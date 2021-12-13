@@ -6,4 +6,6 @@ Implementation of the core business logic as cosmwasm contracts.
 
 ### Setup
 
+```
 cargo install cargo-edit cargo-workspaces cargo-expand
+```
