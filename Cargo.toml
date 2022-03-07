@@ -1,3 +1,2 @@
 [workspace]
-# members = ["packages/*", "contracts/*"]
-members = ["contracts/*"]
+members = ["packages/*", "contracts/*"]
