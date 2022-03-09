@@ -28,19 +28,28 @@ rustup component add clippy
 cargo install cargo-edit cargo-workspaces cargo-expand
 ```
 
+### Test
+Run the following in a package directory or on the workspace root.
+```
+cargo test
+```
+
 ### Build
 
-* In debug:
+* A non-optimized version of a contract, run in a contract directory:
 ```
-cargo build
+cargo build --target=wasm32-unknown-unknown
 ```
 
-* In release:
+* An optimized and verifiable version of all contracts, run on the workspace directory:
+```
+docker run --rm -v "$(pwd)":/code \
+  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
+  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
+  cosmwasm/workspace-optimizer:0.12.5
+```
+[Ref](https://github.com/CosmWasm/rust-optimizer#mono-repos)
 
-```
-cargo build --release
-```
-* TBD add WASM optimization, and introduce [just](https://github.com/casey/just)?
 
 ### VSCode
 
