@@ -24,13 +24,12 @@ pub fn query_global_time(storage: &dyn Storage) -> StdResult<GlobalTimeResponse>
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env};
-    use cosmwasm_std::{coins};
+    use cosmwasm_std::testing;
 
     #[test]
     fn test_update_and_query_global_time() {
-        let mut deps = mock_dependencies_with_balance(&coins(10, "unolus"));
-        let env = mock_env();
+        let mut deps = testing::mock_dependencies_with_balance(&cosmwasm_std::coins(10, "unolus"));
+        let env = testing::mock_env();
 
         update_global_time(&mut deps.storage, &env).expect("can't update global time");
 
