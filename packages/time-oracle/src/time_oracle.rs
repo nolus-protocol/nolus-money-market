@@ -1,3 +1,4 @@
+use crate::alarms::{self, MsgSender};
 use cosmwasm_std::{Env, Response, StdResult, Storage, Timestamp};
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
@@ -10,9 +11,14 @@ pub struct GlobalTimeResponse {
     pub time: Timestamp,
 }
 
-pub fn update_global_time(storage: &mut dyn Storage, env: &Env) -> StdResult<Response> {
-    let time = &env.block.time;
-    GLOBAL_TIME.save(storage, time)?;
+pub fn update_global_time(
+    storage: &mut dyn Storage,
+    env: &Env,
+    sender: &impl MsgSender,
+) -> StdResult<Response> {
+    let time = env.block.time;
+    GLOBAL_TIME.save(storage, &time)?;
+    alarms::notify(storage, sender, time)?;
     Ok(Response::new().add_attribute("method", "update_time"))
 }
 
@@ -24,14 +30,16 @@ pub fn query_global_time(storage: &dyn Storage) -> StdResult<GlobalTimeResponse>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alarms::tests::MockSender;
     use cosmwasm_std::testing;
 
     #[test]
     fn test_update_and_query_global_time() {
         let mut deps = testing::mock_dependencies_with_balance(&cosmwasm_std::coins(10, "unolus"));
         let env = testing::mock_env();
+        let sender = MockSender::new();
 
-        update_global_time(&mut deps.storage, &env).expect("can't update global time");
+        update_global_time(&mut deps.storage, &env, &sender).expect("can't update global time");
 
         let time_response = query_global_time(&deps.storage).expect("can't query global time");
 
