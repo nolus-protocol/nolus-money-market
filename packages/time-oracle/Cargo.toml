@@ -1,0 +1,12 @@
+[package]
+name = "time-oracle"
+version = "0.1.0"
+authors = ["Vladimir Kolesnikov <v.kolesnikov@nolus.io>"]
+edition = "2018"
+
+[dependencies]
+cosmwasm-std = { version = "1.0.0-beta5" }
+cw-storage-plus = "0.12"
+schemars = "0.8"
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+
