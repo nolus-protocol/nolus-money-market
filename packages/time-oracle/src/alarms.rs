@@ -14,7 +14,7 @@ pub fn add(storage: &mut dyn Storage, addr: Addr, time: Timestamp) -> StdResult<
     Ok(Response::new().add_attribute("method", "add"))
 }
 
-pub fn remove(storage: &mut dyn Storage, addr: &Addr, time: Timestamp) -> StdResult<Response> {
+pub fn remove(storage: &mut dyn Storage, addr: &Addr, time: Timestamp) -> StdResult<()> {
     let mut is_empty = false;
 
     ALARMS.update::<_, StdError>(storage, time.nanos(), |records| {
@@ -33,23 +33,20 @@ pub fn remove(storage: &mut dyn Storage, addr: &Addr, time: Timestamp) -> StdRes
         ALARMS.remove(storage, time.nanos());
     }
 
-    Ok(Response::new().add_attribute("method", "add"))
+    Ok(())
 }
 
 fn remove_by_timestamp(storage: &mut dyn Storage, time: u64) {
     ALARMS.remove(storage, time);
 }
 
-pub trait MsgSender {
-    fn send(&self, addr: &Addr, time: Timestamp) -> StdResult<Response>;
-}
-
 pub fn notify(
     storage: &mut dyn Storage,
-    sender: &impl MsgSender,
     ctime: Timestamp,
-) -> StdResult<Response> {
+) -> StdResult<Vec<Addr>> {
     let mut to_remove = vec![];
+    let mut collector = vec![];
+
 
     let timestamps = ALARMS.range(
         storage,
@@ -59,9 +56,7 @@ pub fn notify(
     );
     for alarms in timestamps {
         let (timestamp, adresses) = alarms?;
-        for address in adresses {
-            sender.send(&address, ctime)?;
-        }
+		collector.extend(adresses);
         to_remove.push(timestamp);
     }
 
@@ -69,31 +64,13 @@ pub fn notify(
         remove_by_timestamp(storage, t);
     }
 
-    Ok(Response::new().add_attribute("method", "notify"))
+    Ok(collector)
 }
 
 #[cfg(test)]
 pub mod tests {
     use super::*;
     use cosmwasm_std::testing;
-    use std::cell::Cell;
-
-    pub struct MockSender(pub Cell<u32>);
-
-    impl MockSender {
-        pub fn new() -> Self {
-            MockSender(Cell::new(0))
-        }
-    }
-
-    impl MsgSender for MockSender {
-        // count send messages
-        fn send(&self, _addr: &Addr, _time: Timestamp) -> StdResult<Response> {
-            let c = self.0.get();
-            self.0.set(c + 1);
-            Ok(Response::new())
-        }
-    }
 
     #[test]
     fn test_add() {
@@ -162,7 +139,6 @@ pub mod tests {
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
         let addr4 = Addr::unchecked("addr4");
-        let sender = MockSender::new();
 
         // same timestamp
         add(storage, addr1.clone(), t1).expect("can't set alarms");
@@ -172,10 +148,11 @@ pub mod tests {
         // rest
         add(storage, addr4.clone(), t4).expect("can't set alarms");
 
-        notify(storage, &sender, t1).expect("can't notify alarms");
-        assert_eq!(sender.0.get(), 2);
+        let mut res = notify(storage, t1).expect("can't notify alarms");
+        res.sort();
+        assert_eq!(res, [addr1, addr2]);
 
-        notify(storage, &sender, t3).expect("can't notify alarms");
-        assert_eq!(sender.0.get(), 3);
+        let res = notify(storage, t3).expect("can't notify alarms");
+        assert_eq!(res, [addr3]);
     }
 }
