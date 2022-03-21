@@ -1,24 +1,22 @@
-use cosmwasm_std::{Env, Response, StdResult, Storage, Timestamp};
+use cosmwasm_std::{StdResult, Storage, Timestamp};
 use cw_storage_plus::Item;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
-const GLOBAL_TIME: Item<Timestamp> = Item::new("Global time");
+pub struct TimeOracle<'a>(Item<'a, Timestamp>);
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct GlobalTimeResponse {
-    pub time: Timestamp,
-}
+impl<'a> TimeOracle<'a> {
+    pub fn new(namespace: &'a str) -> Self {
+        TimeOracle(Item::new(namespace))
+    }
 
-pub fn update_global_time(storage: &mut dyn Storage, env: &Env) -> StdResult<Response> {
-    let time = &env.block.time;
-    GLOBAL_TIME.save(storage, time)?;
-    Ok(Response::new().add_attribute("method", "update_time"))
-}
+    pub fn update_global_time(&self, storage: &mut dyn Storage, time: Timestamp) -> StdResult<()> {
+        self.0.save(storage, &time)?;
+        Ok(())
+    }
 
-pub fn query_global_time(storage: &dyn Storage) -> StdResult<GlobalTimeResponse> {
-    let time = GLOBAL_TIME.load(storage)?;
-    Ok(GlobalTimeResponse { time })
+    pub fn query_global_time(&self, storage: &dyn Storage) -> StdResult<Timestamp> {
+        let time = self.0.load(storage)?;
+        Ok(time)
+    }
 }
 
 #[cfg(test)]
@@ -28,13 +26,18 @@ mod tests {
 
     #[test]
     fn test_update_and_query_global_time() {
-        let mut deps = testing::mock_dependencies_with_balance(&cosmwasm_std::coins(10, "unolus"));
-        let env = testing::mock_env();
+        let time_oracle = TimeOracle::new("time_oracle");
+        let mut deps = testing::mock_dependencies();
+        let timestamp = Timestamp::from_seconds(1);
 
-        update_global_time(&mut deps.storage, &env).expect("can't update global time");
+        time_oracle
+            .update_global_time(&mut deps.storage, timestamp)
+            .expect("can't update global time");
 
-        let time_response = query_global_time(&deps.storage).expect("can't query global time");
+        let time_response = time_oracle
+            .query_global_time(&deps.storage)
+            .expect("can't query global time");
 
-        assert_eq!(env.block.time, time_response.time);
+        assert_eq!(timestamp, time_response);
     }
 }
