@@ -511,9 +511,6 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-std",
  "cw-storage-plus",
- "schemars",
- "serde",
- "thiserror",
 ]
 
 [[package]]
