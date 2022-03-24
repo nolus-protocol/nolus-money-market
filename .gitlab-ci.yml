@@ -1,0 +1,34 @@
+image: "rust:latest"
+
+.caching_rust: &caching_rust
+    cache:
+      paths:
+        - /usr/local/cargo/
+        - target/
+
+
+schema:cargo:
+  <<: *caching_rust
+  script:
+    - cargo schema
+
+
+# Use cargo to test the project
+test:cargo:
+  <<: *caching_rust
+  coverage: '/^\d+.\d+% coverage/'
+  script:
+    - rustc --version && cargo --version  # Print version info for debugging
+    - cargo install cargo-tarpaulin
+    - cargo tarpaulin --out Xml
+  artifacts:
+    reports:
+      cobertura:
+        - cobertura.xml  
+
+lint:cargo:
+  <<: *caching_rust
+  script:
+    - rustup component add clippy
+    - cargo clippy --workspace --verbose --all-targets -- -D warnings
+
