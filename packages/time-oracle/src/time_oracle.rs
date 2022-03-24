@@ -4,7 +4,7 @@ use cw_storage_plus::Item;
 pub struct TimeOracle<'a>(Item<'a, Timestamp>);
 
 impl<'a> TimeOracle<'a> {
-    pub fn new(namespace: &'a str) -> Self {
+    pub const fn new(namespace: &'a str) -> Self {
         TimeOracle(Item::new(namespace))
     }
 
