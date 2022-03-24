@@ -24,6 +24,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "borrow"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus 0.13.0",
+ "cw2 0.13.0",
+ "loan-api",
+ "protobuf",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -217,6 +234,18 @@ checksum = "4f8a6500c396e33f6a7b05d35a5124eb3e394cdb6ca901f7e88332870407896c"
 dependencies = [
  "cosmwasm-std",
  "cw-storage-plus 0.12.1",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "cw2"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c1d97aa569c7ef4f169a6dec1f50e39cfade420838fb08c4ec460ec4449b7236"
+dependencies = [
+ "cosmwasm-std",
+ "cw-storage-plus 0.13.0",
  "schemars",
  "serde",
 ]
@@ -417,6 +446,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1bf2e165bb3457c8e098ea76f3e3bc9db55f87aa90d52d0e6be741470916aaa4"
 
 [[package]]
+name = "loan"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus 0.13.0",
+ "cw2 0.13.0",
+ "loan-api",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "loan-api"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-std",
+ "cw-storage-plus 0.12.1",
+ "schemars",
+ "serde",
+]
+
+[[package]]
 name = "marketprice"
 version = "0.1.0"
 dependencies = [
@@ -425,7 +480,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus 0.12.1",
- "cw2",
+ "cw2 0.12.1",
  "schemars",
  "serde",
  "thiserror",
@@ -446,7 +501,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus 0.12.1",
- "cw2",
+ "cw2 0.12.1",
  "marketprice",
  "schemars",
  "serde",
@@ -494,6 +549,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "protobuf"
+version = "2.27.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf7e6d18738ecd0902d30d1ad232c9125985a3422929b16c65517b38adc14f96"
+dependencies = [
+ "bytes",
 ]
 
 [[package]]
@@ -684,7 +748,7 @@ name = "time-oracle"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-std",
- "cw-storage-plus",
+ "cw-storage-plus 0.12.1",
 ]
 
 [[package]]
