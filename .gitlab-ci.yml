@@ -10,7 +10,9 @@ image: "rust:latest"
 schema:cargo:
   <<: *caching_rust
   script:
-    - cargo schema
+    - cargo run --example schema --package oracle
+    - cargo run --example schema --package borrow
+    - cargo run --example schema --package loan
 
 
 # Use cargo to test the project
@@ -24,7 +26,7 @@ test:cargo:
   artifacts:
     reports:
       cobertura:
-        - cobertura.xml  
+        - cobertura.xml
 
 lint:cargo:
   <<: *caching_rust
