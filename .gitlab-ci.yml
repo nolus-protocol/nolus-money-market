@@ -10,10 +10,8 @@ image: "rust:latest"
 schema:cargo:
   <<: *caching_rust
   script:
-    - cargo run --example schema --package oracle
-    - cargo run --example schema --package borrow
-    - cargo run --example schema --package loan
-
+    - cargo install cargo-workspaces
+    - cargo workspaces exec --no-bail cargo run --example schema
 
 # Use cargo to test the project
 test:cargo:
