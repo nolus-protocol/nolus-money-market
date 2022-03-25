@@ -39,7 +39,7 @@ impl<'a> InstantiateReplyIdSeq<'a> {
     }
 
     pub fn next(&self, store: &mut dyn Storage) -> Result<InstantiateReplyId, ContractError> {
-        let mut next_seq = self.0.load(store).or::<InstantiateReplyId>(Ok(0)).unwrap();
+        let mut next_seq = self.0.load(store).unwrap_or(0);
         next_seq += 1;
         self.0.save(store, &next_seq)?;
         Ok(next_seq)
