@@ -84,13 +84,12 @@ fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    let msg_id = msg.id.clone();
-    let contract_addr_raw = parse_reply_instantiate_data(msg)
+    let contract_addr_raw = parse_reply_instantiate_data(msg.clone())
         .map(|r| r.contract_address)
         .map_err(|_| ContractError::ParseError {})?;
 
     let contract_addr = deps.api.addr_validate(&contract_addr_raw)?;
-    register_loan(deps, msg_id, contract_addr)
+    register_loan(deps, msg.id, contract_addr)
 }
 
 fn register_loan(deps: DepsMut, msg_id: u64, loan_addr: Addr) -> Result<Response, ContractError> {
