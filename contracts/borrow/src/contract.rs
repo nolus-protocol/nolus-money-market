@@ -11,7 +11,7 @@ use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{CONFIG, Config, INSTANTIATE_REPLY_IDS, LOANS, PENDING_INSTANCE_CREATIONS};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:borrow";
+const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
