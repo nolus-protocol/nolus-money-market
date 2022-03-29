@@ -32,9 +32,9 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus 0.13.0",
+ "cw-utils",
  "cw2 0.13.0",
- "loan-api",
- "protobuf",
+ "loan",
  "schemars",
  "serde",
  "thiserror",
@@ -216,9 +216,9 @@ dependencies = [
 
 [[package]]
 name = "cw-utils"
-version = "0.13.0"
+version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1afc58c44e94c03e3df8c22713bb12e738bfff77277d92c4b4e1cd7366e7e606"
+checksum = "2aa10861dc5d74400eaf0ed920b6f8fdbc36ce53840ffee1688d9757dfc9fc9f"
 dependencies = [
  "cosmwasm-std",
  "schemars",
@@ -455,20 +455,9 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus 0.13.0",
  "cw2 0.13.0",
- "loan-api",
  "schemars",
  "serde",
  "thiserror",
-]
-
-[[package]]
-name = "loan-api"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-std",
- "cw-storage-plus 0.12.1",
- "schemars",
- "serde",
 ]
 
 [[package]]
@@ -549,15 +538,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "protobuf"
-version = "2.27.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf7e6d18738ecd0902d30d1ad232c9125985a3422929b16c65517b38adc14f96"
-dependencies = [
- "bytes",
 ]
 
 [[package]]

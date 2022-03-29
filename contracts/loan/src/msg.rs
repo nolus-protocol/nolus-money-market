@@ -1,8 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-// use cosmwasm_bignumber::Uint256;
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct InstantiateMsg {
@@ -50,13 +48,6 @@ pub enum Cw20HookMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
-    Borrower {
-        address: String,
-    },
-    Borrowers {
-        start_after: Option<String>,
-        limit: Option<u32>,
-    },
 }
 
 // We define a custom struct for each query response

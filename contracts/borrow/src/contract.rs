@@ -1,13 +1,12 @@
-use cosmwasm_std::{Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, StdResult, SubMsg, to_binary, WasmMsg};
+use cosmwasm_std::{Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, SubMsg, to_binary, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cw2::set_contract_version;
-use protobuf::Message;
+use cw_utils::parse_reply_instantiate_data;
 
-use loan_api::loan::InstantiateMsg as LoanInstantiateMsg;
+use loan::msg::InstantiateMsg as LoanInstantiateMsg;
 
 use crate::error::ContractError;
-use crate::instantiate_msg_response::MsgInstantiateContractResponse;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{CONFIG, Config, INSTANTIATE_REPLY_IDS, LOANS, PENDING_INSTANCE_CREATIONS};
 
@@ -60,7 +59,7 @@ pub fn try_borrow(deps: DepsMut, info: MessageInfo) -> Result<Response, Contract
                 admin: None,
                 code_id: config.loan_code_id,
                 funds: vec![],
-                label: "".to_string(),
+                label: "loan".to_string(),
                 msg: to_binary(&LoanInstantiateMsg {
                     owner: info.sender.to_string(),
                 })?,
@@ -85,18 +84,13 @@ fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    let res: MsgInstantiateContractResponse = Message::parse_from_bytes(
-        msg.result.unwrap().data.unwrap().as_slice(),
-    )
-        .map_err(|_| {
-            ContractError::Std(StdError::parse_err(
-                "MsgInstantiateContractResponse",
-                "failed to parse data",
-            ))
-        })?;
-    let contract_addr = deps.api.addr_validate(res.get_address())?;
+    let msg_id = msg.id.clone();
+    let contract_addr_raw = parse_reply_instantiate_data(msg)
+        .map(|r| r.contract_address)
+        .map_err(|_| ContractError::ParseError {})?;
 
-    register_loan(deps, msg.id, contract_addr)
+    let contract_addr = deps.api.addr_validate(&contract_addr_raw)?;
+    register_loan(deps, msg_id, contract_addr)
 }
 
 fn register_loan(deps: DepsMut, msg_id: u64, loan_addr: Addr) -> Result<Response, ContractError> {
