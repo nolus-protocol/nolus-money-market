@@ -1,0 +1,29 @@
+[package]
+name = "loan"
+version = "0.1.0"
+authors = ["Nikola Terziev <n.terziev@nolus.io>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+# use library feature to disable all instantiate/execute/query exports
+api = []
+
+
+
+[dependencies]
+cosmwasm-std = { version = "1.0.0-beta6" }
+cosmwasm-storage = { version = "1.0.0-beta6" }
+cw-storage-plus = "0.13"
+cw2 = "0.13"
+schemars = "0.8"
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+thiserror = { version = "1.0" }
+
+[dev-dependencies]
+cosmwasm-schema = { version = "1.0.0-beta6" }
+cw-multi-test = "0.13"
