@@ -10,8 +10,8 @@ image: "rust:latest"
 schema:cargo:
   <<: *caching_rust
   script:
-    - cargo schema
-
+    - cargo install cargo-workspaces
+    - cargo workspaces exec --no-bail cargo run --example schema
 
 # Use cargo to test the project
 test:cargo:
@@ -24,7 +24,7 @@ test:cargo:
   artifacts:
     reports:
       cobertura:
-        - cobertura.xml  
+        - cobertura.xml
 
 lint:cargo:
   <<: *caching_rust
