@@ -50,6 +50,70 @@ docker run --rm -v "$(pwd)":/code \
 ```
 [Ref](https://github.com/CosmWasm/rust-optimizer#mono-repos)
 
+### Deploy smart contract
+
+* Add new key to be used for the deployment:
+```
+nolusd keys add wallet
+
+------------ Example Output-----------------
+- name: wallet
+  type: local
+  address: nolus1um993zvsdp8upa5qvtspu0jdy66eahlcghm0w6
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"A0MFMuJSqWpofT3GIQchGyL9bADlC5GEWu3QJHGL/XHZ"}'
+  mnemonic: ""
+```
+
+* The new key needs some tockens for the deployment
+
+When scripts/init-local-network.sh is started it creates two acconts. One of them is the "treasury" account \
+To find the address of the treasury account, run the folloing command:
+
+```
+nolusd keys show -a treasury
+> nolus122f36dx292yy72253ufkt2g8rzheml2pkcfckl
+```
+
+
+Use the treasury address to send tockens to the new "wallet" account
+
+```
+nolusd query bank total $NODE
+nolusd tx bank send nolus122f36dx292yy72253ufkt2g8rzheml2pkcfckl nolus1um993zvsdp8upa5qvtspu0jdy66eahlcghm0w6 1000000unolus --chain-id nolus-local --keyring-backend test
+nolusd query bank balances nolus1um993zvsdp8upa5qvtspu0jdy66eahlcghm0w6 --chain-id nolus-localnolus-local
+```
+
+* set environment
+```
+export CHAIN_ID="nolus-local"
+export TXFLAG="--chain-id ${CHAIN_ID} --gas-prices 0.025unolus --gas auto --gas-adjustment 1.3"
+```
+
+* see how many codes we have now
+```
+nolusd query wasm list-code
+```
+
+* now we store the bytecode on chain; you can see the code in the result
+```
+RES=$(nolusd tx wasm store artifacts/<contract name>.wasm --from wallet $TXFLAG -y --output json -b block)
+```
+
+* you can also get the code this way
+```
+CODE_ID=$(echo $RES | jq -r '.logs[0].events[-1].attributes[0].value')
+```
+
+* no contracts yet, this should return an empty list
+```
+nolusd query wasm list-contract-by-code $CODE_ID --output json
+```
+
+* you can also download the wasm from the chain and check that the diff between them is empty
+```
+nolusd query wasm code $CODE_ID download.wasm
+diff artifacts/<contract name>.wasm download.wasm
+```
 
 ### VSCode
 
