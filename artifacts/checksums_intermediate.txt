@@ -1,0 +1,4 @@
+c01bf7a3c954b6a2cd665ab257982d48f382aba36d9081bb71588c6c40e2fcf9  ./contracts/oracle/target/wasm32-unknown-unknown/release/borrow.wasm
+3f357beefc64828b62169baa685cb4fdbb599997c1c0753dbbda6f5590019b39  ./contracts/oracle/target/wasm32-unknown-unknown/release/loan.wasm
+2a55e60ee1e709a93c31a1067ecabb29c1c445ca1eda5d802e858727c52809e7  ./contracts/oracle/target/wasm32-unknown-unknown/release/oracle.wasm
+366e4f098358675335a176e00e1e7ac96d5b9199a36ab810ddc312523f869436  ./contracts/oracle/target/wasm32-unknown-unknown/release/treasury.wasm

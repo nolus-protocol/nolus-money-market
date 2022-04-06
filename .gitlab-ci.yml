@@ -32,3 +32,20 @@ lint:cargo:
     - rustup component add clippy
     - cargo clippy --workspace --verbose --all-targets -- -D warnings
 
+deploy:
+  image: node:16.14.2-alpine
+  variables:
+    CONTRACTS_INFO_DIR: "contracts.tar.gz"
+  before_script:
+    - apk update && apk add bash
+    - apk --no-cache add curl
+    - apk --no-cache add jq
+  script:
+    - /bin/bash ./scripts/deploy-dev-net.sh
+    - tar -C contracts-addresses/ $CONTRACTS_INFO_DIR
+  artifacts:
+    name: "contracts-$CI_COMMIT_REF_SLUG"
+    paths:
+      - $CONTRACTS_INFO_DIR
+
+
