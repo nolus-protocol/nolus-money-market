@@ -40,7 +40,7 @@ deploy:
     - apk update && apk add bash
     - apk --no-cache add curl
     - apk --no-cache add jq
-    - apk add build-essential
+    - apk update && apk --no-cache --update add build-base
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     - source $HOME/.cargo/env
     - rustup target add wasm32-unknown-unknown
