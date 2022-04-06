@@ -36,7 +36,7 @@ deploy:
   variables:
     CONTRACTS_INFO_DIR: "contracts.tar.gz"
   before_script:
-    - apt update && apt add bash
+    - apt update && apt install bash
     - apt install curl
     - apt install jq
   script:
