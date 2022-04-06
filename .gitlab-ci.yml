@@ -37,9 +37,9 @@ deploy:
   variables:
     CONTRACTS_INFO_DIR: "contracts.tar.gz"
   before_script:
-    - apt update && apt install bash
-    - apt install curl
-    - echo 'y' | apt install jq
+    - apk update && apk add bash
+    - apk --no-cache add curl
+    - apk --no-cache add jq
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     - rustup target add wasm32-unknown-unknown
   script:
