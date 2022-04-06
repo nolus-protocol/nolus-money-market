@@ -40,7 +40,7 @@ deploy:
     - apk update && apk add bash
     - apk --no-cache add curl
     - apk --no-cache add jq
-    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -y | sh
     - rustup target add wasm32-unknown-unknown
   script:
     - /bin/bash ./scripts/deploy-contracts-dev-net.sh
