@@ -41,7 +41,7 @@ deploy:
     - apk --no-cache add curl
     - apk --no-cache add jq
   script:
-    - /bin/bash ./scripts/deploy-dev-net.sh
+    - /bin/bash ./scripts/deploy-contracts-dev-net.sh
     - tar -C contracts-addresses/ $CONTRACTS_INFO_DIR
   artifacts:
     name: "contracts-$CI_COMMIT_REF_SLUG"
