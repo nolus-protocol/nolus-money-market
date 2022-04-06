@@ -32,24 +32,15 @@ lint:cargo:
     - rustup component add clippy
     - cargo clippy --workspace --verbose --all-targets -- -D warnings
 
-deploy:
-  image: node:16.14.2-alpine
+deploy:cargo:
+  <<: *caching_rust
   variables:
     CONTRACTS_INFO_DIR: "contracts.tar.gz"
   before_script:
-    - apk update && apk add bash
-    - apk --no-cache add curl
-    - apk --no-cache add jq
-    - apk update && apk --no-cache --update add build-base
-    - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    - source $HOME/.cargo/env
+    - apt update && apt install bash
+    - apt install curl
+    - echo 'y' | apt install jq
     - rustup target add wasm32-unknown-unknown
   script:
     - /bin/bash ./scripts/deploy-contracts-dev-net.sh
-    - tar -C contracts-addresses/ -czvf $CONTRACTS_INFO_DIR .
-  artifacts:
-    name: "contracts-$CI_COMMIT_REF_SLUG"
-    paths:
-      - $CONTRACTS_INFO_DIR
-
-
+    - tar -C contracts-addresses/ $CONTRACTS_INFO_DIR
