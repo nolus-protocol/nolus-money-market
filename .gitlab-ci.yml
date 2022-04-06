@@ -32,13 +32,14 @@ lint:cargo:
     - rustup component add clippy
     - cargo clippy --workspace --verbose --all-targets -- -D warnings
 
-deploy:
+deploy:cargo:
+  <<: *caching_rust
   variables:
     CONTRACTS_INFO_DIR: "contracts.tar.gz"
   before_script:
     - apt update && apt install bash
     - apt install curl
-    - apt install jq
+    - echo 'y' | apt install jq
   script:
     - /bin/bash ./scripts/deploy-contracts-dev-net.sh
     - tar -C contracts-addresses/ $CONTRACTS_INFO_DIR
