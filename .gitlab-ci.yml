@@ -41,6 +41,7 @@ deploy:
     - apk --no-cache add curl
     - apk --no-cache add jq
     - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    - source $HOME/.cargo/env
     - rustup target add wasm32-unknown-unknown
   script:
     - /bin/bash ./scripts/deploy-contracts-dev-net.sh
