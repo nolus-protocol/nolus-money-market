@@ -6,7 +6,6 @@ image: "rust:latest"
         - /usr/local/cargo/
         - target/
 
-
 schema:cargo:
   <<: *caching_rust
   script:
@@ -32,17 +31,13 @@ lint:cargo:
     - rustup component add clippy
     - cargo clippy --workspace --verbose --all-targets -- -D warnings
 
-compile:cargo:
-  <<: *caching_rust
-  script:
-    - rustup target add wasm32-unknown-unknown
-    - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
-
 optimization:cargo:
   <<: *caching_rust
   tags:
     - shell
   script:
+    - rustup target add wasm32-unknown-unknown
+    - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
     - docker run --rm -v "$(pwd)":/code --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.5
 
 deploy:cargo:
