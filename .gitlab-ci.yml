@@ -35,6 +35,7 @@ lint:cargo:
 compile:cargo:
   <<: *caching_rust
   script:
+    - rustup target add wasm32-unknown-unknown
     - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
 
 optimization:
@@ -52,7 +53,6 @@ deploy:cargo:
     - apt update && apt install bash
     - apt install curl
     - echo 'y' | apt install jq
-    - rustup target add wasm32-unknown-unknown
   script:
     - /bin/bash ./scripts/deploy-contracts-dev-net.sh
     - tar -C contracts-addresses/ $CONTRACTS_INFO_DIR
