@@ -38,9 +38,10 @@ compile:cargo:
     - rustup target add wasm32-unknown-unknown
     - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
 
-optimization:
-  services:
-    - docker:19.03.12-dind
+optimization:cargo:
+  <<: *caching_rust
+  tags:
+    - shell
   script:
     - docker run --rm -v "$(pwd)":/code --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.5
 
