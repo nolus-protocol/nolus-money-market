@@ -39,7 +39,6 @@ compile:cargo:
     - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
 
 optimization:
-  image: docker:19.03.12
   services:
     - docker:19.03.12-dind
   script:
