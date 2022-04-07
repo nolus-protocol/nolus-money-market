@@ -32,6 +32,18 @@ lint:cargo:
     - rustup component add clippy
     - cargo clippy --workspace --verbose --all-targets -- -D warnings
 
+compile:cargo:
+  <<: *caching_rust
+  script:
+    - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
+
+optimization:
+  image: docker:19.03.12
+  services:
+    - docker:19.03.12-dind
+  script:
+    - docker run --rm -v "$(pwd)":/code --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.5
+
 deploy:cargo:
   <<: *caching_rust
   variables:
@@ -44,3 +56,7 @@ deploy:cargo:
   script:
     - /bin/bash ./scripts/deploy-contracts-dev-net.sh
     - tar -C contracts-addresses/ $CONTRACTS_INFO_DIR
+  artifacts:
+    name: "contracts-$CI_COMMIT_REF_SLUG"
+    paths:
+      - $CONTRACTS_INFO_DIR

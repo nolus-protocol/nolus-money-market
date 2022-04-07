@@ -7,8 +7,6 @@ ACCOUNTS_DIR="$(pwd)/accounts"
 export TXFLAG="--gas-prices 0.025unolus --gas auto --gas-adjustment 1.3 -y --home $ACCOUNTS_DIR --node $NOLUS_DEV_NET"
 
 deployContract() {
-    RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./contracts/$1/target
-    docker run --rm -v "$(pwd)":/code --mount type=volume,source="devcontract_cache_$1",target=/code/target --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/rust-optimizer:0.12.5 ./contracts/$1
 
     RES=$(nolusd tx wasm store artifacts/$1.wasm --from treasury ${TXFLAG} --output json -b block)
     CODE_ID=$(echo $RES | jq -r '.logs[0].events[-1].attributes[0].value')
