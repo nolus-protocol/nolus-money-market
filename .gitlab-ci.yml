@@ -38,9 +38,7 @@ optimization:cargo:
   script:
     - rustup target add wasm32-unknown-unknown
     - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
-    - usermod -aG docker gitlab-runner
-    - sudo service docker restart
-    - docker run --rm -v "$(pwd)":/code --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.5
+    - sudo docker run --rm -v "$(pwd)":/code --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.5
 
 deploy:cargo:
   <<: *caching_rust
