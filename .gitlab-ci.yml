@@ -46,18 +46,15 @@ build:cargo:
   script:
     - rustup target add wasm32-unknown-unknown
     - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
-    - tar -czvf target.tar.gz target
   artifacts:
     paths:
-    - target.tar.gz
+    - target/
     expire_in: 1 hour
 
 optimization:
   stage: optimization
   tags:
     - shell
-  before_script:
-    - tar -xvf target.tar.gz
   script:
     - sudo docker run --rm -v "$(pwd)":/code --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.5
 
@@ -73,7 +70,7 @@ deploy:cargo:
     - echo 'y' | apt install jq
   script:
     - /bin/bash ./scripts/deploy-contracts-dev-net.sh
-    - tar -C contracts-addresses/ $CONTRACTS_INFO_DIR
+    - tar -czvf $CONTRACTS_INFO_DIR contracts-addresses
   artifacts:
     name: "contracts-$CI_COMMIT_REF_SLUG"
     paths:
