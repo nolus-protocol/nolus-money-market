@@ -3,6 +3,7 @@ image: "rust:latest"
 stages:
   - test
   - build
+  - optimization
   - deploy
 
 .caching_rust: &caching_rust
@@ -39,15 +40,22 @@ lint:cargo:
     - rustup component add clippy
     - cargo clippy --workspace --verbose --all-targets -- -D warnings
 
-
-optimization:cargo:
+build:cargo:
   <<: *caching_rust
   stage: build
-  tags:
-    - shell
   script:
     - rustup target add wasm32-unknown-unknown
     - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
+  artifacts:
+    paths:
+    - target/
+    expire_in: 1 hour
+
+optimization:
+  stage: optimization
+  tags:
+    - shell
+  script:
     - sudo docker run --rm -v "$(pwd)":/code --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.5
 
 
