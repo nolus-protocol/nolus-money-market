@@ -46,15 +46,18 @@ build:cargo:
   script:
     - rustup target add wasm32-unknown-unknown
     - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
+    - tar -czvf target.tar.gz target
   artifacts:
     paths:
-    - target/
+    - target.tar.gz
     expire_in: 1 hour
 
 optimization:
   stage: optimization
   tags:
     - shell
+  before_script:
+    - tar -xvf target.tar.gz
   script:
     - sudo docker run --rm -v "$(pwd)":/code --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.5
 
