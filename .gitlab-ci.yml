@@ -1,5 +1,10 @@
 image: "rust:latest"
 
+stages:
+  - test
+  - build
+  - deploy
+
 .caching_rust: &caching_rust
     cache:
       paths:
@@ -8,6 +13,7 @@ image: "rust:latest"
 
 schema:cargo:
   <<: *caching_rust
+  stage: test
   script:
     - cargo install cargo-workspaces
     - cargo workspaces exec --no-bail cargo run --example schema
@@ -15,6 +21,7 @@ schema:cargo:
 # Use cargo to test the project
 test:cargo:
   <<: *caching_rust
+  stage: test
   coverage: '/^\d+.\d+% coverage/'
   script:
     - rustc --version && cargo --version  # Print version info for debugging
@@ -27,12 +34,15 @@ test:cargo:
 
 lint:cargo:
   <<: *caching_rust
+  stage: test
   script:
     - rustup component add clippy
     - cargo clippy --workspace --verbose --all-targets -- -D warnings
 
+
 optimization:cargo:
   <<: *caching_rust
+  stage: build
   tags:
     - shell
   script:
@@ -40,8 +50,10 @@ optimization:cargo:
     - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
     - sudo docker run --rm -v "$(pwd)":/code --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.5
 
+
 deploy:cargo:
   <<: *caching_rust
+  stage: deploy
   variables:
     CONTRACTS_INFO_DIR: "contracts.tar.gz"
   before_script:
