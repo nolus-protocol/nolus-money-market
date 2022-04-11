@@ -11,17 +11,17 @@ deployContract() {
     RES=$(nolusd tx wasm store artifacts/$1.wasm --from treasury ${TXFLAG} --output json -b block)
     CODE_ID=$(echo $RES | jq -r '.logs[0].events[-1].attributes[0].value')
 
-    nolusd tx wasm instantiate $CODE_ID "$2" --from treasury --label "$1" ${TXFLAG} --no-admin
-    sleep 6
-    CONTRACT_ADDRESS=$(nolusd query wasm list-contract-by-code $CODE_ID --node $NOLUS_DEV_NET --output json | jq -r '.contracts[-1]')
+    #nolusd tx wasm instantiate $CODE_ID "$2" --from treasury --label "$1" ${TXFLAG} --no-admin
+    #  sleep 6
+    #CONTRACT_ADDRESS=$(nolusd query wasm list-contract-by-code $CODE_ID --node $NOLUS_DEV_NET --output json | jq -r '.contracts[-1]')
 
     if [[ ! -e "contracts-addresses" ]]; then
         mkdir "contracts-addresses"
     fi
 
+#CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
 PAIR=$(cat <<-EOF
 CODE_ID=${CODE_ID}
-CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
 EOF
 )
 echo "$PAIR" > "contracts-addresses/$1"
@@ -52,6 +52,10 @@ curl --output artifacts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "https://gitlab
 echo 'A' | unzip artifacts.zip
 
 # deploy all contracts
-INIT_MSG_ORACLE='{"base_asset":"ust","price_feed_period":60,"feeders_percentage_needed":50}'
-deployContract "oracle" $INIT_MSG_ORACLE
 
+# if we need CONTRACT_ADDRESS var we send init msg also, to deployContract:
+#INIT_MSG_ORACLE='{"base_asset":"ust","price_feed_period":60,"feeders_percentage_needed":50}'
+deployContract "oracle"
+deployContract "loan"
+deployContract "treasury"
+deployContract "borrow"
