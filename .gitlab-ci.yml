@@ -21,7 +21,7 @@ prep-version:check:
       then
         echo "BUILD_NOLUS_VERSION=true" >> build_version.env ;
       else
-        echo "NOLUS_IMAGE_EXIST=true" >> build_version.env ;
+         echo "This is not a new version build" ;
       fi
   artifacts:
     reports:
@@ -58,14 +58,11 @@ lint:cargo:
 build:cargo:
   <<: *caching_rust
   stage: build
+  rules:
+  - if: '$BUILD_NOLUS_VERSION == "true"'
   script:
-    - if [[ $BUILD_NOLUS_VERSION == "true" ]] ;
-      then
-        rustup target add wasm32-unknown-unknown ;
-        RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target ;
-      else
-        echo "Skip since this is not a new version build" ;
-      fi
+    - rustup target add wasm32-unknown-unknown
+    - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
   artifacts:
     paths:
     - target/
@@ -93,7 +90,6 @@ deploy:cargo:
   stage: deploy
   variables:
     CONTRACTS_INFO_DIR: "contracts.tar.gz"
-  needs: ["prep-version:check"]
   before_script:
     - apt update && apt install bash
     - apt install curl
