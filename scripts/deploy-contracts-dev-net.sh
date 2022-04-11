@@ -52,6 +52,6 @@ curl --output artifacts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "https://gitlab
 echo 'A' | unzip artifacts.zip
 
 # deploy all contracts
-INIT_MSG_ORACLE='{"base_asset":"ust","price_feed_period":20,"feeders_percentage_needed":50}'
+INIT_MSG_ORACLE='{"base_asset":"ust","price_feed_period":60,"feeders_percentage_needed":50}'
 deployContract "oracle" $INIT_MSG_ORACLE
 
