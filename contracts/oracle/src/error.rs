@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{Addr, StdError};
 use marketprice::{feeders::PriceFeedersError, market_price::PriceFeedsError};
 use thiserror::Error;
 
@@ -26,5 +26,8 @@ pub enum ContractError {
 
     #[error("There are no authorized feeders")]
     NoAuthorizedFeeders {},
+
+    #[error("Invalid alarm notification address: {0:?}")]
+    InvalidAlarmAddess(Addr),
 
 }

@@ -1,46 +1,62 @@
-use cosmwasm_std::{Addr, Order, StdError, StdResult, Storage, Timestamp};
-use cw_storage_plus::{Bound, Map};
-use std::collections::HashSet;
+use cosmwasm_std::{Addr, Order, StdResult, Storage, Timestamp};
+use cw_storage_plus::{Bound, IndexedMap, MultiIndex, IndexList, Index, Item};
+use serde::{Serialize, Deserialize};
 
-pub struct Alarms<'a>(Map<'a, u64, HashSet<Addr>>);
+pub type TimeSeconds = u64;
+pub type Id = u64;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Alarm {
+    pub time: TimeSeconds,
+	pub addr: Addr,
+}
+
+struct AlarmIndexes<'a>{
+    alarms: MultiIndex<'a, TimeSeconds, Alarm, Id>
+}
+
+impl<'a> IndexList<Alarm> for AlarmIndexes<'a> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Alarm>> + '_> {
+        let v: Vec<&dyn Index<Alarm>> = vec![&self.alarms];
+        Box::new(v.into_iter())
+    }
+}
+
+pub struct Alarms<'a>{
+	namespace_alarms: &'a str,
+	namespace_index: &'a str,
+	next_id: Item<'a, Id>,
+}
 
 impl<'a> Alarms<'a> {
-    pub fn new(namespace: &'a str) -> Self {
-        Alarms(Map::new(namespace))
-    }
-
-    pub fn add(&self, storage: &mut dyn Storage, addr: Addr, time: Timestamp) -> StdResult<()> {
-        self.0
-            .update::<_, StdError>(storage, time.seconds(), |records| {
-                let mut records = records.unwrap_or_default();
-                records.insert(addr);
-                Ok(records)
-            })?;
-
-        Ok(())
-    }
-
-    pub fn remove(&self, storage: &mut dyn Storage, addr: &Addr, time: Timestamp) -> StdResult<()> {
-        let mut is_empty = false;
-
-        self.0
-            .update::<_, StdError>(storage, time.seconds(), |records| {
-                if let Some(mut records) = records {
-                    if !records.remove(addr) {
-                        return Err(StdError::generic_err("Unknown alarm recipient"));
-                    }
-                    is_empty = records.is_empty();
-                    Ok(records)
-                } else {
-                    Err(StdError::generic_err("Unknown alarm timestamp"))
-                }
-            })?;
-
-        if is_empty {
-            self.0.remove(storage, time.seconds());
+    pub const fn new(namespace_alarms: &'a str, namespace_index: &'a str, namespace_next_id: &'a str) -> Self {
+        Alarms {
+			namespace_alarms,
+			namespace_index,
+            next_id: Item::new(namespace_next_id),
         }
+    }
 
-        Ok(())
+    fn alarms(&self) -> IndexedMap<TimeSeconds, Alarm, AlarmIndexes<'a>> {
+        let indexes = AlarmIndexes {
+            alarms: MultiIndex::new(|d| d.time, self.namespace_alarms, self.namespace_index),
+        };
+        IndexedMap::new(self.namespace_alarms, indexes)
+    }
+
+    pub fn add(&self, storage: &mut dyn Storage, addr: Addr, time: Timestamp) -> StdResult<Id> {
+        let id = self.next_id.may_load(storage)?.unwrap_or_default();
+        let alarm = Alarm {
+            time: time.seconds(),
+            addr,
+        };
+        self.alarms().save(storage, id, &alarm)?;
+        self.next_id.save(storage, &(id + 1))?;
+        Ok(id)
+    }
+
+    pub fn remove(&self, storage: &mut dyn Storage, id: Id) -> StdResult<()> {
+		self.alarms().remove(storage, id)
     }
 
     pub fn notify(
@@ -49,36 +65,26 @@ impl<'a> Alarms<'a> {
         dispatcher: &mut impl AlarmDispatcher,
         ctime: Timestamp,
     ) -> StdResult<()> {
-        let mut to_remove = vec![];
 
-        let timestamps = self.0.range(
+        let max_id = self.next_id.may_load(storage)?.unwrap_or_default();
+
+        let timestamps = self.alarms().idx.alarms.range(
             storage,
             None,
-            Some(Bound::inclusive(ctime.seconds())),
+            Some(Bound::inclusive((ctime.seconds(), max_id))),
             Order::Ascending,
         );
-        for alarms in timestamps {
-            let (timestamp, adresses) = alarms?;
-            for addr in adresses {
-                dispatcher.send_to(addr);
-            }
-            to_remove.push(timestamp);
-        }
-
-        for t in to_remove {
-            self.remove_by_timestamp(storage, t);
+        for timestamp in timestamps {
+            let (id, alarm) = timestamp?;
+            dispatcher.send_to(id, alarm, ctime)?;
         }
 
         Ok(())
     }
-
-    fn remove_by_timestamp(&self, storage: &mut dyn Storage, time: u64) {
-        self.0.remove(storage, time);
-    }
 }
 
 pub trait AlarmDispatcher {
-    fn send_to(&mut self, addr: Addr);
+    fn send_to(&mut self, id: Id, alarm: Alarm, ctime: Timestamp) -> StdResult<()>;
 }
 
 #[cfg(test)]
@@ -87,19 +93,28 @@ pub mod tests {
     use cosmwasm_std::testing;
 
     #[derive(Default)]
-    struct MockAlarmDispatcher(pub Vec<Addr>);
+    struct MockAlarmDispatcher(pub Vec<Id>);
 
     impl AlarmDispatcher for MockAlarmDispatcher {
-        fn send_to(&mut self, addr: Addr) {
-            self.0.push(addr);
+        fn send_to(&mut self, id: Id, _alarm: Alarm, _ctime: Timestamp) -> StdResult<()> {
+            self.0.push(id);
+            Ok(())
         }
+    }
+
+    impl MockAlarmDispatcher {
+		fn clean_alarms(&self, storage: &mut dyn Storage, alarms: &Alarms) -> StdResult<()> {
+			for id in self.0.iter() {
+				alarms.remove(storage, *id)?;
+			}
+			Ok(())
+		}
     }
 
     #[test]
     fn test_add() {
-        let alarms = Alarms::new("alarms");
+        let alarms = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
         let storage = &mut testing::mock_dependencies().storage;
-        let mut dispatcher = MockAlarmDispatcher::default();
 
         let t1 = Timestamp::from_seconds(1);
         let t2 = Timestamp::from_seconds(2);
@@ -107,20 +122,16 @@ pub mod tests {
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
 
-        assert_eq!(alarms.add(storage, addr1.clone(), t1), Ok(()));
+        assert_eq!(alarms.add(storage, addr1, t1), Ok(0));
         // same timestamp
-        assert_eq!(alarms.add(storage, addr2.clone(), t1), Ok(()));
+        assert_eq!(alarms.add(storage, addr2, t1), Ok(1));
         // different timestamp
-        assert_eq!(alarms.add(storage, addr3.clone(), t2), Ok(()));
-
-        assert_eq!(alarms.notify(storage, &mut dispatcher, t2), Ok(()));
-        dispatcher.0.sort();
-        assert_eq!(dispatcher.0, [addr1, addr2, addr3]);
+        assert_eq!(alarms.add(storage, addr3, t2), Ok(2));
     }
 
     #[test]
     fn test_remove() {
-        let alarms = Alarms::new("alarms");
+        let alarms = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
         let storage = &mut testing::mock_dependencies().storage;
         let mut dispatcher = MockAlarmDispatcher::default();
         let t1 = Timestamp::from_seconds(1);
@@ -128,40 +139,33 @@ pub mod tests {
         let addr1 = Addr::unchecked("addr1");
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
-        let addr4 = Addr::unchecked("addr4");
+        let err_id = 4;
 
         // same time stamp
-        alarms
-            .add(storage, addr1.clone(), t1)
+        let id1 = alarms
+            .add(storage, addr1, t1)
             .expect("can't set alarms");
-        alarms
-            .add(storage, addr2.clone(), t1)
+        let id2 = alarms
+            .add(storage, addr2, t1)
             .expect("can't set alarms");
         // different timestamp
-        alarms
-            .add(storage, addr3.clone(), t2)
+        let id3 = alarms
+            .add(storage, addr3, t2)
             .expect("can't set alarms");
 
-        assert_eq!(alarms.remove(storage, &addr1, t1), Ok(()));
+        assert_eq!(alarms.remove(storage, id1), Ok(()));
+        assert_eq!(alarms.remove(storage, id3), Ok(()));
 
-        // remove with timestamp collection cleanup
-        assert_eq!(alarms.remove(storage, &addr3, t2), Ok(()));
-
-        // unknown alarm recipient
-        let err = alarms.remove(storage, &addr4, t1).map_err(|_| ());
-        assert_eq!(err, Err(()));
-
-        // unknown alarm timestamp
-        let err = alarms.remove(storage, &addr4, t2).map_err(|_| ());
-        assert_eq!(err, Err(()));
+        // unknown recipient: cw_storage_plus Map does't throw an Err, when removes unknown item.
+        alarms.remove(storage, err_id).expect("remove alarm with unknown id");
 
         assert_eq!(alarms.notify(storage, &mut dispatcher, t2), Ok(()));
-        assert_eq!(dispatcher.0, [addr2]);
+        assert_eq!(dispatcher.0, [id2]);
     }
 
     #[test]
     fn test_notify() {
-        let alarms = Alarms::new("alarms");
+        let alarms = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
         let storage = &mut testing::mock_dependencies().storage;
         let mut dispatcher = MockAlarmDispatcher::default();
         let t1 = Timestamp::from_seconds(1);
@@ -174,25 +178,25 @@ pub mod tests {
         let addr4 = Addr::unchecked("addr4");
 
         // same timestamp
-        alarms
-            .add(storage, addr1.clone(), t1)
+        let id1 = alarms
+            .add(storage, addr1, t1)
             .expect("can't set alarms");
-        alarms
-            .add(storage, addr2.clone(), t1)
+        let id2 = alarms
+            .add(storage, addr2, t1)
             .expect("can't set alarms");
         // different timestamp
-        alarms
-            .add(storage, addr3.clone(), t2)
+        let id3 = alarms
+            .add(storage, addr3, t2)
             .expect("can't set alarms");
         // rest
         alarms.add(storage, addr4, t4).expect("can't set alarms");
 
         assert_eq!(alarms.notify(storage, &mut dispatcher, t1), Ok(()));
-        dispatcher.0.sort();
-        assert_eq!(dispatcher.0, [addr1, addr2]);
+        assert_eq!(dispatcher.0, [id1, id2]);
+        dispatcher.clean_alarms(storage, &alarms).expect("can't clean up alarms db");
 
         let mut dispatcher = MockAlarmDispatcher::default();
         assert_eq!(alarms.notify(storage, &mut dispatcher, t3), Ok(()));
-        assert_eq!(dispatcher.0, [addr3]);
+        assert_eq!(dispatcher.0, [id3]);
     }
 }

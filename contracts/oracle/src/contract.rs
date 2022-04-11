@@ -2,15 +2,16 @@ use std::convert::{TryInto, TryFrom};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Decimal256, StdError};
+use cosmwasm_std::{Addr, Reply, CosmosMsg, SubMsg, Storage, Timestamp, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Decimal256, StdError};
 use cw2::set_contract_version;
 use marketprice::feed::{DenomPair, Observation};
 use marketprice::market_price::PriceQuery;
 
 
 use crate::error::ContractError;
-use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{Config, CONFIG, FEEDERS, MARKET_PRICE, TIME_ORACLE};
+use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, ExecuteAlarmMsg};
+use crate::state::{Config, CONFIG, FEEDERS, MARKET_PRICE, TIME_ORACLE, TIME_ALARMS};
+use time_oracle::{Alarm, Id};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -46,6 +47,7 @@ pub fn execute(
         ExecuteMsg::Config {price_feed_period, feeders_percentage_needed} => try_configure(deps, info, price_feed_period, feeders_percentage_needed),
         ExecuteMsg::RegisterFeeder {feeder_address} => try_register_feeder(deps, info, feeder_address),
         ExecuteMsg::FeedPrice { base, prices } => try_feed_prices(deps, env, info, base, prices),
+        ExecuteMsg::AddAlarm { addr, time } => try_add_alarm(deps, addr, time),
     }
 }
 
@@ -57,6 +59,16 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::IsFeeder { address} => to_binary(&FEEDERS.is_registered(deps, &address)?),
         QueryMsg::Price { base, quote } => to_binary(&query_market_price(deps, env, (base, quote))?)
 
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+    if msg.result.is_err() {
+        Ok(Response::new().add_attribute("alarm", "error"))
+    } else {
+		TIME_ALARMS.remove(deps.storage, msg.id)?;
+        Ok(Response::new().add_attribute("alarm", "success"))
     }
 }
 
@@ -141,8 +153,45 @@ fn try_feed_prices(
     MARKET_PRICE.feed(deps.storage, block_time, sender_raw, base, prices, config.price_feed_period)?;
 
     TIME_ORACLE.update_global_time(deps.storage, block_time)?;
+    let response = try_notify_alarms(deps.storage, block_time)?;
 
-    Ok(Response::new().add_attribute("method", "try_feed_prices"))
+    Ok(response.add_attribute("method", "try_feed_prices"))
+}
+
+fn try_add_alarm(deps: DepsMut, addr: Addr, time: Timestamp) -> Result<Response, ContractError> {
+    let valid = deps
+        .api
+        .addr_validate(addr.as_str())
+        .map_err(|_| ContractError::InvalidAlarmAddess(addr))?;
+    TIME_ALARMS.add(deps.storage, valid, time)?;
+    Ok(Response::new().add_attribute("method", "try_add_alarm"))
+}
+
+fn try_notify_alarms(storage: &mut dyn Storage, ctime: Timestamp) -> StdResult<Response> {
+    use time_oracle::AlarmDispatcher;
+
+    struct OracleAlarmDispatcher<'a> {
+        pub response: &'a mut Response,
+    }
+
+    impl<'a> AlarmDispatcher for OracleAlarmDispatcher<'a> {
+        fn send_to(&mut self, id: Id, alarm: Alarm, ctime: Timestamp) -> StdResult<()> {
+            let msg = ExecuteAlarmMsg::Alarm(ctime);
+            let wasm_msg = cosmwasm_std::wasm_execute(alarm.addr, &msg, vec![])?;
+            let submsg = SubMsg::reply_always(CosmosMsg::Wasm(wasm_msg), id);
+            self.response.messages.push(submsg);
+            Ok(())
+        }
+    }
+
+    let mut response = Response::new();
+    let mut dispatcher = OracleAlarmDispatcher {
+        response: &mut response,
+    };
+
+    TIME_ALARMS.notify(storage, &mut dispatcher, ctime)?;
+
+    Ok(response)
 }
 
 #[test]

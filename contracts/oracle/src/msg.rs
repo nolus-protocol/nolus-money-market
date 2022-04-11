@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal256};
+use cosmwasm_std::{Addr, Decimal256, Timestamp};
 use marketprice::feed::Denom;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -21,7 +21,11 @@ pub enum ExecuteMsg {
     Config {
         price_feed_period: u64,
         feeders_percentage_needed: u8
-    }
+    },
+    AddAlarm {
+        addr: Addr,
+        time: Timestamp,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -41,4 +45,10 @@ pub enum QueryMsg {
 pub struct ConfigResponse {
     pub base_asset: String,
     pub owner: Addr,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ExecuteAlarmMsg {
+    Alarm(Timestamp),
 }
