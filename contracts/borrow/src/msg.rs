@@ -1,7 +1,7 @@
+use crate::state::Config;
 use cosmwasm_std::{Addr, Decimal256, Uint256};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use crate::state::Config;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {

@@ -1,12 +1,13 @@
-use std::convert::{TryInto, TryFrom};
+use std::convert::{TryFrom, TryInto};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Decimal256, StdError};
+use cosmwasm_std::{
+    to_binary, Binary, Decimal256, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
+};
 use cw2::set_contract_version;
 use marketprice::feed::{DenomPair, Observation};
 use marketprice::market_price::PriceQuery;
-
 
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -27,7 +28,7 @@ pub fn instantiate(
         base_asset: msg.base_asset,
         owner: info.sender,
         price_feed_period: msg.price_feed_period,
-        feeders_percentage_needed: msg.feeders_percentage_needed
+        feeders_percentage_needed: msg.feeders_percentage_needed,
     };
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     CONFIG.save(deps.storage, &state)?;
@@ -43,8 +44,13 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Config {price_feed_period, feeders_percentage_needed} => try_configure(deps, info, price_feed_period, feeders_percentage_needed),
-        ExecuteMsg::RegisterFeeder {feeder_address} => try_register_feeder(deps, info, feeder_address),
+        ExecuteMsg::Config {
+            price_feed_period,
+            feeders_percentage_needed,
+        } => try_configure(deps, info, price_feed_period, feeders_percentage_needed),
+        ExecuteMsg::RegisterFeeder { feeder_address } => {
+            try_register_feeder(deps, info, feeder_address)
+        }
         ExecuteMsg::FeedPrice { base, prices } => try_feed_prices(deps, env, info, base, prices),
     }
 }
@@ -54,9 +60,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
         QueryMsg::Feeders {} => to_binary(&FEEDERS.get(deps)?),
-        QueryMsg::IsFeeder { address} => to_binary(&FEEDERS.is_registered(deps, &address)?),
-        QueryMsg::Price { base, quote } => to_binary(&query_market_price(deps, env, (base, quote))?)
-
+        QueryMsg::IsFeeder { address } => to_binary(&FEEDERS.is_registered(deps, &address)?),
+        QueryMsg::Price { base, quote } => {
+            to_binary(&query_market_price(deps, env, (base, quote))?)
+        }
     }
 }
 
@@ -70,19 +77,21 @@ fn feeders_needed(weight: usize, percentage: u8) -> usize {
 
 fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     let state = CONFIG.load(deps.storage)?;
-    Ok(ConfigResponse { base_asset: state.base_asset, owner: state.owner })
+    Ok(ConfigResponse {
+        base_asset: state.base_asset,
+        owner: state.owner,
+    })
 }
 
 fn query_market_price(deps: Deps, env: Env, denom_pair: DenomPair) -> StdResult<Observation> {
-    
     let config = CONFIG.load(deps.storage)?;
     let price_feed_period = config.price_feed_period;
 
     let registered_feeders = FEEDERS.get(deps)?;
     let all_feeders_cnt = registered_feeders.len();
     let feeders_needed = feeders_needed(all_feeders_cnt, config.feeders_percentage_needed);
-    
-    let price_query = PriceQuery::new(denom_pair, price_feed_period, feeders_needed );
+
+    let price_query = PriceQuery::new(denom_pair, price_feed_period, feeders_needed);
 
     let resp = MARKET_PRICE.get(deps.storage, env.block.time, price_query);
     match resp {
@@ -91,11 +100,15 @@ fn query_market_price(deps: Deps, env: Env, denom_pair: DenomPair) -> StdResult<
     }
 }
 
-
-fn try_configure(deps: DepsMut, info: MessageInfo, price_feed_period: u64, feeders_percentage_needed:u8) -> Result<Response, ContractError> {
+fn try_configure(
+    deps: DepsMut,
+    info: MessageInfo,
+    price_feed_period: u64,
+    feeders_percentage_needed: u8,
+) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
     if info.sender != config.owner {
-        return Err(ContractError::Unauthorized{})
+        return Err(ContractError::Unauthorized {});
     }
     CONFIG.update(deps.storage, |mut c| -> StdResult<_> {
         c.price_feed_period = price_feed_period;
@@ -104,20 +117,22 @@ fn try_configure(deps: DepsMut, info: MessageInfo, price_feed_period: u64, feede
     })?;
 
     Ok(Response::new().add_attribute("method", "try_configure"))
-
 }
 
-fn try_register_feeder(deps: DepsMut, info: MessageInfo, address: String) -> Result<Response, ContractError> {
-        let config = CONFIG.load(deps.storage)?;
-        if info.sender != config.owner {
-            return Err(ContractError::Unauthorized{})
-        }
-        // check if address is valid
-        let f_address = deps.api.addr_validate(&address)?;
-        FEEDERS.register(deps, f_address)?;
+fn try_register_feeder(
+    deps: DepsMut,
+    info: MessageInfo,
+    address: String,
+) -> Result<Response, ContractError> {
+    let config = CONFIG.load(deps.storage)?;
+    if info.sender != config.owner {
+        return Err(ContractError::Unauthorized {});
+    }
+    // check if address is valid
+    let f_address = deps.api.addr_validate(&address)?;
+    FEEDERS.register(deps, f_address)?;
 
-        Ok(Response::new().add_attribute("method", "try_register_feeder"))
-
+    Ok(Response::new().add_attribute("method", "try_register_feeder"))
 }
 
 fn try_feed_prices(
@@ -127,9 +142,8 @@ fn try_feed_prices(
     base: String,
     prices: Vec<(String, Decimal256)>,
 ) -> Result<Response, ContractError> {
-
     let sender_raw = deps.api.addr_validate(info.sender.as_str())?;
- 
+
     // Check feeder permission
     let is_registered = FEEDERS.is_registered(deps.as_ref(), &sender_raw)?;
     if !is_registered {
@@ -138,7 +152,14 @@ fn try_feed_prices(
 
     let config = CONFIG.load(deps.storage)?;
     let block_time = env.block.time;
-    MARKET_PRICE.feed(deps.storage, block_time, sender_raw, base, prices, config.price_feed_period)?;
+    MARKET_PRICE.feed(
+        deps.storage,
+        block_time,
+        sender_raw,
+        base,
+        prices,
+        config.price_feed_period,
+    )?;
 
     TIME_ORACLE.update_global_time(deps.storage, block_time)?;
 

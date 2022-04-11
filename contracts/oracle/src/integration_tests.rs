@@ -38,7 +38,11 @@ mod tests {
         let mut app = mock_app();
         let cw_template_id = app.store_code(contract_template());
 
-        let msg = InstantiateMsg { base_asset: "token".to_string(), price_feed_period: 60, feeders_percentage_needed: 50 };
+        let msg = InstantiateMsg {
+            base_asset: "token".to_string(),
+            price_feed_period: 60,
+            feeders_percentage_needed: 50,
+        };
         let cw_template_contract_addr = app
             .instantiate_contract(
                 cw_template_id,
@@ -64,19 +68,23 @@ mod tests {
 
         use crate::msg::ExecuteMsg;
 
-        use super::{proper_instantiate, USER, ADMIN};
+        use super::{proper_instantiate, ADMIN, USER};
 
         #[test]
         fn register_feeder() {
             let (mut app, cw_template_contract) = proper_instantiate();
 
             // only admin can register new feeder, other user should result in error
-            let msg = ExecuteMsg::RegisterFeeder { feeder_address: USER.to_string() };
+            let msg = ExecuteMsg::RegisterFeeder {
+                feeder_address: USER.to_string(),
+            };
             let cosmos_msg = cw_template_contract.call(msg).unwrap();
             app.execute(Addr::unchecked(USER), cosmos_msg).unwrap_err();
 
             // check if admin can register new feeder
-            let msg = ExecuteMsg::RegisterFeeder { feeder_address: ADMIN.to_string() };
+            let msg = ExecuteMsg::RegisterFeeder {
+                feeder_address: ADMIN.to_string(),
+            };
             let cosmos_msg = cw_template_contract.call(msg).unwrap();
             app.execute(Addr::unchecked(ADMIN), cosmos_msg).unwrap();
         }

@@ -1,4 +1,6 @@
-use cosmwasm_std::{Addr, CosmosMsg, Empty, Querier, QuerierWrapper, StdResult, to_binary, WasmMsg, WasmQuery};
+use cosmwasm_std::{
+    to_binary, Addr, CosmosMsg, Empty, Querier, QuerierWrapper, StdResult, WasmMsg, WasmQuery,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -21,20 +23,20 @@ impl CwTemplateContract {
             msg,
             funds: vec![],
         }
-            .into())
+        .into())
     }
 
     /// Get config
     pub fn config<Q>(&self, querier: &Q) -> StdResult<ConfigResponse>
-        where
-            Q: Querier,
+    where
+        Q: Querier,
     {
         let msg = QueryMsg::Config {};
         let query = WasmQuery::Smart {
             contract_addr: self.addr().into(),
             msg: to_binary(&msg)?,
         }
-            .into();
+        .into();
         let res: ConfigResponse = QuerierWrapper::<Empty>::new(querier).query(&query)?;
         Ok(res)
     }

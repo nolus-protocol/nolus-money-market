@@ -34,7 +34,6 @@ pub enum ExecuteMsg {
         borrower: String,
         // amount: Uint256,
     },
-
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
