@@ -61,7 +61,7 @@ optimization:
   tags:
     - shell
   rules:
-    - if: '-n "$CI_COMMIT_TAG"'
+    - if: $CI_COMMIT_TAG != null
   script:
     - sudo docker run --rm -v "$(pwd)":/code --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.5
   artifacts:
@@ -76,7 +76,7 @@ deploy:cargo:
   variables:
     CONTRACTS_INFO_DIR: "contracts.tar.gz"
   rules:
-    - if: '-n "$CI_COMMIT_TAG"'
+    - if: $CI_COMMIT_TAG != null
   before_script:
     - apt update && apt install bash
     - apt install curl
