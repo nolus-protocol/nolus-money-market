@@ -47,7 +47,7 @@ build:cargo:
   <<: *caching_rust
   stage: build
   rules:
-    - if: '-n "$CI_COMMIT_TAG"'
+    - if: '-n $CI_COMMIT_TAG'
   script:
     - rustup target add wasm32-unknown-unknown
     - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
