@@ -1,6 +1,9 @@
-use cosmwasm_std::{Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, SubMsg, to_binary, WasmMsg};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response,
+    StdResult, SubMsg, WasmMsg,
+};
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
 
@@ -8,7 +11,7 @@ use loan::msg::InstantiateMsg as LoanInstantiateMsg;
 
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{CONFIG, Config, INSTANTIATE_REPLY_IDS, LOANS, PENDING_INSTANCE_CREATIONS};
+use crate::state::{Config, CONFIG, INSTANTIATE_REPLY_IDS, LOANS, PENDING_INSTANCE_CREATIONS};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -81,7 +84,6 @@ fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     Ok(ConfigResponse { config })
 }
 
-
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let contract_addr_raw = parse_reply_instantiate_data(msg.clone())
@@ -100,11 +102,10 @@ fn register_loan(deps: DepsMut, msg_id: u64, loan_addr: Addr) -> Result<Response
     Ok(Response::default())
 }
 
-
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{coins, Decimal256, from_binary, Uint256};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+    use cosmwasm_std::{coins, from_binary, Decimal256, Uint256};
 
     use super::*;
 
