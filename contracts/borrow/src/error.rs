@@ -10,7 +10,7 @@ pub enum ContractError {
     Unauthorized {},
 
     #[error("ParseError")]
-    ParseError{},
+    ParseError {},
 
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },

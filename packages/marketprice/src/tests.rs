@@ -5,7 +5,7 @@ use cosmwasm_std::testing::mock_dependencies;
 use cosmwasm_std::{Api, Decimal256, Timestamp};
 
 use crate::feeders::PriceFeeders;
-use crate::market_price::{PriceFeeds, PriceQuery, PriceFeedsError};
+use crate::market_price::{PriceFeeds, PriceFeedsError, PriceQuery};
 
 #[test]
 fn register_feeder() {
@@ -15,9 +15,7 @@ fn register_feeder() {
     let f_address = deps.api.addr_validate("address1").unwrap();
     control.register(deps.as_mut(), f_address.clone()).unwrap();
 
-    let resp = control
-        .is_registered(deps.as_ref(), &f_address)
-        .unwrap();
+    let resp = control.is_registered(deps.as_ref(), &f_address).unwrap();
     assert!(resp);
 
     let feeders = control.get(deps.as_ref()).unwrap();
@@ -46,7 +44,7 @@ fn marketprice_add_feed_expect_err() {
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
-    let query = PriceQuery::new( ("DEN1".to_string(), "DEN2".to_string()), 60, 50);
+    let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), 60, 50);
     let expected_err = market.get(&deps.storage, ts, query).unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
 }
@@ -112,10 +110,9 @@ fn marketprice_add_feed() {
         .unwrap();
     let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), 60, 50);
     let err = market.get(&deps.storage, ts, query).unwrap_err();
-    assert_eq!(err, PriceFeedsError::NoPrice {  });
+    assert_eq!(err, PriceFeedsError::NoPrice {});
 
     let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), 60, 1);
     let price_resp = market.get(&deps.storage, ts, query).unwrap();
     assert_eq!(price_resp.price().to_string(), "0.5".to_string());
-
 }

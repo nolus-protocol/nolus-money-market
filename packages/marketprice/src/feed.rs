@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use cosmwasm_std::{Addr, Decimal256, Timestamp};
 use schemars::JsonSchema;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::market_price::PriceFeedsError;
 
@@ -13,11 +13,15 @@ pub type DenomPair = (Denom, Denom);
 pub struct Observation {
     feeder_addr: Addr,
     time: Timestamp,
-    price: Decimal256
+    price: Decimal256,
 }
 impl Observation {
     pub fn new(feeder_addr: Addr, time: Timestamp, price: Decimal256) -> Observation {
-        Observation { feeder_addr, time, price  }
+        Observation {
+            feeder_addr,
+            time,
+            price,
+        }
     }
     pub fn price(&self) -> Decimal256 {
         self.price
@@ -26,44 +30,48 @@ impl Observation {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct PriceFeed {
-    observations: Vec<Observation>
+    observations: Vec<Observation>,
 }
 
 impl PriceFeed {
     pub fn new(new_feed: Observation) -> PriceFeed {
-        PriceFeed { observations: vec![new_feed]  }
-
+        PriceFeed {
+            observations: vec![new_feed],
+        }
     }
 
     pub fn update(&mut self, new_feed: Observation, price_feed_period: u64) {
         // drop all feeds older than the required refresh time
-        self.observations.retain(|f| {
-            !PriceFeed::is_old_feed(new_feed.time, f.time, price_feed_period)
-        });
+        self.observations
+            .retain(|f| !PriceFeed::is_old_feed(new_feed.time, f.time, price_feed_period));
 
         self.observations.push(new_feed);
     }
 
-
-    // provide no price for a pair if there are no feeds from at least configurable percentage * <number_of_whitelisted_feeders> 
+    // provide no price for a pair if there are no feeds from at least configurable percentage * <number_of_whitelisted_feeders>
     // in a configurable period T in seconds
-    // provide the last price for a requested pair unless the previous condition is met. 
-    pub fn get_price(&self, time_now: Timestamp, price_feed_period: u64, required_feeders_cnt: usize) -> Result<Observation, PriceFeedsError> {
+    // provide the last price for a requested pair unless the previous condition is met.
+    pub fn get_price(
+        &self,
+        time_now: Timestamp,
+        price_feed_period: u64,
+        required_feeders_cnt: usize,
+    ) -> Result<Observation, PriceFeedsError> {
         let res = self.observations.last().cloned();
         let last_feed = match res {
             Some(f) => f,
-            None => return Err(PriceFeedsError::NoPrice{}),
+            None => return Err(PriceFeedsError::NoPrice {}),
         };
-        
+
         // check if last reported feed is older than the required refresh time
         if PriceFeed::is_old_feed(time_now, last_feed.time, price_feed_period) {
-            return Err(PriceFeedsError::NoPrice{})
+            return Err(PriceFeedsError::NoPrice {});
         }
 
         if !self.has_enough_feeders(required_feeders_cnt) {
-            return Err(PriceFeedsError::NoPrice{})
+            return Err(PriceFeedsError::NoPrice {});
         }
-        
+
         Ok(last_feed)
     }
 
@@ -78,10 +86,6 @@ impl PriceFeed {
     }
 
     fn filter_uniq(vec: &[Observation]) -> HashSet<&Addr> {
-        vec.iter()
-            .map(|o| &o.feeder_addr)
-            .collect::<HashSet<_>>()
+        vec.iter().map(|o| &o.feeder_addr).collect::<HashSet<_>>()
     }
 }
-
-

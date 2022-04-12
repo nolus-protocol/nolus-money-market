@@ -1,12 +1,10 @@
-use cosmwasm_std::{Decimal256, StdResult, StdError, Addr, Storage, Timestamp};
+use cosmwasm_std::{Addr, Decimal256, StdError, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::feed::{Denom, PriceFeed, Observation, DenomPair};
-
-
+use crate::feed::{Denom, DenomPair, Observation, PriceFeed};
 
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
@@ -18,11 +16,19 @@ pub struct PriceResponse {
 pub struct PriceQuery {
     denom_pair: DenomPair,
     price_feed_period: u64,
-    required_feeders_cnt: usize
+    required_feeders_cnt: usize,
 }
 impl PriceQuery {
-    pub fn new(denom_pair: DenomPair, price_feed_period: u64, required_feeders_cnt: usize) -> PriceQuery {
-        PriceQuery { denom_pair, price_feed_period, required_feeders_cnt  }
+    pub fn new(
+        denom_pair: DenomPair,
+        price_feed_period: u64,
+        required_feeders_cnt: usize,
+    ) -> PriceQuery {
+        PriceQuery {
+            denom_pair,
+            price_feed_period,
+            required_feeders_cnt,
+        }
     }
 }
 
@@ -50,15 +56,22 @@ impl<'m> PriceFeeds<'m> {
         PriceFeeds(Map::new(namespace))
     }
 
-    pub fn get(&self, 
-        storage: &dyn Storage, 
+    pub fn get(
+        &self,
+        storage: &dyn Storage,
         current_block_time: Timestamp,
-        query: PriceQuery) -> Result<Observation, PriceFeedsError> {
-
-        let res = self.0.load(storage, (query.denom_pair.0, query.denom_pair.1));
+        query: PriceQuery,
+    ) -> Result<Observation, PriceFeedsError> {
+        let res = self
+            .0
+            .load(storage, (query.denom_pair.0, query.denom_pair.1));
         match res {
-            Ok(last_feed) => last_feed.get_price(current_block_time, query.price_feed_period, query.required_feeders_cnt),
-            Err(_) => Err(PriceFeedsError::NoPrice{}),
+            Ok(last_feed) => last_feed.get_price(
+                current_block_time,
+                query.price_feed_period,
+                query.required_feeders_cnt,
+            ),
+            Err(_) => Err(PriceFeedsError::NoPrice {}),
         }
     }
 
@@ -69,28 +82,27 @@ impl<'m> PriceFeeds<'m> {
         sender_raw: Addr,
         base: Denom,
         prices: Vec<(Denom, Decimal256)>,
-        price_feed_period: u64
+        price_feed_period: u64,
     ) -> Result<(), PriceFeedsError> {
-      
         for price in prices {
             let quote: String = price.0;
             let price: Decimal256 = price.1;
 
             let update_market_price = |old: Option<PriceFeed>| -> StdResult<PriceFeed> {
-                let new_feed = Observation::new(sender_raw.clone(), current_block_time, price );
+                let new_feed = Observation::new(sender_raw.clone(), current_block_time, price);
                 match old {
                     Some(mut feed) => {
-                        feed.update( new_feed, price_feed_period);
+                        feed.update(new_feed, price_feed_period);
                         Ok(feed)
-                    },
+                    }
                     None => Ok(PriceFeed::new(new_feed)),
                 }
             };
-    
-            self.0.update(storage, (base.clone(), quote), update_market_price)?;
+
+            self.0
+                .update(storage, (base.clone(), quote), update_market_price)?;
         }
-    
+
         Ok(())
     }
 }
-

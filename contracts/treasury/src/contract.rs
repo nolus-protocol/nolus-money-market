@@ -1,8 +1,8 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::{entry_point, DepsMut, Env, MessageInfo, Response};
-use cw2::{set_contract_version,get_contract_version};
+use cw2::{get_contract_version, set_contract_version};
 
-use semver::{Version};
+use semver::Version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};

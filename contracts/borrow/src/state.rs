@@ -1,9 +1,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::ContractError;
 use cosmwasm_std::{Addr, Decimal256, Storage, Uint256};
 use cw_storage_plus::{Item, Map};
-use crate::ContractError;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct State {
@@ -14,10 +14,11 @@ pub struct State {
 pub type InstantiateReplyId = u64;
 
 pub const CONFIG: Item<Config> = Item::new("config");
-pub const INSTANTIATE_REPLY_IDS: InstantiateReplyIdSeq = InstantiateReplyIdSeq::new("instantiate_reply_ids");
-pub const PENDING_INSTANCE_CREATIONS: Map<InstantiateReplyId, Addr> = Map::new("pending_instance_creations");
+pub const INSTANTIATE_REPLY_IDS: InstantiateReplyIdSeq =
+    InstantiateReplyIdSeq::new("instantiate_reply_ids");
+pub const PENDING_INSTANCE_CREATIONS: Map<InstantiateReplyId, Addr> =
+    Map::new("pending_instance_creations");
 pub const LOANS: Map<&Addr, Addr> = Map::new("loans");
-
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {

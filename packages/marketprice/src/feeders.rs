@@ -1,11 +1,10 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{Addr, Deps, StdResult, StdError, DepsMut};
+use cosmwasm_std::{Addr, Deps, DepsMut, StdError, StdResult};
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-
 
 /// Errors returned from Admin
 #[derive(Error, Debug, PartialEq)]
@@ -34,17 +33,16 @@ impl<'f> PriceFeeders<'f> {
 
     pub fn get(&self, deps: Deps) -> StdResult<HashSet<Addr>> {
         let addrs = self.0.load(deps.storage)?;
-        Ok( addrs )
+        Ok(addrs)
     }
 
     pub fn is_registered(&self, deps: Deps, address: &Addr) -> StdResult<bool> {
         let addrs = self.0.load(deps.storage)?;
-        Ok( addrs.contains(address) )
+        Ok(addrs.contains(address))
     }
 
     pub fn register(&self, deps: DepsMut, address: Addr) -> Result<(), PriceFeedersError> {
-
-        let add_new_address = |mut addrs:HashSet<Addr>| -> StdResult<HashSet<Addr>> {
+        let add_new_address = |mut addrs: HashSet<Addr>| -> StdResult<HashSet<Addr>> {
             addrs.insert(address.clone());
             Ok(addrs)
         };
@@ -55,12 +53,11 @@ impl<'f> PriceFeeders<'f> {
                 let mut empty = HashSet::new();
                 empty.insert(address);
                 self.0.save(deps.storage, &empty)?
-            },
+            }
             Some(_) => {
                 self.0.update(deps.storage, add_new_address)?;
             }
         }
-
 
         Ok(())
     }
@@ -75,7 +72,3 @@ pub struct FeedersResponse {
 pub struct FeederResponse {
     pub exists: bool,
 }
-
-
-
-
