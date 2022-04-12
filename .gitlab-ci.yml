@@ -22,7 +22,7 @@ prep-version:check:
       then
         echo "BUILD_NOLUS_VERSION=true" >> build_version.env ;
       else
-        echo "skip"
+        echo "BUILD_NOLUS_VERSION=false" >> build_version.env ;
       fi
   artifacts:
     reports:
