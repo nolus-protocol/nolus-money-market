@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euxo pipefail
 
+ROOT_DIR=$(pwd)
 ARTIFACT_BIN="nolus.tar.gz"
 NOLUS_DEV_NET="https://net-dev.nolus.io:26612"
 ACCOUNTS_DIR="$(pwd)/accounts"
@@ -19,12 +20,25 @@ deployContract() {
         mkdir "contracts-addresses"
     fi
 
+    if [[ -d "contracts-addresses/$1" ]]; then
+        rm -rf contracts-addresses/$1
+    fi
+
+    cd contracts/$1
+    cargo schema
+
+    mkdir $ROOT_DIR/contracts-addresses/$1
+    cp -R schema $ROOT_DIR/contracts-addresses/$1
+
+
 #CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
-PAIR=$(cat <<-EOF
+INFO=$(cat <<-EOF
 CODE_ID=${CODE_ID}
 EOF
 )
-echo "$PAIR" > "contracts-addresses/$1"
+echo "$INFO" > "$ROOT_DIR/contracts-addresses/$1/info"
+
+cd $ROOT_DIR
 }
 
 
@@ -53,7 +67,7 @@ echo 'A' | unzip artifacts.zip
 
 # deploy all contracts
 
-# if we need CONTRACT_ADDRESS var we send init msg also, to deployContract:
+# if we need CONTRACT_ADDRESS var we will send init msg to deployContract():
 #INIT_MSG_ORACLE='{"base_asset":"ust","price_feed_period":60,"feeders_percentage_needed":50}'
 deployContract "oracle"
 deployContract "loan"
