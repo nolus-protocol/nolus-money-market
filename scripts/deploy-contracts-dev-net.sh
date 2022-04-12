@@ -16,19 +16,19 @@ deployContract() {
     #  sleep 6
     #CONTRACT_ADDRESS=$(nolusd query wasm list-contract-by-code $CODE_ID --node $NOLUS_DEV_NET --output json | jq -r '.contracts[-1]')
 
-    if [[ ! -e "contracts-addresses" ]]; then
-        mkdir "contracts-addresses"
+    if [[ ! -e "contracts-results" ]]; then
+        mkdir "contracts-results"
     fi
 
-    if [[ -d "contracts-addresses/$1" ]]; then
-        rm -rf contracts-addresses/$1
+    if [[ -d "contracts-results/$1" ]]; then
+        rm -rf contracts-results/$1
     fi
 
     cd contracts/$1
     cargo schema
 
-    mkdir $ROOT_DIR/contracts-addresses/$1
-    cp -R schema $ROOT_DIR/contracts-addresses/$1
+    mkdir $ROOT_DIR/contracts-results/$1
+    cp -R schema $ROOT_DIR/contracts-results/$1
 
 
 #CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
@@ -36,7 +36,7 @@ INFO=$(cat <<-EOF
 CODE_ID=${CODE_ID}
 EOF
 )
-echo "$INFO" > "$ROOT_DIR/contracts-addresses/$1/info"
+echo "$INFO" > "$ROOT_DIR/contracts-results/$1/info"
 
 cd $ROOT_DIR
 }
