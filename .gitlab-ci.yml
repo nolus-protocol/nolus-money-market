@@ -14,7 +14,6 @@ stages:
         - target/
 
 #  [[ $CI_COMMIT_REF_PROTECTED == "true" ]]  &&  [[ $CI_COMMIT_TAG =~ /^v?[0-9]+[.][0-9]+([.][0-9]+)?$/  ]]
-
 .default_rules:
   rules:
     - if: '$CI_COMMIT_TAG != null && $CI_COMMIT_REF_PROTECTED == "true"'
