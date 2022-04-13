@@ -76,8 +76,8 @@ curl --output artifacts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "https://gitlab
 echo 'A' | unzip artifacts.zip
 
 # Deploy or migrate contracts
-CONTRACTS_VERSION=$(curl --header "$TOKEN_TYPE: $TOKEN_VALUE" "https://gitlab-nomo.credissimo.net/api/v4/projects/8/repository/tags" | jq '.[0].name' | tr -d '"')
-
+CONTRACTS_VERSION=$(curl --header "$TOKEN_TYPE: $TOKEN_VALUE" "https://gitlab-nomo.credissimo.net/api/v4/projects/8/repository/tags" | jq '.[1].name' | tr -d '"')
+echo CONTRACTS_VERSION
   if [[ -d "last-contracts-version" ]]; then
       rm -rf last-contracts-version
   fi
