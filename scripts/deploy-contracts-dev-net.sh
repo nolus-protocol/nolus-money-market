@@ -4,10 +4,11 @@ set -euxo pipefail
 ROOT_DIR=$(pwd)
 BINARY_ARTIFACT_BIN="nolus.tar.gz"
 CONTRACTS_ARTIFACT_BIN="contracts.tar.gz"
-
 NOLUS_DEV_NET="https://net-dev.nolus.io:26612"
+GITLAB_API="https://gitlab-nomo.credissimo.net/api/v4"
 ACCOUNTS_DIR="$(pwd)/accounts"
 export TXFLAG="--gas-prices 0.025unolus --gas auto --gas-adjustment 1.3 -y --home $ACCOUNTS_DIR --node $NOLUS_DEV_NET"
+
 source msgs.env #load init msgs of contracts as env variables
 
 deployContract() {
@@ -67,28 +68,26 @@ fi
 
 VERSION=$(curl --silent "$NOLUS_DEV_NET/abci_info" | jq '.result.response.version' | tr -d '"')
 
-curl --output binary.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "https://gitlab-nomo.credissimo.net/api/v4/projects/3/jobs/artifacts/v$VERSION/download?job=build-binary"
+curl --output binary.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/3/jobs/artifacts/v$VERSION/download?job=build-binary"
 echo 'A' | unzip binary.zip
 tar -xf $BINARY_ARTIFACT_BIN
 export PATH=$(pwd):$PATH
 
-curl --output artifacts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "https://gitlab-nomo.credissimo.net/api/v4/projects/3/jobs/artifacts/v$VERSION/download?job=setup-dev-network"
+curl --output artifacts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/3/jobs/artifacts/v$VERSION/download?job=setup-dev-network"
 echo 'A' | unzip artifacts.zip
 
-# Deploy or migrate contracts
-CONTRACTS_VERSION=$(curl --header "$TOKEN_TYPE: $TOKEN_VALUE" "https://gitlab-nomo.credissimo.net/api/v4/projects/8/repository/tags" | jq '.[1].name' | tr -d '"')
-echo CONTRACTS_VERSION
-  if [[ -d "last-contracts-version" ]]; then
-      rm -rf last-contracts-version
-  fi
+# # Deploy or migrate contracts
+# CONTRACTS_VERSION=$(curl --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/repository/tags" | jq '.[1].name' | tr -d '"')
+#   if [[ -d "last-contracts-version" ]]; then
+#       rm -rf last-contracts-version
+#   fi
 
-mkdir last-contracts-version
-cd last-contracts-version
-curl --output contracts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "https://gitlab-nomo.credissimo.net/api/v4/projects/8/jobs/artifacts/$CONTRACTS_VERSION/download?job=deploy:cargo"
-echo 'A' | unzip contracts.zip
-tar -xf $CONTRACTS_ARTIFACT_BIN
-cd $ROOT_DIR
-
+# mkdir last-contracts-version && cd $_
+# # cd last-contracts-version
+# curl --output contracts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/jobs/artifacts/$CONTRACTS_VERSION/download?job=deploy:cargo"
+# echo 'A' | unzip contracts.zip
+# tar -xf $CONTRACTS_ARTIFACT_BIN
+# cd $ROOT_DIR
 
 deployContract "oracle" ${ORACLE_MSG}
 deployContract "borrow" ${BORROW_MSG}
