@@ -86,7 +86,7 @@ deploy:cargo:
     - echo 'y' | apt install jq
   script:
     - /bin/bash ./scripts/deploy-contracts-dev-net.sh
-    - tar -czvf $CONTRACTS_INFO_DIR contracts-addresses
+    - tar -czvf $CONTRACTS_INFO_DIR contracts-results
   artifacts:
     name: "contracts-$CI_COMMIT_REF_SLUG"
     paths:

@@ -24,7 +24,7 @@ deployContract() {
     else # else this is an existing contract, so we migrate it
         source last-contracts-version/contracts-addresses/$1/info.env
         echo "migr"
-        # nolusd tx wasm migrate ${CONTRACT_ADDRESS} $NEW_CODE_ID [json_encoded_migration_args] --from treasury
+        # nolusd tx wasm migrate ${CONTRACT_ADDRESS} $NEW_CODE_ID $3 --from treasury
     fi
 
     # prepare the results in contracts-results dir to be saved as artifact
@@ -89,7 +89,7 @@ echo 'A' | unzip artifacts.zip
 # tar -xf $CONTRACTS_ARTIFACT_BIN
 # cd $ROOT_DIR
 
-deployContract "oracle" ${ORACLE_MSG}
-deployContract "borrow" ${BORROW_MSG}
-deployContract "loan" ${LOAN_MSG}
-# deployContract "treasury" ${TREASURY_MSG}
+deployContract "oracle" ${ORACLE_INIT_MSG} ${ORACLE_MIGRATE_MSG}
+deployContract "borrow" ${BORROW_INIT_MSG} ${BORROW_MIGRATE_MSG}
+deployContract "loan" ${LOAN_INIT_MSG} ${LOAN_MIGRATE_MSG}
+# deployContract "treasury" ${TREASURY_INIT_MSG} ${TREASURY_MIGRATE_MSG}
