@@ -26,8 +26,6 @@ deployContract() {
     RES=$(nolusd tx wasm store artifacts/$1.wasm --from treasury ${TXFLAG} --output json -b block)
     NEW_CODE_ID=$(echo $RES | jq -r '.logs[0].events[-1].attributes[0].value')
 
-    ADMIN_ADDRESS=$(nolusd keys show treasury -a) # treasury
-
     # if there is no $1 dir in the latest version of deploy-contracts artifact -> this is a new contract, so we instantiate it
    # if [[ ! -e "last_contracts_version/contracts-results/$1" ]]; then
         nolusd tx wasm instantiate $NEW_CODE_ID "$2" --from treasury --label "$1" ${TXFLAG} --admin $ADMIN_ADDRESS
@@ -71,6 +69,8 @@ echo 'A' | unzip binary.zip
 tar -xf $BINARY_ARTIFACT_BIN
 export PATH=$(pwd):$PATH
 
+ADMIN_ADDRESS=$(nolusd keys show treasury -a --home $ACCOUNTS_DIR) # treasury
+
 curl --output artifacts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/3/jobs/artifacts/v$VERSION/download?job=setup-dev-network"
 echo 'A' | unzip artifacts.zip
 
@@ -84,7 +84,7 @@ echo 'A' | unzip artifacts.zip
 # curl --output contracts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/jobs/artifacts/$CONTRACTS_VERSION/download?job=deploy:cargo"
 # echo 'A' | unzip contracts.zip
 # tar -xf $CONTRACTS_ARTIFACT_BIN
-# cd $ROOT_DIR
+cd $ROOT_DIR
 
 deployContract "oracle" ${ORACLE_INIT_MSG} ${ORACLE_MIGRATE_MSG}
 deployContract "borrow" ${BORROW_INIT_MSG} ${BORROW_MIGRATE_MSG}
