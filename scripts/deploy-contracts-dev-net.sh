@@ -16,16 +16,17 @@ deployContract() {
     RES=$(nolusd tx wasm store artifacts/$1.wasm --from treasury ${TXFLAG} --output json -b block)
     NEW_CODE_ID=$(echo $RES | jq -r '.logs[0].events[-1].attributes[0].value')
 
+    ADMIN_ADDRESS=$(nolusd keys show treasury -a) # treasury
+
     # if there is no $1 dir in the latest version of deploy-contracts artifact -> this is a new contract, so we instantiate it
-    if [[ ! -e "xxxxxlast-contracts-version/contracts-results/$1" ]]; then
-        nolusd tx wasm instantiate $NEW_CODE_ID "$2" --from treasury --label "$1" ${TXFLAG} --no-admin
+    # if [[ ! -e "last_contracts_version/contracts-results/$1" ]]; then
+        nolusd tx wasm instantiate $NEW_CODE_ID "$2" --from treasury --label "$1" ${TXFLAG} --admin $ADMIN_ADDRESS
         sleep 6
         CONTRACT_ADDRESS=$(nolusd query wasm list-contract-by-code $NEW_CODE_ID --node $NOLUS_DEV_NET --output json | jq -r '.contracts[-1]')
-    else # else this is an existing contract, so we migrate it
-        source last-contracts-version/contracts-addresses/$1/info.env
-        echo "migr"
-        # nolusd tx wasm migrate ${CONTRACT_ADDRESS} $NEW_CODE_ID $3 --from treasury
-    fi
+    # else # else this is an existing contract, so we migrate it
+    #     source last_contracts_version/contracts-results/$1/info.env
+    #     $(echo 'y' | nolusd tx wasm migrate ${CONTRACT_ADDRESS} $NEW_CODE_ID $3 --from treasury --home $ACCOUNTS_DIR --node $NOLUS_DEV_NET)
+    # fi
 
     # prepare the results in contracts-results dir to be saved as artifact
     if [[ ! -e "contracts-results" ]]; then
@@ -60,10 +61,12 @@ if [[ $# -eq 0 ]]; then
   else
     TOKEN_TYPE="JOB-TOKEN"
     TOKEN_VALUE="$CI_JOB_TOKEN"
+    TAG_NAME='.[1].name'
   fi
 else
   TOKEN_TYPE="PRIVATE-TOKEN"
   TOKEN_VALUE="$1"
+  TAG_NAME='.[0].name'
 fi
 
 VERSION=$(curl --silent "$NOLUS_DEV_NET/abci_info" | jq '.result.response.version' | tr -d '"')
@@ -76,14 +79,14 @@ export PATH=$(pwd):$PATH
 curl --output artifacts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/3/jobs/artifacts/v$VERSION/download?job=setup-dev-network"
 echo 'A' | unzip artifacts.zip
 
-# # Deploy or migrate contracts
-# CONTRACTS_VERSION=$(curl --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/repository/tags" | jq '.[1].name' | tr -d '"')
-#   if [[ -d "last-contracts-version" ]]; then
-#       rm -rf last-contracts-version
-#   fi
+# Deploy or migrate contracts
+CONTRACTS_VERSION=$(curl --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/repository/tags" | jq $TAG_NAME | tr -d '"')
+  echo $CONTRACTS_VERSION
+  if [[ -d "last-contracts-version" ]]; then
+      rm -rf last-contracts-version
+  fi
 
 # mkdir last-contracts-version && cd $_
-# # cd last-contracts-version
 # curl --output contracts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/jobs/artifacts/$CONTRACTS_VERSION/download?job=deploy:cargo"
 # echo 'A' | unzip contracts.zip
 # tar -xf $CONTRACTS_ARTIFACT_BIN
@@ -92,4 +95,4 @@ echo 'A' | unzip artifacts.zip
 deployContract "oracle" ${ORACLE_INIT_MSG} ${ORACLE_MIGRATE_MSG}
 deployContract "borrow" ${BORROW_INIT_MSG} ${BORROW_MIGRATE_MSG}
 deployContract "loan" ${LOAN_INIT_MSG} ${LOAN_MIGRATE_MSG}
-# deployContract "treasury" ${TREASURY_INIT_MSG} ${TREASURY_MIGRATE_MSG}
+deployContract "treasury" ${TREASURY_INIT_MSG} ${TREASURY_MIGRATE_MSG}
