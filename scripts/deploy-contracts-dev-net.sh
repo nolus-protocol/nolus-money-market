@@ -69,10 +69,10 @@ echo 'A' | unzip binary.zip
 tar -xf $BINARY_ARTIFACT_BIN
 export PATH=$(pwd):$PATH
 
-ADMIN_ADDRESS=$(nolusd keys show treasury -a --home $ACCOUNTS_DIR) # treasury
-
 curl --output artifacts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/3/jobs/artifacts/v$VERSION/download?job=setup-dev-network"
 echo 'A' | unzip artifacts.zip
+
+ADMIN_ADDRESS=$(nolusd keys show treasury --address --home $ACCOUNTS_DIR)
 
 # # Deploy or migrate contracts
 # CONTRACTS_VERSION=$(curl --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/repository/tags" | jq '.[1].name' | tr -d '"')
