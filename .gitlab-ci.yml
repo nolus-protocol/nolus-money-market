@@ -18,33 +18,33 @@ stages:
   rules:
     - if: $CI_COMMIT_TAG != null && $CI_COMMIT_REF_PROTECTED == "true"
 
-# schema:cargo:
-#   <<: *caching_rust
-#   stage: test
-#   script:
-#     - cargo install cargo-workspaces
-#     - cargo workspaces exec --no-bail cargo run --example schema
+schema:cargo:
+  <<: *caching_rust
+  stage: test
+  script:
+    - cargo install cargo-workspaces
+    - cargo workspaces exec --no-bail cargo run --example schema
 
-# # Use cargo to test the project
-# test:cargo:
-#   <<: *caching_rust
-#   stage: test
-#   coverage: '/^\d+.\d+% coverage/'
-#   script:
-#     - rustc --version && cargo --version  # Print version info for debugging
-#     - cargo install cargo-tarpaulin
-#     - cargo tarpaulin --out Xml
-#   artifacts:
-#     reports:
-#       cobertura:
-#         - cobertura.xml
+# Use cargo to test the project
+test:cargo:
+  <<: *caching_rust
+  stage: test
+  coverage: '/^\d+.\d+% coverage/'
+  script:
+    - rustc --version && cargo --version  # Print version info for debugging
+    - cargo install cargo-tarpaulin
+    - cargo tarpaulin --out Xml
+  artifacts:
+    reports:
+      cobertura:
+        - cobertura.xml
 
-# lint:cargo:
-#   <<: *caching_rust
-#   stage: test
-#   script:
-#     - rustup component add clippy
-#     - cargo clippy --workspace --verbose --all-targets -- -D warnings
+lint:cargo:
+  <<: *caching_rust
+  stage: test
+  script:
+    - rustup component add clippy
+    - cargo clippy --workspace --verbose --all-targets -- -D warnings
 
 build:cargo:
   <<: *caching_rust
