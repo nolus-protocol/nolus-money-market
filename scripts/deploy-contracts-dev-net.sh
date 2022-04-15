@@ -2,17 +2,15 @@
 set -euxo pipefail
 
 LAST_TAG="test12"
-  TOKEN_TYPE="PRIVATE-TOKEN"
-  TOKEN_VALUE="$1"
 
-# # the script should only be executed by ci pipeline
-# if [[ -z ${CI_JOB_TOKEN+x} ]]; then
-#   echo "Error: there is no CI_JOB token"
-#   exit 1
-# else
-#   TOKEN_TYPE="JOB-TOKEN"
-#   TOKEN_VALUE="$CI_JOB_TOKEN"
-# fi
+# the script should only be executed by ci pipeline
+if [[ -z ${CI_JOB_TOKEN+x} ]]; then
+  echo "Error: there is no CI_JOB token"
+  exit 1
+else
+  TOKEN_TYPE="JOB-TOKEN"
+  TOKEN_VALUE="$CI_JOB_TOKEN"
+fi
 
 ROOT_DIR=$(pwd)
 BINARY_ARTIFACT_BIN="nolus.tar.gz"
