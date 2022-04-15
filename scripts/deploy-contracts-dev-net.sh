@@ -1,16 +1,18 @@
 #!/bin/bash
 set -euxo pipefail
 
-LAST_TAG="teste"
+LAST_TAG="test12"
+  TOKEN_TYPE="PRIVATE-TOKEN"
+  TOKEN_VALUE="$1"
 
-# the script should only be executed by ci pipeline
-if [[ -z ${CI_JOB_TOKEN+x} ]]; then
-  echo "Error: there is no CI_JOB token"
-  exit 1
-else
-  TOKEN_TYPE="JOB-TOKEN"
-  TOKEN_VALUE="$CI_JOB_TOKEN"
-fi
+# # the script should only be executed by ci pipeline
+# if [[ -z ${CI_JOB_TOKEN+x} ]]; then
+#   echo "Error: there is no CI_JOB token"
+#   exit 1
+# else
+#   TOKEN_TYPE="JOB-TOKEN"
+#   TOKEN_VALUE="$CI_JOB_TOKEN"
+# fi
 
 ROOT_DIR=$(pwd)
 BINARY_ARTIFACT_BIN="nolus.tar.gz"
@@ -29,12 +31,12 @@ deployContract() {
     NEW_CODE_ID=$(echo $RES | jq -r '.logs[0].events[-1].attributes[0].value')
 
     # if there is no $1 dir in the latest version of deploy-contracts artifact -> this is a new contract, so we instantiate it
-   if [[ ! -e "last_contracts_version/contracts-results/$1" ]]; then
+   if [[ ! -e "last-contracts-version/contracts-results/$1" ]]; then
         nolusd tx wasm instantiate $NEW_CODE_ID "$2" --from treasury --label "$1" ${TXFLAG} --admin $ADMIN_ADDRESS
         sleep 6
         CONTRACT_ADDRESS=$(nolusd query wasm list-contract-by-code $NEW_CODE_ID --node $NOLUS_DEV_NET --output json | jq -r '.contracts[-1]')
     else # else this is an existing contract, so we migrate it
-        source last_contracts_version/contracts-results/$1/info.env
+        source last-contracts-version/contracts-results/$1/info.env
         echo "migration"
     # TO DO: when we have migration msgs:
     #   $(echo 'y' | nolusd tx wasm migrate ${CONTRACT_ADDRESS} $NEW_CODE_ID $3 --from treasury --home $ACCOUNTS_DIR --node $NOLUS_DEV_NET)
