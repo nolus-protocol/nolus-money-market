@@ -78,7 +78,8 @@ ADMIN_ADDRESS=$(nolusd keys show treasury --address --home $ACCOUNTS_DIR)
 
 # Deploy or migrate contracts
 
-curl --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/repository/tags"
+CC=$(curl --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/repository/tags")
+echo $CC
 CONTRACTS_VERSION=$(curl --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/repository/tags" | jq -r '.[1].name' | tr -d '"')
   if [[ -d "last-contracts-version" ]]; then
       rm -rf last-contracts-version
