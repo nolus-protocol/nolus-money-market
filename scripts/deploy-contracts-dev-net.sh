@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euxo pipefail
 
+LAST_TAG="teste"
+
 # the script should only be executed by ci pipeline
 if [[ -z ${CI_JOB_TOKEN+x} ]]; then
   echo "Error: there is no CI_JOB token"
@@ -77,16 +79,13 @@ echo 'A' | unzip artifacts.zip
 ADMIN_ADDRESS=$(nolusd keys show treasury --address --home $ACCOUNTS_DIR)
 
 # Deploy or migrate contracts
-
-CC=$(curl --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/repository/tags")
-echo $CC
-CONTRACTS_VERSION=$(curl --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/repository/tags" | jq -r '.[1].name' | tr -d '"')
+# TO DO: CONTRACTS_VERSION=$(curl --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/repository/tags" | jq -r '.[1].name' | tr -d '"')
   if [[ -d "last-contracts-version" ]]; then
       rm -rf last-contracts-version
   fi
 
 mkdir last-contracts-version && cd $_
-curl --output contracts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/jobs/artifacts/$CONTRACTS_VERSION/download?job=deploy:cargo"
+curl --output contracts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/jobs/artifacts/$LAST_TAG/download?job=deploy:cargo"
 echo 'A' | unzip contracts.zip
 tar -xf $CONTRACTS_ARTIFACT_BIN
 cd $ROOT_DIR
