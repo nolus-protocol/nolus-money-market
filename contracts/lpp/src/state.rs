@@ -1,15 +1,15 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Coin, Decimal, Env, QuerierWrapper, StdResult, Timestamp};
+use cosmwasm_std::{Coin, Decimal, Env, QuerierWrapper, StdResult, Timestamp, Uint128};
 use cw_storage_plus::Item;
 
-pub const NANOSECS_IN_YEAR: u64 = 365 * 24 * 60 * 60 * 1000 * 1000 * 1000;
+pub const NANOSECS_IN_YEAR: Uint128 = Uint128::new(365 * 24 * 60 * 60 * 1000 * 1000 * 1000);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct State {
-    pub total_principal_due: Coin,
-    pub total_last_interest: Coin,
+    pub total_principal_due: Uint128,
+    pub total_last_interest: Uint128,
     pub annual_interest_rate: Decimal,
     pub last_update_time: Timestamp,
 }
