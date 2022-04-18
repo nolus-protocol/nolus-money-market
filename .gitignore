@@ -17,12 +17,11 @@ artifacts
 **/schema
 
 # Deploying process
-artifacts.zip
+setup-dev-network.zip
 nolus.tar.gz
-binary.zip
+build-binary.zip
 accounts
 nolusd
 contracts-results
 last-contracts-version
 target.tar.gz
-contracts.tar.gz

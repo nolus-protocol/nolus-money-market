@@ -1,9 +1,6 @@
 #!/bin/bash
 set -euxo pipefail
 
-LAST_TAG="test12"
-
-# the script should only be executed by ci pipeline
 if [[ -z ${CI_JOB_TOKEN+x} ]]; then
   echo "Error: there is no CI_JOB token"
   exit 1
@@ -20,41 +17,36 @@ GITLAB_API="https://gitlab-nomo.credissimo.net/api/v4"
 ACCOUNTS_DIR="$(pwd)/accounts"
 export TXFLAG="--gas-prices 0.025unolus --gas auto --gas-adjustment 1.3 -y --home $ACCOUNTS_DIR --node $NOLUS_DEV_NET"
 
-# load msgs of contracts as env variables
 source msgs.env
 
+downloadArtifact() {
+  curl --output $1.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/3/jobs/artifacts/v$2/download?job=$1"
+  echo 'A' | unzip $1.zip
+}
+
 deployContract() {
+  RES=$(nolusd tx wasm store artifacts/$1.wasm --from treasury ${TXFLAG} --output json -b block)
+  NEW_CODE_ID=$(echo $RES | jq -r '.logs[0].events[-1].attributes[0].value')
 
-    RES=$(nolusd tx wasm store artifacts/$1.wasm --from treasury ${TXFLAG} --output json -b block)
-    NEW_CODE_ID=$(echo $RES | jq -r '.logs[0].events[-1].attributes[0].value')
+  nolusd tx wasm instantiate $NEW_CODE_ID "$2" --from treasury --label "$1" ${TXFLAG} --no-admin
+  sleep 6
+  CONTRACT_ADDRESS=$(nolusd query wasm list-contract-by-code $NEW_CODE_ID --node $NOLUS_DEV_NET --output json | jq -r '.contracts[-1]')
 
-    # if there is no $1 dir in the latest version of deploy-contracts artifact -> this is a new contract, so we instantiate it
-   if [[ ! -e "last-contracts-version/contracts-results/$1" ]]; then
-        nolusd tx wasm instantiate $NEW_CODE_ID "$2" --from treasury --label "$1" ${TXFLAG} --admin $ADMIN_ADDRESS
-        sleep 6
-        CONTRACT_ADDRESS=$(nolusd query wasm list-contract-by-code $NEW_CODE_ID --node $NOLUS_DEV_NET --output json | jq -r '.contracts[-1]')
-    else # else this is an existing contract, so we migrate it
-        source last-contracts-version/contracts-results/$1/info.env
-        echo "migration"
-    # TO DO: when we have migration msgs:
-    #   $(echo 'y' | nolusd tx wasm migrate ${CONTRACT_ADDRESS} $NEW_CODE_ID $3 --from treasury --home $ACCOUNTS_DIR --node $NOLUS_DEV_NET)
-    fi
+  # prepare the results in contracts-results dir to be saved as artifact
+  if [[ ! -e "contracts-results" ]]; then
+      mkdir "contracts-results"
+  fi
 
-    # prepare the results in contracts-results dir to be saved as artifact
-    if [[ ! -e "contracts-results" ]]; then
-        mkdir "contracts-results"
-    fi
+  if [[ -d "contracts-results/$1" ]]; then
+      rm -rf contracts-results/$1
+  fi
 
-    if [[ -d "contracts-results/$1" ]]; then
-        rm -rf contracts-results/$1
-    fi
+  # generate schema
+  cd contracts/$1
+  cargo schema
 
-    # generate schema
-    cd contracts/$1
-    cargo schema
-
-    mkdir $ROOT_DIR/contracts-results/$1
-    cp -R schema $ROOT_DIR/contracts-results/$1
+  mkdir $ROOT_DIR/contracts-results/$1
+  cp -R schema $ROOT_DIR/contracts-results/$1
 
 INFO=$(cat <<-EOF
 export CONTRACT_ADDRESS=${CONTRACT_ADDRESS}
@@ -62,35 +54,19 @@ export CODE_ID=${NEW_CODE_ID}
 EOF
 )
 echo "$INFO" > "$ROOT_DIR/contracts-results/$1/info.env"
-cd $ROOT_DIR
+  cd $ROOT_DIR
 }
 
 # Download the build-binary and setup-dev-network artifacts from cosmozone
 VERSION=$(curl --silent "$NOLUS_DEV_NET/abci_info" | jq '.result.response.version' | tr -d '"')
 
-curl --output binary.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/3/jobs/artifacts/v$VERSION/download?job=build-binary"
-echo 'A' | unzip binary.zip
+downloadArtifact "setup-dev-network" $VERSION
+downloadArtifact "build-binary" $VERSION
 tar -xf $BINARY_ARTIFACT_BIN
 export PATH=$(pwd):$PATH
 
-curl --output artifacts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/3/jobs/artifacts/v$VERSION/download?job=setup-dev-network"
-echo 'A' | unzip artifacts.zip
-
-ADMIN_ADDRESS=$(nolusd keys show treasury --address --home $ACCOUNTS_DIR)
-
-# Deploy or migrate contracts
-# TO DO: CONTRACTS_VERSION=$(curl --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/repository/tags" | jq -r '.[1].name' | tr -d '"')
-  if [[ -d "last-contracts-version" ]]; then
-      rm -rf last-contracts-version
-  fi
-
-mkdir last-contracts-version && cd $_
-curl --output contracts.zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/8/jobs/artifacts/$LAST_TAG/download?job=deploy:cargo"
-echo 'A' | unzip contracts.zip
-tar -xf $CONTRACTS_ARTIFACT_BIN
-cd $ROOT_DIR
-
-deployContract "oracle" ${ORACLE_INIT_MSG} ${ORACLE_MIGRATE_MSG}
-deployContract "borrow" ${BORROW_INIT_MSG} ${BORROW_MIGRATE_MSG}
-deployContract "loan" ${LOAN_INIT_MSG} ${LOAN_MIGRATE_MSG}
-deployContract "treasury" ${TREASURY_INIT_MSG} ${TREASURY_MIGRATE_MSG}
+# Deploy smart contracts
+deployContract "oracle" ${ORACLE_INIT_MSG}
+deployContract "borrow" ${BORROW_INIT_MSG}
+deployContract "loan" ${LOAN_INIT_MSG}
+deployContract "treasury" ${TREASURY_INIT_MSG}
