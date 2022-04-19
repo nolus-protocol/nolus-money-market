@@ -19,11 +19,22 @@ stages:
 schema:cargo:
   <<: *caching_rust
   stage: test
+  variables:
+    SCHEMA_DIR: "schema.tar.gz"
+  before_script:
+    - apt update && apt install bash
+    - apt install curl
+    - echo 'y' | apt install jq
   script:
     - cargo install cargo-workspaces
     - cargo workspaces exec --no-bail cargo run --example schema
+    - /bin/bash ./scripts/json-schema-generator.sh
+    - tar -czvf $CONTRACTS_INFO_DIR contracts-schema
+  artifacts:
+    name: "schema-$CI_COMMIT_REF_SLUG"
+    paths:
+      - $SCHEMA_DIR
 
-# Use cargo to test the project
 test:cargo:
   <<: *caching_rust
   stage: test
@@ -78,10 +89,6 @@ deploy:cargo:
     - !reference [.default_rules, rules]
   variables:
     CONTRACTS_INFO_DIR: "contracts.tar.gz"
-  before_script:
-    - apt update && apt install bash
-    - apt install curl
-    - echo 'y' | apt install jq
   script:
     - /bin/bash ./scripts/deploy-contracts-dev-net.sh
     - tar -czvf $CONTRACTS_INFO_DIR contracts-results
