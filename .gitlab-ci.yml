@@ -29,7 +29,7 @@ schema:cargo:
     - cargo install cargo-workspaces
     - cargo workspaces exec --no-bail cargo run --example schema
     - /bin/bash ./scripts/json-schema-generator.sh
-    - tar -czvf $CONTRACTS_INFO_DIR contracts-schema
+    - tar -czvf $SCHEMA_DIR contracts-schema
   artifacts:
     name: "schema-$CI_COMMIT_REF_SLUG"
     paths:
