@@ -24,23 +24,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "borrow"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cosmwasm-storage",
- "cw-multi-test",
- "cw-storage-plus 0.13.0",
- "cw-utils",
- "cw2 0.13.0",
- "loan",
- "schemars",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -440,13 +423,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "libc"
-version = "0.2.119"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bf2e165bb3457c8e098ea76f3e3bc9db55f87aa90d52d0e6be741470916aaa4"
-
-[[package]]
-name = "loan"
+name = "lease"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
@@ -459,6 +436,29 @@ dependencies = [
  "serde",
  "thiserror",
 ]
+
+[[package]]
+name = "leaser"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus 0.13.0",
+ "cw-utils",
+ "cw2 0.13.0",
+ "lease",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "libc"
+version = "0.2.119"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1bf2e165bb3457c8e098ea76f3e3bc9db55f87aa90d52d0e6be741470916aaa4"
 
 [[package]]
 name = "marketprice"
@@ -598,6 +598,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "semver"
+version = "1.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d65bd28f48be7196d222d95b9243287f48d27aca604e08497513019ff0502cc4"
+
+[[package]]
 name = "serde"
 version = "1.0.136"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -729,6 +735,21 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-std",
  "cw-storage-plus 0.12.1",
+]
+
+[[package]]
+name = "treasury"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-storage-plus 0.12.1",
+ "cw2 0.12.1",
+ "schemars",
+ "semver",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]
