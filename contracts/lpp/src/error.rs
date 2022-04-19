@@ -9,6 +9,15 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error("Unauthorized contract Id")]
+    ContractId {},
+
+    #[error("No liquidity")]
+    NoLiquidity {},
+
+    #[error("The loan exists")]
+    LoanExists {},
+
     #[error("Denom: {contract_denom:?} vs {query_denom:?}")]
     Denom { contract_denom: String, query_denom: String},
 
