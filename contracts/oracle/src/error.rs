@@ -28,6 +28,6 @@ pub enum ContractError {
     NoAuthorizedFeeders {},
 
     #[error("Invalid alarm notification address: {0:?}")]
-    InvalidAlarmAddess(Addr),
+    InvalidAlarmAddress(Addr),
 
 }

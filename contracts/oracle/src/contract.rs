@@ -181,7 +181,7 @@ fn try_add_alarm(deps: DepsMut, addr: Addr, time: Timestamp) -> Result<Response,
     let valid = deps
         .api
         .addr_validate(addr.as_str())
-        .map_err(|_| ContractError::InvalidAlarmAddess(addr))?;
+        .map_err(|_| ContractError::InvalidAlarmAddress(addr))?;
     TIME_ALARMS.add(deps.storage, valid, time)?;
     Ok(Response::new().add_attribute("method", "try_add_alarm"))
 }
