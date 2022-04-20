@@ -1,15 +1,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::ContractError;
+use crate::{msg::InstantiateMsg, ContractError};
 use cosmwasm_std::{Addr, Decimal256, Storage, Uint256};
 use cw_storage_plus::{Item, Map};
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct State {
-    pub count: i32,
-    pub owner: Addr,
-}
 
 pub type InstantiateReplyId = u64;
 
@@ -23,13 +17,58 @@ pub const LOANS: Map<&Addr, Addr> = Map::new("loans");
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
     pub owner: Addr,
-    pub loan_code_id: u64,
+    pub lease_code_id: u64,
     pub lpp_ust_addr: Addr,
-    pub loan_interest_rate_margin: Decimal256,
-    pub loan_max_liability: Decimal256,
-    pub loan_healthy_liability: Decimal256,
+    pub lease_interest_rate_margin: Decimal256,
+    pub lease_max_liability: Decimal256,
+    pub lease_healthy_liability: Decimal256,
+    pub lease_initial_liability: Decimal256,
     pub repayment_period_nano_sec: Uint256,
     pub grace_period_nano_sec: Uint256,
+}
+
+impl Config {
+    pub fn new(sender: Addr, msg: InstantiateMsg) -> Result<Self, ContractError> {
+        Ok(Config {
+            owner: sender,
+            lease_code_id: msg.lease_code_id,
+            lpp_ust_addr: msg.lpp_ust_addr,
+            lease_interest_rate_margin: Decimal256::percent(msg.lease_interest_rate_margin),
+            lease_max_liability: Decimal256::percent(msg.lease_max_liability),
+            lease_healthy_liability: Config::validate_lease_healthy_liability(
+                msg.lease_healthy_liability,
+                msg.lease_max_liability,
+            )?,
+            lease_initial_liability: Config::validate_lease_initial_liability(
+                msg.lease_initial_liability,
+                msg.lease_healthy_liability,
+            )?,
+            repayment_period_nano_sec: msg.repayment_period_nano_sec,
+            grace_period_nano_sec: msg.grace_period_nano_sec,
+        })
+    }
+
+    fn validate_lease_healthy_liability(
+        lease_healthy_liability: u64,
+        lease_max_liability: u64,
+    ) -> Result<Decimal256, ContractError> {
+        if lease_healthy_liability < lease_max_liability {
+            Ok(Decimal256::percent(lease_healthy_liability))
+        } else {
+            Err(ContractError::ValidationError {})
+        }
+    }
+
+    fn validate_lease_initial_liability(
+        lease_initial_liability: u64,
+        lease_healthy_liability: u64,
+    ) -> Result<Decimal256, ContractError> {
+        if lease_initial_liability <= lease_healthy_liability {
+            Ok(Decimal256::percent(lease_initial_liability))
+        } else {
+            Err(ContractError::ValidationError {})
+        }
+    }
 }
 
 pub struct InstantiateReplyIdSeq<'a>(Item<'a, InstantiateReplyId>);

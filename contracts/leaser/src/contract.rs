@@ -25,16 +25,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    let config = Config {
-        owner: info.sender,
-        loan_code_id: msg.loan_code_id,
-        lpp_ust_addr: msg.lpp_ust_addr,
-        loan_interest_rate_margin: msg.loan_interest_rate_margin,
-        loan_max_liability: msg.loan_max_liability,
-        loan_healthy_liability: msg.loan_healthy_liability,
-        repayment_period_nano_sec: msg.repayment_period_nano_sec,
-        grace_period_nano_sec: msg.grace_period_nano_sec,
-    };
+    let config = Config::new(info.sender, msg)?;
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::default())
@@ -60,9 +51,9 @@ pub fn try_borrow(deps: DepsMut, info: MessageInfo) -> Result<Response, Contract
         Response::new().add_submessages(vec![SubMsg::reply_on_success(
             CosmosMsg::Wasm(WasmMsg::Instantiate {
                 admin: None,
-                code_id: config.loan_code_id,
+                code_id: config.lease_code_id,
                 funds: vec![],
-                label: "loan".to_string(),
+                label: "lease".to_string(),
                 msg: to_binary(&LoanInstantiateMsg {
                     owner: info.sender.to_string(),
                 })?,
@@ -105,7 +96,7 @@ fn register_loan(deps: DepsMut, msg_id: u64, loan_addr: Addr) -> Result<Response
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, Decimal256, Uint256};
+    use cosmwasm_std::{coins, from_binary, Uint256};
 
     use super::*;
 
@@ -114,11 +105,12 @@ mod tests {
         let mut deps = mock_dependencies();
 
         let msg = InstantiateMsg {
-            loan_code_id: 1,
+            lease_code_id: 1,
             lpp_ust_addr: Addr::unchecked("test"),
-            loan_interest_rate_margin: Decimal256::one(),
-            loan_max_liability: Decimal256::one(),
-            loan_healthy_liability: Decimal256::one(),
+            lease_interest_rate_margin: 3,
+            lease_max_liability: 80,
+            lease_healthy_liability: 70,
+            lease_initial_liability: 65,
             repayment_period_nano_sec: Uint256::from(123_u64),
             grace_period_nano_sec: Uint256::from(123_u64),
         };
@@ -133,7 +125,7 @@ mod tests {
         let config_response: ConfigResponse = from_binary(&res).unwrap();
         let config = config_response.config;
         assert_eq!("creator", config.owner);
-        assert_eq!(1, config.loan_code_id);
+        assert_eq!(1, config.lease_code_id);
         assert_eq!(Addr::unchecked("test"), config.lpp_ust_addr);
     }
 }

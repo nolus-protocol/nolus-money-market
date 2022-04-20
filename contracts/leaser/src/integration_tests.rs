@@ -2,7 +2,7 @@
 mod tests {
     use crate::helpers::CwTemplateContract;
     use crate::msg::InstantiateMsg;
-    use cosmwasm_std::{Addr, Coin, Decimal256, Empty, Uint128, Uint256};
+    use cosmwasm_std::{Addr, Coin, Empty, Uint128, Uint256};
     use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
 
     pub fn contract_template() -> Box<dyn Contract<Empty>> {
@@ -39,11 +39,12 @@ mod tests {
         let cw_template_id = app.store_code(contract_template());
 
         let msg = InstantiateMsg {
-            loan_code_id: 1,
+            lease_code_id: 1,
             lpp_ust_addr: Addr::unchecked("test"),
-            loan_interest_rate_margin: Decimal256::one(),
-            loan_max_liability: Decimal256::one(),
-            loan_healthy_liability: Decimal256::one(),
+            lease_interest_rate_margin: 3,
+            lease_max_liability: 80,
+            lease_healthy_liability: 70,
+            lease_initial_liability: 65,
             repayment_period_nano_sec: Uint256::from(123_u64),
             grace_period_nano_sec: Uint256::from(123_u64),
         };
