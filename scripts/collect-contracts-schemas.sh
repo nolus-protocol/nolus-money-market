@@ -15,10 +15,8 @@ copyContractSchema() {
       rm -rf "${CONTRACTS_SCHEMA_DIR:?}/$contract_name"
   fi
 
-  cd contracts/"$contract_name"
   mkdir "$ROOT_DIR"/"$CONTRACTS_SCHEMA_DIR"/"$contract_name"
-  cp -R schema "$ROOT_DIR"/"$CONTRACTS_SCHEMA_DIR"/"$contract_name"
-  cd "$ROOT_DIR"
+  cp -R contracts/"$contract_name"/schema "$ROOT_DIR"/"$CONTRACTS_SCHEMA_DIR"/"$contract_name"
 }
 
 # Collect contracts schemas
