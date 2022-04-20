@@ -7,7 +7,7 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, QueryQuoteResponse, QueryBorrowResponse, QueryBorrowOutstandingInterestResponse};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, QueryQuoteResponse, QueryLoanResponse, QueryLoanOutstandingInterestResponse};
 use crate::state::{self, Config, State, Loan, CONFIG, STATE, LOANS, NANOSECS_IN_YEAR};
 
 // version info for migration info
@@ -23,7 +23,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let config = Config::new(msg.denom, msg.loan_code_id);
+    let config = Config::new(msg.denom, msg.lease_code_id);
     CONFIG.save(deps.storage, &config)?;
 
     Ok(Response::new().add_attribute("method", "instantiate"))
@@ -37,11 +37,11 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
 
-	let loan_unchecked = info.sender;
+	let lease_unchecked = info.sender;
 
     match msg {
-        ExecuteMsg::Borrow { amount } => try_borrow(deps, env, loan_unchecked, amount),
-        ExecuteMsg::Repay { amount } => try_repay(loan_unchecked, amount),
+        ExecuteMsg::Loan { amount } => try_loan(deps, env, lease_unchecked, amount),
+        ExecuteMsg::Repay { amount } => try_repay(lease_unchecked, amount),
     }
 }
 
@@ -49,19 +49,19 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::Quote { amount } => to_binary(&query_quote(&deps, &env, amount)?),
-        QueryMsg::Borrow { loan } => to_binary(&query_borrow(loan)?),
-        QueryMsg::BorrowOutstandingInterest {
-            loan,
+        QueryMsg::Loan { lease_addr } => to_binary(&query_loan(lease_addr)?),
+        QueryMsg::LoanOutstandingInterest {
+            lease_addr,
             outstanding_by,
-        } => to_binary(&query_borrow_outstanding_interest(loan, outstanding_by)?),
+        } => to_binary(&query_loan_outstanding_interest(lease_addr, outstanding_by)?),
     }?;
 
 	Ok(res)
 }
 
-fn try_borrow(deps: DepsMut, env: Env, addr: Addr, amount: Coin) -> Result<Response, ContractError> {
+fn try_loan(deps: DepsMut, env: Env, lease_addr: Addr, amount: Coin) -> Result<Response, ContractError> {
 	let config = CONFIG.load(deps.storage)?;
-    let checked_loan_addr = validate_loan_addr(&deps.querier, &config, addr)?;
+    let checked_lease_addr = validate_lease_addr(&deps.querier, &config, lease_addr)?;
     let current_time = env.block.time;
     // let amount = validate_coins(&config, &amount)?;
 
@@ -70,7 +70,7 @@ fn try_borrow(deps: DepsMut, env: Env, addr: Addr, amount: Coin) -> Result<Respo
 		QueryQuoteResponse::NoLiquidity => Err(ContractError::NoLiquidity {}),
     }?;
 
-	if LOANS.has(deps.storage, checked_loan_addr.clone()) {
+	if LOANS.has(deps.storage, checked_lease_addr.clone()) {
 		return Err(ContractError::LoanExists {})
 	}
 
@@ -80,7 +80,7 @@ fn try_borrow(deps: DepsMut, env: Env, addr: Addr, amount: Coin) -> Result<Respo
     	interest_paid_by: current_time,
 	};
 
-	LOANS.save(deps.storage, checked_loan_addr.clone(), &loan)?;
+	LOANS.save(deps.storage, checked_lease_addr.clone(), &loan)?;
 
 	STATE.update(deps.storage, |mut state| -> Result<State, ContractError> {
 
@@ -98,12 +98,12 @@ fn try_borrow(deps: DepsMut, env: Env, addr: Addr, amount: Coin) -> Result<Respo
 	})?;
 
 	let transfer_msg = BankMsg::Send {
-		to_address: checked_loan_addr.to_string(),
+		to_address: checked_lease_addr.to_string(),
 		amount: vec![amount],
 	};
 
 	let response = Response::new()
-    	.add_attribute("method", "try_borrow")
+    	.add_attribute("method", "try_loan")
     	.add_message(transfer_msg);
 
 	Ok(response)
@@ -131,8 +131,8 @@ fn query_quote(deps: &Deps, env: &Env, quote: Coin) -> Result<QueryQuoteResponse
 	} = STATE.load(deps.storage)?;
 
 	// NOTE: Should we be paranoid here and use checked calcs?
-	let delta_t = Uint128::new((env.block.time.nanos() - last_update_time.nanos()).into());
-	let total_interest = total_last_interest + total_principal_due*annual_interest_rate*delta_t/NANOSECS_IN_YEAR;
+	let dt = Uint128::new((env.block.time.nanos() - last_update_time.nanos()).into());
+	let total_interest = total_last_interest + total_principal_due*annual_interest_rate*dt/NANOSECS_IN_YEAR;
 	let total_liability = total_principal_due + quote + total_interest;
 
 	// NOTE: unused formula in the task
@@ -145,14 +145,14 @@ fn query_quote(deps: &Deps, env: &Env, quote: Coin) -> Result<QueryQuoteResponse
 
 }
 
-fn query_borrow(_loan: Addr) -> Result<QueryBorrowResponse, ContractError> {
+fn query_loan(_loan: Addr) -> Result<QueryLoanResponse, ContractError> {
     unimplemented!()
 }
 
-fn query_borrow_outstanding_interest(
+fn query_loan_outstanding_interest(
     _loan: Addr,
     _outstanding_by: Timestamp,
-) -> Result<QueryBorrowOutstandingInterestResponse, ContractError> {
+) -> Result<QueryLoanOutstandingInterestResponse, ContractError> {
     unimplemented!()
 }
 
@@ -166,15 +166,15 @@ fn validate_coins(config: &Config, coins: &Coin) -> Result<Uint128, ContractErro
 	Ok(coins.amount)
 }
 
-fn validate_loan_addr(querier: &QuerierWrapper, config: &Config, addr: Addr) -> Result<Addr, ContractError> {
-    let q_msg = QueryRequest::Wasm(WasmQuery::ContractInfo {contract_addr: addr.to_string()});
+fn validate_lease_addr(querier: &QuerierWrapper, config: &Config, lease_addr: Addr) -> Result<Addr, ContractError> {
+    let q_msg = QueryRequest::Wasm(WasmQuery::ContractInfo {contract_addr: lease_addr.to_string()});
     let q_resp: ContractInfoResponse = querier.query(&q_msg)?;
 
-    if q_resp.code_id != config.loan_code_id.u64() {
+    if q_resp.code_id != config.lease_code_id.u64() {
 		return Err(ContractError::ContractId {})
     }
 
-	Ok(addr)
+	Ok(lease_addr)
 }
 
 #[cfg(test)]
@@ -189,7 +189,7 @@ mod tests {
 
         let msg = InstantiateMsg {
             denom: "ust".into(),
-            loan_code_id: Uint64::new(1000),
+            lease_code_id: Uint64::new(1000),
         };
         let info = mock_info("creator", &coins(1000, "ust"));
 
