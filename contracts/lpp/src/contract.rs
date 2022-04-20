@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, Timestamp, Uint128, Decimal,
-    WasmQuery, QueryRequest, ContractInfoResponse, QuerierWrapper, BankMsg,
+    WasmQuery, QueryRequest, ContractInfoResponse, QuerierWrapper, BankMsg, Storage, coin,
 };
 use cw2::set_contract_version;
 
@@ -49,7 +49,7 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::Quote { amount } => to_binary(&query_quote(&deps, &env, amount)?),
-        QueryMsg::Loan { lease_addr } => to_binary(&query_loan(lease_addr)?),
+        QueryMsg::Loan { lease_addr } => to_binary(&query_loan(deps.storage, lease_addr)?),
         QueryMsg::LoanOutstandingInterest {
             lease_addr,
             outstanding_by,
@@ -139,14 +139,26 @@ fn query_quote(deps: &Deps, env: &Env, quote: Coin) -> Result<QueryQuoteResponse
 	let _utilization = total_liability/(total_liability+balance.amount);
 
 	// NOTE: Do we need percent ratios? Maybe we can use relative values?
-	let quote_interest_rate: Decimal = Decimal::from_ratio(100u128,1u128)*(config.base_interest_rate + config.utilization_optimal*config.addon_optimal_interest_rate);
+	let quote_interest_rate = Decimal::from_ratio(100u128,1u128)*(config.base_interest_rate + config.utilization_optimal*config.addon_optimal_interest_rate);
 
 	Ok(QueryQuoteResponse::QuoteInterestRate(quote_interest_rate))
 
 }
 
-fn query_loan(_loan: Addr) -> Result<QueryLoanResponse, ContractError> {
-    unimplemented!()
+fn query_loan(storage: &dyn Storage, lease_addr: Addr) -> Result<QueryLoanResponse, ContractError> {
+    let config = CONFIG.load(storage)?;
+    match LOANS.may_load(storage, lease_addr)? {
+        Some(Loan {
+            principal_due,
+            annual_interest_rate,
+            interest_paid_by,
+        }) => Ok(QueryLoanResponse::Loan {
+            principal_due: coin(principal_due.u128(), config.denom),
+            annual_interest_rate,
+            interest_paid_by,
+        }),
+        None => Ok(QueryLoanResponse::LoanNotFound),
+    }
 }
 
 fn query_loan_outstanding_interest(
