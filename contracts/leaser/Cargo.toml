@@ -1,7 +1,7 @@
 [package]
-name = "borrow"
+name = "leaser"
 version = "0.1.0"
-authors = ["Nikola Terziev <n.terziev@nolus.io>"]
+authors = ["Nikola Terziev <n.terziev@nolus.io>", "Gancho Manev <g.manev@nolus.io>"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -10,7 +10,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-loan = { path = "../loan", version = "0.1.0", default-features = false, features = ["api"] }
+lease = { path = "../lease", version = "0.1.0", default-features = false, features = ["api"] }
 
 cosmwasm-std = { version = "1.0.0-beta6" }
 cosmwasm-storage = { version = "1.0.0-beta6" }
