@@ -12,9 +12,10 @@ TOKEN_VALUE="$CI_JOB_TOKEN"
 BINARY_ARTIFACT_BIN="nolus.tar.gz"
 NOLUS_DEV_NET="https://net-dev.nolus.io:26612"
 GITLAB_API="https://gitlab-nomo.credissimo.net/api/v4"
+COSMZONE_PROJECT_ID="3"
 ACCOUNTS_DIR="$(pwd)/accounts"
 TXFLAG="--gas-prices 0.025unolus --gas auto --gas-adjustment 1.3 -y --home $ACCOUNTS_DIR --node $NOLUS_DEV_NET"
-CONTRACTS_RESULTS_FILE="contracts-info.json"
+CONTRACTS_RESULTS_FILE="$1"
 
 # init msgs
 ORACLE_INIT_MSG='{"base_asset":"ust","price_feed_period":60,"feeders_percentage_needed":50}'
@@ -24,8 +25,9 @@ TREASURY_INIT_MSG='{}'
 downloadArtifact() {
   local name="$1"
   local version="$2"
+  local project_id="$3"
 
-  curl --output "$name".zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/3/jobs/artifacts/v$version/download?job=$name"
+  curl --output "$name".zip --header "$TOKEN_TYPE: $TOKEN_VALUE" "$GITLAB_API/projects/$project_id/jobs/artifacts/v$version/download?job=$name"
   echo 'A' | unzip "$name".zip
 }
 
@@ -48,8 +50,8 @@ deployContract() {
 
 # Download the build-binary and setup-dev-network artifacts from cosmozone
 VERSION=$(curl --silent "$NOLUS_DEV_NET/abci_info" | jq '.result.response.version' | tr -d '"')
-downloadArtifact "setup-dev-network" "$VERSION"
-downloadArtifact "build-binary" "$VERSION"
+downloadArtifact "setup-dev-network" "$VERSION" "$COSMZONE_PROJECT_ID"
+downloadArtifact "build-binary" "$VERSION" "$COSMZONE_PROJECT_ID"
 tar -xf $BINARY_ARTIFACT_BIN
 
 export PATH;

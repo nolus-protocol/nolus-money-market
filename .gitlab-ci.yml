@@ -20,7 +20,8 @@ schema:cargo:
   <<: *caching_rust
   stage: test
   variables:
-    SCHEMA_DIR: "schemas.tar.gz"
+    SCHEMA_DIR: "contracts-schemas"
+    SCHEMA_DIR_RESULT: "schemas.tar.gz"
   before_script:
     - apt update && apt install bash
     - apt install curl
@@ -28,12 +29,12 @@ schema:cargo:
   script:
     - cargo install cargo-workspaces
     - cargo workspaces exec --no-bail cargo run --example schema
-    - /bin/bash ./scripts/collect-contracts-schemas.sh
-    - tar -czvf $SCHEMA_DIR contracts-schemas
+    - /bin/bash ./scripts/collect-contracts-schemas.sh $SCHEMA_DIR
+    - tar -czvf $SCHEMA_DIR_RESULT $SCHEMA_DIR
   artifacts:
     name: "schemas-$CI_COMMIT_REF_SLUG"
     paths:
-      - $SCHEMA_DIR
+      - $SCHEMA_DIR_RESULT
 
 test:cargo:
   <<: *caching_rust
@@ -88,10 +89,11 @@ deploy:cargo:
   rules:
     - !reference [.default_rules, rules]
   variables:
+    CONTRACTS_INFO_FILE: "contracts-info.json"
     CONTRACTS_INFO_DIR: "contracts.tar.gz"
   script:
-    - /bin/bash ./scripts/deploy-contracts-dev-net.sh
-    - tar -czvf $CONTRACTS_INFO_DIR contracts-info.json
+    - /bin/bash ./scripts/deploy-contracts-dev-net.sh $CONTRACTS_INFO_FILE
+    - tar -czvf $CONTRACTS_INFO_DIR $CONTRACTS_INFO_FILE
   artifacts:
     name: "contracts-$CI_COMMIT_REF_SLUG"
     paths:

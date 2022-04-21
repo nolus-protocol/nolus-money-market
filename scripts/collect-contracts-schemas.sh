@@ -1,8 +1,7 @@
 #!/bin/bash
 set -euxo pipefail
 
-ROOT_DIR=$(pwd)
-CONTRACTS_SCHEMA_DIR="contracts-schemas"
+CONTRACTS_SCHEMA_DIR="$1"
 
 if [[ ! -e "$CONTRACTS_SCHEMA_DIR" ]]; then
       mkdir "$CONTRACTS_SCHEMA_DIR"
@@ -15,8 +14,8 @@ copyContractSchema() {
       rm -rf "${CONTRACTS_SCHEMA_DIR:?}/$contract_name"
   fi
 
-  mkdir "$ROOT_DIR"/"$CONTRACTS_SCHEMA_DIR"/"$contract_name"
-  cp -R contracts/"$contract_name"/schema "$ROOT_DIR"/"$CONTRACTS_SCHEMA_DIR"/"$contract_name"
+  mkdir "$CONTRACTS_SCHEMA_DIR/$contract_name"
+  cp -R contracts/"$contract_name"/schema "$CONTRACTS_SCHEMA_DIR/$contract_name"
 }
 
 # Collect contracts schemas
