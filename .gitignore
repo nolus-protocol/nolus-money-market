@@ -1,5 +1,6 @@
 # Build results
 /target
+artifacts
 
 # Cargo+Git helper file (https://github.com/rust-lang/cargo/blob/0.44.1/src/cargo/sources/git/utils.rs#L320-L327)
 .cargo-ok
@@ -14,3 +15,13 @@
 *.iml
 .idea
 **/schema
+
+# Deploying process
+setup-dev-network.zip
+nolus.tar.gz
+build-binary.zip
+accounts
+nolusd
+contracts-info.json
+contracts-schemas
+target.tar.gz
