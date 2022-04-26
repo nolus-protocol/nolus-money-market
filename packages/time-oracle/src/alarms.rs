@@ -2,11 +2,15 @@ use cosmwasm_std::{Addr, Order, StdResult, Storage, Timestamp};
 use cw_storage_plus::{Bound, IndexedMap, MultiIndex, IndexList, Index, Item};
 use serde::{Serialize, Deserialize};
 
-pub type TimeSeconds = u64;
+type TimeSeconds = u64;
 pub type Id = u64;
 
+fn as_seconds(from: Timestamp) -> TimeSeconds {
+    from.seconds()
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct Alarm {
+struct Alarm {
     pub time: TimeSeconds,
 	pub addr: Addr,
 }
@@ -47,7 +51,7 @@ impl<'a> Alarms<'a> {
     pub fn add(&self, storage: &mut dyn Storage, addr: Addr, time: Timestamp) -> StdResult<Id> {
         let id = self.next_id.may_load(storage)?.unwrap_or_default();
         let alarm = Alarm {
-            time: time.seconds(),
+            time: as_seconds(time),
             addr,
         };
         self.alarms().save(storage, id, &alarm)?;
@@ -71,12 +75,12 @@ impl<'a> Alarms<'a> {
         let timestamps = self.alarms().idx.alarms.range(
             storage,
             None,
-            Some(Bound::inclusive((ctime.seconds(), max_id))),
+            Some(Bound::inclusive((as_seconds(ctime), max_id))),
             Order::Ascending,
         );
         for timestamp in timestamps {
             let (id, alarm) = timestamp?;
-            dispatcher.send_to(id, alarm, ctime)?;
+            dispatcher.send_to(id, alarm.addr, ctime)?;
         }
 
         Ok(())
@@ -84,7 +88,7 @@ impl<'a> Alarms<'a> {
 }
 
 pub trait AlarmDispatcher {
-    fn send_to(&mut self, id: Id, alarm: Alarm, ctime: Timestamp) -> StdResult<()>;
+    fn send_to(&mut self, id: Id, addr: Addr, ctime: Timestamp) -> StdResult<()>;
 }
 
 #[cfg(test)]
@@ -96,7 +100,7 @@ pub mod tests {
     struct MockAlarmDispatcher(pub Vec<Id>);
 
     impl AlarmDispatcher for MockAlarmDispatcher {
-        fn send_to(&mut self, id: Id, _alarm: Alarm, _ctime: Timestamp) -> StdResult<()> {
+        fn send_to(&mut self, id: Id, _addr: Addr, _ctime: Timestamp) -> StdResult<()> {
             self.0.push(id);
             Ok(())
         }

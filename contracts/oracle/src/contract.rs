@@ -10,7 +10,7 @@ use marketprice::market_price::PriceQuery;
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, ExecuteAlarmMsg};
 use crate::state::{Config, CONFIG, FEEDERS, MARKET_PRICE, TIME_ORACLE, TIME_ALARMS};
-use time_oracle::{Alarm, Id};
+use time_oracle::{Id};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -194,9 +194,9 @@ fn try_notify_alarms(storage: &mut dyn Storage, ctime: Timestamp) -> StdResult<R
     }
 
     impl<'a> AlarmDispatcher for OracleAlarmDispatcher<'a> {
-        fn send_to(&mut self, id: Id, alarm: Alarm, ctime: Timestamp) -> StdResult<()> {
+        fn send_to(&mut self, id: Id, addr: Addr, ctime: Timestamp) -> StdResult<()> {
             let msg = ExecuteAlarmMsg::Alarm(ctime);
-            let wasm_msg = cosmwasm_std::wasm_execute(alarm.addr, &msg, vec![])?;
+            let wasm_msg = cosmwasm_std::wasm_execute(addr, &msg, vec![])?;
             let submsg = SubMsg::reply_always(CosmosMsg::Wasm(wasm_msg), id);
             self.response.messages.push(submsg);
             Ok(())
