@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 # use library feature to disable all instantiate/execute/query exports
-api = []
+library = []
 
 
 
@@ -27,3 +27,7 @@ thiserror = { version = "1.0" }
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0-beta6" }
 cw-multi-test = "0.13"
+
+[[example]]
+name = "schema"
+required-features = ["library"]

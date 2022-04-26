@@ -1,9 +1,12 @@
-#[cfg(not(feature = "library"))]
-pub mod contract;
-mod error;
-#[cfg(not(feature = "library"))]
 pub mod msg;
-#[cfg(not(feature = "library"))]
-pub mod state;
 
-pub use crate::error::ContractError;
+#[cfg(not(feature = "library"))]
+#[path = ""]
+mod nolib {
+    pub mod contract;
+    pub mod error;
+    pub mod state;
+}
+
+#[cfg(not(feature = "library"))]
+pub use nolib::*;
