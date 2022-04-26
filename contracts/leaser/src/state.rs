@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{msg::InstantiateMsg, ContractError};
-use cosmwasm_std::{Addr, Decimal256, Storage, Uint256};
+use cosmwasm_std::{Addr, Coin, Decimal256, Storage, Uint256};
 use cw_storage_plus::{Item, Map};
 
 pub type InstantiateReplyId = u64;
@@ -12,7 +12,7 @@ pub const INSTANTIATE_REPLY_IDS: InstantiateReplyIdSeq =
     InstantiateReplyIdSeq::new("instantiate_reply_ids");
 pub const PENDING_INSTANCE_CREATIONS: Map<InstantiateReplyId, Addr> =
     Map::new("pending_instance_creations");
-pub const LOANS: Map<&Addr, Addr> = Map::new("loans");
+pub const LEASES: Map<&Addr, Addr> = Map::new("leases");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -23,6 +23,7 @@ pub struct Config {
     pub lease_max_liability: Decimal256,
     pub lease_healthy_liability: Decimal256,
     pub lease_initial_liability: Decimal256,
+    pub lease_minimal_downpayment: Option<Coin>,
     pub repayment_period_nano_sec: Uint256,
     pub grace_period_nano_sec: Uint256,
 }
@@ -43,6 +44,7 @@ impl Config {
                 msg.lease_initial_liability,
                 msg.lease_healthy_liability,
             )?,
+            lease_minimal_downpayment: msg.lease_minimal_downpayment,
             repayment_period_nano_sec: msg.repayment_period_nano_sec,
             grace_period_nano_sec: msg.grace_period_nano_sec,
         })
@@ -55,7 +57,9 @@ impl Config {
         if lease_healthy_liability < lease_max_liability {
             Ok(Decimal256::percent(lease_healthy_liability))
         } else {
-            Err(ContractError::ValidationError {})
+            Err(ContractError::ValidationError {
+                msg: "LeaseHealthyLiability% must be less than LeaseMaxLiability%".to_string(),
+            })
         }
     }
 
@@ -66,7 +70,10 @@ impl Config {
         if lease_initial_liability <= lease_healthy_liability {
             Ok(Decimal256::percent(lease_initial_liability))
         } else {
-            Err(ContractError::ValidationError {})
+            Err(ContractError::ValidationError {
+                msg: "LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
+                    .to_string(),
+            })
         }
     }
 }

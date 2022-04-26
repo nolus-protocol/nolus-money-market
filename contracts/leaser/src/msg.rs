@@ -1,5 +1,5 @@
 use crate::state::Config;
-use cosmwasm_std::{Addr, Uint256};
+use cosmwasm_std::{Addr, Coin, Uint256};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +11,7 @@ pub struct InstantiateMsg {
     pub lease_max_liability: u64,        // LeaseMaxLiability%, for example 80%
     pub lease_healthy_liability: u64, // LeaseHealthyLiability%, for example, 70%, must be less than LeaseMaxLiability%
     pub lease_initial_liability: u64, // LeaseInitialLiability%, for example, 65%, must be less or equal to LeaseHealthyLiability%
+    pub lease_minimal_downpayment: Option<Coin>,
     pub repayment_period_nano_sec: Uint256, // PeriodLengthNanoSec, for example 90 days = 90*24*60*60*1000*1000*1000
     pub grace_period_nano_sec: Uint256, // GracePeriodNanoSec, for example 10 days = 10*24*60*60*1000*1000*1000
 }

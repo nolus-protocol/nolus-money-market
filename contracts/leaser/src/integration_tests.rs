@@ -27,7 +27,7 @@ mod tests {
                     &Addr::unchecked(USER),
                     vec![Coin {
                         denom: NATIVE_DENOM.to_string(),
-                        amount: Uint128::new(1),
+                        amount: Uint128::new(100000),
                     }],
                 )
                 .unwrap();
@@ -47,6 +47,7 @@ mod tests {
             lease_initial_liability: 65,
             repayment_period_nano_sec: Uint256::from(123_u64),
             grace_period_nano_sec: Uint256::from(123_u64),
+            lease_minimal_downpayment: Some(Coin::new(10, "UST")),
         };
         let cw_template_contract_addr = app
             .instantiate_contract(
@@ -75,4 +76,41 @@ mod tests {
             assert_eq!(Addr::unchecked("test"), response.config.lpp_ust_addr)
         }
     }
+
+    // mod lease {
+    //     use crate::msg::ExecuteMsg;
+
+    //     use super::*;
+
+    //     #[test]
+    //     fn open_lease() {
+    //         let (mut app, cw_template_contract) = proper_instantiate();
+
+    //         // send without funds
+    //         let msg = ExecuteMsg::Borrow {};
+    //         let cosmos_msg = cw_template_contract.call(msg, None).unwrap();
+    //         app.execute(Addr::unchecked(USER), cosmos_msg).unwrap_err();
+
+    //         // send not enought funds
+    //         let msg = ExecuteMsg::Borrow {};
+    //         let cosmos_msg = cw_template_contract
+    //             .call(msg, Some(vec![Coin::new(123_u128, "ETH")]))
+    //             .unwrap();
+    //         app.execute(Addr::unchecked(USER), cosmos_msg).unwrap();
+
+    //         // send not enought funds - only UST are accepted
+    //         let msg = ExecuteMsg::Borrow {};
+    //         let cosmos_msg = cw_template_contract
+    //             .call(msg, Some(vec![Coin::new(1_u128, "ETH")]))
+    //             .unwrap();
+    //         app.execute(Addr::unchecked(USER), cosmos_msg).unwrap();
+
+    //         // // send with funds
+    //         // let msg = ExecuteMsg::Borrow {};
+    //         // let cosmos_msg = cw_template_contract
+    //         //     .call(msg, Some(vec![Coin::new(123_u128, "UST")]))
+    //         //     .unwrap();
+    //         // app.execute(Addr::unchecked(USER), cosmos_msg).unwrap();
+    //     }
+    // }
 }

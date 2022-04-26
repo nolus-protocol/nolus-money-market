@@ -7,11 +7,12 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
 
-use lease::msg::InstantiateMsg as LoanInstantiateMsg;
+use lease::msg::InstantiateMsg as LeaseInstantiateMsg;
 
 use crate::error::ContractError;
+use crate::helpers::assert_sent_sufficient_coin;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{Config, CONFIG, INSTANTIATE_REPLY_IDS, LOANS, PENDING_INSTANCE_CREATIONS};
+use crate::state::{Config, CONFIG, INSTANTIATE_REPLY_IDS, LEASES, PENDING_INSTANCE_CREATIONS};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -45,6 +46,8 @@ pub fn execute(
 
 pub fn try_borrow(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
+    assert_sent_sufficient_coin(&info.funds, config.lease_minimal_downpayment)?;
+
     let instance_reply_id = INSTANTIATE_REPLY_IDS.next(deps.storage)?;
     PENDING_INSTANCE_CREATIONS.save(deps.storage, instance_reply_id, &info.sender)?;
     Ok(
@@ -52,9 +55,9 @@ pub fn try_borrow(deps: DepsMut, info: MessageInfo) -> Result<Response, Contract
             CosmosMsg::Wasm(WasmMsg::Instantiate {
                 admin: None,
                 code_id: config.lease_code_id,
-                funds: vec![],
+                funds: info.funds,
                 label: "lease".to_string(),
-                msg: to_binary(&LoanInstantiateMsg {
+                msg: to_binary(&LeaseInstantiateMsg {
                     owner: info.sender.to_string(),
                 })?,
             }),
@@ -82,50 +85,13 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
         .map_err(|_| ContractError::ParseError {})?;
 
     let contract_addr = deps.api.addr_validate(&contract_addr_raw)?;
-    register_loan(deps, msg.id, contract_addr)
+    register_lease(deps, msg.id, contract_addr)
 }
 
-fn register_loan(deps: DepsMut, msg_id: u64, loan_addr: Addr) -> Result<Response, ContractError> {
+fn register_lease(deps: DepsMut, msg_id: u64, lease_addr: Addr) -> Result<Response, ContractError> {
     // TODO: Remove pending id if the creation was not successful
     let owner_addr = PENDING_INSTANCE_CREATIONS.load(deps.storage, msg_id)?;
-    LOANS.save(deps.storage, &owner_addr, &loan_addr)?;
+    LEASES.save(deps.storage, &owner_addr, &lease_addr)?;
     PENDING_INSTANCE_CREATIONS.remove(deps.storage, msg_id);
-    Ok(Response::default())
-}
-
-#[cfg(test)]
-mod tests {
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, Uint256};
-
-    use super::*;
-
-    #[test]
-    fn proper_initialization() {
-        let mut deps = mock_dependencies();
-
-        let msg = InstantiateMsg {
-            lease_code_id: 1,
-            lpp_ust_addr: Addr::unchecked("test"),
-            lease_interest_rate_margin: 3,
-            lease_max_liability: 80,
-            lease_healthy_liability: 70,
-            lease_initial_liability: 65,
-            repayment_period_nano_sec: Uint256::from(123_u64),
-            grace_period_nano_sec: Uint256::from(123_u64),
-        };
-        let info = mock_info("creator", &coins(1000, "unolus"));
-
-        // we can just call .unwrap() to assert this was a success
-        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-        assert_eq!(0, res.messages.len());
-
-        // it worked, let's query the state
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-        let config_response: ConfigResponse = from_binary(&res).unwrap();
-        let config = config_response.config;
-        assert_eq!("creator", config.owner);
-        assert_eq!(1, config.lease_code_id);
-        assert_eq!(Addr::unchecked("test"), config.lpp_ust_addr);
-    }
+    Ok(Response::new().add_attribute("lease_address", lease_addr))
 }
