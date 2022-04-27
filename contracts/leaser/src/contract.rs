@@ -1,7 +1,7 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response,
+    to_binary, Addr, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response,
     StdResult, SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
@@ -40,25 +40,29 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Borrow {} => try_borrow(deps, info),
+        ExecuteMsg::Borrow {} => try_borrow(deps, info.funds, info.sender),
     }
 }
 
-pub fn try_borrow(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn try_borrow(
+    deps: DepsMut,
+    amount: Vec<Coin>,
+    sender: Addr,
+) -> Result<Response, ContractError> {
     let config = CONFIG.load(deps.storage)?;
-    assert_sent_sufficient_coin(&info.funds, config.lease_minimal_downpayment)?;
+    assert_sent_sufficient_coin(&amount, config.lease_minimal_downpayment)?;
 
     let instance_reply_id = INSTANTIATE_REPLY_IDS.next(deps.storage)?;
-    PENDING_INSTANCE_CREATIONS.save(deps.storage, instance_reply_id, &info.sender)?;
+    PENDING_INSTANCE_CREATIONS.save(deps.storage, instance_reply_id, &sender)?;
     Ok(
         Response::new().add_submessages(vec![SubMsg::reply_on_success(
             CosmosMsg::Wasm(WasmMsg::Instantiate {
                 admin: None,
                 code_id: config.lease_code_id,
-                funds: info.funds,
+                funds: amount,
                 label: "lease".to_string(),
                 msg: to_binary(&LeaseInstantiateMsg {
-                    owner: info.sender.to_string(),
+                    owner: sender.to_string(),
                 })?,
             }),
             instance_reply_id,

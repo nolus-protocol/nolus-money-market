@@ -1,59 +1,6 @@
-use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, Empty, Querier, QuerierWrapper, StdResult, WasmMsg, WasmQuery,
-};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use cosmwasm_std::Coin;
 
-use crate::{
-    msg::{ConfigResponse, ExecuteMsg, QueryMsg},
-    ContractError,
-};
-
-/// CwTemplateContract is a wrapper around Addr that provides a lot of helpers
-/// for working with this.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct CwTemplateContract(pub Addr);
-
-impl CwTemplateContract {
-    pub fn addr(&self) -> Addr {
-        self.0.clone()
-    }
-
-    pub fn call<T: Into<ExecuteMsg>>(
-        &self,
-        msg: T,
-        sent_funds: Option<Vec<Coin>>,
-    ) -> StdResult<CosmosMsg> {
-        let msg = to_binary(&msg.into())?;
-
-        let funds = match sent_funds {
-            Some(f) => f,
-            None => vec![],
-        };
-
-        Ok(WasmMsg::Execute {
-            contract_addr: self.addr().into(),
-            msg,
-            funds,
-        }
-        .into())
-    }
-
-    /// Get config
-    pub fn config<Q>(&self, querier: &Q) -> StdResult<ConfigResponse>
-    where
-        Q: Querier,
-    {
-        let msg = QueryMsg::Config {};
-        let query = WasmQuery::Smart {
-            contract_addr: self.addr().into(),
-            msg: to_binary(&msg)?,
-        }
-        .into();
-        let res: ConfigResponse = QuerierWrapper::<Empty>::new(querier).query(&query)?;
-        Ok(res)
-    }
-}
+use crate::ContractError;
 
 pub fn assert_sent_sufficient_coin(
     sent: &[Coin],

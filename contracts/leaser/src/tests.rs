@@ -25,7 +25,6 @@ fn proper_initialization() {
     };
     let info = mock_info("creator", &coins(1000, "unolus"));
 
-    // we can just call .unwrap() to assert this was a success
     let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
     assert_eq!(0, res.messages.len());
 
@@ -56,16 +55,30 @@ fn testexecute() {
     let info = mock_info("creator", &coins(1000, "unolus"));
     let _ = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
+    // try open lease with nothing
+    let msg = ExecuteMsg::Borrow {};
+    let info = mock_info("addr0000", &[]);
+    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
+    assert_eq!(res.to_string(), "Insufficient funds for down payment");
+
     // try open lease with not enought UST
     let msg = ExecuteMsg::Borrow {};
+    let mut amount = coins(40, "ETH");
+    amount.append(&mut coins(2, "UST"));
     let info = mock_info("addr0000", coins(40, "ETH").as_ref());
-    let res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap_err();
+    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
+    assert_eq!(res.to_string(), "Insufficient funds for down payment");
+
+    // try open lease with no UST
+    let msg = ExecuteMsg::Borrow {};
+    let info = mock_info("addr0000", coins(40, "ETH").as_ref());
+    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
     assert_eq!(res.to_string(), "Insufficient funds for down payment");
 
     // try open lease with enought UST
     let msg = ExecuteMsg::Borrow {};
     let info = mock_info("addr0000", coins(40, "UST").as_ref());
-    let res = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
+    let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
     assert_eq!(
         res.messages,
         vec![SubMsg::reply_on_success(
