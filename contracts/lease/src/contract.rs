@@ -17,6 +17,8 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    //info.sender is the Leaser.addr
+    // TODO restrict the Lease instantiation only to the Leaser addr by using `nolusd tx wasm store ... --instantiate-only-address <addr>`
     let state = State {
         owner: deps.api.addr_validate(&msg.owner)?,
     };
