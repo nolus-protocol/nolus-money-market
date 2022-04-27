@@ -4,8 +4,14 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct InstantiateMsg {
-    /// customer address
+    /// The customer who wants to open a lease.
     pub customer: String,
+    /// Denomination of the currency this lease will be about.
+    pub currency: String,
+    /// The delta, represented as permille, added on top of the LPP Loan interest rate.
+    ///
+    /// The value remains intact. The amount, a part of any payment, goes to the Profit contract.
+    pub annual_margin_interest_permille: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

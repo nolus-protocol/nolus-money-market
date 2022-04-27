@@ -65,6 +65,8 @@ pub fn try_borrow(deps: DepsMut, info: MessageInfo) -> Result<Response, Contract
                 label: "loan".to_string(),
                 msg: to_binary(&LoanInstantiateMsg {
                     customer: info.sender.to_string(),
+                    currency: "".to_owned(), // TODO the same denom lppUST is working with
+                    annual_margin_interest_permille: 32, // TODO take from config
                 })?,
             }),
             instance_reply_id,

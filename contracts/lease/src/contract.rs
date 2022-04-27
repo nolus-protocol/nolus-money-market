@@ -1,5 +1,5 @@
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -21,7 +21,7 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let customer = deps.api.addr_validate(&msg.customer)?;
-    let app = Application::new(customer, "UST".to_owned(), 32);
+    let app = Application::new(customer, msg.currency, msg.annual_margin_interest_permille);
     app.store(deps.storage)?;
     Ok(Response::default())
 }
