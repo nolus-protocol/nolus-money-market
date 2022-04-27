@@ -1,6 +1,8 @@
 pub mod msg;
 
-// pub mod lease;
+mod application;
+pub use crate::application::Application;
+
 pub mod error;
 pub mod state;
 
