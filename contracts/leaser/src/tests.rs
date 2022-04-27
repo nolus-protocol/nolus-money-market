@@ -1,12 +1,13 @@
 use crate::contract::{execute, instantiate, query};
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{
-    coins, from_binary, to_binary, Addr, Coin, CosmosMsg, SubMsg, Uint256, WasmMsg,
+    coins, from_binary, to_binary, Addr, Coin, CosmosMsg, Decimal, StdError, SubMsg, Uint128,
+    Uint256, WasmMsg,
 };
 
 use lease::msg::InstantiateMsg as LeaseInstantiateMsg;
 
-use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse};
 
 #[test]
 fn proper_initialization() {
@@ -95,4 +96,51 @@ fn testexecute() {
             1
         )]
     );
+}
+
+#[test]
+fn quote_test() {
+    let mut deps = mock_dependencies();
+
+    let msg = InstantiateMsg {
+        lease_code_id: 1,
+        lpp_ust_addr: Addr::unchecked("test"),
+        lease_interest_rate_margin: 3,
+        lease_max_liability: 80,
+        lease_healthy_liability: 70,
+        lease_initial_liability: 65,
+        repayment_period_nano_sec: Uint256::from(123_u64),
+        grace_period_nano_sec: Uint256::from(123_u64),
+        lease_minimal_downpayment: Some(Coin::new(10, "UST")),
+    };
+    let info = mock_info("creator", &coins(2, "token"));
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+    // should fail if zero downpaynment
+    let err = query(
+        deps.as_ref(),
+        mock_env(),
+        QueryMsg::Quote {
+            downpayment: Uint128::zero(),
+        },
+    )
+    .unwrap_err();
+    assert_eq!(
+        err,
+        StdError::generic_err("cannot open lease with zero downpayment",)
+    );
+
+    let res = query(
+        deps.as_ref(),
+        mock_env(),
+        QueryMsg::Quote {
+            downpayment: Uint128::new(100),
+        },
+    )
+    .unwrap();
+    let resp: QuoteResponse = from_binary(&res).unwrap();
+
+    assert_eq!(Uint128::new(185), resp.borrow_ust);
+    assert_eq!(Uint128::new(285), resp.total_ust);
+    assert_eq!(Decimal::one(), resp.annual_interest_rate); // hardcoded until LPP contract is merged
 }

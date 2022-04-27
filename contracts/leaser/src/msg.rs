@@ -1,5 +1,5 @@
 use crate::state::Config;
-use cosmwasm_std::{Addr, Coin, Uint256};
+use cosmwasm_std::{Addr, Coin, Decimal, Uint128, Uint256};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -26,9 +26,18 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
+    Quote { downpayment: Uint128 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ConfigResponse {
     pub config: Config,
+}
+
+// totalUST, borrowUST, annualInterestRate%
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct QuoteResponse {
+    pub total_ust: Uint128,
+    pub borrow_ust: Uint128,
+    pub annual_interest_rate: Decimal,
 }

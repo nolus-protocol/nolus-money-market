@@ -1,8 +1,10 @@
+use std::ops::{Mul, Sub};
+
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response,
-    StdResult, SubMsg, WasmMsg,
+    to_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, Fraction, MessageInfo,
+    Reply, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
@@ -11,7 +13,7 @@ use lease::msg::InstantiateMsg as LeaseInstantiateMsg;
 
 use crate::error::ContractError;
 use crate::helpers::assert_sent_sufficient_coin;
-use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse};
 use crate::state::{Config, CONFIG, INSTANTIATE_REPLY_IDS, LEASES, PENDING_INSTANCE_CREATIONS};
 
 // version info for migration info
@@ -74,12 +76,36 @@ pub fn try_borrow(
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
+        QueryMsg::Quote { downpayment } => to_binary(&query_quote(deps, downpayment)?),
     }
 }
 
 fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     let config = CONFIG.load(deps.storage)?;
     Ok(ConfigResponse { config })
+}
+
+fn query_quote(deps: Deps, downpayment_ust: Uint128) -> StdResult<QuoteResponse> {
+    // borrowUST = LeaseInitialLiability% * downpaymentUST / (1 - LeaseInitialLiability%)
+    if downpayment_ust.is_zero() {
+        return Err(StdError::generic_err(
+            "cannot open lease with zero downpayment",
+        ));
+    }
+    let config = CONFIG.load(deps.storage)?;
+
+    // TODO: too complex, maybe can be represented in more rust native way
+    let numerator = config
+        .lease_initial_liability
+        .mul(Decimal::from_atomics(downpayment_ust, 0).unwrap());
+    let denominator = Decimal::one().sub(config.lease_initial_liability);
+    let borrow_ust = numerator.mul(denominator.denominator()) / denominator.numerator();
+
+    Ok(QuoteResponse {
+        total_ust: borrow_ust + downpayment_ust,
+        borrow_ust,
+        annual_interest_rate: Decimal::one(), // hardcoded until LPP contract is merged
+    })
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
