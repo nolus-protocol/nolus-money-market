@@ -64,7 +64,7 @@ pub fn try_borrow(deps: DepsMut, info: MessageInfo) -> Result<Response, Contract
                 funds: vec![],
                 label: "loan".to_string(),
                 msg: to_binary(&LoanInstantiateMsg {
-                    owner: info.sender.to_string(),
+                    customer: info.sender.to_string(),
                 })?,
             }),
             instance_reply_id,

@@ -4,7 +4,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{State, STATE};
+use crate::Application;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -17,14 +17,12 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    //info.sender is the Leaser.addr
     // TODO restrict the Lease instantiation only to the Leaser addr by using `nolusd tx wasm store ... --instantiate-only-address <addr>`
-    let state = State {
-        owner: deps.api.addr_validate(&msg.owner)?,
-    };
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    STATE.save(deps.storage, &state)?;
 
+    let customer = deps.api.addr_validate(&msg.customer)?;
+    let app = Application::new(customer, "UST".to_owned(), 32);
+    app.store(deps.storage)?;
     Ok(Response::default())
 }
 
@@ -39,12 +37,9 @@ pub fn execute(
 }
 
 #[entry_point]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    match msg {
-        QueryMsg::Config {} => to_binary(&query_config(deps)?),
-    }
-}
-
-pub fn query_config(deps: Deps) -> StdResult<State> {
-    STATE.load(deps.storage)
+pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
+    // match msg {
+        // QueryMsg::Config {} => to_binary(&query_config(deps)?),
+    // }
+    StdResult::Ok(Binary::from([]))
 }
