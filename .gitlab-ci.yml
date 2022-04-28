@@ -63,7 +63,7 @@ build:cargo:
     - !reference [.default_rules, rules]
   script:
     - rustup target add wasm32-unknown-unknown
-    - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
+    - cargo wasm --target-dir ./target
   artifacts:
     paths:
     - target/
