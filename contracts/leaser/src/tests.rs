@@ -145,4 +145,17 @@ fn quote_test() {
     assert_eq!("UST", resp.borrow.denom);
     assert_eq!("UST", resp.total.denom);
     assert_eq!(Decimal::one(), resp.annual_interest_rate); // hardcoded until LPP contract is merged
+
+    let res = query(
+        deps.as_ref(),
+        mock_env(),
+        QueryMsg::Quote {
+            downpayment: Coin::new(15, "UST"),
+        },
+    )
+    .unwrap();
+    let resp: QuoteResponse = from_binary(&res).unwrap();
+
+    assert_eq!(Uint128::new(27), resp.borrow.amount);
+    assert_eq!(Uint128::new(42), resp.total.amount);
 }

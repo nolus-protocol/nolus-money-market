@@ -1,10 +1,10 @@
-use std::ops::{Mul, Sub};
+use std::ops::Sub;
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, Fraction, MessageInfo,
-    Reply, Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    Reply, Response, StdError, StdResult, SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
@@ -95,13 +95,13 @@ fn query_quote(deps: Deps, downpayment: Coin) -> StdResult<QuoteResponse> {
     }
     let config = CONFIG.load(deps.storage)?;
 
-    // TODO: too complex, maybe can be represented in more rust native way
-    let numerator = config
-        .lease_initial_liability
-        .mul(Decimal::from_atomics(downpayment.amount, 0).unwrap());
-    let denominator = Decimal::one().sub(config.lease_initial_liability);
-    let borrow_amount = numerator.mul(denominator.denominator()) / denominator.numerator();
+    let numerator = config.lease_initial_liability.numerator() * downpayment.amount;
 
+    let denominator = Decimal::one()
+        .sub(config.lease_initial_liability)
+        .numerator();
+
+    let borrow_amount = numerator / denominator;
     let total_amount = borrow_amount + downpayment.amount;
 
     Ok(QuoteResponse {
