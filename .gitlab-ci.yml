@@ -3,7 +3,6 @@ image: "rust:latest"
 stages:
   - test
   - build
-  - optimization
   - deploy
 
 .caching_rust: &caching_rust
@@ -56,21 +55,8 @@ lint:cargo:
     - rustup component add clippy
     - cargo clippy --workspace --verbose --all-targets -- -D warnings
 
-build:cargo:
-  <<: *caching_rust
+build-and-optimization:cargo:
   stage: build
-  rules:
-    - !reference [.default_rules, rules]
-  script:
-    - rustup target add wasm32-unknown-unknown
-    - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
-  artifacts:
-    paths:
-    - target/
-    expire_in: 1 hour
-
-optimization:
-  stage: optimization
   tags:
     - shell
   rules:
@@ -81,7 +67,6 @@ optimization:
     paths:
     - artifacts/
     expire_in: 1 hour
-
 
 deploy:cargo:
   <<: *caching_rust
