@@ -86,9 +86,9 @@ fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     Ok(ConfigResponse { config })
 }
 
-fn query_quote(deps: Deps, downpayment_ust: Uint128) -> StdResult<QuoteResponse> {
+fn query_quote(deps: Deps, downpayment: Coin) -> StdResult<QuoteResponse> {
     // borrowUST = LeaseInitialLiability% * downpaymentUST / (1 - LeaseInitialLiability%)
-    if downpayment_ust.is_zero() {
+    if downpayment.amount.is_zero() {
         return Err(StdError::generic_err(
             "cannot open lease with zero downpayment",
         ));
@@ -98,13 +98,15 @@ fn query_quote(deps: Deps, downpayment_ust: Uint128) -> StdResult<QuoteResponse>
     // TODO: too complex, maybe can be represented in more rust native way
     let numerator = config
         .lease_initial_liability
-        .mul(Decimal::from_atomics(downpayment_ust, 0).unwrap());
+        .mul(Decimal::from_atomics(downpayment.amount, 0).unwrap());
     let denominator = Decimal::one().sub(config.lease_initial_liability);
-    let borrow_ust = numerator.mul(denominator.denominator()) / denominator.numerator();
+    let borrow_amount = numerator.mul(denominator.denominator()) / denominator.numerator();
+
+    let total_amount = borrow_amount + downpayment.amount;
 
     Ok(QuoteResponse {
-        total_ust: borrow_ust + downpayment_ust,
-        borrow_ust,
+        total: Coin::new(total_amount.u128(), downpayment.denom.clone()),
+        borrow: Coin::new(borrow_amount.u128(), downpayment.denom),
         annual_interest_rate: Decimal::one(), // hardcoded until LPP contract is merged
     })
 }

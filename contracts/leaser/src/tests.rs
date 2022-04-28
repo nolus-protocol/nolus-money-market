@@ -121,7 +121,7 @@ fn quote_test() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::Quote {
-            downpayment: Uint128::zero(),
+            downpayment: Coin::new(0, "UST"),
         },
     )
     .unwrap_err();
@@ -134,13 +134,15 @@ fn quote_test() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::Quote {
-            downpayment: Uint128::new(100),
+            downpayment: Coin::new(100, "UST"),
         },
     )
     .unwrap();
     let resp: QuoteResponse = from_binary(&res).unwrap();
 
-    assert_eq!(Uint128::new(185), resp.borrow_ust);
-    assert_eq!(Uint128::new(285), resp.total_ust);
+    assert_eq!(Uint128::new(185), resp.borrow.amount);
+    assert_eq!(Uint128::new(285), resp.total.amount);
+    assert_eq!("UST", resp.borrow.denom);
+    assert_eq!("UST", resp.total.denom);
     assert_eq!(Decimal::one(), resp.annual_interest_rate); // hardcoded until LPP contract is merged
 }

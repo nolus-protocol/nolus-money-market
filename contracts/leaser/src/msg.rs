@@ -27,7 +27,7 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
-    Quote { downpayment: Uint128 },
+    Quote { downpayment: Coin },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -38,7 +38,7 @@ pub struct ConfigResponse {
 // totalUST, borrowUST, annualInterestRate%
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct QuoteResponse {
-    pub total_ust: Uint128,
-    pub borrow_ust: Uint128,
+    pub total: Coin,
+    pub borrow: Coin,
     pub annual_interest_rate: Decimal,
 }
