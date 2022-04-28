@@ -10,7 +10,7 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-lease = { path = "../lease", version = "0.1.0", default-features = false, features = ["api"] }
+lease = { path = "../lease", version = "0.1.0", default-features = false }
 
 cosmwasm-std = { version = "1.0.0-beta6" }
 cosmwasm-storage = { version = "1.0.0-beta6" }
