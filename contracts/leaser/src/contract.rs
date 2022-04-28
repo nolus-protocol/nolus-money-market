@@ -11,10 +11,11 @@ use cw_utils::parse_reply_instantiate_data;
 
 use lease::msg::InstantiateMsg as LeaseInstantiateMsg;
 
+use crate::config::Config;
 use crate::error::ContractError;
 use crate::helpers::assert_sent_sufficient_coin;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse};
-use crate::state::{Config, CONFIG, INSTANTIATE_REPLY_IDS, LEASES, PENDING_INSTANCE_CREATIONS};
+use crate::state::{CONFIG, INSTANTIATE_REPLY_IDS, LEASES, PENDING_INSTANCE_CREATIONS};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
