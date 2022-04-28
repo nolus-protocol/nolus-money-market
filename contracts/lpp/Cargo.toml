@@ -7,6 +7,10 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[[example]]
+name = "schema"
+required-features = ["library"]
+
 [features]
 library = []
 

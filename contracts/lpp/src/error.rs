@@ -18,8 +18,14 @@ pub enum ContractError {
     #[error("The loan exists")]
     LoanExists {},
 
-    #[error("Denom: {contract_denom:?} vs {query_denom:?}")]
-    Denom { contract_denom: String, query_denom: String},
+    #[error("The loan does not exist")]
+    NoLoan {},
+
+    #[error("Lpp requires single denom")]
+    FundsLen {},
+
+    #[error("Denoms are different: {contract_denom:?} vs {denom:?}")]
+    Denom { contract_denom: String, denom: String},
 
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },

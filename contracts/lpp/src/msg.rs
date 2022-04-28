@@ -11,8 +11,8 @@ pub struct InstantiateMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    Loan { amount: Coin },
-    Repay { amount: Coin },
+    OpenLoan { amount: Coin },
+    RepayLoan,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -26,7 +26,7 @@ pub enum QueryMsg {
     },
     LoanOutstandingInterest {
         lease_addr: Addr,
-        outstanding_by: Timestamp,
+        outstanding_time: Timestamp,
     },
 }
 
@@ -39,21 +39,16 @@ pub enum QueryQuoteResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum QueryLoanResponse {
-    Loan {
-        principal_due: Coin,
-        annual_interest_rate: Decimal,
-        // NOTE: is it ok to use a Timestamp? or switch to Uint64
-        interest_paid_by: Timestamp,
-    },
-    // NOTE: how about switch to Option<QueryLoanResponse> for query response?
-    LoanNotFound,
+pub struct LoanResponse {
+    pub principal_due: Coin,
+    pub annual_interest_rate: Decimal,
+    pub interest_paid: Timestamp,
 }
+
+pub type QueryLoanResponse = Option<LoanResponse>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum QueryLoanOutstandingInterestResponse {
-    // NOTE: is Coin ok or better downgrade to Uint128?
-    OutstandingInterest(Coin),
-    LoanNotFound,
-}
+pub struct OutstandingInterest(pub Coin);
+
+pub type QueryLoanOutstandingInterestResponse = Option<OutstandingInterest>;

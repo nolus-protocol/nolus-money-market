@@ -6,6 +6,8 @@ mod nolib {
     pub mod contract;
     pub mod error;
     pub mod state;
+    pub mod config;
+    pub mod loan;
 }
 
 #[cfg(not(feature = "library"))]
