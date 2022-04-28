@@ -1,0 +1,67 @@
+use cosmwasm_std::{Addr, Api, StdResult, Storage, Timestamp, Uint128};
+use cw_storage_plus::Item;
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    application::{Denom, LiabilityPolicy},
+    interest::InterestPolicy,
+};
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Lease {
+    customer: Addr,
+    currency: Denom,
+    liability: LiabilityPolicy,
+    interest: InterestPolicy,
+}
+
+const DB_ITEM: Item<Lease> = Item::new("lease");
+
+impl Lease {
+    // pub fn from(msg: InstantiateMsg, now: Timestamp, api: &dyn Api) -> StdResult<Self> {
+    //     let application = Application::from(msg, api)?;
+    //     Ok(Self {
+    //         application,
+    //         interest_due_period_start: now,
+    //         interest_due_period_end: now.plus_nanos(0), // TODO intro PeriodLengthNanoSec
+    //         margin_interest_paid_in_period_uust: Uint128::zero(),
+    //     })
+    // }
+
+    pub fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
+        DB_ITEM.save(storage, &self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
+        DB_ITEM.load(storage)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use cosmwasm_std::{testing::MockStorage, Addr};
+
+    use crate::{application::LiabilityPolicy, interest::InterestPolicy};
+
+    use super::Lease;
+
+    #[test]
+    fn persist_ok() {
+        let mut storage = MockStorage::default();
+        let obj = Lease {
+            customer: Addr::unchecked("test"),
+            currency: "UST".to_owned(),
+            liability: LiabilityPolicy {
+                init_percent: 24,
+                healthy_percent: 32,
+                max_percent: 40,
+                recalc_secs: 3,
+            },
+            interest: InterestPolicy::new(23, Addr::unchecked("ust_lpp"), 100, 10),
+        };
+        let obj_exp = obj.clone();
+        obj.store(&mut storage).expect("storing failed");
+        let obj_loaded = Lease::load(&storage).expect("loading failed");
+        assert_eq!(obj_exp, obj_loaded);
+    }
+}
