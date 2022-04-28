@@ -63,7 +63,7 @@ build:cargo:
     - !reference [.default_rules, rules]
   script:
     - rustup target add wasm32-unknown-unknown
-    - cargo wasm --target-dir ./target
+    - cargo wasm --target-dir ./target --features cosmwasm
   artifacts:
     paths:
     - target/
