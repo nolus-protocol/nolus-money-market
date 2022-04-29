@@ -42,3 +42,16 @@ pub struct QuoteResponse {
     pub borrow: Coin,
     pub annual_interest_rate: Decimal,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LPPQueryMsg {
+    Quote { amount: Coin },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum QueryQuoteResponse {
+    QuoteInterestRate(Decimal),
+    NoLiquidity,
+}
