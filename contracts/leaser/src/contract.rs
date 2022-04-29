@@ -11,11 +11,10 @@ use cw_utils::parse_reply_instantiate_data;
 
 use lease::msg::InstantiateMsg as LeaseInstantiateMsg;
 
-use crate::config::Config;
 use crate::error::ContractError;
 use crate::helpers::assert_sent_sufficient_coin;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse};
-use crate::state::{CONFIG, INSTANTIATE_REPLY_IDS, LEASES, PENDING_INSTANCE_CREATIONS};
+use crate::state::LS;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -29,8 +28,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    let config = Config::new(info.sender, msg)?;
-    CONFIG.save(deps.storage, &config)?;
+    LS.init(deps, msg, info.sender)?;
 
     Ok(Response::default())
 }
@@ -52,11 +50,10 @@ pub fn try_borrow(
     amount: Vec<Coin>,
     sender: Addr,
 ) -> Result<Response, ContractError> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = LS.get_config(deps.storage)?;
     assert_sent_sufficient_coin(&amount, config.lease_minimal_downpayment)?;
 
-    let instance_reply_id = INSTANTIATE_REPLY_IDS.next(deps.storage)?;
-    PENDING_INSTANCE_CREATIONS.save(deps.storage, instance_reply_id, &sender)?;
+    let instance_reply_id = LS.next(deps.storage, sender.clone())?;
     Ok(
         Response::new().add_submessages(vec![SubMsg::reply_on_success(
             CosmosMsg::Wasm(WasmMsg::Instantiate {
@@ -82,7 +79,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
-    let config = CONFIG.load(deps.storage)?;
+    let config = LS.get_config(deps.storage)?;
     Ok(ConfigResponse { config })
 }
 
@@ -93,7 +90,7 @@ fn query_quote(_env: Env, deps: Deps, downpayment: Coin) -> StdResult<QuoteRespo
             "cannot open lease with zero downpayment",
         ));
     }
-    let config = CONFIG.load(deps.storage)?;
+    let config = LS.get_config(deps.storage)?;
     let numerator = config.lease_initial_liability.numerator() * downpayment.amount;
     let denominator = Decimal::one()
         .sub(config.lease_initial_liability)
@@ -115,7 +112,7 @@ fn get_annual_interest_rate(deps: Deps, downpayment: Coin) -> StdResult<Decimal>
 
     use crate::msg::{LPPQueryMsg, QueryQuoteResponse};
 
-    let config = CONFIG.load(deps.storage)?;
+    let config = LS.get_config(deps.storage)?;
     let query_msg: LPPQueryMsg = LPPQueryMsg::Quote {
         amount: downpayment,
     };
@@ -147,8 +144,6 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
 
 fn register_lease(deps: DepsMut, msg_id: u64, lease_addr: Addr) -> Result<Response, ContractError> {
     // TODO: Remove pending id if the creation was not successful
-    let owner_addr = PENDING_INSTANCE_CREATIONS.load(deps.storage, msg_id)?;
-    LEASES.save(deps.storage, &owner_addr, &lease_addr)?;
-    PENDING_INSTANCE_CREATIONS.remove(deps.storage, msg_id);
+    LS.save(deps.storage, msg_id, lease_addr.clone())?;
     Ok(Response::new().add_attribute("lease_address", lease_addr))
 }
