@@ -4,7 +4,6 @@ use cosmwasm_std::{
     coins, from_binary, to_binary, Addr, Coin, CosmosMsg, Decimal, StdError, SubMsg, Uint128,
     Uint256, WasmMsg,
 };
-
 use lease::msg::InstantiateMsg as LeaseInstantiateMsg;
 
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse};

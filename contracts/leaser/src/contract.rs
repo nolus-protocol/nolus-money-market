@@ -4,7 +4,7 @@ use std::ops::Sub;
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, Fraction, MessageInfo,
-    QueryRequest, Reply, Response, StdError, StdResult, SubMsg, WasmMsg, WasmQuery,
+    Reply, Response, StdError, StdResult, SubMsg, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
@@ -14,10 +14,7 @@ use lease::msg::InstantiateMsg as LeaseInstantiateMsg;
 use crate::config::Config;
 use crate::error::ContractError;
 use crate::helpers::assert_sent_sufficient_coin;
-use crate::msg::{
-    ConfigResponse, ExecuteMsg, InstantiateMsg, LPPQueryMsg, QueryMsg, QueryQuoteResponse,
-    QuoteResponse,
-};
+use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse};
 use crate::state::{CONFIG, INSTANTIATE_REPLY_IDS, LEASES, PENDING_INSTANCE_CREATIONS};
 
 // version info for migration info
@@ -89,7 +86,7 @@ fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     Ok(ConfigResponse { config })
 }
 
-fn query_quote(env: Env, deps: Deps, downpayment: Coin) -> StdResult<QuoteResponse> {
+fn query_quote(_env: Env, deps: Deps, downpayment: Coin) -> StdResult<QuoteResponse> {
     // borrowUST = LeaseInitialLiability% * downpaymentUST / (1 - LeaseInitialLiability%)
     if downpayment.amount.is_zero() {
         return Err(StdError::generic_err(
@@ -97,7 +94,6 @@ fn query_quote(env: Env, deps: Deps, downpayment: Coin) -> StdResult<QuoteRespon
         ));
     }
     let config = CONFIG.load(deps.storage)?;
-
     let numerator = config.lease_initial_liability.numerator() * downpayment.amount;
     let denominator = Decimal::one()
         .sub(config.lease_initial_liability)
@@ -109,18 +105,16 @@ fn query_quote(env: Env, deps: Deps, downpayment: Coin) -> StdResult<QuoteRespon
     Ok(QuoteResponse {
         total: Coin::new(total_amount.u128(), downpayment.denom.clone()),
         borrow: Coin::new(borrow_amount.u128(), downpayment.denom.clone()),
-        annual_interest_rate: get_annual_interest_rate(env, deps, downpayment)?,
+        annual_interest_rate: get_annual_interest_rate(deps, downpayment)?,
     })
 }
 
-fn get_annual_interest_rate(env: Env, deps: Deps, downpayment: Coin) -> StdResult<Decimal> {
-    #[cfg(test)]
-    if env.block.height == 12345 {
-        //the mock env block
-        return Ok(Decimal::one());
-    }
+#[cfg(not(test))]
+fn get_annual_interest_rate(deps: Deps, downpayment: Coin) -> StdResult<Decimal> {
+    use cosmwasm_std::{QueryRequest, WasmQuery};
 
-    #[cfg(not(test))]
+    use crate::msg::{LPPQueryMsg, QueryQuoteResponse};
+
     let config = CONFIG.load(deps.storage)?;
     let query_msg: LPPQueryMsg = LPPQueryMsg::Quote {
         amount: downpayment,
@@ -134,6 +128,11 @@ fn get_annual_interest_rate(env: Env, deps: Deps, downpayment: Coin) -> StdResul
         QueryQuoteResponse::QuoteInterestRate(rate) => Ok(rate),
         QueryQuoteResponse::NoLiquidity => Err(StdError::generic_err("NoLiquidity")),
     }
+}
+
+#[cfg(test)]
+fn get_annual_interest_rate(_deps: Deps, _downpayment: Coin) -> StdResult<Decimal> {
+    Ok(Decimal::one())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

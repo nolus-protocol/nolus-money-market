@@ -5,6 +5,8 @@ mod tests {
     use lease::msg::InstantiateMsg as LeaseInstantiateMsg;
     use lpp::msg::InstantiateMsg as LppInstantiateMsg;
 
+    use crate::msg::{QueryMsg, QuoteResponse};
+
     const USER: &str = "USER";
     const ADMIN: &str = "ADMIN";
 
@@ -97,7 +99,7 @@ mod tests {
         )
     }
 
-    fn setup_test_case(app: &mut App, init_funds: Vec<Coin>, user_addr: Addr) -> (Addr, u64) {
+    pub fn setup_test_case(app: &mut App, init_funds: Vec<Coin>, user_addr: Addr) -> (Addr, u64) {
         // 1. Instantiate Lease contract (and OWNER as admin)
         let (_lease_addr, lease_code_id) = instantiate_lease(app);
         app.update_block(next_block);
@@ -187,5 +189,24 @@ mod tests {
             coins(40, "UST"),
             app.wrap().query_all_balances(lease_address).unwrap()
         );
+    }
+
+    #[test]
+    fn test_quote() {
+        let mut app = mock_app(&coins(10000, "UST"));
+        let user_addr = Addr::unchecked(USER);
+        let (leaser_addr, _) = setup_test_case(&mut app, coins(500, "UST"), user_addr);
+
+        let resp: QuoteResponse = app
+            .wrap()
+            .query_wasm_smart(
+                leaser_addr,
+                &QueryMsg::Quote {
+                    downpayment: Coin::new(100, "UST"),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(185, resp.borrow.amount.u128());
     }
 }
