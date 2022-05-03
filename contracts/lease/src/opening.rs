@@ -12,7 +12,7 @@ pub struct NewLeaseForm {
     /// Denomination of the currency this lease will be about.
     pub currency: String,
     pub liability: Liability,
-    pub interest: LoanForm,
+    pub loan: LoanForm,
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq, JsonSchema)]

@@ -21,7 +21,7 @@ impl NewLeaseForm {
             customer,
             self.currency,
             self.liability,
-            self.interest.into(api)?,
+            self.loan.into(api)?,
         ))
     }
 }

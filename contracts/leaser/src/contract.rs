@@ -71,7 +71,7 @@ pub fn try_borrow(deps: DepsMut, info: MessageInfo) -> Result<Response, Contract
                         max_percent: 80,
                         recalc_secs: 20 * 24 * 60 * 60, // 20 days TODO use a crate for daytime calculations
                     },
-                    interest: LoanForm {
+                    loan: LoanForm {
                         annual_margin_interest_permille: 31, // 3.1%
                         lpp: config.lpp_ust_addr.into_string(),
                         interest_due_period_secs: 90 * 24 * 60 * 60, // 90 days TODO use a crate for daytime calculations
