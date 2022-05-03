@@ -1,15 +1,12 @@
-use cosmwasm_std::{Api, StdResult};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::{loan::Loan, lease::Lease};
 
 // TODO define it as type not alias
 pub type Denom = String;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct OpenLeaseForm {
+pub struct NewLeaseForm {
     /// The customer who wants to open a lease.
     pub customer: String,
     /// Denomination of the currency this lease will be about.
@@ -46,28 +43,4 @@ pub struct LoanForm {
     pub interest_due_period_secs: u32,
     /// How long after the due period ends the interest may be paid before initiating a liquidation
     pub grace_period_secs: u32,
-}
-
-impl LoanForm {
-    pub fn into(self, api: &dyn Api) -> StdResult<Loan> {
-        let lpp = api.addr_validate(&self.lpp)?;
-        Ok(Loan::new(
-            self.annual_margin_interest_permille,
-            lpp,
-            self.interest_due_period_secs,
-            self.grace_period_secs,
-        ))
-    }
-}
-
-impl OpenLeaseForm {
-    pub fn into(self, api: &dyn Api) -> StdResult<Lease> {
-        let customer = api.addr_validate(&self.customer)?;
-        Ok(Lease::new(
-            customer,
-            self.currency,
-            self.liability,
-            self.interest.into(api)?,
-        ))
-    }
 }

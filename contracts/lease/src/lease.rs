@@ -3,7 +3,7 @@ use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    application::{Denom, Liability},
+    opening::{Denom, Liability},
     loan::{Loan},
 };
 
@@ -45,7 +45,7 @@ impl Lease {
 mod tests {
     use cosmwasm_std::{testing::MockStorage, Addr};
 
-    use crate::{application::Liability, loan::Loan};
+    use crate::{opening::Liability, loan::Loan};
 
     use super::Lease;
 

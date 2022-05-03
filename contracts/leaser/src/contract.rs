@@ -6,7 +6,7 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
-use lease::application::{OpenLeaseForm, Liability, LoanForm};
+use lease::opening::{NewLeaseForm, Liability, LoanForm};
 
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -62,7 +62,7 @@ pub fn try_borrow(deps: DepsMut, info: MessageInfo) -> Result<Response, Contract
                 code_id: config.loan_code_id,
                 funds: vec![],
                 label: "lease".to_string(),
-                msg: to_binary(&OpenLeaseForm {
+                msg: to_binary(&NewLeaseForm {
                     customer: info.sender.into_string(),
                     currency: "".to_owned(), // TODO the same denom lppUST is working with
                     liability: Liability {
