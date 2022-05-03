@@ -1,8 +1,8 @@
-use cosmwasm_std::{entry_point, Coin};
+use cosmwasm_std::{entry_point};
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
-use crate::application::{Denom, ApplicationForm};
+use crate::application::{ApplicationForm};
 use crate::error::ContractError;
 use crate::lease::Lease;
 use crate::msg::{ExecuteMsg, QueryMsg};
@@ -14,19 +14,19 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[entry_point]
 pub fn instantiate(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     _info: MessageInfo,
     msg: ApplicationForm,
 ) -> Result<Response, ContractError> {
     // TODO restrict the Lease instantiation only to the Leaser addr by using `nolusd tx wasm store ... --instantiate-only-address <addr>`
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let lease: Lease = msg.into();
+    let lease: Lease = msg.into(deps.api)?;
     // TODO validate "SingleDenom" invariant
     lease.store(deps.storage)?;
 
     // TODO query lpp about its denom
-    const LPP_DENOM: &str = "UST";
+    // const LPP_DENOM: &str = "UST";
 
     // let borrow_amount = Coin::new(amount, denom)
     // lpp::msg::ExecuteMsg::Loan{}

@@ -1,10 +1,10 @@
-use cosmwasm_std::{Addr, Api, StdResult, Storage, Timestamp, Uint128};
+use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     application::{Denom, LiabilityPolicy},
-    interest::InterestPolicy,
+    interest::{InterestPolicy},
 };
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -18,15 +18,19 @@ pub struct Lease {
 const DB_ITEM: Item<Lease> = Item::new("lease");
 
 impl Lease {
-    // pub fn from(msg: InstantiateMsg, now: Timestamp, api: &dyn Api) -> StdResult<Self> {
-    //     let application = Application::from(msg, api)?;
-    //     Ok(Self {
-    //         application,
-    //         interest_due_period_start: now,
-    //         interest_due_period_end: now.plus_nanos(0), // TODO intro PeriodLengthNanoSec
-    //         margin_interest_paid_in_period_uust: Uint128::zero(),
-    //     })
-    // }
+    pub fn new(
+        customer: Addr,
+        currency: Denom,
+        liability: LiabilityPolicy,
+        interest: InterestPolicy,
+    ) -> Self {
+        Self {
+            customer,
+            currency,
+            liability,
+            interest,
+        }
+    }
 
     pub fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
         DB_ITEM.save(storage, &self)

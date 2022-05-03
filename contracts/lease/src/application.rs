@@ -1,5 +1,4 @@
-use cosmwasm_std::{Addr, StdResult, Storage, Api};
-use cw_storage_plus::Item;
+use cosmwasm_std::{Api, StdResult};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -48,35 +47,26 @@ pub struct InterestPolicyDTO {
     pub grace_period_secs: u32,
 }
 
-impl From<InterestPolicyDTO> for InterestPolicy {
-    fn from(_: InterestPolicyDTO) -> Self {
-        todo!()
+impl InterestPolicyDTO {
+    pub fn into(self, api: &dyn Api) -> StdResult<InterestPolicy> {
+        let lpp = api.addr_validate(&self.lpp)?;
+        Ok(InterestPolicy::new(
+            self.annual_margin_interest_permille,
+            lpp,
+            self.interest_due_period_secs,
+            self.grace_period_secs,
+        ))
     }
 }
 
-impl From<ApplicationForm> for Lease {
-    fn from(_: ApplicationForm) -> Self {
-        todo!()
+impl ApplicationForm {
+    pub fn into(self, api: &dyn Api) -> StdResult<Lease> {
+        let customer = api.addr_validate(&self.customer)?;
+        Ok(Lease::new(
+            customer,
+            self.currency,
+            self.liability,
+            self.interest.into(api)?,
+        ))
     }
 }
-
-// impl Application {
-//     pub fn from(msg: InstantiateMsg, api: &dyn Api) -> StdResult<Self> {
-//         let customer = api.addr_validate(&msg.customer)?;
-//         let lpp = api.addr_validate(&msg.lpp)?;
-//         Ok(Self {
-//             customer,
-//             currency: msg.currency,
-//             lpp,
-//             annual_margin_interest_permille: msg.annual_margin_interest_permille,
-//         })
-//     }
-
-//     pub fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
-//         DB_ITEM.save(storage, &self)
-//     }
-
-//     pub fn load(storage: &dyn Storage) -> StdResult<Self> {
-//         DB_ITEM.load(storage)
-//     }
-// }
