@@ -2,7 +2,7 @@ use cosmwasm_std::{entry_point};
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 
-use crate::application::{ApplicationForm};
+use crate::application::OpenLeaseForm;
 use crate::error::ContractError;
 use crate::lease::Lease;
 use crate::msg::{ExecuteMsg, QueryMsg};
@@ -16,7 +16,7 @@ pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     _info: MessageInfo,
-    msg: ApplicationForm,
+    msg: OpenLeaseForm,
 ) -> Result<Response, ContractError> {
     // TODO restrict the Lease instantiation only to the Leaser addr by using `nolusd tx wasm store ... --instantiate-only-address <addr>`
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;

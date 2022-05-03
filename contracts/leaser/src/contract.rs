@@ -6,7 +6,7 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
-use lease::application::{ApplicationForm, InterestPolicyDTO, LiabilityPolicy};
+use lease::application::{OpenLeaseForm, Liability, LoanForm};
 
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -62,16 +62,16 @@ pub fn try_borrow(deps: DepsMut, info: MessageInfo) -> Result<Response, Contract
                 code_id: config.loan_code_id,
                 funds: vec![],
                 label: "lease".to_string(),
-                msg: to_binary(&ApplicationForm {
+                msg: to_binary(&OpenLeaseForm {
                     customer: info.sender.into_string(),
                     currency: "".to_owned(), // TODO the same denom lppUST is working with
-                    liability: LiabilityPolicy {
+                    liability: Liability {
                         init_percent: 65,
                         healthy_percent: 70,
                         max_percent: 80,
                         recalc_secs: 20 * 24 * 60 * 60, // 20 days TODO use a crate for daytime calculations
                     },
-                    interest: InterestPolicyDTO {
+                    interest: LoanForm {
                         annual_margin_interest_permille: 31, // 3.1%
                         lpp: config.lpp_ust_addr.into_string(),
                         interest_due_period_secs: 90 * 24 * 60 * 60, // 90 days TODO use a crate for daytime calculations

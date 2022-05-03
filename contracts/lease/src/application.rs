@@ -2,25 +2,25 @@ use cosmwasm_std::{Api, StdResult};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{interest::InterestPolicy, lease::Lease};
+use crate::{loan::Loan, lease::Lease};
 
 // TODO define it as type not alias
 pub type Denom = String;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct ApplicationForm {
+pub struct OpenLeaseForm {
     /// The customer who wants to open a lease.
     pub customer: String,
     /// Denomination of the currency this lease will be about.
     pub currency: String,
-    pub liability: LiabilityPolicy,
-    pub interest: InterestPolicyDTO,
+    pub liability: Liability,
+    pub interest: LoanForm,
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct LiabilityPolicy {
+pub struct Liability {
     /// The initial percentage of the amount due versus the locked collateral
     pub init_percent: u8,
     /// The healty percentage of the amount due versus the locked collateral
@@ -33,8 +33,9 @@ pub struct LiabilityPolicy {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+#[serde(rename = "loan")]
 /// The value remains intact.
-pub struct InterestPolicyDTO {
+pub struct LoanForm {
     /// The delta added on top of the LPP Loan interest rate.
     ///
     /// The amount, a part of any payment, goes to the Profit contract.
@@ -47,10 +48,10 @@ pub struct InterestPolicyDTO {
     pub grace_period_secs: u32,
 }
 
-impl InterestPolicyDTO {
-    pub fn into(self, api: &dyn Api) -> StdResult<InterestPolicy> {
+impl LoanForm {
+    pub fn into(self, api: &dyn Api) -> StdResult<Loan> {
         let lpp = api.addr_validate(&self.lpp)?;
-        Ok(InterestPolicy::new(
+        Ok(Loan::new(
             self.annual_margin_interest_permille,
             lpp,
             self.interest_due_period_secs,
@@ -59,7 +60,7 @@ impl InterestPolicyDTO {
     }
 }
 
-impl ApplicationForm {
+impl OpenLeaseForm {
     pub fn into(self, api: &dyn Api) -> StdResult<Lease> {
         let customer = api.addr_validate(&self.customer)?;
         Ok(Lease::new(
