@@ -6,7 +6,8 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
-use lease::opening::{NewLeaseForm, Liability, LoanForm};
+use lease::liability::Liability;
+use lease::opening::{NewLeaseForm, LoanForm};
 
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
