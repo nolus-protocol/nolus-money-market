@@ -66,12 +66,7 @@ pub fn try_borrow(deps: DepsMut, info: MessageInfo) -> Result<Response, Contract
                 msg: to_binary(&NewLeaseForm {
                     customer: info.sender.into_string(),
                     currency: "".to_owned(), // TODO the same denom lppUST is working with
-                    liability: Liability {
-                        init_percent: 65,
-                        healthy_percent: 70,
-                        max_percent: 80,
-                        recalc_secs: 20 * 24 * 60 * 60, // 20 days TODO use a crate for daytime calculations
-                    },
+                    liability: Liability::new(65, 5, 10, 20 * 24),
                     loan: LoanForm {
                         annual_margin_interest_permille: 31, // 3.1%
                         lpp: config.lpp_ust_addr.into_string(),
