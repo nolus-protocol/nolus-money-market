@@ -4,7 +4,7 @@ use cw2::set_contract_version;
 use cw_utils::{one_coin};
 
 use crate::opening::NewLeaseForm;
-use crate::error::ContractError;
+use crate::error::ContractResult;
 use crate::lease::Lease;
 use crate::msg::{ExecuteMsg, QueryMsg};
 
@@ -18,7 +18,7 @@ pub fn instantiate(
     _env: Env,
     info: MessageInfo,
     msg: NewLeaseForm,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
 
     // TODO restrict the Lease instantiation only to the Leaser addr by using `nolusd tx wasm store ... --instantiate-only-address <addr>`
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -39,7 +39,7 @@ pub fn execute(
     _env: Env,
     _info: MessageInfo,
     _msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     Ok(Response::default())
 }
 

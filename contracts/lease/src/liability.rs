@@ -1,7 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::error::ContractError;
+use crate::error::{ContractError, ContractResult};
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -56,7 +56,7 @@ impl Liability {
         obj
     }
 
-    pub fn invariant_held(&self) -> Result<(), ContractError> {
+    pub fn invariant_held(&self) -> ContractResult<()> {
         if self.init_percent > 0
             && self.healthy_percent >= self.init_percent
             && self.max_percent > self.healthy_percent

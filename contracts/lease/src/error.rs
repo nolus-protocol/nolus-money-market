@@ -31,3 +31,5 @@ impl ContractError {
         ))
     }
 }
+
+pub type ContractResult<T> = core::result::Result<T, ContractError>;
