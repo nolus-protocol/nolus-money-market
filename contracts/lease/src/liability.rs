@@ -1,6 +1,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::error::ContractError;
+
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Liability {
@@ -50,21 +52,28 @@ impl Liability {
             max_percent,
             recalc_secs: u32::from(recalc_hours) * SECS_IN_HOUR,
         };
-        debug_assert!(obj.invariant_held());
+        debug_assert!(obj.invariant_held().is_ok());
         obj
     }
 
-    pub fn invariant_held(&self) -> bool {
-        self.init_percent > 0
+    pub fn invariant_held(&self) -> Result<(), ContractError> {
+        if self.init_percent > 0
             && self.healthy_percent >= self.init_percent
             && self.max_percent > self.healthy_percent
             && self.recalc_secs >= SECS_IN_HOUR
+        {
+            Result::Ok(())
+        } else {
+            Result::Err(ContractError::broken_invariant_err::<Liability>())
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
     use cosmwasm_std::from_slice;
+
+    use crate::error::ContractError;
 
     use super::{Liability, SECS_IN_HOUR};
 
@@ -132,6 +141,6 @@ mod test {
             br#"{"init_percent":40,"healthy_percent":30,"max_percent":20,"recalc_secs":36000}"#,
         )
         .unwrap();
-        assert!(!deserialized.invariant_held());
+        assert_eq!(ContractError::broken_invariant_err::<Liability>(), deserialized.invariant_held().unwrap_err());
     }
 }

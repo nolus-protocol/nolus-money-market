@@ -1,9 +1,9 @@
-use cosmwasm_std::{StdResult, Api};
+use cosmwasm_std::{Api};
 
-use crate::{opening::{LoanForm, NewLeaseForm}, loan::Loan, lease::Lease};
+use crate::{opening::{LoanForm, NewLeaseForm}, loan::Loan, lease::Lease, error::ContractError};
 
 impl LoanForm {
-    pub fn into(self, api: &dyn Api) -> StdResult<Loan> {
+    pub fn into(self, api: &dyn Api) -> Result<Loan, ContractError> {
         let lpp = api.addr_validate(&self.lpp)?;
         let _lpp_stub = lpp::stub::LppStub::from(lpp.clone());
         // lpp_stub.create_open_loan_msg();
@@ -17,7 +17,8 @@ impl LoanForm {
 }
 
 impl NewLeaseForm {
-    pub fn into(self, api: &dyn Api) -> StdResult<Lease> {
+    pub fn into(self, api: &dyn Api) -> Result<Lease, ContractError> {
+        self.liability.invariant_held()?;
         let customer = api.addr_validate(&self.customer)?;
         Ok(Lease::new(
             customer,
