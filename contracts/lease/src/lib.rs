@@ -9,3 +9,5 @@ pub mod contract;
 mod lease;
 mod loan;
 mod from_forms;
+mod amount;
+mod percent;

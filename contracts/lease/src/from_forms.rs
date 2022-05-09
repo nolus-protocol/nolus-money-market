@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api};
+use cosmwasm_std::{Api, Coin};
 
 use crate::{opening::{LoanForm, NewLeaseForm}, loan::Loan, lease::Lease, error::ContractResult};
 
@@ -17,9 +17,10 @@ impl LoanForm {
 }
 
 impl NewLeaseForm {
-    pub fn into(self, api: &dyn Api) -> ContractResult<Lease> {
+    pub fn open_lease(self, _downpayment: Coin, api: &dyn Api) -> ContractResult<Lease> {
         self.liability.invariant_held()?;
         let customer = api.addr_validate(&self.customer)?;
+
         Ok(Lease::new(
             customer,
             self.currency,

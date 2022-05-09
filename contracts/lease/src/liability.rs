@@ -1,7 +1,12 @@
+use cosmwasm_std::Uint128;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::error::{ContractError, ContractResult};
+use crate::{
+    amount::Amount,
+    error::{ContractError, ContractResult},
+    percent::HUNDRED,
+};
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -57,6 +62,7 @@ impl Liability {
     }
 
     pub fn invariant_held(&self) -> ContractResult<()> {
+        // TODO restrict further the accepted percents to 100 since there is no much sense of having no borrow
         if self.init_percent > 0
             && self.healthy_percent >= self.init_percent
             && self.max_percent > self.healthy_percent
@@ -67,13 +73,21 @@ impl Liability {
             Result::Err(ContractError::broken_invariant_err::<Liability>())
         }
     }
+
+    pub fn init_borrow_amount(&self, downpayment: Amount) -> Amount {
+        let init = self.init_percent.into();
+        debug_assert!(init < HUNDRED);
+        let borrowed = Uint128::from(downpayment.percent(init))
+            .multiply_ratio(HUNDRED.u8(), (HUNDRED - init).u8());
+        borrowed.into()
+    }
 }
 
 #[cfg(test)]
 mod test {
     use cosmwasm_std::from_slice;
 
-    use crate::error::ContractError;
+    use crate::{amount::Amount, error::ContractError, percent::Percent};
 
     use super::{Liability, SECS_IN_HOUR};
 
@@ -141,6 +155,35 @@ mod test {
             br#"{"init_percent":40,"healthy_percent":30,"max_percent":20,"recalc_secs":36000}"#,
         )
         .unwrap();
-        assert_eq!(ContractError::broken_invariant_err::<Liability>(), deserialized.invariant_held().unwrap_err());
+        assert_eq!(
+            ContractError::broken_invariant_err::<Liability>(),
+            deserialized.invariant_held().unwrap_err()
+        );
+    }
+
+    fn test_init_borrow_amount<D, P, B>(d: D, p: P, exp: B)
+    where
+        D: Into<Amount>,
+        P: Into<Percent>,
+        B: Into<Amount>,
+    {
+        let downpayment = d.into();
+        let percent = p.into();
+        let calculated = Liability {
+            init_percent: percent.u8(),
+            healthy_percent: 99,
+            max_percent: 100,
+            recalc_secs: 20000,
+        }
+        .init_borrow_amount(downpayment);
+        assert_eq!(exp.into(), calculated);
+        assert_eq!(calculated, (downpayment + calculated).percent(percent));
+    }
+
+    #[test]
+    fn init_borrow() {
+        test_init_borrow_amount(1000, 10, 111);
+        test_init_borrow_amount(1, 10, 0);
+        test_init_borrow_amount(1000, 99, 990 * 100);
     }
 }
