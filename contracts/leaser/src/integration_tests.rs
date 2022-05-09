@@ -2,7 +2,10 @@
 mod tests {
     use cosmwasm_std::{coins, Addr, Coin, Empty, Uint256, Uint64};
     use cw_multi_test::{next_block, App, AppBuilder, Contract, ContractWrapper, Executor};
-    use lease::msg::InstantiateMsg as LeaseInstantiateMsg;
+    use lease::{
+        liability::Liability,
+        opening::{LoanForm, NewLeaseForm},
+    };
     use lpp::msg::InstantiateMsg as LppInstantiateMsg;
 
     use crate::msg::{QueryMsg, QuoteResponse};
@@ -73,16 +76,28 @@ mod tests {
     }
 
     #[track_caller]
-    fn instantiate_lease(app: &mut App) -> (Addr, u64) {
-        let lease_id = app.store_code(contract_lease_mock());
-        let msg = LeaseInstantiateMsg {
-            owner: ADMIN.to_string(),
+    fn instantiate_lease(app: &mut App, lease_id: u64, lpp_addr: Addr) -> Addr {
+        let msg = NewLeaseForm {
+            customer: USER.to_string(),
+            currency: "UST".to_string(),
+            liability: Liability::new(65, 5, 10, 20 * 24),
+            loan: LoanForm {
+                annual_margin_interest_permille: 31, // 3.1%
+                lpp: lpp_addr.into_string(),
+                interest_due_period_secs: 90 * 24 * 60 * 60, // 90 days TODO use a crate for daytime calculations
+                grace_period_secs: 10 * 24 * 60 * 60, // 10 days TODO use a crate for daytime calculations
+            },
         };
-        (
-            app.instantiate_contract(lease_id, Addr::unchecked(ADMIN), &msg, &[], "lease", None)
-                .unwrap(),
+
+        app.instantiate_contract(
             lease_id,
+            Addr::unchecked(ADMIN),
+            &msg,
+            &coins(40, "UST"),
+            "lease",
+            None,
         )
+        .unwrap()
     }
 
     #[track_caller]
@@ -100,16 +115,18 @@ mod tests {
     }
 
     pub fn setup_test_case(app: &mut App, init_funds: Vec<Coin>, user_addr: Addr) -> (Addr, u64) {
-        // 1. Instantiate Lease contract (and OWNER as admin)
-        let (_lease_addr, lease_code_id) = instantiate_lease(app);
+        let lease_id = app.store_code(contract_lease_mock());
+
+        // 1. Instantiate LPP contract
+        let (lpp_addr, _lpp_id) = instantiate_lpp(app, Uint64::new(lease_id));
         app.update_block(next_block);
 
-        // 2. Instantiate LPP contract
-        let lpp_addr = instantiate_lpp(app, Uint64::new(lease_code_id));
+        // 2. Instantiate Lease contract (and OWNER as admin)
+        let _lease_addr = instantiate_lease(app, lease_id, lpp_addr.clone());
         app.update_block(next_block);
 
         // 3. Instantiate Leaser contract
-        let leaser_addr = instantiate_leaser(app, lease_code_id, lpp_addr.0);
+        let leaser_addr = instantiate_leaser(app, lease_id, lpp_addr);
         app.update_block(next_block);
 
         // Bonus: set some funds on the user for future proposals
@@ -117,7 +134,7 @@ mod tests {
             app.send_tokens(Addr::unchecked(ADMIN), user_addr, &init_funds)
                 .unwrap();
         }
-        (leaser_addr, lease_code_id)
+        (leaser_addr, lease_id)
     }
 
     #[test]

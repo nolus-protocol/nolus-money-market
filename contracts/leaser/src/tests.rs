@@ -4,7 +4,8 @@ use cosmwasm_std::{
     coins, from_binary, to_binary, Addr, Coin, CosmosMsg, Decimal, StdError, SubMsg, Uint128,
     Uint256, WasmMsg,
 };
-use lease::msg::InstantiateMsg as LeaseInstantiateMsg;
+use lease::liability::Liability;
+use lease::opening::{LoanForm, NewLeaseForm};
 
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse};
 
@@ -40,10 +41,11 @@ fn proper_initialization() {
 #[test]
 fn testexecute() {
     let mut deps = mock_dependencies();
+    let lpp_addr = Addr::unchecked("test");
 
     let msg = InstantiateMsg {
         lease_code_id: 1,
-        lpp_ust_addr: Addr::unchecked("test"),
+        lpp_ust_addr: lpp_addr.clone(),
         lease_interest_rate_margin: 3,
         lease_max_liability: 80,
         lease_healthy_liability: 70,
@@ -78,14 +80,22 @@ fn testexecute() {
     // try open lease with enought UST
     let msg = ExecuteMsg::Borrow {};
     let info = mock_info("addr0000", coins(40, "UST").as_ref());
-    let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     assert_eq!(
         res.messages,
         vec![SubMsg::reply_on_success(
             CosmosMsg::Wasm(WasmMsg::Instantiate {
                 funds: coins(40, "UST"),
-                msg: to_binary(&LeaseInstantiateMsg {
-                    owner: info.sender.to_string(),
+                msg: to_binary(&NewLeaseForm {
+                    customer: "addr0000".to_string(),
+                    currency: "".to_string(),
+                    liability: Liability::new(65, 5, 10, 20 * 24),
+                    loan: LoanForm {
+                        annual_margin_interest_permille: 31, // 3.1%
+                        lpp: lpp_addr.to_string(),
+                        interest_due_period_secs: 90 * 24 * 60 * 60, // 90 days TODO use a crate for daytime calculations
+                        grace_period_secs: 10 * 24 * 60 * 60, // 10 days TODO use a crate for daytime calculations
+                    },
                 })
                 .unwrap(),
                 admin: None,
