@@ -22,7 +22,6 @@ fn proper_initialization() {
         lease_initial_liability: 65,
         repayment_period_nano_sec: Uint256::from(123_u64),
         grace_period_nano_sec: Uint256::from(123_u64),
-        lease_minimal_downpayment: Some(Coin::new(10, "UST")),
     };
     let info = mock_info("creator", &coins(1000, "unolus"));
 
@@ -52,30 +51,9 @@ fn testexecute() {
         lease_initial_liability: 65,
         repayment_period_nano_sec: Uint256::from(123_u64),
         grace_period_nano_sec: Uint256::from(123_u64),
-        lease_minimal_downpayment: Some(Coin::new(10, "UST")),
     };
     let info = mock_info("creator", &coins(1000, "unolus"));
     let _ = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-    // try open lease with nothing
-    let msg = ExecuteMsg::Borrow {};
-    let info = mock_info("addr0000", &[]);
-    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
-    assert_eq!(res.to_string(), "Insufficient funds for down payment");
-
-    // try open lease with not enought UST
-    let msg = ExecuteMsg::Borrow {};
-    let mut amount = coins(40, "ETH");
-    amount.append(&mut coins(2, "UST"));
-    let info = mock_info("addr0000", coins(40, "ETH").as_ref());
-    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
-    assert_eq!(res.to_string(), "Insufficient funds for down payment");
-
-    // try open lease with no UST
-    let msg = ExecuteMsg::Borrow {};
-    let info = mock_info("addr0000", coins(40, "ETH").as_ref());
-    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
-    assert_eq!(res.to_string(), "Insufficient funds for down payment");
 
     // try open lease with enought UST
     let msg = ExecuteMsg::Borrow {};
@@ -120,7 +98,6 @@ fn quote_test() {
         lease_initial_liability: 65,
         repayment_period_nano_sec: Uint256::from(123_u64),
         grace_period_nano_sec: Uint256::from(123_u64),
-        lease_minimal_downpayment: Some(Coin::new(10, "UST")),
     };
     let info = mock_info("creator", &coins(2, "token"));
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();

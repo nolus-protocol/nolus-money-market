@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin, Decimal, Uint256};
+use cosmwasm_std::{Addr, Decimal, Uint256};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +13,6 @@ pub struct Config {
     pub lease_max_liability: Decimal,
     pub lease_healthy_liability: Decimal,
     pub lease_initial_liability: Decimal,
-    pub lease_minimal_downpayment: Option<Coin>,
     pub repayment_period_nano_sec: Uint256,
     pub grace_period_nano_sec: Uint256,
 }
@@ -24,17 +23,16 @@ impl Config {
             owner: sender,
             lease_code_id: msg.lease_code_id,
             lpp_ust_addr: msg.lpp_ust_addr,
-            lease_interest_rate_margin: Decimal::percent(msg.lease_interest_rate_margin),
-            lease_max_liability: Decimal::percent(msg.lease_max_liability),
+            lease_interest_rate_margin: Decimal::percent(msg.lease_interest_rate_margin.into()),
+            lease_max_liability: Decimal::percent(msg.lease_max_liability.into()),
             lease_healthy_liability: Config::validate_lease_healthy_liability(
-                msg.lease_healthy_liability,
-                msg.lease_max_liability,
+                msg.lease_healthy_liability.into(),
+                msg.lease_max_liability.into(),
             )?,
             lease_initial_liability: Config::validate_lease_initial_liability(
-                msg.lease_initial_liability,
-                msg.lease_healthy_liability,
+                msg.lease_initial_liability.into(),
+                msg.lease_healthy_liability.into(),
             )?,
-            lease_minimal_downpayment: msg.lease_minimal_downpayment,
             repayment_period_nano_sec: msg.repayment_period_nano_sec,
             grace_period_nano_sec: msg.grace_period_nano_sec,
         })

@@ -63,7 +63,6 @@ mod tests {
             lease_initial_liability: 65,
             repayment_period_nano_sec: Uint256::from(123_u64),
             grace_period_nano_sec: Uint256::from(123_u64),
-            lease_minimal_downpayment: Some(Coin::new(10, "UST")),
         }
     }
 

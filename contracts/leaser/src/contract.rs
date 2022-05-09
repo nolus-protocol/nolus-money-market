@@ -12,7 +12,6 @@ use lease::liability::Liability;
 use lease::opening::{LoanForm, NewLeaseForm};
 
 use crate::error::ContractError;
-use crate::helpers::assert_sent_sufficient_coin;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse};
 use crate::state::LS;
 
@@ -51,7 +50,7 @@ pub fn try_borrow(
     sender: Addr,
 ) -> Result<Response, ContractError> {
     let config = LS.get_config(deps.storage)?;
-    assert_sent_sufficient_coin(&amount, config.lease_minimal_downpayment)?;
+    // assert_sent_sufficient_coin(&amount, config.lease_minimal_downpayment)?;
 
     let instance_reply_id = LS.next(deps.storage, sender.clone())?;
     Ok(
