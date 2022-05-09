@@ -1,4 +1,3 @@
-
 use std::collections::HashSet;
 use std::str::FromStr;
 
@@ -7,7 +6,7 @@ use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 
 use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
 use cosmwasm_std::{coins, from_binary, Addr, Decimal256};
-use marketprice::feed::Observation;
+use marketprice::feed::{Observation, Prices};
 
 #[test]
 fn proper_initialization() {
@@ -79,11 +78,13 @@ fn feed_prices_unknown_feeder() {
     // beneficiary can release it
     let info = mock_info("creator", &coins(2, "token"));
     let msg = ExecuteMsg::FeedPrice {
-        base: "OSM".to_string(),
-        prices: vec![
-            ("mAAPL".to_string(), Decimal256::from_str("1.2").unwrap()),
-            ("mGOGL".to_string(), Decimal256::from_str("2.2").unwrap()),
-        ],
+        prices: Prices {
+            base: "OSM".to_string(),
+            values: vec![
+                ("mAAPL".to_string(), Decimal256::from_str("1.2").unwrap()),
+                ("mGOGL".to_string(), Decimal256::from_str("2.2").unwrap()),
+            ],
+        },
     };
     execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
 }
@@ -109,13 +110,59 @@ fn feed_prices() {
     // beneficiary can release it
     let info = mock_info("creator", &coins(2, "token"));
     let msg = ExecuteMsg::FeedPrice {
+        prices: Prices {
+            base: "OSM".to_string(),
+            values: vec![
+                ("mAAPL".to_string(), Decimal256::from_str("1.2").unwrap()),
+                ("mGOGL".to_string(), Decimal256::from_str("2.2").unwrap()),
+            ],
+        },
+    };
+    let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+    // should add new address to FEEDERS Item
+    let res = query(
+        deps.as_ref(),
+        mock_env(),
+        QueryMsg::Price {
+            base: "OSM".to_string(),
+            quote: "mGOGL".to_string(),
+        },
+    )
+    .unwrap();
+    let value: Observation = from_binary(&res).unwrap();
+    assert_eq!(Decimal256::from_str("2.2").unwrap(), value.price());
+}
+
+#[test]
+fn feed_prices_multiple_bases() {
+    let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+
+    let msg = InstantiateMsg {
+        base_asset: "token".to_string(),
+        price_feed_period: 60,
+        feeders_percentage_needed: 50,
+    };
+    let info = mock_info("creator", &coins(2, "token"));
+    let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+    let info = mock_info("creator", &coins(2, "token"));
+    let msg = ExecuteMsg::RegisterFeeder {
+        feeder_address: "creator".to_string(),
+    };
+    let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+    // beneficiary can release it
+    let info = mock_info("creator", &coins(2, "token"));
+    let prices_map = vec![marketprice::feed::Prices {
         base: "OSM".to_string(),
-        prices: vec![
+        values: vec![
             ("mAAPL".to_string(), Decimal256::from_str("1.2").unwrap()),
             ("mGOGL".to_string(), Decimal256::from_str("2.2").unwrap()),
         ],
-    };
-    let _res = execute(deps.as_mut(), mock_env(), info.clone(), msg.clone()).unwrap();
+    }];
+
+    let msg = ExecuteMsg::FeedPrices { prices: prices_map };
     let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
     // should add new address to FEEDERS Item

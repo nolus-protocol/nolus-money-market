@@ -2,15 +2,18 @@ use std::convert::{TryFrom, TryInto};
 
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Addr, Reply, CosmosMsg, SubMsg, Storage, Timestamp, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Decimal256, StdError};
+use cosmwasm_std::{
+    to_binary, Addr, Api, Binary, CosmosMsg, Decimal256, Deps, DepsMut, Env, MessageInfo, Reply,
+    Response, StdError, StdResult, Storage, SubMsg, Timestamp,
+};
 use cw2::set_contract_version;
-use marketprice::feed::{DenomPair, Observation};
+use marketprice::feed::{DenomPair, Observation, Prices};
 use marketprice::market_price::PriceQuery;
 
 use crate::error::ContractError;
-use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, ExecuteAlarmMsg};
-use crate::state::{Config, CONFIG, FEEDERS, MARKET_PRICE, TIME_ORACLE, TIME_ALARMS};
-use time_oracle::{Id};
+use crate::msg::{ConfigResponse, ExecuteAlarmMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::state::{Config, CONFIG, FEEDERS, MARKET_PRICE, TIME_ALARMS, TIME_ORACLE};
+use time_oracle::Id;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -50,7 +53,19 @@ pub fn execute(
         ExecuteMsg::RegisterFeeder { feeder_address } => {
             try_register_feeder(deps, info, feeder_address)
         }
-        ExecuteMsg::FeedPrice { base, prices } => try_feed_prices(deps, env, info, base, prices),
+        ExecuteMsg::FeedPrice { prices } => try_feed_prices(
+            deps.storage,
+            env.block.time,
+            get_sender(deps.api, info)?,
+            prices.base,
+            prices.values,
+        ),
+        ExecuteMsg::FeedPrices { prices } => try_feed_multiple_prices(
+            deps.storage,
+            env.block.time,
+            get_sender(deps.api, info)?,
+            prices,
+        ),
         ExecuteMsg::AddAlarm { addr, time } => try_add_alarm(deps, addr, time),
     }
 }
@@ -60,11 +75,17 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
         QueryMsg::Feeders {} => to_binary(&FEEDERS.get(deps)?),
-        QueryMsg::IsFeeder { address } => to_binary(&FEEDERS.is_registered(deps, &address)?),
+        QueryMsg::IsFeeder { address } => {
+            to_binary(&FEEDERS.is_registered(deps.storage, &address)?)
+        }
         QueryMsg::Price { base, quote } => {
             to_binary(&query_market_price(deps, env, (base, quote))?)
         }
     }
+}
+
+pub fn get_sender(api: &dyn Api, info: MessageInfo) -> StdResult<Addr> {
+    api.addr_validate(info.sender.as_str())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -72,7 +93,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
     if msg.result.is_err() {
         Ok(Response::new().add_attribute("alarm", "error"))
     } else {
-		TIME_ALARMS.remove(deps.storage, msg.id)?;
+        TIME_ALARMS.remove(deps.storage, msg.id)?;
         Ok(Response::new().add_attribute("alarm", "success"))
     }
 }
@@ -146,24 +167,21 @@ fn try_register_feeder(
 }
 
 fn try_feed_prices(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
+    storage: &mut dyn Storage,
+    block_time: Timestamp,
+    sender_raw: Addr,
     base: String,
     prices: Vec<(String, Decimal256)>,
 ) -> Result<Response, ContractError> {
-    let sender_raw = deps.api.addr_validate(info.sender.as_str())?;
-
     // Check feeder permission
-    let is_registered = FEEDERS.is_registered(deps.as_ref(), &sender_raw)?;
+    let is_registered = FEEDERS.is_registered(storage, &sender_raw)?;
     if !is_registered {
         return Err(ContractError::UnknownFeeder {});
     }
 
-    let config = CONFIG.load(deps.storage)?;
-    let block_time = env.block.time;
+    let config = CONFIG.load(storage)?;
     MARKET_PRICE.feed(
-        deps.storage,
+        storage,
         block_time,
         sender_raw,
         base,
@@ -171,8 +189,8 @@ fn try_feed_prices(
         config.price_feed_period,
     )?;
 
-    TIME_ORACLE.update_global_time(deps.storage, block_time)?;
-    let response = try_notify_alarms(deps.storage, block_time)?;
+    TIME_ORACLE.update_global_time(storage, block_time)?;
+    let response = try_notify_alarms(storage, block_time)?;
 
     Ok(response.add_attribute("method", "try_feed_prices"))
 }
@@ -211,6 +229,24 @@ fn try_notify_alarms(storage: &mut dyn Storage, ctime: Timestamp) -> StdResult<R
     TIME_ALARMS.notify(storage, &mut dispatcher, ctime)?;
 
     Ok(response)
+}
+
+fn try_feed_multiple_prices(
+    storage: &mut dyn Storage,
+    block_time: Timestamp,
+    sender_raw: Addr,
+    prices: Vec<Prices>,
+) -> Result<Response, ContractError> {
+    for entry in prices {
+        try_feed_prices(
+            storage,
+            block_time,
+            sender_raw.clone(),
+            entry.base,
+            entry.values,
+        )?;
+    }
+    Ok(Response::new().add_attribute("method", "try_feed_multiple_prices"))
 }
 
 #[test]

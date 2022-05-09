@@ -52,7 +52,8 @@ nolusd query wasm contract-state all $CONTRACT --output "json" | jq -r '.models[
 
 * register feeder address. Will use the treasury address just for the test
 ```
-REGISTER='{"register_feeder":{"feeder_address":"nolus1qaf23chpkknx2znmz6p7k7n0u2uk5xtr5zdaf2"}}'
+WALLET_ADDR=$(nolusd keys show -a wallet)
+REGISTER='{"register_feeder":{"feeder_address":"'$WALLET_ADDR'"}}'
 nolusd tx wasm execute $CONTRACT "$REGISTER" --amount 100unolus --from wallet $TXFLAG -y
 ```
 
@@ -60,4 +61,23 @@ nolusd tx wasm execute $CONTRACT "$REGISTER" --amount 100unolus --from wallet $T
 ```
 FEEDERS_QUERY='{"feeders" : {}}'
 nolusd query wasm contract-state smart $CONTRACT "$FEEDERS_QUERY" --output json
+```
+
+* Push new price feed
+For single base denom:
+```
+FEED_PRICE='{"feed_price":{"base": "uosmo", "prices": [["uion", "1.2"], ["mGOGL", "2.2"]]}}'
+nolusd tx wasm execute $CONTRACT "$FEED_PRICE" --amount 100unolus --from wallet $TXFLAG -y
+```
+
+For multiple base denoms:
+```
+FEED_PRICES='{"feed_prices":{"prices":[{"base":"uion","prices":[["unolus","0.00473935148644648"],["uosmo","0.001180423650740253"]]},{"base":"unolus","prices":[["uosmo","0.253428205727904854"]]}]}}'
+nolusd tx wasm execute $CONTRACT "$FEED_PRICES" --amount 100unolus --from wallet $TXFLAG -y
+```
+
+* Query price feeds
+```
+PRICE='{"price":{"base": "uion", "quote": "uosmo"}}'
+nolusd query wasm contract-state smart  $CONTRACT "$PRICE" --output json
 ```
