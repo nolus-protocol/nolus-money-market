@@ -23,7 +23,7 @@ pub fn instantiate(
     // TODO restrict the Lease instantiation only to the Leaser addr by using `nolusd tx wasm store ... --instantiate-only-address <addr>`
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let downpayment = one_coin(&info)?;
+    let _downpayment = one_coin(&info)?;
 
 
     let lease: Lease = msg.into(deps.api)?;
