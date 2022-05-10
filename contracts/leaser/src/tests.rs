@@ -2,27 +2,32 @@ use crate::contract::{execute, instantiate, query};
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{
     coins, from_binary, to_binary, Addr, Coin, CosmosMsg, Decimal, StdError, SubMsg, Uint128,
-    Uint256, WasmMsg,
+    WasmMsg,
 };
 use lease::liability::Liability;
 use lease::opening::{LoanForm, NewLeaseForm};
 
-use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse};
+use crate::msg::{ConfigResponse, ExecuteMsg, QueryMsg, QuoteResponse};
+
+pub fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::InstantiateMsg {
+    crate::msg::InstantiateMsg {
+        lease_code_id,
+        lpp_ust_addr: lpp_addr,
+        lease_interest_rate_margin: 3,
+        lease_max_liability: 80,
+        lease_healthy_liability: 70,
+        lease_initial_liability: 65,
+        repayment_period_sec: 90 * 24 * 60 * 60,
+        grace_period_sec: 10 * 24 * 60 * 60,
+    }
+}
 
 #[test]
 fn proper_initialization() {
     let mut deps = mock_dependencies();
 
-    let msg = InstantiateMsg {
-        lease_code_id: 1,
-        lpp_ust_addr: Addr::unchecked("test"),
-        lease_interest_rate_margin: 3,
-        lease_max_liability: 80,
-        lease_healthy_liability: 70,
-        lease_initial_liability: 65,
-        repayment_period_nano_sec: Uint256::from(123_u64),
-        grace_period_nano_sec: Uint256::from(123_u64),
-    };
+    let lpp_addr = Addr::unchecked("test");
+    let msg = leaser_instantiate_msg(1, lpp_addr.clone());
     let info = mock_info("creator", &coins(1000, "unolus"));
 
     let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -34,24 +39,15 @@ fn proper_initialization() {
     let config = config_response.config;
     assert_eq!("creator", config.owner);
     assert_eq!(1, config.lease_code_id);
-    assert_eq!(Addr::unchecked("test"), config.lpp_ust_addr);
+    assert_eq!(lpp_addr, config.lpp_ust_addr);
 }
 
 #[test]
 fn testexecute() {
     let mut deps = mock_dependencies();
-    let lpp_addr = Addr::unchecked("test");
 
-    let msg = InstantiateMsg {
-        lease_code_id: 1,
-        lpp_ust_addr: lpp_addr.clone(),
-        lease_interest_rate_margin: 3,
-        lease_max_liability: 80,
-        lease_healthy_liability: 70,
-        lease_initial_liability: 65,
-        repayment_period_nano_sec: Uint256::from(123_u64),
-        grace_period_nano_sec: Uint256::from(123_u64),
-    };
+    let lpp_addr = Addr::unchecked("test");
+    let msg = leaser_instantiate_msg(1, lpp_addr.clone());
     let info = mock_info("creator", &coins(1000, "unolus"));
     let _ = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
@@ -89,16 +85,9 @@ fn testexecute() {
 fn quote_test() {
     let mut deps = mock_dependencies();
 
-    let msg = InstantiateMsg {
-        lease_code_id: 1,
-        lpp_ust_addr: Addr::unchecked("test"),
-        lease_interest_rate_margin: 3,
-        lease_max_liability: 80,
-        lease_healthy_liability: 70,
-        lease_initial_liability: 65,
-        repayment_period_nano_sec: Uint256::from(123_u64),
-        grace_period_nano_sec: Uint256::from(123_u64),
-    };
+    let lpp_addr = Addr::unchecked("test");
+    let msg = leaser_instantiate_msg(1, lpp_addr);
+
     let info = mock_info("creator", &coins(2, "token"));
     let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 

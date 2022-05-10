@@ -10,4 +10,4 @@ pub use crate::error::ContractError;
 #[cfg(test)]
 mod integration_tests;
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal, Uint256};
+use cosmwasm_std::{Addr, Decimal};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -13,8 +13,8 @@ pub struct Config {
     pub lease_max_liability: Decimal,
     pub lease_healthy_liability: Decimal,
     pub lease_initial_liability: Decimal,
-    pub repayment_period_nano_sec: Uint256,
-    pub grace_period_nano_sec: Uint256,
+    pub repayment_period_sec: u32,
+    pub grace_period_sec: u32,
 }
 
 impl Config {
@@ -33,8 +33,8 @@ impl Config {
                 msg.lease_initial_liability.into(),
                 msg.lease_healthy_liability.into(),
             )?,
-            repayment_period_nano_sec: msg.repayment_period_nano_sec,
-            grace_period_nano_sec: msg.grace_period_nano_sec,
+            repayment_period_sec: msg.repayment_period_sec,
+            grace_period_sec: msg.grace_period_sec,
         })
     }
 

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{coins, Addr, Coin, Empty, Uint256, Uint64};
+    use cosmwasm_std::{coins, Addr, Coin, Empty, Uint64};
     use cw_multi_test::{next_block, App, AppBuilder, Contract, ContractWrapper, Executor};
     use lease::{
         liability::Liability,
@@ -8,7 +8,10 @@ mod tests {
     };
     use lpp::msg::InstantiateMsg as LppInstantiateMsg;
 
-    use crate::msg::{QueryMsg, QuoteResponse};
+    use crate::{
+        msg::{QueryMsg, QuoteResponse},
+        tests::leaser_instantiate_msg,
+    };
 
     const USER: &str = "USER";
     const ADMIN: &str = "ADMIN";
@@ -48,22 +51,6 @@ mod tests {
                 .init_balance(storage, &Addr::unchecked(ADMIN), init_funds.to_vec())
                 .unwrap();
         })
-    }
-
-    pub fn leaser_instantiate_msg(
-        lease_code_id: u64,
-        lpp_addr: Addr,
-    ) -> crate::msg::InstantiateMsg {
-        crate::msg::InstantiateMsg {
-            lease_code_id,
-            lpp_ust_addr: lpp_addr,
-            lease_interest_rate_margin: 3,
-            lease_max_liability: 80,
-            lease_healthy_liability: 70,
-            lease_initial_liability: 65,
-            repayment_period_nano_sec: Uint256::from(123_u64),
-            grace_period_nano_sec: Uint256::from(123_u64),
-        }
     }
 
     #[track_caller]

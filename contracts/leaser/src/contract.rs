@@ -67,8 +67,8 @@ pub fn try_borrow(
                     loan: LoanForm {
                         annual_margin_interest_permille: 31, // 3.1%
                         lpp: config.lpp_ust_addr.into_string(),
-                        interest_due_period_secs: 90 * 24 * 60 * 60, // 90 days TODO use a crate for daytime calculations
-                        grace_period_secs: 10 * 24 * 60 * 60, // 10 days TODO use a crate for daytime calculations
+                        interest_due_period_secs: config.repayment_period_sec, // 90 days TODO use a crate for daytime calculations
+                        grace_period_secs: config.grace_period_sec,
                     },
                 })?,
             }),
