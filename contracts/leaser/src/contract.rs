@@ -57,7 +57,7 @@ pub fn try_configure(
     if info.sender != config.owner {
         return Err(ContractError::Unauthorized {});
     }
-    LS.update_config(deps.storage, msg);
+    LS.update_config(deps.storage, msg)?;
 
     Ok(Response::default())
 }
