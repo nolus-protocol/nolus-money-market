@@ -5,7 +5,6 @@ use cw_utils::{one_coin};
 
 use crate::opening::NewLeaseForm;
 use crate::error::ContractResult;
-use crate::lease::Lease;
 use crate::msg::{ExecuteMsg, QueryMsg};
 
 // version info for migration info
@@ -26,7 +25,7 @@ pub fn instantiate(
     let downpayment = one_coin(&info)?;
 
 
-    let lease: Lease = msg.open_lease(downpayment, deps.api)?;
+    let lease = msg.open_lease(downpayment, deps.api)?;
     // TODO validate "SingleDenom" invariant
     lease.store(deps.storage)?;
 

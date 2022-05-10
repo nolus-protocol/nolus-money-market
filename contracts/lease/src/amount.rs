@@ -35,6 +35,12 @@ impl From<u128> for Amount {
     }
 }
 
+impl From<Amount> for u128 {
+    fn from(amount: Amount) -> Self {
+        amount.into()
+    }
+}
+
 impl Add<Amount> for Amount {
     type Output = Self;
 
