@@ -1,5 +1,9 @@
-use crate::{config::Config, msg::InstantiateMsg, ContractError};
-use cosmwasm_std::{Addr, DepsMut, StdResult, Storage};
+use crate::{
+    config::Config,
+    msg::{InstantiateMsg, UpdateConfigMsg},
+    ContractError,
+};
+use cosmwasm_std::{Addr, DepsMut, Response, StdResult, Storage};
 use cw_storage_plus::{Item, Map};
 
 pub const LS: LeaserState = LeaserState::new(
@@ -61,6 +65,21 @@ impl<'a> LeaserState<'a> {
 
     pub fn get_config(&self, storage: &dyn Storage) -> StdResult<Config> {
         self.config.load(storage)
+    }
+
+    pub fn update_config(
+        &self,
+        storage: &mut dyn Storage,
+        msg: UpdateConfigMsg,
+    ) -> Result<(), ContractError> {
+        self.config.load(storage)?;
+
+        self.config
+            .update(storage, |mut c| -> Result<Config, ContractError> {
+                c.update_from(msg)?;
+                Ok(c)
+            })?;
+        Ok(())
     }
 
     pub fn next(

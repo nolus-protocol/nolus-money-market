@@ -12,7 +12,9 @@ use lease::liability::Liability;
 use lease::opening::{LoanForm, NewLeaseForm};
 
 use crate::error::ContractError;
-use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse};
+use crate::msg::{
+    ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse, UpdateConfigMsg,
+};
 use crate::state::LS;
 
 // version info for migration info
@@ -41,7 +43,23 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Borrow {} => try_borrow(deps, info.funds, info.sender),
+        ExecuteMsg::Config { msg } => try_configure(deps, info, msg),
     }
+}
+
+pub fn try_configure(
+    deps: DepsMut,
+    info: MessageInfo,
+    msg: UpdateConfigMsg,
+) -> Result<Response, ContractError> {
+    let config = LS.get_config(deps.storage)?;
+
+    if info.sender != config.owner {
+        return Err(ContractError::Unauthorized {});
+    }
+    LS.update_config(deps.storage, msg);
+
+    Ok(Response::default())
 }
 
 pub fn try_borrow(

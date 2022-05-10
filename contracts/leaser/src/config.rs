@@ -2,7 +2,10 @@ use cosmwasm_std::{Addr, Decimal};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{msg::InstantiateMsg, ContractError};
+use crate::{
+    msg::{InstantiateMsg, UpdateConfigMsg},
+    ContractError,
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -36,6 +39,22 @@ impl Config {
             repayment_period_sec: msg.repayment_period_sec,
             grace_period_sec: msg.grace_period_sec,
         })
+    }
+
+    pub fn update_from(&mut self, msg: UpdateConfigMsg) -> Result<(), ContractError> {
+        self.lease_interest_rate_margin = Decimal::percent(msg.lease_interest_rate_margin.into());
+        self.lease_max_liability = Decimal::percent(msg.lease_max_liability.into());
+        self.lease_healthy_liability = Config::validate_lease_healthy_liability(
+            msg.lease_healthy_liability.into(),
+            msg.lease_max_liability.into(),
+        )?;
+        self.lease_initial_liability = Config::validate_lease_initial_liability(
+            msg.lease_initial_liability.into(),
+            msg.lease_healthy_liability.into(),
+        )?;
+        self.repayment_period_sec = msg.repayment_period_sec;
+        self.grace_period_sec = msg.grace_period_sec;
+        Ok(())
     }
 
     fn validate_lease_healthy_liability(

@@ -12,13 +12,24 @@ pub struct InstantiateMsg {
     pub lease_max_liability: u8,        // LeaseMaxLiability%, for example 80%
     pub lease_healthy_liability: u8, // LeaseHealthyLiability%, for example, 70%, must be less than LeaseMaxLiability%
     pub lease_initial_liability: u8, // LeaseInitialLiability%, for example, 65%, must be less or equal to LeaseHealthyLiability%
-    pub repayment_period_sec: u32, // PeriodLengthSec, for example 90 days = 90*24*60*60*1000*1000*1000
-    pub grace_period_sec: u32, // GracePeriodSec, for example 10 days = 10*24*60*60*1000*1000*1000
+    pub repayment_period_sec: u32,   // PeriodLengthSec, for example 90 days = 90*24*60*60
+    pub grace_period_sec: u32,       // GracePeriodSec, for example 10 days = 10*24*60*60
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct UpdateConfigMsg {
+    pub lease_interest_rate_margin: u8,
+    pub lease_max_liability: u8,
+    pub lease_healthy_liability: u8,
+    pub lease_initial_liability: u8,
+    pub repayment_period_sec: u32,
+    pub grace_period_sec: u32,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    Config { msg: UpdateConfigMsg },
     Borrow {},
 }
 
