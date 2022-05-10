@@ -12,7 +12,9 @@ name = "schema"
 required-features = ["library"]
 
 [features]
+default = ["library"]
 library = []
+cosmwasm = []
 
 [dependencies]
 cosmwasm-std = { version = "1.0.0-beta6" }

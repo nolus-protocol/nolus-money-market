@@ -27,5 +27,5 @@ cw-utils = { version = "0.13.1" }
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0-beta6" }
 cw-multi-test = "0.13"
-lpp = { path = "../lpp", version = "0.1.0", default-features = false}
+lpp = { path = "../lpp", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
 lease = { path = "../lease", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
