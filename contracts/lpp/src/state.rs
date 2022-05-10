@@ -20,10 +20,10 @@ pub const LPP: LiquidityPool = LiquidityPool::new("state", "config", "loans");
 // TODO: evaluate fixed or rust_decimal instead of cosmwasm_std::Decimal
 // https://docs.rs/fixed/latest/fixed/index.html
 // https://docs.rs/rust_decimal/latest/rust_decimal/index.html
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
 pub struct State {
     pub total_principal_due: Uint128,
-    pub total_last_interest: Uint128,
+    pub total_interest_due: Uint128,
     pub annual_interest_rate: Decimal,
     pub last_update_time: Timestamp,
 }
@@ -46,6 +46,10 @@ impl<'a> LiquidityPool<'a> {
     pub fn init(&self, deps: DepsMut, denom: String, lease_code_id: Uint64) -> StdResult<()> {
         let config = Config::new(denom, lease_code_id);
         self.config.save(deps.storage, &config)?;
+
+        let state = State::default();
+        self.state.save(deps.storage, &state)?;
+
         Ok(())
     }
 
@@ -58,8 +62,8 @@ impl<'a> LiquidityPool<'a> {
     pub fn validate_lease_addr(
         &self,
         deps: &Deps,
-        lease_addr: Addr,
-    ) -> Result<Addr, ContractError> {
+        lease_addr: &Addr,
+    ) -> Result<(), ContractError> {
         let querier = deps.querier;
         let config = self.config.load(deps.storage)?;
         let q_msg = QueryRequest::Wasm(WasmQuery::ContractInfo {
@@ -70,11 +74,13 @@ impl<'a> LiquidityPool<'a> {
         if q_resp.code_id != config.lease_code_id.u64() {
             Err(ContractError::ContractId {})
         } else {
-            Ok(lease_addr)
+            Ok(())
         }
     }
 
-    pub fn validate_denom(&self, deps: &Deps, coins: &Coin) -> Result<Uint128, ContractError> {
+    // TODO: introduce a Denom type that would list all Nolus supported currencies.
+    /// checks `coins` denom vs config, converts Coin into it's amount;
+    pub fn try_into_amount(&self, deps: &Deps, coins: Coin) -> Result<Uint128, ContractError> {
         let config = self.config.load(deps.storage)?;
 
         if config.denom != coins.denom {
@@ -92,17 +98,18 @@ impl<'a> LiquidityPool<'a> {
         env: &Env,
         quote: Coin,
     ) -> Result<Option<Decimal>, ContractError> {
-        let quote = self.validate_denom(deps, &quote)?;
+        let quote = self.try_into_amount(deps, quote)?;
 
-        let balance = self.balance(deps, env)?;
+        let balance = self.balance(deps, env)?
+            .amount;
 
-        if quote > balance.amount {
+        if quote > balance {
             return Ok(None);
         }
 
         let State {
             total_principal_due,
-            total_last_interest,
+            total_interest_due,
             annual_interest_rate,
             last_update_time,
         } = self.state.load(deps.storage)?;
@@ -114,15 +121,17 @@ impl<'a> LiquidityPool<'a> {
             ..
         } = self.config.load(deps.storage)?;
 
-        let total_interest = total_last_interest
-            + total_principal_due * annual_interest_rate * dt(env, last_update_time)
-                / NANOSECS_IN_YEAR;
-        let total_liability = total_principal_due + quote + total_interest;
+        let total_interest = total_interest_due
+            + interest(total_principal_due, annual_interest_rate, dt(env, last_update_time));
 
-        let utilization = Decimal::from_ratio(total_liability, total_liability + balance.amount);
+        let total_liability_past_quote = total_principal_due + quote + total_interest;
+
+        let total_balance_past_quote = balance - quote;
+
+        let utilization = Decimal::from_ratio(total_liability_past_quote, total_liability_past_quote + total_balance_past_quote);
 
         let quote_interest_rate =
-            base_interest_rate + (utilization - utilization_optimal) * addon_optimal_interest_rate;
+            base_interest_rate + utilization * addon_optimal_interest_rate - utilization_optimal * addon_optimal_interest_rate;
 
         Ok(Some(quote_interest_rate))
     }
@@ -161,11 +170,13 @@ impl<'a> LiquidityPool<'a> {
         let config = self.config.load(storage)?;
 
         if let Some(loan) = maybe_loan {
+
             let delta_t: Uint128 = (cmp::max(outstanding_time.nanos(), loan.interest_paid.nanos())
                 - loan.interest_paid.nanos())
             .into();
-            let outstanding_interest_amount =
-                loan.principal_due * loan.annual_interest_rate * delta_t / NANOSECS_IN_YEAR;
+
+            let outstanding_interest_amount = interest(loan.principal_due, loan.annual_interest_rate, delta_t);
+
             Ok(Some(coin(outstanding_interest_amount.u128(), config.denom)))
         } else {
             Ok(None)
@@ -179,7 +190,6 @@ impl<'a> LiquidityPool<'a> {
         lease_addr: Addr,
         amount: Coin,
     ) -> Result<(), ContractError> {
-        let checked_lease_addr = self.validate_lease_addr(&deps.as_ref(), lease_addr)?;
         let current_time = env.block.time;
 
         let annual_interest_rate = match self.query_quote(&deps.as_ref(), &env, amount.clone())? {
@@ -187,7 +197,7 @@ impl<'a> LiquidityPool<'a> {
             None => Err(ContractError::NoLiquidity {}),
         }?;
 
-        if self.loans.has(deps.storage, checked_lease_addr.clone()) {
+        if self.loans.has(deps.storage, lease_addr.clone()) {
             return Err(ContractError::LoanExists {});
         }
 
@@ -198,14 +208,13 @@ impl<'a> LiquidityPool<'a> {
         };
 
         self.loans
-            .save(deps.storage, checked_lease_addr, &loan)?;
+            .save(deps.storage, lease_addr, &loan)?;
 
         self.state
             .update(deps.storage, |mut state| -> Result<State, ContractError> {
                 let dt = dt(&env, state.last_update_time);
 
-                state.total_last_interest +=
-                    state.total_principal_due * state.annual_interest_rate * dt / NANOSECS_IN_YEAR;
+                state.total_interest_due += interest(state.total_principal_due, state.annual_interest_rate, dt);
 
                 state.annual_interest_rate = Decimal::from_ratio(
                     state.annual_interest_rate * state.total_principal_due
@@ -235,25 +244,23 @@ impl<'a> LiquidityPool<'a> {
             return Err(ContractError::FundsLen {});
         }
 
-        let checked_lease_addr = self.validate_lease_addr(&deps.as_ref(), lease_addr)?;
-        let repay_amount = self.validate_denom(&deps.as_ref(), &funds[0])?;
+        let repay_amount = self.try_into_amount(&deps.as_ref(), funds[0].clone())?;
 
-        let loan = self.loans.load(deps.storage, checked_lease_addr.clone())?;
+        let loan = self.loans.load(deps.storage, lease_addr.clone())?;
 
         let time_delta = dt(&env, loan.interest_paid);
-        let loan_interest_due =
-            loan.principal_due * loan.annual_interest_rate * time_delta / NANOSECS_IN_YEAR;
+        let loan_interest_due = interest(loan.principal_due, loan.annual_interest_rate, time_delta);
         let loan_interest_payment = cmp::min(loan_interest_due, repay_amount);
         let loan_principal_payment =
-            cmp::max(repay_amount - loan_interest_payment, loan.principal_due);
+            cmp::min(repay_amount - loan_interest_payment, loan.principal_due);
         let excess_received = repay_amount - loan_interest_payment - loan_principal_payment;
 
         if loan.principal_due == loan_principal_payment {
-            self.loans.remove(deps.storage, checked_lease_addr);
+            self.loans.remove(deps.storage, lease_addr);
         } else {
             self.loans.update(
                 deps.storage,
-                checked_lease_addr,
+                lease_addr,
                 |loan| -> Result<Loan, ContractError> {
                     let mut loan = loan.ok_or(ContractError::NoLoan {})?;
                     loan.principal_due -= loan_principal_payment;
@@ -273,17 +280,20 @@ impl<'a> LiquidityPool<'a> {
 
         self.state
             .update(deps.storage, |mut state| -> Result<State, ContractError> {
-                // TODO: refactoring
-                state.total_last_interest += state.total_principal_due
-                    * state.annual_interest_rate
-                    * dt(&env, state.last_update_time)
-                    / NANOSECS_IN_YEAR;
+                state.total_interest_due += interest(
+                    state.total_principal_due,
+                    state.annual_interest_rate,
+                    dt(&env, state.last_update_time));
 
-                state.annual_interest_rate = Decimal::from_ratio(
-                    state.annual_interest_rate * state.total_principal_due
-                        - loan.annual_interest_rate * loan_principal_payment,
-                    state.total_principal_due - loan_principal_payment,
-                );
+                state.annual_interest_rate = if state.total_principal_due == loan_principal_payment {
+                    Decimal::zero()
+                } else {
+                    Decimal::from_ratio(
+                        state.annual_interest_rate * state.total_principal_due
+                            - loan.annual_interest_rate * loan_principal_payment,
+                        state.total_principal_due - loan_principal_payment,
+                    )
+                };
 
                 state.total_principal_due -= loan_principal_payment;
 
@@ -298,10 +308,185 @@ impl<'a> LiquidityPool<'a> {
     }
 }
 
-/// Time difference in nanosecs between current time from `env.block.time` and timestamp.
+/// Time difference in nanosecs between current block time and timestamp.
 fn dt(env: &Env, time: Timestamp) -> Uint128 {
     let ct = env.block.time.nanos();
     let t = time.nanos();
     assert!(ct > t);
     Uint128::new((ct - t).into())
+}
+
+/// Calculate interest
+fn interest(due: Uint128, rate: Decimal, dt_nanos: Uint128) -> Uint128 {
+    due*rate*dt_nanos/NANOSECS_IN_YEAR
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use cosmwasm_std::testing::{self, MOCK_CONTRACT_ADDR};
+
+    #[test]
+    fn test_dt() {
+        let mut env = testing::mock_env();
+        env.block.time = Timestamp::from_nanos(20);
+        assert_eq!(dt(&env, Timestamp::from_nanos(10)), 10u128.into());
+    }
+
+    #[test]
+    fn test_balance() {
+        let balance_mock = [coin(10_000_000, "uusdt")];
+        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
+        let env = testing::mock_env();
+        let lease_code_id = Uint64::new(123);
+
+        LPP.init(deps.as_mut(), "uusdt".into(), lease_code_id)
+            .expect("can't initialize LiquidityPool");
+
+        let balance = LPP.balance(&deps.as_ref(), &env)
+            .expect("can't get balance");
+
+        assert_eq!(balance, balance_mock[0]);
+    }
+
+    #[test]
+    fn test_try_into_amount() {
+        let mut deps = testing::mock_dependencies();
+        let lease_code_id = Uint64::new(123);
+        let amount = 10u128;
+
+        LPP.init(deps.as_mut(), "uusdt".into(), lease_code_id)
+            .expect("can't initialize LiquidityPool");
+
+        // same denom
+        let checked = LPP.try_into_amount(&deps.as_ref(), coin(amount, "uusdt"))
+            .expect("can't validate denom");
+        assert_eq!(checked, Uint128::new(amount));
+
+        // err denom
+        LPP.try_into_amount(&deps.as_ref(), coin(amount, "eth"))
+            .expect_err("should not pass validation");
+
+    }
+
+    #[test]
+    fn test_query_quote() {
+        let balance_mock = [coin(10_000_000, "uusdt")];
+        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
+        let mut env = testing::mock_env();
+        let loan = Addr::unchecked("loan");
+        env.block.time = Timestamp::from_nanos(0);
+
+        let lease_code_id = Uint64::new(123);
+
+        LPP.init(deps.as_mut(), "uusdt".into(), lease_code_id)
+            .expect("can't initialize LiquidityPool");
+
+        env.block.time = Timestamp::from_nanos(10);
+
+        let result = LPP.query_quote(&deps.as_ref(), &env, coin(5_000_000, "uusdt"))
+            .expect("can't query quote")
+            .expect("should return some interest_rate");
+
+        let interest_rate = Decimal::percent(7) + Decimal::percent(50)*Decimal::percent(2) - Decimal::percent(70)*Decimal::percent(2);
+
+        assert_eq!(result, interest_rate);
+
+        LPP.try_open_loan(deps.as_mut(), env.clone(), loan.clone(), coin(5_000_000, "uusdt"))
+            .expect("can't open loan");
+        deps.querier.update_balance(MOCK_CONTRACT_ADDR, vec![coin(5_000_000, "uusdt")]);
+
+        // wait for year/10
+        env.block.time = Timestamp::from_nanos((10 + NANOSECS_IN_YEAR.u128()/10).try_into().unwrap());
+
+        let interest_rate = Decimal::percent(7) + Decimal::from_ratio(6033u128,10033u128)*Decimal::percent(2) - Decimal::percent(70)*Decimal::percent(2);
+
+        let result = LPP.query_quote(&deps.as_ref(), &env, coin(1_000_000, "uusdt"))
+            .expect("can't query quote")
+            .expect("should return some interest_rate");
+
+        assert_eq!(result, interest_rate);
+
+    }
+
+    #[test]
+    fn test_open_and_repay_loan() {
+        let balance_mock = [coin(10_000_000, "uusdt")];
+        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
+        let mut env = testing::mock_env();
+        let loan = Addr::unchecked("loan");
+        env.block.time = Timestamp::from_nanos(0);
+        let lease_code_id = Uint64::new(123);
+
+        let annual_interest_rate = Decimal::from_ratio(66u128,1000u128);
+
+        LPP.init(deps.as_mut(), "uusdt".into(), lease_code_id)
+            .expect("can't initialize LiquidityPool");
+
+        // doesn't exist
+        let loan_response = LPP.query_loan(deps.as_ref().storage, loan.clone())
+            .expect("can't query loan");
+        assert_eq!(loan_response, None);
+
+
+        env.block.time = Timestamp::from_nanos(10);
+
+        LPP.try_open_loan(deps.as_mut(), env.clone(), loan.clone(), coin(5_000_000, "uusdt"))
+            .expect("can't open loan");
+        deps.querier.update_balance(MOCK_CONTRACT_ADDR, vec![coin(5_000_000, "uusdt")]);
+
+        let loan_response = LPP.query_loan(deps.as_ref().storage, loan.clone())
+            .expect("can't query loan")
+            .expect("should be some response");
+
+        let test_response = LoanResponse {
+            principal_due: coin(5_000_000, "uusdt"),
+            annual_interest_rate,
+            interest_paid: env.block.time,
+        };
+
+        assert_eq!(loan_response, test_response);
+
+        // wait for year/10
+        env.block.time = Timestamp::from_nanos((10 + NANOSECS_IN_YEAR.u128()/10).try_into().unwrap());
+
+        // pay interest for year/10
+        let payment = LPP.query_loan_outstanding_interest(deps.as_ref().storage, loan.clone(), env.block.time)
+            .expect("can't query outstanding interest")
+            .expect("should be some coins");
+
+        let repay = LPP.try_repay_loan(deps.as_mut(), env.clone(), loan.clone(), vec![payment])
+            .expect("can't repay loan");
+
+        assert_eq!(repay, coin(0, "uusdt"));
+
+        let loan_response = LPP.query_loan(deps.as_ref().storage, loan.clone())
+            .expect("can't query loan")
+            .expect("should be some response");
+
+        let test_response = LoanResponse {
+            principal_due: coin(5_000_000, "uusdt"),
+            annual_interest_rate,
+            interest_paid: env.block.time,
+        };
+
+        assert_eq!(loan_response, test_response);
+
+        // wait for another year/10
+        env.block.time = Timestamp::from_nanos((10 + 2*NANOSECS_IN_YEAR.u128()/10).try_into().unwrap());
+
+        // pay everything + excess
+        let payment = LPP.query_loan_outstanding_interest(deps.as_ref().storage, loan.clone(), env.block.time)
+            .expect("can't query outstanding interest")
+            .expect("should be some coins").amount.u128()
+                + 5_000_000
+                + 100;
+
+        let repay = LPP.try_repay_loan(deps.as_mut(), env.clone(), loan.clone(), vec![coin(payment, "uusdt")])
+            .expect("can't repay loan");
+
+        assert_eq!(repay, coin(100, "uusdt"));
+
+    }
+
 }

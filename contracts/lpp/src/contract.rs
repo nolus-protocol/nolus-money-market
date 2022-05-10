@@ -61,6 +61,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 
 fn try_open_loan(deps: DepsMut, env: Env, lease_addr: Addr, amount: Coin) -> Result<Response, ContractError> {
 
+    LPP.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
     LPP.try_open_loan(deps, env, lease_addr.clone(), amount.clone())?;
 
     let transfer_msg = BankMsg::Send {
@@ -76,6 +77,7 @@ fn try_open_loan(deps: DepsMut, env: Env, lease_addr: Addr, amount: Coin) -> Res
 }
 
 fn try_repay_loan(deps: DepsMut, env: Env, lease_addr: Addr, funds: Vec<Coin>) -> Result<Response, ContractError> {
+    LPP.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
     let return_coin = LPP.try_repay_loan(deps, env, lease_addr.clone(), funds)?;
 
     let mut response = Response::new()
