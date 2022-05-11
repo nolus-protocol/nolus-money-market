@@ -8,10 +8,9 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
-use lease::liability::Liability;
-use lease::opening::{LoanForm, NewLeaseForm};
 
 use crate::error::ContractError;
+use crate::helpers::open_lease_msg;
 use crate::msg::{
     ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse, UpdateConfigMsg,
 };
@@ -47,13 +46,30 @@ pub fn execute(
     }
 }
 
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+    match msg {
+        QueryMsg::Config {} => to_binary(&query_config(deps)?),
+        QueryMsg::Quote { downpayment } => to_binary(&query_quote(env, deps, downpayment)?),
+    }
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+    let contract_addr_raw = parse_reply_instantiate_data(msg.clone())
+        .map(|r| r.contract_address)
+        .map_err(|_| ContractError::ParseError {})?;
+
+    let contract_addr = deps.api.addr_validate(&contract_addr_raw)?;
+    register_lease(deps, msg.id, contract_addr)
+}
+
 pub fn try_configure(
     deps: DepsMut,
     info: MessageInfo,
     msg: UpdateConfigMsg,
 ) -> Result<Response, ContractError> {
     let config = LS.get_config(deps.storage)?;
-
     if info.sender != config.owner {
         return Err(ContractError::Unauthorized {});
     }
@@ -68,8 +84,6 @@ pub fn try_borrow(
     sender: Addr,
 ) -> Result<Response, ContractError> {
     let config = LS.get_config(deps.storage)?;
-    // assert_sent_sufficient_coin(&amount, config.lease_minimal_downpayment)?;
-
     let instance_reply_id = LS.next(deps.storage, sender.clone())?;
     Ok(
         Response::new().add_submessages(vec![SubMsg::reply_on_success(
@@ -78,29 +92,11 @@ pub fn try_borrow(
                 code_id: config.lease_code_id,
                 funds: amount,
                 label: "lease".to_string(),
-                msg: to_binary(&NewLeaseForm {
-                    customer: sender.into_string(),
-                    currency: "".to_owned(), // TODO the same denom lppUST is working with
-                    liability: Liability::new(65, 5, 10, 20 * 24),
-                    loan: LoanForm {
-                        annual_margin_interest_permille: 31, // 3.1%
-                        lpp: config.lpp_ust_addr.into_string(),
-                        interest_due_period_secs: config.repayment_period_sec, // 90 days TODO use a crate for daytime calculations
-                        grace_period_secs: config.grace_period_sec,
-                    },
-                })?,
+                msg: to_binary(&open_lease_msg(sender, config))?,
             }),
             instance_reply_id,
         )]),
     )
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    match msg {
-        QueryMsg::Config {} => to_binary(&query_config(deps)?),
-        QueryMsg::Quote { downpayment } => to_binary(&query_quote(env, deps, downpayment)?),
-    }
 }
 
 fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
@@ -155,16 +151,6 @@ fn get_annual_interest_rate(deps: Deps, downpayment: Coin) -> StdResult<Decimal>
 #[cfg(test)]
 fn get_annual_interest_rate(_deps: Deps, _downpayment: Coin) -> StdResult<Decimal> {
     Ok(Decimal::one())
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    let contract_addr_raw = parse_reply_instantiate_data(msg.clone())
-        .map(|r| r.contract_address)
-        .map_err(|_| ContractError::ParseError {})?;
-
-    let contract_addr = deps.api.addr_validate(&contract_addr_raw)?;
-    register_lease(deps, msg.id, contract_addr)
 }
 
 fn register_lease(deps: DepsMut, msg_id: u64, lease_addr: Addr) -> Result<Response, ContractError> {

@@ -12,7 +12,7 @@ pub struct Config {
     pub owner: Addr,
     pub lease_code_id: u64,
     pub lpp_ust_addr: Addr,
-    pub lease_interest_rate_margin: Decimal,
+    pub lease_interest_rate_margin: u8,
     pub lease_max_liability: Decimal,
     pub lease_healthy_liability: Decimal,
     pub lease_initial_liability: Decimal,
@@ -26,7 +26,7 @@ impl Config {
             owner: sender,
             lease_code_id: msg.lease_code_id,
             lpp_ust_addr: msg.lpp_ust_addr,
-            lease_interest_rate_margin: Decimal::percent(msg.lease_interest_rate_margin.into()),
+            lease_interest_rate_margin: msg.lease_interest_rate_margin,
             lease_max_liability: Decimal::percent(msg.lease_max_liability.into()),
             lease_healthy_liability: Config::validate_lease_healthy_liability(
                 msg.lease_healthy_liability.into(),
@@ -42,7 +42,7 @@ impl Config {
     }
 
     pub fn update_from(&mut self, msg: UpdateConfigMsg) -> Result<(), ContractError> {
-        self.lease_interest_rate_margin = Decimal::percent(msg.lease_interest_rate_margin.into());
+        self.lease_interest_rate_margin = msg.lease_interest_rate_margin;
         self.lease_max_liability = Decimal::percent(msg.lease_max_liability.into());
         self.lease_healthy_liability = Config::validate_lease_healthy_liability(
             msg.lease_healthy_liability.into(),
