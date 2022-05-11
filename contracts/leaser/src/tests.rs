@@ -43,7 +43,7 @@ fn testexecute() {
     let mut deps = mock_dependencies();
 
     let lpp_addr = Addr::unchecked("test");
-    let msg = leaser_instantiate_msg(1, lpp_addr.clone());
+    let msg = leaser_instantiate_msg(1, lpp_addr);
     let info = mock_info("creator", &coins(1000, "unolus"));
     let _ = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
@@ -56,7 +56,7 @@ fn testexecute() {
     let info = mock_info("addr0000", coins(40, "UST").as_ref());
     let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-    let msg = open_lease_msg(info.sender.clone(), config);
+    let msg = open_lease_msg(info.sender, config);
     assert_eq!(
         res.messages,
         vec![SubMsg::reply_on_success(
