@@ -26,49 +26,14 @@ pub struct Repayment {
     pub grace_period_sec: u32, // GracePeriodSec, for example 10 days = 10*24*60*60
 }
 
-impl Repayment {
-    pub fn new(period_sec: u32, grace_period_sec: u32) -> Self {
-        Repayment {
-            period_sec,
-            grace_period_sec,
-        }
-    }
-}
-
-impl Liability {
-    pub fn new(initial: u8, healthy: u8, max: u8) -> Self {
-        assert!(
-            healthy < max,
-            "LeaseHealthyLiability% must be less than LeaseMaxLiability%"
-        );
-
-        assert!(
-            initial <= healthy,
-            "LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
-        );
-
-        Liability {
-            max,
-            healthy,
-            initial,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct UpdateConfigMsg {
-    pub lease_interest_rate_margin: u8,
-    pub lease_max_liability: u8,
-    pub lease_healthy_liability: u8,
-    pub lease_initial_liability: u8,
-    pub repayment_period_sec: u32,
-    pub grace_period_sec: u32,
-}
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    Config { msg: UpdateConfigMsg },
+    Config {
+        lease_interest_rate_margin: u8,
+        liability: Liability,
+        repayment: Repayment,
+    },
     Borrow {},
 }
 
@@ -103,4 +68,33 @@ pub enum LPPQueryMsg {
 pub enum QueryQuoteResponse {
     QuoteInterestRate(Decimal),
     NoLiquidity,
+}
+
+impl Repayment {
+    pub fn new(period_sec: u32, grace_period_sec: u32) -> Self {
+        Repayment {
+            period_sec,
+            grace_period_sec,
+        }
+    }
+}
+
+impl Liability {
+    pub fn new(initial: u8, healthy: u8, max: u8) -> Self {
+        assert!(
+            healthy < max,
+            "LeaseHealthyLiability% must be less than LeaseMaxLiability%"
+        );
+
+        assert!(
+            initial <= healthy,
+            "LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
+        );
+
+        Liability {
+            max,
+            healthy,
+            initial,
+        }
+    }
 }

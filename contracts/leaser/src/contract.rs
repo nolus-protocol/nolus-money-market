@@ -10,7 +10,7 @@ use cw_utils::parse_reply_instantiate_data;
 use crate::error::ContractError;
 use crate::helpers::open_lease_msg;
 use crate::msg::{
-    ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse, UpdateConfigMsg,
+    ConfigResponse, ExecuteMsg, InstantiateMsg, Liability, QueryMsg, QuoteResponse, Repayment,
 };
 use crate::state::LS;
 
@@ -40,7 +40,11 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Borrow {} => try_borrow(deps, info.funds, info.sender),
-        ExecuteMsg::Config { msg } => try_configure(deps, info, msg),
+        ExecuteMsg::Config {
+            lease_interest_rate_margin,
+            liability,
+            repayment,
+        } => try_configure(deps, info, lease_interest_rate_margin, liability, repayment),
     }
 }
 
@@ -65,13 +69,20 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
 pub fn try_configure(
     deps: DepsMut,
     info: MessageInfo,
-    msg: UpdateConfigMsg,
+    lease_interest_rate_margin: u8,
+    liability: Liability,
+    repayment: Repayment,
 ) -> Result<Response, ContractError> {
     let config = LS.get_config(deps.storage)?;
     if info.sender != config.owner {
         return Err(ContractError::Unauthorized {});
     }
-    LS.update_config(deps.storage, msg)?;
+    LS.update_config(
+        deps.storage,
+        lease_interest_rate_margin,
+        liability,
+        repayment,
+    )?;
 
     Ok(Response::default())
 }
@@ -110,8 +121,8 @@ fn query_quote(_env: Env, deps: Deps, downpayment: Coin) -> StdResult<QuoteRespo
         ));
     }
     let config = LS.get_config(deps.storage)?;
-    let numerator = Uint128::from(config.lease_initial_liability) * downpayment.amount;
-    let denominator = Uint128::from(100 - config.lease_initial_liability);
+    let numerator = Uint128::from(config.liability.initial) * downpayment.amount;
+    let denominator = Uint128::from(100 - config.liability.initial);
 
     let borrow_amount = numerator / denominator;
     let total_amount = borrow_amount + downpayment.amount;

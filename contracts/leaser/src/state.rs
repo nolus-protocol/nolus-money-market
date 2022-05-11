@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    msg::{InstantiateMsg, UpdateConfigMsg},
+    msg::{InstantiateMsg, Liability, Repayment},
     ContractError,
 };
 use cosmwasm_std::{Addr, DepsMut, StdResult, Storage};
@@ -70,13 +70,16 @@ impl<'a> LeaserState<'a> {
     pub fn update_config(
         &self,
         storage: &mut dyn Storage,
-        msg: UpdateConfigMsg,
+        lease_interest_rate_margin: u8,
+        liability: Liability,
+        repayment: Repayment,
     ) -> Result<(), ContractError> {
-        self.config.load(storage)?;
-
+        self.config.may_load(storage)?;
         self.config
             .update(storage, |mut c| -> Result<Config, ContractError> {
-                c.update_from(msg)?;
+                c.lease_interest_rate_margin = lease_interest_rate_margin;
+                c.liability = liability;
+                c.repayment = repayment;
                 Ok(c)
             })?;
         Ok(())
