@@ -9,7 +9,8 @@ mod tests {
             crate::contract::execute,
             crate::contract::instantiate,
             crate::contract::query,
-        ).with_reply(crate::contract::reply);
+        )
+        .with_reply(crate::contract::reply);
         Box::new(contract)
     }
     const USER: &str = "USER";
@@ -33,7 +34,11 @@ mod tests {
     fn proper_instantiate() -> (App, CwTemplateContract) {
         let mut app = mock_app();
         let cw_template_id = app.store_code(contract_template());
-        let msg = InstantiateMsg { base_asset: "token".to_string(), price_feed_period: 60, feeders_percentage_needed: 50 };
+        let msg = InstantiateMsg {
+            base_asset: "token".to_string(),
+            price_feed_period: 60,
+            feeders_percentage_needed: 50,
+        };
         let cw_template_contract_addr = app
             .instantiate_contract(
                 cw_template_id,
@@ -50,25 +55,26 @@ mod tests {
     mod register_feeder {
         // use super::*;
         // use crate::msg::ExecuteMsg;
+        use super::{proper_instantiate, ADMIN, USER};
+        use crate::msg::ExecuteMsg;
         use cosmwasm_std::{Addr, Decimal256, Timestamp};
         use cw_multi_test::Executor;
-        use crate::msg::ExecuteMsg;
-        use super::{proper_instantiate, USER, ADMIN};
+        use marketprice::feed::Prices;
         use std::str::FromStr;
         //TODO: remove after proper implementation of loan SC
         /// The mock for loan SC. It mimics the scheme for time notification.
         /// If GATE, it returns Ok on notifications, returns Err otherwise.
         mod mock_loan {
+            use super::ADMIN;
             use crate::helpers::CwTemplateContract;
             use cosmwasm_std::{
-                Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError, StdResult,
-                Timestamp,
+                Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
+                StdResult, Timestamp,
             };
             use cw_multi_test::{App, Contract, ContractWrapper, Executor};
             use cw_storage_plus::Item;
             use schemars::JsonSchema;
             use serde::{Deserialize, Serialize};
-            use super::ADMIN;
             const GATE: Item<bool> = Item::new("alarm gate");
             #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
             #[serde(rename_all = "snake_case")]
@@ -82,7 +88,12 @@ mod tests {
                 GATE.save(deps.storage, &true)?;
                 Ok(Response::new().add_attribute("method", "instantiate"))
             }
-            fn execute(deps: DepsMut, _: Env, _: MessageInfo, msg: MockExecuteMsg) -> StdResult<Response> {
+            fn execute(
+                deps: DepsMut,
+                _: Env,
+                _: MessageInfo,
+                msg: MockExecuteMsg,
+            ) -> StdResult<Response> {
                 match msg {
                     MockExecuteMsg::Alarm(time) => {
                         let gate = GATE.load(deps.storage).expect("storage problem");
@@ -124,11 +135,15 @@ mod tests {
         fn register_feeder() {
             let (mut app, cw_template_contract) = proper_instantiate();
             // only admin can register new feeder, other user should result in error
-            let msg = ExecuteMsg::RegisterFeeder { feeder_address: USER.to_string() };
+            let msg = ExecuteMsg::RegisterFeeder {
+                feeder_address: USER.to_string(),
+            };
             let cosmos_msg = cw_template_contract.call(msg).unwrap();
             app.execute(Addr::unchecked(USER), cosmos_msg).unwrap_err();
             // check if admin can register new feeder
-            let msg = ExecuteMsg::RegisterFeeder { feeder_address: ADMIN.to_string() };
+            let msg = ExecuteMsg::RegisterFeeder {
+                feeder_address: ADMIN.to_string(),
+            };
             let cosmos_msg = cw_template_contract.call(msg).unwrap();
             app.execute(Addr::unchecked(ADMIN), cosmos_msg).unwrap();
         }
@@ -142,8 +157,10 @@ mod tests {
             app.execute_contract(Addr::unchecked(ADMIN), oracle.addr(), &msg, &[])
                 .unwrap();
             let feed_msg = ExecuteMsg::FeedPrice {
-                base: "ust".into(),
-                prices: vec![("denom".into(), Decimal256::from_str("100").unwrap())],
+                prices: Prices {
+                    base: "ust".into(),
+                    values: vec![("denom".into(), Decimal256::from_str("100").unwrap())],
+                },
             };
             app.update_block(|bl| bl.time = Timestamp::from_nanos(0));
             // instantiate loan, add alarms
@@ -162,33 +179,45 @@ mod tests {
                 .unwrap();
             // advance by 5 seconds
             app.update_block(cw_multi_test::next_block);
-			// trigger notification, the GATE is open, events are stacked for the whole chain of contracts calls
+            // trigger notification, the GATE is open, events are stacked for the whole chain of contracts calls
             let resp = app
                 .execute_contract(Addr::unchecked(ADMIN), oracle.addr(), &feed_msg, &[])
                 .unwrap();
-            let attr = resp.events.iter().flat_map(|ev| &ev.attributes)
-                .find(|atr| atr.key == "loan_reply").unwrap();
+            let attr = resp
+                .events
+                .iter()
+                .flat_map(|ev| &ev.attributes)
+                .find(|atr| atr.key == "loan_reply")
+                .unwrap();
             assert_eq!(attr.value, app.block_info().time.to_string());
             app.update_block(cw_multi_test::next_block);
-			// close the GATE, loan return error on notification
+            // close the GATE, loan return error on notification
             let close_gate = mock_loan::MockExecuteMsg::Gate(false);
             app.execute_contract(Addr::unchecked(ADMIN), loan.addr(), &close_gate, &[])
                 .unwrap();
             let resp = app
                 .execute_contract(Addr::unchecked(ADMIN), oracle.addr(), &feed_msg, &[])
                 .unwrap();
-            let attr = resp.events.iter().flat_map(|ev| &ev.attributes)
-                .find(|atr| atr.key == "alarm").unwrap();
+            let attr = resp
+                .events
+                .iter()
+                .flat_map(|ev| &ev.attributes)
+                .find(|atr| atr.key == "alarm")
+                .unwrap();
             assert_eq!(attr.value, "error");
-			// open the GATE, check for remaining alarm
+            // open the GATE, check for remaining alarm
             let open_gate = mock_loan::MockExecuteMsg::Gate(true);
             app.execute_contract(Addr::unchecked(ADMIN), loan.addr(), &open_gate, &[])
                 .unwrap();
             let resp = app
                 .execute_contract(Addr::unchecked(ADMIN), oracle.addr(), &feed_msg, &[])
                 .unwrap();
-            let attr = resp.events.iter().flat_map(|ev| &ev.attributes)
-                .find(|atr| atr.key == "loan_reply").unwrap();
+            let attr = resp
+                .events
+                .iter()
+                .flat_map(|ev| &ev.attributes)
+                .find(|atr| atr.key == "loan_reply")
+                .unwrap();
             assert_eq!(attr.value, app.block_info().time.to_string());
         }
     }

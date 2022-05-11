@@ -1,4 +1,5 @@
-use cosmwasm_std::{entry_point};
+#[cfg(feature = "cosmwasm_bindings")]
+use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw2::set_contract_version;
 use cw_utils::{one_coin};
@@ -11,7 +12,7 @@ use crate::msg::{ExecuteMsg, QueryMsg};
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[entry_point]
+#[cfg_attr(feature = "cosmwasm_bindings", entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -32,7 +33,7 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-#[entry_point]
+#[cfg_attr(feature = "cosmwasm_bindings", entry_point)]
 pub fn execute(
     _deps: DepsMut,
     _env: Env,
@@ -42,7 +43,7 @@ pub fn execute(
     Ok(Response::default())
 }
 
-#[entry_point]
+#[cfg_attr(feature = "cosmwasm_bindings", entry_point)]
 pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
     // match msg {
     // QueryMsg::Config {} => to_binary(&query_config(deps)?),
