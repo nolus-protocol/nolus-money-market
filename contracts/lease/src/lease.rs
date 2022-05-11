@@ -10,7 +10,7 @@ pub struct Lease<L> {
     customer: Addr,
     currency: Denom,
     liability: Liability,
-    interest: Loan<L>,
+    loan: Loan<L>,
 }
 
 impl<L> Lease<L>
@@ -19,12 +19,12 @@ where
 {
     const DB_ITEM: Item<'static, Lease<L>> = Item::new("lease");
 
-    pub fn new(customer: Addr, currency: Denom, liability: Liability, interest: Loan<L>) -> Self {
+    pub fn new(customer: Addr, currency: Denom, liability: Liability, loan: Loan<L>) -> Self {
         Self {
             customer,
             currency,
             liability,
-            interest,
+            loan,
         }
     }
 
@@ -62,7 +62,7 @@ mod tests {
             customer: Addr::unchecked("test"),
             currency: "UST".to_owned(),
             liability: Liability::new(65, 5, 10, 10 * 24),
-            interest: Loan::open(Coin::new(23456, "UST"), LppLocalStub {}, 23, 100, 10).unwrap(),
+            loan: Loan::open(Coin::new(23456, "UST"), LppLocalStub {}, 23, 100, 10).unwrap(),
         };
         let obj_exp = obj.clone();
         obj.store(&mut storage).expect("storing failed");
