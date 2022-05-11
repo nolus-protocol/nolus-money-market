@@ -1,24 +1,20 @@
 use crate::contract::{execute, instantiate, query};
+use crate::helpers::open_lease_msg;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{
-    coins, from_binary, to_binary, Addr, Coin, CosmosMsg, Decimal, StdError, SubMsg, Uint128,
-    WasmMsg,
+    coins, from_binary, to_binary, Addr, Coin, CosmosMsg, Decimal, DepsMut, StdError, SubMsg,
+    Uint128, WasmMsg,
 };
-use lease::liability::Liability;
-use lease::opening::{LoanForm, NewLeaseForm};
 
-use crate::msg::{ConfigResponse, ExecuteMsg, QueryMsg, QuoteResponse};
+use crate::msg::{ConfigResponse, ExecuteMsg, Liability, QueryMsg, QuoteResponse, Repayment};
 
 pub fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::InstantiateMsg {
     crate::msg::InstantiateMsg {
         lease_code_id,
         lpp_ust_addr: lpp_addr,
         lease_interest_rate_margin: 3,
-        lease_max_liability: 80,
-        lease_healthy_liability: 70,
-        lease_initial_liability: 65,
-        repayment_period_sec: 90 * 24 * 60 * 60,
-        grace_period_sec: 10 * 24 * 60 * 60,
+        liability: Liability::new(65, 70, 80),
+        repayment: Repayment::new(90 * 24 * 60 * 60, 10 * 24 * 60 * 60),
     }
 }
 
@@ -51,27 +47,22 @@ fn testexecute() {
     let info = mock_info("creator", &coins(1000, "unolus"));
     let _ = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
+    let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
+    let config_response: ConfigResponse = from_binary(&res).unwrap();
+    let config = config_response.config;
+
     // try open lease with enought UST
     let msg = ExecuteMsg::Borrow {};
     let info = mock_info("addr0000", coins(40, "UST").as_ref());
-    let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+    let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+    let msg = open_lease_msg(info.sender.clone(), config);
     assert_eq!(
         res.messages,
         vec![SubMsg::reply_on_success(
             CosmosMsg::Wasm(WasmMsg::Instantiate {
                 funds: coins(40, "UST"),
-                msg: to_binary(&NewLeaseForm {
-                    customer: "addr0000".to_string(),
-                    currency: "".to_string(),
-                    liability: Liability::new(65, 5, 10, 20 * 24),
-                    loan: LoanForm {
-                        annual_margin_interest_permille: 31, // 3.1%
-                        lpp: lpp_addr.to_string(),
-                        interest_due_period_secs: 90 * 24 * 60 * 60, // 90 days TODO use a crate for daytime calculations
-                        grace_period_secs: 10 * 24 * 60 * 60, // 10 days TODO use a crate for daytime calculations
-                    },
-                })
-                .unwrap(),
+                msg: to_binary(&msg).unwrap(),
                 admin: None,
                 code_id: 1,
                 label: "lease".to_string()
@@ -81,15 +72,18 @@ fn testexecute() {
     );
 }
 
-#[test]
-fn quote_test() {
-    let mut deps = mock_dependencies();
-
+fn setup_test_case(deps: DepsMut) {
     let lpp_addr = Addr::unchecked("test");
     let msg = leaser_instantiate_msg(1, lpp_addr);
 
     let info = mock_info("creator", &coins(2, "token"));
-    let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+    let _res = instantiate(deps, mock_env(), info, msg).unwrap();
+}
+
+#[test]
+fn quote_test() {
+    let mut deps = mock_dependencies();
+    setup_test_case(deps.as_mut());
 
     // should fail if zero downpaynment
     let err = query(

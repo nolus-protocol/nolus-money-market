@@ -1,10 +1,8 @@
-use std::ops::Sub;
-
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, Fraction, MessageInfo,
-    Reply, Response, StdError, StdResult, SubMsg, WasmMsg,
+    to_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
+    Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
@@ -112,10 +110,8 @@ fn query_quote(_env: Env, deps: Deps, downpayment: Coin) -> StdResult<QuoteRespo
         ));
     }
     let config = LS.get_config(deps.storage)?;
-    let numerator = config.lease_initial_liability.numerator() * downpayment.amount;
-    let denominator = Decimal::one()
-        .sub(config.lease_initial_liability)
-        .numerator();
+    let numerator = Uint128::from(config.lease_initial_liability) * downpayment.amount;
+    let denominator = Uint128::from(100 - config.lease_initial_liability);
 
     let borrow_amount = numerator / denominator;
     let total_amount = borrow_amount + downpayment.amount;

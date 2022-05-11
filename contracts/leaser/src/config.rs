@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Decimal};
+use cosmwasm_std::Addr;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -13,9 +13,9 @@ pub struct Config {
     pub lease_code_id: u64,
     pub lpp_ust_addr: Addr,
     pub lease_interest_rate_margin: u8,
-    pub lease_max_liability: Decimal,
-    pub lease_healthy_liability: Decimal,
-    pub lease_initial_liability: Decimal,
+    pub lease_max_liability: u8,
+    pub lease_healthy_liability: u8,
+    pub lease_initial_liability: u8,
     pub repayment_period_sec: u32,
     pub grace_period_sec: u32,
 }
@@ -27,60 +27,20 @@ impl Config {
             lease_code_id: msg.lease_code_id,
             lpp_ust_addr: msg.lpp_ust_addr,
             lease_interest_rate_margin: msg.lease_interest_rate_margin,
-            lease_max_liability: Decimal::percent(msg.lease_max_liability.into()),
-            lease_healthy_liability: Config::validate_lease_healthy_liability(
-                msg.lease_healthy_liability.into(),
-                msg.lease_max_liability.into(),
-            )?,
-            lease_initial_liability: Config::validate_lease_initial_liability(
-                msg.lease_initial_liability.into(),
-                msg.lease_healthy_liability.into(),
-            )?,
-            repayment_period_sec: msg.repayment_period_sec,
-            grace_period_sec: msg.grace_period_sec,
+            lease_max_liability: msg.liability.max,
+            lease_healthy_liability: msg.liability.healthy,
+            lease_initial_liability: msg.liability.initial,
+            repayment_period_sec: msg.repayment.period_sec,
+            grace_period_sec: msg.repayment.grace_period_sec,
         })
     }
-
     pub fn update_from(&mut self, msg: UpdateConfigMsg) -> Result<(), ContractError> {
         self.lease_interest_rate_margin = msg.lease_interest_rate_margin;
-        self.lease_max_liability = Decimal::percent(msg.lease_max_liability.into());
-        self.lease_healthy_liability = Config::validate_lease_healthy_liability(
-            msg.lease_healthy_liability.into(),
-            msg.lease_max_liability.into(),
-        )?;
-        self.lease_initial_liability = Config::validate_lease_initial_liability(
-            msg.lease_initial_liability.into(),
-            msg.lease_healthy_liability.into(),
-        )?;
+        self.lease_max_liability = msg.lease_max_liability;
+        self.lease_healthy_liability = msg.lease_healthy_liability;
+        self.lease_initial_liability = msg.lease_healthy_liability;
         self.repayment_period_sec = msg.repayment_period_sec;
         self.grace_period_sec = msg.grace_period_sec;
         Ok(())
-    }
-
-    fn validate_lease_healthy_liability(
-        lease_healthy_liability: u64,
-        lease_max_liability: u64,
-    ) -> Result<Decimal, ContractError> {
-        if lease_healthy_liability < lease_max_liability {
-            Ok(Decimal::percent(lease_healthy_liability))
-        } else {
-            Err(ContractError::ValidationError {
-                msg: "LeaseHealthyLiability% must be less than LeaseMaxLiability%".to_string(),
-            })
-        }
-    }
-
-    fn validate_lease_initial_liability(
-        lease_initial_liability: u64,
-        lease_healthy_liability: u64,
-    ) -> Result<Decimal, ContractError> {
-        if lease_initial_liability <= lease_healthy_liability {
-            Ok(Decimal::percent(lease_initial_liability))
-        } else {
-            Err(ContractError::ValidationError {
-                msg: "LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
-                    .to_string(),
-            })
-        }
     }
 }
