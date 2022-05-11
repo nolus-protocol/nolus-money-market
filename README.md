@@ -85,8 +85,8 @@ Use the treasury address to send tockens to the new "wallet" account
 
 ```sh
 nolusd query bank total $NODE
-nolusd tx bank send nolus122f36dx292yy72253ufkt2g8rzheml2pkcfckl nolus1um993zvsdp8upa5qvtspu0jdy66eahlcghm0w6 1000000unolus --chain-id nolus-local --keyring-backend test
-nolusd query bank balances nolus1um993zvsdp8upa5qvtspu0jdy66eahlcghm0w6 --chain-id nolus-localnolus-local
+nolusd tx bank send $(nolusd keys show -a treasury) $(nolusd keys show -a wallet) 1000000unolus --chain-id nolus-local --keyring-backend test
+nolusd query bank balances $(nolusd keys show -a wallet) --chain-id nolus-local
 ```
 
 * set environment

@@ -427,7 +427,9 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus 0.13.0",
+ "cw-utils",
  "cw2 0.13.0",
+ "lpp",
  "schemars",
  "serde",
  "thiserror",
@@ -455,6 +457,19 @@ name = "libc"
 version = "0.2.119"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1bf2e165bb3457c8e098ea76f3e3bc9db55f87aa90d52d0e6be741470916aaa4"
+
+[[package]]
+name = "lpp"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus 0.13.0",
+ "cw2 0.13.0",
+ "schemars",
+ "serde",
+ "thiserror",
+]
 
 [[package]]
 name = "marketprice"

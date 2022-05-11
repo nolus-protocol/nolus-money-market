@@ -10,6 +10,12 @@ pub type Denom = String;
 pub type DenomPair = (Denom, Denom);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Prices {
+    pub base: Denom,
+    pub values: Vec<(Denom, Decimal256)>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Observation {
     feeder_addr: Addr,
     time: Timestamp,

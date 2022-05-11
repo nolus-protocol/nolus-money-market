@@ -1,31 +1,40 @@
-image: "rust:latest"
-
 stages:
+  - prepare
   - test
   - build
-  - optimization
   - deploy
 
-.caching_rust: &caching_rust
-    cache:
-      paths:
-        - /usr/local/cargo/
-        - target/
+variables:
+  CARGO_HOME: $CI_PROJECT_DIR/cargo_home
+
+default:
+  image: "rust:latest"
 
 .default_rules:
   rules:
     - if: $CI_COMMIT_TAG != null && $CI_COMMIT_REF_PROTECTED == "true"
 
+cache:
+  paths:
+    - target/
+    - cargo_home/
+
+prepare_node:
+  stage: prepare
+  script:
+    - apt update && apt install bash
+    - apt install curl
+    - echo 'y' | apt install jq
+    - mkdir -p $CARGO_HOME
+    - rustc --version && cargo --version    
+    - du -hs target
+    - du -hs $CARGO_HOME
+
 schema:cargo:
-  <<: *caching_rust
   stage: test
   variables:
     SCHEMA_DIR: "contracts-schemas"
     SCHEMA_DIR_RESULT: "schemas.tar.gz"
-  before_script:
-    - apt update && apt install bash
-    - apt install curl
-    - echo 'y' | apt install jq
   script:
     - cargo install cargo-workspaces
     - cargo workspaces exec --no-bail cargo run --example schema
@@ -37,11 +46,9 @@ schema:cargo:
       - $SCHEMA_DIR_RESULT
 
 test:cargo:
-  <<: *caching_rust
   stage: test
   coverage: '/^\d+.\d+% coverage/'
   script:
-    - rustc --version && cargo --version  # Print version info for debugging
     - cargo install cargo-tarpaulin
     - cargo tarpaulin --out Xml
   artifacts:
@@ -50,27 +57,13 @@ test:cargo:
         - cobertura.xml
 
 lint:cargo:
-  <<: *caching_rust
   stage: test
   script:
     - rustup component add clippy
     - cargo clippy --workspace --verbose --all-targets -- -D warnings
 
-build:cargo:
-  <<: *caching_rust
+build-and-optimization:cargo:
   stage: build
-  rules:
-    - !reference [.default_rules, rules]
-  script:
-    - rustup target add wasm32-unknown-unknown
-    - RUSTFLAGS='-C link-arg=-s' cargo wasm --target-dir ./target
-  artifacts:
-    paths:
-    - target/
-    expire_in: 1 hour
-
-optimization:
-  stage: optimization
   tags:
     - shell
   rules:
@@ -82,19 +75,13 @@ optimization:
     - artifacts/
     expire_in: 1 hour
 
-
 deploy:cargo:
-  <<: *caching_rust
   stage: deploy
   rules:
     - !reference [.default_rules, rules]
   variables:
     CONTRACTS_INFO_FILE: "contracts-info.json"
     CONTRACTS_INFO_DIR: "contracts.tar.gz"
-  before_script:
-    - apt update && apt install bash
-    - apt install curl
-    - echo 'y' | apt install jq
   script:
     - /bin/bash ./scripts/deploy-contracts-dev-net.sh $CONTRACTS_INFO_FILE
     - tar -czvf $CONTRACTS_INFO_DIR $CONTRACTS_INFO_FILE

@@ -15,7 +15,7 @@ fn register_feeder() {
     let f_address = deps.api.addr_validate("address1").unwrap();
     control.register(deps.as_mut(), f_address.clone()).unwrap();
 
-    let resp = control.is_registered(deps.as_ref(), &f_address).unwrap();
+    let resp = control.is_registered(&deps.storage, &f_address).unwrap();
     assert!(resp);
 
     let feeders = control.get(deps.as_ref()).unwrap();

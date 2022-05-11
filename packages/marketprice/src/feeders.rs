@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{Addr, Deps, DepsMut, StdError, StdResult};
+use cosmwasm_std::{Addr, Deps, DepsMut, StdError, StdResult, Storage};
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -36,8 +36,8 @@ impl<'f> PriceFeeders<'f> {
         Ok(addrs)
     }
 
-    pub fn is_registered(&self, deps: Deps, address: &Addr) -> StdResult<bool> {
-        let addrs = self.0.load(deps.storage)?;
+    pub fn is_registered(&self, storage: &dyn Storage, address: &Addr) -> StdResult<bool> {
+        let addrs = self.0.load(storage)?;
         Ok(addrs.contains(address))
     }
 

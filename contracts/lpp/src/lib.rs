@@ -1,4 +1,5 @@
 pub mod msg;
+pub mod stub;
 
 #[cfg(not(feature = "library"))]
 #[path=""]
