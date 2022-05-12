@@ -1,15 +1,11 @@
 pub mod msg;
 pub mod stub;
 
-#[cfg(not(feature = "library"))]
-#[path=""]
-mod nolib {
-    pub mod contract;
-    pub mod error;
-    pub mod state;
-    pub mod config;
-    pub mod loan;
-}
+#[cfg(feature = "cosmwasm")]
+pub mod contract;
 
-#[cfg(not(feature = "library"))]
-pub use nolib::*;
+mod error;
+mod state;
+mod config;
+mod loan;
+

@@ -86,7 +86,7 @@ impl<'a> LiquidityPool<'a> {
         if config.denom != coins.denom {
             return Err(ContractError::Denom {
                 contract_denom: config.denom,
-                denom: coins.denom.clone(),
+                denom: coins.denom,
             });
         }
         Ok(coins.amount)
@@ -392,7 +392,7 @@ mod test {
 
         assert_eq!(result, interest_rate);
 
-        LPP.try_open_loan(deps.as_mut(), env.clone(), loan.clone(), coin(5_000_000, "uusdt"))
+        LPP.try_open_loan(deps.as_mut(), env.clone(), loan, coin(5_000_000, "uusdt"))
             .expect("can't open loan");
         deps.querier.update_balance(MOCK_CONTRACT_ADDR, vec![coin(5_000_000, "uusdt")]);
 
@@ -482,7 +482,7 @@ mod test {
                 + 5_000_000
                 + 100;
 
-        let repay = LPP.try_repay_loan(deps.as_mut(), env.clone(), loan.clone(), vec![coin(payment, "uusdt")])
+        let repay = LPP.try_repay_loan(deps.as_mut(), env, loan, vec![coin(payment, "uusdt")])
             .expect("can't repay loan");
 
         assert_eq!(repay, coin(100, "uusdt"));
