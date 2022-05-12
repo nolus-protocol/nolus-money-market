@@ -52,12 +52,14 @@ impl NewLeaseForm {
         ))
     }
 
-    pub fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
+    pub fn save(self, storage: &mut dyn Storage) -> StdResult<()> {
         Self::DB_ITEM.save(storage, &self)
     }
 
-    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
-        Self::DB_ITEM.load(storage)
+    pub fn pull(storage: &mut dyn Storage) -> StdResult<Self> {
+        let item = Self::DB_ITEM.load(storage)?;
+        Self::DB_ITEM.remove(storage);
+        StdResult::Ok(item)
     }
 }
 
