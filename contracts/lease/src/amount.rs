@@ -37,7 +37,7 @@ impl From<u128> for Amount {
 
 impl From<Amount> for u128 {
     fn from(amount: Amount) -> Self {
-        amount.into()
+        amount.val.into()
     }
 }
 
@@ -85,10 +85,9 @@ impl<'a> Sub<&'a Amount> for Amount {
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        amount::Amount,
-        percent::HUNDRED,
-    };
+    use cosmwasm_std::Uint128;
+
+    use crate::{amount::Amount, percent::HUNDRED};
 
     fn from(val: u128) -> Amount {
         val.into()
@@ -103,6 +102,20 @@ mod test {
         assert_eq!(from(0), a.percent(0.into()));
         assert_eq!(from(6), a.percent(120.into()));
         assert_eq!(from(10), a.percent(200.into()));
+    }
+
+    #[test]
+    fn from_into_u128() {
+        assert_eq!(10u128, Amount::from(10).into());
+        let a = from(100);
+        assert_eq!(a, Amount::from(u128::from(a)));
+    }
+
+    #[test]
+    fn from_into_uint128() {
+        assert_eq!(Uint128::new(10), Amount::from(10).into());
+        let a = from(100);
+        assert_eq!(a, Amount::from(Uint128::from(a)));
     }
 
     #[test]
