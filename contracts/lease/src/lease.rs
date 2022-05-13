@@ -15,7 +15,7 @@ pub struct Lease<L> {
 
 impl<L> Lease<L>
 where
-    L: Lpp
+    L: Lpp,
 {
     const DB_ITEM: Item<'static, Lease<L>> = Item::new("lease");
 
@@ -44,7 +44,7 @@ mod tests {
     use lpp::stub::Lpp;
     use serde::{Deserialize, Serialize};
 
-    use crate::{liability::Liability, loan::Loan};
+    use crate::{liability::Liability, loan::Loan, percent::Percent};
 
     use super::Lease;
 
@@ -66,7 +66,12 @@ mod tests {
         let obj = Lease {
             customer: Addr::unchecked("test"),
             currency: "UST".to_owned(),
-            liability: Liability::new(65, 5, 10, 10 * 24),
+            liability: Liability::new(
+                Percent::from(65),
+                Percent::from(5),
+                Percent::from(10),
+                10 * 24,
+            ),
             loan: Loan::open(LppLocalStub {}, 23, 100, 10).unwrap(),
         };
         let obj_exp = obj.clone();

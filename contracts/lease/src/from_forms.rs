@@ -34,9 +34,7 @@ impl NewLeaseForm {
         // TODO msg.invariant_held(deps.api) checking invariants including address validity and incorporating the liability and loan form invariants
         self.liability.invariant_held()?;
 
-        // TODO provide Percent.of(&self, Coin) -> Coin and get rid of Amount
-        let borrow = self.liability.init_borrow_amount(downpayment.amount.into());
-        Ok(Coin::new(borrow.into(), self.currency.clone()))
+        Ok(self.liability.init_borrow_amount(downpayment))
     }
 
     pub(crate) fn into_lease<L>(self, lpp: L, api: &dyn Api) -> ContractResult<Lease<L>>
@@ -70,6 +68,7 @@ mod test {
     use crate::{
         liability::Liability,
         opening::{LoanForm, NewLeaseForm},
+        percent::Percent,
     };
 
     #[test]
@@ -92,13 +91,13 @@ mod test {
         let lease = NewLeaseForm {
             customer: "ss1s1".into(),
             currency: downpayment.denom.clone(),
-            liability: Liability::new(10, 0, 0, 100),
+            liability: Liability::new(Percent::from(10), Percent::from(0), Percent::from(0), 100),
             loan: LoanForm {
                 annual_margin_interest_permille: 0,
                 lpp: "sdgg22d".into(),
                 interest_due_period_secs: 100,
                 grace_period_secs: 10,
-            }
+            },
         };
         let _res = lease.amount_to_borrow(&downpayment);
     }
@@ -107,13 +106,13 @@ mod test {
         let lease = NewLeaseForm {
             customer: "ss1s1".into(),
             currency: downpayment.denom.clone(),
-            liability: Liability::new(10, 0, 10, 100),
+            liability: Liability::new(Percent::from(10), Percent::from(0), Percent::from(10), 100),
             loan: LoanForm {
                 annual_margin_interest_permille: 0,
                 lpp: "sdgg22d".into(),
                 interest_due_period_secs: 100,
                 grace_period_secs: 10,
-            }
+            },
         };
         assert_eq!(expected, &lease.amount_to_borrow(downpayment).unwrap());
     }

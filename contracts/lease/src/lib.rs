@@ -2,8 +2,7 @@ pub mod msg;
 pub mod opening;
 pub mod liability;
 pub mod error;
-mod amount;
-mod percent;
+pub mod percent;
 
 #[cfg(feature = "cosmwasm")]
 pub mod contract;

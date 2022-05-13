@@ -1,6 +1,6 @@
 use std::any::type_name;
 
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, OverflowError};
 use cw_utils::PaymentError;
 use thiserror::Error;
 
@@ -20,6 +20,9 @@ pub enum ContractError {
 
     #[error("Error in opening an underlying loan: {0}")]
     OpenLoanError(String),
+
+    #[error("{0}")]
+    OverflowError(#[from] OverflowError),
 
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },
