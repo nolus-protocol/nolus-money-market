@@ -1,4 +1,4 @@
-#[cfg(not(feature = "library"))]
+#[cfg(feature = "cosmwasm_bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,

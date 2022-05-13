@@ -2,6 +2,7 @@ use cosmwasm_std::{Addr, Coin};
 use lease::{
     liability::Liability,
     opening::{LoanForm, NewLeaseForm},
+    percent::Percent,
 };
 
 use crate::{config::Config, ContractError};
@@ -33,7 +34,12 @@ pub(crate) fn open_lease_msg(sender: Addr, config: Config) -> NewLeaseForm {
     NewLeaseForm {
         customer: sender.into_string(),
         currency: "".to_owned(), // TODO the same denom lppUST is working with
-        liability: Liability::new(config.liability.initial, 5, 10, 20 * 24), //TODO
+        liability: Liability::new(
+            Percent::from(config.liability.initial),
+            Percent::from(config.liability.healthy - config.liability.initial),
+            Percent::from(config.liability.max - config.liability.healthy),
+            20 * 24,
+        ), //TODO
         loan: LoanForm {
             annual_margin_interest_permille: config.lease_interest_rate_margin,
             lpp: config.lpp_ust_addr.into_string(),

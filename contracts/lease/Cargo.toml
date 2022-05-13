@@ -27,4 +27,3 @@ lpp = { path = "../lpp", version = "0.1.0", default-features = false, features =
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0-beta6" }
-cw-multi-test = "0.13"

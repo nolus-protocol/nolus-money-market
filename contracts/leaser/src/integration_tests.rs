@@ -5,6 +5,7 @@ mod tests {
     use lease::{
         liability::Liability,
         opening::{LoanForm, NewLeaseForm},
+        percent::Percent,
     };
     use lpp::msg::InstantiateMsg as LppInstantiateMsg;
 
@@ -66,12 +67,17 @@ mod tests {
         let msg = NewLeaseForm {
             customer: USER.to_string(),
             currency: "UST".to_string(),
-            liability: Liability::new(65, 5, 10, 20 * 24),
+            liability: Liability::new(
+                Percent::from(65),
+                Percent::from(5),
+                Percent::from(10),
+                20 * 24,
+            ),
             loan: LoanForm {
-                annual_margin_interest_permille: 31, // 3.1%
+                annual_margin_interest_permille: 0, // 3.1%
                 lpp: lpp_addr.into_string(),
-                interest_due_period_secs: 90 * 24 * 60 * 60, // 90 days TODO use a crate for daytime calculations
-                grace_period_secs: 10 * 24 * 60 * 60, // 10 days TODO use a crate for daytime calculations
+                interest_due_period_secs: 100, // 90 days TODO use a crate for daytime calculations
+                grace_period_secs: 10,         // 10 days TODO use a crate for daytime calculations
             },
         };
 
