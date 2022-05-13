@@ -1,22 +1,13 @@
 use crate::contract::{execute, instantiate, query};
 use crate::helpers::open_lease_msg;
+use crate::tests::common::leaser_instantiate_msg;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{
     coins, from_binary, to_binary, Addr, Coin, CosmosMsg, Decimal, DepsMut, StdError, SubMsg,
     Uint128, WasmMsg,
 };
 
-use crate::msg::{ConfigResponse, ExecuteMsg, Liability, QueryMsg, QuoteResponse, Repayment};
-
-pub fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::InstantiateMsg {
-    crate::msg::InstantiateMsg {
-        lease_code_id,
-        lpp_ust_addr: lpp_addr,
-        lease_interest_rate_margin: 3,
-        liability: Liability::new(65, 70, 80),
-        repayment: Repayment::new(90 * 24 * 60 * 60, 10 * 24 * 60 * 60),
-    }
-}
+use crate::msg::{ConfigResponse, ExecuteMsg, QueryMsg, QuoteResponse};
 
 #[test]
 fn proper_initialization() {

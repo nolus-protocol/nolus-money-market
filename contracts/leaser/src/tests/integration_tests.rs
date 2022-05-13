@@ -11,7 +11,7 @@ mod tests {
 
     use crate::{
         msg::{QueryMsg, QuoteResponse},
-        tests::leaser_instantiate_msg,
+        tests::common::leaser_instantiate_msg,
     };
 
     const USER: &str = "USER";

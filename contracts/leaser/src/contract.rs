@@ -155,13 +155,13 @@ fn get_annual_interest_rate(deps: Deps, downpayment: Coin) -> StdResult<Decimal>
     }
 }
 
-#[cfg(test)]
-fn get_annual_interest_rate(_deps: Deps, _downpayment: Coin) -> StdResult<Decimal> {
-    Ok(Decimal::one())
-}
-
 fn register_lease(deps: DepsMut, msg_id: u64, lease_addr: Addr) -> Result<Response, ContractError> {
     // TODO: Remove pending id if the creation was not successful
     LS.save(deps.storage, msg_id, lease_addr.clone())?;
     Ok(Response::new().add_attribute("lease_address", lease_addr))
+}
+
+#[cfg(test)]
+fn get_annual_interest_rate(_deps: Deps, _downpayment: Coin) -> StdResult<Decimal> {
+    Ok(Decimal::one())
 }
