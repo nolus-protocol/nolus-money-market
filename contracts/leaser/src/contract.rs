@@ -7,7 +7,8 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
 use lease::liability::Liability;
-use lease::opening::{NewLeaseForm, LoanForm};
+use lease::opening::{LoanForm, NewLeaseForm};
+use lease::percent::Percent;
 
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -66,7 +67,12 @@ pub fn try_borrow(deps: DepsMut, info: MessageInfo) -> Result<Response, Contract
                 msg: to_binary(&NewLeaseForm {
                     customer: info.sender.into_string(),
                     currency: "".to_owned(), // TODO the same denom lppUST is working with
-                    liability: Liability::new(65, 5, 10, 20 * 24),
+                    liability: Liability::new(
+                        Percent::from(65),
+                        Percent::from(5),
+                        Percent::from(10),
+                        20 * 24,
+                    ),
                     loan: LoanForm {
                         annual_margin_interest_permille: 31, // 3.1%
                         lpp: config.lpp_ust_addr.into_string(),
