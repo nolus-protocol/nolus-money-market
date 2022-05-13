@@ -23,6 +23,7 @@ CONTRACTS_RESULTS_FILE="$1"
 ORACLE_INIT_MSG='{"base_asset":"ust","price_feed_period":60,"feeders_percentage_needed":50}'
 LEASER_INIT_MSG='{"grace_period_nano_sec":"23","loan_code_id":1,"loan_healthy_liability":"1.584007913129639935","loan_interest_rate_margin":"30.584007913129639935","loan_max_liability":"4.584007913129639935","lpp_ust_addr":"nolus1qaf23chpkknx2znmz6p7k7n0u2uk5xtr5zdaf2","repayment_period_nano_sec":"50"}'
 TREASURY_INIT_MSG='{}'
+LPP_INIT_MSG='{"denom":"ust","lease_code_id":1}'
 
 downloadArtifact() {
   local name="$1"
@@ -66,3 +67,4 @@ deployContract "oracle" "$ORACLE_INIT_MSG"
 deployContract "leaser" "$LEASER_INIT_MSG"
 deployContract "lease"
 deployContract "treasury" "$TREASURY_INIT_MSG"
+deployContract "lpp" "$LPP_INIT_MSG"
