@@ -3,7 +3,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    error::{ContractError, ContractResult},
+    error::{Error, Result},
     percent::Percent,
 };
 
@@ -58,7 +58,7 @@ impl Liability {
         obj
     }
 
-    pub fn invariant_held(&self) -> ContractResult<()> {
+    pub fn invariant_held(&self) -> Result<()> {
         // TODO restrict further the accepted percents to 100 since there is no much sense of having no borrow
         if self.init_percent > Percent::ZERO
             && self.healthy_percent >= self.init_percent
@@ -67,7 +67,7 @@ impl Liability {
         {
             Result::Ok(())
         } else {
-            Result::Err(ContractError::broken_invariant_err::<Liability>())
+            Result::Err(Error::broken_invariant_err::<Liability>())
         }
     }
 
@@ -85,7 +85,7 @@ impl Liability {
 mod test {
     use cosmwasm_std::{from_slice, Coin};
 
-    use crate::{error::ContractError, percent::Percent};
+    use crate::{error::Error, percent::Percent};
 
     use super::{Liability, SECS_IN_HOUR};
 
@@ -164,7 +164,7 @@ mod test {
         )
         .unwrap();
         assert_eq!(
-            ContractError::broken_invariant_err::<Liability>(),
+            Error::broken_invariant_err::<Liability>(),
             deserialized.invariant_held().unwrap_err()
         );
     }

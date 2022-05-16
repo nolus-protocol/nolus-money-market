@@ -2,12 +2,7 @@ use cosmwasm_std::{Api, Coin, StdResult, Storage};
 use cw_storage_plus::Item;
 use lpp::stub::Lpp;
 
-use crate::{
-    error::ContractResult,
-    lease::Lease,
-    loan::Loan,
-    opening::NewLeaseForm,
-};
+use crate::{error::ContractResult, lease::Lease, loan::Loan, opening::NewLeaseForm};
 
 impl NewLeaseForm {
     const DB_ITEM: Item<'static, NewLeaseForm> = Item::new("lease_form");
@@ -35,12 +30,7 @@ impl NewLeaseForm {
             self.loan.grace_period_secs,
         )?;
 
-        Ok(Lease::new(
-            customer,
-            self.currency,
-            self.liability,
-            loan,
-        ))
+        Ok(Lease::new(customer, self.currency, self.liability, loan))
     }
 
     pub fn save(self, storage: &mut dyn Storage) -> StdResult<()> {
@@ -57,12 +47,9 @@ impl NewLeaseForm {
 #[cfg(test)]
 mod test {
     use cosmwasm_std::Coin;
+    use finance::{liability::Liability, percent::Percent};
 
-    use crate::{
-        liability::Liability,
-        opening::{LoanForm, NewLeaseForm},
-        percent::Percent,
-    };
+    use crate::opening::{LoanForm, NewLeaseForm};
 
     #[test]
     fn amount_to_borrow_no_downpayment() {

@@ -327,6 +327,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "finance"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-std",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "forward_ref"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -428,6 +438,7 @@ dependencies = [
  "cw-storage-plus 0.13.0",
  "cw-utils",
  "cw2 0.13.0",
+ "finance",
  "lpp",
  "schemars",
  "serde",
@@ -445,6 +456,7 @@ dependencies = [
  "cw-storage-plus 0.13.0",
  "cw-utils",
  "cw2 0.13.0",
+ "finance",
  "lease",
  "schemars",
  "serde",

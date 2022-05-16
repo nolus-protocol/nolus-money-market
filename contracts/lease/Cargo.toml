@@ -24,6 +24,7 @@ schemars = "0.8"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0" }
 lpp = { path = "../lpp", version = "0.1.0", default-features = false, features = ["library"] }
+finance = { path = "../../packages/finance", version = "0.1.0", default-features = false }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0-beta6" }
