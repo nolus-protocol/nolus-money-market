@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{Addr, Deps, DepsMut, StdError, StdResult, Storage};
+use cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage};
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -31,8 +31,8 @@ impl<'f> PriceFeeders<'f> {
         PriceFeeders(Item::new(namespace))
     }
 
-    pub fn get(&self, deps: Deps) -> StdResult<HashSet<Addr>> {
-        let addrs = self.0.load(deps.storage)?;
+    pub fn get(&self, storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
+        let addrs = self.0.load(storage)?;
         Ok(addrs)
     }
 

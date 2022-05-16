@@ -1,5 +1,5 @@
 use cw_storage_plus::Item;
-use marketprice::{feeders::PriceFeeders, market_price::PriceFeeds};
+use marketprice::{feed::DenomPair, feeders::PriceFeeders, market_price::PriceFeeds};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -18,4 +18,5 @@ pub struct Config {
     pub owner: Addr,
     pub price_feed_period: u64,
     pub feeders_percentage_needed: u8,
+    pub supported_denom_pairs: Vec<DenomPair>,
 }
