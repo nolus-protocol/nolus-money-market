@@ -62,12 +62,12 @@ deployContract "oracle" "$ORACLE_INIT_MSG"
 
 deployContract "lease"
 
-LEASE_CODE_ID=$(jq .contracts_info[0].lease.code_id contracts-info.json | tr -d '"')
+LEASE_CODE_ID=$(jq .contracts_info[1].lease.code_id contracts-info.json | tr -d '"')
 echo "$LEASE_CODE_ID"
 
 LPP_INIT_MSG='{"denom":"unolus","lease_code_id":'$LEASE_CODE_ID'}'
 deployContract "lpp" "$LPP_INIT_MSG"
-LPP_ADDRESS=$(jq .contracts_info[1].lpp.instance contracts-info.json | tr -d '"')
+LPP_ADDRESS=$(jq .contracts_info[2].lpp.instance contracts-info.json | tr -d '"')
 echo "$LPP_ADDRESS"
 
 LEASER_INIT_MSG='{"lease_code_id":'$LEASE_CODE_ID',"lease_interest_rate_margin":3,"liability":{"healthy":70,"initial":65,"max":80},"lpp_ust_addr":"'$LPP_ADDRESS'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'
