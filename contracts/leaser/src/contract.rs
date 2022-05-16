@@ -9,9 +9,7 @@ use cw_utils::parse_reply_instantiate_data;
 
 use crate::error::ContractError;
 use crate::helpers::open_lease_msg;
-use crate::msg::{
-    ConfigResponse, ExecuteMsg, InstantiateMsg, Liability, QueryMsg, QuoteResponse, Repayment,
-};
+use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse, Repayment};
 use crate::state::LS;
 
 // version info for migration info
@@ -70,7 +68,7 @@ pub fn try_configure(
     deps: DepsMut,
     info: MessageInfo,
     lease_interest_rate_margin: u8,
-    liability: Liability,
+    liability: crate::msg::Liability,
     repayment: Repayment,
 ) -> Result<Response, ContractError> {
     let config = LS.get_config(deps.storage)?;

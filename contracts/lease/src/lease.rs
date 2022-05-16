@@ -1,9 +1,10 @@
 use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::Item;
+use finance::liability::Liability;
 use lpp::stub::Lpp;
 use serde::{Deserialize, Serialize};
 
-use crate::{liability::Liability, loan::Loan, opening::Denom};
+use crate::{loan::Loan, opening::Denom};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Lease<L> {
@@ -41,10 +42,11 @@ where
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{testing::MockStorage, Addr, StdResult, SubMsg};
+    use finance::{liability::Liability, percent::Percent};
     use lpp::stub::Lpp;
     use serde::{Deserialize, Serialize};
 
-    use crate::{liability::Liability, loan::Loan, percent::Percent};
+    use crate::loan::Loan;
 
     use super::Lease;
 

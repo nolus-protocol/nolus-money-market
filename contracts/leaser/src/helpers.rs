@@ -1,9 +1,6 @@
 use cosmwasm_std::{Addr, Coin};
-use lease::{
-    liability::Liability,
-    opening::{LoanForm, NewLeaseForm},
-    percent::Percent,
-};
+use finance::{liability::Liability, percent::Percent};
+use lease::opening::{LoanForm, NewLeaseForm};
 
 use crate::{config::Config, ContractError};
 

@@ -7,7 +7,7 @@ use cosmwasm_std::{Coin, OverflowError, OverflowOperation};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::error::ContractResult;
+use crate::error::Result as FinanceResult;
 
 #[derive(
     Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
@@ -50,14 +50,14 @@ impl Percent {
         }
     }
 
-    pub fn checked_add(self, other: Self) -> ContractResult<Self> {
+    pub fn checked_add(self, other: Self) -> FinanceResult<Self> {
         self.val
             .checked_add(other.val)
             .map(Self::from)
             .ok_or_else(|| OverflowError::new(OverflowOperation::Add, self, other).into())
     }
 
-    pub fn checked_sub(self, other: Self) -> ContractResult<Self> {
+    pub fn checked_sub(self, other: Self) -> FinanceResult<Self> {
         self.val
             .checked_sub(other.val)
             .map(Self::from)

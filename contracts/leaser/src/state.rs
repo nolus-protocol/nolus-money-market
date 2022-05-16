@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    msg::{InstantiateMsg, Liability, Repayment},
+    msg::{InstantiateMsg, Repayment},
     ContractError,
 };
 use cosmwasm_std::{Addr, DepsMut, StdResult, Storage};
@@ -71,7 +71,7 @@ impl<'a> LeaserState<'a> {
         &self,
         storage: &mut dyn Storage,
         lease_interest_rate_margin: u8,
-        liability: Liability,
+        liability: crate::msg::Liability,
         repayment: Repayment,
     ) -> Result<(), ContractError> {
         self.config.may_load(storage)?;
