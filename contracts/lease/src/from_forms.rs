@@ -6,22 +6,8 @@ use crate::{
     error::ContractResult,
     lease::Lease,
     loan::Loan,
-    opening::{LoanForm, NewLeaseForm},
+    opening::NewLeaseForm,
 };
-
-impl LoanForm {
-    pub fn into_loan<L>(self, lpp: L) -> ContractResult<Loan<L>>
-    where
-        L: Lpp,
-    {
-        Loan::open(
-            lpp,
-            self.annual_margin_interest_permille,
-            self.interest_due_period_secs,
-            self.grace_period_secs,
-        )
-    }
-}
 
 impl NewLeaseForm {
     const DB_ITEM: Item<'static, NewLeaseForm> = Item::new("lease_form");
@@ -42,11 +28,18 @@ impl NewLeaseForm {
         L: Lpp,
     {
         let customer = api.addr_validate(&self.customer)?;
+        let loan = Loan::open(
+            lpp,
+            self.loan.annual_margin_interest_permille,
+            self.loan.interest_due_period_secs,
+            self.loan.grace_period_secs,
+        )?;
+
         Ok(Lease::new(
             customer,
             self.currency,
             self.liability,
-            self.loan.into_loan(lpp)?,
+            loan,
         ))
     }
 
