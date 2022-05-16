@@ -5,7 +5,7 @@ authors = ["Nikola Terziev <n.terziev@nolus.io>", "Gancho Manev <g.manev@nolus.i
 edition = "2021"
 
 [lib]
-crate-type = ["rlib"]
+crate-type = ["cdylib", "rlib"]
 
 [features]
 default = ["cosmwasm-bindings"]
