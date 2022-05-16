@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, Timestamp};
-use marketprice::feed::{Denom, Prices};
+use marketprice::feed::{Denom, DenomPair, Prices};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -8,6 +8,7 @@ pub struct InstantiateMsg {
     pub base_asset: String,
     pub price_feed_period: u64,
     pub feeders_percentage_needed: u8,
+    pub supported_denom_pairs: Vec<DenomPair>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -15,9 +16,6 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     RegisterFeeder {
         feeder_address: String,
-    },
-    FeedPrice {
-        prices: Prices, // (asset, price)
     },
     FeedPrices {
         prices: Vec<Prices>, // (asset, [(asset1, price), (asset2, price)])
@@ -30,21 +28,32 @@ pub enum ExecuteMsg {
         addr: Addr,
         time: Timestamp,
     },
+    SupportedDenomPairs {
+        pairs: Vec<DenomPair>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    // returns the contract configuration
     Config {},
+    // returns all registered feeders
     Feeders {},
+    // check if an address belongs to a registered feeder
     IsFeeder { address: Addr },
-    Price { base: Denom, quote: Denom },
+    // returns the price of the denom against the base asset
+    PriceFor { denom: Denom },
+    // returns a list of supported denom pairs
+    SupportedDenomPairs {},
 }
 
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ConfigResponse {
     pub base_asset: String,
+    pub price_feed_period: u64,
+    pub feeders_percentage_needed: u8,
     pub owner: Addr,
 }
 

@@ -1,9 +1,33 @@
 #[cfg(test)]
 mod tests {
-    use crate::helpers::CwTemplateContract;
-    use crate::msg::InstantiateMsg;
-    use cosmwasm_std::{Addr, Coin, Empty, Uint128};
+    use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, Empty, StdResult, Uint128, WasmMsg};
     use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
+    use schemars::JsonSchema;
+    use serde::{Deserialize, Serialize};
+
+    use crate::{msg::ExecuteMsg, tests::common::dummy_default_instantiate_msg};
+
+    /// CwTemplateContract is a wrapper around Addr that provides a lot of helpers
+    /// for working with this.
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+    pub struct CwTemplateContract(pub Addr);
+
+    impl CwTemplateContract {
+        pub fn addr(&self) -> Addr {
+            self.0.clone()
+        }
+
+        pub fn call<T: Into<ExecuteMsg>>(&self, msg: T) -> StdResult<CosmosMsg> {
+            let msg = to_binary(&msg.into())?;
+            Ok(WasmMsg::Execute {
+                contract_addr: self.addr().into(),
+                msg,
+                funds: vec![],
+            }
+            .into())
+        }
+    }
+
     pub fn contract_template() -> Box<dyn Contract<Empty>> {
         let contract = ContractWrapper::new(
             crate::contract::execute,
@@ -34,11 +58,7 @@ mod tests {
     fn proper_instantiate() -> (App, CwTemplateContract) {
         let mut app = mock_app();
         let cw_template_id = app.store_code(contract_template());
-        let msg = InstantiateMsg {
-            base_asset: "token".to_string(),
-            price_feed_period: 60,
-            feeders_percentage_needed: 50,
-        };
+        let msg = dummy_default_instantiate_msg();
         let cw_template_contract_addr = app
             .instantiate_contract(
                 cw_template_id,
@@ -65,8 +85,10 @@ mod tests {
         /// The mock for loan SC. It mimics the scheme for time notification.
         /// If GATE, it returns Ok on notifications, returns Err otherwise.
         mod mock_loan {
+
+            use crate::tests::integration_tests::tests::CwTemplateContract;
+
             use super::ADMIN;
-            use crate::helpers::CwTemplateContract;
             use cosmwasm_std::{
                 Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
                 StdResult, Timestamp,
@@ -156,11 +178,14 @@ mod tests {
             };
             app.execute_contract(Addr::unchecked(ADMIN), oracle.addr(), &msg, &[])
                 .unwrap();
-            let feed_msg = ExecuteMsg::FeedPrice {
-                prices: Prices {
-                    base: "ust".into(),
-                    values: vec![("denom".into(), Decimal256::from_str("100").unwrap())],
-                },
+            let feed_msg = ExecuteMsg::FeedPrices {
+                prices: vec![Prices {
+                    base: "A".into(),
+                    values: vec![
+                        ("B".into(), Decimal256::from_str("100").unwrap()),
+                        ("C".into(), Decimal256::from_str("200").unwrap()),
+                    ],
+                }],
             };
             app.update_block(|bl| bl.time = Timestamp::from_nanos(0));
             // instantiate loan, add alarms
