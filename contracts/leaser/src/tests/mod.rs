@@ -1,2 +1,2 @@
 pub mod common;
-pub mod integration_tests;
+pub mod contract_tests;

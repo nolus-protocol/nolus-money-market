@@ -34,7 +34,7 @@ pub enum ExecuteMsg {
         liability: Liability,
         repayment: Repayment,
     },
-    Borrow {},
+    OpenLease {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

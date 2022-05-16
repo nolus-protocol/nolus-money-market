@@ -10,6 +10,4 @@ pub use crate::error::ContractError;
 pub mod contract;
 
 #[cfg(test)]
-pub(crate) mod tests;
-#[cfg(test)]
-pub(crate) mod unit_tests;
+mod tests;

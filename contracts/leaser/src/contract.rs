@@ -39,7 +39,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Borrow {} => try_borrow(deps, info.funds, info.sender),
+        ExecuteMsg::OpenLease {} => try_borrow(deps, info.funds, info.sender),
         ExecuteMsg::Config {
             lease_interest_rate_margin,
             liability,

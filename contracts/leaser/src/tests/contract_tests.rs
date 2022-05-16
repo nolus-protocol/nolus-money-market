@@ -43,7 +43,7 @@ fn testexecute() {
     let config = config_response.config;
 
     // try open lease with enought UST
-    let msg = ExecuteMsg::Borrow {};
+    let msg = ExecuteMsg::OpenLease {};
     let info = mock_info("addr0000", coins(40, "UST").as_ref());
     let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 

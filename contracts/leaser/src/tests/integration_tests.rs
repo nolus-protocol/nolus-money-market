@@ -146,7 +146,7 @@ mod tests {
             .execute_contract(
                 user_addr.clone(),
                 leaser_addr.clone(),
-                &crate::msg::ExecuteMsg::Borrow {},
+                &crate::msg::ExecuteMsg::OpenLease {},
                 &coins(40, "UST"),
             )
             .unwrap();
