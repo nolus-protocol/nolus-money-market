@@ -82,6 +82,10 @@ deploy:cargo:
   variables:
     CONTRACTS_INFO_FILE: "contracts-info.json"
     CONTRACTS_INFO_DIR: "contracts.tar.gz"
+  before_script:
+    - apt update && apt install bash
+    - apt install curl
+    - echo 'y' | apt install jq
   script:
     - /bin/bash ./scripts/deploy-contracts-dev-net.sh $CONTRACTS_INFO_FILE
     - tar -czvf $CONTRACTS_INFO_DIR $CONTRACTS_INFO_FILE
