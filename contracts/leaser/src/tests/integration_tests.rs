@@ -3,7 +3,7 @@ mod tests {
     use cosmwasm_std::{coins, Addr, Coin, Empty, Uint64};
     use cw_multi_test::{next_block, App, AppBuilder, Contract, ContractWrapper, Executor};
     use finance::{liability::Liability, percent::Percent};
-    use lease::opening::{LoanForm, NewLeaseForm};
+    use lease::msg::{LoanForm, NewLeaseForm};
     use lpp::msg::InstantiateMsg as LppInstantiateMsg;
 
     use crate::{
