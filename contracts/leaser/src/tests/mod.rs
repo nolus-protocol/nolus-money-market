@@ -1,2 +1,3 @@
-pub mod common;
-pub mod contract_tests;
+mod common;
+mod contract_tests;
+mod integration_tests;
