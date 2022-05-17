@@ -11,5 +11,6 @@ pub mod contract;
 
 #[cfg(feature = "cosmwasm")]
 pub mod helpers;
+#[cfg(feature = "cosmwasm")]
 #[cfg(test)]
 mod tests;
