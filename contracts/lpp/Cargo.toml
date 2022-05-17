@@ -9,11 +9,10 @@ crate-type = ["cdylib", "rlib"]
 
 [[example]]
 name = "schema"
-required-features = ["library"]
 
 [features]
-default = ["library"]
-library = []
+default = ["cosmwasm-bindings"]
+cosmwasm-bindings = ["cosmwasm"]
 cosmwasm = []
 
 [dependencies]
