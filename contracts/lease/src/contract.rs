@@ -6,7 +6,7 @@ use cw_utils::one_coin;
 use lpp::stub::{Lpp, LppStub};
 
 use crate::error::{ContractResult, ContractError};
-use crate::msg::NewLeaseForm;
+use crate::msg::{NewLeaseForm, ExecuteMsg};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -47,15 +47,15 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
     Ok(Response::default())
 }
 
-// #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-// pub fn execute(
-//     _deps: DepsMut,
-//     _env: Env,
-//     _info: MessageInfo,
-//     _msg: ExecuteMsg,
-// ) -> ContractResult<Response> {
-//     Ok(Response::default())
-// }
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+pub fn execute(
+    _deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    _msg: ExecuteMsg,
+) -> ContractResult<Response> {
+    Ok(Response::default())
+}
 
 // #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 // pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
