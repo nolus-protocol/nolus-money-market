@@ -9,7 +9,6 @@ fi
 TOKEN_TYPE="JOB-TOKEN"
 TOKEN_VALUE="$CI_JOB_TOKEN"
 
-
 BINARY_ARTIFACT_BIN="nolus.tar.gz"
 NOLUS_DEV_NET="https://net-dev.nolus.io:26612"
 GITLAB_API="https://gitlab-nomo.credissimo.net/api/v4"
@@ -64,11 +63,11 @@ deployContract "oracle" "$ORACLE_INIT_MSG"
 deployContract "lease"
 LEASE_CODE_ID=$(jq .contracts_info[1].lease.code_id contracts-info.json | tr -d '"')
 
-LPP_INIT_MSG='{"denom":"unolus","lease_code_id":"'$LEASE_CODE_ID'"}'
+LPP_INIT_MSG='{"denom":"UST","lease_code_id":"'$LEASE_CODE_ID'"}'
 deployContract "lpp" "$LPP_INIT_MSG"
 LPP_ADDRESS=$(jq .contracts_info[2].lpp.instance contracts-info.json | tr -d '"')
 
-LEASER_INIT_MSG='{"lease_code_id":'$LEASE_CODE_ID',"lease_interest_rate_margin":3,"liability":{"healthy":70,"initial":65,"max":80},"lpp_ust_addr":"'$LPP_ADDRESS'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'
+LEASER_INIT_MSG='{"lease_code_id":"'$LEASE_CODE_ID'","lease_interest_rate_margin":3,"recalc_hours":2,"liability":{"healthy":70,"initial":65,"max":80},"lpp_ust_addr":"'$LPP_ADDRESS'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'
 deployContract "leaser" "$LEASER_INIT_MSG"
 
 TREASURY_INIT_MSG='{}'
