@@ -2,7 +2,7 @@ use std::env::current_dir;
 use std::fs::create_dir_all;
 
 use cosmwasm_schema::{remove_schemas, schema_for, export_schema};
-use lease::msg::opening::NewLeaseForm;
+use lease::msg::NewLeaseForm;
 
 fn main() {
     let mut out_dir = current_dir().unwrap();

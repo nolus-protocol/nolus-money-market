@@ -6,7 +6,7 @@ use cw_utils::one_coin;
 use lpp::stub::{Lpp, LppStub};
 
 use crate::error::{ContractResult, ContractError};
-use crate::msg::opening::NewLeaseForm;
+use crate::msg::NewLeaseForm;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");

@@ -4,7 +4,7 @@ use finance::liability::Liability;
 use lpp::stub::Lpp;
 use serde::{Deserialize, Serialize};
 
-use crate::{loan::Loan, msg::opening::Denom};
+use crate::{loan::Loan, msg::Denom};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Lease<L> {

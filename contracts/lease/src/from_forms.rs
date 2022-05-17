@@ -2,7 +2,7 @@ use cosmwasm_std::{Api, Coin, StdResult, Storage};
 use cw_storage_plus::Item;
 use lpp::stub::Lpp;
 
-use crate::{error::ContractResult, lease::Lease, loan::Loan, msg::opening::NewLeaseForm};
+use crate::{error::ContractResult, lease::Lease, loan::Loan, msg::NewLeaseForm};
 
 impl NewLeaseForm {
     const DB_ITEM: Item<'static, NewLeaseForm> = Item::new("lease_form");
@@ -49,7 +49,7 @@ mod test {
     use cosmwasm_std::Coin;
     use finance::{liability::Liability, percent::Percent};
 
-    use crate::msg::opening::{LoanForm, NewLeaseForm};
+    use crate::msg::{LoanForm, NewLeaseForm};
 
     #[test]
     fn amount_to_borrow_no_downpayment() {
