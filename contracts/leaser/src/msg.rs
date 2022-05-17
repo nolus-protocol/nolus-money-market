@@ -1,32 +1,101 @@
-use crate::state::Config;
-use cosmwasm_std::{Addr, Decimal256, Uint256};
+use cosmwasm_std::{Addr, Coin, Decimal};
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::config::Config;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
-    pub loan_code_id: u64,
+    pub lease_code_id: u64,
     pub lpp_ust_addr: Addr,
-    pub loan_interest_rate_margin: Decimal256,
-    pub loan_max_liability: Decimal256,
-    pub loan_healthy_liability: Decimal256,
-    pub repayment_period_nano_sec: Uint256,
-    pub grace_period_nano_sec: Uint256,
+    pub lease_interest_rate_margin: u8, // LeaseInterestRateMargin%, for example 3%
+    pub liability: Liability,           // LeaseMaxLiability%, for example 80%
+    pub repayment: Repayment,           // GracePeriodSec, for example 10 days = 10*24*60*60
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Liability {
+    pub max: u8,     // LeaseMaxLiability%, for example 80%
+    pub healthy: u8, // LeaseHealthyLiability%, for example, 70%, must be less than LeaseMaxLiability%
+    pub initial: u8, // LeaseInitialLiability%, for example, 65%, must be less or equal to LeaseHealthyLiability%
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Repayment {
+    pub period_sec: u32,       // PeriodLengthSec, for example 90 days = 90*24*60*60
+    pub grace_period_sec: u32, // GracePeriodSec, for example 10 days = 10*24*60*60
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    Borrow {},
+    Config {
+        lease_interest_rate_margin: u8,
+        liability: Liability,
+        repayment: Repayment,
+    },
+    OpenLease {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
+    Quote { downpayment: Coin },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ConfigResponse {
     pub config: Config,
+}
+
+// totalUST, borrowUST, annualInterestRate%
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct QuoteResponse {
+    pub total: Coin,
+    pub borrow: Coin,
+    pub annual_interest_rate: Decimal,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum LPPQueryMsg {
+    Quote { amount: Coin },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum QueryQuoteResponse {
+    QuoteInterestRate(Decimal),
+    NoLiquidity,
+}
+
+impl Repayment {
+    pub fn new(period_sec: u32, grace_period_sec: u32) -> Self {
+        Repayment {
+            period_sec,
+            grace_period_sec,
+        }
+    }
+}
+
+impl Liability {
+    pub fn new(initial: u8, healthy: u8, max: u8) -> Self {
+        assert!(
+            healthy < max,
+            "LeaseHealthyLiability% must be less than LeaseMaxLiability%"
+        );
+
+        assert!(
+            initial <= healthy,
+            "LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
+        );
+
+        Liability {
+            max,
+            healthy,
+            initial,
+        }
+    }
 }

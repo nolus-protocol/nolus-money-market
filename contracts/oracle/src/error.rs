@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, StdError};
-use marketprice::{feeders::PriceFeedersError, market_price::PriceFeedsError};
+use marketprice::{feed::DenomPair, feeders::PriceFeedersError, market_price::PriceFeedsError};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -17,9 +17,14 @@ pub enum ContractError {
     Unauthorized {},
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
+    #[error("Unsupported denom pairs")]
+    UnsupportedDenomPairs {},
 
     #[error("Invalid feeder address")]
     InvalidAddress {},
+
+    #[error("Invalid denom pair")]
+    InvalidDenomPair(DenomPair),
 
     #[error("No feeder data for the specified address")]
     UnknownFeeder {},
@@ -29,5 +34,4 @@ pub enum ContractError {
 
     #[error("Invalid alarm notification address: {0:?}")]
     InvalidAlarmAddress(Addr),
-
 }

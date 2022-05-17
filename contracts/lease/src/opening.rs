@@ -1,7 +1,6 @@
+use finance::liability::Liability;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use crate::liability::Liability;
 
 // TODO define it as type not alias
 pub type Denom = String;
