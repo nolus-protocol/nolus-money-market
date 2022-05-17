@@ -2,11 +2,8 @@
 mod tests {
     use cosmwasm_std::{coins, Addr, Coin, Empty, Uint64};
     use cw_multi_test::{next_block, App, AppBuilder, Contract, ContractWrapper, Executor};
-    use lease::{
-        liability::Liability,
-        opening::{LoanForm, NewLeaseForm},
-        percent::Percent,
-    };
+    use finance::{liability::Liability, percent::Percent};
+    use lease::opening::{LoanForm, NewLeaseForm};
     use lpp::msg::InstantiateMsg as LppInstantiateMsg;
 
     use crate::{
@@ -32,7 +29,8 @@ mod tests {
             lease::contract::execute,
             lease::contract::instantiate,
             lease::contract::query,
-        );
+        )
+        .with_reply(lease::contract::reply);
         Box::new(contract)
     }
 
@@ -63,7 +61,7 @@ mod tests {
     }
 
     #[track_caller]
-    fn instantiate_lease(app: &mut App, lease_id: u64, lpp_addr: Addr) -> Addr {
+    fn _instantiate_lease(app: &mut App, lease_id: u64, lpp_addr: Addr) -> Addr {
         let msg = NewLeaseForm {
             customer: USER.to_string(),
             currency: "UST".to_string(),
@@ -85,7 +83,7 @@ mod tests {
             lease_id,
             Addr::unchecked(ADMIN),
             &msg,
-            &coins(40, "UST"),
+            &coins(400, "UST"),
             "lease",
             None,
         )
@@ -100,8 +98,15 @@ mod tests {
             lease_code_id,
         };
         (
-            app.instantiate_contract(lpp_id, Addr::unchecked(ADMIN), &msg, &[], "lpp", None)
-                .unwrap(),
+            app.instantiate_contract(
+                lpp_id,
+                Addr::unchecked(ADMIN),
+                &msg,
+                &coins(400, "UST"),
+                "lpp",
+                None,
+            )
+            .unwrap(),
             lpp_id,
         )
     }
@@ -113,9 +118,9 @@ mod tests {
         let (lpp_addr, _lpp_id) = instantiate_lpp(app, Uint64::new(lease_id));
         app.update_block(next_block);
 
-        // 2. Instantiate Lease contract (and OWNER as admin)
-        let _lease_addr = instantiate_lease(app, lease_id, lpp_addr.clone());
-        app.update_block(next_block);
+        // // // 2. Instantiate Lease contract (and OWNER as admin)
+        // let _lease_addr = instantiate_lease(app, lease_id, lpp_addr.clone());
+        // app.update_block(next_block);
 
         // 3. Instantiate Leaser contract
         let leaser_addr = instantiate_leaser(app, lease_id, lpp_addr);
@@ -152,7 +157,7 @@ mod tests {
             .unwrap();
 
         // ensure the attributes were relayed from the sub-message
-        assert_eq!(4, res.events.len(), "{:?}", res.events);
+        assert_eq!(8, res.events.len(), "{:?}", res.events);
         // reflect only returns standard wasm-execute event
         let leaser_exec = &res.events[0];
         assert_eq!(leaser_exec.ty.as_str(), "execute");
@@ -163,39 +168,74 @@ mod tests {
         assert_eq!(
             lease_exec.attributes,
             [
-                ("_contract_addr", "Contract #3"),
+                ("_contract_addr", "Contract #2"),
                 ("code_id", &lease_code_id.to_string())
             ]
         );
 
         let lease_reply = &res.events[2];
-        assert_eq!(lease_reply.ty.as_str(), "reply");
-        assert_eq!(
-            lease_reply.attributes,
-            [
-                ("_contract_addr", leaser_addr.as_str()),
-                ("mode", "handle_success")
-            ]
-        );
+        assert_eq!(lease_reply.ty.as_str(), "execute");
+        assert_eq!(lease_reply.attributes, [("_contract_addr", "Contract #0")]);
 
         let lease_reply = &res.events[3];
         assert_eq!(lease_reply.ty.as_str(), "wasm");
         assert_eq!(
             lease_reply.attributes,
             [
-                ("_contract_addr", leaser_addr.as_str()),
-                ("lease_address", "Contract #3")
+                ("_contract_addr", "Contract #0"),
+                ("method", "try_open_loan")
             ]
         );
 
-        let lease_address = &res.events[3].attributes.get(1).unwrap().value;
+        let lease_reply = &res.events[4];
+        assert_eq!(lease_reply.ty.as_str(), "transfer");
+        assert_eq!(
+            lease_reply.attributes,
+            [
+                ("recipient", "Contract #2"),
+                ("sender", "Contract #0"),
+                ("amount", "74UST")
+            ]
+        );
+
+        let lease_reply = &res.events[5];
+        assert_eq!(lease_reply.ty.as_str(), "reply");
+        assert_eq!(
+            lease_reply.attributes,
+            [
+                ("_contract_addr", "Contract #2"),
+                ("mode", "handle_success")
+            ]
+        );
+
+        let lease_reply = &res.events[6];
+        assert_eq!(lease_reply.ty.as_str(), "reply");
+        assert_eq!(
+            lease_reply.attributes,
+            [
+                ("_contract_addr", "Contract #1"),
+                ("mode", "handle_success")
+            ]
+        );
+
+        let lease_reply = &res.events[7];
+        assert_eq!(lease_reply.ty.as_str(), "wasm");
+        assert_eq!(
+            lease_reply.attributes,
+            [
+                ("_contract_addr", leaser_addr.as_str()),
+                ("lease_address", "Contract #2")
+            ]
+        );
+
+        let lease_address = &res.events[7].attributes.get(1).unwrap().value;
 
         assert_eq!(
             coins(460, "UST"),
             app.wrap().query_all_balances(user_addr).unwrap()
         );
         assert_eq!(
-            coins(40, "UST"),
+            coins(114, "UST"),
             app.wrap().query_all_balances(lease_address).unwrap()
         );
     }

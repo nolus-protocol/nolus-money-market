@@ -30,7 +30,7 @@ pub fn assert_sent_sufficient_coin(
 pub(crate) fn open_lease_msg(sender: Addr, config: Config) -> NewLeaseForm {
     NewLeaseForm {
         customer: sender.into_string(),
-        currency: "".to_owned(), // TODO the same denom lppUST is working with
+        currency: "UST".to_owned(), // TODO the same denom lppUST is working with
         liability: Liability::new(
             Percent::from(config.liability.initial),
             Percent::from(config.liability.healthy - config.liability.initial),
