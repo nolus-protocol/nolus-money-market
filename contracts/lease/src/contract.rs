@@ -1,4 +1,4 @@
-#[cfg(feature = "cosmwasm_bindings")]
+#[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
 use cw2::set_contract_version;
@@ -13,7 +13,7 @@ use crate::opening::NewLeaseForm;
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg_attr(feature = "cosmwasm_bindings", entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -34,7 +34,7 @@ pub fn instantiate(
     Ok(Response::new().add_submessage(req))
 }
 
-#[cfg_attr(feature = "cosmwasm_bindings", entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
     // TODO debug_assert the balance is increased with the borrowed amount
     // TODO load the top request and pass it as a reply
@@ -48,7 +48,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
     Ok(Response::default())
 }
 
-#[cfg_attr(feature = "cosmwasm_bindings", entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn execute(
     _deps: DepsMut,
     _env: Env,
@@ -58,7 +58,7 @@ pub fn execute(
     Ok(Response::default())
 }
 
-#[cfg_attr(feature = "cosmwasm_bindings", entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
     // match msg {
     // QueryMsg::Config {} => to_binary(&query_config(deps)?),
