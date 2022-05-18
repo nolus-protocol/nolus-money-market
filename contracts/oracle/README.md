@@ -88,12 +88,12 @@ nolusd tx wasm execute $CONTRACT "$DENOM_PAIRS_UPDATE" --amount 100unolus --from
 
 * Push new price feed
 ```
-FEED_PRICES='{"feed_prices":{"prices":[{"base":"A","values":[["B","1.2"],["C","2.1"]]},{"base":"C","values":[["D","3.2"]]}]}}'
+FEED_PRICES='{"feed_prices":{"prices":[{"base":"A","values":[{"denom": "B", "amount": "1.2"},{"denom": "C", "amount": "2.1"}]},{"base":"C","values":[{"denom": "D", "amount": "3.2"}]}]}}'
 nolusd tx wasm execute $CONTRACT "$FEED_PRICES" --amount 100unolus --from wallet $TXFLAG -y
 ```
 
 * Query price feeds. Returns price against the base asset (taken from contract configuration)
 ```
-PRICE='{"price_for":{"denom": "A"}}'
+PRICE='{"price_for":{"denoms": ["A"]}}'
 nolusd query wasm contract-state smart  $CONTRACT "$PRICE" --output json
 ```

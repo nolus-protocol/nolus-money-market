@@ -10,9 +10,32 @@ pub type Denom = String;
 pub type DenomPair = (Denom, Denom);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Price {
+    pub amount: Decimal256,
+    pub denom: Denom,
+}
+
+impl Price {
+    pub fn new(amount: Decimal256, denom: Denom) -> Self {
+        Price { amount, denom }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Prices {
     pub base: Denom,
-    pub values: Vec<(Denom, Decimal256)>,
+    pub values: Vec<Price>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct DenomToPrice {
+    pub denom: Denom,
+    pub price: Price,
+}
+impl DenomToPrice {
+    pub fn new(denom: Denom, price: Price) -> Self {
+        DenomToPrice { denom, price }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

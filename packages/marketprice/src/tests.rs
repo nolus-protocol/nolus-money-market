@@ -4,6 +4,7 @@ use std::time::SystemTime;
 use cosmwasm_std::testing::mock_dependencies;
 use cosmwasm_std::{Api, Decimal256, DepsMut, Timestamp};
 
+use crate::feed::Price;
 use crate::feeders::PriceFeeders;
 use crate::market_price::{PriceFeeds, PriceFeedsError, PriceQuery};
 
@@ -61,7 +62,7 @@ fn marketprice_add_feed_empty_vec() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let prices: Vec<(String, Decimal256)> = Vec::new();
+    let prices: Vec<Price> = Vec::new();
     market
         .feed(
             &mut deps.storage,
@@ -81,16 +82,19 @@ fn marketprice_add_feed() {
     let market = PriceFeeds::new("foo");
     let f_address = deps.api.addr_validate("address1").unwrap();
 
-    let prices: Vec<(String, Decimal256)> = vec![
-        ("DEN2".to_string(), Decimal256::from_str("0.5").unwrap()),
-        (
-            "DEN3".to_string(),
-            Decimal256::from_str("0.1000000009").unwrap(),
-        ),
-        (
-            "DEN4".to_string(),
-            Decimal256::from_str("1.00000000000002").unwrap(),
-        ),
+    let prices: Vec<Price> = vec![
+        Price {
+            denom: "DEN2".to_string(),
+            amount: Decimal256::from_str("0.5").unwrap(),
+        },
+        Price {
+            denom: "DEN3".to_string(),
+            amount: Decimal256::from_str("0.1000000009").unwrap(),
+        },
+        Price {
+            denom: "DEN4".to_string(),
+            amount: Decimal256::from_str("1.00000000000002").unwrap(),
+        },
     ];
 
     let now = SystemTime::now()
@@ -180,7 +184,10 @@ fn feed_price(
         ts,
         f_address,
         base.to_string(),
-        vec![(quote.to_string(), Decimal256::from_str(price).unwrap())],
+        vec![Price {
+            denom: quote.to_string(),
+            amount: Decimal256::from_str(price).unwrap(),
+        }],
         60,
     )?;
     Ok(ts)

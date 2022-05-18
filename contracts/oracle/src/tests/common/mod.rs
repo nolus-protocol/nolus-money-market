@@ -5,7 +5,7 @@ use cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
     Decimal256, MemoryStorage, MessageInfo, OwnedDeps,
 };
-use marketprice::feed::{Denom, Prices};
+use marketprice::feed::{Denom, Price, Prices};
 
 use crate::{
     contract::{execute, instantiate},
@@ -47,13 +47,16 @@ pub(crate) fn dummy_feed_prices_msg() -> ExecuteMsg {
             Prices {
                 base: "A".to_string(),
                 values: vec![
-                    ("B".to_string(), Decimal256::from_str("1.2").unwrap()),
-                    ("C".to_string(), Decimal256::from_str("3.2").unwrap()),
+                    Price::new(Decimal256::from_str("1.2").unwrap(), "B".to_string()),
+                    Price::new(Decimal256::from_str("3.2").unwrap(), "C".to_string()),
                 ],
             },
             Prices {
                 base: "C".to_string(),
-                values: vec![("D".to_string(), Decimal256::from_str("1.2").unwrap())],
+                values: vec![Price::new(
+                    Decimal256::from_str("1.2").unwrap(),
+                    "D".to_string(),
+                )],
             },
         ],
     }

@@ -6,7 +6,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::feed::{Denom, DenomPair, Observation, PriceFeed};
+use crate::feed::{Denom, DenomPair, Observation, Price, PriceFeed};
 
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
@@ -214,12 +214,12 @@ impl<'m> PriceFeeds<'m> {
         current_block_time: Timestamp,
         sender_raw: Addr,
         base: Denom,
-        prices: Vec<(Denom, Decimal256)>,
+        prices: Vec<Price>,
         price_feed_period: u64,
     ) -> Result<(), PriceFeedsError> {
         for price in prices {
-            let quote: String = price.0;
-            let price: Decimal256 = price.1;
+            let quote: Denom = price.denom;
+            let price: Decimal256 = price.amount;
 
             let update_market_price = |old: Option<PriceFeed>| -> StdResult<PriceFeed> {
                 let new_feed = Observation::new(sender_raw.clone(), current_block_time, price);
