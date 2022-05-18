@@ -2,13 +2,14 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, Timestamp,
-    BankMsg, Storage,
+    BankMsg, Storage, coin
 };
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, QueryQuoteResponse, QueryLoanResponse, QueryLoanOutstandingInterestResponse, OutstandingInterest};
-use crate::state::LPP;
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, QueryQuoteResponse, QueryLoanResponse, QueryLoanOutstandingInterestResponse, OutstandingInterest, LoanResponse};
+use crate::lpp::LiquidityPool;
+use crate::state::{Total, Config, Loan};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -23,7 +24,11 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    LPP.init(deps, msg.denom, msg.lease_code_id)?;
+    Config::new(msg.denom, msg.lease_code_id)
+        .store(deps.storage)?;
+
+    Total::default()
+        .store(deps.storage)?;
 
     Ok(Response::new().add_attribute("method", "instantiate"))
 }
@@ -61,8 +66,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 
 fn try_open_loan(deps: DepsMut, env: Env, lease_addr: Addr, amount: Coin) -> Result<Response, ContractError> {
 
-    LPP.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
-    LPP.try_open_loan(deps, env, lease_addr.clone(), amount.clone())?;
+    let mut lpp = LiquidityPool::load(deps.storage)?;
+    lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
+    lpp.try_open_loan(deps, env, lease_addr.clone(), amount.clone())?;
 
     let transfer_msg = BankMsg::Send {
         to_address: lease_addr.to_string(),
@@ -77,8 +83,10 @@ fn try_open_loan(deps: DepsMut, env: Env, lease_addr: Addr, amount: Coin) -> Res
 }
 
 fn try_repay_loan(deps: DepsMut, env: Env, lease_addr: Addr, funds: Vec<Coin>) -> Result<Response, ContractError> {
-    LPP.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
-    let return_coin = LPP.try_repay_loan(deps, env, lease_addr.clone(), funds)?;
+
+    let mut lpp = LiquidityPool::load(deps.storage)?;
+    lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
+    let return_coin = lpp.try_repay_loan(deps, env, lease_addr.clone(), funds)?;
 
     let mut response = Response::new()
         .add_attribute("method", "try_repay_loan");
@@ -97,14 +105,26 @@ fn try_repay_loan(deps: DepsMut, env: Env, lease_addr: Addr, funds: Vec<Coin>) -
 }
 
 fn query_quote(deps: &Deps, env: &Env, quote: Coin) -> Result<QueryQuoteResponse, ContractError> {
-    match LPP.query_quote(deps, env, quote)? {
+    let lpp = LiquidityPool::load(deps.storage)?;
+    match lpp.query_quote(deps, env, quote)? {
         Some(quote) => Ok(QueryQuoteResponse::QuoteInterestRate(quote)),
         None => Ok(QueryQuoteResponse::NoLiquidity),
     }
 }
 
 fn query_loan(storage: &dyn Storage, lease_addr: Addr) -> Result<QueryLoanResponse, ContractError> {
-    LPP.query_loan(storage, lease_addr)
+    let denom = Config::load(storage)?
+        .denom;
+    let response = Loan::query(storage, lease_addr)?
+        .map( |loan|
+            LoanResponse {
+                principal_due: coin(loan.principal_due.u128(), denom),
+                annual_interest_rate: loan.annual_interest_rate,
+                interest_paid: loan.interest_paid,
+            }
+        );
+
+        Ok(response)
 }
 
 fn query_loan_outstanding_interest(
@@ -112,7 +132,7 @@ fn query_loan_outstanding_interest(
     loan: Addr,
     outstanding_time: Timestamp,
 ) -> Result<QueryLoanOutstandingInterestResponse, ContractError> {
-    let res = LPP.query_loan_outstanding_interest(storage, loan, outstanding_time)?
+    let res = Loan::query_outstanding_interest(storage, loan, outstanding_time)?
         .map(OutstandingInterest);
     Ok(res)
 }
