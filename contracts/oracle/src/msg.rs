@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, Timestamp};
-use marketprice::feed::{Denom, DenomPair, Prices};
+use marketprice::feed::{Denom, DenomPair, DenomToPrice, Prices};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -43,7 +43,7 @@ pub enum QueryMsg {
     // check if an address belongs to a registered feeder
     IsFeeder { address: Addr },
     // returns the price of the denom against the base asset
-    PriceFor { denom: Denom },
+    PriceFor { denoms: Vec<Denom> },
     // returns a list of supported denom pairs
     SupportedDenomPairs {},
 }
@@ -55,6 +55,11 @@ pub struct ConfigResponse {
     pub price_feed_period: u64,
     pub feeders_percentage_needed: u8,
     pub owner: Addr,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct PriceResponse {
+    pub prices: Vec<DenomToPrice>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
