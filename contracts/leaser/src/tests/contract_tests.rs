@@ -43,11 +43,13 @@ fn testexecute() {
     let config = config_response.config;
 
     // try open lease with enought UST
-    let msg = ExecuteMsg::OpenLease {};
+    let msg = ExecuteMsg::OpenLease {
+        currency: "UST".to_string(),
+    };
     let info = mock_info("addr0000", coins(40, "UST").as_ref());
     let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-    let msg = open_lease_msg(info.sender, config);
+    let msg = open_lease_msg(info.sender, config, "UST".to_string());
     assert_eq!(
         res.messages,
         vec![SubMsg::reply_on_success(

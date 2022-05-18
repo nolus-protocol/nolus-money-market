@@ -4,10 +4,10 @@ use lease::msg::{LoanForm, NewLeaseForm};
 
 use crate::config::Config;
 
-pub(crate) fn open_lease_msg(sender: Addr, config: Config) -> NewLeaseForm {
+pub(crate) fn open_lease_msg(sender: Addr, config: Config, currency: String) -> NewLeaseForm {
     NewLeaseForm {
         customer: sender.into_string(),
-        currency: "UST".to_owned(), // TODO the same denom lppUST is working with
+        currency, // TODO the same denom lppUST is working with
         liability: Liability::new(
             Percent::from(config.liability.initial),
             Percent::from(config.liability.healthy - config.liability.initial),

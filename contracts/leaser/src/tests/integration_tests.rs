@@ -151,7 +151,9 @@ mod tests {
             .execute_contract(
                 user_addr.clone(),
                 leaser_addr.clone(),
-                &crate::msg::ExecuteMsg::OpenLease {},
+                &crate::msg::ExecuteMsg::OpenLease {
+                    currency: "UST".to_string(),
+                },
                 &coins(40, "UST"),
             )
             .unwrap();
