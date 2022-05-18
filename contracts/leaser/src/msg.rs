@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin, Decimal};
+use cosmwasm_std::{Addr, Coin, Decimal, Uint64};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -7,11 +7,12 @@ use crate::config::Config;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
-    pub lease_code_id: u64,
+    pub lease_code_id: Uint64,
     pub lpp_ust_addr: Addr,
     pub lease_interest_rate_margin: u8, // LeaseInterestRateMargin%, for example 3%
-    pub liability: Liability,           // LeaseMaxLiability%, for example 80%
-    pub repayment: Repayment,           // GracePeriodSec, for example 10 days = 10*24*60*60
+    pub recalc_hours: u16,
+    pub liability: Liability, // LeaseMaxLiability%, for example 80%
+    pub repayment: Repayment, // GracePeriodSec, for example 10 days = 10*24*60*60
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

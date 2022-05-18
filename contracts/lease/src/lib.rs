@@ -1,5 +1,4 @@
 pub mod msg;
-pub mod opening;
 pub mod error;
 
 #[cfg(feature = "cosmwasm")]

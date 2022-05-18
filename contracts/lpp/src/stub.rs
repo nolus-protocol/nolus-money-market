@@ -28,12 +28,12 @@ impl LppStub {
 impl Lpp for LppStub {
     fn open_loan_req(&self, amount: Coin) -> StdResult<SubMsg> {
         let msg = to_binary(&ExecuteMsg::OpenLoan {
-            amount: amount.clone(),
+            amount,
         })?;
         Ok(SubMsg::reply_on_success(
             WasmMsg::Execute {
                 contract_addr: self.addr.as_ref().into(),
-                funds: vec![amount],
+                funds: vec![],
                 msg,
             },
             REPLY_ID,
@@ -71,7 +71,7 @@ mod test {
         }) = msg.msg
         {
             assert_eq!(addr, contract_addr);
-            assert_eq!(vec![borrow_amount.clone()], funds);
+            assert_eq!(Vec::<Coin>::new(), funds);
             let _lpp_msg: ExecuteMsg = from_binary(&msg).expect("invalid Lpp message");
             if let ExecuteMsg::OpenLoan{amount} = _lpp_msg {
                 assert_eq!(borrow_amount, amount);

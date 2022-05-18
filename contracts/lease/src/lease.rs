@@ -1,10 +1,10 @@
-use cosmwasm_std::{Addr, StdResult, Storage};
+use cosmwasm_std::{Addr, StdResult, Storage, Coin};
 use cw_storage_plus::Item;
 use finance::liability::Liability;
 use lpp::stub::Lpp;
 use serde::{Deserialize, Serialize};
 
-use crate::{loan::Loan, opening::Denom};
+use crate::{loan::Loan, msg::Denom, error::ContractResult};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Lease<L> {
@@ -20,7 +20,7 @@ where
 {
     const DB_ITEM: Item<'static, Lease<L>> = Item::new("lease");
 
-    pub fn new(customer: Addr, currency: Denom, liability: Liability, loan: Loan<L>) -> Self {
+    pub(crate) fn new(customer: Addr, currency: Denom, liability: Liability, loan: Loan<L>) -> Self {
         Self {
             customer,
             currency,
@@ -29,12 +29,15 @@ where
         }
     }
 
-    pub fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
+    pub(crate) fn repay(&self, _downpayment: Coin) -> ContractResult<()> {
+        todo!()
+    }
+    
+    pub(crate) fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
         Lease::DB_ITEM.save(storage, &self)
     }
 
-    #[cfg(test)]
-    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
+    pub(crate) fn load(storage: &dyn Storage) -> StdResult<Self> {
         Lease::DB_ITEM.load(storage)
     }
 }

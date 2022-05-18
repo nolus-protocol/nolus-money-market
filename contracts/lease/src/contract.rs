@@ -1,13 +1,14 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
+use cosmwasm_std::{Api, DepsMut, Env, MessageInfo, Reply, Response, StdResult, Deps, Binary};
 use cw2::set_contract_version;
 use cw_utils::one_coin;
+use lpp::msg::QueryMsg;
 use lpp::stub::{Lpp, LppStub};
 
 use crate::error::{ContractResult, ContractError};
-use crate::msg::{ExecuteMsg, QueryMsg};
-use crate::opening::NewLeaseForm;
+use crate::lease::Lease;
+use crate::msg::{NewLeaseForm, ExecuteMsg};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -50,12 +51,20 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn execute(
-    _deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
-    _msg: ExecuteMsg,
+    info: MessageInfo,
+    msg: ExecuteMsg,
 ) -> ContractResult<Response> {
-    Ok(Response::default())
+    let resp = match msg {
+        ExecuteMsg::Repay => {
+            let downpayment = one_coin(&info)?;
+            let lease = Lease::<LppStub>::load(deps.storage)?;
+            lease.repay(downpayment)?;
+            Response::default()
+        }
+    };
+    Ok(resp)
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
