@@ -265,7 +265,7 @@ mod tests {
         let res = app
             .execute_contract(
                 user_addr.clone(),
-                leaser_addr.clone(),
+                leaser_addr,
                 &crate::msg::ExecuteMsg::OpenLease {
                     currency: denom.to_string(),
                 },
