@@ -12,3 +12,7 @@ mod from_forms;
 
 #[cfg(feature = "cosmwasm")]
 mod duration;
+#[cfg(feature = "cosmwasm")]
+mod interest;
+#[cfg(feature = "cosmwasm")]
+mod coin;
