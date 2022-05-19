@@ -61,10 +61,10 @@ mod tests {
     }
 
     #[track_caller]
-    fn _instantiate_lease(app: &mut App, lease_id: u64, lpp_addr: Addr) -> Addr {
+    fn _instantiate_lease(app: &mut App, lease_id: u64, lpp_addr: Addr, denom: &str) -> Addr {
         let msg = NewLeaseForm {
             customer: USER.to_string(),
-            currency: "UST".to_string(),
+            currency: denom.to_string(),
             liability: Liability::new(
                 Percent::from(65),
                 Percent::from(5),
@@ -83,7 +83,7 @@ mod tests {
             lease_id,
             Addr::unchecked(ADMIN),
             &msg,
-            &coins(400, "UST"),
+            &coins(400, denom),
             "lease",
             None,
         )
@@ -91,10 +91,10 @@ mod tests {
     }
 
     #[track_caller]
-    fn instantiate_lpp(app: &mut App, lease_code_id: Uint64) -> (Addr, u64) {
+    fn instantiate_lpp(app: &mut App, lease_code_id: Uint64, denom: &str) -> (Addr, u64) {
         let lpp_id = app.store_code(contract_lpp_mock());
         let msg = LppInstantiateMsg {
-            denom: "UST".to_string(),
+            denom: denom.to_string(),
             lease_code_id,
         };
         (
@@ -102,7 +102,7 @@ mod tests {
                 lpp_id,
                 Addr::unchecked(ADMIN),
                 &msg,
-                &coins(400, "UST"),
+                &coins(400, denom),
                 "lpp",
                 None,
             )
@@ -111,11 +111,16 @@ mod tests {
         )
     }
 
-    pub fn setup_test_case(app: &mut App, init_funds: Vec<Coin>, user_addr: Addr) -> (Addr, u64) {
+    pub fn setup_test_case(
+        app: &mut App,
+        init_funds: Vec<Coin>,
+        user_addr: Addr,
+        denom: &str,
+    ) -> (Addr, u64) {
         let lease_id = app.store_code(contract_lease_mock());
 
         // 1. Instantiate LPP contract
-        let (lpp_addr, _lpp_id) = instantiate_lpp(app, Uint64::new(lease_id));
+        let (lpp_addr, _lpp_id) = instantiate_lpp(app, Uint64::new(lease_id), denom);
         app.update_block(next_block);
 
         // // // 2. Instantiate Lease contract (and OWNER as admin)
@@ -136,14 +141,15 @@ mod tests {
 
     #[test]
     fn open_lease() {
-        let mut app = mock_app(&coins(10000, "UST"));
+        let denom = "UST";
+        let mut app = mock_app(&coins(10000, denom));
         let user_addr = Addr::unchecked(USER);
 
         let (leaser_addr, lease_code_id) =
-            setup_test_case(&mut app, coins(500, "UST"), user_addr.clone());
+            setup_test_case(&mut app, coins(500, denom), user_addr.clone(), denom);
 
         assert_eq!(
-            coins(500, "UST"),
+            coins(500, denom),
             app.wrap().query_all_balances(user_addr.clone()).unwrap()
         );
 
@@ -152,9 +158,9 @@ mod tests {
                 user_addr.clone(),
                 leaser_addr.clone(),
                 &crate::msg::ExecuteMsg::OpenLease {
-                    currency: "UST".to_string(),
+                    currency: denom.to_string(),
                 },
-                &coins(40, "UST"),
+                &coins(40, denom),
             )
             .unwrap();
 
@@ -233,27 +239,65 @@ mod tests {
         let lease_address = &res.events[7].attributes.get(1).unwrap().value;
 
         assert_eq!(
-            coins(460, "UST"),
+            coins(460, denom),
             app.wrap().query_all_balances(user_addr).unwrap()
         );
         assert_eq!(
-            coins(114, "UST"),
+            coins(114, denom),
+            app.wrap().query_all_balances(lease_address).unwrap()
+        );
+    }
+
+    #[test]
+    fn open_lease_custom_currency() {
+        let denom = "unolus";
+        let mut app = mock_app(&coins(10000, denom));
+        let user_addr = Addr::unchecked(USER);
+
+        let (leaser_addr, _) =
+            setup_test_case(&mut app, coins(500, denom), user_addr.clone(), denom);
+
+        assert_eq!(
+            coins(500, denom),
+            app.wrap().query_all_balances(user_addr.clone()).unwrap()
+        );
+
+        let res = app
+            .execute_contract(
+                user_addr.clone(),
+                leaser_addr.clone(),
+                &crate::msg::ExecuteMsg::OpenLease {
+                    currency: denom.to_string(),
+                },
+                &coins(3, denom),
+            )
+            .unwrap();
+
+        let lease_address = &res.events[7].attributes.get(1).unwrap().value;
+
+        assert_eq!(
+            coins(497, denom),
+            app.wrap().query_all_balances(user_addr).unwrap()
+        );
+        assert_eq!(
+            coins(5, denom),
             app.wrap().query_all_balances(lease_address).unwrap()
         );
     }
 
     #[test]
     fn test_quote() {
-        let mut app = mock_app(&coins(10000, "UST"));
+        let denom = "UST";
+        let mut app = mock_app(&coins(10000, denom));
         let user_addr = Addr::unchecked(USER);
-        let (leaser_addr, _) = setup_test_case(&mut app, coins(500, "UST"), user_addr);
+        let (leaser_addr, _) = setup_test_case(&mut app, coins(500, denom), user_addr, denom);
 
         let resp: QuoteResponse = app
             .wrap()
             .query_wasm_smart(
                 leaser_addr,
                 &QueryMsg::Quote {
-                    downpayment: Coin::new(100, "UST"),
+                    downpayment: Coin::new(100, denom),
                 },
             )
             .unwrap();
