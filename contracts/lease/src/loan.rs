@@ -1,10 +1,11 @@
 use std::fmt::Debug;
 
 use cosmwasm_std::{Coin, Timestamp, SubMsg};
+use finance::{interest::InterestPeriod, duration::Duration, coin};
 use lpp::stub::Lpp;
 use serde::{Deserialize, Serialize};
 
-use crate::{duration::Duration, error::ContractResult, interest::InterestPeriod, coin};
+use crate::error::ContractResult;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]

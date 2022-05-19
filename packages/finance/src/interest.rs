@@ -1,9 +1,8 @@
 use std::{cmp, fmt::Debug};
 use cosmwasm_std::{Timestamp, Coin, Uint128};
-use finance::percent::Percent;
 use serde::{Serialize, Deserialize};
 
-use crate::{duration::Duration, coin};
+use crate::{duration::Duration, coin, percent::Percent};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct InterestPeriod {
