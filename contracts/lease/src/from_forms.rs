@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, Coin, StdResult, Storage};
+use cosmwasm_std::{Api, Coin, StdResult, Storage, Timestamp};
 use cw_storage_plus::Item;
 use lpp::stub::Lpp;
 
@@ -18,12 +18,13 @@ impl NewLeaseForm {
         Ok(self.liability.init_borrow_amount(downpayment))
     }
 
-    pub(crate) fn into_lease<L>(self, lpp: L, api: &dyn Api) -> ContractResult<Lease<L>>
+    pub(crate) fn into_lease<L>(self, lpp: L, start_at: Timestamp, api: &dyn Api) -> ContractResult<Lease<L>>
     where
         L: Lpp,
     {
         let customer = api.addr_validate(&self.customer)?;
         let loan = Loan::open(
+            start_at,
             lpp,
             self.loan.annual_margin_interest_permille,
             self.loan.interest_due_period_secs,

@@ -36,14 +36,14 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
     // TODO debug_assert the balance is increased with the borrowed amount
     // TODO load the top request and pass it as a reply
     let new_lease_form = NewLeaseForm::pull(deps.storage)?;
     let lpp = lpp(new_lease_form.loan.lpp.clone(), deps.api)?;
     lpp.open_loan_resp(msg).map_err(ContractError::OpenLoanError)?;
 
-    let lease = new_lease_form.into_lease(lpp, deps.api)?;
+    let lease = new_lease_form.into_lease(lpp, env.block.time, deps.api)?;
     lease.store(deps.storage)?;
 
     Ok(Response::default())
@@ -52,16 +52,22 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<Response> {
     let resp = match msg {
         ExecuteMsg::Repay => {
-            let downpayment = one_coin(&info)?;
-            let lease = Lease::<LppStub>::load(deps.storage)?;
-            lease.repay(downpayment)?;
-            Response::default()
+            let payment = one_coin(&info)?;
+            let mut lease = Lease::<LppStub>::load(deps.storage)?;
+            let lpp_loan_repay_req = lease.repay(payment, env.block.time)?;
+            lease.store(deps.storage)?;
+            let resp = Response::default();
+            if let Some(req) = lpp_loan_repay_req {
+                resp.add_submessage(req)
+            } else {
+                resp
+            }
         }
     };
     Ok(resp)

@@ -1,12 +1,12 @@
-use cosmwasm_std::{Addr, StdResult, Storage, Coin};
+use cosmwasm_std::{Addr, Coin, StdResult, Storage, Timestamp, SubMsg};
 use cw_storage_plus::Item;
 use finance::liability::Liability;
 use lpp::stub::Lpp;
 use serde::{Deserialize, Serialize};
 
-use crate::{loan::Loan, msg::Denom, error::ContractResult};
+use crate::{error::ContractResult, loan::Loan, msg::Denom};
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Lease<L> {
     customer: Addr,
     currency: Denom,
@@ -20,7 +20,12 @@ where
 {
     const DB_ITEM: Item<'static, Lease<L>> = Item::new("lease");
 
-    pub(crate) fn new(customer: Addr, currency: Denom, liability: Liability, loan: Loan<L>) -> Self {
+    pub(crate) fn new(
+        customer: Addr,
+        currency: Denom,
+        liability: Liability,
+        loan: Loan<L>,
+    ) -> Self {
         Self {
             customer,
             currency,
@@ -29,10 +34,11 @@ where
         }
     }
 
-    pub(crate) fn repay(&self, _downpayment: Coin) -> ContractResult<()> {
-        todo!()
+    pub(crate) fn repay(&mut self, payment: Coin, by: Timestamp) -> ContractResult<Option<SubMsg>> {
+        // TODO assert self.currency == self.loan.currency
+        self.loan.repay(payment, by)
     }
-    
+
     pub(crate) fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
         Lease::DB_ITEM.save(storage, &self)
     }
@@ -44,7 +50,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{testing::MockStorage, Addr, StdResult, SubMsg};
+    use cosmwasm_std::{testing::MockStorage, Addr, StdResult, SubMsg, Timestamp};
     use finance::{liability::Liability, percent::Percent};
     use lpp::stub::Lpp;
     use serde::{Deserialize, Serialize};
@@ -77,11 +83,11 @@ mod tests {
                 Percent::from(10),
                 10 * 24,
             ),
-            loan: Loan::open(LppLocalStub {}, 23, 100, 10).unwrap(),
+            loan: Loan::open(Timestamp::default(), LppLocalStub {}, 23, 100, 10).unwrap(),
         };
         let obj_exp = obj.clone();
         obj.store(&mut storage).expect("storing failed");
-        let obj_loaded = Lease::load(&storage).expect("loading failed");
-        assert_eq!(obj_exp, obj_loaded);
+        let obj_loaded: Lease<LppLocalStub> = Lease::load(&storage).expect("loading failed");
+        assert_eq!(obj_exp.customer, obj_loaded.customer);
     }
 }
