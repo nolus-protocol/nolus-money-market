@@ -37,7 +37,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::OpenLease {} => try_borrow(deps, info.funds, info.sender),
+        ExecuteMsg::OpenLease { currency } => try_borrow(deps, info.funds, info.sender, currency),
         ExecuteMsg::Config {
             lease_interest_rate_margin,
             liability,
@@ -89,6 +89,7 @@ pub fn try_borrow(
     deps: DepsMut,
     amount: Vec<Coin>,
     sender: Addr,
+    currency: String,
 ) -> Result<Response, ContractError> {
     let config = LS.get_config(deps.storage)?;
     let instance_reply_id = LS.next(deps.storage, sender.clone())?;
@@ -99,7 +100,7 @@ pub fn try_borrow(
                 code_id: config.lease_code_id,
                 funds: amount,
                 label: "lease".to_string(),
-                msg: to_binary(&open_lease_msg(sender, config))?,
+                msg: to_binary(&open_lease_msg(sender, config, currency))?,
             }),
             instance_reply_id,
         )]),

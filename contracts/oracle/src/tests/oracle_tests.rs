@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::str::FromStr;
 
 use crate::contract::{execute, query};
-use crate::msg::{ConfigResponse, ExecuteMsg, QueryMsg};
+use crate::msg::{ConfigResponse, ExecuteMsg, PriceResponse, QueryMsg};
 use crate::tests::common::{
     dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test, CREATOR,
 };
@@ -10,6 +10,7 @@ use crate::ContractError;
 
 use cosmwasm_std::testing::{mock_env, mock_info};
 use cosmwasm_std::{from_binary, Addr, Decimal256, StdError};
+use marketprice::feed::{DenomToPrice, Price};
 
 use super::common::dummy_feed_prices_msg;
 
@@ -98,12 +99,18 @@ fn feed_prices() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::PriceFor {
-            denom: "A".to_string(),
+            denoms: vec!["A".to_string()],
         },
     )
     .unwrap();
-    let value: Decimal256 = from_binary(&res).unwrap();
-    assert_eq!(Decimal256::from_str("1.2").unwrap(), value);
+    let value: PriceResponse = from_binary(&res).unwrap();
+    assert_eq!(
+        DenomToPrice::new(
+            "A".to_string(),
+            Price::new(Decimal256::from_str("1.2").unwrap(), "B".to_string())
+        ),
+        value.prices.first().unwrap().to_owned()
+    );
 }
 
 #[test]
@@ -115,7 +122,7 @@ fn query_prices_unsuppoted_denom() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::PriceFor {
-            denom: "dummy".to_string(),
+            denoms: vec!["dummy".to_string()],
         },
     )
     .unwrap_err();
@@ -129,8 +136,14 @@ fn feed_prices_unsupported_pairs() {
     let prices_map = vec![marketprice::feed::Prices {
         base: "X".to_string(),
         values: vec![
-            ("c".to_string(), Decimal256::from_str("1.2").unwrap()),
-            ("D".to_string(), Decimal256::from_str("2.2").unwrap()),
+            Price {
+                denom: "c".to_string(),
+                amount: Decimal256::from_str("1.2").unwrap(),
+            },
+            Price {
+                denom: "D".to_string(),
+                amount: Decimal256::from_str("2.2").unwrap(),
+            },
         ],
     }];
 

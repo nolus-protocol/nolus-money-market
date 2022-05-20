@@ -1,17 +1,19 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Api, Binary, CosmosMsg, Decimal256, Deps, DepsMut, Env, MessageInfo, Reply,
-    Response, StdError, StdResult, Storage, SubMsg, Timestamp,
+    to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response,
+    StdError, StdResult, Storage, SubMsg, Timestamp,
 };
 use cw2::set_contract_version;
-use marketprice::feed::{Denom, DenomPair, Prices};
+use marketprice::feed::{Denom, DenomPair, DenomToPrice, Price, Prices};
 use marketprice::market_price::PriceQuery;
 use std::collections::HashSet;
 use std::convert::{TryFrom, TryInto};
 
 use crate::error::ContractError;
-use crate::msg::{ConfigResponse, ExecuteAlarmMsg, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{
+    ConfigResponse, ExecuteAlarmMsg, ExecuteMsg, InstantiateMsg, PriceResponse, QueryMsg,
+};
 use crate::state::{Config, CONFIG, FEEDERS, MARKET_PRICE, TIME_ALARMS, TIME_ORACLE};
 use time_oracle::Id;
 
@@ -75,8 +77,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
         QueryMsg::IsFeeder { address } => {
             to_binary(&FEEDERS.is_registered(deps.storage, &address)?)
         }
-        QueryMsg::PriceFor { denom } => {
-            to_binary(&query_market_price_for(deps.storage, env, denom)?)
+        QueryMsg::PriceFor { denoms } => {
+            to_binary(&query_market_price_for(deps.storage, env, denoms)?)
         }
         QueryMsg::SupportedDenomPairs {} => {
             to_binary(&CONFIG.load(deps.storage)?.supported_denom_pairs)
@@ -116,23 +118,34 @@ fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     })
 }
 
-fn query_market_price_for(storage: &dyn Storage, env: Env, denom: Denom) -> StdResult<Decimal256> {
-    let price_query = init_price_query(storage, denom, None)?;
-    let resp = MARKET_PRICE.get(storage, env.block.time, price_query);
-    match resp {
-        Ok(feed) => Ok(feed),
-        Err(err) => Err(StdError::generic_err(err.to_string())),
+fn query_market_price_for(
+    storage: &dyn Storage,
+    env: Env,
+    denoms: Vec<Denom>,
+) -> StdResult<PriceResponse> {
+    let config = CONFIG.load(storage)?;
+    let mut prices: Vec<DenomToPrice> = Vec::new();
+    for denom in denoms {
+        let price_query = init_price_query(storage, denom.clone(), &config)?;
+        let resp = MARKET_PRICE.get(storage, env.block.time, price_query);
+        match resp {
+            Ok(feed) => {
+                prices.push(DenomToPrice::new(
+                    denom,
+                    Price::new(feed, config.base_asset.clone()),
+                ));
+            }
+            Err(err) => return Err(StdError::generic_err(err.to_string())),
+        };
     }
+    Ok(PriceResponse { prices })
 }
 
-fn assert_supported_denom(
-    supported_denom_pairs: Vec<(String, String)>,
-    denom: Denom,
-) -> StdResult<()> {
+fn assert_supported_denom(supported_denom_pairs: &[(Denom, Denom)], denom: Denom) -> StdResult<()> {
     let mut all_supported_denoms = HashSet::<Denom>::new();
     for pair in supported_denom_pairs {
-        all_supported_denoms.insert(pair.0);
-        all_supported_denoms.insert(pair.1);
+        all_supported_denoms.insert(pair.0.clone());
+        all_supported_denoms.insert(pair.1.clone());
     }
     if !all_supported_denoms.contains(&denom) {
         return Err(StdError::generic_err("Unsupported denom"));
@@ -140,26 +153,17 @@ fn assert_supported_denom(
     Ok(())
 }
 
-fn init_price_query(
-    storage: &dyn Storage,
-    base: Denom,
-    quote: Option<Denom>,
-) -> StdResult<PriceQuery> {
-    let config = CONFIG.load(storage)?;
+fn init_price_query(storage: &dyn Storage, base: Denom, config: &Config) -> StdResult<PriceQuery> {
     let price_feed_period = config.price_feed_period;
 
-    let query_quote = match quote {
-        Some(q) => q,
-        None => config.base_asset,
-    };
-    assert_supported_denom(config.supported_denom_pairs, base.clone())?;
+    assert_supported_denom(&config.supported_denom_pairs, base.clone())?;
 
     let registered_feeders = FEEDERS.get(storage)?;
     let all_feeders_cnt = registered_feeders.len();
     let feeders_needed = feeders_needed(all_feeders_cnt, config.feeders_percentage_needed);
 
     Ok(PriceQuery::new(
-        (base, query_quote),
+        (base, config.base_asset.clone()),
         price_feed_period,
         feeders_needed,
     ))
@@ -229,7 +233,7 @@ fn try_feed_prices(
     block_time: Timestamp,
     sender_raw: Addr,
     base: Denom,
-    prices: Vec<(Denom, Decimal256)>,
+    prices: Vec<Price>,
 ) -> Result<Response, ContractError> {
     let config = CONFIG.load(storage)?;
 
@@ -314,13 +318,13 @@ fn try_feed_multiple_prices(
 fn remove_invalid_prices(
     supported_denom_pairs: Vec<(String, String)>,
     base: Denom,
-    prices: Vec<(Denom, Decimal256)>,
-) -> Vec<(String, Decimal256)> {
+    prices: Vec<Price>,
+) -> Vec<Price> {
     prices
         .iter()
         .filter(|price| {
-            supported_denom_pairs.contains(&(base.clone(), price.0.clone()))
-                && !base.eq_ignore_ascii_case(price.0.as_str())
+            supported_denom_pairs.contains(&(base.clone(), price.denom.clone()))
+                && !base.eq_ignore_ascii_case(&price.denom)
         })
         .map(|p| p.to_owned())
         .collect()
@@ -331,6 +335,7 @@ mod tests {
     use std::str::FromStr;
 
     use cosmwasm_std::Decimal256;
+    use marketprice::feed::Price;
 
     use crate::contract::{feeders_needed, remove_invalid_prices};
 
@@ -361,14 +366,26 @@ mod tests {
             supported_pairs,
             "B".to_string(),
             vec![
-                ("A".to_string(), Decimal256::from_str("1.2").unwrap()),
-                ("D".to_string(), Decimal256::from_str("3.2").unwrap()),
-                ("B".to_string(), Decimal256::from_str("1.2").unwrap()),
+                Price {
+                    denom: "A".to_string(),
+                    amount: Decimal256::from_str("1.2").unwrap(),
+                },
+                Price {
+                    denom: "D".to_string(),
+                    amount: Decimal256::from_str("3.2").unwrap(),
+                },
+                Price {
+                    denom: "B".to_string(),
+                    amount: Decimal256::from_str("1.2").unwrap(),
+                },
             ],
         );
 
         assert_eq!(
-            vec![("A".to_string(), Decimal256::from_str("1.2").unwrap()),],
+            vec![Price {
+                denom: "A".to_string(),
+                amount: Decimal256::from_str("1.2").unwrap()
+            }],
             filtered
         );
     }
