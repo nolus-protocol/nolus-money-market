@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin, Decimal, Timestamp, Uint64};
+use cosmwasm_std::{Addr, Coin, Decimal, Timestamp, Uint64, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -13,6 +13,10 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     OpenLoan { amount: Coin },
     RepayLoan,
+
+    Deposit,
+    // CW20 interface
+    Burn { amount: Uint128}
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -28,6 +32,12 @@ pub enum QueryMsg {
         lease_addr: Addr,
         outstanding_time: Timestamp,
     },
+
+    // Deposit
+
+    /// CW20 interface
+    Balance { address: Addr },
+    Price {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -52,3 +62,17 @@ pub type QueryLoanResponse = Option<LoanResponse>;
 pub struct OutstandingInterest(pub Coin);
 
 pub type QueryLoanOutstandingInterestResponse = Option<OutstandingInterest>;
+
+// Deposit query responses
+
+// CW20 interface
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct BalanceResponse {
+        pub balance: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct PriceResponse {
+        pub price: Decimal,
+        pub denom: String,
+}

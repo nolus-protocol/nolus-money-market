@@ -47,6 +47,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::OpenLoan { amount } => try_open_loan(deps, env, lease_unchecked, amount),
         ExecuteMsg::RepayLoan => try_repay_loan(deps, env, lease_unchecked, funds),
+        _ => unimplemented!(),
     }
 }
 
@@ -59,6 +60,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             lease_addr,
             outstanding_time,
         } => to_binary(&query_loan_outstanding_interest(deps.storage, lease_addr, outstanding_time)?),
+        _ => unimplemented!(),
     }?;
 
     Ok(res)
