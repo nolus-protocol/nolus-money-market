@@ -1,4 +1,5 @@
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, StdResult, Storage};
+use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -19,6 +20,8 @@ pub struct Config {
 }
 
 impl Config {
+    const STORAGE: Item<'static, Self> = Item::new("config");
+
     pub fn new(sender: Addr, msg: InstantiateMsg) -> Result<Self, ContractError> {
         Ok(Config {
             owner: sender,
@@ -29,5 +32,29 @@ impl Config {
             liability: msg.liability,
             repayment: msg.repayment,
         })
+    }
+
+    pub fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        Self::STORAGE.save(storage, self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
+        Self::STORAGE.load(storage)
+    }
+
+    pub fn update(
+        storage: &mut dyn Storage,
+        lease_interest_rate_margin: u8,
+        liability: crate::msg::Liability,
+        repayment: Repayment,
+    ) -> Result<(), ContractError> {
+        Self::load(storage)?;
+        Self::STORAGE.update(storage, |mut c| -> Result<Config, ContractError> {
+            c.lease_interest_rate_margin = lease_interest_rate_margin;
+            c.liability = liability;
+            c.repayment = repayment;
+            Ok(c)
+        })?;
+        Ok(())
     }
 }
