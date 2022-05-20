@@ -1,6 +1,7 @@
 use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
-use cosmwasm_std::{Uint64, Decimal};
+use cosmwasm_std::{Uint64, Decimal, Storage, StdResult};
+use cw_storage_plus::Item;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -12,6 +13,8 @@ pub struct Config {
 }
 
 impl Config {
+    const STORAGE: Item<'static, Self> = Item::new("config");
+
     pub fn new(denom: String, lease_code_id: Uint64) -> Self {
         Config {
             denom,
@@ -21,4 +24,14 @@ impl Config {
             addon_optimal_interest_rate: Decimal::percent(2),
         }
     }
+
+    pub fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
+        Self::STORAGE.save(storage, &self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
+        Self::STORAGE.load(storage)
+    }
+
+
 }

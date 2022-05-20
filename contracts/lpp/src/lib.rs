@@ -1,11 +1,16 @@
 pub mod msg;
 pub mod stub;
+pub mod error;
 
 #[cfg(feature = "cosmwasm")]
 pub mod contract;
 
-mod error;
+#[cfg(feature = "cosmwasm")]
 mod state;
-mod config;
-mod loan;
+
+#[cfg(feature = "cosmwasm")]
+mod lpp;
+
+#[cfg(feature = "cosmwasm")]
+mod calc;
 
