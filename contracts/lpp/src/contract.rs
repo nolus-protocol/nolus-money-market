@@ -132,9 +132,11 @@ fn query_loan_outstanding_interest(
     loan: Addr,
     outstanding_time: Timestamp,
 ) -> Result<QueryLoanOutstandingInterestResponse, ContractError> {
-    let res = Loan::query_outstanding_interest(storage, loan, outstanding_time)?
-        .map(OutstandingInterest);
-    Ok(res)
+    let denom = Config::load(storage)?
+        .denom;
+    let response = Loan::query_outstanding_interest(storage, loan, outstanding_time)?
+        .map(|interest| OutstandingInterest(coin(interest.u128(), denom)));
+    Ok(response)
 }
 
 

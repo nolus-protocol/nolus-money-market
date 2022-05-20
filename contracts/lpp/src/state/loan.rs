@@ -1,9 +1,8 @@
-use cosmwasm_std::{coin, Coin, Uint128, Decimal, Timestamp, Addr, Storage, StdResult, Env};
+use cosmwasm_std::{Uint128, Decimal, Timestamp, Addr, Storage, StdResult, Env};
 use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
 use cw_storage_plus::Map;
 use crate::error::ContractError;
-use crate::state::Config;
 use crate::calc;
 use std::cmp;
 
@@ -95,8 +94,6 @@ impl Loan {
         Ok((loan_principal_payment, excess_received))
     }
 
-
-
     pub fn query(
         storage: &dyn Storage,
         lease_addr: Addr,
@@ -104,15 +101,12 @@ impl Loan {
         Self::STORAGE.may_load(storage, lease_addr)
     }
 
-    // TODO: move config/denom stuff to a caller
     pub fn query_outstanding_interest(
         storage: &dyn Storage,
         lease_addr: Addr,
         outstanding_time: Timestamp,
-    ) -> Result<Option<Coin>, ContractError> {
+    ) -> StdResult<Option<Uint128>> {
         let maybe_loan = Self::STORAGE.may_load(storage, lease_addr)?;
-        let denom = Config::load(storage)?
-            .denom;
 
         if let Some(loan) = maybe_loan {
 
@@ -122,11 +116,10 @@ impl Loan {
 
             let outstanding_interest_amount = calc::interest(loan.principal_due, loan.annual_interest_rate, delta_t);
 
-            Ok(Some(coin(outstanding_interest_amount.u128(), denom)))
+            Ok(Some(outstanding_interest_amount))
         } else {
             Ok(None)
         }
     }
-
 }
 
