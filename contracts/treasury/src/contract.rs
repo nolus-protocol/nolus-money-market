@@ -1,31 +1,16 @@
-#[cfg(not(feature = "library"))]
-use cosmwasm_std::{entry_point, DepsMut, Env, MessageInfo, Response};
-use cw2::{get_contract_version, set_contract_version};
-
-use semver::Version;
+#[cfg(feature = "cosmwasm-bindings")]
+use cosmwasm_std::entry_point;
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Response};
+use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg};
 
 // version info for migration info
-const CONTRACT_NAME: &str = "crates.io:treasury";
+const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    let version: Version = CONTRACT_VERSION.parse()?;
-    let storage_version: Version = get_contract_version(deps.storage)?.version.parse()?;
-
-    if storage_version < version {
-        set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
-        // If state structure changed in any contract version in the way migration is needed, it
-        // should occur here
-    }
-    Ok(Response::default())
-}
-
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -37,7 +22,7 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn execute(
     _deps: DepsMut,
     _env: Env,
