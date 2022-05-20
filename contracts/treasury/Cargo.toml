@@ -10,9 +10,10 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-# for more explicit tests, cargo test --features=backtraces
-backtraces = ["cosmwasm-std/backtraces"]
-# use library feature to disable all instantiate/execute/query exports
+default = ["cosmwasm-bindings"]
+cosmwasm-bindings = ["cosmwasm"]
+cosmwasm = []
+
 
 [dependencies]
 cosmwasm-std = { version = "1.0.0-beta5" }
