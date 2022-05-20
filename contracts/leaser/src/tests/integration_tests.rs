@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use cosmwasm_std::{coins, Addr, Coin, Empty, Uint64};
     use cw_multi_test::{next_block, App, AppBuilder, Contract, ContractWrapper, Executor};
     use finance::{liability::Liability, percent::Percent};
@@ -283,6 +285,79 @@ mod tests {
             coins(5, denom),
             app.wrap().query_all_balances(lease_address).unwrap()
         );
+    }
+
+    #[test]
+    fn open_multiple_loans() {
+        let denom = "unolus";
+        let mut app = mock_app(&coins(10000, denom));
+        let user_addr = Addr::unchecked(USER);
+        let user1_addr = Addr::unchecked("USER1");
+
+        let (leaser_addr, _) =
+            setup_test_case(&mut app, coins(500, denom), user_addr.clone(), denom);
+        app.send_tokens(
+            Addr::unchecked(ADMIN),
+            user1_addr.clone(),
+            &coins(50, denom),
+        )
+        .unwrap();
+
+        let resp: HashSet<Addr> = app
+            .wrap()
+            .query_wasm_smart(
+                leaser_addr.clone(),
+                &QueryMsg::Leases {
+                    owner: user_addr.clone(),
+                },
+            )
+            .unwrap();
+        assert!(resp.is_empty());
+
+        let mut loans = HashSet::new();
+        for _ in 0..5 {
+            let res = app
+                .execute_contract(
+                    user_addr.clone(),
+                    leaser_addr.clone(),
+                    &crate::msg::ExecuteMsg::OpenLease {
+                        currency: denom.to_string(),
+                    },
+                    &coins(3, denom),
+                )
+                .unwrap();
+            app.update_block(next_block);
+            let addr = res.events[7].attributes.get(1).unwrap().value.clone();
+            loans.insert(Addr::unchecked(addr));
+        }
+
+        assert_eq!(5, loans.len());
+
+        let res = app
+            .execute_contract(
+                user1_addr.clone(),
+                leaser_addr.clone(),
+                &crate::msg::ExecuteMsg::OpenLease {
+                    currency: denom.to_string(),
+                },
+                &coins(30, denom),
+            )
+            .unwrap();
+        app.update_block(next_block);
+        let user1_lease_addr = res.events[7].attributes.get(1).unwrap().value.clone();
+
+        let resp: HashSet<Addr> = app
+            .wrap()
+            .query_wasm_smart(leaser_addr.clone(), &QueryMsg::Leases { owner: user1_addr })
+            .unwrap();
+        assert!(resp.contains(&Addr::unchecked(user1_lease_addr)));
+        assert_eq!(1, resp.len());
+
+        let user0_loans: HashSet<Addr> = app
+            .wrap()
+            .query_wasm_smart(leaser_addr, &QueryMsg::Leases { owner: user_addr })
+            .unwrap();
+        assert_eq!(loans, user0_loans);
     }
 
     #[test]

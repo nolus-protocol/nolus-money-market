@@ -46,6 +46,7 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     Config {},
     Quote { downpayment: Coin },
+    Leases { owner: Addr },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
