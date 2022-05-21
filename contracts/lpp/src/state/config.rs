@@ -10,6 +10,7 @@ pub struct Config {
     pub base_interest_rate: Decimal,
     pub utilization_optimal: Decimal,
     pub addon_optimal_interest_rate: Decimal,
+    pub initial_derivative_price: Decimal,
 }
 
 impl Config {
@@ -22,6 +23,7 @@ impl Config {
             base_interest_rate: Decimal::percent(7),
             utilization_optimal: Decimal::percent(70),
             addon_optimal_interest_rate: Decimal::percent(2),
+            initial_derivative_price: Decimal::one(),
         }
     }
 

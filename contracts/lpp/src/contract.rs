@@ -2,14 +2,17 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, Timestamp,
-    BankMsg, Storage, coin
+    BankMsg, Storage, coin, Uint128
 };
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, QueryQuoteResponse, QueryLoanResponse, QueryLoanOutstandingInterestResponse, OutstandingInterest, LoanResponse};
+use crate::msg::{
+    ExecuteMsg, InstantiateMsg, QueryMsg, QueryQuoteResponse, QueryLoanResponse,
+    QueryLoanOutstandingInterestResponse, OutstandingInterest, LoanResponse, PriceResponse, BalanceResponse,
+};
 use crate::lpp::LiquidityPool;
-use crate::state::{Total, Config, Loan};
+use crate::state::{Total, Config, Loan, Deposit};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -41,13 +44,14 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
 
-    let lease_unchecked = info.sender;
+    let sender = info.sender;
     let funds = info.funds;
 
     match msg {
-        ExecuteMsg::OpenLoan { amount } => try_open_loan(deps, env, lease_unchecked, amount),
-        ExecuteMsg::RepayLoan => try_repay_loan(deps, env, lease_unchecked, funds),
-        _ => unimplemented!(),
+        ExecuteMsg::OpenLoan { amount } => try_open_loan(deps, env, sender, amount),
+        ExecuteMsg::RepayLoan => try_repay_loan(deps, env, sender, funds),
+        ExecuteMsg::Deposit => try_deposit(deps, env, sender, funds),
+        ExecuteMsg::Burn { amount } => try_withdraw(deps, env, sender, amount),
     }
 }
 
@@ -60,7 +64,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             lease_addr,
             outstanding_time,
         } => to_binary(&query_loan_outstanding_interest(deps.storage, lease_addr, outstanding_time)?),
-        _ => unimplemented!(),
+        QueryMsg::Price {} => to_binary(&query_ntoken_price(deps, env)?),
+        QueryMsg::Balance { address } => to_binary(&query_balance(deps.storage, address)?),
     }?;
 
     Ok(res)
@@ -88,20 +93,51 @@ fn try_repay_loan(deps: DepsMut, env: Env, lease_addr: Addr, funds: Vec<Coin>) -
 
     let mut lpp = LiquidityPool::load(deps.storage)?;
     lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
-    let return_coin = lpp.try_repay_loan(deps, env, lease_addr.clone(), funds)?;
+    let excess_received = lpp.try_repay_loan(deps, env, lease_addr.clone(), funds)?;
 
     let mut response = Response::new()
         .add_attribute("method", "try_repay_loan");
 
-    if !return_coin.amount.is_zero() {
-
-        let transfer_msg = BankMsg::Send {
-            to_address: lease_addr.to_string(),
-            amount: vec![return_coin],
-        };
-
-        response = response.add_message(transfer_msg);
+    if !excess_received.is_zero() {
+        let payment = lpp.pay(lease_addr, excess_received);
+        response = response.add_message(payment);
     }
+
+    Ok(response)
+}
+
+fn try_deposit(deps: DepsMut, env: Env, lender_addr: Addr, funds: Vec<Coin>) -> Result<Response, ContractError> {
+    if funds.len() != 1 {
+        return Err(ContractError::FundsLen {});
+    }
+
+    let lpp = LiquidityPool::load(deps.storage)?;
+    let amount = lpp.try_into_amount(funds[0].clone())?;
+    let price = lpp.calculate_price(&deps.as_ref(), &env)?;
+    Deposit::load(deps.storage, lender_addr)?
+        .deposit(deps.storage, amount, price)?;
+
+    Ok(Response::new().add_attribute("method", "try_deposit"))
+}
+
+fn try_withdraw(deps: DepsMut, env: Env, lender_addr: Addr, amount: Uint128) -> Result<Response, ContractError> {
+    let lpp = LiquidityPool::load(deps.storage)?;
+    let price = lpp.calculate_price(&deps.as_ref(), &env)?
+        .get();
+    let payment = amount*price;
+
+    if lpp.balance(&deps.as_ref(), &env)?.amount < payment {
+        return Err(ContractError::NoLiquidity {});
+    }
+
+    Deposit::load(deps.storage, lender_addr.clone())?
+        .withdraw(deps.storage, amount)?;
+
+    let payment_msg = lpp.pay(lender_addr, payment);
+
+    let response = Response::new()
+        .add_attribute("method", "try_withdraw")
+        .add_message(payment_msg);
 
     Ok(response)
 }
@@ -141,6 +177,19 @@ fn query_loan_outstanding_interest(
     Ok(response)
 }
 
+fn query_ntoken_price(deps: Deps, env: Env) -> Result<PriceResponse, ContractError> {
+    let lpp = LiquidityPool::load(deps.storage)?;
+    let price = lpp.calculate_price(&deps, &env)?.get();
+    let denom = lpp.config().denom.clone();
+
+    Ok(PriceResponse {price, denom})
+}
+
+fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceResponse, ContractError> {
+    let balance = Deposit::query_balance(storage, addr)?
+        .unwrap_or_default();
+    Ok(BalanceResponse { balance })
+}
 
 #[cfg(test)]
 mod tests {
