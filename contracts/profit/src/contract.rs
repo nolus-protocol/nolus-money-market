@@ -1,9 +1,11 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
+    to_binary, Addr, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    Storage, Timestamp,
 };
 use cw2::set_contract_version;
+use time_oracle::Alarms;
 
 use crate::config::Config;
 use crate::error::ContractError;
@@ -13,35 +15,50 @@ use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+pub const TIME_ALARMS: Alarms = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
+
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    Config::new(
-        info.sender,
-        msg.cadence_hours,
-        msg.treasury,
-        msg.time_oracle,
-    )
-    .store(deps.storage)?;
+    let treasury = validate_addr(deps.as_ref(), msg.treasury)?;
+    let time_oracle = validate_addr(deps.as_ref(), msg.time_oracle)?;
+
+    Config::new(info.sender, msg.cadence_hours, treasury, time_oracle).store(deps.storage)?;
+
+    try_add_alarm(
+        deps,
+        env.contract.address,
+        env.block.time.plus_seconds(to_seconds(msg.cadence_hours)),
+    )?;
 
     Ok(Response::new().add_attribute("method", "instantiate"))
+}
+
+fn validate_addr(deps: Deps, addr: Addr) -> Result<Addr, ContractError> {
+    deps.api
+        .addr_validate(addr.as_str())
+        .map_err(|_| ContractError::InvalidContractAddress(addr))
+}
+fn to_seconds(cadence_hours: u32) -> u64 {
+    cadence_hours as u64 * 60 * 60
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Config { cadence_hours } => try_config(deps, info, cadence_hours),
+        ExecuteMsg::Alarm { time } => try_transfer(deps, env, info, time),
     }
 }
 
@@ -59,6 +76,32 @@ pub fn try_config(
     Ok(Response::new().add_attribute("method", "config"))
 }
 
+pub fn try_transfer(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    _time: Timestamp,
+) -> Result<Response, ContractError> {
+    let config = Config::load(deps.storage)?;
+
+    if info.sender != config.time_oracle {
+        return Err(ContractError::UnrecognisedAlarm(info.sender));
+    }
+
+    let balance = deps.querier.query_all_balances(env.contract.address)?;
+    if balance.len() > 1 {
+        // currently supporting only single currency
+        unimplemented!()
+    }
+
+    Ok(Response::new()
+        .add_attribute("method", "try_transfer")
+        .add_message(BankMsg::Send {
+            to_address: config.treasury.to_string(),
+            amount: balance,
+        }))
+}
+
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
@@ -71,6 +114,15 @@ fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
     Ok(ConfigResponse {
         cadence_hours: config.cadence_hours,
     })
+}
+
+fn try_add_alarm(deps: DepsMut, addr: Addr, time: Timestamp) -> Result<Response, ContractError> {
+    let valid = deps
+        .api
+        .addr_validate(addr.as_str())
+        .map_err(|_| ContractError::InvalidAlarmAddress(addr))?;
+    TIME_ALARMS.add(deps.storage, valid, time)?;
+    Ok(Response::new().add_attribute("method", "try_add_alarm"))
 }
 
 #[cfg(test)]
@@ -101,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    fn reset() {
+    fn configure() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
         let msg = InstantiateMsg {
