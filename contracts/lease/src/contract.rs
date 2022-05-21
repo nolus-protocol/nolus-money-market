@@ -1,14 +1,14 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Api, DepsMut, Env, MessageInfo, Reply, Response, StdResult, Deps, Binary};
+use cosmwasm_std::{Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
 use cw2::set_contract_version;
 use cw_utils::one_coin;
 use lpp::msg::QueryMsg;
 use lpp::stub::{Lpp, LppStub};
 
-use crate::error::{ContractResult, ContractError};
+use crate::error::{ContractError, ContractResult};
 use crate::lease::Lease;
-use crate::msg::{NewLeaseForm, ExecuteMsg};
+use crate::msg::{ExecuteMsg, NewLeaseForm};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -41,7 +41,8 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
     // TODO load the top request and pass it as a reply
     let new_lease_form = NewLeaseForm::pull(deps.storage)?;
     let lpp = lpp(new_lease_form.loan.lpp.clone(), deps.api)?;
-    lpp.open_loan_resp(msg).map_err(ContractError::OpenLoanError)?;
+    lpp.open_loan_resp(msg)
+        .map_err(ContractError::OpenLoanError)?;
 
     let lease = new_lease_form.into_lease(lpp, env.block.time, deps.api)?;
     lease.store(deps.storage)?;
@@ -68,6 +69,11 @@ pub fn execute(
             } else {
                 resp
             }
+        }
+        ExecuteMsg::Close => {
+            let mut lease = Lease::<LppStub>::load(deps.storage)?;
+            // lease.
+            Response::default()
         }
     };
     Ok(resp)

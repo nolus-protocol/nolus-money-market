@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin, StdResult, Storage, Timestamp, SubMsg};
+use cosmwasm_std::{Addr, Coin, StdResult, Storage, SubMsg, Timestamp};
 use cw_storage_plus::Item;
 use finance::liability::Liability;
 use lpp::stub::Lpp;
@@ -45,6 +45,9 @@ where
 
     pub(crate) fn load(storage: &dyn Storage) -> StdResult<Self> {
         Lease::DB_ITEM.load(storage)
+    }
+    pub(crate) fn customer(self) -> Addr {
+        self.customer
     }
 }
 
