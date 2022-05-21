@@ -86,6 +86,16 @@ impl Repayment {
 
 impl Liability {
     pub fn new(initial: u8, healthy: u8, max: u8) -> Self {
+        Liability::validate(initial, healthy, max);
+
+        Liability {
+            max,
+            healthy,
+            initial,
+        }
+    }
+
+    pub fn validate(initial: u8, healthy: u8, max: u8) {
         assert!(
             healthy < max,
             "LeaseHealthyLiability% must be less than LeaseMaxLiability%"
@@ -95,11 +105,5 @@ impl Liability {
             initial <= healthy,
             "LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
         );
-
-        Liability {
-            max,
-            healthy,
-            initial,
-        }
     }
 }

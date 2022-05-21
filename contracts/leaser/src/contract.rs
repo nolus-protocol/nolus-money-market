@@ -12,7 +12,9 @@ use cw_utils::parse_reply_instantiate_data;
 use crate::config::Config;
 use crate::error::ContractError;
 use crate::helpers::open_lease_msg;
-use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse, Repayment};
+use crate::msg::{
+    ConfigResponse, ExecuteMsg, InstantiateMsg, Liability, QueryMsg, QuoteResponse, Repayment,
+};
 use crate::state::Leaser;
 
 // version info for migration info
@@ -80,6 +82,7 @@ pub fn try_configure(
     if info.sender != config.owner {
         return Err(ContractError::Unauthorized {});
     }
+    Liability::validate(liability.initial, liability.healthy, liability.max);
     Config::update(
         deps.storage,
         lease_interest_rate_margin,
