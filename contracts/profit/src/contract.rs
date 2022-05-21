@@ -131,8 +131,15 @@ mod tests {
 
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, Addr};
+    use cosmwasm_std::{coins, from_binary, Addr, SubMsg};
 
+    fn instantiate_msg() -> InstantiateMsg {
+        InstantiateMsg {
+            cadence_hours: 10,
+            treasury: Addr::unchecked("treasury"),
+            time_oracle: Addr::unchecked("time"),
+        }
+    }
     #[test]
     fn proper_initialization() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
@@ -156,11 +163,7 @@ mod tests {
     fn configure() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = InstantiateMsg {
-            cadence_hours: 10,
-            treasury: Addr::unchecked("treasury"),
-            time_oracle: Addr::unchecked("time"),
-        };
+        let msg = instantiate_msg();
         let info = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
@@ -180,5 +183,29 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
         assert_eq!(12, value.cadence_hours);
+    }
+
+    #[test]
+    fn transfer() {
+        let mut deps = mock_dependencies_with_balance(&coins(20, "unolus"));
+
+        let msg = instantiate_msg();
+        let info = mock_info("time", &coins(2, "unolus"));
+        let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        let msg = ExecuteMsg::Alarm {
+            time: mock_env().block.time,
+        };
+        let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        assert_eq!(1, res.messages.len());
+        println!("{:?}", res.messages);
+        assert_eq!(
+            res.messages,
+            vec![SubMsg::new(BankMsg::Send {
+                to_address: "treasury".to_string(),
+                amount: coins(20, "unolus"),
+            })]
+        );
     }
 }
