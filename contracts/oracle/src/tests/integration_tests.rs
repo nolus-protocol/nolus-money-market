@@ -37,8 +37,8 @@ mod tests {
         .with_reply(crate::contract::reply);
         Box::new(contract)
     }
-    const USER: &str = "USER";
-    const ADMIN: &str = "ADMIN";
+    const USER: &str = "user";
+    const ADMIN: &str = "admin";
     const NATIVE_DENOM: &str = "denom";
     fn mock_app() -> App {
         AppBuilder::new().build(|router, _, storage| {
