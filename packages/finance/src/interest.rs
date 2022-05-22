@@ -1,8 +1,8 @@
+use cosmwasm_std::{Coin, Timestamp, Uint128};
+use serde::{Deserialize, Serialize};
 use std::{cmp, fmt::Debug};
-use cosmwasm_std::{Timestamp, Coin, Uint128};
-use serde::{Serialize, Deserialize};
 
-use crate::{duration::Duration, coin, percent::Percent};
+use crate::{coin, duration::Duration, percent::Percent};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct InterestPeriod {
@@ -55,21 +55,38 @@ impl InterestPeriod {
         self.start + self.length
     }
 
+    pub fn interest(&self, principal: &Coin) -> Coin {
+        self.interest_by(principal, self.till())
+    }
+
     pub fn pay(self, principal: &Coin, payment: Coin, by: Timestamp) -> (Self, Coin) {
-        let till = cmp::min(cmp::max(self.start, by), self.till());
-        debug_assert!(self.start <= till);
-        debug_assert!(till <= self.till());
-        let period = Duration::between(self.start, till);
+        let by_within_period = self.move_within_period(by);
+        let interest_due_per_period = self.interest_by(principal, by_within_period);
+
+        let period = Duration::between(self.start, by_within_period);
+        let repayment = cmp::min(interest_due_per_period.amount, payment.amount);
+        let period_paid_for = fraction(period, repayment, interest_due_per_period.amount);
+
+        let change = coin::sub_amount(payment, repayment);
+        (self.shift_start(period_paid_for), change)
+    }
+
+    fn move_within_period(&self, t: Timestamp) -> Timestamp {
+        cmp::min(cmp::max(self.start, t), self.till())
+    }
+
+    fn interest_by(&self, principal: &Coin, by: Timestamp) -> Coin {
+        debug_assert!(self.start <= by);
+        debug_assert!(by <= self.till());
+        let period = Duration::between(self.start, by);
 
         let interest_due_per_year = Percent::from(self.interest).of(principal);
         let interest_due_per_period =
             fraction(interest_due_per_year.amount, period, Duration::YEAR);
-
-        let repayment = cmp::min(interest_due_per_period, payment.amount);
-        let period_paid_for = fraction(period, repayment, interest_due_per_period);
-
-        let change = coin::sub_amount(payment, repayment);
-        (self.shift_start(period_paid_for), change)
+        Coin {
+            amount: interest_due_per_period,
+            denom: interest_due_per_year.denom,
+        }
     }
 }
 
