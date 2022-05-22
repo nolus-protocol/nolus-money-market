@@ -9,27 +9,19 @@ use crate::ContractError;
 pub struct Config {
     pub cadence_hours: u32,
     pub owner: Addr,
-    pub lpp: Addr,
+    pub treasury: Addr,
     pub time_oracle: Addr,
-    pub tvls: Vec<u32>,
 }
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("profit_config");
 
-    pub fn new(
-        owner: Addr,
-        cadence_hours: u32,
-        lpp: Addr,
-        time_oracle: Addr,
-        tvls: Vec<u32>,
-    ) -> Self {
+    pub fn new(owner: Addr, cadence_hours: u32, treasury: Addr, time_oracle: Addr) -> Self {
         Config {
             cadence_hours,
             owner,
-            lpp,
+            treasury,
             time_oracle,
-            tvls,
         }
     }
 
