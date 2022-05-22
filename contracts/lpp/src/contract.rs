@@ -52,6 +52,7 @@ pub fn execute(
         ExecuteMsg::RepayLoan => try_repay_loan(deps, env, sender, funds),
         ExecuteMsg::Deposit => try_deposit(deps, env, sender, funds),
         ExecuteMsg::Burn { amount } => try_withdraw(deps, env, sender, amount),
+        ExecuteMsg::DistributeRewards => unimplemented!(),
     }
 }
 
@@ -64,8 +65,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             lease_addr,
             outstanding_time,
         } => to_binary(&query_loan_outstanding_interest(deps.storage, lease_addr, outstanding_time)?),
-        QueryMsg::Price {} => to_binary(&query_ntoken_price(deps, env)?),
+        QueryMsg::Price => to_binary(&query_ntoken_price(deps, env)?),
         QueryMsg::Balance { address } => to_binary(&query_balance(deps.storage, address)?),
+        QueryMsg::LppBalance => unimplemented!(),
     }?;
 
     Ok(res)
