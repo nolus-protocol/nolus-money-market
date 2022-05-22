@@ -5,8 +5,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub cadence_hours: u32,
-    pub treasury: Addr,
+    pub lpp: Addr,
     pub time_oracle: Addr,
+    pub tvls: Vec<u32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

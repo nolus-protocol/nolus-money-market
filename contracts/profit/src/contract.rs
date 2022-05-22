@@ -26,10 +26,10 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let treasury = validate_addr(deps.as_ref(), msg.treasury)?;
+    let lpp = validate_addr(deps.as_ref(), msg.lpp)?;
     let time_oracle = validate_addr(deps.as_ref(), msg.time_oracle)?;
 
-    Config::new(info.sender, msg.cadence_hours, treasury, time_oracle).store(deps.storage)?;
+    Config::new(info.sender, msg.cadence_hours, lpp, time_oracle, msg.tvls).store(deps.storage)?;
 
     try_add_alarm(
         deps,
@@ -58,7 +58,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Config { cadence_hours } => try_config(deps, info, cadence_hours),
-        ExecuteMsg::Alarm { time } => try_transfer(deps, env, info, time),
+        ExecuteMsg::Alarm { time } => try_dispatch(deps, env, info, time),
     }
 }
 
@@ -76,7 +76,7 @@ pub fn try_config(
     Ok(Response::new().add_attribute("method", "config"))
 }
 
-pub fn try_transfer(
+pub fn try_dispatch(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
@@ -97,7 +97,7 @@ pub fn try_transfer(
     Ok(Response::new()
         .add_attribute("method", "try_transfer")
         .add_message(BankMsg::Send {
-            to_address: config.treasury.to_string(),
+            to_address: config.lpp.to_string(),
             amount: balance,
         }))
 }
@@ -136,8 +136,9 @@ mod tests {
     fn instantiate_msg() -> InstantiateMsg {
         InstantiateMsg {
             cadence_hours: 10,
-            treasury: Addr::unchecked("treasury"),
+            lpp: Addr::unchecked("lpp"),
             time_oracle: Addr::unchecked("time"),
+            tvls: vec![],
         }
     }
     #[test]
@@ -146,8 +147,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             cadence_hours: 16,
-            treasury: Addr::unchecked("treasury"),
+            lpp: Addr::unchecked("lpp"),
             time_oracle: Addr::unchecked("time"),
+            tvls: vec![],
         };
         let info = mock_info("creator", &coins(1000, "unolus"));
 
@@ -186,7 +188,7 @@ mod tests {
     }
 
     #[test]
-    fn transfer() {
+    fn dispatch() {
         let mut deps = mock_dependencies_with_balance(&coins(20, "unolus"));
 
         let msg = instantiate_msg();

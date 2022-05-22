@@ -39,8 +39,9 @@ mod tests {
 
         let msg = InstantiateMsg {
             cadence_hours: 3u32,
-            treasury: Addr::unchecked("treasury"),
+            lpp: Addr::unchecked("lpp"),
             time_oracle: Addr::unchecked("time"),
+            tvls: vec![],
         };
         let cw_template_contract_addr = app
             .instantiate_contract(
