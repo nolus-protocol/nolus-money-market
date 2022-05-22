@@ -1,15 +1,15 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
-    Timestamp,
+    coins, to_binary, Addr, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    Storage, Timestamp,
 };
 use cw2::set_contract_version;
 use time_oracle::Alarms;
 
-use crate::config::Config;
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::state::config::Config;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -26,10 +26,19 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let treasury = validate_addr(deps.as_ref(), msg.treasury)?;
+    let lpp = validate_addr(deps.as_ref(), msg.lpp)?;
     let time_oracle = validate_addr(deps.as_ref(), msg.time_oracle)?;
+    let treasury = validate_addr(deps.as_ref(), msg.treasury)?;
 
-    Config::new(info.sender, msg.cadence_hours, treasury, time_oracle).store(deps.storage)?;
+    Config::new(
+        info.sender,
+        msg.cadence_hours,
+        lpp,
+        time_oracle,
+        treasury,
+        msg.tvl_to_apr,
+    )
+    .store(deps.storage)?;
 
     try_add_alarm(
         deps,
@@ -88,16 +97,12 @@ pub fn try_dispatch(
         return Err(ContractError::UnrecognisedAlarm(info.sender));
     }
 
-    // let balance = deps.querier.query_balance(env.contract.address, "");
-
-    // Ok(Response::new()
-    //     .add_attribute("method", "try_transfer")
-    //     .add_message(BankMsg::Send {
-    //         to_address: config.treasury.to_string(),
-    //         amount: balance,
-    //     }))
-
-    Ok(Response::default())
+    Ok(Response::new()
+        .add_attribute("method", "try_transfer")
+        .add_message(BankMsg::Send {
+            to_address: config.lpp.to_string(),
+            amount: coins(1, "denom"),
+        }))
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -126,6 +131,7 @@ fn try_add_alarm(deps: DepsMut, addr: Addr, time: Timestamp) -> Result<Response,
 #[cfg(test)]
 mod tests {
     use crate::msg::ConfigResponse;
+    use crate::state::config::TvlApr;
 
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
@@ -134,19 +140,17 @@ mod tests {
     fn instantiate_msg() -> InstantiateMsg {
         InstantiateMsg {
             cadence_hours: 10,
-            treasury: Addr::unchecked("treasury"),
+            lpp: Addr::unchecked("lpp"),
             time_oracle: Addr::unchecked("time"),
+            treasury: Addr::unchecked("treasury"),
+            tvl_to_apr: vec![TvlApr::new(1000000, 5)],
         }
     }
     #[test]
     fn proper_initialization() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let msg = InstantiateMsg {
-            cadence_hours: 16,
-            treasury: Addr::unchecked("treasury"),
-            time_oracle: Addr::unchecked("time"),
-        };
+        let msg = instantiate_msg();
         let info = mock_info("creator", &coins(1000, "unolus"));
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -154,7 +158,7 @@ mod tests {
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
-        assert_eq!(16, value.cadence_hours);
+        assert_eq!(10, value.cadence_hours);
     }
 
     #[test]

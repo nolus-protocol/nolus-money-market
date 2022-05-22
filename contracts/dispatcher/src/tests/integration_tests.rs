@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::{msg::InstantiateMsg, tests::helpers::CwTemplateContract};
+    use crate::{msg::InstantiateMsg, state::config::TvlApr, tests::helpers::CwTemplateContract};
     use cosmwasm_std::{Addr, Coin, Empty, Uint128};
     use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
 
@@ -39,8 +39,10 @@ mod tests {
 
         let msg = InstantiateMsg {
             cadence_hours: 3u32,
-            treasury: Addr::unchecked("treasury"),
+            lpp: Addr::unchecked("lpp"),
             time_oracle: Addr::unchecked("time"),
+            treasury: Addr::unchecked("treasury"),
+            tvl_to_apr: vec![TvlApr::new(1000000, 5)],
         };
         let cw_template_contract_addr = app
             .instantiate_contract(

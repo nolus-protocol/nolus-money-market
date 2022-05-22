@@ -2,11 +2,15 @@ use cosmwasm_std::{Addr, Timestamp};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::state::config::TvlApr;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub cadence_hours: u32,
-    pub treasury: Addr,
+    pub lpp: Addr,
     pub time_oracle: Addr,
+    pub treasury: Addr,
+    pub tvl_to_apr: Vec<TvlApr>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

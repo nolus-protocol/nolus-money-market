@@ -15,7 +15,8 @@ cosmwasm-bindings = ["cosmwasm"]
 cosmwasm = []
 
 [dependencies]
-time-oracle = { path = "../../packages/time-oracle", version = "0.1.0"}
+time-oracle = { path = "../../packages/time-oracle", version = "0.1.0", default-features = false}
+lpp = { path = "../lpp", version = "0.1.0", default-features = false}
 
 cosmwasm-std = "1.0.0"
 cosmwasm-storage = "1.0.0"
