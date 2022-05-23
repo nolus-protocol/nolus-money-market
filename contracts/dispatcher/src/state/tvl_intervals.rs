@@ -1,18 +1,22 @@
 use std::cmp::Ordering;
 
 use cosmwasm_std::{StdError, StdResult};
+use finance::percent::Percent;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Eq)]
 pub struct Stop {
     pub tvl: u32,
-    pub apr: u8, //TODO:  in permille
+    pub apr: Percent,
 }
 
 impl Stop {
-    pub fn new(tvl: u32, apr: u8) -> Self {
-        Stop { tvl, apr }
+    pub fn new(tvl: u32, apr: u32) -> Self {
+        Stop {
+            tvl,
+            apr: Percent::from_permille(apr),
+        }
     }
 }
 impl Ord for Stop {
@@ -32,7 +36,7 @@ pub struct Intervals {
     intervals: Vec<Stop>,
 }
 impl Intervals {
-    pub fn new(initial_apr: u8) -> Self {
+    pub fn new(initial_apr: u32) -> Self {
         Intervals {
             intervals: vec![Stop::new(0, initial_apr)],
         }
@@ -51,7 +55,7 @@ impl Intervals {
         stops.iter().any(|stop| stop.tvl == 0)
         // TODO: check for duplicated intervals
     }
-    pub fn get_apr(&self, lpp_balance: u128) -> StdResult<u8> {
+    pub fn get_apr(&self, lpp_balance: u128) -> StdResult<Percent> {
         let idx = match self
             .intervals
             .binary_search(&Stop::new(lpp_balance as u32, 0))
@@ -70,6 +74,8 @@ impl Intervals {
 
 #[cfg(test)]
 mod tests {
+    use finance::percent::Percent;
+
     use crate::state::tvl_intervals::Stop;
 
     use super::Intervals;
@@ -79,7 +85,7 @@ mod tests {
         let cfg = Intervals::new(6);
         let initial = cfg.intervals.get(0).unwrap();
         assert_eq!(0, initial.tvl);
-        assert_eq!(6, initial.apr);
+        assert_eq!(Percent::from_permille(6), initial.apr);
         assert_eq!(1, cfg.intervals.len());
     }
 
@@ -94,9 +100,12 @@ mod tests {
         let res = Intervals::from(vec![Stop::new(0, 6), Stop::new(30000, 10)]).unwrap();
         assert_eq!(res.intervals.len(), 2);
         assert_eq!(res.intervals.get(0).unwrap().tvl, 0);
-        assert_eq!(res.intervals.get(0).unwrap().apr, 6);
+        assert_eq!(res.intervals.get(0).unwrap().apr, Percent::from_permille(6));
         assert_eq!(res.intervals.get(1).unwrap().tvl, 30000);
-        assert_eq!(res.intervals.get(1).unwrap().apr, 10);
+        assert_eq!(
+            res.intervals.get(1).unwrap().apr,
+            Percent::from_permille(10)
+        );
     }
     #[test]
     fn interval_get_apr() {
@@ -108,19 +117,19 @@ mod tests {
             Stop::new(100000, 12),
         ])
         .unwrap();
-        assert_eq!(res.get_apr(0).unwrap(), 6);
-        assert_eq!(res.get_apr(1000).unwrap(), 6);
-        assert_eq!(res.get_apr(29999).unwrap(), 6);
-        assert_eq!(res.get_apr(30000).unwrap(), 10);
-        assert_eq!(res.get_apr(30001).unwrap(), 10);
-        assert_eq!(res.get_apr(100051).unwrap(), 12);
-        assert_eq!(res.get_apr(149999).unwrap(), 12);
-        assert_eq!(res.get_apr(150000).unwrap(), 15);
-        assert_eq!(res.get_apr(2000300).unwrap(), 15);
-        assert_eq!(res.get_apr(3000000).unwrap(), 20);
-        assert_eq!(res.get_apr(3000200).unwrap(), 20);
-        assert_eq!(res.get_apr(13000200).unwrap(), 20);
-        assert_eq!(res.get_apr(u128::MAX).unwrap(), 20);
-        assert_eq!(res.get_apr(u128::MIN).unwrap(), 6);
+        assert_eq!(res.get_apr(0).unwrap(), Percent::from_permille(6));
+        assert_eq!(res.get_apr(1000).unwrap(), Percent::from_permille(6));
+        assert_eq!(res.get_apr(29999).unwrap(), Percent::from_permille(6));
+        assert_eq!(res.get_apr(30000).unwrap(), Percent::from_permille(10));
+        assert_eq!(res.get_apr(30001).unwrap(), Percent::from_permille(10));
+        assert_eq!(res.get_apr(100051).unwrap(), Percent::from_permille(12));
+        assert_eq!(res.get_apr(149999).unwrap(), Percent::from_permille(12));
+        assert_eq!(res.get_apr(150000).unwrap(), Percent::from_permille(15));
+        assert_eq!(res.get_apr(2000300).unwrap(), Percent::from_permille(15));
+        assert_eq!(res.get_apr(3000000).unwrap(), Percent::from_permille(20));
+        assert_eq!(res.get_apr(3000200).unwrap(), Percent::from_permille(20));
+        assert_eq!(res.get_apr(13000200).unwrap(), Percent::from_permille(20));
+        assert_eq!(res.get_apr(u128::MAX).unwrap(), Percent::from_permille(20));
+        assert_eq!(res.get_apr(u128::MIN).unwrap(), Percent::from_permille(6));
     }
 }
