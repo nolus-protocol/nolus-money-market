@@ -74,7 +74,7 @@ mod tests {
                 20 * 24,
             ),
             loan: LoanForm {
-                annual_margin_interest_permille: Percent::from_percent(0), // 3.1%
+                annual_margin_interest: Percent::from_percent(0), // 3.1%
                 lpp: lpp_addr.into_string(),
                 interest_due_period_secs: 100, // 90 days TODO use a crate for daytime calculations
                 grace_period_secs: 10,         // 10 days TODO use a crate for daytime calculations
