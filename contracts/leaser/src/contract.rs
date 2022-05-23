@@ -8,6 +8,7 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
+use finance::percent::Percent;
 
 use crate::config::Config;
 use crate::error::ContractError;
@@ -74,7 +75,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
 pub fn try_configure(
     deps: DepsMut,
     info: MessageInfo,
-    lease_interest_rate_margin: u8,
+    lease_interest_rate_margin: Percent,
     liability: crate::msg::Liability,
     repayment: Repayment,
 ) -> Result<Response, ContractError> {

@@ -72,9 +72,9 @@ mod test {
         let lease = NewLeaseForm {
             customer: "ss1s1".into(),
             currency: downpayment.denom.clone(),
-            liability: Liability::new(Percent::from(10), Percent::from(0), Percent::from(0), 100),
+            liability: Liability::new(Percent::from_percent(10), Percent::from_percent(0), Percent::from_percent(0), 100),
             loan: LoanForm {
-                annual_margin_interest_permille: 0,
+                annual_margin_interest_permille: Percent::from_percent(0),
                 lpp: "sdgg22d".into(),
                 interest_due_period_secs: 100,
                 grace_period_secs: 10,
@@ -87,9 +87,9 @@ mod test {
         let lease = NewLeaseForm {
             customer: "ss1s1".into(),
             currency: downpayment.denom.clone(),
-            liability: Liability::new(Percent::from(10), Percent::from(0), Percent::from(10), 100),
+            liability: Liability::new(Percent::from_percent(10), Percent::from_percent(0), Percent::from_percent(10), 100),
             loan: LoanForm {
-                annual_margin_interest_permille: 0,
+                annual_margin_interest_permille: Percent::from_percent(0),
                 lpp: "sdgg22d".into(),
                 interest_due_period_secs: 100,
                 grace_period_secs: 10,

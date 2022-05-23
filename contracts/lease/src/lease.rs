@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin, StdResult, Storage, Timestamp, SubMsg};
+use cosmwasm_std::{Addr, Coin, StdResult, Storage, SubMsg, Timestamp};
 use cw_storage_plus::Item;
 use finance::liability::Liability;
 use lpp::stub::Lpp;
@@ -78,12 +78,19 @@ mod tests {
             customer: Addr::unchecked("test"),
             currency: "UST".to_owned(),
             liability: Liability::new(
-                Percent::from(65),
-                Percent::from(5),
-                Percent::from(10),
+                Percent::from_percent(65),
+                Percent::from_percent(5),
+                Percent::from_percent(10),
                 10 * 24,
             ),
-            loan: Loan::open(Timestamp::default(), LppLocalStub {}, 23, 100, 10).unwrap(),
+            loan: Loan::open(
+                Timestamp::default(),
+                LppLocalStub {},
+                Percent::from_percent(23),
+                100,
+                10,
+            )
+            .unwrap(),
         };
         let obj_exp = obj.clone();
         obj.store(&mut storage).expect("storing failed");

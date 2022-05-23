@@ -14,22 +14,23 @@ use crate::error::Result as FinanceResult;
 )]
 #[serde(rename_all = "snake_case")]
 #[serde(transparent)]
-pub struct Percent {
-    val: u8,
-}
+pub struct Percent(u32); //value in permille
 
 impl Percent {
-    pub const ZERO: Percent = Percent { val: 0u8 };
-    pub const HUNDRED: Percent = Percent { val: 100u8 };
+    pub const ZERO: Self = Self::from_permille(0);
+    pub const HUNDRED: Self = Self::from_permille(1000);
+    const PERMILLE_TO_PERCENT_RATIO: u32 = 10;
 
-    pub fn u8(&self) -> u8 {
-        self.val
+    pub fn from_percent(percent: u16) -> Self {
+        Self(u32::from(percent) * Self::PERMILLE_TO_PERCENT_RATIO)
+    }
+
+    pub const fn from_permille(permille: u32) -> Self {
+        Self(permille)
     }
 
     pub fn of(&self, amount: &Coin) -> Coin {
-        let new_quantity = amount
-            .amount
-            .multiply_ratio(self.val, Percent::HUNDRED.u8());
+        let new_quantity = amount.amount.multiply_ratio(self.0, Percent::HUNDRED.0);
         Coin {
             amount: new_quantity,
             denom: amount.denom.clone(),
@@ -40,10 +41,8 @@ impl Percent {
     /// If %.of(X) -> Y, then %.are(Y) -> X
     /// :pre self != 0
     pub fn are(&self, amount: &Coin) -> Coin {
-        debug_assert!(self.val != 0);
-        let new_quantity = amount
-            .amount
-            .multiply_ratio(Percent::HUNDRED.u8(), self.val);
+        debug_assert!(self != &Self::ZERO);
+        let new_quantity = amount.amount.multiply_ratio(Percent::HUNDRED.0, self.0);
         Coin {
             amount: new_quantity,
             denom: amount.denom.clone(),
@@ -51,35 +50,23 @@ impl Percent {
     }
 
     pub fn checked_add(self, other: Self) -> FinanceResult<Self> {
-        self.val
-            .checked_add(other.val)
-            .map(Self::from)
+        self.0
+            .checked_add(other.0)
+            .map(Self::from_permille)
             .ok_or_else(|| OverflowError::new(OverflowOperation::Add, self, other).into())
     }
 
     pub fn checked_sub(self, other: Self) -> FinanceResult<Self> {
-        self.val
-            .checked_sub(other.val)
-            .map(Self::from)
+        self.0
+            .checked_sub(other.0)
+            .map(Self::from_permille)
             .ok_or_else(|| OverflowError::new(OverflowOperation::Sub, self, other).into())
-    }
-}
-
-impl From<u8> for Percent {
-    fn from(val: u8) -> Self {
-        Self { val }
-    }
-}
-
-impl From<Percent> for u8 {
-    fn from(p: Percent) -> Self {
-        p.val
     }
 }
 
 impl Display for Percent {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        self.val.fmt(f)
+        write!(f, "{:.1}%", self.0 / Self::PERMILLE_TO_PERCENT_RATIO)
     }
 }
 
@@ -87,12 +74,11 @@ impl Add<Percent> for Percent {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self {
-        Self {
-            val: self
-                .u8()
-                .checked_add(rhs.u8())
+        Self(
+            self.0
+                .checked_add(rhs.0)
                 .expect("attempt to add with overflow"),
-        }
+        )
     }
 }
 
@@ -108,12 +94,11 @@ impl Sub<Percent> for Percent {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self {
-        Self {
-            val: self
-                .u8()
-                .checked_sub(rhs.u8())
+        Self(
+            self.0
+                .checked_sub(rhs.0)
                 .expect("attempt to subtract with overflow"),
-        }
+        )
     }
 }
 
@@ -131,23 +116,36 @@ mod test {
 
     use crate::percent::Percent;
 
-    fn from(val: u8) -> Percent {
-        val.into()
+    fn from(permille: u32) -> Percent {
+        Percent::from_permille(permille)
     }
 
     #[test]
-    fn from_u8() {
-        let val = 10u8;
-        assert_eq!(Percent { val: 10 }, Percent::from(val));
-        assert_eq!(val, Percent::from(val).u8());
+    fn from_percent() {
+        assert_eq!(Percent(0), Percent::from_percent(0));
+        assert_eq!(Percent(100), Percent::from_percent(10));
     }
 
     #[test]
-    fn into_u8() {
-        let val = 35u8;
-        let p = Percent { val };
-        let val_result: u8 = p.into();
-        assert_eq!(val, val_result);
+    fn from_permille() {
+        assert_eq!(Percent(0), Percent::from_permille(0));
+        assert_eq!(Percent(10), Percent::from_permille(10));
+    }
+
+    #[test]
+    fn test_zero() {
+        let d = String::from("sfw");
+        assert_eq!(Coin::new(0, d.clone()), Percent::ZERO.of(&Coin::new(10, d)))
+    }
+
+    #[test]
+    fn test_hundred() {
+        let d = String::from("sfw");
+        let amount = 123;
+        assert_eq!(
+            Coin::new(amount, d.clone()),
+            Percent::HUNDRED.of(&Coin::new(amount, d))
+        )
     }
 
     #[test]
@@ -155,15 +153,15 @@ mod test {
         assert_eq!(from(40), from(25) + from(15));
         assert_eq!(from(39), from(0) + from(39));
         assert_eq!(from(39), from(39) + from(0));
-        assert_eq!(from(101), Percent::HUNDRED + from(1));
+        assert_eq!(from(1001), Percent::HUNDRED + from(1));
         assert_eq!(from(1) + Percent::HUNDRED, Percent::HUNDRED + from(1));
-        assert_eq!(from(u8::MAX), from(u8::MAX) + from(0));
+        assert_eq!(from(u32::MAX), from(u32::MAX) + from(0));
     }
 
     #[test]
     #[should_panic]
     fn add_overflow() {
-        let _ = from(u8::MAX) + from(1);
+        let _ = from(u32::MAX) + from(1);
     }
 
     #[test]
@@ -171,8 +169,8 @@ mod test {
         assert_eq!(from(67), from(79) - from(12));
         assert_eq!(from(0), from(34) - from(34));
         assert_eq!(from(39), from(39) - from(0));
-        assert_eq!(from(90), Percent::HUNDRED - from(10));
-        assert_eq!(from(0), from(u8::MAX) - from(u8::MAX));
+        assert_eq!(from(990), Percent::HUNDRED - from(10));
+        assert_eq!(from(0), from(u32::MAX) - from(u32::MAX));
     }
 
     #[test]
@@ -181,52 +179,40 @@ mod test {
         let _ = from(34) - from(35);
     }
 
-    fn test_of(percent: u8, quantity: u128, exp: u128) {
+    fn test_of_are(permille: u32, quantity: u128, exp: u128) {
         let d = String::from("ABC");
-        assert_eq!(
-            Coin::new(exp, d.clone()),
-            Percent::from(percent).of(&Coin::new(quantity, d))
-        );
+        let of = Coin::new(quantity, d.clone());
+        let exp = Coin::new(exp, d);
+        assert_eq!(exp, Percent::from_permille(permille).of(&of));
+        if permille != 0 {
+            assert_eq!(of, Percent::from_permille(permille).are(&exp));
+        }
     }
 
     #[test]
-    fn of() {
-        test_of(10, 50, 5);
-        test_of(20, 50, 10);
-        test_of(0, 120, 0);
-        test_of(20, 0, 0);
-        test_of(120, 50, 60);
-        test_of(100, u128::MAX, u128::MAX);
+    fn of_are() {
+        test_of_are(100, 50, 5);
+        test_of_are(100, 5000, 500);
+        test_of_are(101, 5000, 505);
+        test_of_are(200, 50, 10);
+        test_of_are(0, 120, 0);
+        test_of_are(1, 1000, 1);
+        test_of_are(1, 0, 0);
+        test_of_are(200, 0, 0);
+        test_of_are(1200, 50, 60);
+        test_of_are(12, 500, 6);
+        test_of_are(1000, u128::MAX, u128::MAX);
     }
 
     #[test]
     #[should_panic]
     fn of_overflow() {
-        test_of(101, u128::MAX, u128::MAX);
-    }
-
-    fn test_are(percent: u8, quantity: u128, exp: u128) {
-        debug_assert!(percent != 0);
-        let d = String::from("ABC");
-        assert_eq!(
-            Coin::new(exp, d.clone()),
-            Percent::from(percent).are(&Coin::new(quantity, d))
-        );
-    }
-
-    #[test]
-    fn are() {
-        test_are(10, 5, 50);
-        test_are(20, 10, 50);
-        test_are(1, 1, 100);
-        test_are(20, 0, 0);
-        test_are(120, 60, 50);
-        test_are(100, u128::MAX, u128::MAX);
+        test_of_are(1001, u128::MAX, u128::MAX);
     }
 
     #[test]
     #[should_panic]
     fn are_overflow() {
-        test_are(99, u128::MAX, u128::MAX);
+        test_of_are(999, u128::MAX, u128::MAX);
     }
 }

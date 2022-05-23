@@ -9,9 +9,9 @@ pub(crate) fn open_lease_msg(sender: Addr, config: Config, currency: String) -> 
         customer: sender.into_string(),
         currency, // TODO the same denom lppUST is working with
         liability: Liability::new(
-            Percent::from(config.liability.initial),
-            Percent::from(config.liability.healthy - config.liability.initial),
-            Percent::from(config.liability.max - config.liability.healthy),
+            Percent::from_percent(config.liability.initial.into()),
+            Percent::from_percent((config.liability.healthy - config.liability.initial).into()),
+            Percent::from_percent((config.liability.max - config.liability.healthy).into()),
             config.recalc_hours,
         ),
         loan: LoanForm {

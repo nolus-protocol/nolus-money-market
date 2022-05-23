@@ -8,11 +8,11 @@ use crate::{coin, duration::Duration, percent::Percent};
 pub struct InterestPeriod {
     start: Timestamp,
     length: Duration,
-    interest: u8, //TODO define Permille
+    interest: Percent,
 }
 
 impl InterestPeriod {
-    pub fn new(interest: u8) -> Self {
+    pub fn with_interest(interest: Percent) -> Self {
         Self {
             start: Timestamp::default(),
             length: Duration::default(),
@@ -63,7 +63,7 @@ impl InterestPeriod {
         let by_within_period = self.move_within_period(by);
         let interest_due_per_period = self.interest_by(principal, by_within_period);
 
-        let period = Duration::between(self.start, by_within_period);
+        let period = Duration::between(self.start, by_within_period);   
         let repayment = cmp::min(interest_due_per_period.amount, payment.amount);
         let period_paid_for = fraction(period, repayment, interest_due_per_period.amount);
 
@@ -80,7 +80,7 @@ impl InterestPeriod {
         debug_assert!(by <= self.till());
         let period = Duration::between(self.start, by);
 
-        let interest_due_per_year = Percent::from(self.interest).of(principal);
+        let interest_due_per_year = self.interest.of(principal);
         let interest_due_per_period =
             fraction(interest_due_per_year.amount, period, Duration::YEAR);
         Coin {

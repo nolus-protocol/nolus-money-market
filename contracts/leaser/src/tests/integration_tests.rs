@@ -68,13 +68,13 @@ mod tests {
             customer: USER.to_string(),
             currency: denom.to_string(),
             liability: Liability::new(
-                Percent::from(65),
-                Percent::from(5),
-                Percent::from(10),
+                Percent::from_percent(65),
+                Percent::from_percent(5),
+                Percent::from_percent(10),
                 20 * 24,
             ),
             loan: LoanForm {
-                annual_margin_interest_permille: 0, // 3.1%
+                annual_margin_interest_permille: Percent::from_percent(0), // 3.1%
                 lpp: lpp_addr.into_string(),
                 interest_due_period_secs: 100, // 90 days TODO use a crate for daytime calculations
                 grace_period_secs: 10,         // 10 days TODO use a crate for daytime calculations
