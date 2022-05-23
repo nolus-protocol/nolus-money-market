@@ -5,7 +5,7 @@ authors = ["Gancho Manev <g.manev@nolus.io>"]
 edition = "2021"
 
 [dependencies]
-cosmwasm-std = { version = "1.0.0-beta5" }
+cosmwasm-std = "1.0.0"
 schemars = "0.8"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0" }

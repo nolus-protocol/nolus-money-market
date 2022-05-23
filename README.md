@@ -54,6 +54,20 @@ docker run --rm -v "$(pwd)":/code \
   cosmwasm/workspace-optimizer:0.12.5
 ```
 
+### Upgrade dependencies
+
+Using the reviously installed cargo-edit one can easily upgrade the dependencies. For more details please refer to 
+
+```sh
+cargo upgrade --help
+```
+
+An example:
+
+```
+cargo upgrade --workspace cw-storage-plus
+```
+
 [Ref](https://github.com/CosmWasm/rust-optimizer#mono-repos)
 
 ### Deploy smart contract CLI
