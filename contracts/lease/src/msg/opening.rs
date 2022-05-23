@@ -1,4 +1,4 @@
-use finance::liability::Liability;
+use finance::{liability::Liability, percent::Percent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -24,7 +24,7 @@ pub struct LoanForm {
     /// The delta added on top of the LPP Loan interest rate.
     ///
     /// The amount, a part of any payment, goes to the Profit contract.
-    pub annual_margin_interest_permille: u8,
+    pub annual_margin_interest_permille: Percent,
     /// The Liquidity Provider Pool, LPP, that lends the necessary amount for this lease.
     pub lpp: String,
     /// How long is a period for which the interest is due

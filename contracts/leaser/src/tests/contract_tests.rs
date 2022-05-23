@@ -7,6 +7,7 @@ use cosmwasm_std::{
     coins, from_binary, to_binary, Addr, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, StdError,
     SubMsg, Uint128, WasmMsg,
 };
+use finance::percent::Percent;
 
 use crate::msg::{ConfigResponse, ExecuteMsg, Liability, QueryMsg, QuoteResponse, Repayment};
 
@@ -50,7 +51,7 @@ fn test_update_config() {
     let expected_repaiment = Repayment::new(10, 10);
     let info = setup_test_case(deps.as_mut());
     let msg = ExecuteMsg::Config {
-        lease_interest_rate_margin: 5,
+        lease_interest_rate_margin: Percent::from_percent(5),
         liability: expected_liability.clone(),
         repayment: expected_repaiment.clone(),
     };
@@ -70,7 +71,7 @@ fn test_update_config_unauthorized() {
     let expected_repaiment = Repayment::new(10, 10);
     setup_test_case(deps.as_mut());
     let msg = ExecuteMsg::Config {
-        lease_interest_rate_margin: 5,
+        lease_interest_rate_margin: Percent::from_percent(5),
         liability: expected_liability,
         repayment: expected_repaiment,
     };
