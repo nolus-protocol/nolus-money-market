@@ -334,7 +334,7 @@ fn remove_invalid_prices(
 mod tests {
     use std::str::FromStr;
 
-    use cosmwasm_std::Decimal256;
+    use cosmwasm_std::Decimal;
     use marketprice::feed::Price;
 
     use crate::contract::{feeders_needed, remove_invalid_prices};
@@ -368,15 +368,15 @@ mod tests {
             vec![
                 Price {
                     denom: "A".to_string(),
-                    amount: Decimal256::from_str("1.2").unwrap(),
+                    amount: Decimal::from_str("1.2").unwrap(),
                 },
                 Price {
                     denom: "D".to_string(),
-                    amount: Decimal256::from_str("3.2").unwrap(),
+                    amount: Decimal::from_str("3.2").unwrap(),
                 },
                 Price {
                     denom: "B".to_string(),
-                    amount: Decimal256::from_str("1.2").unwrap(),
+                    amount: Decimal::from_str("1.2").unwrap(),
                 },
             ],
         );
@@ -384,7 +384,7 @@ mod tests {
         assert_eq!(
             vec![Price {
                 denom: "A".to_string(),
-                amount: Decimal256::from_str("1.2").unwrap()
+                amount: Decimal::from_str("1.2").unwrap()
             }],
             filtered
         );

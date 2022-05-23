@@ -9,7 +9,7 @@ use crate::tests::common::{
 use crate::ContractError;
 
 use cosmwasm_std::testing::{mock_env, mock_info};
-use cosmwasm_std::{from_binary, Addr, Decimal256, StdError};
+use cosmwasm_std::{from_binary, Addr, Decimal, StdError};
 use marketprice::feed::{DenomToPrice, Price};
 
 use super::common::dummy_feed_prices_msg;
@@ -107,7 +107,7 @@ fn feed_prices() {
     assert_eq!(
         DenomToPrice::new(
             "A".to_string(),
-            Price::new(Decimal256::from_str("1.2").unwrap(), "B".to_string())
+            Price::new(Decimal::from_str("1.2").unwrap(), "B".to_string())
         ),
         value.prices.first().unwrap().to_owned()
     );
@@ -138,11 +138,11 @@ fn feed_prices_unsupported_pairs() {
         values: vec![
             Price {
                 denom: "c".to_string(),
-                amount: Decimal256::from_str("1.2").unwrap(),
+                amount: Decimal::from_str("1.2").unwrap(),
             },
             Price {
                 denom: "D".to_string(),
-                amount: Decimal256::from_str("2.2").unwrap(),
+                amount: Decimal::from_str("2.2").unwrap(),
             },
         ],
     }];

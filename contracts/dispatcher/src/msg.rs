@@ -2,7 +2,7 @@ use cosmwasm_std::{Addr, Timestamp};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::state::config::TvlApr;
+use crate::state::tvl_intervals::Intervals;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -10,7 +10,8 @@ pub struct InstantiateMsg {
     pub lpp: Addr,
     pub time_oracle: Addr,
     pub treasury: Addr,
-    pub tvl_to_apr: Vec<TvlApr>,
+    pub market_oracle: Addr,
+    pub tvl_to_apr: Intervals,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

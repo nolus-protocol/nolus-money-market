@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-
 use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::Item;
 use schemars::JsonSchema;
@@ -7,37 +5,23 @@ use serde::{Deserialize, Serialize};
 
 use crate::ContractError;
 
+use super::tvl_intervals::Intervals;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
-    pub cadence_hours: u32,
     pub owner: Addr,
+    // Time duration in hours defining the periods of time this instance is awaken
+    pub cadence_hours: u32,
+    // An LPP instance address
     pub lpp: Addr,
-    pub time_oracle: Addr,
+    // address to treasury contract
     pub treasury: Addr,
-    pub tvl_to_apr: Vec<TvlApr>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Eq)]
-pub struct TvlApr {
-    pub tvl: u32,
-    pub apr: u32, //in permille
-}
-
-impl TvlApr {
-    pub fn new(tvl: u32, apr: u32) -> Self {
-        TvlApr { tvl, apr }
-    }
-}
-impl Ord for TvlApr {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.tvl.cmp(&other.tvl)
-    }
-}
-
-impl PartialOrd for TvlApr {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
+    // address to time oracle
+    pub time_oracle: Addr,
+    // address to market price oracle
+    pub market_oracle: Addr,
+    // A list of (minTVL_MNLS: u32, APR%o) which defines the APR as per the TVL.
+    pub tvl_to_apr: Intervals,
 }
 
 impl Config {
@@ -49,7 +33,8 @@ impl Config {
         lpp: Addr,
         time_oracle: Addr,
         treasury: Addr,
-        tvl_to_apr: Vec<TvlApr>,
+        market_oracle: Addr,
+        tvl_to_apr: Intervals,
     ) -> Self {
         Config {
             cadence_hours,
@@ -57,6 +42,7 @@ impl Config {
             lpp,
             time_oracle,
             tvl_to_apr,
+            market_oracle,
             treasury,
         }
     }

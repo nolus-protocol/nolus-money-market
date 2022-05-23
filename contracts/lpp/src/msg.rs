@@ -81,7 +81,7 @@ pub struct PriceResponse {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct LppBalanceResponse {
-    balance: Coin,
-    total_principal_due: Coin,
-    total_interest_due: Coin,
+    pub balance: Coin,
+    pub total_principal_due: Coin,
+    pub total_interest_due: Coin,
 }

@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{Addr, Decimal256, Timestamp};
+use cosmwasm_std::{Addr, Decimal, Timestamp};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -11,12 +11,12 @@ pub type DenomPair = (Denom, Denom);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Price {
-    pub amount: Decimal256,
+    pub amount: Decimal,
     pub denom: Denom,
 }
 
 impl Price {
-    pub fn new(amount: Decimal256, denom: Denom) -> Self {
+    pub fn new(amount: Decimal, denom: Denom) -> Self {
         Price { amount, denom }
     }
 }
@@ -42,17 +42,17 @@ impl DenomToPrice {
 pub struct Observation {
     feeder_addr: Addr,
     time: Timestamp,
-    price: Decimal256,
+    price: Decimal,
 }
 impl Observation {
-    pub fn new(feeder_addr: Addr, time: Timestamp, price: Decimal256) -> Observation {
+    pub fn new(feeder_addr: Addr, time: Timestamp, price: Decimal) -> Observation {
         Observation {
             feeder_addr,
             time,
             price,
         }
     }
-    pub fn price(&self) -> Decimal256 {
+    pub fn price(&self) -> Decimal {
         self.price
     }
 }

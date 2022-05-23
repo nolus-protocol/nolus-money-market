@@ -1,15 +1,18 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coins, to_binary, Addr, BankMsg, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
-    Storage, Timestamp,
+    to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    Storage, SubMsg, Timestamp, WasmMsg,
 };
 use cw2::set_contract_version;
+use finance::interest::InterestPeriod;
 use time_oracle::Alarms;
 
+use crate::dispatcher::{exec_lpp_distribute_rewards, get_lpp_balance, swap_reward_in_unls};
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::config::Config;
+use crate::state::dispatch_log::DispatchLog;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -28,14 +31,15 @@ pub fn instantiate(
 
     let lpp = validate_addr(deps.as_ref(), msg.lpp)?;
     let time_oracle = validate_addr(deps.as_ref(), msg.time_oracle)?;
-    let treasury = validate_addr(deps.as_ref(), msg.treasury)?;
+    let market_oracle = validate_addr(deps.as_ref(), msg.market_oracle)?;
 
     Config::new(
         info.sender,
         msg.cadence_hours,
         lpp,
         time_oracle,
-        treasury,
+        msg.treasury,
+        market_oracle,
         msg.tvl_to_apr,
     )
     .store(deps.storage)?;
@@ -87,7 +91,7 @@ pub fn try_config(
 
 pub fn try_dispatch(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     _time: Timestamp,
 ) -> Result<Response, ContractError> {
@@ -97,12 +101,32 @@ pub fn try_dispatch(
         return Err(ContractError::UnrecognisedAlarm(info.sender));
     }
 
-    Ok(Response::new()
-        .add_attribute("method", "try_transfer")
-        .add_message(BankMsg::Send {
-            to_address: config.lpp.to_string(),
-            amount: coins(1, "denom"),
-        }))
+    // 1. get LPP balance: TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
+    let lpp_balance = get_lpp_balance(deps.as_ref(), config.lpp.clone())?;
+
+    // 2. get apr from configuration
+    let arp_permille = config.tvl_to_apr.get_apr(lpp_balance.amount.u128())?;
+
+    // 3. Use the finance::interest::interestPeriod::interest() to calculate the reward in LPN,
+    //    which matches TVLdenom, since the last calculation, Rewards_TVLdenom
+    let reward_lppdenom = InterestPeriod::new(arp_permille)
+        .from(DispatchLog::load(deps.storage)?.last_dispatch)
+        .interest(&lpp_balance);
+    // 4. Store the current time for use for the next calculation.
+    DispatchLog::update(deps.storage, env.block.time)?;
+
+    // 5. Obtain the currency market price of TVLdenom in uNLS and convert Rewards_TVLdenom in uNLS, Rewards_uNLS.
+    let _reward_unls = swap_reward_in_unls(deps.as_ref(), config.market_oracle, reward_lppdenom)?;
+
+    // 6. Prepare a Send Rewards for the amount of Rewards_uNLS to the Treasury.
+    // 7. LPP.Distribute Rewards command.
+    Ok(
+        Response::new().add_submessages(vec![SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+            funds: vec![],
+            contract_addr: config.lpp.to_string(),
+            msg: to_binary(&exec_lpp_distribute_rewards())?,
+        }))]),
+    )
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -131,7 +155,7 @@ fn try_add_alarm(deps: DepsMut, addr: Addr, time: Timestamp) -> Result<Response,
 #[cfg(test)]
 mod tests {
     use crate::msg::ConfigResponse;
-    use crate::state::config::TvlApr;
+    use crate::state::tvl_intervals::{Intervals, Stop};
 
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
@@ -143,7 +167,8 @@ mod tests {
             lpp: Addr::unchecked("lpp"),
             time_oracle: Addr::unchecked("time"),
             treasury: Addr::unchecked("treasury"),
-            tvl_to_apr: vec![TvlApr::new(1000000, 5)],
+            market_oracle: Addr::unchecked("market_oracle"),
+            tvl_to_apr: Intervals::from(vec![Stop::new(0, 5), Stop::new(1000000, 10)]).unwrap(),
         }
     }
     #[test]
