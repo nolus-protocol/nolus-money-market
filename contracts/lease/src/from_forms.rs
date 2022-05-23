@@ -26,7 +26,7 @@ impl NewLeaseForm {
         let loan = Loan::open(
             start_at,
             lpp,
-            self.loan.annual_margin_interest_permille,
+            self.loan.annual_margin_interest,
             self.loan.interest_due_period_secs,
             self.loan.grace_period_secs,
         )?;
@@ -74,7 +74,7 @@ mod test {
             currency: downpayment.denom.clone(),
             liability: Liability::new(Percent::from_percent(10), Percent::from_percent(0), Percent::from_percent(0), 100),
             loan: LoanForm {
-                annual_margin_interest_permille: Percent::from_percent(0),
+                annual_margin_interest: Percent::from_percent(0),
                 lpp: "sdgg22d".into(),
                 interest_due_period_secs: 100,
                 grace_period_secs: 10,
@@ -89,7 +89,7 @@ mod test {
             currency: downpayment.denom.clone(),
             liability: Liability::new(Percent::from_percent(10), Percent::from_percent(0), Percent::from_percent(10), 100),
             loan: LoanForm {
-                annual_margin_interest_permille: Percent::from_percent(0),
+                annual_margin_interest: Percent::from_percent(0),
                 lpp: "sdgg22d".into(),
                 interest_due_period_secs: 100,
                 grace_period_secs: 10,
