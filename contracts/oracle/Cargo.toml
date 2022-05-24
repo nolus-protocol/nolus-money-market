@@ -9,6 +9,11 @@ edition = "2018"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default = ["cosmwasm-bindings"]
+cosmwasm-bindings = ["cosmwasm"]
+cosmwasm = []
+
 [dependencies]
 marketprice = { path = "../../packages/marketprice", version = "0.1.0"}
 time-oracle = { path = "../../packages/time-oracle", version = "0.1.0"}

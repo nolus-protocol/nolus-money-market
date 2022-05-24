@@ -35,4 +35,5 @@ cw-multi-test = "0.13.2"
 treasury = { path = "../treasury", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
 lease = { path = "../lease", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
 lpp = { path = "../lpp", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
-marketprice = { path = "../../packages/marketprice", version = "0.1.0", default-features = false }
+oracle = { path = "../oracle", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
+marketprice = { path = "../../packages/marketprice", version = "0.1.0", default-features = false}

@@ -1,4 +1,4 @@
-#[cfg(not(feature = "library"))]
+#[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Api, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, Response,
@@ -21,7 +21,7 @@ use time_oracle::Id;
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -41,7 +41,7 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -69,7 +69,7 @@ pub fn execute(
     }
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps)?),
@@ -90,7 +90,7 @@ pub fn get_sender(api: &dyn Api, info: MessageInfo) -> StdResult<Addr> {
     api.addr_validate(info.sender.as_str())
 }
 
-#[cfg_attr(not(feature = "library"), entry_point)]
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     if msg.result.is_err() {
         Ok(Response::new().add_attribute("alarm", "error"))
