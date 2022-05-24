@@ -17,7 +17,9 @@ pub enum ExecuteMsg {
     Deposit,
     // CW20 interface, withdraw from lender deposit
     Burn { amount: Uint128},
+
     DistributeRewards,
+    ClaimRewards { other_recipient: Option<Addr> },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -40,6 +42,8 @@ pub enum QueryMsg {
     Balance { address: Addr },
     LppBalance,
     Price,
+
+    Rewards { address: Addr },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -84,4 +88,9 @@ pub struct LppBalanceResponse {
     pub balance: Coin,
     pub total_principal_due: Coin,
     pub total_interest_due: Coin,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct RewardsResponse {
+    pub rewards: Coin
 }

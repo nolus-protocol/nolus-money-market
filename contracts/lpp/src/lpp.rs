@@ -37,6 +37,16 @@ impl LiquidityPool {
         querier.query_balance(&env.contract.address, &self.config.denom)
     }
 
+    // TODO: instead refactor state/total.rs, introduce TotalData and total(&self) -> &TotalData
+    pub fn total_principal_due(&self) -> Uint128 {
+        self.total.total_principal_due
+    }
+
+    // TODO: refactor
+    pub fn total_interest_due_by_now(&self, env: &Env) -> Uint128 {
+        self.total.total_interest_due_by_now(env)
+    }
+
     pub fn total_lpn(&self, deps: &Deps, env: &Env) -> StdResult<Uint128> {
 
         let total_interest_due_by_now = self.total.total_interest_due +
@@ -55,7 +65,7 @@ impl LiquidityPool {
 
     pub fn calculate_price(&self, deps: &Deps, env: &Env) -> StdResult<NTokenPrice> {
 
-        let balance_nlpn = Deposit::balance(deps.storage)?;
+        let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
         let price = if balance_nlpn.is_zero() {
             self.config.initial_derivative_price

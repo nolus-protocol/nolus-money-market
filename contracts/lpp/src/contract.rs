@@ -10,6 +10,7 @@ use crate::error::ContractError;
 use crate::msg::{
     ExecuteMsg, InstantiateMsg, QueryMsg, QueryQuoteResponse, QueryLoanResponse,
     QueryLoanOutstandingInterestResponse, OutstandingInterest, LoanResponse, PriceResponse, BalanceResponse,
+    RewardsResponse, LppBalanceResponse,
 };
 use crate::lpp::LiquidityPool;
 use crate::state::{Total, Config, Loan, Deposit};
@@ -52,7 +53,8 @@ pub fn execute(
         ExecuteMsg::RepayLoan => try_repay_loan(deps, env, sender, funds),
         ExecuteMsg::Deposit => try_deposit(deps, env, sender, funds),
         ExecuteMsg::Burn { amount } => try_withdraw(deps, env, sender, amount),
-        ExecuteMsg::DistributeRewards => unimplemented!(),
+        ExecuteMsg::DistributeRewards => try_distribute_rewards(deps, env),
+        ExecuteMsg::ClaimRewards {other_recipient} => try_claim_rewards(deps, sender, other_recipient),
     }
 }
 
@@ -67,7 +69,8 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         } => to_binary(&query_loan_outstanding_interest(deps.storage, lease_addr, outstanding_time)?),
         QueryMsg::Price => to_binary(&query_ntoken_price(deps, env)?),
         QueryMsg::Balance { address } => to_binary(&query_balance(deps.storage, address)?),
-        QueryMsg::LppBalance => unimplemented!(),
+        QueryMsg::LppBalance => to_binary(&query_lpp_balance(deps, env)?),
+        QueryMsg::Rewards { address } => to_binary(&query_rewards(deps.storage, address)?),
     }?;
 
     Ok(res)
@@ -132,14 +135,35 @@ fn try_withdraw(deps: DepsMut, env: Env, lender_addr: Addr, amount: Uint128) -> 
         return Err(ContractError::NoLiquidity {});
     }
 
-    Deposit::load(deps.storage, lender_addr.clone())?
+    let maybe_reward = Deposit::load(deps.storage, lender_addr.clone())?
         .withdraw(deps.storage, amount)?;
 
     let payment_msg = lpp.pay(lender_addr, payment);
 
-    let response = Response::new()
+    let mut response = Response::new()
         .add_attribute("method", "try_withdraw")
         .add_message(payment_msg);
+
+    // TODO: refactor pay to avoid sending 2 msgs
+    if let Some(reward_msg) = maybe_reward {
+        response = response.add_message(reward_msg)
+    }
+
+    Ok(response)
+}
+
+fn try_distribute_rewards(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
+    Deposit::distribute_rewards(deps, env)?;
+    Ok(Response::new().add_attribute("method", "try_distribute_rewards"))
+}
+
+fn try_claim_rewards(deps: DepsMut, addr: Addr, other_recipient: Option<Addr>) -> Result<Response, ContractError> {
+    let mut deposit = Deposit::load(deps.storage, addr)?;
+    let reward_msg = deposit.claim_rewards(deps.storage, other_recipient)?;
+
+    let response = Response::new()
+        .add_attribute("method", "try_claim_rewards")
+        .add_message(reward_msg);
 
     Ok(response)
 }
@@ -179,6 +203,16 @@ fn query_loan_outstanding_interest(
     Ok(response)
 }
 
+fn query_lpp_balance(deps: Deps, env: Env) -> Result<LppBalanceResponse, ContractError> {
+    let lpp = LiquidityPool::load(deps.storage)?;
+    let denom = lpp.config().denom.clone();
+    let balance = lpp.balance(&deps, &env)?;
+    let total_principal_due = coin(lpp.total_principal_due().u128(), denom.clone());
+    let total_interest_due = coin(lpp.total_interest_due_by_now(&env).u128(), denom);
+
+    Ok(LppBalanceResponse{balance, total_principal_due, total_interest_due })
+}
+
 fn query_ntoken_price(deps: Deps, env: Env) -> Result<PriceResponse, ContractError> {
     let lpp = LiquidityPool::load(deps.storage)?;
     let price = lpp.calculate_price(&deps, &env)?.get();
@@ -188,9 +222,15 @@ fn query_ntoken_price(deps: Deps, env: Env) -> Result<PriceResponse, ContractErr
 }
 
 fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceResponse, ContractError> {
-    let balance = Deposit::query_balance(storage, addr)?
+    let balance = Deposit::query_balance_nlpn(storage, addr)?
         .unwrap_or_default();
     Ok(BalanceResponse { balance })
+}
+
+fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse, ContractError> {
+    let deposit = Deposit::load(storage, addr)?;
+    let rewards = deposit.query_rewards(storage)?;
+    Ok(RewardsResponse { rewards } )
 }
 
 #[cfg(test)]

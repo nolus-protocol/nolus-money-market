@@ -27,45 +27,48 @@ impl Total {
     }
 
     pub fn borrow(&mut self, env: &Env, amount: Uint128, loan_interest_rate: Decimal) -> &Self {
-                let dt = calc::dt(env, self.last_update_time);
 
-                self.total_interest_due += calc::interest(self.total_principal_due, self.annual_interest_rate, dt);
+        self.total_interest_due = self.total_interest_due_by_now(env);
 
-                self.annual_interest_rate = Decimal::from_ratio(
-                    self.annual_interest_rate * self.total_principal_due
-                        + loan_interest_rate * amount,
-                    self.total_principal_due + amount
-                );
+        self.annual_interest_rate = Decimal::from_ratio(
+            self.annual_interest_rate * self.total_principal_due
+                + loan_interest_rate * amount,
+            self.total_principal_due + amount
+        );
 
-                self.total_principal_due += amount;
+        self.total_principal_due += amount;
 
-                self.last_update_time = env.block.time;
+        self.last_update_time = env.block.time;
 
-                self
+        self
     }
 
     pub fn repay(&mut self, env: &Env, loan_principal_payment: Uint128, loan_interest_rate: Decimal) -> &Self {
 
-                self.total_interest_due += calc::interest(
-                    self.total_principal_due,
-                    self.annual_interest_rate,
-                    calc::dt(env, self.last_update_time));
+        self.total_interest_due = self.total_interest_due_by_now(env);
+        self.annual_interest_rate = if self.total_principal_due == loan_principal_payment {
+            Decimal::zero()
+        } else {
+            Decimal::from_ratio(
+                self.annual_interest_rate * self.total_principal_due
+                    - loan_interest_rate * loan_principal_payment,
+                self.total_principal_due - loan_principal_payment,
+            )
+        };
 
-                self.annual_interest_rate = if self.total_principal_due == loan_principal_payment {
-                    Decimal::zero()
-                } else {
-                    Decimal::from_ratio(
-                        self.annual_interest_rate * self.total_principal_due
-                            - loan_interest_rate * loan_principal_payment,
-                        self.total_principal_due - loan_principal_payment,
-                    )
-                };
+        self.total_principal_due -= loan_principal_payment;
 
-                self.total_principal_due -= loan_principal_payment;
+        self.last_update_time = env.block.time;
 
-                self.last_update_time = env.block.time;
-
-                self
+        self
     }
+
+    pub fn total_interest_due_by_now(&self, env: &Env) -> Uint128 {
+        self.total_interest_due + calc::interest(
+            self.total_principal_due,
+            self.annual_interest_rate,
+            calc::dt(env, self.last_update_time))
+    }
+
 }
 
