@@ -5,24 +5,13 @@ use cw_multi_test::{App, AppBuilder};
 #[cfg(test)]
 #[allow(dead_code)]
 pub mod mock_dispatcher;
+pub mod mock_lease;
 #[cfg(feature = "cosmwasm")]
 #[cfg(test)]
 #[allow(dead_code)]
 pub mod mock_lpp;
-#[cfg(feature = "cosmwasm")]
-#[cfg(test)]
-#[allow(dead_code)]
 pub mod mock_oracle;
-
-#[cfg(feature = "cosmwasm")]
-#[cfg(test)]
-#[allow(dead_code)]
 pub mod mock_treasury;
-
-#[cfg(feature = "cosmwasm")]
-#[cfg(test)]
-#[allow(dead_code)]
-pub mod mock_lease;
 
 pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
