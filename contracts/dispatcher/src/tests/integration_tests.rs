@@ -1,84 +1,101 @@
 #[cfg(test)]
 mod tests {
+    use cosmwasm_std::{coins, Addr, Coin, Uint64};
+    use cw_multi_test::{next_block, App, Executor};
+
     use crate::{
-        msg::InstantiateMsg,
-        state::tvl_intervals::{Intervals, Stop},
-        tests::helpers::CwTemplateContract,
+        msg::QueryMsg,
+        tests::common::{
+            contracts::{
+                contract_lease_mock, instantiate_dispatcher, instantiate_treasury, mock_app, ADMIN,
+                USER,
+            },
+            mock_lpp::instantiate_lpp,
+            mock_oracle::instantiate_oracle,
+        },
     };
-    use cosmwasm_std::{Addr, Coin, Empty, Uint128};
-    use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
 
-    pub fn contract_template() -> Box<dyn Contract<Empty>> {
-        let contract = ContractWrapper::new(
-            crate::contract::execute,
-            crate::contract::instantiate,
-            crate::contract::query,
+    pub fn setup_test_case(
+        app: &mut App,
+        init_funds: Vec<Coin>,
+        user_addr: Addr,
+        denom: &str,
+    ) -> (Addr, u64) {
+        let lease_id = app.store_code(contract_lease_mock());
+
+        // 1. Instantiate LPP contract
+        let (lpp_addr, _lpp_id) = instantiate_lpp(app, Uint64::new(lease_id), denom);
+        app.update_block(next_block);
+
+        // 2. Instantiate Treasury contract (and OWNER as admin)
+        let treasury_addr = instantiate_treasury(app, denom);
+        app.update_block(next_block);
+
+        // 3. Instantiate Oracle contract (and OWNER as admin)
+        let market_oracle = instantiate_oracle(app, denom);
+        app.update_block(next_block);
+
+        // 3. Instantiate Leaser contract
+        let dispatcher_addr = instantiate_dispatcher(
+            app,
+            lpp_addr,
+            Addr::unchecked("time"),
+            treasury_addr,
+            market_oracle,
         );
-        Box::new(contract)
-    }
+        app.update_block(next_block);
 
-    const USER: &str = "USER";
-    const ADMIN: &str = "ADMIN";
-    const NATIVE_DENOM: &str = "denom";
-
-    fn mock_app() -> App {
-        AppBuilder::new().build(|router, _, storage| {
-            router
-                .bank
-                .init_balance(
-                    storage,
-                    &Addr::unchecked(USER),
-                    vec![Coin {
-                        denom: NATIVE_DENOM.to_string(),
-                        amount: Uint128::new(1),
-                    }],
-                )
+        // Bonus: set some funds on the user for future proposals
+        if !init_funds.is_empty() {
+            app.send_tokens(Addr::unchecked(ADMIN), user_addr, &init_funds)
                 .unwrap();
-        })
+        }
+        (dispatcher_addr, lease_id)
     }
 
-    fn proper_instantiate() -> (App, CwTemplateContract) {
-        let mut app = mock_app();
-        let cw_template_id = app.store_code(contract_template());
+    #[test]
+    fn on_alarm() {
+        let denom = "UST";
+        let mut app = mock_app(&coins(10000, denom));
+        let time_oracle_addr = Addr::unchecked("time");
 
-        let msg = InstantiateMsg {
-            cadence_hours: 3u32,
-            lpp: Addr::unchecked("lpp"),
-            time_oracle: Addr::unchecked("time"),
-            treasury: Addr::unchecked("treasury"),
-            market_oracle: Addr::unchecked("marketoracle"),
+        let (dispatcher_addr, _) =
+            setup_test_case(&mut app, coins(500, denom), time_oracle_addr.clone(), denom);
 
-            tvl_to_apr: Intervals::from(vec![Stop::new(0, 5), Stop::new(1000000, 10)]).unwrap(),
-        };
-        let cw_template_contract_addr = app
-            .instantiate_contract(
-                cw_template_id,
-                Addr::unchecked(ADMIN),
-                &msg,
-                &[],
-                "test",
-                None,
+        let res = app
+            .execute_contract(
+                time_oracle_addr,
+                dispatcher_addr.clone(),
+                &crate::msg::ExecuteMsg::Alarm {
+                    time: app.block_info().time,
+                },
+                &coins(40, denom),
             )
             .unwrap();
 
-        let cw_template_contract = CwTemplateContract(cw_template_contract_addr);
-
-        (app, cw_template_contract)
+        // ensure the attributes were relayed from the sub-message
+        assert_eq!(2, res.events.len(), "{:?}", res.events);
+        // reflect only returns standard wasm-execute event
+        let leaser_exec = &res.events[0];
+        assert_eq!(leaser_exec.ty.as_str(), "execute");
+        assert_eq!(
+            leaser_exec.attributes,
+            [("_contract_addr", &dispatcher_addr)]
+        );
     }
 
-    mod config {
-        use super::*;
-        use crate::msg::ExecuteMsg;
+    #[test]
+    fn test_config() {
+        let denom = "UST";
+        let mut app = mock_app(&coins(2000000, denom));
+        let user_addr = Addr::unchecked(USER);
+        let (dispatcher_addr, _) = setup_test_case(&mut app, coins(500, denom), user_addr, denom);
 
-        #[test]
-        fn config() {
-            let (mut app, cw_template_contract) = proper_instantiate();
+        let resp: crate::msg::ConfigResponse = app
+            .wrap()
+            .query_wasm_smart(dispatcher_addr, &QueryMsg::Config {})
+            .unwrap();
 
-            let msg = ExecuteMsg::Config {
-                cadence_hours: 12u32,
-            };
-            let cosmos_msg = cw_template_contract.call(msg).unwrap();
-            app.execute(Addr::unchecked(USER), cosmos_msg).unwrap_err();
-        }
+        assert_eq!(10, resp.cadence_hours);
     }
 }

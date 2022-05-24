@@ -611,12 +611,15 @@ dependencies = [
  "cw-storage-plus",
  "cw2",
  "finance",
+ "lease",
  "lpp",
+ "marketprice",
  "oracle",
  "schemars",
  "serde",
  "thiserror",
  "time-oracle",
+ "treasury",
 ]
 
 [[package]]

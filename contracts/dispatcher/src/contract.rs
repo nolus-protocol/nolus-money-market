@@ -110,7 +110,7 @@ pub fn try_dispatch(
     // 3. Use the finance::interest::interestPeriod::interest() to calculate the reward in LPN,
     //    which matches TVLdenom, since the last calculation, Rewards_TVLdenom
     let reward_lppdenom = InterestPeriod::with_interest(arp_permille)
-        .from(DispatchLog::load(deps.storage)?.last_dispatch)
+        .from(DispatchLog::last_dispatch(deps.storage)?)
         .interest(&lpp_balance);
     // 4. Store the current time for use for the next calculation.
     DispatchLog::update(deps.storage, env.block.time)?;
