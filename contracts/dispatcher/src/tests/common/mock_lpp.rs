@@ -4,7 +4,7 @@ use cosmwasm_std::{
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 use lpp::error::ContractError;
 
-use super::contracts::ADMIN;
+use super::ADMIN;
 
 fn mock_lpp_balance() -> Result<lpp::msg::LppBalanceResponse, ContractError> {
     Ok(lpp::msg::LppBalanceResponse {

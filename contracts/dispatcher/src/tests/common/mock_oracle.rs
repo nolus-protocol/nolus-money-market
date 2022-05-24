@@ -4,7 +4,7 @@ use cosmwasm_std::{to_binary, Addr, Binary, Decimal, Deps, Empty, Env, StdResult
 use cw_multi_test::{App, Contract, ContractWrapper, Executor};
 use marketprice::feed::{DenomToPrice, Price};
 
-use super::contracts::ADMIN;
+use super::ADMIN;
 
 fn mock_oracle_price() -> StdResult<oracle::msg::PriceResponse> {
     Ok(oracle::msg::PriceResponse {

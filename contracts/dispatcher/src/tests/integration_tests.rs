@@ -6,12 +6,9 @@ mod tests {
     use crate::{
         msg::QueryMsg,
         tests::common::{
-            contracts::{
-                contract_lease_mock, instantiate_dispatcher, instantiate_treasury, mock_app, ADMIN,
-                USER,
-            },
-            mock_lpp::instantiate_lpp,
-            mock_oracle::instantiate_oracle,
+            mock_app, mock_dispatcher::instantiate_dispatcher, mock_lease::contract_lease_mock,
+            mock_lpp::instantiate_lpp, mock_oracle::instantiate_oracle,
+            mock_treasury::instantiate_treasury, ADMIN, USER,
         },
     };
 
