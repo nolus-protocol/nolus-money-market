@@ -77,9 +77,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{
-        testing::MockStorage, Addr, QuerierWrapper, StdResult, SubMsg, Timestamp,
-    };
+    use cosmwasm_std::{testing::MockStorage, Addr, QuerierWrapper, StdResult, SubMsg, Timestamp};
     use finance::{liability::Liability, percent::Percent};
     use lpp::stub::Lpp;
     use serde::{Deserialize, Serialize};
@@ -99,6 +97,9 @@ mod tests {
             unimplemented!()
         }
 
+        fn repay_loan_req(&self, _repayment: cosmwasm_std::Coin) -> StdResult<SubMsg> {
+            todo!()
+        }
         fn loan_closed(&self, _querier: &QuerierWrapper, _lease: Addr) -> StdResult<bool> {
             todo!()
         }

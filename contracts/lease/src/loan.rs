@@ -51,26 +51,50 @@ where
     pub(crate) fn repay(&mut self, payment: Coin, by: Timestamp) -> ContractResult<Option<SubMsg>> {
         // TODO self.lpp.my_loan()
         let principal_due: Coin = Coin::new(10, &payment.denom);
-        let (period, change) = self.current_period.pay(&principal_due, payment, by);
-        self.current_period = period;
-        // TODO self.lpp.my_interest_due(by: Timestamp)
+        let change = self.repay_margin_interest(&principal_due, by, payment);
+        if change.amount.is_zero() {
+            return Ok(None);
+        }
+
+        // TODO self.lpp.my_interest_due(by = self.current_period().till(): Timestamp)
         let loan_interest_due = Coin::new(1000, &principal_due.denom);
-        let _loan_payment =
+        let loan_payment =
             if loan_interest_due.amount <= change.amount && self.current_period.zero_length() {
-                self.current_period = InterestPeriod::with_interest(self.annual_margin_interest)
-                    .from(self.current_period.till())
-                    .spanning(Duration::from_secs(self.interest_due_period_secs));
-                let (period, change) = self.current_period.pay(
-                    &principal_due,
-                    coin::sub_amount(change, loan_interest_due.amount),
-                    by,
-                );
-                self.current_period = period;
+                self.open_next_period();
+                let loan_interest_surplus = coin::sub_amount(change, loan_interest_due.amount);
+                let change = self.repay_margin_interest(&principal_due, by, loan_interest_surplus);
                 coin::add_coin(loan_interest_due, change)
             } else {
                 change
             };
-        // TODO self.lpp.repay_loan_req(&self, repayment: Coin)
-        Ok(None)
+        if loan_payment.amount.is_zero() {
+            // in practice not possible, but in theory it is if two consecutive repayments are received
+            // with the same 'by' time.
+            return Ok(None);
+        }
+
+        self.lpp
+            .repay_loan_req(loan_payment)
+            .map(Some)
+            .map_err(|err| err.into())
+    }
+
+    fn repay_margin_interest(
+        &mut self,
+        principal_due: &Coin,
+        by: Timestamp,
+        payment: Coin,
+    ) -> Coin {
+        let (period, change) = self.current_period.pay(principal_due, payment, by);
+        self.current_period = period;
+        change
+    }
+
+    fn open_next_period(&mut self) {
+        debug_assert!(self.current_period.zero_length());
+
+        self.current_period = InterestPeriod::with_interest(self.annual_margin_interest)
+            .from(self.current_period.till())
+            .spanning(Duration::from_secs(self.interest_due_period_secs));
     }
 }

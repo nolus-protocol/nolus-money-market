@@ -8,6 +8,7 @@ pub const REPLY_ID: u64 = 28;
 pub trait Lpp: Serialize + DeserializeOwned {
     fn open_loan_req(&self, amount: Coin) -> StdResult<SubMsg>;
     fn open_loan_resp(&self, resp: Reply) -> Result<(), String>;
+    fn repay_loan_req(&self, repayment: Coin) -> StdResult<SubMsg>;
     fn loan_closed(&self, querier: &QuerierWrapper, lease: Addr) -> StdResult<bool>;
 }
 
@@ -42,6 +43,15 @@ impl Lpp for LppStub {
     fn open_loan_resp(&self, resp: Reply) -> Result<(), String> {
         debug_assert_eq!(REPLY_ID, resp.id);
         resp.result.into_result().map(|_| ())
+    }
+
+    fn repay_loan_req(&self, repayment: Coin) -> StdResult<SubMsg> {
+        let msg = to_binary(&ExecuteMsg::RepayLoan {})?;
+        Ok(SubMsg::new(WasmMsg::Execute {
+            contract_addr: self.addr.as_ref().into(),
+            funds: vec![repayment],
+            msg,
+        }))
     }
 
     fn loan_closed(&self, querier: &QuerierWrapper, lease: Addr) -> StdResult<bool> {
