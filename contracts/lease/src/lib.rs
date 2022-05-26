@@ -9,3 +9,5 @@ mod lease;
 mod loan;
 #[cfg(feature = "cosmwasm")]
 mod from_forms;
+#[cfg(feature = "cosmwasm")]
+mod bank;

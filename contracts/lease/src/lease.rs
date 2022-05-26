@@ -1,10 +1,15 @@
-use cosmwasm_std::{Addr, Coin, StdResult, Storage, SubMsg, Timestamp};
+use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdResult, Storage, SubMsg, Timestamp};
 use cw_storage_plus::Item;
 use finance::liability::Liability;
 use lpp::stub::Lpp;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::ContractResult, loan::Loan, msg::Denom};
+use crate::{
+    bank::BankAccount,
+    error::{ContractError, ContractResult},
+    loan::Loan,
+    msg::Denom,
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Lease<L> {
@@ -34,6 +39,24 @@ where
         }
     }
 
+    pub(crate) fn close<B>(
+        &self,
+        lease: Addr,
+        querier: &QuerierWrapper,
+        account: B,
+    ) -> ContractResult<SubMsg>
+    where
+        B: BankAccount,
+    {
+        if !self.loan.closed(querier, lease)? {
+            return ContractResult::Err(ContractError::LoanNotPaid {});
+        }
+        let balance = account.balance(&self.currency)?;
+        account
+            .send(&self.customer, balance)
+            .map_err(|err| err.into())
+    }
+
     pub(crate) fn repay(&mut self, payment: Coin, by: Timestamp) -> ContractResult<Option<SubMsg>> {
         // TODO assert self.currency == self.loan.currency
         self.loan.repay(payment, by)
@@ -46,14 +69,17 @@ where
     pub(crate) fn load(storage: &dyn Storage) -> StdResult<Self> {
         Lease::DB_ITEM.load(storage)
     }
-    pub(crate) fn customer(self) -> Addr {
-        self.customer
+
+    pub(crate) fn owned_by(&self, addr: &Addr) -> bool {
+        &self.customer == addr
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{testing::MockStorage, Addr, StdResult, SubMsg, Timestamp};
+    use cosmwasm_std::{
+        testing::MockStorage, Addr, QuerierWrapper, StdResult, SubMsg, Timestamp,
+    };
     use finance::{liability::Liability, percent::Percent};
     use lpp::stub::Lpp;
     use serde::{Deserialize, Serialize};
@@ -71,6 +97,10 @@ mod tests {
 
         fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> Result<(), String> {
             unimplemented!()
+        }
+
+        fn loan_closed(&self, _querier: &QuerierWrapper, _lease: Addr) -> StdResult<bool> {
+            todo!()
         }
     }
 

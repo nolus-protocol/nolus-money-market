@@ -6,6 +6,7 @@ use cw_utils::one_coin;
 use lpp::msg::QueryMsg;
 use lpp::stub::{Lpp, LppStub};
 
+use crate::bank::BankStub;
 use crate::error::{ContractError, ContractResult};
 use crate::lease::Lease;
 use crate::msg::{ExecuteMsg, NewLeaseForm};
@@ -57,26 +58,10 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<Response> {
-    let resp = match msg {
-        ExecuteMsg::Repay => {
-            let payment = one_coin(&info)?;
-            let mut lease = Lease::<LppStub>::load(deps.storage)?;
-            let lpp_loan_repay_req = lease.repay(payment, env.block.time)?;
-            lease.store(deps.storage)?;
-            let resp = Response::default();
-            if let Some(req) = lpp_loan_repay_req {
-                resp.add_submessage(req)
-            } else {
-                resp
-            }
-        }
-        ExecuteMsg::Close => {
-            let mut lease = Lease::<LppStub>::load(deps.storage)?;
-            // lease.
-            Response::default()
-        }
-    };
-    Ok(resp)
+    match msg {
+        ExecuteMsg::Repay => try_repay(deps, env, info),
+        ExecuteMsg::Close => try_close(deps, env, info),
+    }
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -85,6 +70,30 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
     // QueryMsg::Config {} => to_binary(&query_config(deps)?),
     // }
     StdResult::Ok(Binary::from([]))
+}
+
+fn try_repay(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
+    let payment = one_coin(&info)?;
+    let mut lease = Lease::<LppStub>::load(deps.storage)?;
+    let lpp_loan_repay_req = lease.repay(payment, env.block.time)?;
+    lease.store(deps.storage)?;
+    let resp = if let Some(req) = lpp_loan_repay_req {
+        Response::default().add_submessage(req)
+    } else {
+        Response::default()
+    };
+    Ok(resp)
+}
+
+fn try_close(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
+    let lease = Lease::<LppStub>::load(deps.storage)?;
+    if !lease.owned_by(&info.sender) {
+        return ContractResult::Err(ContractError::Unauthorized {});
+    }
+
+    let bank_account = BankStub::my_account(&env, &deps.querier);
+    let bank_req = lease.close(env.contract.address.clone(), &deps.querier,  bank_account)?;
+    Ok(Response::default().add_submessage(bank_req))
 }
 
 fn lpp(address: String, api: &dyn Api) -> StdResult<LppStub> {
