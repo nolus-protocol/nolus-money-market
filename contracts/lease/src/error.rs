@@ -20,6 +20,9 @@ pub enum ContractError {
     #[error("Error in opening an underlying loan: {0}")]
     OpenLoanError(String),
 
+    #[error("The underlying loan is not fully repaid")]
+    LoanNotPaid(),
+
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },
     // Add any other custom errors you like here.
