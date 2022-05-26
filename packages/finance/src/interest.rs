@@ -51,6 +51,10 @@ impl InterestPeriod {
         self.length == Duration::default()
     }
 
+    pub fn start(&self) -> Timestamp {
+        self.start
+    }
+
     pub fn till(&self) -> Timestamp {
         self.start + self.length
     }
@@ -63,7 +67,7 @@ impl InterestPeriod {
         let by_within_period = self.move_within_period(by);
         let interest_due_per_period = self.interest_by(principal, by_within_period);
 
-        let period = Duration::between(self.start, by_within_period);   
+        let period = Duration::between(self.start, by_within_period);
         let repayment = cmp::min(interest_due_per_period.amount, payment.amount);
         let period_paid_for = fraction(period, repayment, interest_due_per_period.amount);
 

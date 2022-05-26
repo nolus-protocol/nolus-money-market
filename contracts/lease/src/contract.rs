@@ -75,7 +75,12 @@ pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
 fn try_repay(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
     let payment = one_coin(&info)?;
     let mut lease = Lease::<LppStub>::load(deps.storage)?;
-    let lpp_loan_repay_req = lease.repay(payment, env.block.time)?;
+    let lpp_loan_repay_req = lease.repay(
+        payment,
+        env.block.time,
+        &deps.querier,
+        env.contract.address,
+    )?;
     lease.store(deps.storage)?;
     let resp = if let Some(req) = lpp_loan_repay_req {
         Response::default().add_submessage(req)
@@ -92,7 +97,7 @@ fn try_close(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Respo
     }
 
     let bank_account = BankStub::my_account(&env, &deps.querier);
-    let bank_req = lease.close(env.contract.address.clone(), &deps.querier,  bank_account)?;
+    let bank_req = lease.close(env.contract.address.clone(), &deps.querier, bank_account)?;
     Ok(Response::default().add_submessage(bank_req))
 }
 
