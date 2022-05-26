@@ -2,10 +2,10 @@ use std::fmt::Debug;
 
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, SubMsg, Timestamp};
 use finance::{coin, duration::Duration, interest::InterestPeriod, percent::Percent};
-use lpp::stub::Lpp;
+use lpp::{msg::QueryLoanResponse, stub::Lpp};
 use serde::{Deserialize, Serialize};
 
-use crate::error::ContractResult;
+use crate::error::{ContractError, ContractResult};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -44,13 +44,23 @@ where
     pub(crate) fn closed(&self, querier: &QuerierWrapper, lease: Addr) -> ContractResult<bool> {
         // TODO define lpp::Loan{querier, id = lease_id: Addr} and instantiate it on Lease::load
         self.lpp
-            .loan_closed(querier, lease)
+            .loan(querier, lease)
+            .map(|res| res.is_none())
             .map_err(|err| err.into())
     }
 
-    pub(crate) fn repay(&mut self, payment: Coin, by: Timestamp) -> ContractResult<Option<SubMsg>> {
-        // TODO self.lpp.my_loan()
-        let principal_due: Coin = Coin::new(10, &payment.denom);
+    pub(crate) fn repay(
+        &mut self,
+        payment: Coin,
+        by: Timestamp,
+        querier: &QuerierWrapper,
+        lease: Addr,
+    ) -> ContractResult<Option<SubMsg>> {
+        let lpp_loan: QueryLoanResponse =
+            self.lpp.loan(querier, lease).map_err(ContractError::from)?;
+        let principal_due = lpp_loan.ok_or(ContractError::LoanClosed())?.principal_due;
+        debug_assert_eq!(payment.denom, principal_due.denom);
+
         let change = self.repay_margin_interest(&principal_due, by, payment);
         if change.amount.is_zero() {
             return Ok(None);

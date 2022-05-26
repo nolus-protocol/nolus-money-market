@@ -57,9 +57,15 @@ where
             .map_err(|err| err.into())
     }
 
-    pub(crate) fn repay(&mut self, payment: Coin, by: Timestamp) -> ContractResult<Option<SubMsg>> {
-        // TODO assert self.currency == self.loan.currency
-        self.loan.repay(payment, by)
+    pub(crate) fn repay(
+        &mut self,
+        payment: Coin,
+        by: Timestamp,
+        querier: &QuerierWrapper,
+        lease: Addr,
+    ) -> ContractResult<Option<SubMsg>> {
+        debug_assert_eq!(self.currency, payment.denom);
+        self.loan.repay(payment, by, querier, lease)
     }
 
     pub(crate) fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
@@ -79,7 +85,7 @@ where
 mod tests {
     use cosmwasm_std::{testing::MockStorage, Addr, QuerierWrapper, StdResult, SubMsg, Timestamp};
     use finance::{liability::Liability, percent::Percent};
-    use lpp::stub::Lpp;
+    use lpp::{msg::QueryLoanResponse, stub::Lpp};
     use serde::{Deserialize, Serialize};
 
     use crate::loan::Loan;
@@ -100,7 +106,7 @@ mod tests {
         fn repay_loan_req(&self, _repayment: cosmwasm_std::Coin) -> StdResult<SubMsg> {
             todo!()
         }
-        fn loan_closed(&self, _querier: &QuerierWrapper, _lease: Addr) -> StdResult<bool> {
+        fn loan(&self, _querier: &QuerierWrapper, _lease: Addr) -> StdResult<QueryLoanResponse> {
             todo!()
         }
     }

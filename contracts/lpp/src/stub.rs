@@ -9,7 +9,8 @@ pub trait Lpp: Serialize + DeserializeOwned {
     fn open_loan_req(&self, amount: Coin) -> StdResult<SubMsg>;
     fn open_loan_resp(&self, resp: Reply) -> Result<(), String>;
     fn repay_loan_req(&self, repayment: Coin) -> StdResult<SubMsg>;
-    fn loan_closed(&self, querier: &QuerierWrapper, lease: Addr) -> StdResult<bool>;
+    
+    fn loan(&self, querier: &QuerierWrapper, lease: Addr) -> StdResult<QueryLoanResponse>;
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -54,11 +55,10 @@ impl Lpp for LppStub {
         }))
     }
 
-    fn loan_closed(&self, querier: &QuerierWrapper, lease: Addr) -> StdResult<bool> {
+    fn loan(&self, querier: &QuerierWrapper, lease: Addr) -> StdResult<QueryLoanResponse> {
         let msg = QueryMsg::Loan { lease_addr: lease };
         let msg_bin = to_binary(&msg)?;
-        let res: QueryLoanResponse = querier.query_wasm_smart(self.addr.clone(), &msg_bin)?;
-        Ok(res.is_none())
+        querier.query_wasm_smart(self.addr.clone(), &msg_bin)
     }
 }
 
