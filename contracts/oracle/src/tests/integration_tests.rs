@@ -37,8 +37,8 @@ mod tests {
         .with_reply(crate::contract::reply);
         Box::new(contract)
     }
-    const USER: &str = "USER";
-    const ADMIN: &str = "ADMIN";
+    const USER: &str = "user";
+    const ADMIN: &str = "admin";
     const NATIVE_DENOM: &str = "denom";
     fn mock_app() -> App {
         AppBuilder::new().build(|router, _, storage| {
@@ -77,7 +77,7 @@ mod tests {
         // use crate::msg::ExecuteMsg;
         use super::{proper_instantiate, ADMIN, USER};
         use crate::msg::ExecuteMsg;
-        use cosmwasm_std::{Addr, Decimal256, Timestamp};
+        use cosmwasm_std::{Addr, Decimal, Timestamp};
         use cw_multi_test::Executor;
         use marketprice::feed::{Price, Prices};
         use std::str::FromStr;
@@ -182,8 +182,8 @@ mod tests {
                 prices: vec![Prices {
                     base: "A".into(),
                     values: vec![
-                        Price::new(Decimal256::from_str("100").unwrap(), "B".into()),
-                        Price::new(Decimal256::from_str("200").unwrap(), "C".into()),
+                        Price::new(Decimal::from_str("100").unwrap(), "B".into()),
+                        Price::new(Decimal::from_str("200").unwrap(), "C".into()),
                     ],
                 }],
             };

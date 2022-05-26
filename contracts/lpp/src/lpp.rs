@@ -1,12 +1,18 @@
 use cosmwasm_std::{
     coin, Addr, Coin, ContractInfoResponse, Decimal, Deps, DepsMut, Env, QueryRequest, StdResult,
-    Storage, Uint128, WasmQuery,
+    Storage, Uint128, WasmQuery, BankMsg,
 };
 
 use crate::error::ContractError;
-use crate::state::{Config, Loan, Total};
+use crate::state::{Config, Loan, Total, Deposit};
 use crate::calc::{dt, interest};
 
+pub struct NTokenPrice(Decimal);
+impl NTokenPrice {
+    pub fn get(&self) -> Decimal {
+        self.0
+    }
+}
 
 pub struct LiquidityPool {
     config: Config,
@@ -22,9 +28,54 @@ impl LiquidityPool {
         Ok(LiquidityPool {config, total})
     }
 
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
+
     pub fn balance(&self, deps: &Deps, env: &Env) -> StdResult<Coin> {
         let querier = deps.querier;
         querier.query_balance(&env.contract.address, &self.config.denom)
+    }
+
+    // TODO: instead refactor state/total.rs, introduce TotalData and total(&self) -> &TotalData
+    pub fn total_principal_due(&self) -> Uint128 {
+        self.total.total_principal_due
+    }
+
+    // TODO: refactor
+    pub fn total_interest_due_by_now(&self, env: &Env) -> Uint128 {
+        self.total.total_interest_due_by_now(env)
+    }
+
+    pub fn total_lpn(&self, deps: &Deps, env: &Env) -> StdResult<Uint128> {
+
+        let total_interest_due_by_now = self.total.total_interest_due +
+            interest(
+                self.total.total_principal_due,
+                self.total.annual_interest_rate,
+                dt(env, self.total.last_update_time)
+            );
+
+        let res = self.balance(deps, env)?.amount
+            + self.total.total_principal_due
+            + total_interest_due_by_now;
+
+        Ok(res)
+    }
+
+    pub fn calculate_price(&self, deps: &Deps, env: &Env) -> StdResult<NTokenPrice> {
+
+        let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
+
+        let price = if balance_nlpn.is_zero() {
+            self.config.initial_derivative_price
+        } else {
+            Decimal::from_ratio(
+                self.total_lpn(deps, env)?,
+                balance_nlpn)
+        };
+
+        Ok(NTokenPrice(price))
     }
 
     pub fn validate_lease_addr(
@@ -42,6 +93,13 @@ impl LiquidityPool {
             Err(ContractError::ContractId {})
         } else {
             Ok(())
+        }
+    }
+
+    pub fn pay(&self, addr: Addr, amount: Uint128) -> BankMsg {
+        BankMsg::Send {
+            to_address: addr.to_string(),
+            amount: vec![coin(amount.u128(), self.config.denom.clone())],
         }
     }
 
@@ -132,7 +190,7 @@ impl LiquidityPool {
         env: Env,
         lease_addr: Addr,
         funds: Vec<Coin>,
-    ) -> Result<Coin, ContractError> {
+    ) -> Result<Uint128, ContractError> {
         if funds.len() != 1 {
             return Err(ContractError::FundsLen {});
         }
@@ -146,8 +204,7 @@ impl LiquidityPool {
         self.total.repay(&env, loan_principal_payment, loan_annual_interest_rate)
             .store(deps.storage)?;
 
-
-        Ok(coin(excess_received.u128(), self.config.denom.clone()))
+        Ok(excess_received)
     }
 }
 
@@ -322,7 +379,7 @@ mod test {
         let repay = lpp.try_repay_loan(deps.as_mut(), env.clone(), loan.clone(), vec![coin(payment.u128(), "uust")])
             .expect("can't repay loan");
 
-        assert_eq!(repay, coin(0, "uust"));
+        assert_eq!(repay, 0u128.into());
 
         let loan_response = Loan::query(deps.as_ref().storage, loan.clone())
             .expect("can't query loan")
@@ -349,7 +406,7 @@ mod test {
         let repay = lpp.try_repay_loan(deps.as_mut(), env, loan, vec![coin(payment, "uust")])
             .expect("can't repay loan");
 
-        assert_eq!(repay, coin(100, "uust"));
+        assert_eq!(repay, 100u128.into());
 
     }
 

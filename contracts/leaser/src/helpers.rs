@@ -9,13 +9,13 @@ pub(crate) fn open_lease_msg(sender: Addr, config: Config, currency: String) -> 
         customer: sender.into_string(),
         currency, // TODO the same denom lppUST is working with
         liability: Liability::new(
-            Percent::from(config.liability.initial),
-            Percent::from(config.liability.healthy - config.liability.initial),
-            Percent::from(config.liability.max - config.liability.healthy),
+            Percent::from_percent(config.liability.initial.into()),
+            Percent::from_percent((config.liability.healthy - config.liability.initial).into()),
+            Percent::from_percent((config.liability.max - config.liability.healthy).into()),
             config.recalc_hours,
         ),
         loan: LoanForm {
-            annual_margin_interest_permille: config.lease_interest_rate_margin,
+            annual_margin_interest: config.lease_interest_rate_margin,
             lpp: config.lpp_ust_addr.into_string(),
             interest_due_period_secs: config.repayment.period_sec, // 90 days TODO use a crate for daytime calculations
             grace_period_secs: config.repayment.grace_period_sec,

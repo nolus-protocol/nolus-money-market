@@ -1,5 +1,6 @@
 use cosmwasm_std::{Addr, Coin, Decimal, Uint64};
 
+use finance::percent::Percent;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -9,7 +10,7 @@ use crate::config::Config;
 pub struct InstantiateMsg {
     pub lease_code_id: Uint64,
     pub lpp_ust_addr: Addr,
-    pub lease_interest_rate_margin: u8, // LeaseInterestRateMargin%, for example 3%
+    pub lease_interest_rate_margin: Percent, // LeaseInterestRateMargin%, for example 3%
     pub recalc_hours: u16,
     pub liability: Liability, // LeaseMaxLiability%, for example 80%
     pub repayment: Repayment, // GracePeriodSec, for example 10 days = 10*24*60*60
@@ -32,7 +33,7 @@ pub struct Repayment {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Config {
-        lease_interest_rate_margin: u8,
+        lease_interest_rate_margin: Percent,
         liability: Liability,
         repayment: Repayment,
     },
@@ -86,6 +87,16 @@ impl Repayment {
 
 impl Liability {
     pub fn new(initial: u8, healthy: u8, max: u8) -> Self {
+        Liability::validate(initial, healthy, max);
+
+        Liability {
+            max,
+            healthy,
+            initial,
+        }
+    }
+
+    pub fn validate(initial: u8, healthy: u8, max: u8) {
         assert!(
             healthy < max,
             "LeaseHealthyLiability% must be less than LeaseMaxLiability%"
@@ -95,11 +106,5 @@ impl Liability {
             initial <= healthy,
             "LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
         );
-
-        Liability {
-            max,
-            healthy,
-            initial,
-        }
     }
 }

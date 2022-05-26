@@ -27,6 +27,9 @@ pub enum ContractError {
     #[error("Denoms are different: {contract_denom:?} vs {denom:?}")]
     Denom { contract_denom: String, denom: String},
 
+    #[error("Insufficient balance")]
+    InsufficientBalance,
+
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },
     // Add any other custom errors you like here.

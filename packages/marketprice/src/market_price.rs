@@ -1,6 +1,6 @@
 use std::ops::Mul;
 
-use cosmwasm_std::{Addr, Decimal256, Order, StdError, StdResult, Storage, Timestamp};
+use cosmwasm_std::{Addr, Decimal, Order, StdError, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,7 @@ use crate::feed::{Denom, DenomPair, Observation, Price, PriceFeed};
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
 pub struct PriceResponse {
-    pub rate: Decimal256,
+    pub rate: Decimal,
     pub last_updated_time: Timestamp,
 }
 
@@ -65,12 +65,12 @@ impl<'m> PriceFeeds<'m> {
         storage: &dyn Storage,
         current_block_time: Timestamp,
         query: PriceQuery,
-    ) -> Result<Decimal256, PriceFeedsError> {
+    ) -> Result<Decimal, PriceFeedsError> {
         let base = &query.denom_pair.0;
         let quote = &query.denom_pair.1;
 
         if base.eq(quote) {
-            return Ok(Decimal256::one());
+            return Ok(Decimal::one());
         }
 
         // check if the second part of the pair exists in the storage
@@ -185,7 +185,7 @@ impl<'m> PriceFeeds<'m> {
     fn calculate_price(
         denom_pair: DenomPair,
         resolution_path: &mut DenomResolutionPath,
-    ) -> Result<Decimal256, PriceFeedsError> {
+    ) -> Result<Decimal, PriceFeedsError> {
         if resolution_path.len() == 1 {
             match resolution_path.first() {
                 Some(o) => Ok(o.1.price()),
@@ -194,7 +194,7 @@ impl<'m> PriceFeeds<'m> {
         } else {
             let mut base = denom_pair.0;
             let mut i = 0;
-            let mut price = Decimal256::one();
+            let mut price = Decimal::one();
             while !resolution_path.is_empty() {
                 if resolution_path[i].0 .0.eq(&base) {
                     let val = resolution_path.remove(i);
@@ -219,7 +219,7 @@ impl<'m> PriceFeeds<'m> {
     ) -> Result<(), PriceFeedsError> {
         for price in prices {
             let quote: Denom = price.denom;
-            let price: Decimal256 = price.amount;
+            let price: Decimal = price.amount;
 
             let update_market_price = |old: Option<PriceFeed>| -> StdResult<PriceFeed> {
                 let new_feed = Observation::new(sender_raw.clone(), current_block_time, price);

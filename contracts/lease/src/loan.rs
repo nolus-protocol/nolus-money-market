@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, SubMsg, Timestamp};
-use finance::{coin, duration::Duration, interest::InterestPeriod};
+use finance::{coin, duration::Duration, interest::InterestPeriod, percent::Percent};
 use lpp::stub::Lpp;
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +11,7 @@ use crate::error::ContractResult;
 #[serde(rename_all = "snake_case")]
 /// The value remains intact.
 pub struct Loan<L> {
-    annual_margin_interest_permille: u8,
+    annual_margin_interest: Percent,
     lpp: L,
     interest_due_period_secs: u32,
     grace_period_secs: u32,
@@ -25,17 +25,17 @@ where
     pub(crate) fn open(
         when: Timestamp,
         lpp: L,
-        annual_margin_interest_permille: u8,
+        annual_margin_interest: Percent,
         interest_due_period_secs: u32,
         grace_period_secs: u32,
     ) -> ContractResult<Self> {
         // check them out cw_utils::Duration, cw_utils::NativeBalance
         Ok(Self {
-            annual_margin_interest_permille,
+            annual_margin_interest,
             lpp,
             interest_due_period_secs,
             grace_period_secs,
-            current_period: InterestPeriod::new(annual_margin_interest_permille)
+            current_period: InterestPeriod::with_interest(annual_margin_interest)
                 .from(when)
                 .spanning(Duration::from_secs(interest_due_period_secs)),
         })
@@ -57,7 +57,7 @@ where
         let loan_interest_due = Coin::new(1000, &principal_due.denom);
         let _loan_payment =
             if loan_interest_due.amount <= change.amount && self.current_period.zero_length() {
-                self.current_period = InterestPeriod::new(self.annual_margin_interest_permille)
+                self.current_period = InterestPeriod::with_interest(self.annual_margin_interest)
                     .from(self.current_period.till())
                     .spanning(Duration::from_secs(self.interest_due_period_secs));
                 let (period, change) = self.current_period.pay(

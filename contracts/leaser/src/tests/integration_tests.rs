@@ -13,8 +13,8 @@ mod tests {
         tests::common::leaser_instantiate_msg,
     };
 
-    const USER: &str = "USER";
-    const ADMIN: &str = "ADMIN";
+    const USER: &str = "user";
+    const ADMIN: &str = "admin";
 
     pub fn contract_leaser_mock() -> Box<dyn Contract<Empty>> {
         let contract = ContractWrapper::new(
@@ -68,13 +68,13 @@ mod tests {
             customer: USER.to_string(),
             currency: denom.to_string(),
             liability: Liability::new(
-                Percent::from(65),
-                Percent::from(5),
-                Percent::from(10),
+                Percent::from_percent(65),
+                Percent::from_percent(5),
+                Percent::from_percent(10),
                 20 * 24,
             ),
             loan: LoanForm {
-                annual_margin_interest_permille: 0, // 3.1%
+                annual_margin_interest: Percent::from_percent(0), // 3.1%
                 lpp: lpp_addr.into_string(),
                 interest_due_period_secs: 100, // 90 days TODO use a crate for daytime calculations
                 grace_period_secs: 10,         // 10 days TODO use a crate for daytime calculations
@@ -178,23 +178,20 @@ mod tests {
         assert_eq!(
             lease_exec.attributes,
             [
-                ("_contract_addr", "Contract #2"),
+                ("_contract_addr", "contract2"),
                 ("code_id", &lease_code_id.to_string())
             ]
         );
 
         let lease_reply = &res.events[2];
         assert_eq!(lease_reply.ty.as_str(), "execute");
-        assert_eq!(lease_reply.attributes, [("_contract_addr", "Contract #0")]);
+        assert_eq!(lease_reply.attributes, [("_contract_addr", "contract0")]);
 
         let lease_reply = &res.events[3];
         assert_eq!(lease_reply.ty.as_str(), "wasm");
         assert_eq!(
             lease_reply.attributes,
-            [
-                ("_contract_addr", "Contract #0"),
-                ("method", "try_open_loan")
-            ]
+            [("_contract_addr", "contract0"), ("method", "try_open_loan")]
         );
 
         let lease_reply = &res.events[4];
@@ -202,8 +199,8 @@ mod tests {
         assert_eq!(
             lease_reply.attributes,
             [
-                ("recipient", "Contract #2"),
-                ("sender", "Contract #0"),
+                ("recipient", "contract2"),
+                ("sender", "contract0"),
                 ("amount", "74UST")
             ]
         );
@@ -212,20 +209,14 @@ mod tests {
         assert_eq!(lease_reply.ty.as_str(), "reply");
         assert_eq!(
             lease_reply.attributes,
-            [
-                ("_contract_addr", "Contract #2"),
-                ("mode", "handle_success")
-            ]
+            [("_contract_addr", "contract2"), ("mode", "handle_success")]
         );
 
         let lease_reply = &res.events[6];
         assert_eq!(lease_reply.ty.as_str(), "reply");
         assert_eq!(
             lease_reply.attributes,
-            [
-                ("_contract_addr", "Contract #1"),
-                ("mode", "handle_success")
-            ]
+            [("_contract_addr", "contract1"), ("mode", "handle_success")]
         );
 
         let lease_reply = &res.events[7];
@@ -234,7 +225,7 @@ mod tests {
             lease_reply.attributes,
             [
                 ("_contract_addr", leaser_addr.as_str()),
-                ("lease_address", "Contract #2")
+                ("lease_address", "contract2")
             ]
         );
 
@@ -292,7 +283,7 @@ mod tests {
         let denom = "unolus";
         let mut app = mock_app(&coins(10000, denom));
         let user_addr = Addr::unchecked(USER);
-        let user1_addr = Addr::unchecked("USER1");
+        let user1_addr = Addr::unchecked("user1");
 
         let (leaser_addr, _) =
             setup_test_case(&mut app, coins(500, denom), user_addr.clone(), denom);

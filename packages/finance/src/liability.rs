@@ -91,12 +91,17 @@ mod test {
 
     #[test]
     fn new_valid() {
-        let obj = Liability::new(Percent::from(10), Percent::from(0), Percent::from(5), 20);
+        let obj = Liability::new(
+            Percent::from_percent(10),
+            Percent::from_percent(0),
+            Percent::from_percent(5),
+            20,
+        );
         assert_eq!(
             Liability {
-                init_percent: Percent::from(10),
-                healthy_percent: Percent::from(10),
-                max_percent: Percent::from(15),
+                init_percent: Percent::from_percent(10),
+                healthy_percent: Percent::from_percent(10),
+                max_percent: Percent::from_percent(15),
                 recalc_secs: 20 * SECS_IN_HOUR,
             },
             obj,
@@ -105,12 +110,17 @@ mod test {
 
     #[test]
     fn new_edge_case() {
-        let obj = Liability::new(Percent::from(1), Percent::from(0), Percent::from(1), 1);
+        let obj = Liability::new(
+            Percent::from_percent(1),
+            Percent::from_percent(0),
+            Percent::from_percent(1),
+            1,
+        );
         assert_eq!(
             Liability {
-                init_percent: Percent::from(1),
-                healthy_percent: Percent::from(1),
-                max_percent: Percent::from(2),
+                init_percent: Percent::from_percent(1),
+                healthy_percent: Percent::from_percent(1),
+                max_percent: Percent::from_percent(2),
                 recalc_secs: SECS_IN_HOUR,
             },
             obj,
@@ -120,16 +130,21 @@ mod test {
     #[test]
     #[should_panic]
     fn new_invalid_init_percent() {
-        Liability::new(Percent::from(0), Percent::from(0), Percent::from(1), 1);
+        Liability::new(
+            Percent::from_percent(0),
+            Percent::from_percent(0),
+            Percent::from_percent(1),
+            1,
+        );
     }
 
     #[test]
     #[should_panic]
     fn new_overflow_healthy_percent() {
         Liability::new(
-            Percent::from(45),
-            Percent::from(u8::MAX - 45 + 1),
-            Percent::from(1),
+            Percent::from_percent(45),
+            Percent::from_permille(u32::MAX - 450 + 1),
+            Percent::from_percent(1),
             1,
         );
     }
@@ -137,16 +152,21 @@ mod test {
     #[test]
     #[should_panic]
     fn new_invalid_delta_max_percent() {
-        Liability::new(Percent::from(10), Percent::from(5), Percent::from(0), 1);
+        Liability::new(
+            Percent::from_percent(10),
+            Percent::from_percent(5),
+            Percent::from_percent(0),
+            1,
+        );
     }
 
     #[test]
     #[should_panic]
     fn new_overflow_max_percent() {
         Liability::new(
-            Percent::from(10),
-            Percent::from(5),
-            Percent::from(u8::MAX - 10 - 5 + 1),
+            Percent::from_permille(10),
+            Percent::from_permille(5),
+            Percent::from_permille(u32::MAX - 10 - 5 + 1),
             1,
         );
     }
@@ -154,7 +174,12 @@ mod test {
     #[test]
     #[should_panic]
     fn new_invalid_recalc_hours() {
-        Liability::new(Percent::from(10), Percent::from(5), Percent::from(10), 0);
+        Liability::new(
+            Percent::from_percent(10),
+            Percent::from_percent(5),
+            Percent::from_percent(10),
+            0,
+        );
     }
 
     #[test]
@@ -169,21 +194,21 @@ mod test {
         );
     }
 
-    fn test_init_borrow_amount(d: u128, p: u8, exp: u128) {
+    fn test_init_borrow_amount(d: u128, p: u16, exp: u128) {
         let denom = String::from("UST");
         let downpayment = Coin::new(d, denom.clone());
-        let percent = p.into();
+        let percent = Percent::from_percent(p);
         let calculated = Liability {
             init_percent: percent,
-            healthy_percent: Percent::from(99),
-            max_percent: Percent::from(100),
+            healthy_percent: Percent::from_percent(99),
+            max_percent: Percent::from_percent(100),
             recalc_secs: 20000,
         }
         .init_borrow_amount(&downpayment);
         assert_eq!(Coin::new(exp, denom), calculated);
         assert_eq!(
             calculated,
-            percent.of(&Coin{
+            percent.of(&Coin {
                 amount: downpayment.amount + calculated.amount,
                 denom: downpayment.denom
             })

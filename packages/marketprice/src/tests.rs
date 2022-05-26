@@ -2,7 +2,7 @@ use std::str::FromStr;
 use std::time::SystemTime;
 
 use cosmwasm_std::testing::mock_dependencies;
-use cosmwasm_std::{Api, Decimal256, DepsMut, Timestamp};
+use cosmwasm_std::{Api, Decimal, DepsMut, Timestamp};
 
 use crate::feed::Price;
 use crate::feeders::PriceFeeders;
@@ -85,15 +85,15 @@ fn marketprice_add_feed() {
     let prices: Vec<Price> = vec![
         Price {
             denom: "DEN2".to_string(),
-            amount: Decimal256::from_str("0.5").unwrap(),
+            amount: Decimal::from_str("0.5").unwrap(),
         },
         Price {
             denom: "DEN3".to_string(),
-            amount: Decimal256::from_str("0.1000000009").unwrap(),
+            amount: Decimal::from_str("0.1000000009").unwrap(),
         },
         Price {
             denom: "DEN4".to_string(),
-            amount: Decimal256::from_str("1.00000000000002").unwrap(),
+            amount: Decimal::from_str("1.00000000000002").unwrap(),
         },
     ];
 
@@ -186,7 +186,7 @@ fn feed_price(
         base.to_string(),
         vec![Price {
             denom: quote.to_string(),
-            amount: Decimal256::from_str(price).unwrap(),
+            amount: Decimal::from_str(price).unwrap(),
         }],
         60,
     )?;
