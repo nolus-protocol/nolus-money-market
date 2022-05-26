@@ -106,7 +106,20 @@ mod tests {
         fn repay_loan_req(&self, _repayment: cosmwasm_std::Coin) -> StdResult<SubMsg> {
             todo!()
         }
-        fn loan(&self, _querier: &QuerierWrapper, _lease: Addr) -> StdResult<QueryLoanResponse> {
+        fn loan(
+            &self,
+            _querier: &QuerierWrapper,
+            _lease: impl Into<Addr>,
+        ) -> StdResult<QueryLoanResponse> {
+            todo!()
+        }
+
+        fn loan_outstanding_interest(
+            &self,
+            _querier: &QuerierWrapper,
+            _lease: impl Into<Addr>,
+            _by: Timestamp,
+        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse> {
             todo!()
         }
     }

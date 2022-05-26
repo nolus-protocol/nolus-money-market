@@ -56,9 +56,7 @@ where
         querier: &QuerierWrapper,
         lease: Addr,
     ) -> ContractResult<Option<SubMsg>> {
-        let lpp_loan: QueryLoanResponse =
-            self.lpp.loan(querier, lease).map_err(ContractError::from)?;
-        let principal_due = lpp_loan.ok_or(ContractError::LoanClosed())?.principal_due;
+        let principal_due = self.load_principal_due(querier, lease.clone())?;
         debug_assert_eq!(payment.denom, principal_due.denom);
 
         let change = self.repay_margin_interest(&principal_due, by, payment);
@@ -66,8 +64,10 @@ where
             return Ok(None);
         }
 
-        // TODO self.lpp.my_interest_due(by = self.current_period().till(): Timestamp)
-        let loan_interest_due = Coin::new(1000, &principal_due.denom);
+        let loan_interest_due =
+            self.load_loan_interest_due(querier, lease, self.current_period.start())?;
+        debug_assert_eq!(change.denom, loan_interest_due.denom);
+
         let loan_payment =
             if loan_interest_due.amount <= change.amount && self.current_period.zero_length() {
                 self.open_next_period();
@@ -87,6 +87,26 @@ where
             .repay_loan_req(loan_payment)
             .map(Some)
             .map_err(|err| err.into())
+    }
+
+    fn load_principal_due(
+        &self,
+        querier: &QuerierWrapper,
+        lease: impl Into<Addr>,
+    ) -> ContractResult<Coin> {
+        let loan: QueryLoanResponse =
+            self.lpp.loan(querier, lease).map_err(ContractError::from)?;
+        Ok(loan.ok_or(ContractError::LoanClosed())?.principal_due)
+    }
+
+    fn load_loan_interest_due(
+        &self,
+        querier: &QuerierWrapper,
+        lease: impl Into<Addr>,
+        by: Timestamp,
+    ) -> ContractResult<Coin> {
+        let interest = self.lpp.loan_outstanding_interest(querier, lease, by).map_err(ContractError::from)?;
+        Ok(interest.ok_or(ContractError::LoanClosed())?.0)
     }
 
     fn repay_margin_interest(
