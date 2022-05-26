@@ -1,14 +1,13 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
-    Storage, SubMsg, Timestamp, WasmMsg,
+    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
+    Timestamp,
 };
 use cw2::set_contract_version;
-use finance::interest::InterestPeriod;
 use time_oracle::Alarms;
 
-use crate::dispatcher::{exec_lpp_distribute_rewards, get_lpp_balance, swap_reward_in_unls};
+use crate::dispatcher::Dispatcher;
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::config::Config;
@@ -29,20 +28,22 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let lpp = validate_addr(deps.as_ref(), msg.lpp)?;
-    let time_oracle = validate_addr(deps.as_ref(), msg.time_oracle)?;
-    let market_oracle = validate_addr(deps.as_ref(), msg.market_oracle)?;
+    let lpp_addr = validate_addr(deps.as_ref(), msg.lpp)?;
+    let time_oracle_addr = validate_addr(deps.as_ref(), msg.time_oracle)?;
+    let market_oracle_addr = validate_addr(deps.as_ref(), msg.market_oracle)?;
+    let treasury_addr = validate_addr(deps.as_ref(), msg.treasury)?;
 
     Config::new(
         info.sender,
         msg.cadence_hours,
-        lpp,
-        time_oracle,
-        msg.treasury,
-        market_oracle,
+        lpp_addr,
+        time_oracle_addr,
+        treasury_addr,
+        market_oracle_addr,
         msg.tvl_to_apr,
     )
     .store(deps.storage)?;
+    DispatchLog::update(deps.storage, env.block.time)?;
 
     try_add_alarm(
         deps,
@@ -58,6 +59,7 @@ fn validate_addr(deps: Deps, addr: Addr) -> Result<Addr, ContractError> {
         .addr_validate(addr.as_str())
         .map_err(|_| ContractError::InvalidContractAddress(addr))
 }
+
 fn to_seconds(cadence_hours: u32) -> u64 {
     cadence_hours as u64 * 60 * 60
 }
@@ -71,7 +73,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Config { cadence_hours } => try_config(deps, info, cadence_hours),
-        ExecuteMsg::Alarm { time } => try_dispatch(deps, env, info, time),
+        ExecuteMsg::Alarm { time } => Dispatcher::try_dispatch(deps, env, info, time),
     }
 }
 
@@ -87,46 +89,6 @@ pub fn try_config(
     Config::update(deps.storage, cadence_hours)?;
 
     Ok(Response::new().add_attribute("method", "config"))
-}
-
-pub fn try_dispatch(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    _time: Timestamp,
-) -> Result<Response, ContractError> {
-    let config = Config::load(deps.storage)?;
-
-    if info.sender != config.time_oracle {
-        return Err(ContractError::UnrecognisedAlarm(info.sender));
-    }
-
-    // 1. get LPP balance: TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
-    let lpp_balance = get_lpp_balance(deps.as_ref(), config.lpp.clone())?;
-
-    // 2. get apr from configuration
-    let arp_permille = config.tvl_to_apr.get_apr(lpp_balance.amount.u128())?;
-
-    // 3. Use the finance::interest::interestPeriod::interest() to calculate the reward in LPN,
-    //    which matches TVLdenom, since the last calculation, Rewards_TVLdenom
-    let reward_lppdenom = InterestPeriod::with_interest(arp_permille)
-        .from(DispatchLog::last_dispatch(deps.storage)?)
-        .interest(&lpp_balance);
-    // 4. Store the current time for use for the next calculation.
-    DispatchLog::update(deps.storage, env.block.time)?;
-
-    // 5. Obtain the currency market price of TVLdenom in uNLS and convert Rewards_TVLdenom in uNLS, Rewards_uNLS.
-    let _reward_unls = swap_reward_in_unls(deps.as_ref(), config.market_oracle, reward_lppdenom)?;
-
-    // 6. Prepare a Send Rewards for the amount of Rewards_uNLS to the Treasury.
-    // 7. LPP.Distribute Rewards command.
-    Ok(
-        Response::new().add_submessages(vec![SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            funds: vec![],
-            contract_addr: config.lpp.to_string(),
-            msg: to_binary(&exec_lpp_distribute_rewards())?,
-        }))]),
-    )
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]

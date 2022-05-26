@@ -33,13 +33,21 @@ impl DispatchLog {
 
     pub fn update(
         storage: &mut dyn Storage,
-        last_dispatch: Timestamp,
+        current_dispatch: Timestamp,
     ) -> Result<(), ContractError> {
         match Self::STORAGE.may_load(storage)? {
-            None => Self::STORAGE.save(storage, &DispatchLog { last_dispatch })?,
-            Some(_) => {
+            None => Self::STORAGE.save(
+                storage,
+                &DispatchLog {
+                    last_dispatch: current_dispatch,
+                },
+            )?,
+            Some(l) => {
+                if current_dispatch < l.last_dispatch {
+                    return Err(ContractError::InvalidTimeConfiguration {});
+                }
                 Self::STORAGE.update(storage, |mut log| -> Result<DispatchLog, ContractError> {
-                    log.last_dispatch = last_dispatch;
+                    log.last_dispatch = current_dispatch;
                     Ok(log)
                 })?;
             }

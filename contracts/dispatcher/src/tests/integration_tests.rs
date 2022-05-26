@@ -17,7 +17,7 @@ mod tests {
         init_funds: Vec<Coin>,
         user_addr: Addr,
         denom: &str,
-    ) -> (Addr, u64) {
+    ) -> (Addr, Addr, Addr) {
         let lease_id = app.store_code(contract_lease_mock());
 
         // 1. Instantiate LPP contract
@@ -32,12 +32,12 @@ mod tests {
         let market_oracle = instantiate_oracle(app, denom);
         app.update_block(next_block);
 
-        // 3. Instantiate Leaser contract
+        // 3. Instantiate Dispatcher contract
         let dispatcher_addr = instantiate_dispatcher(
             app,
-            lpp_addr,
+            lpp_addr.clone(),
             Addr::unchecked("time"),
-            treasury_addr,
+            treasury_addr.clone(),
             market_oracle,
         );
         app.update_block(next_block);
@@ -47,7 +47,19 @@ mod tests {
             app.send_tokens(Addr::unchecked(ADMIN), user_addr, &init_funds)
                 .unwrap();
         }
-        (dispatcher_addr, lease_id)
+        (dispatcher_addr, treasury_addr, lpp_addr)
+    }
+
+    fn set_rewards_dispatcher(app: &mut App, treasury: Addr, dispatcher: Addr) {
+        app.execute_contract(
+            Addr::unchecked(ADMIN),
+            treasury,
+            &treasury::msg::ExecuteMsg::ConfigureRewardTransfer {
+                rewards_dispatcher: dispatcher,
+            },
+            &[],
+        )
+        .unwrap();
     }
 
     #[test]
@@ -56,8 +68,10 @@ mod tests {
         let mut app = mock_app(&coins(10000, denom));
         let time_oracle_addr = Addr::unchecked("time");
 
-        let (dispatcher_addr, _) =
+        let (dispatcher_addr, treasury_addr, lpp_addr) =
             setup_test_case(&mut app, coins(500, denom), time_oracle_addr.clone(), denom);
+
+        set_rewards_dispatcher(&mut app, treasury_addr.clone(), dispatcher_addr.clone());
 
         let res = app
             .execute_contract(
@@ -71,14 +85,42 @@ mod tests {
             .unwrap();
 
         // ensure the attributes were relayed from the sub-message
-        assert_eq!(2, res.events.len(), "{:?}", res.events);
+        assert_eq!(5, res.events.len(), "{:?}", res.events);
         // reflect only returns standard wasm-execute event
-        let leaser_exec = &res.events[0];
-        assert_eq!(leaser_exec.ty.as_str(), "execute");
+        let dispatcher_exec = &res.events[0];
+        assert_eq!(dispatcher_exec.ty.as_str(), "execute");
         assert_eq!(
-            leaser_exec.attributes,
+            dispatcher_exec.attributes,
             [("_contract_addr", &dispatcher_addr)]
         );
+        let treasury_exec = &res.events[1];
+        assert_eq!(treasury_exec.ty.as_str(), "execute");
+        assert_eq!(
+            treasury_exec.attributes,
+            [("_contract_addr", &treasury_addr)]
+        );
+        let treasury_wasm = &res.events[2];
+        assert_eq!(treasury_wasm.ty.as_str(), "wasm");
+        assert_eq!(
+            treasury_wasm.attributes,
+            [
+                ("_contract_addr", treasury_addr.to_string()),
+                ("method", "try_send_rewards".to_string())
+            ]
+        );
+        let treasury_wasm = &res.events[3];
+        assert_eq!(treasury_wasm.ty.as_str(), "transfer");
+        assert_eq!(
+            treasury_wasm.attributes,
+            [
+                ("recipient", lpp_addr.to_string()),
+                ("sender", treasury_addr.to_string()),
+                ("amount", "32UST".to_string())
+            ]
+        );
+        let treasury_exec = &res.events[4];
+        assert_eq!(treasury_exec.ty.as_str(), "execute");
+        assert_eq!(treasury_exec.attributes, [("_contract_addr", &lpp_addr)]);
     }
 
     #[test]
@@ -86,7 +128,8 @@ mod tests {
         let denom = "UST";
         let mut app = mock_app(&coins(2000000, denom));
         let user_addr = Addr::unchecked(USER);
-        let (dispatcher_addr, _) = setup_test_case(&mut app, coins(500, denom), user_addr, denom);
+        let (dispatcher_addr, _, _) =
+            setup_test_case(&mut app, coins(500, denom), user_addr, denom);
 
         let resp: crate::msg::ConfigResponse = app
             .wrap()

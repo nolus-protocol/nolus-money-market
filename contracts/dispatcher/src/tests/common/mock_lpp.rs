@@ -8,9 +8,9 @@ use super::ADMIN;
 
 fn mock_lpp_balance() -> Result<lpp::msg::LppBalanceResponse, ContractError> {
     Ok(lpp::msg::LppBalanceResponse {
-        balance: Coin::new(100, "UST"),
-        total_principal_due: Coin::new(100, "UST"),
-        total_interest_due: Coin::new(100, "UST"),
+        balance: Coin::new(1000000000, "UST"),
+        total_principal_due: Coin::new(1000000000, "UST"),
+        total_interest_due: Coin::new(1000000000, "UST"),
     })
 }
 

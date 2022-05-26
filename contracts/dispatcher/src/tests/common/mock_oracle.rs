@@ -9,8 +9,8 @@ use super::ADMIN;
 fn mock_oracle_price() -> StdResult<oracle::msg::PriceResponse> {
     Ok(oracle::msg::PriceResponse {
         prices: vec![DenomToPrice {
-            denom: "UST".to_string(),
-            price: Price::new(Decimal::from_str("1000").unwrap(), "unolus".to_string()),
+            denom: "unolus".to_string(),
+            price: Price::new(Decimal::from_str("0.123456789").unwrap(), "UST".to_string()),
         }],
     })
 }
