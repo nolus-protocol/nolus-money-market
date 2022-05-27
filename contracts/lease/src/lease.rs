@@ -79,6 +79,10 @@ where
     pub(crate) fn owned_by(&self, addr: &Addr) -> bool {
         &self.customer == addr
     }
+
+    pub(crate) fn closed(&self, querier: &QuerierWrapper, lease: Addr) -> ContractResult<bool> {
+        self.loan.closed(querier, lease)
+    }
 }
 
 #[cfg(test)]

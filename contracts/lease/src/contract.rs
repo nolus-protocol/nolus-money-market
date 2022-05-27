@@ -1,17 +1,15 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
+use cosmwasm_std::{Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, to_binary};
 use cw2::set_contract_version;
 use cw_utils::one_coin;
-use lpp::msg::QueryMsg;
 use lpp::stub::{Lpp, LppStub};
 
 use crate::bank::BankStub;
 use crate::error::{ContractError, ContractResult};
 use crate::lease::Lease;
-use crate::msg::{ExecuteMsg, NewLeaseForm};
+use crate::msg::{ExecuteMsg, NewLeaseForm, StatusQuery, StatusResponse};
 
-// version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -65,22 +63,23 @@ pub fn execute(
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-pub fn query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    // match msg {
-    // QueryMsg::Config {} => to_binary(&query_config(deps)?),
-    // }
-    StdResult::Ok(Binary::from([]))
+pub fn query(deps: Deps, env: Env, _msg: StatusQuery) -> ContractResult<Binary> {
+    let lease = Lease::<LppStub>::load(deps.storage)?;
+    let closed = lease.closed(&deps.querier, env.contract.address)?;
+    let resp = if closed {
+        StatusResponse::Closed
+    } else {
+        // TODO supply details as per the spec
+        StatusResponse::Opened
+    };
+    to_binary(&resp).map_err(ContractError::from)
 }
 
 fn try_repay(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
     let payment = one_coin(&info)?;
     let mut lease = Lease::<LppStub>::load(deps.storage)?;
-    let lpp_loan_repay_req = lease.repay(
-        payment,
-        env.block.time,
-        &deps.querier,
-        env.contract.address,
-    )?;
+    let lpp_loan_repay_req =
+        lease.repay(payment, env.block.time, &deps.querier, env.contract.address)?;
     lease.store(deps.storage)?;
     let resp = if let Some(req) = lpp_loan_repay_req {
         Response::default().add_submessage(req)

@@ -1,10 +1,12 @@
 mod closing;
 mod opening;
 mod repayment;
+mod query;
 
 pub use closing::Close;
 pub use opening::{Denom, LoanForm, NewLeaseForm};
 pub use repayment::Repay;
+pub use query::{StatusQuery, StatusResponse};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
