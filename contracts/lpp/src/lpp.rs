@@ -4,7 +4,7 @@ use cosmwasm_std::{
 };
 
 use crate::error::ContractError;
-use crate::state::{Config, Loan, Total, Deposit};
+use crate::state::{Config, Loan, Total, TotalData, Deposit};
 use crate::calc::{dt, interest};
 
 pub struct NTokenPrice(Decimal);
@@ -32,33 +32,20 @@ impl LiquidityPool {
         &self.config
     }
 
+    pub fn total(&self) -> &TotalData {
+        &self.total
+    }
+
     pub fn balance(&self, deps: &Deps, env: &Env) -> StdResult<Coin> {
         let querier = deps.querier;
         querier.query_balance(&env.contract.address, &self.config.denom)
     }
 
-    // TODO: instead refactor state/total.rs, introduce TotalData and total(&self) -> &TotalData
-    pub fn total_principal_due(&self) -> Uint128 {
-        self.total.total_principal_due
-    }
-
-    // TODO: refactor
-    pub fn total_interest_due_by_now(&self, env: &Env) -> Uint128 {
-        self.total.total_interest_due_by_now(env)
-    }
-
     pub fn total_lpn(&self, deps: &Deps, env: &Env) -> StdResult<Uint128> {
-
-        let total_interest_due_by_now = self.total.total_interest_due +
-            interest(
-                self.total.total_principal_due,
-                self.total.annual_interest_rate,
-                dt(env, self.total.last_update_time)
-            );
 
         let res = self.balance(deps, env)?.amount
             + self.total.total_principal_due
-            + total_interest_due_by_now;
+            + self.total.total_interest_due_by_now(env);
 
         Ok(res)
     }
@@ -131,12 +118,12 @@ impl LiquidityPool {
             return Ok(None);
         }
 
-        let Total {
+        let TotalData {
             total_principal_due,
             total_interest_due,
             annual_interest_rate,
             last_update_time,
-        } = self.total;
+        } = *self.total;
 
         let Config {
             base_interest_rate,

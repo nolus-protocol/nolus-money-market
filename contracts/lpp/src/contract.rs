@@ -207,8 +207,8 @@ fn query_lpp_balance(deps: Deps, env: Env) -> Result<LppBalanceResponse, Contrac
     let lpp = LiquidityPool::load(deps.storage)?;
     let denom = lpp.config().denom.clone();
     let balance = lpp.balance(&deps, &env)?;
-    let total_principal_due = coin(lpp.total_principal_due().u128(), denom.clone());
-    let total_interest_due = coin(lpp.total_interest_due_by_now(&env).u128(), denom);
+    let total_principal_due = coin(lpp.total().total_principal_due.u128(), denom.clone());
+    let total_interest_due = coin(lpp.total().total_interest_due_by_now(&env).u128(), denom);
 
     Ok(LppBalanceResponse{balance, total_principal_due, total_interest_due })
 }
