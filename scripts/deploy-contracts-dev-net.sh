@@ -80,5 +80,5 @@ TREASURY_ADDRESS=$(jq .contracts_info[4].treasury.instance contracts-info.json |
 PROFIT_INIT_MSG='{"cadence_hours":7200,"treasury":"'$TREASURY_ADDRESS'","time_oracle":"'$ORACLE_ADDRESS'"}'
 deployContract "profit" "$PROFIT_INIT_MSG"
 
-DISPATCHER_INIT_MSG='{"cadence_hours":7200,"lpp":"'$LPP_ADDRESS'","time_oracle":"'$ORACLE_ADDRESS'","treasury":"'$TREASURY_ADDRESS'","market_oracle":"'$ORACLE_ADDRESS'","tvl_to_apr":{"intervals":[{"tvl":0,"apr":30},{"tvl":1000,"apr":90},{"tvl":1000000,"apr":300}]}}';
+DISPATCHER_INIT_MSG='{"cadence_hours":7200,"lpp":"'$LPP_ADDRESS'","time_oracle":"'$ORACLE_ADDRESS'","treasury":"'$TREASURY_ADDRESS'","market_oracle":"'$ORACLE_ADDRESS'","tvl_to_apr":{"intervals":[{"tvl":0,"apr":300},{"tvl":1000,"apr":90},{"tvl":1000000,"apr":30}]}}';
 deployContract "rewards_dispatcher" "$DISPATCHER_INIT_MSG"
