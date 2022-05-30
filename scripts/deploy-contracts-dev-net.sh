@@ -57,18 +57,28 @@ PATH=$(pwd):$PATH
 jq -n '{"contracts_info":[]}' > "$CONTRACTS_RESULTS_FILE"
 
 # Deploy smart contracts
-ORACLE_INIT_MSG='{"base_asset":"UST","price_feed_period":60,"feeders_percentage_needed":50,"supported_denom_pairs":[["OSMO","UST"],["LUNA","OSMO"],["IRIS","OSMO"]]}'
-deployContract "oracle" "$ORACLE_INIT_MSG"
 
 deployContract "lease"
-LEASE_CODE_ID=$(jq .contracts_info[1].lease.code_id contracts-info.json | tr -d '"')
+LEASE_CODE_ID=$(jq .contracts_info[0].lease.code_id contracts-info.json | tr -d '"')
 
-LPP_INIT_MSG='{"denom":"UST","lease_code_id":"'$LEASE_CODE_ID'"}'
+LPP_INIT_MSG='{"denom":"USDS","lease_code_id":"'$LEASE_CODE_ID'"}'
 deployContract "lpp" "$LPP_INIT_MSG"
-LPP_ADDRESS=$(jq .contracts_info[2].lpp.instance contracts-info.json | tr -d '"')
+LPP_ADDRESS=$(jq .contracts_info[1].lpp.instance contracts-info.json | tr -d '"')
 
-LEASER_INIT_MSG='{"lease_code_id":"'$LEASE_CODE_ID'","lease_interest_rate_margin":3,"recalc_hours":2,"liability":{"healthy":70,"initial":65,"max":80},"lpp_ust_addr":"'$LPP_ADDRESS'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'
+LEASER_INIT_MSG='{"lease_code_id":"'$LEASE_CODE_ID'","lease_interest_rate_margin":30,"recalc_hours":2,"liability":{"healthy":70,"initial":65,"max":80},"lpp_ust_addr":"'$LPP_ADDRESS'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'
 deployContract "leaser" "$LEASER_INIT_MSG"
+
+ORACLE_INIT_MSG='{"base_asset":"USDS","price_feed_period":60,"feeders_percentage_needed":50,"supported_denom_pairs":[["OSMO","USDS"],["LUNA","OSMO"],["IRIS","OSMO"]]}'
+deployContract "oracle" "$ORACLE_INIT_MSG"
+ORACLE_ADDRESS=$(jq .contracts_info[3].oracle.instance contracts-info.json | tr -d '"')
 
 TREASURY_INIT_MSG='{}'
 deployContract "treasury" "$TREASURY_INIT_MSG"
+TREASURY_ADDRESS=$(jq .contracts_info[4].treasury.instance contracts-info.json | tr -d '"')
+
+
+PROFIT_INIT_MSG='{"cadence_hours":7200,"treasury":"'$TREASURY_ADDRESS'","time_oracle":"'$ORACLE_ADDRESS'"}'
+deployContract "profit" "$PROFIT_INIT_MSG"
+
+DISPATCHER_INIT_MSG='{"cadence_hours":7200,"lpp":"'$LPP_ADDRESS'","time_oracle":"'$ORACLE_ADDRESS'","treasury":"'$TREASURY_ADDRESS'","market_oracle":"'$ORACLE_ADDRESS'","tvl_to_apr":{"intervals":[{"tvl":0,"apr":30},{"tvl":1000,"apr":90},{"tvl":1000000,"apr":300}]}}';
+deployContract "rewards_dispatcher" "$DISPATCHER_INIT_MSG"
