@@ -9,6 +9,42 @@ use super::{
 
 const STABLECOIN: &str = "UST";
 
+type OptionalContractWrapper = Option<
+    ContractWrapper<
+        lpp::msg::ExecuteMsg,
+        lpp::msg::InstantiateMsg,
+        lpp::msg::QueryMsg,
+        lpp::error::ContractError,
+        lpp::error::ContractError,
+        lpp::error::ContractError,
+        Empty,
+        Empty,
+        Empty,
+        Error,
+        Error,
+        Empty,
+        Error,
+    >,
+>;
+
+type OptionalContractWrapperStd = Option<
+    ContractWrapper<
+        oracle::msg::ExecuteMsg,
+        oracle::msg::InstantiateMsg,
+        oracle::msg::QueryMsg,
+        oracle::ContractError,
+        oracle::ContractError,
+        StdError,
+        Empty,
+        Empty,
+        Empty,
+        Error,
+        Error,
+        Empty,
+        Error,
+    >,
+>;
+
 pub struct TestCase {
     pub app: App,
     pub dispatcher_addr: Option<Addr>,
@@ -44,26 +80,7 @@ impl TestCase {
 
         self
     }
-    pub fn init_lpp(
-        &mut self,
-        custom_wrapper: Option<
-            ContractWrapper<
-                lpp::msg::ExecuteMsg,
-                lpp::msg::InstantiateMsg,
-                lpp::msg::QueryMsg,
-                lpp::error::ContractError,
-                lpp::error::ContractError,
-                lpp::error::ContractError,
-                Empty,
-                Empty,
-                Empty,
-                Error,
-                Error,
-                Empty,
-                Error,
-            >,
-        >,
-    ) -> &mut Self {
+    pub fn init_lpp(&mut self, custom_wrapper: OptionalContractWrapper) -> &mut Self {
         let mocked_lpp = match custom_wrapper {
             Some(wrapper) => MockLpp::with_contract_wrapper(wrapper),
             None => MockLpp::default(),
@@ -88,26 +105,7 @@ impl TestCase {
         self
     }
 
-    pub fn init_market_oracle(
-        &mut self,
-        custom_wrapper: Option<
-            ContractWrapper<
-                oracle::msg::ExecuteMsg,
-                oracle::msg::InstantiateMsg,
-                oracle::msg::QueryMsg,
-                oracle::ContractError,
-                oracle::ContractError,
-                StdError,
-                Empty,
-                Empty,
-                Empty,
-                Error,
-                Error,
-                Empty,
-                Error,
-            >,
-        >,
-    ) -> &mut Self {
+    pub fn init_market_oracle(&mut self, custom_wrapper: OptionalContractWrapperStd) -> &mut Self {
         let mocked_oracle = match custom_wrapper {
             Some(wrapper) => MockMarketOracle::with_contract_wrapper(wrapper),
             None => MockMarketOracle::default(),
@@ -145,6 +143,8 @@ impl TestCase {
                 &[],
             )
             .unwrap();
+
+        self.app.update_block(next_block);
 
         self.dispatcher_addr = Some(dispatcher_addr);
         self

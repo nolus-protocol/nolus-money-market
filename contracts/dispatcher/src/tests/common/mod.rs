@@ -20,7 +20,7 @@ pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
 
 pub fn mock_app(init_funds: &[Coin]) -> App {
-    let return_time = mock_env().block.time.minus_seconds(120 * 24 * 60 * 60);
+    let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);
 
     let mock_start_block = BlockInfo {
         height: 12_345,

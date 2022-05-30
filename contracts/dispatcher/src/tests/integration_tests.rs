@@ -164,7 +164,7 @@ fn on_alarm() {
         [
             (
                 "_contract_addr",
-                test_case.treasury_addr.unwrap().to_string()
+                test_case.treasury_addr.clone().unwrap().to_string()
             ),
             ("method", "try_send_rewards".to_string())
         ]
@@ -175,8 +175,11 @@ fn on_alarm() {
         treasury_wasm.attributes,
         [
             ("recipient", test_case.lpp_addr.clone().unwrap().to_string()),
-            ("sender", test_case.lpp_addr.clone().unwrap().to_string()),
-            ("amount", "32UST".to_string())
+            (
+                "sender",
+                test_case.treasury_addr.clone().unwrap().to_string()
+            ),
+            ("amount", "72UST".to_string())
         ]
     );
     let treasury_exec = &res.events[4];
