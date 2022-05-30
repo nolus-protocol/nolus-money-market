@@ -1,10 +1,15 @@
-use cosmwasm_std::{Addr, Coin, StdResult, Storage, SubMsg, Timestamp};
+use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdResult, Storage, SubMsg, Timestamp};
 use cw_storage_plus::Item;
 use finance::liability::Liability;
 use lpp::stub::Lpp;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::ContractResult, loan::Loan, msg::Denom};
+use crate::{
+    bank::BankAccount,
+    error::{ContractError, ContractResult},
+    loan::Loan,
+    msg::Denom,
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Lease<L> {
@@ -34,9 +39,33 @@ where
         }
     }
 
-    pub(crate) fn repay(&mut self, payment: Coin, by: Timestamp) -> ContractResult<Option<SubMsg>> {
-        // TODO assert self.currency == self.loan.currency
-        self.loan.repay(payment, by)
+    pub(crate) fn close<B>(
+        &self,
+        lease: Addr,
+        querier: &QuerierWrapper,
+        account: B,
+    ) -> ContractResult<SubMsg>
+    where
+        B: BankAccount,
+    {
+        if !self.loan.closed(querier, lease)? {
+            return ContractResult::Err(ContractError::LoanNotPaid {});
+        }
+        let balance = account.balance(&self.currency)?;
+        account
+            .send(&self.customer, balance)
+            .map_err(|err| err.into())
+    }
+
+    pub(crate) fn repay(
+        &mut self,
+        payment: Coin,
+        by: Timestamp,
+        querier: &QuerierWrapper,
+        lease: Addr,
+    ) -> ContractResult<Option<SubMsg>> {
+        debug_assert_eq!(self.currency, payment.denom);
+        self.loan.repay(payment, by, querier, lease)
     }
 
     pub(crate) fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
@@ -46,13 +75,21 @@ where
     pub(crate) fn load(storage: &dyn Storage) -> StdResult<Self> {
         Lease::DB_ITEM.load(storage)
     }
+
+    pub(crate) fn owned_by(&self, addr: &Addr) -> bool {
+        &self.customer == addr
+    }
+
+    pub(crate) fn closed(&self, querier: &QuerierWrapper, lease: Addr) -> ContractResult<bool> {
+        self.loan.closed(querier, lease)
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{testing::MockStorage, Addr, StdResult, SubMsg, Timestamp};
+    use cosmwasm_std::{testing::MockStorage, Addr, QuerierWrapper, StdResult, SubMsg, Timestamp};
     use finance::{liability::Liability, percent::Percent};
-    use lpp::stub::Lpp;
+    use lpp::{msg::QueryLoanResponse, stub::Lpp};
     use serde::{Deserialize, Serialize};
 
     use crate::loan::Loan;
@@ -68,6 +105,26 @@ mod tests {
 
         fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> Result<(), String> {
             unimplemented!()
+        }
+
+        fn repay_loan_req(&self, _repayment: cosmwasm_std::Coin) -> StdResult<SubMsg> {
+            todo!()
+        }
+        fn loan(
+            &self,
+            _querier: &QuerierWrapper,
+            _lease: impl Into<Addr>,
+        ) -> StdResult<QueryLoanResponse> {
+            todo!()
+        }
+
+        fn loan_outstanding_interest(
+            &self,
+            _querier: &QuerierWrapper,
+            _lease: impl Into<Addr>,
+            _by: Timestamp,
+        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse> {
+            todo!()
         }
     }
 

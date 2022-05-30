@@ -1,13 +1,24 @@
-use cosmwasm_std::{to_binary, Addr, Api, Coin, Reply, StdResult, SubMsg, WasmMsg};
+use cosmwasm_std::{
+    to_binary, Addr, Api, Coin, QuerierWrapper, Reply, StdResult, SubMsg, Timestamp, WasmMsg,
+};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::msg::ExecuteMsg;
+use crate::msg::{ExecuteMsg, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg};
 
 pub const REPLY_ID: u64 = 28;
 
 pub trait Lpp: Serialize + DeserializeOwned {
     fn open_loan_req(&self, amount: Coin) -> StdResult<SubMsg>;
     fn open_loan_resp(&self, resp: Reply) -> Result<(), String>;
+    fn repay_loan_req(&self, repayment: Coin) -> StdResult<SubMsg>;
+
+    fn loan(&self, querier: &QuerierWrapper, lease: impl Into<Addr>) -> StdResult<QueryLoanResponse>;
+    fn loan_outstanding_interest(
+        &self,
+        querier: &QuerierWrapper,
+        lease: impl Into<Addr>,
+        by: Timestamp,
+    ) -> StdResult<QueryLoanOutstandingInterestResponse>;
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -27,9 +38,7 @@ impl LppStub {
 
 impl Lpp for LppStub {
     fn open_loan_req(&self, amount: Coin) -> StdResult<SubMsg> {
-        let msg = to_binary(&ExecuteMsg::OpenLoan {
-            amount,
-        })?;
+        let msg = to_binary(&ExecuteMsg::OpenLoan { amount })?;
         Ok(SubMsg::reply_on_success(
             WasmMsg::Execute {
                 contract_addr: self.addr.as_ref().into(),
@@ -43,6 +52,33 @@ impl Lpp for LppStub {
     fn open_loan_resp(&self, resp: Reply) -> Result<(), String> {
         debug_assert_eq!(REPLY_ID, resp.id);
         resp.result.into_result().map(|_| ())
+    }
+
+    fn repay_loan_req(&self, repayment: Coin) -> StdResult<SubMsg> {
+        let msg = to_binary(&ExecuteMsg::RepayLoan {})?;
+        Ok(SubMsg::new(WasmMsg::Execute {
+            contract_addr: self.addr.as_ref().into(),
+            funds: vec![repayment],
+            msg,
+        }))
+    }
+
+    fn loan(&self, querier: &QuerierWrapper, lease: impl Into<Addr>) -> StdResult<QueryLoanResponse> {
+        let msg = QueryMsg::Loan { lease_addr: lease.into() };
+        querier.query_wasm_smart(self.addr.clone(), &msg)
+    }
+
+    fn loan_outstanding_interest(
+        &self,
+        querier: &QuerierWrapper,
+        lease: impl Into<Addr>,
+        by: Timestamp,
+    ) -> StdResult<QueryLoanOutstandingInterestResponse> {
+        let msg = QueryMsg::LoanOutstandingInterest {
+            lease_addr: lease.into(),
+            outstanding_time: by,
+        };
+        querier.query_wasm_smart(self.addr.clone(), &msg)
     }
 }
 
@@ -73,10 +109,10 @@ mod test {
             assert_eq!(addr, contract_addr);
             assert_eq!(Vec::<Coin>::new(), funds);
             let _lpp_msg: ExecuteMsg = from_binary(&msg).expect("invalid Lpp message");
-            if let ExecuteMsg::OpenLoan{amount} = _lpp_msg {
+            if let ExecuteMsg::OpenLoan { amount } = _lpp_msg {
                 assert_eq!(borrow_amount, amount);
             } else {
-                panic!("Bad Lpp message type!");    
+                panic!("Bad Lpp message type!");
             }
         } else {
             panic!("Bad Cosmos message!");
