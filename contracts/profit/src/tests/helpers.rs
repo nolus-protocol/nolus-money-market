@@ -1,11 +1,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, CustomQuery, Querier, QuerierWrapper, StdResult, WasmMsg, WasmQuery,
-};
+use cosmwasm_std::{to_binary, Addr, CosmosMsg, StdResult, WasmMsg};
 
-use crate::msg::{ConfigResponse, ExecuteMsg, QueryMsg};
+use crate::msg::ExecuteMsg;
 
 /// CwTemplateContract is a wrapper around Addr that provides a lot of helpers
 /// for working with this.
@@ -25,22 +23,5 @@ impl CwTemplateContract {
             funds: vec![],
         }
         .into())
-    }
-
-    /// Get Count
-    pub fn _count<Q, T, CQ>(&self, querier: &Q) -> StdResult<ConfigResponse>
-    where
-        Q: Querier,
-        T: Into<String>,
-        CQ: CustomQuery,
-    {
-        let msg = QueryMsg::Config {};
-        let query = WasmQuery::Smart {
-            contract_addr: self.addr().into(),
-            msg: to_binary(&msg)?,
-        }
-        .into();
-        let res: ConfigResponse = QuerierWrapper::<CQ>::new(querier).query(&query)?;
-        Ok(res)
     }
 }

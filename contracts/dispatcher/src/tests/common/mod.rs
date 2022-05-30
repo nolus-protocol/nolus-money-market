@@ -12,6 +12,9 @@ pub mod mock_lease;
 pub mod mock_lpp;
 pub mod mock_oracle;
 pub mod mock_treasury;
+#[cfg(feature = "cosmwasm")]
+#[cfg(test)]
+pub mod test_case;
 
 pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";

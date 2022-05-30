@@ -1,9 +1,10 @@
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, StdError};
 use cw_multi_test::ContractWrapper;
 
-use cosmwasm_std::{coins, to_binary, Binary, Deps, Empty, Env, StdResult};
-use cw_multi_test::{App, Contract, Executor};
+use cosmwasm_std::{coins, to_binary, Binary, Deps, Env, StdResult};
+use cw_multi_test::{App, Executor};
 use serde::{Deserialize, Serialize};
+use treasury::ContractError;
 
 use super::ADMIN;
 
@@ -16,31 +17,50 @@ struct MockResponse {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 struct QueryMsg {}
 
-fn mock_treasury_query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-    to_binary(&MockResponse {})
+pub struct MockTreasury {
+    contract_wrapper: Box<
+        ContractWrapper<
+            treasury::msg::ExecuteMsg,
+            treasury::msg::InstantiateMsg,
+            QueryMsg,
+            ContractError,
+            ContractError,
+            StdError,
+        >,
+    >,
 }
 
-pub fn contract_treasury_mock() -> Box<dyn Contract<Empty>> {
-    let contract = ContractWrapper::new(
-        treasury::contract::execute,
-        treasury::contract::instantiate,
-        mock_treasury_query,
-    );
-    Box::new(contract)
+impl MockTreasury {
+    fn mock_treasury_query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
+        to_binary(&MockResponse {})
+    }
+    #[track_caller]
+    pub fn instantiate(self, app: &mut App, denom: &str) -> Addr {
+        let code_id = app.store_code(self.contract_wrapper);
+        let msg = treasury_instantiate_msg();
+
+        app.instantiate_contract(
+            code_id,
+            Addr::unchecked(ADMIN),
+            &msg,
+            &coins(1000, denom),
+            "treasury",
+            None,
+        )
+        .unwrap()
+    }
 }
 
-#[track_caller]
-pub fn instantiate_treasury(app: &mut App, denom: &str) -> Addr {
-    let code_id = app.store_code(contract_treasury_mock());
-    let msg = treasury_instantiate_msg();
+impl Default for MockTreasury {
+    fn default() -> Self {
+        let contract = ContractWrapper::new(
+            treasury::contract::execute,
+            treasury::contract::instantiate,
+            Self::mock_treasury_query,
+        );
 
-    app.instantiate_contract(
-        code_id,
-        Addr::unchecked(ADMIN),
-        &msg,
-        &coins(1000, denom),
-        "treasury",
-        None,
-    )
-    .unwrap()
+        Self {
+            contract_wrapper: Box::new(contract),
+        }
+    }
 }
