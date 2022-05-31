@@ -38,7 +38,7 @@ impl TransferLog {
     pub fn update(
         storage: &mut dyn Storage,
         current_transfer: Timestamp,
-        amount: &Vec<Coin>,
+        amount: &[Coin],
     ) -> Result<(), ContractError> {
         match Self::STORAGE.may_load(storage)? {
             None => Self::STORAGE.save(
