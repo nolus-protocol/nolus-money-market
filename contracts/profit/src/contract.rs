@@ -59,6 +59,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::Config { cadence_hours } => try_config(deps, info, cadence_hours),
         ExecuteMsg::Alarm { time } => try_transfer(deps, env, info, time),
+        // ExecuteMsg::Receive {} => try_receive(deps, env, info),
     }
 }
 
@@ -89,9 +90,11 @@ pub fn try_transfer(
     }
 
     let balance = deps.querier.query_all_balances(env.contract.address)?;
-    if balance.len() > 1 {
-        // currently supporting only single currency
-        unimplemented!()
+
+    if balance.is_empty() {
+        return Ok(Response::new()
+            .add_attribute("method", "try_transfer")
+            .add_attribute("result", "no profit to dispatch"));
     }
 
     Ok(Response::new()

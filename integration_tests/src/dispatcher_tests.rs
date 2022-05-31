@@ -1,50 +1,13 @@
 use cosmwasm_std::{coins, Addr};
 use cw_multi_test::{ContractWrapper, Executor};
 
-use crate::tests::common::{
-    mock_lpp::{mock_lpp_execute, mock_lpp_query},
-    mock_oracle::mock_oracle_query,
-    test_case::TestCase,
+use crate::{
+    common::test_case::TestCase,
+    common::{
+        mock_lpp::{mock_lpp_execute, mock_lpp_query},
+        mock_oracle::mock_oracle_query,
+    },
 };
-
-// pub fn setup_test_case(
-//     app: &mut App,
-//     init_funds: Vec<Coin>,
-//     user_addr: Addr,
-//     denom: &str,
-// ) -> (Addr, Addr, Addr) {
-//     let lease_id = app.store_code(contract_lease_mock());
-
-//     // 1. Instantiate LPP contract
-//     let (lpp_addr, _lpp_id) = MockLpp::default().instantiate(app, Uint64::new(lease_id), denom);
-//     app.update_block(next_block);
-
-//     // 2. Instantiate Treasury contract (and OWNER as admin)
-//     let treasury_addr = MockTreasury::default().instantiate(app, denom);
-//     app.update_block(next_block);
-
-//     // 3. Instantiate Oracle contract (and OWNER as admin)
-//     let market_oracle = instantiate_oracle(app, denom);
-//     app.update_block(next_block);
-
-//     // 3. Instantiate Dispatcher contract
-//     let dispatcher_addr = MockDispatcher::default().instantiate(
-//         app,
-//         &lpp_addr,
-//         &Addr::unchecked("time"),
-//         &treasury_addr,
-//         &market_oracle,
-//         denom,
-//     );
-//     app.update_block(next_block);
-
-//     // Bonus: set some funds on the user for future proposals
-//     if !init_funds.is_empty() {
-//         app.send_tokens(Addr::unchecked(ADMIN), user_addr, &init_funds)
-//             .unwrap();
-//     }
-//     (dispatcher_addr, treasury_addr, lpp_addr)
-// }
 
 #[test]
 fn on_alarm_zero_reeward() {
@@ -66,7 +29,7 @@ fn on_alarm_zero_reeward() {
         .execute_contract(
             test_case.time_oracle.unwrap(),
             test_case.dispatcher_addr.as_ref().unwrap().clone(),
-            &crate::msg::ExecuteMsg::Alarm {
+            &rewards_dispatcher::msg::ExecuteMsg::Alarm {
                 time: test_case.app.block_info().time,
             },
             &coins(40, denom),
@@ -135,7 +98,7 @@ fn on_alarm() {
         .execute_contract(
             Addr::unchecked("time"),
             test_case.dispatcher_addr.clone().unwrap(),
-            &crate::msg::ExecuteMsg::Alarm {
+            &rewards_dispatcher::msg::ExecuteMsg::Alarm {
                 time: test_case.app.block_info().time,
             },
             &coins(40, denom),
