@@ -1,4 +1,5 @@
 use cosmwasm_std::{Addr, Coin, Decimal, Timestamp, Uint64, Uint128};
+use finance::percent::Percent;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -57,7 +58,7 @@ pub enum QueryQuoteResponse {
 #[serde(rename_all = "snake_case")]
 pub struct LoanResponse {
     pub principal_due: Coin,
-    pub annual_interest_rate: Decimal,
+    pub annual_interest_rate: Percent,
     pub interest_paid: Timestamp,
 }
 

@@ -1,5 +1,6 @@
 use cosmwasm_std::StdError;
 use thiserror::Error;
+use std::num::TryFromIntError;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
@@ -29,6 +30,9 @@ pub enum ContractError {
 
     #[error("Insufficient balance")]
     InsufficientBalance,
+
+    #[error("{0}")]
+    OverflowError(#[from] TryFromIntError),
 
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },

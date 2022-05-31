@@ -5,6 +5,7 @@ use cosmwasm_std::{
     BankMsg, Storage, coin, Uint128
 };
 use cw2::set_contract_version;
+use finance::percent::Percent;
 
 use crate::error::ContractError;
 use crate::msg::{
@@ -177,19 +178,19 @@ fn query_quote(deps: &Deps, env: &Env, quote: Coin) -> Result<QueryQuoteResponse
 }
 
 fn query_loan(storage: &dyn Storage, lease_addr: Addr) -> Result<QueryLoanResponse, ContractError> {
-    let denom = Config::load(storage)?
-        .denom;
-    let response = Loan::query(storage, lease_addr)?
-        .map( |loan|
-            LoanResponse {
+    let denom = Config::load(storage)?.denom;
+    Loan::query(storage, lease_addr)?
+        .map(|loan| {
+            let permilles: u32 = (loan.annual_interest_rate * Uint128::from(1000u32))
+                .u128()
+                .try_into()?;
+            Ok(LoanResponse {
                 principal_due: coin(loan.principal_due.u128(), denom),
-                annual_interest_rate: loan.annual_interest_rate,
+                annual_interest_rate: Percent::from_permille(permilles),
                 interest_paid: loan.interest_paid,
-            }
-        );
-
-        Ok(response)
-}
+            })
+        })
+        .transpose()}
 
 fn query_loan_outstanding_interest(
     storage: &dyn Storage,
