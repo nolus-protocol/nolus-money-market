@@ -1,0 +1,34 @@
+[package]
+name = "integration_tests"
+version = "0.1.0"
+authors = ["Nina Nikolova <n.nikolova@nolus.io>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+
+[dependencies]
+time-oracle = { path = "../packages/time-oracle", version = "0.1.0", default-features = false}
+lpp = { path = "../contracts/lpp", version = "0.1.0", default-features = false}
+oracle = { path = "../contracts/oracle", version = "0.1.0", default-features = false}
+treasury = { path = "../contracts/treasury", version = "0.1.0", default-features = false}
+rewards_dispatcher = { path = "../contracts/dispatcher", version = "0.1.0", default-features = false}
+profit = { path = "../contracts/profit", version = "0.1.0", default-features = false}
+finance = { path = "../packages/finance", version = "0.1.0", default-features = false }
+cosmwasm-std = "1.0.0"
+
+
+[dev-dependencies]
+cosmwasm-schema = "1.0.0"
+cw-multi-test = "0.13.2"
+anyhow = "1.0.57"
+serde = { version = "1.0.137", default-features = false, features = ["derive"] }
+
+
+treasury = { path = "../contracts/treasury", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
+lease = { path = "../contracts/lease", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
+lpp = { path = "../contracts/lpp", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
+oracle = { path = "../contracts/oracle", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
+rewards_dispatcher = { path = "../contracts/dispatcher", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
+profit = { path = "../contracts/profit", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
+marketprice = { path = "../packages/marketprice", version = "0.1.0", default-features = false}

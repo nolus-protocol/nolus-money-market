@@ -1,18 +1,16 @@
 use cosmwasm_std::{testing::mock_env, Addr, BlockInfo, Coin};
 use cw_multi_test::{App, AppBuilder};
 
-#[cfg(feature = "cosmwasm")]
 #[cfg(test)]
 #[allow(dead_code)]
 pub mod mock_dispatcher;
 pub mod mock_lease;
-#[cfg(feature = "cosmwasm")]
 #[cfg(test)]
 #[allow(dead_code)]
 pub mod mock_lpp;
 pub mod mock_oracle;
+pub mod mock_profit;
 pub mod mock_treasury;
-#[cfg(feature = "cosmwasm")]
 #[cfg(test)]
 pub mod test_case;
 

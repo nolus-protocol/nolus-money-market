@@ -4,7 +4,7 @@ use cw_multi_test::{next_block, App, ContractWrapper, Executor};
 
 use super::{
     mock_app, mock_dispatcher::MockDispatcher, mock_lease::contract_lease_mock, mock_lpp::MockLpp,
-    mock_oracle::MockMarketOracle, mock_treasury::MockTreasury, ADMIN,
+    mock_oracle::MockMarketOracle, mock_profit::MockProfit, mock_treasury::MockTreasury, ADMIN,
 };
 
 const STABLECOIN: &str = "UST";
@@ -49,6 +49,7 @@ pub struct TestCase {
     pub app: App,
     pub dispatcher_addr: Option<Addr>,
     pub treasury_addr: Option<Addr>,
+    pub profit_addr: Option<Addr>,
     pub lpp_addr: Option<Addr>,
     pub market_oracle: Option<Addr>,
     pub time_oracle: Option<Addr>,
@@ -62,6 +63,7 @@ impl TestCase {
             app: mock_app(&coins(10000, denom)),
             dispatcher_addr: None,
             treasury_addr: None,
+            profit_addr: None,
             lpp_addr: None,
             market_oracle: None,
             time_oracle: None,
@@ -80,6 +82,7 @@ impl TestCase {
 
         self
     }
+
     pub fn init_lpp(&mut self, custom_wrapper: OptionalContractWrapper) -> &mut Self {
         let mocked_lpp = match custom_wrapper {
             Some(wrapper) => MockLpp::with_contract_wrapper(wrapper),
@@ -100,6 +103,18 @@ impl TestCase {
 
     pub fn init_treasury(&mut self) -> &mut Self {
         self.treasury_addr = Some(MockTreasury::default().instantiate(&mut self.app, &self.denom));
+        self.app.update_block(next_block);
+
+        self
+    }
+
+    pub fn init_profit(&mut self, cadence_hours: u32) -> &mut Self {
+        self.profit_addr = Some(MockProfit::default().instantiate(
+            &mut self.app,
+            cadence_hours,
+            self.treasury_addr.as_ref().unwrap(),
+            self.time_oracle.as_ref().unwrap(),
+        ));
         self.app.update_block(next_block);
 
         self
