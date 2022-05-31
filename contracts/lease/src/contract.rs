@@ -1,6 +1,8 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, to_binary};
+use cosmwasm_std::{
+    to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+};
 use cw2::set_contract_version;
 use cw_utils::one_coin;
 use lpp::stub::{Lpp, LppStub};
@@ -65,13 +67,13 @@ pub fn execute(
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, _msg: StatusQuery) -> ContractResult<Binary> {
     let lease = Lease::<LppStub>::load(deps.storage)?;
-    let closed = lease.closed(&deps.querier, env.contract.address)?;
-    let resp = if closed {
-        StatusResponse::Closed
-    } else {
-        // TODO supply details as per the spec
-        StatusResponse::Opened
-    };
+    let bank_account = BankStub::my_account(&env, &deps.querier);
+    let resp: StatusResponse = lease.state(
+        env.block.time,
+        bank_account,
+        &deps.querier,
+        env.contract.address.clone(),
+    )?;
     to_binary(&resp).map_err(ContractError::from)
 }
 

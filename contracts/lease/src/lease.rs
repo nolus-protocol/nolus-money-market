@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use crate::{
     bank::BankAccount,
     error::{ContractError, ContractResult},
-    loan::Loan,
-    msg::Denom,
+    loan::{Loan, State as LoanState},
+    msg::{Denom, State},
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -80,8 +80,36 @@ where
         &self.customer == addr
     }
 
-    pub(crate) fn closed(&self, querier: &QuerierWrapper, lease: Addr) -> ContractResult<bool> {
-        self.loan.closed(querier, lease)
+    pub(crate) fn state<B>(
+        &self,
+        now: Timestamp,
+        account: B,
+        querier: &QuerierWrapper,
+        lease: Addr,
+    ) -> ContractResult<Option<State>>
+    where
+        B: BankAccount,
+    {
+        let loan_state = self.loan.state(now, querier, lease)?;
+        loan_state
+            .map(|open_state| self.merge_state(account, open_state))
+            .transpose()
+    }
+
+    fn merge_state<B>(&self, account: B, loan_state: LoanState) -> ContractResult<State>
+    where
+        B: BankAccount,
+    {
+        let lease_amount = account
+            .balance(&self.currency)
+            .map_err(ContractError::from)?;
+
+        Ok(State {
+            amount: lease_amount,
+            annual_interest: loan_state.annual_interest,
+            principal_due: loan_state.principal_due,
+            interest_due: loan_state.interest_due,
+        })
     }
 }
 

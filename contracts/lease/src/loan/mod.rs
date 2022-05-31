@@ -1,8 +1,14 @@
+mod state;
+pub use state::State;
+
 use std::fmt::Debug;
 
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, SubMsg, Timestamp};
 use finance::{coin, duration::Duration, interest::InterestPeriod, percent::Percent};
-use lpp::{msg::QueryLoanResponse, stub::Lpp};
+use lpp::{
+    msg::{LoanResponse, QueryLoanResponse},
+    stub::Lpp,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{ContractError, ContractResult};
@@ -96,12 +102,22 @@ where
             .map_err(|err| err.into())
     }
 
+    pub(crate) fn state(
+        &self,
+        now: Timestamp,
+        querier: &QuerierWrapper,
+        lease: impl Into<Addr>,
+    ) -> ContractResult<Option<State>> {
+        let loan_resp = self.load_lpp_loan(querier, lease)?;
+        Ok(loan_resp.map(|loan_state| self.merge_state_with(loan_state, now)))
+    }
+
     fn load_principal_due(
         &self,
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
     ) -> ContractResult<Coin> {
-        let loan: QueryLoanResponse = self.lpp.loan(querier, lease).map_err(ContractError::from)?;
+        let loan: QueryLoanResponse = self.load_lpp_loan(querier, lease)?;
         Ok(loan.ok_or(ContractError::LoanClosed())?.principal_due)
     }
 
@@ -116,6 +132,14 @@ where
             .loan_outstanding_interest(querier, lease, by)
             .map_err(ContractError::from)?;
         Ok(interest.ok_or(ContractError::LoanClosed())?.0)
+    }
+
+    fn load_lpp_loan(
+        &self,
+        querier: &QuerierWrapper,
+        lease: impl Into<Addr>,
+    ) -> ContractResult<QueryLoanResponse> {
+        self.lpp.loan(querier, lease).map_err(ContractError::from)
     }
 
     fn repay_margin_interest(
@@ -135,5 +159,19 @@ where
         self.current_period = InterestPeriod::with_interest(self.annual_margin_interest)
             .from(self.current_period.till())
             .spanning(Duration::from_secs(self.interest_due_period_secs));
+    }
+
+    fn merge_state_with(&self, loan_state: LoanResponse, now: Timestamp) -> State {
+        let principal_due = loan_state.principal_due;
+        let margin_interest_period = self
+            .current_period
+            .spanning(Duration::between(self.current_period.start(), now));
+        let margin_interest_due = margin_interest_period.interest(&principal_due);
+        State {
+            annual_interest: loan_state.annual_interest_rate + self.annual_margin_interest,
+            principal_due,
+            interest_due: margin_interest_due,
+            // TODO interest_due: loan_state.interest_due + margin_interest_due,
+        }
     }
 }
