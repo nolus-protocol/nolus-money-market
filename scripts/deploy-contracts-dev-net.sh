@@ -15,6 +15,7 @@ GITLAB_API="https://gitlab-nomo.credissimo.net/api/v4"
 COSMZONE_PROJECT_ID="3"
 SETUP_DEV_NETWORK_ARTIFACT="setup-dev-network"
 NOLUS_BUILD_BINARY_ARTIFACT="build-binary"
+STABLE_DENOM="$STABLE_DENOM_DEV"
 ACCOUNTS_DIR="$(pwd)/accounts"
 TXFLAG="--gas-prices 0.025unolus --gas auto --gas-adjustment 1.3 -y --home $ACCOUNTS_DIR --node $NOLUS_DEV_NET"
 CONTRACTS_RESULTS_FILE="$1"
@@ -61,14 +62,14 @@ jq -n '{"contracts_info":[]}' > "$CONTRACTS_RESULTS_FILE"
 deployContract "lease"
 LEASE_CODE_ID=$(jq .contracts_info[0].lease.code_id contracts-info.json | tr -d '"')
 
-LPP_INIT_MSG='{"denom":"USDS","lease_code_id":"'$LEASE_CODE_ID'"}'
+LPP_INIT_MSG='{"denom":"'$STABLE_DENOM'","lease_code_id":"'$LEASE_CODE_ID'"}'
 deployContract "lpp" "$LPP_INIT_MSG"
 LPP_ADDRESS=$(jq .contracts_info[1].lpp.instance contracts-info.json | tr -d '"')
 
 LEASER_INIT_MSG='{"lease_code_id":"'$LEASE_CODE_ID'","lease_interest_rate_margin":30,"recalc_hours":2,"liability":{"healthy":70,"initial":65,"max":80},"lpp_ust_addr":"'$LPP_ADDRESS'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'
 deployContract "leaser" "$LEASER_INIT_MSG"
 
-ORACLE_INIT_MSG='{"base_asset":"USDS","price_feed_period":60,"feeders_percentage_needed":50,"supported_denom_pairs":[["OSMO","USDS"],["LUNA","OSMO"],["IRIS","OSMO"]]}'
+ORACLE_INIT_MSG='{"base_asset":"'$STABLE_DENOM'","price_feed_period":60,"feeders_percentage_needed":50,"supported_denom_pairs":[["OSMO","'$STABLE_DENOM'"],["LUNA","OSMO"],["IRIS","OSMO"]]}'
 deployContract "oracle" "$ORACLE_INIT_MSG"
 ORACLE_ADDRESS=$(jq .contracts_info[3].oracle.instance contracts-info.json | tr -d '"')
 
