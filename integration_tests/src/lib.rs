@@ -5,5 +5,8 @@ mod dispatcher_tests;
 mod profit_tests;
 
 #[cfg(test)]
+mod lpp_tests;
+
+#[cfg(test)]
 #[allow(dead_code)]
 mod common;
