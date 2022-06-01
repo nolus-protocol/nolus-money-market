@@ -3,7 +3,7 @@ use cosmwasm_std::{coins, Addr, Coin, Empty, StdError, Uint64};
 use cw_multi_test::{next_block, App, ContractWrapper, Executor};
 
 use super::{
-    mock_app, mock_dispatcher::MockDispatcher, mock_lease::contract_lease_mock, mock_lpp::MockLpp,
+    mock_app, mock_dispatcher::MockDispatcher, mock_lease::MockLease, mock_lpp::MockLpp,
     mock_oracle::MockMarketOracle, mock_profit::MockProfit, mock_treasury::MockTreasury, ADMIN,
 };
 
@@ -72,7 +72,7 @@ impl TestCase {
         }
     }
     pub fn init(&mut self, user_addr: &Addr, init_funds: Vec<Coin>) -> &mut Self {
-        self.lease_code_id = Some(self.app.store_code(contract_lease_mock()));
+        self.lease_code_id = Some(MockLease::default().store(&mut self.app));
         // Bonus: set some funds on the user for future proposals
         if !init_funds.is_empty() {
             self.app
@@ -80,6 +80,20 @@ impl TestCase {
                 .unwrap();
         }
 
+        self
+    }
+
+    pub fn get_lease_instance(&mut self) -> Addr {
+        MockLease::default().instantiate(
+            &mut self.app,
+            self.lease_code_id,
+            self.lpp_addr.as_ref().unwrap(),
+            &self.denom,
+        )
+    }
+
+    pub fn init_lease(&mut self) -> &mut Self {
+        self.lease_code_id = Some(MockLease::default().store(&mut self.app));
         self
     }
 
