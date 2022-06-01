@@ -25,7 +25,7 @@ impl Total {
     pub fn last_update_time(&self) -> Timestamp { self.last_update_time }
 
     pub fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        Self::STORAGE.save(storage, &self)
+        Self::STORAGE.save(storage, self)
     }
 
     pub fn load(storage: &dyn Storage) -> StdResult<Self> {

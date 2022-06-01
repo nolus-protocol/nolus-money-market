@@ -63,7 +63,7 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::Quote { amount } => to_binary(&query_quote(&deps, &env, amount)?),
-        QueryMsg::Loan { lease_addr } => to_binary(&query_loan(deps.storage, lease_addr)?),
+        QueryMsg::Loan { lease_addr } => to_binary(&query_loan(deps.storage, env, lease_addr)?),
         QueryMsg::LoanOutstandingInterest {
             lease_addr,
             outstanding_time,
@@ -177,15 +177,18 @@ fn query_quote(deps: &Deps, env: &Env, quote: Coin) -> Result<QueryQuoteResponse
     }
 }
 
-fn query_loan(storage: &dyn Storage, lease_addr: Addr) -> Result<QueryLoanResponse, ContractError> {
+fn query_loan(storage: &dyn Storage, env: Env, lease_addr: Addr) -> Result<QueryLoanResponse, ContractError> {
     let denom = Config::load(storage)?.denom;
-    Loan::query(storage, lease_addr)?
+    Loan::query(storage, lease_addr.clone())?
         .map(|loan| {
             let permilles: u32 = (loan.annual_interest_rate * Uint128::from(1000u32))
                 .u128()
                 .try_into()?;
+            let interest_due = Loan::query_outstanding_interest(storage, lease_addr, env.block.time)?
+                .expect("should be some interest_due");
             Ok(LoanResponse {
-                principal_due: coin(loan.principal_due.u128(), denom),
+                principal_due: coin(loan.principal_due.u128(), &denom),
+                interest_due: coin(interest_due.u128(), &denom),
                 annual_interest_rate: Percent::from_permille(permilles),
                 interest_paid: loan.interest_paid,
             })

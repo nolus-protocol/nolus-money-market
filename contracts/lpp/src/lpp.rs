@@ -54,7 +54,7 @@ impl LiquidityPool {
         let total_principal_due_amount = self.total.total_principal_due();
         let total_principal_due = coin(total_principal_due_amount.u128(), denom);
 
-        let total_interest_due_amount = self.total.total_interest_due_by_now(&env);
+        let total_interest_due_amount = self.total.total_interest_due_by_now(env);
         let total_interest_due = coin(total_interest_due_amount.u128(), denom);
 
         Ok(LppBalanceResponse{balance, total_principal_due, total_interest_due })
