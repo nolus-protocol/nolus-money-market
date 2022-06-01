@@ -206,12 +206,7 @@ fn query_loan_outstanding_interest(
 
 fn query_lpp_balance(deps: Deps, env: Env) -> Result<LppBalanceResponse, ContractError> {
     let lpp = LiquidityPool::load(deps.storage)?;
-    let denom = lpp.config().denom.clone();
-    let balance = lpp.balance(&deps, &env)?;
-    let total_principal_due = coin(lpp.total().total_principal_due.u128(), denom.clone());
-    let total_interest_due = coin(lpp.total().total_interest_due_by_now(&env).u128(), denom);
-
-    Ok(LppBalanceResponse{balance, total_principal_due, total_interest_due })
+    Ok(lpp.query_lpp_balance(&deps, &env)?)
 }
 
 fn query_ntoken_price(deps: Deps, env: Env) -> Result<PriceResponse, ContractError> {

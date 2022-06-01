@@ -4,7 +4,8 @@ use cosmwasm_std::{
 };
 
 use crate::error::ContractError;
-use crate::state::{Config, Loan, Total, TotalData, Deposit};
+use crate::msg::LppBalanceResponse;
+use crate::state::{Config, Loan, Total, Deposit};
 use crate::calc::{dt, interest};
 
 pub struct NTokenPrice(Decimal);
@@ -32,10 +33,6 @@ impl LiquidityPool {
         &self.config
     }
 
-    pub fn total(&self) -> &TotalData {
-        &self.total
-    }
-
     pub fn balance(&self, deps: &Deps, env: &Env) -> StdResult<Coin> {
         let querier = deps.querier;
         querier.query_balance(&env.contract.address, &self.config.denom)
@@ -44,10 +41,23 @@ impl LiquidityPool {
     pub fn total_lpn(&self, deps: &Deps, env: &Env) -> StdResult<Uint128> {
 
         let res = self.balance(deps, env)?.amount
-            + self.total.total_principal_due
+            + self.total.total_principal_due()
             + self.total.total_interest_due_by_now(env);
 
         Ok(res)
+    }
+
+    pub fn query_lpp_balance(&self, deps: &Deps,env: &Env) -> StdResult<LppBalanceResponse> {
+        let balance = self.balance(deps, env)?;
+        let denom = &self.config.denom;
+
+        let total_principal_due_amount = self.total.total_principal_due();
+        let total_principal_due = coin(total_principal_due_amount.u128(), denom);
+
+        let total_interest_due_amount = self.total.total_interest_due_by_now(&env);
+        let total_interest_due = coin(total_interest_due_amount.u128(), denom);
+
+        Ok(LppBalanceResponse{balance, total_principal_due, total_interest_due })
     }
 
     pub fn calculate_price(&self, deps: &Deps, env: &Env) -> StdResult<NTokenPrice> {
@@ -86,7 +96,7 @@ impl LiquidityPool {
     pub fn pay(&self, addr: Addr, amount: Uint128) -> BankMsg {
         BankMsg::Send {
             to_address: addr.to_string(),
-            amount: vec![coin(amount.u128(), self.config.denom.clone())],
+            amount: vec![coin(amount.u128(), &self.config.denom)],
         }
     }
 
@@ -118,12 +128,10 @@ impl LiquidityPool {
             return Ok(None);
         }
 
-        let TotalData {
-            total_principal_due,
-            total_interest_due,
-            annual_interest_rate,
-            last_update_time,
-        } = *self.total;
+        let total_principal_due = self.total.total_principal_due();
+        let total_interest_due = self.total.total_interest_due();
+        let annual_interest_rate = self.total.annual_interest_rate();
+        let last_update_time = self.total.last_update_time();
 
         let Config {
             base_interest_rate,
