@@ -1,6 +1,7 @@
 mod coin;
 mod u64;
 mod u128;
+mod percent;
 
 use std::ops::{Div, Mul};
 

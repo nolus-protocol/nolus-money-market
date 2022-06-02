@@ -1,5 +1,5 @@
 use std::{
-    fmt::{Debug, Display, Formatter, Result},
+    fmt::{Debug, Display, Formatter, Result, Write},
     ops::{Add, Sub},
 };
 
@@ -24,7 +24,7 @@ impl Percent {
     const UNITS_TO_PERCENT_RATIO: Units = 10;
 
     pub fn from_percent(percent: u16) -> Self {
-        Self(Units::from(percent) * Self::UNITS_TO_PERCENT_RATIO)
+        Self::from_permille(Units::from(percent) * Self::UNITS_TO_PERCENT_RATIO)
     }
 
     pub const fn from_permille(permille: Units) -> Self {
@@ -70,7 +70,18 @@ impl Percent {
 
 impl Display for Percent {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{:.1}%", self.0 / Self::UNITS_TO_PERCENT_RATIO)
+        let whole = (self.0) / Self::UNITS_TO_PERCENT_RATIO;
+        let fractional = (self.0)
+            .checked_rem(Self::UNITS_TO_PERCENT_RATIO)
+            .expect("zero divider");
+
+        f.write_str(&whole.to_string())?;
+        if fractional != Units::default() {
+            f.write_char('.')?;
+            f.write_str(&fractional.to_string())?;
+        }
+        f.write_char('%')?;
+        Ok(())
     }
 }
 
@@ -187,6 +198,19 @@ pub(super) mod test {
         let _ = from(34) - from(35);
     }
 
+    #[test]
+    fn display() {
+        test_display("0%", 0);
+        test_display("0.1%", 1);
+        test_display("0.4%", 4);
+        test_display("1%", 10);
+        test_display("1.9%", 19);
+        test_display("9%", 90);
+        test_display("10.1%", 101);
+        test_display("100%", 1000);
+        test_display("1234567.8%", 12345678);
+    }
+
     pub(crate) fn test_of_are<P>(permille: Units, quantity: P, exp: P)
     where
         P: Percentable<Result = P> + PartialEq + Debug + Clone,
@@ -195,5 +219,9 @@ pub(super) mod test {
         if permille != 0 {
             assert_eq!(quantity, Percent::from_permille(permille).are(exp));
         }
+    }
+
+    fn test_display(exp: &str, permilles: Units) {
+        assert_eq!(exp, format!("{}", Percent::from_permille(permilles)));
     }
 }
