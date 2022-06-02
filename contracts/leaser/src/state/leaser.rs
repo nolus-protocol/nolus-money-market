@@ -69,4 +69,8 @@ impl Loans {
             Err(_) => HashSet::new(), //return empty list of addresses
         })
     }
+
+    pub fn remove(storage: &mut dyn Storage, msg_id: u64) {
+        PENDING.remove(storage, msg_id);
+    }
 }
