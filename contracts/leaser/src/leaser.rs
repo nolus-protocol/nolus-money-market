@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, Deps, DepsMut, Env, Response, StdError, StdResult, SubMsg,
-    Uint128, WasmMsg,
+    to_binary, Addr, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+    StdResult, SubMsg, Uint128, WasmMsg,
 };
 
 use finance::percent::Percent;
@@ -10,7 +10,7 @@ use lease::msg::{LoanForm, NewLeaseForm};
 
 use crate::error::ContractError;
 use crate::lpp_querier::LppQuerier;
-use crate::msg::{ConfigResponse, QuoteResponse};
+use crate::msg::{ConfigResponse, Liability, QuoteResponse, Repayment};
 use crate::state::config::Config;
 use crate::state::leaser::Loans;
 
@@ -68,6 +68,28 @@ impl Leaser {
             annual_interest_rate: LppQuerier::get_annual_interest_rate(deps, downpayment)?,
         })
     }
+    pub fn try_configure(
+        deps: DepsMut,
+        info: MessageInfo,
+        lease_interest_rate_margin: Percent,
+        liability: crate::msg::Liability,
+        repayment: Repayment,
+    ) -> Result<Response, ContractError> {
+        let config = Config::load(deps.storage)?;
+        if info.sender != config.owner {
+            return Err(ContractError::Unauthorized {});
+        }
+        Liability::validate(liability.initial, liability.healthy, liability.max);
+        Config::update(
+            deps.storage,
+            lease_interest_rate_margin,
+            liability,
+            repayment,
+        )?;
+
+        Ok(Response::default())
+    }
+
     pub(crate) fn open_lease_msg(sender: Addr, config: Config, currency: String) -> NewLeaseForm {
         NewLeaseForm {
             customer: sender.into_string(),

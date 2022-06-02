@@ -1,15 +1,14 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
-use finance::percent::Percent;
 
 use crate::error::ContractError;
 use crate::leaser::Leaser;
-use crate::msg::{ExecuteMsg, InstantiateMsg, Liability, QueryMsg, Repayment};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::config::Config;
 use crate::state::leaser::Loans;
 
@@ -46,7 +45,7 @@ pub fn execute(
             lease_interest_rate_margin,
             liability,
             repayment,
-        } => try_configure(deps, info, lease_interest_rate_margin, liability, repayment),
+        } => Leaser::try_configure(deps, info, lease_interest_rate_margin, liability, repayment),
     }
 }
 
@@ -63,36 +62,19 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let contract_addr_raw = parse_reply_instantiate_data(msg.clone())
         .map(|r| r.contract_address)
-        .map_err(|_| ContractError::ParseError {})?;
+        .map_err(|err| ContractError::ParseError {
+            err: err.to_string(),
+        })?;
 
     let contract_addr = deps.api.addr_validate(&contract_addr_raw)?;
-    register_lease(deps, msg.id, contract_addr)
-}
 
-pub fn try_configure(
-    deps: DepsMut,
-    info: MessageInfo,
-    lease_interest_rate_margin: Percent,
-    liability: crate::msg::Liability,
-    repayment: Repayment,
-) -> Result<Response, ContractError> {
-    let config = Config::load(deps.storage)?;
-    if info.sender != config.owner {
-        return Err(ContractError::Unauthorized {});
+    match Loans::save(deps.storage, msg.id, contract_addr.clone()) {
+        Ok(_) => Ok(Response::new().add_attribute("lease_address", contract_addr)),
+        Err(err) => {
+            Loans::remove(deps.storage, msg.id);
+            Err(ContractError::CustomError {
+                val: err.to_string(),
+            })
+        }
     }
-    Liability::validate(liability.initial, liability.healthy, liability.max);
-    Config::update(
-        deps.storage,
-        lease_interest_rate_margin,
-        liability,
-        repayment,
-    )?;
-
-    Ok(Response::default())
-}
-
-fn register_lease(deps: DepsMut, msg_id: u64, lease_addr: Addr) -> Result<Response, ContractError> {
-    // TODO: Remove pending id if the creation was not successful
-    Loans::save(deps.storage, msg_id, lease_addr.clone())?;
-    Ok(Response::new().add_attribute("lease_address", lease_addr))
 }
