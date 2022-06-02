@@ -1,5 +1,5 @@
 use crate::contract::{execute, instantiate, query};
-use crate::helpers::open_lease_msg;
+use crate::leaser::Leaser;
 use crate::tests::common::leaser_instantiate_msg;
 use crate::ContractError;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
@@ -97,7 +97,7 @@ fn test_open_lease() {
     let info = mock_info("addr0000", coins(40, DENOM).as_ref());
     let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-    let msg = open_lease_msg(info.sender, config, DENOM.to_string());
+    let msg = Leaser::open_lease_msg(info.sender, config, DENOM.to_string());
     assert_eq!(
         res.messages,
         vec![SubMsg::reply_on_success(
