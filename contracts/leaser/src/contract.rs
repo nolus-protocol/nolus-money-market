@@ -1,22 +1,17 @@
-use std::collections::HashSet;
-
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Coin, CosmosMsg, Decimal, Deps, DepsMut, Env, MessageInfo, Reply,
-    Response, StdError, StdResult, SubMsg, Uint128, WasmMsg,
+    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
 use finance::percent::Percent;
 
-use crate::config::Config;
 use crate::error::ContractError;
-use crate::helpers::open_lease_msg;
-use crate::msg::{
-    ConfigResponse, ExecuteMsg, InstantiateMsg, Liability, QueryMsg, QuoteResponse, Repayment,
-};
-use crate::state::Leaser;
+use crate::leaser::Leaser;
+use crate::msg::{ExecuteMsg, InstantiateMsg, Liability, QueryMsg, Repayment};
+use crate::state::config::Config;
+use crate::state::leaser::Loans;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -44,7 +39,9 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::OpenLease { currency } => try_borrow(deps, info.funds, info.sender, currency),
+        ExecuteMsg::OpenLease { currency } => {
+            Leaser::try_borrow(deps, info.funds, info.sender, currency)
+        }
         ExecuteMsg::Config {
             lease_interest_rate_margin,
             liability,
@@ -56,9 +53,9 @@ pub fn execute(
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::Config {} => to_binary(&query_config(deps)?),
-        QueryMsg::Quote { downpayment } => to_binary(&query_quote(env, deps, downpayment)?),
-        QueryMsg::Leases { owner } => to_binary(&query_leases(deps, owner)?),
+        QueryMsg::Config {} => to_binary(&Leaser::query_config(deps)?),
+        QueryMsg::Quote { downpayment } => to_binary(&Leaser::query_quote(env, deps, downpayment)?),
+        QueryMsg::Leases { owner } => to_binary(&Leaser::query_loans(deps, owner)?),
     }
 }
 
@@ -94,86 +91,8 @@ pub fn try_configure(
     Ok(Response::default())
 }
 
-pub fn try_borrow(
-    deps: DepsMut,
-    amount: Vec<Coin>,
-    sender: Addr,
-    currency: String,
-) -> Result<Response, ContractError> {
-    let config = Config::load(deps.storage)?;
-    let instance_reply_id = Leaser::next(deps.storage, sender.clone())?;
-    Ok(
-        Response::new().add_submessages(vec![SubMsg::reply_on_success(
-            CosmosMsg::Wasm(WasmMsg::Instantiate {
-                admin: None,
-                code_id: config.lease_code_id,
-                funds: amount,
-                label: "lease".to_string(),
-                msg: to_binary(&open_lease_msg(sender, config, currency))?,
-            }),
-            instance_reply_id,
-        )]),
-    )
-}
-
-fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
-    let config = Config::load(deps.storage)?;
-    Ok(ConfigResponse { config })
-}
-
-fn query_leases(deps: Deps, owner: Addr) -> StdResult<HashSet<Addr>> {
-    Leaser::get(deps.storage, owner)
-}
-
-fn query_quote(_env: Env, deps: Deps, downpayment: Coin) -> StdResult<QuoteResponse> {
-    // borrowUST = LeaseInitialLiability% * downpaymentUST / (1 - LeaseInitialLiability%)
-    if downpayment.amount.is_zero() {
-        return Err(StdError::generic_err(
-            "cannot open lease with zero downpayment",
-        ));
-    }
-    let config = Config::load(deps.storage)?;
-    let numerator = Uint128::from(config.liability.initial) * downpayment.amount;
-    let denominator = Uint128::from(100 - config.liability.initial);
-
-    let borrow_amount = numerator / denominator;
-    let total_amount = borrow_amount + downpayment.amount;
-
-    Ok(QuoteResponse {
-        total: Coin::new(total_amount.u128(), downpayment.denom.clone()),
-        borrow: Coin::new(borrow_amount.u128(), downpayment.denom.clone()),
-        annual_interest_rate: get_annual_interest_rate(deps, downpayment)?,
-    })
-}
-
-#[cfg(not(test))]
-fn get_annual_interest_rate(deps: Deps, downpayment: Coin) -> StdResult<Decimal> {
-    use cosmwasm_std::{QueryRequest, WasmQuery};
-
-    use crate::msg::{LPPQueryMsg, QueryQuoteResponse};
-
-    let config = Config::load(deps.storage)?;
-    let query_msg: LPPQueryMsg = LPPQueryMsg::Quote {
-        amount: downpayment,
-    };
-    let query_response: QueryQuoteResponse =
-        deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: config.lpp_ust_addr.to_string(),
-            msg: to_binary(&query_msg)?,
-        }))?;
-    match query_response {
-        QueryQuoteResponse::QuoteInterestRate(rate) => Ok(rate),
-        QueryQuoteResponse::NoLiquidity => Err(StdError::generic_err("NoLiquidity")),
-    }
-}
-
 fn register_lease(deps: DepsMut, msg_id: u64, lease_addr: Addr) -> Result<Response, ContractError> {
     // TODO: Remove pending id if the creation was not successful
-    Leaser::save(deps.storage, msg_id, lease_addr.clone())?;
+    Loans::save(deps.storage, msg_id, lease_addr.clone())?;
     Ok(Response::new().add_attribute("lease_address", lease_addr))
-}
-
-#[cfg(test)]
-fn get_annual_interest_rate(_deps: Deps, _downpayment: Coin) -> StdResult<Decimal> {
-    Ok(Decimal::one())
 }

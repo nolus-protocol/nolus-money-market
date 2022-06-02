@@ -23,9 +23,9 @@ impl<'a> InstantiateReplyIdSeq<'a> {
     }
 }
 
-pub struct Leaser {}
+pub struct Loans {}
 
-impl Leaser {
+impl Loans {
     const STORAGE: Map<'static, Addr, HashSet<Addr>> = Map::new("loans");
 
     pub fn next(
