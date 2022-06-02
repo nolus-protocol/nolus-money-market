@@ -33,7 +33,7 @@ impl Percent {
 
     pub(crate) fn units(&self) -> Units {
         self.0
-    } 
+    }
 
     pub fn of<P>(&self, amount: P) -> <P as Percentable>::Result
     where
@@ -115,10 +115,12 @@ impl<'a> Sub<&'a Percent> for Percent {
 }
 
 #[cfg(test)]
-mod test {
+pub(super) mod test {
+    use std::fmt::Debug;
+
     use cosmwasm_std::Coin;
 
-    use crate::percent::Percent;
+    use crate::{percent::Percent, percentable::Percentable};
 
     use super::Units;
 
@@ -185,40 +187,13 @@ mod test {
         let _ = from(34) - from(35);
     }
 
-    fn test_of_are(permille: Units, quantity: u128, exp: u128) {
-        let d = String::from("ABC");
-        let of = Coin::new(quantity, d.clone());
-        let exp = Coin::new(exp, d);
-        assert_eq!(exp, Percent::from_permille(permille).of(&of));
+    pub(crate) fn test_of_are<P>(permille: Units, quantity: P, exp: P)
+    where
+        P: Percentable<Result = P> + PartialEq + Debug + Clone,
+    {
+        assert_eq!(exp, Percent::from_permille(permille).of(quantity.clone()));
         if permille != 0 {
-            assert_eq!(of, Percent::from_permille(permille).are(&exp));
+            assert_eq!(quantity, Percent::from_permille(permille).are(exp));
         }
-    }
-
-    #[test]
-    fn of_are() {
-        test_of_are(100, 50, 5);
-        test_of_are(100, 5000, 500);
-        test_of_are(101, 5000, 505);
-        test_of_are(200, 50, 10);
-        test_of_are(0, 120, 0);
-        test_of_are(1, 1000, 1);
-        test_of_are(1, 0, 0);
-        test_of_are(200, 0, 0);
-        test_of_are(1200, 50, 60);
-        test_of_are(12, 500, 6);
-        test_of_are(1000, u128::MAX, u128::MAX);
-    }
-
-    #[test]
-    #[should_panic]
-    fn of_overflow() {
-        test_of_are(1001, u128::MAX, u128::MAX);
-    }
-
-    #[test]
-    #[should_panic]
-    fn are_overflow() {
-        test_of_are(999, u128::MAX, u128::MAX);
     }
 }
