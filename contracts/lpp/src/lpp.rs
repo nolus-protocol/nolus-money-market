@@ -1,17 +1,31 @@
 use cosmwasm_std::{
     coin, Addr, Coin, ContractInfoResponse, Decimal, Deps, DepsMut, Env, QueryRequest, StdResult,
-    Storage, Uint128, WasmQuery, BankMsg,
+    Storage, Uint128, WasmQuery, BankMsg, Timestamp, Uint64,
 };
 
 use crate::error::ContractError;
-use crate::msg::LppBalanceResponse;
+use crate::msg::{LppBalanceResponse, LoanResponse, PriceResponse, OutstandingInterest};
 use crate::state::{Config, Loan, Total, Deposit};
 use crate::calc::{dt, interest};
+use finance::percent::Percent;
 
-pub struct NTokenPrice(Decimal);
-impl NTokenPrice {
+pub struct NTokenPrice<'a> {
+    price: Decimal,
+    denom: &'a String,
+}
+
+impl<'a> NTokenPrice<'a> {
     pub fn get(&self) -> Decimal {
-        self.0
+        self.price
+    }
+}
+
+impl<'a> From<NTokenPrice<'a>> for PriceResponse {
+    fn from(nprice: NTokenPrice) -> Self {
+        PriceResponse {
+            price: nprice.price,
+            denom: nprice.denom.to_owned(),
+        }
     }
 }
 
@@ -22,6 +36,15 @@ pub struct LiquidityPool {
 
 impl LiquidityPool {
 
+    pub fn store(storage: &mut dyn Storage, denom: String, lease_code_id: Uint64) -> StdResult<()> {
+        Config::new(denom, lease_code_id)
+            .store(storage)?;
+
+        Total::default().store(storage)?;
+
+        Ok(())
+    }
+
     pub fn load(storage: &dyn Storage) -> StdResult<Self> {
         let config = Config::load(storage)?;
         let total = Total::load(storage)?;
@@ -29,9 +52,12 @@ impl LiquidityPool {
         Ok(LiquidityPool {config, total})
     }
 
+// TODO: query parameters
+/*
     pub fn config(&self) -> &Config {
         &self.config
     }
+*/
 
     pub fn balance(&self, deps: &Deps, env: &Env) -> StdResult<Coin> {
         let querier = deps.querier;
@@ -72,7 +98,10 @@ impl LiquidityPool {
                 balance_nlpn)
         };
 
-        Ok(NTokenPrice(price))
+        Ok(NTokenPrice {
+            price,
+            denom: &self.config.denom,
+        })
     }
 
     pub fn validate_lease_addr(
@@ -200,6 +229,37 @@ impl LiquidityPool {
             .store(deps.storage)?;
 
         Ok(excess_received)
+    }
+
+    pub fn query_loan_outstanding_interest(&self, storage: &dyn Storage, addr: Addr, time: Timestamp) -> StdResult<Option<OutstandingInterest>> {
+        let interest = Loan::query_outstanding_interest(storage, addr, time)?
+            .map(
+                |amount|
+                OutstandingInterest(coin(amount.u128(), &self.config.denom))
+            );
+
+        Ok(interest)
+    }
+
+    pub fn query_loan(&self, storage: &dyn Storage, env: &Env, addr: Addr) -> Result<Option<LoanResponse>, ContractError> {
+        let maybe_loan = Loan::query(storage, addr.clone())?;
+        let maybe_interest_due = self.query_loan_outstanding_interest(storage, addr, env.block.time)?;
+        let denom = &self.config.denom;
+        maybe_loan.zip(maybe_interest_due)
+            .map(|(loan, interest_due)| {
+                let permilles: u32 = (loan.annual_interest_rate * Uint128::from(1000u32))
+                    .u128()
+                    .try_into()?;
+
+                Ok(LoanResponse {
+                    principal_due: coin(loan.principal_due.u128(), denom),
+                    interest_due: interest_due.0,
+                    annual_interest_rate: Percent::from_permille(permilles),
+                    interest_paid: loan.interest_paid,
+                })
+                      
+            })
+        .transpose()
     }
 }
 
