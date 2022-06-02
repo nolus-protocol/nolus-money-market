@@ -1,13 +1,63 @@
 use std::{
-    fmt::{Display, Formatter, Result},
-    ops::{Add, Sub},
+    fmt::{Debug, Display, Formatter, Result},
+    ops::{Add, Div, Mul, Sub},
 };
 
-use cosmwasm_std::{Coin, OverflowError, OverflowOperation};
+use cosmwasm_std::{Coin, OverflowError, OverflowOperation, Uint256};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result as FinanceResult;
+
+pub trait Percentable: Mul<Percent, Output = <Self as Percentable>::Intermediate> {
+    type Intermediate: Div<Percent, Output = <Self as Percentable>::Result>;
+    type Result: Percentable;
+}
+
+pub struct Coin256 {
+    pub denom: String,
+    pub amount: Uint256,
+}
+impl Mul<Percent> for &Coin {
+    type Output = Coin256;
+
+    fn mul(self, rhs: Percent) -> Self::Output {
+        self.clone().mul(rhs)
+    }
+}
+
+impl Mul<Percent> for Coin {
+    type Output = Coin256;
+
+    fn mul(self, rhs: Percent) -> Self::Output {
+        Self::Output {
+            denom: self.denom,
+            amount: Uint256::from(self.amount).mul(Uint256::from(rhs.0)),
+        }
+    }
+}
+
+impl Div<Percent> for Coin256 {
+    type Output = Coin;
+
+    fn div(self, rhs: Percent) -> Self::Output {
+        let amount256 = self.amount.div(Uint256::from(rhs.0));
+        Self::Output {
+            denom: self.denom,
+            amount: amount256.try_into().expect("Overflow computing percent"),
+        }
+    }
+}
+
+impl Percentable for Coin {
+    type Intermediate = Coin256;
+    type Result = Self;
+}
+
+impl Percentable for &Coin {
+    type Intermediate = Coin256;
+    type Result = Coin;
+}
 
 #[derive(
     Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
@@ -29,12 +79,11 @@ impl Percent {
         Self(permille)
     }
 
-    pub fn of(&self, amount: &Coin) -> Coin {
-        let new_quantity = amount.amount.multiply_ratio(self.0, Percent::HUNDRED.0);
-        Coin {
-            amount: new_quantity,
-            denom: amount.denom.clone(),
-        }
+    pub fn of<P>(&self, percentable: P) -> <P as Percentable>::Result
+    where
+        P: Percentable,
+    {
+        percentable * *self / Percent::HUNDRED
     }
 
     /// the inverse of `Percent::of`
