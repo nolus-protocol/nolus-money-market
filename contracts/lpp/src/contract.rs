@@ -2,19 +2,18 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     to_binary, Addr, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, Timestamp,
-    BankMsg, Storage, coin, Uint128
+    BankMsg, Storage, Uint128
 };
 use cw2::set_contract_version;
-use finance::percent::Percent;
 
 use crate::error::ContractError;
 use crate::msg::{
     ExecuteMsg, InstantiateMsg, QueryMsg, QueryQuoteResponse, QueryLoanResponse,
-    QueryLoanOutstandingInterestResponse, OutstandingInterest, LoanResponse, PriceResponse, BalanceResponse,
+    QueryLoanOutstandingInterestResponse, PriceResponse, BalanceResponse,
     RewardsResponse, LppBalanceResponse,
 };
 use crate::lpp::LiquidityPool;
-use crate::state::{Total, Config, Loan, Deposit};
+use crate::state::Deposit;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -29,11 +28,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    Config::new(msg.denom, msg.lease_code_id)
-        .store(deps.storage)?;
-
-    Total::default()
-        .store(deps.storage)?;
+    LiquidityPool::store(deps.storage, msg.denom, msg.lease_code_id)?;
 
     Ok(Response::new().add_attribute("method", "instantiate"))
 }
@@ -178,33 +173,19 @@ fn query_quote(deps: &Deps, env: &Env, quote: Coin) -> Result<QueryQuoteResponse
 }
 
 fn query_loan(storage: &dyn Storage, env: Env, lease_addr: Addr) -> Result<QueryLoanResponse, ContractError> {
-    let denom = Config::load(storage)?.denom;
-    Loan::query(storage, lease_addr.clone())?
-        .map(|loan| {
-            let permilles: u32 = (loan.annual_interest_rate * Uint128::from(1000u32))
-                .u128()
-                .try_into()?;
-            let interest_due = Loan::query_outstanding_interest(storage, lease_addr, env.block.time)?
-                .expect("should be some interest_due");
-            Ok(LoanResponse {
-                principal_due: coin(loan.principal_due.u128(), &denom),
-                interest_due: coin(interest_due.u128(), &denom),
-                annual_interest_rate: Percent::from_permille(permilles),
-                interest_paid: loan.interest_paid,
-            })
-        })
-        .transpose()}
+    LiquidityPool::load(storage)?
+        .query_loan(storage, &env, lease_addr)
+}
 
 fn query_loan_outstanding_interest(
     storage: &dyn Storage,
     loan: Addr,
     outstanding_time: Timestamp,
 ) -> Result<QueryLoanOutstandingInterestResponse, ContractError> {
-    let denom = Config::load(storage)?
-        .denom;
-    let response = Loan::query_outstanding_interest(storage, loan, outstanding_time)?
-        .map(|interest| OutstandingInterest(coin(interest.u128(), denom)));
-    Ok(response)
+    let interest = LiquidityPool::load(storage)?
+        .query_loan_outstanding_interest(storage, loan, outstanding_time)?;
+
+    Ok(interest)
 }
 
 fn query_lpp_balance(deps: Deps, env: Env) -> Result<LppBalanceResponse, ContractError> {
@@ -214,10 +195,9 @@ fn query_lpp_balance(deps: Deps, env: Env) -> Result<LppBalanceResponse, Contrac
 
 fn query_ntoken_price(deps: Deps, env: Env) -> Result<PriceResponse, ContractError> {
     let lpp = LiquidityPool::load(deps.storage)?;
-    let price = lpp.calculate_price(&deps, &env)?.get();
-    let denom = lpp.config().denom.clone();
+    let price = lpp.calculate_price(&deps, &env)?.into();
 
-    Ok(PriceResponse {price, denom})
+    Ok(price)
 }
 
 fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceResponse, ContractError> {
