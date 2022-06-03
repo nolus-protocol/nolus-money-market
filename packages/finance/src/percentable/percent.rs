@@ -1,5 +1,3 @@
-use std::ops::{Div, Mul};
-
 use crate::{
     percent::{Percent, Units},
     percentable::Percentable,
@@ -8,30 +6,22 @@ use crate::{
 type DoubleUnit = u64;
 
 impl Percentable for Percent {
-    type Intermediate = DoubleUnit;
-    type Result = Self;
-}
-impl Mul<Percent> for Percent {
-    type Output = <Self as Percentable>::Intermediate;
-
-    fn mul(self, rhs: Percent) -> Self::Output {
-        debug_assert_eq!(Units::BITS * 2, Self::Output::BITS);
-        Self::Output::from(self.units()).mul(Self::Output::from(rhs.units()))
-    }
-}
-impl Div<Percent> for DoubleUnit {
-    type Output = Percent;
-
-    fn div(self, rhs: Percent) -> Self::Output {
-        let out_double = self.div(Self::from(rhs.units()));
-        let out: Units = out_double.try_into().expect("Overflow");
-        Self::Output::from_permille(out)
+    fn safe_mul<F>(self, fraction: &F) -> Self
+    where
+        F: cosmwasm_std::Fraction<Units>,
+    {
+        debug_assert_eq!(Units::BITS * 2, DoubleUnit::BITS);
+        let res = Units::try_from(
+            DoubleUnit::from(self.units()) * DoubleUnit::from(fraction.numerator())
+                / DoubleUnit::from(fraction.denominator()),
+        );
+        Percent::from_permille(res.expect("unexpected overflow"))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::percent::{test::test_of_are, Percent, Units};
+    use crate::percent::{test::{test_of_are, test_of, test_are}, Percent, Units};
 
     #[test]
     fn of_are() {
@@ -40,7 +30,9 @@ mod test {
         test_of_are(10, Percent::from_percent(800), Percent::from_percent(8));
         test_of_are(10, Percent::from_permille(8900), Percent::from_permille(89));
         test_of_are(1, Percent::from_percent(12300), Percent::from_permille(123));
-        test_of_are(0, Percent::from_percent(123), Percent::from_percent(0));
+        test_of(1, Percent::from_percent(12345), Percent::from_permille(123));
+        test_are(1, Percent::from_permille(123), Percent::from_percent(12300));
+        test_of(0, Percent::from_percent(123), Percent::from_percent(0));
         test_of_are(
             1000,
             Percent::from_permille(Units::MAX),
@@ -66,5 +58,11 @@ mod test {
     #[should_panic]
     fn are_overflow() {
         Percent::from_permille(999).are(Percent::from_permille(Units::MAX));
+    }
+
+    #[test]
+    #[should_panic]
+    fn are_div_zero() {
+        Percent::ZERO.are(Percent::from_permille(10));
     }
 }

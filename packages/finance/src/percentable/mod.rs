@@ -1,13 +1,14 @@
 mod coin;
-mod u64;
-mod u128;
 mod percent;
+mod u128;
+mod u64;
 
-use std::ops::{Div, Mul};
+use cosmwasm_std::Fraction;
 
-use crate::percent::Percent;
+use crate::percent::Units;
 
-pub trait Percentable: Mul<Percent, Output = <Self as Percentable>::Intermediate> {
-    type Intermediate: Div<Percent, Output = <Self as Percentable>::Result>;
-    type Result: Percentable;
+pub trait Percentable {
+    fn safe_mul<F>(self, fraction: &F) -> Self
+    where
+        F: Fraction<Units>;
 }

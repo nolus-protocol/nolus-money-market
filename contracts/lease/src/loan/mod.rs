@@ -65,7 +65,7 @@ where
         let principal_due = self.load_principal_due(querier, lease.clone())?;
         debug_assert_eq!(payment.denom, principal_due.denom);
 
-        let change = self.repay_margin_interest(&principal_due, by, payment);
+        let change = self.repay_margin_interest(principal_due.clone(), by, payment);
         if change.amount.is_zero() {
             return Ok(None);
         }
@@ -78,7 +78,7 @@ where
             if loan_interest_due.amount <= change.amount && self.current_period.zero_length() {
                 self.open_next_period();
                 let loan_interest_surplus = coin::sub_amount(change, loan_interest_due.amount);
-                let change = self.repay_margin_interest(&principal_due, by, loan_interest_surplus);
+                let change = self.repay_margin_interest(principal_due, by, loan_interest_surplus);
                 coin::add_coin(loan_interest_due, change)
             } else {
                 change
@@ -144,7 +144,7 @@ where
 
     fn repay_margin_interest(
         &mut self,
-        principal_due: &Coin,
+        principal_due: Coin,
         by: Timestamp,
         payment: Coin,
     ) -> Coin {
@@ -166,7 +166,7 @@ where
         let margin_interest_period = self
             .current_period
             .spanning(Duration::between(self.current_period.start(), now));
-        let margin_interest_due = margin_interest_period.interest(&principal_due);
+        let margin_interest_due = margin_interest_period.interest(principal_due.clone());
         State {
             annual_interest: loan_state.annual_interest_rate + self.annual_margin_interest,
             principal_due,

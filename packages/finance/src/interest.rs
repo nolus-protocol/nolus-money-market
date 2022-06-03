@@ -59,11 +59,11 @@ impl InterestPeriod {
         self.start + self.length
     }
 
-    pub fn interest(&self, principal: &Coin) -> Coin {
+    pub fn interest(&self, principal: Coin) -> Coin {
         self.interest_by(principal, self.till())
     }
 
-    pub fn pay(self, principal: &Coin, payment: Coin, by: Timestamp) -> (Self, Coin) {
+    pub fn pay(self, principal: Coin, payment: Coin, by: Timestamp) -> (Self, Coin) {
         let by_within_period = self.move_within_period(by);
         let interest_due_per_period = self.interest_by(principal, by_within_period);
 
@@ -79,7 +79,7 @@ impl InterestPeriod {
         cmp::min(cmp::max(self.start, t), self.till())
     }
 
-    fn interest_by(&self, principal: &Coin, by: Timestamp) -> Coin {
+    fn interest_by(&self, principal: Coin, by: Timestamp) -> Coin {
         debug_assert!(self.start <= by);
         debug_assert!(by <= self.till());
         let period = Duration::between(self.start, by);

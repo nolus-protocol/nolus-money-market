@@ -1,30 +1,23 @@
-use std::ops::{Div, Mul};
+use cosmwasm_std::Fraction;
 
-use crate::{percent::Percent, percentable::Percentable};
+use crate::{percent::Units, percentable::Percentable};
+
+type Double64 = u128;
 
 impl Percentable for u64 {
-    type Intermediate = u128;
-    type Result = Self;
-}
-impl Mul<Percent> for u64 {
-    type Output = u128;
-
-    fn mul(self, rhs: Percent) -> Self::Output {
-        Self::Output::from(self).mul(Self::Output::from(rhs.units()))
-    }
-}
-impl Div<Percent> for u128 {
-    type Output = u64;
-
-    fn div(self, rhs: Percent) -> Self::Output {
-        let out128 = self.div(Self::from(rhs.units()));
-        out128.try_into().expect("Overflow")
+    fn safe_mul<F>(self, fraction: &F) -> Self
+    where
+        F: Fraction<Units>,
+    {
+        let res_double: Double64 = Double64::from(self) * Double64::from(fraction.numerator())
+            / Double64::from(fraction.denominator());
+        res_double.try_into().expect("unexpected overflow")
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::percent::test::test_of_are;
+    use crate::percent::test::{test_of_are, test_of, test_are};
 
     #[test]
     fn of_are() {
@@ -32,7 +25,7 @@ mod test {
         test_of_are(100, 5000, 500);
         test_of_are(101, 5000, 505);
         test_of_are(200, 50, 10);
-        test_of_are(0, 120, 0);
+        test_of(0, 120, 0);
         test_of_are(1, 1000, 1);
         test_of_are(1, 0, 0);
         test_of_are(200, 0, 0);
@@ -44,12 +37,18 @@ mod test {
     #[test]
     #[should_panic]
     fn of_overflow() {
-        test_of_are(2001, u64::MAX / 2, u64::MAX);
+        test_of(2001, u64::MAX / 2, u64::MAX);
     }
 
     #[test]
     #[should_panic]
     fn are_overflow() {
-        test_of_are(999, u64::MAX, u64::MAX);
+        test_are(999, u64::MAX, u64::MAX);
+    }
+
+    #[test]
+    #[should_panic]
+    fn are_div_zero() {
+        test_are(0, u64::MAX, u64::MAX);
     }
 }

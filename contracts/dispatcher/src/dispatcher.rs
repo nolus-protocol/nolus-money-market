@@ -42,7 +42,7 @@ impl Dispatcher {
         let reward_lppdenom = InterestPeriod::with_interest(arp_permille)
             .from(last_dispatch)
             .spanning(Duration::between(last_dispatch, env.block.time))
-            .interest(&lpp_balance);
+            .interest(lpp_balance);
 
         if reward_lppdenom.amount.is_zero() {
             return Ok(Response::new()
