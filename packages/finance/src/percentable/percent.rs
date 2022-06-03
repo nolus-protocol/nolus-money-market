@@ -1,27 +1,31 @@
+use cosmwasm_std::Fraction;
+
 use crate::{
     percent::{Percent, Units},
     percentable::Percentable,
 };
 
-type DoubleUnit = u64;
+use super::Integer;
+
+impl Integer for Units {
+    type DoubleInteger = u64;
+}
 
 impl Percentable for Percent {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: cosmwasm_std::Fraction<Units>,
+        F: Fraction<Units>,
     {
-        debug_assert_eq!(Units::BITS * 2, DoubleUnit::BITS);
-        let res = Units::try_from(
-            DoubleUnit::from(self.units()) * DoubleUnit::from(fraction.numerator())
-                / DoubleUnit::from(fraction.denominator()),
-        );
-        Percent::from_permille(res.expect("unexpected overflow"))
+        Percent::from_permille(self.units().safe_mul(fraction))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::percent::{test::{test_of_are, test_of, test_are}, Percent, Units};
+    use crate::percent::{
+        test::{test_are, test_of, test_of_are},
+        Percent, Units,
+    };
 
     #[test]
     fn of_are() {

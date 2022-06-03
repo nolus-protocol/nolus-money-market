@@ -1,36 +1,25 @@
-use cosmwasm_std::Fraction;
+use super::Integer;
 
-use crate::{percent::Units, percentable::Percentable};
-
-type Double64 = u128;
-
-impl Percentable for u64 {
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Fraction<Units>,
-    {
-        let res_double: Double64 = Double64::from(self) * Double64::from(fraction.numerator())
-            / Double64::from(fraction.denominator());
-        res_double.try_into().expect("unexpected overflow")
-    }
+impl Integer for u64 {
+    type DoubleInteger = u128;
 }
 
 #[cfg(test)]
 mod test {
-    use crate::percent::test::{test_of_are, test_of, test_are};
+    use crate::percent::test::{test_are, test_of, test_of_are};
 
     #[test]
     fn of_are() {
-        test_of_are(100, 50, 5);
-        test_of_are(100, 5000, 500);
-        test_of_are(101, 5000, 505);
-        test_of_are(200, 50, 10);
-        test_of(0, 120, 0);
-        test_of_are(1, 1000, 1);
-        test_of_are(1, 0, 0);
-        test_of_are(200, 0, 0);
-        test_of_are(1200, 50, 60);
-        test_of_are(12, 500, 6);
+        test_of_are(100, 50u64, 5u64);
+        test_of_are(100, 5000u64, 500u64);
+        test_of_are(101, 5000u64, 505u64);
+        test_of_are(200, 50u64, 10u64);
+        test_of(0, 120u64, 0u64);
+        test_of_are(1, 1000u64, 1u64);
+        test_of_are(1, 0u64, 0u64);
+        test_of_are(200, 0u64, 0u64);
+        test_of_are(1200, 50u64, 60u64);
+        test_of_are(12, 500u64, 6u64);
         test_of_are(1000, u64::MAX, u64::MAX);
     }
 

@@ -1,18 +1,9 @@
-use cosmwasm_std::{Fraction, Uint128, Uint256};
+use cosmwasm_std::{Uint128, Uint256};
 
-use crate::{percent::Units, percentable::Percentable};
+use super::Integer;
 
-type Double128 = Uint256;
-
-impl Percentable for Uint128 {
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Fraction<Units>,
-    {
-        let res_double = Double128::from(self) * Double128::from(fraction.numerator())
-            / Double128::from(fraction.denominator());
-        res_double.try_into().expect("unexpected overflow")
-    }
+impl Integer for Uint128 {
+    type DoubleInteger = Uint256;
 }
 
 #[cfg(test)]

@@ -20,7 +20,7 @@ impl Percentable for Coin {
 mod test {
     use cosmwasm_std::Coin;
 
-    use crate::percent::test::{test_of_are, test_of, test_are};
+    use crate::percent::test::{test_are, test_of, test_of_are};
     const DENOM: &str = "USDC";
 
     #[test]
