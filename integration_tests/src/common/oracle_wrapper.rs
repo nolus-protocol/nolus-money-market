@@ -6,7 +6,7 @@ use marketprice::feed::{DenomToPrice, Price};
 
 use super::ADMIN;
 
-pub struct MockMarketOracle {
+pub struct MarketOracleWrapper {
     contract_wrapper: Box<
         ContractWrapper<
             oracle::msg::ExecuteMsg,
@@ -19,7 +19,7 @@ pub struct MockMarketOracle {
     >,
 }
 
-impl MockMarketOracle {
+impl MarketOracleWrapper {
     pub fn with_contract_wrapper(
         contract: ContractWrapper<
             oracle::msg::ExecuteMsg,
@@ -48,7 +48,7 @@ impl MockMarketOracle {
     }
 }
 
-impl Default for MockMarketOracle {
+impl Default for MarketOracleWrapper {
     fn default() -> Self {
         let contract = ContractWrapper::new(
             oracle::contract::execute,

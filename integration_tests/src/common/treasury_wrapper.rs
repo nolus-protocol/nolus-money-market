@@ -17,7 +17,7 @@ struct MockResponse {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 struct QueryMsg {}
 
-pub struct MockTreasury {
+pub struct TreasuryWrapper {
     contract_wrapper: Box<
         ContractWrapper<
             treasury::msg::ExecuteMsg,
@@ -30,7 +30,7 @@ pub struct MockTreasury {
     >,
 }
 
-impl MockTreasury {
+impl TreasuryWrapper {
     fn mock_treasury_query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
         to_binary(&MockResponse {})
     }
@@ -51,7 +51,7 @@ impl MockTreasury {
     }
 }
 
-impl Default for MockTreasury {
+impl Default for TreasuryWrapper {
     fn default() -> Self {
         let contract = ContractWrapper::new(
             treasury::contract::execute,

@@ -1,26 +1,26 @@
 use cosmwasm_std::{Addr, StdError};
 use cw_multi_test::ContractWrapper;
 
-use crate::state::tvl_intervals::{Intervals, Stop};
+use rewards_dispatcher::state::tvl_intervals::{Intervals, Stop};
 
 use cw_multi_test::{App, Executor};
 
 use super::ADMIN;
 
-pub struct MockDispatcher {
+pub struct DispatcherWrapper {
     contract_wrapper: Box<
         ContractWrapper<
-            crate::msg::ExecuteMsg,
-            crate::msg::InstantiateMsg,
-            crate::msg::QueryMsg,
-            crate::error::ContractError,
-            crate::error::ContractError,
+            rewards_dispatcher::msg::ExecuteMsg,
+            rewards_dispatcher::msg::InstantiateMsg,
+            rewards_dispatcher::msg::QueryMsg,
+            rewards_dispatcher::error::ContractError,
+            rewards_dispatcher::error::ContractError,
             StdError,
         >,
     >,
 }
 
-impl MockDispatcher {
+impl DispatcherWrapper {
     #[track_caller]
     pub fn instantiate(
         self,
@@ -32,7 +32,7 @@ impl MockDispatcher {
         _denom: &str,
     ) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
-        let msg = crate::msg::InstantiateMsg {
+        let msg = rewards_dispatcher::msg::InstantiateMsg {
             cadence_hours: 10,
             lpp: lpp.clone(),
             time_oracle: time_oracle.clone(),
@@ -53,12 +53,12 @@ impl MockDispatcher {
     }
 }
 
-impl Default for MockDispatcher {
+impl Default for DispatcherWrapper {
     fn default() -> Self {
         let contract = ContractWrapper::new(
-            crate::contract::execute,
-            crate::contract::instantiate,
-            crate::contract::query,
+            rewards_dispatcher::contract::execute,
+            rewards_dispatcher::contract::instantiate,
+            rewards_dispatcher::contract::query,
         );
 
         Self {
