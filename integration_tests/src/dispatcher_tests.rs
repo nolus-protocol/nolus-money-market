@@ -4,8 +4,8 @@ use cw_multi_test::{ContractWrapper, Executor};
 use crate::{
     common::test_case::TestCase,
     common::{
-        mock_lpp::{mock_lpp_execute, mock_lpp_query},
-        mock_oracle::mock_oracle_query,
+        lpp_wrapper::{mock_lpp_execute, mock_lpp_query},
+        oracle_wrapper::mock_oracle_query,
     },
 };
 

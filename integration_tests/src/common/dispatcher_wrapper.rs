@@ -7,7 +7,7 @@ use cw_multi_test::{App, Executor};
 
 use super::ADMIN;
 
-pub struct MockDispatcher {
+pub struct DispatcherWrapper {
     contract_wrapper: Box<
         ContractWrapper<
             rewards_dispatcher::msg::ExecuteMsg,
@@ -20,7 +20,7 @@ pub struct MockDispatcher {
     >,
 }
 
-impl MockDispatcher {
+impl DispatcherWrapper {
     #[track_caller]
     pub fn instantiate(
         self,
@@ -53,7 +53,7 @@ impl MockDispatcher {
     }
 }
 
-impl Default for MockDispatcher {
+impl Default for DispatcherWrapper {
     fn default() -> Self {
         let contract = ContractWrapper::new(
             rewards_dispatcher::contract::execute,

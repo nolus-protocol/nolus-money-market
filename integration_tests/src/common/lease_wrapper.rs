@@ -7,7 +7,7 @@ use cw_multi_test::{App, Executor};
 
 use super::{ADMIN, USER};
 
-pub struct MockLease {
+pub struct LeaseWrapper {
     contract_wrapper: Box<
         ContractWrapper<
             lease::msg::ExecuteMsg,
@@ -20,7 +20,7 @@ pub struct MockLease {
     >,
 }
 
-impl MockLease {
+impl LeaseWrapper {
     pub fn store(self, app: &mut App) -> u64 {
         app.store_code(self.contract_wrapper)
     }
@@ -70,7 +70,7 @@ impl MockLease {
     }
 }
 
-impl Default for MockLease {
+impl Default for LeaseWrapper {
     fn default() -> Self {
         let contract = ContractWrapper::new(
             lease::contract::execute,

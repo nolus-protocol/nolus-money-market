@@ -10,7 +10,7 @@ use super::ADMIN;
 #[derive(Serialize, Clone, Debug, PartialEq)]
 struct MockResponse {}
 
-pub struct MockProfit {
+pub struct ProfitWrapper {
     contract_wrapper: Box<
         ContractWrapper<
             profit::msg::ExecuteMsg,
@@ -23,7 +23,7 @@ pub struct MockProfit {
     >,
 }
 
-impl MockProfit {
+impl ProfitWrapper {
     #[track_caller]
     pub fn instantiate(
         self,
@@ -44,7 +44,7 @@ impl MockProfit {
     }
 }
 
-impl Default for MockProfit {
+impl Default for ProfitWrapper {
     fn default() -> Self {
         let contract = ContractWrapper::new(
             profit::contract::execute,
