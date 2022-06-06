@@ -3,12 +3,8 @@ use cw_multi_test::ContractWrapper;
 
 use cw_multi_test::{App, Executor};
 use profit::ContractError;
-use serde::Serialize;
 
 use super::ADMIN;
-
-#[derive(Serialize, Clone, Debug, PartialEq)]
-struct MockResponse {}
 
 pub struct ProfitWrapper {
     contract_wrapper: Box<

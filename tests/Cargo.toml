@@ -27,6 +27,7 @@ serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 
 treasury = { path = "../contracts/treasury", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
 lease = { path = "../contracts/lease", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
+leaser = { path = "../contracts/leaser", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
 lpp = { path = "../contracts/lpp", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
 oracle = { path = "../contracts/oracle", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
 rewards_dispatcher = { path = "../contracts/dispatcher", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
