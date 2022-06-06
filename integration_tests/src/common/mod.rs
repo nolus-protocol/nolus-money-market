@@ -3,16 +3,16 @@ use cw_multi_test::{App, AppBuilder};
 
 #[cfg(test)]
 #[allow(dead_code)]
-pub mod mock_dispatcher;
-pub mod mock_lease;
+pub mod dispatcher_wrapper;
+pub mod lease_wrapper;
 #[cfg(test)]
 #[allow(dead_code)]
-pub mod mock_lpp;
-pub mod mock_oracle;
-pub mod mock_profit;
-pub mod mock_treasury;
+pub mod lpp_wrapper;
+pub mod oracle_wrapper;
+pub mod profit_wrapper;
 #[cfg(test)]
 pub mod test_case;
+pub mod treasury_wrapper;
 
 pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";

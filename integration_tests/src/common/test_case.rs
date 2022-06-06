@@ -3,8 +3,9 @@ use cosmwasm_std::{coins, Addr, Coin, Empty, StdError, Uint64};
 use cw_multi_test::{next_block, App, ContractWrapper, Executor};
 
 use super::{
-    mock_app, mock_dispatcher::MockDispatcher, mock_lease::MockLease, mock_lpp::MockLpp,
-    mock_oracle::MockMarketOracle, mock_profit::MockProfit, mock_treasury::MockTreasury, ADMIN,
+    dispatcher_wrapper::DispatcherWrapper, lease_wrapper::LeaseWrapper, lpp_wrapper::LppWrapper,
+    mock_app, oracle_wrapper::MarketOracleWrapper, profit_wrapper::ProfitWrapper,
+    treasury_wrapper::TreasuryWrapper, ADMIN,
 };
 
 const STABLECOIN: &str = "UST";
@@ -72,7 +73,7 @@ impl TestCase {
         }
     }
     pub fn init(&mut self, user_addr: &Addr, init_funds: Vec<Coin>) -> &mut Self {
-        self.lease_code_id = Some(MockLease::default().store(&mut self.app));
+        self.lease_code_id = Some(LeaseWrapper::default().store(&mut self.app));
         // Bonus: set some funds on the user for future proposals
         if !init_funds.is_empty() {
             self.app
@@ -84,7 +85,7 @@ impl TestCase {
     }
 
     pub fn get_lease_instance(&mut self) -> Addr {
-        MockLease::default().instantiate(
+        LeaseWrapper::default().instantiate(
             &mut self.app,
             self.lease_code_id,
             self.lpp_addr.as_ref().unwrap(),
@@ -93,14 +94,14 @@ impl TestCase {
     }
 
     pub fn init_lease(&mut self) -> &mut Self {
-        self.lease_code_id = Some(MockLease::default().store(&mut self.app));
+        self.lease_code_id = Some(LeaseWrapper::default().store(&mut self.app));
         self
     }
 
     pub fn init_lpp(&mut self, custom_wrapper: OptionalContractWrapper) -> &mut Self {
         let mocked_lpp = match custom_wrapper {
-            Some(wrapper) => MockLpp::with_contract_wrapper(wrapper),
-            None => MockLpp::default(),
+            Some(wrapper) => LppWrapper::with_contract_wrapper(wrapper),
+            None => LppWrapper::default(),
         };
         self.lpp_addr = Some(
             mocked_lpp
@@ -116,14 +117,15 @@ impl TestCase {
     }
 
     pub fn init_treasury(&mut self) -> &mut Self {
-        self.treasury_addr = Some(MockTreasury::default().instantiate(&mut self.app, &self.denom));
+        self.treasury_addr =
+            Some(TreasuryWrapper::default().instantiate(&mut self.app, &self.denom));
         self.app.update_block(next_block);
 
         self
     }
 
     pub fn init_profit(&mut self, cadence_hours: u32) -> &mut Self {
-        self.profit_addr = Some(MockProfit::default().instantiate(
+        self.profit_addr = Some(ProfitWrapper::default().instantiate(
             &mut self.app,
             cadence_hours,
             self.treasury_addr.as_ref().unwrap(),
@@ -136,8 +138,8 @@ impl TestCase {
 
     pub fn init_market_oracle(&mut self, custom_wrapper: OptionalContractWrapperStd) -> &mut Self {
         let mocked_oracle = match custom_wrapper {
-            Some(wrapper) => MockMarketOracle::with_contract_wrapper(wrapper),
-            None => MockMarketOracle::default(),
+            Some(wrapper) => MarketOracleWrapper::with_contract_wrapper(wrapper),
+            None => MarketOracleWrapper::default(),
         };
 
         self.market_oracle = Some(mocked_oracle.instantiate(&mut self.app, &self.denom));
@@ -152,7 +154,7 @@ impl TestCase {
     }
     pub fn init_dispatcher(&mut self) -> &mut Self {
         // Instantiate Dispatcher contract
-        let dispatcher_addr = MockDispatcher::default().instantiate(
+        let dispatcher_addr = DispatcherWrapper::default().instantiate(
             &mut self.app,
             self.lpp_addr.as_ref().unwrap(),
             self.time_oracle.as_ref().unwrap(),

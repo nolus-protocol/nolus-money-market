@@ -9,7 +9,7 @@ use lpp::{
 
 use super::ADMIN;
 
-pub struct MockLpp {
+pub struct LppWrapper {
     contract_wrapper: Box<
         ContractWrapper<
             ExecuteMsg,
@@ -22,7 +22,7 @@ pub struct MockLpp {
     >,
 }
 
-impl MockLpp {
+impl LppWrapper {
     pub fn with_contract_wrapper(
         contract: ContractWrapper<
             ExecuteMsg,
@@ -59,7 +59,7 @@ impl MockLpp {
     }
 }
 
-impl Default for MockLpp {
+impl Default for LppWrapper {
     fn default() -> Self {
         let contract = ContractWrapper::new(
             lpp::contract::execute,
