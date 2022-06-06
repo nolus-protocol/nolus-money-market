@@ -1,18 +1,19 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{coins, Addr, Coin};
-use cw_multi_test::{next_block, Executor};
+use cosmwasm_std::{coins, Addr, Coin, DepsMut, Env, MessageInfo, Response};
+use cw_multi_test::{next_block, ContractWrapper, Executor};
 use leaser::msg::{QueryMsg, QuoteResponse};
 
 use crate::common::{test_case::TestCase, ADMIN, USER};
 
+const DENOM: &str = "uusdc";
+
 #[test]
 fn open_lease() {
-    let denom = "UST";
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::new(denom);
-    test_case.init(&user_addr, coins(500, denom));
+    let mut test_case = TestCase::new(DENOM);
+    test_case.init(&user_addr, coins(500, DENOM));
     test_case.init_lpp(None);
     test_case.init_leaser();
 
@@ -22,9 +23,9 @@ fn open_lease() {
             user_addr.clone(),
             test_case.leaser_addr.clone().unwrap(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: denom.to_string(),
+                currency: DENOM.to_string(),
             },
-            &coins(40, denom),
+            &coins(40, DENOM),
         )
         .unwrap();
 
@@ -66,7 +67,7 @@ fn open_lease() {
         [
             ("recipient", "contract2"),
             ("sender", "contract0"),
-            ("amount", "74UST")
+            ("amount", format!("{}{}", "74", DENOM).as_ref())
         ]
     );
 
@@ -97,11 +98,11 @@ fn open_lease() {
     let lease_address = &res.events[7].attributes.get(1).unwrap().value;
 
     assert_eq!(
-        coins(460, denom),
+        coins(460, DENOM),
         test_case.app.wrap().query_all_balances(user_addr).unwrap()
     );
     assert_eq!(
-        coins(114, denom),
+        coins(114, DENOM),
         test_case
             .app
             .wrap()
@@ -111,16 +112,17 @@ fn open_lease() {
 }
 #[test]
 fn open_lease_custom_currency() {
-    let denom = "unolus";
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::new(denom);
-    test_case.init(&user_addr, coins(500, denom));
+    let custom_denom = "unolus";
+
+    let mut test_case = TestCase::new(custom_denom);
+    test_case.init(&user_addr, coins(500, custom_denom));
     test_case.init_lpp(None);
     test_case.init_leaser();
 
     assert_eq!(
-        coins(500, denom),
+        coins(500, custom_denom),
         test_case
             .app
             .wrap()
@@ -134,20 +136,20 @@ fn open_lease_custom_currency() {
             user_addr.clone(),
             test_case.leaser_addr.unwrap(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: denom.to_string(),
+                currency: custom_denom.to_string(),
             },
-            &coins(3, denom),
+            &coins(3, custom_denom),
         )
         .unwrap();
 
     let lease_address = &res.events[7].attributes.get(1).unwrap().value;
 
     assert_eq!(
-        coins(497, denom),
+        coins(497, custom_denom),
         test_case.app.wrap().query_all_balances(user_addr).unwrap()
     );
     assert_eq!(
-        coins(5, denom),
+        coins(5, custom_denom),
         test_case
             .app
             .wrap()
@@ -157,13 +159,46 @@ fn open_lease_custom_currency() {
 }
 
 #[test]
+#[should_panic(expected = "this is a single currency lease version")]
+fn open_lease_mixed_currency() {
+    let user_addr = Addr::unchecked(USER);
+
+    let custom_denom = "unolus";
+
+    let mut test_case = TestCase::new(custom_denom);
+    test_case.init(&user_addr, coins(500, custom_denom));
+    test_case.init_lpp(None);
+    test_case.init_leaser();
+
+    assert_eq!(
+        coins(500, custom_denom),
+        test_case
+            .app
+            .wrap()
+            .query_all_balances(user_addr.clone())
+            .unwrap()
+    );
+
+    let _res = test_case
+        .app
+        .execute_contract(
+            user_addr.clone(),
+            test_case.leaser_addr.unwrap(),
+            &leaser::msg::ExecuteMsg::OpenLease {
+                currency: DENOM.to_string(),
+            },
+            &coins(3, custom_denom),
+        )
+        .unwrap();
+}
+
+#[test]
 fn open_multiple_loans() {
-    let denom = "unolus";
     let user_addr = Addr::unchecked(USER);
     let user1_addr = Addr::unchecked("user1");
 
-    let mut test_case = TestCase::new(denom);
-    test_case.init(&user_addr, coins(500, denom));
+    let mut test_case = TestCase::new(DENOM);
+    test_case.init(&user_addr, coins(500, DENOM));
     test_case.init_lpp(None);
     test_case.init_leaser();
 
@@ -172,7 +207,7 @@ fn open_multiple_loans() {
         .send_tokens(
             Addr::unchecked(ADMIN),
             user1_addr.clone(),
-            &coins(50, denom),
+            &coins(50, DENOM),
         )
         .unwrap();
 
@@ -196,9 +231,9 @@ fn open_multiple_loans() {
                 user_addr.clone(),
                 test_case.leaser_addr.clone().unwrap(),
                 &leaser::msg::ExecuteMsg::OpenLease {
-                    currency: denom.to_string(),
+                    currency: DENOM.to_string(),
                 },
-                &coins(3, denom),
+                &coins(3, DENOM),
             )
             .unwrap();
         test_case.app.update_block(next_block);
@@ -214,9 +249,9 @@ fn open_multiple_loans() {
             user1_addr.clone(),
             test_case.leaser_addr.as_ref().unwrap().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: denom.to_string(),
+                currency: DENOM.to_string(),
             },
-            &coins(30, denom),
+            &coins(30, DENOM),
         )
         .unwrap();
     test_case.app.update_block(next_block);
@@ -246,10 +281,9 @@ fn open_multiple_loans() {
 
 #[test]
 fn test_quote() {
-    let denom = "UST";
     let user_addr = Addr::unchecked(USER);
-    let mut test_case = TestCase::new(denom);
-    test_case.init(&user_addr, coins(500, denom));
+    let mut test_case = TestCase::new(DENOM);
+    test_case.init(&user_addr, coins(500, DENOM));
     test_case.init_lpp(None);
     test_case.init_leaser();
 
@@ -259,10 +293,52 @@ fn test_quote() {
         .query_wasm_smart(
             test_case.leaser_addr.unwrap(),
             &QueryMsg::Quote {
-                downpayment: Coin::new(100, denom),
+                downpayment: Coin::new(100, DENOM),
             },
         )
         .unwrap();
 
     assert_eq!(185, resp.borrow.amount.u128());
+}
+
+#[test]
+#[should_panic(expected = "Insufficient balance")]
+fn open_loans_lpp_fails() {
+    let user_addr = Addr::unchecked(USER);
+
+    fn mock_lpp_execute(
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+        msg: lpp::msg::ExecuteMsg,
+    ) -> Result<Response, lpp::error::ContractError> {
+        match msg {
+            lpp::msg::ExecuteMsg::OpenLoan { amount: _ } => {
+                Err(lpp::error::ContractError::InsufficientBalance)
+            }
+            _ => Ok(lpp::contract::execute(deps, env, info, msg)?),
+        }
+    }
+
+    let mut test_case = TestCase::new(DENOM);
+    test_case
+        .init(&user_addr, coins(500, DENOM))
+        .init_lpp(Some(ContractWrapper::new(
+            mock_lpp_execute,
+            lpp::contract::instantiate,
+            lpp::contract::query,
+        )))
+        .init_leaser();
+
+    let _res = test_case
+        .app
+        .execute_contract(
+            user_addr.clone(),
+            test_case.leaser_addr.as_ref().unwrap().clone(),
+            &leaser::msg::ExecuteMsg::OpenLease {
+                currency: DENOM.to_string(),
+            },
+            &coins(30, DENOM),
+        )
+        .unwrap();
 }
