@@ -1,52 +1,60 @@
 use std::{
-    fmt::{Display, Formatter, Result},
+    fmt::{Debug, Display, Formatter, Result, Write},
     ops::{Add, Sub},
 };
 
-use cosmwasm_std::{Coin, OverflowError, OverflowOperation};
+use cosmwasm_std::{Fraction, OverflowError, OverflowOperation};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::error::Result as FinanceResult;
+use crate::{error::Result as FinanceResult, percent::internal::Ratio, percentable::Percentable};
+
+pub type Units = u32;
 
 #[derive(
     Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(rename_all = "snake_case")]
 #[serde(transparent)]
-pub struct Percent(u32); //value in permille
+pub struct Percent(Units); //value in permille
 
 impl Percent {
     pub const ZERO: Self = Self::from_permille(0);
     pub const HUNDRED: Self = Self::from_permille(1000);
-    const PERMILLE_TO_PERCENT_RATIO: u32 = 10;
+    const UNITS_TO_PERCENT_RATIO: Units = 10;
 
     pub fn from_percent(percent: u16) -> Self {
-        Self(u32::from(percent) * Self::PERMILLE_TO_PERCENT_RATIO)
+        Self::from_permille(Units::from(percent) * Self::UNITS_TO_PERCENT_RATIO)
     }
 
-    pub const fn from_permille(permille: u32) -> Self {
+    pub const fn from_permille(permille: Units) -> Self {
         Self(permille)
     }
 
-    pub fn of(&self, amount: &Coin) -> Coin {
-        let new_quantity = amount.amount.multiply_ratio(self.0, Percent::HUNDRED.0);
-        Coin {
-            amount: new_quantity,
-            denom: amount.denom.clone(),
-        }
+    pub(crate) fn units(&self) -> Units {
+        self.0
+    }
+
+    pub fn of<P>(&self, amount: P) -> P
+    where
+        P: Percentable,
+    {
+        amount.safe_mul(&internal::Ratio::from(*self))
     }
 
     /// the inverse of `Percent::of`
     /// If %.of(X) -> Y, then %.are(Y) -> X
     /// :pre self != 0
-    pub fn are(&self, amount: &Coin) -> Coin {
+    pub fn are<P>(&self, amount: P) -> P
+    where
+        P: Percentable,
+    {
         debug_assert!(self != &Self::ZERO);
-        let new_quantity = amount.amount.multiply_ratio(Percent::HUNDRED.0, self.0);
-        Coin {
-            amount: new_quantity,
-            denom: amount.denom.clone(),
-        }
+        amount.safe_mul(
+            &Ratio::from(*self)
+                .inv()
+                .expect("precondition not respected"),
+        )
     }
 
     pub fn checked_add(self, other: Self) -> FinanceResult<Self> {
@@ -66,7 +74,18 @@ impl Percent {
 
 impl Display for Percent {
     fn fmt(&self, f: &mut Formatter) -> Result {
-        write!(f, "{:.1}%", self.0 / Self::PERMILLE_TO_PERCENT_RATIO)
+        let whole = (self.0) / Self::UNITS_TO_PERCENT_RATIO;
+        let fractional = (self.0)
+            .checked_rem(Self::UNITS_TO_PERCENT_RATIO)
+            .expect("zero divider");
+
+        f.write_str(&whole.to_string())?;
+        if fractional != Units::default() {
+            f.write_char('.')?;
+            f.write_str(&fractional.to_string())?;
+        }
+        f.write_char('%')?;
+        Ok(())
     }
 }
 
@@ -110,13 +129,54 @@ impl<'a> Sub<&'a Percent> for Percent {
     }
 }
 
+mod internal {
+    use cosmwasm_std::Fraction;
+
+    use super::{Percent, Units};
+
+    pub(super) struct Ratio {
+        nominator: Units,
+        denominator: Units,
+    }
+    impl Fraction<Units> for Ratio {
+        fn numerator(&self) -> Units {
+            self.nominator
+        }
+
+        fn denominator(&self) -> Units {
+            self.denominator
+        }
+
+        fn inv(&self) -> Option<Self> {
+            match self.nominator {
+                Units::MIN => None,
+                _ => Some(Ratio {
+                    nominator: self.denominator,
+                    denominator: self.nominator,
+                }),
+            }
+        }
+    }
+    impl From<Percent> for Ratio {
+        fn from(p: Percent) -> Self {
+            Self {
+                nominator: p.units(),
+                denominator: Percent::HUNDRED.units(),
+            }
+        }
+    }
+}
 #[cfg(test)]
-mod test {
+pub(super) mod test {
+    use std::fmt::{Debug, Display};
+
     use cosmwasm_std::Coin;
 
-    use crate::percent::Percent;
+    use crate::{percent::Percent, percentable::Percentable};
 
-    fn from(permille: u32) -> Percent {
+    use super::Units;
+
+    fn from(permille: Units) -> Percent {
         Percent::from_permille(permille)
     }
 
@@ -135,7 +195,7 @@ mod test {
     #[test]
     fn test_zero() {
         let d = String::from("sfw");
-        assert_eq!(Coin::new(0, d.clone()), Percent::ZERO.of(&Coin::new(10, d)))
+        assert_eq!(Coin::new(0, d.clone()), Percent::ZERO.of(Coin::new(10, d)))
     }
 
     #[test]
@@ -144,7 +204,7 @@ mod test {
         let amount = 123;
         assert_eq!(
             Coin::new(amount, d.clone()),
-            Percent::HUNDRED.of(&Coin::new(amount, d))
+            Percent::HUNDRED.of(Coin::new(amount, d))
         )
     }
 
@@ -155,13 +215,13 @@ mod test {
         assert_eq!(from(39), from(39) + from(0));
         assert_eq!(from(1001), Percent::HUNDRED + from(1));
         assert_eq!(from(1) + Percent::HUNDRED, Percent::HUNDRED + from(1));
-        assert_eq!(from(u32::MAX), from(u32::MAX) + from(0));
+        assert_eq!(from(Units::MAX), from(Units::MAX) + from(0));
     }
 
     #[test]
     #[should_panic]
     fn add_overflow() {
-        let _ = from(u32::MAX) + from(1);
+        let _ = from(Units::MAX) + from(1);
     }
 
     #[test]
@@ -170,7 +230,7 @@ mod test {
         assert_eq!(from(0), from(34) - from(34));
         assert_eq!(from(39), from(39) - from(0));
         assert_eq!(from(990), Percent::HUNDRED - from(10));
-        assert_eq!(from(0), from(u32::MAX) - from(u32::MAX));
+        assert_eq!(from(0), from(Units::MAX) - from(Units::MAX));
     }
 
     #[test]
@@ -179,40 +239,57 @@ mod test {
         let _ = from(34) - from(35);
     }
 
-    fn test_of_are(permille: u32, quantity: u128, exp: u128) {
-        let d = String::from("ABC");
-        let of = Coin::new(quantity, d.clone());
-        let exp = Coin::new(exp, d);
-        assert_eq!(exp, Percent::from_permille(permille).of(&of));
-        if permille != 0 {
-            assert_eq!(of, Percent::from_permille(permille).are(&exp));
-        }
+    #[test]
+    fn display() {
+        test_display("0%", 0);
+        test_display("0.1%", 1);
+        test_display("0.4%", 4);
+        test_display("1%", 10);
+        test_display("1.9%", 19);
+        test_display("9%", 90);
+        test_display("10.1%", 101);
+        test_display("100%", 1000);
+        test_display("1234567.8%", 12345678);
     }
 
-    #[test]
-    fn of_are() {
-        test_of_are(100, 50, 5);
-        test_of_are(100, 5000, 500);
-        test_of_are(101, 5000, 505);
-        test_of_are(200, 50, 10);
-        test_of_are(0, 120, 0);
-        test_of_are(1, 1000, 1);
-        test_of_are(1, 0, 0);
-        test_of_are(200, 0, 0);
-        test_of_are(1200, 50, 60);
-        test_of_are(12, 500, 6);
-        test_of_are(1000, u128::MAX, u128::MAX);
+    pub(crate) fn test_of_are<P>(permille: Units, quantity: P, exp: P)
+    where
+        P: Percentable + PartialEq + Debug + Clone + Display,
+    {
+        test_of(permille, quantity.clone(), exp.clone());
+        test_are(permille, exp, quantity);
     }
 
-    #[test]
-    #[should_panic]
-    fn of_overflow() {
-        test_of_are(1001, u128::MAX, u128::MAX);
+    pub(crate) fn test_of<P>(permille: Units, quantity: P, exp: P)
+    where
+        P: Percentable + PartialEq + Debug + Clone + Display,
+    {
+        let perm = Percent::from_permille(permille);
+        assert_eq!(
+            exp,
+            perm.of(quantity.clone()),
+            "Calculating {} of {}",
+            perm,
+            quantity
+        );
     }
 
-    #[test]
-    #[should_panic]
-    fn are_overflow() {
-        test_of_are(999, u128::MAX, u128::MAX);
+    pub(crate) fn test_are<P>(permille: Units, quantity: P, exp: P)
+    where
+        P: Percentable + PartialEq + Debug + Clone + Display,
+    {
+        let perm = Percent::from_permille(permille);
+
+        assert_eq!(
+            exp,
+            perm.are(quantity.clone()),
+            "Calculating {} of X are {}",
+            perm,
+            quantity
+        );
+    }
+
+    fn test_display(exp: &str, permilles: Units) {
+        assert_eq!(exp, format!("{}", Percent::from_permille(permilles)));
     }
 }

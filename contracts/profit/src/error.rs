@@ -22,4 +22,9 @@ pub enum ContractError {
 
     #[error("Alarm comming from unknown address: {0:?}")]
     UnrecognisedAlarm(Addr),
+
+    #[error(
+        "Invalid time configuration. Current profit transfer time is before the last transfer time"
+    )]
+    InvalidTimeConfiguration {},
 }

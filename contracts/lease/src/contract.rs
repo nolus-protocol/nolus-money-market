@@ -26,7 +26,7 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let downpayment = one_coin(&info)?;
-    let borrow = msg.amount_to_borrow(&downpayment)?;
+    let borrow = msg.amount_to_borrow(downpayment)?;
     let lpp = lpp(msg.loan.lpp.clone(), deps.api)?;
     msg.save(deps.storage)?;
     let req = lpp.open_loan_req(borrow)?;

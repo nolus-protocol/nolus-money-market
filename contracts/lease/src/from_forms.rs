@@ -7,7 +7,7 @@ use crate::{error::ContractResult, lease::Lease, loan::Loan, msg::NewLeaseForm};
 impl NewLeaseForm {
     const DB_ITEM: Item<'static, NewLeaseForm> = Item::new("lease_form");
 
-    pub(crate) fn amount_to_borrow(&self, downpayment: &Coin) -> ContractResult<Coin> {
+    pub(crate) fn amount_to_borrow(&self, downpayment: Coin) -> ContractResult<Coin> {
         assert_eq!(
             downpayment.denom, self.currency,
             "this is a single currency lease version"
@@ -55,14 +55,14 @@ mod test {
     #[test]
     fn amount_to_borrow_no_downpayment() {
         let downpayment = Coin::new(0, String::from("YAN"));
-        amount_to_borrow_impl(&downpayment, &downpayment);
+        amount_to_borrow_impl(downpayment.clone(), downpayment);
     }
 
     #[test]
     fn amount_to_borrow_some_downpayment() {
         let downpayment = Coin::new(1000, String::from("YAN"));
         let expected = Coin::new(111, downpayment.denom.clone());
-        amount_to_borrow_impl(&downpayment, &expected);
+        amount_to_borrow_impl(downpayment, expected);
     }
 
     #[test]
@@ -80,10 +80,10 @@ mod test {
                 grace_period_secs: 10,
             },
         };
-        let _res = lease.amount_to_borrow(&downpayment);
+        let _res = lease.amount_to_borrow(downpayment);
     }
 
-    fn amount_to_borrow_impl(downpayment: &Coin, expected: &Coin) {
+    fn amount_to_borrow_impl(downpayment: Coin, expected: Coin) {
         let lease = NewLeaseForm {
             customer: "ss1s1".into(),
             currency: downpayment.denom.clone(),
@@ -95,6 +95,6 @@ mod test {
                 grace_period_secs: 10,
             },
         };
-        assert_eq!(expected, &lease.amount_to_borrow(downpayment).unwrap());
+        assert_eq!(expected, lease.amount_to_borrow(downpayment).unwrap());
     }
 }

@@ -71,13 +71,13 @@ impl Liability {
         }
     }
 
-    pub fn init_borrow_amount(&self, downpayment: &Coin) -> Coin {
+    pub fn init_borrow_amount(&self, downpayment: Coin) -> Coin {
         // let init = self.init_percent.into();
         debug_assert!(self.init_percent < Percent::HUNDRED);
 
         // borrow = init%.of(borrow + downpayment)
         // (100% - init%).of(borrow) = init%.of(dowmpayment)
-        (Percent::HUNDRED - self.init_percent).are(&self.init_percent.of(downpayment))
+        (Percent::HUNDRED - self.init_percent).are(self.init_percent.of(downpayment))
     }
 }
 
@@ -204,11 +204,11 @@ mod test {
             max_percent: Percent::from_percent(100),
             recalc_secs: 20000,
         }
-        .init_borrow_amount(&downpayment);
+        .init_borrow_amount(downpayment.clone());
         assert_eq!(Coin::new(exp, denom), calculated);
         assert_eq!(
             calculated,
-            percent.of(&Coin {
+            percent.of(Coin {
                 amount: downpayment.amount + calculated.amount,
                 denom: downpayment.denom
             })
