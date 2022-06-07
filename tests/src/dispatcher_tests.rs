@@ -6,6 +6,7 @@ use crate::{
     common::{
         lpp_wrapper::{mock_lpp_execute, mock_lpp_query},
         oracle_wrapper::mock_oracle_query,
+        ADMIN, USER,
     },
 };
 
@@ -153,19 +154,83 @@ fn on_alarm() {
     );
 }
 
-// #[test]
-// fn test_config() {
-//     let denom = "UST";
-//     let user_addr = Addr::unchecked(USER);
-//     let mut test_case = TestCase::new(denom);
-//     test_case.init(&user_addr, coins(500, denom));
-//     test_case.init_dispatcher();
+#[test]
+#[should_panic(expected = "Unauthorized")]
+fn test_config_unauthorized() {
+    let denom = "UST";
+    let user_addr = Addr::unchecked(USER);
+    let mut test_case = TestCase::new(denom);
+    test_case
+        .init(&user_addr, coins(500, denom))
+        .init_lpp(None)
+        .init_treasury()
+        .init_market_oracle(None)
+        .init_time_oracle()
+        .init_dispatcher();
 
-//     let resp: crate::msg::ConfigResponse = test_case
-//         .app
-//         .wrap()
-//         .query_wasm_smart(test_case.dispatcher_addr.unwrap(), &QueryMsg::Config {})
-//         .unwrap();
+    let resp: rewards_dispatcher::msg::ConfigResponse = test_case
+        .app
+        .wrap()
+        .query_wasm_smart(
+            test_case.dispatcher_addr.clone().unwrap(),
+            &rewards_dispatcher::msg::QueryMsg::Config {},
+        )
+        .unwrap();
 
-//     assert_eq!(10, resp.cadence_hours);
-// }
+    assert_eq!(10, resp.cadence_hours);
+
+    let _res = test_case
+        .app
+        .execute_contract(
+            user_addr,
+            test_case.dispatcher_addr.clone().unwrap(),
+            &rewards_dispatcher::msg::ExecuteMsg::Config { cadence_hours: 30 },
+            &coins(40, denom),
+        )
+        .unwrap();
+}
+
+#[test]
+fn test_config() {
+    let denom = "UST";
+    let user_addr = Addr::unchecked(ADMIN);
+    let mut test_case = TestCase::new(denom);
+    test_case
+        .init(&user_addr, coins(500, denom))
+        .init_lpp(None)
+        .init_treasury()
+        .init_market_oracle(None)
+        .init_time_oracle()
+        .init_dispatcher();
+
+    let resp: rewards_dispatcher::msg::ConfigResponse = test_case
+        .app
+        .wrap()
+        .query_wasm_smart(
+            test_case.dispatcher_addr.clone().unwrap(),
+            &rewards_dispatcher::msg::QueryMsg::Config {},
+        )
+        .unwrap();
+
+    assert_eq!(10, resp.cadence_hours);
+
+    let _res = test_case
+        .app
+        .execute_contract(
+            user_addr,
+            test_case.dispatcher_addr.clone().unwrap(),
+            &rewards_dispatcher::msg::ExecuteMsg::Config { cadence_hours: 30 },
+            &coins(40, denom),
+        )
+        .unwrap();
+    let resp: rewards_dispatcher::msg::ConfigResponse = test_case
+        .app
+        .wrap()
+        .query_wasm_smart(
+            test_case.dispatcher_addr.clone().unwrap(),
+            &rewards_dispatcher::msg::QueryMsg::Config {},
+        )
+        .unwrap();
+
+    assert_eq!(30, resp.cadence_hours);
+}
