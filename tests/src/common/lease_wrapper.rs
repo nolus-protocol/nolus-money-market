@@ -7,17 +7,24 @@ use cw_multi_test::{App, Executor};
 
 use super::{ADMIN, USER};
 
-pub struct LeaseWrapper {
-    contract_wrapper: Box<
-        ContractWrapper<
-            lease::msg::ExecuteMsg,
-            lease::msg::NewLeaseForm,
-            lease::msg::StatusQuery,
-            lease::error::ContractError,
-            lease::error::ContractError,
-            lease::error::ContractError,
-        >,
+type LeaseContractWrapperReply = Box<
+    ContractWrapper<
+        lease::msg::ExecuteMsg,
+        lease::msg::NewLeaseForm,
+        lease::msg::StatusQuery,
+        lease::error::ContractError,
+        lease::error::ContractError,
+        lease::error::ContractError,
+        cosmwasm_std::Empty,
+        cosmwasm_std::Empty,
+        cosmwasm_std::Empty,
+        anyhow::Error,
+        lease::error::ContractError,
     >,
+>;
+
+pub struct LeaseWrapper {
+    contract_wrapper: LeaseContractWrapperReply,
 }
 
 impl LeaseWrapper {
@@ -76,7 +83,8 @@ impl Default for LeaseWrapper {
             lease::contract::execute,
             lease::contract::instantiate,
             lease::contract::query,
-        );
+        )
+        .with_reply(lease::contract::reply);
 
         Self {
             contract_wrapper: Box::new(contract),

@@ -10,3 +10,6 @@ mod lpp_tests;
 #[cfg(test)]
 #[allow(dead_code)]
 mod common;
+
+#[cfg(test)]
+mod leaser_tests;
