@@ -1,16 +1,17 @@
-use cosmwasm_std::{Uint128, Decimal, Timestamp, Addr, Storage, StdResult, Env};
+use cosmwasm_std::{Uint128, Timestamp, Addr, Storage, StdResult, Env};
 use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
 use cw_storage_plus::Map;
 use crate::error::ContractError;
 use crate::calc;
 use std::cmp;
+use finance::percent::Percent;
 
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct LoanData {
     pub principal_due: Uint128,
-    pub annual_interest_rate: Decimal,
+    pub annual_interest_rate: Percent,
     pub interest_paid: Timestamp,
 }
 
@@ -26,7 +27,7 @@ impl Loan {
         storage: &mut dyn Storage,
         addr: Addr,
         amount: Uint128,
-        annual_interest_rate: Decimal,
+        annual_interest_rate: Percent,
         current_time: Timestamp
     ) -> Result<(), ContractError> {
 
