@@ -2,16 +2,15 @@ use cosmwasm_std::Fraction;
 
 use crate::{
     percent::{Percent, Units},
-    percentable::Percentable,
 };
 
-use super::Integer;
+use super::{Integer, Fractionable};
 
 impl Integer for Units {
     type DoubleInteger = u64;
 }
 
-impl Percentable for Percent {
+impl Fractionable<Units> for Percent {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
         F: Fraction<Units>,

@@ -2,7 +2,7 @@ use cosmwasm_std::{Coin, Timestamp, Uint128};
 use serde::{Deserialize, Serialize};
 use std::{cmp, fmt::Debug};
 
-use crate::{coin, duration::Duration, percent::Percent};
+use crate::{coin, duration::Duration, percent::Percent, percentable::{Percentable, TimeSliceable}};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct InterestPeriod {
@@ -59,7 +59,10 @@ impl InterestPeriod {
         self.start + self.length
     }
 
-    pub fn interest(&self, principal: Coin) -> Coin {
+    pub fn interest<P>(&self, principal: P) -> P
+    where
+        P: Percentable + TimeSliceable,
+    {
         self.interest_by(principal, self.till())
     }
 
@@ -79,18 +82,16 @@ impl InterestPeriod {
         cmp::min(cmp::max(self.start, t), self.till())
     }
 
-    fn interest_by(&self, principal: Coin, by: Timestamp) -> Coin {
+    fn interest_by<P>(&self, principal: P, by: Timestamp) -> P
+    where
+        P: Percentable + TimeSliceable,
+    {
         debug_assert!(self.start <= by);
         debug_assert!(by <= self.till());
         let period = Duration::between(self.start, by);
 
         let interest_due_per_year = self.interest.of(principal);
-        let interest_due_per_period =
-            fraction(interest_due_per_year.amount, period, Duration::YEAR);
-        Coin {
-            amount: interest_due_per_period,
-            denom: interest_due_per_year.denom,
-        }
+        period.slice_of(interest_due_per_year)
     }
 }
 
