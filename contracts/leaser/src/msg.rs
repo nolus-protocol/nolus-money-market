@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin, Decimal, Uint64};
+use cosmwasm_std::{Addr, Coin, Uint64};
 
 use finance::percent::Percent;
 use schemars::JsonSchema;
@@ -60,7 +60,7 @@ pub struct ConfigResponse {
 pub struct QuoteResponse {
     pub total: Coin,
     pub borrow: Coin,
-    pub annual_interest_rate: Decimal,
+    pub annual_interest_rate: Percent,
 }
 
 impl Repayment {

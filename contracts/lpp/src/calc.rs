@@ -1,4 +1,5 @@
-use cosmwasm_std::{Uint128, Decimal, Timestamp, Env};
+use cosmwasm_std::{Uint128, Timestamp, Env};
+use finance::percent::Percent;
 
 pub const NANOSECS_IN_YEAR: Uint128 = Uint128::new(365 * 24 * 60 * 60 * 1000 * 1000 * 1000);
 
@@ -11,6 +12,6 @@ pub fn dt(env: &Env, time: Timestamp) -> Uint128 {
 }
 
 /// Calculate interest
-pub fn interest(due: Uint128, rate: Decimal, dt_nanos: Uint128) -> Uint128 {
-    due*rate*dt_nanos/NANOSECS_IN_YEAR
+pub fn interest(due: Uint128, rate: Percent, dt_nanos: Uint128) -> Uint128 {
+    rate.of(due)*dt_nanos/NANOSECS_IN_YEAR
 }

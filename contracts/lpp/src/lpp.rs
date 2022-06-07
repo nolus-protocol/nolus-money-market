@@ -68,7 +68,7 @@ impl LiquidityPool {
 
         let res = self.balance(deps, env)?.amount
             + self.total.total_principal_due()
-            + self.total.total_interest_due_by_now(env);
+            + self.total.total_interest_due_by_now(env.block.time);
 
         Ok(res)
     }
@@ -80,7 +80,7 @@ impl LiquidityPool {
         let total_principal_due_amount = self.total.total_principal_due();
         let total_principal_due = coin(total_principal_due_amount.u128(), denom);
 
-        let total_interest_due_amount = self.total.total_interest_due_by_now(env);
+        let total_interest_due_amount = self.total.total_interest_due_by_now(env.block.time);
         let total_interest_due = coin(total_interest_due_amount.u128(), denom);
 
         Ok(LppBalanceResponse{balance, total_principal_due, total_interest_due })
@@ -147,7 +147,7 @@ impl LiquidityPool {
         deps: &Deps,
         env: &Env,
         quote: Coin,
-    ) -> Result<Option<Decimal>, ContractError> {
+    ) -> Result<Option<Percent>, ContractError> {
         let quote = self.try_into_amount(quote)?;
 
         let balance = self.balance(deps, env)?
@@ -176,10 +176,15 @@ impl LiquidityPool {
 
         let total_balance_past_quote = balance - quote;
 
-        let utilization = Decimal::from_ratio(total_liability_past_quote, total_liability_past_quote + total_balance_past_quote);
+        let utilization = Percent::from_permille(
+            (1000*total_liability_past_quote.u128()/
+                (total_liability_past_quote + total_balance_past_quote).u128())
+            .try_into()?
+        );
+
 
         let quote_interest_rate =
-            base_interest_rate + utilization * addon_optimal_interest_rate - utilization_optimal * addon_optimal_interest_rate;
+            base_interest_rate + addon_optimal_interest_rate.of(utilization) - addon_optimal_interest_rate.of(utilization_optimal);
 
         Ok(Some(quote_interest_rate))
     }
@@ -201,7 +206,7 @@ impl LiquidityPool {
         Loan::open(deps.storage, lease_addr, amount.amount, annual_interest_rate, current_time)?;
 
         self.total
-            .borrow(&env, amount.amount, annual_interest_rate)
+            .borrow(env.block.time, amount.amount, annual_interest_rate)?
             .store(deps.storage)?;
 
         Ok(())
@@ -225,7 +230,7 @@ impl LiquidityPool {
         let loan_annual_interest_rate = loan.data().annual_interest_rate;
         let (loan_principal_payment, excess_received) = loan.repay(deps.storage, &env, repay_amount)?;
 
-        self.total.repay(&env, loan_principal_payment, loan_annual_interest_rate)
+        self.total.repay(env.block.time, loan_principal_payment, loan_annual_interest_rate)?
             .store(deps.storage)?;
 
         Ok(excess_received)
@@ -247,17 +252,12 @@ impl LiquidityPool {
         let denom = &self.config.denom;
         maybe_loan.zip(maybe_interest_due)
             .map(|(loan, interest_due)| {
-                let permilles: u32 = (loan.annual_interest_rate * Uint128::from(1000u32))
-                    .u128()
-                    .try_into()?;
-
                 Ok(LoanResponse {
                     principal_due: coin(loan.principal_due.u128(), denom),
                     interest_due: interest_due.0,
-                    annual_interest_rate: Percent::from_permille(permilles),
+                    annual_interest_rate: loan.annual_interest_rate,
                     interest_paid: loan.interest_paid,
                 })
-                      
             })
         .transpose()
     }
@@ -356,7 +356,7 @@ mod test {
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
-        let interest_rate = Decimal::percent(7) + Decimal::percent(50)*Decimal::percent(2) - Decimal::percent(70)*Decimal::percent(2);
+        let interest_rate = Percent::from_percent(7) + Percent::from_percent(50).of(Percent::from_percent(2)) - Percent::from_percent(70).of(Percent::from_percent(2));
 
         assert_eq!(result, interest_rate);
 
@@ -367,7 +367,8 @@ mod test {
         // wait for year/10
         env.block.time = Timestamp::from_nanos((10 + NANOSECS_IN_YEAR.u128()/10).try_into().unwrap());
 
-        let interest_rate = Decimal::percent(7) + Decimal::from_ratio(6033u128,10033u128)*Decimal::percent(2) - Decimal::percent(70)*Decimal::percent(2);
+        let interest_rate = Percent::from_percent(7) + Percent::from_percent(2).of(Percent::from_permille(6033000u32/10033u32))
+            - Percent::from_percent(2).of(Percent::from_percent(70));
 
         let result = lpp.query_quote(&deps.as_ref(), &env, coin(1_000_000, "uust"))
             .expect("can't query quote")
@@ -386,7 +387,7 @@ mod test {
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
-        let annual_interest_rate = Decimal::from_ratio(66u128,1000u128);
+        let annual_interest_rate = Percent::from_permille(66000u32/1000u32);
 
         Config::new("uust".into(), lease_code_id)
             .store(deps.as_mut().storage)
