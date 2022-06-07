@@ -1,13 +1,11 @@
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, Decimal, DepsMut, Env, Fraction, MessageInfo, Response,
-    SubMsg, Timestamp, WasmMsg,
+    ensure, to_binary, Addr, Coin, CosmosMsg, Decimal, DepsMut, Env, Fraction, MessageInfo,
+    Response, SubMsg, Timestamp, WasmMsg,
 };
-use cosmwasm_std::{Deps, QueryRequest, StdResult, WasmQuery};
-use finance::coin::add_coin;
+use cosmwasm_std::{Deps, StdResult};
 use finance::duration::Duration;
 use finance::interest::InterestPeriod;
-use lpp::msg::{ExecuteMsg as LPPExecuteMsg, LppBalanceResponse, QueryMsg as LPPQueryMsg};
-use oracle::msg::{PriceResponse, QueryMsg as MarketQueryMsg};
+use lpp::msg::ExecuteMsg as LPPExecuteMsg;
 
 use crate::state::config::Config;
 use crate::state::dispatch_log::DispatchLog;
@@ -22,8 +20,12 @@ impl Dispatcher {
         deps: DepsMut,
         env: Env,
         info: MessageInfo,
-        _time: Timestamp,
+        time: Timestamp,
     ) -> Result<Response, ContractError> {
+        ensure!(
+            time >= env.block.time,
+            ContractError::AlarmTimeValidation {}
+        );
         let config = Config::load(deps.storage)?;
 
         if info.sender != config.time_oracle {
@@ -73,14 +75,16 @@ impl Dispatcher {
             .add_submessages(vec![treasury_send_rewards_msg, lpp_distribute_rewards_msg]))
     }
 
+    #[cfg(not(test))]
     // Get LPP balance and return TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
     fn get_lpp_balance(deps: Deps, lpp_addr: &Addr) -> StdResult<Coin> {
+        use finance::coin::add_coin;
+        use lpp::msg::{LppBalanceResponse, QueryMsg as LPPQueryMsg};
+
         let query_msg: LPPQueryMsg = LPPQueryMsg::LppBalance {};
-        let resp: LppBalanceResponse =
-            deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-                contract_addr: lpp_addr.to_string(),
-                msg: to_binary(&query_msg)?,
-            }))?;
+        let resp: LppBalanceResponse = deps
+            .querier
+            .query_wasm_smart(lpp_addr.to_string(), &query_msg)?;
 
         let balance = add_coin(
             add_coin(resp.balance, resp.total_principal_due),
@@ -90,20 +94,35 @@ impl Dispatcher {
         Ok(balance)
     }
 
+    #[cfg(test)]
+    // Get LPP balance and return TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
+    fn get_lpp_balance(_deps: Deps, _lpp_addr: &Addr) -> StdResult<Coin> {
+        Ok(Coin::new(2000000000, "unolus"))
+    }
+
+    #[cfg(not(test))]
     fn get_market_price(deps: Deps, market_oracle: Addr, denom: &str) -> StdResult<Decimal> {
+        use oracle::msg::{PriceResponse, QueryMsg as MarketQueryMsg};
+
         let query_msg: MarketQueryMsg = MarketQueryMsg::PriceFor {
             denoms: vec![denom.to_string()],
         };
-        let resp: PriceResponse = deps.querier.query(&QueryRequest::Wasm(WasmQuery::Smart {
-            contract_addr: market_oracle.to_string(),
-            msg: to_binary(&query_msg)?,
-        }))?;
+        let resp: PriceResponse = deps
+            .querier
+            .query_wasm_smart(market_oracle.to_string(), &query_msg)?;
         let denom_price = match resp.prices.first() {
             Some(d) => d.price.amount,
             None => todo!(),
         };
 
         Ok(denom_price)
+    }
+
+    #[cfg(test)]
+    fn get_market_price(_deps: Deps, _market_oracle: Addr, _denom: &str) -> StdResult<Decimal> {
+        use std::str::FromStr;
+
+        Decimal::from_str("0.12345")
     }
 
     fn swap_reward_in_unls(

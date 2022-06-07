@@ -1,8 +1,8 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
-    Timestamp,
+    ensure, to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    Storage, Timestamp,
 };
 use cw2::set_contract_version;
 use time_oracle::Alarms;
@@ -88,8 +88,12 @@ fn try_transfer(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    _time: Timestamp,
+    time: Timestamp,
 ) -> Result<Response, ContractError> {
+    ensure!(
+        time >= env.block.time,
+        ContractError::AlarmTimeValidation {}
+    );
     let config = Profit::query_config(deps.storage)?;
     try_add_alarm(
         deps.api,

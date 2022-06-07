@@ -25,4 +25,7 @@ pub enum ContractError {
 
     #[error("Invalid time configuration. Current reward distribution time is before the last distribution time")]
     InvalidTimeConfiguration {},
+
+    #[error("Alarm time validation failed")]
+    AlarmTimeValidation {},
 }
