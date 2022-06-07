@@ -1,13 +1,15 @@
-use cosmwasm_std::{Coin, Fraction};
+use cosmwasm_std::{Coin, Fraction, Uint256};
 
-use crate::percent::Units;
+use super::Fractionable;
 
-use super::Percentable;
-
-impl Percentable for Coin {
+impl<U> Fractionable<U> for Coin
+where
+    Uint256: From<U>,
+    U: PartialEq,
+{
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: Fraction<Units>,
+        F: Fraction<U>,
     {
         Self {
             amount: self.amount.safe_mul(fraction),
