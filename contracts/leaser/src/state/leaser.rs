@@ -23,9 +23,9 @@ impl<'a> InstantiateReplyIdSeq<'a> {
     }
 }
 
-pub struct Leaser {}
+pub struct Loans {}
 
-impl Leaser {
+impl Loans {
     const STORAGE: Map<'static, Addr, HashSet<Addr>> = Map::new("loans");
 
     pub fn next(
@@ -68,5 +68,9 @@ impl Leaser {
             Ok(loans) => loans,
             Err(_) => HashSet::new(), //return empty list of addresses
         })
+    }
+
+    pub fn remove(storage: &mut dyn Storage, msg_id: u64) {
+        PENDING.remove(storage, msg_id);
     }
 }

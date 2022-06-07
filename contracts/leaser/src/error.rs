@@ -9,8 +9,8 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
-    #[error("ParseError")]
-    ParseError {},
+    #[error("ParseError {err:?}")]
+    ParseError { err: String },
 
     #[error("Validation error {msg:?}")]
     ValidationError { msg: String },

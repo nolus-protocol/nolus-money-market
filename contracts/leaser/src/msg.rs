@@ -1,10 +1,10 @@
-use cosmwasm_std::{Addr, Coin, Decimal, Uint64};
+use cosmwasm_std::{Addr, Coin, Uint64};
 
 use finance::percent::Percent;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::config::Config;
+use crate::state::config::Config;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -60,20 +60,7 @@ pub struct ConfigResponse {
 pub struct QuoteResponse {
     pub total: Coin,
     pub borrow: Coin,
-    pub annual_interest_rate: Decimal,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum LPPQueryMsg {
-    Quote { amount: Coin },
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum QueryQuoteResponse {
-    QuoteInterestRate(Decimal),
-    NoLiquidity,
+    pub annual_interest_rate: Percent,
 }
 
 impl Repayment {

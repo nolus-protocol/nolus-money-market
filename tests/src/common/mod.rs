@@ -6,6 +6,8 @@ use cw_multi_test::{App, AppBuilder};
 pub mod dispatcher_wrapper;
 pub mod lease_wrapper;
 #[cfg(test)]
+pub mod leaser_wrapper;
+#[cfg(test)]
 #[allow(dead_code)]
 pub mod lpp_wrapper;
 pub mod oracle_wrapper;
