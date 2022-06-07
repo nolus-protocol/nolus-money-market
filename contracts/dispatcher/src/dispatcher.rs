@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    ensure, to_binary, Addr, Coin, CosmosMsg, Decimal, DepsMut, Env, Fraction, MessageInfo,
-    Response, SubMsg, Timestamp, WasmMsg,
+    to_binary, Addr, Coin, CosmosMsg, Decimal, DepsMut, Fraction, Response, SubMsg, Timestamp,
+    WasmMsg,
 };
 use cosmwasm_std::{Deps, StdResult};
 use finance::duration::Duration;
@@ -16,22 +16,11 @@ const NATIVE_DENOM: &str = "unolus";
 pub struct Dispatcher {}
 
 impl Dispatcher {
-    pub fn try_dispatch(
+    pub fn dispatch(
         deps: DepsMut,
-        env: Env,
-        info: MessageInfo,
-        time: Timestamp,
+        config: Config,
+        block_time: Timestamp,
     ) -> Result<Response, ContractError> {
-        ensure!(
-            time >= env.block.time,
-            ContractError::AlarmTimeValidation {}
-        );
-        let config = Config::load(deps.storage)?;
-
-        if info.sender != config.time_oracle {
-            return Err(ContractError::UnrecognisedAlarm(info.sender));
-        }
-
         // get LPP balance: TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
         let lpp_balance = Self::get_lpp_balance(deps.as_ref(), &config.lpp)?;
 
@@ -43,26 +32,22 @@ impl Dispatcher {
         // which matches TVLdenom, since the last calculation
         let reward_lppdenom = InterestPeriod::with_interest(arp_permille)
             .from(last_dispatch)
-            .spanning(Duration::between(last_dispatch, env.block.time))
+            .spanning(Duration::between(last_dispatch, block_time))
             .interest(lpp_balance);
 
         if reward_lppdenom.amount.is_zero() {
-            return Ok(Response::new()
-                .add_attribute("method", "try_dispatch")
-                .add_attribute("result", "no reward to dispatch"));
+            return Self::no_reward_resp();
         }
 
         // Store the current time for use for the next calculation.
-        DispatchLog::update(deps.storage, env.block.time)?;
+        DispatchLog::update(deps.storage, block_time)?;
 
         // Obtain the currency market price of TVLdenom in uNLS and convert Rewards_TVLdenom in uNLS, Rewards_uNLS.
         let reward_unls =
             Self::swap_reward_in_unls(deps.as_ref(), config.market_oracle, reward_lppdenom)?;
 
         if reward_unls.amount.is_zero() {
-            return Ok(Response::new()
-                .add_attribute("method", "try_dispatch")
-                .add_attribute("result", "no reward to dispatch"));
+            return Self::no_reward_resp();
         }
 
         // Prepare a Send Rewards for the amount of Rewards_uNLS to the Treasury.
@@ -158,5 +143,10 @@ impl Dispatcher {
             contract_addr: lpp.to_string(),
             msg: to_binary(&LPPExecuteMsg::DistributeRewards {})?,
         })))
+    }
+    fn no_reward_resp() -> Result<Response, ContractError> {
+        Ok(Response::new()
+            .add_attribute("method", "try_dispatch")
+            .add_attribute("result", "no reward to dispatch"))
     }
 }

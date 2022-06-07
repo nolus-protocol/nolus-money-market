@@ -1,8 +1,8 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
-    Timestamp,
+    ensure, to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    Storage, Timestamp,
 };
 use cw2::set_contract_version;
 use time_oracle::Alarms;
@@ -46,7 +46,8 @@ pub fn instantiate(
     DispatchLog::update(deps.storage, env.block.time)?;
 
     try_add_alarm(
-        deps,
+        deps.api,
+        deps.storage,
         env.contract.address,
         env.block.time.plus_seconds(to_seconds(msg.cadence_hours)),
     )?;
@@ -73,7 +74,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Config { cadence_hours } => try_config(deps, info, cadence_hours),
-        ExecuteMsg::Alarm { time } => Dispatcher::try_dispatch(deps, env, info, time),
+        ExecuteMsg::Alarm { time } => try_dispatch(deps, env, info, time),
     }
 }
 
@@ -105,12 +106,44 @@ fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
     })
 }
 
-fn try_add_alarm(deps: DepsMut, addr: Addr, time: Timestamp) -> Result<Response, ContractError> {
-    let valid = deps
-        .api
+pub fn try_dispatch(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    time: Timestamp,
+) -> Result<Response, ContractError> {
+    ensure!(
+        time >= env.block.time,
+        ContractError::AlarmTimeValidation {}
+    );
+    let config = Config::load(deps.storage)?;
+
+    if info.sender != config.time_oracle {
+        return Err(ContractError::UnrecognisedAlarm(info.sender));
+    }
+
+    try_add_alarm(
+        deps.api,
+        deps.storage,
+        env.contract.address,
+        env.block
+            .time
+            .plus_seconds(to_seconds(config.cadence_hours)),
+    )?;
+
+    Dispatcher::dispatch(deps, config, env.block.time)
+}
+
+fn try_add_alarm(
+    api: &dyn Api,
+    storage: &mut dyn Storage,
+    addr: Addr,
+    time: Timestamp,
+) -> Result<Response, ContractError> {
+    let valid = api
         .addr_validate(addr.as_str())
         .map_err(|_| ContractError::InvalidAlarmAddress(addr))?;
-    TIME_ALARMS.add(deps.storage, valid, time)?;
+    TIME_ALARMS.add(storage, valid, time)?;
     Ok(Response::new().add_attribute("method", "try_add_alarm"))
 }
 
