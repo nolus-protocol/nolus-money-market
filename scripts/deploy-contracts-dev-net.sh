@@ -1,16 +1,13 @@
 #!/bin/bash
 set -euxo pipefail
 
-# if [[ -z ${CI_JOB_TOKEN+x} ]]; then
-#   echo "Error: there is no CI_JOB token"
-#   exit 1
-# fi
+if [[ -z ${CI_JOB_TOKEN+x} ]]; then
+  echo "Error: there is no CI_JOB token"
+  exit 1
+fi
 
-# TOKEN_TYPE="JOB-TOKEN"
-# TOKEN_VALUE="$CI_JOB_TOKEN"
-
-TOKEN_TYPE="PRIVATE-TOKEN"
-TOKEN_VALUE="glpat-zThjW6Eja8xh9vCVxLWT"
+TOKEN_TYPE="JOB-TOKEN"
+TOKEN_VALUE="$CI_JOB_TOKEN"
 
 COMMON_DIR="$(pwd)/scripts/common"
 
@@ -20,8 +17,7 @@ GITLAB_API="https://gitlab-nomo.credissimo.net/api/v4"
 COSMZONE_PROJECT_ID="3"
 SETUP_DEV_NETWORK_ARTIFACT="setup-dev-network"
 NOLUS_BUILD_BINARY_ARTIFACT="build-binary"
-STABLE_DENOM="ibc/8A34AF0C1943FD0DFCDE9ADBF0B2C9959C45E87E6088EA2FC6ADACD59261B8A2"
-#STABLE_DENOM="$STABLE_DENOM_DEV"
+STABLE_DENOM="$STABLE_DENOM_DEV"
 HOME_DIR="$(pwd)/accounts"
 CONTRACTS_RESULTS_FILE="$1"
 
