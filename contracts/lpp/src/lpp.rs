@@ -6,8 +6,9 @@ use cosmwasm_std::{
 use crate::error::ContractError;
 use crate::msg::{LppBalanceResponse, LoanResponse, PriceResponse, OutstandingInterest};
 use crate::state::{Config, Loan, Total, Deposit};
-use crate::calc::{dt, interest};
 use finance::percent::Percent;
+use finance::interest::InterestPeriod;
+use finance::duration::Duration;
 
 pub struct NTokenPrice<'a> {
     price: Decimal,
@@ -169,8 +170,12 @@ impl LiquidityPool {
             ..
         } = self.config;
 
-        let total_interest = total_interest_due
-            + interest(total_principal_due, annual_interest_rate, dt(env, last_update_time));
+
+        let total_interest = InterestPeriod::with_interest(annual_interest_rate)
+            .from(last_update_time)
+            .spanning(Duration::between(last_update_time, env.block.time))
+            .interest(total_principal_due)
+            + total_interest_due;
 
         let total_liability_past_quote = total_principal_due + quote + total_interest;
 
@@ -270,15 +275,7 @@ mod test {
     use super::*;
     use cosmwasm_std::testing::{self, MOCK_CONTRACT_ADDR};
     use cosmwasm_std::{Uint64, Timestamp, coin};
-    use crate::calc::NANOSECS_IN_YEAR;
     use crate::state::LoanData;
-
-    #[test]
-    fn test_dt() {
-        let mut env = testing::mock_env();
-        env.block.time = Timestamp::from_nanos(20);
-        assert_eq!(dt(&env, Timestamp::from_nanos(10)), 10u128.into());
-    }
 
     #[test]
     fn test_balance() {
@@ -365,7 +362,7 @@ mod test {
         deps.querier.update_balance(MOCK_CONTRACT_ADDR, vec![coin(5_000_000, "uust")]);
 
         // wait for year/10
-        env.block.time = Timestamp::from_nanos((10 + NANOSECS_IN_YEAR.u128()/10).try_into().unwrap());
+        env.block.time = Timestamp::from_nanos(10 + Duration::YEAR.nanos()/10);
 
         let interest_rate = Percent::from_percent(7) + Percent::from_percent(2).of(Percent::from_permille(6033000u32/10033u32))
             - Percent::from_percent(2).of(Percent::from_percent(70));
@@ -424,7 +421,7 @@ mod test {
         assert_eq!(loan_response, test_response);
 
         // wait for year/10
-        env.block.time = Timestamp::from_nanos((10 + NANOSECS_IN_YEAR.u128()/10).try_into().unwrap());
+        env.block.time = Timestamp::from_nanos(10 + Duration::YEAR.nanos()/10);
 
         // pay interest for year/10
         let payment = Loan::query_outstanding_interest(deps.as_ref().storage, loan.clone(), env.block.time)
@@ -450,7 +447,7 @@ mod test {
         assert_eq!(loan_response, test_response);
 
         // wait for another year/10
-        env.block.time = Timestamp::from_nanos((10 + 2*NANOSECS_IN_YEAR.u128()/10).try_into().unwrap());
+        env.block.time = Timestamp::from_nanos(10 + 2*Duration::YEAR.nanos()/10);
 
         // pay everything + excess
         let payment = Loan::query_outstanding_interest(deps.as_ref().storage, loan.clone(), env.block.time)
