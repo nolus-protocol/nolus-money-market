@@ -19,7 +19,7 @@ pub trait Percentable {
         F: Fraction<Units>;
 }
 
-trait Integer {
+pub trait Integer {
     type DoubleInteger;
 }
 
