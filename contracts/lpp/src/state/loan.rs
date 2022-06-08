@@ -1,11 +1,12 @@
-use cosmwasm_std::{Uint128, Timestamp, Addr, Storage, StdResult, Env};
+use cosmwasm_std::{Uint128, Timestamp, Addr, Storage, StdResult, Env, Decimal};
 use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
 use cw_storage_plus::Map;
 use crate::error::ContractError;
-use crate::calc;
 use std::cmp;
 use finance::percent::Percent;
+use finance::interest::InterestPeriod;
+use finance::duration::Duration;
 
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -62,8 +63,15 @@ impl Loan {
     /// change the Loan state after repay, return (principal_payment, excess_received) pair
     pub fn repay(&mut self, storage: &mut dyn Storage, env: &Env, repay_amount: Uint128) -> Result<(Uint128, Uint128), ContractError> {
 
-        let time_delta = calc::dt(env, self.data.interest_paid);
-        let loan_interest_due = calc::interest(self.data.principal_due, self.data.annual_interest_rate, time_delta);
+        let time_delta = Duration::between(self.data.interest_paid, env.block.time);
+        let loan_interest_due = InterestPeriod::with_interest(self.data.annual_interest_rate)
+            .from(self.data.interest_paid)
+            .spanning(time_delta)
+            .interest(self.data.principal_due);
+
+
+        // let loan_interest_due = calc::interest(self.data.principal_due, self.data.annual_interest_rate, time_delta);
+
         let loan_interest_payment = cmp::min(loan_interest_due, repay_amount);
         let loan_principal_payment =
             cmp::min(repay_amount - loan_interest_payment, self.data.principal_due);
@@ -79,8 +87,10 @@ impl Loan {
                     let mut loan = loan.ok_or(ContractError::NoLoan {})?;
                     loan.principal_due -= loan_principal_payment;
 
-                    let interest_paid_delta: u64 = (loan_interest_payment / loan_interest_due
-                        * time_delta)
+                    // TODO: use InterestPeriod::pay
+                    let interest_paid_delta: u64 = (
+                        Decimal::from_ratio(loan_interest_payment, loan_interest_due)
+                        * Uint128::new(time_delta.nanos() as u128))
                         .u128()
                         .try_into()
                         .expect("math overflow");
@@ -111,11 +121,16 @@ impl Loan {
 
         if let Some(loan) = maybe_loan {
 
-            let delta_t: Uint128 = (cmp::max(outstanding_time.nanos(), loan.interest_paid.nanos())
-                - loan.interest_paid.nanos())
-            .into();
+            let delta_t = Duration::from_nanos(
+                cmp::max(outstanding_time.nanos(), loan.interest_paid.nanos())
+                - loan.interest_paid.nanos()
+            );
 
-            let outstanding_interest_amount = calc::interest(loan.principal_due, loan.annual_interest_rate, delta_t);
+            let interest_period = InterestPeriod::with_interest(loan.annual_interest_rate)
+                .from(loan.interest_paid)
+                .spanning(delta_t);
+
+            let outstanding_interest_amount = interest_period.interest(loan.principal_due);
 
             Ok(Some(outstanding_interest_amount))
         } else {

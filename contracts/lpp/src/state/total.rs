@@ -2,10 +2,10 @@ use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
 use cosmwasm_std::{Uint128, Timestamp, Storage, StdResult};
 use cw_storage_plus::Item;
-use crate::calc;
 use finance::duration::Duration;
 use finance::percent::Percent;
 use crate::error::ContractError;
+use finance::interest::InterestPeriod;
 
 // TODO: evaluate fixed or rust_decimal instead of cosmwasm_std::Decimal
 // https://docs.rs/fixed/latest/fixed/index.html
@@ -78,11 +78,11 @@ impl Total {
     }
 
     pub fn total_interest_due_by_now(&self, ctime: Timestamp) -> Uint128 {
-        self.total_interest_due + calc::interest(
-            self.total_principal_due,
-            self.annual_interest_rate,
-            Duration::between(self.last_update_time, ctime).into()
-        )
+        InterestPeriod::with_interest(self.annual_interest_rate)
+            .from(self.last_update_time)
+            .spanning(Duration::between(self.last_update_time, ctime))
+            .interest(self.total_principal_due)
+            + self.total_interest_due
     }
 
 }
