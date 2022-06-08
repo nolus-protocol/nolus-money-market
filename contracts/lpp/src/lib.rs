@@ -10,7 +10,3 @@ mod state;
 
 #[cfg(feature = "cosmwasm")]
 mod lpp;
-
-#[cfg(feature = "cosmwasm")]
-mod calc;
-
