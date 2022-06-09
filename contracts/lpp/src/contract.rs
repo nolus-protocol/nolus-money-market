@@ -176,7 +176,7 @@ fn try_distribute_rewards(
     env: Env,
     funds: Vec<Coin>,
 ) -> Result<Response, ContractError> {
-    match funds.iter().find(|&coin| &coin.denom == NOLUS_DENOM) {
+    match funds.iter().find(|&coin| coin.denom == NOLUS_DENOM) {
         Some(coin) => Deposit::distribute_rewards(deps, env, coin.to_owned())?,
         None => {
             return Err(ContractError::CustomError {
