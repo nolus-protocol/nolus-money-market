@@ -1,17 +1,15 @@
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, Decimal, DepsMut, Fraction, Response, SubMsg, Timestamp,
-    WasmMsg,
+    to_binary, Addr, Coin, CosmosMsg, Decimal, DepsMut, Fraction, Response, Timestamp, WasmMsg,
 };
 use cosmwasm_std::{Deps, StdResult};
 use finance::duration::Duration;
 use finance::interest::InterestPeriod;
-use lpp::msg::ExecuteMsg as LPPExecuteMsg;
 
 use crate::state::config::Config;
 use crate::state::dispatch_log::DispatchLog;
 use crate::ContractError;
 
-const NATIVE_DENOM: &str = "unolus";
+const NATIVE_DENOM: &str = "uNLS";
 
 pub struct Dispatcher {}
 
@@ -54,10 +52,7 @@ impl Dispatcher {
         let treasury_send_rewards_msg =
             Self::treasury_send_rewards(&config.treasury, &config.lpp, reward_unls)?;
 
-        // Prepare LPP.Distribute Rewards command
-        let lpp_distribute_rewards_msg = Self::lpp_distribute_rewards(config.lpp)?;
-        Ok(Response::new()
-            .add_submessages(vec![treasury_send_rewards_msg, lpp_distribute_rewards_msg]))
+        Ok(Response::new().add_message(treasury_send_rewards_msg))
     }
 
     #[cfg(not(test))]
@@ -82,7 +77,7 @@ impl Dispatcher {
     #[cfg(test)]
     // Get LPP balance and return TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
     fn get_lpp_balance(_deps: Deps, _lpp_addr: &Addr) -> StdResult<Coin> {
-        Ok(Coin::new(2000000000, "unolus"))
+        Ok(Coin::new(2000000000, NATIVE_DENOM))
     }
 
     #[cfg(not(test))]
@@ -115,7 +110,7 @@ impl Dispatcher {
         market_oracle: Addr,
         reward_lppdenom: Coin,
     ) -> StdResult<Coin> {
-        // get price of the unolus in UST(market oracle base asset)
+        // get price of the native denom in UST(market oracle base asset)
         let native_denom_price = Self::get_market_price(deps, market_oracle, NATIVE_DENOM)?;
 
         // calculate the UST price from the response
@@ -123,27 +118,20 @@ impl Dispatcher {
             native_denom_price.denominator(),
             native_denom_price.numerator(),
         );
-        Ok(Coin::new(reward_unls.u128(), reward_lppdenom.denom))
+        Ok(Coin::new(reward_unls.u128(), NATIVE_DENOM))
     }
 
-    fn treasury_send_rewards(treasury: &Addr, lpp: &Addr, reward: Coin) -> StdResult<SubMsg> {
-        Ok(SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+    fn treasury_send_rewards(treasury: &Addr, lpp: &Addr, reward: Coin) -> StdResult<CosmosMsg> {
+        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             funds: vec![],
             contract_addr: treasury.to_string(),
             msg: to_binary(&treasury::msg::ExecuteMsg::SendRewards {
                 lpp_addr: lpp.to_owned(),
                 amount: reward,
             })?,
-        })))
+        }))
     }
 
-    fn lpp_distribute_rewards(lpp: Addr) -> StdResult<SubMsg> {
-        Ok(SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
-            funds: vec![],
-            contract_addr: lpp.to_string(),
-            msg: to_binary(&LPPExecuteMsg::DistributeRewards {})?,
-        })))
-    }
     fn no_reward_resp() -> Result<Response, ContractError> {
         Ok(Response::new()
             .add_attribute("method", "try_dispatch")

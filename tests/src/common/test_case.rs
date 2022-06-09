@@ -75,6 +75,15 @@ impl TestCase {
             denom: denom.to_string(),
         }
     }
+
+    pub fn init_user_with_funds(&mut self, user_addr: &Addr, init_funds: Vec<Coin>) -> &mut Self {
+        self.app
+            .send_tokens(Addr::unchecked(ADMIN), user_addr.clone(), &init_funds)
+            .unwrap();
+
+        self
+    }
+
     pub fn init(&mut self, user_addr: &Addr, init_funds: Vec<Coin>) -> &mut Self {
         self.lease_code_id = Some(LeaseWrapper::default().store(&mut self.app));
         // Bonus: set some funds on the user for future proposals

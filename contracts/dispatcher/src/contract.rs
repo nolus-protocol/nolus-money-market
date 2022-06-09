@@ -252,25 +252,18 @@ mod tests {
         };
 
         let res = execute(deps.as_mut(), env, info, msg).unwrap();
-        assert_eq!(res.messages.len(), 2);
+        assert_eq!(res.messages.len(), 1);
         assert_eq!(
             res.messages,
-            vec![
-                SubMsg::new(WasmMsg::Execute {
-                    contract_addr: "treasury".to_string(),
-                    msg: to_binary(&treasury::msg::ExecuteMsg::SendRewards {
-                        lpp_addr: Addr::unchecked("lpp"),
-                        amount: Coin::new(44386002, "unolus"),
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                }),
-                SubMsg::new(WasmMsg::Execute {
-                    contract_addr: "lpp".to_string(),
-                    msg: to_binary(&lpp::msg::ExecuteMsg::DistributeRewards {}).unwrap(),
-                    funds: vec![],
+            vec![SubMsg::new(WasmMsg::Execute {
+                contract_addr: "treasury".to_string(),
+                msg: to_binary(&treasury::msg::ExecuteMsg::SendRewards {
+                    lpp_addr: Addr::unchecked("lpp"),
+                    amount: Coin::new(44386002, "uNLS"),
                 })
-            ]
+                .unwrap(),
+                funds: vec![],
+            })]
         );
     }
 }

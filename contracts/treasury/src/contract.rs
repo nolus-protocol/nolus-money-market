@@ -1,7 +1,9 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, Addr, Coin, BankMsg};
+use cosmwasm_std::{
+    to_binary, Addr, Coin, CosmosMsg, DepsMut, Env, MessageInfo, Response, WasmMsg,
+};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
@@ -35,8 +37,12 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
     match msg {
-        ExecuteMsg::ConfigureRewardTransfer { rewards_dispatcher } => try_configure_reward_transfer(deps, sender, rewards_dispatcher),
-        ExecuteMsg::SendRewards { lpp_addr, amount } => try_send_rewards(deps, sender, lpp_addr, amount),
+        ExecuteMsg::ConfigureRewardTransfer { rewards_dispatcher } => {
+            try_configure_reward_transfer(deps, sender, rewards_dispatcher)
+        }
+        ExecuteMsg::SendRewards { lpp_addr, amount } => {
+            try_send_rewards(deps, sender, lpp_addr, amount)
+        }
     }
 }
 
@@ -59,10 +65,11 @@ fn try_send_rewards(
 ) -> Result<Response, ContractError> {
     state::assert_rewards_dispatcher(deps.storage, sender)?;
 
-    let pay_msg = BankMsg::Send {
-        to_address: lpp_addr.to_string(),
-        amount: vec![amount],
-    };
+    let pay_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+        funds: vec![amount],
+        contract_addr: lpp_addr.to_string(),
+        msg: to_binary(&lpp::msg::ExecuteMsg::DistributeRewards {})?,
+    });
 
     let response = Response::new()
         .add_attribute("method", "try_send_rewards")

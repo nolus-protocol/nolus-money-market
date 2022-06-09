@@ -1,4 +1,4 @@
-use cosmwasm_std::{coins, Addr};
+use cosmwasm_std::{coins, Addr, Coin};
 use cw_multi_test::Executor;
 
 use crate::common::{test_case::TestCase, ADMIN, USER};
@@ -12,6 +12,12 @@ fn on_alarm_from_unknown() {
     test_case.init(&user_addr, coins(500, denom));
     test_case.init_treasury().init_time_oracle().init_profit(2);
 
+    let treasury_balance = test_case
+        .app
+        .wrap()
+        .query_all_balances(test_case.treasury_addr.clone().unwrap())
+        .unwrap();
+
     let res = test_case.app.execute_contract(
         user_addr,
         test_case.profit_addr.as_ref().unwrap().clone(),
@@ -24,7 +30,7 @@ fn on_alarm_from_unknown() {
 
     //assert that no transfer is made to treasury
     assert_eq!(
-        coins(1000, denom),
+        treasury_balance,
         test_case
             .app
             .wrap()
@@ -41,6 +47,12 @@ fn on_alarm_zero_balance() {
     let mut test_case = TestCase::new(denom);
     test_case.init(&time_oracle_addr, coins(500, denom));
     test_case.init_treasury().init_time_oracle().init_profit(2);
+
+    let initial_treasury_balance = test_case
+        .app
+        .wrap()
+        .query_all_balances(test_case.treasury_addr.clone().unwrap())
+        .unwrap();
 
     let res = test_case
         .app
@@ -76,8 +88,9 @@ fn on_alarm_zero_balance() {
         ]
     );
 
+    // assert no change in treasury balance
     assert_eq!(
-        coins(1000, denom),
+        initial_treasury_balance,
         test_case
             .app
             .wrap()
@@ -94,15 +107,6 @@ fn on_alarm_transfer() {
     let mut test_case = TestCase::new(denom);
     test_case.init(&time_oracle_addr, coins(500, denom));
     test_case.init_treasury().init_time_oracle().init_profit(2);
-
-    assert_eq!(
-        coins(1000, denom),
-        test_case
-            .app
-            .wrap()
-            .query_all_balances(test_case.treasury_addr.as_ref().unwrap())
-            .unwrap()
-    );
 
     test_case
         .app
@@ -160,11 +164,11 @@ fn on_alarm_transfer() {
     );
 
     assert_eq!(
-        coins(1100, denom),
+        Coin::new(1100, denom),
         test_case
             .app
             .wrap()
-            .query_all_balances(test_case.treasury_addr.unwrap())
+            .query_balance(test_case.treasury_addr.unwrap(), denom)
             .unwrap()
     );
 }

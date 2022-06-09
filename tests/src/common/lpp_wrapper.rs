@@ -1,6 +1,4 @@
-use cosmwasm_std::{
-    coins, to_binary, Addr, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, Uint64,
-};
+use cosmwasm_std::{coins, to_binary, Addr, Binary, Coin, Deps, Env, Uint64};
 use cw_multi_test::{App, ContractWrapper, Executor};
 use lpp::{
     error::ContractError,
@@ -88,16 +86,4 @@ pub fn mock_lpp_query(
     }?;
 
     Ok(res)
-}
-
-pub fn mock_lpp_execute(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    msg: lpp::msg::ExecuteMsg,
-) -> Result<Response, ContractError> {
-    match msg {
-        lpp::msg::ExecuteMsg::DistributeRewards => Ok(Response::default()),
-        _ => Ok(lpp::contract::execute(deps, env, info, msg)?),
-    }
 }
