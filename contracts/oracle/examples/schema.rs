@@ -5,7 +5,7 @@ use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
 use oracle::{
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::Config,
+    state::config::Config,
 };
 
 fn main() {
