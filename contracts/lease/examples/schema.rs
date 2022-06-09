@@ -14,3 +14,17 @@ fn main() {
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
     export_schema(&schema_for!(StatusQuery), &out_dir);
 }
+
+#[cfg(test)]
+#[test]
+fn test_repay_representation() {
+    use cosmwasm_std::{from_slice, to_vec};
+    use lease::msg::ExecuteMsg;
+    use schemars::_serde_json::to_string;
+
+    let msg = ExecuteMsg::Repay();
+    let repay_bin = to_vec(&msg).expect("serialization failed");
+    assert_eq!(msg, from_slice(&repay_bin).expect("deserialization failed"));
+
+    assert_eq!(r#"{"repay":[]}"#, to_string(&msg).expect("deserialization failed"));
+}

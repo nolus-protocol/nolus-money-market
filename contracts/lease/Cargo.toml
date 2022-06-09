@@ -9,6 +9,10 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[[example]]
+name = "schema"
+test = true
+
 [features]
 default = ["cosmwasm-bindings"]
 cosmwasm-bindings = ["cosmwasm"]

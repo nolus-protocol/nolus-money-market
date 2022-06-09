@@ -59,8 +59,8 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<Response> {
     match msg {
-        ExecuteMsg::Repay => try_repay(deps, env, info),
-        ExecuteMsg::Close => try_close(deps, env, info),
+        ExecuteMsg::Repay() => try_repay(deps, env, info),
+        ExecuteMsg::Close() => try_close(deps, env, info),
     }
 }
 
