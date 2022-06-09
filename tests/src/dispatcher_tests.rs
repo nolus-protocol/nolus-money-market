@@ -126,7 +126,7 @@ fn on_alarm() {
         .unwrap();
 
     // call dispatcher on alarm
-    let _res = test_case
+    let res = test_case
         .app
         .execute_contract(
             Addr::unchecked("time"),
@@ -139,39 +139,51 @@ fn on_alarm() {
         .unwrap();
 
     // ensure the attributes were relayed from the sub-message
-    // assert_eq!(4, res.events.len(), "{:?}", res.events);
+    assert_eq!(5, res.events.len(), "{:?}", res.events);
 
-    // let dispatcher_exec = &res.events[0];
-    // assert_eq!(dispatcher_exec.ty.as_str(), "execute");
-    // assert_eq!(
-    //     dispatcher_exec.attributes,
-    //     [("_contract_addr", test_case.dispatcher_addr.unwrap())]
-    // );
-    // let treasury_exec = &res.events[1];
-    // assert_eq!(treasury_exec.ty.as_str(), "execute");
-    // assert_eq!(
-    //     treasury_exec.attributes,
-    //     [("_contract_addr", &test_case.treasury_addr.clone().unwrap())]
-    // );
-    // let treasury_wasm = &res.events[2];
-    // assert_eq!(treasury_wasm.ty.as_str(), "wasm");
-    // assert_eq!(
-    //     treasury_wasm.attributes,
-    //     [
-    //         (
-    //             "_contract_addr",
-    //             test_case.treasury_addr.clone().unwrap().to_string()
-    //         ),
-    //         ("method", "try_send_rewards".to_string())
-    //     ]
-    // );
+    let dispatcher_exec = &res.events[0];
+    assert_eq!(dispatcher_exec.ty.as_str(), "execute");
+    assert_eq!(
+        dispatcher_exec.attributes,
+        [("_contract_addr", test_case.dispatcher_addr.unwrap())]
+    );
+    let treasury_exec = &res.events[1];
+    assert_eq!(treasury_exec.ty.as_str(), "execute");
+    assert_eq!(
+        treasury_exec.attributes,
+        [("_contract_addr", &test_case.treasury_addr.clone().unwrap())]
+    );
+    let treasury_wasm = &res.events[2];
+    assert_eq!(treasury_wasm.ty.as_str(), "wasm");
+    assert_eq!(
+        treasury_wasm.attributes,
+        [
+            (
+                "_contract_addr",
+                test_case.treasury_addr.clone().unwrap().to_string()
+            ),
+            ("method", "try_send_rewards".to_string())
+        ]
+    );
 
-    // let treasury_exec = &res.events[3];
-    // assert_eq!(treasury_exec.ty.as_str(), "execute");
-    // assert_eq!(
-    //     treasury_exec.attributes,
-    //     [("_contract_addr", &test_case.lpp_addr.clone().unwrap())]
-    // );
+    let treasury_exec = &res.events[3];
+    assert_eq!(treasury_exec.ty.as_str(), "execute");
+    assert_eq!(
+        treasury_exec.attributes,
+        [("_contract_addr", &test_case.lpp_addr.clone().unwrap())]
+    );
+    let treasury_exec = &res.events[4];
+    assert_eq!(treasury_exec.ty.as_str(), "wasm");
+    assert_eq!(
+        treasury_exec.attributes,
+        [
+            (
+                "_contract_addr",
+                test_case.lpp_addr.clone().unwrap().to_string()
+            ),
+            ("method", "try_distribute_rewards".to_string())
+        ]
+    );
 
     assert_eq!(
         Coin::new(72, NATIVE_DENOM),
