@@ -99,7 +99,6 @@ impl Deposit {
 
     // NOTE: a chain of messages: BankMsg and SendRewards
     pub fn distribute_rewards(deps: DepsMut, env: Env, funds: Vec<Coin>) -> StdResult<()> {
-        println!("Distributing: {:?}", funds);
         let current_balance_nls = Self::balance_nls(&deps.as_ref(), &env)?;
         let mut globals = Self::GLOBALS.may_load(deps.storage)?.unwrap_or_default();
 
