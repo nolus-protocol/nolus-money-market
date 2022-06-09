@@ -1,9 +1,6 @@
 #!/bin/bash
 set -euxo pipefail
 
-COMMON_DIR="$(pwd)/scripts/common"
-source "$COMMON_DIR"/cmd.sh
-
 NOLUS_LOCAL_NET="http://localhost:26612"
 CONTRACTS_RESULTS_FILE="contracts-info.json"
 STABLE_DENOM="ibc/8A34AF0C1943FD0DFCDE9ADBF0B2C9959C45E87E6088EA2FC6ADACD59261B8A2"
@@ -54,5 +51,7 @@ done
 
 # Deploy contracts
 
-source "$COMMON_DIR"/deploy-contracts.sh
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$SCRIPT_DIR"/common/deploy-contracts.sh
+
 deployContracts "$CONTRACTS_RESULTS_FILE" "$NOLUS_LOCAL_NET" "$HOME_DIR" "$STABLE_DENOM"

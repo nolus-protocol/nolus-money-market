@@ -9,8 +9,6 @@ fi
 TOKEN_TYPE="JOB-TOKEN"
 TOKEN_VALUE="$CI_JOB_TOKEN"
 
-COMMON_DIR="$(pwd)/scripts/common"
-
 BINARY_ARTIFACT_BIN="nolus.tar.gz"
 NOLUS_DEV_NET="https://net-dev.nolus.io:26612"
 GITLAB_API="https://gitlab-nomo.credissimo.net/api/v4"
@@ -18,7 +16,7 @@ COSMZONE_PROJECT_ID="3"
 SETUP_DEV_NETWORK_ARTIFACT="setup-dev-network"
 NOLUS_BUILD_BINARY_ARTIFACT="build-binary"
 STABLE_DENOM="$STABLE_DENOM_DEV"
-HOME_DIR="$(pwd)/accounts"
+HOME_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && cd .. && pwd)/accounts
 CONTRACTS_RESULTS_FILE="$1"
 
 downloadArtifact() {
@@ -42,6 +40,8 @@ PATH=$(pwd):$PATH
 
 # Deploy contracts
 
-source "$COMMON_DIR"/deploy-contracts.sh
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+source "$SCRIPT_DIR"/common/deploy-contracts.sh
+
 deployContracts "$CONTRACTS_RESULTS_FILE" "$NOLUS_DEV_NET" "$HOME_DIR" "$STABLE_DENOM"
 
