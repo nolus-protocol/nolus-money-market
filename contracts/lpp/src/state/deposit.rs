@@ -100,6 +100,11 @@ impl Deposit {
         //let current_balance_nls = Self::balance_nls(&deps.as_ref(), &env)?;
         let mut globals = Self::GLOBALS.may_load(deps.storage)?.unwrap_or_default();
 
+        if globals.balance_nlpn.is_zero() {
+            // no deposits => no rewards
+            return Ok(());
+        }
+
         globals.reward_per_token += Decimal::from_ratio(
             rewards_nls.amount - globals.balance_nls,
             globals.balance_nlpn,
