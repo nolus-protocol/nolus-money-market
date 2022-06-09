@@ -9,7 +9,7 @@ use crate::tests::common::{
 use crate::ContractError;
 
 use cosmwasm_std::testing::{mock_env, mock_info};
-use cosmwasm_std::{from_binary, Addr, Decimal, StdError};
+use cosmwasm_std::{coins, from_binary, Addr, Decimal, StdError};
 use marketprice::feed::{DenomToPrice, Price};
 
 use super::common::dummy_feed_prices_msg;
@@ -35,6 +35,48 @@ fn proper_initialization() {
     let value: Vec<(String, String)> = from_binary(&res).unwrap();
     assert_eq!("unolus".to_string(), value.get(0).unwrap().0);
     assert_eq!("uosmo".to_string(), value.get(0).unwrap().1);
+}
+
+#[test]
+#[should_panic(expected = "Unauthorized")]
+fn configure_unauthorized() {
+    let msg = dummy_instantiate_msg(
+        "token".to_string(),
+        60,
+        50,
+        vec![("unolus".to_string(), "uosmo".to_string())],
+    );
+    let (mut deps, _) = setup_test(msg);
+
+    let unauth_info = mock_info("anyone", &coins(2, "token"));
+    let msg = ExecuteMsg::Config {
+        price_feed_period: 15,
+        feeders_percentage_needed: 12,
+    };
+    let _res = execute(deps.as_mut(), mock_env(), unauth_info, msg).unwrap();
+}
+
+#[test]
+fn configure() {
+    let msg = dummy_instantiate_msg(
+        "token".to_string(),
+        60,
+        50,
+        vec![("unolus".to_string(), "uosmo".to_string())],
+    );
+    let (mut deps, info) = setup_test(msg);
+
+    let msg = ExecuteMsg::Config {
+        price_feed_period: 33,
+        feeders_percentage_needed: 44,
+    };
+    let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+    // should now be 12
+    let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
+    let value: ConfigResponse = from_binary(&res).unwrap();
+    assert_eq!(44, value.feeders_percentage_needed);
+    assert_eq!(33, value.price_feed_period);
 }
 
 #[test]

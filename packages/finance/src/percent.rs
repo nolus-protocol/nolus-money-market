@@ -7,7 +7,7 @@ use cosmwasm_std::{Fraction, OverflowError, OverflowOperation};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::Result as FinanceResult, percent::internal::Ratio, percentable::Percentable};
+use crate::{error::Result as FinanceResult, percentable::Percentable};
 
 pub type Units = u32;
 
@@ -51,7 +51,7 @@ impl Percent {
     {
         debug_assert!(self != &Self::ZERO);
         amount.safe_mul(
-            &Ratio::from(*self)
+            &internal::Ratio::from(*self)
                 .inv()
                 .expect("precondition not respected"),
         )

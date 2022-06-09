@@ -67,7 +67,7 @@ fn marketprice_add_feed_empty_vec() {
         .feed(
             &mut deps.storage,
             ts,
-            f_address,
+            &f_address,
             "DEN1".to_string(),
             prices,
             60,
@@ -106,7 +106,7 @@ fn marketprice_add_feed() {
         .feed(
             &mut deps.storage,
             ts,
-            f_address,
+            &f_address,
             "DEN1".to_string(),
             prices,
             60,
@@ -182,7 +182,7 @@ fn feed_price(
     market.feed(
         deps.storage,
         ts,
-        f_address,
+        &f_address,
         base.to_string(),
         vec![Price {
             denom: quote.to_string(),

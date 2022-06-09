@@ -3,8 +3,9 @@ use cosmwasm_std::{coins, Addr, Coin, Empty, StdError, Uint64};
 use cw_multi_test::{next_block, App, ContractWrapper, Executor};
 
 use super::{
-    dispatcher_wrapper::DispatcherWrapper, lease_wrapper::LeaseWrapper, lpp_wrapper::LppWrapper,
-    mock_app, oracle_wrapper::MarketOracleWrapper, profit_wrapper::ProfitWrapper,
+    dispatcher_wrapper::DispatcherWrapper, lease_wrapper::LeaseWrapper,
+    leaser_wrapper::LeaserWrapper, lpp_wrapper::LppWrapper, mock_app,
+    oracle_wrapper::MarketOracleWrapper, profit_wrapper::ProfitWrapper,
     treasury_wrapper::TreasuryWrapper, ADMIN,
 };
 
@@ -51,10 +52,11 @@ pub struct TestCase {
     pub dispatcher_addr: Option<Addr>,
     pub treasury_addr: Option<Addr>,
     pub profit_addr: Option<Addr>,
+    pub leaser_addr: Option<Addr>,
     pub lpp_addr: Option<Addr>,
     pub market_oracle: Option<Addr>,
     pub time_oracle: Option<Addr>,
-    lease_code_id: Option<u64>,
+    pub lease_code_id: Option<u64>,
     denom: String,
 }
 
@@ -65,6 +67,7 @@ impl TestCase {
             dispatcher_addr: None,
             treasury_addr: None,
             profit_addr: None,
+            leaser_addr: None,
             lpp_addr: None,
             market_oracle: None,
             time_oracle: None,
@@ -113,6 +116,17 @@ impl TestCase {
                 .0,
         );
         self.app.update_block(next_block);
+        self
+    }
+
+    pub fn init_leaser(&mut self) -> &mut Self {
+        self.leaser_addr = Some(LeaserWrapper::default().instantiate(
+            &mut self.app,
+            self.lease_code_id.unwrap(),
+            self.lpp_addr.as_ref().unwrap(),
+        ));
+        self.app.update_block(next_block);
+
         self
     }
 

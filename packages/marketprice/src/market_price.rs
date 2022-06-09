@@ -212,7 +212,7 @@ impl<'m> PriceFeeds<'m> {
         &self,
         storage: &mut dyn Storage,
         current_block_time: Timestamp,
-        sender_raw: Addr,
+        sender_raw: &Addr,
         base: Denom,
         prices: Vec<Price>,
         price_feed_period: u64,

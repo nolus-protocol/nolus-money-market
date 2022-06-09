@@ -1,11 +1,10 @@
 use crate::contract::{execute, instantiate, query};
-use crate::helpers::open_lease_msg;
-use crate::tests::common::leaser_instantiate_msg;
+use crate::leaser::Leaser;
 use crate::ContractError;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{
-    coins, from_binary, to_binary, Addr, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, StdError,
-    SubMsg, Uint128, WasmMsg,
+    coins, from_binary, to_binary, Addr, Coin, CosmosMsg, DepsMut, MessageInfo, StdError, SubMsg,
+    Uint128, Uint64, WasmMsg,
 };
 use finance::percent::Percent;
 
@@ -14,6 +13,17 @@ use crate::msg::{ConfigResponse, ExecuteMsg, Liability, QueryMsg, QuoteResponse,
 const CREATOR: &str = "creator";
 const LPP_ADDR: &str = "test";
 const DENOM: &str = "UST";
+
+fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::InstantiateMsg {
+    crate::msg::InstantiateMsg {
+        lease_code_id: Uint64::new(lease_code_id),
+        lpp_ust_addr: lpp_addr,
+        lease_interest_rate_margin: Percent::from_percent(3),
+        recalc_hours: 1,
+        liability: Liability::new(65, 70, 80),
+        repayment: Repayment::new(90 * 24 * 60 * 60, 10 * 24 * 60 * 60),
+    }
+}
 
 fn setup_test_case(deps: DepsMut) -> MessageInfo {
     let lpp_addr = Addr::unchecked(LPP_ADDR);
@@ -97,7 +107,7 @@ fn test_open_lease() {
     let info = mock_info("addr0000", coins(40, DENOM).as_ref());
     let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-    let msg = open_lease_msg(info.sender, config, DENOM.to_string());
+    let msg = Leaser::open_lease_msg(info.sender, config, DENOM.to_string());
     assert_eq!(
         res.messages,
         vec![SubMsg::reply_on_success(
@@ -146,7 +156,7 @@ fn test_quote() {
     assert_eq!(Uint128::new(285), resp.total.amount);
     assert_eq!(DENOM, resp.borrow.denom);
     assert_eq!(DENOM, resp.total.denom);
-    assert_eq!(Decimal::one(), resp.annual_interest_rate); // hardcoded until LPP contract is merged
+    assert_eq!(Percent::HUNDRED, resp.annual_interest_rate); // hardcoded until LPP contract is merged
 
     let res = query(
         deps.as_ref(),
