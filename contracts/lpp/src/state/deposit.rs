@@ -1,14 +1,12 @@
-use crate::error::ContractError;
 use crate::lpp::NTokenPrice;
+use crate::{contract::NOLUS_DENOM, error::ContractError};
 use cosmwasm_std::{
-    coin, Addr, BankMsg, Coin, Decimal, Deps, DepsMut, Env, Fraction, StdResult, Storage, Uint128,
+    coin, Addr, BankMsg, Coin, Decimal, DepsMut, Env, Fraction, StdResult, Storage, Uint128,
 };
 use cw_storage_plus::{Item, Map};
 use serde::{Deserialize, Serialize};
 
 type Balance = Uint128;
-// TODO: move to some global config package
-pub const NOLUS_DENOM: &str = "uNLS";
 
 pub struct Deposit {
     addr: Addr,
@@ -98,15 +96,15 @@ impl Deposit {
     }
 
     // NOTE: a chain of messages: BankMsg and SendRewards
-    pub fn distribute_rewards(deps: DepsMut, env: Env, funds: Vec<Coin>) -> StdResult<()> {
-        let current_balance_nls = Self::balance_nls(&deps.as_ref(), &env)?;
+    pub fn distribute_rewards(deps: DepsMut, _env: Env, rewards_nls: Coin) -> StdResult<()> {
+        //let current_balance_nls = Self::balance_nls(&deps.as_ref(), &env)?;
         let mut globals = Self::GLOBALS.may_load(deps.storage)?.unwrap_or_default();
 
         globals.reward_per_token += Decimal::from_ratio(
-            current_balance_nls - globals.balance_nls,
+            rewards_nls.amount - globals.balance_nls,
             globals.balance_nlpn,
         );
-        globals.balance_nls = current_balance_nls;
+        globals.balance_nls = rewards_nls.amount;
         Self::GLOBALS.save(deps.storage, &globals)
     }
 
@@ -169,10 +167,10 @@ impl Deposit {
         Ok(maybe_balance)
     }
 
-    pub fn balance_nls(deps: &Deps, env: &Env) -> StdResult<Uint128> {
-        let querier = deps.querier;
-        querier
-            .query_balance(&env.contract.address, NOLUS_DENOM)
-            .map(|coin| coin.amount)
-    }
+    // pub fn balance_nls(deps: &Deps, env: &Env) -> StdResult<Uint128> {
+    //     let querier = deps.querier;
+    //     querier
+    //         .query_balance(&env.contract.address, NOLUS_DENOM)
+    //         .map(|coin| coin.amount)
+    // }
 }

@@ -19,6 +19,9 @@ use crate::state::Deposit;
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+// TODO: move to some global config package
+pub const NOLUS_DENOM: &str = "uNLS";
+
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -173,7 +176,15 @@ fn try_distribute_rewards(
     env: Env,
     funds: Vec<Coin>,
 ) -> Result<Response, ContractError> {
-    Deposit::distribute_rewards(deps, env, funds)?;
+    match funds.iter().find(|&coin| &coin.denom == NOLUS_DENOM) {
+        Some(coin) => Deposit::distribute_rewards(deps, env, coin.to_owned())?,
+        None => {
+            return Err(ContractError::CustomError {
+                val: "Rewards are supported only in native currency".to_string(),
+            })
+        }
+    }
+
     Ok(Response::new().add_attribute("method", "try_distribute_rewards"))
 }
 
