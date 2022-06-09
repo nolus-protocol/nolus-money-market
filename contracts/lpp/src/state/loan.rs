@@ -69,9 +69,6 @@ impl Loan {
             .spanning(time_delta)
             .interest(self.data.principal_due);
 
-
-        // let loan_interest_due = calc::interest(self.data.principal_due, self.data.annual_interest_rate, time_delta);
-
         let loan_interest_payment = cmp::min(loan_interest_due, repay_amount);
         let loan_principal_payment =
             cmp::min(repay_amount - loan_interest_payment, self.data.principal_due);
@@ -88,14 +85,16 @@ impl Loan {
                     loan.principal_due -= loan_principal_payment;
 
                     // TODO: use InterestPeriod::pay
-                    let interest_paid_delta: u64 = (
-                        Decimal::from_ratio(loan_interest_payment, loan_interest_due)
-                        * Uint128::new(time_delta.nanos() as u128))
-                        .u128()
-                        .try_into()
-                        .expect("math overflow");
-                    loan.interest_paid =
-                        Timestamp::from_nanos(loan.interest_paid.nanos() + interest_paid_delta);
+                    if !loan_interest_due.is_zero() {
+                        let interest_paid_delta: u64 = (
+                            Decimal::from_ratio(loan_interest_payment, loan_interest_due)
+                            * Uint128::new(time_delta.nanos() as u128))
+                            .u128()
+                            .try_into()
+                            .expect("math overflow");
+                        loan.interest_paid =
+                            Timestamp::from_nanos(loan.interest_paid.nanos() + interest_paid_delta);
+                    }
 
                     Ok(loan)
                 },

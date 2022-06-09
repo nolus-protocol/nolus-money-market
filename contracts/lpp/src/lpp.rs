@@ -446,6 +446,10 @@ mod test {
 
         assert_eq!(loan_response, test_response);
 
+        // an immediate repay after repay should pass (loan_interest_due==0 bug)
+        lpp.try_repay_loan(deps.as_mut(), env.clone(), loan.clone(), vec![coin(0u128, "uust")])
+            .expect("can't repay loan");
+
         // wait for another year/10
         env.block.time = Timestamp::from_nanos(10 + 2*Duration::YEAR.nanos()/10);
 
