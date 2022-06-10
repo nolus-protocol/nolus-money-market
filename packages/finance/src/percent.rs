@@ -3,11 +3,11 @@ use std::{
     ops::{Add, Sub},
 };
 
-use cosmwasm_std::{Fraction, OverflowError, OverflowOperation};
+use cosmwasm_std::{OverflowError, OverflowOperation};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::Result as FinanceResult, percentable::Percentable};
+use crate::{error::Result as FinanceResult, percentable::Percentable, ratio::Ratio};
 
 pub type Units = u32;
 
@@ -39,7 +39,7 @@ impl Percent {
     where
         P: Percentable,
     {
-        amount.safe_mul(&internal::Ratio::from(*self))
+        amount.safe_mul(&Ratio::from(*self))
     }
 
     /// the inverse of `Percent::of`
@@ -49,9 +49,10 @@ impl Percent {
     where
         P: Percentable,
     {
+        use cosmwasm_std::Fraction;
         debug_assert!(self != &Self::ZERO);
         amount.safe_mul(
-            &internal::Ratio::from(*self)
+            &Ratio::from(*self)
                 .inv()
                 .expect("precondition not respected"),
         )
@@ -69,6 +70,12 @@ impl Percent {
             .checked_sub(other.0)
             .map(Self::from_permille)
             .ok_or_else(|| OverflowError::new(OverflowOperation::Sub, self, other).into())
+    }
+}
+
+impl From<Percent> for Ratio<Units> {
+    fn from(p: Percent) -> Self {
+        Self::new(p.units(), Percent::HUNDRED.units())
     }
 }
 
@@ -129,43 +136,6 @@ impl<'a> Sub<&'a Percent> for Percent {
     }
 }
 
-mod internal {
-    use cosmwasm_std::Fraction;
-
-    use super::{Percent, Units};
-
-    pub(super) struct Ratio {
-        nominator: Units,
-        denominator: Units,
-    }
-    impl Fraction<Units> for Ratio {
-        fn numerator(&self) -> Units {
-            self.nominator
-        }
-
-        fn denominator(&self) -> Units {
-            self.denominator
-        }
-
-        fn inv(&self) -> Option<Self> {
-            match self.nominator {
-                Units::MIN => None,
-                _ => Some(Ratio {
-                    nominator: self.denominator,
-                    denominator: self.nominator,
-                }),
-            }
-        }
-    }
-    impl From<Percent> for Ratio {
-        fn from(p: Percent) -> Self {
-            Self {
-                nominator: p.units(),
-                denominator: Percent::HUNDRED.units(),
-            }
-        }
-    }
-}
 #[cfg(test)]
 pub(super) mod test {
     use std::fmt::{Debug, Display};

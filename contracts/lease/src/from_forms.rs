@@ -1,5 +1,6 @@
 use cosmwasm_std::{Api, Coin, StdResult, Storage, Timestamp};
 use cw_storage_plus::Item;
+use finance::coin::{Currency, Usdc};
 use lpp::stub::Lpp;
 
 use crate::{error::ContractResult, lease::Lease, loan::Loan, msg::NewLeaseForm};
@@ -30,7 +31,9 @@ impl NewLeaseForm {
             self.loan.interest_due_period_secs,
             self.loan.grace_period_secs,
         )?;
+if (self.currency == Usdc::DENOM) {
 
+}
         Ok(Lease::new(customer, self.currency, self.liability, loan))
     }
 

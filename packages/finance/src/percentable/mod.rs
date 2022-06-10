@@ -1,4 +1,5 @@
 mod coin;
+mod duration;
 mod percent;
 mod u128;
 mod u64;

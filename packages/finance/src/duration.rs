@@ -1,9 +1,15 @@
-use std::ops::{Add, Sub};
+use std::{
+    fmt::Debug,
+    ops::{Add, Div, Mul, Sub},
+};
 
-use cosmwasm_std::{Timestamp, Uint128, Fraction};
-use serde::{Serialize, Deserialize};
+use cosmwasm_std::{Fraction, Timestamp, Uint128};
+use serde::{Deserialize, Serialize};
 
-use crate::percentable::TimeSliceable;
+use crate::{
+    percentable::{Integer, TimeSliceable},
+    ratio::Ratio,
+};
 
 pub type Units = u64;
 
@@ -28,11 +34,29 @@ impl Duration {
     pub const fn nanos(&self) -> Units {
         self.0
     }
-    pub fn slice_of<T>(&self, annual_amount: T) -> T
+
+    pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T
     where
         T: TimeSliceable,
     {
-        annual_amount.safe_mul(&DurationPerYear{nominator: *self})
+        annual_amount.safe_mul(&Ratio::from(*self))
+    }
+
+    pub fn into_slice_per_ratio<U, D>(self, amount: U, annual_amount: U) -> Self
+    where
+        U: Default + PartialEq + Copy,
+        Units: Integer<DoubleInteger = D> + TryFrom<D>,
+        D: From<Units> + From<U> + Mul<D, Output = D> + Div<D, Output = D>,
+        <Units as TryFrom<D>>::Error: Debug,
+    {
+        use crate::percentable::Fractionable;
+        self.safe_mul(&Ratio::new(amount, annual_amount))
+    }
+}
+
+impl From<Duration> for Ratio<Units> {
+    fn from(p: Duration) -> Self {
+        Self::new(p.nanos(), Duration::YEAR.nanos())
     }
 }
 
