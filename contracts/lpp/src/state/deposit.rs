@@ -27,7 +27,6 @@ struct DepositsGlobals {
     pub balance_nlpn: Balance,
 
     // Rewards
-    pub balance_nls: Balance,
     pub reward_per_token: Decimal,
 }
 
@@ -82,7 +81,6 @@ impl Deposit {
 
         let maybe_reward = if self.data.deposited_nlpn.is_zero() {
             let reward: Uint128 = self.data.pending_rewards_nls * Uint128::new(1);
-            globals.balance_nls -= reward;
             Self::DEPOSITS.remove(storage, self.addr.clone());
             Some(Self::pay_nls(self.addr.clone(), reward))
         } else {
@@ -95,22 +93,21 @@ impl Deposit {
         Ok(maybe_reward)
     }
 
-    // NOTE: a chain of messages: BankMsg and SendRewards
     pub fn distribute_rewards(deps: DepsMut, _env: Env, rewards_nls: Coin) -> StdResult<()> {
-        //let current_balance_nls = Self::balance_nls(&deps.as_ref(), &env)?;
+
         let mut globals = Self::GLOBALS.may_load(deps.storage)?.unwrap_or_default();
 
-        if globals.balance_nlpn.is_zero() {
-            // no deposits => no rewards
-            return Ok(());
-        }
+        // TODO: should we throw error in this case?
+        if !globals.balance_nlpn.is_zero() {
+            globals.reward_per_token += Decimal::from_ratio(
+                rewards_nls.amount,
+                globals.balance_nlpn,
+            );
 
-        globals.reward_per_token += Decimal::from_ratio(
-            rewards_nls.amount - globals.balance_nls,
-            globals.balance_nlpn,
-        );
-        globals.balance_nls = rewards_nls.amount;
-        Self::GLOBALS.save(deps.storage, &globals)
+            Self::GLOBALS.save(deps.storage, &globals)
+        } else {
+            Ok(())
+        }
     }
 
     fn update_rewards(&mut self, globals: &DepositsGlobals) {
@@ -125,6 +122,7 @@ impl Deposit {
                 * Decimal::from_ratio(deposit.deposited_nlpn.u128(), 1u128)
     }
 
+    /// query accounted rewards
     pub fn query_rewards(&self, storage: &dyn Storage) -> StdResult<Coin> {
         let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
 
@@ -132,6 +130,7 @@ impl Deposit {
         Ok(coin(reward.u128(), NOLUS_DENOM))
     }
 
+    /// pay accounted rewards to the deposit owner or optioanl recipient
     pub fn claim_rewards(
         &mut self,
         storage: &mut dyn Storage,
@@ -139,18 +138,17 @@ impl Deposit {
     ) -> StdResult<BankMsg> {
         let recipient = recipient.unwrap_or_else(|| self.addr.clone());
 
-        let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
+        let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
 
         let reward = self.calculate_reward(&globals) * Uint128::new(1);
-        globals.balance_nls -= reward;
         self.data.pending_rewards_nls -= Decimal::from_ratio(reward.u128(), 1u128);
 
         Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
-        Self::GLOBALS.save(storage, &globals)?;
 
         Ok(Self::pay_nls(recipient, reward))
     }
 
+    /// create `BankMsg` to send nolus tokens to `addr`
     pub fn pay_nls(addr: Addr, amount: Uint128) -> BankMsg {
         BankMsg::Send {
             to_address: addr.to_string(),
@@ -158,6 +156,7 @@ impl Deposit {
         }
     }
 
+    /// lpp derivative tokens balance
     pub fn balance_nlpn(storage: &dyn Storage) -> StdResult<Balance> {
         Ok(Self::GLOBALS
             .may_load(storage)?
@@ -165,6 +164,7 @@ impl Deposit {
             .balance_nlpn)
     }
 
+    /// deposit derivative tokens balance
     pub fn query_balance_nlpn(storage: &dyn Storage, addr: Addr) -> StdResult<Option<Balance>> {
         let maybe_balance = Self::DEPOSITS
             .may_load(storage, addr)?
