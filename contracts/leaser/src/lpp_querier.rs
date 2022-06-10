@@ -1,9 +1,10 @@
-use cosmwasm_std::{Coin, Decimal, Deps, StdResult};
+use cosmwasm_std::{Coin, Deps, StdResult};
+use finance::percent::Percent;
 
 pub struct LppQuerier {}
 impl LppQuerier {
     #[cfg(not(test))]
-    pub fn get_annual_interest_rate(deps: Deps, downpayment: Coin) -> StdResult<Decimal> {
+    pub fn get_annual_interest_rate(deps: Deps, downpayment: Coin) -> StdResult<Percent> {
         use cosmwasm_std::StdError;
         use lpp::msg::{QueryMsg as LppQueryMsg, QueryQuoteResponse};
 
@@ -23,7 +24,7 @@ impl LppQuerier {
     }
 
     #[cfg(test)]
-    pub fn get_annual_interest_rate(_deps: Deps, _downpayment: Coin) -> StdResult<Decimal> {
-        Ok(Decimal::one())
+    pub fn get_annual_interest_rate(_deps: Deps, _downpayment: Coin) -> StdResult<Percent> {
+        Ok(Percent::HUNDRED)
     }
 }

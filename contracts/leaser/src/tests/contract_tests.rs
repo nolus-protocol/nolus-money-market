@@ -3,8 +3,8 @@ use crate::leaser::Leaser;
 use crate::ContractError;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{
-    coins, from_binary, to_binary, Addr, Coin, CosmosMsg, Decimal, DepsMut, MessageInfo, StdError,
-    SubMsg, Uint128, Uint64, WasmMsg,
+    coins, from_binary, to_binary, Addr, Coin, CosmosMsg, DepsMut, MessageInfo, StdError, SubMsg,
+    Uint128, Uint64, WasmMsg,
 };
 use finance::percent::Percent;
 
@@ -156,7 +156,7 @@ fn test_quote() {
     assert_eq!(Uint128::new(285), resp.total.amount);
     assert_eq!(DENOM, resp.borrow.denom);
     assert_eq!(DENOM, resp.total.denom);
-    assert_eq!(Decimal::one(), resp.annual_interest_rate); // hardcoded until LPP contract is merged
+    assert_eq!(Percent::HUNDRED, resp.annual_interest_rate); // hardcoded until LPP contract is merged
 
     let res = query(
         deps.as_ref(),
