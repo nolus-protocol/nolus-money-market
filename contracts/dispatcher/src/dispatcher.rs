@@ -50,9 +50,15 @@ impl Dispatcher {
 
         // Prepare a Send Rewards for the amount of Rewards_uNLS to the Treasury.
         let treasury_send_rewards_msg =
-            Self::treasury_send_rewards(&config.treasury, &config.lpp, reward_unls)?;
+            Self::treasury_send_rewards(&config.treasury, reward_unls.clone())?;
 
-        Ok(Response::new().add_message(treasury_send_rewards_msg))
+        let pay_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+            funds: vec![reward_unls],
+            contract_addr: config.lpp.to_string(),
+            msg: to_binary(&lpp::msg::ExecuteMsg::DistributeRewards {})?,
+        });
+
+        Ok(Response::new().add_messages([treasury_send_rewards_msg, pay_msg]))
     }
 
     #[cfg(not(test))]
@@ -121,14 +127,11 @@ impl Dispatcher {
         Ok(Coin::new(reward_unls.u128(), NATIVE_DENOM))
     }
 
-    fn treasury_send_rewards(treasury: &Addr, lpp: &Addr, reward: Coin) -> StdResult<CosmosMsg> {
+    fn treasury_send_rewards(treasury: &Addr, reward: Coin) -> StdResult<CosmosMsg> {
         Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             funds: vec![],
             contract_addr: treasury.to_string(),
-            msg: to_binary(&treasury::msg::ExecuteMsg::SendRewards {
-                lpp_addr: lpp.to_owned(),
-                amount: reward,
-            })?,
+            msg: to_binary(&treasury::msg::ExecuteMsg::SendRewards { amount: reward })?,
         }))
     }
 
