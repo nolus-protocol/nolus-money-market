@@ -3,6 +3,7 @@ pub mod percentable;
 pub mod liability;
 pub mod error;
 pub mod coin;
+pub mod coin_legacy;
 pub mod coin_enum;
 pub mod coin_trait;
 pub mod interest;

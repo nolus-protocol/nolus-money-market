@@ -4,7 +4,7 @@ pub use state::State;
 use std::fmt::Debug;
 
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, SubMsg, Timestamp};
-use finance::{coin, duration::Duration, interest::InterestPeriod, percent::Percent};
+use finance::{coin_legacy, duration::Duration, interest::InterestPeriod, percent::Percent};
 use lpp::{
     msg::{LoanResponse, QueryLoanResponse},
     stub::Lpp,
@@ -77,9 +77,9 @@ where
         let loan_payment =
             if loan_interest_due.amount <= change.amount && self.current_period.zero_length() {
                 self.open_next_period();
-                let loan_interest_surplus = coin::sub_amount(change, loan_interest_due.amount);
+                let loan_interest_surplus = coin_legacy::sub_amount(change, loan_interest_due.amount);
                 let change = self.repay_margin_interest(principal_due, by, loan_interest_surplus);
-                coin::add_coin(loan_interest_due, change)
+                coin_legacy::add_coin(loan_interest_due, change)
             } else {
                 change
             };

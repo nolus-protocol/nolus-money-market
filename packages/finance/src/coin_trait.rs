@@ -22,12 +22,12 @@ pub fn from_cosmos(coin: CosmWasmCoin) -> Option<Box<dyn Coin>> {
 
 #[cfg(test)]
 mod test {
-    use super::{from_cosmos, NlsCoin};
+    use super::{from_cosmos};
     use cosmwasm_std::Coin as CosmWasmCoin;
 
     #[test]
     fn test_from() {
-        let pointer_coin = from_cosmos(CosmWasmCoin::new(12, "nls")).expect("nolus coin");
+        let _pointer_coin = from_cosmos(CosmWasmCoin::new(12, "nls")).expect("nolus coin");
         // let coin: NlsCoin = *pointer_coin;
         // assert_eq!(Some(Box::new(NlsCoin)), );
     }

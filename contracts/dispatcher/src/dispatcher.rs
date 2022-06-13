@@ -3,7 +3,7 @@ use cosmwasm_std::{
     SubMsg, Timestamp, WasmMsg,
 };
 use cosmwasm_std::{Deps, QueryRequest, StdResult, WasmQuery};
-use finance::coin::add_coin;
+use finance::coin_legacy::add_coin;
 use finance::duration::Duration;
 use finance::interest::InterestPeriod;
 use lpp::msg::{ExecuteMsg as LPPExecuteMsg, LppBalanceResponse, QueryMsg as LPPQueryMsg};

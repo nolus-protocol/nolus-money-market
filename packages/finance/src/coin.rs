@@ -1,17 +1,11 @@
 use std::{
     marker::PhantomData,
-    ops::{Add, Sub},
+    ops::{Add, Sub}, fmt::Debug,
 };
-// , fmt::{Formatter, Result as FmtResult}
 
-use cosmwasm_std::{Coin as CosmWasmCoin, Uint128};
 use serde::{Deserialize, Serialize};
 
-// pub enum Currency {
-//     Nls,
-//     Usdc,
-// }
-pub trait Currency {
+pub trait Currency : 'static {
     const DENOM: &'static str;
 }
 #[derive(PartialEq, Debug)]
@@ -26,21 +20,17 @@ impl Currency for Nls {
     const DENOM: &'static str = "unls";
 }
 
-
 #[derive(Serialize, Deserialize, PartialEq, Clone, Copy, Debug)]
-pub struct Coin<C: 'static> {
+pub struct Coin<C> {
     amount: u128,
-    denom: PhantomData<&'static C>,
+    denom: PhantomData<C>,
 }
 
-impl<C> Coin<C>
-where
-    C: 'static,
-{
+impl<C> Coin<C> {
     pub fn new(amount: u128) -> Self {
         Self {
             amount,
-            denom: PhantomData::<&C>,
+            denom: PhantomData::<C>,
         }
     }
 }
@@ -64,26 +54,6 @@ impl<C> Sub<Coin<C>> for Coin<C> {
             denom: self.denom,
         }
     }
-}
-
-fn from_cosmwasm<C>(coin: CosmWasmCoin) -> Option<Coin<C>>
-where
-    C: Currency,
-{
-    let amount: u128 = coin.amount.into();
-    let denom = coin.denom.as_str();
-    if denom == C::DENOM {
-        Some(Coin::<C>::new(amount))
-    } else {
-        None
-    }
-    // if denom == Nls::DENOM {
-    //     Some(Coin::<Nls>::new(amount))
-    // } else if denom == Usdc::DENOM {
-    //     Some(Coin::<Nls>::new(amount))
-    // } else {
-    //     None
-    // }
 }
 
 // impl<C> Serialize for MyCoin<C>
@@ -143,48 +113,9 @@ where
 //     }
 // }
 
-pub fn sub_amount(from: CosmWasmCoin, amount: Uint128) -> CosmWasmCoin {
-    CosmWasmCoin {
-        amount: from.amount - amount,
-        denom: from.denom,
-    }
-}
-
-pub fn add_coin(to: CosmWasmCoin, other: CosmWasmCoin) -> CosmWasmCoin {
-    debug_assert!(to.denom == other.denom);
-    CosmWasmCoin {
-        amount: to.amount + other.amount,
-        denom: to.denom,
-    }
-}
-
 #[cfg(test)]
 mod test {
-    use super::{Coin, Nls, Usdc, from_cosmwasm, Currency};
 
-    // use cosmwasm_std::{to_vec, Coin as CosmWasmCoin};
-    use cosmwasm_std::Coin as CosmWasmCoin;
-    // use crate::coin::Usdc;
-
-    // use super::{Coin, Nls, Currency};
-
-    #[test]
-    fn test_add() {
-        let c1 = Coin::<Nls>::new(10);
-        let c2 = Coin::<Nls>::new(20);
-        let c12 = Coin::<Nls>::new(30);
-        assert_eq!(c12, c1 + c2);
-        // let _c2 = Coin::<Usdc>::new(10);
-        // assert_ne!(c1, c2);
-    }
-
-    #[test]
-    fn test_from_cosmwasm() {
-        let c1 = from_cosmwasm::<Nls>(CosmWasmCoin::new(12, Nls::DENOM));
-        assert_eq!(Some(Coin::<Nls>::new(12)), c1);
-        let c2 = from_cosmwasm::<Nls>(CosmWasmCoin::new(12, Usdc::DENOM));
-        assert_eq!(None, c2);
-    }
     // #[test]
     // fn serialize() {
     //     let amount = 123;
