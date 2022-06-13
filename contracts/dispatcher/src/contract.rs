@@ -1,8 +1,8 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
-    Timestamp,
+    ensure, to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    Storage, Timestamp,
 };
 use cw2::set_contract_version;
 use time_oracle::Alarms;
@@ -46,7 +46,8 @@ pub fn instantiate(
     DispatchLog::update(deps.storage, env.block.time)?;
 
     try_add_alarm(
-        deps,
+        deps.api,
+        deps.storage,
         env.contract.address,
         env.block.time.plus_seconds(to_seconds(msg.cadence_hours)),
     )?;
@@ -73,7 +74,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Config { cadence_hours } => try_config(deps, info, cadence_hours),
-        ExecuteMsg::Alarm { time } => Dispatcher::try_dispatch(deps, env, info, time),
+        ExecuteMsg::Alarm { time } => try_dispatch(deps, env, info, time),
     }
 }
 
@@ -105,12 +106,44 @@ fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
     })
 }
 
-fn try_add_alarm(deps: DepsMut, addr: Addr, time: Timestamp) -> Result<Response, ContractError> {
-    let valid = deps
-        .api
+pub fn try_dispatch(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    time: Timestamp,
+) -> Result<Response, ContractError> {
+    ensure!(
+        time >= env.block.time,
+        ContractError::AlarmTimeValidation {}
+    );
+    let config = Config::load(deps.storage)?;
+
+    if info.sender != config.time_oracle {
+        return Err(ContractError::UnrecognisedAlarm(info.sender));
+    }
+
+    try_add_alarm(
+        deps.api,
+        deps.storage,
+        env.contract.address,
+        env.block
+            .time
+            .plus_seconds(to_seconds(config.cadence_hours)),
+    )?;
+
+    Dispatcher::dispatch(deps, config, env.block.time)
+}
+
+fn try_add_alarm(
+    api: &dyn Api,
+    storage: &mut dyn Storage,
+    addr: Addr,
+    time: Timestamp,
+) -> Result<Response, ContractError> {
+    let valid = api
         .addr_validate(addr.as_str())
         .map_err(|_| ContractError::InvalidAlarmAddress(addr))?;
-    TIME_ALARMS.add(deps.storage, valid, time)?;
+    TIME_ALARMS.add(storage, valid, time)?;
     Ok(Response::new().add_attribute("method", "try_add_alarm"))
 }
 
@@ -121,7 +154,7 @@ mod tests {
 
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, Addr};
+    use cosmwasm_std::{coins, from_binary, Addr, BlockInfo, Coin, SubMsg, WasmMsg};
 
     fn instantiate_msg() -> InstantiateMsg {
         InstantiateMsg {
@@ -172,29 +205,71 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
         assert_eq!(12, value.cadence_hours);
+
+        let auth_info = mock_info("creator", &coins(2, "token"));
+        let msg = ExecuteMsg::Config { cadence_hours: 20 };
+        let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
+
+        // should now be 12
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
+        let value: ConfigResponse = from_binary(&res).unwrap();
+        assert_eq!(20, value.cadence_hours);
     }
 
-    // #[test]
-    // fn transfer() {
-    //     let mut deps = mock_dependencies_with_balance(&coins(20, "unolus"));
+    #[test]
+    fn dispatch() {
+        let mut deps = mock_dependencies_with_balance(&coins(20, "unolus"));
 
-    //     let msg = instantiate_msg();
-    //     let info = mock_info("time", &coins(2, "unolus"));
-    //     let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+        let msg = instantiate_msg();
+        let info = mock_info("time", &coins(2, "unolus"));
+        let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-    //     let msg = ExecuteMsg::Alarm {
-    //         time: mock_env().block.time,
-    //     };
-    //     let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let msg = ExecuteMsg::Alarm {
+            time: mock_env().block.time,
+        };
+        let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    //     assert_eq!(1, res.messages.len());
-    //     println!("{:?}", res.messages);
-    //     assert_eq!(
-    //         res.messages,
-    //         vec![SubMsg::new(BankMsg::Send {
-    //             to_address: "treasury".to_string(),
-    //             amount: coins(20, "unolus"),
-    //         })]
-    //     );
-    // }
+        // lpp period is zero => lpp returns zero reward => no dispatch message is send
+        assert_eq!(0, res.messages.len());
+    }
+    #[test]
+    fn dispatch_with_valid_period() {
+        let mut deps = mock_dependencies_with_balance(&coins(20, "unolus"));
+
+        let msg = instantiate_msg();
+        let info = mock_info("time", &coins(2, "unolus"));
+        let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        let mut env = mock_env();
+        env.block = BlockInfo {
+            height: 12_345,
+            time: env.block.time.plus_seconds(100 * 24 * 60 * 60),
+            chain_id: "cosmos-testnet-14002".to_string(),
+        };
+
+        let msg = ExecuteMsg::Alarm {
+            time: env.block.time,
+        };
+
+        let res = execute(deps.as_mut(), env, info, msg).unwrap();
+        assert_eq!(res.messages.len(), 2);
+        assert_eq!(
+            res.messages,
+            vec![
+                SubMsg::new(WasmMsg::Execute {
+                    contract_addr: "treasury".to_string(),
+                    msg: to_binary(&treasury::msg::ExecuteMsg::SendRewards {
+                        amount: Coin::new(44386002, "uNLS"),
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }),
+                SubMsg::new(WasmMsg::Execute {
+                    contract_addr: "lpp".to_string(),
+                    msg: to_binary(&lpp::msg::ExecuteMsg::DistributeRewards {}).unwrap(),
+                    funds: coins(44386002, "uNLS"),
+                })
+            ]
+        );
+    }
 }

@@ -1,12 +1,12 @@
-use cosmwasm_std::{Addr, StdError};
+use cosmwasm_std::{Addr, Coin, StdError};
 use cw_multi_test::ContractWrapper;
 
-use cosmwasm_std::{coins, to_binary, Binary, Deps, Env, StdResult};
+use cosmwasm_std::{to_binary, Binary, Deps, Env, StdResult};
 use cw_multi_test::{App, Executor};
 use serde::{Deserialize, Serialize};
 use treasury::ContractError;
 
-use super::ADMIN;
+use super::{ADMIN, NATIVE_DENOM};
 
 pub fn treasury_instantiate_msg() -> treasury::msg::InstantiateMsg {
     treasury::msg::InstantiateMsg {}
@@ -43,7 +43,7 @@ impl TreasuryWrapper {
             code_id,
             Addr::unchecked(ADMIN),
             &msg,
-            &coins(1000, denom),
+            &[Coin::new(1000, denom), Coin::new(1000, NATIVE_DENOM)],
             "treasury",
             None,
         )

@@ -114,7 +114,7 @@ fn open_lease() {
 fn open_lease_custom_currency() {
     let user_addr = Addr::unchecked(USER);
 
-    let custom_denom = "unolus";
+    let custom_denom = "token";
 
     let mut test_case = TestCase::new(custom_denom);
     test_case.init(&user_addr, coins(500, custom_denom));
@@ -163,7 +163,7 @@ fn open_lease_custom_currency() {
 fn open_lease_mixed_currency() {
     let user_addr = Addr::unchecked(USER);
 
-    let custom_denom = "unolus";
+    let custom_denom = "token";
 
     let mut test_case = TestCase::new(custom_denom);
     test_case.init(&user_addr, coins(500, custom_denom));

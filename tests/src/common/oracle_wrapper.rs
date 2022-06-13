@@ -4,7 +4,7 @@ use cosmwasm_std::{to_binary, Addr, Binary, Decimal, Deps, Env, StdError, StdRes
 use cw_multi_test::{App, ContractWrapper, Executor};
 use marketprice::feed::{DenomToPrice, Price};
 
-use super::ADMIN;
+use super::{ADMIN, NATIVE_DENOM};
 
 pub struct MarketOracleWrapper {
     contract_wrapper: Box<
@@ -41,7 +41,7 @@ impl MarketOracleWrapper {
             base_asset: denom.to_string(),
             price_feed_period: 60,
             feeders_percentage_needed: 1,
-            supported_denom_pairs: vec![("UST".to_string(), "unolus".to_string())],
+            supported_denom_pairs: vec![("UST".to_string(), NATIVE_DENOM.to_string())],
         };
         app.instantiate_contract(code_id, Addr::unchecked(ADMIN), &msg, &[], "oracle", None)
             .unwrap()
@@ -66,7 +66,7 @@ pub fn mock_oracle_query(deps: Deps, env: Env, msg: oracle::msg::QueryMsg) -> St
     let res = match msg {
         oracle::msg::QueryMsg::PriceFor { denoms: _ } => to_binary(&oracle::msg::PriceResponse {
             prices: vec![DenomToPrice {
-                denom: "unolus".to_string(),
+                denom: NATIVE_DENOM.to_string(),
                 price: Price::new(Decimal::from_str("0.123456789").unwrap(), "UST".to_string()),
             }],
         }),
