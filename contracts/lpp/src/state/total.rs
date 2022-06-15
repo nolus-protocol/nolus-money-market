@@ -23,9 +23,6 @@ impl Total {
     const STORAGE: Item<'static, Total> = Item::new("total");
 
     pub fn total_principal_due(&self) -> Uint128 { self.total_principal_due }
-    pub fn total_interest_due(&self) -> Uint128 { self.total_interest_due }
-    pub fn annual_interest_rate(&self) -> Percent { self.annual_interest_rate }
-    pub fn last_update_time(&self) -> Timestamp { self.last_update_time }
 
     pub fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
         Self::STORAGE.save(storage, self)
@@ -91,18 +88,32 @@ impl Total {
 mod test {
     use super::*;
     use cosmwasm_std::testing;
+    use finance::duration::Duration;
     
     #[test]
     fn borrow_and_repay() {
         let mut deps = testing::mock_dependencies();
-        let env = testing::mock_env();
+        let mut env = testing::mock_env();
 
         let mut total = Total::default();
         total.store(deps.as_mut().storage)
             .expect("should store");
 
-        total.borrow(env.block.time, 10000u128.into(), Percent::from_percent(10))
+        total.borrow(env.block.time, 10000u128.into(), Percent::from_percent(20))
             .expect("should borrow");
+        assert_eq!(total.total_principal_due(), 10000u128.into());
+
+        env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos()/2);
+        let interest_due = total.total_interest_due_by_now(env.block.time);
+        assert_eq!(interest_due, 1000u128.into());
+
+        total.repay(env.block.time, 5000u128.into(), Percent::from_percent(20))
+            .expect("should repay");
+        assert_eq!(total.total_principal_due(), 5000u128.into());
+
+        env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos()/2);
+        let interest_due = total.total_interest_due_by_now(env.block.time);
+        assert_eq!(interest_due, 1500u128.into());
    }
     
 }

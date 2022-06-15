@@ -6,8 +6,6 @@ use cosmwasm_std::{
 use crate::error::ContractError;
 use crate::msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse};
 use crate::state::{Config, Deposit, Loan, Total};
-use finance::duration::Duration;
-use finance::interest::InterestPeriod;
 use finance::percent::Percent;
 
 pub struct NTokenPrice<'a> {
@@ -38,9 +36,7 @@ pub struct LiquidityPool {
 impl LiquidityPool {
     pub fn store(storage: &mut dyn Storage, denom: String, lease_code_id: Uint64) -> StdResult<()> {
         Config::new(denom, lease_code_id).store(storage)?;
-
         Total::default().store(storage)?;
-
         Ok(())
     }
 
@@ -150,11 +146,6 @@ impl LiquidityPool {
             return Ok(None);
         }
 
-        let total_principal_due = self.total.total_principal_due();
-        let total_interest_due = self.total.total_interest_due();
-        let annual_interest_rate = self.total.annual_interest_rate();
-        let last_update_time = self.total.last_update_time();
-
         let Config {
             base_interest_rate,
             utilization_optimal,
@@ -162,14 +153,9 @@ impl LiquidityPool {
             ..
         } = self.config;
 
-        let total_interest = InterestPeriod::with_interest(annual_interest_rate)
-            .from(last_update_time)
-            .spanning(Duration::between(last_update_time, env.block.time))
-            .interest(total_principal_due)
-            + total_interest_due;
-
+        let total_principal_due = self.total.total_principal_due();
+        let total_interest = self.total.total_interest_due_by_now(env.block.time);
         let total_liability_past_quote = total_principal_due + quote + total_interest;
-
         let total_balance_past_quote = balance - quote;
 
         let utilization = Percent::from_permille(
@@ -178,8 +164,8 @@ impl LiquidityPool {
             .try_into()?,
         );
 
-        let quote_interest_rate = base_interest_rate + addon_optimal_interest_rate.of(utilization)
-            - addon_optimal_interest_rate.of(utilization_optimal);
+        let quote_interest_rate =
+            base_interest_rate + addon_optimal_interest_rate.of(utilization) - addon_optimal_interest_rate.of(utilization_optimal);
 
         Ok(Some(quote_interest_rate))
     }
@@ -227,10 +213,9 @@ impl LiquidityPool {
 
         let repay_amount = self.try_into_amount(funds[0].clone())?;
 
-        let mut loan = Loan::load(deps.storage, lease_addr)?;
+        let loan = Loan::load(deps.storage, lease_addr)?;
         let loan_annual_interest_rate = loan.data().annual_interest_rate;
-        let (loan_principal_payment, excess_received) =
-            loan.repay(deps.storage, &env, repay_amount)?;
+        let (loan_principal_payment, excess_received) = loan.repay(deps.storage, env.block.time, repay_amount)?;
 
         self.total
             .repay(
@@ -285,6 +270,7 @@ mod test {
     use crate::state::LoanData;
     use cosmwasm_std::testing::{self, MOCK_CONTRACT_ADDR};
     use cosmwasm_std::{coin, Timestamp, Uint64};
+    use finance::duration::Duration;
 
     #[test]
     fn test_balance() {

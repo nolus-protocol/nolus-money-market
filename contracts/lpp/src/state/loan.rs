@@ -1,4 +1,4 @@
-use cosmwasm_std::{Uint128, Timestamp, Addr, Storage, StdResult, Env, Decimal};
+use cosmwasm_std::{Uint128, Timestamp, Addr, Storage, StdResult, Decimal};
 use serde::{Serialize, Deserialize};
 use schemars::JsonSchema;
 use cw_storage_plus::Map;
@@ -61,9 +61,9 @@ impl Loan {
     }
 
     /// change the Loan state after repay, return (principal_payment, excess_received) pair
-    pub fn repay(&mut self, storage: &mut dyn Storage, env: &Env, repay_amount: Uint128) -> Result<(Uint128, Uint128), ContractError> {
+    pub fn repay(self, storage: &mut dyn Storage, ctime: Timestamp, repay_amount: Uint128) -> Result<(Uint128, Uint128), ContractError> {
 
-        let time_delta = Duration::between(self.data.interest_paid, env.block.time);
+        let time_delta = Duration::between(self.data.interest_paid, ctime);
         let loan_interest_due = InterestPeriod::with_interest(self.data.annual_interest_rate)
             .from(self.data.interest_paid)
             .spanning(time_delta)
@@ -136,5 +136,61 @@ impl Loan {
             Ok(None)
         }
     }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use cosmwasm_std::testing;
+    use finance::duration::Duration;
+
+    #[test]
+    fn test_open_and_repay_loan() {
+        let mut deps = testing::mock_dependencies();
+
+        let mut time = Timestamp::from_nanos(0);
+
+        let addr = Addr::unchecked("leaser");
+        Loan::open(deps.as_mut().storage, addr.clone(), 1000u128.into(), Percent::from_percent(20), time)
+            .expect("should open loan");
+
+        let loan = Loan::load(deps.as_ref().storage, addr.clone())
+            .expect("should load loan");
+
+        time = Timestamp::from_nanos(Duration::YEAR.nanos()/2);
+        let interest = Loan::query_outstanding_interest(deps.as_ref().storage, addr.clone(), time)
+            .expect("should query interest")
+            .expect("should be some interest");
+        assert_eq!(interest, 100u128.into());
+
+        // partial repay
+        let (principal_payment, excess_received) = loan.repay(deps.as_mut().storage, time, 600u128.into())
+            .expect("should repay");
+        assert_eq!(principal_payment, 500u128.into());
+        assert_eq!(excess_received, 0u128.into());
+
+        let resp = Loan::query(deps.as_ref().storage, addr.clone())
+            .expect("should query loan")
+            .expect("should be some loan");
+
+        assert_eq!(resp.principal_due, 500u128.into());
+
+        let loan = Loan::load(deps.as_ref().storage, addr.clone())
+            .expect("should load loan");
+
+        // repay with excess, should close the loan
+        let (principal_payment, excess_received) = loan.repay(deps.as_mut().storage, time, 600u128.into())
+            .expect("should repay");
+        assert_eq!(principal_payment, 500u128.into());
+        assert_eq!(excess_received, 100u128.into());
+
+        // is it cleaned up?
+        let is_none = Loan::query(deps.as_ref().storage, addr)
+            .expect("should query loan")
+            .is_none();
+        assert!(is_none);
+
+    }
+
 }
 
