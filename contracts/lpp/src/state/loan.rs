@@ -75,11 +75,11 @@ impl Loan {
         let excess_received = repay_amount - loan_interest_payment - loan_principal_payment;
 
         if self.data.principal_due == loan_principal_payment {
-            Self::STORAGE.remove(storage, self.addr.clone());
+            Self::STORAGE.remove(storage, self.addr);
         } else {
             Self::STORAGE.update(
                 storage,
-                self.addr.clone(),
+                self.addr,
                 |loan| -> Result<LoanData, ContractError> {
                     let mut loan = loan.ok_or(ContractError::NoLoan {})?;
                     loan.principal_due -= loan_principal_payment;

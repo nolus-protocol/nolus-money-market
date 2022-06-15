@@ -51,7 +51,7 @@ pub fn execute(
         ExecuteMsg::RepayLoan => try_repay_loan(deps, env, sender, funds),
         ExecuteMsg::Deposit => try_deposit(deps, env, sender, funds),
         ExecuteMsg::Burn { amount } => try_withdraw(deps, env, sender, amount),
-        ExecuteMsg::DistributeRewards => try_distribute_rewards(deps, env, funds),
+        ExecuteMsg::DistributeRewards => try_distribute_rewards(deps, funds),
         ExecuteMsg::ClaimRewards { other_recipient } => {
             try_claim_rewards(deps, sender, other_recipient)
         }
@@ -173,11 +173,10 @@ fn try_withdraw(
 
 fn try_distribute_rewards(
     deps: DepsMut,
-    env: Env,
     funds: Vec<Coin>,
 ) -> Result<Response, ContractError> {
     match funds.iter().find(|&coin| coin.denom == NOLUS_DENOM) {
-        Some(coin) => Deposit::distribute_rewards(deps, env, coin.to_owned())?,
+        Some(coin) => Deposit::distribute_rewards(deps, coin.to_owned())?,
         None => {
             return Err(ContractError::CustomError {
                 val: "Rewards are supported only in native currency".to_string(),

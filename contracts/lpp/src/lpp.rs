@@ -17,6 +17,14 @@ impl<'a> NTokenPrice<'a> {
     pub fn get(&self) -> Decimal {
         self.price
     }
+
+    #[cfg(test)]
+    pub fn mock(price: Decimal, denom: &'a String) -> Self {
+        Self {
+            price,
+            denom,
+        }
+    }
 }
 
 impl<'a> From<NTokenPrice<'a>> for PriceResponse {
