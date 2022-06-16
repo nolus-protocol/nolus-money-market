@@ -546,7 +546,7 @@ mod test {
         lpp.try_open_loan(
             deps.as_mut(),
             env.clone(),
-            loan.clone(),
+            loan,
             coin(5_000_000, "uust"),
         )
         .expect("can't open loan");
