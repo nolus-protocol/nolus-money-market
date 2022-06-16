@@ -7,6 +7,13 @@ add_wasm_messages() {
   local -r wasm_code_path="$2"
   local -r admin_addr="$3"
   local -r treasury_init_tokens="$4"
+
+  if ! [ -f "$wasm_code_path/treasury.wasm" ]
+  then
+    echo "The path '$wasm_code_path' does not contain the contracts' code."
+    exit 1
+  fi
+
   # TODO fill in other contracts
 
   run_cmd "$genesis_home_dir" add-wasm-genesis-message store "$wasm_code_path/treasury.wasm" --run-as "$admin_addr"
