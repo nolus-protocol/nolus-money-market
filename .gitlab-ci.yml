@@ -30,8 +30,6 @@ prepare_node:
     - echo 'y' | apt install jq
     - mkdir -p $CARGO_HOME
     - rustc --version && cargo --version
-    - du -hs target
-    - du -hs $CARGO_HOME
 
 schema:cargo:
   stage: test
