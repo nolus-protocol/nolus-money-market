@@ -28,8 +28,8 @@ impl Config {
         }
     }
 
-    pub fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
-        Self::STORAGE.save(storage, &self)
+    pub fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        Self::STORAGE.save(storage, self)
     }
 
     pub fn load(storage: &dyn Storage) -> StdResult<Self> {
