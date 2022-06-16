@@ -14,6 +14,7 @@ use crate::msg::{
     RewardsResponse,
 };
 use crate::state::Deposit;
+use finance::percent::Percent;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -47,14 +48,22 @@ pub fn execute(
     let funds = info.funds;
 
     match msg {
+        ExecuteMsg::UpdateParameters {
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        } => try_update_parameters(
+            deps,
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        ),
         ExecuteMsg::OpenLoan { amount } => try_open_loan(deps, env, sender, amount),
         ExecuteMsg::RepayLoan => try_repay_loan(deps, env, sender, funds),
         ExecuteMsg::Deposit => try_deposit(deps, env, sender, funds),
         ExecuteMsg::Burn { amount } => try_withdraw(deps, env, sender, amount),
         ExecuteMsg::DistributeRewards => try_distribute_rewards(deps, funds),
-        ExecuteMsg::ClaimRewards { other_recipient } => {
-            try_claim_rewards(deps, sender, other_recipient)
-        }
+        ExecuteMsg::ClaimRewards { other_recipient } => try_claim_rewards(deps, sender, other_recipient),
     }
 }
 
@@ -78,6 +87,22 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
     }?;
 
     Ok(res)
+}
+
+fn try_update_parameters(
+    deps: DepsMut,
+    base_interest_rate: Percent,
+    utilization_optimal: Percent,
+    addon_optimal_interest_rate: Percent,
+) -> Result<Response, ContractError> {
+    let mut lpp = LiquidityPool::load(deps.storage)?;
+    lpp.update_config(
+        deps.storage,
+        base_interest_rate,
+        utilization_optimal,
+        addon_optimal_interest_rate,
+    )?;
+     Ok(Response::new().add_attribute("method", "try_update_parameters"))
 }
 
 fn try_open_loan(
