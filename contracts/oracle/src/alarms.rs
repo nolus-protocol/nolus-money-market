@@ -1,4 +1,8 @@
 use cosmwasm_std::{Addr, CosmosMsg, DepsMut, Response, StdResult, Storage, SubMsg, Timestamp};
+use marketprice::{
+    feed::Price,
+    hooks::{price_hooks::PriceHooks, SimpleRule},
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -12,6 +16,7 @@ pub struct MarketAlarms {}
 impl MarketAlarms {
     const TIME_ORACLE: TimeOracle<'static> = TimeOracle::new("time_oracle");
     const TIME_ALARMS: Alarms<'static> = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
+    const HOOKS: PriceHooks<'static> = PriceHooks::new("hooks");
 
     pub fn remove(storage: &mut dyn Storage, msg_id: Id) -> StdResult<()> {
         Self::TIME_ALARMS.remove(storage, msg_id)
@@ -59,5 +64,26 @@ impl MarketAlarms {
     ) -> StdResult<Response> {
         Self::TIME_ORACLE.update_global_time(storage, block_time)?;
         Self::try_notify(storage, block_time)
+    }
+
+    pub fn try_add_price_hook(
+        storage: &mut dyn Storage,
+        addr: Addr,
+        rules: Vec<SimpleRule>,
+    ) -> Result<Response, ContractError> {
+        // TODO: Check if sender address is a contract
+
+        Self::HOOKS.try_add(storage, &addr, rules)?;
+        Ok(Response::new().add_attribute("method", "try_add_price_hook"))
+    }
+
+    pub fn try_notify_hooks(
+        storage: &mut dyn Storage,
+        prices: &Vec<Price>,
+    ) -> Result<Response, ContractError> {
+        // TODO: Check if sender address is a contract
+
+        Self::HOOKS.check_rules(storage);
+        Ok(Response::new().add_attribute("method", "try_add_price_hook"))
     }
 }

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use std::convert::TryFrom;
 
-use crate::{state::config::Config, ContractError};
+use crate::{alarms::MarketAlarms, state::config::Config, ContractError};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MarketOracle {}
@@ -105,6 +105,8 @@ impl MarketOracle {
         if filtered_prices.is_empty() {
             return Err(ContractError::UnsupportedDenomPairs {});
         }
+
+        MarketAlarms::try_notify_hooks(storage, &filtered_prices)?;
 
         Self::MARKET_PRICE.feed(
             storage,

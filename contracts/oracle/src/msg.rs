@@ -1,5 +1,8 @@
 use cosmwasm_std::{Addr, Timestamp};
-use marketprice::feed::{Denom, DenomPair, DenomToPrice, Prices};
+use marketprice::{
+    feed::{Denom, DenomPair, DenomToPrice, Prices},
+    hooks::SimpleRule,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -30,6 +33,9 @@ pub enum ExecuteMsg {
     },
     SupportedDenomPairs {
         pairs: Vec<DenomPair>,
+    },
+    AddHook {
+        rules: Vec<SimpleRule>,
     },
 }
 

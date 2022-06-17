@@ -1,5 +1,8 @@
 use cosmwasm_std::{Addr, StdError};
-use marketprice::{feed::DenomPair, feeders::PriceFeedersError, market_price::PriceFeedsError};
+use marketprice::{
+    feed::DenomPair, feeders::PriceFeedersError, hooks::errors::HooksError,
+    market_price::PriceFeedsError,
+};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -12,6 +15,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     PriceFeedsError(#[from] PriceFeedsError),
+
+    #[error("{0}")]
+    HooksError(#[from] HooksError),
 
     #[error("Unauthorized")]
     Unauthorized {},

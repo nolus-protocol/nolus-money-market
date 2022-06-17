@@ -62,6 +62,9 @@ pub fn execute(
             prices,
         ),
         ExecuteMsg::AddAlarm { addr, time } => MarketAlarms::try_add(deps, addr, time),
+        ExecuteMsg::AddHook { rules } => {
+            MarketAlarms::try_add_price_hook(deps.storage, get_sender(deps.api, info)?, rules)
+        }
     }
 }
 
