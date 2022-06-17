@@ -8,7 +8,10 @@ variables:
   CARGO_HOME: $CI_PROJECT_DIR/cargo_home
 
 default:
-  image: "rust:latest"
+# use specific tag here in order to 
+# 1) be able to control the build, and
+# 2) update to a newer version. With "latest" and the default '-if-not-present' Docker executor policy that is not possible.
+  image: "rust:1.61"
 
 .default_rules:
   rules:
@@ -27,8 +30,6 @@ prepare_node:
     - echo 'y' | apt install jq
     - mkdir -p $CARGO_HOME
     - rustc --version && cargo --version
-    - du -hs target
-    - du -hs $CARGO_HOME
 
 schema:cargo:
   stage: test
@@ -53,8 +54,9 @@ test:cargo:
     - cargo tarpaulin --out Xml
   artifacts:
     reports:
-      cobertura:
-        - cobertura.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: cobertura.xml
 
 lint:cargo:
   stage: test
@@ -69,27 +71,30 @@ build-and-optimization:cargo:
   rules:
     - !reference [.default_rules, rules]
   script:
-    - sudo docker run --rm -v "$(pwd)":/code --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.5
+    - sudo docker run --rm -v "$(pwd)":/code --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target
+                      --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry
+                      cosmwasm/workspace-optimizer:0.12.6
+    - sudo cp scripts/deploy-contracts-genesis.sh artifacts/
   artifacts:
     paths:
     - artifacts/
-    expire_in: 1 hour
+    # expire_in: 1 hour
 
-deploy:cargo:
-  stage: deploy
-  rules:
-    - !reference [.default_rules, rules]
-  variables:
-    CONTRACTS_INFO_FILE: "contracts-info.json"
-    CONTRACTS_INFO_DIR: "contracts.tar.gz"
-  before_script:
-    - apt update && apt install bash
-    - apt install curl
-    - echo 'y' | apt install jq
-  script:
-    - /bin/bash ./scripts/deploy-contracts-dev-net.sh $CONTRACTS_INFO_FILE
-    - tar -czvf $CONTRACTS_INFO_DIR $CONTRACTS_INFO_FILE
-  artifacts:
-    name: "contracts-$CI_COMMIT_REF_SLUG"
-    paths:
-      - $CONTRACTS_INFO_DIR
+# deploy:cargo:
+#   stage: deploy
+#   rules:
+#     - !reference [.default_rules, rules]
+#   variables:
+#     CONTRACTS_INFO_FILE: "contracts-info.json"
+#     CONTRACTS_INFO_DIR: "contracts.tar.gz"
+#   before_script:
+#     - apt update && apt install bash
+#     - apt install curl
+#     - echo 'y' | apt install jq
+#   script:
+#     - /bin/bash ./scripts/deploy-contracts-dev-net.sh $CONTRACTS_INFO_FILE
+#     - tar -czvf $CONTRACTS_INFO_DIR $CONTRACTS_INFO_FILE
+#   artifacts:
+#     name: "contracts-$CI_COMMIT_REF_SLUG"
+#     paths:
+#       - $CONTRACTS_INFO_DIR

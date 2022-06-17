@@ -1,4 +1,4 @@
-use cosmwasm_std::{testing::mock_env, Addr, BlockInfo, Coin};
+use cosmwasm_std::{coins, testing::mock_env, Addr, BlockInfo, Coin};
 use cw_multi_test::{App, AppBuilder};
 
 #[cfg(test)]
@@ -18,6 +18,7 @@ pub mod treasury_wrapper;
 
 pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
+pub const NATIVE_DENOM: &str = "uNLS";
 
 pub fn mock_app(init_funds: &[Coin]) -> App {
     let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);
@@ -27,12 +28,16 @@ pub fn mock_app(init_funds: &[Coin]) -> App {
         time: return_time,
         chain_id: "cosmos-testnet-14002".to_string(),
     };
+
+    let mut funds = coins(1000, NATIVE_DENOM);
+    funds.append(&mut init_funds.to_vec());
+
     AppBuilder::new()
         .with_block(mock_start_block)
         .build(|router, _, storage| {
             router
                 .bank
-                .init_balance(storage, &Addr::unchecked(ADMIN), init_funds.to_vec())
+                .init_balance(storage, &Addr::unchecked(ADMIN), funds)
                 .unwrap();
         })
 }

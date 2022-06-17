@@ -2,7 +2,7 @@
 name = "time-oracle"
 version = "0.1.0"
 authors = ["Vladimir Kolesnikov <v.kolesnikov@nolus.io>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 cosmwasm-std = "1.0.0"

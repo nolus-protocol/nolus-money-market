@@ -850,6 +850,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-storage-plus",
  "cw2",
+ "lpp",
  "schemars",
  "semver",
  "serde",
