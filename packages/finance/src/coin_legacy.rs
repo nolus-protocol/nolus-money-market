@@ -69,6 +69,13 @@ where
     v.0.ok_or_else(|| Error::UnexpectedCurrency(coin.denom, C::DENOM.into()))
 }
 
+pub fn to_cosmwasm<C>(coin: Coin<C>) -> CosmWasmCoin
+where
+    C: Currency,
+{
+    CosmWasmCoin::new(coin.amount(), C::DENOM)
+}
+
 struct AnyDenomVisitorImpl<'a, V>(&'a mut V, bool);
 impl<'a, V> AnyDenomVisitorImpl<'a, V> {
     fn new(v: &'a mut V) -> Self {
@@ -254,5 +261,12 @@ mod test {
             )),
             c2
         );
+    }
+
+    #[test]
+    fn to_cosmwasm() {
+        let amount = 326;
+        assert_eq!(CosmWasmCoin::new(amount, Nls::DENOM), coin_legacy::to_cosmwasm(Coin::<Nls>::new(amount)));
+        assert_eq!(CosmWasmCoin::new(amount, Usdc::DENOM), coin_legacy::to_cosmwasm(Coin::<Usdc>::new(amount)));
     }
 }
