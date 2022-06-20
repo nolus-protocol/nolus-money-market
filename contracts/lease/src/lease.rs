@@ -1,11 +1,10 @@
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdResult, Storage, SubMsg, Timestamp};
 use cw_storage_plus::Item;
-use finance::{liability::Liability, coin::Usdc, coin_legacy::to_cosmwasm};
+use finance::{liability::Liability, coin::Usdc, coin_legacy::to_cosmwasm, bank::BankAccount};
 use lpp::stub::Lpp;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    bank::BankAccount,
     error::{ContractError, ContractResult},
     loan::{Loan, State as LoanState},
     msg::{Denom, State},

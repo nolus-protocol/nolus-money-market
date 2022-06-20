@@ -5,9 +5,9 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw_utils::one_coin;
+use finance::bank::BankStub;
 use lpp::stub::{Lpp, LppStub};
 
-use crate::bank::BankStub;
 use crate::error::{ContractError, ContractResult};
 use crate::lease::Lease;
 use crate::msg::{ExecuteMsg, NewLeaseForm, StatusQuery, StatusResponse};

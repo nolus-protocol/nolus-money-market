@@ -1,17 +1,13 @@
 use cosmwasm_std::{Addr, BankMsg, Env, QuerierWrapper, SubMsg};
-use finance::{
-    coin::{Coin, Currency},
-    coin_legacy::{to_cosmwasm, from_cosmwasm},
-};
 
-use crate::error::ContractResult;
+use crate::{coin::{Coin, Currency}, error::Result, coin_legacy::{from_cosmwasm, to_cosmwasm}};
 
 pub trait BankAccount {
-    fn balance<C>(&self) -> ContractResult<Coin<C>>
+    fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: Currency;
 
-    fn send<C>(&self, amount: Coin<C>, to: &Addr) -> ContractResult<SubMsg>
+    fn send<C>(&self, amount: Coin<C>, to: &Addr) -> Result<SubMsg>
     where
         C: Currency;
 }
@@ -30,15 +26,15 @@ impl<'a> BankStub<'a> {
     }
 }
 impl<'a> BankAccount for BankStub<'a> {
-    fn balance<C>(&self) -> ContractResult<Coin<C>>
+    fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: Currency,
     {
         let coin = self.querier.query_balance(self.addr, C::SYMBOL)?;
-        from_cosmwasm(coin).map_err(|e|e.into())
+        from_cosmwasm(coin)
     }
 
-    fn send<C>(&self, amount: Coin<C>, to: &Addr) -> ContractResult<SubMsg>
+    fn send<C>(&self, amount: Coin<C>, to: &Addr) -> Result<SubMsg>
     where
         C: Currency,
     {
