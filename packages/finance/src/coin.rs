@@ -1,11 +1,16 @@
 use std::{
+    fmt::{Debug, Formatter},
     marker::PhantomData,
-    ops::{Add, Sub}, fmt::Debug,
+    ops::{Add, Sub},
 };
 
-use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
+use serde::{
+    de::{Error, SeqAccess, Unexpected, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 
-pub trait Currency : 'static {
+pub trait Currency: 'static {
     const DENOM: &'static str;
 }
 #[derive(PartialEq, Debug)]
@@ -20,7 +25,7 @@ impl Currency for Nls {
     const DENOM: &'static str = "unls";
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Clone, Copy, Debug)]
+#[derive(PartialEq, Clone, Copy, Debug, JsonSchema)]
 pub struct Coin<C> {
     amount: u128,
     denom: PhantomData<C>,
@@ -32,6 +37,10 @@ impl<C> Coin<C> {
             amount,
             denom: PhantomData::<C>,
         }
+    }
+
+    pub(super) fn amount(&self) -> u128 {
+        self.amount
     }
 }
 impl<C> Add<Coin<C>> for Coin<C> {
@@ -56,92 +65,123 @@ impl<C> Sub<Coin<C>> for Coin<C> {
     }
 }
 
-// impl<C> Serialize for MyCoin<C>
-// where
-//     C: Currency,
-// {
-//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//     where
-//         S: Serializer,
-//     {
-//         let mut rgb = serializer.serialize_struct("MyCoin", 2)?;
-//         rgb.serialize_field("amount", &self.amount)?;
+impl<C> Serialize for Coin<C>
+where
+    C: Currency,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        use serde::ser::SerializeTuple;
 
-//         rgb.serialize_field("denom", &C::DENOM)?;
+        let mut rgb = serializer.serialize_tuple(2)?;
+        rgb.serialize_element(&self.amount)?;
+        rgb.serialize_element(&C::DENOM)?;
+        rgb.end()
+    }
+}
 
-//         rgb.end()
-//     }
-// }
+impl<'de, C> Deserialize<'de> for Coin<C>
+where
+    C: Currency,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_tuple(2, CoinVisitor::<C>(PhantomData))
+    }
+}
 
-// fn from<C>(c: Coin) -> Option<MyCoin<C>>
-// where
-//     C: Currency,
-// {
-//     if C::DENOM == c.denom.as_str() {
-//         Some(MyCoin::new(c.amount.into()))
-//     } else {
-//         None
-//     }
-// }
+struct CoinVisitor<C>(PhantomData<C>);
 
-// impl<'de, C> Deserialize<'de> for MyCoin<C> {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//     where
-//         D: Deserializer<'de>,
-//     {
-//         deserializer.deserialize_str(DecimalVisitor)
-//     }
-// }
+impl<'de, C> Visitor<'de> for CoinVisitor<C>
+where
+    C: Currency,
+{
+    type Value = Coin<C>;
 
-// struct DecimalVisitor;
+    fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
+        formatter.write_str("a Coin encoded in two fields, amount and currency denom")
+    }
 
-// impl<'de, C> Visitor<'de> for DecimalVisitor {
-//     type Value = MyCoin<C>;
-
-//     fn expecting(&self, formatter: &mut Formatter) -> FmtResult {
-//         formatter.write_str("string-encoded decimal")
-//     }
-
-//     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-//     where
-//         E: Error,
-//     {
-//         match Decimal::from_str(v) {
-//             Ok(d) => Ok(d),
-//             Err(e) => Err(E::custom(format!("Error parsing decimal '{}': {}", v, e))),
-//         }
-//     }
-// }
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        let amount = seq
+            .next_element()?
+            .ok_or_else(|| Error::invalid_length(0, &self))?;
+        let denom: &str = seq
+            .next_element()?
+            .ok_or_else(|| Error::invalid_length(1, &self))?;
+        if denom != C::DENOM {
+            Err(Error::invalid_value(Unexpected::Str(denom), &C::DENOM))
+        } else {
+            Ok(Coin::<C>::new(amount))
+        }
+    }
+}
 
 #[cfg(test)]
 mod test {
+    use std::{any::type_name, fmt::Debug};
 
-    // #[test]
-    // fn serialize() {
-    //     let amount = 123;
-    //     let coin_nls = Coin::<Nls>::new(amount);
-    //     let coin_usdc = Coin::<Usdc>::new(amount);
+    use cosmwasm_std::{from_slice, to_vec, StdError};
 
-    //     let coin_usdc_bin = to_vec(&coin_nls).unwrap();
+    use super::{Coin, Currency, Nls, Usdc};
 
-    //     let coin_nls_txt = String::from_utf8(coin_usdc_bin).unwrap();
-    //     let coin_usdc_txt = String::from_utf8(to_vec(&coin_usdc).unwrap()).unwrap();
-    //     assert_ne!(coin_nls_txt, coin_usdc_txt);
+    #[test]
+    fn serialize_deserialize() {
+        serialize_deserialize_impl::<Nls>(u128::MIN, r#"["0","unls"]"#);
+        serialize_deserialize_impl::<Nls>(123, r#"["123","unls"]"#);
+        serialize_deserialize_impl::<Nls>(
+            u128::MAX,
+            r#"["340282366920938463463374607431768211455","unls"]"#,
+        );
+        serialize_deserialize_impl::<Usdc>(u128::MIN, r#"["0","uusdc"]"#);
+        serialize_deserialize_impl::<Usdc>(7368953, r#"["7368953","uusdc"]"#);
+        serialize_deserialize_impl::<Usdc>(
+            u128::MAX,
+            r#"["340282366920938463463374607431768211455","uusdc"]"#,
+        );
+    }
 
-    //     // let coin_usdc_deser: MyCoin<Usdc> = from_slice(&coin_usdc_bin).unwrap();
-    //     // assert_eq!(coin_usdc_deser, coin_usdc);
-    //     assert_eq!(r#"{"amount":"123","denom":"uusdc"}"#, coin_usdc_txt);
-    //     assert_eq!(r#"{"amount":"123","denom":"unls"}"#, coin_nls_txt);
-    // }
+    fn serialize_deserialize_impl<C>(amount: u128, exp_txt: &str)
+    where
+        C: Currency + PartialEq + Debug,
+    {
+        let coin = Coin::<C>::new(amount);
+        let coin_bin = to_vec(&coin).unwrap();
+        assert_eq!(coin, from_slice(&coin_bin).unwrap());
 
-    // #[test]
-    // fn from_coin() {
-    //     assert!(from::<Usdc>(Coin::new(123, "uuu")).is_none());
-    // }
+        let coin_txt = String::from_utf8(coin_bin).unwrap();
+        assert_eq!(exp_txt, coin_txt);
 
-    // #[test]
-    // fn test_from_label() {
-    //     let c: &'static dyn Currency = &Usdc{};
-    //     // assert_eq!(Nls, from_label("nls"));
-    // }
+        assert_eq!(coin, from_slice(exp_txt.as_bytes()).unwrap());
+    }
+
+    #[test]
+    fn distinct_repr() {
+        let amount = 432;
+        assert_ne!(
+            to_vec(&Coin::<Nls>::new(amount)).unwrap(),
+            to_vec(&Coin::<Usdc>::new(amount)).unwrap()
+        );
+    }
+
+    #[test]
+    fn wrong_currency() {
+        let amount = 134;
+        let nls_bin = to_vec(&Coin::<Nls>::new(amount)).unwrap();
+        let res = from_slice::<Coin<Usdc>>(&nls_bin);
+        assert_eq!(
+            Err(StdError::parse_err(
+                type_name::<Coin::<Usdc>>(),
+                "invalid value: string \"unls\", expected uusdc"
+            )),
+            res
+        );
+    }
 }
