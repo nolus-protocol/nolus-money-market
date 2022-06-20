@@ -11,31 +11,31 @@ use serde::{
 };
 
 pub trait Currency: 'static {
-    const DENOM: &'static str;
+    const SYMBOL: &'static str;
 }
 #[derive(PartialEq, Debug)]
 pub struct Usdc;
 impl Currency for Usdc {
-    const DENOM: &'static str = "uusdc";
+    const SYMBOL: &'static str = "uusdc";
 }
 
 #[derive(PartialEq, Debug)]
 pub struct Nls;
 impl Currency for Nls {
-    const DENOM: &'static str = "unls";
+    const SYMBOL: &'static str = "unls";
 }
 
 #[derive(PartialEq, Clone, Copy, Debug, JsonSchema)]
 pub struct Coin<C> {
     amount: u128,
-    denom: PhantomData<C>,
+    currency: PhantomData<C>,
 }
 
 impl<C> Coin<C> {
     pub fn new(amount: u128) -> Self {
         Self {
             amount,
-            denom: PhantomData::<C>,
+            currency: PhantomData::<C>,
         }
     }
 
@@ -49,7 +49,7 @@ impl<C> Add<Coin<C>> for Coin<C> {
     fn add(self, rhs: Coin<C>) -> Self::Output {
         Self::Output {
             amount: self.amount + rhs.amount,
-            denom: self.denom,
+            currency: self.currency,
         }
     }
 }
@@ -60,7 +60,7 @@ impl<C> Sub<Coin<C>> for Coin<C> {
     fn sub(self, rhs: Coin<C>) -> Self::Output {
         Self::Output {
             amount: self.amount - rhs.amount,
-            denom: self.denom,
+            currency: self.currency,
         }
     }
 }
@@ -77,7 +77,7 @@ where
 
         let mut rgb = serializer.serialize_tuple(2)?;
         rgb.serialize_element(&self.amount)?;
-        rgb.serialize_element(&C::DENOM)?;
+        rgb.serialize_element(&C::SYMBOL)?;
         rgb.end()
     }
 }
@@ -103,7 +103,7 @@ where
     type Value = Coin<C>;
 
     fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
-        formatter.write_str("a Coin encoded in two fields, amount and currency denom")
+        formatter.write_str("a Coin encoded in two fields, amount and currency label")
     }
 
     fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
@@ -113,11 +113,11 @@ where
         let amount = seq
             .next_element()?
             .ok_or_else(|| Error::invalid_length(0, &self))?;
-        let denom: &str = seq
+        let label: &str = seq
             .next_element()?
             .ok_or_else(|| Error::invalid_length(1, &self))?;
-        if denom != C::DENOM {
-            Err(Error::invalid_value(Unexpected::Str(denom), &C::DENOM))
+        if label != C::SYMBOL {
+            Err(Error::invalid_value(Unexpected::Str(label), &C::SYMBOL))
         } else {
             Ok(Coin::<C>::new(amount))
         }

@@ -19,41 +19,41 @@ pub fn add_coin(to: CosmWasmCoin, other: CosmWasmCoin) -> CosmWasmCoin {
     }
 }
 
-pub trait AnyDenomVisitor {
+pub trait AnyCurrencyVisitor {
     fn on<C>(&mut self, coin: Coin<C>)
     where
         C: Currency;
     fn on_unknown(&mut self);
 }
 
-pub trait SingleDenomVisitor<C> {
+pub trait SingleCurrencyVisitor<C> {
     fn on(&mut self, coin: Coin<C>);
     fn on_unknown(&mut self);
 }
 
-pub fn visit_denom_any<V>(coin: &CosmWasmCoin, visitor: &mut V)
+pub fn visit_any<V>(coin: &CosmWasmCoin, visitor: &mut V)
 where
-    V: AnyDenomVisitor,
+    V: AnyCurrencyVisitor,
 {
-    let mut any_visitor = AnyDenomVisitorImpl::new(visitor);
+    let mut any_visitor = AnyCyrrencyVisitorImpl::new(visitor);
     debug_assert!(!any_visitor.visited());
-    visit_denom_one::<Nls, _>(coin, &mut any_visitor);
+    visit::<Nls, _>(coin, &mut any_visitor);
     if !any_visitor.visited() {
-        visit_denom_one::<Usdc, _>(coin, &mut any_visitor);
+        visit::<Usdc, _>(coin, &mut any_visitor);
     }
     if !any_visitor.visited() {
         visitor.on_unknown();
     }
 }
 
-pub fn visit_denom_one<C, V>(coin: &CosmWasmCoin, visitor: &mut V)
+pub fn visit<C, V>(coin: &CosmWasmCoin, visitor: &mut V)
 where
-    V: SingleDenomVisitor<C>,
+    V: SingleCurrencyVisitor<C>,
     C: Currency,
 {
     let amount: u128 = coin.amount.into();
-    let denom = coin.denom.as_str();
-    if denom == C::DENOM {
+    let currency_symbol = coin.denom.as_str();
+    if currency_symbol == C::SYMBOL {
         visitor.on(Coin::<C>::new(amount));
     } else {
         visitor.on_unknown();
@@ -65,19 +65,19 @@ where
     C: Currency,
 {
     let mut v = CoinTransformer(None);
-    visit_denom_one(&coin, &mut v);
-    v.0.ok_or_else(|| Error::UnexpectedCurrency(coin.denom, C::DENOM.into()))
+    visit(&coin, &mut v);
+    v.0.ok_or_else(|| Error::UnexpectedCurrency(coin.denom, C::SYMBOL.into()))
 }
 
 pub fn to_cosmwasm<C>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: Currency,
 {
-    CosmWasmCoin::new(coin.amount(), C::DENOM)
+    CosmWasmCoin::new(coin.amount(), C::SYMBOL)
 }
 
-struct AnyDenomVisitorImpl<'a, V>(&'a mut V, bool);
-impl<'a, V> AnyDenomVisitorImpl<'a, V> {
+struct AnyCyrrencyVisitorImpl<'a, V>(&'a mut V, bool);
+impl<'a, V> AnyCyrrencyVisitorImpl<'a, V> {
     fn new(v: &'a mut V) -> Self {
         Self(v, false)
     }
@@ -85,9 +85,9 @@ impl<'a, V> AnyDenomVisitorImpl<'a, V> {
         self.1
     }
 }
-impl<'a, C, V> SingleDenomVisitor<C> for AnyDenomVisitorImpl<'a, V>
+impl<'a, C, V> SingleCurrencyVisitor<C> for AnyCyrrencyVisitorImpl<'a, V>
 where
-    V: AnyDenomVisitor,
+    V: AnyCurrencyVisitor,
     C: Currency,
 {
     fn on(&mut self, coin: Coin<C>) {
@@ -101,7 +101,7 @@ where
 }
 
 struct CoinTransformer<C>(Option<Coin<C>>);
-impl<C> SingleDenomVisitor<C> for CoinTransformer<C>
+impl<C> SingleCurrencyVisitor<C> for CoinTransformer<C>
 where
     C: Currency,
 {
@@ -121,7 +121,7 @@ mod test {
 
     use crate::{coin_legacy, error::Error};
 
-    use super::{AnyDenomVisitor, Coin, Currency, Nls, SingleDenomVisitor, Usdc};
+    use super::{AnyCurrencyVisitor, Coin, Currency, Nls, SingleCurrencyVisitor, Usdc};
 
     use cosmwasm_std::Coin as CosmWasmCoin;
 
@@ -133,8 +133,8 @@ mod test {
         assert_eq!(c12, c1 + c2);
     }
 
-    struct ExpectDenom<C>(PhantomData<C>, bool);
-    impl<C> ExpectDenom<C> {
+    struct Expect<C>(PhantomData<C>, bool);
+    impl<C> Expect<C> {
         fn new() -> Self {
             Self(PhantomData, false)
         }
@@ -142,7 +142,7 @@ mod test {
             self.1
         }
     }
-    impl<C> AnyDenomVisitor for ExpectDenom<C>
+    impl<C> AnyCurrencyVisitor for Expect<C>
     where
         C: 'static,
     {
@@ -164,7 +164,7 @@ mod test {
             unreachable!();
         }
     }
-    impl<C> SingleDenomVisitor<C> for ExpectDenom<C> {
+    impl<C> SingleCurrencyVisitor<C> for Expect<C> {
         fn on(&mut self, _coin: Coin<C>) {
             self.1 = true;
         }
@@ -174,13 +174,13 @@ mod test {
         }
     }
 
-    struct ExpectUnknownDenom(bool);
-    impl ExpectUnknownDenom {
+    struct ExpectUnknownCurrency(bool);
+    impl ExpectUnknownCurrency {
         fn called(&self) -> bool {
             self.0
         }
     }
-    impl AnyDenomVisitor for ExpectUnknownDenom {
+    impl AnyCurrencyVisitor for ExpectUnknownCurrency {
         fn on<C>(&mut self, _coin: Coin<C>)
         where
             C: Currency,
@@ -193,7 +193,7 @@ mod test {
         }
     }
 
-    impl<C> SingleDenomVisitor<C> for ExpectUnknownDenom {
+    impl<C> SingleCurrencyVisitor<C> for ExpectUnknownCurrency {
         fn on(&mut self, _coin: Coin<C>) {
             unreachable!();
         }
@@ -203,61 +203,61 @@ mod test {
         }
     }
     #[test]
-    fn visit_denom_any() {
-        let mut v_usdc = ExpectDenom::<Usdc>::new();
-        coin_legacy::visit_denom_any(&CosmWasmCoin::new(121, Usdc::DENOM), &mut v_usdc);
+    fn visit_any() {
+        let mut v_usdc = Expect::<Usdc>::new();
+        coin_legacy::visit_any(&CosmWasmCoin::new(121, Usdc::SYMBOL), &mut v_usdc);
         assert!(v_usdc.called());
 
-        let mut v_nls = ExpectDenom::<Nls>::new();
-        coin_legacy::visit_denom_any(&CosmWasmCoin::new(11, Nls::DENOM), &mut v_nls);
+        let mut v_nls = Expect::<Nls>::new();
+        coin_legacy::visit_any(&CosmWasmCoin::new(11, Nls::SYMBOL), &mut v_nls);
         assert!(v_nls.called());
     }
 
     #[test]
-    fn visit_denom_any_unexpected() {
-        let mut v = ExpectUnknownDenom(false);
-        coin_legacy::visit_denom_any(&CosmWasmCoin::new(0, "my_fancy_coin"), &mut v);
+    fn visit_any_unexpected() {
+        let mut v = ExpectUnknownCurrency(false);
+        coin_legacy::visit_any(&CosmWasmCoin::new(0, "my_fancy_coin"), &mut v);
         assert!(v.called());
     }
 
     #[test]
-    fn visit_denom_one() {
-        let mut v_usdc = ExpectDenom::<Usdc>::new();
-        coin_legacy::visit_denom_one(&CosmWasmCoin::new(121, Usdc::DENOM), &mut v_usdc);
+    fn visit_one() {
+        let mut v_usdc = Expect::<Usdc>::new();
+        coin_legacy::visit(&CosmWasmCoin::new(121, Usdc::SYMBOL), &mut v_usdc);
         assert!(v_usdc.called());
 
-        let mut v_nls = ExpectDenom::<Nls>::new();
-        coin_legacy::visit_denom_one(&CosmWasmCoin::new(11, Nls::DENOM), &mut v_nls);
+        let mut v_nls = Expect::<Nls>::new();
+        coin_legacy::visit(&CosmWasmCoin::new(11, Nls::SYMBOL), &mut v_nls);
         assert!(v_nls.called());
     }
 
     #[test]
-    fn visit_denom_one_unexpected() {
-        let mut v = ExpectUnknownDenom(false);
-        coin_legacy::visit_denom_one::<Nls, _>(&CosmWasmCoin::new(0, "my_fancy_coin"), &mut v);
+    fn visit_one_unexpected() {
+        let mut v = ExpectUnknownCurrency(false);
+        coin_legacy::visit::<Nls, _>(&CosmWasmCoin::new(0, "my_fancy_coin"), &mut v);
         assert!(v.called());
     }
 
     #[test]
     fn from_cosmwasm() {
-        let c1 = coin_legacy::from_cosmwasm::<Nls>(CosmWasmCoin::new(12, Nls::DENOM));
+        let c1 = coin_legacy::from_cosmwasm::<Nls>(CosmWasmCoin::new(12, Nls::SYMBOL));
         assert_eq!(Ok(Coin::<Nls>::new(12)), c1);
     }
     #[test]
     fn from_cosmwasm_unexpected() {
-        let c1 = coin_legacy::from_cosmwasm::<Nls>(CosmWasmCoin::new(12, Usdc::DENOM));
+        let c1 = coin_legacy::from_cosmwasm::<Nls>(CosmWasmCoin::new(12, Usdc::SYMBOL));
         assert_eq!(
             Err(Error::UnexpectedCurrency(
-                Usdc::DENOM.into(),
-                Nls::DENOM.into()
+                Usdc::SYMBOL.into(),
+                Nls::SYMBOL.into()
             )),
             c1
         );
-        let c2 = coin_legacy::from_cosmwasm::<Usdc>(CosmWasmCoin::new(12, Nls::DENOM));
+        let c2 = coin_legacy::from_cosmwasm::<Usdc>(CosmWasmCoin::new(12, Nls::SYMBOL));
         assert_eq!(
             Err(Error::UnexpectedCurrency(
-                Nls::DENOM.into(),
-                Usdc::DENOM.into(),
+                Nls::SYMBOL.into(),
+                Usdc::SYMBOL.into(),
             )),
             c2
         );
@@ -266,7 +266,7 @@ mod test {
     #[test]
     fn to_cosmwasm() {
         let amount = 326;
-        assert_eq!(CosmWasmCoin::new(amount, Nls::DENOM), coin_legacy::to_cosmwasm(Coin::<Nls>::new(amount)));
-        assert_eq!(CosmWasmCoin::new(amount, Usdc::DENOM), coin_legacy::to_cosmwasm(Coin::<Usdc>::new(amount)));
+        assert_eq!(CosmWasmCoin::new(amount, Nls::SYMBOL), coin_legacy::to_cosmwasm(Coin::<Nls>::new(amount)));
+        assert_eq!(CosmWasmCoin::new(amount, Usdc::SYMBOL), coin_legacy::to_cosmwasm(Coin::<Usdc>::new(amount)));
     }
 }

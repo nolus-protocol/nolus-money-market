@@ -11,7 +11,7 @@ pub enum Error {
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
 
-    #[error("Found denom {0} expecting {1}")]
+    #[error("Found currency {0} expecting {1}")]
     UnexpectedCurrency(String, String),
 }
 
