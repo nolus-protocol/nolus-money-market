@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdResult, Storage, SubMsg, Timestamp};
 use cw_storage_plus::Item;
-use finance::liability::Liability;
+use finance::{liability::Liability, coin::Usdc, coin_legacy::to_cosmwasm};
 use lpp::stub::Lpp;
 use serde::{Deserialize, Serialize};
 
@@ -18,6 +18,9 @@ pub struct Lease<L> {
     liability: Liability,
     loan: Loan<L>,
 }
+
+//TODO transform it into a Lease type 
+type CURRENCY = Usdc;
 
 impl<L> Lease<L>
 where
@@ -51,9 +54,9 @@ where
         if !self.loan.closed(querier, lease)? {
             return ContractResult::Err(ContractError::LoanNotPaid {});
         }
-        let balance = account.balance(&self.currency)?;
+        let balance = account.balance::<CURRENCY>()?;
         account
-            .send(&self.customer, balance)
+            .send(balance, &self.customer)
             .map_err(|err| err.into())
     }
 
@@ -101,11 +104,11 @@ where
         B: BankAccount,
     {
         let lease_amount = account
-            .balance(&self.currency)
+            .balance::<Usdc>()
             .map_err(ContractError::from)?;
 
         Ok(State {
-            amount: lease_amount,
+            amount: to_cosmwasm( lease_amount),
             annual_interest: loan_state.annual_interest,
             principal_due: loan_state.principal_due,
             interest_due: loan_state.interest_due,
