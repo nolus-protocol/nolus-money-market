@@ -19,11 +19,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{ContractError, ContractResult},
-    lease,
+    lease::Currency as LeaseCurrency,
 };
 
 //TODO transform it into a Loan type
-type CURRENCY = lease::CURRENCY;
+type LoanCurrency = LeaseCurrency;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -38,7 +38,7 @@ pub struct Loan<L> {
 
 impl<L> Loan<L>
 where
-    L: Lpp<CURRENCY>,
+    L: Lpp<LoanCurrency>,
 {
     pub(crate) fn open(
         when: Timestamp,
@@ -77,7 +77,7 @@ where
         let principal_due = self.load_principal_due(querier, lease.clone())?;
         debug_assert_eq!(payment.denom, principal_due.denom);
 
-        let change = self.repay_margin_interest::<CURRENCY>(
+        let change = self.repay_margin_interest::<LoanCurrency>(
             from_cosmwasm(principal_due.clone())?,
             by,
             from_cosmwasm(payment)?,
@@ -95,7 +95,7 @@ where
         {
             self.open_next_period();
             let loan_interest_surplus = coin_legacy::sub_amount(change, loan_interest_due.amount);
-            let change = self.repay_margin_interest::<CURRENCY>(
+            let change = self.repay_margin_interest::<LoanCurrency>(
                 from_cosmwasm(principal_due)?,
                 by,
                 from_cosmwasm(loan_interest_surplus)?,

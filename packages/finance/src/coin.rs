@@ -1,5 +1,5 @@
 use std::{
-    fmt::{Debug, Formatter},
+    fmt::{Debug, Display, Formatter, Write},
     marker::PhantomData,
     ops::{Add, Sub},
 };
@@ -124,6 +124,30 @@ where
     }
 }
 
+impl<C> Display for Coin<C>
+where
+    C: Currency,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.amount().to_string())?;
+        f.write_char(' ')?;
+        f.write_str(C::SYMBOL)?;
+        Ok(())
+    }
+}
+
+impl<C> From<u128> for Coin<C> {
+    fn from(amount: u128) -> Self {
+        Self::new(amount)
+    }
+}
+
+impl<C> From<Coin<C>> for u128 {
+    fn from(coin: Coin<C>) -> Self {
+        coin.amount()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::{any::type_name, fmt::Debug};
@@ -183,5 +207,11 @@ mod test {
             )),
             res
         );
+    }
+
+    #[test]
+    fn display() {
+        assert_eq!("25 unls", Coin::<Nls>::new(25).to_string());
+        assert_eq!("0 uusdc", Coin::<Usdc>::new(0).to_string());
     }
 }

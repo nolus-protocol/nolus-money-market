@@ -20,7 +20,7 @@ impl NewLeaseForm {
 
     pub(crate) fn into_lease<L>(self, lpp: L, start_at: Timestamp, api: &dyn Api) -> ContractResult<Lease<L>>
     where
-        L: Lpp<lease::CURRENCY>,
+        L: Lpp<lease::Currency>,
     {
         let customer = api.addr_validate(&self.customer)?;
         let loan = Loan::open(

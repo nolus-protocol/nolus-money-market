@@ -1,6 +1,7 @@
 use super::Integer;
 
 impl Integer for u64 {
+    type SameBitsInteger = Self;
     type DoubleInteger = u128;
 }
 

@@ -4,6 +4,7 @@ use crate::{
 };
 use cosmwasm_std::{Coin as CosmWasmCoin, Uint128};
 
+#[deprecated = "Migrate to using finance::coin::Coin"]
 pub fn sub_amount(from: CosmWasmCoin, amount: Uint128) -> CosmWasmCoin {
     CosmWasmCoin {
         amount: from.amount - amount,
@@ -11,6 +12,7 @@ pub fn sub_amount(from: CosmWasmCoin, amount: Uint128) -> CosmWasmCoin {
     }
 }
 
+#[deprecated = "Migrate to using finance::coin::Coin"]
 pub fn add_coin(to: CosmWasmCoin, other: CosmWasmCoin) -> CosmWasmCoin {
     debug_assert!(to.denom == other.denom);
     CosmWasmCoin {
@@ -60,6 +62,7 @@ where
     }
 }
 
+#[deprecated = "Migrate to using finance::bank::BankAccount"]
 pub fn from_cosmwasm<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
 where
     C: Currency,
@@ -69,6 +72,7 @@ where
     v.0.ok_or_else(|| Error::UnexpectedCurrency(coin.denom, C::SYMBOL.into()))
 }
 
+#[deprecated = "Migrate to using finance::bank::BankAccount"]
 pub fn to_cosmwasm<C>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: Currency,

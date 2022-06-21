@@ -7,6 +7,7 @@ use crate::{
 use super::{Integer, Fractionable};
 
 impl Integer for Units {
+    type SameBitsInteger = Self;
     type DoubleInteger = u64;
 }
 

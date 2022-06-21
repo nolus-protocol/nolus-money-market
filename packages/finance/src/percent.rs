@@ -140,9 +140,11 @@ impl<'a> Sub<&'a Percent> for Percent {
 pub(super) mod test {
     use std::fmt::{Debug, Display};
 
-    use cosmwasm_std::Coin;
-
-    use crate::{percent::Percent, percentable::Percentable};
+    use crate::{
+        coin::{Coin, Nls},
+        percent::Percent,
+        percentable::Percentable,
+    };
 
     use super::Units;
 
@@ -164,17 +166,15 @@ pub(super) mod test {
 
     #[test]
     fn test_zero() {
-        let d = String::from("sfw");
-        assert_eq!(Coin::new(0, d.clone()), Percent::ZERO.of(Coin::new(10, d)))
+        assert_eq!(Coin::<Nls>::new(0), Percent::ZERO.of(Coin::<Nls>::new(10)))
     }
 
     #[test]
     fn test_hundred() {
-        let d = String::from("sfw");
         let amount = 123;
         assert_eq!(
-            Coin::new(amount, d.clone()),
-            Percent::HUNDRED.of(Coin::new(amount, d))
+            Coin::<Nls>::new(amount),
+            Percent::HUNDRED.of(Coin::<Nls>::new(amount))
         )
     }
 
