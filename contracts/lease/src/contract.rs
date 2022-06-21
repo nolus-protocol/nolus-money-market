@@ -6,10 +6,11 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw_utils::one_coin;
 use finance::bank::BankStub;
+use finance::coin_legacy::from_cosmwasm;
 use lpp::stub::{Lpp, LppStub};
 
 use crate::error::{ContractError, ContractResult};
-use crate::lease::Lease;
+use crate::lease::{Lease, CURRENCY};
 use crate::msg::{ExecuteMsg, NewLeaseForm, StatusQuery, StatusResponse};
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -29,7 +30,7 @@ pub fn instantiate(
     let borrow = msg.amount_to_borrow(downpayment)?;
     let lpp = lpp(msg.loan.lpp.clone(), deps.api)?;
     msg.save(deps.storage)?;
-    let req = lpp.open_loan_req(borrow)?;
+    let req = <LppStub as Lpp<CURRENCY>>::open_loan_req(&lpp, from_cosmwasm(borrow)?)?;
 
     // TODO define an OpenLoanRequest(downpayment, borrowed_amount) and persist it
 
@@ -42,8 +43,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
     // TODO load the top request and pass it as a reply
     let new_lease_form = NewLeaseForm::pull(deps.storage)?;
     let lpp = lpp(new_lease_form.loan.lpp.clone(), deps.api)?;
-    lpp.open_loan_resp(msg)
-        .map_err(ContractError::OpenLoanError)?;
+    <LppStub as Lpp<CURRENCY>>::open_loan_resp(&lpp, msg).map_err(ContractError::OpenLoanError)?;
 
     let lease = new_lease_form.into_lease(lpp, env.block.time, deps.api)?;
     lease.store(deps.storage)?;

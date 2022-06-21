@@ -19,11 +19,11 @@ pub struct Lease<L> {
 }
 
 //TODO transform it into a Lease type 
-type CURRENCY = Usdc;
+pub type CURRENCY = Usdc;
 
 impl<L> Lease<L>
 where
-    L: Lpp,
+    L: Lpp<CURRENCY>,
 {
     const DB_ITEM: Item<'static, Lease<L>> = Item::new("lease");
 
@@ -118,7 +118,7 @@ where
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{testing::MockStorage, Addr, QuerierWrapper, StdResult, SubMsg, Timestamp};
-    use finance::{liability::Liability, percent::Percent};
+    use finance::{liability::Liability, percent::Percent, coin::Coin};
     use lpp::{msg::QueryLoanResponse, stub::Lpp};
     use serde::{Deserialize, Serialize};
 
@@ -128,8 +128,8 @@ mod tests {
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     struct LppLocalStub {}
-    impl Lpp for LppLocalStub {
-        fn open_loan_req(&self, _amount: cosmwasm_std::Coin) -> StdResult<SubMsg> {
+    impl Lpp<super::CURRENCY> for LppLocalStub {
+        fn open_loan_req(&self, _amount: Coin<super::CURRENCY>) -> StdResult<SubMsg> {
             unimplemented!()
         }
 
@@ -137,7 +137,7 @@ mod tests {
             unimplemented!()
         }
 
-        fn repay_loan_req(&self, _repayment: cosmwasm_std::Coin) -> StdResult<SubMsg> {
+        fn repay_loan_req(&self, _repayment: Coin<super::CURRENCY>) -> StdResult<SubMsg> {
             todo!()
         }
         fn loan(

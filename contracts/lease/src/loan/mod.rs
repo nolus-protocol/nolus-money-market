@@ -4,14 +4,26 @@ pub use state::State;
 use std::fmt::Debug;
 
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, SubMsg, Timestamp};
-use finance::{coin_legacy, duration::Duration, interest::InterestPeriod, percent::Percent};
+use finance::{
+    coin::{Coin as FinanceCoin, Currency},
+    coin_legacy::{self, from_cosmwasm, to_cosmwasm},
+    duration::Duration,
+    interest::InterestPeriod,
+    percent::Percent,
+};
 use lpp::{
     msg::{LoanResponse, QueryLoanResponse},
     stub::Lpp,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::error::{ContractError, ContractResult};
+use crate::{
+    error::{ContractError, ContractResult},
+    lease,
+};
+
+//TODO transform it into a Loan type
+type CURRENCY = lease::CURRENCY;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -26,7 +38,7 @@ pub struct Loan<L> {
 
 impl<L> Loan<L>
 where
-    L: Lpp,
+    L: Lpp<CURRENCY>,
 {
     pub(crate) fn open(
         when: Timestamp,
@@ -65,7 +77,11 @@ where
         let principal_due = self.load_principal_due(querier, lease.clone())?;
         debug_assert_eq!(payment.denom, principal_due.denom);
 
-        let change = self.repay_margin_interest(principal_due.clone(), by, payment);
+        let change = self.repay_margin_interest::<CURRENCY>(
+            from_cosmwasm(principal_due.clone())?,
+            by,
+            from_cosmwasm(payment)?,
+        );
         if change.amount.is_zero() {
             return Ok(None);
         }
@@ -74,15 +90,20 @@ where
             self.load_loan_interest_due(querier, lease, self.current_period.start())?;
         debug_assert_eq!(change.denom, loan_interest_due.denom);
 
-        let loan_payment =
-            if loan_interest_due.amount <= change.amount && self.current_period.zero_length() {
-                self.open_next_period();
-                let loan_interest_surplus = coin_legacy::sub_amount(change, loan_interest_due.amount);
-                let change = self.repay_margin_interest(principal_due, by, loan_interest_surplus);
-                coin_legacy::add_coin(loan_interest_due, change)
-            } else {
-                change
-            };
+        let loan_payment = if loan_interest_due.amount <= change.amount
+            && self.current_period.zero_length()
+        {
+            self.open_next_period();
+            let loan_interest_surplus = coin_legacy::sub_amount(change, loan_interest_due.amount);
+            let change = self.repay_margin_interest::<CURRENCY>(
+                from_cosmwasm(principal_due)?,
+                by,
+                from_cosmwasm(loan_interest_surplus)?,
+            );
+            coin_legacy::add_coin(loan_interest_due, change)
+        } else {
+            change
+        };
         if loan_payment.amount.is_zero() {
             // in practice not possible, but in theory it is if two consecutive repayments are received
             // with the same 'by' time.
@@ -97,7 +118,7 @@ where
 
         // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
         self.lpp
-            .repay_loan_req(loan_payment)
+            .repay_loan_req(from_cosmwasm(loan_payment)?)
             .map(Some)
             .map_err(|err| err.into())
     }
@@ -142,15 +163,18 @@ where
         self.lpp.loan(querier, lease).map_err(ContractError::from)
     }
 
-    fn repay_margin_interest(
+    fn repay_margin_interest<C>(
         &mut self,
-        principal_due: Coin,
+        principal_due: FinanceCoin<C>,
         by: Timestamp,
-        payment: Coin,
-    ) -> Coin {
+        payment: FinanceCoin<C>,
+    ) -> Coin
+    where
+        C: Currency,
+    {
         let (period, change) = self.current_period.pay(principal_due, payment, by);
         self.current_period = period;
-        change
+        to_cosmwasm(change)
     }
 
     fn open_next_period(&mut self) {

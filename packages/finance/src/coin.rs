@@ -10,22 +10,22 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
 };
 
-pub trait Currency: 'static {
+pub trait Currency: 'static + Copy + Ord + Default {
     const SYMBOL: &'static str;
 }
-#[derive(PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub struct Usdc;
 impl Currency for Usdc {
     const SYMBOL: &'static str = "uusdc";
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub struct Nls;
 impl Currency for Nls {
     const SYMBOL: &'static str = "unls";
 }
 
-#[derive(PartialEq, Clone, Copy, Debug, JsonSchema)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, JsonSchema)]
 pub struct Coin<C> {
     amount: u128,
     currency: PhantomData<C>,
