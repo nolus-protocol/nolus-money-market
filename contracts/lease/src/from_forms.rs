@@ -2,7 +2,7 @@ use cosmwasm_std::{Api, Coin, StdResult, Storage, Timestamp};
 use cw_storage_plus::Item;
 use lpp::stub::Lpp;
 
-use crate::{error::ContractResult, lease::Lease, loan::Loan, msg::NewLeaseForm};
+use crate::{error::ContractResult, lease::{Lease, self}, loan::Loan, msg::NewLeaseForm};
 
 impl NewLeaseForm {
     const DB_ITEM: Item<'static, NewLeaseForm> = Item::new("lease_form");
@@ -20,7 +20,7 @@ impl NewLeaseForm {
 
     pub(crate) fn into_lease<L>(self, lpp: L, start_at: Timestamp, api: &dyn Api) -> ContractResult<Lease<L>>
     where
-        L: Lpp,
+        L: Lpp<lease::Currency>,
     {
         let customer = api.addr_validate(&self.customer)?;
         let loan = Loan::open(
@@ -30,7 +30,6 @@ impl NewLeaseForm {
             self.loan.interest_due_period_secs,
             self.loan.grace_period_secs,
         )?;
-
         Ok(Lease::new(customer, self.currency, self.liability, loan))
     }
 

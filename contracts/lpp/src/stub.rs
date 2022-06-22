@@ -1,18 +1,23 @@
 use cosmwasm_std::{
-    to_binary, Addr, Api, Coin, QuerierWrapper, Reply, StdResult, SubMsg, Timestamp, WasmMsg,
+    to_binary, Addr, Api, QuerierWrapper, Reply, StdResult, SubMsg, Timestamp, WasmMsg,
 };
+use finance::{coin::{Currency, Coin}, coin_legacy::to_cosmwasm};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::msg::{ExecuteMsg, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg};
 
 pub const REPLY_ID: u64 = 28;
 
-pub trait Lpp: Serialize + DeserializeOwned {
-    fn open_loan_req(&self, amount: Coin) -> StdResult<SubMsg>;
+pub trait Lpp<C>: Serialize + DeserializeOwned {
+    fn open_loan_req(&self, amount: Coin<C>) -> StdResult<SubMsg>;
     fn open_loan_resp(&self, resp: Reply) -> Result<(), String>;
-    fn repay_loan_req(&self, repayment: Coin) -> StdResult<SubMsg>;
+    fn repay_loan_req(&self, repayment: Coin<C>) -> StdResult<SubMsg>;
 
-    fn loan(&self, querier: &QuerierWrapper, lease: impl Into<Addr>) -> StdResult<QueryLoanResponse>;
+    fn loan(
+        &self,
+        querier: &QuerierWrapper,
+        lease: impl Into<Addr>,
+    ) -> StdResult<QueryLoanResponse>;
     fn loan_outstanding_interest(
         &self,
         querier: &QuerierWrapper,
@@ -36,9 +41,12 @@ impl LppStub {
     }
 }
 
-impl Lpp for LppStub {
-    fn open_loan_req(&self, amount: Coin) -> StdResult<SubMsg> {
-        let msg = to_binary(&ExecuteMsg::OpenLoan { amount })?;
+impl<C> Lpp<C> for LppStub
+where
+    C: Currency,
+{
+    fn open_loan_req(&self, amount: Coin<C>) -> StdResult<SubMsg> {
+        let msg = to_binary(&ExecuteMsg::OpenLoan { amount: to_cosmwasm(amount) })?;
         Ok(SubMsg::reply_on_success(
             WasmMsg::Execute {
                 contract_addr: self.addr.as_ref().into(),
@@ -54,17 +62,23 @@ impl Lpp for LppStub {
         resp.result.into_result().map(|_| ())
     }
 
-    fn repay_loan_req(&self, repayment: Coin) -> StdResult<SubMsg> {
+    fn repay_loan_req(&self, repayment: Coin<C>) -> StdResult<SubMsg> {
         let msg = to_binary(&ExecuteMsg::RepayLoan {})?;
         Ok(SubMsg::new(WasmMsg::Execute {
             contract_addr: self.addr.as_ref().into(),
-            funds: vec![repayment],
+            funds: vec![to_cosmwasm(repayment)],
             msg,
         }))
     }
 
-    fn loan(&self, querier: &QuerierWrapper, lease: impl Into<Addr>) -> StdResult<QueryLoanResponse> {
-        let msg = QueryMsg::Loan { lease_addr: lease.into() };
+    fn loan(
+        &self,
+        querier: &QuerierWrapper,
+        lease: impl Into<Addr>,
+    ) -> StdResult<QueryLoanResponse> {
+        let msg = QueryMsg::Loan {
+            lease_addr: lease.into(),
+        };
         querier.query_wasm_smart(self.addr.clone(), &msg)
     }
 
@@ -84,7 +98,8 @@ impl Lpp for LppStub {
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{from_binary, Addr, Coin, CosmosMsg, ReplyOn, WasmMsg};
+    use cosmwasm_std::{from_binary, Addr, CosmosMsg, ReplyOn, WasmMsg};
+    use finance::{coin::{Nls, Coin}, coin_legacy::from_cosmwasm};
 
     use crate::{msg::ExecuteMsg, stub::REPLY_ID};
 
@@ -94,9 +109,9 @@ mod test {
     fn open_loan_req() {
         let addr = Addr::unchecked("defd2r2");
         let lpp = LppStub { addr: addr.clone() };
-        let borrow_amount = Coin::new(10, "WRT");
+        let borrow_amount = Coin::<Nls>::new(10);
         let msg = lpp
-            .open_loan_req(borrow_amount.clone())
+            .open_loan_req(borrow_amount)
             .expect("open new loan request failed");
         assert_eq!(REPLY_ID, msg.id);
         assert_eq!(ReplyOn::Success, msg.reply_on);
@@ -107,10 +122,10 @@ mod test {
         }) = msg.msg
         {
             assert_eq!(addr, contract_addr);
-            assert_eq!(Vec::<Coin>::new(), funds);
-            let _lpp_msg: ExecuteMsg = from_binary(&msg).expect("invalid Lpp message");
-            if let ExecuteMsg::OpenLoan { amount } = _lpp_msg {
-                assert_eq!(borrow_amount, amount);
+            assert!(funds.is_empty());
+            let lpp_msg: ExecuteMsg = from_binary(&msg).expect("invalid Lpp message");
+            if let ExecuteMsg::OpenLoan { amount } = lpp_msg {
+                assert_eq!(borrow_amount, from_cosmwasm(amount).unwrap());
             } else {
                 panic!("Bad Lpp message type!");
             }

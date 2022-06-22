@@ -64,7 +64,7 @@ impl Dispatcher {
     #[cfg(not(test))]
     // Get LPP balance and return TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
     fn get_lpp_balance(deps: Deps, lpp_addr: &Addr) -> StdResult<Coin> {
-        use finance::coin::add_coin;
+        use finance::coin_legacy::add_coin;
         use lpp::msg::{LppBalanceResponse, QueryMsg as LPPQueryMsg};
 
         let query_msg: LPPQueryMsg = LPPQueryMsg::LppBalance {};

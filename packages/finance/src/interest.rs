@@ -1,9 +1,12 @@
-use cosmwasm_std::{Coin, Timestamp, Uint128};
+use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
-use std::{cmp, fmt::Debug};
+use std::{cmp, fmt::Debug, ops::{Sub, Mul, Div}};
 
-use crate::{coin, duration::Duration, percent::Percent, percentable::{Percentable, TimeSliceable}};
-
+use crate::{
+    duration::{Duration, Units as TimeUnits},
+    percent::Percent,
+    percentable::{Percentable, TimeSliceable, Integer},
+};
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct InterestPeriod {
     start: Timestamp,
@@ -66,20 +69,27 @@ impl InterestPeriod {
         self.interest_by(principal, self.till())
     }
 
-    pub fn pay(self, principal: Coin, payment: Coin, by: Timestamp) -> (Self, Coin) {
+    pub fn pay<P,D>(self, principal: P, payment: P, by: Timestamp) -> (Self, P)
+    where
+        P: Percentable + TimeSliceable + Ord + Default + Sub<Output = P> + Copy,
+        TimeUnits: Integer<DoubleInteger = D> + TryFrom<D>,
+        D: From<TimeUnits> + From<P> + Mul<D, Output = D> + Div<D, Output = D>,
+        <TimeUnits as TryFrom<D>>::Error: Debug,
+
+    {
         let by_within_period = self.move_within_period(by);
         let interest_due_per_period = self.interest_by(principal, by_within_period);
 
         let period = Duration::between(self.start, by_within_period);
-        let repayment = cmp::min(interest_due_per_period.amount, payment.amount);
-        let period_paid_for = fraction(period, repayment, interest_due_per_period.amount);
+        let repayment = cmp::min(interest_due_per_period, payment);
+        let period_paid_for = period.into_slice_per_ratio(repayment, interest_due_per_period);
 
-        let change = coin::sub_amount(payment, repayment);
+        let change = payment - repayment;
         (self.shift_start(period_paid_for), change)
     }
 
     fn move_within_period(&self, t: Timestamp) -> Timestamp {
-        cmp::min(cmp::max(self.start, t), self.till())
+        t.clamp(self.start, self.till())
     }
 
     fn interest_by<P>(&self, principal: P, by: Timestamp) -> P
@@ -91,24 +101,6 @@ impl InterestPeriod {
         let period = Duration::between(self.start, by);
 
         let interest_due_per_year = self.interest.of(principal);
-        period.slice_of(interest_due_per_year)
-    }
-}
-
-fn fraction<R, S, T>(what: R, shares: S, total: T) -> R
-where
-    R: Into<Uint128> + TryFrom<u128>,
-    <R as TryFrom<u128>>::Error: Debug,
-    S: Into<u128> + PartialEq<T>,
-    T: Into<u128>,
-{
-    if shares == total {
-        what
-    } else {
-        let w: Uint128 = what.into();
-        w.multiply_ratio(shares.into(), total.into())
-            .u128()
-            .try_into()
-            .expect("Overflow computing a fraction")
+        period.annualized_slice_of(interest_due_per_year)
     }
 }

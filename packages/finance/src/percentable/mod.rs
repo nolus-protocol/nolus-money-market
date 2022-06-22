@@ -1,4 +1,6 @@
 mod coin;
+mod deprecated;
+mod duration;
 mod percent;
 mod u128;
 mod u64;
@@ -21,14 +23,18 @@ pub trait Percentable: Fractionable<PercentUnits> {}
 pub trait TimeSliceable: Fractionable<TimeUnits> {}
 
 pub trait Integer {
+    // An intermediate type to handle cases when there is no TryFrom<DoubleInteger> for Self but
+    // instead there is TryFrom<DoubleInteger> for SameBitsInteger, and From<SameBitsInteger> for Self
+    type SameBitsInteger;
     type DoubleInteger;
 }
 
-impl<T, D, U> Fractionable<U> for T
+impl<T, D, DIntermediate, U> Fractionable<U> for T
 where
-    T: Integer<DoubleInteger = D> + TryFrom<D>,
+    T: Integer<SameBitsInteger = DIntermediate, DoubleInteger = D> + From<DIntermediate>,
     D: From<T> + From<U> + Mul<D, Output = D> + Div<D, Output = D>,
-    <T as TryFrom<D>>::Error: Debug,
+    <DIntermediate as TryFrom<D>>::Error: Debug,
+    DIntermediate: TryFrom<D>,
     U: PartialEq,
 {
     fn safe_mul<F>(self, fraction: &F) -> Self
@@ -41,7 +47,9 @@ where
         } else {
             let res_double: D = D::from(self) * D::from(fraction.numerator());
             let res_double = res_double / D::from(fraction.denominator());
-            res_double.try_into().expect("unexpected overflow")
+            let res_intermediate: DIntermediate =
+                res_double.try_into().expect("unexpected overflow");
+            res_intermediate.into()
         }
     }
 }
