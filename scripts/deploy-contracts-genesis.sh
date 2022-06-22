@@ -7,7 +7,7 @@ add_wasm_messages() {
   local -r wasm_code_path="$2"
   local -r admin_addr="$3"
   local -r treasury_init_tokens="$4"
-  local -r stable_denom="$5"
+  local -r lpp_native="$5"
   local -r contracts_info_file="$6"
 
   local -r LEASE_CODE_ID=2
@@ -28,7 +28,7 @@ add_wasm_messages() {
 
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lease" "$((++id))" "$admin_addr" ""
 
-  local -r lpp_init_msg='{"denom":"'$stable_denom'","lease_code_id":"'$LEASE_CODE_ID'"}'
+  local -r lpp_init_msg='{"denom":"'$lpp_native'","lease_code_id":"'$LEASE_CODE_ID'"}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lpp" "$((++id))" "$admin_addr" "" "$lpp_init_msg"
   _make_contract_info_file  "lpp" "$LPP_ADDRESS" "$contracts_info_file"
 
@@ -36,7 +36,7 @@ add_wasm_messages() {
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "leaser" "$((++id))"  "$admin_addr" "" "$leaser_init_msg"
   _make_contract_info_file  "leaser" "$LEASER_ADDRESS" "$contracts_info_file"
 
-  local -r oracle_init_msg='{"base_asset":"'$stable_denom'","price_feed_period":60,"feeders_percentage_needed":50,"supported_denom_pairs":[["OSMO","'$stable_denom'"],["LUNA","OSMO"],["IRIS","OSMO"]]}'
+  local -r oracle_init_msg='{"base_asset":"'$lpp_native'","price_feed_period":60,"feeders_percentage_needed":50,"supported_denom_pairs":[["OSMO","'$lpp_native'"],["LUNA","OSMO"],["IRIS","OSMO"]]}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "oracle" "$((++id))" "$admin_addr" "" "$oracle_init_msg"
   _make_contract_info_file  "oracle" "$ORACLE_ADDRESS" "$contracts_info_file"
 
