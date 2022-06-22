@@ -10,20 +10,7 @@ use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
 };
 
-pub trait Currency: 'static + Copy + Ord + Default {
-    const SYMBOL: &'static str;
-}
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub struct Usdc;
-impl Currency for Usdc {
-    const SYMBOL: &'static str = "uusdc";
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub struct Nls;
-impl Currency for Nls {
-    const SYMBOL: &'static str = "unls";
-}
+use crate::currency::Currency;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, JsonSchema)]
 pub struct Coin<C> {
@@ -154,7 +141,9 @@ mod test {
 
     use cosmwasm_std::{from_slice, to_vec, StdError};
 
-    use super::{Coin, Currency, Nls, Usdc};
+    use crate::currency::{Nls, Usdc, Currency};
+
+    use super::Coin;
 
     #[test]
     fn serialize_deserialize() {

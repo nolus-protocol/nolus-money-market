@@ -140,11 +140,7 @@ impl<'a> Sub<&'a Percent> for Percent {
 pub(super) mod test {
     use std::fmt::{Debug, Display};
 
-    use crate::{
-        coin::{Coin, Nls},
-        percent::Percent,
-        percentable::Percentable,
-    };
+    use crate::{coin::Coin, percent::Percent, percentable::Percentable, currency::Nls};
 
     use super::Units;
 

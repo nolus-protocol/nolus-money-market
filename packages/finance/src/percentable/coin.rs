@@ -19,7 +19,10 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{percent::test::{test_are, test_of, test_of_are}, coin::{Usdc, Coin}};
+    use crate::{
+        coin::Coin,
+        percent::test::{test_are, test_of, test_of_are}, currency::Usdc,
+    };
 
     #[test]
     fn of_are() {
@@ -34,11 +37,7 @@ mod test {
         test_are(18, usdc(1), usdc(55));
         test_of(18, usdc(120), usdc(2));
         test_are(18, usdc(2), usdc(111));
-        test_of_are(
-            1000,
-            usdc(u128::MAX),
-            usdc(u128::MAX),
-        );
+        test_of_are(1000, usdc(u128::MAX), usdc(u128::MAX));
     }
 
     #[test]

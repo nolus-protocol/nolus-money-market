@@ -87,11 +87,7 @@ impl Liability {
 mod test {
     use cosmwasm_std::from_slice;
 
-    use crate::{
-        coin::{Coin, Usdc},
-        error::Error,
-        percent::Percent,
-    };
+    use crate::{coin::Coin, error::Error, percent::Percent, currency::Usdc};
 
     use super::{Liability, SECS_IN_HOUR};
 
@@ -201,7 +197,7 @@ mod test {
     }
 
     fn test_init_borrow_amount(d: u128, p: u16, exp: u128) {
-        type Currency    = Usdc;
+        type Currency = Usdc;
         let downpayment = Coin::<Currency>::new(d);
         let percent = Percent::from_percent(p);
         let calculated = Liability {
