@@ -5,11 +5,11 @@ use std::fmt::Debug;
 
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, SubMsg, Timestamp};
 use finance::{
-    coin::{Coin as FinanceCoin, Currency},
+    coin::Coin as FinanceCoin,
     coin_legacy::{self, from_cosmwasm, to_cosmwasm},
     duration::Duration,
     interest::InterestPeriod,
-    percent::Percent,
+    percent::Percent, currency::Currency,
 };
 use lpp::{
     msg::{LoanResponse, QueryLoanResponse},

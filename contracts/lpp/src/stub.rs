@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     to_binary, Addr, Api, QuerierWrapper, Reply, StdResult, SubMsg, Timestamp, WasmMsg,
 };
-use finance::{coin::{Currency, Coin}, coin_legacy::to_cosmwasm};
+use finance::{coin::Coin, coin_legacy::to_cosmwasm, currency::Currency};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::msg::{ExecuteMsg, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg};
@@ -46,7 +46,9 @@ where
     C: Currency,
 {
     fn open_loan_req(&self, amount: Coin<C>) -> StdResult<SubMsg> {
-        let msg = to_binary(&ExecuteMsg::OpenLoan { amount: to_cosmwasm(amount) })?;
+        let msg = to_binary(&ExecuteMsg::OpenLoan {
+            amount: to_cosmwasm(amount),
+        })?;
         Ok(SubMsg::reply_on_success(
             WasmMsg::Execute {
                 contract_addr: self.addr.as_ref().into(),
@@ -99,7 +101,7 @@ where
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{from_binary, Addr, CosmosMsg, ReplyOn, WasmMsg};
-    use finance::{coin::{Nls, Coin}, coin_legacy::from_cosmwasm};
+    use finance::{coin::Coin, coin_legacy::from_cosmwasm, currency::Nls};
 
     use crate::{msg::ExecuteMsg, stub::REPLY_ID};
 

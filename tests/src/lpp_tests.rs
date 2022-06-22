@@ -1,6 +1,6 @@
 use cosmwasm_std::{coins, Addr, Coin};
 use cw_multi_test::Executor;
-use finance::coin::{Usdc, Currency};
+use finance::currency::{Usdc, Currency};
 
 use crate::common::{test_case::TestCase, USER};
 

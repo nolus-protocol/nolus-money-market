@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdResult, Storage, SubMsg, Timestamp};
 use cw_storage_plus::Item;
-use finance::{liability::Liability, coin::Usdc, coin_legacy::to_cosmwasm, bank::BankAccount};
+use finance::{bank::BankAccount, coin_legacy::to_cosmwasm, liability::Liability, currency::Usdc};
 use lpp::stub::Lpp;
 use serde::{Deserialize, Serialize};
 
@@ -18,7 +18,7 @@ pub struct Lease<L> {
     loan: Loan<L>,
 }
 
-//TODO transform it into a Lease type 
+//TODO transform it into a Lease type
 pub type Currency = Usdc;
 
 impl<L> Lease<L>
@@ -102,12 +102,10 @@ where
     where
         B: BankAccount,
     {
-        let lease_amount = account
-            .balance::<Usdc>()
-            .map_err(ContractError::from)?;
+        let lease_amount = account.balance::<Usdc>().map_err(ContractError::from)?;
 
         Ok(State {
-            amount: to_cosmwasm( lease_amount),
+            amount: to_cosmwasm(lease_amount),
             annual_interest: loan_state.annual_interest,
             principal_due: loan_state.principal_due,
             interest_due: loan_state.interest_due,
@@ -118,7 +116,7 @@ where
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{testing::MockStorage, Addr, QuerierWrapper, StdResult, SubMsg, Timestamp};
-    use finance::{liability::Liability, percent::Percent, coin::Coin};
+    use finance::{coin::Coin, liability::Liability, percent::Percent};
     use lpp::{msg::QueryLoanResponse, stub::Lpp};
     use serde::{Deserialize, Serialize};
 
