@@ -137,7 +137,7 @@ mod test {
 
     use crate::{
         currency::{Currency, Nls, Usdc},
-        error::Error,
+        error::Error, coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl},
     };
 
     use super::{Coin, CoinVisitor};
@@ -187,6 +187,20 @@ mod test {
         }
     }
 
+    struct ExpectUnknownCurrency;
+    impl CoinVisitor for ExpectUnknownCurrency {
+        type Output = ();
+        type Error = ();
+
+        fn on<Cin>(&self, _coin: Coin<Cin>) -> Result<Self::Output, Self::Error> {
+            Err(())
+        }
+
+        fn on_unknown(&self) -> Result<Self::Output, Self::Error> {
+            Ok(())
+        }
+    }
+
     #[test]
     fn from_cosmwasm() {
         let c1 = super::from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Nls::SYMBOL));
@@ -224,6 +238,25 @@ mod test {
     }
 
     #[test]
+    #[should_panic]
+    fn from_cosmwasm_any_other_currency() {
+        let v = Expect::<Usdc>::new();
+        let amount = 12;
+        let _ = super::from_cosmwasm_any_impl(CosmWasmCoin::new(amount, Nls::SYMBOL), v);
+    }
+
+    #[test]
+    fn from_cosmwasm_any_unexpected() {
+        assert_eq!(
+            Ok(()),
+            super::from_cosmwasm_any_impl(
+                CosmWasmCoin::new(3, "my-nice-currency"),
+                ExpectUnknownCurrency
+            )
+        );
+    }
+
+    #[test]
     fn to_cosmwasm() {
         let amount = 326;
         assert_eq!(
@@ -234,5 +267,14 @@ mod test {
             CosmWasmCoin::new(amount, Usdc::SYMBOL),
             super::to_cosmwasm_impl(Coin::<Usdc>::new(amount))
         );
+    }
+
+    #[test]
+    fn from_to_cosmwasm() {
+        let c_nls = Coin::<Nls>::new(24563);
+        assert_eq!(Ok(c_nls), from_cosmwasm_impl(to_cosmwasm_impl(c_nls)));
+
+        let c_usdc = Coin::<Usdc>::new(u128::MAX);
+        assert_eq!(Ok(c_usdc), from_cosmwasm_impl(to_cosmwasm_impl(c_usdc)));
     }
 }
