@@ -28,11 +28,25 @@ pub fn from_cosmwasm<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
 where
     C: Currency,
 {
+    from_cosmwasm_impl(coin)
+}
+
+pub(crate) fn from_cosmwasm_impl<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
+where
+    C: Currency,
+{
     visit(&coin.denom, &CoinTransformer(&coin))
 }
 
 #[deprecated = "Migrate to using finance::bank::BankAccount"]
 pub fn to_cosmwasm<C>(coin: Coin<C>) -> CosmWasmCoin
+where
+    C: Currency,
+{
+    to_cosmwasm_impl(coin)
+}
+
+pub(crate) fn to_cosmwasm_impl<C>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: Currency,
 {
@@ -51,6 +65,13 @@ pub trait CoinVisitor {
 
 #[deprecated = "Migrate to using finance::bank::BankAccount"]
 pub fn from_cosmwasm_any<V>(coin: CosmWasmCoin, v: V) -> StdResult<V::Output, V::Error>
+where
+    V: CoinVisitor,
+{
+    from_cosmwasm_any_impl(coin, v)
+}
+
+pub(crate) fn from_cosmwasm_any_impl<V>(coin: CosmWasmCoin, v: V) -> StdResult<V::Output, V::Error>
 where
     V: CoinVisitor,
 {
@@ -168,12 +189,12 @@ mod test {
 
     #[test]
     fn from_cosmwasm() {
-        let c1 = super::from_cosmwasm::<Nls>(CosmWasmCoin::new(12, Nls::SYMBOL));
+        let c1 = super::from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Nls::SYMBOL));
         assert_eq!(Ok(Coin::<Nls>::new(12)), c1);
     }
     #[test]
     fn from_cosmwasm_unexpected() {
-        let c1 = super::from_cosmwasm::<Nls>(CosmWasmCoin::new(12, Usdc::SYMBOL));
+        let c1 = super::from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Usdc::SYMBOL));
         assert_eq!(
             Err(Error::UnexpectedCurrency(
                 Usdc::SYMBOL.into(),
@@ -181,7 +202,7 @@ mod test {
             )),
             c1
         );
-        let c2 = super::from_cosmwasm::<Usdc>(CosmWasmCoin::new(12, Nls::SYMBOL));
+        let c2 = super::from_cosmwasm_impl::<Usdc>(CosmWasmCoin::new(12, Nls::SYMBOL));
         assert_eq!(
             Err(Error::UnexpectedCurrency(
                 Nls::SYMBOL.into(),
@@ -198,7 +219,7 @@ mod test {
         let amount = 12;
         assert_eq!(
             Ok(Coin::<T>::new(amount)),
-            super::from_cosmwasm_any(CosmWasmCoin::new(amount, T::SYMBOL), v)
+            super::from_cosmwasm_any_impl(CosmWasmCoin::new(amount, T::SYMBOL), v)
         );
     }
 
@@ -207,11 +228,11 @@ mod test {
         let amount = 326;
         assert_eq!(
             CosmWasmCoin::new(amount, Nls::SYMBOL),
-            super::to_cosmwasm(Coin::<Nls>::new(amount))
+            super::to_cosmwasm_impl(Coin::<Nls>::new(amount))
         );
         assert_eq!(
             CosmWasmCoin::new(amount, Usdc::SYMBOL),
-            super::to_cosmwasm(Coin::<Usdc>::new(amount))
+            super::to_cosmwasm_impl(Coin::<Usdc>::new(amount))
         );
     }
 }

@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, BankMsg, Env, QuerierWrapper, SubMsg};
 
-use crate::{coin::Coin, error::Result, coin_legacy::{from_cosmwasm, to_cosmwasm}, currency::Currency};
+use crate::{coin::Coin, error::Result, coin_legacy::{to_cosmwasm_impl, from_cosmwasm_impl}, currency::Currency};
 
 pub trait BankAccount {
     fn balance<C>(&self) -> Result<Coin<C>>
@@ -31,7 +31,7 @@ impl<'a> BankAccount for BankStub<'a> {
         C: Currency,
     {
         let coin = self.querier.query_balance(self.addr, C::SYMBOL)?;
-        from_cosmwasm(coin)
+        from_cosmwasm_impl(coin)
     }
 
     fn send<C>(&self, amount: Coin<C>, to: &Addr) -> Result<SubMsg>
@@ -40,7 +40,7 @@ impl<'a> BankAccount for BankStub<'a> {
     {
         Ok(SubMsg::new(BankMsg::Send {
             to_address: to.into(),
-            amount: vec![to_cosmwasm(amount)],
+            amount: vec![to_cosmwasm_impl(amount)],
         }))
     }
 }
