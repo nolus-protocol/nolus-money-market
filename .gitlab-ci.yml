@@ -62,7 +62,7 @@ lint:cargo:
   stage: test
   script:
     - rustup component add clippy
-    - cargo clippy --workspace --verbose --all-targets -- -D warnings
+    - ./lint.sh
 
 build-and-optimization:cargo:
   stage: build
