@@ -2,7 +2,7 @@ use cosmwasm_std::Fraction;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::percentable::Fractionable;
+use crate::fractionable::Fractionable;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]

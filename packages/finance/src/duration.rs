@@ -7,7 +7,7 @@ use cosmwasm_std::{Fraction, Timestamp, Uint128};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    percentable::{Integer, TimeSliceable},
+    fractionable::{Integer, TimeSliceable},
     ratio::Ratio,
 };
 
@@ -49,7 +49,7 @@ impl Duration {
         D: From<Units> + From<U> + Mul<D, Output = D> + Div<D, Output = D>,
         <Units as TryFrom<D>>::Error: Debug,
     {
-        use crate::percentable::Fractionable;
+        use crate::fractionable::Fractionable;
         self.safe_mul(&Ratio::new(amount, annual_amount))
     }
 }

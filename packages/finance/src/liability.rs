@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::{Error, Result},
     percent::Percent,
-    percentable::Percentable,
+    fractionable::Percentable,
 };
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq, JsonSchema)]

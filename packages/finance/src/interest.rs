@@ -5,7 +5,7 @@ use std::{cmp, fmt::Debug, ops::{Sub, Mul, Div}};
 use crate::{
     duration::{Duration, Units as TimeUnits},
     percent::Percent,
-    percentable::{Percentable, TimeSliceable, Integer},
+    fractionable::{Percentable, TimeSliceable, Integer},
 };
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct InterestPeriod {

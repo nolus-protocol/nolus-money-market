@@ -1,5 +1,5 @@
 pub mod percent;
-pub mod percentable;
+pub mod fractionable;
 pub mod liability;
 pub mod error;
 pub mod bank;

@@ -7,7 +7,7 @@ use cosmwasm_std::{OverflowError, OverflowOperation};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::Result as FinanceResult, percentable::Percentable, ratio::Ratio};
+use crate::{error::Result as FinanceResult, fractionable::Percentable, ratio::Ratio};
 
 pub type Units = u32;
 
@@ -139,7 +139,7 @@ impl<'a> Sub<&'a Percent> for Percent {
 pub(super) mod test {
     use std::fmt::{Debug, Display};
 
-    use crate::{coin::Coin, currency::Nls, percent::Percent, percentable::Percentable};
+    use crate::{coin::Coin, currency::Nls, percent::Percent, fractionable::Percentable};
 
     use super::Units;
 
