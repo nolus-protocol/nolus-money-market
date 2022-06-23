@@ -1,6 +1,12 @@
 use cosmwasm_std::Fraction;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
-pub(crate) struct Ratio<U> {
+use crate::percentable::Fractionable;
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct Ratio<U> {
     nominator: U,
     denominator: U,
 }
@@ -13,6 +19,19 @@ impl<U> Ratio<U> {
         }
     }
 }
+
+impl<U> Ratio<U>
+where
+    U: Default + PartialEq + Copy,
+{
+    pub fn of<A>(&self, amount: A) -> A
+    where
+        A: Fractionable<U>,
+    {
+        amount.safe_mul(self)
+    }
+}
+
 impl<U> Fraction<U> for Ratio<U>
 where
     U: Default + PartialEq + Copy,

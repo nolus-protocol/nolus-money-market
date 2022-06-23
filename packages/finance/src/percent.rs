@@ -39,7 +39,7 @@ impl Percent {
     where
         P: Percentable,
     {
-        amount.safe_mul(&Ratio::from(*self))
+        Ratio::from(*self).of(amount)
     }
 
     /// the inverse of `Percent::of`
@@ -51,11 +51,10 @@ impl Percent {
     {
         use cosmwasm_std::Fraction;
         debug_assert!(self != &Self::ZERO);
-        amount.safe_mul(
-            &Ratio::from(*self)
-                .inv()
-                .expect("precondition not respected"),
-        )
+        Ratio::from(*self)
+            .inv()
+            .expect("precondition not respected")
+            .of(amount)
     }
 
     pub fn checked_add(self, other: Self) -> FinanceResult<Self> {
@@ -140,7 +139,7 @@ impl<'a> Sub<&'a Percent> for Percent {
 pub(super) mod test {
     use std::fmt::{Debug, Display};
 
-    use crate::{coin::Coin, percent::Percent, percentable::Percentable, currency::Nls};
+    use crate::{coin::Coin, currency::Nls, percent::Percent, percentable::Percentable};
 
     use super::Units;
 
