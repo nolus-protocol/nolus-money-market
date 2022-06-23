@@ -60,7 +60,7 @@ pub fn execute(
         ),
         ExecuteMsg::OpenLoan { amount } => try_open_loan(deps, env, sender, amount),
         ExecuteMsg::RepayLoan => try_repay_loan(deps, env, sender, funds),
-        ExecuteMsg::Deposit => try_deposit(deps, env, sender, funds),
+        ExecuteMsg::Deposit() => try_deposit(deps, env, sender, funds),
         ExecuteMsg::Burn { amount } => try_withdraw(deps, env, sender, amount),
         ExecuteMsg::DistributeRewards => try_distribute_rewards(deps, funds),
         ExecuteMsg::ClaimRewards { other_recipient } => try_claim_rewards(deps, sender, other_recipient),
@@ -80,9 +80,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             lease_addr,
             outstanding_time,
         )?),
-        QueryMsg::Price => to_binary(&query_ntoken_price(deps, env)?),
+        QueryMsg::Price() => to_binary(&query_ntoken_price(deps, env)?),
         QueryMsg::Balance { address } => to_binary(&query_balance(deps.storage, address)?),
-        QueryMsg::LppBalance => to_binary(&query_lpp_balance(deps, env)?),
+        QueryMsg::LppBalance() => to_binary(&query_lpp_balance(deps, env)?),
         QueryMsg::Rewards { address } => to_binary(&query_rewards(deps.storage, address)?),
     }?;
 

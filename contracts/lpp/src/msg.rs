@@ -21,7 +21,7 @@ pub enum ExecuteMsg {
     OpenLoan { amount: Coin },
     RepayLoan,
 
-    Deposit,
+    Deposit(),
     // CW20 interface, withdraw from lender deposit
     Burn { amount: Uint128},
 
@@ -47,8 +47,8 @@ pub enum QueryMsg {
 
     /// CW20 interface, lender deposit balance
     Balance { address: Addr },
-    LppBalance,
-    Price,
+    LppBalance(),
+    Price(),
 
     Rewards { address: Addr },
 }
