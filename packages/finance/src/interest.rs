@@ -1,21 +1,29 @@
 use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
-use std::{cmp, fmt::Debug, ops::{Sub, Mul, Div}};
+use std::{
+    cmp,
+    fmt::Debug,
+    ops::{Div, Mul, Sub},
+};
 
 use crate::{
     duration::{Duration, Units as TimeUnits},
-    percent::Percent,
-    fractionable::{Percentable, TimeSliceable, Integer},
+    fraction::Fraction,
+    fractionable::{Integer, Percentable, TimeSliceable}, percent::Units,
 };
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
-pub struct InterestPeriod {
+pub struct InterestPeriod<F>
+{
     start: Timestamp,
     length: Duration,
-    interest: Percent,
+    interest: F,
 }
 
-impl InterestPeriod {
-    pub fn with_interest(interest: Percent) -> Self {
+impl<F> InterestPeriod<F> 
+where
+    F: Fraction<Units> + Copy,
+{
+    pub fn with_interest(interest: F) -> Self {
         Self {
             start: Timestamp::default(),
             length: Duration::default(),
@@ -69,13 +77,12 @@ impl InterestPeriod {
         self.interest_by(principal, self.till())
     }
 
-    pub fn pay<P,D>(self, principal: P, payment: P, by: Timestamp) -> (Self, P)
+    pub fn pay<P, D>(self, principal: P, payment: P, by: Timestamp) -> (Self, P)
     where
         P: Percentable + TimeSliceable + Ord + Default + Sub<Output = P> + Copy,
         TimeUnits: Integer<DoubleInteger = D> + TryFrom<D>,
         D: From<TimeUnits> + From<P> + Mul<D, Output = D> + Div<D, Output = D>,
         <TimeUnits as TryFrom<D>>::Error: Debug,
-
     {
         let by_within_period = self.move_within_period(by);
         let interest_due_per_period = self.interest_by(principal, by_within_period);
@@ -96,7 +103,6 @@ impl InterestPeriod {
     where
         P: Percentable + TimeSliceable,
     {
-        use crate::fraction::Fraction;
         debug_assert!(self.start <= by);
         debug_assert!(by <= self.till());
         let period = Duration::between(self.start, by);

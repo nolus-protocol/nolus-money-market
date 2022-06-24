@@ -33,7 +33,7 @@ pub struct Loan<L> {
     lpp: L,
     interest_due_period_secs: u32,
     grace_period_secs: u32,
-    current_period: InterestPeriod,
+    current_period: InterestPeriod<Percent>,
 }
 
 impl<L> Loan<L>
