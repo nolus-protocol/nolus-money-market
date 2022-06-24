@@ -1,6 +1,6 @@
-use cosmwasm_std::{Fraction, Uint256};
+use cosmwasm_std::Uint256;
 
-use crate::coin::Coin;
+use crate::{coin::Coin, ratio::Ratio};
 
 use super::Fractionable;
 
@@ -9,11 +9,11 @@ where
     Uint256: From<U>,
     U: PartialEq,
 {
-    fn safe_mul<F>(self, fraction: &F) -> Self
+    fn safe_mul<R>(self, ratio: &R) -> Self
     where
-        F: Fraction<U>,
+        R: Ratio<U>,
     {
-        Self::new(self.amount().safe_mul(fraction))
+        Self::new(self.amount().safe_mul(ratio))
     }
 }
 

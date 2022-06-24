@@ -10,13 +10,11 @@ use std::{
     ops::{Div, Mul},
 };
 
-use cosmwasm_std::Fraction;
-
-use crate::{duration::Units as TimeUnits, percent::Units as PercentUnits};
+use crate::{duration::Units as TimeUnits, percent::Units as PercentUnits, ratio::Ratio};
 pub trait Fractionable<U> {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
-        F: Fraction<U>;
+        F: Ratio<U>;
 }
 
 pub trait Percentable: Fractionable<PercentUnits> {}
@@ -37,16 +35,16 @@ where
     DIntermediate: TryFrom<D>,
     U: PartialEq,
 {
-    fn safe_mul<F>(self, fraction: &F) -> Self
+    fn safe_mul<R>(self, ratio: &R) -> Self
     where
-        F: Fraction<U>,
+        R: Ratio<U>,
     {
         // TODO debug_assert_eq!(T::BITS * 2, D::BITS);
-        if fraction.numerator() == fraction.denominator() {
+        if ratio.parts() == ratio.total() {
             self
         } else {
-            let res_double: D = D::from(self) * D::from(fraction.numerator());
-            let res_double = res_double / D::from(fraction.denominator());
+            let res_double: D = D::from(self) * D::from(ratio.parts());
+            let res_double = res_double / D::from(ratio.total());
             let res_intermediate: DIntermediate =
                 res_double.try_into().expect("unexpected overflow");
             res_intermediate.into()

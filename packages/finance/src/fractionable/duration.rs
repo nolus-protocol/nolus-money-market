@@ -3,9 +3,7 @@ use std::{
     ops::{Div, Mul},
 };
 
-use cosmwasm_std::Fraction;
-
-use crate::duration::{Duration, Units};
+use crate::{duration::{Duration, Units}, ratio::Ratio};
 
 use super::{Fractionable, Integer};
 
@@ -16,11 +14,11 @@ where
     <Units as TryFrom<D>>::Error: Debug,
     U: PartialEq,
 {
-    fn safe_mul<F>(self, fraction: &F) -> Self
+    fn safe_mul<R>(self, ratio: &R) -> Self
     where
-        F: Fraction<U>,
+        R: Ratio<U>,
     {
-        let nanos = self.nanos().safe_mul(fraction);
+        let nanos = self.nanos().safe_mul(ratio);
         Self::from_nanos(nanos)
     }
 }

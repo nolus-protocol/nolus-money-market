@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     fractionable::{Integer, TimeSliceable},
-    ratio::Ratio,
+    ratio::Rational,
 };
 
 pub type Units = u64;
@@ -39,7 +39,7 @@ impl Duration {
     where
         T: TimeSliceable,
     {
-        annual_amount.safe_mul(&Ratio::from(*self))
+        annual_amount.safe_mul(&Rational::new(self.nanos(), Duration::YEAR.nanos()))
     }
 
     pub fn into_slice_per_ratio<U, D>(self, amount: U, annual_amount: U) -> Self
@@ -50,31 +50,7 @@ impl Duration {
         <Units as TryFrom<D>>::Error: Debug,
     {
         use crate::fractionable::Fractionable;
-        self.safe_mul(&Ratio::new(amount, annual_amount))
-    }
-}
-
-impl From<Duration> for Ratio<Units> {
-    fn from(p: Duration) -> Self {
-        Self::new(p.nanos(), Duration::YEAR.nanos())
-    }
-}
-
-struct DurationPerYear {
-    nominator: Duration,
-}
-
-impl Fraction<Units> for DurationPerYear {
-    fn numerator(&self) -> Units {
-        self.nominator.nanos()
-    }
-
-    fn denominator(&self) -> Units {
-        Duration::YEAR.nanos()
-    }
-
-    fn inv(&self) -> Option<Self> {
-        todo!();
+        self.safe_mul(&Rational::new(amount, annual_amount))
     }
 }
 

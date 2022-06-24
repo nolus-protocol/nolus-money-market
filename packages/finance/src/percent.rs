@@ -7,7 +7,7 @@ use cosmwasm_std::{OverflowError, OverflowOperation};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::Result as FinanceResult, fractionable::Percentable, ratio::Ratio};
+use crate::{error::Result as FinanceResult, fractionable::Percentable, ratio::Rational};
 
 pub type Units = u32;
 
@@ -39,7 +39,7 @@ impl Percent {
     where
         P: Percentable,
     {
-        Ratio::from(*self).of(amount)
+        Rational::from(*self).of(amount)
     }
 
     /// the inverse of `Percent::of`
@@ -49,9 +49,9 @@ impl Percent {
     where
         P: Percentable,
     {
-        use cosmwasm_std::Fraction;
+        use crate::ratio::Ratio;
         debug_assert!(self != &Self::ZERO);
-        Ratio::from(*self)
+        Rational::from(*self)
             .inv()
             .expect("precondition not respected")
             .of(amount)
@@ -72,7 +72,7 @@ impl Percent {
     }
 }
 
-impl From<Percent> for Ratio<Units> {
+impl From<Percent> for Rational<Units> {
     fn from(p: Percent) -> Self {
         Self::new(p.units(), Percent::HUNDRED.units())
     }

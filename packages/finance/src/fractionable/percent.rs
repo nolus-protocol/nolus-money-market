@@ -1,7 +1,5 @@
-use cosmwasm_std::Fraction;
-
 use crate::{
-    percent::{Percent, Units},
+    percent::{Percent, Units}, ratio::Ratio,
 };
 
 use super::{Integer, Fractionable};
@@ -12,11 +10,11 @@ impl Integer for Units {
 }
 
 impl Fractionable<Units> for Percent {
-    fn safe_mul<F>(self, fraction: &F) -> Self
+    fn safe_mul<R>(self, ratio: &R) -> Self
     where
-        F: Fraction<Units>,
+        R: Ratio<Units>,
     {
-        Percent::from_permille(self.units().safe_mul(fraction))
+        Percent::from_permille(self.units().safe_mul(ratio))
     }
 }
 

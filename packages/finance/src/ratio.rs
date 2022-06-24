@@ -1,17 +1,25 @@
-use cosmwasm_std::Fraction;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::fractionable::Fractionable;
 
+pub trait Ratio<U>
+where
+    Self: Sized,
+{
+    fn parts(&self) -> U;
+    fn total(&self) -> U;
+    fn inv(&self) -> Option<Self>;
+}
+
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct Ratio<U> {
+pub struct Rational<U> {
     nominator: U,
     denominator: U,
 }
 
-impl<U> Ratio<U> {
+impl<U> Rational<U> {
     pub fn new(nominator: U, denominator: U) -> Self {
         Self {
             nominator,
@@ -20,7 +28,7 @@ impl<U> Ratio<U> {
     }
 }
 
-impl<U> Ratio<U>
+impl<U> Rational<U>
 where
     U: Default + PartialEq + Copy,
 {
@@ -32,15 +40,15 @@ where
     }
 }
 
-impl<U> Fraction<U> for Ratio<U>
+impl<U> Ratio<U> for Rational<U>
 where
     U: Default + PartialEq + Copy,
 {
-    fn numerator(&self) -> U {
+    fn parts(&self) -> U {
         self.nominator
     }
 
-    fn denominator(&self) -> U {
+    fn total(&self) -> U {
         self.denominator
     }
 
@@ -48,7 +56,7 @@ where
         if self.nominator == U::default() {
             None
         } else {
-            Some(Ratio {
+            Some(Rational {
                 nominator: self.denominator,
                 denominator: self.nominator,
             })
