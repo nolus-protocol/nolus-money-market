@@ -75,6 +75,7 @@ impl Liability {
     where
         P: Percentable,
     {
+        use crate::fraction::Fraction;
         debug_assert!(self.init_percent < Percent::HUNDRED);
 
         // borrow = init%.of(borrow + downpayment)
@@ -197,6 +198,7 @@ mod test {
     }
 
     fn test_init_borrow_amount(d: u128, p: u16, exp: u128) {
+        use crate::fraction::Fraction;
         type Currency = Usdc;
         let downpayment = Coin::<Currency>::new(d);
         let percent = Percent::from_percent(p);

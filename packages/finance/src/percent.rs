@@ -7,7 +7,12 @@ use cosmwasm_std::{OverflowError, OverflowOperation};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::Result as FinanceResult, fractionable::Percentable, ratio::Rational};
+use crate::{
+    error::Result as FinanceResult,
+    fraction::Fraction,
+    fractionable::{Fractionable, Percentable},
+    ratio::{Ratio, Rational},
+};
 
 pub type Units = u32;
 
@@ -35,13 +40,6 @@ impl Percent {
         self.0
     }
 
-    pub fn of<P>(&self, amount: P) -> P
-    where
-        P: Percentable,
-    {
-        Rational::from(*self).of(amount)
-    }
-
     /// the inverse of `Percent::of`
     /// If %.of(X) -> Y, then %.are(Y) -> X
     /// :pre self != 0
@@ -49,12 +47,8 @@ impl Percent {
     where
         P: Percentable,
     {
-        use crate::ratio::Ratio;
         debug_assert!(self != &Self::ZERO);
-        Rational::from(*self)
-            .inv()
-            .expect("precondition not respected")
-            .of(amount)
+        self.inv().expect("precondition not respected").of(amount)
     }
 
     pub fn checked_add(self, other: Self) -> FinanceResult<Self> {
@@ -72,9 +66,32 @@ impl Percent {
     }
 }
 
-impl From<Percent> for Rational<Units> {
-    fn from(p: Percent) -> Self {
-        Self::new(p.units(), Percent::HUNDRED.units())
+impl Fraction<Units> for Percent {
+    fn of<A>(&self, whole: A) -> A
+    where
+        A: Fractionable<Units>,
+    {
+        whole.safe_mul(self)
+    }
+}
+
+impl Ratio<Units> for Percent {
+    type Inv = Rational<Units>;
+
+    fn parts(&self) -> Units {
+        self.units()
+    }
+
+    fn total(&self) -> Units {
+        Percent::HUNDRED.units()
+    }
+
+    fn inv(&self) -> Option<Self::Inv> {
+        if self.parts() == Units::default() {
+            None
+        } else {
+            Some(Self::Inv::new(self.total(), self.parts()))
+        }
     }
 }
 
@@ -139,7 +156,9 @@ impl<'a> Sub<&'a Percent> for Percent {
 pub(super) mod test {
     use std::fmt::{Debug, Display};
 
-    use crate::{coin::Coin, currency::Nls, percent::Percent, fractionable::Percentable};
+    use crate::{
+        coin::Coin, currency::Nls, fraction::Fraction, fractionable::Percentable, percent::Percent,
+    };
 
     use super::Units;
 

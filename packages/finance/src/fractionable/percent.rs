@@ -53,6 +53,7 @@ mod test {
     #[test]
     #[should_panic]
     fn of_overflow() {
+        use crate::fraction::Fraction;
         Percent::from_permille(1001).of(Percent::from_permille(Units::MAX));
     }
 

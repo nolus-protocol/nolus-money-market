@@ -1,15 +1,17 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::fractionable::Fractionable;
+use crate::{fraction::Fraction, fractionable::Fractionable};
 
 pub trait Ratio<U>
 where
-    Self: Sized,
+    Self: Sized + Fraction<U>,
 {
+    type Inv: Ratio<U>;
+
     fn parts(&self) -> U;
     fn total(&self) -> U;
-    fn inv(&self) -> Option<Self>;
+    fn inv(&self) -> Option<Self::Inv>;
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -28,15 +30,15 @@ impl<U> Rational<U> {
     }
 }
 
-impl<U> Rational<U>
+impl<U> Fraction<U> for Rational<U>
 where
     U: Default + PartialEq + Copy,
 {
-    pub fn of<A>(&self, amount: A) -> A
+    fn of<A>(&self, whole: A) -> A
     where
         A: Fractionable<U>,
     {
-        amount.safe_mul(self)
+        whole.safe_mul(self)
     }
 }
 
@@ -44,6 +46,8 @@ impl<U> Ratio<U> for Rational<U>
 where
     U: Default + PartialEq + Copy,
 {
+    type Inv = Self;
+
     fn parts(&self) -> U {
         self.nominator
     }
@@ -52,11 +56,11 @@ where
         self.denominator
     }
 
-    fn inv(&self) -> Option<Self> {
+    fn inv(&self) -> Option<Self::Inv> {
         if self.nominator == U::default() {
             None
         } else {
-            Some(Rational {
+            Some(Self {
                 nominator: self.denominator,
                 denominator: self.nominator,
             })

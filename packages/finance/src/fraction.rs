@@ -1,6 +1,6 @@
 use crate::fractionable::Fractionable;
 
-trait Fraction<U> {
+pub trait Fraction<U> {
 
     fn of<A>(&self, whole: A) -> A
     where

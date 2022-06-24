@@ -96,6 +96,7 @@ impl InterestPeriod {
     where
         P: Percentable + TimeSliceable,
     {
+        use crate::fraction::Fraction;
         debug_assert!(self.start <= by);
         debug_assert!(by <= self.till());
         let period = Duration::between(self.start, by);

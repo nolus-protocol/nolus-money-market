@@ -7,6 +7,7 @@ use crate::error::ContractError;
 use crate::msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse};
 use crate::state::{Config, Deposit, Loan, Total};
 use finance::percent::Percent;
+use finance::fraction::Fraction;
 
 pub struct NTokenPrice<'a> {
     price: Decimal,
