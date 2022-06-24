@@ -3,7 +3,7 @@ use std::{
     ops::{Add, Div, Mul, Sub},
 };
 
-use cosmwasm_std::{Fraction, Timestamp, Uint128};
+use cosmwasm_std::{Timestamp, Uint128};
 use serde::{Deserialize, Serialize};
 
 use crate::{

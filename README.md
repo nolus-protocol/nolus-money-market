@@ -29,14 +29,6 @@ rustup component add clippy
 cargo install cargo-edit cargo-workspaces cargo-expand
 ```
 
-### Test
-
-Run the following in a package directory or on the workspace root.
-
-```sh
-cargo test
-```
-
 ### Build
 
 * A non-optimized version of a contract, run in a contract directory:
@@ -52,6 +44,22 @@ docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
   cosmwasm/workspace-optimizer:0.12.6
+```
+
+### Test
+
+Run the following in a package directory or on the workspace root.
+
+```sh
+cargo test
+```
+
+### Lint
+
+Run the following in the workspace root.
+
+```sh
+./lint.sh
 ```
 
 ### Upgrade dependencies
