@@ -1,4 +1,7 @@
-use cosmwasm_std::{BankMsg, DepsMut, Env, MessageInfo, Response, StdResult, Storage};
+use cosmwasm_std::{
+    to_binary, Addr, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
+    Timestamp, WasmMsg,
+};
 
 use crate::{
     msg::ConfigResponse,
@@ -9,7 +12,7 @@ use crate::{
 pub struct Profit {}
 
 impl Profit {
-    pub fn try_config(
+    pub(crate) fn try_config(
         deps: DepsMut,
         info: MessageInfo,
         cadence_hours: u32,
@@ -22,14 +25,18 @@ impl Profit {
 
         Ok(Response::new().add_attribute("method", "config"))
     }
-    pub fn transfer(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+    pub(crate) fn transfer(
+        deps: DepsMut,
+        env: Env,
+        info: MessageInfo,
+    ) -> Result<Response, ContractError> {
         let config = Config::load(deps.storage)?;
 
-        if info.sender != config.time_oracle {
+        if info.sender != config.oracle {
             return Err(ContractError::UnrecognisedAlarm(info.sender));
         }
 
-        let balance = deps.querier.query_all_balances(env.contract.address)?;
+        let balance = deps.querier.query_all_balances(&env.contract.address)?;
 
         if balance.is_empty() {
             return Ok(Response::new()
@@ -37,7 +44,16 @@ impl Profit {
                 .add_attribute("result", "no profit to dispatch"));
         }
 
-        TransferLog::update(deps.storage, env.block.time, &balance)?;
+        let current_time = env.block.time;
+
+        Self::alarm_subscribe_msg(
+            env.contract.address,
+            &config.oracle,
+            current_time,
+            config.cadence_hours,
+        )?;
+
+        TransferLog::update(deps.storage, current_time, &balance)?;
         Ok(Response::new()
             .add_attribute("method", "try_transfer")
             .add_message(BankMsg::Send {
@@ -50,5 +66,25 @@ impl Profit {
         Ok(ConfigResponse {
             cadence_hours: config.cadence_hours,
         })
+    }
+
+    pub(crate) fn alarm_subscribe_msg(
+        this_contract: Addr,
+        oracle_addr: &Addr,
+        current_time: Timestamp,
+        cadence_hours: u32,
+    ) -> StdResult<CosmosMsg> {
+        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+            funds: vec![],
+            contract_addr: oracle_addr.to_string(),
+            msg: to_binary(&oracle::msg::ExecuteMsg::AddAlarm {
+                addr: this_contract,
+                time: current_time.plus_seconds(Self::to_seconds(cadence_hours)),
+            })?,
+        }))
+    }
+
+    fn to_seconds(cadence_hours: u32) -> u64 {
+        cadence_hours as u64 * 60 * 60
     }
 }

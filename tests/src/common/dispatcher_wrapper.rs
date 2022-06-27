@@ -26,18 +26,16 @@ impl DispatcherWrapper {
         self,
         app: &mut App,
         lpp: &Addr,
-        time_oracle: &Addr,
+        oracle: &Addr,
         treasury: &Addr,
-        market_oracle: &Addr,
         _denom: &str,
     ) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = rewards_dispatcher::msg::InstantiateMsg {
             cadence_hours: 10,
             lpp: lpp.clone(),
-            time_oracle: time_oracle.clone(),
+            oracle: oracle.clone(),
             treasury: treasury.clone(),
-            market_oracle: market_oracle.clone(),
             tvl_to_apr: Intervals::from(vec![Stop::new(0, 10), Stop::new(1000000, 10)]).unwrap(),
         };
 
