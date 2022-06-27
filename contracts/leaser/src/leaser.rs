@@ -67,7 +67,7 @@ impl Leaser {
 
         Ok(QuoteResponse {
             total: Coin::new(total_amount.u128(), downpayment.denom.clone()),
-            borrow: Coin::new(borrow_amount.u128(), downpayment.denom.clone()),
+            borrow: Coin::new(borrow_amount.u128(), downpayment.denom),
             annual_interest_rate: annual_interest_rate + lease_interest_rate_margin,
         })
     }
