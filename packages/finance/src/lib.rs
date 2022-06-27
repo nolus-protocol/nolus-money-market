@@ -1,7 +1,12 @@
 pub mod percent;
-pub mod percentable;
 pub mod liability;
 pub mod error;
+pub mod bank;
 pub mod coin;
+pub mod coin_legacy;
+pub mod currency;
+pub mod fraction;
+pub mod fractionable;
 pub mod interest;
 pub mod duration;
+pub mod ratio;

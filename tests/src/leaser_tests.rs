@@ -110,53 +110,54 @@ fn open_lease() {
             .unwrap()
     );
 }
-#[test]
-fn open_lease_custom_currency() {
-    let user_addr = Addr::unchecked(USER);
+// #[test]
+// TODO uncomment once the lease works with any currency
+// fn open_lease_custom_currency() {
+//     let user_addr = Addr::unchecked(USER);
 
-    let custom_denom = "token";
+//     let custom_denom = "token";
 
-    let mut test_case = TestCase::new(custom_denom);
-    test_case.init(&user_addr, coins(500, custom_denom));
-    test_case.init_lpp(None);
-    test_case.init_leaser();
+//     let mut test_case = TestCase::new(custom_denom);
+//     test_case.init(&user_addr, coins(500, custom_denom));
+//     test_case.init_lpp(None);
+//     test_case.init_leaser();
 
-    assert_eq!(
-        coins(500, custom_denom),
-        test_case
-            .app
-            .wrap()
-            .query_all_balances(user_addr.clone())
-            .unwrap()
-    );
+//     assert_eq!(
+//         coins(500, custom_denom),
+//         test_case
+//             .app
+//             .wrap()
+//             .query_all_balances(user_addr.clone())
+//             .unwrap()
+//     );
 
-    let res = test_case
-        .app
-        .execute_contract(
-            user_addr.clone(),
-            test_case.leaser_addr.unwrap(),
-            &leaser::msg::ExecuteMsg::OpenLease {
-                currency: custom_denom.to_string(),
-            },
-            &coins(3, custom_denom),
-        )
-        .unwrap();
+//     let res = test_case
+//         .app
+//         .execute_contract(
+//             user_addr.clone(),
+//             test_case.leaser_addr.unwrap(),
+//             &leaser::msg::ExecuteMsg::OpenLease {
+//                 currency: custom_denom.to_string(),
+//             },
+//             &coins(3, custom_denom),
+//         )
+//         .unwrap();
 
-    let lease_address = &res.events[7].attributes.get(1).unwrap().value;
+//     let lease_address = &res.events[7].attributes.get(1).unwrap().value;
 
-    assert_eq!(
-        coins(497, custom_denom),
-        test_case.app.wrap().query_all_balances(user_addr).unwrap()
-    );
-    assert_eq!(
-        coins(5, custom_denom),
-        test_case
-            .app
-            .wrap()
-            .query_all_balances(lease_address)
-            .unwrap()
-    );
-}
+//     assert_eq!(
+//         coins(497, custom_denom),
+//         test_case.app.wrap().query_all_balances(user_addr).unwrap()
+//     );
+//     assert_eq!(
+//         coins(5, custom_denom),
+//         test_case
+//             .app
+//             .wrap()
+//             .query_all_balances(lease_address)
+//             .unwrap()
+//     );
+// }
 
 #[test]
 #[should_panic(expected = "this is a single currency lease version")]

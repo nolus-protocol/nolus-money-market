@@ -77,7 +77,7 @@ pub fn mock_lpp_query(
     msg: lpp::msg::QueryMsg,
 ) -> Result<Binary, ContractError> {
     let res = match msg {
-        lpp::msg::QueryMsg::LppBalance => to_binary(&lpp::msg::LppBalanceResponse {
+        lpp::msg::QueryMsg::LppBalance() => to_binary(&lpp::msg::LppBalanceResponse {
             balance: Coin::new(1000000000, "UST"),
             total_principal_due: Coin::new(1000000000, "UST"),
             total_interest_due: Coin::new(1000000000, "UST"),

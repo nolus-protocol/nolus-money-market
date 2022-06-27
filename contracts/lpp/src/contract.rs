@@ -60,7 +60,7 @@ pub fn execute(
         ),
         ExecuteMsg::OpenLoan { amount } => try_open_loan(deps, env, sender, amount),
         ExecuteMsg::RepayLoan => try_repay_loan(deps, env, sender, funds),
-        ExecuteMsg::Deposit => try_deposit(deps, env, sender, funds),
+        ExecuteMsg::Deposit() => try_deposit(deps, env, sender, funds),
         ExecuteMsg::Burn { amount } => try_withdraw(deps, env, sender, amount),
         ExecuteMsg::DistributeRewards => try_distribute_rewards(deps, funds),
         ExecuteMsg::ClaimRewards { other_recipient } => try_claim_rewards(deps, sender, other_recipient),
@@ -80,9 +80,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             lease_addr,
             outstanding_time,
         )?),
-        QueryMsg::Price => to_binary(&query_ntoken_price(deps, env)?),
+        QueryMsg::Price() => to_binary(&query_ntoken_price(deps, env)?),
         QueryMsg::Balance { address } => to_binary(&query_balance(deps.storage, address)?),
-        QueryMsg::LppBalance => to_binary(&query_lpp_balance(deps, env)?),
+        QueryMsg::LppBalance() => to_binary(&query_lpp_balance(deps, env)?),
         QueryMsg::Rewards { address } => to_binary(&query_rewards(deps.storage, address)?),
     }?;
 
@@ -169,29 +169,29 @@ fn try_withdraw(
     deps: DepsMut,
     env: Env,
     lender_addr: Addr,
-    amount: Uint128,
+    amount_nlpn: Uint128,
 ) -> Result<Response, ContractError> {
-    let lpp = LiquidityPool::load(deps.storage)?;
-    let price = lpp.calculate_price(&deps.as_ref(), &env)?.get();
-    let payment = amount * price;
 
-    if lpp.balance(&deps.as_ref(), &env)?.amount < payment {
-        return Err(ContractError::NoLiquidity {});
-    }
+    let lpp = LiquidityPool::load(deps.storage)?;
+
+    let payment_lpn = lpp.withdraw_lpn(&deps.as_ref(), &env, amount_nlpn)?;
+    let mut msg_payment = vec![payment_lpn];
 
     let maybe_reward =
-        Deposit::load(deps.storage, lender_addr.clone())?.withdraw(deps.storage, amount)?;
+        Deposit::load(deps.storage, lender_addr.clone())?.withdraw(deps.storage, amount_nlpn)?;
 
-    let payment_msg = lpp.pay(lender_addr, payment);
-
-    let mut response = Response::new()
-        .add_attribute("method", "try_withdraw")
-        .add_message(payment_msg);
-
-    // TODO: refactor pay to avoid sending 2 msgs
     if let Some(reward_msg) = maybe_reward {
-        response = response.add_message(reward_msg)
+        msg_payment.push(reward_msg)
     }
+
+    let msg = BankMsg::Send {
+            to_address: lender_addr.into(),
+            amount: msg_payment,
+        };
+
+    let response = Response::new()
+        .add_attribute("method", "try_withdraw")
+        .add_message(msg);
 
     Ok(response)
 }
@@ -217,12 +217,18 @@ fn try_claim_rewards(
     addr: Addr,
     other_recipient: Option<Addr>,
 ) -> Result<Response, ContractError> {
+    let recipient = other_recipient.unwrap_or_else(|| addr.clone());
     let mut deposit = Deposit::load(deps.storage, addr)?;
-    let reward_msg = deposit.claim_rewards(deps.storage, other_recipient)?;
+    let reward = deposit.claim_rewards(deps.storage)?;
+
+    let msg = BankMsg::Send {
+            to_address: recipient.into(),
+            amount: vec![reward],
+        };
 
     let response = Response::new()
         .add_attribute("method", "try_claim_rewards")
-        .add_message(reward_msg);
+        .add_message(msg);
 
     Ok(response)
 }

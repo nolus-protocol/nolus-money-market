@@ -1,12 +1,13 @@
 use cosmwasm_std::{coins, Addr, Coin};
 use cw_multi_test::Executor;
+use finance::currency::{Usdc, Currency};
 
 use crate::common::{test_case::TestCase, USER};
 
 #[test]
 #[should_panic(expected = "Unauthorized contract Id")]
 fn open_loan_unauthorized_contract_id() {
-    let denom = "UST";
+    let denom = Usdc::SYMBOL;
     let user_addr = Addr::unchecked(USER);
 
     let mut test_case = TestCase::new(denom);
@@ -24,7 +25,7 @@ fn open_loan_unauthorized_contract_id() {
             lease_addr,
             test_case.lpp_addr.unwrap(),
             &lpp::msg::ExecuteMsg::OpenLoan {
-                amount: Coin::new(100, "UST"),
+                amount: Coin::new(100, denom),
             },
             &coins(200, denom),
         )
@@ -34,7 +35,7 @@ fn open_loan_unauthorized_contract_id() {
 #[test]
 #[should_panic(expected = "No liquidity")]
 fn open_loan_no_liquidity() {
-    let denom = "UST";
+    let denom = Usdc::SYMBOL;
     let user_addr = Addr::unchecked(USER);
 
     let mut test_case = TestCase::new(denom);
@@ -49,7 +50,7 @@ fn open_loan_no_liquidity() {
             lease_addr,
             test_case.lpp_addr.unwrap(),
             &lpp::msg::ExecuteMsg::OpenLoan {
-                amount: Coin::new(100, "UST"),
+                amount: Coin::new(100, denom),
             },
             &coins(200, denom),
         )

@@ -50,7 +50,7 @@ impl LeaseWrapper {
             code_id,
             Addr::unchecked(ADMIN),
             &msg,
-            &coins(1000, "UST"),
+            &coins(1000, denom),
             "lease",
             None,
         )

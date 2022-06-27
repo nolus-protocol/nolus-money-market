@@ -1,10 +1,10 @@
-use cosmwasm_std::Coin;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result},
     percent::Percent,
+    fractionable::Percentable,
 };
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq, JsonSchema)]
@@ -71,21 +71,24 @@ impl Liability {
         }
     }
 
-    pub fn init_borrow_amount(&self, downpayment: Coin) -> Coin {
-        // let init = self.init_percent.into();
+    pub fn init_borrow_amount<P>(&self, downpayment: P) -> P
+    where
+        P: Percentable,
+    {
+        use crate::fraction::Fraction;
         debug_assert!(self.init_percent < Percent::HUNDRED);
 
         // borrow = init%.of(borrow + downpayment)
-        // (100% - init%).of(borrow) = init%.of(dowmpayment)
+        // (100% - init%).of(borrow) = init%.of(downpayment)
         (Percent::HUNDRED - self.init_percent).are(self.init_percent.of(downpayment))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{from_slice, Coin};
+    use cosmwasm_std::from_slice;
 
-    use crate::{error::Error, percent::Percent};
+    use crate::{coin::Coin, error::Error, percent::Percent, currency::Usdc};
 
     use super::{Liability, SECS_IN_HOUR};
 
@@ -195,8 +198,9 @@ mod test {
     }
 
     fn test_init_borrow_amount(d: u128, p: u16, exp: u128) {
-        let denom = String::from("UST");
-        let downpayment = Coin::new(d, denom.clone());
+        use crate::fraction::Fraction;
+        type Currency = Usdc;
+        let downpayment = Coin::<Currency>::new(d);
         let percent = Percent::from_percent(p);
         let calculated = Liability {
             init_percent: percent,
@@ -204,15 +208,9 @@ mod test {
             max_percent: Percent::from_percent(100),
             recalc_secs: 20000,
         }
-        .init_borrow_amount(downpayment.clone());
-        assert_eq!(Coin::new(exp, denom), calculated);
-        assert_eq!(
-            calculated,
-            percent.of(Coin {
-                amount: downpayment.amount + calculated.amount,
-                denom: downpayment.denom
-            })
-        );
+        .init_borrow_amount(downpayment);
+        assert_eq!(Coin::<Currency>::new(exp), calculated);
+        assert_eq!(calculated, percent.of(downpayment + calculated));
     }
 
     #[test]

@@ -1,6 +1,6 @@
 use std::any::type_name;
 
-use cosmwasm_std::OverflowError;
+use cosmwasm_std::{OverflowError, StdError};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -10,6 +10,12 @@ pub enum Error {
 
     #[error("{0}")]
     OverflowError(#[from] OverflowError),
+
+    #[error("Found currency {0} expecting {1}")]
+    UnexpectedCurrency(String, String),
+
+    #[error("{0}")]
+    CosmWasmError(#[from] StdError),
 }
 
 impl Error {
@@ -32,10 +38,7 @@ mod test {
         let test_x_type_name: &str = type_name::<TestX>();
 
         let err = Error::broken_invariant_err::<TestX>();
-        assert_eq!(
-            &Error::BrokenInvariant(test_x_type_name.into()),
-            &err
-        );
+        assert_eq!(&Error::BrokenInvariant(test_x_type_name.into()), &err);
 
         assert_eq!(
             format!(

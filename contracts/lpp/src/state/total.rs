@@ -6,6 +6,7 @@ use finance::duration::Duration;
 use finance::percent::Percent;
 use crate::error::ContractError;
 use finance::interest::InterestPeriod;
+use finance::fraction::Fraction;
 
 // TODO: evaluate fixed or rust_decimal instead of cosmwasm_std::Decimal
 // https://docs.rs/fixed/latest/fixed/index.html

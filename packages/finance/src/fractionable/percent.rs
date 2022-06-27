@@ -1,21 +1,20 @@
-use cosmwasm_std::Fraction;
-
 use crate::{
-    percent::{Percent, Units},
+    percent::{Percent, Units}, ratio::Ratio,
 };
 
 use super::{Integer, Fractionable};
 
 impl Integer for Units {
+    type SameBitsInteger = Self;
     type DoubleInteger = u64;
 }
 
 impl Fractionable<Units> for Percent {
-    fn safe_mul<F>(self, fraction: &F) -> Self
+    fn safe_mul<R>(self, ratio: &R) -> Self
     where
-        F: Fraction<Units>,
+        R: Ratio<Units>,
     {
-        Percent::from_permille(self.units().safe_mul(fraction))
+        Percent::from_permille(self.units().safe_mul(ratio))
     }
 }
 
@@ -54,6 +53,7 @@ mod test {
     #[test]
     #[should_panic]
     fn of_overflow() {
+        use crate::fraction::Fraction;
         Percent::from_permille(1001).of(Percent::from_permille(Units::MAX));
     }
 

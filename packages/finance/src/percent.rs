@@ -3,11 +3,16 @@ use std::{
     ops::{Add, Sub},
 };
 
-use cosmwasm_std::{Fraction, OverflowError, OverflowOperation};
+use cosmwasm_std::{OverflowError, OverflowOperation};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::Result as FinanceResult, percentable::Percentable};
+use crate::{
+    error::Result as FinanceResult,
+    fraction::Fraction,
+    fractionable::{Fractionable, Percentable},
+    ratio::{Ratio, Rational},
+};
 
 pub type Units = u32;
 
@@ -35,13 +40,6 @@ impl Percent {
         self.0
     }
 
-    pub fn of<P>(&self, amount: P) -> P
-    where
-        P: Percentable,
-    {
-        amount.safe_mul(&internal::Ratio::from(*self))
-    }
-
     /// the inverse of `Percent::of`
     /// If %.of(X) -> Y, then %.are(Y) -> X
     /// :pre self != 0
@@ -50,11 +48,7 @@ impl Percent {
         P: Percentable,
     {
         debug_assert!(self != &Self::ZERO);
-        amount.safe_mul(
-            &internal::Ratio::from(*self)
-                .inv()
-                .expect("precondition not respected"),
-        )
+        self.inv().expect("precondition not respected").of(amount)
     }
 
     pub fn checked_add(self, other: Self) -> FinanceResult<Self> {
@@ -69,6 +63,35 @@ impl Percent {
             .checked_sub(other.0)
             .map(Self::from_permille)
             .ok_or_else(|| OverflowError::new(OverflowOperation::Sub, self, other).into())
+    }
+}
+
+impl Fraction<Units> for Percent {
+    fn of<A>(&self, whole: A) -> A
+    where
+        A: Fractionable<Units>,
+    {
+        whole.safe_mul(self)
+    }
+}
+
+impl Ratio<Units> for Percent {
+    type Inv = Rational<Units>;
+
+    fn parts(&self) -> Units {
+        self.units()
+    }
+
+    fn total(&self) -> Units {
+        Percent::HUNDRED.units()
+    }
+
+    fn inv(&self) -> Option<Self::Inv> {
+        if self.parts() == Units::default() {
+            None
+        } else {
+            Some(Self::Inv::new(self.total(), self.parts()))
+        }
     }
 }
 
@@ -129,50 +152,13 @@ impl<'a> Sub<&'a Percent> for Percent {
     }
 }
 
-mod internal {
-    use cosmwasm_std::Fraction;
-
-    use super::{Percent, Units};
-
-    pub(super) struct Ratio {
-        nominator: Units,
-        denominator: Units,
-    }
-    impl Fraction<Units> for Ratio {
-        fn numerator(&self) -> Units {
-            self.nominator
-        }
-
-        fn denominator(&self) -> Units {
-            self.denominator
-        }
-
-        fn inv(&self) -> Option<Self> {
-            match self.nominator {
-                Units::MIN => None,
-                _ => Some(Ratio {
-                    nominator: self.denominator,
-                    denominator: self.nominator,
-                }),
-            }
-        }
-    }
-    impl From<Percent> for Ratio {
-        fn from(p: Percent) -> Self {
-            Self {
-                nominator: p.units(),
-                denominator: Percent::HUNDRED.units(),
-            }
-        }
-    }
-}
 #[cfg(test)]
 pub(super) mod test {
     use std::fmt::{Debug, Display};
 
-    use cosmwasm_std::Coin;
-
-    use crate::{percent::Percent, percentable::Percentable};
+    use crate::{
+        coin::Coin, currency::Nls, fraction::Fraction, fractionable::Percentable, percent::Percent,
+    };
 
     use super::Units;
 
@@ -194,17 +180,15 @@ pub(super) mod test {
 
     #[test]
     fn test_zero() {
-        let d = String::from("sfw");
-        assert_eq!(Coin::new(0, d.clone()), Percent::ZERO.of(Coin::new(10, d)))
+        assert_eq!(Coin::<Nls>::new(0), Percent::ZERO.of(Coin::<Nls>::new(10)))
     }
 
     #[test]
     fn test_hundred() {
-        let d = String::from("sfw");
         let amount = 123;
         assert_eq!(
-            Coin::new(amount, d.clone()),
-            Percent::HUNDRED.of(Coin::new(amount, d))
+            Coin::<Nls>::new(amount),
+            Percent::HUNDRED.of(Coin::<Nls>::new(amount))
         )
     }
 

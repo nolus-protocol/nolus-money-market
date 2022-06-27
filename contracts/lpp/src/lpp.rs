@@ -7,6 +7,7 @@ use crate::error::ContractError;
 use crate::msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse};
 use crate::state::{Config, Deposit, Loan, Total};
 use finance::percent::Percent;
+use finance::fraction::Fraction;
 
 pub struct NTokenPrice<'a> {
     price: Decimal,
@@ -133,6 +134,18 @@ impl LiquidityPool {
         } else {
             Ok(())
         }
+    }
+
+    pub fn withdraw_lpn(&self, deps: &Deps, env: &Env, amount_nlpn: Uint128) -> Result<Coin, ContractError> {
+        let price = self.calculate_price(deps, env)?
+            .get();
+        let amount_lpn = price*amount_nlpn;
+
+        if self.balance(deps, env)?.amount < amount_lpn {
+            return Err(ContractError::NoLiquidity {});
+        }
+
+        Ok(coin(amount_lpn.u128(), &self.config.denom))
     }
 
     pub fn pay(&self, addr: Addr, amount: Uint128) -> BankMsg {
@@ -569,6 +582,14 @@ mod test {
         let price = lpp.calculate_price(&deps.as_ref(), &env)
             .expect("should get price");
         assert_eq!(price.get(), Decimal::from_ratio(11u128, 10u128));
+
+        let withdraw = lpp.withdraw_lpn(&deps.as_ref(), &env, 1000u128.into())
+            .expect("should withdraw");
+        assert_eq!(withdraw, coin(1100, "uust"));
+
+        // too much
+        let withdraw = lpp.withdraw_lpn(&deps.as_ref(), &env, 10_000_000u128.into());
+        assert!(withdraw.is_err());
 
     }
 
