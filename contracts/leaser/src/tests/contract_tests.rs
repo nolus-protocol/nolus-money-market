@@ -156,7 +156,7 @@ fn test_quote() {
     assert_eq!(Uint128::new(285), resp.total.amount);
     assert_eq!(DENOM, resp.borrow.denom);
     assert_eq!(DENOM, resp.total.denom);
-    assert_eq!(Percent::HUNDRED, resp.annual_interest_rate); // hardcoded until LPP contract is merged
+    assert_eq!(Percent::from_percent(103), resp.annual_interest_rate); // hardcoded until LPP contract is merged
 
     let res = query(
         deps.as_ref(),
