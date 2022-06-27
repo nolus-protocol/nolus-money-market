@@ -3,11 +3,7 @@ use cosmwasm_std::{
     Timestamp, WasmMsg,
 };
 
-use crate::{
-    msg::ConfigResponse,
-    state::{config::Config, transfer_log::TransferLog},
-    ContractError,
-};
+use crate::{msg::ConfigResponse, state::config::Config, ContractError};
 
 pub struct Profit {}
 
@@ -53,7 +49,6 @@ impl Profit {
             config.cadence_hours,
         )?;
 
-        TransferLog::update(deps.storage, current_time, &balance)?;
         Ok(Response::new()
             .add_attribute("method", "try_transfer")
             .add_message(BankMsg::Send {
