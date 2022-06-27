@@ -11,22 +11,23 @@ use crate::{
 #[test]
 fn on_alarm_zero_reeward() {
     let denom = "UST";
-    let time_oracle_addr = Addr::unchecked("time");
 
+    let user = Addr::unchecked(USER);
     let mut test_case = TestCase::new(denom);
-    test_case.init(&time_oracle_addr, coins(500, denom));
+    test_case.init(&user, coins(500, denom));
 
     test_case
         .init_lpp(None)
-        .init_market_oracle(None)
-        .init_time_oracle()
+        .init_oracle(None)
         .init_treasury()
         .init_dispatcher();
+
+    test_case.send_funds(&test_case.oracle.clone().unwrap(), coins(500, denom));
 
     let res = test_case
         .app
         .execute_contract(
-            test_case.time_oracle.unwrap(),
+            test_case.oracle.unwrap(),
             test_case.dispatcher_addr.as_ref().unwrap().clone(),
             &rewards_dispatcher::msg::ExecuteMsg::Alarm {
                 time: test_case.app.block_info().time,
@@ -64,23 +65,13 @@ fn on_alarm_zero_reeward() {
 #[test]
 fn on_alarm() {
     let denom = "UST";
-    let time_oracle_addr = Addr::unchecked("time");
 
     let lender = Addr::unchecked(USER);
 
     let mut test_case = TestCase::new(denom);
-    test_case
-        .init(&time_oracle_addr, coins(500, denom))
-        .init_user_with_funds(&lender, coins(500, denom));
+    test_case.init(&lender, coins(500, denom)).init_oracle(None);
 
-    assert_eq!(
-        coins(500, denom),
-        test_case
-            .app
-            .wrap()
-            .query_all_balances(time_oracle_addr)
-            .unwrap()
-    );
+    test_case.send_funds(&test_case.oracle.clone().unwrap(), coins(500, denom));
 
     test_case
         .init_lpp(Some(ContractWrapper::new(
@@ -88,12 +79,11 @@ fn on_alarm() {
             lpp::contract::instantiate,
             mock_lpp_query,
         )))
-        .init_market_oracle(Some(ContractWrapper::new(
+        .init_oracle(Some(ContractWrapper::new(
             oracle::contract::execute,
             oracle::contract::instantiate,
             mock_oracle_query,
         )))
-        .init_time_oracle()
         .init_treasury()
         .init_dispatcher();
 
@@ -129,7 +119,7 @@ fn on_alarm() {
     let res = test_case
         .app
         .execute_contract(
-            Addr::unchecked("time"),
+            test_case.oracle.unwrap(),
             test_case.dispatcher_addr.clone().unwrap(),
             &rewards_dispatcher::msg::ExecuteMsg::Alarm {
                 time: test_case.app.block_info().time,
@@ -139,7 +129,7 @@ fn on_alarm() {
         .unwrap();
 
     // ensure the attributes were relayed from the sub-message
-    assert_eq!(6, res.events.len(), "{:?}", res.events);
+    assert_eq!(8, res.events.len(), "{:?}", res.events);
 
     let dispatcher_exec = &res.events[0];
     assert_eq!(dispatcher_exec.ty.as_str(), "execute");
@@ -234,8 +224,7 @@ fn test_config_unauthorized() {
         .init(&user_addr, coins(500, denom))
         .init_lpp(None)
         .init_treasury()
-        .init_market_oracle(None)
-        .init_time_oracle()
+        .init_oracle(None)
         .init_dispatcher();
 
     let resp: rewards_dispatcher::msg::ConfigResponse = test_case
@@ -269,8 +258,7 @@ fn test_config() {
         .init(&user_addr, coins(500, denom))
         .init_lpp(None)
         .init_treasury()
-        .init_market_oracle(None)
-        .init_time_oracle()
+        .init_oracle(None)
         .init_dispatcher();
 
     let resp: rewards_dispatcher::msg::ConfigResponse = test_case

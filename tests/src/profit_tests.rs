@@ -10,7 +10,7 @@ fn on_alarm_from_unknown() {
 
     let mut test_case = TestCase::new(denom);
     test_case.init(&user_addr, coins(500, denom));
-    test_case.init_treasury().init_time_oracle().init_profit(2);
+    test_case.init_treasury().init_oracle(None).init_profit(2);
 
     let treasury_balance = test_case
         .app
@@ -46,7 +46,7 @@ fn on_alarm_zero_balance() {
 
     let mut test_case = TestCase::new(denom);
     test_case.init(&time_oracle_addr, coins(500, denom));
-    test_case.init_treasury().init_time_oracle().init_profit(2);
+    test_case.init_treasury().init_oracle(None).init_profit(2);
 
     let initial_treasury_balance = test_case
         .app
@@ -57,7 +57,7 @@ fn on_alarm_zero_balance() {
     let res = test_case
         .app
         .execute_contract(
-            test_case.time_oracle.unwrap(),
+            test_case.oracle.unwrap(),
             test_case.profit_addr.as_ref().unwrap().clone(),
             &profit::msg::ExecuteMsg::Alarm {
                 time: test_case.app.block_info().time,
@@ -106,7 +106,7 @@ fn on_alarm_transfer() {
 
     let mut test_case = TestCase::new(denom);
     test_case.init(&time_oracle_addr, coins(500, denom));
-    test_case.init_treasury().init_time_oracle().init_profit(2);
+    test_case.init_treasury().init_oracle(None).init_profit(2);
 
     test_case
         .app
@@ -120,7 +120,7 @@ fn on_alarm_transfer() {
     let res = test_case
         .app
         .execute_contract(
-            test_case.time_oracle.unwrap(),
+            test_case.oracle.unwrap(),
             test_case.profit_addr.as_ref().unwrap().clone(),
             &profit::msg::ExecuteMsg::Alarm {
                 time: test_case.app.block_info().time,

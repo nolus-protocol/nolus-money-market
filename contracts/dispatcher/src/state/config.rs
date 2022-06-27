@@ -16,10 +16,8 @@ pub struct Config {
     pub lpp: Addr,
     // address to treasury contract
     pub treasury: Addr,
-    // address to time oracle
-    pub time_oracle: Addr,
-    // address to market price oracle
-    pub market_oracle: Addr,
+    // address to oracle
+    pub oracle: Addr,
     // A list of (minTVL_MNLS: u32, APR%o) which defines the APR as per the TVL.
     pub tvl_to_apr: Intervals,
 }
@@ -31,18 +29,16 @@ impl Config {
         owner: Addr,
         cadence_hours: u32,
         lpp: Addr,
-        time_oracle: Addr,
+        oracle: Addr,
         treasury: Addr,
-        market_oracle: Addr,
         tvl_to_apr: Intervals,
     ) -> Self {
         Config {
             cadence_hours,
             owner,
             lpp,
-            time_oracle,
+            oracle,
             tvl_to_apr,
-            market_oracle,
             treasury,
         }
     }

@@ -38,7 +38,7 @@ fn proper_instantiate() -> (App, CwTemplateContract) {
     let msg = InstantiateMsg {
         cadence_hours: 3u32,
         treasury: Addr::unchecked("treasury"),
-        time_oracle: Addr::unchecked("time"),
+        oracle: Addr::unchecked("time"),
     };
     let cw_template_contract_addr = app
         .instantiate_contract(
@@ -61,6 +61,7 @@ mod config {
     use crate::msg::ExecuteMsg;
 
     #[test]
+    #[should_panic(expected = "ContractData not found")]
     fn config() {
         let (mut app, cw_template_contract) = proper_instantiate();
 
