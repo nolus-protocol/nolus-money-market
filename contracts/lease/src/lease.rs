@@ -3,7 +3,7 @@ use cw_storage_plus::Item;
 use finance::{
     bank::BankAccount,
     coin_legacy::to_cosmwasm,
-    currency::{Usdc, SymbolOwned},
+    currency::{SymbolOwned, Usdc},
     liability::Liability,
 };
 use lpp::stub::Lpp;
@@ -11,13 +11,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{ContractError, ContractResult},
-    loan::{Loan, State as LoanState},
-    msg::State,
+    loan::Loan,
+    msg::{Denom, StateResponse},
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Lease<L>
-{
+pub struct Lease<L> {
     customer: Addr,
     currency: SymbolOwned,
     liability: Liability,
@@ -94,28 +93,29 @@ where
         account: B,
         querier: &QuerierWrapper,
         lease: Addr,
-    ) -> ContractResult<Option<State>>
+    ) -> ContractResult<StateResponse>
     where
         B: BankAccount,
     {
-        let loan_state = self.loan.state(now, querier, lease)?;
-        loan_state
-            .map(|open_state| self.merge_state(account, open_state))
-            .transpose()
-    }
+        let lease_amount = to_cosmwasm(account.balance::<Usdc>().map_err(ContractError::from)?);
 
-    fn merge_state<B>(&self, account: B, loan_state: LoanState) -> ContractResult<State>
-    where
-        B: BankAccount,
-    {
-        let lease_amount = account.balance::<Usdc>().map_err(ContractError::from)?;
+        if lease_amount.amount.is_zero() {
+            Ok(StateResponse::Closed)
+        } else {
+            let loan_state = self.loan.state(now, querier, lease)?;
 
-        Ok(State {
-            amount: to_cosmwasm(lease_amount),
-            annual_interest: loan_state.annual_interest,
-            principal_due: loan_state.principal_due,
-            interest_due: loan_state.interest_due,
-        })
+            loan_state.map_or_else(
+                || Ok(StateResponse::Paid(lease_amount.clone())),
+                |state| {
+                    Ok(StateResponse::Opened {
+                        amount: lease_amount.clone(),
+                        interest_rate: state.annual_interest,
+                        principal_due: state.principal_due,
+                        interest_due: state.interest_due,
+                    })
+                },
+            )
+        }
     }
 }
 

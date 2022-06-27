@@ -5,15 +5,17 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct StatusQuery {}
-
-pub type StatusResponse = Option<State>;
+pub struct StateQuery {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct State {
-    pub amount: Coin,
-    pub annual_interest: Percent,
-    pub principal_due: Coin,
-    pub interest_due: Coin,
+pub enum StateResponse {
+    Opened {
+        amount: Coin,
+        interest_rate: Percent,
+        principal_due: Coin,
+        interest_due: Coin,
+    },
+    Paid(Coin),
+    Closed,
 }

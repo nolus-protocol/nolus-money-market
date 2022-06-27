@@ -12,8 +12,8 @@ use finance::currency::Currency;
 use lpp::stub::{Lpp, LppStub, LppVisitor};
 
 use crate::error::{ContractError, ContractResult};
-use crate::lease::Lease;
-use crate::msg::{ExecuteMsg, NewLeaseForm, StatusQuery, StatusResponse};
+use crate::lease::{Currency, Lease};
+use crate::msg::{ExecuteMsg, NewLeaseForm, StateQuery, StateResponse};
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -76,7 +76,7 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, _msg: StatusQuery) -> ContractResult<Binary> {
     let lease = load_lease(deps.storage)?;
     let bank_account = BankStub::my_account(&env, &deps.querier);
-    let resp: StatusResponse = lease.state(
+    let resp: StateResponse = lease.state(
         env.block.time,
         bank_account,
         &deps.querier,

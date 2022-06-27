@@ -1,8 +1,8 @@
 use std::env::current_dir;
 use std::fs::create_dir_all;
 
-use cosmwasm_schema::{remove_schemas, schema_for, export_schema};
-use lease::msg::{NewLeaseForm, ExecuteMsg, StatusQuery};
+use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
+use lease::msg::{ExecuteMsg, NewLeaseForm, StateQuery};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();
@@ -12,7 +12,7 @@ fn main() {
 
     export_schema(&schema_for!(NewLeaseForm), &out_dir);
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
-    export_schema(&schema_for!(StatusQuery), &out_dir);
+    export_schema(&schema_for!(StateQuery), &out_dir);
 }
 
 #[cfg(test)]
@@ -26,5 +26,8 @@ fn test_repay_representation() {
     let repay_bin = to_vec(&msg).expect("serialization failed");
     assert_eq!(msg, from_slice(&repay_bin).expect("deserialization failed"));
 
-    assert_eq!(r#"{"repay":[]}"#, to_string(&msg).expect("deserialization failed"));
+    assert_eq!(
+        r#"{"repay":[]}"#,
+        to_string(&msg).expect("deserialization failed")
+    );
 }
