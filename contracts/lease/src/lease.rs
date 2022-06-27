@@ -121,17 +121,54 @@ where
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{testing::MockStorage, Addr, QuerierWrapper, StdResult, SubMsg, Timestamp};
-    use finance::{coin::Coin, liability::Liability, percent::Percent};
-    use lpp::{msg::QueryLoanResponse, stub::Lpp};
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, MockApi, MockQuerier, MockStorage};
+    use cosmwasm_std::{
+        Addr, Coin as CWCoin, DepsMut, Env, MemoryStorage, OwnedDeps, QuerierWrapper, StdResult,
+        SubMsg, Timestamp,
+    };
+    use finance::{
+        bank::BankAccount,
+        coin::Coin,
+        coin_legacy::from_cosmwasm,
+        currency::{Currency, Usdc},
+        error::Result as FinanceResult,
+        liability::Liability,
+        percent::Percent,
+    };
+    use lpp::msg::{LoanResponse, QueryLoanResponse};
+    use lpp::stub::Lpp;
     use serde::{Deserialize, Serialize};
 
     use crate::loan::Loan;
+    use crate::msg::StateResponse;
 
     use super::Lease;
 
+    const DENOM: &str = Usdc::SYMBOL;
+
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-    struct LppLocalStub {}
+    pub struct BankStub {
+        balance: CWCoin,
+    }
+
+    impl BankAccount for BankStub {
+        fn balance<C>(&self) -> FinanceResult<Coin<C>>
+        where
+            C: Currency,
+        {
+            from_cosmwasm(self.balance.clone())
+        }
+
+        fn send<Usdc>(&self, _amount: Coin<Usdc>, _to: &Addr) -> FinanceResult<SubMsg> {
+            unimplemented!()
+        }
+    }
+
+    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+    struct LppLocalStub {
+        addr: Addr,
+        loan: Option<LoanResponse>,
+    }
     impl Lpp<super::Currency> for LppLocalStub {
         fn open_loan_req(&self, _amount: Coin<super::Currency>) -> StdResult<SubMsg> {
             unimplemented!()
@@ -144,12 +181,13 @@ mod tests {
         fn repay_loan_req(&self, _repayment: Coin<super::Currency>) -> StdResult<SubMsg> {
             todo!()
         }
+
         fn loan(
             &self,
             _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
         ) -> StdResult<QueryLoanResponse> {
-            todo!()
+            Result::Ok(self.loan.clone())
         }
 
         fn loan_outstanding_interest(
@@ -176,7 +214,10 @@ mod tests {
             ),
             loan: Loan::open(
                 Timestamp::default(),
-                LppLocalStub {},
+                LppLocalStub {
+                    addr: Addr::unchecked("lpp"),
+                    loan: None,
+                },
                 Percent::from_percent(23),
                 100,
                 10,
@@ -187,5 +228,147 @@ mod tests {
         obj.store(&mut storage).expect("storing failed");
         let obj_loaded: Lease<LppLocalStub> = Lease::load(&storage).expect("loading failed");
         assert_eq!(obj_exp.customer, obj_loaded.customer);
+    }
+
+    fn lease_setup(
+        loan_response: Option<LoanResponse>,
+        lease_amount: u128,
+    ) -> (
+        Lease<LppLocalStub>,
+        Env,
+        BankStub,
+        OwnedDeps<MemoryStorage, MockApi, MockQuerier>,
+    ) {
+        let deps = mock_dependencies();
+        let mut env = mock_env();
+        env.block.time = Timestamp::from_nanos(0);
+
+        let bank_account = get_bank_account(lease_amount);
+
+        let lpp_stub = LppLocalStub {
+            addr: Addr::unchecked("lpp"),
+            loan: loan_response,
+        };
+
+        let lease = Lease {
+            customer: Addr::unchecked("customer"),
+            currency: DENOM.to_string(),
+            liability: Liability::new(
+                Percent::from_percent(65),
+                Percent::from_percent(70),
+                Percent::from_percent(80),
+                10 * 24,
+            ),
+            loan: Loan::open(
+                Timestamp::from_nanos(0),
+                lpp_stub,
+                Percent::from_permille(23),
+                0,
+                0,
+            )
+            .unwrap(),
+        };
+
+        (lease, env, bank_account, deps)
+    }
+
+    fn get_bank_account(lease_amount: u128) -> BankStub {
+        BankStub {
+            balance: CWCoin::new(lease_amount, DENOM),
+        }
+    }
+
+    fn request_state(
+        lease: Lease<LppLocalStub>,
+        env: Env,
+        bank_account: BankStub,
+        deps: &DepsMut,
+    ) -> StateResponse {
+        lease
+            .state(
+                env.block.time,
+                bank_account,
+                &deps.querier,
+                Addr::unchecked("unused"),
+            )
+            .unwrap()
+    }
+
+    #[test]
+    fn state_opened() {
+        let lease_amount = 1000;
+        // LPP loan
+        let loan = LoanResponse {
+            principal_due: CWCoin::new(300, DENOM),
+            interest_due: CWCoin::new(0, DENOM),
+            annual_interest_rate: Percent::from_permille(50),
+            interest_paid: Timestamp::from_nanos(0),
+        };
+
+        let (lease, env, bank_account, mut deps) = lease_setup(Some(loan.clone()), lease_amount);
+
+        let res = request_state(lease, env, bank_account, &deps.as_mut());
+        let exp = StateResponse::Opened {
+            amount: CWCoin::new(lease_amount, DENOM),
+            interest_rate: Percent::from_permille(73),
+            principal_due: loan.principal_due,
+            interest_due: loan.interest_due,
+        };
+        assert_eq!(
+            exp, res,
+            "EXPECTED =======> {:#?} \n ACTUAL =======> {:#?}",
+            exp, res
+        );
+    }
+
+    #[test]
+    fn state_paid() {
+        let lease_amount = 1000;
+        let (lease, env, bank_account, mut deps) = lease_setup(None, lease_amount);
+
+        let res = request_state(lease, env, bank_account, &deps.as_mut());
+        let exp = StateResponse::Paid(CWCoin::new(lease_amount, DENOM));
+        assert_eq!(
+            exp, res,
+            "EXPECTED =======> {:#?} \n ACTUAL =======> {:#?}",
+            exp, res
+        );
+    }
+
+    #[test]
+    fn state_closed_no_loan() {
+        let lease_amount = 0;
+        let (lease, env, bank_account, mut deps) = lease_setup(None, lease_amount);
+
+        let res = request_state(lease, env, bank_account, &deps.as_mut());
+        let exp = StateResponse::Closed;
+        assert_eq!(
+            exp, res,
+            "EXPECTED =======> {:#?} \n ACTUAL =======> {:#?}",
+            exp, res
+        );
+    }
+
+    #[test]
+    fn state_closed_loan_is_ignored() {
+        let lease_amount = 0;
+        let (lease, env, bank_account, mut deps) = lease_setup(
+            // This loan would never be requested
+            Some(LoanResponse {
+                principal_due: CWCoin::new(0, DENOM),
+                interest_due: CWCoin::new(0, DENOM),
+                annual_interest_rate: Percent::from_permille(50),
+                interest_paid: Timestamp::from_nanos(0),
+            }),
+            lease_amount,
+        );
+
+        let res = request_state(lease, env, bank_account, &deps.as_mut());
+        let exp = StateResponse::Closed;
+        assert_eq!(
+            exp, res,
+            "EXPECTED =======> {:#?} \n ACTUAL =======> {:#?}",
+            exp, res
+        );
     }
 }
