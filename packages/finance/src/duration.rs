@@ -1,13 +1,14 @@
 use std::{
     fmt::Debug,
-    ops::{Add, Div, Mul, Sub},
+    ops::{Add, Sub},
 };
 
 use cosmwasm_std::{Timestamp, Uint128};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    fractionable::{Integer, TimeSliceable},
+    fraction::Fraction,
+    fractionable::{Fractionable, TimeSliceable},
     ratio::Rational,
 };
 
@@ -42,15 +43,12 @@ impl Duration {
         annual_amount.safe_mul(&Rational::new(self.nanos(), Duration::YEAR.nanos()))
     }
 
-    pub fn into_slice_per_ratio<U, D>(self, amount: U, annual_amount: U) -> Self
+    pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
     where
+        Self: Fractionable<U>,
         U: Default + PartialEq + Copy,
-        Units: Integer<DoubleInteger = D> + TryFrom<D>,
-        D: From<Units> + From<U> + Mul<D, Output = D> + Div<D, Output = D>,
-        <Units as TryFrom<D>>::Error: Debug,
     {
-        use crate::fractionable::Fractionable;
-        self.safe_mul(&Rational::new(amount, annual_amount))
+        Rational::new(amount, annual_amount).of(self)
     }
 }
 

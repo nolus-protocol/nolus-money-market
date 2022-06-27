@@ -29,10 +29,11 @@ impl Dispatcher {
         let last_dispatch = DispatchLog::last_dispatch(deps.storage)?;
         // Calculate the reward in LPN,
         // which matches TVLdenom, since the last calculation
-        let reward_lppdenom = InterestPeriod::with_interest(arp_permille)
+        let reward_lppdenom_amount = InterestPeriod::with_interest(arp_permille)
             .from(last_dispatch)
             .spanning(Duration::between(last_dispatch, block_time))
-            .interest(lpp_balance);
+            .interest(lpp_balance.amount);
+            let reward_lppdenom = Coin::new(reward_lppdenom_amount.into(), lpp_balance.denom);
 
         if reward_lppdenom.amount.is_zero() {
             return Self::no_reward_resp();

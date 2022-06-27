@@ -15,7 +15,7 @@ impl NewLeaseForm {
         // TODO msg.invariant_held(deps.api) checking invariants including address validity and incorporating the liability and loan form invariants
         self.liability.invariant_held()?;
 
-        Ok(self.liability.init_borrow_amount(downpayment))
+        Ok(Coin::new(self.liability.init_borrow_amount(downpayment.amount.into()), downpayment.denom))
     }
 
     pub(crate) fn into_lease<L>(self, lpp: L, start_at: Timestamp, api: &dyn Api) -> ContractResult<Lease<L>>
