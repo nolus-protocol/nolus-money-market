@@ -2,6 +2,7 @@ use serde::{Serialize, Deserialize};
 
 type Symbol<'a> = &'a str;
 type SymbolStatic = &'static str;
+pub type SymbolOwned = String;
 
 pub trait Currency: 'static + Copy + Ord + Default {
     const SYMBOL: SymbolStatic;

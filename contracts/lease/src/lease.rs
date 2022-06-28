@@ -1,19 +1,25 @@
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdResult, Storage, SubMsg, Timestamp};
 use cw_storage_plus::Item;
-use finance::{bank::BankAccount, coin_legacy::to_cosmwasm, liability::Liability, currency::Usdc};
+use finance::{
+    bank::BankAccount,
+    coin_legacy::to_cosmwasm,
+    currency::{Usdc, SymbolOwned},
+    liability::Liability,
+};
 use lpp::stub::Lpp;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{ContractError, ContractResult},
     loan::{Loan, State as LoanState},
-    msg::{Denom, State},
+    msg::State,
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Lease<L> {
+pub struct Lease<L>
+{
     customer: Addr,
-    currency: Denom,
+    currency: SymbolOwned,
     liability: Liability,
     loan: Loan<L>,
 }
@@ -21,15 +27,15 @@ pub struct Lease<L> {
 //TODO transform it into a Lease type
 pub type Currency = Usdc;
 
-impl<L> Lease<L>
+impl<'a, L> Lease<L>
 where
     L: Lpp<Currency>,
 {
-    const DB_ITEM: Item<'static, Lease<L>> = Item::new("lease");
+    const DB_ITEM: Item<'a, Lease<L>> = Item::new("lease");
 
     pub(crate) fn new(
         customer: Addr,
-        currency: Denom,
+        currency: SymbolOwned,
         liability: Liability,
         loan: Loan<L>,
     ) -> Self {
