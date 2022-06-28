@@ -1,3 +1,5 @@
+use serde::{Serialize, Deserialize};
+
 type Symbol<'a> = &'a str;
 type SymbolStatic = &'static str;
 
@@ -5,13 +7,13 @@ pub trait Currency: 'static + Copy + Ord + Default {
     const SYMBOL: SymbolStatic;
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Usdc;
 impl Currency for Usdc {
     const SYMBOL: SymbolStatic = "uusdc";
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Nls;
 impl Currency for Nls {
     const SYMBOL: SymbolStatic = "unls";

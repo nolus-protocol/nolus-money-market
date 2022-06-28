@@ -140,8 +140,12 @@ mod test {
     use std::{any::type_name, fmt::Debug};
 
     use cosmwasm_std::{from_slice, to_vec, StdError};
+    use serde::Serialize;
 
-    use crate::{currency::{Nls, Usdc, Currency}, percent::test::{test_of_are, test_of, test_are}};
+    use crate::{
+        currency::{Currency, Nls, Usdc},
+        percent::test::{test_are, test_of, test_of_are},
+    };
 
     use super::Coin;
 
@@ -174,20 +178,39 @@ mod test {
 
         assert_eq!(coin, from_slice(exp_txt.as_bytes()).unwrap());
     }
+    #[test]
+    fn serialize_as_field() {
+        //tested since it requires Serialize of the Currency
+        #[derive(Serialize)]
+        struct CoinContainer<C>
+        where
+            C: Currency,
+            Coin<C>: Serialize,
+        {
+            coin: Coin<C>,
+        }
+        assert_eq!(
+            r#"{"coin":["10","uusdc"]}"#,
+            String::from_utf8(
+                to_vec(&CoinContainer { coin: usdc(10) }).expect("serialization failed")
+            )
+            .unwrap()
+        );
+    }
 
     #[test]
     fn distinct_repr() {
         let amount = 432;
         assert_ne!(
-            to_vec(&Coin::<Nls>::new(amount)).unwrap(),
-            to_vec(&Coin::<Usdc>::new(amount)).unwrap()
+            to_vec(&nls(amount)).unwrap(),
+            to_vec(&usdc(amount)).unwrap()
         );
     }
 
     #[test]
     fn wrong_currency() {
         let amount = 134;
-        let nls_bin = to_vec(&Coin::<Nls>::new(amount)).unwrap();
+        let nls_bin = to_vec(&nls(amount)).unwrap();
         let res = from_slice::<Coin<Usdc>>(&nls_bin);
         assert_eq!(
             Err(StdError::parse_err(
@@ -200,8 +223,8 @@ mod test {
 
     #[test]
     fn display() {
-        assert_eq!("25 unls", Coin::<Nls>::new(25).to_string());
-        assert_eq!("0 uusdc", Coin::<Usdc>::new(0).to_string());
+        assert_eq!("25 unls", nls(25).to_string());
+        assert_eq!("0 uusdc", usdc(0).to_string());
     }
 
     #[test]
@@ -237,4 +260,7 @@ mod test {
         Coin::new(amount)
     }
 
+    fn nls(amount: u128) -> Coin<Nls> {
+        Coin::new(amount)
+    }
 }
