@@ -84,6 +84,65 @@ impl Sub<Duration> for Duration {
     type Output = Duration;
 
     fn sub(self, rhs: Duration) -> Self::Output {
-        Self::Output::from_nanos(self.nanos().add(rhs.nanos()))
+        Self::Output::from_nanos(self.nanos().sub(rhs.nanos()))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use cosmwasm_std::Timestamp;
+
+    use crate::duration::Duration;
+
+    #[test]
+    fn add() {
+        let t = Timestamp::from_seconds(100);
+        assert_eq!(
+            Timestamp::from_seconds(t.seconds() + 10),
+            t + Duration::from_secs(10)
+        );
+        assert_eq!(
+            Timestamp::from_nanos(t.nanos() + 1),
+            t + Duration::from_nanos(1)
+        );
+        assert_eq!(t, t + Duration::from_secs(0));
+        assert_eq!(
+            Timestamp::from_nanos(u64::MAX),
+            Timestamp::from_nanos(u64::MAX - 12) + Duration::from_nanos(12)
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn add_overflow() {
+        let _ = Timestamp::from_nanos(u64::MAX - 12) + Duration::from_nanos(13);
+    }
+
+    #[test]
+    fn sub() {
+        let d = Duration::from_secs(12345678);
+        assert_eq!(Duration::from_nanos(0), d - d);
+    }
+
+    #[test]
+    #[should_panic]
+    fn sub_underflow() {
+        let _ = Duration::from_nanos(0) - Duration::from_nanos(1);
+    }
+
+    #[test]
+    fn between() {
+        let d = Duration::from_secs(422);
+        let t1 = Timestamp::from_seconds(24);
+        let t2 = t1 + d;
+
+        assert_eq!(d, Duration::between(t1, t2));
+    }
+
+    #[test]
+    #[should_panic]
+    fn between_underflow() {
+        let t = Timestamp::from_seconds(24);
+        let _ = Duration::between(t + Duration::from_nanos(1), t);
     }
 }
