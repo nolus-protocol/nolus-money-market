@@ -100,7 +100,7 @@ where
         let lease_amount = to_cosmwasm(account.balance::<Usdc>().map_err(ContractError::from)?);
 
         if lease_amount.amount.is_zero() {
-            Ok(StateResponse::Closed)
+            Ok(StateResponse::Closed())
         } else {
             let loan_state = self.loan.state(now, querier, lease)?;
 
@@ -341,12 +341,12 @@ mod tests {
         let (lease, env, bank_account, mut deps) = lease_setup(None, lease_amount);
 
         let res = request_state(lease, env, bank_account, &deps.as_mut());
-        let exp = StateResponse::Closed;
         assert_eq!(
             exp, res,
             "EXPECTED =======> {:#?} \n ACTUAL =======> {:#?}",
             exp, res
         );
+        let exp = StateResponse::Closed();
     }
 
     #[test]
@@ -364,11 +364,11 @@ mod tests {
         );
 
         let res = request_state(lease, env, bank_account, &deps.as_mut());
-        let exp = StateResponse::Closed;
         assert_eq!(
             exp, res,
             "EXPECTED =======> {:#?} \n ACTUAL =======> {:#?}",
             exp, res
         );
+        let exp = StateResponse::Closed();
     }
 }

@@ -17,5 +17,5 @@ pub enum StateResponse {
         interest_due: Coin,
     },
     Paid(Coin),
-    Closed,
+    Closed(),
 }

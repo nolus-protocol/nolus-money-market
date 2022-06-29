@@ -216,7 +216,7 @@ fn state_closed() {
     repay(&mut test_case, &lease_address, full_payment);
     close(&mut test_case, &lease_address);
 
-    let expected_result = StateResponse::Closed;
+    let expected_result = StateResponse::Closed();
     let query_result = state_query(&mut test_case, &lease_address.into_string());
 
     println!("=======> {:#?}", query_result);
