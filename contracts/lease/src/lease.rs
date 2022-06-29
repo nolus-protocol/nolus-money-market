@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::{ContractError, ContractResult},
     loan::Loan,
-    msg::{Denom, StateResponse},
+    msg::StateResponse,
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
