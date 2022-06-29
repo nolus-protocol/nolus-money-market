@@ -40,11 +40,11 @@ add_wasm_messages() {
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "oracle" "$((++id))" "$admin_addr" "" "$oracle_init_msg"
   _export_to_file  "oracle" "$ORACLE_ADDRESS" "$contracts_info_file"
 
-  local -r profit_init_msg='{"cadence_hours":7200,"treasury":"'$TREASURY_ADDRESS'","time_oracle":"'$ORACLE_ADDRESS'"}'
+  local -r profit_init_msg='{"cadence_hours":7200,"treasury":"'$TREASURY_ADDRESS'","oracle":"'$ORACLE_ADDRESS'"}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "profit" "$((++id))" "$admin_addr" "" "$profit_init_msg"
   _export_to_file  "profit" "$PROFIT_ADDRESS" "$contracts_info_file"
 
-  local -r dispatcher_init_msg='{"cadence_hours":7200,"lpp":"'$LPP_ADDRESS'","time_oracle":"'$ORACLE_ADDRESS'","treasury":"'$TREASURY_ADDRESS'","market_oracle":"'$ORACLE_ADDRESS'","tvl_to_apr":{"intervals":[{"tvl":0,"apr":300},{"tvl":1000,"apr":90},{"tvl":1000000,"apr":30}]}}';
+  local -r dispatcher_init_msg='{"cadence_hours":7200,"lpp":"'$LPP_ADDRESS'","treasury":"'$TREASURY_ADDRESS'","oracle":"'$ORACLE_ADDRESS'","tvl_to_apr":{"intervals":[{"tvl":0,"apr":300},{"tvl":1000,"apr":90},{"tvl":1000000,"apr":30}]}}';
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "rewards_dispatcher" "$((++id))" "$admin_addr" "" "$dispatcher_init_msg"
   _export_to_file  "rewards_dispatcher" "$REWARDS_DISPATCHER_ADDRESS" "$contracts_info_file"
 }
