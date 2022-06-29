@@ -194,12 +194,12 @@ where
             
         // TODO calculate the interest directly over `principal_due` once migrate to finance::coin<>
         let margin_interest_due_amount = margin_interest_period.interest(principal_due.amount);
-        let denom = principal_due.denom.clone();
+        let margin_interest_due = Coin::new(margin_interest_due_amount.into(), principal_due.denom.clone());
+        let interest_due = coin_legacy::add_coin(loan_state.interest_due, margin_interest_due);
         State {
             annual_interest: loan_state.annual_interest_rate + self.annual_margin_interest,
             principal_due,
-            interest_due: Coin::new(margin_interest_due_amount.into(), denom),
-            // TODO interest_due: loan_state.interest_due + margin_interest_due,
+            interest_due,
         }
     }
 }
