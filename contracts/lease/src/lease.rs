@@ -122,7 +122,7 @@ where
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::testing::{mock_dependencies, MockStorage};
-    use cosmwasm_std::{Addr, Coin as CWCoin, QuerierWrapper, StdResult, SubMsg, Timestamp};
+    use cosmwasm_std::{coin, Addr, Coin as CWCoin, QuerierWrapper, StdResult, SubMsg, Timestamp};
     use finance::{
         bank::BankAccount,
         coin::Coin,
@@ -157,7 +157,7 @@ mod tests {
             from_cosmwasm(self.balance.clone())
         }
 
-        fn send<Usdc>(&self, _amount: Coin<Usdc>, _to: &Addr) -> FinanceResult<SubMsg> {
+        fn send<C>(&self, _amount: Coin<C>, _to: &Addr) -> FinanceResult<SubMsg> {
             unimplemented!()
         }
     }
@@ -260,7 +260,7 @@ mod tests {
 
     fn create_bank_account(lease_amount: u128) -> BankStub {
         BankStub {
-            balance: CWCoin::new(lease_amount, DENOM),
+            balance: coin(lease_amount, DENOM),
         }
     }
 
@@ -283,8 +283,8 @@ mod tests {
         let interest_rate = Percent::from_permille(50);
         // LPP loan
         let loan = LoanResponse {
-            principal_due: CWCoin::new(300, DENOM),
-            interest_due: CWCoin::new(0, DENOM),
+            principal_due: coin(300, DENOM),
+            interest_due: coin(0, DENOM),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -294,7 +294,7 @@ mod tests {
 
         let res = request_state(lease, bank_account);
         let exp = StateResponse::Opened {
-            amount: CWCoin::new(lease_amount, DENOM),
+            amount: coin(lease_amount, DENOM),
             interest_rate: MARGIN_INTEREST_RATE + interest_rate,
             principal_due: loan.principal_due,
             interest_due: loan.interest_due,
@@ -311,7 +311,7 @@ mod tests {
         let lease = lease_setup(None);
 
         let res = request_state(lease, bank_account);
-        let exp = StateResponse::Paid(CWCoin::new(lease_amount, DENOM));
+        let exp = StateResponse::Paid(coin(lease_amount, DENOM));
         assert_eq_pretty(exp, res);
     }
 
