@@ -59,6 +59,7 @@ impl Leaser {
         let numerator = Uint128::from(config.liability.initial) * downpayment.amount;
         let denominator = Uint128::from(100 - config.liability.initial);
 
+        // TODO use liability::init_borrow_amount
         let borrow_amount = numerator / denominator;
         let total_amount = borrow_amount + downpayment.amount;
 
