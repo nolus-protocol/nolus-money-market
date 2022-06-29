@@ -15,6 +15,23 @@ pub fn sub_amount(from: CosmWasmCoin, amount: Uint128) -> CosmWasmCoin {
 }
 
 #[deprecated = "Migrate to using finance::coin::Coin"]
+pub fn add_amount(to: CosmWasmCoin, amount: Uint128) -> CosmWasmCoin {
+    CosmWasmCoin {
+        amount: to.amount + amount,
+        denom: to.denom,
+    }
+}
+
+#[deprecated = "Migrate to using finance::coin::Coin"]
+pub fn sub_coin(from: CosmWasmCoin, other: CosmWasmCoin) -> CosmWasmCoin {
+    debug_assert!(from.denom == other.denom);
+    CosmWasmCoin {
+        amount: from.amount - other.amount,
+        denom: from.denom,
+    }
+}
+
+#[deprecated = "Migrate to using finance::coin::Coin"]
 pub fn add_coin(to: CosmWasmCoin, other: CosmWasmCoin) -> CosmWasmCoin {
     debug_assert!(to.denom == other.denom);
     CosmWasmCoin {
@@ -136,8 +153,9 @@ mod test {
     };
 
     use crate::{
+        coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl},
         currency::{Currency, Nls, Usdc},
-        error::Error, coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl},
+        error::Error,
     };
 
     use super::{Coin, CoinVisitor};
