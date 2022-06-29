@@ -56,12 +56,9 @@ impl LiquidityPool {
         Ok(LiquidityPool { config, total })
     }
 
-    // TODO: query parameters
-    /*
-        pub fn config(&self) -> &Config {
-            &self.config
-        }
-    */
+    pub fn config(&self) -> &Config {
+        &self.config
+    }
 
     pub fn update_config(
         &mut self,

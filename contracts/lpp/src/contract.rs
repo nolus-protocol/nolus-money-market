@@ -11,7 +11,7 @@ use crate::lpp::LiquidityPool;
 use crate::msg::{
     BalanceResponse, ExecuteMsg, InstantiateMsg, LppBalanceResponse, PriceResponse,
     QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg, QueryQuoteResponse,
-    RewardsResponse,
+    RewardsResponse, QueryConfigResponse,
 };
 use crate::state::Deposit;
 use finance::percent::Percent;
@@ -70,6 +70,7 @@ pub fn execute(
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
+        QueryMsg::Config() => to_binary(&query_config(&deps)?),
         QueryMsg::Quote { amount } => to_binary(&query_quote(&deps, &env, amount)?),
         QueryMsg::Loan { lease_addr } => to_binary(&query_loan(deps.storage, env, lease_addr)?),
         QueryMsg::LoanOutstandingInterest {
@@ -231,6 +232,19 @@ fn try_claim_rewards(
         .add_message(msg);
 
     Ok(response)
+}
+
+fn query_config(deps: &Deps) -> Result<QueryConfigResponse, ContractError> {
+    let lpp = LiquidityPool::load(deps.storage)?;
+    let config = lpp.config();
+    
+    Ok(QueryConfigResponse {
+        lpn_symbol: config.denom.clone(),
+        lease_code_id: config.lease_code_id,
+        base_interest_rate: config.base_interest_rate,
+        utilization_optimal: config.utilization_optimal,
+        addon_optimal_interest_rate: config.addon_optimal_interest_rate,
+    })
 }
 
 fn query_quote(deps: &Deps, env: &Env, quote: Coin) -> Result<QueryQuoteResponse, ContractError> {
