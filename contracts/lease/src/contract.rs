@@ -12,7 +12,7 @@ use finance::currency::Currency;
 use lpp::stub::{Lpp, LppStub, LppVisitor};
 
 use crate::error::{ContractError, ContractResult};
-use crate::lease::{Currency, Lease};
+use crate::lease::Lease;
 use crate::msg::{ExecuteMsg, NewLeaseForm, StateQuery, StateResponse};
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -73,7 +73,7 @@ pub fn execute(
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-pub fn query(deps: Deps, env: Env, _msg: StatusQuery) -> ContractResult<Binary> {
+pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     let lease = load_lease(deps.storage)?;
     let bank_account = BankStub::my_account(&env, &deps.querier);
     let resp: StateResponse = lease.state(
