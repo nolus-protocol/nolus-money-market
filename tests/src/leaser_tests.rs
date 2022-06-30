@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 
+use crate::common::{test_case::TestCase, ADMIN, USER};
 use cosmwasm_std::{coins, Addr, Coin, DepsMut, Env, MessageInfo, Response};
 use cw_multi_test::{next_block, ContractWrapper, Executor};
+use finance::error::Error as FinanceError;
 use leaser::msg::{QueryMsg, QuoteResponse};
-
-use crate::common::{test_case::TestCase, ADMIN, USER};
 
 const DENOM: &str = "uusdc";
 
@@ -160,7 +160,6 @@ fn open_lease() {
 // }
 
 #[test]
-#[should_panic(expected = "this is a single currency lease version")]
 fn open_lease_mixed_currency() {
     let user_addr = Addr::unchecked(USER);
 
@@ -180,17 +179,20 @@ fn open_lease_mixed_currency() {
             .unwrap()
     );
 
-    let _res = test_case
-        .app
-        .execute_contract(
-            user_addr.clone(),
-            test_case.leaser_addr.unwrap(),
-            &leaser::msg::ExecuteMsg::OpenLease {
-                currency: DENOM.to_string(),
-            },
-            &coins(3, custom_denom),
-        )
-        .unwrap();
+    let res = test_case.app.execute_contract(
+        user_addr.clone(),
+        test_case.leaser_addr.unwrap(),
+        &leaser::msg::ExecuteMsg::OpenLease {
+            currency: DENOM.to_string(),
+        },
+        &coins(3, custom_denom),
+    );
+    let err = res.unwrap_err();
+    let root_err = err.root_cause().downcast_ref::<FinanceError>().unwrap();
+    assert_eq!(
+        &FinanceError::UnexpectedCurrency(custom_denom.to_owned(), DENOM.to_owned()),
+        root_err
+    );
 }
 
 #[test]

@@ -35,7 +35,7 @@ pub(crate) fn from_cosmwasm_impl<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
 where
     C: Currency,
 {
-    visit(&coin.denom, &CoinTransformer(&coin))
+    visit(&coin.denom, CoinTransformer(&coin))
 }
 
 #[deprecated = "Migrate to using finance::bank::BankAccount"]
@@ -75,7 +75,7 @@ pub(crate) fn from_cosmwasm_any_impl<V>(coin: CosmWasmCoin, v: V) -> StdResult<V
 where
     V: CoinVisitor,
 {
-    visit_any(&coin.denom, &CoinTransformerAny(&coin, v))
+    visit_any(&coin.denom, CoinTransformerAny(&coin, v))
 }
 
 struct CoinTransformer<'a>(&'a CosmWasmCoin);
@@ -87,11 +87,11 @@ where
 
     type Error = Error;
 
-    fn on(&self) -> Result<Self::Output> {
+    fn on(self) -> Result<Self::Output> {
         Ok(from_cosmwasm_internal(self.0))
     }
 
-    fn on_unknown(&self) -> Result<Self::Output> {
+    fn on_unknown(self) -> Result<Self::Output> {
         Err(Error::UnexpectedCurrency(
             self.0.denom.clone(),
             C::SYMBOL.into(),
@@ -107,7 +107,7 @@ where
     type Output = V::Output;
     type Error = V::Error;
 
-    fn on<C>(&self) -> StdResult<Self::Output, Self::Error>
+    fn on<C>(self) -> StdResult<Self::Output, Self::Error>
     where
         C: Currency,
     {
@@ -115,7 +115,7 @@ where
         self.1.on::<C>(coin)
     }
 
-    fn on_unknown(&self) -> StdResult<Self::Output, Self::Error> {
+    fn on_unknown(self) -> StdResult<Self::Output, Self::Error> {
         self.1.on_unknown()
     }
 }
