@@ -13,13 +13,13 @@ use crate::msg::{ConfigResponse, ExecuteMsg, Liability, QueryMsg, QuoteResponse,
 const CREATOR: &str = "creator";
 const LPP_ADDR: &str = "test";
 const DENOM: &str = "UST";
-const MARGIN_INTEREST_RATE: u16 = 3;
+const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
 
 fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::InstantiateMsg {
     crate::msg::InstantiateMsg {
         lease_code_id: Uint64::new(lease_code_id),
         lpp_ust_addr: lpp_addr,
-        lease_interest_rate_margin: Percent::from_percent(MARGIN_INTEREST_RATE),
+        lease_interest_rate_margin: MARGIN_INTEREST_RATE,
         recalc_hours: 1,
         liability: Liability::new(65, 70, 80),
         repayment: Repayment::new(90 * 24 * 60 * 60, 10 * 24 * 60 * 60),
@@ -164,7 +164,7 @@ fn test_quote() {
         3% margin_interest_rate of the leaser
     */
     assert_eq!(
-        Percent::from_percent(100 + MARGIN_INTEREST_RATE),
+        Percent::HUNDRED.checked_add(MARGIN_INTEREST_RATE).unwrap(),
         resp.annual_interest_rate
     ); // hardcoded until LPP contract is merged
 

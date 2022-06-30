@@ -15,14 +15,6 @@ pub fn sub_amount(from: CosmWasmCoin, amount: Uint128) -> CosmWasmCoin {
 }
 
 #[deprecated = "Migrate to using finance::coin::Coin"]
-pub fn add_amount(to: CosmWasmCoin, amount: Uint128) -> CosmWasmCoin {
-    CosmWasmCoin {
-        amount: to.amount + amount,
-        denom: to.denom,
-    }
-}
-
-#[deprecated = "Migrate to using finance::coin::Coin"]
 pub fn sub_coin(from: CosmWasmCoin, other: CosmWasmCoin) -> CosmWasmCoin {
     debug_assert!(from.denom == other.denom);
     CosmWasmCoin {

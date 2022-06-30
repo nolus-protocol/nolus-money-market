@@ -1,26 +1,22 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{coin, coins, Addr, Coin};
+use cosmwasm_std::{coin, coins, Addr, Coin, Timestamp};
 use cw_multi_test::{AppResponse, Executor};
 
 use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
 
-use finance::coin_legacy::{add_coin, sub_coin};
+use finance::{
+    coin_legacy::{add_coin, sub_coin},
+    duration::Duration,
+    interest::InterestPeriod,
+    percent::Percent,
+};
 
 use crate::common::test_case::TestCase;
 
 const DENOM: &str = "uusdc";
 const DOWNPAYMENT: u128 = 10;
-
-// TODO(kari): remove this function or move it to tests/ or else
-fn assert_eq_pretty(exp: StateResponse, res: StateResponse) {
-    assert_eq!(
-        exp, res,
-        "EXPECTED =======> {:#?}\n ACTUAL =======> {:#?}",
-        exp, res
-    );
-}
 
 fn create_coin(amount: u128) -> Coin {
     coin(amount, DENOM)
@@ -37,6 +33,16 @@ fn create_test_case() -> TestCase {
     test_case.init_leaser();
 
     test_case
+}
+
+fn calculate_interest(principal: Coin, interest_rate: Percent, duration: u64) -> Coin {
+    coin(
+        InterestPeriod::with_interest(interest_rate)
+            .from(Timestamp::from_nanos(0))
+            .spanning(Duration::from_nanos(duration))
+            .interest(principal.amount.u128()),
+        DENOM,
+    )
 }
 
 fn open_lease(test_case: &mut TestCase, value: Coin) -> Addr {
@@ -115,14 +121,19 @@ fn state_query(test_case: &TestCase, contract_addr: &String) -> StateResponse {
         .unwrap()
 }
 
-fn expected_open_state(test_case: &TestCase, downpayment: Coin, payments: Coin) -> StateResponse {
+fn expected_open_state(
+    test_case: &TestCase,
+    downpayment: Coin,
+    payments: Coin,
+    duration: u64,
+) -> StateResponse {
     let quote_result = quote_query(test_case, downpayment.clone());
     let expected = sub_coin(sub_coin(quote_result.total.clone(), downpayment), payments);
     StateResponse::Opened {
         amount: quote_result.total,
         interest_rate: quote_result.annual_interest_rate,
-        principal_due: expected,
-        interest_due: create_coin(0),
+        principal_due: expected.clone(),
+        interest_due: calculate_interest(expected, quote_result.annual_interest_rate, duration),
     }
 }
 
@@ -132,7 +143,7 @@ fn state_opened_when_no_payments() {
     let downpayment = create_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment.clone());
 
-    let _expected_result = expected_open_state(&test_case, downpayment, create_coin(0));
+    let _expected_result = expected_open_state(&test_case, downpayment, create_coin(0), 0);
     let query_result = state_query(&test_case, &lease_address.into_string());
 
     println!("=======> {:#?}", query_result);
@@ -144,7 +155,7 @@ fn state_opened_when_no_payments() {
 
         TODO(kari): uncomment the assert after the issues are fixed
     */
-    // assert_eq_pretty(_expected_result, query_result);
+    // assert_eq!(_expected_result, query_result);
 }
 
 #[test]
@@ -155,7 +166,7 @@ fn state_opened_when_partially_paid() {
 
     let quote_result = quote_query(&test_case, downpayment.clone());
     let partial_payment = create_coin(quote_result.borrow.amount.u128() / 2);
-    let _expected_result = expected_open_state(&test_case, downpayment, partial_payment.clone());
+    let _expected_result = expected_open_state(&test_case, downpayment, partial_payment.clone(), 0);
 
     repay(&mut test_case, &lease_address, partial_payment);
 
@@ -170,7 +181,7 @@ fn state_opened_when_partially_paid() {
 
         TODO(kari): uncomment the assert after the issues are fixed
     */
-    // assert_eq_pretty(_expected_result, query_result);
+    // assert_eq!(_expected_result, query_result);
 }
 
 #[test]
@@ -187,7 +198,7 @@ fn state_paid() {
     let expected_result = StateResponse::Paid(expected_amount);
     let query_result = state_query(&test_case, &lease_address.into_string());
 
-    assert_eq_pretty(expected_result, query_result);
+    assert_eq!(expected_result, query_result);
 }
 
 #[test]
@@ -206,7 +217,7 @@ fn state_paid_when_overpaid() {
     let expected_result = StateResponse::Paid(expected_amount);
     let query_result = state_query(&test_case, &lease_address.into_string());
 
-    assert_eq_pretty(expected_result, query_result);
+    assert_eq!(expected_result, query_result);
 }
 
 #[test]
@@ -222,5 +233,5 @@ fn state_closed() {
     let expected_result = StateResponse::Closed();
     let query_result = state_query(&test_case, &lease_address.into_string());
 
-    assert_eq_pretty(expected_result, query_result);
+    assert_eq!(expected_result, query_result);
 }

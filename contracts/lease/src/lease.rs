@@ -198,135 +198,6 @@ mod tests {
         }
     }
 
-    #[test]
-    fn persist_ok() {
-        let mut storage = MockStorage::default();
-        let obj = Lease {
-            customer: Addr::unchecked("test"),
-            currency: "UST".to_owned(),
-            liability: Liability::new(
-                Percent::from_percent(65),
-                Percent::from_percent(5),
-                Percent::from_percent(10),
-                10 * 24,
-            ),
-            loan: Loan::open(
-                Timestamp::default(),
-                LppLocalStub { loan: None },
-                Percent::from_percent(23),
-                100,
-                10,
-            )
-            .unwrap(),
-        };
-        let obj_exp = obj.clone();
-        obj.store(&mut storage).expect("storing failed");
-        let obj_loaded: Lease<LppLocalStub> = Lease::load(&storage).expect("loading failed");
-        assert_eq!(obj_exp.customer, obj_loaded.customer);
-    }
-
-    fn lease_setup(loan_response: Option<LoanResponse>) -> Lease<LppLocalStub> {
-        let lpp_stub = LppLocalStub {
-            loan: loan_response,
-        };
-
-        Lease {
-            customer: Addr::unchecked("customer"),
-            currency: DENOM.to_string(),
-            liability: Liability::new(
-                Percent::from_percent(65),
-                Percent::from_percent(70),
-                Percent::from_percent(80),
-                10 * 24,
-            ),
-            loan: Loan::open(
-                Timestamp::from_nanos(0),
-                lpp_stub,
-                MARGIN_INTEREST_RATE,
-                0,
-                0,
-            )
-            .unwrap(),
-        }
-    }
-
-    fn assert_eq_pretty(exp: StateResponse, res: StateResponse) {
-        assert_eq!(
-            exp, res,
-            "EXPECTED =======> {:#?}\n ACTUAL =======> {:#?}",
-            exp, res
-        );
-    }
-
-    fn create_bank_account(lease_amount: u128) -> BankStub {
-        BankStub {
-            balance: coin(lease_amount, DENOM),
-        }
-    }
-
-    fn request_state(lease: Lease<LppLocalStub>, bank_account: BankStub) -> StateResponse {
-        let mut deps = mock_dependencies();
-        lease
-            .state(
-                Timestamp::from_nanos(0),
-                bank_account,
-                &deps.as_mut().querier,
-                Addr::unchecked("unused"),
-            )
-            .unwrap()
-    }
-
-    #[test]
-    // Open state -> Lease's balance in the loan's currency > 0, loan exists in the lpp
-    fn state_opened() {
-        let lease_amount = 1000;
-        let interest_rate = Percent::from_permille(50);
-        // LPP loan
-        let loan = LoanResponse {
-            principal_due: coin(300, DENOM),
-            interest_due: coin(0, DENOM),
-            annual_interest_rate: interest_rate,
-            interest_paid: Timestamp::from_nanos(0),
-        };
-
-        let bank_account = create_bank_account(lease_amount);
-        let lease = lease_setup(Some(loan.clone()));
-
-        let res = request_state(lease, bank_account);
-        let exp = StateResponse::Opened {
-            amount: coin(lease_amount, DENOM),
-            interest_rate: MARGIN_INTEREST_RATE + interest_rate,
-            principal_due: loan.principal_due,
-            interest_due: loan.interest_due,
-        };
-
-        assert_eq_pretty(exp, res);
-    }
-
-    #[test]
-    // Paid state -> Lease's balance in the loan's currency > 0, loan doesn't exist in the lpp anymore
-    fn state_paid() {
-        let lease_amount = 1000;
-        let bank_account = create_bank_account(lease_amount);
-        let lease = lease_setup(None);
-
-        let res = request_state(lease, bank_account);
-        let exp = StateResponse::Paid(coin(lease_amount, DENOM));
-        assert_eq_pretty(exp, res);
-    }
-
-    #[test]
-    // Closed state -> Lease's balance in the loan's currency = 0, loan doesn't exist in the lpp anymore
-    fn state_closed() {
-        let lease_amount = 0;
-        let bank_account = create_bank_account(lease_amount);
-        let lease = lease_setup(None);
-
-        let res = request_state(lease, bank_account);
-        let exp = StateResponse::Closed();
-        assert_eq_pretty(exp, res);
-    }
-
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     struct LppLocalStubUnreachable {}
 
@@ -361,12 +232,11 @@ mod tests {
         }
     }
 
-    #[test]
-    // Verify that if the Lease's balance is 0, lpp won't be queried for the loan
-    fn state_closed_lpp_must_not_be_called() {
-        let lpp_stub = LppLocalStubUnreachable {};
-
-        let lease = Lease {
+    fn create_lease<L>(lpp_stub: L) -> Lease<L>
+    where
+        L: Lpp<super::Currency>,
+    {
+        Lease {
             customer: Addr::unchecked("customer"),
             currency: DENOM.to_string(),
             liability: Liability::new(
@@ -383,7 +253,101 @@ mod tests {
                 0,
             )
             .unwrap(),
+        }
+    }
+
+    fn lease_setup(loan_response: Option<LoanResponse>) -> Lease<LppLocalStub> {
+        let lpp_stub = LppLocalStub {
+            loan: loan_response,
         };
+
+        create_lease(lpp_stub)
+    }
+
+    fn create_bank_account(lease_amount: u128) -> BankStub {
+        BankStub {
+            balance: coin(lease_amount, DENOM),
+        }
+    }
+
+    fn request_state(lease: Lease<LppLocalStub>, bank_account: BankStub) -> StateResponse {
+        let mut deps = mock_dependencies();
+        lease
+            .state(
+                Timestamp::from_nanos(0),
+                bank_account,
+                &deps.as_mut().querier,
+                Addr::unchecked("unused"),
+            )
+            .unwrap()
+    }
+
+    #[test]
+    fn persist_ok() {
+        let mut storage = MockStorage::default();
+        let obj = create_lease(LppLocalStub { loan: None });
+        let obj_exp = obj.clone();
+        obj.store(&mut storage).expect("storing failed");
+        let obj_loaded: Lease<LppLocalStub> = Lease::load(&storage).expect("loading failed");
+        assert_eq!(obj_exp.customer, obj_loaded.customer);
+    }
+
+    #[test]
+    // Open state -> Lease's balance in the loan's currency > 0, loan exists in the lpp
+    fn state_opened() {
+        let lease_amount = 1000;
+        let interest_rate = Percent::from_permille(50);
+        // LPP loan
+        let loan = LoanResponse {
+            principal_due: coin(300, DENOM),
+            interest_due: coin(0, DENOM),
+            annual_interest_rate: interest_rate,
+            interest_paid: Timestamp::from_nanos(0),
+        };
+
+        let bank_account = create_bank_account(lease_amount);
+        let lease = lease_setup(Some(loan.clone()));
+
+        let res = request_state(lease, bank_account);
+        let exp = StateResponse::Opened {
+            amount: coin(lease_amount, DENOM),
+            interest_rate: MARGIN_INTEREST_RATE.checked_add(interest_rate).unwrap(),
+            principal_due: loan.principal_due,
+            interest_due: loan.interest_due,
+        };
+
+        assert_eq!(exp, res);
+    }
+
+    #[test]
+    // Paid state -> Lease's balance in the loan's currency > 0, loan doesn't exist in the lpp anymore
+    fn state_paid() {
+        let lease_amount = 1000;
+        let bank_account = create_bank_account(lease_amount);
+        let lease = lease_setup(None);
+
+        let res = request_state(lease, bank_account);
+        let exp = StateResponse::Paid(coin(lease_amount, DENOM));
+        assert_eq!(exp, res);
+    }
+
+    #[test]
+    // Closed state -> Lease's balance in the loan's currency = 0, loan doesn't exist in the lpp anymore
+    fn state_closed() {
+        let lease_amount = 0;
+        let bank_account = create_bank_account(lease_amount);
+        let lease = lease_setup(None);
+
+        let res = request_state(lease, bank_account);
+        let exp = StateResponse::Closed();
+        assert_eq!(exp, res);
+    }
+
+    #[test]
+    // Verify that if the Lease's balance is 0, lpp won't be queried for the loan
+    fn state_closed_lpp_must_not_be_called() {
+        let lpp_stub = LppLocalStubUnreachable {};
+        let lease = create_lease(lpp_stub);
 
         let bank_account = create_bank_account(0);
 
@@ -398,6 +362,6 @@ mod tests {
             .unwrap();
 
         let exp = StateResponse::Closed();
-        assert_eq_pretty(exp, res);
+        assert_eq!(exp, res);
     }
 }
