@@ -1,11 +1,12 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{
-    from_binary, Addr, Binary, CosmosMsg, DepsMut, Response, StdResult, Storage, SubMsg, Timestamp,
+    from_binary, Addr, Binary, CosmosMsg, DepsMut, Response, StdError, StdResult, Storage, SubMsg,
+    Timestamp,
 };
 use marketprice::{
     feed::{Denom, DenomToPrice},
-    hooks::price::PriceHooks,
+    hooks::{price::PriceHooks, HookDispatcher},
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -23,7 +24,7 @@ pub struct MarketAlarms {}
 impl MarketAlarms {
     const TIME_ORACLE: TimeOracle<'static> = TimeOracle::new("time_oracle");
     const TIME_ALARMS: Alarms<'static> = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
-    const PRICE_ALARMS: PriceHooks<'static> = PriceHooks::new("hooks");
+    const PRICE_ALARMS: PriceHooks<'static> = PriceHooks::new("hooks", "hooks_sequence");
 
     pub fn remove(storage: &mut dyn Storage, msg_id: Id) -> StdResult<()> {
         Self::TIME_ALARMS.remove(storage, msg_id)
@@ -46,7 +47,13 @@ impl MarketAlarms {
         }
 
         impl<'a> AlarmDispatcher for OracleAlarmDispatcher<'a> {
-            fn send_to(&mut self, id: Id, addr: Addr, ctime: Timestamp) -> StdResult<()> {
+            fn send_to(
+                &mut self,
+                id: Id,
+                addr: Addr,
+                ctime: Timestamp,
+                _data: &Option<Binary>,
+            ) -> StdResult<()> {
                 let msg = ExecuteAlarmMsg::Alarm(ctime);
                 let wasm_msg = cosmwasm_std::wasm_execute(addr, &msg, vec![])?;
                 let submsg = SubMsg::reply_always(CosmosMsg::Wasm(wasm_msg), id);
@@ -87,33 +94,30 @@ impl MarketAlarms {
     pub fn get_hook_denoms(storage: &dyn Storage) -> StdResult<HashSet<Denom>> {
         Self::PRICE_ALARMS.get_hook_denoms(storage)
     }
+
     pub fn try_notify_hooks(
         storage: &mut dyn Storage,
+        ctime: Timestamp,
         updated_prices: Vec<DenomToPrice>,
-    ) -> StdResult<()> {
-        let messages: Vec<_> = Self::PRICE_ALARMS
-            .get_affected(storage, updated_prices)?
-            .iter()
-            .map(|(addr, current_price)| Self::trigger_msg(addr, current_price))
-            .collect();
-
-        Ok(())
-    }
-
-    pub fn try_notify_hooks1(
-        storage: &mut dyn Storage,
-        receiver: &Addr,
-        current_price: &DenomToPrice,
     ) -> StdResult<Response> {
-        use time_oracle::AlarmDispatcher;
-
         struct OracleAlarmDispatcher<'a> {
             pub response: &'a mut Response,
         }
 
-        impl<'a> AlarmDispatcher for OracleAlarmDispatcher<'a> {
-            fn send_to(&mut self, id: Id, addr: Addr, current_price: Binary) -> StdResult<()> {
-                let msg = ExecuteHookMsg::Notify(from_binary(&current_price)?);
+        impl<'a> HookDispatcher for OracleAlarmDispatcher<'a> {
+            fn send_to(
+                &mut self,
+                id: Id,
+                addr: Addr,
+                _ctime: Timestamp,
+                data: &Option<Binary>,
+            ) -> StdResult<()> {
+                let current_price: DenomToPrice = match data {
+                    Some(bin) => from_binary(bin)?,
+                    None => return Err(StdError::generic_err("msg")),
+                };
+
+                let msg = ExecuteHookMsg::Notify(current_price);
                 let wasm_msg = cosmwasm_std::wasm_execute(addr.to_string(), &msg, vec![])?;
                 let submsg = SubMsg::reply_always(CosmosMsg::Wasm(wasm_msg), id);
                 self.response.messages.push(submsg);
@@ -126,15 +130,8 @@ impl MarketAlarms {
             response: &mut response,
         };
 
-        Self::TIME_ALARMS.notify(storage, &mut dispatcher, ctime)?;
+        Self::PRICE_ALARMS.notify(storage, &mut dispatcher, ctime, updated_prices)?;
 
         Ok(response)
-    }
-
-    fn trigger_msg(receiver: &Addr, current: &DenomToPrice) -> StdResult<SubMsg> {
-        let msg = ExecuteHookMsg::Notify(current.to_owned());
-        let wasm_msg = cosmwasm_std::wasm_execute(receiver.to_string(), &msg, vec![])?;
-        let submsg = SubMsg::reply_always(CosmosMsg::Wasm(wasm_msg), 1);
-        Ok(submsg)
     }
 }

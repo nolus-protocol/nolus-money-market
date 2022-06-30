@@ -4,7 +4,6 @@ use cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage, Timestamp};
 use marketprice::{
     feed::{Denom, DenomToPrice, Price},
     feeders::{PriceFeeders, PriceFeedersError},
-    hooks::price::PriceHooks,
     market_price::{PriceFeeds, PriceQuery},
 };
 use schemars::JsonSchema;
@@ -12,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use std::convert::TryFrom;
 
-use crate::{alarms::MarketAlarms, state::config::Config, ContractError};
+use crate::{state::config::Config, ContractError};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MarketOracle {}

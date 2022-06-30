@@ -8,13 +8,6 @@ edition = "2021"
 
 
 [dependencies]
-time-oracle = { path = "../packages/time-oracle", version = "0.1.0", default-features = false}
-lpp = { path = "../contracts/lpp", version = "0.1.0", default-features = false}
-oracle = { path = "../contracts/oracle", version = "0.1.0", default-features = false}
-treasury = { path = "../contracts/treasury", version = "0.1.0", default-features = false}
-rewards_dispatcher = { path = "../contracts/dispatcher", version = "0.1.0", default-features = false}
-profit = { path = "../contracts/profit", version = "0.1.0", default-features = false}
-finance = { path = "../packages/finance", version = "0.1.0", default-features = false }
 cosmwasm-std = "1.0.0"
 
 
@@ -24,7 +17,7 @@ cw-multi-test = "0.13.2"
 anyhow = "1.0.57"
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 
-
+finance = { path = "../packages/finance", version = "0.1.0", default-features = false }
 treasury = { path = "../contracts/treasury", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
 lease = { path = "../contracts/lease", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
 leaser = { path = "../contracts/leaser", version = "0.1.0", default-features = false, features = ["cosmwasm"]}

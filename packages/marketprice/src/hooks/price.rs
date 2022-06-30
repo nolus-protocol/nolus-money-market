@@ -1,16 +1,38 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{Addr, Order, Response, StdResult, Storage};
-use cw_storage_plus::Map;
+use cosmwasm_std::{to_binary, Addr, Order, Response, StdResult, Storage, Timestamp};
+use cw_storage_plus::{Item, Map};
 
-use super::errors::HooksError;
+use super::{errors::HooksError, HookDispatcher};
 use crate::feed::{Denom, DenomToPrice};
 
-pub struct PriceHooks<'m>(Map<'m, Addr, DenomToPrice>);
+pub type HookReplyId = u64;
+pub struct HookReplyIdSeq<'a>(Item<'a, HookReplyId>);
+
+impl<'a> HookReplyIdSeq<'a> {
+    pub const fn new(namespace: &'a str) -> HookReplyIdSeq {
+        HookReplyIdSeq(Item::new(namespace))
+    }
+
+    pub fn next(&self, store: &mut dyn Storage) -> StdResult<HookReplyId> {
+        let mut next_seq = self.0.load(store).unwrap_or(0);
+        next_seq += 1;
+        self.0.save(store, &next_seq)?;
+        Ok(next_seq)
+    }
+}
+
+pub struct PriceHooks<'m> {
+    hooks: Map<'m, Addr, DenomToPrice>,
+    id_seq: HookReplyIdSeq<'m>,
+}
 
 impl<'m> PriceHooks<'m> {
-    pub const fn new(namespace: &'m str) -> PriceHooks {
-        PriceHooks(Map::new(namespace))
+    pub const fn new(hooks_namespace: &'m str, seq_namespace: &'m str) -> PriceHooks<'m> {
+        PriceHooks {
+            hooks: Map::new(hooks_namespace),
+            id_seq: HookReplyIdSeq::new(seq_namespace),
+        }
     }
 
     pub fn add_or_update(
@@ -20,19 +42,42 @@ impl<'m> PriceHooks<'m> {
         target: DenomToPrice,
     ) -> Result<Response, HooksError> {
         let update_hook = |_: Option<DenomToPrice>| -> StdResult<DenomToPrice> { Ok(target) };
-        self.0.update(storage, addr.to_owned(), update_hook)?;
+        self.hooks.update(storage, addr.to_owned(), update_hook)?;
         Ok(Response::new().add_attribute("method", "add_or_update"))
     }
 
     pub fn remove(&self, storage: &mut dyn Storage, addr: Addr) -> Result<Response, HooksError> {
-        let hook = self.0.key(addr);
+        let hook = self.hooks.key(addr);
         hook.remove(storage);
         Ok(Response::new().add_attribute("method", "remove"))
+    }
+    pub fn notify(
+        &self,
+        storage: &mut dyn Storage,
+        dispatcher: &mut impl HookDispatcher,
+        ctime: Timestamp,
+        updated_prices: Vec<DenomToPrice>,
+    ) -> StdResult<()> {
+        let affected_contracts: Vec<_> = self.get_affected(storage, updated_prices)?;
+
+        for (addr, price) in affected_contracts {
+            dispatcher.send_to(
+                self.id_seq.next(storage)?,
+                addr,
+                ctime,
+                &Some(to_binary(&price)?),
+            )?;
+
+            // let (id, alarm) = timestamp?;
+            // dispatcher.send_to(id, alarm.addr, ctime, &None)?;
+        }
+
+        Ok(())
     }
 
     pub fn get_hook_denoms(&self, storage: &dyn Storage) -> StdResult<HashSet<Denom>> {
         let hook_denoms: HashSet<Denom> = self
-            .0
+            .hooks
             .prefix(())
             .range(storage, None, None, Order::Ascending)
             .map(|item| match item {
@@ -51,7 +96,7 @@ impl<'m> PriceHooks<'m> {
         let mut affected: Vec<(Addr, DenomToPrice)> = vec![];
         for updated in updated_prices {
             let mut msgs: Vec<_> = self
-                .0
+                .hooks
                 .prefix(())
                 .range(storage, None, None, Order::Ascending)
                 .filter_map(|item| item.ok())
@@ -80,7 +125,7 @@ pub mod tests {
 
     #[test]
     fn test_add() {
-        let hooks = PriceHooks::new("price_hooks");
+        let hooks = PriceHooks::new("hooks", "hooks_sequence");
         let storage = &mut mock_dependencies().storage;
 
         let t1 = DenomToPrice::new(

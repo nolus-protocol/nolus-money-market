@@ -189,7 +189,7 @@ fn try_feed_multiple_prices(
         MarketOracle::get_price_for(storage, block_time, affected_denoms)?;
 
     // get all affected addresses
-    MarketAlarms::try_notify_hooks(storage, updated_prices);
+    let _res = MarketAlarms::try_notify_hooks(storage, block_time, updated_prices);
 
     let response = MarketAlarms::update_global_time(storage, block_time)?;
     Ok(response.add_attribute("method", "try_feed_prices"))
