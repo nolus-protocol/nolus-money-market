@@ -4,6 +4,7 @@ use cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage, Timestamp};
 use marketprice::{
     feed::{Denom, DenomToPrice, Price},
     feeders::{PriceFeeders, PriceFeedersError},
+    hooks::price::PriceHooks,
     market_price::{PriceFeeds, PriceQuery},
 };
 use schemars::JsonSchema;
@@ -95,7 +96,7 @@ impl MarketOracle {
         storage: &mut dyn Storage,
         block_time: Timestamp,
         sender_raw: &Addr,
-        base: Denom,
+        base: &Denom,
         prices: Vec<Price>,
     ) -> Result<(), ContractError> {
         let config = Config::load(storage)?;
@@ -106,13 +107,11 @@ impl MarketOracle {
             return Err(ContractError::UnsupportedDenomPairs {});
         }
 
-        MarketAlarms::try_notify_hooks(storage, &filtered_prices)?;
-
         Self::MARKET_PRICE.feed(
             storage,
             block_time,
             sender_raw,
-            base,
+            base.to_string(),
             filtered_prices,
             config.price_feed_period,
         )?;

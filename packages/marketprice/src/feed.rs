@@ -19,6 +19,10 @@ impl Price {
     pub fn new(amount: Decimal, denom: Denom) -> Self {
         Price { amount, denom }
     }
+
+    pub fn is_below(&self, target: &Price) -> bool {
+        self.denom.eq(&target.denom) && self.amount.lt(&target.amount)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -35,6 +39,10 @@ pub struct DenomToPrice {
 impl DenomToPrice {
     pub fn new(denom: Denom, price: Price) -> Self {
         DenomToPrice { denom, price }
+    }
+
+    pub fn is_below(&self, target: &DenomToPrice) -> bool {
+        self.denom.eq(&target.denom) && self.price.is_below(&target.price)
     }
 }
 
@@ -116,5 +124,42 @@ impl PriceFeed {
 
     fn filter_uniq(vec: &[Observation]) -> HashSet<&Addr> {
         vec.iter().map(|o| &o.feeder_addr).collect::<HashSet<_>>()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use cosmwasm_std::Decimal;
+
+    use crate::feed::{DenomToPrice, Price};
+
+    #[test]
+    // we ensure this rounds up (as it calculates needed votes)
+    fn compare_prices() {
+        let p1 = DenomToPrice::new(
+            "BTH".to_string(),
+            Price::new(Decimal::from_str("0.123456").unwrap(), "NLS".to_string()),
+        );
+
+        let p2 = DenomToPrice::new(
+            "BTH".to_string(),
+            Price::new(Decimal::from_str("0.789456").unwrap(), "NLS".to_string()),
+        );
+
+        let p3 = DenomToPrice::new(
+            "BTH".to_string(),
+            Price::new(Decimal::from_str("0.003456").unwrap(), "NLS".to_string()),
+        );
+
+        let p4 = DenomToPrice::new(
+            "ETH".to_string(),
+            Price::new(Decimal::from_str("0.003456").unwrap(), "NLS".to_string()),
+        );
+
+        assert!(p1.is_below(&p2));
+        assert!(p3.is_below(&p2));
+        assert!(!p4.is_below(&p2));
     }
 }

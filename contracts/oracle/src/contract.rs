@@ -5,7 +5,7 @@ use cosmwasm_std::{
     Storage, Timestamp,
 };
 use cw2::set_contract_version;
-use marketprice::feed::{Denom, DenomPair, Prices};
+use marketprice::feed::{Denom, DenomPair, DenomToPrice, Prices};
 
 use crate::alarms::MarketAlarms;
 use crate::error::ContractError;
@@ -62,8 +62,8 @@ pub fn execute(
             prices,
         ),
         ExecuteMsg::AddAlarm { addr, time } => MarketAlarms::try_add(deps, addr, time),
-        ExecuteMsg::AddHook { rules } => {
-            MarketAlarms::try_add_price_hook(deps.storage, get_sender(deps.api, info)?, rules)
+        ExecuteMsg::AddHook { target } => {
+            MarketAlarms::try_add_price_hook(deps.storage, get_sender(deps.api, info)?, target)
         }
     }
 }
@@ -172,9 +172,25 @@ fn try_feed_multiple_prices(
     if !is_registered {
         return Err(ContractError::UnknownFeeder {});
     }
+
+    let hook_denoms = MarketAlarms::get_hook_denoms(storage)?;
+
+    let mut affected_denoms: Vec<Denom> = vec![];
     for entry in prices {
-        MarketOracle::feed_prices(storage, block_time, &sender_raw, entry.base, entry.values)?;
+        MarketOracle::feed_prices(storage, block_time, &sender_raw, &entry.base, entry.values)?;
+
+        if hook_denoms.contains(&entry.base) {
+            affected_denoms.push(entry.base);
+        }
     }
+
+    //calculate the price of this denom againts the base for the oracle denom
+    let updated_prices: Vec<DenomToPrice> =
+        MarketOracle::get_price_for(storage, block_time, affected_denoms)?;
+
+    // get all affected addresses
+    MarketAlarms::try_notify_hooks(storage, updated_prices);
+
     let response = MarketAlarms::update_global_time(storage, block_time)?;
     Ok(response.add_attribute("method", "try_feed_prices"))
 }
