@@ -95,6 +95,26 @@ impl Ratio<Units> for Percent {
     }
 }
 
+impl Ratio<Units> for Rational<Percent> {
+    type Inv = Self;
+
+    fn parts(&self) -> Units {
+        <Self as Ratio<Percent>>::parts(self).units()
+    }
+
+    fn total(&self) -> Units {
+        <Self as Ratio<Percent>>::total(self).units()
+    }
+
+    fn inv(&self) -> Option<Self::Inv> {
+        if <Self as Ratio<Percent>>::parts(self) == Percent::ZERO {
+            None
+        } else {
+            Some(Self::new(self.total(), self.parts()))
+        }
+    }
+}
+
 impl Display for Percent {
     fn fmt(&self, f: &mut Formatter) -> Result {
         let whole = (self.0) / Self::UNITS_TO_PERCENT_RATIO;
@@ -158,6 +178,7 @@ pub(super) mod test {
 
     use crate::{
         coin::Coin, currency::Nls, fraction::Fraction, fractionable::Percentable, percent::Percent,
+        ratio::Rational,
     };
 
     use super::Units;
@@ -278,6 +299,13 @@ pub(super) mod test {
     #[should_panic]
     fn are_div_zero() {
         Percent::ZERO.are(Percent::from_permille(10));
+    }
+
+    #[test]
+    fn rational_of_percents() {
+        let v = 14u32;
+        let r = Rational::new(Percent::HUNDRED, Percent::HUNDRED);
+        assert_eq!(v, <Rational<Percent> as Fraction<u32>>::of(&r, v));
     }
 
     pub(crate) fn test_of_are<P>(permille: Units, quantity: P, exp: P)

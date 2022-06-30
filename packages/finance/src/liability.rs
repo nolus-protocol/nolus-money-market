@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{Error, Result},
-    percent::Percent,
     fractionable::Percentable,
+    percent::Percent,
+    ratio::Rational,
 };
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq, JsonSchema)]
@@ -80,7 +81,9 @@ impl Liability {
 
         // borrow = init%.of(borrow + downpayment)
         // (100% - init%).of(borrow) = init%.of(downpayment)
-        (Percent::HUNDRED - self.init_percent).are(self.init_percent.of(downpayment))
+        // borrow = init% / (100% - init%) * downpayment
+        let ratio = Rational::new(self.init_percent, Percent::HUNDRED - self.init_percent);
+        ratio.of(downpayment)
     }
 }
 
@@ -88,7 +91,7 @@ impl Liability {
 mod test {
     use cosmwasm_std::from_slice;
 
-    use crate::{coin::Coin, error::Error, percent::Percent, currency::Usdc};
+    use crate::{coin::Coin, currency::Usdc, error::Error, percent::Percent};
 
     use super::{Liability, SECS_IN_HOUR};
 
@@ -218,10 +221,8 @@ mod test {
         test_init_borrow_amount(1000, 10, 111);
         test_init_borrow_amount(1, 10, 0);
         test_init_borrow_amount(1000, 99, 990 * 100);
-
-        /*
-            TODO uncomment this after bug #3 is fixed
-        */
-        // test_init_borrow_amount(10, 65, 18);
+        test_init_borrow_amount(10, 65, 18);
+        test_init_borrow_amount(1, 65, 1);
+        test_init_borrow_amount(2, 65, 3);
     }
 }
