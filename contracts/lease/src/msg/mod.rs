@@ -2,7 +2,7 @@ mod opening;
 mod query;
 
 pub use opening::{LoanForm, NewLeaseForm};
-pub use query::{StatusQuery, StatusResponse, State};
+pub use query::{StateQuery, StateResponse};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

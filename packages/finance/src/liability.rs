@@ -218,5 +218,10 @@ mod test {
         test_init_borrow_amount(1000, 10, 111);
         test_init_borrow_amount(1, 10, 0);
         test_init_borrow_amount(1000, 99, 990 * 100);
+
+        /*
+            TODO uncomment this after bug #3 is fixed
+        */
+        // test_init_borrow_amount(10, 65, 18);
     }
 }
