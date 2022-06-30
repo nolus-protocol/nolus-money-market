@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     error::Result as FinanceResult,
     fraction::Fraction,
-    fractionable::{Fractionable, Percentable},
+    fractionable::Fractionable,
     ratio::{Ratio, Rational},
 };
 
@@ -40,17 +40,6 @@ impl Percent {
         self.0
     }
 
-    /// the inverse of `Percent::of`
-    /// If %.of(X) -> Y, then %.are(Y) -> X
-    /// :pre self != 0
-    pub fn are<P>(&self, amount: P) -> P
-    where
-        P: Percentable,
-    {
-        debug_assert!(self != &Self::ZERO);
-        self.inv().expect("precondition not respected").of(amount)
-    }
-
     pub fn checked_add(self, other: Self) -> FinanceResult<Self> {
         self.0
             .checked_add(other.0)
@@ -76,8 +65,6 @@ impl Fraction<Units> for Percent {
 }
 
 impl Ratio<Units> for Percent {
-    type Inv = Rational<Units>;
-
     fn parts(&self) -> Units {
         self.units()
     }
@@ -85,33 +72,15 @@ impl Ratio<Units> for Percent {
     fn total(&self) -> Units {
         Percent::HUNDRED.units()
     }
-
-    fn inv(&self) -> Option<Self::Inv> {
-        if self.parts() == Units::default() {
-            None
-        } else {
-            Some(Self::Inv::new(self.total(), self.parts()))
-        }
-    }
 }
 
 impl Ratio<Units> for Rational<Percent> {
-    type Inv = Self;
-
     fn parts(&self) -> Units {
         <Self as Ratio<Percent>>::parts(self).units()
     }
 
     fn total(&self) -> Units {
         <Self as Ratio<Percent>>::total(self).units()
-    }
-
-    fn inv(&self) -> Option<Self::Inv> {
-        if <Self as Ratio<Percent>>::parts(self) == Percent::ZERO {
-            None
-        } else {
-            Some(Self::new(self.total(), self.parts()))
-        }
     }
 }
 
@@ -258,28 +227,26 @@ pub(super) mod test {
     }
 
     #[test]
-    fn of_are() {
-        test_of_are(100, Percent::from_percent(40), Percent::from_percent(4));
-        test_of_are(100, Percent::from_percent(40), Percent::from_permille(40));
-        test_of_are(10, Percent::from_percent(800), Percent::from_percent(8));
-        test_of_are(10, Percent::from_permille(8900), Percent::from_permille(89));
-        test_of_are(1, Percent::from_percent(12300), Percent::from_permille(123));
+    fn of() {
+        test_of(100, Percent::from_percent(40), Percent::from_percent(4));
+        test_of(100, Percent::from_percent(40), Percent::from_permille(40));
+        test_of(10, Percent::from_percent(800), Percent::from_percent(8));
+        test_of(10, Percent::from_permille(8900), Percent::from_permille(89));
+        test_of(1, Percent::from_percent(12300), Percent::from_permille(123));
         test_of(1, Percent::from_percent(12345), Percent::from_permille(123));
-        test_are(1, Percent::from_permille(123), Percent::from_percent(12300));
         test_of(0, Percent::from_percent(123), Percent::from_percent(0));
-        test_of_are(
+        test_of(
             1000,
             Percent::from_permille(Units::MAX),
             Percent::from_permille(Units::MAX),
         );
-        test_of_are(
+        test_of(
             2000,
             Percent::from_permille(Units::MAX / 2),
             Percent::from_permille(Units::MAX - 1),
         );
-
-        test_of_are(1000, Percent::HUNDRED, Percent::HUNDRED);
-        test_of_are(100, Percent::ZERO, Percent::ZERO);
+        test_of(1000, Percent::HUNDRED, Percent::HUNDRED);
+        test_of(100, Percent::ZERO, Percent::ZERO);
     }
 
     #[test]
@@ -290,30 +257,10 @@ pub(super) mod test {
     }
 
     #[test]
-    #[should_panic]
-    fn are_overflow() {
-        Percent::from_permille(999).are(Percent::from_permille(Units::MAX));
-    }
-
-    #[test]
-    #[should_panic]
-    fn are_div_zero() {
-        Percent::ZERO.are(Percent::from_permille(10));
-    }
-
-    #[test]
     fn rational_of_percents() {
         let v = 14u32;
         let r = Rational::new(Percent::HUNDRED, Percent::HUNDRED);
         assert_eq!(v, <Rational<Percent> as Fraction<u32>>::of(&r, v));
-    }
-
-    pub(crate) fn test_of_are<P>(permille: Units, quantity: P, exp: P)
-    where
-        P: Percentable + PartialEq + Debug + Clone + Display,
-    {
-        test_of(permille, quantity.clone(), exp.clone());
-        test_are(permille, exp, quantity);
     }
 
     pub(crate) fn test_of<P>(permille: Units, quantity: P, exp: P)
@@ -325,21 +272,6 @@ pub(super) mod test {
             exp,
             perm.of(quantity.clone()),
             "Calculating {} of {}",
-            perm,
-            quantity
-        );
-    }
-
-    pub(crate) fn test_are<P>(permille: Units, quantity: P, exp: P)
-    where
-        P: Percentable + PartialEq + Debug + Clone + Display,
-    {
-        let perm = Percent::from_permille(permille);
-
-        assert_eq!(
-            exp,
-            perm.are(quantity.clone()),
-            "Calculating {} of X are {}",
             perm,
             quantity
         );
