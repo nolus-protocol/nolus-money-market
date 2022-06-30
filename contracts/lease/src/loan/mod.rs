@@ -1,16 +1,15 @@
 mod state;
 pub use state::State;
 
-use std::fmt::Debug;
+use std::{fmt::Debug, marker::PhantomData};
 
 use cosmwasm_std::{Addr, Coin, QuerierWrapper, SubMsg, Timestamp};
 use finance::{
     coin::Coin as FinanceCoin,
     coin_legacy::{self, from_cosmwasm, to_cosmwasm},
-    currency::Currency,
     duration::Duration,
     interest::InterestPeriod,
-    percent::{Percent, Units},
+    percent::{Percent, Units}, currency::Currency,
 };
 use lpp::{
     msg::{LoanResponse, QueryLoanResponse},
@@ -19,27 +18,26 @@ use lpp::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    error::{ContractError, ContractResult},
-    lease::Currency as LeaseCurrency,
+    error::{ContractError, ContractResult}
 };
-
-//TODO transform it into a Loan type
-type LoanCurrency = LeaseCurrency;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
-/// The value remains intact.
-pub struct Loan<L> {
+pub struct Loan<Lpn, L> {
     annual_margin_interest: Percent,
+    lpn: PhantomData<Lpn>,
     lpp: L,
+    // TODO u32 -> Duration
     interest_due_period_secs: u32,
+    // TODO u32 -> Duration
     grace_period_secs: u32,
     current_period: InterestPeriod<Units, Percent>,
 }
 
-impl<L> Loan<L>
+impl<Lpn, L> Loan<Lpn, L>
 where
-    L: Lpp<LoanCurrency>,
+    L: Lpp<Lpn>,
+    Lpn: Currency,
 {
     pub(crate) fn open(
         when: Timestamp,
@@ -51,6 +49,7 @@ where
         // check them out cw_utils::Duration, cw_utils::NativeBalance
         Ok(Self {
             annual_margin_interest,
+            lpn: PhantomData,
             lpp,
             interest_due_period_secs,
             grace_period_secs,
@@ -78,7 +77,7 @@ where
         let principal_due = self.load_principal_due(querier, lease.clone())?;
         debug_assert_eq!(payment.denom, principal_due.denom);
 
-        let change = self.repay_margin_interest::<LoanCurrency>(
+        let change = self.repay_margin_interest(
             from_cosmwasm(principal_due.clone())?,
             by,
             from_cosmwasm(payment)?,
@@ -96,7 +95,7 @@ where
         {
             self.open_next_period();
             let loan_interest_surplus = coin_legacy::sub_amount(change, loan_interest_due.amount);
-            let change = self.repay_margin_interest::<LoanCurrency>(
+            let change = self.repay_margin_interest(
                 from_cosmwasm(principal_due)?,
                 by,
                 from_cosmwasm(loan_interest_surplus)?,
@@ -164,14 +163,12 @@ where
         self.lpp.loan(querier, lease).map_err(ContractError::from)
     }
 
-    fn repay_margin_interest<C>(
+    fn repay_margin_interest(
         &mut self,
-        principal_due: FinanceCoin<C>,
+        principal_due: FinanceCoin<Lpn>,
         by: Timestamp,
-        payment: FinanceCoin<C>,
+        payment: FinanceCoin<Lpn>,
     ) -> Coin
-    where
-        C: Currency,
     {
         let (period, change) = self.current_period.pay(principal_due, payment, by);
         self.current_period = period;

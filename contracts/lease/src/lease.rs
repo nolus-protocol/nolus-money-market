@@ -20,7 +20,7 @@ pub struct Lease<L> {
     customer: Addr,
     currency: SymbolOwned,
     liability: Liability,
-    loan: Loan<L>,
+    loan: Loan<Currency, L>,
 }
 
 //TODO transform it into a Lease type
@@ -36,7 +36,7 @@ where
         customer: Addr,
         currency: SymbolOwned,
         liability: Liability,
-        loan: Loan<L>,
+        loan: Loan<Currency, L>,
     ) -> Self {
         Self {
             customer,
