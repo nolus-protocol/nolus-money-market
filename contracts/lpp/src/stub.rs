@@ -47,7 +47,7 @@ pub struct LppStub {
 }
 
 impl LppStub {
-    pub fn try_from<A>(addr_raw: String, api: &A, querier: &QuerierWrapper) -> StdResult<Self>
+    pub fn try_from<A>(addr_raw: String, api: &A, _querier: &QuerierWrapper) -> StdResult<Self>
     where
         A: ?Sized + Api,
     {
