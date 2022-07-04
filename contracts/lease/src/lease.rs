@@ -1,9 +1,10 @@
-use cosmwasm_std::{Addr, Coin, QuerierWrapper, StdResult, Storage, SubMsg, Timestamp};
+use cosmwasm_std::{Addr, QuerierWrapper, StdResult, Storage, SubMsg, Timestamp};
 use cw_storage_plus::Item;
 use finance::{
     bank::BankAccount,
+    coin::Coin,
     coin_legacy::to_cosmwasm,
-    currency::{SymbolOwned, Usdc},
+    currency::{Currency as CurrencyType, SymbolOwned, Usdc},
     liability::Liability,
 };
 use lpp::stub::Lpp;
@@ -66,12 +67,12 @@ where
 
     pub(crate) fn repay(
         &mut self,
-        payment: Coin,
+        payment: Coin<Currency>,
         by: Timestamp,
         querier: &QuerierWrapper,
         lease: Addr,
     ) -> ContractResult<Option<SubMsg>> {
-        debug_assert_eq!(self.currency, payment.denom);
+        assert_eq!(self.currency, <Currency as CurrencyType>::SYMBOL);
         self.loan.repay(payment, by, querier, lease)
     }
 
@@ -93,13 +94,13 @@ where
         account: B,
         querier: &QuerierWrapper,
         lease: Addr,
-    ) -> ContractResult<StateResponse>
+    ) -> ContractResult<StateResponse<Currency, Currency>>
     where
         B: BankAccount,
     {
-        let lease_amount = to_cosmwasm(account.balance::<Usdc>().map_err(ContractError::from)?);
+        let lease_amount = account.balance::<Currency>().map_err(ContractError::from)?;
 
-        if lease_amount.amount.is_zero() {
+        if lease_amount.is_zero() {
             Ok(StateResponse::Closed())
         } else {
             let loan_state = self.loan.state(now, querier, lease)?;
@@ -122,17 +123,16 @@ where
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::testing::{mock_dependencies, MockStorage};
-    use cosmwasm_std::{coin, Addr, Coin as CWCoin, QuerierWrapper, StdResult, SubMsg, Timestamp};
+    use cosmwasm_std::{Addr, QuerierWrapper, StdResult, SubMsg, Timestamp};
     use finance::{
         bank::BankAccount,
         coin::Coin,
-        coin_legacy::from_cosmwasm,
-        currency::{Currency, Usdc},
+        currency::Currency,
         error::Result as FinanceResult,
         liability::Liability,
         percent::Percent,
     };
-    use lpp::msg::{LoanResponse, QueryLoanResponse};
+    use lpp::msg::{LoanResponseNew, QueryLoanResponseNew};
     use lpp::stub::Lpp;
     use serde::{Deserialize, Serialize};
 
@@ -141,12 +141,11 @@ mod tests {
 
     use super::Lease;
 
-    const DENOM: &str = Usdc::SYMBOL;
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     pub struct BankStub {
-        balance: CWCoin,
+        balance: u128,
     }
 
     impl BankAccount for BankStub {
@@ -154,7 +153,7 @@ mod tests {
         where
             C: Currency,
         {
-            from_cosmwasm(self.balance.clone())
+            Ok(Coin::<C>::new(self.balance))
         }
 
         fn send<C>(&self, _amount: Coin<C>, _to: &Addr) -> FinanceResult<SubMsg> {
@@ -164,7 +163,7 @@ mod tests {
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     struct LppLocalStub {
-        loan: Option<LoanResponse>,
+        loan: Option<LoanResponseNew<super::Currency>>,
     }
 
     impl Lpp<super::Currency> for LppLocalStub {
@@ -184,7 +183,7 @@ mod tests {
             &self,
             _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
-        ) -> StdResult<QueryLoanResponse> {
+        ) -> StdResult<QueryLoanResponseNew<super::Currency>> {
             Result::Ok(self.loan.clone())
         }
 
@@ -193,7 +192,7 @@ mod tests {
             _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
             _by: Timestamp,
-        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse> {
+        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponseNew<super::Currency>> {
             todo!()
         }
     }
@@ -218,7 +217,7 @@ mod tests {
             &self,
             _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
-        ) -> StdResult<QueryLoanResponse> {
+        ) -> StdResult<QueryLoanResponseNew<super::Currency>> {
             unreachable!()
         }
 
@@ -227,7 +226,7 @@ mod tests {
             _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
             _by: Timestamp,
-        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse> {
+        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponseNew<super::Currency>> {
             unreachable!()
         }
     }
@@ -238,7 +237,7 @@ mod tests {
     {
         Lease {
             customer: Addr::unchecked("customer"),
-            currency: DENOM.to_string(),
+            currency: super::Currency::SYMBOL.to_string(),
             liability: Liability::new(
                 Percent::from_percent(65),
                 Percent::from_percent(70),
@@ -256,7 +255,7 @@ mod tests {
         }
     }
 
-    fn lease_setup(loan_response: Option<LoanResponse>) -> Lease<LppLocalStub> {
+    fn lease_setup(loan_response: Option<LoanResponseNew<super::Currency>>) -> Lease<LppLocalStub> {
         let lpp_stub = LppLocalStub {
             loan: loan_response,
         };
@@ -266,11 +265,14 @@ mod tests {
 
     fn create_bank_account(lease_amount: u128) -> BankStub {
         BankStub {
-            balance: coin(lease_amount, DENOM),
+            balance: lease_amount,
         }
     }
 
-    fn request_state(lease: Lease<LppLocalStub>, bank_account: BankStub) -> StateResponse {
+    fn request_state(
+        lease: Lease<LppLocalStub>,
+        bank_account: BankStub,
+    ) -> StateResponse<super::Currency, super::Currency> {
         let mut deps = mock_dependencies();
         lease
             .state(
@@ -298,9 +300,9 @@ mod tests {
         let lease_amount = 1000;
         let interest_rate = Percent::from_permille(50);
         // LPP loan
-        let loan = LoanResponse {
-            principal_due: coin(300, DENOM),
-            interest_due: coin(0, DENOM),
+        let loan = LoanResponseNew {
+            principal_due: coin(300),
+            interest_due: coin(0),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -310,7 +312,7 @@ mod tests {
 
         let res = request_state(lease, bank_account);
         let exp = StateResponse::Opened {
-            amount: coin(lease_amount, DENOM),
+            amount: coin(lease_amount),
             interest_rate: MARGIN_INTEREST_RATE.checked_add(interest_rate).unwrap(),
             principal_due: loan.principal_due,
             interest_due: loan.interest_due,
@@ -327,7 +329,7 @@ mod tests {
         let lease = lease_setup(None);
 
         let res = request_state(lease, bank_account);
-        let exp = StateResponse::Paid(coin(lease_amount, DENOM));
+        let exp = StateResponse::Paid(coin(lease_amount));
         assert_eq!(exp, res);
     }
 
@@ -363,5 +365,9 @@ mod tests {
 
         let exp = StateResponse::Closed();
         assert_eq!(exp, res);
+    }
+
+    fn coin(a: u128) -> Coin<super::Currency> {
+        Coin::<super::Currency>::new(a)
     }
 }

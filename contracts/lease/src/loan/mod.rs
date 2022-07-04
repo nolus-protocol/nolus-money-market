@@ -3,23 +3,21 @@ pub use state::State;
 
 use std::{fmt::Debug, marker::PhantomData};
 
-use cosmwasm_std::{Addr, Coin, QuerierWrapper, SubMsg, Timestamp};
+use cosmwasm_std::{Addr, QuerierWrapper, SubMsg, Timestamp};
 use finance::{
-    coin::Coin as FinanceCoin,
-    coin_legacy::{self, from_cosmwasm, to_cosmwasm},
+    coin::Coin,
+    currency::Currency,
     duration::Duration,
     interest::InterestPeriod,
-    percent::{Percent, Units}, currency::Currency,
+    percent::{Percent, Units},
 };
 use lpp::{
-    msg::{LoanResponse, QueryLoanResponse},
+    msg::{QueryLoanResponseNew, LoanResponseNew},
     stub::Lpp,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    error::{ContractError, ContractResult}
-};
+use crate::error::{ContractError, ContractResult};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -69,42 +67,31 @@ where
 
     pub(crate) fn repay(
         &mut self,
-        payment: Coin,
+        payment: Coin<Lpn>,
         by: Timestamp,
         querier: &QuerierWrapper,
         lease: Addr,
     ) -> ContractResult<Option<SubMsg>> {
         let principal_due = self.load_principal_due(querier, lease.clone())?;
-        debug_assert_eq!(payment.denom, principal_due.denom);
 
-        let change = self.repay_margin_interest(
-            from_cosmwasm(principal_due.clone())?,
-            by,
-            from_cosmwasm(payment)?,
-        );
-        if change.amount.is_zero() {
+        let change = self.repay_margin_interest(principal_due, by, payment);
+        if change.is_zero() {
             return Ok(None);
         }
 
         let loan_interest_due =
             self.load_loan_interest_due(querier, lease, self.current_period.start())?;
-        debug_assert_eq!(change.denom, loan_interest_due.denom);
 
-        let loan_payment = if loan_interest_due.amount <= change.amount
-            && self.current_period.zero_length()
-        {
-            self.open_next_period();
-            let loan_interest_surplus = coin_legacy::sub_amount(change, loan_interest_due.amount);
-            let change = self.repay_margin_interest(
-                from_cosmwasm(principal_due)?,
-                by,
-                from_cosmwasm(loan_interest_surplus)?,
-            );
-            coin_legacy::add_coin(loan_interest_due, change)
-        } else {
-            change
-        };
-        if loan_payment.amount.is_zero() {
+        let loan_payment =
+            if loan_interest_due <= change && self.current_period.zero_length() {
+                self.open_next_period();
+                let loan_interest_surplus = change - loan_interest_due;
+                let change = self.repay_margin_interest(principal_due, by, loan_interest_surplus);
+                loan_interest_due + change
+            } else {
+                change
+            };
+        if loan_payment.is_zero() {
             // in practice not possible, but in theory it is if two consecutive repayments are received
             // with the same 'by' time.
             return Ok(None);
@@ -118,7 +105,7 @@ where
 
         // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
         self.lpp
-            .repay_loan_req(from_cosmwasm(loan_payment)?)
+            .repay_loan_req(loan_payment)
             .map(Some)
             .map_err(|err| err.into())
     }
@@ -128,7 +115,7 @@ where
         now: Timestamp,
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
-    ) -> ContractResult<Option<State>> {
+    ) -> ContractResult<Option<State<Lpn>>> {
         let loan_resp = self.load_lpp_loan(querier, lease)?;
         Ok(loan_resp.map(|loan_state| self.merge_state_with(loan_state, now)))
     }
@@ -137,8 +124,8 @@ where
         &self,
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
-    ) -> ContractResult<Coin> {
-        let loan: QueryLoanResponse = self.load_lpp_loan(querier, lease)?;
+    ) -> ContractResult<Coin<Lpn>> {
+        let loan: QueryLoanResponseNew<Lpn> = self.load_lpp_loan(querier, lease)?;
         Ok(loan.ok_or(ContractError::LoanClosed())?.principal_due)
     }
 
@@ -147,7 +134,7 @@ where
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
         by: Timestamp,
-    ) -> ContractResult<Coin> {
+    ) -> ContractResult<Coin<Lpn>> {
         let interest = self
             .lpp
             .loan_outstanding_interest(querier, lease, by)
@@ -159,20 +146,19 @@ where
         &self,
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
-    ) -> ContractResult<QueryLoanResponse> {
+    ) -> ContractResult<QueryLoanResponseNew<Lpn>> {
         self.lpp.loan(querier, lease).map_err(ContractError::from)
     }
 
     fn repay_margin_interest(
         &mut self,
-        principal_due: FinanceCoin<Lpn>,
+        principal_due: Coin<Lpn>,
         by: Timestamp,
-        payment: FinanceCoin<Lpn>,
-    ) -> Coin
-    {
+        payment: Coin<Lpn>,
+    ) -> Coin<Lpn> {
         let (period, change) = self.current_period.pay(principal_due, payment, by);
         self.current_period = period;
-        to_cosmwasm(change)
+        change
     }
 
     fn open_next_period(&mut self) {
@@ -183,19 +169,14 @@ where
             .spanning(Duration::from_secs(self.interest_due_period_secs));
     }
 
-    fn merge_state_with(&self, loan_state: LoanResponse, now: Timestamp) -> State {
+    fn merge_state_with(&self, loan_state: LoanResponseNew<Lpn>, now: Timestamp) -> State<Lpn> {
         let principal_due = loan_state.principal_due;
         let margin_interest_period = self
             .current_period
             .spanning(Duration::between(self.current_period.start(), now));
 
-        // TODO calculate the interest directly over `principal_due` once migrate to finance::coin<>
-        let margin_interest_due_amount = margin_interest_period.interest(principal_due.amount);
-        let margin_interest_due = Coin::new(
-            margin_interest_due_amount.into(),
-            principal_due.denom.clone(),
-        );
-        let interest_due = coin_legacy::add_coin(loan_state.interest_due, margin_interest_due);
+        let margin_interest_due = margin_interest_period.interest(principal_due);
+        let interest_due = loan_state.interest_due + margin_interest_due;
         State {
             annual_interest: loan_state.annual_interest_rate + self.annual_margin_interest,
             principal_due,

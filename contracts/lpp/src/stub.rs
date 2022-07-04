@@ -8,26 +8,32 @@ use finance::{
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::msg::{ExecuteMsg, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg};
+use crate::msg::{
+    ExecuteMsg, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryLoanResponseNew,
+    QueryMsg, QueryLoanOutstandingInterestResponseNew,
+};
 
 pub const REPLY_ID: u64 = 28;
 
-pub trait Lpp<C>: Serialize + DeserializeOwned {
-    fn open_loan_req(&self, amount: Coin<C>) -> StdResult<SubMsg>;
+pub trait Lpp<Lpn>: Serialize + DeserializeOwned
+where
+    Lpn: Currency,
+{
+    fn open_loan_req(&self, amount: Coin<Lpn>) -> StdResult<SubMsg>;
     fn open_loan_resp(&self, resp: Reply) -> Result<(), String>;
-    fn repay_loan_req(&self, repayment: Coin<C>) -> StdResult<SubMsg>;
+    fn repay_loan_req(&self, repayment: Coin<Lpn>) -> StdResult<SubMsg>;
 
     fn loan(
         &self,
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
-    ) -> StdResult<QueryLoanResponse>;
+    ) -> StdResult<QueryLoanResponseNew<Lpn>>;
     fn loan_outstanding_interest(
         &self,
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
         by: Timestamp,
-    ) -> StdResult<QueryLoanOutstandingInterestResponse>;
+    ) -> StdResult<QueryLoanOutstandingInterestResponseNew<Lpn>>;
 }
 
 pub trait LppVisitor {
@@ -37,7 +43,7 @@ pub trait LppVisitor {
     fn on<C, L>(self, lpp: &L) -> Result<Self::Output, Self::Error>
     where
         L: Lpp<C>,
-        C: Currency,;
+        C: Currency;
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -76,7 +82,7 @@ impl LppStub {
 
             fn on<C>(self) -> Result<Self::Output, Self::Error>
             where
-                C: Currency,
+                C: Currency + DeserializeOwned,
             {
                 self.0.on::<C, LppStub>(self.1)
             }
@@ -89,11 +95,11 @@ impl LppStub {
     }
 }
 
-impl<C> Lpp<C> for LppStub
+impl<Lpn> Lpp<Lpn> for LppStub
 where
-    C: Currency,
+    Lpn: Currency + DeserializeOwned,
 {
-    fn open_loan_req(&self, amount: Coin<C>) -> StdResult<SubMsg> {
+    fn open_loan_req(&self, amount: Coin<Lpn>) -> StdResult<SubMsg> {
         let msg = to_binary(&ExecuteMsg::OpenLoan {
             amount: to_cosmwasm(amount),
         })?;
@@ -112,7 +118,7 @@ where
         resp.result.into_result().map(|_| ())
     }
 
-    fn repay_loan_req(&self, repayment: Coin<C>) -> StdResult<SubMsg> {
+    fn repay_loan_req(&self, repayment: Coin<Lpn>) -> StdResult<SubMsg> {
         let msg = to_binary(&ExecuteMsg::RepayLoan {})?;
         Ok(SubMsg::new(WasmMsg::Execute {
             contract_addr: self.addr.as_ref().into(),
@@ -125,7 +131,7 @@ where
         &self,
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
-    ) -> StdResult<QueryLoanResponse> {
+    ) -> StdResult<QueryLoanResponseNew<Lpn>> {
         let msg = QueryMsg::Loan {
             lease_addr: lease.into(),
         };
@@ -137,7 +143,7 @@ where
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
         by: Timestamp,
-    ) -> StdResult<QueryLoanOutstandingInterestResponse> {
+    ) -> StdResult<QueryLoanOutstandingInterestResponseNew<Lpn>> {
         let msg = QueryMsg::LoanOutstandingInterest {
             lease_addr: lease.into(),
             outstanding_time: by,

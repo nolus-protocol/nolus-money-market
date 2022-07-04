@@ -1,8 +1,7 @@
-use cosmwasm_std::Coin;
-use finance::percent::Percent;
+use finance::{percent::Percent, coin::Coin};
 
-pub struct State {
+pub struct State<Lpn> {
     pub annual_interest: Percent,
-    pub principal_due: Coin,
-    pub interest_due: Coin,
+    pub principal_due: Coin<Lpn>,
+    pub interest_due: Coin<Lpn>,
 }

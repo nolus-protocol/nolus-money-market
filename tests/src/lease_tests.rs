@@ -1,13 +1,15 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{coin, coins, Addr, Coin, Timestamp};
+use cosmwasm_std::{coin, coins, Addr, Timestamp};
 use cw_multi_test::{AppResponse, Executor};
 
 use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
 
 use finance::{
-    coin_legacy::{add_coin, sub_coin},
+    coin::Coin,
+    coin_legacy::{add_coin, from_cosmwasm, sub_coin},
+    currency::Usdc,
     duration::Duration,
     interest::InterestPeriod,
     percent::Percent,
@@ -15,15 +17,17 @@ use finance::{
 
 use crate::common::test_case::TestCase;
 
-const DENOM: &str = "uusdc";
+type Currency = Usdc;
+type TheCoin = Coin<Currency>;
+const DENOM: &str = <Usdc as finance::currency::Currency>::SYMBOL;
 const DOWNPAYMENT: u128 = 10;
 
-fn create_coin(amount: u128) -> Coin {
-    coin(amount, DENOM)
+fn create_coin(amount: u128) -> TheCoin {
+    Coin::<Currency>::new(amount)
 }
 
-fn create_coins(amount: u128) -> Vec<Coin> {
-    coins(amount, DENOM)
+fn create_coins(amount: u128) -> Vec<TheCoin> {
+    vec![create_coin(amount)]
 }
 
 fn create_test_case() -> TestCase {
@@ -35,17 +39,14 @@ fn create_test_case() -> TestCase {
     test_case
 }
 
-fn calculate_interest(principal: Coin, interest_rate: Percent, duration: u64) -> Coin {
-    coin(
-        InterestPeriod::with_interest(interest_rate)
-            .from(Timestamp::from_nanos(0))
-            .spanning(Duration::from_nanos(duration))
-            .interest(principal.amount.u128()),
-        DENOM,
-    )
+fn calculate_interest(principal: TheCoin, interest_rate: Percent, duration: u64) -> TheCoin {
+    InterestPeriod::with_interest(interest_rate)
+        .from(Timestamp::from_nanos(0))
+        .spanning(Duration::from_nanos(duration))
+        .interest(principal)
 }
 
-fn open_lease(test_case: &mut TestCase, value: Coin) -> Addr {
+fn open_lease(test_case: &mut TestCase, value: TheCoin) -> Addr {
     test_case
         .app
         .execute_contract(
@@ -76,7 +77,7 @@ fn get_lease_address(test_case: &TestCase) -> Addr {
     query_response.iter().next().unwrap().clone()
 }
 
-fn repay(test_case: &mut TestCase, contract_addr: &Addr, value: Coin) -> AppResponse {
+fn repay(test_case: &mut TestCase, contract_addr: &Addr, value: TheCoin) -> AppResponse {
     test_case
         .app
         .execute_contract(
@@ -100,7 +101,7 @@ fn close(test_case: &mut TestCase, contract_addr: &Addr) -> AppResponse {
         .unwrap()
 }
 
-fn quote_query(test_case: &TestCase, amount: Coin) -> QuoteResponse {
+fn quote_query(test_case: &TestCase, amount: TheCoin) -> QuoteResponse {
     test_case
         .app
         .wrap()
@@ -113,7 +114,7 @@ fn quote_query(test_case: &TestCase, amount: Coin) -> QuoteResponse {
         .unwrap()
 }
 
-fn state_query(test_case: &TestCase, contract_addr: &String) -> StateResponse {
+fn state_query(test_case: &TestCase, contract_addr: &String) -> StateResponse<Currency, Currency> {
     test_case
         .app
         .wrap()
@@ -123,12 +124,12 @@ fn state_query(test_case: &TestCase, contract_addr: &String) -> StateResponse {
 
 fn expected_open_state(
     test_case: &TestCase,
-    downpayment: Coin,
-    payments: Coin,
+    downpayment: TheCoin,
+    payments: TheCoin,
     duration: u64,
-) -> StateResponse {
+) -> StateResponse<Currency, Currency> {
     let quote_result = quote_query(test_case, downpayment.clone());
-    let expected = sub_coin(sub_coin(quote_result.total.clone(), downpayment), payments);
+    let expected = from_cosmwasm(quote_result.total)? - downpayment - payments;
     StateResponse::Opened {
         amount: quote_result.total,
         interest_rate: quote_result.annual_interest_rate,

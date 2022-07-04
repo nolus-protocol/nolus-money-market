@@ -1,7 +1,7 @@
-use cosmwasm_std::{Addr, Coin, Decimal, Timestamp, Uint64, Uint128};
-use finance::percent::Percent;
+use cosmwasm_std::{Addr, Coin as CwCoin, Decimal, Timestamp, Uint128, Uint64};
+use finance::{coin::Coin, currency::Currency, percent::Percent};
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -18,15 +18,21 @@ pub enum ExecuteMsg {
         addon_optimal_interest_rate: Percent,
     },
 
-    OpenLoan { amount: Coin },
+    OpenLoan {
+        amount: CwCoin,
+    },
     RepayLoan,
 
     Deposit(),
     // CW20 interface, withdraw from lender deposit
-    Burn { amount: Uint128},
+    Burn {
+        amount: Uint128,
+    },
 
     DistributeRewards,
-    ClaimRewards { other_recipient: Option<Addr> },
+    ClaimRewards {
+        other_recipient: Option<Addr>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -34,7 +40,7 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     Config(),
     Quote {
-        amount: Coin,
+        amount: CwCoin,
     },
     Loan {
         lease_addr: Addr,
@@ -45,13 +51,16 @@ pub enum QueryMsg {
     },
 
     // Deposit
-
     /// CW20 interface, lender deposit balance
-    Balance { address: Addr },
+    Balance {
+        address: Addr,
+    },
     LppBalance(),
     Price(),
 
-    Rewards { address: Addr },
+    Rewards {
+        address: Addr,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -74,42 +83,62 @@ pub enum QueryQuoteResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct LoanResponse {
-    pub principal_due: Coin,
-    pub interest_due: Coin,
+    pub principal_due: CwCoin,
+    pub interest_due: CwCoin,
+    pub annual_interest_rate: Percent,
+    pub interest_paid: Timestamp,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct LoanResponseNew<Lpn>
+where
+    Lpn: Currency,
+{
+    pub principal_due: Coin<Lpn>,
+    pub interest_due: Coin<Lpn>,
     pub annual_interest_rate: Percent,
     pub interest_paid: Timestamp,
 }
 
 pub type QueryLoanResponse = Option<LoanResponse>;
+pub type QueryLoanResponseNew<Lpn> = Option<LoanResponseNew<Lpn>>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct OutstandingInterest(pub Coin);
+pub struct OutstandingInterest(pub CwCoin);
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct OutstandingInterestNew<Lpn>(pub Coin<Lpn>)
+where
+    Lpn: Currency;
 
 pub type QueryLoanOutstandingInterestResponse = Option<OutstandingInterest>;
+pub type QueryLoanOutstandingInterestResponseNew<Lpn> = Option<OutstandingInterestNew<Lpn>>;
 
 // Deposit query responses
 
 // CW20 interface
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct BalanceResponse {
-        pub balance: Uint128,
+    pub balance: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct PriceResponse {
-        pub price: Decimal,
-        pub denom: String,
+    pub price: Decimal,
+    pub denom: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct LppBalanceResponse {
-    pub balance: Coin,
-    pub total_principal_due: Coin,
-    pub total_interest_due: Coin,
+    pub balance: CwCoin,
+    pub total_principal_due: CwCoin,
+    pub total_interest_due: CwCoin,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct RewardsResponse {
-    pub rewards: Coin
+    pub rewards: CwCoin,
 }
