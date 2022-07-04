@@ -51,6 +51,18 @@ impl<'m> PriceHooks<'m> {
         hook.remove(storage);
         Ok(Response::new().add_attribute("method", "remove"))
     }
+
+    #[cfg(test)]
+    pub fn get(&self, storage: &dyn Storage, addr: Addr) -> StdResult<DenomToPrice> {
+        use cosmwasm_std::StdError;
+
+        let hook = self.hooks.may_load(storage, addr)?;
+        match hook {
+            Some(h) => Ok(h),
+            None => Err(StdError::generic_err("no hook found for address")),
+        }
+    }
+
     pub fn notify(
         &self,
         storage: &mut dyn Storage,
@@ -67,9 +79,6 @@ impl<'m> PriceHooks<'m> {
                 ctime,
                 &Some(to_binary(&price)?),
             )?;
-
-            // let (id, alarm) = timestamp?;
-            // dispatcher.send_to(id, alarm.addr, ctime, &None)?;
         }
 
         Ok(())
@@ -141,15 +150,53 @@ pub mod tests {
         let addr3 = Addr::unchecked("addr3");
 
         assert!(hooks.add_or_update(storage, &addr1, t1.clone()).is_ok());
-        // same timestamp
-        assert!(hooks.add_or_update(storage, &addr2, t1).is_ok());
+        assert_eq!(hooks.get(storage, addr1.clone()).unwrap(), t1);
+
+        // same price hook
+        assert!(hooks.add_or_update(storage, &addr2, t1.clone()).is_ok());
+        assert_eq!(hooks.get(storage, addr2.clone()).unwrap(), t1);
+
         // different timestamp
-        assert!(hooks.add_or_update(storage, &addr3, t2).is_ok());
+        assert!(hooks.add_or_update(storage, &addr3, t2.clone()).is_ok());
+
+        assert!(hooks.add_or_update(storage, &addr1, t2.clone()).is_ok());
 
         let hook_denoms = hooks.get_hook_denoms(storage).unwrap();
         assert_eq!(hook_denoms.len(), 2);
 
+        assert_eq!(hooks.get(storage, addr1).unwrap(), t2);
+
         assert!(hook_denoms.contains("BTH"));
         assert!(hook_denoms.contains("ETH"));
+    }
+
+    #[test]
+    fn test_remove() {
+        let hooks = PriceHooks::new("hooks", "hooks_sequence");
+        let storage = &mut mock_dependencies().storage;
+
+        let t1 = DenomToPrice::new(
+            "BTH".to_string(),
+            Price::new(Decimal::from_str("0.456789").unwrap(), "NLS".to_string()),
+        );
+        let t2 = DenomToPrice::new(
+            "ETH".to_string(),
+            Price::new(Decimal::from_str("0.123456").unwrap(), "NLS".to_string()),
+        );
+        let addr1 = Addr::unchecked("addr1");
+        let addr2 = Addr::unchecked("addr2");
+        let addr3 = Addr::unchecked("addr3");
+
+        assert!(hooks.add_or_update(storage, &addr1, t1.clone()).is_ok());
+        assert!(hooks.add_or_update(storage, &addr2, t1.clone()).is_ok());
+        assert!(hooks.add_or_update(storage, &addr3, t2.clone()).is_ok());
+
+        assert_eq!(hooks.get(storage, addr2.clone()).unwrap(), t1);
+        hooks.remove(storage, addr2.clone()).unwrap();
+        assert_eq!(
+            hooks.get(storage, addr2.clone()).unwrap_err().to_string(),
+            "Generic error: no hook found for address"
+        );
+        hooks.remove(storage, addr2).unwrap();
     }
 }

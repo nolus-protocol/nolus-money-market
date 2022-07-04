@@ -74,5 +74,5 @@ pub enum ExecuteAlarmMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteHookMsg {
-    Notify(DenomToPrice),
+    Alarm(DenomToPrice),
 }

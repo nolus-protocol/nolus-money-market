@@ -10,7 +10,7 @@ use finance::coin_legacy::from_cosmwasm;
 use lpp::stub::{Lpp, LppStub};
 
 use crate::error::{ContractError, ContractResult};
-use crate::lease::{Lease, Currency};
+use crate::lease::{Currency, Lease};
 use crate::msg::{ExecuteMsg, NewLeaseForm, StatusQuery, StatusResponse};
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -61,6 +61,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::Repay() => try_repay(deps, env, info),
         ExecuteMsg::Close() => try_close(deps, env, info),
+        ExecuteMsg::Alarm(price) => todo!(),
     }
 }
 

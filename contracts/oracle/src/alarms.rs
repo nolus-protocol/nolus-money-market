@@ -11,7 +11,7 @@ use marketprice::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use time_oracle::{Alarms, Id, TimeOracle};
+use time_oracle::{Alarms as TimeAlarms, Id, TimeOracle};
 
 use crate::{
     msg::{ExecuteAlarmMsg, ExecuteHookMsg},
@@ -23,14 +23,19 @@ pub struct MarketAlarms {}
 
 impl MarketAlarms {
     const TIME_ORACLE: TimeOracle<'static> = TimeOracle::new("time_oracle");
-    const TIME_ALARMS: Alarms<'static> = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
+    const TIME_ALARMS: TimeAlarms<'static> =
+        TimeAlarms::new("alarms", "alarms_idx", "alarms_next_id");
     const PRICE_ALARMS: PriceHooks<'static> = PriceHooks::new("hooks", "hooks_sequence");
 
     pub fn remove(storage: &mut dyn Storage, msg_id: Id) -> StdResult<()> {
         Self::TIME_ALARMS.remove(storage, msg_id)
     }
 
-    pub fn try_add(deps: DepsMut, addr: Addr, time: Timestamp) -> Result<Response, ContractError> {
+    pub fn try_add_time_alarm(
+        deps: DepsMut,
+        addr: Addr,
+        time: Timestamp,
+    ) -> Result<Response, ContractError> {
         let valid = deps
             .api
             .addr_validate(addr.as_str())
@@ -39,7 +44,7 @@ impl MarketAlarms {
         Ok(Response::new().add_attribute("method", "try_add_alarm"))
     }
 
-    pub fn try_notify(storage: &mut dyn Storage, ctime: Timestamp) -> StdResult<Response> {
+    pub fn try_notify_on_time(storage: &mut dyn Storage, ctime: Timestamp) -> StdResult<Response> {
         use time_oracle::AlarmDispatcher;
 
         struct OracleAlarmDispatcher<'a> {
@@ -47,13 +52,7 @@ impl MarketAlarms {
         }
 
         impl<'a> AlarmDispatcher for OracleAlarmDispatcher<'a> {
-            fn send_to(
-                &mut self,
-                id: Id,
-                addr: Addr,
-                ctime: Timestamp,
-                _data: &Option<Binary>,
-            ) -> StdResult<()> {
+            fn send_to(&mut self, id: Id, addr: Addr, ctime: Timestamp) -> StdResult<()> {
                 let msg = ExecuteAlarmMsg::Alarm(ctime);
                 let wasm_msg = cosmwasm_std::wasm_execute(addr, &msg, vec![])?;
                 let submsg = SubMsg::reply_always(CosmosMsg::Wasm(wasm_msg), id);
@@ -77,7 +76,7 @@ impl MarketAlarms {
         block_time: Timestamp,
     ) -> StdResult<Response> {
         Self::TIME_ORACLE.update_global_time(storage, block_time)?;
-        Self::try_notify(storage, block_time)
+        Self::try_notify_on_time(storage, block_time)
     }
 
     pub fn try_add_price_hook(
@@ -117,7 +116,7 @@ impl MarketAlarms {
                     None => return Err(StdError::generic_err("msg")),
                 };
 
-                let msg = ExecuteHookMsg::Notify(current_price);
+                let msg = ExecuteHookMsg::Alarm(current_price);
                 let wasm_msg = cosmwasm_std::wasm_execute(addr.to_string(), &msg, vec![])?;
                 let submsg = SubMsg::reply_always(CosmosMsg::Wasm(wasm_msg), id);
                 self.response.messages.push(submsg);

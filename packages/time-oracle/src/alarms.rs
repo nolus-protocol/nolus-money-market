@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Binary, Order, StdResult, Storage, Timestamp};
+use cosmwasm_std::{Addr, Order, StdResult, Storage, Timestamp};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, MultiIndex};
 use serde::{Deserialize, Serialize};
 
@@ -83,7 +83,7 @@ impl<'a> Alarms<'a> {
         );
         for timestamp in timestamps {
             let (id, alarm) = timestamp?;
-            dispatcher.send_to(id, alarm.addr, ctime, &None)?;
+            dispatcher.send_to(id, alarm.addr, ctime)?;
         }
 
         Ok(())
@@ -91,13 +91,7 @@ impl<'a> Alarms<'a> {
 }
 
 pub trait AlarmDispatcher {
-    fn send_to(
-        &mut self,
-        id: Id,
-        addr: Addr,
-        ctime: Timestamp,
-        data: &Option<Binary>,
-    ) -> StdResult<()>;
+    fn send_to(&mut self, id: Id, addr: Addr, ctime: Timestamp) -> StdResult<()>;
 }
 
 #[cfg(test)]
@@ -109,13 +103,7 @@ pub mod tests {
     struct MockAlarmDispatcher(pub Vec<Id>);
 
     impl AlarmDispatcher for MockAlarmDispatcher {
-        fn send_to(
-            &mut self,
-            id: Id,
-            _addr: Addr,
-            _ctime: Timestamp,
-            _data: &Option<Binary>,
-        ) -> StdResult<()> {
+        fn send_to(&mut self, id: Id, _addr: Addr, _ctime: Timestamp) -> StdResult<()> {
             self.0.push(id);
             Ok(())
         }

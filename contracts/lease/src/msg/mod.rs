@@ -1,8 +1,9 @@
 mod opening;
 mod query;
 
+use marketprice::feed::DenomToPrice;
 pub use opening::{Denom, LoanForm, NewLeaseForm};
-pub use query::{StatusQuery, StatusResponse, State};
+pub use query::{State, StatusQuery, StatusResponse};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -11,4 +12,5 @@ use serde::{Deserialize, Serialize};
 pub enum ExecuteMsg {
     Repay(), // it is not an enum variant to represent it as a JSON object instead of JSON string
     Close(), // that is a limitation of cosmjs library
+    Alarm(DenomToPrice),
 }

@@ -61,7 +61,7 @@ pub fn execute(
             get_sender(deps.api, info)?,
             prices,
         ),
-        ExecuteMsg::AddAlarm { addr, time } => MarketAlarms::try_add(deps, addr, time),
+        ExecuteMsg::AddAlarm { addr, time } => MarketAlarms::try_add_time_alarm(deps, addr, time),
         ExecuteMsg::AddHook { target } => {
             MarketAlarms::try_add_price_hook(deps.storage, get_sender(deps.api, info)?, target)
         }
@@ -91,6 +91,7 @@ pub fn get_sender(api: &dyn Api, info: MessageInfo) -> StdResult<Addr> {
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+    parse_
     if msg.result.is_err() {
         Ok(Response::new().add_attribute("alarm", "error"))
     } else {
