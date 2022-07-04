@@ -11,7 +11,7 @@ type LeaseContractWrapperReply = Box<
     ContractWrapper<
         lease::msg::ExecuteMsg,
         lease::msg::NewLeaseForm,
-        lease::msg::StatusQuery,
+        lease::msg::StateQuery,
         lease::error::ContractError,
         lease::error::ContractError,
         lease::error::ContractError,

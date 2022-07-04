@@ -1,17 +1,20 @@
+use serde::{Deserialize, Serialize};
+
 type Symbol<'a> = &'a str;
 type SymbolStatic = &'static str;
+pub type SymbolOwned = String;
 
 pub trait Currency: 'static + Copy + Ord + Default {
     const SYMBOL: SymbolStatic;
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Usdc;
 impl Currency for Usdc {
     const SYMBOL: SymbolStatic = "uusdc";
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Nls;
 impl Currency for Nls {
     const SYMBOL: SymbolStatic = "unls";
@@ -21,11 +24,11 @@ pub trait SingleVisitor<C> {
     type Output;
     type Error;
 
-    fn on(&self) -> Result<Self::Output, Self::Error>;
-    fn on_unknown(&self) -> Result<Self::Output, Self::Error>;
+    fn on(self) -> Result<Self::Output, Self::Error>;
+    fn on_unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn visit<C, V>(symbol: Symbol, visitor: &V) -> Result<V::Output, V::Error>
+pub fn visit<C, V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
 where
     V: SingleVisitor<C>,
     C: Currency,
@@ -41,38 +44,38 @@ pub trait AnyVisitor {
     type Output;
     type Error;
 
-    fn on<C>(&self) -> Result<Self::Output, Self::Error>
+    fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
         C: Currency;
-    fn on_unknown(&self) -> Result<Self::Output, Self::Error>;
+    fn on_unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn visit_any<V>(symbol: Symbol, visitor: &V) -> Result<V::Output, V::Error>
+pub fn visit_any<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
 where
     V: AnyVisitor,
 {
     let any_visitor = AnyVisitorImpl(visitor);
-    visit::<Nls, _>(symbol, &any_visitor)
-        .or_else(|_| visit::<Usdc, _>(symbol, &any_visitor))
-        .unwrap_or_else(|_| visitor.on_unknown())
+    visit::<Nls, _>(symbol, any_visitor)
+        .or_else(|any_visitor| visit::<Usdc, _>(symbol, any_visitor))
+        .unwrap_or_else(|any_visitor| any_visitor.0.on_unknown())
 }
 
-struct AnyVisitorImpl<'a, V>(&'a V);
+struct AnyVisitorImpl<V>(V);
 
-impl<'a, C, V> SingleVisitor<C> for AnyVisitorImpl<'a, V>
+impl<C, V> SingleVisitor<C> for AnyVisitorImpl<V>
 where
     V: AnyVisitor,
     C: Currency,
 {
     type Output = Result<<V as AnyVisitor>::Output, <V as AnyVisitor>::Error>;
-    type Error = u8;
+    type Error = Self;
 
-    fn on(&self) -> Result<Self::Output, Self::Error> {
+    fn on(self) -> Result<Self::Output, Self::Error> {
         Ok(self.0.on::<C>())
     }
 
-    fn on_unknown(&self) -> Result<Self::Output, Self::Error> {
-        Err(Self::Error::default())
+    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+        Err(self)
     }
 }
 
@@ -100,7 +103,7 @@ mod test {
         type Output = bool;
         type Error = ();
 
-        fn on<Cin>(&self) -> Result<Self::Output, Self::Error>
+        fn on<Cin>(self) -> Result<Self::Output, Self::Error>
         where
             Cin: 'static,
         {
@@ -114,7 +117,7 @@ mod test {
             Ok(true)
         }
 
-        fn on_unknown(&self) -> Result<Self::Output, Self::Error> {
+        fn on_unknown(self) -> Result<Self::Output, Self::Error> {
             unreachable!();
         }
     }
@@ -122,11 +125,11 @@ mod test {
         type Output = bool;
         type Error = ();
 
-        fn on(&self) -> Result<Self::Output, Self::Error> {
+        fn on(self) -> Result<Self::Output, Self::Error> {
             Ok(true)
         }
 
-        fn on_unknown(&self) -> Result<Self::Output, Self::Error> {
+        fn on_unknown(self) -> Result<Self::Output, Self::Error> {
             unreachable!();
         }
     }
@@ -136,14 +139,14 @@ mod test {
         type Output = bool;
         type Error = ();
 
-        fn on<C>(&self) -> Result<Self::Output, Self::Error>
+        fn on<C>(self) -> Result<Self::Output, Self::Error>
         where
             C: Currency,
         {
             unreachable!();
         }
 
-        fn on_unknown(&self) -> Result<Self::Output, Self::Error> {
+        fn on_unknown(self) -> Result<Self::Output, Self::Error> {
             Ok(true)
         }
     }
@@ -152,45 +155,45 @@ mod test {
         type Output = bool;
         type Error = ();
 
-        fn on(&self) -> Result<Self::Output, Self::Error> {
+        fn on(self) -> Result<Self::Output, Self::Error> {
             unreachable!();
         }
 
-        fn on_unknown(&self) -> Result<Self::Output, Self::Error> {
+        fn on_unknown(self) -> Result<Self::Output, Self::Error> {
             Ok(true)
         }
     }
     #[test]
     fn visit_any() {
         let v_usdc = Expect::<Usdc>::new();
-        assert_eq!(Ok(true), super::visit_any(Usdc::SYMBOL, &v_usdc));
+        assert_eq!(Ok(true), super::visit_any(Usdc::SYMBOL, v_usdc));
 
         let v_nls = Expect::<Nls>::new();
-        assert_eq!(Ok(true), super::visit_any(Nls::SYMBOL, &v_nls));
+        assert_eq!(Ok(true), super::visit_any(Nls::SYMBOL, v_nls));
     }
 
     #[test]
     fn visit_any_unexpected() {
         assert_eq!(
             Ok(true),
-            super::visit_any("my_fancy_coin", &ExpectUnknownCurrency)
+            super::visit_any("my_fancy_coin", ExpectUnknownCurrency)
         );
     }
 
     #[test]
     fn visit_one() {
         let v_usdc = Expect::<Usdc>::new();
-        assert_eq!(Ok(true), super::visit(Usdc::SYMBOL, &v_usdc));
+        assert_eq!(Ok(true), super::visit(Usdc::SYMBOL, v_usdc));
 
         let v_nls = Expect::<Nls>::new();
-        assert_eq!(Ok(true), super::visit(Nls::SYMBOL, &v_nls));
+        assert_eq!(Ok(true), super::visit(Nls::SYMBOL, v_nls));
     }
 
     #[test]
     fn visit_one_unexpected() {
         assert_eq!(
             Ok(true),
-            super::visit::<Nls, _>("my_fancy_coin", &ExpectUnknownCurrency)
+            super::visit::<Nls, _>("my_fancy_coin", ExpectUnknownCurrency)
         );
     }
 }

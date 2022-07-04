@@ -3,15 +3,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{fraction::Fraction, fractionable::Fractionable};
 
+// TODO review whether it may gets simpler if extend Fraction
 pub trait Ratio<U>
-where
-    Self: Sized + Fraction<U>,
 {
-    type Inv: Ratio<U>;
-
     fn parts(&self) -> U;
     fn total(&self) -> U;
-    fn inv(&self) -> Option<Self::Inv>;
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -30,9 +26,9 @@ impl<U> Rational<U> {
     }
 }
 
-impl<U> Fraction<U> for Rational<U>
+impl<U, T> Fraction<U> for Rational<T>
 where
-    U: Default + PartialEq + Copy,
+    Self: Ratio<U>,
 {
     fn of<A>(&self, whole: A) -> A
     where
@@ -42,28 +38,15 @@ where
     }
 }
 
-impl<U> Ratio<U> for Rational<U>
+impl<U, T> Ratio<U> for Rational<T>
 where
-    U: Default + PartialEq + Copy,
+    T: Default + Copy + PartialEq + Into<U>,
 {
-    type Inv = Self;
-
     fn parts(&self) -> U {
-        self.nominator
+        self.nominator.into()
     }
 
     fn total(&self) -> U {
-        self.denominator
-    }
-
-    fn inv(&self) -> Option<Self::Inv> {
-        if self.nominator == U::default() {
-            None
-        } else {
-            Some(Self {
-                nominator: self.denominator,
-                denominator: self.nominator,
-            })
-        }
+        self.denominator.into()
     }
 }

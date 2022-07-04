@@ -8,9 +8,8 @@ use crate::state::tvl_intervals::Intervals;
 pub struct InstantiateMsg {
     pub cadence_hours: u32,
     pub lpp: Addr,
-    pub time_oracle: Addr,
+    pub oracle: Addr,
     pub treasury: Addr,
-    pub market_oracle: Addr,
     pub tvl_to_apr: Intervals,
 }
 

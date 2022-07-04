@@ -16,8 +16,9 @@ pub struct Dispatcher {}
 impl Dispatcher {
     pub fn dispatch(
         deps: DepsMut,
-        config: Config,
+        config: &Config,
         block_time: Timestamp,
+        this_contract: Addr,
     ) -> Result<Response, ContractError> {
         // get LPP balance: TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
         let lpp_balance = Self::get_lpp_balance(deps.as_ref(), &config.lpp)?;
@@ -28,10 +29,11 @@ impl Dispatcher {
         let last_dispatch = DispatchLog::last_dispatch(deps.storage)?;
         // Calculate the reward in LPN,
         // which matches TVLdenom, since the last calculation
-        let reward_lppdenom = InterestPeriod::with_interest(arp_permille)
+        let reward_lppdenom_amount = InterestPeriod::with_interest(arp_permille)
             .from(last_dispatch)
             .spanning(Duration::between(last_dispatch, block_time))
-            .interest(lpp_balance);
+            .interest(lpp_balance.amount);
+            let reward_lppdenom = Coin::new(reward_lppdenom_amount.into(), lpp_balance.denom);
 
         if reward_lppdenom.amount.is_zero() {
             return Self::no_reward_resp();
@@ -42,7 +44,7 @@ impl Dispatcher {
 
         // Obtain the currency market price of TVLdenom in uNLS and convert Rewards_TVLdenom in uNLS, Rewards_uNLS.
         let reward_unls =
-            Self::swap_reward_in_unls(deps.as_ref(), config.market_oracle, reward_lppdenom)?;
+            Self::swap_reward_in_unls(deps.as_ref(), config.oracle.to_owned(), reward_lppdenom)?;
 
         if reward_unls.amount.is_zero() {
             return Self::no_reward_resp();
@@ -58,7 +60,14 @@ impl Dispatcher {
             msg: to_binary(&lpp::msg::ExecuteMsg::DistributeRewards {})?,
         });
 
-        Ok(Response::new().add_messages([treasury_send_rewards_msg, pay_msg]))
+        let subsrcibe_msg = Dispatcher::alarm_subscribe_msg(
+            this_contract,
+            &config.oracle,
+            block_time,
+            config.cadence_hours,
+        )?;
+
+        Ok(Response::new().add_messages([treasury_send_rewards_msg, pay_msg, subsrcibe_msg]))
     }
 
     #[cfg(not(test))]
@@ -139,5 +148,25 @@ impl Dispatcher {
         Ok(Response::new()
             .add_attribute("method", "try_dispatch")
             .add_attribute("result", "no reward to dispatch"))
+    }
+
+    pub(crate) fn alarm_subscribe_msg(
+        this_contract: Addr,
+        oracle_addr: &Addr,
+        current_time: Timestamp,
+        cadence_hours: u32,
+    ) -> StdResult<CosmosMsg> {
+        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+            funds: vec![],
+            contract_addr: oracle_addr.to_string(),
+            msg: to_binary(&oracle::msg::ExecuteMsg::AddAlarm {
+                addr: this_contract,
+                time: current_time.plus_seconds(Self::to_seconds(cadence_hours)),
+            })?,
+        }))
+    }
+
+    fn to_seconds(cadence_hours: u32) -> u64 {
+        cadence_hours as u64 * 60 * 60
     }
 }

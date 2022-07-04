@@ -140,8 +140,12 @@ mod test {
     use std::{any::type_name, fmt::Debug};
 
     use cosmwasm_std::{from_slice, to_vec, StdError};
+    use serde::Serialize;
 
-    use crate::currency::{Nls, Usdc, Currency};
+    use crate::{
+        currency::{Currency, Nls, Usdc},
+        percent::test::test_of,
+    };
 
     use super::Coin;
 
@@ -174,20 +178,39 @@ mod test {
 
         assert_eq!(coin, from_slice(exp_txt.as_bytes()).unwrap());
     }
+    #[test]
+    fn serialize_as_field() {
+        //tested since it requires Serialize of the Currency
+        #[derive(Serialize)]
+        struct CoinContainer<C>
+        where
+            C: Currency,
+            Coin<C>: Serialize,
+        {
+            coin: Coin<C>,
+        }
+        assert_eq!(
+            r#"{"coin":["10","uusdc"]}"#,
+            String::from_utf8(
+                to_vec(&CoinContainer { coin: usdc(10) }).expect("serialization failed")
+            )
+            .unwrap()
+        );
+    }
 
     #[test]
     fn distinct_repr() {
         let amount = 432;
         assert_ne!(
-            to_vec(&Coin::<Nls>::new(amount)).unwrap(),
-            to_vec(&Coin::<Usdc>::new(amount)).unwrap()
+            to_vec(&nls(amount)).unwrap(),
+            to_vec(&usdc(amount)).unwrap()
         );
     }
 
     #[test]
     fn wrong_currency() {
         let amount = 134;
-        let nls_bin = to_vec(&Coin::<Nls>::new(amount)).unwrap();
+        let nls_bin = to_vec(&nls(amount)).unwrap();
         let res = from_slice::<Coin<Usdc>>(&nls_bin);
         assert_eq!(
             Err(StdError::parse_err(
@@ -200,7 +223,40 @@ mod test {
 
     #[test]
     fn display() {
-        assert_eq!("25 unls", Coin::<Nls>::new(25).to_string());
-        assert_eq!("0 uusdc", Coin::<Usdc>::new(0).to_string());
+        assert_eq!("25 unls", nls(25).to_string());
+        assert_eq!("0 uusdc", usdc(0).to_string());
+    }
+
+    #[test]
+    fn of_are() {
+        test_of(10, usdc(100), usdc(1));
+        test_of(11, usdc(100), usdc(1));
+        test_of(11, usdc(90), usdc(0));
+        test_of(11, usdc(91), usdc(1));
+        test_of(110, usdc(100), usdc(11));
+        test_of(12, usdc(100), usdc(1));
+        test_of(12, usdc(84), usdc(1));
+        test_of(12, usdc(83), usdc(0));
+        test_of(18, usdc(100), usdc(1));
+        test_of(18, usdc(56), usdc(1));
+        test_of(18, usdc(55), usdc(0));
+        test_of(18, usdc(120), usdc(2));
+        test_of(18, usdc(112), usdc(2));
+        test_of(18, usdc(111), usdc(1));
+        test_of(1000, usdc(u128::MAX), usdc(u128::MAX));
+    }
+
+    #[test]
+    #[should_panic]
+    fn of_overflow() {
+        let max_amount = usdc(u128::MAX);
+        test_of(1001, max_amount, max_amount);
+    }
+    fn usdc(amount: u128) -> Coin<Usdc> {
+        Coin::new(amount)
+    }
+
+    fn nls(amount: u128) -> Coin<Nls> {
+        Coin::new(amount)
     }
 }

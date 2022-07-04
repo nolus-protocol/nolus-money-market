@@ -567,10 +567,10 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
+ "oracle",
  "schemars",
  "serde",
  "thiserror",
- "time-oracle",
 ]
 
 [[package]]
@@ -642,7 +642,6 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
- "time-oracle",
  "treasury",
 ]
 

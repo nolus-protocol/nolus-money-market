@@ -91,7 +91,6 @@ pub fn get_sender(api: &dyn Api, info: MessageInfo) -> StdResult<Addr> {
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    parse_
     if msg.result.is_err() {
         Ok(Response::new().add_attribute("alarm", "error"))
     } else {

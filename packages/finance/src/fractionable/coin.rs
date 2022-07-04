@@ -1,59 +1,57 @@
-use cosmwasm_std::Uint256;
+use cosmwasm_std::{Uint128, Uint256};
 
-use crate::{coin::Coin, ratio::Ratio};
+use crate::coin::Coin;
 
-use super::Fractionable;
+use super::HigherRank;
 
-impl<U, C> Fractionable<U> for Coin<C>
+impl<U, C> HigherRank<U> for Coin<C>
 where
-    Uint256: From<U>,
-    U: PartialEq,
+    U: Into<u128>,
 {
-    fn safe_mul<R>(self, ratio: &R) -> Self
-    where
-        R: Ratio<U>,
-    {
-        Self::new(self.amount().safe_mul(ratio))
+    type Type = Uint256;
+
+    type Intermediate = Uint128;
+}
+
+impl<C> From<Coin<C>> for Uint256 {
+    fn from(coin: Coin<C>) -> Self {
+        let c: u128 = coin.into();
+        c.into()
     }
 }
 
+impl<C> From<Uint128> for Coin<C> {
+    fn from(amount: Uint128) -> Self {
+        let c: u128 = amount.into();
+        c.into()
+    }
+}
 #[cfg(test)]
 mod test {
-    use crate::{
-        coin::Coin,
-        percent::test::{test_are, test_of, test_of_are}, currency::Usdc,
-    };
+    use crate::{coin::Coin, currency::Nls, percent::Percent, ratio::Rational};
 
     #[test]
-    fn of_are() {
-        test_of_are(10, usdc(100), usdc(1));
-        test_of(11, usdc(100), usdc(1));
-        test_are(11, usdc(1), usdc(90));
-        test_of(110, usdc(100), usdc(11));
-        test_are(110, usdc(11), usdc(100));
-        test_of(12, usdc(100), usdc(1));
-        test_are(12, usdc(1), usdc(83));
-        test_of(18, usdc(100), usdc(1));
-        test_are(18, usdc(1), usdc(55));
-        test_of(18, usdc(120), usdc(2));
-        test_are(18, usdc(2), usdc(111));
-        test_of_are(1000, usdc(u128::MAX), usdc(u128::MAX));
-    }
+    fn safe_mul() {
+        use crate::fractionable::Fractionable;
+        assert_eq!(
+            Coin::<Nls>::new(30),
+            Coin::<Nls>::new(3).safe_mul(&Percent::from_percent(1000))
+        );
 
-    #[test]
-    #[should_panic]
-    fn of_overflow() {
-        let max_amount = usdc(u128::MAX);
-        test_of(1001, max_amount, max_amount);
-    }
-    #[test]
-    #[should_panic]
-    fn are_overflow() {
-        let max_amount = usdc(u128::MAX);
-        test_are(999, max_amount, max_amount);
-    }
+        assert_eq!(
+            Coin::<Nls>::new(1000),
+            <Coin::<Nls> as Fractionable<u32>>::safe_mul(
+                Coin::<Nls>::new(2),
+                &Rational::new(1000u32, 2u32)
+            )
+        );
 
-    fn usdc(amount: u128) -> Coin<Usdc> {
-        Coin::new(amount)
+        assert_eq!(
+            Coin::<Nls>::new(2u128 * u128::from(u32::MAX)),
+            <Coin::<Nls> as Fractionable<u32>>::safe_mul(
+                Coin::<Nls>::new(2),
+                &Rational::new(u32::MAX, 1u32)
+            )
+        );
     }
 }

@@ -1,16 +1,26 @@
-use cosmwasm_std::{Api, Coin, StdResult, Storage, Timestamp};
+use cosmwasm_std::{Api, StdResult, Storage, Timestamp};
 use cw_storage_plus::Item;
+use finance::{coin::Coin, currency::Currency};
 use lpp::stub::Lpp;
 
-use crate::{error::ContractResult, lease::{Lease, self}, loan::Loan, msg::NewLeaseForm};
+use crate::{
+    error::ContractResult,
+    lease::{self, Lease},
+    loan::Loan,
+    msg::NewLeaseForm,
+};
 
 impl NewLeaseForm {
-    const DB_ITEM: Item<'static, NewLeaseForm> = Item::new("lease_form");
+    const DB_ITEM: Item<'static, Self> = Item::new("lease_form");
 
-    pub(crate) fn amount_to_borrow(&self, downpayment: Coin) -> ContractResult<Coin> {
+    pub(crate) fn amount_to_borrow<Lpn>(&self, downpayment: Coin<Lpn>) -> ContractResult<Coin<Lpn>>
+    where
+        Lpn: Currency,
+    {
         assert_eq!(
-            downpayment.denom, self.currency,
-            "this is a single currency lease version"
+            Lpn::SYMBOL,
+            self.currency,
+            "[Single currency version] The LPN should match the currency of the lease"
         );
         // TODO msg.invariant_held(deps.api) checking invariants including address validity and incorporating the liability and loan form invariants
         self.liability.invariant_held()?;
@@ -18,7 +28,12 @@ impl NewLeaseForm {
         Ok(self.liability.init_borrow_amount(downpayment))
     }
 
-    pub(crate) fn into_lease<L>(self, lpp: L, start_at: Timestamp, api: &dyn Api) -> ContractResult<Lease<L>>
+    pub(crate) fn into_lease<L>(
+        self,
+        lpp: L,
+        start_at: Timestamp,
+        api: &dyn Api,
+    ) -> ContractResult<Lease<L>>
     where
         L: Lpp<lease::Currency>,
     {
@@ -46,32 +61,43 @@ impl NewLeaseForm {
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::Coin;
-    use finance::{liability::Liability, percent::Percent};
+    use std::fmt::Debug;
+
+    use finance::{
+        coin::Coin,
+        currency::{Currency, Nls, Usdc},
+        liability::Liability,
+        percent::Percent,
+    };
 
     use crate::msg::{LoanForm, NewLeaseForm};
 
     #[test]
     fn amount_to_borrow_no_downpayment() {
-        let downpayment = Coin::new(0, String::from("YAN"));
-        amount_to_borrow_impl(downpayment.clone(), downpayment);
+        let downpayment = Coin::<Usdc>::new(0);
+        amount_to_borrow_impl(downpayment, downpayment);
     }
 
     #[test]
     fn amount_to_borrow_some_downpayment() {
-        let downpayment = Coin::new(1000, String::from("YAN"));
-        let expected = Coin::new(111, downpayment.denom.clone());
+        let downpayment = Coin::<Nls>::new(1000);
+        let expected = Coin::<Nls>::new(111);
         amount_to_borrow_impl(downpayment, expected);
     }
 
     #[test]
     #[should_panic]
     fn amount_to_borrow_broken_invariant() {
-        let downpayment = Coin::new(0, String::from("YAN"));
+        let downpayment = Coin::<Nls>::new(0);
         let lease = NewLeaseForm {
             customer: "ss1s1".into(),
-            currency: downpayment.denom.clone(),
-            liability: Liability::new(Percent::from_percent(10), Percent::from_percent(0), Percent::from_percent(0), 100),
+            currency: Nls::SYMBOL.to_owned(),
+            liability: Liability::new(
+                Percent::from_percent(10),
+                Percent::from_percent(0),
+                Percent::from_percent(0),
+                100,
+            ),
             loan: LoanForm {
                 annual_margin_interest: Percent::from_percent(0),
                 lpp: "sdgg22d".into(),
@@ -82,11 +108,19 @@ mod test {
         let _res = lease.amount_to_borrow(downpayment);
     }
 
-    fn amount_to_borrow_impl(downpayment: Coin, expected: Coin) {
+    fn amount_to_borrow_impl<C>(downpayment: Coin<C>, expected: Coin<C>)
+    where
+        C: Currency + Debug,
+    {
         let lease = NewLeaseForm {
             customer: "ss1s1".into(),
-            currency: downpayment.denom.clone(),
-            liability: Liability::new(Percent::from_percent(10), Percent::from_percent(0), Percent::from_percent(10), 100),
+            currency: C::SYMBOL.to_owned(),
+            liability: Liability::new(
+                Percent::from_percent(10),
+                Percent::from_percent(0),
+                Percent::from_percent(10),
+                100,
+            ),
             loan: LoanForm {
                 annual_margin_interest: Percent::from_percent(0),
                 lpp: "sdgg22d".into(),

@@ -13,12 +13,13 @@ use crate::msg::{ConfigResponse, ExecuteMsg, Liability, QueryMsg, QuoteResponse,
 const CREATOR: &str = "creator";
 const LPP_ADDR: &str = "test";
 const DENOM: &str = "UST";
+const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
 
 fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::InstantiateMsg {
     crate::msg::InstantiateMsg {
         lease_code_id: Uint64::new(lease_code_id),
         lpp_ust_addr: lpp_addr,
-        lease_interest_rate_margin: Percent::from_percent(3),
+        lease_interest_rate_margin: MARGIN_INTEREST_RATE,
         recalc_hours: 1,
         liability: Liability::new(65, 70, 80),
         repayment: Repayment::new(90 * 24 * 60 * 60, 10 * 24 * 60 * 60),
@@ -156,7 +157,16 @@ fn test_quote() {
     assert_eq!(Uint128::new(285), resp.total.amount);
     assert_eq!(DENOM, resp.borrow.denom);
     assert_eq!(DENOM, resp.total.denom);
-    assert_eq!(Percent::HUNDRED, resp.annual_interest_rate); // hardcoded until LPP contract is merged
+    /*
+        103% =
+        100% lpp annual_interest_rate (when calling the test version of get_annual_interest_rate() in lpp_querier.rs)
+        +
+        3% margin_interest_rate of the leaser
+    */
+    assert_eq!(
+        Percent::HUNDRED.checked_add(MARGIN_INTEREST_RATE).unwrap(),
+        resp.annual_interest_rate
+    ); // hardcoded until LPP contract is merged
 
     let res = query(
         deps.as_ref(),

@@ -1,11 +1,10 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    ensure, to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
-    Storage, Timestamp,
+    ensure, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
+    Timestamp,
 };
 use cw2::set_contract_version;
-use time_oracle::Alarms;
 
 use crate::dispatcher::Dispatcher;
 use crate::error::ContractError;
@@ -17,8 +16,6 @@ use crate::state::dispatch_log::DispatchLog;
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub const TIME_ALARMS: Alarms = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
-
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -29,40 +26,36 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let lpp_addr = validate_addr(deps.as_ref(), msg.lpp)?;
-    let time_oracle_addr = validate_addr(deps.as_ref(), msg.time_oracle)?;
-    let market_oracle_addr = validate_addr(deps.as_ref(), msg.market_oracle)?;
+    let oracle_addr = validate_addr(deps.as_ref(), msg.oracle)?;
     let treasury_addr = validate_addr(deps.as_ref(), msg.treasury)?;
 
     Config::new(
         info.sender,
         msg.cadence_hours,
         lpp_addr,
-        time_oracle_addr,
+        oracle_addr.clone(),
         treasury_addr,
-        market_oracle_addr,
         msg.tvl_to_apr,
     )
     .store(deps.storage)?;
     DispatchLog::update(deps.storage, env.block.time)?;
 
-    try_add_alarm(
-        deps.api,
-        deps.storage,
+    let subscribe_msg = Dispatcher::alarm_subscribe_msg(
         env.contract.address,
-        env.block.time.plus_seconds(to_seconds(msg.cadence_hours)),
+        &oracle_addr,
+        env.block.time,
+        msg.cadence_hours,
     )?;
 
-    Ok(Response::new().add_attribute("method", "instantiate"))
+    Ok(Response::new()
+        .add_message(subscribe_msg)
+        .add_attribute("method", "instantiate"))
 }
 
 fn validate_addr(deps: Deps, addr: Addr) -> Result<Addr, ContractError> {
     deps.api
         .addr_validate(addr.as_str())
         .map_err(|_| ContractError::InvalidContractAddress(addr))
-}
-
-fn to_seconds(cadence_hours: u32) -> u64 {
-    cadence_hours as u64 * 60 * 60
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -112,39 +105,15 @@ pub fn try_dispatch(
     info: MessageInfo,
     time: Timestamp,
 ) -> Result<Response, ContractError> {
-    ensure!(
-        time >= env.block.time,
-        ContractError::AlarmTimeValidation {}
-    );
+    let block_time = env.block.time;
+    ensure!(time >= block_time, ContractError::AlarmTimeValidation {});
     let config = Config::load(deps.storage)?;
 
-    if info.sender != config.time_oracle {
+    if info.sender != config.oracle {
         return Err(ContractError::UnrecognisedAlarm(info.sender));
     }
 
-    try_add_alarm(
-        deps.api,
-        deps.storage,
-        env.contract.address,
-        env.block
-            .time
-            .plus_seconds(to_seconds(config.cadence_hours)),
-    )?;
-
-    Dispatcher::dispatch(deps, config, env.block.time)
-}
-
-fn try_add_alarm(
-    api: &dyn Api,
-    storage: &mut dyn Storage,
-    addr: Addr,
-    time: Timestamp,
-) -> Result<Response, ContractError> {
-    let valid = api
-        .addr_validate(addr.as_str())
-        .map_err(|_| ContractError::InvalidAlarmAddress(addr))?;
-    TIME_ALARMS.add(storage, valid, time)?;
-    Ok(Response::new().add_attribute("method", "try_add_alarm"))
+    Dispatcher::dispatch(deps, &config, block_time, env.contract.address)
 }
 
 #[cfg(test)]
@@ -160,9 +129,8 @@ mod tests {
         InstantiateMsg {
             cadence_hours: 10,
             lpp: Addr::unchecked("lpp"),
-            time_oracle: Addr::unchecked("time"),
+            oracle: Addr::unchecked("time"),
             treasury: Addr::unchecked("treasury"),
-            market_oracle: Addr::unchecked("market_oracle"),
             tvl_to_apr: Intervals::from(vec![Stop::new(0, 5), Stop::new(1000000, 10)]).unwrap(),
         }
     }
@@ -174,7 +142,7 @@ mod tests {
         let info = mock_info("creator", &coins(1000, "unolus"));
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-        assert_eq!(0, res.messages.len());
+        assert_eq!(1, res.messages.len());
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
@@ -251,8 +219,8 @@ mod tests {
             time: env.block.time,
         };
 
-        let res = execute(deps.as_mut(), env, info, msg).unwrap();
-        assert_eq!(res.messages.len(), 2);
+        let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
+        assert_eq!(res.messages.len(), 3);
         assert_eq!(
             res.messages,
             vec![
@@ -268,6 +236,15 @@ mod tests {
                     contract_addr: "lpp".to_string(),
                     msg: to_binary(&lpp::msg::ExecuteMsg::DistributeRewards {}).unwrap(),
                     funds: coins(44386002, "uNLS"),
+                }),
+                SubMsg::new(WasmMsg::Execute {
+                    contract_addr: "time".to_string(),
+                    msg: to_binary(&oracle::msg::ExecuteMsg::AddAlarm {
+                        addr: env.clone().contract.address,
+                        time: env.block.time.plus_seconds(10 * 60 * 60),
+                    })
+                    .unwrap(),
+                    funds: vec![],
                 })
             ]
         );

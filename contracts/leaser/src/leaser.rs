@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdError,
+    coin, to_binary, Addr, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdError,
     StdResult, SubMsg, Uint128, WasmMsg,
 };
 
@@ -59,13 +59,16 @@ impl Leaser {
         let numerator = Uint128::from(config.liability.initial) * downpayment.amount;
         let denominator = Uint128::from(100 - config.liability.initial);
 
+        // TODO use liability::init_borrow_amount
         let borrow_amount = numerator / denominator;
         let total_amount = borrow_amount + downpayment.amount;
 
+        let annual_interest_rate = LppQuerier::get_annual_interest_rate(deps, downpayment.clone())?;
+
         Ok(QuoteResponse {
-            total: Coin::new(total_amount.u128(), downpayment.denom.clone()),
-            borrow: Coin::new(borrow_amount.u128(), downpayment.denom.clone()),
-            annual_interest_rate: LppQuerier::get_annual_interest_rate(deps, downpayment)?,
+            total: coin(total_amount.u128(), downpayment.denom.clone()),
+            borrow: coin(borrow_amount.u128(), downpayment.denom),
+            annual_interest_rate: annual_interest_rate + config.lease_interest_rate_margin,
         })
     }
     pub fn try_configure(

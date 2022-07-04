@@ -2,8 +2,6 @@ mod coin;
 mod deprecated;
 mod duration;
 mod percent;
-mod u128;
-mod u64;
 
 use std::{
     fmt::Debug,
@@ -17,23 +15,25 @@ pub trait Fractionable<U> {
         F: Ratio<U>;
 }
 
+// TODO revisit its usability
 pub trait Percentable: Fractionable<PercentUnits> {}
 pub trait TimeSliceable: Fractionable<TimeUnits> {}
 
-pub trait Integer {
-    // An intermediate type to handle cases when there is no TryFrom<DoubleInteger> for Self but
-    // instead there is TryFrom<DoubleInteger> for SameBitsInteger, and From<SameBitsInteger> for Self
-    type SameBitsInteger;
-    type DoubleInteger;
+pub trait HigherRank<T> {
+    type Type;
+    // An intermediate type to handle cases when there is no TryInto<Self> for HigherRank::Type but
+    // instead there is TryInto<HigherRank::Intermediate> for HigherRank::Type, and Into<Self> for HigherRank::Intermediate
+    type Intermediate;
 }
 
 impl<T, D, DIntermediate, U> Fractionable<U> for T
 where
-    T: Integer<SameBitsInteger = DIntermediate, DoubleInteger = D> + From<DIntermediate>,
-    D: From<T> + From<U> + Mul<D, Output = D> + Div<D, Output = D>,
-    <DIntermediate as TryFrom<D>>::Error: Debug,
-    DIntermediate: TryFrom<D>,
-    U: PartialEq,
+    T: HigherRank<U, Type = D, Intermediate = DIntermediate> + Into<D>,
+    D: TryInto<DIntermediate>,
+    <D as TryInto<DIntermediate>>::Error: Debug,
+    DIntermediate: Into<T>,
+    D: Mul<D, Output = D> + Div<D, Output = D>,
+    U: PartialEq + Into<D>,
 {
     fn safe_mul<R>(self, ratio: &R) -> Self
     where
@@ -43,8 +43,8 @@ where
         if ratio.parts() == ratio.total() {
             self
         } else {
-            let res_double: D = D::from(self) * D::from(ratio.parts());
-            let res_double = res_double / D::from(ratio.total());
+            let res_double: D = self.into() * ratio.parts().into();
+            let res_double = res_double / ratio.total().into();
             let res_intermediate: DIntermediate =
                 res_double.try_into().expect("unexpected overflow");
             res_intermediate.into()

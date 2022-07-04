@@ -13,3 +13,6 @@ mod common;
 
 #[cfg(test)]
 mod leaser_tests;
+
+#[cfg(test)]
+mod lease_tests;

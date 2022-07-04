@@ -1,11 +1,10 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    ensure, to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
-    Storage, Timestamp,
+    ensure, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+    Timestamp,
 };
 use cw2::set_contract_version;
-use time_oracle::Alarms;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -15,8 +14,6 @@ use crate::state::config::Config;
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
-
-pub const TIME_ALARMS: Alarms = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
@@ -28,18 +25,19 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let treasury = validate_addr(deps.as_ref(), msg.treasury)?;
-    let time_oracle = validate_addr(deps.as_ref(), msg.time_oracle)?;
+    let oracle = validate_addr(deps.as_ref(), msg.oracle)?;
 
-    Config::new(info.sender, msg.cadence_hours, treasury, time_oracle).store(deps.storage)?;
-
-    try_add_alarm(
-        deps.api,
-        deps.storage,
+    Config::new(info.sender, msg.cadence_hours, treasury, oracle.clone()).store(deps.storage)?;
+    let subscribe_msg = Profit::alarm_subscribe_msg(
         env.contract.address,
-        env.block.time.plus_seconds(to_seconds(msg.cadence_hours)),
+        &oracle,
+        env.block.time,
+        msg.cadence_hours,
     )?;
 
-    Ok(Response::new().add_attribute("method", "instantiate"))
+    Ok(Response::new()
+        .add_attribute("method", "instantiate")
+        .add_message(subscribe_msg))
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -62,26 +60,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-fn try_add_alarm(
-    api: &dyn Api,
-    storage: &mut dyn Storage,
-    addr: Addr,
-    time: Timestamp,
-) -> Result<Response, ContractError> {
-    let valid = api
-        .addr_validate(addr.as_str())
-        .map_err(|_| ContractError::InvalidAlarmAddress(addr))?;
-    TIME_ALARMS.add(storage, valid, time)?;
-    Ok(Response::new().add_attribute("method", "try_add_alarm"))
-}
-
 fn validate_addr(deps: Deps, addr: Addr) -> Result<Addr, ContractError> {
     deps.api
         .addr_validate(addr.as_str())
         .map_err(|_| ContractError::InvalidContractAddress(addr))
-}
-fn to_seconds(cadence_hours: u32) -> u64 {
-    cadence_hours as u64 * 60 * 60
 }
 
 fn try_transfer(
@@ -94,16 +76,6 @@ fn try_transfer(
         time >= env.block.time,
         ContractError::AlarmTimeValidation {}
     );
-    let config = Profit::query_config(deps.storage)?;
-    try_add_alarm(
-        deps.api,
-        deps.storage,
-        env.contract.address.clone(),
-        env.block
-            .time
-            .plus_seconds(to_seconds(config.cadence_hours)),
-    )?;
-
     Profit::transfer(deps, env, info)
 }
 
@@ -113,28 +85,42 @@ mod tests {
 
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, Addr, BankMsg, SubMsg};
+    use cosmwasm_std::{coins, from_binary, Addr, BankMsg, CosmosMsg, SubMsg, WasmMsg};
 
     fn instantiate_msg() -> InstantiateMsg {
         InstantiateMsg {
             cadence_hours: 10,
             treasury: Addr::unchecked("treasury"),
-            time_oracle: Addr::unchecked("time"),
+            oracle: Addr::unchecked("time"),
         }
     }
     #[test]
     fn proper_initialization() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
+        let oracle_addr = Addr::unchecked("time");
         let msg = InstantiateMsg {
             cadence_hours: 16,
             treasury: Addr::unchecked("treasury"),
-            time_oracle: Addr::unchecked("time"),
+            oracle: oracle_addr.clone(),
         };
         let info = mock_info("creator", &coins(1000, "unolus"));
 
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-        assert_eq!(0, res.messages.len());
+        assert_eq!(1, res.messages.len());
+
+        assert_eq!(
+            res.messages,
+            vec![SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
+                funds: vec![],
+                contract_addr: oracle_addr.to_string(),
+                msg: to_binary(&oracle::msg::ExecuteMsg::AddAlarm {
+                    addr: mock_env().contract.address,
+                    time: mock_env().block.time.plus_seconds(16u64 * 60 * 60),
+                })
+                .unwrap(),
+            }))]
+        );
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();

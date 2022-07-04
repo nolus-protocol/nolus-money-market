@@ -32,6 +32,7 @@ pub enum ExecuteMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    Config(),
     Quote {
         amount: Coin,
     },
@@ -51,6 +52,16 @@ pub enum QueryMsg {
     Price(),
 
     Rewards { address: Addr },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct QueryConfigResponse {
+    pub lpn_symbol: String,
+    pub lease_code_id: Uint64,
+    pub base_interest_rate: Percent,
+    pub utilization_optimal: Percent,
+    pub addon_optimal_interest_rate: Percent,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

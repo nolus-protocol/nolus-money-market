@@ -1,17 +1,14 @@
-use finance::{liability::Liability, percent::Percent};
+use finance::{liability::Liability, percent::Percent, currency::SymbolOwned};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-// TODO define it as type not alias
-pub type Denom = String;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct NewLeaseForm {
     /// The customer who wants to open a lease.
     pub customer: String,
-    /// Denomination of the currency this lease will be about.
-    pub currency: String,
+    /// Symbol of the currency this lease will be about.
+    pub currency: SymbolOwned,
     pub liability: Liability,
     pub loan: LoanForm,
 }

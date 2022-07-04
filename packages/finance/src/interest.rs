@@ -1,32 +1,30 @@
 use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
-use std::{
-    cmp,
-    fmt::Debug,
-    ops::{Div, Mul, Sub},
-};
+use std::{cmp, fmt::Debug, marker::PhantomData, ops::Sub};
 
 use crate::{
-    duration::{Duration, Units as TimeUnits},
+    duration::Duration,
     fraction::Fraction,
-    fractionable::{Integer, Percentable, TimeSliceable}, percent::Units,
+    fractionable::{Fractionable, TimeSliceable},
 };
-#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
-pub struct InterestPeriod<F>
-{
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+pub struct InterestPeriod<U, F> {
     start: Timestamp,
     length: Duration,
+    interest_units: PhantomData<U>,
     interest: F,
 }
 
-impl<F> InterestPeriod<F> 
+impl<U, F> InterestPeriod<U, F>
 where
-    F: Fraction<Units> + Copy,
+    F: Fraction<U> + Copy,
+    U: PartialEq,
 {
     pub fn with_interest(interest: F) -> Self {
         Self {
             start: Timestamp::default(),
             length: Duration::default(),
+            interest_units: PhantomData,
             interest,
         }
     }
@@ -35,6 +33,7 @@ where
         Self {
             start,
             length: self.length,
+            interest_units: self.interest_units,
             interest: self.interest,
         }
     }
@@ -43,6 +42,7 @@ where
         Self {
             start: self.start,
             length,
+            interest_units: self.interest_units,
             interest: self.interest,
         }
     }
@@ -52,9 +52,10 @@ where
         let res = Self {
             start: self.start + delta,
             length: self.length - delta,
+            interest_units: self.interest_units,
             interest: self.interest,
         };
-        debug_assert!(self.till() == res.till());
+        debug_assert_eq!(self.till(), res.till());
         res
     }
 
@@ -72,17 +73,15 @@ where
 
     pub fn interest<P>(&self, principal: P) -> P
     where
-        P: Percentable + TimeSliceable,
+        P: Fractionable<U> + TimeSliceable,
     {
         self.interest_by(principal, self.till())
     }
 
-    pub fn pay<P, D>(self, principal: P, payment: P, by: Timestamp) -> (Self, P)
+    pub fn pay<P>(self, principal: P, payment: P, by: Timestamp) -> (Self, P)
     where
-        P: Percentable + TimeSliceable + Ord + Default + Sub<Output = P> + Copy,
-        TimeUnits: Integer<DoubleInteger = D> + TryFrom<D>,
-        D: From<TimeUnits> + From<P> + Mul<D, Output = D> + Div<D, Output = D>,
-        <TimeUnits as TryFrom<D>>::Error: Debug,
+        P: Default + Copy + Ord + Sub<Output = P> + Fractionable<U> + TimeSliceable,
+        Duration: Fractionable<P>,
     {
         let by_within_period = self.move_within_period(by);
         let interest_due_per_period = self.interest_by(principal, by_within_period);
@@ -101,7 +100,7 @@ where
 
     fn interest_by<P>(&self, principal: P, by: Timestamp) -> P
     where
-        P: Percentable + TimeSliceable,
+        P: Fractionable<U> + TimeSliceable,
     {
         debug_assert!(self.start <= by);
         debug_assert!(by <= self.till());
@@ -109,5 +108,28 @@ where
 
         let interest_due_per_year = self.interest.of(principal);
         period.annualized_slice_of(interest_due_per_year)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use cosmwasm_std::Timestamp;
+
+    use crate::{coin::Coin, currency::Usdc, duration::Duration, percent::Percent, fraction::Fraction};
+
+    use super::InterestPeriod;
+
+    #[test]
+    fn pay() {
+        let p = Percent::from_percent(10);
+        let principal = Coin::<Usdc>::new(1000);
+        let payment = Coin::<Usdc>::new(200);
+        let ip = InterestPeriod::with_interest(p)
+            .from(Timestamp::from_nanos(0))
+            .spanning(Duration::YEAR);
+        let (ip_res, change) = ip.pay(principal, payment, ip.till());
+        let ip_exp =InterestPeriod::with_interest(p).from(ip.till()).spanning(Duration::from_secs(0));
+        assert_eq!(ip_exp, ip_res);
+        assert_eq!(payment - p.of(principal), change);
     }
 }

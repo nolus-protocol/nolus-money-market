@@ -10,18 +10,18 @@ pub struct Config {
     pub cadence_hours: u32,
     pub owner: Addr,
     pub treasury: Addr,
-    pub time_oracle: Addr,
+    pub oracle: Addr,
 }
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("profit_config");
 
-    pub fn new(owner: Addr, cadence_hours: u32, treasury: Addr, time_oracle: Addr) -> Self {
+    pub fn new(owner: Addr, cadence_hours: u32, treasury: Addr, oracle: Addr) -> Self {
         Config {
             cadence_hours,
             owner,
             treasury,
-            time_oracle,
+            oracle,
         }
     }
 
