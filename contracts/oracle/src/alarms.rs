@@ -25,7 +25,7 @@ impl MarketAlarms {
         address: Addr,
         time: Timestamp,
     ) -> Result<Response, ContractError> {
-        validate_contract_addr(&deps.querier, address.clone())?;
+        Self::validate_contract_addr(&deps.querier, address.clone())?;
         Self::TIME_ALARMS.add(deps.storage, address, time)?;
         Ok(Response::new().add_attribute("method", "try_add_alarm"))
     }
@@ -64,14 +64,14 @@ impl MarketAlarms {
         Self::TIME_ORACLE.update_global_time(storage, block_time)?;
         Self::try_notify(storage, block_time)
     }
-}
 
-fn validate_contract_addr(querier: &QuerierWrapper, addr: Addr) -> StdResult<()> {
-    let raw = QueryRequest::<Empty>::Wasm(WasmQuery::ContractInfo {
-        contract_addr: addr.into_string(),
-    });
-    let res: StdResult<ContractInfoResponse> = querier.query(&raw);
-    res.map(|_| ())
+    fn validate_contract_addr(querier: &QuerierWrapper, addr: Addr) -> StdResult<()> {
+        let raw = QueryRequest::<Empty>::Wasm(WasmQuery::ContractInfo {
+            contract_addr: addr.into_string(),
+        });
+        let res: StdResult<ContractInfoResponse> = querier.query(&raw);
+        res.map(|_| ())
+    }
 }
 
 #[cfg(test)]
@@ -96,7 +96,10 @@ mod tests {
     fn validate_contract_addr_user_address() {
         let mock_querier = MockQuerier::default();
         let querier = QuerierWrapper::new(&mock_querier);
-        assert!(validate_contract_addr(&querier, Addr::unchecked("some address")).is_err());
+        assert!(
+            MarketAlarms::validate_contract_addr(&querier, Addr::unchecked("some address"))
+                .is_err()
+        );
     }
 
     #[test]
@@ -109,7 +112,8 @@ mod tests {
         );
 
         let expected_error = ContractError::Std(
-            validate_contract_addr(&deps.as_mut().querier, msg_sender.clone()).unwrap_err(),
+            MarketAlarms::validate_contract_addr(&deps.as_mut().querier, msg_sender.clone())
+                .unwrap_err(),
         );
 
         let result =
@@ -122,7 +126,9 @@ mod tests {
     fn validate_contract_addr_contract_address() {
         let mock_querier = NewQuerier {};
         let querier = QuerierWrapper::new(&mock_querier);
-        assert!(validate_contract_addr(&querier, Addr::unchecked("some address")).is_ok());
+        assert!(
+            MarketAlarms::validate_contract_addr(&querier, Addr::unchecked("some address")).is_ok()
+        );
     }
 
     #[test]
