@@ -243,5 +243,28 @@ mod tests {
                 .unwrap();
             assert_eq!(attr.value, app.block_info().time.to_string());
         }
+
+        #[test]
+        fn test_add_alarm() {
+            let (mut app, oracle) = proper_instantiate();
+            let loan = mock_loan::proper_instantiate(&mut app);
+
+            let alarm_msg = ExecuteMsg::AddAlarm {
+                time: Timestamp::from_seconds(100),
+            };
+
+            assert!(app
+                .execute_contract(loan.addr(), oracle.addr(), &alarm_msg, &[])
+                .is_ok());
+
+            assert!(app
+                .execute_contract(
+                    Addr::unchecked("some address"),
+                    oracle.addr(),
+                    &alarm_msg,
+                    &[]
+                )
+                .is_err());
+        }
     }
 }

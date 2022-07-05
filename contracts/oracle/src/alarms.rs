@@ -73,3 +73,67 @@ fn validate_contract_addr(querier: &QuerierWrapper, addr: Addr) -> StdResult<()>
     let res: StdResult<ContractInfoResponse> = querier.query(&raw);
     res.map(|_| ())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cosmwasm_std::{
+        testing::{mock_dependencies, MockQuerier},
+        to_binary, ContractResult, SystemResult,
+    };
+
+    struct NewQuerier {}
+
+    impl cosmwasm_std::Querier for NewQuerier {
+        fn raw_query(&self, _bin_request: &[u8]) -> cosmwasm_std::QuerierResult {
+            SystemResult::Ok(ContractResult::Ok(
+                to_binary(&ContractInfoResponse::new(20, "some data")).unwrap(),
+            ))
+        }
+    }
+
+    #[test]
+    fn validate_contract_addr_user_address() {
+        let mock_querier = MockQuerier::default();
+        let querier = QuerierWrapper::new(&mock_querier);
+        assert!(validate_contract_addr(&querier, Addr::unchecked("some address")).is_err());
+    }
+
+    #[test]
+    fn try_add_invalid_contract_address() {
+        let mut deps = mock_dependencies();
+        let msg_sender = Addr::unchecked("some address");
+        assert!(
+            MarketAlarms::try_add(deps.as_mut(), msg_sender.clone(), Timestamp::from_nanos(8))
+                .is_err()
+        );
+
+        let expected_error = ContractError::Std(
+            validate_contract_addr(&deps.as_mut().querier, msg_sender.clone()).unwrap_err(),
+        );
+
+        let result =
+            MarketAlarms::try_add(deps.as_mut(), msg_sender, Timestamp::from_nanos(8)).unwrap_err();
+
+        assert_eq!(expected_error, result);
+    }
+
+    #[test]
+    fn validate_contract_addr_contract_address() {
+        let mock_querier = NewQuerier {};
+        let querier = QuerierWrapper::new(&mock_querier);
+        assert!(validate_contract_addr(&querier, Addr::unchecked("some address")).is_ok());
+    }
+
+    #[test]
+    fn try_add_valid_contract_address() {
+        let mock_querier = NewQuerier {};
+        let querier = QuerierWrapper::new(&mock_querier);
+        let mut deps_temp = mock_dependencies();
+        let mut deps = deps_temp.as_mut();
+        deps.querier = querier;
+
+        let msg_sender = Addr::unchecked("some address");
+        assert!(MarketAlarms::try_add(deps, msg_sender, Timestamp::from_nanos(4)).is_ok());
+    }
+}
