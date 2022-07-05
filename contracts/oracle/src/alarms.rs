@@ -1,4 +1,7 @@
-use cosmwasm_std::{Addr, CosmosMsg, DepsMut, Response, StdResult, Storage, SubMsg, Timestamp};
+use cosmwasm_std::{
+    Addr, ContractInfoResponse, CosmosMsg, DepsMut, Empty, QuerierWrapper, QueryRequest, Response,
+    StdResult, Storage, SubMsg, Timestamp, WasmQuery,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -19,14 +22,11 @@ impl MarketAlarms {
 
     pub fn try_add(
         deps: DepsMut,
-        info: MessageInfo,
+        address: Addr,
         time: Timestamp,
     ) -> Result<Response, ContractError> {
-        let valid = deps
-            .api
-            .addr_validate(info.sender.as_str())
-            .map_err(|_| ContractError::InvalidAlarmAddress(info.sender.clone()))?;
-        Self::TIME_ALARMS.add(deps.storage, valid, time)?;
+        validate_contract_addr(&deps.querier, address.clone())?;
+        Self::TIME_ALARMS.add(deps.storage, address, time)?;
         Ok(Response::new().add_attribute("method", "try_add_alarm"))
     }
 
@@ -64,4 +64,12 @@ impl MarketAlarms {
         Self::TIME_ORACLE.update_global_time(storage, block_time)?;
         Self::try_notify(storage, block_time)
     }
+}
+
+fn validate_contract_addr(querier: &QuerierWrapper, addr: Addr) -> StdResult<()> {
+    let raw = QueryRequest::<Empty>::Wasm(WasmQuery::ContractInfo {
+        contract_addr: addr.into_string(),
+    });
+    let res: StdResult<ContractInfoResponse> = querier.query(&raw);
+    res.map(|_| ())
 }
