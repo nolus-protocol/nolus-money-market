@@ -1,13 +1,15 @@
 use cosmwasm_std::{
-    coin, Addr, BankMsg, Coin, ContractInfoResponse, Decimal, Deps, DepsMut, Env, QueryRequest,
-    StdResult, Storage, Timestamp, Uint128, Uint64, WasmQuery,
+    coin, Addr, BankMsg, ContractInfoResponse, Decimal, Deps, DepsMut, Env, QueryRequest,
+    StdResult, Storage, Timestamp, Uint128, Uint64, WasmQuery, Coin as CwCoin,
 };
+use finance::currency::Currency;
 
 use crate::error::ContractError;
 use crate::msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse};
 use crate::state::{Config, Deposit, Loan, Total};
 use finance::percent::Percent;
 use finance::fraction::Fraction;
+use finance::coin::Coin;
 
 pub struct NTokenPrice<'a> {
     price: Decimal,
@@ -37,15 +39,15 @@ impl<'a> From<NTokenPrice<'a>> for PriceResponse {
     }
 }
 
-pub struct LiquidityPool {
+pub struct LiquidityPool<LPN: Currency> {
     config: Config,
-    total: Total,
+    total: Total<LPN>,
 }
 
-impl LiquidityPool {
+impl<LPN: Currency> LiquidityPool<LPN> {
     pub fn store(storage: &mut dyn Storage, denom: String, lease_code_id: Uint64) -> StdResult<()> {
         Config::new(denom, lease_code_id).store(storage)?;
-        Total::default().store(storage)?;
+        Total::<LPN>::new().store(storage)?;
         Ok(())
     }
 
@@ -74,13 +76,15 @@ impl LiquidityPool {
         self.config.store(storage)
     }
 
-    pub fn balance(&self, deps: &Deps, env: &Env) -> StdResult<Coin> {
+    // TODO: use finance bank module
+    pub fn balance(&self, deps: &Deps, env: &Env) -> StdResult<Coin<LPN>> {
         let querier = deps.querier;
         querier.query_balance(&env.contract.address, &self.config.denom)
+            .map(|cw_coin| Coin::<LPN>::new(cw_coin.amount.u128()))
     }
 
-    pub fn total_lpn(&self, deps: &Deps, env: &Env) -> StdResult<Uint128> {
-        let res = self.balance(deps, env)?.amount
+    pub fn total_lpn(&self, deps: &Deps, env: &Env) -> StdResult<Coin<LPN>> {
+        let res = self.balance(deps, env)?
             + self.total.total_principal_due()
             + self.total.total_interest_due_by_now(env.block.time);
 
@@ -88,14 +92,12 @@ impl LiquidityPool {
     }
 
     pub fn query_lpp_balance(&self, deps: &Deps, env: &Env) -> StdResult<LppBalanceResponse> {
-        let balance = self.balance(deps, env)?;
-        let denom = &self.config.denom;
+        let balance = self.balance(deps, env)?
+            .into_cw();
 
-        let total_principal_due_amount = self.total.total_principal_due();
-        let total_principal_due = coin(total_principal_due_amount.u128(), denom);
+        let total_principal_due = self.total.total_principal_due().into_cw();
 
-        let total_interest_due_amount = self.total.total_interest_due_by_now(env.block.time);
-        let total_interest_due = coin(total_interest_due_amount.u128(), denom);
+        let total_interest_due = self.total.total_interest_due_by_now(env.block.time).into_cw();
 
         Ok(LppBalanceResponse {
             balance,
@@ -110,7 +112,8 @@ impl LiquidityPool {
         let price = if balance_nlpn.is_zero() {
             self.config.initial_derivative_price
         } else {
-            Decimal::from_ratio(self.total_lpn(deps, env)?, balance_nlpn)
+            let nominator: u128 = self.total_lpn(deps, env)?.into();
+            Decimal::from_ratio(nominator, balance_nlpn)
         };
 
         Ok(NTokenPrice {
@@ -133,7 +136,7 @@ impl LiquidityPool {
         }
     }
 
-    pub fn withdraw_lpn(&self, deps: &Deps, env: &Env, amount_nlpn: Uint128) -> Result<Coin, ContractError> {
+    pub fn withdraw_lpn(&self, deps: &Deps, env: &Env, amount_nlpn: Uint128) -> Result<Coin<LPN>, ContractError> {
         let price = self.calculate_price(deps, env)?
             .get();
         let amount_lpn = price*amount_nlpn;
@@ -154,7 +157,7 @@ impl LiquidityPool {
 
     // TODO: introduce a Denom type that would list all Nolus supported currencies.
     /// checks `coins` denom vs config, converts Coin into it's amount;
-    pub fn try_into_amount(&self, coins: Coin) -> Result<Uint128, ContractError> {
+    /* pub fn try_into_amount(&self, coins: Coin<LPN>) -> Result<Uint128, ContractError> {
         if self.config.denom != coins.denom {
             return Err(ContractError::Denom {
                 contract_denom: self.config.denom.clone(),
@@ -162,13 +165,13 @@ impl LiquidityPool {
             });
         }
         Ok(coins.amount)
-    }
+    } */
 
     pub fn query_quote(
         &self,
         deps: &Deps,
         env: &Env,
-        quote: Coin,
+        quote: Coin<LPN>,
     ) -> Result<Option<Percent>, ContractError> {
         let quote = self.try_into_amount(quote)?;
 
@@ -207,7 +210,7 @@ impl LiquidityPool {
         deps: DepsMut,
         env: Env,
         lease_addr: Addr,
-        amount: Coin,
+        amount: Coin<LPN>,
     ) -> Result<(), ContractError> {
         let current_time = env.block.time;
 
@@ -237,13 +240,8 @@ impl LiquidityPool {
         deps: DepsMut,
         env: Env,
         lease_addr: Addr,
-        funds: Vec<Coin>,
-    ) -> Result<Uint128, ContractError> {
-        if funds.len() != 1 {
-            return Err(ContractError::FundsLen {});
-        }
-
-        let repay_amount = self.try_into_amount(funds[0].clone())?;
+        repay_amount: Coin<LPN>,
+    ) -> Result<Coin<LPN>, ContractError> {
 
         let loan = Loan::load(deps.storage, lease_addr)?;
         let loan_annual_interest_rate = loan.data().annual_interest_rate;
@@ -286,9 +284,9 @@ impl LiquidityPool {
             .zip(maybe_interest_due)
             .map(|(loan, interest_due)| {
                 Ok(LoanResponse {
-                    principal_due: coin(loan.principal_due.u128(), denom),
+                    principal_due: coin(loan.principal_due.into(), LPN::SYMBOL),
                     interest_due: interest_due.0,
-                    annual_interest_rate: loan.annual_interest_rate,
+                    annual_interest_rate: loan.annual_interest_rate.into(),
                     interest_paid: loan.interest_paid,
                 })
             })
@@ -296,6 +294,18 @@ impl LiquidityPool {
     }
 }
 
+// TODO: perhaps change to From<Coin<LPN>> in finance or remove
+trait IntoCW {
+    fn into_cw(self) -> CwCoin;
+}
+
+impl<LPN: Currency> IntoCW for Coin<LPN> {
+    fn into_cw(self) -> CwCoin {
+       coin(self.into(), LPN::SYMBOL) 
+    }
+}
+
+/*
 #[cfg(test)]
 mod test {
     use super::*;
@@ -591,3 +601,4 @@ mod test {
     }
 
 }
+*/

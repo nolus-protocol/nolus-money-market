@@ -134,9 +134,17 @@ fn try_repay_loan(
     lease_addr: Addr,
     funds: Vec<Coin>,
 ) -> Result<Response, ContractError> {
+
+    if funds.len() != 1 {
+        return Err(ContractError::FundsLen {});
+    }
+
+    let repay_amount = funds[0].clone();
+
+
     let mut lpp = LiquidityPool::load(deps.storage)?;
     lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
-    let excess_received = lpp.try_repay_loan(deps, env, lease_addr.clone(), funds)?;
+    let excess_received = lpp.try_repay_loan(deps, env, lease_addr.clone(), repay_amount)?;
 
     let mut response = Response::new().add_attribute("method", "try_repay_loan");
 
