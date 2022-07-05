@@ -91,12 +91,16 @@ pub fn get_sender(api: &dyn Api, info: MessageInfo) -> StdResult<Addr> {
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    if msg.result.is_err() {
-        Ok(Response::new().add_attribute("alarm", "error"))
-    } else {
-        MarketAlarms::remove(deps.storage, msg.id)?;
-        Ok(Response::new().add_attribute("alarm", "success"))
-    }
+    let res = match msg.result {
+        cosmwasm_std::SubMsgResult::Ok(_) => {
+            MarketAlarms::remove(deps.storage, msg.id)?;
+            Response::new().add_attribute("alarm", "success")
+        }
+        cosmwasm_std::SubMsgResult::Err(err) => Response::new()
+            .add_attribute("alarm", "error")
+            .add_attribute("error", err),
+    };
+    Ok(res)
 }
 
 fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
