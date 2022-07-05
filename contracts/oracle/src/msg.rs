@@ -25,7 +25,6 @@ pub enum ExecuteMsg {
         feeders_percentage_needed: u8,
     },
     AddAlarm {
-        addr: Addr,
         time: Timestamp,
     },
     SupportedDenomPairs {

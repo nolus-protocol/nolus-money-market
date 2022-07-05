@@ -40,12 +40,8 @@ pub fn instantiate(
     .store(deps.storage)?;
     DispatchLog::update(deps.storage, env.block.time)?;
 
-    let subscribe_msg = Dispatcher::alarm_subscribe_msg(
-        env.contract.address,
-        &oracle_addr,
-        env.block.time,
-        msg.cadence_hours,
-    )?;
+    let subscribe_msg =
+        Dispatcher::alarm_subscribe_msg(&oracle_addr, env.block.time, msg.cadence_hours)?;
 
     Ok(Response::new()
         .add_message(subscribe_msg)
@@ -113,7 +109,7 @@ pub fn try_dispatch(
         return Err(ContractError::UnrecognisedAlarm(info.sender));
     }
 
-    Dispatcher::dispatch(deps, &config, block_time, env.contract.address)
+    Dispatcher::dispatch(deps, &config, block_time)
 }
 
 #[cfg(test)]
@@ -240,7 +236,6 @@ mod tests {
                 SubMsg::new(WasmMsg::Execute {
                     contract_addr: "time".to_string(),
                     msg: to_binary(&oracle::msg::ExecuteMsg::AddAlarm {
-                        addr: env.clone().contract.address,
                         time: env.block.time.plus_seconds(10 * 60 * 60),
                     })
                     .unwrap(),

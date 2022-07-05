@@ -28,12 +28,7 @@ pub fn instantiate(
     let oracle = validate_addr(deps.as_ref(), msg.oracle)?;
 
     Config::new(info.sender, msg.cadence_hours, treasury, oracle.clone()).store(deps.storage)?;
-    let subscribe_msg = Profit::alarm_subscribe_msg(
-        env.contract.address,
-        &oracle,
-        env.block.time,
-        msg.cadence_hours,
-    )?;
+    let subscribe_msg = Profit::alarm_subscribe_msg(&oracle, env.block.time, msg.cadence_hours)?;
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
@@ -115,7 +110,6 @@ mod tests {
                 funds: vec![],
                 contract_addr: oracle_addr.to_string(),
                 msg: to_binary(&oracle::msg::ExecuteMsg::AddAlarm {
-                    addr: mock_env().contract.address,
                     time: mock_env().block.time.plus_seconds(16u64 * 60 * 60),
                 })
                 .unwrap(),

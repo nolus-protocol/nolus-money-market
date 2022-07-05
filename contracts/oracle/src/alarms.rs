@@ -17,11 +17,15 @@ impl MarketAlarms {
         Self::TIME_ALARMS.remove(storage, msg_id)
     }
 
-    pub fn try_add(deps: DepsMut, addr: Addr, time: Timestamp) -> Result<Response, ContractError> {
+    pub fn try_add(
+        deps: DepsMut,
+        info: MessageInfo,
+        time: Timestamp,
+    ) -> Result<Response, ContractError> {
         let valid = deps
             .api
-            .addr_validate(addr.as_str())
-            .map_err(|_| ContractError::InvalidAlarmAddress(addr))?;
+            .addr_validate(info.sender.as_str())
+            .map_err(|_| ContractError::InvalidAlarmAddress(info.sender.clone()))?;
         Self::TIME_ALARMS.add(deps.storage, valid, time)?;
         Ok(Response::new().add_attribute("method", "try_add_alarm"))
     }
