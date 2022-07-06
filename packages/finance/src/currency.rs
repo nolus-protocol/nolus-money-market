@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 type Symbol<'a> = &'a str;
 type SymbolStatic = &'static str;
@@ -46,7 +46,7 @@ pub trait AnyVisitor {
 
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
-        C: Currency;
+        C: Currency + DeserializeOwned;
     fn on_unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
@@ -65,7 +65,7 @@ struct AnyVisitorImpl<V>(V);
 impl<C, V> SingleVisitor<C> for AnyVisitorImpl<V>
 where
     V: AnyVisitor,
-    C: Currency,
+    C: Currency + DeserializeOwned,
 {
     type Output = Result<<V as AnyVisitor>::Output, <V as AnyVisitor>::Error>;
     type Error = Self;
