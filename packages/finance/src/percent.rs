@@ -263,6 +263,15 @@ pub(super) mod test {
         assert_eq!(v, <Rational<Percent> as Fraction<u32>>::of(&r, v));
     }
 
+    #[test]
+    fn rational_to_percents() {
+        let n: Units = 189;
+        let d: Units = 1890;
+        let r = Rational::new(n, d);
+        let res: Percent = <Rational<Units> as Fraction<Units>>::of(&r, Percent::HUNDRED);
+        assert_eq!(Percent::from_permille(n * 1000 / d), res);
+    }
+
     pub(crate) fn test_of<P>(permille: Units, quantity: P, exp: P)
     where
         P: Percentable + PartialEq + Debug + Clone + Display,
