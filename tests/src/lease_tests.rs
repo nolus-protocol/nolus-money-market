@@ -145,47 +145,29 @@ fn expected_open_state(
 fn state_opened_when_no_payments() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
+    let expected_result = expected_open_state(&test_case, downpayment, create_coin(0), 0);
     let lease_address = open_lease(&mut test_case, downpayment);
 
-    let _expected_result = expected_open_state(&test_case, downpayment, create_coin(0), 0);
     let query_result = state_query(&test_case, &lease_address.into_string());
 
-    println!("=======> {:#?}", query_result);
-    /*
-        This is commented out because otherwise it will fail
-            * due to precision loss in calculations -> bug #3
-        and could fail
-            * due to 'borrow amount' being calculated differently when instanciating a new Lease (NewLeaseForm::amount_to_borrow()) and in leaser::query_quote()
-
-        TODO(kari): uncomment the assert after the issues are fixed
-    */
-    // assert_eq!(_expected_result, query_result);
+    assert_eq!(expected_result, query_result);
 }
 
 #[test]
 fn state_opened_when_partially_paid() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
-    let lease_address = open_lease(&mut test_case, downpayment);
 
     let quote_result = quote_query(&test_case, downpayment);
     let partial_payment = create_coin(quote_result.borrow.amount.u128() / 2);
-    let _expected_result = expected_open_state(&test_case, downpayment, partial_payment, 0);
+    let expected_result = expected_open_state(&test_case, downpayment, partial_payment, 0);
 
+    let lease_address = open_lease(&mut test_case, downpayment);
     repay(&mut test_case, &lease_address, partial_payment);
 
     let query_result = state_query(&test_case, &lease_address.into_string());
 
-    println!("=======> {:#?}", query_result);
-    /*
-        This is commented out because otherwise it will fail
-            * due to precision loss in calculations -> bug #3
-        and could fail
-            * due to 'borrow amount' being calculated differently when instanciating a new Lease (NewLeaseForm::amount_to_borrow()) and in leaser::query_quote()
-
-        TODO(kari): uncomment the assert after the issues are fixed
-    */
-    // assert_eq!(_expected_result, query_result);
+    assert_eq!(expected_result, query_result);
 }
 
 #[test]
