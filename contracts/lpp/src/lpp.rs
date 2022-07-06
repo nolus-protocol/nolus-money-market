@@ -2,12 +2,14 @@ use cosmwasm_std::{
     coin, Addr, BankMsg, Coin, ContractInfoResponse, Decimal, Deps, DepsMut, Env, QueryRequest,
     StdResult, Storage, Timestamp, Uint128, Uint64, WasmQuery,
 };
+use finance::currency::Usdc;
 
 use crate::error::ContractError;
-use crate::msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse};
+use crate::msg::{LppBalanceResponse, PriceResponse, OutstandingInterestNew, LoanResponseNew};
 use crate::state::{Config, Deposit, Loan, Total};
 use finance::percent::Percent;
 use finance::fraction::Fraction;
+use finance::coin::Coin as FinanceCoin;
 
 pub struct NTokenPrice<'a> {
     price: Decimal,
@@ -37,12 +39,15 @@ impl<'a> From<NTokenPrice<'a>> for PriceResponse {
     }
 }
 
+pub type TheCurrency = Usdc;
+
 pub struct LiquidityPool {
     config: Config,
     total: Total,
 }
 
 impl LiquidityPool {
+
     pub fn store(storage: &mut dyn Storage, denom: String, lease_code_id: Uint64) -> StdResult<()> {
         Config::new(denom, lease_code_id).store(storage)?;
         Total::default().store(storage)?;
@@ -265,9 +270,9 @@ impl LiquidityPool {
         storage: &dyn Storage,
         addr: Addr,
         time: Timestamp,
-    ) -> StdResult<Option<OutstandingInterest>> {
+    ) -> StdResult<Option<OutstandingInterestNew<TheCurrency>>> {
         let interest = Loan::query_outstanding_interest(storage, addr, time)?
-            .map(|amount| OutstandingInterest(coin(amount.u128(), &self.config.denom)));
+            .map(|amount| OutstandingInterestNew(FinanceCoin::<TheCurrency>::new(amount.u128())));
 
         Ok(interest)
     }
@@ -277,16 +282,15 @@ impl LiquidityPool {
         storage: &dyn Storage,
         env: &Env,
         addr: Addr,
-    ) -> Result<Option<LoanResponse>, ContractError> {
+    ) -> Result<Option<LoanResponseNew<TheCurrency>>, ContractError> {
         let maybe_loan = Loan::query(storage, addr.clone())?;
         let maybe_interest_due =
             self.query_loan_outstanding_interest(storage, addr, env.block.time)?;
-        let denom = &self.config.denom;
         maybe_loan
             .zip(maybe_interest_due)
             .map(|(loan, interest_due)| {
-                Ok(LoanResponse {
-                    principal_due: coin(loan.principal_due.u128(), denom),
+                Ok(LoanResponseNew {
+                    principal_due: FinanceCoin::<TheCurrency>::new(loan.principal_due.u128()),
                     interest_due: interest_due.0,
                     annual_interest_rate: loan.annual_interest_rate,
                     interest_paid: loan.interest_paid,
@@ -298,19 +302,29 @@ impl LiquidityPool {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use crate::lpp::LiquidityPool;
+    use crate::state::{Config, Total, Deposit};
+
+    use super::TheCurrency;
     use cosmwasm_std::testing::{self, MOCK_CONTRACT_ADDR};
-    use cosmwasm_std::{coin, Timestamp, Uint64};
+    use cosmwasm_std::{Timestamp, Uint64, Addr, Decimal, Coin};
+    use finance::coin_legacy::to_cosmwasm;
     use finance::duration::Duration;
+    use finance::currency::{Currency};
+    use finance::fraction::Fraction;
+    use finance::percent::Percent;
+    use finance::coin::Coin as FinanceCoin;
+
+    const THE_CURRENCY_SYMBOL: &str = TheCurrency::SYMBOL;
 
     #[test]
     fn test_balance() {
-        let balance_mock = [coin(10_000_000, "uust")];
-        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
+        let balance_mock = coin(10_000_000);
+        let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
         let env = testing::mock_env();
         let lease_code_id = Uint64::new(123);
 
-        Config::new("uust".into(), lease_code_id)
+        Config::new(balance_mock.denom.clone(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::default()
@@ -323,7 +337,7 @@ mod test {
             .balance(&deps.as_ref(), &env)
             .expect("can't get balance");
 
-        assert_eq!(balance, balance_mock[0]);
+        assert_eq!(balance, balance_mock);
     }
 
     #[test]
@@ -332,7 +346,7 @@ mod test {
         let lease_code_id = Uint64::new(123);
         let amount = 10u128;
 
-        Config::new("uust".into(), lease_code_id)
+        Config::new(THE_CURRENCY_SYMBOL.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::default()
@@ -343,26 +357,26 @@ mod test {
 
         // same denom
         let checked = lpp
-            .try_into_amount(coin(amount, "uust"))
+            .try_into_amount(coin(amount))
             .expect("can't validate denom");
-        assert_eq!(checked, Uint128::new(amount));
+        assert_eq!(checked, amount.into());
 
         // err denom
-        lpp.try_into_amount(coin(amount, "eth"))
+        lpp.try_into_amount(cosmwasm_std::coin(amount, "eth"))
             .expect_err("should not pass validation");
     }
 
     #[test]
     fn test_query_quote() {
-        let balance_mock = [coin(10_000_000, "uust")];
-        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
+        let balance_mock = coin(10_000_000);
+        let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
         let mut env = testing::mock_env();
         let loan = Addr::unchecked("loan");
         env.block.time = Timestamp::from_nanos(0);
 
         let lease_code_id = Uint64::new(123);
 
-        Config::new("uust".into(), lease_code_id)
+        Config::new(balance_mock.denom, lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::default()
@@ -374,7 +388,7 @@ mod test {
         env.block.time = Timestamp::from_nanos(10);
 
         let result = lpp
-            .query_quote(&deps.as_ref(), &env, coin(5_000_000, "uust"))
+            .query_quote(&deps.as_ref(), &env, coin(5_000_000))
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
@@ -384,10 +398,10 @@ mod test {
 
         assert_eq!(result, interest_rate);
 
-        lpp.try_open_loan(deps.as_mut(), env.clone(), loan, coin(5_000_000, "uust"))
+        lpp.try_open_loan(deps.as_mut(), env.clone(), loan, coin(5_000_000))
             .expect("can't open loan");
         deps.querier
-            .update_balance(MOCK_CONTRACT_ADDR, vec![coin(5_000_000, "uust")]);
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin(5_000_000)]);
 
         // wait for year/10
         env.block.time = Timestamp::from_nanos(10 + Duration::YEAR.nanos() / 10);
@@ -397,7 +411,7 @@ mod test {
             - Percent::from_percent(2).of(Percent::from_percent(70));
 
         let result = lpp
-            .query_quote(&deps.as_ref(), &env, coin(1_000_000, "uust"))
+            .query_quote(&deps.as_ref(), &env, coin(1_000_000))
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
@@ -406,7 +420,7 @@ mod test {
 
     #[test]
     fn test_open_and_repay_loan() {
-        let balance_mock = [coin(10_000_000, "uust")];
+        let balance_mock = [coin(10_000_000)];
         let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
         let mut env = testing::mock_env();
         let loan = Addr::unchecked("loan");
@@ -415,7 +429,7 @@ mod test {
 
         let annual_interest_rate = Percent::from_permille(66000u32 / 1000u32);
 
-        Config::new("uust".into(), lease_code_id)
+        Config::new(THE_CURRENCY_SYMBOL.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::default()
@@ -431,25 +445,26 @@ mod test {
 
         env.block.time = Timestamp::from_nanos(10);
 
+        let amount = 5_000_000;
         lpp.try_open_loan(
             deps.as_mut(),
             env.clone(),
             loan.clone(),
-            coin(5_000_000, "uust"),
+            coin(amount),
         )
         .expect("can't open loan");
         deps.querier
-            .update_balance(MOCK_CONTRACT_ADDR, vec![coin(5_000_000, "uust")]);
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin(5_000_000)]);
 
 
         let loan_response = lpp.query_loan(deps.as_ref().storage, &env, loan.clone())
             .expect("can't query loan")
             .expect("should be some response");
 
-        assert_eq!(loan_response.principal_due.amount, 5_000_000u128.into());
+        assert_eq!(loan_response.principal_due, amount.into());
         assert_eq!(loan_response.annual_interest_rate, annual_interest_rate);
         assert_eq!(loan_response.interest_paid, env.block.time);
-        assert_eq!(loan_response.interest_due.amount, 0u128.into());
+        assert_eq!(loan_response.interest_due, 0u128.into());
 
         // wait for year/10
         env.block.time = Timestamp::from_nanos(10 + Duration::YEAR.nanos() / 10);
@@ -466,7 +481,7 @@ mod test {
                 deps.as_mut(),
                 env.clone(),
                 loan.clone(),
-                vec![payment],
+                vec![to_cosmwasm(payment)],
             )
             .expect("can't repay loan");
 
@@ -476,17 +491,17 @@ mod test {
             .expect("can't query loan")
             .expect("should be some response");
 
-        assert_eq!(loan_response.principal_due.amount, 5_000_000u128.into());
+        assert_eq!(loan_response.principal_due, amount.into());
         assert_eq!(loan_response.annual_interest_rate, annual_interest_rate);
         assert_eq!(loan_response.interest_paid, env.block.time);
-        assert_eq!(loan_response.interest_due.amount, 0u128.into());
+        assert_eq!(loan_response.interest_due, 0u128.into());
 
         // an immediate repay after repay should pass (loan_interest_due==0 bug)
         lpp.try_repay_loan(
             deps.as_mut(),
             env.clone(),
             loan.clone(),
-            vec![coin(0u128, "uust")],
+            vec![coin(0u128)],
         )
         .expect("can't repay loan");
 
@@ -498,12 +513,12 @@ mod test {
             lpp.query_loan_outstanding_interest(deps.as_ref().storage, loan.clone(), env.block.time)
                 .expect("can't query outstanding interest")
                 .expect("should be some coins")
-                .0.amount.u128()
-                + 5_000_000
-                + 100;
+                .0
+                + new_coin(amount)
+                + new_coin(100);
 
         let repay = lpp
-            .try_repay_loan(deps.as_mut(), env, loan, vec![coin(payment, "uust")])
+            .try_repay_loan(deps.as_mut(), env, loan, vec![to_cosmwasm(payment)])
             .expect("can't repay loan");
 
         assert_eq!(repay, 100u128.into());
@@ -511,14 +526,14 @@ mod test {
 
     #[test]
     fn test_tvl_and_price() {
-        let balance_mock = [coin(0, "uust")]; // will deposit something later
-        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
+        let balance_mock = coin(0); // will deposit something later
+        let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
         let mut env = testing::mock_env();
         let loan = Addr::unchecked("loan");
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
-        Config::new("uust".into(), lease_code_id)
+        Config::new(balance_mock.denom, lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::default()
@@ -544,9 +559,9 @@ mod test {
         lender.deposit(deps.as_mut().storage, 10_000_000u128.into(), price)
             .expect("should deposit");
         deps.querier
-            .update_balance(MOCK_CONTRACT_ADDR, vec![coin(10_000_000, "uust")]);
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin(10_000_000)]);
 
-        let annual_interest_rate = lpp.query_quote(&deps.as_ref(), &env, coin(5_000_000, "uust"))
+        let annual_interest_rate = lpp.query_quote(&deps.as_ref(), &env, coin(5_000_000))
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
@@ -557,11 +572,11 @@ mod test {
             deps.as_mut(),
             env.clone(),
             loan,
-            coin(5_000_000, "uust"),
+            coin(5_000_000),
         )
         .expect("can't open loan");
         deps.querier
-            .update_balance(MOCK_CONTRACT_ADDR, vec![coin(5_000_000, "uust")]);
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin(5_000_000)]);
 
         // wait a year
         env.block.time = Timestamp::from_nanos(Duration::YEAR.nanos());
@@ -572,9 +587,9 @@ mod test {
 
         let lpp_balance = lpp.query_lpp_balance(&deps.as_ref(), &env)
             .expect("should query_lpp_balance");
-        assert_eq!(lpp_balance.balance, coin(5_000_000, "uust"));
-        assert_eq!(lpp_balance.total_principal_due, coin(5_000_000, "uust"));
-        assert_eq!(lpp_balance.total_interest_due, coin(1_000_000, "uust"));
+        assert_eq!(lpp_balance.balance, coin(5_000_000));
+        assert_eq!(lpp_balance.total_principal_due, coin(5_000_000));
+        assert_eq!(lpp_balance.total_interest_due, coin(1_000_000));
 
         let price = lpp.calculate_price(&deps.as_ref(), &env)
             .expect("should get price");
@@ -582,12 +597,20 @@ mod test {
 
         let withdraw = lpp.withdraw_lpn(&deps.as_ref(), &env, 1000u128.into())
             .expect("should withdraw");
-        assert_eq!(withdraw, coin(1100, "uust"));
+        assert_eq!(withdraw, coin(1100));
 
         // too much
         let withdraw = lpp.withdraw_lpn(&deps.as_ref(), &env, 10_000_000u128.into());
         assert!(withdraw.is_err());
 
+    }
+
+    fn new_coin(amount: u128) -> FinanceCoin<super::TheCurrency> {
+        FinanceCoin::<TheCurrency>::new(amount)
+    }
+
+    fn coin(amount: u128) -> Coin {
+        cosmwasm_std::coin(amount, THE_CURRENCY_SYMBOL)
     }
 
 }

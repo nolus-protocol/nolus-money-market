@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, Coin as CwCoin, Decimal, Timestamp, Uint128, Uint64};
 use finance::{coin::Coin, currency::Currency, percent::Percent};
 use schemars::JsonSchema;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {

@@ -7,11 +7,11 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::lpp::LiquidityPool;
+use crate::lpp::{LiquidityPool, TheCurrency};
 use crate::msg::{
     BalanceResponse, ExecuteMsg, InstantiateMsg, LppBalanceResponse, PriceResponse,
-    QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg, QueryQuoteResponse,
-    RewardsResponse, QueryConfigResponse,
+    QueryMsg, QueryQuoteResponse,
+    RewardsResponse, QueryConfigResponse, QueryLoanOutstandingInterestResponseNew, QueryLoanResponseNew,
 };
 use crate::state::Deposit;
 use finance::percent::Percent;
@@ -259,7 +259,7 @@ fn query_loan(
     storage: &dyn Storage,
     env: Env,
     lease_addr: Addr,
-) -> Result<QueryLoanResponse, ContractError> {
+) -> Result<QueryLoanResponseNew<TheCurrency>, ContractError> {
     LiquidityPool::load(storage)?.query_loan(storage, &env, lease_addr)
 }
 
@@ -267,7 +267,7 @@ fn query_loan_outstanding_interest(
     storage: &dyn Storage,
     loan: Addr,
     outstanding_time: Timestamp,
-) -> Result<QueryLoanOutstandingInterestResponse, ContractError> {
+) -> Result<QueryLoanOutstandingInterestResponseNew<TheCurrency>, ContractError> {
     let interest = LiquidityPool::load(storage)?.query_loan_outstanding_interest(
         storage,
         loan,

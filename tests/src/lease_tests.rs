@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{coin, coins, Addr, Timestamp};
+use cosmwasm_std::{Addr, Timestamp};
 use cw_multi_test::{AppResponse, Executor};
 
 use lease::msg::{StateQuery, StateResponse};
@@ -8,13 +8,12 @@ use leaser::msg::{QueryMsg, QuoteResponse};
 
 use finance::{
     coin::Coin,
-    coin_legacy::{add_coin, from_cosmwasm, sub_coin},
+    coin_legacy::{from_cosmwasm, to_cosmwasm},
     currency::Usdc,
     duration::Duration,
     interest::InterestPeriod,
     percent::Percent,
 };
-
 use crate::common::test_case::TestCase;
 
 type Currency = Usdc;
@@ -26,13 +25,12 @@ fn create_coin(amount: u128) -> TheCoin {
     Coin::<Currency>::new(amount)
 }
 
-fn create_coins(amount: u128) -> Vec<TheCoin> {
-    vec![create_coin(amount)]
-}
-
 fn create_test_case() -> TestCase {
     let mut test_case = TestCase::new(DENOM);
-    test_case.init(&Addr::unchecked("user"), create_coins(100));
+    test_case.init(
+        &Addr::unchecked("user"),
+        vec![to_cosmwasm(create_coin(100))],
+    );
     test_case.init_lpp(None);
     test_case.init_leaser();
 
@@ -55,7 +53,7 @@ fn open_lease(test_case: &mut TestCase, value: TheCoin) -> Addr {
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: DENOM.to_string(),
             },
-            &[value],
+            &[to_cosmwasm(value)],
         )
         .unwrap();
 
@@ -84,7 +82,7 @@ fn repay(test_case: &mut TestCase, contract_addr: &Addr, value: TheCoin) -> AppR
             Addr::unchecked("user"),
             contract_addr.clone(),
             &lease::msg::ExecuteMsg::Repay {},
-            &[value],
+            &[to_cosmwasm(value)],
         )
         .unwrap()
 }
@@ -96,9 +94,13 @@ fn close(test_case: &mut TestCase, contract_addr: &Addr) -> AppResponse {
             Addr::unchecked("user"),
             contract_addr.clone(),
             &lease::msg::ExecuteMsg::Close {},
-            &create_coins(1),
+            &[],
         )
         .unwrap()
+}
+
+fn quote_borrow(test_case: &TestCase, amount: TheCoin) -> TheCoin {
+    from_cosmwasm(quote_query(test_case, amount).borrow).unwrap()
 }
 
 fn quote_query(test_case: &TestCase, amount: TheCoin) -> QuoteResponse {
@@ -108,7 +110,7 @@ fn quote_query(test_case: &TestCase, amount: TheCoin) -> QuoteResponse {
         .query_wasm_smart(
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Quote {
-                downpayment: amount,
+                downpayment: to_cosmwasm(amount),
             },
         )
         .unwrap()
@@ -128,12 +130,13 @@ fn expected_open_state(
     payments: TheCoin,
     duration: u64,
 ) -> StateResponse<Currency, Currency> {
-    let quote_result = quote_query(test_case, downpayment.clone());
-    let expected = from_cosmwasm(quote_result.total)? - downpayment - payments;
+    let quote_result = quote_query(test_case, downpayment);
+    let total = from_cosmwasm(quote_result.total).unwrap();
+    let expected =  total - downpayment - payments;
     StateResponse::Opened {
-        amount: quote_result.total,
+        amount: total,
         interest_rate: quote_result.annual_interest_rate,
-        principal_due: expected.clone(),
+        principal_due: expected,
         interest_due: calculate_interest(expected, quote_result.annual_interest_rate, duration),
     }
 }
@@ -142,7 +145,7 @@ fn expected_open_state(
 fn state_opened_when_no_payments() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
-    let lease_address = open_lease(&mut test_case, downpayment.clone());
+    let lease_address = open_lease(&mut test_case, downpayment);
 
     let _expected_result = expected_open_state(&test_case, downpayment, create_coin(0), 0);
     let query_result = state_query(&test_case, &lease_address.into_string());
@@ -163,11 +166,11 @@ fn state_opened_when_no_payments() {
 fn state_opened_when_partially_paid() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
-    let lease_address = open_lease(&mut test_case, downpayment.clone());
+    let lease_address = open_lease(&mut test_case, downpayment);
 
-    let quote_result = quote_query(&test_case, downpayment.clone());
+    let quote_result = quote_query(&test_case, downpayment);
     let partial_payment = create_coin(quote_result.borrow.amount.u128() / 2);
-    let _expected_result = expected_open_state(&test_case, downpayment, partial_payment.clone(), 0);
+    let _expected_result = expected_open_state(&test_case, downpayment, partial_payment, 0);
 
     repay(&mut test_case, &lease_address, partial_payment);
 
@@ -189,13 +192,12 @@ fn state_opened_when_partially_paid() {
 fn state_paid() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
-    let lease_address = open_lease(&mut test_case, downpayment.clone());
-    let quote_result = quote_query(&test_case, downpayment.clone());
-    let full_payment = quote_result.borrow;
+    let lease_address = open_lease(&mut test_case, downpayment);
+    let borrowed = quote_borrow(&test_case, downpayment);
 
-    repay(&mut test_case, &lease_address, full_payment.clone());
+    repay(&mut test_case, &lease_address, borrowed);
 
-    let expected_amount = add_coin(downpayment, full_payment);
+    let expected_amount = downpayment + borrowed;
     let expected_result = StateResponse::Paid(expected_amount);
     let query_result = state_query(&test_case, &lease_address.into_string());
 
@@ -206,12 +208,12 @@ fn state_paid() {
 fn state_paid_when_overpaid() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
-    let lease_address = open_lease(&mut test_case, downpayment.clone());
-    let quote_result = quote_query(&test_case, downpayment.clone());
+    let lease_address = open_lease(&mut test_case, downpayment);
+    let borrowed = quote_borrow(&test_case, downpayment);
 
     let overpayment = create_coin(5);
-    let payment = add_coin(quote_result.borrow, overpayment);
-    let expected_amount = add_coin(downpayment, payment.clone());
+    let payment = borrowed + overpayment;
+    let expected_amount = downpayment + payment;
 
     repay(&mut test_case, &lease_address, payment);
 
@@ -225,10 +227,9 @@ fn state_paid_when_overpaid() {
 fn state_closed() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
-    let lease_address = open_lease(&mut test_case, downpayment.clone());
-    let quote_result = quote_query(&test_case, downpayment);
-    let full_payment = quote_result.borrow;
-    repay(&mut test_case, &lease_address, full_payment);
+    let lease_address = open_lease(&mut test_case, downpayment);
+    let borrowed = quote_borrow(&test_case, downpayment);
+    repay(&mut test_case, &lease_address, borrowed);
     close(&mut test_case, &lease_address);
 
     let expected_result = StateResponse::Closed();

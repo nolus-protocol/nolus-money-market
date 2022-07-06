@@ -9,7 +9,7 @@ use finance::{
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::msg::{
-    ExecuteMsg, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryLoanResponseNew,
+    ExecuteMsg, QueryLoanResponseNew,
     QueryMsg, QueryLoanOutstandingInterestResponseNew,
 };
 

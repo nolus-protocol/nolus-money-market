@@ -3,7 +3,6 @@ use cw_storage_plus::Item;
 use finance::{
     bank::BankAccount,
     coin::Coin,
-    coin_legacy::to_cosmwasm,
     currency::{Currency as CurrencyType, SymbolOwned, Usdc},
     liability::Liability,
 };
@@ -106,10 +105,10 @@ where
             let loan_state = self.loan.state(now, querier, lease)?;
 
             loan_state.map_or_else(
-                || Ok(StateResponse::Paid(lease_amount.clone())),
+                || Ok(StateResponse::Paid(lease_amount)),
                 |state| {
                     Ok(StateResponse::Opened {
-                        amount: lease_amount.clone(),
+                        amount: lease_amount,
                         interest_rate: state.annual_interest,
                         principal_due: state.principal_due,
                         interest_due: state.interest_due,
