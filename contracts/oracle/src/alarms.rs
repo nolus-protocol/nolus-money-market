@@ -1,13 +1,10 @@
-use cosmwasm_std::{
-    Addr, ContractInfoResponse, CosmosMsg, DepsMut, Empty, QuerierWrapper, QueryRequest, Response,
-    StdResult, Storage, SubMsg, Timestamp, WasmQuery,
-};
+use cosmwasm_std::{Addr, CosmosMsg, DepsMut, Response, StdResult, Storage, SubMsg, Timestamp};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use time_oracle::{Alarms, Id, TimeOracle};
 
-use crate::{msg::ExecuteAlarmMsg, ContractError};
+use crate::{contract_validation::validate_contract_addr, msg::ExecuteAlarmMsg, ContractError};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MarketAlarms {}
@@ -25,7 +22,7 @@ impl MarketAlarms {
         address: Addr,
         time: Timestamp,
     ) -> Result<Response, ContractError> {
-        Self::validate_contract_addr(&deps.querier, &address)?;
+        validate_contract_addr(&deps.querier, &address)?;
         Self::TIME_ALARMS.add(deps.storage, address, time)?;
         Ok(Response::new().add_attribute("method", "try_add_alarm"))
     }
@@ -64,40 +61,18 @@ impl MarketAlarms {
         Self::TIME_ORACLE.update_global_time(storage, block_time)?;
         Self::try_notify(storage, block_time)
     }
-
-    fn validate_contract_addr(querier: &QuerierWrapper, addr: &Addr) -> StdResult<()> {
-        let raw = QueryRequest::<Empty>::Wasm(WasmQuery::ContractInfo {
-            contract_addr: addr.into(),
-        });
-        let res: StdResult<ContractInfoResponse> = querier.query(&raw);
-        res.map(|_| ())
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{
         testing::{mock_dependencies, MockQuerier},
-        to_binary, Addr, ContractInfoResponse, ContractResult, QuerierResult, QuerierWrapper,
-        SystemResult, Timestamp, WasmQuery,
+        Addr, QuerierWrapper, Timestamp,
     };
 
     use super::MarketAlarms;
+    use crate::contract_validation::{tests::mock_query, validate_contract_addr};
     use crate::ContractError;
-
-    fn mock_query(_query: &WasmQuery) -> QuerierResult {
-        SystemResult::Ok(ContractResult::Ok(
-            to_binary(&ContractInfoResponse::new(20, "some data")).unwrap(),
-        ))
-    }
-
-    #[test]
-    fn validate_contract_addr_user_address() {
-        let mock_querier = MockQuerier::default();
-        let querier = QuerierWrapper::new(&mock_querier);
-        let address = Addr::unchecked("some address");
-        assert!(MarketAlarms::validate_contract_addr(&querier, &address).is_err());
-    }
 
     #[test]
     fn try_add_invalid_contract_address() {
@@ -109,23 +84,13 @@ mod tests {
         );
 
         let expected_error = ContractError::Std(
-            MarketAlarms::validate_contract_addr(&deps.as_mut().querier, &msg_sender).unwrap_err(),
+            validate_contract_addr(&deps.as_mut().querier, &msg_sender).unwrap_err(),
         );
 
         let result =
             MarketAlarms::try_add(deps.as_mut(), msg_sender, Timestamp::from_nanos(8)).unwrap_err();
 
         assert_eq!(expected_error, result);
-    }
-
-    #[test]
-    fn validate_contract_addr_contract_address() {
-        // let mock_querier = MockContractInfoQuerier {};
-        let mut mock_querier = MockQuerier::default();
-        mock_querier.update_wasm(mock_query);
-        let querier = QuerierWrapper::new(&mock_querier);
-        let address = Addr::unchecked("some address");
-        assert!(MarketAlarms::validate_contract_addr(&querier, &address).is_ok());
     }
 
     #[test]
