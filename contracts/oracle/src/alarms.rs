@@ -76,15 +76,18 @@ impl MarketAlarms {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use cosmwasm_std::{
         testing::{mock_dependencies, MockQuerier},
-        to_binary, ContractResult, SystemResult,
+        to_binary, Addr, ContractInfoResponse, ContractResult, QuerierWrapper, SystemResult,
+        Timestamp,
     };
 
-    struct NewQuerier {}
+    use super::MarketAlarms;
+    use crate::ContractError;
 
-    impl cosmwasm_std::Querier for NewQuerier {
+    struct MockContractInfoQuerier {}
+
+    impl cosmwasm_std::Querier for MockContractInfoQuerier {
         fn raw_query(&self, _bin_request: &[u8]) -> cosmwasm_std::QuerierResult {
             SystemResult::Ok(ContractResult::Ok(
                 to_binary(&ContractInfoResponse::new(20, "some data")).unwrap(),
@@ -124,7 +127,7 @@ mod tests {
 
     #[test]
     fn validate_contract_addr_contract_address() {
-        let mock_querier = NewQuerier {};
+        let mock_querier = MockContractInfoQuerier {};
         let querier = QuerierWrapper::new(&mock_querier);
         assert!(
             MarketAlarms::validate_contract_addr(&querier, Addr::unchecked("some address")).is_ok()
@@ -133,7 +136,7 @@ mod tests {
 
     #[test]
     fn try_add_valid_contract_address() {
-        let mock_querier = NewQuerier {};
+        let mock_querier = MockContractInfoQuerier {};
         let querier = QuerierWrapper::new(&mock_querier);
         let mut deps_temp = mock_dependencies();
         let mut deps = deps_temp.as_mut();
