@@ -61,7 +61,7 @@ pub fn execute(
             get_sender(deps.api, info)?,
             prices,
         ),
-        ExecuteMsg::AddAlarm { addr, time } => MarketAlarms::try_add(deps, addr, time),
+        ExecuteMsg::AddAlarm { time } => MarketAlarms::try_add(deps, info.sender, time),
     }
 }
 

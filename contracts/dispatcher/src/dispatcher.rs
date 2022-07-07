@@ -18,7 +18,6 @@ impl Dispatcher {
         deps: DepsMut,
         config: &Config,
         block_time: Timestamp,
-        this_contract: Addr,
     ) -> Result<Response, ContractError> {
         // get LPP balance: TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
         let lpp_balance = Self::get_lpp_balance(deps.as_ref(), &config.lpp)?;
@@ -60,12 +59,8 @@ impl Dispatcher {
             msg: to_binary(&lpp::msg::ExecuteMsg::DistributeRewards {})?,
         });
 
-        let subsrcibe_msg = Dispatcher::alarm_subscribe_msg(
-            this_contract,
-            &config.oracle,
-            block_time,
-            config.cadence_hours,
-        )?;
+        let subsrcibe_msg =
+            Dispatcher::alarm_subscribe_msg(&config.oracle, block_time, config.cadence_hours)?;
 
         Ok(Response::new().add_messages([treasury_send_rewards_msg, pay_msg, subsrcibe_msg]))
     }
@@ -151,7 +146,6 @@ impl Dispatcher {
     }
 
     pub(crate) fn alarm_subscribe_msg(
-        this_contract: Addr,
         oracle_addr: &Addr,
         current_time: Timestamp,
         cadence_hours: u32,
@@ -160,7 +154,6 @@ impl Dispatcher {
             funds: vec![],
             contract_addr: oracle_addr.to_string(),
             msg: to_binary(&oracle::msg::ExecuteMsg::AddAlarm {
-                addr: this_contract,
                 time: current_time.plus_seconds(Self::to_seconds(cadence_hours)),
             })?,
         }))
