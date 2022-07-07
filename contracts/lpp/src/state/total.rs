@@ -113,6 +113,13 @@ impl<LPN: Currency> Total<LPN> {
     }
 }
 
+impl<LPN: Currency> Default for Total<LPN> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+
 #[cfg(test)]
 mod test {
 

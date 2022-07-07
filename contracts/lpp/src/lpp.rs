@@ -217,7 +217,7 @@ impl<LPN: Currency> LiquidityPool<LPN> {
     ) -> Result<(), ContractError> {
         let current_time = env.block.time;
 
-        let annual_interest_rate = match self.query_quote(&deps.as_ref(), &env, amount.clone())? {
+        let annual_interest_rate = match self.query_quote(&deps.as_ref(), &env, amount)? {
             Some(rate) => Ok(rate),
             None => Err(ContractError::NoLiquidity {}),
         }?;
@@ -288,7 +288,7 @@ impl<LPN: Currency> LiquidityPool<LPN> {
                 Ok(LoanResponse {
                     principal_due: loan.principal_due,
                     interest_due: interest_due.0,
-                    annual_interest_rate: loan.annual_interest_rate.into(),
+                    annual_interest_rate: loan.annual_interest_rate,
                     interest_paid: loan.interest_paid,
                 })
             })
