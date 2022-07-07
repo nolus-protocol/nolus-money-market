@@ -1,22 +1,23 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, BankMsg, Binary, Coin as CwCoin, Deps, DepsMut, Env, MessageInfo, Response, Storage,
-    Timestamp, Uint128,
+    to_binary, Addr, BankMsg, Binary, Coin as CwCoin, Deps, DepsMut, Env, MessageInfo, Response,
+    Storage, Timestamp, Uint128,
 };
 use cw2::set_contract_version;
+use finance::currency::{Currency, Nls};
 
 use crate::error::ContractError;
-use crate::lpp::{LiquidityPool, IntoCW};
+use crate::lpp::{IntoCW, LiquidityPool};
 use crate::msg::{
     BalanceResponse, ExecuteMsg, InstantiateMsg, LppBalanceResponse, PriceResponse,
-    QueryMsg, QueryQuoteResponse,
-    RewardsResponse, QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
+    QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg,
+    QueryQuoteResponse, RewardsResponse,
 };
 use crate::state::Deposit;
-use finance::percent::Percent;
-use finance::currency::{Usdc, Nls, Currency};
 use finance::coin::Coin;
+use finance::currency::Usdc;
+use finance::percent::Percent;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -65,7 +66,9 @@ pub fn execute(
         ExecuteMsg::Deposit() => try_deposit(deps, env, sender, funds),
         ExecuteMsg::Burn { amount } => try_withdraw(deps, env, sender, amount),
         ExecuteMsg::DistributeRewards => try_distribute_rewards(deps, funds),
-        ExecuteMsg::ClaimRewards { other_recipient } => try_claim_rewards(deps, sender, other_recipient),
+        ExecuteMsg::ClaimRewards { other_recipient } => {
+            try_claim_rewards(deps, sender, other_recipient)
+        }
     }
 }
 
@@ -105,7 +108,7 @@ fn try_update_parameters(
         utilization_optimal,
         addon_optimal_interest_rate,
     )?;
-     Ok(Response::new().add_attribute("method", "try_update_parameters"))
+    Ok(Response::new().add_attribute("method", "try_update_parameters"))
 }
 
 fn try_open_loan(
@@ -139,7 +142,6 @@ fn try_repay_loan(
     lease_addr: Addr,
     funds: Vec<CwCoin>,
 ) -> Result<Response, ContractError> {
-
     if funds.len() != 1 {
         return Err(ContractError::FundsLen {});
     }
@@ -153,7 +155,7 @@ fn try_repay_loan(
 
     let mut response = Response::new().add_attribute("method", "try_repay_loan");
 
-    if excess_received!=Coin::new(0) {
+    if excess_received != Coin::new(0) {
         // TODO: transition to finance bank module
         let payment = lpp.pay(lease_addr, excess_received);
         response = response.add_message(payment);
@@ -174,7 +176,7 @@ fn try_deposit(
 
     let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
     let amount = lpp.try_into_amount(funds[0].clone())?;
-    
+
     let price = lpp.calculate_price(&deps.as_ref(), &env)?;
     let amount: u128 = amount.into();
     Deposit::load(deps.storage, lender_addr)?.deposit(deps.storage, amount.into(), price)?;
@@ -188,7 +190,6 @@ fn try_withdraw(
     lender_addr: Addr,
     amount_nlpn: Uint128,
 ) -> Result<Response, ContractError> {
-
     let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
 
     let payment_lpn = lpp.withdraw_lpn(&deps.as_ref(), &env, amount_nlpn)?;
@@ -202,9 +203,9 @@ fn try_withdraw(
     }
 
     let msg = BankMsg::Send {
-            to_address: lender_addr.into(),
-            amount: msg_payment,
-        };
+        to_address: lender_addr.into(),
+        amount: msg_payment,
+    };
 
     let response = Response::new()
         .add_attribute("method", "try_withdraw")
@@ -213,10 +214,7 @@ fn try_withdraw(
     Ok(response)
 }
 
-fn try_distribute_rewards(
-    deps: DepsMut,
-    funds: Vec<CwCoin>,
-) -> Result<Response, ContractError> {
+fn try_distribute_rewards(deps: DepsMut, funds: Vec<CwCoin>) -> Result<Response, ContractError> {
     match funds.iter().find(|&coin| coin.denom == NOLUS_DENOM) {
         Some(coin) => Deposit::distribute_rewards(deps, coin.to_owned())?,
         None => {
@@ -239,9 +237,9 @@ fn try_claim_rewards(
     let reward = deposit.claim_rewards(deps.storage)?;
 
     let msg = BankMsg::Send {
-            to_address: recipient.into(),
-            amount: vec![reward],
-        };
+        to_address: recipient.into(),
+        amount: vec![reward],
+    };
 
     let response = Response::new()
         .add_attribute("method", "try_claim_rewards")
@@ -253,7 +251,7 @@ fn try_claim_rewards(
 fn query_config(deps: &Deps) -> Result<QueryConfigResponse, ContractError> {
     let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
     let config = lpp.config();
-    
+
     Ok(QueryConfigResponse {
         lpn_symbol: config.denom.clone(),
         lease_code_id: config.lease_code_id,

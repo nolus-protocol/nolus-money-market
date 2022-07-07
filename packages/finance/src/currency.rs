@@ -1,3 +1,4 @@
+use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 type Symbol<'a> = &'a str;
@@ -14,7 +15,9 @@ impl Currency for Usdc {
     const SYMBOL: SymbolStatic = "uusdc";
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
+)]
 pub struct Nls;
 impl Currency for Nls {
     const SYMBOL: SymbolStatic = "unls";

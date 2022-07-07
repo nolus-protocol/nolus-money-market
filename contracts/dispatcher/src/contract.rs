@@ -117,10 +117,14 @@ mod tests {
     use cosmwasm_std::{
         coins, from_binary,
         testing::{mock_dependencies_with_balance, mock_env, mock_info},
-        to_binary, Addr, BlockInfo, Coin, SubMsg, WasmMsg,
+        to_binary, Addr, BlockInfo, SubMsg, WasmMsg,
     };
 
-    use finance::duration::Duration;
+    use finance::{
+        coin::Coin,
+        currency::{Currency, Nls},
+        duration::Duration,
+    };
 
     use super::{execute, instantiate, query};
     use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -204,10 +208,11 @@ mod tests {
     }
     #[test]
     fn dispatch_with_valid_period() {
-        let mut deps = mock_dependencies_with_balance(&coins(20, "unolus"));
+        let native_denom = Nls::SYMBOL;
+        let mut deps = mock_dependencies_with_balance(&coins(20, native_denom));
 
         let msg = instantiate_msg();
-        let info = mock_info("time", &coins(2, "unolus"));
+        let info = mock_info("time", &coins(2, native_denom));
         let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
         let mut env = mock_env();
@@ -229,7 +234,7 @@ mod tests {
                 SubMsg::new(WasmMsg::Execute {
                     contract_addr: "treasury".to_string(),
                     msg: to_binary(&treasury::msg::ExecuteMsg::SendRewards {
-                        amount: Coin::new(44386002, "uNLS"),
+                        amount: Coin::<Nls>::new(44386002),
                     })
                     .unwrap(),
                     funds: vec![],
@@ -237,7 +242,7 @@ mod tests {
                 SubMsg::new(WasmMsg::Execute {
                     contract_addr: "lpp".to_string(),
                     msg: to_binary(&lpp::msg::ExecuteMsg::DistributeRewards {}).unwrap(),
-                    funds: coins(44386002, "uNLS"),
+                    funds: coins(44386002, native_denom),
                 }),
                 SubMsg::new(WasmMsg::Execute {
                     contract_addr: "time".to_string(),

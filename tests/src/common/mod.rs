@@ -1,5 +1,6 @@
 use cosmwasm_std::{coins, testing::mock_env, Addr, BlockInfo, Coin};
 use cw_multi_test::{App, AppBuilder};
+use finance::currency::{Currency, Nls};
 
 #[cfg(test)]
 #[allow(dead_code)]
@@ -18,7 +19,7 @@ pub mod treasury_wrapper;
 
 pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
-pub const NATIVE_DENOM: &str = "uNLS";
+pub const NATIVE_DENOM: &str = Nls::SYMBOL;
 
 pub fn mock_app(init_funds: &[Coin]) -> App {
     let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);

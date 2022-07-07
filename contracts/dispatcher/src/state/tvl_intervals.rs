@@ -31,6 +31,9 @@ impl PartialOrd for Stop {
     }
 }
 
+// A list of (minTVL_thousands: u32, APR%o) which defines the APR as per the TVL.
+// The list represents intervals of TVL amounts starting from the given min TVL.
+// A valid configuration shall include a pair with minTVL_thousands == 0.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Eq)]
 pub struct Intervals {
     intervals: Vec<Stop>,

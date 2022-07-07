@@ -6,8 +6,8 @@ use finance::currency::Currency;
 use finance::duration::Duration;
 use finance::fraction::Fraction;
 use finance::interest::InterestPeriod;
-use finance::ratio::Rational;
 use finance::percent::Percent;
+use finance::ratio::Rational;
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -25,6 +25,12 @@ pub struct Total<LPN: Currency> {
     #[serde(bound = "Coin<LPN>: Serialize + DeserializeOwned")]
     annual_interest_rate: Rational<Coin<LPN>>,
     last_update_time: Timestamp,
+}
+
+impl<LPN: Currency> Default for Total<LPN> {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<LPN: Currency> Total<LPN> {
@@ -140,21 +146,22 @@ mod test {
 
         assert_eq!(total.total_principal_due(), Coin::<Usdc>::new(0));
 
-        total.borrow(env.block.time, Coin::new(10000), Percent::from_percent(20))
+        total
+            .borrow(env.block.time, Coin::new(10000), Percent::from_percent(20))
             .expect("should borrow");
         assert_eq!(total.total_principal_due(), Coin::new(10000));
 
-        env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos()/2);
+        env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos() / 2);
         let interest_due = total.total_interest_due_by_now(env.block.time);
         assert_eq!(interest_due, Coin::new(1000));
 
-        total.repay(env.block.time, Coin::new(5000), Percent::from_percent(20))
+        total
+            .repay(env.block.time, Coin::new(5000), Percent::from_percent(20))
             .expect("should repay");
         assert_eq!(total.total_principal_due(), Coin::new(5000));
 
-        env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos()/2);
+        env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos() / 2);
         let interest_due = total.total_interest_due_by_now(env.block.time);
         assert_eq!(interest_due, 1500u128.into());
-
     }
 }

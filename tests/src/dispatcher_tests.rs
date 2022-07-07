@@ -1,5 +1,6 @@
 use cosmwasm_std::{coins, Addr, Coin};
 use cw_multi_test::{ContractWrapper, Executor};
+use finance::currency::{Currency, Nls, Usdc};
 
 use crate::{
     common::test_case::TestCase,
@@ -10,7 +11,7 @@ use crate::{
 
 #[test]
 fn on_alarm_zero_reeward() {
-    let denom = "UST";
+    let denom = Usdc::SYMBOL;
 
     let user = Addr::unchecked(USER);
     let mut test_case = TestCase::new(denom);
@@ -64,7 +65,7 @@ fn on_alarm_zero_reeward() {
 
 #[test]
 fn on_alarm() {
-    let denom = "UST";
+    let denom = Usdc::SYMBOL;
 
     let lender = Addr::unchecked(USER);
 
@@ -88,11 +89,11 @@ fn on_alarm() {
         .init_dispatcher();
 
     assert_eq!(
-        Coin::new(0, NATIVE_DENOM),
+        Coin::new(0, Nls::SYMBOL),
         test_case
             .app
             .wrap()
-            .query_balance(test_case.lpp_addr.clone().unwrap(), NATIVE_DENOM)
+            .query_balance(test_case.lpp_addr.clone().unwrap(), Nls::SYMBOL)
             .unwrap()
     );
 
@@ -217,7 +218,7 @@ fn on_alarm() {
 #[test]
 #[should_panic(expected = "Unauthorized")]
 fn test_config_unauthorized() {
-    let denom = "UST";
+    let denom = Usdc::SYMBOL;
     let user_addr = Addr::unchecked(USER);
     let mut test_case = TestCase::new(denom);
     test_case
@@ -251,7 +252,7 @@ fn test_config_unauthorized() {
 
 #[test]
 fn test_config() {
-    let denom = "UST";
+    let denom = Usdc::SYMBOL;
     let user_addr = Addr::unchecked(ADMIN);
     let mut test_case = TestCase::new(denom);
     test_case

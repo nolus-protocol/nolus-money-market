@@ -849,6 +849,7 @@ dependencies = [
  "cosmwasm-storage",
  "cw-storage-plus",
  "cw2",
+ "finance",
  "lpp",
  "schemars",
  "semver",

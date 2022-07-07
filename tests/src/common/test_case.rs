@@ -1,6 +1,7 @@
 use anyhow::Error;
 use cosmwasm_std::{coins, Addr, Coin, Empty, StdError, Uint64};
 use cw_multi_test::{next_block, App, ContractWrapper, Executor};
+use finance::currency::{Currency, Usdc};
 
 use super::{
     dispatcher_wrapper::DispatcherWrapper, lease_wrapper::LeaseWrapper,
@@ -9,7 +10,7 @@ use super::{
     treasury_wrapper::TreasuryWrapper, ADMIN,
 };
 
-const STABLECOIN: &str = "UST";
+const STABLECOIN: &str = Usdc::SYMBOL;
 
 type OptionalContractWrapper = Option<
     ContractWrapper<
