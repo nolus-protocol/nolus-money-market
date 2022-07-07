@@ -32,7 +32,7 @@ impl Duration {
     const MINUTES_IN_HOUR: u16 = 60;
     const HOURS_IN_DAY: u16 = 24;
 
-    pub const YEAR: Duration = Self::from_nanos(365 * Self::SECONDS_IN_DAY as Units);
+    pub const YEAR: Duration = Self::from_days(365);
 
     pub const fn from_nanos(nanos: Units) -> Self {
         Self(nanos)
@@ -199,5 +199,10 @@ mod tests {
         assert_eq!(D::from_minutes(1), D::from_secs(D::SECONDS_IN_MINUTE));
         assert_eq!(D::from_hours(1), D::from_minutes(D::MINUTES_IN_HOUR));
         assert_eq!(D::from_days(1), D::from_hours(D::HOURS_IN_DAY));
+    }
+
+    #[test]
+    fn year() {
+        assert_eq!(D::from_days(365), D::YEAR);
     }
 }
