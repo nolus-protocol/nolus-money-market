@@ -26,6 +26,10 @@ impl<C> Coin<C> {
         }
     }
 
+    pub fn is_zero(&self) -> bool {
+        self.amount == u128::default()
+    }
+
     pub(super) fn amount(&self) -> u128 {
         self.amount
     }
@@ -244,6 +248,12 @@ mod test {
         test_of(18, usdc(112), usdc(2));
         test_of(18, usdc(111), usdc(1));
         test_of(1000, usdc(u128::MAX), usdc(u128::MAX));
+    }
+
+    #[test]
+    fn is_zero() {
+        assert!(usdc(0).is_zero());
+        assert!(!usdc(1).is_zero());
     }
 
     #[test]

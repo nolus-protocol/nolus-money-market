@@ -10,8 +10,8 @@ use crate::error::ContractError;
 use crate::lpp::{LiquidityPool, IntoCW};
 use crate::msg::{
     BalanceResponse, ExecuteMsg, InstantiateMsg, LppBalanceResponse, PriceResponse,
-    QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg, QueryQuoteResponse,
-    RewardsResponse, QueryConfigResponse,
+    QueryMsg, QueryQuoteResponse,
+    RewardsResponse, QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
 };
 use crate::state::Deposit;
 use finance::percent::Percent;

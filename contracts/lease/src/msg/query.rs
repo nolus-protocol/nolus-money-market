@@ -1,5 +1,4 @@
-use cosmwasm_std::Coin;
-use finance::percent::Percent;
+use finance::{coin::Coin, percent::Percent, currency::Currency};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -9,13 +8,17 @@ pub struct StateQuery {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum StateResponse {
+pub enum StateResponse<C, Lpn>
+where
+    C: Currency,
+    Lpn: Currency,
+{
     Opened {
-        amount: Coin,
+        amount: Coin<C>,
         interest_rate: Percent,
-        principal_due: Coin,
-        interest_due: Coin,
+        principal_due: Coin<Lpn>,
+        interest_due: Coin<Lpn>,
     },
-    Paid(Coin),
+    Paid(Coin<C>),
     Closed(),
 }
