@@ -8,7 +8,6 @@ use finance::interest::InterestPeriod;
 use finance::duration::Duration;
 use finance::coin::Coin;
 use finance::percent::Percent;
-use finance::ratio::{Rational, Ratio};
 use finance::currency::Currency;
 
 
@@ -70,12 +69,7 @@ impl<LPN: Currency> Loan<LPN> {
 
         let time_delta = Duration::between(self.data.interest_paid, ctime);
 
-        // TODO: refactor or impl InterestPeriod<Coin<LPN>, Percent>
-        let nominator = Coin::<LPN>::new(self.data.annual_interest_rate.parts().into());
-        let denominator = Coin::<LPN>::new(self.data.annual_interest_rate.total().into());
-        let annual_interest_rate = Rational::new(nominator, denominator);
-
-        let (interest_period, interest_pay_excess) = InterestPeriod::<Coin<LPN>, _>::with_interest(annual_interest_rate)
+        let (interest_period, interest_pay_excess) = InterestPeriod::with_interest(self.data.annual_interest_rate)
             .from(self.data.interest_paid)
             .spanning(time_delta)
             .pay(self.data.principal_due, repay_amount, ctime);
@@ -124,12 +118,7 @@ impl<LPN: Currency> Loan<LPN> {
                 - loan.interest_paid.nanos()
             );
             
-        // TODO: refactor or impl InterestPeriod<Coin<LPN>, Percent>
-        let nominator = Coin::<LPN>::new(loan.annual_interest_rate.parts().into());
-        let denominator = Coin::<LPN>::new(loan.annual_interest_rate.total().into());
-        let annual_interest_rate = Rational::new(nominator, denominator);
-
-            let interest_period = InterestPeriod::<Coin<LPN>, _>::with_interest(annual_interest_rate)
+            let interest_period = InterestPeriod::with_interest(loan.annual_interest_rate)
                 .from(loan.interest_paid)
                 .spanning(delta_t);
 

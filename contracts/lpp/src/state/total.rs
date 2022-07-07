@@ -7,6 +7,7 @@ use finance::duration::Duration;
 use finance::fraction::Fraction;
 use finance::interest::InterestPeriod;
 use finance::ratio::Rational;
+use finance::percent::Percent;
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -51,7 +52,7 @@ impl<LPN: Currency> Total<LPN> {
     }
 
     pub fn total_interest_due_by_now(&self, ctime: Timestamp) -> Coin<LPN> {
-        InterestPeriod::<Coin<LPN>, _>::with_interest(self.annual_interest_rate)
+        InterestPeriod::with_interest(self.annual_interest_rate)
             .from(self.last_update_time)
             .spanning(Duration::between(self.last_update_time, ctime))
             .interest(self.total_principal_due)
@@ -62,7 +63,7 @@ impl<LPN: Currency> Total<LPN> {
         &mut self,
         ctime: Timestamp,
         amount: Coin<LPN>,
-        loan_interest_rate: Rational<Coin<LPN>>,
+        loan_interest_rate: Percent,
     ) -> Result<&Self, ContractError> {
         self.total_interest_due = self.total_interest_due_by_now(ctime);
 
@@ -71,7 +72,7 @@ impl<LPN: Currency> Total<LPN> {
             <Rational<Coin<LPN>> as Fraction<Coin<LPN>>>::of(
                 &self.annual_interest_rate,
                 self.total_principal_due,
-            ) + <Rational<Coin<LPN>> as Fraction<Coin<LPN>>>::of(&loan_interest_rate, amount),
+            ) + loan_interest_rate.of(amount),
             self.total_principal_due + amount,
         );
 
@@ -87,7 +88,7 @@ impl<LPN: Currency> Total<LPN> {
         &mut self,
         ctime: Timestamp,
         loan_principal_payment: Coin<LPN>,
-        loan_interest_rate: Rational<Coin<LPN>>,
+        loan_interest_rate: Percent,
     ) -> Result<&Self, ContractError> {
         self.total_interest_due = self.total_interest_due_by_now(ctime);
 
@@ -98,10 +99,7 @@ impl<LPN: Currency> Total<LPN> {
                 <Rational<Coin<LPN>> as Fraction<Coin<LPN>>>::of(
                     &self.annual_interest_rate,
                     self.total_principal_due,
-                ) - <Rational<Coin<LPN>> as Fraction<Coin<LPN>>>::of(
-                    &loan_interest_rate,
-                    loan_principal_payment,
-                ),
+                ) - loan_interest_rate.of(loan_principal_payment),
                 self.total_principal_due - loan_principal_payment,
             )
         };
@@ -135,7 +133,7 @@ mod test {
 
         assert_eq!(total.total_principal_due(), Coin::<Usdc>::new(0));
 
-        total.borrow(env.block.time, Coin::new(10000), Rational::new(Coin::new(200), Coin::new(1000)))
+        total.borrow(env.block.time, Coin::new(10000), Percent::from_percent(20))
             .expect("should borrow");
         assert_eq!(total.total_principal_due(), Coin::new(10000));
 
@@ -143,7 +141,7 @@ mod test {
         let interest_due = total.total_interest_due_by_now(env.block.time);
         assert_eq!(interest_due, Coin::new(1000));
 
-        total.repay(env.block.time, Coin::new(5000), Rational::new(Coin::new(200), Coin::new(1000)))
+        total.repay(env.block.time, Coin::new(5000), Percent::from_percent(20))
             .expect("should repay");
         assert_eq!(total.total_principal_due(), Coin::new(5000));
 

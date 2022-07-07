@@ -1,13 +1,13 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, BankMsg, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, Storage,
+    to_binary, Addr, BankMsg, Binary, Coin as CwCoin, Deps, DepsMut, Env, MessageInfo, Response, Storage,
     Timestamp, Uint128,
 };
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
-use crate::lpp::LiquidityPool;
+use crate::lpp::{LiquidityPool, IntoCW};
 use crate::msg::{
     BalanceResponse, ExecuteMsg, InstantiateMsg, LppBalanceResponse, PriceResponse,
     QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg, QueryQuoteResponse,
@@ -15,13 +15,15 @@ use crate::msg::{
 };
 use crate::state::Deposit;
 use finance::percent::Percent;
+use finance::currency::{Usdc, Nls, Currency};
+use finance::coin::Coin;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-// TODO: move to some global config package
-pub const NOLUS_DENOM: &str = "uNLS";
+// TODO: remove
+pub const NOLUS_DENOM: &str = Nls::SYMBOL;
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
@@ -32,7 +34,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    LiquidityPool::store(deps.storage, msg.denom, msg.lease_code_id)?;
+    LiquidityPool::<Usdc>::store(deps.storage, msg.denom, msg.lease_code_id)?;
 
     Ok(Response::new().add_attribute("method", "instantiate"))
 }
@@ -96,7 +98,7 @@ fn try_update_parameters(
     utilization_optimal: Percent,
     addon_optimal_interest_rate: Percent,
 ) -> Result<Response, ContractError> {
-    let mut lpp = LiquidityPool::load(deps.storage)?;
+    let mut lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
     lpp.update_config(
         deps.storage,
         base_interest_rate,
@@ -110,15 +112,18 @@ fn try_open_loan(
     deps: DepsMut,
     env: Env,
     lease_addr: Addr,
-    amount: Coin,
+    amount: CwCoin,
 ) -> Result<Response, ContractError> {
-    let mut lpp = LiquidityPool::load(deps.storage)?;
+    let mut lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
     lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
-    lpp.try_open_loan(deps, env, lease_addr.clone(), amount.clone())?;
+    let amount = Coin::new(amount.amount.u128());
 
+    lpp.try_open_loan(deps, env, lease_addr.clone(), amount)?;
+
+    // TODO: transition to finance bank module
     let transfer_msg = BankMsg::Send {
         to_address: lease_addr.to_string(),
-        amount: vec![amount],
+        amount: vec![amount.into_cw()],
     };
 
     let response = Response::new()
@@ -132,7 +137,7 @@ fn try_repay_loan(
     deps: DepsMut,
     env: Env,
     lease_addr: Addr,
-    funds: Vec<Coin>,
+    funds: Vec<CwCoin>,
 ) -> Result<Response, ContractError> {
 
     if funds.len() != 1 {
@@ -140,15 +145,16 @@ fn try_repay_loan(
     }
 
     let repay_amount = funds[0].clone();
+    let repay_amount = Coin::new(repay_amount.amount.u128());
 
-
-    let mut lpp = LiquidityPool::load(deps.storage)?;
+    let mut lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
     lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
     let excess_received = lpp.try_repay_loan(deps, env, lease_addr.clone(), repay_amount)?;
 
     let mut response = Response::new().add_attribute("method", "try_repay_loan");
 
-    if !excess_received.is_zero() {
+    if excess_received!=Coin::new(0) {
+        // TODO: transition to finance bank module
         let payment = lpp.pay(lease_addr, excess_received);
         response = response.add_message(payment);
     }
@@ -160,16 +166,18 @@ fn try_deposit(
     deps: DepsMut,
     env: Env,
     lender_addr: Addr,
-    funds: Vec<Coin>,
+    funds: Vec<CwCoin>,
 ) -> Result<Response, ContractError> {
     if funds.len() != 1 {
         return Err(ContractError::FundsLen {});
     }
 
-    let lpp = LiquidityPool::load(deps.storage)?;
+    let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
     let amount = lpp.try_into_amount(funds[0].clone())?;
+    
     let price = lpp.calculate_price(&deps.as_ref(), &env)?;
-    Deposit::load(deps.storage, lender_addr)?.deposit(deps.storage, amount, price)?;
+    let amount: u128 = amount.into();
+    Deposit::load(deps.storage, lender_addr)?.deposit(deps.storage, amount.into(), price)?;
 
     Ok(Response::new().add_attribute("method", "try_deposit"))
 }
@@ -181,10 +189,10 @@ fn try_withdraw(
     amount_nlpn: Uint128,
 ) -> Result<Response, ContractError> {
 
-    let lpp = LiquidityPool::load(deps.storage)?;
+    let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
 
     let payment_lpn = lpp.withdraw_lpn(&deps.as_ref(), &env, amount_nlpn)?;
-    let mut msg_payment = vec![payment_lpn];
+    let mut msg_payment = vec![payment_lpn.into_cw()];
 
     let maybe_reward =
         Deposit::load(deps.storage, lender_addr.clone())?.withdraw(deps.storage, amount_nlpn)?;
@@ -207,7 +215,7 @@ fn try_withdraw(
 
 fn try_distribute_rewards(
     deps: DepsMut,
-    funds: Vec<Coin>,
+    funds: Vec<CwCoin>,
 ) -> Result<Response, ContractError> {
     match funds.iter().find(|&coin| coin.denom == NOLUS_DENOM) {
         Some(coin) => Deposit::distribute_rewards(deps, coin.to_owned())?,
@@ -243,7 +251,7 @@ fn try_claim_rewards(
 }
 
 fn query_config(deps: &Deps) -> Result<QueryConfigResponse, ContractError> {
-    let lpp = LiquidityPool::load(deps.storage)?;
+    let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
     let config = lpp.config();
     
     Ok(QueryConfigResponse {
@@ -255,8 +263,10 @@ fn query_config(deps: &Deps) -> Result<QueryConfigResponse, ContractError> {
     })
 }
 
-fn query_quote(deps: &Deps, env: &Env, quote: Coin) -> Result<QueryQuoteResponse, ContractError> {
-    let lpp = LiquidityPool::load(deps.storage)?;
+fn query_quote(deps: &Deps, env: &Env, quote: CwCoin) -> Result<QueryQuoteResponse, ContractError> {
+    let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
+    let quote = lpp.try_into_amount(quote)?;
+
     match lpp.query_quote(deps, env, quote)? {
         Some(quote) => Ok(QueryQuoteResponse::QuoteInterestRate(quote)),
         None => Ok(QueryQuoteResponse::NoLiquidity),
@@ -268,7 +278,7 @@ fn query_loan(
     env: Env,
     lease_addr: Addr,
 ) -> Result<QueryLoanResponse, ContractError> {
-    LiquidityPool::load(storage)?.query_loan(storage, &env, lease_addr)
+    LiquidityPool::<Usdc>::load(storage)?.query_loan(storage, &env, lease_addr)
 }
 
 fn query_loan_outstanding_interest(
@@ -276,7 +286,7 @@ fn query_loan_outstanding_interest(
     loan: Addr,
     outstanding_time: Timestamp,
 ) -> Result<QueryLoanOutstandingInterestResponse, ContractError> {
-    let interest = LiquidityPool::load(storage)?.query_loan_outstanding_interest(
+    let interest = LiquidityPool::<Usdc>::load(storage)?.query_loan_outstanding_interest(
         storage,
         loan,
         outstanding_time,
@@ -286,12 +296,12 @@ fn query_loan_outstanding_interest(
 }
 
 fn query_lpp_balance(deps: Deps, env: Env) -> Result<LppBalanceResponse, ContractError> {
-    let lpp = LiquidityPool::load(deps.storage)?;
+    let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
     Ok(lpp.query_lpp_balance(&deps, &env)?)
 }
 
 fn query_ntoken_price(deps: Deps, env: Env) -> Result<PriceResponse, ContractError> {
-    let lpp = LiquidityPool::load(deps.storage)?;
+    let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
     let price = lpp.calculate_price(&deps, &env)?.into();
 
     Ok(price)
