@@ -277,7 +277,7 @@ fn query_loan(
     storage: &dyn Storage,
     env: Env,
     lease_addr: Addr,
-) -> Result<QueryLoanResponse, ContractError> {
+) -> Result<QueryLoanResponse<Usdc>, ContractError> {
     LiquidityPool::<Usdc>::load(storage)?.query_loan(storage, &env, lease_addr)
 }
 
@@ -285,7 +285,7 @@ fn query_loan_outstanding_interest(
     storage: &dyn Storage,
     loan: Addr,
     outstanding_time: Timestamp,
-) -> Result<QueryLoanOutstandingInterestResponse, ContractError> {
+) -> Result<QueryLoanOutstandingInterestResponse<Usdc>, ContractError> {
     let interest = LiquidityPool::<Usdc>::load(storage)?.query_loan_outstanding_interest(
         storage,
         loan,

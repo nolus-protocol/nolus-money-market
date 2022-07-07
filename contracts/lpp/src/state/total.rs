@@ -52,7 +52,7 @@ impl<LPN: Currency> Total<LPN> {
     }
 
     pub fn total_interest_due_by_now(&self, ctime: Timestamp) -> Coin<LPN> {
-        InterestPeriod::with_interest(self.annual_interest_rate)
+        InterestPeriod::<Coin<LPN>, _>::with_interest(self.annual_interest_rate)
             .from(self.last_update_time)
             .spanning(Duration::between(self.last_update_time, ctime))
             .interest(self.total_principal_due)
