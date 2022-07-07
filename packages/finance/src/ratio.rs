@@ -10,7 +10,7 @@ pub trait Ratio<U>
     fn total(&self) -> U;
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Rational<U> {
     nominator: U,
