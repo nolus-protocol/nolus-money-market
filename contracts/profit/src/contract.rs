@@ -76,11 +76,17 @@ fn try_transfer(
 
 #[cfg(test)]
 mod tests {
-    use crate::msg::ConfigResponse;
+    use cosmwasm_std::{
+        coins, from_binary,
+        testing::{mock_dependencies_with_balance, mock_env, mock_info},
+        to_binary, Addr, BankMsg, CosmosMsg, SubMsg, WasmMsg,
+    };
 
-    use super::*;
-    use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, Addr, BankMsg, CosmosMsg, SubMsg, WasmMsg};
+    use finance::duration::Duration;
+
+    use super::{execute, instantiate, query};
+    use crate::error::ContractError;
+    use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 
     fn instantiate_msg() -> InstantiateMsg {
         InstantiateMsg {
@@ -110,7 +116,7 @@ mod tests {
                 funds: vec![],
                 contract_addr: oracle_addr.to_string(),
                 msg: to_binary(&oracle::msg::ExecuteMsg::AddAlarm {
-                    time: mock_env().block.time.plus_seconds(16u64 * 60 * 60),
+                    time: mock_env().block.time + Duration::from_hours(16),
                 })
                 .unwrap(),
             }))]
