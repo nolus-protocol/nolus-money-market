@@ -2,8 +2,9 @@ use cosmwasm_std::{Addr, StdError, Uint64};
 use cw_multi_test::ContractWrapper;
 
 use cw_multi_test::{App, Executor};
+use finance::liability::Liability;
 use finance::percent::Percent;
-use leaser::msg::{Liability, Repayment};
+use leaser::msg::Repayment;
 use leaser::ContractError;
 
 use super::ADMIN;
@@ -35,8 +36,12 @@ impl LeaserWrapper {
             lease_code_id: Uint64::new(lease_code_id),
             lpp_ust_addr: lpp_addr.clone(),
             lease_interest_rate_margin: Percent::from_percent(3),
-            recalc_hours: 1,
-            liability: Liability::new(65, 70, 80),
+            liability: Liability::new(
+                Percent::from_percent(65),
+                Percent::from_percent(70),
+                Percent::from_percent(80),
+                1,
+            ),
             repayment: Repayment::new(90 * 24 * 60 * 60, 10 * 24 * 60 * 60),
         };
 

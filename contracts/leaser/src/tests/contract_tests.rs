@@ -4,15 +4,17 @@ use crate::ContractError;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{
     coins, from_binary, to_binary, Addr, Coin, CosmosMsg, DepsMut, MessageInfo, StdError, SubMsg,
-    Uint128, Uint64, WasmMsg,
+    Uint64, WasmMsg,
 };
+use finance::currency::{Currency, Usdc};
+use finance::liability::Liability;
 use finance::percent::Percent;
 
-use crate::msg::{ConfigResponse, ExecuteMsg, Liability, QueryMsg, QuoteResponse, Repayment};
+use crate::msg::{ConfigResponse, ExecuteMsg, QueryMsg, QuoteResponse, Repayment};
 
 const CREATOR: &str = "creator";
 const LPP_ADDR: &str = "test";
-const DENOM: &str = "UST";
+const DENOM: &str = Usdc::SYMBOL;
 const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
 
 fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::InstantiateMsg {
@@ -20,8 +22,12 @@ fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::Ins
         lease_code_id: Uint64::new(lease_code_id),
         lpp_ust_addr: lpp_addr,
         lease_interest_rate_margin: MARGIN_INTEREST_RATE,
-        recalc_hours: 1,
-        liability: Liability::new(65, 70, 80),
+        liability: Liability::new(
+            Percent::from_percent(65),
+            Percent::from_percent(70),
+            Percent::from_percent(80),
+            1,
+        ),
         repayment: Repayment::new(90 * 24 * 60 * 60, 10 * 24 * 60 * 60),
     }
 }
@@ -58,12 +64,17 @@ fn proper_initialization() {
 #[test]
 fn test_update_config() {
     let mut deps = mock_dependencies();
-    let expected_liability = Liability::new(55, 60, 65);
+    let expected_liability = Liability::new(
+        Percent::from_percent(55),
+        Percent::from_percent(60),
+        Percent::from_percent(65),
+        12,
+    );
     let expected_repaiment = Repayment::new(10, 10);
     let info = setup_test_case(deps.as_mut());
     let msg = ExecuteMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
-        liability: expected_liability.clone(),
+        liability: expected_liability,
         repayment: expected_repaiment.clone(),
     };
     execute(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -78,7 +89,12 @@ fn test_update_config() {
 #[test]
 fn test_update_config_unauthorized() {
     let mut deps = mock_dependencies();
-    let expected_liability = Liability::new(55, 60, 65);
+    let expected_liability = Liability::new(
+        Percent::from_percent(55),
+        Percent::from_percent(60),
+        Percent::from_percent(65),
+        12,
+    );
     let expected_repaiment = Repayment::new(10, 10);
     setup_test_case(deps.as_mut());
     let msg = ExecuteMsg::Config {
@@ -153,10 +169,11 @@ fn test_quote() {
     .unwrap();
     let resp: QuoteResponse = from_binary(&res).unwrap();
 
-    assert_eq!(Uint128::new(185), resp.borrow.amount);
-    assert_eq!(Uint128::new(285), resp.total.amount);
-    assert_eq!(DENOM, resp.borrow.denom);
-    assert_eq!(DENOM, resp.total.denom);
+    assert_eq!(Coin::new(185, DENOM), resp.borrow);
+    assert_eq!(Coin::new(285, DENOM), resp.total);
+    // TODO: move to finance::coin::Coin
+    // assert_eq!(finance::coin::Coin::<Usdc>::new(185), resp.borrow);
+    // assert_eq!(finance::coin::Coin::<Usdc>::new(285), resp.total);
     /*
         103% =
         100% lpp annual_interest_rate (when calling the test version of get_annual_interest_rate() in lpp_querier.rs)
@@ -178,6 +195,10 @@ fn test_quote() {
     .unwrap();
     let resp: QuoteResponse = from_binary(&res).unwrap();
 
-    assert_eq!(Uint128::new(27), resp.borrow.amount);
-    assert_eq!(Uint128::new(42), resp.total.amount);
+    assert_eq!(Coin::new(27, DENOM), resp.borrow);
+    assert_eq!(Coin::new(42, DENOM), resp.total);
+
+    // TODO: move to finance::coin
+    // assert_eq!(finance::coin::Coin::<Usdc>::new(27), resp.borrow);
+    // assert_eq!(finance::coin::Coin::<Usdc>::new(42), resp.total);
 }
