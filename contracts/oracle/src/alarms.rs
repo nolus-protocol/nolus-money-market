@@ -71,7 +71,7 @@ mod tests {
     };
 
     use super::MarketAlarms;
-    use crate::contract_validation::{tests::mock_query, validate_contract_addr};
+    use crate::contract_validation::{tests::valid_contract_query, validate_contract_addr};
     use crate::ContractError;
 
     #[test]
@@ -96,7 +96,7 @@ mod tests {
     #[test]
     fn try_add_valid_contract_address() {
         let mut mock_querier = MockQuerier::default();
-        mock_querier.update_wasm(mock_query);
+        mock_querier.update_wasm(valid_contract_query);
         let querier = QuerierWrapper::new(&mock_querier);
         let mut deps_temp = mock_dependencies();
         let mut deps = deps_temp.as_mut();

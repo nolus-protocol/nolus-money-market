@@ -25,7 +25,7 @@ pub mod tests {
 
     use super::validate_contract_addr;
 
-    pub fn mock_query(_query: &WasmQuery) -> QuerierResult {
+    pub fn valid_contract_query(_query: &WasmQuery) -> QuerierResult {
         SystemResult::Ok(ContractResult::Ok(
             to_binary(&ContractInfoResponse::new(20, "some data")).unwrap(),
         ))
@@ -42,7 +42,7 @@ pub mod tests {
     #[test]
     fn validate_contract_addr_contract_address() {
         let mut mock_querier = MockQuerier::default();
-        mock_querier.update_wasm(mock_query);
+        mock_querier.update_wasm(valid_contract_query);
         let querier = QuerierWrapper::new(&mock_querier);
         let address = Addr::unchecked("some address");
         assert!(validate_contract_addr(&querier, &address).is_ok());
