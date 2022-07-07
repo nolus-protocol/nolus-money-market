@@ -2,7 +2,11 @@ use cosmwasm_std::{
     Addr, ContractInfoResponse, Empty, QuerierWrapper, QueryRequest, StdResult, WasmQuery,
 };
 
-pub fn get_contract_info(
+pub fn validate_contract_addr(querier: &QuerierWrapper, contract_address: &Addr) -> StdResult<()> {
+    get_contract_info(querier, contract_address).map(|_| ())
+}
+
+fn get_contract_info(
     querier: &QuerierWrapper,
     contract_address: &Addr,
 ) -> StdResult<ContractInfoResponse> {
@@ -10,10 +14,6 @@ pub fn get_contract_info(
         contract_addr: contract_address.into(),
     });
     querier.query(&raw)
-}
-
-pub fn validate_contract_addr(querier: &QuerierWrapper, contract_address: &Addr) -> StdResult<()> {
-    get_contract_info(querier, contract_address).map(|_| ())
 }
 
 #[cfg(test)]
