@@ -114,12 +114,18 @@ pub fn try_dispatch(
 
 #[cfg(test)]
 mod tests {
-    use crate::msg::ConfigResponse;
-    use crate::state::tvl_intervals::{Intervals, Stop};
+    use cosmwasm_std::{
+        coins, from_binary,
+        testing::{mock_dependencies_with_balance, mock_env, mock_info},
+        to_binary, Addr, BlockInfo, Coin, SubMsg, WasmMsg,
+    };
 
-    use super::*;
-    use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, Addr, BlockInfo, Coin, SubMsg, WasmMsg};
+    use finance::duration::Duration;
+
+    use super::{execute, instantiate, query};
+    use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+    use crate::state::tvl_intervals::{Intervals, Stop};
+    use crate::ContractError;
 
     fn instantiate_msg() -> InstantiateMsg {
         InstantiateMsg {
@@ -207,7 +213,7 @@ mod tests {
         let mut env = mock_env();
         env.block = BlockInfo {
             height: 12_345,
-            time: env.block.time.plus_seconds(100 * 24 * 60 * 60),
+            time: env.block.time + Duration::from_days(100),
             chain_id: "cosmos-testnet-14002".to_string(),
         };
 
@@ -236,7 +242,7 @@ mod tests {
                 SubMsg::new(WasmMsg::Execute {
                     contract_addr: "time".to_string(),
                     msg: to_binary(&oracle::msg::ExecuteMsg::AddAlarm {
-                        time: env.block.time.plus_seconds(10 * 60 * 60),
+                        time: env.block.time + Duration::from_hours(10),
                     })
                     .unwrap(),
                     funds: vec![],
