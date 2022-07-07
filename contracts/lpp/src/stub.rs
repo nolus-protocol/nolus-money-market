@@ -9,8 +9,8 @@ use finance::{
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::msg::{
-    ExecuteMsg, QueryLoanResponseNew,
-    QueryMsg, QueryLoanOutstandingInterestResponseNew,
+    ExecuteMsg, QueryLoanResponse,
+    QueryMsg, QueryLoanOutstandingInterestResponse,
 };
 
 pub const REPLY_ID: u64 = 28;
@@ -27,13 +27,13 @@ where
         &self,
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
-    ) -> StdResult<QueryLoanResponseNew<Lpn>>;
+    ) -> StdResult<QueryLoanResponse<Lpn>>;
     fn loan_outstanding_interest(
         &self,
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
         by: Timestamp,
-    ) -> StdResult<QueryLoanOutstandingInterestResponseNew<Lpn>>;
+    ) -> StdResult<QueryLoanOutstandingInterestResponse<Lpn>>;
 }
 
 pub trait LppVisitor {
@@ -131,7 +131,7 @@ where
         &self,
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
-    ) -> StdResult<QueryLoanResponseNew<Lpn>> {
+    ) -> StdResult<QueryLoanResponse<Lpn>> {
         let msg = QueryMsg::Loan {
             lease_addr: lease.into(),
         };
@@ -143,7 +143,7 @@ where
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
         by: Timestamp,
-    ) -> StdResult<QueryLoanOutstandingInterestResponseNew<Lpn>> {
+    ) -> StdResult<QueryLoanOutstandingInterestResponse<Lpn>> {
         let msg = QueryMsg::LoanOutstandingInterest {
             lease_addr: lease.into(),
             outstanding_time: by,

@@ -11,7 +11,7 @@ use crate::lpp::{LiquidityPool, TheCurrency};
 use crate::msg::{
     BalanceResponse, ExecuteMsg, InstantiateMsg, LppBalanceResponse, PriceResponse,
     QueryMsg, QueryQuoteResponse,
-    RewardsResponse, QueryConfigResponse, QueryLoanOutstandingInterestResponseNew, QueryLoanResponseNew,
+    RewardsResponse, QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
 };
 use crate::state::Deposit;
 use finance::percent::Percent;
@@ -259,7 +259,7 @@ fn query_loan(
     storage: &dyn Storage,
     env: Env,
     lease_addr: Addr,
-) -> Result<QueryLoanResponseNew<TheCurrency>, ContractError> {
+) -> Result<QueryLoanResponse<TheCurrency>, ContractError> {
     LiquidityPool::load(storage)?.query_loan(storage, &env, lease_addr)
 }
 
@@ -267,7 +267,7 @@ fn query_loan_outstanding_interest(
     storage: &dyn Storage,
     loan: Addr,
     outstanding_time: Timestamp,
-) -> Result<QueryLoanOutstandingInterestResponseNew<TheCurrency>, ContractError> {
+) -> Result<QueryLoanOutstandingInterestResponse<TheCurrency>, ContractError> {
     let interest = LiquidityPool::load(storage)?.query_loan_outstanding_interest(
         storage,
         loan,

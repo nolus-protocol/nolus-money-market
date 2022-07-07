@@ -82,16 +82,7 @@ pub enum QueryQuoteResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct LoanResponse {
-    pub principal_due: CwCoin,
-    pub interest_due: CwCoin,
-    pub annual_interest_rate: Percent,
-    pub interest_paid: Timestamp,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct LoanResponseNew<Lpn>
+pub struct LoanResponse<Lpn>
 where
     Lpn: Currency,
 {
@@ -101,21 +92,15 @@ where
     pub interest_paid: Timestamp,
 }
 
-pub type QueryLoanResponse = Option<LoanResponse>;
-pub type QueryLoanResponseNew<Lpn> = Option<LoanResponseNew<Lpn>>;
+pub type QueryLoanResponse<Lpn> = Option<LoanResponse<Lpn>>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct OutstandingInterest(pub CwCoin);
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct OutstandingInterestNew<Lpn>(pub Coin<Lpn>)
+pub struct OutstandingInterest<Lpn>(pub Coin<Lpn>)
 where
     Lpn: Currency;
 
-pub type QueryLoanOutstandingInterestResponse = Option<OutstandingInterest>;
-pub type QueryLoanOutstandingInterestResponseNew<Lpn> = Option<OutstandingInterestNew<Lpn>>;
+pub type QueryLoanOutstandingInterestResponse<Lpn> = Option<OutstandingInterest<Lpn>>;
 
 // Deposit query responses
 

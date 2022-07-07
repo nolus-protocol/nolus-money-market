@@ -131,7 +131,7 @@ mod tests {
         liability::Liability,
         percent::Percent,
     };
-    use lpp::msg::{LoanResponseNew, QueryLoanResponseNew};
+    use lpp::msg::{LoanResponse, QueryLoanResponse};
     use lpp::stub::Lpp;
     use serde::{Deserialize, Serialize};
 
@@ -162,7 +162,7 @@ mod tests {
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     struct LppLocalStub {
-        loan: Option<LoanResponseNew<super::Currency>>,
+        loan: Option<LoanResponse<super::Currency>>,
     }
 
     impl Lpp<super::Currency> for LppLocalStub {
@@ -182,7 +182,7 @@ mod tests {
             &self,
             _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
-        ) -> StdResult<QueryLoanResponseNew<super::Currency>> {
+        ) -> StdResult<QueryLoanResponse<super::Currency>> {
             Result::Ok(self.loan.clone())
         }
 
@@ -191,7 +191,7 @@ mod tests {
             _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
             _by: Timestamp,
-        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponseNew<super::Currency>> {
+        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse<super::Currency>> {
             todo!()
         }
     }
@@ -216,7 +216,7 @@ mod tests {
             &self,
             _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
-        ) -> StdResult<QueryLoanResponseNew<super::Currency>> {
+        ) -> StdResult<QueryLoanResponse<super::Currency>> {
             unreachable!()
         }
 
@@ -225,7 +225,7 @@ mod tests {
             _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
             _by: Timestamp,
-        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponseNew<super::Currency>> {
+        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse<super::Currency>> {
             unreachable!()
         }
     }
@@ -254,7 +254,7 @@ mod tests {
         }
     }
 
-    fn lease_setup(loan_response: Option<LoanResponseNew<super::Currency>>) -> Lease<LppLocalStub> {
+    fn lease_setup(loan_response: Option<LoanResponse<super::Currency>>) -> Lease<LppLocalStub> {
         let lpp_stub = LppLocalStub {
             loan: loan_response,
         };
@@ -299,7 +299,7 @@ mod tests {
         let lease_amount = 1000;
         let interest_rate = Percent::from_permille(50);
         // LPP loan
-        let loan = LoanResponseNew {
+        let loan = LoanResponse {
             principal_due: coin(300),
             interest_due: coin(0),
             annual_interest_rate: interest_rate,

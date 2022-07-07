@@ -5,7 +5,7 @@ use cosmwasm_std::{
 use finance::currency::Usdc;
 
 use crate::error::ContractError;
-use crate::msg::{LppBalanceResponse, PriceResponse, OutstandingInterestNew, LoanResponseNew};
+use crate::msg::{LppBalanceResponse, PriceResponse, OutstandingInterest, LoanResponse};
 use crate::state::{Config, Deposit, Loan, Total};
 use finance::percent::Percent;
 use finance::fraction::Fraction;
@@ -270,9 +270,9 @@ impl LiquidityPool {
         storage: &dyn Storage,
         addr: Addr,
         time: Timestamp,
-    ) -> StdResult<Option<OutstandingInterestNew<TheCurrency>>> {
+    ) -> StdResult<Option<OutstandingInterest<TheCurrency>>> {
         let interest = Loan::query_outstanding_interest(storage, addr, time)?
-            .map(|amount| OutstandingInterestNew(FinanceCoin::<TheCurrency>::new(amount.u128())));
+            .map(|amount| OutstandingInterest(FinanceCoin::<TheCurrency>::new(amount.u128())));
 
         Ok(interest)
     }
@@ -282,14 +282,14 @@ impl LiquidityPool {
         storage: &dyn Storage,
         env: &Env,
         addr: Addr,
-    ) -> Result<Option<LoanResponseNew<TheCurrency>>, ContractError> {
+    ) -> Result<Option<LoanResponse<TheCurrency>>, ContractError> {
         let maybe_loan = Loan::query(storage, addr.clone())?;
         let maybe_interest_due =
             self.query_loan_outstanding_interest(storage, addr, env.block.time)?;
         maybe_loan
             .zip(maybe_interest_due)
             .map(|(loan, interest_due)| {
-                Ok(LoanResponseNew {
+                Ok(LoanResponse {
                     principal_due: FinanceCoin::<TheCurrency>::new(loan.principal_due.u128()),
                     interest_due: interest_due.0,
                     annual_interest_rate: loan.annual_interest_rate,

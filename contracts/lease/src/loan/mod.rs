@@ -12,7 +12,7 @@ use finance::{
     percent::{Percent, Units},
 };
 use lpp::{
-    msg::{QueryLoanResponseNew, LoanResponseNew},
+    msg::{QueryLoanResponse, LoanResponse},
     stub::Lpp,
 };
 use serde::{Deserialize, Serialize};
@@ -125,7 +125,7 @@ where
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
     ) -> ContractResult<Coin<Lpn>> {
-        let loan: QueryLoanResponseNew<Lpn> = self.load_lpp_loan(querier, lease)?;
+        let loan: QueryLoanResponse<Lpn> = self.load_lpp_loan(querier, lease)?;
         Ok(loan.ok_or(ContractError::LoanClosed())?.principal_due)
     }
 
@@ -146,7 +146,7 @@ where
         &self,
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
-    ) -> ContractResult<QueryLoanResponseNew<Lpn>> {
+    ) -> ContractResult<QueryLoanResponse<Lpn>> {
         self.lpp.loan(querier, lease).map_err(ContractError::from)
     }
 
@@ -169,7 +169,7 @@ where
             .spanning(Duration::from_secs(self.interest_due_period_secs));
     }
 
-    fn merge_state_with(&self, loan_state: LoanResponseNew<Lpn>, now: Timestamp) -> State<Lpn> {
+    fn merge_state_with(&self, loan_state: LoanResponse<Lpn>, now: Timestamp) -> State<Lpn> {
         let principal_due = loan_state.principal_due;
         let margin_interest_period = self
             .current_period
