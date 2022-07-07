@@ -305,6 +305,9 @@ fn test_quote() {
         .unwrap();
 
     assert_eq!(185, resp.borrow.amount.u128());
+
+    //TODO: change to
+    // assert_eq!(finance::coin::Coin::<Usdc>::new(185), resp.borrow);
 }
 
 #[test]

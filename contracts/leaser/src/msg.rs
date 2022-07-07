@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Coin, Uint64};
 
-use finance::percent::Percent;
+use finance::{liability::Liability, percent::Percent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -11,16 +11,8 @@ pub struct InstantiateMsg {
     pub lease_code_id: Uint64,
     pub lpp_ust_addr: Addr,
     pub lease_interest_rate_margin: Percent, // LeaseInterestRateMargin%, for example 3%
-    pub recalc_hours: u16,
-    pub liability: Liability, // LeaseMaxLiability%, for example 80%
-    pub repayment: Repayment, // GracePeriodSec, for example 10 days = 10*24*60*60
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Liability {
-    pub max: u8,     // LeaseMaxLiability%, for example 80%
-    pub healthy: u8, // LeaseHealthyLiability%, for example, 70%, must be less than LeaseMaxLiability%
-    pub initial: u8, // LeaseInitialLiability%, for example, 65%, must be less or equal to LeaseHealthyLiability%
+    pub liability: Liability,                // LeaseMaxLiability%, for example 80%
+    pub repayment: Repayment,                // GracePeriodSec, for example 10 days = 10*24*60*60
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -69,29 +61,5 @@ impl Repayment {
             period_sec,
             grace_period_sec,
         }
-    }
-}
-
-impl Liability {
-    pub fn new(initial: u8, healthy: u8, max: u8) -> Self {
-        Liability::validate(initial, healthy, max);
-
-        Liability {
-            max,
-            healthy,
-            initial,
-        }
-    }
-
-    pub fn validate(initial: u8, healthy: u8, max: u8) {
-        assert!(
-            healthy < max,
-            "LeaseHealthyLiability% must be less than LeaseMaxLiability%"
-        );
-
-        assert!(
-            initial <= healthy,
-            "LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
-        );
     }
 }

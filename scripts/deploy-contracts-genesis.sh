@@ -32,8 +32,7 @@ add_wasm_messages() {
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lpp" "$((++id))" "$admin_addr" "" "$lpp_init_msg"
   _export_to_file  "lpp" "$LPP_ADDRESS" "$contracts_info_file"
 
-  local -r leaser_init_msg='{"lease_code_id":"'$LEASE_CODE_ID'","lease_interest_rate_margin":30,"recalc_hours":2,"liability":{"healthy":70,"initial":65,"max":80},"lpp_ust_addr":"'$LPP_ADDRESS'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "leaser" "$((++id))"  "$admin_addr" "" "$leaser_init_msg"
+  local -r leaser_init_msg='{"lease_code_id":"'$LEASE_CODE_ID'","lease_interest_rate_margin":30,"liability":{"healthy_percent":70,"init_percent":65,"max_percent":80,"recalc_secs":7200},"lpp_ust_addr":"'$LPP_ADDRESS'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "leaser" "$((++id))"  "$admin_addr" "" "$leaser_init_msg"
   _export_to_file  "leaser" "$LEASER_ADDRESS" "$contracts_info_file"
 
   local -r oracle_init_msg='{"base_asset":"'$lpp_native'","price_feed_period":60,"feeders_percentage_needed":50,"supported_denom_pairs":[["OSMO","'$lpp_native'"],["LUNA","OSMO"],["IRIS","OSMO"]]}'
