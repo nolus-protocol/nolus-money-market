@@ -1,5 +1,6 @@
 use cosmwasm_std::{coins, to_binary, Addr, Binary, Coin, Deps, Env, Uint64};
 use cw_multi_test::{App, ContractWrapper, Executor};
+use finance::currency::{Currency, Usdc};
 use lpp::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
@@ -76,11 +77,12 @@ pub fn mock_lpp_query(
     env: Env,
     msg: lpp::msg::QueryMsg,
 ) -> Result<Binary, ContractError> {
+    let denom = Usdc::SYMBOL;
     let res = match msg {
         lpp::msg::QueryMsg::LppBalance() => to_binary(&lpp::msg::LppBalanceResponse {
-            balance: Coin::new(1000000000, "UST"),
-            total_principal_due: Coin::new(1000000000, "UST"),
-            total_interest_due: Coin::new(1000000000, "UST"),
+            balance: Coin::new(1000000000, denom),
+            total_principal_due: Coin::new(1000000000, denom),
+            total_interest_due: Coin::new(1000000000, denom),
         }),
         _ => Ok(lpp::contract::query(deps, env, msg)?),
     }?;
