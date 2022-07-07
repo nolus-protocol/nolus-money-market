@@ -1,4 +1,5 @@
 pub mod percent;
+pub mod price;
 pub mod liability;
 pub mod error;
 pub mod bank;
