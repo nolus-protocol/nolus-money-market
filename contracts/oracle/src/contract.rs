@@ -29,7 +29,7 @@ pub fn instantiate(
     Config::new(
         msg.base_asset,
         info.sender,
-        msg.price_feed_period,
+        msg.price_feed_period_secs,
         msg.feeders_percentage_needed,
         msg.supported_denom_pairs,
         timealarms_addr,
@@ -49,9 +49,14 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Config {
-            price_feed_period,
+            price_feed_period_secs,
             feeders_percentage_needed,
-        } => try_configure(deps, info, price_feed_period, feeders_percentage_needed),
+        } => try_configure(
+            deps,
+            info,
+            price_feed_period_secs,
+            feeders_percentage_needed,
+        ),
         ExecuteMsg::RegisterFeeder { feeder_address } => {
             try_register_feeder(deps, info, feeder_address)
         }
@@ -107,7 +112,7 @@ fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
     Ok(ConfigResponse {
         base_asset: config.base_asset,
         owner: config.owner,
-        price_feed_period: config.price_feed_period,
+        price_feed_period_secs: config.price_feed_period_secs,
         feeders_percentage_needed: config.feeders_percentage_needed,
     })
 }
@@ -125,12 +130,12 @@ fn query_market_price_for(
 fn try_configure(
     deps: DepsMut,
     info: MessageInfo,
-    price_feed_period: u64,
+    price_feed_period_secs: u32,
     feeders_percentage_needed: u8,
 ) -> Result<Response, ContractError> {
     Config::update(
         deps.storage,
-        price_feed_period,
+        price_feed_period_secs,
         feeders_percentage_needed,
         info.sender,
     )?;

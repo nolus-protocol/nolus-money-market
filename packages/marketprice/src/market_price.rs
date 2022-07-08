@@ -17,14 +17,18 @@ pub struct PriceResponse {
 
 pub struct PriceQuery {
     denom_pair: DenomPair,
-    price_feed_period: u64,
+    price_feed_period_secs: u32,
     required_feeders_cnt: usize,
 }
 impl PriceQuery {
-    pub fn new(denom_pair: DenomPair, price_feed_period: u64, required_feeders_cnt: usize) -> Self {
+    pub fn new(
+        denom_pair: DenomPair,
+        price_feed_period_secs: u32,
+        required_feeders_cnt: usize,
+    ) -> Self {
         PriceQuery {
             denom_pair,
-            price_feed_period,
+            price_feed_period_secs,
             required_feeders_cnt,
         }
     }
@@ -88,7 +92,7 @@ impl<'m> PriceFeeds<'m> {
             storage,
             current_block_time,
             query.denom_pair.clone(),
-            query.price_feed_period,
+            query.price_feed_period_secs,
             query.required_feeders_cnt,
             &mut resolution_path,
         )?;
@@ -103,7 +107,7 @@ impl<'m> PriceFeeds<'m> {
         storage: &dyn Storage,
         current_block_time: Timestamp,
         denom_pair: DenomPair,
-        price_feed_period: u64,
+        price_feed_period_secs: u32,
         required_feeders_cnt: usize,
         resolution_path: &mut DenomResolutionPath,
     ) -> Result<DenomPairPrice, PriceFeedsError> {
@@ -115,7 +119,7 @@ impl<'m> PriceFeeds<'m> {
                 // there is a price record for denom pair base to denom pair quote => return price
                 let price = last_feed.get_price(
                     current_block_time,
-                    price_feed_period,
+                    price_feed_period_secs,
                     required_feeders_cnt,
                 );
                 Ok(DenomPairPrice {
@@ -133,7 +137,7 @@ impl<'m> PriceFeeds<'m> {
                     storage,
                     current_block_time,
                     denom_pair.clone(),
-                    price_feed_period,
+                    price_feed_period_secs,
                     required_feeders_cnt,
                     resolution_path,
                 ) {
@@ -153,7 +157,7 @@ impl<'m> PriceFeeds<'m> {
         storage: &dyn Storage,
         current_block_time: Timestamp,
         denom_pair: DenomPair,
-        price_feed_period: u64,
+        price_feed_period_secs: u32,
         required_feeders_cnt: usize,
         resolution_path: &mut DenomResolutionPath,
     ) -> Result<Option<(String, PriceFeed)>, PriceFeedsError> {
@@ -171,7 +175,7 @@ impl<'m> PriceFeeds<'m> {
                 storage,
                 current_block_time,
                 (current_quote.0.clone(), searched_quote.clone()),
-                price_feed_period,
+                price_feed_period_secs,
                 required_feeders_cnt,
                 resolution_path,
             ) {
@@ -215,7 +219,7 @@ impl<'m> PriceFeeds<'m> {
         sender_raw: &Addr,
         base: Denom,
         prices: Vec<Price>,
-        price_feed_period: u64,
+        price_feed_period_secs: u32,
     ) -> Result<(), PriceFeedsError> {
         for price in prices {
             let quote: Denom = price.denom;
@@ -225,7 +229,7 @@ impl<'m> PriceFeeds<'m> {
                 let new_feed = Observation::new(sender_raw.clone(), current_block_time, price);
                 match old {
                     Some(mut feed) => {
-                        feed.update(new_feed, price_feed_period);
+                        feed.update(new_feed, price_feed_period_secs);
                         Ok(feed)
                     }
                     None => Ok(PriceFeed::new(new_feed)),

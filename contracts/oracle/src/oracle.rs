@@ -37,7 +37,7 @@ impl MarketOracle {
         base: Denom,
         config: &Config,
     ) -> StdResult<PriceQuery> {
-        let price_feed_period = config.price_feed_period;
+        let price_feed_period_secs = config.price_feed_period_secs;
 
         Self::assert_supported_denom(&config.supported_denom_pairs, base.clone())?;
 
@@ -48,7 +48,7 @@ impl MarketOracle {
 
         Ok(PriceQuery::new(
             (base, config.base_asset.clone()),
-            price_feed_period,
+            price_feed_period_secs,
             feeders_needed,
         ))
     }
@@ -112,7 +112,7 @@ impl MarketOracle {
             sender_raw,
             base,
             filtered_prices,
-            config.price_feed_period,
+            config.price_feed_period_secs,
         )?;
 
         Ok(())

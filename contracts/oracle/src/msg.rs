@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub base_asset: String,
-    pub price_feed_period: u64,
+    pub price_feed_period_secs: u32,
     pub feeders_percentage_needed: u8,
     pub supported_denom_pairs: Vec<DenomPair>,
     pub timealarms_addr: String,
@@ -22,7 +22,7 @@ pub enum ExecuteMsg {
         prices: Vec<Prices>, // (asset, [(asset1, price), (asset2, price)])
     },
     Config {
-        price_feed_period: u64,
+        price_feed_period_secs: u32,
         feeders_percentage_needed: u8,
     },
     SupportedDenomPairs {
@@ -49,7 +49,7 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ConfigResponse {
     pub base_asset: String,
-    pub price_feed_period: u64,
+    pub price_feed_period_secs: u32,
     pub feeders_percentage_needed: u8,
     pub owner: Addr,
 }
