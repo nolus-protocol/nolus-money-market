@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
-    pub cadence_hours: u32,
+    pub cadence_hours: u16,
     pub treasury: Addr,
     pub timealarms: Addr,
 }
@@ -12,7 +12,7 @@ pub struct InstantiateMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    Config { cadence_hours: u32 },
+    Config { cadence_hours: u16 },
     Alarm { time: Timestamp },
 }
 
@@ -25,5 +25,5 @@ pub enum QueryMsg {
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ConfigResponse {
-    pub cadence_hours: u32,
+    pub cadence_hours: u16,
 }

@@ -24,7 +24,7 @@ impl ProfitWrapper {
     pub fn instantiate(
         self,
         app: &mut App,
-        cadence_hours: u32,
+        cadence_hours: u16,
         treasury: &Addr,
         timealarms: &Addr,
     ) -> Addr {
