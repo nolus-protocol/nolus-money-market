@@ -38,7 +38,7 @@ fn proper_instantiate() -> (App, CwTemplateContract) {
     let msg = InstantiateMsg {
         cadence_hours: 3u32,
         treasury: Addr::unchecked("treasury"),
-        oracle: Addr::unchecked("time"),
+        timealarms: Addr::unchecked("timealarms"),
     };
     let cw_template_contract_addr = app
         .instantiate_contract(

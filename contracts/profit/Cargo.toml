@@ -15,8 +15,9 @@ cosmwasm-bindings = ["cosmwasm"]
 cosmwasm = []
 
 [dependencies]
-oracle = { path = "../oracle", version = "0.1.0", default-features = false}
+timealarms = { path = "../timealarms", version = "0.1.0", default-features = false}
 finance = { path = "../../packages/finance", version = "0.1.0", default-features = false }
+
 
 cosmwasm-std = "1.0.0"
 cosmwasm-storage = "1.0.0"

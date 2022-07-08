@@ -9,6 +9,7 @@ pub struct InstantiateMsg {
     pub cadence_hours: u32,
     pub lpp: Addr,
     pub oracle: Addr,
+    pub timealarms: Addr,
     pub treasury: Addr,
     pub tvl_to_apr: Intervals,
 }

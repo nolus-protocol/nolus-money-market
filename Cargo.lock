@@ -411,6 +411,7 @@ dependencies = [
  "rewards_dispatcher",
  "serde",
  "time-oracle",
+ "timealarms",
  "treasury",
 ]
 
@@ -534,6 +535,7 @@ dependencies = [
  "serde",
  "thiserror",
  "time-oracle",
+ "timealarms",
 ]
 
 [[package]]
@@ -567,10 +569,10 @@ dependencies = [
  "cw-storage-plus",
  "cw2",
  "finance",
- "oracle",
  "schemars",
  "serde",
  "thiserror",
+ "timealarms",
 ]
 
 [[package]]
@@ -642,6 +644,7 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
+ "timealarms",
  "treasury",
 ]
 
@@ -839,6 +842,22 @@ dependencies = [
  "cosmwasm-std",
  "cw-storage-plus",
  "serde",
+]
+
+[[package]]
+name = "timealarms"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cosmwasm-storage",
+ "cw-multi-test",
+ "cw-storage-plus",
+ "cw2",
+ "schemars",
+ "serde",
+ "thiserror",
+ "time-oracle",
 ]
 
 [[package]]

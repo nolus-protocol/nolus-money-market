@@ -59,7 +59,7 @@ impl Dispatcher {
         });
 
         let subsrcibe_msg =
-            Dispatcher::alarm_subscribe_msg(&config.oracle, block_time, config.cadence_hours)?;
+            Dispatcher::alarm_subscribe_msg(&config.timealarms, block_time, config.cadence_hours)?;
 
         Ok(Response::new().add_messages([treasury_send_rewards_msg, pay_msg, subsrcibe_msg]))
     }
@@ -152,14 +152,14 @@ impl Dispatcher {
     }
 
     pub(crate) fn alarm_subscribe_msg(
-        oracle_addr: &Addr,
+        timealarm_addr: &Addr,
         current_time: Timestamp,
         cadence_hours: u32,
     ) -> StdResult<CosmosMsg> {
         Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             funds: vec![],
-            contract_addr: oracle_addr.to_string(),
-            msg: to_binary(&oracle::msg::ExecuteMsg::AddAlarm {
+            contract_addr: timealarm_addr.to_string(),
+            msg: to_binary(&timealarms::msg::ExecuteMsg::AddAlarm {
                 time: current_time.plus_seconds(Self::to_seconds(cadence_hours)),
             })?,
         }))

@@ -19,12 +19,14 @@ pub(crate) fn dummy_instantiate_msg(
     price_feed_period: u64,
     feeders_percentage_needed: u8,
     supported_denom_pairs: Vec<(String, String)>,
+    alarms_addr: String,
 ) -> InstantiateMsg {
     InstantiateMsg {
         base_asset,
         price_feed_period,
         feeders_percentage_needed,
         supported_denom_pairs,
+        timealarms_addr: alarms_addr,
     }
 }
 
@@ -38,6 +40,7 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
             ("A".to_string(), "C".to_string()),
             ("C".to_string(), "D".to_string()),
         ],
+        "timealarms".to_string(),
     )
 }
 

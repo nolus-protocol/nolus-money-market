@@ -26,13 +26,13 @@ impl ProfitWrapper {
         app: &mut App,
         cadence_hours: u32,
         treasury: &Addr,
-        oracle: &Addr,
+        timealarms: &Addr,
     ) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = profit::msg::InstantiateMsg {
             cadence_hours,
             treasury: treasury.clone(),
-            oracle: oracle.clone(),
+            timealarms: timealarms.clone(),
         };
 
         app.instantiate_contract(code_id, Addr::unchecked(ADMIN), &msg, &[], "profit", None)
