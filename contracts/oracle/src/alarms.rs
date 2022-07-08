@@ -29,8 +29,9 @@ impl MarketAlarms {
         Self::PRICE_ALARMS.remove(storage, addr)
     }
 
-    pub fn remove_pending(storage: &mut dyn Storage, msg_id: Id) {
+    pub fn remove_pending(storage: &mut dyn Storage, msg_id: Id) -> Result<Response, HooksError> {
         // Self::PRICE_ALARMS.remove(storage, msg_id)
+        Ok(Response::new())
     }
 
     // pub fn _try_notify(storage: &mut dyn Storage, ctime: Timestamp) -> StdResult<Response> {

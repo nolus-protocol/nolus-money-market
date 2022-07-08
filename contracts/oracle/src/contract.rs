@@ -95,7 +95,7 @@ pub fn get_sender(api: &dyn Api, info: MessageInfo) -> StdResult<Addr> {
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let resp = match msg.result {
         cosmwasm_std::SubMsgResult::Ok(_) => {
-            MarketAlarms::remove(deps.storage, msg.id)?;
+            MarketAlarms::remove_pending(deps.storage, msg.id)?;
             Response::new().add_attribute("alarm", "success")
         }
         cosmwasm_std::SubMsgResult::Err(err) => Response::new()
