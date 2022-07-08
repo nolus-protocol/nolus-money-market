@@ -21,6 +21,7 @@ fn proper_initialization() {
         60,
         50,
         vec![("unolus".to_string(), "uosmo".to_string())],
+        "timealarms".to_string(),
     );
     let (deps, _) = setup_test(msg);
 
@@ -45,6 +46,7 @@ fn configure_unauthorized() {
         60,
         50,
         vec![("unolus".to_string(), "uosmo".to_string())],
+        "timealarms".to_string(),
     );
     let (mut deps, _) = setup_test(msg);
 
@@ -63,6 +65,7 @@ fn configure() {
         60,
         50,
         vec![("unolus".to_string(), "uosmo".to_string())],
+        "timealarms".to_string(),
     );
     let (mut deps, info) = setup_test(msg);
 

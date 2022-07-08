@@ -1,28 +1,22 @@
 use cosmwasm_std::{Addr, Coin, StdError};
 use cw_multi_test::ContractWrapper;
 
-use cosmwasm_std::{to_binary, Binary, Deps, Env, StdResult};
 use cw_multi_test::{App, Executor};
-use serde::{Deserialize, Serialize};
+
 use treasury::ContractError;
 
-use super::{ADMIN, NATIVE_DENOM};
+use super::{mock_query, MockQueryMsg, ADMIN, NATIVE_DENOM};
 
 pub fn treasury_instantiate_msg() -> treasury::msg::InstantiateMsg {
     treasury::msg::InstantiateMsg {}
 }
-
-#[derive(Serialize, Clone, Debug, PartialEq)]
-struct MockResponse {}
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-struct QueryMsg {}
 
 pub struct TreasuryWrapper {
     contract_wrapper: Box<
         ContractWrapper<
             treasury::msg::ExecuteMsg,
             treasury::msg::InstantiateMsg,
-            QueryMsg,
+            MockQueryMsg,
             ContractError,
             ContractError,
             StdError,
@@ -31,9 +25,6 @@ pub struct TreasuryWrapper {
 }
 
 impl TreasuryWrapper {
-    fn mock_treasury_query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
-        to_binary(&MockResponse {})
-    }
     #[track_caller]
     pub fn instantiate(self, app: &mut App, denom: &str) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
@@ -56,7 +47,7 @@ impl Default for TreasuryWrapper {
         let contract = ContractWrapper::new(
             treasury::contract::execute,
             treasury::contract::instantiate,
-            Self::mock_treasury_query,
+            mock_query,
         );
 
         Self {

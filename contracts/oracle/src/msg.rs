@@ -9,6 +9,7 @@ pub struct InstantiateMsg {
     pub price_feed_period: u64,
     pub feeders_percentage_needed: u8,
     pub supported_denom_pairs: Vec<DenomPair>,
+    pub timealarms_addr: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -23,9 +24,6 @@ pub enum ExecuteMsg {
     Config {
         price_feed_period: u64,
         feeders_percentage_needed: u8,
-    },
-    AddAlarm {
-        time: Timestamp,
     },
     SupportedDenomPairs {
         pairs: Vec<DenomPair>,

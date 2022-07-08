@@ -27,13 +27,15 @@ pub fn instantiate(
 
     let lpp_addr = validate_addr(deps.as_ref(), msg.lpp)?;
     let oracle_addr = validate_addr(deps.as_ref(), msg.oracle)?;
+    let timealarms_addr = validate_addr(deps.as_ref(), msg.timealarms)?;
     let treasury_addr = validate_addr(deps.as_ref(), msg.treasury)?;
 
     Config::new(
         info.sender,
         msg.cadence_hours,
         lpp_addr,
-        oracle_addr.clone(),
+        oracle_addr,
+        timealarms_addr.clone(),
         treasury_addr,
         msg.tvl_to_apr,
     )
@@ -41,7 +43,7 @@ pub fn instantiate(
     DispatchLog::update(deps.storage, env.block.time)?;
 
     let subscribe_msg =
-        Dispatcher::alarm_subscribe_msg(&oracle_addr, env.block.time, msg.cadence_hours)?;
+        Dispatcher::alarm_subscribe_msg(&timealarms_addr, env.block.time, msg.cadence_hours)?;
 
     Ok(Response::new()
         .add_message(subscribe_msg)
@@ -105,7 +107,7 @@ pub fn try_dispatch(
     ensure!(time >= block_time, ContractError::AlarmTimeValidation {});
     let config = Config::load(deps.storage)?;
 
-    if info.sender != config.oracle {
+    if info.sender != config.timealarms {
         return Err(ContractError::UnrecognisedAlarm(info.sender));
     }
 
@@ -135,7 +137,8 @@ mod tests {
         InstantiateMsg {
             cadence_hours: 10,
             lpp: Addr::unchecked("lpp"),
-            oracle: Addr::unchecked("time"),
+            oracle: Addr::unchecked("oracle"),
+            timealarms: Addr::unchecked("timealarms"),
             treasury: Addr::unchecked("treasury"),
             tvl_to_apr: Intervals::from(vec![Stop::new(0, 5), Stop::new(1000000, 10)]).unwrap(),
         }
@@ -195,7 +198,7 @@ mod tests {
         let mut deps = mock_dependencies_with_balance(&coins(20, "unolus"));
 
         let msg = instantiate_msg();
-        let info = mock_info("time", &coins(2, "unolus"));
+        let info = mock_info("timealarms", &coins(2, "unolus"));
         let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
         let msg = ExecuteMsg::Alarm {
@@ -212,7 +215,7 @@ mod tests {
         let mut deps = mock_dependencies_with_balance(&coins(20, native_denom));
 
         let msg = instantiate_msg();
-        let info = mock_info("time", &coins(2, native_denom));
+        let info = mock_info("timealarms", &coins(2, native_denom));
         let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
         let mut env = mock_env();
@@ -245,9 +248,9 @@ mod tests {
                     funds: coins(44386002, native_denom),
                 }),
                 SubMsg::new(WasmMsg::Execute {
-                    contract_addr: "time".to_string(),
-                    msg: to_binary(&oracle::msg::ExecuteMsg::AddAlarm {
-                        time: env.block.time + Duration::from_hours(10),
+                    contract_addr: "timealarms".to_string(),
+                    msg: to_binary(&timealarms::msg::ExecuteMsg::AddAlarm {
+                        time: env.block.time.plus_seconds(10 * 60 * 60),
                     })
                     .unwrap(),
                     funds: vec![],

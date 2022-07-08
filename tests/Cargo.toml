@@ -33,3 +33,4 @@ oracle = { path = "../contracts/oracle", version = "0.1.0", default-features = f
 rewards_dispatcher = { path = "../contracts/dispatcher", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
 profit = { path = "../contracts/profit", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
 marketprice = { path = "../packages/marketprice", version = "0.1.0", default-features = false}
+timealarms = { path = "../contracts/timealarms", version = "0.1.0", default-features = false, features = ["cosmwasm"]}

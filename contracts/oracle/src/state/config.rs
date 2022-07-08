@@ -13,6 +13,7 @@ pub struct Config {
     pub price_feed_period: u64,
     pub feeders_percentage_needed: u8,
     pub supported_denom_pairs: Vec<DenomPair>,
+    pub timealarms_contract: Addr,
 }
 
 impl Config {
@@ -24,6 +25,7 @@ impl Config {
         price_feed_period: u64,
         feeders_percentage_needed: u8,
         supported_denom_pairs: Vec<DenomPair>,
+        timealarms_contract: Addr,
     ) -> Self {
         Config {
             base_asset: denom,
@@ -31,6 +33,7 @@ impl Config {
             price_feed_period,
             feeders_percentage_needed,
             supported_denom_pairs,
+            timealarms_contract,
         }
     }
 
@@ -76,6 +79,22 @@ impl Config {
 
         Self::STORAGE.update(storage, |mut c| -> StdResult<_> {
             c.supported_denom_pairs = pairs;
+            Ok(c)
+        })?;
+        Ok(())
+    }
+
+    pub fn set_time_alarms_address(
+        storage: &mut dyn Storage,
+        timealarms_contract: Addr,
+        sender: Addr,
+    ) -> Result<(), ContractError> {
+        let config = Self::STORAGE.load(storage)?;
+        if sender != config.owner {
+            return Err(ContractError::Unauthorized {});
+        }
+        Self::STORAGE.update(storage, |mut c| -> StdResult<_> {
+            c.timealarms_contract = timealarms_contract;
             Ok(c)
         })?;
         Ok(())
