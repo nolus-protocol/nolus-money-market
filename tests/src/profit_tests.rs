@@ -1,16 +1,17 @@
-use cosmwasm_std::{coins, Addr, Coin};
+use cosmwasm_std::{coins, Addr, Coin as CwCoin};
 use cw_multi_test::Executor;
+use finance::currency::{Currency, Usdc};
 
 use crate::common::{test_case::TestCase, ADMIN, USER};
 
 #[test]
 fn on_alarm_from_unknown() {
-    let denom = "UST";
+    let denom = Usdc::SYMBOL;
     let user_addr = Addr::unchecked(USER);
 
     let mut test_case = TestCase::new(denom);
     test_case.init(&user_addr, coins(500, denom));
-    test_case.init_treasury().init_oracle(None).init_profit(2);
+    test_case.init_treasury().init_timealarms().init_profit(2);
 
     let treasury_balance = test_case
         .app
@@ -41,12 +42,12 @@ fn on_alarm_from_unknown() {
 
 #[test]
 fn on_alarm_zero_balance() {
-    let denom = "UST";
+    let denom = Usdc::SYMBOL;
     let time_oracle_addr = Addr::unchecked("time");
 
     let mut test_case = TestCase::new(denom);
     test_case.init(&time_oracle_addr, coins(500, denom));
-    test_case.init_treasury().init_oracle(None).init_profit(2);
+    test_case.init_treasury().init_timealarms().init_profit(2);
 
     let initial_treasury_balance = test_case
         .app
@@ -57,7 +58,7 @@ fn on_alarm_zero_balance() {
     let res = test_case
         .app
         .execute_contract(
-            test_case.oracle.unwrap(),
+            test_case.timealarms.unwrap(),
             test_case.profit_addr.as_ref().unwrap().clone(),
             &profit::msg::ExecuteMsg::Alarm {
                 time: test_case.app.block_info().time,
@@ -101,26 +102,26 @@ fn on_alarm_zero_balance() {
 
 #[test]
 fn on_alarm_transfer() {
-    let denom = "UST";
+    let denom = Usdc::SYMBOL;
     let time_oracle_addr = Addr::unchecked("time");
 
     let mut test_case = TestCase::new(denom);
     test_case.init(&time_oracle_addr, coins(500, denom));
-    test_case.init_treasury().init_oracle(None).init_profit(2);
+    test_case.init_treasury().init_timealarms().init_profit(2);
 
     test_case
         .app
         .send_tokens(
             Addr::unchecked(ADMIN),
             test_case.profit_addr.clone().unwrap(),
-            &coins(100, "UST"),
+            &coins(100, Usdc::SYMBOL),
         )
         .unwrap();
 
     let res = test_case
         .app
         .execute_contract(
-            test_case.oracle.unwrap(),
+            test_case.timealarms.unwrap(),
             test_case.profit_addr.as_ref().unwrap().clone(),
             &profit::msg::ExecuteMsg::Alarm {
                 time: test_case.app.block_info().time,
@@ -159,12 +160,12 @@ fn on_alarm_transfer() {
                 test_case.treasury_addr.as_ref().unwrap().to_string()
             ),
             ("sender", test_case.profit_addr.unwrap().to_string()),
-            ("amount", "100UST".to_string())
+            ("amount", "100uusdc".to_string())
         ]
     );
 
     assert_eq!(
-        Coin::new(1100, denom),
+        CwCoin::new(1100, denom),
         test_case
             .app
             .wrap()

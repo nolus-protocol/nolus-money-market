@@ -1,8 +1,11 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 
-use cosmwasm_std::{Addr, BankMsg, Coin, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, Storage};
 use cw2::set_contract_version;
+use finance::bank::{BankAccount, BankStub};
+use finance::coin::Coin;
+use finance::currency::Currency;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg};
@@ -29,7 +32,7 @@ pub fn instantiate(
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -38,7 +41,11 @@ pub fn execute(
         ExecuteMsg::ConfigureRewardTransfer { rewards_dispatcher } => {
             try_configure_reward_transfer(deps, sender, rewards_dispatcher)
         }
-        ExecuteMsg::SendRewards { amount } => try_send_rewards(deps, sender, amount),
+        ExecuteMsg::SendRewards { amount } => {
+            let bank_account = BankStub::my_account(&env, &deps.querier);
+
+            try_send_rewards(deps.storage, sender, amount, bank_account)
+        }
     }
 }
 
@@ -53,17 +60,22 @@ fn try_configure_reward_transfer(
     Ok(Response::new().add_attribute("method", "try_configure_reward_transfer"))
 }
 
-fn try_send_rewards(deps: DepsMut, sender: Addr, amount: Coin) -> Result<Response, ContractError> {
-    state::assert_rewards_dispatcher(deps.storage, &sender)?;
-
-    let pay_msg = BankMsg::Send {
-        to_address: sender.to_string(),
-        amount: vec![amount],
-    };
+fn try_send_rewards<B, C>(
+    storage: &mut dyn Storage,
+    sender: Addr,
+    amount: Coin<C>,
+    account: B,
+) -> Result<Response, ContractError>
+where
+    B: BankAccount,
+    C: Currency,
+{
+    state::assert_rewards_dispatcher(storage, &sender)?;
+    let pay_msg = account.send(amount, &sender)?;
 
     let response = Response::new()
         .add_attribute("method", "try_send_rewards")
-        .add_message(pay_msg);
+        .add_submessage(pay_msg);
 
     Ok(response)
 }

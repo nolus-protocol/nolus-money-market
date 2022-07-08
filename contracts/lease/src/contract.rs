@@ -12,7 +12,7 @@ use finance::currency::Currency;
 use lpp::stub::{Lpp, LppStub, LppVisitor};
 
 use crate::error::{ContractError, ContractResult};
-use crate::lease::Lease;
+use crate::lease::{self, Lease};
 use crate::msg::{ExecuteMsg, NewLeaseForm, StateQuery, StateResponse};
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -77,7 +77,7 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     let lease = load_lease(deps.storage)?;
     let bank_account = BankStub::my_account(&env, &deps.querier);
-    let resp: StateResponse = lease.state(
+    let resp: StateResponse<lease::Currency, lease::Currency> = lease.state(
         env.block.time,
         bank_account,
         &deps.querier,
@@ -87,7 +87,7 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
 }
 
 fn try_repay(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
-    let payment = one_coin(&info)?;
+    let payment = from_cosmwasm(one_coin(&info)?)?;
     let mut lease = load_lease(deps.storage)?;
     let lpp_loan_repay_req =
         lease.repay(payment, env.block.time, &deps.querier, env.contract.address)?;

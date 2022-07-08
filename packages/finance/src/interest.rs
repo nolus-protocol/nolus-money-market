@@ -115,7 +115,14 @@ where
 mod tests {
     use cosmwasm_std::Timestamp;
 
-    use crate::{coin::Coin, currency::Usdc, duration::Duration, percent::Percent, fraction::Fraction};
+    use crate::{
+        coin::Coin,
+        currency::{Nls, Usdc},
+        duration::Duration,
+        fraction::Fraction,
+        percent::Percent,
+        ratio::Rational,
+    };
 
     use super::InterestPeriod;
 
@@ -128,8 +135,24 @@ mod tests {
             .from(Timestamp::from_nanos(0))
             .spanning(Duration::YEAR);
         let (ip_res, change) = ip.pay(principal, payment, ip.till());
-        let ip_exp =InterestPeriod::with_interest(p).from(ip.till()).spanning(Duration::from_secs(0));
+        let ip_exp = InterestPeriod::with_interest(p)
+            .from(ip.till())
+            .spanning(Duration::from_secs(0));
         assert_eq!(ip_exp, ip_res);
         assert_eq!(payment - p.of(principal), change);
+    }
+
+    #[test]
+    fn interest() {
+        type MyCoin = Coin::<Nls>;
+        let whole = MyCoin::new(1001);
+        let part = MyCoin::new(125);
+        let r = Rational::new(part, whole);
+
+        let res = InterestPeriod::<MyCoin, Rational<MyCoin>>::with_interest(r)
+            .from(Timestamp::from_nanos(0))
+            .spanning(Duration::YEAR)
+            .interest(whole);
+        assert_eq!(part, res);
     }
 }

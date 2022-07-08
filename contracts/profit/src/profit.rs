@@ -28,7 +28,7 @@ impl Profit {
     ) -> Result<Response, ContractError> {
         let config = Config::load(deps.storage)?;
 
-        if info.sender != config.oracle {
+        if info.sender != config.timealarms {
             return Err(ContractError::UnrecognisedAlarm(info.sender));
         }
 
@@ -42,12 +42,7 @@ impl Profit {
 
         let current_time = env.block.time;
 
-        Self::alarm_subscribe_msg(
-            env.contract.address,
-            &config.oracle,
-            current_time,
-            config.cadence_hours,
-        )?;
+        Self::alarm_subscribe_msg(&config.timealarms, current_time, config.cadence_hours)?;
 
         Ok(Response::new()
             .add_attribute("method", "try_transfer")
@@ -64,16 +59,14 @@ impl Profit {
     }
 
     pub(crate) fn alarm_subscribe_msg(
-        this_contract: Addr,
-        oracle_addr: &Addr,
+        timealarms_addr: &Addr,
         current_time: Timestamp,
         cadence_hours: u32,
     ) -> StdResult<CosmosMsg> {
         Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             funds: vec![],
-            contract_addr: oracle_addr.to_string(),
-            msg: to_binary(&oracle::msg::ExecuteMsg::AddAlarm {
-                addr: this_contract,
+            contract_addr: timealarms_addr.to_string(),
+            msg: to_binary(&timealarms::msg::ExecuteMsg::AddAlarm {
                 time: current_time.plus_seconds(Self::to_seconds(cadence_hours)),
             })?,
         }))

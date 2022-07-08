@@ -3,10 +3,13 @@ use std::collections::HashSet;
 use crate::common::{test_case::TestCase, ADMIN, USER};
 use cosmwasm_std::{coins, Addr, Coin, DepsMut, Env, MessageInfo, Response};
 use cw_multi_test::{next_block, ContractWrapper, Executor};
-use finance::error::Error as FinanceError;
+use finance::{
+    currency::{Currency, Usdc},
+    error::Error as FinanceError,
+};
 use leaser::msg::{QueryMsg, QuoteResponse};
 
-const DENOM: &str = "uusdc";
+const DENOM: &str = Usdc::SYMBOL;
 
 #[test]
 fn open_lease() {
@@ -302,6 +305,9 @@ fn test_quote() {
         .unwrap();
 
     assert_eq!(185, resp.borrow.amount.u128());
+
+    //TODO: change to
+    // assert_eq!(finance::coin::Coin::<Usdc>::new(185), resp.borrow);
 }
 
 #[test]

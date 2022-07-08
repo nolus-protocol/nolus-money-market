@@ -1,5 +1,9 @@
-use cosmwasm_std::{coins, testing::mock_env, Addr, BlockInfo, Coin};
+use cosmwasm_std::{
+    coins, testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin, Deps, Env, StdResult,
+};
 use cw_multi_test::{App, AppBuilder};
+use finance::currency::{Currency, Nls};
+use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 #[allow(dead_code)]
@@ -12,13 +16,24 @@ pub mod leaser_wrapper;
 pub mod lpp_wrapper;
 pub mod oracle_wrapper;
 pub mod profit_wrapper;
+pub mod timealarms_wrapper;
+
 #[cfg(test)]
 pub mod test_case;
 pub mod treasury_wrapper;
 
 pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
-pub const NATIVE_DENOM: &str = "uNLS";
+pub const NATIVE_DENOM: &str = Nls::SYMBOL;
+
+#[derive(Serialize, Clone, Debug, PartialEq)]
+struct MockResponse {}
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+struct MockQueryMsg {}
+
+fn mock_query(_deps: Deps, _env: Env, _msg: MockQueryMsg) -> StdResult<Binary> {
+    to_binary(&MockResponse {})
+}
 
 pub fn mock_app(init_funds: &[Coin]) -> App {
     let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);

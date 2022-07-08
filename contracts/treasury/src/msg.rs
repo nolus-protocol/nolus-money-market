@@ -1,4 +1,5 @@
-use cosmwasm_std::{Addr, Coin};
+use cosmwasm_std::Addr;
+use finance::{coin::Coin, currency::Nls};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -12,5 +13,5 @@ pub struct InstantiateMsg {}
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     ConfigureRewardTransfer { rewards_dispatcher: Addr },
-    SendRewards { amount: Coin },
+    SendRewards { amount: Coin<Nls> },
 }

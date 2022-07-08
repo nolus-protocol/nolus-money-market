@@ -1,10 +1,11 @@
 use crate::lpp::NTokenPrice;
-use crate::{contract::NOLUS_DENOM, error::ContractError};
+use crate::error::ContractError;
 use cosmwasm_std::{
     coin, Addr, Coin, Decimal, DepsMut, Fraction, StdResult, Storage, Uint128,
 };
 use cw_storage_plus::{Item, Map};
 use serde::{Deserialize, Serialize};
+use finance::currency::{Currency, Nls};
 
 type Balance = Uint128;
 
@@ -88,7 +89,7 @@ impl Deposit {
             self.update_rewards(&globals);
             let reward: Uint128 = self.data.pending_rewards_nls * Uint128::new(1);
             Self::DEPOSITS.remove(storage, self.addr.clone());
-            Some(coin(reward.u128(), NOLUS_DENOM))
+            Some(coin(reward.u128(), Nls::SYMBOL))
         } else {
             Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
             None
@@ -133,7 +134,7 @@ impl Deposit {
         let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
 
         let reward = self.calculate_reward(&globals) * Uint128::new(1);
-        Ok(coin(reward.u128(), NOLUS_DENOM))
+        Ok(coin(reward.u128(), Nls::SYMBOL))
     }
 
     /// pay accounted rewards to the deposit owner or optioanl recipient
@@ -149,7 +150,7 @@ impl Deposit {
 
         Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
 
-        Ok(coin(reward.u128(), NOLUS_DENOM))
+        Ok(coin(reward.u128(), Nls::SYMBOL))
     }
 
 /*
@@ -253,11 +254,11 @@ mod test {
 
         let amount = deposit1.claim_rewards(deps.as_mut().storage)
             .expect("should claim rewards");
-        assert_eq!(amount, coin(2000, NOLUS_DENOM));
+        assert_eq!(amount, coin(2000, Nls::SYMBOL));
 
         let amount = deposit2.claim_rewards(deps.as_mut().storage)
             .expect("should claim rewards");
-        assert_eq!(amount, coin(500, NOLUS_DENOM));
+        assert_eq!(amount, coin(500, Nls::SYMBOL));
 
 
         Deposit::distribute_rewards(deps.as_mut(), coin(1000, "unolus"))
@@ -277,7 +278,7 @@ mod test {
         let rewards = deposit1.withdraw(deps.as_mut().storage, 500u128.into())
             .expect("should withdraw")
             .expect("should be some rewards");
-        assert_eq!(rewards, coin(500, NOLUS_DENOM));
+        assert_eq!(rewards, coin(500, Nls::SYMBOL));
         let response = Deposit::query_balance_nlpn(deps.as_mut().storage, addr1)
             .expect("should query");
         assert!(response.is_none());

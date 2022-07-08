@@ -27,6 +27,7 @@ impl DispatcherWrapper {
         app: &mut App,
         lpp: &Addr,
         oracle: &Addr,
+        timealarms: &Addr,
         treasury: &Addr,
         _denom: &str,
     ) -> Addr {
@@ -35,6 +36,7 @@ impl DispatcherWrapper {
             cadence_hours: 10,
             lpp: lpp.clone(),
             oracle: oracle.clone(),
+            timealarms: timealarms.clone(),
             treasury: treasury.clone(),
             tvl_to_apr: Intervals::from(vec![Stop::new(0, 10), Stop::new(1000000, 10)]).unwrap(),
         };

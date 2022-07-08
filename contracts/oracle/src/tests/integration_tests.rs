@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, Empty, StdResult, Uint128, WasmMsg};
+    use cosmwasm_std::{
+        to_binary, Addr, Binary, Coin, CosmosMsg, Deps, Empty, Env, StdResult, Uint128, WasmMsg,
+    };
     use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
     use schemars::JsonSchema;
     use serde::{Deserialize, Serialize};
@@ -11,6 +13,11 @@ mod tests {
     /// for working with this.
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
     pub struct CwTemplateContract(pub Addr);
+
+    #[derive(Serialize, Clone, Debug, PartialEq)]
+    struct MockResponse {}
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+    struct QueryMsg {}
 
     impl CwTemplateContract {
         pub fn addr(&self) -> Addr {
@@ -28,11 +35,23 @@ mod tests {
         }
     }
 
+    fn mock_query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
+        to_binary(&MockResponse {})
+    }
     pub fn contract_template() -> Box<dyn Contract<Empty>> {
         let contract = ContractWrapper::new(
             crate::contract::execute,
             crate::contract::instantiate,
             crate::contract::query,
+        )
+        .with_reply(crate::contract::reply);
+        Box::new(contract)
+    }
+    pub fn timealarms_template() -> Box<dyn Contract<Empty>> {
+        let contract = ContractWrapper::new(
+            timealarms::contract::execute,
+            timealarms::contract::instantiate,
+            mock_query,
         )
         .with_reply(crate::contract::reply);
         Box::new(contract)
@@ -55,10 +74,26 @@ mod tests {
                 .unwrap();
         })
     }
-    fn proper_instantiate() -> (App, CwTemplateContract) {
-        let mut app = mock_app();
+
+    fn timealarms_instantiate(app: &mut App) -> CwTemplateContract {
+        let cw_template_id = app.store_code(timealarms_template());
+        let cw_template_contract_addr = app
+            .instantiate_contract(
+                cw_template_id,
+                Addr::unchecked(ADMIN),
+                &timealarms::msg::InstantiateMsg {},
+                &[],
+                "timealarms_test",
+                None,
+            )
+            .unwrap();
+        CwTemplateContract(cw_template_contract_addr)
+    }
+
+    fn proper_instantiate(app: &mut App, timealarms_addr: Addr) -> CwTemplateContract {
         let cw_template_id = app.store_code(contract_template());
-        let msg = dummy_default_instantiate_msg();
+        let mut msg = dummy_default_instantiate_msg();
+        msg.timealarms_addr = timealarms_addr.to_string();
         let cw_template_contract_addr = app
             .instantiate_contract(
                 cw_template_id,
@@ -69,14 +104,16 @@ mod tests {
                 None,
             )
             .unwrap();
-        let cw_template_contract = CwTemplateContract(cw_template_contract_addr);
-        (app, cw_template_contract)
+        CwTemplateContract(cw_template_contract_addr)
     }
     mod register_feeder {
         // use super::*;
         // use crate::msg::ExecuteMsg;
         use super::{proper_instantiate, ADMIN, USER};
-        use crate::msg::ExecuteMsg;
+        use crate::{
+            msg::ExecuteMsg,
+            tests::integration_tests::tests::{mock_app, timealarms_instantiate},
+        };
         use cosmwasm_std::{Addr, Decimal, Timestamp};
         use cw_multi_test::Executor;
         use marketprice::feed::{Price, Prices};
@@ -155,7 +192,8 @@ mod tests {
         }
         #[test]
         fn register_feeder() {
-            let (mut app, cw_template_contract) = proper_instantiate();
+            let mut app = mock_app();
+            let cw_template_contract = proper_instantiate(&mut app, Addr::unchecked("timealarms"));
             // only admin can register new feeder, other user should result in error
             let msg = ExecuteMsg::RegisterFeeder {
                 feeder_address: USER.to_string(),
@@ -171,8 +209,12 @@ mod tests {
         }
         #[test]
         fn test_time_notify() {
+            let mut app = mock_app();
+            let timealarms = timealarms_instantiate(&mut app);
+            app.update_block(cw_multi_test::next_block);
+
             // instantiate oracle, register feeder
-            let (mut app, oracle) = proper_instantiate();
+            let oracle = proper_instantiate(&mut app, timealarms.addr());
             let msg = ExecuteMsg::RegisterFeeder {
                 feeder_address: ADMIN.to_string(),
             };
@@ -190,17 +232,15 @@ mod tests {
             app.update_block(|bl| bl.time = Timestamp::from_nanos(0));
             // instantiate loan, add alarms
             let loan = mock_loan::proper_instantiate(&mut app);
-            let alarm_msg = ExecuteMsg::AddAlarm {
-                addr: loan.addr(),
+            let alarm_msg = timealarms::msg::ExecuteMsg::AddAlarm {
                 time: Timestamp::from_seconds(1),
             };
-            app.execute_contract(Addr::unchecked(ADMIN), oracle.addr(), &alarm_msg, &[])
+            app.execute_contract(loan.addr(), timealarms.addr(), &alarm_msg, &[])
                 .unwrap();
-            let alarm_msg = ExecuteMsg::AddAlarm {
-                addr: loan.addr(),
+            let alarm_msg = timealarms::msg::ExecuteMsg::AddAlarm {
                 time: Timestamp::from_seconds(6),
             };
-            app.execute_contract(Addr::unchecked(ADMIN), oracle.addr(), &alarm_msg, &[])
+            app.execute_contract(loan.addr(), timealarms.addr(), &alarm_msg, &[])
                 .unwrap();
             // advance by 5 seconds
             app.update_block(cw_multi_test::next_block);

@@ -25,6 +25,7 @@ serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0" }
 semver = "1"
 lpp = { path = "../lpp", version = "0.1.0", default-features = false}
+finance = { path = "../../packages/finance", version = "0.1.0", default-features = false }
 
 
 [dev-dependencies]

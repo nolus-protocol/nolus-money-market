@@ -15,9 +15,6 @@ pub enum ContractError {
     #[error("Validation error {msg:?}")]
     ValidationError { msg: String },
 
-    #[error("Insufficient funds for down payment")]
-    InsufficientFundsSend {},
-
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },
     // Add any other custom errors you like here.

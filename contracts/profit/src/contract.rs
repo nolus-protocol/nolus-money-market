@@ -25,15 +25,12 @@ pub fn instantiate(
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let treasury = validate_addr(deps.as_ref(), msg.treasury)?;
-    let oracle = validate_addr(deps.as_ref(), msg.oracle)?;
+    let timealarms = validate_addr(deps.as_ref(), msg.timealarms)?;
 
-    Config::new(info.sender, msg.cadence_hours, treasury, oracle.clone()).store(deps.storage)?;
-    let subscribe_msg = Profit::alarm_subscribe_msg(
-        env.contract.address,
-        &oracle,
-        env.block.time,
-        msg.cadence_hours,
-    )?;
+    Config::new(info.sender, msg.cadence_hours, treasury, timealarms.clone())
+        .store(deps.storage)?;
+    let subscribe_msg =
+        Profit::alarm_subscribe_msg(&timealarms, env.block.time, msg.cadence_hours)?;
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
@@ -81,28 +78,34 @@ fn try_transfer(
 
 #[cfg(test)]
 mod tests {
-    use crate::msg::ConfigResponse;
+    use cosmwasm_std::{
+        coins, from_binary,
+        testing::{mock_dependencies_with_balance, mock_env, mock_info},
+        to_binary, Addr, BankMsg, CosmosMsg, SubMsg, WasmMsg,
+    };
 
-    use super::*;
-    use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, Addr, BankMsg, CosmosMsg, SubMsg, WasmMsg};
+    use finance::duration::Duration;
+
+    use super::{execute, instantiate, query};
+    use crate::error::ContractError;
+    use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 
     fn instantiate_msg() -> InstantiateMsg {
         InstantiateMsg {
             cadence_hours: 10,
             treasury: Addr::unchecked("treasury"),
-            oracle: Addr::unchecked("time"),
+            timealarms: Addr::unchecked("timealarms"),
         }
     }
     #[test]
     fn proper_initialization() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
 
-        let oracle_addr = Addr::unchecked("time");
+        let timealarms_addr = Addr::unchecked("timealarms");
         let msg = InstantiateMsg {
             cadence_hours: 16,
             treasury: Addr::unchecked("treasury"),
-            oracle: oracle_addr.clone(),
+            timealarms: timealarms_addr.clone(),
         };
         let info = mock_info("creator", &coins(1000, "unolus"));
 
@@ -113,10 +116,9 @@ mod tests {
             res.messages,
             vec![SubMsg::new(CosmosMsg::Wasm(WasmMsg::Execute {
                 funds: vec![],
-                contract_addr: oracle_addr.to_string(),
-                msg: to_binary(&oracle::msg::ExecuteMsg::AddAlarm {
-                    addr: mock_env().contract.address,
-                    time: mock_env().block.time.plus_seconds(16u64 * 60 * 60),
+                contract_addr: timealarms_addr.to_string(),
+                msg: to_binary(&timealarms::msg::ExecuteMsg::AddAlarm {
+                    time: mock_env().block.time + Duration::from_hours(16),
                 })
                 .unwrap(),
             }))]
@@ -158,7 +160,7 @@ mod tests {
         let mut deps = mock_dependencies_with_balance(&coins(20, "unolus"));
 
         let msg = instantiate_msg();
-        let info = mock_info("time", &coins(2, "unolus"));
+        let info = mock_info("timealarms", &coins(2, "unolus"));
         let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
         let msg = ExecuteMsg::Alarm {

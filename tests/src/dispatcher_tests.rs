@@ -1,5 +1,6 @@
 use cosmwasm_std::{coins, Addr, Coin};
 use cw_multi_test::{ContractWrapper, Executor};
+use finance::currency::{Currency, Nls, Usdc};
 
 use crate::{
     common::test_case::TestCase,
@@ -10,7 +11,7 @@ use crate::{
 
 #[test]
 fn on_alarm_zero_reeward() {
-    let denom = "UST";
+    let denom = Usdc::SYMBOL;
 
     let user = Addr::unchecked(USER);
     let mut test_case = TestCase::new(denom);
@@ -18,16 +19,17 @@ fn on_alarm_zero_reeward() {
 
     test_case
         .init_lpp(None)
+        .init_timealarms()
         .init_oracle(None)
         .init_treasury()
         .init_dispatcher();
 
-    test_case.send_funds(&test_case.oracle.clone().unwrap(), coins(500, denom));
+    test_case.send_funds(&test_case.timealarms.clone().unwrap(), coins(500, denom));
 
     let res = test_case
         .app
         .execute_contract(
-            test_case.oracle.unwrap(),
+            test_case.timealarms.unwrap(),
             test_case.dispatcher_addr.as_ref().unwrap().clone(),
             &rewards_dispatcher::msg::ExecuteMsg::Alarm {
                 time: test_case.app.block_info().time,
@@ -64,14 +66,12 @@ fn on_alarm_zero_reeward() {
 
 #[test]
 fn on_alarm() {
-    let denom = "UST";
+    let denom = Usdc::SYMBOL;
 
     let lender = Addr::unchecked(USER);
 
     let mut test_case = TestCase::new(denom);
     test_case.init(&lender, coins(500, denom)).init_oracle(None);
-
-    test_case.send_funds(&test_case.oracle.clone().unwrap(), coins(500, denom));
 
     test_case
         .init_lpp(Some(ContractWrapper::new(
@@ -79,6 +79,7 @@ fn on_alarm() {
             lpp::contract::instantiate,
             mock_lpp_query,
         )))
+        .init_timealarms()
         .init_oracle(Some(ContractWrapper::new(
             oracle::contract::execute,
             oracle::contract::instantiate,
@@ -86,13 +87,14 @@ fn on_alarm() {
         )))
         .init_treasury()
         .init_dispatcher();
+    test_case.send_funds(&test_case.timealarms.clone().unwrap(), coins(500, denom));
 
     assert_eq!(
-        Coin::new(0, NATIVE_DENOM),
+        Coin::new(0, Nls::SYMBOL),
         test_case
             .app
             .wrap()
-            .query_balance(test_case.lpp_addr.clone().unwrap(), NATIVE_DENOM)
+            .query_balance(test_case.lpp_addr.clone().unwrap(), Nls::SYMBOL)
             .unwrap()
     );
 
@@ -119,7 +121,7 @@ fn on_alarm() {
     let res = test_case
         .app
         .execute_contract(
-            test_case.oracle.unwrap(),
+            test_case.timealarms.unwrap(),
             test_case.dispatcher_addr.clone().unwrap(),
             &rewards_dispatcher::msg::ExecuteMsg::Alarm {
                 time: test_case.app.block_info().time,
@@ -217,13 +219,14 @@ fn on_alarm() {
 #[test]
 #[should_panic(expected = "Unauthorized")]
 fn test_config_unauthorized() {
-    let denom = "UST";
+    let denom = Usdc::SYMBOL;
     let user_addr = Addr::unchecked(USER);
     let mut test_case = TestCase::new(denom);
     test_case
         .init(&user_addr, coins(500, denom))
         .init_lpp(None)
         .init_treasury()
+        .init_timealarms()
         .init_oracle(None)
         .init_dispatcher();
 
@@ -251,13 +254,14 @@ fn test_config_unauthorized() {
 
 #[test]
 fn test_config() {
-    let denom = "UST";
+    let denom = Usdc::SYMBOL;
     let user_addr = Addr::unchecked(ADMIN);
     let mut test_case = TestCase::new(denom);
     test_case
         .init(&user_addr, coins(500, denom))
         .init_lpp(None)
         .init_treasury()
+        .init_timealarms()
         .init_oracle(None)
         .init_dispatcher();
 

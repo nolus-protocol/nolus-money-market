@@ -1,11 +1,11 @@
 use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::Item;
-use finance::percent::Percent;
+use finance::{liability::Liability, percent::Percent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    msg::{InstantiateMsg, Liability, Repayment},
+    msg::{InstantiateMsg, Repayment},
     ContractError,
 };
 
@@ -15,7 +15,6 @@ pub struct Config {
     pub lease_code_id: u64,
     pub lpp_ust_addr: Addr,
     pub lease_interest_rate_margin: Percent,
-    pub recalc_hours: u16,
     pub liability: Liability,
     pub repayment: Repayment,
 }
@@ -29,7 +28,6 @@ impl Config {
             lease_code_id: msg.lease_code_id.u64(),
             lpp_ust_addr: msg.lpp_ust_addr,
             lease_interest_rate_margin: msg.lease_interest_rate_margin,
-            recalc_hours: msg.recalc_hours,
             liability: msg.liability,
             repayment: msg.repayment,
         })
@@ -46,7 +44,7 @@ impl Config {
     pub fn update(
         storage: &mut dyn Storage,
         lease_interest_rate_margin: Percent,
-        liability: crate::msg::Liability,
+        liability: Liability,
         repayment: Repayment,
     ) -> Result<(), ContractError> {
         Self::load(storage)?;

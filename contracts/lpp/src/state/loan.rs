@@ -1,33 +1,37 @@
-use cosmwasm_std::{Uint128, Timestamp, Addr, Storage, StdResult, Decimal};
-use serde::{Serialize, Deserialize};
+use cosmwasm_std::{Timestamp, Addr, Storage, StdResult};
+use serde::{Serialize, Deserialize, de::DeserializeOwned};
 use schemars::JsonSchema;
 use cw_storage_plus::Map;
 use crate::error::ContractError;
 use std::cmp;
-use finance::percent::Percent;
 use finance::interest::InterestPeriod;
 use finance::duration::Duration;
+use finance::coin::Coin;
+use finance::percent::Percent;
+use finance::currency::Currency;
 
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct LoanData {
-    pub principal_due: Uint128,
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
+pub struct LoanData<LPN: Currency> {
+    #[serde(bound = "Coin<LPN>: Serialize + DeserializeOwned")]
+    pub principal_due: Coin<LPN>,
+    #[serde(bound = "Coin<LPN>: Serialize + DeserializeOwned")]
     pub annual_interest_rate: Percent,
     pub interest_paid: Timestamp,
 }
 
-pub struct Loan {
+pub struct Loan<LPN: Currency> {
     addr: Addr,
-    data: LoanData,
+    data: LoanData<LPN>,
 }
 
-impl Loan {
-    const STORAGE: Map<'static, Addr, LoanData> = Map::new("loans");
+impl<LPN: Currency> Loan<LPN> {
+    const STORAGE: Map<'static, Addr, LoanData<LPN>> = Map::new("loans");
 
     pub fn open(
         storage: &mut dyn Storage,
         addr: Addr,
-        amount: Uint128,
+        amount: Coin<LPN>,
         annual_interest_rate: Percent,
         current_time: Timestamp
     ) -> Result<(), ContractError> {
@@ -56,23 +60,23 @@ impl Loan {
         Ok(loan)
     }
 
-    pub fn data(&self) -> &LoanData {
+    pub fn data(&self) -> &LoanData<LPN> {
         &self.data
     }
 
     /// change the Loan state after repay, return (principal_payment, excess_received) pair
-    pub fn repay(self, storage: &mut dyn Storage, ctime: Timestamp, repay_amount: Uint128) -> Result<(Uint128, Uint128), ContractError> {
+    pub fn repay(self, storage: &mut dyn Storage, ctime: Timestamp, repay_amount: Coin<LPN>) -> Result<(Coin<LPN>, Coin<LPN>), ContractError> {
 
         let time_delta = Duration::between(self.data.interest_paid, ctime);
-        let loan_interest_due = InterestPeriod::with_interest(self.data.annual_interest_rate)
+
+        let (interest_period, interest_pay_excess) = InterestPeriod::with_interest(self.data.annual_interest_rate)
             .from(self.data.interest_paid)
             .spanning(time_delta)
-            .interest(self.data.principal_due);
+            .pay(self.data.principal_due, repay_amount, ctime);
 
-        let loan_interest_payment = cmp::min(loan_interest_due, repay_amount);
         let loan_principal_payment =
-            cmp::min(repay_amount - loan_interest_payment, self.data.principal_due);
-        let excess_received = repay_amount - loan_interest_payment - loan_principal_payment;
+            cmp::min(interest_pay_excess, self.data.principal_due);
+        let excess_received = interest_pay_excess - loan_principal_payment;
 
         if self.data.principal_due == loan_principal_payment {
             Self::STORAGE.remove(storage, self.addr);
@@ -80,21 +84,10 @@ impl Loan {
             Self::STORAGE.update(
                 storage,
                 self.addr,
-                |loan| -> Result<LoanData, ContractError> {
+                |loan| -> Result<LoanData<LPN>, ContractError> {
                     let mut loan = loan.ok_or(ContractError::NoLoan {})?;
-                    loan.principal_due -= loan_principal_payment;
-
-                    // TODO: use InterestPeriod::pay
-                    if !loan_interest_due.is_zero() {
-                        let interest_paid_delta: u64 = (
-                            Decimal::from_ratio(loan_interest_payment, loan_interest_due)
-                            * Uint128::new(time_delta.nanos() as u128))
-                            .u128()
-                            .try_into()
-                            .expect("math overflow");
-                        loan.interest_paid =
-                            Timestamp::from_nanos(loan.interest_paid.nanos() + interest_paid_delta);
-                    }
+                    loan.principal_due = loan.principal_due - loan_principal_payment;
+                    loan.interest_paid = interest_period.start();
 
                     Ok(loan)
                 },
@@ -107,7 +100,7 @@ impl Loan {
     pub fn query(
         storage: &dyn Storage,
         lease_addr: Addr,
-    ) -> StdResult<Option<LoanData>> {
+    ) -> StdResult<Option<LoanData<LPN>>> {
         Self::STORAGE.may_load(storage, lease_addr)
     }
 
@@ -115,7 +108,7 @@ impl Loan {
         storage: &dyn Storage,
         lease_addr: Addr,
         outstanding_time: Timestamp,
-    ) -> StdResult<Option<Uint128>> {
+    ) -> StdResult<Option<Coin<LPN>>> {
         let maybe_loan = Self::STORAGE.may_load(storage, lease_addr)?;
 
         if let Some(loan) = maybe_loan {
@@ -124,7 +117,7 @@ impl Loan {
                 cmp::max(outstanding_time.nanos(), loan.interest_paid.nanos())
                 - loan.interest_paid.nanos()
             );
-
+            
             let interest_period = InterestPeriod::with_interest(loan.annual_interest_rate)
                 .from(loan.interest_paid)
                 .spanning(delta_t);
@@ -142,8 +135,8 @@ impl Loan {
 mod test {
     use super::*;
     use cosmwasm_std::testing;
-    use finance::duration::Duration;
-
+    use finance::{duration::Duration, currency::Usdc};
+    
     #[test]
     fn test_open_and_repay_loan() {
         let mut deps = testing::mock_dependencies();
@@ -151,14 +144,14 @@ mod test {
         let mut time = Timestamp::from_nanos(0);
 
         let addr = Addr::unchecked("leaser");
-        Loan::open(deps.as_mut().storage, addr.clone(), 1000u128.into(), Percent::from_percent(20), time)
+        Loan::open(deps.as_mut().storage, addr.clone(), Coin::<Usdc>::new(1000), Percent::from_percent(20), time)
             .expect("should open loan");
 
-        let loan = Loan::load(deps.as_ref().storage, addr.clone())
+        let loan: Loan<Usdc> = Loan::load(deps.as_ref().storage, addr.clone())
             .expect("should load loan");
 
         time = Timestamp::from_nanos(Duration::YEAR.nanos()/2);
-        let interest = Loan::query_outstanding_interest(deps.as_ref().storage, addr.clone(), time)
+        let interest: Coin<Usdc> = Loan::query_outstanding_interest(deps.as_ref().storage, addr.clone(), time)
             .expect("should query interest")
             .expect("should be some interest");
         assert_eq!(interest, 100u128.into());
@@ -169,13 +162,13 @@ mod test {
         assert_eq!(principal_payment, 500u128.into());
         assert_eq!(excess_received, 0u128.into());
 
-        let resp = Loan::query(deps.as_ref().storage, addr.clone())
+        let resp = Loan::<Usdc>::query(deps.as_ref().storage, addr.clone())
             .expect("should query loan")
             .expect("should be some loan");
 
         assert_eq!(resp.principal_due, 500u128.into());
 
-        let loan = Loan::load(deps.as_ref().storage, addr.clone())
+        let loan: Loan<Usdc> = Loan::load(deps.as_ref().storage, addr.clone())
             .expect("should load loan");
 
         // repay with excess, should close the loan
@@ -185,12 +178,9 @@ mod test {
         assert_eq!(excess_received, 100u128.into());
 
         // is it cleaned up?
-        let is_none = Loan::query(deps.as_ref().storage, addr)
+        let is_none = Loan::<Usdc>::query(deps.as_ref().storage, addr)
             .expect("should query loan")
             .is_none();
         assert!(is_none);
-
     }
-
 }
-

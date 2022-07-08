@@ -1,15 +1,16 @@
 use anyhow::Error;
 use cosmwasm_std::{coins, Addr, Coin, Empty, StdError, Uint64};
 use cw_multi_test::{next_block, App, ContractWrapper, Executor};
+use finance::currency::{Currency, Usdc};
 
 use super::{
     dispatcher_wrapper::DispatcherWrapper, lease_wrapper::LeaseWrapper,
     leaser_wrapper::LeaserWrapper, lpp_wrapper::LppWrapper, mock_app,
     oracle_wrapper::MarketOracleWrapper, profit_wrapper::ProfitWrapper,
-    treasury_wrapper::TreasuryWrapper, ADMIN,
+    timealarms_wrapper::TimeAlarmsWrapper, treasury_wrapper::TreasuryWrapper, ADMIN,
 };
 
-const STABLECOIN: &str = "UST";
+const STABLECOIN: &str = Usdc::SYMBOL;
 
 type OptionalContractWrapper = Option<
     ContractWrapper<
@@ -55,6 +56,7 @@ pub struct TestCase {
     pub leaser_addr: Option<Addr>,
     pub lpp_addr: Option<Addr>,
     pub oracle: Option<Addr>,
+    pub timealarms: Option<Addr>,
     pub lease_code_id: Option<u64>,
     denom: String,
 }
@@ -69,6 +71,7 @@ impl TestCase {
             leaser_addr: None,
             lpp_addr: None,
             oracle: None,
+            timealarms: None,
             lease_code_id: None,
             denom: denom.to_string(),
         }
@@ -150,20 +153,26 @@ impl TestCase {
             &mut self.app,
             cadence_hours,
             self.treasury_addr.as_ref().unwrap(),
-            self.oracle.as_ref().unwrap(),
+            self.timealarms.as_ref().unwrap(),
         ));
         self.app.update_block(next_block);
 
         self
     }
 
+    pub fn init_timealarms(&mut self) -> &mut Self {
+        self.timealarms = Some(TimeAlarmsWrapper::default().instantiate(&mut self.app));
+        self.app.update_block(next_block);
+
+        self
+    }
     pub fn init_oracle(&mut self, custom_wrapper: OptionalContractWrapperStd) -> &mut Self {
         let mocked_oracle = match custom_wrapper {
             Some(wrapper) => MarketOracleWrapper::with_contract_wrapper(wrapper),
             None => MarketOracleWrapper::default(),
         };
 
-        self.oracle = Some(mocked_oracle.instantiate(&mut self.app, &self.denom));
+        self.oracle = Some(mocked_oracle.instantiate(&mut self.app, &self.denom, "timealarms"));
         self.app.update_block(next_block);
 
         self
@@ -175,6 +184,7 @@ impl TestCase {
             &mut self.app,
             self.lpp_addr.as_ref().unwrap(),
             self.oracle.as_ref().unwrap(),
+            self.timealarms.as_ref().unwrap(),
             &self.treasury_addr.as_ref().unwrap().clone(),
             &self.denom,
         );

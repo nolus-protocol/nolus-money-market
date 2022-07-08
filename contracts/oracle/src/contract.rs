@@ -24,12 +24,15 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    let timealarms_addr = deps.api.addr_validate(&msg.timealarms_addr)?;
+
     Config::new(
         msg.base_asset,
         info.sender,
         msg.price_feed_period,
         msg.feeders_percentage_needed,
         msg.supported_denom_pairs,
+        timealarms_addr,
     )
     .store(deps.storage)?;
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -61,7 +64,6 @@ pub fn execute(
             get_sender(deps.api, info)?,
             prices,
         ),
-        ExecuteMsg::AddAlarm { addr, time } => MarketAlarms::try_add_time_alarm(deps, addr, time),
         ExecuteMsg::AddHook { target } => {
             MarketAlarms::try_add_price_hook(deps.storage, get_sender(deps.api, info)?, target)
         }
@@ -91,7 +93,7 @@ pub fn get_sender(api: &dyn Api, info: MessageInfo) -> StdResult<Addr> {
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    let res = match msg.result {
+    let resp = match msg.result {
         cosmwasm_std::SubMsgResult::Ok(_) => {
             MarketAlarms::remove(deps.storage, msg.id)?;
             Response::new().add_attribute("alarm", "success")
@@ -100,7 +102,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             .add_attribute("alarm", "error")
             .add_attribute("error", err),
     };
-    Ok(res)
+    Ok(resp)
 }
 
 fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
@@ -195,6 +197,10 @@ fn try_feed_multiple_prices(
     // get all affected addresses
     let _res = MarketAlarms::try_notify_hooks(storage, block_time, updated_prices);
 
-    let response = MarketAlarms::update_global_time(storage, block_time)?;
-    Ok(response.add_attribute("method", "try_feed_prices"))
+    // let response = MarketAlarms::update_global_time(storage, block_time)?;
+    // Ok(response.add_attribute("method", "try_feed_prices"))
+    let submsg = MarketAlarms::trigger_time_alarms(storage)?;
+    Ok(Response::new()
+        .add_submessage(submsg)
+        .add_attribute("method", "try_feed_prices"))
 }

@@ -27,25 +27,23 @@ pub fn instantiate(
 
     let lpp_addr = validate_addr(deps.as_ref(), msg.lpp)?;
     let oracle_addr = validate_addr(deps.as_ref(), msg.oracle)?;
+    let timealarms_addr = validate_addr(deps.as_ref(), msg.timealarms)?;
     let treasury_addr = validate_addr(deps.as_ref(), msg.treasury)?;
 
     Config::new(
         info.sender,
         msg.cadence_hours,
         lpp_addr,
-        oracle_addr.clone(),
+        oracle_addr,
+        timealarms_addr.clone(),
         treasury_addr,
         msg.tvl_to_apr,
     )
     .store(deps.storage)?;
     DispatchLog::update(deps.storage, env.block.time)?;
 
-    let subscribe_msg = Dispatcher::alarm_subscribe_msg(
-        env.contract.address,
-        &oracle_addr,
-        env.block.time,
-        msg.cadence_hours,
-    )?;
+    let subscribe_msg =
+        Dispatcher::alarm_subscribe_msg(&timealarms_addr, env.block.time, msg.cadence_hours)?;
 
     Ok(Response::new()
         .add_message(subscribe_msg)
@@ -109,27 +107,38 @@ pub fn try_dispatch(
     ensure!(time >= block_time, ContractError::AlarmTimeValidation {});
     let config = Config::load(deps.storage)?;
 
-    if info.sender != config.oracle {
+    if info.sender != config.timealarms {
         return Err(ContractError::UnrecognisedAlarm(info.sender));
     }
 
-    Dispatcher::dispatch(deps, &config, block_time, env.contract.address)
+    Dispatcher::dispatch(deps, &config, block_time)
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::msg::ConfigResponse;
-    use crate::state::tvl_intervals::{Intervals, Stop};
+    use cosmwasm_std::{
+        coins, from_binary,
+        testing::{mock_dependencies_with_balance, mock_env, mock_info},
+        to_binary, Addr, BlockInfo, SubMsg, WasmMsg,
+    };
 
-    use super::*;
-    use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, Addr, BlockInfo, Coin, SubMsg, WasmMsg};
+    use finance::{
+        coin::Coin,
+        currency::{Currency, Nls},
+        duration::Duration,
+    };
+
+    use super::{execute, instantiate, query};
+    use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+    use crate::state::tvl_intervals::{Intervals, Stop};
+    use crate::ContractError;
 
     fn instantiate_msg() -> InstantiateMsg {
         InstantiateMsg {
             cadence_hours: 10,
             lpp: Addr::unchecked("lpp"),
-            oracle: Addr::unchecked("time"),
+            oracle: Addr::unchecked("oracle"),
+            timealarms: Addr::unchecked("timealarms"),
             treasury: Addr::unchecked("treasury"),
             tvl_to_apr: Intervals::from(vec![Stop::new(0, 5), Stop::new(1000000, 10)]).unwrap(),
         }
@@ -189,7 +198,7 @@ mod tests {
         let mut deps = mock_dependencies_with_balance(&coins(20, "unolus"));
 
         let msg = instantiate_msg();
-        let info = mock_info("time", &coins(2, "unolus"));
+        let info = mock_info("timealarms", &coins(2, "unolus"));
         let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
         let msg = ExecuteMsg::Alarm {
@@ -202,16 +211,17 @@ mod tests {
     }
     #[test]
     fn dispatch_with_valid_period() {
-        let mut deps = mock_dependencies_with_balance(&coins(20, "unolus"));
+        let native_denom = Nls::SYMBOL;
+        let mut deps = mock_dependencies_with_balance(&coins(20, native_denom));
 
         let msg = instantiate_msg();
-        let info = mock_info("time", &coins(2, "unolus"));
+        let info = mock_info("timealarms", &coins(2, native_denom));
         let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
         let mut env = mock_env();
         env.block = BlockInfo {
             height: 12_345,
-            time: env.block.time.plus_seconds(100 * 24 * 60 * 60),
+            time: env.block.time + Duration::from_days(100),
             chain_id: "cosmos-testnet-14002".to_string(),
         };
 
@@ -227,7 +237,7 @@ mod tests {
                 SubMsg::new(WasmMsg::Execute {
                     contract_addr: "treasury".to_string(),
                     msg: to_binary(&treasury::msg::ExecuteMsg::SendRewards {
-                        amount: Coin::new(44386002, "uNLS"),
+                        amount: Coin::<Nls>::new(44386002),
                     })
                     .unwrap(),
                     funds: vec![],
@@ -235,12 +245,11 @@ mod tests {
                 SubMsg::new(WasmMsg::Execute {
                     contract_addr: "lpp".to_string(),
                     msg: to_binary(&lpp::msg::ExecuteMsg::DistributeRewards {}).unwrap(),
-                    funds: coins(44386002, "uNLS"),
+                    funds: coins(44386002, native_denom),
                 }),
                 SubMsg::new(WasmMsg::Execute {
-                    contract_addr: "time".to_string(),
-                    msg: to_binary(&oracle::msg::ExecuteMsg::AddAlarm {
-                        addr: env.clone().contract.address,
+                    contract_addr: "timealarms".to_string(),
+                    msg: to_binary(&timealarms::msg::ExecuteMsg::AddAlarm {
                         time: env.block.time.plus_seconds(10 * 60 * 60),
                     })
                     .unwrap(),
