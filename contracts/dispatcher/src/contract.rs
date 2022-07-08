@@ -6,6 +6,8 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 
+use finance::duration::Duration;
+
 use crate::dispatcher::Dispatcher;
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -42,8 +44,11 @@ pub fn instantiate(
     .store(deps.storage)?;
     DispatchLog::update(deps.storage, env.block.time)?;
 
-    let subscribe_msg =
-        Dispatcher::alarm_subscribe_msg(&timealarms_addr, env.block.time, msg.cadence_hours)?;
+    let subscribe_msg = Dispatcher::alarm_subscribe_msg(
+        &timealarms_addr,
+        env.block.time,
+        Duration::from_hours(msg.cadence_hours),
+    )?;
 
     Ok(Response::new()
         .add_message(subscribe_msg)
@@ -72,7 +77,7 @@ pub fn execute(
 pub fn try_config(
     deps: DepsMut,
     info: MessageInfo,
-    cadence_hours: u32,
+    cadence_hours: u16,
 ) -> Result<Response, ContractError> {
     let config = Config::load(deps.storage)?;
     if info.sender != config.owner {
