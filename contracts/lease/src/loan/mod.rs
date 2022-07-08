@@ -12,7 +12,7 @@ use finance::{
     percent::{Percent, Units},
 };
 use lpp::{
-    msg::{QueryLoanResponse, LoanResponse},
+    msg::{LoanResponse, QueryLoanResponse},
     stub::Lpp,
 };
 use serde::{Deserialize, Serialize};
@@ -25,10 +25,8 @@ pub struct Loan<Lpn, L> {
     annual_margin_interest: Percent,
     lpn: PhantomData<Lpn>,
     lpp: L,
-    // TODO u32 -> Duration
-    interest_due_period_secs: u32,
-    // TODO u32 -> Duration
-    grace_period_secs: u32,
+    interest_due_period_secs: Duration,
+    grace_period_secs: Duration,
     current_period: InterestPeriod<Units, Percent>,
 }
 
@@ -41,8 +39,8 @@ where
         when: Timestamp,
         lpp: L,
         annual_margin_interest: Percent,
-        interest_due_period_secs: u32,
-        grace_period_secs: u32,
+        interest_due_period_secs: Duration,
+        grace_period_secs: Duration,
     ) -> ContractResult<Self> {
         // check them out cw_utils::Duration, cw_utils::NativeBalance
         Ok(Self {
@@ -53,7 +51,7 @@ where
             grace_period_secs,
             current_period: InterestPeriod::with_interest(annual_margin_interest)
                 .from(when)
-                .spanning(Duration::from_secs(interest_due_period_secs)),
+                .spanning(interest_due_period_secs),
         })
     }
 
@@ -82,15 +80,14 @@ where
         let loan_interest_due =
             self.load_loan_interest_due(querier, lease, self.current_period.start())?;
 
-        let loan_payment =
-            if loan_interest_due <= change && self.current_period.zero_length() {
-                self.open_next_period();
-                let loan_interest_surplus = change - loan_interest_due;
-                let change = self.repay_margin_interest(principal_due, by, loan_interest_surplus);
-                loan_interest_due + change
-            } else {
-                change
-            };
+        let loan_payment = if loan_interest_due <= change && self.current_period.zero_length() {
+            self.open_next_period();
+            let loan_interest_surplus = change - loan_interest_due;
+            let change = self.repay_margin_interest(principal_due, by, loan_interest_surplus);
+            loan_interest_due + change
+        } else {
+            change
+        };
         if loan_payment.is_zero() {
             // in practice not possible, but in theory it is if two consecutive repayments are received
             // with the same 'by' time.
@@ -166,7 +163,7 @@ where
 
         self.current_period = InterestPeriod::with_interest(self.annual_margin_interest)
             .from(self.current_period.till())
-            .spanning(Duration::from_secs(self.interest_due_period_secs));
+            .spanning(self.interest_due_period_secs);
     }
 
     fn merge_state_with(&self, loan_state: LoanResponse<Lpn>, now: Timestamp) -> State<Lpn> {

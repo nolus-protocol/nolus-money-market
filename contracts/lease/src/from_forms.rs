@@ -1,6 +1,6 @@
 use cosmwasm_std::{Api, StdResult, Storage, Timestamp};
 use cw_storage_plus::Item;
-use finance::{coin::Coin, currency::Currency};
+use finance::{coin::Coin, currency::Currency, duration::Duration};
 use lpp::stub::Lpp;
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -41,8 +41,8 @@ impl NewLeaseForm {
             start_at,
             lpp,
             self.loan.annual_margin_interest,
-            self.loan.interest_due_period_secs,
-            self.loan.grace_period_secs,
+            Duration::from_secs(self.loan.interest_due_period_secs),
+            Duration::from_secs(self.loan.grace_period_secs),
         )?;
         Ok(Lease::new(customer, self.currency, self.liability, loan))
     }
