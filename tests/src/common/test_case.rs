@@ -1,7 +1,6 @@
 use anyhow::Error;
 use cosmwasm_std::{coins, Addr, Coin, Empty, StdError, Uint64};
 use cw_multi_test::{next_block, App, ContractWrapper, Executor};
-use finance::currency::{Currency, Usdc};
 
 use super::{
     dispatcher_wrapper::DispatcherWrapper, lease_wrapper::LeaseWrapper,
@@ -9,8 +8,6 @@ use super::{
     oracle_wrapper::MarketOracleWrapper, profit_wrapper::ProfitWrapper,
     timealarms_wrapper::TimeAlarmsWrapper, treasury_wrapper::TreasuryWrapper, ADMIN,
 };
-
-const STABLECOIN: &str = Usdc::SYMBOL;
 
 type OptionalContractWrapper = Option<
     ContractWrapper<
@@ -85,13 +82,19 @@ impl TestCase {
         self
     }
 
-    pub fn init(&mut self, user_addr: &Addr, init_funds: Vec<Coin>) -> &mut Self {
+    pub fn init(&mut self, user: &Addr, init_funds: Vec<Coin>) -> &mut Self {
         self.lease_code_id = Some(LeaseWrapper::default().store(&mut self.app));
         // Bonus: set some funds on the user for future proposals
-        if !init_funds.is_empty() {
+        let admin = Addr::unchecked(ADMIN);
+        if !init_funds.is_empty() && user != &admin {
             self.app
-                .send_tokens(Addr::unchecked(ADMIN), user_addr.clone(), &init_funds)
+                .send_tokens(admin, user.clone(), &init_funds)
                 .unwrap();
+
+            assert_eq!(
+                init_funds,
+                self.app.wrap().query_all_balances(user).unwrap()
+            );
         }
 
         self

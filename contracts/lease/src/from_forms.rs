@@ -16,7 +16,9 @@ impl NewLeaseForm {
         assert_eq!(
             Lpn::SYMBOL,
             self.currency,
-            "[Single currency version] The LPN should match the currency of the lease"
+            "[Single currency version] The LPN '{}' should match the currency of the lease '{}'",
+            Lpn::SYMBOL,
+            self.currency
         );
         // TODO msg.invariant_held(deps.api) checking invariants including address validity and incorporating the liability and loan form invariants
         self.liability.invariant_held()?;
