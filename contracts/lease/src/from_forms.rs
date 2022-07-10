@@ -2,6 +2,7 @@ use cosmwasm_std::{Api, StdResult, Storage, Timestamp};
 use cw_storage_plus::Item;
 use finance::{coin::Coin, currency::Currency};
 use lpp::stub::Lpp;
+use serde::{Serialize, de::DeserializeOwned};
 
 use crate::{
     error::ContractResult,
@@ -35,7 +36,7 @@ impl NewLeaseForm {
         api: &dyn Api,
     ) -> ContractResult<Lease<L>>
     where
-        L: Lpp<lease::Currency>,
+        L: Lpp<lease::Currency> + Serialize + DeserializeOwned,
     {
         let customer = api.addr_validate(&self.customer)?;
         let loan = Loan::open(

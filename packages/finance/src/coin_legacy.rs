@@ -66,9 +66,7 @@ pub trait CoinVisitor {
     type Output;
     type Error;
 
-    fn on<C>(&self, coin: Coin<C>) -> StdResult<Self::Output, Self::Error>
-    where
-        C: Currency;
+    fn on<C>(&self, coin: Coin<C>) -> StdResult<Self::Output, Self::Error>;
     fn on_unknown(&self) -> StdResult<Self::Output, Self::Error>;
 }
 
@@ -116,10 +114,7 @@ where
     type Output = V::Output;
     type Error = V::Error;
 
-    fn on<C>(self) -> StdResult<Self::Output, Self::Error>
-    where
-        C: Currency,
-    {
+    fn on<C>(self) -> StdResult<Self::Output, Self::Error> {
         let coin = Coin::new(self.0.amount.into());
         self.1.on::<C>(coin)
     }
@@ -139,10 +134,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::{
-        any::{type_name, TypeId},
-        marker::PhantomData,
-    };
+    use std::{any::type_name, marker::PhantomData};
 
     use crate::{
         coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl},
@@ -170,23 +162,13 @@ mod test {
     }
 
     impl<C> CoinVisitor for Expect<C>
-    where
-        C: 'static,
     {
         type Output = Coin<C>;
         type Error = ();
 
         fn on<Cin>(&self, coin: Coin<Cin>) -> Result<Self::Output, Self::Error>
-        where
-            Cin: 'static,
         {
-            assert_eq!(
-                TypeId::of::<C>(),
-                TypeId::of::<Cin>(),
-                "Expected {}, got {}",
-                type_name::<C>(),
-                type_name::<Cin>()
-            );
+            assert_eq!(type_name::<C>(), type_name::<Cin>(),);
 
             // TODO functionality to represent a Coin<X> to Coin<Y>, if X==Y
             Ok(Coin::<C>::new(coin.into()))

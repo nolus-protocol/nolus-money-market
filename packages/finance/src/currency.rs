@@ -1,11 +1,11 @@
 use schemars::JsonSchema;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 type Symbol<'a> = &'a str;
-type SymbolStatic = &'static str;
+pub type SymbolStatic = &'static str;
 pub type SymbolOwned = String;
 
-pub trait Currency: 'static + Copy + Ord + Default {
+pub trait Currency: Copy + Ord + Default {
     const SYMBOL: SymbolStatic;
 }
 
@@ -85,7 +85,7 @@ where
 #[cfg(test)]
 mod test {
     use std::{
-        any::{type_name, TypeId},
+        any::type_name,
         marker::PhantomData,
     };
 
@@ -100,20 +100,13 @@ mod test {
         }
     }
     impl<C> AnyVisitor for Expect<C>
-    where
-        C: 'static,
     {
         type Output = bool;
         type Error = ();
 
         fn on<Cin>(self) -> Result<Self::Output, Self::Error>
-        where
-            Cin: 'static,
         {
             assert_eq!(
-                TypeId::of::<C>(),
-                TypeId::of::<Cin>(),
-                "Expected {}, got {}",
                 type_name::<C>(),
                 type_name::<Cin>()
             );

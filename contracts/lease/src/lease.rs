@@ -7,7 +7,7 @@ use finance::{
     liability::Liability,
 };
 use lpp::stub::Lpp;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -28,7 +28,7 @@ pub type Currency = Usdc;
 
 impl<'a, L> Lease<L>
 where
-    L: Lpp<Currency>,
+    L: Lpp<Currency> + Serialize + DeserializeOwned,
 {
     const DB_ITEM: Item<'a, Lease<L>> = Item::new("lease");
 

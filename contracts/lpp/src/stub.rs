@@ -15,9 +15,9 @@ use crate::msg::{
 
 pub const REPLY_ID: u64 = 28;
 
-pub trait Lpp<Lpn>: Serialize + DeserializeOwned
+pub trait Lpp<Lpn>
 where
-    Lpn: Currency,
+    Lpn: Currency + DeserializeOwned,
 {
     fn open_loan_req(&self, amount: Coin<Lpn>) -> StdResult<SubMsg>;
     fn open_loan_resp(&self, resp: Reply) -> Result<(), String>;
@@ -43,7 +43,7 @@ pub trait LppVisitor {
     fn on<C, L>(self, lpp: &L) -> Result<Self::Output, Self::Error>
     where
         L: Lpp<C>,
-        C: Currency;
+        C: Currency + DeserializeOwned;
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
