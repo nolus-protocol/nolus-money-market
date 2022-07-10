@@ -8,15 +8,17 @@ use cw2::set_contract_version;
 use cw_utils::one_coin;
 use finance::bank::BankStub;
 use finance::coin_legacy::from_cosmwasm;
-use finance::currency::Currency;
+use finance::currency::{Currency, Usdc};
 use lpp::stub::{Lpp, LppStub, LppVisitor};
 
 use crate::error::{ContractError, ContractResult};
-use crate::lease::{self, Lease};
+use crate::lease::Lease;
 use crate::msg::{ExecuteMsg, NewLeaseForm, StateQuery, StateResponse};
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+type TheCurrency = Usdc;
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
@@ -53,7 +55,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
     let lpp = lpp(&new_lease_form, &deps)?;
     lpp.execute(OpenLoanResp { resp: msg })?;
 
-    let lease = new_lease_form.into_lease(lpp, env.block.time, deps.api)?;
+    let lease: Lease<TheCurrency, _> = new_lease_form.into_lease(lpp, env.block.time, deps.api)?;
     lease.store(deps.storage)?;
 
     Ok(Response::default())
@@ -76,7 +78,7 @@ pub fn execute(
 pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     let lease = load_lease(deps.storage)?;
     let bank_account = BankStub::my_account(&env, &deps.querier);
-    let resp: StateResponse<lease::Currency, lease::Currency> = lease.state(
+    let resp: StateResponse<TheCurrency, TheCurrency> = lease.state(
         env.block.time,
         bank_account,
         &deps.querier,
@@ -114,7 +116,7 @@ fn lpp(form: &NewLeaseForm, deps: &DepsMut) -> StdResult<LppStub> {
     lpp::stub::LppStub::try_from(form.loan.lpp.clone(), deps.api, &deps.querier)
 }
 
-fn load_lease(storage: &dyn Storage) -> StdResult<Lease<LppStub>> {
+fn load_lease(storage: &dyn Storage) -> StdResult<Lease<TheCurrency, LppStub>> {
     Lease::load(storage)
 }
 

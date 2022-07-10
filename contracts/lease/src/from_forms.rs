@@ -2,14 +2,9 @@ use cosmwasm_std::{Api, StdResult, Storage, Timestamp};
 use cw_storage_plus::Item;
 use finance::{coin::Coin, currency::Currency};
 use lpp::stub::Lpp;
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{
-    error::ContractResult,
-    lease::{self, Lease},
-    loan::Loan,
-    msg::NewLeaseForm,
-};
+use crate::{error::ContractResult, lease::Lease, loan::Loan, msg::NewLeaseForm};
 
 impl NewLeaseForm {
     const DB_ITEM: Item<'static, Self> = Item::new("lease_form");
@@ -29,14 +24,15 @@ impl NewLeaseForm {
         Ok(self.liability.init_borrow_amount(downpayment))
     }
 
-    pub(crate) fn into_lease<L>(
+    pub(crate) fn into_lease<C, L>(
         self,
         lpp: L,
         start_at: Timestamp,
         api: &dyn Api,
-    ) -> ContractResult<Lease<L>>
+    ) -> ContractResult<Lease<C, L>>
     where
-        L: Lpp<lease::Currency> + Serialize + DeserializeOwned,
+        C: Currency + Serialize + DeserializeOwned,
+        L: Lpp<C> + Serialize + DeserializeOwned,
     {
         let customer = api.addr_validate(&self.customer)?;
         let loan = Loan::open(

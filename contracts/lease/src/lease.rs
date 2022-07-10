@@ -3,11 +3,11 @@ use cw_storage_plus::Item;
 use finance::{
     bank::BankAccount,
     coin::Coin,
-    currency::{Currency as CurrencyType, SymbolOwned, Usdc},
+    currency::{Currency, SymbolOwned},
     liability::Liability,
 };
-use lpp::stub::Lpp;
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use lpp::stub::Lpp as LppTrait;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -16,27 +16,25 @@ use crate::{
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Lease<L> {
+pub struct Lease<Lpn, Lpp> {
     customer: Addr,
     currency: SymbolOwned,
     liability: Liability,
-    loan: Loan<Currency, L>,
+    loan: Loan<Lpn, Lpp>,
 }
 
-//TODO transform it into a Lease type
-pub type Currency = Usdc;
-
-impl<'a, L> Lease<L>
+impl<'a, Lpn, Lpp> Lease<Lpn, Lpp>
 where
-    L: Lpp<Currency> + Serialize + DeserializeOwned,
+    Lpn: Currency + Serialize + DeserializeOwned,
+    Lpp: LppTrait<Lpn> + Serialize + DeserializeOwned,
 {
-    const DB_ITEM: Item<'a, Lease<L>> = Item::new("lease");
+    const DB_ITEM: Item<'a, Lease<Lpn, Lpp>> = Item::new("lease");
 
     pub(crate) fn new(
         customer: Addr,
         currency: SymbolOwned,
         liability: Liability,
-        loan: Loan<Currency, L>,
+        loan: Loan<Lpn, Lpp>,
     ) -> Self {
         Self {
             customer,
@@ -58,7 +56,7 @@ where
         if !self.loan.closed(querier, lease)? {
             return ContractResult::Err(ContractError::LoanNotPaid {});
         }
-        let balance = account.balance::<Currency>()?;
+        let balance = account.balance::<Lpn>()?;
         account
             .send(balance, &self.customer)
             .map_err(|err| err.into())
@@ -66,12 +64,12 @@ where
 
     pub(crate) fn repay(
         &mut self,
-        payment: Coin<Currency>,
+        payment: Coin<Lpn>,
         by: Timestamp,
         querier: &QuerierWrapper,
         lease: Addr,
     ) -> ContractResult<Option<SubMsg>> {
-        assert_eq!(self.currency, <Currency as CurrencyType>::SYMBOL);
+        assert_eq!(self.currency, Lpn::SYMBOL);
         self.loan.repay(payment, by, querier, lease)
     }
 
@@ -93,11 +91,11 @@ where
         account: B,
         querier: &QuerierWrapper,
         lease: Addr,
-    ) -> ContractResult<StateResponse<Currency, Currency>>
+    ) -> ContractResult<StateResponse<Lpn, Lpn>>
     where
         B: BankAccount,
     {
-        let lease_amount = account.balance::<Currency>().map_err(ContractError::from)?;
+        let lease_amount = account.balance::<Lpn>().map_err(ContractError::from)?;
 
         if lease_amount.is_zero() {
             Ok(StateResponse::Closed())
@@ -123,13 +121,10 @@ where
 mod tests {
     use cosmwasm_std::testing::{mock_dependencies, MockStorage};
     use cosmwasm_std::{Addr, QuerierWrapper, StdResult, SubMsg, Timestamp};
+    use finance::currency::Usdc;
     use finance::{
-        bank::BankAccount,
-        coin::Coin,
-        currency::Currency,
-        error::Result as FinanceResult,
-        liability::Liability,
-        percent::Percent,
+        bank::BankAccount, coin::Coin, currency::Currency, error::Result as FinanceResult,
+        liability::Liability, percent::Percent,
     };
     use lpp::msg::{LoanResponse, QueryLoanResponse};
     use lpp::stub::Lpp;
@@ -141,6 +136,7 @@ mod tests {
     use super::Lease;
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
+    type TestCurrency = Usdc;
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     pub struct BankStub {
@@ -162,11 +158,11 @@ mod tests {
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     struct LppLocalStub {
-        loan: Option<LoanResponse<super::Currency>>,
+        loan: Option<LoanResponse<TestCurrency>>,
     }
 
-    impl Lpp<super::Currency> for LppLocalStub {
-        fn open_loan_req(&self, _amount: Coin<super::Currency>) -> StdResult<SubMsg> {
+    impl Lpp<TestCurrency> for LppLocalStub {
+        fn open_loan_req(&self, _amount: Coin<TestCurrency>) -> StdResult<SubMsg> {
             unimplemented!()
         }
 
@@ -174,7 +170,7 @@ mod tests {
             unimplemented!()
         }
 
-        fn repay_loan_req(&self, _repayment: Coin<super::Currency>) -> StdResult<SubMsg> {
+        fn repay_loan_req(&self, _repayment: Coin<TestCurrency>) -> StdResult<SubMsg> {
             todo!()
         }
 
@@ -182,7 +178,7 @@ mod tests {
             &self,
             _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
-        ) -> StdResult<QueryLoanResponse<super::Currency>> {
+        ) -> StdResult<QueryLoanResponse<TestCurrency>> {
             Result::Ok(self.loan.clone())
         }
 
@@ -191,7 +187,7 @@ mod tests {
             _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
             _by: Timestamp,
-        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse<super::Currency>> {
+        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse<TestCurrency>> {
             todo!()
         }
     }
@@ -199,8 +195,8 @@ mod tests {
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     struct LppLocalStubUnreachable {}
 
-    impl Lpp<super::Currency> for LppLocalStubUnreachable {
-        fn open_loan_req(&self, _amount: Coin<super::Currency>) -> StdResult<SubMsg> {
+    impl Lpp<TestCurrency> for LppLocalStubUnreachable {
+        fn open_loan_req(&self, _amount: Coin<TestCurrency>) -> StdResult<SubMsg> {
             unreachable!()
         }
 
@@ -208,7 +204,7 @@ mod tests {
             unreachable!()
         }
 
-        fn repay_loan_req(&self, _repayment: Coin<super::Currency>) -> StdResult<SubMsg> {
+        fn repay_loan_req(&self, _repayment: Coin<TestCurrency>) -> StdResult<SubMsg> {
             unreachable!()
         }
 
@@ -216,7 +212,7 @@ mod tests {
             &self,
             _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
-        ) -> StdResult<QueryLoanResponse<super::Currency>> {
+        ) -> StdResult<QueryLoanResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -225,18 +221,18 @@ mod tests {
             _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
             _by: Timestamp,
-        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse<super::Currency>> {
+        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse<TestCurrency>> {
             unreachable!()
         }
     }
 
-    fn create_lease<L>(lpp_stub: L) -> Lease<L>
+    fn create_lease<L>(lpp_stub: L) -> Lease<TestCurrency, L>
     where
-        L: Lpp<super::Currency>,
+        L: Lpp<TestCurrency>,
     {
         Lease {
             customer: Addr::unchecked("customer"),
-            currency: super::Currency::SYMBOL.to_string(),
+            currency: TestCurrency::SYMBOL.to_string(),
             liability: Liability::new(
                 Percent::from_percent(65),
                 Percent::from_percent(70),
@@ -254,7 +250,9 @@ mod tests {
         }
     }
 
-    fn lease_setup(loan_response: Option<LoanResponse<super::Currency>>) -> Lease<LppLocalStub> {
+    fn lease_setup(
+        loan_response: Option<LoanResponse<TestCurrency>>,
+    ) -> Lease<TestCurrency, LppLocalStub> {
         let lpp_stub = LppLocalStub {
             loan: loan_response,
         };
@@ -269,9 +267,9 @@ mod tests {
     }
 
     fn request_state(
-        lease: Lease<LppLocalStub>,
+        lease: Lease<TestCurrency, LppLocalStub>,
         bank_account: BankStub,
-    ) -> StateResponse<super::Currency, super::Currency> {
+    ) -> StateResponse<TestCurrency, TestCurrency> {
         let mut deps = mock_dependencies();
         lease
             .state(
@@ -289,7 +287,7 @@ mod tests {
         let obj = create_lease(LppLocalStub { loan: None });
         let obj_exp = obj.clone();
         obj.store(&mut storage).expect("storing failed");
-        let obj_loaded: Lease<LppLocalStub> = Lease::load(&storage).expect("loading failed");
+        let obj_loaded: Lease<TestCurrency, LppLocalStub> = Lease::load(&storage).expect("loading failed");
         assert_eq!(obj_exp.customer, obj_loaded.customer);
     }
 
@@ -366,7 +364,7 @@ mod tests {
         assert_eq!(exp, res);
     }
 
-    fn coin(a: u128) -> Coin<super::Currency> {
-        Coin::<super::Currency>::new(a)
+    fn coin(a: u128) -> Coin<TestCurrency> {
+        Coin::<TestCurrency>::new(a)
     }
 }
