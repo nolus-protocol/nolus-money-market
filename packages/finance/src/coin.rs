@@ -195,7 +195,6 @@ mod test {
         struct CoinContainer<C>
         where
             C: Currency,
-            Coin<C>: Serialize,
         {
             coin: Coin<C>,
         }
