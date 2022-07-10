@@ -3,10 +3,8 @@ use std::collections::HashSet;
 use crate::common::{test_case::TestCase, ADMIN, USER};
 use cosmwasm_std::{coins, Addr, Coin, DepsMut, Env, MessageInfo, Response};
 use cw_multi_test::{next_block, ContractWrapper, Executor};
-use finance::{
-    currency::{Currency, Usdc},
-    error::Error as FinanceError,
-};
+use finance::currency::{Currency, Usdc};
+use lease::error::ContractError;
 use leaser::msg::{QueryMsg, QuoteResponse};
 
 const DENOM: &str = Usdc::SYMBOL;
@@ -191,9 +189,11 @@ fn open_lease_mixed_currency() {
         &coins(3, custom_denom),
     );
     let err = res.unwrap_err();
-    let root_err = err.root_cause().downcast_ref::<FinanceError>().unwrap();
+    let root_err = err.root_cause().downcast_ref::<ContractError>().unwrap();
     assert_eq!(
-        &FinanceError::UnexpectedCurrency(custom_denom.to_owned(), DENOM.to_owned()),
+        &ContractError::UnknownCurrency {
+            symbol: custom_denom.to_owned()
+        },
         root_err
     );
 }

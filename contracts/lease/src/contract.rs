@@ -8,7 +8,7 @@ use cw2::set_contract_version;
 use cw_utils::one_coin;
 use finance::bank::BankStub;
 use finance::coin_legacy::from_cosmwasm;
-use finance::currency::{Currency, Usdc};
+use finance::currency::{Currency, SymbolOwned, Usdc};
 use lpp::stub::{Lpp, LppStub, LppVisitor};
 
 use crate::error::{ContractError, ContractResult};
@@ -139,6 +139,10 @@ impl<'a> LppVisitor for OpenLoanReq<'a> {
             .amount_to_borrow(from_cosmwasm(self.downpayment)?)?;
         lpp.open_loan_req(borrow).map_err(|e| e.into())
     }
+
+    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
+        Err(ContractError::UnknownCurrency { symbol })
+    }
 }
 
 struct OpenLoanResp {
@@ -157,5 +161,9 @@ impl LppVisitor for OpenLoanResp {
     {
         lpp.open_loan_resp(self.resp)
             .map_err(ContractError::OpenLoanError)
+    }
+
+    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
+        Err(ContractError::UnknownCurrency { symbol })
     }
 }

@@ -4,13 +4,15 @@ use cosmwasm_std::{
 use finance::{
     coin::Coin,
     coin_legacy::to_cosmwasm,
-    currency::{visit_any, AnyVisitor, Currency, SymbolOwned, Usdc},
+    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::msg::{
-    ExecuteMsg, QueryLoanResponse,
-    QueryMsg, QueryLoanOutstandingInterestResponse,
+use crate::{
+    msg::{
+        ExecuteMsg, QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
+        QueryMsg,
+    },
 };
 
 pub const REPLY_ID: u64 = 28;
@@ -44,6 +46,8 @@ pub trait LppVisitor {
     where
         L: Lpp<C>,
         C: Currency;
+
+    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -53,14 +57,14 @@ pub struct LppStub {
 }
 
 impl LppStub {
-    pub fn try_from<A>(addr_raw: String, api: &A, _querier: &QuerierWrapper) -> StdResult<Self>
+    pub fn try_from<A>(addr_raw: String, api: &A, querier: &QuerierWrapper) -> StdResult<Self>
     where
         A: ?Sized + Api,
     {
         let addr = api.addr_validate(&addr_raw)?;
-        // let resp : QueryConfigResponse = querier.query_wasm_smart(addr.clone(), &QueryMsg::QueryConfig())?;
-        // let currency = resp.lpn;
-        let currency = Usdc::SYMBOL.to_owned();
+        let resp: QueryConfigResponse =
+            querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
+        let currency = resp.lpn_symbol;
         Ok(Self { addr, currency })
     }
 
@@ -88,7 +92,7 @@ impl LppStub {
             }
 
             fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-                unreachable!("The LPN is unknown for the LPP stub!")
+                self.0.unknown_lpn(self.1.currency.clone())
             }
         }
         visit_any(&self.currency, CurrencyVisitor(v, self))

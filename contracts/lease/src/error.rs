@@ -17,6 +17,9 @@ pub enum ContractError {
     #[error("{0}")]
     FinanceError(#[from] FinanceError),
 
+    #[error("{symbol:?}")]
+    UnknownCurrency{ symbol: String},
+
     #[error("Error in opening an underlying loan: {0}")]
     OpenLoanError(String),
 
