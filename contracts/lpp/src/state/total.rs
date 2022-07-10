@@ -13,27 +13,32 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 // TODO: evaluate fixed or rust_decimal instead of cosmwasm_std::Decimal
-// TODO: get ride of serde(bound=...)
 // https://docs.rs/fixed/latest/fixed/index.html
 // https://docs.rs/rust_decimal/latest/rust_decimal/index.html
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
-pub struct Total<LPN: Currency> {
-    #[serde(bound = "Coin<LPN>: Serialize + DeserializeOwned")]
+pub struct Total<LPN>
+where
+    LPN: Currency,
+{
     total_principal_due: Coin<LPN>,
-    #[serde(bound = "Coin<LPN>: Serialize + DeserializeOwned")]
     total_interest_due: Coin<LPN>,
-    #[serde(bound = "Coin<LPN>: Serialize + DeserializeOwned")]
     annual_interest_rate: Rational<Coin<LPN>>,
     last_update_time: Timestamp,
 }
 
-impl<LPN: Currency> Default for Total<LPN> {
+impl<LPN> Default for Total<LPN>
+where
+    LPN: Currency + Serialize + DeserializeOwned,
+{
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<LPN: Currency> Total<LPN> {
+impl<LPN> Total<LPN> 
+where
+    LPN: Currency + Serialize + DeserializeOwned,
+{
     const STORAGE: Item<'static, Total<LPN>> = Item::new("total");
 
     pub fn new() -> Self {
