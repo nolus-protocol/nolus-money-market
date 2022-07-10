@@ -144,7 +144,7 @@ mod test {
     use std::{any::type_name, fmt::Debug};
 
     use cosmwasm_std::{from_slice, to_vec, StdError};
-    use serde::Serialize;
+    use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
     use crate::{
         currency::{Currency, Nls, Usdc},
@@ -155,37 +155,43 @@ mod test {
 
     #[test]
     fn serialize_deserialize() {
-        serialize_deserialize_impl::<Nls>(u128::MIN, r#"["0","unls"]"#);
-        serialize_deserialize_impl::<Nls>(123, r#"["123","unls"]"#);
-        serialize_deserialize_impl::<Nls>(
+        serialize_deserialize_coin::<Nls>(u128::MIN, r#"["0","unls"]"#);
+        serialize_deserialize_coin::<Nls>(123, r#"["123","unls"]"#);
+        serialize_deserialize_coin::<Nls>(
             u128::MAX,
             r#"["340282366920938463463374607431768211455","unls"]"#,
         );
-        serialize_deserialize_impl::<Usdc>(u128::MIN, r#"["0","uusdc"]"#);
-        serialize_deserialize_impl::<Usdc>(7368953, r#"["7368953","uusdc"]"#);
-        serialize_deserialize_impl::<Usdc>(
+        serialize_deserialize_coin::<Usdc>(u128::MIN, r#"["0","uusdc"]"#);
+        serialize_deserialize_coin::<Usdc>(7368953, r#"["7368953","uusdc"]"#);
+        serialize_deserialize_coin::<Usdc>(
             u128::MAX,
             r#"["340282366920938463463374607431768211455","uusdc"]"#,
         );
     }
 
-    fn serialize_deserialize_impl<C>(amount: u128, exp_txt: &str)
+    fn serialize_deserialize_coin<C>(amount: u128, exp_txt: &str)
     where
         C: Currency + PartialEq + Debug,
     {
         let coin = Coin::<C>::new(amount);
-        let coin_bin = to_vec(&coin).unwrap();
-        assert_eq!(coin, from_slice(&coin_bin).unwrap());
+        serialize_deserialize_impl(coin, exp_txt)
+    }
 
-        let coin_txt = String::from_utf8(coin_bin).unwrap();
-        assert_eq!(exp_txt, coin_txt);
+    fn serialize_deserialize_impl<T>(obj: T, exp_txt: &str)
+    where
+        T: Serialize + DeserializeOwned + PartialEq + Debug,
+    {
+        let obj_bin = to_vec(&obj).unwrap();
+        assert_eq!(obj, from_slice(&obj_bin).unwrap());
 
-        assert_eq!(coin, from_slice(exp_txt.as_bytes()).unwrap());
+        let obj_txt = String::from_utf8(obj_bin).unwrap();
+        assert_eq!(exp_txt, obj_txt);
+
+        assert_eq!(obj, from_slice(exp_txt.as_bytes()).unwrap());
     }
     #[test]
-    fn serialize_as_field() {
-        //tested since it requires Serialize of the Currency
-        #[derive(Serialize)]
+    fn serialize_deserialize_as_field() {
+        #[derive(Serialize, Deserialize, PartialEq, Debug)]
         struct CoinContainer<C>
         where
             C: Currency,
@@ -193,13 +199,8 @@ mod test {
         {
             coin: Coin<C>,
         }
-        assert_eq!(
-            r#"{"coin":["10","uusdc"]}"#,
-            String::from_utf8(
-                to_vec(&CoinContainer { coin: usdc(10) }).expect("serialization failed")
-            )
-            .unwrap()
-        );
+        let coin_container = CoinContainer { coin: usdc(10) };
+        serialize_deserialize_impl(coin_container, r#"{"coin":["10","uusdc"]}"#);
     }
 
     #[test]

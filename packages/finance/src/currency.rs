@@ -5,6 +5,9 @@ type Symbol<'a> = &'a str;
 pub type SymbolStatic = &'static str;
 pub type SymbolOwned = String;
 
+// Not extending Serialize + DeserializeOwbed since the serde derive implementations fail to 
+// satisfy trait bounds with regards of the lifetimes
+// Foe example, https://stackoverflow.com/questions/70774093/generic-type-that-implements-deserializeowned
 pub trait Currency: Copy + Ord + Default {
     const SYMBOL: SymbolStatic;
 }
