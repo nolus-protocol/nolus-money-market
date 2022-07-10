@@ -15,7 +15,7 @@ use lpp::{
     msg::{QueryLoanResponse, LoanResponse},
     stub::Lpp,
 };
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{Deserialize, Serialize};
 
 use crate::error::{ContractError, ContractResult};
 
@@ -35,7 +35,7 @@ pub struct Loan<Lpn, L> {
 impl<Lpn, L> Loan<Lpn, L>
 where
     L: Lpp<Lpn>,
-    Lpn: Currency + DeserializeOwned,
+    Lpn: Currency,
 {
     pub(crate) fn open(
         when: Timestamp,

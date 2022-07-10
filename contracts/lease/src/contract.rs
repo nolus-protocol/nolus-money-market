@@ -10,7 +10,6 @@ use finance::bank::BankStub;
 use finance::coin_legacy::from_cosmwasm;
 use finance::currency::Currency;
 use lpp::stub::{Lpp, LppStub, LppVisitor};
-use serde::de::DeserializeOwned;
 
 use crate::error::{ContractError, ContractResult};
 use crate::lease::{self, Lease};
@@ -131,7 +130,7 @@ impl<'a> LppVisitor for OpenLoanReq<'a> {
     fn on<C, L>(self, lpp: &L) -> Result<Self::Output, Self::Error>
     where
         L: Lpp<C>,
-        C: Currency + DeserializeOwned,
+        C: Currency,
     {
         let borrow = self
             .form
@@ -152,7 +151,7 @@ impl LppVisitor for OpenLoanResp {
     fn on<C, L>(self, lpp: &L) -> Result<Self::Output, Self::Error>
     where
         L: Lpp<C>,
-        C: Currency + DeserializeOwned,
+        C: Currency,
     {
         lpp.open_loan_resp(self.resp)
             .map_err(ContractError::OpenLoanError)
