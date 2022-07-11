@@ -1,6 +1,11 @@
-use cosmwasm_std::{Addr, BankMsg, Env, QuerierWrapper, SubMsg};
+use cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, Env, QuerierWrapper, SubMsg};
 
-use crate::{coin::Coin, error::Result, coin_legacy::{to_cosmwasm_impl, from_cosmwasm_impl}, currency::Currency};
+use crate::{
+    coin::Coin,
+    coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl},
+    currency::Currency,
+    error::{Result, Error},
+};
 
 pub trait BankAccount {
     fn balance<C>(&self) -> Result<Coin<C>>
@@ -10,6 +15,20 @@ pub trait BankAccount {
     fn send<C>(&self, amount: Coin<C>, to: &Addr) -> Result<SubMsg>
     where
         C: Currency;
+}
+
+pub fn received<C>(cw_amount: &[CwCoin]) -> Result<Coin<C>>
+where
+    C: Currency,
+{
+    match cw_amount.len() {
+        0 => Err(Error::no_funds::<C>()),
+        1 => {
+            let cw_coin = &cw_amount[0];
+            Ok(from_cosmwasm_impl(cw_coin.clone())?)
+        }
+        _ => Err(Error::unexpected_funds::<C>()),
+    }
 }
 
 pub struct BankStub<'a> {

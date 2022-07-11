@@ -451,7 +451,6 @@ dependencies = [
  "cosmwasm-std",
  "cosmwasm-storage",
  "cw-storage-plus",
- "cw-utils",
  "cw2",
  "finance",
  "lpp",

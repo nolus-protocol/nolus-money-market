@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::common::{test_case::TestCase, ADMIN, USER};
 use cosmwasm_std::{coins, Addr, Coin, DepsMut, Env, MessageInfo, Response};
 use cw_multi_test::{next_block, ContractWrapper, Executor};
-use finance::currency::{Currency, Usdc, SymbolStatic, Nls};
+use finance::{currency::{Currency, Usdc, SymbolStatic, Nls}, error::Error as FinanceError};
 use lease::error::ContractError;
 use leaser::msg::{QueryMsg, QuoteResponse};
 
@@ -39,11 +39,12 @@ fn open_lease_unknown_lpn() {
         &coins(3, unknown_lpn),
     );
     let err = res.unwrap_err();
-    let root_err = err.root_cause().downcast_ref::<ContractError>().unwrap();
+    println!("{:?}", err);
+    let root_err = err.root_cause().downcast_ref::<FinanceError>().unwrap();
     assert_eq!(
-        &ContractError::UnknownCurrency {
-            symbol: unknown_lpn.to_owned()
-        },
+        &FinanceError::UnexpectedCurrency(
+            unknown_lpn.into(), Usdc::SYMBOL.into()
+        ),
         root_err
     );
 }

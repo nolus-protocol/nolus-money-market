@@ -1,13 +1,13 @@
+use std::any;
+
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, Coin as CwCoin, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
-    Storage, SubMsg,
+    to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, Storage, SubMsg,
 };
 use cw2::set_contract_version;
-use cw_utils::one_coin;
-use finance::bank::BankStub;
-use finance::coin_legacy::from_cosmwasm;
+use finance::bank::{self, BankStub};
+use finance::coin::Coin;
 use finance::currency::{Currency, SymbolOwned, Usdc};
 use lpp::stub::{Lpp, LppStub, LppVisitor};
 
@@ -30,11 +30,12 @@ pub fn instantiate(
     // TODO restrict the Lease instantiation only to the Leaser addr by using `nolusd tx wasm store ... --instantiate-only-address <addr>`
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    // TODO query LPP balance to obtain the LPN
     // TODO query the market price oracle to get the price of the downpayment currency to LPN
-    let downpayment = one_coin(&info)?;
+    let downpayment = bank::received::<TheCurrency>(&info.funds)?;
     let lpp = lpp(&msg, &deps)?;
 
+    // TODO 'receive' downpayment from the bank using Lpn
+    // TODO store the lpp stub and load it on reply
     let req = lpp.execute(OpenLoanReq {
         form: &msg,
         downpayment,
@@ -88,7 +89,7 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
 }
 
 fn try_repay(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
-    let payment = from_cosmwasm(one_coin(&info)?)?;
+    let payment = bank::received::<TheCurrency>(&info.funds)?;
     let mut lease = load_lease(deps.storage)?;
     let lpp_loan_repay_req =
         lease.repay(payment, env.block.time, &deps.querier, env.contract.address)?;
@@ -122,7 +123,7 @@ fn load_lease(storage: &dyn Storage) -> StdResult<Lease<TheCurrency, LppStub>> {
 
 struct OpenLoanReq<'a> {
     form: &'a NewLeaseForm,
-    downpayment: CwCoin,
+    downpayment: Coin<TheCurrency>,
 }
 impl<'a> LppVisitor for OpenLoanReq<'a> {
     type Output = SubMsg;
@@ -134,15 +135,22 @@ impl<'a> LppVisitor for OpenLoanReq<'a> {
         L: Lpp<C>,
         C: Currency,
     {
-        let borrow = self
-            .form
-            .amount_to_borrow(from_cosmwasm(self.downpayment)?)?;
+        let downpayment_lpn: Coin<C> = swap::<TheCurrency, C>(self.downpayment);
+        let borrow = self.form.amount_to_borrow(downpayment_lpn)?;
+        
         lpp.open_loan_req(borrow).map_err(|e| e.into())
     }
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
         Err(ContractError::UnknownCurrency { symbol })
     }
+}
+
+fn swap<Cin, Cout>(coin_in: Coin<Cin>) -> Coin<Cout>
+{
+    // NB! `type_name` is not a proper way to compare currency types. Consider removing it once implement the real swap.
+    assert_eq!(any::type_name::<Cin>(), any::type_name::<Cout>());
+    Coin::<Cout>::new(coin_in.into())
 }
 
 struct OpenLoanResp {
