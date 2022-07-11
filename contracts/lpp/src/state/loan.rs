@@ -12,20 +12,27 @@ use finance::currency::Currency;
 
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct LoanData<LPN: Currency> {
-    #[serde(bound = "Coin<LPN>: Serialize + DeserializeOwned")]
+pub struct LoanData<LPN> 
+where
+    LPN: Currency,
+{
     pub principal_due: Coin<LPN>,
-    #[serde(bound = "Coin<LPN>: Serialize + DeserializeOwned")]
     pub annual_interest_rate: Percent,
     pub interest_paid: Timestamp,
 }
 
-pub struct Loan<LPN: Currency> {
+pub struct Loan<LPN>
+where
+    LPN: Currency,
+{
     addr: Addr,
     data: LoanData<LPN>,
 }
 
-impl<LPN: Currency> Loan<LPN> {
+impl<LPN> Loan<LPN>
+where
+    LPN: Currency + Serialize + DeserializeOwned,
+ {
     const STORAGE: Map<'static, Addr, LoanData<LPN>> = Map::new("loans");
 
     pub fn open(

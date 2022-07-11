@@ -3,6 +3,8 @@ use cosmwasm_std::{
     QueryRequest, StdResult, Storage, Timestamp, Uint128, Uint64, WasmQuery,
 };
 use finance::currency::Currency;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 use crate::error::ContractError;
 use crate::msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse};
@@ -37,12 +39,18 @@ impl<'a> From<NTokenPrice<'a>> for PriceResponse {
     }
 }
 
-pub struct LiquidityPool<LPN: Currency> {
+pub struct LiquidityPool<LPN>
+where
+    LPN: Currency,
+{
     config: Config,
     total: Total<LPN>,
 }
 
-impl<LPN: Currency> LiquidityPool<LPN> {
+impl<LPN> LiquidityPool<LPN>
+where
+    LPN: Currency + Serialize + DeserializeOwned,
+{
     pub fn store(storage: &mut dyn Storage, denom: String, lease_code_id: Uint64) -> StdResult<()> {
         Config::new(denom, lease_code_id).store(storage)?;
         Total::<LPN>::new().store(storage)?;
@@ -305,7 +313,10 @@ pub trait IntoCW {
     fn into_cw(self) -> CwCoin;
 }
 
-impl<LPN: Currency> IntoCW for Coin<LPN> {
+impl<LPN> IntoCW for Coin<LPN>
+where
+    LPN: Currency,
+{
     fn into_cw(self) -> CwCoin {
         coin(self.into(), LPN::SYMBOL)
     }
