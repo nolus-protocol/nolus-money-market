@@ -1,13 +1,14 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
-    Storage, Timestamp,
+    from_binary, to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
+    StdResult, Storage, Timestamp,
 };
 use cw2::set_contract_version;
 use marketprice::feed::{Denom, DenomPair, DenomToPrice, Prices};
 
 use crate::alarms::MarketAlarms;
+use crate::contract_validation::validate_contract_addr;
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, PriceResponse, QueryMsg};
 use crate::oracle::MarketOracle;
@@ -64,8 +65,13 @@ pub fn execute(
             get_sender(deps.api, info)?,
             prices,
         ),
-        ExecuteMsg::AddHook { target } => {
-            MarketAlarms::try_add_price_hook(deps.storage, get_sender(deps.api, info)?, target)
+        ExecuteMsg::AddPriceAlarm { target } => {
+            let sender = get_sender(deps.api, info)?;
+            validate_contract_addr(&deps.querier, &sender)?;
+            MarketAlarms::try_add_price_alarm(deps.storage, sender, target)
+        }
+        ExecuteMsg::RemovePriceAlarm {} => {
+            MarketAlarms::remove(deps.storage, get_sender(deps.api, info)?)
         }
     }
 }
@@ -94,8 +100,13 @@ pub fn get_sender(api: &dyn Api, info: MessageInfo) -> StdResult<Addr> {
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let resp = match msg.result {
-        cosmwasm_std::SubMsgResult::Ok(_) => {
-            MarketAlarms::remove_pending(deps.storage, msg.id)?;
+        cosmwasm_std::SubMsgResult::Ok(resp) => {
+            let data = match resp.data {
+                Some(d) => d,
+                None => return Ok(err_as_ok("No data")),
+            };
+            // TODO: get lease address from the attributes and remove the hook
+            MarketAlarms::remove(deps.storage, from_binary(&data)?)?;
             Response::new().add_attribute("alarm", "success")
         }
         cosmwasm_std::SubMsgResult::Err(err) => Response::new()
@@ -103,6 +114,12 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             .add_attribute("error", err),
     };
     Ok(resp)
+}
+
+fn err_as_ok(err: &str) -> Response {
+    Response::new()
+        .add_attribute("alarm", "error")
+        .add_attribute("error", err)
 }
 
 fn query_config(deps: Deps) -> StdResult<ConfigResponse> {

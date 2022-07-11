@@ -4,20 +4,15 @@ use cosmwasm_std::{
     from_binary, Addr, Binary, CosmosMsg, Response, StdError, StdResult, Storage, SubMsg, Timestamp,
 };
 use marketprice::{
+    alarms::{price::PriceHooks, AlarmDispatcher},
     feed::{Denom, DenomToPrice},
-    hooks::{errors::HooksError, price::PriceHooks, HookDispatcher},
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use time_oracle::Id;
 
-use crate::{
-    contract_validation::validate_contract_addr,
-    msg::{ExecuteAlarmMsg, ExecuteHookMsg},
-    state::config::Config,
-    ContractError,
-};
+use crate::{msg::ExecuteAlarmMsg, state::config::Config, ContractError};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct MarketAlarms {}
@@ -25,49 +20,15 @@ pub struct MarketAlarms {}
 impl MarketAlarms {
     const PRICE_ALARMS: PriceHooks<'static> = PriceHooks::new("hooks", "hooks_sequence");
 
-    pub fn remove(storage: &mut dyn Storage, addr: Addr) -> Result<Response, HooksError> {
-        Self::PRICE_ALARMS.remove(storage, addr)
+    pub fn remove(storage: &mut dyn Storage, addr: Addr) -> Result<Response, ContractError> {
+        Ok(Self::PRICE_ALARMS.remove(storage, addr)?)
     }
 
-    pub fn remove_pending(storage: &mut dyn Storage, msg_id: Id) -> Result<Response, HooksError> {
-        // Self::PRICE_ALARMS.remove(storage, msg_id)
-        Ok(Response::new())
-    }
-
-    // pub fn _try_notify(storage: &mut dyn Storage, ctime: Timestamp) -> StdResult<Response> {
-    //     use time_oracle::AlarmDispatcher;
-
-    //     struct OracleAlarmDispatcher<'a> {
-    //         pub response: &'a mut Response,
-    //     }
-
-    //     impl<'a> AlarmDispatcher for OracleAlarmDispatcher<'a> {
-    //         fn send_to(&mut self, id: Id, addr: Addr, ctime: Timestamp) -> StdResult<()> {
-    //             let msg = ExecuteAlarmMsg::Alarm(ctime);
-    //             let wasm_msg = cosmwasm_std::wasm_execute(addr, &msg, vec![])?;
-    //             let submsg = SubMsg::reply_always(CosmosMsg::Wasm(wasm_msg), id);
-    //             self.response.messages.push(submsg);
-    //             Ok(())
-    //         }
-    //     }
-
-    //     let mut response = Response::new();
-    //     let mut dispatcher = OracleAlarmDispatcher {
-    //         response: &mut response,
-    //     };
-
-    //     Self::TIME_ALARMS.notify(storage, &mut dispatcher, ctime)?;
-
-    //     Ok(response)
-    // }
-
-    pub fn try_add_price_hook(
+    pub fn try_add_price_alarm(
         storage: &mut dyn Storage,
         addr: Addr,
         target: DenomToPrice,
     ) -> Result<Response, ContractError> {
-        // TODO: Check if sender address is a contract
-
         Self::PRICE_ALARMS.add_or_update(storage, &addr, target)?;
         Ok(Response::new().add_attribute("method", "try_add_price_hook"))
     }
@@ -85,7 +46,7 @@ impl MarketAlarms {
             pub response: &'a mut Response,
         }
 
-        impl<'a> HookDispatcher for OracleAlarmDispatcher<'a> {
+        impl<'a> AlarmDispatcher for OracleAlarmDispatcher<'a> {
             fn send_to(
                 &mut self,
                 id: Id,
@@ -98,7 +59,7 @@ impl MarketAlarms {
                     None => return Err(StdError::generic_err("msg")),
                 };
 
-                let msg = ExecuteHookMsg::Alarm(current_price);
+                let msg = ExecuteAlarmMsg::Alarm(current_price);
                 let wasm_msg = cosmwasm_std::wasm_execute(addr.to_string(), &msg, vec![])?;
                 let submsg = SubMsg::reply_always(CosmosMsg::Wasm(wasm_msg), id);
                 self.response.messages.push(submsg);
@@ -115,6 +76,7 @@ impl MarketAlarms {
 
         Ok(response)
     }
+
     pub fn trigger_time_alarms(storage: &mut dyn Storage) -> StdResult<SubMsg> {
         let config = Config::load(storage)?;
 

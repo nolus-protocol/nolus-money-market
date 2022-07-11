@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, StdError};
 use marketprice::{
-    feed::DenomPair, feeders::PriceFeedersError, hooks::errors::HooksError,
+    alarms::errors::AlarmError, feed::DenomPair, feeders::PriceFeedersError,
     market_price::PriceFeedsError,
 };
 use thiserror::Error;
@@ -17,7 +17,7 @@ pub enum ContractError {
     PriceFeedsError(#[from] PriceFeedsError),
 
     #[error("{0}")]
-    HooksError(#[from] HooksError),
+    HooksError(#[from] AlarmError),
 
     #[error("Unauthorized")]
     Unauthorized {},
@@ -40,4 +40,7 @@ pub enum ContractError {
 
     #[error("Invalid alarm notification address: {0:?}")]
     InvalidAlarmAddress(Addr),
+
+    #[error("ParseError {err:?}")]
+    ParseError { err: String },
 }

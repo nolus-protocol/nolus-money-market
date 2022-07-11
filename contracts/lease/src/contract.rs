@@ -69,7 +69,6 @@ pub fn execute(
     match msg {
         ExecuteMsg::Repay() => try_repay(deps, env, info),
         ExecuteMsg::Close() => try_close(deps, env, info),
-        ExecuteMsg::Alarm(price) => todo!(),
     }
 }
 
