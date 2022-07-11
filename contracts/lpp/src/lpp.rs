@@ -86,7 +86,7 @@ where
     pub fn balance(&self, deps: &Deps, env: &Env) -> StdResult<Coin<LPN>> {
         let querier = deps.querier;
         querier
-            .query_balance(&env.contract.address, &self.config.denom)
+            .query_balance(&env.contract.address, &self.config.currency)
             .map(|cw_coin| Coin::<LPN>::new(cw_coin.amount.u128()))
     }
 
@@ -127,7 +127,7 @@ where
 
         Ok(NTokenPrice {
             price,
-            denom: &self.config.denom,
+            denom: &self.config.currency,
         })
     }
 
@@ -172,9 +172,9 @@ where
     /// checks `coins` denom vs config, converts Coin into it's amount;
     pub fn try_into_amount(&self, coins: CwCoin) -> Result<Coin<LPN>, ContractError> {
         if LPN::SYMBOL != coins.denom {
-            return Err(ContractError::Denom {
-                contract_denom: LPN::SYMBOL.into(),
-                denom: coins.denom,
+            return Err(ContractError::CurrencyDiff {
+                contract_currency: LPN::SYMBOL.into(),
+                currency: coins.denom,
             });
         }
 

@@ -10,6 +10,9 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error("Unknown currency")]
+    UnknownCurrency {},
+
     #[error("Unauthorized contract Id")]
     ContractId {},
 
@@ -22,11 +25,11 @@ pub enum ContractError {
     #[error("The loan does not exist")]
     NoLoan {},
 
-    #[error("Lpp requires single denom")]
+    #[error("Lpp requires single currency")]
     FundsLen {},
 
-    #[error("Denoms are different: {contract_denom:?} vs {denom:?}")]
-    Denom { contract_denom: String, denom: String},
+    #[error("Different currencies : {contract_currency:?} vs {currency:?}")]
+    CurrencyDiff { contract_currency: String, currency: String},
 
     #[error("Insufficient balance")]
     InsufficientBalance,

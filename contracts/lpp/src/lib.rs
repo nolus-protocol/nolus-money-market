@@ -6,7 +6,7 @@ pub mod error;
 pub mod contract;
 
 #[cfg(feature = "cosmwasm")]
-pub mod state;
+mod state;
 
 #[cfg(feature = "cosmwasm")]
 mod lpp;

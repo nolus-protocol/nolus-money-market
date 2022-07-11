@@ -6,7 +6,7 @@ use finance::percent::Percent;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
-    pub denom: String,
+    pub currency: String,
     pub lease_code_id: Uint64,
     pub base_interest_rate: Percent,
     pub utilization_optimal: Percent,
@@ -19,7 +19,7 @@ impl Config {
 
     pub fn new(denom: String, lease_code_id: Uint64) -> Self {
         Config {
-            denom,
+            currency: denom,
             lease_code_id,
             base_interest_rate: Percent::from_percent(7),
             utilization_optimal: Percent::from_percent(70),

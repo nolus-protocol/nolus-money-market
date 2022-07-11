@@ -1,5 +1,7 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
+
+use serde::{Serialize, de::DeserializeOwned};
 use cosmwasm_std::{
     to_binary, Addr, BankMsg, Binary, Coin as CwCoin, Deps, DepsMut, Env, MessageInfo, Response,
     Storage, Timestamp, Uint128,
@@ -14,10 +16,13 @@ use crate::msg::{
     QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg,
     QueryQuoteResponse, RewardsResponse,
 };
+use crate::state::Config;
 use crate::state::Deposit;
 use finance::coin::Coin;
-use finance::currency::Usdc;
+use finance::currency::{AnyVisitor, visit_any, Usdc};
 use finance::percent::Percent;
+
+
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -26,6 +31,47 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 // TODO: remove
 pub const NOLUS_DENOM: &str = Nls::SYMBOL;
 
+struct InstantiateCurrencyContext<'a> {
+    deps: DepsMut<'a>,
+    msg: InstantiateMsg,
+}
+
+impl<'a> InstantiateCurrencyContext<'a> {
+    // could be moved directly to on<LPN>()
+    fn instantiate<LPN>(self) -> Result<Response, ContractError> 
+        where
+            LPN: Currency + Serialize + DeserializeOwned {
+        set_contract_version(self.deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+        LiquidityPool::<LPN>::store(self.deps.storage, self.msg.denom, self.msg.lease_code_id)?;
+
+        Ok(Response::new().add_attribute("method", "instantiate"))
+    }
+
+    pub fn run(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<Response, ContractError> {
+        let context = Self {
+            deps,
+            msg,
+        };
+        visit_any(&context.msg.denom.clone(), context)
+    }
+}
+
+impl<'a> AnyVisitor for InstantiateCurrencyContext<'a> {
+    type Output = Response;
+    type Error = ContractError;
+    
+    fn on<LPN>(self) -> Result<Self::Output, Self::Error>
+        where
+            LPN: Currency + DeserializeOwned + Serialize {
+        self.instantiate::<LPN>()
+    }
+    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+       Err(ContractError::UnknownCurrency {}) 
+    }
+}
+
+
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
     deps: DepsMut,
@@ -33,11 +79,60 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    InstantiateCurrencyContext::run(deps, msg)
+}
 
-    LiquidityPool::<Usdc>::store(deps.storage, msg.denom, msg.lease_code_id)?;
+struct ExecuteCurrencyContext<'a> {
+    deps: DepsMut<'a>,
+    env: Env,
+    info: MessageInfo,
+    msg: ExecuteMsg,
+}
 
-    Ok(Response::new().add_attribute("method", "instantiate"))
+impl<'a> ExecuteCurrencyContext<'a> {
+    fn execute<LPN>(self) -> Result<Response, ContractError> 
+        where
+            LPN: Currency + Serialize + DeserializeOwned {
+        // currency context variants
+        match self.msg {
+            ExecuteMsg::OpenLoan { amount } => try_open_loan(self.deps, self.env, self.info.sender, amount),
+            ExecuteMsg::RepayLoan => try_repay_loan(self.deps, self.env, self.info.sender, self.info.funds),
+            ExecuteMsg::Deposit() => try_deposit(self.deps, self.env, self.info.sender, self.info.funds),
+            ExecuteMsg::Burn { amount } => try_withdraw(self.deps, self.env, self.info.sender, amount),
+            _ => {unreachable!()} // should be done already
+        }
+    }
+
+    pub fn run(
+        deps: DepsMut<'a>, 
+        env: Env,
+        info: MessageInfo,
+        msg: ExecuteMsg,
+    ) -> Result<Response, ContractError> {
+        let context = Self {
+            deps,
+            env,
+            info,
+            msg,
+        };
+
+        let config = Config::load(context.deps.storage)?;
+        visit_any(&config.currency, context)
+    }
+
+}
+impl<'a> AnyVisitor for ExecuteCurrencyContext<'a> {
+    type Output = Response;
+    type Error = ContractError;
+    
+    fn on<LPN>(self) -> Result<Self::Output, Self::Error>
+        where
+            LPN: Currency + DeserializeOwned + Serialize {
+        self.execute::<LPN>()
+    }
+    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+       Err(ContractError::UnknownCurrency {}) 
+    }
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -47,9 +142,7 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    let sender = info.sender;
-    let funds = info.funds;
-
+    // no currency context variants
     match msg {
         ExecuteMsg::UpdateParameters {
             base_interest_rate,
@@ -61,14 +154,12 @@ pub fn execute(
             utilization_optimal,
             addon_optimal_interest_rate,
         ),
-        ExecuteMsg::OpenLoan { amount } => try_open_loan(deps, env, sender, amount),
-        ExecuteMsg::RepayLoan => try_repay_loan(deps, env, sender, funds),
-        ExecuteMsg::Deposit() => try_deposit(deps, env, sender, funds),
-        ExecuteMsg::Burn { amount } => try_withdraw(deps, env, sender, amount),
-        ExecuteMsg::DistributeRewards => try_distribute_rewards(deps, funds),
+        ExecuteMsg::DistributeRewards => try_distribute_rewards(deps, info.funds),
         ExecuteMsg::ClaimRewards { other_recipient } => {
-            try_claim_rewards(deps, sender, other_recipient)
-        }
+            try_claim_rewards(deps, info.sender, other_recipient)
+        },
+        _ => ExecuteCurrencyContext::run(deps, env, info, msg),
+
     }
 }
 
@@ -253,7 +344,7 @@ fn query_config(deps: &Deps) -> Result<QueryConfigResponse, ContractError> {
     let config = lpp.config();
 
     Ok(QueryConfigResponse {
-        lpn_symbol: config.denom.clone(),
+        lpn_symbol: config.currency.clone(),
         lease_code_id: config.lease_code_id,
         base_interest_rate: config.base_interest_rate,
         utilization_optimal: config.utilization_optimal,
@@ -321,17 +412,21 @@ mod tests {
     use super::*;
     use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
     use cosmwasm_std::{coins, Uint64};
+    use finance::currency::Usdc;
+
+    type TheCurrency = Usdc;
 
     #[test]
     fn proper_initialization() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "ust"));
+        let mut deps = mock_dependencies_with_balance(&coins(2, TheCurrency::SYMBOL));
 
         let msg = InstantiateMsg {
-            denom: "ust".into(),
+            denom: TheCurrency::SYMBOL.to_string(),
             lease_code_id: Uint64::new(1000),
         };
-        let info = mock_info("creator", &coins(1000, "ust"));
+        let info = mock_info("creator", &coins(1000, TheCurrency::SYMBOL));
 
         instantiate(deps.as_mut(), mock_env(), info, msg).expect("can't instantiate");
     }
+    
 }
