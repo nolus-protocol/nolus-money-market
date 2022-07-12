@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    coin, Addr, BankMsg, Coin as CwCoin, ContractInfoResponse, Decimal, Deps, DepsMut, Env,
-    QueryRequest, StdResult, Storage, Timestamp, Uint128, Uint64, WasmQuery,
+    Addr, BankMsg, Coin as CwCoin, ContractInfoResponse, Decimal, Deps, DepsMut, Env, QueryRequest,
+    StdResult, Storage, Timestamp, Uint128, Uint64, WasmQuery,
 };
 use finance::currency::Currency;
 use serde::de::DeserializeOwned;
@@ -62,24 +62,6 @@ where
         let total = Total::load(storage)?;
 
         Ok(LiquidityPool { config, total })
-    }
-
-    pub fn config(&self) -> &Config {
-        &self.config
-    }
-
-    pub fn update_config(
-        &mut self,
-        storage: &mut dyn Storage,
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
-    ) -> StdResult<()> {
-        self.config.base_interest_rate = base_interest_rate;
-        self.config.utilization_optimal = utilization_optimal;
-        self.config.addon_optimal_interest_rate = addon_optimal_interest_rate;
-
-        self.config.store(storage)
     }
 
     // TODO: use finance bank module
@@ -308,7 +290,7 @@ where
     }
 }
 
-// TODO: perhaps change to From<Coin<LPN>> in finance or remove
+// TODO: perhaps change to From<Coin<LPN>> in finance or remove, more convinient way
 pub trait IntoCW {
     fn into_cw(self) -> CwCoin;
 }
@@ -318,7 +300,7 @@ where
     LPN: Currency,
 {
     fn into_cw(self) -> CwCoin {
-        coin(self.into(), LPN::SYMBOL)
+        finance::coin_legacy::to_cosmwasm(self)
     }
 }
 
@@ -523,21 +505,24 @@ mod test {
         Config::new(balance_mock.denom, lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
+
+        // simplify calculation
+        Config::load(deps.as_ref().storage)
+            .expect("can't load Config")
+            .update(
+                deps.as_mut().storage,
+                Percent::from_percent(20),
+                Percent::from_percent(50),
+                Percent::from_percent(10),
+            )
+            .expect("should update config");
+
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
             .expect("can't initialize Total");
 
         let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
             .expect("can't load LiquidityPool");
-
-        // simplify calculation
-        lpp.update_config(
-            deps.as_mut().storage,
-            Percent::from_percent(20),
-            Percent::from_percent(50),
-            Percent::from_percent(10),
-        )
-        .expect("should update config");
 
         let mut lender =
             Deposit::load(deps.as_ref().storage, Addr::unchecked("lender")).expect("should load");

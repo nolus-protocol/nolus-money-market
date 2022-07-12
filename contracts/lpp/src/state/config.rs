@@ -1,8 +1,8 @@
-use serde::{Serialize, Deserialize};
-use schemars::JsonSchema;
-use cosmwasm_std::{Uint64, Storage, StdResult, Decimal};
+use cosmwasm_std::{Decimal, StdResult, Storage, Uint64};
 use cw_storage_plus::Item;
 use finance::percent::Percent;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -36,5 +36,17 @@ impl Config {
         Self::STORAGE.load(storage)
     }
 
+    pub fn update(
+        &mut self,
+        storage: &mut dyn Storage,
+        base_interest_rate: Percent,
+        utilization_optimal: Percent,
+        addon_optimal_interest_rate: Percent,
+    ) -> StdResult<()> {
+        self.base_interest_rate = base_interest_rate;
+        self.utilization_optimal = utilization_optimal;
+        self.addon_optimal_interest_rate = addon_optimal_interest_rate;
 
+        self.store(storage)
+    }
 }

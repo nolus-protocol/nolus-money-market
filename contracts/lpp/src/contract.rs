@@ -1,46 +1,36 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 
-use serde::{Serialize, de::DeserializeOwned};
-use cosmwasm_std::{
-    to_binary, Addr, BankMsg, Binary, Coin as CwCoin, Deps, DepsMut, Env, MessageInfo, Response,
-    Storage, Timestamp, Uint128,
-};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
 use cw2::set_contract_version;
-use finance::currency::{Currency, Nls};
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::ContractError;
-use crate::lpp::{IntoCW, LiquidityPool};
-use crate::msg::{
-    BalanceResponse, ExecuteMsg, InstantiateMsg, LppBalanceResponse, PriceResponse,
-    QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg,
-    QueryQuoteResponse, RewardsResponse,
-};
+use crate::lpp::LiquidityPool;
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryConfigResponse, QueryMsg};
 use crate::state::Config;
-use crate::state::Deposit;
-use finance::coin::Coin;
-use finance::currency::{AnyVisitor, visit_any, Usdc};
+use finance::currency::{visit_any, AnyVisitor, Currency};
 use finance::percent::Percent;
 
-
+mod borrow;
+mod lender;
+mod rewards;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-// TODO: remove
-pub const NOLUS_DENOM: &str = Nls::SYMBOL;
-
-struct InstantiateCurrencyContext<'a> {
+struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
     msg: InstantiateMsg,
 }
 
-impl<'a> InstantiateCurrencyContext<'a> {
+impl<'a> InstantiateWithLpn<'a> {
     // could be moved directly to on<LPN>()
-    fn instantiate<LPN>(self) -> Result<Response, ContractError> 
-        where
-            LPN: Currency + Serialize + DeserializeOwned {
+    fn do_work<LPN>(self) -> Result<Response, ContractError>
+    where
+        LPN: Currency + Serialize + DeserializeOwned,
+    {
         set_contract_version(self.deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
         LiquidityPool::<LPN>::store(self.deps.storage, self.msg.denom, self.msg.lease_code_id)?;
@@ -49,28 +39,25 @@ impl<'a> InstantiateCurrencyContext<'a> {
     }
 
     pub fn run(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<Response, ContractError> {
-        let context = Self {
-            deps,
-            msg,
-        };
+        let context = Self { deps, msg };
         visit_any(&context.msg.denom.clone(), context)
     }
 }
 
-impl<'a> AnyVisitor for InstantiateCurrencyContext<'a> {
+impl<'a> AnyVisitor for InstantiateWithLpn<'a> {
     type Output = Response;
     type Error = ContractError;
-    
+
     fn on<LPN>(self) -> Result<Self::Output, Self::Error>
-        where
-            LPN: Currency + DeserializeOwned + Serialize {
-        self.instantiate::<LPN>()
+    where
+        LPN: Currency + DeserializeOwned + Serialize,
+    {
+        self.do_work::<LPN>()
     }
     fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-       Err(ContractError::UnknownCurrency {}) 
+        Err(ContractError::UnknownCurrency {})
     }
 }
-
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
@@ -79,32 +66,46 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    InstantiateCurrencyContext::run(deps, msg)
+    InstantiateWithLpn::run(deps, msg)
 }
 
-struct ExecuteCurrencyContext<'a> {
+struct ExecuteWithLpn<'a> {
     deps: DepsMut<'a>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 }
 
-impl<'a> ExecuteCurrencyContext<'a> {
-    fn execute<LPN>(self) -> Result<Response, ContractError> 
-        where
-            LPN: Currency + Serialize + DeserializeOwned {
+impl<'a> ExecuteWithLpn<'a> {
+    fn do_work<LPN>(self) -> Result<Response, ContractError>
+    where
+        LPN: Currency + Serialize + DeserializeOwned,
+    {
         // currency context variants
         match self.msg {
-            ExecuteMsg::OpenLoan { amount } => try_open_loan(self.deps, self.env, self.info.sender, amount),
-            ExecuteMsg::RepayLoan => try_repay_loan(self.deps, self.env, self.info.sender, self.info.funds),
-            ExecuteMsg::Deposit() => try_deposit(self.deps, self.env, self.info.sender, self.info.funds),
-            ExecuteMsg::Burn { amount } => try_withdraw(self.deps, self.env, self.info.sender, amount),
-            _ => {unreachable!()} // should be done already
+            ExecuteMsg::OpenLoan { amount } => {
+                borrow::try_open_loan::<LPN>(self.deps, self.env, self.info.sender, amount)
+            }
+            ExecuteMsg::RepayLoan => borrow::try_repay_loan::<LPN>(
+                self.deps,
+                self.env,
+                self.info.sender,
+                self.info.funds,
+            ),
+            ExecuteMsg::Deposit() => {
+                lender::try_deposit::<LPN>(self.deps, self.env, self.info.sender, self.info.funds)
+            }
+            ExecuteMsg::Burn { amount } => {
+                lender::try_withdraw::<LPN>(self.deps, self.env, self.info.sender, amount)
+            }
+            _ => {
+                unreachable!()
+            } // should be done already
         }
     }
 
     pub fn run(
-        deps: DepsMut<'a>, 
+        deps: DepsMut<'a>,
         env: Env,
         info: MessageInfo,
         msg: ExecuteMsg,
@@ -119,19 +120,20 @@ impl<'a> ExecuteCurrencyContext<'a> {
         let config = Config::load(context.deps.storage)?;
         visit_any(&config.currency, context)
     }
-
 }
-impl<'a> AnyVisitor for ExecuteCurrencyContext<'a> {
+
+impl<'a> AnyVisitor for ExecuteWithLpn<'a> {
     type Output = Response;
     type Error = ContractError;
-    
+
     fn on<LPN>(self) -> Result<Self::Output, Self::Error>
-        where
-            LPN: Currency + DeserializeOwned + Serialize {
-        self.execute::<LPN>()
+    where
+        LPN: Currency + DeserializeOwned + Serialize,
+    {
+        self.do_work::<LPN>()
     }
     fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-       Err(ContractError::UnknownCurrency {}) 
+        Err(ContractError::UnknownCurrency {})
     }
 }
 
@@ -154,34 +156,89 @@ pub fn execute(
             utilization_optimal,
             addon_optimal_interest_rate,
         ),
-        ExecuteMsg::DistributeRewards => try_distribute_rewards(deps, info.funds),
+        ExecuteMsg::DistributeRewards => rewards::try_distribute_rewards(deps, info.funds),
         ExecuteMsg::ClaimRewards { other_recipient } => {
-            try_claim_rewards(deps, info.sender, other_recipient)
-        },
-        _ => ExecuteCurrencyContext::run(deps, env, info, msg),
+            rewards::try_claim_rewards(deps, info.sender, other_recipient)
+        }
+        _ => ExecuteWithLpn::run(deps, env, info, msg),
+    }
+}
 
+struct QueryWithLpn<'a> {
+    deps: Deps<'a>,
+    env: Env,
+    msg: QueryMsg,
+}
+
+impl<'a> QueryWithLpn<'a> {
+    fn do_work<LPN>(self) -> Result<Binary, ContractError>
+    where
+        LPN: Currency + Serialize + DeserializeOwned,
+    {
+        // currency context variants
+        let res = match self.msg {
+            QueryMsg::Quote { amount } => {
+                to_binary(&borrow::query_quote::<LPN>(&self.deps, &self.env, amount)?)
+            }
+            QueryMsg::Loan { lease_addr } => to_binary(&borrow::query_loan::<LPN>(
+                self.deps.storage,
+                self.env,
+                lease_addr,
+            )?),
+            QueryMsg::LoanOutstandingInterest {
+                lease_addr,
+                outstanding_time,
+            } => to_binary(&borrow::query_loan_outstanding_interest::<LPN>(
+                self.deps.storage,
+                lease_addr,
+                outstanding_time,
+            )?),
+            QueryMsg::LppBalance() => {
+                to_binary(&rewards::query_lpp_balance::<LPN>(self.deps, self.env)?)
+            }
+            QueryMsg::Price() => {
+                to_binary(&lender::query_ntoken_price::<LPN>(self.deps, self.env)?)
+            }
+            _ => {
+                unreachable!()
+            } // should be done already
+        }?;
+        Ok(res)
+    }
+
+    pub fn run(deps: Deps<'a>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+        let context = Self { deps, env, msg };
+
+        let config = Config::load(context.deps.storage)?;
+        visit_any(&config.currency, context)
+    }
+}
+
+impl<'a> AnyVisitor for QueryWithLpn<'a> {
+    type Output = Binary;
+    type Error = ContractError;
+
+    fn on<LPN>(self) -> Result<Self::Output, Self::Error>
+    where
+        LPN: Currency + DeserializeOwned + Serialize,
+    {
+        self.do_work::<LPN>()
+    }
+    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+        Err(ContractError::UnknownCurrency {})
     }
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
-        QueryMsg::Config() => to_binary(&query_config(&deps)?),
-        QueryMsg::Quote { amount } => to_binary(&query_quote(&deps, &env, amount)?),
-        QueryMsg::Loan { lease_addr } => to_binary(&query_loan(deps.storage, env, lease_addr)?),
-        QueryMsg::LoanOutstandingInterest {
-            lease_addr,
-            outstanding_time,
-        } => to_binary(&query_loan_outstanding_interest(
-            deps.storage,
-            lease_addr,
-            outstanding_time,
-        )?),
-        QueryMsg::Price() => to_binary(&query_ntoken_price(deps, env)?),
-        QueryMsg::Balance { address } => to_binary(&query_balance(deps.storage, address)?),
-        QueryMsg::LppBalance() => to_binary(&query_lpp_balance(deps, env)?),
-        QueryMsg::Rewards { address } => to_binary(&query_rewards(deps.storage, address)?),
-    }?;
+        QueryMsg::Config() => to_binary(&query_config(&deps)?)?,
+        QueryMsg::Balance { address } => to_binary(&lender::query_balance(deps.storage, address)?)?,
+        QueryMsg::Rewards { address } => {
+            to_binary(&rewards::query_rewards(deps.storage, address)?)?
+        }
+        _ => QueryWithLpn::run(deps, env, msg)?,
+    };
 
     Ok(res)
 }
@@ -192,8 +249,7 @@ fn try_update_parameters(
     utilization_optimal: Percent,
     addon_optimal_interest_rate: Percent,
 ) -> Result<Response, ContractError> {
-    let mut lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
-    lpp.update_config(
+    Config::load(deps.storage)?.update(
         deps.storage,
         base_interest_rate,
         utilization_optimal,
@@ -202,146 +258,8 @@ fn try_update_parameters(
     Ok(Response::new().add_attribute("method", "try_update_parameters"))
 }
 
-fn try_open_loan(
-    deps: DepsMut,
-    env: Env,
-    lease_addr: Addr,
-    amount: CwCoin,
-) -> Result<Response, ContractError> {
-    let mut lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
-    lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
-    let amount = Coin::new(amount.amount.u128());
-
-    lpp.try_open_loan(deps, env, lease_addr.clone(), amount)?;
-
-    // TODO: transition to finance bank module
-    let transfer_msg = BankMsg::Send {
-        to_address: lease_addr.to_string(),
-        amount: vec![amount.into_cw()],
-    };
-
-    let response = Response::new()
-        .add_attribute("method", "try_open_loan")
-        .add_message(transfer_msg);
-
-    Ok(response)
-}
-
-fn try_repay_loan(
-    deps: DepsMut,
-    env: Env,
-    lease_addr: Addr,
-    funds: Vec<CwCoin>,
-) -> Result<Response, ContractError> {
-    if funds.len() != 1 {
-        return Err(ContractError::FundsLen {});
-    }
-
-    let repay_amount = funds[0].clone();
-    let repay_amount = Coin::new(repay_amount.amount.u128());
-
-    let mut lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
-    lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
-    let excess_received = lpp.try_repay_loan(deps, env, lease_addr.clone(), repay_amount)?;
-
-    let mut response = Response::new().add_attribute("method", "try_repay_loan");
-
-    if excess_received != Coin::new(0) {
-        // TODO: transition to finance bank module
-        let payment = lpp.pay(lease_addr, excess_received);
-        response = response.add_message(payment);
-    }
-
-    Ok(response)
-}
-
-fn try_deposit(
-    deps: DepsMut,
-    env: Env,
-    lender_addr: Addr,
-    funds: Vec<CwCoin>,
-) -> Result<Response, ContractError> {
-    if funds.len() != 1 {
-        return Err(ContractError::FundsLen {});
-    }
-
-    let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
-    let amount = lpp.try_into_amount(funds[0].clone())?;
-
-    let price = lpp.calculate_price(&deps.as_ref(), &env)?;
-    let amount: u128 = amount.into();
-    Deposit::load(deps.storage, lender_addr)?.deposit(deps.storage, amount.into(), price)?;
-
-    Ok(Response::new().add_attribute("method", "try_deposit"))
-}
-
-fn try_withdraw(
-    deps: DepsMut,
-    env: Env,
-    lender_addr: Addr,
-    amount_nlpn: Uint128,
-) -> Result<Response, ContractError> {
-    let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
-
-    let payment_lpn = lpp.withdraw_lpn(&deps.as_ref(), &env, amount_nlpn)?;
-    let mut msg_payment = vec![payment_lpn.into_cw()];
-
-    let maybe_reward =
-        Deposit::load(deps.storage, lender_addr.clone())?.withdraw(deps.storage, amount_nlpn)?;
-
-    if let Some(reward_msg) = maybe_reward {
-        msg_payment.push(reward_msg)
-    }
-
-    let msg = BankMsg::Send {
-        to_address: lender_addr.into(),
-        amount: msg_payment,
-    };
-
-    let response = Response::new()
-        .add_attribute("method", "try_withdraw")
-        .add_message(msg);
-
-    Ok(response)
-}
-
-fn try_distribute_rewards(deps: DepsMut, funds: Vec<CwCoin>) -> Result<Response, ContractError> {
-    match funds.iter().find(|&coin| coin.denom == NOLUS_DENOM) {
-        Some(coin) => Deposit::distribute_rewards(deps, coin.to_owned())?,
-        None => {
-            return Err(ContractError::CustomError {
-                val: "Rewards are supported only in native currency".to_string(),
-            })
-        }
-    }
-
-    Ok(Response::new().add_attribute("method", "try_distribute_rewards"))
-}
-
-fn try_claim_rewards(
-    deps: DepsMut,
-    addr: Addr,
-    other_recipient: Option<Addr>,
-) -> Result<Response, ContractError> {
-    let recipient = other_recipient.unwrap_or_else(|| addr.clone());
-    let mut deposit = Deposit::load(deps.storage, addr)?;
-    let reward = deposit.claim_rewards(deps.storage)?;
-
-    let msg = BankMsg::Send {
-        to_address: recipient.into(),
-        amount: vec![reward],
-    };
-
-    let response = Response::new()
-        .add_attribute("method", "try_claim_rewards")
-        .add_message(msg);
-
-    Ok(response)
-}
-
 fn query_config(deps: &Deps) -> Result<QueryConfigResponse, ContractError> {
-    let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
-    let config = lpp.config();
+    let config = Config::load(deps.storage)?;
 
     Ok(QueryConfigResponse {
         lpn_symbol: config.currency.clone(),
@@ -350,61 +268,6 @@ fn query_config(deps: &Deps) -> Result<QueryConfigResponse, ContractError> {
         utilization_optimal: config.utilization_optimal,
         addon_optimal_interest_rate: config.addon_optimal_interest_rate,
     })
-}
-
-fn query_quote(deps: &Deps, env: &Env, quote: CwCoin) -> Result<QueryQuoteResponse, ContractError> {
-    let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
-    let quote = lpp.try_into_amount(quote)?;
-
-    match lpp.query_quote(deps, env, quote)? {
-        Some(quote) => Ok(QueryQuoteResponse::QuoteInterestRate(quote)),
-        None => Ok(QueryQuoteResponse::NoLiquidity),
-    }
-}
-
-fn query_loan(
-    storage: &dyn Storage,
-    env: Env,
-    lease_addr: Addr,
-) -> Result<QueryLoanResponse<Usdc>, ContractError> {
-    LiquidityPool::<Usdc>::load(storage)?.query_loan(storage, &env, lease_addr)
-}
-
-fn query_loan_outstanding_interest(
-    storage: &dyn Storage,
-    loan: Addr,
-    outstanding_time: Timestamp,
-) -> Result<QueryLoanOutstandingInterestResponse<Usdc>, ContractError> {
-    let interest = LiquidityPool::<Usdc>::load(storage)?.query_loan_outstanding_interest(
-        storage,
-        loan,
-        outstanding_time,
-    )?;
-
-    Ok(interest)
-}
-
-fn query_lpp_balance(deps: Deps, env: Env) -> Result<LppBalanceResponse, ContractError> {
-    let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
-    Ok(lpp.query_lpp_balance(&deps, &env)?)
-}
-
-fn query_ntoken_price(deps: Deps, env: Env) -> Result<PriceResponse, ContractError> {
-    let lpp = LiquidityPool::<Usdc>::load(deps.storage)?;
-    let price = lpp.calculate_price(&deps, &env)?.into();
-
-    Ok(price)
-}
-
-fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceResponse, ContractError> {
-    let balance = Deposit::query_balance_nlpn(storage, addr)?.unwrap_or_default();
-    Ok(BalanceResponse { balance })
-}
-
-fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse, ContractError> {
-    let deposit = Deposit::load(storage, addr)?;
-    let rewards = deposit.query_rewards(storage)?;
-    Ok(RewardsResponse { rewards })
 }
 
 #[cfg(test)]
@@ -428,5 +291,4 @@ mod tests {
 
         instantiate(deps.as_mut(), mock_env(), info, msg).expect("can't instantiate");
     }
-    
 }

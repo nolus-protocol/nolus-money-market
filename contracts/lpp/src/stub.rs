@@ -8,11 +8,9 @@ use finance::{
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::{
-    msg::{
-        ExecuteMsg, QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
-        QueryMsg,
-    },
+use crate::msg::{
+    ExecuteMsg, QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
+    QueryMsg,
 };
 
 pub const REPLY_ID: u64 = 28;

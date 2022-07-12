@@ -1,6 +1,6 @@
 use cosmwasm_std::StdError;
-use thiserror::Error;
 use std::num::TryFromIntError;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
@@ -29,7 +29,10 @@ pub enum ContractError {
     FundsLen {},
 
     #[error("Different currencies : {contract_currency:?} vs {currency:?}")]
-    CurrencyDiff { contract_currency: String, currency: String},
+    CurrencyDiff {
+        contract_currency: String,
+        currency: String,
+    },
 
     #[error("Insufficient balance")]
     InsufficientBalance,
@@ -42,4 +45,3 @@ pub enum ContractError {
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
 }
-
