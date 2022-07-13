@@ -10,7 +10,7 @@ use crate::ContractError;
 pub struct Config {
     pub base_asset: Denom,
     pub owner: Addr,
-    pub price_feed_period: u64,
+    pub price_feed_period_secs: u32,
     pub feeders_percentage_needed: u8,
     pub supported_denom_pairs: Vec<DenomPair>,
     pub timealarms_contract: Addr,
@@ -22,7 +22,7 @@ impl Config {
     pub fn new(
         denom: String,
         owner: Addr,
-        price_feed_period: u64,
+        price_feed_period_secs: u32,
         feeders_percentage_needed: u8,
         supported_denom_pairs: Vec<DenomPair>,
         timealarms_contract: Addr,
@@ -30,7 +30,7 @@ impl Config {
         Config {
             base_asset: denom,
             owner,
-            price_feed_period,
+            price_feed_period_secs,
             feeders_percentage_needed,
             supported_denom_pairs,
             timealarms_contract,
@@ -47,7 +47,7 @@ impl Config {
 
     pub fn update(
         storage: &mut dyn Storage,
-        price_feed_period: u64,
+        price_feed_period_secs: u32,
         feeders_percentage_needed: u8,
         sender: Addr,
     ) -> Result<(), ContractError> {
@@ -56,7 +56,7 @@ impl Config {
             return Err(ContractError::Unauthorized {});
         }
         Self::STORAGE.update(storage, |mut c| -> StdResult<_> {
-            c.price_feed_period = price_feed_period;
+            c.price_feed_period_secs = price_feed_period_secs;
             c.feeders_percentage_needed = feeders_percentage_needed;
             Ok(c)
         })?;

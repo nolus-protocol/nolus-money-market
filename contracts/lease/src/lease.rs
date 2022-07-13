@@ -123,8 +123,8 @@ mod tests {
     use cosmwasm_std::{Addr, QuerierWrapper, StdResult, SubMsg, Timestamp};
     use finance::currency::Usdc;
     use finance::{
-        bank::BankAccount, coin::Coin, currency::Currency, error::Result as FinanceResult,
-        liability::Liability, percent::Percent,
+        bank::BankAccount, coin::Coin, currency::Currency, duration::Duration,
+        error::Result as FinanceResult, liability::Liability, percent::Percent,
     };
     use lpp::msg::{LoanResponse, QueryLoanResponse};
     use lpp::stub::Lpp;
@@ -243,8 +243,8 @@ mod tests {
                 Timestamp::from_nanos(0),
                 lpp_stub,
                 MARGIN_INTEREST_RATE,
-                0,
-                0,
+                Duration::from_secs(0),
+                Duration::from_secs(0),
             )
             .unwrap(),
         }
@@ -287,7 +287,8 @@ mod tests {
         let obj = create_lease(LppLocalStub { loan: None });
         let obj_exp = obj.clone();
         obj.store(&mut storage).expect("storing failed");
-        let obj_loaded: Lease<TestCurrency, LppLocalStub> = Lease::load(&storage).expect("loading failed");
+        let obj_loaded: Lease<TestCurrency, LppLocalStub> =
+            Lease::load(&storage).expect("loading failed");
         assert_eq!(obj_exp.customer, obj_loaded.customer);
     }
 

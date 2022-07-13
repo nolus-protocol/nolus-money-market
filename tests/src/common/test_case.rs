@@ -151,7 +151,7 @@ impl TestCase {
         self
     }
 
-    pub fn init_profit(&mut self, cadence_hours: u32) -> &mut Self {
+    pub fn init_profit(&mut self, cadence_hours: u16) -> &mut Self {
         self.profit_addr = Some(ProfitWrapper::default().instantiate(
             &mut self.app,
             cadence_hours,

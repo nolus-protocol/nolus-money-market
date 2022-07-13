@@ -7,6 +7,9 @@ use cosmwasm_std::{Api, Decimal, DepsMut, Timestamp};
 use crate::feed::Price;
 use crate::feeders::PriceFeeders;
 use crate::market_price::{PriceFeeds, PriceFeedsError, PriceQuery};
+use finance::duration::Duration;
+
+const MINUTE: Duration = Duration::from_secs(60);
 
 #[test]
 fn register_feeder() {
@@ -45,7 +48,7 @@ fn marketprice_add_feed_expect_err() {
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
-    let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), 60, 50);
+    let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), MINUTE, 50);
     let expected_err = market.get(&deps.storage, ts, query).unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
 }
@@ -70,7 +73,7 @@ fn marketprice_add_feed_empty_vec() {
             &f_address,
             "DEN1".to_string(),
             prices,
-            60,
+            MINUTE,
         )
         .unwrap();
 }
@@ -109,14 +112,14 @@ fn marketprice_add_feed() {
             &f_address,
             "DEN1".to_string(),
             prices,
-            60,
+            MINUTE,
         )
         .unwrap();
-    let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), 60, 50);
+    let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), MINUTE, 50);
     let err = market.get(&deps.storage, ts, query).unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
 
-    let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), 60, 1);
+    let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), MINUTE, 1);
     let price_resp = market.get(&deps.storage, ts, query).unwrap();
     assert_eq!(price_resp.to_string(), "0.5".to_string());
 }
@@ -137,28 +140,28 @@ fn marketprice_follow_the_path() {
     let ts = feed_price(deps.as_mut(), &market, "DENC", "DEN4", "3").unwrap();
 
     // valid search denom pair
-    let query = PriceQuery::new(("DEN1".to_string(), "DEN4".to_string()), 60, 1);
+    let query = PriceQuery::new(("DEN1".to_string(), "DEN4".to_string()), MINUTE, 1);
     assert_eq!(
         market.get(&deps.storage, ts, query).unwrap().to_string(),
         "6".to_string()
     );
 
     // first and second part of denom pair are the same
-    let query = PriceQuery::new(("DEN1".to_string(), "DEN1".to_string()), 60, 1);
+    let query = PriceQuery::new(("DEN1".to_string(), "DEN1".to_string()), MINUTE, 1);
     assert_eq!(
         market.get(&deps.storage, ts, query).unwrap().to_string(),
         "1".to_string()
     );
 
     // second part of denome pair doesn't exists in the storage
-    let query = PriceQuery::new(("DEN1".to_string(), "DEN5".to_string()), 60, 1);
+    let query = PriceQuery::new(("DEN1".to_string(), "DEN5".to_string()), MINUTE, 1);
     assert_eq!(
         market.get(&deps.storage, ts, query).unwrap_err(),
         PriceFeedsError::NoPrice {}
     );
 
     // first part of denome pair doesn't exists in the storage
-    let query = PriceQuery::new(("DEN6".to_string(), "DEN1".to_string()), 60, 1);
+    let query = PriceQuery::new(("DEN6".to_string(), "DEN1".to_string()), MINUTE, 1);
     assert_eq!(
         market.get(&deps.storage, ts, query).unwrap_err(),
         PriceFeedsError::NoPrice {}
@@ -188,7 +191,7 @@ fn feed_price(
             denom: quote.to_string(),
             amount: Decimal::from_str(price).unwrap(),
         }],
-        60,
+        MINUTE,
     )?;
     Ok(ts)
 }

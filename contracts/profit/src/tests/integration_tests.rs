@@ -36,7 +36,7 @@ fn proper_instantiate() -> (App, CwTemplateContract) {
     let cw_template_id = app.store_code(contract_template());
 
     let msg = InstantiateMsg {
-        cadence_hours: 3u32,
+        cadence_hours: 3u16,
         treasury: Addr::unchecked("treasury"),
         timealarms: Addr::unchecked("timealarms"),
     };
@@ -66,7 +66,7 @@ mod config {
         let (mut app, cw_template_contract) = proper_instantiate();
 
         let msg = ExecuteMsg::Config {
-            cadence_hours: 12u32,
+            cadence_hours: 12u16,
         };
         let cosmos_msg = cw_template_contract.call(msg).unwrap();
         app.execute(Addr::unchecked(USER), cosmos_msg).unwrap_err();

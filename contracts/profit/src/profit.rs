@@ -4,6 +4,7 @@ use cosmwasm_std::{
 };
 
 use crate::{msg::ConfigResponse, state::config::Config, ContractError};
+use finance::duration::Duration;
 
 pub struct Profit {}
 
@@ -11,7 +12,7 @@ impl Profit {
     pub(crate) fn try_config(
         deps: DepsMut,
         info: MessageInfo,
-        cadence_hours: u32,
+        cadence_hours: u16,
     ) -> Result<Response, ContractError> {
         let config = Config::load(deps.storage)?;
         if info.sender != config.owner {
@@ -42,7 +43,11 @@ impl Profit {
 
         let current_time = env.block.time;
 
-        Self::alarm_subscribe_msg(&config.timealarms, current_time, config.cadence_hours)?;
+        Self::alarm_subscribe_msg(
+            &config.timealarms,
+            current_time,
+            Duration::from_hours(config.cadence_hours),
+        )?;
 
         Ok(Response::new()
             .add_attribute("method", "try_transfer")
@@ -61,18 +66,14 @@ impl Profit {
     pub(crate) fn alarm_subscribe_msg(
         timealarms_addr: &Addr,
         current_time: Timestamp,
-        cadence_hours: u32,
+        cadence: Duration,
     ) -> StdResult<CosmosMsg> {
         Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             funds: vec![],
             contract_addr: timealarms_addr.to_string(),
             msg: to_binary(&timealarms::msg::ExecuteMsg::AddAlarm {
-                time: current_time.plus_seconds(Self::to_seconds(cadence_hours)),
+                time: current_time + cadence,
             })?,
         }))
-    }
-
-    fn to_seconds(cadence_hours: u32) -> u64 {
-        cadence_hours as u64 * 60 * 60
     }
 }

@@ -29,7 +29,7 @@ fn proper_initialization() {
     let value: ConfigResponse = from_binary(&res).unwrap();
     assert_eq!(CREATOR.to_string(), value.owner.to_string());
     assert_eq!("token".to_string(), value.base_asset);
-    assert_eq!(60, value.price_feed_period);
+    assert_eq!(60, value.price_feed_period_secs);
     assert_eq!(50, value.feeders_percentage_needed);
 
     let res = query(deps.as_ref(), mock_env(), QueryMsg::SupportedDenomPairs {}).unwrap();
@@ -52,7 +52,7 @@ fn configure_unauthorized() {
 
     let unauth_info = mock_info("anyone", &coins(2, "token"));
     let msg = ExecuteMsg::Config {
-        price_feed_period: 15,
+        price_feed_period_secs: 15,
         feeders_percentage_needed: 12,
     };
     let _res = execute(deps.as_mut(), mock_env(), unauth_info, msg).unwrap();
@@ -70,7 +70,7 @@ fn configure() {
     let (mut deps, info) = setup_test(msg);
 
     let msg = ExecuteMsg::Config {
-        price_feed_period: 33,
+        price_feed_period_secs: 33,
         feeders_percentage_needed: 44,
     };
     let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -79,7 +79,7 @@ fn configure() {
     let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let value: ConfigResponse = from_binary(&res).unwrap();
     assert_eq!(44, value.feeders_percentage_needed);
-    assert_eq!(33, value.price_feed_period);
+    assert_eq!(33, value.price_feed_period_secs);
 }
 
 #[test]
