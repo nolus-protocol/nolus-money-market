@@ -3,11 +3,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::{coin::Coin, currency::Currency, fraction::Fraction, ratio::Rational};
 
-pub fn ratio<From>(from: Coin<From>) -> RatioBuilder<From> {
+pub fn ratio<From>(from: Coin<From>) -> RatioBuilder<From>
+where
+    From: Currency,
+{
     RatioBuilder(from)
 }
 
-pub struct RatioBuilder<From>(Coin<From>);
+pub struct RatioBuilder<From>(Coin<From>)
+where
+    From: Currency;
 
 impl<From> RatioBuilder<From>
 where

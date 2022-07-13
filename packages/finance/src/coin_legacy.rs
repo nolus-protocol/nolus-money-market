@@ -66,7 +66,9 @@ pub trait CoinVisitor {
     type Output;
     type Error;
 
-    fn on<C>(&self, coin: Coin<C>) -> StdResult<Self::Output, Self::Error>;
+    fn on<C>(&self, coin: Coin<C>) -> StdResult<Self::Output, Self::Error>
+    where
+        C: Currency;
     fn on_unknown(&self) -> StdResult<Self::Output, Self::Error>;
 }
 
@@ -114,7 +116,10 @@ where
     type Output = V::Output;
     type Error = V::Error;
 
-    fn on<C>(self) -> StdResult<Self::Output, Self::Error> {
+    fn on<C>(self) -> StdResult<Self::Output, Self::Error>
+    where
+        C: Currency,
+    {
         let coin = Coin::new(self.0.amount.into());
         self.1.on::<C>(coin)
     }
@@ -155,6 +160,7 @@ mod test {
     }
 
     struct Expect<C>(PhantomData<C>);
+
     impl<C> Expect<C> {
         fn new() -> Self {
             Self(PhantomData)
@@ -162,11 +168,15 @@ mod test {
     }
 
     impl<C> CoinVisitor for Expect<C>
+    where
+        C: Currency,
     {
         type Output = Coin<C>;
         type Error = ();
 
         fn on<Cin>(&self, coin: Coin<Cin>) -> Result<Self::Output, Self::Error>
+        where
+            Cin: Currency,
         {
             assert_eq!(type_name::<C>(), type_name::<Cin>(),);
 
@@ -184,7 +194,10 @@ mod test {
         type Output = ();
         type Error = ();
 
-        fn on<Cin>(&self, _coin: Coin<Cin>) -> Result<Self::Output, Self::Error> {
+        fn on<Cin>(&self, _coin: Coin<Cin>) -> Result<Self::Output, Self::Error>
+        where
+            Cin: Currency,
+        {
             Err(())
         }
 

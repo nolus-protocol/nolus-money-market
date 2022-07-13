@@ -155,7 +155,10 @@ mod tests {
             Ok(Coin::<C>::new(self.balance))
         }
 
-        fn send<C>(&self, _amount: Coin<C>, _to: &Addr) -> FinanceResult<SubMsg> {
+        fn send<C>(&self, _amount: Coin<C>, _to: &Addr) -> FinanceResult<SubMsg>
+        where
+            C: Currency,
+        {
             unimplemented!()
         }
     }

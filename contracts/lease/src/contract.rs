@@ -147,6 +147,9 @@ impl<'a> LppVisitor for OpenLoanReq<'a> {
 }
 
 fn swap<Cin, Cout>(coin_in: Coin<Cin>) -> Coin<Cout>
+where
+    Cin: Currency,
+    Cout: Currency,
 {
     // NB! `type_name` is not a proper way to compare currency types. Consider removing it once implement the real swap.
     assert_eq!(any::type_name::<Cin>(), any::type_name::<Cout>());
