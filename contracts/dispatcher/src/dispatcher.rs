@@ -71,17 +71,16 @@ impl Dispatcher {
     #[cfg(not(test))]
     // Get LPP balance and return TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
     fn get_lpp_balance(deps: Deps, lpp_addr: &Addr) -> Result<Coin<Usdc>, ContractError> {
-        use finance::coin_legacy::from_cosmwasm;
         use lpp::msg::{LppBalanceResponse, QueryMsg as LPPQueryMsg};
 
         let query_msg: LPPQueryMsg = LPPQueryMsg::LppBalance {};
-        let resp: LppBalanceResponse = deps
+        let resp: LppBalanceResponse<Usdc> = deps
             .querier
             .query_wasm_smart(lpp_addr.to_string(), &query_msg)?;
 
-        let balance = from_cosmwasm(resp.balance)?
-            + from_cosmwasm(resp.total_principal_due)?
-            + from_cosmwasm(resp.total_interest_due)?;
+        let balance = resp.balance
+            + resp.total_principal_due
+            + resp.total_interest_due;
 
         Ok(balance)
     }
