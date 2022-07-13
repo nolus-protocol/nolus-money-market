@@ -6,7 +6,7 @@ use std::{
 
 use schemars::JsonSchema;
 use serde::{
-    de::{Error, SeqAccess, Unexpected, Visitor},
+    de::{Error, SeqAccess, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
 };
 
@@ -104,11 +104,15 @@ where
         let amount = seq
             .next_element()?
             .ok_or_else(|| Error::invalid_length(0, &self))?;
-        let label: &str = seq
+        let label: String = seq
             .next_element()?
             .ok_or_else(|| Error::invalid_length(1, &self))?;
         if label != C::SYMBOL {
-            Err(Error::invalid_value(Unexpected::Str(label), &C::SYMBOL))
+            Err(Error::custom(format!(
+                "invalid type: found: {}, expected: {}",
+                label,
+                C::SYMBOL
+            )))
         } else {
             Ok(Coin::<C>::new(amount))
         }
@@ -219,7 +223,7 @@ mod test {
         assert_eq!(
             Err(StdError::parse_err(
                 type_name::<Coin::<Usdc>>(),
-                "invalid value: string \"unls\", expected uusdc"
+                "invalid type: found: unls, expected: uusdc"
             )),
             res
         );
