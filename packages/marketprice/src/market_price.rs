@@ -1,12 +1,12 @@
 use std::ops::Mul;
 
+use crate::feed::{Denom, DenomPair, Observation, Price, PriceFeed};
 use cosmwasm_std::{Addr, Decimal, Order, StdError, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
+use finance::duration::Duration;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-
-use crate::feed::{Denom, DenomPair, Observation, Price, PriceFeed};
 
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
@@ -17,18 +17,18 @@ pub struct PriceResponse {
 
 pub struct PriceQuery {
     denom_pair: DenomPair,
-    price_feed_period_secs: u32,
+    price_feed_period: Duration,
     required_feeders_cnt: usize,
 }
 impl PriceQuery {
     pub fn new(
         denom_pair: DenomPair,
-        price_feed_period_secs: u32,
+        price_feed_period: Duration,
         required_feeders_cnt: usize,
     ) -> Self {
         PriceQuery {
             denom_pair,
-            price_feed_period_secs,
+            price_feed_period,
             required_feeders_cnt,
         }
     }
@@ -92,7 +92,7 @@ impl<'m> PriceFeeds<'m> {
             storage,
             current_block_time,
             query.denom_pair.clone(),
-            query.price_feed_period_secs,
+            query.price_feed_period,
             query.required_feeders_cnt,
             &mut resolution_path,
         )?;
@@ -107,7 +107,7 @@ impl<'m> PriceFeeds<'m> {
         storage: &dyn Storage,
         current_block_time: Timestamp,
         denom_pair: DenomPair,
-        price_feed_period_secs: u32,
+        price_feed_period: Duration,
         required_feeders_cnt: usize,
         resolution_path: &mut DenomResolutionPath,
     ) -> Result<DenomPairPrice, PriceFeedsError> {
@@ -119,7 +119,7 @@ impl<'m> PriceFeeds<'m> {
                 // there is a price record for denom pair base to denom pair quote => return price
                 let price = last_feed.get_price(
                     current_block_time,
-                    price_feed_period_secs,
+                    price_feed_period,
                     required_feeders_cnt,
                 );
                 Ok(DenomPairPrice {
@@ -137,11 +137,12 @@ impl<'m> PriceFeeds<'m> {
                     storage,
                     current_block_time,
                     denom_pair.clone(),
-                    price_feed_period_secs,
+                    price_feed_period,
                     required_feeders_cnt,
                     resolution_path,
                 ) {
-                    let price = q.1.get_price(current_block_time, 60, 1)?;
+                    let price =
+                        q.1.get_price(current_block_time, Duration::from_secs(60), 1)?;
                     return Ok(DenomPairPrice {
                         pair: (denom_pair.0, q.0),
                         price,
@@ -157,7 +158,7 @@ impl<'m> PriceFeeds<'m> {
         storage: &dyn Storage,
         current_block_time: Timestamp,
         denom_pair: DenomPair,
-        price_feed_period_secs: u32,
+        price_feed_period: Duration,
         required_feeders_cnt: usize,
         resolution_path: &mut DenomResolutionPath,
     ) -> Result<Option<(String, PriceFeed)>, PriceFeedsError> {
@@ -175,7 +176,7 @@ impl<'m> PriceFeeds<'m> {
                 storage,
                 current_block_time,
                 (current_quote.0.clone(), searched_quote.clone()),
-                price_feed_period_secs,
+                price_feed_period,
                 required_feeders_cnt,
                 resolution_path,
             ) {
@@ -219,7 +220,7 @@ impl<'m> PriceFeeds<'m> {
         sender_raw: &Addr,
         base: Denom,
         prices: Vec<Price>,
-        price_feed_period_secs: u32,
+        price_feed_period: Duration,
     ) -> Result<(), PriceFeedsError> {
         for price in prices {
             let quote: Denom = price.denom;
@@ -229,7 +230,7 @@ impl<'m> PriceFeeds<'m> {
                 let new_feed = Observation::new(sender_raw.clone(), current_block_time, price);
                 match old {
                     Some(mut feed) => {
-                        feed.update(new_feed, price_feed_period_secs);
+                        feed.update(new_feed, price_feed_period);
                         Ok(feed)
                     }
                     None => Ok(PriceFeed::new(new_feed)),

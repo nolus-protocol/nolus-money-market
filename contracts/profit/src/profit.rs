@@ -66,13 +66,13 @@ impl Profit {
     pub(crate) fn alarm_subscribe_msg(
         timealarms_addr: &Addr,
         current_time: Timestamp,
-        cadence_hours: Duration,
+        cadence: Duration,
     ) -> StdResult<CosmosMsg> {
         Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             funds: vec![],
             contract_addr: timealarms_addr.to_string(),
             msg: to_binary(&timealarms::msg::ExecuteMsg::AddAlarm {
-                time: current_time + cadence_hours,
+                time: current_time + cadence,
             })?,
         }))
     }
