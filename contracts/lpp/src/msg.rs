@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, Coin as CwCoin, Decimal, Timestamp, Uint128, Uint64};
-use finance::{coin::Coin, currency::Currency, percent::Percent};
+use finance::{coin::Coin, currency::{Currency, Nls}, percent::Percent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -118,13 +118,16 @@ pub struct PriceResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-pub struct LppBalanceResponse {
-    pub balance: CwCoin,
-    pub total_principal_due: CwCoin,
-    pub total_interest_due: CwCoin,
+pub struct LppBalanceResponse<LPN> 
+    where
+        LPN: Currency
+{
+    pub balance: Coin<LPN>,
+    pub total_principal_due: Coin<LPN>,
+    pub total_interest_due: Coin<LPN>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct RewardsResponse {
-    pub rewards: CwCoin,
+    pub rewards: Coin<Nls>,
 }

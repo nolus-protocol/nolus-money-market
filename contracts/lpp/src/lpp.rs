@@ -80,15 +80,14 @@ where
         Ok(res)
     }
 
-    pub fn query_lpp_balance(&self, deps: &Deps, env: &Env) -> StdResult<LppBalanceResponse> {
-        let balance = self.balance(deps, env)?.into_cw();
+    pub fn query_lpp_balance(&self, deps: &Deps, env: &Env) -> StdResult<LppBalanceResponse<LPN>> {
+        let balance = self.balance(deps, env)?;
 
-        let total_principal_due = self.total.total_principal_due().into_cw();
+        let total_principal_due = self.total.total_principal_due();
 
         let total_interest_due = self
             .total
-            .total_interest_due_by_now(env.block.time)
-            .into_cw();
+            .total_interest_due_by_now(env.block.time);
 
         Ok(LppBalanceResponse {
             balance,
@@ -560,9 +559,9 @@ mod test {
         let lpp_balance = lpp
             .query_lpp_balance(&deps.as_ref(), &env)
             .expect("should query_lpp_balance");
-        assert_eq!(lpp_balance.balance, coin_cw(5_000_000));
-        assert_eq!(lpp_balance.total_principal_due, coin_cw(5_000_000));
-        assert_eq!(lpp_balance.total_interest_due, coin_cw(1_000_000));
+        assert_eq!(lpp_balance.balance, Coin::new(5_000_000));
+        assert_eq!(lpp_balance.total_principal_due, Coin::new(5_000_000));
+        assert_eq!(lpp_balance.total_interest_due, Coin::new(1_000_000));
 
         let price = lpp
             .calculate_price(&deps.as_ref(), &env)

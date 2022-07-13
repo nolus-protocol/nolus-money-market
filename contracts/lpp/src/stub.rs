@@ -10,7 +10,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::msg::{
     ExecuteMsg, QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
-    QueryMsg,
+    QueryMsg, QueryQuoteResponse, LppBalanceResponse, PriceResponse, BalanceResponse, RewardsResponse,
 };
 
 pub const REPLY_ID: u64 = 28;
@@ -34,6 +34,34 @@ where
         lease: impl Into<Addr>,
         by: Timestamp,
     ) -> StdResult<QueryLoanOutstandingInterestResponse<Lpn>>;
+    fn quote(
+        &self,
+        querier: &QuerierWrapper,
+        amount: Coin<Lpn>,
+    ) -> StdResult<QueryQuoteResponse>;
+    fn lpp_balance(
+        &self,
+        querier: &QuerierWrapper,
+    ) -> StdResult<LppBalanceResponse<Lpn>>;
+    fn nlpn_price(
+        &self,
+        querier: &QuerierWrapper,
+    ) -> StdResult<PriceResponse>;
+    fn config(
+        &self,
+        querier: &QuerierWrapper,
+    ) -> StdResult<QueryConfigResponse>;
+    fn nlpn_balance(
+        &self,
+        querier: &QuerierWrapper,
+        lender: impl Into<Addr>,
+    ) -> StdResult<BalanceResponse>;
+    fn rewards(
+        &self,
+        querier: &QuerierWrapper,
+        lender: impl Into<Addr>,
+    ) -> StdResult<RewardsResponse>;
+     
 }
 
 pub trait LppVisitor {
@@ -149,6 +177,64 @@ where
         let msg = QueryMsg::LoanOutstandingInterest {
             lease_addr: lease.into(),
             outstanding_time: by,
+        };
+        querier.query_wasm_smart(self.addr.clone(), &msg)
+    }
+    
+    fn quote(
+            &self,
+            querier: &QuerierWrapper,
+            amount: Coin<Lpn>,
+        ) -> StdResult<QueryQuoteResponse> {
+
+            let msg = QueryMsg::Quote {
+                amount: to_cosmwasm(amount) 
+            };
+            querier.query_wasm_smart(self.addr.clone(), &msg)
+    }
+
+    fn lpp_balance(
+            &self,
+            querier: &QuerierWrapper,
+        ) -> StdResult<LppBalanceResponse<Lpn>> {
+            let msg = QueryMsg::LppBalance() ;
+            querier.query_wasm_smart(self.addr.clone(), &msg)
+    }
+
+    fn nlpn_price(
+            &self,
+            querier: &QuerierWrapper,
+        ) -> StdResult<PriceResponse> {
+            let msg = QueryMsg::Price();
+            querier.query_wasm_smart(self.addr.clone(), &msg)
+    }
+
+    fn config(
+            &self,
+            querier: &QuerierWrapper,
+        ) -> StdResult<QueryConfigResponse> {
+            let msg = QueryMsg::Config();
+            querier.query_wasm_smart(self.addr.clone(), &msg)
+    }
+
+    fn nlpn_balance(
+            &self,
+            querier: &QuerierWrapper,
+            lender: impl Into<Addr>,
+        ) -> StdResult<BalanceResponse> {
+        let msg = QueryMsg::Balance {
+           address: lender.into(),
+        };
+        querier.query_wasm_smart(self.addr.clone(), &msg)
+    }
+
+    fn rewards(
+            &self,
+            querier: &QuerierWrapper,
+            lender: impl Into<Addr>,
+        ) -> StdResult<RewardsResponse> {
+        let msg = QueryMsg::Rewards {
+           address: lender.into(),
         };
         querier.query_wasm_smart(self.addr.clone(), &msg)
     }

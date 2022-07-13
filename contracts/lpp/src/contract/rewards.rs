@@ -6,6 +6,8 @@ use crate::error::ContractError;
 use crate::lpp::LiquidityPool;
 use crate::msg::{LppBalanceResponse, RewardsResponse};
 use crate::state::Deposit;
+use finance::coin_legacy;
+
 
 pub fn try_distribute_rewards(
     deps: DepsMut,
@@ -44,7 +46,7 @@ pub fn try_claim_rewards(
     Ok(response)
 }
 
-pub fn query_lpp_balance<LPN>(deps: Deps, env: Env) -> Result<LppBalanceResponse, ContractError>
+pub fn query_lpp_balance<LPN>(deps: Deps, env: Env) -> Result<LppBalanceResponse<LPN>, ContractError>
 where
     LPN: Currency + DeserializeOwned + Serialize,
 {
@@ -55,5 +57,5 @@ where
 pub fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse, ContractError> {
     let deposit = Deposit::load(storage, addr)?;
     let rewards = deposit.query_rewards(storage)?;
-    Ok(RewardsResponse { rewards })
+    Ok(RewardsResponse { rewards: coin_legacy::from_cosmwasm(rewards)? })
 }
