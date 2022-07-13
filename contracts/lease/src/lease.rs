@@ -48,18 +48,22 @@ where
         &self,
         lease: Addr,
         querier: &QuerierWrapper,
-        account: B,
+        account: &B,
     ) -> ContractResult<SubMsg>
     where
         B: BankAccount,
     {
-        if !self.loan.closed(querier, lease)? {
-            return ContractResult::Err(ContractError::LoanNotPaid {});
+        let state = self.state(Timestamp::from_nanos(u64::MAX), account, querier, lease)?;
+        match state {
+            StateResponse::Opened { .. } => ContractResult::Err(ContractError::LoanNotPaid()),
+            StateResponse::Paid(..) => {
+                let balance = account.balance::<Lpn>()?;
+                account
+                    .send(balance, &self.customer)
+                    .map_err(|err| err.into())
+            }
+            StateResponse::Closed() => ContractResult::Err(ContractError::LoanClosed()),
         }
-        let balance = account.balance::<Lpn>()?;
-        account
-            .send(balance, &self.customer)
-            .map_err(|err| err.into())
     }
 
     pub(crate) fn repay(
@@ -88,7 +92,7 @@ where
     pub(crate) fn state<B>(
         &self,
         now: Timestamp,
-        account: B,
+        account: &B,
         querier: &QuerierWrapper,
         lease: Addr,
     ) -> ContractResult<StateResponse<Lpn, Lpn>>
@@ -268,7 +272,7 @@ mod tests {
 
     fn request_state(
         lease: Lease<TestCurrency, LppLocalStub>,
-        bank_account: BankStub,
+        bank_account: &BankStub,
     ) -> StateResponse<TestCurrency, TestCurrency> {
         let mut deps = mock_dependencies();
         lease
@@ -308,7 +312,7 @@ mod tests {
         let bank_account = create_bank_account(lease_amount);
         let lease = lease_setup(Some(loan.clone()));
 
-        let res = request_state(lease, bank_account);
+        let res = request_state(lease, &bank_account);
         let exp = StateResponse::Opened {
             amount: coin(lease_amount),
             interest_rate: MARGIN_INTEREST_RATE.checked_add(interest_rate).unwrap(),
@@ -326,7 +330,7 @@ mod tests {
         let bank_account = create_bank_account(lease_amount);
         let lease = lease_setup(None);
 
-        let res = request_state(lease, bank_account);
+        let res = request_state(lease, &bank_account);
         let exp = StateResponse::Paid(coin(lease_amount));
         assert_eq!(exp, res);
     }
@@ -338,7 +342,7 @@ mod tests {
         let bank_account = create_bank_account(lease_amount);
         let lease = lease_setup(None);
 
-        let res = request_state(lease, bank_account);
+        let res = request_state(lease, &bank_account);
         let exp = StateResponse::Closed();
         assert_eq!(exp, res);
     }
@@ -355,7 +359,7 @@ mod tests {
         let res = lease
             .state(
                 Timestamp::from_nanos(0),
-                bank_account,
+                &bank_account,
                 &deps.as_mut().querier,
                 Addr::unchecked("unused"),
             )

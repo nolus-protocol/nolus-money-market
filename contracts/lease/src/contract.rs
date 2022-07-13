@@ -81,7 +81,7 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     let bank_account = BankStub::my_account(&env, &deps.querier);
     let resp: StateResponse<TheCurrency, TheCurrency> = lease.state(
         env.block.time,
-        bank_account,
+        &bank_account,
         &deps.querier,
         env.contract.address.clone(),
     )?;
@@ -109,7 +109,7 @@ fn try_close(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Respo
     }
 
     let bank_account = BankStub::my_account(&env, &deps.querier);
-    let bank_req = lease.close(env.contract.address.clone(), &deps.querier, bank_account)?;
+    let bank_req = lease.close(env.contract.address.clone(), &deps.querier, &bank_account)?;
     Ok(Response::default().add_submessage(bank_req))
 }
 

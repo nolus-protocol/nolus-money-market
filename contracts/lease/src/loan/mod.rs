@@ -42,7 +42,7 @@ where
         interest_due_period: Duration,
         grace_period: Duration,
     ) -> ContractResult<Self> {
-        // check them out cw_utils::Duration, cw_utils::NativeBalance
+
         Ok(Self {
             annual_margin_interest,
             lpn: PhantomData,
@@ -55,14 +55,6 @@ where
         })
     }
 
-    pub(crate) fn closed(&self, querier: &QuerierWrapper, lease: Addr) -> ContractResult<bool> {
-        // TODO define lpp::Loan{querier, id = lease_id: Addr} and instantiate it on Lease::load
-        self.lpp
-            .loan(querier, lease)
-            .map(|res| res.is_none())
-            .map_err(|err| err.into())
-    }
-
     pub(crate) fn repay(
         &mut self,
         payment: Coin<Lpn>,
@@ -70,6 +62,8 @@ where
         querier: &QuerierWrapper,
         lease: Addr,
     ) -> ContractResult<Option<SubMsg>> {
+        self.debug_check_start_due_before(by, "before the 'repay-by' time");
+
         let principal_due = self.load_principal_due(querier, lease.clone())?;
 
         let change = self.repay_margin_interest(principal_due, by, payment);
@@ -113,6 +107,8 @@ where
         querier: &QuerierWrapper,
         lease: impl Into<Addr>,
     ) -> ContractResult<Option<State<Lpn>>> {
+        self.debug_check_start_due_before(now, "in the past, i.e");
+
         let loan_resp = self.load_lpp_loan(querier, lease)?;
         Ok(loan_resp.map(|loan_state| self.merge_state_with(loan_state, now)))
     }
@@ -179,5 +175,15 @@ where
             principal_due,
             interest_due,
         }
+    }
+
+    fn debug_check_start_due_before(&self, when: Timestamp, when_descr: &str) {
+        debug_assert!(
+            self.current_period.start() <= when,
+            "The current due period {}, should begin {} {}",
+            self.current_period.start(),
+            when_descr,
+            when
+        );
     }
 }
