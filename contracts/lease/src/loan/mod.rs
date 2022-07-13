@@ -25,8 +25,8 @@ pub struct Loan<Lpn, L> {
     annual_margin_interest: Percent,
     lpn: PhantomData<Lpn>,
     lpp: L,
-    interest_due_period_secs: Duration,
-    grace_period_secs: Duration,
+    interest_due_period: Duration,
+    grace_period: Duration,
     current_period: InterestPeriod<Units, Percent>,
 }
 
@@ -39,19 +39,19 @@ where
         when: Timestamp,
         lpp: L,
         annual_margin_interest: Percent,
-        interest_due_period_secs: Duration,
-        grace_period_secs: Duration,
+        interest_due_period: Duration,
+        grace_period: Duration,
     ) -> ContractResult<Self> {
         // check them out cw_utils::Duration, cw_utils::NativeBalance
         Ok(Self {
             annual_margin_interest,
             lpn: PhantomData,
             lpp,
-            interest_due_period_secs,
-            grace_period_secs,
+            interest_due_period,
+            grace_period,
             current_period: InterestPeriod::with_interest(annual_margin_interest)
                 .from(when)
-                .spanning(interest_due_period_secs),
+                .spanning(interest_due_period),
         })
     }
 
@@ -163,7 +163,7 @@ where
 
         self.current_period = InterestPeriod::with_interest(self.annual_margin_interest)
             .from(self.current_period.till())
-            .spanning(self.interest_due_period_secs);
+            .spanning(self.interest_due_period);
     }
 
     fn merge_state_with(&self, loan_state: LoanResponse<Lpn>, now: Timestamp) -> State<Lpn> {
