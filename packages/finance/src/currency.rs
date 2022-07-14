@@ -52,7 +52,7 @@ pub trait AnyVisitor {
 
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
-        C: Currency + DeserializeOwned;
+        C: Currency + Serialize + DeserializeOwned;
     fn on_unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
@@ -71,7 +71,7 @@ struct AnyVisitorImpl<V>(V);
 impl<C, V> SingleVisitor<C> for AnyVisitorImpl<V>
 where
     V: AnyVisitor,
-    C: Currency + DeserializeOwned,
+    C: Currency + Serialize + DeserializeOwned,
 {
     type Output = Result<<V as AnyVisitor>::Output, <V as AnyVisitor>::Error>;
     type Error = Self;

@@ -1,11 +1,9 @@
-use crate::lpp::NTokenPrice;
 use crate::error::ContractError;
-use cosmwasm_std::{
-    coin, Addr, Coin, Decimal, DepsMut, Fraction, StdResult, Storage, Uint128,
-};
+use crate::lpp::NTokenPrice;
+use cosmwasm_std::{coin, Addr, Coin, Decimal, DepsMut, Fraction, StdResult, Storage, Uint128};
 use cw_storage_plus::{Item, Map};
-use serde::{Deserialize, Serialize};
 use finance::currency::{Currency, Nls};
+use serde::{Deserialize, Serialize};
 
 type Balance = Uint128;
 
@@ -50,9 +48,8 @@ impl Deposit {
         amount_lpn: Uint128,
         price: NTokenPrice,
     ) -> StdResult<()> {
-
         if amount_lpn.is_zero() {
-            return Ok(())
+            return Ok(());
         }
 
         let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
@@ -101,15 +98,12 @@ impl Deposit {
     }
 
     pub fn distribute_rewards(deps: DepsMut, rewards_nls: Coin) -> StdResult<()> {
-
         let mut globals = Self::GLOBALS.may_load(deps.storage)?.unwrap_or_default();
 
         // TODO: should we throw error in this case?
         if !globals.balance_nlpn.is_zero() {
-            globals.reward_per_token += Decimal::from_ratio(
-                rewards_nls.amount,
-                globals.balance_nlpn,
-            );
+            globals.reward_per_token +=
+                Decimal::from_ratio(rewards_nls.amount, globals.balance_nlpn);
 
             Self::GLOBALS.save(deps.storage, &globals)
         } else {
@@ -138,11 +132,7 @@ impl Deposit {
     }
 
     /// pay accounted rewards to the deposit owner or optioanl recipient
-    pub fn claim_rewards(
-        &mut self,
-        storage: &mut dyn Storage,
-    ) -> StdResult<Coin> {
-
+    pub fn claim_rewards(&mut self, storage: &mut dyn Storage) -> StdResult<Coin> {
         let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
         self.update_rewards(&globals);
         let reward = self.data.pending_rewards_nls * Uint128::new(1);
@@ -153,15 +143,15 @@ impl Deposit {
         Ok(coin(reward.u128(), Nls::SYMBOL))
     }
 
-/*
-    /// create `BankMsg` to send nolus tokens to `addr`
-    pub fn pay_nls(addr: Addr, amount: Uint128) -> BankMsg {
-        BankMsg::Send {
-            to_address: addr.to_string(),
-            amount: vec![coin(amount.u128(), NOLUS_DENOM)],
+    /*
+        /// create `BankMsg` to send nolus tokens to `addr`
+        pub fn pay_nls(addr: Addr, amount: Uint128) -> BankMsg {
+            BankMsg::Send {
+                to_address: addr.to_string(),
+                amount: vec![coin(amount.u128(), NOLUS_DENOM)],
+            }
         }
-    }
-*/
+    */
 
     /// lpp derivative tokens balance
     pub fn balance_nlpn(storage: &dyn Storage) -> StdResult<Balance> {
@@ -190,8 +180,8 @@ impl Deposit {
 #[cfg(test)]
 mod test {
     use super::*;
-    use cosmwasm_std::testing;
     use crate::lpp::NTokenPrice;
+    use cosmwasm_std::testing;
 
     #[test]
     fn test_deposit_and_withdraw() {
@@ -201,22 +191,24 @@ mod test {
         let ndenom = "nusdc".to_string();
         let price = NTokenPrice::mock(Decimal::one(), &ndenom);
 
-        let mut deposit1 = Deposit::load(deps.as_ref().storage, addr1.clone())
-            .expect("should load");
-        deposit1.deposit(deps.as_mut().storage, 1000u128.into(), price)
+        let mut deposit1 =
+            Deposit::load(deps.as_ref().storage, addr1.clone()).expect("should load");
+        deposit1
+            .deposit(deps.as_mut().storage, 1000u128.into(), price)
             .expect("should deposit");
 
         Deposit::distribute_rewards(deps.as_mut(), coin(1000, "unolus"))
             .expect("should distribute rewards");
 
         let price = NTokenPrice::mock(Decimal::percent(200), &ndenom);
-        let mut deposit2 = Deposit::load(deps.as_ref().storage, addr2.clone())
-            .expect("should load");
-        deposit2.deposit(deps.as_mut().storage, 1000u128.into(), price)
+        let mut deposit2 =
+            Deposit::load(deps.as_ref().storage, addr2.clone()).expect("should load");
+        deposit2
+            .deposit(deps.as_mut().storage, 1000u128.into(), price)
             .expect("should deposit");
 
-        let balance_nlpn = Deposit::balance_nlpn(deps.as_ref().storage)
-            .expect("should query balance_nlpn");
+        let balance_nlpn =
+            Deposit::balance_nlpn(deps.as_ref().storage).expect("should query balance_nlpn");
         assert_eq!(balance_nlpn, 1500u128.into());
 
         let balance2 = Deposit::query_balance_nlpn(deps.as_ref().storage, addr2)
@@ -224,66 +216,71 @@ mod test {
             .expect("should be some balance");
         assert_eq!(balance2, 500u128.into());
 
-        let reward = deposit1.query_rewards(deps.as_ref().storage)
+        let reward = deposit1
+            .query_rewards(deps.as_ref().storage)
             .expect("should query rewards");
 
         assert_eq!(reward.amount, 1000u128.into());
 
-        let reward = deposit2.query_rewards(deps.as_ref().storage)
+        let reward = deposit2
+            .query_rewards(deps.as_ref().storage)
             .expect("should query rewards");
 
         assert_eq!(reward.amount, 0u128.into());
 
-
         Deposit::distribute_rewards(deps.as_mut(), coin(1500, "unolus"))
             .expect("should distribute rewards");
 
-        let reward = deposit1.query_rewards(deps.as_ref().storage)
+        let reward = deposit1
+            .query_rewards(deps.as_ref().storage)
             .expect("should query rewards");
 
         assert_eq!(reward.amount, 2000u128.into());
 
-        let reward = deposit2.query_rewards(deps.as_ref().storage)
+        let reward = deposit2
+            .query_rewards(deps.as_ref().storage)
             .expect("should query rewards");
 
         assert_eq!(reward.amount, 500u128.into());
 
-        let some_rewards = deposit1.withdraw(deps.as_mut().storage, 500u128.into())
+        let some_rewards = deposit1
+            .withdraw(deps.as_mut().storage, 500u128.into())
             .expect("should withdraw");
         assert!(some_rewards.is_none());
 
-        let amount = deposit1.claim_rewards(deps.as_mut().storage)
+        let amount = deposit1
+            .claim_rewards(deps.as_mut().storage)
             .expect("should claim rewards");
         assert_eq!(amount, coin(2000, Nls::SYMBOL));
 
-        let amount = deposit2.claim_rewards(deps.as_mut().storage)
+        let amount = deposit2
+            .claim_rewards(deps.as_mut().storage)
             .expect("should claim rewards");
         assert_eq!(amount, coin(500, Nls::SYMBOL));
-
 
         Deposit::distribute_rewards(deps.as_mut(), coin(1000, "unolus"))
             .expect("should distribute rewards");
 
-        let reward = deposit1.query_rewards(deps.as_ref().storage)
+        let reward = deposit1
+            .query_rewards(deps.as_ref().storage)
             .expect("should query rewards");
 
         assert_eq!(reward.amount, 500u128.into());
 
-        let reward = deposit2.query_rewards(deps.as_ref().storage)
+        let reward = deposit2
+            .query_rewards(deps.as_ref().storage)
             .expect("should query rewards");
 
         assert_eq!(reward.amount, 500u128.into());
 
         // withdraw all, return rewards, close deposit
-        let rewards = deposit1.withdraw(deps.as_mut().storage, 500u128.into())
+        let rewards = deposit1
+            .withdraw(deps.as_mut().storage, 500u128.into())
             .expect("should withdraw")
             .expect("should be some rewards");
         assert_eq!(rewards, coin(500, Nls::SYMBOL));
-        let response = Deposit::query_balance_nlpn(deps.as_mut().storage, addr1)
-            .expect("should query");
+        let response =
+            Deposit::query_balance_nlpn(deps.as_mut().storage, addr1).expect("should query");
         assert!(response.is_none());
-
-
-
     }
 }

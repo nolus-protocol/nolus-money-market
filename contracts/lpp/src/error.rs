@@ -1,14 +1,20 @@
 use cosmwasm_std::StdError;
-use thiserror::Error;
 use std::num::TryFromIntError;
+use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
+    #[error("{0}")]
+    Finance(#[from] finance::error::Error),
+
     #[error("Unauthorized")]
     Unauthorized {},
+
+    #[error("Unknown currency")]
+    UnknownCurrency {},
 
     #[error("Unauthorized contract Id")]
     ContractId {},
@@ -22,11 +28,14 @@ pub enum ContractError {
     #[error("The loan does not exist")]
     NoLoan {},
 
-    #[error("Lpp requires single denom")]
+    #[error("Lpp requires single currency")]
     FundsLen {},
 
-    #[error("Denoms are different: {contract_denom:?} vs {denom:?}")]
-    Denom { contract_denom: String, denom: String},
+    #[error("Different currencies : {contract_currency:?} vs {currency:?}")]
+    CurrencyDiff {
+        contract_currency: String,
+        currency: String,
+    },
 
     #[error("Insufficient balance")]
     InsufficientBalance,
@@ -39,4 +48,3 @@ pub enum ContractError {
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
 }
-

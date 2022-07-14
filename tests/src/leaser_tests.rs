@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::common::{test_case::TestCase, ADMIN, USER};
 use cosmwasm_std::{coins, Addr, Coin, DepsMut, Env, MessageInfo, Response};
 use cw_multi_test::{next_block, ContractWrapper, Executor};
-use finance::{currency::{Currency, Usdc, SymbolStatic, Nls}, error::Error as FinanceError};
+use finance::currency::{Currency, Usdc, SymbolStatic, Nls};
 use lease::error::ContractError;
 use leaser::msg::{QueryMsg, QuoteResponse};
 
@@ -20,7 +20,8 @@ fn open_lease() {
 // }
 
 #[test]
-fn open_lease_unknown_lpn() {
+#[should_panic(expected = "Unknown currency")]
+fn init_lpp_with_unknown_currency() {
     let user_addr = Addr::unchecked(USER);
 
     let unknown_lpn = "token";
@@ -28,25 +29,6 @@ fn open_lease_unknown_lpn() {
     let mut test_case = TestCase::new(unknown_lpn);
     test_case.init(&user_addr, coins(500, unknown_lpn));
     test_case.init_lpp(None);
-    test_case.init_leaser();
-
-    let res = test_case.app.execute_contract(
-        user_addr.clone(),
-        test_case.leaser_addr.unwrap(),
-        &leaser::msg::ExecuteMsg::OpenLease {
-            currency: unknown_lpn.to_string(),
-        },
-        &coins(3, unknown_lpn),
-    );
-    let err = res.unwrap_err();
-    println!("{:?}", err);
-    let root_err = err.root_cause().downcast_ref::<FinanceError>().unwrap();
-    assert_eq!(
-        &FinanceError::UnexpectedCurrency(
-            unknown_lpn.into(), Usdc::SYMBOL.into()
-        ),
-        root_err
-    );
 }
 
 #[test]

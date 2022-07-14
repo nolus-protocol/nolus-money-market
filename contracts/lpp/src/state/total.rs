@@ -35,7 +35,7 @@ where
     }
 }
 
-impl<LPN> Total<LPN> 
+impl<LPN> Total<LPN>
 where
     LPN: Currency + Serialize + DeserializeOwned,
 {

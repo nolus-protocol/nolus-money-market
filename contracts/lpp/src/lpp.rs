@@ -1,6 +1,6 @@
 use cosmwasm_std::{
-    coin, Addr, BankMsg, Coin as CwCoin, ContractInfoResponse, Decimal, Deps, DepsMut, Env,
-    QueryRequest, StdResult, Storage, Timestamp, Uint128, Uint64, WasmQuery,
+    Addr, BankMsg, Coin as CwCoin, ContractInfoResponse, Decimal, Deps, DepsMut, Env, QueryRequest,
+    StdResult, Storage, Timestamp, Uint128, Uint64, WasmQuery,
 };
 use finance::currency::Currency;
 use serde::de::DeserializeOwned;
@@ -64,29 +64,11 @@ where
         Ok(LiquidityPool { config, total })
     }
 
-    pub fn config(&self) -> &Config {
-        &self.config
-    }
-
-    pub fn update_config(
-        &mut self,
-        storage: &mut dyn Storage,
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
-    ) -> StdResult<()> {
-        self.config.base_interest_rate = base_interest_rate;
-        self.config.utilization_optimal = utilization_optimal;
-        self.config.addon_optimal_interest_rate = addon_optimal_interest_rate;
-
-        self.config.store(storage)
-    }
-
     // TODO: use finance bank module
     pub fn balance(&self, deps: &Deps, env: &Env) -> StdResult<Coin<LPN>> {
         let querier = deps.querier;
         querier
-            .query_balance(&env.contract.address, &self.config.denom)
+            .query_balance(&env.contract.address, &self.config.currency)
             .map(|cw_coin| Coin::<LPN>::new(cw_coin.amount.u128()))
     }
 
@@ -98,15 +80,12 @@ where
         Ok(res)
     }
 
-    pub fn query_lpp_balance(&self, deps: &Deps, env: &Env) -> StdResult<LppBalanceResponse> {
-        let balance = self.balance(deps, env)?.into_cw();
+    pub fn query_lpp_balance(&self, deps: &Deps, env: &Env) -> StdResult<LppBalanceResponse<LPN>> {
+        let balance = self.balance(deps, env)?;
 
-        let total_principal_due = self.total.total_principal_due().into_cw();
+        let total_principal_due = self.total.total_principal_due();
 
-        let total_interest_due = self
-            .total
-            .total_interest_due_by_now(env.block.time)
-            .into_cw();
+        let total_interest_due = self.total.total_interest_due_by_now(env.block.time);
 
         Ok(LppBalanceResponse {
             balance,
@@ -127,7 +106,7 @@ where
 
         Ok(NTokenPrice {
             price,
-            denom: &self.config.denom,
+            denom: &self.config.currency,
         })
     }
 
@@ -172,9 +151,9 @@ where
     /// checks `coins` denom vs config, converts Coin into it's amount;
     pub fn try_into_amount(&self, coins: CwCoin) -> Result<Coin<LPN>, ContractError> {
         if LPN::SYMBOL != coins.denom {
-            return Err(ContractError::Denom {
-                contract_denom: LPN::SYMBOL.into(),
-                denom: coins.denom,
+            return Err(ContractError::CurrencyDiff {
+                contract_currency: LPN::SYMBOL.into(),
+                currency: coins.denom,
             });
         }
 
@@ -308,7 +287,7 @@ where
     }
 }
 
-// TODO: perhaps change to From<Coin<LPN>> in finance or remove
+// TODO: perhaps change to From<Coin<LPN>> in finance or remove, more convinient way
 pub trait IntoCW {
     fn into_cw(self) -> CwCoin;
 }
@@ -318,7 +297,7 @@ where
     LPN: Currency,
 {
     fn into_cw(self) -> CwCoin {
-        coin(self.into(), LPN::SYMBOL)
+        finance::coin_legacy::to_cosmwasm(self)
     }
 }
 
@@ -523,21 +502,24 @@ mod test {
         Config::new(balance_mock.denom, lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
+
+        // simplify calculation
+        Config::load(deps.as_ref().storage)
+            .expect("can't load Config")
+            .update(
+                deps.as_mut().storage,
+                Percent::from_percent(20),
+                Percent::from_percent(50),
+                Percent::from_percent(10),
+            )
+            .expect("should update config");
+
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
             .expect("can't initialize Total");
 
         let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
             .expect("can't load LiquidityPool");
-
-        // simplify calculation
-        lpp.update_config(
-            deps.as_mut().storage,
-            Percent::from_percent(20),
-            Percent::from_percent(50),
-            Percent::from_percent(10),
-        )
-        .expect("should update config");
 
         let mut lender =
             Deposit::load(deps.as_ref().storage, Addr::unchecked("lender")).expect("should load");
@@ -575,9 +557,9 @@ mod test {
         let lpp_balance = lpp
             .query_lpp_balance(&deps.as_ref(), &env)
             .expect("should query_lpp_balance");
-        assert_eq!(lpp_balance.balance, coin_cw(5_000_000));
-        assert_eq!(lpp_balance.total_principal_due, coin_cw(5_000_000));
-        assert_eq!(lpp_balance.total_interest_due, coin_cw(1_000_000));
+        assert_eq!(lpp_balance.balance, Coin::new(5_000_000));
+        assert_eq!(lpp_balance.total_principal_due, Coin::new(5_000_000));
+        assert_eq!(lpp_balance.total_interest_due, Coin::new(1_000_000));
 
         let price = lpp
             .calculate_price(&deps.as_ref(), &env)

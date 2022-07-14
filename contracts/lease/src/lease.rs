@@ -197,6 +197,51 @@ mod tests {
         ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse<TestCurrency>> {
             todo!()
         }
+
+        fn quote(
+                &self,
+                _querier: &QuerierWrapper,
+                _amount: Coin<TestCurrency>,
+            ) -> StdResult<lpp::msg::QueryQuoteResponse> {
+            unimplemented!()
+        }
+
+        fn config(
+                &self,
+                _querier: &QuerierWrapper,
+            ) -> StdResult<lpp::msg::QueryConfigResponse> {
+            unimplemented!()
+        }
+
+        fn rewards(
+                &self,
+                _querier: &QuerierWrapper,
+                _lender: impl Into<Addr>,
+            ) -> StdResult<lpp::msg::RewardsResponse> {
+            unimplemented!()
+        }
+
+        fn nlpn_price(
+                &self,
+                _querier: &QuerierWrapper,
+            ) -> StdResult<lpp::msg::PriceResponse> {
+            unimplemented!()
+        }
+
+        fn lpp_balance(
+                &self,
+                _querier: &QuerierWrapper,
+            ) -> StdResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
+            unimplemented!()
+        }
+
+        fn nlpn_balance(
+                &self,
+                _querier: &QuerierWrapper,
+                _lender: impl Into<Addr>,
+            ) -> StdResult<lpp::msg::BalanceResponse> {
+            unimplemented!()
+        }
     }
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -230,6 +275,51 @@ mod tests {
             _by: Timestamp,
         ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse<TestCurrency>> {
             unreachable!()
+        }
+
+        fn quote(
+                &self,
+                _querier: &QuerierWrapper,
+                _amount: Coin<TestCurrency>,
+            ) -> StdResult<lpp::msg::QueryQuoteResponse> {
+            unimplemented!()
+        }
+
+        fn config(
+                &self,
+                _querier: &QuerierWrapper,
+            ) -> StdResult<lpp::msg::QueryConfigResponse> {
+            unimplemented!()
+        }
+
+        fn rewards(
+                &self,
+                _querier: &QuerierWrapper,
+                _lender: impl Into<Addr>,
+            ) -> StdResult<lpp::msg::RewardsResponse> {
+            unimplemented!()
+        }
+
+        fn nlpn_price(
+                &self,
+                _querier: &QuerierWrapper,
+            ) -> StdResult<lpp::msg::PriceResponse> {
+            unimplemented!()
+        }
+
+        fn lpp_balance(
+                &self,
+                _querier: &QuerierWrapper,
+            ) -> StdResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
+            unimplemented!()
+        }
+
+        fn nlpn_balance(
+                &self,
+                _querier: &QuerierWrapper,
+                _lender: impl Into<Addr>,
+            ) -> StdResult<lpp::msg::BalanceResponse> {
+            unimplemented!()
         }
     }
 
