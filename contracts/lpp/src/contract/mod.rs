@@ -38,7 +38,7 @@ impl<'a> InstantiateWithLpn<'a> {
         Ok(Response::new().add_attribute("method", "instantiate"))
     }
 
-    pub fn run(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<Response, ContractError> {
+    pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<Response, ContractError> {
         let context = Self { deps, msg };
         visit_any(&context.msg.denom.clone(), context)
     }
@@ -66,7 +66,7 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    InstantiateWithLpn::run(deps, msg)
+    InstantiateWithLpn::cmd(deps, msg)
 }
 
 struct ExecuteWithLpn<'a> {
@@ -104,7 +104,7 @@ impl<'a> ExecuteWithLpn<'a> {
         }
     }
 
-    pub fn run(
+    pub fn cmd(
         deps: DepsMut<'a>,
         env: Env,
         info: MessageInfo,
@@ -160,7 +160,7 @@ pub fn execute(
         ExecuteMsg::ClaimRewards { other_recipient } => {
             rewards::try_claim_rewards(deps, info.sender, other_recipient)
         }
-        _ => ExecuteWithLpn::run(deps, env, info, msg),
+        _ => ExecuteWithLpn::cmd(deps, env, info, msg),
     }
 }
 
@@ -206,7 +206,7 @@ impl<'a> QueryWithLpn<'a> {
         Ok(res)
     }
 
-    pub fn run(deps: Deps<'a>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    pub fn cmd(deps: Deps<'a>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
         let context = Self { deps, env, msg };
 
         let config = Config::load(context.deps.storage)?;
@@ -237,7 +237,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::Rewards { address } => {
             to_binary(&rewards::query_rewards(deps.storage, address)?)?
         }
-        _ => QueryWithLpn::run(deps, env, msg)?,
+        _ => QueryWithLpn::cmd(deps, env, msg)?,
     };
 
     Ok(res)
