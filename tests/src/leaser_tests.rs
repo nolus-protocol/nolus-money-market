@@ -1,11 +1,13 @@
 use std::collections::HashSet;
 
 use crate::common::{test_case::TestCase, ADMIN, USER};
-use cosmwasm_std::{coins, Addr, Coin, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{coins, Addr, DepsMut, Env, MessageInfo, Response};
 use cw_multi_test::{next_block, ContractWrapper, Executor};
-use finance::currency::{Currency, Usdc, SymbolStatic, Nls};
+use finance::{currency::{Currency, Usdc, SymbolStatic, Nls}, coin::{self, Coin}};
 use lease::error::ContractError;
 use leaser::msg::{QueryMsg, QuoteResponse};
+
+type TheCurrency = Usdc;
 
 #[test]
 fn open_lease() {
@@ -153,7 +155,7 @@ fn open_multiple_loans() {
 
 #[test]
 fn test_quote() {
-    const LPN: SymbolStatic = Usdc::SYMBOL;
+    const LPN: SymbolStatic = TheCurrency::SYMBOL;
 
     let user_addr = Addr::unchecked(USER);
     let mut test_case = TestCase::new(LPN);
@@ -161,21 +163,18 @@ fn test_quote() {
     test_case.init_lpp(None);
     test_case.init_leaser();
 
-    let resp: QuoteResponse = test_case
+    let resp: QuoteResponse<TheCurrency, TheCurrency> = test_case
         .app
         .wrap()
         .query_wasm_smart(
             test_case.leaser_addr.unwrap(),
             &QueryMsg::Quote {
-                downpayment: Coin::new(100, LPN),
+                downpayment: coin::funds::<TheCurrency>(100),
             },
         )
         .unwrap();
 
-    assert_eq!(185, resp.borrow.amount.u128());
-
-    //TODO: change to
-    // assert_eq!(finance::coin::Coin::<Usdc>::new(185), resp.borrow);
+    assert_eq!(Coin::<TheCurrency>::new(185), resp.borrow);
 }
 
 #[test]

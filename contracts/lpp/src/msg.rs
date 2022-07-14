@@ -1,6 +1,6 @@
-use cosmwasm_std::{Addr, Coin as CwCoin, Decimal, Timestamp, Uint128, Uint64};
+use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128, Uint64};
 use finance::{
-    coin::Coin,
+    coin::{Coin, CoinC},
     currency::{Currency, Nls},
     percent::Percent,
 };
@@ -24,7 +24,7 @@ pub enum ExecuteMsg {
     },
 
     OpenLoan {
-        amount: CwCoin,
+        amount: CoinC,
     },
     RepayLoan,
 
@@ -45,7 +45,7 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     Config(),
     Quote {
-        amount: CwCoin,
+        amount: CoinC,
     },
     Loan {
         lease_addr: Addr,

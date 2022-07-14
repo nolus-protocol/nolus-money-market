@@ -3,8 +3,7 @@ use cosmwasm_std::{
 };
 use finance::{
     coin::Coin,
-    coin_legacy::to_cosmwasm,
-    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
+    currency::{visit_any, AnyVisitor, Currency, SymbolOwned}, coin_legacy::to_cosmwasm,
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -118,7 +117,7 @@ where
 {
     fn open_loan_req(&self, amount: Coin<Lpn>) -> StdResult<SubMsg> {
         let msg = to_binary(&ExecuteMsg::OpenLoan {
-            amount: to_cosmwasm(amount),
+            amount: amount.into(),
         })?;
         Ok(SubMsg::reply_on_success(
             WasmMsg::Execute {
@@ -170,7 +169,7 @@ where
 
     fn quote(&self, querier: &QuerierWrapper, amount: Coin<Lpn>) -> StdResult<QueryQuoteResponse> {
         let msg = QueryMsg::Quote {
-            amount: to_cosmwasm(amount),
+            amount: amount.into(),
         };
         querier.query_wasm_smart(self.addr.clone(), &msg)
     }
@@ -218,7 +217,6 @@ mod test {
     use cosmwasm_std::{from_binary, Addr, CosmosMsg, ReplyOn, WasmMsg};
     use finance::{
         coin::Coin,
-        coin_legacy::from_cosmwasm,
         currency::{Currency, Nls},
     };
 
@@ -249,7 +247,7 @@ mod test {
             assert!(funds.is_empty());
             let lpp_msg: ExecuteMsg = from_binary(&msg).expect("invalid Lpp message");
             if let ExecuteMsg::OpenLoan { amount } = lpp_msg {
-                assert_eq!(borrow_amount, from_cosmwasm(amount).unwrap());
+                assert_eq!(borrow_amount, amount.try_into().unwrap());
             } else {
                 panic!("Bad Lpp message type!");
             }

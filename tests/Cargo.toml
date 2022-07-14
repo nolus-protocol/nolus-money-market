@@ -14,7 +14,7 @@ oracle = { path = "../contracts/oracle", version = "0.1.0", default-features = f
 treasury = { path = "../contracts/treasury", version = "0.1.0", default-features = false}
 rewards_dispatcher = { path = "../contracts/dispatcher", version = "0.1.0", default-features = false}
 profit = { path = "../contracts/profit", version = "0.1.0", default-features = false}
-finance = { path = "../packages/finance", version = "0.1.0", default-features = false }
+finance = { path = "../packages/finance", version = "0.1.0", default-features = false, features = ["testing"]}
 cosmwasm-std = "1.0.0"
 
 

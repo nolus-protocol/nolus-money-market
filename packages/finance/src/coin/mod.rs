@@ -1,3 +1,7 @@
+mod coinc;
+#[cfg(feature = "testing")]
+pub use coinc::funds;
+pub use coinc::CoinC;
 mod serde;
 
 use std::{
@@ -6,8 +10,8 @@ use std::{
     ops::{Add, Sub},
 };
 
-use schemars::JsonSchema;
 use ::serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 
 use crate::currency::Currency;
 
