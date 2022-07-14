@@ -52,3 +52,22 @@ where
 {
     Coin::<C>::new(amount).into()
 }
+
+#[cfg(test)]
+mod test {
+    use cosmwasm_std::to_vec;
+
+    use crate::{currency::{Currency, SymbolStatic}, coin::{Coin, CoinC}};
+
+    #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+    struct MyTestCurrency;
+    impl Currency for MyTestCurrency {
+        const SYMBOL: SymbolStatic = "qwerty";
+    }
+
+    #[test]
+    fn same_representation() {
+        let coin = Coin::<MyTestCurrency>::new(4215);
+        assert_eq!(to_vec(&coin), to_vec(&CoinC::from(coin)));
+    }
+}
