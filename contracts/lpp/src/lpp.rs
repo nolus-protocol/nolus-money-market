@@ -85,9 +85,7 @@ where
 
         let total_principal_due = self.total.total_principal_due();
 
-        let total_interest_due = self
-            .total
-            .total_interest_due_by_now(env.block.time);
+        let total_interest_due = self.total.total_interest_due_by_now(env.block.time);
 
         Ok(LppBalanceResponse {
             balance,
