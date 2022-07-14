@@ -147,19 +147,6 @@ where
         }
     }
 
-    // to remove, maybe try_into for cosmwasm_std::Coin
-    /// checks `coins` denom vs config, converts Coin into it's amount;
-    pub fn try_into_amount(&self, coins: CwCoin) -> Result<Coin<LPN>, ContractError> {
-        if LPN::SYMBOL != coins.denom {
-            return Err(ContractError::CurrencyDiff {
-                contract_currency: LPN::SYMBOL.into(),
-                currency: coins.denom,
-            });
-        }
-
-        Ok(Coin::new(coins.amount.into()))
-    }
-
     pub fn query_quote(
         &self,
         deps: &Deps,

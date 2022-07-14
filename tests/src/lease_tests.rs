@@ -8,7 +8,7 @@ use leaser::msg::{QueryMsg, QuoteResponse};
 
 use finance::{
     coin::Coin,
-    coin_legacy::{from_cosmwasm, to_cosmwasm},
+    coin_legacy::to_cosmwasm,
     currency::Usdc,
     duration::Duration,
     interest::InterestPeriod,
@@ -100,17 +100,17 @@ fn close(test_case: &mut TestCase, contract_addr: &Addr) -> AppResponse {
 }
 
 fn quote_borrow(test_case: &TestCase, amount: TheCoin) -> TheCoin {
-    from_cosmwasm(quote_query(test_case, amount).borrow).unwrap()
+    quote_query(test_case, amount).borrow
 }
 
-fn quote_query(test_case: &TestCase, amount: TheCoin) -> QuoteResponse {
+fn quote_query(test_case: &TestCase, amount: TheCoin) -> QuoteResponse<Currency, Currency> {
     test_case
         .app
         .wrap()
         .query_wasm_smart(
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Quote {
-                downpayment: to_cosmwasm(amount),
+                downpayment: amount.into(),
             },
         )
         .unwrap()
@@ -131,7 +131,7 @@ fn expected_open_state(
     duration: u64,
 ) -> StateResponse<Currency, Currency> {
     let quote_result = quote_query(test_case, downpayment);
-    let total = from_cosmwasm(quote_result.total).unwrap();
+    let total = quote_result.total;
     let expected =  total - downpayment - payments;
     StateResponse::Opened {
         amount: total,
@@ -159,7 +159,7 @@ fn state_opened_when_partially_paid() {
     let downpayment = create_coin(DOWNPAYMENT);
 
     let quote_result = quote_query(&test_case, downpayment);
-    let partial_payment = create_coin(quote_result.borrow.amount.u128() / 2);
+    let partial_payment = create_coin(u128::from(quote_result.borrow) / 2);
     let expected_result = expected_open_state(&test_case, downpayment, partial_payment, 0);
 
     let lease_address = open_lease(&mut test_case, downpayment);

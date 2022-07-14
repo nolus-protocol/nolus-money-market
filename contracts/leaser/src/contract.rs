@@ -1,10 +1,12 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult, Storage,
+    to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, Storage,
 };
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
+use finance::coin::Coin;
+use finance::currency::Usdc;
 
 use crate::error::ContractError;
 use crate::leaser::Leaser;
@@ -50,12 +52,16 @@ pub fn execute(
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    match msg {
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    let res = match msg {
         QueryMsg::Config {} => to_binary(&Leaser::query_config(deps)?),
-        QueryMsg::Quote { downpayment } => to_binary(&Leaser::query_quote(env, deps, downpayment)?),
+        QueryMsg::Quote { downpayment } => {
+            let quote: Coin<Usdc> = downpayment.try_into()?;
+            to_binary(&Leaser::query_quote(env, deps, quote)?)
+        }
         QueryMsg::Leases { owner } => to_binary(&Leaser::query_loans(deps, owner)?),
-    }
+    };
+    res.map_err(ContractError::from)
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]

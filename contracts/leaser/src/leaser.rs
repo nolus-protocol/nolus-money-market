@@ -5,8 +5,8 @@ use cosmwasm_std::{
     SubMsg, WasmMsg,
 };
 
-use finance::coin_legacy::{from_cosmwasm, to_cosmwasm};
-use finance::currency::Usdc;
+use finance::coin::Coin;
+use finance::currency::Currency;
 use finance::liability::Liability;
 use finance::percent::Percent;
 use lease::msg::{LoanForm, NewLeaseForm};
@@ -51,30 +51,31 @@ impl Leaser {
         Loans::get(deps.storage, owner)
     }
 
-    pub fn query_quote(
+    pub fn query_quote<C>(
         _env: Env,
         deps: Deps,
-        downpayment: cosmwasm_std::Coin,
-    ) -> StdResult<QuoteResponse> {
+        downpayment: Coin<C>,
+    ) -> StdResult<QuoteResponse<C, C>>
+    where
+        C: Currency,
+    {
         // borrowUST = LeaseInitialLiability% * downpaymentUST / (1 - LeaseInitialLiability%)
-        if downpayment.amount.is_zero() {
+        if downpayment.is_zero() {
             return Err(StdError::generic_err(
                 "cannot open lease with zero downpayment",
             ));
         }
-        let dp = from_cosmwasm::<Usdc>(downpayment.clone())
-            .map_err(|err| StdError::generic_err(err.to_string()))?;
 
         let config = Config::load(deps.storage)?;
 
-        let borrow_amount = config.liability.init_borrow_amount(dp);
-        let total_amount = borrow_amount + dp;
+        let borrow = config.liability.init_borrow_amount(downpayment);
+        let total = borrow + downpayment;
 
         let annual_interest_rate = LppQuerier::get_annual_interest_rate(deps, downpayment)?;
 
         Ok(QuoteResponse {
-            total: to_cosmwasm(total_amount),
-            borrow: to_cosmwasm(borrow_amount),
+            total,
+            borrow,
             annual_interest_rate: annual_interest_rate + config.lease_interest_rate_margin,
         })
     }

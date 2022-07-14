@@ -3,6 +3,7 @@ use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
 use cw2::set_contract_version;
+use finance::coin_legacy;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::ContractError;
@@ -84,6 +85,7 @@ impl<'a> ExecuteWithLpn<'a> {
         // currency context variants
         match self.msg {
             ExecuteMsg::OpenLoan { amount } => {
+                let amount = amount.try_into()?;
                 borrow::try_open_loan::<LPN>(self.deps, self.env, self.info.sender, amount)
             }
             ExecuteMsg::RepayLoan => borrow::try_repay_loan::<LPN>(
@@ -93,7 +95,13 @@ impl<'a> ExecuteWithLpn<'a> {
                 self.info.funds,
             ),
             ExecuteMsg::Deposit() => {
-                lender::try_deposit::<LPN>(self.deps, self.env, self.info.sender, self.info.funds)
+                // TODO use Bank::receive
+                if self.info.funds.len() != 1 {
+                    return Err(ContractError::FundsLen {});
+                }
+                let amount = coin_legacy::from_cosmwasm(self.info.funds[0].clone())?;
+            
+                lender::try_deposit::<LPN>(self.deps, self.env, self.info.sender, amount)
             }
             ExecuteMsg::Burn { amount } => {
                 lender::try_withdraw::<LPN>(self.deps, self.env, self.info.sender, amount)
@@ -178,7 +186,8 @@ impl<'a> QueryWithLpn<'a> {
         // currency context variants
         let res = match self.msg {
             QueryMsg::Quote { amount } => {
-                to_binary(&borrow::query_quote::<LPN>(&self.deps, &self.env, amount)?)
+                let quote = amount.try_into()?;
+                to_binary(&borrow::query_quote::<LPN>(&self.deps, &self.env, quote)?)
             }
             QueryMsg::Loan { lease_addr } => to_binary(&borrow::query_loan::<LPN>(
                 self.deps.storage,

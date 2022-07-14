@@ -14,14 +14,13 @@ pub fn try_open_loan<LPN>(
     deps: DepsMut,
     env: Env,
     lease_addr: Addr,
-    amount: CwCoin,
+    amount: Coin<LPN>,
 ) -> Result<Response, ContractError>
 where
     LPN: Currency + Serialize + DeserializeOwned,
 {
     let mut lpp = LiquidityPool::<LPN>::load(deps.storage)?;
     lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
-    let amount = Coin::new(amount.amount.u128());
 
     lpp.try_open_loan(deps, env, lease_addr.clone(), amount)?;
 
@@ -72,13 +71,12 @@ where
 pub fn query_quote<LPN>(
     deps: &Deps,
     env: &Env,
-    quote: CwCoin,
+    quote: Coin<LPN>,
 ) -> Result<QueryQuoteResponse, ContractError>
 where
     LPN: Currency + Serialize + DeserializeOwned,
 {
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
-    let quote = lpp.try_into_amount(quote)?;
 
     match lpp.query_quote(deps, env, quote)? {
         Some(quote) => Ok(QueryQuoteResponse::QuoteInterestRate(quote)),

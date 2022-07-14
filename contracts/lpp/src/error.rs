@@ -31,12 +31,6 @@ pub enum ContractError {
     #[error("Lpp requires single currency")]
     FundsLen {},
 
-    #[error("Different currencies : {contract_currency:?} vs {currency:?}")]
-    CurrencyDiff {
-        contract_currency: String,
-        currency: String,
-    },
-
     #[error("Insufficient balance")]
     InsufficientBalance,
 

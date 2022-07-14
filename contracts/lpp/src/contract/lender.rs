@@ -1,4 +1,5 @@
-use cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, Deps, DepsMut, Env, Response, Storage, Uint128};
+use cosmwasm_std::{Addr, BankMsg, Deps, DepsMut, Env, Response, Storage, Uint128};
+use finance::coin::Coin;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::ContractError;
@@ -11,17 +12,12 @@ pub fn try_deposit<LPN>(
     deps: DepsMut,
     env: Env,
     lender_addr: Addr,
-    funds: Vec<CwCoin>,
+    amount: Coin<LPN>,
 ) -> Result<Response, ContractError>
 where
     LPN: Currency + DeserializeOwned + Serialize,
 {
-    if funds.len() != 1 {
-        return Err(ContractError::FundsLen {});
-    }
-
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
-    let amount = lpp.try_into_amount(funds[0].clone())?;
 
     let price = lpp.calculate_price(&deps.as_ref(), &env)?;
     let amount: u128 = amount.into();

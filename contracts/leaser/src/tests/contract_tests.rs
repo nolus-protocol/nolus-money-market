@@ -3,9 +3,10 @@ use crate::leaser::Leaser;
 use crate::ContractError;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{
-    coins, from_binary, to_binary, Addr, Coin, CosmosMsg, DepsMut, MessageInfo, StdError, SubMsg,
-    Uint64, WasmMsg,
+    coins, from_binary, to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, StdError, SubMsg, Uint64,
+    WasmMsg,
 };
+use finance::coin::{self, Coin};
 use finance::currency::{Currency, Usdc};
 use finance::liability::Liability;
 use finance::percent::Percent;
@@ -14,7 +15,8 @@ use crate::msg::{ConfigResponse, ExecuteMsg, QueryMsg, QuoteResponse, Repayment}
 
 const CREATOR: &str = "creator";
 const LPP_ADDR: &str = "test";
-const DENOM: &str = Usdc::SYMBOL;
+type TheCurrency = Usdc;
+const DENOM: &str = TheCurrency::SYMBOL;
 const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
 
 fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::InstantiateMsg {
@@ -150,27 +152,27 @@ fn test_quote() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::Quote {
-            downpayment: Coin::new(0, DENOM),
+            downpayment: coin::funds::<TheCurrency>(0),
         },
     )
     .unwrap_err();
     assert_eq!(
         err,
-        StdError::generic_err("cannot open lease with zero downpayment",)
+        StdError::generic_err("cannot open lease with zero downpayment",).into()
     );
 
     let res = query(
         deps.as_ref(),
         mock_env(),
         QueryMsg::Quote {
-            downpayment: Coin::new(100, DENOM),
+            downpayment: coin::funds::<TheCurrency>(100),
         },
     )
     .unwrap();
-    let resp: QuoteResponse = from_binary(&res).unwrap();
+    let resp: QuoteResponse<TheCurrency, TheCurrency> = from_binary(&res).unwrap();
 
-    assert_eq!(Coin::new(185, DENOM), resp.borrow);
-    assert_eq!(Coin::new(285, DENOM), resp.total);
+    assert_eq!(Coin::<TheCurrency>::new(185), resp.borrow);
+    assert_eq!(Coin::<TheCurrency>::new(285), resp.total);
     // TODO: move to finance::coin::Coin
     // assert_eq!(finance::coin::Coin::<Usdc>::new(185), resp.borrow);
     // assert_eq!(finance::coin::Coin::<Usdc>::new(285), resp.total);
@@ -189,14 +191,14 @@ fn test_quote() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::Quote {
-            downpayment: Coin::new(15, DENOM),
+            downpayment: coin::funds::<TheCurrency>(15),
         },
     )
     .unwrap();
-    let resp: QuoteResponse = from_binary(&res).unwrap();
+    let resp: QuoteResponse<TheCurrency, TheCurrency> = from_binary(&res).unwrap();
 
-    assert_eq!(Coin::new(27, DENOM), resp.borrow);
-    assert_eq!(Coin::new(42, DENOM), resp.total);
+    assert_eq!(Coin::<TheCurrency>::new(27), resp.borrow);
+    assert_eq!(Coin::<TheCurrency>::new(42), resp.total);
 
     // TODO: move to finance::coin
     // assert_eq!(finance::coin::Coin::<Usdc>::new(27), resp.borrow);
