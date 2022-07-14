@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, Uint64};
 
 use finance::{
-    coin::{Coin, CoinC},
+    coin::{Coin, CoinDTO},
     currency::Currency,
     liability::Liability,
     percent::Percent,
@@ -43,7 +43,7 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
-    Quote { downpayment: CoinC },
+    Quote { downpayment: CoinDTO },
     Leases { owner: Addr },
 }
 

@@ -13,18 +13,18 @@ use super::Coin;
 /// the same representation on the wire. The aim is to use it everywhere the cosmwasm
 /// framework does not support type parameterization.
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CoinC {
+pub struct CoinDTO {
     amount: u128,
     symbol: SymbolOwned,
 }
 
-impl<C> TryFrom<CoinC> for Coin<C>
+impl<C> TryFrom<CoinDTO> for Coin<C>
 where
     C: Currency,
 {
     type Error = Error;
 
-    fn try_from(coin: CoinC) -> Result<Self, Self::Error> {
+    fn try_from(coin: CoinDTO) -> Result<Self, Self::Error> {
         if C::SYMBOL == coin.symbol {
             Ok(Self::new(coin.amount))
         } else {
@@ -33,7 +33,7 @@ where
     }
 }
 
-impl<C> From<Coin<C>> for CoinC
+impl<C> From<Coin<C>> for CoinDTO
 where
     C: Currency,
 {
@@ -46,7 +46,7 @@ where
 }
 
 #[cfg(feature = "testing")]
-pub fn funds<C>(amount: u128) -> CoinC
+pub fn funds<C>(amount: u128) -> CoinDTO
 where
     C: Currency,
 {
@@ -57,7 +57,7 @@ where
 mod test {
     use cosmwasm_std::to_vec;
 
-    use crate::{currency::{Currency, SymbolStatic}, coin::{Coin, CoinC}};
+    use crate::{currency::{Currency, SymbolStatic}, coin::{Coin, CoinDTO}};
 
     #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
     struct MyTestCurrency;
@@ -68,6 +68,6 @@ mod test {
     #[test]
     fn same_representation() {
         let coin = Coin::<MyTestCurrency>::new(4215);
-        assert_eq!(to_vec(&coin), to_vec(&CoinC::from(coin)));
+        assert_eq!(to_vec(&coin), to_vec(&CoinDTO::from(coin)));
     }
 }

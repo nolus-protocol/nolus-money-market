@@ -1,7 +1,7 @@
 mod coinc;
 #[cfg(feature = "testing")]
 pub use coinc::funds;
-pub use coinc::CoinC;
+pub use coinc::CoinDTO;
 mod serde;
 
 use std::{
