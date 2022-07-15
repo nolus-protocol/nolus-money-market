@@ -1,5 +1,8 @@
-use cosmwasm_std::{Addr, QuerierWrapper, StdResult, Storage, SubMsg, Timestamp};
-use cw_storage_plus::Item;
+mod dto;
+pub(super) use dto::LeaseDTO;
+mod factory;
+
+use cosmwasm_std::{Addr, QuerierWrapper, Reply, SubMsg, Timestamp};
 use finance::{
     bank::BankAccount,
     coin::Coin,
@@ -7,7 +10,7 @@ use finance::{
     liability::Liability,
 };
 use lpp::stub::Lpp as LppTrait;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -15,7 +18,28 @@ use crate::{
     msg::StateResponse,
 };
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+use self::factory::Factory;
+
+pub trait WithLease {
+    type Output;
+    type Error;
+
+    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    where
+        Lpn: Currency + Serialize,
+        Lpp: LppTrait<Lpn>;
+
+    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
+}
+
+pub fn execute<L, O, E>(dto: LeaseDTO, cmd: L, querier: &QuerierWrapper) -> Result<O, E>
+where
+    L: WithLease<Output = O, Error = E>,
+{
+    let lpp = dto.loan.lpp().clone();
+    lpp.execute(Factory::new(cmd, dto), querier)
+}
+
 pub struct Lease<Lpn, Lpp> {
     customer: Addr,
     currency: SymbolOwned,
@@ -25,35 +49,50 @@ pub struct Lease<Lpn, Lpp> {
 
 impl<'a, Lpn, Lpp> Lease<Lpn, Lpp>
 where
-    Lpn: Currency + Serialize + DeserializeOwned,
-    Lpp: LppTrait<Lpn> + Serialize + DeserializeOwned,
+    Lpn: Currency,
+    Lpp: LppTrait<Lpn>,
 {
-    const DB_ITEM: Item<'a, Lease<Lpn, Lpp>> = Item::new("lease");
+    pub(super) fn from_dto(dto: LeaseDTO, lpp: Lpp) -> Self {
+        assert_eq!(
+            Lpn::SYMBOL,
+            dto.currency,
+            "[Single currency version] The LPN '{}' should match the currency of the lease '{}'",
+            Lpn::SYMBOL,
+            dto.currency
+        );
 
-    pub(crate) fn new(
-        customer: Addr,
-        currency: SymbolOwned,
-        liability: Liability,
-        loan: Loan<Lpn, Lpp>,
-    ) -> Self {
         Self {
-            customer,
-            currency,
-            liability,
-            loan,
+            customer: dto.customer,
+            currency: dto.currency,
+            liability: dto.liability,
+            loan: Loan::from_dto(dto.loan, lpp),
         }
     }
 
-    pub(crate) fn close<B>(
-        &self,
-        lease: Addr,
-        querier: &QuerierWrapper,
-        account: &B,
-    ) -> ContractResult<SubMsg>
+    pub(crate) fn owned_by(&self, addr: &Addr) -> bool {
+        &self.customer == addr
+    }
+
+    pub(crate) fn open_loan_req(&self, downpayment: Coin<Lpn>) -> ContractResult<SubMsg> {
+        // TODO add a type parameter to this function to designate the downpayment currency
+        // TODO query the market price oracle to get the price of the downpayment currency to LPN
+        // and calculate `downpayment` in LPN
+        let borrow = self.liability.init_borrow_amount(downpayment);
+
+        self.loan.open_loan_req(borrow)
+    }
+
+    pub(crate) fn open_loan_resp(&self, resp: Reply) -> ContractResult<()> {
+        self.loan.open_loan_resp(resp)
+    }
+
+    // TODO add the lease address as a field in Lease<>
+    // and populate it on LeaseDTO.execute as LeaseFactory
+    pub(crate) fn close<B>(&self, lease: Addr, account: &B) -> ContractResult<SubMsg>
     where
         B: BankAccount,
     {
-        let state = self.state(Timestamp::from_nanos(u64::MAX), account, querier, lease)?;
+        let state = self.state(Timestamp::from_nanos(u64::MAX), account, lease)?;
         match state {
             StateResponse::Opened { .. } => ContractResult::Err(ContractError::LoanNotPaid()),
             StateResponse::Paid(..) => {
@@ -70,30 +109,16 @@ where
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
-        querier: &QuerierWrapper,
         lease: Addr,
     ) -> ContractResult<Option<SubMsg>> {
         assert_eq!(self.currency, Lpn::SYMBOL);
-        self.loan.repay(payment, by, querier, lease)
-    }
-
-    pub(crate) fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
-        Lease::DB_ITEM.save(storage, &self)
-    }
-
-    pub(crate) fn load(storage: &dyn Storage) -> StdResult<Self> {
-        Lease::DB_ITEM.load(storage)
-    }
-
-    pub(crate) fn owned_by(&self, addr: &Addr) -> bool {
-        &self.customer == addr
+        self.loan.repay(payment, by, lease)
     }
 
     pub(crate) fn state<B>(
         &self,
         now: Timestamp,
         account: &B,
-        querier: &QuerierWrapper,
         lease: Addr,
     ) -> ContractResult<StateResponse<Lpn, Lpn>>
     where
@@ -104,7 +129,7 @@ where
         if lease_amount.is_zero() {
             Ok(StateResponse::Closed())
         } else {
-            let loan_state = self.loan.state(now, querier, lease)?;
+            let loan_state = self.loan.state(now, lease)?;
 
             loan_state.map_or_else(
                 || Ok(StateResponse::Paid(lease_amount)),
@@ -123,23 +148,25 @@ where
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::testing::{mock_dependencies, MockStorage};
-    use cosmwasm_std::{Addr, QuerierWrapper, StdResult, SubMsg, Timestamp};
-    use finance::currency::Usdc;
+
+    use cosmwasm_std::{Addr, StdResult, SubMsg, Timestamp};
+    use finance::currency::{Nls, Usdc};
     use finance::{
         bank::BankAccount, coin::Coin, currency::Currency, duration::Duration,
         error::Result as FinanceResult, liability::Liability, percent::Percent,
     };
     use lpp::msg::{LoanResponse, QueryLoanResponse};
-    use lpp::stub::Lpp;
+    use lpp::stub::{Lpp, LppRef};
     use serde::{Deserialize, Serialize};
 
-    use crate::loan::Loan;
+    use crate::loan::{Loan, LoanDTO};
     use crate::msg::StateResponse;
 
     use super::Lease;
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
+    const LEASE_START: Timestamp = Timestamp::from_nanos(100);
+    const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
     type TestCurrency = Usdc;
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -168,79 +195,54 @@ mod tests {
         loan: Option<LoanResponse<TestCurrency>>,
     }
 
+    // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl Lpp<TestCurrency> for LppLocalStub {
         fn open_loan_req(&self, _amount: Coin<TestCurrency>) -> StdResult<SubMsg> {
-            unimplemented!()
+            unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> Result<(), String> {
-            unimplemented!()
+        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> StdResult<()> {
+            unreachable!()
         }
 
         fn repay_loan_req(&self, _repayment: Coin<TestCurrency>) -> StdResult<SubMsg> {
-            todo!()
+            unreachable!()
         }
 
-        fn loan(
-            &self,
-            _querier: &QuerierWrapper,
-            _lease: impl Into<Addr>,
-        ) -> StdResult<QueryLoanResponse<TestCurrency>> {
+        fn loan(&self, _lease: impl Into<Addr>) -> StdResult<QueryLoanResponse<TestCurrency>> {
             Result::Ok(self.loan.clone())
         }
 
         fn loan_outstanding_interest(
             &self,
-            _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
             _by: Timestamp,
         ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse<TestCurrency>> {
-            todo!()
+            unreachable!()
         }
 
-        fn quote(
-                &self,
-                _querier: &QuerierWrapper,
-                _amount: Coin<TestCurrency>,
-            ) -> StdResult<lpp::msg::QueryQuoteResponse> {
-            unimplemented!()
+        fn quote(&self, _amount: Coin<TestCurrency>) -> StdResult<lpp::msg::QueryQuoteResponse> {
+            unreachable!()
         }
 
-        fn config(
-                &self,
-                _querier: &QuerierWrapper,
-            ) -> StdResult<lpp::msg::QueryConfigResponse> {
-            unimplemented!()
+        fn config(&self) -> StdResult<lpp::msg::QueryConfigResponse> {
+            unreachable!()
         }
 
-        fn rewards(
-                &self,
-                _querier: &QuerierWrapper,
-                _lender: impl Into<Addr>,
-            ) -> StdResult<lpp::msg::RewardsResponse> {
-            unimplemented!()
+        fn rewards(&self, _lender: impl Into<Addr>) -> StdResult<lpp::msg::RewardsResponse> {
+            unreachable!()
         }
 
-        fn nlpn_price(
-                &self,
-                _querier: &QuerierWrapper,
-            ) -> StdResult<lpp::msg::PriceResponse> {
-            unimplemented!()
+        fn nlpn_price(&self) -> StdResult<lpp::msg::PriceResponse> {
+            unreachable!()
         }
 
-        fn lpp_balance(
-                &self,
-                _querier: &QuerierWrapper,
-            ) -> StdResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
-            unimplemented!()
+        fn lpp_balance(&self) -> StdResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
+            unreachable!()
         }
 
-        fn nlpn_balance(
-                &self,
-                _querier: &QuerierWrapper,
-                _lender: impl Into<Addr>,
-            ) -> StdResult<lpp::msg::BalanceResponse> {
-            unimplemented!()
+        fn nlpn_balance(&self, _lender: impl Into<Addr>) -> StdResult<lpp::msg::BalanceResponse> {
+            unreachable!()
         }
     }
 
@@ -252,7 +254,7 @@ mod tests {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> Result<(), String> {
+        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> StdResult<()> {
             unreachable!()
         }
 
@@ -260,73 +262,55 @@ mod tests {
             unreachable!()
         }
 
-        fn loan(
-            &self,
-            _querier: &QuerierWrapper,
-            _lease: impl Into<Addr>,
-        ) -> StdResult<QueryLoanResponse<TestCurrency>> {
+        fn loan(&self, _lease: impl Into<Addr>) -> StdResult<QueryLoanResponse<TestCurrency>> {
             unreachable!()
         }
 
         fn loan_outstanding_interest(
             &self,
-            _querier: &QuerierWrapper,
             _lease: impl Into<Addr>,
             _by: Timestamp,
         ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse<TestCurrency>> {
             unreachable!()
         }
 
-        fn quote(
-                &self,
-                _querier: &QuerierWrapper,
-                _amount: Coin<TestCurrency>,
-            ) -> StdResult<lpp::msg::QueryQuoteResponse> {
-            unimplemented!()
+        fn quote(&self, _amount: Coin<TestCurrency>) -> StdResult<lpp::msg::QueryQuoteResponse> {
+            unreachable!()
         }
 
-        fn config(
-                &self,
-                _querier: &QuerierWrapper,
-            ) -> StdResult<lpp::msg::QueryConfigResponse> {
-            unimplemented!()
+        fn config(&self) -> StdResult<lpp::msg::QueryConfigResponse> {
+            unreachable!()
         }
 
-        fn rewards(
-                &self,
-                _querier: &QuerierWrapper,
-                _lender: impl Into<Addr>,
-            ) -> StdResult<lpp::msg::RewardsResponse> {
-            unimplemented!()
+        fn rewards(&self, _lender: impl Into<Addr>) -> StdResult<lpp::msg::RewardsResponse> {
+            unreachable!()
         }
 
-        fn nlpn_price(
-                &self,
-                _querier: &QuerierWrapper,
-            ) -> StdResult<lpp::msg::PriceResponse> {
-            unimplemented!()
+        fn nlpn_price(&self) -> StdResult<lpp::msg::PriceResponse> {
+            unreachable!()
         }
 
-        fn lpp_balance(
-                &self,
-                _querier: &QuerierWrapper,
-            ) -> StdResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
-            unimplemented!()
+        fn lpp_balance(&self) -> StdResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
+            unreachable!()
         }
 
-        fn nlpn_balance(
-                &self,
-                _querier: &QuerierWrapper,
-                _lender: impl Into<Addr>,
-            ) -> StdResult<lpp::msg::BalanceResponse> {
-            unimplemented!()
+        fn nlpn_balance(&self, _lender: impl Into<Addr>) -> StdResult<lpp::msg::BalanceResponse> {
+            unreachable!()
         }
     }
 
-    fn create_lease<L>(lpp_stub: L) -> Lease<TestCurrency, L>
+    fn create_lease<L>(lpp: L) -> Lease<TestCurrency, L>
     where
         L: Lpp<TestCurrency>,
     {
+        let lpp_ref = LppRef::unchecked::<_, Nls>("lpp_adr");
+        let loan_dto = LoanDTO::new(
+            LEASE_START,
+            lpp_ref,
+            MARGIN_INTEREST_RATE,
+            Duration::from_secs(0),
+            Duration::from_secs(0),
+        );
         Lease {
             customer: Addr::unchecked("customer"),
             currency: TestCurrency::SYMBOL.to_string(),
@@ -336,14 +320,7 @@ mod tests {
                 Percent::from_percent(80),
                 10 * 24,
             ),
-            loan: Loan::open(
-                Timestamp::from_nanos(0),
-                lpp_stub,
-                MARGIN_INTEREST_RATE,
-                Duration::from_secs(0),
-                Duration::from_secs(0),
-            )
-            .unwrap(),
+            loan: Loan::from_dto(loan_dto, lpp),
         }
     }
 
@@ -367,26 +344,9 @@ mod tests {
         lease: Lease<TestCurrency, LppLocalStub>,
         bank_account: &BankStub,
     ) -> StateResponse<TestCurrency, TestCurrency> {
-        let mut deps = mock_dependencies();
         lease
-            .state(
-                Timestamp::from_nanos(0),
-                bank_account,
-                &deps.as_mut().querier,
-                Addr::unchecked("unused"),
-            )
+            .state(LEASE_STATE_AT, bank_account, Addr::unchecked("unused"))
             .unwrap()
-    }
-
-    #[test]
-    fn persist_ok() {
-        let mut storage = MockStorage::default();
-        let obj = create_lease(LppLocalStub { loan: None });
-        let obj_exp = obj.clone();
-        obj.store(&mut storage).expect("storing failed");
-        let obj_loaded: Lease<TestCurrency, LppLocalStub> =
-            Lease::load(&storage).expect("loading failed");
-        assert_eq!(obj_exp.customer, obj_loaded.customer);
     }
 
     #[test]
@@ -448,12 +408,10 @@ mod tests {
 
         let bank_account = create_bank_account(0);
 
-        let mut deps = mock_dependencies();
         let res = lease
             .state(
                 Timestamp::from_nanos(0),
                 &bank_account,
-                &deps.as_mut().querier,
                 Addr::unchecked("unused"),
             )
             .unwrap();

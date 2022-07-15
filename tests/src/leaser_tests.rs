@@ -14,12 +14,10 @@ fn open_lease() {
     open_lease_impl(Usdc::SYMBOL);
 }
 
-// TODO uncomment once Lpp completes its migration to finance::Coin
-// and supports any currency
-// #[test]
-// fn open_lease_another_currency() {
-//     open_lease_impl(Nls::SYMBOL);
-// }
+#[test]
+fn open_lease_another_currency() {
+    open_lease_impl(Nls::SYMBOL);
+}
 
 #[test]
 #[should_panic(expected = "Unknown currency")]

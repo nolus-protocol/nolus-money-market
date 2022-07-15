@@ -3,7 +3,7 @@ pub use state::State;
 
 use std::{fmt::Debug, marker::PhantomData};
 
-use cosmwasm_std::{Addr, QuerierWrapper, SubMsg, Timestamp};
+use cosmwasm_std::{Addr, SubMsg, Timestamp, Reply};
 use finance::{
     coin::Coin,
     currency::Currency,
@@ -13,66 +13,94 @@ use finance::{
 };
 use lpp::{
     msg::{LoanResponse, QueryLoanResponse},
-    stub::Lpp,
+    stub::{Lpp as LppTrait, LppRef},
 };
 use serde::{Deserialize, Serialize};
 
 use crate::error::{ContractError, ContractResult};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(rename_all = "snake_case")]
-pub struct Loan<Lpn, L> {
+pub(crate) struct LoanDTO {
     annual_margin_interest: Percent,
-    lpn: PhantomData<Lpn>,
-    lpp: L,
+    lpp: LppRef,
     interest_due_period: Duration,
     grace_period: Duration,
     current_period: InterestPeriod<Units, Percent>,
 }
 
-impl<Lpn, L> Loan<Lpn, L>
-where
-    L: Lpp<Lpn>,
-    Lpn: Currency,
-{
-    pub(crate) fn open(
-        when: Timestamp,
-        lpp: L,
+impl LoanDTO {
+    pub(crate) fn new(
+        start: Timestamp,
+        lpp: LppRef,
         annual_margin_interest: Percent,
         interest_due_period: Duration,
         grace_period: Duration,
-    ) -> ContractResult<Self> {
-
-        Ok(Self {
+    ) -> Self {
+        Self {
             annual_margin_interest,
-            lpn: PhantomData,
             lpp,
             interest_due_period,
             grace_period,
             current_period: InterestPeriod::with_interest(annual_margin_interest)
-                .from(when)
+                .from(start)
                 .spanning(interest_due_period),
-        })
+        }
+    }
+
+    pub(super) fn lpp(&self) -> &LppRef {
+        &self.lpp
+    }
+}
+
+pub struct Loan<Lpn, Lpp> {
+    annual_margin_interest: Percent,
+    lpn: PhantomData<Lpn>,
+    lpp: Lpp,
+    interest_due_period: Duration,
+    _grace_period: Duration,
+    current_period: InterestPeriod<Units, Percent>,
+}
+
+impl<Lpn, Lpp> Loan<Lpn, Lpp>
+where
+    Lpp: LppTrait<Lpn>,
+    Lpn: Currency,
+{
+    pub(super) fn from_dto(dto: LoanDTO, lpp: Lpp) -> Self {
+        Self {
+            annual_margin_interest: dto.annual_margin_interest,
+            lpn: PhantomData,
+            lpp,
+            interest_due_period: dto.interest_due_period,
+            _grace_period: dto.grace_period,
+            current_period: dto.current_period,
+        }
+    }
+
+    pub(crate) fn open_loan_req(&self, amount: Coin<Lpn>) -> ContractResult<SubMsg> {
+        self.lpp.open_loan_req(amount).map_err(ContractError::from)
+    }
+
+    pub(crate) fn open_loan_resp(&self, resp: Reply) -> ContractResult<()> {
+        self.lpp.open_loan_resp(resp).map_err(ContractError::from)
     }
 
     pub(crate) fn repay(
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
-        querier: &QuerierWrapper,
         lease: Addr,
     ) -> ContractResult<Option<SubMsg>> {
         self.debug_check_start_due_before(by, "before the 'repay-by' time");
 
-        let principal_due = self.load_principal_due(querier, lease.clone())?;
+        let principal_due = self.load_principal_due(lease.clone())?;
 
         let change = self.repay_margin_interest(principal_due, by, payment);
         if change.is_zero() {
             return Ok(None);
         }
 
-        let loan_interest_due =
-            self.load_loan_interest_due(querier, lease, self.current_period.start())?;
+        let loan_interest_due = self.load_loan_interest_due(lease, self.current_period.start())?;
 
         let loan_payment = if loan_interest_due <= change && self.current_period.zero_length() {
             self.open_next_period();
@@ -104,43 +132,33 @@ where
     pub(crate) fn state(
         &self,
         now: Timestamp,
-        querier: &QuerierWrapper,
         lease: impl Into<Addr>,
     ) -> ContractResult<Option<State<Lpn>>> {
-        self.debug_check_start_due_before(now, "in the past, i.e");
+        self.debug_check_start_due_before(now, "in the past of");
 
-        let loan_resp = self.load_lpp_loan(querier, lease)?;
+        let loan_resp = self.load_lpp_loan(lease)?;
         Ok(loan_resp.map(|loan_state| self.merge_state_with(loan_state, now)))
     }
 
-    fn load_principal_due(
-        &self,
-        querier: &QuerierWrapper,
-        lease: impl Into<Addr>,
-    ) -> ContractResult<Coin<Lpn>> {
-        let loan: QueryLoanResponse<Lpn> = self.load_lpp_loan(querier, lease)?;
+    fn load_principal_due(&self, lease: impl Into<Addr>) -> ContractResult<Coin<Lpn>> {
+        let loan: QueryLoanResponse<Lpn> = self.load_lpp_loan(lease)?;
         Ok(loan.ok_or(ContractError::LoanClosed())?.principal_due)
     }
 
     fn load_loan_interest_due(
         &self,
-        querier: &QuerierWrapper,
         lease: impl Into<Addr>,
         by: Timestamp,
     ) -> ContractResult<Coin<Lpn>> {
         let interest = self
             .lpp
-            .loan_outstanding_interest(querier, lease, by)
+            .loan_outstanding_interest(lease, by)
             .map_err(ContractError::from)?;
         Ok(interest.ok_or(ContractError::LoanClosed())?.0)
     }
 
-    fn load_lpp_loan(
-        &self,
-        querier: &QuerierWrapper,
-        lease: impl Into<Addr>,
-    ) -> ContractResult<QueryLoanResponse<Lpn>> {
-        self.lpp.loan(querier, lease).map_err(ContractError::from)
+    fn load_lpp_loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>> {
+        self.lpp.loan(lease).map_err(ContractError::from)
     }
 
     fn repay_margin_interest(
