@@ -60,7 +60,7 @@ fn proper_initialization() {
     let config = config_response.config;
     assert_eq!(CREATOR, config.owner);
     assert_eq!(1, config.lease_code_id);
-    assert_eq!(lpp_addr, config.lpp_ust_addr);
+    assert_eq!(lpp_addr, config.lpp_addr);
 }
 
 #[test]

@@ -11,7 +11,7 @@ use finance::liability::Liability;
 use finance::percent::Percent;
 use lease::msg::{LoanForm, NewLeaseForm};
 
-use crate::error::ContractError;
+use crate::error::{ContractError, ContractResult};
 use crate::lpp_querier::LppQuerier;
 use crate::msg::{ConfigResponse, QuoteResponse, Repayment};
 use crate::state::config::Config;
@@ -42,7 +42,7 @@ impl Leaser {
         )
     }
 
-    pub fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
+    pub fn query_config(deps: Deps) -> ContractResult<ConfigResponse> {
         let config = Config::load(deps.storage)?;
         Ok(ConfigResponse { config })
     }
@@ -107,7 +107,7 @@ impl Leaser {
             liability: config.liability,
             loan: LoanForm {
                 annual_margin_interest: config.lease_interest_rate_margin,
-                lpp: config.lpp_ust_addr.into_string(),
+                lpp: config.lpp_addr.into_string(),
                 interest_due_period_secs: config.repayment.period_sec, // 90 days TODO use a crate for daytime calculations
                 grace_period_secs: config.repayment.grace_period_sec,
             },
