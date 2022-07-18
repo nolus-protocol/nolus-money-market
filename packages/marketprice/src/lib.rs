@@ -1,3 +1,4 @@
+pub mod alarms;
 pub mod feed;
 pub mod feeders;
 pub mod market_price;

@@ -410,7 +410,6 @@ dependencies = [
  "profit",
  "rewards_dispatcher",
  "serde",
- "time-oracle",
  "timealarms",
  "treasury",
 ]
@@ -454,6 +453,7 @@ dependencies = [
  "cw2",
  "finance",
  "lpp",
+ "marketprice",
  "schemars",
  "serde",
  "thiserror",

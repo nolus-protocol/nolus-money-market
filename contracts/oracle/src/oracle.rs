@@ -95,7 +95,7 @@ impl MarketOracle {
         storage: &mut dyn Storage,
         block_time: Timestamp,
         sender_raw: &Addr,
-        base: Denom,
+        base: &Denom,
         prices: Vec<Price>,
     ) -> Result<(), ContractError> {
         let config = Config::load(storage)?;
@@ -110,7 +110,7 @@ impl MarketOracle {
             storage,
             block_time,
             sender_raw,
-            base,
+            base.to_string(),
             filtered_prices,
             Duration::from_secs(config.price_feed_period_secs),
         )?;

@@ -1,13 +1,14 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdResult,
-    Storage, Timestamp,
+    from_binary, to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
+    StdResult, Storage, Timestamp,
 };
 use cw2::set_contract_version;
-use marketprice::feed::{Denom, DenomPair, Prices};
+use marketprice::feed::{Denom, DenomPair, DenomToPrice, Prices};
 
 use crate::alarms::MarketAlarms;
+use crate::contract_validation::validate_contract_addr;
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, PriceResponse, QueryMsg};
 use crate::oracle::MarketOracle;
@@ -69,6 +70,14 @@ pub fn execute(
             get_sender(deps.api, info)?,
             prices,
         ),
+        ExecuteMsg::AddPriceAlarm { target } => {
+            let sender = get_sender(deps.api, info)?;
+            validate_contract_addr(&deps.querier, &sender)?;
+            MarketAlarms::try_add_price_alarm(deps.storage, sender, target)
+        }
+        ExecuteMsg::RemovePriceAlarm {} => {
+            MarketAlarms::remove(deps.storage, get_sender(deps.api, info)?)
+        }
     }
 }
 
@@ -96,8 +105,13 @@ pub fn get_sender(api: &dyn Api, info: MessageInfo) -> StdResult<Addr> {
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let resp = match msg.result {
-        cosmwasm_std::SubMsgResult::Ok(_) => {
-            MarketAlarms::remove(deps.storage, msg.id)?;
+        cosmwasm_std::SubMsgResult::Ok(resp) => {
+            let data = match resp.data {
+                Some(d) => d,
+                None => return Ok(err_as_ok("No data")),
+            };
+            // TODO: get lease address from the attributes and remove the hook
+            MarketAlarms::remove(deps.storage, from_binary(&data)?)?;
             Response::new().add_attribute("alarm", "success")
         }
         cosmwasm_std::SubMsgResult::Err(err) => Response::new()
@@ -105,6 +119,12 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             .add_attribute("error", err),
     };
     Ok(resp)
+}
+
+fn err_as_ok(err: &str) -> Response {
+    Response::new()
+        .add_attribute("alarm", "error")
+        .add_attribute("error", err)
 }
 
 fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
@@ -180,9 +200,27 @@ fn try_feed_multiple_prices(
     if !is_registered {
         return Err(ContractError::UnknownFeeder {});
     }
+
+    let hook_denoms = MarketAlarms::get_hook_denoms(storage)?;
+
+    let mut affected_denoms: Vec<Denom> = vec![];
     for entry in prices {
-        MarketOracle::feed_prices(storage, block_time, &sender_raw, entry.base, entry.values)?;
+        MarketOracle::feed_prices(storage, block_time, &sender_raw, &entry.base, entry.values)?;
+
+        if hook_denoms.contains(&entry.base) {
+            affected_denoms.push(entry.base);
+        }
     }
+
+    //calculate the price of this denom againts the base for the oracle denom
+    let updated_prices: Vec<DenomToPrice> =
+        MarketOracle::get_price_for(storage, block_time, affected_denoms)?;
+
+    // get all affected addresses
+    let _res = MarketAlarms::try_notify_hooks(storage, block_time, updated_prices);
+
+    // let response = MarketAlarms::update_global_time(storage, block_time)?;
+    // Ok(response.add_attribute("method", "try_feed_prices"))
     let submsg = MarketAlarms::trigger_time_alarms(storage)?;
     Ok(Response::new()
         .add_submessage(submsg)

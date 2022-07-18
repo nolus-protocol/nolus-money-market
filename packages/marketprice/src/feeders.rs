@@ -6,7 +6,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-/// Errors returned from Admin
+/// Errors returned from Feeders
 #[derive(Error, Debug, PartialEq)]
 pub enum PriceFeedersError {
     #[error("{0}")]

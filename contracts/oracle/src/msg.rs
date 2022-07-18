@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Timestamp};
+use cosmwasm_std::Addr;
 use marketprice::feed::{Denom, DenomPair, DenomToPrice, Prices};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -28,6 +28,10 @@ pub enum ExecuteMsg {
     SupportedDenomPairs {
         pairs: Vec<DenomPair>,
     },
+    AddPriceAlarm {
+        target: DenomToPrice,
+    },
+    RemovePriceAlarm {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -62,5 +66,5 @@ pub struct PriceResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
-    Alarm(Timestamp),
+    Alarm(DenomToPrice),
 }
