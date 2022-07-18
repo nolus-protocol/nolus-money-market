@@ -3,7 +3,10 @@ use std::collections::HashSet;
 use crate::common::{test_case::TestCase, ADMIN, USER};
 use cosmwasm_std::{coins, Addr, DepsMut, Env, MessageInfo, Response};
 use cw_multi_test::{next_block, ContractWrapper, Executor};
-use finance::{currency::{Currency, Usdc, SymbolStatic, Nls}, coin::{self, Coin}};
+use finance::{
+    coin::{self, Coin},
+    currency::{Currency, Nls, SymbolStatic, Usdc},
+};
 use lease::error::ContractError;
 use leaser::msg::{QueryMsg, QuoteResponse};
 
@@ -76,11 +79,7 @@ fn open_multiple_loans() {
 
     test_case
         .app
-        .send_tokens(
-            Addr::unchecked(ADMIN),
-            user1_addr.clone(),
-            &coins(50, LPN),
-        )
+        .send_tokens(Addr::unchecked(ADMIN), user1_addr.clone(), &coins(50, LPN))
         .unwrap();
 
     let resp: HashSet<Addr> = test_case

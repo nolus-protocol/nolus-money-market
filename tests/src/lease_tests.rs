@@ -6,15 +6,11 @@ use cw_multi_test::{AppResponse, Executor};
 use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
 
-use finance::{
-    coin::Coin,
-    coin_legacy::to_cosmwasm,
-    currency::Usdc,
-    duration::Duration,
-    interest::InterestPeriod,
-    percent::Percent,
-};
 use crate::common::test_case::TestCase;
+use finance::{
+    coin::Coin, coin_legacy::to_cosmwasm, currency::Usdc, duration::Duration,
+    interest::InterestPeriod, percent::Percent,
+};
 
 type Currency = Usdc;
 type TheCoin = Coin<Currency>;
@@ -132,7 +128,7 @@ fn expected_open_state(
 ) -> StateResponse<Currency, Currency> {
     let quote_result = quote_query(test_case, downpayment);
     let total = quote_result.total;
-    let expected =  total - downpayment - payments;
+    let expected = total - downpayment - payments;
     StateResponse::Opened {
         amount: total,
         interest_rate: quote_result.annual_interest_rate,

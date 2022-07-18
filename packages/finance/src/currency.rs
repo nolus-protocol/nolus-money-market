@@ -1,11 +1,11 @@
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 type Symbol<'a> = &'a str;
 pub type SymbolStatic = &'static str;
 pub type SymbolOwned = String;
 
-// Not extending Serialize + DeserializeOwbed since the serde derive implementations fail to 
+// Not extending Serialize + DeserializeOwbed since the serde derive implementations fail to
 // satisfy trait bounds with regards of the lifetimes
 // Foe example, https://stackoverflow.com/questions/70774093/generic-type-that-implements-deserializeowned
 pub trait Currency: Copy + Ord + Default {
@@ -87,10 +87,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::{
-        any::type_name,
-        marker::PhantomData,
-    };
+    use std::{any::type_name, marker::PhantomData};
 
     use crate::currency::{Currency, Nls, SingleVisitor, Usdc};
 
@@ -102,17 +99,12 @@ mod test {
             Self(PhantomData)
         }
     }
-    impl<C> AnyVisitor for Expect<C>
-    {
+    impl<C> AnyVisitor for Expect<C> {
         type Output = bool;
         type Error = ();
 
-        fn on<Cin>(self) -> Result<Self::Output, Self::Error>
-        {
-            assert_eq!(
-                type_name::<C>(),
-                type_name::<Cin>()
-            );
+        fn on<Cin>(self) -> Result<Self::Output, Self::Error> {
+            assert_eq!(type_name::<C>(), type_name::<Cin>());
             Ok(true)
         }
 

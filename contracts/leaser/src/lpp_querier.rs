@@ -1,7 +1,7 @@
 use cosmwasm_std::{Deps, StdResult};
 use finance::coin::Coin;
-use finance::percent::Percent;
 use finance::currency::Currency;
+use finance::percent::Percent;
 
 // TODO use lpp::stub::Lpp<Lpn> instead of LppQuerier
 pub struct LppQuerier {}
@@ -12,6 +12,7 @@ impl LppQuerier {
         Lpn: Currency,
     {
         use cosmwasm_std::StdError;
+
         use lpp::msg::{QueryMsg as LppQueryMsg, QueryQuoteResponse};
 
         use crate::state::config::Config;
@@ -22,7 +23,7 @@ impl LppQuerier {
         };
         let query_response: QueryQuoteResponse = deps
             .querier
-            .query_wasm_smart(config.lpp_ust_addr.to_string(), &query_msg)?;
+            .query_wasm_smart(config.lpp_addr.to_string(), &query_msg)?;
         match query_response {
             QueryQuoteResponse::QuoteInterestRate(rate) => Ok(rate),
             QueryQuoteResponse::NoLiquidity => Err(StdError::generic_err("NoLiquidity")),
