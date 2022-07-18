@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, StdError, Uint64};
+use cosmwasm_std::{Addr, Uint64};
 use cw_multi_test::ContractWrapper;
 
 use cw_multi_test::{App, Executor};
@@ -16,7 +16,7 @@ type LeaserContractWrapperReply = Box<
         leaser::msg::QueryMsg,
         ContractError,
         ContractError,
-        StdError,
+        ContractError,
         cosmwasm_std::Empty,
         cosmwasm_std::Empty,
         cosmwasm_std::Empty,

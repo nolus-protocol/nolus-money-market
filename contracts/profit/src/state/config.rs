@@ -7,7 +7,7 @@ use crate::ContractError;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
-    pub cadence_hours: u32,
+    pub cadence_hours: u16,
     pub owner: Addr,
     pub treasury: Addr,
     pub timealarms: Addr,
@@ -16,7 +16,7 @@ pub struct Config {
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("profit_config");
 
-    pub fn new(owner: Addr, cadence_hours: u32, treasury: Addr, timealarms: Addr) -> Self {
+    pub fn new(owner: Addr, cadence_hours: u16, treasury: Addr, timealarms: Addr) -> Self {
         Config {
             cadence_hours,
             owner,
@@ -33,7 +33,7 @@ impl Config {
         Self::STORAGE.load(storage)
     }
 
-    pub fn update(storage: &mut dyn Storage, cadence_hours: u32) -> Result<(), ContractError> {
+    pub fn update(storage: &mut dyn Storage, cadence_hours: u16) -> Result<(), ContractError> {
         Self::load(storage)?;
         Self::STORAGE.update(storage, |mut c| -> Result<Config, ContractError> {
             c.cadence_hours = cadence_hours;

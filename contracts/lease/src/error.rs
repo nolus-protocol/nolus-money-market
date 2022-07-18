@@ -1,5 +1,4 @@
 use cosmwasm_std::StdError;
-use cw_utils::PaymentError;
 use finance::error::Error as FinanceError;
 use thiserror::Error;
 
@@ -11,11 +10,11 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
-    #[error("Payment error: {0}")]
-    PaymentError(#[from] PaymentError),
-
     #[error("{0}")]
     FinanceError(#[from] FinanceError),
+
+    #[error("{symbol:?}")]
+    UnknownCurrency{ symbol: String},
 
     #[error("Error in opening an underlying loan: {0}")]
     OpenLoanError(String),

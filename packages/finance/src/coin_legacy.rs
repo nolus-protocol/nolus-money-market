@@ -139,10 +139,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::{
-        any::{type_name, TypeId},
-        marker::PhantomData,
-    };
+    use std::{any::type_name, marker::PhantomData};
 
     use crate::{
         coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl},
@@ -163,6 +160,7 @@ mod test {
     }
 
     struct Expect<C>(PhantomData<C>);
+
     impl<C> Expect<C> {
         fn new() -> Self {
             Self(PhantomData)
@@ -171,22 +169,16 @@ mod test {
 
     impl<C> CoinVisitor for Expect<C>
     where
-        C: 'static,
+        C: Currency,
     {
         type Output = Coin<C>;
         type Error = ();
 
         fn on<Cin>(&self, coin: Coin<Cin>) -> Result<Self::Output, Self::Error>
         where
-            Cin: 'static,
+            Cin: Currency,
         {
-            assert_eq!(
-                TypeId::of::<C>(),
-                TypeId::of::<Cin>(),
-                "Expected {}, got {}",
-                type_name::<C>(),
-                type_name::<Cin>()
-            );
+            assert_eq!(type_name::<C>(), type_name::<Cin>(),);
 
             // TODO functionality to represent a Coin<X> to Coin<Y>, if X==Y
             Ok(Coin::<C>::new(coin.into()))
@@ -202,7 +194,10 @@ mod test {
         type Output = ();
         type Error = ();
 
-        fn on<Cin>(&self, _coin: Coin<Cin>) -> Result<Self::Output, Self::Error> {
+        fn on<Cin>(&self, _coin: Coin<Cin>) -> Result<Self::Output, Self::Error>
+        where
+            Cin: Currency,
+        {
             Err(())
         }
 

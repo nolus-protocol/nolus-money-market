@@ -11,6 +11,8 @@ use serde::{Deserialize, Serialize};
 
 use std::convert::TryFrom;
 
+use finance::duration::Duration;
+
 use crate::{state::config::Config, ContractError};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -37,8 +39,6 @@ impl MarketOracle {
         base: Denom,
         config: &Config,
     ) -> StdResult<PriceQuery> {
-        let price_feed_period = config.price_feed_period;
-
         Self::assert_supported_denom(&config.supported_denom_pairs, base.clone())?;
 
         let registered_feeders = Self::FEEDERS.get(storage)?;
@@ -48,7 +48,7 @@ impl MarketOracle {
 
         Ok(PriceQuery::new(
             (base, config.base_asset.clone()),
-            price_feed_period,
+            Duration::from_secs(config.price_feed_period_secs),
             feeders_needed,
         ))
     }
@@ -112,7 +112,7 @@ impl MarketOracle {
             sender_raw,
             base.to_string(),
             filtered_prices,
-            config.price_feed_period,
+            Duration::from_secs(config.price_feed_period_secs),
         )?;
 
         Ok(())

@@ -1,26 +1,33 @@
 use cosmwasm_std::{Uint128, Uint256};
 
-use crate::coin::Coin;
+use crate::{coin::Coin, currency::Currency};
 
 use super::HigherRank;
 
 impl<U, C> HigherRank<U> for Coin<C>
 where
     U: Into<u128>,
+    C: Currency,
 {
     type Type = Uint256;
 
     type Intermediate = Uint128;
 }
 
-impl<C> From<Coin<C>> for Uint256 {
+impl<C> From<Coin<C>> for Uint256
+where
+    C: Currency,
+{
     fn from(coin: Coin<C>) -> Self {
         let c: u128 = coin.into();
         c.into()
     }
 }
 
-impl<C> From<Uint128> for Coin<C> {
+impl<C> From<Uint128> for Coin<C>
+where
+    C: Currency,
+{
     fn from(amount: Uint128) -> Self {
         let c: u128 = amount.into();
         c.into()

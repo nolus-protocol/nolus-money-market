@@ -1,10 +1,16 @@
-use cosmwasm_std::{Coin, Deps, StdResult};
+use cosmwasm_std::{Deps, StdResult};
+use finance::coin::Coin;
 use finance::percent::Percent;
+use finance::currency::Currency;
 
+// TODO use lpp::stub::Lpp<Lpn> instead of LppQuerier
 pub struct LppQuerier {}
 impl LppQuerier {
     #[cfg(not(test))]
-    pub fn get_annual_interest_rate(deps: Deps, downpayment: Coin) -> StdResult<Percent> {
+    pub fn get_annual_interest_rate<Lpn>(deps: Deps, downpayment: Coin<Lpn>) -> StdResult<Percent>
+    where
+        Lpn: Currency,
+    {
         use cosmwasm_std::StdError;
         use lpp::msg::{QueryMsg as LppQueryMsg, QueryQuoteResponse};
 
@@ -12,7 +18,7 @@ impl LppQuerier {
 
         let config = Config::load(deps.storage)?;
         let query_msg: LppQueryMsg = LppQueryMsg::Quote {
-            amount: downpayment,
+            amount: downpayment.into(),
         };
         let query_response: QueryQuoteResponse = deps
             .querier
@@ -23,8 +29,12 @@ impl LppQuerier {
         }
     }
 
+    // TODO use a mock of lpp::stub::Lpp<Lpn> instead of this condiionally compilated function
     #[cfg(test)]
-    pub fn get_annual_interest_rate(_deps: Deps, _downpayment: Coin) -> StdResult<Percent> {
+    pub fn get_annual_interest_rate<Lpn>(_deps: Deps, _downpayment: Coin<Lpn>) -> StdResult<Percent>
+    where
+        Lpn: Currency,
+    {
         Ok(Percent::HUNDRED)
     }
 }

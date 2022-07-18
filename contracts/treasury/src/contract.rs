@@ -5,7 +5,7 @@ use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, Storage};
 use cw2::set_contract_version;
 use finance::bank::{BankAccount, BankStub};
 use finance::coin::Coin;
-use finance::currency::Currency;
+use finance::currency::Nls;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg};
@@ -60,15 +60,14 @@ fn try_configure_reward_transfer(
     Ok(Response::new().add_attribute("method", "try_configure_reward_transfer"))
 }
 
-fn try_send_rewards<B, C>(
+fn try_send_rewards<B>(
     storage: &mut dyn Storage,
     sender: Addr,
-    amount: Coin<C>,
+    amount: Coin<Nls>,
     account: B,
 ) -> Result<Response, ContractError>
 where
     B: BankAccount,
-    C: Currency,
 {
     state::assert_rewards_dispatcher(storage, &sender)?;
     let pay_msg = account.send(amount, &sender)?;

@@ -5,6 +5,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::market_price::PriceFeedsError;
+use finance::duration::Duration;
 
 pub type Denom = String;
 pub type DenomPair = (Denom, Denom);
@@ -77,7 +78,7 @@ impl PriceFeed {
         }
     }
 
-    pub fn update(&mut self, new_feed: Observation, price_feed_period: u64) {
+    pub fn update(&mut self, new_feed: Observation, price_feed_period: Duration) {
         // drop all feeds older than the required refresh time
         self.observations
             .retain(|f| !PriceFeed::is_old_feed(new_feed.time, f.time, price_feed_period));
@@ -91,7 +92,7 @@ impl PriceFeed {
     pub fn get_price(
         &self,
         time_now: Timestamp,
-        price_feed_period: u64,
+        price_feed_period: Duration,
         required_feeders_cnt: usize,
     ) -> Result<Observation, PriceFeedsError> {
         let res = self.observations.last().cloned();
@@ -112,8 +113,8 @@ impl PriceFeed {
         Ok(last_feed)
     }
 
-    fn is_old_feed(time_now: Timestamp, feed_time: Timestamp, price_feed_period: u64) -> bool {
-        let ts = feed_time.plus_seconds(price_feed_period);
+    fn is_old_feed(time_now: Timestamp, feed_time: Timestamp, price_feed_period: Duration) -> bool {
+        let ts = feed_time + price_feed_period;
         ts.lt(&time_now)
     }
 

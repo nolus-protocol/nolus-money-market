@@ -1,10 +1,15 @@
-use cosmwasm_std::{Addr, Coin as CwCoin, Decimal, Timestamp, Uint128, Uint64};
-use finance::{coin::Coin, currency::Currency, percent::Percent};
+use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128, Uint64};
+use finance::{
+    coin::{Coin, CoinDTO},
+    currency::{Currency, Nls},
+    percent::Percent,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
+    // TODO: maybe change to currency ?
     pub denom: String,
     pub lease_code_id: Uint64,
 }
@@ -19,7 +24,7 @@ pub enum ExecuteMsg {
     },
 
     OpenLoan {
-        amount: CwCoin,
+        amount: CoinDTO,
     },
     RepayLoan,
 
@@ -40,7 +45,7 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     Config(),
     Quote {
-        amount: CwCoin,
+        amount: CoinDTO,
     },
     Loan {
         lease_addr: Addr,
@@ -117,13 +122,16 @@ pub struct PriceResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-pub struct LppBalanceResponse {
-    pub balance: CwCoin,
-    pub total_principal_due: CwCoin,
-    pub total_interest_due: CwCoin,
+pub struct LppBalanceResponse<LPN>
+where
+    LPN: Currency,
+{
+    pub balance: Coin<LPN>,
+    pub total_principal_due: Coin<LPN>,
+    pub total_interest_due: Coin<LPN>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct RewardsResponse {
-    pub rewards: CwCoin,
+    pub rewards: Coin<Nls>,
 }

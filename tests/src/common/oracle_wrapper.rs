@@ -39,7 +39,7 @@ impl MarketOracleWrapper {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = oracle::msg::InstantiateMsg {
             base_asset: denom.to_string(),
-            price_feed_period: 60,
+            price_feed_period_secs: 60,
             feeders_percentage_needed: 1,
             supported_denom_pairs: vec![("UST".to_string(), NATIVE_DENOM.to_string())],
             timealarms_addr: timealarms_addr.to_string(),

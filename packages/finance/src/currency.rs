@@ -1,11 +1,14 @@
 use schemars::JsonSchema;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 type Symbol<'a> = &'a str;
-type SymbolStatic = &'static str;
+pub type SymbolStatic = &'static str;
 pub type SymbolOwned = String;
 
-pub trait Currency: 'static + Copy + Ord + Default {
+// Not extending Serialize + DeserializeOwbed since the serde derive implementations fail to 
+// satisfy trait bounds with regards of the lifetimes
+// Foe example, https://stackoverflow.com/questions/70774093/generic-type-that-implements-deserializeowned
+pub trait Currency: Copy + Ord + Default {
     const SYMBOL: SymbolStatic;
 }
 
@@ -49,7 +52,7 @@ pub trait AnyVisitor {
 
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
-        C: Currency + DeserializeOwned;
+        C: Currency + Serialize + DeserializeOwned;
     fn on_unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
@@ -68,7 +71,7 @@ struct AnyVisitorImpl<V>(V);
 impl<C, V> SingleVisitor<C> for AnyVisitorImpl<V>
 where
     V: AnyVisitor,
-    C: Currency + DeserializeOwned,
+    C: Currency + Serialize + DeserializeOwned,
 {
     type Output = Result<<V as AnyVisitor>::Output, <V as AnyVisitor>::Error>;
     type Error = Self;
@@ -85,7 +88,7 @@ where
 #[cfg(test)]
 mod test {
     use std::{
-        any::{type_name, TypeId},
+        any::type_name,
         marker::PhantomData,
     };
 
@@ -100,20 +103,13 @@ mod test {
         }
     }
     impl<C> AnyVisitor for Expect<C>
-    where
-        C: 'static,
     {
         type Output = bool;
         type Error = ();
 
         fn on<Cin>(self) -> Result<Self::Output, Self::Error>
-        where
-            Cin: 'static,
         {
             assert_eq!(
-                TypeId::of::<C>(),
-                TypeId::of::<Cin>(),
-                "Expected {}, got {}",
                 type_name::<C>(),
                 type_name::<Cin>()
             );

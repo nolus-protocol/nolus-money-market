@@ -58,8 +58,11 @@ impl Dispatcher {
             msg: to_binary(&lpp::msg::ExecuteMsg::DistributeRewards {})?,
         });
 
-        let subsrcibe_msg =
-            Dispatcher::alarm_subscribe_msg(&config.timealarms, block_time, config.cadence_hours)?;
+        let subsrcibe_msg = Dispatcher::alarm_subscribe_msg(
+            &config.timealarms,
+            block_time,
+            Duration::from_hours(config.cadence_hours),
+        )?;
 
         Ok(Response::new().add_messages([treasury_send_rewards_msg, pay_msg, subsrcibe_msg]))
     }
@@ -68,17 +71,16 @@ impl Dispatcher {
     #[cfg(not(test))]
     // Get LPP balance and return TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
     fn get_lpp_balance(deps: Deps, lpp_addr: &Addr) -> Result<Coin<Usdc>, ContractError> {
-        use finance::coin_legacy::from_cosmwasm;
         use lpp::msg::{LppBalanceResponse, QueryMsg as LPPQueryMsg};
 
         let query_msg: LPPQueryMsg = LPPQueryMsg::LppBalance {};
-        let resp: LppBalanceResponse = deps
+        let resp: LppBalanceResponse<Usdc> = deps
             .querier
             .query_wasm_smart(lpp_addr.to_string(), &query_msg)?;
 
-        let balance = from_cosmwasm(resp.balance)?
-            + from_cosmwasm(resp.total_principal_due)?
-            + from_cosmwasm(resp.total_interest_due)?;
+        let balance = resp.balance
+            + resp.total_principal_due
+            + resp.total_interest_due;
 
         Ok(balance)
     }
@@ -154,18 +156,14 @@ impl Dispatcher {
     pub(crate) fn alarm_subscribe_msg(
         timealarm_addr: &Addr,
         current_time: Timestamp,
-        cadence_hours: u32,
+        cadence: Duration,
     ) -> StdResult<CosmosMsg> {
         Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             funds: vec![],
             contract_addr: timealarm_addr.to_string(),
             msg: to_binary(&timealarms::msg::ExecuteMsg::AddAlarm {
-                time: current_time.plus_seconds(Self::to_seconds(cadence_hours)),
+                time: current_time + cadence,
             })?,
         }))
-    }
-
-    fn to_seconds(cadence_hours: u32) -> u64 {
-        cadence_hours as u64 * 60 * 60
     }
 }

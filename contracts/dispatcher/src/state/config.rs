@@ -3,7 +3,7 @@ use cw_storage_plus::Item;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::ContractError;
+use crate::error::ContractError;
 
 use super::tvl_intervals::Intervals;
 
@@ -11,7 +11,7 @@ use super::tvl_intervals::Intervals;
 pub struct Config {
     pub owner: Addr,
     // Time duration in hours defining the periods of time this instance is awaken
-    pub cadence_hours: u32,
+    pub cadence_hours: u16,
     // An LPP instance address
     pub lpp: Addr,
     // address to treasury contract
@@ -29,7 +29,7 @@ impl Config {
 
     pub fn new(
         owner: Addr,
-        cadence_hours: u32,
+        cadence_hours: u16,
         lpp: Addr,
         oracle: Addr,
         timealarms: Addr,
@@ -55,7 +55,7 @@ impl Config {
         Self::STORAGE.load(storage)
     }
 
-    pub fn update(storage: &mut dyn Storage, cadence_hours: u32) -> Result<(), ContractError> {
+    pub fn update(storage: &mut dyn Storage, cadence_hours: u16) -> Result<(), ContractError> {
         Self::load(storage)?;
         Self::STORAGE.update(storage, |mut c| -> Result<Config, ContractError> {
             c.cadence_hours = cadence_hours;

@@ -10,6 +10,7 @@ use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::profit::Profit;
 use crate::state::config::Config;
+use finance::duration::Duration;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -29,8 +30,11 @@ pub fn instantiate(
 
     Config::new(info.sender, msg.cadence_hours, treasury, timealarms.clone())
         .store(deps.storage)?;
-    let subscribe_msg =
-        Profit::alarm_subscribe_msg(&timealarms, env.block.time, msg.cadence_hours)?;
+    let subscribe_msg = Profit::alarm_subscribe_msg(
+        &timealarms,
+        env.block.time,
+        Duration::from_hours(msg.cadence_hours),
+    )?;
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")

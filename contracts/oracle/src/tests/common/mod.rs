@@ -16,14 +16,14 @@ pub(crate) const CREATOR: &str = "creator";
 
 pub(crate) fn dummy_instantiate_msg(
     base_asset: Denom,
-    price_feed_period: u64,
+    price_feed_period_secs: u32,
     feeders_percentage_needed: u8,
     supported_denom_pairs: Vec<(String, String)>,
     alarms_addr: String,
 ) -> InstantiateMsg {
     InstantiateMsg {
         base_asset,
-        price_feed_period,
+        price_feed_period_secs,
         feeders_percentage_needed,
         supported_denom_pairs,
         timealarms_addr: alarms_addr,

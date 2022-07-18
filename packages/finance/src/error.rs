@@ -3,6 +3,8 @@ use std::any::type_name;
 use cosmwasm_std::{OverflowError, StdError};
 use thiserror::Error;
 
+use crate::currency::Currency;
+
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
     #[error("Programming error or invalid serialized object of {0} type")]
@@ -14,6 +16,12 @@ pub enum Error {
     #[error("Found currency {0} expecting {1}")]
     UnexpectedCurrency(String, String),
 
+    #[error("Expecting funds of {0} but found none")]
+    NoFunds(String),
+
+    #[error("Expecting funds of {0} but found extra ones")]
+    UnexpectedFunds(String),
+
     #[error("{0}")]
     CosmWasmError(#[from] StdError),
 }
@@ -21,6 +29,20 @@ pub enum Error {
 impl Error {
     pub fn broken_invariant_err<T>() -> Self {
         Self::BrokenInvariant(String::from(type_name::<T>()))
+    }
+
+    pub fn no_funds<C>() -> Self
+    where
+        C: Currency,
+    {
+        Self::NoFunds(C::SYMBOL.into())
+    }
+
+    pub fn unexpected_funds<C>() -> Self
+    where
+        C: Currency,
+    {
+        Self::UnexpectedFunds(C::SYMBOL.into())
     }
 }
 
