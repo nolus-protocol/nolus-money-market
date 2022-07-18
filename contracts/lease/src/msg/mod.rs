@@ -1,7 +1,6 @@
 mod opening;
 mod query;
 
-use marketprice::feed::DenomToPrice;
 pub use opening::{LoanForm, NewLeaseForm};
 pub use query::{StateQuery, StateResponse};
 use schemars::JsonSchema;
