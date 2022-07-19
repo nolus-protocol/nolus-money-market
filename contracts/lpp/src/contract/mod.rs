@@ -100,7 +100,7 @@ impl<'a> ExecuteWithLpn<'a> {
                     return Err(ContractError::FundsLen {});
                 }
                 let amount = coin_legacy::from_cosmwasm(self.info.funds[0].clone())?;
-            
+
                 lender::try_deposit::<LPN>(self.deps, self.env, self.info.sender, amount)
             }
             ExecuteMsg::Burn { amount } => {
@@ -271,7 +271,7 @@ fn query_config(deps: &Deps) -> Result<QueryConfigResponse, ContractError> {
     let config = Config::load(deps.storage)?;
 
     Ok(QueryConfigResponse {
-        lpn_symbol: config.currency.clone(),
+        lpn_symbol: config.currency,
         lease_code_id: config.lease_code_id,
         base_interest_rate: config.base_interest_rate,
         utilization_optimal: config.utilization_optimal,

@@ -1,8 +1,15 @@
-use cosmwasm_std::{Decimal, StdResult, Storage, Uint64};
+use cosmwasm_std::{StdResult, Storage, Uint64};
 use cw_storage_plus::Item;
-use finance::percent::Percent;
+use finance::{
+    coin::Coin,
+    currency::Currency,
+    percent::Percent,
+    price::{self, Price},
+};
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+
+use crate::lpp::NLpn;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
@@ -11,7 +18,6 @@ pub struct Config {
     pub base_interest_rate: Percent,
     pub utilization_optimal: Percent,
     pub addon_optimal_interest_rate: Percent,
-    pub initial_derivative_price: Decimal,
 }
 
 impl Config {
@@ -24,7 +30,6 @@ impl Config {
             base_interest_rate: Percent::from_percent(7),
             utilization_optimal: Percent::from_percent(70),
             addon_optimal_interest_rate: Percent::from_percent(2),
-            initial_derivative_price: Decimal::one(),
         }
     }
 
@@ -48,5 +53,12 @@ impl Config {
         self.addon_optimal_interest_rate = addon_optimal_interest_rate;
 
         self.store(storage)
+    }
+
+    pub fn initial_derivative_price<LPN>() -> Price<NLpn, LPN>
+    where
+        LPN: Currency + Serialize + DeserializeOwned,
+    {
+        price::total_of(Coin::new(1)).is(Coin::new(1))
     }
 }

@@ -1,11 +1,11 @@
 use crate::error::ContractError;
-use crate::lpp::NTokenPrice;
-use cosmwasm_std::{coin, Addr, Coin, Decimal, DepsMut, Fraction, StdResult, Storage, Uint128};
+use crate::lpp::{NLpn, NTokenPrice};
+use cosmwasm_std::{coin, Addr, Coin as CwCoin, Decimal, DepsMut, StdResult, Storage, Uint128};
 use cw_storage_plus::{Item, Map};
+use finance::coin::Coin;
 use finance::currency::{Currency, Nls};
-use serde::{Deserialize, Serialize};
-
-type Balance = Uint128;
+use finance::price;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 #[derive(Debug)]
 pub struct Deposit {
@@ -15,7 +15,7 @@ pub struct Deposit {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 struct DepositData {
-    pub deposited_nlpn: Balance,
+    pub deposited_nlpn: Coin<NLpn>,
 
     // Rewards
     pub reward_per_token: Decimal,
@@ -24,7 +24,7 @@ struct DepositData {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 struct DepositsGlobals {
-    pub balance_nlpn: Balance,
+    pub balance_nlpn: Coin<NLpn>,
 
     // Rewards
     pub reward_per_token: Decimal,
@@ -42,12 +42,15 @@ impl Deposit {
         Ok(Self { addr, data })
     }
 
-    pub fn deposit(
+    pub fn deposit<LPN>(
         &mut self,
         storage: &mut dyn Storage,
-        amount_lpn: Uint128,
-        price: NTokenPrice,
-    ) -> StdResult<()> {
+        amount_lpn: Coin<LPN>,
+        price: NTokenPrice<LPN>,
+    ) -> StdResult<()>
+    where
+        LPN: Currency + Serialize + DeserializeOwned,
+    {
         if amount_lpn.is_zero() {
             return Ok(());
         }
@@ -55,13 +58,12 @@ impl Deposit {
         let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
         self.update_rewards(&globals);
 
-        let inv_price = price.get().inv().expect("price should not be zero");
-        let deposited_nlpn = inv_price * amount_lpn;
-        self.data.deposited_nlpn += deposited_nlpn;
+        let deposited_nlpn = price::total(amount_lpn, price.get().inv());
+        self.data.deposited_nlpn = self.data.deposited_nlpn + deposited_nlpn;
 
         Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
 
-        globals.balance_nlpn += deposited_nlpn;
+        globals.balance_nlpn = globals.balance_nlpn + deposited_nlpn;
 
         Self::GLOBALS.save(storage, &globals)
     }
@@ -70,8 +72,8 @@ impl Deposit {
     pub fn withdraw(
         &mut self,
         storage: &mut dyn Storage,
-        amount_nlpn: Uint128,
-    ) -> Result<Option<Coin>, ContractError> {
+        amount_nlpn: Coin<NLpn>,
+    ) -> Result<Option<CwCoin>, ContractError> {
         if self.data.deposited_nlpn < amount_nlpn {
             return Err(ContractError::InsufficientBalance);
         }
@@ -79,8 +81,8 @@ impl Deposit {
         let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
         self.update_rewards(&globals);
 
-        self.data.deposited_nlpn -= amount_nlpn;
-        globals.balance_nlpn -= amount_nlpn;
+        self.data.deposited_nlpn = self.data.deposited_nlpn - amount_nlpn;
+        globals.balance_nlpn = globals.balance_nlpn - amount_nlpn;
 
         let maybe_reward = if self.data.deposited_nlpn.is_zero() {
             self.update_rewards(&globals);
@@ -97,13 +99,13 @@ impl Deposit {
         Ok(maybe_reward)
     }
 
-    pub fn distribute_rewards(deps: DepsMut, rewards_nls: Coin) -> StdResult<()> {
+    pub fn distribute_rewards(deps: DepsMut, rewards_nls: CwCoin) -> StdResult<()> {
         let mut globals = Self::GLOBALS.may_load(deps.storage)?.unwrap_or_default();
 
         // TODO: should we throw error in this case?
         if !globals.balance_nlpn.is_zero() {
-            globals.reward_per_token +=
-                Decimal::from_ratio(rewards_nls.amount, globals.balance_nlpn);
+            let balance_nlpn: u128 = globals.balance_nlpn.into();
+            globals.reward_per_token += Decimal::from_ratio(rewards_nls.amount, balance_nlpn);
 
             Self::GLOBALS.save(deps.storage, &globals)
         } else {
@@ -118,21 +120,22 @@ impl Deposit {
 
     fn calculate_reward(&self, globals: &DepositsGlobals) -> Decimal {
         let deposit = &self.data;
+        let deposited_nlpn: u128 = deposit.deposited_nlpn.into();
         deposit.pending_rewards_nls
             + (globals.reward_per_token - deposit.reward_per_token)
-                * Decimal::from_ratio(deposit.deposited_nlpn.u128(), 1u128)
+                * Decimal::from_ratio(deposited_nlpn, 1u128)
     }
 
     /// query accounted rewards
-    pub fn query_rewards(&self, storage: &dyn Storage) -> StdResult<Coin> {
+    pub fn query_rewards(&self, storage: &dyn Storage) -> StdResult<CwCoin> {
         let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
 
         let reward = self.calculate_reward(&globals) * Uint128::new(1);
         Ok(coin(reward.u128(), Nls::SYMBOL))
     }
 
-    /// pay accounted rewards to the deposit owner or optioanl recipient
-    pub fn claim_rewards(&mut self, storage: &mut dyn Storage) -> StdResult<Coin> {
+    /// pay accounted rewards to the deposit owner or optional recipient
+    pub fn claim_rewards(&mut self, storage: &mut dyn Storage) -> StdResult<CwCoin> {
         let globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
         self.update_rewards(&globals);
         let reward = self.data.pending_rewards_nls * Uint128::new(1);
@@ -154,7 +157,7 @@ impl Deposit {
     */
 
     /// lpp derivative tokens balance
-    pub fn balance_nlpn(storage: &dyn Storage) -> StdResult<Balance> {
+    pub fn balance_nlpn(storage: &dyn Storage) -> StdResult<Coin<NLpn>> {
         Ok(Self::GLOBALS
             .may_load(storage)?
             .unwrap_or_default()
@@ -162,7 +165,7 @@ impl Deposit {
     }
 
     /// deposit derivative tokens balance
-    pub fn query_balance_nlpn(storage: &dyn Storage, addr: Addr) -> StdResult<Option<Balance>> {
+    pub fn query_balance_nlpn(storage: &dyn Storage, addr: Addr) -> StdResult<Option<Coin<NLpn>>> {
         let maybe_balance = Self::DEPOSITS
             .may_load(storage, addr)?
             .map(|data| data.deposited_nlpn);
@@ -182,14 +185,16 @@ mod test {
     use super::*;
     use crate::lpp::NTokenPrice;
     use cosmwasm_std::testing;
+    use finance::currency::Usdc;
+
+    type TheCurrency = Usdc;
 
     #[test]
     fn test_deposit_and_withdraw() {
         let mut deps = testing::mock_dependencies();
         let addr1 = Addr::unchecked("depositor1");
         let addr2 = Addr::unchecked("depositor2");
-        let ndenom = "nusdc".to_string();
-        let price = NTokenPrice::mock(Decimal::one(), &ndenom);
+        let price = NTokenPrice::<TheCurrency>::mock(Coin::new(1), Coin::new(1));
 
         let mut deposit1 =
             Deposit::load(deps.as_ref().storage, addr1.clone()).expect("should load");
@@ -200,7 +205,7 @@ mod test {
         Deposit::distribute_rewards(deps.as_mut(), coin(1000, "unolus"))
             .expect("should distribute rewards");
 
-        let price = NTokenPrice::mock(Decimal::percent(200), &ndenom);
+        let price = NTokenPrice::<TheCurrency>::mock(Coin::new(1), Coin::new(2));
         let mut deposit2 =
             Deposit::load(deps.as_ref().storage, addr2.clone()).expect("should load");
         deposit2

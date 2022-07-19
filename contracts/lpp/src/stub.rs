@@ -37,7 +37,7 @@ where
     ) -> StdResult<QueryLoanOutstandingInterestResponse<Lpn>>;
     fn quote(&self, amount: Coin<Lpn>) -> StdResult<QueryQuoteResponse>;
     fn lpp_balance(&self) -> StdResult<LppBalanceResponse<Lpn>>;
-    fn nlpn_price(&self) -> StdResult<PriceResponse>;
+    fn nlpn_price(&self) -> StdResult<PriceResponse<Lpn>>;
     fn config(&self) -> StdResult<QueryConfigResponse>;
     fn nlpn_balance(&self, lender: impl Into<Addr>) -> StdResult<BalanceResponse>;
     fn rewards(&self, lender: impl Into<Addr>) -> StdResult<RewardsResponse>;
@@ -209,7 +209,7 @@ where
         self.querier.query_wasm_smart(self.addr.clone(), &msg)
     }
 
-    fn nlpn_price(&self) -> StdResult<PriceResponse> {
+    fn nlpn_price(&self) -> StdResult<PriceResponse<Lpn>> {
         let msg = QueryMsg::Price();
         self.querier.query_wasm_smart(self.addr.clone(), &msg)
     }

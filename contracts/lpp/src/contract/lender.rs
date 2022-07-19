@@ -36,6 +36,7 @@ where
     LPN: Currency + DeserializeOwned + Serialize,
 {
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
+    let amount_nlpn = Coin::new(amount_nlpn.u128());
 
     let payment_lpn = lpp.withdraw_lpn(&deps.as_ref(), &env, amount_nlpn)?;
     let mut msg_payment = vec![payment_lpn.into_cw()];
@@ -59,7 +60,7 @@ where
     Ok(response)
 }
 
-pub fn query_ntoken_price<LPN>(deps: Deps, env: Env) -> Result<PriceResponse, ContractError>
+pub fn query_ntoken_price<LPN>(deps: Deps, env: Env) -> Result<PriceResponse<LPN>, ContractError>
 where
     LPN: Currency + DeserializeOwned + Serialize,
 {
@@ -70,6 +71,10 @@ where
 }
 
 pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceResponse, ContractError> {
-    let balance = Deposit::query_balance_nlpn(storage, addr)?.unwrap_or_default();
-    Ok(BalanceResponse { balance })
+    let balance: u128 = Deposit::query_balance_nlpn(storage, addr)?
+        .unwrap_or_default()
+        .into();
+    Ok(BalanceResponse {
+        balance: balance.into(),
+    })
 }

@@ -18,9 +18,7 @@ impl<C> PriceBuilder<C>
 where
     C: Currency,
 {
-    // TODO remove the configuration attribute once start using the method in production code
-    #[cfg(test)]
-    fn is<QuoteC>(self, to: Coin<QuoteC>) -> Price<C, QuoteC>
+    pub fn is<QuoteC>(self, to: Coin<QuoteC>) -> Price<C, QuoteC>
     where
         QuoteC: Currency,
     {
@@ -36,7 +34,7 @@ where
 /// Ref: https://en.wikipedia.org/wiki/Currency_pair
 ///
 /// For example, Price<EUR, USD> 1.15, generally represented as EURUSD or EUR/USD, means that one EUR is exchanged for 1.15 USD.
-#[derive(Clone, Copy, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Copy, Serialize, Deserialize, JsonSchema, PartialEq, Debug)]
 pub struct Price<C, QuoteC>
 where
     C: Currency,

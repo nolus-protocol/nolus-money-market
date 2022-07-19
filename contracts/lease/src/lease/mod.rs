@@ -233,7 +233,7 @@ mod tests {
             unreachable!()
         }
 
-        fn nlpn_price(&self) -> StdResult<lpp::msg::PriceResponse> {
+        fn nlpn_price(&self) -> StdResult<lpp::msg::PriceResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -286,7 +286,7 @@ mod tests {
             unreachable!()
         }
 
-        fn nlpn_price(&self) -> StdResult<lpp::msg::PriceResponse> {
+        fn nlpn_price(&self) -> StdResult<lpp::msg::PriceResponse<TestCurrency>> {
             unreachable!()
         }
 

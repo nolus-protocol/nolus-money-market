@@ -1,10 +1,12 @@
 use cosmwasm_std::{
-    Addr, BankMsg, Coin as CwCoin, ContractInfoResponse, Decimal, Deps, DepsMut, Env, QueryRequest,
-    StdResult, Storage, Timestamp, Uint128, Uint64, WasmQuery,
+    Addr, BankMsg, Coin as CwCoin, ContractInfoResponse, Deps, DepsMut, Env, QueryRequest,
+    StdResult, Storage, Timestamp, Uint64, WasmQuery,
 };
-use finance::currency::Currency;
+use finance::currency::{Currency, SymbolStatic};
+use finance::price::{self, Price};
+use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::error::ContractError;
 use crate::msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse};
@@ -14,28 +16,44 @@ use finance::fraction::Fraction;
 use finance::percent::Percent;
 use finance::ratio::Rational;
 
-pub struct NTokenPrice<'a> {
-    price: Decimal,
-    denom: &'a str,
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
+)]
+pub struct NLpn;
+impl Currency for NLpn {
+    // should not be visible
+    const SYMBOL: SymbolStatic = "nlpn";
 }
 
-impl<'a> NTokenPrice<'a> {
-    pub fn get(&self) -> Decimal {
+pub struct NTokenPrice<LPN>
+where
+    LPN: Currency + Serialize + DeserializeOwned,
+{
+    price: Price<NLpn, LPN>,
+}
+
+impl<LPN> NTokenPrice<LPN>
+where
+    LPN: Currency + Serialize + DeserializeOwned,
+{
+    pub fn get(&self) -> Price<NLpn, LPN> {
         self.price
     }
 
     #[cfg(test)]
-    pub fn mock(price: Decimal, denom: &'a str) -> Self {
-        Self { price, denom }
+    pub fn mock(nlpn: Coin<NLpn>, lpn: Coin<LPN>) -> Self {
+        Self {
+            price: finance::price::total_of(nlpn).is(lpn),
+        }
     }
 }
 
-impl<'a> From<NTokenPrice<'a>> for PriceResponse {
-    fn from(nprice: NTokenPrice) -> Self {
-        PriceResponse {
-            price: nprice.price,
-            denom: nprice.denom.to_owned(),
-        }
+impl<LPN> From<NTokenPrice<LPN>> for PriceResponse<LPN>
+where
+    LPN: Currency + Serialize + DeserializeOwned,
+{
+    fn from(nprice: NTokenPrice<LPN>) -> Self {
+        PriceResponse(nprice.price)
     }
 }
 
@@ -94,20 +112,16 @@ where
         })
     }
 
-    pub fn calculate_price(&self, deps: &Deps, env: &Env) -> StdResult<NTokenPrice> {
+    pub fn calculate_price(&self, deps: &Deps, env: &Env) -> StdResult<NTokenPrice<LPN>> {
         let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
         let price = if balance_nlpn.is_zero() {
-            self.config.initial_derivative_price
+            Config::initial_derivative_price()
         } else {
-            let nominator: u128 = self.total_lpn(deps, env)?.into();
-            Decimal::from_ratio(nominator, balance_nlpn)
+            price::total_of(balance_nlpn).is(self.total_lpn(deps, env)?)
         };
 
-        Ok(NTokenPrice {
-            price,
-            denom: &self.config.currency,
-        })
+        Ok(NTokenPrice { price })
     }
 
     pub fn validate_lease_addr(&self, deps: &Deps, lease_addr: &Addr) -> Result<(), ContractError> {
@@ -128,10 +142,10 @@ where
         &self,
         deps: &Deps,
         env: &Env,
-        amount_nlpn: Uint128,
+        amount_nlpn: Coin<NLpn>,
     ) -> Result<Coin<LPN>, ContractError> {
         let price = self.calculate_price(deps, env)?.get();
-        let amount_lpn = Coin::<LPN>::new((price * amount_nlpn).u128());
+        let amount_lpn = price::total(amount_nlpn, price);
 
         if self.balance(deps, env)? < amount_lpn {
             return Err(ContractError::NoLiquidity {});
@@ -297,6 +311,7 @@ mod test {
     use cosmwasm_std::{Addr, Timestamp, Uint64};
     use finance::currency::Usdc;
     use finance::duration::Duration;
+    use finance::price;
 
     type TheCurrency = Usdc;
 
@@ -513,7 +528,10 @@ mod test {
         let price = lpp
             .calculate_price(&deps.as_ref(), &env)
             .expect("should get price");
-        assert_eq!(price.get(), Decimal::one());
+        assert_eq!(
+            price.get(),
+            price::total_of(Coin::<NLpn>::new(1)).is(Coin::<TheCurrency>::new(1))
+        );
 
         lender
             .deposit(deps.as_mut().storage, 10_000_000u128.into(), price)
@@ -551,7 +569,14 @@ mod test {
         let price = lpp
             .calculate_price(&deps.as_ref(), &env)
             .expect("should get price");
-        assert_eq!(price.get(), Decimal::from_ratio(11u128, 10u128));
+        // assert_eq!(price.get(), Decimal::from_ratio(11u128, 10u128));
+        assert_eq!(
+            price::total(Coin::<NLpn>::new(1), price.get()),
+            price::total(
+                Coin::<NLpn>::new(1),
+                price::total_of(Coin::new(10)).is(Coin::new(11))
+            )
+        );
 
         let withdraw = lpp
             .withdraw_lpn(&deps.as_ref(), &env, 1000u128.into())

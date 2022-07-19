@@ -1,11 +1,14 @@
-use cosmwasm_std::{Addr, Decimal, Timestamp, Uint128, Uint64};
+use cosmwasm_std::{Addr, Timestamp, Uint128, Uint64};
 use finance::{
     coin::{Coin, CoinDTO},
     currency::{Currency, Nls},
     percent::Percent,
+    price::Price,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use crate::lpp::NLpn;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -116,10 +119,9 @@ pub struct BalanceResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
-pub struct PriceResponse {
-    pub price: Decimal,
-    pub denom: String,
-}
+pub struct PriceResponse<LPN>(pub Price<NLpn, LPN>)
+where
+    LPN: Currency;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct LppBalanceResponse<LPN>

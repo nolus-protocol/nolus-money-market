@@ -116,9 +116,9 @@ where
         let maybe_loan = Self::STORAGE.may_load(storage, lease_addr)?;
 
         if let Some(loan) = maybe_loan {
-            let delta_t = Duration::from_nanos(
-                cmp::max(outstanding_time.nanos(), loan.interest_paid.nanos())
-                    - loan.interest_paid.nanos(),
+            let delta_t = Duration::between(
+                loan.interest_paid,
+                cmp::max(outstanding_time, loan.interest_paid),
             );
 
             let interest_period = InterestPeriod::with_interest(loan.annual_interest_rate)
