@@ -3,102 +3,111 @@ use serde::{Deserialize, Serialize};
 
 use crate::{coin::Coin, currency::Currency, fraction::Fraction, ratio::Rational};
 
-pub fn ratio<From>(from: Coin<From>) -> RatioBuilder<From>
+pub fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
 where
-    From: Currency,
+    C: Currency,
 {
-    RatioBuilder(from)
+    PriceBuilder(amount)
 }
 
-pub struct RatioBuilder<From>(Coin<From>)
+pub struct PriceBuilder<C>(Coin<C>)
 where
-    From: Currency;
+    C: Currency;
 
-impl<From> RatioBuilder<From>
+impl<C> PriceBuilder<C>
 where
-    From: Currency,
+    C: Currency,
 {
     // TODO remove the configuration attribute once start using the method in production code
     #[cfg(test)]
-    fn to<To>(self, to: Coin<To>) -> ConversionRatio<From, To>
+    fn is<QuoteC>(self, to: Coin<QuoteC>) -> Price<C, QuoteC>
     where
-        To: Currency,
+        QuoteC: Currency,
     {
-        ConversionRatio {
-            amount1: self.0,
-            amount2: to,
+        Price {
+            amount: self.0,
+            amount_quote: to,
         }
     }
 }
 
+/// Represents the price of a currency in a quote currency
+///
+/// Ref: https://en.wikipedia.org/wiki/Currency_pair
+///
+/// For example, Price<EUR, USD> 1.15, generally represented as EURUSD or EUR/USD, means that one EUR is exchanged for 1.15 USD.
 #[derive(Clone, Copy, Serialize, Deserialize, JsonSchema)]
-pub struct ConversionRatio<C1, C2>
+pub struct Price<C, QuoteC>
 where
-    C1: Currency,
-    C2: Currency,
+    C: Currency,
+    QuoteC: Currency,
 {
-    amount1: Coin<C1>,
-    amount2: Coin<C2>,
+    amount: Coin<C>,
+    amount_quote: Coin<QuoteC>,
 }
 
-impl<C1, C2> ConversionRatio<C1, C2>
+impl<C, QuoteC> Price<C, QuoteC>
 where
-    C1: Currency,
-    C2: Currency,
+    C: Currency,
+    QuoteC: Currency,
 {
-    pub fn inv(self) -> ConversionRatio<C2, C1> {
-        ConversionRatio {
-            amount1: self.amount2,
-            amount2: self.amount1,
+    pub fn inv(self) -> Price<QuoteC, C> {
+        Price {
+            amount: self.amount_quote,
+            amount_quote: self.amount,
         }
     }
 }
 
-pub fn total<From, To>(of: Coin<From>, ratio: ConversionRatio<From, To>) -> Coin<To>
+/// Calculates the amount of given coins in another currency, referred here as `quote currency`
+///
+/// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
+pub fn total<C, QuoteC>(of: Coin<C>, price: Price<C, QuoteC>) -> Coin<QuoteC>
 where
-    From: Currency,
-    To: Currency,
+    C: Currency,
+    QuoteC: Currency,
 {
-    let ratio_impl = Rational::new(of, ratio.amount1);
-    <Rational<Coin<From>> as Fraction<Coin<From>>>::of(&ratio_impl, ratio.amount2)
+    let ratio_impl = Rational::new(of, price.amount);
+    <Rational<Coin<C>> as Fraction<Coin<C>>>::of(&ratio_impl, price.amount_quote)
 }
 
 #[cfg(test)]
 mod test {
     use crate::{
-        coin::Coin,
+        coin::Coin as CoinT,
         currency::{Nls, Usdc},
+        price,
     };
 
-    type BaseCoin = Coin<Usdc>;
-    type OtherCoin = Coin<Nls>;
+    type QuoteCoin = CoinT<Usdc>;
+    type Coin = CoinT<Nls>;
 
     #[test]
     fn total() {
-        let amount_base = 647;
-        let amount_other = 48;
-        let price = super::ratio(OtherCoin::new(amount_other)).to(BaseCoin::new(amount_base));
+        let amount_quote = 647;
+        let amount = 48;
+        let price = price::total_of(amount.into()).is(amount_quote.into());
         let factor = 17;
-        let coin_base = BaseCoin::new(amount_base * factor);
-        let coin_other = OtherCoin::new(amount_other * factor);
+        let coin_quote = QuoteCoin::new(amount_quote * factor);
+        let coin = Coin::new(amount * factor);
 
-        assert_eq!(coin_base, super::total(coin_other, price));
-        assert_eq!(coin_other, super::total(coin_base, price.inv()));
+        assert_eq!(coin_quote, super::total(coin, price));
+        assert_eq!(coin, super::total(coin_quote, price.inv()));
     }
 
     #[test]
     fn total_rounding() {
-        let amount_base = 647;
-        let amount_other = 48;
-        let price = super::ratio(OtherCoin::new(amount_other)).to(BaseCoin::new(amount_base));
-        let coin_base = BaseCoin::new(633);
+        let amount_quote = 647;
+        let amount = 48;
+        let price = super::total_of(amount.into()).is(amount_quote.into());
+        let coin_quote = QuoteCoin::new(633);
 
         // 47 * 647 / 48 -> 633.5208333333334
-        let coin_other_in = OtherCoin::new(47);
-        assert_eq!(coin_base, super::total(coin_other_in, price));
+        let coin_in = Coin::new(47);
+        assert_eq!(coin_quote, super::total(coin_in, price));
 
         // 633 * 48 / 647 -> 46.9613601236476
-        let coin_other_out = OtherCoin::new(46);
-        assert_eq!(coin_other_out, super::total(coin_base, price.inv()));
+        let coin_out = Coin::new(46);
+        assert_eq!(coin_out, super::total(coin_quote, price.inv()));
     }
 }
