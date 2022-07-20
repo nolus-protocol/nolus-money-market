@@ -18,7 +18,7 @@ use finance::ratio::Rational;
 
 pub struct NTokenPrice<LPN>
 where
-    LPN: Currency + Serialize + DeserializeOwned,
+    LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
     price: Price<NLpn, LPN>,
 }
@@ -58,7 +58,7 @@ where
 
 impl<LPN> LiquidityPool<LPN>
 where
-    LPN: Currency + Serialize + DeserializeOwned,
+    LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
     pub fn store(storage: &mut dyn Storage, denom: String, lease_code_id: Uint64) -> StdResult<()> {
         Config::new(denom, lease_code_id).store(storage)?;

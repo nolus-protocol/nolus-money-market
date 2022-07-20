@@ -121,7 +121,7 @@ pub struct BalanceResponse {
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct PriceResponse<LPN>(pub Price<NLpn, LPN>)
 where
-    LPN: Currency;
+    LPN: 'static + Currency;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 pub struct LppBalanceResponse<LPN>

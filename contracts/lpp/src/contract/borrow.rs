@@ -17,7 +17,7 @@ pub fn try_open_loan<LPN>(
     amount: Coin<LPN>,
 ) -> Result<Response, ContractError>
 where
-    LPN: Currency + Serialize + DeserializeOwned,
+    LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
     let mut lpp = LiquidityPool::<LPN>::load(deps.storage)?;
     lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
@@ -44,7 +44,7 @@ pub fn try_repay_loan<LPN>(
     funds: Vec<CwCoin>,
 ) -> Result<Response, ContractError>
 where
-    LPN: Currency + Serialize + DeserializeOwned,
+    LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
     if funds.len() != 1 {
         return Err(ContractError::FundsLen {});
@@ -74,7 +74,7 @@ pub fn query_quote<LPN>(
     quote: Coin<LPN>,
 ) -> Result<QueryQuoteResponse, ContractError>
 where
-    LPN: Currency + Serialize + DeserializeOwned,
+    LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
 
@@ -90,7 +90,7 @@ pub fn query_loan<LPN>(
     lease_addr: Addr,
 ) -> Result<QueryLoanResponse<LPN>, ContractError>
 where
-    LPN: Currency + Serialize + DeserializeOwned,
+    LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
     LiquidityPool::<LPN>::load(storage)?.query_loan(storage, &env, lease_addr)
 }
@@ -101,7 +101,7 @@ pub fn query_loan_outstanding_interest<LPN>(
     outstanding_time: Timestamp,
 ) -> Result<QueryLoanOutstandingInterestResponse<LPN>, ContractError>
 where
-    LPN: Currency + Serialize + DeserializeOwned,
+    LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
     let interest = LiquidityPool::<LPN>::load(storage)?.query_loan_outstanding_interest(
         storage,

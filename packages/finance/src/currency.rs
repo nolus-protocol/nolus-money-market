@@ -50,9 +50,10 @@ pub trait AnyVisitor {
     type Output;
     type Error;
 
+    // Requiring `'static` due to the requirements of Price
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
-        C: Currency + Serialize + DeserializeOwned;
+        C: 'static + Currency + Serialize + DeserializeOwned;
     fn on_unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
@@ -71,7 +72,7 @@ struct AnyVisitorImpl<V>(V);
 impl<C, V> SingleVisitor<C> for AnyVisitorImpl<V>
 where
     V: AnyVisitor,
-    C: Currency + Serialize + DeserializeOwned,
+    C: 'static + Currency + Serialize + DeserializeOwned,
 {
     type Output = Result<<V as AnyVisitor>::Output, <V as AnyVisitor>::Error>;
     type Error = Self;

@@ -50,7 +50,7 @@ pub fn query_lpp_balance<LPN>(
     env: Env,
 ) -> Result<LppBalanceResponse<LPN>, ContractError>
 where
-    LPN: Currency + DeserializeOwned + Serialize,
+    LPN: 'static + Currency + DeserializeOwned + Serialize,
 {
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
     Ok(lpp.query_lpp_balance(&deps, &env)?)

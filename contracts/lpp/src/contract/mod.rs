@@ -30,7 +30,7 @@ impl<'a> InstantiateWithLpn<'a> {
     // could be moved directly to on<LPN>()
     fn do_work<LPN>(self) -> Result<Response, ContractError>
     where
-        LPN: Currency + Serialize + DeserializeOwned,
+        LPN: 'static + Currency + Serialize + DeserializeOwned,
     {
         set_contract_version(self.deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
@@ -51,7 +51,7 @@ impl<'a> AnyVisitor for InstantiateWithLpn<'a> {
 
     fn on<LPN>(self) -> Result<Self::Output, Self::Error>
     where
-        LPN: Currency + DeserializeOwned + Serialize,
+        LPN: 'static + Currency + DeserializeOwned + Serialize,
     {
         self.do_work::<LPN>()
     }
@@ -80,7 +80,7 @@ struct ExecuteWithLpn<'a> {
 impl<'a> ExecuteWithLpn<'a> {
     fn do_work<LPN>(self) -> Result<Response, ContractError>
     where
-        LPN: Currency + Serialize + DeserializeOwned,
+        LPN: 'static + Currency + Serialize + DeserializeOwned,
     {
         // currency context variants
         match self.msg {
@@ -136,7 +136,7 @@ impl<'a> AnyVisitor for ExecuteWithLpn<'a> {
 
     fn on<LPN>(self) -> Result<Self::Output, Self::Error>
     where
-        LPN: Currency + DeserializeOwned + Serialize,
+        LPN: 'static + Currency + DeserializeOwned + Serialize,
     {
         self.do_work::<LPN>()
     }
@@ -181,7 +181,7 @@ struct QueryWithLpn<'a> {
 impl<'a> QueryWithLpn<'a> {
     fn do_work<LPN>(self) -> Result<Binary, ContractError>
     where
-        LPN: Currency + Serialize + DeserializeOwned,
+        LPN: 'static + Currency + Serialize + DeserializeOwned,
     {
         // currency context variants
         let res = match self.msg {
@@ -229,7 +229,7 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
 
     fn on<LPN>(self) -> Result<Self::Output, Self::Error>
     where
-        LPN: Currency + DeserializeOwned + Serialize,
+        LPN: 'static + Currency + DeserializeOwned + Serialize,
     {
         self.do_work::<LPN>()
     }

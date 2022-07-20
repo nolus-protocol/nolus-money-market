@@ -15,7 +15,7 @@ pub fn try_deposit<LPN>(
     amount: Coin<LPN>,
 ) -> Result<Response, ContractError>
 where
-    LPN: Currency + DeserializeOwned + Serialize,
+    LPN: 'static + Currency + DeserializeOwned + Serialize,
 {
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
 
@@ -33,7 +33,7 @@ pub fn try_withdraw<LPN>(
     amount_nlpn: Uint128,
 ) -> Result<Response, ContractError>
 where
-    LPN: Currency + DeserializeOwned + Serialize,
+    LPN: 'static + Currency + DeserializeOwned + Serialize,
 {
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
     let amount_nlpn = Coin::new(amount_nlpn.u128());
