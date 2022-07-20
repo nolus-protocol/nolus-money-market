@@ -7,7 +7,7 @@ use cosmwasm_std::{
 use finance::{
     coin::Coin,
     coin_legacy::to_cosmwasm,
-    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
+    currency::{visit_any, AnyVisitor, Currency, Nls, SymbolOwned},
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -29,6 +29,8 @@ where
     fn repay_loan_req(&self, repayment: Coin<Lpn>) -> StdResult<SubMsg>;
 
     fn loan(&self, lease: impl Into<Addr>) -> StdResult<QueryLoanResponse<Lpn>>;
+
+    fn distribute_rewards_req(&self, funds: Coin<Nls>) -> StdResult<SubMsg>;
 
     fn loan_outstanding_interest(
         &self,
@@ -174,6 +176,15 @@ where
         Ok(SubMsg::new(WasmMsg::Execute {
             contract_addr: self.addr.as_ref().into(),
             funds: vec![to_cosmwasm(repayment)],
+            msg,
+        }))
+    }
+
+    fn distribute_rewards_req(&self, funds: Coin<Nls>) -> StdResult<SubMsg> {
+        let msg = to_binary(&ExecuteMsg::DistributeRewards {})?;
+        Ok(SubMsg::new(WasmMsg::Execute {
+            contract_addr: self.addr.as_ref().into(),
+            funds: vec![to_cosmwasm(funds)],
             msg,
         }))
     }

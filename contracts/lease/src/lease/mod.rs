@@ -221,6 +221,10 @@ mod tests {
             unreachable!()
         }
 
+        fn distribute_rewards_req(&self, _funds: Coin<Nls>) -> StdResult<SubMsg> {
+            unimplemented!()
+        }
+
         fn quote(&self, _amount: Coin<TestCurrency>) -> StdResult<lpp::msg::QueryQuoteResponse> {
             unreachable!()
         }
@@ -260,6 +264,10 @@ mod tests {
 
         fn repay_loan_req(&self, _repayment: Coin<TestCurrency>) -> StdResult<SubMsg> {
             unreachable!()
+        }
+
+        fn distribute_rewards_req(&self, _funds: Coin<Nls>) -> StdResult<SubMsg> {
+            unimplemented!()
         }
 
         fn loan(&self, _lease: impl Into<Addr>) -> StdResult<QueryLoanResponse<TestCurrency>> {
