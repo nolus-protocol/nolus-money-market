@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[test]
-fn on_alarm_zero_reeward() {
+fn on_alarm_zero_reward() {
     let denom = Usdc::SYMBOL;
 
     let user = Addr::unchecked(USER);
@@ -171,7 +171,7 @@ fn on_alarm() {
                 "sender",
                 &test_case.treasury_addr.clone().unwrap().to_string()
             ),
-            ("amount", &format!("72{}", NATIVE_DENOM))
+            ("amount", &format!("24{}", NATIVE_DENOM))
         ]
     );
 
@@ -195,7 +195,7 @@ fn on_alarm() {
     );
 
     assert_eq!(
-        Coin::new(72, NATIVE_DENOM),
+        Coin::new(24, NATIVE_DENOM),
         test_case
             .app
             .wrap()
@@ -296,3 +296,59 @@ fn test_config() {
 
     assert_eq!(30, resp.cadence_hours);
 }
+
+// TODO: moved from contract tests, should be implemented as integration test
+// #[test]
+// fn dispatch_with_valid_period() {
+//     // let lpp_stub = LppLocalStubUnreachable {};
+
+//     let native_denom = Nls::SYMBOL;
+//     let mut deps = mock_dependencies_with_balance(&coins(20, native_denom));
+//     do_instantiate(deps.as_mut());
+
+//     let mut env = mock_env();
+//     env.block = BlockInfo {
+//         height: 12_345,
+//         time: env.block.time + Duration::from_days(100),
+//         chain_id: "cosmos-testnet-14002".to_string(),
+//     };
+
+//     let alarm_msg = ExecuteMsg::Alarm {
+//         time: env.block.time,
+//     };
+
+//     let res = execute(
+//         deps.as_mut(),
+//         env.clone(),
+//         mock_info("timealarms", &[]),
+//         alarm_msg,
+//     )
+//     .unwrap();
+//     assert_eq!(res.messages.len(), 3);
+//     assert_eq!(
+//         res.messages,
+//         vec![
+//             SubMsg::new(WasmMsg::Execute {
+//                 contract_addr: "treasury".to_string(),
+//                 msg: to_binary(&treasury::msg::ExecuteMsg::SendRewards {
+//                     amount: Coin::<Nls>::new(44386002),
+//                 })
+//                 .unwrap(),
+//                 funds: vec![],
+//             }),
+//             SubMsg::new(WasmMsg::Execute {
+//                 contract_addr: "lpp".to_string(),
+//                 msg: to_binary(&lpp::msg::ExecuteMsg::DistributeRewards {}).unwrap(),
+//                 funds: coins(44386002, native_denom),
+//             }),
+//             SubMsg::new(WasmMsg::Execute {
+//                 contract_addr: "timealarms".to_string(),
+//                 msg: to_binary(&timealarms::msg::ExecuteMsg::AddAlarm {
+//                     time: env.block.time.plus_seconds(10 * 60 * 60),
+//                 })
+//                 .unwrap(),
+//                 funds: vec![],
+//             })
+//         ]
+//     );
+// }

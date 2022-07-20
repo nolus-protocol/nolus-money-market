@@ -7,8 +7,10 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 
 use finance::duration::Duration;
+use lpp::stub::LppRef;
 
-use crate::dispatcher::Dispatcher;
+use crate::dispatcher::alarm_subscribe_msg;
+use crate::dispatcher_ref::DispatcherRef;
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::config::Config;
@@ -44,14 +46,14 @@ pub fn instantiate(
     .store(deps.storage)?;
     DispatchLog::update(deps.storage, env.block.time)?;
 
-    let subscribe_msg = Dispatcher::alarm_subscribe_msg(
+    let subscribe_msg = alarm_subscribe_msg(
         &timealarms_addr,
         env.block.time,
         Duration::from_hours(msg.cadence_hours),
     )?;
 
     Ok(Response::new()
-        .add_message(subscribe_msg)
+        .add_submessage(subscribe_msg)
         .add_attribute("method", "instantiate"))
 }
 
@@ -115,8 +117,11 @@ pub fn try_dispatch(
     if info.sender != config.timealarms {
         return Err(ContractError::UnrecognisedAlarm(info.sender));
     }
-
-    Dispatcher::dispatch(deps, &config, block_time)
+    let lpp = LppRef::try_from(config.lpp.to_string(), deps.api, &deps.querier)?;
+    lpp.execute(
+        DispatcherRef::new(deps.storage, deps.querier, config, block_time)?,
+        &deps.querier,
+    )
 }
 
 #[cfg(test)]
@@ -124,13 +129,7 @@ mod tests {
     use cosmwasm_std::{
         coins, from_binary,
         testing::{mock_dependencies_with_balance, mock_env, mock_info},
-        to_binary, Addr, BlockInfo, SubMsg, WasmMsg,
-    };
-
-    use finance::{
-        coin::Coin,
-        currency::{Currency, Nls},
-        duration::Duration,
+        Addr, DepsMut,
     };
 
     use super::{execute, instantiate, query};
@@ -138,25 +137,25 @@ mod tests {
     use crate::state::tvl_intervals::{Intervals, Stop};
     use crate::ContractError;
 
-    fn instantiate_msg() -> InstantiateMsg {
-        InstantiateMsg {
+    fn do_instantiate(deps: DepsMut) {
+        let msg = InstantiateMsg {
             cadence_hours: 10,
             lpp: Addr::unchecked("lpp"),
             oracle: Addr::unchecked("oracle"),
             timealarms: Addr::unchecked("timealarms"),
             treasury: Addr::unchecked("treasury"),
             tvl_to_apr: Intervals::from(vec![Stop::new(0, 5), Stop::new(1000000, 10)]).unwrap(),
-        }
+        };
+        let info = mock_info("creator", &coins(1000, "unolus"));
+
+        let res = instantiate(deps, mock_env(), info, msg).unwrap();
+        assert_eq!(1, res.messages.len());
     }
+
     #[test]
     fn proper_initialization() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
-
-        let msg = instantiate_msg();
-        let info = mock_info("creator", &coins(1000, "unolus"));
-
-        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-        assert_eq!(1, res.messages.len());
+        do_instantiate(deps.as_mut());
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
@@ -166,10 +165,7 @@ mod tests {
     #[test]
     fn configure() {
         let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
-
-        let msg = instantiate_msg();
-        let info = mock_info("creator", &coins(2, "token"));
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        do_instantiate(deps.as_mut());
 
         let unauth_info = mock_info("anyone", &coins(2, "token"));
         let msg = ExecuteMsg::Config { cadence_hours: 20 };
@@ -196,71 +192,5 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
         assert_eq!(20, value.cadence_hours);
-    }
-
-    #[test]
-    fn dispatch() {
-        let mut deps = mock_dependencies_with_balance(&coins(20, "unolus"));
-
-        let msg = instantiate_msg();
-        let info = mock_info("timealarms", &coins(2, "unolus"));
-        let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
-
-        let msg = ExecuteMsg::Alarm {
-            time: mock_env().block.time,
-        };
-        let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        // lpp period is zero => lpp returns zero reward => no dispatch message is send
-        assert_eq!(0, res.messages.len());
-    }
-    #[test]
-    fn dispatch_with_valid_period() {
-        let native_denom = Nls::SYMBOL;
-        let mut deps = mock_dependencies_with_balance(&coins(20, native_denom));
-
-        let msg = instantiate_msg();
-        let info = mock_info("timealarms", &coins(2, native_denom));
-        let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
-
-        let mut env = mock_env();
-        env.block = BlockInfo {
-            height: 12_345,
-            time: env.block.time + Duration::from_days(100),
-            chain_id: "cosmos-testnet-14002".to_string(),
-        };
-
-        let msg = ExecuteMsg::Alarm {
-            time: env.block.time,
-        };
-
-        let res = execute(deps.as_mut(), env.clone(), info, msg).unwrap();
-        assert_eq!(res.messages.len(), 3);
-        assert_eq!(
-            res.messages,
-            vec![
-                SubMsg::new(WasmMsg::Execute {
-                    contract_addr: "treasury".to_string(),
-                    msg: to_binary(&treasury::msg::ExecuteMsg::SendRewards {
-                        amount: Coin::<Nls>::new(44386002),
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                }),
-                SubMsg::new(WasmMsg::Execute {
-                    contract_addr: "lpp".to_string(),
-                    msg: to_binary(&lpp::msg::ExecuteMsg::DistributeRewards {}).unwrap(),
-                    funds: coins(44386002, native_denom),
-                }),
-                SubMsg::new(WasmMsg::Execute {
-                    contract_addr: "timealarms".to_string(),
-                    msg: to_binary(&timealarms::msg::ExecuteMsg::AddAlarm {
-                        time: env.block.time.plus_seconds(10 * 60 * 60),
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                })
-            ]
-        );
     }
 }
