@@ -59,7 +59,7 @@ pub(crate) fn to_cosmwasm_impl<C>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: Currency,
 {
-    CosmWasmCoin::new(coin.amount(), C::SYMBOL)
+    CosmWasmCoin::new(coin.into(), C::SYMBOL)
 }
 
 pub trait CoinVisitor {

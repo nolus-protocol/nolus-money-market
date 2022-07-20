@@ -18,7 +18,7 @@ pub struct Rational<U> {
 }
 
 impl<U> Rational<U> {
-    pub fn new(nominator: U, denominator: U) -> Self {
+    pub const fn new(nominator: U, denominator: U) -> Self {
         Self {
             nominator,
             denominator,

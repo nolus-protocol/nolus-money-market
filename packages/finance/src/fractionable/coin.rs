@@ -1,12 +1,15 @@
 use cosmwasm_std::{Uint128, Uint256};
 
-use crate::{coin::Coin, currency::Currency};
+use crate::{
+    coin::{Amount, Coin},
+    currency::Currency,
+};
 
 use super::HigherRank;
 
 impl<U, C> HigherRank<U> for Coin<C>
 where
-    U: Into<u128>,
+    U: Into<Amount>,
     C: Currency,
 {
     type Type = Uint256;
@@ -19,7 +22,7 @@ where
     C: Currency,
 {
     fn from(coin: Coin<C>) -> Self {
-        let c: u128 = coin.into();
+        let c: Amount = coin.into();
         c.into()
     }
 }
@@ -29,13 +32,18 @@ where
     C: Currency,
 {
     fn from(amount: Uint128) -> Self {
-        let c: u128 = amount.into();
+        let c: Amount = amount.into();
         c.into()
     }
 }
 #[cfg(test)]
 mod test {
-    use crate::{coin::Coin, currency::Nls, percent::Percent, ratio::Rational};
+    use crate::{
+        coin::{Amount, Coin},
+        currency::Nls,
+        percent::Percent,
+        ratio::Rational,
+    };
 
     #[test]
     fn safe_mul() {
@@ -54,7 +62,7 @@ mod test {
         );
 
         assert_eq!(
-            Coin::<Nls>::new(2u128 * u128::from(u32::MAX)),
+            Coin::<Nls>::new(2 * Amount::from(u32::MAX)),
             <Coin::<Nls> as Fractionable<u32>>::safe_mul(
                 Coin::<Nls>::new(2),
                 &Rational::new(u32::MAX, 1u32)

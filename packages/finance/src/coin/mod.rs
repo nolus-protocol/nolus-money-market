@@ -7,13 +7,17 @@ mod serde;
 use std::{
     fmt::{Debug, Display, Formatter, Write},
     marker::PhantomData,
-    ops::{Add, Sub},
+    ops::{Add, Div, Sub},
 };
 
 use ::serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 
+use gcd::Gcd;
+
 use crate::currency::Currency;
+
+pub(super) type Amount = u128;
 
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
@@ -22,7 +26,7 @@ pub struct Coin<C>
 where
     C: Currency,
 {
-    amount: u128,
+    amount: Amount,
     // using `with` for both directions implies implementing JsonSchema for that type
     // https://github.com/GREsau/schemars/issues/89
     #[serde(serialize_with = "serde::serialize")]
@@ -34,7 +38,7 @@ impl<C> Coin<C>
 where
     C: Currency,
 {
-    pub fn new(amount: u128) -> Self {
+    pub fn new(amount: Amount) -> Self {
         Self {
             amount,
             symbol: PhantomData::<C>,
@@ -42,11 +46,23 @@ where
     }
 
     pub fn is_zero(&self) -> bool {
-        self.amount == u128::default()
+        self.amount == Amount::default()
     }
 
-    pub(super) fn amount(&self) -> u128 {
-        self.amount
+    pub(super) fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>)
+    where
+        OtherC: Currency,
+    {
+        debug_assert!(!self.is_zero() && !other.is_zero());
+        let gcd = self.amount.gcd(other.amount);
+        debug_assert!(gcd > 0);
+
+        debug_assert_eq!(self.amount % gcd, 0);
+        debug_assert_eq!(other.amount % gcd, 0);
+        (
+            Self::new(self.amount / gcd),
+            Coin::<OtherC>::new(other.amount / gcd),
+        )
     }
 }
 impl<C> Add<Coin<C>> for Coin<C>
@@ -77,33 +93,47 @@ where
     }
 }
 
+impl<C> Div<Amount> for Coin<C>
+where
+    C: Currency,
+{
+    type Output = Self;
+
+    fn div(self, rhs: Amount) -> Self::Output {
+        Self::Output {
+            amount: self.amount / rhs,
+            symbol: self.symbol,
+        }
+    }
+}
+
 impl<C> Display for Coin<C>
 where
     C: Currency,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.amount().to_string())?;
+        f.write_str(&self.amount.to_string())?;
         f.write_char(' ')?;
         f.write_str(C::SYMBOL)?;
         Ok(())
     }
 }
 
-impl<C> From<u128> for Coin<C>
+impl<C> From<Amount> for Coin<C>
 where
     C: Currency,
 {
-    fn from(amount: u128) -> Self {
+    fn from(amount: Amount) -> Self {
         Self::new(amount)
     }
 }
 
-impl<C> From<Coin<C>> for u128
+impl<C> From<Coin<C>> for Amount
 where
     C: Currency,
 {
     fn from(coin: Coin<C>) -> Self {
-        coin.amount()
+        coin.amount
     }
 }
 
@@ -115,7 +145,7 @@ mod test {
         percent::test::test_of,
     };
 
-    use super::Coin;
+    use super::{Amount, Coin};
 
     #[test]
     fn display() {
@@ -139,7 +169,7 @@ mod test {
         test_of(18, usdc(120), usdc(2));
         test_of(18, usdc(112), usdc(2));
         test_of(18, usdc(111), usdc(1));
-        test_of(1000, usdc(u128::MAX), usdc(u128::MAX));
+        test_of(1000, usdc(Amount::MAX), usdc(Amount::MAX));
     }
 
     #[test]
@@ -151,14 +181,49 @@ mod test {
     #[test]
     #[should_panic]
     fn of_overflow() {
-        let max_amount = usdc(u128::MAX);
+        let max_amount = usdc(Amount::MAX);
         test_of(1001, max_amount, max_amount);
     }
-    fn usdc(amount: u128) -> Coin<Usdc> {
+
+    #[test]
+    fn div() {
+        assert_eq!(usdc(18 / 3), usdc(18) / 3);
+        assert_eq!(usdc(0), usdc(0) / 5);
+        assert_eq!(usdc(17 / 3), usdc(17) / 3);
+    }
+
+    #[test]
+    fn div_ceil() {
+        assert_eq!(usdc(17 / 3), usdc(17) / 3);
+    }
+
+    #[test]
+    fn coprime() {
+        coprime_impl(1, 1, 2);
+        coprime_impl(1, 5, 7);
+        coprime_impl(6, 18, 12);
+        coprime_impl(6, 12, 18);
+        coprime_impl(13, 13, 13);
+        coprime_impl(13, 13, 26);
+        coprime_impl(Amount::MAX, Amount::MAX, Amount::MAX);
+    }
+
+    fn coprime_impl(gcd: Amount, a1: Amount, a2: Amount) {
+        assert_eq!(
+            (usdc(a1 / gcd), nls(a2 / gcd)),
+            usdc(a1).into_coprime_with(nls(a2))
+        );
+        assert_eq!(
+            (nls(a1 / gcd), nls(a2 / gcd)),
+            nls(a1).into_coprime_with(nls(a2))
+        );
+    }
+
+    fn usdc(amount: Amount) -> Coin<Usdc> {
         Coin::new(amount)
     }
 
-    fn nls(amount: u128) -> Coin<Nls> {
+    fn nls(amount: Amount) -> Coin<Nls> {
         Coin::new(amount)
     }
 }
