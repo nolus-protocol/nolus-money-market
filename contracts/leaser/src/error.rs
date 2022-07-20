@@ -13,8 +13,7 @@ pub enum ContractError {
     Unauthorized {},
 
     #[error(
-        "LeaseHealthyLiability% must be less than LeaseMaxLiability% and 
-    LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
+        "LeaseHealthyLiability% must be less than LeaseMaxLiability% and LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
     )]
     IvalidLiability {},
 

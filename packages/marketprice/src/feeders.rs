@@ -32,11 +32,17 @@ impl<'f> PriceFeeders<'f> {
     }
 
     pub fn get(&self, storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
+        if self.0.may_load(storage)?.is_none() {
+            return Err(StdError::generic_err("No registered feeders"));
+        }
         let addrs = self.0.load(storage)?;
         Ok(addrs)
     }
 
     pub fn is_registered(&self, storage: &dyn Storage, address: &Addr) -> StdResult<bool> {
+        if self.0.may_load(storage)?.is_none() {
+            return Ok(false);
+        }
         let addrs = self.0.load(storage)?;
         Ok(addrs.contains(address))
     }

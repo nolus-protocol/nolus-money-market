@@ -17,6 +17,9 @@ fn register_feeder() {
 
     let control = PriceFeeders::new("foo");
     let f_address = deps.api.addr_validate("address1").unwrap();
+    let resp = control.is_registered(&deps.storage, &f_address).unwrap();
+    assert!(!resp);
+
     control.register(deps.as_mut(), f_address.clone()).unwrap();
 
     let resp = control.is_registered(&deps.storage, &f_address).unwrap();
