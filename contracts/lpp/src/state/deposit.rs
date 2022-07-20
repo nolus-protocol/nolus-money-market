@@ -1,5 +1,6 @@
 use crate::error::ContractError;
-use crate::lpp::{NLpn, NTokenPrice};
+use crate::lpp::NTokenPrice;
+use crate::nlpn::NLpn;
 use cosmwasm_std::{coin, Addr, Coin as CwCoin, Decimal, DepsMut, StdResult, Storage, Uint128};
 use cw_storage_plus::{Item, Map};
 use finance::coin::Coin;

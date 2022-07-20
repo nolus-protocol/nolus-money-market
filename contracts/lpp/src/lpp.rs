@@ -2,28 +2,19 @@ use cosmwasm_std::{
     Addr, BankMsg, Coin as CwCoin, ContractInfoResponse, Deps, DepsMut, Env, QueryRequest,
     StdResult, Storage, Timestamp, Uint64, WasmQuery,
 };
-use finance::currency::{Currency, SymbolStatic};
+use finance::currency::Currency;
 use finance::price::{self, Price};
-use schemars::JsonSchema;
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 use crate::error::ContractError;
 use crate::msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse};
 use crate::state::{Config, Deposit, Loan, LoanData, Total};
+use crate::nlpn::NLpn;
 use finance::coin::Coin;
 use finance::fraction::Fraction;
 use finance::percent::Percent;
 use finance::ratio::Rational;
 
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
-)]
-pub struct NLpn;
-impl Currency for NLpn {
-    // should not be visible
-    const SYMBOL: SymbolStatic = "nlpn";
-}
 
 pub struct NTokenPrice<LPN>
 where

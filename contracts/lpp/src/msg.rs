@@ -8,7 +8,7 @@ use finance::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::lpp::NLpn;
+use crate::nlpn::NLpn;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {

@@ -9,7 +9,7 @@ use finance::{
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::lpp::NLpn;
+use crate::nlpn::NLpn;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Config {
