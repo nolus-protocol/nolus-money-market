@@ -10,6 +10,8 @@ use finance::coin::{self, Coin};
 use finance::currency::{Currency, Usdc};
 use finance::liability::Liability;
 use finance::percent::Percent;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 use crate::msg::{ConfigResponse, ExecuteMsg, QueryMsg, QuoteResponse, Repayment};
 
@@ -86,6 +88,52 @@ fn test_update_config() {
 
     assert_eq!(expected_liability, config_response.config.liability);
     assert_eq!(expected_repaiment, config_response.config.repayment);
+}
+
+#[test]
+#[should_panic(expected = "IvalidLiability")]
+fn test_update_config_invalid_liability() {
+    let mut deps = mock_dependencies();
+
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+    #[serde(rename_all = "snake_case")]
+    pub struct Liability {
+        init_percent: Percent,
+        healthy_percent: Percent,
+        max_percent: Percent,
+        recalc_secs: u32,
+    }
+
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+    #[serde(rename_all = "snake_case")]
+    pub enum MockExecuteMsg {
+        Config {
+            lease_interest_rate_margin: Percent,
+            liability: Liability,
+            repayment: Repayment,
+        },
+        OpenLease {
+            currency: String,
+        },
+    }
+
+    let liability = Liability {
+        init_percent: Percent::from_percent(55),
+        healthy_percent: Percent::from_percent(55),
+        max_percent: Percent::from_percent(55),
+        recalc_secs: 100,
+    };
+    let mock_msg = MockExecuteMsg::Config {
+        lease_interest_rate_margin: Percent::from_percent(5),
+        liability,
+        repayment: Repayment::new(10, 10),
+    };
+
+    let msg: ExecuteMsg = from_binary(&to_binary(&mock_msg).unwrap()).unwrap();
+
+    let info = setup_test_case(deps.as_mut());
+
+    execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 }
 
 #[test]
@@ -173,9 +221,7 @@ fn test_quote() {
 
     assert_eq!(Coin::<TheCurrency>::new(185), resp.borrow);
     assert_eq!(Coin::<TheCurrency>::new(285), resp.total);
-    // TODO: move to finance::coin::Coin
-    // assert_eq!(finance::coin::Coin::<Usdc>::new(185), resp.borrow);
-    // assert_eq!(finance::coin::Coin::<Usdc>::new(285), resp.total);
+
     /*
         103% =
         100% lpp annual_interest_rate (when calling the test version of get_annual_interest_rate() in lpp_querier.rs)
@@ -199,8 +245,4 @@ fn test_quote() {
 
     assert_eq!(Coin::<TheCurrency>::new(27), resp.borrow);
     assert_eq!(Coin::<TheCurrency>::new(42), resp.total);
-
-    // TODO: move to finance::coin
-    // assert_eq!(finance::coin::Coin::<Usdc>::new(27), resp.borrow);
-    // assert_eq!(finance::coin::Coin::<Usdc>::new(42), resp.total);
 }

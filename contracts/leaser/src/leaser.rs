@@ -79,6 +79,7 @@ impl Leaser {
             annual_interest_rate: annual_interest_rate + config.lease_interest_rate_margin,
         })
     }
+
     pub fn try_configure(
         deps: DepsMut,
         info: MessageInfo,
@@ -89,6 +90,9 @@ impl Leaser {
         let config = Config::load(deps.storage)?;
         if info.sender != config.owner {
             return Err(ContractError::Unauthorized {});
+        }
+        if liability.invariant_held().is_err() {
+            return Err(ContractError::IvalidLiability {});
         }
         Config::update(
             deps.storage,
