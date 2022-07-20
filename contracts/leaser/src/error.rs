@@ -12,6 +12,12 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error(
+        "LeaseHealthyLiability% must be less than LeaseMaxLiability% and 
+    LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
+    )]
+    IvalidLiability {},
+
     #[error("ParseError {err:?}")]
     ParseError { err: String },
 
