@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::str::FromStr;
 
 use crate::contract::{execute, query};
 use crate::msg::{ConfigResponse, ExecuteMsg, PriceResponse, QueryMsg};
@@ -9,8 +8,8 @@ use crate::tests::common::{
 use crate::ContractError;
 
 use cosmwasm_std::testing::{mock_env, mock_info};
-use cosmwasm_std::{coins, from_binary, Addr, Decimal, StdError};
-use marketprice::feed::{DenomToPrice, Price};
+use cosmwasm_std::{coins, from_binary, Addr, StdError};
+use marketprice::storage::PriceStorage;
 
 use super::common::dummy_feed_prices_msg;
 
@@ -150,10 +149,7 @@ fn feed_prices() {
     .unwrap();
     let value: PriceResponse = from_binary(&res).unwrap();
     assert_eq!(
-        DenomToPrice::new(
-            "A".to_string(),
-            Price::new(Decimal::from_str("1.2").unwrap(), "B".to_string())
-        ),
+        PriceStorage::new("A".to_string(), 10, "B".to_string(), 12),
         value.prices.first().unwrap().to_owned()
     );
 }
@@ -178,19 +174,10 @@ fn query_prices_unsuppoted_denom() {
 fn feed_prices_unsupported_pairs() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
-    let prices_map = vec![marketprice::feed::Prices {
-        base: "X".to_string(),
-        values: vec![
-            Price {
-                denom: "c".to_string(),
-                amount: Decimal::from_str("1.2").unwrap(),
-            },
-            Price {
-                denom: "D".to_string(),
-                amount: Decimal::from_str("2.2").unwrap(),
-            },
-        ],
-    }];
+    let prices_map = vec![
+        PriceStorage::new("X".to_string(), 10, "C".to_string(), 12),
+        PriceStorage::new("X".to_string(), 10, "D".to_string(), 22),
+    ];
 
     let msg = ExecuteMsg::FeedPrices { prices: prices_map };
     let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();

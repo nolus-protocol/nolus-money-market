@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, StdError};
 use marketprice::{
-    alarms::errors::AlarmError, feed::DenomPair, feeders::PriceFeedersError,
-    market_price::PriceFeedsError,
+    alarms::errors::AlarmError, feeders::PriceFeedersError, market_price::PriceFeedsError,
+    storage::DenomPair,
 };
 use thiserror::Error;
 

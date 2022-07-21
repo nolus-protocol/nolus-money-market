@@ -5,7 +5,7 @@ use cosmwasm_std::{
     StdResult, Storage, Timestamp,
 };
 use cw2::set_contract_version;
-use marketprice::feed::{Denom, DenomPair, DenomToPrice, Prices};
+use marketprice::storage::{Denom, DenomPair, PriceStorage};
 
 use crate::alarms::MarketAlarms;
 use crate::contract_validation::validate_contract_addr;
@@ -193,7 +193,7 @@ fn try_feed_multiple_prices(
     storage: &mut dyn Storage,
     block_time: Timestamp,
     sender_raw: Addr,
-    prices: Vec<Prices>,
+    prices: Vec<PriceStorage>,
 ) -> Result<Response, ContractError> {
     // Check feeder permission
     let is_registered = MarketOracle::is_feeder(storage, &sender_raw)?;
@@ -201,19 +201,25 @@ fn try_feed_multiple_prices(
         return Err(ContractError::UnknownFeeder {});
     }
 
+    /*
+        TODO(kari, nina): To be designed:
+        Setup: price pairs (A,B), (B,C), (C,D) are available
+        If (B,C) is updated, (A,D) price is affected but hooks for it will not be notified
+    */
+
     let hook_denoms = MarketAlarms::get_hook_denoms(storage)?;
 
     let mut affected_denoms: Vec<Denom> = vec![];
-    for entry in prices {
-        MarketOracle::feed_prices(storage, block_time, &sender_raw, &entry.base, entry.values)?;
+    MarketOracle::feed_prices(storage, block_time, &sender_raw, prices.clone())?;
 
-        if hook_denoms.contains(&entry.base) {
-            affected_denoms.push(entry.base);
+    for entry in prices {
+        if hook_denoms.contains(&entry.base().symbol) {
+            affected_denoms.push(entry.base().symbol);
         }
     }
 
     //calculate the price of this denom againts the base for the oracle denom
-    let updated_prices: Vec<DenomToPrice> =
+    let updated_prices: Vec<PriceStorage> =
         MarketOracle::get_price_for(storage, block_time, affected_denoms)?;
 
     // get all affected addresses

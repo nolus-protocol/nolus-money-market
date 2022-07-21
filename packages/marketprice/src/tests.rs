@@ -1,12 +1,11 @@
-use std::str::FromStr;
 use std::time::SystemTime;
 
 use cosmwasm_std::testing::mock_dependencies;
-use cosmwasm_std::{Api, Decimal, DepsMut, Timestamp};
+use cosmwasm_std::{Api, DepsMut, Timestamp};
 
-use crate::feed::Price;
 use crate::feeders::PriceFeeders;
 use crate::market_price::{PriceFeeds, PriceFeedsError, PriceQuery};
+use crate::storage::PriceStorage;
 use finance::duration::Duration;
 
 const MINUTE: Duration = Duration::from_secs(60);
@@ -68,16 +67,9 @@ fn marketprice_add_feed_empty_vec() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let prices: Vec<Price> = Vec::new();
+    let prices: Vec<PriceStorage> = Vec::new();
     market
-        .feed(
-            &mut deps.storage,
-            ts,
-            &f_address,
-            "DEN1".to_string(),
-            prices,
-            MINUTE,
-        )
+        .feed(&mut deps.storage, ts, &f_address, prices, MINUTE)
         .unwrap();
 }
 
@@ -88,19 +80,20 @@ fn marketprice_add_feed() {
     let market = PriceFeeds::new("foo");
     let f_address = deps.api.addr_validate("address1").unwrap();
 
-    let prices: Vec<Price> = vec![
-        Price {
-            denom: "DEN2".to_string(),
-            amount: Decimal::from_str("0.5").unwrap(),
-        },
-        Price {
-            denom: "DEN3".to_string(),
-            amount: Decimal::from_str("0.1000000009").unwrap(),
-        },
-        Price {
-            denom: "DEN4".to_string(),
-            amount: Decimal::from_str("1.00000000000002").unwrap(),
-        },
+    let prices: Vec<PriceStorage> = vec![
+        PriceStorage::new("DEN1".to_string(), 10, "DEN2".to_string(), 5),
+        PriceStorage::new(
+            "DEN1".to_string(),
+            10000000000,
+            "DEN3".to_string(),
+            1000000009,
+        ),
+        PriceStorage::new(
+            "DEN1".to_string(),
+            10000000000000,
+            "DEN4".to_string(),
+            100000000000002,
+        ),
     ];
 
     let now = SystemTime::now()
@@ -109,14 +102,7 @@ fn marketprice_add_feed() {
     let ts = Timestamp::from_seconds(now.as_secs());
 
     market
-        .feed(
-            &mut deps.storage,
-            ts,
-            &f_address,
-            "DEN1".to_string(),
-            prices,
-            MINUTE,
-        )
+        .feed(&mut deps.storage, ts, &f_address, prices, MINUTE)
         .unwrap();
     let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), MINUTE, 50);
     let err = market.get(&deps.storage, ts, query).unwrap_err();
@@ -124,37 +110,37 @@ fn marketprice_add_feed() {
 
     let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), MINUTE, 1);
     let price_resp = market.get(&deps.storage, ts, query).unwrap();
-    assert_eq!(price_resp.to_string(), "0.5".to_string());
+    let expected_price = PriceStorage::new("DEN1".to_string(), 10, "DEN2".to_string(), 5);
+    assert_eq!(expected_price, price_resp);
 }
 
 #[test]
 fn marketprice_follow_the_path() {
     let mut deps = mock_dependencies();
     let market = PriceFeeds::new("foo");
-    let _ = feed_price(deps.as_mut(), &market, "DEN1", "DEN0", "1").unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DEN3", "DEN4", "3").unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DEN3", "DENX", "3").unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DEN1", "DEN2", "1").unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DEN3", "DEN4", "3").unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DEN2", "DEN3", "2").unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DEN3", "DEN2", "3").unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DENZ", "DENX", "3").unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DEN4", "DEN1", "3").unwrap();
-    let ts = feed_price(deps.as_mut(), &market, "DENC", "DEN4", "3").unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN1".into(), 1, "DEN0".into(), 1).unwrap();
+
+    let _ = feed_price(deps.as_mut(), &market, "DEN3".into(), 1, "DEN4".into(), 3).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN3".into(), 1, "DENX".into(), 3).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN1".into(), 1, "DEN2".into(), 1).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN3".into(), 1, "DEN4".into(), 3).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN2".into(), 1, "DEN3".into(), 2).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN3".into(), 1, "DEN2".into(), 3).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DENZ".into(), 1, "DENX".into(), 3).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN4".into(), 1, "DEN1".into(), 3).unwrap();
+    let ts = feed_price(deps.as_mut(), &market, "DENC".into(), 1, "DEN4".into(), 3).unwrap();
 
     // valid search denom pair
     let query = PriceQuery::new(("DEN1".to_string(), "DEN4".to_string()), MINUTE, 1);
-    assert_eq!(
-        market.get(&deps.storage, ts, query).unwrap().to_string(),
-        "6".to_string()
-    );
+    let price_resp = market.get(&deps.storage, ts, query).unwrap();
+    let expected = PriceStorage::new("DEN1".into(), 1, "DEN4".into(), 6);
+    assert_eq!(expected, price_resp);
 
     // first and second part of denom pair are the same
     let query = PriceQuery::new(("DEN1".to_string(), "DEN1".to_string()), MINUTE, 1);
-    assert_eq!(
-        market.get(&deps.storage, ts, query).unwrap().to_string(),
-        "1".to_string()
-    );
+    let price_resp = market.get(&deps.storage, ts, query).unwrap();
+    let expected = PriceStorage::new("DEN1".into(), 1, "DEN1".into(), 1);
+    assert_eq!(expected, price_resp);
 
     // second part of denome pair doesn't exists in the storage
     let query = PriceQuery::new(("DEN1".to_string(), "DEN5".to_string()), MINUTE, 1);
@@ -174,9 +160,10 @@ fn marketprice_follow_the_path() {
 fn feed_price(
     deps: DepsMut,
     market: &PriceFeeds,
-    base: &str,
-    quote: &str,
-    price: &str,
+    sym_base: String,
+    amount_base: u128,
+    sym_quote: String,
+    amount_quote: u128,
 ) -> Result<Timestamp, PriceFeedsError> {
     let f_address = deps.api.addr_validate("address1").unwrap();
 
@@ -185,16 +172,7 @@ fn feed_price(
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    market.feed(
-        deps.storage,
-        ts,
-        &f_address,
-        base.to_string(),
-        vec![Price {
-            denom: quote.to_string(),
-            amount: Decimal::from_str(price).unwrap(),
-        }],
-        MINUTE,
-    )?;
+    let price = PriceStorage::new(sym_base, amount_base, sym_quote, amount_quote);
+    market.feed(deps.storage, ts, &f_address, vec![price], MINUTE)?;
     Ok(ts)
 }

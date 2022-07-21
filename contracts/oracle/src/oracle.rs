@@ -2,9 +2,9 @@ use std::{collections::HashSet, convert::TryInto};
 
 use cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage, Timestamp};
 use marketprice::{
-    feed::{Denom, DenomToPrice, Price},
     feeders::{PriceFeeders, PriceFeedersError},
     market_price::{PriceFeeds, PriceQuery},
+    storage::{Denom, DenomPair, PriceStorage},
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -72,18 +72,15 @@ impl MarketOracle {
         storage: &dyn Storage,
         block_time: Timestamp,
         denoms: Vec<Denom>,
-    ) -> StdResult<Vec<DenomToPrice>> {
+    ) -> StdResult<Vec<PriceStorage>> {
         let config = Config::load(storage)?;
-        let mut prices: Vec<DenomToPrice> = Vec::new();
+        let mut prices: Vec<PriceStorage> = Vec::new();
         for denom in denoms {
             let price_query = Self::init_price_query(storage, denom.clone(), &config)?;
             let resp = Self::MARKET_PRICE.get(storage, block_time, price_query);
             match resp {
                 Ok(feed) => {
-                    prices.push(DenomToPrice::new(
-                        denom,
-                        Price::new(feed, config.base_asset.clone()),
-                    ));
+                    prices.push(feed);
                 }
                 Err(err) => return Err(StdError::generic_err(err.to_string())),
             };
@@ -95,13 +92,11 @@ impl MarketOracle {
         storage: &mut dyn Storage,
         block_time: Timestamp,
         sender_raw: &Addr,
-        base: &Denom,
-        prices: Vec<Price>,
+        prices: Vec<PriceStorage>,
     ) -> Result<(), ContractError> {
         let config = Config::load(storage)?;
 
-        let filtered_prices =
-            Self::remove_invalid_prices(config.supported_denom_pairs, base.clone(), prices);
+        let filtered_prices = Self::remove_invalid_prices(config.supported_denom_pairs, prices);
         if filtered_prices.is_empty() {
             return Err(ContractError::UnsupportedDenomPairs {});
         }
@@ -110,7 +105,6 @@ impl MarketOracle {
             storage,
             block_time,
             sender_raw,
-            base.to_string(),
             filtered_prices,
             Duration::from_secs(config.price_feed_period_secs),
         )?;
@@ -127,15 +121,17 @@ impl MarketOracle {
     }
 
     fn remove_invalid_prices(
-        supported_denom_pairs: Vec<(String, String)>,
-        base: Denom,
-        prices: Vec<Price>,
-    ) -> Vec<Price> {
+        supported_denom_pairs: Vec<DenomPair>,
+        prices: Vec<PriceStorage>,
+    ) -> Vec<PriceStorage> {
         prices
             .iter()
             .filter(|price| {
-                supported_denom_pairs.contains(&(base.clone(), price.denom.clone()))
-                    && !base.eq_ignore_ascii_case(&price.denom)
+                supported_denom_pairs.contains(&price.denom_pair())
+                    && !price
+                        .base()
+                        .symbol
+                        .eq_ignore_ascii_case(&price.quote().symbol)
             })
             .map(|p| p.to_owned())
             .collect()
@@ -144,10 +140,7 @@ impl MarketOracle {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use cosmwasm_std::Decimal;
-    use marketprice::feed::Price;
+    use marketprice::storage::PriceStorage;
 
     use crate::oracle::MarketOracle;
 
@@ -174,30 +167,16 @@ mod tests {
             ("C".to_string(), "D".to_string()),
         ];
 
-        let filtered = MarketOracle::remove_invalid_prices(
-            supported_pairs,
-            "B".to_string(),
-            vec![
-                Price {
-                    denom: "A".to_string(),
-                    amount: Decimal::from_str("1.2").unwrap(),
-                },
-                Price {
-                    denom: "D".to_string(),
-                    amount: Decimal::from_str("3.2").unwrap(),
-                },
-                Price {
-                    denom: "B".to_string(),
-                    amount: Decimal::from_str("1.2").unwrap(),
-                },
-            ],
-        );
+        let prices = vec![
+            PriceStorage::new("B".into(), 10, "A".into(), 12),
+            PriceStorage::new("B".into(), 10, "D".into(), 32),
+            PriceStorage::new("B".into(), 10, "B".into(), 12),
+        ];
+
+        let filtered = MarketOracle::remove_invalid_prices(supported_pairs, prices);
 
         assert_eq!(
-            vec![Price {
-                denom: "A".to_string(),
-                amount: Decimal::from_str("1.2").unwrap()
-            }],
+            vec![PriceStorage::new("B".into(), 10, "A".into(), 12),],
             filtered
         );
     }

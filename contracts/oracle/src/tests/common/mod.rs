@@ -1,11 +1,9 @@
-use std::str::FromStr;
-
 use cosmwasm_std::{
     coins,
     testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
-    Decimal, MemoryStorage, MessageInfo, OwnedDeps,
+    MemoryStorage, MessageInfo, OwnedDeps,
 };
-use marketprice::feed::{Denom, Price, Prices};
+use marketprice::storage::{Denom, PriceStorage};
 
 use crate::{
     contract::{execute, instantiate},
@@ -47,20 +45,9 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
 pub(crate) fn dummy_feed_prices_msg() -> ExecuteMsg {
     ExecuteMsg::FeedPrices {
         prices: vec![
-            Prices {
-                base: "A".to_string(),
-                values: vec![
-                    Price::new(Decimal::from_str("1.2").unwrap(), "B".to_string()),
-                    Price::new(Decimal::from_str("3.2").unwrap(), "C".to_string()),
-                ],
-            },
-            Prices {
-                base: "C".to_string(),
-                values: vec![Price::new(
-                    Decimal::from_str("1.2").unwrap(),
-                    "D".to_string(),
-                )],
-            },
+            PriceStorage::new("A".to_string(), 10, "B".to_string(), 12),
+            PriceStorage::new("A".to_string(), 10, "C".to_string(), 32),
+            PriceStorage::new("C".to_string(), 10, "D".to_string(), 12),
         ],
     }
 }

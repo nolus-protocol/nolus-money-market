@@ -44,15 +44,15 @@ impl PriceStorage {
         self.quote.clone()
     }
 
-    pub fn one(symbol: &String) -> Self {
+    pub fn one(symbol: &str) -> Self {
         PriceStorage {
             base: CoinStorage {
                 amount: 1,
-                symbol: symbol.clone(),
+                symbol: symbol.into(),
             },
             quote: CoinStorage {
                 amount: 1,
-                symbol: symbol.clone(),
+                symbol: symbol.into(),
             },
         }
     }

@@ -121,7 +121,7 @@ where
             .querier
             .query_wasm_smart(self.config.oracle.to_string(), &query_msg)?;
         let denom_price = match resp.prices.first() {
-            Some(d) => d.price.amount,
+            Some(d) => Decimal::from_ratio(d.quote().amount, d.base().amount),
             None => todo!(),
         };
 

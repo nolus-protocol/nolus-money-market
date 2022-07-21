@@ -1,8 +1,6 @@
-use std::str::FromStr;
-
-use cosmwasm_std::{to_binary, Addr, Binary, Decimal, Deps, Env, StdError, StdResult};
+use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdError, StdResult};
 use cw_multi_test::{App, ContractWrapper, Executor};
-use marketprice::feed::{DenomToPrice, Price};
+use marketprice::storage::{CoinStorage, PriceStorage};
 
 use super::{ADMIN, NATIVE_DENOM};
 
@@ -66,10 +64,12 @@ impl Default for MarketOracleWrapper {
 pub fn mock_oracle_query(deps: Deps, env: Env, msg: oracle::msg::QueryMsg) -> StdResult<Binary> {
     let res = match msg {
         oracle::msg::QueryMsg::PriceFor { denoms: _ } => to_binary(&oracle::msg::PriceResponse {
-            prices: vec![DenomToPrice {
-                denom: NATIVE_DENOM.to_string(),
-                price: Price::new(Decimal::from_str("0.123456789").unwrap(), "UST".to_string()),
-            }],
+            prices: vec![PriceStorage::new(
+                NATIVE_DENOM.to_string(),
+                1000000000,
+                "UST".to_string(),
+                123456789,
+            )],
         }),
         _ => Ok(oracle::contract::query(deps, env, msg)?),
     }?;
