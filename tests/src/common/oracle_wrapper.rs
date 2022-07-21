@@ -1,6 +1,6 @@
 use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdError, StdResult};
 use cw_multi_test::{App, ContractWrapper, Executor};
-use marketprice::storage::{CoinStorage, PriceStorage};
+use marketprice::storage::PriceStorage;
 
 use super::{ADMIN, NATIVE_DENOM};
 
