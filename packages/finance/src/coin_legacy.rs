@@ -3,34 +3,8 @@ use crate::{
     currency::{visit, visit_any, AnyVisitor, Currency, SingleVisitor},
     error::{Error, Result},
 };
-use cosmwasm_std::{Coin as CosmWasmCoin, Uint128};
+use cosmwasm_std::{Coin as CosmWasmCoin};
 use std::result::Result as StdResult;
-
-#[deprecated = "Migrate to using finance::coin::Coin"]
-pub fn sub_amount(from: CosmWasmCoin, amount: Uint128) -> CosmWasmCoin {
-    CosmWasmCoin {
-        amount: from.amount - amount,
-        denom: from.denom,
-    }
-}
-
-#[deprecated = "Migrate to using finance::coin::Coin"]
-pub fn sub_coin(from: CosmWasmCoin, other: CosmWasmCoin) -> CosmWasmCoin {
-    debug_assert!(from.denom == other.denom);
-    CosmWasmCoin {
-        amount: from.amount - other.amount,
-        denom: from.denom,
-    }
-}
-
-#[deprecated = "Migrate to using finance::coin::Coin"]
-pub fn add_coin(to: CosmWasmCoin, other: CosmWasmCoin) -> CosmWasmCoin {
-    debug_assert!(to.denom == other.denom);
-    CosmWasmCoin {
-        amount: to.amount + other.amount,
-        denom: to.denom,
-    }
-}
 
 #[deprecated = "Migrate to using finance::bank::BankAccount"]
 pub fn from_cosmwasm<C>(coin: CosmWasmCoin) -> Result<Coin<C>>

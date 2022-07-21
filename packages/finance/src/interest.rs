@@ -78,6 +78,9 @@ where
         self.interest_by(principal, self.till())
     }
 
+    ///
+    /// The return.1 is the change after the payment. The actual payment is
+    /// equal to the payment minus the returned change.
     pub fn pay<P>(self, principal: P, payment: P, by: Timestamp) -> (Self, P)
     where
         P: Default + Copy + Ord + Sub<Output = P> + Fractionable<U> + TimeSliceable,
