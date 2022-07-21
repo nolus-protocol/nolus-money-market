@@ -1,7 +1,7 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
+    from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
     StdResult, Storage, Timestamp,
 };
 use cw2::set_contract_version;
@@ -64,20 +64,14 @@ pub fn execute(
         ExecuteMsg::SupportedDenomPairs { pairs } => {
             try_configure_supported_pairs(deps.storage, info, pairs)
         }
-        ExecuteMsg::FeedPrices { prices } => try_feed_multiple_prices(
-            deps.storage,
-            env.block.time,
-            get_sender(deps.api, info)?,
-            prices,
-        ),
+        ExecuteMsg::FeedPrices { prices } => {
+            try_feed_multiple_prices(deps.storage, env.block.time, info.sender, prices)
+        }
         ExecuteMsg::AddPriceAlarm { target } => {
-            let sender = get_sender(deps.api, info)?;
-            validate_contract_addr(&deps.querier, &sender)?;
-            MarketAlarms::try_add_price_alarm(deps.storage, sender, target)
+            validate_contract_addr(&deps.querier, &info.sender)?;
+            MarketAlarms::try_add_price_alarm(deps.storage, info.sender, target)
         }
-        ExecuteMsg::RemovePriceAlarm {} => {
-            MarketAlarms::remove(deps.storage, get_sender(deps.api, info)?)
-        }
+        ExecuteMsg::RemovePriceAlarm {} => MarketAlarms::remove(deps.storage, info.sender),
     }
 }
 
@@ -96,10 +90,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&Config::load(deps.storage)?.supported_denom_pairs)
         }
     }
-}
-
-pub fn get_sender(api: &dyn Api, info: MessageInfo) -> StdResult<Addr> {
-    api.addr_validate(info.sender.as_str())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
