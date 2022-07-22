@@ -1,11 +1,11 @@
 use cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, Env, QuerierWrapper, SubMsg};
 
-use crate::{
+use finance::{
     coin::Coin,
-    coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl},
     currency::Currency,
-    error::{Result, Error},
 };
+
+use crate::{coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl}, error::{Result, Error}};
 
 pub trait BankAccount {
     fn balance<C>(&self) -> Result<Coin<C>>

@@ -7,5 +7,6 @@ edition = "2021"
 [dependencies]
 cosmwasm-std = "1.0.0"
 serde = { version = "1.0", default-features = false }
+thiserror = { version = "1.0" }
 
 finance = { path = "../../packages/finance", version = "0.1.0", default-features = false }

@@ -3,7 +3,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use finance::currency::Currency;
 use finance::coin::Coin;
-use finance::bank::{self, BankStub, BankAccount};
+use platform::bank::{self, BankStub, BankAccount};
 
 use crate::error::ContractError;
 use crate::lpp::LiquidityPool;

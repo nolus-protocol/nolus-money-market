@@ -14,7 +14,7 @@ use finance::coin::Coin;
 use finance::fraction::Fraction;
 use finance::percent::Percent;
 use finance::ratio::Rational;
-use finance::bank::{BankAccount, BankStub};
+use platform::bank::{BankAccount, BankStub};
 
 
 pub struct NTokenPrice<LPN>

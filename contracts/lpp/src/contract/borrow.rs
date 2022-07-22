@@ -1,11 +1,9 @@
-use cosmwasm_std::{
-    Addr, Deps, DepsMut, Env, Response, Storage, Timestamp, MessageInfo,
-};
+use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Timestamp};
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::coin::Coin;
 use finance::currency::Currency;
-use finance::bank::{self, BankStub, BankAccount};
+use platform::bank::{self, BankAccount, BankStub};
 
 use crate::error::ContractError;
 use crate::lpp::LiquidityPool;

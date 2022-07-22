@@ -58,7 +58,6 @@ impl Leaser {
         let lpp = LppRef::try_from(config.lpp_addr.to_string(), deps.api, &deps.querier)?;
 
         let mut platform = Platform::default();
-
         let resp = lpp.execute(
             Quote::new(
                 downpayment,

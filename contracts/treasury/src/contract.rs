@@ -3,7 +3,7 @@ use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, Storage};
 use cw2::set_contract_version;
-use finance::bank::{BankAccount, BankStub};
+use platform::bank::{BankAccount, BankStub};
 use finance::coin::Coin;
 use finance::currency::Nls;
 

@@ -1,61 +1,65 @@
 use std::marker::PhantomData;
 
+use core::result::Result as StdResult;
 use cosmwasm_std::{
-    to_binary, Addr, Api, QuerierWrapper, Reply, StdError, StdResult, SubMsg, Timestamp, WasmMsg,
+    to_binary, Addr, Api, QuerierWrapper, Reply, StdError, SubMsg, Timestamp, WasmMsg,
 };
 
 use finance::{
     coin::Coin,
-    coin_legacy::to_cosmwasm,
     currency::{visit_any, AnyVisitor, Currency, Nls, SymbolOwned},
 };
-use platform::platform::Platform;
+use platform::{coin_legacy::to_cosmwasm, platform::Platform};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use crate::msg::{
-    BalanceResponse, ExecuteMsg, LppBalanceResponse, PriceResponse, QueryConfigResponse,
-    QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg, QueryQuoteResponse,
-    RewardsResponse,
+use crate::{
+    error::ContractError,
+    msg::{
+        BalanceResponse, ExecuteMsg, LppBalanceResponse, PriceResponse, QueryConfigResponse,
+        QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg, QueryQuoteResponse,
+        RewardsResponse,
+    },
 };
 
 const REPLY_ID: u64 = 28;
+pub type Result<T> = StdResult<T, ContractError>;
 
 // TODO split into LppBorrow, LppLend, and LppAdmin traits
 pub trait Lpp<Lpn>
 where
     Lpn: Currency,
 {
-    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> StdResult<()>;
-    fn open_loan_resp(&self, resp: Reply) -> StdResult<()>;
-    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> StdResult<()>;
+    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()>;
+    fn open_loan_resp(&self, resp: Reply) -> Result<()>;
+    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()>;
 
-    fn loan(&self, lease: impl Into<Addr>) -> StdResult<QueryLoanResponse<Lpn>>;
+    fn loan(&self, lease: impl Into<Addr>) -> Result<QueryLoanResponse<Lpn>>;
 
-    fn distribute_rewards_req(&self, funds: Coin<Nls>) -> StdResult<SubMsg>;
+    fn distribute_rewards_req(&self, funds: Coin<Nls>) -> Result<SubMsg>;
 
     fn loan_outstanding_interest(
         &self,
         lease: impl Into<Addr>,
         by: Timestamp,
-    ) -> StdResult<QueryLoanOutstandingInterestResponse<Lpn>>;
-    fn quote(&self, amount: Coin<Lpn>) -> StdResult<QueryQuoteResponse>;
-    fn lpp_balance(&self) -> StdResult<LppBalanceResponse<Lpn>>;
-    fn nlpn_price(&self) -> StdResult<PriceResponse<Lpn>>;
-    fn config(&self) -> StdResult<QueryConfigResponse>;
-    fn nlpn_balance(&self, lender: impl Into<Addr>) -> StdResult<BalanceResponse>;
-    fn rewards(&self, lender: impl Into<Addr>) -> StdResult<RewardsResponse>;
+    ) -> Result<QueryLoanOutstandingInterestResponse<Lpn>>;
+    fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse>;
+    fn lpp_balance(&self) -> Result<LppBalanceResponse<Lpn>>;
+    fn nlpn_price(&self) -> Result<PriceResponse<Lpn>>;
+    fn config(&self) -> Result<QueryConfigResponse>;
+    fn nlpn_balance(&self, lender: impl Into<Addr>) -> Result<BalanceResponse>;
+    fn rewards(&self, lender: impl Into<Addr>) -> Result<RewardsResponse>;
 }
 
 pub trait WithLpp {
     type Output;
     type Error;
 
-    fn exec<C, L>(self, lpp: L) -> Result<Self::Output, Self::Error>
+    fn exec<C, L>(self, lpp: L) -> StdResult<Self::Output, Self::Error>
     where
         L: Lpp<C>,
         C: Currency + Serialize;
 
-    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
+    fn unknown_lpn(self, symbol: SymbolOwned) -> StdResult<Self::Output, Self::Error>;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -65,7 +69,7 @@ pub struct LppRef {
 }
 
 impl LppRef {
-    pub fn try_from<A>(addr_raw: String, api: &A, querier: &QuerierWrapper) -> StdResult<Self>
+    pub fn try_from<A>(addr_raw: String, api: &A, querier: &QuerierWrapper) -> Result<Self>
     where
         A: ?Sized + Api,
     {
@@ -81,7 +85,7 @@ impl LppRef {
         cmd: V,
         querier: &QuerierWrapper,
         platform: &mut Platform,
-    ) -> Result<O, E>
+    ) -> StdResult<O, E>
     where
         V: WithLpp<Output = O, Error = E>,
     {
@@ -102,7 +106,7 @@ impl LppRef {
             type Output = O;
             type Error = E;
 
-            fn on<C>(self) -> Result<Self::Output, Self::Error>
+            fn on<C>(self) -> StdResult<Self::Output, Self::Error>
             where
                 C: Currency + Serialize + DeserializeOwned,
             {
@@ -110,7 +114,7 @@ impl LppRef {
                     .exec(self.lpp_ref.as_stub::<C>(self.querier, self.platform))
             }
 
-            fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+            fn on_unknown(self) -> StdResult<Self::Output, Self::Error> {
                 self.cmd.unknown_lpn(self.lpp_ref.currency.clone())
             }
         }
@@ -164,34 +168,35 @@ impl<'a, Lpn> Lpp<Lpn> for LppStub<'a, Lpn>
 where
     Lpn: Currency + DeserializeOwned,
 {
-    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> StdResult<()> {
-        self.platform.schedule_execute_on_success_reply::<_, Lpn>(
-            &self.addr,
-            ExecuteMsg::OpenLoan {
-                amount: amount.into(),
-            },
-            None,
-            REPLY_ID,
-        )
+    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {
+        self.platform
+            .schedule_execute_on_success_reply::<_, Lpn>(
+                &self.addr,
+                ExecuteMsg::OpenLoan {
+                    amount: amount.into(),
+                },
+                None,
+                REPLY_ID,
+            )
+            .map_err(ContractError::from)
     }
 
-    fn open_loan_resp(&self, resp: Reply) -> StdResult<()> {
+    fn open_loan_resp(&self, resp: Reply) -> Result<()> {
         debug_assert_eq!(REPLY_ID, resp.id);
         resp.result
             .into_result()
             .map(|_| ())
             .map_err(StdError::generic_err)
+            .map_err(ContractError::from)
     }
 
-    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> StdResult<()> {
-        self.platform.schedule_execute_no_reply(
-            &self.addr,
-            ExecuteMsg::RepayLoan {},
-            Some(repayment),
-        )
+    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()> {
+        self.platform
+            .schedule_execute_no_reply(&self.addr, ExecuteMsg::RepayLoan {}, Some(repayment))
+            .map_err(ContractError::from)
     }
 
-    fn distribute_rewards_req(&self, funds: Coin<Nls>) -> StdResult<SubMsg> {
+    fn distribute_rewards_req(&self, funds: Coin<Nls>) -> Result<SubMsg> {
         let msg = to_binary(&ExecuteMsg::DistributeRewards {})?;
         Ok(SubMsg::new(WasmMsg::Execute {
             contract_addr: self.addr.as_ref().into(),
@@ -200,59 +205,75 @@ where
         }))
     }
 
-    fn loan(&self, lease: impl Into<Addr>) -> StdResult<QueryLoanResponse<Lpn>> {
+    fn loan(&self, lease: impl Into<Addr>) -> Result<QueryLoanResponse<Lpn>> {
         let msg = QueryMsg::Loan {
             lease_addr: lease.into(),
         };
-        self.querier.query_wasm_smart(self.addr.clone(), &msg)
+        self.querier
+            .query_wasm_smart(self.addr.clone(), &msg)
+            .map_err(ContractError::from)
     }
 
     fn loan_outstanding_interest(
         &self,
         lease: impl Into<Addr>,
         by: Timestamp,
-    ) -> StdResult<QueryLoanOutstandingInterestResponse<Lpn>> {
+    ) -> Result<QueryLoanOutstandingInterestResponse<Lpn>> {
         let msg = QueryMsg::LoanOutstandingInterest {
             lease_addr: lease.into(),
             outstanding_time: by,
         };
-        self.querier.query_wasm_smart(self.addr.clone(), &msg)
+        self.querier
+            .query_wasm_smart(self.addr.clone(), &msg)
+            .map_err(ContractError::from)
     }
 
-    fn quote(&self, amount: Coin<Lpn>) -> StdResult<QueryQuoteResponse> {
+    fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse> {
         let msg = QueryMsg::Quote {
             amount: amount.into(),
         };
-        self.querier.query_wasm_smart(self.addr.clone(), &msg)
+        self.querier
+            .query_wasm_smart(self.addr.clone(), &msg)
+            .map_err(ContractError::from)
     }
 
-    fn lpp_balance(&self) -> StdResult<LppBalanceResponse<Lpn>> {
+    fn lpp_balance(&self) -> Result<LppBalanceResponse<Lpn>> {
         let msg = QueryMsg::LppBalance();
-        self.querier.query_wasm_smart(self.addr.clone(), &msg)
+        self.querier
+            .query_wasm_smart(self.addr.clone(), &msg)
+            .map_err(ContractError::from)
     }
 
-    fn nlpn_price(&self) -> StdResult<PriceResponse<Lpn>> {
+    fn nlpn_price(&self) -> Result<PriceResponse<Lpn>> {
         let msg = QueryMsg::Price();
-        self.querier.query_wasm_smart(self.addr.clone(), &msg)
+        self.querier
+            .query_wasm_smart(self.addr.clone(), &msg)
+            .map_err(ContractError::from)
     }
 
-    fn config(&self) -> StdResult<QueryConfigResponse> {
+    fn config(&self) -> Result<QueryConfigResponse> {
         let msg = QueryMsg::Config();
-        self.querier.query_wasm_smart(self.addr.clone(), &msg)
+        self.querier
+            .query_wasm_smart(self.addr.clone(), &msg)
+            .map_err(ContractError::from)
     }
 
-    fn nlpn_balance(&self, lender: impl Into<Addr>) -> StdResult<BalanceResponse> {
+    fn nlpn_balance(&self, lender: impl Into<Addr>) -> Result<BalanceResponse> {
         let msg = QueryMsg::Balance {
             address: lender.into(),
         };
-        self.querier.query_wasm_smart(self.addr.clone(), &msg)
+        self.querier
+            .query_wasm_smart(self.addr.clone(), &msg)
+            .map_err(ContractError::from)
     }
 
-    fn rewards(&self, lender: impl Into<Addr>) -> StdResult<RewardsResponse> {
+    fn rewards(&self, lender: impl Into<Addr>) -> Result<RewardsResponse> {
         let msg = QueryMsg::Rewards {
             address: lender.into(),
         };
-        self.querier.query_wasm_smart(self.addr.clone(), &msg)
+        self.querier
+            .query_wasm_smart(self.addr.clone(), &msg)
+            .map_err(ContractError::from)
     }
 }
 

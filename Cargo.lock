@@ -417,6 +417,7 @@ dependencies = [
  "lpp",
  "marketprice",
  "oracle",
+ "platform",
  "profit",
  "rewards_dispatcher",
  "serde",
@@ -484,6 +485,7 @@ dependencies = [
  "finance",
  "lease",
  "lpp",
+ "platform",
  "schemars",
  "serde",
  "thiserror",
@@ -575,6 +577,7 @@ dependencies = [
  "cosmwasm-std",
  "finance",
  "serde",
+ "thiserror",
 ]
 
 [[package]]
@@ -900,6 +903,7 @@ dependencies = [
  "cw2",
  "finance",
  "lpp",
+ "platform",
  "schemars",
  "semver",
  "serde",

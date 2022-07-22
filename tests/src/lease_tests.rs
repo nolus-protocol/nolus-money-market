@@ -5,10 +5,11 @@ use cw_multi_test::{AppResponse, Executor};
 
 use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
+use platform::coin_legacy::to_cosmwasm;
 
 use crate::common::test_case::TestCase;
 use finance::{
-    coin::Coin, coin_legacy::to_cosmwasm, currency::Usdc, duration::Duration,
+    coin::Coin, currency::Usdc, duration::Duration,
     interest::InterestPeriod, percent::Percent,
 };
 

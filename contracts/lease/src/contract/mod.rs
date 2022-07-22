@@ -7,7 +7,7 @@ mod state;
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
-use finance::bank::BankStub;
+use platform::bank::BankStub;
 use platform::platform::Platform;
 
 use crate::error::ContractResult;

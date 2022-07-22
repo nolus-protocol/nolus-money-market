@@ -9,7 +9,7 @@ pub enum ContractError {
     Std(#[from] StdError),
 
     #[error("{0}")]
-    FinanceError(#[from] finance::error::Error),
+    PlatformError(#[from] platform::error::Error),
 
     #[error("Unauthorized")]
     Unauthorized {},

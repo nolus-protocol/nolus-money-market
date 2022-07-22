@@ -9,6 +9,9 @@ pub enum ContractError {
     #[error("{0}")]
     Finance(#[from] finance::error::Error),
 
+    #[error("{0}")]
+    Lpp(#[from] lpp::error::ContractError),
+
     #[error("Unauthorized")]
     Unauthorized {},
 

@@ -4,13 +4,12 @@ mod factory;
 
 use cosmwasm_std::{Addr, QuerierWrapper, Reply, SubMsg, Timestamp};
 use finance::{
-    bank::BankAccount,
     coin::Coin,
     currency::{Currency, SymbolOwned},
     liability::Liability,
 };
 use lpp::stub::Lpp as LppTrait;
-use platform::platform::Platform;
+use platform::{bank::BankAccount, platform::Platform};
 use serde::Serialize;
 
 use crate::{
@@ -155,14 +154,16 @@ where
 #[cfg(test)]
 mod tests {
 
-    use cosmwasm_std::{Addr, StdResult, SubMsg, Timestamp};
+    use cosmwasm_std::{Addr, SubMsg, Timestamp};
     use finance::currency::{Nls, Usdc};
     use finance::{
-        bank::BankAccount, coin::Coin, currency::Currency, duration::Duration,
-        error::Result as FinanceResult, liability::Liability, percent::Percent,
+        coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
     };
+    use lpp::error::ContractError as LppError;
     use lpp::msg::{LoanResponse, QueryLoanResponse};
     use lpp::stub::{Lpp, LppRef};
+
+    use platform::{bank::BankAccount, error::Result as PlatformResult};
     use serde::{Deserialize, Serialize};
 
     use crate::loan::{Loan, LoanDTO};
@@ -174,6 +175,7 @@ mod tests {
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
     const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
     type TestCurrency = Usdc;
+    type LppResult<T> = core::result::Result<T, LppError>;
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     pub struct BankStub {
@@ -181,14 +183,14 @@ mod tests {
     }
 
     impl BankAccount for BankStub {
-        fn balance<C>(&self) -> FinanceResult<Coin<C>>
+        fn balance<C>(&self) -> PlatformResult<Coin<C>>
         where
             C: Currency,
         {
             Ok(Coin::<C>::new(self.balance))
         }
 
-        fn send<C>(&self, _amount: Coin<C>, _to: &Addr) -> FinanceResult<SubMsg>
+        fn send<C>(&self, _amount: Coin<C>, _to: &Addr) -> PlatformResult<SubMsg>
         where
             C: Currency,
         {
@@ -203,19 +205,19 @@ mod tests {
 
     // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl Lpp<TestCurrency> for LppLocalStub {
-        fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> StdResult<()> {
+        fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> StdResult<()> {
+        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<()> {
             unreachable!()
         }
 
-        fn repay_loan_req(&mut self, _repayment: Coin<TestCurrency>) -> StdResult<()> {
+        fn repay_loan_req(&mut self, _repayment: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
 
-        fn loan(&self, _lease: impl Into<Addr>) -> StdResult<QueryLoanResponse<TestCurrency>> {
+        fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestCurrency>> {
             Result::Ok(self.loan.clone())
         }
 
@@ -223,35 +225,35 @@ mod tests {
             &self,
             _lease: impl Into<Addr>,
             _by: Timestamp,
-        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse<TestCurrency>> {
+        ) -> LppResult<lpp::msg::QueryLoanOutstandingInterestResponse<TestCurrency>> {
             unreachable!()
         }
 
-        fn distribute_rewards_req(&self, _funds: Coin<Nls>) -> StdResult<SubMsg> {
+        fn distribute_rewards_req(&self, _funds: Coin<Nls>) -> LppResult<SubMsg> {
             unimplemented!()
         }
 
-        fn quote(&self, _amount: Coin<TestCurrency>) -> StdResult<lpp::msg::QueryQuoteResponse> {
+        fn quote(&self, _amount: Coin<TestCurrency>) -> LppResult<lpp::msg::QueryQuoteResponse> {
             unreachable!()
         }
 
-        fn config(&self) -> StdResult<lpp::msg::QueryConfigResponse> {
+        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
             unreachable!()
         }
 
-        fn rewards(&self, _lender: impl Into<Addr>) -> StdResult<lpp::msg::RewardsResponse> {
+        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
             unreachable!()
         }
 
-        fn nlpn_price(&self) -> StdResult<lpp::msg::PriceResponse<TestCurrency>> {
+        fn nlpn_price(&self) -> LppResult<lpp::msg::PriceResponse<TestCurrency>> {
             unreachable!()
         }
 
-        fn lpp_balance(&self) -> StdResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
+        fn lpp_balance(&self) -> LppResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
             unreachable!()
         }
 
-        fn nlpn_balance(&self, _lender: impl Into<Addr>) -> StdResult<lpp::msg::BalanceResponse> {
+        fn nlpn_balance(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::BalanceResponse> {
             unreachable!()
         }
     }
@@ -260,23 +262,23 @@ mod tests {
     struct LppLocalStubUnreachable {}
 
     impl Lpp<TestCurrency> for LppLocalStubUnreachable {
-        fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> StdResult<()> {
+        fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> StdResult<()> {
+        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<()> {
             unreachable!()
         }
 
-        fn repay_loan_req(&mut self, _repayment: Coin<TestCurrency>) -> StdResult<()> {
+        fn repay_loan_req(&mut self, _repayment: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
 
-        fn distribute_rewards_req(&self, _funds: Coin<Nls>) -> StdResult<SubMsg> {
+        fn distribute_rewards_req(&self, _funds: Coin<Nls>) -> LppResult<SubMsg> {
             unimplemented!()
         }
 
-        fn loan(&self, _lease: impl Into<Addr>) -> StdResult<QueryLoanResponse<TestCurrency>> {
+        fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -284,31 +286,31 @@ mod tests {
             &self,
             _lease: impl Into<Addr>,
             _by: Timestamp,
-        ) -> StdResult<lpp::msg::QueryLoanOutstandingInterestResponse<TestCurrency>> {
+        ) -> LppResult<lpp::msg::QueryLoanOutstandingInterestResponse<TestCurrency>> {
             unreachable!()
         }
 
-        fn quote(&self, _amount: Coin<TestCurrency>) -> StdResult<lpp::msg::QueryQuoteResponse> {
+        fn quote(&self, _amount: Coin<TestCurrency>) -> LppResult<lpp::msg::QueryQuoteResponse> {
             unreachable!()
         }
 
-        fn config(&self) -> StdResult<lpp::msg::QueryConfigResponse> {
+        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
             unreachable!()
         }
 
-        fn rewards(&self, _lender: impl Into<Addr>) -> StdResult<lpp::msg::RewardsResponse> {
+        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
             unreachable!()
         }
 
-        fn nlpn_price(&self) -> StdResult<lpp::msg::PriceResponse<TestCurrency>> {
+        fn nlpn_price(&self) -> LppResult<lpp::msg::PriceResponse<TestCurrency>> {
             unreachable!()
         }
 
-        fn lpp_balance(&self) -> StdResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
+        fn lpp_balance(&self) -> LppResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
             unreachable!()
         }
 
-        fn nlpn_balance(&self, _lender: impl Into<Addr>) -> StdResult<lpp::msg::BalanceResponse> {
+        fn nlpn_balance(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::BalanceResponse> {
             unreachable!()
         }
     }

@@ -5,7 +5,7 @@ use crate::error::ContractError;
 use crate::lpp::LiquidityPool;
 use crate::msg::{LppBalanceResponse, RewardsResponse};
 use crate::state::Deposit;
-use finance::bank::{self, BankStub, BankAccount};
+use platform::bank::{self, BankStub, BankAccount};
 use finance::currency::{Currency, Nls};
 use finance::coin::Coin;
 

@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, Coin as CwCoin, Timestamp};
-use finance::bank;
+use platform::bank;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
 use serde::Serialize;

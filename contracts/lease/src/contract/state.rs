@@ -1,5 +1,5 @@
 use cosmwasm_std::{to_binary, Addr, Binary, Timestamp};
-use finance::bank::BankAccount;
+use platform::bank::BankAccount;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
 use serde::Serialize;

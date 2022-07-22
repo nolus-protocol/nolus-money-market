@@ -1,6 +1,8 @@
-use cosmwasm_std::{to_binary, Addr, Response, StdResult, SubMsg, WasmMsg};
-use finance::{coin::Coin, coin_legacy::to_cosmwasm, currency::Currency};
+use cosmwasm_std::{to_binary, Addr, Response, SubMsg, WasmMsg};
+use finance::{coin::Coin, currency::Currency};
 use serde::Serialize;
+
+use crate::{coin_legacy::to_cosmwasm_impl, error::Result};
 
 #[derive(Default)]
 pub struct Platform {
@@ -13,7 +15,7 @@ impl Platform {
         addr: &Addr,
         msg: M,
         funds: Option<Coin<C>>,
-    ) -> StdResult<()>
+    ) -> Result<()>
     where
         M: Serialize,
         C: Currency,
@@ -31,7 +33,7 @@ impl Platform {
         msg: M,
         funds: Option<Coin<C>>,
         reply_id: u64,
-    ) -> StdResult<()>
+    ) -> Result<()>
     where
         M: Serialize,
         C: Currency,
@@ -43,7 +45,7 @@ impl Platform {
         Ok(())
     }
 
-    fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> StdResult<WasmMsg>
+    fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>
     where
         M: Serialize,
         C: Currency,
@@ -51,7 +53,7 @@ impl Platform {
         let msg_bin = to_binary(&msg)?;
         let mut funds_cw = vec![];
         if let Some(coin) = funds {
-            funds_cw.push(to_cosmwasm(coin));
+            funds_cw.push(to_cosmwasm_impl(coin));
         }
 
         Ok(WasmMsg::Execute {
