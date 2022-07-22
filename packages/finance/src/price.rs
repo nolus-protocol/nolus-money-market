@@ -66,6 +66,20 @@ where
         }
     }
 
+    /// Add two prices rounding each of them to 1.10-18, simmilarly to
+    /// the precision provided by cosmwasm::Decimal.
+    ///
+    /// TODO Implement a variable precision algorithm depending on the
+    /// value of the prices. The rounding would be done by shifting to
+    /// the right both amounts of the price with a bigger denominator
+    /// until a * d + b * c and b * d do not overflow.
+    pub fn lossy_add(self, rhs: Self) -> Self {
+        const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
+        let factored_amount = FACTOR.into();
+        let factored_total = self::total(factored_amount, self) + self::total(factored_amount, rhs);
+        self::total_of(factored_amount).is(factored_total)
+    }
+
     pub fn inv(self) -> Price<QuoteC, C> {
         Price {
             amount: self.amount_quote,
@@ -208,6 +222,72 @@ mod test {
         super::total(2.into(), price);
     }
 
+    #[test]
+    fn add() {
+        lossy_add_impl(c(1), q(2), c(5), q(10), c(1), q(4));
+        lossy_add_impl(c(2), q(1), c(10), q(5), c(1), q(1));
+        lossy_add_impl(c(2), q(3), c(10), q(14), c(10), q(29));
+    }
+
+    #[test]
+    fn lossy_add() {
+        // 1/3 + 2/7 = 13/21 that is 0.(619047)*...
+        let amount_exp = 1_000_000_000_000_000_000;
+        let quote_exp = 619_047_619_047_619_047;
+        lossy_add_impl(c(3), q(1), c(7), q(2), c(amount_exp), q(quote_exp));
+        lossy_add_impl(
+            c(amount_exp),
+            q(quote_exp),
+            c(3),
+            q(1),
+            c(amount_exp),
+            q(quote_exp + 333_333_333_333_333_333),
+        );
+        lossy_add_impl(
+            c(amount_exp + 1),
+            q(quote_exp),
+            c(21),
+            q(1),
+            c(amount_exp / 5),
+            q(133_333_333_333_333_333),
+        );
+
+        lossy_add_impl(
+            c(amount_exp + 1),
+            q(1),
+            c(1),
+            q(1),
+            c(1),
+            q(1),
+        );
+
+        lossy_add_impl(
+            c(Amount::MAX),
+            q(1),
+            c(1),
+            q(1),
+            c(1),
+            q(1),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn lossy_add_overflow() {
+        // 2^128 / FACTOR (10^18) / 2^64 ~ 18.446744073709553
+        let p1 = price::total_of(c(1)).is(q(u128::from(u64::MAX) * 19u128));
+        let p2 = price::total_of(c(1)).is(q(1));
+        p1.lossy_add(p2);
+    }
+
+    fn c(a: Amount) -> Coin {
+        Coin::new(a)
+    }
+
+    fn q(a: Amount) -> QuoteCoin {
+        QuoteCoin::new(a)
+    }
+
     fn ord_impl(amount: Amount, amount_quote: Amount) {
         let price1 = Price::new(amount.into(), QuoteCoin::new(amount_quote));
         let price2 = Price::new(amount.into(), QuoteCoin::new(amount_quote + 1));
@@ -230,5 +310,19 @@ mod test {
 
         assert_eq!(expected, super::total(input, price));
         assert_eq!(input, super::total(expected, price.inv()));
+    }
+
+    fn lossy_add_impl(
+        amount1: Coin,
+        quote1: QuoteCoin,
+        amount2: Coin,
+        quote2: QuoteCoin,
+        amount_exp: Coin,
+        quote_exp: QuoteCoin,
+    ) {
+        let price1 = price::total_of(amount1).is(quote1);
+        let price2 = price::total_of(amount2).is(quote2);
+        let exp = price::total_of(amount_exp).is(quote_exp);
+        assert_eq!(exp, price1.lossy_add(price2));
     }
 }
