@@ -25,7 +25,7 @@ pub trait Lpp<Lpn>
 where
     Lpn: Currency,
 {
-    fn open_loan_req(&self, amount: Coin<Lpn>) -> StdResult<SubMsg>;
+    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> StdResult<()>;
     fn open_loan_resp(&self, resp: Reply) -> StdResult<()>;
     fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> StdResult<()>;
 
@@ -76,7 +76,12 @@ impl LppRef {
         Ok(Self { addr, currency })
     }
 
-    pub fn execute<V, O, E>(&self, cmd: V, querier: &QuerierWrapper, platform: &mut Platform) -> Result<O, E>
+    pub fn execute<V, O, E>(
+        &self,
+        cmd: V,
+        querier: &QuerierWrapper,
+        platform: &mut Platform,
+    ) -> Result<O, E>
     where
         V: WithLpp<Output = O, Error = E>,
     {
@@ -101,7 +106,8 @@ impl LppRef {
             where
                 C: Currency + Serialize + DeserializeOwned,
             {
-                self.cmd.exec(self.lpp_ref.as_stub::<C>(self.querier, self.platform))
+                self.cmd
+                    .exec(self.lpp_ref.as_stub::<C>(self.querier, self.platform))
             }
 
             fn on_unknown(self) -> Result<Self::Output, Self::Error> {
@@ -158,18 +164,15 @@ impl<'a, Lpn> Lpp<Lpn> for LppStub<'a, Lpn>
 where
     Lpn: Currency + DeserializeOwned,
 {
-    fn open_loan_req(&self, amount: Coin<Lpn>) -> StdResult<SubMsg> {
-        let msg = to_binary(&ExecuteMsg::OpenLoan {
-            amount: amount.into(),
-        })?;
-        Ok(SubMsg::reply_on_success(
-            WasmMsg::Execute {
-                contract_addr: self.addr.as_ref().into(),
-                funds: vec![],
-                msg,
+    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> StdResult<()> {
+        self.platform.schedule_execute_on_success_reply::<_, Lpn>(
+            &self.addr,
+            ExecuteMsg::OpenLoan {
+                amount: amount.into(),
             },
+            None,
             REPLY_ID,
-        ))
+        )
     }
 
     fn open_loan_resp(&self, resp: Reply) -> StdResult<()> {
@@ -181,8 +184,11 @@ where
     }
 
     fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> StdResult<()> {
-        self.platform
-            .schedule_execute_no_reply(&self.addr, ExecuteMsg::RepayLoan {}, repayment)
+        self.platform.schedule_execute_no_reply(
+            &self.addr,
+            ExecuteMsg::RepayLoan {},
+            Some(repayment),
+        )
     }
 
     fn distribute_rewards_req(&self, funds: Coin<Nls>) -> StdResult<SubMsg> {
@@ -253,7 +259,8 @@ where
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{
-        from_binary, testing::MockQuerier, Addr, CosmosMsg, QuerierWrapper, ReplyOn, WasmMsg,
+        from_binary, testing::MockQuerier, Addr, CosmosMsg, QuerierWrapper, ReplyOn, Response,
+        WasmMsg,
     };
     use finance::{
         coin::Coin,
@@ -277,21 +284,23 @@ mod test {
         };
         let borrow_amount = Coin::<Nls>::new(10);
         let mut platform = Platform::default();
-        let msg = lpp
-            .as_stub(&QuerierWrapper::new(&MockQuerier::default()), &mut platform)
+        lpp.as_stub(&QuerierWrapper::new(&MockQuerier::default()), &mut platform)
             .open_loan_req(borrow_amount)
             .expect("open new loan request failed");
+        let resp: Response = platform.into();
+        assert_eq!(1, resp.messages.len());
+        let msg = &resp.messages[0];
         assert_eq!(REPLY_ID, msg.id);
         assert_eq!(ReplyOn::Success, msg.reply_on);
         if let CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr,
             funds,
             msg,
-        }) = msg.msg
+        }) = &msg.msg
         {
-            assert_eq!(addr, contract_addr);
+            assert_eq!(addr.as_str(), contract_addr);
             assert!(funds.is_empty());
-            let lpp_msg: ExecuteMsg = from_binary(&msg).expect("invalid Lpp message");
+            let lpp_msg: ExecuteMsg = from_binary(msg).expect("invalid Lpp message");
             if let ExecuteMsg::OpenLoan { amount } = lpp_msg {
                 assert_eq!(borrow_amount, amount.try_into().unwrap());
             } else {

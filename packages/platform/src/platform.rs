@@ -12,21 +12,53 @@ impl Platform {
         &mut self,
         addr: &Addr,
         msg: M,
-        funds: Coin<C>,
+        funds: Option<Coin<C>>,
     ) -> StdResult<()>
     where
         M: Serialize,
         C: Currency,
     {
-        let msg_bin = to_binary(&msg)?;
-        let msg_cw = SubMsg::new(WasmMsg::Execute {
-            contract_addr: addr.into(),
-            funds: vec![to_cosmwasm(funds)],
-            msg: msg_bin,
-        });
+        let wasm_msg = Self::wasm_exec_msg(addr, msg, funds)?;
+        let msg_cw = SubMsg::new(wasm_msg);
 
         self.msgs.push(msg_cw);
         Ok(())
+    }
+
+    pub fn schedule_execute_on_success_reply<M, C>(
+        &mut self,
+        addr: &Addr,
+        msg: M,
+        funds: Option<Coin<C>>,
+        reply_id: u64,
+    ) -> StdResult<()>
+    where
+        M: Serialize,
+        C: Currency,
+    {
+        let wasm_msg = Self::wasm_exec_msg(addr, msg, funds)?;
+        let msg_cw = SubMsg::reply_on_success(wasm_msg, reply_id);
+
+        self.msgs.push(msg_cw);
+        Ok(())
+    }
+
+    fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> StdResult<WasmMsg>
+    where
+        M: Serialize,
+        C: Currency,
+    {
+        let msg_bin = to_binary(&msg)?;
+        let mut funds_cw = vec![];
+        if let Some(coin) = funds {
+            funds_cw.push(to_cosmwasm(coin));
+        }
+
+        Ok(WasmMsg::Execute {
+            contract_addr: addr.into(),
+            funds: funds_cw,
+            msg: msg_bin,
+        })
     }
 }
 

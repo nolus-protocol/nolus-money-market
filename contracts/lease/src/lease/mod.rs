@@ -79,7 +79,7 @@ where
         &self.customer == addr
     }
 
-    pub(crate) fn open_loan_req(&self, downpayment: Coin<Lpn>) -> ContractResult<SubMsg> {
+    pub(crate) fn open_loan_req(&mut self, downpayment: Coin<Lpn>) -> ContractResult<()> {
         // TODO add a type parameter to this function to designate the downpayment currency
         // TODO query the market price oracle to get the price of the downpayment currency to LPN
         // and calculate `downpayment` in LPN
@@ -203,7 +203,7 @@ mod tests {
 
     // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl Lpp<TestCurrency> for LppLocalStub {
-        fn open_loan_req(&self, _amount: Coin<TestCurrency>) -> StdResult<SubMsg> {
+        fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> StdResult<()> {
             unreachable!()
         }
 
@@ -260,7 +260,7 @@ mod tests {
     struct LppLocalStubUnreachable {}
 
     impl Lpp<TestCurrency> for LppLocalStubUnreachable {
-        fn open_loan_req(&self, _amount: Coin<TestCurrency>) -> StdResult<SubMsg> {
+        fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> StdResult<()> {
             unreachable!()
         }
 

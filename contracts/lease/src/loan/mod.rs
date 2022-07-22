@@ -3,7 +3,7 @@ pub use state::State;
 
 use std::{fmt::Debug, marker::PhantomData};
 
-use cosmwasm_std::{Addr, SubMsg, Timestamp, Reply};
+use cosmwasm_std::{Addr, Timestamp, Reply};
 use finance::{
     coin::Coin,
     currency::Currency,
@@ -77,7 +77,7 @@ where
         }
     }
 
-    pub(crate) fn open_loan_req(&self, amount: Coin<Lpn>) -> ContractResult<SubMsg> {
+    pub(crate) fn open_loan_req(&mut self, amount: Coin<Lpn>) -> ContractResult<()> {
         self.lpp.open_loan_req(amount).map_err(ContractError::from)
     }
 

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Coin as CwCoin, Reply, SubMsg};
+use cosmwasm_std::{Coin as CwCoin, Reply};
 use finance::bank;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
@@ -17,11 +17,11 @@ impl<'a> OpenLoanReq<'a> {
 }
 
 impl<'a> WithLease for OpenLoanReq<'a> {
-    type Output = SubMsg;
+    type Output = ();
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp>(self, mut lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
     where
         Lpp: LppTrait<Lpn>,
         Lpn: Currency,

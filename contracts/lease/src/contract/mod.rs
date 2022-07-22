@@ -36,14 +36,14 @@ pub fn instantiate(
     lease.store(deps.storage)?;
 
     let mut platform = Platform::default();
-    let req = lease::execute(
+    lease::execute(
         lease,
         OpenLoanReq::new(&info.funds),
         &deps.querier,
         &mut platform,
     )?;
 
-    Ok(Response::new().add_submessage(req))
+    Ok(platform.into())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
