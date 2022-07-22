@@ -90,14 +90,14 @@ where
         payment: Coin<Lpn>,
         by: Timestamp,
         lease: Addr,
-    ) -> ContractResult<Option<SubMsg>> {
+    ) -> ContractResult<()> {
         self.debug_check_start_due_before(by, "before the 'repay-by' time");
 
         let principal_due = self.load_principal_due(lease.clone())?;
 
         let change = self.repay_margin_interest(principal_due, by, payment);
         if change.is_zero() {
-            return Ok(None);
+            return Ok(());
         }
 
         let loan_interest_due = self.load_loan_interest_due(lease, self.current_period.start())?;
@@ -113,7 +113,7 @@ where
         if loan_payment.is_zero() {
             // in practice not possible, but in theory it is if two consecutive repayments are received
             // with the same 'by' time.
-            return Ok(None);
+            return Ok(());
         }
         // TODO handle any surplus left after the repayment, options:
         // - query again the lpp on the interest due by now + calculate the max repayment by now + send the supplus to the customer, or
@@ -125,7 +125,6 @@ where
         // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
         self.lpp
             .repay_loan_req(loan_payment)
-            .map(Some)
             .map_err(|err| err.into())
     }
 

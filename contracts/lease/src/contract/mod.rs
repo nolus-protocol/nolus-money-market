@@ -8,6 +8,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
 use finance::bank::BankStub;
+use platform::platform::Platform;
 
 use crate::error::ContractResult;
 use crate::lease::{self, LeaseDTO};
@@ -34,7 +35,13 @@ pub fn instantiate(
     let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
     lease.store(deps.storage)?;
 
-    let req = lease::execute(lease, OpenLoanReq::new(&info.funds), &deps.querier)?;
+    let mut platform = Platform::default();
+    let req = lease::execute(
+        lease,
+        OpenLoanReq::new(&info.funds),
+        &deps.querier,
+        &mut platform,
+    )?;
 
     Ok(Response::new().add_submessage(req))
 }
@@ -44,7 +51,8 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
     // TODO swap the received loan and the downpayment to lease.currency
     let lease = LeaseDTO::load(deps.storage)?;
 
-    lease::execute(lease, OpenLoanResp::new(msg), &deps.querier)?;
+    let mut platform = Platform::default();
+    lease::execute(lease, OpenLoanResp::new(msg), &deps.querier, &mut platform)?;
 
     Ok(Response::default())
 }
@@ -68,28 +76,27 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
 
     let bank = BankStub::my_account(&env, &deps.querier);
 
+    let mut platform = Platform::default();
     lease::execute(
         lease,
         LeaseState::new(env.block.time, bank, env.contract.address.clone()),
         &deps.querier,
+        &mut platform,
     )
 }
 
 fn try_repay(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
     let lease = LeaseDTO::load(deps.storage)?;
 
-    let req = lease::execute(
+    let mut platform = Platform::default();
+    lease::execute(
         lease,
         Repay::new(&info.funds, env.block.time, env.contract.address),
         &deps.querier,
+        &mut platform,
     )?;
 
-    let resp = if let Some(req) = req {
-        Response::default().add_submessage(req)
-    } else {
-        Response::default()
-    };
-    Ok(resp)
+    Ok(platform.into())
 }
 
 fn try_close(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
@@ -97,10 +104,12 @@ fn try_close(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Respo
 
     let bank = BankStub::my_account(&env, &deps.querier);
 
+    let mut platform = Platform::default();
     let req = lease::execute(
         lease,
         Close::new(&info.sender, env.contract.address.clone(), bank),
         &deps.querier,
+        &mut platform,
     )?;
 
     Ok(Response::default().add_submessage(req))

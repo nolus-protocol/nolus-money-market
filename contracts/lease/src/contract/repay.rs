@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin as CwCoin, SubMsg, Timestamp};
+use cosmwasm_std::{Addr, Coin as CwCoin, Timestamp};
 use finance::bank;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
@@ -24,7 +24,7 @@ impl<'a> Repay<'a> {
 }
 
 impl<'a> WithLease for Repay<'a> {
-    type Output = Option<SubMsg>;
+    type Output = ();
 
     type Error = ContractError;
 

@@ -10,6 +10,7 @@ use finance::{
     liability::Liability,
 };
 use lpp::stub::Lpp as LppTrait;
+use platform::platform::Platform;
 use serde::Serialize;
 
 use crate::{
@@ -32,12 +33,17 @@ pub trait WithLease {
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn execute<L, O, E>(dto: LeaseDTO, cmd: L, querier: &QuerierWrapper) -> Result<O, E>
+pub fn execute<L, O, E>(
+    dto: LeaseDTO,
+    cmd: L,
+    querier: &QuerierWrapper,
+    platform: &mut Platform,
+) -> Result<O, E>
 where
     L: WithLease<Output = O, Error = E>,
 {
     let lpp = dto.loan.lpp().clone();
-    lpp.execute(Factory::new(cmd, dto), querier)
+    lpp.execute(Factory::new(cmd, dto), querier, platform)
 }
 
 pub struct Lease<Lpn, Lpp> {
@@ -110,7 +116,7 @@ where
         payment: Coin<Lpn>,
         by: Timestamp,
         lease: Addr,
-    ) -> ContractResult<Option<SubMsg>> {
+    ) -> ContractResult<()> {
         assert_eq!(self.currency, Lpn::SYMBOL);
         self.loan.repay(payment, by, lease)
     }
@@ -205,7 +211,7 @@ mod tests {
             unreachable!()
         }
 
-        fn repay_loan_req(&self, _repayment: Coin<TestCurrency>) -> StdResult<SubMsg> {
+        fn repay_loan_req(&mut self, _repayment: Coin<TestCurrency>) -> StdResult<()> {
             unreachable!()
         }
 
@@ -262,7 +268,7 @@ mod tests {
             unreachable!()
         }
 
-        fn repay_loan_req(&self, _repayment: Coin<TestCurrency>) -> StdResult<SubMsg> {
+        fn repay_loan_req(&mut self, _repayment: Coin<TestCurrency>) -> StdResult<()> {
             unreachable!()
         }
 

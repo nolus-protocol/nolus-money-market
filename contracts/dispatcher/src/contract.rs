@@ -8,6 +8,7 @@ use cw2::set_contract_version;
 
 use finance::duration::Duration;
 use lpp::stub::LppRef;
+use platform::platform::Platform;
 
 use crate::dispatcher::alarm_subscribe_msg;
 use crate::dispatcher_ref::DispatcherRef;
@@ -118,9 +119,11 @@ pub fn try_dispatch(
         return Err(ContractError::UnrecognisedAlarm(info.sender));
     }
     let lpp = LppRef::try_from(config.lpp.to_string(), deps.api, &deps.querier)?;
+    let mut platform = Platform::default();
     lpp.execute(
         DispatcherRef::new(deps.storage, deps.querier, config, block_time)?,
         &deps.querier,
+        &mut platform,
     )
 }
 

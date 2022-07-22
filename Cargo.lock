@@ -464,6 +464,7 @@ dependencies = [
  "finance",
  "lpp",
  "marketprice",
+ "platform",
  "schemars",
  "serde",
  "thiserror",
@@ -503,6 +504,7 @@ dependencies = [
  "cw-storage-plus",
  "cw2",
  "finance",
+ "platform",
  "schemars",
  "serde",
  "thiserror",
@@ -564,6 +566,15 @@ dependencies = [
  "der",
  "spki",
  "zeroize",
+]
+
+[[package]]
+name = "platform"
+version = "0.1.0"
+dependencies = [
+ "cosmwasm-std",
+ "finance",
+ "serde",
 ]
 
 [[package]]
@@ -658,6 +669,7 @@ dependencies = [
  "lpp",
  "marketprice",
  "oracle",
+ "platform",
  "schemars",
  "serde",
  "thiserror",

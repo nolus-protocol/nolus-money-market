@@ -9,6 +9,7 @@ use finance::{
     coin_legacy::to_cosmwasm,
     currency::{visit_any, AnyVisitor, Currency, Nls, SymbolOwned},
 };
+use platform::platform::Platform;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::msg::{
@@ -26,7 +27,7 @@ where
 {
     fn open_loan_req(&self, amount: Coin<Lpn>) -> StdResult<SubMsg>;
     fn open_loan_resp(&self, resp: Reply) -> StdResult<()>;
-    fn repay_loan_req(&self, repayment: Coin<Lpn>) -> StdResult<SubMsg>;
+    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> StdResult<()>;
 
     fn loan(&self, lease: impl Into<Addr>) -> StdResult<QueryLoanResponse<Lpn>>;
 
@@ -75,7 +76,7 @@ impl LppRef {
         Ok(Self { addr, currency })
     }
 
-    pub fn execute<V, O, E>(&self, cmd: V, querier: &QuerierWrapper) -> Result<O, E>
+    pub fn execute<V, O, E>(&self, cmd: V, querier: &QuerierWrapper, platform: &mut Platform) -> Result<O, E>
     where
         V: WithLpp<Output = O, Error = E>,
     {
@@ -86,6 +87,7 @@ impl LppRef {
             cmd: V,
             lpp_ref: &'a LppRef,
             querier: &'a QuerierWrapper<'a>,
+            platform: &'a mut Platform,
         }
 
         impl<'a, V, O, E> AnyVisitor for CurrencyVisitor<'a, V, O, E>
@@ -99,7 +101,7 @@ impl LppRef {
             where
                 C: Currency + Serialize + DeserializeOwned,
             {
-                self.cmd.exec(self.lpp_ref.as_stub::<C>(self.querier))
+                self.cmd.exec(self.lpp_ref.as_stub::<C>(self.querier, self.platform))
             }
 
             fn on_unknown(self) -> Result<Self::Output, Self::Error> {
@@ -112,15 +114,21 @@ impl LppRef {
                 cmd,
                 lpp_ref: self,
                 querier,
+                platform,
             },
         )
     }
 
-    fn as_stub<'a, C>(&'a self, querier: &'a QuerierWrapper) -> LppStub<'a, C> {
+    fn as_stub<'a, C>(
+        &'a self,
+        querier: &'a QuerierWrapper,
+        platform: &'a mut Platform,
+    ) -> LppStub<'a, C> {
         LppStub {
             addr: self.addr.clone(),
             currency: PhantomData::<C>,
             querier,
+            platform,
         }
     }
 }
@@ -143,6 +151,7 @@ struct LppStub<'a, C> {
     addr: Addr,
     currency: PhantomData<C>,
     querier: &'a QuerierWrapper<'a>,
+    platform: &'a mut Platform,
 }
 
 impl<'a, Lpn> Lpp<Lpn> for LppStub<'a, Lpn>
@@ -171,13 +180,9 @@ where
             .map_err(StdError::generic_err)
     }
 
-    fn repay_loan_req(&self, repayment: Coin<Lpn>) -> StdResult<SubMsg> {
-        let msg = to_binary(&ExecuteMsg::RepayLoan {})?;
-        Ok(SubMsg::new(WasmMsg::Execute {
-            contract_addr: self.addr.as_ref().into(),
-            funds: vec![to_cosmwasm(repayment)],
-            msg,
-        }))
+    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> StdResult<()> {
+        self.platform
+            .schedule_execute_no_reply(&self.addr, ExecuteMsg::RepayLoan {}, repayment)
     }
 
     fn distribute_rewards_req(&self, funds: Coin<Nls>) -> StdResult<SubMsg> {
@@ -254,6 +259,7 @@ mod test {
         coin::Coin,
         currency::{Currency, Nls},
     };
+    use platform::platform::Platform;
 
     use crate::{
         msg::ExecuteMsg,
@@ -270,8 +276,9 @@ mod test {
             currency: Nls::SYMBOL.to_owned(),
         };
         let borrow_amount = Coin::<Nls>::new(10);
+        let mut platform = Platform::default();
         let msg = lpp
-            .as_stub(&QuerierWrapper::new(&MockQuerier::default()))
+            .as_stub(&QuerierWrapper::new(&MockQuerier::default()), &mut platform)
             .open_loan_req(borrow_amount)
             .expect("open new loan request failed");
         assert_eq!(REPLY_ID, msg.id);
