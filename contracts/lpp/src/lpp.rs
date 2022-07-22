@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    Addr, BankMsg, Coin as CwCoin, ContractInfoResponse, Deps, DepsMut, Env, QueryRequest,
+    Addr, ContractInfoResponse, Deps, DepsMut, Env, QueryRequest,
     StdResult, Storage, Timestamp, Uint64, WasmQuery,
 };
 use finance::currency::Currency;
@@ -14,6 +14,7 @@ use finance::coin::Coin;
 use finance::fraction::Fraction;
 use finance::percent::Percent;
 use finance::ratio::Rational;
+use finance::bank::{BankAccount, BankStub};
 
 
 pub struct NTokenPrice<LPN>
@@ -74,14 +75,14 @@ where
     }
 
     // TODO: use finance bank module
-    pub fn balance(&self, deps: &Deps, env: &Env) -> StdResult<Coin<LPN>> {
-        let querier = deps.querier;
-        querier
-            .query_balance(&env.contract.address, &self.config.currency)
-            .map(|cw_coin| Coin::<LPN>::new(cw_coin.amount.u128()))
+    pub fn balance(&self, deps: &Deps, env: &Env) -> Result<Coin<LPN>, ContractError> {
+        let balance = BankStub::my_account(env, &deps.querier)
+        .balance()?;
+
+        Ok(balance)
     }
 
-    pub fn total_lpn(&self, deps: &Deps, env: &Env) -> StdResult<Coin<LPN>> {
+    pub fn total_lpn(&self, deps: &Deps, env: &Env) -> Result<Coin<LPN>, ContractError> {
         let res = self.balance(deps, env)?
             + self.total.total_principal_due()
             + self.total.total_interest_due_by_now(env.block.time);
@@ -89,7 +90,7 @@ where
         Ok(res)
     }
 
-    pub fn query_lpp_balance(&self, deps: &Deps, env: &Env) -> StdResult<LppBalanceResponse<LPN>> {
+    pub fn query_lpp_balance(&self, deps: &Deps, env: &Env) -> Result<LppBalanceResponse<LPN>, ContractError> {
         let balance = self.balance(deps, env)?;
 
         let total_principal_due = self.total.total_principal_due();
@@ -103,7 +104,7 @@ where
         })
     }
 
-    pub fn calculate_price(&self, deps: &Deps, env: &Env) -> StdResult<NTokenPrice<LPN>> {
+    pub fn calculate_price(&self, deps: &Deps, env: &Env) -> Result<NTokenPrice<LPN>, ContractError> {
         let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
         let price = if balance_nlpn.is_zero() {
@@ -143,13 +144,6 @@ where
         }
 
         Ok(amount_lpn)
-    }
-
-    pub fn pay(&self, addr: Addr, amount: Coin<LPN>) -> BankMsg {
-        BankMsg::Send {
-            to_address: addr.to_string(),
-            amount: vec![amount.into_cw()],
-        }
     }
 
     pub fn query_quote(
@@ -193,14 +187,14 @@ where
 
     pub fn try_open_loan(
         &mut self,
-        deps: DepsMut,
-        env: Env,
+        deps: &mut DepsMut,
+        env: &Env,
         lease_addr: Addr,
         amount: Coin<LPN>,
     ) -> Result<(), ContractError> {
         let current_time = env.block.time;
 
-        let annual_interest_rate = match self.query_quote(&deps.as_ref(), &env, amount)? {
+        let annual_interest_rate = match self.query_quote(&deps.as_ref(), env, amount)? {
             Some(rate) => Ok(rate),
             None => Err(ContractError::NoLiquidity {}),
         }?;
@@ -223,8 +217,8 @@ where
     /// return amount of lpp currency to pay back to lease_addr
     pub fn try_repay_loan(
         &mut self,
-        deps: DepsMut,
-        env: Env,
+        deps: &mut DepsMut,
+        env: &Env,
         lease_addr: Addr,
         repay_amount: Coin<LPN>,
     ) -> Result<Coin<LPN>, ContractError> {
@@ -279,27 +273,13 @@ where
     }
 }
 
-// TODO: perhaps change to From<Coin<LPN>> in finance or remove, more convinient way
-pub trait IntoCW {
-    fn into_cw(self) -> CwCoin;
-}
-
-impl<LPN> IntoCW for Coin<LPN>
-where
-    LPN: Currency,
-{
-    fn into_cw(self) -> CwCoin {
-        finance::coin_legacy::to_cosmwasm(self)
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::state::{Config, Deposit, Total};
 
     use cosmwasm_std::testing::{self, MOCK_CONTRACT_ADDR};
-    use cosmwasm_std::{Addr, Timestamp, Uint64};
+    use cosmwasm_std::{Coin as CwCoin, Addr, Timestamp, Uint64};
     use finance::currency::Usdc;
     use finance::duration::Duration;
     use finance::price;
@@ -325,10 +305,9 @@ mod test {
 
         let balance = lpp
             .balance(&deps.as_ref(), &env)
-            .expect("can't get balance")
-            .into_cw();
+            .expect("can't get balance");
 
-        assert_eq!(balance, balance_mock);
+        assert_eq!(balance, balance_mock.amount.into());
     }
 
     #[test]
@@ -364,7 +343,7 @@ mod test {
 
         assert_eq!(result, interest_rate);
 
-        lpp.try_open_loan(deps.as_mut(), env.clone(), loan, Coin::new(5_000_000))
+        lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(5_000_000))
             .expect("can't open loan");
         deps.querier
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);
@@ -415,8 +394,8 @@ mod test {
 
         let amount = 5_000_000;
         lpp.try_open_loan(
-            deps.as_mut(),
-            env.clone(),
+            &mut deps.as_mut(),
+            &env,
             loan.clone(),
             Coin::new(5_000_000),
         )
@@ -445,7 +424,7 @@ mod test {
             .0;
 
         let repay = lpp
-            .try_repay_loan(deps.as_mut(), env.clone(), loan.clone(), payment)
+            .try_repay_loan(&mut deps.as_mut(), &env, loan.clone(), payment)
             .expect("can't repay loan");
 
         assert_eq!(repay, 0u128.into());
@@ -461,7 +440,7 @@ mod test {
         assert_eq!(loan_response.interest_due, 0u128.into());
 
         // an immediate repay after repay should pass (loan_interest_due==0 bug)
-        lpp.try_repay_loan(deps.as_mut(), env.clone(), loan.clone(), Coin::new(0))
+        lpp.try_repay_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(0))
             .expect("can't repay loan");
 
         // wait for another year/10
@@ -477,7 +456,7 @@ mod test {
             + Coin::new(100);
 
         let repay = lpp
-            .try_repay_loan(deps.as_mut(), env, loan, payment)
+            .try_repay_loan(&mut deps.as_mut(), &env, loan, payment)
             .expect("can't repay loan");
 
         assert_eq!(repay, 100u128.into());
@@ -537,7 +516,7 @@ mod test {
 
         assert_eq!(annual_interest_rate, Percent::from_percent(20));
 
-        lpp.try_open_loan(deps.as_mut(), env.clone(), loan, Coin::new(5_000_000))
+        lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(5_000_000))
             .expect("can't open loan");
         deps.querier
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);

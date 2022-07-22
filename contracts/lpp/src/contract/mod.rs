@@ -3,19 +3,18 @@ use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
 use cw2::set_contract_version;
-use finance::coin_legacy;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::ContractError;
 use crate::lpp::LiquidityPool;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryConfigResponse, QueryMsg};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::Config;
 use finance::currency::{visit_any, AnyVisitor, Currency};
-use finance::percent::Percent;
 
 mod borrow;
 mod lender;
 mod rewards;
+mod config;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -86,25 +85,18 @@ impl<'a> ExecuteWithLpn<'a> {
         match self.msg {
             ExecuteMsg::OpenLoan { amount } => {
                 let amount = amount.try_into()?;
-                borrow::try_open_loan::<LPN>(self.deps, self.env, self.info.sender, amount)
+                borrow::try_open_loan::<LPN>(self.deps, self.env, self.info, amount)
             }
             ExecuteMsg::RepayLoan => borrow::try_repay_loan::<LPN>(
                 self.deps,
                 self.env,
-                self.info.sender,
-                self.info.funds,
+                self.info,
             ),
             ExecuteMsg::Deposit() => {
-                // TODO use Bank::receive
-                if self.info.funds.len() != 1 {
-                    return Err(ContractError::FundsLen {});
-                }
-                let amount = coin_legacy::from_cosmwasm(self.info.funds[0].clone())?;
-
-                lender::try_deposit::<LPN>(self.deps, self.env, self.info.sender, amount)
+                lender::try_deposit::<LPN>(self.deps, self.env, self.info)
             }
             ExecuteMsg::Burn { amount } => {
-                lender::try_withdraw::<LPN>(self.deps, self.env, self.info.sender, amount)
+                lender::try_withdraw::<LPN>(self.deps, self.env, self.info, amount)
             }
             _ => {
                 unreachable!()
@@ -158,15 +150,15 @@ pub fn execute(
             base_interest_rate,
             utilization_optimal,
             addon_optimal_interest_rate,
-        } => try_update_parameters(
+        } => config::try_update_parameters(
             deps,
             base_interest_rate,
             utilization_optimal,
             addon_optimal_interest_rate,
         ),
-        ExecuteMsg::DistributeRewards => rewards::try_distribute_rewards(deps, info.funds),
+        ExecuteMsg::DistributeRewards => rewards::try_distribute_rewards(deps, info),
         ExecuteMsg::ClaimRewards { other_recipient } => {
-            rewards::try_claim_rewards(deps, info.sender, other_recipient)
+            rewards::try_claim_rewards(deps, env, info, other_recipient)
         }
         _ => ExecuteWithLpn::cmd(deps, env, info, msg),
     }
@@ -241,7 +233,7 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
-        QueryMsg::Config() => to_binary(&query_config(&deps)?)?,
+        QueryMsg::Config() => to_binary(&config::query_config(&deps)?)?,
         QueryMsg::Balance { address } => to_binary(&lender::query_balance(deps.storage, address)?)?,
         QueryMsg::Rewards { address } => {
             to_binary(&rewards::query_rewards(deps.storage, address)?)?
@@ -250,33 +242,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
     };
 
     Ok(res)
-}
-
-fn try_update_parameters(
-    deps: DepsMut,
-    base_interest_rate: Percent,
-    utilization_optimal: Percent,
-    addon_optimal_interest_rate: Percent,
-) -> Result<Response, ContractError> {
-    Config::load(deps.storage)?.update(
-        deps.storage,
-        base_interest_rate,
-        utilization_optimal,
-        addon_optimal_interest_rate,
-    )?;
-    Ok(Response::new().add_attribute("method", "try_update_parameters"))
-}
-
-fn query_config(deps: &Deps) -> Result<QueryConfigResponse, ContractError> {
-    let config = Config::load(deps.storage)?;
-
-    Ok(QueryConfigResponse {
-        lpn_symbol: config.currency,
-        lease_code_id: config.lease_code_id,
-        base_interest_rate: config.base_interest_rate,
-        utilization_optimal: config.utilization_optimal,
-        addon_optimal_interest_rate: config.addon_optimal_interest_rate,
-    })
 }
 
 #[cfg(test)]

@@ -1,27 +1,30 @@
-use cosmwasm_std::{Addr, BankMsg, Deps, DepsMut, Env, Response, Storage, Uint128};
-use finance::coin::Coin;
+use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Uint128};
 use serde::{de::DeserializeOwned, Serialize};
 
+use finance::currency::Currency;
+use finance::coin::Coin;
+use finance::bank::{self, BankStub, BankAccount};
+
 use crate::error::ContractError;
-use crate::lpp::{IntoCW, LiquidityPool};
+use crate::lpp::LiquidityPool;
 use crate::msg::{BalanceResponse, PriceResponse};
 use crate::state::Deposit;
-use finance::currency::Currency;
 
 pub fn try_deposit<LPN>(
     deps: DepsMut,
     env: Env,
-    lender_addr: Addr,
-    amount: Coin<LPN>,
+    info: MessageInfo,
 ) -> Result<Response, ContractError>
 where
     LPN: 'static + Currency + DeserializeOwned + Serialize,
 {
+    let lender_addr = info.sender;
+    let amount = bank::received(&info.funds)?;
+
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
 
     let price = lpp.calculate_price(&deps.as_ref(), &env)?;
-    let amount: u128 = amount.into();
-    Deposit::load(deps.storage, lender_addr)?.deposit(deps.storage, amount.into(), price)?;
+    Deposit::load(deps.storage, lender_addr)?.deposit(deps.storage, amount, price)?;
 
     Ok(Response::new().add_attribute("method", "try_deposit"))
 }
@@ -29,33 +32,31 @@ where
 pub fn try_withdraw<LPN>(
     deps: DepsMut,
     env: Env,
-    lender_addr: Addr,
+    info: MessageInfo,
     amount_nlpn: Uint128,
 ) -> Result<Response, ContractError>
 where
     LPN: 'static + Currency + DeserializeOwned + Serialize,
 {
-    let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
+    let lender_addr = info.sender;
     let amount_nlpn = Coin::new(amount_nlpn.u128());
 
+    let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
     let payment_lpn = lpp.withdraw_lpn(&deps.as_ref(), &env, amount_nlpn)?;
-    let mut msg_payment = vec![payment_lpn.into_cw()];
 
     let maybe_reward =
         Deposit::load(deps.storage, lender_addr.clone())?.withdraw(deps.storage, amount_nlpn)?;
 
-    if let Some(reward_msg) = maybe_reward {
-        msg_payment.push(reward_msg)
+    let mut response = Response::new().add_attribute("method", "try_withdraw");
+
+    let bank = BankStub::my_account(&env, &deps.querier);
+    let payment_msg = bank.send(payment_lpn, &lender_addr)?;
+    response = response.add_submessage(payment_msg);
+
+    if let Some(reward) = maybe_reward {
+        let reward_msg = bank.send(reward, &lender_addr)?;
+        response = response.add_submessage(reward_msg);
     }
-
-    let msg = BankMsg::Send {
-        to_address: lender_addr.into(),
-        amount: msg_payment,
-    };
-
-    let response = Response::new()
-        .add_attribute("method", "try_withdraw")
-        .add_message(msg);
 
     Ok(response)
 }
