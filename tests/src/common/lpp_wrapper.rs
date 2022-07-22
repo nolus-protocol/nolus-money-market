@@ -1,7 +1,7 @@
 use cosmwasm_std::{coins, to_binary, Addr, Binary, Deps, Env, Uint64};
 use cw_multi_test::{App, ContractWrapper, Executor};
 use finance::currency::Usdc;
-use finance::coin::Coin;
+use finance::{coin::Coin, percent::Percent};
 use lpp::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
@@ -84,6 +84,21 @@ pub fn mock_lpp_query(
             total_principal_due: Coin::new(1000000000),
             total_interest_due: Coin::new(1000000000),
         }),
+        _ => Ok(lpp::contract::query(deps, env, msg)?),
+    }?;
+
+    Ok(res)
+}
+
+pub fn mock_lpp_quote_query(
+    deps: Deps,
+    env: Env,
+    msg: lpp::msg::QueryMsg,
+) -> Result<Binary, ContractError> {
+    let res = match msg {
+        lpp::msg::QueryMsg::Quote { amount: _amount } => to_binary(
+            &lpp::msg::QueryQuoteResponse::QuoteInterestRate(Percent::HUNDRED),
+        ),
         _ => Ok(lpp::contract::query(deps, env, msg)?),
     }?;
 

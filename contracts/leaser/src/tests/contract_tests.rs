@@ -3,17 +3,15 @@ use crate::leaser::Leaser;
 use crate::ContractError;
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{
-    coins, from_binary, to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, StdError, SubMsg, Uint64,
-    WasmMsg,
+    coins, from_binary, to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
 };
-use finance::coin::{self, Coin};
 use finance::currency::{Currency, Usdc};
 use finance::liability::Liability;
 use finance::percent::Percent;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::msg::{ConfigResponse, ExecuteMsg, QueryMsg, QuoteResponse, Repayment};
+use crate::msg::{ConfigResponse, ExecuteMsg, QueryMsg, Repayment};
 
 const CREATOR: &str = "creator";
 const LPP_ADDR: &str = "test";
@@ -188,61 +186,4 @@ fn test_open_lease() {
             1
         )]
     );
-}
-
-#[test]
-fn test_quote() {
-    let mut deps = mock_dependencies();
-    setup_test_case(deps.as_mut());
-
-    // should fail if zero downpaynment
-    let err = query(
-        deps.as_ref(),
-        mock_env(),
-        QueryMsg::Quote {
-            downpayment: coin::funds::<TheCurrency>(0),
-        },
-    )
-    .unwrap_err();
-    assert_eq!(
-        err,
-        StdError::generic_err("cannot open lease with zero downpayment",).into()
-    );
-
-    let res = query(
-        deps.as_ref(),
-        mock_env(),
-        QueryMsg::Quote {
-            downpayment: coin::funds::<TheCurrency>(100),
-        },
-    )
-    .unwrap();
-    let resp: QuoteResponse<TheCurrency, TheCurrency> = from_binary(&res).unwrap();
-
-    assert_eq!(Coin::<TheCurrency>::new(185), resp.borrow);
-    assert_eq!(Coin::<TheCurrency>::new(285), resp.total);
-
-    /*
-        103% =
-        100% lpp annual_interest_rate (when calling the test version of get_annual_interest_rate() in lpp_querier.rs)
-        +
-        3% margin_interest_rate of the leaser
-    */
-    assert_eq!(
-        Percent::HUNDRED.checked_add(MARGIN_INTEREST_RATE).unwrap(),
-        resp.annual_interest_rate
-    ); // hardcoded until LPP contract is merged
-
-    let res = query(
-        deps.as_ref(),
-        mock_env(),
-        QueryMsg::Quote {
-            downpayment: coin::funds::<TheCurrency>(15),
-        },
-    )
-    .unwrap();
-    let resp: QuoteResponse<TheCurrency, TheCurrency> = from_binary(&res).unwrap();
-
-    assert_eq!(Coin::<TheCurrency>::new(27), resp.borrow);
-    assert_eq!(Coin::<TheCurrency>::new(42), resp.total);
 }

@@ -29,6 +29,12 @@ pub enum ContractError {
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
     #[error("Cannot open lease with zero downpayment")]
     ZeroDownpayment {},
+
+    #[error("{symbol:?}")]
+    UnknownCurrency { symbol: String },
+
+    #[error("NoLiquidity")]
+    NoLiquidity {},
 }
 
 pub type ContractResult<T> = core::result::Result<T, ContractError>;
