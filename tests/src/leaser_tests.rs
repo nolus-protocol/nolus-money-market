@@ -1,11 +1,12 @@
 use std::collections::HashSet;
 
-use crate::common::{test_case::TestCase, ADMIN, USER};
+use crate::common::{lpp_wrapper::mock_lpp_quote_query, test_case::TestCase, ADMIN, USER};
 use cosmwasm_std::{coins, Addr, DepsMut, Env, MessageInfo, Response};
 use cw_multi_test::{next_block, ContractWrapper, Executor};
 use finance::{
     coin::{self, Coin},
     currency::{Currency, Nls, SymbolStatic, Usdc},
+    percent::Percent,
 };
 use lease::error::ContractError;
 use leaser::msg::{QueryMsg, QuoteResponse};
@@ -160,18 +161,96 @@ fn test_quote() {
     test_case.init_lpp(None);
     test_case.init_leaser();
 
-    let resp: QuoteResponse<TheCurrency, TheCurrency> = test_case
+    let resp: QuoteResponse = test_case
         .app
         .wrap()
         .query_wasm_smart(
-            test_case.leaser_addr.unwrap(),
+            test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Quote {
                 downpayment: coin::funds::<TheCurrency>(100),
             },
         )
         .unwrap();
 
-    assert_eq!(Coin::<TheCurrency>::new(185), resp.borrow);
+    assert_eq!(
+        Coin::<TheCurrency>::new(185),
+        resp.borrow.try_into().unwrap()
+    );
+    assert_eq!(
+        Coin::<TheCurrency>::new(285),
+        resp.total.try_into().unwrap()
+    );
+
+    /*   TODO: test with different time periods and amounts in LPP
+     */
+
+    assert_eq!(Percent::from_permille(91), resp.annual_interest_rate); // hardcoded until LPP contract is merged
+
+    let resp: QuoteResponse = test_case
+        .app
+        .wrap()
+        .query_wasm_smart(
+            test_case.leaser_addr.unwrap(),
+            &QueryMsg::Quote {
+                downpayment: coin::funds::<TheCurrency>(15),
+            },
+        )
+        .unwrap();
+
+    assert_eq!(
+        Coin::<TheCurrency>::new(27),
+        resp.borrow.try_into().unwrap()
+    );
+    assert_eq!(Coin::<TheCurrency>::new(42), resp.total.try_into().unwrap());
+}
+
+#[test]
+fn test_quote_fixed_rate() {
+    const LPN: SymbolStatic = TheCurrency::SYMBOL;
+
+    let user_addr = Addr::unchecked(USER);
+    let mut test_case = TestCase::new(LPN);
+    test_case.init(&user_addr, coins(500, LPN));
+    test_case.init_lpp(Some(ContractWrapper::new(
+        lpp::contract::execute,
+        lpp::contract::instantiate,
+        mock_lpp_quote_query,
+    )));
+    test_case.init_leaser();
+
+    let resp: QuoteResponse = test_case
+        .app
+        .wrap()
+        .query_wasm_smart(
+            test_case.leaser_addr.clone().unwrap(),
+            &QueryMsg::Quote {
+                downpayment: coin::funds::<TheCurrency>(100),
+            },
+        )
+        .unwrap();
+
+    assert_eq!(
+        Coin::<TheCurrency>::new(185),
+        resp.borrow.try_into().unwrap()
+    );
+    assert_eq!(
+        Coin::<TheCurrency>::new(285),
+        resp.total.try_into().unwrap()
+    );
+
+    /*   TODO: test with different time periods and amounts in LPP
+        103% =
+        100% lpp annual_interest_rate (when calling the test version of get_annual_interest_rate() in lpp_querier.rs)
+        +
+        3% margin_interest_rate of the leaser
+    */
+
+    assert_eq!(
+        Percent::HUNDRED
+            .checked_add(Percent::from_percent(3))
+            .unwrap(),
+        resp.annual_interest_rate
+    );
 }
 
 #[test]

@@ -1,11 +1,6 @@
 use cosmwasm_std::{Addr, Uint64};
 
-use finance::{
-    coin::{Coin, CoinDTO},
-    currency::Currency,
-    liability::Liability,
-    percent::Percent,
-};
+use finance::{coin::CoinDTO, liability::Liability, percent::Percent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -54,13 +49,9 @@ pub struct ConfigResponse {
 
 // totalUST, borrowUST, annualInterestRate%
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct QuoteResponse<Asset, Lpn>
-where
-    Asset: Currency,
-    Lpn: Currency,
-{
-    pub total: Coin<Asset>,
-    pub borrow: Coin<Lpn>,
+pub struct QuoteResponse {
+    pub total: CoinDTO,
+    pub borrow: CoinDTO,
     pub annual_interest_rate: Percent,
 }
 

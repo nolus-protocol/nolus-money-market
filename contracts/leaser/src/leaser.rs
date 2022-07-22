@@ -1,18 +1,17 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
-    SubMsg, WasmMsg,
+    to_binary, Addr, CosmosMsg, Deps, DepsMut, MessageInfo, Response, StdResult, SubMsg, WasmMsg,
 };
 
-use finance::coin::Coin;
-use finance::currency::Currency;
+use finance::coin::CoinDTO;
 use finance::liability::Liability;
 use finance::percent::Percent;
 use lease::msg::{LoanForm, NewLeaseForm};
+use lpp::stub::LppRef;
 
+use crate::cmd::Quote;
 use crate::error::{ContractError, ContractResult};
-use crate::lpp_querier::LppQuerier;
 use crate::msg::{ConfigResponse, QuoteResponse, Repayment};
 use crate::state::config::Config;
 use crate::state::leaser::Loans;
@@ -28,6 +27,7 @@ impl Leaser {
     ) -> Result<Response, ContractError> {
         let config = Config::load(deps.storage)?;
         let instance_reply_id = Loans::next(deps.storage, sender.clone())?;
+
         Ok(
             Response::new().add_submessages(vec![SubMsg::reply_on_success(
                 CosmosMsg::Wasm(WasmMsg::Instantiate {
@@ -35,7 +35,7 @@ impl Leaser {
                     code_id: config.lease_code_id,
                     funds: amount,
                     label: "lease".to_string(),
-                    msg: to_binary(&Leaser::open_lease_msg(sender, config, currency))?,
+                    msg: to_binary(&Self::open_lease_msg(sender, config, currency))?,
                 }),
                 instance_reply_id,
             )]),
@@ -51,33 +51,20 @@ impl Leaser {
         Loans::get(deps.storage, owner)
     }
 
-    pub fn query_quote<C>(
-        _env: Env,
-        deps: Deps,
-        downpayment: Coin<C>,
-    ) -> StdResult<QuoteResponse<C, C>>
-    where
-        C: Currency,
-    {
-        // borrowUST = LeaseInitialLiability% * downpaymentUST / (1 - LeaseInitialLiability%)
-        if downpayment.is_zero() {
-            return Err(StdError::generic_err(
-                "cannot open lease with zero downpayment",
-            ));
-        }
-
+    pub fn query_quote(deps: Deps, downpayment: CoinDTO) -> Result<QuoteResponse, ContractError> {
         let config = Config::load(deps.storage)?;
 
-        let borrow = config.liability.init_borrow_amount(downpayment);
-        let total = borrow + downpayment;
+        let lpp = LppRef::try_from(config.lpp_addr.to_string(), deps.api, &deps.querier)?;
 
-        let annual_interest_rate = LppQuerier::get_annual_interest_rate(deps, downpayment)?;
-
-        Ok(QuoteResponse {
-            total,
-            borrow,
-            annual_interest_rate: annual_interest_rate + config.lease_interest_rate_margin,
-        })
+        let resp = lpp.execute(
+            Quote::new(
+                downpayment,
+                config.liability,
+                config.lease_interest_rate_margin,
+            )?,
+            &deps.querier,
+        )?;
+        Ok(resp)
     }
 
     pub fn try_configure(

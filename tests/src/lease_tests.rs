@@ -96,10 +96,10 @@ fn close(test_case: &mut TestCase, contract_addr: &Addr) -> AppResponse {
 }
 
 fn quote_borrow(test_case: &TestCase, amount: TheCoin) -> TheCoin {
-    quote_query(test_case, amount).borrow
+    quote_query(test_case, amount).borrow.try_into().unwrap()
 }
 
-fn quote_query(test_case: &TestCase, amount: TheCoin) -> QuoteResponse<Currency, Currency> {
+fn quote_query(test_case: &TestCase, amount: TheCoin) -> QuoteResponse {
     test_case
         .app
         .wrap()
@@ -127,7 +127,7 @@ fn expected_open_state(
     duration: u64,
 ) -> StateResponse<Currency, Currency> {
     let quote_result = quote_query(test_case, downpayment);
-    let total = quote_result.total;
+    let total = quote_result.total.try_into().unwrap();
     let expected = total - downpayment - payments;
     StateResponse::Opened {
         amount: total,
@@ -155,7 +155,8 @@ fn state_opened_when_partially_paid() {
     let downpayment = create_coin(DOWNPAYMENT);
 
     let quote_result = quote_query(&test_case, downpayment);
-    let partial_payment = create_coin(u128::from(quote_result.borrow) / 2);
+    let amount: Coin<Usdc> = quote_result.borrow.try_into().unwrap();
+    let partial_payment = create_coin(u128::from(amount) / 2);
     let expected_result = expected_open_state(&test_case, downpayment, partial_payment, 0);
 
     let lease_address = open_lease(&mut test_case, downpayment);
