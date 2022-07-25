@@ -1,16 +1,25 @@
-use cosmwasm_std::{to_binary, Addr, Response, SubMsg, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, CosmosMsg, Response, SubMsg, WasmMsg};
 use finance::{coin::Coin, currency::Currency};
 use serde::Serialize;
 
 use crate::{coin_legacy::to_cosmwasm_impl, error::Result};
 
 #[derive(Default)]
-pub struct Platform {
+pub struct Batch {
     msgs: Vec<SubMsg>,
 }
 
-impl Platform {
-    pub fn schedule_execute_no_reply<M, C>(
+impl Batch {
+    pub fn schedule_execute_no_reply<M>(&mut self, msg: M)
+    where
+        M: Into<CosmosMsg>,
+    {
+        let msg_cw = SubMsg::new(msg);
+
+        self.msgs.push(msg_cw);
+    }
+
+    pub fn schedule_execute_wasm_no_reply<M, C>(
         &mut self,
         addr: &Addr,
         msg: M,
@@ -27,7 +36,7 @@ impl Platform {
         Ok(())
     }
 
-    pub fn schedule_execute_on_success_reply<M, C>(
+    pub fn schedule_execute_wasm_on_success_reply<M, C>(
         &mut self,
         addr: &Addr,
         msg: M,
@@ -43,6 +52,12 @@ impl Platform {
 
         self.msgs.push(msg_cw);
         Ok(())
+    }
+
+    pub fn merge(self, mut other: Batch) -> Self {
+        let mut res = self;
+        res.msgs.append(&mut other.msgs);
+        res
     }
 
     fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>
@@ -64,8 +79,8 @@ impl Platform {
     }
 }
 
-impl From<Platform> for Response {
-    fn from(p: Platform) -> Self {
+impl From<Batch> for Response {
+    fn from(p: Batch) -> Self {
         let res = Self::default();
         p.msgs
             .into_iter()

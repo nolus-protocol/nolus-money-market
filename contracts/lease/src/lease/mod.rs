@@ -2,14 +2,14 @@ mod dto;
 pub(super) use dto::LeaseDTO;
 mod factory;
 
-use cosmwasm_std::{Addr, QuerierWrapper, Reply, SubMsg, Timestamp};
+use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp};
 use finance::{
     coin::Coin,
     currency::{Currency, SymbolOwned},
     liability::Liability,
 };
 use lpp::stub::Lpp as LppTrait;
-use platform::{bank::BankAccount, platform::Platform};
+use platform::{bank::BankAccount, batch::Batch};
 use serde::Serialize;
 
 use crate::{
@@ -36,13 +36,13 @@ pub fn execute<L, O, E>(
     dto: LeaseDTO,
     cmd: L,
     querier: &QuerierWrapper,
-    platform: &mut Platform,
+    batch: &mut Batch,
 ) -> Result<O, E>
 where
     L: WithLease<Output = O, Error = E>,
 {
     let lpp = dto.loan.lpp().clone();
-    lpp.execute(Factory::new(cmd, dto), querier, platform)
+    lpp.execute(Factory::new(cmd, dto), querier, batch)
 }
 
 pub struct Lease<Lpn, Lpp> {
@@ -93,7 +93,7 @@ where
 
     // TODO add the lease address as a field in Lease<>
     // and populate it on LeaseDTO.execute as LeaseFactory
-    pub(crate) fn close<B>(&self, lease: Addr, account: &B) -> ContractResult<SubMsg>
+    pub(crate) fn close<B>(&self, lease: Addr, account: &mut B) -> ContractResult<()>
     where
         B: BankAccount,
     {
@@ -102,9 +102,8 @@ where
             StateResponse::Opened { .. } => ContractResult::Err(ContractError::LoanNotPaid()),
             StateResponse::Paid(..) => {
                 let balance = account.balance::<Lpn>()?;
-                account
-                    .send(balance, &self.customer)
-                    .map_err(|err| err.into())
+                account.send(balance, &self.customer);
+                Ok(())
             }
             StateResponse::Closed() => ContractResult::Err(ContractError::LoanClosed()),
         }
@@ -163,6 +162,7 @@ mod tests {
     use lpp::msg::{LoanResponse, QueryLoanResponse};
     use lpp::stub::{Lpp, LppRef};
 
+    use platform::bank::BankAccountView;
     use platform::{bank::BankAccount, error::Result as PlatformResult};
     use serde::{Deserialize, Serialize};
 
@@ -182,15 +182,17 @@ mod tests {
         balance: u128,
     }
 
-    impl BankAccount for BankStub {
+    impl BankAccountView for BankStub {
         fn balance<C>(&self) -> PlatformResult<Coin<C>>
         where
             C: Currency,
         {
             Ok(Coin::<C>::new(self.balance))
         }
+    }
 
-        fn send<C>(&self, _amount: Coin<C>, _to: &Addr) -> PlatformResult<SubMsg>
+    impl BankAccount for BankStub {
+        fn send<C>(&mut self, _amount: Coin<C>, _to: &Addr)
         where
             C: Currency,
         {

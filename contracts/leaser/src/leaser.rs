@@ -10,7 +10,7 @@ use finance::liability::Liability;
 use finance::percent::Percent;
 use lease::msg::{LoanForm, NewLeaseForm};
 use lpp::stub::LppRef;
-use platform::platform::Platform;
+use platform::batch::Batch;
 
 use crate::cmd::Quote;
 use crate::error::{ContractError, ContractResult};
@@ -58,7 +58,7 @@ impl Leaser {
 
         let lpp = LppRef::try_from(config.lpp_addr.to_string(), deps.api, &deps.querier)?;
 
-        let mut platform = Platform::default();
+        let mut batch = Batch::default();
         let resp = lpp.execute(
             Quote::new(
                 downpayment,
@@ -66,7 +66,7 @@ impl Leaser {
                 config.lease_interest_rate_margin,
             )?,
             &deps.querier,
-            &mut platform,
+            &mut batch,
         )?;
         Ok(resp)
     }

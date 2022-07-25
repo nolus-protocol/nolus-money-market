@@ -8,7 +8,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
 use platform::bank::BankStub;
-use platform::platform::Platform;
+use platform::batch::Batch;
 
 use crate::error::ContractResult;
 use crate::lease::{self, LeaseDTO};
@@ -35,15 +35,15 @@ pub fn instantiate(
     let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
     lease.store(deps.storage)?;
 
-    let mut platform = Platform::default();
+    let mut batch = Batch::default();
     lease::execute(
         lease,
         OpenLoanReq::new(&info.funds),
         &deps.querier,
-        &mut platform,
+        &mut batch,
     )?;
 
-    Ok(platform.into())
+    Ok(batch.into())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -51,8 +51,8 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
     // TODO swap the received loan and the downpayment to lease.currency
     let lease = LeaseDTO::load(deps.storage)?;
 
-    let mut platform = Platform::default();
-    lease::execute(lease, OpenLoanResp::new(msg), &deps.querier, &mut platform)?;
+    let mut batch = Batch::default();
+    lease::execute(lease, OpenLoanResp::new(msg), &deps.querier, &mut batch)?;
 
     Ok(Response::default())
 }
@@ -64,10 +64,13 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<Response> {
-    match msg {
-        ExecuteMsg::Repay() => try_repay(deps, env, info),
-        ExecuteMsg::Close() => try_close(deps, env, info),
-    }
+    let lease = LeaseDTO::load(deps.storage)?;
+
+    let batch = match msg {
+        ExecuteMsg::Repay() => try_repay(deps, env, info, lease),
+        ExecuteMsg::Close() => try_close(deps, env, info, lease),
+    }?;
+    Ok(batch.into())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -76,41 +79,36 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
 
     let bank = BankStub::my_account(&env, &deps.querier);
 
-    let mut platform = Platform::default();
+    // TODO get rid of it using a read-only impl.
+    let mut batch_lease = Batch::default();
     lease::execute(
         lease,
         LeaseState::new(env.block.time, bank, env.contract.address.clone()),
         &deps.querier,
-        &mut platform,
+        &mut batch_lease,
     )
 }
 
-fn try_repay(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
-    let lease = LeaseDTO::load(deps.storage)?;
-
-    let mut platform = Platform::default();
+fn try_repay(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Batch> {
+    let mut batch = Batch::default();
     lease::execute(
         lease,
         Repay::new(&info.funds, env.block.time, env.contract.address),
         &deps.querier,
-        &mut platform,
+        &mut batch,
     )?;
-
-    Ok(platform.into())
+    Ok(batch)
 }
 
-fn try_close(deps: DepsMut, env: Env, info: MessageInfo) -> ContractResult<Response> {
-    let lease = LeaseDTO::load(deps.storage)?;
-
+fn try_close(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Batch> {
     let bank = BankStub::my_account(&env, &deps.querier);
 
-    let mut platform = Platform::default();
-    let req = lease::execute(
+    let mut batch = Batch::default();
+    let bank = lease::execute(
         lease,
         Close::new(&info.sender, env.contract.address.clone(), bank),
         &deps.querier,
-        &mut platform,
+        &mut batch,
     )?;
-
-    Ok(Response::default().add_submessage(req))
+    Ok(batch.merge(bank.into()))
 }

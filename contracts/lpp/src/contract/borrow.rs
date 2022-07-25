@@ -1,4 +1,5 @@
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Timestamp};
+use platform::batch::Batch;
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::coin::Coin;
@@ -24,14 +25,14 @@ where
 
     lpp.try_open_loan(&mut deps, &env, lease_addr.clone(), amount)?;
 
-    let bank = BankStub::my_account(&env, &deps.querier);
-    let transfer_msg = bank.send(amount, &lease_addr)?;
+    let mut bank = BankStub::my_account(&env, &deps.querier);
+    bank.send(amount, &lease_addr);
 
-    let response = Response::new()
-        .add_attribute("method", "try_open_loan")
-        .add_submessage(transfer_msg);
+    let batch: Batch = bank.into();
+    let mut batch: Response = batch.into();
+    batch = batch.add_attribute("method", "try_open_loan");
 
-    Ok(response)
+    Ok(batch)
 }
 
 pub fn try_repay_loan<LPN>(
@@ -49,15 +50,17 @@ where
     lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
     let excess_received = lpp.try_repay_loan(&mut deps, &env, lease_addr.clone(), repay_amount)?;
 
-    let mut response = Response::new().add_attribute("method", "try_repay_loan");
+    let batch = if excess_received.is_zero() {
+        Batch::default()
+    } else {
+        let mut bank = BankStub::my_account(&env, &deps.querier);
+        bank.send(excess_received, &lease_addr);
+        bank.into()
+    };
 
-    if !excess_received.is_zero() {
-        let bank = BankStub::my_account(&env, &deps.querier);
-        let payment = bank.send(excess_received, &lease_addr)?;
-        response = response.add_submessage(payment);
-    }
-
-    Ok(response)
+    let mut resp: Response = batch.into();
+    resp = resp.add_attribute("method", "try_repay_loan");
+    Ok(resp)
 }
 
 pub fn query_quote<LPN>(

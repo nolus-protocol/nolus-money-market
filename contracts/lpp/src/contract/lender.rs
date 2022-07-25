@@ -1,9 +1,10 @@
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Uint128};
+use platform::batch::Batch;
 use serde::{de::DeserializeOwned, Serialize};
 
-use finance::currency::Currency;
 use finance::coin::Coin;
-use platform::bank::{self, BankStub, BankAccount};
+use finance::currency::Currency;
+use platform::bank::{self, BankAccount, BankStub};
 
 use crate::error::ContractError;
 use crate::lpp::LiquidityPool;
@@ -47,17 +48,16 @@ where
     let maybe_reward =
         Deposit::load(deps.storage, lender_addr.clone())?.withdraw(deps.storage, amount_nlpn)?;
 
-    let mut response = Response::new().add_attribute("method", "try_withdraw");
-
-    let bank = BankStub::my_account(&env, &deps.querier);
-    let payment_msg = bank.send(payment_lpn, &lender_addr)?;
-    response = response.add_submessage(payment_msg);
+    let mut bank = BankStub::my_account(&env, &deps.querier);
+    bank.send(payment_lpn, &lender_addr);
 
     if let Some(reward) = maybe_reward {
-        let reward_msg = bank.send(reward, &lender_addr)?;
-        response = response.add_submessage(reward_msg);
+        bank.send(reward, &lender_addr);
     }
+    let batch: Batch = bank.into();
 
+    let mut response: Response = batch.into();
+    response = response.add_attribute("method", "try_withdraw");
     Ok(response)
 }
 

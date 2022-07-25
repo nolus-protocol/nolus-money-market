@@ -1,18 +1,21 @@
-use cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, Env, QuerierWrapper, SubMsg};
+use cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, Env, QuerierWrapper};
 
-use finance::{
-    coin::Coin,
-    currency::Currency,
+use finance::{coin::Coin, currency::Currency};
+
+use crate::{
+    batch::Batch,
+    coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl},
+    error::{Error, Result},
 };
 
-use crate::{coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl}, error::{Result, Error}};
-
-pub trait BankAccount {
+pub trait BankAccountView {
     fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: Currency;
+}
 
-    fn send<C>(&self, amount: Coin<C>, to: &Addr) -> Result<SubMsg>
+pub trait BankAccount: BankAccountView {
+    fn send<C>(&mut self, amount: Coin<C>, to: &Addr)
     where
         C: Currency;
 }
@@ -31,12 +34,12 @@ where
     }
 }
 
-pub struct BankStub<'a> {
+pub struct BankView<'a> {
     addr: &'a Addr,
     querier: &'a QuerierWrapper<'a>,
 }
 
-impl<'a> BankStub<'a> {
+impl<'a> BankView<'a> {
     pub fn my_account(env: &'a Env, querier: &'a QuerierWrapper) -> Self {
         Self {
             addr: &env.contract.address,
@@ -44,7 +47,8 @@ impl<'a> BankStub<'a> {
         }
     }
 }
-impl<'a> BankAccount for BankStub<'a> {
+
+impl<'a> BankAccountView for BankView<'a> {
     fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: Currency,
@@ -52,14 +56,45 @@ impl<'a> BankAccount for BankStub<'a> {
         let coin = self.querier.query_balance(self.addr, C::SYMBOL)?;
         from_cosmwasm_impl(coin)
     }
+}
 
-    fn send<C>(&self, amount: Coin<C>, to: &Addr) -> Result<SubMsg>
+pub struct BankStub<'a> {
+    view: BankView<'a>,
+    batch: Batch,
+}
+
+impl<'a> BankStub<'a> {
+    pub fn my_account(env: &'a Env, querier: &'a QuerierWrapper) -> Self {
+        Self {
+            view: BankView::my_account(env, querier),
+            batch: Batch::default(),
+        }
+    }
+}
+
+impl<'a> BankAccountView for BankStub<'a> {
+    fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: Currency,
     {
-        Ok(SubMsg::new(BankMsg::Send {
+        self.view.balance()
+    }
+}
+
+impl<'a> BankAccount for BankStub<'a> {
+    fn send<C>(&mut self, amount: Coin<C>, to: &Addr)
+    where
+        C: Currency,
+    {
+        self.batch.schedule_execute_no_reply(BankMsg::Send {
             to_address: to.into(),
             amount: vec![to_cosmwasm_impl(amount)],
-        }))
+        });
+    }
+}
+
+impl<'a> From<BankStub<'a>> for Batch {
+    fn from(stub: BankStub) -> Self {
+        stub.batch
     }
 }

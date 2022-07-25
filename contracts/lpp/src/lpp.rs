@@ -1,21 +1,20 @@
 use cosmwasm_std::{
-    Addr, ContractInfoResponse, Deps, DepsMut, Env, QueryRequest,
-    StdResult, Storage, Timestamp, Uint64, WasmQuery,
+    Addr, ContractInfoResponse, Deps, DepsMut, Env, QueryRequest, StdResult, Storage, Timestamp,
+    Uint64, WasmQuery,
 };
 use finance::currency::Currency;
 use finance::price::{self, Price};
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::ContractError;
 use crate::msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse};
-use crate::state::{Config, Deposit, Loan, LoanData, Total};
 use crate::nlpn::NLpn;
+use crate::state::{Config, Deposit, Loan, LoanData, Total};
 use finance::coin::Coin;
 use finance::fraction::Fraction;
 use finance::percent::Percent;
 use finance::ratio::Rational;
-use platform::bank::{BankAccount, BankStub};
-
+use platform::bank::BankView;
 
 pub struct NTokenPrice<LPN>
 where
@@ -74,10 +73,9 @@ where
         Ok(LiquidityPool { config, total })
     }
 
-    // TODO: use finance bank module
     pub fn balance(&self, deps: &Deps, env: &Env) -> Result<Coin<LPN>, ContractError> {
-        let balance = BankStub::my_account(env, &deps.querier)
-        .balance()?;
+        use platform::bank::BankAccountView;
+        let balance = BankView::my_account(env, &deps.querier).balance()?;
 
         Ok(balance)
     }
@@ -90,7 +88,11 @@ where
         Ok(res)
     }
 
-    pub fn query_lpp_balance(&self, deps: &Deps, env: &Env) -> Result<LppBalanceResponse<LPN>, ContractError> {
+    pub fn query_lpp_balance(
+        &self,
+        deps: &Deps,
+        env: &Env,
+    ) -> Result<LppBalanceResponse<LPN>, ContractError> {
         let balance = self.balance(deps, env)?;
 
         let total_principal_due = self.total.total_principal_due();
@@ -104,7 +106,11 @@ where
         })
     }
 
-    pub fn calculate_price(&self, deps: &Deps, env: &Env) -> Result<NTokenPrice<LPN>, ContractError> {
+    pub fn calculate_price(
+        &self,
+        deps: &Deps,
+        env: &Env,
+    ) -> Result<NTokenPrice<LPN>, ContractError> {
         let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
         let price = if balance_nlpn.is_zero() {
@@ -279,7 +285,7 @@ mod test {
     use crate::state::{Config, Deposit, Total};
 
     use cosmwasm_std::testing::{self, MOCK_CONTRACT_ADDR};
-    use cosmwasm_std::{Coin as CwCoin, Addr, Timestamp, Uint64};
+    use cosmwasm_std::{Addr, Coin as CwCoin, Timestamp, Uint64};
     use finance::currency::Usdc;
     use finance::duration::Duration;
     use finance::price;
@@ -393,13 +399,8 @@ mod test {
         env.block.time = Timestamp::from_nanos(10);
 
         let amount = 5_000_000;
-        lpp.try_open_loan(
-            &mut deps.as_mut(),
-            &env,
-            loan.clone(),
-            Coin::new(5_000_000),
-        )
-        .expect("can't open loan");
+        lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000_000))
+            .expect("can't open loan");
         deps.querier
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);
 

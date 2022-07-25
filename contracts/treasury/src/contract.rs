@@ -3,9 +3,10 @@ use cosmwasm_std::entry_point;
 
 use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, Storage};
 use cw2::set_contract_version;
-use platform::bank::{BankAccount, BankStub};
 use finance::coin::Coin;
 use finance::currency::Nls;
+use platform::bank::{BankAccount, BankStub};
+use platform::batch::Batch;
 
 use crate::error::ContractError;
 use crate::msg::{ExecuteMsg, InstantiateMsg};
@@ -44,7 +45,11 @@ pub fn execute(
         ExecuteMsg::SendRewards { amount } => {
             let bank_account = BankStub::my_account(&env, &deps.querier);
 
-            try_send_rewards(deps.storage, sender, amount, bank_account)
+            let bank_account = try_send_rewards(deps.storage, sender, amount, bank_account)?;
+            let batch: Batch = bank_account.into();
+            let mut response: Response = batch.into();
+            response = response.add_attribute("method", "try_send_rewards");
+            Ok(response)
         }
     }
 }
@@ -64,17 +69,13 @@ fn try_send_rewards<B>(
     storage: &mut dyn Storage,
     sender: Addr,
     amount: Coin<Nls>,
-    account: B,
-) -> Result<Response, ContractError>
+    mut account: B,
+) -> Result<B, ContractError>
 where
     B: BankAccount,
 {
     state::assert_rewards_dispatcher(storage, &sender)?;
-    let pay_msg = account.send(amount, &sender)?;
+    account.send(amount, &sender);
 
-    let response = Response::new()
-        .add_attribute("method", "try_send_rewards")
-        .add_submessage(pay_msg);
-
-    Ok(response)
+    Ok(account)
 }

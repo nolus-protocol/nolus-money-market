@@ -1,19 +1,16 @@
-use cosmwasm_std::{Addr, Deps, DepsMut, Env, Response, Storage, MessageInfo};
+use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage};
+use platform::batch::Batch;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::ContractError;
 use crate::lpp::LiquidityPool;
 use crate::msg::{LppBalanceResponse, RewardsResponse};
 use crate::state::Deposit;
-use platform::bank::{self, BankStub, BankAccount};
-use finance::currency::{Currency, Nls};
 use finance::coin::Coin;
+use finance::currency::{Currency, Nls};
+use platform::bank::{self, BankAccount, BankStub};
 
-pub fn try_distribute_rewards(
-    deps: DepsMut,
-    info: MessageInfo,
-) -> Result<Response, ContractError> {
-
+pub fn try_distribute_rewards(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
     let amount: Coin<Nls> = bank::received(&info.funds)?;
     Deposit::distribute_rewards(deps, amount)?;
 
@@ -30,14 +27,14 @@ pub fn try_claim_rewards(
     let mut deposit = Deposit::load(deps.storage, info.sender)?;
     let reward = deposit.claim_rewards(deps.storage)?;
 
-    let bank = BankStub::my_account(&env, &deps.querier);
-    let msg = bank.send(reward, &recipient)?;
+    let mut bank = BankStub::my_account(&env, &deps.querier);
+    bank.send(reward, &recipient);
 
-    let response = Response::new()
-        .add_attribute("method", "try_claim_rewards")
-        .add_submessage(msg);
+    let batch: Batch = bank.into();
 
-    Ok(response)
+    let mut batch: Response = batch.into();
+    batch = batch.add_attribute("method", "try_claim_rewards");
+    Ok(batch)
 }
 
 pub fn query_lpp_balance<LPN>(
@@ -54,7 +51,5 @@ where
 pub fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse, ContractError> {
     let deposit = Deposit::load(storage, addr)?;
     let rewards = deposit.query_rewards(storage)?;
-    Ok(RewardsResponse {
-        rewards
-    })
+    Ok(RewardsResponse { rewards })
 }

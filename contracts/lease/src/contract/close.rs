@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, SubMsg};
+use cosmwasm_std::Addr;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
 use platform::bank::BankAccount;
@@ -27,11 +27,11 @@ impl<'a, Bank> WithLease for Close<'a, Bank>
 where
     Bank: BankAccount,
 {
-    type Output = SubMsg;
+    type Output = Bank;
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp>(mut self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
     where
         Lpp: LppTrait<Lpn>,
         Lpn: Currency + Serialize,
@@ -40,7 +40,8 @@ where
             return Err(Self::Error::Unauthorized {});
         }
 
-        lease.close(self.lease, &self.account)
+        lease.close(self.lease, &mut self.account)?;
+        Ok(self.account)
     }
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
