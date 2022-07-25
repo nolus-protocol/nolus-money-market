@@ -9,6 +9,9 @@ pub enum ContractError {
     #[error("{0}")]
     LppError(#[from] lpp::error::ContractError),
 
+    #[error("{0}")]
+    Platform(#[from] platform::error::Error),
+
     #[error("Unauthorized")]
     Unauthorized {},
 

@@ -4,9 +4,7 @@ use crate::state::config::Config;
 use crate::state::dispatch_log::DispatchLog;
 use crate::ContractError;
 use cosmwasm_std::StdResult;
-use cosmwasm_std::{
-    to_binary, Addr, Decimal, QuerierWrapper, Response, Storage, SubMsg, Timestamp, WasmMsg,
-};
+use cosmwasm_std::{Decimal, QuerierWrapper, Response, Storage, Timestamp};
 use finance::coin::Coin;
 use finance::currency::{Currency, Nls};
 use finance::duration::Duration;
@@ -14,9 +12,7 @@ use finance::fraction::Fraction;
 use finance::interest::InterestPeriod;
 use finance::ratio::Rational;
 use lpp::stub::Lpp as LppTrait;
-
-// #[cfg(not(test))]
-// use serde::{de::DeserializeOwned, Serialize};
+use platform::platform::Platform;
 
 pub struct Dispatcher<'a, Lpn, Lpp> {
     lpn: PhantomData<Lpn>,
@@ -83,18 +79,36 @@ where
             return Self::no_reward_resp();
         }
 
-        // Prepare a Send Rewards for the amount of Rewards_uNLS to the Treasury.
-        let treasury_send_rewards_msg = self.treasury_send_rewards(reward_unls)?;
-
         let pay_msg = self.lpp.distribute_rewards_req(reward_unls)?;
 
-        let subsrcibe_msg = alarm_subscribe_msg(
-            &self.config.timealarms,
-            self.block_time,
-            Duration::from_hours(self.config.cadence_hours),
-        )?;
+        let mut resp = self.create_response(reward_unls)?;
+        // TODO: use Platform to subscribe for lpp distribute message ?
+        resp.messages.insert(resp.messages.len() - 1, pay_msg);
+        Ok(resp)
+    }
 
-        Ok(Response::new().add_submessages([treasury_send_rewards_msg, pay_msg, subsrcibe_msg]))
+    fn create_response(&self, reward: Coin<Nls>) -> Result<Response, ContractError> {
+        let mut platform = Platform::default();
+        // Prepare a Send Rewards for the amount of Rewards_uNLS to the Treasury.
+        platform
+            .schedule_execute_no_reply::<_, Nls>(
+                &self.config.treasury,
+                treasury::msg::ExecuteMsg::SendRewards { amount: reward },
+                None,
+            )
+            .map_err(ContractError::from)?;
+
+        platform
+            .schedule_execute_no_reply::<_, Nls>(
+                &self.config.timealarms,
+                &timealarms::msg::ExecuteMsg::AddAlarm {
+                    time: self.block_time + Duration::from_hours(self.config.cadence_hours),
+                },
+                None,
+            )
+            .map_err(ContractError::from)?;
+
+        Ok(Response::from(platform))
     }
 
     fn get_market_price(&self, denom: &str) -> StdResult<Decimal> {
@@ -133,31 +147,9 @@ where
         Ok(Coin::<Nls>::new(nls_amount))
     }
 
-    fn treasury_send_rewards(&self, reward: Coin<Nls>) -> StdResult<SubMsg> {
-        Ok(SubMsg::new(WasmMsg::Execute {
-            funds: vec![],
-            contract_addr: self.config.treasury.to_string(),
-            msg: to_binary(&treasury::msg::ExecuteMsg::SendRewards { amount: reward })?,
-        }))
-    }
-
     fn no_reward_resp() -> Result<Response, ContractError> {
         Ok(Response::new()
             .add_attribute("method", "try_dispatch")
             .add_attribute("result", "no reward to dispatch"))
     }
-}
-
-pub(crate) fn alarm_subscribe_msg(
-    timealarm_addr: &Addr,
-    current_time: Timestamp,
-    cadence: Duration,
-) -> StdResult<SubMsg> {
-    Ok(SubMsg::new(WasmMsg::Execute {
-        funds: vec![],
-        contract_addr: timealarm_addr.to_string(),
-        msg: to_binary(&timealarms::msg::ExecuteMsg::AddAlarm {
-            time: current_time + cadence,
-        })?,
-    }))
 }

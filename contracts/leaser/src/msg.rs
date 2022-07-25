@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Uint64};
 
-use finance::{coin::CoinDTO, liability::Liability, percent::Percent};
+use finance::{coin::CoinDTO, currency::SymbolOwned, liability::Liability, percent::Percent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -30,7 +30,7 @@ pub enum ExecuteMsg {
         repayment: Repayment,
     },
     OpenLease {
-        currency: String,
+        currency: SymbolOwned,
     },
 }
 

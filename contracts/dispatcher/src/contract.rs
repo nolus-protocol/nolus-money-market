@@ -6,11 +6,11 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 
+use finance::currency::Nls;
 use finance::duration::Duration;
 use lpp::stub::LppRef;
 use platform::platform::Platform;
 
-use crate::dispatcher::alarm_subscribe_msg;
 use crate::dispatcher_ref::DispatcherRef;
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -47,15 +47,18 @@ pub fn instantiate(
     .store(deps.storage)?;
     DispatchLog::update(deps.storage, env.block.time)?;
 
-    let subscribe_msg = alarm_subscribe_msg(
-        &timealarms_addr,
-        env.block.time,
-        Duration::from_hours(msg.cadence_hours),
-    )?;
+    let mut platform = Platform::default();
+    platform
+        .schedule_execute_no_reply::<_, Nls>(
+            &timealarms_addr,
+            &timealarms::msg::ExecuteMsg::AddAlarm {
+                time: env.block.time + Duration::from_hours(msg.cadence_hours),
+            },
+            None,
+        )
+        .map_err(ContractError::from)?;
 
-    Ok(Response::new()
-        .add_submessage(subscribe_msg)
-        .add_attribute("method", "instantiate"))
+    Ok(Response::from(platform).add_attribute("method", "instantiate"))
 }
 
 fn validate_addr(deps: Deps, addr: Addr) -> Result<Addr, ContractError> {

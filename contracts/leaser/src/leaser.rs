@@ -5,6 +5,7 @@ use cosmwasm_std::{
 };
 
 use finance::coin::CoinDTO;
+use finance::currency::SymbolOwned;
 use finance::liability::Liability;
 use finance::percent::Percent;
 use lease::msg::{LoanForm, NewLeaseForm};
@@ -24,7 +25,7 @@ impl Leaser {
         deps: DepsMut,
         amount: Vec<cosmwasm_std::Coin>,
         sender: Addr,
-        currency: String,
+        currency: SymbolOwned,
     ) -> Result<Response, ContractError> {
         let config = Config::load(deps.storage)?;
         let instance_reply_id = Loans::next(deps.storage, sender.clone())?;
@@ -94,7 +95,11 @@ impl Leaser {
         Ok(Response::default())
     }
 
-    pub(crate) fn open_lease_msg(sender: Addr, config: Config, currency: String) -> NewLeaseForm {
+    pub(crate) fn open_lease_msg(
+        sender: Addr,
+        config: Config,
+        currency: SymbolOwned,
+    ) -> NewLeaseForm {
         NewLeaseForm {
             customer: sender.into_string(),
             currency,
