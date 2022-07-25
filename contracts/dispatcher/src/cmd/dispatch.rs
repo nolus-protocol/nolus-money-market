@@ -1,5 +1,4 @@
-use crate::dispatcher::Dispatcher;
-use crate::state::config::Config;
+use crate::state::Config;
 use crate::ContractError;
 use cosmwasm_std::{QuerierWrapper, Response, Timestamp};
 use cosmwasm_std::{StdResult, Storage};
@@ -8,14 +7,10 @@ use finance::currency::Currency;
 use lpp::stub::{Lpp as LppTrait, WithLpp};
 use serde::Serialize;
 
-pub struct DispatcherRef<'a> {
-    storage: &'a mut dyn Storage,
-    querier: QuerierWrapper<'a>,
-    config: Config,
-    block_time: Timestamp,
-}
+use super::dispatcher::Dispatcher;
+use super::Dispatch;
 
-impl<'a> WithLpp for DispatcherRef<'a> {
+impl<'a> WithLpp for Dispatch<'a> {
     type Output = Response;
     type Error = ContractError;
 
@@ -42,13 +37,13 @@ impl<'a> WithLpp for DispatcherRef<'a> {
     }
 }
 
-impl<'a> DispatcherRef<'a> {
+impl<'a> Dispatch<'a> {
     pub fn new(
         storage: &'a mut dyn Storage,
         querier: QuerierWrapper<'a>,
         config: Config,
         block_time: Timestamp,
-    ) -> StdResult<DispatcherRef<'a>> {
+    ) -> StdResult<Dispatch<'a>> {
         Ok(Self {
             storage,
             querier,

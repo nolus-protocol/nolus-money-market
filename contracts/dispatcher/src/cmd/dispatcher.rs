@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
-use crate::state::config::Config;
-use crate::state::dispatch_log::DispatchLog;
+use crate::state::Config;
+use crate::state::DispatchLog;
 use crate::ContractError;
 use cosmwasm_std::StdResult;
 use cosmwasm_std::{Decimal, QuerierWrapper, Response, Storage, Timestamp};

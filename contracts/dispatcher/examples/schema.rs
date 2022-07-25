@@ -5,7 +5,7 @@ use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
 use rewards_dispatcher::{
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::{config::Config, dispatch_log::DispatchLog},
+    state::{Config, DispatchLog},
 };
 
 fn main() {

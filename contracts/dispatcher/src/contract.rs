@@ -11,11 +11,11 @@ use finance::duration::Duration;
 use lpp::stub::LppRef;
 use platform::platform::Platform;
 
-use crate::dispatcher_ref::DispatcherRef;
+use crate::cmd::Dispatch;
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::config::Config;
-use crate::state::dispatch_log::DispatchLog;
+use crate::state::Config;
+use crate::state::DispatchLog;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -124,7 +124,7 @@ pub fn try_dispatch(
     let lpp = LppRef::try_from(config.lpp.to_string(), deps.api, &deps.querier)?;
     let mut platform = Platform::default();
     lpp.execute(
-        DispatcherRef::new(deps.storage, deps.querier, config, block_time)?,
+        Dispatch::new(deps.storage, deps.querier, config, block_time)?,
         &deps.querier,
         &mut platform,
     )

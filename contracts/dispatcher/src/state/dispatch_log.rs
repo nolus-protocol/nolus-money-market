@@ -1,14 +1,9 @@
 use cosmwasm_std::{StdResult, Storage, Timestamp};
 use cw_storage_plus::Item;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use crate::ContractError;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct DispatchLog {
-    pub last_dispatch: Timestamp,
-}
+use super::DispatchLog;
 
 impl DispatchLog {
     const STORAGE: Item<'static, Self> = Item::new("dispatch_log");
