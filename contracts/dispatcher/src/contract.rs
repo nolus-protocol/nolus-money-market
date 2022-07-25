@@ -47,9 +47,9 @@ pub fn instantiate(
     .store(deps.storage)?;
     DispatchLog::update(deps.storage, env.block.time)?;
 
-    let mut platform = Platform::default();
-    platform
-        .schedule_execute_no_reply::<_, Nls>(
+    let mut batch = Batch::default();
+    batch
+        .schedule_execute_wasm_no_reply::<_, Nls>(
             &timealarms_addr,
             &timealarms::msg::ExecuteMsg::AddAlarm {
                 time: env.block.time + Duration::from_hours(msg.cadence_hours),
@@ -58,7 +58,7 @@ pub fn instantiate(
         )
         .map_err(ContractError::from)?;
 
-    Ok(Response::from(platform).add_attribute("method", "instantiate"))
+    Ok(Response::from(batch).add_attribute("method", "instantiate"))
 }
 
 fn validate_addr(deps: Deps, addr: Addr) -> Result<Addr, ContractError> {

@@ -12,7 +12,7 @@ use finance::fraction::Fraction;
 use finance::interest::InterestPeriod;
 use finance::ratio::Rational;
 use lpp::stub::Lpp as LppTrait;
-use platform::platform::Platform;
+use platform::batch::Batch;
 
 pub struct Dispatcher<'a, Lpn, Lpp> {
     lpn: PhantomData<Lpn>,
@@ -88,18 +88,18 @@ where
     }
 
     fn create_response(&self, reward: Coin<Nls>) -> Result<Response, ContractError> {
-        let mut platform = Platform::default();
+        let mut batch = Batch::default();
         // Prepare a Send Rewards for the amount of Rewards_uNLS to the Treasury.
-        platform
-            .schedule_execute_no_reply::<_, Nls>(
+        batch
+            .schedule_execute_wasm_no_reply::<_, Nls>(
                 &self.config.treasury,
                 treasury::msg::ExecuteMsg::SendRewards { amount: reward },
                 None,
             )
             .map_err(ContractError::from)?;
 
-        platform
-            .schedule_execute_no_reply::<_, Nls>(
+        batch
+            .schedule_execute_wasm_no_reply::<_, Nls>(
                 &self.config.timealarms,
                 &timealarms::msg::ExecuteMsg::AddAlarm {
                     time: self.block_time + Duration::from_hours(self.config.cadence_hours),
@@ -108,7 +108,7 @@ where
             )
             .map_err(ContractError::from)?;
 
-        Ok(Response::from(platform))
+        Ok(Response::from(batch))
     }
 
     fn get_market_price(&self, denom: &str) -> StdResult<Decimal> {
