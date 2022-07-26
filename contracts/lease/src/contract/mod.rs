@@ -35,13 +35,7 @@ pub fn instantiate(
     let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
     lease.store(deps.storage)?;
 
-    let mut batch = Batch::default();
-    lease::execute(
-        lease,
-        OpenLoanReq::new(&info.funds),
-        &deps.querier,
-        &mut batch,
-    )?;
+    let batch = lease::execute(lease, OpenLoanReq::new(&info.funds), &deps.querier)?;
 
     Ok(batch.into())
 }
@@ -51,10 +45,9 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
     // TODO swap the received loan and the downpayment to lease.currency
     let lease = LeaseDTO::load(deps.storage)?;
 
-    let mut batch = Batch::default();
-    lease::execute(lease, OpenLoanResp::new(msg), &deps.querier, &mut batch)?;
+    let batch = lease::execute(lease, OpenLoanResp::new(msg), &deps.querier)?;
 
-    Ok(Response::default())
+    Ok(batch.into())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -79,36 +72,29 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
 
     let bank = BankStub::my_account(&env, &deps.querier);
 
-    // TODO get rid of it using a read-only impl.
-    let mut batch_lease = Batch::default();
+    // TODO think on taking benefit from having a LppView trait
     lease::execute(
         lease,
         LeaseState::new(env.block.time, bank, env.contract.address.clone()),
         &deps.querier,
-        &mut batch_lease,
     )
 }
 
 fn try_repay(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Batch> {
-    let mut batch = Batch::default();
     lease::execute(
         lease,
         Repay::new(&info.funds, env.block.time, env.contract.address),
         &deps.querier,
-        &mut batch,
-    )?;
-    Ok(batch)
+    )
 }
 
 fn try_close(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Batch> {
     let bank = BankStub::my_account(&env, &deps.querier);
 
-    let mut batch = Batch::default();
-    let bank = lease::execute(
+    let batch = lease::execute(
         lease,
         Close::new(&info.sender, env.contract.address.clone(), bank),
         &deps.querier,
-        &mut batch,
     )?;
-    Ok(batch.merge(bank.into()))
+    Ok(batch)
 }

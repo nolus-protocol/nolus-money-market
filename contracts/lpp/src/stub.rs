@@ -9,7 +9,7 @@ use finance::{
     coin::Coin,
     currency::{visit_any, AnyVisitor, Currency, Nls, SymbolOwned},
 };
-use platform::{coin_legacy::to_cosmwasm, batch::Batch};
+use platform::{batch::Batch, coin_legacy::to_cosmwasm};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
@@ -25,7 +25,7 @@ const REPLY_ID: u64 = 28;
 pub type Result<T> = StdResult<T, ContractError>;
 
 // TODO split into LppBorrow, LppLend, and LppAdmin traits
-pub trait Lpp<Lpn>
+pub trait Lpp<Lpn> : Into<Batch>
 where
     Lpn: Currency,
 {
@@ -80,12 +80,7 @@ impl LppRef {
         Ok(Self { addr, currency })
     }
 
-    pub fn execute<V, O, E>(
-        &self,
-        cmd: V,
-        querier: &QuerierWrapper,
-        batch: &mut Batch,
-    ) -> StdResult<O, E>
+    pub fn execute<V, O, E>(&self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
     where
         V: WithLpp<Output = O, Error = E>,
     {
@@ -96,7 +91,6 @@ impl LppRef {
             cmd: V,
             lpp_ref: &'a LppRef,
             querier: &'a QuerierWrapper<'a>,
-            batch: &'a mut Batch,
         }
 
         impl<'a, V, O, E> AnyVisitor for CurrencyVisitor<'a, V, O, E>
@@ -110,8 +104,7 @@ impl LppRef {
             where
                 C: Currency + Serialize + DeserializeOwned,
             {
-                self.cmd
-                    .exec(self.lpp_ref.as_stub::<C>(self.querier, self.batch))
+                self.cmd.exec(self.lpp_ref.as_stub::<C>(self.querier))
             }
 
             fn on_unknown(self) -> StdResult<Self::Output, Self::Error> {
@@ -124,21 +117,16 @@ impl LppRef {
                 cmd,
                 lpp_ref: self,
                 querier,
-                batch,
             },
         )
     }
 
-    fn as_stub<'a, C>(
-        &'a self,
-        querier: &'a QuerierWrapper,
-        batch: &'a mut Batch,
-    ) -> LppStub<'a, C> {
+    fn as_stub<'a, C>(&'a self, querier: &'a QuerierWrapper) -> LppStub<'a, C> {
         LppStub {
             addr: self.addr.clone(),
             currency: PhantomData::<C>,
             querier,
-            batch,
+            batch: Batch::default(),
         }
     }
 }
@@ -161,7 +149,7 @@ struct LppStub<'a, C> {
     addr: Addr,
     currency: PhantomData<C>,
     querier: &'a QuerierWrapper<'a>,
-    batch: &'a mut Batch,
+    batch: Batch,
 }
 
 impl<'a, Lpn> Lpp<Lpn> for LppStub<'a, Lpn>
@@ -277,6 +265,12 @@ where
     }
 }
 
+impl<'a, C> From<LppStub<'a, C>> for Batch {
+    fn from(stub: LppStub<'a, C>) -> Self {
+        stub.batch
+    }
+}
+
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{
@@ -304,10 +298,13 @@ mod test {
             currency: Nls::SYMBOL.to_owned(),
         };
         let borrow_amount = Coin::<Nls>::new(10);
-        let mut batch = Batch::default();
-        lpp.as_stub(&QuerierWrapper::new(&MockQuerier::default()), &mut batch)
+        let querier = MockQuerier::default();
+        let wrapper = QuerierWrapper::new(&querier);
+        let mut lpp_stub = lpp.as_stub(&wrapper);
+        lpp_stub
             .open_loan_req(borrow_amount)
             .expect("open new loan request failed");
+        let batch: Batch = lpp_stub.into();
         let resp: Response = batch.into();
         assert_eq!(1, resp.messages.len());
         let msg = &resp.messages[0];

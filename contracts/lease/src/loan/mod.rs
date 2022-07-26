@@ -1,9 +1,10 @@
 mod state;
+use platform::batch::Batch;
 pub use state::State;
 
 use std::{fmt::Debug, marker::PhantomData};
 
-use cosmwasm_std::{Addr, Timestamp, Reply};
+use cosmwasm_std::{Addr, Reply, Timestamp};
 use finance::{
     coin::Coin,
     currency::Currency,
@@ -77,27 +78,29 @@ where
         }
     }
 
-    pub(crate) fn open_loan_req(&mut self, amount: Coin<Lpn>) -> ContractResult<()> {
-        self.lpp.open_loan_req(amount).map_err(ContractError::from)
+    pub(crate) fn open_loan_req(mut self, amount: Coin<Lpn>) -> ContractResult<Batch> {
+        self.lpp.open_loan_req(amount)?;
+        Ok(self.into())
     }
 
-    pub(crate) fn open_loan_resp(&self, resp: Reply) -> ContractResult<()> {
-        self.lpp.open_loan_resp(resp).map_err(ContractError::from)
+    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<Batch> {
+        self.lpp.open_loan_resp(resp)?;
+        Ok(self.into())
     }
 
     pub(crate) fn repay(
-        &mut self,
+        mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
         lease: Addr,
-    ) -> ContractResult<()> {
+    ) -> ContractResult<Batch> {
         self.debug_check_start_due_before(by, "before the 'repay-by' time");
 
         let principal_due = self.load_principal_due(lease.clone())?;
 
         let change = self.repay_margin_interest(principal_due, by, payment);
         if change.is_zero() {
-            return Ok(());
+            return Ok(self.into());
         }
 
         let loan_interest_due = self.load_loan_interest_due(lease, self.current_period.start())?;
@@ -113,7 +116,8 @@ where
         if loan_payment.is_zero() {
             // in practice not possible, but in theory it is if two consecutive repayments are received
             // with the same 'by' time.
-            return Ok(());
+            // TODO return profit.batch + lpp.batch
+            return Ok(self.into());
         }
         // TODO handle any surplus left after the repayment, options:
         // - query again the lpp on the interest due by now + calculate the max repayment by now + send the supplus to the customer, or
@@ -123,9 +127,8 @@ where
         // and send repayment amount up to the principal + interest due. The remainder is left in the lease
 
         // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
-        self.lpp
-            .repay_loan_req(loan_payment)
-            .map_err(|err| err.into())
+        self.lpp.repay_loan_req(loan_payment)?;
+        Ok(self.into())
     }
 
     pub(crate) fn state(
@@ -168,6 +171,7 @@ where
     ) -> Coin<Lpn> {
         let (period, change) = self.current_period.pay(principal_due, payment, by);
         self.current_period = period;
+        // TODO send payment - change to profit
         change
     }
 
@@ -202,5 +206,14 @@ where
             when_descr,
             when
         );
+    }
+}
+
+impl<Lpn, Lpp> From<Loan<Lpn, Lpp>> for Batch
+where
+    Lpp: Into<Batch>,
+{
+    fn from(loan: Loan<Lpn, Lpp>) -> Self {
+        loan.lpp.into()
     }
 }

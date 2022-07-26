@@ -2,6 +2,7 @@ use cosmwasm_std::{Coin as CwCoin, Reply};
 use platform::bank;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
+use platform::batch::Batch;
 
 use crate::error::ContractError;
 use crate::lease::{Lease, WithLease};
@@ -17,11 +18,11 @@ impl<'a> OpenLoanReq<'a> {
 }
 
 impl<'a> WithLease for OpenLoanReq<'a> {
-    type Output = ();
+    type Output = Batch;
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, mut lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
     where
         Lpp: LppTrait<Lpn>,
         Lpn: Currency,
@@ -50,7 +51,7 @@ impl<'a> OpenLoanResp {
 }
 
 impl WithLease for OpenLoanResp {
-    type Output = ();
+    type Output = Batch;
 
     type Error = ContractError;
 

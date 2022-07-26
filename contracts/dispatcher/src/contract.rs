@@ -122,11 +122,9 @@ pub fn try_dispatch(
         return Err(ContractError::UnrecognisedAlarm(info.sender));
     }
     let lpp = LppRef::try_from(config.lpp.to_string(), deps.api, &deps.querier)?;
-    let mut batch = Batch::default();
     lpp.execute(
         Dispatch::new(deps.storage, deps.querier, config, block_time)?,
         &deps.querier,
-        &mut batch,
     )
 }
 

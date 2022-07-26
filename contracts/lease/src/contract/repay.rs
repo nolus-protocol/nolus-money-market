@@ -2,6 +2,7 @@ use cosmwasm_std::{Addr, Coin as CwCoin, Timestamp};
 use platform::bank;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
+use platform::batch::Batch;
 use serde::Serialize;
 
 use crate::error::ContractError;
@@ -24,11 +25,11 @@ impl<'a> Repay<'a> {
 }
 
 impl<'a> WithLease for Repay<'a> {
-    type Output = ();
+    type Output = Batch;
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, mut lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
     where
         Lpp: LppTrait<Lpn>,
         Lpn: Currency + Serialize,

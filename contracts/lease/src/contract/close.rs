@@ -2,6 +2,7 @@ use cosmwasm_std::Addr;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
 use platform::bank::BankAccount;
+use platform::batch::Batch;
 use serde::Serialize;
 
 use crate::error::ContractError;
@@ -27,11 +28,11 @@ impl<'a, Bank> WithLease for Close<'a, Bank>
 where
     Bank: BankAccount,
 {
-    type Output = Bank;
+    type Output = Batch;
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(mut self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
     where
         Lpp: LppTrait<Lpn>,
         Lpn: Currency + Serialize,
@@ -40,8 +41,7 @@ where
             return Err(Self::Error::Unauthorized {});
         }
 
-        lease.close(self.lease, &mut self.account)?;
-        Ok(self.account)
+        lease.close(self.lease, self.account)
     }
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {

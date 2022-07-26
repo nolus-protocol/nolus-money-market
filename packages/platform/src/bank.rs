@@ -14,7 +14,7 @@ pub trait BankAccountView {
         C: Currency;
 }
 
-pub trait BankAccount: BankAccountView {
+pub trait BankAccount: BankAccountView + Into<Batch> {
     fn send<C>(&mut self, amount: Coin<C>, to: &Addr)
     where
         C: Currency;

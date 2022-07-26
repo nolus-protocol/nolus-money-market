@@ -9,7 +9,7 @@ use finance::{
     liability::Liability,
 };
 use lpp::stub::Lpp as LppTrait;
-use platform::{bank::BankAccount, batch::Batch};
+use platform::{bank::{BankAccount, BankAccountView}, batch::Batch};
 use serde::Serialize;
 
 use crate::{
@@ -32,17 +32,12 @@ pub trait WithLease {
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn execute<L, O, E>(
-    dto: LeaseDTO,
-    cmd: L,
-    querier: &QuerierWrapper,
-    batch: &mut Batch,
-) -> Result<O, E>
+pub fn execute<L, O, E>(dto: LeaseDTO, cmd: L, querier: &QuerierWrapper) -> Result<O, E>
 where
     L: WithLease<Output = O, Error = E>,
 {
     let lpp = dto.loan.lpp().clone();
-    lpp.execute(Factory::new(cmd, dto), querier, batch)
+    lpp.execute(Factory::new(cmd, dto), querier)
 }
 
 pub struct Lease<Lpn, Lpp> {
@@ -78,7 +73,7 @@ where
         &self.customer == addr
     }
 
-    pub(crate) fn open_loan_req(&mut self, downpayment: Coin<Lpn>) -> ContractResult<()> {
+    pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<Batch> {
         // TODO add a type parameter to this function to designate the downpayment currency
         // TODO query the market price oracle to get the price of the downpayment currency to LPN
         // and calculate `downpayment` in LPN
@@ -87,34 +82,34 @@ where
         self.loan.open_loan_req(borrow)
     }
 
-    pub(crate) fn open_loan_resp(&self, resp: Reply) -> ContractResult<()> {
+    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<Batch> {
         self.loan.open_loan_resp(resp)
     }
 
     // TODO add the lease address as a field in Lease<>
     // and populate it on LeaseDTO.execute as LeaseFactory
-    pub(crate) fn close<B>(&self, lease: Addr, account: &mut B) -> ContractResult<()>
+    pub(crate) fn close<B>(self, lease: Addr, mut account: B) -> ContractResult<Batch>
     where
         B: BankAccount,
     {
-        let state = self.state(Timestamp::from_nanos(u64::MAX), account, lease)?;
+        let state = self.state(Timestamp::from_nanos(u64::MAX), &account, lease)?;
         match state {
             StateResponse::Opened { .. } => ContractResult::Err(ContractError::LoanNotPaid()),
             StateResponse::Paid(..) => {
                 let balance = account.balance::<Lpn>()?;
                 account.send(balance, &self.customer);
-                Ok(())
+                Ok(account.into())
             }
             StateResponse::Closed() => ContractResult::Err(ContractError::LoanClosed()),
         }
     }
 
     pub(crate) fn repay(
-        &mut self,
+        self,
         payment: Coin<Lpn>,
         by: Timestamp,
         lease: Addr,
-    ) -> ContractResult<()> {
+    ) -> ContractResult<Batch> {
         assert_eq!(self.currency, Lpn::SYMBOL);
         self.loan.repay(payment, by, lease)
     }
@@ -126,7 +121,7 @@ where
         lease: Addr,
     ) -> ContractResult<StateResponse<Lpn, Lpn>>
     where
-        B: BankAccount,
+        B: BankAccountView,
     {
         let lease_amount = account.balance::<Lpn>().map_err(ContractError::from)?;
 
@@ -163,7 +158,8 @@ mod tests {
     use lpp::stub::{Lpp, LppRef};
 
     use platform::bank::BankAccountView;
-    use platform::{bank::BankAccount, error::Result as PlatformResult};
+    use platform::batch::Batch;
+    use platform::error::Result as PlatformResult;
     use serde::{Deserialize, Serialize};
 
     use crate::loan::{Loan, LoanDTO};
@@ -188,15 +184,6 @@ mod tests {
             C: Currency,
         {
             Ok(Coin::<C>::new(self.balance))
-        }
-    }
-
-    impl BankAccount for BankStub {
-        fn send<C>(&mut self, _amount: Coin<C>, _to: &Addr)
-        where
-            C: Currency,
-        {
-            unimplemented!()
         }
     }
 
@@ -260,9 +247,20 @@ mod tests {
         }
     }
 
+    impl From<LppLocalStub> for Batch {
+        fn from(_: LppLocalStub) -> Self {
+            unreachable!()
+        }
+    }
+
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     struct LppLocalStubUnreachable {}
 
+    impl From<LppLocalStubUnreachable> for Batch {
+        fn from(_: LppLocalStubUnreachable) -> Self {
+            unreachable!()
+        }
+    }
     impl Lpp<TestCurrency> for LppLocalStubUnreachable {
         fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
