@@ -110,13 +110,14 @@ where
         &self,
         deps: &Deps,
         env: &Env,
+        received: Coin<LPN>,
     ) -> Result<NTokenPrice<LPN>, ContractError> {
         let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
         let price = if balance_nlpn.is_zero() {
             Config::initial_derivative_price()
         } else {
-            price::total_of(balance_nlpn).is(self.total_lpn(deps, env)?)
+            price::total_of(balance_nlpn).is(self.total_lpn(deps, env)? - received)
         };
 
         Ok(NTokenPrice { price })
@@ -142,7 +143,7 @@ where
         env: &Env,
         amount_nlpn: Coin<NLpn>,
     ) -> Result<Coin<LPN>, ContractError> {
-        let price = self.calculate_price(deps, env)?.get();
+        let price = self.calculate_price(deps, env, Coin::new(0))?.get();
         let amount_lpn = price::total(amount_nlpn, price);
 
         if self.balance(deps, env)? < amount_lpn {
@@ -497,7 +498,7 @@ mod test {
         let mut lender =
             Deposit::load(deps.as_ref().storage, Addr::unchecked("lender")).expect("should load");
         let price = lpp
-            .calculate_price(&deps.as_ref(), &env)
+            .calculate_price(&deps.as_ref(), &env, Coin::new(0))
             .expect("should get price");
         assert_eq!(
             price.get(),
@@ -538,7 +539,7 @@ mod test {
         assert_eq!(lpp_balance.total_interest_due, Coin::new(1_000_000));
 
         let price = lpp
-            .calculate_price(&deps.as_ref(), &env)
+            .calculate_price(&deps.as_ref(), &env, Coin::new(0))
             .expect("should get price");
         // assert_eq!(price.get(), Decimal::from_ratio(11u128, 10u128));
         assert_eq!(
