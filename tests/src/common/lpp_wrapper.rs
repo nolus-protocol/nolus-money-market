@@ -83,6 +83,7 @@ pub fn mock_lpp_query(
             balance: Coin::new(1000000000),
             total_principal_due: Coin::new(1000000000),
             total_interest_due: Coin::new(1000000000),
+            balance_nlpn: Coin::new(1000000000),
         }),
         _ => Ok(lpp::contract::query(deps, env, msg)?),
     }?;

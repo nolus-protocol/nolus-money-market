@@ -99,10 +99,13 @@ where
 
         let total_interest_due = self.total.total_interest_due_by_now(env.block.time);
 
+        let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
+
         Ok(LppBalanceResponse {
             balance,
             total_principal_due,
             total_interest_due,
+            balance_nlpn,
         })
     }
 

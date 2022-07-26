@@ -131,6 +131,7 @@ where
     pub balance: Coin<LPN>,
     pub total_principal_due: Coin<LPN>,
     pub total_interest_due: Coin<LPN>,
+    pub balance_nlpn: Coin<NLpn>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
