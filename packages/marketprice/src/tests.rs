@@ -156,16 +156,17 @@ fn marketprice_follow_the_path() {
     );
 }
 
-fn feed_price<S>(
+fn feed_price<S1, S2>(
     deps: DepsMut,
     market: &PriceFeeds,
-    sym_base: S,
+    sym_base: S1,
     amount_base: u128,
-    sym_quote: S,
+    sym_quote: S2,
     amount_quote: u128,
 ) -> Result<Timestamp, PriceFeedsError>
 where
-    S: Into<String>,
+    S1: Into<String>,
+    S2: Into<String>,
 {
     let f_address = deps.api.addr_validate("address1").unwrap();
 
