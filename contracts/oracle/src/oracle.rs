@@ -4,7 +4,7 @@ use cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage, Timestamp};
 use marketprice::{
     feeders::{PriceFeeders, PriceFeedersError},
     market_price::{PriceFeeds, PriceQuery},
-    storage::{Denom, DenomPair, PriceStorage},
+    storage::{Denom, DenomPair, Price},
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -72,9 +72,9 @@ impl MarketOracle {
         storage: &dyn Storage,
         block_time: Timestamp,
         denoms: Vec<Denom>,
-    ) -> StdResult<Vec<PriceStorage>> {
+    ) -> StdResult<Vec<Price>> {
         let config = Config::load(storage)?;
-        let mut prices: Vec<PriceStorage> = Vec::new();
+        let mut prices: Vec<Price> = Vec::new();
         for denom in denoms {
             let price_query = Self::init_price_query(storage, denom.clone(), &config)?;
             let resp = Self::MARKET_PRICE.get(storage, block_time, price_query);
@@ -92,7 +92,7 @@ impl MarketOracle {
         storage: &mut dyn Storage,
         block_time: Timestamp,
         sender_raw: &Addr,
-        prices: Vec<PriceStorage>,
+        prices: Vec<Price>,
     ) -> Result<(), ContractError> {
         let config = Config::load(storage)?;
 
@@ -122,8 +122,8 @@ impl MarketOracle {
 
     fn remove_invalid_prices(
         supported_denom_pairs: Vec<DenomPair>,
-        prices: Vec<PriceStorage>,
-    ) -> Vec<PriceStorage> {
+        prices: Vec<Price>,
+    ) -> Vec<Price> {
         prices
             .iter()
             .filter(|price| {
@@ -140,7 +140,7 @@ impl MarketOracle {
 
 #[cfg(test)]
 mod tests {
-    use marketprice::storage::PriceStorage;
+    use marketprice::storage::Price;
 
     use crate::oracle::MarketOracle;
 
@@ -168,16 +168,13 @@ mod tests {
         ];
 
         let prices = vec![
-            PriceStorage::new("B".into(), 10, "A".into(), 12),
-            PriceStorage::new("B".into(), 10, "D".into(), 32),
-            PriceStorage::new("B".into(), 10, "B".into(), 12),
+            Price::new("B".into(), 10, "A".into(), 12),
+            Price::new("B".into(), 10, "D".into(), 32),
+            Price::new("B".into(), 10, "B".into(), 12),
         ];
 
         let filtered = MarketOracle::remove_invalid_prices(supported_pairs, prices);
 
-        assert_eq!(
-            vec![PriceStorage::new("B".into(), 10, "A".into(), 12),],
-            filtered
-        );
+        assert_eq!(vec![Price::new("B".into(), 10, "A".into(), 12),], filtered);
     }
 }

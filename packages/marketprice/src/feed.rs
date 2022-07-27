@@ -5,24 +5,24 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::market_price::PriceFeedsError;
-use crate::storage::PriceStorage;
+use crate::storage::Price;
 use finance::duration::Duration;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Observation {
     feeder_addr: Addr,
     time: Timestamp,
-    price: PriceStorage,
+    price: Price,
 }
 impl Observation {
-    pub fn new(feeder_addr: Addr, time: Timestamp, price: PriceStorage) -> Observation {
+    pub fn new(feeder_addr: Addr, time: Timestamp, price: Price) -> Observation {
         Observation {
             feeder_addr,
             time,
             price,
         }
     }
-    pub fn price(&self) -> PriceStorage {
+    pub fn price(&self) -> Price {
         self.price.clone()
     }
 }
@@ -91,18 +91,18 @@ impl PriceFeed {
 
 #[cfg(test)]
 mod tests {
-    use crate::storage::PriceStorage;
+    use crate::storage::Price;
 
     #[test]
     // we ensure this rounds up (as it calculates needed votes)
     fn compare_prices() {
-        let p1 = PriceStorage::new("BTH".to_string(), 1000000, "NLS".to_string(), 123456);
+        let p1 = Price::new("BTH".to_string(), 1000000, "NLS".to_string(), 123456);
 
-        let p2 = PriceStorage::new("BTH".to_string(), 1000000, "NLS".to_string(), 789456);
+        let p2 = Price::new("BTH".to_string(), 1000000, "NLS".to_string(), 789456);
 
-        let p3 = PriceStorage::new("BTH".to_string(), 1000000, "NLS".to_string(), 3456);
+        let p3 = Price::new("BTH".to_string(), 1000000, "NLS".to_string(), 3456);
 
-        let p4 = PriceStorage::new("ETH".to_string(), 1000000, "NLS".to_string(), 3456);
+        let p4 = Price::new("ETH".to_string(), 1000000, "NLS".to_string(), 3456);
 
         assert!(p1.lt(&p2));
         assert!(p3.lt(&p2));

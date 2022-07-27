@@ -9,7 +9,7 @@ use crate::ContractError;
 
 use cosmwasm_std::testing::{mock_env, mock_info};
 use cosmwasm_std::{coins, from_binary, Addr, StdError};
-use marketprice::storage::PriceStorage;
+use marketprice::storage::Price;
 
 use super::common::dummy_feed_prices_msg;
 
@@ -149,7 +149,7 @@ fn feed_prices() {
     .unwrap();
     let value: PriceResponse = from_binary(&res).unwrap();
     assert_eq!(
-        PriceStorage::new("A".to_string(), 10, "B".to_string(), 12),
+        Price::new("A".to_string(), 10, "B".to_string(), 12),
         value.prices.first().unwrap().to_owned()
     );
 }
@@ -175,8 +175,8 @@ fn feed_prices_unsupported_pairs() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
     let prices_map = vec![
-        PriceStorage::new("X".to_string(), 10, "C".to_string(), 12),
-        PriceStorage::new("X".to_string(), 10, "D".to_string(), 22),
+        Price::new("X".to_string(), 10, "C".to_string(), 12),
+        Price::new("X".to_string(), 10, "D".to_string(), 22),
     ];
 
     let msg = ExecuteMsg::FeedPrices { prices: prices_map };

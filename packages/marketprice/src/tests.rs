@@ -5,7 +5,7 @@ use cosmwasm_std::{Api, DepsMut, Timestamp};
 
 use crate::feeders::PriceFeeders;
 use crate::market_price::{PriceFeeds, PriceFeedsError, PriceQuery};
-use crate::storage::PriceStorage;
+use crate::storage::Price;
 use finance::duration::Duration;
 
 const MINUTE: Duration = Duration::from_secs(60);
@@ -67,7 +67,7 @@ fn marketprice_add_feed_empty_vec() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let prices: Vec<PriceStorage> = Vec::new();
+    let prices: Vec<Price> = Vec::new();
     market
         .feed(&mut deps.storage, ts, &f_address, prices, MINUTE)
         .unwrap();
@@ -80,15 +80,15 @@ fn marketprice_add_feed() {
     let market = PriceFeeds::new("foo");
     let f_address = deps.api.addr_validate("address1").unwrap();
 
-    let prices: Vec<PriceStorage> = vec![
-        PriceStorage::new("DEN1".to_string(), 10, "DEN2".to_string(), 5),
-        PriceStorage::new(
+    let prices: Vec<Price> = vec![
+        Price::new("DEN1".to_string(), 10, "DEN2".to_string(), 5),
+        Price::new(
             "DEN1".to_string(),
             10000000000,
             "DEN3".to_string(),
             1000000009,
         ),
-        PriceStorage::new(
+        Price::new(
             "DEN1".to_string(),
             10000000000000,
             "DEN4".to_string(),
@@ -110,7 +110,7 @@ fn marketprice_add_feed() {
 
     let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), MINUTE, 1);
     let price_resp = market.get(&deps.storage, ts, query).unwrap();
-    let expected_price = PriceStorage::new("DEN1".to_string(), 10, "DEN2".to_string(), 5);
+    let expected_price = Price::new("DEN1".to_string(), 10, "DEN2".to_string(), 5);
     assert_eq!(expected_price, price_resp);
 }
 
@@ -133,13 +133,13 @@ fn marketprice_follow_the_path() {
     // valid search denom pair
     let query = PriceQuery::new(("DEN1".to_string(), "DEN4".to_string()), MINUTE, 1);
     let price_resp = market.get(&deps.storage, ts, query).unwrap();
-    let expected = PriceStorage::new("DEN1".into(), 1, "DEN4".into(), 6);
+    let expected = Price::new("DEN1".into(), 1, "DEN4".into(), 6);
     assert_eq!(expected, price_resp);
 
     // first and second part of denom pair are the same
     let query = PriceQuery::new(("DEN1".to_string(), "DEN1".to_string()), MINUTE, 1);
     let price_resp = market.get(&deps.storage, ts, query).unwrap();
-    let expected = PriceStorage::new("DEN1".into(), 1, "DEN1".into(), 1);
+    let expected = Price::new("DEN1".into(), 1, "DEN1".into(), 1);
     assert_eq!(expected, price_resp);
 
     // second part of denome pair doesn't exists in the storage
@@ -172,7 +172,7 @@ fn feed_price(
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let price = PriceStorage::new(sym_base, amount_base, sym_quote, amount_quote);
+    let price = Price::new(sym_base, amount_base, sym_quote, amount_quote);
     market.feed(deps.storage, ts, &f_address, vec![price], MINUTE)?;
     Ok(ts)
 }

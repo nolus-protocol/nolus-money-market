@@ -6,51 +6,53 @@ use finance::{fraction::Fraction, fractionable::HigherRank, ratio::Rational};
 pub type Denom = String;
 pub type DenomPair = (Denom, Denom);
 
+#[deprecated = "Migrate to using finance::coin::Coin"]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]
-pub struct CoinStorage {
+pub struct Coin {
     pub amount: u128,
     pub symbol: String,
 }
 
+#[deprecated = "Migrate to using finance::price::Price"]
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug, JsonSchema)]
-pub struct PriceStorage {
-    base: CoinStorage,
-    quote: CoinStorage,
+pub struct Price {
+    base: Coin,
+    quote: Coin,
 }
 
-impl PriceStorage {
+impl Price {
     pub fn new(symbol1: String, base: u128, symbol2: String, quote: u128) -> Self {
         Self::new_from_coins(
-            CoinStorage {
+            Coin {
                 amount: base,
                 symbol: symbol1,
             },
-            CoinStorage {
+            Coin {
                 amount: quote,
                 symbol: symbol2,
             },
         )
     }
 
-    pub fn new_from_coins(base: CoinStorage, quote: CoinStorage) -> Self {
-        PriceStorage { base, quote }
+    pub fn new_from_coins(base: Coin, quote: Coin) -> Self {
+        Price { base, quote }
     }
 
-    pub fn base(&self) -> CoinStorage {
+    pub fn base(&self) -> Coin {
         self.base.clone()
     }
 
-    pub fn quote(&self) -> CoinStorage {
+    pub fn quote(&self) -> Coin {
         self.quote.clone()
     }
 
     pub fn one(symbol: &str) -> Self {
-        PriceStorage {
-            base: CoinStorage {
+        Price {
+            base: Coin {
                 amount: 1,
                 symbol: symbol.into(),
             },
-            quote: CoinStorage {
+            quote: Coin {
                 amount: 1,
                 symbol: symbol.into(),
             },
@@ -58,17 +60,17 @@ impl PriceStorage {
     }
 
     pub fn inv(&self) -> Self {
-        PriceStorage {
+        Price {
             base: self.quote.clone(),
             quote: self.base.clone(),
         }
     }
 
-    pub fn total(&self, of: &CoinStorage) -> CoinStorage {
+    pub fn total(&self, of: &Coin) -> Coin {
         assert_eq!(self.base.symbol, of.symbol);
         let ratio = Rational::new(of.amount, self.base.amount);
         let amount = <Rational<u128> as Fraction<u128>>::of(&ratio, self.quote.amount);
-        CoinStorage {
+        Coin {
             amount,
             symbol: self.quote.symbol.clone(),
         }
@@ -83,7 +85,7 @@ impl PriceStorage {
     }
 }
 
-impl PartialOrd for PriceStorage {
+impl PartialOrd for Price {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         type DoubleType = <u128 as HigherRank<u128>>::Type;
 

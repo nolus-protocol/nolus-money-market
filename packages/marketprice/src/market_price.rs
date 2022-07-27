@@ -1,5 +1,5 @@
 use crate::feed::{Observation, PriceFeed};
-use crate::storage::{CoinStorage, DenomPair, PriceStorage};
+use crate::storage::{Coin, DenomPair, Price};
 use cosmwasm_std::{Addr, Order, StdError, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
 use finance::duration::Duration;
@@ -10,7 +10,7 @@ use thiserror::Error;
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 pub struct PriceResponse {
-    pub price: PriceStorage,
+    pub price: Price,
     pub last_updated_time: Timestamp,
 }
 
@@ -64,12 +64,12 @@ impl<'m> PriceFeeds<'m> {
         storage: &dyn Storage,
         current_block_time: Timestamp,
         query: PriceQuery,
-    ) -> Result<PriceStorage, PriceFeedsError> {
+    ) -> Result<Price, PriceFeedsError> {
         let base = &query.denom_pair.0;
         let quote = &query.denom_pair.1;
 
         if base.eq(quote) {
-            return Ok(PriceStorage::one(base));
+            return Ok(Price::one(base));
         }
 
         // check if the second part of the pair exists in the storage
@@ -182,7 +182,7 @@ impl<'m> PriceFeeds<'m> {
     fn calculate_price(
         denom_pair: DenomPair,
         resolution_path: &mut DenomResolutionPath,
-    ) -> Result<PriceStorage, PriceFeedsError> {
+    ) -> Result<Price, PriceFeedsError> {
         if resolution_path.len() == 1 {
             match resolution_path.first() {
                 Some(o) => Ok(o.price()),
@@ -192,8 +192,8 @@ impl<'m> PriceFeeds<'m> {
             let mut base = denom_pair.0;
             let mut i = 0;
             assert!(resolution_path[0].price().base().symbol.eq(&base));
-            let first: CoinStorage = resolution_path[0].price().base();
-            let mut result: CoinStorage = first.clone();
+            let first: Coin = resolution_path[0].price().base();
+            let mut result: Coin = first.clone();
 
             while !resolution_path.is_empty() {
                 if resolution_path[i].price().base().symbol.eq(&base) {
@@ -206,7 +206,7 @@ impl<'m> PriceFeeds<'m> {
                     i += 1;
                 }
             }
-            Ok(PriceStorage::new_from_coins(first, result))
+            Ok(Price::new_from_coins(first, result))
         }
     }
 
@@ -215,7 +215,7 @@ impl<'m> PriceFeeds<'m> {
         storage: &mut dyn Storage,
         current_block_time: Timestamp,
         sender_raw: &Addr,
-        prices: Vec<PriceStorage>,
+        prices: Vec<Price>,
         price_feed_period: Duration,
     ) -> Result<(), PriceFeedsError> {
         for price in prices {

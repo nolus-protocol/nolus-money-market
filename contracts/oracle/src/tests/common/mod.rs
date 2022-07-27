@@ -3,7 +3,7 @@ use cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
     MemoryStorage, MessageInfo, OwnedDeps,
 };
-use marketprice::storage::{Denom, PriceStorage};
+use marketprice::storage::{Denom, Price};
 
 use crate::{
     contract::{execute, instantiate},
@@ -45,9 +45,9 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
 pub(crate) fn dummy_feed_prices_msg() -> ExecuteMsg {
     ExecuteMsg::FeedPrices {
         prices: vec![
-            PriceStorage::new("A".to_string(), 10, "B".to_string(), 12),
-            PriceStorage::new("A".to_string(), 10, "C".to_string(), 32),
-            PriceStorage::new("C".to_string(), 10, "D".to_string(), 12),
+            Price::new("A".to_string(), 10, "B".to_string(), 12),
+            Price::new("A".to_string(), 10, "C".to_string(), 32),
+            Price::new("C".to_string(), 10, "D".to_string(), 12),
         ],
     }
 }

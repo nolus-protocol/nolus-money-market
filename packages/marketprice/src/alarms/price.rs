@@ -4,7 +4,7 @@ use cosmwasm_std::{to_binary, Addr, Order, Response, StdResult, Storage, Timesta
 use cw_storage_plus::{Item, Map};
 
 use super::{errors::AlarmError, AlarmDispatcher};
-use crate::storage::{Denom, PriceStorage};
+use crate::storage::{Denom, Price};
 
 pub type HookReplyId = u64;
 pub struct HookReplyIdSeq<'a>(Item<'a, HookReplyId>);
@@ -23,7 +23,7 @@ impl<'a> HookReplyIdSeq<'a> {
 }
 
 pub struct PriceHooks<'m> {
-    hooks: Map<'m, Addr, PriceStorage>,
+    hooks: Map<'m, Addr, Price>,
     id_seq: HookReplyIdSeq<'m>,
 }
 
@@ -39,9 +39,9 @@ impl<'m> PriceHooks<'m> {
         &self,
         storage: &mut dyn Storage,
         addr: &Addr,
-        target: PriceStorage,
+        target: Price,
     ) -> Result<Response, AlarmError> {
-        let update_hook = |_: Option<PriceStorage>| -> StdResult<PriceStorage> { Ok(target) };
+        let update_hook = |_: Option<Price>| -> StdResult<Price> { Ok(target) };
         self.hooks.update(storage, addr.to_owned(), update_hook)?;
         Ok(Response::new().add_attribute("method", "add_or_update"))
     }
@@ -53,7 +53,7 @@ impl<'m> PriceHooks<'m> {
     }
 
     #[cfg(test)]
-    pub fn get(&self, storage: &dyn Storage, addr: Addr) -> StdResult<PriceStorage> {
+    pub fn get(&self, storage: &dyn Storage, addr: Addr) -> StdResult<Price> {
         use cosmwasm_std::StdError;
 
         let hook = self.hooks.may_load(storage, addr)?;
@@ -68,7 +68,7 @@ impl<'m> PriceHooks<'m> {
         storage: &mut dyn Storage,
         dispatcher: &mut impl AlarmDispatcher,
         ctime: Timestamp,
-        updated_prices: Vec<PriceStorage>,
+        updated_prices: Vec<Price>,
     ) -> StdResult<()> {
         let affected_contracts: Vec<_> = self.get_affected(storage, updated_prices)?;
 
@@ -96,9 +96,9 @@ impl<'m> PriceHooks<'m> {
     pub fn get_affected(
         &self,
         storage: &mut dyn Storage,
-        updated_prices: Vec<PriceStorage>,
-    ) -> StdResult<Vec<(Addr, PriceStorage)>> {
-        let mut affected: Vec<(Addr, PriceStorage)> = vec![];
+        updated_prices: Vec<Price>,
+    ) -> StdResult<Vec<(Addr, Price)>> {
+        let mut affected: Vec<(Addr, Price)> = vec![];
         for updated in updated_prices {
             let mut msgs: Vec<_> = self
                 .hooks
@@ -120,7 +120,7 @@ pub mod tests {
 
     use cosmwasm_std::{testing::mock_dependencies, Addr};
 
-    use crate::{alarms::price::PriceHooks, storage::PriceStorage};
+    use crate::{alarms::price::PriceHooks, storage::Price};
 
     #[test]
     fn test_add() {
@@ -131,8 +131,8 @@ pub mod tests {
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
 
-        let price1: PriceStorage = PriceStorage::new("BTH".into(), 1000000, "NLS".into(), 456789);
-        let price2: PriceStorage = PriceStorage::new("ETH".into(), 1000000, "NLS".into(), 123456);
+        let price1: Price = Price::new("BTH".into(), 1000000, "NLS".into(), 456789);
+        let price2: Price = Price::new("ETH".into(), 1000000, "NLS".into(), 123456);
 
         assert!(hooks.add_or_update(storage, &addr1, price1.clone()).is_ok());
         assert_eq!(hooks.get(storage, addr1.clone()).unwrap(), price1);
@@ -164,8 +164,8 @@ pub mod tests {
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
 
-        let price1 = PriceStorage::new("some_coint".into(), 1000000, "another_coin".into(), 456789);
-        let price2 = PriceStorage::new("some_coint".into(), 1000000, "another_coin".into(), 123456);
+        let price1 = Price::new("some_coint".into(), 1000000, "another_coin".into(), 456789);
+        let price2 = Price::new("some_coint".into(), 1000000, "another_coin".into(), 123456);
 
         assert!(hooks.add_or_update(storage, &addr1, price1.clone()).is_ok());
         assert!(hooks.add_or_update(storage, &addr2, price1.clone()).is_ok());

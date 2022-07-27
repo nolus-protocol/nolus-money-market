@@ -5,7 +5,7 @@ use cosmwasm_std::{
     StdResult, Storage, Timestamp,
 };
 use cw2::set_contract_version;
-use marketprice::storage::{Denom, DenomPair, PriceStorage};
+use marketprice::storage::{Denom, DenomPair, Price as Price};
 
 use crate::alarms::MarketAlarms;
 use crate::contract_validation::validate_contract_addr;
@@ -183,7 +183,7 @@ fn try_feed_multiple_prices(
     storage: &mut dyn Storage,
     block_time: Timestamp,
     sender_raw: Addr,
-    prices: Vec<PriceStorage>,
+    prices: Vec<Price>,
 ) -> Result<Response, ContractError> {
     // Check feeder permission
     let is_registered = MarketOracle::is_feeder(storage, &sender_raw)?;
@@ -209,7 +209,7 @@ fn try_feed_multiple_prices(
     }
 
     //calculate the price of this denom againts the base for the oracle denom
-    let updated_prices: Vec<PriceStorage> =
+    let updated_prices: Vec<Price> =
         MarketOracle::get_price_for(storage, block_time, affected_denoms)?;
 
     // get all affected addresses

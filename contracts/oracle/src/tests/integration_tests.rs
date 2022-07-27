@@ -116,7 +116,7 @@ mod tests {
         };
         use cosmwasm_std::{Addr, Timestamp};
         use cw_multi_test::Executor;
-        use marketprice::storage::PriceStorage;
+        use marketprice::storage::Price;
         //TODO: remove after proper implementation of loan SC
         /// The mock for loan SC. It mimics the scheme for time notification.
         /// If GATE, it returns Ok on notifications, returns Err otherwise.
@@ -222,8 +222,8 @@ mod tests {
                 .unwrap();
             let feed_msg = ExecuteMsg::FeedPrices {
                 prices: vec![
-                    PriceStorage::new("A".into(), 1, "B".into(), 100),
-                    PriceStorage::new("A".into(), 1, "C".into(), 200),
+                    Price::new("A".into(), 1, "B".into(), 100),
+                    Price::new("A".into(), 1, "C".into(), 200),
                 ],
             };
             app.update_block(|bl| bl.time = Timestamp::from_nanos(0));

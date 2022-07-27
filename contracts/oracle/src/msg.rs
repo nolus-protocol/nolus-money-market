@@ -1,5 +1,5 @@
 use cosmwasm_std::Addr;
-use marketprice::storage::{Denom, DenomPair, PriceStorage};
+use marketprice::storage::{Denom, DenomPair, Price};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -19,7 +19,7 @@ pub enum ExecuteMsg {
         feeder_address: String,
     },
     FeedPrices {
-        prices: Vec<PriceStorage>,
+        prices: Vec<Price>,
     },
     Config {
         price_feed_period_secs: u32,
@@ -29,7 +29,7 @@ pub enum ExecuteMsg {
         pairs: Vec<DenomPair>,
     },
     AddPriceAlarm {
-        target: PriceStorage,
+        target: Price,
     },
     RemovePriceAlarm {},
 }
@@ -60,11 +60,11 @@ pub struct ConfigResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct PriceResponse {
-    pub prices: Vec<PriceStorage>,
+    pub prices: Vec<Price>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
-    Alarm(PriceStorage),
+    Alarm(Price),
 }
