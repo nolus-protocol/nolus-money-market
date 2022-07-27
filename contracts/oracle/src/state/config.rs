@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::Item;
-use marketprice::feed::{Denom, DenomPair};
+use marketprice::storage::{Denom, DenomPair};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

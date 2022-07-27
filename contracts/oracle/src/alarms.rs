@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 use marketprice::{
     alarms::{price::PriceHooks, AlarmDispatcher},
-    feed::{Denom, DenomToPrice},
+    storage::{Denom, Price},
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -27,7 +27,7 @@ impl MarketAlarms {
     pub fn try_add_price_alarm(
         storage: &mut dyn Storage,
         addr: Addr,
-        target: DenomToPrice,
+        target: Price,
     ) -> Result<Response, ContractError> {
         Self::PRICE_ALARMS.add_or_update(storage, &addr, target)?;
         Ok(Response::new().add_attribute("method", "try_add_price_hook"))
@@ -40,7 +40,7 @@ impl MarketAlarms {
     pub fn try_notify_hooks(
         storage: &mut dyn Storage,
         ctime: Timestamp,
-        updated_prices: Vec<DenomToPrice>,
+        updated_prices: Vec<Price>,
     ) -> StdResult<Response> {
         struct OracleAlarmDispatcher<'a> {
             pub response: &'a mut Response,
@@ -54,7 +54,7 @@ impl MarketAlarms {
                 _ctime: Timestamp,
                 data: &Option<Binary>,
             ) -> StdResult<()> {
-                let current_price: DenomToPrice = match data {
+                let current_price: Price = match data {
                     Some(bin) => from_binary(bin)?,
                     None => return Err(StdError::generic_err("msg")),
                 };

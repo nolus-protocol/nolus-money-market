@@ -4,7 +4,7 @@ use cosmwasm_std::{to_binary, Addr, Order, Response, StdResult, Storage, Timesta
 use cw_storage_plus::{Item, Map};
 
 use super::{errors::AlarmError, AlarmDispatcher};
-use crate::feed::{Denom, DenomToPrice};
+use crate::storage::{Denom, Price};
 
 pub type HookReplyId = u64;
 pub struct HookReplyIdSeq<'a>(Item<'a, HookReplyId>);
@@ -23,7 +23,7 @@ impl<'a> HookReplyIdSeq<'a> {
 }
 
 pub struct PriceHooks<'m> {
-    hooks: Map<'m, Addr, DenomToPrice>,
+    hooks: Map<'m, Addr, Price>,
     id_seq: HookReplyIdSeq<'m>,
 }
 
@@ -39,9 +39,9 @@ impl<'m> PriceHooks<'m> {
         &self,
         storage: &mut dyn Storage,
         addr: &Addr,
-        target: DenomToPrice,
+        target: Price,
     ) -> Result<Response, AlarmError> {
-        let update_hook = |_: Option<DenomToPrice>| -> StdResult<DenomToPrice> { Ok(target) };
+        let update_hook = |_: Option<Price>| -> StdResult<Price> { Ok(target) };
         self.hooks.update(storage, addr.to_owned(), update_hook)?;
         Ok(Response::new().add_attribute("method", "add_or_update"))
     }
@@ -53,7 +53,7 @@ impl<'m> PriceHooks<'m> {
     }
 
     #[cfg(test)]
-    pub fn get(&self, storage: &dyn Storage, addr: Addr) -> StdResult<DenomToPrice> {
+    pub fn get(&self, storage: &dyn Storage, addr: Addr) -> StdResult<Price> {
         use cosmwasm_std::StdError;
 
         let hook = self.hooks.may_load(storage, addr)?;
@@ -68,7 +68,7 @@ impl<'m> PriceHooks<'m> {
         storage: &mut dyn Storage,
         dispatcher: &mut impl AlarmDispatcher,
         ctime: Timestamp,
-        updated_prices: Vec<DenomToPrice>,
+        updated_prices: Vec<Price>,
     ) -> StdResult<()> {
         let affected_contracts: Vec<_> = self.get_affected(storage, updated_prices)?;
 
@@ -86,7 +86,7 @@ impl<'m> PriceHooks<'m> {
             .prefix(())
             .range(storage, None, None, Order::Ascending)
             .map(|item| match item {
-                Ok((_, hook)) => hook.denom,
+                Ok((_, hook)) => hook.base().symbol,
                 Err(_) => todo!(),
             })
             .collect();
@@ -96,18 +96,16 @@ impl<'m> PriceHooks<'m> {
     pub fn get_affected(
         &self,
         storage: &mut dyn Storage,
-        updated_prices: Vec<DenomToPrice>,
-    ) -> StdResult<Vec<(Addr, DenomToPrice)>> {
-        let mut affected: Vec<(Addr, DenomToPrice)> = vec![];
+        updated_prices: Vec<Price>,
+    ) -> StdResult<Vec<(Addr, Price)>> {
+        let mut affected: Vec<(Addr, Price)> = vec![];
         for updated in updated_prices {
             let mut msgs: Vec<_> = self
                 .hooks
                 .prefix(())
                 .range(storage, None, None, Order::Ascending)
                 .filter_map(|item| item.ok())
-                .filter(|(_, hook)| {
-                    updated.denom.eq(&hook.denom) && updated.price.is_below(&hook.price)
-                })
+                .filter(|(_, hook)| updated.is_same_type(hook) && updated.lt(hook))
                 .map(|(addr, _)| (addr, updated.clone()))
                 .collect();
 
@@ -119,48 +117,39 @@ impl<'m> PriceHooks<'m> {
 
 #[cfg(test)]
 pub mod tests {
-    use std::str::FromStr;
 
-    use cosmwasm_std::{testing::mock_dependencies, Addr, Decimal};
+    use cosmwasm_std::{testing::mock_dependencies, Addr};
 
-    use crate::{
-        alarms::price::PriceHooks,
-        feed::{DenomToPrice, Price},
-    };
+    use crate::{alarms::price::PriceHooks, storage::Price};
 
     #[test]
     fn test_add() {
         let hooks = PriceHooks::new("hooks", "hooks_sequence");
         let storage = &mut mock_dependencies().storage;
 
-        let t1 = DenomToPrice::new(
-            "BTH".to_string(),
-            Price::new(Decimal::from_str("0.456789").unwrap(), "NLS".to_string()),
-        );
-        let t2 = DenomToPrice::new(
-            "ETH".to_string(),
-            Price::new(Decimal::from_str("0.123456").unwrap(), "NLS".to_string()),
-        );
         let addr1 = Addr::unchecked("addr1");
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
 
-        assert!(hooks.add_or_update(storage, &addr1, t1.clone()).is_ok());
-        assert_eq!(hooks.get(storage, addr1.clone()).unwrap(), t1);
+        let price1: Price = Price::new("BTH", 1000000, "NLS", 456789);
+        let price2: Price = Price::new("ETH", 1000000, "NLS", 123456);
+
+        assert!(hooks.add_or_update(storage, &addr1, price1.clone()).is_ok());
+        assert_eq!(hooks.get(storage, addr1.clone()).unwrap(), price1);
 
         // same price hook
-        assert!(hooks.add_or_update(storage, &addr2, t1.clone()).is_ok());
-        assert_eq!(hooks.get(storage, addr2.clone()).unwrap(), t1);
+        assert!(hooks.add_or_update(storage, &addr2, price1.clone()).is_ok());
+        assert_eq!(hooks.get(storage, addr2.clone()).unwrap(), price1);
 
         // different timestamp
-        assert!(hooks.add_or_update(storage, &addr3, t2.clone()).is_ok());
+        assert!(hooks.add_or_update(storage, &addr3, price2.clone()).is_ok());
 
-        assert!(hooks.add_or_update(storage, &addr1, t2.clone()).is_ok());
+        assert!(hooks.add_or_update(storage, &addr1, price2.clone()).is_ok());
 
         let hook_denoms = hooks.get_hook_denoms(storage).unwrap();
         assert_eq!(hook_denoms.len(), 2);
 
-        assert_eq!(hooks.get(storage, addr1).unwrap(), t2);
+        assert_eq!(hooks.get(storage, addr1).unwrap(), price2);
 
         assert!(hook_denoms.contains("BTH"));
         assert!(hook_denoms.contains("ETH"));
@@ -171,23 +160,18 @@ pub mod tests {
         let hooks = PriceHooks::new("hooks", "hooks_sequence");
         let storage = &mut mock_dependencies().storage;
 
-        let t1 = DenomToPrice::new(
-            "BTH".to_string(),
-            Price::new(Decimal::from_str("0.456789").unwrap(), "NLS".to_string()),
-        );
-        let t2 = DenomToPrice::new(
-            "ETH".to_string(),
-            Price::new(Decimal::from_str("0.123456").unwrap(), "NLS".to_string()),
-        );
         let addr1 = Addr::unchecked("addr1");
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
 
-        assert!(hooks.add_or_update(storage, &addr1, t1.clone()).is_ok());
-        assert!(hooks.add_or_update(storage, &addr2, t1.clone()).is_ok());
-        assert!(hooks.add_or_update(storage, &addr3, t2).is_ok());
+        let price1 = Price::new("some_coin", 1000000, "another_coin", 456789);
+        let price2 = Price::new("some_coin", 1000000, "another_coin", 123456);
 
-        assert_eq!(hooks.get(storage, addr2.clone()).unwrap(), t1);
+        assert!(hooks.add_or_update(storage, &addr1, price1.clone()).is_ok());
+        assert!(hooks.add_or_update(storage, &addr2, price1.clone()).is_ok());
+        assert!(hooks.add_or_update(storage, &addr3, price2).is_ok());
+
+        assert_eq!(hooks.get(storage, addr2.clone()).unwrap(), price1);
         hooks.remove(storage, addr2.clone()).unwrap();
         assert_eq!(
             hooks.get(storage, addr2.clone()).unwrap_err().to_string(),

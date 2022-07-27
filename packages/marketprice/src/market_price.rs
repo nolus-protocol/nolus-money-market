@@ -1,7 +1,6 @@
-use std::ops::Mul;
-
-use crate::feed::{Denom, DenomPair, Observation, Price, PriceFeed};
-use cosmwasm_std::{Addr, Decimal, Order, StdError, StdResult, Storage, Timestamp};
+use crate::feed::{Observation, PriceFeed};
+use crate::storage::{Coin, DenomPair, Price};
+use cosmwasm_std::{Addr, Order, StdError, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
 use finance::duration::Duration;
 use schemars::JsonSchema;
@@ -9,9 +8,9 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 // We define a custom struct for each query response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 pub struct PriceResponse {
-    pub rate: Decimal,
+    pub price: Price,
     pub last_updated_time: Timestamp,
 }
 
@@ -20,6 +19,7 @@ pub struct PriceQuery {
     price_feed_period: Duration,
     required_feeders_cnt: usize,
 }
+
 impl PriceQuery {
     pub fn new(
         denom_pair: DenomPair,
@@ -32,11 +32,6 @@ impl PriceQuery {
             required_feeders_cnt,
         }
     }
-}
-
-pub struct DenomPairPrice {
-    pub pair: DenomPair,
-    pub price: Observation,
 }
 
 /// Errors returned from Admin
@@ -55,8 +50,8 @@ pub enum PriceFeedsError {
     NoPrice {},
 }
 
-type DenomResolutionPath = Vec<(DenomPair, Observation)>;
-// state/logic
+type DenomResolutionPath = Vec<Observation>;
+// PriceFeed == Vec<Observation>
 pub struct PriceFeeds<'m>(Map<'m, DenomPair, PriceFeed>);
 
 impl<'m> PriceFeeds<'m> {
@@ -69,12 +64,12 @@ impl<'m> PriceFeeds<'m> {
         storage: &dyn Storage,
         current_block_time: Timestamp,
         query: PriceQuery,
-    ) -> Result<Decimal, PriceFeedsError> {
+    ) -> Result<Price, PriceFeedsError> {
         let base = &query.denom_pair.0;
         let quote = &query.denom_pair.1;
 
         if base.eq(quote) {
-            return Ok(Decimal::one());
+            return Ok(Price::one(base));
         }
 
         // check if the second part of the pair exists in the storage
@@ -96,7 +91,7 @@ impl<'m> PriceFeeds<'m> {
             query.required_feeders_cnt,
             &mut resolution_path,
         )?;
-        resolution_path.push((result.pair, result.price));
+        resolution_path.push(result);
         resolution_path.reverse();
         println!("Resolution path {:?}", resolution_path);
         PriceFeeds::calculate_price(query.denom_pair, &mut resolution_path)
@@ -110,7 +105,7 @@ impl<'m> PriceFeeds<'m> {
         price_feed_period: Duration,
         required_feeders_cnt: usize,
         resolution_path: &mut DenomResolutionPath,
-    ) -> Result<DenomPairPrice, PriceFeedsError> {
+    ) -> Result<Observation, PriceFeedsError> {
         // check for exact match for the denom pair
         let res = self.0.load(storage, denom_pair.clone());
 
@@ -121,11 +116,8 @@ impl<'m> PriceFeeds<'m> {
                     current_block_time,
                     price_feed_period,
                     required_feeders_cnt,
-                );
-                Ok(DenomPairPrice {
-                    pair: denom_pair,
-                    price: price?,
-                })
+                )?;
+                Ok(price)
             }
             Err(err) => {
                 println!(
@@ -141,12 +133,12 @@ impl<'m> PriceFeeds<'m> {
                     required_feeders_cnt,
                     resolution_path,
                 ) {
-                    let price =
+                    let observation =
                         q.1.get_price(current_block_time, Duration::from_secs(60), 1)?;
-                    return Ok(DenomPairPrice {
-                        pair: (denom_pair.0, q.0),
-                        price,
-                    });
+                    let price = observation.price();
+                    assert_eq!(denom_pair.0, price.base().symbol);
+                    assert_eq!(q.0, price.quote().symbol);
+                    return Ok(observation);
                 }
                 Err(PriceFeedsError::NoPrice {})
             }
@@ -172,7 +164,7 @@ impl<'m> PriceFeeds<'m> {
             .collect();
 
         for current_quote in quotes? {
-            if let Ok(o) = self.find_price_for_pair(
+            if let Ok(observation) = self.find_price_for_pair(
                 storage,
                 current_block_time,
                 (current_quote.0.clone(), searched_quote.clone()),
@@ -180,7 +172,7 @@ impl<'m> PriceFeeds<'m> {
                 required_feeders_cnt,
                 resolution_path,
             ) {
-                resolution_path.push((o.pair, o.price));
+                resolution_path.push(observation);
                 return Ok(Some(current_quote));
             };
         }
@@ -190,26 +182,31 @@ impl<'m> PriceFeeds<'m> {
     fn calculate_price(
         denom_pair: DenomPair,
         resolution_path: &mut DenomResolutionPath,
-    ) -> Result<Decimal, PriceFeedsError> {
+    ) -> Result<Price, PriceFeedsError> {
         if resolution_path.len() == 1 {
             match resolution_path.first() {
-                Some(o) => Ok(o.1.price()),
+                Some(o) => Ok(o.price()),
                 None => Err(PriceFeedsError::NoPrice {}),
             }
         } else {
             let mut base = denom_pair.0;
             let mut i = 0;
-            let mut price = Decimal::one();
+            assert!(resolution_path[0].price().base().symbol.eq(&base));
+            let first: Coin = resolution_path[0].price().base();
+            let mut result: Coin = first.clone();
+
             while !resolution_path.is_empty() {
-                if resolution_path[i].0 .0.eq(&base) {
+                if resolution_path[i].price().base().symbol.eq(&base) {
                     let val = resolution_path.remove(i);
-                    base = val.0 .1;
-                    price = price.mul(val.1.price());
+                    let price = val.price();
+                    base = price.quote().symbol.clone();
+                    result = price.total(&result);
+                    assert_eq!(result.symbol, base);
                 } else {
                     i += 1;
                 }
             }
-            Ok(price)
+            Ok(Price::new_from_coins(first, result))
         }
     }
 
@@ -218,13 +215,11 @@ impl<'m> PriceFeeds<'m> {
         storage: &mut dyn Storage,
         current_block_time: Timestamp,
         sender_raw: &Addr,
-        base: Denom,
         prices: Vec<Price>,
         price_feed_period: Duration,
     ) -> Result<(), PriceFeedsError> {
         for price in prices {
-            let quote: Denom = price.denom;
-            let price: Decimal = price.amount;
+            let (base, quote) = price.denom_pair();
 
             let update_market_price = |old: Option<PriceFeed>| -> StdResult<PriceFeed> {
                 let new_feed = Observation::new(sender_raw.clone(), current_block_time, price);
@@ -237,8 +232,7 @@ impl<'m> PriceFeeds<'m> {
                 }
             };
 
-            self.0
-                .update(storage, (base.clone(), quote), update_market_price)?;
+            self.0.update(storage, (base, quote), update_market_price)?;
         }
 
         Ok(())

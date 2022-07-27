@@ -1,68 +1,29 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{Addr, Decimal, Timestamp};
+use cosmwasm_std::{Addr, Timestamp};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::market_price::PriceFeedsError;
+use crate::storage::Price;
 use finance::duration::Duration;
-
-pub type Denom = String;
-pub type DenomPair = (Denom, Denom);
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Price {
-    pub amount: Decimal,
-    pub denom: Denom,
-}
-
-impl Price {
-    pub fn new(amount: Decimal, denom: Denom) -> Self {
-        Price { amount, denom }
-    }
-
-    pub fn is_below(&self, target: &Price) -> bool {
-        self.denom.eq(&target.denom) && self.amount.lt(&target.amount)
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct Prices {
-    pub base: Denom,
-    pub values: Vec<Price>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct DenomToPrice {
-    pub denom: Denom,
-    pub price: Price,
-}
-impl DenomToPrice {
-    pub fn new(denom: Denom, price: Price) -> Self {
-        DenomToPrice { denom, price }
-    }
-
-    pub fn is_below(&self, target: &DenomToPrice) -> bool {
-        self.denom.eq(&target.denom) && self.price.is_below(&target.price)
-    }
-}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Observation {
     feeder_addr: Addr,
     time: Timestamp,
-    price: Decimal,
+    price: Price,
 }
 impl Observation {
-    pub fn new(feeder_addr: Addr, time: Timestamp, price: Decimal) -> Observation {
+    pub fn new(feeder_addr: Addr, time: Timestamp, price: Price) -> Observation {
         Observation {
             feeder_addr,
             time,
             price,
         }
     }
-    pub fn price(&self) -> Decimal {
-        self.price
+    pub fn price(&self) -> Price {
+        self.price.clone()
     }
 }
 
@@ -130,37 +91,17 @@ impl PriceFeed {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use cosmwasm_std::Decimal;
-
-    use crate::feed::{DenomToPrice, Price};
+    use crate::storage::Price;
 
     #[test]
     // we ensure this rounds up (as it calculates needed votes)
     fn compare_prices() {
-        let p1 = DenomToPrice::new(
-            "BTH".to_string(),
-            Price::new(Decimal::from_str("0.123456").unwrap(), "NLS".to_string()),
-        );
-
-        let p2 = DenomToPrice::new(
-            "BTH".to_string(),
-            Price::new(Decimal::from_str("0.789456").unwrap(), "NLS".to_string()),
-        );
-
-        let p3 = DenomToPrice::new(
-            "BTH".to_string(),
-            Price::new(Decimal::from_str("0.003456").unwrap(), "NLS".to_string()),
-        );
-
-        let p4 = DenomToPrice::new(
-            "ETH".to_string(),
-            Price::new(Decimal::from_str("0.003456").unwrap(), "NLS".to_string()),
-        );
-
-        assert!(p1.is_below(&p2));
-        assert!(p3.is_below(&p2));
-        assert!(!p4.is_below(&p2));
+        let p1 = Price::new("BTH", 1000000, "NLS", 123456);
+        let p2 = Price::new("BTH", 1000000, "NLS", 789456);
+        let p3 = Price::new("BTH", 1000000, "NLS", 3456);
+        let p4 = Price::new("ETH", 1000000, "NLS", 3456);
+        assert!(p1.lt(&p2));
+        assert!(p3.lt(&p2));
+        assert!(p4.lt(&p2));
     }
 }

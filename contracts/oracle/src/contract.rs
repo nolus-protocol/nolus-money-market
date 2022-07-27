@@ -1,11 +1,11 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Addr, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
+    from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
     StdResult, Storage, Timestamp,
 };
 use cw2::set_contract_version;
-use marketprice::feed::{Denom, DenomPair, DenomToPrice, Prices};
+use marketprice::storage::{Denom, DenomPair, Price as Price};
 
 use crate::alarms::MarketAlarms;
 use crate::contract_validation::validate_contract_addr;
@@ -64,20 +64,14 @@ pub fn execute(
         ExecuteMsg::SupportedDenomPairs { pairs } => {
             try_configure_supported_pairs(deps.storage, info, pairs)
         }
-        ExecuteMsg::FeedPrices { prices } => try_feed_multiple_prices(
-            deps.storage,
-            env.block.time,
-            get_sender(deps.api, info)?,
-            prices,
-        ),
+        ExecuteMsg::FeedPrices { prices } => {
+            try_feed_multiple_prices(deps.storage, env.block.time, info.sender, prices)
+        }
         ExecuteMsg::AddPriceAlarm { target } => {
-            let sender = get_sender(deps.api, info)?;
-            validate_contract_addr(&deps.querier, &sender)?;
-            MarketAlarms::try_add_price_alarm(deps.storage, sender, target)
+            validate_contract_addr(&deps.querier, &info.sender)?;
+            MarketAlarms::try_add_price_alarm(deps.storage, info.sender, target)
         }
-        ExecuteMsg::RemovePriceAlarm {} => {
-            MarketAlarms::remove(deps.storage, get_sender(deps.api, info)?)
-        }
+        ExecuteMsg::RemovePriceAlarm {} => MarketAlarms::remove(deps.storage, info.sender),
     }
 }
 
@@ -96,10 +90,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
             to_binary(&Config::load(deps.storage)?.supported_denom_pairs)
         }
     }
-}
-
-pub fn get_sender(api: &dyn Api, info: MessageInfo) -> StdResult<Addr> {
-    api.addr_validate(info.sender.as_str())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -193,7 +183,7 @@ fn try_feed_multiple_prices(
     storage: &mut dyn Storage,
     block_time: Timestamp,
     sender_raw: Addr,
-    prices: Vec<Prices>,
+    prices: Vec<Price>,
 ) -> Result<Response, ContractError> {
     // Check feeder permission
     let is_registered = MarketOracle::is_feeder(storage, &sender_raw)?;
@@ -201,19 +191,25 @@ fn try_feed_multiple_prices(
         return Err(ContractError::UnknownFeeder {});
     }
 
+    /*
+        TODO(kari, nina): To be designed:
+        Setup: price pairs (A,B), (B,C), (C,D) are available
+        If (B,C) is updated, (A,D) price is affected but hooks for it will not be notified
+    */
+
     let hook_denoms = MarketAlarms::get_hook_denoms(storage)?;
 
     let mut affected_denoms: Vec<Denom> = vec![];
-    for entry in prices {
-        MarketOracle::feed_prices(storage, block_time, &sender_raw, &entry.base, entry.values)?;
+    MarketOracle::feed_prices(storage, block_time, &sender_raw, prices.clone())?;
 
-        if hook_denoms.contains(&entry.base) {
-            affected_denoms.push(entry.base);
+    for entry in prices {
+        if hook_denoms.contains(&entry.base().symbol) {
+            affected_denoms.push(entry.base().symbol);
         }
     }
 
     //calculate the price of this denom againts the base for the oracle denom
-    let updated_prices: Vec<DenomToPrice> =
+    let updated_prices: Vec<Price> =
         MarketOracle::get_price_for(storage, block_time, affected_denoms)?;
 
     // get all affected addresses

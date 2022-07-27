@@ -114,10 +114,9 @@ mod tests {
             msg::ExecuteMsg,
             tests::integration_tests::tests::{mock_app, timealarms_instantiate},
         };
-        use cosmwasm_std::{Addr, Decimal, Timestamp};
+        use cosmwasm_std::{Addr, Timestamp};
         use cw_multi_test::Executor;
-        use marketprice::feed::{Price, Prices};
-        use std::str::FromStr;
+        use marketprice::storage::Price;
         //TODO: remove after proper implementation of loan SC
         /// The mock for loan SC. It mimics the scheme for time notification.
         /// If GATE, it returns Ok on notifications, returns Err otherwise.
@@ -190,6 +189,7 @@ mod tests {
                 CwTemplateContract(cw_template_contract_addr)
             }
         }
+
         #[test]
         fn register_feeder() {
             let mut app = mock_app();
@@ -221,13 +221,7 @@ mod tests {
             app.execute_contract(Addr::unchecked(ADMIN), oracle.addr(), &msg, &[])
                 .unwrap();
             let feed_msg = ExecuteMsg::FeedPrices {
-                prices: vec![Prices {
-                    base: "A".into(),
-                    values: vec![
-                        Price::new(Decimal::from_str("100").unwrap(), "B".into()),
-                        Price::new(Decimal::from_str("200").unwrap(), "C".into()),
-                    ],
-                }],
+                prices: vec![Price::new("A", 1, "B", 100), Price::new("A", 1, "C", 200)],
             };
             app.update_block(|bl| bl.time = Timestamp::from_nanos(0));
             // instantiate loan, add alarms
