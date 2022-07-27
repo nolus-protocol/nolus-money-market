@@ -44,7 +44,7 @@ pub struct OpenLoanResp {
     resp: Reply,
 }
 
-impl<'a> OpenLoanResp {
+impl OpenLoanResp {
     pub fn new(resp: Reply) -> Self {
         Self { resp }
     }
