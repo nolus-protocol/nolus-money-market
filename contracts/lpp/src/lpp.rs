@@ -544,7 +544,6 @@ mod test {
         let price = lpp
             .calculate_price(&deps.as_ref(), &env, Coin::new(0))
             .expect("should get price");
-        // assert_eq!(price.get(), Decimal::from_ratio(11u128, 10u128));
         assert_eq!(
             price::total(Coin::<NLpn>::new(1), price.get()),
             price::total(
