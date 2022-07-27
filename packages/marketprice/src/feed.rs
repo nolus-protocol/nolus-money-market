@@ -96,14 +96,10 @@ mod tests {
     #[test]
     // we ensure this rounds up (as it calculates needed votes)
     fn compare_prices() {
-        let p1 = Price::new("BTH".to_string(), 1000000, "NLS".to_string(), 123456);
-
-        let p2 = Price::new("BTH".to_string(), 1000000, "NLS".to_string(), 789456);
-
-        let p3 = Price::new("BTH".to_string(), 1000000, "NLS".to_string(), 3456);
-
-        let p4 = Price::new("ETH".to_string(), 1000000, "NLS".to_string(), 3456);
-
+        let p1 = Price::new("BTH", 1000000, "NLS", 123456);
+        let p2 = Price::new("BTH", 1000000, "NLS", 789456);
+        let p3 = Price::new("BTH", 1000000, "NLS", 3456);
+        let p4 = Price::new("ETH", 1000000, "NLS", 3456);
         assert!(p1.lt(&p2));
         assert!(p3.lt(&p2));
         assert!(p4.lt(&p2));

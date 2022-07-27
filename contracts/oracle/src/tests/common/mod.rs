@@ -45,9 +45,9 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
 pub(crate) fn dummy_feed_prices_msg() -> ExecuteMsg {
     ExecuteMsg::FeedPrices {
         prices: vec![
-            Price::new("A".to_string(), 10, "B".to_string(), 12),
-            Price::new("A".to_string(), 10, "C".to_string(), 32),
-            Price::new("C".to_string(), 10, "D".to_string(), 12),
+            Price::new("A", 10, "B", 12),
+            Price::new("A", 10, "C", 32),
+            Price::new("C", 10, "D", 12),
         ],
     }
 }

@@ -21,15 +21,15 @@ pub struct Price {
 }
 
 impl Price {
-    pub fn new(symbol1: String, base: u128, symbol2: String, quote: u128) -> Self {
+    pub fn new<S: Into<String>>(symbol1: S, base: u128, symbol2: S, quote: u128) -> Self {
         Self::new_from_coins(
             Coin {
                 amount: base,
-                symbol: symbol1,
+                symbol: symbol1.into(),
             },
             Coin {
                 amount: quote,
-                symbol: symbol2,
+                symbol: symbol2.into(),
             },
         )
     }

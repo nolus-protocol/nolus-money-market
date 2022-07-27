@@ -221,10 +221,7 @@ mod tests {
             app.execute_contract(Addr::unchecked(ADMIN), oracle.addr(), &msg, &[])
                 .unwrap();
             let feed_msg = ExecuteMsg::FeedPrices {
-                prices: vec![
-                    Price::new("A".into(), 1, "B".into(), 100),
-                    Price::new("A".into(), 1, "C".into(), 200),
-                ],
+                prices: vec![Price::new("A", 1, "B", 100), Price::new("A", 1, "C", 200)],
             };
             app.update_block(|bl| bl.time = Timestamp::from_nanos(0));
             // instantiate loan, add alarms

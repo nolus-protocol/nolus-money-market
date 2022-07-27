@@ -149,7 +149,7 @@ fn feed_prices() {
     .unwrap();
     let value: PriceResponse = from_binary(&res).unwrap();
     assert_eq!(
-        Price::new("A".to_string(), 10, "B".to_string(), 12),
+        Price::new("A", 10, "B", 12),
         value.prices.first().unwrap().to_owned()
     );
 }
@@ -174,10 +174,7 @@ fn query_prices_unsuppoted_denom() {
 fn feed_prices_unsupported_pairs() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
-    let prices_map = vec![
-        Price::new("X".to_string(), 10, "C".to_string(), 12),
-        Price::new("X".to_string(), 10, "D".to_string(), 22),
-    ];
+    let prices_map = vec![Price::new("X", 10, "C", 12), Price::new("X", 10, "D", 22)];
 
     let msg = ExecuteMsg::FeedPrices { prices: prices_map };
     let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();

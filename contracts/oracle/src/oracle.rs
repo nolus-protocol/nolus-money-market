@@ -168,13 +168,13 @@ mod tests {
         ];
 
         let prices = vec![
-            Price::new("B".into(), 10, "A".into(), 12),
-            Price::new("B".into(), 10, "D".into(), 32),
-            Price::new("B".into(), 10, "B".into(), 12),
+            Price::new("B", 10, "A", 12),
+            Price::new("B", 10, "D", 32),
+            Price::new("B", 10, "B", 12),
         ];
 
         let filtered = MarketOracle::remove_invalid_prices(supported_pairs, prices);
 
-        assert_eq!(vec![Price::new("B".into(), 10, "A".into(), 12),], filtered);
+        assert_eq!(vec![Price::new("B", 10, "A", 12),], filtered);
     }
 }

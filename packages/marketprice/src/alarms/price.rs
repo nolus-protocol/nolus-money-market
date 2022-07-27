@@ -131,8 +131,8 @@ pub mod tests {
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
 
-        let price1: Price = Price::new("BTH".into(), 1000000, "NLS".into(), 456789);
-        let price2: Price = Price::new("ETH".into(), 1000000, "NLS".into(), 123456);
+        let price1: Price = Price::new("BTH", 1000000, "NLS", 456789);
+        let price2: Price = Price::new("ETH", 1000000, "NLS", 123456);
 
         assert!(hooks.add_or_update(storage, &addr1, price1.clone()).is_ok());
         assert_eq!(hooks.get(storage, addr1.clone()).unwrap(), price1);
@@ -164,8 +164,8 @@ pub mod tests {
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
 
-        let price1 = Price::new("some_coint".into(), 1000000, "another_coin".into(), 456789);
-        let price2 = Price::new("some_coint".into(), 1000000, "another_coin".into(), 123456);
+        let price1 = Price::new("some_coin", 1000000, "another_coin", 456789);
+        let price2 = Price::new("some_coin", 1000000, "another_coin", 123456);
 
         assert!(hooks.add_or_update(storage, &addr1, price1.clone()).is_ok());
         assert!(hooks.add_or_update(storage, &addr2, price1.clone()).is_ok());

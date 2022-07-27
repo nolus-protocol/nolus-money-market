@@ -81,7 +81,7 @@ fn marketprice_add_feed() {
     let f_address = deps.api.addr_validate("address1").unwrap();
 
     let prices: Vec<Price> = vec![
-        Price::new("DEN1".to_string(), 10, "DEN2".to_string(), 5),
+        Price::new("DEN1", 10, "DEN2", 5),
         Price::new(
             "DEN1".to_string(),
             10000000000,
@@ -110,7 +110,7 @@ fn marketprice_add_feed() {
 
     let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), MINUTE, 1);
     let price_resp = market.get(&deps.storage, ts, query).unwrap();
-    let expected_price = Price::new("DEN1".to_string(), 10, "DEN2".to_string(), 5);
+    let expected_price = Price::new("DEN1", 10, "DEN2", 5);
     assert_eq!(expected_price, price_resp);
 }
 
@@ -118,28 +118,27 @@ fn marketprice_add_feed() {
 fn marketprice_follow_the_path() {
     let mut deps = mock_dependencies();
     let market = PriceFeeds::new("foo");
-    let _ = feed_price(deps.as_mut(), &market, "DEN1".into(), 1, "DEN0".into(), 1).unwrap();
-
-    let _ = feed_price(deps.as_mut(), &market, "DEN3".into(), 1, "DEN4".into(), 3).unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DEN3".into(), 1, "DENX".into(), 3).unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DEN1".into(), 1, "DEN2".into(), 1).unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DEN3".into(), 1, "DEN4".into(), 3).unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DEN2".into(), 1, "DEN3".into(), 2).unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DEN3".into(), 1, "DEN2".into(), 3).unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DENZ".into(), 1, "DENX".into(), 3).unwrap();
-    let _ = feed_price(deps.as_mut(), &market, "DEN4".into(), 1, "DEN1".into(), 3).unwrap();
-    let ts = feed_price(deps.as_mut(), &market, "DENC".into(), 1, "DEN4".into(), 3).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN1", 1, "DEN0", 1).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN3", 1, "DEN4", 3).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN3", 1, "DENX", 3).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN1", 1, "DEN2", 1).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN3", 1, "DEN4", 3).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN2", 1, "DEN3", 2).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN3", 1, "DEN2", 3).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DENZ", 1, "DENX", 3).unwrap();
+    let _ = feed_price(deps.as_mut(), &market, "DEN4", 1, "DEN1", 3).unwrap();
+    let ts = feed_price(deps.as_mut(), &market, "DENC", 1, "DEN4", 3).unwrap();
 
     // valid search denom pair
     let query = PriceQuery::new(("DEN1".to_string(), "DEN4".to_string()), MINUTE, 1);
     let price_resp = market.get(&deps.storage, ts, query).unwrap();
-    let expected = Price::new("DEN1".into(), 1, "DEN4".into(), 6);
+    let expected = Price::new("DEN1", 1, "DEN4", 6);
     assert_eq!(expected, price_resp);
 
     // first and second part of denom pair are the same
     let query = PriceQuery::new(("DEN1".to_string(), "DEN1".to_string()), MINUTE, 1);
     let price_resp = market.get(&deps.storage, ts, query).unwrap();
-    let expected = Price::new("DEN1".into(), 1, "DEN1".into(), 1);
+    let expected = Price::new("DEN1", 1, "DEN1", 1);
     assert_eq!(expected, price_resp);
 
     // second part of denome pair doesn't exists in the storage
@@ -157,12 +156,12 @@ fn marketprice_follow_the_path() {
     );
 }
 
-fn feed_price(
+fn feed_price<S: Into<String>>(
     deps: DepsMut,
     market: &PriceFeeds,
-    sym_base: String,
+    sym_base: S,
     amount_base: u128,
-    sym_quote: String,
+    sym_quote: S,
     amount_quote: u128,
 ) -> Result<Timestamp, PriceFeedsError> {
     let f_address = deps.api.addr_validate("address1").unwrap();
@@ -172,7 +171,7 @@ fn feed_price(
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let price = Price::new(sym_base, amount_base, sym_quote, amount_quote);
+    let price = Price::new(sym_base.into(), amount_base, sym_quote.into(), amount_quote);
     market.feed(deps.storage, ts, &f_address, vec![price], MINUTE)?;
     Ok(ts)
 }
