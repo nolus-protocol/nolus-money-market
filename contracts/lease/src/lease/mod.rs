@@ -15,7 +15,7 @@ use serde::Serialize;
 use crate::{
     error::{ContractError, ContractResult},
     loan::Loan,
-    msg::StateResponse,
+    msg::StateResponse, event::{TYPE, self},
 };
 
 use self::factory::Factory;
@@ -79,10 +79,12 @@ where
         // and calculate `downpayment` in LPN
         let borrow = self.liability.init_borrow_amount(downpayment);
 
-        self.loan.open_loan_req(borrow)
+        let batch = self.loan.open_loan_req(borrow)?;
+        Ok(event::emit_addr(batch, TYPE::Open, "customer", self.customer))
     }
 
     pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<Batch> {
+        // use cw_utils::parse_reply_instantiate_data;
         self.loan.open_loan_resp(resp)
     }
 

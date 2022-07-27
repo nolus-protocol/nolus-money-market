@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::common::{lpp_wrapper::mock_lpp_quote_query, test_case::TestCase, ADMIN, USER};
-use cosmwasm_std::{coins, Addr, DepsMut, Env, MessageInfo, Response};
+use cosmwasm_std::{coins, Addr, DepsMut, Env, Event, MessageInfo, Response};
 use cw_multi_test::{next_block, ContractWrapper, Executor};
 use finance::{
     coin::{self, Coin},
@@ -109,7 +109,7 @@ fn open_multiple_loans() {
             )
             .unwrap();
         test_case.app.update_block(next_block);
-        let addr = res.events[7].attributes.get(1).unwrap().value.clone();
+        let addr = lease_addr(&res.events);
         loans.insert(Addr::unchecked(addr));
     }
 
@@ -127,7 +127,7 @@ fn open_multiple_loans() {
         )
         .unwrap();
     test_case.app.update_block(next_block);
-    let user1_lease_addr = res.events[7].attributes.get(1).unwrap().value.clone();
+    let user1_lease_addr = lease_addr(&res.events);
 
     let resp: HashSet<Addr> = test_case
         .app
@@ -317,7 +317,7 @@ fn open_lease_impl(currency: SymbolStatic) {
         .unwrap();
 
     // ensure the attributes were relayed from the sub-message
-    assert_eq!(8, res.events.len(), "{:?}", res.events);
+    assert_eq!(9, res.events.len(), "{:?}", res.events);
     // reflect only returns standard wasm-execute event
     let leaser_exec = &res.events[0];
     assert_eq!(leaser_exec.ty.as_str(), "execute");
@@ -336,18 +336,25 @@ fn open_lease_impl(currency: SymbolStatic) {
         ]
     );
 
-    let lease_reply = &res.events[2];
+    let lease_exec = &res.events[2];
+    assert_eq!(lease_exec.ty.as_str(), "wasm-ls-open");
+    assert_eq!(
+        lease_exec.attributes,
+        [("_contract_addr", "contract2"), ("customer", "user")]
+    );
+
+    let lease_reply = &res.events[3];
     assert_eq!(lease_reply.ty.as_str(), "execute");
     assert_eq!(lease_reply.attributes, [("_contract_addr", "contract0")]);
 
-    let lease_reply = &res.events[3];
+    let lease_reply = &res.events[4];
     assert_eq!(lease_reply.ty.as_str(), "wasm");
     assert_eq!(
         lease_reply.attributes,
         [("_contract_addr", "contract0"), ("method", "try_open_loan")]
     );
 
-    let lease_reply = &res.events[4];
+    let lease_reply = &res.events[5];
     assert_eq!(lease_reply.ty.as_str(), "transfer");
     assert_eq!(
         lease_reply.attributes,
@@ -358,21 +365,21 @@ fn open_lease_impl(currency: SymbolStatic) {
         ]
     );
 
-    let lease_reply = &res.events[5];
+    let lease_reply = &res.events[6];
     assert_eq!(lease_reply.ty.as_str(), "reply");
     assert_eq!(
         lease_reply.attributes,
         [("_contract_addr", "contract2"), ("mode", "handle_success")]
     );
 
-    let lease_reply = &res.events[6];
+    let lease_reply = &res.events[7];
     assert_eq!(lease_reply.ty.as_str(), "reply");
     assert_eq!(
         lease_reply.attributes,
         [("_contract_addr", "contract1"), ("mode", "handle_success")]
     );
 
-    let lease_reply = &res.events[7];
+    let lease_reply = &res.events[8];
     assert_eq!(lease_reply.ty.as_str(), "wasm");
     assert_eq!(
         lease_reply.attributes,
@@ -382,7 +389,7 @@ fn open_lease_impl(currency: SymbolStatic) {
         ]
     );
 
-    let lease_address = &res.events[7].attributes.get(1).unwrap().value;
+    let lease_address = &res.events[8].attributes.get(1).unwrap().value;
 
     assert_eq!(
         coins(460, currency),
@@ -396,4 +403,8 @@ fn open_lease_impl(currency: SymbolStatic) {
             .query_all_balances(lease_address)
             .unwrap()
     );
+}
+
+fn lease_addr(events: &[Event]) -> String {
+    events[8].attributes.get(1).unwrap().value.clone()
 }
