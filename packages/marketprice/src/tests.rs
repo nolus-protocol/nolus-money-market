@@ -156,14 +156,17 @@ fn marketprice_follow_the_path() {
     );
 }
 
-fn feed_price<S: Into<String>>(
+fn feed_price<S>(
     deps: DepsMut,
     market: &PriceFeeds,
     sym_base: S,
     amount_base: u128,
     sym_quote: S,
     amount_quote: u128,
-) -> Result<Timestamp, PriceFeedsError> {
+) -> Result<Timestamp, PriceFeedsError>
+where
+    S: Into<String>,
+{
     let f_address = deps.api.addr_validate("address1").unwrap();
 
     let now = SystemTime::now()
