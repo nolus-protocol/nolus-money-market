@@ -47,7 +47,7 @@ pub struct Lease<Lpn, Lpp> {
     loan: Loan<Lpn, Lpp>,
 }
 
-impl<'a, Lpn, Lpp> Lease<Lpn, Lpp>
+impl<Lpn, Lpp> Lease<Lpn, Lpp>
 where
     Lpn: Currency,
     Lpp: LppTrait<Lpn>,
