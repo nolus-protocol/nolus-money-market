@@ -1,17 +1,28 @@
 use platform::batch::Batch;
 
-/// 'wasm-' is always prepended by the runtime
-const TYPES: [&str; 4] = [
-    "ls-open",
-    "ls-close",
-    "ls-repay",
-    "ls-liquidation",
-];
 pub enum TYPE {
-    Open = 0,
-    // Close,
+    Open,
+    Close,
     // Repay,
     // Liquidation,
+}
+
+impl TYPE {
+    /// 'wasm-' is always prepended by the runtime
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            Self::Open => "ls-open",
+            Self::Close => "ls-close",
+            // TYPE::Repay => "ls-repay",
+            // TYPE::Liquidation => "ls-liquidation",
+        }
+    }
+}
+
+impl From<TYPE> for String {
+    fn from(ty: TYPE) -> Self {
+        String::from(ty.as_str())
+    }
 }
 
 pub fn emit_addr<K, V>(mut batch: Batch, ty: TYPE, event_key: K, event_value: V) -> Batch
@@ -19,6 +30,6 @@ where
     K: Into<String>,
     V: Into<String>,
 {
-    batch.emit(TYPES[ty as usize], event_key, event_value);
+    batch.emit(ty, event_key, event_value);
     batch
 }
