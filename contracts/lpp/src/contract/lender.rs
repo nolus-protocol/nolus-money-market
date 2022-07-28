@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Uint128};
+use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Uint128, Event};
 use platform::batch::Batch;
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -25,9 +25,31 @@ where
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
 
     let price = lpp.calculate_price(&deps.as_ref(), &env, amount)?;
-    Deposit::load(deps.storage, lender_addr)?.deposit(deps.storage, amount, price)?;
 
-    Ok(Response::new().add_attribute("method", "try_deposit"))
+    let receipts =  finance::price::total(amount, price.get().inv());
+
+
+    Deposit::load(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
+
+
+
+    let transaction_idx = match env.transaction {
+        Some(idx) => idx.index.to_string(),
+        None => String::from(""),
+      };
+    
+    let deposit_event = Event::new("wasm-lp-deposit")
+    .add_attribute("height", env.block.height.to_string())
+    .add_attribute("idx", transaction_idx.to_string())
+    .add_attribute("from", lender_addr)
+    .add_attribute("at", env.block.time.to_string())
+    .add_attribute("to", env.contract.address)
+    .add_attribute("amount", info.funds[0].amount.to_string())
+    .add_attribute("currency", info.funds[0].denom.to_string())
+    .add_attribute("receipts", receipts.to_string());
+
+
+   Ok(Response::new().add_attribute("method", "try_deposit").add_event(deposit_event))
 }
 
 pub fn try_withdraw<LPN>(
