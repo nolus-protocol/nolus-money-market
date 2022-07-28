@@ -19,12 +19,6 @@ impl TYPE {
     }
 }
 
-impl ToString for TYPE {
-    fn to_string(&self) -> String {
-        String::from(self.as_str())
-    }
-}
-
 impl From<TYPE> for String {
     fn from(ty: TYPE) -> Self {
         String::from(ty.as_str())
