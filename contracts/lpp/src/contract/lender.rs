@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Uint128, Event};
+use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Uint128};
 use platform::batch::Batch;
 use serde::{de::DeserializeOwned, Serialize};
 
