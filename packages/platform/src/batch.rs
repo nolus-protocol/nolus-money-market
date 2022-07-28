@@ -84,7 +84,7 @@ impl Batch {
     }
 
     /// Specialization of [`emit`](Batch::emit) for timestamps.
-    pub fn emit_timestamp<T, K>(&mut self, event_type: T, event_key: K, timestamp: Timestamp)
+    pub fn emit_timestamp<T, K>(&mut self, event_type: T, event_key: K, timestamp: &Timestamp)
     where
         T: Into<String>,
         K: Into<String>,
