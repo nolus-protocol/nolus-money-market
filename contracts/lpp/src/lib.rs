@@ -1,5 +1,6 @@
 pub mod error;
 pub mod msg;
+pub mod event;
 pub mod stub;
 pub mod nlpn;
 

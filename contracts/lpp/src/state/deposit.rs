@@ -48,12 +48,12 @@ impl Deposit {
         storage: &mut dyn Storage,
         amount_lpn: Coin<LPN>,
         price: NTokenPrice<LPN>,
-    ) -> StdResult<()>
+    ) -> Result<Coin<NLpn>,ContractError>
     where
         LPN: Currency + Serialize + DeserializeOwned,
     {
         if amount_lpn.is_zero() {
-            return Ok(());
+            return Err(ContractError::NoDeposit);
         }
 
         let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
@@ -66,7 +66,9 @@ impl Deposit {
 
         globals.balance_nlpn = globals.balance_nlpn + deposited_nlpn;
 
-        Self::GLOBALS.save(storage, &globals)
+        Self::GLOBALS.save(storage, &globals)?;
+
+        Ok(deposited_nlpn)
     }
 
     /// return optional reward payment msg in case of deleting account

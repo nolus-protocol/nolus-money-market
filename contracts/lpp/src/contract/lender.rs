@@ -10,6 +10,7 @@ use crate::error::ContractError;
 use crate::lpp::LiquidityPool;
 use crate::msg::{BalanceResponse, PriceResponse};
 use crate::state::Deposit;
+use crate::event::{TYPE, TYPES};
 
 pub fn try_deposit<LPN>(
     deps: DepsMut,
@@ -26,30 +27,29 @@ where
 
     let price = lpp.calculate_price(&deps.as_ref(), &env, amount)?;
 
-    let receipts =  finance::price::total(amount, price.get().inv());
-
-
-    Deposit::load(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
+    let receipts = Deposit::load(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
 
 
 
     let transaction_idx = match env.transaction {
         Some(idx) => idx.index.to_string(),
-        None => String::from(""),
+        None => String::from("Error! No transaction index."),
       };
+
+
+    let mut deposit_event = Batch::default();
+    deposit_event.emit(TYPES[TYPE::Deposit as usize],"height" , env.block.height.to_string());
+    deposit_event.emit(TYPES[TYPE::Deposit as usize],"idx" , transaction_idx);
+    deposit_event.emit(TYPES[TYPE::Deposit as usize],"from" , lender_addr);
+    deposit_event.emit(TYPES[TYPE::Deposit as usize],"at" ,  env.block.time.to_string());
+    deposit_event.emit(TYPES[TYPE::Deposit as usize],"to" ,  env.contract.address);
+    deposit_event.emit(TYPES[TYPE::Deposit as usize],"amount" ,  info.funds[0].amount.to_string());
+    deposit_event.emit(TYPES[TYPE::Deposit as usize],"amount-symbol" , info.funds[0].denom.to_string());
+    deposit_event.emit(TYPES[TYPE::Deposit as usize],"receipts" , receipts.to_string());
     
-    let deposit_event = Event::new("wasm-lp-deposit")
-    .add_attribute("height", env.block.height.to_string())
-    .add_attribute("idx", transaction_idx)
-    .add_attribute("from", lender_addr)
-    .add_attribute("at", env.block.time.to_string())
-    .add_attribute("to", env.contract.address)
-    .add_attribute("amount", info.funds[0].amount.to_string())
-    .add_attribute("currency", info.funds[0].denom.to_string())
-    .add_attribute("receipts", receipts.to_string());
 
-
-   Ok(Response::new().add_attribute("method", "try_deposit").add_event(deposit_event))
+    let resp: Response = deposit_event.into();
+   Ok(resp.add_attribute("method", "try_deposit"))
 }
 
 pub fn try_withdraw<LPN>(
