@@ -93,7 +93,7 @@ fn try_close(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> Con
 
     let batch = lease::execute(
         lease,
-        Close::new(&info.sender, env.contract.address.clone(), bank),
+        Close::new(&info.sender, env.contract.address.clone(), bank, env.block.time),
         &deps.querier,
     )?;
     Ok(batch)

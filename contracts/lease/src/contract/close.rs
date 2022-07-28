@@ -1,4 +1,4 @@
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Timestamp};
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
 use platform::bank::BankAccount;
@@ -12,14 +12,16 @@ pub struct Close<'a, Bank> {
     sender: &'a Addr,
     lease: Addr,
     account: Bank,
+    now: Timestamp,
 }
 
 impl<'a, Bank> Close<'a, Bank> {
-    pub fn new(sender: &'a Addr, lease: Addr, account: Bank) -> Self {
+    pub fn new(sender: &'a Addr, lease: Addr, account: Bank, now: Timestamp) -> Self {
         Self {
             sender,
             lease,
             account,
+            now,
         }
     }
 }
@@ -41,7 +43,7 @@ where
             return Err(Self::Error::Unauthorized {});
         }
 
-        lease.close(self.lease, self.account)
+        lease.close(self.lease, self.account, self.now)
     }
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
