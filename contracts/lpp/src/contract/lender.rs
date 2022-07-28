@@ -40,7 +40,7 @@ where
     
     let deposit_event = Event::new("wasm-lp-deposit")
     .add_attribute("height", env.block.height.to_string())
-    .add_attribute("idx", transaction_idx.to_string())
+    .add_attribute("idx", transaction_idx)
     .add_attribute("from", lender_addr)
     .add_attribute("at", env.block.time.to_string())
     .add_attribute("to", env.contract.address)
