@@ -103,7 +103,7 @@ where
 
                 let mut batch: Batch = account.into();
                 batch.emit(TYPE::Close, "id", lease);
-                batch.emit(TYPE::Close, "at", now.to_string());
+                batch.emit_timestamp(TYPE::Close, "at", now);
 
                 Ok(batch)
             }

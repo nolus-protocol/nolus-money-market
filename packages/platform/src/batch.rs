@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, Event, Response, SubMsg, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, CosmosMsg, Event, Response, SubMsg, Timestamp, WasmMsg};
 use finance::{coin::Coin, currency::Currency};
 use serde::Serialize;
 
@@ -81,6 +81,15 @@ impl Batch {
             .event
             .replace(event.add_attribute(event_key, event_value));
         debug_assert!(none.is_none());
+    }
+
+    /// Specialization of [`emit`](Batch::emit) for timestamps.
+    pub fn emit_timestamp<T, K>(&mut self, event_type: T, event_key: K, timestamp: Timestamp)
+    where
+        T: Into<String>,
+        K: Into<String>,
+    {
+        self.emit(event_type, event_key, timestamp.nanos().to_string())
     }
 
     fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>
