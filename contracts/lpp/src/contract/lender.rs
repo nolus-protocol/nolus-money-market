@@ -41,7 +41,7 @@ where
     deposit_event.emit(Event::Deposit,"from" , lender_addr);
     deposit_event.emit_timestamp(Event::Deposit,"at" ,  &env.block.time);
     deposit_event.emit(Event::Deposit,"to" ,  env.contract.address);
-    deposit_event.emit_coin(Event::Deposit, Coin::<LPN>::new(info.funds[0].amount.u128()));
+    deposit_event.emit_coin(Event::Deposit, amount);
     deposit_event.emit(Event::Deposit ,"receipts" , receipts.to_string());
     
     
