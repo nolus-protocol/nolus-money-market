@@ -10,7 +10,7 @@ use crate::error::ContractError;
 use crate::lpp::LiquidityPool;
 use crate::msg::{BalanceResponse, PriceResponse};
 use crate::state::Deposit;
-use crate::event::{TYPE, TYPES};
+use crate::event::TYPE;
 
 pub fn try_deposit<LPN>(
     deps: DepsMut,
@@ -38,14 +38,14 @@ where
 
 
     let mut deposit_event = Batch::default();
-    deposit_event.emit(TYPES[TYPE::Deposit as usize],"height" , env.block.height.to_string());
-    deposit_event.emit(TYPES[TYPE::Deposit as usize],"idx" , transaction_idx);
-    deposit_event.emit(TYPES[TYPE::Deposit as usize],"from" , lender_addr);
-    deposit_event.emit(TYPES[TYPE::Deposit as usize],"at" ,  env.block.time.to_string());
-    deposit_event.emit(TYPES[TYPE::Deposit as usize],"to" ,  env.contract.address);
-    deposit_event.emit(TYPES[TYPE::Deposit as usize],"amount" ,  info.funds[0].amount.to_string());
-    deposit_event.emit(TYPES[TYPE::Deposit as usize],"amount-symbol" , info.funds[0].denom.to_string());
-    deposit_event.emit(TYPES[TYPE::Deposit as usize],"receipts" , receipts.to_string());
+    deposit_event.emit(TYPE::Deposit,"height" , env.block.height.to_string());
+    deposit_event.emit(TYPE::Deposit,"idx" , transaction_idx);
+    deposit_event.emit(TYPE::Deposit,"from" , lender_addr);
+    deposit_event.emit(TYPE::Deposit,"at" ,  env.block.time.to_string());
+    deposit_event.emit(TYPE::Deposit,"to" ,  env.contract.address);
+    deposit_event.emit_coin(TYPE::Deposit,&info.funds[0]);
+    deposit_event.emit(TYPE::Deposit ,"receipts" , receipts.to_string());
+    
     
 
     let resp: Response = deposit_event.into();
