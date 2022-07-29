@@ -116,7 +116,7 @@ where
         };
 
         // TODO: maybe add -= for Coin?
-        self.total_principal_due = self.total_principal_due - loan_principal_payment;
+        self.total_principal_due -= loan_principal_payment;
 
         self.last_update_time = ctime;
 

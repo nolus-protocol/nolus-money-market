@@ -93,7 +93,7 @@ where
                 self.addr,
                 |loan| -> Result<LoanData<LPN>, ContractError> {
                     let mut loan = loan.ok_or(ContractError::NoLoan {})?;
-                    loan.principal_due = loan.principal_due - loan_principal_payment;
+                    loan.principal_due -= loan_principal_payment;
                     loan.interest_paid = interest_period.start();
 
                     Ok(loan)

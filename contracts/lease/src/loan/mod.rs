@@ -196,6 +196,8 @@ where
         self.load_lpp_loan(lease).and_then(TryInto::try_into)
     }
 
+    // Allowing dead code for backwards-compatibility if needed.
+    #[allow(dead_code)]
     fn load_principal_due(&self, lease: impl Into<Addr>) -> ContractResult<Coin<Lpn>> {
         self.load_loan_dues(lease).map(|dues| dues.principal_due)
     }
