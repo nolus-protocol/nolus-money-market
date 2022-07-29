@@ -161,11 +161,11 @@ where
             return Ok(());
         }
         // TODO handle any surplus left after the repayment, options:
-        // - query again the lpp on the interest due by now + calculate the max repayment by now + send the supplus to the customer, or
-        // - [better separation of responsabilities, need of a 'reply' contract entry] pay lpp and once the surplus is received send it to the customer, or
-        // - [better separation of responsabilities + low trx cost] keep the surplus in the lease and send it back on lease.close
-        // - [better separation of responsabilities + even lower trx cost] include the remaining interest due up to this moment in the Lpp.query_loan response
-        // and send repayment amount up to the principal + interest due. The remainder is left in the lease
+        //  - query again the lpp on the interest due by now + calculate the max repayment by now + send the supplus to the customer, or
+        //  - [better separation of responsabilities, need of a 'reply' contract entry] pay lpp and once the surplus is received send it to the customer, or
+        //  - [better separation of responsabilities + low trx cost] keep the surplus in the lease and send it back on lease.close
+        //  - [better separation of responsabilities + even lower trx cost] include the remaining interest due up to this moment in the Lpp.query_loan response
+        //  and send repayment amount up to the principal + interest due. The remainder is left in the lease
 
         // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
         self.lpp.repay_loan_req(loan_payment)?;

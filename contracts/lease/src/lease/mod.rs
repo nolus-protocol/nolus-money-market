@@ -76,7 +76,7 @@ where
     pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<Batch> {
         // TODO add a type parameter to this function to designate the downpayment currency
         // TODO query the market price oracle to get the price of the downpayment currency to LPN
-        // and calculate `downpayment` in LPN
+        //  and calculate `downpayment` in LPN
         let borrow = self.liability.init_borrow_amount(downpayment);
 
         let batch = self.loan.open_loan_req(borrow)?;
@@ -89,7 +89,7 @@ where
     }
 
     // TODO add the lease address as a field in Lease<>
-    // and populate it on LeaseDTO.execute as LeaseFactory
+    //  and populate it on LeaseDTO.execute as LeaseFactory
     pub(crate) fn close<B>(self, lease: Addr, mut account: B, now: Timestamp) -> ContractResult<Batch>
     where
         B: BankAccount,
