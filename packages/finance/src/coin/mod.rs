@@ -5,10 +5,11 @@ pub use coinc::CoinDTO;
 mod serde;
 
 use std::{
-    fmt::{Debug, Display, Formatter, Write},
+    fmt::{Debug, Display, Formatter},
     marker::PhantomData,
     ops::{Add, Div, Sub},
 };
+use std::ops::SubAssign;
 
 use ::serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
@@ -93,6 +94,15 @@ where
     }
 }
 
+impl<C> SubAssign<Coin<C>> for Coin<C>
+where
+    C: Currency,
+{
+    fn sub_assign(&mut self, rhs: Coin<C>) {
+        self.amount -= rhs.amount;
+    }
+}
+
 impl<C> Div<Amount> for Coin<C>
 where
     C: Currency,
@@ -112,10 +122,7 @@ where
     C: Currency,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.amount.to_string())?;
-        f.write_char(' ')?;
-        f.write_str(C::SYMBOL)?;
-        Ok(())
+        f.write_fmt(format_args!("{} {}", self.amount, C::SYMBOL))
     }
 }
 
@@ -134,6 +141,20 @@ where
 {
     fn from(coin: Coin<C>) -> Self {
         coin.amount
+    }
+}
+
+pub struct PrintableCoinAmount<C: Currency>(pub Coin<C>);
+
+impl<C: Currency> From<Coin<C>> for PrintableCoinAmount<C> {
+    fn from(coin: Coin<C>) -> Self {
+        Self(coin)
+    }
+}
+
+impl<C: Currency> Display for PrintableCoinAmount<C> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}", self.0.amount))
     }
 }
 

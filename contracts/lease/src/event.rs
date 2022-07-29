@@ -3,7 +3,7 @@ use platform::batch::Batch;
 pub enum TYPE {
     Open,
     Close,
-    // Repay,
+    Repay,
     // Liquidation,
 }
 
@@ -13,7 +13,7 @@ impl TYPE {
         match self {
             Self::Open => "ls-open",
             Self::Close => "ls-close",
-            // TYPE::Repay => "ls-repay",
+            TYPE::Repay => "ls-repay",
             // TYPE::Liquidation => "ls-liquidation",
         }
     }

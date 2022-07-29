@@ -10,7 +10,8 @@ use cw2::set_contract_version;
 use platform::bank::BankStub;
 use platform::batch::Batch;
 
-use crate::error::ContractResult;
+use crate::error::{ContractError, ContractResult};
+use crate::event::TYPE;
 use crate::lease::{self, LeaseDTO};
 use crate::msg::{ExecuteMsg, NewLeaseForm, StateQuery};
 
@@ -83,9 +84,21 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
 fn try_repay(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Batch> {
     lease::execute(
         lease,
-        Repay::new(&info.funds, env.block.time, env.contract.address),
+        Repay::new(&info.funds, env.block.time, env.contract.address.clone()),
         &deps.querier,
-    )
+    ).and_then(|mut batch| {
+        batch.emit(TYPE::Repay, "height", env.block.height.to_string());
+        batch.emit(
+            TYPE::Repay,
+            "idx",
+            env.transaction.ok_or(ContractError::CustomError {
+                val: "Couldn't get transaction info!".to_string(),
+            })?.index.to_string(),
+        );
+        batch.emit(TYPE::Repay, "to", env.contract.address.to_string());
+
+        Ok(batch)
+    })
 }
 
 fn try_close(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Batch> {
