@@ -211,9 +211,9 @@ where
                         .start()
                         .minus_nanos(loan_state.interest_paid.nanos())
                         .nanos() as u128
-            ) / (
+            ).checked_div(
                 (now.nanos() - loan_state.interest_paid.nanos()) as u128
-            )
+            ).unwrap_or(0)
         );
 
         State {
