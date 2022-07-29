@@ -41,7 +41,7 @@ where
     deposit_event.emit(TYPE::Deposit,"height" , env.block.height.to_string());
     deposit_event.emit(TYPE::Deposit,"idx" , transaction_idx);
     deposit_event.emit(TYPE::Deposit,"from" , lender_addr);
-    deposit_event.emit(TYPE::Deposit,"at" ,  env.block.time.to_string());
+    deposit_event.emit_timestamp(TYPE::Deposit,"at" ,  &env.block.time);
     deposit_event.emit(TYPE::Deposit,"to" ,  env.contract.address);
     deposit_event.emit_coin(TYPE::Deposit,&info.funds[0]);
     deposit_event.emit(TYPE::Deposit ,"receipts" , receipts.to_string());
