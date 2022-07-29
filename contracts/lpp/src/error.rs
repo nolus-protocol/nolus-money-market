@@ -31,6 +31,9 @@ pub enum ContractError {
     #[error("The loan does not exist")]
     NoLoan {},
 
+    #[error("Your are trying to deposit 0")]
+    NoDeposit,
+
     #[error("Lpp requires single currency")]
     FundsLen {},
 

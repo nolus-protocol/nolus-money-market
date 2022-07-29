@@ -10,6 +10,7 @@ use crate::error::ContractError;
 use crate::lpp::LiquidityPool;
 use crate::msg::{BalanceResponse, PriceResponse};
 use crate::state::Deposit;
+use crate::event::TYPE;
 
 pub fn try_deposit<LPN>(
     deps: DepsMut,
@@ -25,9 +26,30 @@ where
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
 
     let price = lpp.calculate_price(&deps.as_ref(), &env, amount)?;
-    Deposit::load(deps.storage, lender_addr)?.deposit(deps.storage, amount, price)?;
 
-    Ok(Response::new().add_attribute("method", "try_deposit"))
+    let receipts = Deposit::load(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
+
+
+
+    let transaction_idx = match env.transaction {
+        Some(idx) => idx.index.to_string(),
+        None => String::from("Error! No transaction index."),
+      };
+
+
+    let mut deposit_event = Batch::default();
+    deposit_event.emit(TYPE::Deposit,"height" , env.block.height.to_string());
+    deposit_event.emit(TYPE::Deposit,"idx" , transaction_idx);
+    deposit_event.emit(TYPE::Deposit,"from" , lender_addr);
+    deposit_event.emit(TYPE::Deposit,"at" ,  env.block.time.to_string());
+    deposit_event.emit(TYPE::Deposit,"to" ,  env.contract.address);
+    deposit_event.emit_coin(TYPE::Deposit,&info.funds[0]);
+    deposit_event.emit(TYPE::Deposit ,"receipts" , receipts.to_string());
+    
+    
+
+    let resp: Response = deposit_event.into();
+   Ok(resp.add_attribute("method", "try_deposit"))
 }
 
 pub fn try_withdraw<LPN>(

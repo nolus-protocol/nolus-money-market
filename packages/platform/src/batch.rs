@@ -83,6 +83,7 @@ impl Batch {
         debug_assert!(none.is_none());
     }
 
+
     /// Specialization of [`emit`](Batch::emit) for timestamps.
     pub fn emit_timestamp<T, K>(&mut self, event_type: T, event_key: K, timestamp: &Timestamp)
     where
@@ -91,6 +92,17 @@ impl Batch {
     {
         self.emit(event_type, event_key, timestamp.nanos().to_string())
     }
+
+
+    pub fn emit_coin<T>(&mut self, event_type: T, coin: &cosmwasm_std::Coin)
+    where
+        T: Into<String> + Clone,
+    {
+        self.emit(event_type.clone(), "amount", coin.amount.to_string());
+        self.emit(event_type, "amount-symbol", coin.denom.to_string())
+    }
+
+
 
     fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>
     where
