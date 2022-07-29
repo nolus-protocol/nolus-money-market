@@ -94,12 +94,14 @@ impl Batch {
     }
 
 
-    pub fn emit_coin<T>(&mut self, event_type: T, coin: &cosmwasm_std::Coin)
+    pub fn emit_coin<T,C>(&mut self, event_type: T, coin: Coin<C>)
     where
         T: Into<String> + Clone,
+        C: Currency,
     {
-        self.emit(event_type.clone(), "amount", coin.amount.to_string());
-        self.emit(event_type, "amount-symbol", coin.denom.to_string())
+        let cw_coin=to_cosmwasm_impl(coin);
+        self.emit(event_type.clone(), "amount", cw_coin.amount);
+        self.emit(event_type, "amount-symbol", cw_coin.denom)
     }
 
 

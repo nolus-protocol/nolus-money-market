@@ -35,15 +35,13 @@ where
         Some(idx) => idx.index.to_string(),
         None => String::from("Error! No transaction index."),
       };
-
-
     let mut deposit_event = Batch::default();
     deposit_event.emit(Event::Deposit,"height" , env.block.height.to_string());
     deposit_event.emit(Event::Deposit,"idx" , transaction_idx);
     deposit_event.emit(Event::Deposit,"from" , lender_addr);
     deposit_event.emit_timestamp(Event::Deposit,"at" ,  &env.block.time);
     deposit_event.emit(Event::Deposit,"to" ,  env.contract.address);
-    deposit_event.emit_coin(Event::Deposit,&info.funds[0]);
+    deposit_event.emit_coin(Event::Deposit, Coin::<LPN>::new(info.funds[0].amount.u128()));
     deposit_event.emit(Event::Deposit ,"receipts" , receipts.to_string());
     
     
