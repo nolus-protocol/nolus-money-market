@@ -204,12 +204,17 @@ where
         let margin_interest_overdue = margin_interest_overdue_period.interest(principal_due);
         let margin_interest_due = margin_interest_due_period.interest(principal_due);
 
-        let loan_interest_overdue = (
-            loan_state.interest_due
-                * self.current_period
-                    .start()
-                    .minus_nanos(loan_state.interest_paid.nanos())
-        ) / (now.nanos() - loan_state.interest_paid.nanos());
+        let loan_interest_overdue = Coin::new(
+            (
+                u128::from(loan_state.interest_due)
+                    * self.current_period
+                        .start()
+                        .minus_nanos(loan_state.interest_paid.nanos())
+                        .nanos() as u128
+            ) / (
+                (now.nanos() - loan_state.interest_paid.nanos()) as u128
+            )
+        );
 
         State {
             annual_interest: loan_state.annual_interest_rate + self.annual_margin_interest,
