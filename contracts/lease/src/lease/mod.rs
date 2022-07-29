@@ -96,7 +96,7 @@ where
     {
         let state = self.state(Timestamp::from_nanos(u64::MAX), &account, lease.clone())?;
         match state {
-            StateResponse::Opened { .. } => ContractResult::Err(ContractError::LoanNotPaid()),
+            StateResponse::Opened { .. } => Err(ContractError::LoanNotPaid()),
             StateResponse::Paid(..) => {
                 let balance = account.balance::<Lpn>()?;
                 account.send(balance, &self.customer);
@@ -107,7 +107,7 @@ where
 
                 Ok(batch)
             }
-            StateResponse::Closed() => ContractResult::Err(ContractError::LoanClosed()),
+            StateResponse::Closed() => Err(ContractError::LoanClosed()),
         }
     }
 
@@ -178,7 +178,7 @@ mod tests {
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
     const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
     type TestCurrency = Usdc;
-    type LppResult<T> = core::result::Result<T, LppError>;
+    type LppResult<T> = Result<T, LppError>;
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     pub struct BankStub {
@@ -214,7 +214,7 @@ mod tests {
         }
 
         fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestCurrency>> {
-            Result::Ok(self.loan.clone())
+            Ok(self.loan.clone())
         }
 
         fn loan_outstanding_interest(
