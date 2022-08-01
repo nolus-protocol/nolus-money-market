@@ -35,7 +35,7 @@ where
     
 
     let transaction_info = env.transaction;
-    assert!(!transaction_info.is_none(),"Error! No transaction index.");
+    assert!(transaction_info.is_some(),"Error! No transaction index.");
     let transaction_idx = transaction_info.unwrap().index.to_string();
 
     let receipts =
@@ -50,7 +50,7 @@ where
     deposit_event.emit(Event::Deposit, "from", lender_addr);
     deposit_event.emit_timestamp(Event::Deposit, "at", &env.block.time);
     deposit_event.emit(Event::Deposit, "to", env.contract.address);
-    deposit_event.emit_coin(Event::Deposit, amount);
+    deposit_event.emit_coin(Event::Deposit,"deposit", amount);
     deposit_event.emit(Event::Deposit, "receipts", cw_reciepts.amount);
 
     let resp: Response = deposit_event.into();

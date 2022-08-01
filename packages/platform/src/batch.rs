@@ -94,15 +94,20 @@ impl Batch {
     }
 
 
-    pub fn emit_coin<T,C>(&mut self, event_type: T, coin: Coin<C>)
+    pub fn emit_coin<T,K,C>(&mut self, event_type: T, event_key: K, coin: Coin<C>)
     where
         T: Into<String> + Clone,
+        K: Into<String>,
         C: Currency,
     {
         let cw_coin=to_cosmwasm_impl(coin);
         
-        self.emit(event_type.clone(), "amount", cw_coin.amount);
-        self.emit(event_type, "amount-symbol", cw_coin.denom)
+        let key = event_key.into();
+        let amount_key = key.clone() + "-amount";
+        let symbol_key = key + "-symbol";
+        
+        self.emit(event_type.clone(), amount_key, cw_coin.amount);
+        self.emit(event_type, symbol_key, cw_coin.denom)
     }
 
 
