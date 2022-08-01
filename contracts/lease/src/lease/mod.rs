@@ -16,7 +16,7 @@ use finance::coin::Amount;
 use crate::{
     error::{ContractError, ContractResult},
     loan::Loan,
-    msg::StateResponse, event::{TYPE, self},
+    msg::StateResponse, event::TYPE,
 };
 use crate::error::ContractError::CustomError;
 
@@ -78,7 +78,7 @@ where
     pub(crate) fn open_loan_req(self, contract: Addr, downpayment: Coin<Lpn>) -> ContractResult<Batch> {
         // TODO add a type parameter to this function to designate the downpayment currency
         // TODO query the market price oracle to get the price of the downpayment currency to LPN
-        // and calculate `downpayment` in LPN
+        //  and calculate `downpayment` in LPN
         let borrow = self.liability.init_borrow_amount(downpayment);
 
         let lpp_addr = self.loan.lpp_addr()
@@ -255,6 +255,10 @@ mod tests {
             Result::Ok(self.loan.clone())
         }
 
+        fn distribute_rewards_req(&self, _funds: Coin<Nls>) -> LppResult<SubMsg> {
+            unimplemented!()
+        }
+
         fn loan_outstanding_interest(
             &self,
             _lease: impl Into<Addr>,
@@ -263,23 +267,7 @@ mod tests {
             unreachable!()
         }
 
-        fn distribute_rewards_req(&self, _funds: Coin<Nls>) -> LppResult<SubMsg> {
-            unimplemented!()
-        }
-
         fn quote(&self, _amount: Coin<TestCurrency>) -> LppResult<lpp::msg::QueryQuoteResponse> {
-            unreachable!()
-        }
-
-        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
-            unreachable!()
-        }
-
-        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
-            unreachable!()
-        }
-
-        fn nlpn_price(&self) -> LppResult<lpp::msg::PriceResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -287,7 +275,19 @@ mod tests {
             unreachable!()
         }
 
+        fn nlpn_price(&self) -> LppResult<lpp::msg::PriceResponse<TestCurrency>> {
+            unreachable!()
+        }
+
+        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
+            unreachable!()
+        }
+
         fn nlpn_balance(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::BalanceResponse> {
+            unreachable!()
+        }
+
+        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
             unreachable!()
         }
     }
@@ -306,6 +306,7 @@ mod tests {
             unreachable!()
         }
     }
+
     impl Lpp<TestCurrency> for LppLocalStubUnreachable {
         type LppAddr = NeverAddr;
 
@@ -327,12 +328,12 @@ mod tests {
             unreachable!()
         }
 
-        fn distribute_rewards_req(&self, _funds: Coin<Nls>) -> LppResult<SubMsg> {
-            unimplemented!()
-        }
-
         fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestCurrency>> {
             unreachable!()
+        }
+
+        fn distribute_rewards_req(&self, _funds: Coin<Nls>) -> LppResult<SubMsg> {
+            unimplemented!()
         }
 
         fn loan_outstanding_interest(
@@ -347,11 +348,7 @@ mod tests {
             unreachable!()
         }
 
-        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
-            unreachable!()
-        }
-
-        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
+        fn lpp_balance(&self) -> LppResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -359,11 +356,14 @@ mod tests {
             unreachable!()
         }
 
-        fn lpp_balance(&self) -> LppResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
+        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
+            unreachable!()
+        }
+        fn nlpn_balance(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::BalanceResponse> {
             unreachable!()
         }
 
-        fn nlpn_balance(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::BalanceResponse> {
+        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
             unreachable!()
         }
     }
