@@ -10,7 +10,7 @@ use cw2::set_contract_version;
 use platform::bank::BankStub;
 use platform::batch::{Batch, Emit};
 
-use crate::error::{ContractError, ContractResult};
+use crate::error::ContractResult;
 use crate::event::TYPE;
 use crate::lease::{self, LeaseDTO};
 use crate::msg::{ExecuteMsg, NewLeaseForm, StateQuery};
