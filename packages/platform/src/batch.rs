@@ -3,6 +3,7 @@ use cosmwasm_std::{
 };
 use finance::{coin::Coin, currency::Currency};
 use serde::Serialize;
+use finance::coin::Amount;
 
 use crate::{coin_legacy::to_cosmwasm_impl, error::Result};
 
@@ -111,6 +112,16 @@ impl Batch {
         K: Into<String>,
     {
         self.emit(event_type, event_key, timestamp.nanos().to_string())
+    }
+
+    /// Specialization of [`emit`](Batch::emit) for [`Coin`]'s amount.
+    pub fn emit_coin_amount<T, K, Lpn>(&mut self, event_type: T, event_key: K, coin: Coin<Lpn>)
+    where
+        T: Into<String>,
+        K: Into<String>,
+        Lpn: Currency,
+    {
+        self.emit(event_type, event_key, Amount::from(coin).to_string())
     }
 
     fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>

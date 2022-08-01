@@ -99,10 +99,10 @@ where
         batch.emit(TYPE::Open, "currency", self.currency);
         batch.emit(TYPE::Open, "loan-pool-id", lpp_addr);
         batch.emit(TYPE::Open, "loan-symbol", Lpn::SYMBOL);
-        batch.emit(TYPE::Open, "loan-amount", Amount::from(borrow).to_string());
+        batch.emit_coin_amount(TYPE::Open, "loan-amount", borrow);
         // TODO when downpayment currency is replaced with a type parameter change from `Lpn` to the type parameter
         batch.emit(TYPE::Open, "downpayment-symbol", Lpn::SYMBOL);
-        batch.emit(TYPE::Open, "downpayment-amount", Amount::from(downpayment).to_string());
+        batch.emit_coin_amount(TYPE::Open, "downpayment-amount", downpayment);
 
         Ok(batch)
     }
