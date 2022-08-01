@@ -18,7 +18,7 @@ use gcd::Gcd;
 
 use crate::currency::Currency;
 
-pub(super) type Amount = u128;
+pub type Amount = u128;
 
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
@@ -141,20 +141,6 @@ where
 {
     fn from(coin: Coin<C>) -> Self {
         coin.amount
-    }
-}
-
-pub struct PrintableCoinAmount<C: Currency>(pub Coin<C>);
-
-impl<C: Currency> From<Coin<C>> for PrintableCoinAmount<C> {
-    fn from(coin: Coin<C>) -> Self {
-        Self(coin)
-    }
-}
-
-impl<C: Currency> Display for PrintableCoinAmount<C> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}", self.0.amount))
     }
 }
 

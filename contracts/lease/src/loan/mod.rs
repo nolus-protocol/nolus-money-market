@@ -104,14 +104,14 @@ where
                 let mut batch: Batch = self.into();
 
                 batch.emit(TYPE::Repay, "payment-symbol", Lpn::SYMBOL);
-                batch.emit(TYPE::Repay, "payment-amount", PrintableCoinAmount(payment).to_string());
+                batch.emit_coin_amount(TYPE::Repay, "payment-amount", payment);
                 batch.emit_timestamp(TYPE::Repay, "at", &by);
                 batch.emit(TYPE::Repay, "loan-close", paid.close.to_string());
-                batch.emit(TYPE::Repay, "prev-margin-interest", paid.previous_margin_paid.to_string());
-                batch.emit(TYPE::Repay, "prev-loan-interest", paid.previous_interest_paid.to_string());
-                batch.emit(TYPE::Repay, "curr-margin-interest", paid.current_margin_paid.to_string());
-                batch.emit(TYPE::Repay, "curr-loan-interest", paid.current_interest_paid.to_string());
-                batch.emit(TYPE::Repay, "principal", paid.principal_paid.to_string());
+                batch.emit_coin_amount(TYPE::Repay, "prev-margin-interest", paid.previous_margin_paid);
+                batch.emit_coin_amount(TYPE::Repay, "prev-loan-interest", paid.previous_interest_paid);
+                batch.emit_coin_amount(TYPE::Repay, "curr-margin-interest", paid.current_margin_paid);
+                batch.emit_coin_amount(TYPE::Repay, "curr-loan-interest", paid.current_interest_paid);
+                batch.emit_coin_amount(TYPE::Repay, "principal", paid.principal_paid);
 
                 batch
             })
