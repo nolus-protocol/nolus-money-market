@@ -11,6 +11,9 @@ use crate::event::Event;
 use crate::lpp::LiquidityPool;
 use crate::msg::{BalanceResponse, PriceResponse};
 use crate::state::Deposit;
+use crate::nlpn::NLpn;
+
+
 
 pub fn try_deposit<LPN>(
     deps: DepsMut,
@@ -27,14 +30,19 @@ where
 
     let price = lpp.calculate_price(&deps.as_ref(), &env, amount)?;
 
-    let transaction_idx = match env.transaction {
-        Some(idx) => idx.index.to_string(),
-        None =>  return Err(ContractError::NoTransactionInfo),
-    };
+
+    
+    
+
+    let transaction_info = env.transaction;
+    assert!(!transaction_info.is_none(),"Error! No transaction index.");
+    let transaction_idx = transaction_info.unwrap().index.to_string();
 
     let receipts =
         Deposit::load(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
 
+    let cw_reciepts = cosmwasm_std::Coin::new(receipts.into(),NLpn::SYMBOL);
+   
   
     let mut deposit_event = Batch::default();
     deposit_event.emit(Event::Deposit, "height", env.block.height.to_string());
@@ -43,10 +51,10 @@ where
     deposit_event.emit_timestamp(Event::Deposit, "at", &env.block.time);
     deposit_event.emit(Event::Deposit, "to", env.contract.address);
     deposit_event.emit_coin(Event::Deposit, amount);
-    deposit_event.emit(Event::Deposit, "receipts", receipts.to_string());
+    deposit_event.emit(Event::Deposit, "receipts", cw_reciepts.amount);
 
     let resp: Response = deposit_event.into();
-    Ok(resp.add_attribute("method", "try_deposit"))
+    Ok(resp)
 }
 
 pub fn try_withdraw<LPN>(

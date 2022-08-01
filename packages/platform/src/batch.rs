@@ -100,6 +100,7 @@ impl Batch {
         C: Currency,
     {
         let cw_coin=to_cosmwasm_impl(coin);
+        
         self.emit(event_type.clone(), "amount", cw_coin.amount);
         self.emit(event_type, "amount-symbol", cw_coin.denom)
     }
