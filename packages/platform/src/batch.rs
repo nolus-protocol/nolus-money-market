@@ -100,14 +100,12 @@ impl Batch {
         K: Into<String>,
         C: Currency,
     {
-        let cw_coin=to_cosmwasm_impl(coin);
-        
         let key = event_key.into();
         let amount_key = key.clone() + "-amount";
         let symbol_key = key + "-symbol";
         
-        self.emit(event_type.clone(), amount_key, cw_coin.amount);
-        self.emit(event_type, symbol_key, cw_coin.denom)
+        self.emit(event_type.clone(), amount_key, u128::from(coin).to_string());
+        self.emit(event_type, symbol_key, C::SYMBOL)
     }
 
     pub fn emit_amount<T,K,C>(&mut self, event_type: T, event_key: K, coin: Coin<C>)
