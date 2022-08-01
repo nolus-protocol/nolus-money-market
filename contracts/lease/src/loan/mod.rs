@@ -8,7 +8,7 @@ use std::mem::swap;
 
 use cosmwasm_std::{Addr, Reply, Timestamp};
 use finance::{
-    coin::{Coin, PrintableCoinAmount},
+    coin::Coin,
     currency::Currency,
     duration::Duration,
     interest::InterestPeriod,
