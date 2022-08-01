@@ -25,7 +25,7 @@ const REPLY_ID: u64 = 28;
 pub type Result<T> = StdResult<T, ContractError>;
 
 // TODO split into LppBorrow, LppLend, and LppAdmin traits
-pub trait Lpp<Lpn> : Into<Batch>
+pub trait Lpp<Lpn>: Into<Batch>
 where
     Lpn: Currency,
 {

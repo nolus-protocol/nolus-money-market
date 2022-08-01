@@ -12,9 +12,9 @@ use crate::state::Config;
 use finance::currency::{visit_any, AnyVisitor, Currency};
 
 mod borrow;
+mod config;
 mod lender;
 mod rewards;
-mod config;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -87,14 +87,8 @@ impl<'a> ExecuteWithLpn<'a> {
                 let amount = amount.try_into()?;
                 borrow::try_open_loan::<LPN>(self.deps, self.env, self.info, amount)
             }
-            ExecuteMsg::RepayLoan => borrow::try_repay_loan::<LPN>(
-                self.deps,
-                self.env,
-                self.info,
-            ),
-            ExecuteMsg::Deposit() => {
-                lender::try_deposit::<LPN>(self.deps, self.env, self.info)
-            }
+            ExecuteMsg::RepayLoan => borrow::try_repay_loan::<LPN>(self.deps, self.env, self.info),
+            ExecuteMsg::Deposit() => lender::try_deposit::<LPN>(self.deps, self.env, self.info),
             ExecuteMsg::Burn { amount } => {
                 lender::try_withdraw::<LPN>(self.deps, self.env, self.info, amount)
             }

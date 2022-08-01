@@ -48,7 +48,7 @@ impl Deposit {
         storage: &mut dyn Storage,
         amount_lpn: Coin<LPN>,
         price: NTokenPrice<LPN>,
-    ) -> Result<Coin<NLpn>,ContractError>
+    ) -> Result<Coin<NLpn>, ContractError>
     where
         LPN: Currency + Serialize + DeserializeOwned,
     {
@@ -126,13 +126,15 @@ impl Deposit {
     fn calculate_reward(&self, globals: &DepositsGlobals) -> Coin<Nls> {
         let deposit = &self.data;
 
-        let global_reward = globals.reward_per_token.map(|price| 
-            price::total(deposit.deposited_nlpn, price)
-        ).unwrap_or_default();
+        let global_reward = globals
+            .reward_per_token
+            .map(|price| price::total(deposit.deposited_nlpn, price))
+            .unwrap_or_default();
 
-        let deposit_reward = deposit.reward_per_token.map(|price| 
-            price::total(deposit.deposited_nlpn, price)
-        ).unwrap_or_default();
+        let deposit_reward = deposit
+            .reward_per_token
+            .map(|price| price::total(deposit.deposited_nlpn, price))
+            .unwrap_or_default();
 
         deposit.pending_rewards_nls + global_reward - deposit_reward
     }
@@ -171,7 +173,6 @@ impl Deposit {
             .map(|data| data.deposited_nlpn);
         Ok(maybe_balance)
     }
-
 }
 
 #[cfg(test)]
@@ -289,20 +290,21 @@ mod test {
         let price = NTokenPrice::<TheCurrency>::mock(Coin::new(1), Coin::new(1));
         let addr = Addr::unchecked("depositor");
 
-        let mut deposit =
-            Deposit::load(deps.as_ref().storage, addr)
-            .expect("should load");
+        let mut deposit = Deposit::load(deps.as_ref().storage, addr).expect("should load");
 
         // balance_nls = 0, balance_nlpn = 0
-        let rewards = deposit.query_rewards(deps.as_ref().storage)
+        let rewards = deposit
+            .query_rewards(deps.as_ref().storage)
             .expect("should query");
         assert_eq!(Coin::<Nls>::new(0), rewards);
 
         // balance_nls = 0, balance_nlpn != 0
-        deposit.deposit(deps.as_mut().storage, Coin::<Usdc>::new(1000), price)
+        deposit
+            .deposit(deps.as_mut().storage, Coin::<Usdc>::new(1000), price)
             .expect("should deposit");
 
-        let rewards = deposit.query_rewards(deps.as_ref().storage)
+        let rewards = deposit
+            .query_rewards(deps.as_ref().storage)
             .expect("should query");
         assert_eq!(Coin::<Nls>::new(0), rewards);
     }
@@ -315,25 +317,25 @@ mod test {
 
         let rewards = Coin::<Nls>::new(1000);
 
-        let mut deposit =
-            Deposit::load(deps.as_ref().storage, addr)
-            .expect("should load");
+        let mut deposit = Deposit::load(deps.as_ref().storage, addr).expect("should load");
 
-        deposit.deposit(deps.as_mut().storage, Coin::<Usdc>::new(1000), price)
+        deposit
+            .deposit(deps.as_mut().storage, Coin::<Usdc>::new(1000), price)
             .expect("should deposit");
 
         // shouldn't change anything
         Deposit::distribute_rewards(deps.as_mut(), Coin::new(0))
             .expect("should distribute rewards");
 
-        let rewards_res = deposit.query_rewards(deps.as_ref().storage)
+        let rewards_res = deposit
+            .query_rewards(deps.as_ref().storage)
             .expect("should query");
         assert_eq!(Coin::<Nls>::new(0), rewards_res);
 
-        Deposit::distribute_rewards(deps.as_mut(), rewards)
-            .expect("should distribute rewards");
+        Deposit::distribute_rewards(deps.as_mut(), rewards).expect("should distribute rewards");
 
-        let rewards_res = deposit.query_rewards(deps.as_ref().storage)
+        let rewards_res = deposit
+            .query_rewards(deps.as_ref().storage)
             .expect("should query");
         assert_eq!(rewards, rewards_res);
 
@@ -341,9 +343,9 @@ mod test {
         Deposit::distribute_rewards(deps.as_mut(), Coin::new(0))
             .expect("should distribute rewards");
 
-        let rewards_res = deposit.query_rewards(deps.as_ref().storage)
+        let rewards_res = deposit
+            .query_rewards(deps.as_ref().storage)
             .expect("should query");
         assert_eq!(rewards, rewards_res);
-
     }
 }

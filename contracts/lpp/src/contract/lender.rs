@@ -7,10 +7,10 @@ use finance::currency::Currency;
 use platform::bank::{self, BankAccount, BankStub};
 
 use crate::error::ContractError;
+use crate::event::Event;
 use crate::lpp::LiquidityPool;
 use crate::msg::{BalanceResponse, PriceResponse};
 use crate::state::Deposit;
-use crate::event::Event;
 
 pub fn try_deposit<LPN>(
     deps: DepsMut,
@@ -27,27 +27,24 @@ where
 
     let price = lpp.calculate_price(&deps.as_ref(), &env, amount)?;
 
-    let receipts = Deposit::load(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
-
-
+    let receipts =
+        Deposit::load(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
 
     let transaction_idx = match env.transaction {
         Some(idx) => idx.index.to_string(),
         None => String::from("Error! No transaction index."),
-      };
+    };
     let mut deposit_event = Batch::default();
-    deposit_event.emit(Event::Deposit,"height" , env.block.height.to_string());
-    deposit_event.emit(Event::Deposit,"idx" , transaction_idx);
-    deposit_event.emit(Event::Deposit,"from" , lender_addr);
-    deposit_event.emit_timestamp(Event::Deposit,"at" ,  &env.block.time);
-    deposit_event.emit(Event::Deposit,"to" ,  env.contract.address);
+    deposit_event.emit(Event::Deposit, "height", env.block.height.to_string());
+    deposit_event.emit(Event::Deposit, "idx", transaction_idx);
+    deposit_event.emit(Event::Deposit, "from", lender_addr);
+    deposit_event.emit_timestamp(Event::Deposit, "at", &env.block.time);
+    deposit_event.emit(Event::Deposit, "to", env.contract.address);
     deposit_event.emit_coin(Event::Deposit, amount);
-    deposit_event.emit(Event::Deposit ,"receipts" , receipts.to_string());
-    
-    
+    deposit_event.emit(Event::Deposit, "receipts", receipts.to_string());
 
     let resp: Response = deposit_event.into();
-   Ok(resp.add_attribute("method", "try_deposit"))
+    Ok(resp.add_attribute("method", "try_deposit"))
 }
 
 pub fn try_withdraw<LPN>(
@@ -104,8 +101,8 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
 #[cfg(test)]
 mod test {
     use super::*;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
     use cosmwasm_std::coin;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
     use finance::currency::Usdc;
     use finance::price;
 
@@ -116,21 +113,35 @@ mod test {
         let mut deps = mock_dependencies();
         let env = mock_env();
 
-        LiquidityPool::<TheCurrency>::store(deps.as_mut().storage, TheCurrency::SYMBOL.into(), 1000u64.into())
-            .unwrap();
+        LiquidityPool::<TheCurrency>::store(
+            deps.as_mut().storage,
+            TheCurrency::SYMBOL.into(),
+            1000u64.into(),
+        )
+        .unwrap();
 
         let info = mock_info("lender1", &[coin(20000, TheCurrency::SYMBOL)]);
-        deps.querier.update_balance(MOCK_CONTRACT_ADDR, vec![coin(20000, TheCurrency::SYMBOL)]);
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin(20000, TheCurrency::SYMBOL)]);
         try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
 
         let info = mock_info("lender2", &[coin(10000, TheCurrency::SYMBOL)]);
-        deps.querier.update_balance(MOCK_CONTRACT_ADDR, vec![coin(30000, TheCurrency::SYMBOL)]);
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin(30000, TheCurrency::SYMBOL)]);
         try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
 
         let lpp = LiquidityPool::<TheCurrency>::load(deps.as_ref().storage).unwrap();
-        let price = lpp.calculate_price(&deps.as_ref(), &env, Coin::new(0)).unwrap();
+        let price = lpp
+            .calculate_price(&deps.as_ref(), &env, Coin::new(0))
+            .unwrap();
 
-        let balance_nlpn = Deposit::query_balance_nlpn(deps.as_ref().storage, Addr::unchecked("lender2")).unwrap().unwrap();
-        assert_eq!(Coin::<TheCurrency>::new(10000), price::total(balance_nlpn, price.get()));
+        let balance_nlpn =
+            Deposit::query_balance_nlpn(deps.as_ref().storage, Addr::unchecked("lender2"))
+                .unwrap()
+                .unwrap();
+        assert_eq!(
+            Coin::<TheCurrency>::new(10000),
+            price::total(balance_nlpn, price.get())
+        );
     }
 }
