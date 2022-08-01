@@ -115,10 +115,8 @@ impl Batch {
         T: Into<String>,
         K: Into<String>,
         C: Currency,
-    {
-        let cw_coin=to_cosmwasm_impl(coin);
-        
-        self.emit(event_type, event_key, cw_coin.amount)
+    {  
+        self.emit(event_type, event_key, u128::from(coin).to_string())
     }
 
 

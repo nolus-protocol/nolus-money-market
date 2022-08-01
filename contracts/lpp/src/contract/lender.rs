@@ -11,7 +11,7 @@ use crate::event::Event;
 use crate::lpp::LiquidityPool;
 use crate::msg::{BalanceResponse, PriceResponse};
 use crate::state::Deposit;
-use crate::nlpn::NLpn;
+
 
 
 
