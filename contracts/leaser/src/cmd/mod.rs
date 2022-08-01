@@ -1,5 +1,6 @@
 use finance::{coin::CoinDTO, liability::Liability, percent::Percent};
 
+pub mod borrow;
 pub mod quote;
 
 pub struct Quote {
@@ -7,3 +8,5 @@ pub struct Quote {
     liability: Liability,
     lease_interest_rate_margin: Percent,
 }
+
+pub struct Borrow {}
