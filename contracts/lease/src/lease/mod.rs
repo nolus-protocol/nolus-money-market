@@ -11,12 +11,14 @@ use finance::{
 use lpp::stub::Lpp as LppTrait;
 use platform::{bank::{BankAccount, BankAccountView}, batch::Batch};
 use serde::Serialize;
+use finance::coin::Amount;
 
 use crate::{
     error::{ContractError, ContractResult},
     loan::Loan,
     msg::StateResponse, event::{TYPE, self},
 };
+use crate::error::ContractError::CustomError;
 
 use self::factory::Factory;
 
