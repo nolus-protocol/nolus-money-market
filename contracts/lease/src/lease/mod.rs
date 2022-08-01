@@ -144,10 +144,10 @@ where
                         amount: lease_amount,
                         interest_rate: state.annual_interest,
                         principal_due: state.principal_due,
-                        interest_due: state.previous_interest_due
-                            + state.previous_margin_interest_due
-                            + state.current_interest_due
-                            + state.current_margin_interest_due,
+                        previous_margin_due: state.previous_margin_interest_due,
+                        previous_interest_due: state.previous_interest_due,
+                        current_margin_due: state.current_margin_interest_due,
+                        current_interest_due: state.current_interest_due,
                     })
                 },
             )
