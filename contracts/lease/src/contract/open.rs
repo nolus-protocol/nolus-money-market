@@ -8,12 +8,13 @@ use crate::error::ContractError;
 use crate::lease::{Lease, WithLease};
 
 pub struct OpenLoanReq<'a> {
+    contract: Addr,
     downpayment: &'a [CwCoin],
 }
 
 impl<'a> OpenLoanReq<'a> {
-    pub fn new(downpayment: &'a [CwCoin]) -> Self {
-        Self { downpayment }
+    pub fn new(contract: Addr, downpayment: &'a [CwCoin]) -> Self {
+        Self { contract, downpayment }
     }
 }
 
@@ -31,7 +32,7 @@ impl<'a> WithLease for OpenLoanReq<'a> {
         let downpayment_lpn = bank::received::<Lpn>(self.downpayment)?;
 
         lease
-            .open_loan_req(downpayment_lpn)
+            .open_loan_req(self.contract, downpayment_lpn)
             .map_err(Self::Error::from)
     }
 

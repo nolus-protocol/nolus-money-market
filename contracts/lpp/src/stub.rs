@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 
 use core::result::Result as StdResult;
+use std::convert::Infallible;
+use std::error::Error as StdErrorTrait;
 use cosmwasm_std::{
     to_binary, Addr, Api, QuerierWrapper, Reply, StdError, SubMsg, Timestamp, WasmMsg,
 };
@@ -29,6 +31,13 @@ pub trait Lpp<Lpn> : Into<Batch>
 where
     Lpn: Currency,
 {
+    type LppAddr: Into<Addr>;
+
+    /// Requires [`Error`](std::error::Error) to allow easier integration.
+    type LppAddrError: StdErrorTrait;
+
+    fn lpp_addr(&self) -> StdResult<Self::LppAddr, Self::LppAddrError>;
+
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()>;
     fn open_loan_resp(&self, resp: Reply) -> Result<()>;
     fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()>;
@@ -156,6 +165,14 @@ impl<'a, Lpn> Lpp<Lpn> for LppStub<'a, Lpn>
 where
     Lpn: Currency + DeserializeOwned,
 {
+    type LppAddr = Addr;
+
+    type LppAddrError = Infallible;
+
+    fn lpp_addr(&self) -> StdResult<Self::LppAddr, Self::LppAddrError> {
+        Ok(self.addr.clone())
+    }
+
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {
         self.batch
             .schedule_execute_wasm_on_success_reply::<_, Lpn>(

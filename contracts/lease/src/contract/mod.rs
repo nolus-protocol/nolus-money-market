@@ -35,7 +35,11 @@ pub fn instantiate(
     let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
     lease.store(deps.storage)?;
 
-    let batch = lease::execute(lease, OpenLoanReq::new(&info.funds), &deps.querier)?;
+    let batch = lease::execute(
+        lease,
+        OpenLoanReq::new(env.contract.address, &info.funds),
+        &deps.querier,
+    )?;
 
     Ok(batch.into())
 }

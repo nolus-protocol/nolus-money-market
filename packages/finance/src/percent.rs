@@ -36,7 +36,7 @@ impl Percent {
         Self(permille)
     }
 
-    pub(crate) fn units(&self) -> Units {
+    pub const fn units(&self) -> Units {
         self.0
     }
 

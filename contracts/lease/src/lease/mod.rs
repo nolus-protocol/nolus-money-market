@@ -73,14 +73,33 @@ where
         &self.customer == addr
     }
 
-    pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<Batch> {
+    pub(crate) fn open_loan_req(self, contract: Addr, downpayment: Coin<Lpn>) -> ContractResult<Batch> {
         // TODO add a type parameter to this function to designate the downpayment currency
         // TODO query the market price oracle to get the price of the downpayment currency to LPN
         // and calculate `downpayment` in LPN
         let borrow = self.liability.init_borrow_amount(downpayment);
 
-        let batch = self.loan.open_loan_req(borrow)?;
-        Ok(event::emit_addr(batch, TYPE::Open, "customer", self.customer))
+        let lpp_addr = self.loan.lpp_addr()
+            .map_err(|error| CustomError {
+            val: format!("Couldn't retrieve LPP smart contract's address! Returned error: {:?}", error)
+        })?;
+
+        let annual_margin_interest = self.loan.annual_margin_interest();
+
+        let mut batch = self.loan.open_loan_req(borrow)?;
+
+        batch.emit(TYPE::Open, "id", contract);
+        batch.emit(TYPE::Open, "customer", self.customer);
+        batch.emit(TYPE::Open, "air", annual_margin_interest.units().to_string());
+        batch.emit(TYPE::Open, "currency", self.currency);
+        batch.emit(TYPE::Open, "loan-pool-id", lpp_addr);
+        batch.emit(TYPE::Open, "loan-symbol", Lpn::SYMBOL);
+        batch.emit(TYPE::Open, "loan-amount", Amount::from(borrow).to_string());
+        // TODO when downpayment currency is replaced with a type parameter change from `Lpn` to the type parameter
+        batch.emit(TYPE::Open, "downpayment-symbol", Lpn::SYMBOL);
+        batch.emit(TYPE::Open, "downpayment-amount", Amount::from(downpayment).to_string());
+
+        Ok(batch)
     }
 
     pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<Batch> {
@@ -168,6 +187,7 @@ mod tests {
     use platform::batch::Batch;
     use platform::error::Result as PlatformResult;
     use serde::{Deserialize, Serialize};
+    use crate::error::ContractError;
 
     use crate::loan::{Loan, LoanDTO};
     use crate::msg::StateResponse;
@@ -199,8 +219,24 @@ mod tests {
         loan: Option<LoanResponse<TestCurrency>>,
     }
 
+    enum NeverAddr {}
+
+    impl From<NeverAddr> for Addr {
+        fn from(_: NeverAddr) -> Self {
+            unreachable!()
+        }
+    }
+
     // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl Lpp<TestCurrency> for LppLocalStub {
+        type LppAddr = NeverAddr;
+
+        type LppAddrError = ContractError;
+
+        fn lpp_addr(&self) -> Result<Self::LppAddr, Self::LppAddrError> {
+            Err(ContractError::LppError(LppError::ContractId {}))
+        }
+
         fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
@@ -269,6 +305,14 @@ mod tests {
         }
     }
     impl Lpp<TestCurrency> for LppLocalStubUnreachable {
+        type LppAddr = NeverAddr;
+
+        type LppAddrError = ContractError;
+
+        fn lpp_addr(&self) -> Result<Self::LppAddr, Self::LppAddrError> {
+            Err(ContractError::LppError(LppError::ContractId {}))
+        }
+
         fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
