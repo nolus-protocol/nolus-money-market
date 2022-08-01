@@ -9,16 +9,19 @@ use finance::{
     liability::Liability,
 };
 use lpp::stub::Lpp as LppTrait;
-use platform::{bank::{BankAccount, BankAccountView}, batch::Batch};
+use platform::{
+    bank::{BankAccount, BankAccountView},
+    batch::Batch,
+};
 use serde::Serialize;
 use finance::coin::Amount;
 
 use crate::{
     error::{ContractError, ContractResult},
+    event::TYPE,
     loan::Loan,
-    msg::StateResponse, event::TYPE,
+    msg::StateResponse,
 };
-use crate::error::ContractError::CustomError;
 
 use self::factory::Factory;
 
@@ -82,7 +85,7 @@ where
         let borrow = self.liability.init_borrow_amount(downpayment);
 
         let lpp_addr = self.loan.lpp_addr()
-            .map_err(|error| CustomError {
+            .map_err(|error| ContractError::CustomError {
             val: format!("Couldn't retrieve LPP smart contract's address! Returned error: {:?}", error)
         })?;
 
@@ -176,7 +179,7 @@ where
 #[cfg(test)]
 mod tests {
 
-    use cosmwasm_std::{Addr, SubMsg, Timestamp};
+    use cosmwasm_std::{Addr, Timestamp};
     use finance::currency::{Nls, Usdc};
     use finance::{
         coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
@@ -189,8 +192,8 @@ mod tests {
     use platform::batch::Batch;
     use platform::error::Result as PlatformResult;
     use serde::{Deserialize, Serialize};
-    use crate::error::ContractError;
 
+    use crate::error::ContractError;
     use crate::loan::{Loan, LoanDTO};
     use crate::msg::StateResponse;
 
@@ -253,10 +256,6 @@ mod tests {
 
         fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestCurrency>> {
             Result::Ok(self.loan.clone())
-        }
-
-        fn distribute_rewards_req(&self, _funds: Coin<Nls>) -> LppResult<SubMsg> {
-            unimplemented!()
         }
 
         fn loan_outstanding_interest(
@@ -330,10 +329,6 @@ mod tests {
 
         fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestCurrency>> {
             unreachable!()
-        }
-
-        fn distribute_rewards_req(&self, _funds: Coin<Nls>) -> LppResult<SubMsg> {
-            unimplemented!()
         }
 
         fn loan_outstanding_interest(

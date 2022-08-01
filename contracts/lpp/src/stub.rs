@@ -3,15 +3,13 @@ use std::marker::PhantomData;
 use core::result::Result as StdResult;
 use std::convert::Infallible;
 use std::error::Error as StdErrorTrait;
-use cosmwasm_std::{
-    to_binary, Addr, Api, QuerierWrapper, Reply, StdError, SubMsg, Timestamp, WasmMsg,
-};
+use cosmwasm_std::{Addr, Api, QuerierWrapper, Reply, StdError, Timestamp};
 
 use finance::{
     coin::Coin,
-    currency::{visit_any, AnyVisitor, Currency, Nls, SymbolOwned},
+    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
 };
-use platform::{batch::Batch, coin_legacy::to_cosmwasm};
+use platform::batch::Batch;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
@@ -27,7 +25,7 @@ const REPLY_ID: u64 = 28;
 pub type Result<T> = StdResult<T, ContractError>;
 
 // TODO split into LppBorrow, LppLend, and LppAdmin traits
-pub trait Lpp<Lpn> : Into<Batch>
+pub trait Lpp<Lpn>: Into<Batch>
 where
     Lpn: Currency,
 {
@@ -43,8 +41,6 @@ where
     fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()>;
 
     fn loan(&self, lease: impl Into<Addr>) -> Result<QueryLoanResponse<Lpn>>;
-
-    fn distribute_rewards_req(&self, funds: Coin<Nls>) -> Result<SubMsg>;
 
     fn loan_outstanding_interest(
         &self,
@@ -199,15 +195,6 @@ where
         self.batch
             .schedule_execute_wasm_no_reply(&self.addr, ExecuteMsg::RepayLoan {}, Some(repayment))
             .map_err(ContractError::from)
-    }
-
-    fn distribute_rewards_req(&self, funds: Coin<Nls>) -> Result<SubMsg> {
-        let msg = to_binary(&ExecuteMsg::DistributeRewards {})?;
-        Ok(SubMsg::new(WasmMsg::Execute {
-            contract_addr: self.addr.as_ref().into(),
-            funds: vec![to_cosmwasm(funds)],
-            msg,
-        }))
     }
 
     fn loan(&self, lease: impl Into<Addr>) -> Result<QueryLoanResponse<Lpn>> {
