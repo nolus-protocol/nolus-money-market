@@ -8,7 +8,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
 use platform::bank::BankStub;
-use platform::batch::Batch;
+use platform::batch::{Batch, Emit};
 
 use crate::error::{ContractError, ContractResult};
 use crate::event::TYPE;
@@ -86,18 +86,15 @@ fn try_repay(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> Con
         lease,
         Repay::new(&info.funds, env.block.time, env.contract.address.clone()),
         &deps.querier,
-    ).and_then(|mut batch| {
-        batch.emit(TYPE::Repay, "height", env.block.height.to_string());
-        batch.emit(
-            TYPE::Repay,
-            "idx",
-            env.transaction.ok_or(ContractError::CustomError {
-                val: "Couldn't get transaction info!".to_string(),
-            })?.index.to_string(),
-        );
-        batch.emit(TYPE::Repay, "to", env.contract.address.to_string());
-
-        Ok(batch)
+    ).map(|batch| {
+        batch
+            .emit_u64(TYPE::Repay, "height", &env.block.height)
+            .emit_u32(
+                TYPE::Repay,
+                "idx",
+                env.transaction.expect("Couldn't get transaction info!").index,
+            )
+            .emit(TYPE::Repay, "to", env.contract.address)
     })
 }
 

@@ -1,4 +1,4 @@
-use platform::batch::Batch;
+use platform::batch::{Batch, Emit};
 
 pub enum TYPE {
     Open,
@@ -25,11 +25,10 @@ impl From<TYPE> for String {
     }
 }
 
-pub fn emit_addr<K, V>(mut batch: Batch, ty: TYPE, event_key: K, event_value: V) -> Batch
+pub fn emit_addr<K, V>(batch: Batch, ty: TYPE, event_key: K, event_value: V) -> Batch
 where
     K: Into<String>,
     V: Into<String>,
 {
-    batch.emit(ty, event_key, event_value);
-    batch
+    batch.emit(ty, event_key, event_value)
 }

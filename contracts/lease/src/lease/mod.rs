@@ -11,6 +11,7 @@ use finance::{
 use lpp::stub::Lpp as LppTrait;
 use platform::{bank::{BankAccount, BankAccountView}, batch::Batch};
 use serde::Serialize;
+use platform::batch::Emit;
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -101,11 +102,9 @@ where
                 let balance = account.balance::<Lpn>()?;
                 account.send(balance, &self.customer);
 
-                let mut batch: Batch = account.into();
-                batch.emit(TYPE::Close, "id", lease);
-                batch.emit_timestamp(TYPE::Close, "at", &now);
-
-                Ok(batch)
+                Ok(Into::<Batch>::into(account)
+                    .emit(TYPE::Close, "id", lease)
+                    .emit_timestamp(TYPE::Close, "at", &now))
             }
             StateResponse::Closed() => Err(ContractError::LoanClosed()),
         }

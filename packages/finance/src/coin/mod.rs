@@ -7,9 +7,8 @@ mod serde;
 use std::{
     fmt::{Debug, Display, Formatter},
     marker::PhantomData,
-    ops::{Add, Div, Sub},
+    ops::{Add, Div, Sub, SubAssign},
 };
-use std::ops::SubAssign;
 
 use ::serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
