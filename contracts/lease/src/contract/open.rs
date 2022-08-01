@@ -1,4 +1,4 @@
-use cosmwasm_std::{Coin as CwCoin, Reply};
+use cosmwasm_std::{Addr, Coin as CwCoin, Reply};
 use platform::bank;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
