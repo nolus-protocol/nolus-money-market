@@ -27,13 +27,15 @@ where
 
     let price = lpp.calculate_price(&deps.as_ref(), &env, amount)?;
 
+    let transaction_idx = match env.transaction {
+        Some(idx) => idx.index.to_string(),
+        None =>  return Err(ContractError::NoTransactionInfo),
+    };
+
     let receipts =
         Deposit::load(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
 
-    let transaction_idx = match env.transaction {
-        Some(idx) => idx.index.to_string(),
-        None => String::from("Error! No transaction index."),
-    };
+  
     let mut deposit_event = Batch::default();
     deposit_event.emit(Event::Deposit, "height", env.block.height.to_string());
     deposit_event.emit(Event::Deposit, "idx", transaction_idx);
