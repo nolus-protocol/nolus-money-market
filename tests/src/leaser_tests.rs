@@ -338,9 +338,15 @@ fn open_lease_impl(currency: SymbolStatic) {
 
     let lease_exec = &res.events[2];
     assert_eq!(lease_exec.ty.as_str(), "wasm-ls-open");
-    assert_eq!(
-        lease_exec.attributes,
-        [("_contract_addr", "contract2"), ("customer", "user")]
+    assert!(
+        lease_exec.attributes.iter().any(
+            |attribute| attribute == ("_contract_addr", "contract2")
+        ),
+    );
+    assert!(
+        lease_exec.attributes.iter().any(
+            |attribute| attribute == ("customer", "user")
+        ),
     );
 
     let lease_reply = &res.events[3];
