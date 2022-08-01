@@ -4,7 +4,7 @@ use platform::batch::{Batch, Emit};
 pub use state::State;
 
 use std::{fmt::Debug, marker::PhantomData};
-use std::mem::{replace, swap};
+use std::mem::replace;
 
 use cosmwasm_std::{Addr, Reply, Timestamp};
 use finance::{
