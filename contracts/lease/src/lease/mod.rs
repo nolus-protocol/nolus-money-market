@@ -14,7 +14,6 @@ use platform::{
     batch::Batch,
 };
 use serde::Serialize;
-use finance::coin::Amount;
 
 use crate::{
     error::{ContractError, ContractResult},
