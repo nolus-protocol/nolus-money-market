@@ -189,7 +189,6 @@ mod tests {
     use platform::error::Result as PlatformResult;
     use serde::{Deserialize, Serialize};
 
-    use crate::error::ContractError;
     use crate::loan::{Loan, LoanDTO};
     use crate::msg::StateResponse;
 

@@ -1,8 +1,6 @@
 use std::marker::PhantomData;
 
 use core::result::Result as StdResult;
-use std::convert::Infallible;
-use std::error::Error as StdErrorTrait;
 use cosmwasm_std::{Addr, Api, QuerierWrapper, Reply, StdError, Timestamp};
 
 use finance::{
