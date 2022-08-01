@@ -83,12 +83,9 @@ where
         //  and calculate `downpayment` in LPN
         let borrow = self.liability.init_borrow_amount(downpayment);
 
-        let lpp_addr = self.loan.lpp_addr()
-            .map_err(|error| ContractError::CustomError {
-            val: format!("Couldn't retrieve LPP smart contract's address! Returned error: {:?}", error)
-        })?;
+        let lpp_addr = self.loan.lpp_addr();
 
-        let annual_margin_interest = self.loan.annual_margin_interest();
+        let annual_margin_interest = self.loan.annual_interest();
 
         let mut batch = self.loan.open_loan_req(borrow)?;
 
@@ -233,12 +230,8 @@ mod tests {
 
     // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl Lpp<TestCurrency> for LppLocalStub {
-        type LppAddr = NeverAddr;
-
-        type LppAddrError = ContractError;
-
-        fn lpp_addr(&self) -> Result<Self::LppAddr, Self::LppAddrError> {
-            Err(ContractError::LppError(LppError::ContractId {}))
+        fn addr(&self) -> Addr {
+            unreachable!()
         }
 
         fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
@@ -306,12 +299,8 @@ mod tests {
     }
 
     impl Lpp<TestCurrency> for LppLocalStubUnreachable {
-        type LppAddr = NeverAddr;
-
-        type LppAddrError = ContractError;
-
-        fn lpp_addr(&self) -> Result<Self::LppAddr, Self::LppAddrError> {
-            Err(ContractError::LppError(LppError::ContractId {}))
+        fn addr(&self) -> Addr {
+            unreachable!()
         }
 
         fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {

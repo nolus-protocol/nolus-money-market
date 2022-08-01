@@ -29,12 +29,7 @@ pub trait Lpp<Lpn>: Into<Batch>
 where
     Lpn: Currency,
 {
-    type LppAddr: Into<Addr>;
-
-    /// Requires [`Error`](std::error::Error) to allow easier integration.
-    type LppAddrError: StdErrorTrait;
-
-    fn lpp_addr(&self) -> StdResult<Self::LppAddr, Self::LppAddrError>;
+    fn addr(&self) -> Addr;
 
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()>;
     fn open_loan_resp(&self, resp: Reply) -> Result<()>;
@@ -161,12 +156,8 @@ impl<'a, Lpn> Lpp<Lpn> for LppStub<'a, Lpn>
 where
     Lpn: Currency + DeserializeOwned,
 {
-    type LppAddr = Addr;
-
-    type LppAddrError = Infallible;
-
-    fn lpp_addr(&self) -> StdResult<Self::LppAddr, Self::LppAddrError> {
-        Ok(self.addr.clone())
+    fn addr(&self) -> Addr {
+        self.addr.clone()
     }
 
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {

@@ -78,8 +78,8 @@ where
         }
     }
 
-    pub(crate) fn lpp_addr(&self) -> Result<Addr, Lpp::LppAddrError> {
-        self.lpp.lpp_addr().map(Into::into)
+    pub(crate) fn lpp_addr(&self) -> Addr {
+        self.lpp.addr()
     }
 
     pub(crate) fn open_loan_req(mut self, amount: Coin<Lpn>) -> ContractResult<Batch> {
@@ -146,8 +146,8 @@ where
         Ok(loan_resp.map(|loan_state| self.merge_state_with(loan_state, now)))
     }
 
-    pub(crate) const fn annual_margin_interest(&self) -> Percent {
-        self.annual_margin_interest
+    pub(crate) fn annual_interest(&self) -> Percent {
+        self.annual_margin_interest + self.current_period.annual_interest_rate()
     }
 
     fn load_principal_due(&self, lease: impl Into<Addr>) -> ContractResult<Coin<Lpn>> {
