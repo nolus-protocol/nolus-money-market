@@ -30,31 +30,21 @@ where
 
     let price = lpp.calculate_price(&deps.as_ref(), &env, amount)?;
 
-
-    
-    
-
-    let transaction_info = env.transaction;
-    assert!(transaction_info.is_some(),"Error! No transaction index.");
-    let transaction_idx = transaction_info.unwrap().index.to_string();
+    let transaction_idx = env.transaction.expect("Error! No transaction index.");
 
     let receipts =
         Deposit::load(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
-
-    let cw_reciepts = cosmwasm_std::Coin::new(receipts.into(),NLpn::SYMBOL);
    
-  
     let mut deposit_event = Batch::default();
     deposit_event.emit(Event::Deposit, "height", env.block.height.to_string());
-    deposit_event.emit(Event::Deposit, "idx", transaction_idx);
+    deposit_event.emit(Event::Deposit, "idx", transaction_idx.index.to_string());
     deposit_event.emit(Event::Deposit, "from", lender_addr);
     deposit_event.emit_timestamp(Event::Deposit, "at", &env.block.time);
     deposit_event.emit(Event::Deposit, "to", env.contract.address);
     deposit_event.emit_coin(Event::Deposit,"deposit", amount);
-    deposit_event.emit(Event::Deposit, "receipts", cw_reciepts.amount);
+    deposit_event.emit_amount(Event::Deposit, "receipts", receipts);
 
-    let resp: Response = deposit_event.into();
-    Ok(resp)
+    Ok(deposit_event.into())
 }
 
 pub fn try_withdraw<LPN>(

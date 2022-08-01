@@ -110,6 +110,17 @@ impl Batch {
         self.emit(event_type, symbol_key, cw_coin.denom)
     }
 
+    pub fn emit_amount<T,K,C>(&mut self, event_type: T, event_key: K, coin: Coin<C>)
+    where
+        T: Into<String>,
+        K: Into<String>,
+        C: Currency,
+    {
+        let cw_coin=to_cosmwasm_impl(coin);
+        
+        self.emit(event_type, event_key, cw_coin.amount)
+    }
+
 
 
     fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>
