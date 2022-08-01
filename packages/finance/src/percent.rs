@@ -91,10 +91,9 @@ impl Display for Percent {
             .checked_rem(Self::UNITS_TO_PERCENT_RATIO)
             .expect("zero divider");
 
-        f.write_str(&whole.to_string())?;
+        f.write_fmt(format_args!("{}", whole))?;
         if fractional != Units::default() {
-            f.write_char('.')?;
-            f.write_str(&fractional.to_string())?;
+            f.write_fmt(format_args!(".{}", fractional))?;
         }
         f.write_char('%')?;
         Ok(())
