@@ -1,11 +1,14 @@
+mod emitter;
+
 use cosmwasm_std::{
-    to_binary, Addr, Coin as CoinCw, CosmosMsg, Event, Response, SubMsg, Timestamp, WasmMsg,
+    Addr, Coin as CoinCw, CosmosMsg, Event, Response, SubMsg, to_binary, WasmMsg,
 };
 use finance::{coin::Coin, currency::Currency};
 use serde::Serialize;
-use finance::coin::Amount;
 
 use crate::{coin_legacy::to_cosmwasm_impl, error::Result};
+
+pub use emitter::{Emit, Emitter};
 
 #[derive(Default)]
 pub struct Batch {
@@ -83,18 +86,17 @@ impl Batch {
         res
     }
 
-    fn internal_emit<T, K, V>(&mut self, event_type: T, event_key: K, event_value: V)
+    fn internal_emit<K>(&mut self, event_type: &str, event_key: K, event_value: String)
     where
-        T: Into<String>,
         K: Into<String>,
-        V: Into<String>,
     {
         // do not use Option.get_or_insert_with(f) since asserting on the type would require clone of the type
         if self.event.is_none() {
-            self.event = Some(Event::new(event_type));
+            self.event = Some(Event::new(event_type.to_string()));
         } else {
-            debug_assert!(
-                self.event.as_ref().unwrap().ty == event_type.into(),
+            assert_eq!(
+                self.event.as_ref().unwrap().ty,
+                event_type.to_string(),
                 "The platform batch supports only one event type"
             );
         }
@@ -103,6 +105,13 @@ impl Batch {
             .event
             .replace(event.add_attribute(event_key, event_value));
         debug_assert!(none.is_none());
+    }
+
+    pub fn into_emitter<T>(self, event_type: T) -> Emitter
+    where
+        T: Into<String>,
+    {
+        Emitter::new(self, event_type)
     }
 
     fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>
@@ -159,82 +168,10 @@ impl From<Batch> for Response {
     }
 }
 
-pub trait Emit where Self: Sized {
-    fn emit<T, K, V>(self, event_type: T, event_key: K, event_value: V) -> Self
-        where
-            T: Into<String>,
-            K: Into<String>,
-            V: Into<String>;
-
-    /// Specialization of [`emit`](Batch::emit) for timestamps.
-    fn emit_timestamp<T, K>(self, event_type: T, event_key: K, timestamp: &Timestamp) -> Self
-        where
-            T: Into<String>,
-            K: Into<String>,
-    {
-        self.emit(event_type, event_key, timestamp.nanos().to_string())
-    }
-
-    /// Specialization of [`emit`](Batch::emit) for `bool`.
-    fn emit_bool<T, K>(self, event_type: T, event_key: K, value: bool) -> Self
-        where
-            T: Into<String>,
-            K: Into<String>,
-    {
-        self.emit(event_type, event_key, value.to_string())
-    }
-
-    /// Specialization of [`emit`](Batch::emit) for `u32`.
-    ///
-    /// Argument not passed by reference as for `wasm32-*` targets `u32` is pointer-sized.
-    fn emit_u32<T, K>(self, event_type: T, event_key: K, value: u32) -> Self
-        where
-            T: Into<String>,
-            K: Into<String>,
-    {
-        self.emit(event_type, event_key, value.to_string())
-    }
-
-    /// Specialization of [`emit`](Batch::emit) for `u64`.
-    fn emit_u64<T, K>(self, event_type: T, event_key: K, value: &u64) -> Self
-        where
-            T: Into<String>,
-            K: Into<String>,
-    {
-        self.emit(event_type, event_key, value.to_string())
-    }
-
-    /// Specialization of [`emit`](Batch::emit) for [`Coin`]'s amount.
-    fn emit_coin_amount<T, K, C>(self, event_type: T, event_key: K, coin: Coin<C>) -> Self
-        where
-            T: Into<String>,
-            K: Into<String>,
-            C: Currency,
-    {
-        self.emit(event_type, event_key, Amount::from(coin).to_string())
-    }
-}
-
-impl Emit for Batch {
-    fn emit<T, K, V>(mut self, event_type: T, event_key: K, event_value: V) -> Self where T: Into<String>, K: Into<String>, V: Into<String> {
-        self.internal_emit(event_type, event_key, event_value);
-
-        self
-    }
-}
-
-impl Emit for &'_ mut Batch {
-    fn emit<T, K, V>(self, event_type: T, event_key: K, event_value: V) -> Self where T: Into<String>, K: Into<String>, V: Into<String> {
-        self.internal_emit(event_type, event_key, event_value);
-
-        self
-    }
-}
-
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{CosmosMsg, Empty, Event, Response};
-    use crate::batch::Emit;
+    use crate::batch::emitter::Emit;
 
     use super::Batch;
 
@@ -256,9 +193,9 @@ mod test {
 
     #[test]
     fn emit() {
-        let b = Batch::default()
-            .emit(TY1, KEY1, VALUE1);
-        let resp: Response = b.into();
+        let e = Batch::default().into_emitter(TY1)
+            .emit(KEY1, VALUE1);
+        let resp: Response = e.into();
         assert_eq!(1, resp.events.len());
         let exp = Event::new(TY1).add_attribute(KEY1, VALUE1);
         assert_eq!(exp, resp.events[0]);
@@ -266,10 +203,10 @@ mod test {
 
     #[test]
     fn emit_same_attr() {
-        let b = Batch::default()
-            .emit(TY1, KEY1, VALUE1)
-            .emit(TY1, KEY1, VALUE1);
-        let resp: Response = b.into();
+        let e = Batch::default().into_emitter(TY1)
+            .emit(KEY1, VALUE1)
+            .emit(KEY1, VALUE1);
+        let resp: Response = e.into();
         assert_eq!(1, resp.events.len());
         let exp = Event::new(TY1)
             .add_attribute(KEY1, VALUE1)
@@ -279,10 +216,10 @@ mod test {
 
     #[test]
     fn emit_two_attrs() {
-        let b = Batch::default()
-            .emit(TY1, KEY1, VALUE1)
-            .emit(TY1, KEY2, VALUE2);
-        let resp: Response = b.into();
+        let e = Batch::default().into_emitter(TY1)
+            .emit(KEY1, VALUE1)
+            .emit(KEY2, VALUE2);
+        let resp: Response = e.into();
         assert_eq!(1, resp.events.len());
         let exp = Event::new(TY1)
             .add_attribute(KEY1, VALUE1)

@@ -7,8 +7,14 @@ mod state;
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
-use platform::bank::BankStub;
-use platform::batch::{Batch, Emit};
+use platform::{
+    batch::{
+        Batch,
+        Emit,
+        Emitter,
+    },
+    bank::BankStub,
+};
 
 use crate::error::ContractResult;
 use crate::event::TYPE;
@@ -81,24 +87,23 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     )
 }
 
-fn try_repay(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Batch> {
+fn try_repay(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Emitter> {
     lease::execute(
         lease,
         Repay::new(&info.funds, env.block.time, env.contract.address.clone()),
         &deps.querier,
     ).map(|batch| {
         batch
-            .emit_u64(TYPE::Repay, "height", &env.block.height)
-            .emit_u32(
-                TYPE::Repay,
+            .emit_to_string_value("height", &env.block.height)
+            .emit_to_string_value(
                 "idx",
                 env.transaction.expect("Couldn't get transaction info!").index,
             )
-            .emit(TYPE::Repay, "to", env.contract.address)
+            .emit("to", env.contract.address)
     })
 }
 
-fn try_close(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Batch> {
+fn try_close(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Emitter> {
     let bank = BankStub::my_account(&env, &deps.querier);
 
     let batch = lease::execute(

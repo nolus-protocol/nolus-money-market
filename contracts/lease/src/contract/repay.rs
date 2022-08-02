@@ -1,8 +1,14 @@
 use cosmwasm_std::{Addr, Coin as CwCoin, Timestamp};
-use platform::bank;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
-use platform::batch::{Batch, Emit};
+use platform::{
+    batch::{
+        Batch,
+        Emit,
+        Emitter
+    },
+    bank,
+};
 use serde::Serialize;
 
 use crate::error::ContractError;
@@ -26,7 +32,7 @@ impl<'a> Repay<'a> {
 }
 
 impl<'a> WithLease for Repay<'a> {
-    type Output = Batch;
+    type Output = Emitter;
 
     type Error = ContractError;
 
@@ -40,18 +46,18 @@ impl<'a> WithLease for Repay<'a> {
 
         let result = lease.repay(payment, self.now, self.lease)?;
 
-        let batch = { result.batch }
-            .emit(TYPE::Repay, "payment-symbol", Lpn::SYMBOL)
-            .emit_coin_amount(TYPE::Repay, "payment-amount", payment)
-            .emit_timestamp(TYPE::Repay, "at", &self.now)
-            .emit_bool(TYPE::Repay, "loan-close", result.paid.close())
-            .emit_coin_amount(TYPE::Repay, "prev-margin-interest", result.paid.previous_margin_paid())
-            .emit_coin_amount(TYPE::Repay, "prev-loan-interest", result.paid.previous_interest_paid())
-            .emit_coin_amount(TYPE::Repay, "curr-margin-interest", result.paid.current_margin_paid())
-            .emit_coin_amount(TYPE::Repay, "curr-loan-interest", result.paid.current_interest_paid())
-            .emit_coin_amount(TYPE::Repay, "principal", result.paid.principal_paid());
+        let emitter = result.batch.into_emitter(TYPE::Repay)
+            .emit("payment-symbol", Lpn::SYMBOL)
+            .emit_coin_amount("payment-amount", payment)
+            .emit_timestamp("at", &self.now)
+            .emit_to_string_value("loan-close", result.paid.close())
+            .emit_coin_amount("prev-margin-interest", result.paid.previous_margin_paid())
+            .emit_coin_amount("prev-loan-interest", result.paid.previous_interest_paid())
+            .emit_coin_amount("curr-margin-interest", result.paid.current_margin_paid())
+            .emit_coin_amount("curr-loan-interest", result.paid.current_interest_paid())
+            .emit_coin_amount("principal", result.paid.principal_paid());
 
-        Ok(batch)
+        Ok(emitter.into())
     }
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
