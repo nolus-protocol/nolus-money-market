@@ -10,6 +10,7 @@ use crate::error::ContractError;
 use crate::lpp::LiquidityPool;
 use crate::msg::{BalanceResponse, PriceResponse};
 use crate::state::Deposit;
+use crate::event::Type as EventType;
 
 pub fn try_deposit<LPN>(
     deps: DepsMut,
@@ -39,13 +40,15 @@ pub fn try_withdraw<LPN>(
 where
     LPN: 'static + Currency + DeserializeOwned + Serialize,
 {
+    
+
     let lender_addr = info.sender;
     let amount_nlpn = Coin::new(amount_nlpn.u128());
 
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
     let payment_lpn = lpp.withdraw_lpn(&deps.as_ref(), &env, amount_nlpn)?;
 
-    let maybe_reward =
+    let (maybe_reward, close_flag) =
         Deposit::load(deps.storage, lender_addr.clone())?.withdraw(deps.storage, amount_nlpn)?;
 
     let mut bank = BankStub::my_account(&env, &deps.querier);
@@ -53,12 +56,23 @@ where
 
     if let Some(reward) = maybe_reward {
         bank.send(reward, &lender_addr);
+       
     }
-    let batch: Batch = bank.into();
 
-    let mut response: Response = batch.into();
-    response = response.add_attribute("method", "try_withdraw");
-    Ok(response)
+    let mut batch: Batch = bank.into();
+
+    let transaction_idx = env.transaction.expect("Error! No transaction index.");
+
+    batch.emit(EventType::Withdraw,"height" , env.block.height.to_string());
+    batch.emit(EventType::Withdraw,"idx" , transaction_idx.index.to_string());
+    batch.emit(EventType::Withdraw,"to" , lender_addr);
+    batch.emit_timestamp(EventType::Withdraw,"at" ,  &env.block.time);
+    batch.emit(EventType::Withdraw,"from" ,  env.contract.address);
+    batch.emit_coin(EventType::Withdraw,"withdraw", payment_lpn);
+    batch.emit_amount(EventType::Withdraw ,"receipts" , amount_nlpn);
+    batch.emit(EventType::Withdraw,"close" , close_flag.to_string());
+    
+    Ok(batch.into())
 }
 
 pub fn query_ntoken_price<LPN>(deps: Deps, env: Env) -> Result<PriceResponse<LPN>, ContractError>

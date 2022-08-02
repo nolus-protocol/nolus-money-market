@@ -74,7 +74,7 @@ impl Deposit {
         &mut self,
         storage: &mut dyn Storage,
         amount_nlpn: Coin<NLpn>,
-    ) -> Result<Option<Coin<Nls>>, ContractError> {
+    ) -> Result<(Option<Coin<Nls>>,bool), ContractError> {
         if self.data.deposited_nlpn < amount_nlpn {
             return Err(ContractError::InsufficientBalance);
         }
@@ -88,13 +88,13 @@ impl Deposit {
         let maybe_reward = if self.data.deposited_nlpn.is_zero() {
             Self::DEPOSITS.remove(storage, self.addr.clone());
             if self.data.pending_rewards_nls.is_zero() {
-                None
+                (None,true)
             } else {
-                Some(self.data.pending_rewards_nls)
+                (Some(self.data.pending_rewards_nls),true)
             }
         } else {
             Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
-            None
+            (None,false)
         };
 
         Self::GLOBALS.save(storage, &globals)?;
@@ -193,7 +193,7 @@ mod test {
         let price = NTokenPrice::<TheCurrency>::mock(Coin::new(1), Coin::new(1));
 
         let mut deposit1 =
-            Deposit::load(deps.as_ref().storage, addr1.clone()).expect("should load");
+            Deposit::load(deps.as_ref().storage, addr1).expect("should load");
         deposit1
             .deposit(deps.as_mut().storage, 1000u128.into(), price)
             .expect("should deposit");
@@ -244,7 +244,7 @@ mod test {
 
         assert_eq!(reward, Coin::new(500));
 
-        let some_rewards = deposit1
+        let (some_rewards, _close_flag) = deposit1
             .withdraw(deps.as_mut().storage, 500u128.into())
             .expect("should withdraw");
         assert!(some_rewards.is_none());
@@ -275,14 +275,12 @@ mod test {
         assert_eq!(reward, Coin::new(500));
 
         // withdraw all, return rewards, close deposit
-        let rewards = deposit1
+        let (rewards, close_flag) = deposit1
             .withdraw(deps.as_mut().storage, 500u128.into())
-            .expect("should withdraw")
-            .expect("should be some rewards");
+            .expect("should withdraw");
+        let rewards = rewards.expect("should be some rewards");
         assert_eq!(rewards, Coin::<Nls>::new(500));
-        let response =
-            Deposit::query_balance_nlpn(deps.as_mut().storage, addr1).expect("should query");
-        assert!(response.is_none());
+        assert!(close_flag);
     }
 
     #[test]
