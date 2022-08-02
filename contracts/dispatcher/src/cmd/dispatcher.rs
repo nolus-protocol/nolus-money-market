@@ -79,12 +79,7 @@ where
             return Self::no_reward_resp();
         }
 
-        let pay_msg = self.lpp.distribute_rewards_req(reward_unls)?;
-
-        let mut resp = self.create_response(reward_unls)?;
-        // TODO: use Platform to subscribe for lpp distribute message ?
-        resp.messages.insert(resp.messages.len() - 1, pay_msg);
-        Ok(resp)
+        self.create_response(reward_unls)
     }
 
     fn create_response(&self, reward: Coin<Nls>) -> Result<Response, ContractError> {
@@ -95,6 +90,14 @@ where
                 &self.config.treasury,
                 treasury::msg::ExecuteMsg::SendRewards { amount: reward },
                 None,
+            )
+            .map_err(ContractError::from)?;
+
+        batch
+            .schedule_execute_wasm_no_reply::<_, Nls>(
+                &self.config.lpp,
+                lpp::msg::ExecuteMsg::DistributeRewards {},
+                Some(reward),
             )
             .map_err(ContractError::from)?;
 

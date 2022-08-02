@@ -1,4 +1,6 @@
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, Event, Response, SubMsg, Timestamp, WasmMsg};
+use cosmwasm_std::{
+    to_binary, Addr, Coin as CoinCw, CosmosMsg, Event, Response, SubMsg, Timestamp, WasmMsg,
+};
 use finance::{coin::Coin, currency::Currency};
 use serde::Serialize;
 use finance::coin::Amount;
@@ -56,6 +58,25 @@ impl Batch {
         Ok(())
     }
 
+    pub fn schedule_instantiate_wasm_on_success_reply<M>(
+        &mut self,
+        code_id: u64,
+        msg: M,
+        funds: Option<Vec<CoinCw>>,
+        label: &str,
+        admin: Option<String>,
+        reply_id: u64,
+    ) -> Result<()>
+    where
+        M: Serialize,
+    {
+        let wasm_msg = Self::wasm_init_msg(code_id, msg, funds, label, admin)?;
+        let msg_cw = SubMsg::reply_on_success(wasm_msg, reply_id);
+
+        self.msgs.push(msg_cw);
+        Ok(())
+    }
+
     pub fn merge(self, mut other: Batch) -> Self {
         let mut res = self;
         res.msgs.append(&mut other.msgs);
@@ -98,6 +119,31 @@ impl Batch {
         Ok(WasmMsg::Execute {
             contract_addr: addr.into(),
             funds: funds_cw,
+            msg: msg_bin,
+        })
+    }
+
+    fn wasm_init_msg<M>(
+        code_id: u64,
+        msg: M,
+        funds: Option<Vec<CoinCw>>,
+        label: &str,
+        admin: Option<String>,
+    ) -> Result<WasmMsg>
+    where
+        M: Serialize,
+    {
+        let msg_bin = to_binary(&msg)?;
+        let mut funds_cw = vec![];
+        if let Some(coin) = funds {
+            funds_cw = coin;
+        }
+
+        Ok(WasmMsg::Instantiate {
+            admin,
+            code_id,
+            funds: funds_cw,
+            label: label.to_string(),
             msg: msg_bin,
         })
     }
