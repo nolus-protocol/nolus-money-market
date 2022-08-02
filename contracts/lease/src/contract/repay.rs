@@ -3,7 +3,6 @@ use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
 use platform::{
     batch::{
-        Batch,
         Emit,
         Emitter
     },
@@ -57,7 +56,7 @@ impl<'a> WithLease for Repay<'a> {
             .emit_coin_amount("curr-loan-interest", result.paid.current_interest_paid())
             .emit_coin_amount("principal", result.paid.principal_paid());
 
-        Ok(emitter.into())
+        Ok(emitter)
     }
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {

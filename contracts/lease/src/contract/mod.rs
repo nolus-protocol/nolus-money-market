@@ -9,7 +9,6 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
 use platform::{
     batch::{
-        Batch,
         Emit,
         Emitter,
     },
@@ -17,7 +16,6 @@ use platform::{
 };
 
 use crate::error::ContractResult;
-use crate::event::TYPE;
 use crate::lease::{self, LeaseDTO};
 use crate::msg::{ExecuteMsg, NewLeaseForm, StateQuery};
 

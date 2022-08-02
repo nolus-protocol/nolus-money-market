@@ -21,7 +21,7 @@ use platform::batch::Emitter;
 
 use crate::{
     error::{ContractError, ContractResult},
-    event::{self, TYPE},
+    event::TYPE,
     loan::{Loan, RepayResult},
     msg::StateResponse,
 };
