@@ -158,7 +158,7 @@ where
         // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
         self.lpp.repay_loan_req(loan_payment)?;
 
-        paid.pay_next_interest(interest_due - interest_overdue);
+        paid.pay_next_interest(interest_due);
 
         paid.pay_principal(principal_due, loan_payment - interest_due);
 
