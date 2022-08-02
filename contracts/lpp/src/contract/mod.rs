@@ -87,8 +87,14 @@ impl<'a> ExecuteWithLpn<'a> {
                 let amount = amount.try_into()?;
                 borrow::try_open_loan::<LPN>(self.deps, self.env, self.info, amount)
             }
-            ExecuteMsg::RepayLoan => borrow::try_repay_loan::<LPN>(self.deps, self.env, self.info),
-            ExecuteMsg::Deposit() => lender::try_deposit::<LPN>(self.deps, self.env, self.info),
+            ExecuteMsg::RepayLoan() => borrow::try_repay_loan::<LPN>(
+                self.deps,
+                self.env,
+                self.info,
+            ),
+            ExecuteMsg::Deposit() => {
+                lender::try_deposit::<LPN>(self.deps, self.env, self.info)
+            }
             ExecuteMsg::Burn { amount } => {
                 lender::try_withdraw::<LPN>(self.deps, self.env, self.info, amount)
             }
@@ -150,7 +156,7 @@ pub fn execute(
             utilization_optimal,
             addon_optimal_interest_rate,
         ),
-        ExecuteMsg::DistributeRewards => rewards::try_distribute_rewards(deps, info),
+        ExecuteMsg::DistributeRewards() => rewards::try_distribute_rewards(deps, info),
         ExecuteMsg::ClaimRewards { other_recipient } => {
             rewards::try_claim_rewards(deps, env, info, other_recipient)
         }

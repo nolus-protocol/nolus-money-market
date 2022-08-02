@@ -6,6 +6,7 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw_utils::parse_reply_instantiate_data;
 
+use crate::cmd::Borrow;
 use crate::error::ContractError;
 use crate::leaser::Leaser;
 use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -38,9 +39,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::OpenLease { currency } => {
-            Leaser::try_borrow(deps, info.funds, info.sender, currency)
-        }
+        ExecuteMsg::OpenLease { currency } => Borrow::with(deps, info.funds, info.sender, currency),
         ExecuteMsg::Config {
             lease_interest_rate_margin,
             liability,
