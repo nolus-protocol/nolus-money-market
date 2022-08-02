@@ -27,7 +27,34 @@ where
     close: bool,
 }
 
-impl<C> LoanInterestsPaid<C> where C: Currency {
+impl<C> LoanInterestsPaid<C>
+where
+    C: Currency,
+{
+    pub const fn previous_margin_paid(&self) -> Coin<C> {
+        self.previous_margin_paid
+    }
+
+    pub const fn previous_interest_paid(&self) -> Coin<C> {
+        self.previous_interest_paid
+    }
+
+    pub const fn current_margin_paid(&self) -> Coin<C> {
+        self.current_margin_paid
+    }
+
+    pub const fn current_interest_paid(&self) -> Coin<C> {
+        self.current_interest_paid
+    }
+
+    pub const fn principal_paid(&self) -> Coin<C> {
+        self.principal_paid
+    }
+
+    pub const fn close(&self) -> bool {
+        self.close
+    }
+
     pub(super) fn next_payment(previous: &mut Coin<C>, current: &mut Coin<C>, payment: Coin<C>) {
         *previous = replace(current, payment);
     }
@@ -52,29 +79,5 @@ impl<C> LoanInterestsPaid<C> where C: Currency {
         self.principal_paid = payment;
 
         self.close = principal == payment;
-    }
-
-    pub const fn previous_margin_paid(&self) -> Coin<C> {
-        self.previous_margin_paid
-    }
-
-    pub const fn previous_interest_paid(&self) -> Coin<C> {
-        self.previous_interest_paid
-    }
-
-    pub const fn current_margin_paid(&self) -> Coin<C> {
-        self.current_margin_paid
-    }
-
-    pub const fn current_interest_paid(&self) -> Coin<C> {
-        self.current_interest_paid
-    }
-
-    pub const fn principal_paid(&self) -> Coin<C> {
-        self.principal_paid
-    }
-
-    pub const fn close(&self) -> bool {
-        self.close
     }
 }
