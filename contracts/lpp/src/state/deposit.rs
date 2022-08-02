@@ -87,7 +87,11 @@ impl Deposit {
 
         let maybe_reward = if self.data.deposited_nlpn.is_zero() {
             Self::DEPOSITS.remove(storage, self.addr.clone());
-            Some(self.data.pending_rewards_nls)
+            if self.data.pending_rewards_nls.is_zero() {
+                None
+            } else {
+                Some(self.data.pending_rewards_nls)
+            }
         } else {
             Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
             None
