@@ -27,7 +27,7 @@ pub trait Lpp<Lpn>: Into<Batch>
 where
     Lpn: Currency,
 {
-    fn addr(&self) -> Addr;
+    fn id(&self) -> Addr;
 
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()>;
     fn open_loan_resp(&self, resp: Reply) -> Result<()>;
@@ -154,7 +154,7 @@ impl<'a, Lpn> Lpp<Lpn> for LppStub<'a, Lpn>
 where
     Lpn: Currency + DeserializeOwned,
 {
-    fn addr(&self) -> Addr {
+    fn id(&self) -> Addr {
         self.addr.clone()
     }
 

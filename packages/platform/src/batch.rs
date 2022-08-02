@@ -1,9 +1,8 @@
-use cosmwasm_std::{
-    to_binary, Addr, Coin as CoinCw, CosmosMsg, Event, Response, SubMsg, Timestamp, WasmMsg,
-};
+use cosmwasm_std::{to_binary, Coin as CoinCw, Addr, CosmosMsg, Event, Response, SubMsg, Timestamp, WasmMsg};
 use finance::{coin::Coin, currency::Currency};
 use serde::Serialize;
 use finance::coin::Amount;
+use finance::percent::Percent;
 
 use crate::{coin_legacy::to_cosmwasm_impl, error::Result};
 
@@ -83,7 +82,7 @@ impl Batch {
         res
     }
 
-    pub fn emit<T, K, V>(&mut self, event_type: T, event_key: K, event_value: V)
+    fn internal_emit<T, K, V>(&mut self, event_type: T, event_key: K, event_value: V)
     where
         T: Into<String>,
         K: Into<String>,
@@ -103,25 +102,6 @@ impl Batch {
             .event
             .replace(event.add_attribute(event_key, event_value));
         debug_assert!(none.is_none());
-    }
-
-    /// Specialization of [`emit`](Batch::emit) for timestamps.
-    pub fn emit_timestamp<T, K>(&mut self, event_type: T, event_key: K, timestamp: &Timestamp)
-    where
-        T: Into<String>,
-        K: Into<String>,
-    {
-        self.emit(event_type, event_key, timestamp.nanos().to_string())
-    }
-
-    /// Specialization of [`emit`](Batch::emit) for [`Coin`]'s amount.
-    pub fn emit_coin_amount<T, K, Lpn>(&mut self, event_type: T, event_key: K, coin: Coin<Lpn>)
-    where
-        T: Into<String>,
-        K: Into<String>,
-        Lpn: Currency,
-    {
-        self.emit(event_type, event_key, Amount::from(coin).to_string())
     }
 
     fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>
@@ -178,9 +158,91 @@ impl From<Batch> for Response {
     }
 }
 
+pub trait Emit where Self: Sized {
+    fn emit<T, K, V>(self, event_type: T, event_key: K, event_value: V) -> Self
+        where
+            T: Into<String>,
+            K: Into<String>,
+            V: Into<String>;
+
+    /// Specialization of [`emit`](Batch::emit) for timestamps.
+    fn emit_timestamp<T, K>(self, event_type: T, event_key: K, timestamp: &Timestamp) -> Self
+        where
+            T: Into<String>,
+            K: Into<String>,
+    {
+        self.emit(event_type, event_key, timestamp.nanos().to_string())
+    }
+
+    /// Specialization of [`emit`](Batch::emit) for `bool`.
+    fn emit_bool<T, K>(self, event_type: T, event_key: K, value: bool) -> Self
+        where
+            T: Into<String>,
+            K: Into<String>,
+    {
+        self.emit(event_type, event_key, value.to_string())
+    }
+
+    /// Specialization of [`emit`](Batch::emit) for `u32`.
+    ///
+    /// Argument not passed by reference as for `wasm32-*` targets `u32` is pointer-sized.
+    fn emit_u32<T, K>(self, event_type: T, event_key: K, value: u32) -> Self
+        where
+            T: Into<String>,
+            K: Into<String>,
+    {
+        self.emit(event_type, event_key, value.to_string())
+    }
+
+    /// Specialization of [`emit`](Batch::emit) for `u64`.
+    fn emit_u64<T, K>(self, event_type: T, event_key: K, value: &u64) -> Self
+        where
+            T: Into<String>,
+            K: Into<String>,
+    {
+        self.emit(event_type, event_key, value.to_string())
+    }
+
+    /// Specialization of [`emit`](Batch::emit) for [`Coin`]'s amount.
+    fn emit_coin_amount<T, K, C>(self, event_type: T, event_key: K, coin: Coin<C>) -> Self
+        where
+            T: Into<String>,
+            K: Into<String>,
+            C: Currency,
+    {
+        self.emit(event_type, event_key, Amount::from(coin).to_string())
+    }
+
+    /// Specialization of [`emit`](Batch::emit) for [`Percent`]'s amount.
+    fn emit_percent_amount<T, K>(self, event_type: T, event_key: K, percent: Percent) -> Self
+        where
+            T: Into<String>,
+            K: Into<String>,
+    {
+        self.emit(event_type, event_key, percent.units().to_string())
+    }
+}
+
+impl Emit for Batch {
+    fn emit<T, K, V>(mut self, event_type: T, event_key: K, event_value: V) -> Self where T: Into<String>, K: Into<String>, V: Into<String> {
+        self.internal_emit(event_type, event_key, event_value);
+
+        self
+    }
+}
+
+impl Emit for &'_ mut Batch {
+    fn emit<T, K, V>(self, event_type: T, event_key: K, event_value: V) -> Self where T: Into<String>, K: Into<String>, V: Into<String> {
+        self.internal_emit(event_type, event_key, event_value);
+
+        self
+    }
+}
+
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{CosmosMsg, Empty, Event, Response};
+    use crate::batch::Emit;
 
     use super::Batch;
 
@@ -202,8 +264,8 @@ mod test {
 
     #[test]
     fn emit() {
-        let mut b = Batch::default();
-        b.emit(TY1, KEY1, VALUE1);
+        let b = Batch::default()
+            .emit(TY1, KEY1, VALUE1);
         let resp: Response = b.into();
         assert_eq!(1, resp.events.len());
         let exp = Event::new(TY1).add_attribute(KEY1, VALUE1);
@@ -212,9 +274,9 @@ mod test {
 
     #[test]
     fn emit_same_attr() {
-        let mut b = Batch::default();
-        b.emit(TY1, KEY1, VALUE1);
-        b.emit(TY1, KEY1, VALUE1);
+        let b = Batch::default()
+            .emit(TY1, KEY1, VALUE1)
+            .emit(TY1, KEY1, VALUE1);
         let resp: Response = b.into();
         assert_eq!(1, resp.events.len());
         let exp = Event::new(TY1)
@@ -225,9 +287,9 @@ mod test {
 
     #[test]
     fn emit_two_attrs() {
-        let mut b = Batch::default();
-        b.emit(TY1, KEY1, VALUE1);
-        b.emit(TY1, KEY2, VALUE2);
+        let b = Batch::default()
+            .emit(TY1, KEY1, VALUE1)
+            .emit(TY1, KEY2, VALUE2);
         let resp: Response = b.into();
         assert_eq!(1, resp.events.len());
         let exp = Event::new(TY1)

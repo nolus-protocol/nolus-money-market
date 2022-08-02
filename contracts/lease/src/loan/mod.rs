@@ -1,4 +1,6 @@
 mod state;
+mod open_request;
+
 use platform::batch::Batch;
 pub use state::State;
 
@@ -19,6 +21,8 @@ use lpp::{
 use serde::{Deserialize, Serialize};
 
 use crate::error::{ContractError, ContractResult};
+
+use open_request::Result as OpenRequestResult;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct LoanDTO {
@@ -78,11 +82,7 @@ where
         }
     }
 
-    pub(crate) fn lpp_addr(&self) -> Addr {
-        self.lpp.addr()
-    }
-
-    pub(crate) fn open_loan_req(mut self, amount: Coin<Lpn>) -> ContractResult<Batch> {
+    pub(crate) fn open_loan_req(mut self, amount: Coin<Lpn>) -> ContractResult<OpenRequestResult> {
         self.lpp.open_loan_req(amount)?;
         Ok(self.into())
     }
@@ -146,7 +146,7 @@ where
         Ok(loan_resp.map(|loan_state| self.merge_state_with(loan_state, now)))
     }
 
-    pub(crate) fn annual_interest(&self) -> Percent {
+    fn annual_interest(&self) -> Percent {
         self.annual_margin_interest + self.current_period.annual_interest_rate()
     }
 
