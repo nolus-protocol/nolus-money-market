@@ -7,7 +7,7 @@ use finance::currency::Currency;
 use platform::bank::{self, BankAccount, BankStub};
 
 use crate::error::ContractError;
-use crate::event::Event;
+use crate::event::Type as EventType;
 use crate::lpp::LiquidityPool;
 use crate::msg::{BalanceResponse, PriceResponse};
 use crate::state::Deposit;
@@ -36,13 +36,13 @@ where
         Deposit::load(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
    
     let mut deposit_event = Batch::default();
-    deposit_event.emit(Event::Deposit, "height", env.block.height.to_string());
-    deposit_event.emit(Event::Deposit, "idx", transaction_idx.index.to_string());
-    deposit_event.emit(Event::Deposit, "from", lender_addr);
-    deposit_event.emit_timestamp(Event::Deposit, "at", &env.block.time);
-    deposit_event.emit(Event::Deposit, "to", env.contract.address);
-    deposit_event.emit_coin(Event::Deposit,"deposit", amount);
-    deposit_event.emit_amount(Event::Deposit, "receipts", receipts);
+    deposit_event.emit(EventType::Deposit, "height", env.block.height.to_string());
+    deposit_event.emit(EventType::Deposit, "idx", transaction_idx.index.to_string());
+    deposit_event.emit(EventType::Deposit, "from", lender_addr);
+    deposit_event.emit_timestamp(EventType::Deposit, "at", &env.block.time);
+    deposit_event.emit(EventType::Deposit, "to", env.contract.address);
+    deposit_event.emit_coin(EventType::Deposit,"deposit", amount);
+    deposit_event.emit_amount(EventType::Deposit, "receipts", receipts);
 
     Ok(deposit_event.into())
 }

@@ -1,10 +1,10 @@
 #[derive(Clone)]
-pub enum Event {
+pub enum Type {
     Deposit,
     Withdraw,
 }
 
-impl Event {
+impl Type {
     /// 'wasm-' is always prepended by the runtime
     pub const fn as_str(&self) -> &'static str {
         match self {
@@ -14,8 +14,8 @@ impl Event {
     }
 }
 
-impl From<Event> for String {
-    fn from(ty: Event) -> Self {
+impl From<Type> for String {
+    fn from(ty: Type) -> Self {
         String::from(ty.as_str())
     }
 }
