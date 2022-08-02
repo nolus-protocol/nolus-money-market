@@ -1,10 +1,10 @@
 mod state;
+mod repay;
 
-use platform::batch::{Batch, Emit};
+use platform::batch::Batch;
 pub use state::State;
 
 use std::{fmt::Debug, marker::PhantomData};
-use std::mem::replace;
 
 use cosmwasm_std::{Addr, Reply, Timestamp};
 use finance::{
@@ -20,8 +20,12 @@ use lpp::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::error::{ContractError, ContractResult};
-use crate::event::TYPE;
+use crate::{
+    error::ContractError,
+    error::ContractResult,
+};
+
+pub(crate) use repay::{Result as RepayResult, LoanInterestsPaid};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct LoanDTO {
@@ -96,21 +100,13 @@ where
         payment: Coin<Lpn>,
         by: Timestamp,
         lease: Addr,
-    ) -> ContractResult<Batch> {
+    ) -> ContractResult<RepayResult<Lpn>> {
         let mut paid = LoanInterestsPaid::default();
 
         self.repay_inner(payment, by, lease, &mut paid)
-            .map(|()| {
-                Batch::from(self)
-                    .emit(TYPE::Repay, "payment-symbol", Lpn::SYMBOL)
-                    .emit_coin_amount(TYPE::Repay, "payment-amount", payment)
-                    .emit_timestamp(TYPE::Repay, "at", &by)
-                    .emit_bool(TYPE::Repay, "loan-close", paid.close)
-                    .emit_coin_amount(TYPE::Repay, "prev-margin-interest", paid.previous_margin_paid)
-                    .emit_coin_amount(TYPE::Repay, "prev-loan-interest", paid.previous_interest_paid)
-                    .emit_coin_amount(TYPE::Repay, "curr-margin-interest", paid.current_margin_paid)
-                    .emit_coin_amount(TYPE::Repay, "curr-loan-interest", paid.current_interest_paid)
-                    .emit_coin_amount(TYPE::Repay, "principal", paid.principal_paid)
+            .map(|()| RepayResult {
+                batch: Batch::from(self),
+                paid,
             })
     }
 
@@ -138,7 +134,7 @@ where
         interest_due -= interest_overdue;
 
         let loan_payment = if interest_overdue <= change && self.current_period.zero_length() {
-            paid.current_interest_paid = interest_overdue;
+            paid.pay_next_interest(interest_overdue);
             self.open_next_period();
 
             let surplus = change - interest_overdue;
@@ -168,9 +164,9 @@ where
         paid.pay_principal(principal_due, loan_payment - interest_due);
 
         assert!(
-            paid.previous_margin_paid + paid.current_margin_paid +
-            paid.previous_interest_paid + paid.current_interest_paid +
-            paid.principal_paid == payment,
+            paid.previous_margin_paid() + paid.current_margin_paid() +
+            paid.previous_interest_paid() + paid.current_interest_paid() +
+            paid.principal_paid() == payment,
         );
 
         Ok(())
@@ -259,43 +255,5 @@ where
 {
     fn from(loan: Loan<Lpn, Lpp>) -> Self {
         loan.lpp.into()
-    }
-}
-
-#[derive(Default)]
-struct LoanInterestsPaid<C> where C: Currency {
-    previous_margin_paid: Coin<C>,
-    current_margin_paid: Coin<C>,
-    previous_interest_paid: Coin<C>,
-    current_interest_paid: Coin<C>,
-    principal_paid: Coin<C>,
-    close: bool,
-}
-
-impl<C> LoanInterestsPaid<C> where C: Currency {
-    fn next_payment(previous: &mut Coin<C>, current: &mut Coin<C>, payment: Coin<C>) {
-        *previous = replace(current, payment);
-    }
-
-    fn pay_next_margin(&mut self, payment: Coin<C>) {
-        Self::next_payment(
-            &mut self.previous_margin_paid,
-            &mut self.current_margin_paid,
-            payment,
-        );
-    }
-
-    fn pay_next_interest(&mut self, payment: Coin<C>) {
-        Self::next_payment(
-            &mut self.previous_interest_paid,
-            &mut self.current_interest_paid,
-            payment,
-        );
-    }
-
-    fn pay_principal(&mut self, principal: Coin<C>, payment: Coin<C>) {
-        self.principal_paid = payment;
-
-        self.close = principal == payment;
     }
 }

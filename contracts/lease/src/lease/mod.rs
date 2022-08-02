@@ -19,7 +19,7 @@ use platform::batch::Emit;
 use crate::{
     error::{ContractError, ContractResult},
     event::{self, TYPE},
-    loan::Loan,
+    loan::{Loan, RepayResult},
     msg::StateResponse,
 };
 
@@ -124,7 +124,7 @@ where
         payment: Coin<Lpn>,
         by: Timestamp,
         lease: Addr,
-    ) -> ContractResult<Batch> {
+    ) -> ContractResult<RepayResult<Lpn>> {
         assert_eq!(self.currency, Lpn::SYMBOL);
         self.loan.repay(payment, by, lease)
     }
@@ -237,11 +237,7 @@ mod tests {
             unreachable!()
         }
 
-        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
-            unreachable!()
-        }
-
-        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
+        fn lpp_balance(&self) -> LppResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -249,11 +245,15 @@ mod tests {
             unreachable!()
         }
 
-        fn lpp_balance(&self) -> LppResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
+        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
             unreachable!()
         }
 
         fn nlpn_balance(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::BalanceResponse> {
+            unreachable!()
+        }
+
+        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
             unreachable!()
         }
     }
@@ -301,11 +301,7 @@ mod tests {
             unreachable!()
         }
 
-        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
-            unreachable!()
-        }
-
-        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
+        fn lpp_balance(&self) -> LppResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -313,11 +309,15 @@ mod tests {
             unreachable!()
         }
 
-        fn lpp_balance(&self) -> LppResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
+        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
             unreachable!()
         }
 
         fn nlpn_balance(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::BalanceResponse> {
+            unreachable!()
+        }
+
+        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
             unreachable!()
         }
     }
