@@ -101,10 +101,8 @@ where
         by: Timestamp,
         lease: Addr,
     ) -> ContractResult<RepayResult<Lpn>> {
-        let mut paid = LoanInterestsPaid::default();
-
-        self.repay_inner(payment, by, lease, &mut paid)
-            .map(|()| RepayResult {
+        self.repay_inner(payment, by, lease)
+            .map(|paid| RepayResult {
                 batch: Batch::from(self),
                 paid,
             })
@@ -115,18 +113,19 @@ where
         payment: Coin<Lpn>,
         by: Timestamp,
         lease: Addr,
-        paid: &mut LoanInterestsPaid<Lpn>,
-    ) -> ContractResult<()> {
+    ) -> ContractResult<LoanInterestsPaid<Lpn>> {
         self.debug_check_start_due_before(by, "before the 'repay-by' time");
 
         let (principal_due, mut interest_due) = self.load_lpp_loan(lease.clone())?
             .ok_or(ContractError::LoanClosed())
             .map(|resp| (resp.principal_due, resp.interest_due))?;
 
-        let change = self.repay_margin_interest(principal_due, by, payment, paid);
+        let mut paid = LoanInterestsPaid::default();
+
+        let change = self.repay_margin_interest(principal_due, by, payment, &mut paid);
 
         if change.is_zero() {
-            return Ok(());
+            return Ok(paid);
         }
 
         let interest_overdue = self.load_loan_interest_due(lease, self.current_period.start())?;
@@ -139,7 +138,7 @@ where
 
             let surplus = change - interest_overdue;
 
-            interest_overdue + self.repay_margin_interest(principal_due, by, surplus, paid)
+            interest_overdue + self.repay_margin_interest(principal_due, by, surplus, &mut paid)
         } else {
             change
         };
@@ -147,7 +146,7 @@ where
             // in practice not possible, but in theory it is if two consecutive repayments are received
             // with the same 'by' time.
             // TODO return profit.batch + lpp.batch
-            return Ok(());
+            return Ok(paid);
         }
         // TODO handle any surplus left after the repayment, options:
         //  - query again the lpp on the interest due by now + calculate the max repayment by now + send the supplus to the customer, or
@@ -169,7 +168,7 @@ where
             paid.principal_paid() == payment,
         );
 
-        Ok(())
+        Ok(paid)
     }
 
     pub(crate) fn state(
