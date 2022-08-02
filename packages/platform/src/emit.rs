@@ -1,4 +1,4 @@
-use cosmwasm_std::{Response, Timestamp};
+use cosmwasm_std::{Event, Response, Timestamp};
 use finance::coin::{Amount, Coin};
 use finance::currency::Currency;
 
@@ -39,17 +39,17 @@ pub trait Emit where Self: Sized {
 
 pub struct Emitter {
     batch: Batch,
-    event: String,
+    event: Event,
 }
 
 impl Emitter {
-    pub(super) fn new<T>(batch: Batch, event_type: T) -> Self
+    pub(crate) fn new<T>(batch: Batch, event_type: T) -> Self
     where
         T: Into<String>,
     {
         Self {
             batch,
-            event: event_type.into(),
+            event: Event::new(event_type.into()),
         }
     }
 }
@@ -59,13 +59,13 @@ where
     Batch: Into<Response>,
 {
     fn from(emitter: Emitter) -> Self {
-        emitter.batch.into()
+        Response::from(emitter.batch).add_event(emitter.event)
     }
 }
 
 impl Emit for Emitter {
     fn emit<K, V>(mut self, event_key: K, event_value: V) -> Self where K: Into<String>, V: Into<String> {
-        self.batch.internal_emit(&self.event, event_key, event_value.into());
+        self.event = self.event.add_attribute(event_key, event_value);
 
         self
     }

@@ -1,19 +1,16 @@
-mod emitter;
-
 use cosmwasm_std::{
-    Addr, Coin as CoinCw, CosmosMsg, Event, Response, SubMsg, to_binary, WasmMsg,
+    Addr, Coin as CoinCw, CosmosMsg, Response, SubMsg, to_binary, WasmMsg,
 };
 use finance::{coin::Coin, currency::Currency};
 use serde::Serialize;
 
 use crate::{coin_legacy::to_cosmwasm_impl, error::Result};
 
-pub use emitter::{Emit, Emitter};
+pub use crate::emit::{Emit, Emitter};
 
 #[derive(Default)]
 pub struct Batch {
     msgs: Vec<SubMsg>,
-    event: Option<Event>,
 }
 
 impl Batch {
@@ -86,27 +83,6 @@ impl Batch {
         res
     }
 
-    fn internal_emit<K>(&mut self, event_type: &str, event_key: K, event_value: String)
-    where
-        K: Into<String>,
-    {
-        // do not use Option.get_or_insert_with(f) since asserting on the type would require clone of the type
-        if self.event.is_none() {
-            self.event = Some(Event::new(event_type.to_string()));
-        } else {
-            assert_eq!(
-                self.event.as_ref().unwrap().ty,
-                event_type.to_string(),
-                "The platform batch supports only one event type"
-            );
-        }
-        let event = self.event.take().expect("empty event");
-        let none = self
-            .event
-            .replace(event.add_attribute(event_key, event_value));
-        debug_assert!(none.is_none());
-    }
-
     pub fn into_emitter<T>(self, event_type: T) -> Emitter
     where
         T: Into<String>,
@@ -160,18 +136,16 @@ impl Batch {
 
 impl From<Batch> for Response {
     fn from(p: Batch) -> Self {
-        let res = p
-            .msgs
+        p.msgs
             .into_iter()
-            .fold(Self::default(), |res, msg| res.add_submessage(msg));
-        p.event.into_iter().fold(res, |res, e| res.add_event(e))
+            .fold(Self::default(), |res, msg| res.add_submessage(msg))
     }
 }
 
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{CosmosMsg, Empty, Event, Response};
-    use crate::batch::emitter::Emit;
+    use crate::emit::Emit;
 
     use super::Batch;
 

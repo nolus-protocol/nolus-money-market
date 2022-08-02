@@ -72,7 +72,7 @@ pub struct Loan<Lpn, Lpp> {
 impl<Lpn, Lpp> Loan<Lpn, Lpp>
 where
     Lpp: LppTrait<Lpn>,
-    Lpn: Currency,
+    Lpn: Currency + Debug,
 {
     pub(super) fn from_dto(dto: LoanDTO, lpp: Lpp) -> Self {
         Self {
@@ -103,7 +103,7 @@ where
     ) -> ContractResult<RepayResult<Lpn>> {
         self.repay_inner(payment, by, lease)
             .map(|paid| RepayResult {
-                batch: Batch::from(self),
+                batch: self.into(),
                 paid,
             })
     }
@@ -162,10 +162,11 @@ where
 
         paid.pay_principal(principal_due, loan_payment - interest_due);
 
-        assert!(
+        assert_eq!(
             paid.previous_margin_paid() + paid.current_margin_paid() +
             paid.previous_interest_paid() + paid.current_interest_paid() +
-            paid.principal_paid() == payment,
+            paid.principal_paid(),
+            payment,
         );
 
         Ok(paid)
