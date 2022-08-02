@@ -29,7 +29,7 @@ pub enum ExecuteMsg {
     OpenLoan {
         amount: CoinDTO,
     },
-    RepayLoan,
+    RepayLoan(),
 
     Deposit(),
     // CW20 interface, withdraw from lender deposit
@@ -37,7 +37,7 @@ pub enum ExecuteMsg {
         amount: Uint128,
     },
 
-    DistributeRewards,
+    DistributeRewards(),
     ClaimRewards {
         other_recipient: Option<Addr>,
     },

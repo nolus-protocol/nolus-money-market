@@ -9,13 +9,17 @@ use finance::{
     liability::Liability,
 };
 use lpp::stub::Lpp as LppTrait;
-use platform::{bank::{BankAccount, BankAccountView}, batch::Batch};
+use platform::{
+    bank::{BankAccount, BankAccountView},
+    batch::Batch,
+};
 use serde::Serialize;
 
 use crate::{
     error::{ContractError, ContractResult},
+    event::{self, TYPE},
     loan::Loan,
-    msg::StateResponse, event::{TYPE, self},
+    msg::StateResponse,
 };
 
 use self::factory::Factory;
@@ -80,7 +84,12 @@ where
         let borrow = self.liability.init_borrow_amount(downpayment);
 
         let batch = self.loan.open_loan_req(borrow)?;
-        Ok(event::emit_addr(batch, TYPE::Open, "customer", self.customer))
+        Ok(event::emit_addr(
+            batch,
+            TYPE::Open,
+            "customer",
+            self.customer,
+        ))
     }
 
     pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<Batch> {
@@ -158,7 +167,7 @@ where
 #[cfg(test)]
 mod tests {
 
-    use cosmwasm_std::{Addr, SubMsg, Timestamp};
+    use cosmwasm_std::{Addr, Timestamp};
     use finance::currency::{Nls, Usdc};
     use finance::{
         coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
@@ -228,10 +237,6 @@ mod tests {
             unreachable!()
         }
 
-        fn distribute_rewards_req(&self, _funds: Coin<Nls>) -> LppResult<SubMsg> {
-            unimplemented!()
-        }
-
         fn quote(&self, _amount: Coin<TestCurrency>) -> LppResult<lpp::msg::QueryQuoteResponse> {
             unreachable!()
         }
@@ -282,10 +287,6 @@ mod tests {
 
         fn repay_loan_req(&mut self, _repayment: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
-        }
-
-        fn distribute_rewards_req(&self, _funds: Coin<Nls>) -> LppResult<SubMsg> {
-            unimplemented!()
         }
 
         fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestCurrency>> {
