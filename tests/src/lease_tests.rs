@@ -134,7 +134,11 @@ fn expected_open_state(
         amount: total,
         interest_rate: quote_result.annual_interest_rate,
         principal_due: expected,
-        interest_due: calculate_interest(expected, quote_result.annual_interest_rate, duration),
+        previous_margin_due: todo!(),
+        previous_interest_due: todo!(),
+        current_margin_due: todo!(),
+        // interest_due: calculate_interest(expected, quote_result.annual_interest_rate, duration),
+        current_interest_due: todo!(),
     }
 }
 

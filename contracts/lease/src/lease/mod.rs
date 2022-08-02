@@ -397,7 +397,10 @@ mod tests {
             amount: coin(lease_amount),
             interest_rate: MARGIN_INTEREST_RATE.checked_add(interest_rate).unwrap(),
             principal_due: loan.principal_due,
-            interest_due: loan.interest_due,
+            previous_margin_due: coin(0),
+            previous_interest_due: coin(0),
+            current_margin_due: coin(0),
+            current_interest_due: coin(0),
         };
 
         assert_eq!(exp, res);
