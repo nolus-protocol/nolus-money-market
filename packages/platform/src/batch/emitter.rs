@@ -4,6 +4,39 @@ use finance::currency::Currency;
 
 use crate::batch::Batch;
 
+pub trait Emit where Self: Sized {
+    fn emit<K, V>(self, event_key: K, event_value: V) -> Self
+        where
+            K: Into<String>,
+            V: Into<String>;
+
+    /// Specialization of [`emit`](Batch::emit) for timestamps.
+    fn emit_timestamp<K>(self, event_key: K, timestamp: &Timestamp) -> Self
+        where
+            K: Into<String>,
+    {
+        self.emit(event_key, timestamp.nanos().to_string())
+    }
+
+    /// Specialization of [`emit`](Batch::emit) for values implementing [`ToString`].
+    fn emit_to_string_value<K, V>(self, event_key: K, value: V) -> Self
+        where
+            K: Into<String>,
+            V: ToString,
+    {
+        self.emit(event_key, value.to_string())
+    }
+
+    /// Specialization of [`emit`](Batch::emit) for [`Coin`]'s amount.
+    fn emit_coin_amount<K, C>(self, event_key: K, coin: Coin<C>) -> Self
+        where
+            K: Into<String>,
+            C: Currency,
+    {
+        self.emit(event_key, Amount::from(coin).to_string())
+    }
+}
+
 pub struct Emitter {
     batch: Batch,
     event: String,
@@ -27,39 +60,6 @@ where
 {
     fn from(emitter: Emitter) -> Self {
         emitter.batch.into()
-    }
-}
-
-pub trait Emit where Self: Sized {
-    fn emit<K, V>(self, event_key: K, event_value: V) -> Self
-    where
-        K: Into<String>,
-        V: Into<String>;
-
-    /// Specialization of [`emit`](Batch::emit) for timestamps.
-    fn emit_timestamp<K>(self, event_key: K, timestamp: &Timestamp) -> Self
-    where
-        K: Into<String>,
-    {
-        self.emit(event_key, timestamp.nanos().to_string())
-    }
-
-    /// Specialization of [`emit`](Batch::emit) for values implementing [`ToString`].
-    fn emit_to_string_value<K, V>(self, event_key: K, value: V) -> Self
-    where
-        K: Into<String>,
-        V: ToString,
-    {
-        self.emit(event_key, value.to_string())
-    }
-
-    /// Specialization of [`emit`](Batch::emit) for [`Coin`]'s amount.
-    fn emit_coin_amount<K, C>(self, event_key: K, coin: Coin<C>) -> Self
-    where
-        K: Into<String>,
-        C: Currency,
-    {
-        self.emit(event_key, Amount::from(coin).to_string())
     }
 }
 
