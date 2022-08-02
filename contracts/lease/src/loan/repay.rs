@@ -14,7 +14,7 @@ where
     pub paid: LoanInterestsPaid<C>,
 }
 
-#[derive(Default, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub(crate) struct LoanInterestsPaid<C>
 where
     C: Currency,
