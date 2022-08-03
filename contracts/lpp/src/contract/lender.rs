@@ -7,7 +7,7 @@ use finance::currency::Currency;
 use platform::bank::{self, BankAccount, BankStub};
 
 use crate::error::ContractError;
-use crate::event::Type as EventType;
+use crate::event::emit_deposit;
 use crate::lpp::LiquidityPool;
 use crate::msg::{BalanceResponse, PriceResponse};
 use crate::state::Deposit;
@@ -30,21 +30,11 @@ where
 
     let price = lpp.calculate_price(&deps.as_ref(), &env, amount)?;
 
-    let transaction_idx = env.transaction.expect("Error! No transaction index.");
-
     let receipts =
         Deposit::load(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
    
-    let mut deposit_event = Batch::default();
-    deposit_event.emit(EventType::Deposit, "height", env.block.height.to_string());
-    deposit_event.emit(EventType::Deposit, "idx", transaction_idx.index.to_string());
-    deposit_event.emit(EventType::Deposit, "from", lender_addr);
-    deposit_event.emit_timestamp(EventType::Deposit, "at", &env.block.time);
-    deposit_event.emit(EventType::Deposit, "to", env.contract.address);
-    deposit_event.emit_coin(EventType::Deposit,"deposit", amount);
-    deposit_event.emit_amount(EventType::Deposit, "receipts", receipts);
 
-    Ok(deposit_event.into())
+    Ok(emit_deposit(Batch::default(),env,lender_addr,amount,receipts).into())
 }
 
 pub fn try_withdraw<LPN>(
