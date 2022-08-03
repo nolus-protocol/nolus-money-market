@@ -12,7 +12,7 @@ where
     pub receipt: Receipt<C>,
 }
 
-#[derive(Debug, Default, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub(crate) struct Receipt<C>
 where
     C: Currency,
