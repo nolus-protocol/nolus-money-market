@@ -31,27 +31,27 @@ impl<C> LoanInterestsPaid<C>
 where
     C: Currency,
 {
-    pub const fn previous_margin_paid(&self) -> Coin<C> {
+    pub fn previous_margin_paid(&self) -> Coin<C> {
         self.previous_margin_paid
     }
 
-    pub const fn previous_interest_paid(&self) -> Coin<C> {
+    pub fn previous_interest_paid(&self) -> Coin<C> {
         self.previous_interest_paid
     }
 
-    pub const fn current_margin_paid(&self) -> Coin<C> {
+    pub fn current_margin_paid(&self) -> Coin<C> {
         self.current_margin_paid
     }
 
-    pub const fn current_interest_paid(&self) -> Coin<C> {
+    pub fn current_interest_paid(&self) -> Coin<C> {
         self.current_interest_paid
     }
 
-    pub const fn principal_paid(&self) -> Coin<C> {
+    pub fn principal_paid(&self) -> Coin<C> {
         self.principal_paid
     }
 
-    pub const fn close(&self) -> bool {
+    pub fn close(&self) -> bool {
         self.close
     }
 
