@@ -1,12 +1,16 @@
 use cosmwasm_std::{Addr, Timestamp};
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
-use platform::bank::BankAccount;
-use platform::batch::{Batch, Emitter};
+use platform::{
+    bank::BankAccount,
+    batch::Emitter
+};
 use serde::Serialize;
 
-use crate::error::ContractError;
-use crate::lease::{Lease, WithLease};
+use crate::{
+    error::ContractError,
+    lease::{Lease, WithLease}
+};
 
 pub struct Close<'a, Bank> {
     sender: &'a Addr,
