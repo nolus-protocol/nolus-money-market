@@ -12,9 +12,6 @@ use crate::lpp::LiquidityPool;
 use crate::msg::{BalanceResponse, PriceResponse};
 use crate::state::Deposit;
 
-
-
-
 pub fn try_deposit<LPN>(
     deps: DepsMut,
     env: Env,
@@ -32,9 +29,8 @@ where
 
     let receipts =
         Deposit::load(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
-   
 
-    Ok(event::emit_deposit(Batch::default(),env,lender_addr,amount,receipts).into())
+    Ok(event::emit_deposit(Batch::default(), env, lender_addr, amount, receipts).into())
 }
 
 pub fn try_withdraw<LPN>(
