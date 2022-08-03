@@ -7,7 +7,7 @@ use finance::currency::Currency;
 use platform::bank::{self, BankAccount, BankStub};
 
 use crate::error::ContractError;
-use crate::event::emit_deposit;
+use crate::event;
 use crate::lpp::LiquidityPool;
 use crate::msg::{BalanceResponse, PriceResponse};
 use crate::state::Deposit;
@@ -34,7 +34,7 @@ where
         Deposit::load(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
    
 
-    Ok(emit_deposit(Batch::default(),env,lender_addr,amount,receipts).into())
+    Ok(event::emit_deposit(Batch::default(),env,lender_addr,amount,receipts).into())
 }
 
 pub fn try_withdraw<LPN>(
