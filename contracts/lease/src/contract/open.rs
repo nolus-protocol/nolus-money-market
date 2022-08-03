@@ -2,7 +2,7 @@ use cosmwasm_std::{Addr, Coin as CwCoin, Reply};
 use platform::bank;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
-use platform::batch::{Batch, Emit};
+use platform::batch::{Batch, Emit, Emitter};
 
 use crate::error::ContractError;
 use crate::event::TYPE;
@@ -20,7 +20,7 @@ impl<'a> OpenLoanReq<'a> {
 }
 
 impl<'a> WithLease for OpenLoanReq<'a> {
-    type Output = Batch;
+    type Output = Emitter;
 
     type Error = ContractError;
 
@@ -37,19 +37,20 @@ impl<'a> WithLease for OpenLoanReq<'a> {
             .map_err(Self::Error::from)?;
 
         // Using a block as an expression enforces move semantics on !Copy types
-        let batch = { result.batch }
-            .emit(TYPE::Open, "id", self.contract)
-            .emit(TYPE::Open, "customer", result.customer)
-            .emit_percent_amount(TYPE::Open, "air", result.annual_interest)
-            .emit(TYPE::Open, "currency", result.currency)
-            .emit(TYPE::Open, "loan-pool-id", result.loan_pool_id)
-            .emit(TYPE::Open, "loan-symbol", Lpn::SYMBOL)
-            .emit_coin_amount(TYPE::Open, "loan-amount", result.loan_amount)
+        let emitter = result.batch
+            .into_emitter(TYPE::Open)
+            .emit("id", self.contract)
+            .emit("customer", result.customer)
+            .emit_percent_amount("air", result.annual_interest)
+            .emit("currency", result.currency)
+            .emit("loan-pool-id", result.loan_pool_id)
+            .emit("loan-symbol", Lpn::SYMBOL)
+            .emit_coin_amount("loan-amount", result.loan_amount)
             // TODO when downpayment currency is replaced with a type parameter change from `Lpn` to the type parameter
-            .emit(TYPE::Open, "downpayment-symbol", Lpn::SYMBOL)
-            .emit_coin_amount(TYPE::Open, "downpayment-amount", downpayment_lpn);
+            .emit("downpayment-symbol", Lpn::SYMBOL)
+            .emit_coin_amount("downpayment-amount", downpayment_lpn);
 
-        Ok(batch)
+        Ok(emitter)
     }
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {

@@ -8,7 +8,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
 use platform::bank::BankStub;
-use platform::batch::Batch;
+use platform::batch::{Batch, Emitter};
 
 use crate::error::ContractResult;
 use crate::lease::{self, LeaseDTO};
@@ -63,11 +63,10 @@ pub fn execute(
 ) -> ContractResult<Response> {
     let lease = LeaseDTO::load(deps.storage)?;
 
-    let batch = match msg {
-        ExecuteMsg::Repay() => try_repay(deps, env, info, lease),
-        ExecuteMsg::Close() => try_close(deps, env, info, lease),
-    }?;
-    Ok(batch.into())
+    match msg {
+        ExecuteMsg::Repay() => try_repay(deps, env, info, lease).map(Into::into),
+        ExecuteMsg::Close() => try_close(deps, env, info, lease).map(Into::into),
+    }
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -92,13 +91,13 @@ fn try_repay(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> Con
     )
 }
 
-fn try_close(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Batch> {
+fn try_close(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Emitter> {
     let bank = BankStub::my_account(&env, &deps.querier);
 
-    let batch = lease::execute(
+    let emitter = lease::execute(
         lease,
         Close::new(&info.sender, env.contract.address.clone(), bank, env.block.time),
         &deps.querier,
     )?;
-    Ok(batch)
+    Ok(emitter)
 }

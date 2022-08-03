@@ -15,7 +15,7 @@ use platform::{
     batch::Batch,
 };
 use serde::Serialize;
-use platform::batch::Emit;
+use platform::batch::{Emit, Emitter};
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -107,7 +107,7 @@ where
 
     // TODO add the lease address as a field in Lease<>
     // and populate it on LeaseDTO.execute as LeaseFactory
-    pub(crate) fn close<B>(self, lease: Addr, mut account: B, now: Timestamp) -> ContractResult<Batch>
+    pub(crate) fn close<B>(self, lease: Addr, mut account: B, now: Timestamp) -> ContractResult<Emitter>
     where
         B: BankAccount,
     {
@@ -118,11 +118,12 @@ where
                 let balance = account.balance::<Lpn>()?;
                 account.send(balance, &self.customer);
 
-                let batch: Batch = account.into()
-                    .emit(TYPE::Close, "id", lease)
-                    .emit_timestamp(TYPE::Close, "at", &now);
+                let emitter = account.into()
+                    .into_emitter(TYPE::Close)
+                    .emit("id", lease)
+                    .emit_timestamp("at", &now);
 
-                Ok(batch)
+                Ok(emitter)
             }
             StateResponse::Closed() => ContractResult::Err(ContractError::LoanClosed()),
         }
