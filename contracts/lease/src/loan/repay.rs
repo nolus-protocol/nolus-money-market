@@ -1,5 +1,3 @@
-use std::mem::replace;
-
 use finance::{
     coin::Coin,
     currency::Currency
@@ -11,11 +9,11 @@ where
     C: Currency,
 {
     pub batch: Batch,
-    pub paid: LoanInterestsPaid<C>,
+    pub receipt: Receipt<C>,
 }
 
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
-pub(crate) struct LoanInterestsPaid<C>
+pub(crate) struct Receipt<C>
 where
     C: Currency,
 {
@@ -27,7 +25,7 @@ where
     close: bool,
 }
 
-impl<C> LoanInterestsPaid<C>
+impl<C> Receipt<C>
 where
     C: Currency,
 {
@@ -55,24 +53,20 @@ where
         self.close
     }
 
-    pub(super) fn next_payment(previous: &mut Coin<C>, current: &mut Coin<C>, payment: Coin<C>) {
-        *previous = replace(current, payment);
+    pub(super) fn pay_previous_margin(&mut self, payment: Coin<C>) {
+        self.previous_margin_paid = payment;
     }
 
-    pub(super) fn pay_next_margin(&mut self, payment: Coin<C>) {
-        Self::next_payment(
-            &mut self.previous_margin_paid,
-            &mut self.current_margin_paid,
-            payment,
-        );
+    pub(super) fn pay_previous_interest(&mut self, payment: Coin<C>) {
+        self.previous_interest_paid = payment;
     }
 
-    pub(super) fn pay_next_interest(&mut self, payment: Coin<C>) {
-        Self::next_payment(
-            &mut self.previous_interest_paid,
-            &mut self.current_interest_paid,
-            payment,
-        );
+    pub(super) fn pay_current_margin(&mut self, payment: Coin<C>) {
+        self.current_margin_paid = payment;
+    }
+
+    pub(super) fn pay_current_interest(&mut self, payment: Coin<C>) {
+        self.current_interest_paid = payment;
     }
 
     pub(super) fn pay_principal(&mut self, principal: Coin<C>, payment: Coin<C>) {
@@ -89,144 +83,23 @@ mod tests {
         currency::Nls
     };
 
-    use crate::loan::LoanInterestsPaid;
-
-    fn pay_margin_once() {
-        let amount = Coin::<Nls>::new(5);
-
-        let mut paid = LoanInterestsPaid::default();
-
-        paid.pay_next_margin(amount);
-
-        assert_eq!(
-            paid,
-            LoanInterestsPaid {
-                current_margin_paid: amount,
-                .. Default::default()
-            },
-        );
-    }
+    use crate::loan::Receipt;
 
     #[test]
-    fn test_pay_margin_once() {
-        pay_margin_once();
-    }
-
-    fn pay_margin_twice() {
-        let amount_1 = Coin::<Nls>::new(5);
-
-        let amount_2 = Coin::<Nls>::new(15);
-
-        let mut paid = LoanInterestsPaid::default();
-
-        paid.pay_next_margin(amount_1);
-
-        paid.pay_next_margin(amount_2);
-
-        assert_eq!(
-            paid,
-            LoanInterestsPaid {
-                previous_margin_paid: amount_1,
-                current_margin_paid: amount_2,
-                .. Default::default()
-            },
-        );
-    }
-
-    #[test]
-    fn test_pay_margin_twice() {
-        pay_margin_twice();
-    }
-
-    fn pay_interest_once() {
-        let amount = Coin::<Nls>::new(5);
-
-        let mut paid = LoanInterestsPaid::default();
-
-        paid.pay_next_interest(amount);
-
-        assert_eq!(
-            paid,
-            LoanInterestsPaid {
-                current_interest_paid: amount,
-                .. Default::default()
-            },
-        );
-    }
-
-    #[test]
-    fn test_pay_interest_once() {
-        pay_interest_once();
-    }
-
-    fn pay_interest_twice() {
-        let amount_1 = Coin::<Nls>::new(5);
-
-        let amount_2 = Coin::<Nls>::new(15);
-
-        let mut paid = LoanInterestsPaid::default();
-
-        paid.pay_next_interest(amount_1);
-
-        paid.pay_next_interest(amount_2);
-
-        assert_eq!(
-            paid,
-            LoanInterestsPaid {
-                previous_interest_paid: amount_1,
-                current_interest_paid: amount_2,
-                .. Default::default()
-            },
-        );
-    }
-
-    #[test]
-    fn test_pay_interest_twice() {
-        pay_interest_twice();
-    }
-
-    fn pay_principal_part() {
-        let principal = Coin::<Nls>::new(10);
-
-        let amount = Coin::<Nls>::new(5);
-
-        let mut paid = LoanInterestsPaid::default();
-
-        paid.pay_principal(principal, amount);
-
-        assert_eq!(
-            paid,
-            LoanInterestsPaid {
-                principal_paid: amount,
-                .. Default::default()
-            },
-        );
-    }
-
-    #[test]
-    fn test_pay_principal_part() {
-        pay_principal_part();
-    }
-
     fn pay_principal_full() {
         let principal = Coin::<Nls>::new(10);
 
-        let mut paid = LoanInterestsPaid::default();
+        let mut paid = Receipt::default();
 
         paid.pay_principal(principal, principal);
 
         assert_eq!(
             paid,
-            LoanInterestsPaid {
+            Receipt {
                 principal_paid: principal,
                 close: true,
                 .. Default::default()
             },
         );
-    }
-
-    #[test]
-    fn test_pay_principal_full() {
-        pay_principal_full();
     }
 }

@@ -49,12 +49,12 @@ impl<'a> WithLease for Repay<'a> {
             .emit("payment-symbol", Lpn::SYMBOL)
             .emit_coin_amount("payment-amount", payment)
             .emit_timestamp("at", &self.now)
-            .emit_to_string_value("loan-close", result.paid.close())
-            .emit_coin_amount("prev-margin-interest", result.paid.previous_margin_paid())
-            .emit_coin_amount("prev-loan-interest", result.paid.previous_interest_paid())
-            .emit_coin_amount("curr-margin-interest", result.paid.current_margin_paid())
-            .emit_coin_amount("curr-loan-interest", result.paid.current_interest_paid())
-            .emit_coin_amount("principal", result.paid.principal_paid());
+            .emit_to_string_value("loan-close", result.receipt.close())
+            .emit_coin_amount("prev-margin-interest", result.receipt.previous_margin_paid())
+            .emit_coin_amount("prev-loan-interest", result.receipt.previous_interest_paid())
+            .emit_coin_amount("curr-margin-interest", result.receipt.current_margin_paid())
+            .emit_coin_amount("curr-loan-interest", result.receipt.current_interest_paid())
+            .emit_coin_amount("principal", result.receipt.principal_paid());
 
         Ok(emitter)
     }

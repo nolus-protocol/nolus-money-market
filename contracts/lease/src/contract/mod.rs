@@ -40,9 +40,9 @@ pub fn instantiate(
     let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
     lease.store(deps.storage)?;
 
-    let batch = lease::execute(lease, OpenLoanReq::new(&info.funds), &deps.querier)?;
+    let emitter = lease::execute(lease, OpenLoanReq::new(&info.funds), &deps.querier)?;
 
-    Ok(batch.into())
+    Ok(emitter.into())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -64,11 +64,11 @@ pub fn execute(
 ) -> ContractResult<Response> {
     let lease = LeaseDTO::load(deps.storage)?;
 
-    let batch = match msg {
+    let emitter = match msg {
         ExecuteMsg::Repay() => try_repay(deps, env, info, lease),
         ExecuteMsg::Close() => try_close(deps, env, info, lease),
     }?;
-    Ok(batch.into())
+    Ok(emitter.into())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -90,8 +90,8 @@ fn try_repay(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> Con
         lease,
         Repay::new(&info.funds, env.block.time, env.contract.address.clone()),
         &deps.querier,
-    ).map(|batch| {
-        batch
+    ).map(|emitter| {
+        emitter
             .emit_to_string_value("height", &env.block.height)
             .emit_to_string_value(
                 "idx",
@@ -104,10 +104,10 @@ fn try_repay(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> Con
 fn try_close(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Emitter> {
     let bank = BankStub::my_account(&env, &deps.querier);
 
-    let batch = lease::execute(
+    let emitter = lease::execute(
         lease,
         Close::new(&info.sender, env.contract.address.clone(), bank, env.block.time),
         &deps.querier,
     )?;
-    Ok(batch)
+    Ok(emitter)
 }
