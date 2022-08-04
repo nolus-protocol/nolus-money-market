@@ -102,9 +102,9 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
         lease: Addr,
     ) -> ContractResult<RepayResult<Lpn>> {
         self.repay_inner(payment, by, lease)
-            .map(|paid| RepayResult {
+            .map(|receipt| RepayResult {
                 batch: self.into(),
-                receipt: paid,
+                receipt,
             })
     }
 
@@ -120,12 +120,12 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
             .ok_or(ContractError::LoanClosed())
             .map(|resp| (resp.principal_due, resp.interest_due))?;
 
-        let mut paid = Receipt::default();
+        let mut receipt = Receipt::default();
 
-        let change = self.repay_margin_interest(principal_due, by, payment, &mut paid, true);
+        let change = self.repay_margin_interest(principal_due, by, payment, &mut receipt, true);
 
         if change.is_zero() {
-            return Ok(paid);
+            return Ok(receipt);
         }
 
         let interest_overdue = self.load_loan_interest_due(lease, self.current_period.start())?;
@@ -133,13 +133,13 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
         let interest_due = total_interest_due - interest_overdue;
 
         let loan_payment = if interest_overdue <= change && self.current_period.zero_length() {
-            paid.pay_previous_interest(interest_overdue);
+            receipt.pay_previous_interest(interest_overdue);
             self.open_next_period();
 
             let surplus = change - interest_overdue;
 
             interest_overdue + self.repay_margin_interest(
-                principal_due, by, surplus, &mut paid, false)
+                principal_due, by, surplus, &mut receipt, false)
         } else {
             change
         };
@@ -147,7 +147,7 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
             // in practice not possible, but in theory it is if two consecutive repayments are received
             // with the same 'by' time.
             // TODO return profit.batch + lpp.batch
-            return Ok(paid);
+            return Ok(receipt);
         }
         // TODO handle any surplus left after the repayment, options:
         //  - query again the lpp on the interest due by now + calculate the max repayment by now + send the surplus to the customer, or
@@ -159,20 +159,20 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
         // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
         self.lpp.repay_loan_req(loan_payment)?;
 
-        paid.pay_current_interest(interest_due);
+        receipt.pay_current_interest(interest_due);
 
         if total_interest_due <= loan_payment {
-            paid.pay_principal(principal_due, loan_payment - total_interest_due);
+            receipt.pay_principal(principal_due, loan_payment - total_interest_due);
         }
 
         assert_eq!(
-            paid.previous_margin_paid() + paid.current_margin_paid() +
-                paid.previous_interest_paid() + paid.current_interest_paid() +
-                paid.principal_paid(),
+            receipt.previous_margin_paid() + receipt.current_margin_paid() +
+                receipt.previous_interest_paid() + receipt.current_interest_paid() +
+                receipt.principal_paid(),
             payment,
         );
 
-        Ok(paid)
+        Ok(receipt)
     }
 
     pub(crate) fn state(
@@ -207,7 +207,7 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
         principal_due: Coin<Lpn>,
         by: Timestamp,
         payment: Coin<Lpn>,
-        paid: &mut Receipt<Lpn>,
+        receipt: &mut Receipt<Lpn>,
         previous: bool,
     ) -> Coin<Lpn> {
         let (period, change) = self.current_period.pay(principal_due, payment, by);
@@ -217,9 +217,9 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
             let margin_paid = payment - change;
 
             if previous {
-                paid.pay_previous_margin(margin_paid);
+                receipt.pay_previous_margin(margin_paid);
             } else {
-                paid.pay_current_margin(margin_paid);
+                receipt.pay_current_margin(margin_paid);
             }
         }
 

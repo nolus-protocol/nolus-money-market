@@ -89,12 +89,12 @@ mod tests {
     fn pay_principal_full() {
         let principal = Coin::<Nls>::new(10);
 
-        let mut paid = Receipt::default();
+        let mut receipt = Receipt::default();
 
-        paid.pay_principal(principal, principal);
+        receipt.pay_principal(principal, principal);
 
         assert_eq!(
-            paid,
+            receipt,
             Receipt {
                 principal_paid: principal,
                 close: true,
