@@ -1,21 +1,30 @@
-#[derive(Clone)]
-pub enum Type {
-    Deposit,
-    Withdraw,
-}
+use cosmwasm_std::{Addr, Env};
+use finance::{coin::Coin, currency::Currency};
+use platform::batch::Batch;
+use crate::nlpn::NLpn;
 
-impl Type {
-    /// 'wasm-' is always prepended by the runtime
-    pub const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Deposit => "lp-deposit",
-            Self::Withdraw => "lp-withdraw",
-        }
-    }
-}
+const WITHDRAW:&str = "lp-withdraw";
 
-impl From<Type> for String {
-    fn from(ty: Type) -> Self {
-        String::from(ty.as_str())
-    }
+pub fn emit_withdraw<C>(
+    mut batch: Batch,
+    env: Env,
+    lender_addr: Addr,
+    payment_lpn: Coin<C>,
+    receipts: Coin<NLpn>,
+    close_flag: bool
+) -> Batch
+where
+    C: Currency,
+{
+    let transaction_idx = env.transaction.expect("Error! No transaction index.");
+
+    batch.emit(WITHDRAW,"height" , env.block.height.to_string());
+    batch.emit(WITHDRAW,"idx" , transaction_idx.index.to_string());
+    batch.emit(WITHDRAW,"to" , lender_addr);
+    batch.emit_timestamp(WITHDRAW,"at" ,  &env.block.time);
+    batch.emit(WITHDRAW,"from" ,  env.contract.address);
+    batch.emit_coin(WITHDRAW,"withdraw", payment_lpn);
+    batch.emit_amount(WITHDRAW ,"receipts" , receipts);
+    batch.emit(WITHDRAW,"close" , close_flag.to_string());
+    batch
 }

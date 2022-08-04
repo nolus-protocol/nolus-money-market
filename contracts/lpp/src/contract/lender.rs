@@ -10,7 +10,7 @@ use crate::error::ContractError;
 use crate::lpp::LiquidityPool;
 use crate::msg::{BalanceResponse, PriceResponse};
 use crate::state::Deposit;
-use crate::event::Type as EventType;
+use crate::event;
 
 pub fn try_deposit<LPN>(
     deps: DepsMut,
@@ -59,20 +59,9 @@ where
        
     }
 
-    let mut batch: Batch = bank.into();
-
-    let transaction_idx = env.transaction.expect("Error! No transaction index.");
-
-    batch.emit(EventType::Withdraw,"height" , env.block.height.to_string());
-    batch.emit(EventType::Withdraw,"idx" , transaction_idx.index.to_string());
-    batch.emit(EventType::Withdraw,"to" , lender_addr);
-    batch.emit_timestamp(EventType::Withdraw,"at" ,  &env.block.time);
-    batch.emit(EventType::Withdraw,"from" ,  env.contract.address);
-    batch.emit_coin(EventType::Withdraw,"withdraw", payment_lpn);
-    batch.emit_amount(EventType::Withdraw ,"receipts" , amount_nlpn);
-    batch.emit(EventType::Withdraw,"close" , close_flag.to_string());
+    let batch: Batch = bank.into();
     
-    Ok(batch.into())
+    Ok(event::emit_withdraw(batch, env, lender_addr,  payment_lpn, amount_nlpn,close_flag).into())
 }
 
 pub fn query_ntoken_price<LPN>(deps: Deps, env: Env) -> Result<PriceResponse<LPN>, ContractError>
