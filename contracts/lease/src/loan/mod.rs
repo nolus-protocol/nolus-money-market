@@ -184,7 +184,7 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
             receipt.pay_principal(principal_due, loan_payment - total_interest_due);
         }
 
-        assert_eq!(
+        debug_assert_eq!(
             receipt.previous_margin_paid() + receipt.current_margin_paid() +
                 receipt.previous_interest_paid() + receipt.current_interest_paid() +
                 receipt.principal_paid(),
