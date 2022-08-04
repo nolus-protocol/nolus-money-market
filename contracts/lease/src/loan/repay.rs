@@ -54,22 +54,32 @@ where
     }
 
     pub(super) fn pay_previous_margin(&mut self, payment: Coin<C>) {
+        debug_assert_eq!(self.previous_margin_paid, Coin::new(0));
+
         self.previous_margin_paid = payment;
     }
 
     pub(super) fn pay_previous_interest(&mut self, payment: Coin<C>) {
+        debug_assert_eq!(self.previous_interest_paid, Coin::new(0));
+
         self.previous_interest_paid = payment;
     }
 
     pub(super) fn pay_current_margin(&mut self, payment: Coin<C>) {
+        debug_assert_eq!(self.current_margin_paid, Coin::new(0));
+
         self.current_margin_paid = payment;
     }
 
     pub(super) fn pay_current_interest(&mut self, payment: Coin<C>) {
+        debug_assert_eq!(self.current_interest_paid, Coin::new(0));
+
         self.current_interest_paid = payment;
     }
 
     pub(super) fn pay_principal(&mut self, principal: Coin<C>, payment: Coin<C>) {
+        debug_assert_eq!(self.principal_paid, Coin::new(0));
+
         self.principal_paid = payment;
 
         self.close = principal == payment;
