@@ -113,7 +113,7 @@ impl Batch {
         self.emit(event_type, event_key, timestamp.nanos().to_string())
     }
 
-    pub fn emit_coin<T,K,C>(&mut self, event_type: T, event_key: K, coin: Coin<C>)
+    pub fn emit_coin<T, K, C>(&mut self, event_type: T, event_key: K, coin: Coin<C>)
     where
         T: Into<String> + Clone,
         K: Into<String>,
@@ -122,17 +122,17 @@ impl Batch {
         let key = event_key.into();
         let amount_key = key.clone() + "-amount";
         let symbol_key = key + "-symbol";
-        
+
         self.emit(event_type.clone(), amount_key, u128::from(coin).to_string());
         self.emit(event_type, symbol_key, C::SYMBOL)
     }
 
-    pub fn emit_amount<T,K,C>(&mut self, event_type: T, event_key: K, coin: Coin<C>)
+    pub fn emit_amount<T, K, C>(&mut self, event_type: T, event_key: K, coin: Coin<C>)
     where
         T: Into<String>,
         K: Into<String>,
         C: Currency,
-    {  
+    {
         self.emit(event_type, event_key, u128::from(coin).to_string())
     }
 
