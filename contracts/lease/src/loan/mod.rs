@@ -280,7 +280,7 @@ mod tests {
     use serde::{Serialize, Deserialize};
     use finance::coin::{Amount, Coin};
     use finance::currency::{Currency, Nls, Usdc};
-    use finance::duration::{Duration, Units as DurationUnits};
+    use finance::duration::Duration;
     use finance::percent::Percent;
     use finance::ratio::Ratio;
     use lpp::msg::{BalanceResponse, LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse, QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryQuoteResponse, RewardsResponse};
@@ -326,7 +326,7 @@ mod tests {
             unreachable!()
         }
 
-        fn repay_loan_req(&mut self, repayment: Coin<TestCurrency>) -> LppResult<()> {
+        fn repay_loan_req(&mut self, _repayment: Coin<TestCurrency>) -> LppResult<()> {
             // let loan = self.loan.as_mut().ok_or(LppError::NoLoan {})?;
             //
             // loan.principal_due -= repayment;
@@ -345,7 +345,7 @@ mod tests {
         fn loan_outstanding_interest(
             &self,
             _lease: impl Into<Addr>,
-            by: Timestamp,
+            _by: Timestamp,
         ) -> LppResult<QueryLoanOutstandingInterestResponse<TestCurrency>> {
             Ok(self.loan.as_ref().map(
                 |loan| OutstandingInterest(loan.interest_due)
