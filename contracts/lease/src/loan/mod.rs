@@ -122,12 +122,18 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
 
         let mut receipt = Receipt::default();
 
+        let current_margin = by < self.current_period.till();
+
         let RepayMarginInterestResult {
             paid,
             change,
         } = self.repay_margin_interest(principal_due, by, payment);
 
-        receipt.pay_previous_margin(paid);
+        if current_margin {
+            receipt.pay_current_margin(paid);
+        } else {
+            receipt.pay_previous_margin(paid);
+        }
 
         if change.is_zero() {
             return Ok(receipt);
@@ -407,24 +413,21 @@ mod tests {
     }
 
     #[test]
-    fn partial_margin_repay() {
+    fn partial_previous_margin_repay() {
         let addr = "unused_addr";
 
         let lease_amount = 1000;
         let lease_coin = coin(lease_amount);
 
-        let interest_amount = lease_amount / 2;
-        let interest_coin = coin(interest_amount);
-
         let repay_amount = lease_amount / 4;
         let repay_coin = coin(repay_amount);
 
-        let interest_rate = Percent::from_permille(50);
+        let interest_rate = Percent::from_permille(0);
 
         // LPP loan
         let loan_resp = LoanResponse {
             principal_due: lease_coin,
-            interest_due: interest_coin,
+            interest_due: coin(0),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -433,7 +436,7 @@ mod tests {
 
         let receipt = loan.repay(
             repay_coin,
-            LEASE_START + Duration::YEAR,
+            LEASE_START + Duration::YEAR + Duration::YEAR,
             Addr::unchecked(addr),
         )
             .unwrap()
@@ -445,6 +448,48 @@ mod tests {
                 let mut receipt = Receipt::default();
 
                 receipt.pay_previous_margin(repay_coin);
+
+                receipt
+            },
+        );
+    }
+
+    #[test]
+    fn partial_current_margin_repay() {
+        let addr = "unused_addr";
+
+        let lease_amount = 1000;
+        let lease_coin = coin(lease_amount);
+
+        let repay_amount = lease_amount / 4;
+        let repay_coin = coin(repay_amount);
+
+        let interest_rate = Percent::from_permille(0);
+
+        // LPP loan
+        let loan_resp = LoanResponse {
+            principal_due: lease_coin,
+            interest_due: coin(0),
+            annual_interest_rate: interest_rate,
+            interest_paid: Timestamp::from_nanos(0),
+        };
+
+        let loan = create_loan(addr, Some(loan_resp));
+
+        let receipt = loan.repay(
+            repay_coin,
+            LEASE_START + Duration::from_nanos(Duration::YEAR.nanos() - 1),
+            Addr::unchecked(addr),
+        )
+            .unwrap()
+            .receipt;
+
+        assert_eq!(
+            receipt,
+            {
+                let mut receipt = Receipt::default();
+
+                receipt.pay_current_margin(repay_coin);
 
                 receipt
             },
@@ -549,7 +594,7 @@ mod tests {
         let lease_amount = 1000;
         let lease_coin = coin(lease_amount);
 
-        let interest_rate = Percent::from_permille(50);
+        let interest_rate = Percent::from_permille(500);
 
         // LPP loan
         let loan = LoanResponse {
