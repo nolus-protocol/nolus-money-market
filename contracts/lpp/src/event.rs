@@ -1,7 +1,7 @@
+use crate::nlpn::NLpn;
 use cosmwasm_std::{Addr, Env};
 use finance::{coin::Coin, currency::Currency};
 use platform::batch::Batch;
-use crate::nlpn::NLpn;
 
 pub fn emit_deposit<C>(
     mut batch: Batch,
@@ -13,7 +13,7 @@ pub fn emit_deposit<C>(
 where
     C: Currency,
 {
-    const DEPOSIT:&str = "lp-deposit";
+    const DEPOSIT: &str = "lp-deposit";
     let transaction_idx = env.transaction.expect("Error! No transaction index.");
 
     batch.emit(DEPOSIT, "height", env.block.height.to_string());
