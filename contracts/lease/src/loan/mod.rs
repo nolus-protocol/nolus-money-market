@@ -274,7 +274,10 @@ impl<Lpn, Lpp> From<Loan<Lpn, Lpp>> for Batch
     }
 }
 
-struct RepayMarginInterestResult<Lpn> {
+struct RepayMarginInterestResult<Lpn>
+where
+    Lpn: Currency,
+{
     paid: Coin<Lpn>,
     change: Coin<Lpn>,
 }
