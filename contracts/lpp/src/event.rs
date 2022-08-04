@@ -3,8 +3,6 @@ use finance::{coin::Coin, currency::Currency};
 use platform::batch::Batch;
 use crate::nlpn::NLpn;
 
-const WITHDRAW:&str = "lp-withdraw";
-
 pub fn emit_withdraw<C>(
     mut batch: Batch,
     env: Env,
@@ -16,6 +14,7 @@ pub fn emit_withdraw<C>(
 where
     C: Currency,
 {
+    const WITHDRAW:&str = "lp-withdraw";
     let transaction_idx = env.transaction.expect("Error! No transaction index.");
 
     batch.emit(WITHDRAW,"height" , env.block.height.to_string());
