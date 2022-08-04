@@ -20,7 +20,7 @@ impl NewLeaseForm {
             self.loan.annual_margin_interest,
             Duration::from_secs(self.loan.interest_due_period_secs),
             Duration::from_secs(self.loan.grace_period_secs),
-        );
+        )?;
         Ok(LeaseDTO::new(customer, self.currency, self.liability, loan))
     }
 }

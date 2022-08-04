@@ -332,9 +332,9 @@ mod tests {
             LEASE_START,
             lpp_ref,
             MARGIN_INTEREST_RATE,
+            Duration::from_secs(100),
             Duration::from_secs(0),
-            Duration::from_secs(0),
-        );
+        ).unwrap();
         Lease {
             customer: Addr::unchecked("customer"),
             currency: TestCurrency::SYMBOL.to_string(),
