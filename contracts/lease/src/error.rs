@@ -33,8 +33,8 @@ pub enum ContractError {
     #[error("The underlying loan is closed")]
     LoanClosed(),
 
-    #[error("Custom Error val: {val:?}")]
-    CustomError { val: String },
+    #[error("Invalid parameters: {0}")]
+    InvalidParameters(String),
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
 }
