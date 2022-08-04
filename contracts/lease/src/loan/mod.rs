@@ -391,7 +391,7 @@ mod tests {
             LEASE_START,
             lpp_ref,
             MARGIN_INTEREST_RATE,
-            Duration::from_secs((Duration::YEAR.nanos() / 1000000) as u32),
+            Duration::from_secs((Duration::YEAR.nanos() / 1000000000) as u32),
             Duration::from_secs(0),
         );
 
