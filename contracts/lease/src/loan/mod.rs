@@ -143,8 +143,9 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
 
         let interest_due = total_interest_due - interest_overdue;
 
+        receipt.pay_previous_interest(interest_overdue.min(change));
+
         let loan_payment = if interest_overdue <= change && self.current_period.zero_length() {
-            receipt.pay_previous_interest(interest_overdue);
             self.open_next_period();
 
             let surplus = change - interest_overdue;
