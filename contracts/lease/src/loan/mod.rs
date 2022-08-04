@@ -124,15 +124,13 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
 
         let change = self.repay_margin_interest(principal_due, by, payment, &mut paid, true);
 
-        dbg!(paid.previous_margin_paid());
-
         if change.is_zero() {
             return Ok(paid);
         }
 
         let interest_overdue = self.load_loan_interest_due(lease, self.current_period.start())?;
 
-        let interest_due = total_interest_due - dbg!(interest_overdue);
+        let interest_due = total_interest_due - interest_overdue;
 
         let loan_payment = if interest_overdue <= change && self.current_period.zero_length() {
             paid.pay_previous_interest(interest_overdue);
@@ -159,15 +157,13 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
         //  and send repayment amount up to the principal + interest due. The remainder is left in the lease
 
         // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
-        self.lpp.repay_loan_req(dbg!(loan_payment))?;
+        self.lpp.repay_loan_req(loan_payment)?;
 
-        paid.pay_current_interest(dbg!(interest_due));
+        paid.pay_current_interest(interest_due);
 
-        if dbg!(total_interest_due) <= loan_payment {
+        if total_interest_due <= loan_payment {
             paid.pay_principal(principal_due, loan_payment - total_interest_due);
         }
-
-        dbg!(&paid);
 
         assert_eq!(
             paid.previous_margin_paid() + paid.current_margin_paid() +
@@ -214,11 +210,11 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
         paid: &mut Receipt<Lpn>,
         previous: bool,
     ) -> Coin<Lpn> {
-        let (period, change) = dbg!(self.current_period).pay(principal_due, payment, dbg!(by));
+        let (period, change) = self.current_period.pay(principal_due, payment, by);
         self.current_period = period;
 
         {
-            let margin_paid = dbg!(payment - dbg!(change));
+            let margin_paid = payment - change;
 
             if previous {
                 paid.pay_previous_margin(margin_paid);
