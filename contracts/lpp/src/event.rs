@@ -1,46 +1,28 @@
 use cosmwasm_std::{Addr, Env};
 use finance::{coin::Coin, currency::Currency};
 use platform::batch::Batch;
+use crate::nlpn::NLpn;
 
-#[derive(Clone)]
-enum Type {
-    Deposit,
-}
+const DEPOSIT:&str = "lp-deposit";
 
-impl Type {
-    /// 'wasm-' is always prepended by the runtime
-    const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Deposit => "lp-deposit",
-        }
-    }
-}
-
-impl From<Type> for String {
-    fn from(ty: Type) -> Self {
-        String::from(ty.as_str())
-    }
-}
-
-pub fn emit_deposit<C, V>(
+pub fn emit_deposit<C>(
     mut batch: Batch,
     env: Env,
     lender_addr: Addr,
     deposited_amount: Coin<C>,
-    receipts: Coin<V>,
+    receipts: Coin<NLpn>,
 ) -> Batch
 where
     C: Currency,
-    V: Currency,
 {
     let transaction_idx = env.transaction.expect("Error! No transaction index.");
 
-    batch.emit(Type::Deposit, "height", env.block.height.to_string());
-    batch.emit(Type::Deposit, "idx", transaction_idx.index.to_string());
-    batch.emit(Type::Deposit, "from", lender_addr);
-    batch.emit_timestamp(Type::Deposit, "at", &env.block.time);
-    batch.emit(Type::Deposit, "to", env.contract.address);
-    batch.emit_coin(Type::Deposit, "deposit", deposited_amount);
-    batch.emit_amount(Type::Deposit, "receipts", receipts);
+    batch.emit(DEPOSIT, "height", env.block.height.to_string());
+    batch.emit(DEPOSIT, "idx", transaction_idx.index.to_string());
+    batch.emit(DEPOSIT, "from", lender_addr);
+    batch.emit_timestamp(DEPOSIT, "at", &env.block.time);
+    batch.emit(DEPOSIT, "to", env.contract.address);
+    batch.emit_coin(DEPOSIT, "deposit", deposited_amount);
+    batch.emit_amount(DEPOSIT, "receipts", receipts);
     batch
 }
