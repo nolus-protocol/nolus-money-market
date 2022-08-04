@@ -498,6 +498,95 @@ mod tests {
     }
 
     #[test]
+    fn partial_previous_interest_repay() {
+        let addr = "unused_addr";
+
+        let lease_amount = 1000;
+        let lease_coin = coin(lease_amount);
+
+        let repay_amount = lease_amount / 4;
+        let repay_coin = coin(repay_amount);
+
+        let interest_rate = Percent::from_permille(500);
+
+        // LPP loan
+        let loan_resp = LoanResponse {
+            principal_due: lease_coin,
+            interest_due: coin(lease_amount / 2),
+            annual_interest_rate: interest_rate,
+            interest_paid: Timestamp::from_nanos(0),
+        };
+
+        let loan = create_loan(addr, Some(loan_resp));
+
+        let receipt = loan.repay(
+            repay_coin,
+            LEASE_START,
+            Addr::unchecked(addr),
+        )
+            .unwrap()
+            .receipt;
+
+        assert_eq!(
+            receipt,
+            {
+                let mut receipt = Receipt::default();
+
+                receipt.pay_previous_interest(repay_coin);
+
+                receipt
+            },
+        );
+    }
+
+    #[test]
+    fn full_previous_partial_current_interest_repay() {
+        let addr = "unused_addr";
+
+        let lease_amount = 1000;
+        let lease_coin = coin(lease_amount);
+
+        let interest_amount = lease_amount / 2;
+        let interest_coin = coin(interest_amount);
+
+        let repay_amount = lease_amount;
+        let repay_coin = coin(repay_amount);
+
+        let interest_rate = Percent::from_permille(500);
+
+        // LPP loan
+        let loan_resp = LoanResponse {
+            principal_due: lease_coin,
+            interest_due: interest_coin,
+            annual_interest_rate: interest_rate,
+            interest_paid: Timestamp::from_nanos(0),
+        };
+
+        let loan = create_loan(addr, Some(loan_resp));
+
+        let receipt = loan.repay(
+            repay_coin,
+            LEASE_START + Duration::YEAR,
+            Addr::unchecked(addr),
+        )
+            .unwrap()
+            .receipt;
+
+        assert_eq!(
+            receipt,
+            {
+                let mut receipt = Receipt::default();
+
+                receipt.pay_previous_margin(coin(lease_amount * Into::<Amount>::into(MARGIN_INTEREST_RATE.parts()) / 1000));
+
+                receipt.pay_previous_interest(interest_coin);
+
+                receipt
+            },
+        );
+    }
+
+    #[test]
     fn partial_principal_repay() {
         let addr = "unused_addr";
 
