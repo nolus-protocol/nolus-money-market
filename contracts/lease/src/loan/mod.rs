@@ -122,7 +122,12 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
 
         let mut receipt = Receipt::default();
 
-        let change = self.repay_margin_interest(principal_due, by, payment, &mut receipt, true);
+        let RepayMarginInterestResult {
+            paid,
+            change,
+        } = self.repay_margin_interest(principal_due, by, payment);
+
+        receipt.pay_previous_margin(paid);
 
         if change.is_zero() {
             return Ok(receipt);
@@ -138,8 +143,16 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
 
             let surplus = change - interest_overdue;
 
-            interest_overdue + self.repay_margin_interest(
-                principal_due, by, surplus, &mut receipt, false)
+            let RepayMarginInterestResult {
+                paid,
+                change,
+            } = self.repay_margin_interest(
+                principal_due, by, surplus
+            );
+
+            receipt.pay_current_margin(paid);
+
+            interest_overdue + change
         } else {
             change
         };
@@ -207,24 +220,15 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
         principal_due: Coin<Lpn>,
         by: Timestamp,
         payment: Coin<Lpn>,
-        receipt: &mut Receipt<Lpn>,
-        previous: bool,
-    ) -> Coin<Lpn> {
+    ) -> RepayMarginInterestResult<Lpn> {
         let (period, change) = self.current_period.pay(principal_due, payment, by);
         self.current_period = period;
 
-        {
-            let margin_paid = payment - change;
-
-            if previous {
-                receipt.pay_previous_margin(margin_paid);
-            } else {
-                receipt.pay_current_margin(margin_paid);
-            }
-        }
-
         // TODO send payment - change to profit
-        change
+        RepayMarginInterestResult {
+            paid: payment - change,
+            change,
+        }
     }
 
     fn open_next_period(&mut self) {
@@ -268,6 +272,11 @@ impl<Lpn, Lpp> From<Loan<Lpn, Lpp>> for Batch
     fn from(loan: Loan<Lpn, Lpp>) -> Self {
         loan.lpp.into()
     }
+}
+
+struct RepayMarginInterestResult<Lpn> {
+    paid: Coin<Lpn>,
+    change: Coin<Lpn>,
 }
 
 #[cfg(test)]
