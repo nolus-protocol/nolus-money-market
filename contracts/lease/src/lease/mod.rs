@@ -15,7 +15,7 @@ use platform::{
     batch::{
         Batch,
         Emit,
-        Emitter
+        Emitter,
     }
 };
 use serde::Serialize;
@@ -23,7 +23,7 @@ use serde::Serialize;
 use crate::{
     error::{ContractError, ContractResult},
     event::TYPE,
-    loan::Loan,
+    loan::{Loan, RepayResult},
     msg::StateResponse,
 };
 
@@ -135,7 +135,7 @@ where
         payment: Coin<Lpn>,
         by: Timestamp,
         lease: Addr,
-    ) -> ContractResult<Batch> {
+    ) -> ContractResult<RepayResult<Lpn>> {
         assert_eq!(self.currency, Lpn::SYMBOL);
         self.loan.repay(payment, by, lease)
     }
@@ -197,7 +197,7 @@ mod tests {
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
     const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
     type TestCurrency = Usdc;
-    type LppResult<T> = core::result::Result<T, LppError>;
+    type LppResult<T> = Result<T, LppError>;
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     pub struct BankStub {
@@ -237,7 +237,7 @@ mod tests {
         }
 
         fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestCurrency>> {
-            Result::Ok(self.loan.clone())
+            Ok(self.loan.clone())
         }
 
         fn loan_outstanding_interest(
@@ -332,6 +332,7 @@ mod tests {
         fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
             unreachable!()
         }
+
         fn nlpn_balance(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::BalanceResponse> {
             unreachable!()
         }

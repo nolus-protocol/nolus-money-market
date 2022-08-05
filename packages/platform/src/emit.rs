@@ -5,34 +5,37 @@ use finance::percent::Percent;
 
 use crate::batch::Batch;
 
-pub trait Emit where Self: Sized {
+pub trait Emit
+where
+    Self: Sized,
+{
     fn emit<K, V>(self, event_key: K, event_value: V) -> Self
-        where
-            K: Into<String>,
-            V: Into<String>;
+    where
+        K: Into<String>,
+        V: Into<String>;
 
     /// Specialization of [`emit`](Self::emit) for [`Timestamp`].
     fn emit_timestamp<K>(self, event_key: K, timestamp: &Timestamp) -> Self
-        where
-            K: Into<String>,
+    where
+        K: Into<String>,
     {
         self.emit_to_string_value(event_key, timestamp.nanos())
     }
 
     /// Specialization of [`emit`](Self::emit) for values implementing [`ToString`].
     fn emit_to_string_value<K, V>(self, event_key: K, value: V) -> Self
-        where
-            K: Into<String>,
-            V: ToString,
+    where
+        K: Into<String>,
+        V: ToString,
     {
         self.emit(event_key, value.to_string())
     }
 
     /// Specialization of [`emit`](Self::emit) for [`Coin`]'s amount.
     fn emit_coin_amount<K, C>(self, event_key: K, coin: Coin<C>) -> Self
-        where
-            K: Into<String>,
-            C: Currency,
+    where
+        K: Into<String>,
+        C: Currency,
     {
         self.emit_to_string_value(event_key, Amount::from(coin))
     }
@@ -43,6 +46,19 @@ pub trait Emit where Self: Sized {
             K: Into<String>,
     {
         self.emit_to_string_value(event_key, percent.units())
+    }
+
+    fn emit_coin<K, C>(self, event_key: K, coin: Coin<C>) -> Self
+    where
+        K: Into<String>,
+        C: Currency,
+    {
+        let key = event_key.into();
+        let amount_key = key.clone() + "-amount";
+        let symbol_key = key + "-symbol";
+
+        self.emit(amount_key, u128::from(coin).to_string())
+            .emit(symbol_key, C::SYMBOL)
     }
 }
 
@@ -73,7 +89,11 @@ where
 }
 
 impl Emit for Emitter {
-    fn emit<K, V>(mut self, event_key: K, event_value: V) -> Self where K: Into<String>, V: Into<String> {
+    fn emit<K, V>(mut self, event_key: K, event_value: V) -> Self
+    where
+        K: Into<String>,
+        V: Into<String>,
+    {
         self.event = self.event.add_attribute(event_key, event_value);
 
         self
