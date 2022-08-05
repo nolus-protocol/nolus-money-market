@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{error::ContractError, error::ContractResult};
 
-pub(crate) use repay::{Receipt, Result as RepayResult};
+pub(crate) use repay::Receipt;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct LoanDTO {
@@ -34,6 +34,22 @@ pub(crate) struct LoanDTO {
 }
 
 impl LoanDTO {
+    fn new_raw(
+        annual_margin_interest: Percent,
+        lpp: LppRef,
+        interest_due_period: Duration,
+        grace_period: Duration,
+        current_period: InterestPeriod<Units, Percent>,
+    ) -> Self {
+        debug_assert!(grace_period < interest_due_period);
+        Self {
+            annual_margin_interest,
+            lpp,
+            interest_due_period,
+            grace_period,
+            current_period,
+        }
+    }
     pub(crate) fn new(
         start: Timestamp,
         lpp: LppRef,
@@ -46,15 +62,15 @@ impl LoanDTO {
             grace_period,
             interest_due_period)))
         } else {
-            Ok(Self {
+            Ok(Self::new_raw(
                 annual_margin_interest,
                 lpp,
                 interest_due_period,
                 grace_period,
-                current_period: InterestPeriod::with_interest(annual_margin_interest)
+                InterestPeriod::with_interest(annual_margin_interest)
                     .from(start)
                     .spanning(interest_due_period),
-            })
+            ))
         }
     }
 
@@ -65,6 +81,7 @@ impl LoanDTO {
 
 pub struct Loan<Lpn, Lpp> {
     annual_margin_interest: Percent,
+    lpp_ref: LppRef,
     lpn: PhantomData<Lpn>,
     lpp: Lpp,
     interest_due_period: Duration,
@@ -80,6 +97,7 @@ where
     pub(super) fn from_dto(dto: LoanDTO, lpp: Lpp) -> Self {
         let res = Self {
             annual_margin_interest: dto.annual_margin_interest,
+            lpp_ref: dto.lpp,
             lpn: PhantomData,
             lpp,
             interest_due_period: dto.interest_due_period,
@@ -88,6 +106,17 @@ where
         };
         debug_assert!(res._grace_period < res.interest_due_period);
         res
+    }
+
+    pub(super) fn into_dto(self) -> (LoanDTO, Lpp) {
+        let dto = LoanDTO::new_raw(
+            self.annual_margin_interest,
+            self.lpp_ref,
+            self.interest_due_period,
+            self._grace_period,
+            self.current_period,
+        );
+        (dto, self.lpp)
     }
 
     pub(crate) fn open_loan_req(mut self, amount: Coin<Lpn>) -> ContractResult<Batch> {
@@ -101,46 +130,6 @@ where
     }
 
     pub(crate) fn repay(
-        mut self,
-        payment: Coin<Lpn>,
-        by: Timestamp,
-        lease: Addr,
-    ) -> ContractResult<RepayResult<Lpn>> {
-        self.repay_inner(payment, by, lease)
-            .map(|receipt| RepayResult {
-                batch: self.into(),
-                receipt,
-            })
-    }
-
-    pub(crate) fn state(
-        &self,
-        now: Timestamp,
-        lease: impl Into<Addr>,
-    ) -> ContractResult<Option<State<Lpn>>> {
-        self.debug_check_start_due_before(now, "in the past of");
-
-        let loan_resp = self.load_lpp_loan(lease)?;
-        Ok(loan_resp.map(|loan_state| self.merge_state_with(loan_state, now)))
-    }
-
-    fn load_loan_interest_due(
-        &self,
-        lease: impl Into<Addr>,
-        by: Timestamp,
-    ) -> ContractResult<Coin<Lpn>> {
-        let interest = self
-            .lpp
-            .loan_outstanding_interest(lease, by)
-            .map_err(ContractError::from)?;
-        Ok(interest.ok_or(ContractError::LoanClosed())?.0)
-    }
-
-    fn load_lpp_loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>> {
-        self.lpp.loan(lease).map_err(ContractError::from)
-    }
-
-    fn repay_inner(
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
@@ -166,9 +155,7 @@ where
             payment,
             change + receipt.previous_margin_paid() + receipt.previous_interest_paid()
         );
-
         debug_assert_eq!(loan_payment, receipt.previous_interest_paid());
-
         debug_assert!(!self.overdue_at(by) || change == Coin::default());
 
         if !self.overdue_at(by) {
@@ -207,8 +194,34 @@ where
                 + receipt.principal_paid(),
             payment,
         );
-
         Ok(receipt)
+    }
+
+    pub(crate) fn state(
+        &self,
+        now: Timestamp,
+        lease: impl Into<Addr>,
+    ) -> ContractResult<Option<State<Lpn>>> {
+        self.debug_check_start_due_before(now, "in the past of");
+
+        let loan_resp = self.load_lpp_loan(lease)?;
+        Ok(loan_resp.map(|loan_state| self.merge_state_with(loan_state, now)))
+    }
+
+    fn load_loan_interest_due(
+        &self,
+        lease: impl Into<Addr>,
+        by: Timestamp,
+    ) -> ContractResult<Coin<Lpn>> {
+        let interest = self
+            .lpp
+            .loan_outstanding_interest(lease, by)
+            .map_err(ContractError::from)?;
+        Ok(interest.ok_or(ContractError::LoanClosed())?.0)
+    }
+
+    fn load_lpp_loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>> {
+        self.lpp.loan(lease).map_err(ContractError::from)
     }
 
     fn repay_previous_period(
@@ -497,7 +510,7 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let loan = create_loan(addr, Some(loan_resp));
+        let mut loan = create_loan(addr, Some(loan_resp));
 
         let receipt = loan
             .repay(
@@ -505,8 +518,7 @@ mod tests {
                 LEASE_START + Duration::YEAR + Duration::YEAR,
                 Addr::unchecked(addr),
             )
-            .unwrap()
-            .receipt;
+            .unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = Receipt::default();
@@ -537,7 +549,7 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let loan = create_loan(addr, Some(loan_resp));
+        let mut loan = create_loan(addr, Some(loan_resp));
 
         let receipt = loan
             .repay(
@@ -545,8 +557,7 @@ mod tests {
                 LEASE_START + Duration::from_nanos(Duration::YEAR.nanos() - 1),
                 Addr::unchecked(addr),
             )
-            .unwrap()
-            .receipt;
+            .unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = Receipt::default();
@@ -579,15 +590,12 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let loan = create_loan(addr, Some(loan_resp));
+        let mut loan = create_loan(addr, Some(loan_resp));
         // let margin_interest = MARGIN_INTEREST_RATE.of(lease_coin);
         let end_of_due_period = LEASE_START + Duration::YEAR;
         // loan.repay(margin_interest, end_of_due_period, addr_obj);
 
-        let receipt = loan
-            .repay(repay_coin, end_of_due_period, addr_obj)
-            .unwrap()
-            .receipt;
+        let receipt = loan.repay(repay_coin, end_of_due_period, addr_obj).unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = Receipt::default();
@@ -621,7 +629,7 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let loan = create_loan(addr, Some(loan_resp));
+        let mut loan = create_loan(addr, Some(loan_resp));
 
         let receipt = loan
             .repay(
@@ -629,8 +637,7 @@ mod tests {
                 LEASE_START + Duration::YEAR,
                 Addr::unchecked(addr),
             )
-            .unwrap()
-            .receipt;
+            .unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = Receipt::default();
@@ -663,12 +670,11 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let lease = create_loan(addr, Some(loan));
+        let mut lease = create_loan(addr, Some(loan));
 
         let receipt = lease
             .repay(repay_coin, LEASE_START, Addr::unchecked(addr))
-            .unwrap()
-            .receipt;
+            .unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = Receipt::default();
@@ -702,7 +708,7 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let loan = create_loan(addr, Some(loan_resp));
+        let mut loan = create_loan(addr, Some(loan_resp));
 
         let receipt = loan
             .repay(
@@ -710,8 +716,7 @@ mod tests {
                 LEASE_START + Duration::YEAR,
                 Addr::unchecked(addr),
             )
-            .unwrap()
-            .receipt;
+            .unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = Receipt::default();
@@ -746,12 +751,11 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let lease = create_loan(addr, Some(loan));
+        let mut lease = create_loan(addr, Some(loan));
 
         let receipt = lease
             .repay(lease_coin, LEASE_START, Addr::unchecked(addr))
-            .unwrap()
-            .receipt;
+            .unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = Receipt::default();
