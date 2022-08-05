@@ -264,7 +264,7 @@ where
     }
 
     fn overdue_at(&self, when: Timestamp) -> bool {
-        when >= self.current_period.till()
+        self.current_period.till() <= when
     }
 
     fn debug_check_start_due_before(&self, when: Timestamp, when_descr: &str) {
