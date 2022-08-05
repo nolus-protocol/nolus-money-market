@@ -163,12 +163,12 @@ where
                 let curr_interest_paid =
                     change.min(total_interest_due - receipt.previous_interest_paid());
                 change -= curr_interest_paid;
-                loan_payment = loan_payment + curr_interest_paid;
+                loan_payment += curr_interest_paid;
                 receipt.pay_current_interest(curr_interest_paid);
             }
             {
                 let principal_paid = change;
-                loan_payment = loan_payment + principal_paid;
+                loan_payment += principal_paid;
                 receipt.pay_principal(principal_due, principal_paid);
             }
         }
