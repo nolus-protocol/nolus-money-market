@@ -7,8 +7,9 @@ mod serde;
 use std::{
     fmt::{Debug, Display, Formatter, Write},
     marker::PhantomData,
-    ops::{Add, Div, Sub},
+    ops::{Add, Div, Sub, SubAssign},
 };
+use std::ops::AddAssign;
 
 use ::serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
@@ -17,7 +18,7 @@ use gcd::Gcd;
 
 use crate::currency::Currency;
 
-pub(super) type Amount = u128;
+pub type Amount = u128;
 
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
@@ -90,6 +91,24 @@ where
             amount: self.amount - rhs.amount,
             symbol: self.symbol,
         }
+    }
+}
+
+impl<C> AddAssign<Coin<C>> for Coin<C>
+where
+    C: Currency,
+{
+    fn add_assign(&mut self, rhs: Coin<C>) {
+        self.amount += rhs.amount;
+    }
+}
+
+impl<C> SubAssign<Coin<C>> for Coin<C>
+where
+    C: Currency,
+{
+    fn sub_assign(&mut self, rhs: Coin<C>) {
+        self.amount -= rhs.amount;
     }
 }
 
