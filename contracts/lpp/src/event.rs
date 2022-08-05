@@ -13,12 +13,9 @@ pub fn emit_deposit<C>(
 where
     C: Currency,
 {
-    let transaction_idx = env.transaction.expect("Error! No transaction index.");
-
     batch
         .into_emitter("lp-deposit")
-        .emit_to_string_value("height", env.block.height)
-        .emit_to_string_value("idx", transaction_idx.index)
+        .emit_block_info(&env)
         .emit("from", lender_addr)
         .emit_timestamp("at", &env.block.time)
         .emit("to", env.contract.address)
@@ -37,12 +34,9 @@ pub fn emit_withdraw<C>(
 where
     C: Currency,
 {
-    let transaction_idx = env.transaction.expect("Error! No transaction index.");
-
     batch
         .into_emitter("lp-withdraw")
-        .emit_to_string_value("height", env.block.height)
-        .emit_to_string_value("idx", transaction_idx.index)
+        .emit_block_info(&env)
         .emit("to", lender_addr)
         .emit_timestamp("at", &env.block.time)
         .emit("from", env.contract.address)
