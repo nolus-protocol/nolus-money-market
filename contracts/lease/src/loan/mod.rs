@@ -43,15 +43,21 @@ impl LoanDTO {
         annual_margin_interest: Percent,
         interest_due_period: Duration,
         grace_period: Duration,
-    ) -> Self {
-        Self {
-            annual_margin_interest,
-            lpp,
-            interest_due_period,
+    ) -> ContractResult<Self> {
+        if grace_period >= interest_due_period {
+            Err(ContractError::InvalidParameters( format!("The grace period, currently {}, must be shorter that an interest period, currently {}, to avoid overlapping",
             grace_period,
-            current_period: InterestPeriod::with_interest(annual_margin_interest)
-                .from(start)
-                .spanning(interest_due_period),
+            interest_due_period)))
+        } else {
+            Ok(Self {
+                annual_margin_interest,
+                lpp,
+                interest_due_period,
+                grace_period,
+                current_period: InterestPeriod::with_interest(annual_margin_interest)
+                    .from(start)
+                    .spanning(interest_due_period),
+            })
         }
     }
 
@@ -75,14 +81,16 @@ impl<Lpn, Lpp> Loan<Lpn, Lpp>
         Lpn: Currency + Debug,
 {
     pub(super) fn from_dto(dto: LoanDTO, lpp: Lpp) -> Self {
-        Self {
+        let res = Self {
             annual_margin_interest: dto.annual_margin_interest,
             lpn: PhantomData,
             lpp,
             interest_due_period: dto.interest_due_period,
             _grace_period: dto.grace_period,
             current_period: dto.current_period,
-        }
+        };
+        debug_assert!(res._grace_period < res.interest_due_period);
+        res
     }
 
     pub(crate) fn open_loan_req(mut self, amount: Coin<Lpn>) -> ContractResult<Batch> {

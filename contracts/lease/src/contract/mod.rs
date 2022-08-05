@@ -64,11 +64,10 @@ pub fn execute(
 ) -> ContractResult<Response> {
     let lease = LeaseDTO::load(deps.storage)?;
 
-    let emitter = match msg {
-        ExecuteMsg::Repay() => try_repay(deps, env, info, lease),
-        ExecuteMsg::Close() => try_close(deps, env, info, lease),
-    }?;
-    Ok(emitter.into())
+    match msg {
+        ExecuteMsg::Repay() => try_repay(deps, env, info, lease).map(Into::into),
+        ExecuteMsg::Close() => try_close(deps, env, info, lease).map(Into::into),
+    }
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
