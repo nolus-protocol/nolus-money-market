@@ -128,7 +128,7 @@ where
             .map(|resp| (resp.principal_due, resp.interest_due))?;
 
         let mut receipt = Receipt::default();
-        let (change, mut loan_payment) = if self.has_overdue(by) {
+        let (change, mut loan_payment) = if self.overdue_at(by) {
             let (prev_margin_paid, change) = self.repay_margin_interest(principal_due, by, payment);
             receipt.pay_previous_margin(prev_margin_paid);
             if change.is_zero() {
@@ -154,9 +154,9 @@ where
         );
         debug_assert_eq!(loan_payment, receipt.previous_interest_paid());
         dbg!(change);
-        debug_assert!(!self.has_overdue(by) || change == Coin::default());
+        debug_assert!(!self.overdue_at(by) || change == Coin::default());
 
-        if !self.has_overdue(by) {
+        if !self.overdue_at(by) {
             let (curr_margin_paid, mut change) =
                 self.repay_margin_interest(principal_due, by, change);
             receipt.pay_current_margin(curr_margin_paid);
@@ -264,7 +264,7 @@ where
         }
     }
 
-    fn has_overdue(&self, when: Timestamp) -> bool {
+    fn overdue_at(&self, when: Timestamp) -> bool {
         when >= self.current_period.till()
     }
 
