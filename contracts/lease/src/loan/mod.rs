@@ -350,14 +350,6 @@ mod tests {
         }
 
         fn repay_loan_req(&mut self, _repayment: Coin<TestCurrency>) -> LppResult<()> {
-            // let loan = self.loan.as_mut().ok_or(LppError::NoLoan {})?;
-            //
-            // loan.principal_due -= repayment;
-            //
-            // loan.interest_due -= repayment.min(loan.interest_due);
-            //
-            // Ok(())
-
             Ok(())
         }
 
