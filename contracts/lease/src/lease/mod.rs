@@ -12,10 +12,13 @@ use finance::{
 use lpp::stub::Lpp as LppTrait;
 use platform::{
     bank::{BankAccount, BankAccountView},
-    batch::Batch,
+    batch::{
+        Batch,
+        Emit,
+        Emitter
+    }
 };
 use serde::Serialize;
-use platform::batch::{Emit, Emitter};
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -106,26 +109,24 @@ where
     }
 
     // TODO add the lease address as a field in Lease<>
-    // and populate it on LeaseDTO.execute as LeaseFactory
+    //  and populate it on LeaseDTO.execute as LeaseFactory
     pub(crate) fn close<B>(self, lease: Addr, mut account: B, now: Timestamp) -> ContractResult<Emitter>
     where
         B: BankAccount,
     {
         let state = self.state(Timestamp::from_nanos(u64::MAX), &account, lease.clone())?;
         match state {
-            StateResponse::Opened { .. } => ContractResult::Err(ContractError::LoanNotPaid()),
+            StateResponse::Opened { .. } => Err(ContractError::LoanNotPaid()),
             StateResponse::Paid(..) => {
                 let balance = account.balance::<Lpn>()?;
                 account.send(balance, &self.customer);
 
-                let emitter = account.into()
+                Ok(account.into()
                     .into_emitter(TYPE::Close)
                     .emit("id", lease)
-                    .emit_timestamp("at", &now);
-
-                Ok(emitter)
+                    .emit_timestamp("at", &now))
             }
-            StateResponse::Closed() => ContractResult::Err(ContractError::LoanClosed()),
+            StateResponse::Closed() => Err(ContractError::LoanClosed()),
         }
     }
 
@@ -349,9 +350,9 @@ mod tests {
             LEASE_START,
             lpp_ref,
             MARGIN_INTEREST_RATE,
+            Duration::from_secs(100),
             Duration::from_secs(0),
-            Duration::from_secs(0),
-        );
+        ).unwrap();
         Lease {
             customer: Addr::unchecked("customer"),
             currency: TestCurrency::SYMBOL.to_string(),
