@@ -128,56 +128,40 @@ where
             .map(|resp| (resp.principal_due, resp.interest_due))?;
 
         let mut receipt = Receipt::default();
+
         let (change, mut loan_payment) = if self.overdue_at(by) {
-            let (prev_margin_paid, change) = self.repay_margin_interest(principal_due, by, payment);
-            receipt.pay_previous_margin(prev_margin_paid);
-            if change.is_zero() {
-                return Ok(receipt);
-            }
-            debug_assert!(self.current_period.zero_length()); // no prev_margin due
-
-            let previous_interest_due =
-                self.load_loan_interest_due(lease, self.current_period.start())?;
-            let previous_interest_paid = previous_interest_due.min(change);
-            receipt.pay_previous_interest(previous_interest_paid);
-
-            if previous_interest_paid == previous_interest_due {
-                self.open_next_period();
-            }
-            (change - previous_interest_paid, previous_interest_paid)
+            self.repay_previous_period(payment, by, lease, principal_due, &mut receipt)
         } else {
             (payment, Coin::default())
         };
+
         debug_assert_eq!(
             payment,
             change + receipt.previous_margin_paid() + receipt.previous_interest_paid()
         );
+
         debug_assert_eq!(loan_payment, receipt.previous_interest_paid());
+
         debug_assert!(!self.overdue_at(by) || change == Coin::default());
 
         if !self.overdue_at(by) {
-            let (curr_margin_paid, mut change) =
-                self.repay_margin_interest(principal_due, by, change);
-            receipt.pay_current_margin(curr_margin_paid);
-            {
-                let curr_interest_paid =
-                    change.min(total_interest_due - receipt.previous_interest_paid());
-                change -= curr_interest_paid;
-                loan_payment += curr_interest_paid;
-                receipt.pay_current_interest(curr_interest_paid);
-            }
-            {
-                let principal_paid = change;
-                loan_payment += principal_paid;
-                receipt.pay_principal(principal_due, principal_paid);
-            }
+            loan_payment += self.repay_current_period(by, principal_due, total_interest_due, &mut receipt, change);
+
+            debug_assert_eq!(
+                loan_payment,
+                receipt.previous_interest_paid()
+                    + receipt.current_interest_paid()
+                    + receipt.principal_paid(),
+            );
         }
+
         if loan_payment.is_zero() {
             // in practice not possible, but in theory it is if two consecutive repayments are received
             // with the same 'by' time.
             // TODO return profit.batch + lpp.batch
             return Ok(receipt);
         }
+
         // TODO handle any surplus left after the repayment, options:
         //  - query again the lpp on the interest due by now + calculate the max repayment by now + send the surplus to the customer, or
         //  - [better separation of responsabilities, need of a 'reply' contract entry] pay lpp and once the surplus is received send it to the customer, or
@@ -198,6 +182,75 @@ where
         );
 
         Ok(receipt)
+    }
+
+    fn repay_previous_period(
+        &mut self,
+        payment: Coin<Lpn>,
+        by: Timestamp,
+        lease: Addr,
+        principal_due: Coin<Lpn>,
+        receipt: &mut Receipt<Lpn>,
+    ) -> (Coin<Lpn>, Coin<Lpn>) {
+        let (prev_margin_paid, change) = self.repay_margin_interest(principal_due, by, payment);
+
+        receipt.pay_previous_margin(prev_margin_paid);
+
+        if change.is_zero() {
+            return (Coin::default(), Coin::default());
+        }
+
+        debug_assert!(self.current_period.zero_length()); // no prev_margin due
+
+        let previous_interest_due =
+            self.load_loan_interest_due(lease, self.current_period.start())?;
+
+        let previous_interest_paid = previous_interest_due.min(change);
+
+        receipt.pay_previous_interest(previous_interest_paid);
+
+        if previous_interest_paid == previous_interest_due {
+            self.open_next_period();
+        }
+
+        (change - previous_interest_paid, previous_interest_paid)
+    }
+
+    fn repay_current_period(
+        &mut self,
+        by: Timestamp,
+        principal_due: Coin<Lpn>,
+        total_interest_due: Coin<Lpn>,
+        receipt: &mut Receipt<Lpn>,
+        change: Coin<Lpn>,
+    ) -> Coin<Lpn> {
+        let mut loan_repay = Coin::default();
+
+        let (curr_margin_paid, mut change) =
+            self.repay_margin_interest(principal_due, by, change);
+
+        receipt.pay_current_margin(curr_margin_paid);
+
+        {
+            let curr_interest_paid =
+                change.min(total_interest_due - receipt.previous_interest_paid());
+
+            change -= curr_interest_paid;
+
+            loan_repay += curr_interest_paid;
+
+            receipt.pay_current_interest(curr_interest_paid);
+        }
+
+        {
+            let principal_paid = change;
+
+            loan_repay += principal_paid;
+
+            receipt.pay_principal(principal_due, principal_paid);
+        }
+
+        loan_repay
     }
 
     pub(crate) fn state(
