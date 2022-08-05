@@ -159,7 +159,13 @@ where
         debug_assert!(!self.overdue_at(by) || change == Coin::default());
 
         if !self.overdue_at(by) {
-            loan_payment += self.repay_current_period(by, principal_due, total_interest_due, &mut receipt, change);
+            loan_payment += self.repay_current_period(
+                by,
+                principal_due,
+                total_interest_due,
+                &mut receipt,
+                change,
+            );
 
             debug_assert_eq!(
                 loan_payment,
@@ -266,8 +272,7 @@ where
     ) -> Coin<Lpn> {
         let mut loan_repay = Coin::default();
 
-        let (curr_margin_paid, mut change) =
-            self.repay_margin_interest(principal_due, by, change);
+        let (curr_margin_paid, mut change) = self.repay_margin_interest(principal_due, by, change);
 
         receipt.pay_current_margin(curr_margin_paid);
 
@@ -569,7 +574,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "till implement repay on &mut self"]
     fn partial_previous_interest_repay() {
         let addr = "unused_addr";
         let addr_obj = Addr::unchecked(addr);
@@ -591,19 +595,23 @@ mod tests {
         };
 
         let mut loan = create_loan(addr, Some(loan_resp));
-        // let margin_interest = MARGIN_INTEREST_RATE.of(lease_coin);
+        let margin_interest = MARGIN_INTEREST_RATE.of(lease_coin);
         let end_of_due_period = LEASE_START + Duration::YEAR;
-        // loan.repay(margin_interest, end_of_due_period, addr_obj);
+        {
+            let mut exp_full_prev_margin = Receipt::default();
+            exp_full_prev_margin.pay_previous_margin(margin_interest);
+            assert_eq!(
+                exp_full_prev_margin,
+                loan.repay(margin_interest, end_of_due_period, addr_obj.clone())
+                    .unwrap()
+            );
+        }
 
-        let receipt = loan.repay(repay_coin, end_of_due_period, addr_obj).unwrap();
-
-        assert_eq!(receipt, {
-            let mut receipt = Receipt::default();
-
-            receipt.pay_previous_interest(repay_coin);
-
-            receipt
-        },);
+        {
+            let mut exp_receipt = Receipt::default();
+            exp_receipt.pay_previous_interest(repay_coin);
+            assert_eq!(exp_receipt, loan.repay(repay_coin, end_of_due_period, addr_obj).unwrap());
+        }
     }
 
     #[test]
