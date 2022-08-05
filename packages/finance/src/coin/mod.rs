@@ -7,7 +7,7 @@ mod serde;
 use std::{
     fmt::{Debug, Display, Formatter, Write},
     marker::PhantomData,
-    ops::{Add, Div, Sub},
+    ops::{Add, Div, Sub, SubAssign},
 };
 
 use ::serde::{Deserialize, Serialize};
@@ -90,6 +90,15 @@ where
             amount: self.amount - rhs.amount,
             symbol: self.symbol,
         }
+    }
+}
+
+impl<C> SubAssign<Coin<C>> for Coin<C>
+where
+    C: Currency,
+{
+    fn sub_assign(&mut self, rhs: Coin<C>) {
+        self.amount -= rhs.amount;
     }
 }
 
