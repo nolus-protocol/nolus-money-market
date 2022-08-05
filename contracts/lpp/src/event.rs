@@ -1,27 +1,27 @@
 use crate::nlpn::NLpn;
 use cosmwasm_std::{Addr, Env};
 use finance::{coin::Coin, currency::Currency};
-use platform::batch::Batch;
+use platform::batch::{Batch, Emit, Emitter};
 
 pub fn emit_deposit<C>(
-    mut batch: Batch,
+    batch: Batch,
     env: Env,
     lender_addr: Addr,
     deposited_amount: Coin<C>,
     receipts: Coin<NLpn>,
-) -> Batch
+) -> Emitter
 where
     C: Currency,
 {
-    const DEPOSIT: &str = "lp-deposit";
     let transaction_idx = env.transaction.expect("Error! No transaction index.");
 
-    batch.emit(DEPOSIT, "height", env.block.height.to_string());
-    batch.emit(DEPOSIT, "idx", transaction_idx.index.to_string());
-    batch.emit(DEPOSIT, "from", lender_addr);
-    batch.emit_timestamp(DEPOSIT, "at", &env.block.time);
-    batch.emit(DEPOSIT, "to", env.contract.address);
-    batch.emit_coin(DEPOSIT, "deposit", deposited_amount);
-    batch.emit_amount(DEPOSIT, "receipts", receipts);
     batch
+        .into_emitter("lp-deposit")
+        .emit_to_string_value("height", env.block.height)
+        .emit_to_string_value("idx", transaction_idx.index)
+        .emit("from", lender_addr)
+        .emit_timestamp("at", &env.block.time)
+        .emit("to", env.contract.address)
+        .emit_coin("deposit", deposited_amount)
+        .emit_coin_amount("receipts", receipts)
 }

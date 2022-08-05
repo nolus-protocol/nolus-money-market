@@ -1,6 +1,4 @@
-use cosmwasm_std::{
-    Addr, Coin as CoinCw, CosmosMsg, Response, SubMsg, to_binary, WasmMsg,
-};
+use cosmwasm_std::{to_binary, Addr, Coin as CoinCw, CosmosMsg, Response, SubMsg, WasmMsg};
 use finance::{coin::Coin, currency::Currency};
 use serde::Serialize;
 
@@ -90,29 +88,6 @@ impl Batch {
         Emitter::new(self, event_type)
     }
 
-    pub fn emit_coin<T, K, C>(&mut self, event_type: T, event_key: K, coin: Coin<C>)
-    where
-        T: Into<String> + Clone,
-        K: Into<String>,
-        C: Currency,
-    {
-        let key = event_key.into();
-        let amount_key = key.clone() + "-amount";
-        let symbol_key = key + "-symbol";
-
-        self.emit(event_type.clone(), amount_key, u128::from(coin).to_string());
-        self.emit(event_type, symbol_key, C::SYMBOL)
-    }
-
-    pub fn emit_amount<T, K, C>(&mut self, event_type: T, event_key: K, coin: Coin<C>)
-    where
-        T: Into<String>,
-        K: Into<String>,
-        C: Currency,
-    {
-        self.emit(event_type, event_key, u128::from(coin).to_string())
-    }
-
     fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>
     where
         M: Serialize,
@@ -167,8 +142,8 @@ impl From<Batch> for Response {
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{CosmosMsg, Empty, Event, Response};
     use crate::emit::Emit;
+    use cosmwasm_std::{CosmosMsg, Empty, Event, Response};
 
     use super::Batch;
 
@@ -190,8 +165,7 @@ mod test {
 
     #[test]
     fn emit() {
-        let e = Batch::default().into_emitter(TY1)
-            .emit(KEY1, VALUE1);
+        let e = Batch::default().into_emitter(TY1).emit(KEY1, VALUE1);
         let resp: Response = e.into();
         assert_eq!(1, resp.events.len());
         let exp = Event::new(TY1).add_attribute(KEY1, VALUE1);
@@ -200,7 +174,8 @@ mod test {
 
     #[test]
     fn emit_same_attr() {
-        let e = Batch::default().into_emitter(TY1)
+        let e = Batch::default()
+            .into_emitter(TY1)
             .emit(KEY1, VALUE1)
             .emit(KEY1, VALUE1);
         let resp: Response = e.into();
@@ -213,7 +188,8 @@ mod test {
 
     #[test]
     fn emit_two_attrs() {
-        let e = Batch::default().into_emitter(TY1)
+        let e = Batch::default()
+            .into_emitter(TY1)
             .emit(KEY1, VALUE1)
             .emit(KEY2, VALUE2);
         let resp: Response = e.into();
