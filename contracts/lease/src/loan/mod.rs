@@ -153,7 +153,6 @@ where
             change + receipt.previous_margin_paid() + receipt.previous_interest_paid()
         );
         debug_assert_eq!(loan_payment, receipt.previous_interest_paid());
-        dbg!(change);
         debug_assert!(!self.overdue_at(by) || change == Coin::default());
 
         if !self.overdue_at(by) {
