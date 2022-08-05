@@ -58,7 +58,7 @@ pub fn instantiate(
         )
         .map_err(ContractError::from)?;
 
-    Ok(Response::from(batch).add_attribute("method", "instantiate"))
+    Ok(Response::from(batch))
 }
 
 fn validate_addr(deps: Deps, addr: Addr) -> Result<Addr, ContractError> {

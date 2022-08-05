@@ -1,10 +1,14 @@
 use cosmwasm_std::{
-    to_binary, Addr, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
-    Timestamp, WasmMsg,
+    to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdResult, Storage, Timestamp,
+    WasmMsg,
+};
+use platform::{
+    bank::{BankAccount, BankAccountView, BankStub},
+    batch::Batch,
 };
 
 use crate::{msg::ConfigResponse, state::config::Config, ContractError};
-use finance::duration::Duration;
+use finance::{coin::Coin, currency::Nls, duration::Duration};
 
 pub struct Profit {}
 
@@ -20,7 +24,7 @@ impl Profit {
         }
         Config::update(deps.storage, cadence_hours)?;
 
-        Ok(Response::new().add_attribute("method", "config"))
+        Ok(Response::new())
     }
     pub(crate) fn transfer(
         deps: DepsMut,
@@ -36,25 +40,27 @@ impl Profit {
         let balance = deps.querier.query_all_balances(&env.contract.address)?;
 
         if balance.is_empty() {
-            return Ok(Response::new()
-                .add_attribute("method", "try_transfer")
-                .add_attribute("result", "no profit to dispatch"));
+            return Ok(Response::new().add_attribute("result", "no profit to dispatch"));
         }
 
         let current_time = env.block.time;
 
-        Self::alarm_subscribe_msg(
+        let msg = Self::alarm_subscribe_msg(
             &config.timealarms,
             current_time,
             Duration::from_hours(config.cadence_hours),
         )?;
 
-        Ok(Response::new()
-            .add_attribute("method", "try_transfer")
-            .add_message(BankMsg::Send {
-                to_address: config.treasury.to_string(),
-                amount: balance,
-            }))
+        let mut bank = BankStub::my_account(&env, &deps.querier);
+        let balance: Coin<Nls> = bank.balance()?;
+        bank.send(balance, &config.treasury);
+
+        let mut batch: Batch = bank.into();
+        batch.schedule_execute_no_reply(msg);
+
+        // batch.emit_timestamp(event_type, event_key, timestamp);
+
+        Ok(batch.into())
     }
     pub fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
         let config = Config::load(storage)?;

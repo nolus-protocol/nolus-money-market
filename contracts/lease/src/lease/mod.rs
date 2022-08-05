@@ -99,7 +99,12 @@ where
 
     // TODO add the lease address as a field in Lease<>
     // and populate it on LeaseDTO.execute as LeaseFactory
-    pub(crate) fn close<B>(self, lease: Addr, mut account: B, now: Timestamp) -> ContractResult<Batch>
+    pub(crate) fn close<B>(
+        self,
+        lease: Addr,
+        mut account: B,
+        now: Timestamp,
+    ) -> ContractResult<Batch>
     where
         B: BankAccount,
     {
@@ -200,6 +205,10 @@ mod tests {
             C: Currency,
         {
             Ok(Coin::<C>::new(self.balance))
+        }
+
+        fn balance_any(&self) -> PlatformResult<Vec<finance::coin::CoinDTO>> {
+            todo!()
         }
     }
 
