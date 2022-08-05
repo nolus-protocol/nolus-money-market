@@ -1,7 +1,10 @@
 pub mod error;
 pub mod msg;
-pub mod stub;
 pub mod nlpn;
+pub mod stub;
+
+#[cfg(feature = "cosmwasm")]
+pub mod event;
 
 #[cfg(feature = "cosmwasm")]
 pub mod contract;

@@ -5,9 +5,9 @@ pub use coinc::CoinDTO;
 mod serde;
 
 use std::{
-    fmt::{Debug, Display, Formatter, Write},
+    fmt::{Debug, Display, Formatter},
     marker::PhantomData,
-    ops::{Add, Div, Sub},
+    ops::{Add, AddAssign, Div, Sub, SubAssign},
 };
 
 use ::serde::{Deserialize, Serialize};
@@ -17,7 +17,7 @@ use gcd::Gcd;
 
 use crate::currency::Currency;
 
-pub(super) type Amount = u128;
+pub type Amount = u128;
 
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
@@ -93,6 +93,24 @@ where
     }
 }
 
+impl<C> AddAssign<Coin<C>> for Coin<C>
+where
+    C: Currency,
+{
+    fn add_assign(&mut self, rhs: Coin<C>) {
+        self.amount += rhs.amount;
+    }
+}
+
+impl<C> SubAssign<Coin<C>> for Coin<C>
+where
+    C: Currency,
+{
+    fn sub_assign(&mut self, rhs: Coin<C>) {
+        self.amount -= rhs.amount;
+    }
+}
+
 impl<C> Div<Amount> for Coin<C>
 where
     C: Currency,
@@ -112,10 +130,7 @@ where
     C: Currency,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.amount.to_string())?;
-        f.write_char(' ')?;
-        f.write_str(C::SYMBOL)?;
-        Ok(())
+        f.write_fmt(format_args!("{} {}", self.amount, C::SYMBOL))
     }
 }
 

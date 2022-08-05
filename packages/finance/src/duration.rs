@@ -1,5 +1,5 @@
 use std::{
-    fmt::Debug,
+    fmt::{Debug, Display, Formatter, Result as FmtResult},
     ops::{Add, Sub},
 };
 
@@ -112,6 +112,12 @@ impl Sub<Duration> for Duration {
 
     fn sub(self, rhs: Duration) -> Self::Output {
         Self::Output::from_nanos(self.nanos().sub(rhs.nanos()))
+    }
+}
+
+impl Display for Duration {
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        f.write_fmt(format_args!("{} {}", self.nanos(), "nanos"))
     }
 }
 

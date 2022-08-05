@@ -1,8 +1,10 @@
 use cosmwasm_std::{Addr, Timestamp};
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
-use platform::bank::BankAccount;
-use platform::batch::Batch;
+use platform::{
+    bank::BankAccount,
+    batch::Emitter
+};
 use serde::Serialize;
 
 use crate::error::ContractError;
@@ -30,7 +32,7 @@ impl<'a, Bank> WithLease for Close<'a, Bank>
 where
     Bank: BankAccount,
 {
-    type Output = Batch;
+    type Output = Emitter;
 
     type Error = ContractError;
 
