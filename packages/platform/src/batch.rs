@@ -1,6 +1,4 @@
-use cosmwasm_std::{
-    Addr, Coin as CoinCw, CosmosMsg, Response, SubMsg, to_binary, WasmMsg,
-};
+use cosmwasm_std::{to_binary, Addr, Coin as CoinCw, CosmosMsg, Response, SubMsg, WasmMsg};
 use finance::{coin::Coin, currency::Currency};
 use serde::Serialize;
 
@@ -145,8 +143,8 @@ impl From<Batch> for Response {
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{CosmosMsg, Empty, Event, Response};
     use crate::emit::Emit;
+    use cosmwasm_std::{CosmosMsg, Empty, Event, Response};
 
     use super::Batch;
 
@@ -168,8 +166,7 @@ mod test {
 
     #[test]
     fn emit() {
-        let e = Batch::default().into_emitter(TY1)
-            .emit(KEY1, VALUE1);
+        let e = Batch::default().into_emitter(TY1).emit(KEY1, VALUE1);
         let resp: Response = e.into();
         assert_eq!(1, resp.events.len());
         let exp = Event::new(TY1).add_attribute(KEY1, VALUE1);
@@ -178,7 +175,8 @@ mod test {
 
     #[test]
     fn emit_same_attr() {
-        let e = Batch::default().into_emitter(TY1)
+        let e = Batch::default()
+            .into_emitter(TY1)
             .emit(KEY1, VALUE1)
             .emit(KEY1, VALUE1);
         let resp: Response = e.into();
@@ -191,7 +189,8 @@ mod test {
 
     #[test]
     fn emit_two_attrs() {
-        let e = Batch::default().into_emitter(TY1)
+        let e = Batch::default()
+            .into_emitter(TY1)
             .emit(KEY1, VALUE1)
             .emit(KEY2, VALUE2);
         let resp: Response = e.into();

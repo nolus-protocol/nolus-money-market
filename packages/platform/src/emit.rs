@@ -4,34 +4,37 @@ use finance::currency::Currency;
 
 use crate::batch::Batch;
 
-pub trait Emit where Self: Sized {
+pub trait Emit
+where
+    Self: Sized,
+{
     fn emit<K, V>(self, event_key: K, event_value: V) -> Self
-        where
-            K: Into<String>,
-            V: Into<String>;
+    where
+        K: Into<String>,
+        V: Into<String>;
 
     /// Specialization of [`emit`](Batch::emit) for timestamps.
     fn emit_timestamp<K>(self, event_key: K, timestamp: &Timestamp) -> Self
-        where
-            K: Into<String>,
+    where
+        K: Into<String>,
     {
         self.emit(event_key, timestamp.nanos().to_string())
     }
 
     /// Specialization of [`emit`](Batch::emit) for values implementing [`ToString`].
     fn emit_to_string_value<K, V>(self, event_key: K, value: V) -> Self
-        where
-            K: Into<String>,
-            V: ToString,
+    where
+        K: Into<String>,
+        V: ToString,
     {
         self.emit(event_key, value.to_string())
     }
 
     /// Specialization of [`emit`](Batch::emit) for [`Coin`]'s amount.
     fn emit_coin_amount<K, C>(self, event_key: K, coin: Coin<C>) -> Self
-        where
-            K: Into<String>,
-            C: Currency,
+    where
+        K: Into<String>,
+        C: Currency,
     {
         self.emit(event_key, Amount::from(coin).to_string())
     }
@@ -77,7 +80,11 @@ where
 }
 
 impl Emit for Emitter {
-    fn emit<K, V>(mut self, event_key: K, event_value: V) -> Self where K: Into<String>, V: Into<String> {
+    fn emit<K, V>(mut self, event_key: K, event_value: V) -> Self
+    where
+        K: Into<String>,
+        V: Into<String>,
+    {
         self.event = self.event.add_attribute(event_key, event_value);
 
         self
