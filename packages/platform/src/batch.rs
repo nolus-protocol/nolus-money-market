@@ -1,15 +1,14 @@
-use cosmwasm_std::{
-    to_binary, Addr, Coin as CoinCw, CosmosMsg, Event, Response, SubMsg, Timestamp, WasmMsg,
-};
+use cosmwasm_std::{to_binary, Addr, Coin as CoinCw, CosmosMsg, Response, SubMsg, WasmMsg};
 use finance::{coin::Coin, currency::Currency};
 use serde::Serialize;
 
 use crate::{coin_legacy::to_cosmwasm_impl, error::Result};
 
+pub use crate::emit::{Emit, Emitter};
+
 #[derive(Default)]
 pub struct Batch {
     msgs: Vec<SubMsg>,
-    event: Option<Event>,
 }
 
 impl Batch {
@@ -82,35 +81,11 @@ impl Batch {
         res
     }
 
-    pub fn emit<T, K, V>(&mut self, event_type: T, event_key: K, event_value: V)
+    pub fn into_emitter<T>(self, event_type: T) -> Emitter
     where
         T: Into<String>,
-        K: Into<String>,
-        V: Into<String>,
     {
-        // do not use Option.get_or_insert_with(f) since asserting on the type would require clone of the type
-        if self.event.is_none() {
-            self.event = Some(Event::new(event_type));
-        } else {
-            debug_assert!(
-                self.event.as_ref().unwrap().ty == event_type.into(),
-                "The platform batch supports only one event type"
-            );
-        }
-        let event = self.event.take().expect("empty event");
-        let none = self
-            .event
-            .replace(event.add_attribute(event_key, event_value));
-        debug_assert!(none.is_none());
-    }
-
-    /// Specialization of [`emit`](Batch::emit) for timestamps.
-    pub fn emit_timestamp<T, K>(&mut self, event_type: T, event_key: K, timestamp: &Timestamp)
-    where
-        T: Into<String>,
-        K: Into<String>,
-    {
-        self.emit(event_type, event_key, timestamp.nanos().to_string())
+        Emitter::new(self, event_type)
     }
 
     fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>
@@ -159,16 +134,15 @@ impl Batch {
 
 impl From<Batch> for Response {
     fn from(p: Batch) -> Self {
-        let res = p
-            .msgs
+        p.msgs
             .into_iter()
-            .fold(Self::default(), |res, msg| res.add_submessage(msg));
-        p.event.into_iter().fold(res, |res, e| res.add_event(e))
+            .fold(Self::default(), |res, msg| res.add_submessage(msg))
     }
 }
 
 #[cfg(test)]
 mod test {
+    use crate::emit::Emit;
     use cosmwasm_std::{CosmosMsg, Empty, Event, Response};
 
     use super::Batch;
@@ -191,9 +165,8 @@ mod test {
 
     #[test]
     fn emit() {
-        let mut b = Batch::default();
-        b.emit(TY1, KEY1, VALUE1);
-        let resp: Response = b.into();
+        let e = Batch::default().into_emitter(TY1).emit(KEY1, VALUE1);
+        let resp: Response = e.into();
         assert_eq!(1, resp.events.len());
         let exp = Event::new(TY1).add_attribute(KEY1, VALUE1);
         assert_eq!(exp, resp.events[0]);
@@ -201,10 +174,11 @@ mod test {
 
     #[test]
     fn emit_same_attr() {
-        let mut b = Batch::default();
-        b.emit(TY1, KEY1, VALUE1);
-        b.emit(TY1, KEY1, VALUE1);
-        let resp: Response = b.into();
+        let e = Batch::default()
+            .into_emitter(TY1)
+            .emit(KEY1, VALUE1)
+            .emit(KEY1, VALUE1);
+        let resp: Response = e.into();
         assert_eq!(1, resp.events.len());
         let exp = Event::new(TY1)
             .add_attribute(KEY1, VALUE1)
@@ -214,10 +188,11 @@ mod test {
 
     #[test]
     fn emit_two_attrs() {
-        let mut b = Batch::default();
-        b.emit(TY1, KEY1, VALUE1);
-        b.emit(TY1, KEY2, VALUE2);
-        let resp: Response = b.into();
+        let e = Batch::default()
+            .into_emitter(TY1)
+            .emit(KEY1, VALUE1)
+            .emit(KEY2, VALUE2);
+        let resp: Response = e.into();
         assert_eq!(1, resp.events.len());
         let exp = Event::new(TY1)
             .add_attribute(KEY1, VALUE1)

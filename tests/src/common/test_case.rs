@@ -3,7 +3,7 @@ use cosmwasm_std::{coins, Addr, Coin, Empty, StdError, Uint64};
 use cw_multi_test::{next_block, App, ContractWrapper, Executor};
 
 use super::{
-    dispatcher_wrapper::DispatcherWrapper, lease_wrapper::LeaseWrapper,
+    dispatcher_wrapper::DispatcherWrapper, lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
     leaser_wrapper::LeaserWrapper, lpp_wrapper::LppWrapper, mock_app,
     oracle_wrapper::MarketOracleWrapper, profit_wrapper::ProfitWrapper,
     timealarms_wrapper::TimeAlarmsWrapper, treasury_wrapper::TreasuryWrapper, ADMIN,
@@ -106,6 +106,7 @@ impl TestCase {
             self.lease_code_id,
             self.lpp_addr.as_ref().unwrap(),
             &self.denom,
+            LeaseWrapperConfig::default(),
         )
     }
 
@@ -125,6 +126,7 @@ impl TestCase {
                     &mut self.app,
                     Uint64::new(self.lease_code_id.unwrap()),
                     &self.denom,
+                    400,
                 )
                 .0,
         );

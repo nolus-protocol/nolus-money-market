@@ -9,15 +9,16 @@ use finance::{
     liability::Liability,
 };
 use lpp::stub::Lpp as LppTrait;
+use platform::batch::Emitter;
 use platform::{
     bank::{BankAccount, BankAccountView},
-    batch::Batch,
+    batch::{Batch, Emit},
 };
 use serde::Serialize;
 
 use crate::{
     error::{ContractError, ContractResult},
-    event::{self, TYPE},
+    event::TYPE,
     loan::Loan,
     msg::StateResponse,
 };
@@ -77,19 +78,17 @@ where
         &self.customer == addr
     }
 
-    pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<Batch> {
+    pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<Emitter> {
         // TODO add a type parameter to this function to designate the downpayment currency
         // TODO query the market price oracle to get the price of the downpayment currency to LPN
-        // and calculate `downpayment` in LPN
+        //  and calculate `downpayment` in LPN
         let borrow = self.liability.init_borrow_amount(downpayment);
 
         let batch = self.loan.open_loan_req(borrow)?;
-        Ok(event::emit_addr(
-            batch,
-            TYPE::Open,
-            "customer",
-            self.customer,
-        ))
+
+        Ok(batch
+            .into_emitter(TYPE::Open)
+            .emit("customer", self.customer))
     }
 
     pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<Batch> {
@@ -98,30 +97,30 @@ where
     }
 
     // TODO add the lease address as a field in Lease<>
-    // and populate it on LeaseDTO.execute as LeaseFactory
+    //  and populate it on LeaseDTO.execute as LeaseFactory
     pub(crate) fn close<B>(
         self,
         lease: Addr,
         mut account: B,
         now: Timestamp,
-    ) -> ContractResult<Batch>
+    ) -> ContractResult<Emitter>
     where
         B: BankAccount,
     {
         let state = self.state(Timestamp::from_nanos(u64::MAX), &account, lease.clone())?;
         match state {
-            StateResponse::Opened { .. } => ContractResult::Err(ContractError::LoanNotPaid()),
+            StateResponse::Opened { .. } => Err(ContractError::LoanNotPaid()),
             StateResponse::Paid(..) => {
                 let balance = account.balance::<Lpn>()?;
                 account.send(balance, &self.customer);
 
-                let mut batch: Batch = account.into();
-                batch.emit(TYPE::Close, "id", lease);
-                batch.emit_timestamp(TYPE::Close, "at", &now);
-
-                Ok(batch)
+                Ok(account
+                    .into()
+                    .into_emitter(TYPE::Close)
+                    .emit("id", lease)
+                    .emit_timestamp("at", &now))
             }
-            StateResponse::Closed() => ContractResult::Err(ContractError::LoanClosed()),
+            StateResponse::Closed() => Err(ContractError::LoanClosed()),
         }
     }
 
@@ -341,9 +340,10 @@ mod tests {
             LEASE_START,
             lpp_ref,
             MARGIN_INTEREST_RATE,
+            Duration::from_secs(100),
             Duration::from_secs(0),
-            Duration::from_secs(0),
-        );
+        )
+        .unwrap();
         Lease {
             customer: Addr::unchecked("customer"),
             currency: TestCurrency::SYMBOL.to_string(),

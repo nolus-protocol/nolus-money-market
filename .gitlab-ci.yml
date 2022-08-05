@@ -8,7 +8,7 @@ variables:
   CARGO_HOME: $CI_PROJECT_DIR/cargo_home
 
 default:
-# use specific tag here in order to 
+# use specific tag here in order to
 # 1) be able to control the build, and
 # 2) update to a newer version. With "latest" and the default '-if-not-present' Docker executor policy that is not possible.
   image: "rust:1.61"
@@ -26,7 +26,7 @@ prepare_node:
   stage: prepare
   script:
     - apt update && apt install bash
-    - apt install curl
+    - echo 'y' | apt install curl
     - echo 'y' | apt install jq
     - mkdir -p $CARGO_HOME
     - rustc --version && cargo --version
