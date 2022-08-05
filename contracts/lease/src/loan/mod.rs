@@ -414,7 +414,8 @@ mod tests {
             MARGIN_INTEREST_RATE,
             Duration::YEAR,
             Duration::from_secs(0),
-        );
+        )
+        .unwrap();
 
         Loan::from_dto(
             loan_dto,
@@ -532,11 +533,7 @@ mod tests {
         // loan.repay(margin_interest, end_of_due_period, addr_obj);
 
         let receipt = loan
-            .repay(
-                repay_coin,
-                end_of_due_period,
-                addr_obj,
-            )
+            .repay(repay_coin, end_of_due_period, addr_obj)
             .unwrap()
             .receipt;
 
