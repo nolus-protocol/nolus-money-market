@@ -35,6 +35,19 @@ pub trait Emit where Self: Sized {
     {
         self.emit(event_key, Amount::from(coin).to_string())
     }
+
+    fn emit_coin<K, C>(self, event_key: K, coin: Coin<C>) -> Self
+    where
+        K: Into<String>,
+        C: Currency,
+    {
+        let key = event_key.into();
+        let amount_key = key.clone() + "-amount";
+        let symbol_key = key + "-symbol";
+
+        self.emit(amount_key, u128::from(coin).to_string())
+            .emit(symbol_key, C::SYMBOL)
+    }
 }
 
 pub struct Emitter {

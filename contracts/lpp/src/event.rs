@@ -1,29 +1,31 @@
 use crate::nlpn::NLpn;
 use cosmwasm_std::{Addr, Env};
 use finance::{coin::Coin, currency::Currency};
-use platform::batch::Batch;
+use platform::batch::{Batch, Emit, Emitter};
 
 pub fn emit_withdraw<C>(
-    mut batch: Batch,
+    batch: Batch,
     env: Env,
     lender_addr: Addr,
     payment_lpn: Coin<C>,
     receipts: Coin<NLpn>,
     close_flag: bool,
-) -> Batch
+) -> Emitter
 where
     C: Currency,
 {
-    const WITHDRAW: &str = "lp-withdraw";
     let transaction_idx = env.transaction.expect("Error! No transaction index.");
 
-    batch.emit(WITHDRAW, "height", env.block.height.to_string());
-    batch.emit(WITHDRAW, "idx", transaction_idx.index.to_string());
-    batch.emit(WITHDRAW, "to", lender_addr);
-    batch.emit_timestamp(WITHDRAW, "at", &env.block.time);
-    batch.emit(WITHDRAW, "from", env.contract.address);
-    batch.emit_coin(WITHDRAW, "withdraw", payment_lpn);
-    batch.emit_amount(WITHDRAW, "receipts", receipts);
-    batch.emit(WITHDRAW, "close", close_flag.to_string());
+
     batch
+    .into_emitter("lp-withdraw")
+    .emit_to_string_value("height", env.block.height)
+    .emit_to_string_value("idx",  transaction_idx.index)
+    .emit("to", lender_addr)
+    .emit_timestamp("at", &env.block.time)
+    .emit("from", env.contract.address)
+    .emit_coin("withdraw", payment_lpn)
+    .emit_coin_amount("receipts",  receipts)
+    .emit_to_string_value("close", close_flag)
+
 }
