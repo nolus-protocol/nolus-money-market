@@ -130,7 +130,7 @@ where
         let mut receipt = Receipt::default();
 
         let (change, mut loan_payment) = if self.overdue_at(by) {
-            self.repay_previous_period(payment, by, lease, principal_due, &mut receipt)
+            self.repay_previous_period(payment, by, lease, principal_due, &mut receipt)?
         } else {
             (payment, Coin::default())
         };
@@ -191,13 +191,13 @@ where
         lease: Addr,
         principal_due: Coin<Lpn>,
         receipt: &mut Receipt<Lpn>,
-    ) -> (Coin<Lpn>, Coin<Lpn>) {
+    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
         let (prev_margin_paid, change) = self.repay_margin_interest(principal_due, by, payment);
 
         receipt.pay_previous_margin(prev_margin_paid);
 
         if change.is_zero() {
-            return (Coin::default(), Coin::default());
+            return Ok((Coin::default(), Coin::default()));
         }
 
         debug_assert!(self.current_period.zero_length()); // no prev_margin due
@@ -213,7 +213,7 @@ where
             self.open_next_period();
         }
 
-        (change - previous_interest_paid, previous_interest_paid)
+        Ok((change - previous_interest_paid, previous_interest_paid))
     }
 
     fn repay_current_period(
