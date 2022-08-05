@@ -17,7 +17,7 @@ use gcd::Gcd;
 
 use crate::currency::Currency;
 
-pub(super) type Amount = u128;
+pub type Amount = u128;
 
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,

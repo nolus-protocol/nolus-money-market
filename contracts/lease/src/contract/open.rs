@@ -2,7 +2,7 @@ use cosmwasm_std::{Coin as CwCoin, Reply};
 use platform::bank;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
-use platform::batch::Batch;
+use platform::batch::{Batch, Emitter};
 
 use crate::error::ContractError;
 use crate::lease::{Lease, WithLease};
@@ -18,7 +18,7 @@ impl<'a> OpenLoanReq<'a> {
 }
 
 impl<'a> WithLease for OpenLoanReq<'a> {
-    type Output = Batch;
+    type Output = Emitter;
 
     type Error = ContractError;
 
