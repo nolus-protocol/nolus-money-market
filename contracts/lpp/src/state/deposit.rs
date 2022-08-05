@@ -60,11 +60,11 @@ impl Deposit {
         self.update_rewards(&globals);
 
         let deposited_nlpn = price::total(amount_lpn, price.get().inv());
-        self.data.deposited_nlpn = self.data.deposited_nlpn + deposited_nlpn;
+        self.data.deposited_nlpn += deposited_nlpn;
 
         Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
 
-        globals.balance_nlpn = globals.balance_nlpn + deposited_nlpn;
+        globals.balance_nlpn += deposited_nlpn;
 
         Self::GLOBALS.save(storage, &globals)
     }
