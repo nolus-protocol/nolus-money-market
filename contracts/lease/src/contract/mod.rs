@@ -7,8 +7,13 @@ mod state;
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
-use platform::bank::BankStub;
-use platform::batch::{Batch, Emitter};
+use platform::{
+    batch::{
+        Emit,
+        Emitter,
+    },
+    bank::BankStub,
+};
 
 use crate::error::ContractResult;
 use crate::lease::{self, LeaseDTO};
@@ -35,9 +40,9 @@ pub fn instantiate(
     let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
     lease.store(deps.storage)?;
 
-    let batch = lease::execute(lease, OpenLoanReq::new(&info.funds), &deps.querier)?;
+    let emitter = lease::execute(lease, OpenLoanReq::new(&info.funds), &deps.querier)?;
 
-    Ok(batch.into())
+    Ok(emitter.into())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -79,21 +84,29 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     )
 }
 
-fn try_repay(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Batch> {
+fn try_repay(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Emitter> {
     lease::execute(
         lease,
-        Repay::new(&info.funds, env.block.time, env.contract.address),
+        Repay::new(&info.funds, env.block.time, env.contract.address.clone()),
         &deps.querier,
-    )
+    ).map(|emitter| {
+        emitter
+            .emit_to_string_value("height", &env.block.height)
+            .emit_to_string_value(
+                "idx",
+                env.transaction.expect("Couldn't get transaction info!").index,
+            )
+            .emit("to", env.contract.address)
+    })
 }
 
 fn try_close(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Emitter> {
     let bank = BankStub::my_account(&env, &deps.querier);
 
-    let batch = lease::execute(
+    let emitter = lease::execute(
         lease,
         Close::new(&info.sender, env.contract.address.clone(), bank, env.block.time),
         &deps.querier,
     )?;
-    Ok(batch)
+    Ok(emitter)
 }

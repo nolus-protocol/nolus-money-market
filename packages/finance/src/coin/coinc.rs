@@ -59,7 +59,7 @@ mod test {
 
     use crate::{currency::{Currency, SymbolStatic}, coin::{Coin, CoinDTO}};
 
-    #[derive(Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+    #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
     struct MyTestCurrency;
     impl Currency for MyTestCurrency {
         const SYMBOL: SymbolStatic = "qwerty";
