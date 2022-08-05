@@ -53,7 +53,7 @@ impl Deposit {
         LPN: Currency + Serialize + DeserializeOwned,
     {
         if amount_lpn.is_zero() {
-            return Err(ContractError::NoDeposit);
+            return Err(ContractError::ZeroDepositFunds);
         }
 
         let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();

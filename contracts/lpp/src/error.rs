@@ -32,7 +32,7 @@ pub enum ContractError {
     NoLoan {},
 
     #[error("Zero deposit")]
-    NoDeposit,
+    ZeroDepositFunds,
 
     #[error("Lpp requires single currency")]
     FundsLen {},
