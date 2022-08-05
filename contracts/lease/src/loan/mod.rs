@@ -113,6 +113,33 @@ where
             })
     }
 
+    pub(crate) fn state(
+        &self,
+        now: Timestamp,
+        lease: impl Into<Addr>,
+    ) -> ContractResult<Option<State<Lpn>>> {
+        self.debug_check_start_due_before(now, "in the past of");
+
+        let loan_resp = self.load_lpp_loan(lease)?;
+        Ok(loan_resp.map(|loan_state| self.merge_state_with(loan_state, now)))
+    }
+
+    fn load_loan_interest_due(
+        &self,
+        lease: impl Into<Addr>,
+        by: Timestamp,
+    ) -> ContractResult<Coin<Lpn>> {
+        let interest = self
+            .lpp
+            .loan_outstanding_interest(lease, by)
+            .map_err(ContractError::from)?;
+        Ok(interest.ok_or(ContractError::LoanClosed())?.0)
+    }
+
+    fn load_lpp_loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>> {
+        self.lpp.loan(lease).map_err(ContractError::from)
+    }
+
     fn repay_inner(
         &mut self,
         payment: Coin<Lpn>,
@@ -251,33 +278,6 @@ where
         }
 
         loan_repay
-    }
-
-    pub(crate) fn state(
-        &self,
-        now: Timestamp,
-        lease: impl Into<Addr>,
-    ) -> ContractResult<Option<State<Lpn>>> {
-        self.debug_check_start_due_before(now, "in the past of");
-
-        let loan_resp = self.load_lpp_loan(lease)?;
-        Ok(loan_resp.map(|loan_state| self.merge_state_with(loan_state, now)))
-    }
-
-    fn load_loan_interest_due(
-        &self,
-        lease: impl Into<Addr>,
-        by: Timestamp,
-    ) -> ContractResult<Coin<Lpn>> {
-        let interest = self
-            .lpp
-            .loan_outstanding_interest(lease, by)
-            .map_err(ContractError::from)?;
-        Ok(interest.ok_or(ContractError::LoanClosed())?.0)
-    }
-
-    fn load_lpp_loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>> {
-        self.lpp.loan(lease).map_err(ContractError::from)
     }
 
     fn repay_margin_interest(
