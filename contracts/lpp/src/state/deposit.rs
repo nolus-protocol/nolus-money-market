@@ -35,12 +35,19 @@ impl Deposit {
     const DEPOSITS: Map<'static, Addr, DepositData> = Map::new("deposits");
     const GLOBALS: Item<'static, DepositsGlobals> = Item::new("deposits_globals");
 
-    pub fn load(storage: &dyn Storage, addr: Addr) -> StdResult<Self> {
+    pub fn load_or_default(storage: &dyn Storage, addr: Addr) -> StdResult<Self> {
         let data = Self::DEPOSITS
             .may_load(storage, addr.clone())?
             .unwrap_or_default();
 
         Ok(Self { addr, data })
+    }
+
+    pub fn may_load(storage: &dyn Storage, addr: Addr) -> StdResult<Option<Self>> {
+        let result = Self::DEPOSITS
+            .may_load(storage, addr.clone())?
+            .map(|data| Self { addr, data });
+        Ok(result) 
     }
 
     pub fn deposit<LPN>(
@@ -76,7 +83,7 @@ impl Deposit {
         &mut self,
         storage: &mut dyn Storage,
         amount_nlpn: Coin<NLpn>,
-    ) -> Result<(Option<Coin<Nls>>,bool), ContractError> {
+    ) -> Result<Option<Coin<Nls>>, ContractError> {
         if self.data.deposited_nlpn < amount_nlpn {
             return Err(ContractError::InsufficientBalance);
         }
@@ -89,14 +96,10 @@ impl Deposit {
 
         let maybe_reward = if self.data.deposited_nlpn.is_zero() {
             Self::DEPOSITS.remove(storage, self.addr.clone());
-            if self.data.pending_rewards_nls.is_zero() {
-                (None,true)
-            } else {
-                (Some(self.data.pending_rewards_nls),true)
-            }
+            Some(self.data.pending_rewards_nls)
         } else {
             Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
-            (None,false)
+            None
         };
 
         Self::GLOBALS.save(storage, &globals)?;
@@ -196,7 +199,7 @@ mod test {
         let price = NTokenPrice::<TheCurrency>::mock(Coin::new(1), Coin::new(1));
 
         let mut deposit1 =
-            Deposit::load(deps.as_ref().storage, addr1).expect("should load");
+            Deposit::load_or_default(deps.as_ref().storage, addr1.clone()).expect("should load");
         deposit1
             .deposit(deps.as_mut().storage, 1000u128.into(), price)
             .expect("should deposit");
@@ -206,7 +209,7 @@ mod test {
 
         let price = NTokenPrice::<TheCurrency>::mock(Coin::new(1), Coin::new(2));
         let mut deposit2 =
-            Deposit::load(deps.as_ref().storage, addr2.clone()).expect("should load");
+            Deposit::load_or_default(deps.as_ref().storage, addr2.clone()).expect("should load");
         deposit2
             .deposit(deps.as_mut().storage, 1000u128.into(), price)
             .expect("should deposit");
@@ -247,7 +250,7 @@ mod test {
 
         assert_eq!(reward, Coin::new(500));
 
-        let (some_rewards, _close_flag) = deposit1
+        let some_rewards = deposit1
             .withdraw(deps.as_mut().storage, 500u128.into())
             .expect("should withdraw");
         assert!(some_rewards.is_none());
@@ -278,12 +281,14 @@ mod test {
         assert_eq!(reward, Coin::new(500));
 
         // withdraw all, return rewards, close deposit
-        let (rewards, close_flag) = deposit1
+        let rewards = deposit1
             .withdraw(deps.as_mut().storage, 500u128.into())
-            .expect("should withdraw");
-        let rewards = rewards.expect("should be some rewards");
+            .expect("should withdraw")
+            .expect("should be some rewards");
         assert_eq!(rewards, Coin::<Nls>::new(500));
-        assert!(close_flag);
+        let response =
+            Deposit::query_balance_nlpn(deps.as_mut().storage, addr1).expect("should query");
+        assert!(response.is_none());
     }
 
     #[test]
@@ -292,7 +297,9 @@ mod test {
         let price = NTokenPrice::<TheCurrency>::mock(Coin::new(1), Coin::new(1));
         let addr = Addr::unchecked("depositor");
 
-        let mut deposit = Deposit::load(deps.as_ref().storage, addr).expect("should load");
+        let mut deposit =
+            Deposit::load_or_default(deps.as_ref().storage, addr)
+            .expect("should load");
 
         // balance_nls = 0, balance_nlpn = 0
         let rewards = deposit
@@ -319,7 +326,9 @@ mod test {
 
         let rewards = Coin::<Nls>::new(1000);
 
-        let mut deposit = Deposit::load(deps.as_ref().storage, addr).expect("should load");
+        let mut deposit =
+            Deposit::load_or_default(deps.as_ref().storage, addr)
+            .expect("should load");
 
         deposit
             .deposit(deps.as_mut().storage, Coin::<Usdc>::new(1000), price)

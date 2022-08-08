@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -8,7 +9,7 @@ pub type SymbolOwned = String;
 // Not extending Serialize + DeserializeOwbed since the serde derive implementations fail to
 // satisfy trait bounds with regards of the lifetimes
 // Foe example, https://stackoverflow.com/questions/70774093/generic-type-that-implements-deserializeowned
-pub trait Currency: Copy + Ord + Default {
+pub trait Currency: Copy + Ord + Default + Debug {
     const SYMBOL: SymbolStatic;
 }
 

@@ -5,11 +5,10 @@ pub use coinc::CoinDTO;
 mod serde;
 
 use std::{
-    fmt::{Debug, Display, Formatter, Write},
+    fmt::{Debug, Display, Formatter},
     marker::PhantomData,
-    ops::{Add, Div, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Sub, SubAssign},
 };
-use std::ops::AddAssign;
 
 use ::serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
@@ -131,10 +130,7 @@ where
     C: Currency,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.amount.to_string())?;
-        f.write_char(' ')?;
-        f.write_str(C::SYMBOL)?;
-        Ok(())
+        f.write_fmt(format_args!("{} {}", self.amount, C::SYMBOL))
     }
 }
 
