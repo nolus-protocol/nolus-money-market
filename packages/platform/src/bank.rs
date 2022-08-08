@@ -86,6 +86,7 @@ impl<'a> BankAccount for BankStub<'a> {
     where
         C: Currency,
     {
+        debug_assert!(!amount.is_zero());
         self.batch.schedule_execute_no_reply(BankMsg::Send {
             to_address: to.into(),
             amount: vec![to_cosmwasm_impl(amount)],
