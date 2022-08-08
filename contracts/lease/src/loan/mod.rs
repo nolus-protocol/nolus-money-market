@@ -1,5 +1,6 @@
 mod repay;
 mod state;
+mod open_request;
 
 use platform::batch::Batch;
 pub use state::State;
@@ -131,11 +132,6 @@ where
 
     fn annual_interest(&self) -> Percent {
         self.annual_margin_interest + self.current_period.annual_interest_rate()
-    }
-
-    fn load_principal_due(&self, lease: impl Into<Addr>) -> ContractResult<Coin<Lpn>> {
-        let loan: QueryLoanResponse<Lpn> = self.load_lpp_loan(lease)?;
-        Ok(loan.ok_or(ContractError::LoanClosed())?.principal_due)
     }
 
     fn load_loan_interest_due(
@@ -410,6 +406,10 @@ mod tests {
 
     // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl Lpp<TestCurrency> for LppLocalStub {
+        fn id(&self) -> Addr {
+            unreachable!()
+        }
+
         fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
