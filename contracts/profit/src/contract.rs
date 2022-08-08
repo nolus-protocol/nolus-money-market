@@ -77,7 +77,7 @@ fn try_transfer(
         time >= env.block.time,
         ContractError::AlarmTimeValidation {}
     );
-    Profit::transfer(deps, env, info)
+    Ok(Profit::transfer(deps, env, info)?.into())
 }
 
 #[cfg(test)]
@@ -88,7 +88,10 @@ mod tests {
         to_binary, Addr, BankMsg, CosmosMsg, SubMsg, WasmMsg,
     };
 
-    use finance::duration::Duration;
+    use finance::{
+        currency::{Currency, Nls},
+        duration::Duration,
+    };
 
     use super::{execute, instantiate, query};
     use crate::error::ContractError;
@@ -161,25 +164,36 @@ mod tests {
 
     #[test]
     fn transfer() {
-        let mut deps = mock_dependencies_with_balance(&coins(20, "unolus"));
+        use timealarms::msg::ExecuteMsg as AlarmsExecuteMsg;
+        let mut deps = mock_dependencies_with_balance(&coins(20, Nls::SYMBOL));
 
         let msg = instantiate_msg();
         let info = mock_info("timealarms", &coins(2, "unolus"));
         let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-        let msg = ExecuteMsg::Alarm {
-            time: mock_env().block.time,
-        };
+        let current_time = mock_env().block.time;
+
+        let msg = ExecuteMsg::Alarm { time: current_time };
         let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        assert_eq!(1, res.messages.len());
+        assert_eq!(2, res.messages.len());
         println!("{:?}", res.messages);
         assert_eq!(
             res.messages,
-            vec![SubMsg::new(BankMsg::Send {
-                to_address: "treasury".to_string(),
-                amount: coins(20, "unolus"),
-            })]
+            vec![
+                SubMsg::new(BankMsg::Send {
+                    to_address: "treasury".to_string(),
+                    amount: coins(20, Nls::SYMBOL),
+                }),
+                SubMsg::new(WasmMsg::Execute {
+                    contract_addr: "timealarms".to_string(),
+                    msg: to_binary(&AlarmsExecuteMsg::AddAlarm {
+                        time: current_time + Duration::from_hours(10)
+                    })
+                    .unwrap(),
+                    funds: vec![]
+                })
+            ]
         );
     }
 }

@@ -1,9 +1,6 @@
 use cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, Env, QuerierWrapper};
 
-use finance::{
-    coin::{Coin, CoinDTO},
-    currency::{Currency, Nls},
-};
+use finance::{coin::Coin, currency::Currency};
 
 use crate::{
     batch::Batch,
@@ -15,7 +12,6 @@ pub trait BankAccountView {
     fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: Currency;
-    fn balance_any(&self) -> Result<Vec<CoinDTO>>;
 }
 
 pub trait BankAccount: BankAccountView + Into<Batch> {
@@ -60,16 +56,6 @@ impl<'a> BankAccountView for BankView<'a> {
         let coin = self.querier.query_balance(self.addr, C::SYMBOL)?;
         from_cosmwasm_impl(coin)
     }
-
-    fn balance_any(&self) -> Result<Vec<CoinDTO>> {
-        let all_balances = self.querier.query_all_balances(self.addr)?;
-        let mut balance: Vec<CoinDTO> = vec![];
-        for coin in all_balances {
-            let dto: Coin<Nls> = from_cosmwasm_impl(coin)?;
-            balance.push(dto.into())
-        }
-        Ok(balance)
-    }
 }
 
 pub struct BankStub<'a> {
@@ -92,10 +78,6 @@ impl<'a> BankAccountView for BankStub<'a> {
         C: Currency,
     {
         self.view.balance()
-    }
-
-    fn balance_any(&self) -> Result<Vec<CoinDTO>> {
-        self.view.balance_any()
     }
 }
 

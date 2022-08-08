@@ -4,10 +4,10 @@ use cosmwasm_std::{
 };
 use platform::{
     bank::{BankAccount, BankAccountView, BankStub},
-    batch::Batch,
+    batch::{Batch, Emitter},
 };
 
-use crate::{msg::ConfigResponse, state::config::Config, ContractError};
+use crate::{event::emit_profit, msg::ConfigResponse, state::config::Config, ContractError};
 use finance::{coin::Coin, currency::Nls, duration::Duration};
 
 pub struct Profit {}
@@ -30,7 +30,7 @@ impl Profit {
         deps: DepsMut,
         env: Env,
         info: MessageInfo,
-    ) -> Result<Response, ContractError> {
+    ) -> Result<Emitter, ContractError> {
         let config = Config::load(deps.storage)?;
 
         if info.sender != config.timealarms {
@@ -40,7 +40,7 @@ impl Profit {
         let balance = deps.querier.query_all_balances(&env.contract.address)?;
 
         if balance.is_empty() {
-            return Ok(Response::new().add_attribute("result", "no profit to dispatch"));
+            return Err(ContractError::EmptyBalance {});
         }
 
         let current_time = env.block.time;
@@ -58,9 +58,7 @@ impl Profit {
         let mut batch: Batch = bank.into();
         batch.schedule_execute_no_reply(msg);
 
-        // batch.emit_timestamp(event_type, event_key, timestamp);
-
-        Ok(batch.into())
+        Ok(emit_profit(batch, env, balance))
     }
     pub fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
         let config = Config::load(storage)?;

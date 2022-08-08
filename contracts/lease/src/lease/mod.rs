@@ -205,10 +205,6 @@ mod tests {
         {
             Ok(Coin::<C>::new(self.balance))
         }
-
-        fn balance_any(&self) -> PlatformResult<Vec<finance::coin::CoinDTO>> {
-            todo!()
-        }
     }
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

@@ -23,7 +23,7 @@ impl TimeAlarms {
     ) -> Result<Response, ContractError> {
         validate_contract_addr(&deps.querier, &address)?;
         Self::TIME_ALARMS.add(deps.storage, address, time)?;
-        Ok(Response::new().add_attribute("method", "try_add_alarm"))
+        Ok(Response::new())
     }
 
     pub fn try_notify(

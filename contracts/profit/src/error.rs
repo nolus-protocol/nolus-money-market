@@ -30,4 +30,7 @@ pub enum ContractError {
         "Invalid time configuration. Current profit transfer time is before the last transfer time"
     )]
     InvalidTimeConfiguration {},
+
+    #[error("EmptyBalance. No profit to dispatch")]
+    EmptyBalance {},
 }

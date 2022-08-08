@@ -131,7 +131,7 @@ fn on_alarm() {
         .unwrap();
 
     // ensure the attributes were relayed from the sub-message
-    assert_eq!(8, res.events.len(), "{:?}", res.events);
+    assert_eq!(7, res.events.len(), "{:?}", res.events);
 
     let dispatcher_exec = &res.events[0];
     assert_eq!(dispatcher_exec.ty.as_str(), "execute");
