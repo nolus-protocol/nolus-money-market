@@ -6,11 +6,13 @@ use platform::{
     batch::Emitter
 };
 use serde::Serialize;
+use platform::batch::Emit;
 
 use crate::{
     error::ContractError,
     lease::{Lease, WithLease}
 };
+use crate::event::TYPE;
 
 pub struct Close<'a, Bank> {
     sender: &'a Addr,
@@ -47,7 +49,13 @@ where
             return Err(Self::Error::Unauthorized {});
         }
 
-        lease.close(self.lease, self.account, self.now)
+        let result = lease.close(self.lease.clone(), self.account)?;
+
+        let emitter = result.into_emitter(TYPE::Close)
+            .emit("id", self.lease)
+            .emit_timestamp("at", &self.now);
+
+        Ok(emitter)
     }
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {

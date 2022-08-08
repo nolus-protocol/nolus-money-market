@@ -18,14 +18,18 @@ pub struct Repay<'a> {
     payment: &'a [CwCoin],
     now: Timestamp,
     lease: Addr,
+    height: u64,
+    transaction: u32,
 }
 
 impl<'a> Repay<'a> {
-    pub fn new(payment: &'a [CwCoin], now: Timestamp, lease: Addr) -> Self {
+    pub fn new(payment: &'a [CwCoin], now: Timestamp, lease: Addr, height: u64, transaction: u32) -> Self {
         Self {
             payment,
             now,
             lease,
+            height,
+            transaction,
         }
     }
 }
@@ -43,9 +47,12 @@ impl<'a> WithLease for Repay<'a> {
         // TODO 'receive' the payment from the bank using any currency it might be in
         let payment = bank::received::<Lpn>(self.payment)?;
 
-        let result = lease.repay(payment, self.now, self.lease)?;
+        let result = lease.repay(payment, self.now, self.lease.clone())?;
 
         let emitter = result.batch.into_emitter(TYPE::Repay)
+            .emit_to_string_value("height", self.height)
+            .emit_to_string_value("idx", self.transaction)
+            .emit("to", self.lease)
             .emit("payment-symbol", Lpn::SYMBOL)
             .emit_coin_amount("payment-amount", payment)
             .emit_timestamp("at", &self.now)

@@ -8,10 +8,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
 use platform::{
-    batch::{
-        Emit,
-        Emitter,
-    },
+    batch::Emitter,
     bank::BankStub,
 };
 
@@ -91,17 +88,15 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
 fn try_repay(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Emitter> {
     lease::execute(
         lease,
-        Repay::new(&info.funds, env.block.time, env.contract.address.clone()),
+        Repay::new(
+            &info.funds,
+            env.block.time,
+            env.contract.address,
+            env.block.height,
+            env.transaction.expect("Couldn't get transaction info!").index,
+        ),
         &deps.querier,
-    ).map(|emitter| {
-        emitter
-            .emit_to_string_value("height", &env.block.height)
-            .emit_to_string_value(
-                "idx",
-                env.transaction.expect("Couldn't get transaction info!").index,
-            )
-            .emit("to", env.contract.address)
-    })
+    )
 }
 
 fn try_close(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Emitter> {
