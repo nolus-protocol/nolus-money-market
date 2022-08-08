@@ -157,6 +157,7 @@ where
                     Ok(StateResponse::Opened {
                         amount: lease_amount,
                         interest_rate: state.annual_interest,
+                        interest_rate_margin: state.annual_interest_margin,
                         principal_due: state.principal_due,
                         previous_margin_due: state.previous_margin_interest_due,
                         previous_interest_due: state.previous_interest_due,
@@ -400,7 +401,8 @@ mod tests {
         let res = request_state(lease, &bank_account);
         let exp = StateResponse::Opened {
             amount: coin(lease_amount),
-            interest_rate: MARGIN_INTEREST_RATE.checked_add(interest_rate).unwrap(),
+            interest_rate,
+            interest_rate_margin: MARGIN_INTEREST_RATE,
             principal_due: loan.principal_due,
             previous_margin_due: coin(0),
             previous_interest_due: coin(0),

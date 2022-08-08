@@ -16,6 +16,7 @@ where
     Opened {
         amount: Coin<C>,
         interest_rate: Percent,
+        interest_rate_margin: Percent,
         principal_due: Coin<Lpn>,
         previous_margin_due: Coin<Lpn>,
         previous_interest_due: Coin<Lpn>,

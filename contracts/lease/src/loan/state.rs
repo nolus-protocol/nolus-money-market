@@ -5,6 +5,7 @@ where
     Lpn: Currency,
 {
     pub annual_interest: Percent,
+    pub annual_interest_margin: Percent,
     pub principal_due: Coin<Lpn>,
     pub previous_interest_due: Coin<Lpn>,
     pub current_interest_due: Coin<Lpn>,

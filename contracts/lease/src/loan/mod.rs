@@ -305,7 +305,7 @@ where
         let principal_due = loan_state.principal_due;
 
         let margin_interest_overdue_period = self.current_period.spanning({
-            let new_period = now.minus_nanos(self.interest_due_period.nanos());
+            let new_period = now.minus_nanos(self.interest_due_period.nanos().min(now.nanos()));
 
             if self.current_period.start() < new_period {
                 Duration::between(self.current_period.start(), new_period)
@@ -334,7 +334,8 @@ where
         );
 
         State {
-            annual_interest: loan_state.annual_interest_rate + self.annual_margin_interest,
+            annual_interest: loan_state.annual_interest_rate,
+            annual_interest_margin: self.annual_margin_interest,
             principal_due,
             previous_interest_due: loan_interest_overdue,
             current_interest_due: loan_state.interest_due - loan_interest_overdue,
