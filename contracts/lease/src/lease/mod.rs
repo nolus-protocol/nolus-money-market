@@ -12,17 +12,12 @@ use finance::{
 use lpp::stub::Lpp as LppTrait;
 use platform::{
     bank::{BankAccount, BankAccountView},
-    batch::{
-        Batch,
-        Emit,
-        Emitter,
-    }
+    batch::Batch,
 };
 use serde::Serialize;
 
 use crate::{
     error::{ContractError, ContractResult},
-    event::TYPE,
     loan::{Loan, RepayResult},
     msg::StateResponse,
 };
@@ -85,18 +80,19 @@ where
         &self.customer == addr
     }
 
-    pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<OpenRequestResult<Lpn>> {
+    pub(crate) fn open_loan_req(self, lease: Addr, downpayment: Coin<Lpn>) -> ContractResult<OpenRequestResult<Lpn>> {
         // TODO add a type parameter to this function to designate the downpayment currency
         // TODO query the market price oracle to get the price of the downpayment currency to LPN
         //  and calculate `downpayment` in LPN
         let borrow = self.liability.init_borrow_amount(downpayment);
 
-        let result = self.loan.open_loan_req(borrow)?;
+        let result = self.loan.open_loan_req(lease, borrow)?;
 
         Ok(OpenRequestResult {
             batch: result.batch,
             customer: self.customer,
-            annual_interest: result.annual_interest,
+            annual_interest_rate: result.annual_interest_rate,
+            annual_interest_rate_margin: result.annual_interest_rate_margin,
             currency: self.currency,
             loan_pool_id: result.loan_pool_id,
             loan_amount: borrow,
@@ -110,21 +106,18 @@ where
 
     // TODO add the lease address as a field in Lease<>
     //  and populate it on LeaseDTO.execute as LeaseFactory
-    pub(crate) fn close<B>(self, lease: Addr, mut account: B, now: Timestamp) -> ContractResult<Emitter>
+    pub(crate) fn close<B>(self, lease: Addr, mut account: B) -> ContractResult<Batch>
     where
         B: BankAccount,
     {
-        let state = self.state(Timestamp::from_nanos(u64::MAX), &account, lease.clone())?;
+        let state = self.state(Timestamp::from_nanos(u64::MAX), &account, lease)?;
         match state {
             StateResponse::Opened { .. } => Err(ContractError::LoanNotPaid()),
             StateResponse::Paid(..) => {
                 let balance = account.balance::<Lpn>()?;
                 account.send(balance, &self.customer);
 
-                Ok(account.into()
-                    .into_emitter(TYPE::Close)
-                    .emit("id", lease)
-                    .emit_timestamp("at", &now))
+                Ok(account.into())
             }
             StateResponse::Closed() => Err(ContractError::LoanClosed()),
         }

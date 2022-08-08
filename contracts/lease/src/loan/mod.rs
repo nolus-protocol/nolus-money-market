@@ -96,9 +96,9 @@ where
         res
     }
 
-    pub(crate) fn open_loan_req(mut self, amount: Coin<Lpn>) -> ContractResult<OpenRequestResult> {
+    pub(crate) fn open_loan_req(mut self, lease: impl Into<Addr>, amount: Coin<Lpn>) -> ContractResult<OpenRequestResult> {
         self.lpp.open_loan_req(amount)?;
-        Ok(self.into())
+        OpenRequestResult::try_new(self, lease)
     }
 
     pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<Batch> {
@@ -130,8 +130,20 @@ where
         Ok(loan_resp.map(|loan_state| self.merge_state_with(loan_state, now)))
     }
 
-    fn annual_interest(&self) -> Percent {
-        self.annual_margin_interest + self.current_period.annual_interest_rate()
+    fn annual_interest(&self, lease: impl Into<Addr>) -> ContractResult<Percent> {
+        self
+            .load_lpp_loan(lease)
+            .and_then(
+                |resp| resp.map(
+                    |resp| resp.annual_interest_rate
+                )
+                    // TODO Change to `ContractError::LoanClosed()` when cause is fixed.
+                    .ok_or_else(|| ContractError::InvalidParameters("Loan Closed!".to_string()))
+            )
+    }
+
+    fn annual_interest_margin(&self) -> Percent {
+        self.annual_margin_interest
     }
 
     fn load_loan_interest_due(

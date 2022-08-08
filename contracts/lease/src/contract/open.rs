@@ -33,15 +33,14 @@ impl<'a> WithLease for OpenLoanReq<'a> {
         let downpayment_lpn = bank::received::<Lpn>(self.downpayment)?;
 
         let result = lease
-            .open_loan_req(downpayment_lpn)
+            .open_loan_req(self.contract.clone(), downpayment_lpn)
             .map_err(Self::Error::from)?;
 
-        // Using a block as an expression enforces move semantics on !Copy types
         let emitter = result.batch
             .into_emitter(TYPE::Open)
             .emit("id", self.contract)
             .emit("customer", result.customer)
-            .emit_percent_amount("air", result.annual_interest)
+            .emit_percent_amount("air", result.annual_interest_rate + result.annual_interest_rate_margin)
             .emit("currency", result.currency)
             .emit("loan-pool-id", result.loan_pool_id)
             .emit("loan-symbol", Lpn::SYMBOL)

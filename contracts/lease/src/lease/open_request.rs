@@ -15,7 +15,8 @@ where
 {
     pub batch: Batch,
     pub customer: Addr,
-    pub annual_interest: Percent,
+    pub annual_interest_rate: Percent,
+    pub annual_interest_rate_margin: Percent,
     pub currency: SymbolOwned,
     pub loan_pool_id: Addr,
     pub loan_amount: Coin<Lpn>,
