@@ -19,7 +19,7 @@ use serde::Serialize;
 use crate::{
     error::{ContractError, ContractResult},
     event::TYPE,
-    loan::Loan,
+    loan::{Loan, Receipt},
     msg::StateResponse,
 };
 
@@ -74,6 +74,14 @@ where
         }
     }
 
+    pub(super) fn into_dto(self) -> (LeaseDTO, Lpp) {
+        let (loan_dto, lpp) = self.loan.into_dto();
+        (
+            LeaseDTO::new(self.customer, self.currency, self.liability, loan_dto),
+            lpp,
+        )
+    }
+
     pub(crate) fn owned_by(&self, addr: &Addr) -> bool {
         &self.customer == addr
     }
@@ -125,11 +133,11 @@ where
     }
 
     pub(crate) fn repay(
-        self,
+        &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
         lease: Addr,
-    ) -> ContractResult<Batch> {
+    ) -> ContractResult<Receipt<Lpn>> {
         assert_eq!(self.currency, Lpn::SYMBOL);
         self.loan.repay(payment, by, lease)
     }
@@ -191,7 +199,7 @@ mod tests {
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
     const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
     type TestCurrency = Usdc;
-    type LppResult<T> = core::result::Result<T, LppError>;
+    type LppResult<T> = Result<T, LppError>;
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     pub struct BankStub {
@@ -227,7 +235,7 @@ mod tests {
         }
 
         fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestCurrency>> {
-            Result::Ok(self.loan.clone())
+            Ok(self.loan.clone())
         }
 
         fn loan_outstanding_interest(
@@ -242,11 +250,7 @@ mod tests {
             unreachable!()
         }
 
-        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
-            unreachable!()
-        }
-
-        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
+        fn lpp_balance(&self) -> LppResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -254,11 +258,15 @@ mod tests {
             unreachable!()
         }
 
-        fn lpp_balance(&self) -> LppResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
+        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
             unreachable!()
         }
 
         fn nlpn_balance(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::BalanceResponse> {
+            unreachable!()
+        }
+
+        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
             unreachable!()
         }
     }
@@ -306,11 +314,7 @@ mod tests {
             unreachable!()
         }
 
-        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
-            unreachable!()
-        }
-
-        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
+        fn lpp_balance(&self) -> LppResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -318,11 +322,15 @@ mod tests {
             unreachable!()
         }
 
-        fn lpp_balance(&self) -> LppResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
+        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
             unreachable!()
         }
 
         fn nlpn_balance(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::BalanceResponse> {
+            unreachable!()
+        }
+
+        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
             unreachable!()
         }
     }

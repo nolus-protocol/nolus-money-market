@@ -5,19 +5,23 @@ mod state;
 
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response};
+use cosmwasm_std::{
+    Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Response,
+};
 use cw2::set_contract_version;
-use platform::bank::BankStub;
-use platform::batch::{Batch, Emitter};
+use platform::{
+    bank::BankStub,
+    batch::{Emit, Emitter},
+};
 
 use crate::error::ContractResult;
 use crate::lease::{self, LeaseDTO};
 use crate::msg::{ExecuteMsg, NewLeaseForm, StateQuery};
 
-use self::close::Close;
 use self::open::{OpenLoanReq, OpenLoanResp};
 use self::repay::Repay;
 use self::state::LeaseState;
+use self::{close::Close, repay::RepayResult};
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -35,9 +39,9 @@ pub fn instantiate(
     let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
     lease.store(deps.storage)?;
 
-    let batch = lease::execute(lease, OpenLoanReq::new(&info.funds), &deps.querier)?;
+    let emitter = lease::execute(lease, OpenLoanReq::new(&info.funds), &deps.querier)?;
 
-    Ok(batch.into())
+    Ok(emitter.into())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -60,9 +64,14 @@ pub fn execute(
     let lease = LeaseDTO::load(deps.storage)?;
 
     match msg {
-        ExecuteMsg::Repay() => try_repay(deps, env, info, lease).map(Into::into),
-        ExecuteMsg::Close() => try_close(deps, env, info, lease).map(Into::into),
+        ExecuteMsg::Repay() => {
+            let res = try_repay(&deps.querier, env, info, lease)?;
+            LeaseDTO::store(&res.lease_dto, deps.storage)?;
+            Ok(res.emitter)
+        }
+        ExecuteMsg::Close() => try_close(deps, env, info, lease),
     }
+    .map(Into::into)
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -79,21 +88,49 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     )
 }
 
-fn try_repay(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Batch> {
+fn try_repay(
+    querier: &QuerierWrapper,
+    env: Env,
+    info: MessageInfo,
+    lease: LeaseDTO,
+) -> ContractResult<RepayResult> {
     lease::execute(
         lease,
-        Repay::new(&info.funds, env.block.time, env.contract.address),
-        &deps.querier,
+        Repay::new(&info.funds, env.block.time, env.contract.address.clone()),
+        querier,
     )
+    .map(|mut result| {
+        result.emitter = result
+            .emitter
+            .emit_to_string_value("height", &env.block.height)
+            .emit_to_string_value(
+                "idx",
+                env.transaction
+                    .expect("Couldn't get transaction info!")
+                    .index,
+            )
+            .emit("to", env.contract.address);
+        result
+    })
 }
 
-fn try_close(deps: DepsMut, env: Env, info: MessageInfo, lease: LeaseDTO) -> ContractResult<Emitter> {
+fn try_close(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    lease: LeaseDTO,
+) -> ContractResult<Emitter> {
     let bank = BankStub::my_account(&env, &deps.querier);
 
-    let batch = lease::execute(
+    let emitter = lease::execute(
         lease,
-        Close::new(&info.sender, env.contract.address.clone(), bank, env.block.time),
+        Close::new(
+            &info.sender,
+            env.contract.address.clone(),
+            bank,
+            env.block.time,
+        ),
         &deps.querier,
     )?;
-    Ok(batch)
+    Ok(emitter)
 }
