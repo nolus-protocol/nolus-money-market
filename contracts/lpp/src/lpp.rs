@@ -499,7 +499,7 @@ mod test {
             .expect("can't load LiquidityPool");
 
         let mut lender =
-            Deposit::load(deps.as_ref().storage, Addr::unchecked("lender")).expect("should load");
+            Deposit::load_or_default(deps.as_ref().storage, Addr::unchecked("lender")).expect("should load");
         let price = lpp
             .calculate_price(&deps.as_ref(), &env, Coin::new(0))
             .expect("should get price");
@@ -508,11 +508,11 @@ mod test {
             price::total_of(Coin::<NLpn>::new(1)).is(Coin::<TheCurrency>::new(1))
         );
 
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(10_000_000)]);
         lender
             .deposit(deps.as_mut().storage, 10_000_000u128.into(), price)
             .expect("should deposit");
-        deps.querier
-            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(10_000_000)]);
 
         let annual_interest_rate = lpp
             .query_quote(&deps.as_ref(), &env, Coin::new(5_000_000))
