@@ -24,8 +24,14 @@ pub fn try_claim_rewards(
     other_recipient: Option<Addr>,
 ) -> Result<Response, ContractError> {
     let recipient = other_recipient.unwrap_or_else(|| info.sender.clone());
-    let mut deposit = Deposit::load(deps.storage, info.sender)?;
+    let mut deposit = Deposit::may_load(deps.storage, info.sender)?
+        .ok_or(ContractError::NoDeposit {})?;
+    
     let reward = deposit.claim_rewards(deps.storage)?;
+
+    if reward.is_zero() {
+        return Err(ContractError::NoRewards {  })
+    }
 
     let mut bank = BankStub::my_account(&env, &deps.querier);
     bank.send(reward, &recipient);
@@ -49,7 +55,48 @@ where
 }
 
 pub fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse, ContractError> {
-    let deposit = Deposit::load(storage, addr)?;
-    let rewards = deposit.query_rewards(storage)?;
+    let rewards = Deposit::may_load(storage, addr)?
+        .ok_or(ContractError::NoDeposit {})?
+        .query_rewards(storage)?;
+
     Ok(RewardsResponse { rewards })
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
+    use cosmwasm_std::coin;
+    use finance::currency::Usdc;
+    use crate::contract::lender;
+
+    type TheCurrency = Usdc;
+
+    #[test]
+    fn test_claim_zero_rewards() {
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+
+        let mut lpp_balance = 0;
+        let deposit = 20_000;
+
+        LiquidityPool::<TheCurrency>::store(deps.as_mut().storage, TheCurrency::SYMBOL.into(), 1000u64.into())
+            .unwrap();
+
+        // no deposit
+        let info = mock_info("lender", &[]);
+        let response = try_claim_rewards(deps.as_mut(), env.clone(), info, None);
+        assert_eq!(response, Err(ContractError::NoDeposit {  }));
+        
+        lpp_balance += deposit;
+        let info = mock_info("lender", &[coin(deposit, TheCurrency::SYMBOL)]);
+        deps.querier.update_balance(MOCK_CONTRACT_ADDR, vec![coin(lpp_balance, TheCurrency::SYMBOL)]);
+        lender::try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
+
+        // pending rewards == 0
+        let info = mock_info("lender", &[]);
+        let response = try_claim_rewards(deps.as_mut(), env, info, None);
+        assert_eq!(response, Err(ContractError::NoRewards {  }));
+    }
+
 }

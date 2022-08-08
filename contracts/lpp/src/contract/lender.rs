@@ -28,7 +28,7 @@ where
     let price = lpp.calculate_price(&deps.as_ref(), &env, amount)?;
 
     let receipts =
-        Deposit::load(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
+        Deposit::load_or_default(deps.storage, lender_addr.clone())?.deposit(deps.storage, amount, price)?;
 
     Ok(event::emit_deposit(Batch::default(), env, lender_addr, amount, receipts).into())
 }
@@ -49,14 +49,19 @@ where
     let payment_lpn = lpp.withdraw_lpn(&deps.as_ref(), &env, amount_nlpn)?;
 
     let maybe_reward =
-        Deposit::load(deps.storage, lender_addr.clone())?.withdraw(deps.storage, amount_nlpn)?;
+        Deposit::may_load(deps.storage, lender_addr.clone())?
+        .ok_or(ContractError::NoDeposit {})?
+        .withdraw(deps.storage, amount_nlpn)?;
 
     let mut bank = BankStub::my_account(&env, &deps.querier);
     bank.send(payment_lpn, &lender_addr);
 
     if let Some(reward) = maybe_reward {
-        bank.send(reward, &lender_addr);
+        if !reward.is_zero() {
+            bank.send(reward, &lender_addr);
+        }
     }
+
     let batch: Batch = bank.into();
 
     let mut response: Response = batch.into();
@@ -91,6 +96,7 @@ mod test {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
     use finance::currency::Usdc;
     use finance::price;
+    
 
     type TheCurrency = Usdc;
 
@@ -154,7 +160,7 @@ mod test {
         assert!(result.is_err());
 
         // partial withdraw
-        try_withdraw::<TheCurrency>(deps.as_mut(), env.clone(), info, withdraw_amount_nlpn.into()).unwrap();
+        try_withdraw::<TheCurrency>(deps.as_mut(), env, info, withdraw_amount_nlpn.into()).unwrap();
         let balance_nlpn = query_balance(deps.as_ref().storage, Addr::unchecked("lender2")).unwrap().balance;
         assert_eq!(balance_nlpn, rest_nlpn.into());
     }
