@@ -10,6 +10,7 @@ use finance::{
     liability::Liability,
 };
 use lpp::stub::Lpp as LppTrait;
+use platform::batch::Emitter;
 use platform::{
     bank::{BankAccount, BankAccountView},
     batch::Batch,
@@ -18,7 +19,7 @@ use serde::Serialize;
 
 use crate::{
     error::{ContractError, ContractResult},
-    loan::{Loan, RepayResult},
+    loan::{Loan, Receipt},
     msg::StateResponse,
 };
 
@@ -76,6 +77,14 @@ where
         }
     }
 
+    pub(super) fn into_dto(self) -> (LeaseDTO, Lpp) {
+        let (loan_dto, lpp) = self.loan.into_dto();
+        (
+            LeaseDTO::new(self.customer, self.currency, self.liability, loan_dto),
+            lpp,
+        )
+    }
+
     pub(crate) fn owned_by(&self, addr: &Addr) -> bool {
         &self.customer == addr
     }
@@ -124,11 +133,11 @@ where
     }
 
     pub(crate) fn repay(
-        self,
+        &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
         lease: Addr,
-    ) -> ContractResult<RepayResult<Lpn>> {
+    ) -> ContractResult<Receipt<Lpn>> {
         assert_eq!(self.currency, Lpn::SYMBOL);
         self.loan.repay(payment, by, lease)
     }
@@ -346,7 +355,8 @@ mod tests {
             MARGIN_INTEREST_RATE,
             Duration::from_secs(100),
             Duration::from_secs(0),
-        ).unwrap();
+        )
+        .unwrap();
         Lease {
             customer: Addr::unchecked("customer"),
             currency: TestCurrency::SYMBOL.to_string(),
