@@ -52,7 +52,7 @@ where
             .emit(symbol_key, C::SYMBOL)
     }
 
-    fn emit_block_info(self, env: &Env) -> Self {
+    fn emit_tx_info(self, env: &Env) -> Self {
         let transaction_idx = env
             .transaction
             .as_ref()

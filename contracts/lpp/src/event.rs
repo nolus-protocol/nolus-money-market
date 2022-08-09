@@ -3,19 +3,19 @@ use cosmwasm_std::{Addr, Env};
 use finance::{coin::Coin, currency::Currency};
 use platform::batch::{Batch, Emit, Emitter};
 
-pub fn emit_deposit<C>(
+pub fn emit_deposit<LPN>(
     batch: Batch,
     env: Env,
     lender_addr: Addr,
-    deposited_amount: Coin<C>,
+    deposited_amount: Coin<LPN>,
     receipts: Coin<NLpn>,
 ) -> Emitter
 where
-    C: Currency,
+LPN: Currency,
 {
     batch
         .into_emitter("lp-deposit")
-        .emit_block_info(&env)
+        .emit_tx_info(&env)
         .emit("from", lender_addr)
         .emit_timestamp("at", &env.block.time)
         .emit("to", env.contract.address)
@@ -23,20 +23,20 @@ where
         .emit_coin_amount("receipts", receipts)
 }
 
-pub fn emit_withdraw<C>(
+pub fn emit_withdraw<LPN>(
     batch: Batch,
     env: Env,
     lender_addr: Addr,
-    payment_lpn: Coin<C>,
+    payment_lpn: Coin<LPN>,
     receipts: Coin<NLpn>,
     close_flag: bool,
 ) -> Emitter
 where
-    C: Currency,
+LPN: Currency,
 {
     batch
         .into_emitter("lp-withdraw")
-        .emit_block_info(&env)
+        .emit_tx_info(&env)
         .emit("to", lender_addr)
         .emit_timestamp("at", &env.block.time)
         .emit("from", env.contract.address)
