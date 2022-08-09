@@ -11,7 +11,7 @@ pub fn emit_deposit<LPN>(
     receipts: Coin<NLpn>,
 ) -> Emitter
 where
-LPN: Currency,
+    LPN: Currency,
 {
     batch
         .into_emitter("lp-deposit")
@@ -32,7 +32,7 @@ pub fn emit_withdraw<LPN>(
     close_flag: bool,
 ) -> Emitter
 where
-LPN: Currency,
+    LPN: Currency,
 {
     batch
         .into_emitter("lp-withdraw")

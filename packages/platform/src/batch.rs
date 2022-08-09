@@ -88,7 +88,6 @@ impl Batch {
         Emitter::new(self, event_type)
     }
 
-
     fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>
     where
         M: Serialize,
