@@ -4,7 +4,7 @@ use cosmwasm_std::{
 };
 use platform::{
     bank::{BankAccount, BankAccountView, BankStub},
-    batch::{Batch, Emitter},
+    batch::{Batch, Emit, Emitter},
 };
 
 use crate::{event::emit_profit, msg::ConfigResponse, state::config::Config, ContractError};
@@ -58,7 +58,14 @@ impl Profit {
         let mut batch: Batch = bank.into();
         batch.schedule_execute_no_reply(msg);
 
-        Ok(emit_profit(batch, env, balance))
+        let transaction_idx = env.transaction.expect("Error! No transaction index.");
+
+        Ok(batch
+            .into_emitter("tr-profit")
+            .emit_to_string_value("height", env.block.height)
+            .emit_to_string_value("idx", transaction_idx.index)
+            .emit_timestamp("at", &env.block.time)
+            .emit_coin("amount", balance))
     }
     pub fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
         let config = Config::load(storage)?;
