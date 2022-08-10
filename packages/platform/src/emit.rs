@@ -1,4 +1,4 @@
-use cosmwasm_std::{Event, Response, Timestamp};
+use cosmwasm_std::{Env, Event, Response, Timestamp};
 use finance::coin::{Amount, Coin};
 use finance::currency::Currency;
 use finance::percent::Percent;
@@ -59,6 +59,16 @@ where
 
         self.emit(amount_key, u128::from(coin).to_string())
             .emit(symbol_key, C::SYMBOL)
+    }
+
+    fn emit_tx_info(self, env: &Env) -> Self {
+        let transaction_idx = env
+            .transaction
+            .as_ref()
+            .expect("Error! No transaction index.");
+
+        self.emit_to_string_value("height", env.block.height)
+            .emit_to_string_value("idx", transaction_idx.index)
     }
 }
 
