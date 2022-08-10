@@ -7,7 +7,7 @@ use platform::{
     batch::{Batch, Emit, Emitter},
 };
 
-use crate::{event::emit_profit, msg::ConfigResponse, state::config::Config, ContractError};
+use crate::{msg::ConfigResponse, state::config::Config, ContractError};
 use finance::{coin::Coin, currency::Nls, duration::Duration};
 
 pub struct Profit {}
