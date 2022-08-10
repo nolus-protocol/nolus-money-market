@@ -2,15 +2,6 @@ use finance::{
     coin::Coin,
     currency::Currency
 };
-use platform::batch::Batch;
-
-pub(crate) struct Result<C>
-where
-    C: Currency,
-{
-    pub batch: Batch,
-    pub receipt: Receipt<C>,
-}
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub(crate) struct Receipt<C>
