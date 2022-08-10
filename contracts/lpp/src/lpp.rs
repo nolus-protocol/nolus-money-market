@@ -487,7 +487,7 @@ mod test {
             .expect("can't load LiquidityPool");
 
         let result =
-            lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000_000));
+            lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(5_000_000));
         assert!(result.is_err());
     }
 
