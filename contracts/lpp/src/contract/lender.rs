@@ -232,6 +232,6 @@ mod test {
         let balance_nlpn = query_balance(deps.as_ref().storage, Addr::unchecked("lender2"))
             .unwrap()
             .balance;
-        assert_eq!(balance_nlpn, (0 as u128).into());
+        assert_eq!(balance_nlpn, zero.into());
     }
 }
