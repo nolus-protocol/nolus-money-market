@@ -38,7 +38,7 @@ impl TimeAlarms {
 
         impl<'a> AlarmDispatcher for OracleAlarmDispatcher<'a> {
             fn send_to(&mut self, id: Id, addr: Addr, ctime: Timestamp) -> StdResult<()> {
-                let msg = ExecuteAlarmMsg::Alarm(ctime);
+                let msg = ExecuteAlarmMsg::TimeAlarm(ctime);
                 let wasm_msg = cosmwasm_std::wasm_execute(addr, &msg, vec![])?;
                 let submsg = SubMsg::reply_always(CosmosMsg::Wasm(wasm_msg), id);
                 self.response.messages.push(submsg);

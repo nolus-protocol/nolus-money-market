@@ -66,5 +66,5 @@ pub struct PriceResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
-    Alarm(Price),
+    PriceAlarm(Price),
 }
