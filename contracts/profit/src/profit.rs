@@ -59,12 +59,13 @@ impl Profit {
         let mut batch: Batch = bank.into();
         batch.schedule_execute_no_reply(msg);
 
-        let transaction_idx = env.transaction.expect("Error! No transaction index.");
+        // let transaction_idx = env.transaction.expect("Error! No transaction index.");
 
         Ok(batch
             .into_emitter("tr-profit")
             .emit_to_string_value("height", env.block.height)
-            .emit_to_string_value("idx", transaction_idx.index)
+            // TODO add idx when https://github.com/CosmWasm/wasmd/issues/932 is resolved
+            // .emit_to_string_value("idx", transaction_idx.index)
             .emit_timestamp("at", &env.block.time)
             .emit_coin("profit-amount", balance))
         // TODO add in_stable(wasm-tr-profit.profit-amount) The amount transferred in stable.
