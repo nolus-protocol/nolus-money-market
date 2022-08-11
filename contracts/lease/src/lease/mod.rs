@@ -158,8 +158,8 @@ where
         } else {
             let loan_state = self.loan.state(now, lease)?;
 
-            loan_state.map_or_else(
-                || Ok(StateResponse::Paid(lease_amount)),
+            loan_state.map_or(
+                Ok(StateResponse::Paid(lease_amount)),
                 |state| {
                     Ok(StateResponse::Opened {
                         amount: lease_amount,
