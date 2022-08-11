@@ -138,7 +138,7 @@ mod tests {
             #[serde(rename_all = "snake_case")]
             pub enum MockExecuteMsg {
                 // mimic the scheme
-                Alarm(Timestamp),
+                TimeAlarm(Timestamp),
                 // setup GATE
                 Gate(bool),
             }
@@ -153,7 +153,7 @@ mod tests {
                 msg: MockExecuteMsg,
             ) -> StdResult<Response> {
                 match msg {
-                    MockExecuteMsg::Alarm(time) => {
+                    MockExecuteMsg::TimeAlarm(time) => {
                         let gate = GATE.load(deps.storage).expect("storage problem");
                         if gate {
                             Ok(Response::new().add_attribute("loan_reply", time.to_string()))
