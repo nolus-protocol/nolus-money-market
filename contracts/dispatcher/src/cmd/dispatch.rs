@@ -31,8 +31,8 @@ impl<'a> WithLpp for Dispatch<'a> {
         Ok(result
             .batch
             .into_emitter("tr-rewards")
-            .emit_coin("amount", result.receipt.in_nls)
-            .emit_coin("in_stable", result.receipt.in_stable))
+            .emit_coin("rewards-amount", result.receipt.in_nls)
+            .emit_coin("rewards-amount", result.receipt.in_stable))
     }
 
     fn unknown_lpn(
