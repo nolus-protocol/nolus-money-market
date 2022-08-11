@@ -52,6 +52,7 @@ impl Profit {
         )?;
 
         let mut bank = BankStub::my_account(&env, &deps.querier);
+        //TODO: currenty only Nls profit is transfered as there is no swap functionality
         let balance: Coin<Nls> = bank.balance()?;
         bank.send(balance, &config.treasury);
 
@@ -65,7 +66,9 @@ impl Profit {
             .emit_to_string_value("height", env.block.height)
             .emit_to_string_value("idx", transaction_idx.index)
             .emit_timestamp("at", &env.block.time)
-            .emit_coin("amount", balance))
+            .emit_coin("profit-amount", balance))
+        // TODO add in_stable(wasm-tr-profit.profit-amount) The amount transferred in stable.
+        //.emit_coin("profit-amount", balance))
     }
     pub fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
         let config = Config::load(storage)?;
