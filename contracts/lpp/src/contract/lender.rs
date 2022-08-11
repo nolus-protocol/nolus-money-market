@@ -228,7 +228,7 @@ mod test {
         assert_eq!(balance_nlpn, rest_nlpn.into());
 
         // full withdraw
-        try_withdraw::<TheCurrency>(deps.as_mut(), env, info, rest_nlpn.into()).unwrap();
+        try_withdraw::<TheCurrency>(deps.as_mut(), env.clone(), info, rest_nlpn.into()).unwrap();
         let balance_nlpn = query_balance(deps.as_ref().storage, Addr::unchecked("lender2"))
             .unwrap()
             .balance;
