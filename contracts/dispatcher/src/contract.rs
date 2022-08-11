@@ -128,11 +128,12 @@ pub fn try_dispatch(
         &deps.querier,
     )?;
 
-    let transaction_idx = env.transaction.expect("Error! No transaction index.");
+    // let transaction_idx = env.transaction.expect("Error! No transaction index.");
 
     Ok(emitter
         .emit_to_string_value("height", env.block.height)
-        .emit_to_string_value("idx", transaction_idx.index)
+        // TODO add idx when https://github.com/CosmWasm/wasmd/issues/932 is resolved
+        // .emit_to_string_value("idx", transaction_idx.index)
         .emit_to_string_value("to", lpp_address)
         .emit_timestamp("at", &env.block.time)
         .into())
