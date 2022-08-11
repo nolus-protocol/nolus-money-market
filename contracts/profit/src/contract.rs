@@ -50,7 +50,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Config { cadence_hours } => Profit::try_config(deps, info, cadence_hours),
-        ExecuteMsg::Alarm { time } => try_transfer(deps, env, info, time),
+        ExecuteMsg::TimeAlarm { time } => try_transfer(deps, env, info, time),
     }
 }
 
@@ -171,9 +171,9 @@ mod tests {
         let info = mock_info("timealarms", &coins(2, "unolus"));
         let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-        let current_time = mock_env().block.time;
-
-        let msg = ExecuteMsg::Alarm { time: current_time };
+        let msg = ExecuteMsg::TimeAlarm {
+            time: mock_env().block.time,
+        };
         let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         assert_eq!(2, res.messages.len());
@@ -188,7 +188,7 @@ mod tests {
                 SubMsg::new(WasmMsg::Execute {
                     contract_addr: "timealarms".to_string(),
                     msg: to_binary(&AlarmsExecuteMsg::AddAlarm {
-                        time: current_time + Duration::from_hours(10)
+                        time: mock_env().block.time + Duration::from_hours(10)
                     })
                     .unwrap(),
                     funds: vec![]

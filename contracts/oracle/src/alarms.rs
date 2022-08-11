@@ -59,7 +59,7 @@ impl MarketAlarms {
                     None => return Err(StdError::generic_err("msg")),
                 };
 
-                let msg = ExecuteAlarmMsg::Alarm(current_price);
+                let msg = ExecuteAlarmMsg::PriceAlarm(current_price);
                 let wasm_msg = cosmwasm_std::wasm_execute(addr.to_string(), &msg, vec![])?;
                 let submsg = SubMsg::reply_always(CosmosMsg::Wasm(wasm_msg), id);
                 self.response.messages.push(submsg);

@@ -76,7 +76,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Config { cadence_hours } => try_config(deps, info, cadence_hours),
-        ExecuteMsg::Alarm { time } => try_dispatch(deps, env, info, time),
+        ExecuteMsg::TimeAlarm { time } => try_dispatch(deps, env, info, time),
     }
 }
 
