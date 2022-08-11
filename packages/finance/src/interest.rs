@@ -78,7 +78,7 @@ where
         self.interest_by(principal, self.till())
     }
 
-    pub const fn annual_interest_rate(&self) -> F {
+    pub fn annual_interest_rate(&self) -> F {
         self.interest
     }
 
