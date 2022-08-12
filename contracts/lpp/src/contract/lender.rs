@@ -104,11 +104,12 @@ mod test {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
     use finance::currency::Usdc;
     use finance::price;
-    use std::panic::{self, AssertUnwindSafe};
+ 
 
     type TheCurrency = Usdc;
 
     #[test]
+    #[should_panic(expected = "!amount.is_zero()")]
     fn test_deposit() {
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -208,11 +209,9 @@ mod test {
         assert!(result.is_err());
 
         //try to withdraw zero
-        let result = panic::catch_unwind(AssertUnwindSafe(|| {
-            try_withdraw::<TheCurrency>(deps.as_mut(), env.clone(), info.clone(), zero.into())
-                .unwrap()
-        }));
-        assert!(result.is_err());
+        try_withdraw::<TheCurrency>(deps.as_mut(), env.clone(), info.clone(), zero.into()).unwrap_err();
+      
+    
 
         // partial withdraw
         try_withdraw::<TheCurrency>(
@@ -228,7 +227,7 @@ mod test {
         assert_eq!(balance_nlpn, rest_nlpn.into());
 
         // full withdraw
-        try_withdraw::<TheCurrency>(deps.as_mut(), env.clone(), info, rest_nlpn.into()).unwrap();
+        try_withdraw::<TheCurrency>(deps.as_mut(), env, info, rest_nlpn.into()).unwrap();
         let balance_nlpn = query_balance(deps.as_ref().storage, Addr::unchecked("lender2"))
             .unwrap()
             .balance;
