@@ -56,11 +56,11 @@ where
         .withdraw(deps.storage, amount_nlpn)?;
 
     let mut bank = BankStub::my_account(&env, &deps.querier);
-    bank.send(payment_lpn, &lender_addr);
+    bank.send(payment_lpn, &lender_addr)?;
 
     if let Some(reward) = maybe_reward {
         if !reward.is_zero() {
-            bank.send(reward, &lender_addr);
+            bank.send(reward, &lender_addr)?;
         }
     }
 
@@ -109,7 +109,6 @@ mod test {
     type TheCurrency = Usdc;
 
     #[test]
-    #[should_panic(expected = "!amount.is_zero()")]
     fn test_deposit() {
         let mut deps = mock_dependencies();
         let env = mock_env();

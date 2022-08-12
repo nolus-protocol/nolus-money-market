@@ -34,7 +34,7 @@ pub fn try_claim_rewards(
     }
 
     let mut bank = BankStub::my_account(&env, &deps.querier);
-    bank.send(reward, &recipient);
+    bank.send(reward, &recipient)?;
 
     let batch: Batch = bank.into();
 

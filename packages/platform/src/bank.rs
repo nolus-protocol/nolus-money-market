@@ -16,6 +16,7 @@ pub trait BankAccountView {
 
 pub trait BankAccount: BankAccountView + Into<Batch> {
     fn send<C>(&mut self, amount: Coin<C>, to: &Addr)
+    -> Result<()>
     where
         C: Currency;
 }
@@ -83,14 +84,18 @@ impl<'a> BankAccountView for BankStub<'a> {
 
 impl<'a> BankAccount for BankStub<'a> {
     fn send<C>(&mut self, amount: Coin<C>, to: &Addr)
+    -> Result<()>
     where
         C: Currency,
     {
-        debug_assert!(!amount.is_zero());
+        if amount.is_zero(){
+            return Err(Error::no_funds::<C>());
+        }
         self.batch.schedule_execute_no_reply(BankMsg::Send {
             to_address: to.into(),
             amount: vec![to_cosmwasm_impl(amount)],
         });
+        Ok(())
     }
 }
 
