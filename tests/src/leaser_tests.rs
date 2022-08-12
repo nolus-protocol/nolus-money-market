@@ -184,7 +184,10 @@ fn test_quote() {
     /*   TODO: test with different time periods and amounts in LPP
      */
 
-    assert_eq!(Percent::from_permille(91), resp.annual_interest_rate); // hardcoded until LPP contract is merged
+    assert_eq!(
+        Percent::from_permille(91),
+        resp.annual_interest_rate + resp.annual_interest_rate_margin,
+    ); // hardcoded until LPP contract is merged
 
     let resp: QuoteResponse = test_case
         .app
@@ -246,10 +249,13 @@ fn test_quote_fixed_rate() {
     */
 
     assert_eq!(
-        Percent::HUNDRED
-            .checked_add(Percent::from_percent(3))
-            .unwrap(),
-        resp.annual_interest_rate
+        Percent::HUNDRED,
+        resp.annual_interest_rate,
+    );
+
+    assert_eq!(
+        Percent::from_percent(3),
+        resp.annual_interest_rate_margin,
     );
 }
 

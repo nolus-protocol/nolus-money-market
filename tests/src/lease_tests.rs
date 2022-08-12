@@ -125,24 +125,65 @@ fn expected_open_state(
     test_case: &TestCase,
     downpayment: TheCoin,
     payments: TheCoin,
-    duration: u64,
+    last_paid: Timestamp,
+    current_period_start: Timestamp,
+    now: Timestamp,
 ) -> StateResponse<Currency, Currency> {
     let quote_result = quote_query(test_case, downpayment);
     let total = quote_result.total.try_into().unwrap();
     let expected = total - downpayment - payments;
+    let (overdue, due) = (
+        current_period_start.nanos().saturating_sub(last_paid.nanos()),
+        now.nanos().saturating_sub(current_period_start.nanos()),
+    );
     StateResponse::Opened {
         amount: total,
         interest_rate: quote_result.annual_interest_rate,
+        interest_rate_margin: quote_result.annual_interest_rate_margin,
         principal_due: expected,
-        interest_due: calculate_interest(expected, quote_result.annual_interest_rate, duration),
+        previous_margin_due: calculate_interest(
+            expected,
+            quote_result.annual_interest_rate_margin,
+            overdue,
+        ),
+        previous_interest_due: calculate_interest(
+            expected,
+            quote_result.annual_interest_rate,
+            overdue,
+        ),
+        current_margin_due: calculate_interest(
+            expected,
+            quote_result.annual_interest_rate_margin,
+            due,
+        ),
+        current_interest_due: calculate_interest(
+            expected,
+            quote_result.annual_interest_rate,
+            due
+        ),
     }
+}
+
+fn expected_newly_opened_state(
+    test_case: &TestCase,
+    downpayment: TheCoin,
+    payments: TheCoin,
+) -> StateResponse<Currency, Currency> {
+    expected_open_state(
+        test_case,
+        downpayment,
+        payments,
+        Timestamp::default(),
+        Timestamp::default(),
+        Timestamp::default(),
+    )
 }
 
 #[test]
 fn state_opened_when_no_payments() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
-    let expected_result = expected_open_state(&test_case, downpayment, create_coin(0), 0);
+    let expected_result = expected_newly_opened_state(&test_case, downpayment, create_coin(0));
     let lease_address = open_lease(&mut test_case, downpayment);
 
     let query_result = state_query(&test_case, &lease_address.into_string());
@@ -158,7 +199,7 @@ fn state_opened_when_partially_paid() {
     let quote_result = quote_query(&test_case, downpayment);
     let amount: Coin<Usdc> = quote_result.borrow.try_into().unwrap();
     let partial_payment = create_coin(u128::from(amount) / 2);
-    let expected_result = expected_open_state(&test_case, downpayment, partial_payment, 0);
+    let expected_result = expected_newly_opened_state(&test_case, downpayment, partial_payment);
 
     let lease_address = open_lease(&mut test_case, downpayment);
     repay(&mut test_case, &lease_address, partial_payment);
