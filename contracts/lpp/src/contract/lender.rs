@@ -208,8 +208,8 @@ mod test {
         assert!(result.is_err());
 
         //try to withdraw zero
-        try_withdraw::<TheCurrency>(deps.as_mut(), env.clone(), info.clone(), zero.into()).unwrap_err();
-      
+        let result = try_withdraw::<TheCurrency>(deps.as_mut(), env.clone(), info.clone(), zero.into());
+        assert!(result.is_err());
     
 
         // partial withdraw
