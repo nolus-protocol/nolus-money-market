@@ -6,6 +6,9 @@ pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),
 
+    #[error("{0}")]
+    Platform(#[from] platform::error::Error),
+
     #[error("Unauthorized")]
     Unauthorized {},
 
@@ -27,4 +30,7 @@ pub enum ContractError {
         "Invalid time configuration. Current profit transfer time is before the last transfer time"
     )]
     InvalidTimeConfiguration {},
+
+    #[error("EmptyBalance. No profit to dispatch")]
+    EmptyBalance {},
 }
