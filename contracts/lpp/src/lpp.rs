@@ -202,6 +202,11 @@ where
         lease_addr: Addr,
         amount: Coin<LPN>,
     ) -> Result<(), ContractError> {
+
+        if amount.is_zero() {
+            return Err(ContractError::ZeroLoanAmount);
+        }
+
         let current_time = env.block.time;
 
         let annual_interest_rate = match self.query_quote(&deps.as_ref(), env, amount)? {
@@ -486,9 +491,41 @@ mod test {
         let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
             .expect("can't load LiquidityPool");
 
-        let result =
-            lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(5_000_000));
+        let result = lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(5_000_000));
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn try_open_loan_for_zero_amount() {
+        let balance_mock = [coin_cw(10_000_000)];
+        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
+        let mut env = testing::mock_env();
+        let loan = Addr::unchecked("loan");
+        env.block.time = Timestamp::from_nanos(0);
+        let lease_code_id = Uint64::new(123);
+
+        //let annual_interest_rate = Percent::from_permille(56000u32 / 1000u32);
+
+        Config::new(TheCurrency::SYMBOL.into(), lease_code_id)
+            .store(deps.as_mut().storage)
+            .expect("can't initialize Config");
+        Total::<TheCurrency>::new()
+            .store(deps.as_mut().storage)
+            .expect("can't initialize Total");
+
+        let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
+            .expect("can't load LiquidityPool");
+
+        // doesn't exist
+        let loan_response = lpp
+            .query_loan(deps.as_ref().storage, &env, loan.clone())
+            .expect("can't query loan");
+        assert_eq!(loan_response, None);
+
+        env.block.time = Timestamp::from_nanos(10);
+
+        let result = lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(0));
+        assert_eq!(result, Err(ContractError::ZeroLoanAmount));
     }
 
     #[test]

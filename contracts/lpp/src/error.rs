@@ -34,6 +34,9 @@ pub enum ContractError {
     #[error("The deposit does not exist")]
     NoDeposit {},
 
+    #[error("Zero amount")]
+    ZeroLoanAmount,
+
     #[error("Zero deposit")]
     ZeroDepositFunds,
 
