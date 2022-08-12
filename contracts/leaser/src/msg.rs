@@ -53,6 +53,7 @@ pub struct QuoteResponse {
     pub total: CoinDTO,
     pub borrow: CoinDTO,
     pub annual_interest_rate: Percent,
+    pub annual_interest_rate_margin: Percent,
 }
 
 impl Repayment {

@@ -39,7 +39,8 @@ impl WithLpp for Quote {
         Ok(QuoteResponse {
             total: total.into(),
             borrow: borrow.into(),
-            annual_interest_rate: annual_interest_rate + self.lease_interest_rate_margin,
+            annual_interest_rate,
+            annual_interest_rate_margin: self.lease_interest_rate_margin,
         })
     }
 

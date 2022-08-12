@@ -102,14 +102,9 @@ fn try_repay(
     .map(|mut result| {
         result.emitter = result
             .emitter
-            .emit_to_string_value("height", &env.block.height)
-            .emit_to_string_value(
-                "idx",
-                env.transaction
-                    .expect("Couldn't get transaction info!")
-                    .index,
-            )
+            .emit_tx_info(&env)
             .emit("to", env.contract.address);
+
         result
     })
 }

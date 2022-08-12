@@ -1,10 +1,11 @@
 use std::marker::PhantomData;
 
+use crate::cmd::Result as DispatcherResult;
 use crate::state::Config;
 use crate::state::DispatchLog;
 use crate::ContractError;
 use cosmwasm_std::StdResult;
-use cosmwasm_std::{Decimal, QuerierWrapper, Response, Storage, Timestamp};
+use cosmwasm_std::{Decimal, QuerierWrapper, Storage, Timestamp};
 use finance::coin::Coin;
 use finance::currency::{Currency, Nls};
 use finance::duration::Duration;
@@ -45,7 +46,7 @@ where
         })
     }
 
-    pub fn dispatch(&mut self) -> Result<Response, ContractError>
+    pub fn dispatch(&mut self) -> Result<DispatcherResult<Lpn>, ContractError>
     where
         Lpp: LppTrait<Lpn>,
         Lpn: Currency,
@@ -66,7 +67,7 @@ where
             .interest(lpp_balance);
 
         if reward_in_lppdenom.is_zero() {
-            return Self::no_reward_resp();
+            return Err(ContractError::ZeroReward {});
         }
 
         // Store the current time for use for the next calculation.
@@ -76,13 +77,19 @@ where
         let reward_unls = self.swap_reward_in_unls(reward_in_lppdenom)?;
 
         if reward_unls.is_zero() {
-            return Self::no_reward_resp();
+            return Err(ContractError::ZeroReward {});
         }
 
-        self.create_response(reward_unls)
+        Ok(DispatcherResult {
+            batch: self.create_response(reward_unls)?,
+            receipt: super::Receipt {
+                in_stable: reward_in_lppdenom,
+                in_nls: reward_unls,
+            },
+        })
     }
 
-    fn create_response(&self, reward: Coin<Nls>) -> Result<Response, ContractError> {
+    fn create_response(&self, reward: Coin<Nls>) -> Result<Batch, ContractError> {
         let mut batch = Batch::default();
         // Prepare a Send Rewards for the amount of Rewards_uNLS to the Treasury.
         batch
@@ -111,7 +118,7 @@ where
             )
             .map_err(ContractError::from)?;
 
-        Ok(Response::from(batch))
+        Ok(batch)
     }
 
     fn get_market_price(&self, denom: &str) -> StdResult<Decimal> {
@@ -148,11 +155,5 @@ where
         let nls_amount = <Rational<u128> as Fraction<u128>>::of(&ratio, lpp_amount);
 
         Ok(Coin::<Nls>::new(nls_amount))
-    }
-
-    fn no_reward_resp() -> Result<Response, ContractError> {
-        Ok(Response::new()
-            .add_attribute("method", "try_dispatch")
-            .add_attribute("result", "no reward to dispatch"))
     }
 }

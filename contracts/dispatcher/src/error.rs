@@ -37,4 +37,7 @@ pub enum ContractError {
 
     #[error("Alarm time validation failed")]
     AlarmTimeValidation {},
+
+    #[error("Zero Reward")]
+    ZeroReward {},
 }
