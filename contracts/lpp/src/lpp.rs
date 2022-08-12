@@ -504,8 +504,6 @@ mod test {
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
-        //let annual_interest_rate = Percent::from_permille(56000u32 / 1000u32);
-
         Config::new(TheCurrency::SYMBOL.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
@@ -515,12 +513,6 @@ mod test {
 
         let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
             .expect("can't load LiquidityPool");
-
-        // doesn't exist
-        let loan_response = lpp
-            .query_loan(deps.as_ref().storage, &env, loan.clone())
-            .expect("can't query loan");
-        assert_eq!(loan_response, None);
 
         env.block.time = Timestamp::from_nanos(10);
 
