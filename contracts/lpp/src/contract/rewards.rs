@@ -106,35 +106,4 @@ mod test {
         assert_eq!(response, Err(ContractError::NoRewards {}));
     }
 
-    #[test]
-    fn test_claim_rewards() {
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-
-        let mut lpp_balance = 0;
-        let deposit = 20_000;
-
-        LiquidityPool::<TheCurrency>::store(
-            deps.as_mut().storage,
-            TheCurrency::SYMBOL.into(),
-            1000u64.into(),
-        )
-        .unwrap();
-
-        lpp_balance += deposit;
-        let info = mock_info("lender", &[coin(deposit, TheCurrency::SYMBOL)]);
-        deps.querier.update_balance(
-            MOCK_CONTRACT_ADDR,
-            vec![coin(lpp_balance, TheCurrency::SYMBOL)],
-        );
-        lender::try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
-
-        let info = mock_info("lender", &[coin(10000, Nls::SYMBOL)]);
-        try_distribute_rewards(deps.as_mut(), info).unwrap();
-
-        // pending rewards == 10000
-        let info = mock_info("lender", &[]);
-        let response = try_claim_rewards(deps.as_mut(), env, info, None);
-        assert!(response.is_ok());
-    }
 }
