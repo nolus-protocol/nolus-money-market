@@ -26,7 +26,7 @@ where
     lpp.try_open_loan(&mut deps, &env, lease_addr.clone(), amount)?;
 
     let mut bank = BankStub::my_account(&env, &deps.querier);
-    bank.send(amount, &lease_addr)?;
+    bank.send(amount, &lease_addr);
 
     let batch: Batch = bank.into();
     let mut batch: Response = batch.into();
@@ -54,7 +54,7 @@ where
         Batch::default()
     } else {
         let mut bank = BankStub::my_account(&env, &deps.querier);
-        bank.send(excess_received, &lease_addr)?;
+        bank.send(excess_received, &lease_addr);
         bank.into()
     };
 

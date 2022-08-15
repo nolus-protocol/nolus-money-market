@@ -45,6 +45,10 @@ pub fn try_withdraw<LPN>(
 where
     LPN: 'static + Currency + DeserializeOwned + Serialize,
 {
+    if amount_nlpn.is_zero(){
+        return Err(ContractError::ZeroWithdrawFunds);
+    }
+
     let lender_addr = info.sender;
     let amount_nlpn = Coin::new(amount_nlpn.u128());
 
@@ -56,11 +60,11 @@ where
         .withdraw(deps.storage, amount_nlpn)?;
 
     let mut bank = BankStub::my_account(&env, &deps.querier);
-    bank.send(payment_lpn, &lender_addr)?;
+    bank.send(payment_lpn, &lender_addr);
 
     if let Some(reward) = maybe_reward {
         if !reward.is_zero() {
-            bank.send(reward, &lender_addr)?;
+            bank.send(reward, &lender_addr);
         }
     }
 

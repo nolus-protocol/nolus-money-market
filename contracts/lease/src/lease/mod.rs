@@ -120,7 +120,7 @@ where
             StateResponse::Opened { .. } => Err(ContractError::LoanNotPaid()),
             StateResponse::Paid(..) => {
                 let balance = account.balance::<Lpn>()?;
-                account.send(balance, &self.customer)?;
+                account.send(balance, &self.customer);
 
                 Ok(account
                     .into()

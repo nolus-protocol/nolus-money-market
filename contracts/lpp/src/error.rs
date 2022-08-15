@@ -40,6 +40,9 @@ pub enum ContractError {
     #[error("Zero deposit")]
     ZeroDepositFunds,
 
+    #[error("Zero withdraw amount")]
+    ZeroWithdrawFunds,
+
     #[error("No pending rewards")]
     NoRewards {},
 

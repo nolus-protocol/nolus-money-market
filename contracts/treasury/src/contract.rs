@@ -75,7 +75,7 @@ where
     B: BankAccount,
 {
     state::assert_rewards_dispatcher(storage, &sender)?;
-    account.send(amount, &sender)?;
+    account.send(amount, &sender);
 
     Ok(account)
 }
