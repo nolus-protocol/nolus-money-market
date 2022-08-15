@@ -11,12 +11,12 @@ mod tests {
 
     /// CwTemplateContract is a wrapper around Addr that provides a lot of helpers
     /// for working with this.
-    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
     pub struct CwTemplateContract(pub Addr);
 
-    #[derive(Serialize, Clone, Debug, PartialEq)]
+    #[derive(Serialize, Clone, Debug, PartialEq, Eq)]
     struct MockResponse {}
-    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
     struct QueryMsg {}
 
     impl CwTemplateContract {
@@ -134,7 +134,7 @@ mod tests {
             use schemars::JsonSchema;
             use serde::{Deserialize, Serialize};
             const GATE: Item<bool> = Item::new("alarm gate");
-            #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+            #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
             #[serde(rename_all = "snake_case")]
             pub enum MockExecuteMsg {
                 // mimic the scheme

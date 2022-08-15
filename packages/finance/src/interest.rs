@@ -7,7 +7,7 @@ use crate::{
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
 };
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct InterestPeriod<U, F> {
     start: Timestamp,
     length: Duration,

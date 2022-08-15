@@ -93,7 +93,7 @@ fn test_update_config() {
 fn test_update_config_invalid_liability() {
     let mut deps = mock_dependencies();
 
-    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
     #[serde(rename_all = "snake_case")]
     pub struct Liability {
         init_percent: Percent,
@@ -102,7 +102,7 @@ fn test_update_config_invalid_liability() {
         recalc_secs: u32,
     }
 
-    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
     #[serde(rename_all = "snake_case")]
     pub enum MockExecuteMsg {
         Config {
