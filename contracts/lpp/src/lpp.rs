@@ -521,6 +521,73 @@ mod test {
     }
 
     #[test]
+    fn try_open_and_close_loan_without_paying_interest() {
+        let balance_mock = [coin_cw(10_000_000)];
+        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
+        let mut env = testing::mock_env();
+        let loan = Addr::unchecked("loan");
+        env.block.time = Timestamp::from_nanos(0);
+        let lease_code_id = Uint64::new(123);
+
+        let annual_interest_rate = Percent::from_permille(66000u32 / 1000u32);
+
+        Config::new(TheCurrency::SYMBOL.into(), lease_code_id)
+            .store(deps.as_mut().storage)
+            .expect("can't initialize Config");
+        Total::<TheCurrency>::new()
+            .store(deps.as_mut().storage)
+            .expect("can't initialize Total");
+
+        let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
+            .expect("can't load LiquidityPool");
+
+        // doesn't exist
+        let loan_response = lpp
+            .query_loan(deps.as_ref().storage, &env, loan.clone())
+            .expect("can't query loan");
+        assert_eq!(loan_response, None);
+
+        env.block.time = Timestamp::from_nanos(10);
+
+        let amount = 5_000_000;
+        lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000_000))
+            .expect("can't open loan");
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);
+
+        let loan_response = lpp
+            .query_loan(deps.as_ref().storage, &env, loan.clone())
+            .expect("can't query loan")
+            .expect("should be some response");
+
+        assert_eq!(loan_response.principal_due, amount.into());
+        assert_eq!(loan_response.annual_interest_rate, annual_interest_rate);
+        assert_eq!(loan_response.interest_paid, env.block.time);
+        assert_eq!(loan_response.interest_due, 0u128.into());
+
+        let payment = lpp
+            .query_loan_outstanding_interest(deps.as_ref().storage, loan.clone(), env.block.time)
+            .expect("can't query outstanding interest")
+            .expect("should be some coins")
+            .0;
+            assert_eq!(payment,Coin::new(0));
+
+
+        let repay = lpp
+            .try_repay_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000_000))
+            .expect("can't repay loan");
+
+        assert_eq!(repay, 0u128.into());
+
+         // Should be closed
+         let loan_response = lpp
+         .query_loan(deps.as_ref().storage, &env, loan)
+         .expect("can't query loan");
+     assert_eq!(loan_response, None);
+
+    }
+
+    #[test]
     fn test_tvl_and_price() {
         let balance_mock = coin_cw(0); // will deposit something later
         let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
