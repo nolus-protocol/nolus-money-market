@@ -14,7 +14,7 @@ use time_oracle::Id;
 
 use crate::{msg::ExecuteAlarmMsg, state::config::Config, ContractError};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct MarketAlarms {}
 
 impl MarketAlarms {

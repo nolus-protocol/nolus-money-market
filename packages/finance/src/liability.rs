@@ -8,7 +8,7 @@ use crate::{
     ratio::Rational,
 };
 
-#[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Copy, Clone, Debug, Eq, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Liability {
     /// The initial percentage of the amount due versus the locked collateral
@@ -66,9 +66,9 @@ impl Liability {
             && self.max_percent > self.healthy_percent
             && self.recalc_secs >= SECS_IN_HOUR
         {
-            Result::Ok(())
+            Ok(())
         } else {
-            Result::Err(Error::broken_invariant_err::<Liability>())
+            Err(Error::broken_invariant_err::<Liability>())
         }
     }
 

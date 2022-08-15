@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::state::config::Config;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
     pub lease_code_id: Uint64,
     pub lpp_ust_addr: Addr,
@@ -15,13 +15,13 @@ pub struct InstantiateMsg {
     pub repayment: Repayment,                // GracePeriodSec, for example 10 days = 10*24*60*60
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Repayment {
     pub period_sec: u32,       // PeriodLengthSec, for example 90 days = 90*24*60*60
     pub grace_period_sec: u32, // GracePeriodSec, for example 10 days = 10*24*60*60
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Config {
@@ -34,7 +34,7 @@ pub enum ExecuteMsg {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
@@ -42,13 +42,13 @@ pub enum QueryMsg {
     Leases { owner: Addr },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct ConfigResponse {
     pub config: Config,
 }
 
 // totalUST, borrowUST, annualInterestRate%
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct QuoteResponse {
     pub total: CoinDTO,
     pub borrow: CoinDTO,

@@ -8,12 +8,12 @@ pub mod config;
 pub mod dispatch_log;
 pub mod tvl_intervals;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct DispatchLog {
     pub last_dispatch: Timestamp,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Config {
     pub owner: Addr,
     // Time duration in hours defining the periods of time this instance is awaken

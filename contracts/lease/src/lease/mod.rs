@@ -205,7 +205,7 @@ mod tests {
     type TestCurrency = Usdc;
     type LppResult<T> = Result<T, LppError>;
 
-    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     pub struct BankStub {
         balance: u128,
     }
@@ -219,7 +219,7 @@ mod tests {
         }
     }
 
-    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     struct LppLocalStub {
         loan: Option<LoanResponse<TestCurrency>>,
     }

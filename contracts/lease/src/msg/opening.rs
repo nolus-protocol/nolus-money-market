@@ -2,7 +2,7 @@ use finance::{liability::Liability, percent::Percent, currency::SymbolOwned};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct NewLeaseForm {
     /// The customer who wants to open a lease.
@@ -13,7 +13,7 @@ pub struct NewLeaseForm {
     pub loan: LoanForm,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 #[serde(rename = "loan")]
 /// The value remains intact.
