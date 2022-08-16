@@ -43,9 +43,6 @@ pub enum ContractError {
     #[error("Zero withdraw amount")]
     ZeroWithdrawFunds,
 
-    #[error("Recieved amount sholud be zero")]
-    WithdrawRecievedFunds,
-
     #[error("No pending rewards")]
     NoRewards {},
 

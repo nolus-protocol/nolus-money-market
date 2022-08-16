@@ -45,12 +45,8 @@ pub fn try_withdraw<LPN>(
 where
     LPN: 'static + Currency + DeserializeOwned + Serialize,
 {
-    if amount_nlpn.is_zero(){
+    if amount_nlpn.is_zero() {
         return Err(ContractError::ZeroWithdrawFunds);
-    }
-
-    if !info.funds.is_empty(){
-        return Err(ContractError::WithdrawRecievedFunds);
     }
 
     let lender_addr = info.sender;
@@ -112,7 +108,6 @@ mod test {
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
     use finance::currency::Usdc;
     use finance::price;
- 
 
     type TheCurrency = Usdc;
 
@@ -216,9 +211,9 @@ mod test {
         assert!(result.is_err());
 
         //try to withdraw zero
-        let result = try_withdraw::<TheCurrency>(deps.as_mut(), env.clone(), info.clone(), zero.into());
+        let result =
+            try_withdraw::<TheCurrency>(deps.as_mut(), env.clone(), info.clone(), zero.into());
         assert!(result.is_err());
-    
 
         // partial withdraw
         try_withdraw::<TheCurrency>(
@@ -234,27 +229,10 @@ mod test {
         assert_eq!(balance_nlpn, rest_nlpn.into());
 
         // full withdraw
-        try_withdraw::<TheCurrency>(deps.as_mut(), env.clone(), info, rest_nlpn.into()).unwrap();
+        try_withdraw::<TheCurrency>(deps.as_mut(), env, info, rest_nlpn.into()).unwrap();
         let balance_nlpn = query_balance(deps.as_ref().storage, Addr::unchecked("lender2"))
             .unwrap()
             .balance;
         assert_eq!(balance_nlpn, zero.into());
-
-
-        //send tokens to withdraw function
-        let info = mock_info("lender5", &[coin(50_000u128, TheCurrency::SYMBOL)]);
-        lpp_balance += 50_000u128;
-        try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info.clone()).unwrap();
-        deps.querier.update_balance(
-            MOCK_CONTRACT_ADDR,
-            vec![coin(lpp_balance, TheCurrency::SYMBOL)],
-        );
-
-        let balance_nlpn = query_balance(deps.as_ref().storage, Addr::unchecked("lender5"))
-            .unwrap()
-            .balance;
-        let result =try_withdraw::<TheCurrency>(deps.as_mut(), env, info, balance_nlpn);
-
-        assert!(result.is_err());
     }
 }
