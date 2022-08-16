@@ -596,12 +596,6 @@ mod test {
         let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
             .expect("can't load LiquidityPool");
 
-        // doesn't exist
-        let loan_response = lpp
-            .query_loan(deps.as_ref().storage, &env, loan.clone())
-            .expect("can't query loan");
-        assert_eq!(loan_response, None);
-
         env.block.time = Timestamp::from_nanos(10);
 
         let amount = 5_000_000;
