@@ -131,7 +131,8 @@ where
         let q_msg = QueryRequest::Wasm(WasmQuery::ContractInfo {
             contract_addr: lease_addr.to_string(),
         });
-        let q_resp: ContractInfoResponse = querier.query(&q_msg)?;
+        let q_resp: ContractInfoResponse = querier.query(&q_msg)
+            .map_err(|_| ContractError::ContractId {})?;
 
         if q_resp.code_id != self.config.lease_code_id.u64() {
             Err(ContractError::ContractId {})

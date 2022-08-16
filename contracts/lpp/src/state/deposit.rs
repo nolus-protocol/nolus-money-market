@@ -14,7 +14,7 @@ pub struct Deposit {
     data: DepositData,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Default)]
 struct DepositData {
     pub deposited_nlpn: Coin<NLpn>,
 
@@ -23,7 +23,7 @@ struct DepositData {
     pub pending_rewards_nls: Coin<Nls>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Default)]
 struct DepositsGlobals {
     pub balance_nlpn: Coin<NLpn>,
 

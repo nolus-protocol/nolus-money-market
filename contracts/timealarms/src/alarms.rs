@@ -6,7 +6,7 @@ use time_oracle::{Alarms, Id};
 
 use crate::{contract_validation::validate_contract_addr, msg::ExecuteAlarmMsg, ContractError};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct TimeAlarms {}
 
 impl TimeAlarms {
@@ -23,7 +23,7 @@ impl TimeAlarms {
     ) -> Result<Response, ContractError> {
         validate_contract_addr(&deps.querier, &address)?;
         Self::TIME_ALARMS.add(deps.storage, address, time)?;
-        Ok(Response::new().add_attribute("method", "try_add_alarm"))
+        Ok(Response::new())
     }
 
     pub fn try_notify(

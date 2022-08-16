@@ -1,10 +1,14 @@
 use cosmwasm_std::{
-    to_binary, Addr, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
-    Timestamp, WasmMsg,
+    to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdResult, Storage, Timestamp,
+    WasmMsg,
+};
+use platform::{
+    bank::{BankAccount, BankAccountView, BankStub},
+    batch::{Batch, Emit, Emitter},
 };
 
 use crate::{msg::ConfigResponse, state::config::Config, ContractError};
-use finance::duration::Duration;
+use finance::{coin::Coin, currency::Nls, duration::Duration};
 
 pub struct Profit {}
 
@@ -20,13 +24,13 @@ impl Profit {
         }
         Config::update(deps.storage, cadence_hours)?;
 
-        Ok(Response::new().add_attribute("method", "config"))
+        Ok(Response::new())
     }
     pub(crate) fn transfer(
         deps: DepsMut,
         env: Env,
         info: MessageInfo,
-    ) -> Result<Response, ContractError> {
+    ) -> Result<Emitter, ContractError> {
         let config = Config::load(deps.storage)?;
 
         if info.sender != config.timealarms {
@@ -36,25 +40,36 @@ impl Profit {
         let balance = deps.querier.query_all_balances(&env.contract.address)?;
 
         if balance.is_empty() {
-            return Ok(Response::new()
-                .add_attribute("method", "try_transfer")
-                .add_attribute("result", "no profit to dispatch"));
+            return Err(ContractError::EmptyBalance {});
         }
 
         let current_time = env.block.time;
 
-        Self::alarm_subscribe_msg(
+        let msg = Self::alarm_subscribe_msg(
             &config.timealarms,
             current_time,
             Duration::from_hours(config.cadence_hours),
         )?;
 
-        Ok(Response::new()
-            .add_attribute("method", "try_transfer")
-            .add_message(BankMsg::Send {
-                to_address: config.treasury.to_string(),
-                amount: balance,
-            }))
+        let mut bank = BankStub::my_account(&env, &deps.querier);
+        //TODO: currenty only Nls profit is transfered as there is no swap functionality
+        let balance: Coin<Nls> = bank.balance()?;
+        bank.send(balance, &config.treasury);
+
+        let mut batch: Batch = bank.into();
+        batch.schedule_execute_no_reply(msg);
+
+        // let transaction_idx = env.transaction.expect("Error! No transaction index.");
+
+        Ok(batch
+            .into_emitter("tr-profit")
+            .emit_to_string_value("height", env.block.height)
+            // TODO add idx when https://github.com/CosmWasm/wasmd/issues/932 is resolved
+            // .emit_to_string_value("idx", transaction_idx.index)
+            .emit_timestamp("at", &env.block.time)
+            .emit_coin("profit-amount", balance))
+        // TODO add in_stable(wasm-tr-profit.profit-amount) The amount transferred in stable.
+        //.emit_coin("profit-amount", balance))
     }
     pub fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
         let config = Config::load(storage)?;

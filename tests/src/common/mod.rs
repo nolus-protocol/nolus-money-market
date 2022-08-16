@@ -1,8 +1,8 @@
 use cosmwasm_std::{
-    coins, testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin, Deps, Env, StdResult,
+    coins, testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin, Deps, Env, StdResult, Timestamp,
 };
 use cw_multi_test::{App, AppBuilder};
-use finance::currency::{Currency, Nls};
+use finance::{currency::{Currency, Nls}, duration::Duration};
 use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
@@ -55,4 +55,18 @@ pub fn mock_app(init_funds: &[Coin]) -> App {
                 .init_balance(storage, &Addr::unchecked(ADMIN), funds)
                 .unwrap();
         })
+}
+
+pub trait AppExt {
+    fn time_shift(&mut self, t: Duration);
+}
+
+impl AppExt for App {
+    fn time_shift(&mut self, t: Duration) {
+        self.update_block(|block| {
+            let ct = block.time.nanos();
+            block.time = Timestamp::from_nanos(ct + t.nanos());
+            block.height += 1;
+        })
+    } 
 }

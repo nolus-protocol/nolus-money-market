@@ -62,13 +62,15 @@ where
     }
 
     fn emit_tx_info(self, env: &Env) -> Self {
-        let transaction_idx = env
-            .transaction
-            .as_ref()
-            .expect("Error! No transaction index.");
-
         self.emit_to_string_value("height", env.block.height)
-            .emit_to_string_value("idx", transaction_idx.index)
+            .emit_to_string_value(
+                "idx",
+                env
+                    .transaction
+                    .as_ref()
+                    .map(|transaction| transaction.index)
+                    .unwrap_or_default(),
+            )
     }
 }
 

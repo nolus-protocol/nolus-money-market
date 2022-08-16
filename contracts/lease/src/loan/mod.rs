@@ -344,16 +344,44 @@ where
 
     fn merge_state_with(&self, loan_state: LoanResponse<Lpn>, now: Timestamp) -> State<Lpn> {
         let principal_due = loan_state.principal_due;
-        let margin_interest_period = self
+
+        let margin_interest_overdue_period = self.current_period.spanning({
+            let new_period = now.minus_nanos(self.interest_due_period.nanos().min(now.nanos()));
+
+            if self.current_period.start() < new_period {
+                Duration::between(self.current_period.start(), new_period)
+            } else {
+                Duration::default()
+            }
+        });
+
+        let margin_interest_due_period = self
             .current_period
             .spanning(Duration::between(self.current_period.start(), now));
 
-        let margin_interest_due = margin_interest_period.interest(principal_due);
-        let interest_due = loan_state.interest_due + margin_interest_due;
+        let margin_interest_overdue = margin_interest_overdue_period.interest(principal_due);
+        let margin_interest_due = margin_interest_due_period.interest(principal_due);
+
+        let loan_interest_overdue = Coin::new(
+            (
+                u128::from(loan_state.interest_due)
+                    * self.current_period
+                        .start()
+                        .minus_nanos(loan_state.interest_paid.nanos())
+                        .nanos() as u128
+            ).checked_div(
+                (now.nanos() - loan_state.interest_paid.nanos()) as u128
+            ).unwrap_or(0)
+        );
+
         State {
-            annual_interest: loan_state.annual_interest_rate + self.annual_margin_interest,
+            annual_interest: loan_state.annual_interest_rate,
+            annual_interest_margin: self.annual_margin_interest,
             principal_due,
-            interest_due,
+            previous_interest_due: loan_interest_overdue,
+            current_interest_due: loan_state.interest_due - loan_interest_overdue,
+            previous_margin_interest_due: margin_interest_overdue,
+            current_margin_interest_due: margin_interest_due,
         }
     }
 
@@ -416,7 +444,7 @@ mod tests {
     type TestCurrency = Usdc;
     type LppResult<T> = Result<T, LppError>;
 
-    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     pub struct BankStub {
         balance: u128,
     }
@@ -430,7 +458,7 @@ mod tests {
         }
     }
 
-    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     struct LppLocalStub {
         loan: Option<LoanResponse<TestCurrency>>,
     }

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::ContractError;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Config {
     pub base_asset: Denom,
     pub owner: Addr,

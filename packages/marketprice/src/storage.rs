@@ -69,7 +69,6 @@ impl Price {
             quote: self.base.clone(),
         }
     }
-
     pub fn total(&self, of: &Coin) -> Coin {
         assert_eq!(self.base.symbol, of.symbol);
         let ratio = Rational::new(of.amount, self.base.amount);

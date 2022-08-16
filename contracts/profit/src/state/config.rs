@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::ContractError;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct Config {
     pub cadence_hours: u16,
     pub owner: Addr,

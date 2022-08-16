@@ -11,7 +11,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::nlpn::NLpn;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct Config {
     pub currency: String,
     pub lease_code_id: Uint64,

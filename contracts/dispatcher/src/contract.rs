@@ -9,7 +9,7 @@ use cw2::set_contract_version;
 use finance::currency::Nls;
 use finance::duration::Duration;
 use lpp::stub::LppRef;
-use platform::batch::Batch;
+use platform::batch::{Batch, Emit, Emitter};
 
 use crate::cmd::Dispatch;
 use crate::error::ContractError;
@@ -58,7 +58,7 @@ pub fn instantiate(
         )
         .map_err(ContractError::from)?;
 
-    Ok(Response::from(batch).add_attribute("method", "instantiate"))
+    Ok(Response::from(batch))
 }
 
 fn validate_addr(deps: Deps, addr: Addr) -> Result<Addr, ContractError> {
@@ -121,11 +121,22 @@ pub fn try_dispatch(
     if info.sender != config.timealarms {
         return Err(ContractError::UnrecognisedAlarm(info.sender));
     }
-    let lpp = LppRef::try_from(config.lpp.to_string(), deps.api, &deps.querier)?;
-    lpp.execute(
+    let lpp_address = config.lpp.as_ref().to_string();
+    let lpp = LppRef::try_from(lpp_address.clone(), deps.api, &deps.querier)?;
+    let emitter: Emitter = lpp.execute(
         Dispatch::new(deps.storage, deps.querier, config, block_time)?,
         &deps.querier,
-    )
+    )?;
+
+    // let transaction_idx = env.transaction.expect("Error! No transaction index.");
+
+    Ok(emitter
+        .emit_to_string_value("height", env.block.height)
+        // TODO add idx when https://github.com/CosmWasm/wasmd/issues/932 is resolved
+        // .emit_to_string_value("idx", transaction_idx.index)
+        .emit_to_string_value("to", lpp_address)
+        .emit_timestamp("at", &env.block.time)
+        .into())
 }
 
 #[cfg(test)]

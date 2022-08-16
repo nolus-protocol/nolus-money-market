@@ -105,7 +105,7 @@ fn try_repay(
             env.block.time,
             env.contract.address,
             env.block.height,
-            env.transaction.expect("Couldn't get transaction info!").index,
+            env.transaction.map(|info| info.index).unwrap_or_default(),
         ),
         querier,
     )

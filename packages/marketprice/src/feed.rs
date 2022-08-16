@@ -8,7 +8,7 @@ use crate::market_price::PriceFeedsError;
 use crate::storage::Price;
 use finance::duration::Duration;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Observation {
     feeder_addr: Addr,
     time: Timestamp,
@@ -27,7 +27,7 @@ impl Observation {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct PriceFeed {
     observations: Vec<Observation>,
 }
