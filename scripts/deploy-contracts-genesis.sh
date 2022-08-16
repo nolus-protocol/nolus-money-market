@@ -24,33 +24,33 @@ add_wasm_messages() {
   local id=0
 
   local -r treasury_init_msg='{}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "treasury" "$((++id))" "$admin_addr" "$treasury_init_tokens" "$treasury_init_msg"
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "treasury" "$((++id))" "$admin_addr" "$treasury_init_tokens"  "" "$treasury_init_msg"
   _export_to_file  "treasury" "$TREASURY_ADDRESS" "$contracts_info_file"
 
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lease" "$((++id))" "$admin_addr" ""
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lease" "$((++id))" "$admin_addr" "" "--instantiate-only-address $LEASER_ADDRESS"
 
   local -r lpp_init_msg='{"denom":"'$lpp_native'","lease_code_id":"'$LEASE_CODE_ID'"}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lpp" "$((++id))" "$admin_addr" "" "$lpp_init_msg"
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lpp" "$((++id))" "$admin_addr" "" "" "$lpp_init_msg"
   _export_to_file  "lpp" "$LPP_ADDRESS" "$contracts_info_file"
 
-  local -r leaser_init_msg='{"lease_code_id":"'$LEASE_CODE_ID'","lease_interest_rate_margin":30,"liability":{"healthy_percent":70,"init_percent":65,"max_percent":80,"recalc_secs":7200},"lpp_ust_addr":"'$LPP_ADDRESS'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'  
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "leaser" "$((++id))"  "$admin_addr" "" "$leaser_init_msg"
+  local -r leaser_init_msg='{"lease_code_id":"'$LEASE_CODE_ID'","lease_interest_rate_margin":30,"liability":{"healthy_percent":70,"init_percent":65,"max_percent":80,"recalc_secs":7200},"lpp_ust_addr":"'$LPP_ADDRESS'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "leaser" "$((++id))"  "$admin_addr" "" "" "$leaser_init_msg"
   _export_to_file  "leaser" "$LEASER_ADDRESS" "$contracts_info_file"
 
   local -r timealarms_init_msg='{}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "timealarms" "$((++id))" "$admin_addr" "" "$timealarms_init_msg"
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "timealarms" "$((++id))" "$admin_addr" "" "" "$timealarms_init_msg"
   _export_to_file  "timealarms" "$TIMEALARMS_ADDRESS" "$contracts_info_file"
 
   local -r oracle_init_msg='{"base_asset":"'$lpp_native'","price_feed_period_secs":60,"feeders_percentage_needed":50,"supported_denom_pairs":[["OSMO","'$lpp_native'"],["LUNA","OSMO"],["IRIS","OSMO"]], "timealarms_addr":"'$TIMEALARMS_ADDRESS'"}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "oracle" "$((++id))" "$admin_addr" "" "$oracle_init_msg"
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "oracle" "$((++id))" "$admin_addr" "" "" "$oracle_init_msg"
   _export_to_file  "oracle" "$ORACLE_ADDRESS" "$contracts_info_file"
 
   local -r profit_init_msg='{"cadence_hours":7200,"treasury":"'$TREASURY_ADDRESS'","timealarms":"'$TIMEALARMS_ADDRESS'"}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "profit" "$((++id))" "$admin_addr" "" "$profit_init_msg"
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "profit" "$((++id))" "$admin_addr" "" "" "$profit_init_msg"
   _export_to_file  "profit" "$PROFIT_ADDRESS" "$contracts_info_file"
 
-  local -r dispatcher_init_msg='{"cadence_hours":7200,"lpp":"'$LPP_ADDRESS'","treasury":"'$TREASURY_ADDRESS'","timealarms":"'$TIMEALARMS_ADDRESS'","oracle":"'$ORACLE_ADDRESS'","tvl_to_apr":{"intervals":[{"tvl":0,"apr":300},{"tvl":1000,"apr":90},{"tvl":1000000,"apr":30}]}}';
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "rewards_dispatcher" "$((++id))" "$admin_addr" "" "$dispatcher_init_msg"
+  local -r dispatcher_init_msg='{"cadence_hours":7200,"lpp":"'$LPP_ADDRESS'","treasury":"'$TREASURY_ADDRESS'","timealarms":"'$TIMEALARMS_ADDRESS'","oracle":"'$ORACLE_ADDRESS'","tvl_to_apr":{"intervals":[{"tvl":0,"apr":300},{"tvl":1000,"apr":90},{"tvl":1000000,"apr":30}]}}'
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "rewards_dispatcher" "$((++id))" "$admin_addr" "" "" "$dispatcher_init_msg"
   _export_to_file  "rewards_dispatcher" "$REWARDS_DISPATCHER_ADDRESS" "$contracts_info_file"
 }
 
@@ -104,6 +104,7 @@ _add_wasm_message() {
   local -r code_id="$4"
   local -r admin_addr="$5"
   local -r init_tokens="$6"
+  local -r instantiate_policy="$7"
 
   if ! [ -f "$wasm_code_path/$contract_name.wasm" ]; then
     echo "The path '$wasm_code_path' does not contain the $contract_name contracts' code."
@@ -115,10 +116,10 @@ _add_wasm_message() {
       amount_flag="--amount $init_tokens"
   fi
 
-  run_cmd "$genesis_home_dir" add-wasm-genesis-message store "$wasm_code_path/$contract_name.wasm" --run-as "$admin_addr"
+  run_cmd "$genesis_home_dir" add-wasm-genesis-message store "$wasm_code_path/$contract_name.wasm" --run-as "$admin_addr" $instantiate_policy
 
-  if [[ $# -eq 7 ]]; then
-    local -r init_msg="$7"
+  if [[ $# -eq 8 ]]; then
+    local -r init_msg="$8"
 
     run_cmd "$genesis_home_dir" add-wasm-genesis-message instantiate-contract "$code_id" "$init_msg" --label "$contract_name" \
       --run-as "$admin_addr" --admin "$admin_addr" $amount_flag
