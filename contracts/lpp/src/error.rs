@@ -40,6 +40,12 @@ pub enum ContractError {
     #[error("No pending rewards")]
     NoRewards {},
 
+    #[error("Zero rewards")]
+    ZeroRewardsFunds {},
+
+    #[error("Distribute rewards with zero balance nlpn")]
+    ZeroBalanceRewards {},
+
     #[error("Lpp requires single currency")]
     FundsLen {},
 
