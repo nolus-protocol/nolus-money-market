@@ -323,18 +323,16 @@ where
         let principal_due = loan_state.principal_due;
 
         let margin_interest_overdue_period = self.current_period.spanning({
-            let new_period = now.minus_nanos(self.interest_due_period.nanos().min(now.nanos()));
-
-            if self.current_period.start() < new_period {
-                Duration::between(self.current_period.start(), new_period)
+            if self.current_period.start() + self.interest_due_period <= now {
+                self.interest_due_period
             } else {
-                Duration::default()
+                Duration::between(self.current_period.start(), now)
             }
         });
 
         let margin_interest_due_period = self
             .current_period
-            .spanning(Duration::between(self.current_period.start(), now));
+            .spanning(Duration::between(margin_interest_overdue_period.till(), now));
 
         let margin_interest_overdue = margin_interest_overdue_period.interest(principal_due);
         let margin_interest_due = margin_interest_due_period.interest(principal_due);
@@ -800,6 +798,27 @@ mod tests {
 
             receipt
         },);
+    }
+
+    #[test]
+    fn state() {
+        let loan_resp = LoanResponse {
+            principal_due: coin(10000),
+            interest_due: coin(0),
+            annual_interest_rate: Percent::from_permille(0),
+            interest_paid: LEASE_START,
+        };
+
+        let loan = create_loan("", Some(loan_resp.clone()));
+        let now = LEASE_START + Duration::YEAR + Duration::from_days(1);
+
+        let expected_margin_overdue = coin(5000);
+        let expected_margin_due = coin(5000 / 365);
+
+        let res = loan.merge_state_with(loan_resp, now);
+
+        assert_eq!(res.previous_margin_interest_due, expected_margin_overdue);
+        assert_eq!(res.current_margin_interest_due, expected_margin_due);
     }
 
     fn coin(a: u128) -> Coin<TestCurrency> {
