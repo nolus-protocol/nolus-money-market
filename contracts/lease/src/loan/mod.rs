@@ -322,13 +322,15 @@ where
     fn merge_state_with(&self, loan_state: LoanResponse<Lpn>, now: Timestamp) -> State<Lpn> {
         let principal_due = loan_state.principal_due;
 
-        let margin_interest_overdue_period = self.current_period.spanning({
-            if self.current_period.start() + self.interest_due_period <= now {
-                self.interest_due_period
-            } else {
-                Duration::between(self.current_period.start(), now)
+        let margin_interest_overdue_period = {
+            let mut period = self.current_period;
+
+            if now < period.till() {
+                period = self.current_period.spanning(Duration::default());
             }
-        });
+
+            period
+        };
 
         let margin_interest_due_period = self
             .current_period
