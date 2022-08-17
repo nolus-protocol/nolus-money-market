@@ -203,6 +203,10 @@ where
         lease_addr: Addr,
         amount: Coin<LPN>,
     ) -> Result<(), ContractError> {
+        if amount.is_zero() {
+            return Err(ContractError::ZeroLoanAmount);
+        }
+
         let current_time = env.block.time;
 
         let annual_interest_rate = match self.query_quote(&deps.as_ref(), env, amount)? {
@@ -469,6 +473,137 @@ mod test {
     }
 
     #[test]
+    fn try_open_loan_with_no_liquidity() {
+        let mut deps = testing::mock_dependencies();
+        let env = testing::mock_env();
+        let loan = Addr::unchecked("loan");
+        let lease_code_id = Uint64::new(123);
+
+        Config::new(TheCurrency::SYMBOL.into(), lease_code_id)
+            .store(deps.as_mut().storage)
+            .expect("can't initialize Config");
+        Total::<TheCurrency>::new()
+            .store(deps.as_mut().storage)
+            .expect("can't initialize Total");
+
+        let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
+            .expect("can't load LiquidityPool");
+
+        let result = lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(1_000));
+        assert_eq!(result, Err(ContractError::NoLiquidity {}));
+    }
+
+    #[test]
+    fn try_open_loan_for_zero_amount() {
+        let balance_mock = [coin_cw(10_000_000)];
+        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
+        let env = testing::mock_env();
+        let loan = Addr::unchecked("loan");
+        let lease_code_id = Uint64::new(123);
+
+        Config::new(TheCurrency::SYMBOL.into(), lease_code_id)
+            .store(deps.as_mut().storage)
+            .expect("can't initialize Config");
+        Total::<TheCurrency>::new()
+            .store(deps.as_mut().storage)
+            .expect("can't initialize Total");
+
+        let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
+            .expect("can't load LiquidityPool");
+
+
+        let result = lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(0));
+        assert_eq!(result, Err(ContractError::ZeroLoanAmount));
+    }
+
+    #[test]
+    fn open_loan_repay_zero() {
+        let balance_mock = [coin_cw(10_000_000)];
+        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
+        let env = testing::mock_env();
+        let loan = Addr::unchecked("loan");
+        let lease_code_id = Uint64::new(123);
+        
+        Config::new(TheCurrency::SYMBOL.into(), lease_code_id)
+            .store(deps.as_mut().storage)
+            .expect("can't initialize Config");
+        Total::<TheCurrency>::new()
+            .store(deps.as_mut().storage)
+            .expect("can't initialize Total");
+
+        let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
+            .expect("can't load LiquidityPool");
+
+        lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000))
+            .expect("can't open loan");
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000)]);
+
+        let loan_response_before = lpp
+            .query_loan(deps.as_ref().storage, &env, loan.clone())
+            .expect("can't query loan")
+            .expect("should be some response");
+
+        //zero repay
+        lpp.try_repay_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(0))
+            .expect("can't repay loan");
+
+        let loan_response_after = lpp
+            .query_loan(deps.as_ref().storage, &env, loan)
+            .expect("can't query loan")
+            .expect("should be some response");
+
+        //should not change after zero repay
+        assert_eq!(loan_response_before.principal_due, loan_response_after.principal_due);
+        assert_eq!(loan_response_before.annual_interest_rate, loan_response_after.annual_interest_rate);
+        assert_eq!(loan_response_before.interest_paid, loan_response_after.interest_paid);
+        assert_eq!(loan_response_before.interest_due, loan_response_after.interest_due);
+    }
+
+    #[test]
+    fn try_open_and_close_loan_without_paying_interest() {
+        let balance_mock = [coin_cw(10_000_000)];
+        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
+        let env = testing::mock_env();
+        let loan = Addr::unchecked("loan");
+        let lease_code_id = Uint64::new(123);
+
+        Config::new(TheCurrency::SYMBOL.into(), lease_code_id)
+            .store(deps.as_mut().storage)
+            .expect("can't initialize Config");
+        Total::<TheCurrency>::new()
+            .store(deps.as_mut().storage)
+            .expect("can't initialize Total");
+
+        let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
+            .expect("can't load LiquidityPool");
+        
+        lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000))
+            .expect("can't open loan");
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000)]);
+
+        let payment = lpp
+            .query_loan_outstanding_interest(deps.as_ref().storage, loan.clone(), env.block.time)
+            .expect("can't query outstanding interest")
+            .expect("should be some coins")
+            .0;
+        assert_eq!(payment, Coin::new(0));
+
+        let repay = lpp
+            .try_repay_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000))
+            .expect("can't repay loan");
+
+        assert_eq!(repay, 0u128.into());
+
+        // Should be closed
+        let loan_response = lpp
+            .query_loan(deps.as_ref().storage, &env, loan)
+            .expect("can't query loan");
+        assert_eq!(loan_response, None);
+    }
+
+    #[test]
     fn test_tvl_and_price() {
         let balance_mock = coin_cw(0); // will deposit something later
         let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
@@ -499,8 +634,8 @@ mod test {
         let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
             .expect("can't load LiquidityPool");
 
-        let mut lender =
-            Deposit::load_or_default(deps.as_ref().storage, Addr::unchecked("lender")).expect("should load");
+        let mut lender = Deposit::load_or_default(deps.as_ref().storage, Addr::unchecked("lender"))
+            .expect("should load");
         let price = lpp
             .calculate_price(&deps.as_ref(), &env, Coin::new(0))
             .expect("should get price");

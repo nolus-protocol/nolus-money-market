@@ -136,7 +136,7 @@ mod test {
         let mut deps = testing::mock_dependencies();
         let mut env = testing::mock_env();
 
-        let total: Total<Usdc> = Total::new();
+        let total: Total<Usdc> = Total::default();
         total.store(deps.as_mut().storage).expect("should store");
 
         let mut total: Total<Usdc> = Total::load(deps.as_ref().storage).expect("should load");
