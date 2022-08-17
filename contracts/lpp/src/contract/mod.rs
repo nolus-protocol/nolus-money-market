@@ -240,25 +240,4 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
     Ok(res)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
-    use cosmwasm_std::{coins, Uint64};
-    use finance::currency::Usdc;
 
-    type TheCurrency = Usdc;
-
-    #[test]
-    fn proper_initialization() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, TheCurrency::SYMBOL));
-
-        let msg = InstantiateMsg {
-            denom: TheCurrency::SYMBOL.to_string(),
-            lease_code_id: Uint64::new(1000),
-        };
-        let info = mock_info("creator", &coins(1000, TheCurrency::SYMBOL));
-
-        instantiate(deps.as_mut(), mock_env(), info, msg).expect("can't instantiate");
-    }
-}

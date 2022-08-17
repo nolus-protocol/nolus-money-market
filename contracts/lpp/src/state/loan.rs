@@ -156,6 +156,15 @@ mod test {
         )
         .expect("should open loan");
 
+        let result = Loan::open(
+            deps.as_mut().storage,
+            addr.clone(),
+            Coin::<Usdc>::new(1000),
+            Percent::from_percent(20),
+            time,
+        );
+        assert_eq!(result, Err(ContractError::LoanExists {}));
+
         let loan: Loan<Usdc> =
             Loan::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 

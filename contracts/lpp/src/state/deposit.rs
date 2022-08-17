@@ -47,7 +47,7 @@ impl Deposit {
         let result = Self::DEPOSITS
             .may_load(storage, addr.clone())?
             .map(|data| Self { addr, data });
-        Ok(result) 
+        Ok(result)
     }
 
     pub fn deposit<LPN>(
@@ -107,22 +107,26 @@ impl Deposit {
         Ok(maybe_reward)
     }
 
-    pub fn distribute_rewards(deps: DepsMut, rewards: Coin<Nls>) -> StdResult<()> {
+    pub fn distribute_rewards(deps: DepsMut, rewards: Coin<Nls>) -> Result<(), ContractError> {
         let mut globals = Self::GLOBALS.may_load(deps.storage)?.unwrap_or_default();
 
-        if !globals.balance_nlpn.is_zero() && !rewards.is_zero() {
-            let partial_price = price::total_of(globals.balance_nlpn).is(rewards);
-
-            if let Some(ref mut reward_per_token) = globals.reward_per_token {
-                *reward_per_token = reward_per_token.lossy_add(partial_price);
-            } else {
-                globals.reward_per_token = Some(partial_price);
-            }
-
-            Self::GLOBALS.save(deps.storage, &globals)
-        } else {
-            Ok(())
+        if globals.balance_nlpn.is_zero() {
+            return Err(ContractError::ZeroBalanceRewards {});
         }
+
+        if rewards.is_zero() {
+            return Err(ContractError::ZeroRewardsFunds {});
+        }
+
+        let partial_price = price::total_of(globals.balance_nlpn).is(rewards);
+
+        if let Some(ref mut reward_per_token) = globals.reward_per_token {
+            *reward_per_token = reward_per_token.lossy_add(partial_price);
+        } else {
+            globals.reward_per_token = Some(partial_price);
+        }
+
+        Ok(Self::GLOBALS.save(deps.storage, &globals)?)
     }
 
     fn update_rewards(&mut self, globals: &DepositsGlobals) {
@@ -292,14 +296,13 @@ mod test {
     }
 
     #[test]
-    fn test_rewards_zero_balance() {
+    fn test_query_rewards_zero_balance() {
         let mut deps = testing::mock_dependencies();
         let price = NTokenPrice::<TheCurrency>::mock(Coin::new(1), Coin::new(1));
         let addr = Addr::unchecked("depositor");
 
         let mut deposit =
-            Deposit::load_or_default(deps.as_ref().storage, addr)
-            .expect("should load");
+            Deposit::load_or_default(deps.as_ref().storage, addr).expect("should load");
 
         // balance_nls = 0, balance_nlpn = 0
         let rewards = deposit
@@ -324,39 +327,22 @@ mod test {
         let price = NTokenPrice::<TheCurrency>::mock(Coin::new(1), Coin::new(1));
         let addr = Addr::unchecked("depositor");
 
-        let rewards = Coin::<Nls>::new(1000);
-
         let mut deposit =
-            Deposit::load_or_default(deps.as_ref().storage, addr)
-            .expect("should load");
+            Deposit::load_or_default(deps.as_ref().storage, addr).expect("should load");
 
         deposit
             .deposit(deps.as_mut().storage, Coin::<Usdc>::new(1000), price)
             .expect("should deposit");
 
         // shouldn't change anything
-        Deposit::distribute_rewards(deps.as_mut(), Coin::new(0))
-            .expect("should distribute rewards");
+        Deposit::distribute_rewards(deps.as_mut(), Coin::new(0)).unwrap_err();
+    }
 
-        let rewards_res = deposit
-            .query_rewards(deps.as_ref().storage)
-            .expect("should query");
-        assert_eq!(Coin::<Nls>::new(0), rewards_res);
+    #[test]
+    fn test_zero_balance_distribute_rewards() {
+        let mut deps = testing::mock_dependencies();
+        let rewards = Coin::new(1000);
 
-        Deposit::distribute_rewards(deps.as_mut(), rewards).expect("should distribute rewards");
-
-        let rewards_res = deposit
-            .query_rewards(deps.as_ref().storage)
-            .expect("should query");
-        assert_eq!(rewards, rewards_res);
-
-        // shouldn't change anything
-        Deposit::distribute_rewards(deps.as_mut(), Coin::new(0))
-            .expect("should distribute rewards");
-
-        let rewards_res = deposit
-            .query_rewards(deps.as_ref().storage)
-            .expect("should query");
-        assert_eq!(rewards, rewards_res);
+        Deposit::distribute_rewards(deps.as_mut(), rewards).unwrap_err();
     }
 }
