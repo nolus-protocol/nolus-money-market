@@ -414,6 +414,7 @@ mod tests {
     use platform::batch::Batch;
     use platform::error::Result as PlatformResult;
     use serde::{Deserialize, Serialize};
+    use finance::interest::InterestPeriod;
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(500); // 50%
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
@@ -802,25 +803,93 @@ mod tests {
         },);
     }
 
-    #[test]
-    fn state() {
+    fn margin_interest<Lpn>(period: Duration, principal_due: Coin<Lpn>) -> Coin<Lpn> where Lpn: Currency, {
+        InterestPeriod::with_interest(MARGIN_INTEREST_RATE)
+            .spanning(period)
+            .interest(principal_due)
+    }
+
+    fn margin_interests<Lpn>(paid: Timestamp, now: Timestamp, principal_due: Coin<Lpn>) -> (Coin<Lpn>, Coin<Lpn>) where Lpn: Currency, {
+        (
+            margin_interest(
+                if now < LEASE_START + Duration::YEAR {
+                    Duration::default()
+                } else {
+                    Duration::between(paid, LEASE_START + Duration::YEAR)
+                },
+                principal_due,
+            ),
+            margin_interest(
+                Duration::between(
+                    if now < LEASE_START + Duration::YEAR {
+                        paid
+                    } else {
+                        LEASE_START + Duration::YEAR
+                    },
+                    now,
+                ),
+                principal_due,
+            ),
+        )
+    }
+
+    fn test_state(period: Duration) {
+        let principal_due = coin(10000);
+
         let loan_resp = LoanResponse {
-            principal_due: coin(10000),
+            principal_due,
             interest_due: coin(0),
             annual_interest_rate: Percent::from_permille(0),
             interest_paid: LEASE_START,
         };
 
         let loan = create_loan("", Some(loan_resp.clone()));
-        let now = LEASE_START + Duration::YEAR + Duration::from_days(1);
+        let now = LEASE_START + period;
 
-        let expected_margin_overdue = coin(5000);
-        let expected_margin_due = coin(5000 / 365);
+        let (expected_margin_overdue, expected_margin_due) = margin_interests(
+            loan_resp.interest_paid,
+            now,
+            principal_due,
+        );
 
         let res = loan.merge_state_with(loan_resp, now);
 
-        assert_eq!(res.previous_margin_interest_due, expected_margin_overdue);
-        assert_eq!(res.current_margin_interest_due, expected_margin_due);
+        assert_eq!(
+            res.previous_margin_interest_due,
+            expected_margin_overdue,
+            "Got different overdue than expected!",
+        );
+
+        assert_eq!(
+            res.current_margin_interest_due,
+            expected_margin_due,
+            "Got different due than expected!",
+        );
+    }
+
+    #[test]
+    fn state_zero() {
+        test_state(Duration::default())
+    }
+
+    #[test]
+    fn state_day() {
+        test_state(Duration::from_days(1))
+    }
+
+    #[test]
+    fn state_year() {
+        test_state(Duration::YEAR)
+    }
+
+    #[test]
+    fn state_year_plus_day() {
+        test_state(Duration::YEAR + Duration::from_days(1))
+    }
+
+    #[test]
+    fn state_year_minus_day() {
+        test_state(Duration::YEAR - Duration::from_days(1))
     }
 
     fn coin(a: u128) -> Coin<TestCurrency> {
