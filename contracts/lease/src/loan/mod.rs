@@ -206,7 +206,7 @@ where
     pub(crate) fn state(
         &self,
         now: Timestamp,
-        lease: impl Into<Addr>,
+        lease: Addr,
     ) -> ContractResult<Option<State<Lpn>>> {
         self.debug_check_start_due_before(now, "in the past of");
 
@@ -843,7 +843,11 @@ mod tests {
             principal_due,
         );
 
-        let res = loan.merge_state_with(loan_resp, now);
+        let res = loan.merge_state_with(
+            Addr::unchecked(String::new()),
+            loan_resp,
+            now,
+        ).unwrap();
 
         assert_eq!(
             res.previous_margin_interest_due,
