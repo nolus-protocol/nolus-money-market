@@ -100,18 +100,26 @@ impl TryFrom<u128> for Duration {
 }
 
 impl Add<Duration> for Timestamp {
-    type Output = Timestamp;
+    type Output = Self;
 
     fn add(self, rhs: Duration) -> Self::Output {
         self.plus_nanos(rhs.nanos())
     }
 }
 
+impl Add<Duration> for Duration {
+    type Output = Self;
+
+    fn add(self, rhs: Duration) -> Self::Output {
+        Self::from_nanos(self.nanos().add(rhs.nanos()))
+    }
+}
+
 impl Sub<Duration> for Duration {
-    type Output = Duration;
+    type Output = Self;
 
     fn sub(self, rhs: Duration) -> Self::Output {
-        Self::Output::from_nanos(self.nanos().sub(rhs.nanos()))
+        Self::from_nanos(self.nanos().sub(rhs.nanos()))
     }
 }
 

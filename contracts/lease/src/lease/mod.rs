@@ -186,13 +186,14 @@ mod tests {
         coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
     };
     use lpp::error::ContractError as LppError;
-    use lpp::msg::{LoanResponse, QueryLoanResponse};
+    use lpp::msg::{LoanResponse, OutstandingInterest, QueryLoanResponse};
     use lpp::stub::{Lpp, LppRef};
 
     use platform::bank::BankAccountView;
     use platform::batch::Batch;
     use platform::error::Result as PlatformResult;
     use serde::{Deserialize, Serialize};
+    use finance::interest::InterestPeriod;
 
     use crate::loan::{Loan, LoanDTO};
     use crate::msg::StateResponse;
@@ -245,9 +246,18 @@ mod tests {
         fn loan_outstanding_interest(
             &self,
             _lease: impl Into<Addr>,
-            _by: Timestamp,
+            by: Timestamp,
         ) -> LppResult<lpp::msg::QueryLoanOutstandingInterestResponse<TestCurrency>> {
-            unreachable!()
+            Ok(
+                self.loan.as_ref()
+                    .map(|loan| {
+                        OutstandingInterest(
+                            InterestPeriod::with_interest(loan.annual_interest_rate)
+                                .spanning(Duration::between(loan.interest_paid, by))
+                                .interest(loan.principal_due),
+                        )
+                    })
+            )
         }
 
         fn quote(&self, _amount: Coin<TestCurrency>) -> LppResult<lpp::msg::QueryQuoteResponse> {
