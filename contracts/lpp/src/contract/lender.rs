@@ -45,6 +45,10 @@ pub fn try_withdraw<LPN>(
 where
     LPN: 'static + Currency + DeserializeOwned + Serialize,
 {
+    if amount_nlpn.is_zero() {
+        return Err(ContractError::ZeroWithdrawFunds);
+    }
+
     let lender_addr = info.sender;
     let amount_nlpn = Coin::new(amount_nlpn.u128());
 
@@ -123,6 +127,7 @@ mod test {
         let overdraft = 5_000;
         let withdraw_amount_nlpn = 1000u128;
         let rest_nlpn = 1000u128;
+        let zero = 0u128;
 
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,
@@ -190,6 +195,11 @@ mod test {
             price::total(balance_nlpn.into(), price)
         );
 
+        //try to deposit zero
+        let info = mock_info("lender4", &[coin(zero, TheCurrency::SYMBOL)]);
+        let result = try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info);
+        assert!(result.is_err());
+
         // try to withdraw with overdraft
         let info = mock_info("lender2", &[]);
         let result = try_withdraw::<TheCurrency>(
@@ -200,11 +210,29 @@ mod test {
         );
         assert!(result.is_err());
 
+        //try to withdraw zero
+        let result =
+            try_withdraw::<TheCurrency>(deps.as_mut(), env.clone(), info.clone(), zero.into());
+        assert!(result.is_err());
+
         // partial withdraw
-        try_withdraw::<TheCurrency>(deps.as_mut(), env, info, withdraw_amount_nlpn.into()).unwrap();
+        try_withdraw::<TheCurrency>(
+            deps.as_mut(),
+            env.clone(),
+            info.clone(),
+            withdraw_amount_nlpn.into(),
+        )
+        .unwrap();
         let balance_nlpn = query_balance(deps.as_ref().storage, Addr::unchecked("lender2"))
             .unwrap()
             .balance;
         assert_eq!(balance_nlpn, rest_nlpn.into());
+
+        // full withdraw
+        try_withdraw::<TheCurrency>(deps.as_mut(), env, info, rest_nlpn.into()).unwrap();
+        let balance_nlpn = query_balance(deps.as_ref().storage, Addr::unchecked("lender2"))
+            .unwrap()
+            .balance;
+        assert_eq!(balance_nlpn, zero.into());
     }
 }
