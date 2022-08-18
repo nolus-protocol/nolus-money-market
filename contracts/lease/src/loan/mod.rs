@@ -453,12 +453,18 @@ mod tests {
         fn loan_outstanding_interest(
             &self,
             _lease: impl Into<Addr>,
-            _by: Timestamp,
+            by: Timestamp,
         ) -> LppResult<QueryLoanOutstandingInterestResponse<TestCurrency>> {
             Ok(self
                 .loan
                 .as_ref()
-                .map(|loan| OutstandingInterest(loan.interest_due)))
+                .map(|loan| OutstandingInterest(
+                    interest(
+                        Duration::between(loan.interest_paid, by),
+                        loan.principal_due,
+                        loan.annual_interest_rate,
+                    ),
+                )))
         }
 
         fn quote(&self, _amount: Coin<TestCurrency>) -> LppResult<QueryQuoteResponse> {
@@ -794,23 +800,24 @@ mod tests {
         },);
     }
 
-    fn margin_interest<Lpn>(period: Duration, principal_due: Coin<Lpn>) -> Coin<Lpn> where Lpn: Currency, {
-        InterestPeriod::with_interest(MARGIN_INTEREST_RATE)
+    fn interest<Lpn>(period: Duration, principal_due: Coin<Lpn>, rate: Percent) -> Coin<Lpn> where Lpn: Currency, {
+        InterestPeriod::with_interest(rate)
             .spanning(period)
             .interest(principal_due)
     }
 
-    fn margin_interests<Lpn>(paid: Timestamp, now: Timestamp, principal_due: Coin<Lpn>) -> (Coin<Lpn>, Coin<Lpn>) where Lpn: Currency, {
+    fn interests<Lpn>(paid: Timestamp, now: Timestamp, principal_due: Coin<Lpn>, rate: Percent) -> (Coin<Lpn>, Coin<Lpn>) where Lpn: Currency, {
         (
-            margin_interest(
+            interest(
                 if now < LEASE_START + Duration::YEAR {
                     Duration::default()
                 } else {
                     Duration::between(paid, LEASE_START + Duration::YEAR)
                 },
                 principal_due,
+                rate,
             ),
-            margin_interest(
+            interest(
                 Duration::between(
                     if now < LEASE_START + Duration::YEAR {
                         paid
@@ -820,27 +827,44 @@ mod tests {
                     now,
                 ),
                 principal_due,
+                rate,
             ),
         )
+    }
+
+    fn margin_interests<Lpn>(paid: Timestamp, now: Timestamp, principal_due: Coin<Lpn>) -> (Coin<Lpn>, Coin<Lpn>) where Lpn: Currency, {
+        interests(paid, now, principal_due, MARGIN_INTEREST_RATE)
     }
 
     fn test_state(period: Duration) {
         let principal_due = coin(10000);
 
+        let interest_rate = Percent::from_permille(25);
+
         let loan_resp = LoanResponse {
             principal_due,
-            interest_due: coin(0),
-            annual_interest_rate: Percent::from_permille(0),
+            interest_due: interest(period, principal_due, interest_rate),
+            annual_interest_rate: interest_rate,
             interest_paid: LEASE_START,
         };
 
-        let loan = create_loan("", Some(loan_resp.clone()));
+        let loan = create_loan(
+            "",
+            Some(loan_resp.clone()),
+        );
         let now = LEASE_START + period;
 
         let (expected_margin_overdue, expected_margin_due) = margin_interests(
             loan_resp.interest_paid,
             now,
             principal_due,
+        );
+
+        let (expected_interest_overdue, expected_interest_due) = interests(
+            loan_resp.interest_paid,
+            now,
+            principal_due,
+            loan_resp.annual_interest_rate,
         );
 
         let res = loan.merge_state_with(
@@ -852,13 +876,25 @@ mod tests {
         assert_eq!(
             res.previous_margin_interest_due,
             expected_margin_overdue,
-            "Got different overdue than expected!",
+            "Got different margin overdue than expected!",
         );
 
         assert_eq!(
             res.current_margin_interest_due,
             expected_margin_due,
-            "Got different due than expected!",
+            "Got different margin due than expected!",
+        );
+
+        assert_eq!(
+            res.previous_interest_due,
+            expected_interest_overdue,
+            "Got different interest overdue than expected!",
+        );
+
+        assert_eq!(
+            res.current_interest_due,
+            expected_interest_due,
+            "Got different interest due than expected!",
         );
     }
 
