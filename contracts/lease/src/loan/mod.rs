@@ -210,8 +210,9 @@ where
     ) -> ContractResult<Option<State<Lpn>>> {
         self.debug_check_start_due_before(now, "in the past of");
 
-        let loan_resp = self.load_lpp_loan(lease)?;
-        Ok(loan_resp.map(|loan_state| self.merge_state_with(loan_state, now)))
+        let loan_resp = self.load_lpp_loan(lease.clone())?;
+
+        loan_resp.map(|loan_state| self.merge_state_with(lease, loan_state, now)).transpose()
     }
 
     fn load_loan_interest_due(
@@ -319,7 +320,7 @@ where
             .spanning(self.interest_due_period);
     }
 
-    fn merge_state_with(&self, loan_state: LoanResponse<Lpn>, now: Timestamp) -> State<Lpn> {
+    fn merge_state_with(&self, lease: Addr, loan_state: LoanResponse<Lpn>, now: Timestamp) -> ContractResult<State<Lpn>> {
         let principal_due = loan_state.principal_due;
 
         let margin_interest_overdue_period = {
@@ -339,19 +340,9 @@ where
         let margin_interest_overdue = margin_interest_overdue_period.interest(principal_due);
         let margin_interest_due = margin_interest_due_period.interest(principal_due);
 
-        let loan_interest_overdue = Coin::new(
-            (
-                u128::from(loan_state.interest_due)
-                    * self.current_period
-                        .start()
-                        .minus_nanos(loan_state.interest_paid.nanos())
-                        .nanos() as u128
-            ).checked_div(
-                (now.nanos() - loan_state.interest_paid.nanos()) as u128
-            ).unwrap_or(0)
-        );
+        let loan_interest_overdue = self.load_loan_interest_due(lease, margin_interest_overdue_period.till())?;
 
-        State {
+        Ok(State {
             annual_interest: loan_state.annual_interest_rate,
             annual_interest_margin: self.annual_margin_interest,
             principal_due,
@@ -359,7 +350,7 @@ where
             current_interest_due: loan_state.interest_due - loan_interest_overdue,
             previous_margin_interest_due: margin_interest_overdue,
             current_margin_interest_due: margin_interest_due,
-        }
+        })
     }
 
     fn overdue_at(&self, when: Timestamp) -> bool {
