@@ -44,7 +44,7 @@ fn open_loan_unauthorized_contract_id() {
         lpp_balance,
     );
 
-    test_case.lpp_addr = Some(lpp.clone());
+    test_case.lpp_addr = Some(lpp);
 
     //redeploy lease contract to change the code_id
     test_case.init_lease();
@@ -84,7 +84,7 @@ fn open_loan_no_liquidity() {
         balance,
     );
 
-    test_case.lpp_addr = Some(lpp.clone());
+    test_case.lpp_addr = Some(lpp);
 
     let lease_addr = test_case.get_lease_instance();
 

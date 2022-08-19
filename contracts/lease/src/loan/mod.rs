@@ -69,9 +69,11 @@ impl LoanDTO {
         grace_period: Duration,
     ) -> ContractResult<Self> {
         if grace_period >= interest_due_period {
-            Err(ContractError::InvalidParameters( format!("The grace period, currently {}, must be shorter that an interest period, currently {}, to avoid overlapping",
-            grace_period,
-            interest_due_period)))
+            Err(ContractError::InvalidParameters(format!(
+                "The grace period, currently {}, must be shorter that an interest period, currently {}, to avoid overlapping",
+                grace_period,
+                interest_due_period,
+            )))
         } else {
             Ok(Self::new_raw(
                 annual_margin_interest,
@@ -247,18 +249,6 @@ where
 
     fn load_lpp_loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>> {
         self.lpp.loan(lease).map_err(ContractError::from)
-    }
-
-    fn annual_interest(&self, lease: impl Into<Addr>) -> ContractResult<Percent> {
-        self
-            .load_lpp_loan(lease)
-            .and_then(
-                |resp| resp.map(
-                    |resp| resp.annual_interest_rate
-                )
-                    // TODO Change to `ContractError::LoanClosed()` when cause is fixed.
-                    .ok_or_else(|| ContractError::InvalidParameters("Loan Closed!".to_string()))
-            )
     }
 
     fn annual_interest_margin(&self) -> Percent {

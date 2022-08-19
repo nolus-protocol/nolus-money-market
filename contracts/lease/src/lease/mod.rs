@@ -10,7 +10,6 @@ use finance::{
     liability::Liability,
 };
 use lpp::stub::Lpp as LppTrait;
-use platform::batch::Emitter;
 use platform::{
     bank::{BankAccount, BankAccountView},
     batch::Batch,
@@ -96,14 +95,20 @@ where
         let borrow = self.liability.init_borrow_amount(downpayment);
 
         self.loan.open_loan_req(borrow)
-            .map(|result| OpenRequestResult {
-                batch: result.batch,
-                customer: self.customer,
-                annual_interest_rate: result.annual_interest_rate,
-                annual_interest_rate_margin: result.annual_interest_rate_margin,
-                currency: self.currency,
-                loan_pool_id: result.loan_pool_id,
-                loan_amount: borrow,
+            .map({
+                // Force move before closure to avoid edition warning from clippy;
+                let customer = self.customer;
+                let currency = self.currency;
+
+                |result| OpenRequestResult {
+                    batch: result.batch,
+                    customer,
+                    annual_interest_rate: result.annual_interest_rate,
+                    annual_interest_rate_margin: result.annual_interest_rate_margin,
+                    currency,
+                    loan_pool_id: result.loan_pool_id,
+                    loan_amount: borrow,
+                }
             })
     }
 

@@ -11,7 +11,7 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use platform::{
     bank::BankStub,
-    batch::{Emit, Emitter},
+    batch::Emitter,
 };
 
 use crate::error::ContractResult;

@@ -1,5 +1,3 @@
-use std::result::Result as StdResult;
-
 use cosmwasm_std::Addr;
 use finance::{
     currency::Currency,
@@ -8,7 +6,6 @@ use finance::{
 use platform::batch::Batch;
 use lpp::stub::Lpp as LppTrait;
 
-use crate::error::ContractError;
 use crate::loan::Loan;
 
 pub(crate) struct Result {
