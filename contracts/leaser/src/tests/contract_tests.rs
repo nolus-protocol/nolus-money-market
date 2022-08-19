@@ -72,7 +72,7 @@ fn test_update_config() {
         Percent::from_percent(65),
         12,
     );
-    let expected_repaiment = Repayment::new(10, 10);
+    let expected_repaiment = Repayment::new(100, 10);
     let info = setup_test_case(deps.as_mut());
     let msg = ExecuteMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
@@ -86,6 +86,26 @@ fn test_update_config() {
 
     assert_eq!(expected_liability, config_response.config.liability);
     assert_eq!(expected_repaiment, config_response.config.repayment);
+}
+
+#[test]
+#[should_panic(expected = "Period length should be greater than grace period")]
+fn test_update_config_invalid_repay_period() {
+    let mut deps = mock_dependencies();
+    let expected_liability = Liability::new(
+        Percent::from_percent(55),
+        Percent::from_percent(60),
+        Percent::from_percent(65),
+        12,
+    );
+    let expected_repaiment = Repayment::new(18000, 23000);
+    let info = setup_test_case(deps.as_mut());
+    let msg = ExecuteMsg::Config {
+        lease_interest_rate_margin: Percent::from_percent(5),
+        liability: expected_liability,
+        repayment: expected_repaiment.clone(),
+    };
+    execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 }
 
 #[test]

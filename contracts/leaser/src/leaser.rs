@@ -55,6 +55,7 @@ impl Leaser {
         if liability.invariant_held().is_err() {
             return Err(ContractError::IvalidLiability {});
         }
+        repayment.validate_period()?;
         Config::update(
             deps.storage,
             lease_interest_rate_margin,
