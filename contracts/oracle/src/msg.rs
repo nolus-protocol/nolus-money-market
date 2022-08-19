@@ -1,4 +1,5 @@
 use cosmwasm_std::Addr;
+use finance::currency::SymbolOwned;
 use marketprice::storage::{Denom, DenomPair, Price};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -52,7 +53,7 @@ pub enum QueryMsg {
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct ConfigResponse {
-    pub base_asset: String,
+    pub base_asset: SymbolOwned,
     pub price_feed_period_secs: u32,
     pub feeders_percentage_needed: u8,
     pub owner: Addr,
