@@ -1,0 +1,2 @@
+[toolchain]
+channel = "1.61" # Update accordingly to cosmwasm/workspace-optimizer's Rust version

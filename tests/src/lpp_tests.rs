@@ -1,24 +1,25 @@
-use cosmwasm_std::{coin, coins, Addr};
+use cosmwasm_std::{Addr, coin, coins};
 use cw_multi_test::Executor;
-use finance::coin::{self, Coin};
+
 use finance::{
+    coin::{self, Coin},
     currency::{Currency, Nls, Usdc},
     duration::Duration,
     fraction::Fraction,
     percent::Percent,
-    price,
-};
-
-use crate::common::{
-    lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
-    lpp_wrapper::LppWrapper,
-    mock_app,
-    test_case::TestCase,
-    AppExt, ADMIN, USER,
+    price
 };
 use lpp::msg::{
     BalanceResponse, ExecuteMsg as ExecuteLpp, LppBalanceResponse, PriceResponse,
     QueryLoanResponse, QueryMsg as QueryLpp, QueryQuoteResponse, RewardsResponse,
+};
+
+use crate::common::{
+    ADMIN,
+    AppExt,
+    lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
+    lpp_wrapper::LppWrapper,
+    mock_app, test_case::TestCase, USER,
 };
 
 type TheCurrency = Usdc;
@@ -336,6 +337,292 @@ fn loan_open_wrong_id() {
 
 #[test]
 fn loan_open_and_repay() {
+    const YEAR: u64 = Duration::YEAR.nanos();
+
+    let denom = TheCurrency::SYMBOL;
+    let admin = Addr::unchecked(ADMIN);
+    let lender = Addr::unchecked("lender");
+    let hacker = Addr::unchecked("Mallory");
+
+    let app_balance = 10_000_000_000u128;
+    let hacker_balance = 10_000_000;
+    let init_deposit = 20_000_000u128;
+    let loan1 = 10_000_000u128;
+    let loan2 = 5_000_000u128;
+    let repay_interest_part = 1_000_000u128;
+    let repay_due_part = 1_000_000u128;
+    let repay_excess = 1_000_000u128;
+
+    let base_interest_rate = Percent::from_percent(21);
+    let addon_optimal_interest_rate = Percent::from_percent(20);
+    let utilization_optimal = Percent::from_percent(55);
+
+    let utilization1 = Percent::from_permille((1000 * loan1 / init_deposit) as u32);
+    let interest1 = base_interest_rate + addon_optimal_interest_rate.of(utilization1)
+        - addon_optimal_interest_rate.of(utilization_optimal);
+    dbg!(Percent::from_percent(1)); // scale
+    dbg!(utilization1);
+    dbg!(interest1);
+
+    // net setup
+    let mut app = mock_app(&[coin(app_balance, denom), coin(app_balance, Nls::SYMBOL)]);
+    let lease_id = LeaseWrapper::default().store(&mut app);
+    let (lpp, _) = LppWrapper::default().instantiate(&mut app, lease_id.into(), denom, 0);
+    app.send_tokens(admin.clone(), lender.clone(), &[coin(init_deposit, denom)])
+        .unwrap();
+    app.send_tokens(
+        admin.clone(),
+        hacker.clone(),
+        &[coin(hacker_balance, denom)],
+    )
+    .unwrap();
+
+    // initial deposit
+    app.execute_contract(
+        lender.clone(),
+        lpp.clone(),
+        &ExecuteLpp::Deposit(),
+        &coins(init_deposit, denom),
+    )
+    .unwrap();
+
+    app.execute_contract(
+        lender,
+        lpp.clone(),
+        &ExecuteLpp::UpdateParameters {
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        },
+        &[],
+    )
+    .unwrap();
+
+    let quote: QueryQuoteResponse = app
+        .wrap()
+        .query_wasm_smart(
+            lpp.clone(),
+            &QueryLpp::Quote {
+                amount: Coin::<TheCurrency>::new(loan1).into(),
+            },
+        )
+        .unwrap();
+    match quote {
+        QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(interest1, quote),
+        _ => panic!("no liquidity"),
+    }
+
+    // borrow
+    let loan_addr1 = LeaseWrapper::default().instantiate(
+        &mut app,
+        Some(lease_id),
+        &lpp,
+        denom,
+        LeaseWrapperConfig {
+            liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
+            downpayment: loan1,
+            ..LeaseWrapperConfig::default()
+        },
+    );
+
+    // double borrow
+    app.execute_contract(
+        loan_addr1.clone(),
+        lpp.clone(),
+        &ExecuteLpp::OpenLoan {
+            amount: Coin::<TheCurrency>::new(loan1).into(),
+        },
+        &[],
+    )
+    .unwrap_err();
+
+    app.time_shift(Duration::from_nanos(YEAR / 2));
+
+    let total_interest_due = interest1.of(loan1) / 2;
+
+    let resp: LppBalanceResponse<TheCurrency> = app
+        .wrap()
+        .query_wasm_smart(lpp.clone(), &QueryLpp::LppBalance())
+        .unwrap();
+    dbg!(&resp);
+    assert_eq!(total_interest_due, resp.total_interest_due.into());
+
+    let total_liability = loan1 + loan2 + total_interest_due;
+    let utilization2 = Percent::from_permille(
+        (1000 * (total_liability) / (init_deposit + total_interest_due)) as u32,
+    );
+    let interest2 = base_interest_rate + addon_optimal_interest_rate.of(utilization2)
+        - addon_optimal_interest_rate.of(utilization_optimal);
+
+    let quote: QueryQuoteResponse = app
+        .wrap()
+        .query_wasm_smart(
+            lpp.clone(),
+            &QueryLpp::Quote {
+                amount: Coin::<TheCurrency>::new(loan2).into(),
+            },
+        )
+        .unwrap();
+    match quote {
+        QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(interest2, quote),
+        _ => panic!("no liquidity"),
+    }
+
+    // borrow 2
+    let loan_addr2 = LeaseWrapper::default().instantiate(
+        &mut app,
+        Some(lease_id),
+        &lpp,
+        denom,
+        LeaseWrapperConfig {
+            liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
+            downpayment: loan2,
+            ..LeaseWrapperConfig::default()
+        },
+    );
+
+    app.time_shift(Duration::from_nanos(YEAR / 2));
+
+    let maybe_loan1: QueryLoanResponse<TheCurrency> = app
+        .wrap()
+        .query_wasm_smart(
+            lpp.clone(),
+            &QueryLpp::Loan {
+                lease_addr: loan_addr1.clone(),
+            },
+        )
+        .unwrap();
+    let loan1_resp = maybe_loan1.unwrap();
+    assert_eq!(loan1_resp.principal_due, loan1.into());
+    assert_eq!(loan1_resp.annual_interest_rate, interest1);
+    assert_eq!(loan1_resp.interest_due, interest1.of(loan1).into());
+
+    // repay from other addr
+    app.execute_contract(
+        hacker,
+        lpp.clone(),
+        &ExecuteLpp::RepayLoan(),
+        &[coin(loan1, denom)],
+    )
+    .unwrap_err();
+
+    // repay zero
+    app.execute_contract(
+        loan_addr1.clone(),
+        lpp.clone(),
+        &ExecuteLpp::RepayLoan(),
+        &[coin(0, denom)],
+    )
+    .unwrap_err();
+
+    // repay wrong currency
+    app.send_tokens(
+        admin,
+        loan_addr2.clone(),
+        &[coin(repay_interest_part, Nls::SYMBOL)],
+    )
+    .unwrap();
+    app.execute_contract(
+        loan_addr2,
+        lpp.clone(),
+        &ExecuteLpp::RepayLoan(),
+        &[coin(repay_interest_part, Nls::SYMBOL)],
+    )
+    .unwrap_err();
+
+    // repay interest part
+    app.execute_contract(
+        loan_addr1.clone(),
+        lpp.clone(),
+        &ExecuteLpp::RepayLoan(),
+        &[coin(repay_interest_part, denom)],
+    )
+    .unwrap();
+
+    let maybe_loan1: QueryLoanResponse<TheCurrency> = app
+        .wrap()
+        .query_wasm_smart(
+            lpp.clone(),
+            &QueryLpp::Loan {
+                lease_addr: loan_addr1.clone(),
+            },
+        )
+        .unwrap();
+    let loan1_resp = maybe_loan1.unwrap();
+    assert_eq!(loan1_resp.principal_due, loan1.into());
+    assert_eq!(
+        loan1_resp.interest_due,
+        (interest1.of(loan1) - repay_interest_part).into()
+    );
+
+    // repay interest + due part
+    app.execute_contract(
+        loan_addr1.clone(),
+        lpp.clone(),
+        &ExecuteLpp::RepayLoan(),
+        &[coin(
+            interest1.of(loan1) - repay_interest_part + repay_due_part,
+            denom,
+        )],
+    )
+    .unwrap();
+
+    let maybe_loan1: QueryLoanResponse<TheCurrency> = app
+        .wrap()
+        .query_wasm_smart(
+            lpp.clone(),
+            &QueryLpp::Loan {
+                lease_addr: loan_addr1.clone(),
+            },
+        )
+        .unwrap();
+    let loan1_resp = maybe_loan1.unwrap();
+    assert_eq!(loan1_resp.principal_due, (loan1 - repay_due_part).into());
+    assert_eq!(loan1_resp.interest_due, Coin::new(0));
+
+    // repay interest + due part, close the loan
+    app.execute_contract(
+        loan_addr1.clone(),
+        lpp.clone(),
+        &ExecuteLpp::RepayLoan(),
+        &[coin(loan1 - repay_due_part + repay_excess, denom)],
+    )
+    .unwrap();
+
+    let maybe_loan1: QueryLoanResponse<TheCurrency> = app
+        .wrap()
+        .query_wasm_smart(
+            lpp.clone(),
+            &QueryLpp::Loan {
+                lease_addr: loan_addr1.clone(),
+            },
+        )
+        .unwrap();
+    assert!(maybe_loan1.is_none());
+
+    // repay excess is returned
+    let balance = app.wrap().query_balance(loan_addr1, denom).unwrap();
+    assert_eq!(balance.amount.u128(), loan1 - interest1.of(loan1));
+
+    let resp: LppBalanceResponse<TheCurrency> = app
+        .wrap()
+        .query_wasm_smart(lpp, &QueryLpp::LppBalance())
+        .unwrap();
+
+    // accumulated interest, both paid and unpaid
+    assert_eq!(
+        resp.total_interest_due,
+        (interest1.of(loan1) + interest2.of(loan2) / 2u128).into()
+    );
+    assert_eq!(resp.total_principal_due, loan2.into());
+    assert_eq!(
+        resp.balance,
+        (init_deposit + interest1.of(loan1) - loan2).into()
+    );
+}
+
+#[test]
+fn compare_lpp_states() {
     const YEAR: u64 = Duration::YEAR.nanos();
 
     let denom = TheCurrency::SYMBOL;
