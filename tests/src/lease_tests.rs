@@ -305,10 +305,10 @@ fn compare_state_with_lpp_state_implicit_time() {
             Duration::from_nanos(1),
     );
 
-    let loan_resp = test_case
+    let loan_resp: lpp::msg::LoanResponse<Currency> = test_case
         .app
         .wrap()
-        .query_wasm_smart::<lpp::msg::LoanResponse<Currency>>(
+        .query_wasm_smart(
             test_case.lpp_addr.clone().unwrap(),
             &lpp::msg::QueryMsg::Loan {
                 lease_addr: lease_address.clone(),
@@ -331,7 +331,6 @@ fn compare_state_with_lpp_state_implicit_time() {
 }
 
 #[test]
-#[ignore = "2:1 tests succeed, one of which manually calculated; LPP issue"]
 fn compare_state_with_lpp_state_explicit_time() {
     const DOWNPAYMENT: u128 = 1_000_000;
 
@@ -350,10 +349,10 @@ fn compare_state_with_lpp_state_explicit_time() {
             Duration::from_nanos(1),
     );
 
-    let loan_resp = test_case
+    let lpp::msg::OutstandingInterest::<Currency>(loan_resp) = test_case
         .app
         .wrap()
-        .query_wasm_smart::<lpp::msg::LoanResponse<Currency>>(
+        .query_wasm_smart(
             test_case.lpp_addr.clone().unwrap(),
             &lpp::msg::QueryMsg::LoanOutstandingInterest {
                 lease_addr: lease_address.clone(),
@@ -363,17 +362,16 @@ fn compare_state_with_lpp_state_explicit_time() {
         .unwrap();
 
     let query_result = if let StateResponse::Opened {
-        principal_due,
         previous_interest_due,
         current_interest_due,
         ..
     } = state_query(&test_case, &lease_address.into_string()) {
-        (principal_due, previous_interest_due + current_interest_due)
+        previous_interest_due + current_interest_due
     } else {
         unreachable!();
     };
 
-    assert_eq!(query_result, (loan_resp.principal_due, loan_resp.interest_due));
+    assert_eq!(query_result, loan_resp);
 }
 
 #[test]
