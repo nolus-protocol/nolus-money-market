@@ -4,7 +4,7 @@ use finance::{coin::CoinDTO, currency::SymbolOwned, liability::Liability, percen
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::state::config::Config;
+use crate::{state::config::Config, ContractError};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -61,6 +61,16 @@ impl Repayment {
         Repayment {
             period_sec,
             grace_period_sec,
+        }
+    }
+
+    pub fn validate_period(&self) -> Result<(), ContractError> {
+        if self.period_sec > self.grace_period_sec {
+            Result::Ok(())
+        } else {
+            Result::Err(ContractError::validation_err::<Repayment>(String::from(
+                "Period length should be greater than grace period",
+            )))
         }
     }
 }
