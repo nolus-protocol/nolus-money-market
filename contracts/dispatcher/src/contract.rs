@@ -145,8 +145,7 @@ pub fn try_dispatch(
 
     Ok(emitter
         .emit_to_string_value("height", env.block.height)
-        // TODO add idx when https://github.com/CosmWasm/wasmd/issues/932 is resolved
-        // .emit_to_string_value("idx", transaction_idx.index)
+        .emit_tx_info(&env)
         .emit_to_string_value("to", lpp_address)
         .emit_timestamp("at", &env.block.time)
         .into())
