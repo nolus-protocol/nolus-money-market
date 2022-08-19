@@ -33,7 +33,7 @@ impl<'a> WithLease for OpenLoanReq<'a> {
         let downpayment_lpn = bank::received::<Lpn>(self.downpayment)?;
 
         let result = lease
-            .open_loan_req(self.contract.clone(), downpayment_lpn)
+            .open_loan_req(downpayment_lpn)
             .map_err(Self::Error::from)?;
 
         let emitter = result.batch

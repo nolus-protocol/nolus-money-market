@@ -288,7 +288,7 @@ mod test {
         let addr = Addr::unchecked("defd2r2");
         let lpp = LppRef {
             addr: addr.clone(),
-            currency: Nls::SYMBOL.to_owned(),
+            currency: ToOwned::to_owned(Nls::SYMBOL),
         };
         let borrow_amount = Coin::<Nls>::new(10);
         let querier = MockQuerier::default();

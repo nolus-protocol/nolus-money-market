@@ -2,7 +2,6 @@ mod repay;
 mod state;
 mod open_request;
 
-use platform::batch::Batch;
 pub use state::State;
 
 use std::{fmt::Debug, marker::PhantomData};
@@ -16,9 +15,15 @@ use finance::{
     percent::{Percent, Units},
 };
 use lpp::{
-    msg::{LoanResponse, QueryLoanResponse},
+    msg::{
+        LoanResponse,
+        QueryLoanResponse,
+        QueryQuoteResponse,
+    },
     stub::{Lpp as LppTrait, LppRef},
+    error::ContractError as LppError,
 };
+use platform::batch::Batch;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{
@@ -125,9 +130,15 @@ where
         (dto, self.lpp)
     }
 
-    pub(crate) fn open_loan_req(mut self, lease: impl Into<Addr>, amount: Coin<Lpn>) -> ContractResult<OpenRequestResult> {
-        self.lpp.open_loan_req(amount)?;
-        OpenRequestResult::try_new(self, lease)
+    pub(crate) fn open_loan_req(mut self, amount: Coin<Lpn>) -> ContractResult<OpenRequestResult> {
+        match self.lpp.quote(amount)? {
+            QueryQuoteResponse::QuoteInterestRate(annual_interest_rate) => {
+                self.lpp.open_loan_req(amount)?;
+
+                Ok(OpenRequestResult::new(self, annual_interest_rate))
+            }
+            QueryQuoteResponse::NoLiquidity => Err(ContractError::LppError(LppError::NoLiquidity {})),
+        }
     }
 
     pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<Batch> {

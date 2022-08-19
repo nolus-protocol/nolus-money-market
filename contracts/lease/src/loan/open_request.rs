@@ -20,16 +20,16 @@ pub(crate) struct Result {
 
 impl Result
 {
-    pub(super) fn try_new<Lpp, Lpn>(loan: Loan<Lpn, Lpp>, lease: impl Into<Addr>) -> StdResult<Self, ContractError>
+    pub(super) fn new<Lpp, Lpn>(loan: Loan<Lpn, Lpp>, annual_interest_rate: Percent) -> Self
     where
         Lpp: LppTrait<Lpn>,
         Lpn: Currency,
     {
-        Ok(Self {
-            annual_interest_rate: loan.annual_interest(lease)?,
+        Self {
+            annual_interest_rate,
             annual_interest_rate_margin: loan.annual_interest_margin(),
             loan_pool_id: loan.lpp.id(),
             batch: loan.lpp.into(),
-        })
+        }
     }
 }

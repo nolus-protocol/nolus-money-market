@@ -89,23 +89,22 @@ where
         &self.customer == addr
     }
 
-    pub(crate) fn open_loan_req(self, lease: Addr, downpayment: Coin<Lpn>) -> ContractResult<OpenRequestResult<Lpn>> {
+    pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<OpenRequestResult<Lpn>> {
         // TODO add a type parameter to this function to designate the downpayment currency
         // TODO query the market price oracle to get the price of the downpayment currency to LPN
         //  and calculate `downpayment` in LPN
         let borrow = self.liability.init_borrow_amount(downpayment);
 
-        let result = self.loan.open_loan_req(lease, borrow)?;
-
-        Ok(OpenRequestResult {
-            batch: result.batch,
-            customer: self.customer,
-            annual_interest_rate: result.annual_interest_rate,
-            annual_interest_rate_margin: result.annual_interest_rate_margin,
-            currency: self.currency,
-            loan_pool_id: result.loan_pool_id,
-            loan_amount: borrow,
-        })
+        self.loan.open_loan_req(borrow)
+            .map(|result| OpenRequestResult {
+                batch: result.batch,
+                customer: self.customer,
+                annual_interest_rate: result.annual_interest_rate,
+                annual_interest_rate_margin: result.annual_interest_rate_margin,
+                currency: self.currency,
+                loan_pool_id: result.loan_pool_id,
+                loan_amount: borrow,
+            })
     }
 
     pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<Batch> {

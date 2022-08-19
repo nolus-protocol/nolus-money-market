@@ -10,7 +10,7 @@ use super::{ADMIN, USER};
 type LeaseContractWrapperReply = Box<
     ContractWrapper<
         lease::msg::ExecuteMsg,
-        lease::msg::NewLeaseForm,
+        NewLeaseForm,
         lease::msg::StateQuery,
         lease::error::ContractError,
         lease::error::ContractError,
@@ -84,15 +84,24 @@ impl LeaseWrapper {
         let downpayment = config.downpayment;
         let msg = Self::lease_instantiate_msg(denom, lpp_addr.clone(), config);
 
-        app.instantiate_contract(
+        let result = app.instantiate_contract(
             code_id,
             Addr::unchecked(ADMIN),
             &msg,
             &[coin(downpayment, denom)],
             "lease",
             None,
-        )
-        .unwrap()
+        );
+
+        if let Err(error) = result.as_ref() {
+            eprintln!("Error: {:?}", error);
+
+            if let Some(source) = error.source() {
+                eprintln!("Source Error: {:?}", source);
+            }
+        }
+
+        result.unwrap()
     }
 
     fn lease_instantiate_msg(denom: &str, lpp_addr: Addr, config: LeaseWrapperConfig) -> NewLeaseForm {
