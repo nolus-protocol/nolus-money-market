@@ -5,10 +5,7 @@ use cw_multi_test::{AppResponse, Executor};
 
 use finance::{
     coin::Coin,
-    currency::{
-        Nls,
-        Usdc,
-    },
+    currency::Usdc,
     duration::Duration,
     interest::InterestPeriod,
     percent::Percent,
@@ -311,7 +308,7 @@ fn compare_state_with_lpp_state_implicit_time() {
     let loan_resp = test_case
         .app
         .wrap()
-        .query_wasm_smart::<lpp::msg::LoanResponse<Usdc>>(
+        .query_wasm_smart::<lpp::msg::LoanResponse<Currency>>(
             test_case.lpp_addr.clone().unwrap(),
             &lpp::msg::QueryMsg::Loan {
                 lease_addr: lease_address.clone(),
@@ -356,7 +353,7 @@ fn compare_state_with_lpp_state_explicit_time() {
     let loan_resp = test_case
         .app
         .wrap()
-        .query_wasm_smart::<lpp::msg::LoanResponse<Usdc>>(
+        .query_wasm_smart::<lpp::msg::LoanResponse<Currency>>(
             test_case.lpp_addr.clone().unwrap(),
             &lpp::msg::QueryMsg::LoanOutstandingInterest {
                 lease_addr: lease_address.clone(),
