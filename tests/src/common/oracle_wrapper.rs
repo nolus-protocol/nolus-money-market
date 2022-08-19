@@ -64,7 +64,7 @@ impl Default for MarketOracleWrapper {
 pub fn mock_oracle_query(deps: Deps, env: Env, msg: oracle::msg::QueryMsg) -> StdResult<Binary> {
     let res = match msg {
         oracle::msg::QueryMsg::PriceFor { denoms: _ } => to_binary(&oracle::msg::PriceResponse {
-            prices: vec![Price::new(NATIVE_DENOM, 1000000000, "UST", 123456789)],
+            prices: vec![Price::new(NATIVE_DENOM, 123456789, "UST", 1000000000)],
         }),
         _ => Ok(oracle::contract::query(deps, env, msg)?),
     }?;

@@ -21,7 +21,11 @@ fn on_alarm_zero_reward() {
     test_case
         .init_lpp(None)
         .init_timealarms()
-        .init_oracle(None)
+        .init_oracle(Some(ContractWrapper::new(
+            oracle::contract::execute,
+            oracle::contract::instantiate,
+            mock_oracle_query,
+        )))
         .init_treasury()
         .init_dispatcher();
 

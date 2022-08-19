@@ -6,6 +6,7 @@ mod error;
 pub mod msg;
 mod oracle;
 pub mod state;
+pub mod stub;
 #[cfg(test)]
 pub mod tests;
 

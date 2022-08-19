@@ -2,51 +2,49 @@ use std::marker::PhantomData;
 
 use crate::cmd::Result as DispatcherResult;
 use crate::state::Config;
-use crate::state::DispatchLog;
 use crate::ContractError;
 use cosmwasm_std::StdResult;
-use cosmwasm_std::{Decimal, QuerierWrapper, Storage, Timestamp};
+use cosmwasm_std::Timestamp;
 use finance::coin::Coin;
 use finance::currency::{Currency, Nls};
 use finance::duration::Duration;
-use finance::fraction::Fraction;
 use finance::interest::InterestPeriod;
-use finance::ratio::Rational;
+use finance::price::{total, Price};
 use lpp::stub::Lpp as LppTrait;
 use platform::batch::Batch;
 
-pub struct Dispatcher<'a, Lpn, Lpp> {
+pub struct Dispatcher<Lpn, Lpp> {
     lpn: PhantomData<Lpn>,
     lpp: Lpp,
-    storage: &'a mut dyn Storage,
-    querier: QuerierWrapper<'a>,
+    last_dispatch: Timestamp,
     config: Config,
     block_time: Timestamp,
 }
 
-impl<'a, Lpn, Lpp> Dispatcher<'a, Lpn, Lpp>
+impl<'a, Lpn, Lpp> Dispatcher<Lpn, Lpp>
 where
     Lpp: LppTrait<Lpn>,
     Lpn: Currency,
 {
     pub fn new(
         lpp: Lpp,
-        storage: &'a mut dyn Storage,
-        querier: QuerierWrapper<'a>,
+        last_dispatch: Timestamp,
         config: Config,
         block_time: Timestamp,
-    ) -> StdResult<Dispatcher<'a, Lpn, Lpp>> {
+    ) -> StdResult<Dispatcher<Lpn, Lpp>> {
         Ok(Self {
             lpn: PhantomData,
             lpp,
-            storage,
-            querier,
+            last_dispatch,
             config,
             block_time,
         })
     }
 
-    pub fn dispatch(&mut self) -> Result<DispatcherResult<Lpn>, ContractError>
+    pub fn dispatch(
+        &mut self,
+        native_price: Price<Nls, Lpn>,
+    ) -> Result<DispatcherResult<Lpn>, ContractError>
     where
         Lpp: LppTrait<Lpn>,
         Lpn: Currency,
@@ -58,23 +56,19 @@ where
         // get annual percentage of return from configuration
         let arp_permille = self.config.tvl_to_apr.get_apr(lpp_balance.into())?;
 
-        let last_dispatch = DispatchLog::last_dispatch(self.storage)?;
         // Calculate the reward in LPN,
         // which matches TVLdenom, since the last calculation
         let reward_in_lppdenom = InterestPeriod::with_interest(arp_permille)
-            .from(last_dispatch)
-            .spanning(Duration::between(last_dispatch, self.block_time))
+            .from(self.last_dispatch)
+            .spanning(Duration::between(self.last_dispatch, self.block_time))
             .interest(lpp_balance);
 
         if reward_in_lppdenom.is_zero() {
             return Err(ContractError::ZeroReward {});
         }
 
-        // Store the current time for use for the next calculation.
-        DispatchLog::update(self.storage, self.block_time)?;
-
         // Obtain the currency market price of TVLdenom in uNLS and convert Rewards_TVLdenom in uNLS, Rewards_uNLS.
-        let reward_unls = self.swap_reward_in_unls(reward_in_lppdenom)?;
+        let reward_unls = total(reward_in_lppdenom, native_price.inv());
 
         if reward_unls.is_zero() {
             return Err(ContractError::ZeroReward {});
@@ -119,41 +113,5 @@ where
             .map_err(ContractError::from)?;
 
         Ok(batch)
-    }
-
-    fn get_market_price(&self, denom: &str) -> StdResult<Decimal> {
-        use oracle::msg::{PriceResponse, QueryMsg as MarketQueryMsg};
-
-        let query_msg: MarketQueryMsg = MarketQueryMsg::PriceFor {
-            denoms: vec![denom.to_string()],
-        };
-        let resp: PriceResponse = self
-            .querier
-            .query_wasm_smart(self.config.oracle.to_string(), &query_msg)?;
-        let denom_price = match resp.prices.first() {
-            Some(d) => Decimal::from_ratio(d.quote().amount, d.base().amount),
-            None => todo!(),
-        };
-
-        Ok(denom_price)
-    }
-
-    fn swap_reward_in_unls(&self, reward_in_lppdenom: Coin<Lpn>) -> StdResult<Coin<Nls>>
-    where
-        Lpn: Currency,
-    {
-        // get price of the native denom in market oracle base asset
-        let native_denom_price = self.get_market_price(Nls::SYMBOL)?;
-
-        // calculate LPN price from the response
-        let ratio = Rational::new(
-            cosmwasm_std::Fraction::denominator(&native_denom_price).u128(),
-            cosmwasm_std::Fraction::numerator(&native_denom_price).u128(),
-        );
-
-        let lpp_amount: u128 = reward_in_lppdenom.into();
-        let nls_amount = <Rational<u128> as Fraction<u128>>::of(&ratio, lpp_amount);
-
-        Ok(Coin::<Nls>::new(nls_amount))
     }
 }
