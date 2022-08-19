@@ -1,6 +1,7 @@
 use anyhow::Error;
 use cosmwasm_std::{coins, Addr, Coin, Empty, StdError, Uint64};
 use cw_multi_test::{next_block, App, ContractWrapper, Executor};
+use finance::coin::Amount;
 
 use super::{
     dispatcher_wrapper::DispatcherWrapper, lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
@@ -60,8 +61,12 @@ pub struct TestCase {
 
 impl TestCase {
     pub fn new(denom: &str) -> Self {
+        Self::with_reserve(denom, 10_000)
+    }
+
+    pub fn with_reserve(denom: &str, reserve: Amount) -> Self {
         Self {
-            app: mock_app(&coins(10000, denom)),
+            app: mock_app(&coins(reserve, denom)),
             dispatcher_addr: None,
             treasury_addr: None,
             profit_addr: None,
@@ -116,6 +121,10 @@ impl TestCase {
     }
 
     pub fn init_lpp(&mut self, custom_wrapper: OptionalContractWrapper) -> &mut Self {
+        self.init_lpp_with_funds(custom_wrapper, 400)
+    }
+
+    pub fn init_lpp_with_funds(&mut self, custom_wrapper: OptionalContractWrapper, amount: Amount) -> &mut Self {
         let mocked_lpp = match custom_wrapper {
             Some(wrapper) => LppWrapper::with_contract_wrapper(wrapper),
             None => LppWrapper::default(),
@@ -126,7 +135,7 @@ impl TestCase {
                     &mut self.app,
                     Uint64::new(self.lease_code_id.unwrap()),
                     &self.denom,
-                    400,
+                    amount,
                 )
                 .0,
         );
