@@ -1,3 +1,5 @@
+use std::any::type_name;
+
 use cosmwasm_std::StdError;
 use thiserror::Error;
 
@@ -26,8 +28,8 @@ pub enum ContractError {
     #[error("ParseError {err:?}")]
     ParseError { err: String },
 
-    #[error("Validation error {msg:?}")]
-    ValidationError { msg: String },
+    #[error("{0}")]
+    Validation(String),
 
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },
@@ -41,6 +43,12 @@ pub enum ContractError {
 
     #[error("NoLiquidity")]
     NoLiquidity {},
+}
+
+impl ContractError {
+    pub fn validation_err<T>(str: String) -> Self {
+        Self::Validation(format!("[ {} ] {}", String::from(type_name::<T>()), str))
+    }
 }
 
 pub type ContractResult<T> = core::result::Result<T, ContractError>;
