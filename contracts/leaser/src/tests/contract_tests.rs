@@ -103,7 +103,7 @@ fn test_update_config_invalid_repay_period() {
     let msg = ExecuteMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
         liability: expected_liability,
-        repayment: expected_repaiment.clone(),
+        repayment: expected_repaiment,
     };
     execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 }
