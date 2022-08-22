@@ -1,18 +1,22 @@
-use cosmwasm_std::{QuerierWrapper, Storage, Timestamp};
+use cosmwasm_std::Timestamp;
 use finance::{
     coin::Coin,
     currency::{Currency, Nls},
 };
+use marketprice::storage::Price;
 use platform::batch::Batch;
 
 use crate::state::Config;
 
 mod dispatch;
 mod dispatcher;
+mod get_price;
 
-pub struct Dispatch<'a> {
-    storage: &'a mut dyn Storage,
-    querier: QuerierWrapper<'a>,
+pub struct GetPrice {}
+
+pub struct Dispatch {
+    last_dispatch: Timestamp,
+    price: Price,
     config: Config,
     block_time: Timestamp,
 }

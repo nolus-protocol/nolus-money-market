@@ -546,6 +546,7 @@ dependencies = [
  "cw2",
  "finance",
  "marketprice",
+ "platform",
  "schemars",
  "serde",
  "thiserror",

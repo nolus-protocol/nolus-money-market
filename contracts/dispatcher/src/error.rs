@@ -12,6 +12,9 @@ pub enum ContractError {
     #[error("{0}")]
     Platform(#[from] platform::error::Error),
 
+    #[error("{0}")]
+    Oracle(#[from] oracle::ContractError),
+
     #[error("Unauthorized")]
     Unauthorized {},
 
