@@ -78,10 +78,6 @@ where
         self.interest_by(principal, self.till())
     }
 
-    pub fn annual_interest_rate(&self) -> F {
-        self.interest
-    }
-
     ///
     /// The return.1 is the change after the payment. The actual payment is
     /// equal to the payment minus the returned change.
