@@ -1,7 +1,8 @@
 use crate::{
     coin::Coin,
+    currency::Currency,
     percent::{Percent, Units},
-    ratio::Ratio, currency::Currency,
+    ratio::Ratio,
 };
 
 use super::{Fractionable, HigherRank};
@@ -33,7 +34,10 @@ where
     {
         let p128: u128 = self.units().into();
         // TODO re-assess the design of Ratio ... and whether it could be > 1
-        let res: Units = p128.safe_mul(fraction).try_into().expect("overflow computing a fraction of permille");
+        let res: Units = p128
+            .safe_mul(fraction)
+            .try_into()
+            .expect("overflow computing a fraction of permille");
         Self::from_permille(res)
     }
 }

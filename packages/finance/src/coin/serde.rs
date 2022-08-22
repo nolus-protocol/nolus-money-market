@@ -36,8 +36,8 @@ mod test {
     use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
     use crate::{
-        currency::{Currency, Nls, Usdc},
         coin::Coin,
+        currency::{Currency, Nls, Usdc},
     };
 
     #[test]
@@ -85,7 +85,9 @@ mod test {
         {
             coin: Coin<C>,
         }
-        let coin_container = CoinContainer { coin: Coin::<Usdc>::new(10) };
+        let coin_container = CoinContainer {
+            coin: Coin::<Usdc>::new(10),
+        };
         serialize_deserialize_impl(
             coin_container,
             r#"{"coin":{"amount":"10","symbol":"uusdc"}}"#,

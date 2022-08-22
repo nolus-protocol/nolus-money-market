@@ -158,21 +158,18 @@ where
         } else {
             let loan_state = self.loan.state(now, lease)?;
 
-            loan_state.map_or(
-                Ok(StateResponse::Paid(lease_amount)),
-                |state| {
-                    Ok(StateResponse::Opened {
-                        amount: lease_amount,
-                        interest_rate: state.annual_interest,
-                        interest_rate_margin: state.annual_interest_margin,
-                        principal_due: state.principal_due,
-                        previous_margin_due: state.previous_margin_interest_due,
-                        previous_interest_due: state.previous_interest_due,
-                        current_margin_due: state.current_margin_interest_due,
-                        current_interest_due: state.current_interest_due,
-                    })
-                },
-            )
+            loan_state.map_or(Ok(StateResponse::Paid(lease_amount)), |state| {
+                Ok(StateResponse::Opened {
+                    amount: lease_amount,
+                    interest_rate: state.annual_interest,
+                    interest_rate_margin: state.annual_interest_margin,
+                    principal_due: state.principal_due,
+                    previous_margin_due: state.previous_margin_interest_due,
+                    previous_interest_due: state.previous_interest_due,
+                    current_margin_due: state.current_margin_interest_due,
+                    current_interest_due: state.current_interest_due,
+                })
+            })
         }
     }
 }
@@ -189,11 +186,11 @@ mod tests {
     use lpp::msg::{LoanResponse, OutstandingInterest, QueryLoanResponse};
     use lpp::stub::{Lpp, LppRef};
 
+    use finance::interest::InterestPeriod;
     use platform::bank::BankAccountView;
     use platform::batch::Batch;
     use platform::error::Result as PlatformResult;
     use serde::{Deserialize, Serialize};
-    use finance::interest::InterestPeriod;
 
     use crate::loan::{Loan, LoanDTO};
     use crate::msg::StateResponse;
@@ -248,16 +245,13 @@ mod tests {
             _lease: impl Into<Addr>,
             by: Timestamp,
         ) -> LppResult<lpp::msg::QueryLoanOutstandingInterestResponse<TestCurrency>> {
-            Ok(
-                self.loan.as_ref()
-                    .map(|loan| {
-                        OutstandingInterest(
-                            InterestPeriod::with_interest(loan.annual_interest_rate)
-                                .spanning(Duration::between(loan.interest_paid, by))
-                                .interest(loan.principal_due),
-                        )
-                    })
-            )
+            Ok(self.loan.as_ref().map(|loan| {
+                OutstandingInterest(
+                    InterestPeriod::with_interest(loan.annual_interest_rate)
+                        .spanning(Duration::between(loan.interest_paid, by))
+                        .interest(loan.principal_due),
+                )
+            }))
         }
 
         fn quote(&self, _amount: Coin<TestCurrency>) -> LppResult<lpp::msg::QueryQuoteResponse> {
