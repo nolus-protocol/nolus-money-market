@@ -4,8 +4,6 @@ mod factory;
 pub(crate) mod open_request;
 
 use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp};
-use serde::Serialize;
-
 use finance::{
     coin::Coin,
     currency::{Currency, SymbolOwned},
@@ -16,6 +14,7 @@ use platform::{
     bank::{BankAccount, BankAccountView},
     batch::Batch,
 };
+use serde::Serialize;
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -23,7 +22,10 @@ use crate::{
     msg::StateResponse,
 };
 
-use self::{factory::Factory, open_request::Result as OpenRequestResult};
+use self::{
+    open_request::Result as OpenRequestResult,
+    factory::Factory,
+};
 
 pub trait WithLease {
     type Output;
@@ -86,30 +88,28 @@ where
         &self.customer == addr
     }
 
-    pub(crate) fn open_loan_req(
-        self,
-        downpayment: Coin<Lpn>,
-    ) -> ContractResult<OpenRequestResult<Lpn>> {
+    pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<OpenRequestResult<Lpn>> {
         // TODO add a type parameter to this function to designate the downpayment currency
         // TODO query the market price oracle to get the price of the downpayment currency to LPN
         //  and calculate `downpayment` in LPN
         let borrow = self.liability.init_borrow_amount(downpayment);
 
-        self.loan.open_loan_req(borrow).map({
-            // Force move before closure to avoid edition warning from clippy;
-            let customer = self.customer;
-            let currency = self.currency;
+        self.loan.open_loan_req(borrow)
+            .map({
+                // Force move before closure to avoid edition warning from clippy;
+                let customer = self.customer;
+                let currency = self.currency;
 
-            |result| OpenRequestResult {
-                batch: result.batch,
-                customer,
-                annual_interest_rate: result.annual_interest_rate,
-                annual_interest_rate_margin: result.annual_interest_rate_margin,
-                currency,
-                loan_pool_id: result.loan_pool_id,
-                loan_amount: borrow,
-            }
-        })
+                |result| OpenRequestResult {
+                    batch: result.batch,
+                    customer,
+                    annual_interest_rate: result.annual_interest_rate,
+                    annual_interest_rate_margin: result.annual_interest_rate_margin,
+                    currency,
+                    loan_pool_id: result.loan_pool_id,
+                    loan_amount: borrow,
+                }
+            })
     }
 
     pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<Batch> {
@@ -162,18 +162,21 @@ where
         } else {
             let loan_state = self.loan.state(now, lease)?;
 
-            loan_state.map_or(Ok(StateResponse::Paid(lease_amount)), |state| {
-                Ok(StateResponse::Opened {
-                    amount: lease_amount,
-                    interest_rate: state.annual_interest,
-                    interest_rate_margin: state.annual_interest_margin,
-                    principal_due: state.principal_due,
-                    previous_margin_due: state.previous_margin_interest_due,
-                    previous_interest_due: state.previous_interest_due,
-                    current_margin_due: state.current_margin_interest_due,
-                    current_interest_due: state.current_interest_due,
-                })
-            })
+            loan_state.map_or(
+                Ok(StateResponse::Paid(lease_amount)),
+                |state| {
+                    Ok(StateResponse::Opened {
+                        amount: lease_amount,
+                        interest_rate: state.annual_interest,
+                        interest_rate_margin: state.annual_interest_margin,
+                        principal_due: state.principal_due,
+                        previous_margin_due: state.previous_margin_interest_due,
+                        previous_interest_due: state.previous_interest_due,
+                        current_margin_due: state.current_margin_interest_due,
+                        current_interest_due: state.current_interest_due,
+                    })
+                },
+            )
         }
     }
 }
@@ -190,11 +193,11 @@ mod tests {
     use lpp::msg::{LoanResponse, OutstandingInterest, QueryLoanResponse};
     use lpp::stub::{Lpp, LppRef};
 
-    use finance::interest::InterestPeriod;
     use platform::bank::BankAccountView;
     use platform::batch::Batch;
     use platform::error::Result as PlatformResult;
     use serde::{Deserialize, Serialize};
+    use finance::interest::InterestPeriod;
 
     use crate::loan::{Loan, LoanDTO};
     use crate::msg::StateResponse;
@@ -253,13 +256,16 @@ mod tests {
             _lease: impl Into<Addr>,
             by: Timestamp,
         ) -> LppResult<lpp::msg::QueryLoanOutstandingInterestResponse<TestCurrency>> {
-            Ok(self.loan.as_ref().map(|loan| {
-                OutstandingInterest(
-                    InterestPeriod::with_interest(loan.annual_interest_rate)
-                        .spanning(Duration::between(loan.interest_paid, by))
-                        .interest(loan.principal_due),
-                )
-            }))
+            Ok(
+                self.loan.as_ref()
+                    .map(|loan| {
+                        OutstandingInterest(
+                            InterestPeriod::with_interest(loan.annual_interest_rate)
+                                .spanning(Duration::between(loan.interest_paid, by))
+                                .interest(loan.principal_due),
+                        )
+                    })
+            )
         }
 
         fn quote(&self, _amount: Coin<TestCurrency>) -> LppResult<lpp::msg::QueryQuoteResponse> {

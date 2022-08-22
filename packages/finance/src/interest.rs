@@ -151,7 +151,7 @@ mod tests {
 
     #[test]
     fn interest() {
-        type MyCoin = Coin<Nls>;
+        type MyCoin = Coin::<Nls>;
         let whole = MyCoin::new(1001);
         let part = MyCoin::new(125);
         let r = Rational::new(part, whole);

@@ -131,8 +131,7 @@ where
         let q_msg = QueryRequest::Wasm(WasmQuery::ContractInfo {
             contract_addr: lease_addr.to_string(),
         });
-        let q_resp: ContractInfoResponse = querier
-            .query(&q_msg)
+        let q_resp: ContractInfoResponse = querier.query(&q_msg)
             .map_err(|_| ContractError::ContractId {})?;
 
         if q_resp.code_id != self.config.lease_code_id.u64() {
@@ -512,6 +511,7 @@ mod test {
         let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
             .expect("can't load LiquidityPool");
 
+
         let result = lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(0));
         assert_eq!(result, Err(ContractError::ZeroLoanAmount));
     }
@@ -523,7 +523,7 @@ mod test {
         let env = testing::mock_env();
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
-
+        
         Config::new(TheCurrency::SYMBOL.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
@@ -554,22 +554,10 @@ mod test {
             .expect("should be some response");
 
         //should not change after zero repay
-        assert_eq!(
-            loan_response_before.principal_due,
-            loan_response_after.principal_due
-        );
-        assert_eq!(
-            loan_response_before.annual_interest_rate,
-            loan_response_after.annual_interest_rate
-        );
-        assert_eq!(
-            loan_response_before.interest_paid,
-            loan_response_after.interest_paid
-        );
-        assert_eq!(
-            loan_response_before.interest_due,
-            loan_response_after.interest_due
-        );
+        assert_eq!(loan_response_before.principal_due, loan_response_after.principal_due);
+        assert_eq!(loan_response_before.annual_interest_rate, loan_response_after.annual_interest_rate);
+        assert_eq!(loan_response_before.interest_paid, loan_response_after.interest_paid);
+        assert_eq!(loan_response_before.interest_due, loan_response_after.interest_due);
     }
 
     #[test]
@@ -589,7 +577,7 @@ mod test {
 
         let mut lpp = LiquidityPool::<TheCurrency>::load(deps.as_mut().storage)
             .expect("can't load LiquidityPool");
-
+        
         lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000))
             .expect("can't open loan");
         deps.querier

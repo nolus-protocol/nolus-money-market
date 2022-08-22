@@ -1,20 +1,13 @@
 use anyhow::Error;
 use cosmwasm_std::{coins, Addr, Coin, Empty, StdError, Uint64};
 use cw_multi_test::{next_block, App, ContractWrapper, Executor};
-
 use finance::coin::Amount;
 
 use super::{
-    dispatcher_wrapper::DispatcherWrapper,
-    lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
-    leaser_wrapper::LeaserWrapper,
-    lpp_wrapper::LppWrapper,
-    mock_app,
-    oracle_wrapper::MarketOracleWrapper,
-    profit_wrapper::ProfitWrapper,
-    timealarms_wrapper::TimeAlarmsWrapper,
-    treasury_wrapper::TreasuryWrapper,
-    ADMIN,
+    dispatcher_wrapper::DispatcherWrapper, lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
+    leaser_wrapper::LeaserWrapper, lpp_wrapper::LppWrapper, mock_app,
+    oracle_wrapper::MarketOracleWrapper, profit_wrapper::ProfitWrapper,
+    timealarms_wrapper::TimeAlarmsWrapper, treasury_wrapper::TreasuryWrapper, ADMIN,
 };
 
 type OptionalContractWrapper = Option<
@@ -131,11 +124,7 @@ impl TestCase {
         self.init_lpp_with_funds(custom_wrapper, 400)
     }
 
-    pub fn init_lpp_with_funds(
-        &mut self,
-        custom_wrapper: OptionalContractWrapper,
-        amount: Amount,
-    ) -> &mut Self {
+    pub fn init_lpp_with_funds(&mut self, custom_wrapper: OptionalContractWrapper, amount: Amount) -> &mut Self {
         let mocked_lpp = match custom_wrapper {
             Some(wrapper) => LppWrapper::with_contract_wrapper(wrapper),
             None => LppWrapper::default(),

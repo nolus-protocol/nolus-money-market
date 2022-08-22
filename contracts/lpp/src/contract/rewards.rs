@@ -105,4 +105,5 @@ mod test {
         let response = try_claim_rewards(deps.as_mut(), env, info, None);
         assert_eq!(response, Err(ContractError::NoRewards {}));
     }
+
 }

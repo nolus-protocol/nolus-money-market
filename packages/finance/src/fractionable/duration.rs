@@ -1,6 +1,6 @@
 use cosmwasm_std::{Uint128, Uint256};
 
-use crate::{coin::Coin, currency::Currency, duration::Duration, ratio::Ratio};
+use crate::{coin::Coin, duration::Duration, ratio::Ratio, currency::Currency};
 
 use super::{Fractionable, HigherRank};
 
@@ -22,9 +22,7 @@ where
     {
         let d128: u128 = self.into();
         // TODO re-assess the design of Ratio ... and whether it could be > 1
-        d128.safe_mul(fraction)
-            .try_into()
-            .expect("overflow computing a fraction of duration")
+        d128.safe_mul(fraction).try_into().expect("overflow computing a fraction of duration")
     }
 }
 

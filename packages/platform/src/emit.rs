@@ -42,8 +42,8 @@ where
 
     /// Specialization of [`emit`](Self::emit) for [`Percent`]'s amount in [`Units`](finance::percent::Units).
     fn emit_percent_amount<K>(self, event_key: K, percent: Percent) -> Self
-    where
-        K: Into<String>,
+        where
+            K: Into<String>,
     {
         self.emit_to_string_value(event_key, percent.units())
     }
@@ -65,7 +65,8 @@ where
         self.emit_to_string_value("height", env.block.height)
             .emit_to_string_value(
                 "idx",
-                env.transaction
+                env
+                    .transaction
                     .as_ref()
                     .map(|transaction| transaction.index)
                     .unwrap_or_default(),

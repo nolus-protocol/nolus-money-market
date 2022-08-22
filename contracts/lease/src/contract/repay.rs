@@ -20,13 +20,7 @@ pub struct Repay<'a> {
 }
 
 impl<'a> Repay<'a> {
-    pub fn new(
-        payment: &'a [CwCoin],
-        now: Timestamp,
-        lease: Addr,
-        height: u64,
-        transaction: u32,
-    ) -> Self {
+    pub fn new(payment: &'a [CwCoin], now: Timestamp, lease: Addr, height: u64, transaction: u32) -> Self {
         Self {
             payment,
             now,

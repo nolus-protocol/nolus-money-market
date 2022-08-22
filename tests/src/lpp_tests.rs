@@ -1,4 +1,4 @@
-use cosmwasm_std::{coin, coins, Addr};
+use cosmwasm_std::{Addr, coin, coins};
 use cw_multi_test::Executor;
 
 use finance::{
@@ -7,7 +7,7 @@ use finance::{
     duration::Duration,
     fraction::Fraction,
     percent::Percent,
-    price,
+    price
 };
 use lpp::msg::{
     BalanceResponse, ExecuteMsg as ExecuteLpp, LppBalanceResponse, PriceResponse,
@@ -15,11 +15,11 @@ use lpp::msg::{
 };
 
 use crate::common::{
+    ADMIN,
+    AppExt,
     lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
     lpp_wrapper::LppWrapper,
-    mock_app,
-    test_case::TestCase,
-    AppExt, ADMIN, USER,
+    mock_app, test_case::TestCase, USER,
 };
 
 type TheCurrency = Usdc;
@@ -38,8 +38,12 @@ fn open_loan_unauthorized_contract_id() {
 
     let lease_id = LeaseWrapper::default().store(&mut test_case.app);
 
-    let (lpp, _) =
-        LppWrapper::default().instantiate(&mut test_case.app, lease_id.into(), denom, lpp_balance);
+    let (lpp, _) = LppWrapper::default().instantiate(
+        &mut test_case.app,
+        lease_id.into(),
+        denom,
+        lpp_balance,
+    );
 
     test_case.lpp_addr = Some(lpp);
 
@@ -74,8 +78,12 @@ fn open_loan_no_liquidity() {
 
     let lease_id = LeaseWrapper::default().store(&mut test_case.app);
 
-    let (lpp, _) =
-        LppWrapper::default().instantiate(&mut test_case.app, lease_id.into(), denom, balance);
+    let (lpp, _) = LppWrapper::default().instantiate(
+        &mut test_case.app,
+        lease_id.into(),
+        denom,
+        balance,
+    );
 
     test_case.lpp_addr = Some(lpp);
 
@@ -246,12 +254,22 @@ fn deposit_and_withdraw() {
 
     let balance_nlpn1: BalanceResponse = app
         .wrap()
-        .query_wasm_smart(lpp.clone(), &QueryLpp::Balance { address: lender1 })
+        .query_wasm_smart(
+            lpp.clone(),
+            &QueryLpp::Balance {
+                address: lender1,
+            },
+        )
         .unwrap();
 
     let balance_nlpn3: BalanceResponse = app
         .wrap()
-        .query_wasm_smart(lpp.clone(), &QueryLpp::Balance { address: lender3 })
+        .query_wasm_smart(
+            lpp.clone(),
+            &QueryLpp::Balance {
+                address: lender3,
+            },
+        )
         .unwrap();
 
     // check for balance consistency
@@ -1108,9 +1126,12 @@ fn test_rewards() {
     assert_eq!(balance.amount.u128(), tot_rewards1 + lender_reward1);
 
     // lender account is removed
-    let resp: Result<RewardsResponse, _> = app
-        .wrap()
-        .query_wasm_smart(lpp.clone(), &QueryLpp::Rewards { address: lender1 });
+    let resp: Result<RewardsResponse, _> = app.wrap().query_wasm_smart(
+        lpp.clone(),
+        &QueryLpp::Rewards {
+            address: lender1,
+        },
+    );
 
     assert!(resp.is_err());
 
@@ -1127,7 +1148,12 @@ fn test_rewards() {
 
     let resp: RewardsResponse = app
         .wrap()
-        .query_wasm_smart(lpp, &QueryLpp::Rewards { address: lender2 })
+        .query_wasm_smart(
+            lpp,
+            &QueryLpp::Rewards {
+                address: lender2,
+            },
+        )
         .unwrap();
 
     assert_eq!(resp.rewards, Coin::new(0));

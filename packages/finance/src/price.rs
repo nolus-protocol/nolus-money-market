@@ -252,9 +252,23 @@ mod test {
             q(133_333_333_333_333_333),
         );
 
-        lossy_add_impl(c(amount_exp + 1), q(1), c(1), q(1), c(1), q(1));
+        lossy_add_impl(
+            c(amount_exp + 1),
+            q(1),
+            c(1),
+            q(1),
+            c(1),
+            q(1),
+        );
 
-        lossy_add_impl(c(Amount::MAX), q(1), c(1), q(1), c(1), q(1));
+        lossy_add_impl(
+            c(Amount::MAX),
+            q(1),
+            c(1),
+            q(1),
+            c(1),
+            q(1),
+        );
     }
 
     #[test]

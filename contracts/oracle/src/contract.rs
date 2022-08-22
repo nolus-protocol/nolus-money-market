@@ -5,7 +5,7 @@ use cosmwasm_std::{
     StdResult, Storage, Timestamp,
 };
 use cw2::set_contract_version;
-use marketprice::storage::{Denom, DenomPair, Price};
+use marketprice::storage::{Denom, DenomPair, Price as Price};
 
 use crate::alarms::MarketAlarms;
 use crate::contract_validation::validate_contract_addr;

@@ -57,10 +57,7 @@ where
 mod test {
     use cosmwasm_std::to_vec;
 
-    use crate::{
-        coin::{Coin, CoinDTO},
-        currency::{Currency, SymbolStatic},
-    };
+    use crate::{currency::{Currency, SymbolStatic}, coin::{Coin, CoinDTO}};
 
     #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
     struct MyTestCurrency;

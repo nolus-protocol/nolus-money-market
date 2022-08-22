@@ -38,20 +38,14 @@ impl LppWrapper {
         }
     }
     #[track_caller]
-    pub fn instantiate(
-        self,
-        app: &mut App,
-        lease_code_id: Uint64,
-        denom: &str,
-        balance: u128,
-    ) -> (Addr, u64) {
+    pub fn instantiate(self, app: &mut App, lease_code_id: Uint64, denom: &str, balance: u128) -> (Addr, u64) {
         let lpp_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {
             denom: denom.to_string(),
             lease_code_id,
         };
 
-        let funds = if balance == 0 {
+        let funds = if balance==0 {
             vec![]
         } else {
             coins(balance, denom)
@@ -86,7 +80,11 @@ impl Default for LppWrapper {
     }
 }
 
-pub fn mock_lpp_query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn mock_lpp_query(
+    deps: Deps,
+    env: Env,
+    msg: QueryMsg,
+) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::LppBalance() => to_binary(&lpp::msg::LppBalanceResponse::<Usdc> {
             balance: Coin::new(1000000000),
@@ -100,7 +98,11 @@ pub fn mock_lpp_query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, Con
     Ok(res)
 }
 
-pub fn mock_lpp_quote_query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn mock_lpp_quote_query(
+    deps: Deps,
+    env: Env,
+    msg: QueryMsg,
+) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::Quote { amount: _amount } => to_binary(
             &lpp::msg::QueryQuoteResponse::QuoteInterestRate(Percent::HUNDRED),

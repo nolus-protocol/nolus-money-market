@@ -4,7 +4,8 @@ use serde::{Deserialize, Serialize};
 use crate::{fraction::Fraction, fractionable::Fractionable};
 
 // TODO review whether it may gets simpler if extend Fraction
-pub trait Ratio<U> {
+pub trait Ratio<U>
+{
     fn parts(&self) -> U;
     fn total(&self) -> U;
 }

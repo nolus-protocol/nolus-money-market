@@ -1,7 +1,7 @@
 use cosmwasm_std::{to_binary, Addr, Binary, Timestamp};
+use platform::bank::BankAccount;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
-use platform::bank::BankAccount;
 use serde::Serialize;
 
 use crate::error::ContractError;
