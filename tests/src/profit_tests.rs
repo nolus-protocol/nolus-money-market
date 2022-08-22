@@ -122,7 +122,7 @@ fn on_alarm_transfer() {
                 test_case.profit_addr.as_ref().unwrap().to_string()
             ),
             ("height", test_case.app.block_info().height.to_string()),
-            // ("idx", String::from("0")),
+            ("idx", String::from("0")),
             ("at", test_case.app.block_info().time.nanos().to_string()),
             ("profit-amount-amount", String::from("100")),
             ("profit-amount-symbol", Nls::SYMBOL.to_string())

@@ -144,7 +144,6 @@ pub fn try_dispatch(
     // let transaction_idx = env.transaction.expect("Error! No transaction index.");
 
     Ok(emitter
-        .emit_to_string_value("height", env.block.height)
         .emit_tx_info(&env)
         .emit_to_string_value("to", lpp_address)
         .emit_timestamp("at", &env.block.time)

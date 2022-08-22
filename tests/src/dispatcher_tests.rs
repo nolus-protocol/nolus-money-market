@@ -133,7 +133,7 @@ fn on_alarm() {
             ("rewards-amount-amount", String::from("3")),
             ("rewards-amount-symbol", String::from(Usdc::SYMBOL)),
             ("height", test_case.app.block_info().height.to_string()),
-            // ("idx", 0.to_string()),
+            ("idx", 0.to_string()),
             ("to", test_case.lpp_addr.as_ref().unwrap().to_string()),
             ("at", test_case.app.block_info().time.nanos().to_string()),
         ]
