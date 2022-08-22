@@ -61,7 +61,6 @@ impl Profit {
 
         Ok(batch
             .into_emitter("tr-profit")
-            .emit_to_string_value("height", env.block.height)
             .emit_tx_info(&env)
             .emit_timestamp("at", &env.block.time)
             .emit_coin("profit-amount", balance))
