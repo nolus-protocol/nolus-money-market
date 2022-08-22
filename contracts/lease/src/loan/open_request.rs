@@ -1,10 +1,8 @@
 use cosmwasm_std::Addr;
-use finance::{
-    currency::Currency,
-    percent::Percent
-};
-use platform::batch::Batch;
+use finance::{currency::Currency, percent::Percent};
+
 use lpp::stub::Lpp as LppTrait;
+use platform::batch::Batch;
 
 use crate::loan::Loan;
 
@@ -15,8 +13,7 @@ pub(crate) struct Result {
     pub loan_pool_id: Addr,
 }
 
-impl Result
-{
+impl Result {
     pub(super) fn new<Lpp, Lpn>(loan: Loan<Lpn, Lpp>, annual_interest_rate: Percent) -> Self
     where
         Lpp: LppTrait<Lpn>,

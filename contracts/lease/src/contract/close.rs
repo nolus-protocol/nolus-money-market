@@ -1,18 +1,14 @@
 use cosmwasm_std::{Addr, Timestamp};
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
-use platform::{
-    bank::BankAccount,
-    batch::Emitter
-};
+use platform::{bank::BankAccount, batch::{Emitter, Emit}};
 use serde::Serialize;
-use platform::batch::Emit;
 
+use crate::event::TYPE;
 use crate::{
     error::ContractError,
-    lease::{Lease, WithLease}
+    lease::{Lease, WithLease},
 };
-use crate::event::TYPE;
 
 pub struct Close<'a, Bank> {
     sender: &'a Addr,
@@ -51,7 +47,8 @@ where
 
         let result = lease.close(self.lease.clone(), self.account)?;
 
-        let emitter = result.into_emitter(TYPE::Close)
+        let emitter = result
+            .into_emitter(TYPE::Close)
             .emit("id", self.lease)
             .emit_timestamp("at", &self.now);
 

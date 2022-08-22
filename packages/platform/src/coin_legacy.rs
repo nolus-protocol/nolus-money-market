@@ -1,11 +1,12 @@
+use std::result::Result as StdResult;
+
 use cosmwasm_std::Coin as CosmWasmCoin;
 use finance::{
     coin::Coin,
     currency::{visit, visit_any, AnyVisitor, Currency, SingleVisitor},
 };
-use std::result::Result as StdResult;
 
-use crate::error::{Result, Error};
+use crate::error::{Error, Result};
 
 #[deprecated = "Migrate to using finance::bank::BankAccount"]
 pub fn from_cosmwasm<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
@@ -116,7 +117,10 @@ where
 mod test {
     use std::{any::type_name, marker::PhantomData};
 
-    use crate::{coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl}, error::Error};
+    use crate::{
+        coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl},
+        error::Error,
+    };
 
     use super::{Coin, CoinVisitor};
 

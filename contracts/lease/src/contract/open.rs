@@ -1,8 +1,10 @@
 use cosmwasm_std::{Addr, Coin as CwCoin, Reply};
-use platform::bank;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
-use platform::batch::{Batch, Emit, Emitter};
+use platform::{
+    bank,
+    batch::{Batch, Emit, Emitter}
+};
 
 use crate::error::ContractError;
 use crate::event::TYPE;
@@ -15,7 +17,10 @@ pub struct OpenLoanReq<'a> {
 
 impl<'a> OpenLoanReq<'a> {
     pub fn new(contract: Addr, downpayment: &'a [CwCoin]) -> Self {
-        Self { contract, downpayment }
+        Self {
+            contract,
+            downpayment,
+        }
     }
 }
 
@@ -36,11 +41,15 @@ impl<'a> WithLease for OpenLoanReq<'a> {
             .open_loan_req(downpayment_lpn)
             .map_err(Self::Error::from)?;
 
-        let emitter = result.batch
+        let emitter = result
+            .batch
             .into_emitter(TYPE::Open)
             .emit("id", self.contract)
             .emit("customer", result.customer)
-            .emit_percent_amount("air", result.annual_interest_rate + result.annual_interest_rate_margin)
+            .emit_percent_amount(
+                "air",
+                result.annual_interest_rate + result.annual_interest_rate_margin,
+            )
             .emit("currency", result.currency)
             .emit("loan-pool-id", result.loan_pool_id)
             .emit("loan-symbol", Lpn::SYMBOL)

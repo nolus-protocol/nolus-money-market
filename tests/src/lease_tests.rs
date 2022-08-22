@@ -4,21 +4,13 @@ use cosmwasm_std::{Addr, Timestamp};
 use cw_multi_test::{AppResponse, Executor};
 
 use finance::{
-    coin::Coin,
-    currency::Usdc,
-    duration::Duration,
-    interest::InterestPeriod,
-    percent::Percent,
+    coin::Coin, currency::Usdc, duration::Duration, interest::InterestPeriod, percent::Percent,
 };
 use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
 use platform::coin_legacy::to_cosmwasm;
 
-use crate::common::{
-    AppExt,
-    leaser_wrapper::LeaserWrapper,
-    test_case::TestCase,
-};
+use crate::common::{leaser_wrapper::LeaserWrapper, test_case::TestCase, AppExt};
 
 type Currency = Usdc;
 type TheCoin = Coin<Currency>;
@@ -140,7 +132,9 @@ fn expected_open_state(
     let total = quote_result.total.try_into().unwrap();
     let expected = total - downpayment - payments;
     let (overdue, due) = (
-        current_period_start.nanos().saturating_sub(last_paid.nanos()),
+        current_period_start
+            .nanos()
+            .saturating_sub(last_paid.nanos()),
         now.nanos().saturating_sub(current_period_start.nanos()),
     );
     StateResponse::Opened {
@@ -163,11 +157,7 @@ fn expected_open_state(
             quote_result.annual_interest_rate_margin,
             due,
         ),
-        current_interest_due: calculate_interest(
-            expected,
-            quote_result.annual_interest_rate,
-            due
-        ),
+        current_interest_due: calculate_interest(expected, quote_result.annual_interest_rate, due),
     }
 }
 
@@ -266,9 +256,7 @@ fn compare_state_with_manual_calculation() {
     assert_eq!(dbg!(query_result), expected_result);
 
     test_case.app.time_shift(
-        LeaserWrapper::REPAYMENT_PERIOD +
-            LeaserWrapper::REPAYMENT_PERIOD -
-            Duration::from_nanos(1),
+        LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1),
     );
 
     let query_result = state_query(&test_case, &lease_address.into_string());
@@ -300,9 +288,7 @@ fn compare_state_with_lpp_state_implicit_time() {
     assert_eq!(dbg!(query_result), expected_result);
 
     test_case.app.time_shift(
-        LeaserWrapper::REPAYMENT_PERIOD +
-            LeaserWrapper::REPAYMENT_PERIOD -
-            Duration::from_nanos(1),
+        LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1),
     );
 
     let loan_resp: lpp::msg::LoanResponse<Currency> = test_case
@@ -321,13 +307,17 @@ fn compare_state_with_lpp_state_implicit_time() {
         previous_interest_due,
         current_interest_due,
         ..
-    } = state_query(&test_case, &lease_address.into_string()) {
+    } = state_query(&test_case, &lease_address.into_string())
+    {
         (principal_due, previous_interest_due + current_interest_due)
     } else {
         unreachable!();
     };
 
-    assert_eq!(query_result, (loan_resp.principal_due, loan_resp.interest_due));
+    assert_eq!(
+        query_result,
+        (loan_resp.principal_due, loan_resp.interest_due)
+    );
 }
 
 #[test]
@@ -344,9 +334,7 @@ fn compare_state_with_lpp_state_explicit_time() {
     assert_eq!(dbg!(query_result), expected_result);
 
     test_case.app.time_shift(
-        LeaserWrapper::REPAYMENT_PERIOD +
-            LeaserWrapper::REPAYMENT_PERIOD -
-            Duration::from_nanos(1),
+        LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1),
     );
 
     let lpp::msg::OutstandingInterest::<Currency>(loan_resp) = test_case
@@ -365,7 +353,8 @@ fn compare_state_with_lpp_state_explicit_time() {
         previous_interest_due,
         current_interest_due,
         ..
-    } = state_query(&test_case, &lease_address.into_string()) {
+    } = state_query(&test_case, &lease_address.into_string())
+    {
         previous_interest_due + current_interest_due
     } else {
         unreachable!();

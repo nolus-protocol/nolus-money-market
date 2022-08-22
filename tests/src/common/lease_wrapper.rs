@@ -104,7 +104,11 @@ impl LeaseWrapper {
         result.unwrap()
     }
 
-    fn lease_instantiate_msg(denom: &str, lpp_addr: Addr, config: LeaseWrapperConfig) -> NewLeaseForm {
+    fn lease_instantiate_msg(
+        denom: &str,
+        lpp_addr: Addr,
+        config: LeaseWrapperConfig,
+    ) -> NewLeaseForm {
         NewLeaseForm {
             customer: config.customer,
             currency: denom.to_string(),

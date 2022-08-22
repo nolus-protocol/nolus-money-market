@@ -1,11 +1,8 @@
 use cosmwasm_std::Addr;
 use finance::{
-    currency::{
-        SymbolOwned,
-        Currency,
-    },
-    percent::Percent,
     coin::Coin,
+    currency::{Currency, SymbolOwned},
+    percent::Percent,
 };
 use platform::batch::Batch;
 

@@ -60,7 +60,7 @@ fn open_lease_not_in_lpn_currency() {
     let root_err = err.root_cause().downcast_ref::<ContractError>().unwrap();
     assert_eq!(
         &ContractError::UnknownCurrency {
-            symbol: lpn.to_owned()
+            symbol: ToOwned::to_owned(lpn)
         },
         root_err
     );
@@ -248,15 +248,9 @@ fn test_quote_fixed_rate() {
         3% margin_interest_rate of the leaser
     */
 
-    assert_eq!(
-        Percent::HUNDRED,
-        resp.annual_interest_rate,
-    );
+    assert_eq!(Percent::HUNDRED, resp.annual_interest_rate,);
 
-    assert_eq!(
-        Percent::from_percent(3),
-        resp.annual_interest_rate_margin,
-    );
+    assert_eq!(Percent::from_percent(3), resp.annual_interest_rate_margin,);
 }
 
 #[test]
@@ -344,16 +338,14 @@ fn open_lease_impl(currency: SymbolStatic) {
 
     let lease_exec = &res.events[2];
     assert_eq!(lease_exec.ty.as_str(), "wasm-ls-open");
-    assert!(
-        lease_exec.attributes.iter().any(
-            |attribute| attribute == ("_contract_addr", "contract2")
-        ),
-    );
-    assert!(
-        lease_exec.attributes.iter().any(
-            |attribute| attribute == ("customer", "user")
-        ),
-    );
+    assert!(lease_exec
+        .attributes
+        .iter()
+        .any(|attribute| attribute == ("_contract_addr", "contract2")),);
+    assert!(lease_exec
+        .attributes
+        .iter()
+        .any(|attribute| attribute == ("customer", "user")),);
 
     let lease_reply = &res.events[3];
     assert_eq!(lease_reply.ty.as_str(), "execute");

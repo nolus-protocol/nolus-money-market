@@ -1,8 +1,9 @@
 use cosmwasm_std::StdError;
-use finance::error::Error as FinanceError;
-use platform::error::Error as PlatformError;
-use lpp::error::ContractError as LppError;
 use thiserror::Error;
+
+use finance::error::Error as FinanceError;
+use lpp::error::ContractError as LppError;
+use platform::error::Error as PlatformError;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
