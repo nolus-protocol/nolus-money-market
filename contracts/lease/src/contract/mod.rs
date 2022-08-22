@@ -41,7 +41,7 @@ pub fn instantiate(
 
     let emitter = lease::execute(
         lease,
-        OpenLoanReq::new(env.contract.address, &info.funds),
+        OpenLoanReq::new(&info.funds, deps.storage),
         &deps.querier,
     )?;
 
@@ -49,13 +49,17 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
     // TODO swap the received loan and the downpayment to lease.currency
     let lease = LeaseDTO::load(deps.storage)?;
 
-    let batch = lease::execute(lease, OpenLoanResp::new(msg), &deps.querier)?;
+    let emitter = lease::execute(
+        lease,
+        OpenLoanResp::new(msg, deps.storage, env),
+        &deps.querier,
+    )?;
 
-    Ok(batch.into())
+    Ok(emitter.into())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]

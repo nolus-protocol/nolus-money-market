@@ -1,6 +1,6 @@
 mod repay;
 mod state;
-mod open_request;
+mod open_response;
 
 pub use state::State;
 
@@ -18,10 +18,8 @@ use lpp::{
     msg::{
         LoanResponse,
         QueryLoanResponse,
-        QueryQuoteResponse,
     },
     stub::{Lpp as LppTrait, LppRef},
-    error::ContractError as LppError,
 };
 use platform::batch::Batch;
 use serde::{Deserialize, Serialize};
@@ -33,7 +31,7 @@ use crate::error::{
 
 pub(crate) use repay::Receipt;
 
-use open_request::Result as OpenRequestResult;
+use open_response::Result as OpenResponseResult;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct LoanDTO {
@@ -132,20 +130,22 @@ where
         (dto, self.lpp)
     }
 
-    pub(crate) fn open_loan_req(mut self, amount: Coin<Lpn>) -> ContractResult<OpenRequestResult> {
-        match self.lpp.quote(amount)? {
-            QueryQuoteResponse::QuoteInterestRate(annual_interest_rate) => {
-                self.lpp.open_loan_req(amount)?;
+    pub(crate) fn open_loan_req(mut self, amount: Coin<Lpn>) -> ContractResult<Batch> {
+        self.lpp.open_loan_req(amount)?;
 
-                Ok(OpenRequestResult::new(self, annual_interest_rate))
-            }
-            QueryQuoteResponse::NoLiquidity => Err(ContractError::LppError(LppError::NoLiquidity {})),
-        }
+        Ok(self.into())
     }
 
-    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<Batch> {
-        self.lpp.open_loan_resp(resp)?;
-        Ok(self.into())
+    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<OpenResponseResult<Lpn>> {
+        let response = self.lpp.open_loan_resp(resp)?;
+
+        Ok(OpenResponseResult {
+            annual_interest_rate: response.annual_interest_rate,
+            annual_interest_rate_margin: self.annual_margin_interest,
+            borrowed: response.principal_due,
+            loan_pool_id: self.lpp.id(),
+            batch: self.lpp.into(),
+        })
     }
 
     pub(crate) fn repay(
@@ -249,10 +249,6 @@ where
 
     fn load_lpp_loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>> {
         self.lpp.loan(lease).map_err(ContractError::from)
-    }
-
-    fn annual_interest_margin(&self) -> Percent {
-        self.annual_margin_interest
     }
 
     fn repay_previous_period(
@@ -419,11 +415,7 @@ mod tests {
     use finance::fraction::Fraction;
     use finance::percent::Percent;
     use lpp::error::ContractError as LppError;
-    use lpp::msg::{
-        BalanceResponse, LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse,
-        QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
-        QueryQuoteResponse, RewardsResponse,
-    };
+    use lpp::msg::{BalanceResponse, LoanResponse, LppBalanceResponse, OpenResponse, OutstandingInterest, PriceResponse, QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryQuoteResponse, RewardsResponse};
     use lpp::stub::{Lpp, LppRef};
     use platform::bank::BankAccountView;
     use platform::batch::Batch;
@@ -466,7 +458,7 @@ mod tests {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<()> {
+        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<OpenResponse<TestCurrency>> {
             unreachable!()
         }
 

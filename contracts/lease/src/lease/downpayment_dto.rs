@@ -1,0 +1,41 @@
+use cosmwasm_std::{StdResult, Storage};
+use cw_storage_plus::Item;
+use serde::{Deserialize, Serialize};
+
+use finance::{
+    coin::{Amount, CoinDTO},
+    currency::SymbolOwned
+};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DownpaymentDTO {
+    pub(super) downpayment: CoinDTO,
+}
+
+impl<'a> DownpaymentDTO {
+    const DB_ITEM: Item<'a, DownpaymentDTO> = Item::new("downpayment");
+
+    pub(crate) fn new(downpayment: CoinDTO) -> Self {
+        Self { downpayment }
+    }
+
+    pub(crate) fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        Self::DB_ITEM.save(storage, self)
+    }
+
+    pub(crate) fn load(storage: &dyn Storage) -> StdResult<Self> {
+        Self::DB_ITEM.load(storage)
+    }
+
+    pub(crate) fn remove(storage: &mut dyn Storage) {
+        Self::DB_ITEM.remove(storage)
+    }
+
+    pub(crate) const fn amount(&self) -> Amount {
+        self.downpayment.amount()
+    }
+
+    pub(crate) const fn symbol(&self) -> &SymbolOwned {
+        self.downpayment.symbol()
+    }
+}

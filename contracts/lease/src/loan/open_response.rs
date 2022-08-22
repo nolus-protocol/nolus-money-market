@@ -1,12 +1,9 @@
 use cosmwasm_std::Addr;
 
 use finance::{
-    currency::{
-        SymbolOwned,
-        Currency,
-    },
+    currency::Currency,
     percent::Percent,
-    coin::Coin,
+    coin::Coin
 };
 use platform::batch::Batch;
 
@@ -15,10 +12,8 @@ where
     Lpn: Currency,
 {
     pub batch: Batch,
-    pub customer: Addr,
     pub annual_interest_rate: Percent,
     pub annual_interest_rate_margin: Percent,
-    pub currency: SymbolOwned,
+    pub borrowed: Coin<Lpn>,
     pub loan_pool_id: Addr,
-    pub loan_amount: Coin<Lpn>,
 }

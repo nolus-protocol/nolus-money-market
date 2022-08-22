@@ -1,14 +1,17 @@
-use std::marker::PhantomData;
+use std::{
+    marker::PhantomData,
+    result::Result as StdResult,
+};
 
-use core::result::Result as StdResult;
-use cosmwasm_std::{Addr, Api, QuerierWrapper, Reply, StdError, Timestamp};
+use cosmwasm_std::{Addr, Api, QuerierWrapper, Reply, Timestamp};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use cosmwasm_protobuf::from_reply;
 use finance::{
     coin::Coin,
     currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
 };
 use platform::batch::Batch;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
     error::ContractError,
@@ -18,6 +21,7 @@ use crate::{
         RewardsResponse,
     },
 };
+use crate::msg::OpenResponse;
 
 const REPLY_ID: u64 = 28;
 pub type Result<T> = StdResult<T, ContractError>;
@@ -30,7 +34,7 @@ where
     fn id(&self) -> Addr;
 
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()>;
-    fn open_loan_resp(&self, resp: Reply) -> Result<()>;
+    fn open_loan_resp(&self, resp: Reply) -> Result<OpenResponse<Lpn>>;
     fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()>;
 
     fn loan(&self, lease: impl Into<Addr>) -> Result<QueryLoanResponse<Lpn>>;
@@ -171,13 +175,10 @@ where
             .map_err(ContractError::from)
     }
 
-    fn open_loan_resp(&self, resp: Reply) -> Result<()> {
+    fn open_loan_resp(&self, resp: Reply) -> Result<OpenResponse<Lpn>> {
         debug_assert_eq!(REPLY_ID, resp.id);
-        resp.result
-            .into_result()
-            .map(|_| ())
-            .map_err(StdError::generic_err)
-            .map_err(ContractError::from)
+
+        from_reply(resp).map_err(Into::into)
     }
 
     fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()> {

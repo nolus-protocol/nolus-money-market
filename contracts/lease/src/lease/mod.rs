@@ -2,6 +2,8 @@ mod dto;
 pub(super) use dto::LeaseDTO;
 mod factory;
 pub(crate) mod open_request;
+mod downpayment_dto;
+pub(super) use downpayment_dto::DownpaymentDTO;
 
 use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp};
 use finance::{
@@ -88,13 +90,19 @@ where
         &self.customer == addr
     }
 
-    pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<OpenRequestResult<Lpn>> {
+    pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<Batch> {
         // TODO add a type parameter to this function to designate the downpayment currency
         // TODO query the market price oracle to get the price of the downpayment currency to LPN
         //  and calculate `downpayment` in LPN
         let borrow = self.liability.init_borrow_amount(downpayment);
 
-        self.loan.open_loan_req(borrow)
+        self.loan.open_loan_req(borrow).map_err(Into::into)
+    }
+
+    // TODO lease currency can be different than Lpn, therefore result's type parameter
+    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<OpenRequestResult<Lpn>> {
+        // use cw_utils::parse_reply_instantiate_data;
+        self.loan.open_loan_resp(resp)
             .map({
                 // Force move before closure to avoid edition warning from clippy;
                 let customer = self.customer;
@@ -107,14 +115,9 @@ where
                     annual_interest_rate_margin: result.annual_interest_rate_margin,
                     currency,
                     loan_pool_id: result.loan_pool_id,
-                    loan_amount: borrow,
+                    loan_amount: result.borrowed,
                 }
             })
-    }
-
-    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<Batch> {
-        // use cw_utils::parse_reply_instantiate_data;
-        self.loan.open_loan_resp(resp)
     }
 
     // TODO add the lease address as a field in Lease<>
@@ -190,7 +193,7 @@ mod tests {
         coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
     };
     use lpp::error::ContractError as LppError;
-    use lpp::msg::{LoanResponse, OutstandingInterest, QueryLoanResponse};
+    use lpp::msg::{LoanResponse, OpenResponse, OutstandingInterest, QueryLoanResponse};
     use lpp::stub::{Lpp, LppRef};
 
     use platform::bank::BankAccountView;
@@ -239,7 +242,7 @@ mod tests {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<()> {
+        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<OpenResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -317,7 +320,7 @@ mod tests {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<()> {
+        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<OpenResponse<TestCurrency>> {
             unreachable!()
         }
 

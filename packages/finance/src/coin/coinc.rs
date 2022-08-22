@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     currency::{Currency, SymbolOwned},
     error::Error,
+    coin::Amount
 };
 
 use super::Coin;
@@ -16,6 +17,16 @@ use super::Coin;
 pub struct CoinDTO {
     amount: u128,
     symbol: SymbolOwned,
+}
+
+impl CoinDTO {
+    pub const fn amount(&self) -> Amount {
+        self.amount
+    }
+
+    pub const fn symbol(&self) -> &SymbolOwned {
+        &self.symbol
+    }
 }
 
 impl<C> TryFrom<CoinDTO> for Coin<C>
