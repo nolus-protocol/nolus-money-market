@@ -65,6 +65,7 @@ where
         self.emit_to_string_value("height", env.block.height)
             .emit_to_string_value(
                 "idx",
+                // TODO remove when issue is fixed (https://github.com/CosmWasm/wasmd/issues/932)
                 env.transaction
                     .as_ref()
                     .map(|transaction| transaction.index)
