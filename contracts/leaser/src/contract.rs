@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 
-use platform::cosmwasm_protobuf::from_instantiate_reply;
+use platform::reply::from_instantiate;
 
 use crate::{
     cmd::Borrow,
@@ -81,7 +81,7 @@ fn on_reply(
     storage: &mut dyn Storage,
     msg: Reply,
 ) -> Result<Response, ContractError> {
-    let contract_addr_raw = from_instantiate_reply::<()>(msg.clone())
+    let contract_addr_raw = from_instantiate::<()>(msg.clone())
         .map(|r| r.address)
         .map_err(|err| ContractError::ParseError {
             err: err.to_string(),

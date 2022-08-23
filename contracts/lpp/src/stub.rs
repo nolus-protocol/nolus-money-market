@@ -6,12 +6,14 @@ use std::{
 use cosmwasm_std::{Addr, Api, QuerierWrapper, Reply, Timestamp};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use platform::cosmwasm_protobuf::from_execute_reply;
+use platform::{
+    reply::from_execute,
+    batch::Batch
+};
 use finance::{
     coin::Coin,
     currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
 };
-use platform::batch::Batch;
 
 use crate::{
     error::ContractError,
@@ -177,7 +179,13 @@ where
     fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>> {
         debug_assert_eq!(REPLY_ID, resp.id);
 
-        from_execute_reply(resp).map_err(Into::into)
+        from_execute(resp).map_err(Into::into).and_then(
+            |maybe_data| maybe_data.ok_or_else(
+                || ContractError::CustomError {
+                    val: "No data passed as response!".into(),
+                },
+            ),
+        )
     }
 
     fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()> {

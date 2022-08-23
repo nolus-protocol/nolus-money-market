@@ -1,7 +1,7 @@
 mod dto;
 pub(super) use dto::LeaseDTO;
 mod factory;
-pub(crate) mod open_request;
+pub(crate) mod open;
 mod downpayment_dto;
 pub(super) use downpayment_dto::DownpaymentDTO;
 
@@ -25,7 +25,7 @@ use crate::{
 };
 
 use self::{
-    open_request::Result as OpenRequestResult,
+    open::Result as OpenResult,
     factory::Factory,
 };
 
@@ -100,15 +100,14 @@ where
     }
 
     // TODO lease currency can be different than Lpn, therefore result's type parameter
-    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<OpenRequestResult<Lpn>> {
-        // use cw_utils::parse_reply_instantiate_data;
+    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<OpenResult<Lpn>> {
         self.loan.open_loan_resp(resp)
             .map({
                 // Force move before closure to avoid edition warning from clippy;
                 let customer = self.customer;
                 let currency = self.currency;
 
-                |result| OpenRequestResult {
+                |result| OpenResult {
                     batch: result.batch,
                     customer,
                     annual_interest_rate: result.annual_interest_rate,
