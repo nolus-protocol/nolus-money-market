@@ -2,13 +2,13 @@
 //!
 //! Here are defined wrappers for deserializing such structures.
 
-use cosmwasm_std::{Binary, from_binary, Reply, StdError, StdResult};
+use cosmwasm_std::{Addr, Api, Binary, from_binary, Reply, StdError, StdResult};
 use serde::de::DeserializeOwned;
 use prost::Message;
 use serde::Deserialize;
 
 pub struct InstantiateResponse<T> {
-    pub address: String,
+    pub address: Addr,
     pub data: Option<T>,
 }
 
@@ -43,7 +43,7 @@ where
     (!data.is_empty()).then(|| from_binary(&Binary::from(data))).transpose()
 }
 
-pub fn from_instantiate<T>(reply: Reply) -> StdResult<InstantiateResponse<T>>
+pub fn from_instantiate<T>(api: &dyn Api, reply: Reply) -> StdResult<InstantiateResponse<T>>
 where
     T: DeserializeOwned,
 {
@@ -58,8 +58,11 @@ where
     let response = decode::<ReplyData>(reply)?;
 
     Ok(InstantiateResponse {
-        address: String::from_utf8(response.address)
-            .map_err(|_| StdError::generic_err("Address field contains invalid UTF-8 data!"))?,
+        address: api.addr_validate(&String::from_utf8(response.address)
+            .map_err(|_| StdError::generic_err(
+                "Address field contains invalid UTF-8 data!",
+            ))?
+        )?,
         data: maybe_from_binary(response.data)?,
     })
 }

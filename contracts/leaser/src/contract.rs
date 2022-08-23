@@ -81,13 +81,11 @@ fn on_reply(
     storage: &mut dyn Storage,
     msg: Reply,
 ) -> Result<Response, ContractError> {
-    let contract_addr_raw = from_instantiate::<()>(msg.clone())
+    let contract_addr = from_instantiate::<()>(api, msg.clone())
         .map(|r| r.address)
         .map_err(|err| ContractError::ParseError {
             err: err.to_string(),
         })?;
-
-    let contract_addr = api.addr_validate(&contract_addr_raw)?;
 
     Loans::save(storage, msg.id, contract_addr.clone())?;
     Ok(Response::new().add_attribute("lease_address", contract_addr))
