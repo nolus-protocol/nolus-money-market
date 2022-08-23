@@ -39,8 +39,6 @@ impl<'a> WithLease for OpenLoanReq<'a> {
         // TODO 'receive' the downpayment from the bank using any currency it might be in
         let downpayment_lpn = bank::received::<Lpn>(self.downpayment)?;
 
-        DownpaymentDTO::new(CoinDTO::from(downpayment_lpn));
-
         Ok(OpenLoanReqResult {
             batch: lease.open_loan_req(downpayment_lpn)?,
             downpayment: DownpaymentDTO::new(downpayment_lpn.into()),
