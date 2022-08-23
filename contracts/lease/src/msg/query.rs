@@ -1,4 +1,4 @@
-use finance::{coin::Coin, percent::Percent, currency::Currency};
+use finance::{coin::Coin, currency::Currency, percent::Percent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

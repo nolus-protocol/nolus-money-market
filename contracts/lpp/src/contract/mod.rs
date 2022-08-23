@@ -239,5 +239,3 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 
     Ok(res)
 }
-
-

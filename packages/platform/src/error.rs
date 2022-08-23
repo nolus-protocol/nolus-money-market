@@ -5,7 +5,6 @@ use finance::currency::Currency;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
-
     #[error("Found currency {0} expecting {1}")]
     UnexpectedCurrency(String, String),
 
@@ -20,7 +19,6 @@ pub enum Error {
 }
 
 impl Error {
-
     pub fn no_funds<C>() -> Self
     where
         C: Currency,

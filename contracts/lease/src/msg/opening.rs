@@ -1,4 +1,4 @@
-use finance::{liability::Liability, percent::Percent, currency::SymbolOwned};
+use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 

@@ -1,7 +1,7 @@
 use cosmwasm_std::{Coin as CwCoin, Reply};
-use platform::bank;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
+use platform::bank;
 use platform::batch::{Batch, Emitter};
 
 use crate::error::ContractError;

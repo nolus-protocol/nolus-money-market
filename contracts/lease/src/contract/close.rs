@@ -1,10 +1,7 @@
 use cosmwasm_std::{Addr, Timestamp};
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
-use platform::{
-    bank::BankAccount,
-    batch::Emitter
-};
+use platform::{bank::BankAccount, batch::Emitter};
 use serde::Serialize;
 
 use crate::error::ContractError;

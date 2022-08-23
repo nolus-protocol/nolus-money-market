@@ -203,16 +203,14 @@ where
         Ok(receipt)
     }
 
-    pub(crate) fn state(
-        &self,
-        now: Timestamp,
-        lease: Addr,
-    ) -> ContractResult<Option<State<Lpn>>> {
+    pub(crate) fn state(&self, now: Timestamp, lease: Addr) -> ContractResult<Option<State<Lpn>>> {
         self.debug_check_start_due_before(now, "in the past of");
 
         let loan_resp = self.load_lpp_loan(lease.clone())?;
 
-        loan_resp.map(|loan_state| self.merge_state_with(lease, loan_state, now)).transpose()
+        loan_resp
+            .map(|loan_state| self.merge_state_with(lease, loan_state, now))
+            .transpose()
     }
 
     fn load_loan_interest_due(
@@ -320,7 +318,12 @@ where
             .spanning(self.interest_due_period);
     }
 
-    fn merge_state_with(&self, lease: Addr, loan_state: LoanResponse<Lpn>, now: Timestamp) -> ContractResult<State<Lpn>> {
+    fn merge_state_with(
+        &self,
+        lease: Addr,
+        loan_state: LoanResponse<Lpn>,
+        now: Timestamp,
+    ) -> ContractResult<State<Lpn>> {
         let principal_due = loan_state.principal_due;
 
         let margin_interest_overdue_period = {
@@ -333,14 +336,16 @@ where
             period
         };
 
-        let margin_interest_due_period = self
-            .current_period
-            .spanning(Duration::between(margin_interest_overdue_period.till(), now));
+        let margin_interest_due_period = self.current_period.spanning(Duration::between(
+            margin_interest_overdue_period.till(),
+            now,
+        ));
 
         let margin_interest_overdue = margin_interest_overdue_period.interest(principal_due);
         let margin_interest_due = margin_interest_due_period.interest(principal_due);
 
-        let loan_interest_overdue = self.load_loan_interest_due(lease, margin_interest_overdue_period.till())?;
+        let loan_interest_overdue =
+            self.load_loan_interest_due(lease, margin_interest_overdue_period.till())?;
 
         Ok(State {
             annual_interest: loan_state.annual_interest_rate,
@@ -393,6 +398,7 @@ mod tests {
     use finance::currency::{Currency, Nls, Usdc};
     use finance::duration::Duration;
     use finance::fraction::Fraction;
+    use finance::interest::InterestPeriod;
     use finance::percent::Percent;
     use lpp::error::ContractError as LppError;
     use lpp::msg::{
@@ -405,7 +411,6 @@ mod tests {
     use platform::batch::Batch;
     use platform::error::Result as PlatformResult;
     use serde::{Deserialize, Serialize};
-    use finance::interest::InterestPeriod;
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(500); // 50%
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
@@ -455,16 +460,13 @@ mod tests {
             _lease: impl Into<Addr>,
             by: Timestamp,
         ) -> LppResult<QueryLoanOutstandingInterestResponse<TestCurrency>> {
-            Ok(self
-                .loan
-                .as_ref()
-                .map(|loan| OutstandingInterest(
-                    interest(
-                        Duration::between(loan.interest_paid, by),
-                        loan.principal_due,
-                        loan.annual_interest_rate,
-                    ),
-                )))
+            Ok(self.loan.as_ref().map(|loan| {
+                OutstandingInterest(interest(
+                    Duration::between(loan.interest_paid, by),
+                    loan.principal_due,
+                    loan.annual_interest_rate,
+                ))
+            }))
         }
 
         fn quote(&self, _amount: Coin<TestCurrency>) -> LppResult<QueryQuoteResponse> {
@@ -636,7 +638,10 @@ mod tests {
         {
             let mut exp_receipt = Receipt::default();
             exp_receipt.pay_previous_interest(repay_coin);
-            assert_eq!(exp_receipt, loan.repay(repay_coin, end_of_due_period, addr_obj).unwrap());
+            assert_eq!(
+                exp_receipt,
+                loan.repay(repay_coin, end_of_due_period, addr_obj).unwrap()
+            );
         }
     }
 
@@ -800,13 +805,24 @@ mod tests {
         },);
     }
 
-    fn interest<Lpn>(period: Duration, principal_due: Coin<Lpn>, rate: Percent) -> Coin<Lpn> where Lpn: Currency, {
+    fn interest<Lpn>(period: Duration, principal_due: Coin<Lpn>, rate: Percent) -> Coin<Lpn>
+    where
+        Lpn: Currency,
+    {
         InterestPeriod::with_interest(rate)
             .spanning(period)
             .interest(principal_due)
     }
 
-    fn interests<Lpn>(paid: Timestamp, now: Timestamp, principal_due: Coin<Lpn>, rate: Percent) -> (Coin<Lpn>, Coin<Lpn>) where Lpn: Currency, {
+    fn interests<Lpn>(
+        paid: Timestamp,
+        now: Timestamp,
+        principal_due: Coin<Lpn>,
+        rate: Percent,
+    ) -> (Coin<Lpn>, Coin<Lpn>)
+    where
+        Lpn: Currency,
+    {
         (
             interest(
                 if now < LEASE_START + Duration::YEAR {
@@ -832,7 +848,14 @@ mod tests {
         )
     }
 
-    fn margin_interests<Lpn>(paid: Timestamp, now: Timestamp, principal_due: Coin<Lpn>) -> (Coin<Lpn>, Coin<Lpn>) where Lpn: Currency, {
+    fn margin_interests<Lpn>(
+        paid: Timestamp,
+        now: Timestamp,
+        principal_due: Coin<Lpn>,
+    ) -> (Coin<Lpn>, Coin<Lpn>)
+    where
+        Lpn: Currency,
+    {
         interests(paid, now, principal_due, MARGIN_INTEREST_RATE)
     }
 
@@ -848,17 +871,11 @@ mod tests {
             interest_paid: LEASE_START,
         };
 
-        let loan = create_loan(
-            "",
-            Some(loan_resp.clone()),
-        );
+        let loan = create_loan("", Some(loan_resp.clone()));
         let now = LEASE_START + period;
 
-        let (expected_margin_overdue, expected_margin_due) = margin_interests(
-            loan_resp.interest_paid,
-            now,
-            principal_due,
-        );
+        let (expected_margin_overdue, expected_margin_due) =
+            margin_interests(loan_resp.interest_paid, now, principal_due);
 
         let (expected_interest_overdue, expected_interest_due) = interests(
             loan_resp.interest_paid,
@@ -867,33 +884,27 @@ mod tests {
             loan_resp.annual_interest_rate,
         );
 
-        let res = loan.merge_state_with(
-            Addr::unchecked(String::new()),
-            loan_resp,
-            now,
-        ).unwrap();
+        let res = loan
+            .merge_state_with(Addr::unchecked(String::new()), loan_resp, now)
+            .unwrap();
 
         assert_eq!(
-            res.previous_margin_interest_due,
-            expected_margin_overdue,
+            res.previous_margin_interest_due, expected_margin_overdue,
             "Got different margin overdue than expected!",
         );
 
         assert_eq!(
-            res.current_margin_interest_due,
-            expected_margin_due,
+            res.current_margin_interest_due, expected_margin_due,
             "Got different margin due than expected!",
         );
 
         assert_eq!(
-            res.previous_interest_due,
-            expected_interest_overdue,
+            res.previous_interest_due, expected_interest_overdue,
             "Got different interest overdue than expected!",
         );
 
         assert_eq!(
-            res.current_interest_due,
-            expected_interest_due,
+            res.current_interest_due, expected_interest_due,
             "Got different interest due than expected!",
         );
     }

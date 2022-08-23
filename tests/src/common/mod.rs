@@ -1,8 +1,12 @@
 use cosmwasm_std::{
-    coins, testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin, Deps, Env, StdResult, Timestamp,
+    coins, testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin, Deps, Env, StdResult,
+    Timestamp,
 };
 use cw_multi_test::{App, AppBuilder};
-use finance::{currency::{Currency, Nls}, duration::Duration};
+use finance::{
+    currency::{Currency, Nls},
+    duration::Duration,
+};
 use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
@@ -68,5 +72,5 @@ impl AppExt for App {
             block.time = Timestamp::from_nanos(ct + t.nanos());
             block.height += 1;
         })
-    } 
+    }
 }
