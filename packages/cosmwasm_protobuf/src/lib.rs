@@ -2,7 +2,7 @@
 //!
 //! Here are defined wrappers for deserializing such structures.
 
-use cosmwasm_std::{StdResult, from_binary, Reply, StdError, Addr};
+use cosmwasm_std::{StdResult, from_binary, Reply, StdError};
 use serde::de::DeserializeOwned;
 
 pub fn from_instantiate_reply<T>(reply: Reply) -> StdResult<(String, T)>
