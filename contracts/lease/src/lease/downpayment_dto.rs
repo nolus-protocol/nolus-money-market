@@ -8,7 +8,7 @@ use finance::{
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub(crate) struct DownpaymentDTO {
+pub struct DownpaymentDTO {
     pub(super) downpayment: CoinDTO,
 }
 

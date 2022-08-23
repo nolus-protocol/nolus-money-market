@@ -1,4 +1,4 @@
-use cosmwasm_std::{Coin as CwCoin, Env, Reply, Storage};
+use cosmwasm_std::{Coin as CwCoin, Env, Reply};
 
 use finance::{
     coin::CoinDTO,
@@ -18,17 +18,16 @@ use crate::{
 
 pub struct OpenLoanReq<'a> {
     downpayment: &'a [CwCoin],
-    storage: &'a mut dyn Storage,
 }
 
 impl<'a> OpenLoanReq<'a> {
-    pub fn new(downpayment: &'a [CwCoin], storage: &'a mut dyn Storage) -> Self {
-        Self { downpayment, storage }
+    pub fn new(downpayment: &'a [CwCoin]) -> Self {
+        Self { downpayment }
     }
 }
 
 impl<'a> WithLease for OpenLoanReq<'a> {
-    type Output = Batch;
+    type Output = OpenLoanReqResult;
 
     type Error = ContractError;
 
@@ -40,11 +39,12 @@ impl<'a> WithLease for OpenLoanReq<'a> {
         // TODO 'receive' the downpayment from the bank using any currency it might be in
         let downpayment_lpn = bank::received::<Lpn>(self.downpayment)?;
 
-        DownpaymentDTO::new(CoinDTO::from(downpayment_lpn)).store(self.storage)?;
+        DownpaymentDTO::new(CoinDTO::from(downpayment_lpn));
 
-        lease
-            .open_loan_req(downpayment_lpn)
-            .map_err(Self::Error::from)
+        Ok(OpenLoanReqResult {
+            batch: lease.open_loan_req(downpayment_lpn)?,
+            downpayment: DownpaymentDTO::new(downpayment_lpn.into()),
+        })
     }
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
@@ -52,19 +52,24 @@ impl<'a> WithLease for OpenLoanReq<'a> {
     }
 }
 
-pub struct OpenLoanResp<'a> {
+pub struct OpenLoanReqResult {
+    pub(super) batch: Batch,
+    pub(super) downpayment: DownpaymentDTO,
+}
+
+pub struct OpenLoanResp {
     resp: Reply,
-    storage: &'a mut dyn Storage,
+    downpayment: DownpaymentDTO,
     env: Env,
 }
 
-impl<'a> OpenLoanResp<'a> {
-    pub fn new(resp: Reply, storage: &'a mut dyn Storage, env: Env) -> Self {
-        Self { resp, storage, env }
+impl OpenLoanResp {
+    pub fn new(resp: Reply, downpayment: DownpaymentDTO, env: Env) -> Self {
+        Self { resp, downpayment, env }
     }
 }
 
-impl<'a> WithLease for OpenLoanResp<'a> {
+impl<'a> WithLease for OpenLoanResp {
     type Output = Emitter;
 
     type Error = ContractError;
@@ -76,8 +81,6 @@ impl<'a> WithLease for OpenLoanResp<'a> {
     {
         let result = lease.open_loan_resp(self.resp)?;
 
-        let downpayment = DownpaymentDTO::remove(self.storage)?;
-
         Ok(result.batch
             .into_emitter(TYPE::Open)
             .emit_tx_info(&self.env)
@@ -87,8 +90,8 @@ impl<'a> WithLease for OpenLoanResp<'a> {
             .emit("currency", result.currency)
             .emit("loan-pool-id", result.loan_pool_id)
             .emit_coin("loan", result.loan_amount)
-            .emit("downpayment-symbol", downpayment.symbol())
-            .emit_to_string_value("downpayment-amount", downpayment.amount()))
+            .emit("downpayment-symbol", self.downpayment.symbol())
+            .emit_to_string_value("downpayment-amount", self.downpayment.amount()))
     }
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {

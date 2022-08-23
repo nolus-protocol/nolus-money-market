@@ -11,9 +11,10 @@ use platform::{
     bank::BankStub,
     batch::Emitter,
 };
+use crate::contract::open::OpenLoanReqResult;
 
 use crate::error::ContractResult;
-use crate::lease::{self, LeaseDTO};
+use crate::lease::{self, DownpaymentDTO, LeaseDTO};
 use crate::msg::{ExecuteMsg, NewLeaseForm, StateQuery};
 
 use self::open::{OpenLoanReq, OpenLoanResp};
@@ -37,13 +38,18 @@ pub fn instantiate(
     let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
     lease.store(deps.storage)?;
 
-    let emitter = lease::execute(
+    let OpenLoanReqResult {
+        batch,
+        downpayment,
+    } = lease::execute(
         lease,
-        OpenLoanReq::new(&info.funds, deps.storage),
+        OpenLoanReq::new(&info.funds),
         &deps.querier,
     )?;
 
-    Ok(emitter.into())
+    downpayment.store(deps.storage)?;
+
+    Ok(batch.into())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -51,9 +57,11 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
     // TODO swap the received loan and the downpayment to lease.currency
     let lease = LeaseDTO::load(deps.storage)?;
 
+    let downpayment = DownpaymentDTO::remove(deps.storage)?;
+
     let emitter = lease::execute(
         lease,
-        OpenLoanResp::new(msg, deps.storage, env),
+        OpenLoanResp::new(msg, downpayment, env),
         &deps.querier,
     )?;
 
