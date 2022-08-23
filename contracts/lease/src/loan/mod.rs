@@ -1,6 +1,6 @@
 mod repay;
 mod state;
-mod open_response;
+mod open;
 
 pub use state::State;
 
@@ -31,7 +31,7 @@ use crate::error::{
 
 pub(crate) use repay::Receipt;
 
-use open_response::Result as OpenResponseResult;
+use open::Result as OpenResult;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct LoanDTO {
@@ -136,10 +136,10 @@ where
         Ok(self.into())
     }
 
-    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<OpenResponseResult<Lpn>> {
+    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<OpenResult<Lpn>> {
         let response = self.lpp.open_loan_resp(resp)?;
 
-        Ok(OpenResponseResult {
+        Ok(OpenResult {
             annual_interest_rate: response.annual_interest_rate,
             annual_interest_rate_margin: self.annual_margin_interest,
             borrowed: response.principal_due,
