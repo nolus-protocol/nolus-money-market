@@ -34,18 +34,20 @@ where
     let mut bank = BankStub::my_account(&env, &deps.querier);
     bank.send(amount, &lease_addr);
 
+    let loan_response = LoanResponse {
+        principal_due: amount,
+        interest_due: Coin::new(0),
+        annual_interest_rate,
+        interest_paid: env.block.time,
+    };
+
     let batch: Batch = bank.into();
 
     let mut response: Response = batch.into();
 
     response = response.add_attribute("method", "try_open_loan");
 
-    response = response.set_data(to_binary(&LoanResponse {
-        principal_due: amount,
-        interest_due: Coin::new(0),
-        annual_interest_rate,
-        interest_paid: env.block.time,
-    })?);
+    response = response.set_data(to_binary(&loan_response)?);
 
     Ok(response)
 }

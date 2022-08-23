@@ -6,7 +6,12 @@ use cosmwasm_std::{from_binary, Reply, StdError, StdResult};
 use serde::de::DeserializeOwned;
 use prost::Message;
 
-pub fn from_instantiate_reply<T>(reply: Reply) -> StdResult<(String, T)>
+pub struct InstantiateResponse<T> {
+    pub address: String,
+    pub data: Option<T>,
+}
+
+pub fn from_instantiate_reply<T>(reply: Reply) -> StdResult<InstantiateResponse<T>>
 where
     T: DeserializeOwned,
 {
@@ -27,11 +32,11 @@ where
             .as_slice(),
     ).map_err(|_| StdError::generic_err("Data is malformed or doesn't comply with used protobuf format!"))?;
 
-    Ok((
-        String::from_utf8(response.address)
+    Ok(InstantiateResponse {
+        address: String::from_utf8(response.address)
             .map_err(|_| StdError::generic_err("Address field contains invalid UTF-8 data!"))?,
-        from_binary(&response.data.into())?,
-    ))
+        data: (!response.data.is_empty()).then(|| from_binary(&response.data.into())).transpose()?,
+    })
 }
 
 pub fn from_execute_reply<T>(reply: Reply) -> StdResult<T>
