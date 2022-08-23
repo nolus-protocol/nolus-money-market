@@ -76,9 +76,7 @@ impl<'a> WithLease for OpenLoanResp<'a> {
     {
         let result = lease.open_loan_resp(self.resp)?;
 
-        let downpayment = DownpaymentDTO::load(self.storage)?;
-
-        DownpaymentDTO::remove(self.storage);
+        let downpayment = DownpaymentDTO::remove(self.storage)?;
 
         Ok(result.batch
             .into_emitter(TYPE::Open)

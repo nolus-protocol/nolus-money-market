@@ -8,7 +8,7 @@ use finance::{
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct DownpaymentDTO {
+pub(crate) struct DownpaymentDTO {
     pub(super) downpayment: CoinDTO,
 }
 
@@ -23,12 +23,12 @@ impl<'a> DownpaymentDTO {
         Self::DB_ITEM.save(storage, self)
     }
 
-    pub(crate) fn load(storage: &dyn Storage) -> StdResult<Self> {
-        Self::DB_ITEM.load(storage)
-    }
+    pub(crate) fn remove(storage: &mut dyn Storage) -> StdResult<Self> {
+        let item = Self::DB_ITEM.load(storage)?;
 
-    pub(crate) fn remove(storage: &mut dyn Storage) {
-        Self::DB_ITEM.remove(storage)
+        Self::DB_ITEM.remove(storage);
+
+        Ok(item)
     }
 
     pub(crate) const fn amount(&self) -> Amount {
