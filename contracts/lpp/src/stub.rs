@@ -6,7 +6,7 @@ use std::{
 use cosmwasm_std::{Addr, Api, QuerierWrapper, Reply, Timestamp};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use cosmwasm_protobuf::from_reply;
+use cosmwasm_protobuf::from_execute_reply;
 use finance::{
     coin::Coin,
     currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
@@ -177,7 +177,7 @@ where
     fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>> {
         debug_assert_eq!(REPLY_ID, resp.id);
 
-        from_reply(resp).map_err(Into::into)
+        from_execute_reply(resp).map_err(Into::into)
     }
 
     fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()> {
