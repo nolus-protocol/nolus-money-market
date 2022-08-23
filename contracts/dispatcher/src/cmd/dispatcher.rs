@@ -21,7 +21,7 @@ pub struct Dispatcher<Lpn, Lpp> {
     block_time: Timestamp,
 }
 
-impl<'a, Lpn, Lpp> Dispatcher<Lpn, Lpp>
+impl<Lpn, Lpp> Dispatcher<Lpn, Lpp>
 where
     Lpp: LppTrait<Lpn>,
     Lpn: Currency,

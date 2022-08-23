@@ -66,7 +66,7 @@ impl OpenLoanResp {
     }
 }
 
-impl<'a> WithLease for OpenLoanResp {
+impl WithLease for OpenLoanResp {
     type Output = Emitter;
 
     type Error = ContractError;
