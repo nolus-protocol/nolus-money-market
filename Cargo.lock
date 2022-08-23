@@ -119,15 +119,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cosmwasm_protobuf"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-std",
- "prost 0.11.0",
- "serde",
-]
-
-[[package]]
 name = "cpufeatures"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -512,7 +503,6 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
- "cosmwasm_protobuf",
  "cw-storage-plus",
  "cw2",
  "finance",
@@ -587,6 +577,7 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-std",
  "finance",
+ "prost 0.11.0",
  "serde",
  "thiserror",
 ]

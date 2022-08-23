@@ -2,14 +2,15 @@
 //!
 //! Here are defined wrappers for deserializing such structures.
 
-use cosmwasm_std::{StdResult, from_binary, Reply, StdError};
+use cosmwasm_std::{from_binary, Reply, StdError, StdResult};
 use serde::de::DeserializeOwned;
+use prost::Message;
 
 pub fn from_instantiate_reply<T>(reply: Reply) -> StdResult<(String, T)>
 where
     T: DeserializeOwned,
 {
-    #[derive(prost::Message)]
+    #[derive(Message)]
     struct ReplyData {
         #[prost(bytes, tag = "1")]
         pub address: Vec<u8>,
@@ -17,7 +18,7 @@ where
         pub data: Vec<u8>,
     }
 
-    let response = <ReplyData as prost::Message>::decode(
+    let response = <ReplyData as Message>::decode(
         reply.result.into_result()
             .map_err(StdError::generic_err)?
             .data

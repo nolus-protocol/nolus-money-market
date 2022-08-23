@@ -6,7 +6,7 @@ use std::{
 use cosmwasm_std::{Addr, Api, QuerierWrapper, Reply, Timestamp};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use cosmwasm_protobuf::from_execute_reply;
+use platform::cosmwasm_protobuf::from_execute_reply;
 use finance::{
     coin::Coin,
     currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
