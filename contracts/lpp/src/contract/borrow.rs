@@ -35,18 +35,19 @@ where
     bank.send(amount, &lease_addr);
 
     let batch: Batch = bank.into();
-    let mut batch: Response = batch.into();
 
-    batch = batch.add_attribute("method", "try_open_loan");
+    let mut response: Response = batch.into();
 
-    batch = batch.set_data(to_binary(&LoanResponse {
+    response = response.add_attribute("method", "try_open_loan");
+
+    response = response.set_data(to_binary(&LoanResponse {
         principal_due: amount,
         interest_due: Coin::new(0),
         annual_interest_rate,
         interest_paid: env.block.time,
     })?);
 
-    Ok(batch)
+    Ok(response)
 }
 
 pub fn try_repay_loan<LPN>(
