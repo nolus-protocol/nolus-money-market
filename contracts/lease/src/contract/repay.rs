@@ -1,32 +1,37 @@
-use cosmwasm_std::{Addr, Coin as CwCoin, Timestamp};
+use cosmwasm_std::{Addr, Coin as CwCoin, Env, Timestamp};
+use serde::Serialize;
+
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
 use platform::{
     bank,
     batch::{Emit, Emitter},
 };
-use serde::Serialize;
 
-use crate::event::TYPE;
-use crate::lease::{Lease, WithLease};
-use crate::{error::ContractError, lease::LeaseDTO};
+use crate::{
+    lease::{
+        Lease,
+        WithLease,
+        LeaseDTO
+    },
+    event::TYPE,
+    error::ContractError,
+};
 
 pub struct Repay<'a> {
     payment: &'a [CwCoin],
     now: Timestamp,
     lease: Addr,
-    height: u64,
-    transaction: u32,
+    env: &'a Env,
 }
 
 impl<'a> Repay<'a> {
-    pub fn new(payment: &'a [CwCoin], now: Timestamp, lease: Addr, height: u64, transaction: u32) -> Self {
+    pub fn new(payment: &'a [CwCoin], now: Timestamp, lease: Addr, env: &'a Env) -> Self {
         Self {
             payment,
             now,
             lease,
-            height,
-            transaction,
+            env,
         }
     }
 }
@@ -55,8 +60,7 @@ impl<'a> WithLease for Repay<'a> {
         let emitter = lpp
             .into()
             .into_emitter(TYPE::Repay)
-            .emit_to_string_value("height", self.height)
-            .emit_to_string_value("idx", self.transaction)
+            .emit_tx_info(self.env)
             .emit("to", self.lease)
             .emit("payment-symbol", Lpn::SYMBOL)
             .emit_coin_amount("payment-amount", payment)
