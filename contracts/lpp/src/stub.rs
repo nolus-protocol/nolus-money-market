@@ -1,21 +1,26 @@
-use std::marker::PhantomData;
+use std::{
+    marker::PhantomData,
+    result::Result as StdResult,
+};
 
-use core::result::Result as StdResult;
-use cosmwasm_std::{Addr, Api, QuerierWrapper, Reply, StdError, Timestamp};
+use cosmwasm_std::{Addr, Api, QuerierWrapper, Reply, Timestamp};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use platform::{
+    reply::from_execute,
+    batch::Batch
+};
 use finance::{
     coin::Coin,
     currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
 };
-use platform::batch::Batch;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
     error::ContractError,
     msg::{
         BalanceResponse, ExecuteMsg, LppBalanceResponse, PriceResponse, QueryConfigResponse,
         QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg, QueryQuoteResponse,
-        RewardsResponse,
+        RewardsResponse, LoanResponse,
     },
 };
 
@@ -27,8 +32,10 @@ pub trait Lpp<Lpn>: Into<Batch>
 where
     Lpn: Currency,
 {
+    fn id(&self) -> Addr;
+
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()>;
-    fn open_loan_resp(&self, resp: Reply) -> Result<()>;
+    fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>>;
     fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()>;
 
     fn loan(&self, lease: impl Into<Addr>) -> Result<QueryLoanResponse<Lpn>>;
@@ -152,6 +159,10 @@ impl<'a, Lpn> Lpp<Lpn> for LppStub<'a, Lpn>
 where
     Lpn: Currency + DeserializeOwned,
 {
+    fn id(&self) -> Addr {
+        self.addr.clone()
+    }
+
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {
         self.batch
             .schedule_execute_wasm_on_success_reply::<_, Lpn>(
@@ -165,13 +176,16 @@ where
             .map_err(ContractError::from)
     }
 
-    fn open_loan_resp(&self, resp: Reply) -> Result<()> {
+    fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>> {
         debug_assert_eq!(REPLY_ID, resp.id);
-        resp.result
-            .into_result()
-            .map(|_| ())
-            .map_err(StdError::generic_err)
-            .map_err(ContractError::from)
+
+        from_execute(resp).map_err(Into::into).and_then(
+            |maybe_data| maybe_data.ok_or_else(
+                || ContractError::CustomError {
+                    val: "No data passed as response!".into(),
+                },
+            ),
+        )
     }
 
     fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()> {
@@ -282,7 +296,7 @@ mod test {
         let addr = Addr::unchecked("defd2r2");
         let lpp = LppRef {
             addr: addr.clone(),
-            currency: Nls::SYMBOL.to_owned(),
+            currency: ToOwned::to_owned(Nls::SYMBOL),
         };
         let borrow_amount = Coin::<Nls>::new(10);
         let querier = MockQuerier::default();

@@ -4,14 +4,19 @@ use cosmwasm_std::{
     to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, Storage,
 };
 use cw2::set_contract_version;
-use cw_utils::parse_reply_instantiate_data;
 
-use crate::cmd::Borrow;
-use crate::error::ContractError;
-use crate::leaser::Leaser;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::config::Config;
-use crate::state::leaser::Loans;
+use platform::reply::from_instantiate;
+
+use crate::{
+    cmd::Borrow,
+    error::ContractError,
+    leaser::Leaser,
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    state::{
+        config::Config,
+        leaser::Loans,
+    },
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -76,13 +81,11 @@ fn on_reply(
     storage: &mut dyn Storage,
     msg: Reply,
 ) -> Result<Response, ContractError> {
-    let contract_addr_raw = parse_reply_instantiate_data(msg.clone())
-        .map(|r| r.contract_address)
+    let contract_addr = from_instantiate::<()>(api, msg.clone())
+        .map(|r| r.address)
         .map_err(|err| ContractError::ParseError {
             err: err.to_string(),
         })?;
-
-    let contract_addr = api.addr_validate(&contract_addr_raw)?;
 
     Loans::save(storage, msg.id, contract_addr.clone())?;
     Ok(Response::new().add_attribute("lease_address", contract_addr))

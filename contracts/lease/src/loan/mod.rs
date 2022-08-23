@@ -1,7 +1,7 @@
 mod repay;
 mod state;
+mod open;
 
-use platform::batch::Batch;
 pub use state::State;
 
 use std::{fmt::Debug, marker::PhantomData};
@@ -15,14 +15,23 @@ use finance::{
     percent::{Percent, Units},
 };
 use lpp::{
-    msg::{LoanResponse, QueryLoanResponse},
+    msg::{
+        LoanResponse,
+        QueryLoanResponse,
+    },
     stub::{Lpp as LppTrait, LppRef},
 };
+use platform::batch::Batch;
 use serde::{Deserialize, Serialize};
 
-use crate::{error::ContractError, error::ContractResult};
+use crate::error::{
+    ContractError,
+    ContractResult
+};
 
 pub(crate) use repay::Receipt;
+
+use open::Result as OpenResult;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct LoanDTO {
@@ -58,9 +67,11 @@ impl LoanDTO {
         grace_period: Duration,
     ) -> ContractResult<Self> {
         if grace_period >= interest_due_period {
-            Err(ContractError::InvalidParameters( format!("The grace period, currently {}, must be shorter that an interest period, currently {}, to avoid overlapping",
-            grace_period,
-            interest_due_period)))
+            Err(ContractError::InvalidParameters(format!(
+                "The grace period, currently {}, must be shorter that an interest period, currently {}, to avoid overlapping",
+                grace_period,
+                interest_due_period,
+            )))
         } else {
             Ok(Self::new_raw(
                 annual_margin_interest,
@@ -121,12 +132,19 @@ where
 
     pub(crate) fn open_loan_req(mut self, amount: Coin<Lpn>) -> ContractResult<Batch> {
         self.lpp.open_loan_req(amount)?;
+
         Ok(self.into())
     }
 
-    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<Batch> {
-        self.lpp.open_loan_resp(resp)?;
-        Ok(self.into())
+    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<OpenResult<Lpn>> {
+        let response = self.lpp.open_loan_resp(resp)?;
+
+        Ok(OpenResult {
+            annual_interest_rate: response.annual_interest_rate + self.annual_margin_interest,
+            borrowed: response.principal_due,
+            loan_pool_id: self.lpp.id(),
+            batch: self.lpp.into(),
+        })
     }
 
     pub(crate) fn repay(
@@ -200,6 +218,7 @@ where
                 + receipt.principal_paid(),
             payment,
         );
+
         Ok(receipt)
     }
 
@@ -401,11 +420,7 @@ mod tests {
     use finance::interest::InterestPeriod;
     use finance::percent::Percent;
     use lpp::error::ContractError as LppError;
-    use lpp::msg::{
-        BalanceResponse, LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse,
-        QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
-        QueryQuoteResponse, RewardsResponse,
-    };
+    use lpp::msg::{BalanceResponse, LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse, QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryQuoteResponse, RewardsResponse};
     use lpp::stub::{Lpp, LppRef};
     use platform::bank::BankAccountView;
     use platform::batch::Batch;
@@ -439,11 +454,15 @@ mod tests {
 
     // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl Lpp<TestCurrency> for LppLocalStub {
+        fn id(&self) -> Addr {
+            unreachable!()
+        }
+
         fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<()> {
+        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<LoanResponse<TestCurrency>> {
             unreachable!()
         }
 

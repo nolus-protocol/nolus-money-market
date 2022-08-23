@@ -1,14 +1,20 @@
-use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Timestamp};
-use platform::batch::Batch;
+use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Timestamp, to_binary};
 use serde::{de::DeserializeOwned, Serialize};
 
-use finance::coin::Coin;
-use finance::currency::Currency;
-use platform::bank::{self, BankAccount, BankStub};
+use finance::{
+    coin::Coin,
+    currency::Currency
+};
+use platform::{
+    batch::Batch,
+    bank::{self, BankAccount, BankStub}
+};
 
-use crate::error::ContractError;
-use crate::lpp::LiquidityPool;
-use crate::msg::{QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryQuoteResponse};
+use crate::{
+    lpp::LiquidityPool,
+    error::ContractError,
+    msg::{LoanResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryQuoteResponse}
+};
 
 pub fn try_open_loan<LPN>(
     mut deps: DepsMut,
@@ -23,16 +29,27 @@ where
     let mut lpp = LiquidityPool::<LPN>::load(deps.storage)?;
     lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
 
-    lpp.try_open_loan(&mut deps, &env, lease_addr.clone(), amount)?;
+    let annual_interest_rate = lpp.try_open_loan(&mut deps, &env, lease_addr.clone(), amount)?;
 
     let mut bank = BankStub::my_account(&env, &deps.querier);
     bank.send(amount, &lease_addr);
 
-    let batch: Batch = bank.into();
-    let mut batch: Response = batch.into();
-    batch = batch.add_attribute("method", "try_open_loan");
+    let loan_response = LoanResponse {
+        principal_due: amount,
+        interest_due: Coin::new(0),
+        annual_interest_rate,
+        interest_paid: env.block.time,
+    };
 
-    Ok(batch)
+    let batch: Batch = bank.into();
+
+    let mut response: Response = batch.into();
+
+    response = response.add_attribute("method", "try_open_loan");
+
+    response = response.set_data(to_binary(&loan_response)?);
+
+    Ok(response)
 }
 
 pub fn try_repay_loan<LPN>(

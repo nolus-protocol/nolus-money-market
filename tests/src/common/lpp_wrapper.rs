@@ -46,7 +46,7 @@ impl LppWrapper {
         balance: u128,
     ) -> (Addr, u64) {
         let lpp_id = app.store_code(self.contract_wrapper);
-        let msg = lpp::msg::InstantiateMsg {
+        let msg = InstantiateMsg {
             denom: denom.to_string(),
             lease_code_id,
         };
@@ -82,10 +82,10 @@ impl Default for LppWrapper {
 pub fn mock_lpp_query(
     deps: Deps,
     env: Env,
-    msg: lpp::msg::QueryMsg,
+    msg: QueryMsg,
 ) -> Result<Binary, ContractError> {
     let res = match msg {
-        lpp::msg::QueryMsg::LppBalance() => to_binary(&lpp::msg::LppBalanceResponse::<Usdc> {
+        QueryMsg::LppBalance() => to_binary(&lpp::msg::LppBalanceResponse::<Usdc> {
             balance: Coin::new(1000000000),
             total_principal_due: Coin::new(1000000000),
             total_interest_due: Coin::new(1000000000),
@@ -100,10 +100,10 @@ pub fn mock_lpp_query(
 pub fn mock_lpp_quote_query(
     deps: Deps,
     env: Env,
-    msg: lpp::msg::QueryMsg,
+    msg: QueryMsg,
 ) -> Result<Binary, ContractError> {
     let res = match msg {
-        lpp::msg::QueryMsg::Quote { amount: _amount } => to_binary(
+        QueryMsg::Quote { amount: _amount } => to_binary(
             &lpp::msg::QueryQuoteResponse::QuoteInterestRate(Percent::HUNDRED),
         ),
         _ => Ok(lpp::contract::query(deps, env, msg)?),

@@ -34,7 +34,7 @@ where
     #[cfg(test)]
     pub fn mock(nlpn: Coin<NLpn>, lpn: Coin<LPN>) -> Self {
         Self {
-            price: finance::price::total_of(nlpn).is(lpn),
+            price: price::total_of(nlpn).is(lpn),
         }
     }
 }
@@ -203,7 +203,7 @@ where
         env: &Env,
         lease_addr: Addr,
         amount: Coin<LPN>,
-    ) -> Result<(), ContractError> {
+    ) -> Result<Percent, ContractError> {
         if amount.is_zero() {
             return Err(ContractError::ZeroLoanAmount);
         }
@@ -227,7 +227,7 @@ where
             .borrow(env.block.time, amount, annual_interest_rate)?
             .store(deps.storage)?;
 
-        Ok(())
+        Ok(annual_interest_rate)
     }
 
     /// return amount of lpp currency to pay back to lease_addr

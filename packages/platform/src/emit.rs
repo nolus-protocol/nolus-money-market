@@ -1,6 +1,7 @@
 use cosmwasm_std::{Env, Event, Response, Timestamp};
 use finance::coin::{Amount, Coin};
 use finance::currency::Currency;
+use finance::percent::Percent;
 
 use crate::batch::Batch;
 
@@ -13,15 +14,15 @@ where
         K: Into<String>,
         V: Into<String>;
 
-    /// Specialization of [`emit`](Batch::emit) for timestamps.
+    /// Specialization of [`emit`](Self::emit) for [`Timestamp`].
     fn emit_timestamp<K>(self, event_key: K, timestamp: &Timestamp) -> Self
     where
         K: Into<String>,
     {
-        self.emit(event_key, timestamp.nanos().to_string())
+        self.emit_to_string_value(event_key, timestamp.nanos())
     }
 
-    /// Specialization of [`emit`](Batch::emit) for values implementing [`ToString`].
+    /// Specialization of [`emit`](Self::emit) for values implementing [`ToString`].
     fn emit_to_string_value<K, V>(self, event_key: K, value: V) -> Self
     where
         K: Into<String>,
@@ -30,13 +31,21 @@ where
         self.emit(event_key, value.to_string())
     }
 
-    /// Specialization of [`emit`](Batch::emit) for [`Coin`]'s amount.
+    /// Specialization of [`emit`](Self::emit) for [`Coin`]'s amount.
     fn emit_coin_amount<K, C>(self, event_key: K, coin: Coin<C>) -> Self
     where
         K: Into<String>,
         C: Currency,
     {
-        self.emit(event_key, Amount::from(coin).to_string())
+        self.emit_to_string_value(event_key, Amount::from(coin))
+    }
+
+    /// Specialization of [`emit`](Self::emit) for [`Percent`]'s amount in [`Units`](finance::percent::Units).
+    fn emit_percent_amount<K>(self, event_key: K, percent: Percent) -> Self
+        where
+            K: Into<String>,
+    {
+        self.emit_to_string_value(event_key, percent.units())
     }
 
     fn emit_coin<K, C>(self, event_key: K, coin: Coin<C>) -> Self
@@ -56,6 +65,7 @@ where
         self.emit_to_string_value("height", env.block.height)
             .emit_to_string_value(
                 "idx",
+                // TODO remove when issue is fixed (https://github.com/CosmWasm/wasmd/issues/932)
                 env.transaction
                     .as_ref()
                     .map(|transaction| transaction.index)

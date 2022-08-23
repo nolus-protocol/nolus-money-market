@@ -9,11 +9,12 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Repl
 use cw2::set_contract_version;
 use platform::{
     bank::BankStub,
-    batch::{Emit, Emitter},
+    batch::Emitter,
 };
+use crate::contract::open::OpenLoanReqResult;
 
 use crate::error::ContractResult;
-use crate::lease::{self, LeaseDTO};
+use crate::lease::{self, DownpaymentDTO, LeaseDTO};
 use crate::msg::{ExecuteMsg, NewLeaseForm, StateQuery};
 
 use self::open::{OpenLoanReq, OpenLoanResp};
@@ -37,19 +38,34 @@ pub fn instantiate(
     let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
     lease.store(deps.storage)?;
 
-    let emitter = lease::execute(lease, OpenLoanReq::new(&info.funds), &deps.querier)?;
+    let OpenLoanReqResult {
+        batch,
+        downpayment,
+    } = lease::execute(
+        lease,
+        OpenLoanReq::new(&info.funds),
+        &deps.querier,
+    )?;
 
-    Ok(emitter.into())
+    downpayment.store(deps.storage)?;
+
+    Ok(batch.into())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
     // TODO swap the received loan and the downpayment to lease.currency
     let lease = LeaseDTO::load(deps.storage)?;
 
-    let batch = lease::execute(lease, OpenLoanResp::new(msg), &deps.querier)?;
+    let downpayment = DownpaymentDTO::remove(deps.storage)?;
 
-    Ok(batch.into())
+    let emitter = lease::execute(
+        lease,
+        OpenLoanResp::new(msg, downpayment, env),
+        &deps.querier,
+    )?;
+
+    Ok(emitter.into())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -94,17 +110,12 @@ fn try_repay(
 ) -> ContractResult<RepayResult> {
     lease::execute(
         lease,
-        Repay::new(&info.funds, env.block.time, env.contract.address.clone()),
+        Repay::new(
+            &info.funds,
+            env,
+        ),
         querier,
     )
-    .map(|mut result| {
-        result.emitter = result
-            .emitter
-            .emit_tx_info(&env)
-            .emit("to", env.contract.address);
-
-        result
-    })
 }
 
 fn try_close(
@@ -125,5 +136,6 @@ fn try_close(
         ),
         &deps.querier,
     )?;
+
     Ok(emitter)
 }

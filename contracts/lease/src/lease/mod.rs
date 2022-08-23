@@ -1,6 +1,9 @@
 mod dto;
 pub(super) use dto::LeaseDTO;
 mod factory;
+pub(crate) mod open;
+mod downpayment_dto;
+pub(super) use downpayment_dto::DownpaymentDTO;
 
 use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp};
 use finance::{
@@ -9,21 +12,22 @@ use finance::{
     liability::Liability,
 };
 use lpp::stub::Lpp as LppTrait;
-use platform::batch::Emitter;
 use platform::{
     bank::{BankAccount, BankAccountView},
-    batch::{Batch, Emit},
+    batch::Batch,
 };
 use serde::Serialize;
 
 use crate::{
     error::{ContractError, ContractResult},
-    event::TYPE,
     loan::{Loan, Receipt},
     msg::StateResponse,
 };
 
-use self::factory::Factory;
+use self::{
+    open::Result as OpenResult,
+    factory::Factory,
+};
 
 pub trait WithLease {
     type Output;
@@ -86,47 +90,48 @@ where
         &self.customer == addr
     }
 
-    pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<Emitter> {
+    pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<Batch> {
         // TODO add a type parameter to this function to designate the downpayment currency
         // TODO query the market price oracle to get the price of the downpayment currency to LPN
         //  and calculate `downpayment` in LPN
         let borrow = self.liability.init_borrow_amount(downpayment);
 
-        let batch = self.loan.open_loan_req(borrow)?;
-
-        Ok(batch
-            .into_emitter(TYPE::Open)
-            .emit("customer", self.customer))
+        self.loan.open_loan_req(borrow).map_err(Into::into)
     }
 
-    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<Batch> {
-        // use cw_utils::parse_reply_instantiate_data;
+    // TODO lease currency can be different than Lpn, therefore result's type parameter
+    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<OpenResult<Lpn>> {
         self.loan.open_loan_resp(resp)
+            .map({
+                // Force move before closure to avoid edition warning from clippy;
+                let customer = self.customer;
+                let currency = self.currency;
+
+                |result| OpenResult {
+                    batch: result.batch,
+                    customer,
+                    annual_interest_rate: result.annual_interest_rate,
+                    currency,
+                    loan_pool_id: result.loan_pool_id,
+                    loan_amount: result.borrowed,
+                }
+            })
     }
 
     // TODO add the lease address as a field in Lease<>
     //  and populate it on LeaseDTO.execute as LeaseFactory
-    pub(crate) fn close<B>(
-        self,
-        lease: Addr,
-        mut account: B,
-        now: Timestamp,
-    ) -> ContractResult<Emitter>
+    pub(crate) fn close<B>(self, lease: Addr, mut account: B) -> ContractResult<Batch>
     where
         B: BankAccount,
     {
-        let state = self.state(Timestamp::from_nanos(u64::MAX), &account, lease.clone())?;
+        let state = self.state(Timestamp::from_nanos(u64::MAX), &account, lease)?;
         match state {
             StateResponse::Opened { .. } => Err(ContractError::LoanNotPaid()),
             StateResponse::Paid(..) => {
                 let balance = account.balance::<Lpn>()?;
                 account.send(balance, &self.customer);
 
-                Ok(account
-                    .into()
-                    .into_emitter(TYPE::Close)
-                    .emit("id", lease)
-                    .emit_timestamp("at", &now))
+                Ok(account.into())
             }
             StateResponse::Closed() => Err(ContractError::LoanClosed()),
         }
@@ -224,11 +229,15 @@ mod tests {
 
     // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl Lpp<TestCurrency> for LppLocalStub {
+        fn id(&self) -> Addr {
+            Addr::unchecked("0123456789ABDEF0123456789ABDEF0123456789ABDEF0123456789ABDEF")
+        }
+
         fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<()> {
+        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<LoanResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -293,12 +302,17 @@ mod tests {
             unreachable!()
         }
     }
+
     impl Lpp<TestCurrency> for LppLocalStubUnreachable {
+        fn id(&self) -> Addr {
+            unreachable!()
+        }
+
         fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<()> {
+        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<LoanResponse<TestCurrency>> {
             unreachable!()
         }
 
