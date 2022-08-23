@@ -12,37 +12,6 @@ pub struct InstantiateResponse<T> {
     pub data: Option<T>,
 }
 
-fn decode_raw<M>(message: &[u8]) -> StdResult<M>
-where
-    M: Message + Default,
-{
-    M::decode(message)
-        .map_err(|_| StdError::generic_err(
-            "Data is malformed or doesn't comply with used protobuf format!",
-        ))
-}
-
-fn decode<M>(reply: Reply) -> StdResult<M>
-where
-    M: Message + Default,
-{
-    decode_raw(
-        reply.result.into_result()
-            .map_err(StdError::generic_err)?
-            .data
-            .ok_or_else(|| StdError::generic_err("Reply doesn't contain data!"))?
-            .0
-            .as_slice(),
-    )
-}
-
-fn maybe_from_binary<T>(data: Vec<u8>) -> StdResult<Option<T>>
-where
-    T: for<'de> Deserialize<'de>,
-{
-    (!data.is_empty()).then(|| from_binary(&Binary::from(data))).transpose()
-}
-
 pub fn from_instantiate<T>(api: &dyn Api, reply: Reply) -> StdResult<InstantiateResponse<T>>
 where
     T: DeserializeOwned,
@@ -78,4 +47,35 @@ where
     }
 
     decode::<ReplyData>(reply).map(|data| data.data).and_then(maybe_from_binary)
+}
+
+fn decode_raw<M>(message: &[u8]) -> StdResult<M>
+where
+    M: Message + Default,
+{
+    M::decode(message)
+        .map_err(|_| StdError::generic_err(
+            "Data is malformed or doesn't comply with used protobuf format!",
+        ))
+}
+
+fn decode<M>(reply: Reply) -> StdResult<M>
+where
+    M: Message + Default,
+{
+    decode_raw(
+        reply.result.into_result()
+            .map_err(StdError::generic_err)?
+            .data
+            .ok_or_else(|| StdError::generic_err("Reply doesn't contain data!"))?
+            .0
+            .as_slice(),
+    )
+}
+
+fn maybe_from_binary<T>(data: Vec<u8>) -> StdResult<Option<T>>
+where
+    T: for<'de> Deserialize<'de>,
+{
+    (!data.is_empty()).then(|| from_binary(&Binary::from(data))).transpose()
 }

@@ -1,9 +1,6 @@
 use cosmwasm_std::{Coin as CwCoin, Env, Reply};
 
-use finance::{
-    coin::CoinDTO,
-    currency::{Currency, SymbolOwned}
-};
+use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
 use platform::{
     bank,
@@ -37,11 +34,13 @@ impl<'a> WithLease for OpenLoanReq<'a> {
         Lpn: Currency,
     {
         // TODO 'receive' the downpayment from the bank using any currency it might be in
-        let downpayment_lpn = bank::received::<Lpn>(self.downpayment)?;
+        let downpayment = bank::received::<Lpn>(self.downpayment)?;
+        // TODO do swapping and convert to Lpn
+        let downpayment_lpn = downpayment;
 
         Ok(OpenLoanReqResult {
             batch: lease.open_loan_req(downpayment_lpn)?,
-            downpayment: DownpaymentDTO::new(downpayment_lpn.into()),
+            downpayment: DownpaymentDTO::new(downpayment.into()),
         })
     }
 
