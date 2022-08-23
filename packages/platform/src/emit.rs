@@ -65,8 +65,7 @@ where
         self.emit_to_string_value("height", env.block.height)
             .emit_to_string_value(
                 "idx",
-                env
-                    .transaction
+                env.transaction
                     .as_ref()
                     .map(|transaction| transaction.index)
                     .unwrap_or_default(),

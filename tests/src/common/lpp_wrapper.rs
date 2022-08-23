@@ -38,29 +38,28 @@ impl LppWrapper {
         }
     }
     #[track_caller]
-    pub fn instantiate(self, app: &mut App, lease_code_id: Uint64, denom: &str, balance: u128) -> (Addr, u64) {
+    pub fn instantiate(
+        self,
+        app: &mut App,
+        lease_code_id: Uint64,
+        denom: &str,
+        balance: u128,
+    ) -> (Addr, u64) {
         let lpp_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {
             denom: denom.to_string(),
             lease_code_id,
         };
 
-        let funds = if balance==0 {
+        let funds = if balance == 0 {
             vec![]
         } else {
             coins(balance, denom)
         };
 
         (
-            app.instantiate_contract(
-                lpp_id,
-                Addr::unchecked(ADMIN),
-                &msg,
-                &dbg!(funds),
-                "lpp",
-                None,
-            )
-            .unwrap(),
+            app.instantiate_contract(lpp_id, Addr::unchecked(ADMIN), &msg, &funds, "lpp", None)
+                .unwrap(),
             lpp_id,
         )
     }

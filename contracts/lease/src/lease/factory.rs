@@ -4,14 +4,12 @@ use serde::Serialize;
 
 use super::{dto::LeaseDTO, Lease, WithLease};
 
-pub struct Factory<L>
-{
+pub struct Factory<L> {
     cmd: L,
     lease_dto: LeaseDTO,
 }
 
-impl<L> Factory<L>
-{
+impl<L> Factory<L> {
     pub fn new(cmd: L, lease_dto: LeaseDTO) -> Self {
         Self { cmd, lease_dto }
     }

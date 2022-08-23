@@ -1,13 +1,20 @@
 use cosmwasm_std::{Coin as CwCoin, Env, Reply, Storage};
-use finance::coin::CoinDTO;
-use platform::bank;
-use finance::currency::{Currency, SymbolOwned};
-use lpp::stub::Lpp as LppTrait;
-use platform::batch::{Batch, Emit, Emitter};
 
-use crate::error::ContractError;
-use crate::event::TYPE;
-use crate::lease::{DownpaymentDTO, Lease, WithLease};
+use finance::{
+    coin::CoinDTO,
+    currency::{Currency, SymbolOwned}
+};
+use lpp::stub::Lpp as LppTrait;
+use platform::{
+    bank,
+    batch::{Batch, Emit, Emitter}
+};
+
+use crate::{
+    error::ContractError,
+    event::TYPE,
+    lease::{DownpaymentDTO, Lease, WithLease}
+};
 
 pub struct OpenLoanReq<'a> {
     downpayment: &'a [CwCoin],

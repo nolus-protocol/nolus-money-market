@@ -248,15 +248,9 @@ fn test_quote_fixed_rate() {
         3% margin_interest_rate of the leaser
     */
 
-    assert_eq!(
-        Percent::HUNDRED,
-        resp.annual_interest_rate,
-    );
+    assert_eq!(Percent::HUNDRED, resp.annual_interest_rate,);
 
-    assert_eq!(
-        Percent::from_percent(3),
-        resp.annual_interest_rate_margin,
-    );
+    assert_eq!(Percent::from_percent(3), resp.annual_interest_rate_margin,);
 }
 
 #[test]
