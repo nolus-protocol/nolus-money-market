@@ -27,25 +27,12 @@ type TheCurrency = Usdc;
 #[test]
 #[should_panic(expected = "Unauthorized contract Id")]
 fn open_loan_unauthorized_contract_id() {
-    let user_balance = 500;
-    let lpp_balance = 5000;
-
     let denom = TheCurrency::SYMBOL;
     let user_addr = Addr::unchecked(USER);
 
     let mut test_case = TestCase::new(denom);
-    test_case.init(&user_addr, coins(user_balance, denom));
-
-    let lease_id = LeaseWrapper::default().store(&mut test_case.app);
-
-    let (lpp, _) = LppWrapper::default().instantiate(
-        &mut test_case.app,
-        lease_id.into(),
-        denom,
-        lpp_balance,
-    );
-
-    test_case.lpp_addr = Some(lpp);
+    test_case.init(&user_addr, coins(500, denom));
+    test_case.init_lpp(None);
 
     //redeploy lease contract to change the code_id
     test_case.init_lease();
@@ -68,24 +55,12 @@ fn open_loan_unauthorized_contract_id() {
 #[test]
 #[should_panic(expected = "No liquidity")]
 fn open_loan_no_liquidity() {
-    let balance = 1000;
-
     let denom = TheCurrency::SYMBOL;
     let user_addr = Addr::unchecked(USER);
 
     let mut test_case = TestCase::new(denom);
-    test_case.init(&user_addr, coins(balance, denom));
-
-    let lease_id = LeaseWrapper::default().store(&mut test_case.app);
-
-    let (lpp, _) = LppWrapper::default().instantiate(
-        &mut test_case.app,
-        lease_id.into(),
-        denom,
-        balance,
-    );
-
-    test_case.lpp_addr = Some(lpp);
+    test_case.init(&user_addr, coins(500, denom));
+    test_case.init_lpp(None);
 
     let lease_addr = test_case.get_lease_instance();
 
