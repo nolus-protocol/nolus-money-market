@@ -104,9 +104,7 @@ fn try_repay(
         lease,
         Repay::new(
             &info.funds,
-            env.block.time,
-            env.contract.address,
-            &env,
+            env,
         ),
         querier,
     )

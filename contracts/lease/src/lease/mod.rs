@@ -190,7 +190,7 @@ mod tests {
         coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
     };
     use lpp::error::ContractError as LppError;
-    use lpp::msg::{LoanResponse, OpenResponse, OutstandingInterest, QueryLoanResponse};
+    use lpp::msg::{LoanResponse, OutstandingInterest, QueryLoanResponse};
     use lpp::stub::{Lpp, LppRef};
 
     use finance::interest::InterestPeriod;
@@ -239,7 +239,7 @@ mod tests {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<OpenResponse<TestCurrency>> {
+        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<LoanResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -314,7 +314,7 @@ mod tests {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<OpenResponse<TestCurrency>> {
+        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<LoanResponse<TestCurrency>> {
             unreachable!()
         }
 

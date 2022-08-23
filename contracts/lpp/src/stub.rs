@@ -18,10 +18,9 @@ use crate::{
     msg::{
         BalanceResponse, ExecuteMsg, LppBalanceResponse, PriceResponse, QueryConfigResponse,
         QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg, QueryQuoteResponse,
-        RewardsResponse,
+        RewardsResponse, LoanResponse,
     },
 };
-use crate::msg::OpenResponse;
 
 const REPLY_ID: u64 = 28;
 pub type Result<T> = StdResult<T, ContractError>;
@@ -34,7 +33,7 @@ where
     fn id(&self) -> Addr;
 
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()>;
-    fn open_loan_resp(&self, resp: Reply) -> Result<OpenResponse<Lpn>>;
+    fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>>;
     fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()>;
 
     fn loan(&self, lease: impl Into<Addr>) -> Result<QueryLoanResponse<Lpn>>;
@@ -175,7 +174,7 @@ where
             .map_err(ContractError::from)
     }
 
-    fn open_loan_resp(&self, resp: Reply) -> Result<OpenResponse<Lpn>> {
+    fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>> {
         debug_assert_eq!(REPLY_ID, resp.id);
 
         from_reply(resp).map_err(Into::into)

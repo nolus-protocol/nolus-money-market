@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Coin as CwCoin, Env, Timestamp};
+use cosmwasm_std::{Coin as CwCoin, Env};
 use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
@@ -20,17 +20,13 @@ use crate::{
 
 pub struct Repay<'a> {
     payment: &'a [CwCoin],
-    now: Timestamp,
-    lease: Addr,
-    env: &'a Env,
+    env: Env,
 }
 
 impl<'a> Repay<'a> {
-    pub fn new(payment: &'a [CwCoin], now: Timestamp, lease: Addr, env: &'a Env) -> Self {
+    pub fn new(payment: &'a [CwCoin], env: Env) -> Self {
         Self {
             payment,
-            now,
-            lease,
             env,
         }
     }
@@ -54,17 +50,17 @@ impl<'a> WithLease for Repay<'a> {
         // TODO 'receive' the payment from the bank using any currency it might be in
         let payment = bank::received::<Lpn>(self.payment)?;
 
-        let receipt = lease.repay(payment, self.now, self.lease.clone())?;
+        let receipt = lease.repay(payment, self.env.block.time, self.env.contract.address.clone())?;
 
         let (lease_dto, lpp) = lease.into_dto();
         let emitter = lpp
             .into()
             .into_emitter(TYPE::Repay)
-            .emit_tx_info(self.env)
-            .emit("to", self.lease)
+            .emit_tx_info(&self.env)
+            .emit("to", self.env.contract.address)
             .emit("payment-symbol", Lpn::SYMBOL)
             .emit_coin_amount("payment-amount", payment)
-            .emit_timestamp("at", &self.now)
+            .emit_timestamp("at", &self.env.block.time)
             .emit_to_string_value("loan-close", receipt.close())
             .emit_coin_amount("prev-margin-interest", receipt.previous_margin_paid())
             .emit_coin_amount("prev-loan-interest", receipt.previous_interest_paid())

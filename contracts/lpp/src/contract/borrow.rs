@@ -1,14 +1,20 @@
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Timestamp, to_binary};
-use platform::batch::Batch;
 use serde::{de::DeserializeOwned, Serialize};
 
-use finance::coin::Coin;
-use finance::currency::Currency;
-use platform::bank::{self, BankAccount, BankStub};
+use finance::{
+    coin::Coin,
+    currency::Currency
+};
+use platform::{
+    batch::Batch,
+    bank::{self, BankAccount, BankStub}
+};
 
-use crate::error::ContractError;
-use crate::lpp::LiquidityPool;
-use crate::msg::{OpenResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryQuoteResponse};
+use crate::{
+    lpp::LiquidityPool,
+    error::ContractError,
+    msg::{LoanResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryQuoteResponse}
+};
 
 pub fn try_open_loan<LPN>(
     mut deps: DepsMut,
@@ -33,9 +39,11 @@ where
 
     batch = batch.add_attribute("method", "try_open_loan");
 
-    batch = batch.set_data(to_binary(&OpenResponse {
+    batch = batch.set_data(to_binary(&LoanResponse {
         principal_due: amount,
+        interest_due: Coin::new(0),
         annual_interest_rate,
+        interest_paid: env.block.time,
     })?);
 
     Ok(batch)

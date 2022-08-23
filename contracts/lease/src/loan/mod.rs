@@ -421,7 +421,7 @@ mod tests {
     use finance::interest::InterestPeriod;
     use finance::percent::Percent;
     use lpp::error::ContractError as LppError;
-    use lpp::msg::{BalanceResponse, LoanResponse, LppBalanceResponse, OpenResponse, OutstandingInterest, PriceResponse, QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryQuoteResponse, RewardsResponse};
+    use lpp::msg::{BalanceResponse, LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse, QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryQuoteResponse, RewardsResponse};
     use lpp::stub::{Lpp, LppRef};
     use platform::bank::BankAccountView;
     use platform::batch::Batch;
@@ -463,7 +463,7 @@ mod tests {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<OpenResponse<TestCurrency>> {
+        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<LoanResponse<TestCurrency>> {
             unreachable!()
         }
 

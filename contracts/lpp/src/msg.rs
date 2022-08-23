@@ -90,18 +90,6 @@ pub enum QueryQuoteResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct OpenResponse<Lpn>
-    where
-        Lpn: Currency,
-{
-    pub principal_due: Coin<Lpn>,
-    pub annual_interest_rate: Percent,
-}
-
-pub type QueryOpenResponse<Lpn> = Option<OpenResponse<Lpn>>;
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
 pub struct LoanResponse<Lpn>
 where
     Lpn: Currency,
