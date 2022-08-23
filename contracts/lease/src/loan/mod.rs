@@ -140,8 +140,7 @@ where
         let response = self.lpp.open_loan_resp(resp)?;
 
         Ok(OpenResult {
-            annual_interest_rate: response.annual_interest_rate,
-            annual_interest_rate_margin: self.annual_margin_interest,
+            annual_interest_rate: response.annual_interest_rate + self.annual_margin_interest,
             borrowed: response.principal_due,
             loan_pool_id: self.lpp.id(),
             batch: self.lpp.into(),

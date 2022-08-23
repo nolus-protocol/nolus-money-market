@@ -86,7 +86,7 @@ impl<'a> WithLease for OpenLoanResp {
             .emit_tx_info(&self.env)
             .emit("id", self.env.contract.address)
             .emit("customer", result.customer)
-            .emit_percent_amount("air", result.annual_interest_rate + result.annual_interest_rate_margin)
+            .emit_percent_amount("air", result.annual_interest_rate)
             .emit("currency", result.currency)
             .emit("loan-pool-id", result.loan_pool_id)
             .emit_coin("loan", result.loan_amount)

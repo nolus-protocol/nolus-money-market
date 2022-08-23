@@ -13,7 +13,6 @@ where
 {
     pub batch: Batch,
     pub annual_interest_rate: Percent,
-    pub annual_interest_rate_margin: Percent,
     pub borrowed: Coin<Lpn>,
     pub loan_pool_id: Addr,
 }

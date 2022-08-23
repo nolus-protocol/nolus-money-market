@@ -111,7 +111,6 @@ where
                     batch: result.batch,
                     customer,
                     annual_interest_rate: result.annual_interest_rate,
-                    annual_interest_rate_margin: result.annual_interest_rate_margin,
                     currency,
                     loan_pool_id: result.loan_pool_id,
                     loan_amount: result.borrowed,
