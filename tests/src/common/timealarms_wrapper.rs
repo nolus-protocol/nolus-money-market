@@ -1,10 +1,14 @@
 use cosmwasm_std::{Addr, StdError};
-use cw_multi_test::ContractWrapper;
+use cw_multi_test::{
+    ContractWrapper,
+    Executor
+};
 
-use cw_multi_test::{App, Executor};
 use timealarms::ContractError;
 
-use super::{mock_query, MockQueryMsg, ADMIN};
+use crate::common::MockApp;
+
+use super::{ADMIN, mock_query, MockQueryMsg};
 
 pub struct TimeAlarmsWrapper {
     contract_wrapper: Box<
@@ -21,7 +25,7 @@ pub struct TimeAlarmsWrapper {
 
 impl TimeAlarmsWrapper {
     #[track_caller]
-    pub fn instantiate(self, app: &mut App) -> Addr {
+    pub fn instantiate(self, app: &mut MockApp) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = timealarms::msg::InstantiateMsg {};
 

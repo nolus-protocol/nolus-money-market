@@ -3,31 +3,37 @@ use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
-use platform::{
-    bank,
-    batch::{Emit, Emitter},
-};
+use platform::{bank::{self, BankAccountView}, batch::{Emit, Emitter}};
 
 use crate::{
+    error::ContractError,
+    event::TYPE,
     lease::{
         Lease,
+        LeaseDTO,
+        LiquidationStatus,
         WithLease,
-        LeaseDTO
     },
-    event::TYPE,
-    error::ContractError,
 };
 
-pub struct Repay<'a> {
+pub struct Repay<'a, Bank>
+where
+    Bank: BankAccountView,
+{
     payment: &'a [CwCoin],
-    env: Env,
+    env: &'a Env,
+    account: Bank,
 }
 
-impl<'a> Repay<'a> {
-    pub fn new(payment: &'a [CwCoin], env: Env) -> Self {
+impl<'a, Bank> Repay<'a, Bank>
+where
+    Bank: BankAccountView,
+{
+    pub fn new(payment: &'a [CwCoin], account: Bank, env: &'a Env) -> Self {
         Self {
             payment,
             env,
+            account,
         }
     }
 }
@@ -37,7 +43,10 @@ pub struct RepayResult {
     pub emitter: Emitter,
 }
 
-impl<'a> WithLease for Repay<'a> {
+impl<'a, Bank> WithLease for Repay<'a, Bank>
+where
+    Bank: BankAccountView,
+{
     type Output = RepayResult;
 
     type Error = ContractError;
@@ -52,12 +61,26 @@ impl<'a> WithLease for Repay<'a> {
 
         let receipt = lease.repay(payment, self.env.block.time, self.env.contract.address.clone())?;
 
+        let reschedule_messages = (!receipt.close()).then(
+            || lease.reschedule_price_alarm(
+                self.env.contract.address.clone(),
+                self.account.balance::<Lpn>()?,
+                &self.env.block.time,
+                &LiquidationStatus::None,
+            )
+        ).transpose()?;
+
         let (lease_dto, lpp) = lease.into_dto();
-        let emitter = lpp
-            .into()
+
+        let mut batch = lpp.into();
+
+        reschedule_messages.into_iter()
+            .for_each(|msg| batch.schedule_execute_batch_message(msg));
+
+        let emitter = batch
             .into_emitter(TYPE::Repay)
-            .emit_tx_info(&self.env)
-            .emit("to", self.env.contract.address)
+            .emit_tx_info(self.env)
+            .emit("to", self.env.contract.address.clone())
             .emit("payment-symbol", Lpn::SYMBOL)
             .emit_coin_amount("payment-amount", payment)
             .emit_timestamp("at", &self.env.block.time)

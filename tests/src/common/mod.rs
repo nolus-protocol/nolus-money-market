@@ -1,13 +1,30 @@
 use cosmwasm_std::{
-    coins, testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin, Deps, Env, StdResult,
+    Addr,
+    Api,
+    Binary,
+    BlockInfo,
+    CanonicalAddr,
+    Coin,
+    coins,
+    Deps,
+    Env,
+    RecoverPubkeyError,
+    StdResult,
+    testing::{
+        mock_env,
+        MockApi
+    },
     Timestamp,
+    to_binary,
+    VerificationError,
 };
-use cw_multi_test::{App, AppBuilder};
+use cw_multi_test::{App, AppBuilder, BankKeeper};
+use serde::{Deserialize, Serialize};
+
 use finance::{
     currency::{Currency, Nls},
     duration::Duration,
 };
-use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 #[allow(dead_code)]
@@ -35,11 +52,69 @@ struct MockResponse {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 struct MockQueryMsg {}
 
+#[derive(Default)]
+pub struct ApiWithNullAddresses<A>(A)
+where
+    A: Api;
+
+impl<A> From<A> for ApiWithNullAddresses<A>
+where
+    A: Api,
+{
+    fn from(api: A) -> Self {
+        Self(api)
+    }
+}
+
+impl<A> Api for ApiWithNullAddresses<A> where
+    A: Api {
+    fn addr_validate(&self, human: &str) -> StdResult<Addr> {
+        if human.is_empty() {
+            Ok(Addr::unchecked(String::default()))
+        } else {
+            self.0.addr_validate(human)
+        }
+    }
+
+    fn addr_canonicalize(&self, human: &str) -> StdResult<CanonicalAddr> {
+        self.0.addr_canonicalize(human)
+    }
+
+    fn addr_humanize(&self, canonical: &CanonicalAddr) -> StdResult<Addr> {
+        self.0.addr_humanize(canonical)
+    }
+
+    fn secp256k1_verify(&self, message_hash: &[u8], signature: &[u8], public_key: &[u8]) -> Result<bool, VerificationError> {
+        self.0.secp256k1_verify(message_hash, signature, public_key)
+    }
+
+    fn secp256k1_recover_pubkey(&self, message_hash: &[u8], signature: &[u8], recovery_param: u8) -> Result<Vec<u8>, RecoverPubkeyError> {
+        self.0.secp256k1_recover_pubkey(message_hash, signature, recovery_param)
+    }
+
+    fn ed25519_verify(&self, message: &[u8], signature: &[u8], public_key: &[u8]) -> Result<bool, VerificationError> {
+        self.0.ed25519_verify(message, signature, public_key)
+    }
+
+    fn ed25519_batch_verify(&self, messages: &[&[u8]], signatures: &[&[u8]], public_keys: &[&[u8]]) -> Result<bool, VerificationError> {
+        self.0.ed25519_batch_verify(messages, signatures, public_keys)
+    }
+
+    fn debug(&self, message: &str) {
+        self.0.debug(message)
+    }
+}
+
 fn mock_query(_deps: Deps, _env: Env, _msg: MockQueryMsg) -> StdResult<Binary> {
     to_binary(&MockResponse {})
 }
 
-pub fn mock_app(init_funds: &[Coin]) -> App {
+pub type MockApp = App<
+    BankKeeper,
+    ApiWithNullAddresses<MockApi>,
+>;
+
+pub fn mock_app(init_funds: &[Coin]) -> MockApp {
     let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);
 
     let mock_start_block = BlockInfo {
@@ -53,6 +128,7 @@ pub fn mock_app(init_funds: &[Coin]) -> App {
 
     AppBuilder::new()
         .with_block(mock_start_block)
+        .with_api(ApiWithNullAddresses::from(MockApi::default()))
         .build(|router, _, storage| {
             router
                 .bank
@@ -65,7 +141,7 @@ pub trait AppExt {
     fn time_shift(&mut self, t: Duration);
 }
 
-impl AppExt for App {
+impl AppExt for MockApp {
     fn time_shift(&mut self, t: Duration) {
         self.update_block(|block| {
             let ct = block.time.nanos();

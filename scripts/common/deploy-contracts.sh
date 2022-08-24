@@ -40,7 +40,7 @@ local -r lpp_init_msg='{"denom":"'$stable_denom'","lease_code_id":"'$lease_code_
 deployContract "$contracts_results_file" "$nolus_net" "$home_dir" "lpp"  "$lpp_init_msg"
 local -r lpp_address=$(jq .contracts_info[1].lpp.instance contracts-info.json | tr -d '"')
 
-local -r leaser_init_msg='{"lease_code_id":"'$lease_code_id'","lease_interest_rate_margin":30,"recalc_hours":2,"liability":{"healthy":70,"initial":65,"max":80},"lpp_ust_addr":"'$lpp_address'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'
+local -r leaser_init_msg='{"lease_code_id":"'$lease_code_id'","lease_interest_rate_margin":30,"recalc_hours":2,"liability":{"healthy":70,"initial":65,"max":80,"first_liq_warn":72,"second_liq_warn":75,"third_liq_warn":78},"lpp_ust_addr":"'$lpp_address'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'
 deployContract "$contracts_results_file" "$nolus_net" "$home_dir" "leaser" "$leaser_init_msg"
 
 local -r oracle_init_msg='{"base_asset":"'$stable_denom'","price_feed_period":60,"feeders_percentage_needed":50,"supported_denom_pairs":[["OSMO","'$stable_denom'"],["LUNA","OSMO"],["IRIS","OSMO"]]}'

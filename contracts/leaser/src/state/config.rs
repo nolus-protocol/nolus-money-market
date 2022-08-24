@@ -1,12 +1,13 @@
 use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::Item;
-use finance::{liability::Liability, percent::Percent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use finance::{liability::Liability, percent::Percent};
+
 use crate::{
-    msg::{InstantiateMsg, Repayment},
     ContractError,
+    msg::{InstantiateMsg, Repayment},
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -17,6 +18,7 @@ pub struct Config {
     pub lease_interest_rate_margin: Percent,
     pub liability: Liability,
     pub repayment: Repayment,
+    pub market_price_oracle: Addr,
 }
 
 impl Config {
@@ -30,6 +32,7 @@ impl Config {
             lease_interest_rate_margin: msg.lease_interest_rate_margin,
             liability: msg.liability,
             repayment: msg.repayment,
+            market_price_oracle: msg.market_price_oracle,
         })
     }
 

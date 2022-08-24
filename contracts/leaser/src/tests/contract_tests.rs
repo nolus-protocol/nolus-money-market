@@ -1,16 +1,17 @@
-use crate::cmd::Borrow;
-use crate::contract::{execute, instantiate, query};
-use crate::ContractError;
-use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{
-    coins, from_binary, to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
+    Addr, coins, CosmosMsg, DepsMut, from_binary, MessageInfo, SubMsg, to_binary, Uint64, WasmMsg,
 };
-use finance::currency::{Currency, Usdc};
-use finance::liability::Liability;
-use finance::percent::Percent;
+use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use finance::currency::{Currency, Usdc};
+use finance::liability::Liability;
+use finance::percent::Percent;
+
+use crate::cmd::Borrow;
+use crate::contract::{execute, instantiate, query};
+use crate::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, QueryMsg, Repayment};
 
 const CREATOR: &str = "creator";
@@ -28,9 +29,13 @@ fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::Ins
             Percent::from_percent(65),
             Percent::from_percent(70),
             Percent::from_percent(80),
+            Percent::from_percent(2),
+            Percent::from_percent(3),
+            Percent::from_percent(2),
             1,
         ),
         repayment: Repayment::new(90 * 24 * 60 * 60, 10 * 24 * 60 * 60),
+        market_price_oracle: Addr::unchecked("oracle"),
     }
 }
 
@@ -70,6 +75,9 @@ fn test_update_config() {
         Percent::from_percent(55),
         Percent::from_percent(60),
         Percent::from_percent(65),
+        Percent::from_percent(1),
+        Percent::from_percent(2),
+        Percent::from_percent(1),
         12,
     );
     let expected_repaiment = Repayment::new(100, 10);
@@ -96,6 +104,9 @@ fn test_update_config_invalid_repay_period() {
         Percent::from_percent(55),
         Percent::from_percent(60),
         Percent::from_percent(65),
+        Percent::from_percent(1),
+        Percent::from_percent(2),
+        Percent::from_percent(1),
         12,
     );
     let expected_repaiment = Repayment::new(18000, 23000);
@@ -119,6 +130,9 @@ fn test_update_config_invalid_liability() {
         init_percent: Percent,
         healthy_percent: Percent,
         max_percent: Percent,
+        first_liq_warn: Percent,
+        second_liq_warn: Percent,
+        third_liq_warn: Percent,
         recalc_secs: u32,
     }
 
@@ -139,6 +153,9 @@ fn test_update_config_invalid_liability() {
         init_percent: Percent::from_percent(55),
         healthy_percent: Percent::from_percent(55),
         max_percent: Percent::from_percent(55),
+        first_liq_warn: Percent::from_percent(55),
+        second_liq_warn: Percent::from_percent(55),
+        third_liq_warn: Percent::from_percent(55),
         recalc_secs: 100,
     };
     let mock_msg = MockExecuteMsg::Config {
@@ -161,6 +178,9 @@ fn test_update_config_unauthorized() {
         Percent::from_percent(55),
         Percent::from_percent(60),
         Percent::from_percent(65),
+        Percent::from_percent(1),
+        Percent::from_percent(2),
+        Percent::from_percent(1),
         12,
     );
     let expected_repaiment = Repayment::new(10, 10);

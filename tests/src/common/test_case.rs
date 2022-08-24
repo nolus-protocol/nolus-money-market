@@ -1,9 +1,16 @@
 use anyhow::Error;
-use cosmwasm_std::{coins, Addr, Coin, Empty, StdError, Uint64};
-use cw_multi_test::{next_block, App, ContractWrapper, Executor};
+use cosmwasm_std::{Addr, Coin, coins, Empty, StdError, Uint64};
+use cw_multi_test::{ContractWrapper, Executor, next_block};
+
 use finance::coin::Amount;
 
+use crate::common::{
+    lease_wrapper::LeaseWrapperAddresses,
+    MockApp,
+};
+
 use super::{
+    ADMIN,
     dispatcher_wrapper::DispatcherWrapper,
     lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
     leaser_wrapper::LeaserWrapper,
@@ -13,7 +20,6 @@ use super::{
     profit_wrapper::ProfitWrapper,
     timealarms_wrapper::TimeAlarmsWrapper,
     treasury_wrapper::TreasuryWrapper,
-    ADMIN,
 };
 
 type OptionalContractWrapper = Option<
@@ -53,7 +59,7 @@ type OptionalContractWrapperStd = Option<
 >;
 
 pub struct TestCase {
-    pub app: App,
+    pub app: MockApp,
     pub dispatcher_addr: Option<Addr>,
     pub treasury_addr: Option<Addr>,
     pub profit_addr: Option<Addr>,
@@ -115,7 +121,11 @@ impl TestCase {
         LeaseWrapper::default().instantiate(
             &mut self.app,
             self.lease_code_id,
-            self.lpp_addr.as_ref().unwrap(),
+            LeaseWrapperAddresses {
+                lpp: self.lpp_addr.clone().expect("LPP contract not instantiated!"),
+                time_alarms: self.timealarms.clone().expect("Time Alarms contract not instantiated!"),
+                oracle: self.oracle.clone().expect("Time Alarms contract not instantiated!"),
+            },
             &self.denom,
             LeaseWrapperConfig::default(),
         )
@@ -158,6 +168,19 @@ impl TestCase {
             &mut self.app,
             self.lease_code_id.unwrap(),
             self.lpp_addr.as_ref().unwrap(),
+            Addr::unchecked(String::default()),
+        ));
+        self.app.update_block(next_block);
+
+        self
+    }
+
+    pub fn init_leaser_with_oracle(&mut self) -> &mut Self {
+        self.leaser_addr = Some(LeaserWrapper::default().instantiate(
+            &mut self.app,
+            self.lease_code_id.unwrap(),
+            self.lpp_addr.as_ref().unwrap(),
+            self.oracle.clone().expect("Market Price Oracle not initialized!"),
         ));
         self.app.update_block(next_block);
 

@@ -1,7 +1,8 @@
 use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::Item;
-use finance::{currency::SymbolOwned, liability::Liability};
 use serde::{Deserialize, Serialize};
+
+use finance::{currency::SymbolOwned, liability::Liability};
 
 use crate::loan::LoanDTO;
 
@@ -11,6 +12,7 @@ pub struct LeaseDTO {
     pub(super) currency: SymbolOwned,
     pub(super) liability: Liability,
     pub(super) loan: LoanDTO,
+    pub(super) market_price_oracle: Addr,
 }
 
 impl<'a> LeaseDTO {
@@ -21,12 +23,14 @@ impl<'a> LeaseDTO {
         currency: SymbolOwned,
         liability: Liability,
         loan: LoanDTO,
+        market_price_oracle: Addr,
     ) -> Self {
         Self {
             customer,
             currency,
             liability,
             loan,
+            market_price_oracle,
         }
     }
 

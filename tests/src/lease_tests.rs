@@ -10,7 +10,7 @@ use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
 use platform::coin_legacy::to_cosmwasm;
 
-use crate::common::{leaser_wrapper::LeaserWrapper, test_case::TestCase, AppExt};
+use crate::common::{AppExt, leaser_wrapper::LeaserWrapper, test_case::TestCase};
 
 type Currency = Usdc;
 type TheCoin = Coin<Currency>;
@@ -28,7 +28,9 @@ fn create_test_case() -> TestCase {
         vec![to_cosmwasm(create_coin(1_000_000))],
     );
     test_case.init_lpp_with_funds(None, 5_000_000_000);
-    test_case.init_leaser();
+    test_case.init_timealarms();
+    test_case.init_oracle(None);
+    test_case.init_leaser_with_oracle();
 
     test_case
 }

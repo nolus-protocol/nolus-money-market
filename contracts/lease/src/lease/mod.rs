@@ -1,22 +1,23 @@
-mod dto;
-pub(super) use dto::LeaseDTO;
-mod factory;
-pub(crate) mod open;
-mod downpayment_dto;
-pub(super) use downpayment_dto::DownpaymentDTO;
+use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp, wasm_execute, WasmMsg};
+use serde::Serialize;
 
-use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp};
+use contract_constants::LeaseReplyId;
 use finance::{
-    coin::Coin,
+    coin::{Amount, Coin},
     currency::{Currency, SymbolOwned},
+    fraction::Fraction,
     liability::Liability,
+    percent::{Percent, Units},
+    ratio::Ratio
 };
 use lpp::stub::Lpp as LppTrait;
+use market_price_oracle::msg::ExecuteMsg::AddPriceAlarm;
+use marketprice::storage::Price;
 use platform::{
     bank::{BankAccount, BankAccountView},
     batch::Batch,
+    batch::BatchMessage,
 };
-use serde::Serialize;
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -24,10 +25,21 @@ use crate::{
     msg::StateResponse,
 };
 
-use self::{
-    open::Result as OpenResult,
-    factory::Factory,
+pub(super) use self::{
+    downpayment_dto::DownpaymentDTO,
+    dto::LeaseDTO,
+    liquidation::LiquidationStatus,
 };
+use self::{
+    factory::Factory,
+    open::Result as OpenResult,
+};
+
+mod downpayment_dto;
+mod dto;
+mod factory;
+mod open;
+mod liquidation;
 
 pub trait WithLease {
     type Output;
@@ -54,6 +66,7 @@ pub struct Lease<Lpn, Lpp> {
     currency: SymbolOwned,
     liability: Liability,
     loan: Loan<Lpn, Lpp>,
+    market_price_oracle: Addr,
 }
 
 impl<Lpn, Lpp> Lease<Lpn, Lpp>
@@ -75,13 +88,20 @@ where
             currency: dto.currency,
             liability: dto.liability,
             loan: Loan::from_dto(dto.loan, lpp),
+            market_price_oracle: dto.market_price_oracle,
         }
     }
 
     pub(super) fn into_dto(self) -> (LeaseDTO, Lpp) {
         let (loan_dto, lpp) = self.loan.into_dto();
         (
-            LeaseDTO::new(self.customer, self.currency, self.liability, loan_dto),
+            LeaseDTO::new(
+                self.customer,
+                self.currency,
+                self.liability,
+                loan_dto,
+                self.market_price_oracle,
+            ),
             lpp,
         )
     }
@@ -100,8 +120,19 @@ where
     }
 
     // TODO lease currency can be different than Lpn, therefore result's type parameter
-    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<OpenResult<Lpn>> {
-        self.loan.open_loan_resp(resp)
+    pub(crate) fn open_loan_resp<B>(self, lease: Addr, resp: Reply, account: B, now: &Timestamp) -> ContractResult<OpenResult<Lpn>>
+    where
+        B: BankAccountView,
+    {
+        // TODO reschedule time alarm too
+        let reschedule_msg = self.reschedule_price_alarm(
+            lease,
+            account.balance()?,
+            now,
+            &LiquidationStatus::None,
+        )?;
+
+        let mut result = self.loan.open_loan_resp(resp)
             .map({
                 // Force move before closure to avoid edition warning from clippy;
                 let customer = self.customer;
@@ -115,7 +146,11 @@ where
                     loan_pool_id: result.loan_pool_id,
                     loan_amount: result.borrowed,
                 }
-            })
+            })?;
+
+        result.batch.schedule_execute_batch_message(reschedule_msg);
+
+        Ok(result)
     }
 
     // TODO add the lease address as a field in Lease<>
@@ -177,25 +212,202 @@ where
             })
         }
     }
+
+    pub(crate) fn reschedule_price_alarm<A>(
+        &self,
+        lease: A,
+        lease_amount: Coin<Lpn>,
+        now: &Timestamp,
+        liquidation: &LiquidationStatus<Lpn>,
+    ) -> ContractResult<BatchMessage<WasmMsg, LeaseReplyId>>
+    where
+        A: Into<Addr>,
+    {
+        Ok(BatchMessage::NoReply(wasm_execute(
+            self.market_price_oracle.as_str(),
+            &AddPriceAlarm {
+                target: self.price_alarm_by_percent(
+                    lease,
+                    lease_amount,
+                    now,
+                    match liquidation {
+                        LiquidationStatus::None
+                            | LiquidationStatus::PartialLiquidation(_) => self.liability.first_liq_warn_percent(),
+                        LiquidationStatus::FirstWarning(_) => self.liability.second_liq_warn_percent(),
+                        LiquidationStatus::SecondWarning(_) => self.liability.third_liq_warn_percent(),
+                        LiquidationStatus::ThirdWarning(_) => self.liability.max_percent(),
+                        LiquidationStatus::FullLiquidation(_) => unreachable!(),
+                    },
+                )?,
+            },
+            Vec::new(),
+        )?))
+    }
+
+    pub(crate) fn run_liquidation<B>(
+        &self,
+        now: Timestamp,
+        account: &B,
+        lease: Addr,
+        price: Price,
+    ) -> ContractResult<(LiquidationStatus<Lpn>, Coin<Lpn>)>
+    where
+        B: BankAccountView,
+    {
+        let lease_amount = account.balance::<Lpn>().map_err(ContractError::from)?;
+
+        self.liability.invariant_held()?;
+
+        let status = self.liquidation_status(now, lease, lease_amount, price)?;
+
+        // TODO run liquidation
+
+        Ok((status, lease_amount))
+    }
+
+    fn liquidation_status(
+        &self,
+        now: Timestamp,
+        lease: Addr,
+        lease_amount: Coin<Lpn>,
+        market_price: Price,
+    ) -> ContractResult<LiquidationStatus<Lpn>> {
+        assert_eq!(
+            market_price.base().symbol,
+            Lpn::SYMBOL,
+        );
+
+        assert_eq!(
+            market_price.quote().symbol,
+            self.currency,
+        );
+
+        self.liability.invariant_held()?;
+
+        Ok(if lease_amount.is_zero() {
+            LiquidationStatus::None
+        } else {
+            let loan_state = self.loan.state(now, lease)?;
+
+            loan_state.map_or(
+                LiquidationStatus::None,
+                |state| {
+                    let liability_lpn = state.principal_due
+                        + state.previous_margin_interest_due
+                        + state.previous_interest_due
+                        + state.current_margin_interest_due
+                        + state.current_interest_due;
+
+                    let lease_lpn = lease_amount * market_price.base().amount / market_price.quote().amount;
+
+                    match Percent::from_permille((Amount::from(liability_lpn) * 1000 / Amount::from(lease_lpn)) as Units) {
+                        liability_percent if liability_percent < self.liability.first_liq_warn_percent() => LiquidationStatus::None,
+                        liability_percent if liability_percent < self.liability.second_liq_warn_percent() => LiquidationStatus::FirstWarning(self.liability.first_liq_warn_percent()),
+                        liability_percent if liability_percent < self.liability.third_liq_warn_percent() => LiquidationStatus::SecondWarning(self.liability.second_liq_warn_percent()),
+                        liability_percent if liability_percent < self.liability.max_percent() => LiquidationStatus::ThirdWarning(self.liability.third_liq_warn_percent()),
+                        _ => {
+                            let liquidation_amount = lease_amount.min(
+                                Coin::new(
+                                    (
+                                        Amount::from(
+                                            liability_lpn - self.liability.healthy_percent().of(lease_lpn)
+                                        ) * Percent::HUNDRED.parts() as Amount
+                                    ) / (Percent::HUNDRED - self.liability.healthy_percent()).parts() as Amount,
+                                ),
+                            );
+
+                            // TODO update contract's "lease_amount"
+
+                            if liquidation_amount == lease_amount {
+                                LiquidationStatus::FullLiquidation(lease_amount)
+                            } else {
+                                LiquidationStatus::PartialLiquidation(liquidation_amount)
+                            }
+                        }
+                    }
+                },
+            )
+        })
+    }
+
+    fn price_alarm_by_percent<A>(
+        &self,
+        lease: A,
+        lease_amount: Coin<Lpn>,
+        now: &Timestamp,
+        percent: Percent,
+    ) -> ContractResult<Price>
+    where
+        A: Into<Addr>,
+    {
+        let state = self.loan.state(
+            *now + self.liability.recalculation_time(),
+            lease.into(),
+        )?
+            .ok_or(ContractError::LoanClosed())?;
+
+        let numerator = Amount::from(
+            state.principal_due
+                + state.previous_margin_interest_due
+                + state.previous_interest_due
+                + state.current_margin_interest_due
+                + state.current_interest_due,
+        );
+
+        assert_ne!(numerator, 0, "Loan already paid!");
+
+        let denominator = Amount::from(percent.of(lease_amount));
+
+        let gcd = {
+            let mut numerator = numerator;
+
+            let mut denominator = denominator;
+
+            while let Some(result) = numerator.checked_rem(denominator) {
+                numerator = denominator;
+
+                denominator = result;
+            }
+
+            numerator
+        };
+
+        Ok(Price::new(
+            Lpn::SYMBOL,
+            numerator / gcd,
+            self.currency.as_str(),
+            denominator / gcd,
+        ))
+    }
 }
 
 #[cfg(test)]
 mod tests {
-
     use cosmwasm_std::{Addr, Timestamp};
-    use finance::currency::{Nls, Usdc};
-    use finance::{
-        coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
-    };
-    use lpp::error::ContractError as LppError;
-    use lpp::msg::{LoanResponse, OutstandingInterest, QueryLoanResponse};
-    use lpp::stub::{Lpp, LppRef};
-
-    use finance::interest::InterestPeriod;
-    use platform::bank::BankAccountView;
-    use platform::batch::Batch;
-    use platform::error::Result as PlatformResult;
     use serde::{Deserialize, Serialize};
+
+    use finance::{
+        coin::Coin,
+        currency::{
+            Currency,
+            Nls,
+            Usdc
+        },
+        duration::Duration,
+        interest::InterestPeriod,
+        liability::Liability,
+        percent::Percent
+    };
+    use lpp::{
+        error::ContractError as LppError,
+        msg::{LoanResponse, OutstandingInterest, QueryLoanResponse},
+        stub::{Lpp, LppRef}
+    };
+    use platform::{
+        bank::BankAccountView,
+        batch::Batch,
+        error::Result as PlatformResult
+    };
 
     use crate::loan::{Loan, LoanDTO};
     use crate::msg::StateResponse;
@@ -377,9 +589,13 @@ mod tests {
                 Percent::from_percent(65),
                 Percent::from_percent(70),
                 Percent::from_percent(80),
+                Percent::from_percent(2),
+                Percent::from_percent(3),
+                Percent::from_percent(2),
                 10 * 24,
             ),
             loan: Loan::from_dto(loan_dto, lpp),
+            market_price_oracle: Addr::unchecked("oracle"),
         }
     }
 

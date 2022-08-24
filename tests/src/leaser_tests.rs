@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
-use crate::common::{lpp_wrapper::mock_lpp_quote_query, test_case::TestCase, ADMIN, USER};
-use cosmwasm_std::{coins, Addr, DepsMut, Env, Event, MessageInfo, Response};
-use cw_multi_test::{next_block, ContractWrapper, Executor};
+use cosmwasm_std::{Addr, coins, DepsMut, Env, Event, MessageInfo, Response};
+use cw_multi_test::{ContractWrapper, Executor, next_block};
+
 use finance::{
     coin::{self, Coin},
     currency::{Currency, Nls, SymbolStatic, Usdc},
@@ -10,6 +10,8 @@ use finance::{
 };
 use lease::error::ContractError;
 use leaser::msg::{QueryMsg, QuoteResponse};
+
+use crate::common::{ADMIN, lpp_wrapper::mock_lpp_quote_query, test_case::TestCase, USER};
 
 type TheCurrency = Usdc;
 
@@ -76,7 +78,9 @@ fn open_multiple_loans() {
     let mut test_case = TestCase::new(LPN);
     test_case.init(&user_addr, coins(500, LPN));
     test_case.init_lpp(None);
-    test_case.init_leaser();
+    test_case.init_timealarms();
+    test_case.init_oracle(None);
+    test_case.init_leaser_with_oracle();
 
     test_case
         .app
@@ -302,7 +306,20 @@ fn open_lease_impl(currency: SymbolStatic) {
     let mut test_case = TestCase::new(currency);
     test_case.init(&user_addr, coins(500, currency));
     test_case.init_lpp(None);
-    test_case.init_leaser();
+    test_case.init_timealarms();
+    test_case.init_oracle(None);
+    test_case.init_leaser_with_oracle();
+
+    let lpp_addr: &str = test_case.lpp_addr.as_ref().unwrap().as_str(); // 0
+
+    let _time_alarms_addr: &str = test_case.timealarms.as_ref().unwrap().as_str(); // 1
+
+    let oracle_addr: &str = test_case.oracle.as_ref().unwrap().as_str(); // 2
+
+    let leaser_addr: &str = test_case.leaser_addr.as_ref().unwrap().as_str(); // 3
+
+    let lease_addr: Addr = Addr::unchecked("contract4"); // 4
+    let lease_addr: &str = lease_addr.as_str();
 
     let res = test_case
         .app
@@ -317,21 +334,22 @@ fn open_lease_impl(currency: SymbolStatic) {
         .unwrap();
 
     // ensure the attributes were relayed from the sub-message
-    assert_eq!(9, res.events.len(), "{:?}", res.events);
+    assert_eq!(res.events.len(), 11);
+
     // reflect only returns standard wasm-execute event
     let leaser_exec = &res.events[0];
     assert_eq!(leaser_exec.ty.as_str(), "execute");
     assert_eq!(
         leaser_exec.attributes,
-        [("_contract_addr", test_case.leaser_addr.clone().unwrap())]
+        [("_contract_addr", leaser_addr)]
     );
 
-    let lease_exec = &res.events[1];
-    assert_eq!(lease_exec.ty.as_str(), "instantiate");
+    let lease_inst = &res.events[1];
+    assert_eq!(lease_inst.ty.as_str(), "instantiate");
     assert_eq!(
-        lease_exec.attributes,
+        lease_inst.attributes,
         [
-            ("_contract_addr", "contract2"),
+            ("_contract_addr", lease_addr),
             ("code_id", &test_case.lease_code_id.unwrap().to_string())
         ]
     );
@@ -340,95 +358,113 @@ fn open_lease_impl(currency: SymbolStatic) {
     assert_eq!(lpp_exec.ty.as_str(), "execute");
     assert_eq!(
         lpp_exec.attributes,
-        [("_contract_addr", "contract0")],
+        [("_contract_addr", lpp_addr)]
     );
 
-    let wasm_event = &res.events[3];
-    assert_eq!(wasm_event.ty.as_str(), "wasm");
-    assert_eq!(wasm_event.attributes.len(), 2);
-    assert!(
-        wasm_event.attributes.iter().any(
-            |attribute| attribute == ("_contract_addr", "contract0")
-        )
-    );
-    assert!(
-        wasm_event.attributes.iter().any(
-            |attribute| attribute == ("method", "try_open_loan")
-        )
+    let lpp_wasm = &res.events[3];
+    assert_eq!(lpp_wasm.ty.as_str(), "wasm");
+    assert_eq!(
+        lpp_wasm.attributes,
+        [
+            ("_contract_addr", lpp_addr),
+            ("method", "try_open_loan"),
+        ]
     );
 
     let transfer_event = &res.events[4];
     assert_eq!(transfer_event.ty.as_str(), "transfer");
-    assert_eq!(transfer_event.attributes.len(), 3);
-    assert!(
-        transfer_event.attributes.iter().any(
-            |attribute| attribute == ("recipient", "contract2")
-        )
-    );
-    assert!(
-        transfer_event.attributes.iter().any(
-            |attribute| attribute == ("sender", "contract0")
-        )
-    );
-    assert!(
-        transfer_event.attributes.iter().any(
-            |attribute| (
-                attribute.key == "amount"
-                && attribute.value.strip_suffix("uusdc")
-                    .or_else(|| attribute.value.strip_suffix("unls"))
-                    .unwrap().parse::<u128>().unwrap() == 74
-            )
-        )
+    assert_eq!(
+        transfer_event.attributes,
+        [
+            ("recipient", lease_addr),
+            ("sender", lpp_addr),
+            ("amount", &format!("{}{}", "74", currency))
+        ]
     );
 
-    let reply_event = &res.events[5];
-    assert_eq!(reply_event.ty.as_str(), "reply");
-    assert_eq!(reply_event.attributes.len(), 2);
-    assert!(
-        reply_event.attributes.iter().any(
-            |attribute| attribute == ("_contract_addr", "contract2")
-        )
-    );
-    assert!(
-        reply_event.attributes.iter().any(
-            |attribute| attribute == ("mode", "handle_success")
-        )
-    );
-
-    let lease_exec = &res.events[6];
-    assert_eq!(lease_exec.ty.as_str(), "wasm-ls-open");
-    assert!(
-        lease_exec.attributes.iter().any(
-            |attribute| attribute == ("_contract_addr", "contract2")
-        )
-    );
-    assert!(
-        lease_exec.attributes.iter().any(
-            |attribute| attribute == ("customer", "user")
-        )
-    );
-
-    let reply_event = &res.events[7];
-    assert_eq!(reply_event.ty.as_str(), "reply");
-    assert_eq!(reply_event.attributes.len(), 2);
-    assert!(
-        reply_event.attributes.iter().any(
-            |attribute| attribute == ("_contract_addr", "contract1")
-        )
-    );
-    assert!(
-        reply_event.attributes.iter().any(
-            |attribute| attribute == ("mode", "handle_success")
-        )
-    );
-
-    let lease_reply = &res.events[8];
-    assert_eq!(lease_reply.ty.as_str(), "wasm");
+    let lease_reply = &res.events[5];
+    assert_eq!(lease_reply.ty.as_str(), "reply");
     assert_eq!(
         lease_reply.attributes,
         [
-            ("_contract_addr", "contract1"),
-            ("lease_address", "contract2"),
+            ("_contract_addr", lease_addr),
+            ("mode", "handle_success"),
+        ]
+    );
+
+    let lease_exec_open = &res.events[6];
+    assert_eq!(lease_exec_open.ty.as_str(), "wasm-ls-open");
+    assert!(lease_exec_open.attributes.iter().any(
+        |attribute| attribute == ("_contract_addr", lease_addr),
+    ));
+    assert!(lease_exec_open.attributes.iter().any(
+        |attribute| attribute.key == "height",
+    ));
+    assert!(lease_exec_open.attributes.iter().any(
+        |attribute| attribute.key == "idx",
+    ));
+    assert!(lease_exec_open.attributes.iter().any(
+        |attribute| attribute == ("id", lease_addr),
+    ));
+    assert!(lease_exec_open.attributes.iter().any(
+        |attribute| attribute == ("customer", USER),
+    ));
+    assert!(lease_exec_open.attributes.iter().any(
+        |attribute| attribute == ("air", "89"),
+    ));
+    assert!(lease_exec_open.attributes.iter().any(
+        |attribute| attribute == ("currency", currency),
+    ));
+    assert!(lease_exec_open.attributes.iter().any(
+        |attribute| attribute == ("loan-pool-id", lpp_addr),
+    ));
+    assert!(lease_exec_open.attributes.iter().any(
+        |attribute| attribute == ("loan-amount", "74"),
+    ));
+    assert!(lease_exec_open.attributes.iter().any(
+        |attribute| attribute == ("loan-symbol", currency),
+    ));
+    assert!(lease_exec_open.attributes.iter().any(
+        |attribute| attribute == ("downpayment-symbol", currency),
+    ));
+    assert!(lease_exec_open.attributes.iter().any(
+        |attribute| attribute == ("downpayment-amount", "40"),
+    ));
+
+    let oracle_exec = &res.events[7];
+    assert_eq!(oracle_exec.ty.as_str(), "execute");
+    assert_eq!(
+        oracle_exec.attributes,
+        [("_contract_addr", oracle_addr)]
+    );
+
+    let oracle_wasm = &res.events[8];
+    assert_eq!(oracle_wasm.ty.as_str(), "wasm");
+    assert_eq!(
+        oracle_wasm.attributes,
+        [
+            ("_contract_addr", oracle_addr),
+            ("method", "try_add_price_hook"),
+        ]
+    );
+
+    let leaser_reply = &res.events[9];
+    assert_eq!(leaser_reply.ty.as_str(), "reply");
+    assert_eq!(
+        leaser_reply.attributes,
+        [
+            ("_contract_addr", leaser_addr),
+            ("mode", "handle_success"),
+        ]
+    );
+
+    let lease_opened = &res.events[10];
+    assert_eq!(lease_opened.ty.as_str(), "wasm");
+    assert_eq!(
+        lease_opened.attributes,
+        [
+            ("_contract_addr", leaser_addr),
+            ("lease_address", lease_addr)
         ]
     );
 
@@ -449,5 +485,5 @@ fn open_lease_impl(currency: SymbolStatic) {
 }
 
 fn lease_addr(events: &[Event]) -> String {
-    events[8].attributes.get(1).unwrap().value.clone()
+    events.last().unwrap().attributes.get(1).unwrap().value.clone()
 }

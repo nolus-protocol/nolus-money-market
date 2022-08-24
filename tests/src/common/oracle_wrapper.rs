@@ -1,6 +1,9 @@
-use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdError, StdResult};
-use cw_multi_test::{App, ContractWrapper, Executor};
+use cosmwasm_std::{Addr, Binary, Deps, Env, StdError, StdResult, to_binary};
+use cw_multi_test::{ContractWrapper, Executor};
+
 use marketprice::storage::Price;
+
+use crate::common::MockApp;
 
 use super::{ADMIN, NATIVE_DENOM};
 
@@ -33,7 +36,7 @@ impl MarketOracleWrapper {
         }
     }
     #[track_caller]
-    pub fn instantiate(self, app: &mut App, denom: &str, timealarms_addr: &str) -> Addr {
+    pub fn instantiate(self, app: &mut MockApp, denom: &str, timealarms_addr: &str) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = oracle::msg::InstantiateMsg {
             base_asset: denom.to_string(),

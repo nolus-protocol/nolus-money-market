@@ -3,7 +3,7 @@ use cosmwasm_std::{Coin as CwCoin, Env, Reply};
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
 use platform::{
-    bank,
+    bank::{self, BankAccountView},
     batch::{Batch, Emit, Emitter}
 };
 
@@ -54,19 +54,29 @@ pub struct OpenLoanReqResult {
     pub(super) downpayment: DownpaymentDTO,
 }
 
-pub struct OpenLoanResp {
+pub struct OpenLoanResp<'a, B>
+where
+    B: BankAccountView,
+{
     resp: Reply,
     downpayment: DownpaymentDTO,
-    env: Env,
+    account: B,
+    env: &'a Env,
 }
 
-impl OpenLoanResp {
-    pub fn new(resp: Reply, downpayment: DownpaymentDTO, env: Env) -> Self {
-        Self { resp, downpayment, env }
+impl<'a, B> OpenLoanResp<'a, B>
+where
+    B: BankAccountView,
+{
+    pub fn new(resp: Reply, downpayment: DownpaymentDTO, account: B, env: &'a Env) -> Self {
+        Self { resp, downpayment, account, env }
     }
 }
 
-impl WithLease for OpenLoanResp {
+impl<'a, B> WithLease for OpenLoanResp<'a, B>
+where
+    B: BankAccountView,
+{
     type Output = Emitter;
 
     type Error = ContractError;
@@ -76,12 +86,12 @@ impl WithLease for OpenLoanResp {
         Lpp: LppTrait<Lpn>,
         Lpn: Currency,
     {
-        let result = lease.open_loan_resp(self.resp)?;
+        let result = lease.open_loan_resp(self.env.contract.address.clone(), self.resp, self.account, &self.env.block.time)?;
 
         Ok(result.batch
             .into_emitter(TYPE::Open)
-            .emit_tx_info(&self.env)
-            .emit("id", self.env.contract.address)
+            .emit_tx_info(self.env)
+            .emit("id", self.env.contract.address.clone())
             .emit("customer", result.customer)
             .emit_percent_amount("air", result.annual_interest_rate)
             .emit("currency", result.currency)

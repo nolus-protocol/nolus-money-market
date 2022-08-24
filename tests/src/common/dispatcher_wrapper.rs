@@ -1,9 +1,12 @@
 use cosmwasm_std::{Addr, StdError};
-use cw_multi_test::ContractWrapper;
+use cw_multi_test::{
+    ContractWrapper,
+    Executor
+};
 
 use rewards_dispatcher::state::tvl_intervals::{Intervals, Stop};
 
-use cw_multi_test::{App, Executor};
+use crate::common::MockApp;
 
 use super::ADMIN;
 
@@ -24,7 +27,7 @@ impl DispatcherWrapper {
     #[track_caller]
     pub fn instantiate(
         self,
-        app: &mut App,
+        app: &mut MockApp,
         lpp: &Addr,
         oracle: &Addr,
         timealarms: &Addr,

@@ -1,10 +1,8 @@
+use cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, from_binary, MessageInfo, Reply, Response, StdError, StdResult, Storage, Timestamp, to_binary};
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
-    StdResult, Storage, Timestamp,
-};
 use cw2::set_contract_version;
+
 use marketprice::storage::{Denom, DenomPair, Price};
 
 use crate::alarms::MarketAlarms;
@@ -25,7 +23,13 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let timealarms_addr = deps.api.addr_validate(&msg.timealarms_addr)?;
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    let timealarms_addr = deps.api.addr_validate(&msg.timealarms_addr)
+        .map_err(|_| StdError::generic_err(format!(
+            "Invalid Time Alarms address provided! Input: {:?}",
+            msg.timealarms_addr.as_str(),
+        )))?;
 
     Config::new(
         msg.base_asset,
@@ -34,9 +38,7 @@ pub fn instantiate(
         msg.feeders_percentage_needed,
         msg.supported_denom_pairs,
         timealarms_addr,
-    )
-    .store(deps.storage)?;
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    ).store(deps.storage)?;
 
     Ok(Response::default())
 }

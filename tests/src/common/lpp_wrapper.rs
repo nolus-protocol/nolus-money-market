@@ -1,11 +1,17 @@
-use cosmwasm_std::{coins, to_binary, Addr, Binary, Deps, Env, Uint64};
-use cw_multi_test::{App, ContractWrapper, Executor};
-use finance::currency::Usdc;
-use finance::{coin::Coin, percent::Percent};
+use cosmwasm_std::{Addr, Binary, coins, Deps, Env, to_binary, Uint64};
+use cw_multi_test::{ContractWrapper, Executor};
+
+use finance::{
+    coin::Coin,
+    currency::Usdc,
+    percent::Percent
+};
 use lpp::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
+
+use crate::common::MockApp;
 
 use super::ADMIN;
 
@@ -40,7 +46,7 @@ impl LppWrapper {
     #[track_caller]
     pub fn instantiate(
         self,
-        app: &mut App,
+        app: &mut MockApp,
         lease_code_id: Uint64,
         denom: &str,
         balance: u128,

@@ -6,25 +6,25 @@ use std::{
 use cosmwasm_std::{Addr, Api, QuerierWrapper, Reply, Timestamp};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use platform::{
-    reply::from_execute,
-    batch::Batch
-};
+use contract_constants::LeaseReplyId;
 use finance::{
     coin::Coin,
-    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
+    currency::{AnyVisitor, Currency, SymbolOwned, visit_any},
+};
+use platform::{
+    batch::Batch,
+    reply::from_execute
 };
 
 use crate::{
     error::ContractError,
     msg::{
-        BalanceResponse, ExecuteMsg, LppBalanceResponse, PriceResponse, QueryConfigResponse,
-        QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg, QueryQuoteResponse,
-        RewardsResponse, LoanResponse,
+        BalanceResponse, ExecuteMsg, LoanResponse, LppBalanceResponse, PriceResponse,
+        QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg,
+        QueryQuoteResponse, RewardsResponse,
     },
 };
 
-const REPLY_ID: u64 = 28;
 pub type Result<T> = StdResult<T, ContractError>;
 
 // TODO split into LppBorrow, LppLend, and LppAdmin traits
@@ -165,19 +165,23 @@ where
 
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {
         self.batch
-            .schedule_execute_wasm_on_success_reply::<_, Lpn>(
+            .schedule_execute_wasm_on_success_reply::<_, Lpn, _>(
                 &self.addr,
                 ExecuteMsg::OpenLoan {
                     amount: amount.into(),
                 },
                 None,
-                REPLY_ID,
+                LeaseReplyId::LppLoan,
             )
             .map_err(ContractError::from)
     }
 
     fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>> {
-        debug_assert_eq!(REPLY_ID, resp.id);
+        if !matches!(resp.id.try_into(), Ok(LeaseReplyId::LppLoan)) {
+            return Err(ContractError::CustomError {
+                val: "Invalid reply ID!".into(),
+            });
+        }
 
         from_execute(resp).map_err(Into::into).and_then(
             |maybe_data| maybe_data.ok_or_else(
@@ -275,9 +279,11 @@ impl<'a, C> From<LppStub<'a, C>> for Batch {
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{
-        from_binary, testing::MockQuerier, Addr, CosmosMsg, QuerierWrapper, ReplyOn, Response,
+        Addr, CosmosMsg, from_binary, QuerierWrapper, ReplyOn, Response, testing::MockQuerier,
         WasmMsg,
     };
+
+    use contract_constants::{IdType, LeaseReplyId};
     use finance::{
         coin::Coin,
         currency::{Currency, Nls},
@@ -286,7 +292,7 @@ mod test {
 
     use crate::{
         msg::ExecuteMsg,
-        stub::{LppRef, REPLY_ID},
+        stub::LppRef,
     };
 
     use super::Lpp;
@@ -309,7 +315,7 @@ mod test {
         let resp: Response = batch.into();
         assert_eq!(1, resp.messages.len());
         let msg = &resp.messages[0];
-        assert_eq!(REPLY_ID, msg.id);
+        assert_eq!(msg.id, LeaseReplyId::LppLoan.downcast());
         assert_eq!(ReplyOn::Success, msg.reply_on);
         if let CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr,

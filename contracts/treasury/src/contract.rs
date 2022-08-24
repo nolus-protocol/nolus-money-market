@@ -1,8 +1,8 @@
+use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, Storage};
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-
-use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, Storage};
 use cw2::set_contract_version;
+
 use finance::coin::Coin;
 use finance::currency::Nls;
 use platform::bank::{BankAccount, BankStub};
@@ -24,6 +24,7 @@ pub fn instantiate(
     _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
     let admin = info.sender;
     ADMIN.save(deps.storage, &admin)?;
 

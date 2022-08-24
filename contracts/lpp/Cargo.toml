@@ -23,6 +23,7 @@ cw2 = "0.13.2"
 schemars = "0.8"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0" }
+contract_constants = { path = "../../packages/contract_constants", version = "0.1.0", default-features = false }
 finance = { path = "../../packages/finance", version = "0.1.0", default-features = false }
 platform = { path = "../../packages/platform", version = "0.1.0", default-features = false }
 

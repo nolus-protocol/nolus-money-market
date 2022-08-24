@@ -62,6 +62,29 @@ Run the following in the workspace root.
 ./lint.sh
 ```
 
+### New contracts
+
+Contract's addresses are dependent on the order in which they are deployed in the script.
+
+When adding a new contract, and it needs to be deployed with the genesis:
+1. Add it to the `scripts/deploy-contracts-genesis.sh` script.
+2. Ensure you preserve the order:
+    * Your contract **is not** a dependency:
+      * Add your initialization logic at the end and fill in the address that you get based on the contract's ID.
+    * Your contract **is** a dependency:
+      * Find the position corresponding to contract's position in the dependency tree.
+      * Assume the address of the first contract that you pushed down.
+      * **Shift** down the addresses of the following contracts.
+
+        In the end, you should be left with one contract for which there won't be an address to assume.
+      * After you have done with the address shifting, fill in the contract without an address the one you get based on the contract's ID.
+
+### Reordering contracts because one is now dependency
+
+As mentioned in the section above, contract's addresses are dependent on the order in which they are deployed in the script.
+
+When changing the order of deployment, reorder the contracts' addresses accordingly, thus the order of the actual addresses is **not** changed but contract who owns that address is.
+
 ### Upgrade dependencies
 
 Using the reviously installed cargo-edit one can easily upgrade the dependencies. For more details please refer to 

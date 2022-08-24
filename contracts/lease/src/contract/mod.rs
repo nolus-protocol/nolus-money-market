@@ -1,26 +1,37 @@
-mod close;
-mod open;
-mod repay;
-mod state;
-
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Response};
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Response};
 use cw2::set_contract_version;
+
+use marketprice::storage::Price;
 use platform::{
     bank::BankStub,
     batch::Emitter,
 };
-use crate::contract::open::OpenLoanReqResult;
 
-use crate::error::ContractResult;
-use crate::lease::{self, DownpaymentDTO, LeaseDTO};
-use crate::msg::{ExecuteMsg, NewLeaseForm, StateQuery};
+use crate::{
+    contract::{
+        alarms::price_alarm::PriceAlarm,
+        open::OpenLoanReqResult,
+    },
+    error::{
+        ContractError,
+        ContractResult
+    },
+    lease::{self, DownpaymentDTO, LeaseDTO},
+    msg::{ExecuteMsg, NewLeaseForm, StateQuery},
+};
 
+use self::{close::Close, repay::RepayResult};
 use self::open::{OpenLoanReq, OpenLoanResp};
 use self::repay::Repay;
 use self::state::LeaseState;
-use self::{close::Close, repay::RepayResult};
+
+mod alarms;
+mod close;
+mod open;
+mod repay;
+mod state;
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -34,6 +45,11 @@ pub fn instantiate(
 ) -> ContractResult<Response> {
     // TODO restrict the Lease instantiation only to the Leaser addr by using `nolusd tx wasm store ... --instantiate-only-address <addr>`
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+    deps.api.addr_validate(form.market_price_oracle.as_str())
+        .map_err(|_| ContractError::InvalidParameters(
+            format!("Invalid Market Price Oracle address provided! Input: {:?}", form.market_price_oracle.as_str())
+        ))?;
 
     let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
     lease.store(deps.storage)?;
@@ -57,11 +73,13 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
     // TODO swap the received loan and the downpayment to lease.currency
     let lease = LeaseDTO::load(deps.storage)?;
 
+    let account = BankStub::my_account(&env, &deps.querier);
+
     let downpayment = DownpaymentDTO::remove(deps.storage)?;
 
     let emitter = lease::execute(
         lease,
-        OpenLoanResp::new(msg, downpayment, env),
+        OpenLoanResp::new(msg, downpayment, account, &env),
         &deps.querier,
     )?;
 
@@ -81,11 +99,11 @@ pub fn execute(
         ExecuteMsg::Repay() => {
             let res = try_repay(&deps.querier, env, info, lease)?;
             LeaseDTO::store(&res.lease_dto, deps.storage)?;
-            Ok(res.emitter)
+            Ok(res.emitter.into())
         }
-        ExecuteMsg::Close() => try_close(deps, env, info, lease),
+        ExecuteMsg::Close() => try_close(deps, env, info, lease).map(Into::into),
+        ExecuteMsg::PriceAlarm(price) => run_price_alarm_liquidation(deps, env, info, lease, price),
     }
-    .map(Into::into)
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -108,11 +126,14 @@ fn try_repay(
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<RepayResult> {
+    let account = BankStub::my_account(&env, querier);
+
     lease::execute(
         lease,
         Repay::new(
             &info.funds,
-            env,
+            account,
+            &env,
         ),
         querier,
     )
@@ -138,4 +159,28 @@ fn try_close(
     )?;
 
     Ok(emitter)
+}
+
+fn run_price_alarm_liquidation(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    lease: LeaseDTO,
+    price: Price,
+) -> ContractResult<Response> {
+    let result = lease::execute(
+        lease,
+        PriceAlarm::new(
+            &info.sender,
+            env.contract.address.clone(),
+            BankStub::my_account(&env, &deps.querier),
+            env.block.time,
+            price,
+        ),
+        &deps.querier,
+    )?;
+
+    result.lease.store(deps.storage)?;
+
+    Ok(result.into_response.convert())
 }

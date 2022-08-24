@@ -1,6 +1,8 @@
-use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
+use cosmwasm_std::Addr;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -11,6 +13,7 @@ pub struct NewLeaseForm {
     pub currency: SymbolOwned,
     pub liability: Liability,
     pub loan: LoanForm,
+    pub market_price_oracle: Addr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

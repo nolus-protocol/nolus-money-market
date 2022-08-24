@@ -1,21 +1,22 @@
-mod coinc;
-#[cfg(feature = "testing")]
-pub use coinc::funds;
-pub use coinc::CoinDTO;
-mod serde;
-
 use std::{
     fmt::{Debug, Display, Formatter},
     marker::PhantomData,
     ops::{Add, AddAssign, Div, Sub, SubAssign},
 };
+use std::ops::Mul;
 
 use ::serde::{Deserialize, Serialize};
+use gcd::Gcd;
 use schemars::JsonSchema;
 
-use gcd::Gcd;
+pub use coinc::CoinDTO;
+#[cfg(feature = "testing")]
+pub use coinc::funds;
 
 use crate::currency::Currency;
+
+mod coinc;
+mod serde;
 
 pub type Amount = u128;
 
@@ -111,6 +112,20 @@ where
     }
 }
 
+impl<C> Mul<Amount> for Coin<C>
+where
+    C: Currency,
+{
+    type Output = Self;
+
+    fn mul(self, rhs: Amount) -> Self::Output {
+        Self::Output {
+            amount: self.amount * rhs,
+            symbol: self.symbol,
+        }
+    }
+}
+
 impl<C> Div<Amount> for Coin<C>
 where
     C: Currency,
@@ -154,7 +169,6 @@ where
 
 #[cfg(test)]
 mod test {
-
     use crate::{
         currency::{Nls, Usdc},
         percent::test::test_of,
