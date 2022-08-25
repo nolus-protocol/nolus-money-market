@@ -1,12 +1,13 @@
-use cosmwasm_std::{coins, Addr, Coin};
+use cosmwasm_std::{Addr, Coin, coins};
 use cw_multi_test::{ContractWrapper, Executor};
+
 use finance::currency::{Currency, Nls, Usdc};
 
 use crate::{
-    common::test_case::TestCase,
     common::{
-        lpp_wrapper::mock_lpp_query, oracle_wrapper::mock_oracle_query, ADMIN, NATIVE_DENOM, USER,
+        ADMIN, lpp_wrapper::mock_lpp_query, NATIVE_DENOM, oracle_wrapper::mock_oracle_query, USER,
     },
+    common::test_case::TestCase,
 };
 
 #[test]
@@ -51,7 +52,11 @@ fn on_alarm() {
     let lender = Addr::unchecked(USER);
 
     let mut test_case = TestCase::new(denom);
-    test_case.init(&lender, coins(500, denom)).init_oracle(None);
+    test_case.init(
+        &lender,
+        coins(500, denom))
+        .init_timealarms()
+        .init_oracle(None);
 
     test_case
         .init_lpp(Some(ContractWrapper::new(
