@@ -12,20 +12,6 @@ use crate::common::{ContractWrapper, MockApp};
 
 use super::{ADMIN, USER};
 
-type LeaseContractWrapperReply = Box<
-    ContractWrapper<
-        ExecuteMsg,
-        ContractError,
-        NewLeaseForm,
-        ContractError,
-        StateQuery,
-        ContractError,
-        cosmwasm_std::Empty,
-        anyhow::Error,
-        ContractError,
-    >,
->;
-
 pub struct LeaseWrapper {
     contract_wrapper: LeaseContractWrapperReply,
 }
@@ -166,3 +152,17 @@ pub struct LeaseWrapperAddresses {
     pub time_alarms: Addr,
     pub oracle: Addr,
 }
+
+type LeaseContractWrapperReply = Box<
+    ContractWrapper<
+        ExecuteMsg,
+        ContractError,
+        NewLeaseForm,
+        ContractError,
+        StateQuery,
+        ContractError,
+        cosmwasm_std::Empty,
+        anyhow::Error,
+        ContractError,
+    >,
+>;

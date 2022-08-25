@@ -16,16 +16,7 @@ use crate::common::{ContractWrapper, MockApp};
 use super::ADMIN;
 
 pub struct LppWrapper {
-    contract_wrapper: Box<
-        ContractWrapper<
-            ExecuteMsg,
-            ContractError,
-            InstantiateMsg,
-            ContractError,
-            QueryMsg,
-            ContractError,
-        >,
-    >,
+    contract_wrapper: Box<LppContractWrapper>,
 }
 
 impl LppWrapper {
@@ -117,3 +108,12 @@ pub fn mock_lpp_quote_query(
 
     Ok(res)
 }
+
+type LppContractWrapper = ContractWrapper<
+    ExecuteMsg,
+    ContractError,
+    InstantiateMsg,
+    ContractError,
+    QueryMsg,
+    ContractError,
+>;
