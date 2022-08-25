@@ -246,8 +246,8 @@ where
 
         debug_assert_eq!(margin_interest_due_period.till(), now);
 
-        let previous_margin_interest_due = dbg!(margin_interest_overdue_period).interest(principal_due);
-        let current_margin_interest_due = dbg!(margin_interest_due_period).interest(principal_due);
+        let previous_margin_interest_due = margin_interest_overdue_period.interest(principal_due);
+        let current_margin_interest_due = margin_interest_due_period.interest(principal_due);
 
         // Fetching both to ensure it doesn't fetch it until the current block's time.
         let previous_interest_due = self.load_loan_interest_due(lease.clone(), margin_interest_overdue_period.till())?;
