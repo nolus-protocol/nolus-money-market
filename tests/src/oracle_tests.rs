@@ -12,12 +12,11 @@ use finance::{
 use marketprice::storage::Price;
 use platform::coin_legacy::to_cosmwasm;
 
-use crate::common::{ADMIN, AppExt, leaser_wrapper::LeaserWrapper, test_case::TestCase};
+use crate::common::{ADMIN, test_case::TestCase};
 
 type Currency = Usdc;
 type TheCoin = Coin<Currency>;
 const DENOM: &str = <Usdc as finance::currency::Currency>::SYMBOL;
-const DOWNPAYMENT: u128 = 10;
 
 fn create_coin(amount: u128) -> TheCoin {
     Coin::<Currency>::new(amount)
@@ -35,20 +34,6 @@ fn create_test_case() -> TestCase {
     test_case.init_leaser();
 
     test_case
-}
-
-fn open_lease(test_case: &mut TestCase, value: TheCoin) {
-    test_case
-        .app
-        .execute_contract(
-            Addr::unchecked("user"),
-            test_case.leaser_addr.clone().unwrap(),
-            &leaser::msg::ExecuteMsg::OpenLease {
-                currency: DENOM.to_string(),
-            },
-            &[to_cosmwasm(value)],
-        )
-        .unwrap();
 }
 
 #[test]

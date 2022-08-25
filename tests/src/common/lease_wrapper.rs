@@ -12,20 +12,6 @@ use crate::common::ContractWrapper;
 
 use super::{ADMIN, USER};
 
-type LeaseContractWrapperReply = Box<
-    ContractWrapper<
-        ExecuteMsg,
-        ContractError,
-        NewLeaseForm,
-        ContractError,
-        StateQuery,
-        ContractError,
-        cosmwasm_std::Empty,
-        anyhow::Error,
-        ContractError,
-    >,
->;
-
 pub struct LeaseWrapper {
     contract_wrapper: LeaseContractWrapperReply,
 }
@@ -145,3 +131,17 @@ impl Default for LeaseWrapper {
         }
     }
 }
+
+type LeaseContractWrapperReply = Box<
+    ContractWrapper<
+        ExecuteMsg,
+        ContractError,
+        NewLeaseForm,
+        ContractError,
+        StateQuery,
+        ContractError,
+        cosmwasm_std::Empty,
+        anyhow::Error,
+        ContractError,
+    >,
+>;

@@ -16,20 +16,6 @@ use crate::common::ContractWrapper;
 
 use super::ADMIN;
 
-type LeaserContractWrapperReply = Box<
-    ContractWrapper<
-        ExecuteMsg,
-        ContractError,
-        InstantiateMsg,
-        ContractError,
-        QueryMsg,
-        ContractError,
-        cosmwasm_std::Empty,
-        anyhow::Error,
-        ContractError,
-    >,
->;
-
 pub struct LeaserWrapper {
     contract_wrapper: LeaserContractWrapperReply,
 }
@@ -75,3 +61,17 @@ impl Default for LeaserWrapper {
         }
     }
 }
+
+type LeaserContractWrapperReply = Box<
+    ContractWrapper<
+        ExecuteMsg,
+        ContractError,
+        InstantiateMsg,
+        ContractError,
+        QueryMsg,
+        ContractError,
+        cosmwasm_std::Empty,
+        anyhow::Error,
+        ContractError,
+    >,
+>;

@@ -13,34 +13,12 @@ use crate::common::ContractWrapper;
 use super::{ADMIN, NATIVE_DENOM};
 
 pub struct MarketOracleWrapper {
-    contract_wrapper: Box<
-        ContractWrapper<
-            ExecuteMsg,
-            ContractError,
-            InstantiateMsg,
-            ContractError,
-            QueryMsg,
-            StdError,
-            cosmwasm_std::Empty,
-            anyhow::Error,
-            ContractError,
-        >,
-    >,
+    contract_wrapper: Box<OracleContractWrapper>,
 }
 
 impl MarketOracleWrapper {
     pub fn with_contract_wrapper(
-        contract: ContractWrapper<
-            ExecuteMsg,
-            ContractError,
-            InstantiateMsg,
-            ContractError,
-            QueryMsg,
-            StdError,
-            cosmwasm_std::Empty,
-            anyhow::Error,
-            ContractError,
-        >,
+        contract: OracleContractWrapper,
     ) -> Self {
         Self {
             contract_wrapper: Box::new(contract),
@@ -85,3 +63,15 @@ pub fn mock_oracle_query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binar
 
     Ok(res)
 }
+
+type OracleContractWrapper = ContractWrapper<
+    ExecuteMsg,
+    ContractError,
+    InstantiateMsg,
+    ContractError,
+    QueryMsg,
+    StdError,
+    cosmwasm_std::Empty,
+    anyhow::Error,
+    ContractError,
+>;

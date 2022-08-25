@@ -12,16 +12,7 @@ use crate::common::ContractWrapper;
 use super::ADMIN;
 
 pub struct ProfitWrapper {
-    contract_wrapper: Box<
-        ContractWrapper<
-            ExecuteMsg,
-            ContractError,
-            InstantiateMsg,
-            ContractError,
-            QueryMsg,
-            StdError,
-        >,
-    >,
+    contract_wrapper: Box<ProfitContractWrapper>,
 }
 
 impl ProfitWrapper {
@@ -58,3 +49,12 @@ impl Default for ProfitWrapper {
         }
     }
 }
+
+type ProfitContractWrapper = ContractWrapper<
+    ExecuteMsg,
+    ContractError,
+    InstantiateMsg,
+    ContractError,
+    QueryMsg,
+    StdError,
+>;

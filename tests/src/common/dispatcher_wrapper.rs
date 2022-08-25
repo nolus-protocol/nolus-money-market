@@ -12,16 +12,7 @@ use crate::common::ContractWrapper;
 use super::ADMIN;
 
 pub struct DispatcherWrapper {
-    contract_wrapper: Box<
-        ContractWrapper<
-            ExecuteMsg,
-            ContractError,
-            InstantiateMsg,
-            ContractError,
-            QueryMsg,
-            StdError,
-        >,
-    >,
+    contract_wrapper: Box<DispatcherContractWrapper>,
 }
 
 impl DispatcherWrapper {
@@ -70,3 +61,12 @@ impl Default for DispatcherWrapper {
         }
     }
 }
+
+type DispatcherContractWrapper = ContractWrapper<
+    ExecuteMsg,
+    ContractError,
+    InstantiateMsg,
+    ContractError,
+    QueryMsg,
+    StdError,
+>;

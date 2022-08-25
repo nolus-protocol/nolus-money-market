@@ -12,19 +12,7 @@ use crate::common::ContractWrapper;
 use super::{ADMIN, mock_query, MockQueryMsg};
 
 pub struct TimeAlarmsWrapper {
-    contract_wrapper: Box<
-        ContractWrapper<
-            ExecuteMsg,
-            ContractError,
-            InstantiateMsg,
-            ContractError,
-            MockQueryMsg,
-            StdError,
-            cosmwasm_std::Empty,
-            anyhow::Error,
-            ContractError,
-        >,
-    >,
+    contract_wrapper: Box<TimeAlarmsContractWrapper>,
 }
 
 impl TimeAlarmsWrapper {
@@ -59,3 +47,15 @@ impl Default for TimeAlarmsWrapper {
         }
     }
 }
+
+type TimeAlarmsContractWrapper = ContractWrapper<
+    ExecuteMsg,
+    ContractError,
+    InstantiateMsg,
+    ContractError,
+    MockQueryMsg,
+    StdError,
+    cosmwasm_std::Empty,
+    anyhow::Error,
+    ContractError,
+>;

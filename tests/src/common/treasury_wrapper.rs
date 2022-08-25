@@ -15,16 +15,7 @@ pub fn treasury_instantiate_msg() -> InstantiateMsg {
 }
 
 pub struct TreasuryWrapper {
-    contract_wrapper: Box<
-        ContractWrapper<
-            ExecuteMsg,
-            ContractError,
-            InstantiateMsg,
-            ContractError,
-            MockQueryMsg,
-            StdError,
-        >,
-    >,
+    contract_wrapper: Box<TreasuryContractWrapper>,
 }
 
 impl TreasuryWrapper {
@@ -58,3 +49,12 @@ impl Default for TreasuryWrapper {
         }
     }
 }
+
+type TreasuryContractWrapper = ContractWrapper<
+    ExecuteMsg,
+    ContractError,
+    InstantiateMsg,
+    ContractError,
+    MockQueryMsg,
+    StdError,
+>;
