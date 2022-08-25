@@ -8,9 +8,10 @@ use finance::{
 };
 use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
+use marketprice::storage::Price;
 use platform::coin_legacy::to_cosmwasm;
 
-use crate::common::{AppExt, leaser_wrapper::LeaserWrapper, test_case::TestCase};
+use crate::common::{ADMIN, AppExt, leaser_wrapper::LeaserWrapper, test_case::TestCase};
 
 type Currency = Usdc;
 type TheCoin = Coin<Currency>;
@@ -234,6 +235,46 @@ fn state_paid_when_overpaid() {
     let overpayment = create_coin(5);
     let payment = borrowed + overpayment;
     let expected_amount = downpayment + payment;
+
+    repay(&mut test_case, &lease_address, payment);
+
+    let expected_result = StateResponse::Paid(expected_amount);
+    let query_result = state_query(&test_case, &lease_address.into_string());
+
+    assert_eq!(expected_result, query_result);
+}
+
+// TODO [WIP] simplify & correct test
+#[test]
+fn liquidation_warning() {
+    let mut test_case = create_test_case();
+    let downpayment = create_coin(DOWNPAYMENT);
+    let lease_address = open_lease(&mut test_case, downpayment);
+    let borrowed = quote_borrow(&test_case, downpayment);
+
+    let overpayment = create_coin(5);
+    let payment = borrowed + overpayment;
+    let expected_amount = downpayment + payment;
+
+    println!("{:?}", test_case.app.execute_contract(
+        Addr::unchecked(ADMIN),
+        test_case.oracle.clone().unwrap(),
+        &oracle::msg::ExecuteMsg::RegisterFeeder {
+            feeder_address: ADMIN.into(),
+        },
+        &[to_cosmwasm(create_coin(10000))],
+    ).unwrap());
+
+    println!("{:?}", test_case.app.execute_contract(
+        Addr::unchecked(ADMIN),
+        test_case.oracle.clone().unwrap(),
+        &oracle::msg::ExecuteMsg::FeedPrices {
+            prices: vec![
+                Price::new("uusdc", 1, "unls", 10),
+            ],
+        },
+        &[to_cosmwasm(create_coin(10000))],
+    ).unwrap());
 
     repay(&mut test_case, &lease_address, payment);
 

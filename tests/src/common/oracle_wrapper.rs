@@ -1,6 +1,7 @@
 use cosmwasm_std::{Addr, Binary, Deps, Env, StdError, StdResult, to_binary};
 use cw_multi_test::{ContractWrapper, Executor};
 
+use finance::currency::{Currency, Usdc};
 use marketprice::storage::Price;
 
 use crate::common::MockApp;
@@ -42,7 +43,7 @@ impl MarketOracleWrapper {
             base_asset: denom.to_string(),
             price_feed_period_secs: 60,
             feeders_percentage_needed: 1,
-            supported_denom_pairs: vec![("UST".to_string(), NATIVE_DENOM.to_string())],
+            supported_denom_pairs: vec![("UST".to_string(), NATIVE_DENOM.to_string()), (Usdc::SYMBOL.to_string(), NATIVE_DENOM.to_string())],
             timealarms_addr: timealarms_addr.to_string(),
         };
         app.instantiate_contract(code_id, Addr::unchecked(ADMIN), &msg, &[], "oracle", None)
