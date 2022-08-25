@@ -1,6 +1,9 @@
-use cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, from_binary, MessageInfo, Reply, Response, StdError, StdResult, Storage, Timestamp, to_binary};
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
+    StdError, StdResult, Storage, Timestamp,
+};
 use cw2::set_contract_version;
 
 use marketprice::storage::{Denom, DenomPair, Price};
@@ -25,11 +28,12 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let timealarms_addr = deps.api.addr_validate(&msg.timealarms_addr)
-        .map_err(|_| StdError::generic_err(format!(
+    let timealarms_addr = deps.api.addr_validate(&msg.timealarms_addr).map_err(|_| {
+        StdError::generic_err(format!(
             "Invalid Time Alarms address provided! Input: {:?}",
             msg.timealarms_addr.as_str(),
-        )))?;
+        ))
+    })?;
 
     Config::new(
         msg.base_asset,
@@ -38,7 +42,8 @@ pub fn instantiate(
         msg.feeders_percentage_needed,
         msg.supported_denom_pairs,
         timealarms_addr,
-    ).store(deps.storage)?;
+    )
+    .store(deps.storage)?;
 
     Ok(Response::default())
 }
@@ -152,7 +157,7 @@ fn try_configure(
         info.sender,
     )?;
 
-    Ok(Response::new().add_attribute("method", "try_configure"))
+    Ok(Response::new())
 }
 
 fn try_configure_supported_pairs(
@@ -162,7 +167,7 @@ fn try_configure_supported_pairs(
 ) -> Result<Response, ContractError> {
     Config::update_supported_pairs(storage, pairs, info.sender)?;
 
-    Ok(Response::new().add_attribute("method", "try_configure_supported_pairs"))
+    Ok(Response::new())
 }
 
 fn try_register_feeder(
@@ -178,7 +183,7 @@ fn try_register_feeder(
     let f_address = deps.api.addr_validate(&address)?;
     MarketOracle::register_feeder(deps, f_address)?;
 
-    Ok(Response::new().add_attribute("method", "try_register_feeder"))
+    Ok(Response::new())
 }
 
 fn try_feed_multiple_prices(
