@@ -252,10 +252,6 @@ fn liquidation_warning() {
     let lease_address = open_lease(&mut test_case, downpayment);
     let borrowed = quote_borrow(&test_case, downpayment);
 
-    let overpayment = create_coin(5);
-    let payment = borrowed + overpayment;
-    let expected_amount = downpayment + payment;
-
     println!("{:?}", test_case.app.execute_contract(
         Addr::unchecked(ADMIN),
         test_case.oracle.clone().unwrap(),
@@ -275,13 +271,6 @@ fn liquidation_warning() {
         },
         &[to_cosmwasm(create_coin(10000))],
     ).unwrap());
-
-    repay(&mut test_case, &lease_address, payment);
-
-    let expected_result = StateResponse::Paid(expected_amount);
-    let query_result = state_query(&test_case, &lease_address.into_string());
-
-    assert_eq!(expected_result, query_result);
 }
 
 #[test]
