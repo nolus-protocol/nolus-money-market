@@ -102,7 +102,9 @@ pub fn execute(
             Ok(res.emitter.into())
         }
         ExecuteMsg::Close() => try_close(deps, env, info, lease).map(Into::into),
-        ExecuteMsg::PriceAlarm(price) => run_price_alarm_liquidation(deps, env, info, lease, price),
+        ExecuteMsg::PriceAlarm {
+            price,
+        } => run_price_alarm_liquidation(deps, env, info, lease, price),
     }
 }
 

@@ -1,8 +1,9 @@
 use cosmwasm_std::Addr;
-use finance::currency::SymbolOwned;
-use marketprice::storage::{Denom, DenomPair, Price};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use finance::currency::SymbolOwned;
+use marketprice::storage::{Denom, DenomPair, Price};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -67,5 +68,5 @@ pub struct PriceResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
-    PriceAlarm(Price),
+    PriceAlarm { price: Price },
 }

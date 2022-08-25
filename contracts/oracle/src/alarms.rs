@@ -1,18 +1,18 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{
-    from_binary, Addr, Binary, CosmosMsg, Response, StdError, StdResult, Storage, SubMsg, Timestamp,
-};
-use marketprice::{
-    alarms::{price::PriceHooks, AlarmDispatcher},
-    storage::{Denom, Price},
+    Addr, Binary, CosmosMsg, from_binary, Response, StdError, StdResult, Storage, SubMsg, Timestamp,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use marketprice::{
+    alarms::{AlarmDispatcher, price::PriceHooks},
+    storage::{Denom, Price},
+};
 use time_oracle::Id;
 
-use crate::{msg::ExecuteAlarmMsg, state::config::Config, ContractError};
+use crate::{ContractError, msg::ExecuteAlarmMsg, state::config::Config};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct MarketAlarms {}
@@ -59,7 +59,7 @@ impl MarketAlarms {
                     None => return Err(StdError::generic_err("msg")),
                 };
 
-                let msg = ExecuteAlarmMsg::PriceAlarm(current_price);
+                let msg = ExecuteAlarmMsg::PriceAlarm { price: current_price };
                 let wasm_msg = cosmwasm_std::wasm_execute(addr.to_string(), &msg, vec![])?;
                 let submsg = SubMsg::reply_always(CosmosMsg::Wasm(wasm_msg), id);
                 self.response.messages.push(submsg);

@@ -16,5 +16,5 @@ mod query;
 pub enum ExecuteMsg {
     Repay(), // it is not an enum variant to represent it as a JSON object instead of JSON string
     Close(), // that is a limitation of cosmjs library
-    PriceAlarm(Price),
+    PriceAlarm { price: Price },
 }
