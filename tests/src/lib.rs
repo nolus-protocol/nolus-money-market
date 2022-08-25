@@ -16,3 +16,6 @@ mod leaser_tests;
 
 #[cfg(test)]
 mod lease_tests;
+
+#[cfg(test)]
+mod oracle_tests;

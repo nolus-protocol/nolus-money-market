@@ -1,9 +1,12 @@
-use anyhow::Error;
-use cosmwasm_std::{coins, Addr, Coin, Empty, StdError, Uint64};
-use cw_multi_test::{next_block, App, ContractWrapper, Executor};
+use cosmwasm_std::{Addr, Coin, coins, StdError, Uint64};
+use cw_multi_test::{App, Executor, next_block};
+
 use finance::coin::Amount;
 
+use crate::common::ContractWrapper;
+
 use super::{
+    ADMIN,
     dispatcher_wrapper::DispatcherWrapper,
     lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
     leaser_wrapper::LeaserWrapper,
@@ -13,42 +16,30 @@ use super::{
     profit_wrapper::ProfitWrapper,
     timealarms_wrapper::TimeAlarmsWrapper,
     treasury_wrapper::TreasuryWrapper,
-    ADMIN,
 };
 
 type OptionalContractWrapper = Option<
     ContractWrapper<
         lpp::msg::ExecuteMsg,
+        lpp::error::ContractError,
         lpp::msg::InstantiateMsg,
+        lpp::error::ContractError,
         lpp::msg::QueryMsg,
         lpp::error::ContractError,
-        lpp::error::ContractError,
-        lpp::error::ContractError,
-        Empty,
-        Empty,
-        Empty,
-        Error,
-        Error,
-        Empty,
-        Error,
     >,
 >;
 
 type OptionalContractWrapperStd = Option<
     ContractWrapper<
         oracle::msg::ExecuteMsg,
+        oracle::ContractError,
         oracle::msg::InstantiateMsg,
+        oracle::ContractError,
         oracle::msg::QueryMsg,
-        oracle::ContractError,
-        oracle::ContractError,
         StdError,
-        Empty,
-        Empty,
-        Empty,
-        Error,
-        Error,
-        Empty,
-        Error,
+        cosmwasm_std::Empty,
+        anyhow::Error,
+        oracle::ContractError,
     >,
 >;
 

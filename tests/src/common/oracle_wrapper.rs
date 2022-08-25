@@ -1,18 +1,29 @@
-use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, StdError, StdResult};
-use cw_multi_test::{App, ContractWrapper, Executor};
+use cosmwasm_std::{Addr, Binary, Deps, Env, StdError, StdResult, to_binary};
+use cw_multi_test::{App, Executor};
+
 use marketprice::storage::Price;
+use oracle::{
+    contract::{execute, instantiate, query, reply},
+    ContractError,
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg}
+};
+
+use crate::common::ContractWrapper;
 
 use super::{ADMIN, NATIVE_DENOM};
 
 pub struct MarketOracleWrapper {
     contract_wrapper: Box<
         ContractWrapper<
-            oracle::msg::ExecuteMsg,
-            oracle::msg::InstantiateMsg,
-            oracle::msg::QueryMsg,
-            oracle::ContractError,
-            oracle::ContractError,
+            ExecuteMsg,
+            ContractError,
+            InstantiateMsg,
+            ContractError,
+            QueryMsg,
             StdError,
+            cosmwasm_std::Empty,
+            anyhow::Error,
+            ContractError,
         >,
     >,
 }
@@ -20,12 +31,15 @@ pub struct MarketOracleWrapper {
 impl MarketOracleWrapper {
     pub fn with_contract_wrapper(
         contract: ContractWrapper<
-            oracle::msg::ExecuteMsg,
-            oracle::msg::InstantiateMsg,
-            oracle::msg::QueryMsg,
-            oracle::ContractError,
-            oracle::ContractError,
+            ExecuteMsg,
+            ContractError,
+            InstantiateMsg,
+            ContractError,
+            QueryMsg,
             StdError,
+            cosmwasm_std::Empty,
+            anyhow::Error,
+            ContractError,
         >,
     ) -> Self {
         Self {
@@ -35,7 +49,7 @@ impl MarketOracleWrapper {
     #[track_caller]
     pub fn instantiate(self, app: &mut App, denom: &str, timealarms_addr: &str) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
-        let msg = oracle::msg::InstantiateMsg {
+        let msg = InstantiateMsg {
             base_asset: denom.to_string(),
             price_feed_period_secs: 60,
             feeders_percentage_needed: 1,
@@ -50,10 +64,10 @@ impl MarketOracleWrapper {
 impl Default for MarketOracleWrapper {
     fn default() -> Self {
         let contract = ContractWrapper::new(
-            oracle::contract::execute,
-            oracle::contract::instantiate,
-            oracle::contract::query,
-        );
+            execute,
+            instantiate,
+            query,
+        ).with_reply(reply);
 
         Self {
             contract_wrapper: Box::new(contract),
@@ -61,12 +75,12 @@ impl Default for MarketOracleWrapper {
     }
 }
 
-pub fn mock_oracle_query(deps: Deps, env: Env, msg: oracle::msg::QueryMsg) -> StdResult<Binary> {
+pub fn mock_oracle_query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
     let res = match msg {
-        oracle::msg::QueryMsg::PriceFor { denoms: _ } => to_binary(&oracle::msg::PriceResponse {
+        QueryMsg::PriceFor { denoms: _ } => to_binary(&oracle::msg::PriceResponse {
             prices: vec![Price::new(NATIVE_DENOM, 123456789, "UST", 1000000000)],
         }),
-        _ => Ok(oracle::contract::query(deps, env, msg)?),
+        _ => Ok(query(deps, env, msg)?),
     }?;
 
     Ok(res)
