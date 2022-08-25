@@ -1,13 +1,42 @@
 use cosmwasm_std::{
-    coins, testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin, Deps, Env, StdResult,
-    Timestamp,
+    Addr, Binary, BlockInfo, Coin, coins, Deps, Env, StdResult, testing::mock_env, Timestamp,
+    to_binary,
 };
 use cw_multi_test::{App, AppBuilder};
+use serde::{Deserialize, Serialize};
+
 use finance::{
     currency::{Currency, Nls},
     duration::Duration,
 };
-use serde::{Deserialize, Serialize};
+
+type ContractWrapper<
+    ExecMsg,
+    ExecErr,
+    InstMsg,
+    InstErr,
+    QueryMsg,
+    QueryErr,
+    Sudo = cosmwasm_std::Empty,
+    SudoErr = anyhow::Error,
+    ReplyErr = anyhow::Error,
+    MigrMsg = cosmwasm_std::Empty,
+    MigrErr = anyhow::Error,
+> = cw_multi_test::ContractWrapper<
+    ExecMsg, // execute msg
+    InstMsg, // instantiate msg
+    QueryMsg, // query msg
+    ExecErr, // execute err
+    InstErr, // instantiate err
+    QueryErr, // query err
+    cosmwasm_std::Empty, // C
+    cosmwasm_std::Empty, // Q
+    Sudo, // sudo msg
+    SudoErr, // sudo err
+    ReplyErr, // reply err
+    MigrMsg, // migrate msg
+    MigrErr, // migrate err
+>;
 
 #[cfg(test)]
 #[allow(dead_code)]

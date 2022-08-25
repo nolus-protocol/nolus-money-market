@@ -1,27 +1,21 @@
 use cosmwasm_std::{Addr, Coin, StdError};
-use cw_multi_test::ContractWrapper;
-
 use cw_multi_test::{App, Executor};
 
-use treasury::ContractError;
+use treasury::{
+    ContractError,
+    msg::{ExecuteMsg, InstantiateMsg}
+};
 
-use super::{mock_query, MockQueryMsg, ADMIN, NATIVE_DENOM};
+use crate::common::ContractWrapper;
 
-pub fn treasury_instantiate_msg() -> treasury::msg::InstantiateMsg {
-    treasury::msg::InstantiateMsg {}
+use super::{ADMIN, mock_query, MockQueryMsg, NATIVE_DENOM};
+
+pub fn treasury_instantiate_msg() -> InstantiateMsg {
+    InstantiateMsg {}
 }
 
 pub struct TreasuryWrapper {
-    contract_wrapper: Box<
-        ContractWrapper<
-            treasury::msg::ExecuteMsg,
-            treasury::msg::InstantiateMsg,
-            MockQueryMsg,
-            ContractError,
-            ContractError,
-            StdError,
-        >,
-    >,
+    contract_wrapper: Box<TreasuryContractWrapper>,
 }
 
 impl TreasuryWrapper {
@@ -55,3 +49,12 @@ impl Default for TreasuryWrapper {
         }
     }
 }
+
+type TreasuryContractWrapper = ContractWrapper<
+    ExecuteMsg,
+    ContractError,
+    InstantiateMsg,
+    ContractError,
+    MockQueryMsg,
+    StdError,
+>;

@@ -1,35 +1,32 @@
-use cosmwasm_std::{coins, to_binary, Addr, Binary, Deps, Env, Uint64};
-use cw_multi_test::{App, ContractWrapper, Executor};
-use finance::currency::Usdc;
-use finance::{coin::Coin, percent::Percent};
+use cosmwasm_std::{Addr, Binary, coins, Deps, Env, to_binary, Uint64};
+use cw_multi_test::{App, Executor};
+
+use finance::{
+    coin::Coin,
+    currency::Usdc,
+    percent::Percent
+};
 use lpp::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
 
+use crate::common::ContractWrapper;
+
 use super::ADMIN;
 
 pub struct LppWrapper {
-    contract_wrapper: Box<
-        ContractWrapper<
-            ExecuteMsg,
-            InstantiateMsg,
-            QueryMsg,
-            ContractError,
-            ContractError,
-            ContractError,
-        >,
-    >,
+    contract_wrapper: Box<LppContractWrapper>,
 }
 
 impl LppWrapper {
     pub fn with_contract_wrapper(
         contract: ContractWrapper<
             ExecuteMsg,
+            ContractError,
             InstantiateMsg,
+            ContractError,
             QueryMsg,
-            ContractError,
-            ContractError,
             ContractError,
         >,
     ) -> Self {
@@ -111,3 +108,12 @@ pub fn mock_lpp_quote_query(
 
     Ok(res)
 }
+
+type LppContractWrapper = ContractWrapper<
+    ExecuteMsg,
+    ContractError,
+    InstantiateMsg,
+    ContractError,
+    QueryMsg,
+    ContractError,
+>;

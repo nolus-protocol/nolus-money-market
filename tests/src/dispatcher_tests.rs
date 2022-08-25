@@ -1,12 +1,13 @@
-use cosmwasm_std::{coins, Addr, Coin};
+use cosmwasm_std::{Addr, Coin, coins};
 use cw_multi_test::{ContractWrapper, Executor};
+
 use finance::currency::{Currency, Nls, Usdc};
 
 use crate::{
-    common::test_case::TestCase,
     common::{
-        lpp_wrapper::mock_lpp_query, oracle_wrapper::mock_oracle_query, ADMIN, NATIVE_DENOM, USER,
+        ADMIN, lpp_wrapper::mock_lpp_query, NATIVE_DENOM, oracle_wrapper::mock_oracle_query, USER,
     },
+    common::test_case::TestCase,
 };
 
 #[test]
@@ -21,11 +22,15 @@ fn on_alarm_zero_reward() {
     test_case
         .init_lpp(None)
         .init_timealarms()
-        .init_oracle(Some(ContractWrapper::new(
-            oracle::contract::execute,
-            oracle::contract::instantiate,
-            mock_oracle_query,
-        )))
+        .init_oracle(Some(
+            ContractWrapper::new(
+                oracle::contract::execute,
+                oracle::contract::instantiate,
+                mock_oracle_query,
+            ).with_reply(
+                oracle::contract::reply,
+            ),
+        ))
         .init_treasury()
         .init_dispatcher();
 
@@ -60,11 +65,14 @@ fn on_alarm() {
             mock_lpp_query,
         )))
         .init_timealarms()
-        .init_oracle(Some(ContractWrapper::new(
-            oracle::contract::execute,
-            oracle::contract::instantiate,
-            mock_oracle_query,
-        )))
+        .init_oracle(Some(
+            ContractWrapper::new(
+                oracle::contract::execute,
+                oracle::contract::instantiate,
+                mock_oracle_query,
+            )
+                .with_reply(oracle::contract::reply),
+        ))
         .init_treasury()
         .init_dispatcher();
     test_case.send_funds(&test_case.timealarms.clone().unwrap(), coins(500, denom));
