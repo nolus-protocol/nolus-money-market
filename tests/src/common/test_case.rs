@@ -219,7 +219,14 @@ impl TestCase {
             None => MarketOracleWrapper::default(),
         };
 
-        self.oracle = Some(mocked_oracle.instantiate(&mut self.app, &self.denom, "timealarms"));
+        self.oracle = Some(mocked_oracle.instantiate(
+            &mut self.app,
+            &self.denom,
+            &self.timealarms
+                .as_ref()
+                .expect("Market Price Oracle not initialized!")
+                .as_str(),
+        ));
         self.app.update_block(next_block);
 
         self

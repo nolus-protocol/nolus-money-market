@@ -215,12 +215,7 @@ fn try_feed_multiple_prices(
         MarketOracle::get_price_for(storage, block_time, affected_denoms)?;
 
     // get all affected addresses
-    let _res = MarketAlarms::try_notify_hooks(storage, block_time, updated_prices);
-
-    // let response = MarketAlarms::update_global_time(storage, block_time)?;
-    // Ok(response.add_attribute("method", "try_feed_prices"))
-    let submsg = MarketAlarms::trigger_time_alarms(storage)?;
-    Ok(Response::new()
-        .add_submessage(submsg)
-        .add_attribute("method", "try_feed_prices"))
+    let res = MarketAlarms::try_notify_hooks(storage, block_time, updated_prices)?;
+    let time_submsgs = MarketAlarms::trigger_time_alarms(storage)?;
+    Ok(res.add_submessage(time_submsgs))
 }
