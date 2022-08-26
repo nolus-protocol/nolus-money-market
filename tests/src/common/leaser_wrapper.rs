@@ -1,8 +1,5 @@
 use cosmwasm_std::{Addr, Uint64};
-use cw_multi_test::{
-    ContractWrapper,
-    Executor
-};
+use cw_multi_test::Executor;
 
 use finance::{
     duration::Duration,
@@ -10,24 +7,23 @@ use finance::{
     percent::Percent
 };
 use leaser::{
+    contract::{execute, instantiate, query, reply},
     ContractError,
-    msg::Repayment
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, Repayment}
 };
 
-use crate::common::MockApp;
+use crate::common::{ContractWrapper, MockApp};
 
 use super::ADMIN;
 
 type LeaserContractWrapperReply = Box<
     ContractWrapper<
-        leaser::msg::ExecuteMsg,
-        leaser::msg::InstantiateMsg,
-        leaser::msg::QueryMsg,
+        ExecuteMsg,
         ContractError,
+        InstantiateMsg,
         ContractError,
+        QueryMsg,
         ContractError,
-        cosmwasm_std::Empty,
-        cosmwasm_std::Empty,
         cosmwasm_std::Empty,
         anyhow::Error,
         ContractError,
@@ -47,7 +43,7 @@ impl LeaserWrapper {
     #[track_caller]
     pub fn instantiate(self, app: &mut MockApp, lease_code_id: u64, lpp_addr: &Addr, market_price_oracle: Addr) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
-        let msg = leaser::msg::InstantiateMsg {
+        let msg = InstantiateMsg {
             lease_code_id: Uint64::new(lease_code_id),
             lpp_ust_addr: lpp_addr.clone(),
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
@@ -72,11 +68,11 @@ impl LeaserWrapper {
 impl Default for LeaserWrapper {
     fn default() -> Self {
         let contract = ContractWrapper::new(
-            leaser::contract::execute,
-            leaser::contract::instantiate,
-            leaser::contract::query,
+            execute,
+            instantiate,
+            query,
         )
-        .with_reply(leaser::contract::reply);
+            .with_reply(reply);
 
         Self {
             contract_wrapper: Box::new(contract),

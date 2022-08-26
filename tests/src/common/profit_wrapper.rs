@@ -1,23 +1,24 @@
 use cosmwasm_std::{Addr, StdError};
-use cw_multi_test::{
-    ContractWrapper,
-    Executor
+use cw_multi_test::Executor;
+
+use profit::{
+    contract::{execute, instantiate, query},
+    ContractError,
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg}
 };
 
-use profit::ContractError;
-
-use crate::common::MockApp;
+use crate::common::{ContractWrapper, MockApp};
 
 use super::ADMIN;
 
 pub struct ProfitWrapper {
     contract_wrapper: Box<
         ContractWrapper<
-            profit::msg::ExecuteMsg,
-            profit::msg::InstantiateMsg,
-            profit::msg::QueryMsg,
+            ExecuteMsg,
             ContractError,
+            InstantiateMsg,
             ContractError,
+            QueryMsg,
             StdError,
         >,
     >,
@@ -33,7 +34,7 @@ impl ProfitWrapper {
         timealarms: &Addr,
     ) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
-        let msg = profit::msg::InstantiateMsg {
+        let msg = InstantiateMsg {
             cadence_hours,
             treasury: treasury.clone(),
             timealarms: timealarms.clone(),
@@ -47,9 +48,9 @@ impl ProfitWrapper {
 impl Default for ProfitWrapper {
     fn default() -> Self {
         let contract = ContractWrapper::new(
-            profit::contract::execute,
-            profit::contract::instantiate,
-            profit::contract::query,
+            execute,
+            instantiate,
+            query,
         );
 
         Self {

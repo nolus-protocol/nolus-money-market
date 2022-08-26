@@ -1,22 +1,6 @@
 use cosmwasm_std::{
-    Addr,
-    Api,
-    Binary,
-    BlockInfo,
-    CanonicalAddr,
-    Coin,
-    coins,
-    Deps,
-    Env,
-    RecoverPubkeyError,
-    StdResult,
-    testing::{
-        mock_env,
-        MockApi
-    },
-    Timestamp,
-    to_binary,
-    VerificationError,
+    Addr, Api, Binary, BlockInfo, CanonicalAddr, Coin, coins, Deps, Env, RecoverPubkeyError,
+    StdResult, testing::{mock_env, MockApi}, Timestamp, to_binary, VerificationError,
 };
 use cw_multi_test::{App, AppBuilder, BankKeeper};
 use serde::{Deserialize, Serialize};
@@ -25,6 +9,34 @@ use finance::{
     currency::{Currency, Nls},
     duration::Duration,
 };
+
+type ContractWrapper<
+    ExecMsg,
+    ExecErr,
+    InstMsg,
+    InstErr,
+    QueryMsg,
+    QueryErr,
+    Sudo = cosmwasm_std::Empty,
+    SudoErr = anyhow::Error,
+    ReplyErr = anyhow::Error,
+    MigrMsg = cosmwasm_std::Empty,
+    MigrErr = anyhow::Error,
+> = cw_multi_test::ContractWrapper<
+    ExecMsg, // execute msg
+    InstMsg, // instantiate msg
+    QueryMsg, // query msg
+    ExecErr, // execute err
+    InstErr, // instantiate err
+    QueryErr, // query err
+    cosmwasm_std::Empty, // C
+    cosmwasm_std::Empty, // Q
+    Sudo, // sudo msg
+    SudoErr, // sudo err
+    ReplyErr, // reply err
+    MigrMsg, // migrate msg
+    MigrErr, // migrate err
+>;
 
 #[cfg(test)]
 #[allow(dead_code)]

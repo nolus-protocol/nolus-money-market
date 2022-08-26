@@ -1,29 +1,28 @@
 use cosmwasm_std::{Addr, coin};
-use cw_multi_test::{
-    ContractWrapper,
-    Executor
-};
+use cw_multi_test::Executor;
 
 use finance::{liability::Liability, percent::Percent};
-use lease::msg::{LoanForm, NewLeaseForm};
+use lease::{
+    error::ContractError,
+    msg::{ExecuteMsg, LoanForm, NewLeaseForm, StateQuery}
+};
+use lease::contract::{execute, instantiate, query, reply};
 
-use crate::common::MockApp;
+use crate::common::{ContractWrapper, MockApp};
 
 use super::{ADMIN, USER};
 
 type LeaseContractWrapperReply = Box<
     ContractWrapper<
-        lease::msg::ExecuteMsg,
+        ExecuteMsg,
+        ContractError,
         NewLeaseForm,
-        lease::msg::StateQuery,
-        lease::error::ContractError,
-        lease::error::ContractError,
-        lease::error::ContractError,
-        cosmwasm_std::Empty,
-        cosmwasm_std::Empty,
+        ContractError,
+        StateQuery,
+        ContractError,
         cosmwasm_std::Empty,
         anyhow::Error,
-        lease::error::ContractError,
+        ContractError,
     >,
 >;
 
@@ -149,11 +148,11 @@ impl LeaseWrapper {
 impl Default for LeaseWrapper {
     fn default() -> Self {
         let contract = ContractWrapper::new(
-            lease::contract::execute,
-            lease::contract::instantiate,
-            lease::contract::query,
+            execute,
+            instantiate,
+            query,
         )
-        .with_reply(lease::contract::reply);
+            .with_reply(reply);
 
         Self {
             contract_wrapper: Box::new(contract),

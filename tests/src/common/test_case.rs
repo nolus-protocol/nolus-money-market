@@ -1,13 +1,9 @@
-use anyhow::Error;
-use cosmwasm_std::{Addr, Coin, coins, Empty, StdError, Uint64};
-use cw_multi_test::{ContractWrapper, Executor, next_block};
+use cosmwasm_std::{Addr, Coin, coins, StdError, Uint64};
+use cw_multi_test::{Executor, next_block};
 
 use finance::coin::Amount;
 
-use crate::common::{
-    lease_wrapper::LeaseWrapperAddresses,
-    MockApp,
-};
+use crate::common::{ContractWrapper, lease_wrapper::LeaseWrapperAddresses, MockApp};
 
 use super::{
     ADMIN,
@@ -25,36 +21,25 @@ use super::{
 type OptionalContractWrapper = Option<
     ContractWrapper<
         lpp::msg::ExecuteMsg,
+        lpp::error::ContractError,
         lpp::msg::InstantiateMsg,
+        lpp::error::ContractError,
         lpp::msg::QueryMsg,
         lpp::error::ContractError,
-        lpp::error::ContractError,
-        lpp::error::ContractError,
-        Empty,
-        Empty,
-        Empty,
-        Error,
-        Error,
-        Empty,
-        Error,
     >,
 >;
 
 type OptionalContractWrapperStd = Option<
     ContractWrapper<
         oracle::msg::ExecuteMsg,
+        oracle::ContractError,
         oracle::msg::InstantiateMsg,
+        oracle::ContractError,
         oracle::msg::QueryMsg,
-        oracle::ContractError,
-        oracle::ContractError,
         StdError,
-        Empty,
-        Empty,
-        Empty,
-        Error,
-        Error,
-        Empty,
-        Error,
+        cosmwasm_std::Empty,
+        anyhow::Error,
+        oracle::ContractError,
     >,
 >;
 
@@ -122,9 +107,12 @@ impl TestCase {
             &mut self.app,
             self.lease_code_id,
             LeaseWrapperAddresses {
-                lpp: self.lpp_addr.clone().expect("LPP contract not instantiated!"),
-                time_alarms: self.timealarms.clone().expect("Time Alarms contract not instantiated!"),
-                oracle: self.oracle.clone().expect("Time Alarms contract not instantiated!"),
+                lpp: self.lpp_addr.clone()
+                    .expect("LPP contract not instantiated!"),
+                time_alarms: self.timealarms.clone()
+                    .expect("Time Alarms contract not instantiated!"),
+                oracle: self.oracle.clone()
+                    .expect("Time Alarms contract not instantiated!"),
             },
             &self.denom,
             LeaseWrapperConfig::default(),

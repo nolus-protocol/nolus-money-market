@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, Binary, coins, Deps, Env, to_binary, Uint64};
-use cw_multi_test::{ContractWrapper, Executor};
+use cw_multi_test::Executor;
 
 use finance::{
     coin::Coin,
@@ -11,7 +11,7 @@ use lpp::{
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
 
-use crate::common::MockApp;
+use crate::common::{ContractWrapper, MockApp};
 
 use super::ADMIN;
 
@@ -19,10 +19,10 @@ pub struct LppWrapper {
     contract_wrapper: Box<
         ContractWrapper<
             ExecuteMsg,
+            ContractError,
             InstantiateMsg,
+            ContractError,
             QueryMsg,
-            ContractError,
-            ContractError,
             ContractError,
         >,
     >,
@@ -32,10 +32,10 @@ impl LppWrapper {
     pub fn with_contract_wrapper(
         contract: ContractWrapper<
             ExecuteMsg,
+            ContractError,
             InstantiateMsg,
+            ContractError,
             QueryMsg,
-            ContractError,
-            ContractError,
             ContractError,
         >,
     ) -> Self {

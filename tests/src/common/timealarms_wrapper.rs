@@ -1,24 +1,28 @@
 use cosmwasm_std::{Addr, StdError};
-use cw_multi_test::{
-    ContractWrapper,
-    Executor
+use cw_multi_test::Executor;
+
+use timealarms::{
+    contract::{execute, instantiate, reply},
+    ContractError,
+    msg::{ExecuteMsg, InstantiateMsg}
 };
 
-use timealarms::ContractError;
-
-use crate::common::MockApp;
+use crate::common::{ContractWrapper, MockApp};
 
 use super::{ADMIN, mock_query, MockQueryMsg};
 
 pub struct TimeAlarmsWrapper {
     contract_wrapper: Box<
         ContractWrapper<
-            timealarms::msg::ExecuteMsg,
-            timealarms::msg::InstantiateMsg,
+            ExecuteMsg,
+            ContractError,
+            InstantiateMsg,
+            ContractError,
             MockQueryMsg,
-            ContractError,
-            ContractError,
             StdError,
+            cosmwasm_std::Empty,
+            anyhow::Error,
+            ContractError,
         >,
     >,
 }
@@ -27,7 +31,7 @@ impl TimeAlarmsWrapper {
     #[track_caller]
     pub fn instantiate(self, app: &mut MockApp) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
-        let msg = timealarms::msg::InstantiateMsg {};
+        let msg = InstantiateMsg {};
 
         app.instantiate_contract(
             code_id,
@@ -44,10 +48,11 @@ impl TimeAlarmsWrapper {
 impl Default for TimeAlarmsWrapper {
     fn default() -> Self {
         let contract = ContractWrapper::new(
-            timealarms::contract::execute,
-            timealarms::contract::instantiate,
+            execute,
+            instantiate,
             mock_query,
-        );
+        )
+            .with_reply(reply);
 
         Self {
             contract_wrapper: Box::new(contract),

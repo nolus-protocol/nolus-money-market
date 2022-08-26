@@ -22,11 +22,15 @@ fn on_alarm_zero_reward() {
     test_case
         .init_lpp(None)
         .init_timealarms()
-        .init_oracle(Some(ContractWrapper::new(
-            oracle::contract::execute,
-            oracle::contract::instantiate,
-            mock_oracle_query,
-        )))
+        .init_oracle(Some(
+            ContractWrapper::new(
+                oracle::contract::execute,
+                oracle::contract::instantiate,
+                mock_oracle_query,
+            ).with_reply(
+                oracle::contract::reply,
+            ),
+        ))
         .init_treasury()
         .init_dispatcher();
 
@@ -65,11 +69,14 @@ fn on_alarm() {
             mock_lpp_query,
         )))
         .init_timealarms()
-        .init_oracle(Some(ContractWrapper::new(
-            oracle::contract::execute,
-            oracle::contract::instantiate,
-            mock_oracle_query,
-        )))
+        .init_oracle(Some(
+            ContractWrapper::new(
+                oracle::contract::execute,
+                oracle::contract::instantiate,
+                mock_oracle_query,
+            )
+                .with_reply(oracle::contract::reply),
+        ))
         .init_treasury()
         .init_dispatcher();
     test_case.send_funds(&test_case.timealarms.clone().unwrap(), coins(500, denom));

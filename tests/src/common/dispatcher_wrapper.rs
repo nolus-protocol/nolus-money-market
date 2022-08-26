@@ -1,23 +1,24 @@
 use cosmwasm_std::{Addr, StdError};
-use cw_multi_test::{
-    ContractWrapper,
-    Executor
+use cw_multi_test::Executor;
+
+use rewards_dispatcher::{
+    error::ContractError,
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    state::tvl_intervals::{Intervals, Stop}
 };
 
-use rewards_dispatcher::state::tvl_intervals::{Intervals, Stop};
-
-use crate::common::MockApp;
+use crate::common::{ContractWrapper, MockApp};
 
 use super::ADMIN;
 
 pub struct DispatcherWrapper {
     contract_wrapper: Box<
         ContractWrapper<
-            rewards_dispatcher::msg::ExecuteMsg,
-            rewards_dispatcher::msg::InstantiateMsg,
-            rewards_dispatcher::msg::QueryMsg,
-            rewards_dispatcher::error::ContractError,
-            rewards_dispatcher::error::ContractError,
+            ExecuteMsg,
+            ContractError,
+            InstantiateMsg,
+            ContractError,
+            QueryMsg,
             StdError,
         >,
     >,
@@ -35,7 +36,7 @@ impl DispatcherWrapper {
         _denom: &str,
     ) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
-        let msg = rewards_dispatcher::msg::InstantiateMsg {
+        let msg = InstantiateMsg {
             cadence_hours: 10,
             lpp: lpp.clone(),
             oracle: oracle.clone(),
