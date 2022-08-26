@@ -3,6 +3,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use finance::currency::SymbolOwned;
+use finance::price::PriceDTO;
 use marketprice::storage::{Denom, DenomPair, Price};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -31,7 +32,7 @@ pub enum ExecuteMsg {
         pairs: Vec<DenomPair>,
     },
     AddPriceAlarm {
-        target: Price,
+        target: PriceDTO,
     },
     RemovePriceAlarm {},
 }

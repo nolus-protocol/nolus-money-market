@@ -201,7 +201,12 @@ impl TestCase {
 
         self
     }
+
     pub fn init_oracle(&mut self, custom_wrapper: OptionalContractWrapperStd) -> &mut Self {
+        self.init_oracle_with_funds(custom_wrapper, 0)
+    }
+
+    pub fn init_oracle_with_funds(&mut self, custom_wrapper: OptionalContractWrapperStd, amount: Amount) -> &mut Self {
         let mocked_oracle = match custom_wrapper {
             Some(wrapper) => MarketOracleWrapper::with_contract_wrapper(wrapper),
             None => MarketOracleWrapper::default(),
@@ -210,10 +215,11 @@ impl TestCase {
         self.oracle = Some(mocked_oracle.instantiate(
             &mut self.app,
             &self.denom,
-            &self.timealarms
+            self.timealarms
                 .as_ref()
                 .expect("Market Price Oracle not initialized!")
                 .as_str(),
+            amount,
         ));
         self.app.update_block(next_block);
 

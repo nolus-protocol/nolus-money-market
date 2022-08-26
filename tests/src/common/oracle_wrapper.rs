@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Binary, Deps, Env, StdError, StdResult, to_binary};
+use cosmwasm_std::{Addr, Binary, coins, Deps, Env, StdError, StdResult, to_binary};
 use cw_multi_test::Executor;
 
 use finance::currency::{Currency, Usdc};
@@ -26,16 +26,38 @@ impl MarketOracleWrapper {
         }
     }
     #[track_caller]
-    pub fn instantiate(self, app: &mut MockApp, denom: &str, timealarms_addr: &str) -> Addr {
+    pub fn instantiate(
+        self,
+        app: &mut MockApp,
+        denom: &str,
+        timealarms_addr: &str,
+        balance: u128,
+    ) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {
             base_asset: denom.to_string(),
             price_feed_period_secs: 60,
             feeders_percentage_needed: 1,
-            supported_denom_pairs: vec![("UST".to_string(), NATIVE_DENOM.to_string()), (Usdc::SYMBOL.to_string(), NATIVE_DENOM.to_string())],
+            supported_denom_pairs: vec![
+                ("UST".to_string(), NATIVE_DENOM.to_string()),
+                (Usdc::SYMBOL.to_string(), NATIVE_DENOM.to_string())],
             timealarms_addr: timealarms_addr.to_string(),
         };
-        app.instantiate_contract(code_id, Addr::unchecked(ADMIN), &msg, &[], "oracle", None)
+
+        let funds = if balance == 0 {
+            vec![]
+        } else {
+            coins(balance, denom)
+        };
+
+        app.instantiate_contract(
+            code_id,
+            Addr::unchecked(ADMIN),
+            &msg,
+            &funds,
+            "oracle",
+            None,
+        )
             .unwrap()
     }
 }

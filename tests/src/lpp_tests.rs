@@ -106,9 +106,19 @@ fn deposit_and_withdraw() {
 
     let mut app = mock_app(&[coin(app_balance, denom)]);
     let lease_id = LeaseWrapper::default().store(&mut app);
-    let (lpp, _) = LppWrapper::default().instantiate(&mut app, lease_id.into(), denom, 0);
+    let (lpp, _) = LppWrapper::default().instantiate(
+        &mut app,
+        lease_id.into(),
+        denom,
+        0,
+    );
     let timealarms = TimeAlarmsWrapper::default().instantiate(&mut app);
-    let market_price_oracle = MarketOracleWrapper::default().instantiate(&mut app, TheCurrency::SYMBOL, timealarms.as_str());
+    let market_price_oracle = MarketOracleWrapper::default().instantiate(
+        &mut app,
+        TheCurrency::SYMBOL,
+        timealarms.as_str(),
+        0,
+    );
 
     app.send_tokens(admin.clone(), lender1.clone(), &[coin(init_deposit, denom)])
         .unwrap();
@@ -371,7 +381,12 @@ fn loan_open_and_repay() {
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate(&mut app, lease_id.into(), denom, 0);
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app);
-    let oracle = MarketOracleWrapper::default().instantiate(&mut app, denom, time_alarms.as_str());
+    let oracle = MarketOracleWrapper::default().instantiate(
+        &mut app,
+        denom,
+        time_alarms.as_str(),
+        0,
+    );
     let lease_addresses = LeaseWrapperAddresses {
         lpp: lpp.clone(),
         time_alarms,
@@ -664,7 +679,12 @@ fn compare_lpp_states() {
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate(&mut app, lease_id.into(), denom, 0);
     let timealarms = TimeAlarmsWrapper::default().instantiate(&mut app);
-    let market_oracle = MarketOracleWrapper::default().instantiate(&mut app, denom, timealarms.as_str());
+    let market_oracle = MarketOracleWrapper::default().instantiate(
+        &mut app,
+        denom,
+        timealarms.as_str(),
+        0,
+    );
     app.send_tokens(admin.clone(), lender.clone(), &[coin(init_deposit, denom)])
         .unwrap();
     app.send_tokens(

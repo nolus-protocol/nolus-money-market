@@ -3,7 +3,7 @@ use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Repl
 use cosmwasm_std::entry_point;
 use cw2::set_contract_version;
 
-use marketprice::storage::Price;
+use finance::price::PriceDTO;
 use platform::{
     bank::BankStub,
     batch::Emitter,
@@ -168,7 +168,7 @@ fn run_price_alarm_liquidation(
     env: Env,
     info: MessageInfo,
     lease: LeaseDTO,
-    price: Price,
+    price: PriceDTO,
 ) -> ContractResult<Response> {
     let result = lease::execute(
         lease,

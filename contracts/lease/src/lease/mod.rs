@@ -8,15 +8,21 @@ use finance::{
     fraction::Fraction,
     liability::Liability,
     percent::{Percent, Units},
-    ratio::Ratio
+    price::{
+        Price,
+        total,
+        total_of
+    },
+    ratio::Ratio,
 };
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::msg::ExecuteMsg::AddPriceAlarm;
-use marketprice::storage::Price;
 use platform::{
     bank::{BankAccount, BankAccountView},
-    batch::Batch,
-    batch::BatchMessage,
+    batch::{
+        Batch,
+        BatchMessage
+    }
 };
 
 use crate::{
@@ -240,9 +246,11 @@ where
                         LiquidationStatus::FirstWarning(_) => self.liability.second_liq_warn_percent(),
                         LiquidationStatus::SecondWarning(_) => self.liability.third_liq_warn_percent(),
                         LiquidationStatus::ThirdWarning(_) => self.liability.max_percent(),
-                        LiquidationStatus::FullLiquidation(_) => unreachable!(),
+                        LiquidationStatus::FullLiquidation(_) => unreachable!(
+                            "Lease is fully liquidated! No alarm should be set for it!",
+                        ),
                     },
-                )?,
+                )?.into(),
             },
             Vec::new(),
         )?))
@@ -253,14 +261,12 @@ where
         now: Timestamp,
         account: &B,
         lease: Addr,
-        price: Price,
+        price: Price<Lpn, Lpn>,
     ) -> ContractResult<(LiquidationStatus<Lpn>, Coin<Lpn>)>
     where
         B: BankAccountView,
     {
         let lease_amount = account.balance::<Lpn>().map_err(ContractError::from)?;
-
-        self.liability.invariant_held()?;
 
         let status = self.liquidation_status(now, lease, lease_amount, price)?;
 
@@ -274,18 +280,8 @@ where
         now: Timestamp,
         lease: Addr,
         lease_amount: Coin<Lpn>,
-        market_price: Price,
+        market_price: Price<Lpn, Lpn>,
     ) -> ContractResult<LiquidationStatus<Lpn>> {
-        assert_eq!(
-            market_price.base().symbol,
-            Lpn::SYMBOL,
-        );
-
-        assert_eq!(
-            market_price.quote().symbol,
-            self.currency,
-        );
-
         self.liability.invariant_held()?;
 
         Ok(if lease_amount.is_zero() {
@@ -302,7 +298,7 @@ where
                         + state.current_margin_interest_due
                         + state.current_interest_due;
 
-                    let lease_lpn = lease_amount * market_price.base().amount / market_price.quote().amount;
+                    let lease_lpn = total(lease_amount, market_price);
 
                     match Percent::from_permille((Amount::from(liability_lpn) * 1000 / Amount::from(lease_lpn)) as Units) {
                         liability_percent if liability_percent < self.liability.first_liq_warn_percent() => LiquidationStatus::None,
@@ -340,7 +336,7 @@ where
         lease_amount: Coin<Lpn>,
         now: &Timestamp,
         percent: Percent,
-    ) -> ContractResult<Price>
+    ) -> ContractResult<Price<Lpn, Lpn>>
     where
         A: Into<Addr>,
     {
@@ -350,38 +346,19 @@ where
         )?
             .ok_or(ContractError::LoanClosed())?;
 
-        let numerator = Amount::from(
-            state.principal_due
-                + state.previous_margin_interest_due
-                + state.previous_interest_due
-                + state.current_margin_interest_due
-                + state.current_interest_due,
-        );
+        assert!(!lease_amount.is_zero(), "Loan already paid!");
 
-        assert_ne!(numerator, 0, "Loan already paid!");
-
-        let denominator = Amount::from(percent.of(lease_amount));
-
-        let gcd = {
-            let mut numerator = numerator;
-
-            let mut denominator = denominator;
-
-            while let Some(result) = numerator.checked_rem(denominator) {
-                numerator = denominator;
-
-                denominator = result;
-            }
-
-            numerator
-        };
-
-        Ok(Price::new(
-            Lpn::SYMBOL,
-            numerator / gcd,
-            self.currency.as_str(),
-            denominator / gcd,
-        ))
+        Ok(
+            total_of(
+                percent.of(lease_amount),
+            ).is(
+                state.principal_due
+                    + state.previous_margin_interest_due
+                    + state.previous_interest_due
+                    + state.current_margin_interest_due
+                    + state.current_interest_due,
+            ),
+        )
     }
 }
 

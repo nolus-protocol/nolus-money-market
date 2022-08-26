@@ -1,15 +1,21 @@
 use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
-use finance::currency::{Currency, SymbolOwned};
+use finance::{
+    currency::{Currency, SymbolOwned},
+    price::PriceDTO
+};
 use lpp::stub::Lpp as LppTrait;
-use marketprice::storage::Price;
 use platform::bank::BankAccountView;
 
 use crate::{
     contract::alarms::{emit_events, LiquidationResult},
     error::ContractError,
-    lease::{Lease, WithLease},
+    lease::{
+        Lease,
+        LiquidationStatus,
+        WithLease
+    }
 };
 
 pub struct PriceAlarm<'a, B>
@@ -20,14 +26,14 @@ where
     lease: Addr,
     account: B,
     now: Timestamp,
-    price: Price,
+    price: PriceDTO,
 }
 
 impl<'a, B> PriceAlarm<'a, B>
 where
     B: BankAccountView,
 {
-    pub fn new(sender: &'a Addr, lease: Addr, account: B, now: Timestamp, price: Price) -> Self {
+    pub fn new(sender: &'a Addr, lease: Addr, account: B, now: Timestamp, price: PriceDTO) -> Self {
         Self {
             sender,
             lease,
@@ -56,9 +62,15 @@ where
         }
 
         let (liquidation, lease_amount) = lease.run_liquidation(
-            self.now, &self.account, self.lease.clone(), self.price)?;
+            self.now,
+            &self.account,
+            self.lease.clone(),
+            self.price.try_into()?,
+        )?;
 
-        let reschedule_msgs = (lease_amount != Default::default()).then(
+        let reschedule_msgs = (
+            !matches!(liquidation, LiquidationStatus::FullLiquidation(_))
+        ).then(
             {
                 // Force move before closure to avoid edition warning from clippy;
                 let lease_addr = self.lease;
