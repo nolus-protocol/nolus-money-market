@@ -110,6 +110,10 @@ where
         &self.customer == addr
     }
 
+    pub(crate) fn sent_oracle(&self, addr: &Addr) -> bool {
+        &self.market_price_oracle == addr
+    }
+
     pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<Batch> {
         // TODO add a type parameter to this function to designate the downpayment currency
         // TODO query the market price oracle to get the price of the downpayment currency to LPN

@@ -51,7 +51,7 @@ where
         Lpp: LppTrait<Lpn>,
         Lpn: Currency + Serialize,
     {
-        if !lease.owned_by(self.sender) {
+        if !lease.sent_oracle(self.sender) {
             return Err(Self::Error::Unauthorized {});
         }
 
