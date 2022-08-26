@@ -26,6 +26,18 @@ impl LeaserWrapper {
 
     pub const REPAYMENT_PERIOD: Duration = Duration::from_secs(Self::REPAYMENT_PERIOD_SECS);
 
+    pub fn liability() -> Liability {
+        Liability::new(
+            Percent::from_percent(65),
+            Percent::from_percent(5),
+            Percent::from_percent(10),
+            Percent::from_percent(2),
+            Percent::from_percent(3),
+            Percent::from_percent(2),
+            1,
+        )
+    }
+
     #[track_caller]
     pub fn instantiate(self, app: &mut MockApp, lease_code_id: u64, lpp_addr: &Addr, market_price_oracle: Addr) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
@@ -33,15 +45,7 @@ impl LeaserWrapper {
             lease_code_id: Uint64::new(lease_code_id),
             lpp_ust_addr: lpp_addr.clone(),
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
-            liability: Liability::new(
-                Percent::from_percent(65),
-                Percent::from_percent(70),
-                Percent::from_percent(80),
-                Percent::from_percent(2),
-                Percent::from_percent(3),
-                Percent::from_percent(2),
-                1,
-            ),
+            liability: Self::liability(),
             repayment: Repayment::new(Self::REPAYMENT_PERIOD_SECS, 10 * 24 * 60 * 60),
             market_price_oracle,
         };

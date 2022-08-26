@@ -27,8 +27,8 @@ fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::Ins
         lease_interest_rate_margin: MARGIN_INTEREST_RATE,
         liability: Liability::new(
             Percent::from_percent(65),
-            Percent::from_percent(70),
-            Percent::from_percent(80),
+            Percent::from_percent(5),
+            Percent::from_percent(10),
             Percent::from_percent(2),
             Percent::from_percent(3),
             Percent::from_percent(2),
@@ -73,8 +73,8 @@ fn test_update_config() {
     let mut deps = mock_dependencies();
     let expected_liability = Liability::new(
         Percent::from_percent(55),
-        Percent::from_percent(60),
-        Percent::from_percent(65),
+        Percent::from_percent(5),
+        Percent::from_percent(5),
         Percent::from_percent(1),
         Percent::from_percent(2),
         Percent::from_percent(1),
@@ -102,8 +102,8 @@ fn test_update_config_invalid_repay_period() {
     let mut deps = mock_dependencies();
     let expected_liability = Liability::new(
         Percent::from_percent(55),
-        Percent::from_percent(60),
-        Percent::from_percent(65),
+        Percent::from_percent(5),
+        Percent::from_percent(5),
         Percent::from_percent(1),
         Percent::from_percent(2),
         Percent::from_percent(1),
@@ -176,8 +176,8 @@ fn test_update_config_unauthorized() {
     let mut deps = mock_dependencies();
     let expected_liability = Liability::new(
         Percent::from_percent(55),
-        Percent::from_percent(60),
-        Percent::from_percent(65),
+        Percent::from_percent(5),
+        Percent::from_percent(5),
         Percent::from_percent(1),
         Percent::from_percent(2),
         Percent::from_percent(1),

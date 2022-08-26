@@ -126,6 +126,7 @@ impl Liability {
             && self.second_liq_warn > self.first_liq_warn
             && self.third_liq_warn > self.second_liq_warn
             && self.max_percent > self.third_liq_warn
+            && self.max_percent <= Percent::HUNDRED
             && self.recalc_secs >= SECS_IN_HOUR
         {
             Ok(())

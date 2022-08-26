@@ -591,8 +591,8 @@ mod tests {
             currency: TestCurrency::SYMBOL.to_string(),
             liability: Liability::new(
                 Percent::from_percent(65),
-                Percent::from_percent(70),
-                Percent::from_percent(80),
+                Percent::from_percent(5),
+                Percent::from_percent(10),
                 Percent::from_percent(2),
                 Percent::from_percent(3),
                 Percent::from_percent(2),
