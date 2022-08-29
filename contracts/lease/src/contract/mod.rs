@@ -43,7 +43,6 @@ pub fn instantiate(
     info: MessageInfo,
     form: NewLeaseForm,
 ) -> ContractResult<Response> {
-    // TODO restrict the Lease instantiation only to the Leaser addr by using `nolusd tx wasm store ... --instantiate-only-address <addr>`
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     deps.api.addr_validate(form.market_price_oracle.as_str())
