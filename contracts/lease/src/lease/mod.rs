@@ -30,7 +30,7 @@ use crate::{
     loan::{Loan, Receipt},
     msg::StateResponse,
 };
-use crate::lease::liquidation::WarningAndPartialLiquidationInfo;
+use crate::lease::liquidation::WarningAndLiquidationInfo;
 
 pub(super) use self::{
     downpayment_dto::DownpaymentDTO,
@@ -297,7 +297,7 @@ where
 
                     let lease_lpn = total(lease_amount, market_price);
 
-                    let mut info = WarningAndPartialLiquidationInfo {
+                    let mut info = WarningAndLiquidationInfo {
                         customer: self.customer.clone(),
                         ltv: Percent::default(),
                         ltv_healthy: self.liability.healthy_percent(),

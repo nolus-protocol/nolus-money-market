@@ -14,14 +14,14 @@ where
     Lpn: Currency,
 {
     None,
-    FirstWarning(WarningAndPartialLiquidationInfo),
-    SecondWarning(WarningAndPartialLiquidationInfo),
-    ThirdWarning(WarningAndPartialLiquidationInfo),
-    PartialLiquidation(WarningAndPartialLiquidationInfo, Coin<Lpn>),
-    FullLiquidation(WarningAndPartialLiquidationInfo, Coin<Lpn>),
+    FirstWarning(WarningAndLiquidationInfo),
+    SecondWarning(WarningAndLiquidationInfo),
+    ThirdWarning(WarningAndLiquidationInfo),
+    PartialLiquidation(WarningAndLiquidationInfo, Coin<Lpn>),
+    FullLiquidation(WarningAndLiquidationInfo, Coin<Lpn>),
 }
 
-pub struct WarningAndPartialLiquidationInfo {
+pub struct WarningAndLiquidationInfo {
     pub customer: Addr,
     pub ltv: Percent,
     pub ltv_healthy: Percent,
