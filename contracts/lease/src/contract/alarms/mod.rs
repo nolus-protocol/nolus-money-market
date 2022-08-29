@@ -1,9 +1,6 @@
 use serde::Serialize;
 
-use finance::{
-    currency::Currency,
-    ratio::Ratio
-};
+use finance::currency::Currency;
 use platform::{
     batch::{Batch, Emit, Emitter},
     either::Either
@@ -39,18 +36,12 @@ fn emit_events<Lpn>(liquidation: &LiquidationStatus<Lpn>, batch: Batch) -> Eithe
                     .emit("lease-asset", &info.lease_asset)
         }
         LiquidationStatus::PartialLiquidation(..) => {
-            let emitter = batch.into_emitter(TYPE::Liquidation);
-
             // TODO add event attributes
-
-            emitter
+            batch.into_emitter(TYPE::Liquidation)
         }
         LiquidationStatus::FullLiquidation(..) => {
-            let emitter = batch.into_emitter(TYPE::Liquidation);
-
             // TODO add event attributes
-
-            emitter
+            batch.into_emitter(TYPE::Liquidation)
         }
     })
 }
