@@ -22,10 +22,15 @@ use crate::{
     msg::{ExecuteMsg, NewLeaseForm, StateQuery},
 };
 
-use self::{close::Close, repay::RepayResult};
-use self::open::{OpenLoanReq, OpenLoanResp};
-use self::repay::Repay;
-use self::state::LeaseState;
+use self::{
+    close::Close,
+    open::{OpenLoanReq, OpenLoanResp},
+    repay::{
+        Repay,
+        RepayResult
+    },
+    state::LeaseState
+};
 
 mod alarms;
 mod close;
@@ -183,5 +188,5 @@ fn run_price_alarm_liquidation(
 
     result.lease.store(deps.storage)?;
 
-    Ok(result.into_response.convert())
+    Ok(result.response)
 }

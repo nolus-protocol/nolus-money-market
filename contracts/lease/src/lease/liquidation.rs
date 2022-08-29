@@ -9,21 +9,27 @@ use finance::{
     percent::Percent,
 };
 
-pub enum LiquidationStatus<Lpn>
+pub(crate) enum LiquidationStatus<Lpn>
 where
     Lpn: Currency,
 {
     None,
-    FirstWarning(WarningAndLiquidationInfo),
-    SecondWarning(WarningAndLiquidationInfo),
-    ThirdWarning(WarningAndLiquidationInfo),
-    PartialLiquidation(WarningAndLiquidationInfo, Coin<Lpn>),
-    FullLiquidation(WarningAndLiquidationInfo, Coin<Lpn>),
+    FirstWarning(CommonInfo),
+    SecondWarning(CommonInfo),
+    ThirdWarning(CommonInfo),
+    PartialLiquidation {
+        info: CommonInfo,
+        healthy_ltv: Percent,
+        liquidation_amount: Coin<Lpn>,
+    },
+    FullLiquidation {
+        info: CommonInfo,
+        healthy_ltv: Percent,
+    },
 }
 
-pub struct WarningAndLiquidationInfo {
+pub(crate) struct CommonInfo {
     pub customer: Addr,
     pub ltv: Percent,
-    pub ltv_healthy: Percent,
     pub lease_asset: SymbolOwned,
 }

@@ -19,18 +19,15 @@ use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::msg::ExecuteMsg::AddPriceAlarm;
 use platform::{
     bank::{BankAccount, BankAccountView},
-    batch::{
-        Batch,
-        BatchMessage
-    },
+    batch::{Batch, BatchMessage},
 };
 
 use crate::{
     error::{ContractError, ContractResult},
+    lease::liquidation::CommonInfo,
     loan::{Loan, Receipt},
-    msg::StateResponse,
+    msg::StateResponse
 };
-use crate::lease::liquidation::WarningAndLiquidationInfo;
 
 pub(super) use self::{
     downpayment_dto::DownpaymentDTO,
@@ -297,10 +294,9 @@ where
 
                     let lease_lpn = total(lease_amount, market_price);
 
-                    let mut info = WarningAndLiquidationInfo {
+                    let mut info = CommonInfo {
                         customer: self.customer.clone(),
                         ltv: Percent::default(),
-                        ltv_healthy: self.liability.healthy_percent(),
                         lease_asset: self.currency.clone(),
                     };
 
@@ -337,9 +333,16 @@ where
                             info.ltv = self.liability.max_percent();
 
                             if liquidation_amount == lease_amount {
-                                LiquidationStatus::FullLiquidation(info, lease_amount)
+                                LiquidationStatus::FullLiquidation {
+                                    info,
+                                    healthy_ltv: self.liability.healthy_percent(),
+                                }
                             } else {
-                                LiquidationStatus::PartialLiquidation(info, liquidation_amount)
+                                LiquidationStatus::PartialLiquidation {
+                                    info,
+                                    healthy_ltv: self.liability.healthy_percent(),
+                                    liquidation_amount,
+                                }
                             }
                         }
                     }
@@ -381,11 +384,11 @@ where
                     now,
                     match liquidation {
                         LiquidationStatus::None
-                        | LiquidationStatus::PartialLiquidation(..) => self.liability.first_liq_warn_percent(),
+                        | LiquidationStatus::PartialLiquidation { .. } => self.liability.first_liq_warn_percent(),
                         LiquidationStatus::FirstWarning(_) => self.liability.second_liq_warn_percent(),
                         LiquidationStatus::SecondWarning(_) => self.liability.third_liq_warn_percent(),
                         LiquidationStatus::ThirdWarning(_) => self.liability.max_percent(),
-                        LiquidationStatus::FullLiquidation(..) => unreachable!(),
+                        LiquidationStatus::FullLiquidation { .. } => unreachable!(),
                     },
                 )?.into(),
             },

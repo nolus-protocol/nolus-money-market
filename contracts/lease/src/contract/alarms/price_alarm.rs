@@ -69,7 +69,7 @@ where
         )?;
 
         let reschedule_msgs = (
-            !matches!(liquidation, LiquidationStatus::FullLiquidation(..))
+            !matches!(liquidation, LiquidationStatus::FullLiquidation { .. })
         ).then(
             {
                 // Force move before closure to avoid edition warning from clippy;
@@ -87,7 +87,7 @@ where
             .for_each(|msg| batch.schedule_execute_batch_message(msg));
 
         Ok(LiquidationResult {
-            into_response: emit_events(&liquidation, batch),
+            response: emit_events(&liquidation, batch),
             lease,
         })
     }
