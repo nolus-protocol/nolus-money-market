@@ -17,17 +17,18 @@ use crate::{
 pub mod price_alarm;
 
 fn emit_events<Lpn>(liquidation: &LiquidationStatus<Lpn>, batch: Batch) -> Either<Batch, Emitter> where Lpn: Currency + Serialize {
-    match &liquidation {
-        LiquidationStatus::None => Either::Left(batch),
-        warning @ LiquidationStatus::FirstWarning(ltv)
-        | warning @ LiquidationStatus::SecondWarning(ltv)
-        | warning @ LiquidationStatus::ThirdWarning(ltv) => {
-            Either::Right(
+    Either::Right(match &liquidation {
+        LiquidationStatus::None => return Either::Left(batch),
+        warning @ LiquidationStatus::FirstWarning(info)
+        | warning @ LiquidationStatus::SecondWarning(info)
+        | warning @ LiquidationStatus::ThirdWarning(info) => {
+
                 batch
                     .into_emitter(TYPE::LiquidationWarning)
-                    .emit_to_string_value("current-ltv", ltv.parts())
+                    .emit("customer", &info.customer)
+                    .emit_percent_amount("ltv", info.ltv)
                     .emit_to_string_value(
-                        "warning-level",
+                        "level",
                         match warning {
                             LiquidationStatus::FirstWarning(_) => 1,
                             LiquidationStatus::SecondWarning(_) => 2,
@@ -35,23 +36,23 @@ fn emit_events<Lpn>(liquidation: &LiquidationStatus<Lpn>, batch: Batch) -> Eithe
                             _ => unreachable!(),
                         }
                     )
-            )
+                    .emit("lease-asset", &info.lease_asset)
         }
-        LiquidationStatus::PartialLiquidation(_) => {
+        LiquidationStatus::PartialLiquidation(..) => {
             let emitter = batch.into_emitter(TYPE::Liquidation);
 
             // TODO add event attributes
 
-            Either::Right(emitter)
+            emitter
         }
-        LiquidationStatus::FullLiquidation(_) => {
+        LiquidationStatus::FullLiquidation(..) => {
             let emitter = batch.into_emitter(TYPE::Liquidation);
 
             // TODO add event attributes
 
-            Either::Right(emitter)
+            emitter
         }
-    }
+    })
 }
 
 pub struct LiquidationResult

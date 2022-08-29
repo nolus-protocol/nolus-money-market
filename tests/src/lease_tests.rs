@@ -15,7 +15,7 @@ use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
 use platform::coin_legacy::to_cosmwasm;
 
-use crate::common::{ADMIN, AppExt, leaser_wrapper::LeaserWrapper, test_case::TestCase};
+use crate::common::{ADMIN, AppExt, leaser_wrapper::LeaserWrapper, test_case::TestCase, USER};
 
 type Currency = Usdc;
 type TheCoin = Coin<Currency>;
@@ -51,7 +51,7 @@ fn open_lease(test_case: &mut TestCase, value: TheCoin) -> Addr {
     test_case
         .app
         .execute_contract(
-            Addr::unchecked("user"),
+            Addr::unchecked(USER),
             test_case.leaser_addr.clone().unwrap(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: DENOM.to_string(),
@@ -70,7 +70,7 @@ fn get_lease_address(test_case: &TestCase) -> Addr {
         .query_wasm_smart(
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Leases {
-                owner: Addr::unchecked("user"),
+                owner: Addr::unchecked(USER),
             },
         )
         .unwrap();
@@ -82,7 +82,7 @@ fn repay(test_case: &mut TestCase, contract_addr: &Addr, value: TheCoin) -> AppR
     test_case
         .app
         .execute_contract(
-            Addr::unchecked("user"),
+            Addr::unchecked(USER),
             contract_addr.clone(),
             &lease::msg::ExecuteMsg::Repay {},
             &[to_cosmwasm(value)],
@@ -94,7 +94,7 @@ fn close(test_case: &mut TestCase, contract_addr: &Addr) -> AppResponse {
     test_case
         .app
         .execute_contract(
-            Addr::unchecked("user"),
+            Addr::unchecked(USER),
             contract_addr.clone(),
             &lease::msg::ExecuteMsg::Close {},
             &[],
@@ -275,14 +275,11 @@ fn liquidation_warning(price: PriceDTO, percent: Percent, level: &str) {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment);
-    let borrowed = quote_borrow(&test_case, downpayment); // principal
-
-    println!("{}", downpayment + borrowed);
 
     let response = test_case.app.execute_contract(
         test_case.oracle.unwrap(),
         lease_address,
-        &lease::msg::ExecuteMsg::PriceAlarm { price },
+        &lease::msg::ExecuteMsg::PriceAlarm { price: price.clone() },
         &[to_cosmwasm(create_coin(10000))],
     ).unwrap();
 
@@ -291,16 +288,28 @@ fn liquidation_warning(price: PriceDTO, percent: Percent, level: &str) {
     ).expect("No liquidation warning emitted!");
 
     let attribute = event.attributes.iter().find(
-        |attribute| attribute.key == "current-ltv",
-    ).unwrap();
+        |attribute| attribute.key == "customer",
+    ).expect("Customer attribute not present!");
+
+    assert_eq!(attribute.value, USER);
+
+    let attribute = event.attributes.iter().find(
+        |attribute| attribute.key == "ltv",
+    ).expect("LTV attribute not present!");
 
     assert_eq!(attribute.value, percent.units().to_string());
 
     let attribute = event.attributes.iter().find(
-        |attribute| attribute.key == "warning-level",
-    ).unwrap();
+        |attribute| attribute.key == "level",
+    ).expect("Level attribute not present!");
 
     assert_eq!(attribute.value, level);
+
+    let attribute = event.attributes.iter().find(
+        |attribute| attribute.key == "lease-asset",
+    ).expect("Lease Asset attribute not present!");
+
+    assert_eq!(&attribute.value, price.quote().symbol());
 }
 
 #[test]
@@ -320,8 +329,8 @@ fn liquidation_warning_0() {
 fn liquidation_warning_1() {
     liquidation_warning(
         PriceDTO::new(
-            create_coin(2085713).into(), // 2085713
-            create_coin(1837159).into(), // 1857159
+            create_coin(2085713).into(), // ref: 2085713
+            create_coin(1837159).into(), // ref: 1857159
         ),
         LeaserWrapper::liability().first_liq_warn_percent(),
         "1",
@@ -332,8 +341,8 @@ fn liquidation_warning_1() {
 fn liquidation_warning_2() {
     liquidation_warning(
         PriceDTO::new(
-            create_coin(2085713).into(), // 2085713
-            create_coin(1757159).into(), // 1857159
+            create_coin(2085713).into(), // ref: 2085713
+            create_coin(1757159).into(), // ref: 1857159
         ),
         LeaserWrapper::liability().second_liq_warn_percent(),
         "2",
@@ -344,8 +353,8 @@ fn liquidation_warning_2() {
 fn liquidation_warning_3() {
     liquidation_warning(
         PriceDTO::new(
-            create_coin(2085713).into(), // 2085713
-            create_coin(1707159).into(), // 1857159
+            create_coin(2085713).into(), // ref: 2085713
+            create_coin(1707159).into(), // ref: 1857159
         ),
         LeaserWrapper::liability().third_liq_warn_percent(),
         "3",

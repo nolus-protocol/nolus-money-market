@@ -1,22 +1,29 @@
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use cosmwasm_std::Addr;
 
 use finance::{
     coin::Coin,
-    currency::Currency,
-    percent::Percent
+    currency::{
+        Currency,
+        SymbolOwned
+    },
+    percent::Percent,
 };
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
 pub enum LiquidationStatus<Lpn>
 where
     Lpn: Currency,
 {
     None,
-    FirstWarning(Percent),
-    SecondWarning(Percent),
-    ThirdWarning(Percent),
-    PartialLiquidation(Coin<Lpn>),
-    FullLiquidation(Coin<Lpn>),
+    FirstWarning(WarningAndPartialLiquidationInfo),
+    SecondWarning(WarningAndPartialLiquidationInfo),
+    ThirdWarning(WarningAndPartialLiquidationInfo),
+    PartialLiquidation(WarningAndPartialLiquidationInfo, Coin<Lpn>),
+    FullLiquidation(WarningAndPartialLiquidationInfo, Coin<Lpn>),
+}
+
+pub struct WarningAndPartialLiquidationInfo {
+    pub customer: Addr,
+    pub ltv: Percent,
+    pub ltv_healthy: Percent,
+    pub lease_asset: SymbolOwned,
 }

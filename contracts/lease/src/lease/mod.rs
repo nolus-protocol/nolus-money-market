@@ -30,6 +30,7 @@ use crate::{
     loan::{Loan, Receipt},
     msg::StateResponse,
 };
+use crate::lease::liquidation::WarningAndPartialLiquidationInfo;
 
 pub(super) use self::{
     downpayment_dto::DownpaymentDTO,
@@ -296,11 +297,30 @@ where
 
                     let lease_lpn = total(lease_amount, market_price);
 
+                    let mut info = WarningAndPartialLiquidationInfo {
+                        customer: self.customer.clone(),
+                        ltv: Percent::default(),
+                        ltv_healthy: self.liability.healthy_percent(),
+                        lease_asset: self.currency.clone(),
+                    };
+
                     match Percent::from_permille((Amount::from(liability_lpn) * 1000 / Amount::from(lease_lpn)) as Units) {
                         liability_percent if liability_percent < self.liability.first_liq_warn_percent() => LiquidationStatus::None,
-                        liability_percent if liability_percent < self.liability.second_liq_warn_percent() => LiquidationStatus::FirstWarning(self.liability.first_liq_warn_percent()),
-                        liability_percent if liability_percent < self.liability.third_liq_warn_percent() => LiquidationStatus::SecondWarning(self.liability.second_liq_warn_percent()),
-                        liability_percent if liability_percent < self.liability.max_percent() => LiquidationStatus::ThirdWarning(self.liability.third_liq_warn_percent()),
+                        liability_percent if liability_percent < self.liability.second_liq_warn_percent() => {
+                            info.ltv = self.liability.first_liq_warn_percent();
+
+                            LiquidationStatus::FirstWarning(info)
+                        }
+                        liability_percent if liability_percent < self.liability.third_liq_warn_percent() => {
+                            info.ltv = self.liability.second_liq_warn_percent();
+
+                            LiquidationStatus::SecondWarning(info)
+                        }
+                        liability_percent if liability_percent < self.liability.max_percent() => {
+                            info.ltv = self.liability.third_liq_warn_percent();
+
+                            LiquidationStatus::ThirdWarning(info)
+                        }
                         _ => {
                             let liquidation_amount = lease_amount.min(
                                 Coin::new(
@@ -314,10 +334,12 @@ where
 
                             // TODO update contract's "lease_amount"
 
+                            info.ltv = self.liability.max_percent();
+
                             if liquidation_amount == lease_amount {
-                                LiquidationStatus::FullLiquidation(lease_amount)
+                                LiquidationStatus::FullLiquidation(info, lease_amount)
                             } else {
-                                LiquidationStatus::PartialLiquidation(liquidation_amount)
+                                LiquidationStatus::PartialLiquidation(info, liquidation_amount)
                             }
                         }
                     }
@@ -359,11 +381,11 @@ where
                     now,
                     match liquidation {
                         LiquidationStatus::None
-                        | LiquidationStatus::PartialLiquidation(_) => self.liability.first_liq_warn_percent(),
+                        | LiquidationStatus::PartialLiquidation(..) => self.liability.first_liq_warn_percent(),
                         LiquidationStatus::FirstWarning(_) => self.liability.second_liq_warn_percent(),
                         LiquidationStatus::SecondWarning(_) => self.liability.third_liq_warn_percent(),
                         LiquidationStatus::ThirdWarning(_) => self.liability.max_percent(),
-                        LiquidationStatus::FullLiquidation(_) => unreachable!(),
+                        LiquidationStatus::FullLiquidation(..) => unreachable!(),
                     },
                 )?.into(),
             },
