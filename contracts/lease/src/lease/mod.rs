@@ -333,10 +333,7 @@ where
                             info.ltv = self.liability.max_percent();
 
                             if liquidation_amount == lease_amount {
-                                LiquidationStatus::FullLiquidation {
-                                    _info: info,
-                                    _healthy_ltv: self.liability.healthy_percent(),
-                                }
+                                LiquidationStatus::FullLiquidation(info)
                             } else {
                                 LiquidationStatus::PartialLiquidation {
                                     _info: info,
@@ -388,7 +385,7 @@ where
                         LiquidationStatus::FirstWarning(_) => self.liability.second_liq_warn_percent(),
                         LiquidationStatus::SecondWarning(_) => self.liability.third_liq_warn_percent(),
                         LiquidationStatus::ThirdWarning(_) => self.liability.max_percent(),
-                        LiquidationStatus::FullLiquidation { .. } => unreachable!(),
+                        LiquidationStatus::FullLiquidation(_) => unreachable!(),
                     },
                 )?.into(),
             },

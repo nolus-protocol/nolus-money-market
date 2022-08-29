@@ -69,7 +69,7 @@ where
         )?;
 
         let reschedule_msgs = (
-            !matches!(liquidation, LiquidationStatus::FullLiquidation { .. })
+            !matches!(liquidation, LiquidationStatus::FullLiquidation(_))
         ).then(
             {
                 // Force move before closure to avoid edition warning from clippy;

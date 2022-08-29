@@ -22,10 +22,7 @@ where
         _healthy_ltv: Percent,
         _liquidation_amount: Coin<Lpn>,
     },
-    FullLiquidation {
-        _info: CommonInfo,
-        _healthy_ltv: Percent,
-    },
+    FullLiquidation(CommonInfo),
 }
 
 pub(crate) struct CommonInfo {

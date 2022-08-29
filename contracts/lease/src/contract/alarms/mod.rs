@@ -37,7 +37,7 @@ fn emit_events<Lpn>(liquidation: &LiquidationStatus<Lpn>, batch: Batch) -> Respo
             // TODO add event attributes
             batch.into_emitter(TYPE::Liquidation).into()
         }
-        LiquidationStatus::FullLiquidation { .. } => {
+        LiquidationStatus::FullLiquidation(_) => {
             // TODO add event attributes
             batch.into_emitter(TYPE::Liquidation).into()
         }
