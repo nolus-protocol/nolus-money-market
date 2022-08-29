@@ -75,7 +75,7 @@ where
                 // Force move before closure to avoid edition warning from clippy;
                 let lease_addr = self.lease;
 
-                || lease.reschedule_price_alarm(lease_addr, lease_amount, &self.now, &liquidation)
+                || lease.reschedule_from_price_alarm(lease_addr, lease_amount, &self.now, &liquidation)
             }
         ).transpose()?;
 
@@ -83,7 +83,7 @@ where
 
         let mut batch = lpp.into();
 
-        reschedule_msgs.into_iter()
+        reschedule_msgs.into_iter().flatten()
             .for_each(|msg| batch.schedule_execute_batch_message(msg));
 
         Ok(LiquidationResult {

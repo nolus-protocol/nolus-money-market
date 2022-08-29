@@ -149,7 +149,6 @@ impl Default for LeaseWrapper {
 #[derive(Debug, Clone)]
 pub struct LeaseWrapperAddresses {
     pub lpp: Addr,
-    pub time_alarms: Addr,
     pub oracle: Addr,
 }
 

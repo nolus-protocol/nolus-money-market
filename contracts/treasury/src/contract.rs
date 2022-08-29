@@ -3,14 +3,20 @@ use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, Storage};
 use cosmwasm_std::entry_point;
 use cw2::set_contract_version;
 
-use finance::coin::Coin;
-use finance::currency::Nls;
-use platform::bank::{BankAccount, BankStub};
-use platform::batch::Batch;
+use finance::{
+    coin::Coin,
+    currency::Nls
+};
+use platform::{
+    bank::{BankAccount, BankStub},
+    batch::Batch
+};
 
-use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg};
-use crate::state::{self, ADMIN, REWARDS_DISPATCHER};
+use crate::{
+    error::ContractError,
+    msg::{ExecuteMsg, InstantiateMsg},
+    state::{self, ADMIN, REWARDS_DISPATCHER}
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");

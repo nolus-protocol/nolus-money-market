@@ -107,12 +107,14 @@ impl TestCase {
             &mut self.app,
             self.lease_code_id,
             LeaseWrapperAddresses {
-                lpp: self.lpp_addr.clone()
+                lpp: self
+                    .lpp_addr
+                    .clone()
                     .expect("LPP contract not instantiated!"),
-                time_alarms: self.timealarms.clone()
-                    .expect("Time Alarms contract not instantiated!"),
-                oracle: self.oracle.clone()
-                    .expect("Time Alarms contract not instantiated!"),
+                oracle: self
+                    .oracle
+                    .clone()
+                    .expect("Market Price Oracle contract not instantiated!"),
             },
             &self.denom,
             LeaseWrapperConfig::default(),
@@ -168,7 +170,9 @@ impl TestCase {
             &mut self.app,
             self.lease_code_id.unwrap(),
             self.lpp_addr.as_ref().unwrap(),
-            self.oracle.clone().expect("Market Price Oracle not initialized!"),
+            self.oracle
+                .clone()
+                .expect("Market Price Oracle not initialized!"),
         ));
         self.app.update_block(next_block);
 
@@ -217,7 +221,7 @@ impl TestCase {
             &self.denom,
             self.timealarms
                 .as_ref()
-                .expect("Market Price Oracle not initialized!")
+                .expect("Time Alarms not initialized!")
                 .as_str(),
             amount,
         ));

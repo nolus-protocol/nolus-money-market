@@ -62,7 +62,7 @@ where
         let receipt = lease.repay(payment, self.env.block.time, self.env.contract.address.clone())?;
 
         let reschedule_messages = (!receipt.close()).then(
-            || lease.reschedule_price_alarm(
+            || lease.reschedule_from_repay(
                 self.env.contract.address.clone(),
                 self.account.balance::<Lpn>()?,
                 &self.env.block.time,
@@ -74,7 +74,7 @@ where
 
         let mut batch = lpp.into();
 
-        reschedule_messages.into_iter()
+        reschedule_messages.into_iter().flatten()
             .for_each(|msg| batch.schedule_execute_batch_message(msg));
 
         let emitter = batch

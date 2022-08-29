@@ -22,7 +22,7 @@ use platform::{
     batch::{
         Batch,
         BatchMessage
-    }
+    },
 };
 
 use crate::{
@@ -134,8 +134,7 @@ where
     where
         B: BankAccountView,
     {
-        // TODO reschedule time alarm too
-        let reschedule_msg = self.reschedule_price_alarm(
+        let reschedule_msgs = self.initial_alarm_schedule(
             lease,
             account.balance()?,
             now,
@@ -158,7 +157,7 @@ where
                 }
             })?;
 
-        result.batch.schedule_execute_batch_message(reschedule_msg);
+        reschedule_msgs.into_iter().for_each(|msg| result.batch.schedule_execute_batch_message(msg));
 
         Ok(result)
     }
@@ -223,37 +222,34 @@ where
         }
     }
 
-    pub(crate) fn reschedule_price_alarm<A>(
+    #[inline]
+    pub(crate) fn reschedule_from_price_alarm<A>(
         &self,
         lease: A,
         lease_amount: Coin<Lpn>,
         now: &Timestamp,
         liquidation: &LiquidationStatus<Lpn>,
-    ) -> ContractResult<BatchMessage<WasmMsg, LeaseReplyId>>
+    ) -> ContractResult<Vec<BatchMessage<WasmMsg, LeaseReplyId>>>
     where
         A: Into<Addr>,
     {
-        Ok(BatchMessage::NoReply(wasm_execute(
-            self.market_price_oracle.as_str(),
-            &AddPriceAlarm {
-                target: self.price_alarm_by_percent(
-                    lease,
-                    lease_amount,
-                    now,
-                    match liquidation {
-                        LiquidationStatus::None
-                            | LiquidationStatus::PartialLiquidation(_) => self.liability.first_liq_warn_percent(),
-                        LiquidationStatus::FirstWarning(_) => self.liability.second_liq_warn_percent(),
-                        LiquidationStatus::SecondWarning(_) => self.liability.third_liq_warn_percent(),
-                        LiquidationStatus::ThirdWarning(_) => self.liability.max_percent(),
-                        LiquidationStatus::FullLiquidation(_) => unreachable!(
-                            "Lease is fully liquidated! No alarm should be set for it!",
-                        ),
-                    },
-                )?.into(),
-            },
-            Vec::new(),
-        )?))
+        Ok(vec![self.reschedule_price_alarm(lease, lease_amount, now, liquidation)?])
+    }
+
+    #[inline]
+    pub(crate) fn reschedule_from_repay<A>(
+        &self,
+        lease: A,
+        lease_amount: Coin<Lpn>,
+        now: &Timestamp,
+        liquidation: &LiquidationStatus<Lpn>,
+    ) -> ContractResult<Vec<BatchMessage<WasmMsg, LeaseReplyId>>>
+        where
+            A: Into<Addr>,
+    {
+        // Reasoning: "reschedule_from_price_alarm" removes current time alarm,
+        // adds a new one, and then updates the price alarm.
+        self.reschedule_from_price_alarm(lease, lease_amount, now, liquidation)
     }
 
     pub(crate) fn run_liquidation<B>(
@@ -328,6 +324,51 @@ where
                 },
             )
         })
+    }
+
+    #[inline]
+    fn initial_alarm_schedule<A>(
+        &self,
+        lease: A,
+        lease_amount: Coin<Lpn>,
+        now: &Timestamp,
+        liquidation: &LiquidationStatus<Lpn>,
+    ) -> ContractResult<Vec<BatchMessage<WasmMsg, LeaseReplyId>>>
+        where
+            A: Into<Addr>,
+    {
+        self.reschedule_from_price_alarm(lease, lease_amount, now, liquidation)
+    }
+
+    fn reschedule_price_alarm<A>(
+        &self,
+        lease: A,
+        lease_amount: Coin<Lpn>,
+        now: &Timestamp,
+        liquidation: &LiquidationStatus<Lpn>,
+    ) -> ContractResult<BatchMessage<WasmMsg, LeaseReplyId>>
+        where
+            A: Into<Addr>,
+    {
+        Ok(BatchMessage::NoReply(wasm_execute(
+            self.market_price_oracle.as_str(),
+            &AddPriceAlarm {
+                target: self.price_alarm_by_percent(
+                    lease,
+                    lease_amount,
+                    now,
+                    match liquidation {
+                        LiquidationStatus::None
+                        | LiquidationStatus::PartialLiquidation(_) => self.liability.first_liq_warn_percent(),
+                        LiquidationStatus::FirstWarning(_) => self.liability.second_liq_warn_percent(),
+                        LiquidationStatus::SecondWarning(_) => self.liability.third_liq_warn_percent(),
+                        LiquidationStatus::ThirdWarning(_) => self.liability.max_percent(),
+                        LiquidationStatus::FullLiquidation(_) => unreachable!(),
+                    },
+                )?.into(),
+            },
+            Vec::new(),
+        )?))
     }
 
     fn price_alarm_by_percent<A>(

@@ -215,7 +215,6 @@ fn deposit_and_withdraw() {
         Some(lease_id),
         LeaseWrapperAddresses {
             lpp: lpp.clone(),
-            time_alarms: timealarms.clone(),
             oracle: market_price_oracle,
         },
         denom,
@@ -389,7 +388,6 @@ fn loan_open_and_repay() {
     );
     let lease_addresses = LeaseWrapperAddresses {
         lpp: lpp.clone(),
-        time_alarms,
         oracle,
     };
     app.send_tokens(admin.clone(), lender.clone(), &[coin(init_deposit, denom)])
@@ -735,7 +733,6 @@ fn compare_lpp_states() {
         Some(lease_id),
         LeaseWrapperAddresses {
             lpp: lpp.clone(),
-            time_alarms: timealarms.clone(),
             oracle: market_oracle.clone(),
         },
         denom,
@@ -794,7 +791,6 @@ fn compare_lpp_states() {
         Some(lease_id),
         LeaseWrapperAddresses {
             lpp: lpp.clone(),
-            time_alarms: timealarms.clone(),
             oracle: market_oracle,
         },
         denom,
