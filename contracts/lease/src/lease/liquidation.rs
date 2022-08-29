@@ -18,13 +18,13 @@ where
     SecondWarning(CommonInfo),
     ThirdWarning(CommonInfo),
     PartialLiquidation {
-        info: CommonInfo,
-        healthy_ltv: Percent,
-        liquidation_amount: Coin<Lpn>,
+        _info: CommonInfo,
+        _healthy_ltv: Percent,
+        _liquidation_amount: Coin<Lpn>,
     },
     FullLiquidation {
-        info: CommonInfo,
-        healthy_ltv: Percent,
+        _info: CommonInfo,
+        _healthy_ltv: Percent,
     },
 }
 

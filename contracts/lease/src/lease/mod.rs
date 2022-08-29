@@ -334,14 +334,14 @@ where
 
                             if liquidation_amount == lease_amount {
                                 LiquidationStatus::FullLiquidation {
-                                    info,
-                                    healthy_ltv: self.liability.healthy_percent(),
+                                    _info: info,
+                                    _healthy_ltv: self.liability.healthy_percent(),
                                 }
                             } else {
                                 LiquidationStatus::PartialLiquidation {
-                                    info,
-                                    healthy_ltv: self.liability.healthy_percent(),
-                                    liquidation_amount,
+                                    _info: info,
+                                    _healthy_ltv: self.liability.healthy_percent(),
+                                    _liquidation_amount: liquidation_amount,
                                 }
                             }
                         }
