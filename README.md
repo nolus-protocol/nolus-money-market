@@ -87,7 +87,7 @@ When changing the order of deployment, reorder the contracts' addresses accordin
 
 ### Upgrade dependencies
 
-Using the reviously installed cargo-edit one can easily upgrade the dependencies. For more details please refer to 
+Using the previously installed cargo-edit one can easily upgrade the dependencies. For more details please refer to 
 
 ```sh
 cargo upgrade --help
