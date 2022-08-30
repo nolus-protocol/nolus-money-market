@@ -100,25 +100,27 @@ pub fn execute(
 ) -> ContractResult<Response> {
     let lease = LeaseDTO::load(deps.storage)?;
 
+    let account = BankStub::my_account(&env, &deps.querier);
+
     match msg {
         ExecuteMsg::Repay() => {
             let RepayResult {
                 lease_dto,
                 emitter,
-            } = try_repay(&deps.querier, env, info, lease)?;
+            } = try_repay(&deps.querier, &env, account, info, lease)?;
 
             lease_dto.store(deps.storage)?;
 
             Ok(emitter.into())
         }
-        ExecuteMsg::Close() => try_close(deps, env, info, lease).map(Into::into),
+        ExecuteMsg::Close() => try_close(&deps.querier, &env, account, info, lease).map(Into::into),
         ExecuteMsg::PriceAlarm {
             price,
         } => {
             let LiquidationResult {
                 response,
                 lease,
-            } = try_on_price_alarm(&deps.querier, env, info, lease, price)?;
+            } = try_on_price_alarm(&deps.querier, &env, account, info, lease, price)?;
 
             lease.store(deps.storage)?;
 
@@ -143,40 +145,38 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
 
 fn try_repay(
     querier: &QuerierWrapper,
-    env: Env,
+    env: &Env,
+    account: BankStub,
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<RepayResult> {
-    let account = BankStub::my_account(&env, querier);
-
     lease::execute(
         lease,
         Repay::new(
             &info.funds,
             account,
-            &env,
+            env,
         ),
         querier,
     )
 }
 
 fn try_close(
-    deps: DepsMut,
-    env: Env,
+    querier: &QuerierWrapper,
+    env: &Env,
+    account: BankStub,
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<Emitter> {
-    let bank = BankStub::my_account(&env, &deps.querier);
-
     let emitter = lease::execute(
         lease,
         Close::new(
             &info.sender,
             env.contract.address.clone(),
-            bank,
+            account,
             env.block.time,
         ),
-        &deps.querier,
+        querier,
     )?;
 
     Ok(emitter)
@@ -184,7 +184,8 @@ fn try_close(
 
 fn try_on_price_alarm(
     querier: &QuerierWrapper,
-    env: Env,
+    env: &Env,
+    account: BankStub,
     info: MessageInfo,
     lease: LeaseDTO,
     price: PriceDTO,
@@ -194,7 +195,7 @@ fn try_on_price_alarm(
         PriceAlarm::new(
             &info.sender,
             env.contract.address.clone(),
-            BankStub::my_account(&env, querier),
+            account,
             env.block.time,
             price,
         ),
