@@ -108,7 +108,7 @@ pub fn execute(
         ExecuteMsg::Close() => try_close(deps, env, info, lease).map(Into::into),
         ExecuteMsg::PriceAlarm {
             price,
-        } => run_price_alarm_liquidation(deps, env, info, lease, price),
+        } => try_on_price_alarm(deps, env, info, lease, price),
     }
 }
 
@@ -167,7 +167,7 @@ fn try_close(
     Ok(emitter)
 }
 
-fn run_price_alarm_liquidation(
+fn try_on_price_alarm(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
