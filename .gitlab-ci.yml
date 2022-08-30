@@ -2,7 +2,6 @@ stages:
   - prepare
   - test
   - build
-  - deploy
 
 variables:
   CARGO_HOME: $CI_PROJECT_DIR/cargo_home
@@ -78,23 +77,3 @@ build-and-optimization:cargo:
   artifacts:
     paths:
     - artifacts/
-    # expire_in: 1 hour
-
-# deploy:cargo:
-#   stage: deploy
-#   rules:
-#     - !reference [.default_rules, rules]
-#   variables:
-#     CONTRACTS_INFO_FILE: "contracts-info.json"
-#     CONTRACTS_INFO_DIR: "contracts.tar.gz"
-#   before_script:
-#     - apt update && apt install bash
-#     - apt install curl
-#     - echo 'y' | apt install jq
-#   script:
-#     - /bin/bash ./scripts/deploy-contracts-dev-net.sh $CONTRACTS_INFO_FILE
-#     - tar -czvf $CONTRACTS_INFO_DIR $CONTRACTS_INFO_FILE
-#   artifacts:
-#     name: "contracts-$CI_COMMIT_REF_SLUG"
-#     paths:
-#       - $CONTRACTS_INFO_DIR
