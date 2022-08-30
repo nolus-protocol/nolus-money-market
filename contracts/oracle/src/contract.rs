@@ -150,7 +150,7 @@ fn try_configure(
         info.sender,
     )?;
 
-    Ok(Response::new().add_attribute("method", "try_configure"))
+    Ok(Response::new())
 }
 
 fn try_configure_supported_pairs(
@@ -160,7 +160,7 @@ fn try_configure_supported_pairs(
 ) -> Result<Response, ContractError> {
     Config::update_supported_pairs(storage, pairs, info.sender)?;
 
-    Ok(Response::new().add_attribute("method", "try_configure_supported_pairs"))
+    Ok(Response::new())
 }
 
 fn try_register_feeder(
@@ -176,7 +176,7 @@ fn try_register_feeder(
     let f_address = deps.api.addr_validate(&address)?;
     MarketOracle::register_feeder(deps, f_address)?;
 
-    Ok(Response::new().add_attribute("method", "try_register_feeder"))
+    Ok(Response::new())
 }
 
 fn try_feed_multiple_prices(
