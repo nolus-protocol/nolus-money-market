@@ -12,6 +12,7 @@ use crate::{
         Lease,
         LeaseDTO,
         LiquidationStatus,
+        RepayResult as LeaseRepayResult,
         WithLease,
     },
 };
@@ -59,23 +60,13 @@ where
         // TODO 'receive' the payment from the bank using any currency it might be in
         let payment = bank::received::<Lpn>(self.payment)?;
 
-        let receipt = lease.repay(payment, self.env.block.time, self.env.contract.address.clone())?;
+        let lease_amount = self.account.balance_without_payment::<Lpn>(&payment)?;
 
-        let reschedule_messages = (!receipt.close()).then(
-            || lease.reschedule_from_repay(
-                self.env.contract.address.clone(),
-                self.account.balance::<Lpn>()?,
-                &self.env.block.time,
-                &LiquidationStatus::None,
-            )
-        ).transpose()?;
-
-        let (lease_dto, lpp) = lease.into_dto();
-
-        let mut batch = lpp.into();
-
-        reschedule_messages.into_iter().flatten()
-            .for_each(|msg| batch.schedule_execute_batch_message(msg));
+        let LeaseRepayResult {
+            batch,
+            lease_dto,
+            receipt,
+        } = lease.repay(lease_amount, payment, self.env.block.time, self.env.contract.address.clone())?;
 
         let emitter = batch
             .into_emitter(TYPE::Repay)

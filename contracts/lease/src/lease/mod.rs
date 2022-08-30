@@ -13,7 +13,10 @@ use finance::{
         total,
         total_of
     },
-    ratio::Ratio,
+    ratio::{
+        Ratio,
+        Rational
+    }
 };
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::msg::ExecuteMsg::AddPriceAlarm;
@@ -24,15 +27,15 @@ use platform::{
 
 use crate::{
     error::{ContractError, ContractResult},
-    lease::liquidation::CommonInfo,
-    loan::{Loan, Receipt},
+    loan::{Loan, Receipt, State},
     msg::StateResponse
 };
 
 pub(super) use self::{
     downpayment_dto::DownpaymentDTO,
     dto::LeaseDTO,
-    liquidation::LiquidationStatus,
+    liquidation::{CommonInfo, LiquidationStatus, OnAlarmResult, WarningLevel},
+    repay::RepayResult,
 };
 use self::{
     factory::Factory,
@@ -44,6 +47,7 @@ mod dto;
 mod factory;
 mod open;
 mod liquidation;
+mod repay;
 
 pub trait WithLease {
     type Output;
@@ -132,7 +136,7 @@ where
     where
         B: BankAccountView,
     {
-        let reschedule_msgs = self.initial_alarm_schedule(
+        let reschedule_batch = self.initial_alarm_schedule(
             lease,
             account.balance()?,
             now,
@@ -155,7 +159,7 @@ where
                 }
             })?;
 
-        reschedule_msgs.into_iter().for_each(|msg| result.batch.schedule_execute_batch_message(msg));
+        result.batch = result.batch.merge(reschedule_batch);
 
         Ok(result)
     }
@@ -180,13 +184,27 @@ where
     }
 
     pub(crate) fn repay(
-        &mut self,
+        mut self,
+        lease_amount: Coin<Lpn>,
         payment: Coin<Lpn>,
-        by: Timestamp,
+        now: Timestamp,
         lease: Addr,
-    ) -> ContractResult<Receipt<Lpn>> {
+    ) -> ContractResult<RepayResult<Lpn>> {
         assert_eq!(self.currency, Lpn::SYMBOL);
-        self.loan.repay(payment, by, lease)
+
+        let receipt = self.loan.repay(payment, now, lease.clone())?;
+
+        let reschedule_batch = self.reschedule_from_repay(lease, lease_amount, &now)?;
+
+        let (lease_dto, lpp) = self.into_dto();
+
+        let batch = lpp.into().merge(reschedule_batch);
+
+        Ok(RepayResult {
+            batch,
+            lease_dto,
+            receipt,
+        })
     }
 
     pub(crate) fn state<B>(
@@ -220,37 +238,40 @@ where
         }
     }
 
-    #[inline]
-    pub(crate) fn reschedule_from_price_alarm<A>(
-        &self,
-        lease: A,
-        lease_amount: Coin<Lpn>,
-        now: &Timestamp,
-        liquidation: &LiquidationStatus<Lpn>,
-    ) -> ContractResult<Vec<BatchMessage<WasmMsg, LeaseReplyId>>>
+    pub(crate) fn on_price_alarm<B>(
+        self,
+        now: Timestamp,
+        account: &B,
+        lease: Addr,
+        price: Price<Lpn, Lpn>,
+    ) -> ContractResult<OnAlarmResult<Lpn>>
     where
-        A: Into<Addr>,
+        B: BankAccountView,
     {
-        Ok(vec![self.reschedule_price_alarm(lease, lease_amount, now, liquidation)?])
+        let (liquidation_status, lease_amount) = self.on_alarm(now, account, lease.clone(), price)?;
+
+        let reschedule_batch = (
+            !matches!(liquidation_status, LiquidationStatus::FullLiquidation(_))
+        ).then(
+            || self.reschedule_on_price_alarm(lease, lease_amount, &now, &liquidation_status)
+        ).transpose()?;
+
+        let (lease_dto, lpp) = self.into_dto();
+
+        let mut batch = lpp.into();
+
+        if let Some(reschedule_batch) = reschedule_batch {
+            batch = batch.merge(reschedule_batch);
+        }
+
+        Ok(OnAlarmResult {
+            batch,
+            lease_dto,
+            liquidation_status,
+        })
     }
 
-    #[inline]
-    pub(crate) fn reschedule_from_repay<A>(
-        &self,
-        lease: A,
-        lease_amount: Coin<Lpn>,
-        now: &Timestamp,
-        liquidation: &LiquidationStatus<Lpn>,
-    ) -> ContractResult<Vec<BatchMessage<WasmMsg, LeaseReplyId>>>
-        where
-            A: Into<Addr>,
-    {
-        // Reasoning: "reschedule_from_price_alarm" removes current time alarm,
-        // adds a new one, and then updates the price alarm.
-        self.reschedule_from_price_alarm(lease, lease_amount, now, liquidation)
-    }
-
-    pub(crate) fn run_liquidation<B>(
+    fn on_alarm<B>(
         &self,
         now: Timestamp,
         account: &B,
@@ -262,14 +283,14 @@ where
     {
         let lease_amount = account.balance::<Lpn>().map_err(ContractError::from)?;
 
-        let status = self.liquidation_status(now, lease, lease_amount, price)?;
+        let status = self.check_liability(now, lease, lease_amount, price)?;
 
         // TODO run liquidation
 
         Ok((status, lease_amount))
     }
 
-    fn liquidation_status(
+    fn check_liability(
         &self,
         now: Timestamp,
         lease: Addr,
@@ -278,74 +299,98 @@ where
     ) -> ContractResult<LiquidationStatus<Lpn>> {
         self.liability.invariant_held()?;
 
-        Ok(if lease_amount.is_zero() {
-            LiquidationStatus::None
-        } else {
-            let loan_state = self.loan.state(now, lease)?;
+        let loan_state = self.loan.state(now, lease)?;
 
-            loan_state.map_or(
-                LiquidationStatus::None,
-                |state| {
-                    let liability_lpn = state.principal_due
-                        + state.previous_margin_interest_due
-                        + state.previous_interest_due
-                        + state.current_margin_interest_due
-                        + state.current_interest_due;
+        Ok(loan_state.map_or(
+            LiquidationStatus::None,
+            |state| {
+                let lease_lpn = total(lease_amount, market_price);
 
-                    let lease_lpn = total(lease_amount, market_price);
+                let (liability_lpn, liability) = Self::liability(state, lease_lpn);
 
-                    let mut info = CommonInfo {
+                let (ltv, level) = if self.liability.max_percent() <= liability {
+                    return self.liquidate(
+                        self.customer.clone(),
+                        self.currency.clone(),
+                        lease_lpn,
+                        liability_lpn,
+                    );
+                } else if self.liability.third_liq_warn_percent() <= liability {
+                    (self.liability.third_liq_warn_percent(), WarningLevel::First)
+                } else if self.liability.second_liq_warn_percent() <= liability {
+                    (self.liability.second_liq_warn_percent(), WarningLevel::First)
+                } else if self.liability.first_liq_warn_percent() <= liability {
+                    (self.liability.first_liq_warn_percent(), WarningLevel::First)
+                } else {
+                    return LiquidationStatus::None;
+                };
+
+                LiquidationStatus::Warning(
+                    CommonInfo {
                         customer: self.customer.clone(),
-                        ltv: Percent::default(),
+                        ltv,
                         lease_asset: self.currency.clone(),
-                    };
+                    },
+                    level,
+                )
+            },
+        ))
+    }
 
-                    match Percent::from_permille((Amount::from(liability_lpn) * 1000 / Amount::from(lease_lpn)) as Units) {
-                        liability_percent if liability_percent < self.liability.first_liq_warn_percent() => LiquidationStatus::None,
-                        liability_percent if liability_percent < self.liability.second_liq_warn_percent() => {
-                            info.ltv = self.liability.first_liq_warn_percent();
+    fn liability(state: State<Lpn>, lease_lpn: Coin<Lpn>) -> (Coin<Lpn>, Percent) {
+        let liability_lpn = state.principal_due
+            + state.previous_margin_interest_due
+            + state.previous_interest_due
+            + state.current_margin_interest_due
+            + state.current_interest_due;
 
-                            LiquidationStatus::FirstWarning(info)
-                        }
-                        liability_percent if liability_percent < self.liability.third_liq_warn_percent() => {
-                            info.ltv = self.liability.second_liq_warn_percent();
-
-                            LiquidationStatus::SecondWarning(info)
-                        }
-                        liability_percent if liability_percent < self.liability.max_percent() => {
-                            info.ltv = self.liability.third_liq_warn_percent();
-
-                            LiquidationStatus::ThirdWarning(info)
-                        }
-                        _ => {
-                            let liquidation_amount = lease_amount.min(
-                                Coin::new(
-                                    (
-                                        Amount::from(
-                                            liability_lpn - self.liability.healthy_percent().of(lease_lpn)
-                                        ) * Percent::HUNDRED.parts() as Amount
-                                    ) / (Percent::HUNDRED - self.liability.healthy_percent()).parts() as Amount,
-                                ),
-                            );
-
-                            // TODO update contract's "lease_amount"
-
-                            info.ltv = self.liability.max_percent();
-
-                            if liquidation_amount == lease_amount {
-                                LiquidationStatus::FullLiquidation(info)
-                            } else {
-                                LiquidationStatus::PartialLiquidation {
-                                    _info: info,
-                                    _healthy_ltv: self.liability.healthy_percent(),
-                                    _liquidation_amount: liquidation_amount,
-                                }
-                            }
-                        }
-                    }
-                },
+        (
+            liability_lpn,
+            Percent::from_permille(
+                Fraction::<Amount>::of::<Amount>(
+                    &Rational::new(liability_lpn, lease_lpn),
+                    Percent::HUNDRED.units().into(),
+                )
+                    .try_into()
+                    .unwrap(),
             )
-        })
+        )
+    }
+
+    fn liquidate(
+        &self,
+        customer: Addr,
+        lease_asset: SymbolOwned,
+        lease_lpn: Coin<Lpn>,
+        liability_lpn: Coin<Lpn>,
+    ) -> LiquidationStatus<Lpn> {
+        let liquidation_amount = lease_lpn.min(
+            Fraction::<Units>::of(
+                &Rational::new(
+                    Percent::HUNDRED.units(),
+                    (Percent::HUNDRED - self.liability.healthy_percent()).units(),
+                ),
+                liability_lpn - self.liability.healthy_percent().of(lease_lpn),
+            ),
+        );
+
+        // TODO perform actual liquidation
+
+        let info = CommonInfo {
+            customer,
+            ltv: self.liability.max_percent(),
+            lease_asset,
+        };
+
+        if liquidation_amount == lease_lpn {
+            LiquidationStatus::FullLiquidation(info)
+        } else {
+            LiquidationStatus::PartialLiquidation {
+                _info: info,
+                _healthy_ltv: self.liability.healthy_percent(),
+                _liquidation_amount: liquidation_amount,
+            }
+        }
     }
 
     #[inline]
@@ -355,11 +400,44 @@ where
         lease_amount: Coin<Lpn>,
         now: &Timestamp,
         liquidation: &LiquidationStatus<Lpn>,
-    ) -> ContractResult<Vec<BatchMessage<WasmMsg, LeaseReplyId>>>
-        where
-            A: Into<Addr>,
+    ) -> ContractResult<Batch>
+    where
+        A: Into<Addr>,
     {
-        self.reschedule_from_price_alarm(lease, lease_amount, now, liquidation)
+        self.reschedule_on_price_alarm(lease, lease_amount, now, liquidation)
+    }
+
+    #[inline]
+    fn reschedule_from_repay<A>(
+        &self,
+        lease: A,
+        lease_amount: Coin<Lpn>,
+        now: &Timestamp,
+    ) -> ContractResult<Batch>
+    where
+        A: Into<Addr>,
+    {
+        // Reasoning: "reschedule_from_price_alarm" removes current time alarm,
+        // adds a new one, and then updates the price alarm.
+        self.reschedule_on_price_alarm(lease, lease_amount, now, &LiquidationStatus::None)
+    }
+
+    #[inline]
+    fn reschedule_on_price_alarm<A>(
+        &self,
+        lease: A,
+        lease_amount: Coin<Lpn>,
+        now: &Timestamp,
+        liquidation: &LiquidationStatus<Lpn>,
+    ) -> ContractResult<Batch>
+    where
+        A: Into<Addr>,
+    {
+        let mut batch = Batch::default();
+
+        batch.schedule_execute_batch_message(self.reschedule_price_alarm(lease, lease_amount, now, liquidation)?);
+
+        Ok(batch)
     }
 
     fn reschedule_price_alarm<A>(
@@ -369,8 +447,8 @@ where
         now: &Timestamp,
         liquidation: &LiquidationStatus<Lpn>,
     ) -> ContractResult<BatchMessage<WasmMsg, LeaseReplyId>>
-        where
-            A: Into<Addr>,
+    where
+        A: Into<Addr>,
     {
         Ok(BatchMessage::NoReply(wasm_execute(
             self.market_price_oracle.as_str(),
@@ -382,9 +460,9 @@ where
                     match liquidation {
                         LiquidationStatus::None
                         | LiquidationStatus::PartialLiquidation { .. } => self.liability.first_liq_warn_percent(),
-                        LiquidationStatus::FirstWarning(_) => self.liability.second_liq_warn_percent(),
-                        LiquidationStatus::SecondWarning(_) => self.liability.third_liq_warn_percent(),
-                        LiquidationStatus::ThirdWarning(_) => self.liability.max_percent(),
+                        LiquidationStatus::Warning(_, WarningLevel::First) => self.liability.second_liq_warn_percent(),
+                        LiquidationStatus::Warning(_, WarningLevel::Second) => self.liability.third_liq_warn_percent(),
+                        LiquidationStatus::Warning(_, WarningLevel::Third) => self.liability.max_percent(),
                         LiquidationStatus::FullLiquidation(_) => unreachable!(),
                     },
                 )?.into(),
@@ -475,6 +553,10 @@ mod tests {
             C: Currency,
         {
             Ok(Coin::<C>::new(self.balance))
+        }
+
+        fn balance_without_payment<C>(&self, payment: &Coin<C>) -> PlatformResult<Coin<C>> where C: Currency {
+            Ok(Coin::new(self.balance))
         }
     }
 

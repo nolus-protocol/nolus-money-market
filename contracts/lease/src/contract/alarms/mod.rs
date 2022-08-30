@@ -1,38 +1,32 @@
-use cosmwasm_std::Response;
+use cosmwasm_std::{Addr, Response};
 use serde::Serialize;
 
-use finance::currency::Currency;
+use finance::{
+    currency::Currency,
+    percent::Percent
+};
 use platform::batch::{Batch, Emit};
 
 use crate::{
     event::TYPE,
-    lease::{LeaseDTO, LiquidationStatus},
+    lease::{CommonInfo, LeaseDTO, LiquidationStatus, WarningLevel},
 };
 
 pub mod price_alarm;
 
-fn emit_events<Lpn>(liquidation: &LiquidationStatus<Lpn>, batch: Batch) -> Response where Lpn: Currency + Serialize {
-    match &liquidation {
+pub struct LiquidationResult
+{
+    pub(super) response: Response,
+    pub(super) lease_dto: LeaseDTO,
+}
+
+fn emit_events<Lpn>(liquidation: &LiquidationStatus<Lpn>, batch: Batch) -> Response
+where
+    Lpn: Currency + Serialize,
+{
+    match liquidation {
         LiquidationStatus::None => batch.into(),
-        warning @ LiquidationStatus::FirstWarning(info)
-        | warning @ LiquidationStatus::SecondWarning(info)
-        | warning @ LiquidationStatus::ThirdWarning(info) => {
-            batch
-                .into_emitter(TYPE::LiquidationWarning)
-                .emit("customer", &info.customer)
-                .emit_percent_amount("ltv", info.ltv)
-                .emit_to_string_value(
-                    "level",
-                    match warning {
-                        LiquidationStatus::FirstWarning(_) => 1,
-                        LiquidationStatus::SecondWarning(_) => 2,
-                        LiquidationStatus::ThirdWarning(_) => 3,
-                        _ => unreachable!(),
-                    },
-                )
-                .emit("lease-asset", &info.lease_asset)
-                .into()
-        }
+        &LiquidationStatus::Warning(ref info, level) => emit_warning(batch, info, level),
         LiquidationStatus::PartialLiquidation { .. } => {
             // TODO add event attributes
             batch.into_emitter(TYPE::Liquidation).into()
@@ -44,8 +38,12 @@ fn emit_events<Lpn>(liquidation: &LiquidationStatus<Lpn>, batch: Batch) -> Respo
     }
 }
 
-pub struct LiquidationResult
-{
-    pub(super) response: Response,
-    pub(super) lease: LeaseDTO,
+fn emit_warning(batch: Batch, info: &CommonInfo, level: WarningLevel) -> Response {
+    batch
+        .into_emitter(TYPE::LiquidationWarning)
+        .emit("customer", &info.customer)
+        .emit_percent_amount("ltv", info.ltv)
+        .emit_to_string_value("level", level as u8)
+        .emit("lease-asset", &info.lease_asset)
+        .into()
 }

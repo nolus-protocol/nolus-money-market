@@ -14,7 +14,8 @@ use crate::{
     lease::{
         Lease,
         LiquidationStatus,
-        WithLease
+        OnAlarmResult,
+        WithLease,
     }
 };
 
@@ -61,34 +62,20 @@ where
             return Err(Self::Error::Unauthorized {});
         }
 
-        let (liquidation, lease_amount) = lease.run_liquidation(
+        let OnAlarmResult {
+            batch,
+            lease_dto,
+            liquidation_status,
+        } = lease.on_price_alarm(
             self.now,
             &self.account,
             self.lease.clone(),
             self.price.try_into()?,
         )?;
 
-        let reschedule_msgs = (
-            !matches!(liquidation, LiquidationStatus::FullLiquidation(_))
-        ).then(
-            {
-                // Force move before closure to avoid edition warning from clippy;
-                let lease_addr = self.lease;
-
-                || lease.reschedule_from_price_alarm(lease_addr, lease_amount, &self.now, &liquidation)
-            }
-        ).transpose()?;
-
-        let (lease, lpp) = lease.into_dto();
-
-        let mut batch = lpp.into();
-
-        reschedule_msgs.into_iter().flatten()
-            .for_each(|msg| batch.schedule_execute_batch_message(msg));
-
         Ok(LiquidationResult {
-            response: emit_events(&liquidation, batch),
-            lease,
+            response: emit_events(&liquidation_status, batch),
+            lease_dto,
         })
     }
 

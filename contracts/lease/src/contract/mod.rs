@@ -119,7 +119,7 @@ pub fn execute(
         } => {
             let LiquidationResult {
                 response,
-                lease,
+                lease_dto: lease,
             } = try_on_price_alarm(&deps.querier, &env, account, info, lease, price)?;
 
             lease.store(deps.storage)?;
