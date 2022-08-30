@@ -102,9 +102,14 @@ pub fn execute(
 
     match msg {
         ExecuteMsg::Repay() => {
-            let res = try_repay(&deps.querier, env, info, lease)?;
-            LeaseDTO::store(&res.lease_dto, deps.storage)?;
-            Ok(res.emitter.into())
+            let RepayResult {
+                lease_dto,
+                emitter,
+            } = try_repay(&deps.querier, env, info, lease)?;
+
+            lease_dto.store(deps.storage)?;
+
+            Ok(emitter.into())
         }
         ExecuteMsg::Close() => try_close(deps, env, info, lease).map(Into::into),
         ExecuteMsg::PriceAlarm {
