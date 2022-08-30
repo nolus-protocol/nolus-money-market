@@ -21,6 +21,7 @@ use crate::{
     lease::{self, DownpaymentDTO, LeaseDTO},
     msg::{ExecuteMsg, NewLeaseForm, StateQuery},
 };
+use crate::contract::alarms::LiquidationResult;
 
 use self::{
     close::Close,
@@ -108,7 +109,16 @@ pub fn execute(
         ExecuteMsg::Close() => try_close(deps, env, info, lease).map(Into::into),
         ExecuteMsg::PriceAlarm {
             price,
-        } => try_on_price_alarm(deps, env, info, lease, price),
+        } => {
+            let LiquidationResult {
+                response,
+                lease,
+            } = try_on_price_alarm(&deps.querier, env, info, lease, price)?;
+
+            lease.store(deps.storage)?;
+
+            Ok(response)
+        },
     }
 }
 
@@ -168,25 +178,21 @@ fn try_close(
 }
 
 fn try_on_price_alarm(
-    deps: DepsMut,
+    querier: &QuerierWrapper,
     env: Env,
     info: MessageInfo,
     lease: LeaseDTO,
     price: PriceDTO,
-) -> ContractResult<Response> {
-    let result = lease::execute(
+) -> ContractResult<LiquidationResult> {
+    lease::execute(
         lease,
         PriceAlarm::new(
             &info.sender,
             env.contract.address.clone(),
-            BankStub::my_account(&env, &deps.querier),
+            BankStub::my_account(&env, querier),
             env.block.time,
             price,
         ),
-        &deps.querier,
-    )?;
-
-    result.lease.store(deps.storage)?;
-
-    Ok(result.response)
+        querier,
+    )
 }
