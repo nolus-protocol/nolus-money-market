@@ -14,6 +14,7 @@ use std::convert::TryFrom;
 use finance::duration::Duration;
 
 use crate::{state::config::Config, ContractError};
+const PRECISION_FACTOR: u128 = 1_000_000_000;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct MarketOracle {}
@@ -116,8 +117,10 @@ impl MarketOracle {
     // also, we must *round up* here, as we need 8, not 7 feeders to reach 50% of 15 total
     fn feeders_needed(weight: usize, percentage: u8) -> usize {
         let weight128 = u128::try_from(weight).expect("usize to u128 overflow");
-        let res = weight128 * u128::from(percentage) / 100;
-        res.try_into().expect("usize overflow")
+        let res = (PRECISION_FACTOR * weight128) * u128::from(percentage) / 100;
+        ((res + PRECISION_FACTOR - 1) / PRECISION_FACTOR)
+            .try_into()
+            .expect("usize overflow")
     }
 
     fn remove_invalid_prices(
@@ -148,14 +151,16 @@ mod tests {
     // we ensure this rounds up (as it calculates needed votes)
     fn feeders_needed_rounds_properly() {
         // round up right below 1
-        assert_eq!(7, MarketOracle::feeders_needed(3, 255));
+        assert_eq!(8, MarketOracle::feeders_needed(3, 255));
         // round up right over 1
-        assert_eq!(7, MarketOracle::feeders_needed(3, 254));
-        assert_eq!(76, MarketOracle::feeders_needed(30, 254));
+        assert_eq!(8, MarketOracle::feeders_needed(3, 254));
+        assert_eq!(77, MarketOracle::feeders_needed(30, 254));
 
         // exact matches don't round
         assert_eq!(17, MarketOracle::feeders_needed(34, 50));
         assert_eq!(12, MarketOracle::feeders_needed(48, 25));
+        assert_eq!(2, MarketOracle::feeders_needed(132, 1));
+        assert_eq!(2, MarketOracle::feeders_needed(189, 1));
     }
 
     #[test]
