@@ -1,5 +1,6 @@
 use cosmwasm_std::Addr;
 use finance::currency::SymbolOwned;
+use finance::price::PriceDTO;
 use marketprice::storage::{Denom, DenomPair, Price};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -46,6 +47,7 @@ pub enum QueryMsg {
     IsFeeder { address: Addr },
     // returns the price of the denom against the base asset
     PriceFor { denoms: Vec<Denom> },
+    Price { denom: Denom },
     // returns a list of supported denom pairs
     SupportedDenomPairs {},
 }
@@ -60,8 +62,13 @@ pub struct ConfigResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct PriceResponse {
+pub struct PricesResponse {
     pub prices: Vec<Price>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct PriceResponse {
+    pub price: PriceDTO,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

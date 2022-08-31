@@ -2,15 +2,21 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
-    StdResult, Storage, Timestamp,
+    Storage, Timestamp,
 };
 use cw2::set_contract_version;
+use finance::currency::{visit_any, AnyVisitor, Currency, Usdc};
+use finance::price::PriceDTO;
 use marketprice::storage::{Denom, DenomPair, Price};
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 use crate::alarms::MarketAlarms;
 use crate::contract_validation::validate_contract_addr;
 use crate::error::ContractError;
-use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, PriceResponse, QueryMsg};
+use crate::msg::{
+    ConfigResponse, ExecuteMsg, InstantiateMsg, PriceResponse, PricesResponse, QueryMsg,
+};
 use crate::oracle::MarketOracle;
 use crate::state::config::Config;
 
@@ -75,21 +81,71 @@ pub fn execute(
     }
 }
 
+struct QueryWithLpn<'a> {
+    deps: Deps<'a>,
+    env: Env,
+    msg: QueryMsg,
+}
+
+impl<'a> QueryWithLpn<'a> {
+    fn do_work<LPN>(self) -> Result<Binary, ContractError>
+    where
+        LPN: 'static + Currency + Serialize + DeserializeOwned,
+    {
+        // currency context variants
+        let res = match self.msg {
+            QueryMsg::Price { denom } => to_binary(&query_market_price_for_single::<LPN, Usdc>(
+                self.deps.storage,
+                self.env,
+                denom,
+            )?),
+            _ => {
+                unreachable!()
+            } // should be done already
+        }?;
+        Ok(res)
+    }
+
+    pub fn cmd(deps: Deps<'a>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+        let context = Self { deps, env, msg };
+
+        let config = Config::load(context.deps.storage)?;
+        visit_any(&config.base_asset, context)
+    }
+}
+
+impl<'a> AnyVisitor for QueryWithLpn<'a> {
+    type Output = Binary;
+    type Error = ContractError;
+
+    fn on<LPN>(self) -> Result<Self::Output, Self::Error>
+    where
+        LPN: 'static + Currency + DeserializeOwned + Serialize,
+    {
+        self.do_work::<LPN>()
+    }
+    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+        Err(ContractError::UnknownCurrency {})
+    }
+}
+
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
-    match msg {
-        QueryMsg::Config {} => to_binary(&query_config(deps)?),
-        QueryMsg::Feeders {} => to_binary(&MarketOracle::get_feeders(deps.storage)?),
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    let res = match msg {
+        QueryMsg::Config {} => to_binary(&query_config(deps)?)?,
+        QueryMsg::Feeders {} => to_binary(&MarketOracle::get_feeders(deps.storage)?)?,
         QueryMsg::IsFeeder { address } => {
-            to_binary(&MarketOracle::is_feeder(deps.storage, &address)?)
+            to_binary(&MarketOracle::is_feeder(deps.storage, &address)?)?
         }
         QueryMsg::PriceFor { denoms } => {
-            to_binary(&query_market_price_for(deps.storage, env, denoms)?)
+            to_binary(&query_market_price_for(deps.storage, env, denoms)?)?
         }
         QueryMsg::SupportedDenomPairs {} => {
-            to_binary(&Config::load(deps.storage)?.supported_denom_pairs)
+            to_binary(&Config::load(deps.storage)?.supported_denom_pairs)?
         }
-    }
+        _ => QueryWithLpn::cmd(deps, env, msg)?,
+    };
+    Ok(res)
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -117,7 +173,7 @@ fn err_as_ok(err: &str) -> Response {
         .add_attribute("error", err)
 }
 
-fn query_config(deps: Deps) -> StdResult<ConfigResponse> {
+fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
     let config = Config::load(deps.storage)?;
     Ok(ConfigResponse {
         base_asset: config.base_asset,
@@ -131,9 +187,27 @@ fn query_market_price_for(
     storage: &dyn Storage,
     env: Env,
     denoms: Vec<Denom>,
-) -> StdResult<PriceResponse> {
-    Ok(PriceResponse {
+) -> Result<PricesResponse, ContractError> {
+    Ok(PricesResponse {
         prices: MarketOracle::get_price_for(storage, env.block.time, denoms)?,
+    })
+}
+
+fn query_market_price_for_single<C, QuoteC>(
+    storage: &dyn Storage,
+    env: Env,
+    denom: Denom,
+) -> Result<PriceResponse, ContractError>
+where
+    C: 'static + Currency + Serialize,
+    QuoteC: 'static + Currency + Serialize,
+{
+    Ok(PriceResponse {
+        price: PriceDTO::try_from(MarketOracle::get_single_price::<C, QuoteC>(
+            storage,
+            env.block.time,
+            denom,
+        )?)?,
     })
 }
 

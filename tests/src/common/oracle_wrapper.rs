@@ -1,11 +1,15 @@
-use cosmwasm_std::{Addr, Binary, Deps, Env, StdError, StdResult, to_binary};
+use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env};
 use cw_multi_test::{App, Executor};
 
-use marketprice::storage::Price;
+use finance::{
+    coin::Coin,
+    currency::{Nls, Usdc},
+    price::{self, PriceDTO},
+};
 use oracle::{
     contract::{execute, instantiate, query, reply},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg}
 };
 
 use crate::common::ContractWrapper;
@@ -17,9 +21,7 @@ pub struct MarketOracleWrapper {
 }
 
 impl MarketOracleWrapper {
-    pub fn with_contract_wrapper(
-        contract: OracleContractWrapper,
-    ) -> Self {
+    pub fn with_contract_wrapper(contract: OracleContractWrapper) -> Self {
         Self {
             contract_wrapper: Box::new(contract),
         }
@@ -41,11 +43,7 @@ impl MarketOracleWrapper {
 
 impl Default for MarketOracleWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(
-            execute,
-            instantiate,
-            query,
-        ).with_reply(reply);
+        let contract = ContractWrapper::new(execute, instantiate, query).with_reply(reply);
 
         Self {
             contract_wrapper: Box::new(contract),
@@ -53,10 +51,14 @@ impl Default for MarketOracleWrapper {
     }
 }
 
-pub fn mock_oracle_query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn mock_oracle_query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    let price = price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<Usdc>::new(100000000));
     let res = match msg {
         QueryMsg::PriceFor { denoms: _ } => to_binary(&oracle::msg::PriceResponse {
-            prices: vec![Price::new(NATIVE_DENOM, 123456789, "UST", 1000000000)],
+            price: PriceDTO::try_from(price).unwrap(),
+        }),
+        QueryMsg::Price { denom: _ } => to_binary(&oracle::msg::PriceResponse {
+            price: PriceDTO::try_from(price).unwrap(),
         }),
         _ => Ok(query(deps, env, msg)?),
     }?;
@@ -70,7 +72,7 @@ type OracleContractWrapper = ContractWrapper<
     InstantiateMsg,
     ContractError,
     QueryMsg,
-    StdError,
+    ContractError,
     cosmwasm_std::Empty,
     anyhow::Error,
     ContractError,

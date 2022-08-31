@@ -2,17 +2,13 @@ use crate::feed::{Observation, PriceFeed};
 use crate::storage::{Coin, DenomPair, Price};
 use cosmwasm_std::{Addr, Order, StdError, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
+use finance::currency::Currency;
 use finance::duration::Duration;
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+
 use thiserror::Error;
 
-// We define a custom struct for each query response
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct PriceResponse {
-    pub price: Price,
-    pub last_updated_time: Timestamp,
-}
+use finance::coin::Coin as FinCoin;
+use finance::price::{self, Price as FinPrice};
 
 pub struct PriceQuery {
     denom_pair: DenomPair,
@@ -48,6 +44,9 @@ pub enum PriceFeedsError {
 
     #[error("No price for pair")]
     NoPrice {},
+
+    #[error("Found currency {0} expecting {1}")]
+    UnexpectedCurrency(String, String),
 }
 
 type DenomResolutionPath = Vec<Observation>;
@@ -59,17 +58,19 @@ impl<'m> PriceFeeds<'m> {
         PriceFeeds(Map::new(namespace))
     }
 
-    pub fn get(
+    fn get(
         &self,
         storage: &dyn Storage,
         current_block_time: Timestamp,
         query: PriceQuery,
-    ) -> Result<Price, PriceFeedsError> {
+    ) -> Result<(Coin, Coin), PriceFeedsError> {
         let base = &query.denom_pair.0;
         let quote = &query.denom_pair.1;
 
+        // TODO PriceDTO
         if base.eq(quote) {
-            return Ok(Price::one(base));
+            let one = Price::one(base);
+            return Ok((one.base(), one.quote()));
         }
 
         // check if the second part of the pair exists in the storage
@@ -95,6 +96,30 @@ impl<'m> PriceFeeds<'m> {
         resolution_path.reverse();
         println!("Resolution path {:?}", resolution_path);
         PriceFeeds::calculate_price(query.denom_pair, &mut resolution_path)
+    }
+
+    pub fn get_converted_dto_price(
+        &self,
+        storage: &dyn Storage,
+        current_block_time: Timestamp,
+        query: PriceQuery,
+    ) -> Result<Price, PriceFeedsError> {
+        let calculated_price = self.get(storage, current_block_time, query)?;
+        PriceFeeds::convert_to_dto_price(calculated_price.0, calculated_price.1)
+    }
+
+    pub fn get_converted_price<C, QuoteC>(
+        &self,
+        storage: &dyn Storage,
+        current_block_time: Timestamp,
+        query: PriceQuery,
+    ) -> Result<FinPrice<C, QuoteC>, PriceFeedsError>
+    where
+        C: 'static + Currency,
+        QuoteC: 'static + Currency,
+    {
+        let calculated_price = self.get(storage, current_block_time, query)?;
+        PriceFeeds::convert_to_price(calculated_price.0, calculated_price.1)
     }
 
     pub fn find_price_for_pair(
@@ -182,10 +207,10 @@ impl<'m> PriceFeeds<'m> {
     fn calculate_price(
         denom_pair: DenomPair,
         resolution_path: &mut DenomResolutionPath,
-    ) -> Result<Price, PriceFeedsError> {
+    ) -> Result<(Coin, Coin), PriceFeedsError> {
         if resolution_path.len() == 1 {
             match resolution_path.first() {
-                Some(o) => Ok(o.price()),
+                Some(o) => Ok((o.price().base(), o.price().quote())),
                 None => Err(PriceFeedsError::NoPrice {}),
             }
         } else {
@@ -206,8 +231,25 @@ impl<'m> PriceFeeds<'m> {
                     i += 1;
                 }
             }
-            Ok(Price::new_from_coins(first, result))
+            Ok((first, result))
         }
+    }
+
+    fn convert_to_price<C, QuoteC>(
+        first: Coin,
+        second: Coin,
+    ) -> Result<FinPrice<C, QuoteC>, PriceFeedsError>
+    where
+        C: 'static + Currency,
+        QuoteC: 'static + Currency,
+    {
+        let c_first = FinCoin::<C>::try_from(first)?;
+        let c_second = FinCoin::<QuoteC>::try_from(second)?;
+        Ok(price::total_of(c_first).is(c_second))
+    }
+
+    fn convert_to_dto_price(first: Coin, second: Coin) -> Result<Price, PriceFeedsError> {
+        Ok(Price::new_from_coins(first, second))
     }
 
     pub fn feed(
