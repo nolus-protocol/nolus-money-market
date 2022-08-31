@@ -11,7 +11,7 @@ use crate::{
     ratio::Rational,
 };
 
-pub use self::dto::{PriceDTO, visit_with_any_price, WithPrice};
+pub use self::dto::{execute, PriceDTO, WithPrice};
 
 mod dto;
 

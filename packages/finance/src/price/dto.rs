@@ -74,30 +74,30 @@ pub trait WithPrice {
     fn unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn visit_with_any_price<V>(price: PriceDTO, visitor: V) -> Result<V::Output, V::Error>
+pub fn execute<Cmd>(price: PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
 where
-    V: WithPrice,
+    Cmd: WithPrice,
 {
     visit_any(&price.amount.symbol().clone(), CVisitor {
         price_dto: price,
-        visitor,
+        cmd,
     })
 }
 
-struct CVisitor<InnerV1>
-    where
-    InnerV1: WithPrice
+struct CVisitor<Cmd>
+where
+    Cmd: WithPrice,
 {
     price_dto: PriceDTO,
-    visitor: InnerV1,
+    cmd: Cmd,
 }
 
-impl<InnerV1> AnyVisitor for CVisitor<InnerV1>
+impl<Cmd> AnyVisitor for CVisitor<Cmd>
 where
-    InnerV1: WithPrice,
+    Cmd: WithPrice,
 {
-    type Output = InnerV1::Output;
-    type Error = InnerV1::Error;
+    type Output = Cmd::Output;
+    type Error = Cmd::Error;
 
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
@@ -110,39 +110,39 @@ where
                     self.price_dto.amount,
                 ).expect("Got different currency in visitor!"),
                 quote_dto: self.price_dto.amount_quote,
-                visitor: self.visitor
+                cmd: self.cmd
             },
         )
     }
 
     fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-        self.visitor.unknown()
+        self.cmd.unknown()
     }
 }
 
-struct QuoteCVisitor<InnerC, InnerV2>
-    where
-    InnerC: Currency + Serialize + DeserializeOwned,
-    InnerV2: WithPrice
+struct QuoteCVisitor<C, Cmd>
+where
+    C: Currency + Serialize + DeserializeOwned,
+    Cmd: WithPrice
 {
-    base: Coin<InnerC>,
+    base: Coin<C>,
     quote_dto: CoinDTO,
-    visitor: InnerV2,
+    cmd: Cmd,
 }
 
-impl<InnerC, InnerV2> AnyVisitor for QuoteCVisitor<InnerC, InnerV2>
+impl<C, Cmd> AnyVisitor for QuoteCVisitor<C, Cmd>
 where
-    InnerC: Currency + Serialize + DeserializeOwned,
-    InnerV2: WithPrice,
+    C: Currency + Serialize + DeserializeOwned,
+    Cmd: WithPrice,
 {
-    type Output = InnerV2::Output;
-    type Error = InnerV2::Error;
+    type Output = Cmd::Output;
+    type Error = Cmd::Error;
 
     fn on<QuoteC>(self) -> Result<Self::Output, Self::Error>
     where
         QuoteC: Currency + Serialize + DeserializeOwned,
     {
-        self.visitor.exec(
+        self.cmd.exec(
             Price::new(
                 self.base,
                 Coin::<QuoteC>::try_from(
@@ -153,6 +153,6 @@ where
     }
 
     fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-        self.visitor.unknown()
+        self.cmd.unknown()
     }
 }
