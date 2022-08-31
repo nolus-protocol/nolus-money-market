@@ -1,20 +1,13 @@
-use std::{
-    marker::PhantomData,
-    result::Result as StdResult,
-};
+use std::{marker::PhantomData, result::Result as StdResult};
 
 use cosmwasm_std::{Addr, Api, QuerierWrapper, Reply, Timestamp};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use contract_constants::LeaseReplyId;
 use finance::{
     coin::Coin,
     currency::{AnyVisitor, Currency, SymbolOwned, visit_any},
 };
-use platform::{
-    batch::Batch,
-    reply::from_execute
-};
+use platform::{batch::Batch, reply::from_execute};
 
 use crate::{
     error::ContractError,
@@ -69,10 +62,16 @@ pub trait WithLpp {
 pub struct LppRef {
     addr: Addr,
     currency: SymbolOwned,
+    open_loan_req_id: u64,
 }
 
 impl LppRef {
-    pub fn try_from<A>(addr_raw: String, api: &A, querier: &QuerierWrapper) -> Result<Self>
+    pub fn try_from<A>(
+        addr_raw: String,
+        api: &A,
+        querier: &QuerierWrapper,
+        open_loan_req_id: u64,
+    ) -> Result<Self>
     where
         A: ?Sized + Api,
     {
@@ -80,7 +79,11 @@ impl LppRef {
         let resp: QueryConfigResponse =
             querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
         let currency = resp.lpn_symbol;
-        Ok(Self { addr, currency })
+        Ok(Self {
+            addr,
+            currency,
+            open_loan_req_id,
+        })
     }
 
     pub fn execute<V, O, E>(&self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
@@ -130,13 +133,14 @@ impl LppRef {
             currency: PhantomData::<C>,
             querier,
             batch: Batch::default(),
+            open_loan_req_id: self.open_loan_req_id,
         }
     }
 }
 
 #[cfg(feature = "testing")]
 impl LppRef {
-    pub fn unchecked<A, Lpn>(addr: A) -> Self
+    pub fn unchecked<A, Lpn>(addr: A, open_loan_req_id: u64) -> Self
     where
         A: Into<String>,
         Lpn: Currency,
@@ -144,6 +148,7 @@ impl LppRef {
         Self {
             addr: Addr::unchecked(addr),
             currency: Lpn::SYMBOL.into(),
+            open_loan_req_id,
         }
     }
 }
@@ -153,6 +158,7 @@ struct LppStub<'a, C> {
     currency: PhantomData<C>,
     querier: &'a QuerierWrapper<'a>,
     batch: Batch,
+    open_loan_req_id: u64,
 }
 
 impl<'a, Lpn> Lpp<Lpn> for LppStub<'a, Lpn>
@@ -165,31 +171,30 @@ where
 
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {
         self.batch
-            .schedule_execute_wasm_on_success_reply::<_, Lpn, _>(
+            .schedule_execute_wasm_on_success_reply::<_, Lpn>(
                 &self.addr,
                 ExecuteMsg::OpenLoan {
                     amount: amount.into(),
                 },
                 None,
-                LeaseReplyId::LppLoan,
+                self.open_loan_req_id,
             )
             .map_err(ContractError::from)
     }
 
     fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>> {
-        if !matches!(resp.id.try_into(), Ok(LeaseReplyId::LppLoan)) {
-            return Err(ContractError::CustomError {
-                val: "Invalid reply ID!".into(),
-            });
-        }
+        // Test against unexpected entry.
+        debug_assert_ne!(self.open_loan_req_id, 0xDEADC0DE);
 
-        from_execute(resp).map_err(Into::into).and_then(
-            |maybe_data| maybe_data.ok_or_else(
-                || ContractError::CustomError {
+        debug_assert_eq!(resp.id, self.open_loan_req_id);
+
+        from_execute(resp)
+            .map_err(Into::into)
+            .and_then(|maybe_data| {
+                maybe_data.ok_or_else(|| ContractError::CustomError {
                     val: "No data passed as response!".into(),
-                },
-            ),
-        )
+                })
+            })
     }
 
     fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()> {
@@ -283,26 +288,26 @@ mod test {
         WasmMsg,
     };
 
-    use contract_constants::{IdType, LeaseReplyId};
     use finance::{
         coin::Coin,
         currency::{Currency, Nls},
     };
     use platform::batch::Batch;
 
-    use crate::{
-        msg::ExecuteMsg,
-        stub::LppRef,
-    };
+    use crate::{msg::ExecuteMsg, stub::LppRef};
 
     use super::Lpp;
 
     #[test]
     fn open_loan_req() {
+        // Magic number to test correctly against default zero.
+        const OPEN_LOAN_REQ_ID: u64 = 0xC0FFEE;
+
         let addr = Addr::unchecked("defd2r2");
         let lpp = LppRef {
             addr: addr.clone(),
             currency: ToOwned::to_owned(Nls::SYMBOL),
+            open_loan_req_id: OPEN_LOAN_REQ_ID,
         };
         let borrow_amount = Coin::<Nls>::new(10);
         let querier = MockQuerier::default();
@@ -315,7 +320,7 @@ mod test {
         let resp: Response = batch.into();
         assert_eq!(1, resp.messages.len());
         let msg = &resp.messages[0];
-        assert_eq!(msg.id, LeaseReplyId::LppLoan.downcast());
+        assert_eq!(msg.id, OPEN_LOAN_REQ_ID);
         assert_eq!(ReplyOn::Success, msg.reply_on);
         if let CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr,

@@ -3,6 +3,7 @@ use cw_storage_plus::Item;
 use serde::{Deserialize, Serialize};
 
 use finance::{currency::SymbolOwned, liability::Liability};
+use market_price_oracle::stub::OracleRef;
 
 use crate::loan::LoanDTO;
 
@@ -12,7 +13,7 @@ pub struct LeaseDTO {
     pub(super) currency: SymbolOwned,
     pub(super) liability: Liability,
     pub(super) loan: LoanDTO,
-    pub(super) market_price_oracle: Addr,
+    pub(super) oracle: OracleRef,
 }
 
 impl<'a> LeaseDTO {
@@ -23,14 +24,14 @@ impl<'a> LeaseDTO {
         currency: SymbolOwned,
         liability: Liability,
         loan: LoanDTO,
-        market_price_oracle: Addr,
+        oracle: OracleRef,
     ) -> Self {
         Self {
             customer,
             currency,
             liability,
             loan,
-            market_price_oracle,
+            oracle,
         }
     }
 

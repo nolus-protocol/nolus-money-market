@@ -3,17 +3,16 @@ use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
-use platform::{bank::{self, BankAccountView}, batch::{Emit, Emitter}};
+use market_price_oracle::stub::Oracle as OracleTrait;
+use platform::{
+    bank::{self, BankAccountView},
+    batch::{Emit, Emitter},
+};
 
 use crate::{
     error::ContractError,
     event::TYPE,
-    lease::{
-        Lease,
-        LeaseDTO,
-        RepayResult as LeaseRepayResult,
-        WithLease,
-    },
+    lease::{Lease, LeaseDTO, RepayResult as LeaseRepayResult, WithLease},
 };
 
 pub struct Repay<'a, Bank>
@@ -51,10 +50,15 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp, OracleC, Oracle>(
+        self,
+        lease: Lease<Lpn, Lpp, OracleC, Oracle>,
+    ) -> Result<Self::Output, Self::Error>
     where
-        Lpp: LppTrait<Lpn>,
         Lpn: Currency + Serialize,
+        Lpp: LppTrait<Lpn>,
+        OracleC: Currency + Serialize,
+        Oracle: OracleTrait<OracleC>,
     {
         // TODO 'receive' the payment from the bank using any currency it might be in
         let payment = bank::received::<Lpn>(self.payment)?;
@@ -65,7 +69,12 @@ where
             batch,
             lease_dto,
             receipt,
-        } = lease.repay(lease_amount, payment, self.env.block.time, self.env.contract.address.clone())?;
+        } = lease.repay(
+            lease_amount,
+            payment,
+            self.env.block.time,
+            self.env.contract.address.clone(),
+        )?;
 
         let emitter = batch
             .into_emitter(TYPE::Repay)

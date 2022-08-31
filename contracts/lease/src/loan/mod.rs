@@ -16,18 +16,15 @@ use lpp::{
 };
 use platform::batch::Batch;
 
-use crate::error::{
-    ContractError,
-    ContractResult
-};
+use crate::error::{ContractError, ContractResult};
 
 use self::open::Result as OpenResult;
 pub(crate) use self::repay::Receipt;
 pub use self::state::State;
 
+mod open;
 mod repay;
 mod state;
-mod open;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct LoanDTO {
@@ -242,7 +239,10 @@ where
         let margin_interest_due_period = self
             .current_period
             .from(margin_interest_overdue_period.till())
-            .spanning(Duration::between(margin_interest_overdue_period.till(), now));
+            .spanning(Duration::between(
+                margin_interest_overdue_period.till(),
+                now,
+            ));
 
         debug_assert_eq!(margin_interest_due_period.till(), now);
 
@@ -250,7 +250,8 @@ where
         let current_margin_interest_due = margin_interest_due_period.interest(principal_due);
 
         // Fetching both to ensure it doesn't fetch it until the current block's time.
-        let previous_interest_due = self.load_loan_interest_due(lease.clone(), margin_interest_overdue_period.till())?;
+        let previous_interest_due =
+            self.load_loan_interest_due(lease.clone(), margin_interest_overdue_period.till())?;
         let current_interest_due = self.load_loan_interest_due(lease, now)? - previous_interest_due;
 
         Ok(Some(State {
@@ -433,6 +434,7 @@ mod tests {
     use platform::batch::Batch;
     use platform::error::Result as PlatformResult;
 
+    use crate::constants::ReplyId;
     use crate::loan::{Loan, LoanDTO, Receipt};
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(500); // 50%
@@ -454,7 +456,10 @@ mod tests {
             Ok(Coin::<C>::new(self.balance))
         }
 
-        fn balance_without_payment<C>(&self, _payment: &Coin<C>) -> PlatformResult<Coin<C>> where C: Currency {
+        fn balance_without_payment<C>(&self, _payment: &Coin<C>) -> PlatformResult<Coin<C>>
+        where
+            C: Currency,
+        {
             self.balance()
         }
     }
@@ -474,7 +479,10 @@ mod tests {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<LoanResponse<TestCurrency>> {
+        fn open_loan_resp(
+            &self,
+            _resp: cosmwasm_std::Reply,
+        ) -> LppResult<LoanResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -535,7 +543,7 @@ mod tests {
         addr: &str,
         loan_response: Option<LoanResponse<TestCurrency>>,
     ) -> Loan<TestCurrency, LppLocalStub> {
-        let lpp_ref = LppRef::unchecked::<_, Nls>(addr);
+        let lpp_ref = LppRef::unchecked::<_, Nls>(addr, ReplyId::OpenLoanReq as u64);
 
         let loan_dto = LoanDTO::new(
             LEASE_START,
@@ -917,7 +925,8 @@ mod tests {
             loan_resp.annual_interest_rate,
         );
 
-        let res = loan.state(now, Addr::unchecked(LEASE_ADDRESS))
+        let res = loan
+            .state(now, Addr::unchecked(LEASE_ADDRESS))
             .unwrap()
             .unwrap();
 

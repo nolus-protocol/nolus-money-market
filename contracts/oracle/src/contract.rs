@@ -1,29 +1,30 @@
 use std::collections::{HashMap, HashSet};
 
-use cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, from_binary, MessageInfo, Reply, Response, StdError, StdResult, Storage, Timestamp, to_binary};
+use cosmwasm_std::{
+    Addr, Binary, Deps, DepsMut, Env, from_binary, MessageInfo, Reply, Response, StdError,
+    StdResult, Storage, Timestamp, to_binary,
+};
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cw2::set_contract_version;
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::{
-    currency::{visit_any, AnyVisitor, Currency, Usdc, SymbolOwned, Nls},
-    price::PriceDTO
+    currency::{AnyVisitor, Currency, Nls, SymbolOwned, Usdc, visit_any},
+    price::PriceDTO,
 };
 use marketprice::{
     market_price::PriceFeedsError,
-    storage::{Denom, DenomPair, Price}
+    storage::{Denom, DenomPair, Price},
 };
 
 use crate::{
     alarms::MarketAlarms,
     contract_validation::validate_contract_addr,
     error::ContractError,
-    msg::{
-        ConfigResponse, ExecuteMsg, InstantiateMsg, PriceResponse, PricesResponse, QueryMsg,
-    },
+    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, PriceResponse, PricesResponse, QueryMsg},
     oracle::MarketOracle,
-    state::config::Config
+    state::config::Config,
 };
 
 // version info for migration info
@@ -39,15 +40,14 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    debug_assert!(
-        deps.querier.query(
-            &cosmwasm_std::QueryRequest::Wasm(
-                cosmwasm_std::WasmQuery::ContractInfo {
-                    contract_addr: msg.timealarms_addr.clone(),
-                }
-            )
-        ).is_ok()
-    );
+    debug_assert!(deps
+        .querier
+        .query::<cosmwasm_std::Empty>(&cosmwasm_std::QueryRequest::Wasm(
+            cosmwasm_std::WasmQuery::ContractInfo {
+                contract_addr: msg.timealarms_addr.clone(),
+            }
+        ))
+        .is_ok());
 
     Config::new(
         msg.base_asset,
@@ -55,9 +55,9 @@ pub fn instantiate(
         msg.price_feed_period_secs,
         msg.feeders_percentage_needed,
         msg.supported_denom_pairs,
-        timealarms_addr,
+        Addr::unchecked(msg.timealarms_addr),
     )
-        .store(deps.storage)?;
+    .store(deps.storage)?;
 
     Ok(Response::default())
 }

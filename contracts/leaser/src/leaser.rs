@@ -2,16 +2,16 @@ use std::collections::HashSet;
 
 use cosmwasm_std::{Addr, Deps, DepsMut, MessageInfo, Response, StdResult};
 
-use finance::coin::CoinDTO;
-use finance::liability::Liability;
-use finance::percent::Percent;
+use finance::{coin::CoinDTO, liability::Liability, percent::Percent};
 use lpp::stub::LppRef;
 
-use crate::cmd::Quote;
-use crate::error::{ContractError, ContractResult};
-use crate::msg::{ConfigResponse, QuoteResponse, Repayment};
-use crate::state::config::Config;
-use crate::state::leaser::Loans;
+use crate::{
+    cmd::Quote,
+    error::{ContractError, ContractResult},
+    msg::{ConfigResponse, QuoteResponse, Repayment},
+    state::config::Config,
+    state::leaser::Loans,
+};
 
 pub struct Leaser {}
 
@@ -28,7 +28,12 @@ impl Leaser {
     pub fn query_quote(deps: Deps, downpayment: CoinDTO) -> Result<QuoteResponse, ContractError> {
         let config = Config::load(deps.storage)?;
 
-        let lpp = LppRef::try_from(config.lpp_addr.to_string(), deps.api, &deps.querier)?;
+        let lpp = LppRef::try_from(
+            config.lpp_addr.to_string(),
+            deps.api,
+            &deps.querier,
+            lease::constants::ReplyId::OpenLoanReq as u64,
+        )?;
 
         let resp = lpp.execute(
             Quote::new(
@@ -38,6 +43,7 @@ impl Leaser {
             )?,
             &deps.querier,
         )?;
+
         Ok(resp)
     }
 

@@ -3,19 +3,16 @@ use serde::Serialize;
 
 use finance::{
     currency::{Currency, SymbolOwned},
-    price::PriceDTO
+    price::PriceDTO,
 };
 use lpp::stub::Lpp as LppTrait;
+use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::bank::BankAccountView;
 
 use crate::{
     contract::alarms::{emit_events, LiquidationResult},
     error::ContractError,
-    lease::{
-        Lease,
-        OnAlarmResult,
-        WithLease,
-    }
+    lease::{Lease, OnAlarmResult, WithLease},
 };
 
 pub struct PriceAlarm<'a, B>
@@ -52,10 +49,15 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp, OracleC, Oracle>(
+        self,
+        lease: Lease<Lpn, Lpp, OracleC, Oracle>,
+    ) -> Result<Self::Output, Self::Error>
     where
         Lpp: LppTrait<Lpn>,
         Lpn: Currency + Serialize,
+        OracleC: Currency + Serialize,
+        Oracle: OracleTrait<OracleC>,
     {
         if !lease.sent_oracle(self.sender) {
             return Err(Self::Error::Unauthorized {});

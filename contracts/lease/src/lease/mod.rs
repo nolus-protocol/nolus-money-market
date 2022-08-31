@@ -1,30 +1,30 @@
+use std::marker::PhantomData;
+
 use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp, wasm_execute, WasmMsg};
 use serde::Serialize;
 
-use contract_constants::LeaseReplyId;
 use finance::{
     coin::Coin,
     currency::{Currency, SymbolOwned},
     fraction::Fraction,
     liability::Liability,
     percent::{Percent, Units},
-    price::{
-        Price,
-        total,
-        total_of
-    }, ratio::Rational, 
+    price::{Price, PriceDTO, total, total_of},
+    ratio::Rational,
 };
 use lpp::stub::Lpp as LppTrait;
-use market_price_oracle::msg::ExecuteMsg::AddPriceAlarm;
+use market_price_oracle::{msg::ExecuteMsg::AddPriceAlarm, stub::Oracle as OracleTrait};
+use marketprice::alarms::Alarm;
 use platform::{
     bank::{BankAccount, BankAccountView},
-    batch::{Batch, BatchMessage},
+    batch::Batch,
 };
 
 use crate::{
     error::{ContractError, ContractResult},
     loan::{Loan, State},
-    msg::StateResponse
+    msg::StateResponse,
+    oracle::Oracle as LeaseOracle,
 };
 
 pub(super) use self::{
@@ -33,26 +33,28 @@ pub(super) use self::{
     liquidation::{CommonInfo, LiquidationStatus, OnAlarmResult, WarningLevel},
     repay::RepayResult,
 };
-use self::{
-    factory::Factory,
-    open::Result as OpenResult,
-};
+use self::{factory::Factory, open::Result as OpenResult};
 
 mod downpayment_dto;
 mod dto;
 mod factory;
-mod open;
 mod liquidation;
+mod open;
 mod repay;
 
 pub trait WithLease {
     type Output;
     type Error;
 
-    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp, OracleC, Oracle>(
+        self,
+        lease: Lease<Lpn, Lpp, OracleC, Oracle>,
+    ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppTrait<Lpn>;
+        Lpp: LppTrait<Lpn>,
+        OracleC: Currency + Serialize,
+        Oracle: OracleTrait<OracleC>;
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
 }
@@ -62,23 +64,27 @@ where
     L: WithLease<Output = O, Error = E>,
 {
     let lpp = dto.loan.lpp().clone();
-    lpp.execute(Factory::new(cmd, dto), querier)
+
+    lpp.execute(Factory::new(cmd, dto, querier), querier)
 }
 
-pub struct Lease<Lpn, Lpp> {
+pub struct Lease<Lpn, Lpp, OracleC, Oracle> {
     customer: Addr,
     currency: SymbolOwned,
     liability: Liability,
     loan: Loan<Lpn, Lpp>,
-    market_price_oracle: Addr,
+    _oracle_c: PhantomData<OracleC>,
+    oracle: LeaseOracle<OracleC, Oracle>,
 }
 
-impl<Lpn, Lpp> Lease<Lpn, Lpp>
+impl<Lpn, Lpp, OracleC, Oracle> Lease<Lpn, Lpp, OracleC, Oracle>
 where
     Lpn: Currency,
     Lpp: LppTrait<Lpn>,
+    OracleC: Currency + Serialize,
+    Oracle: OracleTrait<OracleC>,
 {
-    pub(super) fn from_dto(dto: LeaseDTO, lpp: Lpp) -> Self {
+    pub(super) fn from_dto(dto: LeaseDTO, lpp: Lpp, oracle: Oracle) -> Self {
         assert_eq!(
             Lpn::SYMBOL,
             dto.currency,
@@ -92,21 +98,25 @@ where
             currency: dto.currency,
             liability: dto.liability,
             loan: Loan::from_dto(dto.loan, lpp),
-            market_price_oracle: dto.market_price_oracle,
+            _oracle_c: PhantomData,
+            oracle: LeaseOracle::from_dto(dto.oracle, oracle),
         }
     }
 
-    pub(super) fn into_dto(self) -> (LeaseDTO, Lpp) {
+    pub(super) fn into_dto(self) -> (LeaseDTO, Lpp, Oracle) {
         let (loan_dto, lpp) = self.loan.into_dto();
+        let (oracle_dto, oracle) = self.oracle.into_dto();
+
         (
             LeaseDTO::new(
                 self.customer,
                 self.currency,
                 self.liability,
                 loan_dto,
-                self.market_price_oracle,
+                oracle_dto,
             ),
             lpp,
+            oracle,
         )
     }
 
@@ -115,7 +125,7 @@ where
     }
 
     pub(crate) fn sent_oracle(&self, addr: &Addr) -> bool {
-        &self.market_price_oracle == addr
+        self.oracle.owned_by(addr)
     }
 
     pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<Batch> {
@@ -128,34 +138,33 @@ where
     }
 
     // TODO lease currency can be different than Lpn, therefore result's type parameter
-    pub(crate) fn open_loan_resp<B>(self, lease: Addr, resp: Reply, account: B, now: &Timestamp) -> ContractResult<OpenResult<Lpn>>
+    pub(crate) fn open_loan_resp<B>(
+        mut self,
+        lease: Addr,
+        resp: Reply,
+        account: B,
+        now: &Timestamp,
+    ) -> ContractResult<OpenResult<Lpn>>
     where
         B: BankAccountView,
     {
-        let reschedule_batch = self.initial_alarm_schedule(
-            lease,
-            account.balance()?,
-            now,
-            &LiquidationStatus::None,
-        )?;
+        self.initial_alarm_schedule(lease, account.balance()?, now, &LiquidationStatus::None)?;
 
-        let mut result = self.loan.open_loan_resp(resp)
-            .map({
-                // Force move before closure to avoid edition warning from clippy;
-                let customer = self.customer;
-                let currency = self.currency;
+        let mut result = self.loan.open_loan_resp(resp).map({
+            // Force move before closure to avoid edition warning from clippy;
+            let customer = self.customer;
+            let currency = self.currency;
+            let oracle = self.oracle;
 
-                |result| OpenResult {
-                    batch: result.batch,
-                    customer,
-                    annual_interest_rate: result.annual_interest_rate,
-                    currency,
-                    loan_pool_id: result.loan_pool_id,
-                    loan_amount: result.borrowed,
-                }
-            })?;
-
-        result.batch = result.batch.merge(reschedule_batch);
+            |result| OpenResult {
+                batch: result.batch.merge(oracle.into()),
+                customer,
+                annual_interest_rate: result.annual_interest_rate,
+                currency,
+                loan_pool_id: result.loan_pool_id,
+                loan_amount: result.borrowed,
+            }
+        })?;
 
         Ok(result)
     }
@@ -190,11 +199,11 @@ where
 
         let receipt = self.loan.repay(payment, now, lease.clone())?;
 
-        let reschedule_batch = self.reschedule_on_repay(lease, lease_amount, &now)?;
+        self.reschedule_on_repay(lease, lease_amount, &now)?;
 
-        let (lease_dto, lpp) = self.into_dto();
+        let (lease_dto, lpp, oracle) = self.into_dto();
 
-        let batch = lpp.into().merge(reschedule_batch);
+        let batch = lpp.into().merge(oracle.into());
 
         Ok(RepayResult {
             batch,
@@ -235,7 +244,7 @@ where
     }
 
     pub(crate) fn on_price_alarm<B>(
-        self,
+        mut self,
         now: Timestamp,
         account: &B,
         lease: Addr,
@@ -246,21 +255,16 @@ where
     {
         assert_ne!(self.currency, Lpn::SYMBOL);
 
-        let (liquidation_status, lease_amount) = self.on_alarm(now, account, lease.clone(), price)?;
+        let (liquidation_status, lease_amount) =
+            self.on_alarm(now, account, lease.clone(), price)?;
 
-        let reschedule_batch = (
-            !matches!(liquidation_status, LiquidationStatus::FullLiquidation(_))
-        ).then(
-            || self.reschedule_on_price_alarm(lease, lease_amount, &now, &liquidation_status)
-        ).transpose()?;
-
-        let (lease_dto, lpp) = self.into_dto();
-
-        let mut batch = lpp.into();
-
-        if let Some(reschedule_batch) = reschedule_batch {
-            batch = batch.merge(reschedule_batch);
+        if !matches!(liquidation_status, LiquidationStatus::FullLiquidation(_)) {
+            self.reschedule_on_price_alarm(lease, lease_amount, &now, &liquidation_status)?;
         }
+
+        let (lease_dto, lpp, oracle) = self.into_dto();
+
+        let mut batch = lpp.into().merge(oracle.into());
 
         Ok(OnAlarmResult {
             batch,
@@ -299,40 +303,40 @@ where
 
         let loan_state = self.loan.state(now, lease)?;
 
-        Ok(loan_state.map_or(
-            LiquidationStatus::None,
-            |state| {
-                let lease_lpn = total(lease_amount, market_price);
+        Ok(loan_state.map_or(LiquidationStatus::None, |state| {
+            let lease_lpn = total(lease_amount, market_price);
 
-                let (liability_lpn, liability) = Self::liability(state, lease_lpn);
+            let (liability_lpn, liability) = Self::liability(state, lease_lpn);
 
-                let (ltv, level) = if self.liability.max_percent() <= liability {
-                    return self.liquidate(
-                        self.customer.clone(),
-                        self.currency.clone(),
-                        lease_lpn,
-                        liability_lpn,
-                    );
-                } else if self.liability.third_liq_warn_percent() <= liability {
-                    (self.liability.third_liq_warn_percent(), WarningLevel::Third)
-                } else if self.liability.second_liq_warn_percent() <= liability {
-                    (self.liability.second_liq_warn_percent(), WarningLevel::Second)
-                } else if self.liability.first_liq_warn_percent() <= liability {
-                    (self.liability.first_liq_warn_percent(), WarningLevel::First)
-                } else {
-                    return LiquidationStatus::None;
-                };
-
-                LiquidationStatus::Warning(
-                    CommonInfo {
-                        customer: self.customer.clone(),
-                        ltv,
-                        lease_asset: self.currency.clone(),
-                    },
-                    level,
+            let (ltv, level) = if self.liability.max_percent() <= liability {
+                return self.liquidate(
+                    self.customer.clone(),
+                    self.currency.clone(),
+                    lease_lpn,
+                    liability_lpn,
+                );
+            } else if self.liability.third_liq_warn_percent() <= liability {
+                (self.liability.third_liq_warn_percent(), WarningLevel::Third)
+            } else if self.liability.second_liq_warn_percent() <= liability {
+                (
+                    self.liability.second_liq_warn_percent(),
+                    WarningLevel::Second,
                 )
-            },
-        ))
+            } else if self.liability.first_liq_warn_percent() <= liability {
+                (self.liability.first_liq_warn_percent(), WarningLevel::First)
+            } else {
+                return LiquidationStatus::None;
+            };
+
+            LiquidationStatus::Warning(
+                CommonInfo {
+                    customer: self.customer.clone(),
+                    ltv,
+                    lease_asset: self.currency.clone(),
+                },
+                level,
+            )
+        }))
     }
 
     fn liability(state: State<Lpn>, lease_lpn: Coin<Lpn>) -> (Coin<Lpn>, Percent) {
@@ -342,10 +346,7 @@ where
             + state.current_margin_interest_due
             + state.current_interest_due;
 
-        (
-            liability_lpn,
-            Percent::from_ratio(liability_lpn, lease_lpn)
-        )
+        (liability_lpn, Percent::from_ratio(liability_lpn, lease_lpn))
     }
 
     fn liquidate(
@@ -386,12 +387,12 @@ where
 
     #[inline]
     fn initial_alarm_schedule<A>(
-        &self,
+        &mut self,
         lease: A,
         lease_amount: Coin<Lpn>,
         now: &Timestamp,
         liquidation: &LiquidationStatus<Lpn>,
-    ) -> ContractResult<Batch>
+    ) -> ContractResult<()>
     where
         A: Into<Addr>,
     {
@@ -400,11 +401,11 @@ where
 
     #[inline]
     fn reschedule_on_repay<A>(
-        &self,
+        &mut self,
         lease: A,
         lease_amount: Coin<Lpn>,
         now: &Timestamp,
-    ) -> ContractResult<Batch>
+    ) -> ContractResult<()>
     where
         A: Into<Addr>,
     {
@@ -415,60 +416,66 @@ where
 
     #[inline]
     fn reschedule_on_price_alarm<A>(
-        &self,
+        &mut self,
         lease: A,
         lease_amount: Coin<Lpn>,
         now: &Timestamp,
-        liquidation: &LiquidationStatus<Lpn>,
-    ) -> ContractResult<Batch>
+        liquidation_status: &LiquidationStatus<Lpn>,
+    ) -> ContractResult<()>
     where
         A: Into<Addr>,
     {
-        let mut batch = Batch::default();
-
-        if self.currency != Lpn::SYMBOL {
-            batch.schedule_execute_batch_message(
-                self.reschedule_price_alarm(
-                    lease,
-                    lease_amount,
-                    now,
-                    liquidation,
-                )?,
-            );
-        }
-
-        Ok(batch)
+        self.reschedule_price_alarm(lease, lease_amount, now, liquidation_status)
     }
 
     fn reschedule_price_alarm<A>(
-        &self,
+        &mut self,
         lease: A,
         lease_amount: Coin<Lpn>,
         now: &Timestamp,
-        liquidation: &LiquidationStatus<Lpn>,
-    ) -> ContractResult<BatchMessage<WasmMsg, LeaseReplyId>>
+        liquidation_status: &LiquidationStatus<Lpn>,
+    ) -> ContractResult<()>
     where
         A: Into<Addr>,
     {
-        Ok(BatchMessage::NoReply(wasm_execute(
-            self.market_price_oracle.as_str(),
-            &AddPriceAlarm {
-                target: self.price_alarm_by_percent(
-                    lease,
-                    lease_amount,
-                    now,
-                    match liquidation {
-                        LiquidationStatus::None
-                        | LiquidationStatus::PartialLiquidation { .. } => self.liability.first_liq_warn_percent(),
-                        LiquidationStatus::Warning(_, WarningLevel::First) => self.liability.second_liq_warn_percent(),
-                        LiquidationStatus::Warning(_, WarningLevel::Second) => self.liability.third_liq_warn_percent(),
-                        LiquidationStatus::Warning(_, WarningLevel::Third) => self.liability.max_percent(),
-                        LiquidationStatus::FullLiquidation(_) => unreachable!(),
-                    },
-                )?.into(),
-            },
-            Vec::new(),
-        )?))
+        if self.currency != Lpn::SYMBOL {
+            let lease = lease.into();
+
+            let (below, above) = match liquidation_status {
+                LiquidationStatus::None | LiquidationStatus::PartialLiquidation { .. } => {
+                    (self.liability.first_liq_warn_percent(), None)
+                }
+                LiquidationStatus::Warning(_, WarningLevel::First) => (
+                    self.liability.second_liq_warn_percent(),
+                    Some(self.liability.first_liq_warn_percent()),
+                ),
+                LiquidationStatus::Warning(_, WarningLevel::Second) => (
+                    self.liability.third_liq_warn_percent(),
+                    Some(self.liability.second_liq_warn_percent()),
+                ),
+                LiquidationStatus::Warning(_, WarningLevel::Third) => (
+                    self.liability.max_percent(),
+                    Some(self.liability.third_liq_warn_percent()),
+                ),
+                LiquidationStatus::FullLiquidation(_) => unreachable!(),
+            };
+
+            let below = self.price_alarm_by_percent(lease.clone(), lease_amount, now, below)?;
+
+            let above = above
+                .map(|above| self.price_alarm_by_percent(lease, lease_amount, now, above))
+                .transpose()?;
+
+            self.oracle
+                .add_alarm(Alarm::new::<PriceDTO>(
+                    self.currency.clone(),
+                    below.into(),
+                    above.map(Into::into),
+                ))
+                .map_err(Into::into)
+        } else {
+            Ok(())
+        }
     }
 
     fn price_alarm_by_percent<A>(
@@ -481,60 +488,55 @@ where
     where
         A: Into<Addr>,
     {
-        let state = self.loan.state(
-            *now + self.liability.recalculation_time(),
-            lease.into(),
-        )?
+        let state = self
+            .loan
+            .state(*now + self.liability.recalculation_time(), lease.into())?
             .ok_or(ContractError::LoanClosed())?;
 
         assert!(!lease_amount.is_zero(), "Loan already paid!");
 
-        Ok(
-            total_of(
-                percent.of(lease_amount),
-            ).is(
-                state.principal_due
-                    + state.previous_margin_interest_due
-                    + state.previous_interest_due
-                    + state.current_margin_interest_due
-                    + state.current_interest_due,
-            ),
-        )
+        Ok(total_of(percent.of(lease_amount)).is(state.principal_due
+            + state.previous_margin_interest_due
+            + state.previous_interest_due
+            + state.current_margin_interest_due
+            + state.current_interest_due))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{Addr, Timestamp};
+    use std::marker::PhantomData;
+
+    use cosmwasm_std::{Addr, Timestamp, wasm_execute};
     use serde::{Deserialize, Serialize};
 
     use finance::{
         coin::Coin,
-        currency::{
-            Currency,
-            Nls,
-            Usdc
-        },
+        currency::{Currency, Nls, Usdc},
         duration::Duration,
         interest::InterestPeriod,
         liability::Liability,
-        percent::Percent
+        percent::Percent,
     };
     use lpp::{
         error::ContractError as LppError,
         msg::{LoanResponse, OutstandingInterest, QueryLoanResponse},
-        stub::{Lpp, LppRef}
+        stub::{Lpp, LppRef},
     };
-    use platform::{
-        bank::BankAccountView,
-        batch::Batch,
-        error::Result as PlatformResult
+    use market_price_oracle::msg::ExecuteMsg::AddPriceAlarm;
+    use market_price_oracle::msg::PriceResponse;
+    use market_price_oracle::stub::{Oracle, OracleRef};
+    use marketprice::alarms::Alarm;
+    use marketprice::storage::Denom;
+    use platform::{bank::BankAccountView, batch::Batch, error::Result as PlatformResult};
+
+    use crate::{
+        constants::ReplyId,
+        loan::{Loan, LoanDTO},
+        msg::StateResponse,
     };
 
-    use crate::loan::{Loan, LoanDTO};
-    use crate::msg::StateResponse;
-
-    use super::Lease;
+    use super::{Lease, LeaseOracle};
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
@@ -555,7 +557,10 @@ mod tests {
             Ok(Coin::<C>::new(self.balance))
         }
 
-        fn balance_without_payment<C>(&self, _payment: &Coin<C>) -> PlatformResult<Coin<C>> where C: Currency {
+        fn balance_without_payment<C>(&self, _payment: &Coin<C>) -> PlatformResult<Coin<C>>
+        where
+            C: Currency,
+        {
             Ok(Coin::new(self.balance))
         }
     }
@@ -575,7 +580,10 @@ mod tests {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<LoanResponse<TestCurrency>> {
+        fn open_loan_resp(
+            &self,
+            _resp: cosmwasm_std::Reply,
+        ) -> LppResult<LoanResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -650,7 +658,10 @@ mod tests {
             unreachable!()
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<LoanResponse<TestCurrency>> {
+        fn open_loan_resp(
+            &self,
+            _resp: cosmwasm_std::Reply,
+        ) -> LppResult<LoanResponse<TestCurrency>> {
             unreachable!()
         }
 
@@ -695,11 +706,64 @@ mod tests {
         }
     }
 
-    fn create_lease<L>(lpp: L) -> Lease<TestCurrency, L>
+    struct OracleLocalStub {
+        address: Addr,
+        batch: Batch,
+    }
+
+    impl From<OracleLocalStub> for Batch {
+        fn from(stub: OracleLocalStub) -> Self {
+            stub.batch
+        }
+    }
+
+    impl<OracleBase> Oracle<OracleBase> for OracleLocalStub
+    where
+        OracleBase: Currency + Serialize,
+    {
+        fn get_price(&self, denom: Denom) -> market_price_oracle::stub::Result<PriceResponse> {
+            todo!()
+        }
+
+        fn add_alarm(&mut self, alarm: Alarm) -> market_price_oracle::stub::Result<()> {
+            self.batch.schedule_execute_no_reply(wasm_execute(
+                self.address.clone(),
+                &AddPriceAlarm { alarm },
+                vec![],
+            )?);
+
+            Ok(())
+        }
+    }
+
+    struct OracleLocalStubUnreachable;
+
+    impl From<OracleLocalStubUnreachable> for Batch {
+        fn from(_: OracleLocalStubUnreachable) -> Self {
+            unreachable!()
+        }
+    }
+
+    impl<OracleBase> Oracle<OracleBase> for OracleLocalStubUnreachable
+    where
+        OracleBase: Currency + Serialize,
+    {
+        fn get_price(&self, denom: Denom) -> market_price_oracle::stub::Result<PriceResponse> {
+            unreachable!()
+        }
+
+        fn add_alarm(&mut self, alarm: Alarm) -> market_price_oracle::stub::Result<()> {
+            unreachable!()
+        }
+    }
+
+    fn create_lease<L, O>(lpp: L, oracle: O) -> Lease<TestCurrency, L, TestCurrency, O>
     where
         L: Lpp<TestCurrency>,
+        O: Oracle<TestCurrency>,
     {
-        let lpp_ref = LppRef::unchecked::<_, Nls>("lpp_adr");
+        let lpp_ref = LppRef::unchecked::<_, Nls>("lpp_addr", ReplyId::OpenLoanReq as u64);
+
         let loan_dto = LoanDTO::new(
             LEASE_START,
             lpp_ref,
@@ -708,6 +772,9 @@ mod tests {
             Duration::from_secs(0),
         )
         .unwrap();
+
+        let oracle_ref = OracleRef::unchecked::<_, Nls>("oracle_addr");
+
         Lease {
             customer: Addr::unchecked("customer"),
             currency: TestCurrency::SYMBOL.to_string(),
@@ -721,18 +788,25 @@ mod tests {
                 10 * 24,
             ),
             loan: Loan::from_dto(loan_dto, lpp),
-            market_price_oracle: Addr::unchecked("oracle"),
+            _oracle_c: PhantomData,
+            oracle: LeaseOracle::from_dto(oracle_ref, oracle),
         }
     }
 
     fn lease_setup(
         loan_response: Option<LoanResponse<TestCurrency>>,
-    ) -> Lease<TestCurrency, LppLocalStub> {
+        oracle_addr: Addr,
+    ) -> Lease<TestCurrency, LppLocalStub, TestCurrency, OracleLocalStub> {
         let lpp_stub = LppLocalStub {
             loan: loan_response,
         };
 
-        create_lease(lpp_stub)
+        let oracle_stub = OracleLocalStub {
+            address: oracle_addr,
+            batch: Batch::default(),
+        };
+
+        create_lease(lpp_stub, oracle_stub)
     }
 
     fn create_bank_account(lease_amount: u128) -> BankStub {
@@ -742,7 +816,7 @@ mod tests {
     }
 
     fn request_state(
-        lease: Lease<TestCurrency, LppLocalStub>,
+        lease: Lease<TestCurrency, LppLocalStub, TestCurrency, OracleLocalStub>,
         bank_account: &BankStub,
     ) -> StateResponse<TestCurrency, TestCurrency> {
         lease
@@ -764,7 +838,7 @@ mod tests {
         };
 
         let bank_account = create_bank_account(lease_amount);
-        let lease = lease_setup(Some(loan.clone()));
+        let lease = lease_setup(Some(loan.clone()), Addr::unchecked(String::new()));
 
         let res = request_state(lease, &bank_account);
         let exp = StateResponse::Opened {
@@ -786,7 +860,7 @@ mod tests {
     fn state_paid() {
         let lease_amount = 1000;
         let bank_account = create_bank_account(lease_amount);
-        let lease = lease_setup(None);
+        let lease = lease_setup(None, Addr::unchecked(String::new()));
 
         let res = request_state(lease, &bank_account);
         let exp = StateResponse::Paid(coin(lease_amount));
@@ -798,7 +872,7 @@ mod tests {
     fn state_closed() {
         let lease_amount = 0;
         let bank_account = create_bank_account(lease_amount);
-        let lease = lease_setup(None);
+        let lease = lease_setup(None, Addr::unchecked(String::new()));
 
         let res = request_state(lease, &bank_account);
         let exp = StateResponse::Closed();
@@ -809,7 +883,8 @@ mod tests {
     // Verify that if the Lease's balance is 0, lpp won't be queried for the loan
     fn state_closed_lpp_must_not_be_called() {
         let lpp_stub = LppLocalStubUnreachable {};
-        let lease = create_lease(lpp_stub);
+        let oracle_stub = OracleLocalStubUnreachable {};
+        let lease = create_lease(lpp_stub, oracle_stub);
 
         let bank_account = create_bank_account(0);
 

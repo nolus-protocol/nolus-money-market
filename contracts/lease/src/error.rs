@@ -1,8 +1,10 @@
 use cosmwasm_std::StdError;
+use thiserror::Error;
+
 use finance::error::Error as FinanceError;
 use lpp::error::ContractError as LppError;
+use market_price_oracle::error::ContractError as OracleError;
 use platform::error::Error as PlatformError;
-use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -20,6 +22,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     LppError(#[from] LppError),
+
+    #[error("{0}")]
+    OracleError(#[from] OracleError),
 
     #[error("{symbol:?}")]
     UnknownCurrency { symbol: String },

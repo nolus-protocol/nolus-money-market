@@ -1,6 +1,8 @@
-use finance::currency::SymbolOwned;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use finance::currency::SymbolOwned;
+use finance::price::PriceDTO;
 
 use crate::storage::Price;
 
@@ -30,13 +32,17 @@ pub struct Alarm {
 }
 
 impl Alarm {
-    pub fn new(currency: SymbolOwned, below: Price, above: Option<Price>) -> Alarm {
+    pub fn new<P>(currency: SymbolOwned, below: P, above: Option<P>) -> Alarm
+    where
+        P: Into<Price>,
+    {
         Self {
             currency,
-            below,
-            above,
+            below: below.into(),
+            above: above.map(Into::into),
         }
     }
+
     pub fn should_fire(&self, current_price: Price) -> bool {
         current_price.lt(&self.below)
             || (self.above.is_some() && current_price.gt(self.above.as_ref().unwrap()))

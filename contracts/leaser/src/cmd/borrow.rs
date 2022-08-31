@@ -1,6 +1,5 @@
 use cosmwasm_std::{Addr, Coin, DepsMut, Response};
 
-use contract_constants::RawId;
 use finance::currency::SymbolOwned;
 use lease::msg::{LoanForm, NewLeaseForm};
 use platform::batch::Batch;
@@ -29,7 +28,7 @@ impl Borrow {
             Some(amount),
             "lease",
             None,
-            RawId::from(instance_reply_id),
+            instance_reply_id,
         )?;
         Ok(batch.into())
     }

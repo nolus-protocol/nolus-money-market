@@ -1,9 +1,9 @@
+use cosmwasm_std::{
+    Addr, Binary, Deps, DepsMut, ensure, Env, MessageInfo, Response, StdResult, Storage, Timestamp,
+    to_binary,
+};
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    ensure, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
-    Timestamp,
-};
 use cw2::set_contract_version;
 
 use finance::currency::Nls;
@@ -127,7 +127,7 @@ pub fn try_dispatch(
     let oracle = OracleRef::try_from(oracle_address, deps.api, &deps.querier)?;
 
     let lpp_address = config.lpp.as_ref().to_string();
-    let lpp = LppRef::try_from(lpp_address.clone(), deps.api, &deps.querier)?;
+    let lpp = LppRef::try_from(lpp_address.clone(), deps.api, &deps.querier, 0xDEADC0DE)?;
     let emitter: Emitter = lpp.execute(
         Dispatch::new(oracle, last_dispatch, config, block_time, deps.querier)?,
         &deps.querier,
@@ -145,15 +145,16 @@ pub fn try_dispatch(
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{
-        coins, from_binary,
-        testing::{mock_dependencies_with_balance, mock_env, mock_info},
-        Addr, DepsMut,
+        Addr, coins,
+        DepsMut,
+        from_binary, testing::{mock_dependencies_with_balance, mock_env, mock_info},
     };
 
-    use super::{execute, instantiate, query};
+    use crate::ContractError;
     use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
     use crate::state::tvl_intervals::{Intervals, Stop};
-    use crate::ContractError;
+
+    use super::{execute, instantiate, query};
 
     fn do_instantiate(deps: DepsMut) {
         let msg = InstantiateMsg {

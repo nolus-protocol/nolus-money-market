@@ -1,16 +1,15 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, result::Result as StdResult};
 
-use core::result::Result as StdResult;
-use cosmwasm_std::{Addr, Api, QuerierWrapper};
-
-use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
-use marketprice::storage::Denom;
-use platform::batch::Batch;
+use cosmwasm_std::{Addr, Api, QuerierWrapper, wasm_execute};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use finance::currency::{AnyVisitor, Currency, SymbolOwned, visit_any};
+use marketprice::{alarms::Alarm, storage::Denom};
+use platform::batch::Batch;
+
 use crate::{
-    msg::{ConfigResponse, PriceResponse, QueryMsg},
     ContractError,
+    msg::{ConfigResponse, ExecuteMsg, PriceResponse, QueryMsg},
 };
 
 pub type Result<T> = StdResult<T, ContractError>;
@@ -20,6 +19,8 @@ where
     OracleBase: Currency + Serialize,
 {
     fn get_price(&self, denom: Denom) -> Result<PriceResponse>;
+
+    fn add_alarm(&mut self, alarm: Alarm) -> Result<()>;
 }
 
 pub trait WithOracle {
@@ -49,6 +50,10 @@ impl OracleRef {
         let resp: ConfigResponse = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config {})?;
         let currency = resp.base_asset;
         Ok(Self { addr, currency })
+    }
+
+    pub fn owned_by(&self, addr: &Addr) -> bool {
+        &self.addr == addr
     }
 
     pub fn execute<V, O, E>(&self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
@@ -137,6 +142,16 @@ where
         self.querier
             .query_wasm_smart(self.addr.clone(), &msg)
             .map_err(ContractError::from)
+    }
+
+    fn add_alarm(&mut self, alarm: Alarm) -> Result<()> {
+        self.batch.schedule_execute_no_reply(wasm_execute(
+            self.addr.clone(),
+            &ExecuteMsg::AddPriceAlarm { alarm },
+            vec![],
+        )?);
+
+        Ok(())
     }
 }
 

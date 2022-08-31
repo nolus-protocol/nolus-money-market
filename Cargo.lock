@@ -60,10 +60,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4c78c047431fee22c1a7bb92e00ad095a02a983affe4d8a72e2a2c62c1b94f3"
 
 [[package]]
-name = "contract_constants"
-version = "0.1.0"
-
-[[package]]
 name = "cosmwasm-crypto"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -461,7 +457,6 @@ dependencies = [
 name = "lease"
 version = "0.1.0"
 dependencies = [
- "contract_constants",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -481,7 +476,6 @@ dependencies = [
 name = "leaser"
 version = "0.1.0"
 dependencies = [
- "contract_constants",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
@@ -507,7 +501,6 @@ checksum = "1bf2e165bb3457c8e098ea76f3e3bc9db55f87aa90d52d0e6be741470916aaa4"
 name = "lpp"
 version = "0.1.0"
 dependencies = [
- "contract_constants",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-storage-plus",
@@ -583,7 +576,6 @@ dependencies = [
 name = "platform"
 version = "0.1.0"
 dependencies = [
- "contract_constants",
  "cosmwasm-std",
  "finance",
  "prost 0.11.0",

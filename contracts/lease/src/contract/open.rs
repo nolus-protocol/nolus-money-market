@@ -1,16 +1,18 @@
 use cosmwasm_std::{Coin as CwCoin, Env, Reply};
+use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
+use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{
     bank::{self, BankAccountView},
-    batch::{Batch, Emit, Emitter}
+    batch::{Batch, Emit, Emitter},
 };
 
 use crate::{
     error::ContractError,
     event::TYPE,
-    lease::{DownpaymentDTO, Lease, WithLease}
+    lease::{DownpaymentDTO, Lease, WithLease},
 };
 
 pub struct OpenLoanReq<'a> {
@@ -28,10 +30,15 @@ impl<'a> WithLease for OpenLoanReq<'a> {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp, OracleC, Oracle>(
+        self,
+        lease: Lease<Lpn, Lpp, OracleC, Oracle>,
+    ) -> Result<Self::Output, Self::Error>
     where
+        Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
-        Lpn: Currency,
+        OracleC: Currency + Serialize,
+        Oracle: OracleTrait<OracleC>,
     {
         // TODO 'receive' the downpayment from the bank using any currency it might be in
         let downpayment = bank::received::<Lpn>(self.downpayment)?;
@@ -69,7 +76,12 @@ where
     B: BankAccountView,
 {
     pub fn new(resp: Reply, downpayment: DownpaymentDTO, account: B, env: &'a Env) -> Self {
-        Self { resp, downpayment, account, env }
+        Self {
+            resp,
+            downpayment,
+            account,
+            env,
+        }
     }
 }
 
@@ -81,14 +93,25 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp, OracleC, Oracle>(
+        self,
+        lease: Lease<Lpn, Lpp, OracleC, Oracle>,
+    ) -> Result<Self::Output, Self::Error>
     where
+        Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
-        Lpn: Currency,
+        OracleC: Currency + Serialize,
+        Oracle: OracleTrait<OracleC>,
     {
-        let result = lease.open_loan_resp(self.env.contract.address.clone(), self.resp, self.account, &self.env.block.time)?;
+        let result = lease.open_loan_resp(
+            self.env.contract.address.clone(),
+            self.resp,
+            self.account,
+            &self.env.block.time,
+        )?;
 
-        Ok(result.batch
+        Ok(result
+            .batch
             .into_emitter(TYPE::Open)
             .emit_tx_info(self.env)
             .emit("id", self.env.contract.address.clone())

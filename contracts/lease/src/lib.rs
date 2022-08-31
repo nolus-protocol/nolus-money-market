@@ -2,6 +2,8 @@ pub mod error;
 pub mod msg;
 
 #[cfg(feature = "cosmwasm")]
+pub mod constants;
+#[cfg(feature = "cosmwasm")]
 pub mod contract;
 #[cfg(feature = "cosmwasm")]
 mod event;
@@ -11,3 +13,5 @@ mod from_forms;
 mod lease;
 #[cfg(feature = "cosmwasm")]
 mod loan;
+#[cfg(feature = "cosmwasm")]
+mod oracle;
