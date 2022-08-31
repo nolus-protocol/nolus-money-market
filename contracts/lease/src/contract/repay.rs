@@ -11,7 +11,6 @@ use crate::{
     lease::{
         Lease,
         LeaseDTO,
-        LiquidationStatus,
         RepayResult as LeaseRepayResult,
         WithLease,
     },
@@ -52,7 +51,7 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, mut lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
     where
         Lpp: LppTrait<Lpn>,
         Lpn: Currency + Serialize,

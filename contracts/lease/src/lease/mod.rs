@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp, wasm_execute, WasmMsg};
+use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp, Uint128, wasm_execute, WasmMsg};
 use serde::Serialize;
 
 use contract_constants::LeaseReplyId;
@@ -13,10 +13,6 @@ use finance::{
         total,
         total_of
     },
-    ratio::{
-        Ratio,
-        Rational
-    }
 };
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::msg::ExecuteMsg::AddPriceAlarm;
@@ -27,7 +23,7 @@ use platform::{
 
 use crate::{
     error::{ContractError, ContractResult},
-    loan::{Loan, Receipt, State},
+    loan::{Loan, State},
     msg::StateResponse
 };
 
@@ -347,13 +343,19 @@ where
         (
             liability_lpn,
             Percent::from_permille(
-                Fraction::<Amount>::of::<Amount>(
-                    &Rational::new(liability_lpn, lease_lpn),
-                    Percent::HUNDRED.units().into(),
-                )
-                    .try_into()
-                    .expect("Couldn't transform result into Percent's Units because of integer overflow!"),
+                finance::ratio_v2::Ratio::new(liability_lpn, lease_lpn)
+                    .of::<Amount, Units, Amount, Uint128>(Percent::HUNDRED.units()),
             )
+            // Using current `finance::ratio`:
+            //
+            // Percent::from_permille(
+            //     Fraction::<Amount>::of::<Amount>(
+            //         &Rational::new(liability_lpn, lease_lpn),
+            //         Percent::HUNDRED.units().into(),
+            //     )
+            //         .try_into()
+            //         .expect("Couldn't transform result into Percent's Units because of integer overflow!"),
+            // )
         )
     }
 
@@ -365,13 +367,22 @@ where
         liability_lpn: Coin<Lpn>,
     ) -> LiquidationStatus<Lpn> {
         let liquidation_amount = lease_lpn.min(
-            Fraction::<Units>::of(
-                &Rational::new(
-                    Percent::HUNDRED.units(),
-                    (Percent::HUNDRED - self.liability.healthy_percent()).units(),
-                ),
-                liability_lpn - self.liability.healthy_percent().of(lease_lpn),
-            ),
+            finance::ratio_v2::Ratio::new(
+                Percent::HUNDRED.units(),
+                (Percent::HUNDRED - self.liability.healthy_percent()).units(),
+            )
+                .of::<Amount, Coin<Lpn>, Amount, Uint128>(
+                    liability_lpn - self.liability.healthy_percent().of(lease_lpn),
+                )
+            // Using current `finance::ratio`:
+            //
+            // Fraction::<Units>::of(
+            //     &Rational::new(
+            //         Percent::HUNDRED.units(),
+            //         (Percent::HUNDRED - self.liability.healthy_percent()).units(),
+            //     ),
+            //     liability_lpn - self.liability.healthy_percent().of(lease_lpn),
+            // ),
         );
 
         // TODO perform actual liquidation
@@ -555,7 +566,7 @@ mod tests {
             Ok(Coin::<C>::new(self.balance))
         }
 
-        fn balance_without_payment<C>(&self, payment: &Coin<C>) -> PlatformResult<Coin<C>> where C: Currency {
+        fn balance_without_payment<C>(&self, _payment: &Coin<C>) -> PlatformResult<Coin<C>> where C: Currency {
             Ok(Coin::new(self.balance))
         }
     }

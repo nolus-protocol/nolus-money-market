@@ -1,10 +1,7 @@
-use cosmwasm_std::{Addr, Response};
+use cosmwasm_std::Response;
 use serde::Serialize;
 
-use finance::{
-    currency::Currency,
-    percent::Percent
-};
+use finance::currency::Currency;
 use platform::batch::{Batch, Emit};
 
 use crate::{

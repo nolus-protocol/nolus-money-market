@@ -13,7 +13,6 @@ use crate::{
     error::ContractError,
     lease::{
         Lease,
-        LiquidationStatus,
         OnAlarmResult,
         WithLease,
     }

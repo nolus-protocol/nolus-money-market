@@ -454,7 +454,7 @@ mod tests {
             Ok(Coin::<C>::new(self.balance))
         }
 
-        fn balance_without_payment<C>(&self, payment: &Coin<C>) -> PlatformResult<Coin<C>> where C: Currency {
+        fn balance_without_payment<C>(&self, _payment: &Coin<C>) -> PlatformResult<Coin<C>> where C: Currency {
             self.balance()
         }
     }
