@@ -30,7 +30,7 @@ impl MarketAlarms {
         target: Price,
     ) -> Result<Response, ContractError> {
         Self::PRICE_ALARMS.add_or_update(storage, &addr, target)?;
-        Ok(Response::new().add_attribute("method", "try_add_price_hook"))
+        Ok(Response::new())
     }
 
     pub fn get_hook_denoms(storage: &dyn Storage) -> StdResult<HashSet<Denom>> {

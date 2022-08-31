@@ -11,6 +11,10 @@ use crate::{
     ratio::Rational,
 };
 
+pub use self::dto::{execute, PriceDTO, WithPrice};
+
+mod dto;
+
 pub fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
 where
     C: 'static + Currency,
@@ -76,8 +80,8 @@ where
     pub fn lossy_add(self, rhs: Self) -> Self {
         const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
         let factored_amount = FACTOR.into();
-        let factored_total = self::total(factored_amount, self) + self::total(factored_amount, rhs);
-        self::total_of(factored_amount).is(factored_total)
+        let factored_total = total(factored_amount, self) + total(factored_amount, rhs);
+        total_of(factored_amount).is(factored_total)
     }
 
     pub fn inv(self) -> Price<QuoteC, C> {

@@ -1,3 +1,5 @@
+use std::convert::Infallible;
+
 use cosmwasm_std::{Addr, StdError};
 use marketprice::{
     alarms::errors::AlarmError, feeders::PriceFeedersError, market_price::PriceFeedsError,
@@ -18,6 +20,12 @@ pub enum ContractError {
 
     #[error("{0}")]
     HooksError(#[from] AlarmError),
+
+    #[error("{0}")]
+    Finance(#[from] finance::error::Error),
+
+    #[error("{0}")]
+    FromInfallible(#[from] Infallible),
 
     #[error("Unauthorized")]
     Unauthorized {},
@@ -43,4 +51,7 @@ pub enum ContractError {
 
     #[error("ParseError {err:?}")]
     ParseError { err: String },
+
+    #[error("Unknown currency")]
+    UnknownCurrency {},
 }

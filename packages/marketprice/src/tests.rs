@@ -51,7 +51,9 @@ fn marketprice_add_feed_expect_err() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
     let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), MINUTE, 50);
-    let expected_err = market.get(&deps.storage, ts, query).unwrap_err();
+    let expected_err = market
+        .get_converted_dto_price(&deps.storage, ts, query)
+        .unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
 }
 
@@ -105,11 +107,15 @@ fn marketprice_add_feed() {
         .feed(&mut deps.storage, ts, &f_address, prices, MINUTE)
         .unwrap();
     let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), MINUTE, 50);
-    let err = market.get(&deps.storage, ts, query).unwrap_err();
+    let err = market
+        .get_converted_dto_price(&deps.storage, ts, query)
+        .unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
 
     let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), MINUTE, 1);
-    let price_resp = market.get(&deps.storage, ts, query).unwrap();
+    let price_resp = market
+        .get_converted_dto_price(&deps.storage, ts, query)
+        .unwrap();
     let expected_price = Price::new("DEN1", 10, "DEN2", 5);
     assert_eq!(expected_price, price_resp);
 }
@@ -131,27 +137,35 @@ fn marketprice_follow_the_path() {
 
     // valid search denom pair
     let query = PriceQuery::new(("DEN1".to_string(), "DEN4".to_string()), MINUTE, 1);
-    let price_resp = market.get(&deps.storage, ts, query).unwrap();
+    let price_resp = market
+        .get_converted_dto_price(&deps.storage, ts, query)
+        .unwrap();
     let expected = Price::new("DEN1", 1, "DEN4", 6);
     assert_eq!(expected, price_resp);
 
     // first and second part of denom pair are the same
     let query = PriceQuery::new(("DEN1".to_string(), "DEN1".to_string()), MINUTE, 1);
-    let price_resp = market.get(&deps.storage, ts, query).unwrap();
+    let price_resp = market
+        .get_converted_dto_price(&deps.storage, ts, query)
+        .unwrap();
     let expected = Price::new("DEN1", 1, "DEN1", 1);
     assert_eq!(expected, price_resp);
 
     // second part of denome pair doesn't exists in the storage
     let query = PriceQuery::new(("DEN1".to_string(), "DEN5".to_string()), MINUTE, 1);
     assert_eq!(
-        market.get(&deps.storage, ts, query).unwrap_err(),
+        market
+            .get_converted_dto_price(&deps.storage, ts, query)
+            .unwrap_err(),
         PriceFeedsError::NoPrice {}
     );
 
     // first part of denome pair doesn't exists in the storage
     let query = PriceQuery::new(("DEN6".to_string(), "DEN1".to_string()), MINUTE, 1);
     assert_eq!(
-        market.get(&deps.storage, ts, query).unwrap_err(),
+        market
+            .get_converted_dto_price(&deps.storage, ts, query)
+            .unwrap_err(),
         PriceFeedsError::NoPrice {}
     );
 }

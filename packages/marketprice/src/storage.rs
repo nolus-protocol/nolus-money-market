@@ -1,7 +1,12 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use finance::{fraction::Fraction, fractionable::HigherRank, ratio::Rational};
+use finance::{
+    coin::Coin as FinCoin, currency::Currency, fraction::Fraction, fractionable::HigherRank,
+    ratio::Rational,
+};
+
+use crate::market_price::PriceFeedsError;
 
 pub type Denom = String;
 pub type DenomPair = (Denom, Denom);
@@ -11,6 +16,24 @@ pub type DenomPair = (Denom, Denom);
 pub struct Coin {
     pub amount: u128,
     pub symbol: String,
+}
+
+impl<C> TryFrom<Coin> for FinCoin<C>
+where
+    C: Currency,
+{
+    type Error = PriceFeedsError;
+
+    fn try_from(coin: Coin) -> Result<Self, Self::Error> {
+        if C::SYMBOL == coin.symbol {
+            Ok(Self::new(coin.amount))
+        } else {
+            Err(PriceFeedsError::UnexpectedCurrency(
+                coin.symbol,
+                C::SYMBOL.into(),
+            ))
+        }
+    }
 }
 
 #[deprecated = "Migrate to using finance::price::Price"]

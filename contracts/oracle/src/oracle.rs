@@ -3,7 +3,7 @@ use std::{collections::HashSet, convert::TryInto};
 use cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage, Timestamp};
 use marketprice::{
     feeders::{PriceFeeders, PriceFeedersError},
-    market_price::{PriceFeeds, PriceQuery},
+    market_price::{PriceFeeds, PriceFeedsError, PriceQuery},
     storage::{Denom, DenomPair, Price},
 };
 use schemars::JsonSchema;
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use std::convert::TryFrom;
 
-use finance::duration::Duration;
+use finance::{currency::Currency, duration::Duration, price::Price as FinPrice};
 
 use crate::{state::config::Config, ContractError};
 const PRECISION_FACTOR: u128 = 1_000_000_000;
@@ -23,8 +23,8 @@ impl MarketOracle {
     const FEEDERS: PriceFeeders<'static> = PriceFeeders::new("feeders");
     const MARKET_PRICE: PriceFeeds<'static> = PriceFeeds::new("market_price");
 
-    pub fn get_feeders(storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
-        Self::FEEDERS.get(storage)
+    pub fn get_feeders(storage: &dyn Storage) -> Result<HashSet<Addr>, ContractError> {
+        Ok(Self::FEEDERS.get(storage)?)
     }
 
     pub fn is_feeder(storage: &dyn Storage, address: &Addr) -> StdResult<bool> {
@@ -78,7 +78,7 @@ impl MarketOracle {
         let mut prices: Vec<Price> = Vec::new();
         for denom in denoms {
             let price_query = Self::init_price_query(storage, denom.clone(), &config)?;
-            let resp = Self::MARKET_PRICE.get(storage, block_time, price_query);
+            let resp = Self::MARKET_PRICE.get_converted_dto_price(storage, block_time, price_query);
             match resp {
                 Ok(feed) => {
                     prices.push(feed);
@@ -87,6 +87,23 @@ impl MarketOracle {
             };
         }
         Ok(prices)
+    }
+
+    pub fn get_single_price<C, QuoteC>(
+        storage: &dyn Storage,
+        block_time: Timestamp,
+        currency: Denom,
+    ) -> Result<FinPrice<C, QuoteC>, PriceFeedsError>
+    where
+        C: Currency,
+        QuoteC: Currency,
+    {
+        let config = Config::load(storage)?;
+
+        let price_query = Self::init_price_query(storage, currency, &config)?;
+        let price = Self::MARKET_PRICE.get_converted_price(storage, block_time, price_query)?;
+
+        Ok(price)
     }
 
     pub fn feed_prices(

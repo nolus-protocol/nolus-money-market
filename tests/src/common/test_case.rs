@@ -1,12 +1,11 @@
-use cosmwasm_std::{Addr, Coin, coins, StdError, Uint64};
-use cw_multi_test::{App, Executor, next_block};
+use cosmwasm_std::{coins, Addr, Coin, Uint64};
+use cw_multi_test::{next_block, App, Executor};
 
 use finance::coin::Amount;
 
 use crate::common::ContractWrapper;
 
 use super::{
-    ADMIN,
     dispatcher_wrapper::DispatcherWrapper,
     lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
     leaser_wrapper::LeaserWrapper,
@@ -16,6 +15,7 @@ use super::{
     profit_wrapper::ProfitWrapper,
     timealarms_wrapper::TimeAlarmsWrapper,
     treasury_wrapper::TreasuryWrapper,
+    ADMIN,
 };
 
 type OptionalContractWrapper = Option<
@@ -36,7 +36,7 @@ type OptionalContractWrapperStd = Option<
         oracle::msg::InstantiateMsg,
         oracle::ContractError,
         oracle::msg::QueryMsg,
-        StdError,
+        oracle::ContractError,
         cosmwasm_std::Empty,
         anyhow::Error,
         oracle::ContractError,
