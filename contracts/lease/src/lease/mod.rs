@@ -356,22 +356,11 @@ where
         liability_lpn: Coin<Lpn>,
     ) -> LiquidationStatus<Lpn> {
         let liquidation_amount = lease_lpn.min(
-            finance::ratio_v2::Ratio::new(
+            Percent::from_ratio(
                 Percent::HUNDRED.units(),
                 (Percent::HUNDRED - self.liability.healthy_percent()).units(),
             )
-                .of::<Amount, Coin<Lpn>, Amount, Uint128>(
-                    liability_lpn - self.liability.healthy_percent().of(lease_lpn),
-                )
-            // Using current `finance::ratio`:
-            //
-            // Fraction::<Units>::of(
-            //     &Rational::new(
-            //         Percent::HUNDRED.units(),
-            //         (Percent::HUNDRED - self.liability.healthy_percent()).units(),
-            //     ),
-            //     liability_lpn - self.liability.healthy_percent().of(lease_lpn),
-            // ),
+                .of(liability_lpn - self.liability.healthy_percent().of(lease_lpn))
         );
 
         // TODO perform actual liquidation
