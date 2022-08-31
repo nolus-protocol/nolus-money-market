@@ -352,7 +352,7 @@ where
                     Percent::HUNDRED.units().into(),
                 )
                     .try_into()
-                    .unwrap(),
+                    .expect("Couldn't transform result into Percent's Units because of integer overflow!"),
             )
         )
     }
