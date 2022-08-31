@@ -7,12 +7,12 @@ use finance::{
     currency::{Currency, SymbolOwned},
     fraction::Fraction,
     liability::Liability,
-    percent::Percent,
+    percent::{Percent, Units},
     price::{
         Price,
         total,
         total_of
-    },
+    }, ratio::Rational, 
 };
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::msg::ExecuteMsg::AddPriceAlarm;
@@ -355,14 +355,16 @@ where
         lease_lpn: Coin<Lpn>,
         liability_lpn: Coin<Lpn>,
     ) -> LiquidationStatus<Lpn> {
-        let liquidation_amount = lease_lpn.min(
-            Percent::from_ratio(
-                Percent::HUNDRED.units(),
-                (Percent::HUNDRED - self.liability.healthy_percent()).units(),
-            )
-                .of(liability_lpn - self.liability.healthy_percent().of(lease_lpn))
+        // from 'liability - liquidation = healthy% of (lease - liquidation)' follows
+        // 'liquidation = 100% / (100% - healthy%) of (liability - healthy% of lease)'
+        let multiplier = Rational::new(
+            Percent::HUNDRED,
+            Percent::HUNDRED - self.liability.healthy_percent(),
         );
-
+        let extra_liability = liability_lpn - self.liability.healthy_percent().of(lease_lpn);
+        let liquidation_amount =
+            <Rational<Percent> as Fraction<Units>>::of(&multiplier, extra_liability);
+        let liquidation_amount = lease_lpn.min(liquidation_amount);
         // TODO perform actual liquidation
 
         let info = CommonInfo {
