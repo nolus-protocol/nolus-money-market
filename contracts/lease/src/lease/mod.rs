@@ -1,9 +1,9 @@
-use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp, Uint128, wasm_execute, WasmMsg};
+use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp, wasm_execute, WasmMsg};
 use serde::Serialize;
 
 use contract_constants::LeaseReplyId;
 use finance::{
-    coin::{Amount, Coin},
+    coin::Coin,
     currency::{Currency, SymbolOwned},
     fraction::Fraction,
     liability::Liability,
