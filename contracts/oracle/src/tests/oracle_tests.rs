@@ -143,7 +143,7 @@ fn feed_prices() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::PriceFor {
-            denoms: vec!["A".to_string()],
+            denoms: HashSet::from(["A".to_string()]),
         },
     )
     .unwrap();
@@ -164,7 +164,7 @@ fn query_prices_unsuppoted_denom() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::PriceFor {
-            denoms: vec!["dummy".to_string()],
+            denoms: HashSet::from(["dummy".to_string()]),
         },
     )
     .unwrap();

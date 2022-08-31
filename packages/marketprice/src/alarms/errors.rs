@@ -8,4 +8,7 @@ pub enum AlarmError {
 
     #[error("Error on add alarm")]
     AddAlarm {},
+
+    #[error("{0}")]
+    Platform(#[from] platform::error::Error),
 }

@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -5,8 +7,9 @@ use cosmwasm_std::{
     Storage, Timestamp,
 };
 use cw2::set_contract_version;
-use finance::currency::{visit_any, AnyVisitor, Currency, Usdc};
+use finance::currency::{visit_any, AnyVisitor, Currency, Nls, SymbolOwned, Usdc};
 use finance::price::PriceDTO;
+use marketprice::market_price::PriceFeedsError;
 use marketprice::storage::{Denom, DenomPair, Price};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -71,11 +74,11 @@ pub fn execute(
             try_configure_supported_pairs(deps.storage, info, pairs)
         }
         ExecuteMsg::FeedPrices { prices } => {
-            try_feed_multiple_prices(deps.storage, env.block.time, info.sender, prices)
+            try_feed_prices(deps.storage, env.block.time, info.sender, prices)
         }
-        ExecuteMsg::AddPriceAlarm { target } => {
+        ExecuteMsg::AddPriceAlarm { alarm } => {
             validate_contract_addr(&deps.querier, &info.sender)?;
-            MarketAlarms::try_add_price_alarm(deps.storage, info.sender, target)
+            MarketAlarms::try_add_price_alarm(deps.storage, info.sender, alarm)
         }
         ExecuteMsg::RemovePriceAlarm {} => MarketAlarms::remove(deps.storage, info.sender),
     }
@@ -131,21 +134,23 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
-    let res = match msg {
-        QueryMsg::Config {} => to_binary(&query_config(deps)?)?,
-        QueryMsg::Feeders {} => to_binary(&MarketOracle::get_feeders(deps.storage)?)?,
-        QueryMsg::IsFeeder { address } => {
-            to_binary(&MarketOracle::is_feeder(deps.storage, &address)?)?
-        }
-        QueryMsg::PriceFor { denoms } => {
-            to_binary(&query_market_price_for(deps.storage, env, denoms)?)?
-        }
-        QueryMsg::SupportedDenomPairs {} => {
-            to_binary(&Config::load(deps.storage)?.supported_denom_pairs)?
-        }
-        _ => QueryWithLpn::cmd(deps, env, msg)?,
-    };
-    Ok(res)
+    match msg {
+        QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?),
+        QueryMsg::Feeders {} => Ok(to_binary(&MarketOracle::get_feeders(deps.storage)?)?),
+        QueryMsg::IsFeeder { address } => Ok(to_binary(&MarketOracle::is_feeder(
+            deps.storage,
+            &address,
+        )?)?),
+        QueryMsg::PriceFor { denoms } => Ok(to_binary(&query_market_price_for(
+            deps.storage,
+            env,
+            HashSet::from_iter(denoms.iter().cloned()),
+        )?)?),
+        QueryMsg::SupportedDenomPairs {} => Ok(to_binary(
+            &Config::load(deps.storage)?.supported_denom_pairs,
+        )?),
+        _ => Ok(QueryWithLpn::cmd(deps, env, msg)?),
+    }
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -156,7 +161,6 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
                 Some(d) => d,
                 None => return Ok(err_as_ok("No data")),
             };
-            // TODO: get lease address from the attributes and remove the hook
             MarketAlarms::remove(deps.storage, from_binary(&data)?)?;
             Response::new().add_attribute("alarm", "success")
         }
@@ -186,10 +190,15 @@ fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
 fn query_market_price_for(
     storage: &dyn Storage,
     env: Env,
-    denoms: Vec<Denom>,
-) -> Result<PricesResponse, ContractError> {
+    denoms: HashSet<Denom>,
+) -> Result<PricesResponse, PriceFeedsError> {
+    let config = Config::load(storage)?;
     Ok(PricesResponse {
-        prices: MarketOracle::get_price_for(storage, env.block.time, denoms)?,
+        prices: MarketOracle::new(config)
+            .get_prices(storage, env.block.time, denoms)?
+            .values()
+            .cloned()
+            .collect(),
     })
 }
 
@@ -253,7 +262,7 @@ fn try_register_feeder(
     Ok(Response::new())
 }
 
-fn try_feed_multiple_prices(
+fn try_feed_prices(
     storage: &mut dyn Storage,
     block_time: Timestamp,
     sender_raw: Addr,
@@ -265,34 +274,26 @@ fn try_feed_multiple_prices(
         return Err(ContractError::UnknownFeeder {});
     }
 
-    /*
-        TODO(kari, nina): To be designed:
-        Setup: price pairs (A,B), (B,C), (C,D) are available
-        If (B,C) is updated, (A,D) price is affected but hooks for it will not be notified
-    */
+    let config = Config::load(storage)?;
+    let oracle = MarketOracle::new(config.clone());
 
-    let hook_denoms = MarketAlarms::get_hook_denoms(storage)?;
+    // Store the new price feed
+    oracle.feed_prices(storage, block_time, &sender_raw, prices)?;
 
-    let mut affected_denoms: Vec<Denom> = vec![];
-    MarketOracle::feed_prices(storage, block_time, &sender_raw, prices.clone())?;
+    // Get all currencies registered for alarms
+    let hooks_currencies = MarketAlarms::get_hooks_currencies(storage)?;
 
-    for entry in prices {
-        if hook_denoms.contains(&entry.base().symbol) {
-            affected_denoms.push(entry.base().symbol);
-        }
-    }
+    //re-calculate the price of these currencies
+    let updated_prices: HashMap<SymbolOwned, Price> =
+        oracle.get_prices(storage, block_time, hooks_currencies)?;
 
-    //calculate the price of this denom againts the base for the oracle denom
-    let updated_prices: Vec<Price> =
-        MarketOracle::get_price_for(storage, block_time, affected_denoms)?;
-
-    // get all affected addresses
-    let _res = MarketAlarms::try_notify_hooks(storage, block_time, updated_prices);
-
-    // let response = MarketAlarms::update_global_time(storage, block_time)?;
-    // Ok(response.add_attribute("method", "try_feed_prices"))
-    let submsg = MarketAlarms::trigger_time_alarms(storage)?;
-    Ok(Response::new()
-        .add_submessage(submsg)
-        .add_attribute("method", "try_feed_prices"))
+    // try notify affected subscribers
+    let mut batch = MarketAlarms::try_notify_hooks(storage, updated_prices)?;
+    batch.schedule_execute_wasm_reply_error::<_, Nls>(
+        &config.timealarms_contract,
+        timealarms::msg::ExecuteMsg::Notify(),
+        None,
+        1,
+    )?;
+    Ok(Response::from(batch))
 }

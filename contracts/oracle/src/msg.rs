@@ -1,7 +1,12 @@
+use std::collections::HashSet;
+
 use cosmwasm_std::Addr;
 use finance::currency::SymbolOwned;
 use finance::price::PriceDTO;
-use marketprice::storage::{Denom, DenomPair, Price};
+use marketprice::{
+    alarms::Alarm,
+    storage::{Denom, DenomPair, Price},
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -31,7 +36,7 @@ pub enum ExecuteMsg {
         pairs: Vec<DenomPair>,
     },
     AddPriceAlarm {
-        target: Price,
+        alarm: Alarm,
     },
     RemovePriceAlarm {},
 }
@@ -46,7 +51,7 @@ pub enum QueryMsg {
     // check if an address belongs to a registered feeder
     IsFeeder { address: Addr },
     // returns the price of the denom against the base asset
-    PriceFor { denoms: Vec<Denom> },
+    PriceFor { denoms: HashSet<Denom> },
     Price { denom: Denom },
     // returns a list of supported denom pairs
     SupportedDenomPairs {},
