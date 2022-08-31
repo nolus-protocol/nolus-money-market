@@ -336,11 +336,13 @@ fn open_lease_impl(currency: SymbolStatic) {
     // ensure the attributes were relayed from the sub-message
     assert_eq!(
         res.events.len(),
-        if currency == TheCurrency::SYMBOL {
-            9
-        } else {
-            11
-        }
+        9
+        // TODO: Add test cases which are with currency different than LPN and uncomment section
+        // if currency == TheCurrency::SYMBOL {
+        //     9
+        // } else {
+        //     11
+        // }
     );
 
     // reflect only returns standard wasm-execute event
