@@ -1,10 +1,15 @@
+use std::collections::HashSet;
+
 use cosmwasm_std::Addr;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use finance::currency::SymbolOwned;
 use finance::price::PriceDTO;
-use marketprice::storage::{Denom, DenomPair, Price};
+use marketprice::{
+    alarms::Alarm,
+    storage::{Denom, DenomPair, Price},
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -32,7 +37,7 @@ pub enum ExecuteMsg {
         pairs: Vec<DenomPair>,
     },
     AddPriceAlarm {
-        target: PriceDTO,
+        alarm: Alarm,
     },
     RemovePriceAlarm {},
 }
@@ -47,7 +52,8 @@ pub enum QueryMsg {
     // check if an address belongs to a registered feeder
     IsFeeder { address: Addr },
     // returns the price of the denom against the base asset
-    PriceFor { denoms: Vec<Denom> },
+    PriceFor { denoms: HashSet<Denom> },
+    Price { denom: Denom },
     // returns a list of supported denom pairs
     SupportedDenomPairs {},
 }
@@ -62,8 +68,13 @@ pub struct ConfigResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct PriceResponse {
+pub struct PricesResponse {
     pub prices: Vec<Price>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct PriceResponse {
+    pub price: PriceDTO,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

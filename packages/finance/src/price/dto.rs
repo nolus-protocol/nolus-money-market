@@ -1,12 +1,9 @@
 use schemars::JsonSchema;
-use serde::{
-    de::DeserializeOwned,
-    Deserialize, Serialize,
-};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
     coin::{Coin, CoinDTO},
-    currency::{AnyVisitor, Currency, visit_any},
+    currency::{visit_any, AnyVisitor, Currency},
     error::Error,
     price::Price,
 };
@@ -78,10 +75,13 @@ pub fn execute<Cmd>(price: PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error
 where
     Cmd: WithPrice,
 {
-    visit_any(&price.amount.symbol().clone(), CVisitor {
-        price_dto: price,
-        cmd,
-    })
+    visit_any(
+        &price.amount.symbol().clone(),
+        CVisitor {
+            price_dto: price,
+            cmd,
+        },
+    )
 }
 
 struct CVisitor<Cmd>
@@ -106,11 +106,10 @@ where
         visit_any(
             &self.price_dto.amount_quote.symbol().clone(),
             QuoteCVisitor {
-                base: Coin::<C>::try_from(
-                    self.price_dto.amount,
-                ).expect("Got different currency in visitor!"),
+                base: Coin::<C>::try_from(self.price_dto.amount)
+                    .expect("Got different currency in visitor!"),
                 quote_dto: self.price_dto.amount_quote,
-                cmd: self.cmd
+                cmd: self.cmd,
             },
         )
     }
@@ -123,7 +122,7 @@ where
 struct QuoteCVisitor<C, Cmd>
 where
     C: Currency + Serialize + DeserializeOwned,
-    Cmd: WithPrice
+    Cmd: WithPrice,
 {
     base: Coin<C>,
     quote_dto: CoinDTO,
@@ -142,14 +141,11 @@ where
     where
         QuoteC: Currency + Serialize + DeserializeOwned,
     {
-        self.cmd.exec(
-            Price::new(
-                self.base,
-                Coin::<QuoteC>::try_from(
-                    self.quote_dto,
-                ).expect("Got different currency in visitor!"),
-            ),
-        )
+        self.cmd.exec(Price::new(
+            self.base,
+            Coin::<QuoteC>::try_from(self.quote_dto)
+                .expect("Got different currency in visitor!"),
+        ))
     }
 
     fn on_unknown(self) -> Result<Self::Output, Self::Error> {

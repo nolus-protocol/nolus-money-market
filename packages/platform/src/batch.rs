@@ -1,10 +1,10 @@
-use cosmwasm_std::{Addr, Coin as CoinCw, CosmosMsg, Response, SubMsg, to_binary, WasmMsg};
+use cosmwasm_std::{to_binary, Addr, Coin as CoinCw, CosmosMsg, Response, SubMsg, WasmMsg};
 use serde::Serialize;
 
-use contract_constants::IdType;
 use finance::{coin::Coin, currency::Currency};
 
 use crate::{coin_legacy::to_cosmwasm_impl, error::Result};
+
 pub use crate::emit::{Emit, Emitter};
 
 #[derive(Default)]
@@ -20,20 +20,6 @@ impl Batch {
         let msg_cw = SubMsg::new(msg);
 
         self.msgs.push(msg_cw);
-    }
-
-    pub fn schedule_execute_batch_message<M, Id>(&mut self, msg: BatchMessage<M, Id>)
-    where
-        M: Into<CosmosMsg>,
-        Id: IdType<u64>,
-        u64: TryInto<Id>,
-    {
-        self.msgs.push(match msg {
-            BatchMessage::NoReply(msg) => SubMsg::new(msg),
-            BatchMessage::ReplyOnSuccess(msg, id) => SubMsg::reply_on_success(msg, id.sealed_downcast()),
-            BatchMessage::ReplyOnError(msg, id) => SubMsg::reply_on_error(msg, id.sealed_downcast()),
-            BatchMessage::AlwaysReply(msg, id) => SubMsg::reply_always(msg, id.sealed_downcast()),
-        });
     }
 
     pub fn schedule_execute_wasm_no_reply<M, C>(
@@ -53,42 +39,74 @@ impl Batch {
         Ok(())
     }
 
-    pub fn schedule_execute_wasm_on_success_reply<M, C, Id>(
+    pub fn schedule_execute_wasm_on_success_reply<M, C>(
         &mut self,
         addr: &Addr,
         msg: M,
         funds: Option<Coin<C>>,
-        reply_id: Id,
+        reply_id: u64,
     ) -> Result<()>
     where
         M: Serialize,
         C: Currency,
-        Id: IdType<u64>,
-        u64: TryInto<Id>,
     {
         let wasm_msg = Self::wasm_exec_msg(addr, msg, funds)?;
-        let msg_cw = SubMsg::reply_on_success(wasm_msg, reply_id.downcast());
+        let msg_cw = SubMsg::reply_on_success(wasm_msg, reply_id);
 
         self.msgs.push(msg_cw);
         Ok(())
     }
 
-    pub fn schedule_instantiate_wasm_on_success_reply<M, Id>(
+    pub fn schedule_execute_wasm_reply_always<M, C>(
+        &mut self,
+        addr: &Addr,
+        msg: M,
+        funds: Option<Coin<C>>,
+        reply_id: u64,
+    ) -> Result<()>
+    where
+        M: Serialize,
+        C: Currency,
+    {
+        let wasm_msg = Self::wasm_exec_msg(addr, msg, funds)?;
+        let msg_cw = SubMsg::reply_always(wasm_msg, reply_id);
+
+        self.msgs.push(msg_cw);
+        Ok(())
+    }
+
+    pub fn schedule_execute_wasm_reply_error<M, C>(
+        &mut self,
+        addr: &Addr,
+        msg: M,
+        funds: Option<Coin<C>>,
+        reply_id: u64,
+    ) -> Result<()>
+    where
+        M: Serialize,
+        C: Currency,
+    {
+        let wasm_msg = Self::wasm_exec_msg(addr, msg, funds)?;
+        let msg_cw = SubMsg::reply_on_error(wasm_msg, reply_id);
+
+        self.msgs.push(msg_cw);
+        Ok(())
+    }
+
+    pub fn schedule_instantiate_wasm_on_success_reply<M>(
         &mut self,
         code_id: u64,
         msg: M,
         funds: Option<Vec<CoinCw>>,
         label: &str,
         admin: Option<String>,
-        reply_id: Id,
+        reply_id: u64,
     ) -> Result<()>
     where
         M: Serialize,
-        Id: IdType<u64>,
-        u64: TryInto<Id>,
     {
         let wasm_msg = Self::wasm_init_msg(code_id, msg, funds, label, admin)?;
-        let msg_cw = SubMsg::reply_on_success(wasm_msg, reply_id.downcast());
+        let msg_cw = SubMsg::reply_on_success(wasm_msg, reply_id);
 
         self.msgs.push(msg_cw);
         Ok(())
@@ -157,18 +175,6 @@ impl From<Batch> for Response {
             .into_iter()
             .fold(Self::default(), |res, msg| res.add_submessage(msg))
     }
-}
-
-pub enum BatchMessage<M, Id>
-where
-    M: Into<CosmosMsg>,
-    Id: IdType<u64>,
-    u64: TryInto<Id>,
-{
-    NoReply(M),
-    ReplyOnSuccess(M, Id),
-    ReplyOnError(M, Id),
-    AlwaysReply(M, Id),
 }
 
 #[cfg(test)]

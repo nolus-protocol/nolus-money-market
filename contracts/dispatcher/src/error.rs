@@ -1,3 +1,5 @@
+use std::convert::Infallible;
+
 use cosmwasm_std::{Addr, StdError};
 use thiserror::Error;
 
@@ -14,6 +16,12 @@ pub enum ContractError {
 
     #[error("{0}")]
     Oracle(#[from] oracle::ContractError),
+
+    #[error("{0}")]
+    Finance(#[from] finance::error::Error),
+
+    #[error("{0}")]
+    FromInfallible(#[from] Infallible),
 
     #[error("Unauthorized")]
     Unauthorized {},

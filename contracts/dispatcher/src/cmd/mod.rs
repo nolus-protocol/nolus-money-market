@@ -1,24 +1,29 @@
-use cosmwasm_std::Timestamp;
+use cosmwasm_std::{QuerierWrapper, Timestamp};
 use finance::{
     coin::Coin,
     currency::{Currency, Nls},
 };
-use marketprice::storage::Price;
+use oracle::stub::OracleRef;
 use platform::batch::Batch;
 
 use crate::state::Config;
 
 mod dispatch;
-mod dispatcher;
-mod get_price;
+mod price_convert;
 
-pub struct GetPrice {}
+pub struct PriceConvert<Lpn>
+where
+    Lpn: Currency,
+{
+    amount: Coin<Lpn>,
+}
 
-pub struct Dispatch {
+pub struct Dispatch<'a> {
     last_dispatch: Timestamp,
-    price: Price,
+    oracle_ref: OracleRef,
     config: Config,
     block_time: Timestamp,
+    querier: QuerierWrapper<'a>,
 }
 
 pub struct Result<C>

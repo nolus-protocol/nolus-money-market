@@ -12,7 +12,7 @@ use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
 
-use crate::cmd::{Dispatch, GetPrice};
+use crate::cmd::Dispatch;
 use crate::error::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::Config;
@@ -125,23 +125,15 @@ pub fn try_dispatch(
     let last_dispatch = DispatchLog::last_dispatch(deps.storage)?;
     let oracle_address = config.oracle.as_ref().to_string();
     let oracle = OracleRef::try_from(oracle_address, deps.api, &deps.querier)?;
-    let price_resp = oracle.execute(GetPrice::new()?, &deps.querier)?;
 
     let lpp_address = config.lpp.as_ref().to_string();
     let lpp = LppRef::try_from(lpp_address.clone(), deps.api, &deps.querier)?;
     let emitter: Emitter = lpp.execute(
-        Dispatch::new(
-            last_dispatch,
-            price_resp.prices.first().expect("No price").to_owned(),
-            config,
-            block_time,
-        )?,
+        Dispatch::new(oracle, last_dispatch, config, block_time, deps.querier)?,
         &deps.querier,
     )?;
     // Store the current time for use for the next calculation.
     DispatchLog::update(deps.storage, env.block.time)?;
-
-    // let transaction_idx = env.transaction.expect("Error! No transaction index.");
 
     Ok(emitter
         .emit_tx_info(&env)

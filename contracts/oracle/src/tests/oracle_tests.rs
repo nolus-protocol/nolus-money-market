@@ -1,14 +1,14 @@
 use std::collections::HashSet;
 
 use crate::contract::{execute, query};
-use crate::msg::{ConfigResponse, ExecuteMsg, PriceResponse, QueryMsg};
+use crate::msg::{ConfigResponse, ExecuteMsg, PricesResponse, QueryMsg};
 use crate::tests::common::{
     dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test, CREATOR,
 };
 use crate::ContractError;
 
 use cosmwasm_std::testing::{mock_env, mock_info};
-use cosmwasm_std::{coins, from_binary, Addr, StdError};
+use cosmwasm_std::{coins, from_binary, Addr};
 use marketprice::storage::Price;
 
 use super::common::dummy_feed_prices_msg;
@@ -143,11 +143,11 @@ fn feed_prices() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::PriceFor {
-            denoms: vec!["A".to_string()],
+            denoms: HashSet::from(["A".to_string()]),
         },
     )
     .unwrap();
-    let value: PriceResponse = from_binary(&res).unwrap();
+    let value: PricesResponse = from_binary(&res).unwrap();
     assert_eq!(
         Price::new("A", 10, "B", 12),
         value.prices.first().unwrap().to_owned()
@@ -155,19 +155,19 @@ fn feed_prices() {
 }
 
 #[test]
+#[should_panic(expected = "Unsupported denom")]
 fn query_prices_unsuppoted_denom() {
     let (deps, _) = setup_test(dummy_default_instantiate_msg());
 
     // query for unsupported denom should fail
-    let err = query(
+    query(
         deps.as_ref(),
         mock_env(),
         QueryMsg::PriceFor {
-            denoms: vec!["dummy".to_string()],
+            denoms: HashSet::from(["dummy".to_string()]),
         },
     )
-    .unwrap_err();
-    assert_eq!(StdError::generic_err("Unsupported denom"), err);
+    .unwrap();
 }
 
 #[test]

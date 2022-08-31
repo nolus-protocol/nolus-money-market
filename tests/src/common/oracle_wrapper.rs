@@ -1,8 +1,11 @@
 use cosmwasm_std::{Addr, Binary, coins, Deps, Env, StdError, StdResult, to_binary};
 use cw_multi_test::Executor;
 
-use finance::currency::{Currency, Usdc};
-use marketprice::storage::Price;
+use finance::{
+    coin::Coin,
+    currency::{Currency, Nls, Usdc},
+    price::{total_of, PriceDTO},
+};
 use oracle::{
     contract::{execute, instantiate, query, reply},
     ContractError,
@@ -18,9 +21,7 @@ pub struct MarketOracleWrapper {
 }
 
 impl MarketOracleWrapper {
-    pub fn with_contract_wrapper(
-        contract: OracleContractWrapper,
-    ) -> Self {
+    pub fn with_contract_wrapper(contract: OracleContractWrapper) -> Self {
         Self {
             contract_wrapper: Box::new(contract),
         }
@@ -77,10 +78,13 @@ impl Default for MarketOracleWrapper {
     }
 }
 
-pub fn mock_oracle_query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn mock_oracle_query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    let price = total_of(Coin::<Nls>::new(123456789))
+        .is(Coin::<Usdc>::new(100000000));
     let res = match msg {
-        QueryMsg::PriceFor { denoms: _ } => to_binary(&oracle::msg::PriceResponse {
-            prices: vec![Price::new(NATIVE_DENOM, 123456789, "UST", 1000000000)],
+        QueryMsg::PriceFor { denoms: _ }
+        | QueryMsg::Price { denom: _ } => to_binary(&oracle::msg::PriceResponse {
+            price: PriceDTO::try_from(price).unwrap(),
         }),
         _ => Ok(query(deps, env, msg)?),
     }?;
@@ -94,7 +98,7 @@ type OracleContractWrapper = ContractWrapper<
     InstantiateMsg,
     ContractError,
     QueryMsg,
-    StdError,
+    ContractError,
     cosmwasm_std::Empty,
     anyhow::Error,
     ContractError,

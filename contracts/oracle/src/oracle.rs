@@ -1,28 +1,41 @@
-use std::{collections::HashSet, convert::TryInto};
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryInto,
+};
 
 use cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage, Timestamp};
 use marketprice::{
     feeders::{PriceFeeders, PriceFeedersError},
-    market_price::{PriceFeeds, PriceQuery},
-    storage::{Denom, DenomPair, Price},
+    market_price::{PriceFeeds, PriceFeedsError, PriceQuery},
+    storage::{Denom, Price},
 };
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use std::convert::TryFrom;
 
-use finance::duration::Duration;
+use finance::{
+    currency::{Currency, SymbolOwned},
+    duration::Duration,
+    price::Price as FinPrice,
+};
 
 use crate::{state::config::Config, ContractError};
 const PRECISION_FACTOR: u128 = 1_000_000_000;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct MarketOracle {}
+pub struct MarketOracle {
+    config: Config,
+}
 
 impl MarketOracle {
     const FEEDERS: PriceFeeders<'static> = PriceFeeders::new("feeders");
     const MARKET_PRICE: PriceFeeds<'static> = PriceFeeds::new("market_price");
 
+    pub fn new(config: Config) -> Self {
+        Self { config }
+    }
     pub fn get_feeders(storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
         Self::FEEDERS.get(storage)
     }
@@ -69,35 +82,47 @@ impl MarketOracle {
         Ok(())
     }
 
-    pub fn get_price_for(
+    pub fn get_prices(
+        &self,
         storage: &dyn Storage,
         block_time: Timestamp,
-        denoms: Vec<Denom>,
-    ) -> StdResult<Vec<Price>> {
-        let config = Config::load(storage)?;
-        let mut prices: Vec<Price> = Vec::new();
+        denoms: HashSet<Denom>,
+    ) -> Result<HashMap<SymbolOwned, Price>, PriceFeedsError> {
+        let mut prices: HashMap<SymbolOwned, Price> = HashMap::new();
         for denom in denoms {
-            let price_query = Self::init_price_query(storage, denom.clone(), &config)?;
-            let resp = Self::MARKET_PRICE.get(storage, block_time, price_query);
-            match resp {
-                Ok(feed) => {
-                    prices.push(feed);
-                }
-                Err(err) => return Err(StdError::generic_err(err.to_string())),
-            };
+            let price_query = Self::init_price_query(storage, denom.clone(), &self.config)?;
+            let feed =
+                Self::MARKET_PRICE.get_converted_dto_price(storage, block_time, price_query)?;
+            prices.insert(denom, feed);
         }
         Ok(prices)
     }
 
+    pub fn get_single_price<C, QuoteC>(
+        storage: &dyn Storage,
+        block_time: Timestamp,
+        currency: Denom,
+    ) -> Result<FinPrice<C, QuoteC>, PriceFeedsError>
+    where
+        C: Currency,
+        QuoteC: Currency,
+    {
+        let config = Config::load(storage)?;
+
+        let price_query = Self::init_price_query(storage, currency, &config)?;
+        let price = Self::MARKET_PRICE.get_converted_price(storage, block_time, price_query)?;
+
+        Ok(price)
+    }
+
     pub fn feed_prices(
+        &self,
         storage: &mut dyn Storage,
         block_time: Timestamp,
         sender_raw: &Addr,
         prices: Vec<Price>,
     ) -> Result<(), ContractError> {
-        let config = Config::load(storage)?;
-
-        let filtered_prices = Self::remove_invalid_prices(config.supported_denom_pairs, prices);
+        let filtered_prices = self.remove_invalid_prices(prices);
         if filtered_prices.is_empty() {
             return Err(ContractError::UnsupportedDenomPairs {});
         }
@@ -107,7 +132,7 @@ impl MarketOracle {
             block_time,
             sender_raw,
             filtered_prices,
-            Duration::from_secs(config.price_feed_period_secs),
+            Duration::from_secs(self.config.price_feed_period_secs),
         )?;
 
         Ok(())
@@ -123,14 +148,13 @@ impl MarketOracle {
             .expect("usize overflow")
     }
 
-    fn remove_invalid_prices(
-        supported_denom_pairs: Vec<DenomPair>,
-        prices: Vec<Price>,
-    ) -> Vec<Price> {
+    fn remove_invalid_prices(&self, prices: Vec<Price>) -> Vec<Price> {
         prices
             .iter()
             .filter(|price| {
-                supported_denom_pairs.contains(&price.denom_pair())
+                self.config
+                    .supported_denom_pairs
+                    .contains(&price.denom_pair())
                     && !price
                         .base()
                         .symbol
@@ -143,9 +167,10 @@ impl MarketOracle {
 
 #[cfg(test)]
 mod tests {
+    use cosmwasm_std::Addr;
     use marketprice::storage::Price;
 
-    use crate::oracle::MarketOracle;
+    use crate::{oracle::MarketOracle, state::config::Config};
 
     #[test]
     // we ensure this rounds up (as it calculates needed votes)
@@ -178,7 +203,15 @@ mod tests {
             Price::new("B", 10, "B", 12),
         ];
 
-        let filtered = MarketOracle::remove_invalid_prices(supported_pairs, prices);
+        let filtered = MarketOracle::new(Config::new(
+            "denom".to_string(),
+            Addr::unchecked("owner"),
+            20,
+            5,
+            supported_pairs,
+            Addr::unchecked("timealarms_contract"),
+        ))
+        .remove_invalid_prices(prices);
 
         assert_eq!(vec![Price::new("B", 10, "A", 12),], filtered);
     }

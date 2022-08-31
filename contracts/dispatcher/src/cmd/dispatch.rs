@@ -1,21 +1,27 @@
 use crate::state::Config;
 use crate::ContractError;
 
+use cosmwasm_std::QuerierWrapper;
 use cosmwasm_std::StdResult;
 use cosmwasm_std::Timestamp;
 use finance::coin::Coin;
-use finance::currency::{Currency, Nls};
-use finance::price::total_of;
+use finance::currency::Currency;
 
+use finance::currency::Nls;
+use finance::duration::Duration;
+use finance::interest::InterestPeriod;
 use lpp::stub::{Lpp as LppTrait, WithLpp};
-use marketprice::storage::Price;
-use platform::batch::{Emit, Emitter};
+use oracle::stub::OracleRef;
+use platform::batch::Batch;
+use platform::batch::Emit;
+use platform::batch::Emitter;
 use serde::Serialize;
 
-use super::dispatcher::Dispatcher;
 use super::Dispatch;
+use super::PriceConvert;
+use crate::cmd::Result as DispatcherResult;
 
-impl WithLpp for Dispatch {
+impl<'a> WithLpp for Dispatch<'a> {
     type Output = Emitter;
     type Error = ContractError;
 
@@ -24,13 +30,35 @@ impl WithLpp for Dispatch {
         Lpp: LppTrait<Lpn>,
         Lpn: Currency + Serialize,
     {
-        let amount_native: Coin<Nls> = self.price.quote().amount.into();
-        let amount: Coin<Lpn> = self.price.base().amount.into();
+        // get LPP balance: TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
+        let resp = lpp.lpp_balance()?;
+        let lpp_balance: Coin<Lpn> = resp.balance;
 
-        let native_price = total_of(amount_native).is(amount);
+        // get annual percentage of return from configuration
+        let arp_permille = self.config.tvl_to_apr.get_apr(lpp_balance.into())?;
 
-        let result = Dispatcher::new(lpp, self.last_dispatch, self.config, self.block_time)?
-            .dispatch(native_price)?;
+        // Calculate the reward in LPN,
+        // which matches TVLdenom, since the last calculation
+        let reward_in_lppdenom = InterestPeriod::with_interest(arp_permille)
+            .from(self.last_dispatch)
+            .spanning(Duration::between(self.last_dispatch, self.block_time))
+            .interest(lpp_balance);
+
+        if reward_in_lppdenom.is_zero() {
+            return Err(ContractError::ZeroReward {});
+        }
+
+        let reward_unls = self
+            .oracle_ref
+            .execute(PriceConvert::with(reward_in_lppdenom)?, &self.querier)?;
+
+        let result = DispatcherResult {
+            batch: self.create_response(reward_unls)?,
+            receipt: super::Receipt {
+                in_stable: reward_in_lppdenom,
+                in_nls: reward_unls,
+            },
+        };
         Ok(result
             .batch
             .into_emitter("tr-rewards")
@@ -46,18 +74,52 @@ impl WithLpp for Dispatch {
     }
 }
 
-impl Dispatch {
+impl<'a> Dispatch<'a> {
     pub fn new(
+        oracle_ref: OracleRef,
         last_dispatch: Timestamp,
-        price: Price,
         config: Config,
         block_time: Timestamp,
-    ) -> StdResult<Dispatch> {
+        querier: QuerierWrapper<'a>,
+    ) -> StdResult<Dispatch<'a>> {
         Ok(Self {
+            oracle_ref,
             last_dispatch,
-            price,
             config,
             block_time,
+            querier,
         })
+    }
+
+    fn create_response(&self, reward: Coin<Nls>) -> Result<Batch, ContractError> {
+        let mut batch = Batch::default();
+        // Prepare a Send Rewards for the amount of Rewards_uNLS to the Treasury.
+        batch
+            .schedule_execute_wasm_no_reply::<_, Nls>(
+                &self.config.treasury,
+                treasury::msg::ExecuteMsg::SendRewards { amount: reward },
+                None,
+            )
+            .map_err(ContractError::from)?;
+
+        batch
+            .schedule_execute_wasm_no_reply::<_, Nls>(
+                &self.config.lpp,
+                lpp::msg::ExecuteMsg::DistributeRewards {},
+                Some(reward),
+            )
+            .map_err(ContractError::from)?;
+
+        batch
+            .schedule_execute_wasm_no_reply::<_, Nls>(
+                &self.config.timealarms,
+                &timealarms::msg::ExecuteMsg::AddAlarm {
+                    time: self.block_time + Duration::from_hours(self.config.cadence_hours),
+                },
+                None,
+            )
+            .map_err(ContractError::from)?;
+
+        Ok(batch)
     }
 }

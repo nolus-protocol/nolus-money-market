@@ -9,27 +9,27 @@ use platform::batch::Batch;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
-    error::ContractError,
     msg::{ConfigResponse, PriceResponse, QueryMsg},
+    ContractError,
 };
 
 pub type Result<T> = StdResult<T, ContractError>;
 
-pub trait Oracle<Lpn>: Into<Batch>
+pub trait Oracle<OracleBase>: Into<Batch>
 where
-    Lpn: Currency,
+    OracleBase: Currency + Serialize,
 {
-    fn get_price(&self, denoms: Vec<Denom>) -> Result<PriceResponse>;
+    fn get_price(&self, denom: Denom) -> Result<PriceResponse>;
 }
 
 pub trait WithOracle {
     type Output;
     type Error;
 
-    fn exec<C: 'static, L>(self, lpp: L) -> StdResult<Self::Output, Self::Error>
+    fn exec<OracleBase, O>(self, oracle: O) -> StdResult<Self::Output, Self::Error>
     where
-        L: Oracle<C>,
-        C: Currency + Serialize;
+        O: Oracle<OracleBase>,
+        OracleBase: Currency + Serialize;
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> StdResult<Self::Output, Self::Error>;
 }
@@ -71,11 +71,12 @@ impl OracleRef {
             type Output = O;
             type Error = E;
 
-            fn on<C>(self) -> StdResult<Self::Output, Self::Error>
+            fn on<OracleBase>(self) -> StdResult<Self::Output, Self::Error>
             where
-                C: Currency + Serialize + DeserializeOwned + 'static,
+                OracleBase: Currency + Serialize + DeserializeOwned + 'static,
             {
-                self.cmd.exec(self.oracle_ref.as_stub::<C>(self.querier))
+                self.cmd
+                    .exec(self.oracle_ref.as_stub::<OracleBase>(self.querier))
             }
 
             fn on_unknown(self) -> StdResult<Self::Output, Self::Error> {
@@ -92,12 +93,15 @@ impl OracleRef {
         )
     }
 
-    fn as_stub<'a, C>(&'a self, querier: &'a QuerierWrapper) -> OracleStub<'a, C> {
+    fn as_stub<'a, OracleBase>(
+        &'a self,
+        querier: &'a QuerierWrapper,
+    ) -> OracleStub<'a, OracleBase> {
         OracleStub {
             addr: self.addr.clone(),
-            currency: PhantomData::<C>,
             querier,
             batch: Batch::default(),
+            _quote_currency: PhantomData::<OracleBase>,
         }
     }
 }
@@ -116,27 +120,28 @@ impl OracleRef {
     }
 }
 
-struct OracleStub<'a, C> {
+struct OracleStub<'a, OracleBase> {
     addr: Addr,
-    currency: PhantomData<C>,
+    // currency: PhantomData<C>,
+    _quote_currency: PhantomData<OracleBase>,
     querier: &'a QuerierWrapper<'a>,
     batch: Batch,
 }
 
-impl<'a, Lpn> Oracle<Lpn> for OracleStub<'a, Lpn>
+impl<'a, OracleBase> Oracle<OracleBase> for OracleStub<'a, OracleBase>
 where
-    Lpn: Currency + DeserializeOwned,
+    OracleBase: Currency + Serialize,
 {
-    fn get_price(&self, denoms: Vec<Denom>) -> Result<PriceResponse> {
-        let msg = QueryMsg::PriceFor { denoms };
+    fn get_price(&self, denom: Denom) -> Result<PriceResponse> {
+        let msg = QueryMsg::Price { denom };
         self.querier
             .query_wasm_smart(self.addr.clone(), &msg)
             .map_err(ContractError::from)
     }
 }
 
-impl<'a, C> From<OracleStub<'a, C>> for Batch {
-    fn from(stub: OracleStub<'a, C>) -> Self {
+impl<'a, OracleBase> From<OracleStub<'a, OracleBase>> for Batch {
+    fn from(stub: OracleStub<'a, OracleBase>) -> Self {
         stub.batch
     }
 }
