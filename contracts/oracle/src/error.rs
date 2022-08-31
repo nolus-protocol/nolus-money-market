@@ -52,6 +52,9 @@ pub enum ContractError {
     #[error("ParseError {err:?}")]
     ParseError { err: String },
 
+    #[error("{0}")]
+    Platform(#[from] platform::error::Error),
+
     #[error("Unknown currency")]
     UnknownCurrency {},
 }

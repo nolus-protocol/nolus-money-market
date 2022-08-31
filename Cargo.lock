@@ -522,6 +522,7 @@ dependencies = [
  "cw-storage-plus",
  "cw2",
  "finance",
+ "platform",
  "schemars",
  "serde",
  "thiserror",

@@ -9,8 +9,8 @@ use platform::batch::Batch;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
-    error::ContractError,
     msg::{ConfigResponse, PriceResponse, QueryMsg},
+    ContractError,
 };
 
 pub type Result<T> = StdResult<T, ContractError>;
