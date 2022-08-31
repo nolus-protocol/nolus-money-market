@@ -4,32 +4,22 @@ use cosmwasm_std::entry_point;
 use cw2::set_contract_version;
 
 use finance::price::PriceDTO;
-use platform::{
-    bank::BankStub,
-    batch::Emitter,
-};
+use platform::{bank::BankStub, batch::Emitter};
 
 use crate::{
     contract::{
-        alarms::price_alarm::PriceAlarm,
+        alarms::{LiquidationResult, price_alarm::PriceAlarm},
         open::OpenLoanReqResult,
     },
-    error::{
-        ContractError,
-        ContractResult
-    },
+    error::{ContractError, ContractResult},
     lease::{self, DownpaymentDTO, LeaseDTO},
     msg::{ExecuteMsg, NewLeaseForm, StateQuery},
 };
-use crate::contract::alarms::LiquidationResult;
 
 use self::{
     close::Close,
     open::{OpenLoanReq, OpenLoanResp},
-    repay::{
-        Repay,
-        RepayResult
-    },
+    repay::{Repay, RepayResult},
     state::LeaseState
 };
 
