@@ -7,7 +7,7 @@ use finance::{
     currency::{Currency, SymbolOwned},
     fraction::Fraction,
     liability::Liability,
-    percent::{Percent, Units},
+    percent::Percent,
     price::{
         Price,
         total,
@@ -344,20 +344,7 @@ where
 
         (
             liability_lpn,
-            Percent::from_permille(
-                finance::ratio_v2::Ratio::new(liability_lpn, lease_lpn)
-                    .of::<Amount, Units, Amount, Uint128>(Percent::HUNDRED.units()),
-            )
-            // Using current `finance::ratio`:
-            //
-            // Percent::from_permille(
-            //     Fraction::<Amount>::of::<Amount>(
-            //         &Rational::new(liability_lpn, lease_lpn),
-            //         Percent::HUNDRED.units().into(),
-            //     )
-            //         .try_into()
-            //         .expect("Couldn't transform result into Percent's Units because of integer overflow!"),
-            // )
+            Percent::from_ratio(liability_lpn, lease_lpn)
         )
     }
 
