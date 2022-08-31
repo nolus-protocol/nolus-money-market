@@ -316,9 +316,9 @@ where
                         liability_lpn,
                     );
                 } else if self.liability.third_liq_warn_percent() <= liability {
-                    (self.liability.third_liq_warn_percent(), WarningLevel::First)
+                    (self.liability.third_liq_warn_percent(), WarningLevel::Third)
                 } else if self.liability.second_liq_warn_percent() <= liability {
-                    (self.liability.second_liq_warn_percent(), WarningLevel::First)
+                    (self.liability.second_liq_warn_percent(), WarningLevel::Second)
                 } else if self.liability.first_liq_warn_percent() <= liability {
                     (self.liability.first_liq_warn_percent(), WarningLevel::First)
                 } else {
