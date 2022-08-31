@@ -314,14 +314,14 @@ fn open_lease_impl(currency: SymbolStatic) {
 
     let _time_alarms_addr: &str = test_case.timealarms.as_ref().unwrap().as_str(); // 1
 
-    let oracle_addr: &str = test_case.oracle.as_ref().unwrap().as_str(); // 2
+    let _oracle_addr: &str = test_case.oracle.as_ref().unwrap().as_str(); // 2
 
     let leaser_addr: &str = test_case.leaser_addr.as_ref().unwrap().as_str(); // 3
 
     let lease_addr: Addr = Addr::unchecked("contract4"); // 4
     let lease_addr: &str = lease_addr.as_str();
 
-    let res = test_case
+    let mut res = test_case
         .app
         .execute_contract(
             user_addr.clone(),
@@ -334,17 +334,24 @@ fn open_lease_impl(currency: SymbolStatic) {
         .unwrap();
 
     // ensure the attributes were relayed from the sub-message
-    assert_eq!(res.events.len(), 11);
+    assert_eq!(
+        res.events.len(),
+        if currency == TheCurrency::SYMBOL {
+            9
+        } else {
+            11
+        }
+    );
 
     // reflect only returns standard wasm-execute event
-    let leaser_exec = &res.events[0];
+    let leaser_exec = res.events.remove(0);
     assert_eq!(leaser_exec.ty.as_str(), "execute");
     assert_eq!(
         leaser_exec.attributes,
         [("_contract_addr", leaser_addr)]
     );
 
-    let lease_inst = &res.events[1];
+    let lease_inst = res.events.remove(0);
     assert_eq!(lease_inst.ty.as_str(), "instantiate");
     assert_eq!(
         lease_inst.attributes,
@@ -354,14 +361,14 @@ fn open_lease_impl(currency: SymbolStatic) {
         ]
     );
 
-    let lpp_exec = &res.events[2];
+    let lpp_exec = res.events.remove(0);
     assert_eq!(lpp_exec.ty.as_str(), "execute");
     assert_eq!(
         lpp_exec.attributes,
         [("_contract_addr", lpp_addr)]
     );
 
-    let lpp_wasm = &res.events[3];
+    let lpp_wasm = res.events.remove(0);
     assert_eq!(lpp_wasm.ty.as_str(), "wasm");
     assert_eq!(
         lpp_wasm.attributes,
@@ -371,7 +378,7 @@ fn open_lease_impl(currency: SymbolStatic) {
         ]
     );
 
-    let transfer_event = &res.events[4];
+    let transfer_event = res.events.remove(0);
     assert_eq!(transfer_event.ty.as_str(), "transfer");
     assert_eq!(
         transfer_event.attributes,
@@ -382,7 +389,7 @@ fn open_lease_impl(currency: SymbolStatic) {
         ]
     );
 
-    let lease_reply = &res.events[5];
+    let lease_reply = res.events.remove(0);
     assert_eq!(lease_reply.ty.as_str(), "reply");
     assert_eq!(
         lease_reply.attributes,
@@ -392,7 +399,7 @@ fn open_lease_impl(currency: SymbolStatic) {
         ]
     );
 
-    let lease_exec_open = &res.events[6];
+    let lease_exec_open = res.events.remove(0);
     assert_eq!(lease_exec_open.ty.as_str(), "wasm-ls-open");
     assert!(lease_exec_open.attributes.iter().any(
         |attribute| attribute == ("_contract_addr", lease_addr),
@@ -431,24 +438,27 @@ fn open_lease_impl(currency: SymbolStatic) {
         |attribute| attribute == ("downpayment-amount", "40"),
     ));
 
-    let oracle_exec = &res.events[7];
-    assert_eq!(oracle_exec.ty.as_str(), "execute");
-    assert_eq!(
-        oracle_exec.attributes,
-        [("_contract_addr", oracle_addr)]
-    );
+    // TODO: Add test cases which are with currency different than LPN and uncomment section
+    // if currency != Lpn::SYMBOL {
+    //     let oracle_exec = res.events.remove(0);
+    //     assert_eq!(oracle_exec.ty.as_str(), "execute");
+    //     assert_eq!(
+    //         oracle_exec.attributes,
+    //         [("_contract_addr", oracle_addr)]
+    //     );
+    //
+    //     let oracle_wasm = res.events.remove(0);
+    //     assert_eq!(oracle_wasm.ty.as_str(), "wasm");
+    //     assert_eq!(
+    //         oracle_wasm.attributes,
+    //         [
+    //             ("_contract_addr", oracle_addr),
+    //             ("method", "try_add_price_hook"),
+    //         ]
+    //     );
+    // }
 
-    let oracle_wasm = &res.events[8];
-    assert_eq!(oracle_wasm.ty.as_str(), "wasm");
-    assert_eq!(
-        oracle_wasm.attributes,
-        [
-            ("_contract_addr", oracle_addr),
-            ("method", "try_add_price_hook"),
-        ]
-    );
-
-    let leaser_reply = &res.events[9];
+    let leaser_reply = res.events.remove(0);
     assert_eq!(leaser_reply.ty.as_str(), "reply");
     assert_eq!(
         leaser_reply.attributes,
@@ -458,7 +468,7 @@ fn open_lease_impl(currency: SymbolStatic) {
         ]
     );
 
-    let lease_opened = &res.events[10];
+    let lease_opened = res.events.remove(0);
     assert_eq!(lease_opened.ty.as_str(), "wasm");
     assert_eq!(
         lease_opened.attributes,
@@ -467,8 +477,6 @@ fn open_lease_impl(currency: SymbolStatic) {
             ("lease_address", lease_addr)
         ]
     );
-
-    let lease_address = &res.events.last().unwrap().attributes.get(1).unwrap().value;
 
     assert_eq!(
         coins(460, currency),
@@ -479,7 +487,7 @@ fn open_lease_impl(currency: SymbolStatic) {
         test_case
             .app
             .wrap()
-            .query_all_balances(lease_address)
+            .query_all_balances(lease_addr)
             .unwrap()
     );
 }

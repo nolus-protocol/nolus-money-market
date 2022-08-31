@@ -190,7 +190,7 @@ where
 
         let receipt = self.loan.repay(payment, now, lease.clone())?;
 
-        let reschedule_batch = self.reschedule_from_repay(lease, lease_amount, &now)?;
+        let reschedule_batch = self.reschedule_on_repay(lease, lease_amount, &now)?;
 
         let (lease_dto, lpp) = self.into_dto();
 
@@ -244,6 +244,8 @@ where
     where
         B: BankAccountView,
     {
+        assert_ne!(self.currency, Lpn::SYMBOL);
+
         let (liquidation_status, lease_amount) = self.on_alarm(now, account, lease.clone(), price)?;
 
         let reschedule_batch = (
@@ -419,7 +421,7 @@ where
     }
 
     #[inline]
-    fn reschedule_from_repay<A>(
+    fn reschedule_on_repay<A>(
         &self,
         lease: A,
         lease_amount: Coin<Lpn>,
@@ -446,7 +448,16 @@ where
     {
         let mut batch = Batch::default();
 
-        batch.schedule_execute_batch_message(self.reschedule_price_alarm(lease, lease_amount, now, liquidation)?);
+        if self.currency != Lpn::SYMBOL {
+            batch.schedule_execute_batch_message(
+                self.reschedule_price_alarm(
+                    lease,
+                    lease_amount,
+                    now,
+                    liquidation,
+                )?,
+            );
+        }
 
         Ok(batch)
     }

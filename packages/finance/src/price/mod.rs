@@ -61,19 +61,7 @@ where
     QuoteC: Currency,
 {
     fn new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
-        // // DISABLED AS WORKAROUND FOR TESTING
-        // debug_assert_ne!(TypeId::of::<C>(), TypeId::of::<QuoteC>());
-        #[cfg(debug_assertions)]
-        if TypeId::of::<C>() == TypeId::of::<QuoteC>() {
-            eprintln!(r#"
-                !!! WARNING !!!
-                Possible programmer mistake!
-                Currencies of "finance::price::Price" are EQUAL!
-                Please make sure, that logic is correct!
-
-                Source: {}:{}
-            "#, file!(), line!());
-        }
+        debug_assert_ne!(TypeId::of::<C>(), TypeId::of::<QuoteC>());
 
         let (amount_normalized, amount_quote_normalized) = amount.into_coprime_with(amount_quote);
         Self {

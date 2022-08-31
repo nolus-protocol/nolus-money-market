@@ -314,6 +314,7 @@ fn liquidation_warning(price: PriceDTO, percent: Percent, level: &str) {
 
 #[test]
 #[should_panic = "No liquidation warning emitted!"]
+#[ignore = "No support for currencies different than LPN"]
 fn liquidation_warning_0() {
     liquidation_warning(
         PriceDTO::new(
@@ -326,6 +327,7 @@ fn liquidation_warning_0() {
 }
 
 #[test]
+#[ignore = "No support for currencies different than LPN"]
 fn liquidation_warning_1() {
     liquidation_warning(
         PriceDTO::new(
@@ -338,6 +340,7 @@ fn liquidation_warning_1() {
 }
 
 #[test]
+#[ignore = "No support for currencies different than LPN"]
 fn liquidation_warning_2() {
     liquidation_warning(
         PriceDTO::new(
@@ -350,6 +353,7 @@ fn liquidation_warning_2() {
 }
 
 #[test]
+#[ignore = "No support for currencies different than LPN"]
 fn liquidation_warning_3() {
     liquidation_warning(
         PriceDTO::new(
