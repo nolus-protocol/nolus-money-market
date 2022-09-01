@@ -2,7 +2,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use finance::currency::SymbolOwned;
-use finance::price::PriceDTO;
 
 use crate::storage::Price;
 

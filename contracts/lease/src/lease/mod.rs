@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp, wasm_execute, WasmMsg};
+use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp};
 use serde::Serialize;
 
 use finance::{
@@ -13,7 +13,7 @@ use finance::{
     ratio::Rational,
 };
 use lpp::stub::Lpp as LppTrait;
-use market_price_oracle::{msg::ExecuteMsg::AddPriceAlarm, stub::Oracle as OracleTrait};
+use market_price_oracle::stub::Oracle as OracleTrait;
 use marketprice::alarms::Alarm;
 use platform::{
     bank::{BankAccount, BankAccountView},
@@ -150,7 +150,7 @@ where
     {
         self.initial_alarm_schedule(lease, account.balance()?, now, &LiquidationStatus::None)?;
 
-        let mut result = self.loan.open_loan_resp(resp).map({
+        let result = self.loan.open_loan_resp(resp).map({
             // Force move before closure to avoid edition warning from clippy;
             let customer = self.customer;
             let currency = self.currency;
@@ -264,7 +264,7 @@ where
 
         let (lease_dto, lpp, oracle) = self.into_dto();
 
-        let mut batch = lpp.into().merge(oracle.into());
+        let batch = lpp.into().merge(oracle.into());
 
         Ok(OnAlarmResult {
             batch,
@@ -721,8 +721,8 @@ mod tests {
     where
         OracleBase: Currency + Serialize,
     {
-        fn get_price(&self, denom: Denom) -> market_price_oracle::stub::Result<PriceResponse> {
-            todo!()
+        fn get_price(&self, _denom: Denom) -> market_price_oracle::stub::Result<PriceResponse> {
+            unimplemented!()
         }
 
         fn add_alarm(&mut self, alarm: Alarm) -> market_price_oracle::stub::Result<()> {
@@ -748,11 +748,11 @@ mod tests {
     where
         OracleBase: Currency + Serialize,
     {
-        fn get_price(&self, denom: Denom) -> market_price_oracle::stub::Result<PriceResponse> {
+        fn get_price(&self, _denom: Denom) -> market_price_oracle::stub::Result<PriceResponse> {
             unreachable!()
         }
 
-        fn add_alarm(&mut self, alarm: Alarm) -> market_price_oracle::stub::Result<()> {
+        fn add_alarm(&mut self, _alarm: Alarm) -> market_price_oracle::stub::Result<()> {
             unreachable!()
         }
     }

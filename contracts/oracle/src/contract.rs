@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use cosmwasm_std::{
-    Addr, Binary, Deps, DepsMut, Env, from_binary, MessageInfo, Reply, Response, StdError,
-    StdResult, Storage, Timestamp, to_binary,
+    Addr, Binary, Deps, DepsMut, Env, from_binary, MessageInfo, Reply, Response, Storage,
+    Timestamp, to_binary,
 };
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;

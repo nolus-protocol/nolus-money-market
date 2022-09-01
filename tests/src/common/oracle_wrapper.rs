@@ -1,15 +1,15 @@
-use cosmwasm_std::{Addr, Binary, coins, Deps, Env, StdError, StdResult, to_binary};
+use cosmwasm_std::{Addr, Binary, coins, Deps, Env, to_binary};
 use cw_multi_test::Executor;
 
 use finance::{
     coin::Coin,
     currency::{Currency, Nls, Usdc},
-    price::{total_of, PriceDTO},
+    price::{PriceDTO, total_of},
 };
 use oracle::{
     contract::{execute, instantiate, query, reply},
     ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg}
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
 
 use crate::common::{ContractWrapper, MockApp};
@@ -41,7 +41,8 @@ impl MarketOracleWrapper {
             feeders_percentage_needed: 1,
             supported_denom_pairs: vec![
                 ("UST".to_string(), NATIVE_DENOM.to_string()),
-                (Usdc::SYMBOL.to_string(), NATIVE_DENOM.to_string())],
+                (Usdc::SYMBOL.to_string(), NATIVE_DENOM.to_string()),
+            ],
             timealarms_addr: timealarms_addr.to_string(),
         };
 
@@ -59,18 +60,13 @@ impl MarketOracleWrapper {
             "oracle",
             None,
         )
-            .unwrap()
+        .unwrap()
     }
 }
 
 impl Default for MarketOracleWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(
-            execute,
-            instantiate,
-            query,
-        )
-            .with_reply(reply);
+        let contract = ContractWrapper::new(execute, instantiate, query).with_reply(reply);
 
         Self {
             contract_wrapper: Box::new(contract),
@@ -79,13 +75,13 @@ impl Default for MarketOracleWrapper {
 }
 
 pub fn mock_oracle_query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
-    let price = total_of(Coin::<Nls>::new(123456789))
-        .is(Coin::<Usdc>::new(100000000));
+    let price = total_of(Coin::<Nls>::new(123456789)).is(Coin::<Usdc>::new(100000000));
     let res = match msg {
-        QueryMsg::PriceFor { denoms: _ }
-        | QueryMsg::Price { denom: _ } => to_binary(&oracle::msg::PriceResponse {
-            price: PriceDTO::try_from(price).unwrap(),
-        }),
+        QueryMsg::PriceFor { denoms: _ } | QueryMsg::Price { denom: _ } => {
+            to_binary(&oracle::msg::PriceResponse {
+                price: PriceDTO::try_from(price).unwrap(),
+            })
+        }
         _ => Ok(query(deps, env, msg)?),
     }?;
 
