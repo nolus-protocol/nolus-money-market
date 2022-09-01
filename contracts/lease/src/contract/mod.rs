@@ -42,15 +42,6 @@ pub fn instantiate(
 ) -> ContractResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    deps.api
-        .addr_validate(form.market_price_oracle.as_str())
-        .map_err(|_| {
-            ContractError::InvalidParameters(format!(
-                "Invalid Market Price Oracle address provided! Input: {:?}",
-                form.market_price_oracle.as_str()
-            ))
-        })?;
-
     let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
     lease.store(deps.storage)?;
 
