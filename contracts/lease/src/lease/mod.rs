@@ -224,13 +224,6 @@ mod tests {
         {
             Ok(Coin::<C>::new(self.balance))
         }
-
-        fn balance_without_payment<C>(&self, _payment: &Coin<C>) -> PlatformResult<Coin<C>>
-        where
-            C: Currency,
-        {
-            Ok(Coin::new(self.balance))
-        }
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

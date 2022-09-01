@@ -62,7 +62,7 @@ where
         // TODO 'receive' the payment from the bank using any currency it might be in
         let payment = bank::received::<Lpn>(self.payment)?;
 
-        let lease_amount = self.account.balance_without_payment::<Lpn>(&payment)?;
+        let lease_amount = self.account.balance::<Lpn>()? - payment;
 
         let LeaseRepayResult {
             batch,

@@ -12,10 +12,6 @@ pub trait BankAccountView {
     fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: Currency;
-
-    fn balance_without_payment<C>(&self, payment: &Coin<C>) -> Result<Coin<C>>
-    where
-        C: Currency;
 }
 
 pub trait BankAccount: BankAccountView + Into<Batch> {
@@ -60,10 +56,6 @@ impl<'a> BankAccountView for BankView<'a> {
         let coin = self.querier.query_balance(self.addr, C::SYMBOL)?;
         from_cosmwasm_impl(coin)
     }
-
-    fn balance_without_payment<C>(&self, payment: &Coin<C>) -> Result<Coin<C>> where C: Currency {
-        Ok(self.balance()? - *payment)
-    }
 }
 
 pub struct BankStub<'a> {
@@ -86,10 +78,6 @@ impl<'a> BankAccountView for BankStub<'a> {
         C: Currency,
     {
         self.view.balance()
-    }
-
-    fn balance_without_payment<C>(&self, payment: &Coin<C>) -> Result<Coin<C>> where C: Currency {
-        self.view.balance_without_payment(payment)
     }
 }
 
