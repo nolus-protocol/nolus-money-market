@@ -9,7 +9,7 @@ use platform::batch::Batch;
 use crate::{
     error::ContractResult,
     lease::{Lease, LeaseDTO},
-    loan::Receipt,
+    loan::RepayReceipt,
 };
 
 impl<Lpn, Lpp, Oracle> Lease<Lpn, Lpp, Oracle>
@@ -31,9 +31,7 @@ where
 
         self.reschedule_on_repay(lease, lease_amount, &now)?;
 
-        let (lease_dto, lpp, oracle) = self.into_dto();
-
-        let batch = Into::<Batch>::into(lpp).merge(oracle.into());
+        let (lease_dto, batch) = self.into_dto();
 
         Ok(Result {
             batch,
@@ -49,5 +47,5 @@ where
 {
     pub batch: Batch,
     pub lease_dto: LeaseDTO,
-    pub receipt: Receipt<Lpn>,
+    pub receipt: RepayReceipt<Lpn>,
 }

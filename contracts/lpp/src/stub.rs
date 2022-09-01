@@ -5,13 +5,10 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use finance::{
     coin::Coin,
-    currency::{AnyVisitor, Currency, SymbolOwned, visit_any},
+    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
 };
 use platform::{
-    batch::{
-        Batch,
-        ReplyId
-    },
+    batch::{Batch, ReplyId},
     reply::from_execute,
 };
 
@@ -27,7 +24,7 @@ use crate::{
 pub type Result<T> = StdResult<T, ContractError>;
 
 // TODO split into LppBorrow, LppLend, and LppAdmin traits
-pub trait Lpp<Lpn>: Into<Batch>
+pub trait Lpp<Lpn>: Into<LppBatch>
 where
     Lpn: Currency,
 {
@@ -72,29 +69,6 @@ pub struct LppRef {
 }
 
 impl LppRef {
-    fn try_from_maybe_borrow<A>(
-        addr_raw: String,
-        api: &A,
-        querier: &QuerierWrapper,
-        open_loan_req_id: Option<ReplyId>,
-    ) -> Result<Self>
-    where
-        A: ?Sized + Api,
-    {
-        let addr = api.addr_validate(&addr_raw)?;
-
-        let resp: QueryConfigResponse =
-            querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
-
-        let currency = resp.lpn_symbol;
-
-        Ok(Self {
-            addr,
-            currency,
-            open_loan_req_id,
-        })
-    }
-
     pub fn try_from<A>(
         addr_raw: String,
         api: &A,
@@ -128,7 +102,11 @@ impl LppRef {
         )
     }
 
-    pub fn execute<V, O, E>(&self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
+    pub fn addr(&self) -> &Addr {
+        &self.addr
+    }
+
+    pub fn execute<V, O, E>(self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
     where
         V: WithLpp<Output = O, Error = E>,
     {
@@ -137,7 +115,7 @@ impl LppRef {
             V: WithLpp<Output = O, Error = E>,
         {
             cmd: V,
-            lpp_ref: &'a LppRef,
+            lpp_ref: LppRef,
             querier: &'a QuerierWrapper<'a>,
         }
 
@@ -152,15 +130,15 @@ impl LppRef {
             where
                 C: Currency + Serialize + DeserializeOwned,
             {
-                self.cmd.exec(self.lpp_ref.as_stub::<C>(self.querier))
+                self.cmd.exec(self.lpp_ref.into_stub::<C>(self.querier))
             }
 
             fn on_unknown(self) -> StdResult<Self::Output, Self::Error> {
-                self.cmd.unknown_lpn(self.lpp_ref.currency.clone())
+                self.cmd.unknown_lpn(self.lpp_ref.currency)
             }
         }
         visit_any(
-            &self.currency,
+            &self.currency.clone(),
             CurrencyVisitor {
                 cmd,
                 lpp_ref: self,
@@ -169,13 +147,35 @@ impl LppRef {
         )
     }
 
-    fn as_stub<'a, C>(&'a self, querier: &'a QuerierWrapper) -> LppStub<'a, C> {
+    fn try_from_maybe_borrow<A>(
+        addr_raw: String,
+        api: &A,
+        querier: &QuerierWrapper,
+        open_loan_req_id: Option<ReplyId>,
+    ) -> Result<Self>
+    where
+        A: ?Sized + Api,
+    {
+        let addr = api.addr_validate(&addr_raw)?;
+
+        let resp: QueryConfigResponse =
+            querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
+
+        let currency = resp.lpn_symbol;
+
+        Ok(Self {
+            addr,
+            currency,
+            open_loan_req_id,
+        })
+    }
+
+    fn into_stub<'a, C>(self, querier: &'a QuerierWrapper) -> LppStub<'a, C> {
         LppStub {
-            addr: self.addr.clone(),
+            lpp_ref: self,
             currency: PhantomData::<C>,
             querier,
             batch: Batch::default(),
-            open_loan_req_id: self.open_loan_req_id,
         }
     }
 }
@@ -196,11 +196,18 @@ impl LppRef {
 }
 
 struct LppStub<'a, C> {
-    addr: Addr,
+    lpp_ref: LppRef,
     currency: PhantomData<C>,
     querier: &'a QuerierWrapper<'a>,
     batch: Batch,
-    open_loan_req_id: Option<ReplyId>,
+}
+
+impl<'a, Lpn> LppStub<'a, Lpn> {
+    fn open_loan_req_id(&self) -> ReplyId {
+        self.lpp_ref
+            .open_loan_req_id
+            .expect("LPP Ref not created with borrow feature!")
+    }
 }
 
 impl<'a, Lpn> Lpp<Lpn> for LppStub<'a, Lpn>
@@ -208,27 +215,24 @@ where
     Lpn: Currency + DeserializeOwned,
 {
     fn id(&self) -> Addr {
-        self.addr.clone()
+        self.lpp_ref.addr.clone()
     }
 
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {
         self.batch
             .schedule_execute_wasm_on_success_reply::<_, Lpn>(
-                &self.addr,
+                &self.id(),
                 ExecuteMsg::OpenLoan {
                     amount: amount.into(),
                 },
                 None,
-                self.open_loan_req_id.expect("LPP not created with borrow feature!"),
+                self.open_loan_req_id(),
             )
             .map_err(ContractError::from)
     }
 
     fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>> {
-        debug_assert_eq!(
-            resp.id,
-            self.open_loan_req_id.expect("LPP not created with borrow feature!"),
-        );
+        debug_assert_eq!(resp.id, self.open_loan_req_id(),);
 
         from_execute(resp)
             .map_err(Into::into)
@@ -241,7 +245,7 @@ where
 
     fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()> {
         self.batch
-            .schedule_execute_wasm_no_reply(&self.addr, ExecuteMsg::RepayLoan {}, Some(repayment))
+            .schedule_execute_wasm_no_reply(&self.id(), ExecuteMsg::RepayLoan {}, Some(repayment))
             .map_err(ContractError::from)
     }
 
@@ -250,7 +254,7 @@ where
             lease_addr: lease.into(),
         };
         self.querier
-            .query_wasm_smart(self.addr.clone(), &msg)
+            .query_wasm_smart(self.id(), &msg)
             .map_err(ContractError::from)
     }
 
@@ -264,7 +268,7 @@ where
             outstanding_time: by,
         };
         self.querier
-            .query_wasm_smart(self.addr.clone(), &msg)
+            .query_wasm_smart(self.id(), &msg)
             .map_err(ContractError::from)
     }
 
@@ -273,28 +277,28 @@ where
             amount: amount.into(),
         };
         self.querier
-            .query_wasm_smart(self.addr.clone(), &msg)
+            .query_wasm_smart(self.id(), &msg)
             .map_err(ContractError::from)
     }
 
     fn lpp_balance(&self) -> Result<LppBalanceResponse<Lpn>> {
         let msg = QueryMsg::LppBalance();
         self.querier
-            .query_wasm_smart(self.addr.clone(), &msg)
+            .query_wasm_smart(self.id(), &msg)
             .map_err(ContractError::from)
     }
 
     fn nlpn_price(&self) -> Result<PriceResponse<Lpn>> {
         let msg = QueryMsg::Price();
         self.querier
-            .query_wasm_smart(self.addr.clone(), &msg)
+            .query_wasm_smart(self.id(), &msg)
             .map_err(ContractError::from)
     }
 
     fn config(&self) -> Result<QueryConfigResponse> {
         let msg = QueryMsg::Config();
         self.querier
-            .query_wasm_smart(self.addr.clone(), &msg)
+            .query_wasm_smart(self.id(), &msg)
             .map_err(ContractError::from)
     }
 
@@ -303,7 +307,7 @@ where
             address: lender.into(),
         };
         self.querier
-            .query_wasm_smart(self.addr.clone(), &msg)
+            .query_wasm_smart(self.id(), &msg)
             .map_err(ContractError::from)
     }
 
@@ -312,21 +316,29 @@ where
             address: lender.into(),
         };
         self.querier
-            .query_wasm_smart(self.addr.clone(), &msg)
+            .query_wasm_smart(self.id(), &msg)
             .map_err(ContractError::from)
     }
 }
 
-impl<'a, C> From<LppStub<'a, C>> for Batch {
+pub struct LppBatch {
+    pub lpp_ref: LppRef,
+    pub batch: Batch,
+}
+
+impl<'a, C> From<LppStub<'a, C>> for LppBatch {
     fn from(stub: LppStub<'a, C>) -> Self {
-        stub.batch
+        Self {
+            lpp_ref: stub.lpp_ref,
+            batch: stub.batch,
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{
-        Addr, CosmosMsg, from_binary, QuerierWrapper, ReplyOn, Response, testing::MockQuerier,
+        from_binary, testing::MockQuerier, Addr, CosmosMsg, QuerierWrapper, ReplyOn, Response,
         WasmMsg,
     };
 
@@ -334,9 +346,11 @@ mod test {
         coin::Coin,
         currency::{Currency, Nls},
     };
-    use platform::batch::Batch;
 
-    use crate::{msg::ExecuteMsg, stub::LppRef};
+    use crate::{
+        msg::ExecuteMsg,
+        stub::{LppBatch, LppRef},
+    };
 
     use super::Lpp;
 
@@ -354,11 +368,11 @@ mod test {
         let borrow_amount = Coin::<Nls>::new(10);
         let querier = MockQuerier::default();
         let wrapper = QuerierWrapper::new(&querier);
-        let mut lpp_stub = lpp.as_stub(&wrapper);
+        let mut lpp_stub = lpp.into_stub(&wrapper);
         lpp_stub
             .open_loan_req(borrow_amount)
             .expect("open new loan request failed");
-        let batch: Batch = lpp_stub.into();
+        let LppBatch { lpp_ref: _, batch } = lpp_stub.into();
         let resp: Response = batch.into();
         assert_eq!(1, resp.messages.len());
         let msg = &resp.messages[0];

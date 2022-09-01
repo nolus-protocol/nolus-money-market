@@ -12,14 +12,14 @@ use finance::{
 };
 use lpp::{
     msg::QueryLoanResponse,
-    stub::{Lpp as LppTrait, LppRef},
+    stub::{Lpp as LppTrait, LppRef, LppBatch},
 };
 use platform::batch::Batch;
 
 use crate::error::{ContractError, ContractResult};
 
-use self::open::Result as OpenResult;
-pub(crate) use self::repay::Receipt;
+pub(crate) use self::open::Receipt as OpenReceipt;
+pub(crate) use self::repay::Receipt as RepayReceipt;
 pub use self::state::State;
 
 mod open;
@@ -78,14 +78,13 @@ impl LoanDTO {
         }
     }
 
-    pub(super) fn lpp(&self) -> &LppRef {
+    pub(crate) fn lpp(&self) -> &LppRef {
         &self.lpp
     }
 }
 
 pub struct Loan<Lpn, Lpp> {
     annual_margin_interest: Percent,
-    lpp_ref: LppRef,
     lpn: PhantomData<Lpn>,
     lpp: Lpp,
     interest_due_period: Duration,
@@ -101,7 +100,6 @@ where
     pub(super) fn from_dto(dto: LoanDTO, lpp: Lpp) -> Self {
         let res = Self {
             annual_margin_interest: dto.annual_margin_interest,
-            lpp_ref: dto.lpp,
             lpn: PhantomData,
             lpp,
             interest_due_period: dto.interest_due_period,
@@ -112,31 +110,30 @@ where
         res
     }
 
-    pub(super) fn into_dto(self) -> (LoanDTO, Lpp) {
+    pub(super) fn into_dto(self) -> (LoanDTO, Batch) {
+        let LppBatch{lpp_ref, batch} = self.lpp.into();
         let dto = LoanDTO::new_raw(
             self.annual_margin_interest,
-            self.lpp_ref,
+            lpp_ref,
             self.interest_due_period,
             self._grace_period,
             self.current_period,
         );
-        (dto, self.lpp)
+        (dto, batch)
     }
 
-    pub(crate) fn open_loan_req(mut self, amount: Coin<Lpn>) -> ContractResult<Batch> {
+    pub(crate) fn open_loan_req(&mut self, amount: Coin<Lpn>) -> ContractResult<()> {
         self.lpp.open_loan_req(amount)?;
 
-        Ok(self.into())
+        Ok(())
     }
 
-    pub(crate) fn open_loan_resp(self, resp: Reply) -> ContractResult<OpenResult<Lpn>> {
+    pub(crate) fn open_loan_resp(&mut self, resp: Reply) -> ContractResult<OpenReceipt<Lpn>> {
         let response = self.lpp.open_loan_resp(resp)?;
 
-        Ok(OpenResult {
+        Ok(OpenReceipt {
             annual_interest_rate: response.annual_interest_rate + self.annual_margin_interest,
             borrowed: response.principal_due,
-            loan_pool_id: self.lpp.id(),
-            batch: self.lpp.into(),
         })
     }
 
@@ -145,7 +142,7 @@ where
         payment: Coin<Lpn>,
         by: Timestamp,
         lease: Addr,
-    ) -> ContractResult<Receipt<Lpn>> {
+    ) -> ContractResult<RepayReceipt<Lpn>> {
         self.debug_check_start_due_before(by, "before the 'repay-by' time");
         self.debug_check_before_period_end(by);
 
@@ -154,7 +151,7 @@ where
             .ok_or(ContractError::LoanClosed())
             .map(|resp| (resp.principal_due, resp.interest_due))?;
 
-        let mut receipt = Receipt::default();
+        let mut receipt = RepayReceipt::default();
 
         let (change, mut loan_payment) = if self.overdue_at(by) {
             self.repay_previous_period(payment, by, lease, principal_due, &mut receipt)?
@@ -296,7 +293,7 @@ where
         by: Timestamp,
         lease: Addr,
         principal_due: Coin<Lpn>,
-        receipt: &mut Receipt<Lpn>,
+        receipt: &mut RepayReceipt<Lpn>,
     ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
         let (prev_margin_paid, change) = self.repay_margin_interest(principal_due, by, payment);
 
@@ -327,7 +324,7 @@ where
         by: Timestamp,
         principal_due: Coin<Lpn>,
         total_interest_due: Coin<Lpn>,
-        receipt: &mut Receipt<Lpn>,
+        receipt: &mut RepayReceipt<Lpn>,
         change: Coin<Lpn>,
     ) -> Coin<Lpn> {
         let mut loan_repay = Coin::default();
@@ -402,9 +399,9 @@ where
     }
 }
 
-impl<Lpn, Lpp> From<Loan<Lpn, Lpp>> for Batch
+impl<Lpn, Lpp> From<Loan<Lpn, Lpp>> for LppBatch
 where
-    Lpp: Into<Batch>,
+    Lpp: Into<LppBatch>,
 {
     fn from(loan: Loan<Lpn, Lpp>) -> Self {
         loan.lpp.into()
@@ -428,12 +425,12 @@ mod tests {
         QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
         QueryQuoteResponse, RewardsResponse,
     };
-    use lpp::stub::{Lpp, LppRef};
+    use lpp::stub::{Lpp, LppRef, LppBatch};
     use platform::bank::BankAccountView;
-    use platform::batch::Batch;
     use platform::error::Result as PlatformResult;
 
-    use crate::loan::{Loan, LoanDTO, Receipt};
+    use crate::loan::repay::Receipt as RepayReceipt;
+    use crate::loan::{Loan, LoanDTO};
     use crate::repay_id::ReplyId;
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(500); // 50%
@@ -525,9 +522,9 @@ mod tests {
         }
     }
 
-    impl From<LppLocalStub> for Batch {
+    impl From<LppLocalStub> for LppBatch {
         fn from(_: LppLocalStub) -> Self {
-            Batch::default()
+            unreachable!()
         }
     }
 
@@ -585,7 +582,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(receipt, {
-            let mut receipt = Receipt::default();
+            let mut receipt = RepayReceipt::default();
 
             receipt.pay_previous_margin(repay_coin);
 
@@ -624,7 +621,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(receipt, {
-            let mut receipt = Receipt::default();
+            let mut receipt = RepayReceipt::default();
 
             receipt.pay_current_margin(repay_coin);
 
@@ -657,7 +654,7 @@ mod tests {
         let margin_interest = MARGIN_INTEREST_RATE.of(lease_coin);
         let end_of_due_period = LEASE_START + Duration::YEAR;
         {
-            let mut exp_full_prev_margin = Receipt::default();
+            let mut exp_full_prev_margin = RepayReceipt::default();
             exp_full_prev_margin.pay_previous_margin(margin_interest);
             assert_eq!(
                 exp_full_prev_margin,
@@ -667,7 +664,7 @@ mod tests {
         }
 
         {
-            let mut exp_receipt = Receipt::default();
+            let mut exp_receipt = RepayReceipt::default();
             exp_receipt.pay_previous_interest(repay_coin);
             assert_eq!(
                 exp_receipt,
@@ -710,7 +707,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(receipt, {
-            let mut receipt = Receipt::default();
+            let mut receipt = RepayReceipt::default();
 
             receipt.pay_previous_margin(MARGIN_INTEREST_RATE.of(lease_coin));
 
@@ -747,7 +744,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(receipt, {
-            let mut receipt = Receipt::default();
+            let mut receipt = RepayReceipt::default();
 
             receipt.pay_principal(lease_coin, repay_coin);
 
@@ -789,7 +786,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(receipt, {
-            let mut receipt = Receipt::default();
+            let mut receipt = RepayReceipt::default();
 
             receipt.pay_previous_margin(MARGIN_INTEREST_RATE.of(lease_coin));
 
@@ -828,7 +825,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(receipt, {
-            let mut receipt = Receipt::default();
+            let mut receipt = RepayReceipt::default();
 
             receipt.pay_principal(lease_coin, lease_coin);
 

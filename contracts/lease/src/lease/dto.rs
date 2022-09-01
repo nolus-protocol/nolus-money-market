@@ -9,11 +9,11 @@ use crate::loan::LoanDTO;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LeaseDTO {
-    pub(super) customer: Addr,
-    pub(super) currency: SymbolOwned,
-    pub(super) liability: Liability,
-    pub(super) loan: LoanDTO,
-    pub(super) oracle: OracleRef,
+    pub(crate) customer: Addr,
+    pub(crate) currency: SymbolOwned,
+    pub(crate) liability: Liability,
+    pub(crate) loan: LoanDTO,
+    pub(crate) oracle: OracleRef,
 }
 
 impl<'a> LeaseDTO {

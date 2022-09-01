@@ -95,9 +95,9 @@ where
         }
     }
 
-    pub(super) fn into_dto(self) -> (LeaseDTO, Lpp, Oracle) {
-        let (loan_dto, lpp) = self.loan.into_dto();
-        let (oracle_dto, oracle) = self.oracle.into_dto();
+    pub(super) fn into_dto(self) -> (LeaseDTO, Batch) {
+        let (loan_dto, lpp_batch) = self.loan.into_dto();
+        let (oracle_dto, oracle_batch) = self.oracle.into_dto();
 
         (
             LeaseDTO::new(
@@ -107,8 +107,7 @@ where
                 loan_dto,
                 oracle_dto,
             ),
-            lpp,
-            oracle,
+            lpp_batch.merge(oracle_batch),
         )
     }
 
@@ -189,7 +188,7 @@ mod tests {
     use lpp::{
         error::ContractError as LppError,
         msg::{LoanResponse, OutstandingInterest, QueryLoanResponse},
-        stub::{Lpp, LppRef},
+        stub::{Lpp, LppRef, LppBatch},
     };
     use market_price_oracle::msg::ExecuteMsg::AddPriceAlarm;
     use market_price_oracle::msg::PriceResponse;
@@ -295,7 +294,7 @@ mod tests {
         }
     }
 
-    impl From<LppLocalStub> for Batch {
+    impl From<LppLocalStub> for LppBatch {
         fn from(_: LppLocalStub) -> Self {
             unreachable!()
         }
@@ -304,7 +303,7 @@ mod tests {
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
     struct LppLocalStubUnreachable {}
 
-    impl From<LppLocalStubUnreachable> for Batch {
+    impl From<LppLocalStubUnreachable> for LppBatch {
         fn from(_: LppLocalStubUnreachable) -> Self {
             unreachable!()
         }

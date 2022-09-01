@@ -47,9 +47,7 @@ where
             self.reschedule_on_price_alarm(lease, lease_amount, &now, &liquidation_status)?;
         }
 
-        let (lease_dto, lpp, oracle) = self.into_dto();
-
-        let batch = Into::<Batch>::into(lpp).merge(oracle.into());
+        let (lease_dto, batch) = self.into_dto();
 
         Ok(OnAlarmResult {
             batch,

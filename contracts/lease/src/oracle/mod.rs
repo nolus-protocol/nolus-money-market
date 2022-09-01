@@ -29,8 +29,8 @@ where
         }
     }
 
-    pub fn into_dto(self) -> (OracleRef, Oracle) {
-        (self.oracle_ref, self.oracle)
+    pub fn into_dto(self) -> (OracleRef, Batch) {
+        (self.oracle_ref, self.oracle.into())
     }
 
     pub fn owned_by(&self, addr: &Addr) -> bool {
