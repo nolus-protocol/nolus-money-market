@@ -6,6 +6,7 @@ use finance::coin::Amount;
 use crate::common::{ContractWrapper, lease_wrapper::LeaseWrapperAddresses, MockApp};
 
 use super::{
+    ADMIN,
     dispatcher_wrapper::DispatcherWrapper,
     lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
     leaser_wrapper::LeaserWrapper,
@@ -15,7 +16,6 @@ use super::{
     profit_wrapper::ProfitWrapper,
     timealarms_wrapper::TimeAlarmsWrapper,
     treasury_wrapper::TreasuryWrapper,
-    ADMIN,
 };
 
 type OptionalContractWrapper = Option<
@@ -154,26 +154,16 @@ impl TestCase {
     }
 
     pub fn init_leaser(&mut self) -> &mut Self {
-        self.leaser_addr = Some(LeaserWrapper::default().instantiate(
-            &mut self.app,
-            self.lease_code_id.unwrap(),
-            self.lpp_addr.as_ref().unwrap(),
-            Addr::unchecked(String::default()),
-        ));
-        self.app.update_block(next_block);
-
-        self
-    }
-
-    pub fn init_leaser_with_oracle(&mut self) -> &mut Self {
-        self.leaser_addr = Some(LeaserWrapper::default().instantiate(
-            &mut self.app,
-            self.lease_code_id.unwrap(),
-            self.lpp_addr.as_ref().unwrap(),
-            self.oracle
-                .clone()
-                .expect("Market Price Oracle not initialized!"),
-        ));
+        self.leaser_addr = Some(
+            LeaserWrapper::default().instantiate(
+                &mut self.app,
+                self.lease_code_id.unwrap(),
+                self.lpp_addr.as_ref().unwrap(),
+                self.oracle
+                    .clone()
+                    .expect("Market Price Oracle not initialized!"),
+            ),
+        );
         self.app.update_block(next_block);
 
         self
@@ -210,21 +200,27 @@ impl TestCase {
         self.init_oracle_with_funds(custom_wrapper, 0)
     }
 
-    pub fn init_oracle_with_funds(&mut self, custom_wrapper: OptionalContractWrapperStd, amount: Amount) -> &mut Self {
+    pub fn init_oracle_with_funds(
+        &mut self,
+        custom_wrapper: OptionalContractWrapperStd,
+        amount: Amount,
+    ) -> &mut Self {
         let mocked_oracle = match custom_wrapper {
             Some(wrapper) => MarketOracleWrapper::with_contract_wrapper(wrapper),
             None => MarketOracleWrapper::default(),
         };
 
-        self.oracle = Some(mocked_oracle.instantiate(
-            &mut self.app,
-            &self.denom,
-            self.timealarms
-                .as_ref()
-                .expect("Time Alarms not initialized!")
-                .as_str(),
-            amount,
-        ));
+        self.oracle = Some(
+            mocked_oracle.instantiate(
+                &mut self.app,
+                &self.denom,
+                self.timealarms
+                    .as_ref()
+                    .expect("Time Alarms not initialized!")
+                    .as_str(),
+                amount,
+            ),
+        );
         self.app.update_block(next_block);
 
         self

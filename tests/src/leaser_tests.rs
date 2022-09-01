@@ -48,6 +48,8 @@ fn open_lease_not_in_lpn_currency() {
     let mut test_case = TestCase::new(lpn);
     test_case.init(&user_addr, coins(500, lpn));
     test_case.init_lpp(None);
+    test_case.init_timealarms();
+    test_case.init_oracle(None);
     test_case.init_leaser();
 
     let res = test_case.app.execute_contract(
@@ -80,7 +82,7 @@ fn open_multiple_loans() {
     test_case.init_lpp(None);
     test_case.init_timealarms();
     test_case.init_oracle(None);
-    test_case.init_leaser_with_oracle();
+    test_case.init_leaser();
 
     test_case
         .app
@@ -163,6 +165,8 @@ fn test_quote() {
     let mut test_case = TestCase::new(LPN);
     test_case.init(&user_addr, coins(500, LPN));
     test_case.init_lpp(None);
+    test_case.init_timealarms();
+    test_case.init_oracle(None);
     test_case.init_leaser();
 
     let resp: QuoteResponse = test_case
@@ -223,6 +227,8 @@ fn test_quote_fixed_rate() {
         lpp::contract::instantiate,
         mock_lpp_quote_query,
     )));
+    test_case.init_timealarms();
+    test_case.init_oracle(None);
     test_case.init_leaser();
 
     let resp: QuoteResponse = test_case
@@ -285,6 +291,8 @@ fn open_loans_lpp_fails() {
             lpp::contract::instantiate,
             lpp::contract::query,
         )))
+        .init_timealarms()
+        .init_oracle(None)
         .init_leaser();
 
     let _res = test_case
@@ -308,7 +316,7 @@ fn open_lease_impl(currency: SymbolStatic) {
     test_case.init_lpp(None);
     test_case.init_timealarms();
     test_case.init_oracle(None);
-    test_case.init_leaser_with_oracle();
+    test_case.init_leaser();
 
     let lpp_addr: &str = test_case.lpp_addr.as_ref().unwrap().as_str(); // 0
 
@@ -336,22 +344,18 @@ fn open_lease_impl(currency: SymbolStatic) {
     // ensure the attributes were relayed from the sub-message
     assert_eq!(
         res.events.len(),
-        9
-        // TODO: Add test cases which are with currency different than LPN and uncomment section
-        // if currency == TheCurrency::SYMBOL {
-        //     9
-        // } else {
-        //     11
-        // }
+        9 // TODO: Add test cases which are with currency different than LPN and uncomment section
+          // if currency == TheCurrency::SYMBOL {
+          //     9
+          // } else {
+          //     11
+          // }
     );
 
     // reflect only returns standard wasm-execute event
     let leaser_exec = res.events.remove(0);
     assert_eq!(leaser_exec.ty.as_str(), "execute");
-    assert_eq!(
-        leaser_exec.attributes,
-        [("_contract_addr", leaser_addr)]
-    );
+    assert_eq!(leaser_exec.attributes, [("_contract_addr", leaser_addr)]);
 
     let lease_inst = res.events.remove(0);
     assert_eq!(lease_inst.ty.as_str(), "instantiate");
@@ -365,19 +369,13 @@ fn open_lease_impl(currency: SymbolStatic) {
 
     let lpp_exec = res.events.remove(0);
     assert_eq!(lpp_exec.ty.as_str(), "execute");
-    assert_eq!(
-        lpp_exec.attributes,
-        [("_contract_addr", lpp_addr)]
-    );
+    assert_eq!(lpp_exec.attributes, [("_contract_addr", lpp_addr)]);
 
     let lpp_wasm = res.events.remove(0);
     assert_eq!(lpp_wasm.ty.as_str(), "wasm");
     assert_eq!(
         lpp_wasm.attributes,
-        [
-            ("_contract_addr", lpp_addr),
-            ("method", "try_open_loan"),
-        ]
+        [("_contract_addr", lpp_addr), ("method", "try_open_loan"),]
     );
 
     let transfer_event = res.events.remove(0);
@@ -395,50 +393,59 @@ fn open_lease_impl(currency: SymbolStatic) {
     assert_eq!(lease_reply.ty.as_str(), "reply");
     assert_eq!(
         lease_reply.attributes,
-        [
-            ("_contract_addr", lease_addr),
-            ("mode", "handle_success"),
-        ]
+        [("_contract_addr", lease_addr), ("mode", "handle_success"),]
     );
 
     let lease_exec_open = res.events.remove(0);
     assert_eq!(lease_exec_open.ty.as_str(), "wasm-ls-open");
-    assert!(lease_exec_open.attributes.iter().any(
-        |attribute| attribute == ("_contract_addr", lease_addr),
-    ));
-    assert!(lease_exec_open.attributes.iter().any(
-        |attribute| attribute.key == "height",
-    ));
-    assert!(lease_exec_open.attributes.iter().any(
-        |attribute| attribute.key == "idx",
-    ));
-    assert!(lease_exec_open.attributes.iter().any(
-        |attribute| attribute == ("id", lease_addr),
-    ));
-    assert!(lease_exec_open.attributes.iter().any(
-        |attribute| attribute == ("customer", USER),
-    ));
-    assert!(lease_exec_open.attributes.iter().any(
-        |attribute| attribute == ("air", "89"),
-    ));
-    assert!(lease_exec_open.attributes.iter().any(
-        |attribute| attribute == ("currency", currency),
-    ));
-    assert!(lease_exec_open.attributes.iter().any(
-        |attribute| attribute == ("loan-pool-id", lpp_addr),
-    ));
-    assert!(lease_exec_open.attributes.iter().any(
-        |attribute| attribute == ("loan-amount", "74"),
-    ));
-    assert!(lease_exec_open.attributes.iter().any(
-        |attribute| attribute == ("loan-symbol", currency),
-    ));
-    assert!(lease_exec_open.attributes.iter().any(
-        |attribute| attribute == ("downpayment-symbol", currency),
-    ));
-    assert!(lease_exec_open.attributes.iter().any(
-        |attribute| attribute == ("downpayment-amount", "40"),
-    ));
+    assert!(lease_exec_open
+        .attributes
+        .iter()
+        .any(|attribute| attribute == ("_contract_addr", lease_addr),));
+    assert!(lease_exec_open
+        .attributes
+        .iter()
+        .any(|attribute| attribute.key == "height",));
+    assert!(lease_exec_open
+        .attributes
+        .iter()
+        .any(|attribute| attribute.key == "idx",));
+    assert!(lease_exec_open
+        .attributes
+        .iter()
+        .any(|attribute| attribute == ("id", lease_addr),));
+    assert!(lease_exec_open
+        .attributes
+        .iter()
+        .any(|attribute| attribute == ("customer", USER),));
+    assert!(lease_exec_open
+        .attributes
+        .iter()
+        .any(|attribute| attribute == ("air", "89"),));
+    assert!(lease_exec_open
+        .attributes
+        .iter()
+        .any(|attribute| attribute == ("currency", currency),));
+    assert!(lease_exec_open
+        .attributes
+        .iter()
+        .any(|attribute| attribute == ("loan-pool-id", lpp_addr),));
+    assert!(lease_exec_open
+        .attributes
+        .iter()
+        .any(|attribute| attribute == ("loan-amount", "74"),));
+    assert!(lease_exec_open
+        .attributes
+        .iter()
+        .any(|attribute| attribute == ("loan-symbol", currency),));
+    assert!(lease_exec_open
+        .attributes
+        .iter()
+        .any(|attribute| attribute == ("downpayment-symbol", currency),));
+    assert!(lease_exec_open
+        .attributes
+        .iter()
+        .any(|attribute| attribute == ("downpayment-amount", "40"),));
 
     // TODO: Add test cases which are with currency different than LPN and uncomment section
     // if currency != Lpn::SYMBOL {
@@ -464,10 +471,7 @@ fn open_lease_impl(currency: SymbolStatic) {
     assert_eq!(leaser_reply.ty.as_str(), "reply");
     assert_eq!(
         leaser_reply.attributes,
-        [
-            ("_contract_addr", leaser_addr),
-            ("mode", "handle_success"),
-        ]
+        [("_contract_addr", leaser_addr), ("mode", "handle_success"),]
     );
 
     let lease_opened = res.events.remove(0);
@@ -486,14 +490,17 @@ fn open_lease_impl(currency: SymbolStatic) {
     );
     assert_eq!(
         coins(114, currency),
-        test_case
-            .app
-            .wrap()
-            .query_all_balances(lease_addr)
-            .unwrap()
+        test_case.app.wrap().query_all_balances(lease_addr).unwrap()
     );
 }
 
 fn lease_addr(events: &[Event]) -> String {
-    events.last().unwrap().attributes.get(1).unwrap().value.clone()
+    events
+        .last()
+        .unwrap()
+        .attributes
+        .get(1)
+        .unwrap()
+        .value
+        .clone()
 }

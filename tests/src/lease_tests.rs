@@ -4,12 +4,8 @@ use cosmwasm_std::{Addr, Timestamp};
 use cw_multi_test::{AppResponse, Executor};
 
 use finance::{
-    coin::Coin,
-    currency::Usdc,
-    duration::Duration,
-    interest::InterestPeriod,
-    percent::Percent,
-    price::PriceDTO
+    coin::Coin, currency::Usdc, duration::Duration, interest::InterestPeriod, percent::Percent,
+    price::PriceDTO,
 };
 use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
@@ -35,7 +31,7 @@ fn create_test_case() -> TestCase {
     test_case.init_lpp_with_funds(None, 5_000_000_000);
     test_case.init_timealarms();
     test_case.init_oracle_with_funds(None, 5_000_000);
-    test_case.init_leaser_with_oracle();
+    test_case.init_leaser();
 
     test_case
 }
@@ -255,18 +251,20 @@ fn price_alarm_unauthorized() {
     let downpayment = create_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment);
 
-    println!("{:?}", test_case.app.execute_contract(
-        Addr::unchecked(ADMIN),
-        lease_address,
-        &lease::msg::ExecuteMsg::PriceAlarm {
-            price: PriceDTO::new(
-                create_coin(1).into(),
-                create_coin(2).into(),
-            ),
-        },
-        &[to_cosmwasm(create_coin(10000))],
-    ).unwrap());
-
+    println!(
+        "{:?}",
+        test_case
+            .app
+            .execute_contract(
+                Addr::unchecked(ADMIN),
+                lease_address,
+                &lease::msg::ExecuteMsg::PriceAlarm {
+                    price: PriceDTO::new(create_coin(1).into(), create_coin(2).into(),),
+                },
+                &[to_cosmwasm(create_coin(10000))],
+            )
+            .unwrap()
+    );
 }
 
 fn liquidation_warning(price: PriceDTO, percent: Percent, level: &str) {
@@ -276,38 +274,53 @@ fn liquidation_warning(price: PriceDTO, percent: Percent, level: &str) {
     let downpayment = create_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment);
 
-    let response = test_case.app.execute_contract(
-        test_case.oracle.unwrap(),
-        lease_address,
-        &lease::msg::ExecuteMsg::PriceAlarm { price: price.clone() },
-        &[to_cosmwasm(create_coin(10000))],
-    ).unwrap();
+    let response = test_case
+        .app
+        .execute_contract(
+            test_case.oracle.unwrap(),
+            lease_address,
+            &lease::msg::ExecuteMsg::PriceAlarm {
+                price: price.clone(),
+            },
+            &[to_cosmwasm(create_coin(10000))],
+        )
+        .unwrap();
 
-    let event = response.events.iter().find(
-        |event| event.ty == "wasm-ls-liquidation-warning",
-    ).expect("No liquidation warning emitted!");
+    let event = response
+        .events
+        .iter()
+        .find(|event| event.ty == "wasm-ls-liquidation-warning")
+        .expect("No liquidation warning emitted!");
 
-    let attribute = event.attributes.iter().find(
-        |attribute| attribute.key == "customer",
-    ).expect("Customer attribute not present!");
+    let attribute = event
+        .attributes
+        .iter()
+        .find(|attribute| attribute.key == "customer")
+        .expect("Customer attribute not present!");
 
     assert_eq!(attribute.value, USER);
 
-    let attribute = event.attributes.iter().find(
-        |attribute| attribute.key == "ltv",
-    ).expect("LTV attribute not present!");
+    let attribute = event
+        .attributes
+        .iter()
+        .find(|attribute| attribute.key == "ltv")
+        .expect("LTV attribute not present!");
 
     assert_eq!(attribute.value, percent.units().to_string());
 
-    let attribute = event.attributes.iter().find(
-        |attribute| attribute.key == "level",
-    ).expect("Level attribute not present!");
+    let attribute = event
+        .attributes
+        .iter()
+        .find(|attribute| attribute.key == "level")
+        .expect("Level attribute not present!");
 
     assert_eq!(attribute.value, level);
 
-    let attribute = event.attributes.iter().find(
-        |attribute| attribute.key == "lease-asset",
-    ).expect("Lease Asset attribute not present!");
+    let attribute = event
+        .attributes
+        .iter()
+        .find(|attribute| attribute.key == "lease-asset")
+        .expect("Lease Asset attribute not present!");
 
     assert_eq!(&attribute.value, price.quote().symbol());
 }
@@ -317,10 +330,7 @@ fn liquidation_warning(price: PriceDTO, percent: Percent, level: &str) {
 #[ignore = "No support for currencies different than LPN"]
 fn liquidation_warning_0() {
     liquidation_warning(
-        PriceDTO::new(
-            create_coin(2085713).into(),
-            create_coin(1857159).into(),
-        ),
+        PriceDTO::new(create_coin(2085713).into(), create_coin(1857159).into()),
         LeaserWrapper::liability().healthy_percent(),
         "N/A",
     );

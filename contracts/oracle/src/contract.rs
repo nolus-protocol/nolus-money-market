@@ -40,15 +40,6 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    debug_assert!(deps
-        .querier
-        .query::<cosmwasm_std::Empty>(&cosmwasm_std::QueryRequest::Wasm(
-            cosmwasm_std::WasmQuery::ContractInfo {
-                contract_addr: msg.timealarms_addr.clone(),
-            }
-        ))
-        .is_ok());
-
     Config::new(
         msg.base_asset,
         info.sender,

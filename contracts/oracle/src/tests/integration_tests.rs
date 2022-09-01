@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{
-        to_binary, Addr, Binary, Coin, CosmosMsg, Deps, Empty, Env, StdResult, Uint128, WasmMsg,
+        Addr, Binary, Coin, CosmosMsg, Deps, Empty, Env, StdResult, to_binary, Uint128, WasmMsg,
     };
     use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
     use schemars::JsonSchema;
@@ -107,24 +107,24 @@ mod tests {
         CwTemplateContract(cw_template_contract_addr)
     }
     mod register_feeder {
-        // use super::*;
-        // use crate::msg::ExecuteMsg;
-        use super::{proper_instantiate, ADMIN, USER};
+        use cosmwasm_std::{Addr, Timestamp};
+        use cw_multi_test::Executor;
+
+        use marketprice::storage::Price;
+
         use crate::{
             msg::ExecuteMsg,
             tests::integration_tests::tests::{mock_app, timealarms_instantiate},
         };
-        use cosmwasm_std::{Addr, Timestamp};
-        use cw_multi_test::Executor;
-        use marketprice::storage::Price;
+
+        // use super::*;
+                // use crate::msg::ExecuteMsg;
+                use super::{ADMIN, proper_instantiate, USER};
+
         //TODO: remove after proper implementation of loan SC
         /// The mock for loan SC. It mimics the scheme for time notification.
         /// If GATE, it returns Ok on notifications, returns Err otherwise.
         mod mock_loan {
-
-            use crate::tests::integration_tests::tests::CwTemplateContract;
-
-            use super::ADMIN;
             use cosmwasm_std::{
                 Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
                 StdResult, Timestamp,
@@ -133,6 +133,11 @@ mod tests {
             use cw_storage_plus::Item;
             use schemars::JsonSchema;
             use serde::{Deserialize, Serialize};
+
+            use crate::tests::integration_tests::tests::CwTemplateContract;
+
+            use super::ADMIN;
+
             const GATE: Item<bool> = Item::new("alarm gate");
             #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
             #[serde(rename_all = "snake_case")]
@@ -193,7 +198,10 @@ mod tests {
         #[test]
         fn register_feeder() {
             let mut app = mock_app();
-            let cw_template_contract = proper_instantiate(&mut app, Addr::unchecked("timealarms"));
+            let timealarms = timealarms_instantiate(&mut app);
+            app.update_block(cw_multi_test::next_block);
+
+            let cw_template_contract = proper_instantiate(&mut app, timealarms.addr());
             // only admin can register new feeder, other user should result in error
             let msg = ExecuteMsg::RegisterFeeder {
                 feeder_address: USER.to_string(),
