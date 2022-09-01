@@ -72,6 +72,29 @@ pub struct LppRef {
 }
 
 impl LppRef {
+    fn try_from_maybe_borrow<A>(
+        addr_raw: String,
+        api: &A,
+        querier: &QuerierWrapper,
+        open_loan_req_id: Option<ReplyId>,
+    ) -> Result<Self>
+    where
+        A: ?Sized + Api,
+    {
+        let addr = api.addr_validate(&addr_raw)?;
+
+        let resp: QueryConfigResponse =
+            querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
+
+        let currency = resp.lpn_symbol;
+
+        Ok(Self {
+            addr,
+            currency,
+            open_loan_req_id,
+        })
+    }
+
     pub fn try_from<A>(
         addr_raw: String,
         api: &A,
@@ -80,15 +103,12 @@ impl LppRef {
     where
         A: ?Sized + Api,
     {
-        let addr = api.addr_validate(&addr_raw)?;
-        let resp: QueryConfigResponse =
-            querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
-        let currency = resp.lpn_symbol;
-        Ok(Self {
-            addr,
-            currency,
-            open_loan_req_id: None,
-        })
+        Self::try_from_maybe_borrow(
+            addr_raw,
+            api,
+            querier,
+            None
+        )
     }
 
     pub fn try_borrow_from<A>(
@@ -100,15 +120,12 @@ impl LppRef {
     where
         A: ?Sized + Api,
     {
-        let addr = api.addr_validate(&addr_raw)?;
-        let resp: QueryConfigResponse =
-            querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
-        let currency = resp.lpn_symbol;
-        Ok(Self {
-            addr,
-            currency,
-            open_loan_req_id: Some(open_loan_req_id),
-        })
+        Self::try_from_maybe_borrow(
+            addr_raw,
+            api,
+            querier,
+            Some(open_loan_req_id),
+        )
     }
 
     pub fn execute<V, O, E>(&self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
