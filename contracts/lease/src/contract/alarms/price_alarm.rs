@@ -59,7 +59,7 @@ where
         OracleC: Currency + Serialize,
         Oracle: OracleTrait<OracleC>,
     {
-        if !lease.sent_oracle(self.sender) {
+        if !lease.sent_by_oracle(self.sender) {
             return Err(Self::Error::Unauthorized {});
         }
 

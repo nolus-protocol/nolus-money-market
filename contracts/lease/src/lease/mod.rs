@@ -124,7 +124,7 @@ where
         &self.customer == addr
     }
 
-    pub(crate) fn sent_oracle(&self, addr: &Addr) -> bool {
+    pub(crate) fn sent_by_oracle(&self, addr: &Addr) -> bool {
         self.oracle.owned_by(addr)
     }
 
