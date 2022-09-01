@@ -6,7 +6,7 @@ use finance::{
     currency::{Currency, SymbolOwned},
     fraction::Fraction,
     percent::{Percent, Units},
-    price::{Price, PriceDTO, total, total_of},
+    price::{total, total_of, Price, PriceDTO},
     ratio::Rational,
 };
 use lpp::stub::Lpp as LppTrait;
@@ -85,41 +85,54 @@ where
         market_price: Price<Lpn, Lpn>,
     ) -> ContractResult<Status<Lpn>> {
         let loan_state = self.loan.state(now, lease)?;
+        if loan_state.is_none() {
+            return Ok(Status::None);
+        }
 
         Ok(loan_state.map_or(Status::None, |state| {
             let lease_lpn = total(lease_amount, market_price);
 
             let (liability_lpn, liability) = Self::liability(state, lease_lpn);
 
-            let (ltv, level) = if self.liability.max_percent() <= liability {
-                return self.liquidate(
+            if self.liability.max_percent() <= liability {
+                self.liquidate(
                     self.customer.clone(),
                     self.currency.clone(),
                     lease_lpn,
                     liability_lpn,
-                );
-            } else if self.liability.third_liq_warn_percent() <= liability {
-                (self.liability.third_liq_warn_percent(), WarningLevel::Third)
-            } else if self.liability.second_liq_warn_percent() <= liability {
-                (
-                    self.liability.second_liq_warn_percent(),
-                    WarningLevel::Second,
                 )
-            } else if self.liability.first_liq_warn_percent() <= liability {
-                (self.liability.first_liq_warn_percent(), WarningLevel::First)
             } else {
-                return Status::None;
-            };
-
-            Status::Warning(
-                LeaseInfo {
-                    customer: self.customer.clone(),
-                    ltv,
-                    lease_asset: self.currency.clone(),
-                },
-                level,
-            )
+                self.handle_warnings(liability)
+            }
         }))
+    }
+
+    fn handle_warnings(&self, liability: Percent) -> Status<Lpn> {
+        debug_assert!(liability < self.liability.max_percent());
+        if liability < self.liability.first_liq_warn_percent() {
+            return Status::None;
+        }
+
+        let (ltv, level) = if self.liability.third_liq_warn_percent() <= liability {
+            (self.liability.third_liq_warn_percent(), WarningLevel::Third)
+        } else if self.liability.second_liq_warn_percent() <= liability {
+            (
+                self.liability.second_liq_warn_percent(),
+                WarningLevel::Second,
+            )
+        } else {
+            debug_assert!(self.liability.first_liq_warn_percent() <= liability);
+            (self.liability.first_liq_warn_percent(), WarningLevel::First)
+        };
+        
+        Status::Warning(
+            LeaseInfo {
+                customer: self.customer.clone(),
+                ltv,
+                lease_asset: self.currency.clone(),
+            },
+            level,
+        )
     }
 
     fn liability_lpn(state: State<Lpn>) -> Coin<Lpn> {
