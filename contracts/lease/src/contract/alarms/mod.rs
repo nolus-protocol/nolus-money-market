@@ -11,7 +11,7 @@ use crate::{
     lease::{CommonInfo, LeaseDTO, LiquidationStatus, WarningLevel},
 };
 
-pub mod price_alarm;
+pub mod price;
 
 pub struct LiquidationResult
 {

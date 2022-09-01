@@ -8,7 +8,7 @@ use platform::{bank::BankStub, batch::Emitter};
 
 use crate::{
     contract::{
-        alarms::{LiquidationResult, price_alarm::PriceAlarm},
+        alarms::{LiquidationResult, price::PriceAlarm},
         open::OpenLoanReqResult,
     },
     error::{ContractError, ContractResult},
