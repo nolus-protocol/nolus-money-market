@@ -5,7 +5,7 @@ use lpp::stub::LppRef;
 use market_price_oracle::stub::OracleRef;
 
 use crate::{
-    constants::ReplyId, error::ContractResult, lease::LeaseDTO, loan::LoanDTO, msg::NewLeaseForm,
+    error::ContractResult, lease::LeaseDTO, loan::LoanDTO, msg::NewLeaseForm, repay_id::ReplyId,
 };
 
 impl NewLeaseForm {

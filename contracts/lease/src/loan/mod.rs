@@ -249,10 +249,9 @@ where
         let previous_margin_interest_due = margin_interest_overdue_period.interest(principal_due);
         let current_margin_interest_due = margin_interest_due_period.interest(principal_due);
 
-        // Fetching both to ensure it doesn't fetch it until the current block's time.
         let previous_interest_due =
-            self.load_loan_interest_due(lease.clone(), margin_interest_overdue_period.till())?;
-        let current_interest_due = self.load_loan_interest_due(lease, now)? - previous_interest_due;
+            self.load_loan_interest_due(lease, margin_interest_overdue_period.till())?;
+        let current_interest_due = loan_state.interest_due - previous_interest_due;
 
         Ok(Some(State {
             annual_interest: loan_state.annual_interest_rate,
@@ -434,8 +433,8 @@ mod tests {
     use platform::batch::Batch;
     use platform::error::Result as PlatformResult;
 
-    use crate::constants::ReplyId;
     use crate::loan::{Loan, LoanDTO, Receipt};
+    use crate::repay_id::ReplyId;
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(500); // 50%
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);

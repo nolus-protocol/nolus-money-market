@@ -9,14 +9,14 @@ use finance::price::PriceDTO;
 use platform::{bank::BankStub, batch::Emitter};
 
 use crate::{
-    constants::ReplyId,
     contract::{
         alarms::{LiquidationResult, price::PriceAlarm},
         open::OpenLoanReqResult,
     },
     error::{ContractError, ContractResult},
     lease::{self, DownpaymentDTO, LeaseDTO},
-    msg::{ExecuteMsg, NewLeaseForm, StateQuery}
+    msg::{ExecuteMsg, NewLeaseForm, StateQuery},
+    repay_id::ReplyId,
 };
 
 use self::{

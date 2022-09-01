@@ -199,9 +199,9 @@ mod tests {
     use platform::{bank::BankAccountView, batch::Batch, error::Result as PlatformResult};
 
     use crate::{
-        constants::ReplyId,
         loan::{Loan, LoanDTO},
         msg::StateResponse,
+        repay_id::ReplyId,
     };
 
     use super::{Lease, LeaseOracle};
