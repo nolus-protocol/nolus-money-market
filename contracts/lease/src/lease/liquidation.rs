@@ -6,7 +6,7 @@ use finance::{
     currency::{Currency, SymbolOwned},
     fraction::Fraction,
     percent::{Percent, Units},
-    price::{total, total_of, Price, PriceDTO},
+    price::{Price, PriceDTO, total, total_of},
     ratio::Rational,
 };
 use lpp::stub::Lpp as LppTrait;
@@ -85,9 +85,6 @@ where
         market_price: Price<Lpn, Lpn>,
     ) -> ContractResult<Status<Lpn>> {
         let loan_state = self.loan.state(now, lease)?;
-        if loan_state.is_none() {
-            return Ok(Status::None);
-        }
 
         Ok(loan_state.map_or(Status::None, |state| {
             let lease_lpn = total(lease_amount, market_price);
