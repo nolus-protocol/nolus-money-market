@@ -1,7 +1,7 @@
 use platform::generate_ids;
 
 generate_ids! {
-    ReplyId as u64 {
+    ReplyId as ::platform::batch::ReplyId {
         OpenLoanReq,
     }
 }

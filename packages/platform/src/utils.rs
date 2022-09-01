@@ -1,6 +1,6 @@
 #[macro_export]
 macro_rules! generate_ids {
-    ($enum_name: ident as $as_type: ident { $($value: ident),+ $(,)? }) => {
+    ($enum_name: ident as $as_type: ty { $($value: ident),+ $(,)? }) => {
         #[repr($as_type)]
         #[derive(Debug, Copy, Clone, Eq, PartialEq)]
         pub enum $enum_name {

@@ -18,7 +18,7 @@ impl NewLeaseForm {
         self.liability.invariant_held()?;
         let customer = api.addr_validate(&self.customer)?;
 
-        let lpp = LppRef::try_from(
+        let lpp = LppRef::try_borrow_from(
             self.loan.lpp.clone(),
             api,
             querier,

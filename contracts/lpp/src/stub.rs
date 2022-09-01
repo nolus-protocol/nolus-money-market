@@ -7,7 +7,13 @@ use finance::{
     coin::Coin,
     currency::{AnyVisitor, Currency, SymbolOwned, visit_any},
 };
-use platform::{batch::Batch, reply::from_execute};
+use platform::{
+    batch::{
+        Batch,
+        ReplyId
+    },
+    reply::from_execute,
+};
 
 use crate::{
     error::ContractError,
@@ -62,7 +68,7 @@ pub trait WithLpp {
 pub struct LppRef {
     addr: Addr,
     currency: SymbolOwned,
-    open_loan_req_id: u64,
+    open_loan_req_id: Option<ReplyId>,
 }
 
 impl LppRef {
@@ -70,7 +76,6 @@ impl LppRef {
         addr_raw: String,
         api: &A,
         querier: &QuerierWrapper,
-        open_loan_req_id: u64,
     ) -> Result<Self>
     where
         A: ?Sized + Api,
@@ -82,7 +87,27 @@ impl LppRef {
         Ok(Self {
             addr,
             currency,
-            open_loan_req_id,
+            open_loan_req_id: None,
+        })
+    }
+
+    pub fn try_borrow_from<A>(
+        addr_raw: String,
+        api: &A,
+        querier: &QuerierWrapper,
+        open_loan_req_id: ReplyId,
+    ) -> Result<Self>
+    where
+        A: ?Sized + Api,
+    {
+        let addr = api.addr_validate(&addr_raw)?;
+        let resp: QueryConfigResponse =
+            querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
+        let currency = resp.lpn_symbol;
+        Ok(Self {
+            addr,
+            currency,
+            open_loan_req_id: Some(open_loan_req_id),
         })
     }
 
@@ -140,7 +165,7 @@ impl LppRef {
 
 #[cfg(feature = "testing")]
 impl LppRef {
-    pub fn unchecked<A, Lpn>(addr: A, open_loan_req_id: u64) -> Self
+    pub fn unchecked<A, Lpn>(addr: A, open_loan_req_id: Option<u64>) -> Self
     where
         A: Into<String>,
         Lpn: Currency,
@@ -158,7 +183,7 @@ struct LppStub<'a, C> {
     currency: PhantomData<C>,
     querier: &'a QuerierWrapper<'a>,
     batch: Batch,
-    open_loan_req_id: u64,
+    open_loan_req_id: Option<ReplyId>,
 }
 
 impl<'a, Lpn> Lpp<Lpn> for LppStub<'a, Lpn>
@@ -177,16 +202,16 @@ where
                     amount: amount.into(),
                 },
                 None,
-                self.open_loan_req_id,
+                self.open_loan_req_id.expect("LPP not created with borrow feature!"),
             )
             .map_err(ContractError::from)
     }
 
     fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>> {
-        // Test against unexpected entry.
-        debug_assert_ne!(self.open_loan_req_id, 0xDEADC0DE);
-
-        debug_assert_eq!(resp.id, self.open_loan_req_id);
+        debug_assert_eq!(
+            resp.id,
+            self.open_loan_req_id.expect("LPP not created with borrow feature!"),
+        );
 
         from_execute(resp)
             .map_err(Into::into)
@@ -307,7 +332,7 @@ mod test {
         let lpp = LppRef {
             addr: addr.clone(),
             currency: ToOwned::to_owned(Nls::SYMBOL),
-            open_loan_req_id: OPEN_LOAN_REQ_ID,
+            open_loan_req_id: Some(OPEN_LOAN_REQ_ID),
         };
         let borrow_amount = Coin::<Nls>::new(10);
         let querier = MockQuerier::default();

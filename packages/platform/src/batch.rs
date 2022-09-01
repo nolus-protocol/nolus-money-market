@@ -1,11 +1,12 @@
-use cosmwasm_std::{to_binary, Addr, Coin as CoinCw, CosmosMsg, Response, SubMsg, WasmMsg};
+use cosmwasm_std::{Addr, Coin as CoinCw, CosmosMsg, Response, SubMsg, to_binary, WasmMsg};
 use serde::Serialize;
 
 use finance::{coin::Coin, currency::Currency};
 
 use crate::{coin_legacy::to_cosmwasm_impl, error::Result};
-
 pub use crate::emit::{Emit, Emitter};
+
+pub type ReplyId = u64;
 
 #[derive(Default)]
 pub struct Batch {
@@ -44,7 +45,7 @@ impl Batch {
         addr: &Addr,
         msg: M,
         funds: Option<Coin<C>>,
-        reply_id: u64,
+        reply_id: ReplyId,
     ) -> Result<()>
     where
         M: Serialize,
@@ -62,7 +63,7 @@ impl Batch {
         addr: &Addr,
         msg: M,
         funds: Option<Coin<C>>,
-        reply_id: u64,
+        reply_id: ReplyId,
     ) -> Result<()>
     where
         M: Serialize,
@@ -80,7 +81,7 @@ impl Batch {
         addr: &Addr,
         msg: M,
         funds: Option<Coin<C>>,
-        reply_id: u64,
+        reply_id: ReplyId,
     ) -> Result<()>
     where
         M: Serialize,
@@ -100,7 +101,7 @@ impl Batch {
         funds: Option<Vec<CoinCw>>,
         label: &str,
         admin: Option<String>,
-        reply_id: u64,
+        reply_id: ReplyId,
     ) -> Result<()>
     where
         M: Serialize,

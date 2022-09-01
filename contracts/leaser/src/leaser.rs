@@ -28,7 +28,7 @@ impl Leaser {
     pub fn query_quote(deps: Deps, downpayment: CoinDTO) -> Result<QuoteResponse, ContractError> {
         let config = Config::load(deps.storage)?;
 
-        let lpp = LppRef::try_from(
+        let lpp = LppRef::try_borrow_from(
             config.lpp_addr.to_string(),
             deps.api,
             &deps.querier,
