@@ -1,7 +1,6 @@
 #[macro_export]
 macro_rules! generate_ids {
     ($enum_name: ident as $as_type: ty { $($value: ident),+ $(,)? }) => {
-        #[repr($as_type)]
         #[derive(Debug, Copy, Clone, Eq, PartialEq)]
         pub enum $enum_name {
             $($value,)+
@@ -24,4 +23,33 @@ macro_rules! generate_ids {
             }
         }
     };
+}
+
+pub enum Either<L, R> {
+    Left(L),
+    Right(R),
+}
+
+impl<L, R> Either<L, R> {
+    pub fn either_into<T>(self) -> T
+    where
+        L: Into<T>,
+        R: Into<T>,
+    {
+        match self {
+            Self::Left(left) => left.into(),
+            Self::Right(right) => right.into(),
+        }
+    }
+
+    pub fn either_try_into<T>(self) -> Result<T, <L as TryInto<T>>::Error>
+    where
+        L: TryInto<T>,
+        R: TryInto<T, Error = <L as TryInto<T>>::Error>,
+    {
+        match self {
+            Self::Left(left) => left.try_into(),
+            Self::Right(right) => right.try_into(),
+        }
+    }
 }

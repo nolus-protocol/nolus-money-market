@@ -543,7 +543,7 @@ mod tests {
         addr: &str,
         loan_response: Option<LoanResponse<TestCurrency>>,
     ) -> Loan<TestCurrency, LppLocalStub> {
-        let lpp_ref = LppRef::unchecked::<_, Nls>(addr, ReplyId::OpenLoanReq as u64);
+        let lpp_ref = LppRef::unchecked::<_, Nls>(addr, Some(ReplyId::OpenLoanReq as u64));
 
         let loan_dto = LoanDTO::new(
             LEASE_START,

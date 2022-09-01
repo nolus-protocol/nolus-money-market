@@ -762,7 +762,7 @@ mod tests {
         L: Lpp<TestCurrency>,
         O: Oracle<TestCurrency>,
     {
-        let lpp_ref = LppRef::unchecked::<_, Nls>("lpp_addr", ReplyId::OpenLoanReq as u64);
+        let lpp_ref = LppRef::unchecked::<_, Nls>("lpp_addr", Some(ReplyId::OpenLoanReq as u64));
 
         let loan_dto = LoanDTO::new(
             LEASE_START,

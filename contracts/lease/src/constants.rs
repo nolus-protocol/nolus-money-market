@@ -1,7 +1,7 @@
-use platform::generate_ids;
+use platform::{batch::ReplyId as BatchReplyId, generate_ids};
 
 generate_ids! {
-    ReplyId as ::platform::batch::ReplyId {
+    ReplyId as BatchReplyId {
         OpenLoanReq,
     }
 }

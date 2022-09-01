@@ -1,8 +1,10 @@
-use cosmwasm_std::Response;
 use serde::Serialize;
 
 use finance::currency::Currency;
-use platform::batch::{Batch, Emit};
+use platform::{
+    batch::{Batch, Emit, Emitter},
+    utils::Either
+};
 
 use crate::{
     event::TYPE,
@@ -13,16 +15,16 @@ pub mod price_alarm;
 
 pub struct LiquidationResult
 {
-    pub(super) response: Response,
+    pub(super) response: Either<Batch, Emitter>,
     pub(super) lease_dto: LeaseDTO,
 }
 
-fn emit_events<Lpn>(liquidation: &LiquidationStatus<Lpn>, batch: Batch) -> Response
+fn emit_events<Lpn>(liquidation: &LiquidationStatus<Lpn>, batch: Batch) -> Either<Batch, Emitter>
 where
     Lpn: Currency + Serialize,
 {
-    match liquidation {
-        LiquidationStatus::None => batch.into(),
+    Either::Right(match liquidation {
+        LiquidationStatus::None => return Either::Left(batch.into()),
         &LiquidationStatus::Warning(ref info, level) => emit_warning(batch, info, level),
         LiquidationStatus::PartialLiquidation { .. } => {
             // TODO add event attributes
@@ -32,10 +34,10 @@ where
             // TODO add event attributes
             batch.into_emitter(TYPE::Liquidation).into()
         }
-    }
+    })
 }
 
-fn emit_warning(batch: Batch, info: &CommonInfo, level: WarningLevel) -> Response {
+fn emit_warning(batch: Batch, info: &CommonInfo, level: WarningLevel) -> Emitter {
     batch
         .into_emitter(TYPE::LiquidationWarning)
         .emit("customer", &info.customer)

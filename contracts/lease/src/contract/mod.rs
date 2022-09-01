@@ -107,7 +107,7 @@ pub fn execute(
 
             lease.store(deps.storage)?;
 
-            Ok(response)
+            Ok(response.either_into())
         }
     }
 }
