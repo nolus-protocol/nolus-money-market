@@ -70,22 +70,20 @@ where
     {
         let lease_amount = account.balance::<Lpn>().map_err(ContractError::from)?;
 
-        let status = self.check_liability(now, lease, lease_amount, price)?;
+        let status = self.act_on_liability(now, lease, lease_amount, price)?;
 
         // TODO run liquidation
 
         Ok((status, lease_amount))
     }
 
-    fn check_liability(
+    fn act_on_liability(
         &self,
         now: Timestamp,
         lease: Addr,
         lease_amount: Coin<Lpn>,
         market_price: Price<Lpn, Lpn>,
     ) -> ContractResult<Status<Lpn>> {
-        self.liability.invariant_held()?;
-
         let loan_state = self.loan.state(now, lease)?;
 
         Ok(loan_state.map_or(Status::None, |state| {
