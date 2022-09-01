@@ -35,15 +35,14 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, OracleC, Oracle>(
+    fn exec<Lpn, Lpp, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, OracleC, Oracle>,
+        lease: Lease<Lpn, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
-        OracleC: Currency + Serialize,
-        Oracle: OracleTrait<OracleC>,
+        Oracle: OracleTrait<Lpn>,
     {
         let resp = lease.state(self.now, &self.account, self.lease)?;
         to_binary(&resp).map_err(ContractError::from)

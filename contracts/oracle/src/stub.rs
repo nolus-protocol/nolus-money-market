@@ -1,9 +1,9 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
 use cosmwasm_std::{Addr, Api, QuerierWrapper, wasm_execute};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
-use finance::currency::{AnyVisitor, Currency, SymbolOwned, visit_any};
+use finance::currency::{Currency, SingleVisitor, SymbolOwned, visit};
 use marketprice::{alarms::Alarm, storage::Denom};
 use platform::batch::Batch;
 
@@ -23,13 +23,15 @@ where
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()>;
 }
 
-pub trait WithOracle {
+pub trait WithOracle<OracleBase>
+where
+    OracleBase: Currency + Serialize,
+{
     type Output;
     type Error;
 
-    fn exec<OracleBase, O>(self, oracle: O) -> StdResult<Self::Output, Self::Error>
+    fn exec<O>(self, oracle: O) -> StdResult<Self::Output, Self::Error>
     where
-        OracleBase: Currency + Serialize,
         O: Oracle<OracleBase>;
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> StdResult<Self::Output, Self::Error>;
@@ -56,30 +58,31 @@ impl OracleRef {
         &self.addr == addr
     }
 
-    pub fn execute<V, O, E>(&self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
+    pub fn execute<OracleBase, V, O, E>(&self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
     where
-        V: WithOracle<Output = O, Error = E>,
+        OracleBase: Currency + Serialize,
+        V: WithOracle<OracleBase, Output = O, Error = E>,
     {
-        struct CurrencyVisitor<'a, V, O, E>
+        struct CurrencyVisitor<'a, OracleBase, V, O, E>
         where
-            V: WithOracle<Output = O, Error = E>,
+            OracleBase: Currency + Serialize,
+            V: WithOracle<OracleBase, Output = O, Error = E>,
         {
             cmd: V,
             oracle_ref: &'a OracleRef,
+            _oracle_base: PhantomData<OracleBase>,
             querier: &'a QuerierWrapper<'a>,
         }
 
-        impl<'a, V, O, E> AnyVisitor for CurrencyVisitor<'a, V, O, E>
+        impl<'a, OracleBase, V, O, E> SingleVisitor<OracleBase> for CurrencyVisitor<'a, OracleBase, V, O, E>
         where
-            V: WithOracle<Output = O, Error = E>,
+            OracleBase: Currency + Serialize,
+            V: WithOracle<OracleBase, Output = O, Error = E>,
         {
             type Output = O;
             type Error = E;
 
-            fn on<OracleBase>(self) -> StdResult<Self::Output, Self::Error>
-            where
-                OracleBase: Currency + Serialize + DeserializeOwned + 'static,
-            {
+            fn on(self) -> StdResult<Self::Output, Self::Error> {
                 self.cmd
                     .exec(self.oracle_ref.as_stub::<OracleBase>(self.querier))
             }
@@ -88,11 +91,13 @@ impl OracleRef {
                 self.cmd.unknown_lpn(self.oracle_ref.currency.clone())
             }
         }
-        visit_any(
+
+        visit(
             &self.currency,
             CurrencyVisitor {
                 cmd,
                 oracle_ref: self,
+                _oracle_base: PhantomData,
                 querier,
             },
         )

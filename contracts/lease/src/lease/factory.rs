@@ -62,7 +62,7 @@ struct FactoryStage2<L, Lpn, Lpp> {
     _phantom_data: PhantomData<Lpn>,
 }
 
-impl<L, Lpn, Lpp> WithOracle for FactoryStage2<L, Lpn, Lpp>
+impl<L, Lpn, Lpp> WithOracle<Lpn> for FactoryStage2<L, Lpn, Lpp>
 where
     L: WithLease,
     Lpp: LppTrait<Lpn>,
@@ -71,10 +71,9 @@ where
     type Output = L::Output;
     type Error = L::Error;
 
-    fn exec<OracleBase, Oracle>(self, oracle: Oracle) -> Result<Self::Output, Self::Error>
+    fn exec<Oracle>(self, oracle: Oracle) -> Result<Self::Output, Self::Error>
     where
-        OracleBase: Currency + Serialize,
-        Oracle: OracleTrait<OracleBase>,
+        Oracle: OracleTrait<Lpn>,
     {
         self.cmd
             .exec(Lease::from_dto(self.lease_dto, self.lpp, oracle))

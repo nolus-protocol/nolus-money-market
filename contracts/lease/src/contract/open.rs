@@ -30,15 +30,14 @@ impl<'a> WithLease for OpenLoanReq<'a> {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, OracleC, Oracle>(
+    fn exec<Lpn, Lpp, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, OracleC, Oracle>,
+        lease: Lease<Lpn, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
-        OracleC: Currency + Serialize,
-        Oracle: OracleTrait<OracleC>,
+        Oracle: OracleTrait<Lpn>,
     {
         // TODO 'receive' the downpayment from the bank using any currency it might be in
         let downpayment = bank::received::<Lpn>(self.downpayment)?;
@@ -93,15 +92,14 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, OracleC, Oracle>(
+    fn exec<Lpn, Lpp, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, OracleC, Oracle>,
+        lease: Lease<Lpn, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
-        OracleC: Currency + Serialize,
-        Oracle: OracleTrait<OracleC>,
+        Oracle: OracleTrait<Lpn>,
     {
         let result = lease.open_loan_resp(
             self.env.contract.address.clone(),

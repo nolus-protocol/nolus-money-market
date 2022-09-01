@@ -22,12 +22,11 @@ use crate::{
 
 use super::LeaseDTO;
 
-impl<Lpn, Lpp, OracleC, Oracle> Lease<Lpn, Lpp, OracleC, Oracle>
+impl<Lpn, Lpp, Oracle> Lease<Lpn, Lpp, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
-    OracleC: Currency + Serialize,
-    Oracle: OracleTrait<OracleC>,
+    Oracle: OracleTrait<Lpn>,
 {
     pub(crate) fn on_price_alarm<B>(
         mut self,

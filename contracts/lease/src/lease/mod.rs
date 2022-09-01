@@ -1,10 +1,9 @@
 use std::marker::PhantomData;
 
-use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp};
+use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use serde::Serialize;
 
 use finance::{
-    coin::Coin,
     currency::{Currency, SymbolOwned},
     liability::Liability,
 };
@@ -26,9 +25,9 @@ pub(super) use self::{
     downpayment_dto::DownpaymentDTO,
     dto::LeaseDTO,
     liquidation::{LeaseInfo, OnAlarmResult, Status, WarningLevel},
-    repay::RepayResult,
+    repay::Result as RepayResult,
 };
-use self::{factory::Factory, open::Result as OpenResult};
+use self::factory::Factory;
 
 mod downpayment_dto;
 mod dto;
@@ -41,15 +40,14 @@ pub trait WithLease {
     type Output;
     type Error;
 
-    fn exec<Lpn, Lpp, OracleC, Oracle>(
+    fn exec<Lpn, Lpp, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, OracleC, Oracle>,
+        lease: Lease<Lpn, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
-        OracleC: Currency + Serialize,
-        Oracle: OracleTrait<OracleC>;
+        Oracle: OracleTrait<Lpn>;
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
 }
@@ -63,21 +61,20 @@ where
     lpp.execute(Factory::new(cmd, dto, querier), querier)
 }
 
-pub struct Lease<Lpn, Lpp, OracleC, Oracle> {
+pub struct Lease<Lpn, Lpp, Oracle> {
     customer: Addr,
     currency: SymbolOwned,
     liability: Liability,
     loan: Loan<Lpn, Lpp>,
-    _oracle_c: PhantomData<OracleC>,
-    oracle: LeaseOracle<OracleC, Oracle>,
+    _oracle_c: PhantomData<Lpn>,
+    oracle: LeaseOracle<Lpn, Oracle>,
 }
 
-impl<Lpn, Lpp, OracleC, Oracle> Lease<Lpn, Lpp, OracleC, Oracle>
+impl<Lpn, Lpp, Oracle> Lease<Lpn, Lpp, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
-    OracleC: Currency + Serialize,
-    Oracle: OracleTrait<OracleC>,
+    Oracle: OracleTrait<Lpn>,
 {
     pub(super) fn from_dto(dto: LeaseDTO, lpp: Lpp, oracle: Oracle) -> Self {
         assert_eq!(
@@ -123,47 +120,6 @@ where
         self.oracle.owned_by(addr)
     }
 
-    pub(crate) fn open_loan_req(self, downpayment: Coin<Lpn>) -> ContractResult<Batch> {
-        // TODO add a type parameter to this function to designate the downpayment currency
-        // TODO query the market price oracle to get the price of the downpayment currency to LPN
-        //  and calculate `downpayment` in LPN
-        let borrow = self.liability.init_borrow_amount(downpayment);
-
-        self.loan.open_loan_req(borrow).map_err(Into::into)
-    }
-
-    // TODO lease currency can be different than Lpn, therefore result's type parameter
-    pub(crate) fn open_loan_resp<B>(
-        mut self,
-        lease: Addr,
-        resp: Reply,
-        account: B,
-        now: &Timestamp,
-    ) -> ContractResult<OpenResult<Lpn>>
-    where
-        B: BankAccountView,
-    {
-        self.initial_alarm_schedule(lease, account.balance()?, now, &Status::None)?;
-
-        let result = self.loan.open_loan_resp(resp).map({
-            // Force move before closure to avoid edition warning from clippy;
-            let customer = self.customer;
-            let currency = self.currency;
-            let oracle = self.oracle;
-
-            |result| OpenResult {
-                batch: result.batch.merge(oracle.into()),
-                customer,
-                annual_interest_rate: result.annual_interest_rate,
-                currency,
-                loan_pool_id: result.loan_pool_id,
-                loan_amount: result.borrowed,
-            }
-        })?;
-
-        Ok(result)
-    }
-
     // TODO add the lease address as a field in Lease<>
     //  and populate it on LeaseDTO.execute as LeaseFactory
     pub(crate) fn close<B>(self, lease: Addr, mut account: B) -> ContractResult<Batch>
@@ -181,30 +137,6 @@ where
             }
             StateResponse::Closed() => Err(ContractError::LoanClosed()),
         }
-    }
-
-    pub(crate) fn repay(
-        mut self,
-        lease_amount: Coin<Lpn>,
-        payment: Coin<Lpn>,
-        now: Timestamp,
-        lease: Addr,
-    ) -> ContractResult<RepayResult<Lpn>> {
-        assert_eq!(self.currency, Lpn::SYMBOL);
-
-        let receipt = self.loan.repay(payment, now, lease.clone())?;
-
-        self.reschedule_on_repay(lease, lease_amount, &now)?;
-
-        let (lease_dto, lpp, oracle) = self.into_dto();
-
-        let batch = lpp.into().merge(oracle.into());
-
-        Ok(RepayResult {
-            batch,
-            lease_dto,
-            receipt,
-        })
     }
 
     pub(crate) fn state<B>(
@@ -493,7 +425,7 @@ mod tests {
         }
     }
 
-    fn create_lease<L, O>(lpp: L, oracle: O) -> Lease<TestCurrency, L, TestCurrency, O>
+    fn create_lease<L, O>(lpp: L, oracle: O) -> Lease<TestCurrency, L, O>
     where
         L: Lpp<TestCurrency>,
         O: Oracle<TestCurrency>,
@@ -532,7 +464,7 @@ mod tests {
     fn lease_setup(
         loan_response: Option<LoanResponse<TestCurrency>>,
         oracle_addr: Addr,
-    ) -> Lease<TestCurrency, LppLocalStub, TestCurrency, OracleLocalStub> {
+    ) -> Lease<TestCurrency, LppLocalStub, OracleLocalStub> {
         let lpp_stub = LppLocalStub {
             loan: loan_response,
         };
@@ -552,7 +484,7 @@ mod tests {
     }
 
     fn request_state(
-        lease: Lease<TestCurrency, LppLocalStub, TestCurrency, OracleLocalStub>,
+        lease: Lease<TestCurrency, LppLocalStub, OracleLocalStub>,
         bank_account: &BankStub,
     ) -> StateResponse<TestCurrency, TestCurrency> {
         lease
