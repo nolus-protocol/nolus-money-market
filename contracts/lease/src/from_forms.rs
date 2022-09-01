@@ -22,7 +22,7 @@ impl NewLeaseForm {
             self.loan.lpp.clone(),
             api,
             querier,
-            ReplyId::OpenLoanReq as u64,
+            ReplyId::OpenLoanReq.into(),
         )?;
 
         let oracle = OracleRef::try_from(self.market_price_oracle.to_string(), api, querier)?;

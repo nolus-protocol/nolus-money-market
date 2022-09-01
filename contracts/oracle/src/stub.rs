@@ -29,8 +29,8 @@ pub trait WithOracle {
 
     fn exec<OracleBase, O>(self, oracle: O) -> StdResult<Self::Output, Self::Error>
     where
-        O: Oracle<OracleBase>,
-        OracleBase: Currency + Serialize;
+        OracleBase: Currency + Serialize,
+        O: Oracle<OracleBase>;
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> StdResult<Self::Output, Self::Error>;
 }

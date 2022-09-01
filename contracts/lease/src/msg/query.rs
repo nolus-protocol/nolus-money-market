@@ -1,6 +1,7 @@
-use finance::{coin::Coin, currency::Currency, percent::Percent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use finance::{coin::Coin, currency::Currency, percent::Percent};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -10,8 +11,8 @@ pub struct StateQuery {}
 #[serde(rename_all = "snake_case")]
 pub enum StateResponse<C, Lpn>
 where
-    C: Currency,
-    Lpn: Currency,
+    C: Currency + Serialize,
+    Lpn: Currency + Serialize,
 {
     Opened {
         amount: Coin<C>,

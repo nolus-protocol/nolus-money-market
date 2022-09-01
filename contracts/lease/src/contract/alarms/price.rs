@@ -54,8 +54,8 @@ where
         lease: Lease<Lpn, Lpp, OracleC, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
-        Lpp: LppTrait<Lpn>,
         Lpn: Currency + Serialize,
+        Lpp: LppTrait<Lpn>,
         OracleC: Currency + Serialize,
         Oracle: OracleTrait<OracleC>,
     {

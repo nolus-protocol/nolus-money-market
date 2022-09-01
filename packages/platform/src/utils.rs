@@ -1,9 +1,9 @@
 #[macro_export]
 macro_rules! generate_ids {
-    ($enum_name: ident as $as_type: ty { $($value: ident),+ $(,)? }) => {
+    ($visibility: vis $enum_name: ident as $as_type: ty { $($value: ident $(= $int_value: literal)?),+ $(,)? }) => {
         #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-        pub enum $enum_name {
-            $($value,)+
+        $visibility enum $enum_name {
+            $($value $(= $int_value)?,)+
         }
 
         impl ::core::convert::From<$enum_name> for $as_type {

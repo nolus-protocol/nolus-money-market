@@ -1,13 +1,12 @@
-use crate::ContractError;
-
 use cosmwasm_std::StdResult;
+use serde::Serialize;
+
 use finance::coin::Coin;
 use finance::currency::{Currency, Nls};
-
-use finance::price::{total, Price};
+use finance::price::{Price, total};
 use oracle::stub::{Oracle as OracleTrait, WithOracle};
 
-use serde::Serialize;
+use crate::ContractError;
 
 use super::PriceConvert;
 
@@ -20,8 +19,8 @@ where
 
     fn exec<OracleBase, Oracle>(self, oracle: Oracle) -> Result<Self::Output, Self::Error>
     where
-        Oracle: OracleTrait<OracleBase>,
         OracleBase: Currency + Serialize, // oracle base asset
+        Oracle: OracleTrait<OracleBase>,
     {
         // Obtain the currency market price of TVLdenom in uNLS and convert Rewards_TVLdenom in uNLS, Rewards_uNLS.
         let price_dto = oracle.get_price(Nls::SYMBOL.to_string())?.price;

@@ -32,7 +32,7 @@ impl Leaser {
             config.lpp_addr.to_string(),
             deps.api,
             &deps.querier,
-            lease::constants::ReplyId::OpenLoanReq as u64,
+            lease::constants::ReplyId::OpenLoanReq.into(),
         )?;
 
         let resp = lpp.execute(
