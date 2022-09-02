@@ -44,4 +44,4 @@ pub enum ContractError {
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
 }
 
-pub type ContractResult<T> = core::result::Result<T, ContractError>;
+pub type ContractResult<T> = Result<T, ContractError>;

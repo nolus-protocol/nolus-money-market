@@ -12,14 +12,13 @@ use finance::{
 };
 use lpp::{
     msg::QueryLoanResponse,
-    stub::{Lpp as LppTrait, LppRef, LppBatch},
+    stub::{Lpp as LppTrait, LppBatch, LppRef},
 };
 use platform::batch::Batch;
 
 use crate::error::{ContractError, ContractResult};
 
-pub(crate) use self::open::Receipt as OpenReceipt;
-pub(crate) use self::repay::Receipt as RepayReceipt;
+pub(crate) use self::{open::Receipt as OpenReceipt, repay::Receipt as RepayReceipt};
 pub use self::state::State;
 
 mod open;
@@ -111,7 +110,7 @@ where
     }
 
     pub(super) fn into_dto(self) -> (LoanDTO, Batch) {
-        let LppBatch{lpp_ref, batch} = self.lpp.into();
+        let LppBatch { lpp_ref, batch } = self.lpp.into();
         let dto = LoanDTO::new_raw(
             self.annual_margin_interest,
             lpp_ref,
@@ -425,12 +424,12 @@ mod tests {
         QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
         QueryQuoteResponse, RewardsResponse,
     };
-    use lpp::stub::{Lpp, LppRef, LppBatch};
+    use lpp::stub::{Lpp, LppBatch, LppRef};
     use platform::bank::BankAccountView;
     use platform::error::Result as PlatformResult;
 
-    use crate::loan::repay::Receipt as RepayReceipt;
     use crate::loan::{Loan, LoanDTO};
+    use crate::loan::repay::Receipt as RepayReceipt;
     use crate::repay_id::ReplyId;
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(500); // 50%

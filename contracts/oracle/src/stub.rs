@@ -96,11 +96,11 @@ impl OracleRef {
 
             fn on(self) -> StdResult<Self::Output, Self::Error> {
                 self.cmd
-                    .exec(self.oracle_ref.as_stub::<OracleBase>(self.querier))
+                    .exec(self.oracle_ref.into_stub::<OracleBase>(self.querier))
             }
 
             fn on_unknown(self) -> StdResult<Self::Output, Self::Error> {
-                self.cmd.unexpected_base(self.oracle_ref.currency.clone())
+                self.cmd.unexpected_base(self.oracle_ref.currency)
             }
         }
 
@@ -115,10 +115,7 @@ impl OracleRef {
         )
     }
 
-    fn as_stub<'a, OracleBase>(
-        self,
-        querier: &'a QuerierWrapper,
-    ) -> OracleStub<'a, OracleBase> {
+    fn into_stub<'a, OracleBase>(self, querier: &'a QuerierWrapper) -> OracleStub<'a, OracleBase> {
         OracleStub {
             oracle_ref: self,
             querier,

@@ -11,8 +11,8 @@ pub struct StateQuery {}
 #[serde(rename_all = "snake_case")]
 pub enum StateResponse<C, Lpn>
 where
-    C: Currency + Serialize,
-    Lpn: Currency + Serialize,
+    C: Currency,
+    Lpn: Currency,
 {
     Opened {
         amount: Coin<C>,

@@ -1,5 +1,4 @@
 use cosmwasm_std::Response;
-use serde::Serialize;
 
 use finance::currency::Currency;
 use platform::batch::{Batch, Emit};
@@ -18,7 +17,7 @@ pub struct LiquidationResult {
 
 fn emit_events<Lpn>(liquidation: &Status<Lpn>, batch: Batch) -> Response
 where
-    Lpn: Currency + Serialize,
+    Lpn: Currency,
 {
     match liquidation {
         Status::None => batch.into(),
