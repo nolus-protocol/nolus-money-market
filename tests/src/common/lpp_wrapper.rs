@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, Binary, coins, Deps, Env, to_binary, Uint64};
-use cw_multi_test::{App, Executor};
+use cw_multi_test::Executor;
 
 use finance::{
     coin::Coin,
@@ -11,7 +11,7 @@ use lpp::{
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
 
-use crate::common::ContractWrapper;
+use crate::common::{ContractWrapper, MockApp};
 
 use super::ADMIN;
 
@@ -37,7 +37,7 @@ impl LppWrapper {
     #[track_caller]
     pub fn instantiate(
         self,
-        app: &mut App,
+        app: &mut MockApp,
         lease_code_id: Uint64,
         denom: &str,
         balance: u128,

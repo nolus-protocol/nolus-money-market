@@ -1,12 +1,12 @@
 use cosmwasm_std::{Addr, Coin, StdError};
-use cw_multi_test::{App, Executor};
+use cw_multi_test::Executor;
 
 use treasury::{
     ContractError,
     msg::{ExecuteMsg, InstantiateMsg}
 };
 
-use crate::common::ContractWrapper;
+use crate::common::{ContractWrapper, MockApp};
 
 use super::{ADMIN, mock_query, MockQueryMsg, NATIVE_DENOM};
 
@@ -20,7 +20,7 @@ pub struct TreasuryWrapper {
 
 impl TreasuryWrapper {
     #[track_caller]
-    pub fn instantiate(self, app: &mut App, denom: &str) -> Addr {
+    pub fn instantiate(self, app: &mut MockApp, denom: &str) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = treasury_instantiate_msg();
 

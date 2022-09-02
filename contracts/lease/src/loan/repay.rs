@@ -78,19 +78,19 @@ where
 mod tests {
     use finance::{coin::Coin, currency::Nls};
 
-    use crate::loan::Receipt;
+    use crate::loan::RepayReceipt;
 
     #[test]
     fn pay_principal_full() {
         let principal = Coin::<Nls>::new(10);
 
-        let mut receipt = Receipt::default();
+        let mut receipt = RepayReceipt::default();
 
         receipt.pay_principal(principal, principal);
 
         assert_eq!(
             receipt,
-            Receipt {
+            RepayReceipt {
                 principal_paid: principal,
                 close: true,
                 ..Default::default()

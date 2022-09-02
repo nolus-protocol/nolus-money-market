@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, coin};
-use cw_multi_test::{App, Executor};
+use cw_multi_test::Executor;
 
 use finance::{liability::Liability, percent::Percent};
 use lease::{
@@ -8,7 +8,7 @@ use lease::{
 };
 use lease::contract::{execute, instantiate, query, reply};
 
-use crate::common::ContractWrapper;
+use crate::common::{ContractWrapper, MockApp};
 
 use super::{ADMIN, USER};
 
@@ -23,6 +23,9 @@ pub struct LeaseWrapperConfig {
     pub liability_init_percent: Percent,
     pub liability_delta_to_healthy_percent: Percent,
     pub liability_delta_to_max_percent: Percent,
+    pub liability_minus_delta_to_first_liq_warn: Percent,
+    pub liability_minus_delta_to_second_liq_warn: Percent,
+    pub liability_minus_delta_to_third_liq_warn: Percent,
     pub liability_recalc_hours: u16,
     // LoanForm
     pub annual_margin_interest: Percent,
@@ -39,6 +42,9 @@ impl Default for LeaseWrapperConfig {
             liability_init_percent: Percent::from_percent(65),
             liability_delta_to_healthy_percent: Percent::from_percent(5),
             liability_delta_to_max_percent: Percent::from_percent(10),
+            liability_minus_delta_to_first_liq_warn: Percent::from_percent(2),
+            liability_minus_delta_to_second_liq_warn: Percent::from_percent(3),
+            liability_minus_delta_to_third_liq_warn: Percent::from_percent(2),
             liability_recalc_hours: 20 * 24,
 
             annual_margin_interest: Percent::from_percent(0), // 3.1%
@@ -52,16 +58,16 @@ impl Default for LeaseWrapperConfig {
 }
 
 impl LeaseWrapper {
-    pub fn store(self, app: &mut App) -> u64 {
+    pub fn store(self, app: &mut MockApp) -> u64 {
         app.store_code(self.contract_wrapper)
     }
 
     #[track_caller]
     pub fn instantiate(
         self,
-        app: &mut App,
+        app: &mut MockApp,
         code_id: Option<u64>,
-        lpp_addr: &Addr,
+        addresses: LeaseWrapperAddresses,
         denom: &str,
         config: LeaseWrapperConfig,
     ) -> Addr {
@@ -71,7 +77,11 @@ impl LeaseWrapper {
         };
 
         let downpayment = config.downpayment;
-        let msg = Self::lease_instantiate_msg(denom, lpp_addr.clone(), config);
+        let msg = Self::lease_instantiate_msg(
+            denom,
+            addresses,
+            config,
+        );
 
         let result = app.instantiate_contract(
             code_id,
@@ -95,7 +105,7 @@ impl LeaseWrapper {
 
     fn lease_instantiate_msg(
         denom: &str,
-        lpp_addr: Addr,
+        addresses: LeaseWrapperAddresses,
         config: LeaseWrapperConfig,
     ) -> NewLeaseForm {
         NewLeaseForm {
@@ -105,14 +115,18 @@ impl LeaseWrapper {
                 config.liability_init_percent,
                 config.liability_delta_to_healthy_percent,
                 config.liability_delta_to_max_percent,
+                config.liability_minus_delta_to_first_liq_warn,
+                config.liability_minus_delta_to_second_liq_warn,
+                config.liability_minus_delta_to_third_liq_warn,
                 config.liability_recalc_hours,
             ),
             loan: LoanForm {
                 annual_margin_interest: config.annual_margin_interest,
-                lpp: lpp_addr.into_string(),
+                lpp: addresses.lpp.into_string(),
                 interest_due_period_secs: config.interest_due_period_secs,
                 grace_period_secs: config.grace_period_secs,
             },
+            market_price_oracle: addresses.oracle,
         }
     }
 }
@@ -130,6 +144,12 @@ impl Default for LeaseWrapper {
             contract_wrapper: Box::new(contract),
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct LeaseWrapperAddresses {
+    pub lpp: Addr,
+    pub oracle: Addr,
 }
 
 type LeaseContractWrapperReply = Box<

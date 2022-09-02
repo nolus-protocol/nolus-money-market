@@ -33,10 +33,6 @@ add_wasm_messages() {
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lpp" "$((++id))" "$admin_addr" "" "" "$lpp_init_msg"
   _export_to_file  "lpp" "$LPP_ADDRESS" "$contracts_info_file"
 
-  local -r leaser_init_msg='{"lease_code_id":"'$LEASE_CODE_ID'","lease_interest_rate_margin":30,"liability":{"healthy_percent":70,"init_percent":65,"max_percent":80,"recalc_secs":7200},"lpp_ust_addr":"'$LPP_ADDRESS'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "leaser" "$((++id))"  "$admin_addr" "" "" "$leaser_init_msg"
-  _export_to_file  "leaser" "$LEASER_ADDRESS" "$contracts_info_file"
-
   local -r timealarms_init_msg='{}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "timealarms" "$((++id))" "$admin_addr" "" "" "$timealarms_init_msg"
   _export_to_file  "timealarms" "$TIMEALARMS_ADDRESS" "$contracts_info_file"
@@ -44,6 +40,10 @@ add_wasm_messages() {
   local -r oracle_init_msg='{"base_asset":"'$lpp_native'","price_feed_period_secs":60,"feeders_percentage_needed":50,"supported_denom_pairs":[["OSMO","'$lpp_native'"],["LUNA","OSMO"],["IRIS","OSMO"]], "timealarms_addr":"'$TIMEALARMS_ADDRESS'"}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "oracle" "$((++id))" "$admin_addr" "" "" "$oracle_init_msg"
   _export_to_file  "oracle" "$ORACLE_ADDRESS" "$contracts_info_file"
+
+  local -r leaser_init_msg='{"lease_code_id":"'$LEASE_CODE_ID'","lease_interest_rate_margin":30,"liability":{"healthy_percent":70,"init_percent":65,"max_percent":80,"first_liq_warn":72,"second_liq_warn":75,"third_liq_warn":78,"recalc_secs":7200},"lpp_ust_addr":"'$LPP_ADDRESS'","time_alarms":"'$TIMEALARMS_ADDRESS'","market_price_oracle":"'$ORACLE_ADDRESS'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "leaser" "$((++id))"  "$admin_addr" "" "" "$leaser_init_msg"
+  _export_to_file  "leaser" "$LEASER_ADDRESS" "$contracts_info_file"
 
   local -r profit_init_msg='{"cadence_hours":7200,"treasury":"'$TREASURY_ADDRESS'","timealarms":"'$TIMEALARMS_ADDRESS'"}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "profit" "$((++id))" "$admin_addr" "" "" "$profit_init_msg"
@@ -68,15 +68,15 @@ lpp_instance_addr() {
   echo "nolus1qg5ega6dykkxc307y25pecuufrjkxkaggkkxh7nad0vhyhtuhw3sqaa3c5"
 }
 
-leaser_instance_addr() {
+timealarms_instance_addr() {
   echo "nolus1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqmx7chl"
 }
 
-timealarms_instance_addr() {
+oracle_instance_addr() {
   echo "nolus1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgsv3wzl4"
 }
 
-oracle_instance_addr() {
+leaser_instance_addr() {
   echo "nolus1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqkxgywu"
 }
 

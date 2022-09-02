@@ -1,16 +1,18 @@
 use cosmwasm_std::{Coin as CwCoin, Env, Reply};
+use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
+use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{
-    bank,
-    batch::{Batch, Emit, Emitter}
+    bank::{self, BankAccountView},
+    batch::{Batch, Emit, Emitter},
 };
 
 use crate::{
     error::ContractError,
     event::TYPE,
-    lease::{DownpaymentDTO, Lease, WithLease}
+    lease::{DownpaymentDTO, Lease, WithLease},
 };
 
 pub struct OpenLoanReq<'a> {
@@ -28,10 +30,14 @@ impl<'a> WithLease for OpenLoanReq<'a> {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp, Oracle>(
+        self,
+        lease: Lease<Lpn, Lpp, Oracle>,
+    ) -> Result<Self::Output, Self::Error>
     where
+        Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
-        Lpn: Currency,
+        Oracle: OracleTrait<Lpn>,
     {
         // TODO 'receive' the downpayment from the bank using any currency it might be in
         let downpayment = bank::received::<Lpn>(self.downpayment)?;
@@ -54,39 +60,64 @@ pub struct OpenLoanReqResult {
     pub(super) downpayment: DownpaymentDTO,
 }
 
-pub struct OpenLoanResp {
+pub struct OpenLoanResp<'a, B>
+where
+    B: BankAccountView,
+{
     resp: Reply,
     downpayment: DownpaymentDTO,
-    env: Env,
+    account: B,
+    env: &'a Env,
 }
 
-impl OpenLoanResp {
-    pub fn new(resp: Reply, downpayment: DownpaymentDTO, env: Env) -> Self {
-        Self { resp, downpayment, env }
+impl<'a, B> OpenLoanResp<'a, B>
+where
+    B: BankAccountView,
+{
+    pub fn new(resp: Reply, downpayment: DownpaymentDTO, account: B, env: &'a Env) -> Self {
+        Self {
+            resp,
+            downpayment,
+            account,
+            env,
+        }
     }
 }
 
-impl WithLease for OpenLoanResp {
+impl<'a, B> WithLease for OpenLoanResp<'a, B>
+where
+    B: BankAccountView,
+{
     type Output = Emitter;
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp, Oracle>(
+        self,
+        lease: Lease<Lpn, Lpp, Oracle>,
+    ) -> Result<Self::Output, Self::Error>
     where
+        Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
-        Lpn: Currency,
+        Oracle: OracleTrait<Lpn>,
     {
-        let result = lease.open_loan_resp(self.resp)?;
+        let result = lease.open_loan_resp(
+            self.env.contract.address.clone(),
+            self.resp,
+            self.account,
+            &self.env.block.time,
+        )?;
 
-        Ok(result.batch
+        Ok(result
+            .batch
             .into_emitter(TYPE::Open)
-            .emit_tx_info(&self.env)
-            .emit("id", self.env.contract.address)
-            .emit("customer", result.customer)
-            .emit_percent_amount("air", result.annual_interest_rate)
-            .emit("currency", result.currency)
-            .emit("loan-pool-id", result.loan_pool_id)
-            .emit_coin("loan", result.loan_amount)
+            .emit_tx_info(self.env)
+            .emit("id", self.env.contract.address.clone())
+            .emit("customer", result.lease_dto.customer)
+            .emit_percent_amount("air", result.receipt.annual_interest_rate)
+            .emit("currency", result.lease_dto.currency)
+            .emit("loan-pool-id", result.lease_dto.loan.lpp().addr())
+            .emit_coin("loan", result.receipt.borrowed)
             .emit("downpayment-symbol", self.downpayment.symbol())
             .emit_to_string_value("downpayment-amount", self.downpayment.amount()))
     }

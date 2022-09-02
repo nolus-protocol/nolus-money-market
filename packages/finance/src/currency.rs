@@ -1,6 +1,7 @@
+use std::fmt::Debug;
+
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::fmt::Debug;
 
 type Symbol<'a> = &'a str;
 pub type SymbolStatic = &'static str;

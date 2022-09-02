@@ -11,3 +11,5 @@ mod from_forms;
 mod lease;
 #[cfg(feature = "cosmwasm")]
 mod loan;
+#[cfg(feature = "cosmwasm")]
+pub mod repay_id;

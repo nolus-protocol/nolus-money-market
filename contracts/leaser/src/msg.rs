@@ -1,10 +1,10 @@
 use cosmwasm_std::{Addr, Uint64};
-
-use finance::{coin::CoinDTO, currency::SymbolOwned, liability::Liability, percent::Percent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{state::config::Config, ContractError};
+use finance::{coin::CoinDTO, currency::SymbolOwned, liability::Liability, percent::Percent};
+
+use crate::{ContractError, state::config::Config};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -13,6 +13,7 @@ pub struct InstantiateMsg {
     pub lease_interest_rate_margin: Percent, // LeaseInterestRateMargin%, for example 3%
     pub liability: Liability,                // LeaseMaxLiability%, for example 80%
     pub repayment: Repayment,                // GracePeriodSec, for example 10 days = 10*24*60*60
+    pub market_price_oracle: Addr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -66,9 +67,9 @@ impl Repayment {
 
     pub fn validate_period(&self) -> Result<(), ContractError> {
         if self.period_sec > self.grace_period_sec {
-            Result::Ok(())
+            Ok(())
         } else {
-            Result::Err(ContractError::validation_err::<Repayment>(String::from(
+            Err(ContractError::validation_err::<Repayment>(String::from(
                 "Period length should be greater than grace period",
             )))
         }

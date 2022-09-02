@@ -36,6 +36,14 @@ impl Percent {
         Self(permille)
     }
 
+    pub fn from_ratio<FractionUnit>(nominator: FractionUnit, denominator: FractionUnit) -> Self
+    where
+        FractionUnit: Default + Copy + PartialEq,
+        Self: Fractionable<FractionUnit>,
+    {
+        Rational::new(nominator, denominator).of(Percent::HUNDRED)
+    }
+
     pub const fn units(&self) -> Units {
         self.0
     }
@@ -142,18 +150,21 @@ impl<'a> Sub<&'a Percent> for Percent {
 
 #[cfg(test)]
 pub(super) mod test {
-    use std::fmt::{Debug, Display};
+    use std::{
+        fmt::{Debug, Display},
+        ops::{Div, Mul},
+    };
 
     use crate::{
-        coin::Coin, currency::Nls, fraction::Fraction, fractionable::Percentable, percent::Percent,
+        coin::Coin,
+        currency::Nls,
+        fraction::Fraction,
+        fractionable::Percentable,
+        percent::Percent,
         ratio::Rational,
     };
 
     use super::Units;
-
-    fn from(permille: Units) -> Percent {
-        Percent::from_permille(permille)
-    }
 
     #[test]
     fn from_percent() {
@@ -165,6 +176,23 @@ pub(super) mod test {
     fn from_permille() {
         assert_eq!(Percent(0), Percent::from_permille(0));
         assert_eq!(Percent(10), Percent::from_permille(10));
+    }
+
+    #[test]
+    fn from_ratio() {
+        let a1 = 0;
+        let a2 = 5000;
+        let a3 = 1352;
+        let c1 = Coin::<Nls>::new(a1);
+        let c2 = Coin::<Nls>::new(a2);
+        let c3 = Coin::<Nls>::new(a3);
+        assert_eq!(Percent::ZERO, Percent::from_ratio(c1, c2));
+
+        assert_eq!(from_parts(a3, a2), Percent::from_ratio(c3, c2));
+
+        assert_eq!(Percent::HUNDRED, Percent::from_ratio(c3, c3));
+
+        assert_eq!(from_parts(a2, a3), Percent::from_ratio(c2, c3));
     }
 
     #[test]
@@ -283,6 +311,21 @@ pub(super) mod test {
             perm,
             quantity
         );
+    }
+
+    fn from(permille: Units) -> Percent {
+        Percent::from_permille(permille)
+    }
+
+    fn from_parts<U>(nom: U, denom: U) -> Percent
+    where
+        U: TryInto<Units>,
+        Units: Into<U>,
+        U: Mul<U, Output = U> + Div<U, Output = U>,
+        <U as TryInto<Units>>::Error: Debug,
+    {
+        let exp = nom * Percent::HUNDRED.units().into() / denom;
+        from(exp.try_into().expect("valid test data"))
     }
 
     fn test_display(exp: &str, permilles: Units) {

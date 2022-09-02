@@ -1,11 +1,12 @@
-use cosmwasm_std::{coins, Addr, Coin, Uint64};
-use cw_multi_test::{next_block, App, Executor};
+use cosmwasm_std::{Addr, Coin, coins, Uint64};
+use cw_multi_test::{Executor, next_block};
 
 use finance::coin::Amount;
 
-use crate::common::ContractWrapper;
+use crate::common::{ContractWrapper, lease_wrapper::LeaseWrapperAddresses, MockApp};
 
 use super::{
+    ADMIN,
     dispatcher_wrapper::DispatcherWrapper,
     lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
     leaser_wrapper::LeaserWrapper,
@@ -15,7 +16,6 @@ use super::{
     profit_wrapper::ProfitWrapper,
     timealarms_wrapper::TimeAlarmsWrapper,
     treasury_wrapper::TreasuryWrapper,
-    ADMIN,
 };
 
 type OptionalContractWrapper = Option<
@@ -44,7 +44,7 @@ type OptionalContractWrapperStd = Option<
 >;
 
 pub struct TestCase {
-    pub app: App,
+    pub app: MockApp,
     pub dispatcher_addr: Option<Addr>,
     pub treasury_addr: Option<Addr>,
     pub profit_addr: Option<Addr>,
@@ -106,7 +106,16 @@ impl TestCase {
         LeaseWrapper::default().instantiate(
             &mut self.app,
             self.lease_code_id,
-            self.lpp_addr.as_ref().unwrap(),
+            LeaseWrapperAddresses {
+                lpp: self
+                    .lpp_addr
+                    .clone()
+                    .expect("LPP contract not instantiated!"),
+                oracle: self
+                    .oracle
+                    .clone()
+                    .expect("Market Price Oracle contract not instantiated!"),
+            },
             &self.denom,
             LeaseWrapperConfig::default(),
         )
@@ -145,11 +154,16 @@ impl TestCase {
     }
 
     pub fn init_leaser(&mut self) -> &mut Self {
-        self.leaser_addr = Some(LeaserWrapper::default().instantiate(
-            &mut self.app,
-            self.lease_code_id.unwrap(),
-            self.lpp_addr.as_ref().unwrap(),
-        ));
+        self.leaser_addr = Some(
+            LeaserWrapper::default().instantiate(
+                &mut self.app,
+                self.lease_code_id.unwrap(),
+                self.lpp_addr.as_ref().unwrap(),
+                self.oracle
+                    .clone()
+                    .expect("Market Price Oracle not initialized!"),
+            ),
+        );
         self.app.update_block(next_block);
 
         self
@@ -181,13 +195,32 @@ impl TestCase {
 
         self
     }
+
     pub fn init_oracle(&mut self, custom_wrapper: OptionalContractWrapperStd) -> &mut Self {
+        self.init_oracle_with_funds(custom_wrapper, 0)
+    }
+
+    pub fn init_oracle_with_funds(
+        &mut self,
+        custom_wrapper: OptionalContractWrapperStd,
+        amount: Amount,
+    ) -> &mut Self {
         let mocked_oracle = match custom_wrapper {
             Some(wrapper) => MarketOracleWrapper::with_contract_wrapper(wrapper),
             None => MarketOracleWrapper::default(),
         };
 
-        self.oracle = Some(mocked_oracle.instantiate(&mut self.app, &self.denom, "timealarms"));
+        self.oracle = Some(
+            mocked_oracle.instantiate(
+                &mut self.app,
+                &self.denom,
+                self.timealarms
+                    .as_ref()
+                    .expect("Time Alarms not initialized!")
+                    .as_str(),
+                amount,
+            ),
+        );
         self.app.update_block(next_block);
 
         self

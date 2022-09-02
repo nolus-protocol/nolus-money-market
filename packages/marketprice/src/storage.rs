@@ -5,6 +5,7 @@ use finance::{
     coin::Coin as FinCoin, currency::Currency, fraction::Fraction, fractionable::HigherRank,
     ratio::Rational,
 };
+use finance::price::PriceDTO;
 
 use crate::market_price::PriceFeedsError;
 
@@ -41,6 +42,17 @@ where
 pub struct Price {
     base: Coin,
     quote: Coin,
+}
+
+impl From<PriceDTO> for Price {
+    fn from(dto: PriceDTO) -> Self {
+        Self::new(
+            dto.base().symbol(),
+            dto.base().amount(),
+            dto.quote().symbol(),
+            dto.quote().amount(),
+        )
+    }
 }
 
 impl Price {

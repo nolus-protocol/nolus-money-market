@@ -143,7 +143,8 @@ where
     {
         self.cmd.exec(Price::new(
             self.base,
-            Coin::<QuoteC>::try_from(self.quote_dto).expect("Got different currency in visitor!"),
+            Coin::<QuoteC>::try_from(self.quote_dto)
+                .expect("Got different currency in visitor!"),
         ))
     }
 

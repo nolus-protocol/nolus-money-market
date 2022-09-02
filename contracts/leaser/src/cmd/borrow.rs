@@ -1,11 +1,12 @@
 use cosmwasm_std::{Addr, Coin, DepsMut, Response};
+
 use finance::currency::SymbolOwned;
 use lease::msg::{LoanForm, NewLeaseForm};
 use platform::batch::Batch;
 
 use crate::{
-    state::{config::Config, leaser::Loans},
     ContractError,
+    state::{config::Config, leaser::Loans},
 };
 
 use super::Borrow;
@@ -47,6 +48,7 @@ impl Borrow {
                 interest_due_period_secs: config.repayment.period_sec, // 90 days TODO use a crate for daytime calculations
                 grace_period_secs: config.repayment.grace_period_sec,
             },
+            market_price_oracle: config.market_price_oracle,
         }
     }
 }

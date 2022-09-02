@@ -2,7 +2,8 @@ pub enum TYPE {
     Open,
     Close,
     Repay,
-    // Liquidation,
+    LiquidationWarning,
+    Liquidation,
 }
 
 impl TYPE {
@@ -11,8 +12,9 @@ impl TYPE {
         match self {
             Self::Open => "ls-open",
             Self::Close => "ls-close",
-            TYPE::Repay => "ls-repay",
-            // TYPE::Liquidation => "ls-liquidation",
+            Self::Repay => "ls-repay",
+            Self::LiquidationWarning => "ls-liquidation-warning",
+            Self::Liquidation => "ls-liquidation",
         }
     }
 }

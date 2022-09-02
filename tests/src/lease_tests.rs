@@ -5,12 +5,13 @@ use cw_multi_test::{AppResponse, Executor};
 
 use finance::{
     coin::Coin, currency::Usdc, duration::Duration, interest::InterestPeriod, percent::Percent,
+    price::PriceDTO,
 };
 use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
 use platform::coin_legacy::to_cosmwasm;
 
-use crate::common::{leaser_wrapper::LeaserWrapper, test_case::TestCase, AppExt};
+use crate::common::{ADMIN, AppExt, leaser_wrapper::LeaserWrapper, test_case::TestCase, USER};
 
 type Currency = Usdc;
 type TheCoin = Coin<Currency>;
@@ -28,6 +29,8 @@ fn create_test_case() -> TestCase {
         vec![to_cosmwasm(create_coin(1_000_000))],
     );
     test_case.init_lpp_with_funds(None, 5_000_000_000);
+    test_case.init_timealarms();
+    test_case.init_oracle_with_funds(None, 5_000_000);
     test_case.init_leaser();
 
     test_case
@@ -44,7 +47,7 @@ fn open_lease(test_case: &mut TestCase, value: TheCoin) -> Addr {
     test_case
         .app
         .execute_contract(
-            Addr::unchecked("user"),
+            Addr::unchecked(USER),
             test_case.leaser_addr.clone().unwrap(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: DENOM.to_string(),
@@ -63,7 +66,7 @@ fn get_lease_address(test_case: &TestCase) -> Addr {
         .query_wasm_smart(
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Leases {
-                owner: Addr::unchecked("user"),
+                owner: Addr::unchecked(USER),
             },
         )
         .unwrap();
@@ -75,7 +78,7 @@ fn repay(test_case: &mut TestCase, contract_addr: &Addr, value: TheCoin) -> AppR
     test_case
         .app
         .execute_contract(
-            Addr::unchecked("user"),
+            Addr::unchecked(USER),
             contract_addr.clone(),
             &lease::msg::ExecuteMsg::Repay {},
             &[to_cosmwasm(value)],
@@ -87,7 +90,7 @@ fn close(test_case: &mut TestCase, contract_addr: &Addr) -> AppResponse {
     test_case
         .app
         .execute_contract(
-            Addr::unchecked("user"),
+            Addr::unchecked(USER),
             contract_addr.clone(),
             &lease::msg::ExecuteMsg::Close {},
             &[],
@@ -239,6 +242,137 @@ fn state_paid_when_overpaid() {
     let query_result = state_query(&test_case, &lease_address.into_string());
 
     assert_eq!(expected_result, query_result);
+}
+
+#[test]
+#[should_panic = "Unauthorized"]
+fn price_alarm_unauthorized() {
+    let mut test_case = create_test_case();
+    let downpayment = create_coin(DOWNPAYMENT);
+    let lease_address = open_lease(&mut test_case, downpayment);
+
+    println!(
+        "{:?}",
+        test_case
+            .app
+            .execute_contract(
+                Addr::unchecked(ADMIN),
+                lease_address,
+                &lease::msg::ExecuteMsg::PriceAlarm {
+                    price: PriceDTO::new(create_coin(1).into(), create_coin(2).into(),),
+                },
+                &[to_cosmwasm(create_coin(10000))],
+            )
+            .unwrap()
+    );
+}
+
+fn liquidation_warning(price: PriceDTO, percent: Percent, level: &str) {
+    const DOWNPAYMENT: u128 = 1_000_000;
+
+    let mut test_case = create_test_case();
+    let downpayment = create_coin(DOWNPAYMENT);
+    let lease_address = open_lease(&mut test_case, downpayment);
+
+    let response = test_case
+        .app
+        .execute_contract(
+            test_case.oracle.unwrap(),
+            lease_address,
+            &lease::msg::ExecuteMsg::PriceAlarm {
+                price: price.clone(),
+            },
+            &[to_cosmwasm(create_coin(10000))],
+        )
+        .unwrap();
+
+    let event = response
+        .events
+        .iter()
+        .find(|event| event.ty == "wasm-ls-liquidation-warning")
+        .expect("No liquidation warning emitted!");
+
+    let attribute = event
+        .attributes
+        .iter()
+        .find(|attribute| attribute.key == "customer")
+        .expect("Customer attribute not present!");
+
+    assert_eq!(attribute.value, USER);
+
+    let attribute = event
+        .attributes
+        .iter()
+        .find(|attribute| attribute.key == "ltv")
+        .expect("LTV attribute not present!");
+
+    assert_eq!(attribute.value, percent.units().to_string());
+
+    let attribute = event
+        .attributes
+        .iter()
+        .find(|attribute| attribute.key == "level")
+        .expect("Level attribute not present!");
+
+    assert_eq!(attribute.value, level);
+
+    let attribute = event
+        .attributes
+        .iter()
+        .find(|attribute| attribute.key == "lease-asset")
+        .expect("Lease Asset attribute not present!");
+
+    assert_eq!(&attribute.value, price.quote().symbol());
+}
+
+#[test]
+#[should_panic = "No liquidation warning emitted!"]
+#[ignore = "No support for currencies different than LPN"]
+fn liquidation_warning_0() {
+    liquidation_warning(
+        PriceDTO::new(create_coin(2085713).into(), create_coin(1857159).into()),
+        LeaserWrapper::liability().healthy_percent(),
+        "N/A",
+    );
+}
+
+#[test]
+#[ignore = "No support for currencies different than LPN"]
+fn liquidation_warning_1() {
+    liquidation_warning(
+        PriceDTO::new(
+            create_coin(2085713).into(), // ref: 2085713
+            create_coin(1837159).into(), // ref: 1857159
+        ),
+        LeaserWrapper::liability().first_liq_warn_percent(),
+        "1",
+    );
+}
+
+#[test]
+#[ignore = "No support for currencies different than LPN"]
+fn liquidation_warning_2() {
+    liquidation_warning(
+        PriceDTO::new(
+            create_coin(2085713).into(), // ref: 2085713
+            create_coin(1757159).into(), // ref: 1857159
+        ),
+        LeaserWrapper::liability().second_liq_warn_percent(),
+        "2",
+    );
+}
+
+#[test]
+#[ignore = "No support for currencies different than LPN"]
+fn liquidation_warning_3() {
+    liquidation_warning(
+        PriceDTO::new(
+            create_coin(2085713).into(), // ref: 2085713
+            create_coin(1707159).into(), // ref: 1857159
+        ),
+        LeaserWrapper::liability().third_liq_warn_percent(),
+        "3",
+    );
 }
 
 #[test]

@@ -2,10 +2,11 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    duration::Duration,
     error::{Error, Result},
     fractionable::Percentable,
     percent::Percent,
-    ratio::Rational,
+    ratio::Rational
 };
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, Eq, PartialEq, JsonSchema)]
@@ -20,6 +21,12 @@ pub struct Liability {
     /// The maximum percentage of the amount due versus the locked collateral
     /// max_percent > healthy_percent
     max_percent: Percent,
+    /// The percentage above which the first liquidity warning is issued.
+    first_liq_warn: Percent,
+    /// The percentage above which the second liquidity warning is issued.
+    second_liq_warn: Percent,
+    /// The percentage above which the third liquidity warning is issued.
+    third_liq_warn: Percent,
     /// At what time cadence to recalculate the liability
     /// recalc_secs >= 3600
     recalc_secs: u32,
@@ -32,6 +39,9 @@ impl Liability {
         init_percent: Percent,
         delta_to_healthy_percent: Percent,
         delta_to_max_percent: Percent,
+        minus_delta_of_first_liq_warn: Percent,
+        minus_delta_of_second_liq_warn: Percent,
+        minus_delta_of_third_liq_warn: Percent,
         recalc_hours: u16,
     ) -> Self {
         assert!(init_percent > Percent::ZERO);
@@ -47,23 +57,76 @@ impl Liability {
             "max percent overflow"
         );
         let max_percent = healthy_percent + delta_to_max_percent;
+
+        let third_liquidity_warning = max_percent.checked_sub(minus_delta_of_third_liq_warn).expect("percentage underflow");
+
+        let second_liquidity_warning = third_liquidity_warning.checked_sub(minus_delta_of_second_liq_warn).expect("percentage underflow");
+
+        let first_liquidity_warning = second_liquidity_warning.checked_sub(minus_delta_of_first_liq_warn).expect("percentage underflow");
+
+        assert!(
+            second_liquidity_warning < third_liquidity_warning,
+            "Third liquidity warning is below second one!",
+        );
+
+        assert!(
+            first_liquidity_warning < second_liquidity_warning,
+            "Second liquidity warning is below first one!",
+        );
+
+        assert!(
+            healthy_percent < first_liquidity_warning,
+            "First liquidity warning is below healthy percentage!",
+        );
+
         assert!(recalc_hours > 0);
 
         let obj = Self {
             init_percent,
             healthy_percent,
             max_percent,
+            first_liq_warn: first_liquidity_warning,
+            second_liq_warn: second_liquidity_warning,
+            third_liq_warn: third_liquidity_warning,
             recalc_secs: u32::from(recalc_hours) * SECS_IN_HOUR,
         };
         debug_assert!(obj.invariant_held().is_ok());
         obj
     }
 
+    pub const fn healthy_percent(&self) -> Percent {
+        self.healthy_percent
+    }
+
+    pub const fn first_liq_warn_percent(&self) -> Percent {
+        self.first_liq_warn
+    }
+
+    pub const fn second_liq_warn_percent(&self) -> Percent {
+        self.second_liq_warn
+    }
+
+    pub const fn third_liq_warn_percent(&self) -> Percent {
+        self.third_liq_warn
+    }
+
+    pub const fn max_percent(&self) -> Percent {
+        self.max_percent
+    }
+
+    pub const fn recalculation_time(&self) -> Duration {
+        Duration::from_secs(self.recalc_secs)
+    }
+
     pub fn invariant_held(&self) -> Result<()> {
         // TODO restrict further the accepted percents to 100 since there is no much sense of having no borrow
         if self.init_percent > Percent::ZERO
             && self.healthy_percent >= self.init_percent
-            && self.max_percent > self.healthy_percent
+            && self.first_liq_warn > self.healthy_percent
+            && self.second_liq_warn > self.first_liq_warn
+            && self.third_liq_warn > self.second_liq_warn
+            && self.max_percent > self.third_liq_warn
+            && self.max_percent <= Percent::HUNDRED
             && self.recalc_secs >= SECS_IN_HOUR
         {
             Ok(())
@@ -101,6 +164,9 @@ mod test {
             Percent::from_percent(10),
             Percent::from_percent(0),
             Percent::from_percent(5),
+            Percent::from_percent(1),
+            Percent::from_percent(1),
+            Percent::from_percent(1),
             20,
         );
         assert_eq!(
@@ -108,6 +174,9 @@ mod test {
                 init_percent: Percent::from_percent(10),
                 healthy_percent: Percent::from_percent(10),
                 max_percent: Percent::from_percent(15),
+                first_liq_warn: Percent::from_percent(12),
+                second_liq_warn: Percent::from_percent(13),
+                third_liq_warn: Percent::from_percent(14),
                 recalc_secs: 20 * SECS_IN_HOUR,
             },
             obj,
@@ -120,6 +189,9 @@ mod test {
             Percent::from_percent(1),
             Percent::from_percent(0),
             Percent::from_percent(1),
+            Percent::from_permille(1),
+            Percent::from_permille(1),
+            Percent::from_permille(1),
             1,
         );
         assert_eq!(
@@ -127,6 +199,9 @@ mod test {
                 init_percent: Percent::from_percent(1),
                 healthy_percent: Percent::from_percent(1),
                 max_percent: Percent::from_percent(2),
+                first_liq_warn: Percent::from_permille(17),
+                second_liq_warn: Percent::from_permille(18),
+                third_liq_warn: Percent::from_permille(19),
                 recalc_secs: SECS_IN_HOUR,
             },
             obj,
@@ -140,6 +215,9 @@ mod test {
             Percent::from_percent(0),
             Percent::from_percent(0),
             Percent::from_percent(1),
+            Percent::from_permille(1),
+            Percent::from_permille(1),
+            Percent::from_permille(1),
             1,
         );
     }
@@ -151,6 +229,9 @@ mod test {
             Percent::from_percent(45),
             Percent::from_permille(u32::MAX - 450 + 1),
             Percent::from_percent(1),
+            Percent::from_permille(1),
+            Percent::from_permille(1),
+            Percent::from_permille(1),
             1,
         );
     }
@@ -162,6 +243,9 @@ mod test {
             Percent::from_percent(10),
             Percent::from_percent(5),
             Percent::from_percent(0),
+            Percent::from_permille(1),
+            Percent::from_permille(1),
+            Percent::from_permille(1),
             1,
         );
     }
@@ -173,6 +257,9 @@ mod test {
             Percent::from_permille(10),
             Percent::from_permille(5),
             Percent::from_permille(u32::MAX - 10 - 5 + 1),
+            Percent::from_permille(1),
+            Percent::from_permille(1),
+            Percent::from_permille(1),
             1,
         );
     }
@@ -184,6 +271,9 @@ mod test {
             Percent::from_percent(10),
             Percent::from_percent(5),
             Percent::from_percent(10),
+            Percent::from_permille(1),
+            Percent::from_permille(1),
+            Percent::from_permille(1),
             0,
         );
     }
@@ -191,7 +281,7 @@ mod test {
     #[test]
     fn deserialize_invalid_state() {
         let deserialized: Liability = from_slice(
-            br#"{"init_percent":40,"healthy_percent":30,"max_percent":20,"recalc_secs":36000}"#,
+            br#"{"init_percent":40,"healthy_percent":30,"first_liq_warn":2,"second_liq_warn":3,"third_liq_warn":2,"max_percent":20,"recalc_secs":36000}"#,
         )
         .unwrap();
         assert_eq!(
@@ -209,6 +299,9 @@ mod test {
             init_percent: percent,
             healthy_percent: Percent::from_percent(99),
             max_percent: Percent::from_percent(100),
+            first_liq_warn: Percent::from_permille(992),
+            second_liq_warn: Percent::from_permille(995),
+            third_liq_warn: Percent::from_permille(998),
             recalc_secs: 20000,
         }
         .init_borrow_amount(downpayment);

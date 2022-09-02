@@ -55,7 +55,11 @@ fn on_alarm() {
     let lender = Addr::unchecked(USER);
 
     let mut test_case = TestCase::new(denom);
-    test_case.init(&lender, coins(500, denom)).init_oracle(None);
+    test_case.init(
+        &lender,
+        coins(500, denom))
+        .init_timealarms()
+        .init_oracle(None);
 
     test_case
         .init_lpp(Some(ContractWrapper::new(

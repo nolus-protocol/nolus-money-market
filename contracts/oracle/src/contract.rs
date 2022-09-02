@@ -1,27 +1,31 @@
 use std::collections::{HashMap, HashSet};
 
+use cosmwasm_std::{
+    Addr, Binary, Deps, DepsMut, Env, from_binary, MessageInfo, Reply, Response, Storage,
+    Timestamp, to_binary,
+};
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
-    Storage, Timestamp,
-};
 use cw2::set_contract_version;
-use finance::currency::{visit_any, AnyVisitor, Currency, Nls, SymbolOwned, Usdc};
-use finance::price::PriceDTO;
-use marketprice::market_price::PriceFeedsError;
-use marketprice::storage::{Denom, DenomPair, Price};
-use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 
-use crate::alarms::MarketAlarms;
-use crate::contract_validation::validate_contract_addr;
-use crate::error::ContractError;
-use crate::msg::{
-    ConfigResponse, ExecuteMsg, InstantiateMsg, PriceResponse, PricesResponse, QueryMsg,
+use finance::{
+    currency::{AnyVisitor, Currency, Nls, SymbolOwned, Usdc, visit_any},
+    price::PriceDTO,
 };
-use crate::oracle::MarketOracle;
-use crate::state::config::Config;
+use marketprice::{
+    market_price::PriceFeedsError,
+    storage::{Denom, DenomPair, Price},
+};
+
+use crate::{
+    alarms::MarketAlarms,
+    contract_validation::validate_contract_addr,
+    error::ContractError,
+    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, PriceResponse, PricesResponse, QueryMsg},
+    oracle::MarketOracle,
+    state::config::Config,
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -34,7 +38,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let timealarms_addr = deps.api.addr_validate(&msg.timealarms_addr)?;
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     Config::new(
         msg.base_asset,
@@ -42,10 +46,9 @@ pub fn instantiate(
         msg.price_feed_period_secs,
         msg.feeders_percentage_needed,
         msg.supported_denom_pairs,
-        timealarms_addr,
+        deps.api.addr_validate(&msg.timealarms_addr)?,
     )
     .store(deps.storage)?;
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     Ok(Response::default())
 }

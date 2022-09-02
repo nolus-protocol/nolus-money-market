@@ -1,27 +1,25 @@
-use crate::ContractError;
-
 use cosmwasm_std::StdResult;
+use serde::Serialize;
+
 use finance::coin::Coin;
 use finance::currency::{Currency, Nls};
-
-use finance::price::{total, Price};
+use finance::price::{Price, total};
 use oracle::stub::{Oracle as OracleTrait, WithOracle};
 
-use serde::Serialize;
+use crate::ContractError;
 
 use super::PriceConvert;
 
-impl<Lpn> WithOracle for PriceConvert<Lpn>
+impl<Lpn> WithOracle<Lpn> for PriceConvert<Lpn>
 where
     Lpn: Currency + Serialize,
 {
     type Output = Coin<Nls>;
     type Error = ContractError;
 
-    fn exec<OracleBase, Oracle>(self, oracle: Oracle) -> Result<Self::Output, Self::Error>
+    fn exec<Oracle>(self, oracle: Oracle) -> Result<Self::Output, Self::Error>
     where
-        Oracle: OracleTrait<OracleBase>,
-        OracleBase: Currency + Serialize, // oracle base asset
+        Oracle: OracleTrait<Lpn>,
     {
         // Obtain the currency market price of TVLdenom in uNLS and convert Rewards_TVLdenom in uNLS, Rewards_uNLS.
         let price_dto = oracle.get_price(Nls::SYMBOL.to_string())?.price;
@@ -30,7 +28,7 @@ where
         Ok(reward_unls)
     }
 
-    fn unknown_lpn(
+    fn unexpected_base(
         self,
         symbol: finance::currency::SymbolOwned,
     ) -> Result<Self::Output, Self::Error> {

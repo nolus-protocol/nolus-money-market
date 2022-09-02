@@ -1,6 +1,7 @@
-use finance::{coin::Coin, currency::Currency, percent::Percent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use finance::{coin::Coin, currency::Currency, percent::Percent};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

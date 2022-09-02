@@ -3,31 +3,36 @@ use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
+use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{
-    bank,
+    bank::{self, BankAccountView},
     batch::{Emit, Emitter},
 };
 
 use crate::{
-    lease::{
-        Lease,
-        WithLease,
-        LeaseDTO
-    },
-    event::TYPE,
     error::ContractError,
+    event::TYPE,
+    lease::{Lease, LeaseDTO, RepayResult as LeaseRepayResult, WithLease},
 };
 
-pub struct Repay<'a> {
+pub struct Repay<'a, Bank>
+where
+    Bank: BankAccountView,
+{
     payment: &'a [CwCoin],
-    env: Env,
+    env: &'a Env,
+    account: Bank,
 }
 
-impl<'a> Repay<'a> {
-    pub fn new(payment: &'a [CwCoin], env: Env) -> Self {
+impl<'a, Bank> Repay<'a, Bank>
+where
+    Bank: BankAccountView,
+{
+    pub fn new(payment: &'a [CwCoin], account: Bank, env: &'a Env) -> Self {
         Self {
             payment,
             env,
+            account,
         }
     }
 }
@@ -37,27 +42,43 @@ pub struct RepayResult {
     pub emitter: Emitter,
 }
 
-impl<'a> WithLease for Repay<'a> {
+impl<'a, Bank> WithLease for Repay<'a, Bank>
+where
+    Bank: BankAccountView,
+{
     type Output = RepayResult;
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, mut lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp, Oracle>(
+        self,
+        lease: Lease<Lpn, Lpp, Oracle>,
+    ) -> Result<Self::Output, Self::Error>
     where
-        Lpp: LppTrait<Lpn>,
         Lpn: Currency + Serialize,
+        Lpp: LppTrait<Lpn>,
+        Oracle: OracleTrait<Lpn>,
     {
         // TODO 'receive' the payment from the bank using any currency it might be in
         let payment = bank::received::<Lpn>(self.payment)?;
 
-        let receipt = lease.repay(payment, self.env.block.time, self.env.contract.address.clone())?;
+        let lease_amount = self.account.balance::<Lpn>()? - payment;
 
-        let (lease_dto, lpp) = lease.into_dto();
-        let emitter = lpp
-            .into()
+        let LeaseRepayResult {
+            batch,
+            lease_dto,
+            receipt,
+        } = lease.repay(
+            lease_amount,
+            payment,
+            self.env.block.time,
+            self.env.contract.address.clone(),
+        )?;
+
+        let emitter = batch
             .into_emitter(TYPE::Repay)
-            .emit_tx_info(&self.env)
-            .emit("to", self.env.contract.address)
+            .emit_tx_info(self.env)
+            .emit("to", self.env.contract.address.clone())
             .emit("payment-symbol", Lpn::SYMBOL)
             .emit_coin_amount("payment-amount", payment)
             .emit_timestamp("at", &self.env.block.time)

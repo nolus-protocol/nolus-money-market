@@ -1,15 +1,19 @@
 use cosmwasm_std::{Addr, Timestamp};
+use serde::Serialize;
+
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
-use platform::{bank::BankAccount, batch::Emitter};
-use serde::Serialize;
-use platform::batch::Emit;
+use market_price_oracle::stub::Oracle as OracleTrait;
+use platform::{
+    bank::BankAccount,
+    batch::{Emit, Emitter},
+};
 
 use crate::{
     error::ContractError,
-    lease::{Lease, WithLease}
+    event::TYPE,
+    lease::{Lease, WithLease},
 };
-use crate::event::TYPE;
 
 pub struct Close<'a, Bank> {
     sender: &'a Addr,
@@ -37,10 +41,14 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp>(self, lease: Lease<Lpn, Lpp>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, Lpp, Oracle>(
+        self,
+        lease: Lease<Lpn, Lpp, Oracle>,
+    ) -> Result<Self::Output, Self::Error>
     where
-        Lpp: LppTrait<Lpn>,
         Lpn: Currency + Serialize,
+        Lpp: LppTrait<Lpn>,
+        Oracle: OracleTrait<Lpn>,
     {
         if !lease.owned_by(self.sender) {
             return Err(Self::Error::Unauthorized {});
@@ -48,7 +56,8 @@ where
 
         let result = lease.close(self.lease.clone(), self.account)?;
 
-        let emitter = result.into_emitter(TYPE::Close)
+        let emitter = result
+            .into_emitter(TYPE::Close)
             .emit("id", self.lease)
             .emit_timestamp("at", &self.now);
 

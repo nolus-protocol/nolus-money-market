@@ -2,19 +2,24 @@ use cosmwasm_std::{
     Addr, ContractInfoResponse, Deps, DepsMut, Env, QueryRequest, StdResult, Storage, Timestamp,
     Uint64, WasmQuery,
 };
-use finance::currency::Currency;
-use finance::price::{self, Price};
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::error::ContractError;
-use crate::msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse};
-use crate::nlpn::NLpn;
-use crate::state::{Config, Deposit, Loan, LoanData, Total};
-use finance::coin::Coin;
-use finance::fraction::Fraction;
-use finance::percent::Percent;
-use finance::ratio::Rational;
+use finance::{
+    coin::Coin,
+    currency::Currency,
+    fraction::Fraction,
+    percent::Percent,
+    price::{self, Price},
+    ratio::Rational
+};
 use platform::bank::BankView;
+
+use crate::{
+    error::ContractError,
+    msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse},
+    nlpn::NLpn,
+    state::{Config, Deposit, Loan, LoanData, Total}
+};
 
 pub struct NTokenPrice<LPN>
 where
@@ -291,14 +296,16 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::state::{Config, Deposit, Total};
-
-    use cosmwasm_std::testing::{self, MOCK_CONTRACT_ADDR};
     use cosmwasm_std::{Addr, Coin as CwCoin, Timestamp, Uint64};
+    use cosmwasm_std::testing::{self, MOCK_CONTRACT_ADDR};
+
     use finance::currency::Usdc;
     use finance::duration::Duration;
     use finance::price;
+
+    use crate::state::{Config, Deposit, Total};
+
+    use super::*;
 
     type TheCurrency = Usdc;
 

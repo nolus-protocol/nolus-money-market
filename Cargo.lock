@@ -465,6 +465,7 @@ dependencies = [
  "finance",
  "lpp",
  "marketprice",
+ "oracle",
  "platform",
  "schemars",
  "serde",

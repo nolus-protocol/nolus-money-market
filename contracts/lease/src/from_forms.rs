@@ -1,8 +1,11 @@
 use cosmwasm_std::{Api, QuerierWrapper, Timestamp};
+
 use finance::duration::Duration;
 use lpp::stub::LppRef;
 
-use crate::{error::ContractResult, lease::LeaseDTO, loan::LoanDTO, msg::NewLeaseForm};
+use crate::{
+    error::ContractResult, lease::LeaseDTO, loan::LoanDTO, msg::NewLeaseForm, repay_id::ReplyId,
+};
 
 impl NewLeaseForm {
     pub(crate) fn into_lease_dto(
@@ -12,8 +15,15 @@ impl NewLeaseForm {
         querier: &QuerierWrapper,
     ) -> ContractResult<LeaseDTO> {
         self.liability.invariant_held()?;
+
         let customer = api.addr_validate(&self.customer)?;
-        let lpp = LppRef::try_from(self.loan.lpp.clone(), api, querier)?;
+
+        let lpp = LppRef::try_borrow_from(
+            api.addr_validate(&self.loan.lpp)?,
+            querier,
+            ReplyId::OpenLoanReq.into(),
+        )?;
+
         let loan = LoanDTO::new(
             start_at,
             lpp,
@@ -21,16 +31,24 @@ impl NewLeaseForm {
             Duration::from_secs(self.loan.interest_due_period_secs),
             Duration::from_secs(self.loan.grace_period_secs),
         )?;
-        Ok(LeaseDTO::new(customer, self.currency, self.liability, loan))
+
+        Ok(LeaseDTO::new(
+            customer,
+            self.currency,
+            self.liability,
+            loan,
+            self.market_price_oracle,
+        ))
     }
 }
 
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{
-        testing::{MockApi, MockQuerier},
-        QuerierWrapper, Timestamp,
+        Addr,
+        QuerierWrapper, testing::{MockApi, MockQuerier}, Timestamp,
     };
+
     use finance::{
         currency::{Currency, Nls},
         liability::Liability,
@@ -44,11 +62,14 @@ mod test {
     fn amount_to_borrow_broken_invariant() {
         let lease = NewLeaseForm {
             customer: "ss1s1".into(),
-            currency: Nls::SYMBOL.to_owned(),
+            currency: ToOwned::to_owned(Nls::SYMBOL),
             liability: Liability::new(
                 Percent::from_percent(10),
                 Percent::from_percent(0),
                 Percent::from_percent(0),
+                Percent::default(),
+                Percent::default(),
+                Percent::default(),
                 100,
             ),
             loan: LoanForm {
@@ -57,6 +78,7 @@ mod test {
                 interest_due_period_secs: 100,
                 grace_period_secs: 10,
             },
+            market_price_oracle: Addr::unchecked("oracle"),
         };
         let api = MockApi::default();
         let _ = lease.into_lease_dto(

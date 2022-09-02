@@ -1,5 +1,5 @@
 use cosmwasm_std::{Addr, StdError};
-use cw_multi_test::{App, Executor};
+use cw_multi_test::Executor;
 
 use profit::{
     contract::{execute, instantiate, query},
@@ -7,7 +7,7 @@ use profit::{
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg}
 };
 
-use crate::common::ContractWrapper;
+use crate::common::{ContractWrapper, MockApp};
 
 use super::ADMIN;
 
@@ -19,7 +19,7 @@ impl ProfitWrapper {
     #[track_caller]
     pub fn instantiate(
         self,
-        app: &mut App,
+        app: &mut MockApp,
         cadence_hours: u16,
         treasury: &Addr,
         timealarms: &Addr,
