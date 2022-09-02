@@ -117,6 +117,7 @@ impl LppRef {
                 self.cmd.unknown_lpn(self.lpp_ref.currency)
             }
         }
+
         visit_any(
             &self.currency.clone(),
             CurrencyVisitor {

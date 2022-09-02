@@ -70,7 +70,7 @@ impl OracleRef {
         &self.addr == addr
     }
 
-    pub fn execute<OracleBase, V, O, E>(&self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
+    pub fn execute<OracleBase, V, O, E>(self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
     where
         OracleBase: Currency + Serialize,
         V: WithOracle<OracleBase, Output = O, Error = E>,
@@ -81,7 +81,7 @@ impl OracleRef {
             V: WithOracle<OracleBase, Output = O, Error = E>,
         {
             cmd: V,
-            oracle_ref: &'a OracleRef,
+            oracle_ref: OracleRef,
             _oracle_base: PhantomData<OracleBase>,
             querier: &'a QuerierWrapper<'a>,
         }
@@ -105,7 +105,7 @@ impl OracleRef {
         }
 
         visit(
-            &self.currency,
+            &self.currency.clone(),
             CurrencyVisitor {
                 cmd,
                 oracle_ref: self,
@@ -116,7 +116,7 @@ impl OracleRef {
     }
 
     fn as_stub<'a, OracleBase>(
-        &'a self,
+        self,
         querier: &'a QuerierWrapper,
     ) -> OracleStub<'a, OracleBase> {
         OracleStub {
@@ -143,15 +143,15 @@ impl OracleRef {
 }
 
 struct OracleStub<'a, OracleBase> {
-    oracle_ref: &'a OracleRef,
+    oracle_ref: OracleRef,
     _quote_currency: PhantomData<OracleBase>,
     querier: &'a QuerierWrapper<'a>,
     batch: Batch,
 }
 
 impl<'a, OracleBase> OracleStub<'a, OracleBase> {
-    fn addr(&self) -> Addr {
-        self.oracle_ref.addr.clone()
+    fn addr(&self) -> &Addr {
+        &self.oracle_ref.addr
     }
 }
 
@@ -166,13 +166,13 @@ where
     fn get_price(&self, denom: Denom) -> Result<PriceResponse> {
         let msg = QueryMsg::Price { denom };
         self.querier
-            .query_wasm_smart(self.addr(), &msg)
+            .query_wasm_smart(self.addr().clone(), &msg)
             .map_err(ContractError::from)
     }
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()> {
         self.batch.schedule_execute_no_reply(wasm_execute(
-            self.addr(),
+            self.addr().clone(),
             &ExecuteMsg::AddPriceAlarm { alarm },
             vec![],
         )?);
@@ -184,7 +184,7 @@ where
 impl<'a, OracleBase> From<OracleStub<'a, OracleBase>> for OracleBatch {
     fn from(stub: OracleStub<'a, OracleBase>) -> Self {
         OracleBatch {
-            oracle_ref: stub.oracle_ref.clone(),
+            oracle_ref: stub.oracle_ref,
             batch: stub.batch,
         }
     }
