@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use finance::{liability::Liability, percent::Percent};
 
 use crate::{
-    ContractError,
     msg::{InstantiateMsg, Repayment},
+    ContractError,
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

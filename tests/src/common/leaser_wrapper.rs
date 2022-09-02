@@ -1,15 +1,11 @@
 use cosmwasm_std::{Addr, Uint64};
 use cw_multi_test::Executor;
 
-use finance::{
-    duration::Duration,
-    liability::Liability,
-    percent::Percent
-};
+use finance::{duration::Duration, liability::Liability, percent::Percent};
 use leaser::{
     contract::{execute, instantiate, query, reply},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, Repayment},
     ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, Repayment}
 };
 
 use crate::common::{ContractWrapper, MockApp};
@@ -39,7 +35,13 @@ impl LeaserWrapper {
     }
 
     #[track_caller]
-    pub fn instantiate(self, app: &mut MockApp, lease_code_id: u64, lpp_addr: &Addr, market_price_oracle: Addr) -> Addr {
+    pub fn instantiate(
+        self,
+        app: &mut MockApp,
+        lease_code_id: u64,
+        lpp_addr: &Addr,
+        market_price_oracle: Addr,
+    ) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {
             lease_code_id: Uint64::new(lease_code_id),
@@ -57,12 +59,7 @@ impl LeaserWrapper {
 
 impl Default for LeaserWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(
-            execute,
-            instantiate,
-            query,
-        )
-            .with_reply(reply);
+        let contract = ContractWrapper::new(execute, instantiate, query).with_reply(reply);
 
         Self {
             contract_wrapper: Box::new(contract),

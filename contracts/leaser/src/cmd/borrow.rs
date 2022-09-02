@@ -5,8 +5,8 @@ use lease::msg::{LoanForm, NewLeaseForm};
 use platform::batch::Batch;
 
 use crate::{
-    ContractError,
     state::{config::Config, leaser::Loans},
+    ContractError,
 };
 
 use super::Borrow;

@@ -1,15 +1,15 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use cosmwasm_std::{Addr, QuerierWrapper, wasm_execute};
+use cosmwasm_std::{wasm_execute, Addr, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{Currency, SingleVisitor, SymbolOwned, visit};
+use finance::currency::{visit, Currency, SingleVisitor, SymbolOwned};
 use marketprice::{alarms::Alarm, storage::Denom};
 use platform::batch::Batch;
 
 use crate::{
-    ContractError,
     msg::{ConfigResponse, ExecuteMsg, PriceResponse, QueryMsg},
+    ContractError,
 };
 
 pub type Result<T> = StdResult<T, ContractError>;

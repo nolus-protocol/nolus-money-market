@@ -6,7 +6,7 @@ use crate::{
     error::{Error, Result},
     fractionable::Percentable,
     percent::Percent,
-    ratio::Rational
+    ratio::Rational,
 };
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, Eq, PartialEq, JsonSchema)]
@@ -58,11 +58,17 @@ impl Liability {
         );
         let max_percent = healthy_percent + delta_to_max_percent;
 
-        let third_liquidity_warning = max_percent.checked_sub(minus_delta_of_third_liq_warn).expect("percentage underflow");
+        let third_liquidity_warning = max_percent
+            .checked_sub(minus_delta_of_third_liq_warn)
+            .expect("percentage underflow");
 
-        let second_liquidity_warning = third_liquidity_warning.checked_sub(minus_delta_of_second_liq_warn).expect("percentage underflow");
+        let second_liquidity_warning = third_liquidity_warning
+            .checked_sub(minus_delta_of_second_liq_warn)
+            .expect("percentage underflow");
 
-        let first_liquidity_warning = second_liquidity_warning.checked_sub(minus_delta_of_first_liq_warn).expect("percentage underflow");
+        let first_liquidity_warning = second_liquidity_warning
+            .checked_sub(minus_delta_of_first_liq_warn)
+            .expect("percentage underflow");
 
         assert!(
             second_liquidity_warning < third_liquidity_warning,

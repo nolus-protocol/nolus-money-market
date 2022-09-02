@@ -2,9 +2,9 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    coin::Amount,
     currency::{Currency, SymbolOwned},
     error::Error,
-    coin::Amount
 };
 
 use super::Coin;

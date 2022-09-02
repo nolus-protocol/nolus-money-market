@@ -156,11 +156,7 @@ pub(super) mod test {
     };
 
     use crate::{
-        coin::Coin,
-        currency::Nls,
-        fraction::Fraction,
-        fractionable::Percentable,
-        percent::Percent,
+        coin::Coin, currency::Nls, fraction::Fraction, fractionable::Percentable, percent::Percent,
         ratio::Rational,
     };
 

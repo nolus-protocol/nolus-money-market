@@ -1,11 +1,11 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use finance::price::PriceDTO;
 use finance::{
     coin::Coin as FinCoin, currency::Currency, fraction::Fraction, fractionable::HigherRank,
     ratio::Rational,
 };
-use finance::price::PriceDTO;
 
 use crate::market_price::PriceFeedsError;
 

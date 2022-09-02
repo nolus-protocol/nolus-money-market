@@ -1,7 +1,7 @@
-use cosmwasm_std::{
-    Addr, coins, CosmosMsg, DepsMut, from_binary, MessageInfo, SubMsg, to_binary, Uint64, WasmMsg,
-};
 use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
+use cosmwasm_std::{
+    coins, from_binary, to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
+};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -11,8 +11,8 @@ use finance::percent::Percent;
 
 use crate::cmd::Borrow;
 use crate::contract::{execute, instantiate, query};
-use crate::ContractError;
 use crate::msg::{ConfigResponse, ExecuteMsg, QueryMsg, Repayment};
+use crate::ContractError;
 
 const CREATOR: &str = "creator";
 const LPP_ADDR: &str = "test";

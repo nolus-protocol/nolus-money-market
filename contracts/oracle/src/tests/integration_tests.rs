@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{
-        Addr, Binary, Coin, CosmosMsg, Deps, Empty, Env, StdResult, to_binary, Uint128, WasmMsg,
+        to_binary, Addr, Binary, Coin, CosmosMsg, Deps, Empty, Env, StdResult, Uint128, WasmMsg,
     };
     use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
     use schemars::JsonSchema;
@@ -118,8 +118,8 @@ mod tests {
         };
 
         // use super::*;
-                // use crate::msg::ExecuteMsg;
-                use super::{ADMIN, proper_instantiate, USER};
+        // use crate::msg::ExecuteMsg;
+        use super::{proper_instantiate, ADMIN, USER};
 
         //TODO: remove after proper implementation of loan SC
         /// The mock for loan SC. It mimics the scheme for time notification.

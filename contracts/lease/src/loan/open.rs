@@ -1,8 +1,4 @@
-use finance::{
-    currency::Currency,
-    percent::Percent,
-    coin::Coin
-};
+use finance::{coin::Coin, currency::Currency, percent::Percent};
 
 pub(crate) struct Receipt<Lpn>
 where

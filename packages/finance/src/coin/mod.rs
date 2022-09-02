@@ -1,17 +1,17 @@
+use std::ops::Mul;
 use std::{
     fmt::{Debug, Display, Formatter},
     marker::PhantomData,
     ops::{Add, AddAssign, Div, Sub, SubAssign},
 };
-use std::ops::Mul;
 
 use ::serde::{Deserialize, Serialize};
 use gcd::Gcd;
 use schemars::JsonSchema;
 
-pub use coinc::CoinDTO;
 #[cfg(feature = "testing")]
 pub use coinc::funds;
+pub use coinc::CoinDTO;
 
 use crate::currency::Currency;
 

@@ -11,7 +11,7 @@ use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
 use platform::coin_legacy::to_cosmwasm;
 
-use crate::common::{ADMIN, AppExt, leaser_wrapper::LeaserWrapper, test_case::TestCase, USER};
+use crate::common::{leaser_wrapper::LeaserWrapper, test_case::TestCase, AppExt, ADMIN, USER};
 
 type Currency = Usdc;
 type TheCoin = Coin<Currency>;

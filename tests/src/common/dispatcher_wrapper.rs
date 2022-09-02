@@ -4,7 +4,7 @@ use cw_multi_test::Executor;
 use rewards_dispatcher::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::tvl_intervals::{Intervals, Stop}
+    state::tvl_intervals::{Intervals, Stop},
 };
 
 use crate::common::{ContractWrapper, MockApp};
@@ -62,11 +62,5 @@ impl Default for DispatcherWrapper {
     }
 }
 
-type DispatcherContractWrapper = ContractWrapper<
-    ExecuteMsg,
-    ContractError,
-    InstantiateMsg,
-    ContractError,
-    QueryMsg,
-    StdError,
->;
+type DispatcherContractWrapper =
+    ContractWrapper<ExecuteMsg, ContractError, InstantiateMsg, ContractError, QueryMsg, StdError>;

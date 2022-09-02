@@ -18,13 +18,13 @@ use crate::{
     msg::StateResponse,
 };
 
+use self::factory::Factory;
 pub(super) use self::{
     downpayment_dto::DownpaymentDTO,
     dto::LeaseDTO,
     liquidation::{LeaseInfo, OnAlarmResult, Status, WarningLevel},
     repay::Result as RepayResult,
 };
-use self::factory::Factory;
 
 mod downpayment_dto;
 mod dto;
@@ -171,7 +171,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{Addr, Timestamp, wasm_execute};
+    use cosmwasm_std::{wasm_execute, Addr, Timestamp};
     use serde::{Deserialize, Serialize};
 
     use finance::{

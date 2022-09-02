@@ -1,6 +1,8 @@
-use cosmwasm_std::{Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, Storage, to_binary};
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, Storage,
+};
 use cw2::set_contract_version;
 
 use platform::reply::from_instantiate;
@@ -10,10 +12,7 @@ use crate::{
     error::ContractError,
     leaser::Leaser,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::{
-        config::Config,
-        leaser::Loans,
-    },
+    state::{config::Config, leaser::Loans},
 };
 
 // version info for migration info
@@ -29,17 +28,23 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    deps.api.addr_validate(msg.lpp_ust_addr.as_str())
-        .map_err(|_| StdError::generic_err(format!(
-            "Invalid LPP address provided! Input: {:?}",
-            msg.lpp_ust_addr.as_str(),
-        )))?;
+    deps.api
+        .addr_validate(msg.lpp_ust_addr.as_str())
+        .map_err(|_| {
+            StdError::generic_err(format!(
+                "Invalid LPP address provided! Input: {:?}",
+                msg.lpp_ust_addr.as_str(),
+            ))
+        })?;
 
-    deps.api.addr_validate(msg.market_price_oracle.as_str())
-        .map_err(|_| StdError::generic_err(format!(
-            "Invalid Market Price Oracle address provided! Input: {:?}",
-            msg.market_price_oracle.as_str(),
-        )))?;
+    deps.api
+        .addr_validate(msg.market_price_oracle.as_str())
+        .map_err(|_| {
+            StdError::generic_err(format!(
+                "Invalid Market Price Oracle address provided! Input: {:?}",
+                msg.market_price_oracle.as_str(),
+            ))
+        })?;
 
     let config = Config::new(info.sender, msg)?;
     config.store(deps.storage)?;

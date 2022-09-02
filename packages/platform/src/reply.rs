@@ -2,9 +2,9 @@
 //!
 //! Here are defined wrappers for deserializing such structures.
 
-use cosmwasm_std::{Addr, Api, Binary, from_binary, Reply, StdError, StdResult};
-use serde::de::DeserializeOwned;
+use cosmwasm_std::{from_binary, Addr, Api, Binary, Reply, StdError, StdResult};
 use prost::Message;
+use serde::de::DeserializeOwned;
 use serde::Deserialize;
 
 pub struct InstantiateResponse<T> {
@@ -27,11 +27,10 @@ where
     let response = decode::<ReplyData>(reply)?;
 
     Ok(InstantiateResponse {
-        address: api.addr_validate(&String::from_utf8(response.address)
-            .map_err(|_| StdError::generic_err(
-                "Address field contains invalid UTF-8 data!",
-            ))?
-        )?,
+        address: api
+            .addr_validate(&String::from_utf8(response.address).map_err(|_| {
+                StdError::generic_err("Address field contains invalid UTF-8 data!")
+            })?)?,
         data: maybe_from_binary(response.data)?,
     })
 }
@@ -46,17 +45,18 @@ where
         pub data: Vec<u8>,
     }
 
-    decode::<ReplyData>(reply).map(|data| data.data).and_then(maybe_from_binary)
+    decode::<ReplyData>(reply)
+        .map(|data| data.data)
+        .and_then(maybe_from_binary)
 }
 
 fn decode_raw<M>(message: &[u8]) -> StdResult<M>
 where
     M: Message + Default,
 {
-    M::decode(message)
-        .map_err(|_| StdError::generic_err(
-            "Data is malformed or doesn't comply with used protobuf format!",
-        ))
+    M::decode(message).map_err(|_| {
+        StdError::generic_err("Data is malformed or doesn't comply with used protobuf format!")
+    })
 }
 
 fn decode<M>(reply: Reply) -> StdResult<M>
@@ -64,7 +64,9 @@ where
     M: Message + Default,
 {
     decode_raw(
-        reply.result.into_result()
+        reply
+            .result
+            .into_result()
             .map_err(StdError::generic_err)?
             .data
             .ok_or_else(|| StdError::generic_err("Reply doesn't contain data!"))?
@@ -77,5 +79,7 @@ fn maybe_from_binary<T>(data: Vec<u8>) -> StdResult<Option<T>>
 where
     T: for<'de> Deserialize<'de>,
 {
-    (!data.is_empty()).then(|| from_binary(&Binary::from(data))).transpose()
+    (!data.is_empty())
+        .then(|| from_binary(&Binary::from(data)))
+        .transpose()
 }

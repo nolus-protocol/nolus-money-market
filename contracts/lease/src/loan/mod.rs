@@ -18,8 +18,8 @@ use platform::batch::Batch;
 
 use crate::error::{ContractError, ContractResult};
 
-pub(crate) use self::{open::Receipt as OpenReceipt, repay::Receipt as RepayReceipt};
 pub use self::state::State;
+pub(crate) use self::{open::Receipt as OpenReceipt, repay::Receipt as RepayReceipt};
 
 mod open;
 mod repay;
@@ -428,8 +428,8 @@ mod tests {
     use platform::bank::BankAccountView;
     use platform::error::Result as PlatformResult;
 
-    use crate::loan::{Loan, LoanDTO};
     use crate::loan::repay::Receipt as RepayReceipt;
+    use crate::loan::{Loan, LoanDTO};
     use crate::repay_id::ReplyId;
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(500); // 50%

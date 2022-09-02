@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Binary, Timestamp, to_binary};
+use cosmwasm_std::{to_binary, Addr, Binary, Timestamp};
 use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};

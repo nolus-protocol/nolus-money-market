@@ -1,18 +1,14 @@
-use cosmwasm_std::{Addr, wasm_execute};
+use cosmwasm_std::{wasm_execute, Addr};
 use cw_multi_test::Executor;
 
 use finance::{
     coin::Coin,
-    currency::{
-        Currency as CurrencyTrait,
-        Nls,
-        Usdc
-    }
+    currency::{Currency as CurrencyTrait, Nls, Usdc},
 };
 use marketprice::storage::Price;
 use platform::coin_legacy::to_cosmwasm;
 
-use crate::common::{ADMIN, test_case::TestCase};
+use crate::common::{test_case::TestCase, ADMIN};
 
 type Currency = Usdc;
 type TheCoin = Coin<Currency>;
@@ -40,27 +36,35 @@ fn create_test_case() -> TestCase {
 fn internal_test_integration_setup_test() {
     let mut test_case = create_test_case();
 
-    test_case.app.execute(
-        Addr::unchecked(ADMIN),
-        wasm_execute(
-            test_case.oracle.clone().unwrap(),
-            &oracle::msg::ExecuteMsg::RegisterFeeder {
-                feeder_address: ADMIN.into(),
-            },
-            vec![to_cosmwasm(create_coin(10000))],
-        ).unwrap().into(),
-    ).unwrap();
+    test_case
+        .app
+        .execute(
+            Addr::unchecked(ADMIN),
+            wasm_execute(
+                test_case.oracle.clone().unwrap(),
+                &oracle::msg::ExecuteMsg::RegisterFeeder {
+                    feeder_address: ADMIN.into(),
+                },
+                vec![to_cosmwasm(create_coin(10000))],
+            )
+            .unwrap()
+            .into(),
+        )
+        .unwrap();
 
-    test_case.app.execute(
-        Addr::unchecked(ADMIN),
-        wasm_execute(
-            test_case.oracle.clone().unwrap(),
-            &oracle::msg::ExecuteMsg::FeedPrices {
-                prices: vec![
-                    Price::new("UST", 5, Nls::SYMBOL, 7),
-                ],
-            },
-            vec![to_cosmwasm(create_coin(10000))],
-        ).unwrap().into(),
-    ).expect("Oracle not properly connected!");
+    test_case
+        .app
+        .execute(
+            Addr::unchecked(ADMIN),
+            wasm_execute(
+                test_case.oracle.clone().unwrap(),
+                &oracle::msg::ExecuteMsg::FeedPrices {
+                    prices: vec![Price::new("UST", 5, Nls::SYMBOL, 7)],
+                },
+                vec![to_cosmwasm(create_coin(10000))],
+            )
+            .unwrap()
+            .into(),
+        )
+        .expect("Oracle not properly connected!");
 }

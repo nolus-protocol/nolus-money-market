@@ -45,8 +45,8 @@ impl NewLeaseForm {
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{
-        Addr,
-        QuerierWrapper, testing::{MockApi, MockQuerier}, Timestamp,
+        testing::{MockApi, MockQuerier},
+        Addr, QuerierWrapper, Timestamp,
     };
 
     use finance::{

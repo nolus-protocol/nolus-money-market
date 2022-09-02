@@ -1,8 +1,8 @@
-use cosmwasm_std::{
-    Binary, Deps, DepsMut, ensure, Env, MessageInfo, QuerierWrapper, Reply, Response,
-};
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    ensure, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Response,
+};
 use cw2::set_contract_version;
 
 use finance::price::PriceDTO;
@@ -10,7 +10,7 @@ use platform::{bank::BankStub, batch::Emitter};
 
 use crate::{
     contract::{
-        alarms::{LiquidationResult, price::PriceAlarm},
+        alarms::{price::PriceAlarm, LiquidationResult},
         open::OpenLoanReqResult,
     },
     error::{ContractError, ContractResult},

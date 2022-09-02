@@ -5,7 +5,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use finance::{
     coin::Coin,
-    currency::{AnyVisitor, Currency, SymbolOwned, visit_any},
+    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
 };
 use platform::{
     batch::{Batch, ReplyId},
@@ -313,7 +313,7 @@ impl<'a, C> From<LppStub<'a, C>> for LppBatch {
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{
-        Addr, CosmosMsg, from_binary, QuerierWrapper, ReplyOn, Response, testing::MockQuerier,
+        from_binary, testing::MockQuerier, Addr, CosmosMsg, QuerierWrapper, ReplyOn, Response,
         WasmMsg,
     };
 

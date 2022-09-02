@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, coin, coins};
+use cosmwasm_std::{coin, coins, Addr};
 use cw_multi_test::Executor;
 
 use finance::{
@@ -15,13 +15,13 @@ use lpp::msg::{
 };
 
 use crate::common::{
-    ADMIN,
-    AppExt,
     lease_wrapper::{LeaseWrapper, LeaseWrapperAddresses, LeaseWrapperConfig},
     lpp_wrapper::LppWrapper,
     mock_app,
     oracle_wrapper::MarketOracleWrapper,
-    test_case::TestCase, timealarms_wrapper::TimeAlarmsWrapper, USER,
+    test_case::TestCase,
+    timealarms_wrapper::TimeAlarmsWrapper,
+    AppExt, ADMIN, USER,
 };
 
 type TheCurrency = Usdc;
@@ -106,12 +106,7 @@ fn deposit_and_withdraw() {
 
     let mut app = mock_app(&[coin(app_balance, denom)]);
     let lease_id = LeaseWrapper::default().store(&mut app);
-    let (lpp, _) = LppWrapper::default().instantiate(
-        &mut app,
-        lease_id.into(),
-        denom,
-        0,
-    );
+    let (lpp, _) = LppWrapper::default().instantiate(&mut app, lease_id.into(), denom, 0);
     let timealarms = TimeAlarmsWrapper::default().instantiate(&mut app);
     let market_price_oracle = MarketOracleWrapper::default().instantiate(
         &mut app,
@@ -221,7 +216,7 @@ fn deposit_and_withdraw() {
         LeaseWrapperConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             downpayment: loan,
-            .. LeaseWrapperConfig::default()
+            ..LeaseWrapperConfig::default()
         },
     );
     let balance_lpp: LppBalanceResponse<TheCurrency> = app
@@ -380,12 +375,8 @@ fn loan_open_and_repay() {
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate(&mut app, lease_id.into(), denom, 0);
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app);
-    let oracle = MarketOracleWrapper::default().instantiate(
-        &mut app,
-        denom,
-        time_alarms.as_str(),
-        0,
-    );
+    let oracle =
+        MarketOracleWrapper::default().instantiate(&mut app, denom, time_alarms.as_str(), 0);
     let lease_addresses = LeaseWrapperAddresses {
         lpp: lpp.clone(),
         oracle,
@@ -443,7 +434,7 @@ fn loan_open_and_repay() {
         LeaseWrapperConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             downpayment: loan1,
-            .. LeaseWrapperConfig::default()
+            ..LeaseWrapperConfig::default()
         },
     );
 
@@ -677,12 +668,8 @@ fn compare_lpp_states() {
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate(&mut app, lease_id.into(), denom, 0);
     let timealarms = TimeAlarmsWrapper::default().instantiate(&mut app);
-    let market_oracle = MarketOracleWrapper::default().instantiate(
-        &mut app,
-        denom,
-        timealarms.as_str(),
-        0,
-    );
+    let market_oracle =
+        MarketOracleWrapper::default().instantiate(&mut app, denom, timealarms.as_str(), 0);
     app.send_tokens(admin.clone(), lender.clone(), &[coin(init_deposit, denom)])
         .unwrap();
     app.send_tokens(
@@ -751,7 +738,8 @@ fn compare_lpp_states() {
             amount: Coin::<TheCurrency>::new(loan1).into(),
         },
         &[],
-    ).unwrap_err();
+    )
+    .unwrap_err();
 
     app.time_shift(Duration::from_nanos(YEAR / 2));
 
@@ -823,7 +811,8 @@ fn compare_lpp_states() {
         lpp.clone(),
         &ExecuteLpp::RepayLoan(),
         &[coin(loan1, denom)],
-    ).unwrap_err();
+    )
+    .unwrap_err();
 
     // repay zero
     app.execute_contract(
@@ -831,7 +820,8 @@ fn compare_lpp_states() {
         lpp.clone(),
         &ExecuteLpp::RepayLoan(),
         &[coin(0, denom)],
-    ).unwrap_err();
+    )
+    .unwrap_err();
 
     // repay wrong currency
     app.send_tokens(
@@ -845,7 +835,8 @@ fn compare_lpp_states() {
         lpp.clone(),
         &ExecuteLpp::RepayLoan(),
         &[coin(repay_interest_part, Nls::SYMBOL)],
-    ).unwrap_err();
+    )
+    .unwrap_err();
 
     // repay interest part
     app.execute_contract(
@@ -853,7 +844,8 @@ fn compare_lpp_states() {
         lpp.clone(),
         &ExecuteLpp::RepayLoan(),
         &[coin(repay_interest_part, denom)],
-    ).unwrap();
+    )
+    .unwrap();
 
     let maybe_loan1: QueryLoanResponse<TheCurrency> = app
         .wrap()
@@ -880,7 +872,8 @@ fn compare_lpp_states() {
             interest1.of(loan1) - repay_interest_part + repay_due_part,
             denom,
         )],
-    ).unwrap();
+    )
+    .unwrap();
 
     let maybe_loan1: QueryLoanResponse<TheCurrency> = app
         .wrap()
@@ -901,7 +894,8 @@ fn compare_lpp_states() {
         lpp.clone(),
         &ExecuteLpp::RepayLoan(),
         &[coin(loan1 - repay_due_part + repay_excess, denom)],
-    ).unwrap();
+    )
+    .unwrap();
 
     let maybe_loan1: QueryLoanResponse<TheCurrency> = app
         .wrap()

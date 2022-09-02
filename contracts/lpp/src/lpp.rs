@@ -10,7 +10,7 @@ use finance::{
     fraction::Fraction,
     percent::Percent,
     price::{self, Price},
-    ratio::Rational
+    ratio::Rational,
 };
 use platform::bank::BankView;
 
@@ -18,7 +18,7 @@ use crate::{
     error::ContractError,
     msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse},
     nlpn::NLpn,
-    state::{Config, Deposit, Loan, LoanData, Total}
+    state::{Config, Deposit, Loan, LoanData, Total},
 };
 
 pub struct NTokenPrice<LPN>
@@ -296,8 +296,8 @@ where
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{Addr, Coin as CwCoin, Timestamp, Uint64};
     use cosmwasm_std::testing::{self, MOCK_CONTRACT_ADDR};
+    use cosmwasm_std::{Addr, Coin as CwCoin, Timestamp, Uint64};
 
     use finance::currency::Usdc;
     use finance::duration::Duration;

@@ -3,13 +3,13 @@ use cw_multi_test::Executor;
 
 use timealarms::{
     contract::{execute, instantiate, reply},
+    msg::{ExecuteMsg, InstantiateMsg},
     ContractError,
-    msg::{ExecuteMsg, InstantiateMsg}
 };
 
 use crate::common::{ContractWrapper, MockApp};
 
-use super::{ADMIN, mock_query, MockQueryMsg};
+use super::{mock_query, MockQueryMsg, ADMIN};
 
 pub struct TimeAlarmsWrapper {
     contract_wrapper: Box<TimeAlarmsContractWrapper>,
@@ -35,12 +35,7 @@ impl TimeAlarmsWrapper {
 
 impl Default for TimeAlarmsWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(
-            execute,
-            instantiate,
-            mock_query,
-        )
-            .with_reply(reply);
+        let contract = ContractWrapper::new(execute, instantiate, mock_query).with_reply(reply);
 
         Self {
             contract_wrapper: Box::new(contract),

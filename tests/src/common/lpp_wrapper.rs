@@ -1,11 +1,7 @@
-use cosmwasm_std::{Addr, Binary, coins, Deps, Env, to_binary, Uint64};
+use cosmwasm_std::{coins, to_binary, Addr, Binary, Deps, Env, Uint64};
 use cw_multi_test::Executor;
 
-use finance::{
-    coin::Coin,
-    currency::Usdc,
-    percent::Percent
-};
+use finance::{coin::Coin, currency::Usdc, percent::Percent};
 use lpp::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
@@ -76,11 +72,7 @@ impl Default for LppWrapper {
     }
 }
 
-pub fn mock_lpp_query(
-    deps: Deps,
-    env: Env,
-    msg: QueryMsg,
-) -> Result<Binary, ContractError> {
+pub fn mock_lpp_query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::LppBalance() => to_binary(&lpp::msg::LppBalanceResponse::<Usdc> {
             balance: Coin::new(1000000000),
@@ -94,11 +86,7 @@ pub fn mock_lpp_query(
     Ok(res)
 }
 
-pub fn mock_lpp_quote_query(
-    deps: Deps,
-    env: Env,
-    msg: QueryMsg,
-) -> Result<Binary, ContractError> {
+pub fn mock_lpp_quote_query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::Quote { amount: _amount } => to_binary(
             &lpp::msg::QueryQuoteResponse::QuoteInterestRate(Percent::HUNDRED),

@@ -3,8 +3,8 @@ use cw_multi_test::Executor;
 
 use profit::{
     contract::{execute, instantiate, query},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg}
 };
 
 use crate::common::{ContractWrapper, MockApp};
@@ -38,11 +38,7 @@ impl ProfitWrapper {
 
 impl Default for ProfitWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(
-            execute,
-            instantiate,
-            query,
-        );
+        let contract = ContractWrapper::new(execute, instantiate, query);
 
         Self {
             contract_wrapper: Box::new(contract),
@@ -50,11 +46,5 @@ impl Default for ProfitWrapper {
     }
 }
 
-type ProfitContractWrapper = ContractWrapper<
-    ExecuteMsg,
-    ContractError,
-    InstantiateMsg,
-    ContractError,
-    QueryMsg,
-    StdError,
->;
+type ProfitContractWrapper =
+    ContractWrapper<ExecuteMsg, ContractError, InstantiateMsg, ContractError, QueryMsg, StdError>;

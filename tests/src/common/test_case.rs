@@ -1,12 +1,11 @@
-use cosmwasm_std::{Addr, Coin, coins, Uint64};
-use cw_multi_test::{Executor, next_block};
+use cosmwasm_std::{coins, Addr, Coin, Uint64};
+use cw_multi_test::{next_block, Executor};
 
 use finance::coin::Amount;
 
-use crate::common::{ContractWrapper, lease_wrapper::LeaseWrapperAddresses, MockApp};
+use crate::common::{lease_wrapper::LeaseWrapperAddresses, ContractWrapper, MockApp};
 
 use super::{
-    ADMIN,
     dispatcher_wrapper::DispatcherWrapper,
     lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
     leaser_wrapper::LeaserWrapper,
@@ -16,6 +15,7 @@ use super::{
     profit_wrapper::ProfitWrapper,
     timealarms_wrapper::TimeAlarmsWrapper,
     treasury_wrapper::TreasuryWrapper,
+    ADMIN,
 };
 
 type OptionalContractWrapper = Option<

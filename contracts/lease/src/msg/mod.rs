@@ -5,7 +5,7 @@ use finance::price::PriceDTO;
 
 pub use self::{
     opening::{LoanForm, NewLeaseForm},
-    query::{StateQuery, StateResponse}
+    query::{StateQuery, StateResponse},
 };
 
 mod opening;

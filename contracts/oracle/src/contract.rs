@@ -1,16 +1,16 @@
 use std::collections::{HashMap, HashSet};
 
-use cosmwasm_std::{
-    Addr, Binary, Deps, DepsMut, Env, from_binary, MessageInfo, Reply, Response, Storage,
-    Timestamp, to_binary,
-};
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
+    Storage, Timestamp,
+};
 use cw2::set_contract_version;
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::{
-    currency::{AnyVisitor, Currency, Nls, SymbolOwned, Usdc, visit_any},
+    currency::{visit_any, AnyVisitor, Currency, Nls, SymbolOwned, Usdc},
     price::PriceDTO,
 };
 use marketprice::{

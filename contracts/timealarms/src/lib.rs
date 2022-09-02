@@ -8,4 +8,3 @@ pub mod error;
 pub mod msg;
 #[cfg(test)]
 pub mod tests;
-

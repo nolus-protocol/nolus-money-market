@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{coin::CoinDTO, currency::SymbolOwned, liability::Liability, percent::Percent};
 
-use crate::{ContractError, state::config::Config};
+use crate::{state::config::Config, ContractError};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {

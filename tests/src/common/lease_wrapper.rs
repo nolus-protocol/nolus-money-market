@@ -1,12 +1,12 @@
-use cosmwasm_std::{Addr, coin};
+use cosmwasm_std::{coin, Addr};
 use cw_multi_test::Executor;
 
 use finance::{liability::Liability, percent::Percent};
+use lease::contract::{execute, instantiate, query, reply};
 use lease::{
     error::ContractError,
-    msg::{ExecuteMsg, LoanForm, NewLeaseForm, StateQuery}
+    msg::{ExecuteMsg, LoanForm, NewLeaseForm, StateQuery},
 };
-use lease::contract::{execute, instantiate, query, reply};
 
 use crate::common::{ContractWrapper, MockApp};
 
@@ -77,11 +77,7 @@ impl LeaseWrapper {
         };
 
         let downpayment = config.downpayment;
-        let msg = Self::lease_instantiate_msg(
-            denom,
-            addresses,
-            config,
-        );
+        let msg = Self::lease_instantiate_msg(denom, addresses, config);
 
         let result = app.instantiate_contract(
             code_id,
@@ -133,12 +129,7 @@ impl LeaseWrapper {
 
 impl Default for LeaseWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(
-            execute,
-            instantiate,
-            query,
-        )
-            .with_reply(reply);
+        let contract = ContractWrapper::new(execute, instantiate, query).with_reply(reply);
 
         Self {
             contract_wrapper: Box::new(contract),

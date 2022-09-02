@@ -1,21 +1,18 @@
-use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, Storage};
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, Storage};
 use cw2::set_contract_version;
 
-use finance::{
-    coin::Coin,
-    currency::Nls
-};
+use finance::{coin::Coin, currency::Nls};
 use platform::{
     bank::{BankAccount, BankStub},
-    batch::Batch
+    batch::Batch,
 };
 
 use crate::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg},
-    state::{self, ADMIN, REWARDS_DISPATCHER}
+    state::{self, ADMIN, REWARDS_DISPATCHER},
 };
 
 // version info for migration info

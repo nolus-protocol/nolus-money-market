@@ -15,8 +15,8 @@ use platform::batch::Emit;
 use platform::batch::Emitter;
 
 use crate::cmd::Result as DispatcherResult;
-use crate::ContractError;
 use crate::state::Config;
+use crate::ContractError;
 
 use super::Dispatch;
 use super::PriceConvert;

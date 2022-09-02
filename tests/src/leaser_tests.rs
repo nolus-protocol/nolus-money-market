@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{Addr, coins, DepsMut, Env, Event, MessageInfo, Response};
-use cw_multi_test::{ContractWrapper, Executor, next_block};
+use cosmwasm_std::{coins, Addr, DepsMut, Env, Event, MessageInfo, Response};
+use cw_multi_test::{next_block, ContractWrapper, Executor};
 
 use finance::{
     coin::{self, Coin},
@@ -11,7 +11,7 @@ use finance::{
 use lease::error::ContractError;
 use leaser::msg::{QueryMsg, QuoteResponse};
 
-use crate::common::{ADMIN, lpp_wrapper::mock_lpp_quote_query, test_case::TestCase, USER};
+use crate::common::{lpp_wrapper::mock_lpp_quote_query, test_case::TestCase, ADMIN, USER};
 
 type TheCurrency = Usdc;
 

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{
     coin::{Amount, CoinDTO},
-    currency::SymbolOwned
+    currency::SymbolOwned,
 };
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

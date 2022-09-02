@@ -1,19 +1,20 @@
-use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Timestamp, to_binary};
+use cosmwasm_std::{
+    to_binary, Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Timestamp,
+};
 use serde::{de::DeserializeOwned, Serialize};
 
-use finance::{
-    coin::Coin,
-    currency::Currency
-};
+use finance::{coin::Coin, currency::Currency};
 use platform::{
+    bank::{self, BankAccount, BankStub},
     batch::Batch,
-    bank::{self, BankAccount, BankStub}
 };
 
 use crate::{
-    lpp::LiquidityPool,
     error::ContractError,
-    msg::{LoanResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryQuoteResponse}
+    lpp::LiquidityPool,
+    msg::{
+        LoanResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryQuoteResponse,
+    },
 };
 
 pub fn try_open_loan<LPN>(

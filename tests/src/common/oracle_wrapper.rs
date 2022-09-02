@@ -1,15 +1,15 @@
-use cosmwasm_std::{Addr, Binary, coins, Deps, Env, to_binary};
+use cosmwasm_std::{coins, to_binary, Addr, Binary, Deps, Env};
 use cw_multi_test::Executor;
 
 use finance::{
     coin::Coin,
     currency::{Currency, Nls, Usdc},
-    price::{PriceDTO, total_of},
+    price::{total_of, PriceDTO},
 };
 use oracle::{
     contract::{execute, instantiate, query, reply},
-    ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    ContractError,
 };
 
 use crate::common::{ContractWrapper, MockApp};

@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use finance::coin::Coin;
 use finance::currency::{Currency, Nls};
-use finance::price::{Price, total};
+use finance::price::{total, Price};
 use oracle::stub::{Oracle as OracleTrait, WithOracle};
 
 use crate::ContractError;

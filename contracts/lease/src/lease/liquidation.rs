@@ -6,7 +6,7 @@ use finance::{
     currency::{Currency, SymbolOwned},
     fraction::Fraction,
     percent::{Percent, Units},
-    price::{Price, PriceDTO, total, total_of},
+    price::{total, total_of, Price, PriceDTO},
     ratio::Rational,
 };
 use lpp::stub::Lpp as LppTrait;
@@ -119,7 +119,7 @@ where
             debug_assert!(self.liability.first_liq_warn_percent() <= liability);
             (self.liability.first_liq_warn_percent(), WarningLevel::First)
         };
-        
+
         Status::Warning(
             LeaseInfo {
                 customer: self.customer.clone(),

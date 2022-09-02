@@ -2,13 +2,13 @@ use cosmwasm_std::{Addr, Coin, StdError};
 use cw_multi_test::Executor;
 
 use treasury::{
+    msg::{ExecuteMsg, InstantiateMsg},
     ContractError,
-    msg::{ExecuteMsg, InstantiateMsg}
 };
 
 use crate::common::{ContractWrapper, MockApp};
 
-use super::{ADMIN, mock_query, MockQueryMsg, NATIVE_DENOM};
+use super::{mock_query, MockQueryMsg, ADMIN, NATIVE_DENOM};
 
 pub fn treasury_instantiate_msg() -> InstantiateMsg {
     InstantiateMsg {}

@@ -1,6 +1,8 @@
 use cosmwasm_std::{
-    Addr, Api, Binary, BlockInfo, CanonicalAddr, Coin, coins, Deps, Env, RecoverPubkeyError,
-    StdResult, testing::{mock_env, MockApi}, Timestamp, to_binary, VerificationError,
+    coins,
+    testing::{mock_env, MockApi},
+    to_binary, Addr, Api, Binary, BlockInfo, CanonicalAddr, Coin, Deps, Env, RecoverPubkeyError,
+    StdResult, Timestamp, VerificationError,
 };
 use cw_multi_test::{App, AppBuilder, BankKeeper};
 use serde::{Deserialize, Serialize};
@@ -23,19 +25,19 @@ type ContractWrapper<
     MigrMsg = cosmwasm_std::Empty,
     MigrErr = anyhow::Error,
 > = cw_multi_test::ContractWrapper<
-    ExecMsg, // execute msg
-    InstMsg, // instantiate msg
-    QueryMsg, // query msg
-    ExecErr, // execute err
-    InstErr, // instantiate err
-    QueryErr, // query err
+    ExecMsg,             // execute msg
+    InstMsg,             // instantiate msg
+    QueryMsg,            // query msg
+    ExecErr,             // execute err
+    InstErr,             // instantiate err
+    QueryErr,            // query err
     cosmwasm_std::Empty, // C
     cosmwasm_std::Empty, // Q
-    Sudo, // sudo msg
-    SudoErr, // sudo err
-    ReplyErr, // reply err
-    MigrMsg, // migrate msg
-    MigrErr, // migrate err
+    Sudo,                // sudo msg
+    SudoErr,             // sudo err
+    ReplyErr,            // reply err
+    MigrMsg,             // migrate msg
+    MigrErr,             // migrate err
 >;
 
 #[cfg(test)]
@@ -78,8 +80,10 @@ where
     }
 }
 
-impl<A> Api for ApiWithNullAddresses<A> where
-    A: Api {
+impl<A> Api for ApiWithNullAddresses<A>
+where
+    A: Api,
+{
     fn addr_validate(&self, human: &str) -> StdResult<Addr> {
         if human.is_empty() {
             Ok(Addr::unchecked(String::default()))
@@ -96,20 +100,42 @@ impl<A> Api for ApiWithNullAddresses<A> where
         self.0.addr_humanize(canonical)
     }
 
-    fn secp256k1_verify(&self, message_hash: &[u8], signature: &[u8], public_key: &[u8]) -> Result<bool, VerificationError> {
+    fn secp256k1_verify(
+        &self,
+        message_hash: &[u8],
+        signature: &[u8],
+        public_key: &[u8],
+    ) -> Result<bool, VerificationError> {
         self.0.secp256k1_verify(message_hash, signature, public_key)
     }
 
-    fn secp256k1_recover_pubkey(&self, message_hash: &[u8], signature: &[u8], recovery_param: u8) -> Result<Vec<u8>, RecoverPubkeyError> {
-        self.0.secp256k1_recover_pubkey(message_hash, signature, recovery_param)
+    fn secp256k1_recover_pubkey(
+        &self,
+        message_hash: &[u8],
+        signature: &[u8],
+        recovery_param: u8,
+    ) -> Result<Vec<u8>, RecoverPubkeyError> {
+        self.0
+            .secp256k1_recover_pubkey(message_hash, signature, recovery_param)
     }
 
-    fn ed25519_verify(&self, message: &[u8], signature: &[u8], public_key: &[u8]) -> Result<bool, VerificationError> {
+    fn ed25519_verify(
+        &self,
+        message: &[u8],
+        signature: &[u8],
+        public_key: &[u8],
+    ) -> Result<bool, VerificationError> {
         self.0.ed25519_verify(message, signature, public_key)
     }
 
-    fn ed25519_batch_verify(&self, messages: &[&[u8]], signatures: &[&[u8]], public_keys: &[&[u8]]) -> Result<bool, VerificationError> {
-        self.0.ed25519_batch_verify(messages, signatures, public_keys)
+    fn ed25519_batch_verify(
+        &self,
+        messages: &[&[u8]],
+        signatures: &[&[u8]],
+        public_keys: &[&[u8]],
+    ) -> Result<bool, VerificationError> {
+        self.0
+            .ed25519_batch_verify(messages, signatures, public_keys)
     }
 
     fn debug(&self, message: &str) {
@@ -121,10 +147,7 @@ fn mock_query(_deps: Deps, _env: Env, _msg: MockQueryMsg) -> StdResult<Binary> {
     to_binary(&MockResponse {})
 }
 
-pub type MockApp = App<
-    BankKeeper,
-    ApiWithNullAddresses<MockApi>,
->;
+pub type MockApp = App<BankKeeper, ApiWithNullAddresses<MockApi>>;
 
 pub fn mock_app(init_funds: &[Coin]) -> MockApp {
     let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);

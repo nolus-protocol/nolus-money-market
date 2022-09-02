@@ -11,4 +11,3 @@ pub mod state;
 pub mod stub;
 #[cfg(test)]
 pub mod tests;
-

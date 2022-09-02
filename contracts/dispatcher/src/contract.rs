@@ -1,9 +1,9 @@
-use cosmwasm_std::{
-    Addr, Binary, Deps, DepsMut, ensure, Env, MessageInfo, Response, StdResult, Storage, Timestamp,
-    to_binary,
-};
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::{
+    ensure, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
+    Timestamp,
+};
 use cw2::set_contract_version;
 
 use finance::currency::Nls;
@@ -144,14 +144,14 @@ pub fn try_dispatch(
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{
-        Addr, coins,
-        DepsMut,
-        from_binary, testing::{mock_dependencies_with_balance, mock_env, mock_info},
+        coins, from_binary,
+        testing::{mock_dependencies_with_balance, mock_env, mock_info},
+        Addr, DepsMut,
     };
 
-    use crate::ContractError;
     use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
     use crate::state::tvl_intervals::{Intervals, Stop};
+    use crate::ContractError;
 
     use super::{execute, instantiate, query};
 
