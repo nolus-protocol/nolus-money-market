@@ -29,8 +29,7 @@ impl Leaser {
         let config = Config::load(deps.storage)?;
 
         let lpp = LppRef::try_borrow_from(
-            config.lpp_addr.to_string(),
-            deps.api,
+            config.lpp_addr,
             &deps.querier,
             lease::repay_id::ReplyId::OpenLoanReq.into(),
         )?;

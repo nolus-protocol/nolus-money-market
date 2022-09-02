@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use cosmwasm_std::{Addr, Api, QuerierWrapper, Reply, Timestamp};
+use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use finance::{
@@ -70,23 +70,16 @@ pub struct LppRef {
 }
 
 impl LppRef {
-    pub fn try_from<A>(addr_raw: String, api: &A, querier: &QuerierWrapper) -> Result<Self>
-    where
-        A: ?Sized + Api,
-    {
-        Self::try_from_maybe_borrow(addr_raw, api, querier, None)
+    pub fn try_from(addr: Addr, querier: &QuerierWrapper) -> Result<Self> {
+        Self::try_from_maybe_borrow(addr, querier, None)
     }
 
-    pub fn try_borrow_from<A>(
-        addr_raw: String,
-        api: &A,
+    pub fn try_borrow_from(
+        addr: Addr,
         querier: &QuerierWrapper,
         open_loan_req_id: ReplyId,
-    ) -> Result<Self>
-    where
-        A: ?Sized + Api,
-    {
-        Self::try_from_maybe_borrow(addr_raw, api, querier, Some(open_loan_req_id))
+    ) -> Result<Self> {
+        Self::try_from_maybe_borrow(addr, querier, Some(open_loan_req_id))
     }
 
     pub fn addr(&self) -> &Addr {
@@ -134,17 +127,11 @@ impl LppRef {
         )
     }
 
-    fn try_from_maybe_borrow<A>(
-        addr_raw: String,
-        api: &A,
+    fn try_from_maybe_borrow(
+        addr: Addr,
         querier: &QuerierWrapper,
         open_loan_req_id: Option<ReplyId>,
-    ) -> Result<Self>
-    where
-        A: ?Sized + Api,
-    {
-        let addr = api.addr_validate(&addr_raw)?;
-
+    ) -> Result<Self> {
         let resp: QueryConfigResponse =
             querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
 

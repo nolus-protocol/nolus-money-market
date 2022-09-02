@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use cosmwasm_std::{Addr, Api, QuerierWrapper, wasm_execute};
+use cosmwasm_std::{Addr, QuerierWrapper, wasm_execute};
 use serde::{Deserialize, Serialize};
 
 use finance::currency::{Currency, SingleVisitor, SymbolOwned, visit};
@@ -42,7 +42,7 @@ where
     where
         O: Oracle<OracleBase>;
 
-    fn unknown_lpn(self, symbol: SymbolOwned) -> StdResult<Self::Output, Self::Error>;
+    fn unexpected_base(self, symbol: SymbolOwned) -> StdResult<Self::Output, Self::Error>;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -58,13 +58,11 @@ impl From<OracleRef> for Addr {
 }
 
 impl OracleRef {
-    pub fn try_from<A>(addr_raw: String, api: &A, querier: &QuerierWrapper) -> Result<Self>
-    where
-        A: ?Sized + Api,
-    {
-        let addr = api.addr_validate(&addr_raw)?;
+    pub fn try_from(addr: Addr, querier: &QuerierWrapper) -> Result<Self> {
         let resp: ConfigResponse = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config {})?;
+
         let currency = resp.base_asset;
+
         Ok(Self { addr, currency })
     }
 
@@ -102,7 +100,7 @@ impl OracleRef {
             }
 
             fn on_unknown(self) -> StdResult<Self::Output, Self::Error> {
-                self.cmd.unknown_lpn(self.oracle_ref.currency.clone())
+                self.cmd.unexpected_base(self.oracle_ref.currency.clone())
             }
         }
 

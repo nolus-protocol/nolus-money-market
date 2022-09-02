@@ -2,7 +2,6 @@ use cosmwasm_std::{Api, QuerierWrapper, Timestamp};
 
 use finance::duration::Duration;
 use lpp::stub::LppRef;
-use market_price_oracle::stub::OracleRef;
 
 use crate::{
     error::ContractResult, lease::LeaseDTO, loan::LoanDTO, msg::NewLeaseForm, repay_id::ReplyId,
@@ -16,16 +15,14 @@ impl NewLeaseForm {
         querier: &QuerierWrapper,
     ) -> ContractResult<LeaseDTO> {
         self.liability.invariant_held()?;
+
         let customer = api.addr_validate(&self.customer)?;
 
         let lpp = LppRef::try_borrow_from(
-            self.loan.lpp.clone(),
-            api,
+            api.addr_validate(&self.loan.lpp)?,
             querier,
             ReplyId::OpenLoanReq.into(),
         )?;
-
-        let oracle = OracleRef::try_from(self.market_price_oracle.to_string(), api, querier)?;
 
         let loan = LoanDTO::new(
             start_at,
@@ -40,7 +37,7 @@ impl NewLeaseForm {
             self.currency,
             self.liability,
             loan,
-            oracle.into(),
+            self.market_price_oracle,
         ))
     }
 }

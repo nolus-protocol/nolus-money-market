@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Api, QuerierWrapper, Timestamp};
+use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use serde::Serialize;
 
 use finance::{
@@ -49,18 +49,13 @@ pub trait WithLease {
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn execute<L, O, E>(
-    dto: LeaseDTO,
-    cmd: L,
-    api: &dyn Api,
-    querier: &QuerierWrapper,
-) -> Result<O, E>
+pub fn execute<L, O, E>(dto: LeaseDTO, cmd: L, querier: &QuerierWrapper) -> Result<O, E>
 where
     L: WithLease<Output = O, Error = E>,
 {
     let lpp = dto.loan.lpp().clone();
 
-    lpp.execute(Factory::new(cmd, dto, api, querier), querier)
+    lpp.execute(Factory::new(cmd, dto, querier), querier)
 }
 
 pub struct Lease<Lpn, Lpp, Oracle> {

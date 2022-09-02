@@ -123,11 +123,10 @@ pub fn try_dispatch(
         return Err(ContractError::UnrecognisedAlarm(info.sender));
     }
     let last_dispatch = DispatchLog::last_dispatch(deps.storage)?;
-    let oracle_address = config.oracle.as_ref().to_string();
-    let oracle = OracleRef::try_from(oracle_address, deps.api, &deps.querier)?;
+    let oracle = OracleRef::try_from(config.oracle.clone(), &deps.querier)?;
 
-    let lpp_address = config.lpp.as_ref().to_string();
-    let lpp = LppRef::try_from(lpp_address.clone(), deps.api, &deps.querier)?;
+    let lpp_address = config.lpp.clone();
+    let lpp = LppRef::try_from(lpp_address.clone(), &deps.querier)?;
     let emitter: Emitter = lpp.execute(
         Dispatch::new(oracle, last_dispatch, config, block_time, deps.querier)?,
         &deps.querier,

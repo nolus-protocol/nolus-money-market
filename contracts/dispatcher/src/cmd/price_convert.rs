@@ -28,7 +28,7 @@ where
         Ok(reward_unls)
     }
 
-    fn unknown_lpn(
+    fn unexpected_base(
         self,
         symbol: finance::currency::SymbolOwned,
     ) -> Result<Self::Output, Self::Error> {

@@ -1,4 +1,4 @@
-use cosmwasm_std::{Api, QuerierWrapper};
+use cosmwasm_std::QuerierWrapper;
 use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
@@ -10,21 +10,14 @@ use super::{dto::LeaseDTO, Lease, WithLease};
 pub struct Factory<'r, L> {
     cmd: L,
     lease_dto: LeaseDTO,
-    api: &'r dyn Api,
     querier: &'r QuerierWrapper<'r>,
 }
 
 impl<'r, L> Factory<'r, L> {
-    pub fn new(
-        cmd: L,
-        lease_dto: LeaseDTO,
-        api: &'r dyn Api,
-        querier: &'r QuerierWrapper<'r>,
-    ) -> Self {
+    pub fn new(cmd: L, lease_dto: LeaseDTO, querier: &'r QuerierWrapper<'r>) -> Self {
         Self {
             cmd,
             lease_dto,
-            api,
             querier,
         }
     }
@@ -42,9 +35,10 @@ where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
     {
-        let oracle = OracleRef::try_from(self.lease_dto.oracle.to_string(), self.api, self.querier);
+        let oracle = OracleRef::try_from(self.lease_dto.oracle.clone(), self.querier)
+            .expect("Constructing OracleRef failed!");
 
-        oracle.expect("Constructing OracleRef failed!").execute(
+        oracle.execute(
             FactoryStage2 {
                 cmd: self.cmd,
                 lease_dto: self.lease_dto,
@@ -82,7 +76,7 @@ where
             .exec(Lease::from_dto(self.lease_dto, self.lpp, oracle))
     }
 
-    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
+    fn unexpected_base(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
         self.cmd.unknown_lpn(symbol)
     }
 }
