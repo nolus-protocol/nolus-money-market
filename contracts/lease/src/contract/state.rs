@@ -5,6 +5,7 @@ use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::bank::BankAccount;
+use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractError,
@@ -35,13 +36,14 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, Oracle>(
+    fn exec<Lpn, Lpp, TimeAlarms, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, Oracle>,
+        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
+        TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
     {
         let resp = lease.state(self.now, &self.account, self.lease)?;

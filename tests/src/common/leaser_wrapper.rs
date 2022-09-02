@@ -40,6 +40,7 @@ impl LeaserWrapper {
         app: &mut MockApp,
         lease_code_id: u64,
         lpp_addr: &Addr,
+        time_alarms: Addr,
         market_price_oracle: Addr,
     ) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
@@ -49,6 +50,7 @@ impl LeaserWrapper {
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
             liability: Self::liability(),
             repayment: Repayment::new(Self::REPAYMENT_PERIOD_SECS, 10 * 24 * 60 * 60),
+            time_alarms,
             market_price_oracle,
         };
 

@@ -8,6 +8,7 @@ use platform::{
     bank::{self, BankAccountView},
     batch::{Batch, Emit, Emitter},
 };
+use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractError,
@@ -30,13 +31,14 @@ impl<'a> WithLease for OpenLoanReq<'a> {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, Oracle>(
+    fn exec<Lpn, Lpp, TimeAlarms, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, Oracle>,
+        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
+        TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
     {
         // TODO 'receive' the downpayment from the bank using any currency it might be in
@@ -92,13 +94,14 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, Oracle>(
+    fn exec<Lpn, Lpp, TimeAlarms, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, Oracle>,
+        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
+        TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
     {
         let result = lease.open_loan_resp(

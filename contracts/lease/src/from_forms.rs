@@ -37,6 +37,7 @@ impl NewLeaseForm {
             self.currency,
             self.liability,
             loan,
+            self.time_alarms,
             self.market_price_oracle,
         ))
     }
@@ -78,6 +79,7 @@ mod test {
                 interest_due_period_secs: 100,
                 grace_period_secs: 10,
             },
+            time_alarms: Addr::unchecked("timealarms"),
             market_price_oracle: Addr::unchecked("oracle"),
         };
         let api = MockApi::default();

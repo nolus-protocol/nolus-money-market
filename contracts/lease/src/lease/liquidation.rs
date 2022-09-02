@@ -13,6 +13,7 @@ use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use marketprice::alarms::Alarm;
 use platform::{bank::BankAccountView, batch::Batch, generate_ids};
+use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -22,10 +23,11 @@ use crate::{
 
 use super::LeaseDTO;
 
-impl<Lpn, Lpp, Oracle> Lease<Lpn, Lpp, Oracle>
+impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
+    TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
 {
     pub(crate) fn on_price_alarm<B>(
@@ -40,12 +42,7 @@ where
     {
         assert_ne!(self.currency, Lpn::SYMBOL);
 
-        let (liquidation_status, lease_amount) =
-            self.on_alarm(now, account, lease.clone(), price)?;
-
-        if !matches!(liquidation_status, Status::FullLiquidation(_)) {
-            self.reschedule_on_price_alarm(lease, lease_amount, &now, &liquidation_status)?;
-        }
+        let liquidation_status = self.on_alarm(now, account, lease, price)?;
 
         let (lease_dto, batch) = self.into_dto();
 
@@ -56,23 +53,48 @@ where
         })
     }
 
+    pub(crate) fn on_time_alarm<B>(
+        self,
+        now: Timestamp,
+        account: &B,
+        lease: Addr,
+    ) -> ContractResult<OnAlarmResult<Lpn>>
+    where
+        B: BankAccountView,
+    {
+        let price = if self.currency == Lpn::SYMBOL {
+            total_of(Coin::new(1)).is(Coin::new(1))
+        } else {
+            self.oracle
+                .get_price(self.currency.clone())?
+                .price
+                .try_into()?
+        };
+
+        self.on_price_alarm(now, account, lease, price)
+    }
+
     fn on_alarm<B>(
-        &self,
+        &mut self,
         now: Timestamp,
         account: &B,
         lease: Addr,
         price: Price<Lpn, Lpn>,
-    ) -> ContractResult<(Status<Lpn>, Coin<Lpn>)>
+    ) -> ContractResult<Status<Lpn>>
     where
         B: BankAccountView,
     {
-        let lease_amount = account.balance::<Lpn>().map_err(ContractError::from)?;
+        let lease_amount = account.balance::<Lpn>()?;
 
-        let status = self.act_on_liability(now, lease, lease_amount, price)?;
+        let status = self.act_on_liability(now, lease.clone(), lease_amount, price)?;
 
         // TODO run liquidation
 
-        Ok((status, lease_amount))
+        if !matches!(status, Status::FullLiquidation(_)) {
+            self.reschedule(lease, lease_amount, &now, &status)?;
+        }
+
+        Ok(status)
     }
 
     fn act_on_liability(
@@ -186,12 +208,11 @@ where
         lease: A,
         lease_amount: Coin<Lpn>,
         now: &Timestamp,
-        liquidation: &Status<Lpn>,
     ) -> ContractResult<()>
     where
         A: Into<Addr>,
     {
-        self.reschedule_on_price_alarm(lease, lease_amount, now, liquidation)
+        self.reschedule(lease, lease_amount, now, &Status::None)
     }
 
     #[inline]
@@ -204,13 +225,11 @@ where
     where
         A: Into<Addr>,
     {
-        // Reasoning: "reschedule_from_price_alarm" removes current time alarm,
-        // adds a new one, and then updates the price alarm.
-        self.reschedule_on_price_alarm(lease, lease_amount, now, &Status::None)
+        self.reschedule(lease, lease_amount, now, &Status::None)
     }
 
     #[inline]
-    fn reschedule_on_price_alarm<A>(
+    fn reschedule<A>(
         &mut self,
         lease: A,
         lease_amount: Coin<Lpn>,
@@ -220,6 +239,8 @@ where
     where
         A: Into<Addr>,
     {
+        self.reschedule_time_alarm(now)?;
+
         self.reschedule_price_alarm(lease, lease_amount, now, liquidation_status)
     }
 
@@ -271,6 +292,12 @@ where
         } else {
             Ok(())
         }
+    }
+
+    fn reschedule_time_alarm(&mut self, now: &Timestamp) -> ContractResult<()> {
+        self.time_alarms
+            .add_alarm(*now + self.liability.recalculation_time())
+            .map_err(Into::into)
     }
 
     fn price_alarm_by_percent<A>(

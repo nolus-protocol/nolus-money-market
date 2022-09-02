@@ -9,8 +9,9 @@ use crate::{
 };
 
 pub mod price;
+pub mod time;
 
-pub struct LiquidationResult {
+pub struct AlarmResult {
     pub(super) response: Response,
     pub(super) lease_dto: LeaseDTO,
 }

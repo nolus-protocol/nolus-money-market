@@ -18,6 +18,7 @@ pub struct Config {
     pub lease_interest_rate_margin: Percent,
     pub liability: Liability,
     pub repayment: Repayment,
+    pub time_alarms: Addr,
     pub market_price_oracle: Addr,
 }
 
@@ -32,6 +33,7 @@ impl Config {
             lease_interest_rate_margin: msg.lease_interest_rate_margin,
             liability: msg.liability,
             repayment: msg.repayment,
+            time_alarms: msg.time_alarms,
             market_price_oracle: msg.market_price_oracle,
         })
     }

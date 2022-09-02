@@ -6,5 +6,6 @@ pub mod contract;
 mod contract_validation;
 pub mod error;
 pub mod msg;
+pub mod stub;
 #[cfg(test)]
 pub mod tests;

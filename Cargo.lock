@@ -470,6 +470,7 @@ dependencies = [
  "schemars",
  "serde",
  "thiserror",
+ "timealarms",
 ]
 
 [[package]]
@@ -913,6 +914,7 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
+ "platform",
  "schemars",
  "serde",
  "thiserror",

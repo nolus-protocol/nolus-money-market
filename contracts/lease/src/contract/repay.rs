@@ -8,6 +8,7 @@ use platform::{
     bank::{self, BankAccountView},
     batch::{Emit, Emitter},
 };
+use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractError,
@@ -50,13 +51,14 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, Oracle>(
+    fn exec<Lpn, Lpp, TimeAlarms, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, Oracle>,
+        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
+        TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
     {
         // TODO 'receive' the payment from the bank using any currency it might be in

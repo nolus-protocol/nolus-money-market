@@ -13,6 +13,7 @@ pub struct NewLeaseForm {
     pub currency: SymbolOwned,
     pub liability: Liability,
     pub loan: LoanForm,
+    pub time_alarms: Addr,
     pub market_price_oracle: Addr,
 }
 

@@ -5,19 +5,17 @@ use finance::{coin::Coin, currency::Currency};
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{bank::BankAccountView, batch::Batch};
+use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
-use crate::{
-    error::ContractResult,
-    lease::{Lease, Status},
-    loan::OpenReceipt,
-};
+use crate::{error::ContractResult, lease::Lease, loan::OpenReceipt};
 
 use super::LeaseDTO;
 
-impl<Lpn, Lpp, Oracle> Lease<Lpn, Lpp, Oracle>
+impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
+    TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
 {
     pub(crate) fn open_loan_req(mut self, downpayment: Coin<Lpn>) -> ContractResult<Batch> {
@@ -43,7 +41,7 @@ where
     where
         B: BankAccountView,
     {
-        self.initial_alarm_schedule(lease, account.balance()?, now, &Status::None)?;
+        self.initial_alarm_schedule(lease, account.balance()?, now)?;
 
         self.loan.open_loan_resp(resp).map({
             let (lease_dto, batch) = self.into_dto();

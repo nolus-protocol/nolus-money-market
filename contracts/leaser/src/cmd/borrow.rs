@@ -48,6 +48,7 @@ impl Borrow {
                 interest_due_period_secs: config.repayment.period_sec, // 90 days TODO use a crate for daytime calculations
                 grace_period_secs: config.repayment.grace_period_sec,
             },
+            time_alarms: config.time_alarms,
             market_price_oracle: config.market_price_oracle,
         }
     }

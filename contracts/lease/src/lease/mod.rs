@@ -11,6 +11,7 @@ use platform::{
     bank::{BankAccount, BankAccountView},
     batch::Batch,
 };
+use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch};
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -37,13 +38,14 @@ pub trait WithLease {
     type Output;
     type Error;
 
-    fn exec<Lpn, Lpp, Oracle>(
+    fn exec<Lpn, Lpp, TimeAlarms, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, Oracle>,
+        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
+        TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>;
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
@@ -58,21 +60,28 @@ where
     lpp.execute(Factory::new(cmd, dto, querier), querier)
 }
 
-pub struct Lease<Lpn, Lpp, Oracle> {
+pub struct Lease<Lpn, Lpp, TimeAlarms, Oracle> {
     customer: Addr,
     currency: SymbolOwned,
     liability: Liability,
     loan: Loan<Lpn, Lpp>,
+    time_alarms: TimeAlarms,
     oracle: Oracle,
 }
 
-impl<Lpn, Lpp, Oracle> Lease<Lpn, Lpp, Oracle>
+impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
+    TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
 {
-    pub(super) fn from_dto(dto: LeaseDTO, lpp: Lpp, oracle: Oracle) -> Self {
+    pub(super) fn from_dto(
+        dto: LeaseDTO,
+        lpp: Lpp,
+        time_alarms: TimeAlarms,
+        oracle: Oracle,
+    ) -> Self {
         assert_eq!(
             Lpn::SYMBOL,
             dto.currency,
@@ -86,12 +95,18 @@ where
             currency: dto.currency,
             liability: dto.liability,
             loan: Loan::from_dto(dto.loan, lpp),
+            time_alarms,
             oracle,
         }
     }
 
     pub(super) fn into_dto(self) -> (LeaseDTO, Batch) {
         let (loan_dto, lpp_batch) = self.loan.into_dto();
+
+        let TimeAlarmsBatch {
+            time_alarms_ref: time_alarms_dto,
+            batch: time_alarms_batch,
+        } = self.time_alarms.into();
 
         let OracleBatch {
             oracle_ref: oracle_dto,
@@ -104,14 +119,19 @@ where
                 self.currency,
                 self.liability,
                 loan_dto,
+                time_alarms_dto.into(),
                 oracle_dto.into(),
             ),
-            lpp_batch.merge(oracle_batch),
+            lpp_batch.merge(time_alarms_batch).merge(oracle_batch),
         )
     }
 
     pub(crate) fn owned_by(&self, addr: &Addr) -> bool {
         &self.customer == addr
+    }
+
+    pub(crate) fn sent_by_time_alarms(&self, addr: &Addr) -> bool {
+        self.time_alarms.owned_by(addr)
     }
 
     pub(crate) fn sent_by_oracle(&self, addr: &Addr) -> bool {
@@ -188,12 +208,17 @@ mod tests {
         msg::{LoanResponse, OutstandingInterest, QueryLoanResponse},
         stub::{Lpp, LppBatch, LppRef},
     };
-    use market_price_oracle::msg::ExecuteMsg::AddPriceAlarm;
-    use market_price_oracle::msg::PriceResponse;
-    use market_price_oracle::stub::{Oracle, OracleBatch, OracleRef};
-    use marketprice::alarms::Alarm;
-    use marketprice::storage::Denom;
+    use market_price_oracle::{
+        msg::ExecuteMsg::AddPriceAlarm,
+        msg::PriceResponse,
+        stub::{Oracle, OracleBatch, OracleRef},
+    };
+    use marketprice::{alarms::Alarm, storage::Denom};
     use platform::{bank::BankAccountView, batch::Batch, error::Result as PlatformResult};
+    use time_alarms::{
+        msg::ExecuteMsg::AddAlarm,
+        stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},
+    };
 
     use crate::{
         loan::{Loan, LoanDTO},
@@ -364,6 +389,54 @@ mod tests {
         }
     }
 
+    struct TimeAlarmsLocalStub {
+        address: Addr,
+        batch: Batch,
+    }
+
+    impl TimeAlarms for TimeAlarmsLocalStub {
+        fn owned_by(&self, addr: &Addr) -> bool {
+            &self.address == addr
+        }
+
+        fn add_alarm(&mut self, time: Timestamp) -> time_alarms::stub::Result<()> {
+            self.batch.schedule_execute_no_reply(wasm_execute(
+                self.address.clone(),
+                &AddAlarm { time },
+                vec![],
+            )?);
+
+            Ok(())
+        }
+    }
+
+    impl From<TimeAlarmsLocalStub> for TimeAlarmsBatch {
+        fn from(stub: TimeAlarmsLocalStub) -> Self {
+            TimeAlarmsBatch {
+                time_alarms_ref: TimeAlarmsRef::unchecked(stub.address),
+                batch: stub.batch,
+            }
+        }
+    }
+
+    struct TimeAlarmsLocalStubUnreachable;
+
+    impl TimeAlarms for TimeAlarmsLocalStubUnreachable {
+        fn owned_by(&self, _addr: &Addr) -> bool {
+            unreachable!()
+        }
+
+        fn add_alarm(&mut self, _time: Timestamp) -> time_alarms::stub::Result<()> {
+            unreachable!()
+        }
+    }
+
+    impl From<TimeAlarmsLocalStubUnreachable> for TimeAlarmsBatch {
+        fn from(_: TimeAlarmsLocalStubUnreachable) -> Self {
+            unreachable!()
+        }
+    }
+
     struct OracleLocalStub {
         address: Addr,
         batch: Batch,
@@ -426,9 +499,10 @@ mod tests {
         }
     }
 
-    fn create_lease<L, O>(lpp: L, oracle: O) -> Lease<TestCurrency, L, O>
+    fn create_lease<L, TA, O>(lpp: L, time_alarms: TA, oracle: O) -> Lease<TestCurrency, L, TA, O>
     where
         L: Lpp<TestCurrency>,
+        TA: TimeAlarms,
         O: Oracle<TestCurrency>,
     {
         let lpp_ref = LppRef::unchecked::<_, Nls>("lpp_addr", Some(ReplyId::OpenLoanReq.into()));
@@ -455,16 +529,23 @@ mod tests {
                 10 * 24,
             ),
             loan: Loan::from_dto(loan_dto, lpp),
+            time_alarms,
             oracle,
         }
     }
 
     fn lease_setup(
         loan_response: Option<LoanResponse<TestCurrency>>,
+        time_alarms_addr: Addr,
         oracle_addr: Addr,
-    ) -> Lease<TestCurrency, LppLocalStub, OracleLocalStub> {
+    ) -> Lease<TestCurrency, LppLocalStub, TimeAlarmsLocalStub, OracleLocalStub> {
         let lpp_stub = LppLocalStub {
             loan: loan_response,
+        };
+
+        let time_alarms_stub = TimeAlarmsLocalStub {
+            address: time_alarms_addr,
+            batch: Batch::default(),
         };
 
         let oracle_stub = OracleLocalStub {
@@ -472,7 +553,7 @@ mod tests {
             batch: Batch::default(),
         };
 
-        create_lease(lpp_stub, oracle_stub)
+        create_lease(lpp_stub, time_alarms_stub, oracle_stub)
     }
 
     fn create_bank_account(lease_amount: u128) -> BankStub {
@@ -482,7 +563,7 @@ mod tests {
     }
 
     fn request_state(
-        lease: Lease<TestCurrency, LppLocalStub, OracleLocalStub>,
+        lease: Lease<TestCurrency, LppLocalStub, TimeAlarmsLocalStub, OracleLocalStub>,
         bank_account: &BankStub,
     ) -> StateResponse<TestCurrency, TestCurrency> {
         lease
@@ -504,7 +585,11 @@ mod tests {
         };
 
         let bank_account = create_bank_account(lease_amount);
-        let lease = lease_setup(Some(loan.clone()), Addr::unchecked(String::new()));
+        let lease = lease_setup(
+            Some(loan.clone()),
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
 
         let res = request_state(lease, &bank_account);
         let exp = StateResponse::Opened {
@@ -527,7 +612,11 @@ mod tests {
     fn state_paid() {
         let lease_amount = 1000;
         let bank_account = create_bank_account(lease_amount);
-        let lease = lease_setup(None, Addr::unchecked(String::new()));
+        let lease = lease_setup(
+            None,
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
 
         let res = request_state(lease, &bank_account);
         let exp = StateResponse::Paid(coin(lease_amount));
@@ -539,7 +628,11 @@ mod tests {
     fn state_closed() {
         let lease_amount = 0;
         let bank_account = create_bank_account(lease_amount);
-        let lease = lease_setup(None, Addr::unchecked(String::new()));
+        let lease = lease_setup(
+            None,
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
 
         let res = request_state(lease, &bank_account);
         let exp = StateResponse::Closed();
@@ -550,8 +643,9 @@ mod tests {
     // Verify that if the Lease's balance is 0, lpp won't be queried for the loan
     fn state_closed_lpp_must_not_be_called() {
         let lpp_stub = LppLocalStubUnreachable {};
+        let time_alarms_stub = TimeAlarmsLocalStubUnreachable {};
         let oracle_stub = OracleLocalStubUnreachable {};
-        let lease = create_lease(lpp_stub, oracle_stub);
+        let lease = create_lease(lpp_stub, time_alarms_stub, oracle_stub);
 
         let bank_account = create_bank_account(0);
 

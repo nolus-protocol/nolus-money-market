@@ -111,6 +111,10 @@ impl TestCase {
                     .lpp_addr
                     .clone()
                     .expect("LPP contract not instantiated!"),
+                time_alarms: self
+                    .oracle
+                    .clone()
+                    .expect("Time Alarms contract not instantiated!"),
                 oracle: self
                     .oracle
                     .clone()
@@ -159,6 +163,9 @@ impl TestCase {
                 &mut self.app,
                 self.lease_code_id.unwrap(),
                 self.lpp_addr.as_ref().unwrap(),
+                self.timealarms
+                    .clone()
+                    .expect("Time Alarms not initialized!"),
                 self.oracle
                     .clone()
                     .expect("Market Price Oracle not initialized!"),

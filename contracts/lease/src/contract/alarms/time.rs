@@ -1,10 +1,7 @@
 use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
-use finance::{
-    currency::{Currency, SymbolOwned},
-    price::PriceDTO,
-};
+use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::bank::BankAccountView;
@@ -16,7 +13,7 @@ use crate::{
     lease::{Lease, OnAlarmResult, WithLease},
 };
 
-pub struct PriceAlarm<'a, B>
+pub struct TimeAlarm<'a, B>
 where
     B: BankAccountView,
 {
@@ -24,25 +21,23 @@ where
     lease: Addr,
     account: B,
     now: Timestamp,
-    price: PriceDTO,
 }
 
-impl<'a, B> PriceAlarm<'a, B>
+impl<'a, B> TimeAlarm<'a, B>
 where
     B: BankAccountView,
 {
-    pub fn new(sender: &'a Addr, lease: Addr, account: B, now: Timestamp, price: PriceDTO) -> Self {
+    pub fn new(sender: &'a Addr, lease: Addr, account: B, now: Timestamp) -> Self {
         Self {
             sender,
             lease,
             account,
             now,
-            price,
         }
     }
 }
 
-impl<'a, B> WithLease for PriceAlarm<'a, B>
+impl<'a, B> WithLease for TimeAlarm<'a, B>
 where
     B: BankAccountView,
 {
@@ -60,7 +55,7 @@ where
         TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
     {
-        if !lease.sent_by_oracle(self.sender) {
+        if !lease.sent_by_time_alarms(self.sender) {
             return Err(Self::Error::Unauthorized {});
         }
 
@@ -68,12 +63,7 @@ where
             batch,
             lease_dto,
             liquidation_status,
-        } = lease.on_price_alarm(
-            self.now,
-            &self.account,
-            self.lease.clone(),
-            self.price.try_into()?,
-        )?;
+        } = lease.on_time_alarm(self.now, &self.account, self.lease.clone())?;
 
         Ok(AlarmResult {
             response: emit_events(&liquidation_status, batch),

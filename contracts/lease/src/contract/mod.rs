@@ -8,9 +8,10 @@ use cw2::set_contract_version;
 use finance::price::PriceDTO;
 use platform::{bank::BankStub, batch::Emitter};
 
+use crate::contract::alarms::time::TimeAlarm;
 use crate::{
     contract::{
-        alarms::{price::PriceAlarm, LiquidationResult},
+        alarms::{price::PriceAlarm, AlarmResult},
         open::OpenLoanReqResult,
     },
     error::{ContractError, ContractResult},
@@ -106,10 +107,20 @@ pub fn execute(
         }
         ExecuteMsg::Close() => try_close(&deps.querier, &env, account, info, lease).map(Into::into),
         ExecuteMsg::PriceAlarm { price } => {
-            let LiquidationResult {
+            let AlarmResult {
                 response,
                 lease_dto: lease,
             } = try_on_price_alarm(&deps.querier, &env, account, info, lease, price)?;
+
+            lease.store(deps.storage)?;
+
+            Ok(response)
+        }
+        ExecuteMsg::TimeAlarm() => {
+            let AlarmResult {
+                response,
+                lease_dto: lease,
+            } = try_on_time_alarm(&deps.querier, &env, account, info, lease)?;
 
             lease.store(deps.storage)?;
 
@@ -170,7 +181,7 @@ fn try_on_price_alarm(
     info: MessageInfo,
     lease: LeaseDTO,
     price: PriceDTO,
-) -> ContractResult<LiquidationResult> {
+) -> ContractResult<AlarmResult> {
     lease::execute(
         lease,
         PriceAlarm::new(
@@ -179,6 +190,25 @@ fn try_on_price_alarm(
             account,
             env.block.time,
             price,
+        ),
+        querier,
+    )
+}
+
+fn try_on_time_alarm(
+    querier: &QuerierWrapper,
+    env: &Env,
+    account: BankStub,
+    info: MessageInfo,
+    lease: LeaseDTO,
+) -> ContractResult<AlarmResult> {
+    lease::execute(
+        lease,
+        TimeAlarm::new(
+            &info.sender,
+            env.contract.address.clone(),
+            account,
+            env.block.time,
         ),
         querier,
     )
