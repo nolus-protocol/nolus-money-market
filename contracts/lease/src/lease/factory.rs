@@ -1,25 +1,30 @@
-use std::marker::PhantomData;
-
-use cosmwasm_std::QuerierWrapper;
+use cosmwasm_std::{Api, QuerierWrapper};
 use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::{Lpp as LppTrait, WithLpp};
-use market_price_oracle::stub::{Oracle as OracleTrait, WithOracle};
+use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
 
 use super::{dto::LeaseDTO, Lease, WithLease};
 
 pub struct Factory<'r, L> {
     cmd: L,
     lease_dto: LeaseDTO,
+    api: &'r dyn Api,
     querier: &'r QuerierWrapper<'r>,
 }
 
 impl<'r, L> Factory<'r, L> {
-    pub fn new(cmd: L, lease_dto: LeaseDTO, querier: &'r QuerierWrapper<'r>) -> Self {
+    pub fn new(
+        cmd: L,
+        lease_dto: LeaseDTO,
+        api: &'r dyn Api,
+        querier: &'r QuerierWrapper<'r>,
+    ) -> Self {
         Self {
             cmd,
             lease_dto,
+            api,
             querier,
         }
     }
@@ -34,17 +39,16 @@ where
 
     fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
-        Lpp: LppTrait<Lpn>,
         Lpn: Currency + Serialize,
+        Lpp: LppTrait<Lpn>,
     {
-        let oracle = self.lease_dto.oracle.clone();
+        let oracle = OracleRef::try_from(self.lease_dto.oracle.to_string(), self.api, self.querier);
 
-        oracle.execute(
+        oracle.expect("Constructing OracleRef failed!").execute(
             FactoryStage2 {
                 cmd: self.cmd,
                 lease_dto: self.lease_dto,
                 lpp,
-                _phantom_data: PhantomData,
             },
             self.querier,
         )
@@ -55,14 +59,13 @@ where
     }
 }
 
-struct FactoryStage2<L, Lpn, Lpp> {
+struct FactoryStage2<L, Lpp> {
     cmd: L,
     lease_dto: LeaseDTO,
     lpp: Lpp,
-    _phantom_data: PhantomData<Lpn>,
 }
 
-impl<L, Lpn, Lpp> WithOracle<Lpn> for FactoryStage2<L, Lpn, Lpp>
+impl<L, Lpn, Lpp> WithOracle<Lpn> for FactoryStage2<L, Lpp>
 where
     L: WithLease,
     Lpp: LppTrait<Lpn>,

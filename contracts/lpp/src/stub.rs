@@ -5,7 +5,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use finance::{
     coin::Coin,
-    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
+    currency::{AnyVisitor, Currency, SymbolOwned, visit_any},
 };
 use platform::{
     batch::{Batch, ReplyId},
@@ -24,8 +24,9 @@ use crate::{
 pub type Result<T> = StdResult<T, ContractError>;
 
 // TODO split into LppBorrow, LppLend, and LppAdmin traits
-pub trait Lpp<Lpn>: Into<LppBatch>
+pub trait Lpp<Lpn>
 where
+    Self: Into<LppBatch>,
     Lpn: Currency,
 {
     fn id(&self) -> Addr;
@@ -69,20 +70,11 @@ pub struct LppRef {
 }
 
 impl LppRef {
-    pub fn try_from<A>(
-        addr_raw: String,
-        api: &A,
-        querier: &QuerierWrapper,
-    ) -> Result<Self>
+    pub fn try_from<A>(addr_raw: String, api: &A, querier: &QuerierWrapper) -> Result<Self>
     where
         A: ?Sized + Api,
     {
-        Self::try_from_maybe_borrow(
-            addr_raw,
-            api,
-            querier,
-            None
-        )
+        Self::try_from_maybe_borrow(addr_raw, api, querier, None)
     }
 
     pub fn try_borrow_from<A>(
@@ -94,12 +86,7 @@ impl LppRef {
     where
         A: ?Sized + Api,
     {
-        Self::try_from_maybe_borrow(
-            addr_raw,
-            api,
-            querier,
-            Some(open_loan_req_id),
-        )
+        Self::try_from_maybe_borrow(addr_raw, api, querier, Some(open_loan_req_id))
     }
 
     pub fn addr(&self) -> &Addr {
@@ -338,7 +325,7 @@ impl<'a, C> From<LppStub<'a, C>> for LppBatch {
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{
-        from_binary, testing::MockQuerier, Addr, CosmosMsg, QuerierWrapper, ReplyOn, Response,
+        Addr, CosmosMsg, from_binary, QuerierWrapper, ReplyOn, Response, testing::MockQuerier,
         WasmMsg,
     };
 

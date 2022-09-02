@@ -1,5 +1,5 @@
 use cosmwasm_std::{
-    Binary, Deps, DepsMut, ensure, Env, MessageInfo, QuerierWrapper, Reply, Response,
+    Api, Binary, Deps, DepsMut, ensure, Env, MessageInfo, QuerierWrapper, Reply, Response,
 };
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
@@ -47,8 +47,12 @@ pub fn instantiate(
     let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
     lease.store(deps.storage)?;
 
-    let OpenLoanReqResult { batch, downpayment } =
-        lease::execute(lease, OpenLoanReq::new(&info.funds), &deps.querier)?;
+    let OpenLoanReqResult { batch, downpayment } = lease::execute(
+        lease,
+        OpenLoanReq::new(&info.funds),
+        deps.api,
+        &deps.querier,
+    )?;
 
     downpayment.store(deps.storage)?;
 
@@ -76,6 +80,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
             let emitter = lease::execute(
                 lease,
                 OpenLoanResp::new(msg, downpayment, account, &env),
+                deps.api,
                 &deps.querier,
             )?;
 
@@ -98,18 +103,20 @@ pub fn execute(
     match msg {
         ExecuteMsg::Repay() => {
             let RepayResult { lease_dto, emitter } =
-                try_repay(&deps.querier, &env, account, info, lease)?;
+                try_repay((&deps.querier, deps.api, &env), account, info, lease)?;
 
             lease_dto.store(deps.storage)?;
 
             Ok(emitter.into())
         }
-        ExecuteMsg::Close() => try_close(&deps.querier, &env, account, info, lease).map(Into::into),
+        ExecuteMsg::Close() => {
+            try_close((&deps.querier, deps.api, &env), account, info, lease).map(Into::into)
+        }
         ExecuteMsg::PriceAlarm { price } => {
             let LiquidationResult {
                 response,
                 lease_dto: lease,
-            } = try_on_price_alarm(&deps.querier, &env, account, info, lease, price)?;
+            } = try_on_price_alarm((&deps.querier, deps.api, &env), account, info, lease, price)?;
 
             lease.store(deps.storage)?;
 
@@ -128,23 +135,22 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     lease::execute(
         lease,
         LeaseState::new(env.block.time, bank, env.contract.address.clone()),
+        deps.api,
         &deps.querier,
     )
 }
 
 fn try_repay(
-    querier: &QuerierWrapper,
-    env: &Env,
+    (querier, api, env): (&QuerierWrapper, &dyn Api, &Env),
     account: BankStub,
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<RepayResult> {
-    lease::execute(lease, Repay::new(&info.funds, account, env), querier)
+    lease::execute(lease, Repay::new(&info.funds, account, env), api, querier)
 }
 
 fn try_close(
-    querier: &QuerierWrapper,
-    env: &Env,
+    (querier, api, env): (&QuerierWrapper, &dyn Api, &Env),
     account: BankStub,
     info: MessageInfo,
     lease: LeaseDTO,
@@ -157,6 +163,7 @@ fn try_close(
             account,
             env.block.time,
         ),
+        api,
         querier,
     )?;
 
@@ -164,8 +171,7 @@ fn try_close(
 }
 
 fn try_on_price_alarm(
-    querier: &QuerierWrapper,
-    env: &Env,
+    (querier, api, env): (&QuerierWrapper, &dyn Api, &Env),
     account: BankStub,
     info: MessageInfo,
     lease: LeaseDTO,
@@ -180,6 +186,7 @@ fn try_on_price_alarm(
             env.block.time,
             price,
         ),
+        api,
         querier,
     )
 }

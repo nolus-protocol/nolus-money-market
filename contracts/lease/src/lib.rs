@@ -12,6 +12,4 @@ mod lease;
 #[cfg(feature = "cosmwasm")]
 mod loan;
 #[cfg(feature = "cosmwasm")]
-mod oracle;
-#[cfg(feature = "cosmwasm")]
 pub mod repay_id;

@@ -1,6 +1,4 @@
-use std::marker::PhantomData;
-
-use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
+use cosmwasm_std::{Addr, Api, QuerierWrapper, Timestamp};
 use serde::Serialize;
 
 use finance::{
@@ -8,7 +6,7 @@ use finance::{
     liability::Liability,
 };
 use lpp::stub::Lpp as LppTrait;
-use market_price_oracle::stub::Oracle as OracleTrait;
+use market_price_oracle::stub::{Oracle as OracleTrait, OracleBatch};
 use platform::{
     bank::{BankAccount, BankAccountView},
     batch::Batch,
@@ -18,7 +16,6 @@ use crate::{
     error::{ContractError, ContractResult},
     loan::Loan,
     msg::StateResponse,
-    oracle::Oracle as LeaseOracle,
 };
 
 pub(super) use self::{
@@ -52,13 +49,18 @@ pub trait WithLease {
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn execute<L, O, E>(dto: LeaseDTO, cmd: L, querier: &QuerierWrapper) -> Result<O, E>
+pub fn execute<L, O, E>(
+    dto: LeaseDTO,
+    cmd: L,
+    api: &dyn Api,
+    querier: &QuerierWrapper,
+) -> Result<O, E>
 where
     L: WithLease<Output = O, Error = E>,
 {
     let lpp = dto.loan.lpp().clone();
 
-    lpp.execute(Factory::new(cmd, dto, querier), querier)
+    lpp.execute(Factory::new(cmd, dto, api, querier), querier)
 }
 
 pub struct Lease<Lpn, Lpp, Oracle> {
@@ -66,8 +68,7 @@ pub struct Lease<Lpn, Lpp, Oracle> {
     currency: SymbolOwned,
     liability: Liability,
     loan: Loan<Lpn, Lpp>,
-    _oracle_c: PhantomData<Lpn>,
-    oracle: LeaseOracle<Lpn, Oracle>,
+    oracle: Oracle,
 }
 
 impl<Lpn, Lpp, Oracle> Lease<Lpn, Lpp, Oracle>
@@ -90,14 +91,17 @@ where
             currency: dto.currency,
             liability: dto.liability,
             loan: Loan::from_dto(dto.loan, lpp),
-            _oracle_c: PhantomData,
-            oracle: LeaseOracle::from_dto(dto.oracle, oracle),
+            oracle,
         }
     }
 
     pub(super) fn into_dto(self) -> (LeaseDTO, Batch) {
         let (loan_dto, lpp_batch) = self.loan.into_dto();
-        let (oracle_dto, oracle_batch) = self.oracle.into_dto();
+
+        let OracleBatch {
+            oracle_ref: oracle_dto,
+            batch: oracle_batch,
+        } = self.oracle.into();
 
         (
             LeaseDTO::new(
@@ -105,7 +109,7 @@ where
                 self.currency,
                 self.liability,
                 loan_dto,
-                oracle_dto,
+                oracle_dto.into(),
             ),
             lpp_batch.merge(oracle_batch),
         )
@@ -172,8 +176,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::marker::PhantomData;
-
     use cosmwasm_std::{Addr, Timestamp, wasm_execute};
     use serde::{Deserialize, Serialize};
 
@@ -188,11 +190,11 @@ mod tests {
     use lpp::{
         error::ContractError as LppError,
         msg::{LoanResponse, OutstandingInterest, QueryLoanResponse},
-        stub::{Lpp, LppRef, LppBatch},
+        stub::{Lpp, LppBatch, LppRef},
     };
     use market_price_oracle::msg::ExecuteMsg::AddPriceAlarm;
     use market_price_oracle::msg::PriceResponse;
-    use market_price_oracle::stub::{Oracle, OracleRef};
+    use market_price_oracle::stub::{Oracle, OracleBatch, OracleRef};
     use marketprice::alarms::Alarm;
     use marketprice::storage::Denom;
     use platform::{bank::BankAccountView, batch::Batch, error::Result as PlatformResult};
@@ -203,7 +205,7 @@ mod tests {
         repay_id::ReplyId,
     };
 
-    use super::{Lease, LeaseOracle};
+    use super::Lease;
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
@@ -371,16 +373,14 @@ mod tests {
         batch: Batch,
     }
 
-    impl From<OracleLocalStub> for Batch {
-        fn from(stub: OracleLocalStub) -> Self {
-            stub.batch
-        }
-    }
-
     impl<OracleBase> Oracle<OracleBase> for OracleLocalStub
     where
         OracleBase: Currency + Serialize,
     {
+        fn owned_by(&self, addr: &Addr) -> bool {
+            &self.address == addr
+        }
+
         fn get_price(&self, _denom: Denom) -> market_price_oracle::stub::Result<PriceResponse> {
             unimplemented!()
         }
@@ -396,23 +396,36 @@ mod tests {
         }
     }
 
-    struct OracleLocalStubUnreachable;
-
-    impl From<OracleLocalStubUnreachable> for Batch {
-        fn from(_: OracleLocalStubUnreachable) -> Self {
-            unreachable!()
+    impl From<OracleLocalStub> for OracleBatch {
+        fn from(stub: OracleLocalStub) -> Self {
+            OracleBatch {
+                oracle_ref: OracleRef::unchecked::<_, TestCurrency>(stub.address),
+                batch: stub.batch,
+            }
         }
     }
+
+    struct OracleLocalStubUnreachable;
 
     impl<OracleBase> Oracle<OracleBase> for OracleLocalStubUnreachable
     where
         OracleBase: Currency + Serialize,
     {
+        fn owned_by(&self, _addr: &Addr) -> bool {
+            unreachable!()
+        }
+
         fn get_price(&self, _denom: Denom) -> market_price_oracle::stub::Result<PriceResponse> {
             unreachable!()
         }
 
         fn add_alarm(&mut self, _alarm: Alarm) -> market_price_oracle::stub::Result<()> {
+            unreachable!()
+        }
+    }
+
+    impl From<OracleLocalStubUnreachable> for OracleBatch {
+        fn from(_: OracleLocalStubUnreachable) -> Self {
             unreachable!()
         }
     }
@@ -433,8 +446,6 @@ mod tests {
         )
         .unwrap();
 
-        let oracle_ref = OracleRef::unchecked::<_, Nls>("oracle_addr");
-
         Lease {
             customer: Addr::unchecked("customer"),
             currency: TestCurrency::SYMBOL.to_string(),
@@ -448,8 +459,7 @@ mod tests {
                 10 * 24,
             ),
             loan: Loan::from_dto(loan_dto, lpp),
-            _oracle_c: PhantomData,
-            oracle: LeaseOracle::from_dto(oracle_ref, oracle),
+            oracle,
         }
     }
 

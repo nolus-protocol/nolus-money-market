@@ -14,10 +14,18 @@ use crate::{
 
 pub type Result<T> = StdResult<T, ContractError>;
 
-pub trait Oracle<OracleBase>: Into<Batch>
+pub struct OracleBatch {
+    pub oracle_ref: OracleRef,
+    pub batch: Batch,
+}
+
+pub trait Oracle<OracleBase>
 where
+    Self: Into<OracleBatch>,
     OracleBase: Currency + Serialize,
 {
+    fn owned_by(&self, addr: &Addr) -> bool;
+
     fn get_price(&self, denom: Denom) -> Result<PriceResponse>;
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()>;
@@ -41,6 +49,12 @@ where
 pub struct OracleRef {
     addr: Addr,
     currency: SymbolOwned,
+}
+
+impl From<OracleRef> for Addr {
+    fn from(oracle_ref: OracleRef) -> Self {
+        oracle_ref.addr
+    }
 }
 
 impl OracleRef {
@@ -108,7 +122,7 @@ impl OracleRef {
         querier: &'a QuerierWrapper,
     ) -> OracleStub<'a, OracleBase> {
         OracleStub {
-            addr: self.addr.clone(),
+            oracle_ref: self,
             querier,
             batch: Batch::default(),
             _quote_currency: PhantomData::<OracleBase>,
@@ -131,27 +145,36 @@ impl OracleRef {
 }
 
 struct OracleStub<'a, OracleBase> {
-    addr: Addr,
-    // currency: PhantomData<C>,
+    oracle_ref: &'a OracleRef,
     _quote_currency: PhantomData<OracleBase>,
     querier: &'a QuerierWrapper<'a>,
     batch: Batch,
+}
+
+impl<'a, OracleBase> OracleStub<'a, OracleBase> {
+    fn addr(&self) -> Addr {
+        self.oracle_ref.addr.clone()
+    }
 }
 
 impl<'a, OracleBase> Oracle<OracleBase> for OracleStub<'a, OracleBase>
 where
     OracleBase: Currency + Serialize,
 {
+    fn owned_by(&self, addr: &Addr) -> bool {
+        self.oracle_ref.owned_by(addr)
+    }
+
     fn get_price(&self, denom: Denom) -> Result<PriceResponse> {
         let msg = QueryMsg::Price { denom };
         self.querier
-            .query_wasm_smart(self.addr.clone(), &msg)
+            .query_wasm_smart(self.addr(), &msg)
             .map_err(ContractError::from)
     }
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()> {
         self.batch.schedule_execute_no_reply(wasm_execute(
-            self.addr.clone(),
+            self.addr(),
             &ExecuteMsg::AddPriceAlarm { alarm },
             vec![],
         )?);
@@ -160,8 +183,11 @@ where
     }
 }
 
-impl<'a, OracleBase> From<OracleStub<'a, OracleBase>> for Batch {
+impl<'a, OracleBase> From<OracleStub<'a, OracleBase>> for OracleBatch {
     fn from(stub: OracleStub<'a, OracleBase>) -> Self {
-        stub.batch
+        OracleBatch {
+            oracle_ref: stub.oracle_ref.clone(),
+            batch: stub.batch,
+        }
     }
 }

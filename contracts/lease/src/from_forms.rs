@@ -40,7 +40,7 @@ impl NewLeaseForm {
             self.currency,
             self.liability,
             loan,
-            oracle,
+            oracle.into(),
         ))
     }
 }
