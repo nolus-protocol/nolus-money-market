@@ -46,7 +46,7 @@ pub fn instantiate(
         msg.price_feed_period_secs,
         msg.feeders_percentage_needed,
         msg.supported_denom_pairs,
-        Addr::unchecked(msg.timealarms_addr),
+        deps.api.addr_validate(&msg.timealarms_addr)?,
     )
     .store(deps.storage)?;
 
