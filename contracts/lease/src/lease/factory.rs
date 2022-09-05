@@ -39,7 +39,7 @@ where
         Lpp: LppTrait<Lpn>,
     {
         let time_alarms = TimeAlarmsRef::try_from(self.lease_dto.time_alarms.clone())
-            .expect("Constructing OracleRef failed!");
+            .expect("Time Alarms is not deployed, or wrong address is passed!");
 
         time_alarms.execute(FactoryStage2 {
             cmd: self.cmd,
@@ -77,7 +77,7 @@ where
         TimeAlarms: TimeAlarmsTrait,
     {
         let oracle = OracleRef::try_from(self.lease_dto.oracle.clone(), self.querier)
-            .expect("Constructing OracleRef failed!");
+            .expect("Market Price Oracle is not deployed, or wrong address is passed!");
 
         oracle.execute(
             FactoryStage3 {
