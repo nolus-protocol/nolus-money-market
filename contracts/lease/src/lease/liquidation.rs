@@ -74,6 +74,37 @@ where
         self.on_price_alarm(now, account, lease, price)
     }
 
+    #[inline]
+    pub(super) fn initial_alarm_schedule<A>(
+        &mut self,
+        lease: A,
+        lease_amount: Coin<Lpn>,
+        now: &Timestamp,
+    ) -> ContractResult<()>
+        where
+            A: Into<Addr>,
+    {
+        self.reschedule(lease, lease_amount, now, &Status::None)
+    }
+
+    #[inline]
+    pub(super) fn reschedule_on_repay<A>(
+        &mut self,
+        lease: A,
+        lease_amount: Coin<Lpn>,
+        now: &Timestamp,
+    ) -> ContractResult<()>
+        where
+            A: Into<Addr>,
+    {
+        let lease = lease.into();
+
+        let status = self.loan.state(*now, lease.clone())?
+            .map_or(Status::None, |state| self.handle_warnings(Self::liability(state, lease_amount).1));
+
+        self.reschedule(lease, lease_amount, now, &status)
+    }
+
     fn on_alarm<B>(
         &mut self,
         now: Timestamp,
@@ -200,32 +231,6 @@ where
                 _liquidation_amount: liquidation_amount,
             }
         }
-    }
-
-    #[inline]
-    pub(super) fn initial_alarm_schedule<A>(
-        &mut self,
-        lease: A,
-        lease_amount: Coin<Lpn>,
-        now: &Timestamp,
-    ) -> ContractResult<()>
-    where
-        A: Into<Addr>,
-    {
-        self.reschedule(lease, lease_amount, now, &Status::None)
-    }
-
-    #[inline]
-    pub(super) fn reschedule_on_repay<A>(
-        &mut self,
-        lease: A,
-        lease_amount: Coin<Lpn>,
-        now: &Timestamp,
-    ) -> ContractResult<()>
-    where
-        A: Into<Addr>,
-    {
-        self.reschedule(lease, lease_amount, now, &Status::None)
     }
 
     #[inline]
