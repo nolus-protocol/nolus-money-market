@@ -228,11 +228,11 @@ mod tests {
 
     use super::Lease;
 
-    const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
-    const LEASE_START: Timestamp = Timestamp::from_nanos(100);
-    const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
-    type TestCurrency = Usdc;
-    type LppResult<T> = Result<T, LppError>;
+    pub const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
+    pub const LEASE_START: Timestamp = Timestamp::from_nanos(100);
+    pub const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
+    pub type TestCurrency = Usdc;
+    pub type LppResult<T> = Result<T, LppError>;
 
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     pub struct BankStub {
@@ -249,7 +249,7 @@ mod tests {
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-    struct LppLocalStub {
+    pub struct LppLocalStub {
         loan: Option<LoanResponse<TestCurrency>>,
     }
 
@@ -324,7 +324,7 @@ mod tests {
     }
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-    struct LppLocalStubUnreachable {}
+    pub struct LppLocalStubUnreachable {}
 
     impl From<LppLocalStubUnreachable> for LppBatch {
         fn from(_: LppLocalStubUnreachable) -> Self {
@@ -389,9 +389,9 @@ mod tests {
         }
     }
 
-    struct TimeAlarmsLocalStub {
+    pub struct TimeAlarmsLocalStub {
         address: Addr,
-        batch: Batch,
+        pub batch: Batch,
     }
 
     impl TimeAlarms for TimeAlarmsLocalStub {
@@ -419,7 +419,7 @@ mod tests {
         }
     }
 
-    struct TimeAlarmsLocalStubUnreachable;
+    pub struct TimeAlarmsLocalStubUnreachable;
 
     impl TimeAlarms for TimeAlarmsLocalStubUnreachable {
         fn owned_by(&self, _addr: &Addr) -> bool {
@@ -437,9 +437,9 @@ mod tests {
         }
     }
 
-    struct OracleLocalStub {
+    pub struct OracleLocalStub {
         address: Addr,
-        batch: Batch,
+        pub batch: Batch,
     }
 
     impl<OracleBase> Oracle<OracleBase> for OracleLocalStub
@@ -474,7 +474,7 @@ mod tests {
         }
     }
 
-    struct OracleLocalStubUnreachable;
+    pub struct OracleLocalStubUnreachable;
 
     impl<OracleBase> Oracle<OracleBase> for OracleLocalStubUnreachable
     where
@@ -499,7 +499,11 @@ mod tests {
         }
     }
 
-    fn create_lease<L, TA, O>(lpp: L, time_alarms: TA, oracle: O) -> Lease<TestCurrency, L, TA, O>
+    pub fn create_lease<L, TA, O>(
+        lpp: L,
+        time_alarms: TA,
+        oracle: O,
+    ) -> Lease<TestCurrency, L, TA, O>
     where
         L: Lpp<TestCurrency>,
         TA: TimeAlarms,
@@ -511,8 +515,8 @@ mod tests {
             LEASE_START,
             lpp_ref,
             MARGIN_INTEREST_RATE,
-            Duration::from_secs(100),
-            Duration::from_secs(0),
+            Duration::from_days(100),
+            Duration::from_days(10),
         )
         .unwrap();
 
@@ -526,7 +530,7 @@ mod tests {
                 Percent::from_percent(2),
                 Percent::from_percent(3),
                 Percent::from_percent(2),
-                10 * 24,
+                24,
             ),
             loan: Loan::from_dto(loan_dto, lpp),
             time_alarms,
@@ -534,7 +538,7 @@ mod tests {
         }
     }
 
-    fn lease_setup(
+    pub fn lease_setup(
         loan_response: Option<LoanResponse<TestCurrency>>,
         time_alarms_addr: Addr,
         oracle_addr: Addr,
@@ -556,19 +560,23 @@ mod tests {
         create_lease(lpp_stub, time_alarms_stub, oracle_stub)
     }
 
-    fn create_bank_account(lease_amount: u128) -> BankStub {
+    pub fn create_bank_account(lease_amount: u128) -> BankStub {
         BankStub {
             balance: lease_amount,
         }
     }
 
-    fn request_state(
+    pub fn request_state(
         lease: Lease<TestCurrency, LppLocalStub, TimeAlarmsLocalStub, OracleLocalStub>,
         bank_account: &BankStub,
     ) -> StateResponse<TestCurrency, TestCurrency> {
         lease
             .state(LEASE_STATE_AT, bank_account, Addr::unchecked("unused"))
             .unwrap()
+    }
+
+    pub fn coin(a: u128) -> Coin<TestCurrency> {
+        Coin::<TestCurrency>::new(a)
     }
 
     #[test]
@@ -659,9 +667,5 @@ mod tests {
 
         let exp = StateResponse::Closed();
         assert_eq!(exp, res);
-    }
-
-    fn coin(a: u128) -> Coin<TestCurrency> {
-        Coin::<TestCurrency>::new(a)
     }
 }

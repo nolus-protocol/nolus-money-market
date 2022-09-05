@@ -209,6 +209,7 @@ where
 
     fn handle_warnings(&self, liability: Percent) -> Status<Lpn> {
         debug_assert!(liability < self.liability.max_percent());
+
         if liability < self.liability.first_liq_warn_percent() {
             return Status::None;
         }
@@ -401,6 +402,7 @@ where
     pub liquidation_status: Status<Lpn>,
 }
 
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 pub(crate) enum Status<Lpn>
 where
     Lpn: Currency,
@@ -415,6 +417,7 @@ where
     FullLiquidation(LeaseInfo),
 }
 
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 pub(crate) struct LeaseInfo {
     pub customer: Addr,
     pub ltv: Percent,
@@ -432,5 +435,365 @@ generate_ids! {
 impl WarningLevel {
     pub fn to_uint(self) -> u8 {
         self.into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use cosmwasm_std::{to_binary, Addr, Timestamp, WasmMsg};
+
+    use finance::currency::Currency;
+
+    use finance::percent::Percent;
+    use finance::price::total_of;
+    use lpp::msg::LoanResponse;
+    use platform::batch::Batch;
+    use time_alarms::msg::ExecuteMsg::AddAlarm;
+
+    use crate::lease::tests::{LppLocalStub, OracleLocalStub, TestCurrency, TimeAlarmsLocalStub};
+    use crate::{
+        lease::{
+            tests::{coin, lease_setup, LEASE_START},
+            Lease, LeaseInfo, Status, WarningLevel,
+        },
+        loan::State,
+    };
+
+    #[test]
+    fn warnings_none() {
+        let _lease_amount = 1000;
+        let interest_rate = Percent::from_permille(50);
+        // LPP loan
+        let loan = LoanResponse {
+            principal_due: coin(500),
+            interest_due: coin(100),
+            annual_interest_rate: interest_rate,
+            interest_paid: Timestamp::from_nanos(0),
+        };
+
+        let lease = lease_setup(
+            Some(loan),
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
+
+        assert_eq!(
+            lease.handle_warnings(Percent::from_percent(60)),
+            Status::None,
+        );
+    }
+
+    #[test]
+    fn warnings_first() {
+        let _lease_amount = 1000;
+        let interest_rate = Percent::from_permille(50);
+        // LPP loan
+        let loan = LoanResponse {
+            principal_due: coin(500),
+            interest_due: coin(100),
+            annual_interest_rate: interest_rate,
+            interest_paid: Timestamp::from_nanos(0),
+        };
+
+        let lease = lease_setup(
+            Some(loan),
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
+
+        assert_eq!(
+            lease.handle_warnings(lease.liability.first_liq_warn_percent()),
+            Status::Warning(
+                LeaseInfo {
+                    customer: lease.customer.clone(),
+                    ltv: lease.liability.first_liq_warn_percent(),
+                    lease_asset: TestCurrency::SYMBOL.into(),
+                },
+                WarningLevel::First,
+            )
+        );
+    }
+
+    #[test]
+    fn warnings_second() {
+        let _lease_amount = 1000;
+        let interest_rate = Percent::from_permille(50);
+        // LPP loan
+        let loan = LoanResponse {
+            principal_due: coin(500),
+            interest_due: coin(100),
+            annual_interest_rate: interest_rate,
+            interest_paid: Timestamp::from_nanos(0),
+        };
+
+        let lease = lease_setup(
+            Some(loan),
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
+
+        assert_eq!(
+            lease.handle_warnings(lease.liability.second_liq_warn_percent()),
+            Status::Warning(
+                LeaseInfo {
+                    customer: lease.customer.clone(),
+                    ltv: lease.liability.second_liq_warn_percent(),
+                    lease_asset: TestCurrency::SYMBOL.into(),
+                },
+                WarningLevel::Second,
+            )
+        );
+    }
+
+    #[test]
+    fn warnings_third() {
+        let _lease_amount = 1000;
+        let interest_rate = Percent::from_permille(50);
+        // LPP loan
+        let loan = LoanResponse {
+            principal_due: coin(500),
+            interest_due: coin(100),
+            annual_interest_rate: interest_rate,
+            interest_paid: Timestamp::from_nanos(0),
+        };
+
+        let lease = lease_setup(
+            Some(loan),
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
+
+        assert_eq!(
+            lease.handle_warnings(lease.liability.third_liq_warn_percent()),
+            Status::Warning(
+                LeaseInfo {
+                    customer: lease.customer.clone(),
+                    ltv: lease.liability.third_liq_warn_percent(),
+                    lease_asset: TestCurrency::SYMBOL.into(),
+                },
+                WarningLevel::Third,
+            )
+        );
+    }
+
+    #[test]
+    fn liability() {
+        assert_eq!(
+            Lease::<TestCurrency, LppLocalStub, TimeAlarmsLocalStub, OracleLocalStub>::liability(
+                State {
+                    annual_interest: Default::default(),
+                    annual_interest_margin: Default::default(),
+                    principal_due: coin(100),
+                    previous_interest_due: coin(200),
+                    current_interest_due: coin(300),
+                    previous_margin_interest_due: coin(400),
+                    current_margin_interest_due: coin(500)
+                },
+                coin(1000),
+            ),
+            (
+                coin(100 + 200 + 300 + 400 + 500),
+                Percent::from_percent(150),
+            )
+        );
+    }
+
+    #[test]
+    fn liquidate_partial() {
+        let lease_amount = 1000;
+        let interest_rate = Percent::from_permille(50);
+        // LPP loan
+        let loan = LoanResponse {
+            principal_due: coin(500),
+            interest_due: coin(100),
+            annual_interest_rate: interest_rate,
+            interest_paid: Timestamp::from_nanos(0),
+        };
+
+        let lease = lease_setup(
+            Some(loan),
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
+
+        assert_eq!(
+            lease.liquidate(
+                Addr::unchecked(String::new()),
+                String::new(),
+                coin(lease_amount),
+                coin(800),
+            ),
+            Status::PartialLiquidation {
+                _info: LeaseInfo {
+                    customer: Addr::unchecked(String::new()),
+                    ltv: lease.liability.max_percent(),
+                    lease_asset: "".into(),
+                },
+                _healthy_ltv: lease.liability.healthy_percent(),
+                _liquidation_amount: coin(333),
+            }
+        );
+    }
+
+    #[test]
+    fn liquidate_full() {
+        let lease_amount = 1000;
+        let interest_rate = Percent::from_permille(50);
+        // LPP loan
+        let loan = LoanResponse {
+            principal_due: coin(500),
+            interest_due: coin(100),
+            annual_interest_rate: interest_rate,
+            interest_paid: Timestamp::from_nanos(0),
+        };
+
+        let lease = lease_setup(
+            Some(loan),
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
+
+        assert_eq!(
+            lease.liquidate(
+                Addr::unchecked(String::new()),
+                String::new(),
+                coin(lease_amount),
+                coin(5000),
+            ),
+            Status::FullLiquidation(LeaseInfo {
+                customer: Addr::unchecked(String::new()),
+                ltv: lease.liability.max_percent(),
+                lease_asset: "".into(),
+            },)
+        );
+    }
+
+    #[test]
+    fn reschedule_time_alarm_no_liquidation() {
+        let _lease_amount = 1000;
+        let interest_rate = Percent::from_permille(50);
+        // LPP loan
+        let loan = LoanResponse {
+            principal_due: coin(300),
+            interest_due: coin(0),
+            annual_interest_rate: interest_rate,
+            interest_paid: Timestamp::from_nanos(0),
+        };
+
+        let mut lease = lease_setup(
+            Some(loan),
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
+
+        lease
+            .reschedule_time_alarm(
+                &LEASE_START,
+                &Status::Warning(
+                    LeaseInfo {
+                        customer: Addr::unchecked(String::new()),
+                        ltv: Default::default(),
+                        lease_asset: "".to_string(),
+                    },
+                    WarningLevel::Second,
+                ),
+            )
+            .unwrap();
+
+        assert_eq!(lease.time_alarms.batch, {
+            let mut batch = Batch::default();
+
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: String::new(),
+                msg: to_binary(&AddAlarm {
+                    time: lease.loan.grace_period_end(),
+                })
+                .unwrap(),
+                funds: vec![],
+            });
+
+            batch
+        });
+    }
+
+    #[test]
+    fn reschedule_time_alarm_liquidation() {
+        let _lease_amount = 1000;
+        let interest_rate = Percent::from_permille(50);
+        // LPP loan
+        let loan = LoanResponse {
+            principal_due: coin(300),
+            interest_due: coin(50),
+            annual_interest_rate: interest_rate,
+            interest_paid: Timestamp::from_nanos(0),
+        };
+
+        let mut lease = lease_setup(
+            Some(loan),
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
+
+        lease
+            .reschedule_time_alarm(
+                &LEASE_START,
+                &Status::PartialLiquidation {
+                    _info: LeaseInfo {
+                        customer: Addr::unchecked(String::new()),
+                        ltv: Default::default(),
+                        lease_asset: "".to_string(),
+                    },
+                    _healthy_ltv: lease.liability.healthy_percent(),
+                    _liquidation_amount: coin(0),
+                },
+            )
+            .unwrap();
+
+        assert_eq!(lease.time_alarms.batch, {
+            let mut batch = Batch::default();
+
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: String::new(),
+                msg: to_binary(&AddAlarm {
+                    time: LEASE_START + lease.liability.recalculation_time(),
+                })
+                .unwrap(),
+                funds: vec![],
+            });
+
+            batch
+        });
+    }
+
+    #[test]
+    #[ignore = "No support for same currency prices. Without Price's debug assertion, runs successfully."]
+    fn price_alarm_by_percent() {
+        let lease_amount = 1000;
+        let interest_rate = Percent::from_permille(50);
+        // LPP loan
+        let loan = LoanResponse {
+            principal_due: coin(300),
+            interest_due: coin(0),
+            annual_interest_rate: interest_rate,
+            interest_paid: Timestamp::from_nanos(0),
+        };
+
+        let lease = lease_setup(
+            Some(loan),
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
+
+        assert_eq!(
+            lease
+                .price_alarm_by_percent(
+                    Addr::unchecked(String::new()),
+                    coin(lease_amount),
+                    &LEASE_START,
+                    Percent::from_percent(50),
+                )
+                .unwrap(),
+            total_of(coin(5)).is(coin(3))
+        );
     }
 }

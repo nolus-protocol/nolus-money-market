@@ -37,4 +37,5 @@ marketprice = { path = "../../packages/marketprice", version = "0.1.0", default-
 cosmwasm-schema = "1.0.0"
 time_alarms = { path = "../timealarms", package = "timealarms", version = "0.1.0", default-features = false, features = ["testing"] }
 lpp = { path = "../lpp", version = "0.1.0", default-features = false, features = ["testing"] }
+platform = { path = "../../packages/platform", version = "0.1.0", default-features = false, features = ["testing"] }
 market_price_oracle = { path = "../oracle", package = "oracle", version = "0.1.0", default-features = false, features = ["testing"] }
