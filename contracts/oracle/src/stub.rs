@@ -26,7 +26,7 @@ where
 {
     fn owned_by(&self, addr: &Addr) -> bool;
 
-    fn get_price(&self, denom: Denom) -> Result<PriceResponse>;
+    fn price_of(&self, denom: Denom) -> Result<PriceResponse>;
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()>;
 }
@@ -160,7 +160,7 @@ where
         self.oracle_ref.owned_by(addr)
     }
 
-    fn get_price(&self, denom: Denom) -> Result<PriceResponse> {
+    fn price_of(&self, denom: Denom) -> Result<PriceResponse> {
         let msg = QueryMsg::Price { denom };
         self.querier
             .query_wasm_smart(self.addr().clone(), &msg)

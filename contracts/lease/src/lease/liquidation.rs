@@ -66,7 +66,7 @@ where
             total_of(Coin::new(1)).is(Coin::new(1))
         } else {
             self.oracle
-                .get_price(self.currency.clone())?
+                .price_of(self.currency.clone())?
                 .price
                 .try_into()?
         };

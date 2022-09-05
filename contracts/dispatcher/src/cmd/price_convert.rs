@@ -22,7 +22,7 @@ where
         Oracle: OracleTrait<Lpn>,
     {
         // Obtain the currency market price of TVLdenom in uNLS and convert Rewards_TVLdenom in uNLS, Rewards_uNLS.
-        let price_dto = oracle.get_price(Nls::SYMBOL.to_string())?.price;
+        let price_dto = oracle.price_of(Nls::SYMBOL.to_string())?.price;
         let converted = Price::<Nls, Lpn>::try_from(price_dto)?.inv();
         let reward_unls: Coin<Nls> = total(self.amount, converted);
         Ok(reward_unls)
