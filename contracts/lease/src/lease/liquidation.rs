@@ -63,6 +63,10 @@ where
         B: BankAccountView,
     {
         let price = if self.currency == Lpn::SYMBOL {
+            if self.loan.grace_period_end() <= now {
+                return self.act_on_interest_overdue(now, lease, account.balance::<Lpn>()?);
+            }
+
             total_of(Coin::new(1)).is(Coin::new(1))
         } else {
             self.oracle
@@ -81,8 +85,8 @@ where
         lease_amount: Coin<Lpn>,
         now: &Timestamp,
     ) -> ContractResult<()>
-        where
-            A: Into<Addr>,
+    where
+        A: Into<Addr>,
     {
         self.reschedule(lease, lease_amount, now, &Status::None)
     }
@@ -94,15 +98,21 @@ where
         lease_amount: Coin<Lpn>,
         now: &Timestamp,
     ) -> ContractResult<()>
-        where
-            A: Into<Addr>,
+    where
+        A: Into<Addr>,
     {
         let lease = lease.into();
 
-        let status = self.loan.state(*now, lease.clone())?
-            .map_or(Status::None, |state| self.handle_warnings(Self::liability(state, lease_amount).1));
+        let status = self
+            .loan
+            .state(*now, lease.clone())?
+            .map(|state| self.handle_warnings(Self::liability(state, lease_amount).1));
 
-        self.reschedule(lease, lease_amount, now, &status)
+        if let Some(status) = &status {
+            self.reschedule(lease, lease_amount, now, status)
+        } else {
+            Ok(())
+        }
     }
 
     fn on_alarm<B>(
@@ -119,13 +129,55 @@ where
 
         let status = self.act_on_liability(now, lease.clone(), lease_amount, price)?;
 
-        // TODO run liquidation
-
         if !matches!(status, Status::FullLiquidation(_)) {
             self.reschedule(lease, lease_amount, &now, &status)?;
         }
 
         Ok(status)
+    }
+
+    fn act_on_interest_overdue(
+        self,
+        now: Timestamp,
+        lease: Addr,
+        lease_amount: Coin<Lpn>,
+    ) -> ContractResult<OnAlarmResult<Lpn>> {
+        let loan_state = self.loan.state(now, lease)?;
+
+        let liquidation_status = loan_state.map_or(Status::None, |state| {
+            let liquidation_amount = lease_amount.min(
+                state.previous_margin_interest_due
+                    + state.previous_interest_due
+                    + state.current_margin_interest_due
+                    + state.current_interest_due,
+            );
+
+            // TODO perform liquidation of asset
+
+            let info = LeaseInfo {
+                customer: self.customer.clone(),
+                ltv: Self::liability(state, lease_amount).1,
+                lease_asset: self.currency.clone(),
+            };
+
+            if liquidation_amount == lease_amount {
+                Status::FullLiquidation(info)
+            } else {
+                Status::PartialLiquidation {
+                    _info: info,
+                    _healthy_ltv: self.liability.healthy_percent(),
+                    _liquidation_amount: liquidation_amount,
+                }
+            }
+        });
+
+        let (lease_dto, batch) = self.into_dto();
+
+        Ok(OnAlarmResult {
+            batch,
+            lease_dto,
+            liquidation_status,
+        })
     }
 
     fn act_on_liability(
@@ -244,7 +296,7 @@ where
     where
         A: Into<Addr>,
     {
-        self.reschedule_time_alarm(now)?;
+        self.reschedule_time_alarm(now, liquidation_status)?;
 
         self.reschedule_price_alarm(lease, lease_amount, now, liquidation_status)
     }
@@ -299,9 +351,23 @@ where
         }
     }
 
-    fn reschedule_time_alarm(&mut self, now: &Timestamp) -> ContractResult<()> {
+    fn reschedule_time_alarm(
+        &mut self,
+        now: &Timestamp,
+        liquidation_status: &Status<Lpn>,
+    ) -> ContractResult<()> {
+        debug_assert!(!matches!(liquidation_status, Status::FullLiquidation(..)));
+
         self.time_alarms
-            .add_alarm(*now + self.liability.recalculation_time())
+            .add_alarm({
+                let grace_period_end = self.loan.grace_period_end();
+
+                if matches!(liquidation_status, Status::PartialLiquidation { .. }) {
+                    grace_period_end.min(*now + self.liability.recalculation_time())
+                } else {
+                    grace_period_end
+                }
+            })
             .map_err(Into::into)
     }
 
