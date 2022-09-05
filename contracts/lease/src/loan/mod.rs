@@ -222,14 +222,10 @@ where
 
         let principal_due = loan_state.principal_due;
 
-        let margin_interest_overdue_period = {
-            let mut period = self.current_period;
-
-            if now < period.till() {
-                period = self.current_period.spanning(Duration::default());
-            }
-
-            period
+        let margin_interest_overdue_period = if self.overdue_at(now) {
+            self.current_period
+        } else {
+            self.current_period.spanning(Duration::default())
         };
 
         let margin_interest_due_period = self
