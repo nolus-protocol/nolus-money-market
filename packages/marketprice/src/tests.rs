@@ -76,9 +76,9 @@ fn marketprice_add_feed_expect_err() {
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
-    let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), MINUTE, 50);
+    let query = PriceQuery::new(MINUTE, 50);
     let expected_err = market
-        .get_converted_dto_price(&deps.storage, ts, query)
+        .get::<DEN1, DEN2>(&deps.storage, ts, query)
         .unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
 }
@@ -127,16 +127,14 @@ fn marketprice_add_feed() {
     market
         .feed(&mut deps.storage, ts, &f_address, prices, MINUTE)
         .unwrap();
-    let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), MINUTE, 50);
+    let query = PriceQuery::new(MINUTE, 50);
     let err = market
-        .get_converted_dto_price(&deps.storage, ts, query)
+        .get::<DEN1, DEN2>(&deps.storage, ts, query)
         .unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
 
-    let query = PriceQuery::new(("DEN1".to_string(), "DEN2".to_string()), MINUTE, 1);
-    let price_resp = market
-        .get_converted_dto_price(&deps.storage, ts, query)
-        .unwrap();
+    let query = PriceQuery::new(MINUTE, 1);
+    let price_resp = market.get::<DEN1, DEN2>(&deps.storage, ts, query).unwrap();
 
     assert_eq!(PriceDTO::try_from(price1).unwrap(), price_resp);
 }
@@ -236,9 +234,9 @@ fn marketprice_follow_the_path() {
     .unwrap();
 
     // valid search denom pair
-    let query = PriceQuery::new(("DEN1".to_string(), "DEN4".to_string()), MINUTE, 1);
+    let query = PriceQuery::new(MINUTE, 1);
     let price_resp = market
-        .get_converted_dto_price(&deps.storage, mock_env().block.time, query)
+        .get::<DEN1, DEN4>(&deps.storage, mock_env().block.time, query)
         .unwrap();
     let expected = price::total_of(Coin::<DEN1>::new(1)).is(Coin::<DEN4>::new(6));
     let expected_dto = PriceDTO::try_from(expected).unwrap();
@@ -246,28 +244,28 @@ fn marketprice_follow_the_path() {
     assert_eq!(expected_dto, price_resp);
 
     // first and second part of denom pair are the same
-    let query = PriceQuery::new(("DEN1".to_string(), "DEN1".to_string()), MINUTE, 1);
+    let query = PriceQuery::new(MINUTE, 1);
     let price_resp = market
-        .get_converted_dto_price(&deps.storage, mock_env().block.time, query)
+        .get::<DEN1, DEN1>(&deps.storage, mock_env().block.time, query)
         .unwrap();
     let expected = price::total_of(Coin::<DEN1>::new(1)).is(Coin::<DEN1>::new(1));
     let expected_dto = PriceDTO::try_from(expected).unwrap();
     assert_eq!(expected_dto, price_resp);
 
     // second part of denome pair doesn't exists in the storage
-    let query = PriceQuery::new(("DEN1".to_string(), "DEN5".to_string()), MINUTE, 1);
+    let query = PriceQuery::new(MINUTE, 1);
     assert_eq!(
         market
-            .get_converted_dto_price(&deps.storage, mock_env().block.time, query)
+            .get::<DEN1, DENX>(&deps.storage, mock_env().block.time, query)
             .unwrap_err(),
         PriceFeedsError::NoPrice {}
     );
 
     // first part of denome pair doesn't exists in the storage
-    let query = PriceQuery::new(("DEN6".to_string(), "DEN1".to_string()), MINUTE, 1);
+    let query = PriceQuery::new(MINUTE, 1);
     assert_eq!(
         market
-            .get_converted_dto_price(&deps.storage, mock_env().block.time, query)
+            .get::<DENX, DEN1>(&deps.storage, mock_env().block.time, query)
             .unwrap_err(),
         PriceFeedsError::NoPrice {}
     );

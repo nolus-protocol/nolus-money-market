@@ -1,7 +1,6 @@
 use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::Item;
 use finance::currency::SymbolOwned;
-use marketprice::storage::DenomPair;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +12,7 @@ pub struct Config {
     pub owner: Addr,
     pub price_feed_period_secs: u32,
     pub feeders_percentage_needed: u8,
-    pub supported_denom_pairs: Vec<DenomPair>,
+    pub supported_denom_pairs: Vec<(SymbolOwned, SymbolOwned)>,
     pub timealarms_contract: Addr,
 }
 
@@ -25,7 +24,7 @@ impl Config {
         owner: Addr,
         price_feed_period_secs: u32,
         feeders_percentage_needed: u8,
-        supported_denom_pairs: Vec<DenomPair>,
+        supported_denom_pairs: Vec<(SymbolOwned, SymbolOwned)>,
         timealarms_contract: Addr,
     ) -> Self {
         Config {
@@ -65,7 +64,7 @@ impl Config {
     }
     pub fn update_supported_pairs(
         storage: &mut dyn Storage,
-        pairs: Vec<DenomPair>,
+        pairs: Vec<(SymbolOwned, SymbolOwned)>,
         sender: Addr,
     ) -> Result<(), ContractError> {
         let config = Self::STORAGE.load(storage)?;
@@ -74,7 +73,10 @@ impl Config {
         }
         for pair in &pairs {
             if pair.0.eq_ignore_ascii_case(pair.1.as_str()) {
-                return Err(ContractError::InvalidDenomPair(pair.to_owned()));
+                return Err(ContractError::InvalidDenomPair(
+                    pair.0.to_owned(),
+                    pair.1.to_owned(),
+                ));
             }
         }
 

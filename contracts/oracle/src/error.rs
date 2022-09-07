@@ -1,9 +1,9 @@
 use std::convert::Infallible;
 
 use cosmwasm_std::{Addr, StdError};
+use finance::currency::SymbolOwned;
 use marketprice::{
     alarms::errors::AlarmError, feeders::PriceFeedersError, market_price::PriceFeedsError,
-    storage::DenomPair,
 };
 use thiserror::Error;
 
@@ -38,7 +38,7 @@ pub enum ContractError {
     InvalidAddress {},
 
     #[error("Invalid denom pair")]
-    InvalidDenomPair(DenomPair),
+    InvalidDenomPair(SymbolOwned, SymbolOwned),
 
     #[error("No feeder data for the specified address")]
     UnknownFeeder {},

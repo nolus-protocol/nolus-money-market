@@ -13,7 +13,7 @@ use finance::{
     currency::{visit_any, AnyVisitor, Currency, Nls, SymbolOwned, Usdc},
     price::PriceDTO,
 };
-use marketprice::{market_price::PriceFeedsError, storage::DenomPair};
+use marketprice::market_price::PriceFeedsError;
 
 use crate::{
     alarms::MarketAlarms,
@@ -239,7 +239,7 @@ fn try_configure(
 fn try_configure_supported_pairs(
     storage: &mut dyn Storage,
     info: MessageInfo,
-    pairs: Vec<DenomPair>,
+    pairs: Vec<(SymbolOwned, SymbolOwned)>,
 ) -> Result<Response, ContractError> {
     Config::update_supported_pairs(storage, pairs, info.sender)?;
 

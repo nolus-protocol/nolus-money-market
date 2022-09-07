@@ -6,14 +6,14 @@ use serde::{Deserialize, Serialize};
 
 use finance::currency::SymbolOwned;
 use finance::price::PriceDTO;
-use marketprice::{alarms::Alarm, storage::DenomPair};
+use marketprice::alarms::Alarm;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
     pub base_asset: String,
     pub price_feed_period_secs: u32,
     pub feeders_percentage_needed: u8,
-    pub supported_denom_pairs: Vec<DenomPair>,
+    pub supported_denom_pairs: Vec<(SymbolOwned, SymbolOwned)>,
     pub timealarms_addr: String,
 }
 
@@ -31,7 +31,7 @@ pub enum ExecuteMsg {
         feeders_percentage_needed: u8,
     },
     SupportedDenomPairs {
-        pairs: Vec<DenomPair>,
+        pairs: Vec<(SymbolOwned, SymbolOwned)>,
     },
     AddPriceAlarm {
         alarm: Alarm,

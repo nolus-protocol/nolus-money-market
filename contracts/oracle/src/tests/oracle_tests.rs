@@ -234,7 +234,7 @@ fn invalid_supported_pairs() {
     };
     let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
     assert_eq!(
-        ContractError::InvalidDenomPair(("denom3".to_string(), "denom3".to_string())),
+        ContractError::InvalidDenomPair("denom3".to_string(), "denom3".to_string()),
         err
     );
 }

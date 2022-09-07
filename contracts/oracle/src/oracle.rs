@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
 use finance::{
-    currency::{Currency, SymbolOwned},
+    currency::{Currency, Nls, SymbolOwned, Usdc},
     duration::Duration,
     price::{Price as FinPrice, PriceDTO},
 };
@@ -60,7 +60,6 @@ impl MarketOracle {
             Self::feeders_needed(all_feeders_cnt, config.feeders_percentage_needed);
 
         Ok(PriceQuery::new(
-            (base, config.base_asset.clone()),
             Duration::from_secs(config.price_feed_period_secs),
             feeders_needed,
         ))
@@ -85,14 +84,14 @@ impl MarketOracle {
         &self,
         storage: &dyn Storage,
         block_time: Timestamp,
-        denoms: HashSet<SymbolOwned>,
+        currencies: HashSet<SymbolOwned>,
     ) -> Result<HashMap<SymbolOwned, PriceDTO>, PriceFeedsError> {
         let mut prices: HashMap<SymbolOwned, PriceDTO> = HashMap::new();
-        for denom in denoms {
-            let price_query = Self::init_price_query(storage, denom.clone(), &self.config)?;
-            let feed =
-                Self::MARKET_PRICE.get_converted_dto_price(storage, block_time, price_query)?;
-            prices.insert(denom, feed);
+        for currency in currencies {
+            let price_query = Self::init_price_query(storage, currency.clone(), &self.config)?;
+            //FIXME remove fixed Nls and Usdc
+            let feed = Self::MARKET_PRICE.get::<Nls, Usdc>(storage, block_time, price_query)?;
+            prices.insert(currency, feed);
         }
         Ok(prices)
     }
