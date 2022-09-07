@@ -2,11 +2,13 @@ use std::collections::{HashMap, HashSet};
 
 use cosmwasm_std::{Addr, Order, Response, StdResult, Storage};
 use cw_storage_plus::{Item, Map};
-use finance::currency::{Nls, SymbolOwned};
+use finance::{
+    currency::{Nls, SymbolOwned},
+    price::PriceDTO,
+};
 use platform::batch::Batch;
 
 use super::{errors::AlarmError, Alarm, ExecuteAlarmMsg};
-use crate::storage::Price;
 
 pub type HookReplyId = u64;
 pub struct HookReplyIdSeq<'a>(Item<'a, HookReplyId>);
@@ -66,7 +68,7 @@ impl<'m> PriceHooks<'m> {
     pub fn notify(
         &self,
         storage: &mut dyn Storage,
-        updated_prices: HashMap<SymbolOwned, Price>,
+        updated_prices: HashMap<SymbolOwned, PriceDTO>,
     ) -> Result<Batch, AlarmError> {
         let affected_contracts: Vec<_> = self.get_affected(storage, updated_prices)?;
 
@@ -102,9 +104,9 @@ impl<'m> PriceHooks<'m> {
     pub fn get_affected(
         &self,
         storage: &mut dyn Storage,
-        updated_prices: HashMap<SymbolOwned, Price>,
-    ) -> StdResult<Vec<(Addr, Alarm, Price)>> {
-        let mut affected: Vec<(Addr, Alarm, Price)> = vec![];
+        updated_prices: HashMap<SymbolOwned, PriceDTO>,
+    ) -> StdResult<Vec<(Addr, Alarm, PriceDTO)>> {
+        let mut affected: Vec<(Addr, Alarm, PriceDTO)> = vec![];
         for price in updated_prices.values() {
             let mut events: Vec<_> = self
                 .hooks
@@ -125,11 +127,27 @@ impl<'m> PriceHooks<'m> {
 pub mod tests {
 
     use cosmwasm_std::{testing::mock_dependencies, Addr};
+    use finance::{
+        coin::Coin,
+        currency::{Currency, Nls, SymbolStatic},
+        price,
+    };
 
     use crate::{
         alarms::{price::PriceHooks, Alarm},
         storage::Price,
     };
+
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+    pub struct BTH;
+    impl Currency for BTH {
+        const SYMBOL: SymbolStatic = "BTH";
+    }
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+    pub struct ETH;
+    impl Currency for ETH {
+        const SYMBOL: SymbolStatic = "ETH";
+    }
 
     #[test]
     fn test_add() {
@@ -140,8 +158,8 @@ pub mod tests {
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
 
-        let price1: Price = Price::new("BTH", 1000000, "NLS", 456789);
-        let price2: Price = Price::new("ETH", 1000000, "NLS", 123456);
+        let price1 = price::total_of(Coin::<BTH>::new(1000000)).is(Coin::<Nls>::new(456789));
+        let price2 = price::total_of(Coin::<ETH>::new(1000000)).is(Coin::<Nls>::new(123456));
 
         let expected_alarm1 = Alarm::new("BTH".to_string(), price1, None);
         let expected_alarm2 = Alarm::new("ETH".to_string(), price2, None);
@@ -177,6 +195,12 @@ pub mod tests {
 
     #[test]
     fn test_remove() {
+        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+        pub struct OtherCoin;
+        impl Currency for OtherCoin {
+            const SYMBOL: SymbolStatic = "OtherCoin";
+        }
+
         let hooks = PriceHooks::new("hooks", "hooks_sequence");
         let storage = &mut mock_dependencies().storage;
 
@@ -184,8 +208,8 @@ pub mod tests {
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
 
-        let price1 = Price::new("some_coin", 1000000, "another_coin", 456789);
-        let price2 = Price::new("some_coin", 1000000, "another_coin", 123456);
+        let price1 = price::total_of(Coin::<BTH>::new(1000000)).is(Coin::<OtherCoin>::new(456789));
+        let price2 = price::total_of(Coin::<ETH>::new(1000000)).is(Coin::<OtherCoin>::new(123456));
 
         let expected_alarm1 = Alarm::new("some_coin".to_string(), price1, None);
         let expected_alarm2 = Alarm::new("some_coin".to_string(), price2, None);

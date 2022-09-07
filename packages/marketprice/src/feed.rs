@@ -1,28 +1,28 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{Addr, Timestamp};
+use finance::price::PriceDTO;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::market_price::PriceFeedsError;
-use crate::storage::Price;
 use finance::duration::Duration;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Observation {
     feeder_addr: Addr,
     time: Timestamp,
-    price: Price,
+    price: PriceDTO,
 }
 impl Observation {
-    pub fn new(feeder_addr: Addr, time: Timestamp, price: Price) -> Observation {
+    pub fn new(feeder_addr: Addr, time: Timestamp, price: PriceDTO) -> Observation {
         Observation {
             feeder_addr,
             time,
             price,
         }
     }
-    pub fn price(&self) -> Price {
+    pub fn price(&self) -> PriceDTO {
         self.price.clone()
     }
 }

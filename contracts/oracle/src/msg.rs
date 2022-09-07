@@ -27,7 +27,7 @@ pub enum ExecuteMsg {
         feeder_address: String,
     },
     FeedPrices {
-        prices: Vec<Price>,
+        prices: Vec<PriceDTO>,
     },
     Config {
         price_feed_period_secs: u32,

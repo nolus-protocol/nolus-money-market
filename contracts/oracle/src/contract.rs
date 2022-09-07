@@ -269,7 +269,7 @@ fn try_feed_prices(
     storage: &mut dyn Storage,
     block_time: Timestamp,
     sender_raw: Addr,
-    prices: Vec<Price>,
+    prices: Vec<PriceDTO>,
 ) -> Result<Response, ContractError> {
     // Check feeder permission
     let is_registered = MarketOracle::is_feeder(storage, &sender_raw)?;
@@ -287,7 +287,7 @@ fn try_feed_prices(
     let hooks_currencies = MarketAlarms::get_hooks_currencies(storage)?;
 
     //re-calculate the price of these currencies
-    let updated_prices: HashMap<SymbolOwned, Price> =
+    let updated_prices: HashMap<SymbolOwned, PriceDTO> =
         oracle.get_prices(storage, block_time, hooks_currencies)?;
 
     // try notify affected subscribers

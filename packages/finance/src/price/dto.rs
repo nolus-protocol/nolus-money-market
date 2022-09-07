@@ -5,6 +5,7 @@ use crate::{
     coin::{Coin, CoinDTO},
     currency::{visit_any, AnyVisitor, Currency},
     error::Error,
+    fractionable::HigherRank,
     price::Price,
 };
 
@@ -149,5 +150,18 @@ where
 
     fn on_unknown(self) -> Result<Self::Output, Self::Error> {
         self.cmd.unknown()
+    }
+}
+
+impl PartialOrd for PriceDTO {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        type DoubleType = <u128 as HigherRank<u128>>::Type;
+
+        let a: DoubleType = self.quote().amount().into();
+        let d: DoubleType = other.base().amount().into();
+
+        let b: DoubleType = self.base().amount().into();
+        let c: DoubleType = other.quote().amount().into();
+        (a * d).partial_cmp(&(b * c))
     }
 }

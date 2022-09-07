@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use cosmwasm_std::{Addr, Response, StdResult, Storage};
-use finance::currency::SymbolOwned;
+use finance::{currency::SymbolOwned, price::PriceDTO};
 use marketprice::{
     alarms::{price::PriceHooks, Alarm},
     storage::Price,
@@ -37,7 +37,7 @@ impl MarketAlarms {
 
     pub fn try_notify_hooks(
         storage: &mut dyn Storage,
-        updated_prices: HashMap<SymbolOwned, Price>,
+        updated_prices: HashMap<SymbolOwned, PriceDTO>,
     ) -> Result<Batch, ContractError> {
         Ok(Self::PRICE_ALARMS.notify(storage, updated_prices)?)
     }
