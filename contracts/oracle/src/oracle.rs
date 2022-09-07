@@ -168,7 +168,6 @@ impl MarketOracle {
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::Addr;
-    use marketprice::storage::Price;
 
     use crate::{oracle::MarketOracle, state::config::Config};
 

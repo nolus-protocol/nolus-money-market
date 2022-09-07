@@ -133,10 +133,7 @@ pub mod tests {
         price,
     };
 
-    use crate::{
-        alarms::{price::PriceHooks, Alarm},
-        storage::Price,
-    };
+    use crate::alarms::{price::PriceHooks, Alarm};
 
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct BTH;

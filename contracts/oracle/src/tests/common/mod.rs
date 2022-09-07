@@ -8,7 +8,6 @@ use finance::{
     currency::{Currency, SymbolOwned, SymbolStatic},
     price::{self, PriceDTO},
 };
-use marketprice::storage::Price;
 
 use crate::{
     contract::{execute, instantiate},

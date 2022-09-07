@@ -1,7 +1,7 @@
 use std::convert::{Infallible, TryFrom, TryInto};
 
 use crate::feed::{Observation, PriceFeed};
-use crate::storage::{Coin, DenomPair, Price};
+use crate::storage::DenomPair;
 use cosmwasm_std::{Addr, Order, StdError, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
 use finance::currency::Currency;
@@ -263,10 +263,6 @@ impl<'m> PriceFeeds<'m> {
         let c_first = FinCoin::<C>::try_from(first)?;
         let c_second = FinCoin::<QuoteC>::try_from(second)?;
         Ok(price::total_of(c_first).is(c_second))
-    }
-
-    fn convert_to_dto_price(first: Coin, second: Coin) -> Result<Price, PriceFeedsError> {
-        Ok(Price::new_from_coins(first, second))
     }
 
     pub fn feed(

@@ -13,10 +13,7 @@ use finance::{
     currency::{visit_any, AnyVisitor, Currency, Nls, SymbolOwned, Usdc},
     price::PriceDTO,
 };
-use marketprice::{
-    market_price::PriceFeedsError,
-    storage::{DenomPair, Price},
-};
+use marketprice::{market_price::PriceFeedsError, storage::DenomPair};
 
 use crate::{
     alarms::MarketAlarms,

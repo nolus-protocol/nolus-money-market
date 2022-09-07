@@ -3,10 +3,9 @@ use cw_multi_test::Executor;
 
 use finance::{
     coin::Coin,
-    currency::{Currency as CurrencyTrait, Nls, Usdc},
+    currency::{Nls, Usdc},
     price::{self, PriceDTO},
 };
-use marketprice::storage::Price;
 use platform::coin_legacy::to_cosmwasm;
 
 use crate::common::{test_case::TestCase, ADMIN};
