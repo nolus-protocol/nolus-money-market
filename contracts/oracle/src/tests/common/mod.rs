@@ -3,13 +3,40 @@ use cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
     MemoryStorage, MessageInfo, OwnedDeps,
 };
-use finance::currency::SymbolOwned;
+use finance::{
+    coin::Coin,
+    currency::{Currency, SymbolOwned, SymbolStatic},
+    price::{self, PriceDTO},
+};
 use marketprice::storage::Price;
 
 use crate::{
     contract::{execute, instantiate},
     msg::{ExecuteMsg, InstantiateMsg},
 };
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+pub struct A;
+impl Currency for A {
+    const SYMBOL: SymbolStatic = "A";
+}
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+pub struct B;
+impl Currency for B {
+    const SYMBOL: SymbolStatic = "B";
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+pub struct C;
+impl Currency for C {
+    const SYMBOL: SymbolStatic = "C";
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+pub struct D;
+impl Currency for D {
+    const SYMBOL: SymbolStatic = "D";
+}
 
 pub(crate) const CREATOR: &str = "creator";
 
@@ -46,9 +73,9 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
 pub(crate) fn dummy_feed_prices_msg() -> ExecuteMsg {
     ExecuteMsg::FeedPrices {
         prices: vec![
-            Price::new("A", 10, "B", 12),
-            Price::new("A", 10, "C", 32),
-            Price::new("C", 10, "D", 12),
+            PriceDTO::try_from(price::total_of(Coin::<A>::new(10)).is(Coin::<B>::new(12))).unwrap(),
+            PriceDTO::try_from(price::total_of(Coin::<A>::new(10)).is(Coin::<C>::new(32))).unwrap(),
+            PriceDTO::try_from(price::total_of(Coin::<C>::new(10)).is(Coin::<D>::new(12))).unwrap(),
         ],
     }
 }

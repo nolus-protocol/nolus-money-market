@@ -166,7 +166,6 @@ fn marketprice_follow_the_path() {
 
     let mut deps = mock_dependencies();
     let market = PriceFeeds::new("foo");
-    let price1 = price::total_of(Coin::<DEN1>::new(1)).is(Coin::<DEN0>::new(1));
 
     feed_price(
         deps.as_mut(),

@@ -10,6 +10,7 @@ use finance::{
 
 use crate::market_price::PriceFeedsError;
 
+#[deprecated = "Migrate to using finance::coin::Coin"]
 pub type DenomPair = (SymbolOwned, SymbolOwned);
 
 #[deprecated = "Migrate to using finance::coin::Coin"]

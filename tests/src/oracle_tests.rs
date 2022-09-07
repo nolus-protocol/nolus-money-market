@@ -4,6 +4,7 @@ use cw_multi_test::Executor;
 use finance::{
     coin::Coin,
     currency::{Currency as CurrencyTrait, Nls, Usdc},
+    price::{self, PriceDTO},
 };
 use marketprice::storage::Price;
 use platform::coin_legacy::to_cosmwasm;
@@ -59,7 +60,10 @@ fn internal_test_integration_setup_test() {
             wasm_execute(
                 test_case.oracle.clone().unwrap(),
                 &oracle::msg::ExecuteMsg::FeedPrices {
-                    prices: vec![Price::new("UST", 5, Nls::SYMBOL, 7)],
+                    prices: vec![PriceDTO::try_from(
+                        price::total_of(Coin::<Usdc>::new(5)).is(Coin::<Nls>::new(7)),
+                    )
+                    .unwrap()],
                 },
                 vec![to_cosmwasm(create_coin(10000))],
             )

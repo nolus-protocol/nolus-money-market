@@ -6,10 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::currency::SymbolOwned;
 use finance::price::PriceDTO;
-use marketprice::{
-    alarms::Alarm,
-    storage::{DenomPair, Price},
-};
+use marketprice::{alarms::Alarm, storage::DenomPair};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -69,7 +66,7 @@ pub struct ConfigResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct PricesResponse {
-    pub prices: Vec<Price>,
+    pub prices: Vec<PriceDTO>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -80,5 +77,5 @@ pub struct PriceResponse {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
-    PriceAlarm { price: Price },
+    PriceAlarm { price: PriceDTO },
 }

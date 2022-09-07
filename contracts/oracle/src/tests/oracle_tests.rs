@@ -3,13 +3,15 @@ use std::collections::HashSet;
 use crate::contract::{execute, query};
 use crate::msg::{ConfigResponse, ExecuteMsg, PricesResponse, QueryMsg};
 use crate::tests::common::{
-    dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test, CREATOR,
+    dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test, A, B, CREATOR,
 };
 use crate::ContractError;
 
 use cosmwasm_std::testing::{mock_env, mock_info};
 use cosmwasm_std::{coins, from_binary, Addr};
-use marketprice::storage::Price;
+use finance::coin::Coin;
+use finance::currency::{Currency, SymbolStatic};
+use finance::price::{self, PriceDTO};
 
 use super::common::dummy_feed_prices_msg;
 
@@ -149,7 +151,7 @@ fn feed_prices() {
     .unwrap();
     let value: PricesResponse = from_binary(&res).unwrap();
     assert_eq!(
-        Price::new("A", 10, "B", 12),
+        PriceDTO::try_from(price::total_of(Coin::<A>::new(10)).is(Coin::<B>::new(12))).unwrap(),
         value.prices.first().unwrap().to_owned()
     );
 }
@@ -173,8 +175,27 @@ fn query_prices_unsuppoted_denom() {
 #[test]
 fn feed_prices_unsupported_pairs() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+    pub struct X;
+    impl Currency for X {
+        const SYMBOL: SymbolStatic = "X";
+    }
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+    pub struct C;
+    impl Currency for C {
+        const SYMBOL: SymbolStatic = "C";
+    }
 
-    let prices_map = vec![Price::new("X", 10, "C", 12), Price::new("X", 10, "D", 22)];
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+    pub struct D;
+    impl Currency for D {
+        const SYMBOL: SymbolStatic = "D";
+    }
+
+    let prices_map = vec![
+        PriceDTO::try_from(price::total_of(Coin::<X>::new(10)).is(Coin::<C>::new(12))).unwrap(),
+        PriceDTO::try_from(price::total_of(Coin::<X>::new(10)).is(Coin::<D>::new(22))).unwrap(),
+    ];
 
     let msg = ExecuteMsg::FeedPrices { prices: prices_map };
     let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
