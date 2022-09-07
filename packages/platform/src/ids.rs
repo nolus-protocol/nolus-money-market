@@ -7,7 +7,7 @@ use std::{
 #[macro_export]
 macro_rules! generate_ids {
     ($visibility: vis $enum_name: ident as $as_type: ty { $($value: ident $(= $int_value: literal)?),+ $(,)? }) => {
-        #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+        #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
         $visibility enum $enum_name {
             $($value $(= $int_value)?,)+
         }
