@@ -144,10 +144,10 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             deps.storage,
             &address,
         )?)?),
-        QueryMsg::PriceFor { denoms } => Ok(to_binary(&query_market_price_for(
+        QueryMsg::PriceFor { currencies } => Ok(to_binary(&query_market_price_for(
             deps.storage,
             env,
-            HashSet::from_iter(denoms.iter().cloned()),
+            HashSet::from_iter(currencies.iter().cloned()),
         )?)?),
         QueryMsg::SupportedDenomPairs {} => Ok(to_binary(
             &Config::load(deps.storage)?.supported_denom_pairs,
