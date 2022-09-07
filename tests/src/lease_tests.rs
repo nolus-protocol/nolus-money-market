@@ -406,20 +406,20 @@ fn liquidation_time_alarm(time_pass: Duration) {
 #[test]
 #[should_panic = "No liquidation emitted!"]
 fn liquidation_time_alarm_0() {
-    liquidation_time_alarm(Duration::from_days(1));
+    liquidation_time_alarm(LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1));
 }
 
 #[test]
 #[should_panic = "No liquidation emitted!"]
 fn liquidation_time_alarm_1() {
     liquidation_time_alarm(
-        LeaserWrapper::REPAYMENT_PERIOD + Duration::from_days(10) - Duration::from_nanos(1),
+        LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::GRACE_PERIOD - Duration::from_nanos(1),
     );
 }
 
 #[test]
 fn liquidation_time_alarm_2() {
-    liquidation_time_alarm(LeaserWrapper::REPAYMENT_PERIOD + Duration::from_days(10));
+    liquidation_time_alarm(LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::GRACE_PERIOD);
 }
 
 #[test]

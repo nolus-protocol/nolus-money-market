@@ -260,6 +260,28 @@ where
         }))
     }
 
+    pub(crate) fn liability<A>(
+        &self,
+        now: Timestamp,
+        lease: A,
+    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)>
+        where
+            A: Into<Addr>,
+    {
+        self.state(now, lease.into())?
+            .map(|state| {
+                (
+                    state.principal_due
+                        + state.previous_margin_interest_due
+                        + state.previous_interest_due
+                        + state.current_margin_interest_due
+                        + state.current_interest_due,
+                    state.previous_margin_interest_due + state.previous_interest_due,
+                )
+            })
+            .ok_or(ContractError::LoanClosed())
+    }
+
     fn maybe_load_loan_interest_due(
         &self,
         lease: impl Into<Addr>,

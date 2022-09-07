@@ -115,6 +115,14 @@ impl Add<Duration> for Duration {
     }
 }
 
+impl Sub<Duration> for Timestamp {
+    type Output = Self;
+
+    fn sub(self, rhs: Duration) -> Self::Output {
+        self.minus_nanos(rhs.nanos())
+    }
+}
+
 impl Sub<Duration> for Duration {
     type Output = Self;
 
