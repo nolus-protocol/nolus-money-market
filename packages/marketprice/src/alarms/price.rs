@@ -6,7 +6,7 @@ use finance::currency::{Nls, SymbolOwned};
 use platform::batch::Batch;
 
 use super::{errors::AlarmError, Alarm, ExecuteAlarmMsg};
-use crate::storage::{Denom, Price};
+use crate::storage::Price;
 
 pub type HookReplyId = u64;
 pub struct HookReplyIdSeq<'a>(Item<'a, HookReplyId>);
@@ -88,8 +88,8 @@ impl<'m> PriceHooks<'m> {
         Ok(batch)
     }
 
-    pub fn get_hook_denoms(&self, storage: &dyn Storage) -> StdResult<HashSet<Denom>> {
-        let hook_denoms: HashSet<Denom> = self
+    pub fn get_hook_denoms(&self, storage: &dyn Storage) -> StdResult<HashSet<SymbolOwned>> {
+        let hook_denoms: HashSet<SymbolOwned> = self
             .hooks
             .prefix(())
             .range(storage, None, None, Order::Ascending)

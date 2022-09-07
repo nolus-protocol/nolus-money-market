@@ -176,7 +176,7 @@ mod tests {
 
     use finance::{
         coin::Coin,
-        currency::{Currency, Nls, Usdc},
+        currency::{Currency, Nls, SymbolOwned, Usdc},
         duration::Duration,
         interest::InterestPeriod,
         liability::Liability,
@@ -191,7 +191,6 @@ mod tests {
     use market_price_oracle::msg::PriceResponse;
     use market_price_oracle::stub::{Oracle, OracleBatch, OracleRef};
     use marketprice::alarms::Alarm;
-    use marketprice::storage::Denom;
     use platform::{bank::BankAccountView, batch::Batch, error::Result as PlatformResult};
 
     use crate::{
@@ -376,7 +375,10 @@ mod tests {
             &self.address == addr
         }
 
-        fn get_price(&self, _denom: Denom) -> market_price_oracle::stub::Result<PriceResponse> {
+        fn get_price(
+            &self,
+            _denom: SymbolOwned,
+        ) -> market_price_oracle::stub::Result<PriceResponse> {
             unimplemented!()
         }
 
@@ -410,7 +412,10 @@ mod tests {
             unreachable!()
         }
 
-        fn get_price(&self, _denom: Denom) -> market_price_oracle::stub::Result<PriceResponse> {
+        fn get_price(
+            &self,
+            _denom: SymbolOwned,
+        ) -> market_price_oracle::stub::Result<PriceResponse> {
             unreachable!()
         }
 

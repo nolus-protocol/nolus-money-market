@@ -7,7 +7,7 @@ use cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage, Timestamp};
 use marketprice::{
     feeders::{PriceFeeders, PriceFeedersError},
     market_price::{PriceFeeds, PriceFeedsError, PriceQuery},
-    storage::{Denom, Price},
+    storage::Price,
 };
 
 use schemars::JsonSchema;
@@ -50,7 +50,7 @@ impl MarketOracle {
 
     fn init_price_query(
         storage: &dyn Storage,
-        base: Denom,
+        base: SymbolOwned,
         config: &Config,
     ) -> StdResult<PriceQuery> {
         Self::assert_supported_denom(&config.supported_denom_pairs, base.clone())?;
@@ -68,15 +68,15 @@ impl MarketOracle {
     }
 
     fn assert_supported_denom(
-        supported_denom_pairs: &[(Denom, Denom)],
-        denom: Denom,
+        supported_denom_pairs: &[(SymbolOwned, SymbolOwned)],
+        currency: SymbolOwned,
     ) -> StdResult<()> {
-        let mut all_supported_denoms = HashSet::<Denom>::new();
+        let mut all_supported_denoms = HashSet::<SymbolOwned>::new();
         for pair in supported_denom_pairs {
             all_supported_denoms.insert(pair.0.clone());
             all_supported_denoms.insert(pair.1.clone());
         }
-        if !all_supported_denoms.contains(&denom) {
+        if !all_supported_denoms.contains(&currency) {
             return Err(StdError::generic_err("Unsupported denom"));
         }
         Ok(())
@@ -86,7 +86,7 @@ impl MarketOracle {
         &self,
         storage: &dyn Storage,
         block_time: Timestamp,
-        denoms: HashSet<Denom>,
+        denoms: HashSet<SymbolOwned>,
     ) -> Result<HashMap<SymbolOwned, Price>, PriceFeedsError> {
         let mut prices: HashMap<SymbolOwned, Price> = HashMap::new();
         for denom in denoms {
@@ -101,7 +101,7 @@ impl MarketOracle {
     pub fn get_single_price<C, QuoteC>(
         storage: &dyn Storage,
         block_time: Timestamp,
-        currency: Denom,
+        currency: SymbolOwned,
     ) -> Result<FinPrice<C, QuoteC>, PriceFeedsError>
     where
         C: Currency,

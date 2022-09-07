@@ -1,3 +1,4 @@
+use finance::currency::SymbolOwned;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -9,8 +10,7 @@ use finance::{
 
 use crate::market_price::PriceFeedsError;
 
-pub type Denom = String;
-pub type DenomPair = (Denom, Denom);
+pub type DenomPair = (SymbolOwned, SymbolOwned);
 
 #[deprecated = "Migrate to using finance::coin::Coin"]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, Default)]

@@ -3,8 +3,8 @@ use std::{marker::PhantomData, result::Result as StdResult};
 use cosmwasm_std::{wasm_execute, Addr, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{visit, Currency, SingleVisitor, SymbolOwned};
-use marketprice::{alarms::Alarm, storage::Denom};
+use finance::currency::{self, visit, Currency, SingleVisitor, SymbolOwned};
+use marketprice::alarms::Alarm;
 use platform::batch::Batch;
 
 use crate::{
@@ -26,7 +26,7 @@ where
 {
     fn owned_by(&self, addr: &Addr) -> bool;
 
-    fn get_price(&self, denom: Denom) -> Result<PriceResponse>;
+    fn get_price(&self, denom: SymbolOwned) -> Result<PriceResponse>;
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()>;
 }
@@ -160,8 +160,8 @@ where
         self.oracle_ref.owned_by(addr)
     }
 
-    fn get_price(&self, denom: Denom) -> Result<PriceResponse> {
-        let msg = QueryMsg::Price { denom };
+    fn get_price(&self, currency: SymbolOwned) -> Result<PriceResponse> {
+        let msg = QueryMsg::Price { currency };
         self.querier
             .query_wasm_smart(self.addr().clone(), &msg)
             .map_err(ContractError::from)

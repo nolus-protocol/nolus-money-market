@@ -3,7 +3,8 @@ use cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
     MemoryStorage, MessageInfo, OwnedDeps,
 };
-use marketprice::storage::{Denom, Price};
+use finance::currency::SymbolOwned;
+use marketprice::storage::Price;
 
 use crate::{
     contract::{execute, instantiate},
@@ -13,7 +14,7 @@ use crate::{
 pub(crate) const CREATOR: &str = "creator";
 
 pub(crate) fn dummy_instantiate_msg(
-    base_asset: Denom,
+    base_asset: SymbolOwned,
     price_feed_period_secs: u32,
     feeders_percentage_needed: u8,
     supported_denom_pairs: Vec<(String, String)>,

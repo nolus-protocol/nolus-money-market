@@ -15,7 +15,7 @@ use finance::{
 };
 use marketprice::{
     market_price::PriceFeedsError,
-    storage::{Denom, DenomPair, Price},
+    storage::{DenomPair, Price},
 };
 
 use crate::{
@@ -100,10 +100,10 @@ impl<'a> QueryWithLpn<'a> {
     {
         // currency context variants
         let res = match self.msg {
-            QueryMsg::Price { denom } => to_binary(&query_market_price_for_single::<LPN, Usdc>(
+            QueryMsg::Price { currency } => to_binary(&query_market_price_for_single::<LPN, Usdc>(
                 self.deps.storage,
                 self.env,
-                denom,
+                currency,
             )?),
             _ => {
                 unreachable!()
@@ -193,12 +193,12 @@ fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
 fn query_market_price_for(
     storage: &dyn Storage,
     env: Env,
-    denoms: HashSet<Denom>,
+    currencies: HashSet<SymbolOwned>,
 ) -> Result<PricesResponse, PriceFeedsError> {
     let config = Config::load(storage)?;
     Ok(PricesResponse {
         prices: MarketOracle::new(config)
-            .get_prices(storage, env.block.time, denoms)?
+            .get_prices(storage, env.block.time, currencies)?
             .values()
             .cloned()
             .collect(),
@@ -208,7 +208,7 @@ fn query_market_price_for(
 fn query_market_price_for_single<C, QuoteC>(
     storage: &dyn Storage,
     env: Env,
-    denom: Denom,
+    currency: SymbolOwned,
 ) -> Result<PriceResponse, ContractError>
 where
     C: 'static + Currency + Serialize,
@@ -218,7 +218,7 @@ where
         price: PriceDTO::try_from(MarketOracle::get_single_price::<C, QuoteC>(
             storage,
             env.block.time,
-            denom,
+            currency,
         )?)?,
     })
 }

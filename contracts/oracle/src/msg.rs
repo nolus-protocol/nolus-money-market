@@ -8,7 +8,7 @@ use finance::currency::SymbolOwned;
 use finance::price::PriceDTO;
 use marketprice::{
     alarms::Alarm,
-    storage::{Denom, DenomPair, Price},
+    storage::{DenomPair, Price},
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -52,8 +52,8 @@ pub enum QueryMsg {
     // check if an address belongs to a registered feeder
     IsFeeder { address: Addr },
     // returns the price of the denom against the base asset
-    PriceFor { denoms: HashSet<Denom> },
-    Price { denom: Denom },
+    PriceFor { denoms: HashSet<SymbolOwned> },
+    Price { currency: SymbolOwned },
     // returns a list of supported denom pairs
     SupportedDenomPairs {},
 }

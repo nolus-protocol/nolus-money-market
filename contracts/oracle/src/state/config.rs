@@ -1,6 +1,7 @@
 use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::Item;
-use marketprice::storage::{Denom, DenomPair};
+use finance::currency::SymbolOwned;
+use marketprice::storage::DenomPair;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -8,7 +9,7 @@ use crate::ContractError;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Config {
-    pub base_asset: Denom,
+    pub base_asset: SymbolOwned,
     pub owner: Addr,
     pub price_feed_period_secs: u32,
     pub feeders_percentage_needed: u8,

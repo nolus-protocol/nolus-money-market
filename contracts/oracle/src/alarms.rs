@@ -4,7 +4,7 @@ use cosmwasm_std::{Addr, Response, StdResult, Storage};
 use finance::currency::SymbolOwned;
 use marketprice::{
     alarms::{price::PriceHooks, Alarm},
-    storage::{Denom, Price},
+    storage::Price,
 };
 use platform::batch::Batch;
 use schemars::JsonSchema;
@@ -31,7 +31,7 @@ impl MarketAlarms {
         Ok(Response::new())
     }
 
-    pub fn get_hooks_currencies(storage: &dyn Storage) -> StdResult<HashSet<Denom>> {
+    pub fn get_hooks_currencies(storage: &dyn Storage) -> StdResult<HashSet<SymbolOwned>> {
         Self::PRICE_ALARMS.get_hook_denoms(storage)
     }
 
