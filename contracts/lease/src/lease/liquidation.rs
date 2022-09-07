@@ -40,17 +40,9 @@ where
     where
         B: BankAccountView,
     {
-        assert_ne!(self.currency, Lpn::SYMBOL);
+        let status = self.on_alarm(now, account, lease, price)?;
 
-        let liquidation_status = self.on_alarm(now, account, lease, price)?;
-
-        let (lease_dto, batch) = self.into_dto();
-
-        Ok(OnAlarmResult {
-            batch,
-            lease_dto,
-            liquidation_status,
-        })
+        Ok(self.construct_on_alarm_result(status))
     }
 
     pub(crate) fn on_time_alarm<B>(
@@ -62,9 +54,19 @@ where
     where
         B: BankAccountView,
     {
+        let mut status = Status::None;
+
         let price = if self.currency == Lpn::SYMBOL {
             if self.loan.grace_period_end() <= now {
-                return self.act_on_interest_overdue(now, lease, account.balance::<Lpn>()?);
+                status =
+                    self.act_on_interest_overdue(now, lease.clone(), account.balance::<Lpn>()?)?;
+
+                if matches!(
+                    status,
+                    Status::PartialLiquidation { .. } | Status::FullLiquidation(..)
+                ) {
+                    return Ok(self.construct_on_alarm_result(status));
+                }
             }
 
             total_of(Coin::new(1)).is(Coin::new(1))
@@ -75,7 +77,9 @@ where
                 .try_into()?
         };
 
-        self.on_price_alarm(now, account, lease, price)
+        Ok(self
+            .on_price_alarm(now, account, lease, price)?
+            .union(status))
     }
 
     #[inline]
@@ -115,6 +119,16 @@ where
         }
     }
 
+    fn construct_on_alarm_result(self, liquidation_status: Status<Lpn>) -> OnAlarmResult<Lpn> {
+        let (lease_dto, batch) = self.into_dto();
+
+        OnAlarmResult {
+            batch,
+            lease_dto,
+            liquidation_status,
+        }
+    }
+
     fn on_alarm<B>(
         &mut self,
         now: Timestamp,
@@ -122,8 +136,8 @@ where
         lease: Addr,
         price: Price<Lpn, Lpn>,
     ) -> ContractResult<Status<Lpn>>
-    where
-        B: BankAccountView,
+        where
+            B: BankAccountView,
     {
         let lease_amount = account.balance::<Lpn>()?;
 
@@ -137,14 +151,14 @@ where
     }
 
     fn act_on_interest_overdue(
-        self,
+        &self,
         now: Timestamp,
         lease: Addr,
         lease_amount: Coin<Lpn>,
-    ) -> ContractResult<OnAlarmResult<Lpn>> {
+    ) -> ContractResult<Status<Lpn>> {
         let loan_state = self.loan.state(now, lease)?;
 
-        let liquidation_status = loan_state.map_or(Status::None, |state| {
+        let status = loan_state.map_or(Status::None, |state| {
             let liquidation_amount = lease_amount.min(
                 state.previous_margin_interest_due
                     + state.previous_interest_due
@@ -171,13 +185,7 @@ where
             }
         });
 
-        let (lease_dto, batch) = self.into_dto();
-
-        Ok(OnAlarmResult {
-            batch,
-            lease_dto,
-            liquidation_status,
-        })
+        Ok(status)
     }
 
     fn act_on_liability(
@@ -394,18 +402,43 @@ where
 }
 
 pub(crate) struct OnAlarmResult<Lpn>
-where
-    Lpn: Currency,
+    where
+        Lpn: Currency,
 {
     pub batch: Batch,
     pub lease_dto: LeaseDTO,
     pub liquidation_status: Status<Lpn>,
 }
 
+impl<Lpn> OnAlarmResult<Lpn>
+    where
+        Lpn: Currency,
+{
+    pub fn union(mut self, status: Status<Lpn>) -> Self {
+        self.liquidation_status = match (self.liquidation_status, status) {
+            (Status::None, status) | (status, Status::None) => status,
+            (Status::Warning(left_info, left_level), Status::Warning(right_info, right_level)) => {
+                if left_level < right_level {
+                    Status::Warning(right_info, right_level)
+                } else {
+                    Status::Warning(left_info, left_level)
+                }
+            }
+            (
+                Status::PartialLiquidation { .. } | Status::FullLiquidation(..),
+                Status::PartialLiquidation { .. } | Status::FullLiquidation(..),
+            ) => unreachable!("Two liquidations ran!"),
+            (status, Status::Warning(..)) | (Status::Warning(..), status) => status,
+        };
+
+        self
+    }
+}
+
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 pub(crate) enum Status<Lpn>
-where
-    Lpn: Currency,
+    where
+        Lpn: Currency,
 {
     None,
     Warning(LeaseInfo, WarningLevel),
