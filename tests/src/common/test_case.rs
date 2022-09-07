@@ -197,7 +197,15 @@ impl TestCase {
     }
 
     pub fn init_timealarms(&mut self) -> &mut Self {
-        self.timealarms = Some(TimeAlarmsWrapper::default().instantiate(&mut self.app));
+        self.init_timealarms_with_funds(0)
+    }
+
+    pub fn init_timealarms_with_funds(&mut self, amount: Amount) -> &mut Self {
+        self.timealarms = Some(TimeAlarmsWrapper::default().instantiate(
+            &mut self.app,
+            amount,
+            self.denom.clone(),
+        ));
         self.app.update_block(next_block);
 
         self

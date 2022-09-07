@@ -1,5 +1,8 @@
-use cosmwasm_std::{Addr, StdError};
+use cosmwasm_std::{coins, Addr, StdError};
 use cw_multi_test::Executor;
+use finance::coin::{Amount, Coin};
+use finance::currency::{Currency, Nls, SymbolOwned};
+use platform::coin_legacy::to_cosmwasm;
 
 use timealarms::{
     contract::{execute, instantiate, reply},
@@ -17,19 +20,25 @@ pub struct TimeAlarmsWrapper {
 
 impl TimeAlarmsWrapper {
     #[track_caller]
-    pub fn instantiate(self, app: &mut MockApp) -> Addr {
+    pub fn instantiate(self, app: &mut MockApp, amount: Amount, denom: SymbolOwned) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {};
+
+        let funds = if amount == 0 {
+            vec![]
+        } else {
+            coins(amount, denom)
+        };
 
         app.instantiate_contract(
             code_id,
             Addr::unchecked(ADMIN),
             &msg,
-            &[],
+            &funds,
             "timealarms",
             None,
         )
-        .unwrap()
+            .unwrap()
     }
 }
 

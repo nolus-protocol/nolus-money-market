@@ -4,8 +4,8 @@ use cosmwasm_std::{Addr, Timestamp};
 use cw_multi_test::{AppResponse, Executor};
 
 use finance::{
-    coin::Coin, currency::Usdc, duration::Duration, interest::InterestPeriod, percent::Percent,
-    price::PriceDTO,
+    coin::Coin, currency::Currency as _, currency::Usdc, duration::Duration,
+    interest::InterestPeriod, percent::Percent, price::PriceDTO,
 };
 use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
@@ -15,7 +15,8 @@ use crate::common::{leaser_wrapper::LeaserWrapper, test_case::TestCase, AppExt, 
 
 type Currency = Usdc;
 type TheCoin = Coin<Currency>;
-const DENOM: &str = <Usdc as finance::currency::Currency>::SYMBOL;
+
+const DENOM: &str = Currency::SYMBOL;
 const DOWNPAYMENT: u128 = 10;
 
 fn create_coin(amount: u128) -> TheCoin {
@@ -29,7 +30,7 @@ fn create_test_case() -> TestCase {
         vec![to_cosmwasm(create_coin(1_000_000))],
     );
     test_case.init_lpp_with_funds(None, 5_000_000_000);
-    test_case.init_timealarms();
+    test_case.init_timealarms_with_funds(5_000_000);
     test_case.init_oracle_with_funds(None, 5_000_000);
     test_case.init_leaser();
 
@@ -374,6 +375,51 @@ fn liquidation_warning_3() {
         LeaserWrapper::liability().third_liq_warn_percent(),
         "3",
     );
+}
+
+fn liquidation_time_alarm(time_pass: Duration) {
+    const DOWNPAYMENT: u128 = 1_000_000;
+
+    let mut test_case = create_test_case();
+    let downpayment = create_coin(DOWNPAYMENT);
+    let lease_address = open_lease(&mut test_case, downpayment);
+
+    test_case.app.time_shift(time_pass);
+
+    let response = test_case
+        .app
+        .execute_contract(
+            test_case.timealarms.unwrap(),
+            lease_address,
+            &lease::msg::ExecuteMsg::TimeAlarm(),
+            &[to_cosmwasm(create_coin(10000))],
+        )
+        .unwrap();
+
+    response
+        .events
+        .iter()
+        .find(|event| event.ty == "wasm-ls-liquidation")
+        .expect("No liquidation emitted!");
+}
+
+#[test]
+#[should_panic = "No liquidation emitted!"]
+fn liquidation_time_alarm_0() {
+    liquidation_time_alarm(Duration::from_days(1));
+}
+
+#[test]
+#[should_panic = "No liquidation emitted!"]
+fn liquidation_time_alarm_1() {
+    liquidation_time_alarm(
+        LeaserWrapper::REPAYMENT_PERIOD + Duration::from_days(10) - Duration::from_nanos(1),
+    );
+}
+
+#[test]
+fn liquidation_time_alarm_2() {
+    liquidation_time_alarm(LeaserWrapper::REPAYMENT_PERIOD + Duration::from_days(10));
 }
 
 #[test]
