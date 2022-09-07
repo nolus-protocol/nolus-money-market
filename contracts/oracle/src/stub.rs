@@ -3,7 +3,7 @@ use std::{marker::PhantomData, result::Result as StdResult};
 use cosmwasm_std::{wasm_execute, Addr, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{self, visit, Currency, SingleVisitor, SymbolOwned};
+use finance::currency::{visit, Currency, SingleVisitor, SymbolOwned};
 use marketprice::alarms::Alarm;
 use platform::batch::Batch;
 

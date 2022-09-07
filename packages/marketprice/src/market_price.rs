@@ -3,12 +3,13 @@ use std::convert::{Infallible, TryInto};
 use crate::feed::{Observation, PriceFeed};
 use cosmwasm_std::{Addr, Order, StdError, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
+use finance::coin::Coin;
 use finance::currency::{Currency, SymbolOwned};
 use finance::duration::Duration;
 
 use thiserror::Error;
 
-use finance::price::{Price as FinPrice, PriceDTO};
+use finance::price::{self, Price as FinPrice, PriceDTO};
 
 pub struct PriceQuery {
     price_feed_period: Duration,
@@ -70,11 +71,12 @@ impl<'m> PriceFeeds<'m> {
         // let quote = &query.denom_pair.1;
 
         // FIXME return PriceDTO::one
-        // if base.eq(quote) {
-        //     let price: FinPrice<C, QuoteC> = price::total_of(FinCoin::new(1)).is(FinCoin::new(1));
+        if C::SYMBOL.eq(QuoteC::SYMBOL) {
+            let price: FinPrice<C, QuoteC> =
+                price::total_of(Coin::<C>::new(1)).is(Coin::<QuoteC>::new(1));
 
-        //     return Ok(PriceDTO::try_from(price)?);
-        // }
+            return Ok(PriceDTO::try_from(price)?);
+        }
 
         // check if the second part of the pair exists in the storage
         let result: StdResult<Vec<_>> = self

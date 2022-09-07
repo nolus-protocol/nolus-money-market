@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
 use finance::{
-    currency::{Currency, Nls, SymbolOwned, Usdc},
+    currency::{Currency, Nls, SymbolOwned, SymbolStatic, Usdc},
     duration::Duration,
     price::{Price as FinPrice, PriceDTO},
 };
@@ -47,13 +47,7 @@ impl MarketOracle {
         Self::FEEDERS.register(deps, address)
     }
 
-    fn init_price_query(
-        storage: &dyn Storage,
-        base: SymbolOwned,
-        config: &Config,
-    ) -> StdResult<PriceQuery> {
-        Self::assert_supported_denom(&config.supported_denom_pairs, base.clone())?;
-
+    fn init_price_query(storage: &dyn Storage, config: &Config) -> StdResult<PriceQuery> {
         let registered_feeders = Self::FEEDERS.get(storage)?;
         let all_feeders_cnt = registered_feeders.len();
         let feeders_needed =
@@ -67,14 +61,14 @@ impl MarketOracle {
 
     fn assert_supported_denom(
         supported_denom_pairs: &[(SymbolOwned, SymbolOwned)],
-        currency: SymbolOwned,
+        currency: &SymbolOwned,
     ) -> StdResult<()> {
         let mut all_supported_denoms = HashSet::<SymbolOwned>::new();
         for pair in supported_denom_pairs {
             all_supported_denoms.insert(pair.0.clone());
             all_supported_denoms.insert(pair.1.clone());
         }
-        if !all_supported_denoms.contains(&currency) {
+        if !all_supported_denoms.contains(currency) {
             return Err(StdError::generic_err("Unsupported denom"));
         }
         Ok(())
@@ -88,7 +82,9 @@ impl MarketOracle {
     ) -> Result<HashMap<SymbolOwned, PriceDTO>, PriceFeedsError> {
         let mut prices: HashMap<SymbolOwned, PriceDTO> = HashMap::new();
         for currency in currencies {
-            let price_query = Self::init_price_query(storage, currency.clone(), &self.config)?;
+            Self::assert_supported_denom(&self.config.supported_denom_pairs, &currency)?;
+
+            let price_query = Self::init_price_query(storage, &self.config)?;
             //FIXME remove fixed Nls and Usdc
             let feed = Self::MARKET_PRICE.get::<Nls, Usdc>(storage, block_time, price_query)?;
             prices.insert(currency, feed);
@@ -99,7 +95,6 @@ impl MarketOracle {
     pub fn get_single_price<C, QuoteC>(
         storage: &dyn Storage,
         block_time: Timestamp,
-        currency: SymbolOwned,
     ) -> Result<FinPrice<C, QuoteC>, PriceFeedsError>
     where
         C: Currency,
@@ -107,7 +102,7 @@ impl MarketOracle {
     {
         let config = Config::load(storage)?;
 
-        let price_query = Self::init_price_query(storage, currency, &config)?;
+        let price_query = Self::init_price_query(storage, &config)?;
         let price = Self::MARKET_PRICE.get_converted_price(storage, block_time, price_query)?;
 
         Ok(price)
@@ -166,9 +161,7 @@ impl MarketOracle {
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::Addr;
-
-    use crate::{oracle::MarketOracle, state::config::Config};
+    use crate::oracle::MarketOracle;
 
     #[test]
     // we ensure this rounds up (as it calculates needed votes)

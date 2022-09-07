@@ -100,7 +100,6 @@ impl<'a> QueryWithLpn<'a> {
             QueryMsg::Price { currency } => to_binary(&query_market_price_for_single::<LPN, Usdc>(
                 self.deps.storage,
                 self.env,
-                currency,
             )?),
             _ => {
                 unreachable!()
@@ -205,7 +204,6 @@ fn query_market_price_for(
 fn query_market_price_for_single<C, QuoteC>(
     storage: &dyn Storage,
     env: Env,
-    currency: SymbolOwned,
 ) -> Result<PriceResponse, ContractError>
 where
     C: 'static + Currency + Serialize,
@@ -215,7 +213,6 @@ where
         price: PriceDTO::try_from(MarketOracle::get_single_price::<C, QuoteC>(
             storage,
             env.block.time,
-            currency,
         )?)?,
     })
 }
