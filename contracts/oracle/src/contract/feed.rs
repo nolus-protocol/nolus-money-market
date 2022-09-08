@@ -12,7 +12,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::convert::TryFrom;
 
 use finance::{
-    currency::{visit_any, AnyVisitor, Currency, SymbolOwned, Usdc},
+    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
     duration::Duration,
     price::{Price as FinPrice, PriceDTO},
 };
@@ -29,7 +29,7 @@ pub struct Feeds {
 impl Feeds {
     const MARKET_PRICE: PriceFeeds<'static> = PriceFeeds::new("market_price");
 
-    pub fn new(config: Config) -> Self {
+    pub fn with(config: Config) -> Self {
         Self { config }
     }
 
@@ -212,7 +212,7 @@ mod tests {
             PriceDTO::try_from(price::total_of(Coin::<B>::new(10)).is(Coin::<D>::new(32))).unwrap(),
         ];
 
-        let filtered = Feeds::new(Config::new(
+        let filtered = Feeds::with(Config::new(
             "denom".to_string(),
             Addr::unchecked("owner"),
             20,

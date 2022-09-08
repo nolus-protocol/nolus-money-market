@@ -145,7 +145,7 @@ fn try_feed_prices(
     }
 
     let config = Config::load(storage)?;
-    let oracle = Feeds::new(config.clone());
+    let oracle = Feeds::with(config.clone());
 
     // Store the new price feed
     oracle.feed_prices(storage, block_time, &sender_raw, prices)?;

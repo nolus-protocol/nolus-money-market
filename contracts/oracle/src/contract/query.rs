@@ -76,7 +76,7 @@ where
 {
     let config = Config::load(storage)?;
     Ok(PricesResponse {
-        prices: Feeds::new(config)
+        prices: Feeds::with(config)
             .get_prices::<OracleBase>(storage, env.block.time, currencies)?
             .values()
             .cloned()

@@ -10,7 +10,7 @@ use cosmwasm_std::{
 };
 use finance::{
     coin::Coin,
-    currency::{Currency, Nls, SymbolOwned, SymbolStatic},
+    currency::{Currency, Nls, SymbolOwned, SymbolStatic, Usdc},
     price::{self, PriceDTO},
 };
 
@@ -62,7 +62,7 @@ pub(crate) fn dummy_instantiate_msg(
 
 pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
     dummy_instantiate_msg(
-        "B".to_string(),
+        Usdc::SYMBOL.to_string(),
         60,
         50,
         vec![
