@@ -11,12 +11,10 @@ use finance::{
 };
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
-
 use platform::{batch::Batch, generate_ids};
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
-use crate::loan::LiabilityStatus;
-use crate::{error::ContractResult, lease::Lease};
+use crate::{error::ContractResult, lease::Lease, loan::LiabilityStatus};
 
 use super::LeaseDTO;
 
@@ -35,15 +33,21 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
         lease: Addr,
         lease_amount: Coin<Lpn>,
     ) -> ContractResult<Status<Lpn>> {
-        let LiabilityStatus { ltv, overdue, .. } = self.loan.liability_status(
-            now,
-            lease,
-            total(lease_amount, self.price_of_lease_currency()?),
-        )?;
+        let lease_lpn = total(lease_amount, self.price_of_lease_currency()?);
 
-        let liquidation_amount = lease_amount.min(overdue);
+        let LiabilityStatus { ltv, overdue, .. } =
+            self.loan.liability_status(now, lease, lease_lpn)?;
 
-        // TODO perform liquidation of asset
+        let liquidation_lpn = lease_lpn.min(overdue);
+
+        self.liquidate(
+            self.customer.clone(),
+            self.currency.clone(),
+            lease_lpn,
+            liquidation_lpn,
+        );
+
+        let liquidation_amount = total(liquidation_lpn, self.price_of_lease_currency()?.inv());
 
         let info = LeaseInfo {
             customer: self.customer.clone(),
@@ -128,7 +132,8 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
             Percent::HUNDRED,
             Percent::HUNDRED - self.liability.healthy_percent(),
         );
-        let extra_liability = liability_lpn - self.liability.healthy_percent().of(lease_lpn);
+        let extra_liability =
+            liability_lpn - liability_lpn.min(self.liability.healthy_percent().of(lease_lpn));
         let liquidation_amount =
             <Rational<Percent> as Fraction<Units>>::of(&multiplier, extra_liability);
         let liquidation_amount = lease_lpn.min(liquidation_amount);

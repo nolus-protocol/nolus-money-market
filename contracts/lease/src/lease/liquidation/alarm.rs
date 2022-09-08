@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use finance::fraction::Fraction;
 use finance::percent::Percent;
-use finance::price::{total_of, PriceDTO};
+use finance::price::{total_of, PriceDTO, total};
 use finance::{coin::Coin, currency::Currency, price::Price};
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
@@ -56,7 +56,7 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
             Status::None
         };
 
-        self.reschedule(lease, lease_amount, &now, &status)?;
+        self.reschedule(lease, lease_amount, &now, &status, self.price_of_lease_currency()?)?;
 
         Ok(self.into_on_alarm_result(status))
     }
@@ -71,7 +71,7 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
         where
             A: Into<Addr>,
     {
-        self.reschedule(lease, lease_amount, now, &Status::None)
+        self.reschedule(lease, lease_amount, now, &Status::None, self.price_of_lease_currency()?)
     }
 
     #[inline]
@@ -89,6 +89,7 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
             lease_amount,
             now,
             &self.handle_warnings(self.loan.liability_status(*now, lease, lease_amount)?.ltv),
+            self.price_of_lease_currency()?,
         )
     }
 
@@ -117,7 +118,7 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
         let status = self.act_on_liability(now, lease.clone(), lease_amount, price)?;
 
         if !matches!(status, Status::FullLiquidation(_)) {
-            self.reschedule(lease, lease_amount, &now, &status)?;
+            self.reschedule(lease, lease_amount, &now, &status, price)?;
         }
 
         Ok(status)
@@ -130,13 +131,14 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
         lease_amount: Coin<Lpn>,
         now: &Timestamp,
         liquidation_status: &Status<Lpn>,
+        price: Price<Lpn, Lpn>,
     ) -> ContractResult<()>
         where
             A: Into<Addr>,
     {
         self.reschedule_time_alarm(now, liquidation_status)?;
 
-        self.reschedule_price_alarm(lease, lease_amount, now, liquidation_status)
+        self.reschedule_price_alarm(lease, lease_amount, now, liquidation_status, price)
     }
 
     fn reschedule_price_alarm<A>(
@@ -145,6 +147,7 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
         mut lease_amount: Coin<Lpn>,
         now: &Timestamp,
         liquidation_status: &Status<Lpn>,
+        price: Price<Lpn, Lpn>,
     ) -> ContractResult<()>
         where
             A: Into<Addr>,
@@ -159,6 +162,8 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
         {
             lease_amount -= *liquidation_amount;
         }
+
+        let lease_lpn = total(lease_amount, price);
 
         let lease = lease.into();
 
@@ -186,7 +191,7 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
             .liability_status(
                 *now + self.liability.recalculation_time(),
                 lease,
-                lease_amount,
+                lease_lpn,
             )?
             .total;
 
