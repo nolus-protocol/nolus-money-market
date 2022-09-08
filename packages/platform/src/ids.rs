@@ -12,6 +12,16 @@ macro_rules! generate_ids {
             $($value $(= $int_value)?,)+
         }
 
+        $(
+            $(
+                const _: () = if ::core::mem::size_of::<$as_type>() < ::core::mem::size_of::<$enum_name>() {
+                    if <$as_type>::MAX < $int_value {
+                        panic!("Value is larger than representing integer type's limit!");
+                    }
+                };
+            )?
+        )+
+
         impl ::core::convert::From<$enum_name> for $as_type {
             fn from(value: $enum_name) -> Self {
                 value as $as_type
