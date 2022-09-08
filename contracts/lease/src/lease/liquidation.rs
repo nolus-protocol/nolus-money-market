@@ -135,10 +135,7 @@ where
         let LiabilityStatus { ltv, overdue, .. } = self.loan.liability_status(
             now,
             lease,
-            total(
-                lease_amount,
-                self.price_of_lease_currency()?,
-            ),
+            total(lease_amount, self.price_of_lease_currency()?),
         )?;
 
         let liquidation_amount = lease_amount.min(overdue);
@@ -352,8 +349,14 @@ where
     {
         assert!(!lease_amount.is_zero(), "Loan already paid!");
 
-        Ok(total_of(percent.of(lease_amount))
-            .is(self.loan.liability_status(*now, lease, lease_amount)?.total))
+        Ok(total_of(percent.of(lease_amount)).is(self
+            .loan
+            .liability_status(
+                *now + self.liability.recalculation_time(),
+                lease,
+                lease_amount,
+            )?
+            .total))
     }
 }
 
