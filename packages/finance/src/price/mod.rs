@@ -73,6 +73,14 @@ where
         }
     }
 
+    /// Returns a new [`Price`] which represents identity mapped, one to one, currency pair.
+    pub fn identity() -> Self {
+        Self {
+            amount: Coin::new(1),
+            amount_quote: Coin::new(1),
+        }
+    }
+
     /// Add two prices rounding each of them to 1.10-18, simmilarly to
     /// the precision provided by cosmwasm::Decimal.
     ///
@@ -269,7 +277,7 @@ mod test {
     fn lossy_add_overflow() {
         // 2^128 / FACTOR (10^18) / 2^64 ~ 18.446744073709553
         let p1 = price::total_of(c(1)).is(q(u128::from(u64::MAX) * 19u128));
-        let p2 = price::total_of(c(1)).is(q(1));
+        let p2 = Price::identity();
         p1.lossy_add(p2);
     }
 

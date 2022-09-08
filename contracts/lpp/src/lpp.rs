@@ -660,7 +660,7 @@ mod test {
             .expect("should get price");
         assert_eq!(
             price.get(),
-            price::total_of(Coin::<NLpn>::new(1)).is(Coin::<TheCurrency>::new(1))
+            Price::identity()
         );
 
         deps.querier

@@ -1,10 +1,9 @@
 use cosmwasm_std::{StdResult, Storage, Uint64};
 use cw_storage_plus::Item;
 use finance::{
-    coin::Coin,
     currency::Currency,
     percent::Percent,
-    price::{self, Price},
+    price::{Price},
 };
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -59,6 +58,6 @@ impl Config {
     where
         LPN: Currency + Serialize + DeserializeOwned,
     {
-        price::total_of(Coin::new(1)).is(Coin::new(1))
+        Price::identity()
     }
 }

@@ -4,6 +4,7 @@ use serde::Serialize;
 use finance::{
     currency::{Currency, SymbolOwned},
     liability::Liability,
+    price::Price,
 };
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleBatch};
@@ -188,6 +189,18 @@ where
             })
         }
     }
+
+    fn price_of_lease_currency(&self) -> ContractResult<Price<Lpn, Lpn>> {
+        if self.currency == Lpn::SYMBOL {
+            Ok(Price::identity())
+        } else {
+            self.oracle
+                .price_of(self.currency.clone())?
+                .price
+                .try_into()
+                .map_err(Into::into)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -323,7 +336,7 @@ mod tests {
         }
     }
 
-    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     pub struct LppLocalStubUnreachable {}
 
     impl From<LppLocalStubUnreachable> for LppBatch {

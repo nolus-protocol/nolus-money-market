@@ -137,10 +137,7 @@ where
             lease,
             total(
                 lease_amount,
-                self.oracle
-                    .price_of(SymbolOwned::from(Lpn::SYMBOL))?
-                    .price
-                    .try_into()?,
+                self.price_of_lease_currency()?,
             ),
         )?;
 
@@ -150,7 +147,7 @@ where
 
         let info = LeaseInfo {
             customer: self.customer.clone(),
-            ltv: ltv,
+            ltv,
             lease_asset: self.currency.clone(),
         };
 
