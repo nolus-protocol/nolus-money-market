@@ -158,8 +158,8 @@ where
 }
 
 pub(crate) struct OnAlarmResult<Lpn>
-    where
-        Lpn: Currency,
+where
+    Lpn: Currency,
 {
     pub batch: Batch,
     pub lease_dto: LeaseDTO,
@@ -168,8 +168,8 @@ pub(crate) struct OnAlarmResult<Lpn>
 
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 pub(crate) enum Status<Lpn>
-    where
-        Lpn: Currency,
+where
+    Lpn: Currency,
 {
     None,
     Warning(LeaseInfo, WarningLevel),

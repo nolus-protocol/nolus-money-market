@@ -19,8 +19,8 @@ where
         lease: A,
         lease_lpn: Coin<Lpn>,
     ) -> ContractResult<LiabilityStatus<Lpn>>
-        where
-            A: Into<Addr>,
+    where
+        A: Into<Addr>,
     {
         self.state(now, lease.into())?
             .map(|state| {
@@ -43,8 +43,8 @@ where
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) struct LiabilityStatus<Lpn>
-    where
-        Lpn: Currency,
+where
+    Lpn: Currency,
 {
     pub ltv: Percent,
     pub total: Coin<Lpn>,

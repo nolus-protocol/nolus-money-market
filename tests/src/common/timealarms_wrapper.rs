@@ -37,7 +37,7 @@ impl TimeAlarmsWrapper {
             "timealarms",
             None,
         )
-            .unwrap()
+        .unwrap()
     }
 }
 

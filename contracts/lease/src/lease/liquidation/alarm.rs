@@ -32,8 +32,8 @@ where
         account: &B,
         lease: Addr,
     ) -> ContractResult<OnAlarmResult<Lpn>>
-        where
-            B: BankAccountView,
+    where
+        B: BankAccountView,
     {
         let status = self.on_alarm(now, account, lease, self.price_of_lease_currency()?)?;
 
@@ -46,8 +46,8 @@ where
         account: &B,
         lease: Addr,
     ) -> ContractResult<OnAlarmResult<Lpn>>
-        where
-            B: BankAccountView,
+    where
+        B: BankAccountView,
     {
         let lease_amount = account.balance::<Lpn>()?;
 
@@ -77,8 +77,8 @@ where
         lease_amount: Coin<Lpn>,
         now: &Timestamp,
     ) -> ContractResult<()>
-        where
-            A: Into<Addr>,
+    where
+        A: Into<Addr>,
     {
         self.reschedule(
             lease,
@@ -96,8 +96,8 @@ where
         lease_amount: Coin<Lpn>,
         now: &Timestamp,
     ) -> ContractResult<()>
-        where
-            A: Into<Addr> + Clone,
+    where
+        A: Into<Addr> + Clone,
     {
         self.reschedule(
             lease.clone(),
@@ -125,8 +125,8 @@ where
         lease: Addr,
         price: Price<Lpn, Lpn>,
     ) -> ContractResult<Status<Lpn>>
-        where
-            B: BankAccountView,
+    where
+        B: BankAccountView,
     {
         let lease_amount = account.balance::<Lpn>()?;
 
@@ -148,8 +148,8 @@ where
         liquidation_status: &Status<Lpn>,
         price: Price<Lpn, Lpn>,
     ) -> ContractResult<()>
-        where
-            A: Into<Addr>,
+    where
+        A: Into<Addr>,
     {
         self.reschedule_time_alarm(now, liquidation_status)?;
 
@@ -164,8 +164,8 @@ where
         liquidation_status: &Status<Lpn>,
         price: Price<Lpn, Lpn>,
     ) -> ContractResult<()>
-        where
-            A: Into<Addr>,
+    where
+        A: Into<Addr>,
     {
         if self.currency == Lpn::SYMBOL {
             return Ok(());
@@ -304,7 +304,7 @@ mod tests {
                 msg: to_binary(&AddAlarm {
                     time: lease.loan.grace_period_end() - lease.liability.recalculation_time(),
                 })
-                    .unwrap(),
+                .unwrap(),
                 funds: vec![],
             });
 
@@ -352,7 +352,7 @@ mod tests {
                 msg: to_binary(&AddAlarm {
                     time: lease.loan.grace_period_end(),
                 })
-                    .unwrap(),
+                .unwrap(),
                 funds: vec![],
             });
 
