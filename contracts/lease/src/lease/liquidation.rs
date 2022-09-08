@@ -15,6 +15,7 @@ use marketprice::alarms::Alarm;
 use platform::{bank::BankAccountView, batch::Batch, generate_ids};
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
+use crate::loan::LiabilityStatus;
 use crate::{error::ContractResult, lease::Lease};
 
 use super::LeaseDTO;
@@ -90,7 +91,7 @@ where
             lease.clone(),
             lease_amount,
             now,
-            &self.handle_warnings(self.ltv(*now, lease, lease_amount)?.ltv),
+            &self.handle_warnings(self.loan.liability_status(*now, lease, lease_amount)?.ltv),
         )
     }
 
@@ -131,15 +132,25 @@ where
         lease: Addr,
         lease_amount: Coin<Lpn>,
     ) -> ContractResult<Status<Lpn>> {
-        let ltv = self.ltv(now, lease, lease_amount)?;
+        let LiabilityStatus { ltv, overdue, .. } = self.loan.liability_status(
+            now,
+            lease,
+            total(
+                lease_amount,
+                self.oracle
+                    .price_of(SymbolOwned::from(Lpn::SYMBOL))?
+                    .price
+                    .try_into()?,
+            ),
+        )?;
 
-        let liquidation_amount = lease_amount.min(ltv.overdue);
+        let liquidation_amount = lease_amount.min(overdue);
 
         // TODO perform liquidation of asset
 
         let info = LeaseInfo {
             customer: self.customer.clone(),
-            ltv: ltv.ltv,
+            ltv: ltv,
             lease_asset: self.currency.clone(),
         };
 
@@ -161,18 +172,17 @@ where
         lease_amount: Coin<Lpn>,
         market_price: Price<Lpn, Lpn>,
     ) -> ContractResult<Status<Lpn>> {
-        let LtvResult {
-            ltv, liability_lpn, ..
-        } = self.ltv(now, lease, lease_amount)?;
-
         let lease_lpn = total(lease_amount, market_price);
+
+        let LiabilityStatus { ltv, total, .. } =
+            self.loan.liability_status(now, lease, lease_lpn)?;
 
         Ok(if self.liability.max_percent() <= ltv {
             self.liquidate(
                 self.customer.clone(),
                 self.currency.clone(),
                 lease_lpn,
-                liability_lpn,
+                total,
             )
         } else {
             self.handle_warnings(ltv)
@@ -206,24 +216,6 @@ where
             },
             level,
         )
-    }
-
-    fn ltv<A>(
-        &self,
-        now: Timestamp,
-        lease: A,
-        lease_lpn: Coin<Lpn>,
-    ) -> ContractResult<LtvResult<Lpn>>
-        where
-            A: Into<Addr>,
-    {
-        self.loan
-            .liability(now, lease)
-            .map(|(liability_lpn, overdue)| LtvResult {
-                ltv: Percent::from_ratio(liability_lpn, lease_lpn),
-                liability_lpn,
-                overdue,
-            })
     }
 
     fn liquidate(
@@ -364,7 +356,7 @@ where
         assert!(!lease_amount.is_zero(), "Loan already paid!");
 
         Ok(total_of(percent.of(lease_amount))
-            .is(self.ltv(*now, lease, lease_amount)?.liability_lpn))
+            .is(self.loan.liability_status(*now, lease, lease_amount)?.total))
     }
 }
 
@@ -413,34 +405,22 @@ impl WarningLevel {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
-struct LtvResult<Lpn>
-    where
-        Lpn: Currency,
-{
-    pub ltv: Percent,
-    pub liability_lpn: Coin<Lpn>,
-    pub overdue: Coin<Lpn>,
-}
-
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{to_binary, Addr, Timestamp, WasmMsg};
 
-    use finance::currency::Currency;
-    use finance::duration::Duration;
-
-    use finance::percent::Percent;
-    use finance::price::total_of;
+    use finance::{currency::Currency, duration::Duration, percent::Percent, price::total_of};
     use lpp::msg::LoanResponse;
     use platform::batch::Batch;
     use time_alarms::msg::ExecuteMsg::AddAlarm;
 
-    use crate::lease::liquidation::LtvResult;
-    use crate::lease::tests::TestCurrency;
-    use crate::lease::{
-        tests::{coin, lease_setup, LEASE_START},
-        LeaseInfo, Status, WarningLevel,
+    use crate::{
+        lease::{
+            tests::TestCurrency,
+            tests::{coin, lease_setup, LEASE_START},
+            LeaseInfo, Status, WarningLevel,
+        },
+        loan::LiabilityStatus,
     };
 
     #[test]
@@ -579,11 +559,12 @@ mod tests {
 
         assert_eq!(
             lease
-                .ltv(LEASE_START, Addr::unchecked(String::new()), coin(1000))
+                .loan
+                .liability_status(LEASE_START, Addr::unchecked(String::new()), coin(1000))
                 .unwrap(),
-            LtvResult {
+            LiabilityStatus {
                 ltv: Percent::from_percent(60),
-                liability_lpn: coin(100 + 500),
+                total: coin(100 + 500),
                 overdue: coin(0),
             }
         );
