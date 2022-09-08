@@ -72,7 +72,6 @@ where
             self.now,
             &self.account,
             self.lease.clone(),
-            self.price.try_into()?,
         )?;
 
         Ok(AlarmResult {

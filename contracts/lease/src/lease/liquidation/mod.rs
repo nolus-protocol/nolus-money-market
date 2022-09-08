@@ -71,9 +71,9 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
         now: Timestamp,
         lease: Addr,
         lease_amount: Coin<Lpn>,
-        market_price: Price<Lpn, Lpn>,
+        price: Price<Lpn, Lpn>,
     ) -> ContractResult<Status<Lpn>> {
-        let lease_lpn = total(lease_amount, market_price);
+        let lease_lpn = total(lease_amount, price);
 
         let LiabilityStatus { ltv, total, .. } =
             self.loan.liability_status(now, lease, lease_lpn)?;

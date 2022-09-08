@@ -31,12 +31,11 @@ where
         now: Timestamp,
         account: &B,
         lease: Addr,
-        price: Price<Lpn, Lpn>,
     ) -> ContractResult<OnAlarmResult<Lpn>>
         where
             B: BankAccountView,
     {
-        let status = self.on_alarm(now, account, lease, price)?;
+        let status = self.on_alarm(now, account, lease, self.price_of_lease_currency()?)?;
 
         Ok(self.into_on_alarm_result(status))
     }
