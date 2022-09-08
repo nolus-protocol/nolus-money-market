@@ -62,7 +62,6 @@ impl Profit {
         Ok(batch
             .into_emitter("tr-profit")
             .emit_tx_info(&env)
-            .emit_timestamp("at", &env.block.time)
             .emit_coin("profit-amount", balance))
         // TODO add in_stable(wasm-tr-profit.profit-amount) The amount transferred in stable.
         //.emit_coin("profit-amount", balance))

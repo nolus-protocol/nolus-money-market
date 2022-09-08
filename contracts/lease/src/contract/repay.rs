@@ -81,7 +81,6 @@ where
             .emit("to", self.env.contract.address.clone())
             .emit("payment-symbol", Lpn::SYMBOL)
             .emit_coin_amount("payment-amount", payment)
-            .emit_timestamp("at", &self.env.block.time)
             .emit_to_string_value("loan-close", receipt.close())
             .emit_coin_amount("prev-margin-interest", receipt.previous_margin_paid())
             .emit_coin_amount("prev-loan-interest", receipt.previous_interest_paid())
