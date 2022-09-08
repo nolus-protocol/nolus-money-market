@@ -21,11 +21,11 @@ use super::LeaseDTO;
 mod alarm;
 
 impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
-    where
-        Lpn: Currency + Serialize,
-        Lpp: LppTrait<Lpn>,
-        TimeAlarms: TimeAlarmsTrait,
-        Oracle: OracleTrait<Lpn>,
+where
+    Lpn: Currency + Serialize,
+    Lpp: LppTrait<Lpn>,
+    TimeAlarms: TimeAlarmsTrait,
+    Oracle: OracleTrait<Lpn>,
 {
     fn liquidate_on_interest_overdue(
         &self,

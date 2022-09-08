@@ -51,6 +51,10 @@ where
     {
         let lease_amount = account.balance::<Lpn>()?;
 
+        let price = self.price_of_lease_currency()?;
+
+        let lease_lpn = total(lease_amount, price);
+
         let status = if self.loan.grace_period_end() <= now {
             self.liquidate_on_interest_overdue(now, lease.clone(), lease_amount)?
         } else {
@@ -61,13 +65,7 @@ where
             )
         };
 
-        self.reschedule(
-            lease,
-            lease_amount,
-            &now,
-            &status,
-            self.price_of_lease_currency()?,
-        )?;
+        self.reschedule(lease, lease_amount, &now, &status, price)?;
 
         Ok(self.into_on_alarm_result(status))
     }

@@ -68,11 +68,7 @@ where
             batch,
             lease_dto,
             liquidation_status,
-        } = lease.on_price_alarm(
-            self.now,
-            &self.account,
-            self.lease.clone(),
-        )?;
+        } = lease.on_price_alarm(self.now, &self.account, self.lease.clone())?;
 
         Ok(AlarmResult {
             response: emit_events(&liquidation_status, batch),
