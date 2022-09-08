@@ -26,7 +26,9 @@ where
 {
     fn owned_by(&self, addr: &Addr) -> bool;
 
-    fn get_price(&self, denom: SymbolOwned) -> Result<PriceResponse>;
+    fn get_price<Lpn>(&self) -> Result<PriceResponse>
+    where
+        Lpn: Currency;
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()>;
 }
@@ -160,8 +162,13 @@ where
         self.oracle_ref.owned_by(addr)
     }
 
-    fn get_price(&self, currency: SymbolOwned) -> Result<PriceResponse> {
-        let msg = QueryMsg::Price { currency };
+    fn get_price<Lpn>(&self) -> Result<PriceResponse>
+    where
+        Lpn: Currency,
+    {
+        let msg = QueryMsg::Price {
+            currency: Lpn::SYMBOL.to_string(),
+        };
         self.querier
             .query_wasm_smart(self.addr().clone(), &msg)
             .map_err(ContractError::from)

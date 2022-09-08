@@ -7,19 +7,16 @@ use cosmwasm_std::{
     Storage, Timestamp,
 };
 use cw2::set_contract_version;
-use serde::{de::DeserializeOwned, Serialize};
-
-use finance::{
-    currency::{visit_any, AnyVisitor, Currency, Nls, SymbolOwned, Usdc},
-    price::PriceDTO,
-};
-use marketprice::market_price::PriceFeedsError;
 
 use crate::{
     contract_validation::validate_contract_addr,
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, PriceResponse, PricesResponse, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     state::config::Config,
+};
+use finance::{
+    currency::{Nls, SymbolOwned},
+    price::PriceDTO,
 };
 
 use self::{
@@ -27,12 +24,14 @@ use self::{
     config::{query_config, try_configure, try_configure_supported_pairs},
     feed::Feeds,
     feeder::Feeders,
+    query::{query_market_price_for, QueryWithOracleBase},
 };
 
 mod alarms;
 mod config;
 mod feed;
 mod feeder;
+pub mod query;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -58,6 +57,21 @@ pub fn instantiate(
     .store(deps.storage)?;
 
     Ok(Response::default())
+}
+
+#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    match msg {
+        QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?),
+        QueryMsg::Feeders {} => Ok(to_binary(&Feeders::get(deps.storage)?)?),
+        QueryMsg::IsFeeder { address } => {
+            Ok(to_binary(&Feeders::is_feeder(deps.storage, &address)?)?)
+        }
+        QueryMsg::SupportedDenomPairs {} => Ok(to_binary(
+            &Config::load(deps.storage)?.supported_denom_pairs,
+        )?),
+        _ => Ok(QueryWithOracleBase::cmd(deps, env, msg)?),
+    }
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -94,73 +108,6 @@ pub fn execute(
     }
 }
 
-struct QueryWithLpn<'a> {
-    deps: Deps<'a>,
-    env: Env,
-    msg: QueryMsg,
-}
-
-impl<'a> QueryWithLpn<'a> {
-    fn do_work<LPN>(self) -> Result<Binary, ContractError>
-    where
-        LPN: 'static + Currency + Serialize + DeserializeOwned,
-    {
-        // currency context variants
-        let res = match self.msg {
-            QueryMsg::Price { currency } => to_binary(&query_market_price_for_single::<LPN, Usdc>(
-                self.deps.storage,
-                self.env,
-            )?),
-            _ => {
-                unreachable!()
-            } // should be done already
-        }?;
-        Ok(res)
-    }
-
-    pub fn cmd(deps: Deps<'a>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
-        let context = Self { deps, env, msg };
-
-        let config = Config::load(context.deps.storage)?;
-        visit_any(&config.base_asset, context)
-    }
-}
-
-impl<'a> AnyVisitor for QueryWithLpn<'a> {
-    type Output = Binary;
-    type Error = ContractError;
-
-    fn on<LPN>(self) -> Result<Self::Output, Self::Error>
-    where
-        LPN: 'static + Currency + DeserializeOwned + Serialize,
-    {
-        self.do_work::<LPN>()
-    }
-    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-        Err(ContractError::UnknownCurrency {})
-    }
-}
-
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
-    match msg {
-        QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?),
-        QueryMsg::Feeders {} => Ok(to_binary(&Feeders::get(deps.storage)?)?),
-        QueryMsg::IsFeeder { address } => {
-            Ok(to_binary(&Feeders::is_feeder(deps.storage, &address)?)?)
-        }
-        QueryMsg::PriceFor { currencies } => Ok(to_binary(&query_market_price_for(
-            deps.storage,
-            env,
-            HashSet::from_iter(currencies.iter().cloned()),
-        )?)?),
-        QueryMsg::SupportedDenomPairs {} => Ok(to_binary(
-            &Config::load(deps.storage)?.supported_denom_pairs,
-        )?),
-        _ => Ok(QueryWithLpn::cmd(deps, env, msg)?),
-    }
-}
-
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let resp = match msg.result {
@@ -185,37 +132,6 @@ fn err_as_ok(err: &str) -> Response {
         .add_attribute("error", err)
 }
 
-fn query_market_price_for(
-    storage: &dyn Storage,
-    env: Env,
-    currencies: HashSet<SymbolOwned>,
-) -> Result<PricesResponse, PriceFeedsError> {
-    let config = Config::load(storage)?;
-    Ok(PricesResponse {
-        prices: Feeds::new(config)
-            .get_prices(storage, env.block.time, currencies)?
-            .values()
-            .cloned()
-            .collect(),
-    })
-}
-
-fn query_market_price_for_single<C, QuoteC>(
-    storage: &dyn Storage,
-    env: Env,
-) -> Result<PriceResponse, ContractError>
-where
-    C: 'static + Currency + Serialize,
-    QuoteC: 'static + Currency + Serialize,
-{
-    Ok(PriceResponse {
-        price: PriceDTO::try_from(Feeds::get_single_price::<C, QuoteC>(
-            storage,
-            env.block.time,
-        )?)?,
-    })
-}
-
 fn try_feed_prices(
     storage: &mut dyn Storage,
     block_time: Timestamp,
@@ -234,20 +150,21 @@ fn try_feed_prices(
     // Store the new price feed
     oracle.feed_prices(storage, block_time, &sender_raw, prices)?;
 
-    // Get all currencies registered for alarms
-    let hooks_currencies = MarketAlarms::get_hooks_currencies(storage)?;
+    // // Get all currencies registered for alarms
+    // let hooks_currencies = MarketAlarms::get_hooks_currencies(storage)?;
 
-    //re-calculate the price of these currencies
-    let updated_prices: HashMap<SymbolOwned, PriceDTO> =
-        oracle.get_prices(storage, block_time, hooks_currencies)?;
+    // //re-calculate the price of these currencies
+    // let updated_prices: HashMap<SymbolOwned, PriceDTO> =
+    //     oracle.get_prices(storage, block_time, hooks_currencies)?;
 
-    // try notify affected subscribers
-    let mut batch = MarketAlarms::try_notify_hooks(storage, updated_prices)?;
-    batch.schedule_execute_wasm_reply_error::<_, Nls>(
-        &config.timealarms_contract,
-        timealarms::msg::ExecuteMsg::Notify(),
-        None,
-        1,
-    )?;
-    Ok(Response::from(batch))
+    // // try notify affected subscribers
+    // let mut batch = MarketAlarms::try_notify_hooks(storage, updated_prices)?;
+    // batch.schedule_execute_wasm_reply_error::<_, Nls>(
+    //     &config.timealarms_contract,
+    //     timealarms::msg::ExecuteMsg::Notify(),
+    //     None,
+    //     1,
+    // )?;
+    // Ok(Response::from(batch))
+    Ok(Response::default())
 }

@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    marker::PhantomData,
+};
 
 use cosmwasm_std::{Addr, StdError, StdResult, Storage, Timestamp};
 use marketprice::market_price::{PriceFeeds, PriceFeedsError};
@@ -45,23 +48,37 @@ impl Feeds {
         Ok(())
     }
 
-    pub fn get_prices(
+    pub fn get_prices<OracleBase>(
         &self,
         storage: &dyn Storage,
         block_time: Timestamp,
         currencies: HashSet<SymbolOwned>,
-    ) -> Result<HashMap<SymbolOwned, PriceDTO>, PriceFeedsError> {
+    ) -> Result<HashMap<SymbolOwned, PriceDTO>, PriceFeedsError>
+    where
+        OracleBase: Currency,
+    {
         let mut prices: HashMap<SymbolOwned, PriceDTO> = HashMap::new();
         for currency in currencies {
             Self::assert_supported_denom(&self.config.supported_denom_pairs, &currency)?;
 
-            let feed = QueryWithLpn::cmd(storage, block_time, currency.clone())?;
+            let feed = PriceForLpn::<OracleBase>::cmd(storage, block_time, currency.clone())?;
             prices.insert(currency, feed);
         }
         Ok(prices)
     }
 
-    pub fn get_single_price<C, QuoteC>(
+    pub fn get_price<OracleBase>(
+        storage: &dyn Storage,
+        block_time: Timestamp,
+        currency: SymbolOwned,
+    ) -> Result<PriceDTO, PriceFeedsError>
+    where
+        OracleBase: Currency,
+    {
+        PriceForLpn::<OracleBase>::cmd(storage, block_time, currency.clone())
+    }
+
+    fn get_single_price<C, QuoteC>(
         storage: &dyn Storage,
         block_time: Timestamp,
     ) -> Result<FinPrice<C, QuoteC>, PriceFeedsError>
@@ -118,13 +135,17 @@ impl Feeds {
     }
 }
 
-struct QueryWithLpn<'a> {
+struct PriceForLpn<'a, OracleBase> {
     storage: &'a dyn Storage,
     block_time: Timestamp,
     currency: SymbolOwned,
+    _oracle_base: PhantomData<OracleBase>,
 }
 
-impl<'a> QueryWithLpn<'a> {
+impl<'a, OracleBase> PriceForLpn<'a, OracleBase>
+where
+    OracleBase: Currency,
+{
     pub fn cmd(
         storage: &'a dyn Storage,
         block_time: Timestamp,
@@ -134,12 +155,16 @@ impl<'a> QueryWithLpn<'a> {
             storage,
             block_time,
             currency,
+            _oracle_base: PhantomData,
         };
         visit_any(&visitor.currency.clone(), visitor)
     }
 }
 
-impl<'a> AnyVisitor for QueryWithLpn<'a> {
+impl<'a, OracleBase> AnyVisitor for PriceForLpn<'a, OracleBase>
+where
+    OracleBase: Currency,
+{
     type Output = PriceDTO;
     type Error = PriceFeedsError;
 
@@ -147,9 +172,11 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
     where
         LPN: 'static + Currency + DeserializeOwned + Serialize,
     {
-        Ok(PriceDTO::try_from(Feeds::get_single_price::<LPN, Usdc>(
-            self.storage,
-            self.block_time,
+        Ok(PriceDTO::try_from(Feeds::get_single_price::<
+            LPN,
+            OracleBase,
+        >(
+            self.storage, self.block_time
         )?)?)
     }
     fn on_unknown(self) -> Result<Self::Output, Self::Error> {

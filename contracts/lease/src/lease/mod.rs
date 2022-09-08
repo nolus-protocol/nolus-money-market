@@ -375,10 +375,7 @@ mod tests {
             &self.address == addr
         }
 
-        fn get_price(
-            &self,
-            _denom: SymbolOwned,
-        ) -> market_price_oracle::stub::Result<PriceResponse> {
+        fn get_price<Lpn>(&self) -> market_price_oracle::stub::Result<PriceResponse> {
             unimplemented!()
         }
 
@@ -412,10 +409,7 @@ mod tests {
             unreachable!()
         }
 
-        fn get_price(
-            &self,
-            _denom: SymbolOwned,
-        ) -> market_price_oracle::stub::Result<PriceResponse> {
+        fn get_price<Lpn>(&self) -> market_price_oracle::stub::Result<PriceResponse> {
             unreachable!()
         }
 
