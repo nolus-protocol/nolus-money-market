@@ -1,20 +1,22 @@
 use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
-use finance::fraction::Fraction;
-use finance::percent::Percent;
-use finance::price::{total_of, PriceDTO, total};
-use finance::{coin::Coin, currency::Currency, price::Price};
+use finance::{
+    coin::Coin,
+    currency::Currency,
+    fraction::Fraction,
+    percent::Percent,
+    price::{total, total_of, Price, PriceDTO},
+};
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use marketprice::alarms::Alarm;
 use platform::bank::BankAccountView;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
-use crate::lease::WarningLevel;
 use crate::{
     error::ContractResult,
-    lease::{Lease, OnAlarmResult, Status},
+    lease::{Lease, OnAlarmResult, Status, WarningLevel},
 };
 
 impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
@@ -56,7 +58,13 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
             Status::None
         };
 
-        self.reschedule(lease, lease_amount, &now, &status, self.price_of_lease_currency()?)?;
+        self.reschedule(
+            lease,
+            lease_amount,
+            &now,
+            &status,
+            self.price_of_lease_currency()?,
+        )?;
 
         Ok(self.into_on_alarm_result(status))
     }
@@ -71,7 +79,13 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
         where
             A: Into<Addr>,
     {
-        self.reschedule(lease, lease_amount, now, &Status::None, self.price_of_lease_currency()?)
+        self.reschedule(
+            lease,
+            lease_amount,
+            now,
+            &Status::None,
+            self.price_of_lease_currency()?,
+        )
     }
 
     #[inline]
@@ -188,11 +202,7 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
 
         let total_liability = self
             .loan
-            .liability_status(
-                *now + self.liability.recalculation_time(),
-                lease,
-                lease_lpn,
-            )?
+            .liability_status(*now + self.liability.recalculation_time(), lease, lease_lpn)?
             .total;
 
         let below = self.price_alarm_by_percent(lease_amount, total_liability, below)?;
@@ -272,7 +282,8 @@ mod tests {
         lease
             .reschedule_time_alarm(
                 &(lease.loan.grace_period_end()
-                    - Duration::from_nanos(lease.liability.recalculation_time().nanos() * 2)),
+                    - Duration::from_nanos(lease.liability.recalculation_time().nanos())
+                    - Duration::from_nanos(lease.liability.recalculation_time().nanos())),
                 &Status::Warning(
                     LeaseInfo {
                         customer: Addr::unchecked(String::new()),
