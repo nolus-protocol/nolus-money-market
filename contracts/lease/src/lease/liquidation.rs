@@ -306,10 +306,19 @@ where
             Status::FullLiquidation(_) => unreachable!(),
         };
 
-        let below = self.price_alarm_by_percent(lease.clone(), lease_amount, now, below)?;
+        let total_liability = self
+            .loan
+            .liability_status(
+                *now + self.liability.recalculation_time(),
+                lease,
+                lease_amount,
+            )?
+            .total;
+
+        let below = self.price_alarm_by_percent(lease_amount, total_liability, below)?;
 
         let above = above
-            .map(|above| self.price_alarm_by_percent(lease, lease_amount, now, above))
+            .map(|above| self.price_alarm_by_percent(lease_amount, total_liability, above))
             .transpose()?;
 
         self.oracle
@@ -337,26 +346,15 @@ where
             .map_err(Into::into)
     }
 
-    fn price_alarm_by_percent<A>(
+    fn price_alarm_by_percent(
         &self,
-        lease: A,
         lease_amount: Coin<Lpn>,
-        now: &Timestamp,
+        liability: Coin<Lpn>,
         percent: Percent,
-    ) -> ContractResult<Price<Lpn, Lpn>>
-    where
-        A: Into<Addr>,
-    {
+    ) -> ContractResult<Price<Lpn, Lpn>> {
         assert!(!lease_amount.is_zero(), "Loan already paid!");
 
-        Ok(total_of(percent.of(lease_amount)).is(self
-            .loan
-            .liability_status(
-                *now + self.liability.recalculation_time(),
-                lease,
-                lease_amount,
-            )?
-            .total))
+        Ok(total_of(percent.of(lease_amount)).is(liability))
     }
 }
 
@@ -758,9 +756,8 @@ mod tests {
         assert_eq!(
             lease
                 .price_alarm_by_percent(
-                    Addr::unchecked(String::new()),
                     coin(lease_amount),
-                    &LEASE_START,
+                    coin(500),
                     Percent::from_percent(50),
                 )
                 .unwrap(),
