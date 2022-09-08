@@ -38,7 +38,7 @@ where
     {
         let status = self.on_alarm(now, account, lease, price)?;
 
-        Ok(self.construct_on_alarm_result(status))
+        Ok(self.into_on_alarm_result(status))
     }
 
     pub(crate) fn on_time_alarm<B>(
@@ -60,7 +60,7 @@ where
 
         self.reschedule(lease, lease_amount, &now, &status)?;
 
-        Ok(self.construct_on_alarm_result(status))
+        Ok(self.into_on_alarm_result(status))
     }
 
     #[inline]
@@ -94,7 +94,7 @@ where
         )
     }
 
-    fn construct_on_alarm_result(self, liquidation_status: Status<Lpn>) -> OnAlarmResult<Lpn> {
+    fn into_on_alarm_result(self, liquidation_status: Status<Lpn>) -> OnAlarmResult<Lpn> {
         let (lease_dto, batch) = self.into_dto();
 
         OnAlarmResult {
