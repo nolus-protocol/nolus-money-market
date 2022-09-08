@@ -7,7 +7,7 @@ mod tests {
     use schemars::JsonSchema;
     use serde::{Deserialize, Serialize};
 
-    use crate::{msg::ExecuteMsg, tests::common::dummy_default_instantiate_msg};
+    use crate::{msg::ExecuteMsg, tests::dummy_default_instantiate_msg};
 
     /// CwTemplateContract is a wrapper around Addr that provides a lot of helpers
     /// for working with this.
@@ -118,8 +118,8 @@ mod tests {
         use crate::{
             msg::ExecuteMsg,
             tests::{
-                common::{A, B, C},
                 integration_tests::tests::{mock_app, timealarms_instantiate},
+                A, B, C,
             },
         };
 

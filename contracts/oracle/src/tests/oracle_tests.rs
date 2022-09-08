@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::contract::{execute, query};
 use crate::msg::{ConfigResponse, ExecuteMsg, PricesResponse, QueryMsg};
-use crate::tests::common::{
+use crate::tests::{
     dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test, A, B, CREATOR,
 };
 use crate::ContractError;
@@ -10,10 +10,10 @@ use crate::ContractError;
 use cosmwasm_std::testing::{mock_env, mock_info};
 use cosmwasm_std::{coins, from_binary, Addr};
 use finance::coin::Coin;
-use finance::currency::{Currency, Nls, SymbolStatic};
+use finance::currency::{Currency, SymbolStatic};
 use finance::price::{self, PriceDTO};
 
-use super::common::dummy_feed_prices_msg;
+use super::dummy_feed_prices_msg;
 
 #[test]
 fn proper_initialization() {

@@ -188,7 +188,7 @@ where
 mod tests {
     use crate::{
         contract::feed::Feeds,
-        tests::common::{A, B, D},
+        tests::{A, B, D},
     };
     use cosmwasm_std::Addr;
     use finance::{
