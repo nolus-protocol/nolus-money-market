@@ -57,7 +57,6 @@ impl<'m> PriceFeeds<'m> {
         PriceFeeds(Map::new(namespace))
     }
 
-    // FIXME: use generics to set <C, QuoteC> and replace denom_pair
     pub fn get<C, QuoteC>(
         &self,
         storage: &dyn Storage,
@@ -72,7 +71,7 @@ impl<'m> PriceFeeds<'m> {
         // let quote = &query.denom_pair.1;
 
         // FIXME return PriceDTO::one
-        if C::SYMBOL.eq(QuoteC::SYMBOL) {
+        if C::SYMBOL.to_string().eq(&QuoteC::SYMBOL.to_string()) {
             let price: FinPrice<C, QuoteC> =
                 price::total_of(Coin::<C>::new(1)).is(Coin::<QuoteC>::new(1));
 
@@ -101,20 +100,6 @@ impl<'m> PriceFeeds<'m> {
         resolution_path.reverse();
         println!("Resolution path {:?}", resolution_path);
         PriceFeeds::calculate_price::<C, QuoteC>(&mut resolution_path)
-    }
-
-    pub fn get_converted_price<C, QuoteC>(
-        &self,
-        storage: &dyn Storage,
-        current_block_time: Timestamp,
-        query: QueryConfig,
-    ) -> Result<FinPrice<C, QuoteC>, PriceFeedsError>
-    where
-        C: 'static + Currency,
-        QuoteC: 'static + Currency,
-    {
-        let calculated_price = self.get::<C, QuoteC>(storage, current_block_time, query)?;
-        Ok(calculated_price.try_into()?)
     }
 
     pub fn find_price<C, QuoteC>(
@@ -159,8 +144,7 @@ impl<'m> PriceFeeds<'m> {
                     required_feeders_cnt,
                     resolution_path,
                 ) {
-                    let observation =
-                        q.1.get_price(current_block_time, Duration::from_secs(60), 1)?;
+                    let observation = q.1.get_price(current_block_time, price_feed_period, 1)?;
                     let price = observation.price();
                     assert_eq!(C::SYMBOL, price.base().symbol());
                     assert_eq!(q.0, price.quote().symbol().to_owned());

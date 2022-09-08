@@ -3,7 +3,7 @@ use std::{
     marker::PhantomData,
 };
 
-use cosmwasm_std::{Addr, StdError, StdResult, Storage, Timestamp};
+use cosmwasm_std::{Addr, Response, StdError, StdResult, Storage, Timestamp};
 use marketprice::market_price::{PriceFeeds, PriceFeedsError};
 
 use schemars::JsonSchema;
@@ -12,14 +12,14 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::convert::TryFrom;
 
 use finance::{
-    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
+    currency::{visit_any, AnyVisitor, Currency, Nls, SymbolOwned},
     duration::Duration,
     price::{Price as FinPrice, PriceDTO},
 };
 
 use crate::{state::config::Config, ContractError};
 
-use super::feeder::Feeders;
+use super::{alarms::MarketAlarms, feeder::Feeders};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Feeds {
@@ -89,9 +89,9 @@ impl Feeds {
         let config = Config::load(storage)?;
 
         let price_query = Feeders::query_config(storage, &config)?;
-        let price = Self::MARKET_PRICE.get_converted_price(storage, block_time, price_query)?;
-
-        Ok(price)
+        let calculated_price =
+            Self::MARKET_PRICE.get::<C, QuoteC>(storage, block_time, price_query)?;
+        Ok(calculated_price.try_into()?)
     }
 
     pub fn feed_prices(
@@ -133,6 +133,45 @@ impl Feeds {
             .map(|p| p.to_owned())
             .collect()
     }
+}
+
+pub fn try_feed_prices<OracleBase>(
+    storage: &mut dyn Storage,
+    block_time: Timestamp,
+    sender_raw: Addr,
+    prices: Vec<PriceDTO>,
+) -> Result<Response, ContractError>
+where
+    OracleBase: Currency,
+{
+    // Check feeder permission
+    let is_registered = Feeders::is_feeder(storage, &sender_raw)?;
+    if !is_registered {
+        return Err(ContractError::UnknownFeeder {});
+    }
+
+    let config = Config::load(storage)?;
+    let oracle = Feeds::with(config.clone());
+
+    // Store the new price feed
+    oracle.feed_prices(storage, block_time, &sender_raw, prices)?;
+
+    // // // Get all currencies registered for alarms
+    let hooks_currencies = MarketAlarms::get_hooks_currencies(storage)?;
+
+    // // //re-calculate the price of these currencies
+    let updated_prices: HashMap<SymbolOwned, PriceDTO> =
+        oracle.get_prices::<OracleBase>(storage, block_time, hooks_currencies)?;
+
+    // // // try notify affected subscribers
+    let mut batch = MarketAlarms::try_notify_hooks(storage, updated_prices)?;
+    batch.schedule_execute_wasm_reply_error::<_, Nls>(
+        &config.timealarms_contract,
+        timealarms::msg::ExecuteMsg::Notify(),
+        None,
+        1,
+    )?;
+    Ok(Response::from(batch))
 }
 
 struct PriceForLpn<'a, OracleBase> {
