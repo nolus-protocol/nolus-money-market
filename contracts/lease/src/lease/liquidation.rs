@@ -280,7 +280,7 @@ where
     where
         A: Into<Addr>,
     {
-        if self.currency != Lpn::SYMBOL {
+        if self.currency == Lpn::SYMBOL {
             return Ok(());
         }
 
