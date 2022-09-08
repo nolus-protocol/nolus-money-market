@@ -20,11 +20,11 @@ use crate::{
 };
 
 impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
-    where
-        Lpn: Currency + Serialize,
-        Lpp: LppTrait<Lpn>,
-        TimeAlarms: TimeAlarmsTrait,
-        Oracle: OracleTrait<Lpn>,
+where
+    Lpn: Currency + Serialize,
+    Lpp: LppTrait<Lpn>,
+    TimeAlarms: TimeAlarmsTrait,
+    Oracle: OracleTrait<Lpn>,
 {
     pub(crate) fn on_price_alarm<B>(
         mut self,
@@ -55,7 +55,11 @@ impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
         let status = if self.loan.grace_period_end() <= now {
             self.liquidate_on_interest_overdue(now, lease.clone(), lease_amount)?
         } else {
-            Status::None
+            self.handle_warnings(
+                self.loan
+                    .liability_status(now, lease.clone(), lease_lpn)?
+                    .ltv,
+            )
         };
 
         self.reschedule(
