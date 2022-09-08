@@ -9,9 +9,9 @@ use crate::{
 };
 
 impl<Lpn, Lpp> Loan<Lpn, Lpp>
-    where
-        Lpn: Currency,
-        Lpp: LppTrait<Lpn>,
+where
+    Lpn: Currency,
+    Lpp: LppTrait<Lpn>,
 {
     pub(crate) fn liability_status<A>(
         &self,

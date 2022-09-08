@@ -1,10 +1,6 @@
 use cosmwasm_std::{StdResult, Storage, Uint64};
 use cw_storage_plus::Item;
-use finance::{
-    currency::Currency,
-    percent::Percent,
-    price::{Price},
-};
+use finance::{currency::Currency, percent::Percent, price::Price};
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
