@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
@@ -24,7 +24,7 @@ use self::{
     config::{query_config, try_configure, try_configure_supported_pairs},
     feed::Feeds,
     feeder::Feeders,
-    query::{query_market_price_for, QueryWithOracleBase},
+    query::QueryWithOracleBase,
 };
 
 mod alarms;
@@ -150,14 +150,14 @@ fn try_feed_prices(
     // Store the new price feed
     oracle.feed_prices(storage, block_time, &sender_raw, prices)?;
 
-    // // Get all currencies registered for alarms
+    // // // Get all currencies registered for alarms
     // let hooks_currencies = MarketAlarms::get_hooks_currencies(storage)?;
 
-    // //re-calculate the price of these currencies
+    // // //re-calculate the price of these currencies
     // let updated_prices: HashMap<SymbolOwned, PriceDTO> =
     //     oracle.get_prices(storage, block_time, hooks_currencies)?;
 
-    // // try notify affected subscribers
+    // // // try notify affected subscribers
     // let mut batch = MarketAlarms::try_notify_hooks(storage, updated_prices)?;
     // batch.schedule_execute_wasm_reply_error::<_, Nls>(
     //     &config.timealarms_contract,
@@ -167,4 +167,39 @@ fn try_feed_prices(
     // )?;
     // Ok(Response::from(batch))
     Ok(Response::default())
+}
+
+#[cfg(test)]
+mod tests {
+    use cosmwasm_std::{from_binary, testing::mock_env};
+
+    use crate::{
+        contract::query,
+        msg::{ConfigResponse, QueryMsg},
+        tests::{dummy_instantiate_msg, setup_test, CREATOR},
+    };
+
+    #[test]
+    fn proper_initialization() {
+        let msg = dummy_instantiate_msg(
+            "token".to_string(),
+            60,
+            50,
+            vec![("unolus".to_string(), "uosmo".to_string())],
+            "timealarms".to_string(),
+        );
+        let (deps, _) = setup_test(msg);
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
+        let value: ConfigResponse = from_binary(&res).unwrap();
+        assert_eq!(CREATOR.to_string(), value.owner.to_string());
+        assert_eq!("token".to_string(), value.base_asset);
+        assert_eq!(60, value.price_feed_period_secs);
+        assert_eq!(50, value.feeders_percentage_needed);
+
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::SupportedDenomPairs {}).unwrap();
+        let value: Vec<(String, String)> = from_binary(&res).unwrap();
+        assert_eq!("unolus".to_string(), value.get(0).unwrap().0);
+        assert_eq!("uosmo".to_string(), value.get(0).unwrap().1);
+    }
 }

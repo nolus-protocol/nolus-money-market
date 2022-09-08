@@ -186,13 +186,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        contract::feed::Feeds,
-        tests::{A, B, D},
-    };
+    use crate::contract::feed::Feeds;
     use cosmwasm_std::Addr;
     use finance::{
         coin::Coin,
+        currency::{Currency, TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD},
         price::{self, PriceDTO},
     };
 
@@ -201,15 +199,37 @@ mod tests {
     #[test]
     fn test_remove_invalid_prices() {
         let supported_pairs = vec![
-            ("A".to_string(), "B".to_string()),
-            ("A".to_string(), "C".to_string()),
-            ("B".to_string(), "A".to_string()),
-            ("C".to_string(), "D".to_string()),
+            (
+                TestCurrencyA::SYMBOL.to_string(),
+                TestCurrencyB::SYMBOL.to_string(),
+            ),
+            (
+                TestCurrencyA::SYMBOL.to_string(),
+                TestCurrencyC::SYMBOL.to_string(),
+            ),
+            (
+                TestCurrencyB::SYMBOL.to_string(),
+                TestCurrencyA::SYMBOL.to_string(),
+            ),
+            (
+                TestCurrencyC::SYMBOL.to_string(),
+                TestCurrencyD::SYMBOL.to_string(),
+            ),
         ];
 
         let prices = vec![
-            PriceDTO::try_from(price::total_of(Coin::<B>::new(10)).is(Coin::<A>::new(12))).unwrap(),
-            PriceDTO::try_from(price::total_of(Coin::<B>::new(10)).is(Coin::<D>::new(32))).unwrap(),
+            PriceDTO::try_from(price::total_of(Coin::<TestCurrencyB>::new(10)).is(Coin::<
+                TestCurrencyA,
+            >::new(
+                12
+            )))
+            .unwrap(),
+            PriceDTO::try_from(price::total_of(Coin::<TestCurrencyB>::new(10)).is(Coin::<
+                TestCurrencyD,
+            >::new(
+                32
+            )))
+            .unwrap(),
         ];
 
         let filtered = Feeds::with(Config::new(
@@ -224,8 +244,12 @@ mod tests {
 
         assert_eq!(
             vec![
-                PriceDTO::try_from(price::total_of(Coin::<B>::new(10)).is(Coin::<A>::new(12)))
-                    .unwrap(),
+                PriceDTO::try_from(price::total_of(Coin::<TestCurrencyB>::new(10)).is(Coin::<
+                    TestCurrencyA,
+                >::new(
+                    12
+                )))
+                .unwrap(),
             ],
             filtered
         );

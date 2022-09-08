@@ -36,3 +36,5 @@ thiserror = { version = "1.0" }
 cosmwasm-schema = "1.0.0"
 cw-multi-test = "0.13.0"
 timealarms = { path = "../timealarms", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
+finance = { path = "../../packages/finance", version = "0.1.0", default-features = false, features = ["testing"] }
+

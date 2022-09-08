@@ -59,6 +59,7 @@ pub trait AnyVisitor {
     fn on_unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
+#[cfg(not(feature = "testing"))]
 pub fn visit_any<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
 where
     V: AnyVisitor,
@@ -66,6 +67,21 @@ where
     let any_visitor = AnyVisitorImpl(visitor);
     visit::<Nls, _>(symbol, any_visitor)
         .or_else(|any_visitor| visit::<Usdc, _>(symbol, any_visitor))
+        .unwrap_or_else(|any_visitor| any_visitor.0.on_unknown())
+}
+
+#[cfg(feature = "testing")]
+pub fn visit_any<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
+where
+    V: AnyVisitor,
+{
+    let any_visitor = AnyVisitorImpl(visitor);
+    visit::<Nls, _>(symbol, any_visitor)
+        .or_else(|any_visitor| visit::<Usdc, _>(symbol, any_visitor))
+        .or_else(|any_visitor| visit::<TestCurrencyA, _>(symbol, any_visitor))
+        .or_else(|any_visitor| visit::<TestCurrencyB, _>(symbol, any_visitor))
+        .or_else(|any_visitor| visit::<TestCurrencyC, _>(symbol, any_visitor))
+        .or_else(|any_visitor| visit::<TestCurrencyD, _>(symbol, any_visitor))
         .unwrap_or_else(|any_visitor| any_visitor.0.on_unknown())
 }
 
@@ -86,6 +102,46 @@ where
     fn on_unknown(self) -> Result<Self::Output, Self::Error> {
         Err(self)
     }
+}
+
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
+)]
+#[cfg(feature = "testing")]
+pub struct TestCurrencyA;
+#[cfg(feature = "testing")]
+impl Currency for TestCurrencyA {
+    const SYMBOL: SymbolStatic = "TestCurrencyA";
+}
+
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
+)]
+#[cfg(feature = "testing")]
+pub struct TestCurrencyB;
+#[cfg(feature = "testing")]
+impl Currency for TestCurrencyB {
+    const SYMBOL: SymbolStatic = "TestCurrencyB";
+}
+
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
+)]
+#[cfg(feature = "testing")]
+pub struct TestCurrencyC;
+#[cfg(feature = "testing")]
+impl Currency for TestCurrencyC {
+    const SYMBOL: SymbolStatic = "TestCurrencyC";
+}
+
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
+)]
+#[cfg(feature = "testing")]
+pub struct TestCurrencyD;
+#[cfg(feature = "testing")]
+impl Currency for TestCurrencyD {
+    const SYMBOL: SymbolStatic = "TestCurrencyD";
 }
 
 #[cfg(test)]

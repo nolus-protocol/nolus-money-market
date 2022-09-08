@@ -70,7 +70,15 @@ impl Feeders {
 #[cfg(test)]
 mod tests {
 
-    use crate::contract::feeder::Feeders;
+    use std::collections::HashSet;
+
+    use cosmwasm_std::{from_binary, testing::mock_env, Addr};
+
+    use crate::{
+        contract::{execute, feeder::Feeders, query},
+        msg::{ExecuteMsg, QueryMsg},
+        tests::{dummy_default_instantiate_msg, setup_test},
+    };
 
     #[test]
     // we ensure this rounds up (as it calculates needed votes)
@@ -86,5 +94,44 @@ mod tests {
         assert_eq!(12, Feeders::feeders_needed(48, 25));
         assert_eq!(2, Feeders::feeders_needed(132, 1));
         assert_eq!(2, Feeders::feeders_needed(189, 1));
+    }
+
+    #[test]
+    fn register_feeder() {
+        let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
+
+        // register new feeder address
+        let msg = ExecuteMsg::RegisterFeeder {
+            feeder_address: "addr0000".to_string(),
+        };
+        let _res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        // check if the new address is added to FEEDERS Item
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
+        let resp: HashSet<Addr> = from_binary(&res).unwrap();
+        assert_eq!(2, resp.len());
+        assert!(resp.contains(&Addr::unchecked("addr0000")));
+
+        // should not add the same address twice
+        let msg = ExecuteMsg::RegisterFeeder {
+            feeder_address: "addr0000".to_string(),
+        };
+        let _ = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+        // validate that the address in not added twice
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
+        let resp: HashSet<Addr> = from_binary(&res).unwrap();
+        assert_eq!(2, resp.len());
+
+        // register new feeder address
+        let msg = ExecuteMsg::RegisterFeeder {
+            feeder_address: "addr0001".to_string(),
+        };
+        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+        // check if the new address is added to FEEDERS Item
+        let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
+        let resp: HashSet<Addr> = from_binary(&res).unwrap();
+        assert_eq!(3, resp.len());
+        assert!(resp.contains(&Addr::unchecked("addr0000")));
+        assert!(resp.contains(&Addr::unchecked("addr0001")));
     }
 }

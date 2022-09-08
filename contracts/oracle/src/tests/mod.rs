@@ -10,7 +10,10 @@ use cosmwasm_std::{
 };
 use finance::{
     coin::Coin,
-    currency::{Currency, Nls, SymbolOwned, SymbolStatic, Usdc},
+    currency::{
+        Currency, Nls, SymbolOwned, TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD,
+        Usdc,
+    },
     price::{self, PriceDTO},
 };
 
@@ -18,29 +21,6 @@ use crate::{
     contract::{execute, instantiate},
     msg::{ExecuteMsg, InstantiateMsg},
 };
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub struct A;
-impl Currency for A {
-    const SYMBOL: SymbolStatic = "A";
-}
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub struct B;
-impl Currency for B {
-    const SYMBOL: SymbolStatic = "B";
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub struct C;
-impl Currency for C {
-    const SYMBOL: SymbolStatic = "C";
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub struct D;
-impl Currency for D {
-    const SYMBOL: SymbolStatic = "D";
-}
 
 pub(crate) const CREATOR: &str = "creator";
 
@@ -66,10 +46,21 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
         60,
         50,
         vec![
-            ("A".to_string(), "B".to_string()),
-            ("A".to_string(), "C".to_string()),
-            ("C".to_string(), "D".to_string()),
-            (Nls::SYMBOL.to_string(), "D".to_string()),
+            (
+                TestCurrencyA::SYMBOL.to_string(),
+                TestCurrencyB::SYMBOL.to_string(),
+            ),
+            (
+                TestCurrencyA::SYMBOL.to_string(),
+                TestCurrencyC::SYMBOL.to_string(),
+            ),
+            (
+                TestCurrencyC::SYMBOL.to_string(),
+                TestCurrencyD::SYMBOL.to_string(),
+            ),
+            (TestCurrencyA::SYMBOL.to_string(), Usdc::SYMBOL.to_string()),
+            (TestCurrencyC::SYMBOL.to_string(), Usdc::SYMBOL.to_string()),
+            (Nls::SYMBOL.to_string(), TestCurrencyD::SYMBOL.to_string()),
         ],
         "timealarms".to_string(),
     )
@@ -78,9 +69,28 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
 pub(crate) fn dummy_feed_prices_msg() -> ExecuteMsg {
     ExecuteMsg::FeedPrices {
         prices: vec![
-            PriceDTO::try_from(price::total_of(Coin::<A>::new(10)).is(Coin::<B>::new(12))).unwrap(),
-            PriceDTO::try_from(price::total_of(Coin::<A>::new(10)).is(Coin::<C>::new(32))).unwrap(),
-            PriceDTO::try_from(price::total_of(Coin::<C>::new(10)).is(Coin::<D>::new(12))).unwrap(),
+            PriceDTO::try_from(price::total_of(Coin::<TestCurrencyA>::new(10)).is(Coin::<
+                TestCurrencyB,
+            >::new(
+                12
+            )))
+            .unwrap(),
+            PriceDTO::try_from(price::total_of(Coin::<TestCurrencyA>::new(10)).is(Coin::<
+                TestCurrencyC,
+            >::new(
+                32
+            )))
+            .unwrap(),
+            PriceDTO::try_from(price::total_of(Coin::<TestCurrencyC>::new(10)).is(Coin::<
+                TestCurrencyD,
+            >::new(
+                12
+            )))
+            .unwrap(),
+            PriceDTO::try_from(
+                price::total_of(Coin::<TestCurrencyA>::new(10)).is(Coin::<Usdc>::new(120)),
+            )
+            .unwrap(),
         ],
     }
 }

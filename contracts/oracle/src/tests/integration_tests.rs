@@ -119,7 +119,7 @@ mod tests {
             msg::ExecuteMsg,
             tests::{
                 integration_tests::tests::{mock_app, timealarms_instantiate},
-                A, B, C,
+                TestCurrencyA, TestCurrencyB, TestCurrencyC,
             },
         };
 
@@ -234,14 +234,21 @@ mod tests {
             };
             app.execute_contract(Addr::unchecked(ADMIN), oracle.addr(), &msg, &[])
                 .unwrap();
-            let feed_msg = ExecuteMsg::FeedPrices {
-                prices: vec![
-                    PriceDTO::try_from(price::total_of(Coin::<A>::new(1)).is(Coin::<B>::new(100)))
+            let feed_msg =
+                ExecuteMsg::FeedPrices {
+                    prices: vec![
+                        PriceDTO::try_from(
+                            price::total_of(Coin::<TestCurrencyA>::new(1))
+                                .is(Coin::<TestCurrencyB>::new(100)),
+                        )
                         .unwrap(),
-                    PriceDTO::try_from(price::total_of(Coin::<A>::new(1)).is(Coin::<C>::new(200)))
+                        PriceDTO::try_from(
+                            price::total_of(Coin::<TestCurrencyA>::new(1))
+                                .is(Coin::<TestCurrencyC>::new(200)),
+                        )
                         .unwrap(),
-                ],
-            };
+                    ],
+                };
             app.update_block(|bl| bl.time = Timestamp::from_nanos(0));
             // instantiate loan, add alarms
             let loan = mock_loan::proper_instantiate(&mut app);

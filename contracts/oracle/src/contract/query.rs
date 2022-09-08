@@ -1,13 +1,10 @@
-use std::collections::HashSet;
-
-use cosmwasm_std::{to_binary, Binary, Deps, Env, Storage};
+use cosmwasm_std::{to_binary, Binary, Deps, Env};
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::{
-    currency::{visit_any, AnyVisitor, Currency, SymbolOwned, Usdc},
+    currency::{visit_any, AnyVisitor, Currency},
     price::PriceDTO,
 };
-use marketprice::market_price::PriceFeedsError;
 
 use crate::{
     error::ContractError,
@@ -42,11 +39,18 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
     {
         let res = match self.msg {
             QueryMsg::PriceFor { currencies } => {
-                Ok(to_binary(&query_market_price_for::<OracleBase>(
-                    self.deps.storage,
-                    self.env,
-                    HashSet::from_iter(currencies.iter().cloned()),
-                )?)?)
+                let config = Config::load(self.deps.storage)?;
+                to_binary(&PricesResponse {
+                    prices: Feeds::with(config)
+                        .get_prices::<OracleBase>(
+                            self.deps.storage,
+                            self.env.block.time,
+                            currencies,
+                        )?
+                        .values()
+                        .cloned()
+                        .collect(),
+                })
             }
             QueryMsg::Price { currency } => to_binary(&PriceResponse {
                 price: PriceDTO::try_from(Feeds::get_price::<OracleBase>(
@@ -65,33 +69,3 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
         Err(ContractError::UnknownCurrency {})
     }
 }
-
-pub fn query_market_price_for<OracleBase>(
-    storage: &dyn Storage,
-    env: Env,
-    currencies: HashSet<SymbolOwned>,
-) -> Result<PricesResponse, PriceFeedsError>
-where
-    OracleBase: Currency,
-{
-    let config = Config::load(storage)?;
-    Ok(PricesResponse {
-        prices: Feeds::with(config)
-            .get_prices::<OracleBase>(storage, env.block.time, currencies)?
-            .values()
-            .cloned()
-            .collect(),
-    })
-}
-
-// fn query_market_price_for_single<OracleBase>(
-//     storage: &dyn Storage,
-//     env: Env,
-// ) -> Result<PriceResponse, ContractError>
-// where
-//     OracleBase: 'static + Currency + Serialize,
-// {
-//     Ok(PriceResponse {
-//         price: PriceDTO::try_from(Feeds::get_price::<OracleBase>(storage, env.block.time)?)?,
-//     })
-// }
