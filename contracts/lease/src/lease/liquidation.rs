@@ -289,50 +289,50 @@ where
         A: Into<Addr>,
     {
         if self.currency != Lpn::SYMBOL {
-            if let Status::PartialLiquidation {
-                liquidation_amount, ..
-            } = liquidation_status
-            {
-                lease_amount -= *liquidation_amount;
-            }
-
-            let lease = lease.into();
-
-            let (below, above) = match liquidation_status {
-                Status::None | Status::PartialLiquidation { .. } => {
-                    (self.liability.first_liq_warn_percent(), None)
-                }
-                Status::Warning(_, WarningLevel::First) => (
-                    self.liability.second_liq_warn_percent(),
-                    Some(self.liability.first_liq_warn_percent()),
-                ),
-                Status::Warning(_, WarningLevel::Second) => (
-                    self.liability.third_liq_warn_percent(),
-                    Some(self.liability.second_liq_warn_percent()),
-                ),
-                Status::Warning(_, WarningLevel::Third) => (
-                    self.liability.max_percent(),
-                    Some(self.liability.third_liq_warn_percent()),
-                ),
-                Status::FullLiquidation(_) => unreachable!(),
-            };
-
-            let below = self.price_alarm_by_percent(lease.clone(), lease_amount, now, below)?;
-
-            let above = above
-                .map(|above| self.price_alarm_by_percent(lease, lease_amount, now, above))
-                .transpose()?;
-
-            self.oracle
-                .add_alarm(Alarm::new::<PriceDTO>(
-                    self.currency.clone(),
-                    below.into(),
-                    above.map(Into::into),
-                ))
-                .map_err(Into::into)
-        } else {
-            Ok(())
+            return Ok(());
         }
+
+        if let Status::PartialLiquidation {
+            liquidation_amount, ..
+        } = liquidation_status
+        {
+            lease_amount -= *liquidation_amount;
+        }
+
+        let lease = lease.into();
+
+        let (below, above) = match liquidation_status {
+            Status::None | Status::PartialLiquidation { .. } => {
+                (self.liability.first_liq_warn_percent(), None)
+            }
+            Status::Warning(_, WarningLevel::First) => (
+                self.liability.second_liq_warn_percent(),
+                Some(self.liability.first_liq_warn_percent()),
+            ),
+            Status::Warning(_, WarningLevel::Second) => (
+                self.liability.third_liq_warn_percent(),
+                Some(self.liability.second_liq_warn_percent()),
+            ),
+            Status::Warning(_, WarningLevel::Third) => (
+                self.liability.max_percent(),
+                Some(self.liability.third_liq_warn_percent()),
+            ),
+            Status::FullLiquidation(_) => unreachable!(),
+        };
+
+        let below = self.price_alarm_by_percent(lease.clone(), lease_amount, now, below)?;
+
+        let above = above
+            .map(|above| self.price_alarm_by_percent(lease, lease_amount, now, above))
+            .transpose()?;
+
+        self.oracle
+            .add_alarm(Alarm::new::<PriceDTO>(
+                self.currency.clone(),
+                below.into(),
+                above.map(Into::into),
+            ))
+            .map_err(Into::into)
     }
 
     fn reschedule_time_alarm(
