@@ -10,7 +10,7 @@ use crate::ContractError;
 use cosmwasm_std::testing::{mock_env, mock_info};
 use cosmwasm_std::{coins, from_binary, Addr};
 use finance::coin::Coin;
-use finance::currency::{Currency, SymbolStatic};
+use finance::currency::{Currency, Nls, SymbolStatic};
 use finance::price::{self, PriceDTO};
 
 use super::common::dummy_feed_prices_msg;
@@ -145,7 +145,7 @@ fn feed_prices() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::PriceFor {
-            currencies: HashSet::from(["A".to_string()]),
+            currencies: HashSet::from([A::SYMBOL.to_string()]),
         },
     )
     .unwrap();

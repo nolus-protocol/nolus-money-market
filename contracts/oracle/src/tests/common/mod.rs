@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 use finance::{
     coin::Coin,
-    currency::{Currency, SymbolOwned, SymbolStatic},
+    currency::{Currency, Nls, SymbolOwned, SymbolStatic},
     price::{self, PriceDTO},
 };
 
@@ -64,6 +64,7 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
             ("A".to_string(), "B".to_string()),
             ("A".to_string(), "C".to_string()),
             ("C".to_string(), "D".to_string()),
+            (Nls::SYMBOL.to_string(), "D".to_string()),
         ],
         "timealarms".to_string(),
     )

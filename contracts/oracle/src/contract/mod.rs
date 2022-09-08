@@ -16,13 +16,23 @@ use finance::{
 use marketprice::market_price::PriceFeedsError;
 
 use crate::{
-    alarms::MarketAlarms,
     contract_validation::validate_contract_addr,
     error::ContractError,
-    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, PriceResponse, PricesResponse, QueryMsg},
-    oracle::MarketOracle,
+    msg::{ExecuteMsg, InstantiateMsg, PriceResponse, PricesResponse, QueryMsg},
     state::config::Config,
 };
+
+use self::{
+    alarms::MarketAlarms,
+    config::{query_config, try_configure, try_configure_supported_pairs},
+    feed::Feeds,
+    feeder::Feeders,
+};
+
+mod alarms;
+mod config;
+mod feed;
+mod feeder;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -68,7 +78,7 @@ pub fn execute(
             feeders_percentage_needed,
         ),
         ExecuteMsg::RegisterFeeder { feeder_address } => {
-            try_register_feeder(deps, info, feeder_address)
+            Feeders::try_register(deps, info, feeder_address)
         }
         ExecuteMsg::SupportedDenomPairs { pairs } => {
             try_configure_supported_pairs(deps.storage, info, pairs)
@@ -135,11 +145,10 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?),
-        QueryMsg::Feeders {} => Ok(to_binary(&MarketOracle::get_feeders(deps.storage)?)?),
-        QueryMsg::IsFeeder { address } => Ok(to_binary(&MarketOracle::is_feeder(
-            deps.storage,
-            &address,
-        )?)?),
+        QueryMsg::Feeders {} => Ok(to_binary(&Feeders::get(deps.storage)?)?),
+        QueryMsg::IsFeeder { address } => {
+            Ok(to_binary(&Feeders::is_feeder(deps.storage, &address)?)?)
+        }
         QueryMsg::PriceFor { currencies } => Ok(to_binary(&query_market_price_for(
             deps.storage,
             env,
@@ -176,16 +185,6 @@ fn err_as_ok(err: &str) -> Response {
         .add_attribute("error", err)
 }
 
-fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
-    let config = Config::load(deps.storage)?;
-    Ok(ConfigResponse {
-        base_asset: config.base_asset,
-        owner: config.owner,
-        price_feed_period_secs: config.price_feed_period_secs,
-        feeders_percentage_needed: config.feeders_percentage_needed,
-    })
-}
-
 fn query_market_price_for(
     storage: &dyn Storage,
     env: Env,
@@ -193,7 +192,7 @@ fn query_market_price_for(
 ) -> Result<PricesResponse, PriceFeedsError> {
     let config = Config::load(storage)?;
     Ok(PricesResponse {
-        prices: MarketOracle::new(config)
+        prices: Feeds::new(config)
             .get_prices(storage, env.block.time, currencies)?
             .values()
             .cloned()
@@ -210,53 +209,11 @@ where
     QuoteC: 'static + Currency + Serialize,
 {
     Ok(PriceResponse {
-        price: PriceDTO::try_from(MarketOracle::get_single_price::<C, QuoteC>(
+        price: PriceDTO::try_from(Feeds::get_single_price::<C, QuoteC>(
             storage,
             env.block.time,
         )?)?,
     })
-}
-
-fn try_configure(
-    deps: DepsMut,
-    info: MessageInfo,
-    price_feed_period_secs: u32,
-    feeders_percentage_needed: u8,
-) -> Result<Response, ContractError> {
-    Config::update(
-        deps.storage,
-        price_feed_period_secs,
-        feeders_percentage_needed,
-        info.sender,
-    )?;
-
-    Ok(Response::new())
-}
-
-fn try_configure_supported_pairs(
-    storage: &mut dyn Storage,
-    info: MessageInfo,
-    pairs: Vec<(SymbolOwned, SymbolOwned)>,
-) -> Result<Response, ContractError> {
-    Config::update_supported_pairs(storage, pairs, info.sender)?;
-
-    Ok(Response::new())
-}
-
-fn try_register_feeder(
-    deps: DepsMut,
-    info: MessageInfo,
-    address: String,
-) -> Result<Response, ContractError> {
-    let config = Config::load(deps.storage)?;
-    if info.sender != config.owner {
-        return Err(ContractError::Unauthorized {});
-    }
-    // check if address is valid
-    let f_address = deps.api.addr_validate(&address)?;
-    MarketOracle::register_feeder(deps, f_address)?;
-
-    Ok(Response::new())
 }
 
 fn try_feed_prices(
@@ -266,13 +223,13 @@ fn try_feed_prices(
     prices: Vec<PriceDTO>,
 ) -> Result<Response, ContractError> {
     // Check feeder permission
-    let is_registered = MarketOracle::is_feeder(storage, &sender_raw)?;
+    let is_registered = Feeders::is_feeder(storage, &sender_raw)?;
     if !is_registered {
         return Err(ContractError::UnknownFeeder {});
     }
 
     let config = Config::load(storage)?;
-    let oracle = MarketOracle::new(config.clone());
+    let oracle = Feeds::new(config.clone());
 
     // Store the new price feed
     oracle.feed_prices(storage, block_time, &sender_raw, prices)?;

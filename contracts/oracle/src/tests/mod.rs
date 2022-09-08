@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod common;
+pub(crate) mod common;
 #[cfg(test)]
 mod integration_tests;
 #[cfg(test)]

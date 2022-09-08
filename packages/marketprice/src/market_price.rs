@@ -1,4 +1,4 @@
-use std::convert::{Infallible, TryInto};
+use std::convert::Infallible;
 
 use crate::feed::{Observation, PriceFeed};
 use cosmwasm_std::{Addr, Order, StdError, StdResult, Storage, Timestamp};
@@ -10,15 +10,14 @@ use finance::duration::Duration;
 use thiserror::Error;
 
 use finance::price::{self, Price as FinPrice, PriceDTO};
-
-pub struct PriceQuery {
+pub struct QueryConfig {
     price_feed_period: Duration,
     required_feeders_cnt: usize,
 }
 
-impl PriceQuery {
+impl QueryConfig {
     pub fn new(price_feed_period: Duration, required_feeders_cnt: usize) -> Self {
-        PriceQuery {
+        QueryConfig {
             price_feed_period,
             required_feeders_cnt,
         }
@@ -46,6 +45,8 @@ pub enum PriceFeedsError {
     FromInfallible(#[from] Infallible),
     #[error("{0}")]
     Finance(#[from] finance::error::Error),
+    #[error("Unknown currency")]
+    UnknownCurrency {},
 }
 
 type DenomResolutionPath = Vec<Observation>;
@@ -61,7 +62,7 @@ impl<'m> PriceFeeds<'m> {
         &self,
         storage: &dyn Storage,
         current_block_time: Timestamp,
-        query: PriceQuery,
+        query: QueryConfig,
     ) -> Result<PriceDTO, PriceFeedsError>
     where
         C: Currency,
@@ -106,7 +107,7 @@ impl<'m> PriceFeeds<'m> {
         &self,
         storage: &dyn Storage,
         current_block_time: Timestamp,
-        query: PriceQuery,
+        query: QueryConfig,
     ) -> Result<FinPrice<C, QuoteC>, PriceFeedsError>
     where
         C: 'static + Currency,
