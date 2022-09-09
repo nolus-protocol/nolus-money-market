@@ -35,7 +35,15 @@ where
     where
         B: BankAccountView,
     {
-        let status = self.on_alarm(now, account, lease, self.price_of_lease_currency()?)?;
+        let lease_amount = account.balance::<Lpn>()?;
+
+        let price_to_lpn = self.price_of_lease_currency()?;
+
+        let status = self.act_on_liability(now, lease.clone(), lease_amount, price_to_lpn)?;
+
+        if !matches!(status, Status::FullLiquidation(_)) {
+            self.reschedule(lease, lease_amount, &now, &status, price_to_lpn)?;
+        }
 
         Ok(self.into_on_alarm_result(status))
     }
@@ -51,12 +59,12 @@ where
     {
         let lease_amount = account.balance::<Lpn>()?;
 
-        let price = self.price_of_lease_currency()?;
+        let price_to_lpn = self.price_of_lease_currency()?;
 
-        let lease_lpn = total(lease_amount, price);
+        let lease_lpn = total(lease_amount, price_to_lpn);
 
         let status = if self.loan.grace_period_end() <= now {
-            self.liquidate_on_interest_overdue(now, lease.clone(), lease_amount)?
+            self.liquidate_on_interest_overdue(now, lease.clone(), lease_amount, price_to_lpn)?
         } else {
             self.handle_warnings(
                 self.loan
@@ -65,7 +73,9 @@ where
             )
         };
 
-        self.reschedule(lease, lease_amount, &now, &status, price)?;
+        if !matches!(status, Status::FullLiquidation(_)) {
+            self.reschedule(lease, lease_amount, &now, &status, price_to_lpn)?;
+        }
 
         Ok(self.into_on_alarm_result(status))
     }
@@ -99,12 +109,16 @@ where
     where
         A: Into<Addr> + Clone,
     {
+        let price_to_lpn = self.price_of_lease_currency()?;
+
+        let lease_lpn = total(lease_amount, price_to_lpn);
+
         self.reschedule(
             lease.clone(),
             lease_amount,
             now,
-            &self.handle_warnings(self.loan.liability_status(*now, lease, lease_amount)?.ltv),
-            self.price_of_lease_currency()?,
+            &self.handle_warnings(self.loan.liability_status(*now, lease, lease_lpn)?.ltv),
+            price_to_lpn,
         )
     }
 
@@ -118,27 +132,6 @@ where
         }
     }
 
-    fn on_alarm<B>(
-        &mut self,
-        now: Timestamp,
-        account: &B,
-        lease: Addr,
-        price: Price<Lpn, Lpn>,
-    ) -> ContractResult<Status<Lpn>>
-    where
-        B: BankAccountView,
-    {
-        let lease_amount = account.balance::<Lpn>()?;
-
-        let status = self.act_on_liability(now, lease.clone(), lease_amount, price)?;
-
-        if !matches!(status, Status::FullLiquidation(_)) {
-            self.reschedule(lease, lease_amount, &now, &status, price)?;
-        }
-
-        Ok(status)
-    }
-
     #[inline]
     fn reschedule<A>(
         &mut self,
@@ -146,14 +139,30 @@ where
         lease_amount: Coin<Lpn>,
         now: &Timestamp,
         liquidation_status: &Status<Lpn>,
-        price: Price<Lpn, Lpn>,
+        price_to_lpn: Price<Lpn, Lpn>,
     ) -> ContractResult<()>
     where
         A: Into<Addr>,
     {
         self.reschedule_time_alarm(now, liquidation_status)?;
 
-        self.reschedule_price_alarm(lease, lease_amount, now, liquidation_status, price)
+        self.reschedule_price_alarm(lease, lease_amount, now, liquidation_status, price_to_lpn)
+    }
+
+    fn reschedule_time_alarm(
+        &mut self,
+        now: &Timestamp,
+        liquidation_status: &Status<Lpn>,
+    ) -> ContractResult<()> {
+        debug_assert!(!matches!(liquidation_status, Status::FullLiquidation(..)));
+
+        self.time_alarms
+            .add_alarm({
+                self.loan
+                    .grace_period_end()
+                    .min(*now + self.liability.recalculation_time())
+            })
+            .map_err(Into::into)
     }
 
     fn reschedule_price_alarm<A>(
@@ -162,7 +171,7 @@ where
         mut lease_amount: Coin<Lpn>,
         now: &Timestamp,
         liquidation_status: &Status<Lpn>,
-        price: Price<Lpn, Lpn>,
+        price_to_lpn: Price<Lpn, Lpn>,
     ) -> ContractResult<()>
     where
         A: Into<Addr>,
@@ -178,7 +187,7 @@ where
             lease_amount -= *liquidation_amount;
         }
 
-        let lease_lpn = total(lease_amount, price);
+        let lease_lpn = total(lease_amount, price_to_lpn);
 
         let lease = lease.into();
 
@@ -218,22 +227,6 @@ where
                 below.into(),
                 above.map(Into::into),
             ))
-            .map_err(Into::into)
-    }
-
-    fn reschedule_time_alarm(
-        &mut self,
-        now: &Timestamp,
-        liquidation_status: &Status<Lpn>,
-    ) -> ContractResult<()> {
-        debug_assert!(!matches!(liquidation_status, Status::FullLiquidation(..)));
-
-        self.time_alarms
-            .add_alarm({
-                self.loan
-                    .grace_period_end()
-                    .min(*now + self.liability.recalculation_time())
-            })
             .map_err(Into::into)
     }
 

@@ -32,9 +32,8 @@ where
         now: Timestamp,
         lease: Addr,
         lease_amount: Coin<Lpn>,
+        price_to_lpn: Price<Lpn, Lpn>,
     ) -> ContractResult<Status<Lpn>> {
-        let price_to_lpn = self.price_of_lease_currency()?;
-
         let lease_lpn = total(lease_amount, price_to_lpn);
 
         let LiabilityStatus {
@@ -53,7 +52,7 @@ where
             lease_asset: self.currency.clone(),
         };
 
-        Ok(if liquidation_amount == lease_amount {
+        Ok(if liquidation_lpn == lease_lpn {
             Status::FullLiquidation(info)
         } else {
             Status::PartialLiquidation {
