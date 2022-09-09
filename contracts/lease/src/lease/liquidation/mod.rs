@@ -33,21 +33,19 @@ where
         lease: Addr,
         lease_amount: Coin<Lpn>,
     ) -> ContractResult<Status<Lpn>> {
-        let lease_lpn = total(lease_amount, self.price_of_lease_currency()?);
+        let price_to_lpn = self.price_of_lease_currency()?;
 
-        let LiabilityStatus { ltv, overdue, .. } =
-            self.loan.liability_status(now, lease, lease_lpn)?;
+        let lease_lpn = total(lease_amount, price_to_lpn);
 
-        let liquidation_lpn = lease_lpn.min(overdue);
+        let LiabilityStatus {
+            ltv, overdue_lpn, ..
+        } = self.loan.liability_status(now, lease, lease_lpn)?;
 
-        self.liquidate(
-            self.customer.clone(),
-            self.currency.clone(),
-            lease_lpn,
-            liquidation_lpn,
-        );
+        let liquidation_lpn = lease_lpn.min(overdue_lpn);
 
-        let liquidation_amount = total(liquidation_lpn, self.price_of_lease_currency()?.inv());
+        self.liquidate(liquidation_lpn)?;
+
+        let liquidation_amount = total(liquidation_lpn, price_to_lpn.inv());
 
         let info = LeaseInfo {
             customer: self.customer.clone(),
@@ -71,23 +69,18 @@ where
         now: Timestamp,
         lease: Addr,
         lease_amount: Coin<Lpn>,
-        price: Price<Lpn, Lpn>,
+        price_to_lpn: Price<Lpn, Lpn>,
     ) -> ContractResult<Status<Lpn>> {
-        let lease_lpn = total(lease_amount, price);
+        let lease_lpn = total(lease_amount, price_to_lpn);
 
-        let LiabilityStatus { ltv, total, .. } =
+        let LiabilityStatus { ltv, total_lpn, .. } =
             self.loan.liability_status(now, lease, lease_lpn)?;
 
-        Ok(if self.liability.max_percent() <= ltv {
-            self.liquidate(
-                self.customer.clone(),
-                self.currency.clone(),
-                lease_lpn,
-                total,
-            )
+        if self.liability.max_percent() <= ltv {
+            self.liquidate_on_liability(lease_lpn, total_lpn, price_to_lpn.inv())
         } else {
-            self.handle_warnings(ltv)
-        })
+            Ok(self.handle_warnings(ltv))
+        }
     }
 
     fn handle_warnings(&self, liability: Percent) -> Status<Lpn> {
@@ -119,33 +112,36 @@ where
         )
     }
 
-    fn liquidate(
+    fn liquidate_on_liability(
         &self,
-        customer: Addr,
-        lease_asset: SymbolOwned,
         lease_lpn: Coin<Lpn>,
         liability_lpn: Coin<Lpn>,
-    ) -> Status<Lpn> {
+        price_from_lpn: Price<Lpn, Lpn>,
+    ) -> ContractResult<Status<Lpn>> {
         // from 'liability - liquidation = healthy% of (lease - liquidation)' follows
         // 'liquidation = 100% / (100% - healthy%) of (liability - healthy% of lease)'
         let multiplier = Rational::new(
             Percent::HUNDRED,
             Percent::HUNDRED - self.liability.healthy_percent(),
         );
-        let extra_liability =
+        let extra_liability_lpn =
             liability_lpn - liability_lpn.min(self.liability.healthy_percent().of(lease_lpn));
-        let liquidation_amount =
-            <Rational<Percent> as Fraction<Units>>::of(&multiplier, extra_liability);
-        let liquidation_amount = lease_lpn.min(liquidation_amount);
-        // TODO perform actual liquidation
+        let liquidation_lpn = lease_lpn.min(<Rational<Percent> as Fraction<Units>>::of(
+            &multiplier,
+            extra_liability_lpn,
+        ));
+
+        self.liquidate(liquidation_lpn)?;
+
+        let liquidation_amount = total(liquidation_lpn, price_from_lpn);
 
         let info = LeaseInfo {
-            customer,
+            customer: self.customer.clone(),
             ltv: self.liability.max_percent(),
-            lease_asset,
+            lease_asset: self.currency.clone(),
         };
 
-        if liquidation_amount == lease_lpn {
+        Ok(if liquidation_amount == lease_lpn {
             Status::FullLiquidation(info)
         } else {
             Status::PartialLiquidation {
@@ -153,7 +149,13 @@ where
                 _healthy_ltv: self.liability.healthy_percent(),
                 liquidation_amount,
             }
-        }
+        })
+    }
+
+    fn liquidate(&self, _liquidation_lpn: Coin<Lpn>) -> ContractResult<()> {
+        // TODO perform actual liquidation
+
+        Ok(())
     }
 }
 
@@ -206,6 +208,7 @@ impl WarningLevel {
 mod tests {
     use cosmwasm_std::{Addr, Timestamp};
 
+    use finance::price::Price;
     use finance::{currency::Currency, percent::Percent};
     use lpp::msg::LoanResponse;
 
@@ -359,8 +362,8 @@ mod tests {
                 .unwrap(),
             LiabilityStatus {
                 ltv: Percent::from_percent(60),
-                total: coin(100 + 500),
-                overdue: coin(0),
+                total_lpn: coin(100 + 500),
+                overdue_lpn: coin(0),
             }
         );
     }
@@ -384,17 +387,14 @@ mod tests {
         );
 
         assert_eq!(
-            lease.liquidate(
-                Addr::unchecked(String::new()),
-                String::new(),
-                coin(lease_amount),
-                coin(800),
-            ),
+            lease
+                .liquidate_on_liability(coin(lease_amount), coin(800), Price::identity())
+                .unwrap(),
             Status::PartialLiquidation {
                 _info: LeaseInfo {
-                    customer: Addr::unchecked(String::new()),
+                    customer: Addr::unchecked("customer"),
                     ltv: lease.liability.max_percent(),
-                    lease_asset: "".into(),
+                    lease_asset: TestCurrency::SYMBOL.into(),
                 },
                 _healthy_ltv: lease.liability.healthy_percent(),
                 liquidation_amount: coin(333),
@@ -421,16 +421,13 @@ mod tests {
         );
 
         assert_eq!(
-            lease.liquidate(
-                Addr::unchecked(String::new()),
-                String::new(),
-                coin(lease_amount),
-                coin(5000),
-            ),
+            lease
+                .liquidate_on_liability(coin(lease_amount), coin(5000), Price::identity())
+                .unwrap(),
             Status::FullLiquidation(LeaseInfo {
-                customer: Addr::unchecked(String::new()),
+                customer: Addr::unchecked("customer"),
                 ltv: lease.liability.max_percent(),
-                lease_asset: "".into(),
+                lease_asset: TestCurrency::SYMBOL.into(),
             },)
         );
     }

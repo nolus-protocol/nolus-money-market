@@ -204,7 +204,7 @@ where
         let total_liability = self
             .loan
             .liability_status(*now + self.liability.recalculation_time(), lease, lease_lpn)?
-            .total;
+            .total_lpn;
 
         let below = self.price_alarm_by_percent(lease_amount, total_liability, below)?;
 
@@ -283,8 +283,8 @@ mod tests {
         lease
             .reschedule_time_alarm(
                 &(lease.loan.grace_period_end()
-                    - Duration::from_nanos(lease.liability.recalculation_time().nanos())
-                    - Duration::from_nanos(lease.liability.recalculation_time().nanos())),
+                    - lease.liability.recalculation_time()
+                    - lease.liability.recalculation_time()),
                 &Status::Warning(
                     LeaseInfo {
                         customer: Addr::unchecked(String::new()),
