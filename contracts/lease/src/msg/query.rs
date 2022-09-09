@@ -1,3 +1,4 @@
+use cosmwasm_std::Timestamp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -23,6 +24,7 @@ where
         previous_interest_due: Coin<Lpn>,
         current_margin_due: Coin<Lpn>,
         current_interest_due: Coin<Lpn>,
+        validity: Timestamp,
     },
     Paid(Coin<C>),
     Closed(),

@@ -161,6 +161,7 @@ fn expected_open_state(
             due,
         ),
         current_interest_due: calculate_interest(expected, quote_result.annual_interest_rate, due),
+        validity: block_time(test_case),
     }
 }
 
@@ -403,6 +404,7 @@ fn compare_state_with_manual_calculation() {
         previous_interest_due: create_coin(25643),
         current_margin_due: create_coin(13737),
         current_interest_due: create_coin(25643 + 1), // Test returns off by 1 from manual calculations
+        validity: block_time(&test_case),
     };
 
     assert_eq!(dbg!(query_result), expected_result);
@@ -478,7 +480,7 @@ fn compare_state_with_lpp_state_explicit_time() {
             test_case.lpp_addr.clone().unwrap(),
             &lpp::msg::QueryMsg::LoanOutstandingInterest {
                 lease_addr: lease_address.clone(),
-                outstanding_time: test_case.app.block_info().time,
+                outstanding_time: block_time(&test_case),
             },
         )
         .unwrap();
@@ -510,4 +512,8 @@ fn state_closed() {
     let query_result = state_query(&test_case, &lease_address.into_string());
 
     assert_eq!(expected_result, query_result);
+}
+
+fn block_time(test_case: &TestCase) -> Timestamp {
+    test_case.app.block_info().time
 }
