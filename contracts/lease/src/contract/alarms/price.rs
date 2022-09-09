@@ -1,10 +1,7 @@
 use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
-use finance::{
-    currency::{Currency, SymbolOwned},
-    price::PriceDTO,
-};
+use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::bank::BankAccountView;
@@ -24,20 +21,18 @@ where
     lease: Addr,
     account: B,
     now: Timestamp,
-    price: PriceDTO,
 }
 
 impl<'a, B> PriceAlarm<'a, B>
 where
     B: BankAccountView,
 {
-    pub fn new(sender: &'a Addr, lease: Addr, account: B, now: Timestamp, price: PriceDTO) -> Self {
+    pub fn new(sender: &'a Addr, lease: Addr, account: B, now: Timestamp) -> Self {
         Self {
             sender,
             lease,
             account,
             now,
-            price,
         }
     }
 }

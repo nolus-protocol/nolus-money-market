@@ -5,7 +5,6 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 
-use finance::price::PriceDTO;
 use platform::{bank::BankStub, batch::Emitter};
 
 use crate::contract::alarms::time::TimeAlarm;
@@ -106,11 +105,11 @@ pub fn execute(
             Ok(emitter.into())
         }
         ExecuteMsg::Close() => try_close(&deps.querier, &env, account, info, lease).map(Into::into),
-        ExecuteMsg::PriceAlarm { price } => {
+        ExecuteMsg::PriceAlarm() => {
             let AlarmResult {
                 response,
                 lease_dto: lease,
-            } = try_on_price_alarm(&deps.querier, &env, account, info, lease, price)?;
+            } = try_on_price_alarm(&deps.querier, &env, account, info, lease)?;
 
             lease.store(deps.storage)?;
 
@@ -180,7 +179,6 @@ fn try_on_price_alarm(
     account: BankStub,
     info: MessageInfo,
     lease: LeaseDTO,
-    price: PriceDTO,
 ) -> ContractResult<AlarmResult> {
     lease::execute(
         lease,
@@ -189,7 +187,6 @@ fn try_on_price_alarm(
             env.contract.address.clone(),
             account,
             env.block.time,
-            price,
         ),
         querier,
     )

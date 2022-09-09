@@ -260,9 +260,7 @@ fn price_alarm_unauthorized() {
             .execute_contract(
                 Addr::unchecked(ADMIN),
                 lease_address,
-                &lease::msg::ExecuteMsg::PriceAlarm {
-                    price: PriceDTO::new(create_coin(1).into(), create_coin(2).into(),),
-                },
+                &lease::msg::ExecuteMsg::PriceAlarm(),
                 &[to_cosmwasm(create_coin(10000))],
             )
             .unwrap()
@@ -281,9 +279,7 @@ fn liquidation_warning(price: PriceDTO, percent: Percent, level: &str) {
         .execute_contract(
             test_case.oracle.unwrap(),
             lease_address,
-            &lease::msg::ExecuteMsg::PriceAlarm {
-                price: price.clone(),
-            },
+            &lease::msg::ExecuteMsg::PriceAlarm(),
             &[to_cosmwasm(create_coin(10000))],
         )
         .unwrap();
