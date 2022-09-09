@@ -10,16 +10,24 @@ use finance::duration::Duration;
 use thiserror::Error;
 
 use finance::price::{self, Price as FinPrice, PriceDTO};
-pub struct QueryConfig {
+
+#[derive(Clone, Copy)]
+pub struct Parameters {
     price_feed_period: Duration,
     required_feeders_cnt: usize,
+    block_time: Timestamp,
 }
 
-impl QueryConfig {
-    pub fn new(price_feed_period: Duration, required_feeders_cnt: usize) -> Self {
-        QueryConfig {
+impl Parameters {
+    pub fn new(
+        price_feed_period: Duration,
+        required_feeders_cnt: usize,
+        block_time: Timestamp,
+    ) -> Self {
+        Parameters {
             price_feed_period,
             required_feeders_cnt,
+            block_time,
         }
     }
 }
@@ -60,17 +68,13 @@ impl<'m> PriceFeeds<'m> {
     pub fn get<C, QuoteC>(
         &self,
         storage: &dyn Storage,
-        current_block_time: Timestamp,
-        query: QueryConfig,
+        parameters: Parameters,
     ) -> Result<PriceDTO, PriceFeedsError>
     where
         C: Currency,
         QuoteC: Currency,
     {
-        // let base = &query.denom_pair.0;
-        // let quote = &query.denom_pair.1;
-
-        // FIXME return PriceDTO::one
+        // check if both currencies are the same
         if C::SYMBOL.to_string().eq(&QuoteC::SYMBOL.to_string()) {
             let price: FinPrice<C, QuoteC> =
                 price::total_of(Coin::<C>::new(1)).is(Coin::<QuoteC>::new(1));
@@ -87,13 +91,13 @@ impl<'m> PriceFeeds<'m> {
             return Err(PriceFeedsError::NoPrice {});
         }
 
-        // find a path from Denom 1 to Denom 2
         let mut resolution_path = DenomResolutionPath::new();
+        // find a path from Denom 1 to Denom 2
         let result = self.find_price::<C, QuoteC>(
             storage,
-            current_block_time,
-            query.price_feed_period,
-            query.required_feeders_cnt,
+            parameters.block_time,
+            parameters.price_feed_period,
+            parameters.required_feeders_cnt,
             &mut resolution_path,
         )?;
         resolution_path.push(result);

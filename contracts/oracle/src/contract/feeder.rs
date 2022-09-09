@@ -1,8 +1,8 @@
 use std::{collections::HashSet, convert::TryInto};
 
-use cosmwasm_std::{Addr, DepsMut, MessageInfo, Response, StdResult, Storage};
+use cosmwasm_std::{Addr, DepsMut, MessageInfo, Response, StdResult, Storage, Timestamp};
 use finance::duration::Duration;
-use marketprice::{feeders::PriceFeeders, market_price::QueryConfig};
+use marketprice::{feeders::PriceFeeders, market_price::Parameters};
 
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -54,15 +54,20 @@ impl Feeders {
             .expect("usize overflow")
     }
 
-    pub fn query_config(storage: &dyn Storage, config: &Config) -> StdResult<QueryConfig> {
+    pub fn query_config(
+        storage: &dyn Storage,
+        config: &Config,
+        block_time: Timestamp,
+    ) -> StdResult<Parameters> {
         let registered_feeders = Self::FEEDERS.get(storage)?;
         let all_feeders_cnt = registered_feeders.len();
         let feeders_needed =
             Self::feeders_needed(all_feeders_cnt, config.feeders_percentage_needed);
 
-        Ok(QueryConfig::new(
+        Ok(Parameters::new(
             Duration::from_secs(config.price_feed_period_secs),
             feeders_needed,
+            block_time,
         ))
     }
 }

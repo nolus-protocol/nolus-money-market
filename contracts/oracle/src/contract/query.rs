@@ -12,7 +12,7 @@ use crate::{
     state::config::Config,
 };
 
-use super::feed::Feeds;
+use super::{feed::Feeds, feeder::Feeders};
 
 pub struct QueryWithOracleBase<'a> {
     deps: Deps<'a>,
@@ -40,25 +40,17 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
         let res = match self.msg {
             QueryMsg::PriceFor { currencies } => {
                 let config = Config::load(self.deps.storage)?;
+                let parameters =
+                    Feeders::query_config(self.deps.storage, &config, self.env.block.time)?;
+
                 to_binary(&PricesResponse {
                     prices: Feeds::with(config)
-                        .get_prices::<OracleBase>(
-                            self.deps.storage,
-                            self.env.block.time,
-                            currencies,
-                        )?
+                        .get_prices::<OracleBase>(self.deps.storage, parameters, currencies)?
                         .values()
                         .cloned()
                         .collect(),
                 })
             }
-            QueryMsg::Price { currency } => to_binary(&PriceResponse {
-                price: PriceDTO::try_from(Feeds::get_price::<OracleBase>(
-                    self.deps.storage,
-                    self.env.block.time,
-                    currency,
-                )?)?,
-            }),
             _ => {
                 unreachable!()
             }

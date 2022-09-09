@@ -4,7 +4,7 @@ use std::{
 };
 
 use cosmwasm_std::{Addr, Response, StdError, StdResult, Storage, Timestamp};
-use marketprice::market_price::{PriceFeeds, PriceFeedsError};
+use marketprice::market_price::{Parameters, PriceFeeds, PriceFeedsError};
 
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -51,7 +51,7 @@ impl Feeds {
     pub fn get_prices<OracleBase>(
         &self,
         storage: &dyn Storage,
-        block_time: Timestamp,
+        parameters: Parameters,
         currencies: HashSet<SymbolOwned>,
     ) -> Result<HashMap<SymbolOwned, PriceDTO>, PriceFeedsError>
     where
@@ -61,36 +61,21 @@ impl Feeds {
         for currency in currencies {
             Self::assert_supported_denom(&self.config.supported_denom_pairs, &currency)?;
 
-            let feed = PriceForLpn::<OracleBase>::cmd(storage, block_time, currency.clone())?;
+            let feed = PriceForCurrency::<OracleBase>::cmd(storage, currency.clone(), parameters)?;
             prices.insert(currency, feed);
         }
         Ok(prices)
     }
 
-    pub fn get_price<OracleBase>(
-        storage: &dyn Storage,
-        block_time: Timestamp,
-        currency: SymbolOwned,
-    ) -> Result<PriceDTO, PriceFeedsError>
-    where
-        OracleBase: Currency,
-    {
-        PriceForLpn::<OracleBase>::cmd(storage, block_time, currency.clone())
-    }
-
     fn get_single_price<C, QuoteC>(
         storage: &dyn Storage,
-        block_time: Timestamp,
+        parameters: Parameters,
     ) -> Result<FinPrice<C, QuoteC>, PriceFeedsError>
     where
         C: Currency,
         QuoteC: Currency,
     {
-        let config = Config::load(storage)?;
-
-        let price_query = Feeders::query_config(storage, &config)?;
-        let calculated_price =
-            Self::MARKET_PRICE.get::<C, QuoteC>(storage, block_time, price_query)?;
+        let calculated_price = Self::MARKET_PRICE.get::<C, QuoteC>(storage, parameters)?;
         Ok(calculated_price.try_into()?)
     }
 
@@ -156,14 +141,15 @@ where
     // Store the new price feed
     oracle.feed_prices(storage, block_time, &sender_raw, prices)?;
 
-    // // // Get all currencies registered for alarms
+    // Get all currencies registered for alarms
     let hooks_currencies = MarketAlarms::get_hooks_currencies(storage)?;
 
-    // // //re-calculate the price of these currencies
+    let parameters = Feeders::query_config(storage, &config, block_time)?;
+    // re-calculate the price of these currencies
     let updated_prices: HashMap<SymbolOwned, PriceDTO> =
-        oracle.get_prices::<OracleBase>(storage, block_time, hooks_currencies)?;
+        oracle.get_prices::<OracleBase>(storage, parameters, hooks_currencies)?;
 
-    // // // try notify affected subscribers
+    // try notify affected subscribers
     let mut batch = MarketAlarms::try_notify_hooks(storage, updated_prices)?;
     batch.schedule_execute_wasm_reply_error::<_, Nls>(
         &config.timealarms_contract,
@@ -174,25 +160,25 @@ where
     Ok(Response::from(batch))
 }
 
-struct PriceForLpn<'a, OracleBase> {
+pub struct PriceForCurrency<'a, QuoteC> {
     storage: &'a dyn Storage,
-    block_time: Timestamp,
+    parameters: Parameters,
     currency: SymbolOwned,
-    _oracle_base: PhantomData<OracleBase>,
+    _oracle_base: PhantomData<QuoteC>,
 }
 
-impl<'a, OracleBase> PriceForLpn<'a, OracleBase>
+impl<'a, QuoteC> PriceForCurrency<'a, QuoteC>
 where
-    OracleBase: Currency,
+    QuoteC: Currency,
 {
     pub fn cmd(
         storage: &'a dyn Storage,
-        block_time: Timestamp,
         currency: SymbolOwned,
+        parameters: Parameters,
     ) -> Result<PriceDTO, PriceFeedsError> {
         let visitor = Self {
             storage,
-            block_time,
+            parameters,
             currency,
             _oracle_base: PhantomData,
         };
@@ -200,23 +186,20 @@ where
     }
 }
 
-impl<'a, OracleBase> AnyVisitor for PriceForLpn<'a, OracleBase>
+impl<'a, QuoteC> AnyVisitor for PriceForCurrency<'a, QuoteC>
 where
-    OracleBase: Currency,
+    QuoteC: Currency,
 {
     type Output = PriceDTO;
     type Error = PriceFeedsError;
 
-    fn on<LPN>(self) -> Result<Self::Output, Self::Error>
+    fn on<BaseC>(self) -> Result<Self::Output, Self::Error>
     where
-        LPN: 'static + Currency + DeserializeOwned + Serialize,
+        BaseC: 'static + Currency + DeserializeOwned + Serialize,
     {
-        Ok(PriceDTO::try_from(Feeds::get_single_price::<
-            LPN,
-            OracleBase,
-        >(
-            self.storage, self.block_time
-        )?)?)
+        Ok(PriceDTO::try_from(
+            Feeds::get_single_price::<BaseC, QuoteC>(self.storage, self.parameters)?,
+        )?)
     }
     fn on_unknown(self) -> Result<Self::Output, Self::Error> {
         Err(PriceFeedsError::UnknownCurrency {})

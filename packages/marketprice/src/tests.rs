@@ -8,7 +8,7 @@ use finance::currency::{Currency, SymbolStatic};
 use finance::price::{self, Price, PriceDTO};
 
 use crate::feeders::PriceFeeders;
-use crate::market_price::{PriceFeeds, PriceFeedsError, QueryConfig};
+use crate::market_price::{Parameters, PriceFeeds, PriceFeedsError};
 use finance::duration::Duration;
 
 const MINUTE: Duration = Duration::from_secs(60);
@@ -76,10 +76,8 @@ fn marketprice_add_feed_expect_err() {
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
-    let query = QueryConfig::new(MINUTE, 50);
-    let expected_err = market
-        .get::<DEN1, DEN2>(&deps.storage, ts, query)
-        .unwrap_err();
+    let query = Parameters::new(MINUTE, 50, ts);
+    let expected_err = market.get::<DEN1, DEN2>(&deps.storage, query).unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
 }
 
@@ -127,14 +125,12 @@ fn marketprice_add_feed() {
     market
         .feed(&mut deps.storage, ts, &f_address, prices, MINUTE)
         .unwrap();
-    let query = QueryConfig::new(MINUTE, 50);
-    let err = market
-        .get::<DEN1, DEN2>(&deps.storage, ts, query)
-        .unwrap_err();
+    let query = Parameters::new(MINUTE, 50, ts);
+    let err = market.get::<DEN1, DEN2>(&deps.storage, query).unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
 
-    let query = QueryConfig::new(MINUTE, 1);
-    let price_resp = market.get::<DEN1, DEN2>(&deps.storage, ts, query).unwrap();
+    let query = Parameters::new(MINUTE, 1, ts);
+    let price_resp = market.get::<DEN1, DEN2>(&deps.storage, query).unwrap();
 
     assert_eq!(PriceDTO::try_from(price1).unwrap(), price_resp);
 }
@@ -234,39 +230,31 @@ fn marketprice_follow_the_path() {
     .unwrap();
 
     // valid search denom pair
-    let query = QueryConfig::new(MINUTE, 1);
-    let price_resp = market
-        .get::<DEN1, DEN4>(&deps.storage, mock_env().block.time, query)
-        .unwrap();
+    let query = Parameters::new(MINUTE, 1, mock_env().block.time);
+    let price_resp = market.get::<DEN1, DEN4>(&deps.storage, query).unwrap();
     let expected = price::total_of(Coin::<DEN1>::new(1)).is(Coin::<DEN4>::new(6));
     let expected_dto = PriceDTO::try_from(expected).unwrap();
 
     assert_eq!(expected_dto, price_resp);
 
     // first and second part of denom pair are the same
-    let query = QueryConfig::new(MINUTE, 1);
-    let price_resp = market
-        .get::<DEN1, DEN1>(&deps.storage, mock_env().block.time, query)
-        .unwrap();
+    let query = Parameters::new(MINUTE, 1, mock_env().block.time);
+    let price_resp = market.get::<DEN1, DEN1>(&deps.storage, query).unwrap();
     let expected = price::total_of(Coin::<DEN1>::new(1)).is(Coin::<DEN1>::new(1));
     let expected_dto = PriceDTO::try_from(expected).unwrap();
     assert_eq!(expected_dto, price_resp);
 
     // second part of denome pair doesn't exists in the storage
-    let query = QueryConfig::new(MINUTE, 1);
+    let query = Parameters::new(MINUTE, 1, mock_env().block.time);
     assert_eq!(
-        market
-            .get::<DEN1, DENX>(&deps.storage, mock_env().block.time, query)
-            .unwrap_err(),
+        market.get::<DEN1, DENX>(&deps.storage, query).unwrap_err(),
         PriceFeedsError::NoPrice {}
     );
 
     // first part of denome pair doesn't exists in the storage
-    let query = QueryConfig::new(MINUTE, 1);
+    let query = Parameters::new(MINUTE, 1, mock_env().block.time);
     assert_eq!(
-        market
-            .get::<DENX, DEN1>(&deps.storage, mock_env().block.time, query)
-            .unwrap_err(),
+        market.get::<DENX, DEN1>(&deps.storage, query).unwrap_err(),
         PriceFeedsError::NoPrice {}
     );
 }

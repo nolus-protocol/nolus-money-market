@@ -4,11 +4,17 @@ use cosmwasm_std::{
     from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
 };
 use cw2::set_contract_version;
+use finance::{
+    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
+    price::PriceDTO,
+};
+use marketprice::market_price::Parameters;
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     contract_validation::validate_contract_addr,
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, PriceResponse, QueryMsg},
     state::config::Config,
 };
 
@@ -16,6 +22,7 @@ use self::{
     alarms::MarketAlarms,
     config::{query_config, try_configure, try_configure_supported_pairs},
     exec::ExecWithOracleBase,
+    feed::PriceForCurrency,
     feeder::Feeders,
     query::QueryWithOracleBase,
 };
@@ -64,6 +71,14 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::SupportedDenomPairs {} => Ok(to_binary(
             &Config::load(deps.storage)?.supported_denom_pairs,
         )?),
+        QueryMsg::Price { currency } => {
+            let config = Config::load(deps.storage)?;
+            let parameters = Feeders::query_config(deps.storage, &config, env.block.time)?;
+
+            Ok(to_binary(&PriceResponse {
+                price: WithQuote::cmd(deps, currency, config.base_asset, parameters)?,
+            })?)
+        }
         _ => Ok(QueryWithOracleBase::cmd(deps, env, msg)?),
     }
 }
@@ -123,6 +138,53 @@ fn err_as_ok(err: &str) -> Response {
         .add_attribute("alarm", "error")
         .add_attribute("error", err)
 }
+
+// -----------------------  trait definition ---------------------------
+pub struct WithQuote<'a> {
+    deps: Deps<'a>,
+    base: SymbolOwned,
+    quote: SymbolOwned,
+    parameters: Parameters,
+}
+
+impl<'a> WithQuote<'a> {
+    pub fn cmd(
+        deps: Deps<'a>,
+        base: SymbolOwned,
+        quote: SymbolOwned,
+        parameters: Parameters,
+    ) -> Result<PriceDTO, ContractError> {
+        let visitor = Self {
+            deps,
+            base,
+            quote,
+            parameters,
+        };
+
+        visit_any(&visitor.quote.clone(), visitor)
+    }
+}
+
+impl<'a> AnyVisitor for WithQuote<'a> {
+    type Output = PriceDTO;
+    type Error = ContractError;
+
+    fn on<QuoteC>(self) -> Result<Self::Output, Self::Error>
+    where
+        QuoteC: 'static + Currency + DeserializeOwned + Serialize,
+    {
+        Ok(PriceForCurrency::<QuoteC>::cmd(
+            self.deps.storage,
+            self.base,
+            self.parameters,
+        )?)
+    }
+    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+        Err(ContractError::UnknownCurrency {})
+    }
+}
+
+// -----------------------  trait definition ---------------------------
 
 #[cfg(test)]
 mod tests {
