@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
+    convert::TryInto,
     marker::PhantomData,
 };
 
@@ -75,8 +76,9 @@ impl Feeds {
         C: Currency,
         QuoteC: Currency,
     {
-        let calculated_price = Self::MARKET_PRICE.get::<C, QuoteC>(storage, parameters)?;
-        Ok(calculated_price.try_into()?)
+        Ok(Self::MARKET_PRICE
+            .get::<C, QuoteC>(storage, parameters)?
+            .try_into()?)
     }
 
     pub fn feed_prices(

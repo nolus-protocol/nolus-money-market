@@ -30,6 +30,15 @@ impl Parameters {
             block_time,
         }
     }
+    pub fn block_time(&self) -> Timestamp {
+        self.block_time
+    }
+    pub fn feeders(&self) -> usize {
+        self.required_feeders_cnt
+    }
+    pub fn period(&self) -> Duration {
+        self.price_feed_period
+    }
 }
 
 /// Errors returned from Admin
@@ -93,13 +102,7 @@ impl<'m> PriceFeeds<'m> {
 
         let mut resolution_path = DenomResolutionPath::new();
         // find a path from Denom 1 to Denom 2
-        let result = self.find_price::<C, QuoteC>(
-            storage,
-            parameters.block_time,
-            parameters.price_feed_period,
-            parameters.required_feeders_cnt,
-            &mut resolution_path,
-        )?;
+        let result = self.find_price::<C, QuoteC>(storage, parameters, &mut resolution_path)?;
         resolution_path.push(result);
         resolution_path.reverse();
         println!("Resolution path {:?}", resolution_path);
@@ -109,9 +112,7 @@ impl<'m> PriceFeeds<'m> {
     pub fn find_price<C, QuoteC>(
         &self,
         storage: &dyn Storage,
-        current_block_time: Timestamp,
-        price_feed_period: Duration,
-        required_feeders_cnt: usize,
+        parameters: Parameters,
         resolution_path: &mut DenomResolutionPath,
     ) -> Result<Observation, PriceFeedsError>
     where
@@ -126,11 +127,7 @@ impl<'m> PriceFeeds<'m> {
         match res {
             Ok(last_feed) => {
                 // there is a price record for denom pair base to denom pair quote => return price
-                let price = last_feed.get_price(
-                    current_block_time,
-                    price_feed_period,
-                    required_feeders_cnt,
-                )?;
+                let price = last_feed.get_price(parameters)?;
                 Ok(price)
             }
             Err(err) => {
@@ -141,14 +138,10 @@ impl<'m> PriceFeeds<'m> {
                     err
                 );
                 // Try to find transitive path
-                if let Ok(Some(q)) = self.search_for_path::<C, QuoteC>(
-                    storage,
-                    current_block_time,
-                    price_feed_period,
-                    required_feeders_cnt,
-                    resolution_path,
-                ) {
-                    let observation = q.1.get_price(current_block_time, price_feed_period, 1)?;
+                if let Ok(Some(q)) =
+                    self.search_for_path::<C, QuoteC>(storage, parameters, resolution_path)
+                {
+                    let observation = q.1.get_price(parameters)?;
                     let price = observation.price();
                     assert_eq!(C::SYMBOL, price.base().symbol());
                     assert_eq!(q.0, price.quote().symbol().to_owned());
@@ -162,9 +155,7 @@ impl<'m> PriceFeeds<'m> {
     fn search_for_path<C, QuoteC>(
         &self,
         storage: &dyn Storage,
-        current_block_time: Timestamp,
-        price_feed_period: Duration,
-        required_feeders_cnt: usize,
+        parameters: Parameters,
         resolution_path: &mut DenomResolutionPath,
     ) -> Result<Option<(String, PriceFeed)>, PriceFeedsError>
     where
@@ -179,13 +170,9 @@ impl<'m> PriceFeeds<'m> {
             .collect();
 
         for current_quote in quotes? {
-            if let Ok(observation) = self.find_price::<C, QuoteC>(
-                storage,
-                current_block_time,
-                price_feed_period,
-                required_feeders_cnt,
-                resolution_path,
-            ) {
+            if let Ok(observation) =
+                self.find_price::<C, QuoteC>(storage, parameters, resolution_path)
+            {
                 resolution_path.push(observation);
                 return Ok(Some(current_quote));
             };

@@ -5,7 +5,7 @@ use finance::price::PriceDTO;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::market_price::PriceFeedsError;
+use crate::market_price::{Parameters, PriceFeedsError};
 use finance::duration::Duration;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -50,12 +50,7 @@ impl PriceFeed {
     // provide no price for a pair if there are no feeds from at least configurable percentage * <number_of_whitelisted_feeders>
     // in a configurable period T in seconds
     // provide the last price for a requested pair unless the previous condition is met.
-    pub fn get_price(
-        &self,
-        time_now: Timestamp,
-        price_feed_period: Duration,
-        required_feeders_cnt: usize,
-    ) -> Result<Observation, PriceFeedsError> {
+    pub fn get_price(&self, parameters: Parameters) -> Result<Observation, PriceFeedsError> {
         let res = self.observations.last().cloned();
         let last_feed = match res {
             Some(f) => f,
@@ -63,11 +58,11 @@ impl PriceFeed {
         };
 
         // check if last reported feed is older than the required refresh time
-        if PriceFeed::is_old_feed(time_now, last_feed.time, price_feed_period) {
+        if PriceFeed::is_old_feed(parameters.block_time(), last_feed.time, parameters.period()) {
             return Err(PriceFeedsError::NoPrice {});
         }
 
-        if !self.has_enough_feeders(required_feeders_cnt) {
+        if !self.has_enough_feeders(parameters.feeders()) {
             return Err(PriceFeedsError::NoPrice {});
         }
 
