@@ -41,7 +41,7 @@ add_wasm_messages() {
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "oracle" "$((++id))" "$admin_addr" "" "" "$oracle_init_msg"
   _export_to_file  "oracle" "$ORACLE_ADDRESS" "$contracts_info_file"
 
-  local -r leaser_init_msg='{"lease_code_id":"'$LEASE_CODE_ID'","lease_interest_rate_margin":300,"liability":{"healthy_percent":700,"init_percent":650,"max_percent":800,"first_liq_warn":720,"second_liq_warn":750,"third_liq_warn":780,"recalc_secs":7200},"lpp_ust_addr":"'$LPP_ADDRESS'","time_alarms":"'$TIMEALARMS_ADDRESS'","market_price_oracle":"'$ORACLE_ADDRESS'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'
+  local -r leaser_init_msg='{"lease_code_id":"'$LEASE_CODE_ID'","lease_interest_rate_margin":30,"liability":{"healthy_percent":700,"init_percent":650,"max_percent":800,"first_liq_warn":720,"second_liq_warn":750,"third_liq_warn":780,"recalc_secs":7200},"lpp_ust_addr":"'$LPP_ADDRESS'","time_alarms":"'$TIMEALARMS_ADDRESS'","market_price_oracle":"'$ORACLE_ADDRESS'","repayment":{"grace_period_sec":864000,"period_sec":5184000}}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "leaser" "$((++id))"  "$admin_addr" "" "" "$leaser_init_msg"
   _export_to_file  "leaser" "$LEASER_ADDRESS" "$contracts_info_file"
 
