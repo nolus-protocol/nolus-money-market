@@ -1,16 +1,13 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    ensure, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Response,
-};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Response};
 use cw2::set_contract_version;
 
 use platform::{bank::BankStub, batch::Emitter};
 
-use crate::contract::alarms::time::TimeAlarm;
 use crate::{
     contract::{
-        alarms::{price::PriceAlarm, AlarmResult},
+        alarms::{price::PriceAlarm, time::TimeAlarm, AlarmResult},
         open::OpenLoanReqResult,
     },
     error::{ContractError, ContractResult},
@@ -64,14 +61,10 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
 
     let downpayment = DownpaymentDTO::remove(deps.storage)?;
 
-    let id = ReplyId::try_from(msg.id);
+    let id = ReplyId::try_from(msg.id)
+        .map_err(|_| ContractError::InvalidParameters("Invalid reply ID passed!".into()))?;
 
-    ensure!(
-        id.is_ok(),
-        ContractError::InvalidParameters("Invalid reply ID passed!".into())
-    );
-
-    match id.unwrap() {
+    match id {
         ReplyId::OpenLoanReq => {
             let emitter = lease::execute(
                 lease,
