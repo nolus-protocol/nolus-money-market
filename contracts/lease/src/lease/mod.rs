@@ -184,7 +184,7 @@ where
                     previous_interest_due: state.previous_interest_due,
                     current_margin_due: state.current_margin_interest_due,
                     current_interest_due: state.current_interest_due,
-                    validity: now
+                    validity: now,
                 })
             })
         }
