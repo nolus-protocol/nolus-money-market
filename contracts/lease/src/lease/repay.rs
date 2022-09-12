@@ -5,6 +5,7 @@ use finance::{coin::Coin, currency::Currency};
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
+use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractResult,
@@ -12,10 +13,11 @@ use crate::{
     loan::RepayReceipt,
 };
 
-impl<Lpn, Lpp, Oracle> Lease<Lpn, Lpp, Oracle>
+impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
+    TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
 {
     pub(crate) fn repay(

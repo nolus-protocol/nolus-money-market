@@ -13,6 +13,7 @@ pub struct InstantiateMsg {
     pub lease_interest_rate_margin: Percent, // LeaseInterestRateMargin%, for example 3%
     pub liability: Liability,                // LeaseMaxLiability%, for example 80%
     pub repayment: Repayment,                // GracePeriodSec, for example 10 days = 10*24*60*60
+    pub time_alarms: Addr,
     pub market_price_oracle: Addr,
 }
 

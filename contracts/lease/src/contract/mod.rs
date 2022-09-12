@@ -1,16 +1,13 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    ensure, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Response,
-};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Response};
 use cw2::set_contract_version;
 
-use finance::price::PriceDTO;
 use platform::{bank::BankStub, batch::Emitter};
 
 use crate::{
     contract::{
-        alarms::{price::PriceAlarm, LiquidationResult},
+        alarms::{price::PriceAlarm, time::TimeAlarm, AlarmResult},
         open::OpenLoanReqResult,
     },
     error::{ContractError, ContractResult},
@@ -64,14 +61,10 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
 
     let downpayment = DownpaymentDTO::remove(deps.storage)?;
 
-    let id = ReplyId::try_from(msg.id);
+    let id = ReplyId::try_from(msg.id)
+        .map_err(|_| ContractError::InvalidParameters("Invalid reply ID passed!".into()))?;
 
-    ensure!(
-        id.is_ok(),
-        ContractError::InvalidParameters("Invalid reply ID passed!".into())
-    );
-
-    match id.unwrap() {
+    match id {
         ReplyId::OpenLoanReq => {
             let emitter = lease::execute(
                 lease,
@@ -105,11 +98,21 @@ pub fn execute(
             Ok(emitter.into())
         }
         ExecuteMsg::Close() => try_close(&deps.querier, &env, account, info, lease).map(Into::into),
-        ExecuteMsg::PriceAlarm { price } => {
-            let LiquidationResult {
+        ExecuteMsg::PriceAlarm() => {
+            let AlarmResult {
                 response,
                 lease_dto: lease,
-            } = try_on_price_alarm(&deps.querier, &env, account, info, lease, price)?;
+            } = try_on_price_alarm(&deps.querier, &env, account, info, lease)?;
+
+            lease.store(deps.storage)?;
+
+            Ok(response)
+        }
+        ExecuteMsg::TimeAlarm() => {
+            let AlarmResult {
+                response,
+                lease_dto: lease,
+            } = try_on_time_alarm(&deps.querier, &env, account, info, lease)?;
 
             lease.store(deps.storage)?;
 
@@ -169,8 +172,7 @@ fn try_on_price_alarm(
     account: BankStub,
     info: MessageInfo,
     lease: LeaseDTO,
-    price: PriceDTO,
-) -> ContractResult<LiquidationResult> {
+) -> ContractResult<AlarmResult> {
     lease::execute(
         lease,
         PriceAlarm::new(
@@ -178,7 +180,25 @@ fn try_on_price_alarm(
             env.contract.address.clone(),
             account,
             env.block.time,
-            price,
+        ),
+        querier,
+    )
+}
+
+fn try_on_time_alarm(
+    querier: &QuerierWrapper,
+    env: &Env,
+    account: BankStub,
+    info: MessageInfo,
+    lease: LeaseDTO,
+) -> ContractResult<AlarmResult> {
+    lease::execute(
+        lease,
+        TimeAlarm::new(
+            &info.sender,
+            env.contract.address.clone(),
+            account,
+            env.block.time,
         ),
         querier,
     )

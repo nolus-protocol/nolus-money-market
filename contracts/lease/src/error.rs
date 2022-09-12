@@ -5,6 +5,7 @@ use finance::error::Error as FinanceError;
 use lpp::error::ContractError as LppError;
 use market_price_oracle::error::ContractError as OracleError;
 use platform::error::Error as PlatformError;
+use time_alarms::error::ContractError as TimeAlarmsError;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -22,6 +23,9 @@ pub enum ContractError {
 
     #[error("{0}")]
     LppError(#[from] LppError),
+
+    #[error("{0}")]
+    TimeAlarmsError(#[from] TimeAlarmsError),
 
     #[error("{0}")]
     OracleError(#[from] OracleError),

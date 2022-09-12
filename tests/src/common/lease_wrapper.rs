@@ -122,6 +122,7 @@ impl LeaseWrapper {
                 interest_due_period_secs: config.interest_due_period_secs,
                 grace_period_secs: config.grace_period_secs,
             },
+            time_alarms: addresses.time_alarms,
             market_price_oracle: addresses.oracle,
         }
     }
@@ -140,6 +141,7 @@ impl Default for LeaseWrapper {
 #[derive(Debug, Clone)]
 pub struct LeaseWrapperAddresses {
     pub lpp: Addr,
+    pub time_alarms: Addr,
     pub oracle: Addr,
 }
 

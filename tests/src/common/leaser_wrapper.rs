@@ -1,7 +1,11 @@
 use cosmwasm_std::{Addr, Uint64};
 use cw_multi_test::Executor;
 
-use finance::{duration::Duration, liability::Liability, percent::Percent};
+use finance::{
+    duration::{Duration, Units as DurationUnits},
+    liability::Liability,
+    percent::Percent,
+};
 use leaser::{
     contract::{execute, instantiate, query, reply},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg, Repayment},
@@ -18,9 +22,13 @@ pub struct LeaserWrapper {
 impl LeaserWrapper {
     pub const INTEREST_RATE_MARGIN: Percent = Percent::from_permille(30);
 
-    pub const REPAYMENT_PERIOD_SECS: u32 = 90 * 24 * 60 * 60;
+    pub const REPAYMENT_PERIOD: Duration = Duration::from_days(90);
 
-    pub const REPAYMENT_PERIOD: Duration = Duration::from_secs(Self::REPAYMENT_PERIOD_SECS);
+    pub const REPAYMENT_PERIOD_SECS: DurationUnits = Self::REPAYMENT_PERIOD.secs();
+
+    pub const GRACE_PERIOD: Duration = Duration::from_days(10);
+
+    pub const GRACE_PERIOD_SECS: DurationUnits = Self::GRACE_PERIOD.secs();
 
     pub fn liability() -> Liability {
         Liability::new(
@@ -40,6 +48,7 @@ impl LeaserWrapper {
         app: &mut MockApp,
         lease_code_id: u64,
         lpp_addr: &Addr,
+        time_alarms: Addr,
         market_price_oracle: Addr,
     ) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
@@ -48,7 +57,11 @@ impl LeaserWrapper {
             lpp_ust_addr: lpp_addr.clone(),
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
             liability: Self::liability(),
-            repayment: Repayment::new(Self::REPAYMENT_PERIOD_SECS, 10 * 24 * 60 * 60),
+            repayment: Repayment::new(
+                Self::REPAYMENT_PERIOD_SECS.try_into().unwrap(),
+                Self::GRACE_PERIOD_SECS.try_into().unwrap(),
+            ),
+            time_alarms,
             market_price_oracle,
         };
 

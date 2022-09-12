@@ -320,7 +320,7 @@ fn open_lease_impl(currency: SymbolStatic) {
 
     let lpp_addr: &str = test_case.lpp_addr.as_ref().unwrap().as_str(); // 0
 
-    let _time_alarms_addr: &str = test_case.timealarms.as_ref().unwrap().as_str(); // 1
+    let time_alarms_addr: &str = test_case.timealarms.as_ref().unwrap().as_str(); // 1
 
     let _oracle_addr: &str = test_case.oracle.as_ref().unwrap().as_str(); // 2
 
@@ -344,12 +344,11 @@ fn open_lease_impl(currency: SymbolStatic) {
     // ensure the attributes were relayed from the sub-message
     assert_eq!(
         res.events.len(),
-        9 // TODO: Add test cases which are with currency different than LPN and uncomment section
-          // if currency == TheCurrency::SYMBOL {
-          //     9
-          // } else {
-          //     11
-          // }
+        // TODO: Add test cases which are with currency different than LPN and uncomment section
+        // if currency == TheCurrency::SYMBOL {
+        10 // } else {
+           //     11
+           // }
     );
 
     // reflect only returns standard wasm-execute event
@@ -466,6 +465,13 @@ fn open_lease_impl(currency: SymbolStatic) {
     //         ]
     //     );
     // }
+
+    let leaser_reply = res.events.remove(0);
+    assert_eq!(leaser_reply.ty.as_str(), "execute");
+    assert_eq!(
+        leaser_reply.attributes,
+        [("_contract_addr", time_alarms_addr),]
+    );
 
     let leaser_reply = res.events.remove(0);
     assert_eq!(leaser_reply.ty.as_str(), "reply");

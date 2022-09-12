@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Gancho Manev <g.manev@nolus.io>"]
 edition = "2021"
 
+[features]
+testing = []
+
 [dependencies]
 cosmwasm-std = "1.0.0"
 serde = { version = "1.0", default-features = false }

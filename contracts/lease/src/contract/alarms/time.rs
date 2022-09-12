@@ -13,7 +13,7 @@ use crate::{
     lease::{Lease, OnAlarmResult, WithLease},
 };
 
-pub struct PriceAlarm<'a, B>
+pub struct TimeAlarm<'a, B>
 where
     B: BankAccountView,
 {
@@ -23,7 +23,7 @@ where
     now: Timestamp,
 }
 
-impl<'a, B> PriceAlarm<'a, B>
+impl<'a, B> TimeAlarm<'a, B>
 where
     B: BankAccountView,
 {
@@ -37,7 +37,7 @@ where
     }
 }
 
-impl<'a, B> WithLease for PriceAlarm<'a, B>
+impl<'a, B> WithLease for TimeAlarm<'a, B>
 where
     B: BankAccountView,
 {
@@ -55,7 +55,7 @@ where
         TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
     {
-        if !lease.sent_by_oracle(self.sender) {
+        if !lease.sent_by_time_alarms(self.sender) {
             return Err(Self::Error::Unauthorized {});
         }
 
@@ -63,7 +63,7 @@ where
             batch,
             lease_dto,
             liquidation_status,
-        } = lease.on_price_alarm(self.now, &self.account, self.lease.clone())?;
+        } = lease.on_time_alarm(self.now, &self.account, self.lease.clone())?;
 
         Ok(AlarmResult {
             response: emit_events(&liquidation_status, batch),
