@@ -140,7 +140,7 @@ where
             lease_asset: self.currency.clone(),
         };
 
-        Ok(if liquidation_amount == lease_lpn {
+        Ok(if liquidation_lpn == lease_lpn {
             Status::FullLiquidation(info)
         } else {
             Status::PartialLiquidation {
