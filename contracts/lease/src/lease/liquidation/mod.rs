@@ -1,9 +1,11 @@
+use std::marker::PhantomData;
+
 use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
 use finance::{
     coin::Coin,
-    currency::{Currency, SymbolOwned},
+    currency::Currency,
     fraction::Fraction,
     percent::{Percent, Units},
     price::{total, Price},
@@ -20,20 +22,21 @@ use super::LeaseDTO;
 
 mod alarm;
 
-impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
+impl<Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
+    Asset: Currency + Serialize,
 {
     fn liquidate_on_interest_overdue(
         &self,
         now: Timestamp,
         lease: Addr,
-        lease_amount: Coin<Lpn>,
-        price_to_lpn: Price<Lpn, Lpn>,
-    ) -> ContractResult<Status<Lpn>> {
+        lease_amount: Coin<Asset>,
+        price_to_lpn: Price<Asset, Lpn>,
+    ) -> ContractResult<Status<Asset>> {
         let lease_lpn = total(lease_amount, price_to_lpn);
 
         let LiabilityStatus {
@@ -52,9 +55,9 @@ where
         &self,
         now: Timestamp,
         lease: Addr,
-        lease_amount: Coin<Lpn>,
-        price_to_lpn: Price<Lpn, Lpn>,
-    ) -> ContractResult<Status<Lpn>> {
+        lease_amount: Coin<Asset>,
+        price_to_lpn: Price<Asset, Lpn>,
+    ) -> ContractResult<Status<Asset>> {
         let lease_lpn = total(lease_amount, price_to_lpn);
 
         let LiabilityStatus { ltv, total_lpn, .. } =
@@ -67,7 +70,7 @@ where
         }
     }
 
-    fn handle_warnings(&self, liability: Percent) -> Status<Lpn> {
+    fn handle_warnings(&self, liability: Percent) -> Status<Asset> {
         debug_assert!(liability < self.liability.max_percent());
 
         if liability < self.liability.first_liq_warn_percent() {
@@ -86,22 +89,15 @@ where
             (self.liability.first_liq_warn_percent(), WarningLevel::First)
         };
 
-        Status::Warning(
-            LeaseInfo {
-                customer: self.customer.clone(),
-                ltv,
-                lease_asset: self.currency.clone(),
-            },
-            level,
-        )
+        Status::Warning(LeaseInfo::new(self.customer.clone(), ltv), level)
     }
 
     fn liquidate_on_liability(
         &self,
         lease_lpn: Coin<Lpn>,
         liability_lpn: Coin<Lpn>,
-        price_from_lpn: Price<Lpn, Lpn>,
-    ) -> ContractResult<Status<Lpn>> {
+        price_from_lpn: Price<Lpn, Asset>,
+    ) -> ContractResult<Status<Asset>> {
         // from 'liability - liquidation = healthy% of (lease - liquidation)' follows
         // 'liquidation = 100% / (100% - healthy%) of (liability - healthy% of lease)'
         let multiplier = Rational::new(
@@ -128,17 +124,13 @@ where
         lease_lpn: Coin<Lpn>,
         liquidation_lpn: Coin<Lpn>,
         ltv: Percent,
-        price_from_lpn: Price<Lpn, Lpn>,
-    ) -> ContractResult<Status<Lpn>> {
+        price_from_lpn: Price<Lpn, Asset>,
+    ) -> ContractResult<Status<Asset>> {
         // TODO perform actual liquidation
 
         let liquidation_amount = total(liquidation_lpn, price_from_lpn);
 
-        let info = LeaseInfo {
-            customer: self.customer.clone(),
-            ltv,
-            lease_asset: self.currency.clone(),
-        };
+        let info = LeaseInfo::new(self.customer.clone(), ltv);
 
         Ok(if liquidation_lpn == lease_lpn {
             Status::FullLiquidation(info)
@@ -162,25 +154,41 @@ where
 }
 
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-pub(crate) enum Status<Lpn>
+pub(crate) enum Status<Asset>
 where
-    Lpn: Currency,
+    Asset: Currency,
 {
     None,
-    Warning(LeaseInfo, WarningLevel),
+    Warning(LeaseInfo<Asset>, WarningLevel),
     PartialLiquidation {
-        _info: LeaseInfo,
+        _info: LeaseInfo<Asset>,
         _healthy_ltv: Percent,
-        liquidation_amount: Coin<Lpn>,
+        liquidation_amount: Coin<Asset>,
     },
-    FullLiquidation(LeaseInfo),
+    FullLiquidation(LeaseInfo<Asset>),
 }
 
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-pub(crate) struct LeaseInfo {
+pub(crate) struct LeaseInfo<Asset>
+where
+    Asset: Currency,
+{
     pub customer: Addr,
     pub ltv: Percent,
-    pub lease_asset: SymbolOwned,
+    _asset: PhantomData<Asset>,
+}
+
+impl<Asset> LeaseInfo<Asset>
+where
+    Asset: Currency,
+{
+    pub fn new(customer: Addr, ltv: Percent) -> Self {
+        Self {
+            customer,
+            ltv,
+            _asset: PhantomData,
+        }
+    }
 }
 
 generate_ids! {
@@ -201,13 +209,12 @@ impl WarningLevel {
 mod tests {
     use cosmwasm_std::{Addr, Timestamp};
 
+    use finance::percent::Percent;
     use finance::price::Price;
-    use finance::{currency::Currency, percent::Percent};
     use lpp::msg::LoanResponse;
 
     use crate::{
         lease::{
-            tests::TestCurrency,
             tests::{coin, lease_setup, LEASE_START},
             LeaseInfo, Status, WarningLevel,
         },
@@ -259,11 +266,10 @@ mod tests {
         assert_eq!(
             lease.handle_warnings(lease.liability.first_liq_warn_percent()),
             Status::Warning(
-                LeaseInfo {
-                    customer: lease.customer.clone(),
-                    ltv: lease.liability.first_liq_warn_percent(),
-                    lease_asset: TestCurrency::SYMBOL.into(),
-                },
+                LeaseInfo::new(
+                    lease.customer.clone(),
+                    lease.liability.first_liq_warn_percent(),
+                ),
                 WarningLevel::First,
             )
         );
@@ -290,11 +296,10 @@ mod tests {
         assert_eq!(
             lease.handle_warnings(lease.liability.second_liq_warn_percent()),
             Status::Warning(
-                LeaseInfo {
-                    customer: lease.customer.clone(),
-                    ltv: lease.liability.second_liq_warn_percent(),
-                    lease_asset: TestCurrency::SYMBOL.into(),
-                },
+                LeaseInfo::new(
+                    lease.customer.clone(),
+                    lease.liability.second_liq_warn_percent(),
+                ),
                 WarningLevel::Second,
             )
         );
@@ -321,11 +326,10 @@ mod tests {
         assert_eq!(
             lease.handle_warnings(lease.liability.third_liq_warn_percent()),
             Status::Warning(
-                LeaseInfo {
-                    customer: lease.customer.clone(),
-                    ltv: lease.liability.third_liq_warn_percent(),
-                    lease_asset: TestCurrency::SYMBOL.into(),
-                },
+                LeaseInfo::new(
+                    lease.customer.clone(),
+                    lease.liability.third_liq_warn_percent(),
+                ),
                 WarningLevel::Third,
             )
         );
@@ -384,11 +388,7 @@ mod tests {
                 .liquidate_on_liability(coin(lease_amount), coin(800), Price::identity())
                 .unwrap(),
             Status::PartialLiquidation {
-                _info: LeaseInfo {
-                    customer: Addr::unchecked("customer"),
-                    ltv: lease.liability.max_percent(),
-                    lease_asset: TestCurrency::SYMBOL.into(),
-                },
+                _info: LeaseInfo::new(Addr::unchecked("customer"), lease.liability.max_percent(),),
                 _healthy_ltv: lease.liability.healthy_percent(),
                 liquidation_amount: coin(333),
             }
@@ -417,11 +417,10 @@ mod tests {
             lease
                 .liquidate_on_liability(coin(lease_amount), coin(5000), Price::identity())
                 .unwrap(),
-            Status::FullLiquidation(LeaseInfo {
-                customer: Addr::unchecked("customer"),
-                ltv: lease.liability.max_percent(),
-                lease_asset: TestCurrency::SYMBOL.into(),
-            },)
+            Status::FullLiquidation(LeaseInfo::new(
+                Addr::unchecked("customer"),
+                lease.liability.max_percent(),
+            ))
         );
     }
 }

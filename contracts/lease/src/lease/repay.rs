@@ -1,6 +1,7 @@
 use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
+use finance::price::{total, Price};
 use finance::{coin::Coin, currency::Currency};
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
@@ -13,23 +14,26 @@ use crate::{
     loan::RepayReceipt,
 };
 
-impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
+impl<Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
+    Asset: Currency + Serialize,
 {
     pub(crate) fn repay(
         mut self,
-        lease_amount: Coin<Lpn>,
-        payment: Coin<Lpn>,
+        lease_amount: Coin<Asset>,
+        payment: Coin<Asset>,
         now: Timestamp,
         lease: Addr,
     ) -> ContractResult<Result<Lpn>> {
-        assert_eq!(self.currency, Lpn::SYMBOL);
+        // TODO perform swap
+        assert_eq!(Asset::SYMBOL, Lpn::SYMBOL);
+        let payment_lpn = total(payment, Price::identity());
 
-        let receipt = self.loan.repay(payment, now, lease.clone())?;
+        let receipt = self.loan.repay(payment_lpn, now, lease.clone())?;
 
         self.reschedule_on_repay(lease, lease_amount, &now)?;
 
