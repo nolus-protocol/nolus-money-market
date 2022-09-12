@@ -40,7 +40,12 @@ where
             ltv, overdue_lpn, ..
         } = self.loan.liability_status(now, lease, lease_lpn)?;
 
-        self.liquidate(lease_lpn.min(overdue_lpn), ltv, price_to_lpn.inv())
+        self.liquidate(
+            lease_lpn,
+            lease_lpn.min(overdue_lpn),
+            ltv,
+            price_to_lpn.inv(),
+        )
     }
 
     fn act_on_liability(
@@ -110,10 +115,21 @@ where
             extra_liability_lpn,
         ));
 
-        self.liquidate(liquidation_lpn, self.liability.max_percent(), price_from_lpn)
+        self.liquidate(
+            lease_lpn,
+            liquidation_lpn,
+            self.liability.max_percent(),
+            price_from_lpn,
+        )
     }
 
-    fn liquidate(&self, liquidation_lpn: Coin<Lpn>, ltv: Percent, price_from_lpn: Price<Lpn, Lpn>) -> ContractResult<Status<Lpn>> {
+    fn liquidate(
+        &self,
+        lease_lpn: Coin<Lpn>,
+        liquidation_lpn: Coin<Lpn>,
+        ltv: Percent,
+        price_from_lpn: Price<Lpn, Lpn>,
+    ) -> ContractResult<Status<Lpn>> {
         // TODO perform actual liquidation
 
         let liquidation_amount = total(liquidation_lpn, price_from_lpn);
