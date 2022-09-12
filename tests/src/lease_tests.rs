@@ -24,12 +24,12 @@ fn create_coin(amount: u128) -> TheCoin {
 }
 
 fn create_test_case() -> TestCase {
-    let mut test_case = TestCase::with_reserve(DENOM, 10_000_000_000);
+    let mut test_case = TestCase::with_reserve(DENOM, 10_000_000_000_000_000_000_000_000_000);
     test_case.init(
         &Addr::unchecked("user"),
-        vec![to_cosmwasm(create_coin(1_000_000))],
+        vec![to_cosmwasm(create_coin(1_000_000_000_000_000_000_000_000))],
     );
-    test_case.init_lpp_with_funds(None, 5_000_000_000);
+    test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000);
     test_case.init_timealarms_with_funds(5_000_000);
     test_case.init_oracle_with_funds(None, 5_000_000);
     test_case.init_leaser();
