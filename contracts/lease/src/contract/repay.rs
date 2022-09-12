@@ -51,20 +51,21 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, TimeAlarms, Oracle>(
+    fn exec<Lpn, Lpp, TimeAlarms, Oracle, Asset>(
         self,
-        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle>,
+        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
         TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
+        Asset: Currency + Serialize,
     {
         // TODO 'receive' the payment from the bank using any currency it might be in
-        let payment = bank::received::<Lpn>(self.payment)?;
+        let payment = bank::received::<Asset>(self.payment)?;
 
-        let lease_amount = self.account.balance::<Lpn>()? - payment;
+        let lease_amount = self.account.balance::<Asset>()? - payment;
 
         let LeaseRepayResult {
             batch,
