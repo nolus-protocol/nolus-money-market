@@ -40,27 +40,7 @@ where
             ltv, overdue_lpn, ..
         } = self.loan.liability_status(now, lease, lease_lpn)?;
 
-        let liquidation_lpn = lease_lpn.min(overdue_lpn);
-
-        self.liquidate(liquidation_lpn)?;
-
-        let liquidation_amount = total(liquidation_lpn, price_to_lpn.inv());
-
-        let info = LeaseInfo {
-            customer: self.customer.clone(),
-            ltv,
-            lease_asset: self.currency.clone(),
-        };
-
-        Ok(if liquidation_lpn == lease_lpn {
-            Status::FullLiquidation(info)
-        } else {
-            Status::PartialLiquidation {
-                _info: info,
-                _healthy_ltv: self.liability.healthy_percent(),
-                liquidation_amount,
-            }
-        })
+        self.liquidate(lease_lpn.min(overdue_lpn), ltv, price_to_lpn.inv())
     }
 
     fn act_on_liability(
@@ -130,13 +110,17 @@ where
             extra_liability_lpn,
         ));
 
-        self.liquidate(liquidation_lpn)?;
+        self.liquidate(liquidation_lpn, self.liability.max_percent(), price_from_lpn)
+    }
+
+    fn liquidate(&self, liquidation_lpn: Coin<Lpn>, ltv: Percent, price_from_lpn: Price<Lpn, Lpn>) -> ContractResult<Status<Lpn>> {
+        // TODO perform actual liquidation
 
         let liquidation_amount = total(liquidation_lpn, price_from_lpn);
 
         let info = LeaseInfo {
             customer: self.customer.clone(),
-            ltv: self.liability.max_percent(),
+            ltv,
             lease_asset: self.currency.clone(),
         };
 
@@ -149,12 +133,6 @@ where
                 liquidation_amount,
             }
         })
-    }
-
-    fn liquidate(&self, _liquidation_lpn: Coin<Lpn>) -> ContractResult<()> {
-        // TODO perform actual liquidation
-
-        Ok(())
     }
 }
 
