@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use serde::Serialize;
 
@@ -39,15 +41,16 @@ pub trait WithLease {
     type Output;
     type Error;
 
-    fn exec<Lpn, Lpp, TimeAlarms, Oracle>(
+    fn exec<Lpn, Lpp, TimeAlarms, Oracle, Asset>(
         self,
-        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle>,
+        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
         TimeAlarms: TimeAlarmsTrait,
-        Oracle: OracleTrait<Lpn>;
+        Oracle: OracleTrait<Lpn>,
+        Asset: Currency + Serialize;
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
 }
@@ -61,13 +64,13 @@ where
     lpp.execute(Factory::new(cmd, dto, querier), querier)
 }
 
-pub struct Lease<Lpn, Lpp, TimeAlarms, Oracle> {
+pub struct Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset> {
     customer: Addr,
-    currency: SymbolOwned,
     liability: Liability,
     loan: Loan<Lpn, Lpp>,
     time_alarms: TimeAlarms,
     oracle: Oracle,
+    _asset: PhantomData<Asset>,
 }
 
 impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>

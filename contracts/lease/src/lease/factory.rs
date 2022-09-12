@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
 use cosmwasm_std::QuerierWrapper;
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 
-use finance::currency::{Currency, SymbolOwned};
+use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
 use lpp::stub::{Lpp as LppTrait, WithLpp};
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
 use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef, WithTimeAlarms};
@@ -112,15 +112,57 @@ where
     where
         Oracle: OracleTrait<Lpn>,
     {
-        self.cmd.exec(Lease::from_dto(
-            self.lease_dto,
-            self.lpp,
-            self.time_alarms,
-            oracle,
-        ))
+        visit_any(
+            &self.lease_dto.currency.clone(),
+            FactoryStage4 {
+                cmd: self.cmd,
+                lease_dto: self.lease_dto,
+                _lpn: PhantomData,
+                lpp: self.lpp,
+                time_alarms: self.time_alarms,
+                oracle,
+            },
+        )
     }
 
     fn unexpected_base(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
         self.cmd.unknown_lpn(symbol)
+    }
+}
+
+struct FactoryStage4<L, Lpn, Lpp, TimeAlarms, Oracle> {
+    cmd: L,
+    _lpn: PhantomData<Lpn>,
+    lease_dto: LeaseDTO,
+    lpp: Lpp,
+    time_alarms: TimeAlarms,
+    oracle: Oracle,
+}
+
+impl<L, Lpn, Lpp, TimeAlarms, Oracle> AnyVisitor for FactoryStage4<L, Lpn, Lpp, TimeAlarms, Oracle>
+where
+    L: WithLease,
+    Lpn: Currency + Serialize,
+    Lpp: LppTrait<Lpn>,
+    TimeAlarms: TimeAlarmsTrait,
+    Oracle: OracleTrait<Lpn>,
+{
+    type Output = L::Output;
+    type Error = L::Error;
+
+    fn on<C>(self) -> Result<Self::Output, Self::Error>
+    where
+        C: 'static + Currency + Serialize + DeserializeOwned,
+    {
+        self.cmd.exec(Lease::<_, _, _, _, C>::from_dto(
+            self.lease_dto,
+            self.lpp,
+            self.time_alarms,
+            self.oracle,
+        ))
+    }
+
+    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+        self.cmd.unknown_lpn(self.lease_dto.currency)
     }
 }
