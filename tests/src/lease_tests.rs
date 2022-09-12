@@ -396,14 +396,14 @@ fn compare_state_with_manual_calculation() {
 
     let query_result = state_query(&test_case, &lease_address.into_string());
     let expected_result = StateResponse::Opened {
-        amount: quote_result.total.try_into().unwrap(),
+        amount: Coin::new(1_000_000 + 1_857_142),
         interest_rate: quote_result.annual_interest_rate,
         interest_rate_margin: quote_result.annual_interest_rate_margin,
-        principal_due: quote_result.borrow.try_into().unwrap(),
-        previous_margin_due: create_coin(13737),
-        previous_interest_due: create_coin(25643),
-        current_margin_due: create_coin(13737),
-        current_interest_due: create_coin(25643 + 1), // Test returns off by 1 from manual calculations
+        principal_due: Coin::new(1_857_142),
+        previous_margin_due: create_coin(13_737),
+        previous_interest_due: create_coin(25_643),
+        current_margin_due: create_coin(13_737),
+        current_interest_due: create_coin(25_644),
         validity: block_time(&test_case),
     };
 
