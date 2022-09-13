@@ -1,3 +1,5 @@
+use std::any::TypeId;
+
 use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
@@ -177,7 +179,7 @@ where
     where
         A: Into<Addr>,
     {
-        if Asset::SYMBOL == Lpn::SYMBOL {
+        if TypeId::of::<Asset>() == TypeId::of::<Lpn>() {
             return Ok(());
         }
 

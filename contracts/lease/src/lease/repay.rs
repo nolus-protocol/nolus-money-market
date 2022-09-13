@@ -1,3 +1,5 @@
+use std::any::TypeId;
+
 use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
@@ -30,7 +32,7 @@ where
         lease: Addr,
     ) -> ContractResult<Result<Lpn>> {
         // TODO perform swap
-        assert_eq!(Asset::SYMBOL, Lpn::SYMBOL);
+        assert_eq!(TypeId::of::<Asset>(), TypeId::of::<Lpn>());
         let payment_lpn = total(payment, Price::identity());
 
         let receipt = self.loan.repay(payment_lpn, now, lease.clone())?;

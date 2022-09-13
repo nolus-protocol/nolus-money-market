@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{any::TypeId, marker::PhantomData};
 
 use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use serde::Serialize;
@@ -195,7 +195,7 @@ where
     }
 
     fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
-        if Asset::SYMBOL == Lpn::SYMBOL {
+        if TypeId::of::<Asset>() == TypeId::of::<Lpn>() {
             Ok(Price::identity())
         } else {
             self.oracle
@@ -209,9 +209,10 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::marker::PhantomData;
+
     use cosmwasm_std::{wasm_execute, Addr, Timestamp};
     use serde::{Deserialize, Serialize};
-    use std::marker::PhantomData;
 
     use finance::{
         coin::Coin,
