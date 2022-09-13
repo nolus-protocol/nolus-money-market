@@ -69,10 +69,9 @@ impl<'m> PriceHooks<'m> {
         &self,
         storage: &mut dyn Storage,
         updated_prices: HashMap<SymbolOwned, PriceDTO>,
-    ) -> Result<Batch, AlarmError> {
+        batch: &mut Batch,
+    ) -> Result<(), AlarmError> {
         let affected_contracts: Vec<_> = self.get_affected(storage, updated_prices)?;
-
-        let mut batch = Batch::default();
 
         for (addr, alarm, _) in affected_contracts {
             let next_id = self.id_seq.next(storage)?;
@@ -87,7 +86,7 @@ impl<'m> PriceHooks<'m> {
                 .map_err(AlarmError::from)?;
         }
 
-        Ok(batch)
+        Ok(())
     }
 
     pub fn get_hook_denoms(&self, storage: &dyn Storage) -> StdResult<HashSet<SymbolOwned>> {

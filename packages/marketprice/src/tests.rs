@@ -7,8 +7,9 @@ use finance::coin::Coin;
 use finance::currency::{Currency, SymbolStatic};
 use finance::price::{self, Price, PriceDTO};
 
+use crate::error::PriceFeedsError;
 use crate::feeders::PriceFeeders;
-use crate::market_price::{Parameters, PriceFeeds, PriceFeedsError};
+use crate::market_price::{Parameters, PriceFeeds};
 use finance::duration::Duration;
 
 const MINUTE: Duration = Duration::from_secs(60);
@@ -76,8 +77,15 @@ fn marketprice_add_feed_expect_err() {
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
-    let query = Parameters::new(MINUTE, 50, ts);
-    let expected_err = market.get::<DEN1, DEN2>(&deps.storage, query).unwrap_err();
+    let params = Parameters::new(MINUTE, 50, ts);
+    let expected_err = market
+        .price(
+            &deps.storage,
+            params,
+            DEN1::SYMBOL.to_string(),
+            DEN2::SYMBOL.to_string(),
+        )
+        .unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
 }
 

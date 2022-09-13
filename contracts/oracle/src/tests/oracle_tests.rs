@@ -81,8 +81,8 @@ fn feed_indirect_price() {
     let res = query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::PriceFor {
-            currencies: HashSet::from([TestCurrencyA::SYMBOL.to_string()]),
+        QueryMsg::Price {
+            currency: TestCurrencyA::SYMBOL.to_string(),
         },
     )
     .unwrap();

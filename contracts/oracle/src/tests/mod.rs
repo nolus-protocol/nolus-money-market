@@ -55,10 +55,15 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
                 TestCurrencyC::SYMBOL.to_string(),
             ),
             (
+                TestCurrencyB::SYMBOL.to_string(),
+                TestCurrencyC::SYMBOL.to_string(),
+            ),
+            (
                 TestCurrencyC::SYMBOL.to_string(),
                 TestCurrencyD::SYMBOL.to_string(),
             ),
             (TestCurrencyA::SYMBOL.to_string(), Usdc::SYMBOL.to_string()),
+            (TestCurrencyB::SYMBOL.to_string(), Usdc::SYMBOL.to_string()),
             (TestCurrencyC::SYMBOL.to_string(), Usdc::SYMBOL.to_string()),
             (Nls::SYMBOL.to_string(), TestCurrencyD::SYMBOL.to_string()),
         ],

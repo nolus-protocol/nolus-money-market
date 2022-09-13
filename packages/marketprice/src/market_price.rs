@@ -1,15 +1,15 @@
-use std::convert::Infallible;
+use std::convert::TryFrom;
 
+use crate::error::PriceFeedsError;
 use crate::feed::{Observation, PriceFeed};
+use crate::WithQuote;
 use cosmwasm_std::{Addr, Order, StdError, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
 use finance::coin::Coin;
 use finance::currency::{Currency, SymbolOwned};
 use finance::duration::Duration;
 
-use thiserror::Error;
-
-use finance::price::{self, Price as FinPrice, PriceDTO};
+use finance::price::{self, PriceDTO};
 
 #[derive(Clone, Copy)]
 pub struct Parameters {
@@ -41,32 +41,7 @@ impl Parameters {
     }
 }
 
-/// Errors returned from Admin
-#[derive(Error, Debug, PartialEq)]
-pub enum PriceFeedsError {
-    #[error("{0}")]
-    Std(#[from] StdError),
-
-    #[error("Given address already registered as a price feeder")]
-    FeederAlreadyRegistered {},
-
-    #[error("Given address not registered as a price feeder")]
-    FeederNotRegistered {},
-
-    #[error("No price for pair")]
-    NoPrice {},
-
-    #[error("Found currency {0} expecting {1}")]
-    UnexpectedCurrency(String, String),
-    #[error("{0}")]
-    FromInfallible(#[from] Infallible),
-    #[error("{0}")]
-    Finance(#[from] finance::error::Error),
-    #[error("Unknown currency")]
-    UnknownCurrency {},
-}
-
-type DenomResolutionPath = Vec<Observation>;
+type DenomResolutionPath = Vec<PriceDTO>;
 pub struct PriceFeeds<'m>(Map<'m, (SymbolOwned, SymbolOwned), PriceFeed>);
 
 impl<'m> PriceFeeds<'m> {
@@ -74,155 +49,147 @@ impl<'m> PriceFeeds<'m> {
         PriceFeeds(Map::new(namespace))
     }
 
+    //TODO REMOVE
     pub fn get<C, QuoteC>(
         &self,
-        storage: &dyn Storage,
-        parameters: Parameters,
+        _storage: &dyn Storage,
+        _parameters: Parameters,
     ) -> Result<PriceDTO, PriceFeedsError>
     where
         C: Currency,
         QuoteC: Currency,
     {
-        // check if both currencies are the same
-        if C::SYMBOL.to_string().eq(&QuoteC::SYMBOL.to_string()) {
-            let price: FinPrice<C, QuoteC> =
-                price::total_of(Coin::<C>::new(1)).is(Coin::<QuoteC>::new(1));
+        Ok(PriceDTO::try_from(
+            price::total_of(Coin::<C>::new(1)).is(Coin::<QuoteC>::new(1)),
+        )?)
+    }
 
-            return Ok(PriceDTO::try_from(price)?);
-        }
-
-        // check if the second part of the pair exists in the storage
-        let result: StdResult<Vec<_>> = self
-            .0
-            .keys(storage, None, None, Order::Descending)
-            .collect();
-        if !result?.iter().any(|key| key.1.eq(QuoteC::SYMBOL)) {
-            return Err(PriceFeedsError::NoPrice {});
-        }
-
+    pub fn price(
+        &self,
+        storage: &dyn Storage,
+        parameters: Parameters,
+        base: SymbolOwned,
+        quote: SymbolOwned,
+    ) -> Result<PriceDTO, PriceFeedsError> {
         let mut resolution_path = DenomResolutionPath::new();
-        // find a path from Denom 1 to Denom 2
-        let result = self.find_price::<C, QuoteC>(storage, parameters, &mut resolution_path)?;
-        resolution_path.push(result);
-        resolution_path.reverse();
-        println!("Resolution path {:?}", resolution_path);
-        PriceFeeds::calculate_price::<C, QuoteC>(&mut resolution_path)
+
+        let res = self.price_impl(storage, parameters, &base, quote, resolution_path.as_mut())?;
+        // resolution_path.push(res);
+        // resolution_path.reverse();
+
+        // PriceFeeds::calculate_price(base, &mut resolution_path)
+        Ok(res)
     }
 
-    pub fn find_price<C, QuoteC>(
+    fn price_impl(
         &self,
         storage: &dyn Storage,
         parameters: Parameters,
+        base: &SymbolOwned,
+        quote: SymbolOwned,
         resolution_path: &mut DenomResolutionPath,
-    ) -> Result<Observation, PriceFeedsError>
-    where
-        C: Currency,
-        QuoteC: Currency,
-    {
-        // check for exact match for the denom pair
-        let res = self
-            .0
-            .load(storage, (C::SYMBOL.to_string(), QuoteC::SYMBOL.to_string()));
-
-        match res {
-            Ok(last_feed) => {
-                // there is a price record for denom pair base to denom pair quote => return price
-                let price = last_feed.get_price(parameters)?;
-                Ok(price)
-            }
-            Err(err) => {
-                println!(
-                    "No price record for [ {}, {} ]: Error {:?}",
-                    C::SYMBOL,
-                    QuoteC::SYMBOL,
-                    err
-                );
-                // Try to find transitive path
-                if let Ok(Some(q)) =
-                    self.search_for_path::<C, QuoteC>(storage, parameters, resolution_path)
-                {
-                    let observation = q.1.get_price(parameters)?;
-                    let price = observation.price();
-                    assert_eq!(C::SYMBOL, price.base().symbol());
-                    assert_eq!(q.0, price.quote().symbol().to_owned());
-                    return Ok(observation);
+    ) -> Result<PriceDTO, PriceFeedsError> {
+        let price_dto = match WithQuote::cmd(storage, base.to_owned(), quote.clone(), parameters) {
+            Ok(price) => price,
+            Err(PriceFeedsError::NoPrice()) => {
+                if let Some(feed) = self.search_for_path(
+                    storage,
+                    parameters,
+                    base.to_owned(),
+                    quote,
+                    resolution_path,
+                )? {
+                    return Ok(feed.get_price(parameters)?.price());
                 }
-                Err(PriceFeedsError::NoPrice {})
+                return Err(PriceFeedsError::NoPrice {});
             }
-        }
+            Err(_err) => {
+                return Err(PriceFeedsError::NoPrice {});
+            }
+        };
+
+        Ok(price_dto)
     }
 
-    fn search_for_path<C, QuoteC>(
+    pub fn load(
+        &self,
+        storage: &dyn Storage,
+        base: SymbolOwned,
+        quote: SymbolOwned,
+        parameters: Parameters,
+    ) -> Result<PriceDTO, PriceFeedsError> {
+        Ok(self
+            .0
+            .load(storage, (base, quote))?
+            .get_price(parameters)?
+            .price())
+    }
+
+    fn search_for_path(
         &self,
         storage: &dyn Storage,
         parameters: Parameters,
+        base: SymbolOwned,
+        quote: SymbolOwned,
         resolution_path: &mut DenomResolutionPath,
-    ) -> Result<Option<(String, PriceFeed)>, PriceFeedsError>
-    where
-        C: Currency,
-        QuoteC: Currency,
-    {
+    ) -> Result<Option<PriceFeed>, PriceFeedsError> {
         // get all entries with key denom pair that stars with the base denom
-        let quotes: StdResult<Vec<_>> = self
+        let quotes: Vec<_> = self
             .0
-            .prefix(C::SYMBOL.to_string())
+            .prefix(base.clone())
             .range(storage, None, None, Order::Ascending)
+            .filter_map(|res| res.ok())
             .collect();
 
-        for current_quote in quotes? {
-            if let Ok(observation) =
-                self.find_price::<C, QuoteC>(storage, parameters, resolution_path)
-            {
-                resolution_path.push(observation);
-                return Ok(Some(current_quote));
+        println!("========{}===={}===========", base, quote.clone());
+
+        for (current_quote, feed) in quotes {
+            if let Ok(price) = self.price_impl(
+                storage,
+                parameters,
+                &current_quote,
+                quote.clone(),
+                resolution_path,
+            ) {
+                resolution_path.push(price.clone());
+                return Ok(Some(feed));
             };
         }
         Ok(None)
     }
 
-    // TODO refactore logic
-    fn calculate_price<C, QuoteC>(
-        resolution_path: &mut DenomResolutionPath,
-    ) -> Result<PriceDTO, PriceFeedsError>
-    where
-        C: Currency,
-        QuoteC: Currency,
-    {
-        if resolution_path.len() == 1 {
-            match resolution_path.first() {
-                Some(o) => Ok(o.price()),
-                None => Err(PriceFeedsError::NoPrice {}),
-            }
-        } else {
-            let base = C::SYMBOL;
-            let mut i = 0;
-            assert!(resolution_path[0]
-                .price()
-                .base()
-                .symbol()
-                .to_string()
-                .eq(&base));
-            let first = resolution_path[0].price();
-            let mut result = first.clone();
+    // TODO remove move price calculation to the finance library
+    // fn calculate_price(
+    //     base: SymbolOwned,
+    //     resolution_path: &mut DenomResolutionPath,
+    // ) -> Result<PriceDTO, PriceFeedsError> {
+    //     if resolution_path.len() == 1 {
+    //         match resolution_path.first() {
+    //             Some(price) => Ok(price.to_owned()),
+    //             None => Err(PriceFeedsError::NoPrice {}),
+    //         }
+    //     } else {
+    //         let mut i = 0;
+    //         assert!(resolution_path[0].base().symbol().to_string().eq(&base));
+    //         let first = resolution_path[0].base().clone();
+    //         let mut result = first.clone();
 
-            while !resolution_path.is_empty() {
-                if resolution_path[i]
-                    .price()
-                    .base()
-                    .symbol()
-                    .to_string()
-                    .eq(&base)
-                {
-                    let val = resolution_path.remove(i);
-                    result = val.price();
-                    assert_eq!(result.base().symbol().to_string(), base);
-                } else {
-                    i += 1;
-                }
-            }
-            Ok(result)
-        }
-    }
+    //         while !resolution_path.is_empty() {
+    //             if resolution_path[i].base().symbol().to_string().eq(&base) {
+    //                 let price = resolution_path.remove(i);
+    //                 base = price.quote().symbol().to_string();
+
+    //                 let x = price.into();
+
+    //                 result = price.total(&result);
+    //                 // assert_eq!(result.base().symbol().to_string(), base);
+    //             } else {
+    //                 i += 1;
+    //             }
+    //         }
+    //         Ok(first)
+    //     }
+    // }
 
     pub fn feed(
         &self,
@@ -257,4 +224,11 @@ impl<'m> PriceFeeds<'m> {
 
         Ok(())
     }
+}
+
+fn print_no_price(base: &str, quote: &str, err: StdError) {
+    println!(
+        "No price record for [ {}, {} ]: Error {:?}",
+        base, quote, err
+    );
 }

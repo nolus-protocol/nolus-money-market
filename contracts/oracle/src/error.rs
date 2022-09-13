@@ -2,9 +2,7 @@ use std::convert::Infallible;
 
 use cosmwasm_std::{Addr, StdError};
 use finance::currency::SymbolOwned;
-use marketprice::{
-    alarms::errors::AlarmError, feeders::PriceFeedersError, market_price::PriceFeedsError,
-};
+use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]

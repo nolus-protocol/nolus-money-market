@@ -1,21 +1,20 @@
-use std::{
-    collections::{HashMap, HashSet},
-    convert::TryInto,
-    marker::PhantomData,
-};
+use std::collections::{HashMap, HashSet};
 
 use cosmwasm_std::{Addr, Response, StdError, StdResult, Storage, Timestamp};
-use marketprice::market_price::{Parameters, PriceFeeds, PriceFeedsError};
+use marketprice::{
+    error::PriceFeedsError,
+    market_price::{Parameters, PriceFeeds},
+    PriceForCurrency,
+};
 
+use platform::batch::Batch;
 use schemars::JsonSchema;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-
-use std::convert::TryFrom;
+use serde::{Deserialize, Serialize};
 
 use finance::{
-    currency::{visit_any, AnyVisitor, Currency, Nls, SymbolOwned},
+    currency::{Currency, Nls, SymbolOwned},
     duration::Duration,
-    price::{Price as FinPrice, PriceDTO},
+    price::PriceDTO,
 };
 
 use crate::{state::config::Config, ContractError};
@@ -68,17 +67,13 @@ impl Feeds {
         Ok(prices)
     }
 
-    fn get_single_price<C, QuoteC>(
+    pub fn get_price(
         storage: &dyn Storage,
         parameters: Parameters,
-    ) -> Result<FinPrice<C, QuoteC>, PriceFeedsError>
-    where
-        C: Currency,
-        QuoteC: Currency,
-    {
-        Ok(Self::MARKET_PRICE
-            .get::<C, QuoteC>(storage, parameters)?
-            .try_into()?)
+        base: SymbolOwned,
+        quote: SymbolOwned,
+    ) -> Result<PriceDTO, PriceFeedsError> {
+        Ok(Self::MARKET_PRICE.price(storage, parameters, base, quote)?)
     }
 
     pub fn feed_prices(
@@ -143,69 +138,27 @@ where
     // Store the new price feed
     oracle.feed_prices(storage, block_time, &sender_raw, prices)?;
 
-    // Get all currencies registered for alarms
-    let hooks_currencies = MarketAlarms::get_hooks_currencies(storage)?;
-
-    let parameters = Feeders::query_config(storage, &config, block_time)?;
-    // re-calculate the price of these currencies
-    let updated_prices: HashMap<SymbolOwned, PriceDTO> =
-        oracle.get_prices::<OracleBase>(storage, parameters, hooks_currencies)?;
-
-    // try notify affected subscribers
-    let mut batch = MarketAlarms::try_notify_hooks(storage, updated_prices)?;
+    let mut batch = Batch::default();
     batch.schedule_execute_wasm_reply_error::<_, Nls>(
         &config.timealarms_contract,
         timealarms::msg::ExecuteMsg::Notify(),
         None,
         1,
     )?;
+
+    // Get all currencies registered for alarms
+    let hooks_currencies = MarketAlarms::get_hooks_currencies(storage)?;
+
+    if hooks_currencies.len() > 0 {
+        let parameters = Feeders::query_config(storage, &config, block_time)?;
+        // re-calculate the price of these currencies
+        let updated_prices: HashMap<SymbolOwned, PriceDTO> =
+            oracle.get_prices::<OracleBase>(storage, parameters, hooks_currencies)?;
+        // try notify affected subscribers
+        MarketAlarms::try_notify_hooks(storage, updated_prices, &mut batch)?;
+    }
+
     Ok(Response::from(batch))
-}
-
-pub struct PriceForCurrency<'a, QuoteC> {
-    storage: &'a dyn Storage,
-    parameters: Parameters,
-    currency: SymbolOwned,
-    _oracle_base: PhantomData<QuoteC>,
-}
-
-impl<'a, QuoteC> PriceForCurrency<'a, QuoteC>
-where
-    QuoteC: Currency,
-{
-    pub fn cmd(
-        storage: &'a dyn Storage,
-        currency: SymbolOwned,
-        parameters: Parameters,
-    ) -> Result<PriceDTO, PriceFeedsError> {
-        let visitor = Self {
-            storage,
-            parameters,
-            currency,
-            _oracle_base: PhantomData,
-        };
-        visit_any(&visitor.currency.clone(), visitor)
-    }
-}
-
-impl<'a, QuoteC> AnyVisitor for PriceForCurrency<'a, QuoteC>
-where
-    QuoteC: Currency,
-{
-    type Output = PriceDTO;
-    type Error = PriceFeedsError;
-
-    fn on<BaseC>(self) -> Result<Self::Output, Self::Error>
-    where
-        BaseC: 'static + Currency + DeserializeOwned + Serialize,
-    {
-        Ok(PriceDTO::try_from(
-            Feeds::get_single_price::<BaseC, QuoteC>(self.storage, self.parameters)?,
-        )?)
-    }
-    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-        Err(PriceFeedsError::UnknownCurrency {})
-    }
 }
 
 #[cfg(test)]

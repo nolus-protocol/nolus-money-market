@@ -5,7 +5,7 @@ use finance::price::PriceDTO;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::market_price::{Parameters, PriceFeedsError};
+use crate::{error::PriceFeedsError, market_price::Parameters};
 use finance::duration::Duration;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
