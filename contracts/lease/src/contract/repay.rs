@@ -76,12 +76,7 @@ where
             batch,
             lease_dto,
             receipt,
-        } = lease.repay(
-            lease_amount,
-            payment,
-            self.env.block.time,
-            self.env.contract.address.clone(),
-        )?;
+        } = lease.repay(lease_amount, payment, self.env.block.time)?;
 
         let emitter = batch
             .into_emitter(TYPE::Repay)

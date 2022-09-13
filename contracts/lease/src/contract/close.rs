@@ -57,7 +57,7 @@ where
             return Err(Self::Error::Unauthorized {});
         }
 
-        let result = lease.close(self.lease.clone(), self.account)?;
+        let result = lease.close(self.account)?;
 
         let emitter = result
             .into_emitter(TYPE::Close)

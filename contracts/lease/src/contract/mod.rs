@@ -41,7 +41,12 @@ pub fn instantiate(
 ) -> ContractResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
+    let lease = form.into_lease_dto(
+        env.block.time,
+        env.contract.address,
+        deps.api,
+        &deps.querier,
+    )?;
     lease.store(deps.storage)?;
 
     let OpenLoanReqResult { batch, downpayment } =

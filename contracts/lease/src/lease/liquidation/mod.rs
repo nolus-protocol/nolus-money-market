@@ -33,7 +33,6 @@ where
     fn liquidate_on_interest_overdue(
         &self,
         now: Timestamp,
-        lease: Addr,
         lease_amount: Coin<Asset>,
         price_to_lpn: Price<Asset, Lpn>,
     ) -> ContractResult<Status<Asset>> {
@@ -41,7 +40,9 @@ where
 
         let LiabilityStatus {
             ltv, overdue_lpn, ..
-        } = self.loan.liability_status(now, lease, lease_lpn)?;
+        } = self
+            .loan
+            .liability_status(now, self.lease.clone(), lease_lpn)?;
 
         self.liquidate(
             lease_lpn,
@@ -54,14 +55,14 @@ where
     fn act_on_liability(
         &self,
         now: Timestamp,
-        lease: Addr,
         lease_amount: Coin<Asset>,
         price_to_lpn: Price<Asset, Lpn>,
     ) -> ContractResult<Status<Asset>> {
         let lease_lpn = total(lease_amount, price_to_lpn);
 
         let LiabilityStatus { ltv, total_lpn, .. } =
-            self.loan.liability_status(now, lease, lease_lpn)?;
+            self.loan
+                .liability_status(now, self.lease.clone(), lease_lpn)?;
 
         if self.liability.max_percent() <= ltv {
             self.liquidate_on_liability(lease_lpn, total_lpn, price_to_lpn.inv())

@@ -106,12 +106,7 @@ where
         Oracle: OracleTrait<Lpn>,
         Asset: Currency + Serialize,
     {
-        let result = lease.open_loan_resp(
-            self.env.contract.address.clone(),
-            self.resp,
-            self.account,
-            &self.env.block.time,
-        )?;
+        let result = lease.open_loan_resp(self.resp, self.account, &self.env.block.time)?;
 
         Ok(result
             .batch

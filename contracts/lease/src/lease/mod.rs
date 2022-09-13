@@ -65,6 +65,7 @@ where
 }
 
 pub struct Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset> {
+    lease: Addr,
     customer: Addr,
     liability: Liability,
     loan: Loan<Lpn, Lpp>,
@@ -96,6 +97,7 @@ where
         );
 
         Self {
+            lease: dto.lease,
             customer: dto.customer,
             liability: dto.liability,
             loan: Loan::from_dto(dto.loan, lpp),
@@ -120,6 +122,7 @@ where
 
         (
             LeaseDTO::new(
+                self.lease,
                 self.customer,
                 ToOwned::to_owned(Asset::SYMBOL),
                 self.liability,
@@ -145,11 +148,11 @@ where
 
     // TODO add the lease address as a field in Lease<>
     //  and populate it on LeaseDTO.execute as LeaseFactory
-    pub(crate) fn close<B>(self, lease: Addr, mut account: B) -> ContractResult<Batch>
+    pub(crate) fn close<B>(self, mut account: B) -> ContractResult<Batch>
     where
         B: BankAccount,
     {
-        let state = self.state(Timestamp::from_nanos(u64::MAX), &account, lease)?;
+        let state = self.state(Timestamp::from_nanos(u64::MAX), &account)?;
         match state {
             StateResponse::Opened { .. } => Err(ContractError::LoanNotPaid()),
             StateResponse::Paid(..) => {
@@ -166,7 +169,6 @@ where
         &self,
         now: Timestamp,
         account: &B,
-        lease: Addr,
     ) -> ContractResult<StateResponse<Lpn, Lpn>>
     where
         B: BankAccountView,
@@ -176,7 +178,7 @@ where
         if lease_amount.is_zero() {
             Ok(StateResponse::Closed())
         } else {
-            let loan_state = self.loan.state(now, lease)?;
+            let loan_state = self.loan.state(now, self.lease.clone())?;
 
             loan_state.map_or(Ok(StateResponse::Paid(lease_amount)), |state| {
                 Ok(StateResponse::Opened {
@@ -540,6 +542,7 @@ mod tests {
         .unwrap();
 
         Lease {
+            lease: Addr::unchecked("lease"),
             customer: Addr::unchecked("customer"),
             liability: Liability::new(
                 Percent::from_percent(65),
@@ -595,9 +598,7 @@ mod tests {
         >,
         bank_account: &BankStub,
     ) -> StateResponse<TestCurrency, TestCurrency> {
-        lease
-            .state(LEASE_STATE_AT, bank_account, Addr::unchecked("unused"))
-            .unwrap()
+        lease.state(LEASE_STATE_AT, bank_account).unwrap()
     }
 
     pub fn coin(a: u128) -> Coin<TestCurrency> {
@@ -683,11 +684,7 @@ mod tests {
         let bank_account = create_bank_account(0);
 
         let res = lease
-            .state(
-                Timestamp::from_nanos(0),
-                &bank_account,
-                Addr::unchecked("unused"),
-            )
+            .state(Timestamp::from_nanos(0), &bank_account)
             .unwrap();
 
         let exp = StateResponse::Closed();

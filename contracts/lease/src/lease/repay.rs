@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Timestamp};
+use cosmwasm_std::Timestamp;
 use serde::Serialize;
 
 use finance::{coin::Coin, currency::Currency};
@@ -26,11 +26,10 @@ where
         lease_amount: Coin<Asset>,
         payment: Coin<Lpn>,
         now: Timestamp,
-        lease: Addr,
     ) -> ContractResult<Result<Lpn>> {
-        let receipt = self.loan.repay(payment, now, lease.clone())?;
+        let receipt = self.loan.repay(payment, now, self.lease.clone())?;
 
-        self.reschedule_on_repay(lease, lease_amount, &now)?;
+        self.reschedule_on_repay(lease_amount, &now)?;
 
         let (lease_dto, batch) = self.into_dto();
 

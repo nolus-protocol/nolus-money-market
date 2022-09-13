@@ -8,6 +8,7 @@ use crate::loan::LoanDTO;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LeaseDTO {
+    pub(crate) lease: Addr,
     pub(crate) customer: Addr,
     pub(crate) currency: SymbolOwned,
     pub(crate) liability: Liability,
@@ -20,6 +21,7 @@ impl<'a> LeaseDTO {
     const DB_ITEM: Item<'a, LeaseDTO> = Item::new("lease");
 
     pub(crate) fn new(
+        lease: Addr,
         customer: Addr,
         currency: SymbolOwned,
         liability: Liability,
@@ -28,6 +30,7 @@ impl<'a> LeaseDTO {
         oracle: Addr,
     ) -> Self {
         Self {
+            lease,
             customer,
             currency,
             liability,

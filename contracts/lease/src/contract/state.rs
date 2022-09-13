@@ -47,7 +47,7 @@ where
         Oracle: OracleTrait<Lpn>,
         Asset: Currency + Serialize,
     {
-        let resp = lease.state(self.now, &self.account, self.lease)?;
+        let resp = lease.state(self.now, &self.account)?;
         to_binary(&resp).map_err(ContractError::from)
     }
 
