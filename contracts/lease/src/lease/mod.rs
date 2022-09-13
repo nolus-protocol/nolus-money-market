@@ -1,8 +1,10 @@
+use std::marker::PhantomData;
+
 use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use serde::Serialize;
 
 use finance::{
-    currency::{Currency, SymbolOwned},
+    currency::{self, Currency, SymbolOwned},
     liability::Liability,
     price::Price,
 };
@@ -39,15 +41,16 @@ pub trait WithLease {
     type Output;
     type Error;
 
-    fn exec<Lpn, Lpp, TimeAlarms, Oracle>(
+    fn exec<Lpn, Lpp, TimeAlarms, Oracle, Asset>(
         self,
-        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle>,
+        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
         TimeAlarms: TimeAlarmsTrait,
-        Oracle: OracleTrait<Lpn>;
+        Oracle: OracleTrait<Lpn>,
+        Asset: Currency + Serialize;
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
 }
@@ -61,21 +64,22 @@ where
     lpp.execute(Factory::new(cmd, dto, querier), querier)
 }
 
-pub struct Lease<Lpn, Lpp, TimeAlarms, Oracle> {
+pub struct Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset> {
     customer: Addr,
-    currency: SymbolOwned,
     liability: Liability,
     loan: Loan<Lpn, Lpp>,
     time_alarms: TimeAlarms,
     oracle: Oracle,
+    _asset: PhantomData<Asset>,
 }
 
-impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
+impl<Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
+    Asset: Currency + Serialize,
 {
     pub(super) fn from_dto(
         dto: LeaseDTO,
@@ -93,11 +97,11 @@ where
 
         Self {
             customer: dto.customer,
-            currency: dto.currency,
             liability: dto.liability,
             loan: Loan::from_dto(dto.loan, lpp),
             time_alarms,
             oracle,
+            _asset: PhantomData,
         }
     }
 
@@ -117,7 +121,7 @@ where
         (
             LeaseDTO::new(
                 self.customer,
-                self.currency,
+                ToOwned::to_owned(Asset::SYMBOL),
                 self.liability,
                 loan_dto,
                 time_alarms_dto.into(),
@@ -190,12 +194,12 @@ where
         }
     }
 
-    fn price_of_lease_currency(&self) -> ContractResult<Price<Lpn, Lpn>> {
-        if self.currency == Lpn::SYMBOL {
+    fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
+        if currency::equal::<Asset, Lpn>() {
             Ok(Price::identity())
         } else {
             self.oracle
-                .price_of(self.currency.clone())?
+                .price_of(ToOwned::to_owned(Asset::SYMBOL))?
                 .price
                 .try_into()
                 .map_err(Into::into)
@@ -205,6 +209,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::marker::PhantomData;
+
     use cosmwasm_std::{wasm_execute, Addr, Timestamp};
     use serde::{Deserialize, Serialize};
 
@@ -516,7 +522,7 @@ mod tests {
         lpp: L,
         time_alarms: TA,
         oracle: O,
-    ) -> Lease<TestCurrency, L, TA, O>
+    ) -> Lease<TestCurrency, L, TA, O, TestCurrency>
     where
         L: Lpp<TestCurrency>,
         TA: TimeAlarms,
@@ -535,7 +541,6 @@ mod tests {
 
         Lease {
             customer: Addr::unchecked("customer"),
-            currency: TestCurrency::SYMBOL.to_string(),
             liability: Liability::new(
                 Percent::from_percent(65),
                 Percent::from_percent(5),
@@ -548,6 +553,7 @@ mod tests {
             loan: Loan::from_dto(loan_dto, lpp),
             time_alarms,
             oracle,
+            _asset: PhantomData,
         }
     }
 
@@ -555,7 +561,7 @@ mod tests {
         loan_response: Option<LoanResponse<TestCurrency>>,
         time_alarms_addr: Addr,
         oracle_addr: Addr,
-    ) -> Lease<TestCurrency, LppLocalStub, TimeAlarmsLocalStub, OracleLocalStub> {
+    ) -> Lease<TestCurrency, LppLocalStub, TimeAlarmsLocalStub, OracleLocalStub, TestCurrency> {
         let lpp_stub = LppLocalStub {
             loan: loan_response,
         };
@@ -580,7 +586,13 @@ mod tests {
     }
 
     pub fn request_state(
-        lease: Lease<TestCurrency, LppLocalStub, TimeAlarmsLocalStub, OracleLocalStub>,
+        lease: Lease<
+            TestCurrency,
+            LppLocalStub,
+            TimeAlarmsLocalStub,
+            OracleLocalStub,
+            TestCurrency,
+        >,
         bank_account: &BankStub,
     ) -> StateResponse<TestCurrency, TestCurrency> {
         lease

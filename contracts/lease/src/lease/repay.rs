@@ -13,22 +13,21 @@ use crate::{
     loan::RepayReceipt,
 };
 
-impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
+impl<Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
+    Asset: Currency + Serialize,
 {
     pub(crate) fn repay(
         mut self,
-        lease_amount: Coin<Lpn>,
+        lease_amount: Coin<Asset>,
         payment: Coin<Lpn>,
         now: Timestamp,
         lease: Addr,
     ) -> ContractResult<Result<Lpn>> {
-        assert_eq!(self.currency, Lpn::SYMBOL);
-
         let receipt = self.loan.repay(payment, now, lease.clone())?;
 
         self.reschedule_on_repay(lease, lease_amount, &now)?;

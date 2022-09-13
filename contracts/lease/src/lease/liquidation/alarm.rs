@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use finance::{
     coin::Coin,
-    currency::Currency,
+    currency::{self, Currency},
     fraction::Fraction,
     percent::Percent,
     price::{total, total_of, Price, PriceDTO},
@@ -19,23 +19,24 @@ use crate::{
     lease::{Lease, OnAlarmResult, Status, WarningLevel},
 };
 
-impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
+impl<Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
+    Asset: Currency + Serialize,
 {
     pub(crate) fn on_price_alarm<B>(
         mut self,
         now: Timestamp,
         account: &B,
         lease: Addr,
-    ) -> ContractResult<OnAlarmResult<Lpn>>
+    ) -> ContractResult<OnAlarmResult<Asset>>
     where
         B: BankAccountView,
     {
-        let lease_amount = account.balance::<Lpn>()?;
+        let lease_amount = account.balance::<Asset>()?;
 
         let price_to_lpn = self.price_of_lease_currency()?;
 
@@ -53,11 +54,11 @@ where
         now: Timestamp,
         account: &B,
         lease: Addr,
-    ) -> ContractResult<OnAlarmResult<Lpn>>
+    ) -> ContractResult<OnAlarmResult<Asset>>
     where
         B: BankAccountView,
     {
-        let lease_amount = account.balance::<Lpn>()?;
+        let lease_amount = account.balance::<Asset>()?;
 
         let price_to_lpn = self.price_of_lease_currency()?;
 
@@ -84,7 +85,7 @@ where
     pub(in crate::lease) fn initial_alarm_schedule<A>(
         &mut self,
         lease: A,
-        lease_amount: Coin<Lpn>,
+        lease_amount: Coin<Asset>,
         now: &Timestamp,
     ) -> ContractResult<()>
     where
@@ -103,7 +104,7 @@ where
     pub(in crate::lease) fn reschedule_on_repay<A>(
         &mut self,
         lease: A,
-        lease_amount: Coin<Lpn>,
+        lease_amount: Coin<Asset>,
         now: &Timestamp,
     ) -> ContractResult<()>
     where
@@ -122,7 +123,7 @@ where
         )
     }
 
-    fn into_on_alarm_result(self, liquidation_status: Status<Lpn>) -> OnAlarmResult<Lpn> {
+    fn into_on_alarm_result(self, liquidation_status: Status<Asset>) -> OnAlarmResult<Asset> {
         let (lease_dto, batch) = self.into_dto();
 
         OnAlarmResult {
@@ -136,10 +137,10 @@ where
     fn reschedule<A>(
         &mut self,
         lease: A,
-        lease_amount: Coin<Lpn>,
+        lease_amount: Coin<Asset>,
         now: &Timestamp,
-        liquidation_status: &Status<Lpn>,
-        price_to_lpn: Price<Lpn, Lpn>,
+        liquidation_status: &Status<Asset>,
+        price_to_lpn: Price<Asset, Lpn>,
     ) -> ContractResult<()>
     where
         A: Into<Addr>,
@@ -152,7 +153,7 @@ where
     fn reschedule_time_alarm(
         &mut self,
         now: &Timestamp,
-        liquidation_status: &Status<Lpn>,
+        liquidation_status: &Status<Asset>,
     ) -> ContractResult<()> {
         debug_assert!(!matches!(liquidation_status, Status::FullLiquidation(..)));
 
@@ -168,15 +169,15 @@ where
     fn reschedule_price_alarm<A>(
         &mut self,
         lease: A,
-        mut lease_amount: Coin<Lpn>,
+        mut lease_amount: Coin<Asset>,
         now: &Timestamp,
-        liquidation_status: &Status<Lpn>,
-        price_to_lpn: Price<Lpn, Lpn>,
+        liquidation_status: &Status<Asset>,
+        price_to_lpn: Price<Asset, Lpn>,
     ) -> ContractResult<()>
     where
         A: Into<Addr>,
     {
-        if self.currency == Lpn::SYMBOL {
+        if currency::equal::<Asset, Lpn>() {
             return Ok(());
         }
 
@@ -223,7 +224,7 @@ where
 
         self.oracle
             .add_alarm(Alarm::new::<PriceDTO>(
-                self.currency.clone(),
+                ToOwned::to_owned(Asset::SYMBOL),
                 below.into(),
                 above.map(Into::into),
             ))
@@ -232,10 +233,10 @@ where
 
     fn price_alarm_by_percent(
         &self,
-        lease_amount: Coin<Lpn>,
+        lease_amount: Coin<Asset>,
         liability: Coin<Lpn>,
         percent: Percent,
-    ) -> ContractResult<Price<Lpn, Lpn>> {
+    ) -> ContractResult<Price<Asset, Lpn>> {
         assert!(!lease_amount.is_zero(), "Loan already paid!");
 
         Ok(total_of(percent.of(lease_amount)).is(liability))
@@ -279,11 +280,7 @@ mod tests {
                     - lease.liability.recalculation_time()
                     - lease.liability.recalculation_time()),
                 &Status::Warning(
-                    LeaseInfo {
-                        customer: Addr::unchecked(String::new()),
-                        ltv: Default::default(),
-                        lease_asset: "".to_string(),
-                    },
+                    LeaseInfo::new(Addr::unchecked(String::new()), Default::default()),
                     WarningLevel::Second,
                 ),
             )
@@ -327,11 +324,7 @@ mod tests {
                 &(lease.loan.grace_period_end() - lease.liability.recalculation_time()
                     + Duration::from_nanos(1)),
                 &Status::Warning(
-                    LeaseInfo {
-                        customer: Addr::unchecked(String::new()),
-                        ltv: Default::default(),
-                        lease_asset: "".to_string(),
-                    },
+                    LeaseInfo::new(Addr::unchecked(String::new()), Default::default()),
                     WarningLevel::Second,
                 ),
             )

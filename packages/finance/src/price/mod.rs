@@ -1,11 +1,9 @@
-use std::any::TypeId;
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     coin::{Amount, Coin},
-    currency::Currency,
+    currency::{self, Currency},
     fraction::Fraction,
     fractionable::HigherRank,
     ratio::Rational,
@@ -62,8 +60,7 @@ where
 {
     fn new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
         debug_assert!(
-            Amount::from(amount) == Amount::from(amount_quote)
-                || TypeId::of::<C>() != TypeId::of::<QuoteC>()
+            Amount::from(amount) == Amount::from(amount_quote) || !currency::equal::<C, QuoteC>()
         );
 
         let (amount_normalized, amount_quote_normalized) = amount.into_coprime_with(amount_quote);
