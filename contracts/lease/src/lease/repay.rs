@@ -1,9 +1,6 @@
-use std::any::TypeId;
-
 use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
-use finance::price::{total, Price};
 use finance::{coin::Coin, currency::Currency};
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
@@ -27,15 +24,11 @@ where
     pub(crate) fn repay(
         mut self,
         lease_amount: Coin<Asset>,
-        payment: Coin<Asset>,
+        payment: Coin<Lpn>,
         now: Timestamp,
         lease: Addr,
     ) -> ContractResult<Result<Lpn>> {
-        // TODO perform swap
-        assert_eq!(TypeId::of::<Asset>(), TypeId::of::<Lpn>());
-        let payment_lpn = total(payment, Price::identity());
-
-        let receipt = self.loan.repay(payment_lpn, now, lease.clone())?;
+        let receipt = self.loan.repay(payment, now, lease.clone())?;
 
         self.reschedule_on_repay(lease, lease_amount, &now)?;
 

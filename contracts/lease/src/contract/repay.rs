@@ -1,7 +1,12 @@
+use std::any::TypeId;
+
 use cosmwasm_std::{Coin as CwCoin, Env};
 use serde::Serialize;
 
-use finance::currency::{Currency, SymbolOwned};
+use finance::{
+    currency::{Currency, SymbolOwned},
+    price::{total, Price},
+};
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{
@@ -63,9 +68,17 @@ where
         Asset: Currency + Serialize,
     {
         // TODO 'receive' the payment from the bank using any currency it might be in
-        let payment = bank::received::<Asset>(self.payment)?;
+        let payment = bank::received::<Lpn>(self.payment)?;
 
-        let lease_amount = self.account.balance::<Asset>()? - payment;
+        let lease_amount = {
+            let mut lease_amount = self.account.balance::<Asset>()?;
+
+            if TypeId::of::<Asset>() == TypeId::of::<Lpn>() {
+                lease_amount -= total(payment, Price::identity());
+            }
+
+            lease_amount
+        };
 
         let LeaseRepayResult {
             batch,
