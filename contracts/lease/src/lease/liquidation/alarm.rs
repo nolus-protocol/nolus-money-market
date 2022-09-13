@@ -1,11 +1,9 @@
-use std::any::TypeId;
-
 use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
 use finance::{
     coin::Coin,
-    currency::Currency,
+    currency::{equal, Currency},
     fraction::Fraction,
     percent::Percent,
     price::{total, total_of, Price, PriceDTO},
@@ -179,7 +177,7 @@ where
     where
         A: Into<Addr>,
     {
-        if TypeId::of::<Asset>() == TypeId::of::<Lpn>() {
+        if equal::<Asset, Lpn>() {
             return Ok(());
         }
 

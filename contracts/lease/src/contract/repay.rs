@@ -1,10 +1,8 @@
-use std::any::TypeId;
-
 use cosmwasm_std::{Coin as CwCoin, Env};
 use serde::Serialize;
 
 use finance::{
-    currency::{Currency, SymbolOwned},
+    currency::{equal, Currency, SymbolOwned},
     price::{total, Price},
 };
 use lpp::stub::Lpp as LppTrait;
@@ -70,15 +68,9 @@ where
         // TODO 'receive' the payment from the bank using any currency it might be in
         let payment = bank::received::<Lpn>(self.payment)?;
 
-        let lease_amount = {
-            let mut lease_amount = self.account.balance::<Asset>()?;
-
-            if TypeId::of::<Asset>() == TypeId::of::<Lpn>() {
-                lease_amount -= total(payment, Price::identity());
-            }
-
-            lease_amount
-        };
+        // TODO adjust/remove this logic when support for multiple currencies is added
+        //  because this only works for `Asset = Lpn`
+        let lease_amount = self.account.balance::<Asset>()? - total(payment, Price::identity());
 
         let LeaseRepayResult {
             batch,
@@ -95,7 +87,7 @@ where
             .into_emitter(TYPE::Repay)
             .emit_tx_info(self.env)
             .emit("to", self.env.contract.address.clone())
-            .emit("payment-symbol", Lpn::SYMBOL)
+            .emit_currency::<_, Lpn>("payment-symbol")
             .emit_coin_amount("payment-amount", payment)
             .emit_to_string_value("loan-close", receipt.close())
             .emit_coin_amount("prev-margin-interest", receipt.previous_margin_paid())
