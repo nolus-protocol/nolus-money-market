@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Addr, Binary, Timestamp};
+use cosmwasm_std::{to_binary, Binary, Timestamp};
 use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
@@ -15,15 +15,13 @@ use crate::{
 pub struct LeaseState<Bank> {
     now: Timestamp,
     account: Bank,
-    lease: Addr,
 }
 
 impl<Bank> LeaseState<Bank> {
-    pub fn new(now: Timestamp, account: Bank, lease: Addr) -> Self {
+    pub fn new(now: Timestamp, account: Bank) -> Self {
         Self {
             now,
             account,
-            lease,
         }
     }
 }

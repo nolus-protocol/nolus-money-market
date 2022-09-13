@@ -135,7 +135,7 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     // TODO think on taking benefit from having a LppView trait
     lease::execute(
         lease,
-        LeaseState::new(env.block.time, bank, env.contract.address.clone()),
+        LeaseState::new(env.block.time, bank),
         &deps.querier,
     )
 }
@@ -182,7 +182,6 @@ fn try_on_price_alarm(
         lease,
         PriceAlarm::new(
             &info.sender,
-            env.contract.address.clone(),
             account,
             env.block.time,
         ),
@@ -201,7 +200,6 @@ fn try_on_time_alarm(
         lease,
         TimeAlarm::new(
             &info.sender,
-            env.contract.address.clone(),
             account,
             env.block.time,
         ),

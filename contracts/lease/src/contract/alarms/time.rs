@@ -18,7 +18,6 @@ where
     B: BankAccountView,
 {
     sender: &'a Addr,
-    lease: Addr,
     account: B,
     now: Timestamp,
 }
@@ -27,10 +26,9 @@ impl<'a, B> TimeAlarm<'a, B>
 where
     B: BankAccountView,
 {
-    pub fn new(sender: &'a Addr, lease: Addr, account: B, now: Timestamp) -> Self {
+    pub fn new(sender: &'a Addr, account: B, now: Timestamp) -> Self {
         Self {
             sender,
-            lease,
             account,
             now,
         }
