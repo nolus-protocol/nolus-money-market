@@ -1,3 +1,5 @@
+use std::ops::Shr;
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -92,7 +94,49 @@ where
         total_of(factored_amount).is(factored_total)
     }
 
-    pub fn inv(self) -> Price<QuoteC, C> {
+    pub fn lossy_mul<QuoteQuoteC>(self, rhs: Price<QuoteC, QuoteQuoteC>) -> Price<C, QuoteQuoteC>
+    where
+        QuoteQuoteC: Currency,
+    {
+        // Price(a, b) * Price(c, d) = Price(a * c, b * d)
+        // first try to convert (a, d) and (b, c) into co-prime numbers
+        let (amount_normalized, rhs_amount_quote_normalized) =
+            self.amount.into_coprime_with(rhs.amount_quote);
+        let (amount_quote_normalized, rhs_amount_normalized) =
+            self.amount_quote.into_coprime_with(rhs.amount);
+
+        type DoubleType = <Amount as HigherRank<Amount>>::Type;
+        type IntermediateType = <Amount as HigherRank<Amount>>::Intermediate;
+        let double_amount =
+            DoubleType::from(amount_normalized) * DoubleType::from(rhs_amount_normalized);
+        let double_amount_quote = DoubleType::from(amount_quote_normalized)
+            * DoubleType::from(rhs_amount_quote_normalized);
+
+        fn bits_above_max(double_amount: DoubleType) -> u32 {
+            const BITS_MAX_AMOUNT: u32 = Amount::BITS;
+            let higher_half: Amount =
+                IntermediateType::try_from(double_amount.shr(BITS_MAX_AMOUNT))
+                    .expect("")
+                    .into();
+            BITS_MAX_AMOUNT - higher_half.leading_zeros()
+        }
+
+        fn trim_down(double_amount: DoubleType, bits: u32) -> Amount {
+            let amount: IntermediateType = double_amount
+                .shr(bits)
+                .try_into()
+                .expect("should not happen!");
+            amount.into()
+        }
+        let bits_to_shift = bits_above_max(double_amount).max(bits_above_max(double_amount_quote));
+
+        Price::new(
+            trim_down(double_amount, bits_to_shift).into(),
+            trim_down(double_amount_quote, bits_to_shift).into(),
+        )
+    }
+
+   pub fn inv(self) -> Price<QuoteC, C> {
         Price {
             amount: self.amount_quote,
             amount_quote: self.amount,
