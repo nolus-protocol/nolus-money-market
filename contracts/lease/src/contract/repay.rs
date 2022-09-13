@@ -2,7 +2,7 @@ use cosmwasm_std::{Coin as CwCoin, Env};
 use serde::Serialize;
 
 use finance::{
-    currency::{equal, Currency, SymbolOwned},
+    currency::{Currency, SymbolOwned},
     price::{total, Price},
 };
 use lpp::stub::Lpp as LppTrait;
