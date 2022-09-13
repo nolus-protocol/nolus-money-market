@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Reply, Timestamp};
+use cosmwasm_std::{Reply, Timestamp};
 use serde::Serialize;
 
 use finance::{coin::Coin, currency::Currency};
@@ -11,7 +11,7 @@ use crate::{error::ContractResult, lease::Lease, loan::OpenReceipt};
 
 use super::LeaseDTO;
 
-impl<Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>
+impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
@@ -34,7 +34,6 @@ where
     // TODO lease currency can be different than Lpn, therefore result's type parameter
     pub(crate) fn open_loan_resp<B>(
         mut self,
-        lease: Addr,
         resp: Reply,
         account: B,
         now: &Timestamp,
@@ -42,7 +41,7 @@ where
     where
         B: BankAccountView,
     {
-        self.initial_alarm_schedule(lease, account.balance()?, now)?;
+        self.initial_alarm_schedule(account.balance()?, now)?;
 
         self.loan.open_loan_resp(resp).map({
             let (lease_dto, batch) = self.into_dto();

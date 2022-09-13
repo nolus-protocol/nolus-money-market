@@ -44,8 +44,12 @@ pub fn instantiate(
     let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
     lease.store(deps.storage)?;
 
-    let OpenLoanReqResult { batch, downpayment } =
-        lease::execute(lease, OpenLoanReq::new(&info.funds), &deps.querier)?;
+    let OpenLoanReqResult { batch, downpayment } = lease::execute(
+        lease,
+        OpenLoanReq::new(&info.funds),
+        &env.contract.address,
+        &deps.querier,
+    )?;
 
     downpayment.store(deps.storage)?;
 
@@ -69,6 +73,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
             let emitter = lease::execute(
                 lease,
                 OpenLoanResp::new(msg, downpayment, account, &env),
+                &env.contract.address,
                 &deps.querier,
             )?;
 
@@ -130,7 +135,8 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     // TODO think on taking benefit from having a LppView trait
     lease::execute(
         lease,
-        LeaseState::new(env.block.time, bank, env.contract.address.clone()),
+        LeaseState::new(env.block.time, bank),
+        &env.contract.address,
         &deps.querier,
     )
 }
@@ -142,7 +148,12 @@ fn try_repay(
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<RepayResult> {
-    lease::execute(lease, Repay::new(&info.funds, account, env), querier)
+    lease::execute(
+        lease,
+        Repay::new(&info.funds, account, env),
+        &env.contract.address,
+        querier,
+    )
 }
 
 fn try_close(
@@ -160,6 +171,7 @@ fn try_close(
             account,
             env.block.time,
         ),
+        &env.contract.address,
         querier,
     )?;
 
@@ -175,12 +187,8 @@ fn try_on_price_alarm(
 ) -> ContractResult<AlarmResult> {
     lease::execute(
         lease,
-        PriceAlarm::new(
-            &info.sender,
-            env.contract.address.clone(),
-            account,
-            env.block.time,
-        ),
+        PriceAlarm::new(&info.sender, account, env.block.time),
+        &env.contract.address,
         querier,
     )
 }
@@ -194,12 +202,8 @@ fn try_on_time_alarm(
 ) -> ContractResult<AlarmResult> {
     lease::execute(
         lease,
-        TimeAlarm::new(
-            &info.sender,
-            env.contract.address.clone(),
-            account,
-            env.block.time,
-        ),
+        TimeAlarm::new(&info.sender, account, env.block.time),
+        &env.contract.address,
         querier,
     )
 }

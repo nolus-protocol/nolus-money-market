@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Timestamp};
+use cosmwasm_std::Timestamp;
 use serde::Serialize;
 
 use finance::{coin::Coin, currency::Currency};
@@ -13,7 +13,7 @@ use crate::{
     loan::RepayReceipt,
 };
 
-impl<Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>
+impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
@@ -26,11 +26,10 @@ where
         lease_amount: Coin<Asset>,
         payment: Coin<Lpn>,
         now: Timestamp,
-        lease: Addr,
     ) -> ContractResult<Result<Lpn>> {
-        let receipt = self.loan.repay(payment, now, lease.clone())?;
+        let receipt = self.loan.repay(payment, now, self.lease_addr.clone())?;
 
-        self.reschedule_on_repay(lease, lease_amount, &now)?;
+        self.reschedule_on_repay(lease_amount, &now)?;
 
         let (lease_dto, batch) = self.into_dto();
 

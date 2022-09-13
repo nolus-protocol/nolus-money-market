@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Timestamp};
+use cosmwasm_std::Timestamp;
 use serde::Serialize;
 
 use finance::{
@@ -19,7 +19,7 @@ use crate::{
     lease::{Lease, OnAlarmResult, Status, WarningLevel},
 };
 
-impl<Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>
+impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
@@ -31,7 +31,6 @@ where
         mut self,
         now: Timestamp,
         account: &B,
-        lease: Addr,
     ) -> ContractResult<OnAlarmResult<Asset>>
     where
         B: BankAccountView,
@@ -40,10 +39,10 @@ where
 
         let price_to_lpn = self.price_of_lease_currency()?;
 
-        let status = self.act_on_liability(now, lease.clone(), lease_amount, price_to_lpn)?;
+        let status = self.act_on_liability(now, lease_amount, price_to_lpn)?;
 
         if !matches!(status, Status::FullLiquidation(_)) {
-            self.reschedule(lease, lease_amount, &now, &status, price_to_lpn)?;
+            self.reschedule(lease_amount, &now, &status, price_to_lpn)?;
         }
 
         Ok(self.into_on_alarm_result(status))
@@ -53,7 +52,6 @@ where
         mut self,
         now: Timestamp,
         account: &B,
-        lease: Addr,
     ) -> ContractResult<OnAlarmResult<Asset>>
     where
         B: BankAccountView,
@@ -65,34 +63,29 @@ where
         let lease_lpn = total(lease_amount, price_to_lpn);
 
         let status = if self.loan.grace_period_end() <= now {
-            self.liquidate_on_interest_overdue(now, lease.clone(), lease_amount, price_to_lpn)?
+            self.liquidate_on_interest_overdue(now, lease_amount, price_to_lpn)?
         } else {
             self.handle_warnings(
                 self.loan
-                    .liability_status(now, lease.clone(), lease_lpn)?
+                    .liability_status(now, self.lease_addr.clone(), lease_lpn)?
                     .ltv,
             )
         };
 
         if !matches!(status, Status::FullLiquidation(_)) {
-            self.reschedule(lease, lease_amount, &now, &status, price_to_lpn)?;
+            self.reschedule(lease_amount, &now, &status, price_to_lpn)?;
         }
 
         Ok(self.into_on_alarm_result(status))
     }
 
     #[inline]
-    pub(in crate::lease) fn initial_alarm_schedule<A>(
+    pub(in crate::lease) fn initial_alarm_schedule(
         &mut self,
-        lease: A,
         lease_amount: Coin<Asset>,
         now: &Timestamp,
-    ) -> ContractResult<()>
-    where
-        A: Into<Addr>,
-    {
+    ) -> ContractResult<()> {
         self.reschedule(
-            lease,
             lease_amount,
             now,
             &Status::None,
@@ -101,24 +94,23 @@ where
     }
 
     #[inline]
-    pub(in crate::lease) fn reschedule_on_repay<A>(
+    pub(in crate::lease) fn reschedule_on_repay(
         &mut self,
-        lease: A,
         lease_amount: Coin<Asset>,
         now: &Timestamp,
-    ) -> ContractResult<()>
-    where
-        A: Into<Addr> + Clone,
-    {
+    ) -> ContractResult<()> {
         let price_to_lpn = self.price_of_lease_currency()?;
 
         let lease_lpn = total(lease_amount, price_to_lpn);
 
         self.reschedule(
-            lease.clone(),
             lease_amount,
             now,
-            &self.handle_warnings(self.loan.liability_status(*now, lease, lease_lpn)?.ltv),
+            &self.handle_warnings(
+                self.loan
+                    .liability_status(*now, self.lease_addr.clone(), lease_lpn)?
+                    .ltv,
+            ),
             price_to_lpn,
         )
     }
@@ -134,20 +126,16 @@ where
     }
 
     #[inline]
-    fn reschedule<A>(
+    fn reschedule(
         &mut self,
-        lease: A,
         lease_amount: Coin<Asset>,
         now: &Timestamp,
         liquidation_status: &Status<Asset>,
         price_to_lpn: Price<Asset, Lpn>,
-    ) -> ContractResult<()>
-    where
-        A: Into<Addr>,
-    {
+    ) -> ContractResult<()> {
         self.reschedule_time_alarm(now, liquidation_status)?;
 
-        self.reschedule_price_alarm(lease, lease_amount, now, liquidation_status, price_to_lpn)
+        self.reschedule_price_alarm(lease_amount, now, liquidation_status, price_to_lpn)
     }
 
     fn reschedule_time_alarm(
@@ -166,17 +154,13 @@ where
             .map_err(Into::into)
     }
 
-    fn reschedule_price_alarm<A>(
+    fn reschedule_price_alarm(
         &mut self,
-        lease: A,
         mut lease_amount: Coin<Asset>,
         now: &Timestamp,
         liquidation_status: &Status<Asset>,
         price_to_lpn: Price<Asset, Lpn>,
-    ) -> ContractResult<()>
-    where
-        A: Into<Addr>,
-    {
+    ) -> ContractResult<()> {
         if currency::equal::<Asset, Lpn>() {
             return Ok(());
         }
@@ -189,8 +173,6 @@ where
         }
 
         let lease_lpn = total(lease_amount, price_to_lpn);
-
-        let lease = lease.into();
 
         let (below, above) = match liquidation_status {
             Status::None | Status::PartialLiquidation { .. } => {
@@ -213,7 +195,11 @@ where
 
         let total_liability = self
             .loan
-            .liability_status(*now + self.liability.recalculation_time(), lease, lease_lpn)?
+            .liability_status(
+                *now + self.liability.recalculation_time(),
+                self.lease_addr.clone(),
+                lease_lpn,
+            )?
             .total_lpn;
 
         let below = self.price_alarm_by_percent(lease_amount, total_liability, below)?;
@@ -268,7 +254,9 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let mut lease = lease_setup(
+            &lease_addr,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -313,7 +301,9 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let mut lease = lease_setup(
+            &lease_addr,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -359,7 +349,9 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
+            &lease_addr,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),

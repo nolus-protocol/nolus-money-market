@@ -1,4 +1,4 @@
-use cosmwasm_std::{to_binary, Addr, Binary, Timestamp};
+use cosmwasm_std::{to_binary, Binary, Timestamp};
 use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
@@ -15,16 +15,11 @@ use crate::{
 pub struct LeaseState<Bank> {
     now: Timestamp,
     account: Bank,
-    lease: Addr,
 }
 
 impl<Bank> LeaseState<Bank> {
-    pub fn new(now: Timestamp, account: Bank, lease: Addr) -> Self {
-        Self {
-            now,
-            account,
-            lease,
-        }
+    pub fn new(now: Timestamp, account: Bank) -> Self {
+        Self { now, account }
     }
 }
 
@@ -47,7 +42,7 @@ where
         Oracle: OracleTrait<Lpn>,
         Asset: Currency + Serialize,
     {
-        let resp = lease.state(self.now, &self.account, self.lease)?;
+        let resp = lease.state(self.now, &self.account)?;
         to_binary(&resp).map_err(ContractError::from)
     }
 

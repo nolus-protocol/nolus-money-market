@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use cosmwasm_std::QuerierWrapper;
+use cosmwasm_std::{Addr, QuerierWrapper};
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
@@ -13,14 +13,21 @@ use super::{dto::LeaseDTO, Lease, WithLease};
 pub struct Factory<'r, L> {
     cmd: L,
     lease_dto: LeaseDTO,
+    lease_addr: &'r Addr,
     querier: &'r QuerierWrapper<'r>,
 }
 
 impl<'r, L> Factory<'r, L> {
-    pub fn new(cmd: L, lease_dto: LeaseDTO, querier: &'r QuerierWrapper<'r>) -> Self {
+    pub fn new(
+        cmd: L,
+        lease_dto: LeaseDTO,
+        lease_addr: &'r Addr,
+        querier: &'r QuerierWrapper<'r>,
+    ) -> Self {
         Self {
             cmd,
             lease_dto,
+            lease_addr,
             querier,
         }
     }
@@ -44,6 +51,7 @@ where
         time_alarms.execute(FactoryStage2 {
             cmd: self.cmd,
             lease_dto: self.lease_dto,
+            lease_addr: self.lease_addr,
             _lpn: PhantomData,
             lpp,
             querier: self.querier,
@@ -58,6 +66,7 @@ where
 struct FactoryStage2<'r, L, Lpn, Lpp> {
     cmd: L,
     lease_dto: LeaseDTO,
+    lease_addr: &'r Addr,
     _lpn: PhantomData<Lpn>,
     lpp: Lpp,
     querier: &'r QuerierWrapper<'r>,
@@ -83,6 +92,7 @@ where
             FactoryStage3 {
                 cmd: self.cmd,
                 lease_dto: self.lease_dto,
+                lease_addr: self.lease_addr,
                 lpp: self.lpp,
                 time_alarms,
             },
@@ -91,14 +101,15 @@ where
     }
 }
 
-struct FactoryStage3<L, Lpp, TimeAlarms> {
+struct FactoryStage3<'r, L, Lpp, TimeAlarms> {
     cmd: L,
     lease_dto: LeaseDTO,
+    lease_addr: &'r Addr,
     lpp: Lpp,
     time_alarms: TimeAlarms,
 }
 
-impl<L, Lpn, Lpp, TimeAlarms> WithOracle<Lpn> for FactoryStage3<L, Lpp, TimeAlarms>
+impl<'r, L, Lpn, Lpp, TimeAlarms> WithOracle<Lpn> for FactoryStage3<'r, L, Lpp, TimeAlarms>
 where
     L: WithLease,
     Lpn: Currency + Serialize,
@@ -117,6 +128,7 @@ where
             FactoryStage4 {
                 cmd: self.cmd,
                 lease_dto: self.lease_dto,
+                lease_addr: self.lease_addr,
                 _lpn: PhantomData,
                 lpp: self.lpp,
                 time_alarms: self.time_alarms,
@@ -130,16 +142,18 @@ where
     }
 }
 
-struct FactoryStage4<L, Lpn, Lpp, TimeAlarms, Oracle> {
+struct FactoryStage4<'r, L, Lpn, Lpp, TimeAlarms, Oracle> {
     cmd: L,
     _lpn: PhantomData<Lpn>,
     lease_dto: LeaseDTO,
+    lease_addr: &'r Addr,
     lpp: Lpp,
     time_alarms: TimeAlarms,
     oracle: Oracle,
 }
 
-impl<L, Lpn, Lpp, TimeAlarms, Oracle> AnyVisitor for FactoryStage4<L, Lpn, Lpp, TimeAlarms, Oracle>
+impl<'r, L, Lpn, Lpp, TimeAlarms, Oracle> AnyVisitor
+    for FactoryStage4<'r, L, Lpn, Lpp, TimeAlarms, Oracle>
 where
     L: WithLease,
     Lpn: Currency + Serialize,
@@ -156,6 +170,7 @@ where
     {
         self.cmd.exec(Lease::<_, _, _, _, C>::from_dto(
             self.lease_dto,
+            self.lease_addr,
             self.lpp,
             self.time_alarms,
             self.oracle,
