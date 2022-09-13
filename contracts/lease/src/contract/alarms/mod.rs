@@ -43,6 +43,6 @@ where
         .emit("customer", &info.customer)
         .emit_percent_amount("ltv", info.ltv)
         .emit_to_string_value("level", level.to_uint())
-        .emit("lease-asset", Asset::SYMBOL)
+        .emit_currency::<_, Asset>("lease-asset")
         .into()
 }

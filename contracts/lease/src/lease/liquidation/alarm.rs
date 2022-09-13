@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use finance::{
     coin::Coin,
-    currency::{equal, Currency},
+    currency::{self, Currency},
     fraction::Fraction,
     percent::Percent,
     price::{total, total_of, Price, PriceDTO},
@@ -177,7 +177,7 @@ where
     where
         A: Into<Addr>,
     {
-        if equal::<Asset, Lpn>() {
+        if currency::equal::<Asset, Lpn>() {
             return Ok(());
         }
 

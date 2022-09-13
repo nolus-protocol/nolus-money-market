@@ -4,7 +4,7 @@ use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use serde::Serialize;
 
 use finance::{
-    currency::{equal, Currency, SymbolOwned},
+    currency::{self, Currency, SymbolOwned},
     liability::Liability,
     price::Price,
 };
@@ -195,7 +195,7 @@ where
     }
 
     fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
-        if equal::<Asset, Lpn>() {
+        if currency::equal::<Asset, Lpn>() {
             Ok(Price::identity())
         } else {
             self.oracle
