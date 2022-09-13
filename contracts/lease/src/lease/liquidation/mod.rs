@@ -22,7 +22,7 @@ use super::LeaseDTO;
 
 mod alarm;
 
-impl<Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>
+impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
@@ -42,7 +42,7 @@ where
             ltv, overdue_lpn, ..
         } = self
             .loan
-            .liability_status(now, self.lease.clone(), lease_lpn)?;
+            .liability_status(now, self.lease_addr.clone(), lease_lpn)?;
 
         self.liquidate(
             lease_lpn,
@@ -62,7 +62,7 @@ where
 
         let LiabilityStatus { ltv, total_lpn, .. } =
             self.loan
-                .liability_status(now, self.lease.clone(), lease_lpn)?;
+                .liability_status(now, self.lease_addr.clone(), lease_lpn)?;
 
         if self.liability.max_percent() <= ltv {
             self.liquidate_on_liability(lease_lpn, total_lpn, price_to_lpn.inv())
@@ -234,7 +234,9 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
+            &lease_addr,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -258,7 +260,9 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
+            &lease_addr,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -288,7 +292,9 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
+            &lease_addr,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -318,7 +324,9 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
+            &lease_addr,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -347,7 +355,9 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
+            &lease_addr,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -378,7 +388,9 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
+            &lease_addr,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -408,7 +420,9 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
+            &lease_addr,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),

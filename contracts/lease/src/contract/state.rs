@@ -19,10 +19,7 @@ pub struct LeaseState<Bank> {
 
 impl<Bank> LeaseState<Bank> {
     pub fn new(now: Timestamp, account: Bank) -> Self {
-        Self {
-            now,
-            account,
-        }
+        Self { now, account }
     }
 }
 

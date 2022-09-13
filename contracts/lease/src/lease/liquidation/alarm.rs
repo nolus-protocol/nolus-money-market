@@ -19,7 +19,7 @@ use crate::{
     lease::{Lease, OnAlarmResult, Status, WarningLevel},
 };
 
-impl<Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>
+impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
@@ -67,7 +67,7 @@ where
         } else {
             self.handle_warnings(
                 self.loan
-                    .liability_status(now, self.lease.clone(), lease_lpn)?
+                    .liability_status(now, self.lease_addr.clone(), lease_lpn)?
                     .ltv,
             )
         };
@@ -108,7 +108,7 @@ where
             now,
             &self.handle_warnings(
                 self.loan
-                    .liability_status(*now, self.lease.clone(), lease_lpn)?
+                    .liability_status(*now, self.lease_addr.clone(), lease_lpn)?
                     .ltv,
             ),
             price_to_lpn,
@@ -197,7 +197,7 @@ where
             .loan
             .liability_status(
                 *now + self.liability.recalculation_time(),
-                self.lease.clone(),
+                self.lease_addr.clone(),
                 lease_lpn,
             )?
             .total_lpn;
@@ -254,7 +254,9 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let mut lease = lease_setup(
+            &lease_addr,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -299,7 +301,9 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let mut lease = lease_setup(
+            &lease_addr,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -345,7 +349,9 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
+            &lease_addr,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),

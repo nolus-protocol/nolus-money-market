@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Api, QuerierWrapper, Timestamp};
+use cosmwasm_std::{Api, QuerierWrapper, Timestamp};
 
 use finance::duration::Duration;
 use lpp::stub::LppRef;
@@ -8,16 +8,12 @@ use crate::{
 };
 
 impl NewLeaseForm {
-    pub(crate) fn into_lease_dto<A>(
+    pub(crate) fn into_lease_dto(
         self,
         start_at: Timestamp,
-        lease: A,
         api: &dyn Api,
         querier: &QuerierWrapper,
-    ) -> ContractResult<LeaseDTO>
-    where
-        A: Into<Addr>,
-    {
+    ) -> ContractResult<LeaseDTO> {
         self.liability.invariant_held()?;
 
         let customer = api.addr_validate(&self.customer)?;
@@ -37,7 +33,6 @@ impl NewLeaseForm {
         )?;
 
         Ok(LeaseDTO::new(
-            lease.into(),
             customer,
             self.currency,
             self.liability,
@@ -90,7 +85,6 @@ mod test {
         let api = MockApi::default();
         let _ = lease.into_lease_dto(
             Timestamp::from_nanos(1000),
-            Addr::unchecked("lease"),
             &api,
             &QuerierWrapper::new(&MockQuerier::default()),
         );

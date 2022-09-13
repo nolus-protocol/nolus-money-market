@@ -41,16 +41,11 @@ pub fn instantiate(
 ) -> ContractResult<Response> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let lease = form.into_lease_dto(
-        env.block.time,
-        env.contract.address,
-        deps.api,
-        &deps.querier,
-    )?;
+    let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
     lease.store(deps.storage)?;
 
     let OpenLoanReqResult { batch, downpayment } =
-        lease::execute(lease, OpenLoanReq::new(&info.funds), &deps.querier)?;
+        lease::execute(lease, OpenLoanReq::new(&info.funds), &env, &deps.querier)?;
 
     downpayment.store(deps.storage)?;
 
@@ -74,6 +69,7 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
             let emitter = lease::execute(
                 lease,
                 OpenLoanResp::new(msg, downpayment, account, &env),
+                &env,
                 &deps.querier,
             )?;
 
@@ -136,6 +132,7 @@ pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     lease::execute(
         lease,
         LeaseState::new(env.block.time, bank),
+        &env,
         &deps.querier,
     )
 }
@@ -147,7 +144,7 @@ fn try_repay(
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<RepayResult> {
-    lease::execute(lease, Repay::new(&info.funds, account, env), querier)
+    lease::execute(lease, Repay::new(&info.funds, account, env), env, querier)
 }
 
 fn try_close(
@@ -165,6 +162,7 @@ fn try_close(
             account,
             env.block.time,
         ),
+        env,
         querier,
     )?;
 
@@ -180,11 +178,8 @@ fn try_on_price_alarm(
 ) -> ContractResult<AlarmResult> {
     lease::execute(
         lease,
-        PriceAlarm::new(
-            &info.sender,
-            account,
-            env.block.time,
-        ),
+        PriceAlarm::new(&info.sender, account, env.block.time),
+        env,
         querier,
     )
 }
@@ -198,11 +193,8 @@ fn try_on_time_alarm(
 ) -> ContractResult<AlarmResult> {
     lease::execute(
         lease,
-        TimeAlarm::new(
-            &info.sender,
-            account,
-            env.block.time,
-        ),
+        TimeAlarm::new(&info.sender, account, env.block.time),
+        env,
         querier,
     )
 }

@@ -13,7 +13,7 @@ use crate::{
     loan::RepayReceipt,
 };
 
-impl<Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>
+impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
@@ -27,7 +27,7 @@ where
         payment: Coin<Lpn>,
         now: Timestamp,
     ) -> ContractResult<Result<Lpn>> {
-        let receipt = self.loan.repay(payment, now, self.lease.clone())?;
+        let receipt = self.loan.repay(payment, now, self.lease_addr.clone())?;
 
         self.reschedule_on_repay(lease_amount, &now)?;
 
