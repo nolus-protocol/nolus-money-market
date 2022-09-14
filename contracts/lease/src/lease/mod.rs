@@ -206,7 +206,7 @@ where
             Ok(Price::identity())
         } else {
             self.oracle
-                .price_of(ToOwned::to_owned(Asset::SYMBOL))?
+                .get_price::<Asset>()?
                 .price
                 .try_into()
                 .map_err(Into::into)

@@ -73,10 +73,10 @@ impl Config {
         }
         for pair in &pairs {
             if pair.0.eq_ignore_ascii_case(pair.1.as_str()) {
-                return Err(ContractError::InvalidDenomPair(
+                return Err(ContractError::InvalidDenomPair((
                     pair.0.to_owned(),
                     pair.1.to_owned(),
-                ));
+                )));
             }
         }
 

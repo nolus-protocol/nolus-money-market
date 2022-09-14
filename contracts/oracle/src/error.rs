@@ -38,7 +38,7 @@ pub enum ContractError {
     InvalidAddress {},
 
     #[error("Invalid denom pair")]
-    InvalidDenomPair(SymbolOwned, SymbolOwned),
+    InvalidDenomPair((SymbolOwned, SymbolOwned)),
 
     #[error("Invalid denom pair")]
     InvalidResolutionPath(ResolutionPath),
