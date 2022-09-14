@@ -2,7 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    check,
+    broken_invariant,
     duration::Duration,
     error::{Error, Result},
     fractionable::Percentable,
@@ -127,37 +127,37 @@ impl Liability {
 
     pub fn invariant_held(&self) -> Result<()> {
         // TODO restrict further the accepted percents to 100 since there is no much sense of having no borrow
-        check!(
+        broken_invariant!(
             self.init_percent > Percent::ZERO,
             "Initial % should not be zero"
         )?;
 
-        check!(
+        broken_invariant!(
             self.healthy_percent >= self.init_percent,
             "Healthy % should be >= initial %"
         )?;
 
-        check!(
+        broken_invariant!(
             self.first_liq_warn > self.healthy_percent,
             "First liquidation % should be > healthy %"
         )?;
-        check!(
+        broken_invariant!(
             self.second_liq_warn > self.first_liq_warn,
             "Second liquidation % should be > first liquidation %"
         )?;
-        check!(
+        broken_invariant!(
             self.third_liq_warn > self.second_liq_warn,
             "Third liquidation % should be > second liquidation %"
         )?;
-        check!(
+        broken_invariant!(
             self.max_percent > self.third_liq_warn,
             "Max % should be > third liquidation %"
         )?;
-        check!(
+        broken_invariant!(
             self.max_percent <= Percent::HUNDRED,
             "Max % should be <= 100%"
         )?;
-        check!(
+        broken_invariant!(
             self.recalc_secs >= SECS_IN_HOUR,
             "Recalculate cadence in seconds should be >= 1h"
         )?;

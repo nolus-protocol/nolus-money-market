@@ -11,7 +11,7 @@ pub mod price;
 pub mod ratio;
 
 #[macro_export]
-macro_rules! check {
+macro_rules! broken_invariant {
     ($cond:expr $(,)?) => {
         if !$cond {
             Err(Error::broken_invariant_err::<Liability>(""))
