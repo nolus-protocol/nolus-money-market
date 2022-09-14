@@ -74,11 +74,11 @@ impl<'m> PriceFeeds<'m> {
         let mut resolution_path = DenomResolutionPath::new();
 
         let res = self.price_impl(storage, parameters, &base, quote, resolution_path.as_mut())?;
-        // resolution_path.push(res);
-        // resolution_path.reverse();
+        resolution_path.push(res);
+        resolution_path.reverse();
 
-        // PriceFeeds::calculate_price(base, &mut resolution_path)
-        Ok(res)
+        PriceFeeds::calculate_price(base, &mut resolution_path)
+        // Ok(res)
     }
 
     fn price_impl(
@@ -111,20 +111,6 @@ impl<'m> PriceFeeds<'m> {
         Ok(price_dto)
     }
 
-    pub fn load(
-        &self,
-        storage: &dyn Storage,
-        base: SymbolOwned,
-        quote: SymbolOwned,
-        parameters: Parameters,
-    ) -> Result<PriceDTO, PriceFeedsError> {
-        Ok(self
-            .0
-            .load(storage, (base, quote))?
-            .get_price(parameters)?
-            .price())
-    }
-
     fn search_for_path(
         &self,
         storage: &dyn Storage,
@@ -141,8 +127,6 @@ impl<'m> PriceFeeds<'m> {
             .filter_map(|res| res.ok())
             .collect();
 
-        println!("========{}===={}===========", base, quote.clone());
-
         for (current_quote, feed) in quotes {
             if let Ok(price) = self.price_impl(
                 storage,
@@ -158,38 +142,39 @@ impl<'m> PriceFeeds<'m> {
         Ok(None)
     }
 
+    pub fn load(
+        &self,
+        storage: &dyn Storage,
+        base: SymbolOwned,
+        quote: SymbolOwned,
+        parameters: Parameters,
+    ) -> Result<PriceDTO, PriceFeedsError> {
+        Ok(self
+            .0
+            .load(storage, (base, quote))?
+            .get_price(parameters)?
+            .price())
+    }
     // TODO remove move price calculation to the finance library
-    // fn calculate_price(
-    //     base: SymbolOwned,
-    //     resolution_path: &mut DenomResolutionPath,
-    // ) -> Result<PriceDTO, PriceFeedsError> {
-    //     if resolution_path.len() == 1 {
-    //         match resolution_path.first() {
-    //             Some(price) => Ok(price.to_owned()),
-    //             None => Err(PriceFeedsError::NoPrice {}),
-    //         }
-    //     } else {
-    //         let mut i = 0;
-    //         assert!(resolution_path[0].base().symbol().to_string().eq(&base));
-    //         let first = resolution_path[0].base().clone();
-    //         let mut result = first.clone();
+    fn calculate_price(
+        base: SymbolOwned,
+        resolution_path: &mut DenomResolutionPath,
+    ) -> Result<PriceDTO, PriceFeedsError> {
+        let mut first = match resolution_path.first() {
+            Some(price) => Ok(price.to_owned()),
+            None => Err(PriceFeedsError::NoPrice {}),
+        }?;
 
-    //         while !resolution_path.is_empty() {
-    //             if resolution_path[i].base().symbol().to_string().eq(&base) {
-    //                 let price = resolution_path.remove(i);
-    //                 base = price.quote().symbol().to_string();
+        if resolution_path.len() == 1 {
+            return Ok(first);
+        }
 
-    //                 let x = price.into();
+        for p in resolution_path.iter() {
+            first = first * p;
+        }
 
-    //                 result = price.total(&result);
-    //                 // assert_eq!(result.base().symbol().to_string(), base);
-    //             } else {
-    //                 i += 1;
-    //             }
-    //         }
-    //         Ok(first)
-    //     }
-    // }
+        Ok(first)
+    }
 
     pub fn feed(
         &self,

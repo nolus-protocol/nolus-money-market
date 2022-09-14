@@ -5,7 +5,7 @@ use error::PriceFeedsError;
 use finance::{
     coin::Coin,
     currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
-    price::{self, Price, PriceDTO},
+    price::{self, execute, Price, PriceDTO, WithPrice},
 };
 use market_price::{Parameters, PriceFeeds};
 use serde::{de::DeserializeOwned, Serialize};
@@ -118,5 +118,67 @@ where
     }
     fn on_unknown(self) -> Result<Self::Output, Self::Error> {
         Err(PriceFeedsError::UnknownCurrency {})
+    }
+}
+
+pub struct Multiplicand {
+    p2: PriceDTO,
+}
+
+impl WithPrice for Multiplicand {
+    type Output = PriceDTO;
+
+    type Error = PriceFeedsError;
+
+    fn exec<C, QuoteC>(self, p1: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
+    where
+        C: Currency,
+        QuoteC: Currency,
+    {
+        execute(self.p2, Multiplier::new(p1))
+    }
+
+    fn unknown(self) -> Result<Self::Output, Self::Error> {
+        todo!()
+    }
+}
+
+pub struct Multiplier<C1, QuoteC1>
+where
+    C1: Currency,
+    QuoteC1: Currency,
+{
+    p1: Price<C1, QuoteC1>,
+}
+
+impl<C1, QuoteC1> Multiplier<C1, QuoteC1>
+where
+    C1: Currency,
+    QuoteC1: Currency,
+{
+    fn new(p: Price<C1, QuoteC1>) -> Self {
+        Self { p1: p }
+    }
+}
+
+impl<C1, QuoteC1> WithPrice for Multiplier<C1, QuoteC1>
+where
+    C1: Currency,
+    QuoteC1: Currency,
+{
+    type Output = PriceDTO;
+
+    type Error = PriceFeedsError;
+
+    fn exec<C, QuoteC>(self, p2: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
+    where
+        C: Currency,
+        QuoteC: Currency,
+    {
+        p1 * p2
+    }
+
+    fn unknown(self) -> Result<Self::Output, Self::Error> {
+        todo!()
     }
 }

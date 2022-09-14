@@ -85,6 +85,23 @@ where
     )
 }
 
+pub fn execute2<Cmd>(
+    price1: PriceDTO,
+    price2: PriceDTO,
+    cmd: Cmd,
+) -> Result<Cmd::Output, Cmd::Error>
+where
+    Cmd: WithPrice,
+{
+    visit_any(
+        &price1.amount.symbol().clone(),
+        CVisitor {
+            price_dto: price1,
+            cmd,
+        },
+    )
+}
+
 struct CVisitor<Cmd>
 where
     Cmd: WithPrice,
