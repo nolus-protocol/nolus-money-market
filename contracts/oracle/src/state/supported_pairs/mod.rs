@@ -45,7 +45,7 @@ where
 {
     const DB_ITEM: Item<'a, SupportedPairs<B>> = Item::new("supported_pairs");
 
-    // TODO: add checks for epmpty paths
+    // TODO: add checks for empty paths
     pub fn new(paths: Vec<ResolutionPath>) -> Result<Self, ContractError> {
         let mut supported_currencies = vec![];
         for path in paths.iter() {
@@ -191,13 +191,21 @@ where
             })?;
         Ok(())
     }
+
+    pub fn query_supported_pairs(&self) -> Vec<CurrencyPair> {
+        self.supported_currencies
+            .iter()
+            .cloned()
+            .map(|c| (c, B::SYMBOL.to_owned()))
+            .collect()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use finance::currency::{Currency, Usdc};
     use cosmwasm_std::testing;
+    use finance::currency::{Currency, Usdc};
 
     type TheCurrency = Usdc;
 
@@ -259,10 +267,8 @@ mod tests {
         let tree = SupportedPairs::<Usdc>::new(paths.clone()).unwrap();
         let mut deps = testing::mock_dependencies();
 
-        tree.save(deps.as_mut().storage)
-            .unwrap();
-        let restored = SupportedPairs::load(deps.as_ref().storage)
-            .unwrap();
+        tree.save(deps.as_mut().storage).unwrap();
+        let restored = SupportedPairs::load(deps.as_ref().storage).unwrap();
 
         assert_eq!(restored, tree);
     }
@@ -279,6 +285,7 @@ mod tests {
         SupportedPairs::<TheCurrency>::new(vec![
             vec!["token0".into(), "token1".into(), TheCurrency::SYMBOL.into()],
             vec!["token0".into(), "token2".into(), TheCurrency::SYMBOL.into()],
-        ]).unwrap();
+        ])
+        .unwrap();
     }
 }
