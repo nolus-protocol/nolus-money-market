@@ -18,7 +18,7 @@ pub type ResolutionPath = Vec<SymbolOwned>;
 type CurrencyPair = (SymbolOwned, SymbolOwned);
 type Node = TreeNode<SymbolOwned>;
 
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SupportedPairs<B>
 where
     B: Currency,
@@ -59,14 +59,13 @@ where
         // edges with depth level
         let mut edges: Vec<((&SymbolOwned, usize), &SymbolOwned)> = paths
             .iter()
-            .map(|path| {
+            .flat_map(|path| {
                 path[..path.len() - 1]
                     .iter()
                     .enumerate()
                     .map(|(i, n)| (n, path.len() - i))
                     .zip(path[1..].iter())
             })
-            .flatten()
             .collect();
         edges.sort();
         edges.dedup();
@@ -80,7 +79,7 @@ where
                     edge.1.to_owned(),
                 )));
             }
-            prev = &edge;
+            prev = edge;
         }
 
         // fill the tree
@@ -107,7 +106,7 @@ where
             // add free edges
             for edge in rest {
                 if let Some(tip) = tips.iter_mut().find(|tip| tip.root().data() == edge.1) {
-                    if tip.iter().find(|child| child.data() == edge.0 .0).is_none() {
+                    if !tip.iter().any(|child| child.data() == edge.0 .0) {
                         tip.push_back(Tree::new(edge.0 .0.clone()));
                     }
                 }
@@ -130,7 +129,7 @@ where
 
     fn validate_path(path: &ResolutionPath) -> Result<(), ContractError> {
         if let Some(base) = path.last() {
-            if base != &B::SYMBOL || path.len() < 2 {
+            if base != B::SYMBOL || path.len() < 2 {
                 return Err(ContractError::InvalidResolutionPath(path.clone()));
             }
         } else {
@@ -224,7 +223,7 @@ mod tests {
     #[test]
     fn test_is_supported() {
         let paths = test_case();
-        let tree = SupportedPairs::<Usdc>::new(paths.clone()).unwrap();
+        let tree = SupportedPairs::<Usdc>::new(paths).unwrap();
 
         assert!(tree.validate_supported(&"token3".into()).is_ok());
         assert!(tree.validate_supported(&"token1".into()).is_err());
@@ -243,7 +242,7 @@ mod tests {
     #[test]
     fn test_load_affected() {
         let paths = test_case();
-        let tree = SupportedPairs::<Usdc>::new(paths.clone()).unwrap();
+        let tree = SupportedPairs::<Usdc>::new(paths).unwrap();
 
         let mut resp = tree
             .load_affected(&("token2".into(), TheCurrency::SYMBOL.into()))
@@ -264,7 +263,7 @@ mod tests {
     #[test]
     fn test_storage() {
         let paths = test_case();
-        let tree = SupportedPairs::<Usdc>::new(paths.clone()).unwrap();
+        let tree = SupportedPairs::<Usdc>::new(paths).unwrap();
         let mut deps = testing::mock_dependencies();
 
         tree.save(deps.as_mut().storage).unwrap();

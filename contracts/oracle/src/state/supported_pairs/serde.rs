@@ -3,7 +3,7 @@ use finance::currency::SymbolOwned;
 use trees::{Tree, tr};
 use std::ops::{Deref, DerefMut};
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct TreeStore(pub trees::Tree<SymbolOwned>);
 
 impl Deref for TreeStore {
