@@ -30,6 +30,7 @@ cw2 = "0.13.2"
 schemars = "0.8"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0" }
+trees = "0.4.2"
 
 
 [dev-dependencies]
