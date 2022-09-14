@@ -1,5 +1,3 @@
-use std::ops::Shr;
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -39,6 +37,9 @@ where
         Price::new(self.0, to)
     }
 }
+
+type DoubleAmount = <Amount as HigherRank<Amount>>::Type;
+type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
 
 /// Represents the price of a currency in a quote currency, ref: https://en.wikipedia.org/wiki/Currency_pair
 ///
@@ -105,34 +106,17 @@ where
         let (amount_quote_normalized, rhs_amount_normalized) =
             self.amount_quote.into_coprime_with(rhs.amount);
 
-        type DoubleType = <Amount as HigherRank<Amount>>::Type;
-        type IntermediateType = <Amount as HigherRank<Amount>>::Intermediate;
         let double_amount =
-            DoubleType::from(amount_normalized) * DoubleType::from(rhs_amount_normalized);
-        let double_amount_quote = DoubleType::from(amount_quote_normalized)
-            * DoubleType::from(rhs_amount_quote_normalized);
+            DoubleAmount::from(amount_normalized) * DoubleAmount::from(rhs_amount_normalized);
+        let double_amount_quote = DoubleAmount::from(amount_quote_normalized)
+            * DoubleAmount::from(rhs_amount_quote_normalized);
 
-        fn bits_above_max(double_amount: DoubleType) -> u32 {
-            const BITS_MAX_AMOUNT: u32 = Amount::BITS;
-            let higher_half: Amount =
-                IntermediateType::try_from(double_amount.shr(BITS_MAX_AMOUNT))
-                    .expect("")
-                    .into();
-            BITS_MAX_AMOUNT - higher_half.leading_zeros()
-        }
-
-        fn trim_down(double_amount: DoubleType, bits: u32) -> Amount {
-            let amount: IntermediateType = double_amount
-                .shr(bits)
-                .try_into()
-                .expect("should not happen!");
-            amount.into()
-        }
-        let bits_to_shift = bits_above_max(double_amount).max(bits_above_max(double_amount_quote));
+        let extra_bits =
+            Self::bits_above_max(double_amount).max(Self::bits_above_max(double_amount_quote));
 
         Price::new(
-            trim_down(double_amount, bits_to_shift).into(),
-            trim_down(double_amount_quote, bits_to_shift).into(),
+            Self::trim_down(double_amount, extra_bits).into(),
+            Self::trim_down(double_amount_quote, extra_bits).into(),
         )
     }
 
@@ -141,6 +125,22 @@ where
             amount: self.amount_quote,
             amount_quote: self.amount,
         }
+    }
+
+    fn bits_above_max(double_amount: DoubleAmount) -> u32 {
+        const BITS_MAX_AMOUNT: u32 = Amount::BITS;
+        let higher_half: Amount = IntermediateAmount::try_from(double_amount >> BITS_MAX_AMOUNT)
+            .expect("Bigger Amount Higher Rank Type than required!")
+            .into();
+        BITS_MAX_AMOUNT - higher_half.leading_zeros()
+    }
+
+    fn trim_down(double_amount: DoubleAmount, bits: u32) -> Amount {
+        debug_assert!(bits <= Amount::BITS);
+        let amount: IntermediateAmount = (double_amount >> bits)
+            .try_into()
+            .expect("insufficient bits to trim");
+        amount.into()
     }
 }
 
