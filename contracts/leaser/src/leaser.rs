@@ -53,9 +53,7 @@ impl Leaser {
         if info.sender != config.owner {
             return Err(ContractError::Unauthorized {});
         }
-        if liability.invariant_held().is_err() {
-            return Err(ContractError::IvalidLiability {});
-        }
+        liability.invariant_held()?;
         repayment.validate_period()?;
         Config::update(
             deps.storage,
