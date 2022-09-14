@@ -22,6 +22,8 @@ impl NewLeaseForm {
             api.addr_validate(&self.loan.lpp)?,
             querier,
             ReplyId::OpenLoanReq.into(),
+            ReplyId::RepayReq.into(),
+            ReplyId::LiquidationRepay.into(),
         )?;
 
         let loan = LoanDTO::new(

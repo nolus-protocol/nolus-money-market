@@ -26,7 +26,9 @@ use self::factory::Factory;
 pub(super) use self::{
     downpayment_dto::DownpaymentDTO,
     dto::LeaseDTO,
-    liquidation::{LeaseInfo, OnAlarmResult, Status, WarningLevel},
+    liquidation::{
+        Cause as LiquidationCause, LeaseInfo, LiquidationInfo, OnAlarmResult, Status, WarningLevel,
+    },
     repay::Result as RepayResult,
 };
 
@@ -296,8 +298,12 @@ mod tests {
             unreachable!()
         }
 
-        fn repay_loan_req(&mut self, _repayment: Coin<TestCurrency>) -> LppResult<()> {
-            unreachable!()
+        fn repay_loan_req(
+            &mut self,
+            _repayment: Coin<TestCurrency>,
+            _liquidation: bool,
+        ) -> LppResult<()> {
+            Ok(())
         }
 
         fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestCurrency>> {
@@ -374,7 +380,11 @@ mod tests {
             unreachable!()
         }
 
-        fn repay_loan_req(&mut self, _repayment: Coin<TestCurrency>) -> LppResult<()> {
+        fn repay_loan_req(
+            &mut self,
+            _repayment: Coin<TestCurrency>,
+            _liquidation: bool,
+        ) -> LppResult<()> {
             unreachable!()
         }
 
@@ -536,7 +546,12 @@ mod tests {
         TA: TimeAlarms,
         O: Oracle<TestCurrency>,
     {
-        let lpp_ref = LppRef::unchecked::<_, Nls>("lpp_addr", Some(ReplyId::OpenLoanReq.into()));
+        let lpp_ref = LppRef::unchecked::<_, Nls>(
+            "lpp_addr",
+            Some(ReplyId::OpenLoanReq.into()),
+            Some(ReplyId::RepayReq.into()),
+            Some(ReplyId::LiquidationRepay.into()),
+        );
 
         let loan_dto = LoanDTO::new(
             LEASE_START,
