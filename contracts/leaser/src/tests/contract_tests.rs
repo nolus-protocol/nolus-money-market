@@ -35,6 +35,7 @@ fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::Ins
             1,
         ),
         repayment: Repayment::new(90 * 24 * 60 * 60, 10 * 24 * 60 * 60),
+        time_alarms: Addr::unchecked("timealarms"),
         market_price_oracle: Addr::unchecked("oracle"),
     }
 }

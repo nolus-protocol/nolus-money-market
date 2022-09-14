@@ -137,7 +137,6 @@ pub fn try_dispatch(
     Ok(emitter
         .emit_tx_info(&env)
         .emit_to_string_value("to", lpp_address)
-        .emit_timestamp("at", &env.block.time)
         .into())
 }
 

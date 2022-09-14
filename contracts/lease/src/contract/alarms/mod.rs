@@ -9,8 +9,9 @@ use crate::{
 };
 
 pub mod price;
+pub mod time;
 
-pub struct LiquidationResult {
+pub struct AlarmResult {
     pub(super) response: Response,
     pub(super) lease_dto: LeaseDTO,
 }
@@ -33,12 +34,15 @@ where
     }
 }
 
-fn emit_warning(batch: Batch, info: &LeaseInfo, level: WarningLevel) -> Response {
+fn emit_warning<Asset>(batch: Batch, info: &LeaseInfo<Asset>, level: WarningLevel) -> Response
+where
+    Asset: Currency,
+{
     batch
         .into_emitter(TYPE::LiquidationWarning)
         .emit("customer", &info.customer)
         .emit_percent_amount("ltv", info.ltv)
         .emit_to_string_value("level", level.to_uint())
-        .emit("lease-asset", &info.lease_asset)
+        .emit_currency::<_, Asset>("lease-asset")
         .into()
 }

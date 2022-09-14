@@ -16,7 +16,7 @@ pub use coinc::CoinDTO;
 use crate::currency::Currency;
 
 mod coinc;
-mod serde;
+pub mod serde;
 
 pub type Amount = u128;
 

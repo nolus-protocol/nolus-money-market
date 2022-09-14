@@ -658,10 +658,7 @@ mod test {
         let price = lpp
             .calculate_price(&deps.as_ref(), &env, Coin::new(0))
             .expect("should get price");
-        assert_eq!(
-            price.get(),
-            price::total_of(Coin::<NLpn>::new(1)).is(Coin::<TheCurrency>::new(1))
-        );
+        assert_eq!(price.get(), Price::identity());
 
         deps.querier
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(10_000_000)]);

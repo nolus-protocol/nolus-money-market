@@ -7,10 +7,20 @@ use std::{
 #[macro_export]
 macro_rules! generate_ids {
     ($visibility: vis $enum_name: ident as $as_type: ty { $($value: ident $(= $int_value: literal)?),+ $(,)? }) => {
-        #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+        #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
         $visibility enum $enum_name {
             $($value $(= $int_value)?,)+
         }
+
+        $(
+            $(
+                const _: () = if ::core::mem::size_of::<$as_type>() < ::core::mem::size_of::<$enum_name>() {
+                    if <$as_type>::MAX < $int_value {
+                        panic!("Value is larger than representing integer type's limit!");
+                    }
+                };
+            )?
+        )+
 
         impl ::core::convert::From<$enum_name> for $as_type {
             fn from(value: $enum_name) -> Self {

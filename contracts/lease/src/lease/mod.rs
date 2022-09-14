@@ -1,9 +1,12 @@
+use std::marker::PhantomData;
+
 use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use serde::Serialize;
 
 use finance::{
-    currency::{Currency, SymbolOwned},
+    currency::{self, Currency, SymbolOwned},
     liability::Liability,
+    price::Price,
 };
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleBatch};
@@ -11,6 +14,7 @@ use platform::{
     bank::{BankAccount, BankAccountView},
     batch::Batch,
 };
+use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch};
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -37,42 +41,59 @@ pub trait WithLease {
     type Output;
     type Error;
 
-    fn exec<Lpn, Lpp, Oracle>(
+    fn exec<Lpn, Lpp, TimeAlarms, Oracle, Asset>(
         self,
-        lease: Lease<Lpn, Lpp, Oracle>,
+        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
-        Oracle: OracleTrait<Lpn>;
+        TimeAlarms: TimeAlarmsTrait,
+        Oracle: OracleTrait<Lpn>,
+        Asset: Currency + Serialize;
 
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn execute<L, O, E>(dto: LeaseDTO, cmd: L, querier: &QuerierWrapper) -> Result<O, E>
+pub fn execute<L, O, E>(
+    dto: LeaseDTO,
+    cmd: L,
+    addr: &Addr,
+    querier: &QuerierWrapper,
+) -> Result<O, E>
 where
     L: WithLease<Output = O, Error = E>,
 {
     let lpp = dto.loan.lpp().clone();
 
-    lpp.execute(Factory::new(cmd, dto, querier), querier)
+    lpp.execute(Factory::new(cmd, dto, addr, querier), querier)
 }
 
-pub struct Lease<Lpn, Lpp, Oracle> {
+pub struct Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset> {
+    lease_addr: &'r Addr,
     customer: Addr,
-    currency: SymbolOwned,
     liability: Liability,
     loan: Loan<Lpn, Lpp>,
+    time_alarms: TimeAlarms,
     oracle: Oracle,
+    _asset: PhantomData<Asset>,
 }
 
-impl<Lpn, Lpp, Oracle> Lease<Lpn, Lpp, Oracle>
+impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
+    TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
+    Asset: Currency + Serialize,
 {
-    pub(super) fn from_dto(dto: LeaseDTO, lpp: Lpp, oracle: Oracle) -> Self {
+    pub(super) fn from_dto(
+        dto: LeaseDTO,
+        lease_addr: &'r Addr,
+        lpp: Lpp,
+        time_alarms: TimeAlarms,
+        oracle: Oracle,
+    ) -> Self {
         assert_eq!(
             Lpn::SYMBOL,
             dto.currency,
@@ -82,16 +103,23 @@ where
         );
 
         Self {
+            lease_addr,
             customer: dto.customer,
-            currency: dto.currency,
             liability: dto.liability,
             loan: Loan::from_dto(dto.loan, lpp),
+            time_alarms,
             oracle,
+            _asset: PhantomData,
         }
     }
 
     pub(super) fn into_dto(self) -> (LeaseDTO, Batch) {
         let (loan_dto, lpp_batch) = self.loan.into_dto();
+
+        let TimeAlarmsBatch {
+            time_alarms_ref: time_alarms_dto,
+            batch: time_alarms_batch,
+        } = self.time_alarms.into();
 
         let OracleBatch {
             oracle_ref: oracle_dto,
@@ -101,17 +129,22 @@ where
         (
             LeaseDTO::new(
                 self.customer,
-                self.currency,
+                ToOwned::to_owned(Asset::SYMBOL),
                 self.liability,
                 loan_dto,
+                time_alarms_dto.into(),
                 oracle_dto.into(),
             ),
-            lpp_batch.merge(oracle_batch),
+            lpp_batch.merge(time_alarms_batch).merge(oracle_batch),
         )
     }
 
     pub(crate) fn owned_by(&self, addr: &Addr) -> bool {
         &self.customer == addr
+    }
+
+    pub(crate) fn sent_by_time_alarms(&self, addr: &Addr) -> bool {
+        self.time_alarms.owned_by(addr)
     }
 
     pub(crate) fn sent_by_oracle(&self, addr: &Addr) -> bool {
@@ -120,11 +153,11 @@ where
 
     // TODO add the lease address as a field in Lease<>
     //  and populate it on LeaseDTO.execute as LeaseFactory
-    pub(crate) fn close<B>(self, lease: Addr, mut account: B) -> ContractResult<Batch>
+    pub(crate) fn close<B>(self, mut account: B) -> ContractResult<Batch>
     where
         B: BankAccount,
     {
-        let state = self.state(Timestamp::from_nanos(u64::MAX), &account, lease)?;
+        let state = self.state(Timestamp::from_nanos(u64::MAX), &account)?;
         match state {
             StateResponse::Opened { .. } => Err(ContractError::LoanNotPaid()),
             StateResponse::Paid(..) => {
@@ -141,7 +174,6 @@ where
         &self,
         now: Timestamp,
         account: &B,
-        lease: Addr,
     ) -> ContractResult<StateResponse<Lpn, Lpn>>
     where
         B: BankAccountView,
@@ -151,7 +183,7 @@ where
         if lease_amount.is_zero() {
             Ok(StateResponse::Closed())
         } else {
-            let loan_state = self.loan.state(now, lease)?;
+            let loan_state = self.loan.state(now, self.lease_addr.clone())?;
 
             loan_state.map_or(Ok(StateResponse::Paid(lease_amount)), |state| {
                 Ok(StateResponse::Opened {
@@ -163,14 +195,29 @@ where
                     previous_interest_due: state.previous_interest_due,
                     current_margin_due: state.current_margin_interest_due,
                     current_interest_due: state.current_interest_due,
+                    validity: now,
                 })
             })
+        }
+    }
+
+    fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
+        if currency::equal::<Asset, Lpn>() {
+            Ok(Price::identity())
+        } else {
+            self.oracle
+                .price_of(ToOwned::to_owned(Asset::SYMBOL))?
+                .price
+                .try_into()
+                .map_err(Into::into)
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::marker::PhantomData;
+
     use cosmwasm_std::{wasm_execute, Addr, Timestamp};
     use serde::{Deserialize, Serialize};
 
@@ -192,6 +239,10 @@ mod tests {
     use market_price_oracle::stub::{Oracle, OracleBatch, OracleRef};
     use marketprice::alarms::Alarm;
     use platform::{bank::BankAccountView, batch::Batch, error::Result as PlatformResult};
+    use time_alarms::{
+        msg::ExecuteMsg::AddAlarm,
+        stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},
+    };
 
     use crate::{
         loan::{Loan, LoanDTO},
@@ -201,11 +252,11 @@ mod tests {
 
     use super::Lease;
 
-    const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
-    const LEASE_START: Timestamp = Timestamp::from_nanos(100);
-    const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
-    type TestCurrency = Usdc;
-    type LppResult<T> = Result<T, LppError>;
+    pub const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
+    pub const LEASE_START: Timestamp = Timestamp::from_nanos(100);
+    pub const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
+    pub type TestCurrency = Usdc;
+    pub type LppResult<T> = Result<T, LppError>;
 
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     pub struct BankStub {
@@ -222,7 +273,7 @@ mod tests {
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-    struct LppLocalStub {
+    pub struct LppLocalStub {
         loan: Option<LoanResponse<TestCurrency>>,
     }
 
@@ -296,8 +347,8 @@ mod tests {
         }
     }
 
-    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-    struct LppLocalStubUnreachable {}
+    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+    pub struct LppLocalStubUnreachable {}
 
     impl From<LppLocalStubUnreachable> for LppBatch {
         fn from(_: LppLocalStubUnreachable) -> Self {
@@ -362,9 +413,57 @@ mod tests {
         }
     }
 
-    struct OracleLocalStub {
+    pub struct TimeAlarmsLocalStub {
         address: Addr,
-        batch: Batch,
+        pub batch: Batch,
+    }
+
+    impl TimeAlarms for TimeAlarmsLocalStub {
+        fn owned_by(&self, addr: &Addr) -> bool {
+            &self.address == addr
+        }
+
+        fn add_alarm(&mut self, time: Timestamp) -> time_alarms::stub::Result<()> {
+            self.batch.schedule_execute_no_reply(wasm_execute(
+                self.address.clone(),
+                &AddAlarm { time },
+                vec![],
+            )?);
+
+            Ok(())
+        }
+    }
+
+    impl From<TimeAlarmsLocalStub> for TimeAlarmsBatch {
+        fn from(stub: TimeAlarmsLocalStub) -> Self {
+            TimeAlarmsBatch {
+                time_alarms_ref: TimeAlarmsRef::unchecked(stub.address),
+                batch: stub.batch,
+            }
+        }
+    }
+
+    pub struct TimeAlarmsLocalStubUnreachable;
+
+    impl TimeAlarms for TimeAlarmsLocalStubUnreachable {
+        fn owned_by(&self, _addr: &Addr) -> bool {
+            unreachable!()
+        }
+
+        fn add_alarm(&mut self, _time: Timestamp) -> time_alarms::stub::Result<()> {
+            unreachable!()
+        }
+    }
+
+    impl From<TimeAlarmsLocalStubUnreachable> for TimeAlarmsBatch {
+        fn from(_: TimeAlarmsLocalStubUnreachable) -> Self {
+            unreachable!()
+        }
+    }
+
+    pub struct OracleLocalStub {
+        address: Addr,
+        pub batch: Batch,
     }
 
     impl<OracleBase> Oracle<OracleBase> for OracleLocalStub
@@ -399,7 +498,7 @@ mod tests {
         }
     }
 
-    struct OracleLocalStubUnreachable;
+    pub struct OracleLocalStubUnreachable;
 
     impl<OracleBase> Oracle<OracleBase> for OracleLocalStubUnreachable
     where
@@ -424,9 +523,15 @@ mod tests {
         }
     }
 
-    fn create_lease<L, O>(lpp: L, oracle: O) -> Lease<TestCurrency, L, O>
+    pub fn create_lease<L, TA, O>(
+        lease_addr: &Addr,
+        lpp: L,
+        time_alarms: TA,
+        oracle: O,
+    ) -> Lease<TestCurrency, L, TA, O, TestCurrency>
     where
         L: Lpp<TestCurrency>,
+        TA: TimeAlarms,
         O: Oracle<TestCurrency>,
     {
         let lpp_ref = LppRef::unchecked::<_, Nls>("lpp_addr", Some(ReplyId::OpenLoanReq.into()));
@@ -435,14 +540,14 @@ mod tests {
             LEASE_START,
             lpp_ref,
             MARGIN_INTEREST_RATE,
-            Duration::from_secs(100),
-            Duration::from_secs(0),
+            Duration::from_days(100),
+            Duration::from_days(10),
         )
         .unwrap();
 
         Lease {
+            lease_addr,
             customer: Addr::unchecked("customer"),
-            currency: TestCurrency::SYMBOL.to_string(),
             liability: Liability::new(
                 Percent::from_percent(65),
                 Percent::from_percent(5),
@@ -450,19 +555,28 @@ mod tests {
                 Percent::from_percent(2),
                 Percent::from_percent(3),
                 Percent::from_percent(2),
-                10 * 24,
+                24,
             ),
             loan: Loan::from_dto(loan_dto, lpp),
+            time_alarms,
             oracle,
+            _asset: PhantomData,
         }
     }
 
-    fn lease_setup(
+    pub fn lease_setup(
+        lease_addr: &Addr,
         loan_response: Option<LoanResponse<TestCurrency>>,
+        time_alarms_addr: Addr,
         oracle_addr: Addr,
-    ) -> Lease<TestCurrency, LppLocalStub, OracleLocalStub> {
+    ) -> Lease<TestCurrency, LppLocalStub, TimeAlarmsLocalStub, OracleLocalStub, TestCurrency> {
         let lpp_stub = LppLocalStub {
             loan: loan_response,
+        };
+
+        let time_alarms_stub = TimeAlarmsLocalStub {
+            address: time_alarms_addr,
+            batch: Batch::default(),
         };
 
         let oracle_stub = OracleLocalStub {
@@ -470,22 +584,30 @@ mod tests {
             batch: Batch::default(),
         };
 
-        create_lease(lpp_stub, oracle_stub)
+        create_lease(lease_addr, lpp_stub, time_alarms_stub, oracle_stub)
     }
 
-    fn create_bank_account(lease_amount: u128) -> BankStub {
+    pub fn create_bank_account(lease_amount: u128) -> BankStub {
         BankStub {
             balance: lease_amount,
         }
     }
 
-    fn request_state(
-        lease: Lease<TestCurrency, LppLocalStub, OracleLocalStub>,
+    pub fn request_state(
+        lease: Lease<
+            TestCurrency,
+            LppLocalStub,
+            TimeAlarmsLocalStub,
+            OracleLocalStub,
+            TestCurrency,
+        >,
         bank_account: &BankStub,
     ) -> StateResponse<TestCurrency, TestCurrency> {
-        lease
-            .state(LEASE_STATE_AT, bank_account, Addr::unchecked("unused"))
-            .unwrap()
+        lease.state(LEASE_STATE_AT, bank_account).unwrap()
+    }
+
+    pub fn coin(a: u128) -> Coin<TestCurrency> {
+        Coin::<TestCurrency>::new(a)
     }
 
     #[test]
@@ -502,7 +624,13 @@ mod tests {
         };
 
         let bank_account = create_bank_account(lease_amount);
-        let lease = lease_setup(Some(loan.clone()), Addr::unchecked(String::new()));
+        let lease_addr = Addr::unchecked("lease");
+        let lease = lease_setup(
+            &lease_addr,
+            Some(loan.clone()),
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
 
         let res = request_state(lease, &bank_account);
         let exp = StateResponse::Opened {
@@ -514,6 +642,7 @@ mod tests {
             previous_interest_due: coin(0),
             current_margin_due: coin(0),
             current_interest_due: coin(0),
+            validity: LEASE_STATE_AT,
         };
 
         assert_eq!(exp, res);
@@ -524,7 +653,13 @@ mod tests {
     fn state_paid() {
         let lease_amount = 1000;
         let bank_account = create_bank_account(lease_amount);
-        let lease = lease_setup(None, Addr::unchecked(String::new()));
+        let lease_addr = Addr::unchecked("lease");
+        let lease = lease_setup(
+            &lease_addr,
+            None,
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
 
         let res = request_state(lease, &bank_account);
         let exp = StateResponse::Paid(coin(lease_amount));
@@ -536,7 +671,13 @@ mod tests {
     fn state_closed() {
         let lease_amount = 0;
         let bank_account = create_bank_account(lease_amount);
-        let lease = lease_setup(None, Addr::unchecked(String::new()));
+        let lease_addr = Addr::unchecked("lease");
+        let lease = lease_setup(
+            &lease_addr,
+            None,
+            Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
+        );
 
         let res = request_state(lease, &bank_account);
         let exp = StateResponse::Closed();
@@ -547,24 +688,18 @@ mod tests {
     // Verify that if the Lease's balance is 0, lpp won't be queried for the loan
     fn state_closed_lpp_must_not_be_called() {
         let lpp_stub = LppLocalStubUnreachable {};
+        let time_alarms_stub = TimeAlarmsLocalStubUnreachable {};
         let oracle_stub = OracleLocalStubUnreachable {};
-        let lease = create_lease(lpp_stub, oracle_stub);
+        let lease_addr = Addr::unchecked("lease");
+        let lease = create_lease(&lease_addr, lpp_stub, time_alarms_stub, oracle_stub);
 
         let bank_account = create_bank_account(0);
 
         let res = lease
-            .state(
-                Timestamp::from_nanos(0),
-                &bank_account,
-                Addr::unchecked("unused"),
-            )
+            .state(Timestamp::from_nanos(0), &bank_account)
             .unwrap();
 
         let exp = StateResponse::Closed();
         assert_eq!(exp, res);
-    }
-
-    fn coin(a: u128) -> Coin<TestCurrency> {
-        Coin::<TestCurrency>::new(a)
     }
 }

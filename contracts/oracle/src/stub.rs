@@ -162,12 +162,12 @@ where
         self.oracle_ref.owned_by(addr)
     }
 
-    fn get_price<Lpn>(&self) -> Result<PriceResponse>
+    fn get_price<C>(&self) -> Result<PriceResponse>
     where
-        Lpn: Currency,
+        C: Currency,
     {
         let msg = QueryMsg::Price {
-            currency: Lpn::SYMBOL.to_string(),
+            currency: C::SYMBOL.to_string(),
         };
         self.querier
             .query_wasm_smart(self.addr().clone(), &msg)

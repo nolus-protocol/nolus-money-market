@@ -5,6 +5,8 @@ use finance::currency::SymbolOwned;
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use thiserror::Error;
 
+use crate::state::supported_pairs::ResolutionPath;
+
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("{0}")]
@@ -37,6 +39,9 @@ pub enum ContractError {
 
     #[error("Invalid denom pair")]
     InvalidDenomPair(SymbolOwned, SymbolOwned),
+
+    #[error("Invalid denom pair")]
+    InvalidResolutionPath(ResolutionPath),
 
     #[error("No feeder data for the specified address")]
     UnknownFeeder {},

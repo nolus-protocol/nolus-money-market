@@ -1,7 +1,10 @@
 use cosmwasm_std::{Env, Event, Response, Timestamp};
-use finance::coin::{Amount, Coin};
-use finance::currency::Currency;
-use finance::percent::Percent;
+
+use finance::{
+    coin::{Amount, Coin},
+    currency::Currency,
+    percent::Percent,
+};
 
 use crate::batch::Batch;
 
@@ -40,6 +43,15 @@ where
         self.emit_to_string_value(event_key, Amount::from(coin))
     }
 
+    /// Specialization of [`emit`](Self::emit) for [`Currency`] implementors.
+    fn emit_currency<K, C>(self, event_key: K) -> Self
+    where
+        K: Into<String>,
+        C: Currency,
+    {
+        self.emit(event_key, C::SYMBOL)
+    }
+
     /// Specialization of [`emit`](Self::emit) for [`Percent`]'s amount in [`Units`](finance::percent::Units).
     fn emit_percent_amount<K>(self, event_key: K, percent: Percent) -> Self
     where
@@ -57,12 +69,13 @@ where
         let amount_key = key.clone() + "-amount";
         let symbol_key = key + "-symbol";
 
-        self.emit(amount_key, u128::from(coin).to_string())
-            .emit(symbol_key, C::SYMBOL)
+        self.emit_coin_amount(amount_key, coin)
+            .emit_currency::<_, C>(symbol_key)
     }
 
     fn emit_tx_info(self, env: &Env) -> Self {
         self.emit_to_string_value("height", env.block.height)
+            .emit_timestamp("at", &env.block.time)
             .emit_to_string_value(
                 "idx",
                 // TODO remove when issue is fixed (https://github.com/CosmWasm/wasmd/issues/932)

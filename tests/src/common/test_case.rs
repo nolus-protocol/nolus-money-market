@@ -111,6 +111,10 @@ impl TestCase {
                     .lpp_addr
                     .clone()
                     .expect("LPP contract not instantiated!"),
+                time_alarms: self
+                    .oracle
+                    .clone()
+                    .expect("Time Alarms contract not instantiated!"),
                 oracle: self
                     .oracle
                     .clone()
@@ -159,6 +163,9 @@ impl TestCase {
                 &mut self.app,
                 self.lease_code_id.unwrap(),
                 self.lpp_addr.as_ref().unwrap(),
+                self.timealarms
+                    .clone()
+                    .expect("Time Alarms not initialized!"),
                 self.oracle
                     .clone()
                     .expect("Market Price Oracle not initialized!"),
@@ -190,7 +197,15 @@ impl TestCase {
     }
 
     pub fn init_timealarms(&mut self) -> &mut Self {
-        self.timealarms = Some(TimeAlarmsWrapper::default().instantiate(&mut self.app));
+        self.init_timealarms_with_funds(0)
+    }
+
+    pub fn init_timealarms_with_funds(&mut self, amount: Amount) -> &mut Self {
+        self.timealarms = Some(TimeAlarmsWrapper::default().instantiate(
+            &mut self.app,
+            amount,
+            self.denom.clone(),
+        ));
         self.app.update_block(next_block);
 
         self

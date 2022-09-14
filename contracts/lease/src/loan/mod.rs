@@ -19,8 +19,11 @@ use platform::batch::Batch;
 use crate::error::{ContractError, ContractResult};
 
 pub use self::state::State;
-pub(crate) use self::{open::Receipt as OpenReceipt, repay::Receipt as RepayReceipt};
+pub(crate) use self::{
+    liability::LiabilityStatus, open::Receipt as OpenReceipt, repay::Receipt as RepayReceipt,
+};
 
+mod liability;
 mod open;
 mod repay;
 mod state;
@@ -87,7 +90,7 @@ pub struct Loan<Lpn, Lpp> {
     lpn: PhantomData<Lpn>,
     lpp: Lpp,
     interest_due_period: Duration,
-    _grace_period: Duration,
+    grace_period: Duration,
     current_period: InterestPeriod<Units, Percent>,
 }
 
@@ -102,10 +105,10 @@ where
             lpn: PhantomData,
             lpp,
             interest_due_period: dto.interest_due_period,
-            _grace_period: dto.grace_period,
+            grace_period: dto.grace_period,
             current_period: dto.current_period,
         };
-        debug_assert!(res._grace_period < res.interest_due_period);
+        debug_assert!(res.grace_period < res.interest_due_period);
         res
     }
 
@@ -115,7 +118,7 @@ where
             self.annual_margin_interest,
             lpp_ref,
             self.interest_due_period,
-            self._grace_period,
+            self.grace_period,
             self.current_period,
         );
         (dto, batch)
@@ -134,6 +137,10 @@ where
             annual_interest_rate: response.annual_interest_rate + self.annual_margin_interest,
             borrowed: response.principal_due,
         })
+    }
+
+    pub(crate) fn grace_period_end(&self) -> Timestamp {
+        self.current_period.till() + self.grace_period
     }
 
     pub(crate) fn repay(

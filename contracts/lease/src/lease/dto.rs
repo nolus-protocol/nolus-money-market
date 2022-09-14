@@ -12,6 +12,7 @@ pub struct LeaseDTO {
     pub(crate) currency: SymbolOwned,
     pub(crate) liability: Liability,
     pub(crate) loan: LoanDTO,
+    pub(crate) time_alarms: Addr,
     pub(crate) oracle: Addr,
 }
 
@@ -23,6 +24,7 @@ impl<'a> LeaseDTO {
         currency: SymbolOwned,
         liability: Liability,
         loan: LoanDTO,
+        time_alarms: Addr,
         oracle: Addr,
     ) -> Self {
         Self {
@@ -30,6 +32,7 @@ impl<'a> LeaseDTO {
             currency,
             liability,
             loan,
+            time_alarms,
             oracle,
         }
     }

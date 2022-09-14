@@ -63,6 +63,18 @@ impl Duration {
         self.0
     }
 
+    pub const fn micros(&self) -> Units {
+        self.nanos() / 1000
+    }
+
+    pub const fn millis(&self) -> Units {
+        self.micros() / 1000
+    }
+
+    pub const fn secs(&self) -> Units {
+        self.millis() / 1000
+    }
+
     pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T
     where
         T: TimeSliceable,
@@ -112,6 +124,14 @@ impl Add<Duration> for Duration {
 
     fn add(self, rhs: Duration) -> Self::Output {
         Self::from_nanos(self.nanos().add(rhs.nanos()))
+    }
+}
+
+impl Sub<Duration> for Timestamp {
+    type Output = Self;
+
+    fn sub(self, rhs: Duration) -> Self::Output {
+        self.minus_nanos(rhs.nanos())
     }
 }
 

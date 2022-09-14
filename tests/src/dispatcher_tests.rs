@@ -138,14 +138,12 @@ fn on_alarm() {
                 "_contract_addr",
                 test_case.dispatcher_addr.clone().unwrap().to_string()
             ),
-            ("rewards-amount-amount", String::from("3")),
-            ("rewards-amount-symbol", String::from(Nls::SYMBOL)),
-            ("rewards-amount-amount", String::from("3")),
-            ("rewards-amount-symbol", String::from(Usdc::SYMBOL)),
+            ("rewards-amount", String::from("11")),
+            ("rewards-symbol", String::from(Nls::SYMBOL)),
             ("height", test_case.app.block_info().height.to_string()),
+            ("at", test_case.app.block_info().time.nanos().to_string()),
             ("idx", 0.to_string()),
             ("to", test_case.lpp_addr.as_ref().unwrap().to_string()),
-            ("at", test_case.app.block_info().time.nanos().to_string()),
         ]
     );
     let treasury_exec = &res.events[2];
@@ -180,7 +178,7 @@ fn on_alarm() {
                 "sender",
                 &test_case.treasury_addr.clone().unwrap().to_string()
             ),
-            ("amount", &format!("3{}", NATIVE_DENOM))
+            ("amount", &format!("11{}", NATIVE_DENOM))
         ]
     );
 
@@ -204,7 +202,7 @@ fn on_alarm() {
     );
 
     assert_eq!(
-        Coin::new(3, NATIVE_DENOM),
+        Coin::new(11, NATIVE_DENOM),
         test_case
             .app
             .wrap()

@@ -32,17 +32,17 @@ impl<'a> WithLpp for Dispatch<'a> {
     {
         // get LPP balance: TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
         let resp = lpp.lpp_balance()?;
-        let lpp_balance: Coin<Lpn> = resp.balance;
+        let tvl: Coin<Lpn> = resp.balance + resp.total_principal_due + resp.total_interest_due;
 
         // get annual percentage of return from configuration
-        let arp_permille = self.config.tvl_to_apr.get_apr(lpp_balance.into())?;
+        let arp_permille = self.config.tvl_to_apr.get_apr(tvl.into())?;
 
         // Calculate the reward in LPN,
         // which matches TVLdenom, since the last calculation
         let reward_in_lppdenom = InterestPeriod::with_interest(arp_permille)
             .from(self.last_dispatch)
             .spanning(Duration::between(self.last_dispatch, self.block_time))
-            .interest(lpp_balance);
+            .interest(tvl);
 
         if reward_in_lppdenom.is_zero() {
             return Err(ContractError::ZeroReward {});
@@ -63,8 +63,7 @@ impl<'a> WithLpp for Dispatch<'a> {
         Ok(result
             .batch
             .into_emitter("tr-rewards")
-            .emit_coin("rewards-amount", result.receipt.in_nls)
-            .emit_coin("rewards-amount", result.receipt.in_stable))
+            .emit_coin("rewards", result.receipt.in_nls))
     }
 
     fn unknown_lpn(
