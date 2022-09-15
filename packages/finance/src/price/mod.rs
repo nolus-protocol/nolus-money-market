@@ -38,6 +38,9 @@ where
     }
 }
 
+type DoubleAmount = <Amount as HigherRank<Amount>>::Type;
+type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
+
 /// Represents the price of a currency in a quote currency, ref: https://en.wikipedia.org/wiki/Currency_pair
 ///
 /// The price is always kept in a canonical form of the underlying ratio. The simplifies equality and comparison operations.
@@ -92,11 +95,52 @@ where
         total_of(factored_amount).is(factored_total)
     }
 
+    pub fn lossy_mul<QuoteQuoteC>(self, rhs: Price<QuoteC, QuoteQuoteC>) -> Price<C, QuoteQuoteC>
+    where
+        QuoteQuoteC: Currency,
+    {
+        // Price(a, b) * Price(c, d) = Price(a * c, b * d)
+        // first try to convert (a, d) and (b, c) into co-prime numbers
+        let (amount_normalized, rhs_amount_quote_normalized) =
+            self.amount.into_coprime_with(rhs.amount_quote);
+        let (amount_quote_normalized, rhs_amount_normalized) =
+            self.amount_quote.into_coprime_with(rhs.amount);
+
+        let double_amount =
+            DoubleAmount::from(amount_normalized) * DoubleAmount::from(rhs_amount_normalized);
+        let double_amount_quote = DoubleAmount::from(amount_quote_normalized)
+            * DoubleAmount::from(rhs_amount_quote_normalized);
+
+        let extra_bits =
+            Self::bits_above_max(double_amount).max(Self::bits_above_max(double_amount_quote));
+
+        Price::new(
+            Self::trim_down(double_amount, extra_bits).into(),
+            Self::trim_down(double_amount_quote, extra_bits).into(),
+        )
+    }
+
     pub fn inv(self) -> Price<QuoteC, C> {
         Price {
             amount: self.amount_quote,
             amount_quote: self.amount,
         }
+    }
+
+    fn bits_above_max(double_amount: DoubleAmount) -> u32 {
+        const BITS_MAX_AMOUNT: u32 = Amount::BITS;
+        let higher_half: Amount = IntermediateAmount::try_from(double_amount >> BITS_MAX_AMOUNT)
+            .expect("Bigger Amount Higher Rank Type than required!")
+            .into();
+        BITS_MAX_AMOUNT - higher_half.leading_zeros()
+    }
+
+    fn trim_down(double_amount: DoubleAmount, bits: u32) -> Amount {
+        debug_assert!(bits <= Amount::BITS);
+        let amount: IntermediateAmount = (double_amount >> bits)
+            .try_into()
+            .expect("insufficient bits to trim");
+        amount.into()
     }
 }
 
@@ -133,12 +177,20 @@ where
 
 #[cfg(test)]
 mod test {
+    use cosmwasm_std::{Uint128, Uint256};
+
     use crate::{
         coin::{Amount, Coin as CoinT},
-        currency::{Nls, Usdc},
+        currency::{Currency, Nls, Usdc},
         price::{self, Price},
     };
 
+    #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+    struct QuoteQuoteCurrency {}
+    impl Currency for QuoteQuoteCurrency {
+        const SYMBOL: crate::currency::SymbolStatic = "mycutecoin";
+    }
+    type QuoteQuoteCoin = CoinT<QuoteQuoteCurrency>;
     type QuoteCoin = CoinT<Usdc>;
     type Coin = CoinT<Nls>;
 
@@ -278,12 +330,58 @@ mod test {
         p1.lossy_add(p2);
     }
 
+    #[test]
+    fn mul() {
+        lossy_mul_impl(c(1), q(2), q(2), qq(1), c(1), qq(1));
+        lossy_mul_impl(c(2), q(3), q(18), qq(5), c(12), qq(5));
+        lossy_mul_impl(c(7), q(3), q(11), qq(21), c(11), qq(9));
+        lossy_mul_impl(c(7), q(3), q(11), qq(23), c(7 * 11), qq(3 * 23));
+
+        let big_int = u128::MAX - 1;
+        assert!(big_int % 3 != 0 && big_int % 11 != 0);
+        lossy_mul_impl(c(big_int), q(3), q(11), qq(big_int), c(11), qq(3));
+
+        assert_eq!(0, u128::MAX % 5);
+        lossy_mul_impl(c(u128::MAX), q(2), q(3), qq(5), c(u128::MAX / 5 * 3), qq(2));
+    }
+
+    #[test]
+    fn lossy_mul_few_shifts() {
+        let a1 = u128::MAX - 1;
+        let q1 = 5;
+        let a2: Amount = 3;
+        let q2 = 7;
+        assert!(a1 % q1 != 0 && a1 % q2 != 0);
+        assert!(a2 % q1 != 0 && a2 % q2 != 0);
+        const SHIFTS: u32 = 2;
+        assert_eq!(0, a2 >> SHIFTS);
+        let a_exp = shift_product(a1, a2, SHIFTS);
+        let q_exp = shift_product(q1, q2, SHIFTS);
+        lossy_mul_impl(c(a1), q(q1), q(a2), qq(q2), c(a_exp), qq(q_exp));
+    }
+
+    #[test]
+    fn lossy_mul_many_shifts() {
+        let a = u128::MAX - 1;
+        let q1 = u128::MAX;
+        let q2 = 7;
+        assert!(a % q1 != 0 && a % q2 != 0);
+        const SHIFTS: u32 = 128;
+        let a_exp = shift_product(a, a, SHIFTS);
+        let q_exp = shift_product(q1, q2, SHIFTS);
+        lossy_mul_impl(c(a), q(q1), q(a), qq(q2), c(a_exp), qq(q_exp));
+    }
+
     fn c(a: Amount) -> Coin {
         Coin::new(a)
     }
 
     fn q(a: Amount) -> QuoteCoin {
         QuoteCoin::new(a)
+    }
+
+    fn qq(a: Amount) -> QuoteQuoteCoin {
+        QuoteQuoteCoin::new(a)
     }
 
     fn ord_impl(amount: Amount, amount_quote: Amount) {
@@ -322,5 +420,29 @@ mod test {
         let price2 = price::total_of(amount2).is(quote2);
         let exp = price::total_of(amount_exp).is(quote_exp);
         assert_eq!(exp, price1.lossy_add(price2));
+    }
+
+    fn shift_product<A1, A2>(a1: A1, a2: A2, shifts: u32) -> Amount
+    where
+        A1: Into<Uint256>,
+        A2: Into<Uint256>,
+    {
+        Uint128::try_from((a1.into() * a2.into()) >> shifts)
+            .expect("Incorrect test setup")
+            .into()
+    }
+
+    fn lossy_mul_impl(
+        amount1: Coin,
+        quote1: QuoteCoin,
+        amount2: QuoteCoin,
+        quote2: QuoteQuoteCoin,
+        amount_exp: Coin,
+        quote_exp: QuoteQuoteCoin,
+    ) {
+        let price1 = price::total_of(amount1).is(quote1);
+        let price2 = price::total_of(amount2).is(quote2);
+        let exp = price::total_of(amount_exp).is(quote_exp);
+        assert_eq!(exp, price1.lossy_mul(price2));
     }
 }
