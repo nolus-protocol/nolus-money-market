@@ -502,8 +502,8 @@ mod tests {
                         coin(0),
                         coin(0),
                         coin(100),
-                        coin(900),
-                        false
+                        coin(500),
+                        true,
                     ),
                 },
             }
