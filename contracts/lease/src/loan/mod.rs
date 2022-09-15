@@ -183,6 +183,7 @@ where
 
             debug_assert_eq!(
                 loan_payment,
+                // TODO add `+ change` when issue #13 is solved
                 receipt.previous_interest_paid()
                     + receipt.current_interest_paid()
                     + receipt.principal_paid(),
@@ -207,12 +208,8 @@ where
         self.lpp.repay_loan_req(loan_payment)?;
 
         debug_assert_eq!(
-            receipt.previous_margin_paid()
-                + receipt.current_margin_paid()
-                + receipt.previous_interest_paid()
-                + receipt.current_interest_paid()
-                + receipt.principal_paid(),
             payment,
+            receipt.total(),
         );
 
         Ok(receipt)

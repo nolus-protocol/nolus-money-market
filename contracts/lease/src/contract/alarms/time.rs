@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Timestamp};
+use cosmwasm_std::{Addr, Env, Timestamp};
 use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
@@ -17,6 +17,7 @@ pub struct TimeAlarm<'a, B>
 where
     B: BankAccountView,
 {
+    env: &'a Env,
     sender: &'a Addr,
     account: B,
     now: Timestamp,
@@ -26,8 +27,9 @@ impl<'a, B> TimeAlarm<'a, B>
 where
     B: BankAccountView,
 {
-    pub fn new(sender: &'a Addr, account: B, now: Timestamp) -> Self {
+    pub fn new(env: &'a Env, sender: &'a Addr, account: B, now: Timestamp) -> Self {
         Self {
+            env,
             sender,
             account,
             now,
@@ -65,7 +67,7 @@ where
         } = lease.on_time_alarm(self.now, &self.account)?;
 
         Ok(AlarmResult {
-            response: emit_events(&liquidation_status, batch),
+            response: emit_events(self.env, &liquidation_status, batch),
             lease_dto,
         })
     }

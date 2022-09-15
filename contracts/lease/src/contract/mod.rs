@@ -63,13 +63,13 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
 
     let account = BankStub::my_account(&env, &deps.querier);
 
-    let downpayment = DownpaymentDTO::remove(deps.storage)?;
-
     let id = ReplyId::try_from(msg.id)
         .map_err(|_| ContractError::InvalidParameters("Invalid reply ID passed!".into()))?;
 
     match id {
         ReplyId::OpenLoanReq => {
+            let downpayment = DownpaymentDTO::remove(deps.storage)?;
+
             let emitter = lease::execute(
                 lease,
                 OpenLoanResp::new(msg, downpayment, account, &env),
@@ -187,7 +187,7 @@ fn try_on_price_alarm(
 ) -> ContractResult<AlarmResult> {
     lease::execute(
         lease,
-        PriceAlarm::new(&info.sender, account, env.block.time),
+        PriceAlarm::new(env, &info.sender, account, env.block.time),
         &env.contract.address,
         querier,
     )
@@ -202,7 +202,7 @@ fn try_on_time_alarm(
 ) -> ContractResult<AlarmResult> {
     lease::execute(
         lease,
-        TimeAlarm::new(&info.sender, account, env.block.time),
+        TimeAlarm::new(env, &info.sender, account, env.block.time),
         &env.contract.address,
         querier,
     )

@@ -157,7 +157,7 @@ impl LppRef {
 
 #[cfg(feature = "testing")]
 impl LppRef {
-    pub fn unchecked<A, Lpn>(addr: A, open_loan_req_id: Option<u64>) -> Self
+    pub fn unchecked<A, Lpn>(addr: A, open_loan_req_id: Option<ReplyId>) -> Self
     where
         A: Into<String>,
         Lpn: Currency,
@@ -220,7 +220,7 @@ where
 
     fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()> {
         self.batch
-            .schedule_execute_wasm_no_reply(&self.id(), ExecuteMsg::RepayLoan {}, Some(repayment))
+            .schedule_execute_wasm_no_reply(&self.id(), ExecuteMsg::RepayLoan(), Some(repayment))
             .map_err(ContractError::from)
     }
 

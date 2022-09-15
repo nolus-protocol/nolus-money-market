@@ -77,7 +77,9 @@ where
     };
 
     let mut resp: Response = batch.into();
-    resp = resp.add_attribute("method", "try_repay_loan");
+    resp = resp
+        .add_attribute("method", "try_repay_loan")
+        .set_data(to_binary(&excess_received)?);
     Ok(resp)
 }
 

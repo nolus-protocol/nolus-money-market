@@ -26,7 +26,9 @@ use self::factory::Factory;
 pub(super) use self::{
     downpayment_dto::DownpaymentDTO,
     dto::LeaseDTO,
-    liquidation::{LeaseInfo, OnAlarmResult, Status, WarningLevel},
+    liquidation::{
+        Cause as LiquidationCause, LeaseInfo, LiquidationInfo, OnAlarmResult, Status, WarningLevel,
+    },
     repay::Result as RepayResult,
 };
 
@@ -297,7 +299,7 @@ mod tests {
         }
 
         fn repay_loan_req(&mut self, _repayment: Coin<TestCurrency>) -> LppResult<()> {
-            unreachable!()
+            Ok(())
         }
 
         fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestCurrency>> {
