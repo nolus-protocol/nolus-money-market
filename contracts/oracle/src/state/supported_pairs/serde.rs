@@ -1,15 +1,20 @@
-use serde::{de, de::SeqAccess, ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer, de::Visitor};
-use finance::currency::SymbolOwned;
-use trees::{Tree, tr};
 use std::ops::{Deref, DerefMut};
 
+use serde::{
+    de, de::SeqAccess, de::Visitor, ser::SerializeSeq, Deserialize, Deserializer, Serialize,
+    Serializer,
+};
+use trees::{tr, Tree};
+
+use finance::currency::SymbolOwned;
+
 #[derive(Clone, PartialEq, Eq)]
-pub struct TreeStore(pub trees::Tree<SymbolOwned>);
+pub struct TreeStore(pub Tree<SymbolOwned>);
 
 impl Deref for TreeStore {
     type Target = Tree<SymbolOwned>;
     fn deref(&self) -> &Self::Target {
-       &self.0 
+        &self.0
     }
 }
 
@@ -24,7 +29,7 @@ impl Serialize for TreeStore {
     where
         S: Serializer,
     {
-            TreeStoreRef(&self.0).serialize(serializer)
+        TreeStoreRef(&self.0).serialize(serializer)
     }
 }
 
@@ -60,8 +65,9 @@ impl<'de> Deserialize<'de> for TreeStore {
             type Value = TreeStore;
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-                where
-                    E: de::Error, {
+            where
+                E: de::Error,
+            {
                 // can't use visit_string with deserialize_any to move value
                 Ok(TreeStore(Tree::new(v.into())))
             }
