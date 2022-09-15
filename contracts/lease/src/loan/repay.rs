@@ -77,14 +77,9 @@ where
         debug_assert_eq!(self.principal_paid, Coin::default());
 
         // TODO uncomment when issue #13 is solved
-        // assert!(principal <= payment, "Payment exceeds principal!");
+        // debug_assert!(payment <= principal, "Payment exceeds principal!");
 
-        // TODO change to `= payment` when issue #13 is solved
-        self.principal_paid = if principal < payment {
-            principal
-        } else {
-            payment
-        };
+        self.principal_paid = payment;
 
         // TODO change to `==` when issue #13 is solved
         self.close = principal <= payment;
@@ -145,14 +140,17 @@ mod tests {
     fn pay_principal_overpaid() {
         let principal = Coin::<Nls>::new(10);
 
+        let payment = principal + Coin::<Nls>::new(1);
+
         let mut receipt = RepayReceipt::default();
 
-        receipt.pay_principal(principal, principal + Coin::<Nls>::new(1));
+        receipt.pay_principal(principal, payment);
 
         assert_eq!(
             receipt,
             RepayReceipt {
-                principal_paid: principal,
+                // TODO change to `principal` when issue #13 is solved
+                principal_paid: payment,
                 close: true,
                 ..Default::default()
             },

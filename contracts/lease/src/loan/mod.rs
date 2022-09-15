@@ -181,20 +181,12 @@ where
                 change,
             );
 
-            // TODO uncomment when issue #13 is solved
-            // debug_assert_eq!(
-            //     loan_payment,
-            //     receipt.previous_interest_paid()
-            //         + receipt.current_interest_paid()
-            //         + receipt.principal_paid(),
-            // );
-
-            // TODO remove when issue #13 is solved
-            debug_assert!(
+            debug_assert_eq!(
+                // TODO change to `loan_payment + change` when issue #13 is solved
+                loan_payment,
                 receipt.previous_interest_paid()
                     + receipt.current_interest_paid()
-                    + receipt.principal_paid()
-                    <= loan_payment
+                    + receipt.principal_paid(),
             );
         }
 
@@ -216,10 +208,11 @@ where
         self.lpp.repay_loan_req(loan_payment)?;
 
         // TODO uncomment when issue #13 is solved
-        // debug_assert_eq!(receipt.total(), payment);
-
-        // TODO remove when issue #13 is solved
-        debug_assert!(receipt.total() <= payment);
+        debug_assert_eq!(
+            // TODO change to `loan_payment + change` when issue #13 is solved
+            loan_payment,
+            receipt.total(),
+        );
 
         Ok(receipt)
     }
