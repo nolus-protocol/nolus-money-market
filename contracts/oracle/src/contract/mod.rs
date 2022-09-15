@@ -79,7 +79,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
                 deps.storage,
                 parameters,
                 currencies,
-                config.base_asset.clone(),
+                config.base_asset,
             )?;
             Ok(to_binary(&PricesResponse { prices })?)
         }

@@ -223,7 +223,7 @@ mod tests {
 
     use finance::{
         coin::Coin,
-        currency::{Currency, Nls, SymbolOwned, Usdc},
+        currency::{Currency, Nls, Usdc},
         duration::Duration,
         interest::InterestPeriod,
         liability::Liability,

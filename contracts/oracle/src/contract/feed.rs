@@ -74,7 +74,7 @@ impl Feeds {
         base: SymbolOwned,
         quote: SymbolOwned,
     ) -> Result<PriceDTO, PriceFeedsError> {
-        Ok(Self::MARKET_PRICE.price(storage, parameters, base, quote)?)
+        Self::MARKET_PRICE.price(storage, parameters, base, quote)
     }
 
     pub fn feed_prices(
@@ -111,7 +111,7 @@ impl Feeds {
                 )) && !price
                     .base()
                     .symbol()
-                    .eq_ignore_ascii_case(&price.quote().symbol())
+                    .eq_ignore_ascii_case(price.quote().symbol())
             })
             .map(|p| p.to_owned())
             .collect()
@@ -150,7 +150,7 @@ where
     // Get all currencies registered for alarms
     let hooks_currencies = MarketAlarms::get_hooks_currencies(storage)?;
 
-    if hooks_currencies.len() > 0 {
+    if !hooks_currencies.is_empty() {
         let parameters = Feeders::query_config(storage, &config, block_time)?;
         // re-calculate the price of these currencies
         let updated_prices: Vec<PriceDTO> = oracle.get_prices(

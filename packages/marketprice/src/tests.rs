@@ -141,24 +141,24 @@ fn marketprice_add_feed() {
 #[test]
 fn marketprice_follow_the_path() {
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-    pub struct DEN0;
-    impl Currency for DEN0 {
-        const SYMBOL: SymbolStatic = "DEN0";
+    pub struct Den0;
+    impl Currency for Den0 {
+        const SYMBOL: SymbolStatic = "Den0";
     }
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-    pub struct DENX;
-    impl Currency for DENX {
-        const SYMBOL: SymbolStatic = "DENX";
+    pub struct DenX;
+    impl Currency for DenX {
+        const SYMBOL: SymbolStatic = "DenX";
     }
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-    pub struct DENZ;
-    impl Currency for DENZ {
-        const SYMBOL: SymbolStatic = "DENZ";
+    pub struct DenZ;
+    impl Currency for DenZ {
+        const SYMBOL: SymbolStatic = "DenZ";
     }
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-    pub struct DENC;
-    impl Currency for DENC {
-        const SYMBOL: SymbolStatic = "DENC";
+    pub struct DenC;
+    impl Currency for DenC {
+        const SYMBOL: SymbolStatic = "DenC";
     }
 
     let mut deps = mock_dependencies();
@@ -167,7 +167,7 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<DEN0>::new(1)),
+        price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<Den0>::new(1)),
     )
     .unwrap();
     feed_price(
@@ -180,7 +180,7 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<TestCurrencyC>::new(1)).is(Coin::<DENX>::new(3)),
+        price::total_of(Coin::<TestCurrencyC>::new(1)).is(Coin::<DenX>::new(3)),
     )
     .unwrap();
 
@@ -214,7 +214,7 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<DENZ>::new(1)).is(Coin::<DENX>::new(3)),
+        price::total_of(Coin::<DenZ>::new(1)).is(Coin::<DenX>::new(3)),
     )
     .unwrap();
 
@@ -228,7 +228,7 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<DENC>::new(1)).is(Coin::<TestCurrencyD>::new(3)),
+        price::total_of(Coin::<DenC>::new(1)).is(Coin::<TestCurrencyD>::new(3)),
     )
     .unwrap();
 
@@ -267,7 +267,7 @@ fn marketprice_follow_the_path() {
                 &deps.storage,
                 query,
                 TestCurrencyA::SYMBOL.to_string(),
-                DENX::SYMBOL.to_string()
+                DenX::SYMBOL.to_string()
             )
             .unwrap_err(),
         PriceFeedsError::UnknownCurrency {}
@@ -280,7 +280,7 @@ fn marketprice_follow_the_path() {
             .price(
                 &deps.storage,
                 query,
-                DENX::SYMBOL.to_string(),
+                DenX::SYMBOL.to_string(),
                 TestCurrencyA::SYMBOL.to_string()
             )
             .unwrap_err(),

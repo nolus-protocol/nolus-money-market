@@ -1,6 +1,6 @@
 use crate::error::PriceFeedsError;
 use crate::feed::{Observation, PriceFeed};
-use crate::{Multiply};
+use crate::Multiply;
 use cosmwasm_std::{Addr, Order, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
 
@@ -109,7 +109,7 @@ impl<'m> PriceFeeds<'m> {
         // get all entries with key denom pair that stars with the base denom
         let quotes: Vec<_> = self
             .0
-            .prefix(base.clone())
+            .prefix(base)
             .range(storage, None, None, Order::Ascending)
             .filter_map(|res| res.ok())
             .collect();
@@ -122,7 +122,7 @@ impl<'m> PriceFeeds<'m> {
                 quote.clone(),
                 resolution_path,
             ) {
-                resolution_path.push(price.clone());
+                resolution_path.push(price);
                 return Ok(Some(feed));
             };
         }
