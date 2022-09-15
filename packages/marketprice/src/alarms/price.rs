@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use cosmwasm_std::{Addr, Order, Response, StdResult, Storage};
 use cw_storage_plus::{Item, Map};
@@ -68,7 +68,7 @@ impl<'m> PriceHooks<'m> {
     pub fn notify(
         &self,
         storage: &mut dyn Storage,
-        updated_prices: HashMap<SymbolOwned, PriceDTO>,
+        updated_prices: Vec<PriceDTO>,
         batch: &mut Batch,
     ) -> Result<(), AlarmError> {
         let affected_contracts: Vec<_> = self.get_affected(storage, updated_prices)?;
@@ -103,10 +103,10 @@ impl<'m> PriceHooks<'m> {
     pub fn get_affected(
         &self,
         storage: &mut dyn Storage,
-        updated_prices: HashMap<SymbolOwned, PriceDTO>,
+        updated_prices: Vec<PriceDTO>,
     ) -> StdResult<Vec<(Addr, Alarm, PriceDTO)>> {
         let mut affected: Vec<(Addr, Alarm, PriceDTO)> = vec![];
-        for price in updated_prices.values() {
+        for price in updated_prices {
             let mut events: Vec<_> = self
                 .hooks
                 .prefix(())

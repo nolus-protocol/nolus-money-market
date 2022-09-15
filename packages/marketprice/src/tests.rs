@@ -4,7 +4,9 @@ use std::time::SystemTime;
 use cosmwasm_std::testing::{mock_dependencies, mock_env};
 use cosmwasm_std::{Api, DepsMut, Timestamp};
 use finance::coin::Coin;
-use finance::currency::{Currency, SymbolStatic};
+use finance::currency::{
+    Currency, SymbolStatic, TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD,
+};
 use finance::price::{self, dto::PriceDTO, Price};
 
 use crate::error::PriceFeedsError;
@@ -13,29 +15,6 @@ use crate::market_price::{Parameters, PriceFeeds};
 use finance::duration::Duration;
 
 const MINUTE: Duration = Duration::from_secs(60);
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub struct DEN1;
-impl Currency for DEN1 {
-    const SYMBOL: SymbolStatic = "DEN1";
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub struct DEN2;
-impl Currency for DEN2 {
-    const SYMBOL: SymbolStatic = "DEN2";
-}
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub struct DEN3;
-impl Currency for DEN3 {
-    const SYMBOL: SymbolStatic = "DEN3";
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub struct DEN4;
-impl Currency for DEN4 {
-    const SYMBOL: SymbolStatic = "DEN4";
-}
 
 #[test]
 fn register_feeder() {
@@ -82,8 +61,8 @@ fn marketprice_add_feed_expect_err() {
         .price(
             &deps.storage,
             params,
-            DEN1::SYMBOL.to_string(),
-            DEN2::SYMBOL.to_string(),
+            TestCurrencyA::SYMBOL.to_string(),
+            TestCurrencyB::SYMBOL.to_string(),
         )
         .unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
@@ -114,10 +93,12 @@ fn marketprice_add_feed() {
     let market = PriceFeeds::new("foo");
     let f_address = deps.api.addr_validate("address1").unwrap();
 
-    let price1 = price::total_of(Coin::<DEN1>::new(10)).is(Coin::<DEN2>::new(5));
-    let price2 = price::total_of(Coin::<DEN1>::new(10000000000)).is(Coin::<DEN3>::new(1000000009));
+    let price1 = price::total_of(Coin::<TestCurrencyA>::new(10)).is(Coin::<TestCurrencyB>::new(5));
+    let price2 = price::total_of(Coin::<TestCurrencyA>::new(10000000000))
+        .is(Coin::<TestCurrencyC>::new(1000000009));
     let price3 =
-        price::total_of(Coin::<DEN1>::new(10000000000000)).is(Coin::<DEN4>::new(100000000000002));
+        price::total_of(Coin::<TestCurrencyA>::new(10000000000000))
+            .is(Coin::<TestCurrencyD>::new(100000000000002));
 
     let prices: Vec<PriceDTO> = vec![
         PriceDTO::try_from(price1).unwrap(),
@@ -134,11 +115,25 @@ fn marketprice_add_feed() {
         .feed(&mut deps.storage, ts, &f_address, prices, MINUTE)
         .unwrap();
     let query = Parameters::new(MINUTE, 50, ts);
-    let err = market.get::<DEN1, DEN2>(&deps.storage, query).unwrap_err();
+    let err = market
+        .price(
+            &deps.storage,
+            query,
+            TestCurrencyA::SYMBOL.to_string(),
+            TestCurrencyB::SYMBOL.to_string(),
+        )
+        .unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
 
     let query = Parameters::new(MINUTE, 1, ts);
-    let price_resp = market.get::<DEN1, DEN2>(&deps.storage, query).unwrap();
+    let price_resp = market
+        .price(
+            &deps.storage,
+            query,
+            TestCurrencyA::SYMBOL.to_string(),
+            TestCurrencyB::SYMBOL.to_string(),
+        )
+        .unwrap();
 
     assert_eq!(PriceDTO::try_from(price1).unwrap(), price_resp);
 }
@@ -172,47 +167,47 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<DEN1>::new(1)).is(Coin::<DEN0>::new(1)),
+        price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<DEN0>::new(1)),
     )
     .unwrap();
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<DEN3>::new(1)).is(Coin::<DEN4>::new(3)),
-    )
-    .unwrap();
-
-    feed_price(
-        deps.as_mut(),
-        &market,
-        price::total_of(Coin::<DEN3>::new(1)).is(Coin::<DENX>::new(3)),
+        price::total_of(Coin::<TestCurrencyC>::new(1)).is(Coin::<TestCurrencyD>::new(3)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<DEN1>::new(1)).is(Coin::<DEN2>::new(1)),
+        price::total_of(Coin::<TestCurrencyC>::new(1)).is(Coin::<DENX>::new(3)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<DEN3>::new(1)).is(Coin::<DEN4>::new(3)),
-    )
-    .unwrap();
-    feed_price(
-        deps.as_mut(),
-        &market,
-        price::total_of(Coin::<DEN2>::new(1)).is(Coin::<DEN3>::new(2)),
+        price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<TestCurrencyB>::new(1)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<DEN3>::new(1)).is(Coin::<DEN2>::new(3)),
+        price::total_of(Coin::<TestCurrencyC>::new(1)).is(Coin::<TestCurrencyD>::new(3)),
+    )
+    .unwrap();
+    feed_price(
+        deps.as_mut(),
+        &market,
+        price::total_of(Coin::<TestCurrencyB>::new(1)).is(Coin::<TestCurrencyC>::new(2)),
+    )
+    .unwrap();
+
+    feed_price(
+        deps.as_mut(),
+        &market,
+        price::total_of(Coin::<TestCurrencyC>::new(1)).is(Coin::<TestCurrencyB>::new(3)),
     )
     .unwrap();
 
@@ -226,43 +221,71 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<DEN4>::new(1)).is(Coin::<DEN1>::new(3)),
+        price::total_of(Coin::<TestCurrencyD>::new(1)).is(Coin::<TestCurrencyA>::new(3)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<DENC>::new(1)).is(Coin::<DEN4>::new(3)),
+        price::total_of(Coin::<DENC>::new(1)).is(Coin::<TestCurrencyD>::new(3)),
     )
     .unwrap();
 
     // valid search denom pair
     let query = Parameters::new(MINUTE, 1, mock_env().block.time);
-    let price_resp = market.get::<DEN1, DEN4>(&deps.storage, query).unwrap();
-    let expected = price::total_of(Coin::<DEN1>::new(1)).is(Coin::<DEN4>::new(6));
+    let price_resp = market
+        .price(
+            &deps.storage,
+            query,
+            TestCurrencyA::SYMBOL.to_string(),
+            TestCurrencyD::SYMBOL.to_string(),
+        )
+        .unwrap();
+    let expected = price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<TestCurrencyD>::new(6));
     let expected_dto = PriceDTO::try_from(expected).unwrap();
 
     assert_eq!(expected_dto, price_resp);
 
     // first and second part of denom pair are the same
     let query = Parameters::new(MINUTE, 1, mock_env().block.time);
-    let price_resp = market.get::<DEN1, DEN1>(&deps.storage, query).unwrap();
-    let expected = price::total_of(Coin::<DEN1>::new(1)).is(Coin::<DEN1>::new(1));
+    let price_resp = market
+        .price(
+            &deps.storage,
+            query,
+            TestCurrencyA::SYMBOL.to_string(),
+            TestCurrencyA::SYMBOL.to_string(),
+        )
+        .unwrap();
+    let expected = price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<TestCurrencyA>::new(1));
     let expected_dto = PriceDTO::try_from(expected).unwrap();
     assert_eq!(expected_dto, price_resp);
 
     // second part of denome pair doesn't exists in the storage
     let query = Parameters::new(MINUTE, 1, mock_env().block.time);
     assert_eq!(
-        market.get::<DEN1, DENX>(&deps.storage, query).unwrap_err(),
+        market
+            .price(
+                &deps.storage,
+                query,
+                TestCurrencyA::SYMBOL.to_string(),
+                DENX::SYMBOL.to_string()
+            )
+            .unwrap_err(),
         PriceFeedsError::NoPrice {}
     );
 
     // first part of denome pair doesn't exists in the storage
     let query = Parameters::new(MINUTE, 1, mock_env().block.time);
     assert_eq!(
-        market.get::<DENX, DEN1>(&deps.storage, query).unwrap_err(),
+        market
+            .price(
+                &deps.storage,
+                query,
+                DENX::SYMBOL.to_string(),
+                TestCurrencyA::SYMBOL.to_string()
+            )
+            .unwrap_err(),
         PriceFeedsError::NoPrice {}
     );
 }

@@ -50,21 +50,6 @@ impl<'m> PriceFeeds<'m> {
         PriceFeeds(Map::new(namespace))
     }
 
-    //TODO REMOVE
-    pub fn get<C, QuoteC>(
-        &self,
-        _storage: &dyn Storage,
-        _parameters: Parameters,
-    ) -> Result<PriceDTO, PriceFeedsError>
-    where
-        C: Currency,
-        QuoteC: Currency,
-    {
-        Ok(PriceDTO::try_from(
-            price::total_of(Coin::<C>::new(1)).is(Coin::<QuoteC>::new(1)),
-        )?)
-    }
-
     pub fn price(
         &self,
         storage: &dyn Storage,
@@ -104,8 +89,8 @@ impl<'m> PriceFeeds<'m> {
                 }
                 return Err(PriceFeedsError::NoPrice {});
             }
-            Err(_err) => {
-                return Err(PriceFeedsError::NoPrice {});
+            Err(err) => {
+                return Err(err);
             }
         };
 

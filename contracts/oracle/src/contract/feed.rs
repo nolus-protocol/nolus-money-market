@@ -1,10 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use cosmwasm_std::{Addr, Response, StdError, StdResult, Storage, Timestamp};
 use marketprice::{
     error::PriceFeedsError,
     market_price::{Parameters, PriceFeeds},
-    PriceForCurrency,
 };
 
 use platform::batch::Batch;
@@ -48,21 +47,23 @@ impl Feeds {
         Ok(())
     }
 
-    pub fn get_prices<OracleBase>(
+    pub fn get_prices(
         &self,
         storage: &dyn Storage,
         parameters: Parameters,
         currencies: HashSet<SymbolOwned>,
-    ) -> Result<HashMap<SymbolOwned, PriceDTO>, PriceFeedsError>
-    where
-        OracleBase: Currency,
-    {
-        let mut prices: HashMap<SymbolOwned, PriceDTO> = HashMap::new();
+        base: SymbolOwned,
+    ) -> Result<Vec<PriceDTO>, PriceFeedsError> {
+        let mut prices: Vec<PriceDTO> = vec![];
         for currency in currencies {
             Self::assert_supported_denom(&self.config.supported_denom_pairs, &currency)?;
 
-            let feed = PriceForCurrency::<OracleBase>::cmd(storage, currency.clone(), parameters)?;
-            prices.insert(currency, feed);
+            prices.push(Feeds::get_price(
+                storage,
+                parameters,
+                currency,
+                base.clone(),
+            )?)
         }
         Ok(prices)
     }
@@ -152,8 +153,12 @@ where
     if hooks_currencies.len() > 0 {
         let parameters = Feeders::query_config(storage, &config, block_time)?;
         // re-calculate the price of these currencies
-        let updated_prices: HashMap<SymbolOwned, PriceDTO> =
-            oracle.get_prices::<OracleBase>(storage, parameters, hooks_currencies)?;
+        let updated_prices: Vec<PriceDTO> = oracle.get_prices(
+            storage,
+            parameters,
+            hooks_currencies,
+            OracleBase::SYMBOL.to_string(),
+        )?;
         // try notify affected subscribers
         MarketAlarms::try_notify_hooks(storage, updated_prices, &mut batch)?;
     }

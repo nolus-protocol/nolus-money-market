@@ -34,7 +34,7 @@ impl MarketAlarms {
 
     pub fn try_notify_hooks(
         storage: &mut dyn Storage,
-        updated_prices: HashMap<SymbolOwned, PriceDTO>,
+        updated_prices: Vec<PriceDTO>,
         batch: &mut Batch,
     ) -> Result<(), ContractError> {
         Ok(Self::PRICE_ALARMS.notify(storage, updated_prices, batch)?)
