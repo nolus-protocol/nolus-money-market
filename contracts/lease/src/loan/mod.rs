@@ -185,7 +185,7 @@ where
                 loan_payment,
                 // TODO add `+ change` when issue #13 is solved
                 receipt.previous_interest_paid()
-                    + receipt.previous_interest_paid()
+                    + receipt.current_interest_paid()
                     + receipt.principal_paid(),
             );
         }
@@ -208,8 +208,8 @@ where
         self.lpp.repay_loan_req(loan_payment)?;
 
         debug_assert_eq!(
-            // TODO change to `loan_payment + change` when issue #13 is solved
-            loan_payment,
+            payment,
+            // TODO add `+ change` when issue #13 is solved
             receipt.total(),
         );
 
