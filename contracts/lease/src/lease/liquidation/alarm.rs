@@ -28,53 +28,43 @@ where
     Asset: Currency + Serialize,
 {
     pub(crate) fn on_price_alarm<B>(
-        mut self,
+        self,
         now: Timestamp,
         account: &B,
     ) -> ContractResult<OnAlarmResult<Lpn, Asset>>
     where
         B: BankAccountView,
     {
-        let lease_amount = account.balance::<Asset>()?;
-
-        let price_to_lpn = self.price_of_lease_currency()?;
-
-        let lease_lpn = total(lease_amount, price_to_lpn);
-
-        let status = self.act_on_liability(now, lease_lpn)?;
-
-        if !matches!(status, Status::FullLiquidation { .. }) {
-            self.reschedule(lease_lpn, &now, &status)?;
-        }
-
-        Ok(self.into_on_alarm_result(status))
+        self.on_alarm(
+            |this, lease_lpn, now| this.act_on_liability(now, lease_lpn),
+            now,
+            account,
+        )
     }
 
     pub(crate) fn on_time_alarm<B>(
-        mut self,
+        self,
         now: Timestamp,
         account: &B,
     ) -> ContractResult<OnAlarmResult<Lpn, Asset>>
     where
         B: BankAccountView,
     {
-        let lease_lpn = total(account.balance::<Asset>()?, self.price_of_lease_currency()?);
-
-        let status = if self.loan.grace_period_end() <= now {
-            self.liquidate_on_interest_overdue(now, lease_lpn)?
-        } else {
-            self.handle_warnings(
-                self.loan
-                    .liability_status(now, self.lease_addr.clone(), lease_lpn)?
-                    .ltv,
-            )
-        };
-
-        if !matches!(status, Status::FullLiquidation { .. }) {
-            self.reschedule(lease_lpn, &now, &status)?;
-        }
-
-        Ok(self.into_on_alarm_result(status))
+        self.on_alarm(
+            |this, lease_lpn, now| {
+                if this.loan.grace_period_end() <= now {
+                    this.liquidate_on_interest_overdue(now, lease_lpn)
+                } else {
+                    Ok(this.handle_warnings(
+                        this.loan
+                            .liability_status(now, this.lease_addr.clone(), lease_lpn)?
+                            .ltv,
+                    ))
+                }
+            },
+            now,
+            account,
+        )
     }
 
     #[inline]
@@ -84,6 +74,7 @@ where
         now: &Timestamp,
     ) -> ContractResult<()> {
         self.reschedule(
+            lease_amount,
             total(lease_amount, self.price_of_lease_currency()?),
             now,
             &Status::None,
@@ -99,6 +90,7 @@ where
         let lease_lpn = total(lease_amount, self.price_of_lease_currency()?);
 
         self.reschedule(
+            lease_amount,
             lease_lpn,
             now,
             &self.handle_warnings(
@@ -107,6 +99,39 @@ where
                     .ltv,
             ),
         )
+    }
+
+    fn on_alarm<F, B>(
+        mut self,
+        handler: F,
+        now: Timestamp,
+        account: &B,
+    ) -> ContractResult<OnAlarmResult<Lpn, Asset>>
+    where
+        F: FnOnce(&mut Self, Coin<Lpn>, Timestamp) -> ContractResult<Status<Lpn, Asset>>,
+        B: BankAccountView,
+    {
+        let mut lease_amount = account.balance::<Asset>()?;
+
+        let price_to_lpn = self.price_of_lease_currency()?;
+
+        let lease_lpn = total(lease_amount, price_to_lpn);
+
+        let status = handler(&mut self, lease_lpn, now)?;
+
+        if let Status::PartialLiquidation {
+            liquidation_info: LiquidationInfo { receipt, .. },
+            ..
+        } = &status
+        {
+            lease_amount -= total(receipt.total(), price_to_lpn.inv());
+        }
+
+        if !matches!(status, Status::FullLiquidation { .. }) {
+            self.reschedule(lease_amount, lease_lpn, &now, &status)?;
+        }
+
+        Ok(self.into_on_alarm_result(status))
     }
 
     fn into_on_alarm_result(
@@ -125,13 +150,14 @@ where
     #[inline]
     fn reschedule(
         &mut self,
+        lease_amount: Coin<Asset>,
         lease_lpn: Coin<Lpn>,
         now: &Timestamp,
         liquidation_status: &Status<Lpn, Asset>,
     ) -> ContractResult<()> {
         self.reschedule_time_alarm(now, liquidation_status)?;
 
-        self.reschedule_price_alarm(lease_lpn, now, liquidation_status)
+        self.reschedule_price_alarm(lease_amount, lease_lpn, now, liquidation_status)
     }
 
     fn reschedule_time_alarm(
@@ -155,20 +181,13 @@ where
 
     fn reschedule_price_alarm(
         &mut self,
-        mut lease_lpn: Coin<Lpn>,
+        lease_amount: Coin<Asset>,
+        lease_lpn: Coin<Lpn>,
         now: &Timestamp,
         liquidation_status: &Status<Lpn, Asset>,
     ) -> ContractResult<()> {
         if currency::equal::<Asset, Lpn>() {
             return Ok(());
-        }
-
-        if let Status::PartialLiquidation {
-            liquidation_info: LiquidationInfo { receipt, .. },
-            ..
-        } = liquidation_status
-        {
-            lease_lpn -= receipt.total();
         }
 
         let (below, above) = match liquidation_status {
@@ -198,8 +217,6 @@ where
                 lease_lpn,
             )?
             .total_lpn;
-
-        let lease_amount = total(lease_lpn, self.price_of_lease_currency()?.inv());
 
         let below = self.price_alarm_by_percent(lease_amount, total_liability, below)?;
 
