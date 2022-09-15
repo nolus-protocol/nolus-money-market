@@ -18,6 +18,9 @@ pub enum PriceFeedsError {
     #[error("No price")]
     NoPrice(),
 
+    #[error("Invalid price")]
+    InvalidPrice(),
+
     #[error("Found currency {0} expecting {1}")]
     UnexpectedCurrency(String, String),
     #[error("{0}")]

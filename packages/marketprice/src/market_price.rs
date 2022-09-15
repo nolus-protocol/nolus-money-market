@@ -1,16 +1,14 @@
-use std::convert::TryFrom;
-
 use crate::error::PriceFeedsError;
 use crate::feed::{Observation, PriceFeed};
 use crate::{Multiply, WithQuote};
-use cosmwasm_std::{Addr, Order, StdError, StdResult, Storage, Timestamp};
+use cosmwasm_std::{Addr, Order, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
-use finance::coin::Coin;
-use finance::currency::{Currency, SymbolOwned};
+
+use finance::currency::SymbolOwned;
 use finance::duration::Duration;
 
 use finance::price::dto::with_price;
-use finance::price::{self, dto::PriceDTO};
+use finance::price::dto::PriceDTO;
 
 #[derive(Clone, Copy)]
 pub struct Parameters {
@@ -57,14 +55,17 @@ impl<'m> PriceFeeds<'m> {
         base: SymbolOwned,
         quote: SymbolOwned,
     ) -> Result<PriceDTO, PriceFeedsError> {
+        // check if both currencies are the same => return one
+        if base.eq(&quote) {
+            return Err(PriceFeedsError::InvalidPrice());
+        }
         let mut resolution_path = DenomResolutionPath::new();
 
         let res = self.price_impl(storage, parameters, &base, quote, resolution_path.as_mut())?;
         resolution_path.push(res);
         resolution_path.reverse();
 
-        PriceFeeds::calculate_price(base, &mut resolution_path)
-        // Ok(res)
+        PriceFeeds::calculate_price(&mut resolution_path)
     }
 
     fn price_impl(
@@ -75,7 +76,7 @@ impl<'m> PriceFeeds<'m> {
         quote: SymbolOwned,
         resolution_path: &mut DenomResolutionPath,
     ) -> Result<PriceDTO, PriceFeedsError> {
-        let price_dto = match WithQuote::cmd(storage, base.to_owned(), quote.clone(), parameters) {
+        let price_dto = match self.get(storage, base.to_owned(), quote.clone(), parameters) {
             Ok(price) => price,
             Err(PriceFeedsError::NoPrice()) => {
                 if let Some(feed) = self.search_for_path(
@@ -128,6 +129,25 @@ impl<'m> PriceFeeds<'m> {
         Ok(None)
     }
 
+    fn get(
+        &self,
+        storage: &dyn Storage,
+        base: SymbolOwned,
+        quote: SymbolOwned,
+        parameters: Parameters,
+    ) -> Result<PriceDTO, PriceFeedsError> {
+        // check if both currencies are the same => return one
+        if base.eq(&quote) {
+            return Err(PriceFeedsError::InvalidPrice());
+        }
+
+        // check for exact match for the denom pair
+        match self.0.may_load(storage, (base, quote))? {
+            Some(feed) => Ok(feed.get_price(parameters)?.price()),
+            None => Err(PriceFeedsError::NoPrice()),
+        }
+    }
+
     pub fn load(
         &self,
         storage: &dyn Storage,
@@ -142,7 +162,6 @@ impl<'m> PriceFeeds<'m> {
     }
     // TODO remove move price calculation to the finance library
     fn calculate_price(
-        base: SymbolOwned,
         resolution_path: &mut DenomResolutionPath,
     ) -> Result<PriceDTO, PriceFeedsError> {
         let mut first = match resolution_path.first() {
@@ -194,11 +213,4 @@ impl<'m> PriceFeeds<'m> {
 
         Ok(())
     }
-}
-
-fn print_no_price(base: &str, quote: &str, err: StdError) {
-    println!(
-        "No price record for [ {}, {} ]: Error {:?}",
-        base, quote, err
-    );
 }

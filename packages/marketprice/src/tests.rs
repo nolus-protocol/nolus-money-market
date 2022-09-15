@@ -256,10 +256,8 @@ fn marketprice_follow_the_path() {
             TestCurrencyA::SYMBOL.to_string(),
             TestCurrencyA::SYMBOL.to_string(),
         )
-        .unwrap();
-    let expected = price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<TestCurrencyA>::new(1));
-    let expected_dto = PriceDTO::try_from(expected).unwrap();
-    assert_eq!(expected_dto, price_resp);
+        .unwrap_err();
+    assert_eq!(price_resp, PriceFeedsError::InvalidPrice());
 
     // second part of denome pair doesn't exists in the storage
     let query = Parameters::new(MINUTE, 1, mock_env().block.time);
@@ -272,7 +270,7 @@ fn marketprice_follow_the_path() {
                 DENX::SYMBOL.to_string()
             )
             .unwrap_err(),
-        PriceFeedsError::NoPrice {}
+        PriceFeedsError::UnknownCurrency {}
     );
 
     // first part of denome pair doesn't exists in the storage
