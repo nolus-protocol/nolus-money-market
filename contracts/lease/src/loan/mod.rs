@@ -185,7 +185,7 @@ where
                 // TODO change to `loan_payment + change` when issue #13 is solved
                 loan_payment,
                 receipt.previous_interest_paid()
-                    + receipt.current_interest_paid()
+                    + receipt.previous_interest_paid()
                     + receipt.principal_paid(),
             );
         }

@@ -41,7 +41,7 @@ where
         self.close
     }
 
-    pub(crate) fn total(&self) -> Coin<C> {
+    pub fn total(&self) -> Coin<C> {
         self.previous_margin_paid
             + self.previous_interest_paid
             + self.current_margin_paid

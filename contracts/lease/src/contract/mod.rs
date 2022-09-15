@@ -79,16 +79,6 @@ pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
 
             Ok(emitter.into())
         }
-        ReplyId::RepayReq => {
-            // Send excess back
-
-            Ok(Response::new())
-        }
-        ReplyId::LiquidationRepay => {
-            // Send excess to profit
-
-            Ok(Response::new())
-        }
     }
 }
 
