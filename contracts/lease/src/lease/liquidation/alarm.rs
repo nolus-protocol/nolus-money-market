@@ -14,6 +14,7 @@ use marketprice::alarms::Alarm;
 use platform::bank::BankAccountView;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
+use crate::loan::LiabilityStatus;
 use crate::{
     error::ContractResult,
     lease::{Lease, LiquidationInfo, OnAlarmResult, Status, WarningLevel},
@@ -35,11 +36,7 @@ where
     where
         B: BankAccountView,
     {
-        self.on_alarm(
-            |this, lease_lpn, now| this.act_on_liability(now, lease_lpn),
-            now,
-            account,
-        )
+        self.on_alarm(Self::act_on_liability, now, account)
     }
 
     pub(crate) fn on_time_alarm<B>(
@@ -50,21 +47,7 @@ where
     where
         B: BankAccountView,
     {
-        self.on_alarm(
-            |this, lease_lpn, now| {
-                if this.loan.grace_period_end() <= now {
-                    this.liquidate_on_interest_overdue(now, lease_lpn)
-                } else {
-                    Ok(this.handle_warnings(
-                        this.loan
-                            .liability_status(now, this.lease_addr.clone(), lease_lpn)?
-                            .ltv,
-                    ))
-                }
-            },
-            now,
-            account,
-        )
+        self.on_alarm(Self::act_on_overdue, now, account)
     }
 
     #[inline]
@@ -108,7 +91,13 @@ where
         account: &B,
     ) -> ContractResult<OnAlarmResult<Lpn, Asset>>
     where
-        F: FnOnce(&mut Self, Coin<Lpn>, Timestamp) -> ContractResult<Status<Lpn, Asset>>,
+        F: FnOnce(
+            &mut Self,
+            Coin<Lpn>,
+            Timestamp,
+            Percent,
+            Coin<Lpn>,
+        ) -> ContractResult<Status<Lpn, Asset>>,
         B: BankAccountView,
     {
         let mut lease_amount = account.balance::<Asset>()?;
@@ -117,7 +106,15 @@ where
 
         let lease_lpn = total(lease_amount, price_to_lpn);
 
-        let status = handler(&mut self, lease_lpn, now)?;
+        let LiabilityStatus {
+            ltv,
+            total_lpn: liability_lpn,
+            ..
+        } = self
+            .loan
+            .liability_status(now, self.lease_addr.clone(), lease_lpn)?;
+
+        let status = handler(&mut self, lease_lpn, now, ltv, liability_lpn)?;
 
         if let Status::PartialLiquidation {
             liquidation_info: LiquidationInfo { receipt, .. },

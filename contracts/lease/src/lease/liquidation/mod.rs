@@ -33,37 +33,29 @@ where
     Oracle: OracleTrait<Lpn>,
     Asset: Currency + Serialize,
 {
-    fn liquidate_on_interest_overdue(
+    fn act_on_overdue(
         &mut self,
-        now: Timestamp,
         lease_lpn: Coin<Lpn>,
+        now: Timestamp,
+        ltv: Percent,
+        _: Coin<Lpn>,
     ) -> ContractResult<Status<Lpn, Asset>> {
-        let LiabilityStatus {
-            ltv, overdue_lpn, ..
-        } = self
-            .loan
-            .liability_status(now, self.lease_addr.clone(), lease_lpn)?;
-
-        self.liquidate(
-            Cause::Overdue,
-            lease_lpn,
-            lease_lpn.min(overdue_lpn),
-            now,
-            ltv,
-        )
+        if self.loan.grace_period_end() <= now {
+            self.liquidate_on_interest_overdue(now, lease_lpn)
+        } else {
+            Ok(self.handle_warnings(ltv))
+        }
     }
 
     fn act_on_liability(
         &mut self,
-        now: Timestamp,
         lease_lpn: Coin<Lpn>,
+        now: Timestamp,
+        ltv: Percent,
+        liability_lpn: Coin<Lpn>,
     ) -> ContractResult<Status<Lpn, Asset>> {
-        let LiabilityStatus { ltv, total_lpn, .. } =
-            self.loan
-                .liability_status(now, self.lease_addr.clone(), lease_lpn)?;
-
         if self.liability.max_percent() <= ltv {
-            self.liquidate_on_liability(lease_lpn, total_lpn, now)
+            self.liquidate_on_liability(lease_lpn, liability_lpn, now)
         } else {
             Ok(self.handle_warnings(ltv))
         }
@@ -116,6 +108,26 @@ where
             liquidation_lpn,
             now,
             self.liability.max_percent(),
+        )
+    }
+
+    fn liquidate_on_interest_overdue(
+        &mut self,
+        now: Timestamp,
+        lease_lpn: Coin<Lpn>,
+    ) -> ContractResult<Status<Lpn, Asset>> {
+        let LiabilityStatus {
+            ltv, overdue_lpn, ..
+        } = self
+            .loan
+            .liability_status(now, self.lease_addr.clone(), lease_lpn)?;
+
+        self.liquidate(
+            Cause::Overdue,
+            lease_lpn,
+            lease_lpn.min(overdue_lpn),
+            now,
+            ltv,
         )
     }
 
@@ -246,7 +258,6 @@ mod tests {
     use cosmwasm_std::{Addr, Timestamp};
 
     use finance::percent::Percent;
-
     use lpp::msg::LoanResponse;
 
     use crate::loan::RepayReceipt;
