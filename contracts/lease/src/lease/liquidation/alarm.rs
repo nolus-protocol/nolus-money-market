@@ -6,7 +6,7 @@ use finance::{
     currency::{self, Currency},
     fraction::Fraction,
     percent::Percent,
-    price::{total, total_of, Price, PriceDTO},
+    price::{dto::PriceDTO, total, total_of, Price},
 };
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;

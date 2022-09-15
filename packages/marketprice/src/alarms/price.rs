@@ -4,7 +4,7 @@ use cosmwasm_std::{Addr, Order, Response, StdResult, Storage};
 use cw_storage_plus::{Item, Map};
 use finance::{
     currency::{Nls, SymbolOwned},
-    price::PriceDTO,
+    price::dto::PriceDTO,
 };
 use platform::batch::Batch;
 

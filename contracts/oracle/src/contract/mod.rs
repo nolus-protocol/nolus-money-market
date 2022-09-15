@@ -4,11 +4,12 @@ use cosmwasm_std::{
     from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
 };
 use cw2::set_contract_version;
+use finance::price::dto::PriceDTO;
 
 use crate::{
     contract_validation::validate_contract_addr,
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, PriceResponse, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, PriceResponse, PricesResponse, QueryMsg},
     state::config::Config,
 };
 
@@ -71,7 +72,20 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
                 price: Feeds::get_price(deps.storage, parameters, currency, config.base_asset)?,
             })?)
         }
-        QueryMsg::PriceFor { currencies } => todo!(), // _ => Ok(QueryWithOracleBase::cmd(deps, env, msg)?),
+        QueryMsg::PriceFor { currencies } => {
+            let config = Config::load(deps.storage)?;
+            let parameters = Feeders::query_config(deps.storage, &config, env.block.time)?;
+            let mut prices: Vec<PriceDTO> = vec![];
+            for currency in currencies {
+                prices.push(Feeds::get_price(
+                    deps.storage,
+                    parameters,
+                    currency,
+                    config.base_asset.clone(),
+                )?)
+            }
+            Ok(to_binary(&PricesResponse { prices })?)
+        }
     }
 }
 

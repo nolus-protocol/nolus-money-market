@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use cosmwasm_std::{Addr, Response, StdResult, Storage};
-use finance::{currency::SymbolOwned, price::PriceDTO};
+use finance::{currency::SymbolOwned, price::dto::PriceDTO};
 use marketprice::alarms::{price::PriceHooks, Alarm};
 use platform::batch::Batch;
 use schemars::JsonSchema;

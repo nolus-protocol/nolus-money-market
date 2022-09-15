@@ -5,7 +5,7 @@ use cw_multi_test::{AppResponse, Executor};
 
 use finance::{
     coin::Coin, currency::Currency as _, currency::Usdc, duration::Duration,
-    interest::InterestPeriod, percent::Percent, price::PriceDTO,
+    interest::InterestPeriod, percent::Percent, price::dto::PriceDTO,
 };
 use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};

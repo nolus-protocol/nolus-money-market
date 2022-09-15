@@ -4,7 +4,7 @@ use cw_multi_test::Executor;
 use finance::{
     coin::Coin,
     currency::{Nls, Usdc},
-    price::{self, PriceDTO},
+    price::{self, dto::PriceDTO},
 };
 use platform::coin_legacy::to_cosmwasm;
 

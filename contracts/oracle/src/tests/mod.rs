@@ -14,7 +14,7 @@ use finance::{
         Currency, Nls, SymbolOwned, TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD,
         Usdc,
     },
-    price::{self, PriceDTO},
+    price::{self, dto::PriceDTO},
 };
 
 use crate::{

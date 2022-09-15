@@ -112,7 +112,7 @@ mod tests {
 
         use finance::{
             coin::Coin,
-            price::{self, PriceDTO},
+            price::{self, dto::PriceDTO},
         };
 
         use crate::{

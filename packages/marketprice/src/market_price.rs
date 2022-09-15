@@ -2,14 +2,15 @@ use std::convert::TryFrom;
 
 use crate::error::PriceFeedsError;
 use crate::feed::{Observation, PriceFeed};
-use crate::WithQuote;
+use crate::{Multiply, WithQuote};
 use cosmwasm_std::{Addr, Order, StdError, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
 use finance::coin::Coin;
 use finance::currency::{Currency, SymbolOwned};
 use finance::duration::Duration;
 
-use finance::price::{self, PriceDTO};
+use finance::price::dto::with_price;
+use finance::price::{self, dto::PriceDTO};
 
 #[derive(Clone, Copy)]
 pub struct Parameters {
@@ -149,11 +150,10 @@ impl<'m> PriceFeeds<'m> {
         quote: SymbolOwned,
         parameters: Parameters,
     ) -> Result<PriceDTO, PriceFeedsError> {
-        Ok(self
-            .0
-            .load(storage, (base, quote))?
-            .get_price(parameters)?
-            .price())
+        match self.0.may_load(storage, (base, quote))? {
+            Some(feed) => Ok(feed.get_price(parameters)?.price()),
+            None => Err(PriceFeedsError::NoPrice()),
+        }
     }
     // TODO remove move price calculation to the finance library
     fn calculate_price(
@@ -168,9 +168,9 @@ impl<'m> PriceFeeds<'m> {
         if resolution_path.len() == 1 {
             return Ok(first);
         }
-
+        resolution_path.remove(0);
         for p in resolution_path.iter() {
-            first = first * p;
+            first = with_price::execute(first.clone(), Multiply::with(p.to_owned()))?;
         }
 
         Ok(first)

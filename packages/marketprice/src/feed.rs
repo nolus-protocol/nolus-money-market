@@ -1,12 +1,11 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{Addr, Timestamp};
-use finance::price::PriceDTO;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{error::PriceFeedsError, market_price::Parameters};
-use finance::duration::Duration;
+use finance::{duration::Duration, price::dto::PriceDTO};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Observation {
@@ -89,7 +88,7 @@ mod tests {
     use finance::{
         coin::Coin,
         currency::{Currency, Nls, SymbolStatic},
-        price::{self, PriceDTO},
+        price::{self, dto::PriceDTO},
     };
 
     #[test]

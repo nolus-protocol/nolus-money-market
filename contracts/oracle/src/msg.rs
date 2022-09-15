@@ -4,8 +4,7 @@ use cosmwasm_std::Addr;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use finance::currency::SymbolOwned;
-use finance::price::PriceDTO;
+use finance::{currency::SymbolOwned, price::dto::PriceDTO};
 use marketprice::alarms::Alarm;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

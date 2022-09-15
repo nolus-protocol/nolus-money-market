@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use finance::{
     currency::{Currency, Nls, SymbolOwned},
     duration::Duration,
-    price::PriceDTO,
+    price::dto::PriceDTO,
 };
 
 use crate::{state::config::Config, ContractError};
@@ -168,7 +168,7 @@ mod tests {
     use finance::{
         coin::Coin,
         currency::{Currency, TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD},
-        price::{self, PriceDTO},
+        price::{self, dto::PriceDTO},
     };
 
     use crate::state::config::Config;

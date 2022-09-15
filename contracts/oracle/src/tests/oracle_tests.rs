@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::contract::{execute, query};
-use crate::msg::{ExecuteMsg, PricesResponse, QueryMsg};
+use crate::msg::{ExecuteMsg, PriceResponse, PricesResponse, QueryMsg};
 use crate::tests::{dummy_default_instantiate_msg, setup_test};
 use crate::ContractError;
 
@@ -11,7 +11,8 @@ use finance::coin::Coin;
 use finance::currency::{
     Currency, SymbolStatic, TestCurrencyA, TestCurrencyB, TestCurrencyC, Usdc,
 };
-use finance::price::{self, PriceDTO};
+use finance::price::dto::PriceDTO;
+use finance::price::{self};
 
 use super::dummy_feed_prices_msg;
 
@@ -88,10 +89,10 @@ fn feed_indirect_price() {
     .unwrap();
 
     let expected_price =
-        PriceDTO::try_from(price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<Usdc>::new(6)))
+        PriceDTO::try_from(price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<Usdc>::new(3)))
             .unwrap();
-    let value: PricesResponse = from_binary(&res).unwrap();
-    assert_eq!(expected_price, value.prices.first().unwrap().to_owned());
+    let value: PriceResponse = from_binary(&res).unwrap();
+    assert_eq!(expected_price, value.price)
 }
 
 #[test]

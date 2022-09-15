@@ -5,7 +5,7 @@ use cosmwasm_std::testing::{mock_dependencies, mock_env};
 use cosmwasm_std::{Api, DepsMut, Timestamp};
 use finance::coin::Coin;
 use finance::currency::{Currency, SymbolStatic};
-use finance::price::{self, Price, PriceDTO};
+use finance::price::{self, dto::PriceDTO, Price};
 
 use crate::error::PriceFeedsError;
 use crate::feeders::PriceFeeders;

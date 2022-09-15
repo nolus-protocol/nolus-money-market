@@ -5,7 +5,12 @@ use error::PriceFeedsError;
 use finance::{
     coin::Coin,
     currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
-    price::{self, execute, Price, PriceDTO, WithPrice},
+    price::{
+        self,
+        dto::{with_base::execute, PriceDTO},
+        dto::{WithBase, WithPrice},
+        Price,
+    },
 };
 use market_price::{Parameters, PriceFeeds};
 use serde::{de::DeserializeOwned, Serialize};
@@ -18,6 +23,8 @@ pub mod market_price;
 
 #[cfg(test)]
 mod tests;
+
+const MARKET_PRICE: PriceFeeds<'static> = PriceFeeds::new("market_price");
 
 pub struct WithQuote<'a> {
     storage: &'a dyn Storage,
@@ -109,7 +116,7 @@ where
         }
 
         // check for exact match for the denom pair
-        Ok(PriceFeeds::new("market_price").load(
+        Ok(MARKET_PRICE.load(
             self.storage,
             BaseC::SYMBOL.to_string(),
             QuoteC::SYMBOL.to_string(),
@@ -121,31 +128,44 @@ where
     }
 }
 
-pub struct Multiplicand {
+pub struct Multiply {
     p2: PriceDTO,
 }
 
-impl WithPrice for Multiplicand {
+impl Multiply {
+    fn with(p2: PriceDTO) -> Self {
+        Self { p2 }
+    }
+}
+
+impl WithPrice for Multiply {
     type Output = PriceDTO;
 
     type Error = PriceFeedsError;
 
     fn exec<C, QuoteC>(self, p1: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
-        C: Currency,
-        QuoteC: Currency,
+        C: 'static + Currency + DeserializeOwned + Serialize,
+        QuoteC: 'static + Currency + DeserializeOwned + Serialize,
     {
+        println!("-----------------------------------");
+        println!("C base {}", C::SYMBOL.to_string());
+        println!("QuoteC quote {}", QuoteC::SYMBOL.to_string());
+        println!("p2 base  {}", self.p2.base().symbol().to_string());
+        println!("p2 quote  {}", self.p2.quote().symbol().to_string());
+        println!("-----------------------------------");
+
         execute(self.p2, Multiplier::new(p1))
     }
 
     fn unknown(self) -> Result<Self::Output, Self::Error> {
-        todo!()
+        Err(PriceFeedsError::UnknownCurrency {})
     }
 }
 
 pub struct Multiplier<C1, QuoteC1>
 where
-    C1: Currency,
+    C1: Currency + Serialize + DeserializeOwned,
     QuoteC1: Currency,
 {
     p1: Price<C1, QuoteC1>,
@@ -153,7 +173,7 @@ where
 
 impl<C1, QuoteC1> Multiplier<C1, QuoteC1>
 where
-    C1: Currency,
+    C1: Currency + Serialize + DeserializeOwned,
     QuoteC1: Currency,
 {
     fn new(p: Price<C1, QuoteC1>) -> Self {
@@ -161,24 +181,25 @@ where
     }
 }
 
-impl<C1, QuoteC1> WithPrice for Multiplier<C1, QuoteC1>
+impl<C1, QuoteC1> WithBase<QuoteC1> for Multiplier<C1, QuoteC1>
 where
-    C1: Currency,
+    C1: Currency + Serialize + DeserializeOwned,
     QuoteC1: Currency,
 {
     type Output = PriceDTO;
 
     type Error = PriceFeedsError;
 
-    fn exec<C, QuoteC>(self, p2: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
+    fn exec<QuoteC2>(self, p2: Price<QuoteC1, QuoteC2>) -> Result<Self::Output, Self::Error>
     where
-        C: Currency,
-        QuoteC: Currency,
+        QuoteC2: Currency,
     {
-        p1 * p2
+        let res: Price<C1, QuoteC2> = self.p1.lossy_mul(p2);
+
+        return Ok(PriceDTO::try_from(res)?);
     }
 
     fn unknown(self) -> Result<Self::Output, Self::Error> {
-        todo!()
+        Err(PriceFeedsError::UnknownCurrency {})
     }
 }

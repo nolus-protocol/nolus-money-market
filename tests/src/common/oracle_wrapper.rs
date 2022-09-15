@@ -4,7 +4,7 @@ use cw_multi_test::Executor;
 use finance::{
     coin::Coin,
     currency::{Currency, Nls, Usdc},
-    price::{total_of, PriceDTO},
+    price::{dto::PriceDTO, total_of},
 };
 use oracle::{
     contract::{execute, instantiate, query, reply},
