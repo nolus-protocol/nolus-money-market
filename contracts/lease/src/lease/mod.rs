@@ -298,11 +298,7 @@ mod tests {
             unreachable!()
         }
 
-        fn repay_loan_req(
-            &mut self,
-            _repayment: Coin<TestCurrency>,
-            _liquidation: bool,
-        ) -> LppResult<()> {
+        fn repay_loan_req(&mut self, _repayment: Coin<TestCurrency>) -> LppResult<()> {
             Ok(())
         }
 
@@ -380,11 +376,7 @@ mod tests {
             unreachable!()
         }
 
-        fn repay_loan_req(
-            &mut self,
-            _repayment: Coin<TestCurrency>,
-            _liquidation: bool,
-        ) -> LppResult<()> {
+        fn repay_loan_req(&mut self, _repayment: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
 
@@ -546,12 +538,7 @@ mod tests {
         TA: TimeAlarms,
         O: Oracle<TestCurrency>,
     {
-        let lpp_ref = LppRef::unchecked::<_, Nls>(
-            "lpp_addr",
-            Some(ReplyId::OpenLoanReq.into()),
-            Some(ReplyId::RepayReq.into()),
-            Some(ReplyId::LiquidationRepay.into()),
-        );
+        let lpp_ref = LppRef::unchecked::<_, Nls>("lpp_addr", Some(ReplyId::OpenLoanReq.into()));
 
         let loan_dto = LoanDTO::new(
             LEASE_START,

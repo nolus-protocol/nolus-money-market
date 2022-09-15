@@ -33,7 +33,7 @@ where
 
     fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()>;
     fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>>;
-    fn repay_loan_req(&mut self, repayment: Coin<Lpn>, liquidation: bool) -> Result<()>;
+    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()>;
 
     fn loan(&self, lease: impl Into<Addr>) -> Result<QueryLoanResponse<Lpn>>;
 
@@ -67,29 +67,19 @@ pub struct LppRef {
     addr: Addr,
     currency: SymbolOwned,
     open_loan_req_id: Option<ReplyId>,
-    repay_req_id: Option<ReplyId>,
-    liquidation_repay_id: Option<ReplyId>,
 }
 
 impl LppRef {
     pub fn try_from(addr: Addr, querier: &QuerierWrapper) -> Result<Self> {
-        Self::try_from_maybe_borrow(addr, querier, None, None, None)
+        Self::try_from_maybe_borrow(addr, querier, None)
     }
 
     pub fn try_borrow_from(
         addr: Addr,
         querier: &QuerierWrapper,
         open_loan_req_id: ReplyId,
-        repay_req_id: ReplyId,
-        liquidation_repay_id: ReplyId,
     ) -> Result<Self> {
-        Self::try_from_maybe_borrow(
-            addr,
-            querier,
-            Some(open_loan_req_id),
-            Some(repay_req_id),
-            Some(liquidation_repay_id),
-        )
+        Self::try_from_maybe_borrow(addr, querier, Some(open_loan_req_id))
     }
 
     pub fn addr(&self) -> &Addr {
@@ -142,8 +132,6 @@ impl LppRef {
         addr: Addr,
         querier: &QuerierWrapper,
         open_loan_req_id: Option<ReplyId>,
-        repay_req_id: Option<ReplyId>,
-        liquidation_repay_id: Option<ReplyId>,
     ) -> Result<Self> {
         let resp: QueryConfigResponse =
             querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
@@ -154,8 +142,6 @@ impl LppRef {
             addr,
             currency,
             open_loan_req_id,
-            repay_req_id,
-            liquidation_repay_id,
         })
     }
 
@@ -171,12 +157,7 @@ impl LppRef {
 
 #[cfg(feature = "testing")]
 impl LppRef {
-    pub fn unchecked<A, Lpn>(
-        addr: A,
-        open_loan_req_id: Option<ReplyId>,
-        repay_req_id: Option<ReplyId>,
-        liquidation_repay_id: Option<ReplyId>,
-    ) -> Self
+    pub fn unchecked<A, Lpn>(addr: A, open_loan_req_id: Option<ReplyId>) -> Self
     where
         A: Into<String>,
         Lpn: Currency,
@@ -185,8 +166,6 @@ impl LppRef {
             addr: Addr::unchecked(addr),
             currency: Lpn::SYMBOL.into(),
             open_loan_req_id,
-            repay_req_id,
-            liquidation_repay_id,
         }
     }
 }
@@ -202,18 +181,6 @@ impl<'a, Lpn> LppStub<'a, Lpn> {
     fn open_loan_req_id(&self) -> ReplyId {
         self.lpp_ref
             .open_loan_req_id
-            .expect("LPP Ref not created with borrow feature!")
-    }
-
-    fn repay_req_id(&self) -> ReplyId {
-        self.lpp_ref
-            .repay_req_id
-            .expect("LPP Ref not created with borrow feature!")
-    }
-
-    fn liquidation_repay_id(&self) -> ReplyId {
-        self.lpp_ref
-            .liquidation_repay_id
             .expect("LPP Ref not created with borrow feature!")
     }
 }
@@ -251,18 +218,9 @@ where
             })
     }
 
-    fn repay_loan_req(&mut self, repayment: Coin<Lpn>, liquidation: bool) -> Result<()> {
+    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()> {
         self.batch
-            .schedule_execute_wasm_on_success_reply(
-                &self.id(),
-                ExecuteMsg::RepayLoan(),
-                Some(repayment),
-                if liquidation {
-                    self.liquidation_repay_id()
-                } else {
-                    self.repay_req_id()
-                },
-            )
+            .schedule_execute_wasm_no_reply(&self.id(), ExecuteMsg::RepayLoan(), Some(repayment))
             .map_err(ContractError::from)
     }
 
@@ -381,8 +339,6 @@ mod test {
             addr: addr.clone(),
             currency: ToOwned::to_owned(Nls::SYMBOL),
             open_loan_req_id: Some(OPEN_LOAN_REQ_ID),
-            repay_req_id: None,
-            liquidation_repay_id: None,
         };
         let borrow_amount = Coin::<Nls>::new(10);
         let querier = MockQuerier::default();

@@ -27,7 +27,7 @@ where
         payment: Coin<Lpn>,
         now: Timestamp,
     ) -> ContractResult<Result<Lpn>> {
-        let receipt = self.inner_repay(payment, now, false)?;
+        let receipt = self.no_reschedule_repay(payment, now)?;
 
         self.reschedule_on_repay(lease_amount, &now)?;
 
@@ -40,22 +40,13 @@ where
         })
     }
 
-    pub(super) fn liquidation_repay(
+    pub(super) fn no_reschedule_repay(
         &mut self,
         payment: Coin<Lpn>,
         now: Timestamp,
-    ) -> ContractResult<RepayReceipt<Lpn>> {
-        self.inner_repay(payment, now, true)
-    }
-
-    fn inner_repay(
-        &mut self,
-        payment: Coin<Lpn>,
-        now: Timestamp,
-        liquidation: bool,
     ) -> ContractResult<RepayReceipt<Lpn>> {
         self.loan
-            .repay(payment, now, self.lease_addr.clone(), liquidation)
+            .repay(payment, now, self.lease_addr.clone())
             .map_err(Into::into)
     }
 }

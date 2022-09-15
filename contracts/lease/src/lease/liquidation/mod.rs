@@ -139,7 +139,7 @@ where
         now: Timestamp,
         ltv: Percent,
     ) -> ContractResult<Status<Lpn, Asset>> {
-        let receipt = self.liquidation_repay(liquidation_lpn, now)?;
+        let receipt = self.no_reschedule_repay(liquidation_lpn, now)?;
 
         let info = LeaseInfo::new(self.customer.clone(), ltv);
 
