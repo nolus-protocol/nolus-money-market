@@ -1,6 +1,6 @@
 use crate::error::PriceFeedsError;
 use crate::feed::{Observation, PriceFeed};
-use crate::{Multiply, WithQuote};
+use crate::{Multiply};
 use cosmwasm_std::{Addr, Order, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
 
