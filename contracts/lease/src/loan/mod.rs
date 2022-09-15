@@ -209,7 +209,6 @@ where
 
         debug_assert_eq!(
             payment,
-            // TODO add `+ change` when issue #13 is solved
             receipt.total(),
         );
 
