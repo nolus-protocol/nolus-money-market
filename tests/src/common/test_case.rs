@@ -119,6 +119,10 @@ impl TestCase {
                     .oracle
                     .clone()
                     .expect("Market Price Oracle contract not instantiated!"),
+                profit: self
+                    .profit_addr
+                    .clone()
+                    .expect("Profit contract not instantiated!"),
             },
             &self.denom,
             LeaseWrapperConfig::default(),
@@ -169,6 +173,7 @@ impl TestCase {
                 self.oracle
                     .clone()
                     .expect("Market Price Oracle not initialized!"),
+                self.profit_addr.clone().expect("Profit not initialized!"),
             ),
         );
         self.app.update_block(next_block);

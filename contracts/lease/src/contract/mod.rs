@@ -20,9 +20,9 @@ use crate::{
 
 use self::{
     close::Close,
+    cmd::LeaseState,
     open::{OpenLoanReq, OpenLoanResp},
     repay::{Repay, RepayResult},
-    cmd::LeaseState,
 };
 
 mod alarms;

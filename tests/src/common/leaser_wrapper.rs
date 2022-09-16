@@ -50,6 +50,7 @@ impl LeaserWrapper {
         lpp_addr: &Addr,
         time_alarms: Addr,
         market_price_oracle: Addr,
+        profit: Addr,
     ) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {
@@ -63,6 +64,7 @@ impl LeaserWrapper {
             ),
             time_alarms,
             market_price_oracle,
+            profit,
         };
 
         app.instantiate_contract(code_id, Addr::unchecked(ADMIN), &msg, &[], "leaser", None)
