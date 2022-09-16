@@ -203,7 +203,7 @@ where
                 total_interest_due,
                 &mut receipt,
                 change,
-            );
+            )?;
 
             debug_assert_eq!(
                 loan_payment,
@@ -230,9 +230,6 @@ where
 
         // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
         self.lpp.repay_loan_req(loan_payment)?;
-
-        self.profit
-            .send(receipt.previous_margin_paid() + receipt.current_margin_paid())?;
 
         debug_assert_eq!(payment, receipt.total());
 
@@ -318,7 +315,7 @@ where
         principal_due: Coin<Lpn>,
         receipt: &mut RepayReceipt<Lpn>,
     ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
-        let (prev_margin_paid, change) = self.repay_margin_interest(principal_due, by, payment);
+        let (prev_margin_paid, change) = self.repay_margin_interest(principal_due, by, payment)?;
 
         receipt.pay_previous_margin(prev_margin_paid);
 
@@ -349,10 +346,10 @@ where
         total_interest_due: Coin<Lpn>,
         receipt: &mut RepayReceipt<Lpn>,
         change: Coin<Lpn>,
-    ) -> Coin<Lpn> {
+    ) -> ContractResult<Coin<Lpn>> {
         let mut loan_repay = Coin::default();
 
-        let (curr_margin_paid, mut change) = self.repay_margin_interest(principal_due, by, change);
+        let (curr_margin_paid, mut change) = self.repay_margin_interest(principal_due, by, change)?;
 
         receipt.pay_current_margin(curr_margin_paid);
 
@@ -375,7 +372,7 @@ where
             receipt.pay_principal(principal_due, principal_paid);
         }
 
-        loan_repay
+        Ok(loan_repay)
     }
 
     fn repay_margin_interest(
@@ -383,12 +380,15 @@ where
         principal_due: Coin<Lpn>,
         by: Timestamp,
         payment: Coin<Lpn>,
-    ) -> (Coin<Lpn>, Coin<Lpn>) {
+    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
         let (period, change) = self.current_period.pay(principal_due, payment, by);
         self.current_period = period;
 
-        // TODO send payment - change to profit
-        (payment - change, change)
+        let paid = payment - change;
+
+        self.profit.send(paid)?;
+
+        Ok((paid, change))
     }
 
     fn open_next_period(&mut self) {
