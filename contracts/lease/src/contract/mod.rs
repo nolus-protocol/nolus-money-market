@@ -1,6 +1,8 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Response};
+use cosmwasm_std::{
+    Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Response as CwResponse,
+};
 use cw2::set_contract_version;
 
 use platform::{bank::BankStub, batch::Emitter};
@@ -20,14 +22,15 @@ use self::{
     close::Close,
     open::{OpenLoanReq, OpenLoanResp},
     repay::{Repay, RepayResult},
-    state::LeaseState,
+    cmd::LeaseState,
 };
 
 mod alarms;
 mod close;
+mod cmd;
 mod open;
 mod repay;
-mod state;
+// mod state;
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -38,7 +41,7 @@ pub fn instantiate(
     env: Env,
     info: MessageInfo,
     form: NewLeaseForm,
-) -> ContractResult<Response> {
+) -> ContractResult<CwResponse> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
     let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
@@ -57,7 +60,7 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
+pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<CwResponse> {
     // TODO swap the received loan and the downpayment to lease.currency
     let lease = LeaseDTO::load(deps.storage)?;
 
@@ -88,7 +91,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> ContractResult<Response> {
+) -> ContractResult<CwResponse> {
     let lease = LeaseDTO::load(deps.storage)?;
 
     let account = BankStub::my_account(&env, &deps.querier);
