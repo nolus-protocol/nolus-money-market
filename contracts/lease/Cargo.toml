@@ -26,6 +26,7 @@ cw2 = "0.13.2"
 schemars = "0.8"
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0" }
+enum_dispatch = "0.3.8"
 time_alarms = { path = "../timealarms", package = "timealarms", version = "0.1.0", default-features = false }
 lpp = { path = "../lpp", version = "0.1.0", default-features = false }
 profit = { path = "../profit", version = "0.1.0", default-features = false }

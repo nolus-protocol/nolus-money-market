@@ -3,14 +3,13 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Response as CwResponse,
 };
-use cw2::set_contract_version;
 
 use platform::{bank::BankStub, batch::Emitter};
 
 use crate::{
     contract::{
         alarms::{price::PriceAlarm, time::TimeAlarm, AlarmResult},
-        open::OpenLoanReqResult,
+        state::{Response, State},
     },
     error::{ContractError, ContractResult},
     lease::{self, DownpaymentDTO, LeaseDTO},
@@ -21,8 +20,9 @@ use crate::{
 use self::{
     close::Close,
     cmd::LeaseState,
-    open::{OpenLoanReq, OpenLoanResp},
+    open::OpenLoanResp,
     repay::{Repay, RepayResult},
+    state::{Controller, NoLease},
 };
 
 mod alarms;
@@ -30,10 +30,7 @@ mod close;
 mod cmd;
 mod open;
 mod repay;
-// mod state;
-
-const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+mod state;
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
@@ -42,21 +39,15 @@ pub fn instantiate(
     info: MessageInfo,
     form: NewLeaseForm,
 ) -> ContractResult<CwResponse> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
-    let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
-    lease.store(deps.storage)?;
-
-    let OpenLoanReqResult { batch, downpayment } = lease::execute(
-        lease,
-        OpenLoanReq::new(&info.funds),
-        &env.contract.address,
-        &deps.querier,
-    )?;
-
-    downpayment.store(deps.storage)?;
-
-    Ok(batch.into())
+    NoLease {}.instantiate(deps, env, info, form).map(|resp| {
+        let Response {
+            cw_response,
+            next_state,
+        } = resp;
+        // TODO store the next_state
+        debug_assert!(matches!(next_state, State::NoLease(_)));
+        cw_response
+    })
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]

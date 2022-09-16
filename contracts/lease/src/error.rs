@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use cosmwasm_std::StdError;
 use thiserror::Error;
 
@@ -48,8 +50,21 @@ pub enum ContractError {
 
     #[error("Invalid parameters: {0}")]
     InvalidParameters(String),
+
+    #[error("The operation '{0}' is not supported in state '{1}'")]
+    UnsupportedOperation(String, String),
     // Add any other custom errors you like here.
-    // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
+    // Look at https://docs.rs/thiserror/1.0.35/thiserror/ for details.
+}
+
+impl ContractError {
+    pub fn unsupported_operation<Op, State>(op: Op, state: &State) -> Self
+    where
+        Op: Into<String>,
+        State: Display,
+    {
+        Self::UnsupportedOperation(op.into(), format!("{}", state))
+    }
 }
 
 pub type ContractResult<T> = Result<T, ContractError>;
