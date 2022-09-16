@@ -15,7 +15,6 @@ pub struct NewLeaseForm {
     pub loan: LoanForm,
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
-    pub profit: Addr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -33,4 +32,6 @@ pub struct LoanForm {
     pub interest_due_period_secs: u32,
     /// How long after the due period ends the interest may be paid before initiating a liquidation
     pub grace_period_secs: u32,
+    /// The Profit contract to which the margin interest is sent.
+    pub profit: String,
 }

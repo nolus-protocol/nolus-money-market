@@ -2,6 +2,7 @@ use cosmwasm_std::{Api, QuerierWrapper, Timestamp};
 
 use finance::duration::Duration;
 use lpp::stub::LppRef;
+use profit::stub::ProfitRef;
 
 use crate::{
     error::ContractResult, lease::LeaseDTO, loan::LoanDTO, msg::NewLeaseForm, repay_id::ReplyId,
@@ -24,12 +25,18 @@ impl NewLeaseForm {
             ReplyId::OpenLoanReq.into(),
         )?;
 
+        let profit = ProfitRef::try_from(
+            api.addr_validate(&self.loan.profit)?,
+            querier,
+        )?;
+
         let loan = LoanDTO::new(
             start_at,
             lpp,
             self.loan.annual_margin_interest,
             Duration::from_secs(self.loan.interest_due_period_secs),
             Duration::from_secs(self.loan.grace_period_secs),
+            profit,
         )?;
 
         Ok(LeaseDTO::new(
@@ -39,7 +46,6 @@ impl NewLeaseForm {
             loan,
             self.time_alarms,
             self.market_price_oracle,
-            self.profit,
         ))
     }
 }
@@ -79,10 +85,10 @@ mod test {
                 lpp: "sdgg22d".into(),
                 interest_due_period_secs: 100,
                 grace_period_secs: 10,
+                profit: "profit".into(),
             },
             time_alarms: Addr::unchecked("timealarms"),
             market_price_oracle: Addr::unchecked("oracle"),
-            profit: Addr::unchecked("profit"),
         };
         let api = MockApi::default();
         let _ = lease.into_lease_dto(

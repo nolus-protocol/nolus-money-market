@@ -47,10 +47,10 @@ impl Borrow {
                 lpp: config.lpp_addr.into_string(),
                 interest_due_period_secs: config.repayment.period_sec, // 90 days TODO use a crate for daytime calculations
                 grace_period_secs: config.repayment.grace_period_sec,
+                profit: config.profit.into_string(),
             },
             time_alarms: config.time_alarms,
             market_price_oracle: config.market_price_oracle,
-            profit: config.profit,
         }
     }
 }

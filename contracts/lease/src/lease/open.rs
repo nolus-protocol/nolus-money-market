@@ -6,17 +6,19 @@ use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{bank::BankAccountView, batch::Batch};
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
+use profit::stub::Profit as ProfitTrait;
 
 use crate::{error::ContractResult, lease::Lease, loan::OpenReceipt};
 
 use super::LeaseDTO;
 
-impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset>
+impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
+    Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
     pub(crate) fn open_loan_req(mut self, downpayment: Coin<Lpn>) -> ContractResult<Batch> {

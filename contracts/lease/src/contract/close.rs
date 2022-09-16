@@ -9,6 +9,7 @@ use platform::{
     batch::{Emit, Emitter},
 };
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
+use profit::stub::Profit as ProfitTrait;
 
 use crate::{
     error::ContractError,
@@ -42,15 +43,16 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, TimeAlarms, Oracle, Asset>(
+    fn exec<Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>(
         self,
-        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>,
+        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppTrait<Lpn>,
         TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
+        Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
         if !lease.owned_by(self.sender) {

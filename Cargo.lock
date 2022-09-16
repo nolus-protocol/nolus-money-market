@@ -467,6 +467,7 @@ dependencies = [
  "marketprice",
  "oracle",
  "platform",
+ "profit",
  "schemars",
  "serde",
  "thiserror",

@@ -14,6 +14,7 @@ use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{batch::Batch, generate_ids};
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
+use profit::stub::Profit as ProfitTrait;
 
 use crate::{
     error::ContractResult,
@@ -25,12 +26,13 @@ use super::LeaseDTO;
 
 mod alarm;
 
-impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset>
+impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
+    Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
     fn act_on_overdue(

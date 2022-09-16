@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, StdError};
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Debug, PartialEq, Error)]
 pub enum ContractError {
     #[error("{0}")]
     Std(#[from] StdError),

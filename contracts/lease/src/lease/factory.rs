@@ -6,6 +6,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
 use lpp::stub::{Lpp as LppTrait, WithLpp};
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
+use profit::stub::{Profit as ProfitTrait, WithProfit};
 use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef, WithTimeAlarms};
 
 use super::{dto::LeaseDTO, Lease, WithLease};
@@ -95,6 +96,7 @@ where
                 lease_addr: self.lease_addr,
                 lpp: self.lpp,
                 time_alarms,
+                querier: self.querier,
             },
             self.querier,
         )
@@ -107,6 +109,7 @@ struct FactoryStage3<'r, L, Lpp, TimeAlarms> {
     lease_addr: &'r Addr,
     lpp: Lpp,
     time_alarms: TimeAlarms,
+    querier: &'r QuerierWrapper<'r>,
 }
 
 impl<'r, L, Lpn, Lpp, TimeAlarms> WithOracle<Lpn> for FactoryStage3<'r, L, Lpp, TimeAlarms>
@@ -123,8 +126,9 @@ where
     where
         Oracle: OracleTrait<Lpn>,
     {
-        visit_any(
-            &self.lease_dto.currency.clone(),
+        let profit = self.lease_dto.loan.profit().clone();
+
+        profit.execute(
             FactoryStage4 {
                 cmd: self.cmd,
                 lease_dto: self.lease_dto,
@@ -134,6 +138,7 @@ where
                 time_alarms: self.time_alarms,
                 oracle,
             },
+            self.querier,
         )
     }
 
@@ -152,7 +157,7 @@ struct FactoryStage4<'r, L, Lpn, Lpp, TimeAlarms, Oracle> {
     oracle: Oracle,
 }
 
-impl<'r, L, Lpn, Lpp, TimeAlarms, Oracle> AnyVisitor
+impl<'r, L, Lpn, Lpp, TimeAlarms, Oracle> WithProfit
     for FactoryStage4<'r, L, Lpn, Lpp, TimeAlarms, Oracle>
 where
     L: WithLease,
@@ -164,16 +169,58 @@ where
     type Output = L::Output;
     type Error = L::Error;
 
+    fn exec<P>(self, profit: P) -> Result<Self::Output, Self::Error> where P: ProfitTrait {
+        visit_any(
+            &self.lease_dto.currency.clone(),
+            FactoryStage5 {
+                cmd: self.cmd,
+                lease_dto: self.lease_dto,
+                lease_addr: self.lease_addr,
+                _lpn: PhantomData,
+                lpp: self.lpp,
+                time_alarms: self.time_alarms,
+                oracle: self.oracle,
+                profit,
+            },
+        )
+    }
+}
+
+struct FactoryStage5<'r, L, Lpn, Lpp, TimeAlarms, Oracle, Profit> {
+    cmd: L,
+    _lpn: PhantomData<Lpn>,
+    lease_dto: LeaseDTO,
+    lease_addr: &'r Addr,
+    lpp: Lpp,
+    time_alarms: TimeAlarms,
+    oracle: Oracle,
+    profit: Profit,
+}
+
+impl<'r, L, Lpn, Lpp, TimeAlarms, Oracle, Profit> AnyVisitor
+    for FactoryStage5<'r, L, Lpn, Lpp, TimeAlarms, Oracle, Profit>
+where
+    L: WithLease,
+    Lpn: Currency + Serialize,
+    Lpp: LppTrait<Lpn>,
+    TimeAlarms: TimeAlarmsTrait,
+    Oracle: OracleTrait<Lpn>,
+    Profit: ProfitTrait,
+{
+    type Output = L::Output;
+    type Error = L::Error;
+
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
         C: 'static + Currency + Serialize + DeserializeOwned,
     {
-        self.cmd.exec(Lease::<_, _, _, _, C>::from_dto(
+        self.cmd.exec(Lease::<_, _, _, _, _, C>::from_dto(
             self.lease_dto,
             self.lease_addr,
             self.lpp,
             self.time_alarms,
             self.oracle,
+            self.profit,
         ))
     }
 

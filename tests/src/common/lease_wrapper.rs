@@ -121,10 +121,10 @@ impl LeaseWrapper {
                 lpp: addresses.lpp.into_string(),
                 interest_due_period_secs: config.interest_due_period_secs,
                 grace_period_secs: config.grace_period_secs,
+                profit: addresses.profit.into_string(),
             },
             time_alarms: addresses.time_alarms,
             market_price_oracle: addresses.oracle,
-            profit: addresses.profit,
         }
     }
 }

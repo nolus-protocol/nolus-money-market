@@ -6,6 +6,7 @@ use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
+use profit::stub::Profit as ProfitTrait;
 
 use crate::{
     error::ContractResult,
@@ -13,12 +14,13 @@ use crate::{
     loan::RepayReceipt,
 };
 
-impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset>
+impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
+    Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
     pub(crate) fn repay(
