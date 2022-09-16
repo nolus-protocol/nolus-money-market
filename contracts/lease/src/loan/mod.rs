@@ -349,7 +349,8 @@ where
     ) -> ContractResult<Coin<Lpn>> {
         let mut loan_repay = Coin::default();
 
-        let (curr_margin_paid, mut change) = self.repay_margin_interest(principal_due, by, change)?;
+        let (curr_margin_paid, mut change) =
+            self.repay_margin_interest(principal_due, by, change)?;
 
         receipt.pay_current_margin(curr_margin_paid);
 

@@ -12,7 +12,6 @@ use platform::{batch::Batch, coin_legacy::to_cosmwasm};
 use crate::{
     error::Result,
     msg::{ConfigResponse, QueryMsg},
-    ContractError,
 };
 
 pub struct ProfitBatch {
