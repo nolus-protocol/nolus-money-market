@@ -1,3 +1,5 @@
+use std::result::Result as StdResult;
+
 use cosmwasm_std::{Addr, StdError};
 use thiserror::Error;
 
@@ -34,3 +36,5 @@ pub enum ContractError {
     #[error("EmptyBalance. No profit to dispatch")]
     EmptyBalance {},
 }
+
+pub type Result<T> = StdResult<T, ContractError>;

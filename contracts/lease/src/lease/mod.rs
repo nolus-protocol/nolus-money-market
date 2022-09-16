@@ -248,7 +248,10 @@ mod tests {
     };
     use marketprice::{alarms::Alarm, storage::Denom};
     use platform::{bank::BankAccountView, batch::Batch, error::Result as PlatformResult};
-    use profit::stub::{Profit, ProfitBatch, ProfitRef, Result as ProfitResult};
+    use profit::{
+        error::Result as ProfitResult,
+        stub::{Profit, ProfitBatch, ProfitRef},
+    };
     use time_alarms::{
         msg::ExecuteMsg::AddAlarm,
         stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},

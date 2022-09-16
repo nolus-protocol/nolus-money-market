@@ -1,17 +1,19 @@
 use std::result::Result as StdResult;
 
-use cosmwasm_std::{Addr, BankMsg, QuerierWrapper};
+use cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper, Uint128};
 use serde::{Deserialize, Serialize};
 
-use finance::{coin::Coin, currency::Currency};
+use finance::{
+    coin::{Amount, Coin},
+    currency::Currency,
+};
 use platform::{batch::Batch, coin_legacy::to_cosmwasm};
 
 use crate::{
+    error::Result,
     msg::{ConfigResponse, QueryMsg},
     ContractError,
 };
-
-pub type Result<T> = StdResult<T, ContractError>;
 
 pub struct ProfitBatch {
     pub profit_ref: ProfitRef,
@@ -22,7 +24,7 @@ pub trait Profit
 where
     Self: Into<ProfitBatch>,
 {
-    fn send<C>(&mut self, coins: Coin<C>) -> Result<()>
+    fn send<C>(&mut self, amount: Coin<C>) -> Result<()>
     where
         C: Currency;
 }
@@ -60,7 +62,7 @@ impl ProfitRef {
     {
         cmd.exec(ProfitStub {
             profit_ref: self,
-            batch: Batch::default(),
+            coins: Vec::new(),
         })
     }
 }
@@ -79,18 +81,27 @@ impl ProfitRef {
 
 struct ProfitStub {
     profit_ref: ProfitRef,
-    batch: Batch,
+    coins: Vec<CwCoin>,
 }
 
 impl Profit for ProfitStub {
-    fn send<C>(&mut self, coins: Coin<C>) -> Result<()>
+    fn send<C>(&mut self, amount: Coin<C>) -> Result<()>
     where
         C: Currency,
     {
-        self.batch.schedule_execute_no_reply(BankMsg::Send {
-            to_address: self.profit_ref.addr.to_string(),
-            amount: vec![to_cosmwasm(coins)],
-        });
+        if amount.is_zero() {
+            return Ok(());
+        }
+
+        if let Some(coin) = self
+            .coins
+            .iter_mut()
+            .find(|amount| amount.denom == C::SYMBOL)
+        {
+            coin.amount += Uint128::new(Amount::from(amount));
+        } else {
+            self.coins.push(to_cosmwasm(amount));
+        }
 
         Ok(())
     }
@@ -98,9 +109,18 @@ impl Profit for ProfitStub {
 
 impl From<ProfitStub> for ProfitBatch {
     fn from(stub: ProfitStub) -> Self {
+        let mut batch = Batch::default();
+
+        if !stub.coins.is_empty() {
+            batch.schedule_execute_no_reply(BankMsg::Send {
+                to_address: stub.profit_ref.addr.to_string(),
+                amount: stub.coins,
+            });
+        }
+
         ProfitBatch {
             profit_ref: stub.profit_ref,
-            batch: stub.batch,
+            batch,
         }
     }
 }

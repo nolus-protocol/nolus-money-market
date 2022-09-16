@@ -445,7 +445,10 @@ mod tests {
         stub::{Lpp, LppBatch, LppRef},
     };
     use platform::{bank::BankAccountView, error::Result as PlatformResult};
-    use profit::stub::{Profit, ProfitBatch, ProfitRef, Result as ProfitResult};
+    use profit::{
+        error::Result as ProfitResult,
+        stub::{Profit, ProfitBatch, ProfitRef},
+    };
 
     use crate::{
         loan::{repay::Receipt as RepayReceipt, Loan, LoanDTO},
