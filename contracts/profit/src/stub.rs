@@ -1,12 +1,9 @@
 use std::result::Result as StdResult;
 
-use cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper, Uint128};
+use cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    coin::{Amount, Coin},
-    currency::Currency,
-};
+use finance::{coin::Coin, currency::Currency};
 use platform::{batch::Batch, coin_legacy::to_cosmwasm};
 
 use crate::{
@@ -88,17 +85,7 @@ impl Profit for ProfitStub {
     where
         C: Currency,
     {
-        if amount.is_zero() {
-            return Ok(());
-        }
-
-        if let Some(coin) = self
-            .coins
-            .iter_mut()
-            .find(|amount| amount.denom == C::SYMBOL)
-        {
-            coin.amount += Uint128::new(Amount::from(amount));
-        } else {
+        if !amount.is_zero() {
             self.coins.push(to_cosmwasm(amount));
         }
 
