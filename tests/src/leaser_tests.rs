@@ -193,7 +193,7 @@ fn test_quote() {
      */
 
     assert_eq!(
-        Percent::from_permille(91),
+        Percent::from_permille(113),
         resp.annual_interest_rate + resp.annual_interest_rate_margin,
     ); // hardcoded until LPP contract is merged
 
@@ -417,10 +417,11 @@ fn open_lease_impl(currency: SymbolStatic) {
         .attributes
         .iter()
         .any(|attribute| attribute == ("customer", USER),));
+    dbg!(&lease_exec_open.attributes);
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute == ("air", "89"),));
+        .any(|attribute| attribute == ("air", "105"),));
     assert!(lease_exec_open
         .attributes
         .iter()

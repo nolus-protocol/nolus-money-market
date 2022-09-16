@@ -187,17 +187,17 @@ where
         let total_liability_past_quote = total_principal_due + quote + total_interest;
         let total_balance_past_quote = balance - quote;
 
-        let utilization = Rational::new(
+        // utilization % / utilization_optimal %
+        let utilization_rel = Rational::new(
             total_liability_past_quote,
-            total_liability_past_quote + total_balance_past_quote,
+            utilization_optimal.of(total_liability_past_quote + total_balance_past_quote),
         );
 
         let quote_interest_rate = base_interest_rate
             + <Rational<Coin<LPN>> as Fraction<Coin<LPN>>>::of(
-                &utilization,
+                &utilization_rel,
                 addon_optimal_interest_rate,
-            )
-            - addon_optimal_interest_rate.of(utilization_optimal);
+            );
 
         Ok(Some(quote_interest_rate))
     }
@@ -301,6 +301,7 @@ mod test {
 
     use finance::currency::Usdc;
     use finance::duration::Duration;
+    use finance::percent::Units;
     use finance::price;
 
     use crate::state::{Config, Deposit, Total};
@@ -356,46 +357,41 @@ mod test {
         env.block.time = Timestamp::from_nanos(10);
 
         let result = lpp
-            .query_quote(&deps.as_ref(), &env, Coin::new(5_000_000))
+            .query_quote(&deps.as_ref(), &env, Coin::new(7_700_000))
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
-        let interest_rate = Percent::from_percent(7)
-            + Percent::from_percent(50).of(Percent::from_percent(2))
-            - Percent::from_percent(70).of(Percent::from_percent(2));
+        assert_eq!(result, Percent::from_permille(92));
 
-        assert_eq!(result, interest_rate);
-
-        lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(5_000_000))
+        lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(7_000_000))
             .expect("can't open loan");
         deps.querier
-            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(3_000_000)]);
 
-        // wait for year/10
-        env.block.time = Timestamp::from_nanos(10 + Duration::YEAR.nanos() / 10);
-
-        let interest_rate = Percent::from_percent(7)
-            + Percent::from_percent(2).of(Percent::from_permille(6033000u32 / 10033u32))
-            - Percent::from_percent(2).of(Percent::from_percent(70));
+        // wait for a year
+        env.block.time = Timestamp::from_nanos(10 + Duration::YEAR.nanos());
 
         let result = lpp
             .query_quote(&deps.as_ref(), &env, Coin::new(1_000_000))
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
-        assert_eq!(result, interest_rate);
+        assert_eq!(result, Percent::from_permille(93));
     }
 
     #[test]
     fn test_open_and_repay_loan() {
-        let balance_mock = [coin_cw(10_000_000)];
-        let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
+        let lpp_balance = 10_000_000;
+        let amount = 5_000_000;
+        let annual_interest_rate = Percent::from_permille(
+            (20 * 1000 * (lpp_balance - amount) / lpp_balance / 700 + 70) as Units,
+        );
+
+        let mut deps = testing::mock_dependencies_with_balance(&[coin_cw(lpp_balance as u128)]);
         let mut env = testing::mock_env();
         let loan = Addr::unchecked("loan");
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
-
-        let annual_interest_rate = Percent::from_permille(66000u32 / 1000u32);
 
         Config::new(TheCurrency::SYMBOL.into(), lease_code_id)
             .store(deps.as_mut().storage)
@@ -415,7 +411,6 @@ mod test {
 
         env.block.time = Timestamp::from_nanos(10);
 
-        let amount = 5_000_000;
         lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000_000))
             .expect("can't open loan");
         deps.querier
@@ -640,9 +635,9 @@ mod test {
             .expect("can't load Config")
             .update(
                 deps.as_mut().storage,
-                Percent::from_percent(20),
+                Percent::from_percent(18),
                 Percent::from_percent(50),
-                Percent::from_percent(10),
+                Percent::from_percent(2),
             )
             .expect("should update config");
 

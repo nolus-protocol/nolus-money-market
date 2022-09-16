@@ -443,9 +443,9 @@ fn compare_state_with_manual_calculation() {
         interest_rate_margin: quote_result.annual_interest_rate_margin,
         principal_due: Coin::new(1_857_142),
         previous_margin_due: create_coin(13_737),
-        previous_interest_due: create_coin(25_643),
+        previous_interest_due: create_coin(32_054),
         current_margin_due: create_coin(13_737),
-        current_interest_due: create_coin(25_644),
+        current_interest_due: create_coin(32_055),
         validity: block_time(&test_case),
     };
 

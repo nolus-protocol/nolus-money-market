@@ -364,11 +364,13 @@ fn loan_open_and_repay() {
     let addon_optimal_interest_rate = Percent::from_percent(20);
     let utilization_optimal = Percent::from_percent(55);
 
-    let utilization1 = Percent::from_permille((1000 * loan1 / init_deposit) as u32);
-    let interest1 = base_interest_rate + addon_optimal_interest_rate.of(utilization1)
-        - addon_optimal_interest_rate.of(utilization_optimal);
+    let utilization_rel1 = Percent::from_permille((1000 * loan1 / utilization_optimal.of(init_deposit)) as u32);
+    let interest1 = base_interest_rate + utilization_rel1.of(addon_optimal_interest_rate);
+    // let utilization1 = Percent::from_permille((1000 * loan1 / init_deposit) as u32);
+    // let interest1 = base_interest_rate + addon_optimal_interest_rate.of(utilization1)
+    //     - addon_optimal_interest_rate.of(utilization_optimal);
     dbg!(Percent::from_percent(1)); // scale
-    dbg!(utilization1);
+    dbg!(utilization_rel1);
     dbg!(interest1);
 
     // net setup
@@ -463,11 +465,15 @@ fn loan_open_and_repay() {
     assert_eq!(total_interest_due, resp.total_interest_due.into());
 
     let total_liability = loan1 + loan2 + total_interest_due;
-    let utilization2 = Percent::from_permille(
-        (1000 * (total_liability) / (init_deposit + total_interest_due)) as u32,
+    // let utilization2 = Percent::from_permille(
+    //     (1000 * (total_liability) / (init_deposit + total_interest_due)) as u32,
+    // );
+    // let interest2 = base_interest_rate + addon_optimal_interest_rate.of(utilization2)
+    //     - addon_optimal_interest_rate.of(utilization_optimal);
+    let utilization_rel2 = Percent::from_permille(
+        (1000 * (total_liability) / utilization_optimal.of(init_deposit + total_interest_due)) as u32,
     );
-    let interest2 = base_interest_rate + addon_optimal_interest_rate.of(utilization2)
-        - addon_optimal_interest_rate.of(utilization_optimal);
+    let interest2 = base_interest_rate + utilization_rel2.of(addon_optimal_interest_rate);
 
     let quote: QueryQuoteResponse = app
         .wrap()
@@ -658,11 +664,11 @@ fn compare_lpp_states() {
     let addon_optimal_interest_rate = Percent::from_percent(20);
     let utilization_optimal = Percent::from_percent(55);
 
-    let utilization1 = Percent::from_permille((1000 * loan1 / init_deposit) as u32);
-    let interest1 = base_interest_rate + addon_optimal_interest_rate.of(utilization1)
-        - addon_optimal_interest_rate.of(utilization_optimal);
+    let utilization_rel1 = Percent::from_permille((1000 * loan1 / utilization_optimal.of(init_deposit)) as u32);
+    let interest1 = base_interest_rate + utilization_rel1.of(addon_optimal_interest_rate);
+    
     dbg!(Percent::from_percent(1)); // scale
-    dbg!(utilization1);
+    dbg!(utilization_rel1);
     dbg!(interest1);
 
     // net setup
@@ -756,11 +762,10 @@ fn compare_lpp_states() {
     assert_eq!(total_interest_due, resp.total_interest_due.into());
 
     let total_liability = loan1 + loan2 + total_interest_due;
-    let utilization2 = Percent::from_permille(
-        (1000 * (total_liability) / (init_deposit + total_interest_due)) as u32,
+    let utilization_rel2 = Percent::from_permille(
+        (1000 * (total_liability) / utilization_optimal.of(init_deposit + total_interest_due)) as u32,
     );
-    let interest2 = base_interest_rate + addon_optimal_interest_rate.of(utilization2)
-        - addon_optimal_interest_rate.of(utilization_optimal);
+    let interest2 = base_interest_rate + utilization_rel2.of(addon_optimal_interest_rate);
 
     let quote: QueryQuoteResponse = app
         .wrap()
