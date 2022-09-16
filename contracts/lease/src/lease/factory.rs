@@ -96,7 +96,6 @@ where
                 lease_addr: self.lease_addr,
                 lpp: self.lpp,
                 time_alarms,
-                querier: self.querier,
             },
             self.querier,
         )
@@ -109,7 +108,6 @@ struct FactoryStage3<'r, L, Lpp, TimeAlarms> {
     lease_addr: &'r Addr,
     lpp: Lpp,
     time_alarms: TimeAlarms,
-    querier: &'r QuerierWrapper<'r>,
 }
 
 impl<'r, L, Lpn, Lpp, TimeAlarms> WithOracle<Lpn> for FactoryStage3<'r, L, Lpp, TimeAlarms>
@@ -128,18 +126,15 @@ where
     {
         let profit = self.lease_dto.loan.profit().clone();
 
-        profit.execute(
-            FactoryStage4 {
-                cmd: self.cmd,
-                lease_dto: self.lease_dto,
-                lease_addr: self.lease_addr,
-                _lpn: PhantomData,
-                lpp: self.lpp,
-                time_alarms: self.time_alarms,
-                oracle,
-            },
-            self.querier,
-        )
+        profit.execute(FactoryStage4 {
+            cmd: self.cmd,
+            lease_dto: self.lease_dto,
+            lease_addr: self.lease_addr,
+            _lpn: PhantomData,
+            lpp: self.lpp,
+            time_alarms: self.time_alarms,
+            oracle,
+        })
     }
 
     fn unexpected_base(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
@@ -169,7 +164,10 @@ where
     type Output = L::Output;
     type Error = L::Error;
 
-    fn exec<P>(self, profit: P) -> Result<Self::Output, Self::Error> where P: ProfitTrait {
+    fn exec<P>(self, profit: P) -> Result<Self::Output, Self::Error>
+    where
+        P: ProfitTrait,
+    {
         visit_any(
             &self.lease_dto.currency.clone(),
             FactoryStage5 {

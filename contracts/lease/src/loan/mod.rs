@@ -15,7 +15,7 @@ use lpp::{
     stub::{Lpp as LppTrait, LppBatch, LppRef},
 };
 use platform::batch::Batch;
-use profit::stub::{Profit as ProfitTrait, ProfitBatch, ProfitRef, Result as ProfitResult};
+use profit::stub::{Profit as ProfitTrait, ProfitBatch, ProfitRef};
 
 use crate::error::{ContractError, ContractResult};
 
@@ -231,6 +231,9 @@ where
         // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
         self.lpp.repay_loan_req(loan_payment)?;
 
+        self.profit
+            .send(receipt.previous_margin_paid() + receipt.current_margin_paid())?;
+
         debug_assert_eq!(payment, receipt.total());
 
         Ok(receipt)
@@ -419,42 +422,18 @@ where
     }
 }
 
-impl<Lpn, Lpp, Profit> From<Loan<Lpn, Lpp, Profit>> for LoanBatch
-where
-    Lpp: Into<LppBatch>,
-    Profit: Into<ProfitBatch>,
-{
-    fn from(loan: Loan<Lpn, Lpp, Profit>) -> Self {
-        let LppBatch { lpp_ref, batch: lpp_batch } = loan.lpp.into();
-
-        let ProfitBatch { profit_ref, batch: profit_batch } = loan.profit.into();
-
-        LoanBatch {
-            lpp_ref,
-            profit_ref,
-            batch: lpp_batch.merge(profit_batch),
-        }
-    }
-}
-
-pub(crate) struct LoanBatch {
-    pub lpp_ref: LppRef,
-    pub profit_ref: ProfitRef,
-    pub batch: Batch,
-}
-
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{Addr, Timestamp};
     use serde::{Deserialize, Serialize};
 
     use finance::{
-        currency::{Currency, Nls, Usdc},
         coin::Coin,
+        currency::{Currency, Nls, Usdc},
         duration::Duration,
         fraction::Fraction,
         interest::InterestPeriod,
-        percent::Percent
+        percent::Percent,
     };
     use lpp::{
         error::ContractError as LppError,
@@ -463,21 +442,14 @@ mod tests {
             QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
             QueryQuoteResponse, RewardsResponse,
         },
-        stub::{Lpp, LppBatch, LppRef}
+        stub::{Lpp, LppBatch, LppRef},
     };
-    use platform::{
-        bank::BankAccountView,
-        error::Result as PlatformResult
-    };
+    use platform::{bank::BankAccountView, error::Result as PlatformResult};
     use profit::stub::{Profit, ProfitBatch, ProfitRef, Result as ProfitResult};
 
     use crate::{
-        loan::{
-            repay::Receipt as RepayReceipt,
-            Loan,
-            LoanDTO
-        },
-        repay_id::ReplyId
+        loan::{repay::Receipt as RepayReceipt, Loan, LoanDTO},
+        repay_id::ReplyId,
     };
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(500); // 50%
@@ -971,10 +943,7 @@ mod tests {
             interest_paid: LEASE_START,
         };
 
-        let loan = create_loan(
-            LEASE_ADDRESS,
-            Some(loan_resp.clone()),
-        );
+        let loan = create_loan(LEASE_ADDRESS, Some(loan_resp.clone()));
         let now = LEASE_START + period;
 
         let (expected_margin_overdue, expected_margin_due) =

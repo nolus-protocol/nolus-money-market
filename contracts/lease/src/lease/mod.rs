@@ -14,8 +14,8 @@ use platform::{
     bank::{BankAccount, BankAccountView},
     batch::Batch,
 };
-use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch};
 use profit::stub::Profit as ProfitTrait;
+use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch};
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -83,7 +83,8 @@ pub struct Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset> {
     _asset: PhantomData<Asset>,
 }
 
-impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>
+impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>
+    Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
@@ -538,7 +539,10 @@ mod tests {
     }
 
     impl Profit for ProfitLocalStub {
-        fn send<C>(&mut self, coins: Coin<C>) -> ProfitResult<()> where C: Currency {
+        fn send<C>(&mut self, _coins: Coin<C>) -> ProfitResult<()>
+        where
+            C: Currency,
+        {
             Ok(())
         }
     }
@@ -555,7 +559,10 @@ mod tests {
     pub struct ProfitLocalStubUnreachable;
 
     impl Profit for ProfitLocalStubUnreachable {
-        fn send<C>(&mut self, coins: Coin<C>) -> ProfitResult<()> where C: Currency {
+        fn send<C>(&mut self, _coins: Coin<C>) -> ProfitResult<()>
+        where
+            C: Currency,
+        {
             Ok(())
         }
     }
@@ -618,7 +625,14 @@ mod tests {
         time_alarms_addr: Addr,
         oracle_addr: Addr,
         profit_addr: Addr,
-    ) -> Lease<TestCurrency, LppLocalStub, TimeAlarmsLocalStub, OracleLocalStub, ProfitLocalStub, TestCurrency> {
+    ) -> Lease<
+        TestCurrency,
+        LppLocalStub,
+        TimeAlarmsLocalStub,
+        OracleLocalStub,
+        ProfitLocalStub,
+        TestCurrency,
+    > {
         let lpp_stub = LppLocalStub {
             loan: loan_response,
         };
@@ -638,7 +652,13 @@ mod tests {
             batch: Batch::default(),
         };
 
-        create_lease(lease_addr, lpp_stub, time_alarms_stub, oracle_stub, profit_stub)
+        create_lease(
+            lease_addr,
+            lpp_stub,
+            time_alarms_stub,
+            oracle_stub,
+            profit_stub,
+        )
     }
 
     pub fn create_bank_account(lease_amount: u128) -> BankStub {

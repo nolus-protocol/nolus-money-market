@@ -11,8 +11,8 @@ use platform::{
     bank::{self, BankAccountView},
     batch::{Emit, Emitter},
 };
-use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 use profit::stub::Profit as ProfitTrait;
+use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractError,

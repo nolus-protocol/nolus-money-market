@@ -1,17 +1,14 @@
 use std::result::Result as StdResult;
 
-use cosmwasm_std::{wasm_execute, Addr, BankMsg, QuerierWrapper};
+use cosmwasm_std::{Addr, BankMsg, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    coin::Coin,
-    currency::{Currency, SymbolOwned},
-};
+use finance::{coin::Coin, currency::Currency};
 use platform::{batch::Batch, coin_legacy::to_cosmwasm};
 
 use crate::{
-    msg::{ConfigResponse, ExecuteMsg, QueryMsg},
-    ContractError
+    msg::{ConfigResponse, QueryMsg},
+    ContractError,
 };
 
 pub type Result<T> = StdResult<T, ContractError>;
@@ -57,17 +54,12 @@ impl ProfitRef {
         Ok(Self { addr })
     }
 
-    pub fn execute<Cmd>(
-        self,
-        cmd: Cmd,
-        querier: &QuerierWrapper,
-    ) -> StdResult<Cmd::Output, Cmd::Error>
+    pub fn execute<Cmd>(self, cmd: Cmd) -> StdResult<Cmd::Output, Cmd::Error>
     where
         Cmd: WithProfit,
     {
         cmd.exec(ProfitStub {
             profit_ref: self,
-            querier,
             batch: Batch::default(),
         })
     }
@@ -85,19 +77,12 @@ impl ProfitRef {
     }
 }
 
-struct ProfitStub<'a> {
+struct ProfitStub {
     profit_ref: ProfitRef,
-    querier: &'a QuerierWrapper<'a>,
     batch: Batch,
 }
 
-impl<'a> ProfitStub<'a> {
-    fn addr(&self) -> &Addr {
-        &self.profit_ref.addr
-    }
-}
-
-impl<'a> Profit for ProfitStub<'a> {
+impl Profit for ProfitStub {
     fn send<C>(&mut self, coins: Coin<C>) -> Result<()>
     where
         C: Currency,
@@ -111,8 +96,8 @@ impl<'a> Profit for ProfitStub<'a> {
     }
 }
 
-impl<'a> From<ProfitStub<'a>> for ProfitBatch {
-    fn from(stub: ProfitStub<'a>) -> Self {
+impl From<ProfitStub> for ProfitBatch {
+    fn from(stub: ProfitStub) -> Self {
         ProfitBatch {
             profit_ref: stub.profit_ref,
             batch: stub.batch,

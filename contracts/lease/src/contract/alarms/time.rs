@@ -5,8 +5,8 @@ use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::bank::BankAccountView;
-use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 use profit::stub::Profit as ProfitTrait;
+use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     contract::alarms::{emit_events, AlarmResult},

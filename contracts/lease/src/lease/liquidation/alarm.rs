@@ -12,8 +12,8 @@ use lpp::stub::Lpp as LppTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use marketprice::alarms::Alarm;
 use platform::bank::BankAccountView;
-use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 use profit::stub::Profit as ProfitTrait;
+use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::loan::LiabilityStatus;
 use crate::{
@@ -21,7 +21,8 @@ use crate::{
     lease::{Lease, LiquidationInfo, OnAlarmResult, Status, WarningLevel},
 };
 
-impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>
+impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>
+    Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,

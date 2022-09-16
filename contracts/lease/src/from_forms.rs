@@ -25,10 +25,7 @@ impl NewLeaseForm {
             ReplyId::OpenLoanReq.into(),
         )?;
 
-        let profit = ProfitRef::try_from(
-            api.addr_validate(&self.loan.profit)?,
-            querier,
-        )?;
+        let profit = ProfitRef::try_from(api.addr_validate(&self.loan.profit)?, querier)?;
 
         let loan = LoanDTO::new(
             start_at,
