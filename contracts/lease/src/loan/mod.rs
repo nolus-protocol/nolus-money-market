@@ -207,10 +207,7 @@ where
         // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
         self.lpp.repay_loan_req(loan_payment)?;
 
-        debug_assert_eq!(
-            payment,
-            receipt.total(),
-        );
+        debug_assert_eq!(payment, receipt.total(),);
 
         Ok(receipt)
     }

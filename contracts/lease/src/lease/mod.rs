@@ -78,6 +78,7 @@ pub struct Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset> {
     loan: Loan<Lpn, Lpp>,
     time_alarms: TimeAlarms,
     oracle: Oracle,
+    profit: Addr,
     _asset: PhantomData<Asset>,
 }
 
@@ -111,6 +112,7 @@ where
             loan: Loan::from_dto(dto.loan, lpp),
             time_alarms,
             oracle,
+            profit: dto.profit,
             _asset: PhantomData,
         }
     }
@@ -136,6 +138,7 @@ where
                 loan_dto,
                 time_alarms_dto.into(),
                 oracle_dto.into(),
+                self.profit,
             ),
             lpp_batch.merge(time_alarms_batch).merge(oracle_batch),
         )
@@ -532,6 +535,7 @@ mod tests {
         lpp: L,
         time_alarms: TA,
         oracle: O,
+        profit: Addr,
     ) -> Lease<TestCurrency, L, TA, O, TestCurrency>
     where
         L: Lpp<TestCurrency>,
@@ -564,6 +568,7 @@ mod tests {
             loan: Loan::from_dto(loan_dto, lpp),
             time_alarms,
             oracle,
+            profit,
             _asset: PhantomData,
         }
     }
@@ -573,6 +578,7 @@ mod tests {
         loan_response: Option<LoanResponse<TestCurrency>>,
         time_alarms_addr: Addr,
         oracle_addr: Addr,
+        profit: Addr,
     ) -> Lease<TestCurrency, LppLocalStub, TimeAlarmsLocalStub, OracleLocalStub, TestCurrency> {
         let lpp_stub = LppLocalStub {
             loan: loan_response,
@@ -588,7 +594,7 @@ mod tests {
             batch: Batch::default(),
         };
 
-        create_lease(lease_addr, lpp_stub, time_alarms_stub, oracle_stub)
+        create_lease(lease_addr, lpp_stub, time_alarms_stub, oracle_stub, profit)
     }
 
     pub fn create_bank_account(lease_amount: u128) -> BankStub {
@@ -634,6 +640,7 @@ mod tests {
             Some(loan.clone()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
         );
 
         let res = request_state(lease, &bank_account);
@@ -663,6 +670,7 @@ mod tests {
             None,
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
         );
 
         let res = request_state(lease, &bank_account);
@@ -681,6 +689,7 @@ mod tests {
             None,
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
         );
 
         let res = request_state(lease, &bank_account);
@@ -695,7 +704,13 @@ mod tests {
         let time_alarms_stub = TimeAlarmsLocalStubUnreachable {};
         let oracle_stub = OracleLocalStubUnreachable {};
         let lease_addr = Addr::unchecked("lease");
-        let lease = create_lease(&lease_addr, lpp_stub, time_alarms_stub, oracle_stub);
+        let lease = create_lease(
+            &lease_addr,
+            lpp_stub,
+            time_alarms_stub,
+            oracle_stub,
+            Addr::unchecked("profit"),
+        );
 
         let bank_account = create_bank_account(0);
 

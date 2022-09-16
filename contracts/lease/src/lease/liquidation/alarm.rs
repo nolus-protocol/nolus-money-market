@@ -273,6 +273,7 @@ mod tests {
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
         );
 
         lease
@@ -318,6 +319,7 @@ mod tests {
         let mut lease = lease_setup(
             &lease_addr,
             Some(loan),
+            Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
@@ -366,6 +368,7 @@ mod tests {
         let lease = lease_setup(
             &lease_addr,
             Some(loan),
+            Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );

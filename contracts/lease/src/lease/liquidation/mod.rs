@@ -289,6 +289,7 @@ mod tests {
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
         );
 
         assert_eq!(
@@ -313,6 +314,7 @@ mod tests {
         let lease = lease_setup(
             &lease_addr,
             Some(loan),
+            Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
@@ -347,6 +349,7 @@ mod tests {
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
         );
 
         assert_eq!(
@@ -377,6 +380,7 @@ mod tests {
         let lease = lease_setup(
             &lease_addr,
             Some(loan),
+            Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
@@ -410,6 +414,7 @@ mod tests {
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
+            Addr::unchecked(String::new()),
         );
 
         assert_eq!(
@@ -441,6 +446,7 @@ mod tests {
         let mut lease = lease_setup(
             &lease_addr,
             Some(loan),
+            Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
@@ -484,6 +490,7 @@ mod tests {
         let mut lease = lease_setup(
             &lease_addr,
             Some(loan),
+            Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );

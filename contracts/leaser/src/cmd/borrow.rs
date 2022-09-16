@@ -50,6 +50,7 @@ impl Borrow {
             },
             time_alarms: config.time_alarms,
             market_price_oracle: config.market_price_oracle,
+            profit: config.profit,
         }
     }
 }

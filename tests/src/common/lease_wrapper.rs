@@ -124,6 +124,7 @@ impl LeaseWrapper {
             },
             time_alarms: addresses.time_alarms,
             market_price_oracle: addresses.oracle,
+            profit: addresses.profit,
         }
     }
 }
@@ -143,6 +144,7 @@ pub struct LeaseWrapperAddresses {
     pub lpp: Addr,
     pub time_alarms: Addr,
     pub oracle: Addr,
+    pub profit: Addr,
 }
 
 type LeaseContractWrapperReply = Box<

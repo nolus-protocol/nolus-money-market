@@ -14,6 +14,7 @@ pub struct LeaseDTO {
     pub(crate) loan: LoanDTO,
     pub(crate) time_alarms: Addr,
     pub(crate) oracle: Addr,
+    pub(crate) profit: Addr,
 }
 
 impl<'a> LeaseDTO {
@@ -26,6 +27,7 @@ impl<'a> LeaseDTO {
         loan: LoanDTO,
         time_alarms: Addr,
         oracle: Addr,
+        profit: Addr,
     ) -> Self {
         Self {
             customer,
@@ -34,6 +36,7 @@ impl<'a> LeaseDTO {
             loan,
             time_alarms,
             oracle,
+            profit,
         }
     }
 

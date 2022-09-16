@@ -14,6 +14,8 @@ use lpp::msg::{
     QueryLoanResponse, QueryMsg as QueryLpp, QueryQuoteResponse, RewardsResponse,
 };
 
+use crate::common::profit_wrapper::ProfitWrapper;
+use crate::common::treasury_wrapper::TreasuryWrapper;
 use crate::common::{
     lease_wrapper::{LeaseWrapper, LeaseWrapperAddresses, LeaseWrapperConfig},
     lpp_wrapper::LppWrapper,
@@ -37,6 +39,8 @@ fn open_loan_unauthorized_contract_id() {
     test_case.init_lpp(None);
     test_case.init_timealarms();
     test_case.init_oracle(None);
+    test_case.init_treasury();
+    test_case.init_profit(24);
 
     //redeploy lease contract to change the code_id
     test_case.init_lease();
@@ -67,6 +71,8 @@ fn open_loan_no_liquidity() {
     test_case.init_lpp(None);
     test_case.init_timealarms();
     test_case.init_oracle(None);
+    test_case.init_treasury();
+    test_case.init_profit(24);
 
     let lease_addr = test_case.get_lease_instance();
 
@@ -114,6 +120,8 @@ fn deposit_and_withdraw() {
         time_alarms.as_str(),
         0,
     );
+    let treasury = TreasuryWrapper::default().instantiate(&mut app, TheCurrency::SYMBOL);
+    let profit = ProfitWrapper::default().instantiate(&mut app, 24, &treasury, &time_alarms);
 
     app.send_tokens(admin.clone(), lender1.clone(), &[coin(init_deposit, denom)])
         .unwrap();
@@ -212,6 +220,7 @@ fn deposit_and_withdraw() {
             lpp: lpp.clone(),
             time_alarms,
             oracle: market_price_oracle,
+            profit,
         },
         denom,
         LeaseWrapperConfig {
@@ -378,10 +387,13 @@ fn loan_open_and_repay() {
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app, 0, String::new());
     let oracle =
         MarketOracleWrapper::default().instantiate(&mut app, denom, time_alarms.as_str(), 0);
+    let treasury = TreasuryWrapper::default().instantiate(&mut app, denom);
+    let profit = ProfitWrapper::default().instantiate(&mut app, 24, &treasury, &time_alarms);
     let lease_addresses = LeaseWrapperAddresses {
         lpp: lpp.clone(),
         time_alarms,
         oracle,
+        profit,
     };
     app.send_tokens(admin.clone(), lender.clone(), &[coin(init_deposit, denom)])
         .unwrap();
@@ -672,6 +684,8 @@ fn compare_lpp_states() {
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app, 0, String::new());
     let market_oracle =
         MarketOracleWrapper::default().instantiate(&mut app, denom, time_alarms.as_str(), 0);
+    let treasury = TreasuryWrapper::default().instantiate(&mut app, denom);
+    let profit = ProfitWrapper::default().instantiate(&mut app, 24, &treasury, &time_alarms);
     app.send_tokens(admin.clone(), lender.clone(), &[coin(init_deposit, denom)])
         .unwrap();
     app.send_tokens(
@@ -724,6 +738,7 @@ fn compare_lpp_states() {
             lpp: lpp.clone(),
             time_alarms: time_alarms.clone(),
             oracle: market_oracle.clone(),
+            profit: profit.clone(),
         },
         denom,
         LeaseWrapperConfig {
@@ -784,6 +799,7 @@ fn compare_lpp_states() {
             lpp: lpp.clone(),
             time_alarms,
             oracle: market_oracle,
+            profit,
         },
         denom,
         LeaseWrapperConfig {

@@ -15,6 +15,7 @@ pub struct NewLeaseForm {
     pub loan: LoanForm,
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
+    pub profit: Addr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

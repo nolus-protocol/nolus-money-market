@@ -39,6 +39,7 @@ impl NewLeaseForm {
             loan,
             self.time_alarms,
             self.market_price_oracle,
+            self.profit,
         ))
     }
 }
@@ -81,6 +82,7 @@ mod test {
             },
             time_alarms: Addr::unchecked("timealarms"),
             market_price_oracle: Addr::unchecked("oracle"),
+            profit: Addr::unchecked("profit"),
         };
         let api = MockApi::default();
         let _ = lease.into_lease_dto(
