@@ -35,7 +35,7 @@ impl WithLpp for Quote {
         let borrow = self.liability.init_borrow_amount(downpayment_lpn);
         let total = borrow + downpayment_lpn;
 
-        let annual_interest_rate = lpp_quote.with(downpayment_lpn)?;
+        let annual_interest_rate = lpp_quote.with(borrow)?;
         Ok(QuoteResponse {
             total: total.into(),
             borrow: borrow.into(),
