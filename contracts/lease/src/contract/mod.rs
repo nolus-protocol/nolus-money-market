@@ -11,18 +11,16 @@ use crate::{
         alarms::{price::PriceAlarm, time::TimeAlarm, AlarmResult},
         state::{Response, State},
     },
-    error::{ContractError, ContractResult},
-    lease::{self, DownpaymentDTO, LeaseDTO},
+    error::ContractResult,
+    lease::{self, LeaseDTO},
     msg::{ExecuteMsg, NewLeaseForm, StateQuery},
-    repay_id::ReplyId,
 };
 
 use self::{
     close::Close,
     cmd::LeaseState,
-    open::OpenLoanResp,
     repay::{Repay, RepayResult},
-    state::{Controller, NoLease},
+    state::{Controller, NoLease, NoLeaseFinish},
 };
 
 mod alarms;
@@ -52,28 +50,15 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<CwResponse> {
-    // TODO swap the received loan and the downpayment to lease.currency
-    let lease = LeaseDTO::load(deps.storage)?;
-
-    let account = BankStub::my_account(&env, &deps.querier);
-
-    let id = ReplyId::try_from(msg.id)
-        .map_err(|_| ContractError::InvalidParameters("Invalid reply ID passed!".into()))?;
-
-    match id {
-        ReplyId::OpenLoanReq => {
-            let downpayment = DownpaymentDTO::remove(deps.storage)?;
-
-            let emitter = lease::execute(
-                lease,
-                OpenLoanResp::new(msg, downpayment, account, &env),
-                &env.contract.address,
-                &deps.querier,
-            )?;
-
-            Ok(emitter.into())
-        }
-    }
+    NoLeaseFinish {}.reply(deps, env, msg).map(|resp| {
+        let Response {
+            cw_response,
+            next_state,
+        } = resp;
+        // TODO store the next_state
+        debug_assert!(matches!(next_state, State::NoLeaseFinish(_)));
+        cw_response
+    })
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]

@@ -9,17 +9,21 @@ use crate::{
 };
 
 mod no_lease;
+mod no_lease_finish;
 pub use no_lease::NoLease;
+pub use no_lease_finish::NoLeaseFinish;
 
 #[enum_dispatch(Controller)]
 pub enum State {
     NoLease,
+    NoLeaseFinish,
 }
 
 impl Display for State {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            State::NoLease(inner) => inner.fmt(f)
+            State::NoLease(inner) => inner.fmt(f),
+            State::NoLeaseFinish(inner) => inner.fmt(f),
         }
     }
 }
