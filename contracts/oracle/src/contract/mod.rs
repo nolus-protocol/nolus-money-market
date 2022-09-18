@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
@@ -5,6 +7,7 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use finance::price::dto::PriceDTO;
+use marketprice::error::PriceFeedsError;
 
 use crate::{
     contract_validation::validate_contract_addr,
@@ -68,19 +71,21 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
             let config = Config::load(deps.storage)?;
             let parameters = Feeders::query_config(deps.storage, &config, env.block.time)?;
 
-            Ok(to_binary(&PriceResponse {
-                price: Feeds::get_price(deps.storage, parameters, currency, config.base_asset)?,
-            })?)
+            match Feeds::with(config.clone())
+                .get_prices(deps.storage, parameters, HashSet::from([currency]))?
+                .first()
+            {
+                Some(price) => Ok(to_binary(&PriceResponse {
+                    price: price.to_owned(),
+                })?),
+                None => Err(ContractError::PriceFeedsError(PriceFeedsError::NoPrice())),
+            }
         }
-        QueryMsg::PriceFor { currencies } => {
+        QueryMsg::Prices { currencies } => {
             let config = Config::load(deps.storage)?;
             let parameters = Feeders::query_config(deps.storage, &config, env.block.time)?;
-            let prices: Vec<PriceDTO> = Feeds::with(config.clone()).get_prices(
-                deps.storage,
-                parameters,
-                currencies,
-                config.base_asset,
-            )?;
+            let prices: Vec<PriceDTO> =
+                Feeds::with(config.clone()).get_prices(deps.storage, parameters, currencies)?;
             Ok(to_binary(&PricesResponse { prices })?)
         }
     }

@@ -46,7 +46,7 @@ fn feed_direct_price() {
     let res = query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::PriceFor {
+        QueryMsg::Prices {
             currencies: HashSet::from([TestCurrencyA::SYMBOL.to_string()]),
         },
     )
@@ -104,7 +104,7 @@ fn query_prices_unsuppoted_denom() {
     query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::PriceFor {
+        QueryMsg::Prices {
             currencies: HashSet::from(["dummy".to_string()]),
         },
     )

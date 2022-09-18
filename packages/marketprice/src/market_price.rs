@@ -1,7 +1,7 @@
 use crate::error::PriceFeedsError;
 use crate::feed::{Observation, PriceFeed};
 use crate::Multiply;
-use cosmwasm_std::{Addr, Order, StdResult, Storage, Timestamp};
+use cosmwasm_std::{Addr, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
 
 use finance::currency::SymbolOwned;
@@ -53,99 +53,24 @@ impl<'m> PriceFeeds<'m> {
         storage: &dyn Storage,
         parameters: Parameters,
         base: SymbolOwned,
-        quote: SymbolOwned,
+        path: Vec<SymbolOwned>,
     ) -> Result<PriceDTO, PriceFeedsError> {
-        // check if both currencies are the same => return one
-        if base.eq(&quote) {
-            return Err(PriceFeedsError::InvalidPrice());
-        }
         let mut resolution_path = DenomResolutionPath::new();
 
-        let res = self.price_impl(storage, parameters, &base, quote, resolution_path.as_mut())?;
-        resolution_path.push(res);
-        resolution_path.reverse();
+        let mut current_base = base;
+        for quote in path {
+            let price_dto = match self.load(storage, current_base, quote.clone(), parameters) {
+                Ok(price) => price,
+                Err(err) => {
+                    return Err(err);
+                }
+            };
+            current_base = quote;
+            resolution_path.push(price_dto);
+        }
+        // resolution_path.reverse();
 
         PriceFeeds::calculate_price(&mut resolution_path)
-    }
-
-    fn price_impl(
-        &self,
-        storage: &dyn Storage,
-        parameters: Parameters,
-        base: &SymbolOwned,
-        quote: SymbolOwned,
-        resolution_path: &mut DenomResolutionPath,
-    ) -> Result<PriceDTO, PriceFeedsError> {
-        let price_dto = match self.get(storage, base.to_owned(), quote.clone(), parameters) {
-            Ok(price) => price,
-            Err(PriceFeedsError::NoPrice()) => {
-                if let Some(feed) = self.search_for_path(
-                    storage,
-                    parameters,
-                    base.to_owned(),
-                    quote,
-                    resolution_path,
-                )? {
-                    return Ok(feed.get_price(parameters)?.price());
-                }
-                return Err(PriceFeedsError::NoPrice {});
-            }
-            Err(err) => {
-                return Err(err);
-            }
-        };
-
-        Ok(price_dto)
-    }
-
-    fn search_for_path(
-        &self,
-        storage: &dyn Storage,
-        parameters: Parameters,
-        base: SymbolOwned,
-        quote: SymbolOwned,
-        resolution_path: &mut DenomResolutionPath,
-    ) -> Result<Option<PriceFeed>, PriceFeedsError> {
-        // get all entries with key denom pair that stars with the base denom
-        let quotes: Vec<_> = self
-            .0
-            .prefix(base)
-            .range(storage, None, None, Order::Ascending)
-            .filter_map(|res| res.ok())
-            .collect();
-
-        for (current_quote, feed) in quotes {
-            if let Ok(price) = self.price_impl(
-                storage,
-                parameters,
-                &current_quote,
-                quote.clone(),
-                resolution_path,
-            ) {
-                resolution_path.push(price);
-                return Ok(Some(feed));
-            };
-        }
-        Ok(None)
-    }
-
-    fn get(
-        &self,
-        storage: &dyn Storage,
-        base: SymbolOwned,
-        quote: SymbolOwned,
-        parameters: Parameters,
-    ) -> Result<PriceDTO, PriceFeedsError> {
-        // check if both currencies are the same => return one
-        if base.eq(&quote) {
-            return Err(PriceFeedsError::InvalidPrice());
-        }
-
-        // check for exact match for the denom pair
-        match self.0.may_load(storage, (base, quote))? {
-            Some(feed) => Ok(feed.get_price(parameters)?.price()),
-            None => Err(PriceFeedsError::NoPrice()),
-        }
     }
 
     pub fn load(

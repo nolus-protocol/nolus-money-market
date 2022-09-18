@@ -1,22 +1,22 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{Addr, Response, StdError, StdResult, Storage, Timestamp};
-use marketprice::{
-    error::PriceFeedsError,
-    market_price::{Parameters, PriceFeeds},
-};
+use cosmwasm_std::{Addr, Response, Storage, Timestamp};
+use marketprice::market_price::{Parameters, PriceFeeds};
 
 use platform::batch::Batch;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    currency::{Currency, Nls, SymbolOwned},
+    currency::{Currency, Nls, SymbolOwned, Usdc},
     duration::Duration,
     price::dto::PriceDTO,
 };
 
-use crate::{state::config::Config, ContractError};
+use crate::{
+    state::{config::Config, supported_pairs::SupportedPairs},
+    ContractError,
+};
 
 use super::{alarms::MarketAlarms, feeder::Feeders};
 
@@ -32,49 +32,23 @@ impl Feeds {
         Self { config }
     }
 
-    fn assert_supported_denom(
-        supported_denom_pairs: &[(SymbolOwned, SymbolOwned)],
-        currency: &SymbolOwned,
-    ) -> StdResult<()> {
-        let mut all_supported_denoms = HashSet::<SymbolOwned>::new();
-        for pair in supported_denom_pairs {
-            all_supported_denoms.insert(pair.0.clone());
-            all_supported_denoms.insert(pair.1.clone());
-        }
-        if !all_supported_denoms.contains(currency) {
-            return Err(StdError::generic_err("Unsupported denom"));
-        }
-        Ok(())
-    }
-
     pub fn get_prices(
         &self,
         storage: &dyn Storage,
         parameters: Parameters,
         currencies: HashSet<SymbolOwned>,
-        base: SymbolOwned,
-    ) -> Result<Vec<PriceDTO>, PriceFeedsError> {
+    ) -> Result<Vec<PriceDTO>, ContractError> {
+        let tree: SupportedPairs<Usdc> = SupportedPairs::load(storage)?;
         let mut prices: Vec<PriceDTO> = vec![];
         for currency in currencies {
-            Self::assert_supported_denom(&self.config.supported_denom_pairs, &currency)?;
+            tree.validate_supported(&currency)?;
+            let path = tree.load_path(&currency)?;
 
-            prices.push(Feeds::get_price(
-                storage,
-                parameters,
-                currency,
-                base.clone(),
-            )?)
+            let price = Self::MARKET_PRICE.price(storage, parameters, currency, path)?;
+
+            prices.push(price);
         }
         Ok(prices)
-    }
-
-    pub fn get_price(
-        storage: &dyn Storage,
-        parameters: Parameters,
-        base: SymbolOwned,
-        quote: SymbolOwned,
-    ) -> Result<PriceDTO, PriceFeedsError> {
-        Self::MARKET_PRICE.price(storage, parameters, base, quote)
     }
 
     pub fn feed_prices(
@@ -153,12 +127,8 @@ where
     if !hooks_currencies.is_empty() {
         let parameters = Feeders::query_config(storage, &config, block_time)?;
         // re-calculate the price of these currencies
-        let updated_prices: Vec<PriceDTO> = oracle.get_prices(
-            storage,
-            parameters,
-            hooks_currencies,
-            OracleBase::SYMBOL.to_string(),
-        )?;
+        let updated_prices: Vec<PriceDTO> =
+            oracle.get_prices(storage, parameters, hooks_currencies)?;
         // try notify affected subscribers
         MarketAlarms::try_notify_hooks(storage, updated_prices, &mut batch)?;
     }

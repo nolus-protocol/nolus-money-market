@@ -57,12 +57,13 @@ fn marketprice_add_feed_expect_err() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
     let params = Parameters::new(MINUTE, 50, ts);
+    let path = vec![TestCurrencyB::SYMBOL.to_string()];
     let expected_err = market
         .price(
             &deps.storage,
             params,
             TestCurrencyA::SYMBOL.to_string(),
-            TestCurrencyB::SYMBOL.to_string(),
+            path,
         )
         .unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
@@ -114,24 +115,26 @@ fn marketprice_add_feed() {
     market
         .feed(&mut deps.storage, ts, &f_address, prices, MINUTE)
         .unwrap();
+    // requite 50 feeders available => NoPrice
     let query = Parameters::new(MINUTE, 50, ts);
     let err = market
         .price(
             &deps.storage,
             query,
             TestCurrencyA::SYMBOL.to_string(),
-            TestCurrencyB::SYMBOL.to_string(),
+            vec![TestCurrencyB::SYMBOL.to_string()],
         )
         .unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
 
+    // requite 1 feeders available => Price
     let query = Parameters::new(MINUTE, 1, ts);
     let price_resp = market
         .price(
             &deps.storage,
             query,
             TestCurrencyA::SYMBOL.to_string(),
-            TestCurrencyB::SYMBOL.to_string(),
+            vec![TestCurrencyB::SYMBOL.to_string()],
         )
         .unwrap();
 
@@ -239,7 +242,11 @@ fn marketprice_follow_the_path() {
             &deps.storage,
             query,
             TestCurrencyA::SYMBOL.to_string(),
-            TestCurrencyD::SYMBOL.to_string(),
+            vec![
+                TestCurrencyB::SYMBOL.to_string(),
+                TestCurrencyC::SYMBOL.to_string(),
+                TestCurrencyD::SYMBOL.to_string(),
+            ],
         )
         .unwrap();
     let expected = price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<TestCurrencyD>::new(6));
@@ -254,10 +261,10 @@ fn marketprice_follow_the_path() {
             &deps.storage,
             query,
             TestCurrencyA::SYMBOL.to_string(),
-            TestCurrencyA::SYMBOL.to_string(),
+            vec![TestCurrencyA::SYMBOL.to_string()],
         )
         .unwrap_err();
-    assert_eq!(price_resp, PriceFeedsError::InvalidPrice());
+    assert_eq!(price_resp, PriceFeedsError::NoPrice());
 
     // second part of denome pair doesn't exists in the storage
     let query = Parameters::new(MINUTE, 1, mock_env().block.time);
@@ -267,10 +274,10 @@ fn marketprice_follow_the_path() {
                 &deps.storage,
                 query,
                 TestCurrencyA::SYMBOL.to_string(),
-                DenX::SYMBOL.to_string()
+                vec![DenX::SYMBOL.to_string()],
             )
             .unwrap_err(),
-        PriceFeedsError::UnknownCurrency {}
+        PriceFeedsError::NoPrice()
     );
 
     // first part of denome pair doesn't exists in the storage
@@ -281,7 +288,7 @@ fn marketprice_follow_the_path() {
                 &deps.storage,
                 query,
                 DenX::SYMBOL.to_string(),
-                TestCurrencyA::SYMBOL.to_string()
+                vec![TestCurrencyA::SYMBOL.to_string()]
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice {}

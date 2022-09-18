@@ -77,7 +77,7 @@ impl Default for MarketOracleWrapper {
 pub fn mock_oracle_query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let price = total_of(Coin::<Nls>::new(123456789)).is(Coin::<Usdc>::new(100000000));
     let res = match msg {
-        QueryMsg::PriceFor { currencies: _ } | QueryMsg::Price { currency: _ } => {
+        QueryMsg::Prices { currencies: _ } | QueryMsg::Price { currency: _ } => {
             to_binary(&oracle::msg::PriceResponse {
                 price: PriceDTO::try_from(price).unwrap(),
             })

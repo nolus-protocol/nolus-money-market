@@ -48,7 +48,7 @@ pub enum QueryMsg {
     // check if an address belongs to a registered feeder
     IsFeeder { address: Addr },
     // returns the price of the denom against the base asset
-    PriceFor { currencies: HashSet<SymbolOwned> },
+    Prices { currencies: HashSet<SymbolOwned> },
     Price { currency: SymbolOwned },
     // returns a list of supported denom pairs
     SupportedDenomPairs {},
