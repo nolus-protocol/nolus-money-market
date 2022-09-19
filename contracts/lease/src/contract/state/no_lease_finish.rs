@@ -10,12 +10,12 @@ use crate::{
     repay_id::ReplyId,
 };
 
-use super::{Controller, Response};
+use super::{Controller, ExecuteResponse};
 
 pub struct NoLeaseFinish {}
 
 impl Controller for NoLeaseFinish {
-    fn reply(self, deps: DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
+    fn reply(self, deps: DepsMut, env: Env, msg: Reply) -> ContractResult<ExecuteResponse> {
         // TODO swap the received loan and the downpayment to lease.currency
         let lease = LeaseDTO::load(deps.storage)?;
 
@@ -35,7 +35,7 @@ impl Controller for NoLeaseFinish {
                     &deps.querier,
                 )?;
 
-                Ok(Response::from(emitter, self))
+                Ok(ExecuteResponse::from(emitter, self))
             }
         }
     }

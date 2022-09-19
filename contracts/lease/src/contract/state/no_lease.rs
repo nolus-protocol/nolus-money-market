@@ -10,7 +10,7 @@ use crate::{
     msg::NewLeaseForm,
 };
 
-use super::{Controller, Response};
+use super::{Controller, ExecuteResponse};
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -24,7 +24,7 @@ impl Controller for NoLease {
         env: Env,
         info: MessageInfo,
         form: NewLeaseForm,
-    ) -> ContractResult<Response> {
+    ) -> ContractResult<ExecuteResponse> {
         set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
         let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
@@ -39,7 +39,7 @@ impl Controller for NoLease {
 
         downpayment.store(deps.storage)?;
 
-        Ok(Response::from(batch, self))
+        Ok(ExecuteResponse::from(batch, self))
     }
 }
 
