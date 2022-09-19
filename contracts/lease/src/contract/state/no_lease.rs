@@ -29,8 +29,8 @@ impl Controller for NoLease {
     ) -> ContractResult<Response> {
         set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+        let form_cloned = form.clone();
         let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
-        lease.store(deps.storage)?;
 
         let OpenLoanReqResult { batch, downpayment } = lease::execute(
             lease,
@@ -39,7 +39,13 @@ impl Controller for NoLease {
             &deps.querier,
         )?;
 
-        Ok(Response::from(batch, NoLeaseFinish { downpayment }))
+        Ok(Response::from(
+            batch,
+            NoLeaseFinish {
+                form: form_cloned,
+                downpayment,
+            },
+        ))
     }
 }
 

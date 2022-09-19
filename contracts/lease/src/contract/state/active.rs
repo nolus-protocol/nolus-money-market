@@ -1,6 +1,8 @@
 use std::fmt::Display;
 
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper};
+use cosmwasm_std::{
+    Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Response as CwResponse,
+};
 use platform::{bank::BankStub, batch::Emitter};
 use serde::{Deserialize, Serialize};
 
@@ -19,7 +21,9 @@ use crate::{
 use super::{Controller, Response};
 
 #[derive(Serialize, Deserialize)]
-pub struct Active {}
+pub struct Active {
+    pub(super) lease: LeaseDTO,
+}
 
 impl Controller for Active {
     fn execute(
@@ -29,54 +33,49 @@ impl Controller for Active {
         info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        let lease = LeaseDTO::load(deps.storage)?;
-
         let account = BankStub::my_account(&env, &deps.querier);
 
-        let cw_resp = match msg {
+        let resp = match msg {
             ExecuteMsg::Repay() => {
-                let RepayResult { lease_dto, emitter } =
-                    try_repay(&deps.querier, &env, account, info, lease)?;
+                let RepayResult {
+                    lease_dto: lease_updated,
+                    emitter,
+                } = try_repay(&deps.querier, &env, account, info, self.lease)?;
 
-                lease_dto.store(deps.storage)?;
-
-                Ok(emitter.into())
+                into_resp(emitter, lease_updated)
             }
             ExecuteMsg::Close() => {
-                try_close(&deps.querier, &env, account, info, lease).map(Into::into)
+                let lease_cloned = self.lease.clone();
+                let resp = try_close(&deps.querier, &env, account, info, self.lease)?;
+
+                into_resp(resp, lease_cloned)
             }
             ExecuteMsg::PriceAlarm() => {
                 let AlarmResult {
                     response,
-                    lease_dto: lease,
-                } = try_on_price_alarm(&deps.querier, &env, account, info, lease)?;
+                    lease_dto: lease_updated,
+                } = try_on_price_alarm(&deps.querier, &env, account, info, self.lease)?;
 
-                lease.store(deps.storage)?;
-
-                Ok(response)
+                into_resp(response, lease_updated)
             }
             ExecuteMsg::TimeAlarm() => {
                 let AlarmResult {
                     response,
-                    lease_dto: lease,
-                } = try_on_time_alarm(&deps.querier, &env, account, info, lease)?;
+                    lease_dto: lease_updated,
+                } = try_on_time_alarm(&deps.querier, &env, account, info, self.lease)?;
 
-                lease.store(deps.storage)?;
-
-                Ok(response)
+                into_resp(response, lease_updated)
             }
-        }?;
-        Ok(Response::from(cw_resp, self))
+        };
+        Ok(resp)
     }
 
     fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
-        let lease = LeaseDTO::load(deps.storage)?;
-
         let bank = BankStub::my_account(&env, &deps.querier);
 
         // TODO think on taking benefit from having a LppView trait
         lease::execute(
-            lease,
+            self.lease,
             LeaseState::new(env.block.time, bank),
             &env.contract.address,
             &deps.querier,
@@ -155,4 +154,11 @@ fn try_on_time_alarm(
         &env.contract.address,
         querier,
     )
+}
+
+fn into_resp<R>(resp: R, lease: LeaseDTO) -> Response
+where
+    R: Into<CwResponse>,
+{
+    Response::from(resp, Active { lease })
 }
