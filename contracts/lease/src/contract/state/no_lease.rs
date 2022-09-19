@@ -3,7 +3,12 @@ use std::fmt::Display;
 use cosmwasm_std::{DepsMut, Env, MessageInfo};
 use cw2::set_contract_version;
 
-use crate::{msg::NewLeaseForm, error::ContractResult, contract::open::{OpenLoanReqResult, OpenLoanReq}, lease};
+use crate::{
+    contract::open::{OpenLoanReq, OpenLoanReqResult},
+    error::ContractResult,
+    lease,
+    msg::NewLeaseForm,
+};
 
 use super::{Controller, ExecuteResponse};
 

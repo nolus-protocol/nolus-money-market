@@ -373,7 +373,8 @@ fn loan_open_and_repay() {
     let addon_optimal_interest_rate = Percent::from_percent(20);
     let utilization_optimal = Percent::from_percent(55);
 
-    let utilization_rel1 = Percent::from_permille((1000 * loan1 / utilization_optimal.of(init_deposit)) as u32);
+    let utilization_rel1 =
+        Percent::from_permille((1000 * loan1 / utilization_optimal.of(init_deposit)) as u32);
     let interest1 = base_interest_rate + utilization_rel1.of(addon_optimal_interest_rate);
     // let utilization1 = Percent::from_permille((1000 * loan1 / init_deposit) as u32);
     // let interest1 = base_interest_rate + addon_optimal_interest_rate.of(utilization1)
@@ -483,7 +484,8 @@ fn loan_open_and_repay() {
     // let interest2 = base_interest_rate + addon_optimal_interest_rate.of(utilization2)
     //     - addon_optimal_interest_rate.of(utilization_optimal);
     let utilization_rel2 = Percent::from_permille(
-        (1000 * (total_liability) / utilization_optimal.of(init_deposit + total_interest_due)) as u32,
+        (1000 * (total_liability) / utilization_optimal.of(init_deposit + total_interest_due))
+            as u32,
     );
     let interest2 = base_interest_rate + utilization_rel2.of(addon_optimal_interest_rate);
 
@@ -676,9 +678,10 @@ fn compare_lpp_states() {
     let addon_optimal_interest_rate = Percent::from_percent(20);
     let utilization_optimal = Percent::from_percent(55);
 
-    let utilization_rel1 = Percent::from_permille((1000 * loan1 / utilization_optimal.of(init_deposit)) as u32);
+    let utilization_rel1 =
+        Percent::from_permille((1000 * loan1 / utilization_optimal.of(init_deposit)) as u32);
     let interest1 = base_interest_rate + utilization_rel1.of(addon_optimal_interest_rate);
-    
+
     dbg!(Percent::from_percent(1)); // scale
     dbg!(utilization_rel1);
     dbg!(interest1);
@@ -778,7 +781,8 @@ fn compare_lpp_states() {
 
     let total_liability = loan1 + loan2 + total_interest_due;
     let utilization_rel2 = Percent::from_permille(
-        (1000 * (total_liability) / utilization_optimal.of(init_deposit + total_interest_due)) as u32,
+        (1000 * (total_liability) / utilization_optimal.of(init_deposit + total_interest_due))
+            as u32,
     );
     let interest2 = base_interest_rate + utilization_rel2.of(addon_optimal_interest_rate);
 
