@@ -18,9 +18,8 @@ use crate::{
 
 use self::{
     close::Close,
-    cmd::LeaseState,
     repay::{Repay, RepayResult},
-    state::{Controller, NoLease, NoLeaseFinish},
+    state::{Controller, NoLease, NoLeaseFinish, Active},
 };
 
 mod alarms;
@@ -106,18 +105,16 @@ pub fn execute(
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-pub fn query(deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
-    let lease = LeaseDTO::load(deps.storage)?;
-
-    let bank = BankStub::my_account(&env, &deps.querier);
-
-    // TODO think on taking benefit from having a LppView trait
-    lease::execute(
-        lease,
-        LeaseState::new(env.block.time, bank),
-        &env.contract.address,
-        &deps.querier,
-    )
+pub fn query(deps: Deps, env: Env, msg: StateQuery) -> ContractResult<Binary> {
+    Active {}.query(deps, env, msg).map(|resp| {
+        let Response {
+            cw_response,
+            next_state,
+        } = resp;
+        // TODO store the next_state
+        debug_assert!(matches!(next_state, State::Active(_)));
+        cw_response
+    })
 }
 
 fn try_repay(
