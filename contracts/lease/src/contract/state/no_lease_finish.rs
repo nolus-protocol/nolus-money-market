@@ -14,7 +14,9 @@ use crate::{
 use super::{Active, Controller, Response};
 
 #[derive(Serialize, Deserialize)]
-pub struct NoLeaseFinish {}
+pub struct NoLeaseFinish {
+    pub(super) downpayment: DownpaymentDTO,
+}
 
 impl Controller for NoLeaseFinish {
     fn reply(self, deps: &mut DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
@@ -28,11 +30,9 @@ impl Controller for NoLeaseFinish {
 
         match id {
             ReplyId::OpenLoanReq => {
-                let downpayment = DownpaymentDTO::remove(deps.storage)?;
-
                 let emitter = lease::execute(
                     lease,
-                    OpenLoanResp::new(msg, downpayment, account, &env),
+                    OpenLoanResp::new(msg, self.downpayment, account, &env),
                     &env.contract.address,
                     &deps.querier,
                 )?;

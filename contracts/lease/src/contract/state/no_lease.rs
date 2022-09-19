@@ -39,9 +39,7 @@ impl Controller for NoLease {
             &deps.querier,
         )?;
 
-        downpayment.store(deps.storage)?;
-
-        Ok(Response::from(batch, NoLeaseFinish {}))
+        Ok(Response::from(batch, NoLeaseFinish { downpayment }))
     }
 }
 
