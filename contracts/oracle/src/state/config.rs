@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::Item;
-use finance::currency::SymbolOwned;
+use finance::{currency::SymbolOwned, percent::Percent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +11,7 @@ pub struct Config {
     pub base_asset: SymbolOwned,
     pub owner: Addr,
     pub price_feed_period_secs: u32,
-    pub feeders_percentage_needed: u8,
+    pub feeders_percentage_needed: Percent,
     pub timealarms_contract: Addr,
 }
 
@@ -22,7 +22,7 @@ impl Config {
         denom: String,
         owner: Addr,
         price_feed_period_secs: u32,
-        feeders_percentage_needed: u8,
+        feeders_percentage_needed: Percent,
         timealarms_contract: Addr,
     ) -> Self {
         Config {
@@ -45,7 +45,7 @@ impl Config {
     pub fn update(
         storage: &mut dyn Storage,
         price_feed_period_secs: u32,
-        feeders_percentage_needed: u8,
+        feeders_percentage_needed: Percent,
         sender: Addr,
     ) -> Result<(), ContractError> {
         let config = Self::STORAGE.load(storage)?;

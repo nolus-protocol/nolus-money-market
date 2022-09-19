@@ -4,7 +4,7 @@ use cosmwasm_std::Addr;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use finance::{currency::SymbolOwned, price::dto::PriceDTO};
+use finance::{currency::SymbolOwned, percent::Percent, price::dto::PriceDTO};
 use marketprice::alarms::Alarm;
 
 use crate::state::supported_pairs::ResolutionPath;
@@ -13,7 +13,7 @@ use crate::state::supported_pairs::ResolutionPath;
 pub struct InstantiateMsg {
     pub base_asset: String,
     pub price_feed_period_secs: u32,
-    pub feeders_percentage_needed: u8,
+    pub feeders_percentage_needed: Percent,
     pub currency_paths: Vec<ResolutionPath>,
     pub timealarms_addr: String,
 }
@@ -29,7 +29,7 @@ pub enum ExecuteMsg {
     },
     Config {
         price_feed_period_secs: u32,
-        feeders_percentage_needed: u8,
+        feeders_percentage_needed: Percent,
     },
     CurrencyPaths {
         paths: Vec<ResolutionPath>,
@@ -61,7 +61,7 @@ pub enum QueryMsg {
 pub struct ConfigResponse {
     pub base_asset: SymbolOwned,
     pub price_feed_period_secs: u32,
-    pub feeders_percentage_needed: u8,
+    pub feeders_percentage_needed: Percent,
     pub owner: Addr,
 }
 

@@ -160,7 +160,10 @@ fn err_as_ok(err: &str) -> Response {
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{from_binary, testing::mock_env};
-    use finance::currency::{Currency, Nls, Usdc};
+    use finance::{
+        currency::{Currency, Nls, Usdc},
+        percent::Percent,
+    };
 
     use crate::{
         contract::query,
@@ -174,7 +177,7 @@ mod tests {
         let msg = dummy_instantiate_msg(
             Usdc::SYMBOL.to_string(),
             60,
-            50,
+            Percent::from_percent(50),
             vec![vec![Nls::SYMBOL.to_string(), Usdc::SYMBOL.to_string()]],
             "timealarms".to_string(),
         );
@@ -185,7 +188,7 @@ mod tests {
         assert_eq!(CREATOR.to_string(), value.owner.to_string());
         assert_eq!(Usdc::SYMBOL.to_string(), value.base_asset);
         assert_eq!(60, value.price_feed_period_secs);
-        assert_eq!(50, value.feeders_percentage_needed);
+        assert_eq!(Percent::from_percent(50), value.feeders_percentage_needed);
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::SupportedDenomPairs {}).unwrap();
         let value: Vec<CurrencyPair> = from_binary(&res).unwrap();

@@ -14,6 +14,7 @@ use finance::{
         Currency, Nls, SymbolOwned, TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD,
         Usdc,
     },
+    percent::Percent,
     price::{self, dto::PriceDTO},
 };
 
@@ -28,7 +29,7 @@ pub(crate) const CREATOR: &str = "creator";
 pub(crate) fn dummy_instantiate_msg(
     base_asset: SymbolOwned,
     price_feed_period_secs: u32,
-    feeders_percentage_needed: u8,
+    feeders_percentage_needed: Percent,
     currency_paths: Vec<ResolutionPath>,
     alarms_addr: String,
 ) -> InstantiateMsg {
@@ -45,7 +46,7 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
     dummy_instantiate_msg(
         Usdc::SYMBOL.to_string(),
         60,
-        50,
+        Percent::from_percent(50),
         vec![
             vec![
                 TestCurrencyA::SYMBOL.to_string(),
