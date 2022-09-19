@@ -1,27 +1,25 @@
-use std::collections::HashSet;
-
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    from_binary, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
+    from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
 };
 use cw2::set_contract_version;
-use finance::price::dto::PriceDTO;
-use marketprice::error::PriceFeedsError;
+use finance::currency::{visit_any, AnyVisitor, Currency};
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     contract_validation::validate_contract_addr,
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, PriceResponse, PricesResponse, QueryMsg},
-    state::config::Config,
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    state::{config::Config, supported_pairs::SupportedPairs},
 };
 
 use self::{
     alarms::MarketAlarms,
-    config::{query_config, try_configure, try_configure_supported_pairs},
+    config::{query_config, try_configure},
     exec::ExecWithOracleBase,
-    feed::Feeds,
     feeder::Feeders,
+    query::QueryWithOracleBase,
 };
 
 mod alarms;
@@ -29,10 +27,56 @@ mod config;
 pub mod exec;
 mod feed;
 mod feeder;
+pub mod query;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
+struct InstantiateWithCurrency<'a> {
+    deps: DepsMut<'a>,
+    msg: InstantiateMsg,
+    owner: Addr,
+}
+
+impl<'a> InstantiateWithCurrency<'a> {
+    pub fn cmd(
+        deps: DepsMut<'a>,
+        msg: InstantiateMsg,
+        owner: Addr,
+    ) -> Result<Response, ContractError> {
+        let context = Self { deps, msg, owner };
+        visit_any(&context.msg.base_asset.clone(), context)
+    }
+}
+
+impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
+    type Output = Response;
+    type Error = ContractError;
+
+    fn on<C>(self) -> Result<Self::Output, Self::Error>
+    where
+        C: 'static + Currency + DeserializeOwned + Serialize,
+    {
+        set_contract_version(self.deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+
+        Config::new(
+            C::SYMBOL.to_string(),
+            self.owner,
+            self.msg.price_feed_period_secs,
+            self.msg.feeders_percentage_needed,
+            self.deps.api.addr_validate(&self.msg.timealarms_addr)?,
+        )
+        .store(self.deps.storage)?;
+
+        SupportedPairs::<C>::new(self.msg.currency_paths)?.save(self.deps.storage)?;
+
+        Ok(Response::new().add_attribute("method", "instantiate"))
+    }
+    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+        Err(ContractError::UnknownCurrency {})
+    }
+}
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
@@ -43,15 +87,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    Config::new(
-        msg.base_asset,
-        info.sender,
-        msg.price_feed_period_secs,
-        msg.feeders_percentage_needed,
-        msg.supported_denom_pairs,
-        deps.api.addr_validate(&msg.timealarms_addr)?,
-    )
-    .store(deps.storage)?;
+    InstantiateWithCurrency::cmd(deps, msg, info.sender)?;
 
     Ok(Response::default())
 }
@@ -64,30 +100,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
         QueryMsg::IsFeeder { address } => {
             Ok(to_binary(&Feeders::is_feeder(deps.storage, &address)?)?)
         }
-        QueryMsg::SupportedDenomPairs {} => Ok(to_binary(
-            &Config::load(deps.storage)?.supported_denom_pairs,
-        )?),
-        QueryMsg::Price { currency } => {
-            let config = Config::load(deps.storage)?;
-            let parameters = Feeders::query_config(deps.storage, &config, env.block.time)?;
-
-            match Feeds::with(config.clone())
-                .get_prices(deps.storage, parameters, HashSet::from([currency]))?
-                .first()
-            {
-                Some(price) => Ok(to_binary(&PriceResponse {
-                    price: price.to_owned(),
-                })?),
-                None => Err(ContractError::PriceFeedsError(PriceFeedsError::NoPrice())),
-            }
-        }
-        QueryMsg::Prices { currencies } => {
-            let config = Config::load(deps.storage)?;
-            let parameters = Feeders::query_config(deps.storage, &config, env.block.time)?;
-            let prices: Vec<PriceDTO> =
-                Feeds::with(config.clone()).get_prices(deps.storage, parameters, currencies)?;
-            Ok(to_binary(&PricesResponse { prices })?)
-        }
+        _ => Ok(QueryWithOracleBase::cmd(deps, env, msg)?),
     }
 }
 
@@ -110,9 +123,6 @@ pub fn execute(
         ),
         ExecuteMsg::RegisterFeeder { feeder_address } => {
             Feeders::try_register(deps, info, feeder_address)
-        }
-        ExecuteMsg::SupportedDenomPairs { pairs } => {
-            try_configure_supported_pairs(deps.storage, info, pairs)
         }
         ExecuteMsg::AddPriceAlarm { alarm } => {
             validate_contract_addr(&deps.querier, &info.sender)?;
@@ -150,20 +160,22 @@ fn err_as_ok(err: &str) -> Response {
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{from_binary, testing::mock_env};
+    use finance::currency::{Currency, Nls, Usdc};
 
     use crate::{
         contract::query,
         msg::{ConfigResponse, QueryMsg},
+        state::supported_pairs::CurrencyPair,
         tests::{dummy_instantiate_msg, setup_test, CREATOR},
     };
 
     #[test]
     fn proper_initialization() {
         let msg = dummy_instantiate_msg(
-            "token".to_string(),
+            Usdc::SYMBOL.to_string(),
             60,
             50,
-            vec![("unolus".to_string(), "uosmo".to_string())],
+            vec![vec![Nls::SYMBOL.to_string(), Usdc::SYMBOL.to_string()]],
             "timealarms".to_string(),
         );
         let (deps, _) = setup_test(msg);
@@ -171,13 +183,15 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
         assert_eq!(CREATOR.to_string(), value.owner.to_string());
-        assert_eq!("token".to_string(), value.base_asset);
+        assert_eq!(Usdc::SYMBOL.to_string(), value.base_asset);
         assert_eq!(60, value.price_feed_period_secs);
         assert_eq!(50, value.feeders_percentage_needed);
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::SupportedDenomPairs {}).unwrap();
-        let value: Vec<(String, String)> = from_binary(&res).unwrap();
-        assert_eq!("unolus".to_string(), value.get(0).unwrap().0);
-        assert_eq!("uosmo".to_string(), value.get(0).unwrap().1);
+        let value: Vec<CurrencyPair> = from_binary(&res).unwrap();
+        assert_eq!(
+            vec![(Nls::SYMBOL.to_string(), Usdc::SYMBOL.to_string())],
+            value
+        );
     }
 }

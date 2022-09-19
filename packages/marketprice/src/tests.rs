@@ -5,7 +5,7 @@ use cosmwasm_std::testing::{mock_dependencies, mock_env};
 use cosmwasm_std::{Api, DepsMut, Timestamp};
 use finance::coin::Coin;
 use finance::currency::{
-    Currency, SymbolStatic, TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD,
+    Currency, SymbolStatic, TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD, Usdc,
 };
 use finance::price::{self, dto::PriceDTO, Price};
 
@@ -57,15 +57,11 @@ fn marketprice_add_feed_expect_err() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
     let params = Parameters::new(MINUTE, 50, ts);
-    let path = vec![TestCurrencyB::SYMBOL.to_string()];
-    let expected_err = market
-        .price(
-            &deps.storage,
-            params,
-            TestCurrencyA::SYMBOL.to_string(),
-            path,
-        )
-        .unwrap_err();
+    let path = vec![
+        TestCurrencyA::SYMBOL.to_string(),
+        TestCurrencyB::SYMBOL.to_string(),
+    ];
+    let expected_err = market.price(&deps.storage, params, path).unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
 }
 
@@ -121,8 +117,10 @@ fn marketprice_add_feed() {
         .price(
             &deps.storage,
             query,
-            TestCurrencyA::SYMBOL.to_string(),
-            vec![TestCurrencyB::SYMBOL.to_string()],
+            vec![
+                TestCurrencyA::SYMBOL.to_string(),
+                TestCurrencyB::SYMBOL.to_string(),
+            ],
         )
         .unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
@@ -133,8 +131,10 @@ fn marketprice_add_feed() {
         .price(
             &deps.storage,
             query,
-            TestCurrencyA::SYMBOL.to_string(),
-            vec![TestCurrencyB::SYMBOL.to_string()],
+            vec![
+                TestCurrencyA::SYMBOL.to_string(),
+                TestCurrencyB::SYMBOL.to_string(),
+            ],
         )
         .unwrap();
 
@@ -241,8 +241,8 @@ fn marketprice_follow_the_path() {
         .price(
             &deps.storage,
             query,
-            TestCurrencyA::SYMBOL.to_string(),
             vec![
+                TestCurrencyA::SYMBOL.to_string(),
                 TestCurrencyB::SYMBOL.to_string(),
                 TestCurrencyC::SYMBOL.to_string(),
                 TestCurrencyD::SYMBOL.to_string(),
@@ -260,8 +260,7 @@ fn marketprice_follow_the_path() {
         .price(
             &deps.storage,
             query,
-            TestCurrencyA::SYMBOL.to_string(),
-            vec![TestCurrencyA::SYMBOL.to_string()],
+            vec![TestCurrencyA::SYMBOL.to_string(), Usdc::SYMBOL.to_string()],
         )
         .unwrap_err();
     assert_eq!(price_resp, PriceFeedsError::NoPrice());
@@ -273,8 +272,7 @@ fn marketprice_follow_the_path() {
             .price(
                 &deps.storage,
                 query,
-                TestCurrencyA::SYMBOL.to_string(),
-                vec![DenX::SYMBOL.to_string()],
+                vec![DenX::SYMBOL.to_string(), Usdc::SYMBOL.to_string()],
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice()
@@ -287,8 +285,7 @@ fn marketprice_follow_the_path() {
             .price(
                 &deps.storage,
                 query,
-                DenX::SYMBOL.to_string(),
-                vec![TestCurrencyA::SYMBOL.to_string()]
+                vec![DenX::SYMBOL.to_string(), TestCurrencyA::SYMBOL.to_string()]
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice {}

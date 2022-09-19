@@ -21,6 +21,8 @@ fn open_lease() {
 }
 
 #[test]
+#[should_panic(expected = "Invalid denom pair")]
+// in single denom version lease can be opened only in the oracle base denom
 fn open_lease_another_currency() {
     open_lease_impl(Nls::SYMBOL);
 }

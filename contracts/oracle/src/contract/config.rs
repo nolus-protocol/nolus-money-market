@@ -1,5 +1,4 @@
-use cosmwasm_std::{Deps, DepsMut, MessageInfo, Response, Storage};
-use finance::currency::SymbolOwned;
+use cosmwasm_std::{Deps, DepsMut, MessageInfo, Response};
 
 use crate::{msg::ConfigResponse, state::config::Config, ContractError};
 
@@ -29,26 +28,18 @@ pub fn try_configure(
     Ok(Response::new())
 }
 
-pub fn try_configure_supported_pairs(
-    storage: &mut dyn Storage,
-    info: MessageInfo,
-    pairs: Vec<(SymbolOwned, SymbolOwned)>,
-) -> Result<Response, ContractError> {
-    Config::update_supported_pairs(storage, pairs, info.sender)?;
-
-    Ok(Response::new())
-}
-
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{
         coins, from_binary,
         testing::{mock_env, mock_info},
     };
+    use finance::currency::{Currency, Nls, TestCurrencyA, Usdc};
 
     use crate::{
         contract::{execute, query},
         msg::{ConfigResponse, ExecuteMsg, QueryMsg},
+        state::supported_pairs::ResolutionPath,
         tests::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test},
         ContractError,
     };
@@ -57,15 +48,15 @@ mod tests {
     #[should_panic(expected = "Unauthorized")]
     fn configure_unauthorized() {
         let msg = dummy_instantiate_msg(
-            "token".to_string(),
+            Usdc::SYMBOL.to_string(),
             60,
             50,
-            vec![("unolus".to_string(), "uosmo".to_string())],
+            vec![vec![Nls::SYMBOL.to_string(), Usdc::SYMBOL.to_string()]],
             "timealarms".to_string(),
         );
         let (mut deps, _) = setup_test(msg);
 
-        let unauth_info = mock_info("anyone", &coins(2, "token"));
+        let unauth_info = mock_info("anyone", &coins(2, Nls::SYMBOL));
         let msg = ExecuteMsg::Config {
             price_feed_period_secs: 15,
             feeders_percentage_needed: 12,
@@ -76,10 +67,10 @@ mod tests {
     #[test]
     fn configure() {
         let msg = dummy_instantiate_msg(
-            "token".to_string(),
+            Usdc::SYMBOL.to_string(),
             60,
             50,
-            vec![("unolus".to_string(), "uosmo".to_string())],
+            vec![vec![Nls::SYMBOL.to_string(), Usdc::SYMBOL.to_string()]],
             "timealarms".to_string(),
         );
         let (mut deps, info) = setup_test(msg);
@@ -102,18 +93,18 @@ mod tests {
         let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
         let test_vec = vec![
-            ("denom1".to_string(), "denom2".to_string()),
-            ("denom3".to_string(), "denom4".to_string()),
+            vec![TestCurrencyA::SYMBOL.to_string(), Usdc::SYMBOL.to_string()],
+            vec![Nls::SYMBOL.to_string(), Usdc::SYMBOL.to_string()],
         ];
 
-        let msg = ExecuteMsg::SupportedDenomPairs {
-            pairs: test_vec.clone(),
+        let msg = ExecuteMsg::CurrencyPaths {
+            paths: test_vec.clone(),
         };
         let res = execute(deps.as_mut(), mock_env(), info, msg);
         assert!(res.is_ok());
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::SupportedDenomPairs {}).unwrap();
-        let value: Vec<(String, String)> = from_binary(&res).unwrap();
+        let value: Vec<ResolutionPath> = from_binary(&res).unwrap();
         assert_eq!(test_vec, value);
     }
 
@@ -121,15 +112,18 @@ mod tests {
     fn invalid_supported_pairs() {
         let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
-        let msg = ExecuteMsg::SupportedDenomPairs {
-            pairs: vec![
-                ("denom1".to_string(), "denom2".to_string()),
-                ("denom3".to_string(), "denom3".to_string()),
+        let msg = ExecuteMsg::CurrencyPaths {
+            paths: vec![
+                vec![TestCurrencyA::SYMBOL.to_string(), Usdc::SYMBOL.to_string()],
+                vec![Nls::SYMBOL.to_string(), Nls::SYMBOL.to_string()],
             ],
         };
         let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
         assert_eq!(
-            ContractError::InvalidDenomPair(("denom3".to_string(), "denom3".to_string())),
+            ContractError::InvalidResolutionPath(vec![
+                Nls::SYMBOL.to_string(),
+                Nls::SYMBOL.to_string()
+            ]),
             err
         );
     }

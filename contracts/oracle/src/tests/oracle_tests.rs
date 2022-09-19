@@ -9,7 +9,7 @@ use cosmwasm_std::from_binary;
 use cosmwasm_std::testing::{mock_env, mock_info};
 use finance::coin::Coin;
 use finance::currency::{
-    Currency, SymbolStatic, TestCurrencyA, TestCurrencyB, TestCurrencyC, Usdc,
+    Currency, SymbolStatic, TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD, Usdc,
 };
 use finance::price::dto::PriceDTO;
 use finance::price::{self};
@@ -32,11 +32,11 @@ fn feed_direct_price() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
     let expected_price = PriceDTO::try_from(
-        price::total_of(Coin::<TestCurrencyA>::new(10)).is(Coin::<Usdc>::new(120)),
+        price::total_of(Coin::<TestCurrencyD>::new(10)).is(Coin::<Usdc>::new(120)),
     )
     .unwrap();
 
-    // Feed direct price TestCurrencyA/OracleBaseAsset
+    // Feed direct price TestCurrencyD/OracleBaseAsset
     let msg = ExecuteMsg::FeedPrices {
         prices: vec![expected_price.clone()],
     };
@@ -47,7 +47,7 @@ fn feed_direct_price() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::Prices {
-            currencies: HashSet::from([TestCurrencyA::SYMBOL.to_string()]),
+            currencies: HashSet::from([TestCurrencyD::SYMBOL.to_string()]),
         },
     )
     .unwrap();
@@ -72,7 +72,7 @@ fn feed_indirect_price() {
     )
     .unwrap();
 
-    // Feed direct price TestCurrencyA/OracleBaseAsset
+    // Feed indirect price from TestCurrencyA to OracleBaseAsset
     let msg = ExecuteMsg::FeedPrices {
         prices: vec![price_a_to_b, price_b_to_c, price_c_to_usdc],
     };
@@ -96,7 +96,7 @@ fn feed_indirect_price() {
 }
 
 #[test]
-#[should_panic(expected = "Unsupported denom")]
+#[should_panic(expected = "InvalidDenomPair")]
 fn query_prices_unsuppoted_denom() {
     let (deps, _) = setup_test(dummy_default_instantiate_msg());
 
@@ -131,12 +131,12 @@ fn feed_prices_unsupported_pairs() {
         const SYMBOL: SymbolStatic = "D";
     }
 
-    let prices_map = vec![
+    let prices = vec![
         PriceDTO::try_from(price::total_of(Coin::<X>::new(10)).is(Coin::<C>::new(12))).unwrap(),
         PriceDTO::try_from(price::total_of(Coin::<X>::new(10)).is(Coin::<D>::new(22))).unwrap(),
     ];
 
-    let msg = ExecuteMsg::FeedPrices { prices: prices_map };
+    let msg = ExecuteMsg::FeedPrices { prices };
     let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
     assert_eq!(ContractError::UnsupportedDenomPairs {}, err);
 }

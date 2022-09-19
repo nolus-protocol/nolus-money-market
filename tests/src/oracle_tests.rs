@@ -60,7 +60,7 @@ fn internal_test_integration_setup_test() {
                 test_case.oracle.clone().unwrap(),
                 &oracle::msg::ExecuteMsg::FeedPrices {
                     prices: vec![PriceDTO::try_from(
-                        price::total_of(Coin::<Usdc>::new(5)).is(Coin::<Nls>::new(7)),
+                        price::total_of(Coin::<Nls>::new(5)).is(Coin::<Usdc>::new(7)),
                     )
                     .unwrap()],
                 },

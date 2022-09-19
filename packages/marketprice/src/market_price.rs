@@ -52,24 +52,24 @@ impl<'m> PriceFeeds<'m> {
         &self,
         storage: &dyn Storage,
         parameters: Parameters,
-        base: SymbolOwned,
         path: Vec<SymbolOwned>,
     ) -> Result<PriceDTO, PriceFeedsError> {
         let mut resolution_path = DenomResolutionPath::new();
 
-        let mut current_base = base;
-        for quote in path {
-            let price_dto = match self.load(storage, current_base, quote.clone(), parameters) {
-                Ok(price) => price,
-                Err(err) => {
-                    return Err(err);
-                }
-            };
-            current_base = quote;
-            resolution_path.push(price_dto);
+        if let Some((first, elements)) = path.split_first() {
+            let mut base = first;
+            for quote in elements {
+                let price_dto =
+                    match self.load(storage, base.to_string(), quote.to_string(), parameters) {
+                        Ok(price) => price,
+                        Err(err) => {
+                            return Err(err);
+                        }
+                    };
+                base = quote;
+                resolution_path.push(price_dto);
+            }
         }
-        // resolution_path.reverse();
-
         PriceFeeds::calculate_price(&mut resolution_path)
     }
 

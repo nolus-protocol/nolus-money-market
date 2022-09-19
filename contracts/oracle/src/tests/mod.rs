@@ -20,6 +20,7 @@ use finance::{
 use crate::{
     contract::{execute, instantiate},
     msg::{ExecuteMsg, InstantiateMsg},
+    state::supported_pairs::ResolutionPath,
 };
 
 pub(crate) const CREATOR: &str = "creator";
@@ -28,14 +29,14 @@ pub(crate) fn dummy_instantiate_msg(
     base_asset: SymbolOwned,
     price_feed_period_secs: u32,
     feeders_percentage_needed: u8,
-    supported_denom_pairs: Vec<(String, String)>,
+    currency_paths: Vec<ResolutionPath>,
     alarms_addr: String,
 ) -> InstantiateMsg {
     InstantiateMsg {
         base_asset,
         price_feed_period_secs,
         feeders_percentage_needed,
-        supported_denom_pairs,
+        currency_paths,
         timealarms_addr: alarms_addr,
     }
 }
@@ -46,26 +47,18 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
         60,
         50,
         vec![
-            (
+            vec![
                 TestCurrencyA::SYMBOL.to_string(),
                 TestCurrencyB::SYMBOL.to_string(),
-            ),
-            (
-                TestCurrencyA::SYMBOL.to_string(),
                 TestCurrencyC::SYMBOL.to_string(),
-            ),
-            (
-                TestCurrencyB::SYMBOL.to_string(),
-                TestCurrencyC::SYMBOL.to_string(),
-            ),
-            (
-                TestCurrencyC::SYMBOL.to_string(),
+                Usdc::SYMBOL.to_string(),
+            ],
+            vec![TestCurrencyD::SYMBOL.to_string(), Usdc::SYMBOL.to_string()],
+            vec![
+                Nls::SYMBOL.to_string(),
                 TestCurrencyD::SYMBOL.to_string(),
-            ),
-            (TestCurrencyA::SYMBOL.to_string(), Usdc::SYMBOL.to_string()),
-            (TestCurrencyB::SYMBOL.to_string(), Usdc::SYMBOL.to_string()),
-            (TestCurrencyC::SYMBOL.to_string(), Usdc::SYMBOL.to_string()),
-            (Nls::SYMBOL.to_string(), TestCurrencyD::SYMBOL.to_string()),
+                Usdc::SYMBOL.to_string(),
+            ],
         ],
         "timealarms".to_string(),
     )
@@ -80,20 +73,18 @@ pub(crate) fn dummy_feed_prices_msg() -> ExecuteMsg {
                 12
             )))
             .unwrap(),
-            PriceDTO::try_from(price::total_of(Coin::<TestCurrencyA>::new(10)).is(Coin::<
+            PriceDTO::try_from(price::total_of(Coin::<TestCurrencyB>::new(10)).is(Coin::<
                 TestCurrencyC,
             >::new(
                 32
             )))
             .unwrap(),
-            PriceDTO::try_from(price::total_of(Coin::<TestCurrencyC>::new(10)).is(Coin::<
-                TestCurrencyD,
-            >::new(
-                12
-            )))
+            PriceDTO::try_from(
+                price::total_of(Coin::<TestCurrencyC>::new(10)).is(Coin::<Usdc>::new(12)),
+            )
             .unwrap(),
             PriceDTO::try_from(
-                price::total_of(Coin::<TestCurrencyA>::new(10)).is(Coin::<Usdc>::new(120)),
+                price::total_of(Coin::<TestCurrencyD>::new(10)).is(Coin::<Usdc>::new(120)),
             )
             .unwrap(),
         ],
@@ -104,7 +95,7 @@ pub(crate) fn setup_test(
     msg: InstantiateMsg,
 ) -> (OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo) {
     let mut deps = mock_dependencies();
-    let info = mock_info(CREATOR, &coins(1000, "token"));
+    let info = mock_info(CREATOR, &coins(1000, Nls::SYMBOL));
     let res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
     assert_eq!(0, res.messages.len());
 

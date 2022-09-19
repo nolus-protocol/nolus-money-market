@@ -1,15 +1,14 @@
+use std::collections::HashSet;
+
 use cosmwasm_std::{to_binary, Binary, Deps, Env};
+use finance::currency::{visit_any, AnyVisitor, Currency};
+use marketprice::error::PriceFeedsError;
 use serde::{de::DeserializeOwned, Serialize};
 
-use finance::{
-    currency::{visit_any, AnyVisitor, Currency},
-    price::PriceDTO,
-};
-
 use crate::{
-    error::ContractError,
     msg::{PriceResponse, PricesResponse, QueryMsg},
-    state::config::Config,
+    state::{config::Config, supported_pairs::SupportedPairs},
+    ContractError,
 };
 
 use super::{feed::Feeds, feeder::Feeders};
@@ -37,23 +36,35 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
     where
         OracleBase: 'static + Currency + DeserializeOwned + Serialize,
     {
-        let res = match self.msg {
-            QueryMsg::PriceFor { currencies } => {
-                let config = Config::load(self.deps.storage)?;
-                let parameters =
-                    Feeders::query_config(self.deps.storage, &config, self.env.block.time)?;
+        let config = Config::load(self.deps.storage)?;
+        let parameters = Feeders::query_config(self.deps.storage, &config, self.env.block.time)?;
 
-                to_binary(&PricesResponse {
-                    prices: Feeds::with(config)
-                        .get_prices::<OracleBase>(self.deps.storage, parameters, currencies)?
-                        .values()
-                        .cloned()
-                        .collect(),
-                })
+        let res = match self.msg {
+            QueryMsg::SupportedDenomPairs {} => Ok(to_binary(
+                &SupportedPairs::<OracleBase>::load(self.deps.storage)?.query_supported_pairs(),
+            )?),
+
+            QueryMsg::Price { currency } => {
+                match Feeds::<OracleBase>::with(config)
+                    .get_prices(self.deps.storage, parameters, HashSet::from([currency]))?
+                    .first()
+                {
+                    Some(price) => Ok(to_binary(&PriceResponse {
+                        price: price.to_owned(),
+                    })?),
+                    None => Err(ContractError::PriceFeedsError(PriceFeedsError::NoPrice())),
+                }
             }
+            QueryMsg::Prices { currencies } => Ok(to_binary(&PricesResponse {
+                prices: Feeds::<OracleBase>::with(config).get_prices(
+                    self.deps.storage,
+                    parameters,
+                    currencies,
+                )?,
+            })?),
             _ => {
                 unreachable!()
-            }
+            } // should be done already
         }?;
         Ok(res)
     }

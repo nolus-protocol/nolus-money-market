@@ -15,7 +15,7 @@ mod serde;
 use self::serde::TreeStore;
 
 pub type ResolutionPath = Vec<SymbolOwned>;
-type CurrencyPair = (SymbolOwned, SymbolOwned);
+pub type CurrencyPair = (SymbolOwned, SymbolOwned);
 type Node = TreeNode<SymbolOwned>;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]

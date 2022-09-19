@@ -3,7 +3,11 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use finance::currency::{visit_any, AnyVisitor, Currency};
 
-use crate::{error::ContractError, msg::ExecuteMsg, state::config::Config};
+use crate::{
+    error::ContractError,
+    msg::ExecuteMsg,
+    state::{config::Config, supported_pairs::SupportedPairs},
+};
 
 use super::feed::try_feed_prices;
 
@@ -42,6 +46,10 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
         OracleBase: 'static + Currency + DeserializeOwned + Serialize,
     {
         match self.msg {
+            ExecuteMsg::CurrencyPaths { paths } => {
+                SupportedPairs::<OracleBase>::new(paths)?.save(self.deps.storage)?;
+                Ok(Response::default())
+            }
             ExecuteMsg::FeedPrices { prices } => try_feed_prices::<OracleBase>(
                 self.deps.storage,
                 self.env.block.time,

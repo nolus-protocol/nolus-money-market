@@ -12,7 +12,6 @@ pub struct Config {
     pub owner: Addr,
     pub price_feed_period_secs: u32,
     pub feeders_percentage_needed: u8,
-    pub supported_denom_pairs: Vec<(SymbolOwned, SymbolOwned)>,
     pub timealarms_contract: Addr,
 }
 
@@ -24,7 +23,6 @@ impl Config {
         owner: Addr,
         price_feed_period_secs: u32,
         feeders_percentage_needed: u8,
-        supported_denom_pairs: Vec<(SymbolOwned, SymbolOwned)>,
         timealarms_contract: Addr,
     ) -> Self {
         Config {
@@ -32,7 +30,6 @@ impl Config {
             owner,
             price_feed_period_secs,
             feeders_percentage_needed,
-            supported_denom_pairs,
             timealarms_contract,
         }
     }
@@ -58,30 +55,6 @@ impl Config {
         Self::STORAGE.update(storage, |mut c| -> StdResult<_> {
             c.price_feed_period_secs = price_feed_period_secs;
             c.feeders_percentage_needed = feeders_percentage_needed;
-            Ok(c)
-        })?;
-        Ok(())
-    }
-    pub fn update_supported_pairs(
-        storage: &mut dyn Storage,
-        pairs: Vec<(SymbolOwned, SymbolOwned)>,
-        sender: Addr,
-    ) -> Result<(), ContractError> {
-        let config = Self::STORAGE.load(storage)?;
-        if sender != config.owner {
-            return Err(ContractError::Unauthorized {});
-        }
-        for pair in &pairs {
-            if pair.0.eq_ignore_ascii_case(pair.1.as_str()) {
-                return Err(ContractError::InvalidDenomPair((
-                    pair.0.to_owned(),
-                    pair.1.to_owned(),
-                )));
-            }
-        }
-
-        Self::STORAGE.update(storage, |mut c| -> StdResult<_> {
-            c.supported_denom_pairs = pairs;
             Ok(c)
         })?;
         Ok(())
