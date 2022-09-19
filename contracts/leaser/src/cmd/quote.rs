@@ -1,27 +1,27 @@
 use std::marker::PhantomData;
 
-use crate::msg::QuoteResponse;
-use crate::ContractError;
-
 use cosmwasm_std::StdResult;
-use finance::coin::Coin;
-use finance::liability::Liability;
-use finance::percent::Percent;
-use finance::{coin::CoinDTO, currency::Currency};
-
-use lpp::msg::QueryQuoteResponse;
-use lpp::stub::{Lpp as LppTrait, WithLpp};
 use serde::Serialize;
+
+use finance::{
+    coin::Coin, coin::CoinDTO, currency::Currency, liability::Liability, percent::Percent,
+};
+use lpp::{
+    msg::QueryQuoteResponse,
+    stub::lender::{LppLender as LppLenderTrait, WithLppLender},
+};
+
+use crate::{msg::QuoteResponse, ContractError};
 
 use super::Quote;
 
-impl WithLpp for Quote {
+impl WithLppLender for Quote {
     type Output = QuoteResponse;
     type Error = ContractError;
 
     fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
-        Lpp: LppTrait<Lpn>,
+        Lpp: LppLenderTrait<Lpn>,
         Lpn: Currency + Serialize,
     {
         let lpp_quote = LppQuote::new(lpp)?;
@@ -73,7 +73,7 @@ pub struct LppQuote<'a, Lpn, Lpp> {
 
 impl<'a, Lpn, Lpp> LppQuote<'a, Lpn, Lpp>
 where
-    Lpp: LppTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn>,
     Lpn: Currency,
 {
     pub fn new(lpp: Lpp) -> StdResult<LppQuote<'a, Lpn, Lpp>> {

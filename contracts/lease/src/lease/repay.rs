@@ -2,7 +2,7 @@ use cosmwasm_std::Timestamp;
 use serde::Serialize;
 
 use finance::{coin::Coin, currency::Currency};
-use lpp::stub::Lpp as LppTrait;
+use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
 use profit::stub::Profit as ProfitTrait;
@@ -18,7 +18,7 @@ impl<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
     Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
-    Lpp: LppTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
     Profit: ProfitTrait,

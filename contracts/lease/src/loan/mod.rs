@@ -12,7 +12,10 @@ use finance::{
 };
 use lpp::{
     msg::QueryLoanResponse,
-    stub::{Lpp as LppTrait, LppBatch, LppRef},
+    stub::{
+        lender::{LppLender as LppLenderTrait, LppLenderRef},
+        LppBatch,
+    },
 };
 use platform::batch::Batch;
 use profit::stub::{Profit as ProfitTrait, ProfitBatch, ProfitRef};
@@ -32,7 +35,7 @@ mod state;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct LoanDTO {
     annual_margin_interest: Percent,
-    lpp: LppRef,
+    lpp: LppLenderRef,
     interest_due_period: Duration,
     grace_period: Duration,
     current_period: InterestPeriod<Units, Percent>,
@@ -42,7 +45,7 @@ pub(crate) struct LoanDTO {
 impl LoanDTO {
     fn new_raw(
         annual_margin_interest: Percent,
-        lpp: LppRef,
+        lpp: LppLenderRef,
         interest_due_period: Duration,
         grace_period: Duration,
         current_period: InterestPeriod<Units, Percent>,
@@ -60,7 +63,7 @@ impl LoanDTO {
     }
     pub(crate) fn new(
         start: Timestamp,
-        lpp: LppRef,
+        lpp: LppLenderRef,
         annual_margin_interest: Percent,
         interest_due_period: Duration,
         grace_period: Duration,
@@ -86,7 +89,7 @@ impl LoanDTO {
         }
     }
 
-    pub(crate) fn lpp(&self) -> &LppRef {
+    pub(crate) fn lpp(&self) -> &LppLenderRef {
         &self.lpp
     }
 
@@ -108,7 +111,7 @@ pub struct Loan<Lpn, Lpp, Profit> {
 impl<Lpn, Lpp, Profit> Loan<Lpn, Lpp, Profit>
 where
     Lpn: Currency + Debug,
-    Lpp: LppTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn>,
     Profit: ProfitTrait,
 {
     pub(super) fn from_dto(dto: LoanDTO, lpp: Lpp, profit: Profit) -> Self {
@@ -439,11 +442,13 @@ mod tests {
     use lpp::{
         error::ContractError as LppError,
         msg::{
-            BalanceResponse, LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse,
-            QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
-            QueryQuoteResponse, RewardsResponse,
+            LoanResponse, OutstandingInterest, QueryLoanOutstandingInterestResponse,
+            QueryLoanResponse, QueryQuoteResponse,
         },
-        stub::{Lpp, LppBatch, LppRef},
+        stub::{
+            lender::{LppLender, LppLenderRef},
+            LppBatch,
+        },
     };
     use platform::{bank::BankAccountView, error::Result as PlatformResult};
     use profit::{
@@ -477,12 +482,12 @@ mod tests {
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-    struct LppLocalStub {
+    struct LppLenderLocalStub {
         loan: Option<LoanResponse<TestCurrency>>,
     }
 
     // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
-    impl Lpp<TestCurrency> for LppLocalStub {
+    impl LppLender<TestCurrency> for LppLenderLocalStub {
         fn id(&self) -> Addr {
             unreachable!()
         }
@@ -523,30 +528,10 @@ mod tests {
         fn quote(&self, _amount: Coin<TestCurrency>) -> LppResult<QueryQuoteResponse> {
             unreachable!()
         }
-
-        fn lpp_balance(&self) -> LppResult<LppBalanceResponse<TestCurrency>> {
-            unreachable!()
-        }
-
-        fn nlpn_price(&self) -> LppResult<PriceResponse<TestCurrency>> {
-            unreachable!()
-        }
-
-        fn config(&self) -> LppResult<QueryConfigResponse> {
-            unreachable!()
-        }
-
-        fn nlpn_balance(&self, _lender: impl Into<Addr>) -> LppResult<BalanceResponse> {
-            unreachable!()
-        }
-
-        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<RewardsResponse> {
-            unreachable!()
-        }
     }
 
-    impl From<LppLocalStub> for LppBatch {
-        fn from(_: LppLocalStub) -> Self {
+    impl From<LppLenderLocalStub> for LppBatch<LppLenderRef> {
+        fn from(_: LppLenderLocalStub) -> Self {
             unreachable!()
         }
     }
@@ -573,8 +558,8 @@ mod tests {
     fn create_loan(
         addr: &str,
         loan_response: Option<LoanResponse<TestCurrency>>,
-    ) -> Loan<TestCurrency, LppLocalStub, ProfitLocalStub> {
-        let lpp_ref = LppRef::unchecked::<_, Nls>(addr, Some(ReplyId::OpenLoanReq.into()));
+    ) -> Loan<TestCurrency, LppLenderLocalStub, ProfitLocalStub> {
+        let lpp_ref = LppLenderRef::unchecked::<_, Nls>(addr, ReplyId::OpenLoanReq.into());
 
         let profit_ref = ProfitRef::unchecked(addr);
 
@@ -590,7 +575,7 @@ mod tests {
 
         Loan::from_dto(
             loan_dto,
-            LppLocalStub {
+            LppLenderLocalStub {
                 loan: loan_response,
             },
             ProfitLocalStub {},
