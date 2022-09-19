@@ -31,7 +31,7 @@ impl Leaser {
         let lpp = LppLenderRef::try_new(
             config.lpp_addr,
             &deps.querier,
-            lease::repay_id::ReplyId::OpenLoanReq.into(),
+            0xDEADC0DEDEADC0DE,
         )?;
 
         let resp = lpp.execute(
