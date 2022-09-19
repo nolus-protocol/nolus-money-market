@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use cosmwasm_std::{Addr, Deps, DepsMut, MessageInfo, Response, StdResult};
 
 use finance::{coin::CoinDTO, liability::Liability, percent::Percent};
-use lpp::stub::LppRef;
+use lpp::stub::lender::LppLenderRef;
 
 use crate::{
     cmd::Quote,
@@ -28,7 +28,11 @@ impl Leaser {
     pub fn query_quote(deps: Deps, downpayment: CoinDTO) -> Result<QuoteResponse, ContractError> {
         let config = Config::load(deps.storage)?;
 
-        let lpp = LppRef::try_from(config.lpp_addr, &deps.querier)?;
+        let lpp = LppLenderRef::try_new(
+            config.lpp_addr,
+            &deps.querier,
+            0xDEADC0DEDEADC0DE,
+        )?;
 
         let resp = lpp.execute(
             Quote::new(

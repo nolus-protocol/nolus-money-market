@@ -2,7 +2,7 @@ use cosmwasm_std::{Coin as CwCoin, Env, Reply};
 use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
-use lpp::stub::Lpp as LppTrait;
+use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{
     bank::{self, BankAccountView},
@@ -38,7 +38,7 @@ impl<'a> WithLease for OpenLoanReq<'a> {
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppTrait<Lpn>,
+        Lpp: LppLenderTrait<Lpn>,
         TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
@@ -103,7 +103,7 @@ where
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppTrait<Lpn>,
+        Lpp: LppLenderTrait<Lpn>,
         TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,

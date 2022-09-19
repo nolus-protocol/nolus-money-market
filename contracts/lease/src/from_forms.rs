@@ -1,7 +1,8 @@
 use cosmwasm_std::{Api, QuerierWrapper, Timestamp};
 
 use finance::duration::Duration;
-use lpp::stub::LppRef;
+use lpp::stub::lender::LppLenderRef;
+
 use profit::stub::ProfitRef;
 
 use crate::{
@@ -19,7 +20,7 @@ impl NewLeaseForm {
 
         let customer = api.addr_validate(&self.customer)?;
 
-        let lpp = LppRef::try_borrow_from(
+        let lpp = LppLenderRef::try_new(
             api.addr_validate(&self.loan.lpp)?,
             querier,
             ReplyId::OpenLoanReq.into(),

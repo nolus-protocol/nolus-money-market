@@ -4,7 +4,7 @@ use cosmwasm_std::{Addr, QuerierWrapper};
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
-use lpp::stub::{Lpp as LppTrait, WithLpp};
+use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
 use profit::stub::{Profit as ProfitTrait, WithProfit};
 use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef, WithTimeAlarms};
@@ -34,7 +34,7 @@ impl<'r, L> Factory<'r, L> {
     }
 }
 
-impl<'r, L, O, E> WithLpp for Factory<'r, L>
+impl<'r, L, O, E> WithLppLender for Factory<'r, L>
 where
     L: WithLease<Output = O, Error = E>,
 {
@@ -44,7 +44,7 @@ where
     fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppTrait<Lpn>,
+        Lpp: LppLenderTrait<Lpn>,
     {
         let time_alarms = TimeAlarmsRef::try_from(self.lease_dto.time_alarms.clone())
             .expect("Time Alarms is not deployed, or wrong address is passed!");
@@ -77,7 +77,7 @@ impl<'r, L, Lpn, Lpp> WithTimeAlarms for FactoryStage2<'r, L, Lpn, Lpp>
 where
     L: WithLease,
     Lpn: Currency + Serialize,
-    Lpp: LppTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn>,
 {
     type Output = L::Output;
     type Error = L::Error;
@@ -116,7 +116,7 @@ impl<'r, L, Lpn, Lpp, TimeAlarms> WithOracle<Lpn> for FactoryStage3<'r, L, Lpn, 
 where
     L: WithLease,
     Lpn: Currency + Serialize,
-    Lpp: LppTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
 {
     type Output = L::Output;
@@ -159,7 +159,7 @@ impl<'r, L, Lpn, Lpp, TimeAlarms, Oracle> WithProfit
 where
     L: WithLease,
     Lpn: Currency + Serialize,
-    Lpp: LppTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
 {
@@ -202,7 +202,7 @@ impl<'r, L, Lpn, Lpp, Profit, TimeAlarms, Oracle> AnyVisitor
 where
     L: WithLease,
     Lpn: Currency + Serialize,
-    Lpp: LppTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn>,
     Profit: ProfitTrait,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,

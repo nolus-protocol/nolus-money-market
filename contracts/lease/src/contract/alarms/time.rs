@@ -2,7 +2,7 @@ use cosmwasm_std::{Addr, Env, Timestamp};
 use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
-use lpp::stub::Lpp as LppTrait;
+use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::bank::BankAccountView;
 use profit::stub::Profit as ProfitTrait;
@@ -52,7 +52,7 @@ where
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppTrait<Lpn>,
+        Lpp: LppLenderTrait<Lpn>,
         TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,

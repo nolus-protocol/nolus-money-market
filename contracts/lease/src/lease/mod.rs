@@ -8,7 +8,7 @@ use finance::{
     liability::Liability,
     price::Price,
 };
-use lpp::stub::Lpp as LppTrait;
+use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleBatch};
 use platform::{
     bank::{BankAccount, BankAccountView},
@@ -50,7 +50,7 @@ pub trait WithLease {
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppTrait<Lpn>,
+        Lpp: LppLenderTrait<Lpn>,
         TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
@@ -87,7 +87,7 @@ impl<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
     Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
-    Lpp: LppTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
     Profit: ProfitTrait,
@@ -236,10 +236,11 @@ mod tests {
         liability::Liability,
         percent::Percent,
     };
+    use lpp::stub::lender::{LppLender, LppLenderRef};
     use lpp::{
         error::ContractError as LppError,
         msg::{LoanResponse, OutstandingInterest, QueryLoanResponse},
-        stub::{Lpp, LppBatch, LppRef},
+        stub::LppBatch,
     };
     use market_price_oracle::{
         msg::ExecuteMsg::AddPriceAlarm,
@@ -286,16 +287,12 @@ mod tests {
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-    pub struct LppLocalStub {
+    pub struct LppLenderLocalStub {
         loan: Option<LoanResponse<TestCurrency>>,
     }
 
     // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
-    impl Lpp<TestCurrency> for LppLocalStub {
-        fn id(&self) -> Addr {
-            Addr::unchecked("0123456789ABDEF0123456789ABDEF0123456789ABDEF0123456789ABDEF")
-        }
-
+    impl LppLender<TestCurrency> for LppLenderLocalStub {
         fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
@@ -332,48 +329,24 @@ mod tests {
         fn quote(&self, _amount: Coin<TestCurrency>) -> LppResult<lpp::msg::QueryQuoteResponse> {
             unreachable!()
         }
-
-        fn lpp_balance(&self) -> LppResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
-            unreachable!()
-        }
-
-        fn nlpn_price(&self) -> LppResult<lpp::msg::PriceResponse<TestCurrency>> {
-            unreachable!()
-        }
-
-        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
-            unreachable!()
-        }
-
-        fn nlpn_balance(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::BalanceResponse> {
-            unreachable!()
-        }
-
-        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
-            unreachable!()
-        }
     }
 
-    impl From<LppLocalStub> for LppBatch {
-        fn from(_: LppLocalStub) -> Self {
+    impl From<LppLenderLocalStub> for LppBatch<LppLenderRef> {
+        fn from(_: LppLenderLocalStub) -> Self {
             unreachable!()
         }
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-    pub struct LppLocalStubUnreachable {}
+    pub struct LppLenderLocalStubUnreachable {}
 
-    impl From<LppLocalStubUnreachable> for LppBatch {
-        fn from(_: LppLocalStubUnreachable) -> Self {
+    impl From<LppLenderLocalStubUnreachable> for LppBatch<LppLenderRef> {
+        fn from(_: LppLenderLocalStubUnreachable) -> Self {
             unreachable!()
         }
     }
 
-    impl Lpp<TestCurrency> for LppLocalStubUnreachable {
-        fn id(&self) -> Addr {
-            unreachable!()
-        }
-
+    impl LppLender<TestCurrency> for LppLenderLocalStubUnreachable {
         fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
@@ -402,26 +375,6 @@ mod tests {
         }
 
         fn quote(&self, _amount: Coin<TestCurrency>) -> LppResult<lpp::msg::QueryQuoteResponse> {
-            unreachable!()
-        }
-
-        fn lpp_balance(&self) -> LppResult<lpp::msg::LppBalanceResponse<TestCurrency>> {
-            unreachable!()
-        }
-
-        fn nlpn_price(&self) -> LppResult<lpp::msg::PriceResponse<TestCurrency>> {
-            unreachable!()
-        }
-
-        fn config(&self) -> LppResult<lpp::msg::QueryConfigResponse> {
-            unreachable!()
-        }
-
-        fn nlpn_balance(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::BalanceResponse> {
-            unreachable!()
-        }
-
-        fn rewards(&self, _lender: impl Into<Addr>) -> LppResult<lpp::msg::RewardsResponse> {
             unreachable!()
         }
     }
@@ -584,12 +537,12 @@ mod tests {
         profit: P,
     ) -> Lease<TestCurrency, TestCurrency, L, P, TA, O>
     where
-        L: Lpp<TestCurrency>,
+        L: LppLender<TestCurrency>,
         TA: TimeAlarms,
         O: Oracle<TestCurrency>,
         P: Profit,
     {
-        let lpp_ref = LppRef::unchecked::<_, Nls>("lpp_addr", Some(ReplyId::OpenLoanReq.into()));
+        let lpp_ref = LppLenderRef::unchecked::<_, Nls>("lpp_addr", ReplyId::OpenLoanReq.into());
 
         let profit_ref = ProfitRef::unchecked("profit_addr");
 
@@ -631,12 +584,12 @@ mod tests {
     ) -> Lease<
         TestCurrency,
         TestCurrency,
-        LppLocalStub,
+        LppLenderLocalStub,
         ProfitLocalStub,
         TimeAlarmsLocalStub,
         OracleLocalStub,
     > {
-        let lpp_stub = LppLocalStub {
+        let lpp_stub = LppLenderLocalStub {
             loan: loan_response,
         };
 
@@ -674,7 +627,7 @@ mod tests {
         lease: Lease<
             TestCurrency,
             TestCurrency,
-            LppLocalStub,
+            LppLenderLocalStub,
             ProfitLocalStub,
             TimeAlarmsLocalStub,
             OracleLocalStub,
@@ -768,7 +721,7 @@ mod tests {
     #[test]
     // Verify that if the Lease's balance is 0, lpp won't be queried for the loan
     fn state_closed_lpp_must_not_be_called() {
-        let lpp_stub = LppLocalStubUnreachable {};
+        let lpp_stub = LppLenderLocalStubUnreachable {};
         let time_alarms_stub = TimeAlarmsLocalStubUnreachable {};
         let oracle_stub = OracleLocalStubUnreachable {};
         let profit_stub = ProfitLocalStubUnreachable {};
