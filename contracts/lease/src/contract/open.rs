@@ -32,9 +32,9 @@ impl<'a> WithLease for OpenLoanReq<'a> {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>(
+    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>,
+        lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
@@ -97,9 +97,9 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>(
+    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>,
+        lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,

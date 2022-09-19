@@ -12,8 +12,8 @@ use crate::{error::ContractResult, lease::Lease, loan::OpenReceipt};
 
 use super::LeaseDTO;
 
-impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>
-    Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>
+impl<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
+    Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,

@@ -94,6 +94,7 @@ where
                 cmd: self.cmd,
                 lease_dto: self.lease_dto,
                 lease_addr: self.lease_addr,
+                _lpn: PhantomData,
                 lpp: self.lpp,
                 time_alarms,
             },
@@ -102,15 +103,16 @@ where
     }
 }
 
-struct FactoryStage3<'r, L, Lpp, TimeAlarms> {
+struct FactoryStage3<'r, L, Lpn, Lpp, TimeAlarms> {
     cmd: L,
     lease_dto: LeaseDTO,
     lease_addr: &'r Addr,
+    _lpn: PhantomData<Lpn>,
     lpp: Lpp,
     time_alarms: TimeAlarms,
 }
 
-impl<'r, L, Lpn, Lpp, TimeAlarms> WithOracle<Lpn> for FactoryStage3<'r, L, Lpp, TimeAlarms>
+impl<'r, L, Lpn, Lpp, TimeAlarms> WithOracle<Lpn> for FactoryStage3<'r, L, Lpn, Lpp, TimeAlarms>
 where
     L: WithLease,
     Lpn: Currency + Serialize,
@@ -144,9 +146,9 @@ where
 
 struct FactoryStage4<'r, L, Lpn, Lpp, TimeAlarms, Oracle> {
     cmd: L,
-    _lpn: PhantomData<Lpn>,
     lease_dto: LeaseDTO,
     lease_addr: &'r Addr,
+    _lpn: PhantomData<Lpn>,
     lpp: Lpp,
     time_alarms: TimeAlarms,
     oracle: Oracle,
@@ -176,34 +178,34 @@ where
                 lease_addr: self.lease_addr,
                 _lpn: PhantomData,
                 lpp: self.lpp,
+                profit,
                 time_alarms: self.time_alarms,
                 oracle: self.oracle,
-                profit,
             },
         )
     }
 }
 
-struct FactoryStage5<'r, L, Lpn, Lpp, TimeAlarms, Oracle, Profit> {
+struct FactoryStage5<'r, L, Lpn, Lpp, Profit, TimeAlarms, Oracle> {
     cmd: L,
-    _lpn: PhantomData<Lpn>,
     lease_dto: LeaseDTO,
     lease_addr: &'r Addr,
+    _lpn: PhantomData<Lpn>,
     lpp: Lpp,
+    profit: Profit,
     time_alarms: TimeAlarms,
     oracle: Oracle,
-    profit: Profit,
 }
 
-impl<'r, L, Lpn, Lpp, TimeAlarms, Oracle, Profit> AnyVisitor
-    for FactoryStage5<'r, L, Lpn, Lpp, TimeAlarms, Oracle, Profit>
+impl<'r, L, Lpn, Lpp, Profit, TimeAlarms, Oracle> AnyVisitor
+    for FactoryStage5<'r, L, Lpn, Lpp, Profit, TimeAlarms, Oracle>
 where
     L: WithLease,
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
+    Profit: ProfitTrait,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
-    Profit: ProfitTrait,
 {
     type Output = L::Output;
     type Error = L::Error;
@@ -212,7 +214,7 @@ where
     where
         C: 'static + Currency + Serialize + DeserializeOwned,
     {
-        self.cmd.exec(Lease::<_, _, _, _, _, C>::from_dto(
+        self.cmd.exec(Lease::<_, C, _, _, _, _>::from_dto(
             self.lease_dto,
             self.lease_addr,
             self.lpp,

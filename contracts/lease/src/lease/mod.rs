@@ -44,9 +44,9 @@ pub trait WithLease {
     type Output;
     type Error;
 
-    fn exec<Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>(
+    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>,
+        lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
@@ -73,7 +73,7 @@ where
     lpp.execute(Factory::new(cmd, dto, addr, querier), querier)
 }
 
-pub struct Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset> {
+pub struct Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> {
     lease_addr: &'r Addr,
     customer: Addr,
     liability: Liability,
@@ -83,8 +83,8 @@ pub struct Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset> {
     _asset: PhantomData<Asset>,
 }
 
-impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>
-    Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Profit, Asset>
+impl<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
+    Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppTrait<Lpn>,
@@ -582,7 +582,7 @@ mod tests {
         time_alarms: TA,
         oracle: O,
         profit: P,
-    ) -> Lease<TestCurrency, L, TA, O, P, TestCurrency>
+    ) -> Lease<TestCurrency, TestCurrency, L, P, TA, O>
     where
         L: Lpp<TestCurrency>,
         TA: TimeAlarms,
@@ -630,11 +630,11 @@ mod tests {
         profit_addr: Addr,
     ) -> Lease<
         TestCurrency,
+        TestCurrency,
         LppLocalStub,
+        ProfitLocalStub,
         TimeAlarmsLocalStub,
         OracleLocalStub,
-        ProfitLocalStub,
-        TestCurrency,
     > {
         let lpp_stub = LppLocalStub {
             loan: loan_response,
@@ -673,11 +673,11 @@ mod tests {
     pub fn request_state(
         lease: Lease<
             TestCurrency,
+            TestCurrency,
             LppLocalStub,
+            ProfitLocalStub,
             TimeAlarmsLocalStub,
             OracleLocalStub,
-            ProfitLocalStub,
-            TestCurrency,
         >,
         bank_account: &BankStub,
     ) -> StateResponse<TestCurrency, TestCurrency> {
