@@ -11,7 +11,7 @@ use crate::{
     repay_id::ReplyId,
 };
 
-use super::{Controller, Response};
+use super::{Active, Controller, Response};
 
 #[derive(Serialize, Deserialize)]
 pub struct NoLeaseFinish {}
@@ -37,7 +37,7 @@ impl Controller for NoLeaseFinish {
                     &deps.querier,
                 )?;
 
-                Ok(Response::from(emitter, self))
+                Ok(Response::from(emitter, Active {}))
             }
         }
     }

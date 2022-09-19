@@ -11,7 +11,7 @@ use crate::{
     msg::NewLeaseForm,
 };
 
-use super::{Controller, Response};
+use super::{Controller, NoLeaseFinish, Response};
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -41,7 +41,7 @@ impl Controller for NoLease {
 
         downpayment.store(deps.storage)?;
 
-        Ok(Response::from(batch, self))
+        Ok(Response::from(batch, NoLeaseFinish {}))
     }
 }
 

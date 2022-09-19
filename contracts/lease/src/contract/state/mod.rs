@@ -34,6 +34,12 @@ impl Display for State {
     }
 }
 
+impl Default for State {
+    fn default() -> Self {
+        NoLease {}.into()
+    }
+}
+
 pub struct Response {
     pub(super) cw_response: CwResponse,
     pub(super) next_state: State,
