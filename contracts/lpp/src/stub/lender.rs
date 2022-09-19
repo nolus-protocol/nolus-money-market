@@ -18,7 +18,7 @@ use crate::{
         ExecuteMsg, LoanResponse, QueryConfigResponse, QueryLoanOutstandingInterestResponse,
         QueryLoanResponse, QueryMsg, QueryQuoteResponse,
     },
-    stub::{LppBatch, Result},
+    stub::{ContractResult, LppBatch},
 };
 
 pub trait LppLender<Lpn>
@@ -26,20 +26,18 @@ where
     Self: Into<LppBatch<LppLenderRef>>,
     Lpn: Currency,
 {
-    fn id(&self) -> Addr;
+    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> ContractResult<()>;
+    fn open_loan_resp(&self, resp: Reply) -> ContractResult<LoanResponse<Lpn>>;
+    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> ContractResult<()>;
 
-    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()>;
-    fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>>;
-    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()>;
-
-    fn loan(&self, lease: impl Into<Addr>) -> Result<QueryLoanResponse<Lpn>>;
+    fn loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>>;
 
     fn loan_outstanding_interest(
         &self,
         lease: impl Into<Addr>,
         by: Timestamp,
-    ) -> Result<QueryLoanOutstandingInterestResponse<Lpn>>;
-    fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse>;
+    ) -> ContractResult<QueryLoanOutstandingInterestResponse<Lpn>>;
+    fn quote(&self, amount: Coin<Lpn>) -> ContractResult<QueryQuoteResponse>;
 }
 
 pub trait WithLppLender {
@@ -66,7 +64,7 @@ impl LppLenderRef {
         addr: Addr,
         querier: &QuerierWrapper,
         open_loan_req_id: ReplyId,
-    ) -> Result<Self> {
+    ) -> ContractResult<Self> {
         let resp: QueryConfigResponse =
             querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
 
@@ -161,15 +159,17 @@ struct LppLenderStub<'a, C> {
     batch: Batch,
 }
 
+impl<'a, C> LppLenderStub<'a, C> {
+    fn id(&self) -> Addr {
+        self.lpp_ref.addr.clone()
+    }
+}
+
 impl<'a, Lpn> LppLender<Lpn> for LppLenderStub<'a, Lpn>
 where
     Lpn: Currency + DeserializeOwned,
 {
-    fn id(&self) -> Addr {
-        self.lpp_ref.addr.clone()
-    }
-
-    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {
+    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> ContractResult<()> {
         self.batch
             .schedule_execute_wasm_on_success_reply::<_, Lpn>(
                 &self.id(),
@@ -182,7 +182,7 @@ where
             .map_err(ContractError::from)
     }
 
-    fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>> {
+    fn open_loan_resp(&self, resp: Reply) -> ContractResult<LoanResponse<Lpn>> {
         debug_assert_eq!(resp.id, self.lpp_ref.open_loan_req_id);
 
         from_execute(resp)
@@ -194,13 +194,13 @@ where
             })
     }
 
-    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()> {
+    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> ContractResult<()> {
         self.batch
             .schedule_execute_wasm_no_reply(&self.id(), ExecuteMsg::RepayLoan(), Some(repayment))
             .map_err(ContractError::from)
     }
 
-    fn loan(&self, lease: impl Into<Addr>) -> Result<QueryLoanResponse<Lpn>> {
+    fn loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>> {
         let msg = QueryMsg::Loan {
             lease_addr: lease.into(),
         };
@@ -213,7 +213,7 @@ where
         &self,
         lease: impl Into<Addr>,
         by: Timestamp,
-    ) -> Result<QueryLoanOutstandingInterestResponse<Lpn>> {
+    ) -> ContractResult<QueryLoanOutstandingInterestResponse<Lpn>> {
         let msg = QueryMsg::LoanOutstandingInterest {
             lease_addr: lease.into(),
             outstanding_time: by,
@@ -223,7 +223,7 @@ where
             .map_err(ContractError::from)
     }
 
-    fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse> {
+    fn quote(&self, amount: Coin<Lpn>) -> ContractResult<QueryQuoteResponse> {
         let msg = QueryMsg::Quote {
             amount: amount.into(),
         };

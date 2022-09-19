@@ -7,7 +7,7 @@ use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
 use platform::batch::{Batch, ReplyId};
 
 use crate::{
-    error::ContractError,
+    error::{ContractError, ContractResult},
     msg::{
         BalanceResponse, LppBalanceResponse, PriceResponse, QueryConfigResponse, QueryMsg,
         RewardsResponse,
@@ -16,19 +16,12 @@ use crate::{
 
 pub mod lender;
 
-pub type Result<T> = StdResult<T, ContractError>;
-
-// TODO split into LppBorrow, LppLend, and LppAdmin traits
 pub trait Lpp<Lpn>
 where
     Self: Into<LppBatch<LppRef>>,
     Lpn: Currency,
 {
-    fn lpp_balance(&self) -> Result<LppBalanceResponse<Lpn>>;
-    fn nlpn_price(&self) -> Result<PriceResponse<Lpn>>;
-    fn config(&self) -> Result<QueryConfigResponse>;
-    fn nlpn_balance(&self, lender: impl Into<Addr>) -> Result<BalanceResponse>;
-    fn rewards(&self, lender: impl Into<Addr>) -> Result<RewardsResponse>;
+    fn lpp_balance(&self) -> ContractResult<LppBalanceResponse<Lpn>>;
 }
 
 pub trait WithLpp {
@@ -47,20 +40,16 @@ pub trait WithLpp {
 pub struct LppRef {
     addr: Addr,
     currency: SymbolOwned,
-    open_loan_req_id: Option<ReplyId>,
 }
 
 impl LppRef {
-    pub fn try_from(addr: Addr, querier: &QuerierWrapper) -> Result<Self> {
-        Self::try_from_maybe_borrow(addr, querier, None)
-    }
+    pub fn try_new(addr: Addr, querier: &QuerierWrapper) -> ContractResult<Self> {
+        let resp: QueryConfigResponse =
+            querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
 
-    pub fn try_borrow_from(
-        addr: Addr,
-        querier: &QuerierWrapper,
-        open_loan_req_id: ReplyId,
-    ) -> Result<Self> {
-        Self::try_from_maybe_borrow(addr, querier, Some(open_loan_req_id))
+        let currency = resp.lpn_symbol;
+
+        Ok(Self { addr, currency })
     }
 
     pub fn addr(&self) -> &Addr {
@@ -109,23 +98,6 @@ impl LppRef {
         )
     }
 
-    fn try_from_maybe_borrow(
-        addr: Addr,
-        querier: &QuerierWrapper,
-        open_loan_req_id: Option<ReplyId>,
-    ) -> Result<Self> {
-        let resp: QueryConfigResponse =
-            querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
-
-        let currency = resp.lpn_symbol;
-
-        Ok(Self {
-            addr,
-            currency,
-            open_loan_req_id,
-        })
-    }
-
     fn into_stub<'a, C>(self, querier: &'a QuerierWrapper) -> LppStub<'a, C> {
         LppStub {
             lpp_ref: self,
@@ -138,7 +110,7 @@ impl LppRef {
 
 #[cfg(feature = "testing")]
 impl LppRef {
-    pub fn unchecked<A, Lpn>(addr: A, open_loan_req_id: Option<ReplyId>) -> Self
+    pub fn unchecked<A, Lpn>(addr: A) -> Self
     where
         A: Into<String>,
         Lpn: Currency,
@@ -146,7 +118,6 @@ impl LppRef {
         Self {
             addr: Addr::unchecked(addr),
             currency: Lpn::SYMBOL.into(),
-            open_loan_req_id,
         }
     }
 }
@@ -168,40 +139,8 @@ impl<'a, Lpn> Lpp<Lpn> for LppStub<'a, Lpn>
 where
     Lpn: Currency + DeserializeOwned,
 {
-    fn lpp_balance(&self) -> Result<LppBalanceResponse<Lpn>> {
+    fn lpp_balance(&self) -> ContractResult<LppBalanceResponse<Lpn>> {
         let msg = QueryMsg::LppBalance();
-        self.querier
-            .query_wasm_smart(self.id(), &msg)
-            .map_err(ContractError::from)
-    }
-
-    fn nlpn_price(&self) -> Result<PriceResponse<Lpn>> {
-        let msg = QueryMsg::Price();
-        self.querier
-            .query_wasm_smart(self.id(), &msg)
-            .map_err(ContractError::from)
-    }
-
-    fn config(&self) -> Result<QueryConfigResponse> {
-        let msg = QueryMsg::Config();
-        self.querier
-            .query_wasm_smart(self.id(), &msg)
-            .map_err(ContractError::from)
-    }
-
-    fn nlpn_balance(&self, lender: impl Into<Addr>) -> Result<BalanceResponse> {
-        let msg = QueryMsg::Balance {
-            address: lender.into(),
-        };
-        self.querier
-            .query_wasm_smart(self.id(), &msg)
-            .map_err(ContractError::from)
-    }
-
-    fn rewards(&self, lender: impl Into<Addr>) -> Result<RewardsResponse> {
-        let msg = QueryMsg::Rewards {
-            address: lender.into(),
-        };
         self.querier
             .query_wasm_smart(self.id(), &msg)
             .map_err(ContractError::from)

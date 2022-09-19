@@ -126,7 +126,7 @@ pub fn try_dispatch(
     let oracle = OracleRef::try_from(config.oracle.clone(), &deps.querier)?;
 
     let lpp_address = config.lpp.clone();
-    let lpp = LppRef::try_from(lpp_address.clone(), &deps.querier)?;
+    let lpp = LppRef::try_new(lpp_address.clone(), &deps.querier)?;
     let emitter: Emitter = lpp.execute(
         Dispatch::new(oracle, last_dispatch, config, block_time, deps.querier)?,
         &deps.querier,

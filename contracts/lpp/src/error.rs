@@ -1,5 +1,6 @@
-use cosmwasm_std::StdError;
 use std::num::TryFromIntError;
+
+use cosmwasm_std::StdError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -66,3 +67,5 @@ pub enum ContractError {
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
 }
+
+pub type ContractResult<T> = Result<T, ContractError>;
