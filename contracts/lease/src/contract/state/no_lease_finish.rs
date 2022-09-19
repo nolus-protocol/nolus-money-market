@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use cosmwasm_std::{DepsMut, Env, Reply};
 use platform::bank::BankStub;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     contract::open::OpenLoanResp,
@@ -10,12 +11,13 @@ use crate::{
     repay_id::ReplyId,
 };
 
-use super::{Controller, ExecuteResponse};
+use super::{Controller, Response};
 
+#[derive(Serialize, Deserialize)]
 pub struct NoLeaseFinish {}
 
 impl Controller for NoLeaseFinish {
-    fn reply(self, deps: DepsMut, env: Env, msg: Reply) -> ContractResult<ExecuteResponse> {
+    fn reply(self, deps: &mut DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
         // TODO swap the received loan and the downpayment to lease.currency
         let lease = LeaseDTO::load(deps.storage)?;
 
@@ -35,7 +37,7 @@ impl Controller for NoLeaseFinish {
                     &deps.querier,
                 )?;
 
-                Ok(ExecuteResponse::from(emitter, self))
+                Ok(Response::from(emitter, self))
             }
         }
     }

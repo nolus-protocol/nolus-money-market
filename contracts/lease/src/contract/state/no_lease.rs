@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use cosmwasm_std::{DepsMut, Env, MessageInfo};
 use cw2::set_contract_version;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     contract::open::{OpenLoanReq, OpenLoanReqResult},
@@ -10,21 +11,22 @@ use crate::{
     msg::NewLeaseForm,
 };
 
-use super::{Controller, ExecuteResponse};
+use super::{Controller, Response};
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[derive(Serialize, Deserialize)]
 pub struct NoLease {}
 
 impl Controller for NoLease {
     fn instantiate(
         self,
-        deps: DepsMut,
+        deps: &mut DepsMut,
         env: Env,
         info: MessageInfo,
         form: NewLeaseForm,
-    ) -> ContractResult<ExecuteResponse> {
+    ) -> ContractResult<Response> {
         set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
         let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
@@ -39,7 +41,7 @@ impl Controller for NoLease {
 
         downpayment.store(deps.storage)?;
 
-        Ok(ExecuteResponse::from(batch, self))
+        Ok(Response::from(batch, self))
     }
 }
 

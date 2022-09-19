@@ -1,7 +1,8 @@
 use std::fmt::Display;
 
-use cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper};
+use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper};
 use platform::{bank::BankStub, batch::Emitter};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     contract::{
@@ -15,18 +16,19 @@ use crate::{
     msg::{ExecuteMsg, StateQuery},
 };
 
-use super::{Controller, ExecuteResponse, QueryResponse};
+use super::{Controller, Response};
 
+#[derive(Serialize, Deserialize)]
 pub struct Active {}
 
 impl Controller for Active {
     fn execute(
         self,
-        deps: DepsMut,
+        deps: &mut DepsMut,
         env: Env,
         info: MessageInfo,
         msg: ExecuteMsg,
-    ) -> crate::error::ContractResult<ExecuteResponse> {
+    ) -> ContractResult<Response> {
         let lease = LeaseDTO::load(deps.storage)?;
 
         let account = BankStub::my_account(&env, &deps.querier);
@@ -64,22 +66,21 @@ impl Controller for Active {
                 Ok(response)
             }
         }?;
-        Ok(ExecuteResponse::from(cw_resp, self))
+        Ok(Response::from(cw_resp, self))
     }
 
-    fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<QueryResponse> {
+    fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
         let lease = LeaseDTO::load(deps.storage)?;
 
         let bank = BankStub::my_account(&env, &deps.querier);
 
         // TODO think on taking benefit from having a LppView trait
-        let resp = lease::execute(
+        lease::execute(
             lease,
             LeaseState::new(env.block.time, bank),
             &env.contract.address,
             &deps.querier,
-        )?;
-        Ok(QueryResponse::from(resp, self))
+        )
     }
 }
 

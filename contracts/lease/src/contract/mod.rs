@@ -1,10 +1,11 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response as CwResponse};
+use cw_storage_plus::Item;
 
 use crate::{
     contract::state::{Response, State},
-    error::ContractResult,
+    error::{ContractError, ContractResult},
     msg::{ExecuteMsg, NewLeaseForm, StateQuery},
 };
 
@@ -17,64 +18,67 @@ mod open;
 mod repay;
 mod state;
 
+const DB_ITEM: Item<State> = Item::new("state");
+
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     form: NewLeaseForm,
 ) -> ContractResult<CwResponse> {
-    NoLease {}.instantiate(deps, env, info, form).map(|resp| {
-        let Response {
-            cw_response,
-            next_state,
-        } = resp;
-        // TODO store the next_state
-        debug_assert!(matches!(next_state, State::NoLease(_)));
-        cw_response
-    })
+    NoLease {}.instantiate(&mut deps, env, info, form).and_then(
+        |Response {
+             cw_response,
+             next_state,
+         }| {
+            save(&next_state, &mut deps)?;
+
+            Ok(cw_response)
+        },
+    )
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
-pub fn reply(deps: DepsMut, env: Env, msg: Reply) -> ContractResult<CwResponse> {
-    NoLeaseFinish {}.reply(deps, env, msg).map(|resp| {
-        let Response {
-            cw_response,
-            next_state,
-        } = resp;
-        // TODO store the next_state
-        debug_assert!(matches!(next_state, State::NoLeaseFinish(_)));
-        cw_response
-    })
+pub fn reply(mut deps: DepsMut, env: Env, msg: Reply) -> ContractResult<CwResponse> {
+    NoLeaseFinish {}.reply(&mut deps, env, msg).and_then(
+        |Response {
+             cw_response,
+             next_state,
+         }| {
+            save(&next_state, &mut deps)?;
+
+            Ok(cw_response)
+        },
+    )
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
-    Active {}.execute(deps, env, info, msg).map(|resp| {
-        let Response {
-            cw_response,
-            next_state,
-        } = resp;
-        // TODO store the next_state
-        debug_assert!(matches!(next_state, State::Active(_)));
-        cw_response
-    })
+    Active {}.execute(&mut deps, env, info, msg).and_then(
+        |Response {
+             cw_response,
+             next_state,
+         }| {
+            save(&next_state, &mut deps)?;
+
+            Ok(cw_response)
+        },
+    )
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, msg: StateQuery) -> ContractResult<Binary> {
-    Active {}.query(deps, env, msg).map(|resp| {
-        let Response {
-            cw_response,
-            next_state,
-        } = resp;
-        // TODO store the next_state
-        debug_assert!(matches!(next_state, State::Active(_)));
-        cw_response
-    })
+    Active {}.query(deps, env, msg)
+}
+
+fn save(next_state: &State, deps: &mut DepsMut) -> ContractResult<()> {
+    DB_ITEM
+        .save(deps.storage, next_state)
+        .map_err(ContractError::from)
 }
