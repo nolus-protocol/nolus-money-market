@@ -4,14 +4,11 @@ use cosmwasm_std::{Addr, QuerierWrapper};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
-use platform::batch::{Batch, ReplyId};
+use platform::batch::Batch;
 
 use crate::{
     error::{ContractError, ContractResult},
-    msg::{
-        BalanceResponse, LppBalanceResponse, PriceResponse, QueryConfigResponse, QueryMsg,
-        RewardsResponse,
-    },
+    msg::{LppBalanceResponse, QueryConfigResponse, QueryMsg},
 };
 
 pub mod lender;

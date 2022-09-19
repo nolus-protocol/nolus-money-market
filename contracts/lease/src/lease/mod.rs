@@ -293,10 +293,6 @@ mod tests {
 
     // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl LppLender<TestCurrency> for LppLenderLocalStub {
-        fn id(&self) -> Addr {
-            Addr::unchecked("0123456789ABDEF0123456789ABDEF0123456789ABDEF0123456789ABDEF")
-        }
-
         fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
@@ -351,10 +347,6 @@ mod tests {
     }
 
     impl LppLender<TestCurrency> for LppLenderLocalStubUnreachable {
-        fn id(&self) -> Addr {
-            unreachable!()
-        }
-
         fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
         }
