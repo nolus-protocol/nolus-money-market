@@ -7,19 +7,26 @@ use serde::{Deserialize, Serialize};
 use crate::{
     contract::open::OpenLoanResp,
     error::{ContractError, ContractResult},
-    lease::{self, DownpaymentDTO, LeaseDTO},
+    lease::{self, DownpaymentDTO},
+    msg::NewLeaseForm,
     repay_id::ReplyId,
 };
 
 use super::{Active, Controller, Response};
 
 #[derive(Serialize, Deserialize)]
-pub struct NoLeaseFinish {}
+pub struct NoLeaseFinish {
+    pub(super) form: NewLeaseForm,
+    pub(super) downpayment: DownpaymentDTO,
+}
 
 impl Controller for NoLeaseFinish {
     fn reply(self, deps: &mut DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
         // TODO swap the received loan and the downpayment to lease.currency
-        let lease = LeaseDTO::load(deps.storage)?;
+        let lease = self
+            .form
+            .into_lease_dto(env.block.time, deps.api, &deps.querier)?;
+        let lease_cloned = lease.clone();
 
         let account = BankStub::my_account(&env, &deps.querier);
 
@@ -28,16 +35,19 @@ impl Controller for NoLeaseFinish {
 
         match id {
             ReplyId::OpenLoanReq => {
-                let downpayment = DownpaymentDTO::remove(deps.storage)?;
-
                 let emitter = lease::execute(
                     lease,
-                    OpenLoanResp::new(msg, downpayment, account, &env),
+                    OpenLoanResp::new(msg, self.downpayment, account, &env),
                     &env.contract.address,
                     &deps.querier,
                 )?;
 
-                Ok(Response::from(emitter, Active {}))
+                Ok(Response::from(
+                    emitter,
+                    Active {
+                        lease: lease_cloned,
+                    },
+                ))
             }
         }
     }

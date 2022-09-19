@@ -1,5 +1,4 @@
-use cosmwasm_std::{Addr, StdResult, Storage};
-use cw_storage_plus::Item;
+use cosmwasm_std::Addr;
 use serde::{Deserialize, Serialize};
 
 use finance::{currency::SymbolOwned, liability::Liability};
@@ -16,9 +15,7 @@ pub struct LeaseDTO {
     pub(crate) oracle: Addr,
 }
 
-impl<'a> LeaseDTO {
-    const DB_ITEM: Item<'a, LeaseDTO> = Item::new("lease");
-
+impl LeaseDTO {
     pub(crate) fn new(
         customer: Addr,
         currency: SymbolOwned,
@@ -35,13 +32,5 @@ impl<'a> LeaseDTO {
             time_alarms,
             oracle,
         }
-    }
-
-    pub(crate) fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        Self::DB_ITEM.save(storage, self)
-    }
-
-    pub(crate) fn load(storage: &dyn Storage) -> StdResult<Self> {
-        Self::DB_ITEM.load(storage)
     }
 }
