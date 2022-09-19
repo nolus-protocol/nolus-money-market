@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response as CwResponse};
 use enum_dispatch::enum_dispatch;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     error::{ContractError as Err, ContractResult},
@@ -16,6 +17,7 @@ pub use no_lease::NoLease;
 pub use no_lease_finish::NoLeaseFinish;
 
 #[enum_dispatch(Controller)]
+#[derive(Serialize, Deserialize)]
 pub enum State {
     NoLease,
     NoLeaseFinish,
@@ -32,18 +34,21 @@ impl Display for State {
     }
 }
 
-pub type ExecuteResponse = Response<CwResponse>;
-pub type QueryResponse = Response<Binary>;
+impl Default for State {
+    fn default() -> Self {
+        NoLease {}.into()
+    }
+}
 
-pub struct Response<CwResp> {
-    pub(super) cw_response: CwResp,
+pub struct Response {
+    pub(super) cw_response: CwResponse,
     pub(super) next_state: State,
 }
 
-impl<CwResp> Response<CwResp> {
+impl Response {
     pub fn from<R, S>(resp: R, next_state: S) -> Self
     where
-        R: Into<CwResp>,
+        R: Into<CwResponse>,
         S: Into<State>,
     {
         Self {
@@ -61,29 +66,29 @@ where
 {
     fn instantiate(
         self,
-        _deps: DepsMut,
+        _deps: &mut DepsMut,
         _env: Env,
         _info: MessageInfo,
         _form: NewLeaseForm,
-    ) -> ContractResult<ExecuteResponse> {
+    ) -> ContractResult<Response> {
         err("instantiate", &self)
     }
 
-    fn reply(self, _deps: DepsMut, _env: Env, _msg: Reply) -> ContractResult<ExecuteResponse> {
+    fn reply(self, _deps: &mut DepsMut, _env: Env, _msg: Reply) -> ContractResult<Response> {
         err("reply", &self)
     }
 
     fn execute(
         self,
-        _deps: DepsMut,
+        _deps: &mut DepsMut,
         _env: Env,
         _info: MessageInfo,
         _msg: ExecuteMsg,
-    ) -> ContractResult<ExecuteResponse> {
+    ) -> ContractResult<Response> {
         err("execute", &self)
     }
 
-    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<QueryResponse> {
+    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<Binary> {
         err("query", &self)
     }
 }
