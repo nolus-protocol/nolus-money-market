@@ -22,7 +22,7 @@ pub struct OracleBatch {
 pub trait Oracle<OracleBase>
 where
     Self: Into<OracleBatch>,
-    OracleBase: Currency + Serialize,
+    OracleBase: Currency,
 {
     fn owned_by(&self, addr: &Addr) -> bool;
 
@@ -33,7 +33,7 @@ where
 
 pub trait WithOracle<OracleBase>
 where
-    OracleBase: Currency + Serialize,
+    OracleBase: Currency,
 {
     type Output;
     type Error;
@@ -75,7 +75,7 @@ impl OracleRef {
 
     pub fn execute<OracleBase, V, O, E>(self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
     where
-        OracleBase: Currency + Serialize,
+        OracleBase: Currency,
         V: WithOracle<OracleBase, Output = O, Error = E>,
     {
         if OracleBase::SYMBOL == self.base_currency {
@@ -124,7 +124,7 @@ impl<'a, OracleBase> OracleStub<'a, OracleBase> {
 
 impl<'a, OracleBase> Oracle<OracleBase> for OracleStub<'a, OracleBase>
 where
-    OracleBase: Currency + Serialize,
+    OracleBase: Currency,
 {
     fn owned_by(&self, addr: &Addr) -> bool {
         self.oracle_ref.owned_by(addr)
