@@ -1,27 +1,22 @@
-use std::{
-    collections::{HashMap, HashSet},
-    convert::TryInto,
-};
+use std::collections::{HashMap, HashSet};
 
 use cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage, Timestamp};
-use marketprice::{
-    feeders::{PriceFeeders, PriceFeedersError},
-    market_price::{PriceFeeds, PriceFeedsError, PriceQuery},
-    storage::{Denom, Price},
-};
-
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use std::convert::TryFrom;
 
 use finance::{
     currency::{Currency, SymbolOwned},
     duration::Duration,
     price::Price as FinPrice,
 };
+use marketprice::{
+    feeders::{PriceFeeders, PriceFeedersError},
+    market_price::{PriceFeeds, PriceFeedsError, PriceQuery},
+    storage::{Denom, Price},
+};
 
 use crate::{state::config::Config, ContractError};
+
 const PRECISION_FACTOR: u128 = 1_000_000_000;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -168,6 +163,7 @@ impl MarketOracle {
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::Addr;
+
     use marketprice::storage::Price;
 
     use crate::{oracle::MarketOracle, state::config::Config};

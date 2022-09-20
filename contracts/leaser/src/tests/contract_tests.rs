@@ -1,18 +1,23 @@
-use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{
-    coins, from_binary, to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
+    coins, from_binary,
+    testing::{mock_dependencies, mock_env, mock_info},
+    to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{Currency, Usdc};
-use finance::liability::Liability;
-use finance::percent::Percent;
+use finance::{
+    currency::{Currency, Usdc},
+    liability::Liability,
+    percent::Percent,
+};
 
-use crate::cmd::Borrow;
-use crate::contract::{execute, instantiate, query};
-use crate::msg::{ConfigResponse, ExecuteMsg, QueryMsg, Repayment};
-use crate::ContractError;
+use crate::{
+    cmd::Borrow,
+    contract::{execute, instantiate, query},
+    msg::{ConfigResponse, ExecuteMsg, QueryMsg, Repayment},
+    ContractError,
+};
 
 const CREATOR: &str = "creator";
 const LPP_ADDR: &str = "test";

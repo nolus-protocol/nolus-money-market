@@ -2,8 +2,8 @@ use cosmwasm_std::{coin, Addr};
 use cw_multi_test::Executor;
 
 use finance::{liability::Liability, percent::Percent};
-use lease::contract::{execute, instantiate, query, reply};
 use lease::{
+    contract::{execute, instantiate, query, reply},
     error::ContractError,
     msg::{ExecuteMsg, LoanForm, NewLeaseForm, StateQuery},
 };

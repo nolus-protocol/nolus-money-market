@@ -1,6 +1,7 @@
-use crate::{msg::InstantiateMsg, tests::helpers::CwTemplateContract};
 use cosmwasm_std::{Addr, Coin, Empty, Uint128};
 use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
+
+use crate::{msg::InstantiateMsg, tests::helpers::CwTemplateContract};
 
 pub fn contract_template() -> Box<dyn Contract<Empty>> {
     let contract = ContractWrapper::new(
@@ -57,8 +58,9 @@ fn proper_instantiate() -> (App, CwTemplateContract) {
 }
 
 mod config {
-    use super::*;
     use crate::msg::ExecuteMsg;
+
+    use super::*;
 
     #[test]
     #[should_panic(expected = "ContractData not found")]

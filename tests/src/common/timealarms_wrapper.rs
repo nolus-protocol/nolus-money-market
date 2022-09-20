@@ -1,8 +1,7 @@
 use cosmwasm_std::{coins, Addr, StdError};
 use cw_multi_test::Executor;
-use finance::coin::Amount;
-use finance::currency::SymbolOwned;
 
+use finance::{coin::Amount, currency::SymbolOwned};
 use timealarms::{
     contract::{execute, instantiate, reply},
     msg::{ExecuteMsg, InstantiateMsg},

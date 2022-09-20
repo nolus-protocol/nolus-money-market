@@ -6,11 +6,14 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 
-use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::profit::Profit;
-use crate::state::config::Config;
 use finance::duration::Duration;
+
+use crate::{
+    error::ContractError,
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    profit::Profit,
+    state::config::Config,
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -93,9 +96,12 @@ mod tests {
         duration::Duration,
     };
 
+    use crate::{
+        error::ContractError,
+        msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
+    };
+
     use super::{execute, instantiate, query};
-    use crate::error::ContractError;
-    use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 
     fn instantiate_msg() -> InstantiateMsg {
         InstantiateMsg {

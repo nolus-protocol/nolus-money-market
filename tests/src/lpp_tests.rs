@@ -14,15 +14,15 @@ use lpp::msg::{
     QueryLoanResponse, QueryMsg as QueryLpp, QueryQuoteResponse, RewardsResponse,
 };
 
-use crate::common::profit_wrapper::ProfitWrapper;
-use crate::common::treasury_wrapper::TreasuryWrapper;
 use crate::common::{
     lease_wrapper::{LeaseWrapper, LeaseWrapperAddresses, LeaseWrapperConfig},
     lpp_wrapper::LppWrapper,
     mock_app,
     oracle_wrapper::MarketOracleWrapper,
+    profit_wrapper::ProfitWrapper,
     test_case::TestCase,
     timealarms_wrapper::TimeAlarmsWrapper,
+    treasury_wrapper::TreasuryWrapper,
     AppExt, ADMIN, USER,
 };
 

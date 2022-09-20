@@ -263,13 +263,12 @@ mod tests {
     use finance::percent::Percent;
     use lpp::msg::LoanResponse;
 
-    use crate::loan::RepayReceipt;
     use crate::{
         lease::{
             tests::{coin, lease_setup, LEASE_START},
             LeaseInfo, LiquidationInfo, Status, WarningLevel,
         },
-        loan::LiabilityStatus,
+        loan::{LiabilityStatus, RepayReceipt},
     };
 
     use super::Cause;

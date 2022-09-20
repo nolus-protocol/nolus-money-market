@@ -1,25 +1,19 @@
-use cosmwasm_std::QuerierWrapper;
-use cosmwasm_std::StdResult;
-use cosmwasm_std::Timestamp;
+use cosmwasm_std::{QuerierWrapper, StdResult, Timestamp};
 use serde::Serialize;
 
-use finance::coin::Coin;
-use finance::currency::Currency;
-use finance::currency::Nls;
-use finance::duration::Duration;
-use finance::interest::InterestPeriod;
+use finance::{
+    coin::Coin,
+    currency::{Currency, Nls},
+    duration::Duration,
+    interest::InterestPeriod,
+};
 use lpp::stub::{Lpp as LppTrait, WithLpp};
 use oracle::stub::OracleRef;
-use platform::batch::Batch;
-use platform::batch::Emit;
-use platform::batch::Emitter;
+use platform::batch::{Batch, Emit, Emitter};
 
-use crate::cmd::Result as DispatcherResult;
-use crate::state::Config;
-use crate::ContractError;
+use crate::{cmd::Result as DispatcherResult, state::Config, ContractError};
 
-use super::Dispatch;
-use super::PriceConvert;
+use super::{Dispatch, PriceConvert};
 
 impl<'a> WithLpp for Dispatch<'a> {
     type Output = Emitter;

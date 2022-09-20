@@ -236,11 +236,13 @@ mod tests {
         liability::Liability,
         percent::Percent,
     };
-    use lpp::stub::lender::{LppLender, LppLenderRef};
     use lpp::{
         error::ContractError as LppError,
         msg::{LoanResponse, OutstandingInterest, QueryLoanResponse},
-        stub::LppBatch,
+        stub::{
+            lender::{LppLender, LppLenderRef},
+            LppBatch,
+        },
     };
     use market_price_oracle::{
         msg::ExecuteMsg::AddPriceAlarm,

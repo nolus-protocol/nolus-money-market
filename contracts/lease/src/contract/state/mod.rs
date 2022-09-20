@@ -9,12 +9,11 @@ use crate::{
     msg::{ExecuteMsg, NewLeaseForm, StateQuery},
 };
 
+pub use self::{active::Active, no_lease::NoLease, no_lease_finish::NoLeaseFinish};
+
 mod active;
 mod no_lease;
 mod no_lease_finish;
-pub use active::Active;
-pub use no_lease::NoLease;
-pub use no_lease_finish::NoLeaseFinish;
 
 #[enum_dispatch(Controller)]
 #[derive(Serialize, Deserialize)]

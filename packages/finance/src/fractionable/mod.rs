@@ -1,14 +1,15 @@
-mod coin;
-mod deprecated;
-mod duration;
-mod percent;
-
 use std::{
     fmt::Debug,
     ops::{Div, Mul},
 };
 
 use crate::{duration::Units as TimeUnits, percent::Units as PercentUnits, ratio::Ratio};
+
+mod coin;
+mod deprecated;
+mod duration;
+mod percent;
+
 pub trait Fractionable<U> {
     fn safe_mul<F>(self, fraction: &F) -> Self
     where

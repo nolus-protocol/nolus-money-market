@@ -2,13 +2,14 @@ use cosmwasm_std::{
     to_binary, Addr, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdResult, Storage, Timestamp,
     WasmMsg,
 };
+
+use finance::{coin::Coin, currency::Nls, duration::Duration};
 use platform::{
     bank::{BankAccount, BankAccountView, BankStub},
     batch::{Batch, Emit, Emitter},
 };
 
 use crate::{msg::ConfigResponse, state::config::Config, ContractError};
-use finance::{coin::Coin, currency::Nls, duration::Duration};
 
 pub struct Profit {}
 

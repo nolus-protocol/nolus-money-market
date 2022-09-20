@@ -6,17 +6,18 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 
-use finance::currency::Nls;
-use finance::duration::Duration;
+use finance::{currency::Nls, duration::Duration};
 use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
 
-use crate::cmd::Dispatch;
-use crate::error::ContractError;
-use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::Config;
-use crate::state::DispatchLog;
+use crate::{
+    cmd::Dispatch,
+    error::ContractError,
+    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
+    state::Config,
+    state::DispatchLog,
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -148,9 +149,11 @@ mod tests {
         Addr, DepsMut,
     };
 
-    use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-    use crate::state::tvl_intervals::{Intervals, Stop};
-    use crate::ContractError;
+    use crate::{
+        msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
+        state::tvl_intervals::{Intervals, Stop},
+        ContractError,
+    };
 
     use super::{execute, instantiate, query};
 

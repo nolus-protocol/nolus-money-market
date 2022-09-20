@@ -1,9 +1,10 @@
 use std::cmp::Ordering;
 
 use cosmwasm_std::{StdError, StdResult};
-use finance::percent::Percent;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use finance::percent::Percent;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Eq)]
 pub struct Stop {

@@ -296,13 +296,12 @@ where
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::testing::{self, MOCK_CONTRACT_ADDR};
-    use cosmwasm_std::{Addr, Coin as CwCoin, Timestamp, Uint64};
+    use cosmwasm_std::{
+        testing::{self, MOCK_CONTRACT_ADDR},
+        Addr, Coin as CwCoin, Timestamp, Uint64,
+    };
 
-    use finance::currency::Usdc;
-    use finance::duration::Duration;
-    use finance::percent::Units;
-    use finance::price;
+    use finance::{currency::Usdc, duration::Duration, percent::Units, price};
 
     use crate::state::{Config, Deposit, Total};
 

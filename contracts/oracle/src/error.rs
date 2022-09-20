@@ -1,11 +1,12 @@
 use std::convert::Infallible;
 
 use cosmwasm_std::{Addr, StdError};
+use thiserror::Error;
+
 use marketprice::{
     alarms::errors::AlarmError, feeders::PriceFeedersError, market_price::PriceFeedsError,
     storage::DenomPair,
 };
-use thiserror::Error;
 
 use crate::state::supported_pairs::ResolutionPath;
 

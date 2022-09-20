@@ -4,9 +4,9 @@ use cosmwasm_std::{Addr, Timestamp};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::market_price::PriceFeedsError;
-use crate::storage::Price;
 use finance::duration::Duration;
+
+use crate::{market_price::PriceFeedsError, storage::Price};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Observation {

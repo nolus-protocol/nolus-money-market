@@ -1,15 +1,19 @@
 use std::collections::HashSet;
 
-use crate::contract::{execute, query};
-use crate::msg::{ConfigResponse, ExecuteMsg, PricesResponse, QueryMsg};
-use crate::tests::common::{
-    dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test, CREATOR,
+use cosmwasm_std::{
+    coins, from_binary,
+    testing::{mock_env, mock_info},
+    Addr,
 };
-use crate::ContractError;
 
-use cosmwasm_std::testing::{mock_env, mock_info};
-use cosmwasm_std::{coins, from_binary, Addr};
 use marketprice::storage::Price;
+
+use crate::{
+    contract::{execute, query},
+    msg::{ConfigResponse, ExecuteMsg, PricesResponse, QueryMsg},
+    tests::common::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test, CREATOR},
+    ContractError,
+};
 
 use super::common::dummy_feed_prices_msg;
 

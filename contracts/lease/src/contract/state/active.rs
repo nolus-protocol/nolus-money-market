@@ -3,8 +3,9 @@ use std::fmt::Display;
 use cosmwasm_std::{
     Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Response as CwResponse,
 };
-use platform::{bank::BankStub, batch::Emitter};
 use serde::{Deserialize, Serialize};
+
+use platform::{bank::BankStub, batch::Emitter};
 
 use crate::{
     contract::{

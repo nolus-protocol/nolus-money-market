@@ -21,8 +21,9 @@ impl<'a> TimeOracle<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use cosmwasm_std::testing;
+
+    use super::*;
 
     #[test]
     fn test_update_and_query_global_time() {

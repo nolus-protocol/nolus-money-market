@@ -1,8 +1,9 @@
 use std::fmt::Display;
 
 use cosmwasm_std::{DepsMut, Env, Reply};
-use platform::bank::BankStub;
 use serde::{Deserialize, Serialize};
+
+use platform::bank::BankStub;
 
 use crate::{
     contract::open::OpenLoanResp,

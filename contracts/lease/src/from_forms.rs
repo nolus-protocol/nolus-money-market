@@ -2,7 +2,6 @@ use cosmwasm_std::{Api, QuerierWrapper, Timestamp};
 
 use finance::duration::Duration;
 use lpp::stub::lender::LppLenderRef;
-
 use profit::stub::ProfitRef;
 
 use crate::{

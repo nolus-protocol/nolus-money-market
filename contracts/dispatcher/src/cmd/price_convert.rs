@@ -1,9 +1,11 @@
 use cosmwasm_std::StdResult;
 use serde::Serialize;
 
-use finance::coin::Coin;
-use finance::currency::{Currency, Nls};
-use finance::price::{total, Price};
+use finance::{
+    coin::Coin,
+    currency::{Currency, Nls},
+    price::{total, Price},
+};
 use oracle::stub::{Oracle as OracleTrait, WithOracle};
 
 use crate::ContractError;

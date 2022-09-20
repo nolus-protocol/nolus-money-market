@@ -1,12 +1,14 @@
 use std::time::SystemTime;
 
-use cosmwasm_std::testing::mock_dependencies;
-use cosmwasm_std::{Api, DepsMut, Timestamp};
+use cosmwasm_std::{testing::mock_dependencies, Api, DepsMut, Timestamp};
 
-use crate::feeders::PriceFeeders;
-use crate::market_price::{PriceFeeds, PriceFeedsError, PriceQuery};
-use crate::storage::Price;
 use finance::duration::Duration;
+
+use crate::{
+    feeders::PriceFeeders,
+    market_price::{PriceFeeds, PriceFeedsError, PriceQuery},
+    storage::Price,
+};
 
 const MINUTE: Duration = Duration::from_secs(60);
 

@@ -15,10 +15,10 @@ use platform::bank::BankAccountView;
 use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
-use crate::loan::LiabilityStatus;
 use crate::{
     error::ContractResult,
     lease::{Lease, LiquidationInfo, OnAlarmResult, Status, WarningLevel},
+    loan::LiabilityStatus,
 };
 
 impl<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
@@ -254,9 +254,9 @@ mod tests {
     use platform::batch::Batch;
     use time_alarms::msg::ExecuteMsg::AddAlarm;
 
-    use crate::{
-        lease::tests::{coin, lease_setup},
-        lease::{LeaseInfo, Status, WarningLevel},
+    use crate::lease::{
+        tests::{coin, lease_setup},
+        LeaseInfo, Status, WarningLevel,
     };
 
     #[test]

@@ -1,4 +1,5 @@
 use cosmwasm_std::{QuerierWrapper, Timestamp};
+
 use finance::{
     coin::Coin,
     currency::{Currency, Nls},

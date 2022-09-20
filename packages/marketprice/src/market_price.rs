@@ -1,14 +1,18 @@
-use crate::feed::{Observation, PriceFeed};
-use crate::storage::{Coin, DenomPair, Price};
 use cosmwasm_std::{Addr, Order, StdError, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
-use finance::currency::Currency;
-use finance::duration::Duration;
-
 use thiserror::Error;
 
-use finance::coin::Coin as FinCoin;
-use finance::price::{self, Price as FinPrice};
+use finance::{
+    coin::Coin as FinCoin,
+    currency::Currency,
+    duration::Duration,
+    price::{self, Price as FinPrice},
+};
+
+use crate::{
+    feed::{Observation, PriceFeed},
+    storage::{Coin, DenomPair, Price},
+};
 
 pub struct PriceQuery {
     denom_pair: DenomPair,
