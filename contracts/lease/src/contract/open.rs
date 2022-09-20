@@ -17,17 +17,17 @@ use crate::{
     lease::{DownpaymentDTO, Lease, WithLease},
 };
 
-pub struct OpenLoanReq<'a> {
-    downpayment: &'a [CwCoin],
+pub struct OpenLoanReq {
+    downpayment: Vec<CwCoin>,
 }
 
-impl<'a> OpenLoanReq<'a> {
-    pub fn new(downpayment: &'a [CwCoin]) -> Self {
+impl OpenLoanReq {
+    pub fn new(downpayment: Vec<CwCoin>) -> Self {
         Self { downpayment }
     }
 }
 
-impl<'a> WithLease for OpenLoanReq<'a> {
+impl WithLease for OpenLoanReq {
     type Output = OpenLoanReqResult;
 
     type Error = ContractError;

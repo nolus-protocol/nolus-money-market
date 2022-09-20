@@ -34,7 +34,7 @@ impl Controller for NoLease {
 
         let OpenLoanReqResult { batch, downpayment } = lease::execute(
             lease,
-            OpenLoanReq::new(&info.funds),
+            OpenLoanReq::new(info.funds),
             &env.contract.address,
             &deps.querier,
         )?;

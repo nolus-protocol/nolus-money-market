@@ -24,7 +24,7 @@ pub struct Repay<'a, Bank>
 where
     Bank: BankAccountView,
 {
-    payment: &'a [CwCoin],
+    payment: Vec<CwCoin>,
     env: &'a Env,
     account: Bank,
 }
@@ -33,7 +33,7 @@ impl<'a, Bank> Repay<'a, Bank>
 where
     Bank: BankAccountView,
 {
-    pub fn new(payment: &'a [CwCoin], account: Bank, env: &'a Env) -> Self {
+    pub fn new(payment: Vec<CwCoin>, account: Bank, env: &'a Env) -> Self {
         Self {
             payment,
             env,

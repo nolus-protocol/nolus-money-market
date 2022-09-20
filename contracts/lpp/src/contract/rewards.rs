@@ -18,7 +18,7 @@ use crate::{
 };
 
 pub fn try_distribute_rewards(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
-    let amount: Coin<Nls> = bank::received(&info.funds)?;
+    let amount: Coin<Nls> = bank::received(info.funds)?;
     Deposit::distribute_rewards(deps, amount)?;
 
     Ok(Response::new().add_attribute("method", "try_distribute_rewards"))

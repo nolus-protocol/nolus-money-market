@@ -99,7 +99,7 @@ fn try_repay(
 ) -> ContractResult<RepayResult> {
     lease::execute(
         lease,
-        Repay::new(&info.funds, account, env),
+        Repay::new(info.funds, account, env),
         &env.contract.address,
         querier,
     )

@@ -62,7 +62,7 @@ where
     LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
     let lease_addr = info.sender;
-    let repay_amount = bank::received(&info.funds)?;
+    let repay_amount = bank::received(info.funds)?;
 
     let mut lpp = LiquidityPool::<LPN>::load(deps.storage)?;
     lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
