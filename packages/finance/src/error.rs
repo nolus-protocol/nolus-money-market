@@ -63,11 +63,11 @@ mod test {
         assert_eq!(&Error::BrokenInvariant(test_x_type_name.into()), &err);
 
         assert_eq!(
+            format!("{}", err),
             format!(
-                "Programming error or invalid serialized object of {} type",
+                "[Finance] Programming error or invalid serialized object of {} type",
                 test_x_type_name
-            ),
-            format!("{}", err)
+            )
         );
     }
 }
