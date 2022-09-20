@@ -4,16 +4,16 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
-    #[error("{0}")]
+    #[error("[Treasury] [Std] {0}")]
     Std(#[from] StdError),
 
-    #[error("{0}")]
+    #[error("[Treasury] {0}")]
     PlatformError(#[from] platform::error::Error),
 
-    #[error("Unauthorized")]
+    #[error("[Treasury] Unauthorized")]
     Unauthorized {},
 
-    #[error("Rewards dispatcher is not configured")]
+    #[error("[Treasury] Rewards dispatcher is not configured")]
     NotConfigured {},
 }
 

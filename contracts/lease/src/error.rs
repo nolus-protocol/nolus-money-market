@@ -12,46 +12,46 @@ use time_alarms::error::ContractError as TimeAlarmsError;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
-    #[error("{0}")]
+    #[error("[Lease] [Std] {0}")]
     Std(#[from] StdError),
 
-    #[error("Unauthorized")]
+    #[error("[Lease] Unauthorized")]
     Unauthorized {},
 
-    #[error("{0}")]
+    #[error("[Lease] {0}")]
     FinanceError(#[from] FinanceError),
 
-    #[error("{0}")]
+    #[error("[Lease] {0}")]
     PlatformError(#[from] PlatformError),
 
-    #[error("{0}")]
+    #[error("[Lease] {0}")]
     LppError(#[from] LppError),
 
-    #[error("{0}")]
+    #[error("[Lease] {0}")]
     TimeAlarmsError(#[from] TimeAlarmsError),
 
-    #[error("{0}")]
+    #[error("[Lease] {0}")]
     OracleError(#[from] OracleError),
 
-    #[error("{0}")]
+    #[error("[Lease] {0}")]
     ProfitError(#[from] ProfitError),
 
-    #[error("{symbol:?}")]
+    #[error("[Lease] Unknown currency symbol: {symbol:?}")]
     UnknownCurrency { symbol: String },
 
-    #[error("Error in opening an underlying loan: {0}")]
+    #[error("[Lease] Error in opening an underlying loan: {0}")]
     OpenLoanError(String),
 
-    #[error("The underlying loan is not fully repaid")]
+    #[error("[Lease] The underlying loan is not fully repaid")]
     LoanNotPaid(),
 
-    #[error("The underlying loan is closed")]
+    #[error("[Lease] The underlying loan is closed")]
     LoanClosed(),
 
-    #[error("Invalid parameters: {0}")]
+    #[error("[Lease] Invalid parameters: {0}")]
     InvalidParameters(String),
 
-    #[error("The operation '{0}' is not supported in state '{1}'")]
+    #[error("[Lease] The operation '{0}' is not supported in state '{1}'")]
     UnsupportedOperation(String, String),
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.35/thiserror/ for details.

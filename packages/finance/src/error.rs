@@ -7,22 +7,22 @@ use crate::currency::Currency;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
-    #[error("Programming error or invalid serialized object of {0} type")]
+    #[error("[Finance] Programming error or invalid serialized object of {0} type")]
     BrokenInvariant(String),
 
-    #[error("{0}")]
+    #[error("[Finance] [OverflowError] {0}")]
     OverflowError(#[from] OverflowError),
 
-    #[error("Found currency {0} expecting {1}")]
+    #[error("[Finance] Found currency {0} expecting {1}")]
     UnexpectedCurrency(String, String),
 
-    #[error("Expecting funds of {0} but found none")]
+    #[error("[Finance] Expecting funds of {0} but found none")]
     NoFunds(String),
 
-    #[error("Expecting funds of {0} but found extra ones")]
+    #[error("[Finance] Expecting funds of {0} but found extra ones")]
     UnexpectedFunds(String),
 
-    #[error("{0}")]
+    #[error("[Finance] [Std] {0}")]
     CosmWasmError(#[from] StdError),
 }
 
