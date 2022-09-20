@@ -20,15 +20,15 @@ impl Feeders {
     const FEEDERS: PriceFeeders<'static> = PriceFeeders::new("feeders");
     const PRECISION_FACTOR: u128 = 1_000_000_000;
 
-    pub fn get(storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
+    pub(crate) fn get(storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
         Self::FEEDERS.get(storage)
     }
 
-    pub fn is_feeder(storage: &dyn Storage, address: &Addr) -> StdResult<bool> {
+    pub(crate) fn is_feeder(storage: &dyn Storage, address: &Addr) -> StdResult<bool> {
         Self::FEEDERS.is_registered(storage, address)
     }
 
-    pub fn try_register(
+    pub(crate) fn try_register(
         deps: DepsMut,
         info: MessageInfo,
         address: String,
@@ -44,6 +44,25 @@ impl Feeders {
         Ok(Response::new())
     }
 
+    pub(crate) fn try_remove(
+        deps: DepsMut,
+        info: MessageInfo,
+        addresses: Vec<String>,
+    ) -> Result<Response, ContractError> {
+        let config = Config::load(deps.storage)?;
+        if info.sender != config.owner {
+            return Err(ContractError::Unauthorized {});
+        }
+
+        let f_addresses: Vec<Addr> = addresses
+            .iter()
+            .filter_map(|f| deps.api.addr_validate(&f).ok())
+            .collect();
+
+        Self::FEEDERS.remove(deps, &f_addresses)?;
+        Ok(Response::new())
+    }
+
     // this is a helper function so Decimal works with u64 rather than Uint128
     // also, we must *round up* here, as we need 8, not 7 feeders to reach 50% of 15 total
     fn feeders_needed(weight: usize, percentage: Percent) -> usize {
@@ -55,7 +74,7 @@ impl Feeders {
             .expect("usize overflow")
     }
 
-    pub fn query_config(
+    pub(crate) fn query_config(
         storage: &dyn Storage,
         config: &Config,
         block_time: Timestamp,
