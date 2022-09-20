@@ -56,7 +56,7 @@ impl Feeders {
 
         let f_addresses: Vec<Addr> = addresses
             .iter()
-            .filter_map(|f| deps.api.addr_validate(&f).ok())
+            .filter_map(|f| deps.api.addr_validate(f).ok())
             .collect();
 
         Self::FEEDERS.remove(deps, &f_addresses)?;

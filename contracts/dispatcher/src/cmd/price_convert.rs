@@ -3,7 +3,7 @@ use serde::Serialize;
 
 use finance::coin::Coin;
 use finance::currency::{Currency, Nls};
-use finance::price::{total, Price};
+use finance::price::total;
 use oracle::stub::{Oracle as OracleTrait, WithOracle};
 
 use crate::ContractError;
@@ -22,9 +22,8 @@ where
         Oracle: OracleTrait<Lpn>,
     {
         // Obtain the currency market price of TVLdenom in uNLS and convert Rewards_TVLdenom in uNLS, Rewards_uNLS.
-        let price_dto = oracle.get_price::<Nls>()?.price;
-        let converted = Price::<Nls, Lpn>::try_from(price_dto)?.inv();
-        let reward_unls: Coin<Nls> = total(self.amount, converted);
+        let price = oracle.get_price::<Nls>()?.price.inv();
+        let reward_unls: Coin<Nls> = total(self.amount, price);
         Ok(reward_unls)
     }
 
@@ -38,7 +37,7 @@ where
 
 impl<Lpn> PriceConvert<Lpn>
 where
-    Lpn: Currency,
+    Lpn: Currency + Serialize,
 {
     pub fn with(amount: Coin<Lpn>) -> StdResult<PriceConvert<Lpn>> {
         Ok(Self { amount })

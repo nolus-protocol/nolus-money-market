@@ -6,7 +6,7 @@ use marketprice::error::PriceFeedsError;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
-    msg::{PriceResponse, PricesResponse, QueryMsg},
+    msg::{PricesResponse, QueryMsg},
     state::{config::Config, supported_pairs::SupportedPairs},
     ContractError,
 };
@@ -49,9 +49,7 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                     .get_prices(self.deps.storage, parameters, HashSet::from([currency]))?
                     .first()
                 {
-                    Some(price) => Ok(to_binary(&PriceResponse {
-                        price: price.to_owned(),
-                    })?),
+                    Some(price) => Ok(to_binary(price)?),
                     None => Err(ContractError::PriceFeedsError(PriceFeedsError::NoPrice())),
                 }
             }

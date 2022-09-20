@@ -66,12 +66,12 @@ impl<'f> PriceFeeders<'f> {
     pub fn remove(&self, deps: DepsMut, to_remove: &[Addr]) -> Result<(), PriceFeedersError> {
         let remove_address = |mut addrs: HashSet<Addr>| -> StdResult<HashSet<Addr>> {
             for addr in to_remove {
-                addrs.remove(&addr);
+                addrs.remove(addr);
             }
             Ok(addrs)
         };
 
-        if let Some(_) = self.0.may_load(deps.storage)? {
+        if self.0.may_load(deps.storage)?.is_some() {
             self.0.update(deps.storage, remove_address)?;
         }
 

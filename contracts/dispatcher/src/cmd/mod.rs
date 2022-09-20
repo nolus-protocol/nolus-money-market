@@ -5,6 +5,7 @@ use finance::{
 };
 use oracle::stub::OracleRef;
 use platform::batch::Batch;
+use serde::Serialize;
 
 use crate::state::Config;
 
@@ -13,7 +14,7 @@ mod price_convert;
 
 pub struct PriceConvert<Lpn>
 where
-    Lpn: Currency,
+    Lpn: Currency + Serialize,
 {
     amount: Coin<Lpn>,
 }

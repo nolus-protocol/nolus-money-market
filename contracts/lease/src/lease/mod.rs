@@ -205,11 +205,7 @@ where
         if currency::equal::<Asset, Lpn>() {
             Ok(Price::identity())
         } else {
-            self.oracle
-                .get_price::<Asset>()?
-                .price
-                .try_into()
-                .map_err(Into::into)
+            Ok(self.oracle.get_price::<Asset>()?.price)
         }
     }
 }
@@ -474,7 +470,10 @@ mod tests {
             &self.address == addr
         }
 
-        fn get_price<C>(&self) -> market_price_oracle::stub::Result<PriceResponse> {
+        fn get_price<C>(&self) -> market_price_oracle::stub::Result<PriceResponse<C, OracleBase>>
+        where
+            C: Currency,
+        {
             unimplemented!()
         }
 
@@ -508,7 +507,10 @@ mod tests {
             unreachable!()
         }
 
-        fn get_price<C>(&self) -> market_price_oracle::stub::Result<PriceResponse> {
+        fn get_price<C>(&self) -> market_price_oracle::stub::Result<PriceResponse<C, OracleBase>>
+        where
+            C: Currency,
+        {
             unreachable!()
         }
 

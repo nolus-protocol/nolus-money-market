@@ -1,18 +1,21 @@
 use std::collections::HashSet;
 
 use crate::contract::{execute, query};
-use crate::msg::{ExecuteMsg, PriceResponse, PricesResponse, QueryMsg};
+use crate::msg::{ExecuteMsg, PricesResponse, QueryMsg};
 use crate::tests::{dummy_default_instantiate_msg, setup_test};
 use crate::ContractError;
 
 use cosmwasm_std::from_binary;
 use cosmwasm_std::testing::{mock_env, mock_info};
-use finance::coin::Coin;
-use finance::currency::{
-    Currency, SymbolStatic, TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD, Usdc,
+
+use finance::{
+    coin::Coin,
+    currency::{
+        Currency, SymbolStatic, TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD, Usdc,
+    },
+    price,
+    price::dto::PriceDTO,
 };
-use finance::price::dto::PriceDTO;
-use finance::price::{self};
 
 use super::dummy_feed_prices_msg;
 
@@ -91,8 +94,8 @@ fn feed_indirect_price() {
     let expected_price =
         PriceDTO::try_from(price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<Usdc>::new(3)))
             .unwrap();
-    let value: PriceResponse = from_binary(&res).unwrap();
-    assert_eq!(expected_price, value.price)
+    let value: PriceDTO = from_binary(&res).unwrap();
+    assert_eq!(expected_price, value)
 }
 
 #[test]

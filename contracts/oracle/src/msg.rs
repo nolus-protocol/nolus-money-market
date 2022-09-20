@@ -4,7 +4,11 @@ use cosmwasm_std::Addr;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use finance::{currency::SymbolOwned, percent::Percent, price::dto::PriceDTO};
+use finance::{
+    currency::{Currency, SymbolOwned},
+    percent::Percent,
+    price::{dto::PriceDTO, Price},
+};
 use marketprice::alarms::Alarm;
 
 use crate::state::supported_pairs::ResolutionPath;
@@ -74,8 +78,12 @@ pub struct PricesResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct PriceResponse {
-    pub price: PriceDTO,
+pub struct PriceResponse<C, QuoteC>
+where
+    C: 'static + Currency,
+    QuoteC: 'static + Currency,
+{
+    pub price: Price<C, QuoteC>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

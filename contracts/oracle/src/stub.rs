@@ -1,9 +1,12 @@
-use std::{marker::PhantomData, result::Result as StdResult};
+use std::{convert::TryInto, marker::PhantomData, result::Result as StdResult};
 
 use cosmwasm_std::{wasm_execute, Addr, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{visit, Currency, SingleVisitor, SymbolOwned};
+use finance::{
+    currency::{visit, Currency, SingleVisitor, SymbolOwned},
+    price::{dto::PriceDTO, Price},
+};
 use marketprice::alarms::Alarm;
 use platform::batch::Batch;
 
@@ -26,9 +29,9 @@ where
 {
     fn owned_by(&self, addr: &Addr) -> bool;
 
-    fn get_price<C>(&self) -> Result<PriceResponse>
+    fn get_price<C>(&self) -> Result<PriceResponse<C, OracleBase>>
     where
-        C: Currency;
+        C: Currency + Serialize;
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()>;
 }
@@ -162,16 +165,20 @@ where
         self.oracle_ref.owned_by(addr)
     }
 
-    fn get_price<C>(&self) -> Result<PriceResponse>
+    fn get_price<C>(&self) -> Result<PriceResponse<C, OracleBase>>
     where
-        C: Currency,
+        C: Currency + Serialize,
     {
         let msg = QueryMsg::Price {
             currency: C::SYMBOL.to_string(),
         };
-        self.querier
+        let dto: PriceDTO = self
+            .querier
             .query_wasm_smart(self.addr().clone(), &msg)
-            .map_err(ContractError::from)
+            .map_err(ContractError::from)?;
+
+        let price: Price<C, OracleBase> = dto.try_into()?;
+        Ok(PriceResponse { price })
     }
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()> {

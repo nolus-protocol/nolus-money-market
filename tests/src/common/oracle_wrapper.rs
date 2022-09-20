@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use cosmwasm_std::{coins, to_binary, Addr, Binary, Deps, Env};
 use cw_multi_test::Executor;
 
@@ -75,11 +77,10 @@ impl Default for MarketOracleWrapper {
 pub fn mock_oracle_query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let price = total_of(Coin::<Nls>::new(123456789)).is(Coin::<Usdc>::new(100000000));
     let res = match msg {
-        QueryMsg::Prices { currencies: _ } | QueryMsg::Price { currency: _ } => {
-            to_binary(&oracle::msg::PriceResponse {
-                price: PriceDTO::try_from(price).unwrap(),
-            })
-        }
+        QueryMsg::Prices { currencies: _ } => to_binary(&oracle::msg::PricesResponse {
+            prices: vec![PriceDTO::try_from(price)?],
+        }),
+        QueryMsg::Price { currency: _ } => to_binary(&PriceDTO::try_from(price)?),
         _ => Ok(query(deps, env, msg)?),
     }?;
 
