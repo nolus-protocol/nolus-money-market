@@ -1,6 +1,7 @@
 use std::convert::Infallible;
 
 use cosmwasm_std::{Addr, StdError};
+use finance::currency::{Currency, SymbolOwned};
 use thiserror::Error;
 
 use marketprice::{
@@ -66,4 +67,14 @@ pub enum ContractError {
 
     #[error("Mismatch of curencies, expected {expected:?}, found {found:?}")]
     CurrencyMismatch { expected: String, found: String },
+}
+
+pub fn currency_mismatch<ExpC>(found: SymbolOwned) -> ContractError
+where
+    ExpC: Currency,
+{
+    ContractError::CurrencyMismatch {
+        expected: ExpC::SYMBOL.into(),
+        found,
+    }
 }

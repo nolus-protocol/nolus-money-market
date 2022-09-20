@@ -6,12 +6,59 @@ use finance::{
     currency::{Currency, SymbolOwned},
     price::{self, Price},
 };
-use serde::Serialize;
 
 use crate::{
+    error,
     stub::{Oracle, OracleRef, WithOracle},
     ContractError,
 };
+
+pub fn to_base<BaseC, InC>(
+    oracle_ref: OracleRef,
+    in_amount: Coin<InC>,
+    querier: &QuerierWrapper,
+) -> Result<Coin<BaseC>, ContractError>
+where
+    BaseC: Currency,
+    InC: Currency,
+{
+    struct PriceConvert<BaseC, In>
+    where
+        BaseC: Currency,
+        In: Currency,
+    {
+        in_amount: Coin<In>,
+        _out: PhantomData<BaseC>,
+    }
+
+    impl<BaseC, In> WithOracle<BaseC> for PriceConvert<BaseC, In>
+    where
+        BaseC: Currency,
+        In: Currency,
+    {
+        type Output = Coin<BaseC>;
+        type Error = ContractError;
+
+        fn exec<OracleImpl>(self, oracle: OracleImpl) -> Result<Self::Output, Self::Error>
+        where
+            OracleImpl: Oracle<BaseC>,
+        {
+            Ok(price::total(self.in_amount, price_of(&oracle)?))
+        }
+
+        fn unexpected_base(self, found: SymbolOwned) -> Result<Self::Output, Self::Error> {
+            Err(error::currency_mismatch::<BaseC>(found))
+        }
+    }
+
+    oracle_ref.execute(
+        PriceConvert {
+            in_amount,
+            _out: PhantomData,
+        },
+        querier,
+    )
+}
 
 pub fn from_base<BaseC, OutC>(
     oracle_ref: OracleRef,
@@ -19,7 +66,7 @@ pub fn from_base<BaseC, OutC>(
     querier: &QuerierWrapper,
 ) -> Result<Coin<OutC>, ContractError>
 where
-    BaseC: Currency + Serialize,
+    BaseC: Currency,
     OutC: Currency,
 {
     struct PriceConvert<BaseC, Out>
@@ -27,13 +74,13 @@ where
         BaseC: Currency,
         Out: Currency,
     {
-        base_amount: Coin<BaseC>,
+        in_amount: Coin<BaseC>,
         _out: PhantomData<Out>,
     }
 
     impl<BaseC, Out> WithOracle<BaseC> for PriceConvert<BaseC, Out>
     where
-        BaseC: Currency + Serialize,
+        BaseC: Currency,
         Out: Currency,
     {
         type Output = Coin<Out>;
@@ -43,25 +90,31 @@ where
         where
             OracleImpl: Oracle<BaseC>,
         {
-            let price_out_base = oracle.price_of(Out::SYMBOL.to_string())?.price;
-            let price_base_out = Price::<Out, BaseC>::try_from(price_out_base)?.inv();
-            let out_amount: Coin<Out> = price::total(self.base_amount, price_base_out);
-            Ok(out_amount)
+            Ok(price::total(self.in_amount, price_of(&oracle)?.inv()))
         }
 
         fn unexpected_base(self, found: SymbolOwned) -> Result<Self::Output, Self::Error> {
-            Err(ContractError::CurrencyMismatch {
-                expected: BaseC::SYMBOL.into(),
-                found,
-            })
+            Err(error::currency_mismatch::<BaseC>(found))
         }
     }
 
     oracle_ref.execute(
         PriceConvert {
-            base_amount: in_amount,
+            in_amount,
             _out: PhantomData,
         },
         querier,
     )
+}
+
+fn price_of<BaseC, OtherC, OracleImpl>(
+    oracle: &OracleImpl,
+) -> Result<Price<OtherC, BaseC>, ContractError>
+where
+    BaseC: Currency,
+    OtherC: Currency,
+    OracleImpl: Oracle<BaseC>,
+{
+    let price_other_to_base = oracle.price_of(OtherC::SYMBOL.to_string())?.price;
+    Ok(Price::<OtherC, BaseC>::try_from(price_other_to_base)?)
 }
