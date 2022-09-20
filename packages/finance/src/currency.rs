@@ -67,30 +67,29 @@ pub trait AnyVisitor {
     fn on_unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
-#[cfg(not(feature = "testing"))]
 pub fn visit_any<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
 where
     V: AnyVisitor,
 {
-    let any_visitor = AnyVisitorImpl(visitor);
-    visit::<Nls, _>(symbol, any_visitor)
-        .or_else(|any_visitor| visit::<Usdc, _>(symbol, any_visitor))
-        .unwrap_or_else(|any_visitor| any_visitor.0.on_unknown())
-}
+    #[cfg(not(feature = "testing"))]
+    {
+        let any_visitor = AnyVisitorImpl(visitor);
+        visit::<Nls, _>(symbol, any_visitor)
+            .or_else(|any_visitor| visit::<Usdc, _>(symbol, any_visitor))
+            .unwrap_or_else(|any_visitor| any_visitor.0.on_unknown())
+    }
 
-#[cfg(feature = "testing")]
-pub fn visit_any<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
-where
-    V: AnyVisitor,
-{
-    let any_visitor = AnyVisitorImpl(visitor);
-    visit::<Nls, _>(symbol, any_visitor)
-        .or_else(|any_visitor| visit::<Usdc, _>(symbol, any_visitor))
-        .or_else(|any_visitor| visit::<TestCurrencyA, _>(symbol, any_visitor))
-        .or_else(|any_visitor| visit::<TestCurrencyB, _>(symbol, any_visitor))
-        .or_else(|any_visitor| visit::<TestCurrencyC, _>(symbol, any_visitor))
-        .or_else(|any_visitor| visit::<TestCurrencyD, _>(symbol, any_visitor))
-        .unwrap_or_else(|any_visitor| any_visitor.0.on_unknown())
+    #[cfg(feature = "testing")]
+    {
+        let any_visitor = AnyVisitorImpl(visitor);
+        visit::<Nls, _>(symbol, any_visitor)
+            .or_else(|any_visitor| visit::<Usdc, _>(symbol, any_visitor))
+            .or_else(|any_visitor| visit::<TestCurrencyA, _>(symbol, any_visitor))
+            .or_else(|any_visitor| visit::<TestCurrencyB, _>(symbol, any_visitor))
+            .or_else(|any_visitor| visit::<TestCurrencyC, _>(symbol, any_visitor))
+            .or_else(|any_visitor| visit::<TestCurrencyD, _>(symbol, any_visitor))
+            .unwrap_or_else(|any_visitor| any_visitor.0.on_unknown())
+    }
 }
 
 struct AnyVisitorImpl<V>(V);

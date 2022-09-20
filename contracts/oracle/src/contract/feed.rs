@@ -117,8 +117,7 @@ where
     OracleBase: Currency,
 {
     // Check feeder permission
-    let is_registered = Feeders::is_feeder(storage, &sender_raw)?;
-    if !is_registered {
+    if !Feeders::is_feeder(storage, &sender_raw)? {
         return Err(ContractError::UnknownFeeder {});
     }
 

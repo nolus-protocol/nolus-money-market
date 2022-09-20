@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
 use crate::{state::config::Config, ContractError};
-const PRECISION_FACTOR: u128 = 1_000_000_000;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Feeders {
@@ -19,6 +18,7 @@ pub struct Feeders {
 
 impl Feeders {
     const FEEDERS: PriceFeeders<'static> = PriceFeeders::new("feeders");
+    const PRECISION_FACTOR: u128 = 1_000_000_000;
 
     pub fn get(storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
         Self::FEEDERS.get(storage)
@@ -49,8 +49,8 @@ impl Feeders {
     fn feeders_needed(weight: usize, percentage: Percent) -> usize {
         let weight128 = u128::try_from(weight).expect("usize to u128 overflow");
 
-        let res = percentage.of(PRECISION_FACTOR * weight128);
-        ((res + PRECISION_FACTOR - 1) / PRECISION_FACTOR)
+        let res = percentage.of(Self::PRECISION_FACTOR * weight128);
+        ((res + Self::PRECISION_FACTOR - 1) / Self::PRECISION_FACTOR)
             .try_into()
             .expect("usize overflow")
     }

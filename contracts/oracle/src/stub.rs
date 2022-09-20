@@ -26,9 +26,9 @@ where
 {
     fn owned_by(&self, addr: &Addr) -> bool;
 
-    fn get_price<Lpn>(&self) -> Result<PriceResponse>
+    fn get_price<C>(&self) -> Result<PriceResponse>
     where
-        Lpn: Currency;
+        C: Currency;
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()>;
 }
@@ -129,14 +129,14 @@ impl OracleRef {
 
 #[cfg(feature = "testing")]
 impl OracleRef {
-    pub fn unchecked<A, Lpn>(addr: A) -> Self
+    pub fn unchecked<A, C>(addr: A) -> Self
     where
         A: Into<String>,
-        Lpn: Currency,
+        C: Currency,
     {
         Self {
             addr: Addr::unchecked(addr),
-            currency: Lpn::SYMBOL.into(),
+            currency: C::SYMBOL.into(),
         }
     }
 }
