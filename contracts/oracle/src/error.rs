@@ -63,4 +63,7 @@ pub enum ContractError {
 
     #[error("Unknown currency")]
     UnknownCurrency {},
+
+    #[error("Mismatch of curencies, expected {expected:?}, found {found:?}")]
+    CurrencyMismatch { expected: String, found: String },
 }
