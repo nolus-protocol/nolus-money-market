@@ -69,8 +69,7 @@ impl PriceFeed {
     }
 
     fn is_old_feed(time_now: Timestamp, feed_time: Timestamp, price_feed_period: Duration) -> bool {
-        let ts = feed_time + price_feed_period;
-        ts.lt(&time_now)
+        (feed_time + price_feed_period).lt(&time_now)
     }
 
     fn has_enough_feeders(&self, required_feeders_cnt: usize) -> bool {

@@ -4,23 +4,21 @@ use cosmwasm_std::{Addr, Response, Storage, Timestamp};
 use marketprice::market_price::{Parameters, PriceFeeds};
 
 use platform::batch::Batch;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use finance::{
     currency::{Currency, Nls, SymbolOwned},
-    duration::Duration,
     price::dto::PriceDTO,
 };
 
 use crate::{
-    state::{config::Config, supported_pairs::SupportedPairs},
+    state::{supported_pairs::SupportedPairs, Config},
     ContractError,
 };
 
 use super::{alarms::MarketAlarms, feeder::Feeders};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Feeds<OracleBase> {
     config: Config,
     _base: PhantomData<OracleBase>,
@@ -78,7 +76,7 @@ where
             block_time,
             sender_raw,
             filtered,
-            Duration::from_secs(self.config.price_feed_period_secs),
+            self.config.price_feed_period,
         )?;
 
         Ok(())

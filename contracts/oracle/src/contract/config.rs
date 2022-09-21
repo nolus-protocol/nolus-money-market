@@ -1,14 +1,14 @@
 use cosmwasm_std::{Deps, DepsMut, MessageInfo, Response};
-use finance::percent::Percent;
+use finance::{duration::Duration, percent::Percent};
 
-use crate::{msg::ConfigResponse, state::config::Config, ContractError};
+use crate::{msg::ConfigResponse, state::Config, ContractError};
 
 pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
     let config = Config::load(deps.storage)?;
     Ok(ConfigResponse {
         base_asset: config.base_asset,
         owner: config.owner,
-        price_feed_period_secs: config.price_feed_period_secs,
+        price_feed_period: config.price_feed_period,
         feeders_percentage_needed: config.feeders_percentage_needed,
     })
 }
@@ -16,12 +16,12 @@ pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
 pub fn try_configure(
     deps: DepsMut,
     info: MessageInfo,
-    price_feed_period_secs: u32,
+    price_feed_period: Duration,
     feeders_percentage_needed: Percent,
 ) -> Result<Response, ContractError> {
     Config::update(
         deps.storage,
-        price_feed_period_secs,
+        price_feed_period,
         feeders_percentage_needed,
         info.sender,
     )?;
@@ -37,6 +37,7 @@ mod tests {
     };
     use finance::{
         currency::{Currency, Nls, TestCurrencyA, Usdc},
+        duration::Duration,
         percent::Percent,
     };
 
@@ -89,7 +90,7 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
         assert_eq!(Percent::from_percent(44), value.feeders_percentage_needed);
-        assert_eq!(33, value.price_feed_period_secs);
+        assert_eq!(Duration::from_secs(33), value.price_feed_period);
     }
 
     #[test]

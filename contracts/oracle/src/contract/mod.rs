@@ -4,14 +4,17 @@ use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
 };
 use cw2::set_contract_version;
-use finance::currency::{visit_any, AnyVisitor, Currency};
+use finance::{
+    currency::{visit_any, AnyVisitor, Currency},
+    duration::Duration,
+};
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     contract_validation::validate_contract_addr,
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::{config::Config, supported_pairs::SupportedPairs},
+    state::{supported_pairs::SupportedPairs, Config},
 };
 
 use self::{
@@ -63,7 +66,7 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
         Config::new(
             C::SYMBOL.to_string(),
             self.owner,
-            self.msg.price_feed_period_secs,
+            Duration::from_secs(self.msg.price_feed_period_secs),
             self.msg.feeders_percentage_needed,
             self.deps.api.addr_validate(&self.msg.timealarms_addr)?,
         )
@@ -118,7 +121,7 @@ pub fn execute(
         } => try_configure(
             deps,
             info,
-            price_feed_period_secs,
+            Duration::from_secs(price_feed_period_secs),
             feeders_percentage_needed,
         ),
         ExecuteMsg::RegisterFeeder { feeder_address } => {
@@ -165,6 +168,7 @@ mod tests {
     use cosmwasm_std::{from_binary, testing::mock_env};
     use finance::{
         currency::{Currency, Nls, Usdc},
+        duration::Duration,
         percent::Percent,
     };
 
@@ -190,7 +194,7 @@ mod tests {
         let value: ConfigResponse = from_binary(&res).unwrap();
         assert_eq!(CREATOR.to_string(), value.owner.to_string());
         assert_eq!(Usdc::SYMBOL.to_string(), value.base_asset);
-        assert_eq!(60, value.price_feed_period_secs);
+        assert_eq!(Duration::from_secs(60), value.price_feed_period);
         assert_eq!(Percent::from_percent(50), value.feeders_percentage_needed);
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::SupportedDenomPairs {}).unwrap();

@@ -6,7 +6,7 @@ use finance::currency::{visit_any, AnyVisitor, Currency};
 use crate::{
     error::ContractError,
     msg::ExecuteMsg,
-    state::{config::Config, supported_pairs::SupportedPairs},
+    state::{supported_pairs::SupportedPairs, Config},
 };
 
 use super::feed::try_feed_prices;

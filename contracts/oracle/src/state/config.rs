@@ -1,19 +1,8 @@
+use super::Config;
+use crate::ContractError;
 use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::Item;
-use finance::{currency::SymbolOwned, percent::Percent};
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
-
-use crate::ContractError;
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct Config {
-    pub base_asset: SymbolOwned,
-    pub owner: Addr,
-    pub price_feed_period_secs: u32,
-    pub feeders_percentage_needed: Percent,
-    pub timealarms_contract: Addr,
-}
+use finance::{duration::Duration, percent::Percent};
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
@@ -21,14 +10,14 @@ impl Config {
     pub fn new(
         denom: String,
         owner: Addr,
-        price_feed_period_secs: u32,
+        price_feed_period: Duration,
         feeders_percentage_needed: Percent,
         timealarms_contract: Addr,
     ) -> Self {
         Config {
             base_asset: denom,
             owner,
-            price_feed_period_secs,
+            price_feed_period,
             feeders_percentage_needed,
             timealarms_contract,
         }
@@ -44,7 +33,7 @@ impl Config {
 
     pub fn update(
         storage: &mut dyn Storage,
-        price_feed_period_secs: u32,
+        price_feed_period: Duration,
         feeders_percentage_needed: Percent,
         sender: Addr,
     ) -> Result<(), ContractError> {
@@ -53,7 +42,7 @@ impl Config {
             return Err(ContractError::Unauthorized {});
         }
         Self::STORAGE.update(storage, |mut c| -> StdResult<_> {
-            c.price_feed_period_secs = price_feed_period_secs;
+            c.price_feed_period = price_feed_period;
             c.feeders_percentage_needed = feeders_percentage_needed;
             Ok(c)
         })?;

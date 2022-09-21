@@ -1,17 +1,16 @@
 use std::{collections::HashSet, convert::TryInto};
 
 use cosmwasm_std::{Addr, DepsMut, MessageInfo, Response, StdResult, Storage, Timestamp};
-use finance::{duration::Duration, fraction::Fraction, percent::Percent};
+use finance::{fraction::Fraction, percent::Percent};
 use marketprice::{feeders::PriceFeeders, market_price::Parameters};
 
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use std::convert::TryFrom;
 
-use crate::{state::config::Config, ContractError};
+use crate::{state::Config, ContractError};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Feeders {
     config: Config,
 }
@@ -85,7 +84,7 @@ impl Feeders {
             Self::feeders_needed(all_feeders_cnt, config.feeders_percentage_needed);
 
         Ok(Parameters::new(
-            Duration::from_secs(config.price_feed_period_secs),
+            config.price_feed_period,
             feeders_needed,
             block_time,
         ))

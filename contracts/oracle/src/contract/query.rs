@@ -7,7 +7,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     msg::{PricesResponse, QueryMsg},
-    state::{config::Config, supported_pairs::SupportedPairs},
+    state::{supported_pairs::SupportedPairs, Config},
     ContractError,
 };
 
