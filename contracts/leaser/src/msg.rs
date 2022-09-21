@@ -15,6 +15,7 @@ pub struct InstantiateMsg {
     pub repayment: Repayment,                // GracePeriodSec, for example 10 days = 10*24*60*60
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
+    pub profit: Addr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

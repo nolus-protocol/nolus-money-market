@@ -13,6 +13,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["cosmwasm-bindings"]
 cosmwasm-bindings = ["cosmwasm"]
 cosmwasm = []
+testing = []
 
 [dependencies]
 timealarms = { path = "../timealarms", version = "0.1.0", default-features = false}

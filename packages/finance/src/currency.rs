@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{any::TypeId, fmt::Debug};
 
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
@@ -26,6 +26,14 @@ impl Currency for Usdc {
 pub struct Nls;
 impl Currency for Nls {
     const SYMBOL: SymbolStatic = "unls";
+}
+
+pub fn equal<C1, C2>() -> bool
+where
+    C1: Currency,
+    C2: Currency,
+{
+    TypeId::of::<C1>() == TypeId::of::<C2>()
 }
 
 pub trait SingleVisitor<C> {

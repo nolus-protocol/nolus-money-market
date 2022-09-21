@@ -1,4 +1,5 @@
 use cosmwasm_std::{QuerierWrapper, Timestamp};
+
 use finance::{
     coin::Coin,
     currency::{Currency, Nls},
@@ -9,14 +10,6 @@ use platform::batch::Batch;
 use crate::state::Config;
 
 mod dispatch;
-mod price_convert;
-
-pub struct PriceConvert<Lpn>
-where
-    Lpn: Currency,
-{
-    amount: Coin<Lpn>,
-}
 
 pub struct Dispatch<'a> {
     last_dispatch: Timestamp,

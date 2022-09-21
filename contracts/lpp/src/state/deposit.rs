@@ -1,12 +1,14 @@
-use crate::error::ContractError;
-use crate::lpp::NTokenPrice;
-use crate::nlpn::NLpn;
 use cosmwasm_std::{Addr, DepsMut, StdResult, Storage};
 use cw_storage_plus::{Item, Map};
-use finance::coin::Coin;
-use finance::currency::{Currency, Nls};
-use finance::price::{self, Price};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+
+use finance::{
+    coin::Coin,
+    currency::{Currency, Nls},
+    price::{self, Price},
+};
+
+use crate::{error::ContractError, lpp::NTokenPrice, nlpn::NLpn};
 
 #[derive(Debug)]
 pub struct Deposit {
@@ -188,10 +190,13 @@ impl Deposit {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::lpp::NTokenPrice;
     use cosmwasm_std::testing;
+
     use finance::currency::Usdc;
+
+    use crate::lpp::NTokenPrice;
+
+    use super::*;
 
     type TheCurrency = Usdc;
 

@@ -3,6 +3,7 @@ use cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
     MemoryStorage, MessageInfo, OwnedDeps,
 };
+
 use marketprice::storage::{Denom, Price};
 
 use crate::{

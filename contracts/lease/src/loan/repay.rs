@@ -41,6 +41,14 @@ where
         self.close
     }
 
+    pub fn total(&self) -> Coin<C> {
+        self.previous_margin_paid
+            + self.previous_interest_paid
+            + self.current_margin_paid
+            + self.current_interest_paid
+            + self.principal_paid
+    }
+
     pub(super) fn pay_previous_margin(&mut self, payment: Coin<C>) {
         debug_assert_eq!(self.previous_margin_paid, Coin::default());
 
@@ -68,9 +76,37 @@ where
     pub(super) fn pay_principal(&mut self, principal: Coin<C>, payment: Coin<C>) {
         debug_assert_eq!(self.principal_paid, Coin::default());
 
+        // TODO uncomment when issue #13 is solved
+        // debug_assert!(payment <= principal, "Payment exceeds principal!");
+
         self.principal_paid = payment;
 
-        self.close = principal == payment;
+        // TODO change to `==` when issue #13 is solved
+        self.close = principal <= payment;
+    }
+}
+
+#[cfg(test)]
+impl<C> Receipt<C>
+where
+    C: Currency,
+{
+    pub(crate) fn new(
+        previous_margin_paid: Coin<C>,
+        current_margin_paid: Coin<C>,
+        previous_interest_paid: Coin<C>,
+        current_interest_paid: Coin<C>,
+        principal_paid: Coin<C>,
+        close: bool,
+    ) -> Receipt<C> {
+        Self {
+            previous_margin_paid,
+            current_margin_paid,
+            previous_interest_paid,
+            current_interest_paid,
+            principal_paid,
+            close,
+        }
     }
 }
 
@@ -92,6 +128,29 @@ mod tests {
             receipt,
             RepayReceipt {
                 principal_paid: principal,
+                close: true,
+                ..Default::default()
+            },
+        );
+    }
+
+    #[test]
+    // TODO uncomment when issue #13 is solved
+    // #[should_panic = "Payment exceeds principal!"]
+    fn pay_principal_overpaid() {
+        let principal = Coin::<Nls>::new(10);
+
+        let payment = principal + Coin::<Nls>::new(1);
+
+        let mut receipt = RepayReceipt::default();
+
+        receipt.pay_principal(principal, payment);
+
+        assert_eq!(
+            receipt,
+            RepayReceipt {
+                // TODO change to `principal` when issue #13 is solved
+                principal_paid: payment,
                 close: true,
                 ..Default::default()
             },

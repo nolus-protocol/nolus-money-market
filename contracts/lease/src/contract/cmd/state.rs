@@ -1,10 +1,11 @@
-use cosmwasm_std::{to_binary, Addr, Binary, Timestamp};
+use cosmwasm_std::{to_binary, Binary, Timestamp};
 use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
-use lpp::stub::Lpp as LppTrait;
+use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::bank::BankAccount;
+use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
@@ -15,16 +16,11 @@ use crate::{
 pub struct LeaseState<Bank> {
     now: Timestamp,
     account: Bank,
-    lease: Addr,
 }
 
 impl<Bank> LeaseState<Bank> {
-    pub fn new(now: Timestamp, account: Bank, lease: Addr) -> Self {
-        Self {
-            now,
-            account,
-            lease,
-        }
+    pub fn new(now: Timestamp, account: Bank) -> Self {
+        Self { now, account }
     }
 }
 
@@ -36,17 +32,19 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, TimeAlarms, Oracle>(
+    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle>,
+        lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppTrait<Lpn>,
+        Lpp: LppLenderTrait<Lpn>,
         TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
+        Profit: ProfitTrait,
+        Asset: Currency + Serialize,
     {
-        let resp = lease.state(self.now, &self.account, self.lease)?;
+        let resp = lease.state(self.now, &self.account)?;
         to_binary(&resp).map_err(ContractError::from)
     }
 

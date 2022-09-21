@@ -1,9 +1,8 @@
 use cosmwasm_std::{Deps, DepsMut, Response};
 
-use crate::error::ContractError;
-use crate::msg::QueryConfigResponse;
-use crate::state::Config;
 use finance::percent::Percent;
+
+use crate::{error::ContractError, msg::QueryConfigResponse, state::Config};
 
 pub fn try_update_parameters(
     deps: DepsMut,

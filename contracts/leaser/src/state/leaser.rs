@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 
-use crate::ContractError;
 use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::{Item, Map};
+
+use crate::ContractError;
 
 const IDS: InstantiateReplyIdSeq = InstantiateReplyIdSeq::new("instantiate_reply_ids");
 const PENDING: Map<InstantiateReplyId, Addr> = Map::new("pending_instance_creations");

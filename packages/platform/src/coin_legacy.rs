@@ -1,9 +1,11 @@
+use std::result::Result as StdResult;
+
 use cosmwasm_std::Coin as CosmWasmCoin;
+
 use finance::{
     coin::Coin,
     currency::{visit, visit_any, AnyVisitor, Currency, SingleVisitor},
 };
-use std::result::Result as StdResult;
 
 use crate::error::{Error, Result};
 
@@ -116,15 +118,16 @@ where
 mod test {
     use std::{any::type_name, marker::PhantomData};
 
+    use cosmwasm_std::Coin as CosmWasmCoin;
+
+    use finance::currency::{Currency, Nls, Usdc};
+
     use crate::{
         coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl},
         error::Error,
     };
 
     use super::{Coin, CoinVisitor};
-
-    use cosmwasm_std::Coin as CosmWasmCoin;
-    use finance::currency::{Currency, Nls, Usdc};
 
     #[test]
     fn test_add() {

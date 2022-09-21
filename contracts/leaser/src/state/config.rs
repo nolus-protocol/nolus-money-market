@@ -20,6 +20,7 @@ pub struct Config {
     pub repayment: Repayment,
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
+    pub profit: Addr,
 }
 
 impl Config {
@@ -35,6 +36,7 @@ impl Config {
             repayment: msg.repayment,
             time_alarms: msg.time_alarms,
             market_price_oracle: msg.market_price_oracle,
+            profit: msg.profit,
         })
     }
 

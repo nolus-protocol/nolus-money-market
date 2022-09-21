@@ -1,7 +1,9 @@
-use crate::nlpn::NLpn;
 use cosmwasm_std::{Addr, Env};
+
 use finance::{coin::Coin, currency::Currency};
 use platform::batch::{Batch, Emit, Emitter};
+
+use crate::nlpn::NLpn;
 
 pub fn emit_deposit<LPN>(
     batch: Batch,

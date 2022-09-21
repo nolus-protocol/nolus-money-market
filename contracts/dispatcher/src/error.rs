@@ -5,50 +5,50 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ContractError {
-    #[error("{0}")]
+    #[error("[Dispatcher] [Std] {0}")]
     Std(#[from] StdError),
 
-    #[error("{0}")]
+    #[error("[Dispatcher] {0}")]
     LppError(#[from] lpp::error::ContractError),
 
-    #[error("{0}")]
+    #[error("[Dispatcher] {0}")]
     Platform(#[from] platform::error::Error),
 
-    #[error("{0}")]
+    #[error("[Dispatcher] {0}")]
     Oracle(#[from] oracle::ContractError),
 
-    #[error("{0}")]
+    #[error("[Dispatcher] {0}")]
     Finance(#[from] finance::error::Error),
 
-    #[error("{0}")]
+    #[error("[Dispatcher] [Infallible] {0}")]
     FromInfallible(#[from] Infallible),
 
-    #[error("Unauthorized")]
+    #[error("[Dispatcher] Unauthorized")]
     Unauthorized {},
 
-    #[error("Custom Error val: {val:?}")]
+    #[error("[Dispatcher] Custom Error value: {val:?}")]
     CustomError { val: String },
 
-    #[error("{symbol:?}")]
+    #[error("[Dispatcher] Unknown currency symbol: {symbol:?}")]
     UnknownCurrency { symbol: String },
 
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
-    #[error("Invalid contract address {0}")]
+    #[error("[Dispatcher] Invalid contract address {0}")]
     InvalidContractAddress(Addr),
 
-    #[error("Invalid alarm notification address: {0:?}")]
+    #[error("[Dispatcher] Invalid alarm notification address: {0:?}")]
     InvalidAlarmAddress(Addr),
 
-    #[error("Alarm comming from unknown address: {0:?}")]
+    #[error("[Dispatcher] Alarm comming from unknown address: {0:?}")]
     UnrecognisedAlarm(Addr),
 
-    #[error("Invalid time configuration. Current reward distribution time is before the last distribution time")]
+    #[error("[Dispatcher] Invalid time configuration. Current reward distribution time is before the last distribution time")]
     InvalidTimeConfiguration {},
 
-    #[error("Alarm time validation failed")]
+    #[error("[Dispatcher] Alarm time validation failed")]
     AlarmTimeValidation {},
 
-    #[error("Zero Reward")]
+    #[error("[Dispatcher] Zero Reward")]
     ZeroReward {},
 }

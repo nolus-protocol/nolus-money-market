@@ -3,9 +3,11 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{Addr, Api, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
 use cw2::set_contract_version;
 
-use crate::alarms::TimeAlarms;
-use crate::error::ContractError;
-use crate::msg::{ExecuteMsg, InstantiateMsg};
+use crate::{
+    alarms::TimeAlarms,
+    error::ContractError,
+    msg::{ExecuteMsg, InstantiateMsg},
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");

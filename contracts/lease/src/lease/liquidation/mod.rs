@@ -1,73 +1,70 @@
+use std::marker::PhantomData;
+
 use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
 use finance::{
     coin::Coin,
-    currency::{Currency, SymbolOwned},
+    currency::Currency,
     fraction::Fraction,
     percent::{Percent, Units},
-    price::{total, Price},
     ratio::Rational,
 };
-use lpp::stub::Lpp as LppTrait;
+use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{batch::Batch, generate_ids};
+use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
-use crate::{error::ContractResult, lease::Lease, loan::LiabilityStatus};
+use crate::{
+    error::ContractResult,
+    lease::Lease,
+    loan::{LiabilityStatus, RepayReceipt},
+};
 
 use super::LeaseDTO;
 
 mod alarm;
 
-impl<Lpn, Lpp, TimeAlarms, Oracle> Lease<Lpn, Lpp, TimeAlarms, Oracle>
+impl<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
+    Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
-    Lpp: LppTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
+    Profit: ProfitTrait,
+    Asset: Currency + Serialize,
 {
-    fn liquidate_on_interest_overdue(
-        &self,
+    fn act_on_overdue(
+        &mut self,
+        lease_lpn: Coin<Lpn>,
         now: Timestamp,
-        lease: Addr,
-        lease_amount: Coin<Lpn>,
-        price_to_lpn: Price<Lpn, Lpn>,
-    ) -> ContractResult<Status<Lpn>> {
-        let lease_lpn = total(lease_amount, price_to_lpn);
-
-        let LiabilityStatus {
-            ltv, overdue_lpn, ..
-        } = self.loan.liability_status(now, lease, lease_lpn)?;
-
-        self.liquidate(
-            lease_lpn,
-            lease_lpn.min(overdue_lpn),
-            ltv,
-            price_to_lpn.inv(),
-        )
-    }
-
-    fn act_on_liability(
-        &self,
-        now: Timestamp,
-        lease: Addr,
-        lease_amount: Coin<Lpn>,
-        price_to_lpn: Price<Lpn, Lpn>,
-    ) -> ContractResult<Status<Lpn>> {
-        let lease_lpn = total(lease_amount, price_to_lpn);
-
-        let LiabilityStatus { ltv, total_lpn, .. } =
-            self.loan.liability_status(now, lease, lease_lpn)?;
-
-        if self.liability.max_percent() <= ltv {
-            self.liquidate_on_liability(lease_lpn, total_lpn, price_to_lpn.inv())
+        ltv: Percent,
+        _: Coin<Lpn>,
+    ) -> ContractResult<Status<Lpn, Asset>> {
+        if self.loan.grace_period_end() <= now {
+            self.liquidate_on_interest_overdue(now, lease_lpn)
         } else {
             Ok(self.handle_warnings(ltv))
         }
     }
 
-    fn handle_warnings(&self, liability: Percent) -> Status<Lpn> {
+    fn act_on_liability(
+        &mut self,
+        lease_lpn: Coin<Lpn>,
+        now: Timestamp,
+        ltv: Percent,
+        liability_lpn: Coin<Lpn>,
+    ) -> ContractResult<Status<Lpn, Asset>> {
+        if self.liability.max_percent() <= ltv {
+            self.liquidate_on_liability(lease_lpn, liability_lpn, now)
+        } else {
+            Ok(self.handle_warnings(ltv))
+        }
+    }
+
+    fn handle_warnings(&self, liability: Percent) -> Status<Lpn, Asset> {
         debug_assert!(liability < self.liability.max_percent());
 
         if liability < self.liability.first_liq_warn_percent() {
@@ -86,22 +83,15 @@ where
             (self.liability.first_liq_warn_percent(), WarningLevel::First)
         };
 
-        Status::Warning(
-            LeaseInfo {
-                customer: self.customer.clone(),
-                ltv,
-                lease_asset: self.currency.clone(),
-            },
-            level,
-        )
+        Status::Warning(LeaseInfo::new(self.customer.clone(), ltv), level)
     }
 
     fn liquidate_on_liability(
-        &self,
+        &mut self,
         lease_lpn: Coin<Lpn>,
         liability_lpn: Coin<Lpn>,
-        price_from_lpn: Price<Lpn, Lpn>,
-    ) -> ContractResult<Status<Lpn>> {
+        now: Timestamp,
+    ) -> ContractResult<Status<Lpn, Asset>> {
         // from 'liability - liquidation = healthy% of (lease - liquidation)' follows
         // 'liquidation = 100% / (100% - healthy%) of (liability - healthy% of lease)'
         let multiplier = Rational::new(
@@ -116,71 +106,140 @@ where
         ));
 
         self.liquidate(
+            Cause::Liability,
             lease_lpn,
             liquidation_lpn,
+            now,
             self.liability.max_percent(),
-            price_from_lpn,
+        )
+    }
+
+    fn liquidate_on_interest_overdue(
+        &mut self,
+        now: Timestamp,
+        lease_lpn: Coin<Lpn>,
+    ) -> ContractResult<Status<Lpn, Asset>> {
+        let LiabilityStatus {
+            ltv, overdue_lpn, ..
+        } = self
+            .loan
+            .liability_status(now, self.lease_addr.clone(), lease_lpn)?;
+
+        self.liquidate(
+            Cause::Overdue,
+            lease_lpn,
+            lease_lpn.min(overdue_lpn),
+            now,
+            ltv,
         )
     }
 
     fn liquidate(
-        &self,
+        &mut self,
+        cause: Cause,
         lease_lpn: Coin<Lpn>,
         liquidation_lpn: Coin<Lpn>,
+        now: Timestamp,
         ltv: Percent,
-        price_from_lpn: Price<Lpn, Lpn>,
-    ) -> ContractResult<Status<Lpn>> {
-        // TODO perform actual liquidation
+    ) -> ContractResult<Status<Lpn, Asset>> {
+        let receipt = self.no_reschedule_repay(liquidation_lpn, now)?;
 
-        let liquidation_amount = total(liquidation_lpn, price_from_lpn);
+        let info = LeaseInfo::new(self.customer.clone(), ltv);
 
-        let info = LeaseInfo {
-            customer: self.customer.clone(),
-            ltv,
-            lease_asset: self.currency.clone(),
+        let liquidation_info = LiquidationInfo {
+            cause,
+            lease: self.lease_addr.clone(),
+            receipt,
         };
 
         Ok(if liquidation_lpn == lease_lpn {
-            Status::FullLiquidation(info)
+            Status::FullLiquidation {
+                info,
+                liquidation_info,
+            }
         } else {
             Status::PartialLiquidation {
-                _info: info,
-                _healthy_ltv: self.liability.healthy_percent(),
-                liquidation_amount,
+                info,
+                liquidation_info,
+                healthy_ltv: self.liability.healthy_percent(),
             }
         })
     }
 }
 
-pub(crate) struct OnAlarmResult<Lpn>
+pub(crate) struct OnAlarmResult<Lpn, Asset>
 where
     Lpn: Currency,
+    Asset: Currency,
 {
     pub batch: Batch,
     pub lease_dto: LeaseDTO,
-    pub liquidation_status: Status<Lpn>,
+    pub liquidation_status: Status<Lpn, Asset>,
 }
 
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-pub(crate) enum Status<Lpn>
+pub(crate) enum Status<Lpn, Asset>
+where
+    Lpn: Currency,
+    Asset: Currency,
+{
+    None,
+    Warning(LeaseInfo<Asset>, WarningLevel),
+    PartialLiquidation {
+        info: LeaseInfo<Asset>,
+        liquidation_info: LiquidationInfo<Lpn>,
+        healthy_ltv: Percent,
+    },
+    FullLiquidation {
+        info: LeaseInfo<Asset>,
+        liquidation_info: LiquidationInfo<Lpn>,
+    },
+}
+
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+pub(crate) struct LeaseInfo<Asset>
+where
+    Asset: Currency,
+{
+    pub customer: Addr,
+    pub ltv: Percent,
+    _asset: PhantomData<Asset>,
+}
+
+impl<Asset> LeaseInfo<Asset>
+where
+    Asset: Currency,
+{
+    pub fn new(customer: Addr, ltv: Percent) -> Self {
+        Self {
+            customer,
+            ltv,
+            _asset: PhantomData,
+        }
+    }
+}
+
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+pub(crate) struct LiquidationInfo<Lpn>
 where
     Lpn: Currency,
 {
-    None,
-    Warning(LeaseInfo, WarningLevel),
-    PartialLiquidation {
-        _info: LeaseInfo,
-        _healthy_ltv: Percent,
-        liquidation_amount: Coin<Lpn>,
-    },
-    FullLiquidation(LeaseInfo),
+    pub cause: Cause,
+    pub lease: Addr,
+    pub receipt: RepayReceipt<Lpn>,
 }
 
-#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-pub(crate) struct LeaseInfo {
-    pub customer: Addr,
-    pub ltv: Percent,
-    pub lease_asset: SymbolOwned,
+generate_ids! {
+    pub(crate) Cause as u8 {
+        Overdue = 1,
+        Liability = 2,
+    }
+}
+
+impl Cause {
+    pub fn to_uint(self) -> u8 {
+        self.into()
+    }
 }
 
 generate_ids! {
@@ -201,18 +260,18 @@ impl WarningLevel {
 mod tests {
     use cosmwasm_std::{Addr, Timestamp};
 
-    use finance::price::Price;
-    use finance::{currency::Currency, percent::Percent};
+    use finance::percent::Percent;
     use lpp::msg::LoanResponse;
 
     use crate::{
         lease::{
-            tests::TestCurrency,
             tests::{coin, lease_setup, LEASE_START},
-            LeaseInfo, Status, WarningLevel,
+            LeaseInfo, LiquidationInfo, Status, WarningLevel,
         },
-        loan::LiabilityStatus,
+        loan::{LiabilityStatus, RepayReceipt},
     };
+
+    use super::Cause;
 
     #[test]
     fn warnings_none() {
@@ -226,8 +285,11 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
+            &lease_addr,
             Some(loan),
+            Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
@@ -250,8 +312,11 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
+            &lease_addr,
             Some(loan),
+            Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
@@ -259,11 +324,10 @@ mod tests {
         assert_eq!(
             lease.handle_warnings(lease.liability.first_liq_warn_percent()),
             Status::Warning(
-                LeaseInfo {
-                    customer: lease.customer.clone(),
-                    ltv: lease.liability.first_liq_warn_percent(),
-                    lease_asset: TestCurrency::SYMBOL.into(),
-                },
+                LeaseInfo::new(
+                    lease.customer.clone(),
+                    lease.liability.first_liq_warn_percent(),
+                ),
                 WarningLevel::First,
             )
         );
@@ -281,8 +345,11 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
+            &lease_addr,
             Some(loan),
+            Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
@@ -290,11 +357,10 @@ mod tests {
         assert_eq!(
             lease.handle_warnings(lease.liability.second_liq_warn_percent()),
             Status::Warning(
-                LeaseInfo {
-                    customer: lease.customer.clone(),
-                    ltv: lease.liability.second_liq_warn_percent(),
-                    lease_asset: TestCurrency::SYMBOL.into(),
-                },
+                LeaseInfo::new(
+                    lease.customer.clone(),
+                    lease.liability.second_liq_warn_percent(),
+                ),
                 WarningLevel::Second,
             )
         );
@@ -312,8 +378,11 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
+            &lease_addr,
             Some(loan),
+            Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
@@ -321,11 +390,10 @@ mod tests {
         assert_eq!(
             lease.handle_warnings(lease.liability.third_liq_warn_percent()),
             Status::Warning(
-                LeaseInfo {
-                    customer: lease.customer.clone(),
-                    ltv: lease.liability.third_liq_warn_percent(),
-                    lease_asset: TestCurrency::SYMBOL.into(),
-                },
+                LeaseInfo::new(
+                    lease.customer.clone(),
+                    lease.liability.third_liq_warn_percent(),
+                ),
                 WarningLevel::Third,
             )
         );
@@ -342,8 +410,11 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
+        let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
+            &lease_addr,
             Some(loan),
+            Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
@@ -373,24 +444,34 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let lease = lease_setup(
+        let lease_addr = Addr::unchecked("lease");
+        let mut lease = lease_setup(
+            &lease_addr,
             Some(loan),
+            Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
 
         assert_eq!(
             lease
-                .liquidate_on_liability(coin(lease_amount), coin(800), Price::identity())
+                .liquidate_on_liability(coin(lease_amount), coin(800), LEASE_START)
                 .unwrap(),
             Status::PartialLiquidation {
-                _info: LeaseInfo {
-                    customer: Addr::unchecked("customer"),
-                    ltv: lease.liability.max_percent(),
-                    lease_asset: TestCurrency::SYMBOL.into(),
+                info: LeaseInfo::new(Addr::unchecked("customer"), lease.liability.max_percent()),
+                liquidation_info: LiquidationInfo {
+                    cause: Cause::Liability,
+                    lease: lease_addr.clone(),
+                    receipt: RepayReceipt::new(
+                        coin(0),
+                        coin(0),
+                        coin(0),
+                        coin(100),
+                        coin(233),
+                        false
+                    ),
                 },
-                _healthy_ltv: lease.liability.healthy_percent(),
-                liquidation_amount: coin(333),
+                healthy_ltv: lease.liability.healthy_percent(),
             }
         );
     }
@@ -407,21 +488,35 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let lease = lease_setup(
+        let lease_addr = Addr::unchecked("lease");
+        let mut lease = lease_setup(
+            &lease_addr,
             Some(loan),
+            Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
 
         assert_eq!(
             lease
-                .liquidate_on_liability(coin(lease_amount), coin(5000), Price::identity())
+                .liquidate_on_liability(coin(lease_amount), coin(5000), LEASE_START)
                 .unwrap(),
-            Status::FullLiquidation(LeaseInfo {
-                customer: Addr::unchecked("customer"),
-                ltv: lease.liability.max_percent(),
-                lease_asset: TestCurrency::SYMBOL.into(),
-            },)
+            Status::FullLiquidation {
+                info: LeaseInfo::new(Addr::unchecked("customer"), lease.liability.max_percent()),
+                liquidation_info: LiquidationInfo {
+                    cause: Cause::Liability,
+                    lease: lease_addr.clone(),
+                    receipt: RepayReceipt::new(
+                        coin(0),
+                        coin(0),
+                        coin(0),
+                        coin(100),
+                        // TODO change to `500` when issue #13 is solved
+                        coin(900),
+                        true,
+                    ),
+                },
+            }
         );
     }
 }

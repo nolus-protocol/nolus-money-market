@@ -6,17 +6,18 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 
-use finance::currency::Nls;
-use finance::duration::Duration;
+use finance::{currency::Nls, duration::Duration};
 use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
 
-use crate::cmd::Dispatch;
-use crate::error::ContractError;
-use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::Config;
-use crate::state::DispatchLog;
+use crate::{
+    cmd::Dispatch,
+    error::ContractError,
+    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
+    state::Config,
+    state::DispatchLog,
+};
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -126,7 +127,7 @@ pub fn try_dispatch(
     let oracle = OracleRef::try_from(config.oracle.clone(), &deps.querier)?;
 
     let lpp_address = config.lpp.clone();
-    let lpp = LppRef::try_from(lpp_address.clone(), &deps.querier)?;
+    let lpp = LppRef::try_new(lpp_address.clone(), &deps.querier)?;
     let emitter: Emitter = lpp.execute(
         Dispatch::new(oracle, last_dispatch, config, block_time, deps.querier)?,
         &deps.querier,
@@ -148,9 +149,11 @@ mod tests {
         Addr, DepsMut,
     };
 
-    use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-    use crate::state::tvl_intervals::{Intervals, Stop};
-    use crate::ContractError;
+    use crate::{
+        msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
+        state::tvl_intervals::{Intervals, Stop},
+        ContractError,
+    };
 
     use super::{execute, instantiate, query};
 

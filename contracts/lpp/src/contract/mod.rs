@@ -1,15 +1,17 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
 use cw2::set_contract_version;
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::error::ContractError;
-use crate::lpp::LiquidityPool;
-use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::Config;
 use finance::currency::{visit_any, AnyVisitor, Currency};
+
+use crate::{
+    error::ContractError,
+    lpp::LiquidityPool,
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    state::Config,
+};
 
 mod borrow;
 mod config;

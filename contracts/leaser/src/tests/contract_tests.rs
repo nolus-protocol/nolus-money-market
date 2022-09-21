@@ -1,18 +1,23 @@
-use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
 use cosmwasm_std::{
-    coins, from_binary, to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
+    coins, from_binary,
+    testing::{mock_dependencies, mock_env, mock_info},
+    to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{Currency, Usdc};
-use finance::liability::Liability;
-use finance::percent::Percent;
+use finance::{
+    currency::{Currency, Usdc},
+    liability::Liability,
+    percent::Percent,
+};
 
-use crate::cmd::Borrow;
-use crate::contract::{execute, instantiate, query};
-use crate::msg::{ConfigResponse, ExecuteMsg, QueryMsg, Repayment};
-use crate::ContractError;
+use crate::{
+    cmd::Borrow,
+    contract::{execute, instantiate, query},
+    msg::{ConfigResponse, ExecuteMsg, QueryMsg, Repayment},
+    ContractError,
+};
 
 const CREATOR: &str = "creator";
 const LPP_ADDR: &str = "test";
@@ -37,6 +42,7 @@ fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::Ins
         repayment: Repayment::new(90 * 24 * 60 * 60, 10 * 24 * 60 * 60),
         time_alarms: Addr::unchecked("timealarms"),
         market_price_oracle: Addr::unchecked("oracle"),
+        profit: Addr::unchecked("profit"),
     }
 }
 

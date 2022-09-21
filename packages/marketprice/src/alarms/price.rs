@@ -2,11 +2,13 @@ use std::collections::{HashMap, HashSet};
 
 use cosmwasm_std::{Addr, Order, Response, StdResult, Storage};
 use cw_storage_plus::{Item, Map};
+
 use finance::currency::{Nls, SymbolOwned};
 use platform::batch::Batch;
 
-use super::{errors::AlarmError, Alarm, ExecuteAlarmMsg};
 use crate::storage::{Denom, Price};
+
+use super::{errors::AlarmError, Alarm, ExecuteAlarmMsg};
 
 pub type HookReplyId = u64;
 pub struct HookReplyIdSeq<'a>(Item<'a, HookReplyId>);
@@ -123,7 +125,6 @@ impl<'m> PriceHooks<'m> {
 
 #[cfg(test)]
 pub mod tests {
-
     use cosmwasm_std::{testing::mock_dependencies, Addr};
 
     use crate::{

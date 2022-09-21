@@ -1,6 +1,7 @@
-use crate::ContractError;
 use cosmwasm_std::{Addr, Storage};
 use cw_storage_plus::Item;
+
+use crate::ContractError;
 
 pub const ADMIN: Item<Addr> = Item::new("admin");
 pub const REWARDS_DISPATCHER: Item<Addr> = Item::new("rewards_dispatcher");

@@ -1,22 +1,21 @@
-use std::ops::Mul;
 use std::{
     fmt::{Debug, Display, Formatter},
     marker::PhantomData,
-    ops::{Add, AddAssign, Div, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Mul, Sub, SubAssign},
 };
 
 use ::serde::{Deserialize, Serialize};
 use gcd::Gcd;
 use schemars::JsonSchema;
 
-#[cfg(feature = "testing")]
-pub use coinc::funds;
-pub use coinc::CoinDTO;
-
 use crate::currency::Currency;
 
+#[cfg(feature = "testing")]
+pub use self::coinc::funds;
+pub use self::coinc::CoinDTO;
+
 mod coinc;
-mod serde;
+pub mod serde;
 
 pub type Amount = u128;
 

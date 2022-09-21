@@ -1,16 +1,19 @@
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Uint128};
-use platform::batch::Batch;
 use serde::{de::DeserializeOwned, Serialize};
 
-use finance::coin::Coin;
-use finance::currency::Currency;
-use platform::bank::{self, BankAccount, BankStub};
+use finance::{coin::Coin, currency::Currency};
+use platform::{
+    bank::{self, BankAccount, BankStub},
+    batch::Batch,
+};
 
-use crate::error::ContractError;
-use crate::event;
-use crate::lpp::LiquidityPool;
-use crate::msg::{BalanceResponse, PriceResponse};
-use crate::state::Deposit;
+use crate::{
+    error::ContractError,
+    event,
+    lpp::LiquidityPool,
+    msg::{BalanceResponse, PriceResponse},
+    state::Deposit,
+};
 
 pub fn try_deposit<LPN>(
     deps: DepsMut,
@@ -21,7 +24,7 @@ where
     LPN: 'static + Currency + DeserializeOwned + Serialize,
 {
     let lender_addr = info.sender;
-    let amount = bank::received(&info.funds)?;
+    let amount = bank::received(info.funds)?;
 
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
 
@@ -103,11 +106,14 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
 // TODO: add more tests
 #[cfg(test)]
 mod test {
+    use cosmwasm_std::{
+        coin,
+        testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
+    };
+
+    use finance::{currency::Usdc, price};
+
     use super::*;
-    use cosmwasm_std::coin;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
-    use finance::currency::Usdc;
-    use finance::price;
 
     type TheCurrency = Usdc;
 
