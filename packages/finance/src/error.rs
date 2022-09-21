@@ -27,8 +27,8 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn broken_invariant_err<T>() -> Self {
-        Self::BrokenInvariant(String::from(type_name::<T>()))
+    pub fn broken_invariant_err<T>(msg: &str) -> Self {
+        Self::BrokenInvariant(String::from(type_name::<T>()) + " => " + msg)
     }
 
     pub fn no_funds<C>() -> Self
@@ -59,13 +59,16 @@ mod test {
         enum TestX {}
         let test_x_type_name: &str = type_name::<TestX>();
 
-        let err = Error::broken_invariant_err::<TestX>();
-        assert_eq!(&Error::BrokenInvariant(test_x_type_name.into()), &err);
+        let err = Error::broken_invariant_err::<TestX>("TestX failed");
+        assert_eq!(
+            &Error::BrokenInvariant(String::from(test_x_type_name) + " => TestX failed"),
+            &err
+        );
 
         assert_eq!(
             format!("{}", err),
             format!(
-                "[Finance] Programming error or invalid serialized object of {} type",
+                "[Finance] Programming error or invalid serialized object of {} => TestX failed type",
                 test_x_type_name
             )
         );

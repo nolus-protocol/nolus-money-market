@@ -127,7 +127,7 @@ fn test_update_config_invalid_repay_period() {
 }
 
 #[test]
-#[should_panic(expected = "IvalidLiability")]
+#[should_panic(expected = "BrokenInvariant")]
 fn test_update_config_invalid_liability() {
     let mut deps = mock_dependencies();
 
