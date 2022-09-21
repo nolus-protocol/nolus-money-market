@@ -1,14 +1,11 @@
+use super::PriceConvert;
+use crate::ContractError;
 use cosmwasm_std::StdResult;
-use serde::Serialize;
-
 use finance::coin::Coin;
 use finance::currency::{Currency, Nls};
 use finance::price::total;
 use oracle::stub::{Oracle as OracleTrait, WithOracle};
-
-use crate::ContractError;
-
-use super::PriceConvert;
+use serde::Serialize;
 
 impl<Lpn> WithOracle<Lpn> for PriceConvert<Lpn>
 where

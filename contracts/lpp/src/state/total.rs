@@ -1,16 +1,14 @@
-use crate::error::ContractError;
 use cosmwasm_std::{StdResult, Storage, Timestamp};
 use cw_storage_plus::Item;
-use finance::coin::Coin;
-use finance::currency::Currency;
-use finance::duration::Duration;
-use finance::fraction::Fraction;
-use finance::interest::InterestPeriod;
-use finance::percent::Percent;
-use finance::ratio::Rational;
 use schemars::JsonSchema;
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
+
+use finance::{
+    coin::Coin, currency::Currency, duration::Duration, fraction::Fraction,
+    interest::InterestPeriod, percent::Percent, ratio::Rational,
+};
+
+use crate::error::ContractError;
 
 // TODO: evaluate fixed or rust_decimal instead of cosmwasm_std::Decimal
 // https://docs.rs/fixed/latest/fixed/index.html
@@ -125,11 +123,11 @@ where
 
 #[cfg(test)]
 mod test {
+    use cosmwasm_std::testing;
+
+    use finance::{currency::Usdc, duration::Duration};
 
     use super::*;
-    use cosmwasm_std::testing;
-    use finance::currency::Usdc;
-    use finance::duration::Duration;
 
     #[test]
     fn borrow_and_repay() {

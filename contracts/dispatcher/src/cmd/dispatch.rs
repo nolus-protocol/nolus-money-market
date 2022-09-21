@@ -1,25 +1,21 @@
 use cosmwasm_std::QuerierWrapper;
 use cosmwasm_std::StdResult;
 use cosmwasm_std::Timestamp;
+use finance::{
+    coin::Coin,
+    currency::{Currency, Nls},
+    duration::Duration,
+    interest::InterestPeriod,
+};
+use lpp::stub::{Lpp as LppTrait, WithLpp};
+use oracle::convert;
+use oracle::stub::OracleRef;
+use platform::batch::{Batch, Emit, Emitter};
 use serde::Serialize;
 
-use finance::coin::Coin;
-use finance::currency::Currency;
-use finance::currency::Nls;
-use finance::duration::Duration;
-use finance::interest::InterestPeriod;
-use lpp::stub::{Lpp as LppTrait, WithLpp};
-use oracle::stub::OracleRef;
-use platform::batch::Batch;
-use platform::batch::Emit;
-use platform::batch::Emitter;
-
-use crate::cmd::Result as DispatcherResult;
-use crate::state::Config;
-use crate::ContractError;
+use crate::{cmd::Result as DispatcherResult, state::Config, ContractError};
 
 use super::Dispatch;
-use super::PriceConvert;
 
 impl<'a> WithLpp for Dispatch<'a> {
     type Output = Emitter;
@@ -48,10 +44,8 @@ impl<'a> WithLpp for Dispatch<'a> {
             return Err(ContractError::ZeroReward {});
         }
 
-        let reward_unls = self
-            .oracle_ref
-            .clone()
-            .execute(PriceConvert::with(reward_in_lppdenom)?, &self.querier)?;
+        let reward_unls =
+            convert::from_base(self.oracle_ref.clone(), reward_in_lppdenom, &self.querier)?;
 
         let result = DispatcherResult {
             batch: self.create_response(reward_unls)?,

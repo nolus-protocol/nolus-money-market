@@ -124,7 +124,6 @@ impl<'m> PriceHooks<'m> {
 
 #[cfg(test)]
 pub mod tests {
-
     use cosmwasm_std::{testing::mock_dependencies, Addr};
     use finance::{
         coin::Coin,

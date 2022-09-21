@@ -1,14 +1,15 @@
-use crate::error::ContractError;
+use std::cmp;
+
 use cosmwasm_std::{Addr, StdResult, Storage, Timestamp};
 use cw_storage_plus::Map;
-use finance::coin::Coin;
-use finance::currency::Currency;
-use finance::duration::Duration;
-use finance::interest::InterestPeriod;
-use finance::percent::Percent;
 use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::cmp;
+
+use finance::{
+    coin::Coin, currency::Currency, duration::Duration, interest::InterestPeriod, percent::Percent,
+};
+
+use crate::error::ContractError;
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 pub struct LoanData<LPN>
@@ -136,9 +137,11 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use cosmwasm_std::testing;
+
     use finance::{currency::Usdc, duration::Duration};
+
+    use super::*;
 
     #[test]
     fn test_open_and_repay_loan() {

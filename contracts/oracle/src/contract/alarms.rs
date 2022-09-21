@@ -1,4 +1,4 @@
-use std::collections::{HashSet};
+use std::collections::HashSet;
 
 use cosmwasm_std::{Addr, Response, StdResult, Storage};
 use finance::{currency::SymbolOwned, price::dto::PriceDTO};

@@ -96,8 +96,9 @@ pub trait AlarmDispatcher {
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
     use cosmwasm_std::testing;
+
+    use super::*;
 
     #[derive(Default)]
     struct MockAlarmDispatcher(pub Vec<Id>);

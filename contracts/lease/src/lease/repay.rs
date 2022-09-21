@@ -2,9 +2,10 @@ use cosmwasm_std::Timestamp;
 use serde::Serialize;
 
 use finance::{coin::Coin, currency::Currency};
-use lpp::stub::Lpp as LppTrait;
+use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
+use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
@@ -13,12 +14,14 @@ use crate::{
     loan::RepayReceipt,
 };
 
-impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset>
+impl<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
+    Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
-    Lpp: LppTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
+    Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
     pub(crate) fn repay(
@@ -27,7 +30,7 @@ where
         payment: Coin<Lpn>,
         now: Timestamp,
     ) -> ContractResult<Result<Lpn>> {
-        let receipt = self.loan.repay(payment, now, self.lease_addr.clone())?;
+        let receipt = self.no_reschedule_repay(payment, now)?;
 
         self.reschedule_on_repay(lease_amount, &now)?;
 
@@ -38,6 +41,16 @@ where
             lease_dto,
             receipt,
         })
+    }
+
+    pub(super) fn no_reschedule_repay(
+        &mut self,
+        payment: Coin<Lpn>,
+        now: Timestamp,
+    ) -> ContractResult<RepayReceipt<Lpn>> {
+        self.loan
+            .repay(payment, now, self.lease_addr.clone())
+            .map_err(Into::into)
     }
 }
 

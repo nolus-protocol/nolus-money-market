@@ -1,10 +1,11 @@
-use cosmwasm_std::{Addr, Timestamp};
+use cosmwasm_std::{Addr, Env, Timestamp};
 use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
-use lpp::stub::Lpp as LppTrait;
+use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::bank::BankAccountView;
+use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
@@ -17,6 +18,7 @@ pub struct TimeAlarm<'a, B>
 where
     B: BankAccountView,
 {
+    env: &'a Env,
     sender: &'a Addr,
     account: B,
     now: Timestamp,
@@ -26,8 +28,9 @@ impl<'a, B> TimeAlarm<'a, B>
 where
     B: BankAccountView,
 {
-    pub fn new(sender: &'a Addr, account: B, now: Timestamp) -> Self {
+    pub fn new(env: &'a Env, sender: &'a Addr, account: B, now: Timestamp) -> Self {
         Self {
+            env,
             sender,
             account,
             now,
@@ -43,15 +46,16 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, TimeAlarms, Oracle, Asset>(
+    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>,
+        lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppTrait<Lpn>,
+        Lpp: LppLenderTrait<Lpn>,
         TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
+        Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
         if !lease.sent_by_time_alarms(self.sender) {
@@ -65,7 +69,7 @@ where
         } = lease.on_time_alarm(self.now, &self.account)?;
 
         Ok(AlarmResult {
-            response: emit_events(&liquidation_status, batch),
+            response: emit_events(self.env, &liquidation_status, batch),
             lease_dto,
         })
     }

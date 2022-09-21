@@ -5,43 +5,43 @@ use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
-    #[error("{0}")]
+    #[error("[Leaser] [Std] {0}")]
     Std(#[from] StdError),
 
-    #[error("{0}")]
+    #[error("[Leaser] {0}")]
     Finance(#[from] finance::error::Error),
 
-    #[error("{0}")]
+    #[error("[Leaser] {0}")]
     Lpp(#[from] lpp::error::ContractError),
 
-    #[error("{0}")]
+    #[error("[Leaser] {0}")]
     Platform(#[from] platform::error::Error),
 
-    #[error("Unauthorized")]
+    #[error("[Leaser] Unauthorized")]
     Unauthorized {},
 
     #[error(
-        "LeaseHealthyLiability% must be less than LeaseMaxLiability% and LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
+        "[Leaser] LeaseHealthyLiability% must be less than LeaseMaxLiability% and LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
     )]
     IvalidLiability {},
 
-    #[error("ParseError {err:?}")]
+    #[error("[Leaser] ParseError {err:?}")]
     ParseError { err: String },
 
-    #[error("{0}")]
+    #[error("[Leaser] Validation {0}")]
     Validation(String),
 
-    #[error("Custom Error val: {val:?}")]
+    #[error("[Leaser] Custom Error val: {val:?}")]
     CustomError { val: String },
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
-    #[error("Cannot open lease with zero downpayment")]
+    #[error("[Leaser] Cannot open lease with zero downpayment")]
     ZeroDownpayment {},
 
-    #[error("{symbol:?}")]
+    #[error("[Leaser] Unknown currency symbol: {symbol:?}")]
     UnknownCurrency { symbol: String },
 
-    #[error("NoLiquidity")]
+    #[error("[Leaser] No Liquidity")]
     NoLiquidity {},
 }
 

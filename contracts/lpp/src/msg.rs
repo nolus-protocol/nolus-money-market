@@ -1,12 +1,13 @@
 use cosmwasm_std::{Addr, Timestamp, Uint128, Uint64};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+
 use finance::{
     coin::{Coin, CoinDTO},
     currency::{Currency, Nls},
     percent::Percent,
     price::Price,
 };
-use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
 
 use crate::nlpn::NLpn;
 

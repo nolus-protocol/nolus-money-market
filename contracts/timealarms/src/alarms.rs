@@ -64,10 +64,10 @@ mod tests {
         Addr, QuerierWrapper, Timestamp,
     };
 
-    use crate::ContractError;
     use crate::{
         alarms::TimeAlarms,
         contract_validation::{tests::valid_contract_query, validate_contract_addr},
+        ContractError,
     };
 
     #[test]

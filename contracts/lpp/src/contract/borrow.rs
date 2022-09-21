@@ -62,7 +62,7 @@ where
     LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
     let lease_addr = info.sender;
-    let repay_amount = bank::received(&info.funds)?;
+    let repay_amount = bank::received(info.funds)?;
 
     let mut lpp = LiquidityPool::<LPN>::load(deps.storage)?;
     lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
@@ -77,7 +77,9 @@ where
     };
 
     let mut resp: Response = batch.into();
-    resp = resp.add_attribute("method", "try_repay_loan");
+    resp = resp
+        .add_attribute("method", "try_repay_loan")
+        .set_data(to_binary(&excess_received)?);
     Ok(resp)
 }
 

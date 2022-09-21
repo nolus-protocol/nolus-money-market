@@ -19,8 +19,10 @@ use crate::common::{
     lpp_wrapper::LppWrapper,
     mock_app,
     oracle_wrapper::MarketOracleWrapper,
+    profit_wrapper::ProfitWrapper,
     test_case::TestCase,
     timealarms_wrapper::TimeAlarmsWrapper,
+    treasury_wrapper::TreasuryWrapper,
     AppExt, ADMIN, USER,
 };
 
@@ -37,6 +39,8 @@ fn open_loan_unauthorized_contract_id() {
     test_case.init_lpp(None);
     test_case.init_timealarms();
     test_case.init_oracle(None);
+    test_case.init_treasury();
+    test_case.init_profit(24);
 
     //redeploy lease contract to change the code_id
     test_case.init_lease();
@@ -67,6 +71,8 @@ fn open_loan_no_liquidity() {
     test_case.init_lpp(None);
     test_case.init_timealarms();
     test_case.init_oracle(None);
+    test_case.init_treasury();
+    test_case.init_profit(24);
 
     let lease_addr = test_case.get_lease_instance();
 
@@ -114,6 +120,8 @@ fn deposit_and_withdraw() {
         time_alarms.as_str(),
         0,
     );
+    let treasury = TreasuryWrapper::default().instantiate(&mut app, TheCurrency::SYMBOL);
+    let profit = ProfitWrapper::default().instantiate(&mut app, 24, &treasury, &time_alarms);
 
     app.send_tokens(admin.clone(), lender1.clone(), &[coin(init_deposit, denom)])
         .unwrap();
@@ -212,6 +220,7 @@ fn deposit_and_withdraw() {
             lpp: lpp.clone(),
             time_alarms,
             oracle: market_price_oracle,
+            profit,
         },
         denom,
         LeaseWrapperConfig {
@@ -364,11 +373,14 @@ fn loan_open_and_repay() {
     let addon_optimal_interest_rate = Percent::from_percent(20);
     let utilization_optimal = Percent::from_percent(55);
 
-    let utilization1 = Percent::from_permille((1000 * loan1 / init_deposit) as u32);
-    let interest1 = base_interest_rate + addon_optimal_interest_rate.of(utilization1)
-        - addon_optimal_interest_rate.of(utilization_optimal);
+    let utilization_rel1 =
+        Percent::from_permille((1000 * loan1 / utilization_optimal.of(init_deposit)) as u32);
+    let interest1 = base_interest_rate + utilization_rel1.of(addon_optimal_interest_rate);
+    // let utilization1 = Percent::from_permille((1000 * loan1 / init_deposit) as u32);
+    // let interest1 = base_interest_rate + addon_optimal_interest_rate.of(utilization1)
+    //     - addon_optimal_interest_rate.of(utilization_optimal);
     dbg!(Percent::from_percent(1)); // scale
-    dbg!(utilization1);
+    dbg!(utilization_rel1);
     dbg!(interest1);
 
     // net setup
@@ -378,10 +390,13 @@ fn loan_open_and_repay() {
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app, 0, String::new());
     let oracle =
         MarketOracleWrapper::default().instantiate(&mut app, denom, time_alarms.as_str(), 0);
+    let treasury = TreasuryWrapper::default().instantiate(&mut app, denom);
+    let profit = ProfitWrapper::default().instantiate(&mut app, 24, &treasury, &time_alarms);
     let lease_addresses = LeaseWrapperAddresses {
         lpp: lpp.clone(),
         time_alarms,
         oracle,
+        profit,
     };
     app.send_tokens(admin.clone(), lender.clone(), &[coin(init_deposit, denom)])
         .unwrap();
@@ -463,11 +478,16 @@ fn loan_open_and_repay() {
     assert_eq!(total_interest_due, resp.total_interest_due.into());
 
     let total_liability = loan1 + loan2 + total_interest_due;
-    let utilization2 = Percent::from_permille(
-        (1000 * (total_liability) / (init_deposit + total_interest_due)) as u32,
+    // let utilization2 = Percent::from_permille(
+    //     (1000 * (total_liability) / (init_deposit + total_interest_due)) as u32,
+    // );
+    // let interest2 = base_interest_rate + addon_optimal_interest_rate.of(utilization2)
+    //     - addon_optimal_interest_rate.of(utilization_optimal);
+    let utilization_rel2 = Percent::from_permille(
+        (1000 * (total_liability) / utilization_optimal.of(init_deposit + total_interest_due))
+            as u32,
     );
-    let interest2 = base_interest_rate + addon_optimal_interest_rate.of(utilization2)
-        - addon_optimal_interest_rate.of(utilization_optimal);
+    let interest2 = base_interest_rate + utilization_rel2.of(addon_optimal_interest_rate);
 
     let quote: QueryQuoteResponse = app
         .wrap()
@@ -658,11 +678,12 @@ fn compare_lpp_states() {
     let addon_optimal_interest_rate = Percent::from_percent(20);
     let utilization_optimal = Percent::from_percent(55);
 
-    let utilization1 = Percent::from_permille((1000 * loan1 / init_deposit) as u32);
-    let interest1 = base_interest_rate + addon_optimal_interest_rate.of(utilization1)
-        - addon_optimal_interest_rate.of(utilization_optimal);
+    let utilization_rel1 =
+        Percent::from_permille((1000 * loan1 / utilization_optimal.of(init_deposit)) as u32);
+    let interest1 = base_interest_rate + utilization_rel1.of(addon_optimal_interest_rate);
+
     dbg!(Percent::from_percent(1)); // scale
-    dbg!(utilization1);
+    dbg!(utilization_rel1);
     dbg!(interest1);
 
     // net setup
@@ -672,6 +693,8 @@ fn compare_lpp_states() {
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app, 0, String::new());
     let market_oracle =
         MarketOracleWrapper::default().instantiate(&mut app, denom, time_alarms.as_str(), 0);
+    let treasury = TreasuryWrapper::default().instantiate(&mut app, denom);
+    let profit = ProfitWrapper::default().instantiate(&mut app, 24, &treasury, &time_alarms);
     app.send_tokens(admin.clone(), lender.clone(), &[coin(init_deposit, denom)])
         .unwrap();
     app.send_tokens(
@@ -724,6 +747,7 @@ fn compare_lpp_states() {
             lpp: lpp.clone(),
             time_alarms: time_alarms.clone(),
             oracle: market_oracle.clone(),
+            profit: profit.clone(),
         },
         denom,
         LeaseWrapperConfig {
@@ -756,11 +780,11 @@ fn compare_lpp_states() {
     assert_eq!(total_interest_due, resp.total_interest_due.into());
 
     let total_liability = loan1 + loan2 + total_interest_due;
-    let utilization2 = Percent::from_permille(
-        (1000 * (total_liability) / (init_deposit + total_interest_due)) as u32,
+    let utilization_rel2 = Percent::from_permille(
+        (1000 * (total_liability) / utilization_optimal.of(init_deposit + total_interest_due))
+            as u32,
     );
-    let interest2 = base_interest_rate + addon_optimal_interest_rate.of(utilization2)
-        - addon_optimal_interest_rate.of(utilization_optimal);
+    let interest2 = base_interest_rate + utilization_rel2.of(addon_optimal_interest_rate);
 
     let quote: QueryQuoteResponse = app
         .wrap()
@@ -784,6 +808,7 @@ fn compare_lpp_states() {
             lpp: lpp.clone(),
             time_alarms,
             oracle: market_oracle,
+            profit,
         },
         denom,
         LeaseWrapperConfig {

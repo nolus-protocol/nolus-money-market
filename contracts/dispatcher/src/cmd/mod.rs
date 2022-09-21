@@ -1,3 +1,4 @@
+use crate::state::Config;
 use cosmwasm_std::{QuerierWrapper, Timestamp};
 use finance::{
     coin::Coin,
@@ -5,19 +6,8 @@ use finance::{
 };
 use oracle::stub::OracleRef;
 use platform::batch::Batch;
-use serde::Serialize;
-
-use crate::state::Config;
 
 mod dispatch;
-mod price_convert;
-
-pub struct PriceConvert<Lpn>
-where
-    Lpn: Currency + Serialize,
-{
-    amount: Coin<Lpn>,
-}
 
 pub struct Dispatch<'a> {
     last_dispatch: Timestamp,

@@ -1,12 +1,14 @@
+use std::{cmp, fmt::Debug, marker::PhantomData, ops::Sub};
+
 use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
-use std::{cmp, fmt::Debug, marker::PhantomData, ops::Sub};
 
 use crate::{
     duration::Duration,
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
 };
+
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct InterestPeriod<U, F> {
     start: Timestamp,

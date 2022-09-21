@@ -5,12 +5,13 @@ use finance::{
     currency::{Currency, SymbolOwned},
     price::{total, Price},
 };
-use lpp::stub::Lpp as LppTrait;
+use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{
     bank::{self, BankAccountView},
     batch::{Emit, Emitter},
 };
+use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
@@ -23,7 +24,7 @@ pub struct Repay<'a, Bank>
 where
     Bank: BankAccountView,
 {
-    payment: &'a [CwCoin],
+    payment: Vec<CwCoin>,
     env: &'a Env,
     account: Bank,
 }
@@ -32,7 +33,7 @@ impl<'a, Bank> Repay<'a, Bank>
 where
     Bank: BankAccountView,
 {
-    pub fn new(payment: &'a [CwCoin], account: Bank, env: &'a Env) -> Self {
+    pub fn new(payment: Vec<CwCoin>, account: Bank, env: &'a Env) -> Self {
         Self {
             payment,
             env,
@@ -54,15 +55,16 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, TimeAlarms, Oracle, Asset>(
+    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>,
+        lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppTrait<Lpn>,
+        Lpp: LppLenderTrait<Lpn>,
         TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
+        Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
         // TODO 'receive' the payment from the bank using any currency it might be in

@@ -84,20 +84,19 @@ mod tests {
         (app, cw_template_contract)
     }
     mod time_alarms {
+        use cosmwasm_std::{Addr, Timestamp};
+        use cw_multi_test::Executor;
+
+        use crate::msg::ExecuteMsg;
+
         // use super::*;
         // use crate::msg::ExecuteMsg;
         use super::{proper_instantiate, ADMIN};
-        use crate::msg::ExecuteMsg;
-        use cosmwasm_std::{Addr, Timestamp};
-        use cw_multi_test::Executor;
+
         //TODO: remove after proper implementation of loan SC
         /// The mock for loan SC. It mimics the scheme for time notification.
         /// If GATE, it returns Ok on notifications, returns Err otherwise.
         mod mock_loan {
-
-            use crate::tests::integration_tests::tests::CwTemplateContract;
-
-            use super::ADMIN;
             use cosmwasm_std::{
                 Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
                 StdResult, Timestamp,
@@ -106,6 +105,11 @@ mod tests {
             use cw_storage_plus::Item;
             use schemars::JsonSchema;
             use serde::{Deserialize, Serialize};
+
+            use crate::tests::integration_tests::tests::CwTemplateContract;
+
+            use super::ADMIN;
+
             const GATE: Item<bool> = Item::new("alarm gate");
             #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
             #[serde(rename_all = "snake_case")]

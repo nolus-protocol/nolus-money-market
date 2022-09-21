@@ -20,15 +20,18 @@ pub trait BankAccount: BankAccountView + Into<Batch> {
         C: Currency;
 }
 
-pub fn received<C>(cw_amount: &[CwCoin]) -> Result<Coin<C>>
+pub fn received<C>(cw_amount: Vec<CwCoin>) -> Result<Coin<C>>
 where
     C: Currency,
 {
     match cw_amount.len() {
         0 => Err(Error::no_funds::<C>()),
         1 => {
-            let cw_coin = &cw_amount[0];
-            Ok(from_cosmwasm_impl(cw_coin.clone())?)
+            let first = cw_amount
+                .into_iter()
+                .next()
+                .expect("there is at least a coin");
+            Ok(from_cosmwasm_impl(first)?)
         }
         _ => Err(Error::unexpected_funds::<C>()),
     }

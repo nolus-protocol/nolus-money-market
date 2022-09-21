@@ -3,11 +3,9 @@ use cw_multi_test::{ContractWrapper, Executor};
 
 use finance::currency::{Currency, Nls, Usdc};
 
-use crate::{
-    common::test_case::TestCase,
-    common::{
-        lpp_wrapper::mock_lpp_query, oracle_wrapper::mock_oracle_query, ADMIN, NATIVE_DENOM, USER,
-    },
+use crate::common::{
+    lpp_wrapper::mock_lpp_query, oracle_wrapper::mock_oracle_query, test_case::TestCase, ADMIN,
+    NATIVE_DENOM, USER,
 };
 
 #[test]

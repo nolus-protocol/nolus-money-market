@@ -1,17 +1,24 @@
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage};
-use platform::batch::Batch;
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::error::ContractError;
-use crate::lpp::LiquidityPool;
-use crate::msg::{LppBalanceResponse, RewardsResponse};
-use crate::state::Deposit;
-use finance::coin::Coin;
-use finance::currency::{Currency, Nls};
-use platform::bank::{self, BankAccount, BankStub};
+use finance::{
+    coin::Coin,
+    currency::{Currency, Nls},
+};
+use platform::{
+    bank::{self, BankAccount, BankStub},
+    batch::Batch,
+};
+
+use crate::{
+    error::ContractError,
+    lpp::LiquidityPool,
+    msg::{LppBalanceResponse, RewardsResponse},
+    state::Deposit,
+};
 
 pub fn try_distribute_rewards(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
-    let amount: Coin<Nls> = bank::received(&info.funds)?;
+    let amount: Coin<Nls> = bank::received(info.funds)?;
     Deposit::distribute_rewards(deps, amount)?;
 
     Ok(Response::new().add_attribute("method", "try_distribute_rewards"))
@@ -64,11 +71,16 @@ pub fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsRespons
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::contract::lender;
-    use cosmwasm_std::coin;
-    use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
+    use cosmwasm_std::{
+        coin,
+        testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
+    };
+
     use finance::currency::Usdc;
+
+    use crate::contract::lender;
+
+    use super::*;
 
     type TheCurrency = Usdc;
 

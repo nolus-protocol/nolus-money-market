@@ -4,7 +4,7 @@ use cosmwasm_std::{wasm_execute, Addr, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    currency::{visit, Currency, SingleVisitor, SymbolOwned},
+    currency::{Currency, SymbolOwned},
     price::{dto::PriceDTO, Price},
 };
 use marketprice::alarms::Alarm;
@@ -25,7 +25,7 @@ pub struct OracleBatch {
 pub trait Oracle<OracleBase>
 where
     Self: Into<OracleBatch>,
-    OracleBase: Currency + Serialize,
+    OracleBase: Currency,
 {
     fn owned_by(&self, addr: &Addr) -> bool;
 
@@ -38,7 +38,7 @@ where
 
 pub trait WithOracle<OracleBase>
 where
-    OracleBase: Currency + Serialize,
+    OracleBase: Currency,
 {
     type Output;
     type Error;
@@ -53,7 +53,7 @@ where
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OracleRef {
     addr: Addr,
-    currency: SymbolOwned,
+    base_currency: SymbolOwned,
 }
 
 impl From<OracleRef> for Addr {
@@ -66,9 +66,12 @@ impl OracleRef {
     pub fn try_from(addr: Addr, querier: &QuerierWrapper) -> Result<Self> {
         let resp: ConfigResponse = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config {})?;
 
-        let currency = resp.base_asset;
+        let base_currency = resp.base_asset;
 
-        Ok(Self { addr, currency })
+        Ok(Self {
+            addr,
+            base_currency,
+        })
     }
 
     pub fn owned_by(&self, addr: &Addr) -> bool {
@@ -77,47 +80,14 @@ impl OracleRef {
 
     pub fn execute<OracleBase, V, O, E>(self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
     where
-        OracleBase: Currency + Serialize,
+        OracleBase: Currency,
         V: WithOracle<OracleBase, Output = O, Error = E>,
     {
-        struct CurrencyVisitor<'a, OracleBase, V, O, E>
-        where
-            OracleBase: Currency + Serialize,
-            V: WithOracle<OracleBase, Output = O, Error = E>,
-        {
-            cmd: V,
-            oracle_ref: OracleRef,
-            _oracle_base: PhantomData<OracleBase>,
-            querier: &'a QuerierWrapper<'a>,
+        if OracleBase::SYMBOL == self.base_currency {
+            cmd.exec(self.into_stub::<OracleBase>(querier))
+        } else {
+            cmd.unexpected_base(self.base_currency)
         }
-
-        impl<'a, OracleBase, V, O, E> SingleVisitor<OracleBase> for CurrencyVisitor<'a, OracleBase, V, O, E>
-        where
-            OracleBase: Currency + Serialize,
-            V: WithOracle<OracleBase, Output = O, Error = E>,
-        {
-            type Output = O;
-            type Error = E;
-
-            fn on(self) -> StdResult<Self::Output, Self::Error> {
-                self.cmd
-                    .exec(self.oracle_ref.into_stub::<OracleBase>(self.querier))
-            }
-
-            fn on_unknown(self) -> StdResult<Self::Output, Self::Error> {
-                self.cmd.unexpected_base(self.oracle_ref.currency)
-            }
-        }
-
-        visit(
-            &self.currency.clone(),
-            CurrencyVisitor {
-                cmd,
-                oracle_ref: self,
-                _oracle_base: PhantomData,
-                querier,
-            },
-        )
     }
 
     fn into_stub<'a, OracleBase>(self, querier: &'a QuerierWrapper) -> OracleStub<'a, OracleBase> {
@@ -139,7 +109,7 @@ impl OracleRef {
     {
         Self {
             addr: Addr::unchecked(addr),
-            currency: C::SYMBOL.into(),
+            base_currency: C::SYMBOL.into(),
         }
     }
 }
@@ -159,7 +129,7 @@ impl<'a, OracleBase> OracleStub<'a, OracleBase> {
 
 impl<'a, OracleBase> Oracle<OracleBase> for OracleStub<'a, OracleBase>
 where
-    OracleBase: Currency + Serialize,
+    OracleBase: Currency,
 {
     fn owned_by(&self, addr: &Addr) -> bool {
         self.oracle_ref.owned_by(addr)

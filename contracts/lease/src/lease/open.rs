@@ -2,21 +2,24 @@ use cosmwasm_std::{Reply, Timestamp};
 use serde::Serialize;
 
 use finance::{coin::Coin, currency::Currency};
-use lpp::stub::Lpp as LppTrait;
+use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{bank::BankAccountView, batch::Batch};
+use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{error::ContractResult, lease::Lease, loan::OpenReceipt};
 
 use super::LeaseDTO;
 
-impl<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset> Lease<'r, Lpn, Lpp, TimeAlarms, Oracle, Asset>
+impl<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
+    Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
-    Lpp: LppTrait<Lpn>,
+    Lpp: LppLenderTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
+    Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
     pub(crate) fn open_loan_req(mut self, downpayment: Coin<Lpn>) -> ContractResult<Batch> {

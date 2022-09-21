@@ -32,6 +32,8 @@ fn create_test_case() -> TestCase {
     test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000);
     test_case.init_timealarms_with_funds(5_000_000);
     test_case.init_oracle_with_funds(None, 5_000_000);
+    test_case.init_treasury();
+    test_case.init_profit(24);
     test_case.init_leaser();
 
     test_case
@@ -443,9 +445,9 @@ fn compare_state_with_manual_calculation() {
         interest_rate_margin: quote_result.annual_interest_rate_margin,
         principal_due: Coin::new(1_857_142),
         previous_margin_due: create_coin(13_737),
-        previous_interest_due: create_coin(25_643),
+        previous_interest_due: create_coin(32_054),
         current_margin_due: create_coin(13_737),
-        current_interest_due: create_coin(25_644),
+        current_interest_due: create_coin(32_055),
         validity: block_time(&test_case),
     };
 

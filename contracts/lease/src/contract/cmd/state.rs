@@ -2,9 +2,10 @@ use cosmwasm_std::{to_binary, Binary, Timestamp};
 use serde::Serialize;
 
 use finance::currency::{Currency, SymbolOwned};
-use lpp::stub::Lpp as LppTrait;
+use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::bank::BankAccount;
+use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
@@ -31,15 +32,16 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Lpp, TimeAlarms, Oracle, Asset>(
+    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
         self,
-        lease: Lease<Lpn, Lpp, TimeAlarms, Oracle, Asset>,
+        lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppTrait<Lpn>,
+        Lpp: LppLenderTrait<Lpn>,
         TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
+        Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
         let resp = lease.state(self.now, &self.account)?;

@@ -4,8 +4,7 @@
 
 use cosmwasm_std::{from_binary, Addr, Api, Binary, Reply, StdError, StdResult};
 use prost::Message;
-use serde::de::DeserializeOwned;
-use serde::Deserialize;
+use serde::{de::DeserializeOwned, Deserialize};
 
 pub struct InstantiateResponse<T> {
     pub address: Addr,

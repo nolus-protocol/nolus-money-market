@@ -3,16 +3,18 @@ use std::{fmt::Debug, marker::PhantomData};
 use ::serde::{Deserialize, Serialize};
 use cosmwasm_std::{StdError, StdResult, Storage};
 use cw_storage_plus::Item;
-
 use trees::{Node as TreeNode, Tree};
 
-use finance::coin::serde::{deserialize as deserialize_currency, serialize as serialize_currency};
-use finance::currency::{Currency, SymbolOwned};
+use finance::{
+    coin::serde::{deserialize as deserialize_currency, serialize as serialize_currency},
+    currency::{Currency, SymbolOwned},
+};
 
 use crate::error::ContractError;
 
-mod serde;
 use self::serde::TreeStore;
+
+mod serde;
 
 pub type ResolutionPath = Vec<SymbolOwned>;
 pub type CurrencyPair = (SymbolOwned, SymbolOwned);
@@ -202,9 +204,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use cosmwasm_std::testing;
+
     use finance::currency::{Currency, Usdc};
+
+    use super::*;
 
     type TheCurrency = Usdc;
 
