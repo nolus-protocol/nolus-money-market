@@ -68,7 +68,7 @@ mod test {
         assert_eq!(
             format!("{}", err),
             format!(
-                "[Finance] Programming error or invalid serialized object of {} type",
+                "[Finance] Programming error or invalid serialized object of {} => TestX failed type",
                 test_x_type_name
             )
         );
