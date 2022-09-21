@@ -78,15 +78,6 @@ pub struct PricesResponse {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct PriceResponse<C, QuoteC>
-where
-    C: 'static + Currency,
-    QuoteC: 'static + Currency,
-{
-    pub price: Price<C, QuoteC>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
     PriceAlarm(),

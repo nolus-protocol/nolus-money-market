@@ -212,7 +212,7 @@ where
         if currency::equal::<Asset, Lpn>() {
             Ok(Price::identity())
         } else {
-            Ok(self.oracle.price_of::<Asset>()?.price)
+            Ok(self.oracle.price_of::<Asset>()?)
         }
     }
 }
@@ -231,6 +231,7 @@ mod tests {
         interest::InterestPeriod,
         liability::Liability,
         percent::Percent,
+        price::Price,
     };
     use lpp::{
         error::ContractError as LppError,
@@ -241,7 +242,6 @@ mod tests {
         },
     };
     use market_price_oracle::msg::ExecuteMsg::AddPriceAlarm;
-    use market_price_oracle::msg::PriceResponse;
     use market_price_oracle::stub::{Oracle, OracleBatch, OracleRef};
     use marketprice::alarms::Alarm;
     use platform::{bank::BankAccountView, batch::Batch, error::Result as PlatformResult};
@@ -436,7 +436,7 @@ mod tests {
             &self.address == addr
         }
 
-        fn price_of<C>(&self) -> market_price_oracle::stub::Result<PriceResponse<C, OracleBase>>
+        fn price_of<C>(&self) -> market_price_oracle::stub::Result<Price<C, OracleBase>>
         where
             C: Currency,
         {
@@ -473,7 +473,7 @@ mod tests {
             unreachable!()
         }
 
-        fn price_of<C>(&self) -> market_price_oracle::stub::Result<PriceResponse<C, OracleBase>>
+        fn price_of<C>(&self) -> market_price_oracle::stub::Result<Price<C, OracleBase>>
         where
             C: Currency,
         {

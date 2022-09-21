@@ -11,7 +11,7 @@ use marketprice::alarms::Alarm;
 use platform::batch::Batch;
 
 use crate::{
-    msg::{ConfigResponse, ExecuteMsg, PriceResponse, QueryMsg},
+    msg::{ConfigResponse, ExecuteMsg, QueryMsg},
     ContractError,
 };
 
@@ -29,7 +29,7 @@ where
 {
     fn owned_by(&self, addr: &Addr) -> bool;
 
-    fn price_of<C>(&self) -> Result<PriceResponse<C, OracleBase>>
+    fn price_of<C>(&self) -> Result<Price<C, OracleBase>>
     where
         C: Currency + Serialize;
 
@@ -135,7 +135,7 @@ where
         self.oracle_ref.owned_by(addr)
     }
 
-    fn price_of<C>(&self) -> Result<PriceResponse<C, OracleBase>>
+    fn price_of<C>(&self) -> Result<Price<C, OracleBase>>
     where
         C: Currency + Serialize,
     {
@@ -147,8 +147,7 @@ where
             .query_wasm_smart(self.addr().clone(), &msg)
             .map_err(ContractError::from)?;
 
-        let price: Price<C, OracleBase> = dto.try_into()?;
-        Ok(PriceResponse { price })
+        Ok(dto.try_into()?)
     }
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()> {
