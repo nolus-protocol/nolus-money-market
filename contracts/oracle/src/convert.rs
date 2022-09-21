@@ -4,7 +4,7 @@ use cosmwasm_std::QuerierWrapper;
 use finance::{
     coin::Coin,
     currency::{Currency, SymbolOwned},
-    price::{self, Price},
+    price,
 };
 use serde::Serialize;
 
@@ -35,7 +35,7 @@ where
     impl<BaseC, In> WithOracle<BaseC> for PriceConvert<BaseC, In>
     where
         BaseC: Currency,
-        In: Currency + Serialize,
+        In: Currency,
     {
         type Output = Coin<BaseC>;
         type Error = ContractError;
@@ -44,7 +44,7 @@ where
         where
             OracleImpl: Oracle<BaseC>,
         {
-            Ok(price::total(self.in_amount, price_of(&oracle)?))
+            Ok(price::total(self.in_amount, oracle.price_of()?))
         }
 
         fn unexpected_base(self, found: SymbolOwned) -> Result<Self::Output, Self::Error> {
@@ -68,7 +68,7 @@ pub fn from_base<BaseC, OutC>(
 ) -> Result<Coin<OutC>, ContractError>
 where
     BaseC: Currency,
-    OutC: Currency + Serialize,
+    OutC: Currency,
 {
     struct PriceConvert<BaseC, Out>
     where
@@ -82,7 +82,7 @@ where
     impl<BaseC, Out> WithOracle<BaseC> for PriceConvert<BaseC, Out>
     where
         BaseC: Currency,
-        Out: Currency + Serialize,
+        Out: Currency,
     {
         type Output = Coin<Out>;
         type Error = ContractError;
@@ -91,7 +91,7 @@ where
         where
             OracleImpl: Oracle<BaseC>,
         {
-            Ok(price::total(self.in_amount, price_of(&oracle)?.inv()))
+            Ok(price::total(self.in_amount, oracle.price_of()?.inv()))
         }
 
         fn unexpected_base(self, found: SymbolOwned) -> Result<Self::Output, Self::Error> {
@@ -106,15 +106,4 @@ where
         },
         querier,
     )
-}
-
-fn price_of<BaseC, OtherC, OracleImpl>(
-    oracle: &OracleImpl,
-) -> Result<Price<OtherC, BaseC>, ContractError>
-where
-    BaseC: Currency,
-    OtherC: Currency + Serialize,
-    OracleImpl: Oracle<BaseC>,
-{
-    Ok(oracle.price_of::<OtherC>()?)
 }

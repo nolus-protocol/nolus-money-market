@@ -31,7 +31,7 @@ where
 
     fn price_of<C>(&self) -> Result<Price<C, OracleBase>>
     where
-        C: Currency + Serialize;
+        C: Currency;
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()>;
 }
@@ -137,7 +137,7 @@ where
 
     fn price_of<C>(&self) -> Result<Price<C, OracleBase>>
     where
-        C: Currency + Serialize,
+        C: Currency,
     {
         let msg = QueryMsg::Price {
             currency: C::SYMBOL.to_string(),

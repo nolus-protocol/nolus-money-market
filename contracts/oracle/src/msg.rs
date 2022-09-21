@@ -4,11 +4,7 @@ use cosmwasm_std::Addr;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    currency::{Currency, SymbolOwned},
-    percent::Percent,
-    price::{dto::PriceDTO, Price},
-};
+use finance::{currency::SymbolOwned, percent::Percent, price::dto::PriceDTO};
 use marketprice::alarms::Alarm;
 
 use crate::state::supported_pairs::ResolutionPath;
