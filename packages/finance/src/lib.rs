@@ -27,4 +27,12 @@ macro_rules! broken_invariant {
             Ok(())
         }
     };
+
+    ($cond:expr, $arg:tt) => {
+        if !$cond {
+            Err(Error::broken_invariant_err::<Liability>($arg))
+        } else {
+            Ok(())
+        }
+    };
 }
