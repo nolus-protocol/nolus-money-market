@@ -2,7 +2,10 @@ use cosmwasm_std::{Addr, Uint64};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use finance::{coin::CoinDTO, currency::SymbolOwned, liability::Liability, percent::Percent};
+use finance::{
+    coin::CoinDTO, currency::SymbolOwned, duration::Duration, liability::Liability,
+    percent::Percent,
+};
 
 use crate::{state::config::Config, ContractError};
 
@@ -20,8 +23,8 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Repayment {
-    pub period_sec: u32,       // PeriodLengthSec, for example 90 days = 90*24*60*60
-    pub grace_period_sec: u32, // GracePeriodSec, for example 10 days = 10*24*60*60
+    pub period: Duration,       // PeriodLengthSec, for example 90 days = 90*24*60*60
+    pub grace_period: Duration, // GracePeriodSec, for example 10 days = 10*24*60*60
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -60,15 +63,15 @@ pub struct QuoteResponse {
 }
 
 impl Repayment {
-    pub fn new(period_sec: u32, grace_period_sec: u32) -> Self {
+    pub fn new(period_time: Duration, grace_period_time: Duration) -> Self {
         Repayment {
-            period_sec,
-            grace_period_sec,
+            period: period_time,
+            grace_period: grace_period_time,
         }
     }
 
     pub fn validate_period(&self) -> Result<(), ContractError> {
-        if self.period_sec > self.grace_period_sec {
+        if self.period > self.grace_period {
             Ok(())
         } else {
             Err(ContractError::validation_err::<Repayment>(String::from(

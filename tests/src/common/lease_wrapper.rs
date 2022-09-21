@@ -1,7 +1,7 @@
 use cosmwasm_std::{coin, Addr};
 use cw_multi_test::Executor;
 
-use finance::{liability::Liability, percent::Percent};
+use finance::{duration::Duration, liability::Liability, percent::Percent};
 use lease::{
     contract::{execute, instantiate, query, reply},
     error::ContractError,
@@ -29,8 +29,8 @@ pub struct LeaseWrapperConfig {
     pub liability_recalc_hours: u16,
     // LoanForm
     pub annual_margin_interest: Percent,
-    pub interest_due_period_secs: u32,
-    pub grace_period_secs: u32,
+    pub interest_due_period: Duration,
+    pub grace_period: Duration,
 
     pub downpayment: u128,
 }
@@ -48,8 +48,8 @@ impl Default for LeaseWrapperConfig {
             liability_recalc_hours: 20 * 24,
 
             annual_margin_interest: Percent::from_percent(0), // 3.1%
-            interest_due_period_secs: 100, // 90 days TODO use a crate for daytime calculations
-            grace_period_secs: 10,         // 10 days TODO use a crate for daytime calculations
+            interest_due_period: Duration::from_secs(100), // 90 days TODO use a crate for daytime calculations
+            grace_period: Duration::from_secs(10), // 10 days TODO use a crate for daytime calculations
 
             // TODO: extend to Coin (downpayment and lpn can be different)
             downpayment: 1000u128,
@@ -119,8 +119,8 @@ impl LeaseWrapper {
             loan: LoanForm {
                 annual_margin_interest: config.annual_margin_interest,
                 lpp: addresses.lpp.into_string(),
-                interest_due_period_secs: config.interest_due_period_secs,
-                grace_period_secs: config.grace_period_secs,
+                interest_due_period: config.interest_due_period,
+                grace_period: config.grace_period,
                 profit: addresses.profit.into_string(),
             },
             time_alarms: addresses.time_alarms,
