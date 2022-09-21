@@ -9,27 +9,11 @@ use finance::{
 
 use crate::error::{Error, Result};
 
-#[deprecated = "Migrate to using finance::bank::BankAccount"]
-pub fn from_cosmwasm<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
-where
-    C: Currency,
-{
-    from_cosmwasm_impl(coin)
-}
-
 pub(crate) fn from_cosmwasm_impl<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
 where
     C: Currency,
 {
     visit(&coin.denom, CoinTransformer(&coin))
-}
-
-#[deprecated = "Migrate to using finance::bank::BankAccount"]
-pub fn to_cosmwasm<C>(coin: Coin<C>) -> CosmWasmCoin
-where
-    C: Currency,
-{
-    to_cosmwasm_impl(coin)
 }
 
 pub(crate) fn to_cosmwasm_impl<C>(coin: Coin<C>) -> CosmWasmCoin
