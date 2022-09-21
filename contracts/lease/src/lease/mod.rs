@@ -212,7 +212,7 @@ where
         if currency::equal::<Asset, Lpn>() {
             Ok(Price::identity())
         } else {
-            Ok(self.oracle.get_price::<Asset>()?.price)
+            Ok(self.oracle.price_of::<Asset>()?.price)
         }
     }
 }
@@ -436,7 +436,7 @@ mod tests {
             &self.address == addr
         }
 
-        fn get_price<C>(&self) -> market_price_oracle::stub::Result<PriceResponse<C, OracleBase>>
+        fn price_of<C>(&self) -> market_price_oracle::stub::Result<PriceResponse<C, OracleBase>>
         where
             C: Currency,
         {
@@ -473,7 +473,7 @@ mod tests {
             unreachable!()
         }
 
-        fn get_price<C>(&self) -> market_price_oracle::stub::Result<PriceResponse<C, OracleBase>>
+        fn price_of<C>(&self) -> market_price_oracle::stub::Result<PriceResponse<C, OracleBase>>
         where
             C: Currency,
         {

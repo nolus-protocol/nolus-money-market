@@ -116,5 +116,5 @@ where
     OtherC: Currency + Serialize,
     OracleImpl: Oracle<BaseC>,
 {
-    Ok(oracle.get_price::<OtherC>()?.price)
+    Ok(oracle.price_of::<OtherC>()?.price)
 }

@@ -29,7 +29,7 @@ where
 {
     fn owned_by(&self, addr: &Addr) -> bool;
 
-    fn get_price<C>(&self) -> Result<PriceResponse<C, OracleBase>>
+    fn price_of<C>(&self) -> Result<PriceResponse<C, OracleBase>>
     where
         C: Currency + Serialize;
 
@@ -135,7 +135,7 @@ where
         self.oracle_ref.owned_by(addr)
     }
 
-    fn get_price<C>(&self) -> Result<PriceResponse<C, OracleBase>>
+    fn price_of<C>(&self) -> Result<PriceResponse<C, OracleBase>>
     where
         C: Currency + Serialize,
     {
