@@ -214,7 +214,6 @@ where
 
             debug_assert_eq!(
                 loan_payment,
-                // TODO add `+ change` when issue #13 is solved
                 receipt.previous_interest_paid()
                     + receipt.current_interest_paid()
                     + receipt.principal_paid(),
@@ -238,7 +237,7 @@ where
         // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
         self.lpp.repay_loan_req(loan_payment)?;
 
-        debug_assert_eq!(payment, receipt.total() + change);
+        debug_assert_eq!(receipt.total() + change, payment);
 
         Ok(receipt)
     }
