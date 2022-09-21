@@ -468,6 +468,7 @@ mod tests {
                         coin(0),
                         coin(100),
                         coin(233),
+                        coin(0),
                         false
                     ),
                 },
@@ -512,6 +513,7 @@ mod tests {
                         coin(0),
                         coin(100),
                         coin(500),
+                        coin(400),
                         true,
                     ),
                 },

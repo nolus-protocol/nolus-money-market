@@ -220,6 +220,8 @@ where
             );
         }
 
+        receipt.set_change(change);
+
         if loan_payment.is_zero() {
             // in practice not possible, but in theory it is if two consecutive repayments are received
             // with the same 'by' time.
@@ -237,7 +239,7 @@ where
         // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
         self.lpp.repay_loan_req(loan_payment)?;
 
-        debug_assert_eq!(receipt.total() + change, payment);
+        debug_assert_eq!(receipt.total(), payment);
 
         Ok(receipt)
     }

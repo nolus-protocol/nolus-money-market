@@ -5,7 +5,7 @@ use platform::batch::{Batch, Emit, Emitter};
 
 use crate::{
     event::TYPE,
-    lease::{LeaseDTO, LeaseInfo, LiquidationCause, LiquidationInfo, Status, WarningLevel},
+    lease::{LeaseDTO, LeaseInfo, LiquidationInfo, Status, WarningLevel},
 };
 
 pub mod price;
@@ -61,25 +61,20 @@ where
         .emit_currency::<_, Asset>("lease-asset")
 }
 
-fn emit_liquidation_info<Lpn>(mut emitter: Emitter, info: &LiquidationInfo<Lpn>) -> Emitter
+fn emit_liquidation_info<Lpn>(emitter: Emitter, info: &LiquidationInfo<Lpn>) -> Emitter
 where
     Lpn: Currency,
 {
-    emitter = emitter
+    emitter
         .emit("of", info.lease.as_str())
         .emit_coin("liquidation", info.receipt.total())
         .emit_to_string_value("type", info.cause.to_uint())
         .emit_coin_amount("prev-margin-interest", info.receipt.previous_margin_paid())
-        .emit_coin_amount("prev-loan-interest", info.receipt.previous_interest_paid());
-
-    if matches!(info.cause, LiquidationCause::Liability) {
-        emitter
-            .emit_coin_amount("curr-margin-interest", info.receipt.current_margin_paid())
-            .emit_coin_amount("curr-loan-interest", info.receipt.current_interest_paid())
-            .emit_coin_amount("principal", info.receipt.principal_paid())
-    } else {
-        emitter
-    }
+        .emit_coin_amount("prev-loan-interest", info.receipt.previous_interest_paid())
+        .emit_coin_amount("curr-margin-interest", info.receipt.current_margin_paid())
+        .emit_coin_amount("curr-loan-interest", info.receipt.current_interest_paid())
+        .emit_coin_amount("principal", info.receipt.principal_paid())
+        .emit_coin_amount("excess", info.receipt.change())
 }
 
 fn emit_liquidation<Lpn, Asset>(
