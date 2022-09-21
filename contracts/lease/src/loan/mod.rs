@@ -220,7 +220,7 @@ where
             );
         }
 
-        receipt.set_change(change);
+        receipt.keep_change(change);
 
         if loan_payment.is_zero() {
             // in practice not possible, but in theory it is if two consecutive repayments are received

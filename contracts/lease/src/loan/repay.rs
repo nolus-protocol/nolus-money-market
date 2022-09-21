@@ -89,7 +89,7 @@ where
         self.close = principal == payment;
     }
 
-    pub(super) fn set_change(&mut self, change: Coin<C>) {
+    pub(super) fn keep_change(&mut self, change: Coin<C>) {
         debug_assert_eq!(self.change, Coin::default());
 
         self.change = change;
