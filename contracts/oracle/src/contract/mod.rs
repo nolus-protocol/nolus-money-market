@@ -127,8 +127,8 @@ pub fn execute(
         ExecuteMsg::RegisterFeeder { feeder_address } => {
             Feeders::try_register(deps, info, feeder_address)
         }
-        ExecuteMsg::RemoveFeeder { feeder_addresses } => {
-            Feeders::try_remove(deps, info, feeder_addresses)
+        ExecuteMsg::RemoveFeeder { feeder_address } => {
+            Feeders::try_remove(deps, info, feeder_address)
         }
         ExecuteMsg::AddPriceAlarm { alarm } => {
             validate_contract_addr(&deps.querier, &info.sender)?;

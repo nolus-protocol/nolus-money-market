@@ -63,11 +63,9 @@ impl<'f> PriceFeeders<'f> {
         Ok(())
     }
 
-    pub fn remove(&self, deps: DepsMut, to_remove: &[Addr]) -> Result<(), PriceFeedersError> {
+    pub fn remove(&self, deps: DepsMut, addr: Addr) -> Result<(), PriceFeedersError> {
         let remove_address = |mut addrs: HashSet<Addr>| -> StdResult<HashSet<Addr>> {
-            for addr in to_remove {
-                addrs.remove(addr);
-            }
+            addrs.remove(&addr);
             Ok(addrs)
         };
 

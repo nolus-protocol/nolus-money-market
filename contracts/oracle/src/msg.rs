@@ -25,7 +25,7 @@ pub enum ExecuteMsg {
         feeder_address: String,
     },
     RemoveFeeder {
-        feeder_addresses: Vec<String>,
+        feeder_address: String,
     },
     FeedPrices {
         prices: Vec<PriceDTO>,

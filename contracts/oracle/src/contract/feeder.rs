@@ -46,20 +46,16 @@ impl Feeders {
     pub(crate) fn try_remove(
         deps: DepsMut,
         info: MessageInfo,
-        addresses: Vec<String>,
+        address: String,
     ) -> Result<Response, ContractError> {
         let config = Config::load(deps.storage)?;
         if info.sender != config.owner {
             return Err(ContractError::Unauthorized {});
         }
 
-        let f_addresses: Vec<Addr> = addresses
-            .iter()
-            .filter_map(|f| deps.api.addr_validate(f).ok())
-            .collect();
-
-        Self::FEEDERS.remove(deps, &f_addresses)?;
-        Ok(Response::new())
+        let f_address = deps.api.addr_validate(&address)?;
+        Self::FEEDERS.remove(deps, f_address)?;
+        Ok(Response::default())
     }
 
     // this is a helper function so Decimal works with u64 rather than Uint128
