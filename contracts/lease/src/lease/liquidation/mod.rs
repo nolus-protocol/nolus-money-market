@@ -511,8 +511,7 @@ mod tests {
                         coin(0),
                         coin(0),
                         coin(100),
-                        // TODO change to `500` when issue #13 is solved
-                        coin(900),
+                        coin(500),
                         true,
                     ),
                 },

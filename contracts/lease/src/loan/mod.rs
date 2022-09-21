@@ -186,7 +186,7 @@ where
 
         let mut receipt = RepayReceipt::default();
 
-        let (change, mut loan_payment) = if self.overdue_at(by) {
+        let (mut change, mut loan_payment) = if self.overdue_at(by) {
             self.repay_previous_period(payment, by, lease, principal_due, &mut receipt)?
         } else {
             (payment, Coin::default())
@@ -200,13 +200,17 @@ where
         debug_assert!(!self.overdue_at(by) || change == Coin::default());
 
         if !self.overdue_at(by) {
-            loan_payment += self.repay_current_period(
+            let current_period_paid;
+
+            (change, current_period_paid) = self.repay_current_period(
                 by,
                 principal_due,
                 total_interest_due,
                 &mut receipt,
                 change,
             )?;
+
+            loan_payment += current_period_paid;
 
             debug_assert_eq!(
                 loan_payment,
@@ -234,7 +238,7 @@ where
         // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
         self.lpp.repay_loan_req(loan_payment)?;
 
-        debug_assert_eq!(payment, receipt.total());
+        debug_assert_eq!(payment, receipt.total() + change);
 
         Ok(receipt)
     }
@@ -349,7 +353,7 @@ where
         total_interest_due: Coin<Lpn>,
         receipt: &mut RepayReceipt<Lpn>,
         change: Coin<Lpn>,
-    ) -> ContractResult<Coin<Lpn>> {
+    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
         let mut loan_repay = Coin::default();
 
         let (curr_margin_paid, mut change) =
@@ -369,14 +373,16 @@ where
         }
 
         {
-            let principal_paid = change;
+            let principal_paid = change.min(principal_due);
+
+            change -= principal_paid;
 
             loan_repay += principal_paid;
 
             receipt.pay_principal(principal_due, principal_paid);
         }
 
-        Ok(loan_repay)
+        Ok((change, loan_repay))
     }
 
     fn repay_margin_interest(
