@@ -100,10 +100,8 @@ where
         );
         let extra_liability_lpn =
             liability_lpn - liability_lpn.min(self.liability.healthy_percent().of(lease_lpn));
-        let liquidation_lpn = lease_lpn.min(<Rational<Percent> as Fraction<Units>>::of(
-            &multiplier,
-            extra_liability_lpn,
-        ));
+        let liquidation_lpn =
+            <Rational<Percent> as Fraction<Units>>::of(&multiplier, extra_liability_lpn);
 
         self.liquidate(
             Cause::Liability,
@@ -125,23 +123,19 @@ where
             .loan
             .liability_status(now, self.lease_addr.clone(), lease_lpn)?;
 
-        self.liquidate(
-            Cause::Overdue,
-            lease_lpn,
-            lease_lpn.min(overdue_lpn),
-            now,
-            ltv,
-        )
+        self.liquidate(Cause::Overdue, lease_lpn, overdue_lpn, now, ltv)
     }
 
     fn liquidate(
         &mut self,
         cause: Cause,
         lease_lpn: Coin<Lpn>,
-        liquidation_lpn: Coin<Lpn>,
+        mut liquidation_lpn: Coin<Lpn>,
         now: Timestamp,
         ltv: Percent,
     ) -> ContractResult<Status<Lpn, Asset>> {
+        liquidation_lpn = lease_lpn.min(liquidation_lpn);
+
         let receipt = self.no_reschedule_repay(liquidation_lpn, now)?;
 
         let info = LeaseInfo::new(self.customer.clone(), ltv);
@@ -468,6 +462,7 @@ mod tests {
                         coin(0),
                         coin(100),
                         coin(233),
+                        coin(0),
                         false
                     ),
                 },
@@ -511,8 +506,8 @@ mod tests {
                         coin(0),
                         coin(0),
                         coin(100),
-                        // TODO change to `500` when issue #13 is solved
-                        coin(900),
+                        coin(500),
+                        coin(400),
                         true,
                     ),
                 },

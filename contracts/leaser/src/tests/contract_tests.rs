@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{
     currency::{Currency, Usdc},
+    duration::Duration,
     liability::Liability,
     percent::Percent,
 };
@@ -39,7 +40,7 @@ fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::Ins
             Percent::from_percent(2),
             1,
         ),
-        repayment: Repayment::new(90 * 24 * 60 * 60, 10 * 24 * 60 * 60),
+        repayment: Repayment::new(Duration::from_days(90), Duration::from_days(10)),
         time_alarms: Addr::unchecked("timealarms"),
         market_price_oracle: Addr::unchecked("oracle"),
         profit: Addr::unchecked("profit"),
@@ -87,7 +88,7 @@ fn test_update_config() {
         Percent::from_percent(1),
         12,
     );
-    let expected_repaiment = Repayment::new(100, 10);
+    let expected_repaiment = Repayment::new(Duration::from_secs(100), Duration::from_secs(10));
     let info = setup_test_case(deps.as_mut());
     let msg = ExecuteMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
@@ -116,7 +117,7 @@ fn test_update_config_invalid_repay_period() {
         Percent::from_percent(1),
         12,
     );
-    let expected_repaiment = Repayment::new(18000, 23000);
+    let expected_repaiment = Repayment::new(Duration::from_secs(18000), Duration::from_secs(23000));
     let info = setup_test_case(deps.as_mut());
     let msg = ExecuteMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
@@ -140,7 +141,7 @@ fn test_update_config_invalid_liability() {
         first_liq_warn: Percent,
         second_liq_warn: Percent,
         third_liq_warn: Percent,
-        recalc_secs: u32,
+        recalc_time: Duration,
     }
 
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -163,12 +164,12 @@ fn test_update_config_invalid_liability() {
         first_liq_warn: Percent::from_percent(55),
         second_liq_warn: Percent::from_percent(55),
         third_liq_warn: Percent::from_percent(55),
-        recalc_secs: 100,
+        recalc_time: Duration::from_secs(100),
     };
     let mock_msg = MockExecuteMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
         liability,
-        repayment: Repayment::new(10, 10),
+        repayment: Repayment::new(Duration::from_secs(10), Duration::from_secs(10)),
     };
 
     let msg: ExecuteMsg = from_binary(&to_binary(&mock_msg).unwrap()).unwrap();
@@ -190,7 +191,7 @@ fn test_update_config_unauthorized() {
         Percent::from_percent(1),
         12,
     );
-    let expected_repaiment = Repayment::new(10, 10);
+    let expected_repaiment = Repayment::new(Duration::from_secs(10), Duration::from_secs(10));
     setup_test_case(deps.as_mut());
     let msg = ExecuteMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),

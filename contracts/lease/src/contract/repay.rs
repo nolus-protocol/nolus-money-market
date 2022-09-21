@@ -91,7 +91,8 @@ where
             .emit_coin_amount("prev-loan-interest", receipt.previous_interest_paid())
             .emit_coin_amount("curr-margin-interest", receipt.current_margin_paid())
             .emit_coin_amount("curr-loan-interest", receipt.current_interest_paid())
-            .emit_coin_amount("principal", receipt.principal_paid());
+            .emit_coin_amount("principal", receipt.principal_paid())
+            .emit_coin_amount("change", receipt.change());
 
         Ok(RepayResult { lease_dto, emitter })
     }

@@ -27,9 +27,7 @@ use self::factory::Factory;
 pub(super) use self::{
     downpayment_dto::DownpaymentDTO,
     dto::LeaseDTO,
-    liquidation::{
-        Cause as LiquidationCause, LeaseInfo, LiquidationInfo, OnAlarmResult, Status, WarningLevel,
-    },
+    liquidation::{LeaseInfo, LiquidationInfo, OnAlarmResult, Status, WarningLevel},
     repay::Result as RepayResult,
 };
 

@@ -242,10 +242,10 @@ fn state_paid_when_overpaid() {
 
     repay(&mut test_case, &lease_address, payment);
 
-    let expected_result = StateResponse::Paid(expected_amount);
     let query_result = state_query(&test_case, &lease_address.into_string());
+    let expected_result = StateResponse::Paid(expected_amount);
 
-    assert_eq!(expected_result, query_result);
+    assert_eq!(query_result, expected_result);
 }
 
 #[test]

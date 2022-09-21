@@ -1,6 +1,5 @@
 use cosmwasm_std::{Api, QuerierWrapper, Timestamp};
 
-use finance::duration::Duration;
 use lpp::stub::lender::LppLenderRef;
 use profit::stub::ProfitRef;
 
@@ -31,8 +30,8 @@ impl NewLeaseForm {
             start_at,
             lpp,
             self.loan.annual_margin_interest,
-            Duration::from_secs(self.loan.interest_due_period_secs),
-            Duration::from_secs(self.loan.grace_period_secs),
+            self.loan.interest_due_period,
+            self.loan.grace_period,
             profit,
         )?;
 
@@ -54,6 +53,7 @@ mod test {
         Addr, QuerierWrapper, Timestamp,
     };
 
+    use finance::duration::Duration;
     use finance::{
         currency::{Currency, Nls},
         liability::Liability,
@@ -80,8 +80,8 @@ mod test {
             loan: LoanForm {
                 annual_margin_interest: Percent::from_percent(0),
                 lpp: "sdgg22d".into(),
-                interest_due_period_secs: 100,
-                grace_period_secs: 10,
+                interest_due_period: Duration::from_secs(100),
+                grace_period: Duration::from_secs(10),
                 profit: "profit".into(),
             },
             time_alarms: Addr::unchecked("timealarms"),
