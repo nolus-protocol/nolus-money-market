@@ -40,9 +40,9 @@ where
 mod test {
     use crate::{
         coin::{Amount, Coin},
-        currency::Nls,
         percent::Percent,
         ratio::Rational,
+        test::currency::Nls,
     };
 
     #[test]

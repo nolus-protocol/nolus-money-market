@@ -53,12 +53,8 @@ mod test {
         Addr, QuerierWrapper, Timestamp,
     };
 
-    use finance::duration::Duration;
-    use finance::{
-        currency::{Currency, Nls},
-        liability::Liability,
-        percent::Percent,
-    };
+    use finance::{currency::Currency, duration::Duration, test::currency::Nls};
+    use finance::{liability::Liability, percent::Percent};
 
     use crate::msg::{LoanForm, NewLeaseForm};
 

@@ -3,7 +3,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{
     coin::{Coin, CoinDTO},
-    currency::{visit_any, AnyVisitor, Currency},
+    currency::{visit_any, AnyVisitor, Currency, Group},
     error::Error,
     price::Price,
 };
@@ -71,11 +71,12 @@ pub trait WithPrice {
     fn unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn execute<Cmd>(price: PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
+pub fn execute<G, Cmd>(price: PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
 where
+    G: Group,
     Cmd: WithPrice,
 {
-    visit_any(
+    visit_any::<G, _>(
         &price.amount.symbol().clone(),
         CVisitor {
             price_dto: price,
@@ -92,8 +93,9 @@ where
     cmd: Cmd,
 }
 
-impl<Cmd> AnyVisitor for CVisitor<Cmd>
+impl<G, Cmd> AnyVisitor<G> for CVisitor<Cmd>
 where
+    G: Group,
     Cmd: WithPrice,
 {
     type Output = Cmd::Output;
@@ -103,7 +105,7 @@ where
     where
         C: Currency + Serialize + DeserializeOwned,
     {
-        visit_any(
+        visit_any::<G, _>(
             &self.price_dto.amount_quote.symbol().clone(),
             QuoteCVisitor {
                 base: Coin::<C>::try_from(self.price_dto.amount)
@@ -129,9 +131,10 @@ where
     cmd: Cmd,
 }
 
-impl<C, Cmd> AnyVisitor for QuoteCVisitor<C, Cmd>
+impl<C, G, Cmd> AnyVisitor<G> for QuoteCVisitor<C, Cmd>
 where
     C: Currency + Serialize + DeserializeOwned,
+    G: Group,
     Cmd: WithPrice,
 {
     type Output = Cmd::Output;

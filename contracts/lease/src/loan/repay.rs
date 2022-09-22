@@ -124,7 +124,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use finance::{coin::Coin, currency::Nls};
+    use finance::{coin::Coin, test::currency::Nls};
 
     use crate::loan::RepayReceipt;
 

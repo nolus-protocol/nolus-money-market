@@ -1,9 +1,10 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, Storage};
+use currency::native::Nls;
 use cw2::set_contract_version;
 
-use finance::{coin::Coin, currency::Nls};
+use finance::coin::Coin;
 use platform::{
     bank::{BankAccount, BankStub},
     batch::Batch,

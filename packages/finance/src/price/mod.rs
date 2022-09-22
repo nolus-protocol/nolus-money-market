@@ -181,8 +181,9 @@ mod test {
 
     use crate::{
         coin::{Amount, Coin as CoinT},
-        currency::{Currency, Nls, Usdc},
+        currency::Currency,
         price::{self, Price},
+        test::currency::{Nls, Usdc},
     };
 
     #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]

@@ -1,6 +1,7 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
 use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp};
+use currency::lpn::Lpns;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use finance::{
@@ -98,7 +99,7 @@ impl LppLenderRef {
             querier: &'a QuerierWrapper<'a>,
         }
 
-        impl<'a, Cmd> AnyVisitor for CurrencyVisitor<'a, Cmd>
+        impl<'a, Cmd> AnyVisitor<Lpns> for CurrencyVisitor<'a, Cmd>
         where
             Cmd: WithLppLender,
         {
@@ -249,10 +250,7 @@ mod test {
         WasmMsg,
     };
 
-    use finance::{
-        coin::Coin,
-        currency::{Currency, Nls},
-    };
+    use finance::{coin::Coin, currency::Currency, test::currency::Nls};
 
     use crate::{msg::ExecuteMsg, stub::LppBatch};
 

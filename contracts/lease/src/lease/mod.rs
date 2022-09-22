@@ -228,11 +228,12 @@ mod tests {
 
     use finance::{
         coin::Coin,
-        currency::{Currency, Nls, Usdc},
+        currency::Currency,
         duration::Duration,
         interest::InterestPeriod,
         liability::Liability,
         percent::Percent,
+        test::currency::{Nls, Usdc},
     };
     use lpp::{
         error::ContractError as LppError,

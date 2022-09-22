@@ -1,15 +1,11 @@
 use cosmwasm_std::QuerierWrapper;
 use cosmwasm_std::StdResult;
 use cosmwasm_std::Timestamp;
+use currency::native::Nls;
 use oracle::convert;
 use serde::Serialize;
 
-use finance::{
-    coin::Coin,
-    currency::{Currency, Nls},
-    duration::Duration,
-    interest::InterestPeriod,
-};
+use finance::{coin::Coin, currency::Currency, duration::Duration, interest::InterestPeriod};
 use lpp::stub::{Lpp as LppTrait, WithLpp};
 use oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
@@ -98,7 +94,7 @@ impl<'a> Dispatch<'a> {
             .map_err(ContractError::from)?;
 
         batch
-            .schedule_execute_wasm_no_reply::<_, Nls>(
+            .schedule_execute_wasm_no_reply(
                 &self.config.lpp,
                 lpp::msg::ExecuteMsg::DistributeRewards {},
                 Some(reward),

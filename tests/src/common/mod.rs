@@ -4,13 +4,11 @@ use cosmwasm_std::{
     to_binary, Addr, Api, Binary, BlockInfo, CanonicalAddr, Coin, Deps, Env, RecoverPubkeyError,
     StdResult, Timestamp, VerificationError,
 };
+use currency::native::Nls;
 use cw_multi_test::{App, AppBuilder, BankKeeper};
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    currency::{Currency, Nls},
-    duration::Duration,
-};
+use finance::{currency::Currency, duration::Duration};
 
 type ContractWrapper<
     ExecMsg,

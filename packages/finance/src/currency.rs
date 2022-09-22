@@ -1,9 +1,8 @@
 use std::{any::TypeId, fmt::Debug};
 
-use schemars::JsonSchema;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Serialize};
 
-type Symbol<'a> = &'a str;
+pub type Symbol<'a> = &'a str;
 pub type SymbolStatic = &'static str;
 pub type SymbolOwned = String;
 
@@ -14,24 +13,23 @@ pub trait Currency: Copy + Ord + Default + Debug + 'static {
     const SYMBOL: SymbolStatic;
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
-pub struct Usdc;
-impl Currency for Usdc {
-    const SYMBOL: SymbolStatic = "uusdc";
+pub trait Member<G>
+where
+    G: Group,
+{
 }
 
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
-)]
-pub struct Nls;
-impl Currency for Nls {
-    const SYMBOL: SymbolStatic = "unls";
+pub trait Group {
+    fn resolve<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
+    where
+        V: AnyVisitor<Self>,
+        Self: Sized;
 }
 
 pub fn equal<C1, C2>() -> bool
 where
-    C1: Currency,
-    C2: Currency,
+    C1: 'static,
+    C2: 'static,
 {
     TypeId::of::<C1>() == TypeId::of::<C2>()
 }
@@ -56,51 +54,35 @@ where
     }
 }
 
-pub trait AnyVisitor {
+pub trait AnyVisitor<G>
+where
+    G: Group,
+{
     type Output;
     type Error;
 
-    // Requiring `'static` due to the requirements of Price
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
-        C: 'static + Currency + Serialize + DeserializeOwned;
+        C: 'static + Currency + Member<G> + Serialize + DeserializeOwned;
     fn on_unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn visit_any<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
+pub fn visit_any<G, V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
 where
-    V: AnyVisitor,
+    G: Group,
+    V: AnyVisitor<G>,
 {
-    let any_visitor = AnyVisitorImpl(visitor);
-    visit::<Nls, _>(symbol, any_visitor)
-        .or_else(|any_visitor| visit::<Usdc, _>(symbol, any_visitor))
-        .unwrap_or_else(|any_visitor| any_visitor.0.on_unknown())
-}
-
-struct AnyVisitorImpl<V>(V);
-
-impl<C, V> SingleVisitor<C> for AnyVisitorImpl<V>
-where
-    V: AnyVisitor,
-    C: 'static + Currency + Serialize + DeserializeOwned,
-{
-    type Output = Result<<V as AnyVisitor>::Output, <V as AnyVisitor>::Error>;
-    type Error = Self;
-
-    fn on(self) -> Result<Self::Output, Self::Error> {
-        Ok(self.0.on::<C>())
-    }
-
-    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-        Err(self)
-    }
+    G::resolve(symbol, visitor)
 }
 
 #[cfg(test)]
 mod test {
-    use std::{any::type_name, marker::PhantomData};
+    use std::marker::PhantomData;
 
-    use crate::currency::{Currency, Nls, SingleVisitor, Usdc};
+    use crate::{
+        currency::{Currency, SingleVisitor},
+        test::currency::{Nls, TestCurrencies, Usdc},
+    };
 
     use super::AnyVisitor;
 
@@ -110,12 +92,18 @@ mod test {
             Self(PhantomData)
         }
     }
-    impl<C> AnyVisitor for Expect<C> {
+    impl<C> AnyVisitor<TestCurrencies> for Expect<C>
+    where
+        C: 'static,
+    {
         type Output = bool;
         type Error = ();
 
-        fn on<Cin>(self) -> Result<Self::Output, Self::Error> {
-            assert_eq!(type_name::<C>(), type_name::<Cin>());
+        fn on<Cin>(self) -> Result<Self::Output, Self::Error>
+        where
+            Cin: 'static,
+        {
+            assert!(super::equal::<C, Cin>());
             Ok(true)
         }
 
@@ -137,7 +125,7 @@ mod test {
     }
 
     struct ExpectUnknownCurrency;
-    impl AnyVisitor for ExpectUnknownCurrency {
+    impl AnyVisitor<TestCurrencies> for ExpectUnknownCurrency {
         type Output = bool;
         type Error = ();
 

@@ -122,11 +122,11 @@ mod tests {
 
     use crate::{
         coin::Coin,
-        currency::{Nls, Usdc},
         duration::Duration,
         fraction::Fraction,
         percent::Percent,
         ratio::Rational,
+        test::currency::{Nls, Usdc},
     };
 
     use super::InterestPeriod;

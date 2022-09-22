@@ -1,11 +1,12 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{Addr, Timestamp};
+use currency::lpn::Usdc;
 use cw_multi_test::{AppResponse, Executor};
 
 use finance::{
-    coin::Coin, currency::Currency as _, currency::Usdc, duration::Duration,
-    interest::InterestPeriod, percent::Percent, price::PriceDTO,
+    coin::Coin, currency::Currency as _, duration::Duration, interest::InterestPeriod,
+    percent::Percent, price::PriceDTO,
 };
 use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
@@ -13,23 +14,31 @@ use platform::coin_legacy::to_cosmwasm;
 
 use crate::common::{leaser_wrapper::LeaserWrapper, test_case::TestCase, AppExt, ADMIN, USER};
 
-type Currency = Usdc;
-type TheCoin = Coin<Currency>;
+type Lpn = Usdc;
+type LppCoin = Coin<Lpn>;
 
-const DENOM: &str = Currency::SYMBOL;
+type LeaseCurrency = Lpn;
+type LeaseCoin = Coin<LeaseCurrency>;
+
 const DOWNPAYMENT: u128 = 10;
 
-fn create_coin(amount: u128) -> TheCoin {
-    Coin::<Currency>::new(amount)
+fn create_coin(amount: u128) -> LeaseCoin {
+    Coin::<LeaseCurrency>::new(amount)
 }
 
 fn create_test_case() -> TestCase {
-    let mut test_case = TestCase::with_reserve(DENOM, 10_000_000_000_000_000_000_000_000_000);
+    let mut test_case = TestCase::with_reserve(
+        Lpn::SYMBOL,
+        &[
+            to_cosmwasm(LeaseCoin::new(10_000_000_000_000_000_000_000_000_000)),
+            to_cosmwasm(LppCoin::new(10_000_000_000_000_000_000_000_000_000)),
+        ],
+    );
     test_case.init(
         &Addr::unchecked("user"),
         vec![to_cosmwasm(create_coin(1_000_000_000_000_000_000_000_000))],
     );
-    test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000);
+    test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000, Lpn::SYMBOL);
     test_case.init_timealarms_with_funds(5_000_000);
     test_case.init_oracle_with_funds(None, 5_000_000);
     test_case.init_treasury();
@@ -39,21 +48,21 @@ fn create_test_case() -> TestCase {
     test_case
 }
 
-fn calculate_interest(principal: TheCoin, interest_rate: Percent, duration: u64) -> TheCoin {
+fn calculate_interest(principal: LeaseCoin, interest_rate: Percent, duration: u64) -> LeaseCoin {
     InterestPeriod::with_interest(interest_rate)
         .from(Timestamp::from_nanos(0))
         .spanning(Duration::from_nanos(duration))
         .interest(principal)
 }
 
-fn open_lease(test_case: &mut TestCase, value: TheCoin) -> Addr {
+fn open_lease(test_case: &mut TestCase, value: LeaseCoin) -> Addr {
     test_case
         .app
         .execute_contract(
             Addr::unchecked(USER),
             test_case.leaser_addr.clone().unwrap(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: DENOM.to_string(),
+                currency: LeaseCurrency::SYMBOL.into(),
             },
             &[to_cosmwasm(value)],
         )
@@ -77,7 +86,7 @@ fn get_lease_address(test_case: &TestCase) -> Addr {
     query_response.iter().next().unwrap().clone()
 }
 
-fn repay(test_case: &mut TestCase, contract_addr: &Addr, value: TheCoin) -> AppResponse {
+fn repay(test_case: &mut TestCase, contract_addr: &Addr, value: LeaseCoin) -> AppResponse {
     test_case
         .app
         .execute_contract(
@@ -101,11 +110,11 @@ fn close(test_case: &mut TestCase, contract_addr: &Addr) -> AppResponse {
         .unwrap()
 }
 
-fn quote_borrow(test_case: &TestCase, amount: TheCoin) -> TheCoin {
+fn quote_borrow(test_case: &TestCase, amount: LeaseCoin) -> LeaseCoin {
     quote_query(test_case, amount).borrow.try_into().unwrap()
 }
 
-fn quote_query(test_case: &TestCase, amount: TheCoin) -> QuoteResponse {
+fn quote_query(test_case: &TestCase, amount: LeaseCoin) -> QuoteResponse {
     test_case
         .app
         .wrap()
@@ -118,7 +127,10 @@ fn quote_query(test_case: &TestCase, amount: TheCoin) -> QuoteResponse {
         .unwrap()
 }
 
-fn state_query(test_case: &TestCase, contract_addr: &String) -> StateResponse<Currency, Currency> {
+fn state_query(
+    test_case: &TestCase,
+    contract_addr: &String,
+) -> StateResponse<LeaseCurrency, LeaseCurrency> {
     test_case
         .app
         .wrap()
@@ -128,12 +140,12 @@ fn state_query(test_case: &TestCase, contract_addr: &String) -> StateResponse<Cu
 
 fn expected_open_state(
     test_case: &TestCase,
-    downpayment: TheCoin,
-    payments: TheCoin,
+    downpayment: LeaseCoin,
+    payments: LeaseCoin,
     last_paid: Timestamp,
     current_period_start: Timestamp,
     now: Timestamp,
-) -> StateResponse<Currency, Currency> {
+) -> StateResponse<LeaseCurrency, LeaseCurrency> {
     let quote_result = quote_query(test_case, downpayment);
     let total = quote_result.total.try_into().unwrap();
     let expected = total - downpayment - payments;
@@ -170,9 +182,9 @@ fn expected_open_state(
 
 fn expected_newly_opened_state(
     test_case: &TestCase,
-    downpayment: TheCoin,
-    payments: TheCoin,
-) -> StateResponse<Currency, Currency> {
+    downpayment: LeaseCoin,
+    payments: LeaseCoin,
+) -> StateResponse<LeaseCurrency, LeaseCurrency> {
     expected_open_state(
         test_case,
         downpayment,
@@ -471,7 +483,7 @@ fn compare_state_with_lpp_state_implicit_time() {
         LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1),
     );
 
-    let loan_resp: lpp::msg::LoanResponse<Currency> = test_case
+    let loan_resp: lpp::msg::LoanResponse<LeaseCurrency> = test_case
         .app
         .wrap()
         .query_wasm_smart(
@@ -517,7 +529,7 @@ fn compare_state_with_lpp_state_explicit_time() {
         LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1),
     );
 
-    let lpp::msg::OutstandingInterest::<Currency>(loan_resp) = test_case
+    let lpp::msg::OutstandingInterest::<LeaseCurrency>(loan_resp) = test_case
         .app
         .wrap()
         .query_wasm_smart(

@@ -1,6 +1,7 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
 use cosmwasm_std::{Addr, QuerierWrapper};
+use currency::lpn::Lpns;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
@@ -66,7 +67,7 @@ impl LppRef {
             querier: &'a QuerierWrapper<'a>,
         }
 
-        impl<'a, V, O, E> AnyVisitor for CurrencyVisitor<'a, V, O, E>
+        impl<'a, V, O, E> AnyVisitor<Lpns> for CurrencyVisitor<'a, V, O, E>
         where
             V: WithLpp<Output = O, Error = E>,
         {

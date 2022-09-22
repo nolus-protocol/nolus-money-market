@@ -440,11 +440,12 @@ mod tests {
 
     use finance::{
         coin::Coin,
-        currency::{Currency, Nls, Usdc},
+        currency::Currency,
         duration::Duration,
         fraction::Fraction,
         interest::InterestPeriod,
         percent::Percent,
+        test::currency::{Nls, Usdc},
     };
     use lpp::{
         error::ContractError as LppError,

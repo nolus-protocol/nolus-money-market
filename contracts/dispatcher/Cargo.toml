@@ -22,6 +22,7 @@ treasury = { path = "../treasury", version = "0.1.0", default-features = false}
 finance = { path = "../../packages/finance", version = "0.1.0", default-features = false }
 platform = { path = "../../packages/platform", version = "0.1.0", default-features = false }
 marketprice = { path = "../../packages/marketprice", version = "0.1.0", default-features = false }
+currency = { path = "../../packages/currency", version = "0.1.0", default-features = false }
 
 cosmwasm-std = { version = "1.0.0", default-features = false, features = ["abort"] }
 cosmwasm-storage = "1.0.0"

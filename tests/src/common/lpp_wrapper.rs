@@ -1,7 +1,8 @@
 use cosmwasm_std::{coins, to_binary, Addr, Binary, Deps, Env, Uint64};
+use currency::lpn::Usdc;
 use cw_multi_test::Executor;
 
-use finance::{coin::Coin, currency::Usdc, percent::Percent};
+use finance::{coin::Coin, percent::Percent};
 use lpp::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},

@@ -1,10 +1,11 @@
 use cosmwasm_std::{Addr, DepsMut, StdResult, Storage};
+use currency::native::Nls;
 use cw_storage_plus::{Item, Map};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use finance::{
     coin::Coin,
-    currency::{Currency, Nls},
+    currency::Currency,
     price::{self, Price},
 };
 
@@ -191,8 +192,7 @@ impl Deposit {
 #[cfg(test)]
 mod test {
     use cosmwasm_std::testing;
-
-    use finance::currency::Usdc;
+    use finance::test::currency::Usdc;
 
     use crate::lpp::NTokenPrice;
 

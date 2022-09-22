@@ -91,10 +91,7 @@ mod tests {
         to_binary, Addr, BankMsg, CosmosMsg, SubMsg, WasmMsg,
     };
 
-    use finance::{
-        currency::{Currency, Nls},
-        duration::Duration,
-    };
+    use finance::{currency::Currency, duration::Duration, test::currency::Nls};
 
     use crate::{
         error::ContractError,

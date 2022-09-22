@@ -7,10 +7,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    currency::{Currency, Usdc},
-    duration::Duration,
-    liability::Liability,
-    percent::Percent,
+    currency::Currency, duration::Duration, liability::Liability, percent::Percent,
+    test::currency::Usdc,
 };
 
 use crate::{

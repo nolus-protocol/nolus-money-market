@@ -125,7 +125,7 @@ where
 mod test {
     use cosmwasm_std::testing;
 
-    use finance::{currency::Usdc, duration::Duration};
+    use finance::{duration::Duration, test::currency::Usdc};
 
     use super::*;
 

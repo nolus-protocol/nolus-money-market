@@ -1,0 +1,11 @@
+[package]
+name = "currency"
+version = "0.1.0"
+authors = ["Gancho Manev <g.manev@nolus.io>"]
+edition = "2021"
+
+[dependencies]
+finance = { path = "../../packages/finance", version = "0.1.0", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+schemars = "0.8"
+thiserror = { version = "1.0" }

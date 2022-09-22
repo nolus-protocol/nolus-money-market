@@ -183,7 +183,9 @@ impl Liability {
 mod test {
     use cosmwasm_std::from_slice;
 
-    use crate::{coin::Coin, currency::Usdc, duration::Duration, error::Error, percent::Percent};
+    use crate::{
+        coin::Coin, duration::Duration, error::Error, percent::Percent, test::currency::Usdc,
+    };
 
     use super::Liability;
 

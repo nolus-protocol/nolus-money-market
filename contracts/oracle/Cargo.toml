@@ -21,6 +21,7 @@ marketprice = { path = "../../packages/marketprice", version = "0.1.0"}
 time-oracle = { path = "../../packages/time-oracle", version = "0.1.0"}
 finance = { path = "../../packages/finance", version = "0.1.0", default-features = false }
 platform = { path = "../../packages/platform", version = "0.1.0", default-features = false }
+currency = { path = "../../packages/currency", version = "0.1.0", default-features = false }
 
 
 cosmwasm-std = { version = "1.0.0", default-features = false, features = ["abort"] }

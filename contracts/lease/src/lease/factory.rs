@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use cosmwasm_std::{Addr, QuerierWrapper};
+use currency::lease::LeaseGroup;
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
@@ -197,7 +198,7 @@ struct FactoryStage5<'r, L, Lpn, Lpp, Profit, TimeAlarms, Oracle> {
     oracle: Oracle,
 }
 
-impl<'r, L, Lpn, Lpp, Profit, TimeAlarms, Oracle> AnyVisitor
+impl<'r, L, Lpn, Lpp, Profit, TimeAlarms, Oracle> AnyVisitor<LeaseGroup>
     for FactoryStage5<'r, L, Lpn, Lpp, Profit, TimeAlarms, Oracle>
 where
     L: WithLease,

@@ -6,11 +6,15 @@ use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
     Storage, Timestamp,
 };
+use currency::{
+    lpn::{Lpns, Usdc},
+    native::Nls,
+};
 use cw2::set_contract_version;
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::{
-    currency::{visit_any, AnyVisitor, Currency, Nls, SymbolOwned, Usdc},
+    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
     price::PriceDTO,
 };
 use marketprice::{
@@ -120,7 +124,7 @@ impl<'a> QueryWithLpn<'a> {
     }
 }
 
-impl<'a> AnyVisitor for QueryWithLpn<'a> {
+impl<'a> AnyVisitor<Lpns> for QueryWithLpn<'a> {
     type Output = Binary;
     type Error = ContractError;
 

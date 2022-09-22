@@ -9,6 +9,8 @@ pub mod liability;
 pub mod percent;
 pub mod price;
 pub mod ratio;
+#[cfg(any(test, feature = "testing"))]
+pub mod test;
 
 #[macro_export]
 macro_rules! broken_invariant {

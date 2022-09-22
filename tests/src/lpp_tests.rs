@@ -1,13 +1,15 @@
 use cosmwasm_std::{coin, coins, Addr};
+use currency::{lpn::Usdc, native::Nls};
 use cw_multi_test::Executor;
 
 use finance::{
-    coin::{self, Coin},
-    currency::{Currency, Nls, Usdc},
+    coin::Coin,
+    currency::Currency,
     duration::Duration,
     fraction::Fraction,
     percent::Percent,
     price,
+    test::{self},
 };
 use lpp::msg::{
     BalanceResponse, ExecuteMsg as ExecuteLpp, LppBalanceResponse, PriceResponse,
@@ -36,7 +38,7 @@ fn open_loan_unauthorized_contract_id() {
 
     let mut test_case = TestCase::new(denom);
     test_case.init(&user_addr, coins(500, denom));
-    test_case.init_lpp(None);
+    test_case.init_lpp(None, denom);
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -53,7 +55,7 @@ fn open_loan_unauthorized_contract_id() {
             lease_addr,
             test_case.lpp_addr.unwrap(),
             &lpp::msg::ExecuteMsg::OpenLoan {
-                amount: coin::funds::<TheCurrency>(100),
+                amount: test::funds::<TheCurrency>(100),
             },
             &coins(200, denom),
         )
@@ -68,7 +70,7 @@ fn open_loan_no_liquidity() {
 
     let mut test_case = TestCase::new(denom);
     test_case.init(&user_addr, coins(500, denom));
-    test_case.init_lpp(None);
+    test_case.init_lpp(None, denom);
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -82,7 +84,7 @@ fn open_loan_no_liquidity() {
             lease_addr,
             test_case.lpp_addr.unwrap(),
             &lpp::msg::ExecuteMsg::OpenLoan {
-                amount: coin::funds::<TheCurrency>(100),
+                amount: test::funds::<TheCurrency>(100),
             },
             &coins(200, denom),
         )

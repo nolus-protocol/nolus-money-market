@@ -206,7 +206,7 @@ where
 mod tests {
     use cosmwasm_std::testing;
 
-    use finance::currency::{Currency, Usdc};
+    use finance::{currency::Currency, test::currency::Usdc};
 
     use super::*;
 

@@ -1,12 +1,14 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{coins, Addr, DepsMut, Env, Event, MessageInfo, Response};
+use currency::{lease::Atom, lpn::Usdc};
 use cw_multi_test::{next_block, ContractWrapper, Executor};
 
 use finance::{
-    coin::{self, Coin},
-    currency::{Currency, Nls, SymbolStatic, Usdc},
+    coin::Coin,
+    currency::{Currency, SymbolStatic},
     percent::Percent,
+    test::{self},
 };
 use lease::error::ContractError;
 use leaser::msg::{QueryMsg, QuoteResponse};
@@ -22,7 +24,7 @@ fn open_lease() {
 
 #[test]
 fn open_lease_another_currency() {
-    open_lease_impl(Nls::SYMBOL);
+    open_lease_impl(Atom::SYMBOL);
 }
 
 #[test]
@@ -34,7 +36,7 @@ fn init_lpp_with_unknown_currency() {
 
     let mut test_case = TestCase::new(unknown_lpn);
     test_case.init(&user_addr, coins(500, unknown_lpn));
-    test_case.init_lpp(None);
+    test_case.init_lpp(None, unknown_lpn);
 }
 
 #[test]
@@ -43,11 +45,11 @@ fn open_lease_not_in_lpn_currency() {
     let user_addr = Addr::unchecked(USER);
 
     let lpn = Usdc::SYMBOL;
-    let lease_currency = Nls::SYMBOL;
+    let lease_currency = Atom::SYMBOL;
 
     let mut test_case = TestCase::new(lpn);
     test_case.init(&user_addr, coins(500, lpn));
-    test_case.init_lpp(None);
+    test_case.init_lpp(None, lpn);
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -81,7 +83,7 @@ fn open_multiple_loans() {
 
     let mut test_case = TestCase::new(LPN);
     test_case.init(&user_addr, coins(500, LPN));
-    test_case.init_lpp(None);
+    test_case.init_lpp(None, LPN);
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -160,7 +162,6 @@ fn open_multiple_loans() {
         .unwrap();
     assert_eq!(loans, user0_loans);
 }
-
 #[test]
 fn test_quote() {
     const LPN: SymbolStatic = TheCurrency::SYMBOL;
@@ -168,7 +169,7 @@ fn test_quote() {
     let user_addr = Addr::unchecked(USER);
     let mut test_case = TestCase::new(LPN);
     test_case.init(&user_addr, coins(500, LPN));
-    test_case.init_lpp(None);
+    test_case.init_lpp(None, LPN);
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -181,7 +182,7 @@ fn test_quote() {
         .query_wasm_smart(
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Quote {
-                downpayment: coin::funds::<TheCurrency>(100),
+                downpayment: test::funds::<TheCurrency>(100),
             },
         )
         .unwrap();
@@ -209,7 +210,7 @@ fn test_quote() {
         .query_wasm_smart(
             test_case.leaser_addr.unwrap(),
             &QueryMsg::Quote {
-                downpayment: coin::funds::<TheCurrency>(15),
+                downpayment: test::funds::<TheCurrency>(15),
             },
         )
         .unwrap();
@@ -228,11 +229,14 @@ fn test_quote_fixed_rate() {
     let user_addr = Addr::unchecked(USER);
     let mut test_case = TestCase::new(LPN);
     test_case.init(&user_addr, coins(500, LPN));
-    test_case.init_lpp(Some(ContractWrapper::new(
-        lpp::contract::execute,
-        lpp::contract::instantiate,
-        mock_lpp_quote_query,
-    )));
+    test_case.init_lpp(
+        Some(ContractWrapper::new(
+            lpp::contract::execute,
+            lpp::contract::instantiate,
+            mock_lpp_quote_query,
+        )),
+        LPN,
+    );
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -245,7 +249,7 @@ fn test_quote_fixed_rate() {
         .query_wasm_smart(
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Quote {
-                downpayment: coin::funds::<TheCurrency>(100),
+                downpayment: test::funds::<TheCurrency>(100),
             },
         )
         .unwrap();
@@ -294,11 +298,14 @@ fn open_loans_lpp_fails() {
     let mut test_case = TestCase::new(LPN);
     test_case
         .init(&user_addr, coins(500, LPN))
-        .init_lpp(Some(ContractWrapper::new(
-            mock_lpp_execute,
-            lpp::contract::instantiate,
-            lpp::contract::query,
-        )))
+        .init_lpp(
+            Some(ContractWrapper::new(
+                mock_lpp_execute,
+                lpp::contract::instantiate,
+                lpp::contract::query,
+            )),
+            LPN,
+        )
         .init_timealarms()
         .init_oracle(None)
         .init_treasury()
@@ -323,7 +330,7 @@ fn open_lease_impl(currency: SymbolStatic) {
 
     let mut test_case = TestCase::new(currency);
     test_case.init(&user_addr, coins(500, currency));
-    test_case.init_lpp(None);
+    test_case.init_lpp(None, currency);
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();

@@ -1,8 +1,9 @@
 use cosmwasm_std::Addr;
+use currency::native::Nls;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use finance::{coin::Coin, currency::Nls};
+use finance::coin::Coin;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub enum MigrateMsg {}
