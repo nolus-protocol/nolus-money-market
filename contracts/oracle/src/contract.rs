@@ -134,9 +134,6 @@ impl<'a> AnyVisitor<Lpns> for QueryWithLpn<'a> {
     {
         self.do_work::<LPN>()
     }
-    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-        Err(ContractError::UnknownCurrency {})
-    }
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]

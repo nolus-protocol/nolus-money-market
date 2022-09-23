@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use platform::{bank::BankStub, batch::Emitter};
 
+use crate::lease::stub;
 use crate::{
     contract::{
         alarms::{price::PriceAlarm, time::TimeAlarm, AlarmResult},
@@ -15,7 +16,7 @@ use crate::{
         repay::{Repay, RepayResult},
     },
     error::ContractResult,
-    lease::{self, LeaseDTO},
+    lease::LeaseDTO,
     msg::{ExecuteMsg, StateQuery},
 };
 
@@ -75,7 +76,7 @@ impl Controller for Active {
         let bank = BankStub::my_account(&env, &deps.querier);
 
         // TODO think on taking benefit from having a LppView trait
-        lease::execute(
+        stub::execute(
             self.lease,
             LeaseState::new(env.block.time, bank),
             &env.contract.address,
@@ -97,7 +98,7 @@ fn try_repay(
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<RepayResult> {
-    lease::execute(
+    stub::execute(
         lease,
         Repay::new(info.funds, account, env),
         &env.contract.address,
@@ -112,7 +113,7 @@ fn try_close(
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<Emitter> {
-    let emitter = lease::execute(
+    let emitter = stub::execute(
         lease,
         Close::new(
             &info.sender,
@@ -134,7 +135,7 @@ fn try_on_price_alarm(
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<AlarmResult> {
-    lease::execute(
+    stub::execute(
         lease,
         PriceAlarm::new(env, &info.sender, account, env.block.time),
         &env.contract.address,
@@ -149,7 +150,7 @@ fn try_on_time_alarm(
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<AlarmResult> {
-    lease::execute(
+    stub::execute(
         lease,
         TimeAlarm::new(env, &info.sender, account, env.block.time),
         &env.contract.address,

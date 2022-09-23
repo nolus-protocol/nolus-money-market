@@ -1,10 +1,10 @@
 use std::marker::PhantomData;
 
-use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
+use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
 use finance::{
-    currency::{self, Currency, SymbolOwned},
+    currency::{self, Currency},
     liability::Liability,
     price::Price,
 };
@@ -23,7 +23,6 @@ use crate::{
     msg::StateResponse,
 };
 
-use self::factory::Factory;
 pub(super) use self::{
     downpayment_dto::DownpaymentDTO,
     dto::LeaseDTO,
@@ -37,39 +36,7 @@ mod factory;
 mod liquidation;
 mod open;
 mod repay;
-
-pub trait WithLease {
-    type Output;
-    type Error;
-
-    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
-        self,
-        lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
-    ) -> Result<Self::Output, Self::Error>
-    where
-        Lpn: Currency + Serialize,
-        Lpp: LppLenderTrait<Lpn>,
-        TimeAlarms: TimeAlarmsTrait,
-        Oracle: OracleTrait<Lpn>,
-        Profit: ProfitTrait,
-        Asset: Currency + Serialize;
-
-    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
-}
-
-pub fn execute<L, O, E>(
-    dto: LeaseDTO,
-    cmd: L,
-    addr: &Addr,
-    querier: &QuerierWrapper,
-) -> Result<O, E>
-where
-    L: WithLease<Output = O, Error = E>,
-{
-    let lpp = dto.loan.lpp().clone();
-
-    lpp.execute(Factory::new(cmd, dto, addr, querier), querier)
-}
+pub mod stub;
 
 pub struct Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> {
     lease_addr: &'r Addr,

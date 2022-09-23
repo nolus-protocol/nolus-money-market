@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{AnyVisitor, Currency, Group, Member, Symbol, SymbolStatic};
+use finance::{
+    currency::{AnyVisitor, Currency, Group, Member, Symbol, SymbolStatic},
+    error::Error as FinanceError,
+};
 
 use crate::lpn::Usdc;
 
@@ -27,12 +30,13 @@ impl Group for LeaseGroup {
     fn resolve<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
     where
         V: AnyVisitor<Self>,
+        FinanceError: Into<V::Error>,
     {
         match symbol {
             Atom::SYMBOL => visitor.on::<Atom>(),
             Osmo::SYMBOL => visitor.on::<Osmo>(),
             Usdc::SYMBOL => visitor.on::<Usdc>(),
-            _ => visitor.on_unknown(),
+            _ => Err(FinanceError::UnknownCurrency(ToOwned::to_owned(symbol)).into()),
         }
     }
 }

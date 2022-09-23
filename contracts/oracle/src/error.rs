@@ -62,11 +62,11 @@ pub enum ContractError {
     #[error("[Oracle] {0}")]
     Platform(#[from] platform::error::Error),
 
-    #[error("[Oracle] Unknown currency")]
-    UnknownCurrency {},
-
     #[error("Mismatch of curencies, expected {expected:?}, found {found:?}")]
-    CurrencyMismatch { expected: String, found: String },
+    CurrencyMismatch {
+        expected: SymbolOwned,
+        found: SymbolOwned,
+    },
 }
 
 pub fn currency_mismatch<ExpC>(found: SymbolOwned) -> ContractError

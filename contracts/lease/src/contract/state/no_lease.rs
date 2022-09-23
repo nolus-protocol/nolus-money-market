@@ -4,10 +4,10 @@ use cosmwasm_std::{DepsMut, Env, MessageInfo};
 use cw2::set_contract_version;
 use serde::{Deserialize, Serialize};
 
+use crate::lease::stub;
 use crate::{
     contract::open::{OpenLoanReq, OpenLoanReqResult},
     error::ContractResult,
-    lease,
     msg::NewLeaseForm,
 };
 
@@ -32,7 +32,7 @@ impl Controller for NoLease {
         let form_cloned = form.clone();
         let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
 
-        let OpenLoanReqResult { batch, downpayment } = lease::execute(
+        let OpenLoanReqResult { batch, downpayment } = stub::execute(
             lease,
             OpenLoanReq::new(info.funds),
             &env.contract.address,

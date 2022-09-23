@@ -5,10 +5,11 @@ use serde::{Deserialize, Serialize};
 
 use platform::bank::BankStub;
 
+use crate::lease::stub;
 use crate::{
     contract::open::OpenLoanResp,
     error::{ContractError, ContractResult},
-    lease::{self, DownpaymentDTO},
+    lease::DownpaymentDTO,
     msg::NewLeaseForm,
     repay_id::ReplyId,
 };
@@ -36,7 +37,7 @@ impl Controller for NoLeaseFinish {
 
         match id {
             ReplyId::OpenLoanReq => {
-                let emitter = lease::execute(
+                let emitter = stub::execute(
                     lease,
                     OpenLoanResp::new(msg, self.downpayment, account, &env),
                     &env.contract.address,

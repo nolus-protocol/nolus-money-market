@@ -57,9 +57,6 @@ impl<'a> AnyVisitor<Lpns> for InstantiateWithLpn<'a> {
     {
         self.do_work::<LPN>()
     }
-    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-        Err(ContractError::UnknownCurrency {})
-    }
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
@@ -130,9 +127,6 @@ impl<'a> AnyVisitor<Lpns> for ExecuteWithLpn<'a> {
         LPN: 'static + Currency + DeserializeOwned + Serialize,
     {
         self.do_work::<LPN>()
-    }
-    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-        Err(ContractError::UnknownCurrency {})
     }
 }
 
@@ -223,9 +217,6 @@ impl<'a> AnyVisitor<Lpns> for QueryWithLpn<'a> {
         LPN: 'static + Currency + DeserializeOwned + Serialize,
     {
         self.do_work::<LPN>()
-    }
-    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-        Err(ContractError::UnknownCurrency {})
     }
 }
 

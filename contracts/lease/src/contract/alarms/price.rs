@@ -1,17 +1,18 @@
 use cosmwasm_std::{Addr, Env, Timestamp};
 use serde::Serialize;
 
-use finance::currency::{Currency, SymbolOwned};
+use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::bank::BankAccountView;
 use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
+use crate::lease::stub::WithLease;
 use crate::{
     contract::alarms::{emit_events, AlarmResult},
     error::ContractError,
-    lease::{Lease, OnAlarmResult, WithLease},
+    lease::{Lease, OnAlarmResult},
 };
 
 pub struct PriceAlarm<'a, B>
@@ -59,7 +60,7 @@ where
         Asset: Currency + Serialize,
     {
         if !lease.sent_by_oracle(self.sender) {
-            return Err(Self::Error::Unauthorized {});
+            return Err(ContractError::Unauthorized {});
         }
 
         let OnAlarmResult {
@@ -72,9 +73,5 @@ where
             response: emit_events(self.env, &liquidation_status, batch),
             lease_dto,
         })
-    }
-
-    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
-        Err(ContractError::UnknownCurrency { symbol })
     }
 }
