@@ -73,7 +73,11 @@ impl OracleRef {
         &self.addr == addr
     }
 
-    pub fn execute<OracleBase, V>(self, cmd: V, querier: &QuerierWrapper) -> StdResult<V::Output, V::Error>
+    pub fn execute<OracleBase, V>(
+        self,
+        cmd: V,
+        querier: &QuerierWrapper,
+    ) -> StdResult<V::Output, V::Error>
     where
         OracleBase: Currency,
         V: WithOracle<OracleBase>,
