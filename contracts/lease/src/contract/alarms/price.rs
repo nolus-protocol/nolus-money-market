@@ -4,7 +4,7 @@ use serde::Serialize;
 use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
-use platform::bank::BankAccountView;
+use platform::bank::BankAccount;
 use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
@@ -16,7 +16,7 @@ use crate::{
 
 pub struct PriceAlarm<'a, B>
 where
-    B: BankAccountView,
+    B: BankAccount,
 {
     env: &'a Env,
     sender: &'a Addr,
@@ -26,7 +26,7 @@ where
 
 impl<'a, B> PriceAlarm<'a, B>
 where
-    B: BankAccountView,
+    B: BankAccount,
 {
     pub fn new(env: &'a Env, sender: &'a Addr, account: B, now: Timestamp) -> Self {
         Self {
@@ -40,14 +40,14 @@ where
 
 impl<'a, B> WithLease for PriceAlarm<'a, B>
 where
-    B: BankAccountView,
+    B: BankAccount,
 {
     type Output = AlarmResult;
 
     type Error = ContractError;
 
     fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
-        self,
+        mut self,
         lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
@@ -63,10 +63,12 @@ where
         }
 
         let OnAlarmResult {
-            batch,
+            mut batch,
             lease_dto,
             liquidation_status,
-        } = lease.on_price_alarm(self.now, &self.account)?;
+        } = lease.on_price_alarm(self.now, &mut self.account)?;
+
+        batch = batch.merge(self.account.into());
 
         Ok(AlarmResult {
             response: emit_events(self.env, &liquidation_status, batch),

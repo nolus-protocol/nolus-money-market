@@ -17,8 +17,8 @@ use lpp::{
         LppBatch,
     },
 };
-use platform::batch::Batch;
-use profit::stub::{Profit as ProfitTrait, ProfitBatch, ProfitRef};
+use platform::{bank::BankAccount, batch::Batch};
+use profit::stub::{Profit as ProfitTrait, ProfitRef};
 
 use crate::error::{ContractError, ContractResult};
 
@@ -134,21 +134,16 @@ where
             batch: lpp_batch,
         } = self.lpp.into();
 
-        let ProfitBatch {
-            profit_ref,
-            batch: profit_batch,
-        } = self.profit.into();
-
         let dto = LoanDTO::new_raw(
             self.annual_margin_interest,
             lpp_ref,
             self.interest_due_period,
             self.grace_period,
             self.current_period,
-            profit_ref,
+            self.profit.into(),
         );
 
-        (dto, lpp_batch.merge(profit_batch))
+        (dto, lpp_batch)
     }
 
     pub(crate) fn open_loan_req(&mut self, amount: Coin<Lpn>) -> ContractResult<()> {
@@ -170,12 +165,16 @@ where
         self.current_period.till() + self.grace_period
     }
 
-    pub(crate) fn repay(
+    pub(crate) fn repay<B>(
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
         lease: Addr,
-    ) -> ContractResult<RepayReceipt<Lpn>> {
+        account: &mut B,
+    ) -> ContractResult<RepayReceipt<Lpn>>
+    where
+        B: BankAccount,
+    {
         self.debug_check_start_due_before(by, "before the 'repay-by' time");
         self.debug_check_before_period_end(by);
 
@@ -187,7 +186,7 @@ where
         let mut receipt = RepayReceipt::default();
 
         let (mut change, mut loan_payment) = if self.overdue_at(by) {
-            self.repay_previous_period(payment, by, lease, principal_due, &mut receipt)?
+            self.repay_previous_period(payment, by, lease, principal_due, &mut receipt, account)?
         } else {
             (payment, Coin::default())
         };
@@ -208,6 +207,7 @@ where
                 total_interest_due,
                 &mut receipt,
                 change,
+                account,
             )?;
 
             loan_payment += current_period_paid;
@@ -315,15 +315,20 @@ where
         self.lpp.loan(lease).map_err(ContractError::from)
     }
 
-    fn repay_previous_period(
+    fn repay_previous_period<B>(
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
         lease: Addr,
         principal_due: Coin<Lpn>,
         receipt: &mut RepayReceipt<Lpn>,
-    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
-        let (prev_margin_paid, change) = self.repay_margin_interest(principal_due, by, payment)?;
+        account: &mut B,
+    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)>
+    where
+        B: BankAccount,
+    {
+        let (prev_margin_paid, change) =
+            self.repay_margin_interest(principal_due, by, payment, account)?;
 
         receipt.pay_previous_margin(prev_margin_paid);
 
@@ -347,18 +352,22 @@ where
         Ok((change - previous_interest_paid, previous_interest_paid))
     }
 
-    fn repay_current_period(
+    fn repay_current_period<B>(
         &mut self,
         by: Timestamp,
         principal_due: Coin<Lpn>,
         total_interest_due: Coin<Lpn>,
         receipt: &mut RepayReceipt<Lpn>,
         change: Coin<Lpn>,
-    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
+        account: &mut B,
+    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)>
+    where
+        B: BankAccount,
+    {
         let mut loan_repay = Coin::default();
 
         let (curr_margin_paid, mut change) =
-            self.repay_margin_interest(principal_due, by, change)?;
+            self.repay_margin_interest(principal_due, by, change, account)?;
 
         receipt.pay_current_margin(curr_margin_paid);
 
@@ -386,18 +395,24 @@ where
         Ok((change, loan_repay))
     }
 
-    fn repay_margin_interest(
+    fn repay_margin_interest<B>(
         &mut self,
         principal_due: Coin<Lpn>,
         by: Timestamp,
         payment: Coin<Lpn>,
-    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
+        account: &mut B,
+    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)>
+    where
+        B: BankAccount,
+    {
         let (period, change) = self.current_period.pay(principal_due, payment, by);
         self.current_period = period;
 
         let paid = payment - change;
 
-        self.profit.send(paid)?;
+        if !paid.is_zero() {
+            self.profit.send(account, paid);
+        }
 
         Ok((paid, change))
     }
@@ -438,6 +453,7 @@ mod tests {
     use cosmwasm_std::{Addr, Timestamp};
     use serde::{Deserialize, Serialize};
 
+    use finance::coin::Amount;
     use finance::{
         coin::Coin,
         currency::Currency,
@@ -458,11 +474,10 @@ mod tests {
             LppBatch,
         },
     };
+    use platform::bank::BankAccount;
+    use platform::batch::Batch;
     use platform::{bank::BankAccountView, error::Result as PlatformResult};
-    use profit::{
-        error::Result as ProfitResult,
-        stub::{Profit, ProfitBatch, ProfitRef},
-    };
+    use profit::stub::{Profit, ProfitRef};
 
     use crate::{
         loan::{repay::Receipt as RepayReceipt, Loan, LoanDTO},
@@ -486,6 +501,21 @@ mod tests {
             C: Currency,
         {
             Ok(Coin::<C>::new(self.balance))
+        }
+    }
+
+    impl BankAccount for BankStub {
+        fn send<C>(&mut self, amount: Coin<C>, _to: &Addr)
+        where
+            C: Currency,
+        {
+            self.balance -= Amount::from(amount);
+        }
+    }
+
+    impl From<BankStub> for Batch {
+        fn from(_: BankStub) -> Self {
+            Batch::default()
         }
     }
 
@@ -545,18 +575,22 @@ mod tests {
 
     // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl Profit for ProfitLocalStub {
-        fn send<C>(&mut self, _coins: Coin<C>) -> ProfitResult<()>
+        fn send<B, C>(&self, _account: &mut B, _coins: Coin<C>)
         where
+            B: BankAccount,
             C: Currency,
         {
-            Ok(())
         }
     }
 
-    impl From<ProfitLocalStub> for ProfitBatch {
+    impl From<ProfitLocalStub> for ProfitRef {
         fn from(_: ProfitLocalStub) -> Self {
             unreachable!()
         }
+    }
+
+    fn create_bank_account(amount: Amount) -> BankStub {
+        BankStub { balance: amount }
     }
 
     fn create_loan(
@@ -613,6 +647,7 @@ mod tests {
                 repay_coin,
                 LEASE_START + Duration::YEAR + Duration::YEAR,
                 Addr::unchecked(addr),
+                &mut create_bank_account(lease_amount),
             )
             .unwrap();
 
@@ -652,6 +687,7 @@ mod tests {
                 repay_coin,
                 LEASE_START + Duration::from_nanos(Duration::YEAR.nanos() - 1),
                 Addr::unchecked(addr),
+                &mut create_bank_account(lease_amount),
             )
             .unwrap();
 
@@ -693,8 +729,13 @@ mod tests {
             exp_full_prev_margin.pay_previous_margin(margin_interest);
             assert_eq!(
                 exp_full_prev_margin,
-                loan.repay(margin_interest, end_of_due_period, addr_obj.clone())
-                    .unwrap()
+                loan.repay(
+                    margin_interest,
+                    end_of_due_period,
+                    addr_obj.clone(),
+                    &mut create_bank_account(lease_amount),
+                )
+                .unwrap()
             );
         }
 
@@ -703,7 +744,13 @@ mod tests {
             exp_receipt.pay_previous_interest(repay_coin);
             assert_eq!(
                 exp_receipt,
-                loan.repay(repay_coin, end_of_due_period, addr_obj).unwrap()
+                loan.repay(
+                    repay_coin,
+                    end_of_due_period,
+                    addr_obj,
+                    &mut create_bank_account(lease_amount),
+                )
+                .unwrap()
             );
         }
     }
@@ -738,6 +785,7 @@ mod tests {
                 repay_coin,
                 LEASE_START + Duration::YEAR,
                 Addr::unchecked(addr),
+                &mut create_bank_account(lease_amount),
             )
             .unwrap();
 
@@ -749,7 +797,7 @@ mod tests {
             receipt.pay_previous_interest(interest_coin);
 
             receipt
-        },);
+        });
     }
 
     #[test]
@@ -775,7 +823,12 @@ mod tests {
         let mut lease = create_loan(addr, Some(loan));
 
         let receipt = lease
-            .repay(repay_coin, LEASE_START, Addr::unchecked(addr))
+            .repay(
+                repay_coin,
+                LEASE_START,
+                Addr::unchecked(addr),
+                &mut create_bank_account(lease_amount),
+            )
             .unwrap();
 
         assert_eq!(receipt, {
@@ -817,6 +870,7 @@ mod tests {
                 repay_coin,
                 LEASE_START + Duration::YEAR,
                 Addr::unchecked(addr),
+                &mut create_bank_account(lease_amount),
             )
             .unwrap();
 
@@ -856,7 +910,12 @@ mod tests {
         let mut lease = create_loan(addr, Some(loan));
 
         let receipt = lease
-            .repay(lease_coin, LEASE_START, Addr::unchecked(addr))
+            .repay(
+                lease_coin,
+                LEASE_START,
+                Addr::unchecked(addr),
+                &mut create_bank_account(lease_amount),
+            )
             .unwrap();
 
         assert_eq!(receipt, {

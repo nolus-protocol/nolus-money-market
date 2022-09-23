@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, Env, QuerierWrapper};
 
 use finance::{coin::Coin, currency::Currency};
@@ -66,14 +68,14 @@ impl<'a> BankAccountView for BankView<'a> {
 
 pub struct BankStub<'a> {
     view: BankView<'a>,
-    batch: Batch,
+    sends: BTreeMap<Addr, Vec<CwCoin>>,
 }
 
 impl<'a> BankStub<'a> {
     pub fn my_account(env: &'a Env, querier: &'a QuerierWrapper) -> Self {
         Self {
             view: BankView::my_account(env, querier),
-            batch: Batch::default(),
+            sends: BTreeMap::default(),
         }
     }
 }
@@ -96,15 +98,29 @@ where
         C: Currency,
     {
         debug_assert!(!amount.is_zero());
-        self.batch.schedule_execute_no_reply(BankMsg::Send {
-            to_address: to.into(),
-            amount: vec![to_cosmwasm_impl(amount)],
-        });
+
+        if amount.is_zero() {
+            return;
+        }
+
+        self.sends
+            .entry(to.clone())
+            .or_default()
+            .push(to_cosmwasm_impl(amount));
     }
 }
 
 impl<'a> From<BankStub<'a>> for Batch {
     fn from(stub: BankStub) -> Self {
-        stub.batch
+        let mut batch = Batch::default();
+
+        for (address, amount) in stub.sends {
+            batch.schedule_execute_no_reply(BankMsg::Send {
+                to_address: address.into_string(),
+                amount,
+            });
+        }
+
+        batch
     }
 }

@@ -226,6 +226,7 @@ mod tests {
     use cosmwasm_std::{wasm_execute, Addr, Timestamp};
     use serde::{Deserialize, Serialize};
 
+    use finance::coin::Amount;
     use finance::{
         coin::Coin,
         currency::Currency,
@@ -249,11 +250,9 @@ mod tests {
         stub::{Oracle, OracleBatch, OracleRef},
     };
     use marketprice::{alarms::Alarm, storage::Denom};
+    use platform::bank::BankAccount;
     use platform::{bank::BankAccountView, batch::Batch, error::Result as PlatformResult};
-    use profit::{
-        error::Result as ProfitResult,
-        stub::{Profit, ProfitBatch, ProfitRef},
-    };
+    use profit::stub::{Profit, ProfitRef};
     use time_alarms::{
         msg::ExecuteMsg::AddAlarm,
         stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},
@@ -284,6 +283,21 @@ mod tests {
             C: Currency,
         {
             Ok(Coin::<C>::new(self.balance))
+        }
+    }
+
+    impl BankAccount for BankStub {
+        fn send<C>(&mut self, amount: Coin<C>, _to: &Addr)
+        where
+            C: Currency,
+        {
+            self.balance -= Amount::from(amount);
+        }
+    }
+
+    impl From<BankStub> for Batch {
+        fn from(_: BankStub) -> Self {
+            Batch::default()
         }
     }
 
@@ -492,39 +506,37 @@ mod tests {
 
     pub struct ProfitLocalStub {
         address: Addr,
-        pub batch: Batch,
     }
 
     impl Profit for ProfitLocalStub {
-        fn send<C>(&mut self, _coins: Coin<C>) -> ProfitResult<()>
+        fn send<B, C>(&self, account: &mut B, coins: Coin<C>)
         where
+            B: BankAccount,
             C: Currency,
         {
-            Ok(())
+            account.send(coins, &self.address)
         }
     }
 
-    impl From<ProfitLocalStub> for ProfitBatch {
+    impl From<ProfitLocalStub> for ProfitRef {
         fn from(stub: ProfitLocalStub) -> Self {
-            ProfitBatch {
-                profit_ref: ProfitRef::unchecked(stub.address),
-                batch: stub.batch,
-            }
+            ProfitRef::unchecked(stub.address)
         }
     }
 
     pub struct ProfitLocalStubUnreachable;
 
     impl Profit for ProfitLocalStubUnreachable {
-        fn send<C>(&mut self, _coins: Coin<C>) -> ProfitResult<()>
+        fn send<B, C>(&self, _account: &mut B, _coins: Coin<C>)
         where
+            B: BankAccount,
             C: Currency,
         {
-            Ok(())
+            unreachable!()
         }
     }
 
-    impl From<ProfitLocalStubUnreachable> for ProfitBatch {
+    impl From<ProfitLocalStubUnreachable> for ProfitRef {
         fn from(_: ProfitLocalStubUnreachable) -> Self {
             unreachable!()
         }
@@ -606,7 +618,6 @@ mod tests {
 
         let profit_stub = ProfitLocalStub {
             address: profit_addr,
-            batch: Batch::default(),
         };
 
         create_lease(

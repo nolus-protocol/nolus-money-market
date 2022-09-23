@@ -11,7 +11,7 @@ use finance::{
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use marketprice::alarms::Alarm;
-use platform::bank::BankAccountView;
+use platform::bank::BankAccount;
 use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
@@ -34,10 +34,10 @@ where
     pub(crate) fn on_price_alarm<B>(
         self,
         now: Timestamp,
-        account: &B,
+        account: &mut B,
     ) -> ContractResult<OnAlarmResult<Lpn, Asset>>
     where
-        B: BankAccountView,
+        B: BankAccount,
     {
         self.on_alarm(Self::act_on_liability, now, account)
     }
@@ -45,10 +45,10 @@ where
     pub(crate) fn on_time_alarm<B>(
         self,
         now: Timestamp,
-        account: &B,
+        account: &mut B,
     ) -> ContractResult<OnAlarmResult<Lpn, Asset>>
     where
-        B: BankAccountView,
+        B: BankAccount,
     {
         self.on_alarm(Self::act_on_overdue, now, account)
     }
@@ -91,7 +91,7 @@ where
         mut self,
         handler: F,
         now: Timestamp,
-        account: &B,
+        account: &mut B,
     ) -> ContractResult<OnAlarmResult<Lpn, Asset>>
     where
         F: FnOnce(
@@ -100,8 +100,9 @@ where
             Timestamp,
             Percent,
             Coin<Lpn>,
+            &mut B,
         ) -> ContractResult<Status<Lpn, Asset>>,
-        B: BankAccountView,
+        B: BankAccount,
     {
         let mut lease_amount = account.balance::<Asset>()?;
 
@@ -117,7 +118,7 @@ where
             .loan
             .liability_status(now, self.lease_addr.clone(), lease_lpn)?;
 
-        let status = handler(&mut self, lease_lpn, now, ltv, liability_lpn)?;
+        let status = handler(&mut self, lease_lpn, now, ltv, liability_lpn, account)?;
 
         if let Status::PartialLiquidation {
             liquidation_info: LiquidationInfo { receipt, .. },

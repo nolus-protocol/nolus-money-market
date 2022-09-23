@@ -8,7 +8,7 @@ use finance::{
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{
-    bank::{self, BankAccountView},
+    bank::{self, BankAccount},
     batch::{Emit, Emitter},
 };
 use profit::stub::Profit as ProfitTrait;
@@ -22,7 +22,7 @@ use crate::{
 
 pub struct Repay<'a, Bank>
 where
-    Bank: BankAccountView,
+    Bank: BankAccount,
 {
     payment: Vec<CwCoin>,
     env: &'a Env,
@@ -31,7 +31,7 @@ where
 
 impl<'a, Bank> Repay<'a, Bank>
 where
-    Bank: BankAccountView,
+    Bank: BankAccount,
 {
     pub fn new(payment: Vec<CwCoin>, account: Bank, env: &'a Env) -> Self {
         Self {
@@ -49,14 +49,14 @@ pub struct RepayResult {
 
 impl<'a, Bank> WithLease for Repay<'a, Bank>
 where
-    Bank: BankAccountView,
+    Bank: BankAccount,
 {
     type Output = RepayResult;
 
     type Error = ContractError;
 
     fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
-        self,
+        mut self,
         lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
@@ -75,10 +75,17 @@ where
         let lease_amount = self.account.balance::<Asset>()? - total(payment, Price::identity());
 
         let LeaseRepayResult {
-            batch,
+            mut batch,
             lease_dto,
             receipt,
-        } = lease.repay(lease_amount, payment, self.env.block.time)?;
+        } = lease.repay(
+            lease_amount,
+            payment,
+            self.env.block.time,
+            &mut self.account,
+        )?;
+
+        batch = batch.merge(self.account.into());
 
         let emitter = batch
             .into_emitter(TYPE::Repay)

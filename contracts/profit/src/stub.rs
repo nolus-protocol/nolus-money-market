@@ -1,27 +1,23 @@
 use std::result::Result as StdResult;
 
-use cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
+use cosmwasm_std::{Addr, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
 use finance::{coin::Coin, currency::Currency};
-use platform::{batch::Batch, coin_legacy::to_cosmwasm};
+use platform::bank::BankAccount;
 
 use crate::{
     error::Result,
     msg::{ConfigResponse, QueryMsg},
 };
 
-pub struct ProfitBatch {
-    pub profit_ref: ProfitRef,
-    pub batch: Batch,
-}
-
 pub trait Profit
 where
-    Self: Into<ProfitBatch>,
+    Self: Into<ProfitRef>,
 {
-    fn send<C>(&mut self, amount: Coin<C>) -> Result<()>
+    fn send<B, C>(&self, account: &mut B, amount: Coin<C>)
     where
+        B: BankAccount,
         C: Currency;
 }
 
@@ -56,10 +52,7 @@ impl ProfitRef {
     where
         Cmd: WithProfit,
     {
-        cmd.exec(ProfitStub {
-            profit_ref: self,
-            coins: Vec::new(),
-        })
+        cmd.exec(ProfitStub { profit_ref: self })
     }
 }
 
@@ -77,36 +70,20 @@ impl ProfitRef {
 
 struct ProfitStub {
     profit_ref: ProfitRef,
-    coins: Vec<CwCoin>,
 }
 
 impl Profit for ProfitStub {
-    fn send<C>(&mut self, amount: Coin<C>) -> Result<()>
+    fn send<B, C>(&self, account: &mut B, amount: Coin<C>)
     where
+        B: BankAccount,
         C: Currency,
     {
-        if !amount.is_zero() {
-            self.coins.push(to_cosmwasm(amount));
-        }
-
-        Ok(())
+        account.send(amount, &self.profit_ref.addr);
     }
 }
 
-impl From<ProfitStub> for ProfitBatch {
+impl From<ProfitStub> for ProfitRef {
     fn from(stub: ProfitStub) -> Self {
-        let mut batch = Batch::default();
-
-        if !stub.coins.is_empty() {
-            batch.schedule_execute_no_reply(BankMsg::Send {
-                to_address: stub.profit_ref.addr.to_string(),
-                amount: stub.coins,
-            });
-        }
-
-        ProfitBatch {
-            profit_ref: stub.profit_ref,
-            batch,
-        }
+        stub.profit_ref
     }
 }

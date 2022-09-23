@@ -12,7 +12,7 @@ use finance::{
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
-use platform::{batch::Batch, generate_ids};
+use platform::{bank::BankAccount, batch::Batch, generate_ids};
 use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
@@ -36,29 +36,37 @@ where
     Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
-    fn act_on_overdue(
+    fn act_on_overdue<B>(
         &mut self,
         lease_lpn: Coin<Lpn>,
         now: Timestamp,
         ltv: Percent,
         _: Coin<Lpn>,
-    ) -> ContractResult<Status<Lpn, Asset>> {
+        account: &mut B,
+    ) -> ContractResult<Status<Lpn, Asset>>
+    where
+        B: BankAccount,
+    {
         if self.loan.grace_period_end() <= now {
-            self.liquidate_on_interest_overdue(now, lease_lpn)
+            self.liquidate_on_interest_overdue(now, lease_lpn, account)
         } else {
             Ok(self.handle_warnings(ltv))
         }
     }
 
-    fn act_on_liability(
+    fn act_on_liability<B>(
         &mut self,
         lease_lpn: Coin<Lpn>,
         now: Timestamp,
         ltv: Percent,
         liability_lpn: Coin<Lpn>,
-    ) -> ContractResult<Status<Lpn, Asset>> {
+        account: &mut B,
+    ) -> ContractResult<Status<Lpn, Asset>>
+    where
+        B: BankAccount,
+    {
         if self.liability.max_percent() <= ltv {
-            self.liquidate_on_liability(lease_lpn, liability_lpn, now)
+            self.liquidate_on_liability(lease_lpn, liability_lpn, now, account)
         } else {
             Ok(self.handle_warnings(ltv))
         }
@@ -86,12 +94,16 @@ where
         Status::Warning(LeaseInfo::new(self.customer.clone(), ltv), level)
     }
 
-    fn liquidate_on_liability(
+    fn liquidate_on_liability<B>(
         &mut self,
         lease_lpn: Coin<Lpn>,
         liability_lpn: Coin<Lpn>,
         now: Timestamp,
-    ) -> ContractResult<Status<Lpn, Asset>> {
+        account: &mut B,
+    ) -> ContractResult<Status<Lpn, Asset>>
+    where
+        B: BankAccount,
+    {
         // from 'liability - liquidation = healthy% of (lease - liquidation)' follows
         // 'liquidation = 100% / (100% - healthy%) of (liability - healthy% of lease)'
         let multiplier = Rational::new(
@@ -109,34 +121,43 @@ where
             liquidation_lpn,
             now,
             self.liability.max_percent(),
+            account,
         )
     }
 
-    fn liquidate_on_interest_overdue(
+    fn liquidate_on_interest_overdue<B>(
         &mut self,
         now: Timestamp,
         lease_lpn: Coin<Lpn>,
-    ) -> ContractResult<Status<Lpn, Asset>> {
+        account: &mut B,
+    ) -> ContractResult<Status<Lpn, Asset>>
+    where
+        B: BankAccount,
+    {
         let LiabilityStatus {
             ltv, overdue_lpn, ..
         } = self
             .loan
             .liability_status(now, self.lease_addr.clone(), lease_lpn)?;
 
-        self.liquidate(Cause::Overdue, lease_lpn, overdue_lpn, now, ltv)
+        self.liquidate(Cause::Overdue, lease_lpn, overdue_lpn, now, ltv, account)
     }
 
-    fn liquidate(
+    fn liquidate<B>(
         &mut self,
         cause: Cause,
         lease_lpn: Coin<Lpn>,
         mut liquidation_lpn: Coin<Lpn>,
         now: Timestamp,
         ltv: Percent,
-    ) -> ContractResult<Status<Lpn, Asset>> {
+        account: &mut B,
+    ) -> ContractResult<Status<Lpn, Asset>>
+    where
+        B: BankAccount,
+    {
         liquidation_lpn = lease_lpn.min(liquidation_lpn);
 
-        let receipt = self.no_reschedule_repay(liquidation_lpn, now)?;
+        let receipt = self.no_reschedule_repay(liquidation_lpn, now, account)?;
 
         let info = LeaseInfo::new(self.customer.clone(), ltv);
 
@@ -257,6 +278,7 @@ mod tests {
     use finance::percent::Percent;
     use lpp::msg::LoanResponse;
 
+    use crate::lease::tests::create_bank_account;
     use crate::{
         lease::{
             tests::{coin, lease_setup, LEASE_START},
@@ -449,7 +471,12 @@ mod tests {
 
         assert_eq!(
             lease
-                .liquidate_on_liability(coin(lease_amount), coin(800), LEASE_START)
+                .liquidate_on_liability(
+                    coin(lease_amount),
+                    coin(800),
+                    LEASE_START,
+                    &mut create_bank_account(lease_amount)
+                )
                 .unwrap(),
             Status::PartialLiquidation {
                 info: LeaseInfo::new(Addr::unchecked("customer"), lease.liability.max_percent()),
@@ -494,7 +521,12 @@ mod tests {
 
         assert_eq!(
             lease
-                .liquidate_on_liability(coin(lease_amount), coin(5000), LEASE_START)
+                .liquidate_on_liability(
+                    coin(lease_amount),
+                    coin(5000),
+                    LEASE_START,
+                    &mut create_bank_account(lease_amount)
+                )
                 .unwrap(),
             Status::FullLiquidation {
                 info: LeaseInfo::new(Addr::unchecked("customer"), lease.liability.max_percent()),
