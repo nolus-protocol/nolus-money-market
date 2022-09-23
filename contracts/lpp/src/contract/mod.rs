@@ -1,10 +1,10 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
-use currency::lpn::Lpns;
 use cw2::set_contract_version;
 use serde::{de::DeserializeOwned, Serialize};
 
+use currency::lpn::Lpns;
 use finance::currency::{visit_any, AnyVisitor, Currency};
 
 use crate::{

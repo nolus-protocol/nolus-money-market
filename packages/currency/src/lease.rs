@@ -1,5 +1,6 @@
-use finance::currency::{AnyVisitor, Currency, Group, Member, Symbol, SymbolStatic};
 use serde::{Deserialize, Serialize};
+
+use finance::currency::{AnyVisitor, Currency, Group, Member, Symbol, SymbolStatic};
 
 use crate::lpn::Usdc;
 

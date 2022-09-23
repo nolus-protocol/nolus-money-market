@@ -1,7 +1,7 @@
 use cosmwasm_std::{coins, Addr, Coin as CwCoin};
-use currency::{lpn::Usdc, native::Nls};
 use cw_multi_test::Executor;
 
+use currency::{lpn::Usdc, native::Nls};
 use finance::currency::Currency;
 
 use crate::common::{test_case::TestCase, ADMIN, USER};

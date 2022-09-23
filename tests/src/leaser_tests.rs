@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{coins, Addr, DepsMut, Env, Event, MessageInfo, Response};
-use currency::{lease::Atom, lpn::Usdc};
 use cw_multi_test::{next_block, ContractWrapper, Executor};
 
+use currency::{lease::Atom, lpn::Usdc};
 use finance::{
     coin::Coin,
     currency::{Currency, SymbolStatic},

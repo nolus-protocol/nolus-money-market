@@ -1,9 +1,9 @@
 use std::convert::Infallible;
 
 use cosmwasm_std::{Addr, StdError};
-use finance::currency::{Currency, SymbolOwned};
 use thiserror::Error;
 
+use finance::currency::{Currency, SymbolOwned};
 use marketprice::{
     alarms::errors::AlarmError, feeders::PriceFeedersError, market_price::PriceFeedsError,
     storage::DenomPair,

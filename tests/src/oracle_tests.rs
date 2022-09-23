@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{wasm_execute, Addr};
-use currency::{lpn::Usdc, native::Nls};
 use cw_multi_test::Executor;
 
+use currency::{lpn::Usdc, native::Nls};
 use finance::{coin::Coin, currency::Currency as CurrencyTrait};
 use leaser::msg::QueryMsg;
 use marketprice::storage::Price;

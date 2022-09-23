@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use cosmwasm_std::QuerierWrapper;
+
 use finance::{
     coin::Coin,
     currency::{Currency, SymbolOwned},

@@ -11,7 +11,6 @@ where
 }
 
 pub mod currency {
-
     use serde::{Deserialize, Serialize};
 
     use crate::currency::{AnyVisitor, Currency, Group, Member, Symbol, SymbolStatic};

@@ -6,13 +6,13 @@ use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
     Storage, Timestamp,
 };
+use cw2::set_contract_version;
+use serde::{de::DeserializeOwned, Serialize};
+
 use currency::{
     lpn::{Lpns, Usdc},
     native::Nls,
 };
-use cw2::set_contract_version;
-use serde::{de::DeserializeOwned, Serialize};
-
 use finance::{
     currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
     price::PriceDTO,

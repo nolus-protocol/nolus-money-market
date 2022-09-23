@@ -1,9 +1,9 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
 use cosmwasm_std::{Addr, QuerierWrapper};
-use currency::lpn::Lpns;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use currency::lpn::Lpns;
 use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
 use platform::batch::Batch;
 

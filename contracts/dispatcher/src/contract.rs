@@ -4,9 +4,9 @@ use cosmwasm_std::{
     ensure, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
     Timestamp,
 };
-use currency::native::Nls;
 use cw2::set_contract_version;
 
+use currency::native::Nls;
 use finance::duration::Duration;
 use lpp::stub::LppRef;
 use oracle::stub::OracleRef;

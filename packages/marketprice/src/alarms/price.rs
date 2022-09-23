@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use cosmwasm_std::{Addr, Order, Response, StdResult, Storage};
-use currency::native::Nls;
 use cw_storage_plus::{Item, Map};
 
+use currency::native::Nls;
 use finance::currency::SymbolOwned;
 use platform::batch::Batch;
 

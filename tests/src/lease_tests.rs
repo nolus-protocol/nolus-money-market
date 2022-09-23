@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{Addr, Timestamp};
-use currency::lpn::Usdc;
 use cw_multi_test::{AppResponse, Executor};
 
+use currency::lpn::Usdc;
 use finance::{
     coin::Coin, currency::Currency as _, duration::Duration, interest::InterestPeriod,
     percent::Percent, price::PriceDTO,

@@ -1,9 +1,9 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
 use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp};
-use currency::lpn::Lpns;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use currency::lpn::Lpns;
 use finance::{
     coin::Coin,
     currency::{visit_any, AnyVisitor, Currency, SymbolOwned},

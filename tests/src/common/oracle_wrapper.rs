@@ -1,7 +1,7 @@
 use cosmwasm_std::{coins, to_binary, Addr, Binary, Deps, Env};
-use currency::{lpn::Usdc, native::Nls};
 use cw_multi_test::Executor;
 
+use currency::{lpn::Usdc, native::Nls};
 use finance::{
     coin::Coin,
     currency::Currency,

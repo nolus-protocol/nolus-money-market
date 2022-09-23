@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
 use cosmwasm_std::{Addr, QuerierWrapper};
-use currency::lease::LeaseGroup;
 use serde::{de::DeserializeOwned, Serialize};
 
+use currency::lease::LeaseGroup;
 use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
