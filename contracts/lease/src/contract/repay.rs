@@ -2,7 +2,7 @@ use cosmwasm_std::{Coin as CwCoin, Env};
 use serde::Serialize;
 
 use finance::{
-    currency::Currency,
+    currency::{Currency, SymbolOwned},
     price::{total, Price},
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
@@ -14,11 +14,10 @@ use platform::{
 use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
-use crate::lease::stub::WithLease;
 use crate::{
     error::ContractError,
     event::TYPE,
-    lease::{Lease, LeaseDTO, RepayResult as LeaseRepayResult},
+    lease::{Lease, LeaseDTO, RepayResult as LeaseRepayResult, WithLease},
 };
 
 pub struct Repay<'a, Bank>
@@ -96,5 +95,9 @@ where
             .emit_coin_amount("change", receipt.change());
 
         Ok(RepayResult { lease_dto, emitter })
+    }
+
+    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
+        Err(ContractError::UnknownCurrency { symbol })
     }
 }

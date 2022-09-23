@@ -7,7 +7,6 @@ use currency::lpn::Lpns;
 use finance::{
     coin::Coin,
     currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
-    error::Error as FinanceError,
 };
 use platform::{
     batch::{Batch, ReplyId},
@@ -42,10 +41,7 @@ where
     fn quote(&self, amount: Coin<Lpn>) -> ContractResult<QueryQuoteResponse>;
 }
 
-pub trait WithLppLender
-where
-    ContractError: Into<Self::Error>,
-{
+pub trait WithLppLender {
     type Output;
     type Error;
 
@@ -53,6 +49,8 @@ where
     where
         L: LppLender<C>,
         C: Currency + Serialize;
+
+    fn unknown_lpn(self, symbol: SymbolOwned) -> StdResult<Self::Output, Self::Error>;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -91,14 +89,10 @@ impl LppLenderRef {
     ) -> StdResult<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLppLender,
-        FinanceError: Into<Cmd::Error>,
-        ContractError: Into<Cmd::Error>,
     {
         struct CurrencyVisitor<'a, Cmd>
         where
             Cmd: WithLppLender,
-            FinanceError: Into<Cmd::Error>,
-            ContractError: Into<Cmd::Error>,
         {
             cmd: Cmd,
             lpp_ref: LppLenderRef,
@@ -108,8 +102,6 @@ impl LppLenderRef {
         impl<'a, Cmd> AnyVisitor<Lpns> for CurrencyVisitor<'a, Cmd>
         where
             Cmd: WithLppLender,
-            FinanceError: Into<Cmd::Error>,
-            ContractError: Into<Cmd::Error>,
         {
             type Output = Cmd::Output;
             type Error = Cmd::Error;
@@ -119,6 +111,10 @@ impl LppLenderRef {
                 C: Currency + Serialize + DeserializeOwned,
             {
                 self.cmd.exec(self.lpp_ref.into_stub::<C>(self.querier))
+            }
+
+            fn on_unknown(self) -> StdResult<Self::Output, Self::Error> {
+                self.cmd.unknown_lpn(self.lpp_ref.currency)
             }
         }
 

@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
-use finance::currency::Currency;
+use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{
@@ -11,8 +11,11 @@ use platform::{
 use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
-use crate::lease::stub::WithLease;
-use crate::{error::ContractError, event::TYPE, lease::Lease};
+use crate::{
+    error::ContractError,
+    event::TYPE,
+    lease::{Lease, WithLease},
+};
 
 pub struct Close<'a, Bank> {
     sender: &'a Addr,
@@ -53,7 +56,7 @@ where
         Asset: Currency + Serialize,
     {
         if !lease.owned_by(self.sender) {
-            return Err(ContractError::Unauthorized {});
+            return Err(Self::Error::Unauthorized {});
         }
 
         let result = lease.close(self.account)?;
@@ -64,5 +67,9 @@ where
             .emit_timestamp("at", &self.now);
 
         Ok(emitter)
+    }
+
+    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
+        Err(ContractError::UnknownCurrency { symbol })
     }
 }

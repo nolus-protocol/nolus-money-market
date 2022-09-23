@@ -5,7 +5,6 @@ use cosmwasm_std::Coin as CosmWasmCoin;
 use finance::{
     coin::Coin,
     currency::{visit, visit_any, AnyVisitor, Currency, Group, SingleVisitor},
-    error::Error as FinanceError,
 };
 
 use crate::error::{Error, Result};
@@ -40,16 +39,14 @@ where
     CosmWasmCoin::new(coin.into(), C::SYMBOL)
 }
 
-pub trait CoinVisitor
-where
-    Error: Into<Self::Error>,
-{
+pub trait CoinVisitor {
     type Output;
     type Error;
 
     fn on<C>(&self, coin: Coin<C>) -> StdResult<Self::Output, Self::Error>
     where
         C: Currency;
+    fn on_unknown(&self) -> StdResult<Self::Output, Self::Error>;
 }
 
 #[deprecated = "Migrate to using finance::bank::BankAccount"]
@@ -57,8 +54,6 @@ pub fn from_cosmwasm_any<G, V>(coin: CosmWasmCoin, v: V) -> StdResult<V::Output,
 where
     G: Group,
     V: CoinVisitor,
-    Error: Into<V::Error>,
-    FinanceError: Into<V::Error>,
 {
     from_cosmwasm_any_impl::<G, _>(coin, v)
 }
@@ -70,8 +65,6 @@ pub(crate) fn from_cosmwasm_any_impl<G, V>(
 where
     G: Group,
     V: CoinVisitor,
-    Error: Into<V::Error>,
-    FinanceError: Into<V::Error>,
 {
     visit_any::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
 }
@@ -88,6 +81,13 @@ where
     fn on(self) -> Result<Self::Output> {
         Ok(from_cosmwasm_internal(self.0))
     }
+
+    fn on_unknown(self) -> Result<Self::Output> {
+        Err(Error::UnexpectedCurrency(
+            self.0.denom.clone(),
+            C::SYMBOL.into(),
+        ))
+    }
 }
 
 struct CoinTransformerAny<'a, V>(&'a CosmWasmCoin, V);
@@ -95,8 +95,6 @@ impl<'a, G, V> AnyVisitor<G> for CoinTransformerAny<'a, V>
 where
     G: Group,
     V: CoinVisitor,
-    Error: Into<V::Error>,
-    FinanceError: Into<V::Error>,
 {
     type Output = V::Output;
     type Error = V::Error;
@@ -107,6 +105,10 @@ where
     {
         let coin = Coin::new(self.0.amount.into());
         self.1.on::<C>(coin)
+    }
+
+    fn on_unknown(self) -> StdResult<Self::Output, Self::Error> {
+        self.1.on_unknown()
     }
 }
 
@@ -126,7 +128,6 @@ mod test {
 
     use finance::{
         currency::Currency,
-        error::Error as FinanceError,
         test::currency::{Nls, TestCurrencies, Usdc},
     };
 
@@ -158,76 +159,76 @@ mod test {
         C: Currency,
     {
         type Output = Coin<C>;
-        type Error = Error;
+        type Error = ();
 
         fn on<Cin>(&self, coin: Coin<Cin>) -> Result<Self::Output, Self::Error>
         where
             Cin: Currency,
         {
-            assert_eq!(type_name::<C>(), type_name::<Cin>());
+            assert_eq!(type_name::<C>(), type_name::<Cin>(),);
 
             // TODO functionality to represent a Coin<X> to Coin<Y>, if X==Y
             Ok(Coin::<C>::new(coin.into()))
+        }
+
+        fn on_unknown(&self) -> Result<Self::Output, Self::Error> {
+            unreachable!();
         }
     }
 
     struct ExpectUnknownCurrency;
     impl CoinVisitor for ExpectUnknownCurrency {
         type Output = ();
-        type Error = Error;
+        type Error = ();
 
         fn on<Cin>(&self, _coin: Coin<Cin>) -> Result<Self::Output, Self::Error>
         where
             Cin: Currency,
         {
-            Err(Error::FinanceError(FinanceError::UnknownCurrency(
-                ToOwned::to_owned(Cin::SYMBOL),
-            )))
+            Err(())
+        }
+
+        fn on_unknown(&self) -> Result<Self::Output, Self::Error> {
+            Ok(())
         }
     }
 
     #[test]
     fn from_cosmwasm() {
-        let c1 = from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Nls::SYMBOL));
+        let c1 = super::from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Nls::SYMBOL));
         assert_eq!(Ok(Coin::<Nls>::new(12)), c1);
     }
     #[test]
     fn from_cosmwasm_unexpected() {
-        let c1 = from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Usdc::SYMBOL));
-
+        let c1 = super::from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Usdc::SYMBOL));
         assert_eq!(
-            c1,
-            Err(Error::FinanceError(FinanceError::UnexpectedCurrency(
+            Err(Error::UnexpectedCurrency(
                 Usdc::SYMBOL.into(),
                 Nls::SYMBOL.into()
-            ))),
+            )),
+            c1
         );
-
-        let c2 = from_cosmwasm_impl::<Usdc>(CosmWasmCoin::new(12, Nls::SYMBOL));
-
+        let c2 = super::from_cosmwasm_impl::<Usdc>(CosmWasmCoin::new(12, Nls::SYMBOL));
         assert_eq!(
-            c2,
-            Err(Error::FinanceError(FinanceError::UnexpectedCurrency(
+            Err(Error::UnexpectedCurrency(
                 Nls::SYMBOL.into(),
                 Usdc::SYMBOL.into(),
-            ))),
+            )),
+            c2
         );
     }
 
     #[test]
     fn from_cosmwasm_any() {
         type T = Nls;
-
         let v = Expect::<T>::new();
-
         let amount = 12;
-
         assert_eq!(
+            Ok(Coin::<T>::new(amount)),
             super::from_cosmwasm_any_impl::<TestCurrencies, _>(
                 CosmWasmCoin::new(amount, T::SYMBOL),
                 v
-            ),
-            Ok(Coin::<T>::new(amount)),
+            )
         );
     }
 
@@ -235,9 +236,7 @@ mod test {
     #[should_panic]
     fn from_cosmwasm_any_other_currency() {
         let v = Expect::<Usdc>::new();
-
         let amount = 12;
-
         let _ = super::from_cosmwasm_any_impl::<TestCurrencies, _>(
             CosmWasmCoin::new(amount, Nls::SYMBOL),
             v,
@@ -247,28 +246,24 @@ mod test {
     #[test]
     fn from_cosmwasm_any_unexpected() {
         assert_eq!(
+            Ok(()),
             super::from_cosmwasm_any_impl::<TestCurrencies, _>(
                 CosmWasmCoin::new(3, "my-nice-currency"),
                 ExpectUnknownCurrency
-            ),
-            Err(Error::FinanceError(FinanceError::UnknownCurrency(
-                ToOwned::to_owned("my-nice-currency")
-            ))),
+            )
         );
     }
 
     #[test]
     fn to_cosmwasm() {
         let amount = 326;
-
         assert_eq!(
             CosmWasmCoin::new(amount, Nls::SYMBOL),
-            to_cosmwasm_impl(Coin::<Nls>::new(amount))
+            super::to_cosmwasm_impl(Coin::<Nls>::new(amount))
         );
-
         assert_eq!(
             CosmWasmCoin::new(amount, Usdc::SYMBOL),
-            to_cosmwasm_impl(Coin::<Usdc>::new(amount))
+            super::to_cosmwasm_impl(Coin::<Usdc>::new(amount))
         );
     }
 

@@ -13,11 +13,8 @@ pub enum Error {
     #[error("[Finance] [OverflowError] {0}")]
     OverflowError(#[from] OverflowError),
 
-    #[error("[Finance] Found currency \"{0}\" expecting \"{1}\"")]
+    #[error("[Finance] Found currency {0} expecting {1}")]
     UnexpectedCurrency(String, String),
-
-    #[error("[Finance] Unknown currency \"{0}\"")]
-    UnknownCurrency(String),
 
     #[error("[Finance] Expecting funds of {0} but found none")]
     NoFunds(String),

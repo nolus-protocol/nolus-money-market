@@ -75,7 +75,6 @@ pub fn execute<G, Cmd>(price: PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Er
 where
     G: Group,
     Cmd: WithPrice,
-    Error: Into<Cmd::Error>,
 {
     visit_any::<G, _>(
         &price.amount.symbol().clone(),
@@ -98,7 +97,6 @@ impl<G, Cmd> AnyVisitor<G> for CVisitor<Cmd>
 where
     G: Group,
     Cmd: WithPrice,
-    Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;
@@ -117,13 +115,16 @@ where
             },
         )
     }
+
+    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+        self.cmd.unknown()
+    }
 }
 
 struct QuoteCVisitor<C, Cmd>
 where
     C: Currency + Serialize + DeserializeOwned,
     Cmd: WithPrice,
-    Error: Into<Cmd::Error>,
 {
     base: Coin<C>,
     quote_dto: CoinDTO,
@@ -135,7 +136,6 @@ where
     C: Currency + Serialize + DeserializeOwned,
     G: Group,
     Cmd: WithPrice,
-    Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;
@@ -148,5 +148,9 @@ where
             self.base,
             Coin::<QuoteC>::try_from(self.quote_dto).expect("Got different currency in visitor!"),
         ))
+    }
+
+    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+        self.cmd.unknown()
     }
 }

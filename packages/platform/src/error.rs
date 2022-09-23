@@ -1,12 +1,12 @@
 use cosmwasm_std::StdError;
 use thiserror::Error;
 
-use finance::{currency::Currency, error::Error as FinanceError};
+use finance::currency::Currency;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
-    #[error("[Platform] {0}")]
-    FinanceError(#[from] FinanceError),
+    #[error("[Platform] Found currency {0} expecting {1}")]
+    UnexpectedCurrency(String, String),
 
     #[error("[Platform] Expecting funds of {0} but found none")]
     NoFunds(String),

@@ -9,7 +9,6 @@ use platform::{batch::Batch, coin_legacy::to_cosmwasm};
 use crate::{
     error::Result,
     msg::{ConfigResponse, QueryMsg},
-    ContractError,
 };
 
 pub struct ProfitBatch {
@@ -26,10 +25,7 @@ where
         C: Currency;
 }
 
-pub trait WithProfit
-where
-    ContractError: Into<Self::Error>,
-{
+pub trait WithProfit {
     type Output;
     type Error;
 
@@ -59,7 +55,6 @@ impl ProfitRef {
     pub fn execute<Cmd>(self, cmd: Cmd) -> StdResult<Cmd::Output, Cmd::Error>
     where
         Cmd: WithProfit,
-        ContractError: Into<Cmd::Error>,
     {
         cmd.exec(ProfitStub {
             profit_ref: self,

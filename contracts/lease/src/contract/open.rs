@@ -1,7 +1,7 @@
 use cosmwasm_std::{Coin as CwCoin, Env, Reply};
 use serde::Serialize;
 
-use finance::currency::Currency;
+use finance::currency::{Currency, SymbolOwned};
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{
@@ -11,11 +11,10 @@ use platform::{
 use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
-use crate::lease::stub::WithLease;
 use crate::{
     error::ContractError,
     event::TYPE,
-    lease::{DownpaymentDTO, Lease},
+    lease::{DownpaymentDTO, Lease, WithLease},
 };
 
 pub struct OpenLoanReq {
@@ -54,6 +53,10 @@ impl WithLease for OpenLoanReq {
             batch: lease.open_loan_req(downpayment_lpn)?,
             downpayment: DownpaymentDTO::new(downpayment.into()),
         })
+    }
+
+    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
+        Err(ContractError::UnknownCurrency { symbol })
     }
 }
 
@@ -120,5 +123,9 @@ where
             .emit_coin("loan", result.receipt.borrowed)
             .emit("downpayment-symbol", self.downpayment.symbol())
             .emit_to_string_value("downpayment-amount", self.downpayment.amount()))
+    }
+
+    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
+        Err(ContractError::UnknownCurrency { symbol })
     }
 }

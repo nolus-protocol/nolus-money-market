@@ -56,6 +56,13 @@ impl<'a> WithLpp for Dispatch<'a> {
             .into_emitter("tr-rewards")
             .emit_coin("rewards", result.receipt.in_nls))
     }
+
+    fn unknown_lpn(
+        self,
+        symbol: finance::currency::SymbolOwned,
+    ) -> Result<Self::Output, Self::Error> {
+        Err(ContractError::UnknownCurrency { symbol })
+    }
 }
 
 impl<'a> Dispatch<'a> {

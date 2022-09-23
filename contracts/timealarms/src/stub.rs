@@ -23,10 +23,7 @@ where
     fn add_alarm(&mut self, time: Timestamp) -> Result<()>;
 }
 
-pub trait WithTimeAlarms
-where
-    ContractError: Into<Self::Error>,
-{
+pub trait WithTimeAlarms {
     type Output;
     type Error;
 
@@ -48,7 +45,6 @@ impl TimeAlarmsRef {
     pub fn execute<Cmd>(self, cmd: Cmd) -> StdResult<Cmd::Output, Cmd::Error>
     where
         Cmd: WithTimeAlarms,
-        ContractError: Into<Cmd::Error>,
     {
         cmd.exec(self.into_stub())
     }

@@ -4,10 +4,7 @@ use cosmwasm_std::{Addr, QuerierWrapper};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::lpn::Lpns;
-use finance::{
-    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
-    error::Error as FinanceError,
-};
+use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
 use platform::batch::Batch;
 
 use crate::{
@@ -25,10 +22,7 @@ where
     fn lpp_balance(&self) -> ContractResult<LppBalanceResponse<Lpn>>;
 }
 
-pub trait WithLpp
-where
-    ContractError: Into<Self::Error>,
-{
+pub trait WithLpp {
     type Output;
     type Error;
 
@@ -36,6 +30,8 @@ where
     where
         L: Lpp<C>,
         C: Currency + Serialize;
+
+    fn unknown_lpn(self, symbol: SymbolOwned) -> StdResult<Self::Output, Self::Error>;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -58,41 +54,35 @@ impl LppRef {
         &self.addr
     }
 
-    pub fn execute<Cmd>(
-        self,
-        cmd: Cmd,
-        querier: &QuerierWrapper,
-    ) -> StdResult<Cmd::Output, Cmd::Error>
+    pub fn execute<V, O, E>(self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
     where
-        Cmd: WithLpp,
-        ContractError: Into<Cmd::Error>,
-        FinanceError: Into<Cmd::Error>,
+        V: WithLpp<Output = O, Error = E>,
     {
-        struct CurrencyVisitor<'a, Cmd>
+        struct CurrencyVisitor<'a, V, O, E>
         where
-            Cmd: WithLpp,
-            ContractError: Into<Cmd::Error>,
-            FinanceError: Into<Cmd::Error>,
+            V: WithLpp<Output = O, Error = E>,
         {
-            cmd: Cmd,
+            cmd: V,
             lpp_ref: LppRef,
             querier: &'a QuerierWrapper<'a>,
         }
 
-        impl<'a, Cmd> AnyVisitor<Lpns> for CurrencyVisitor<'a, Cmd>
+        impl<'a, V, O, E> AnyVisitor<Lpns> for CurrencyVisitor<'a, V, O, E>
         where
-            Cmd: WithLpp,
-            ContractError: Into<Cmd::Error>,
-            FinanceError: Into<Cmd::Error>,
+            V: WithLpp<Output = O, Error = E>,
         {
-            type Output = Cmd::Output;
-            type Error = Cmd::Error;
+            type Output = O;
+            type Error = E;
 
             fn on<C>(self) -> StdResult<Self::Output, Self::Error>
             where
                 C: Currency + Serialize + DeserializeOwned,
             {
                 self.cmd.exec(self.lpp_ref.into_stub::<C>(self.querier))
+            }
+
+            fn on_unknown(self) -> StdResult<Self::Output, Self::Error> {
+                self.cmd.unknown_lpn(self.lpp_ref.currency)
             }
         }
 

@@ -2,8 +2,6 @@ use std::{any::TypeId, fmt::Debug};
 
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::error::Error;
-
 pub type Symbol<'a> = &'a str;
 pub type SymbolStatic = &'static str;
 pub type SymbolOwned = String;
@@ -25,7 +23,6 @@ pub trait Group {
     fn resolve<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
     where
         V: AnyVisitor<Self>,
-        Error: Into<V::Error>,
         Self: Sized;
 }
 
@@ -37,36 +34,29 @@ where
     TypeId::of::<C1>() == TypeId::of::<C2>()
 }
 
-pub trait SingleVisitor<C>
-where
-    Error: Into<Self::Error>,
-{
+pub trait SingleVisitor<C> {
     type Output;
     type Error;
 
     fn on(self) -> Result<Self::Output, Self::Error>;
+    fn on_unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
 pub fn visit<C, V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
 where
     V: SingleVisitor<C>,
-    Error: Into<V::Error>,
     C: Currency,
 {
     if symbol == C::SYMBOL {
         visitor.on()
     } else {
-        Err(
-            Error::UnexpectedCurrency(ToOwned::to_owned(symbol), ToOwned::to_owned(C::SYMBOL))
-                .into(),
-        )
+        visitor.on_unknown()
     }
 }
 
 pub trait AnyVisitor<G>
 where
     G: Group,
-    Error: Into<Self::Error>,
 {
     type Output;
     type Error;
@@ -74,13 +64,13 @@ where
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
         C: 'static + Currency + Member<G> + Serialize + DeserializeOwned;
+    fn on_unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
 pub fn visit_any<G, V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
 where
     G: Group,
     V: AnyVisitor<G>,
-    Error: Into<V::Error>,
 {
     G::resolve(symbol, visitor)
 }
@@ -89,7 +79,6 @@ where
 mod test {
     use std::marker::PhantomData;
 
-    use crate::error::Error;
     use crate::{
         currency::{Currency, SingleVisitor},
         test::currency::{Nls, TestCurrencies, Usdc},
@@ -108,7 +97,7 @@ mod test {
         C: 'static,
     {
         type Output = bool;
-        type Error = Error;
+        type Error = ();
 
         fn on<Cin>(self) -> Result<Self::Output, Self::Error>
         where
@@ -117,20 +106,28 @@ mod test {
             assert!(super::equal::<C, Cin>());
             Ok(true)
         }
+
+        fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+            unreachable!();
+        }
     }
     impl<C> SingleVisitor<C> for Expect<C> {
         type Output = bool;
-        type Error = Error;
+        type Error = ();
 
         fn on(self) -> Result<Self::Output, Self::Error> {
             Ok(true)
+        }
+
+        fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+            unreachable!();
         }
     }
 
     struct ExpectUnknownCurrency;
     impl AnyVisitor<TestCurrencies> for ExpectUnknownCurrency {
         type Output = bool;
-        type Error = Error;
+        type Error = ();
 
         fn on<C>(self) -> Result<Self::Output, Self::Error>
         where
@@ -138,14 +135,22 @@ mod test {
         {
             unreachable!();
         }
+
+        fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+            Ok(true)
+        }
     }
 
     impl<C> SingleVisitor<C> for ExpectUnknownCurrency {
         type Output = bool;
-        type Error = Error;
+        type Error = ();
 
         fn on(self) -> Result<Self::Output, Self::Error> {
             unreachable!();
+        }
+
+        fn on_unknown(self) -> Result<Self::Output, Self::Error> {
+            Ok(true)
         }
     }
     #[test]
@@ -160,8 +165,8 @@ mod test {
     #[test]
     fn visit_any_unexpected() {
         assert_eq!(
-            super::visit_any("my_fancy_coin", ExpectUnknownCurrency),
-            Err(Error::UnknownCurrency(ToOwned::to_owned("my_fancy_coin"))),
+            Ok(true),
+            super::visit_any("my_fancy_coin", ExpectUnknownCurrency)
         );
     }
 
@@ -177,11 +182,8 @@ mod test {
     #[test]
     fn visit_one_unexpected() {
         assert_eq!(
-            super::visit::<Nls, _>("my_fancy_coin", ExpectUnknownCurrency),
-            Err(Error::UnexpectedCurrency(
-                ToOwned::to_owned("my_fancy_coin"),
-                ToOwned::to_owned(Nls::SYMBOL)
-            )),
+            Ok(true),
+            super::visit::<Nls, _>("my_fancy_coin", ExpectUnknownCurrency)
         );
     }
 }

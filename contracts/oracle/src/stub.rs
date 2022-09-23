@@ -34,7 +34,6 @@ where
 pub trait WithOracle<OracleBase>
 where
     OracleBase: Currency,
-    ContractError: Into<Self::Error>,
 {
     type Output;
     type Error;
@@ -42,6 +41,8 @@ where
     fn exec<O>(self, oracle: O) -> StdResult<Self::Output, Self::Error>
     where
         O: Oracle<OracleBase>;
+
+    fn unexpected_base(self, symbol: SymbolOwned) -> StdResult<Self::Output, Self::Error>;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -72,24 +73,19 @@ impl OracleRef {
         &self.addr == addr
     }
 
-    pub fn execute<OracleBase, Cmd>(
+    pub fn execute<OracleBase, V>(
         self,
-        cmd: Cmd,
+        cmd: V,
         querier: &QuerierWrapper,
-    ) -> StdResult<Cmd::Output, Cmd::Error>
+    ) -> StdResult<V::Output, V::Error>
     where
         OracleBase: Currency,
-        Cmd: WithOracle<OracleBase>,
-        ContractError: Into<Cmd::Error>,
+        V: WithOracle<OracleBase>,
     {
         if OracleBase::SYMBOL == self.base_currency {
             cmd.exec(self.into_stub::<OracleBase>(querier))
         } else {
-            Err(ContractError::CurrencyMismatch {
-                expected: ToOwned::to_owned(OracleBase::SYMBOL),
-                found: self.base_currency,
-            }
-            .into())
+            cmd.unexpected_base(self.base_currency)
         }
     }
 
