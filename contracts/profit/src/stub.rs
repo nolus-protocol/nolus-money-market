@@ -4,20 +4,27 @@ use cosmwasm_std::{Addr, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
 use finance::{coin::Coin, currency::Currency};
-use platform::bank::BankAccount;
+use platform::{
+    bank::{FixedAddressSender, FixedAddressSenderBuilder},
+    batch::Batch,
+};
 
 use crate::{
     error::Result,
     msg::{ConfigResponse, QueryMsg},
 };
 
+pub struct ProfitBatch {
+    pub profit_ref: ProfitRef,
+    pub batch: Batch,
+}
+
 pub trait Profit
 where
-    Self: Into<ProfitRef>,
+    Self: Into<ProfitBatch>,
 {
-    fn send<B, C>(&self, account: &mut B, amount: Coin<C>)
+    fn send<C>(&mut self, amount: Coin<C>)
     where
-        B: BankAccount,
         C: Currency;
 }
 
@@ -48,11 +55,21 @@ impl ProfitRef {
         Ok(Self { addr })
     }
 
-    pub fn execute<Cmd>(self, cmd: Cmd) -> StdResult<Cmd::Output, Cmd::Error>
+    pub fn execute<SenderBuilder, Cmd>(
+        self,
+        sender_builder: SenderBuilder,
+        cmd: Cmd,
+    ) -> StdResult<Cmd::Output, Cmd::Error>
     where
+        SenderBuilder: FixedAddressSenderBuilder,
         Cmd: WithProfit,
     {
-        cmd.exec(ProfitStub { profit_ref: self })
+        let profit_address = self.addr.clone();
+
+        cmd.exec(ProfitStub {
+            profit_ref: self,
+            sender: sender_builder.build(profit_address),
+        })
     }
 }
 
@@ -68,22 +85,31 @@ impl ProfitRef {
     }
 }
 
-struct ProfitStub {
+struct ProfitStub<Sender> {
     profit_ref: ProfitRef,
+    sender: Sender,
 }
 
-impl Profit for ProfitStub {
-    fn send<B, C>(&self, account: &mut B, amount: Coin<C>)
+impl<Sender> Profit for ProfitStub<Sender>
+where
+    Sender: FixedAddressSender,
+{
+    fn send<C>(&mut self, amount: Coin<C>)
     where
-        B: BankAccount,
         C: Currency,
     {
-        account.send(amount, &self.profit_ref.addr);
+        self.sender.send(amount);
     }
 }
 
-impl From<ProfitStub> for ProfitRef {
-    fn from(stub: ProfitStub) -> Self {
-        stub.profit_ref
+impl<Sender> From<ProfitStub<Sender>> for ProfitBatch
+where
+    Sender: FixedAddressSender,
+{
+    fn from(stub: ProfitStub<Sender>) -> Self {
+        ProfitBatch {
+            profit_ref: stub.profit_ref,
+            batch: stub.sender.into(),
+        }
     }
 }

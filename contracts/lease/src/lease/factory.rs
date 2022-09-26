@@ -7,40 +7,48 @@ use currency::lease::LeaseGroup;
 use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
+use platform::bank::FixedAddressSenderBuilder;
 use profit::stub::{Profit as ProfitTrait, WithProfit};
 use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef, WithTimeAlarms};
 
 use super::{dto::LeaseDTO, Lease, WithLease};
 
-pub struct Factory<'r, L> {
-    cmd: L,
+pub struct Factory<'r, Cmd, SenderBuilder> {
+    cmd: Cmd,
     lease_dto: LeaseDTO,
     lease_addr: &'r Addr,
+    sender_builder: SenderBuilder,
     querier: &'r QuerierWrapper<'r>,
 }
 
-impl<'r, L> Factory<'r, L> {
+impl<'r, Cmd, SenderBuilder> Factory<'r, Cmd, SenderBuilder>
+where
+    SenderBuilder: FixedAddressSenderBuilder,
+{
     pub fn new(
-        cmd: L,
+        cmd: Cmd,
         lease_dto: LeaseDTO,
         lease_addr: &'r Addr,
+        sender_builder: SenderBuilder,
         querier: &'r QuerierWrapper<'r>,
     ) -> Self {
         Self {
             cmd,
             lease_dto,
             lease_addr,
+            sender_builder,
             querier,
         }
     }
 }
 
-impl<'r, L, O, E> WithLppLender for Factory<'r, L>
+impl<'r, Cmd, SenderBuilder> WithLppLender for Factory<'r, Cmd, SenderBuilder>
 where
-    L: WithLease<Output = O, Error = E>,
+    Cmd: WithLease,
+    SenderBuilder: FixedAddressSenderBuilder,
 {
-    type Output = O;
-    type Error = E;
+    type Output = Cmd::Output;
+    type Error = Cmd::Error;
 
     fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
@@ -56,6 +64,7 @@ where
             lease_addr: self.lease_addr,
             _lpn: PhantomData,
             lpp,
+            sender_builder: self.sender_builder,
             querier: self.querier,
         })
     }
@@ -65,23 +74,26 @@ where
     }
 }
 
-struct FactoryStage2<'r, L, Lpn, Lpp> {
-    cmd: L,
+struct FactoryStage2<'r, Cmd, Lpn, Lpp, SenderBuilder> {
+    cmd: Cmd,
     lease_dto: LeaseDTO,
     lease_addr: &'r Addr,
     _lpn: PhantomData<Lpn>,
     lpp: Lpp,
+    sender_builder: SenderBuilder,
     querier: &'r QuerierWrapper<'r>,
 }
 
-impl<'r, L, Lpn, Lpp> WithTimeAlarms for FactoryStage2<'r, L, Lpn, Lpp>
+impl<'r, Cmd, Lpn, Lpp, SenderBuilder> WithTimeAlarms
+    for FactoryStage2<'r, Cmd, Lpn, Lpp, SenderBuilder>
 where
-    L: WithLease,
+    Cmd: WithLease,
     Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
+    SenderBuilder: FixedAddressSenderBuilder,
 {
-    type Output = L::Output;
-    type Error = L::Error;
+    type Output = Cmd::Output;
+    type Error = Cmd::Error;
 
     fn exec<TimeAlarms>(self, time_alarms: TimeAlarms) -> Result<Self::Output, Self::Error>
     where
@@ -97,6 +109,7 @@ where
                 lease_addr: self.lease_addr,
                 _lpn: PhantomData,
                 lpp: self.lpp,
+                sender_builder: self.sender_builder,
                 time_alarms,
             },
             self.querier,
@@ -104,24 +117,27 @@ where
     }
 }
 
-struct FactoryStage3<'r, L, Lpn, Lpp, TimeAlarms> {
-    cmd: L,
+struct FactoryStage3<'r, Cmd, Lpn, Lpp, SenderBuilder, TimeAlarms> {
+    cmd: Cmd,
     lease_dto: LeaseDTO,
     lease_addr: &'r Addr,
     _lpn: PhantomData<Lpn>,
     lpp: Lpp,
+    sender_builder: SenderBuilder,
     time_alarms: TimeAlarms,
 }
 
-impl<'r, L, Lpn, Lpp, TimeAlarms> WithOracle<Lpn> for FactoryStage3<'r, L, Lpn, Lpp, TimeAlarms>
+impl<'r, Cmd, Lpn, Lpp, SenderBuilder, TimeAlarms> WithOracle<Lpn>
+    for FactoryStage3<'r, Cmd, Lpn, Lpp, SenderBuilder, TimeAlarms>
 where
-    L: WithLease,
+    Cmd: WithLease,
     Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
+    SenderBuilder: FixedAddressSenderBuilder,
     TimeAlarms: TimeAlarmsTrait,
 {
-    type Output = L::Output;
-    type Error = L::Error;
+    type Output = Cmd::Output;
+    type Error = Cmd::Error;
 
     fn exec<Oracle>(self, oracle: Oracle) -> Result<Self::Output, Self::Error>
     where
@@ -129,15 +145,18 @@ where
     {
         let profit = self.lease_dto.loan.profit().clone();
 
-        profit.execute(FactoryStage4 {
-            cmd: self.cmd,
-            lease_dto: self.lease_dto,
-            lease_addr: self.lease_addr,
-            _lpn: PhantomData,
-            lpp: self.lpp,
-            time_alarms: self.time_alarms,
-            oracle,
-        })
+        profit.execute(
+            self.sender_builder,
+            FactoryStage4 {
+                cmd: self.cmd,
+                lease_dto: self.lease_dto,
+                lease_addr: self.lease_addr,
+                _lpn: PhantomData,
+                lpp: self.lpp,
+                time_alarms: self.time_alarms,
+                oracle,
+            },
+        )
     }
 
     fn unexpected_base(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
@@ -145,8 +164,8 @@ where
     }
 }
 
-struct FactoryStage4<'r, L, Lpn, Lpp, TimeAlarms, Oracle> {
-    cmd: L,
+struct FactoryStage4<'r, Cmd, Lpn, Lpp, TimeAlarms, Oracle> {
+    cmd: Cmd,
     lease_dto: LeaseDTO,
     lease_addr: &'r Addr,
     _lpn: PhantomData<Lpn>,
@@ -155,17 +174,17 @@ struct FactoryStage4<'r, L, Lpn, Lpp, TimeAlarms, Oracle> {
     oracle: Oracle,
 }
 
-impl<'r, L, Lpn, Lpp, TimeAlarms, Oracle> WithProfit
-    for FactoryStage4<'r, L, Lpn, Lpp, TimeAlarms, Oracle>
+impl<'r, Cmd, Lpn, Lpp, TimeAlarms, Oracle> WithProfit
+    for FactoryStage4<'r, Cmd, Lpn, Lpp, TimeAlarms, Oracle>
 where
-    L: WithLease,
+    Cmd: WithLease,
     Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
 {
-    type Output = L::Output;
-    type Error = L::Error;
+    type Output = Cmd::Output;
+    type Error = Cmd::Error;
 
     fn exec<P>(self, profit: P) -> Result<Self::Output, Self::Error>
     where
@@ -187,8 +206,8 @@ where
     }
 }
 
-struct FactoryStage5<'r, L, Lpn, Lpp, Profit, TimeAlarms, Oracle> {
-    cmd: L,
+struct FactoryStage5<'r, Cmd, Lpn, Lpp, Profit, TimeAlarms, Oracle> {
+    cmd: Cmd,
     lease_dto: LeaseDTO,
     lease_addr: &'r Addr,
     _lpn: PhantomData<Lpn>,

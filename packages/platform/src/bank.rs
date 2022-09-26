@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, Env, QuerierWrapper};
 
 use finance::{coin::Coin, currency::Currency};
@@ -21,6 +19,21 @@ where
     Self: BankAccountView + Into<Batch>,
 {
     fn send<C>(&mut self, amount: Coin<C>, to: &Addr)
+    where
+        C: Currency;
+}
+
+pub trait FixedAddressSenderBuilder {
+    type Built: FixedAddressSender;
+
+    fn build(self, address: Addr) -> Self::Built;
+}
+
+pub trait FixedAddressSender
+where
+    Self: Into<Batch>,
+{
+    fn send<C>(&mut self, amount: Coin<C>)
     where
         C: Currency;
 }
@@ -68,14 +81,14 @@ impl<'a> BankAccountView for BankView<'a> {
 
 pub struct BankStub<'a> {
     view: BankView<'a>,
-    sends: BTreeMap<Addr, Vec<CwCoin>>,
+    batch: Batch,
 }
 
 impl<'a> BankStub<'a> {
     pub fn my_account(env: &'a Env, querier: &'a QuerierWrapper) -> Self {
         Self {
             view: BankView::my_account(env, querier),
-            sends: BTreeMap::default(),
+            batch: Batch::default(),
         }
     }
 }
@@ -98,26 +111,64 @@ where
         C: Currency,
     {
         debug_assert!(!amount.is_zero());
-
-        if amount.is_zero() {
-            return;
-        }
-
-        self.sends
-            .entry(to.clone())
-            .or_default()
-            .push(to_cosmwasm_impl(amount));
+        self.batch.schedule_execute_no_reply(BankMsg::Send {
+            to_address: to.into(),
+            amount: vec![to_cosmwasm_impl(amount)],
+        });
     }
 }
 
 impl<'a> From<BankStub<'a>> for Batch {
     fn from(stub: BankStub) -> Self {
+        stub.batch
+    }
+}
+
+#[derive(Default)]
+pub struct LazySenderStubBuilder;
+
+impl FixedAddressSenderBuilder for LazySenderStubBuilder {
+    type Built = LazySenderStub;
+
+    fn build(self, address: Addr) -> Self::Built {
+        LazySenderStub {
+            address,
+            amounts: Vec::new(),
+        }
+    }
+}
+
+pub struct LazySenderStub {
+    address: Addr,
+    amounts: Vec<CwCoin>,
+}
+
+impl FixedAddressSender for LazySenderStub
+where
+    Self: Into<Batch>,
+{
+    fn send<C>(&mut self, amount: Coin<C>)
+    where
+        C: Currency,
+    {
+        debug_assert!(!amount.is_zero());
+
+        if amount.is_zero() {
+            return;
+        }
+
+        self.amounts.push(to_cosmwasm_impl(amount));
+    }
+}
+
+impl From<LazySenderStub> for Batch {
+    fn from(stub: LazySenderStub) -> Self {
         let mut batch = Batch::default();
 
-        for (address, amount) in stub.sends {
+        if !stub.amounts.is_empty() {
             batch.schedule_execute_no_reply(BankMsg::Send {
-                to_address: address.into_string(),
-                amount,
+                to_address: stub.address.to_string(),
+                amount: stub.amounts,
             });
         }
 

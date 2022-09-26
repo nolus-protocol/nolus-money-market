@@ -4,7 +4,7 @@ use serde::Serialize;
 use finance::{coin::Coin, currency::Currency};
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
-use platform::{bank::BankAccount, batch::Batch};
+use platform::batch::Batch;
 use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
@@ -24,17 +24,13 @@ where
     Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
-    pub(crate) fn repay<B>(
+    pub(crate) fn repay(
         mut self,
         lease_amount: Coin<Asset>,
         payment: Coin<Lpn>,
         now: Timestamp,
-        account: &mut B,
-    ) -> ContractResult<Result<Lpn>>
-    where
-        B: BankAccount,
-    {
-        let receipt = self.no_reschedule_repay(payment, now, account)?;
+    ) -> ContractResult<Result<Lpn>> {
+        let receipt = self.no_reschedule_repay(payment, now)?;
 
         self.reschedule_on_repay(lease_amount, &now)?;
 
@@ -47,17 +43,13 @@ where
         })
     }
 
-    pub(super) fn no_reschedule_repay<B>(
+    pub(super) fn no_reschedule_repay(
         &mut self,
         payment: Coin<Lpn>,
         now: Timestamp,
-        account: &mut B,
-    ) -> ContractResult<RepayReceipt<Lpn>>
-    where
-        B: BankAccount,
-    {
+    ) -> ContractResult<RepayReceipt<Lpn>> {
         self.loan
-            .repay(payment, now, self.lease_addr.clone(), account)
+            .repay(payment, now, self.lease_addr.clone())
             .map_err(Into::into)
     }
 }

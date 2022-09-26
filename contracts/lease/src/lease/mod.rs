@@ -11,7 +11,7 @@ use finance::{
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleBatch};
 use platform::{
-    bank::{BankAccount, BankAccountView},
+    bank::{BankAccount, BankAccountView, FixedAddressSenderBuilder},
     batch::Batch,
 };
 use profit::stub::Profit as ProfitTrait;
@@ -57,18 +57,23 @@ pub trait WithLease {
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn execute<L, O, E>(
+pub fn execute<Cmd, SenderBuilder>(
     dto: LeaseDTO,
-    cmd: L,
+    cmd: Cmd,
     addr: &Addr,
+    sender_builder: SenderBuilder,
     querier: &QuerierWrapper,
-) -> Result<O, E>
+) -> Result<Cmd::Output, Cmd::Error>
 where
-    L: WithLease<Output = O, Error = E>,
+    Cmd: WithLease,
+    SenderBuilder: FixedAddressSenderBuilder,
 {
     let lpp = dto.loan.lpp().clone();
 
-    lpp.execute(Factory::new(cmd, dto, addr, querier), querier)
+    lpp.execute(
+        Factory::new(cmd, dto, addr, sender_builder, querier),
+        querier,
+    )
 }
 
 pub struct Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> {
@@ -226,7 +231,6 @@ mod tests {
     use cosmwasm_std::{wasm_execute, Addr, Timestamp};
     use serde::{Deserialize, Serialize};
 
-    use finance::coin::Amount;
     use finance::{
         coin::Coin,
         currency::Currency,
@@ -250,9 +254,8 @@ mod tests {
         stub::{Oracle, OracleBatch, OracleRef},
     };
     use marketprice::{alarms::Alarm, storage::Denom};
-    use platform::bank::BankAccount;
     use platform::{bank::BankAccountView, batch::Batch, error::Result as PlatformResult};
-    use profit::stub::{Profit, ProfitRef};
+    use profit::stub::{Profit, ProfitBatch, ProfitRef};
     use time_alarms::{
         msg::ExecuteMsg::AddAlarm,
         stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},
@@ -283,21 +286,6 @@ mod tests {
             C: Currency,
         {
             Ok(Coin::<C>::new(self.balance))
-        }
-    }
-
-    impl BankAccount for BankStub {
-        fn send<C>(&mut self, amount: Coin<C>, _to: &Addr)
-        where
-            C: Currency,
-        {
-            self.balance -= Amount::from(amount);
-        }
-    }
-
-    impl From<BankStub> for Batch {
-        fn from(_: BankStub) -> Self {
-            Batch::default()
         }
     }
 
@@ -506,37 +494,37 @@ mod tests {
 
     pub struct ProfitLocalStub {
         address: Addr,
+        pub batch: Batch,
     }
 
     impl Profit for ProfitLocalStub {
-        fn send<B, C>(&self, account: &mut B, coins: Coin<C>)
+        fn send<C>(&mut self, _coins: Coin<C>)
         where
-            B: BankAccount,
             C: Currency,
         {
-            account.send(coins, &self.address)
         }
     }
 
-    impl From<ProfitLocalStub> for ProfitRef {
+    impl From<ProfitLocalStub> for ProfitBatch {
         fn from(stub: ProfitLocalStub) -> Self {
-            ProfitRef::unchecked(stub.address)
+            ProfitBatch {
+                profit_ref: ProfitRef::unchecked(stub.address),
+                batch: stub.batch,
+            }
         }
     }
 
     pub struct ProfitLocalStubUnreachable;
 
     impl Profit for ProfitLocalStubUnreachable {
-        fn send<B, C>(&self, _account: &mut B, _coins: Coin<C>)
+        fn send<C>(&mut self, _coins: Coin<C>)
         where
-            B: BankAccount,
             C: Currency,
         {
-            unreachable!()
         }
     }
 
-    impl From<ProfitLocalStubUnreachable> for ProfitRef {
+    impl From<ProfitLocalStubUnreachable> for ProfitBatch {
         fn from(_: ProfitLocalStubUnreachable) -> Self {
             unreachable!()
         }
@@ -618,6 +606,7 @@ mod tests {
 
         let profit_stub = ProfitLocalStub {
             address: profit_addr,
+            batch: Batch::default(),
         };
 
         create_lease(
