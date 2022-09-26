@@ -24,7 +24,6 @@ impl DispatcherWrapper {
         oracle: &Addr,
         timealarms: &Addr,
         treasury: &Addr,
-        _denom: &str,
     ) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {

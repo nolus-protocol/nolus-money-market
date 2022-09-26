@@ -1,11 +1,9 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{Addr, Order, Response, StdResult, Storage};
+use currency::native::Nls;
 use cw_storage_plus::{Item, Map};
-use finance::{
-    currency::{Nls, SymbolOwned},
-    price::dto::PriceDTO,
-};
+use finance::{currency::SymbolOwned, price::dto::PriceDTO};
 use platform::batch::Batch;
 
 use super::{errors::AlarmError, Alarm, ExecuteAlarmMsg};
@@ -125,9 +123,10 @@ impl<'m> PriceHooks<'m> {
 #[cfg(test)]
 pub mod tests {
     use cosmwasm_std::{testing::mock_dependencies, Addr};
+    use currency::native::Nls;
     use finance::{
         coin::Coin,
-        currency::{Currency, Nls, SymbolStatic},
+        currency::{Currency, SymbolStatic},
         price,
     };
 

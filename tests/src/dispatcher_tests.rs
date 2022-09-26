@@ -1,7 +1,8 @@
 use cosmwasm_std::{coins, Addr, Coin};
 use cw_multi_test::{ContractWrapper, Executor};
 
-use finance::currency::{Currency, Nls, Usdc};
+use currency::{lpn::Usdc, native::Nls};
+use finance::currency::Currency;
 
 use crate::common::{
     lpp_wrapper::mock_lpp_query, oracle_wrapper::mock_oracle_query, test_case::TestCase, ADMIN,
@@ -18,7 +19,7 @@ fn on_alarm_zero_reward() {
     test_case.init(&user, coins(500, denom));
 
     test_case
-        .init_lpp(None)
+        .init_lpp(None, denom)
         .init_timealarms()
         .init_oracle(Some(
             ContractWrapper::new(
@@ -57,11 +58,14 @@ fn on_alarm() {
         .init_oracle(None);
 
     test_case
-        .init_lpp(Some(ContractWrapper::new(
-            lpp::contract::execute,
-            lpp::contract::instantiate,
-            mock_lpp_query,
-        )))
+        .init_lpp(
+            Some(ContractWrapper::new(
+                lpp::contract::execute,
+                lpp::contract::instantiate,
+                mock_lpp_query,
+            )),
+            denom,
+        )
         .init_timealarms()
         .init_oracle(Some(
             ContractWrapper::new(
@@ -225,7 +229,7 @@ fn test_config_unauthorized() {
     let mut test_case = TestCase::new(denom);
     test_case
         .init(&user_addr, coins(500, denom))
-        .init_lpp(None)
+        .init_lpp(None, denom)
         .init_treasury()
         .init_timealarms()
         .init_oracle(None)
@@ -260,7 +264,7 @@ fn test_config() {
     let mut test_case = TestCase::new(denom);
     test_case
         .init(&user_addr, coins(500, denom))
-        .init_lpp(None)
+        .init_lpp(None, denom)
         .init_treasury()
         .init_timealarms()
         .init_oracle(None)

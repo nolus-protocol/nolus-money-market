@@ -1,7 +1,7 @@
 use cosmwasm_std::{coins, Addr, Coin, Uint64};
 use cw_multi_test::{next_block, Executor};
 
-use finance::coin::Amount;
+use finance::{coin::Amount, currency::Symbol};
 
 use crate::common::{lease_wrapper::LeaseWrapperAddresses, ContractWrapper, MockApp};
 
@@ -58,12 +58,12 @@ pub struct TestCase {
 
 impl TestCase {
     pub fn new(denom: &str) -> Self {
-        Self::with_reserve(denom, 100_000)
+        Self::with_reserve(denom, &coins(10_000, denom))
     }
 
-    pub fn with_reserve(denom: &str, reserve: Amount) -> Self {
+    pub fn with_reserve(denom: &str, reserve: &[Coin]) -> Self {
         Self {
-            app: mock_app(&coins(reserve, denom)),
+            app: mock_app(reserve),
             dispatcher_addr: None,
             treasury_addr: None,
             profit_addr: None,
@@ -134,14 +134,19 @@ impl TestCase {
         self
     }
 
-    pub fn init_lpp(&mut self, custom_wrapper: OptionalContractWrapper) -> &mut Self {
-        self.init_lpp_with_funds(custom_wrapper, 400)
+    pub fn init_lpp(
+        &mut self,
+        custom_wrapper: OptionalContractWrapper,
+        symbol: Symbol,
+    ) -> &mut Self {
+        self.init_lpp_with_funds(custom_wrapper, 400, symbol)
     }
 
     pub fn init_lpp_with_funds(
         &mut self,
         custom_wrapper: OptionalContractWrapper,
         amount: Amount,
+        symbol: Symbol,
     ) -> &mut Self {
         let mocked_lpp = match custom_wrapper {
             Some(wrapper) => LppWrapper::with_contract_wrapper(wrapper),
@@ -152,7 +157,7 @@ impl TestCase {
                 .instantiate(
                     &mut self.app,
                     Uint64::new(self.lease_code_id.unwrap()),
-                    &self.denom,
+                    symbol,
                     amount,
                 )
                 .0,
@@ -254,7 +259,6 @@ impl TestCase {
             self.oracle.as_ref().unwrap(),
             self.timealarms.as_ref().unwrap(),
             &self.treasury_addr.as_ref().unwrap().clone(),
-            &self.denom,
         );
         self.app.update_block(next_block);
 

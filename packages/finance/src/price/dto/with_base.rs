@@ -2,7 +2,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     coin::{Coin, CoinDTO},
-    currency::{visit_any, AnyVisitor, Currency},
+    currency::{visit_any, AnyVisitor, Currency, Group},
     price::Price,
 };
 
@@ -18,9 +18,10 @@ where
     cmd: Cmd,
 }
 
-impl<C, Cmd> AnyVisitor for QuoteCVisitor<C, Cmd>
+impl<C, G, Cmd> AnyVisitor<G> for QuoteCVisitor<C, Cmd>
 where
     C: Currency + Serialize + DeserializeOwned,
+    G: Group,
     Cmd: WithBase<C>,
 {
     type Output = Cmd::Output;
@@ -41,12 +42,13 @@ where
     }
 }
 
-pub fn execute<Cmd, C>(price: PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
+pub fn execute<G, Cmd, C>(price: PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
 where
+    G: Group,
     Cmd: WithBase<C>,
     C: Currency + Serialize + DeserializeOwned,
 {
-    visit_any(
+    visit_any::<G, _>(
         &price.amount_quote.symbol().clone(),
         QuoteCVisitor {
             base: Coin::<C>::try_from(price.amount).expect("Got different currency in visitor!"),

@@ -84,9 +84,12 @@ impl PriceFeed {
 
 #[cfg(test)]
 mod tests {
+    use currency::{
+        native::Nls,
+        test::{TestCurrencyA, TestCurrencyB},
+    };
     use finance::{
         coin::Coin,
-        currency::{Nls, TestCurrencyA, TestCurrencyB},
         price::{self, dto::PriceDTO},
     };
 

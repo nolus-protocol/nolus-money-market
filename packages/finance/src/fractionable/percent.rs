@@ -89,10 +89,10 @@ mod test {
     mod rational {
         use crate::{
             coin::Coin,
-            currency::Nls,
             fractionable::Fractionable,
             percent::{Percent, Units},
             ratio::Rational,
+            test::currency::Nls,
         };
 
         #[test]

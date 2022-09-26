@@ -3,10 +3,12 @@ use std::time::SystemTime;
 
 use cosmwasm_std::testing::{mock_dependencies, mock_env};
 use cosmwasm_std::{Api, DepsMut, Timestamp};
+use currency::lease::{Atom, Osmo};
+use currency::lpn::Usdc;
+use currency::native::Nls;
+use currency::test::{TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD};
 use finance::coin::Coin;
-use finance::currency::{
-    Currency, SymbolStatic, TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD, Usdc,
-};
+use finance::currency::{Currency, SymbolStatic};
 use finance::price::{self, dto::PriceDTO, Price};
 
 use crate::error::PriceFeedsError;
@@ -170,47 +172,47 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<Den0>::new(1)),
+        price::total_of(Coin::<Atom>::new(1)).is(Coin::<Den0>::new(1)),
     )
     .unwrap();
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<TestCurrencyC>::new(1)).is(Coin::<TestCurrencyD>::new(3)),
-    )
-    .unwrap();
-
-    feed_price(
-        deps.as_mut(),
-        &market,
-        price::total_of(Coin::<TestCurrencyC>::new(1)).is(Coin::<DenX>::new(3)),
+        price::total_of(Coin::<Nls>::new(1)).is(Coin::<Usdc>::new(3)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<TestCurrencyB>::new(1)),
+        price::total_of(Coin::<Nls>::new(1)).is(Coin::<DenX>::new(3)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<TestCurrencyC>::new(1)).is(Coin::<TestCurrencyD>::new(3)),
-    )
-    .unwrap();
-    feed_price(
-        deps.as_mut(),
-        &market,
-        price::total_of(Coin::<TestCurrencyB>::new(1)).is(Coin::<TestCurrencyC>::new(2)),
+        price::total_of(Coin::<Atom>::new(1)).is(Coin::<Osmo>::new(1)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<TestCurrencyC>::new(1)).is(Coin::<TestCurrencyB>::new(3)),
+        price::total_of(Coin::<Nls>::new(1)).is(Coin::<Usdc>::new(3)),
+    )
+    .unwrap();
+    feed_price(
+        deps.as_mut(),
+        &market,
+        price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Nls>::new(2)),
+    )
+    .unwrap();
+
+    feed_price(
+        deps.as_mut(),
+        &market,
+        price::total_of(Coin::<Nls>::new(1)).is(Coin::<Osmo>::new(3)),
     )
     .unwrap();
 
@@ -224,14 +226,14 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<TestCurrencyD>::new(1)).is(Coin::<TestCurrencyA>::new(3)),
+        price::total_of(Coin::<Usdc>::new(1)).is(Coin::<Atom>::new(3)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<DenC>::new(1)).is(Coin::<TestCurrencyD>::new(3)),
+        price::total_of(Coin::<DenC>::new(1)).is(Coin::<Usdc>::new(3)),
     )
     .unwrap();
 
@@ -242,14 +244,14 @@ fn marketprice_follow_the_path() {
             &deps.storage,
             query,
             vec![
-                TestCurrencyA::SYMBOL.to_string(),
-                TestCurrencyB::SYMBOL.to_string(),
-                TestCurrencyC::SYMBOL.to_string(),
-                TestCurrencyD::SYMBOL.to_string(),
+                Atom::SYMBOL.to_string(),
+                Osmo::SYMBOL.to_string(),
+                Nls::SYMBOL.to_string(),
+                Usdc::SYMBOL.to_string(),
             ],
         )
         .unwrap();
-    let expected = price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<TestCurrencyD>::new(6));
+    let expected = price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(6));
     let expected_dto = PriceDTO::try_from(expected).unwrap();
 
     assert_eq!(expected_dto, price_resp);
@@ -260,7 +262,7 @@ fn marketprice_follow_the_path() {
         .price(
             &deps.storage,
             query,
-            vec![TestCurrencyA::SYMBOL.to_string(), Usdc::SYMBOL.to_string()],
+            vec![Atom::SYMBOL.to_string(), Usdc::SYMBOL.to_string()],
         )
         .unwrap_err();
     assert_eq!(price_resp, PriceFeedsError::NoPrice());

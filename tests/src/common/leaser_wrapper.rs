@@ -1,11 +1,7 @@
 use cosmwasm_std::{Addr, Uint64};
 use cw_multi_test::Executor;
 
-use finance::{
-    duration::{Duration, Units as DurationUnits},
-    liability::Liability,
-    percent::Percent,
-};
+use finance::{duration::Duration, liability::Liability, percent::Percent};
 use leaser::{
     contract::{execute, instantiate, query, reply},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg, Repayment},
@@ -24,11 +20,7 @@ impl LeaserWrapper {
 
     pub const REPAYMENT_PERIOD: Duration = Duration::from_days(90);
 
-    pub const REPAYMENT_PERIOD_SECS: DurationUnits = Self::REPAYMENT_PERIOD.secs();
-
     pub const GRACE_PERIOD: Duration = Duration::from_days(10);
-
-    pub const GRACE_PERIOD_SECS: DurationUnits = Self::GRACE_PERIOD.secs();
 
     pub fn liability() -> Liability {
         Liability::new(
@@ -58,10 +50,7 @@ impl LeaserWrapper {
             lpp_ust_addr: lpp_addr.clone(),
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
             liability: Self::liability(),
-            repayment: Repayment::new(
-                Self::REPAYMENT_PERIOD_SECS.try_into().unwrap(),
-                Self::GRACE_PERIOD_SECS.try_into().unwrap(),
-            ),
+            repayment: Repayment::new(Self::REPAYMENT_PERIOD, Self::GRACE_PERIOD),
             time_alarms,
             market_price_oracle,
             profit,

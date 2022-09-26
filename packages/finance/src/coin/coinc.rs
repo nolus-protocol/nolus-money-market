@@ -56,14 +56,6 @@ where
     }
 }
 
-#[cfg(feature = "testing")]
-pub fn funds<C>(amount: u128) -> CoinDTO
-where
-    C: Currency,
-{
-    Coin::<C>::new(amount).into()
-}
-
 #[cfg(test)]
 mod test {
     use cosmwasm_std::to_vec;

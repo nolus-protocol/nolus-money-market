@@ -14,7 +14,10 @@ pub trait BankAccountView {
         C: Currency;
 }
 
-pub trait BankAccount: BankAccountView + Into<Batch> {
+pub trait BankAccount
+where
+    Self: BankAccountView + Into<Batch>,
+{
     fn send<C>(&mut self, amount: Coin<C>, to: &Addr)
     where
         C: Currency;
@@ -84,7 +87,10 @@ impl<'a> BankAccountView for BankStub<'a> {
     }
 }
 
-impl<'a> BankAccount for BankStub<'a> {
+impl<'a> BankAccount for BankStub<'a>
+where
+    Self: BankAccountView + Into<Batch>,
+{
     fn send<C>(&mut self, amount: Coin<C>, to: &Addr)
     where
         C: Currency,

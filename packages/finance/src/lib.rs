@@ -9,3 +9,32 @@ pub mod liability;
 pub mod percent;
 pub mod price;
 pub mod ratio;
+#[cfg(any(test, feature = "testing"))]
+pub mod test;
+
+#[macro_export]
+macro_rules! broken_invariant {
+    ($cond:expr $(,)?) => {
+        if !$cond {
+            Err(Error::broken_invariant_err::<Liability>(""))
+        }
+    };
+
+    ($cond:expr, $($arg:tt)+) => {
+        if !$cond {
+            let mut msg = String::from("");
+            $(msg.push_str($arg);)*
+            Err(Error::broken_invariant_err::<Liability>(&msg))
+        } else {
+            Ok(())
+        }
+    };
+
+    ($cond:expr, $arg:tt) => {
+        if !$cond {
+            Err(Error::broken_invariant_err::<Liability>($arg))
+        } else {
+            Ok(())
+        }
+    };
+}

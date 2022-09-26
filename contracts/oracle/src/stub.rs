@@ -78,10 +78,14 @@ impl OracleRef {
         &self.addr == addr
     }
 
-    pub fn execute<OracleBase, V, O, E>(self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
+    pub fn execute<OracleBase, V>(
+        self,
+        cmd: V,
+        querier: &QuerierWrapper,
+    ) -> StdResult<V::Output, V::Error>
     where
         OracleBase: Currency,
-        V: WithOracle<OracleBase, Output = O, Error = E>,
+        V: WithOracle<OracleBase>,
     {
         if OracleBase::SYMBOL == self.base_currency {
             cmd.exec(self.into_stub::<OracleBase>(querier))

@@ -3,7 +3,8 @@ use cosmwasm_std::{
     WasmMsg,
 };
 
-use finance::{coin::Coin, currency::Nls, duration::Duration};
+use currency::native::Nls;
+use finance::{coin::Coin, duration::Duration};
 use platform::{
     bank::{BankAccount, BankAccountView, BankStub},
     batch::{Batch, Emit, Emitter},

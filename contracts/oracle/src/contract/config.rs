@@ -35,11 +35,8 @@ mod tests {
         coins, from_binary,
         testing::{mock_env, mock_info},
     };
-    use finance::{
-        currency::{Currency, Nls, TestCurrencyA, Usdc},
-        duration::Duration,
-        percent::Percent,
-    };
+    use currency::{lpn::Usdc, native::Nls, test::TestCurrencyA};
+    use finance::{currency::Currency, duration::Duration, percent::Percent};
 
     use crate::{
         contract::{execute, query},

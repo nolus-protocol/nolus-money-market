@@ -301,7 +301,7 @@ mod test {
         Addr, Coin as CwCoin, Timestamp, Uint64,
     };
 
-    use finance::{currency::Usdc, duration::Duration, percent::Units, price};
+    use finance::{duration::Duration, percent::Units, price, test::currency::Usdc};
 
     use crate::state::{Config, Deposit, Total};
 

@@ -4,6 +4,7 @@ use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response}
 use cw2::set_contract_version;
 use serde::{de::DeserializeOwned, Serialize};
 
+use currency::lpn::Lpns;
 use finance::currency::{visit_any, AnyVisitor, Currency};
 
 use crate::{
@@ -46,7 +47,7 @@ impl<'a> InstantiateWithLpn<'a> {
     }
 }
 
-impl<'a> AnyVisitor for InstantiateWithLpn<'a> {
+impl<'a> AnyVisitor<Lpns> for InstantiateWithLpn<'a> {
     type Output = Response;
     type Error = ContractError;
 
@@ -120,7 +121,7 @@ impl<'a> ExecuteWithLpn<'a> {
     }
 }
 
-impl<'a> AnyVisitor for ExecuteWithLpn<'a> {
+impl<'a> AnyVisitor<Lpns> for ExecuteWithLpn<'a> {
     type Output = Response;
     type Error = ContractError;
 
@@ -213,7 +214,7 @@ impl<'a> QueryWithLpn<'a> {
     }
 }
 
-impl<'a> AnyVisitor for QueryWithLpn<'a> {
+impl<'a> AnyVisitor<Lpns> for QueryWithLpn<'a> {
     type Output = Binary;
     type Error = ContractError;
 

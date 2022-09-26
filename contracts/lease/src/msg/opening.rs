@@ -2,7 +2,7 @@ use cosmwasm_std::Addr;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
+use finance::{currency::SymbolOwned, duration::Duration, liability::Liability, percent::Percent};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -29,9 +29,9 @@ pub struct LoanForm {
     /// The Liquidity Provider Pool, LPP, that lends the necessary amount for this lease.
     pub lpp: String,
     /// How long is a period for which the interest is due
-    pub interest_due_period_secs: u32,
+    pub interest_due_period: Duration,
     /// How long after the due period ends the interest may be paid before initiating a liquidation
-    pub grace_period_secs: u32,
+    pub grace_period: Duration,
     /// The Profit contract to which the margin interest is sent.
     pub profit: String,
 }

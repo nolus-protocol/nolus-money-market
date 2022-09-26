@@ -4,7 +4,7 @@ use cosmwasm_std::Coin as CosmWasmCoin;
 
 use finance::{
     coin::Coin,
-    currency::{visit, visit_any, AnyVisitor, Currency, SingleVisitor},
+    currency::{visit, visit_any, AnyVisitor, Currency, Group, SingleVisitor},
 };
 
 use crate::error::{Error, Result};
@@ -50,18 +50,23 @@ pub trait CoinVisitor {
 }
 
 #[deprecated = "Migrate to using finance::bank::BankAccount"]
-pub fn from_cosmwasm_any<V>(coin: CosmWasmCoin, v: V) -> StdResult<V::Output, V::Error>
+pub fn from_cosmwasm_any<G, V>(coin: CosmWasmCoin, v: V) -> StdResult<V::Output, V::Error>
 where
+    G: Group,
     V: CoinVisitor,
 {
-    from_cosmwasm_any_impl(coin, v)
+    from_cosmwasm_any_impl::<G, _>(coin, v)
 }
 
-pub(crate) fn from_cosmwasm_any_impl<V>(coin: CosmWasmCoin, v: V) -> StdResult<V::Output, V::Error>
+pub(crate) fn from_cosmwasm_any_impl<G, V>(
+    coin: CosmWasmCoin,
+    v: V,
+) -> StdResult<V::Output, V::Error>
 where
+    G: Group,
     V: CoinVisitor,
 {
-    visit_any(&coin.denom, CoinTransformerAny(&coin, v))
+    visit_any::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
 }
 
 struct CoinTransformer<'a>(&'a CosmWasmCoin);
@@ -86,8 +91,9 @@ where
 }
 
 struct CoinTransformerAny<'a, V>(&'a CosmWasmCoin, V);
-impl<'a, V> AnyVisitor for CoinTransformerAny<'a, V>
+impl<'a, G, V> AnyVisitor<G> for CoinTransformerAny<'a, V>
 where
+    G: Group,
     V: CoinVisitor,
 {
     type Output = V::Output;
@@ -120,7 +126,10 @@ mod test {
 
     use cosmwasm_std::Coin as CosmWasmCoin;
 
-    use finance::currency::{Currency, Nls, Usdc};
+    use finance::{
+        currency::Currency,
+        test::currency::{Nls, TestCurrencies, Usdc},
+    };
 
     use crate::{
         coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl},
@@ -216,7 +225,10 @@ mod test {
         let amount = 12;
         assert_eq!(
             Ok(Coin::<T>::new(amount)),
-            super::from_cosmwasm_any_impl(CosmWasmCoin::new(amount, T::SYMBOL), v)
+            super::from_cosmwasm_any_impl::<TestCurrencies, _>(
+                CosmWasmCoin::new(amount, T::SYMBOL),
+                v
+            )
         );
     }
 
@@ -225,14 +237,17 @@ mod test {
     fn from_cosmwasm_any_other_currency() {
         let v = Expect::<Usdc>::new();
         let amount = 12;
-        let _ = super::from_cosmwasm_any_impl(CosmWasmCoin::new(amount, Nls::SYMBOL), v);
+        let _ = super::from_cosmwasm_any_impl::<TestCurrencies, _>(
+            CosmWasmCoin::new(amount, Nls::SYMBOL),
+            v,
+        );
     }
 
     #[test]
     fn from_cosmwasm_any_unexpected() {
         assert_eq!(
             Ok(()),
-            super::from_cosmwasm_any_impl(
+            super::from_cosmwasm_any_impl::<TestCurrencies, _>(
                 CosmWasmCoin::new(3, "my-nice-currency"),
                 ExpectUnknownCurrency
             )

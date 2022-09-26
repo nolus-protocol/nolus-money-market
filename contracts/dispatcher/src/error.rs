@@ -26,9 +26,6 @@ pub enum ContractError {
     #[error("[Dispatcher] Unauthorized")]
     Unauthorized {},
 
-    #[error("[Dispatcher] Custom Error value: {val:?}")]
-    CustomError { val: String },
-
     #[error("[Dispatcher] Unknown currency symbol: {symbol:?}")]
     UnknownCurrency { symbol: String },
 

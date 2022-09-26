@@ -25,6 +25,8 @@ serde = { version = "1.0", default-features = false, features = ["derive"] }
 thiserror = { version = "1.0" }
 finance = { path = "../../packages/finance", version = "0.1.0", default-features = false }
 platform = { path = "../../packages/platform", version = "0.1.0", default-features = false }
+currency = { path = "../../packages/currency", version = "0.1.0", default-features = false }
 
 [dev-dependencies]
 cosmwasm-schema = "1.0.0"
+finance = { path = "../../packages/finance", version = "0.1.0", default-features = false, features = ["testing"] }

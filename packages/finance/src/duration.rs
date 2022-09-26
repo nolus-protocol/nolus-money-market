@@ -35,6 +35,8 @@ impl Duration {
     const MINUTES_IN_HOUR: u16 = 60;
     const HOURS_IN_DAY: u16 = 24;
 
+    pub const HOUR: Duration = Self::from_hours(1);
+
     pub const YEAR: Duration = Self::from_days(365);
 
     pub const fn from_nanos(nanos: Units) -> Self {

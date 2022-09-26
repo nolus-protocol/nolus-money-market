@@ -37,7 +37,8 @@ mod test {
 
     use crate::{
         coin::Coin,
-        currency::{Currency, Nls, Usdc},
+        currency::Currency,
+        test::currency::{Nls, Usdc},
     };
 
     #[test]

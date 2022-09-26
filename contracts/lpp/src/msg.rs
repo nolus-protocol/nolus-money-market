@@ -2,9 +2,10 @@ use cosmwasm_std::{Addr, Timestamp, Uint128, Uint64};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use currency::native::Nls;
 use finance::{
     coin::{Coin, CoinDTO},
-    currency::{Currency, Nls},
+    currency::Currency,
     percent::Percent,
     price::Price,
 };

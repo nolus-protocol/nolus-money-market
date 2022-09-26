@@ -74,7 +74,7 @@ build-and-optimization:cargo:
       --mount type=volume,source=rustup_dir_cache,target=/usr/local/rustup
       --mount type=volume,source=cargo_dir_cache,target=/usr/local/cargo
       --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry
-      cosmwasm/workspace-optimizer:0.12.7
+      cosmwasm/workspace-optimizer:0.12.8
     - sudo cp scripts/deploy-contracts-genesis.sh artifacts/
   artifacts:
     paths:

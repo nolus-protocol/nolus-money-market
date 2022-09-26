@@ -111,7 +111,7 @@ mod test {
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
     };
 
-    use finance::{currency::Usdc, price};
+    use finance::{price, test::currency::Usdc};
 
     use super::*;
 

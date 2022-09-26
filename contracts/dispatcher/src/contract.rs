@@ -6,7 +6,8 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 
-use finance::{currency::Nls, duration::Duration};
+use currency::native::Nls;
+use finance::duration::Duration;
 use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};

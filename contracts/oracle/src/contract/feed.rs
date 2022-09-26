@@ -1,13 +1,14 @@
 use std::{collections::HashSet, marker::PhantomData};
 
 use cosmwasm_std::{Addr, Response, Storage, Timestamp};
+use currency::native::Nls;
 use marketprice::market_price::{Parameters, PriceFeeds};
 
 use platform::batch::Batch;
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    currency::{Currency, Nls, SymbolOwned},
+    currency::{Currency, SymbolOwned},
     price::dto::PriceDTO,
 };
 

@@ -8,11 +8,11 @@ use crate::ContractError;
 use cosmwasm_std::from_binary;
 use cosmwasm_std::testing::{mock_env, mock_info};
 
+use currency::lpn::Usdc;
+use currency::test::{TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD};
 use finance::{
     coin::Coin,
-    currency::{
-        Currency, SymbolStatic, TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD, Usdc,
-    },
+    currency::{Currency, SymbolStatic},
     price,
     price::dto::PriceDTO,
 };

@@ -8,12 +8,14 @@ use cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
     MemoryStorage, MessageInfo, OwnedDeps,
 };
+use currency::{
+    lpn::Usdc,
+    native::Nls,
+    test::{TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD},
+};
 use finance::{
     coin::Coin,
-    currency::{
-        Currency, Nls, SymbolOwned, TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD,
-        Usdc,
-    },
+    currency::{Currency, SymbolOwned},
     percent::Percent,
     price::{self, dto::PriceDTO},
 };

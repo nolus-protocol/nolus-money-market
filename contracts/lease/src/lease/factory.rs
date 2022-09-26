@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use cosmwasm_std::{Addr, QuerierWrapper};
 use serde::{de::DeserializeOwned, Serialize};
 
+use currency::lease::LeaseGroup;
 use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
@@ -197,7 +198,7 @@ struct FactoryStage5<'r, L, Lpn, Lpp, Profit, TimeAlarms, Oracle> {
     oracle: Oracle,
 }
 
-impl<'r, L, Lpn, Lpp, Profit, TimeAlarms, Oracle> AnyVisitor
+impl<'r, L, Lpn, Lpp, Profit, TimeAlarms, Oracle> AnyVisitor<LeaseGroup>
     for FactoryStage5<'r, L, Lpn, Lpp, Profit, TimeAlarms, Oracle>
 where
     L: WithLease,

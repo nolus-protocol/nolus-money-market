@@ -7,10 +7,8 @@ use cosmwasm_std::{
 use cw_multi_test::{App, AppBuilder, BankKeeper};
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    currency::{Currency, Nls},
-    duration::Duration,
-};
+use currency::native::Nls;
+use finance::{currency::Currency, duration::Duration};
 
 type ContractWrapper<
     ExecMsg,

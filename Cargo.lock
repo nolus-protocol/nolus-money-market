@@ -156,6 +156,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "currency"
+version = "0.1.0"
+dependencies = [
+ "finance",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "curve25519-dalek"
 version = "3.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -422,6 +432,7 @@ dependencies = [
  "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
+ "currency",
  "cw-multi-test",
  "finance",
  "lease",
@@ -472,6 +483,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
+ "currency",
  "cw-storage-plus",
  "cw2",
  "enum_dispatch",
@@ -518,6 +530,7 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
+ "currency",
  "cw-storage-plus",
  "cw2",
  "finance",
@@ -534,6 +547,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
+ "currency",
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
@@ -563,6 +577,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
+ "currency",
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
@@ -621,6 +636,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
+ "currency",
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
@@ -713,6 +729,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
+ "currency",
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
@@ -952,6 +969,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
+ "currency",
  "cw-storage-plus",
  "cw2",
  "finance",

@@ -10,6 +10,7 @@ where
     previous_interest_paid: Coin<C>,
     current_interest_paid: Coin<C>,
     principal_paid: Coin<C>,
+    change: Coin<C>,
     close: bool,
 }
 
@@ -37,6 +38,10 @@ where
         self.principal_paid
     }
 
+    pub fn change(&self) -> Coin<C> {
+        self.change
+    }
+
     pub fn close(&self) -> bool {
         self.close
     }
@@ -47,6 +52,7 @@ where
             + self.current_margin_paid
             + self.current_interest_paid
             + self.principal_paid
+            + self.change
     }
 
     pub(super) fn pay_previous_margin(&mut self, payment: Coin<C>) {
@@ -76,13 +82,17 @@ where
     pub(super) fn pay_principal(&mut self, principal: Coin<C>, payment: Coin<C>) {
         debug_assert_eq!(self.principal_paid, Coin::default());
 
-        // TODO uncomment when issue #13 is solved
-        // debug_assert!(payment <= principal, "Payment exceeds principal!");
+        debug_assert!(payment <= principal, "Payment exceeds principal!");
 
         self.principal_paid = payment;
 
-        // TODO change to `==` when issue #13 is solved
-        self.close = principal <= payment;
+        self.close = principal == payment;
+    }
+
+    pub(super) fn keep_change(&mut self, change: Coin<C>) {
+        debug_assert_eq!(self.change, Coin::default());
+
+        self.change = change;
     }
 }
 
@@ -97,6 +107,7 @@ where
         previous_interest_paid: Coin<C>,
         current_interest_paid: Coin<C>,
         principal_paid: Coin<C>,
+        change: Coin<C>,
         close: bool,
     ) -> Receipt<C> {
         Self {
@@ -105,6 +116,7 @@ where
             previous_interest_paid,
             current_interest_paid,
             principal_paid,
+            change,
             close,
         }
     }
@@ -112,7 +124,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use finance::{coin::Coin, currency::Nls};
+    use finance::{coin::Coin, test::currency::Nls};
 
     use crate::loan::RepayReceipt;
 
@@ -135,8 +147,7 @@ mod tests {
     }
 
     #[test]
-    // TODO uncomment when issue #13 is solved
-    // #[should_panic = "Payment exceeds principal!"]
+    #[should_panic = "Payment exceeds principal!"]
     fn pay_principal_overpaid() {
         let principal = Coin::<Nls>::new(10);
 

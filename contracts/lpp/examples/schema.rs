@@ -3,7 +3,7 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use finance::currency::Nls;
+use currency::native::Nls;
 use lpp::msg::{
     BalanceResponse, ExecuteMsg, InstantiateMsg, LoanResponse, LppBalanceResponse, PriceResponse,
     QueryConfigResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg,

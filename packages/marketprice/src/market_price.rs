@@ -2,6 +2,7 @@ use crate::error::PriceFeedsError;
 use crate::feed::{Observation, PriceFeed};
 use crate::Multiply;
 use cosmwasm_std::{Addr, StdResult, Storage, Timestamp};
+use currency::payment::PaymentGroup;
 use cw_storage_plus::Map;
 
 use finance::currency::SymbolOwned;
@@ -99,7 +100,10 @@ impl<'m> PriceFeeds<'m> {
         }
         resolution_path.remove(0);
         for p in resolution_path.iter() {
-            first = with_price::execute(first.clone(), Multiply::with(p.to_owned()))?;
+            first = with_price::execute::<PaymentGroup, Multiply>(
+                first.clone(),
+                Multiply::with(p.to_owned()),
+            )?;
         }
 
         Ok(first)

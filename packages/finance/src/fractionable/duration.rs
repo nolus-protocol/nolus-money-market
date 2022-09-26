@@ -31,7 +31,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        coin::Coin, currency::Nls, duration::Duration, fractionable::Fractionable, ratio::Rational,
+        coin::Coin, duration::Duration, fractionable::Fractionable, ratio::Rational,
+        test::currency::Nls,
     };
 
     #[test]

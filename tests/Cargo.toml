@@ -17,8 +17,9 @@ cw-multi-test = "0.13.2"
 anyhow = "1.0.57"
 serde = { version = "1.0.137", default-features = false, features = ["derive"] }
 
-finance = { path = "../packages/finance", version = "0.1.0", default-features = false, features = ["testing"] }
+finance = { path = "../packages/finance", version = "0.1.0", default-features = false }
 platform = { path = "../packages/platform", version = "0.1.0", default-features = false }
+currency = { path = "../packages/currency", version = "0.1.0", default-features = false }
 treasury = { path = "../contracts/treasury", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
 lease = { path = "../contracts/lease", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
 leaser = { path = "../contracts/leaser", version = "0.1.0", default-features = false, features = ["cosmwasm"]}

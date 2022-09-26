@@ -1,10 +1,8 @@
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage};
 use serde::{de::DeserializeOwned, Serialize};
 
-use finance::{
-    coin::Coin,
-    currency::{Currency, Nls},
-};
+use currency::native::Nls;
+use finance::{coin::Coin, currency::Currency};
 use platform::{
     bank::{self, BankAccount, BankStub},
     batch::Batch,
@@ -76,7 +74,7 @@ mod test {
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
     };
 
-    use finance::currency::Usdc;
+    use finance::test::currency::Usdc;
 
     use crate::contract::lender;
 

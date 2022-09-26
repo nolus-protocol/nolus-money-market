@@ -3,6 +3,7 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
 };
+use currency::payment::PaymentGroup;
 use cw2::set_contract_version;
 use finance::{
     currency::{visit_any, AnyVisitor, Currency},
@@ -53,7 +54,7 @@ impl<'a> InstantiateWithCurrency<'a> {
     }
 }
 
-impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
+impl<'a> AnyVisitor<PaymentGroup> for InstantiateWithCurrency<'a> {
     type Output = Response;
     type Error = ContractError;
 
@@ -166,11 +167,8 @@ fn err_as_ok(err: &str) -> Response {
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{from_binary, testing::mock_env};
-    use finance::{
-        currency::{Currency, Nls, Usdc},
-        duration::Duration,
-        percent::Percent,
-    };
+    use currency::{lpn::Usdc, native::Nls};
+    use finance::{currency::Currency, duration::Duration, percent::Percent};
 
     use crate::{
         contract::query,

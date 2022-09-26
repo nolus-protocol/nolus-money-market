@@ -156,8 +156,8 @@ pub(super) mod test {
     };
 
     use crate::{
-        coin::Coin, currency::Nls, fraction::Fraction, fractionable::Percentable, percent::Percent,
-        ratio::Rational,
+        coin::Coin, fraction::Fraction, fractionable::Percentable, percent::Percent,
+        ratio::Rational, test::currency::Nls,
     };
 
     use super::Units;

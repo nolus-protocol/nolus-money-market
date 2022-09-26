@@ -1,12 +1,15 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{coins, wasm_execute, Addr, Event};
+
+use currency::lpn::Usdc;
 use cw_multi_test::Executor;
 
 use finance::{
     coin::Coin,
-    currency::{Nls, Usdc},
+    currency::Currency as _,
     price::{self, dto::PriceDTO},
+    test::currency::Nls,
 };
 use leaser::msg::QueryMsg;
 use platform::coin_legacy::to_cosmwasm;
@@ -17,19 +20,20 @@ use crate::common::{
 
 type Currency = Usdc;
 type TheCoin = Coin<Currency>;
-const DENOM: &str = <Usdc as finance::currency::Currency>::SYMBOL;
+const DENOM: &str = Usdc::SYMBOL;
 
 fn create_coin(amount: u128) -> TheCoin {
     Coin::<Currency>::new(amount)
 }
 
 fn create_test_case() -> TestCase {
-    let mut test_case = TestCase::with_reserve(DENOM, 10_000_000_000_000_000_000_000_000_000);
+    let mut test_case =
+        TestCase::with_reserve(DENOM, &coins(10_000_000_000_000_000_000_000_000_000, DENOM));
     test_case.init(
         &Addr::unchecked(ADMIN),
         vec![to_cosmwasm(create_coin(1_000_000_000_000_000_000_000_000))],
     );
-    test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000);
+    test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000, DENOM);
     test_case.init_timealarms_with_funds(5_000_000);
     test_case.init_oracle_with_funds(None, 5_000_000);
     test_case.init_treasury();

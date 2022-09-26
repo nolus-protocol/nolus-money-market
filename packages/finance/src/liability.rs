@@ -2,6 +2,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    broken_invariant,
     duration::Duration,
     error::{Error, Result},
     fractionable::Percentable,
@@ -28,11 +29,10 @@ pub struct Liability {
     /// The percentage above which the third liquidity warning is issued.
     third_liq_warn: Percent,
     /// At what time cadence to recalculate the liability
-    /// recalc_secs >= 3600
-    recalc_secs: u32,
+    ///
+    /// Limitation: recalc_time >= 1 hour
+    recalc_time: Duration,
 }
-
-const SECS_IN_HOUR: u32 = 60 * 60; // TODO move to a duration lib?
 
 impl Liability {
     pub fn new(
@@ -94,7 +94,7 @@ impl Liability {
             first_liq_warn: first_liquidity_warning,
             second_liq_warn: second_liquidity_warning,
             third_liq_warn: third_liquidity_warning,
-            recalc_secs: u32::from(recalc_hours) * SECS_IN_HOUR,
+            recalc_time: Duration::from_hours(recalc_hours),
         };
         debug_assert!(obj.invariant_held().is_ok());
         obj
@@ -121,24 +121,47 @@ impl Liability {
     }
 
     pub const fn recalculation_time(&self) -> Duration {
-        Duration::from_secs(self.recalc_secs)
+        self.recalc_time
     }
 
     pub fn invariant_held(&self) -> Result<()> {
         // TODO restrict further the accepted percents to 100 since there is no much sense of having no borrow
-        if self.init_percent > Percent::ZERO
-            && self.healthy_percent >= self.init_percent
-            && self.first_liq_warn > self.healthy_percent
-            && self.second_liq_warn > self.first_liq_warn
-            && self.third_liq_warn > self.second_liq_warn
-            && self.max_percent > self.third_liq_warn
-            && self.max_percent <= Percent::HUNDRED
-            && self.recalc_secs >= SECS_IN_HOUR
-        {
-            Ok(())
-        } else {
-            Err(Error::broken_invariant_err::<Liability>())
-        }
+        broken_invariant!(
+            self.init_percent > Percent::ZERO,
+            "Initial % should not be zero"
+        )?;
+
+        broken_invariant!(
+            self.healthy_percent >= self.init_percent,
+            "Healthy % should be >= initial %"
+        )?;
+
+        broken_invariant!(
+            self.first_liq_warn > self.healthy_percent,
+            "First liquidation % should be > healthy %"
+        )?;
+        broken_invariant!(
+            self.second_liq_warn > self.first_liq_warn,
+            "Second liquidation % should be > first liquidation %"
+        )?;
+        broken_invariant!(
+            self.third_liq_warn > self.second_liq_warn,
+            "Third liquidation % should be > second liquidation %"
+        )?;
+        broken_invariant!(
+            self.max_percent > self.third_liq_warn,
+            "Max % should be > third liquidation %"
+        )?;
+        broken_invariant!(
+            self.max_percent <= Percent::HUNDRED,
+            "Max % should be <= 100%"
+        )?;
+        broken_invariant!(
+            self.recalc_time >= Duration::HOUR,
+            "Recalculate cadence in seconds should be >= 1h"
+        )?;
+
+        Ok(())
     }
 
     pub fn init_borrow_amount<P>(&self, downpayment: P) -> P
@@ -160,9 +183,11 @@ impl Liability {
 mod test {
     use cosmwasm_std::from_slice;
 
-    use crate::{coin::Coin, currency::Usdc, error::Error, percent::Percent};
+    use crate::{
+        coin::Coin, duration::Duration, error::Error, percent::Percent, test::currency::Usdc,
+    };
 
-    use super::{Liability, SECS_IN_HOUR};
+    use super::Liability;
 
     #[test]
     fn new_valid() {
@@ -183,7 +208,7 @@ mod test {
                 first_liq_warn: Percent::from_percent(12),
                 second_liq_warn: Percent::from_percent(13),
                 third_liq_warn: Percent::from_percent(14),
-                recalc_secs: 20 * SECS_IN_HOUR,
+                recalc_time: Duration::from_hours(20),
             },
             obj,
         );
@@ -208,7 +233,7 @@ mod test {
                 first_liq_warn: Percent::from_permille(17),
                 second_liq_warn: Percent::from_permille(18),
                 third_liq_warn: Percent::from_permille(19),
-                recalc_secs: SECS_IN_HOUR,
+                recalc_time: Duration::HOUR,
             },
             obj,
         );
@@ -287,11 +312,11 @@ mod test {
     #[test]
     fn deserialize_invalid_state() {
         let deserialized: Liability = from_slice(
-            br#"{"init_percent":40,"healthy_percent":30,"first_liq_warn":2,"second_liq_warn":3,"third_liq_warn":2,"max_percent":20,"recalc_secs":36000}"#,
+            br#"{"init_percent":40,"healthy_percent":30,"first_liq_warn":2,"second_liq_warn":3,"third_liq_warn":2,"max_percent":20,"recalc_time":36000}"#,
         )
         .unwrap();
         assert_eq!(
-            Error::broken_invariant_err::<Liability>(),
+            Error::broken_invariant_err::<Liability>("Healthy % should be >= initial %"),
             deserialized.invariant_held().unwrap_err()
         );
     }
@@ -308,7 +333,7 @@ mod test {
             first_liq_warn: Percent::from_permille(992),
             second_liq_warn: Percent::from_permille(995),
             third_liq_warn: Percent::from_permille(998),
-            recalc_secs: 20000,
+            recalc_time: Duration::from_secs(20000),
         }
         .init_borrow_amount(downpayment);
         assert_eq!(Coin::<Currency>::new(exp), calculated);

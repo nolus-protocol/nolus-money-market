@@ -1,3 +1,4 @@
+use currency::payment::PaymentGroup;
 use error::PriceFeedsError;
 use finance::{
     currency::Currency,
@@ -38,7 +39,7 @@ impl WithPrice for Multiply {
         C: 'static + Currency + DeserializeOwned + Serialize,
         QuoteC: 'static + Currency + DeserializeOwned + Serialize,
     {
-        execute(self.p2, Multiplier::new(p1))
+        execute::<PaymentGroup, Multiplier<C, QuoteC>, QuoteC>(self.p2, Multiplier::new(p1))
     }
 
     fn unknown(self) -> Result<Self::Output, Self::Error> {

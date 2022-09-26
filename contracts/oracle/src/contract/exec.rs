@@ -1,4 +1,5 @@
 use cosmwasm_std::{Addr, DepsMut, Env, Response};
+use currency::payment::PaymentGroup;
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::currency::{visit_any, AnyVisitor, Currency};
@@ -37,7 +38,7 @@ impl<'a> ExecWithOracleBase<'a> {
     }
 }
 
-impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
+impl<'a> AnyVisitor<PaymentGroup> for ExecWithOracleBase<'a> {
     type Output = Response;
     type Error = ContractError;
 

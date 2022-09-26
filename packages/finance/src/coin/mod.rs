@@ -10,8 +10,6 @@ use schemars::JsonSchema;
 
 use crate::currency::Currency;
 
-#[cfg(feature = "testing")]
-pub use self::coinc::funds;
 pub use self::coinc::CoinDTO;
 
 mod coinc;
@@ -169,8 +167,8 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        currency::{Nls, Usdc},
         percent::test::test_of,
+        test::currency::{Nls, Usdc},
     };
 
     use super::{Amount, Coin};
