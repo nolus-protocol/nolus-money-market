@@ -951,6 +951,7 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
+ "currency",
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",

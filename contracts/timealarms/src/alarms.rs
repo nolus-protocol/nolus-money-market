@@ -1,6 +1,6 @@
 use crate::{contract_validation::validate_contract_addr, msg::ExecuteAlarmMsg, ContractError};
 use cosmwasm_std::{Addr, DepsMut, Response, StdResult, Storage, Timestamp};
-use finance::test::currency::Nls;
+use currency::native::Nls;
 use platform::batch::Batch;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
