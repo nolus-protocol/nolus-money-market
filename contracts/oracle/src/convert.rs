@@ -6,7 +6,6 @@ use finance::{
     currency::{Currency, SymbolOwned},
     price,
 };
-use serde::Serialize;
 
 use crate::{
     error,
@@ -21,7 +20,7 @@ pub fn to_base<BaseC, InC>(
 ) -> Result<Coin<BaseC>, ContractError>
 where
     BaseC: Currency,
-    InC: Currency + Serialize,
+    InC: Currency,
 {
     struct PriceConvert<BaseC, In>
     where
