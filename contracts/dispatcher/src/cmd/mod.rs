@@ -1,9 +1,11 @@
-use crate::state::Config;
 use cosmwasm_std::{QuerierWrapper, Timestamp};
+
 use currency::native::Nls;
 use finance::{coin::Coin, currency::Currency};
 use oracle::stub::OracleRef;
 use platform::batch::Batch;
+
+use crate::state::Config;
 
 mod dispatch;
 

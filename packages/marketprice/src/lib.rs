@@ -1,3 +1,5 @@
+use serde::{de::DeserializeOwned, Serialize};
+
 use currency::payment::PaymentGroup;
 use error::PriceFeedsError;
 use finance::{
@@ -8,7 +10,6 @@ use finance::{
         Price,
     },
 };
-use serde::{de::DeserializeOwned, Serialize};
 
 pub mod alarms;
 pub mod error;

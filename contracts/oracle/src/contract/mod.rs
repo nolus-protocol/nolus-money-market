@@ -3,13 +3,14 @@ use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
 };
-use currency::payment::PaymentGroup;
 use cw2::set_contract_version;
+use serde::{de::DeserializeOwned, Serialize};
+
+use currency::payment::PaymentGroup;
 use finance::{
     currency::{visit_any, AnyVisitor, Currency},
     duration::Duration,
 };
-use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     contract_validation::validate_contract_addr,
@@ -167,6 +168,7 @@ fn err_as_ok(err: &str) -> Response {
 #[cfg(test)]
 mod tests {
     use cosmwasm_std::{from_binary, testing::mock_env};
+
     use currency::{lpn::Usdc, native::Nls};
     use finance::{currency::Currency, duration::Duration, percent::Percent};
 

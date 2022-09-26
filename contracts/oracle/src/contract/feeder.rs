@@ -1,12 +1,10 @@
-use std::{collections::HashSet, convert::TryInto};
+use std::collections::HashSet;
 
 use cosmwasm_std::{Addr, DepsMut, MessageInfo, Response, StdResult, Storage, Timestamp};
-use finance::{fraction::Fraction, percent::Percent};
-use marketprice::{feeders::PriceFeeders, market_price::Parameters};
-
 use serde::{Deserialize, Serialize};
 
-use std::convert::TryFrom;
+use finance::{fraction::Fraction, percent::Percent};
+use marketprice::{feeders::PriceFeeders, market_price::Parameters};
 
 use crate::{state::Config, ContractError};
 
@@ -89,17 +87,17 @@ impl Feeders {
 
 #[cfg(test)]
 mod tests {
-
     use std::collections::HashSet;
 
     use cosmwasm_std::{from_binary, testing::mock_env, Addr};
+
+    use finance::percent::Percent;
 
     use crate::{
         contract::{execute, feeder::Feeders, query},
         msg::{ExecuteMsg, QueryMsg},
         tests::{dummy_default_instantiate_msg, setup_test},
     };
-    use finance::percent::Percent;
 
     #[test]
     // we ensure this rounds up (as it calculates needed votes)

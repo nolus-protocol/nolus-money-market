@@ -1,10 +1,9 @@
 use std::collections::HashSet;
 
 use cosmwasm_std::{coins, wasm_execute, Addr, Event};
-
-use currency::lpn::Usdc;
 use cw_multi_test::Executor;
 
+use currency::lpn::Usdc;
 use finance::{
     coin::Coin,
     currency::Currency as _,

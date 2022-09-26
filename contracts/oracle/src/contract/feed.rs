@@ -1,16 +1,15 @@
 use std::{collections::HashSet, marker::PhantomData};
 
 use cosmwasm_std::{Addr, Response, Storage, Timestamp};
-use currency::native::Nls;
-use marketprice::market_price::{Parameters, PriceFeeds};
-
-use platform::batch::Batch;
 use serde::{Deserialize, Serialize};
 
+use currency::native::Nls;
 use finance::{
     currency::{Currency, SymbolOwned},
     price::dto::PriceDTO,
 };
+use marketprice::market_price::{Parameters, PriceFeeds};
+use platform::batch::Batch;
 
 use crate::{
     state::{supported_pairs::SupportedPairs, Config},

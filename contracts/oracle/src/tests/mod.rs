@@ -1,13 +1,9 @@
-#[cfg(test)]
-mod integration_tests;
-#[cfg(test)]
-mod oracle_tests;
-
 use cosmwasm_std::{
     coins,
     testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
     MemoryStorage, MessageInfo, OwnedDeps,
 };
+
 use currency::{
     lpn::Usdc,
     native::Nls,
@@ -25,6 +21,11 @@ use crate::{
     msg::{ExecuteMsg, InstantiateMsg},
     state::supported_pairs::ResolutionPath,
 };
+
+#[cfg(test)]
+mod integration_tests;
+#[cfg(test)]
+mod oracle_tests;
 
 pub(crate) const CREATOR: &str = "creator";
 

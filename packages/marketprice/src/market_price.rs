@@ -1,15 +1,16 @@
-use crate::error::PriceFeedsError;
-use crate::feed::{Observation, PriceFeed};
-use crate::Multiply;
 use cosmwasm_std::{Addr, StdResult, Storage, Timestamp};
-use currency::payment::PaymentGroup;
 use cw_storage_plus::Map;
 
-use finance::currency::SymbolOwned;
-use finance::duration::Duration;
+use currency::payment::PaymentGroup;
+use finance::{
+    currency::SymbolOwned, duration::Duration, price::dto::with_price, price::dto::PriceDTO,
+};
 
-use finance::price::dto::with_price;
-use finance::price::dto::PriceDTO;
+use crate::{
+    error::PriceFeedsError,
+    feed::{Observation, PriceFeed},
+    Multiply,
+};
 
 #[derive(Clone, Copy)]
 pub struct Parameters {

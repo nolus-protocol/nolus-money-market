@@ -1,20 +1,26 @@
 use std::collections::HashSet;
 
-use crate::contract::{execute, query};
-use crate::msg::{ExecuteMsg, PricesResponse, QueryMsg};
-use crate::tests::{dummy_default_instantiate_msg, setup_test};
-use crate::ContractError;
+use cosmwasm_std::{
+    from_binary,
+    testing::{mock_env, mock_info},
+};
 
-use cosmwasm_std::from_binary;
-use cosmwasm_std::testing::{mock_env, mock_info};
-
-use currency::lpn::Usdc;
-use currency::test::{TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD};
+use currency::{
+    lpn::Usdc,
+    test::{TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD},
+};
 use finance::{
     coin::Coin,
     currency::{Currency, SymbolStatic},
     price,
     price::dto::PriceDTO,
+};
+
+use crate::{
+    contract::{execute, query},
+    msg::{ExecuteMsg, PricesResponse, QueryMsg},
+    tests::{dummy_default_instantiate_msg, setup_test},
+    ContractError,
 };
 
 use super::dummy_feed_prices_msg;

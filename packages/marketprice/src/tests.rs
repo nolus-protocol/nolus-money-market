@@ -1,20 +1,28 @@
-use std::convert::TryFrom;
 use std::time::SystemTime;
 
-use cosmwasm_std::testing::{mock_dependencies, mock_env};
-use cosmwasm_std::{Api, DepsMut, Timestamp};
-use currency::lease::{Atom, Osmo};
-use currency::lpn::Usdc;
-use currency::native::Nls;
-use currency::test::{TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD};
-use finance::coin::Coin;
-use finance::currency::{Currency, SymbolStatic};
-use finance::price::{self, dto::PriceDTO, Price};
+use cosmwasm_std::{
+    testing::{mock_dependencies, mock_env},
+    Api, DepsMut, Timestamp,
+};
 
-use crate::error::PriceFeedsError;
-use crate::feeders::PriceFeeders;
-use crate::market_price::{Parameters, PriceFeeds};
-use finance::duration::Duration;
+use currency::{
+    lease::{Atom, Osmo},
+    lpn::Usdc,
+    native::Nls,
+    test::{TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD},
+};
+use finance::{
+    coin::Coin,
+    currency::{Currency, SymbolStatic},
+    duration::Duration,
+    price::{self, dto::PriceDTO, Price},
+};
+
+use crate::{
+    error::PriceFeedsError,
+    feeders::PriceFeeders,
+    market_price::{Parameters, PriceFeeds},
+};
 
 const MINUTE: Duration = Duration::from_secs(60);
 

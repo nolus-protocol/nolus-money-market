@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, DepsMut, Env, Response};
-use currency::payment::PaymentGroup;
 use serde::{de::DeserializeOwned, Serialize};
 
+use currency::payment::PaymentGroup;
 use finance::currency::{visit_any, AnyVisitor, Currency};
 
 use crate::{
