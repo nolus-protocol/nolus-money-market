@@ -397,7 +397,9 @@ where
 
         let paid = payment - change;
 
-        self.profit.send(paid)?;
+        if !paid.is_zero() {
+            self.profit.send(paid);
+        }
 
         Ok((paid, change))
     }
@@ -459,10 +461,7 @@ mod tests {
         },
     };
     use platform::{bank::BankAccountView, error::Result as PlatformResult};
-    use profit::{
-        error::Result as ProfitResult,
-        stub::{Profit, ProfitBatch, ProfitRef},
-    };
+    use profit::stub::{Profit, ProfitBatch, ProfitRef};
 
     use crate::{
         loan::{repay::Receipt as RepayReceipt, Loan, LoanDTO},
@@ -545,11 +544,10 @@ mod tests {
 
     // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl Profit for ProfitLocalStub {
-        fn send<C>(&mut self, _coins: Coin<C>) -> ProfitResult<()>
+        fn send<C>(&mut self, _coins: Coin<C>)
         where
             C: Currency,
         {
-            Ok(())
         }
     }
 

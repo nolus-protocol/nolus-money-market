@@ -23,6 +23,21 @@ where
         C: Currency;
 }
 
+pub trait FixedAddressSenderBuilder {
+    type Built: FixedAddressSender;
+
+    fn build(self, address: Addr) -> Self::Built;
+}
+
+pub trait FixedAddressSender
+where
+    Self: Into<Batch>,
+{
+    fn send<C>(&mut self, amount: Coin<C>)
+    where
+        C: Currency;
+}
+
 pub fn received<C>(cw_amount: Vec<CwCoin>) -> Result<Coin<C>>
 where
     C: Currency,
@@ -106,5 +121,57 @@ where
 impl<'a> From<BankStub<'a>> for Batch {
     fn from(stub: BankStub) -> Self {
         stub.batch
+    }
+}
+
+#[derive(Default)]
+pub struct LazySenderStubBuilder;
+
+impl FixedAddressSenderBuilder for LazySenderStubBuilder {
+    type Built = LazySenderStub;
+
+    fn build(self, address: Addr) -> Self::Built {
+        LazySenderStub {
+            address,
+            amounts: Vec::new(),
+        }
+    }
+}
+
+pub struct LazySenderStub {
+    address: Addr,
+    amounts: Vec<CwCoin>,
+}
+
+impl FixedAddressSender for LazySenderStub
+where
+    Self: Into<Batch>,
+{
+    fn send<C>(&mut self, amount: Coin<C>)
+    where
+        C: Currency,
+    {
+        debug_assert!(!amount.is_zero());
+
+        if amount.is_zero() {
+            return;
+        }
+
+        self.amounts.push(to_cosmwasm_impl(amount));
+    }
+}
+
+impl From<LazySenderStub> for Batch {
+    fn from(stub: LazySenderStub) -> Self {
+        let mut batch = Batch::default();
+
+        if !stub.amounts.is_empty() {
+            batch.schedule_execute_no_reply(BankMsg::Send {
+                to_address: stub.address.to_string(),
+                amount: stub.amounts,
+            });
+        }
+
+        batch
     }
 }

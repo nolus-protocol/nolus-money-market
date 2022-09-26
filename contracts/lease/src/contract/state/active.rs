@@ -5,7 +5,10 @@ use cosmwasm_std::{
 };
 use serde::{Deserialize, Serialize};
 
-use platform::{bank::BankStub, batch::Emitter};
+use platform::{
+    bank::{BankStub, LazySenderStubBuilder},
+    batch::Emitter,
+};
 
 use crate::{
     contract::{
@@ -79,6 +82,7 @@ impl Controller for Active {
             self.lease,
             LeaseState::new(env.block.time, bank),
             &env.contract.address,
+            LazySenderStubBuilder,
             &deps.querier,
         )
     }
@@ -101,6 +105,7 @@ fn try_repay(
         lease,
         Repay::new(info.funds, account, env),
         &env.contract.address,
+        LazySenderStubBuilder,
         querier,
     )
 }
@@ -121,6 +126,7 @@ fn try_close(
             env.block.time,
         ),
         &env.contract.address,
+        LazySenderStubBuilder,
         querier,
     )?;
 
@@ -138,6 +144,7 @@ fn try_on_price_alarm(
         lease,
         PriceAlarm::new(env, &info.sender, account, env.block.time),
         &env.contract.address,
+        LazySenderStubBuilder,
         querier,
     )
 }
@@ -153,6 +160,7 @@ fn try_on_time_alarm(
         lease,
         TimeAlarm::new(env, &info.sender, account, env.block.time),
         &env.contract.address,
+        LazySenderStubBuilder,
         querier,
     )
 }

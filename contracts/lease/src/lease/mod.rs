@@ -11,7 +11,7 @@ use finance::{
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleBatch};
 use platform::{
-    bank::{BankAccount, BankAccountView},
+    bank::{BankAccount, BankAccountView, FixedAddressSenderBuilder},
     batch::Batch,
 };
 use profit::stub::Profit as ProfitTrait;
@@ -57,18 +57,23 @@ pub trait WithLease {
     fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn execute<L, O, E>(
+pub fn execute<Cmd, SenderBuilder>(
     dto: LeaseDTO,
-    cmd: L,
+    cmd: Cmd,
     addr: &Addr,
+    sender_builder: SenderBuilder,
     querier: &QuerierWrapper,
-) -> Result<O, E>
+) -> Result<Cmd::Output, Cmd::Error>
 where
-    L: WithLease<Output = O, Error = E>,
+    Cmd: WithLease,
+    SenderBuilder: FixedAddressSenderBuilder,
 {
     let lpp = dto.loan.lpp().clone();
 
-    lpp.execute(Factory::new(cmd, dto, addr, querier), querier)
+    lpp.execute(
+        Factory::new(cmd, dto, addr, sender_builder, querier),
+        querier,
+    )
 }
 
 pub struct Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> {
@@ -244,10 +249,7 @@ mod tests {
     use market_price_oracle::stub::{Oracle, OracleBatch, OracleRef};
     use marketprice::alarms::Alarm;
     use platform::{bank::BankAccountView, batch::Batch, error::Result as PlatformResult};
-    use profit::{
-        error::Result as ProfitResult,
-        stub::{Profit, ProfitBatch, ProfitRef},
-    };
+    use profit::stub::{Profit, ProfitBatch, ProfitRef};
     use time_alarms::{
         msg::ExecuteMsg::AddAlarm,
         stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},
@@ -496,11 +498,10 @@ mod tests {
     }
 
     impl Profit for ProfitLocalStub {
-        fn send<C>(&mut self, _coins: Coin<C>) -> ProfitResult<()>
+        fn send<C>(&mut self, _coins: Coin<C>)
         where
             C: Currency,
         {
-            Ok(())
         }
     }
 
@@ -516,11 +517,10 @@ mod tests {
     pub struct ProfitLocalStubUnreachable;
 
     impl Profit for ProfitLocalStubUnreachable {
-        fn send<C>(&mut self, _coins: Coin<C>) -> ProfitResult<()>
+        fn send<C>(&mut self, _coins: Coin<C>)
         where
             C: Currency,
         {
-            Ok(())
         }
     }
 

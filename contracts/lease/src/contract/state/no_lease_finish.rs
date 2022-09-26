@@ -3,7 +3,7 @@ use std::fmt::Display;
 use cosmwasm_std::{DepsMut, Env, Reply};
 use serde::{Deserialize, Serialize};
 
-use platform::bank::BankStub;
+use platform::bank::{BankStub, LazySenderStubBuilder};
 
 use crate::{
     contract::open::OpenLoanResp,
@@ -40,6 +40,7 @@ impl Controller for NoLeaseFinish {
                     lease,
                     OpenLoanResp::new(msg, self.downpayment, account, &env),
                     &env.contract.address,
+                    LazySenderStubBuilder,
                     &deps.querier,
                 )?;
 

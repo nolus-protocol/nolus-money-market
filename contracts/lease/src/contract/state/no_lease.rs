@@ -4,6 +4,8 @@ use cosmwasm_std::{DepsMut, Env, MessageInfo};
 use cw2::set_contract_version;
 use serde::{Deserialize, Serialize};
 
+use platform::bank::LazySenderStubBuilder;
+
 use crate::{
     contract::open::{OpenLoanReq, OpenLoanReqResult},
     error::ContractResult,
@@ -36,6 +38,7 @@ impl Controller for NoLease {
             lease,
             OpenLoanReq::new(info.funds),
             &env.contract.address,
+            LazySenderStubBuilder,
             &deps.querier,
         )?;
 

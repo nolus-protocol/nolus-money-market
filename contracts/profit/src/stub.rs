@@ -1,10 +1,13 @@
 use std::result::Result as StdResult;
 
-use cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
+use cosmwasm_std::{Addr, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
 use finance::{coin::Coin, currency::Currency};
-use platform::{batch::Batch, coin_legacy::to_cosmwasm};
+use platform::{
+    bank::{FixedAddressSender, FixedAddressSenderBuilder},
+    batch::Batch,
+};
 
 use crate::{
     error::Result,
@@ -20,7 +23,7 @@ pub trait Profit
 where
     Self: Into<ProfitBatch>,
 {
-    fn send<C>(&mut self, amount: Coin<C>) -> Result<()>
+    fn send<C>(&mut self, amount: Coin<C>)
     where
         C: Currency;
 }
@@ -52,13 +55,20 @@ impl ProfitRef {
         Ok(Self { addr })
     }
 
-    pub fn execute<Cmd>(self, cmd: Cmd) -> StdResult<Cmd::Output, Cmd::Error>
+    pub fn execute<SenderBuilder, Cmd>(
+        self,
+        sender_builder: SenderBuilder,
+        cmd: Cmd,
+    ) -> StdResult<Cmd::Output, Cmd::Error>
     where
+        SenderBuilder: FixedAddressSenderBuilder,
         Cmd: WithProfit,
     {
+        let profit_address = self.addr.clone();
+
         cmd.exec(ProfitStub {
             profit_ref: self,
-            coins: Vec::new(),
+            sender: sender_builder.build(profit_address),
         })
     }
 }
@@ -75,38 +85,31 @@ impl ProfitRef {
     }
 }
 
-struct ProfitStub {
+struct ProfitStub<Sender> {
     profit_ref: ProfitRef,
-    coins: Vec<CwCoin>,
+    sender: Sender,
 }
 
-impl Profit for ProfitStub {
-    fn send<C>(&mut self, amount: Coin<C>) -> Result<()>
+impl<Sender> Profit for ProfitStub<Sender>
+where
+    Sender: FixedAddressSender,
+{
+    fn send<C>(&mut self, amount: Coin<C>)
     where
         C: Currency,
     {
-        if !amount.is_zero() {
-            self.coins.push(to_cosmwasm(amount));
-        }
-
-        Ok(())
+        self.sender.send(amount);
     }
 }
 
-impl From<ProfitStub> for ProfitBatch {
-    fn from(stub: ProfitStub) -> Self {
-        let mut batch = Batch::default();
-
-        if !stub.coins.is_empty() {
-            batch.schedule_execute_no_reply(BankMsg::Send {
-                to_address: stub.profit_ref.addr.to_string(),
-                amount: stub.coins,
-            });
-        }
-
+impl<Sender> From<ProfitStub<Sender>> for ProfitBatch
+where
+    Sender: FixedAddressSender,
+{
+    fn from(stub: ProfitStub<Sender>) -> Self {
         ProfitBatch {
             profit_ref: stub.profit_ref,
-            batch,
+            batch: stub.sender.into(),
         }
     }
 }
