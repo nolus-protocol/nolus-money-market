@@ -6,7 +6,7 @@ use cw_multi_test::{AppResponse, Executor};
 use currency::lpn::Usdc;
 use finance::{
     coin::Coin, currency::Currency as _, duration::Duration, interest::InterestPeriod,
-    percent::Percent, price::PriceDTO,
+    percent::Percent, price::dto::PriceDTO,
 };
 use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
@@ -401,7 +401,7 @@ fn liquidation_time_alarm(time_pass: Duration) {
         .execute_contract(
             test_case.timealarms.unwrap(),
             lease_address,
-            &lease::msg::ExecuteMsg::TimeAlarm(),
+            &lease::msg::ExecuteMsg::TimeAlarm(test_case.app.block_info().time),
             &[to_cosmwasm(create_coin(10000))],
         )
         .unwrap();

@@ -2,6 +2,8 @@ use cosmwasm_std::{Addr, Order, StdResult, Storage, Timestamp};
 use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, MultiIndex};
 use serde::{Deserialize, Serialize};
 
+use crate::AlarmError;
+
 type TimeSeconds = u64;
 pub type Id = u64;
 
@@ -72,7 +74,7 @@ impl<'a> Alarms<'a> {
         storage: &mut dyn Storage,
         dispatcher: &mut impl AlarmDispatcher,
         ctime: Timestamp,
-    ) -> StdResult<()> {
+    ) -> Result<(), AlarmError> {
         let max_id = self.next_id.may_load(storage)?.unwrap_or_default();
 
         let timestamps = self.alarms().idx.alarms.range(
@@ -91,7 +93,7 @@ impl<'a> Alarms<'a> {
 }
 
 pub trait AlarmDispatcher {
-    fn send_to(&mut self, id: Id, addr: Addr, ctime: Timestamp) -> StdResult<()>;
+    fn send_to(&mut self, id: Id, addr: Addr, ctime: Timestamp) -> Result<(), AlarmError>;
 }
 
 #[cfg(test)]
@@ -104,7 +106,7 @@ pub mod tests {
     struct MockAlarmDispatcher(pub Vec<Id>);
 
     impl AlarmDispatcher for MockAlarmDispatcher {
-        fn send_to(&mut self, id: Id, _addr: Addr, _ctime: Timestamp) -> StdResult<()> {
+        fn send_to(&mut self, id: Id, _addr: Addr, _ctime: Timestamp) -> Result<(), AlarmError> {
             self.0.push(id);
             Ok(())
         }

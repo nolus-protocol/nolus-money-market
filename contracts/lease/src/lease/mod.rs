@@ -210,11 +210,7 @@ where
         if currency::equal::<Asset, Lpn>() {
             Ok(Price::identity())
         } else {
-            self.oracle
-                .price_of(ToOwned::to_owned(Asset::SYMBOL))?
-                .price
-                .try_into()
-                .map_err(Into::into)
+            Ok(self.oracle.price_of::<Asset>()?)
         }
     }
 }
@@ -233,6 +229,7 @@ mod tests {
         interest::InterestPeriod,
         liability::Liability,
         percent::Percent,
+        price::Price,
         test::currency::{Nls, Usdc},
     };
     use lpp::{
@@ -243,12 +240,9 @@ mod tests {
             LppBatch,
         },
     };
-    use market_price_oracle::{
-        msg::ExecuteMsg::AddPriceAlarm,
-        msg::PriceResponse,
-        stub::{Oracle, OracleBatch, OracleRef},
-    };
-    use marketprice::{alarms::Alarm, storage::Denom};
+    use market_price_oracle::msg::ExecuteMsg::AddPriceAlarm;
+    use market_price_oracle::stub::{Oracle, OracleBatch, OracleRef};
+    use marketprice::alarms::Alarm;
     use platform::{bank::BankAccountView, batch::Batch, error::Result as PlatformResult};
     use profit::{
         error::Result as ProfitResult,
@@ -441,7 +435,10 @@ mod tests {
             &self.address == addr
         }
 
-        fn price_of(&self, _denom: Denom) -> market_price_oracle::stub::Result<PriceResponse> {
+        fn price_of<C>(&self) -> market_price_oracle::stub::Result<Price<C, OracleBase>>
+        where
+            C: Currency,
+        {
             unimplemented!()
         }
 
@@ -475,7 +472,10 @@ mod tests {
             unreachable!()
         }
 
-        fn price_of(&self, _denom: Denom) -> market_price_oracle::stub::Result<PriceResponse> {
+        fn price_of<C>(&self) -> market_price_oracle::stub::Result<Price<C, OracleBase>>
+        where
+            C: Currency,
+        {
             unreachable!()
         }
 

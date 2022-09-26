@@ -53,16 +53,24 @@ impl<'f> PriceFeeders<'f> {
             Ok(addrs)
         };
 
-        let can_load = self.0.may_load(deps.storage)?;
-        match can_load {
-            None => {
-                let mut empty = HashSet::new();
-                empty.insert(address);
-                self.0.save(deps.storage, &empty)?
-            }
+        match self.0.may_load(deps.storage)? {
+            None => self.0.save(deps.storage, &HashSet::from([address]))?,
             Some(_) => {
                 self.0.update(deps.storage, add_new_address)?;
             }
+        }
+
+        Ok(())
+    }
+
+    pub fn remove(&self, deps: DepsMut, addr: Addr) -> Result<(), PriceFeedersError> {
+        let remove_address = |mut addrs: HashSet<Addr>| -> StdResult<HashSet<Addr>> {
+            addrs.remove(&addr);
+            Ok(addrs)
+        };
+
+        if self.0.may_load(deps.storage)?.is_some() {
+            self.0.update(deps.storage, remove_address)?;
         }
 
         Ok(())

@@ -939,7 +939,9 @@ version = "0.1.0"
 dependencies = [
  "cosmwasm-std",
  "cw-storage-plus",
+ "platform",
  "serde",
+ "thiserror",
 ]
 
 [[package]]
@@ -949,9 +951,11 @@ dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",
+ "currency",
  "cw-multi-test",
  "cw-storage-plus",
  "cw2",
+ "finance",
  "platform",
  "schemars",
  "serde",

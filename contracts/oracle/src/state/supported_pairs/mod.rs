@@ -1,8 +1,7 @@
-use std::{fmt::Debug, marker::PhantomData};
-
 use ::serde::{Deserialize, Serialize};
 use cosmwasm_std::{StdError, StdResult, Storage};
 use cw_storage_plus::Item;
+use std::{fmt::Debug, marker::PhantomData};
 use trees::{Node as TreeNode, Tree};
 
 use finance::{
@@ -17,7 +16,7 @@ use self::serde::TreeStore;
 mod serde;
 
 pub type ResolutionPath = Vec<SymbolOwned>;
-type CurrencyPair = (SymbolOwned, SymbolOwned);
+pub type CurrencyPair = (SymbolOwned, SymbolOwned);
 type Node = TreeNode<SymbolOwned>;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]

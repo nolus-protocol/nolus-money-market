@@ -5,7 +5,7 @@ use cosmwasm_std::QuerierWrapper;
 use finance::{
     coin::Coin,
     currency::{Currency, SymbolOwned},
-    price::{self, Price},
+    price,
 };
 
 use crate::{
@@ -44,7 +44,7 @@ where
         where
             OracleImpl: Oracle<BaseC>,
         {
-            Ok(price::total(self.in_amount, price_of(&oracle)?))
+            Ok(price::total(self.in_amount, oracle.price_of()?))
         }
 
         fn unexpected_base(self, found: SymbolOwned) -> Result<Self::Output, Self::Error> {
@@ -91,7 +91,7 @@ where
         where
             OracleImpl: Oracle<BaseC>,
         {
-            Ok(price::total(self.in_amount, price_of(&oracle)?.inv()))
+            Ok(price::total(self.in_amount, oracle.price_of()?.inv()))
         }
 
         fn unexpected_base(self, found: SymbolOwned) -> Result<Self::Output, Self::Error> {
@@ -106,16 +106,4 @@ where
         },
         querier,
     )
-}
-
-fn price_of<BaseC, OtherC, OracleImpl>(
-    oracle: &OracleImpl,
-) -> Result<Price<OtherC, BaseC>, ContractError>
-where
-    BaseC: Currency,
-    OtherC: Currency,
-    OracleImpl: Oracle<BaseC>,
-{
-    let price_other_to_base = oracle.price_of(OtherC::SYMBOL.to_string())?.price;
-    Ok(Price::<OtherC, BaseC>::try_from(price_other_to_base)?)
 }

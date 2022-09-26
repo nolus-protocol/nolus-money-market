@@ -1,5 +1,6 @@
 use cosmwasm_std::{Addr, StdError};
 use thiserror::Error;
+use time_oracle::AlarmError;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
@@ -12,4 +13,10 @@ pub enum ContractError {
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
     #[error("[TimeAlarms] Invalid alarm notification address: {0:?}")]
     InvalidAlarmAddress(Addr),
+
+    #[error("[Platform] {0}")]
+    Platform(#[from] platform::error::Error),
+
+    #[error("[Oracle] {0}")]
+    AlarmError(#[from] AlarmError),
 }

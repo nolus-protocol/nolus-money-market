@@ -7,7 +7,7 @@ mod tests {
     use schemars::JsonSchema;
     use serde::{Deserialize, Serialize};
 
-    use crate::{msg::ExecuteMsg, tests::common::dummy_default_instantiate_msg};
+    use crate::{msg::ExecuteMsg, tests::dummy_default_instantiate_msg};
 
     /// CwTemplateContract is a wrapper around Addr that provides a lot of helpers
     /// for working with this.
@@ -110,11 +110,17 @@ mod tests {
         use cosmwasm_std::{Addr, Timestamp};
         use cw_multi_test::Executor;
 
-        use marketprice::storage::Price;
+        use finance::{
+            coin::Coin,
+            price::{self, dto::PriceDTO},
+        };
 
         use crate::{
             msg::ExecuteMsg,
-            tests::integration_tests::tests::{mock_app, timealarms_instantiate},
+            tests::{
+                integration_tests::tests::{mock_app, timealarms_instantiate},
+                TestCurrencyA, TestCurrencyB, TestCurrencyC,
+            },
         };
 
         // use super::*;
@@ -228,9 +234,21 @@ mod tests {
             };
             app.execute_contract(Addr::unchecked(ADMIN), oracle.addr(), &msg, &[])
                 .unwrap();
-            let feed_msg = ExecuteMsg::FeedPrices {
-                prices: vec![Price::new("A", 1, "B", 100), Price::new("A", 1, "C", 200)],
-            };
+            let feed_msg =
+                ExecuteMsg::FeedPrices {
+                    prices: vec![
+                        PriceDTO::try_from(
+                            price::total_of(Coin::<TestCurrencyA>::new(1))
+                                .is(Coin::<TestCurrencyB>::new(100)),
+                        )
+                        .unwrap(),
+                        PriceDTO::try_from(
+                            price::total_of(Coin::<TestCurrencyA>::new(1))
+                                .is(Coin::<TestCurrencyC>::new(200)),
+                        )
+                        .unwrap(),
+                    ],
+                };
             app.update_block(|bl| bl.time = Timestamp::from_nanos(0));
             // instantiate loan, add alarms
             let loan = mock_loan::proper_instantiate(&mut app);

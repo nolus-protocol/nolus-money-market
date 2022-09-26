@@ -4,25 +4,24 @@ use cosmwasm_std::{Addr, Timestamp};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use finance::duration::Duration;
-
-use crate::{market_price::PriceFeedsError, storage::Price};
+use crate::{error::PriceFeedsError, market_price::Parameters};
+use finance::{duration::Duration, price::dto::PriceDTO};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Observation {
     feeder_addr: Addr,
     time: Timestamp,
-    price: Price,
+    price: PriceDTO,
 }
 impl Observation {
-    pub fn new(feeder_addr: Addr, time: Timestamp, price: Price) -> Observation {
+    pub fn new(feeder_addr: Addr, time: Timestamp, price: PriceDTO) -> Observation {
         Observation {
             feeder_addr,
             time,
             price,
         }
     }
-    pub fn price(&self) -> Price {
+    pub fn price(&self) -> PriceDTO {
         self.price.clone()
     }
 }
@@ -50,12 +49,7 @@ impl PriceFeed {
     // provide no price for a pair if there are no feeds from at least configurable percentage * <number_of_whitelisted_feeders>
     // in a configurable period T in seconds
     // provide the last price for a requested pair unless the previous condition is met.
-    pub fn get_price(
-        &self,
-        time_now: Timestamp,
-        price_feed_period: Duration,
-        required_feeders_cnt: usize,
-    ) -> Result<Observation, PriceFeedsError> {
+    pub fn get_price(&self, parameters: Parameters) -> Result<Observation, PriceFeedsError> {
         let res = self.observations.last().cloned();
         let last_feed = match res {
             Some(f) => f,
@@ -63,11 +57,11 @@ impl PriceFeed {
         };
 
         // check if last reported feed is older than the required refresh time
-        if PriceFeed::is_old_feed(time_now, last_feed.time, price_feed_period) {
+        if PriceFeed::is_old_feed(parameters.block_time(), last_feed.time, parameters.period()) {
             return Err(PriceFeedsError::NoPrice {});
         }
 
-        if !self.has_enough_feeders(required_feeders_cnt) {
+        if !self.has_enough_feeders(parameters.feeders()) {
             return Err(PriceFeedsError::NoPrice {});
         }
 
@@ -75,8 +69,7 @@ impl PriceFeed {
     }
 
     fn is_old_feed(time_now: Timestamp, feed_time: Timestamp, price_feed_period: Duration) -> bool {
-        let ts = feed_time + price_feed_period;
-        ts.lt(&time_now)
+        (feed_time + price_feed_period).lt(&time_now)
     }
 
     fn has_enough_feeders(&self, required_feeders_cnt: usize) -> bool {
@@ -91,15 +84,34 @@ impl PriceFeed {
 
 #[cfg(test)]
 mod tests {
-    use crate::storage::Price;
+    use currency::{
+        native::Nls,
+        test::{TestCurrencyA, TestCurrencyB},
+    };
+    use finance::{
+        coin::Coin,
+        price::{self, dto::PriceDTO},
+    };
 
     #[test]
     // we ensure this rounds up (as it calculates needed votes)
     fn compare_prices() {
-        let p1 = Price::new("BTH", 1000000, "NLS", 123456);
-        let p2 = Price::new("BTH", 1000000, "NLS", 789456);
-        let p3 = Price::new("BTH", 1000000, "NLS", 3456);
-        let p4 = Price::new("ETH", 1000000, "NLS", 3456);
+        let p1 = PriceDTO::try_from(
+            price::total_of(Coin::<TestCurrencyA>::new(1000000)).is(Coin::<Nls>::new(123456)),
+        )
+        .unwrap();
+        let p2 = PriceDTO::try_from(
+            price::total_of(Coin::<TestCurrencyA>::new(1000000)).is(Coin::<Nls>::new(789456)),
+        )
+        .unwrap();
+        let p3 = PriceDTO::try_from(
+            price::total_of(Coin::<TestCurrencyA>::new(1000000)).is(Coin::<Nls>::new(3456)),
+        )
+        .unwrap();
+        let p4 = PriceDTO::try_from(
+            price::total_of(Coin::<TestCurrencyB>::new(1000000)).is(Coin::<Nls>::new(3456)),
+        )
+        .unwrap();
         assert!(p1.lt(&p2));
         assert!(p3.lt(&p2));
         assert!(p4.lt(&p2));

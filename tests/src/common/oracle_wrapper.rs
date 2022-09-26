@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use cosmwasm_std::{coins, to_binary, Addr, Binary, Deps, Env};
 use cw_multi_test::Executor;
 
@@ -5,7 +7,8 @@ use currency::{lpn::Usdc, native::Nls};
 use finance::{
     coin::Coin,
     currency::Currency,
-    price::{total_of, PriceDTO},
+    percent::Percent,
+    price::{dto::PriceDTO, total_of},
 };
 use oracle::{
     contract::{execute, instantiate, query, reply},
@@ -39,11 +42,8 @@ impl MarketOracleWrapper {
         let msg = InstantiateMsg {
             base_asset: denom.to_string(),
             price_feed_period_secs: 60,
-            feeders_percentage_needed: 1,
-            supported_denom_pairs: vec![
-                ("UST".to_string(), NATIVE_DENOM.to_string()),
-                (Usdc::SYMBOL.to_string(), NATIVE_DENOM.to_string()),
-            ],
+            feeders_percentage_needed: Percent::from_percent(1),
+            currency_paths: vec![vec![NATIVE_DENOM.to_string(), Usdc::SYMBOL.to_string()]],
             timealarms_addr: timealarms_addr.to_string(),
         };
 
@@ -78,11 +78,10 @@ impl Default for MarketOracleWrapper {
 pub fn mock_oracle_query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let price = total_of(Coin::<Nls>::new(123456789)).is(Coin::<Usdc>::new(100000000));
     let res = match msg {
-        QueryMsg::PriceFor { denoms: _ } | QueryMsg::Price { denom: _ } => {
-            to_binary(&oracle::msg::PriceResponse {
-                price: PriceDTO::try_from(price).unwrap(),
-            })
-        }
+        QueryMsg::Prices { currencies: _ } => to_binary(&oracle::msg::PricesResponse {
+            prices: vec![PriceDTO::try_from(price)?],
+        }),
+        QueryMsg::Price { currency: _ } => to_binary(&PriceDTO::try_from(price)?),
         _ => Ok(query(deps, env, msg)?),
     }?;
 

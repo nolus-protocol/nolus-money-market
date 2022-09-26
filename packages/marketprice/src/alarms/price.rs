@@ -1,13 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use cosmwasm_std::{Addr, Order, Response, StdResult, Storage};
-use cw_storage_plus::{Item, Map};
-
 use currency::native::Nls;
-use finance::currency::SymbolOwned;
+use cw_storage_plus::{Item, Map};
+use finance::{currency::SymbolOwned, price::dto::PriceDTO};
 use platform::batch::Batch;
-
-use crate::storage::{Denom, Price};
 
 use super::{errors::AlarmError, Alarm, ExecuteAlarmMsg};
 
@@ -69,11 +66,10 @@ impl<'m> PriceHooks<'m> {
     pub fn notify(
         &self,
         storage: &mut dyn Storage,
-        updated_prices: HashMap<SymbolOwned, Price>,
-    ) -> Result<Batch, AlarmError> {
+        updated_prices: Vec<PriceDTO>,
+        batch: &mut Batch,
+    ) -> Result<(), AlarmError> {
         let affected_contracts: Vec<_> = self.get_affected(storage, updated_prices)?;
-
-        let mut batch = Batch::default();
 
         for (addr, alarm, _) in affected_contracts {
             let next_id = self.id_seq.next(storage)?;
@@ -88,11 +84,11 @@ impl<'m> PriceHooks<'m> {
                 .map_err(AlarmError::from)?;
         }
 
-        Ok(batch)
+        Ok(())
     }
 
-    pub fn get_hook_denoms(&self, storage: &dyn Storage) -> StdResult<HashSet<Denom>> {
-        let hook_denoms: HashSet<Denom> = self
+    pub fn get_hook_denoms(&self, storage: &dyn Storage) -> StdResult<HashSet<SymbolOwned>> {
+        let hook_denoms: HashSet<SymbolOwned> = self
             .hooks
             .prefix(())
             .range(storage, None, None, Order::Ascending)
@@ -105,10 +101,10 @@ impl<'m> PriceHooks<'m> {
     pub fn get_affected(
         &self,
         storage: &mut dyn Storage,
-        updated_prices: HashMap<SymbolOwned, Price>,
-    ) -> StdResult<Vec<(Addr, Alarm, Price)>> {
-        let mut affected: Vec<(Addr, Alarm, Price)> = vec![];
-        for price in updated_prices.values() {
+        updated_prices: Vec<PriceDTO>,
+    ) -> StdResult<Vec<(Addr, Alarm, PriceDTO)>> {
+        let mut affected: Vec<(Addr, Alarm, PriceDTO)> = vec![];
+        for price in updated_prices {
             let mut events: Vec<_> = self
                 .hooks
                 .prefix(())
@@ -127,11 +123,25 @@ impl<'m> PriceHooks<'m> {
 #[cfg(test)]
 pub mod tests {
     use cosmwasm_std::{testing::mock_dependencies, Addr};
-
-    use crate::{
-        alarms::{price::PriceHooks, Alarm},
-        storage::Price,
+    use currency::native::Nls;
+    use finance::{
+        coin::Coin,
+        currency::{Currency, SymbolStatic},
+        price,
     };
+
+    use crate::alarms::{price::PriceHooks, Alarm};
+
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+    pub struct BTH;
+    impl Currency for BTH {
+        const SYMBOL: SymbolStatic = "BTH";
+    }
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+    pub struct ETH;
+    impl Currency for ETH {
+        const SYMBOL: SymbolStatic = "ETH";
+    }
 
     #[test]
     fn test_add() {
@@ -142,8 +152,8 @@ pub mod tests {
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
 
-        let price1: Price = Price::new("BTH", 1000000, "NLS", 456789);
-        let price2: Price = Price::new("ETH", 1000000, "NLS", 123456);
+        let price1 = price::total_of(Coin::<BTH>::new(1000000)).is(Coin::<Nls>::new(456789));
+        let price2 = price::total_of(Coin::<ETH>::new(1000000)).is(Coin::<Nls>::new(123456));
 
         let expected_alarm1 = Alarm::new("BTH".to_string(), price1, None);
         let expected_alarm2 = Alarm::new("ETH".to_string(), price2, None);
@@ -179,6 +189,12 @@ pub mod tests {
 
     #[test]
     fn test_remove() {
+        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+        pub struct OtherCoin;
+        impl Currency for OtherCoin {
+            const SYMBOL: SymbolStatic = "OtherCoin";
+        }
+
         let hooks = PriceHooks::new("hooks", "hooks_sequence");
         let storage = &mut mock_dependencies().storage;
 
@@ -186,8 +202,8 @@ pub mod tests {
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
 
-        let price1 = Price::new("some_coin", 1000000, "another_coin", 456789);
-        let price2 = Price::new("some_coin", 1000000, "another_coin", 123456);
+        let price1 = price::total_of(Coin::<BTH>::new(1000000)).is(Coin::<OtherCoin>::new(456789));
+        let price2 = price::total_of(Coin::<ETH>::new(1000000)).is(Coin::<OtherCoin>::new(123456));
 
         let expected_alarm1 = Alarm::new("some_coin".to_string(), price1, None);
         let expected_alarm2 = Alarm::new("some_coin".to_string(), price2, None);

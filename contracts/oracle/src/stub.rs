@@ -1,14 +1,17 @@
-use std::{marker::PhantomData, result::Result as StdResult};
+use std::{convert::TryInto, marker::PhantomData, result::Result as StdResult};
 
 use cosmwasm_std::{wasm_execute, Addr, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{Currency, SymbolOwned};
-use marketprice::{alarms::Alarm, storage::Denom};
+use finance::{
+    currency::{Currency, SymbolOwned},
+    price::{dto::PriceDTO, Price},
+};
+use marketprice::alarms::Alarm;
 use platform::batch::Batch;
 
 use crate::{
-    msg::{ConfigResponse, ExecuteMsg, PriceResponse, QueryMsg},
+    msg::{ConfigResponse, ExecuteMsg, QueryMsg},
     ContractError,
 };
 
@@ -26,7 +29,9 @@ where
 {
     fn owned_by(&self, addr: &Addr) -> bool;
 
-    fn price_of(&self, denom: Denom) -> Result<PriceResponse>;
+    fn price_of<C>(&self) -> Result<Price<C, OracleBase>>
+    where
+        C: Currency;
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()>;
 }
@@ -101,14 +106,14 @@ impl OracleRef {
 
 #[cfg(feature = "testing")]
 impl OracleRef {
-    pub fn unchecked<A, Lpn>(addr: A) -> Self
+    pub fn unchecked<A, C>(addr: A) -> Self
     where
         A: Into<String>,
-        Lpn: Currency,
+        C: Currency,
     {
         Self {
             addr: Addr::unchecked(addr),
-            base_currency: Lpn::SYMBOL.into(),
+            base_currency: C::SYMBOL.into(),
         }
     }
 }
@@ -134,11 +139,19 @@ where
         self.oracle_ref.owned_by(addr)
     }
 
-    fn price_of(&self, denom: Denom) -> Result<PriceResponse> {
-        let msg = QueryMsg::Price { denom };
-        self.querier
+    fn price_of<C>(&self) -> Result<Price<C, OracleBase>>
+    where
+        C: Currency,
+    {
+        let msg = QueryMsg::Price {
+            currency: C::SYMBOL.to_string(),
+        };
+        let dto: PriceDTO = self
+            .querier
             .query_wasm_smart(self.addr().clone(), &msg)
-            .map_err(ContractError::from)
+            .map_err(ContractError::from)?;
+
+        Ok(dto.try_into()?)
     }
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()> {

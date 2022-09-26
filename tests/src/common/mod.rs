@@ -156,7 +156,7 @@ pub fn mock_app(init_funds: &[Coin]) -> MockApp {
         chain_id: "cosmos-testnet-14002".to_string(),
     };
 
-    let mut funds = coins(1000, NATIVE_DENOM);
+    let mut funds = coins(100000, NATIVE_DENOM);
     funds.append(&mut init_funds.to_vec());
 
     AppBuilder::new()

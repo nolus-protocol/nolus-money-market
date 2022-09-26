@@ -1,13 +1,9 @@
 use std::convert::Infallible;
 
 use cosmwasm_std::{Addr, StdError};
-use thiserror::Error;
-
 use finance::currency::{Currency, SymbolOwned};
-use marketprice::{
-    alarms::errors::AlarmError, feeders::PriceFeedersError, market_price::PriceFeedsError,
-    storage::DenomPair,
-};
+use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
+use thiserror::Error;
 
 use crate::state::supported_pairs::ResolutionPath;
 
@@ -41,8 +37,8 @@ pub enum ContractError {
     #[error("[Oracle] Invalid feeder address")]
     InvalidAddress {},
 
-    #[error("[Oracle] Invalid denom pair")]
-    InvalidDenomPair(DenomPair),
+    #[error("Invalid denom pair")]
+    InvalidDenomPair((SymbolOwned, SymbolOwned)),
 
     #[error("[Oracle] Invalid denom pair")]
     InvalidResolutionPath(ResolutionPath),

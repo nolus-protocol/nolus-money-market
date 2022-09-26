@@ -53,7 +53,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Config { cadence_hours } => Profit::try_config(deps, info, cadence_hours),
-        ExecuteMsg::TimeAlarm { time } => try_transfer(deps, env, info, time),
+        ExecuteMsg::TimeAlarm(time) => try_transfer(deps, env, info, time),
     }
 }
 
@@ -174,9 +174,7 @@ mod tests {
         let info = mock_info("timealarms", &coins(2, "unolus"));
         let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-        let msg = ExecuteMsg::TimeAlarm {
-            time: mock_env().block.time,
-        };
+        let msg = ExecuteMsg::TimeAlarm(mock_env().block.time);
         let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         assert_eq!(2, res.messages.len());

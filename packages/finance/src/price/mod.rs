@@ -9,9 +9,7 @@ use crate::{
     ratio::Rational,
 };
 
-pub use self::dto::{execute, PriceDTO, WithPrice};
-
-mod dto;
+pub mod dto;
 
 pub fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
 where

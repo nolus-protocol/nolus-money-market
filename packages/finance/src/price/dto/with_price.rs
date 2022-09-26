@@ -1,75 +1,12 @@
-use schemars::JsonSchema;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     coin::{Coin, CoinDTO},
     currency::{visit_any, AnyVisitor, Currency, Group},
-    error::Error,
     price::Price,
 };
 
-#[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, JsonSchema)]
-pub struct PriceDTO {
-    amount: CoinDTO,
-    amount_quote: CoinDTO,
-}
-
-impl<C, QuoteC> TryFrom<PriceDTO> for Price<C, QuoteC>
-where
-    C: Currency,
-    QuoteC: Currency,
-{
-    type Error = Error;
-
-    fn try_from(value: PriceDTO) -> Result<Self, Self::Error> {
-        Ok(Price::new(
-            value.amount.try_into()?,
-            value.amount_quote.try_into()?,
-        ))
-    }
-}
-
-impl PriceDTO {
-    pub fn new(base: CoinDTO, quote: CoinDTO) -> Self {
-        Self {
-            amount: base,
-            amount_quote: quote,
-        }
-    }
-
-    pub const fn base(&self) -> &CoinDTO {
-        &self.amount
-    }
-
-    pub const fn quote(&self) -> &CoinDTO {
-        &self.amount_quote
-    }
-}
-
-impl<C, QuoteC> From<Price<C, QuoteC>> for PriceDTO
-where
-    C: Currency,
-    QuoteC: Currency,
-{
-    fn from(price: Price<C, QuoteC>) -> Self {
-        Self {
-            amount: price.amount.into(),
-            amount_quote: price.amount_quote.into(),
-        }
-    }
-}
-
-pub trait WithPrice {
-    type Output;
-    type Error;
-
-    fn exec<C, QuoteC>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
-    where
-        C: Currency,
-        QuoteC: Currency;
-
-    fn unknown(self) -> Result<Self::Output, Self::Error>;
-}
+use super::{PriceDTO, WithPrice};
 
 pub fn execute<G, Cmd>(price: PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
 where
