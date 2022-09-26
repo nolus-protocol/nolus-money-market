@@ -2,7 +2,7 @@ use cosmwasm_std::{Coin as CwCoin, Env};
 use serde::Serialize;
 
 use finance::{
-    currency::{Currency, SymbolOwned},
+    currency::Currency,
     price::{total, Price},
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
@@ -95,9 +95,5 @@ where
             .emit_coin_amount("change", receipt.change());
 
         Ok(RepayResult { lease_dto, emitter })
-    }
-
-    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
-        Err(ContractError::UnknownCurrency { symbol })
     }
 }

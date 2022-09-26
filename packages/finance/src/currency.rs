@@ -1,6 +1,8 @@
-use std::{any::TypeId, fmt::Debug};
+use std::{any::TypeId, error::Error as ErrorTrait, fmt::Debug};
 
 use serde::{de::DeserializeOwned, Serialize};
+
+use crate::error::Error;
 
 pub type Symbol<'a> = &'a str;
 pub type SymbolStatic = &'static str;
@@ -20,10 +22,13 @@ where
 }
 
 pub trait Group {
+    type ResolveError: ErrorTrait;
+
     fn resolve<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
     where
+        Self: Sized,
         V: AnyVisitor<Self>,
-        Self: Sized;
+        Self::ResolveError: Into<V::Error>;
 }
 
 pub fn equal<C1, C2>() -> bool
@@ -39,18 +44,18 @@ pub trait SingleVisitor<C> {
     type Error;
 
     fn on(self) -> Result<Self::Output, Self::Error>;
-    fn on_unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
 pub fn visit<C, V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
 where
     V: SingleVisitor<C>,
     C: Currency,
+    Error: Into<V::Error>,
 {
     if symbol == C::SYMBOL {
         visitor.on()
     } else {
-        visitor.on_unknown()
+        Err(Error::UnexpectedCurrency(symbol.into(), C::SYMBOL.into()).into())
     }
 }
 
@@ -64,13 +69,13 @@ where
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
         C: 'static + Currency + Member<G> + Serialize + DeserializeOwned;
-    fn on_unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
 pub fn visit_any<G, V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
 where
     G: Group,
     V: AnyVisitor<G>,
+    G::ResolveError: Into<V::Error>,
 {
     G::resolve(symbol, visitor)
 }
@@ -81,12 +86,14 @@ mod test {
 
     use crate::{
         currency::{Currency, SingleVisitor},
+        error::Error,
         test::currency::{Nls, TestCurrencies, Usdc},
     };
 
     use super::AnyVisitor;
 
     struct Expect<C>(PhantomData<C>);
+
     impl<C> Expect<C> {
         fn new() -> Self {
             Self(PhantomData)
@@ -97,7 +104,7 @@ mod test {
         C: 'static,
     {
         type Output = bool;
-        type Error = ();
+        type Error = Error;
 
         fn on<Cin>(self) -> Result<Self::Output, Self::Error>
         where
@@ -106,28 +113,20 @@ mod test {
             assert!(super::equal::<C, Cin>());
             Ok(true)
         }
-
-        fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-            unreachable!();
-        }
     }
     impl<C> SingleVisitor<C> for Expect<C> {
         type Output = bool;
-        type Error = ();
+        type Error = Error;
 
         fn on(self) -> Result<Self::Output, Self::Error> {
             Ok(true)
-        }
-
-        fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-            unreachable!();
         }
     }
 
     struct ExpectUnknownCurrency;
     impl AnyVisitor<TestCurrencies> for ExpectUnknownCurrency {
         type Output = bool;
-        type Error = ();
+        type Error = Error;
 
         fn on<C>(self) -> Result<Self::Output, Self::Error>
         where
@@ -135,22 +134,14 @@ mod test {
         {
             unreachable!();
         }
-
-        fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-            Ok(true)
-        }
     }
 
     impl<C> SingleVisitor<C> for ExpectUnknownCurrency {
         type Output = bool;
-        type Error = ();
+        type Error = Error;
 
         fn on(self) -> Result<Self::Output, Self::Error> {
             unreachable!();
-        }
-
-        fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-            Ok(true)
         }
     }
     #[test]
@@ -164,26 +155,30 @@ mod test {
 
     #[test]
     fn visit_any_unexpected() {
+        const DENOM: &str = "my_fancy_coin";
+
         assert_eq!(
-            Ok(true),
-            super::visit_any("my_fancy_coin", ExpectUnknownCurrency)
+            super::visit_any(DENOM, ExpectUnknownCurrency),
+            Err(Error::NotInCurrencyGroup(DENOM.into())),
         );
     }
 
     #[test]
     fn visit_one() {
         let v_usdc = Expect::<Usdc>::new();
-        assert_eq!(Ok(true), super::visit(Usdc::SYMBOL, v_usdc));
+        assert_eq!(super::visit(Usdc::SYMBOL, v_usdc), Ok(true));
 
         let v_nls = Expect::<Nls>::new();
-        assert_eq!(Ok(true), super::visit(Nls::SYMBOL, v_nls));
+        assert_eq!(super::visit(Nls::SYMBOL, v_nls), Ok(true));
     }
 
     #[test]
     fn visit_one_unexpected() {
+        const DENOM: &str = "my_fancy_coin";
+
         assert_eq!(
-            Ok(true),
-            super::visit::<Nls, _>("my_fancy_coin", ExpectUnknownCurrency)
+            super::visit::<Nls, _>(DENOM, ExpectUnknownCurrency),
+            Err(Error::UnexpectedCurrency(DENOM.into(), Nls::SYMBOL.into())),
         );
     }
 }

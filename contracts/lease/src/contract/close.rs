@@ -1,7 +1,7 @@
 use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
-use finance::currency::{Currency, SymbolOwned};
+use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{
@@ -67,9 +67,5 @@ where
             .emit_timestamp("at", &self.now);
 
         Ok(emitter)
-    }
-
-    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
-        Err(ContractError::UnknownCurrency { symbol })
     }
 }

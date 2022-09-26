@@ -16,6 +16,9 @@ pub enum Error {
     #[error("[Finance] Found currency {0} expecting {1}")]
     UnexpectedCurrency(String, String),
 
+    #[error("[Finance] Found currency {0} which is not defined in the given currency group")]
+    NotInCurrencyGroup(String),
+
     #[error("[Finance] Expecting funds of {0} but found none")]
     NoFunds(String),
 

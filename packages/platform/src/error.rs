@@ -5,14 +5,14 @@ use finance::currency::Currency;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
-    #[error("[Platform] Found currency {0} expecting {1}")]
-    UnexpectedCurrency(String, String),
-
     #[error("[Platform] Expecting funds of {0} but found none")]
     NoFunds(String),
 
     #[error("[Platform] Expecting funds of {0} but found extra ones")]
     UnexpectedFunds(String),
+
+    #[error("[Platform] {0}")]
+    Finance(#[from] finance::error::Error),
 
     #[error("[Platform] [Std] {0}")]
     CosmWasmError(#[from] StdError),

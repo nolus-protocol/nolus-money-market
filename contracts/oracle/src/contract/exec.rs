@@ -62,7 +62,4 @@ impl<'a> AnyVisitor<PaymentGroup> for ExecWithOracleBase<'a> {
             }
         }
     }
-    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-        Err(ContractError::UnknownCurrency {})
-    }
 }

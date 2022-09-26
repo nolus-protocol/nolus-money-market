@@ -2,14 +2,9 @@ use std::marker::PhantomData;
 
 use cosmwasm_std::QuerierWrapper;
 
-use finance::{
-    coin::Coin,
-    currency::{Currency, SymbolOwned},
-    price,
-};
+use finance::{coin::Coin, currency::Currency, price};
 
 use crate::{
-    error,
     stub::{Oracle, OracleRef, WithOracle},
     ContractError,
 };
@@ -45,10 +40,6 @@ where
             OracleImpl: Oracle<BaseC>,
         {
             Ok(price::total(self.in_amount, oracle.price_of()?))
-        }
-
-        fn unexpected_base(self, found: SymbolOwned) -> Result<Self::Output, Self::Error> {
-            Err(error::currency_mismatch::<BaseC>(found))
         }
     }
 
@@ -92,10 +83,6 @@ where
             OracleImpl: Oracle<BaseC>,
         {
             Ok(price::total(self.in_amount, oracle.price_of()?.inv()))
-        }
-
-        fn unexpected_base(self, found: SymbolOwned) -> Result<Self::Output, Self::Error> {
-            Err(error::currency_mismatch::<BaseC>(found))
         }
     }
 

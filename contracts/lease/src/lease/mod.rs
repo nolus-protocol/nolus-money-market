@@ -4,7 +4,7 @@ use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use serde::Serialize;
 
 use finance::{
-    currency::{self, Currency, SymbolOwned},
+    currency::{self, Currency},
     liability::Liability,
     price::Price,
 };
@@ -53,8 +53,6 @@ pub trait WithLease {
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
         Asset: Currency + Serialize;
-
-    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error>;
 }
 
 pub fn execute<Cmd, SenderBuilder>(
@@ -66,6 +64,10 @@ pub fn execute<Cmd, SenderBuilder>(
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLease,
+    finance::error::Error: Into<Cmd::Error>,
+    time_alarms::error::ContractError: Into<Cmd::Error>,
+    market_price_oracle::error::ContractError: Into<Cmd::Error>,
+    profit::error::ContractError: Into<Cmd::Error>,
     SenderBuilder: FixedAddressSenderBuilder,
 {
     let lpp = dto.loan.lpp().clone();

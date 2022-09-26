@@ -1,4 +1,7 @@
-use finance::currency::{AnyVisitor, Currency, Group, Member, Symbol};
+use finance::{
+    currency::{AnyVisitor, Currency, Group, Member, Symbol},
+    error::Error,
+};
 
 #[cfg(feature = "testing")]
 use crate::test::{TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD};
@@ -15,33 +18,27 @@ impl Member<PaymentGroup> for Nls {}
 
 pub struct PaymentGroup {}
 impl Group for PaymentGroup {
+    type ResolveError = Error;
+
     fn resolve<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
     where
         V: AnyVisitor<Self>,
+        Self::ResolveError: Into<V::Error>,
     {
-        #[cfg(not(feature = "testing"))]
-        {
-            match symbol {
-                Usdc::SYMBOL => visitor.on::<Usdc>(),
-                Osmo::SYMBOL => visitor.on::<Osmo>(),
-                Atom::SYMBOL => visitor.on::<Atom>(),
-                Nls::SYMBOL => visitor.on::<Nls>(),
-                _ => visitor.on_unknown(),
-            }
-        }
-        #[cfg(feature = "testing")]
-        {
-            match symbol {
-                Usdc::SYMBOL => visitor.on::<Usdc>(),
-                Osmo::SYMBOL => visitor.on::<Osmo>(),
-                Atom::SYMBOL => visitor.on::<Atom>(),
-                Nls::SYMBOL => visitor.on::<Nls>(),
-                TestCurrencyA::SYMBOL => visitor.on::<TestCurrencyA>(),
-                TestCurrencyB::SYMBOL => visitor.on::<TestCurrencyB>(),
-                TestCurrencyC::SYMBOL => visitor.on::<TestCurrencyC>(),
-                TestCurrencyD::SYMBOL => visitor.on::<TestCurrencyD>(),
-                _ => visitor.on_unknown(),
-            }
+        match symbol {
+            Usdc::SYMBOL => visitor.on::<Usdc>(),
+            Osmo::SYMBOL => visitor.on::<Osmo>(),
+            Atom::SYMBOL => visitor.on::<Atom>(),
+            Nls::SYMBOL => visitor.on::<Nls>(),
+            #[cfg(feature = "testing")]
+            TestCurrencyA::SYMBOL => visitor.on::<TestCurrencyA>(),
+            #[cfg(feature = "testing")]
+            TestCurrencyB::SYMBOL => visitor.on::<TestCurrencyB>(),
+            #[cfg(feature = "testing")]
+            TestCurrencyC::SYMBOL => visitor.on::<TestCurrencyC>(),
+            #[cfg(feature = "testing")]
+            TestCurrencyD::SYMBOL => visitor.on::<TestCurrencyD>(),
+            _ => Err(Error::NotInCurrencyGroup(symbol.into()).into()),
         }
     }
 }

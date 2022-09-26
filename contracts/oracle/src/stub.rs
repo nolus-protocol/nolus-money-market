@@ -46,8 +46,6 @@ where
     fn exec<O>(self, oracle: O) -> StdResult<Self::Output, Self::Error>
     where
         O: Oracle<OracleBase>;
-
-    fn unexpected_base(self, symbol: SymbolOwned) -> StdResult<Self::Output, Self::Error>;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -86,11 +84,16 @@ impl OracleRef {
     where
         OracleBase: Currency,
         V: WithOracle<OracleBase>,
+        ContractError: Into<V::Error>,
     {
         if OracleBase::SYMBOL == self.base_currency {
             cmd.exec(self.into_stub::<OracleBase>(querier))
         } else {
-            cmd.unexpected_base(self.base_currency)
+            Err(ContractError::CurrencyMismatch {
+                expected: OracleBase::SYMBOL.into(),
+                found: self.base_currency,
+            }
+            .into())
         }
     }
 
