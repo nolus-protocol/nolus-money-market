@@ -59,7 +59,7 @@ impl Controller for Active {
 
                 into_resp(response, lease_updated)
             }
-            ExecuteMsg::TimeAlarm() => {
+            ExecuteMsg::TimeAlarm(_block_time) => {
                 let AlarmResult {
                     response,
                     lease_dto: lease_updated,

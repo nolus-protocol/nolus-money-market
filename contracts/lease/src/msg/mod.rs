@@ -1,3 +1,4 @@
+use cosmwasm_std::Timestamp;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -15,5 +16,5 @@ pub enum ExecuteMsg {
     Repay(), // it is not an enum variant to represent it as a JSON object instead of JSON string
     Close(), // that is a limitation of cosmjs library
     PriceAlarm(),
-    TimeAlarm(),
+    TimeAlarm(Timestamp),
 }

@@ -1,10 +1,10 @@
-use cosmwasm_std::{Addr, CosmosMsg, DepsMut, Response, StdResult, Storage, SubMsg, Timestamp};
+use crate::{contract_validation::validate_contract_addr, msg::ExecuteAlarmMsg, ContractError};
+use cosmwasm_std::{Addr, DepsMut, Response, StdResult, Storage, Timestamp};
+use finance::currency::Nls;
+use platform::batch::Batch;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-
-use time_oracle::{Alarms, Id};
-
-use crate::{contract_validation::validate_contract_addr, msg::ExecuteAlarmMsg, ContractError};
+use time_oracle::{AlarmError, Alarms, Id};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct TimeAlarms {}
@@ -33,27 +33,26 @@ impl TimeAlarms {
         use time_oracle::AlarmDispatcher;
 
         struct OracleAlarmDispatcher<'a> {
-            pub response: &'a mut Response,
+            pub batch: &'a mut Batch,
         }
 
         impl<'a> AlarmDispatcher for OracleAlarmDispatcher<'a> {
-            fn send_to(&mut self, id: Id, addr: Addr, ctime: Timestamp) -> StdResult<()> {
-                let msg = ExecuteAlarmMsg::TimeAlarm(ctime);
-                let wasm_msg = cosmwasm_std::wasm_execute(addr, &msg, vec![])?;
-                let submsg = SubMsg::reply_always(CosmosMsg::Wasm(wasm_msg), id);
-                self.response.messages.push(submsg);
-                Ok(())
+            fn send_to(&mut self, id: Id, addr: Addr, ctime: Timestamp) -> Result<(), AlarmError> {
+                Ok(self.batch.schedule_execute_wasm_reply_always::<_, Nls>(
+                    &addr,
+                    ExecuteAlarmMsg::TimeAlarm(ctime),
+                    None,
+                    id,
+                )?)
             }
         }
 
-        let mut response = Response::new();
-        let mut dispatcher = OracleAlarmDispatcher {
-            response: &mut response,
-        };
+        let mut batch = Batch::default();
+        let mut dispatcher = OracleAlarmDispatcher { batch: &mut batch };
 
         Self::TIME_ALARMS.notify(storage, &mut dispatcher, ctime)?;
 
-        Ok(response)
+        Ok(batch.into())
     }
 }
 

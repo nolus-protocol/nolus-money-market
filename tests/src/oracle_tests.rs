@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{wasm_execute, Addr};
+use cosmwasm_std::{coins, wasm_execute, Addr, Event};
 use cw_multi_test::Executor;
 
 use finance::{
@@ -11,7 +11,9 @@ use finance::{
 use leaser::msg::QueryMsg;
 use platform::coin_legacy::to_cosmwasm;
 
-use crate::common::{leaser_wrapper::LeaserWrapper, test_case::TestCase, AppExt, ADMIN, USER};
+use crate::common::{
+    leaser_wrapper::LeaserWrapper, test_case::TestCase, AppExt, ADMIN, NATIVE_DENOM,
+};
 
 type Currency = Usdc;
 type TheCoin = Coin<Currency>;
@@ -22,14 +24,14 @@ fn create_coin(amount: u128) -> TheCoin {
 }
 
 fn create_test_case() -> TestCase {
-    let mut test_case = TestCase::with_reserve(DENOM, 10_000_000_000);
+    let mut test_case = TestCase::with_reserve(DENOM, 10_000_000_000_000_000_000_000_000_000);
     test_case.init(
-        &Addr::unchecked("user"),
-        vec![to_cosmwasm(create_coin(1_000_000))],
+        &Addr::unchecked(ADMIN),
+        vec![to_cosmwasm(create_coin(1_000_000_000_000_000_000_000_000))],
     );
-    test_case.init_lpp_with_funds(None, 5_000_000_000);
-    test_case.init_timealarms();
-    test_case.init_oracle(None);
+    test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000);
+    test_case.init_timealarms_with_funds(5_000_000);
+    test_case.init_oracle_with_funds(None, 5_000_000);
     test_case.init_treasury();
     test_case.init_profit(24);
     test_case.init_leaser();
@@ -50,7 +52,7 @@ fn internal_test_integration_setup_test() {
                 &oracle::msg::ExecuteMsg::RegisterFeeder {
                     feeder_address: ADMIN.into(),
                 },
-                vec![to_cosmwasm(create_coin(10000))],
+                vec![to_cosmwasm(create_coin(1000))],
             )
             .unwrap()
             .into(),
@@ -69,7 +71,7 @@ fn internal_test_integration_setup_test() {
                     )
                     .unwrap()],
                 },
-                vec![to_cosmwasm(create_coin(10000))],
+                vec![to_cosmwasm(create_coin(1000))],
             )
             .unwrap()
             .into(),
@@ -81,7 +83,7 @@ fn open_lease(test_case: &mut TestCase, value: TheCoin) -> Addr {
     test_case
         .app
         .execute_contract(
-            Addr::unchecked(USER),
+            Addr::unchecked(ADMIN),
             test_case.leaser_addr.clone().unwrap(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: DENOM.to_string(),
@@ -100,7 +102,7 @@ fn get_lease_address(test_case: &TestCase) -> Addr {
         .query_wasm_smart(
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Leases {
-                owner: Addr::unchecked(USER),
+                owner: Addr::unchecked(ADMIN),
             },
         )
         .unwrap();
@@ -134,7 +136,12 @@ fn integration_with_timealarms() {
         LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::GRACE_PERIOD + LeaserWrapper::GRACE_PERIOD,
     );
 
-    test_case
+    test_case.send_funds(
+        &test_case.profit_addr.clone().unwrap(),
+        coins(500, NATIVE_DENOM),
+    );
+
+    let resp = test_case
         .app
         .execute(
             Addr::unchecked(ADMIN),
@@ -151,5 +158,7 @@ fn integration_with_timealarms() {
             .unwrap()
             .into(),
         )
-        .expect("Oracle not properly connected!");
+        .unwrap();
+
+    resp.assert_event(&Event::new("wasm").add_attribute("alarm", "success"))
 }

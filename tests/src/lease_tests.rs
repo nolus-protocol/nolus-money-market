@@ -389,7 +389,7 @@ fn liquidation_time_alarm(time_pass: Duration) {
         .execute_contract(
             test_case.timealarms.unwrap(),
             lease_address,
-            &lease::msg::ExecuteMsg::TimeAlarm(),
+            &lease::msg::ExecuteMsg::TimeAlarm(test_case.app.block_info().time),
             &[to_cosmwasm(create_coin(10000))],
         )
         .unwrap();

@@ -13,7 +13,7 @@ pub struct InstantiateMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Config { cadence_hours: u16 },
-    TimeAlarm { time: Timestamp },
+    TimeAlarm(Timestamp),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

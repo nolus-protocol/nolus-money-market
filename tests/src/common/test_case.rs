@@ -58,7 +58,7 @@ pub struct TestCase {
 
 impl TestCase {
     pub fn new(denom: &str) -> Self {
-        Self::with_reserve(denom, 10_000)
+        Self::with_reserve(denom, 100_000)
     }
 
     pub fn with_reserve(denom: &str, reserve: Amount) -> Self {
