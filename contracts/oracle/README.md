@@ -101,13 +101,13 @@ nolusd query wasm contract-state smart $CONTRACT "$DENOM_PAIRS_QUERY" --output j
 * update supported currency paths
 ```
 CURRENCY_PATHS_UPDATE='{"currency_paths":[["A","B"],["C","D","B"],["E","F","G","B"]]}'
-nolusd tx wasm execute $CONTRACT "$CURRENCY_PATHS_UPDATE" --amount 100unls --from wallet $TXFLAG -y
+nolusd tx wasm execute $CONTRACT "$CURRENCY_PATHS_UPDATE" --amount 100unls --from wasm_admin $TXFLAG -y
 ```
 
 * Push new price feed
 ```
 FEED_PRICES='{"feed_prices":{"prices":[{"amount":{"amount": "10", "symbol": "unls"}, "amount_quote":{"amount": "100", "symbol": "uusdc"}}]}}'
-nolusd tx wasm execute $CONTRACT "$FEED_PRICES" --amount 100unls --from wallet $TXFLAG -y --fees 600unls
+nolusd tx wasm execute $CONTRACT "$FEED_PRICES" --amount 100unls --from wasm_admin $TXFLAG -y --fees 600unls
 ```
 
 * Query price feeds. Returns price against the base asset (taken from contract configuration)
