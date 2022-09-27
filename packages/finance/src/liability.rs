@@ -2,7 +2,6 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    broken_invariant,
     duration::Duration,
     error::{Error, Result},
     fractionable::Percentable,
@@ -126,41 +125,48 @@ impl Liability {
 
     pub fn invariant_held(&self) -> Result<()> {
         // TODO restrict further the accepted percents to 100 since there is no much sense of having no borrow
-        broken_invariant!(
+        Self::broken_invariant(
             self.init_percent > Percent::ZERO,
-            "Initial % should not be zero"
+            "Initial % should not be zero",
         )?;
 
-        broken_invariant!(
+        Self::broken_invariant(
             self.healthy_percent >= self.init_percent,
-            "Healthy % should be >= initial %"
+            "Healthy % should be >= initial %",
         )?;
 
-        broken_invariant!(
+        Self::broken_invariant(
             self.first_liq_warn > self.healthy_percent,
-            "First liquidation % should be > healthy %"
+            "First liquidation % should be > healthy %",
         )?;
-        broken_invariant!(
+        Self::broken_invariant(
             self.second_liq_warn > self.first_liq_warn,
-            "Second liquidation % should be > first liquidation %"
+            "Second liquidation % should be > first liquidation %",
         )?;
-        broken_invariant!(
+        Self::broken_invariant(
             self.third_liq_warn > self.second_liq_warn,
-            "Third liquidation % should be > second liquidation %"
+            "Third liquidation % should be > second liquidation %",
         )?;
-        broken_invariant!(
+        Self::broken_invariant(
             self.max_percent > self.third_liq_warn,
-            "Max % should be > third liquidation %"
+            "Max % should be > third liquidation %",
         )?;
-        broken_invariant!(
+        Self::broken_invariant(
             self.max_percent <= Percent::HUNDRED,
-            "Max % should be <= 100%"
+            "Max % should be <= 100%",
         )?;
-        broken_invariant!(
+        Self::broken_invariant(
             self.recalc_time >= Duration::HOUR,
-            "Recalculate cadence in seconds should be >= 1h"
+            "Recalculate cadence in seconds should be >= 1h",
         )?;
 
+        Ok(())
+    }
+
+    fn broken_invariant(check: bool, msg: &str) -> Result<()> {
+        if !check {
+            return Err(Error::broken_invariant_err::<Liability>(msg));
+        }
         Ok(())
     }
 
