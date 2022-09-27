@@ -1,4 +1,5 @@
 use cosmwasm_std::{Deps, DepsMut, MessageInfo, Response};
+
 use finance::{duration::Duration, percent::Percent};
 
 use crate::{msg::ConfigResponse, state::Config, ContractError};
@@ -35,6 +36,7 @@ mod tests {
         coins, from_binary,
         testing::{mock_env, mock_info},
     };
+
     use currency::{lpn::Usdc, native::Nls, test::TestCurrencyA};
     use finance::{currency::Currency, duration::Duration, percent::Percent};
 

@@ -94,16 +94,14 @@ where
 
 #[cfg(test)]
 mod test {
-
     use cosmwasm_std::Coin as CosmWasmCoin;
 
-    use crate::coin_legacy::from_cosmwasm_impl;
     use finance::{
         currency::Currency,
         test::currency::{Nls, Usdc},
     };
 
-    use crate::error::Error;
+    use crate::{coin_legacy::from_cosmwasm_impl, error::Error};
 
     use super::{to_cosmwasm_impl, Coin};
 

@@ -1,12 +1,12 @@
+use finance::currency::{AnyVisitor, Currency, Group, Member, Symbol};
+
+#[cfg(feature = "testing")]
+use crate::test::{TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD};
 use crate::{
     lease::{Atom, Osmo},
     lpn::Usdc,
     native::Nls,
 };
-use finance::currency::{AnyVisitor, Currency, Group, Member, Symbol};
-
-#[cfg(feature = "testing")]
-use crate::test::{TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD};
 
 impl Member<PaymentGroup> for Usdc {}
 impl Member<PaymentGroup> for Osmo {}

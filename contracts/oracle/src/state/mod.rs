@@ -1,7 +1,8 @@
 use cosmwasm_std::Addr;
-use finance::{currency::SymbolOwned, duration::Duration, percent::Percent};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use finance::{currency::SymbolOwned, duration::Duration, percent::Percent};
 
 pub mod config;
 pub mod supported_pairs;

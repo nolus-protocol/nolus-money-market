@@ -1,8 +1,11 @@
-use super::Config;
-use crate::ContractError;
 use cosmwasm_std::{Addr, StdResult, Storage};
 use cw_storage_plus::Item;
+
 use finance::{duration::Duration, percent::Percent};
+
+use crate::ContractError;
+
+use super::Config;
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
