@@ -37,7 +37,7 @@ add_wasm_messages() {
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "timealarms" "$((++id))" "$admin_addr" "" "" "$timealarms_init_msg"
   _export_to_file  "timealarms" "$TIMEALARMS_ADDRESS" "$contracts_info_file"
 
-  local -r oracle_init_msg='{"base_asset":"'$lpp_native'","price_feed_period_secs":60,"feeders_percentage_needed":50,"supported_denom_pairs":[["OSMO","'$lpp_native'"],["LUNA","OSMO"],["IRIS","OSMO"]], "timealarms_addr":"'$TIMEALARMS_ADDRESS'"}'
+  local -r oracle_init_msg='{"base_asset":"'$lpp_native'","price_feed_period_secs":60,"feeders_percentage_needed":50,"currency_paths":[["OSMO","'$lpp_native'"],["LUNA","OSMO","'$lpp_native'"],["IRIS","OSMO","'$lpp_native'"]], "timealarms_addr":"'$TIMEALARMS_ADDRESS'"}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "oracle" "$((++id))" "$admin_addr" "" "" "$oracle_init_msg"
   _export_to_file  "oracle" "$ORACLE_ADDRESS" "$contracts_info_file"
 

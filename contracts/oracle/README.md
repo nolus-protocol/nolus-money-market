@@ -3,11 +3,23 @@
 
 ### Instantiate contract
 
+* Send some money to wasm_admin account
+```
+nolusd tx bank send $(nolusd keys show -a reserve) $(nolusd keys show -a wasm_admin) 1000000unls --chain-id nolus-local --keyring-backend test --fees 500unls
+```
+* Set some environment variables
+```
+export CHAIN_ID="nolus-local"
+export TXFLAG="--chain-id ${CHAIN_ID} --gas auto --gas-adjustment 1.3 --fees 15000unls"
+```
+
 * instantiate contract and verify
 ```
-INIT='{"base_asset":"B","price_feed_period":60,"feeders_percentage_needed":50,"supported_denom_pairs":[["A","B"],["A","C"],["C","D"]]}'
-nolusd tx wasm instantiate $CODE_ID "$INIT" --from wallet --label "awesome oracle" $TXFLAG -y
+INIT='{"base_asset":"B","price_feed_period":60,"feeders_percentage_needed":50,"currency_paths":[["A","B"],["C","D","B"],["E","F","G","B"]]}'
+nolusd tx wasm instantiate $CODE_ID "$INIT" --from wasm_admin --label "awesome oracle" $TXFLAG -y
 ```
+currency_paths - is a list of resolution paths. For example: the way to resolve the price of C, first we need to get the price of C against D, then the price of D against B, where B is the base asset for the contract. Every resolution path should end with the base asset
+
 
 * check the contract state (and account balance)
 ```
@@ -18,7 +30,7 @@ echo $CONTRACT
 
 ### Execute and Query
 
-* we should see this contract with 0unolus
+* we should see this contract with 0unls
 ```
 nolusd query wasm contract $CONTRACT
 nolusd query bank balances $CONTRACT
@@ -58,14 +70,20 @@ nolusd query wasm contract-state smart $CONTRACT "$CONFIG_QUERY" --output json
 * update oracle configuration
 ```
 CONFIG_UPDATE='{"config" : {"price_feed_period":120,"feeders_percentage_needed":20}}'
-nolusd tx wasm execute $CONTRACT "$CONFIG_UPDATE" --amount 100unolus --from wallet $TXFLAG -y
+nolusd tx wasm execute $CONTRACT "$CONFIG_UPDATE" --amount 100unls --from wasm_admin $TXFLAG -y
 ```
 
-* register feeder address. Will use the treasury address just for the test
+* register feeder address. Only the contract owner should be able to register new feeder address. All contracts are deployed from wasm_admin
 ```
 WALLET_ADDR=$(nolusd keys show -a wallet)
 REGISTER='{"register_feeder":{"feeder_address":"'$WALLET_ADDR'"}}'
-nolusd tx wasm execute $CONTRACT "$REGISTER" --amount 100unolus --from wallet $TXFLAG -y
+nolusd tx wasm execute $CONTRACT "$REGISTER" --amount 100unls --from wasm_admin $TXFLAG -y
+```
+
+* remove registered feeders. Only contract owner
+```
+REMOVE='{"remove_feeder":{"feeder_address":"'$WALLET_ADDR'"}}'
+nolusd tx wasm execute $CONTRACT "$REMOVE" --amount 100unls --from wasm_admin $TXFLAG -y
 ```
 
 * query registered feeders
@@ -80,20 +98,25 @@ DENOM_PAIRS_QUERY='{"supported_denom_pairs" : {}}'
 nolusd query wasm contract-state smart $CONTRACT "$DENOM_PAIRS_QUERY" --output json
 ```
 
-* update supported denom pairs
+* update supported currency paths
 ```
-DENOM_PAIRS_UPDATE='{"supported_denom_pairs" : {"pairs": [["B","D"],["X","Y"],["C","D"]]}}'
-nolusd tx wasm execute $CONTRACT "$DENOM_PAIRS_UPDATE" --amount 100unolus --from wallet $TXFLAG -y
+CURRENCY_PATHS_UPDATE='{"currency_paths":[["A","B"],["C","D","B"],["E","F","G","B"]]}'
+nolusd tx wasm execute $CONTRACT "$CURRENCY_PATHS_UPDATE" --amount 100unls --from wallet $TXFLAG -y
 ```
 
 * Push new price feed
 ```
-FEED_PRICES='{"feed_prices":{"prices":[{"base":"A","values":[{"denom": "B", "amount": "1.2"},{"denom": "C", "amount": "2.1"}]},{"base":"C","values":[{"denom": "D", "amount": "3.2"}]}]}}'
-nolusd tx wasm execute $CONTRACT "$FEED_PRICES" --amount 100unolus --from wallet $TXFLAG -y
+FEED_PRICES='{"feed_prices":{"prices":[{"amount":{"amount": "10", "symbol": "unls"}, "amount_quote":{"amount": "100", "symbol": "uusdc"}}]}}'
+nolusd tx wasm execute $CONTRACT "$FEED_PRICES" --amount 100unls --from wallet $TXFLAG -y --fees 600unls
 ```
 
 * Query price feeds. Returns price against the base asset (taken from contract configuration)
 ```
-PRICE='{"price_for":{"denoms": ["A"]}}'
+PRICE='{"price":{"currency": "OSMO"}}'
 nolusd query wasm contract-state smart  $CONTRACT "$PRICE" --output json
+```
+* Query price feeds. Returns price for multiple denoms against the base asset (taken from contract configuration)
+```
+PRICES='{"prices":{"currencies": ["OSMO","ATOM"]}}'
+nolusd query wasm contract-state smart  $CONTRACT "$PRICES" --output json
 ```
