@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{AnyVisitor, Currency, Group, Member, Symbol, SymbolStatic};
+use finance::{
+    currency::{AnyVisitor, Currency, Group, Member, Symbol, SymbolStatic},
+    error::Error,
+};
 
 use crate::lease::Atom;
 
@@ -16,14 +19,17 @@ impl Member<Lpns> for Atom {}
 
 pub struct Lpns {}
 impl Group for Lpns {
+    type ResolveError = Error;
+
     fn resolve<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
     where
         V: AnyVisitor<Self>,
+        Self::ResolveError: Into<V::Error>,
     {
         match symbol {
             Usdc::SYMBOL => visitor.on::<Usdc>(),
             Atom::SYMBOL => visitor.on::<Atom>(),
-            _ => visitor.on_unknown(),
+            _ => Err(Error::NotInCurrencyGroup(symbol.into()).into()),
         }
     }
 }

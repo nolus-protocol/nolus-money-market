@@ -4,7 +4,7 @@ use cosmwasm_std::{Addr, QuerierWrapper};
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::lease::LeaseGroup;
-use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
+use finance::currency::{visit_any, AnyVisitor, Currency};
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
 use platform::bank::FixedAddressSenderBuilder;
@@ -21,10 +21,7 @@ pub struct Factory<'r, Cmd, SenderBuilder> {
     querier: &'r QuerierWrapper<'r>,
 }
 
-impl<'r, Cmd, SenderBuilder> Factory<'r, Cmd, SenderBuilder>
-where
-    SenderBuilder: FixedAddressSenderBuilder,
-{
+impl<'r, Cmd, SenderBuilder> Factory<'r, Cmd, SenderBuilder> {
     pub fn new(
         cmd: Cmd,
         lease_dto: LeaseDTO,
@@ -45,6 +42,10 @@ where
 impl<'r, Cmd, SenderBuilder> WithLppLender for Factory<'r, Cmd, SenderBuilder>
 where
     Cmd: WithLease,
+    finance::error::Error: Into<Cmd::Error>,
+    time_alarms::error::ContractError: Into<Cmd::Error>,
+    market_price_oracle::error::ContractError: Into<Cmd::Error>,
+    profit::error::ContractError: Into<Cmd::Error>,
     SenderBuilder: FixedAddressSenderBuilder,
 {
     type Output = Cmd::Output;
@@ -68,10 +69,6 @@ where
             querier: self.querier,
         })
     }
-
-    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
-        self.cmd.unknown_lpn(symbol)
-    }
 }
 
 struct FactoryStage2<'r, Cmd, Lpn, Lpp, SenderBuilder> {
@@ -88,6 +85,9 @@ impl<'r, Cmd, Lpn, Lpp, SenderBuilder> WithTimeAlarms
     for FactoryStage2<'r, Cmd, Lpn, Lpp, SenderBuilder>
 where
     Cmd: WithLease,
+    finance::error::Error: Into<Cmd::Error>,
+    market_price_oracle::error::ContractError: Into<Cmd::Error>,
+    profit::error::ContractError: Into<Cmd::Error>,
     Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
     SenderBuilder: FixedAddressSenderBuilder,
@@ -131,6 +131,8 @@ impl<'r, Cmd, Lpn, Lpp, SenderBuilder, TimeAlarms> WithOracle<Lpn>
     for FactoryStage3<'r, Cmd, Lpn, Lpp, SenderBuilder, TimeAlarms>
 where
     Cmd: WithLease,
+    finance::error::Error: Into<Cmd::Error>,
+    profit::error::ContractError: Into<Cmd::Error>,
     Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
     SenderBuilder: FixedAddressSenderBuilder,
@@ -158,10 +160,6 @@ where
             },
         )
     }
-
-    fn unexpected_base(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
-        self.cmd.unknown_lpn(symbol)
-    }
 }
 
 struct FactoryStage4<'r, Cmd, Lpn, Lpp, TimeAlarms, Oracle> {
@@ -178,6 +176,7 @@ impl<'r, Cmd, Lpn, Lpp, TimeAlarms, Oracle> WithProfit
     for FactoryStage4<'r, Cmd, Lpn, Lpp, TimeAlarms, Oracle>
 where
     Cmd: WithLease,
+    finance::error::Error: Into<Cmd::Error>,
     Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
     TimeAlarms: TimeAlarmsTrait,
@@ -242,9 +241,5 @@ where
             self.oracle,
             self.profit,
         ))
-    }
-
-    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-        self.cmd.unknown_lpn(self.lease_dto.currency)
     }
 }

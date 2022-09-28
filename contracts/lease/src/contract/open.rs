@@ -1,7 +1,7 @@
 use cosmwasm_std::{Coin as CwCoin, Env, Reply};
 use serde::Serialize;
 
-use finance::currency::{Currency, SymbolOwned};
+use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{
@@ -53,10 +53,6 @@ impl WithLease for OpenLoanReq {
             batch: lease.open_loan_req(downpayment_lpn)?,
             downpayment: DownpaymentDTO::new(downpayment.into()),
         })
-    }
-
-    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
-        Err(ContractError::UnknownCurrency { symbol })
     }
 }
 
@@ -123,9 +119,5 @@ where
             .emit_coin("loan", result.receipt.borrowed)
             .emit("downpayment-symbol", self.downpayment.symbol())
             .emit_to_string_value("downpayment-amount", self.downpayment.amount()))
-    }
-
-    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
-        Err(ContractError::UnknownCurrency { symbol })
     }
 }

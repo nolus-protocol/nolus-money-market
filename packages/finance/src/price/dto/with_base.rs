@@ -11,7 +11,6 @@ use super::{PriceDTO, WithBase};
 struct QuoteCVisitor<C, Cmd>
 where
     C: Currency + Serialize + DeserializeOwned,
-    Cmd: WithBase<C>,
 {
     base: Coin<C>,
     quote_dto: CoinDTO,
@@ -36,10 +35,6 @@ where
             Coin::<QuoteC>::try_from(self.quote_dto).expect("Got different currency in visitor!"),
         ))
     }
-
-    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-        self.cmd.unknown()
-    }
 }
 
 pub fn execute<G, Cmd, C>(price: PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
@@ -47,6 +42,7 @@ where
     G: Group,
     Cmd: WithBase<C>,
     C: Currency + Serialize + DeserializeOwned,
+    G::ResolveError: Into<Cmd::Error>,
 {
     visit_any::<G, _>(
         &price.amount_quote.symbol().clone(),

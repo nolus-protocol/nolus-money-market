@@ -1,7 +1,7 @@
 use cosmwasm_std::{to_binary, Binary, Timestamp};
 use serde::Serialize;
 
-use finance::currency::{Currency, SymbolOwned};
+use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::bank::BankAccount;
@@ -46,9 +46,5 @@ where
     {
         let resp = lease.state(self.now, &self.account)?;
         to_binary(&resp).map_err(ContractError::from)
-    }
-
-    fn unknown_lpn(self, symbol: SymbolOwned) -> Result<Self::Output, Self::Error> {
-        Err(ContractError::UnknownCurrency { symbol })
     }
 }
