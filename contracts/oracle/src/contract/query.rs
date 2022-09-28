@@ -38,15 +38,15 @@ impl<'a> AnyVisitor<PaymentGroup> for QueryWithOracleBase<'a> {
     where
         OracleBase: 'static + Currency + DeserializeOwned + Serialize,
     {
-        let config = Config::load(self.deps.storage)?;
-        let parameters = Feeders::query_config(self.deps.storage, &config, self.env.block.time)?;
-
         let res = match self.msg {
             QueryMsg::SupportedDenomPairs {} => Ok(to_binary(
                 &SupportedPairs::<OracleBase>::load(self.deps.storage)?.query_supported_pairs(),
             )?),
 
             QueryMsg::Price { currency } => {
+                let config = Config::load(self.deps.storage)?;
+                let parameters =
+                    Feeders::query_config(self.deps.storage, &config, self.env.block.time)?;
                 match Feeds::<OracleBase>::with(config)
                     .get_prices(self.deps.storage, parameters, HashSet::from([currency]))?
                     .first()
@@ -55,13 +55,18 @@ impl<'a> AnyVisitor<PaymentGroup> for QueryWithOracleBase<'a> {
                     None => Err(ContractError::PriceFeedsError(PriceFeedsError::NoPrice())),
                 }
             }
-            QueryMsg::Prices { currencies } => Ok(to_binary(&PricesResponse {
-                prices: Feeds::<OracleBase>::with(config).get_prices(
-                    self.deps.storage,
-                    parameters,
-                    currencies,
-                )?,
-            })?),
+            QueryMsg::Prices { currencies } => {
+                let config = Config::load(self.deps.storage)?;
+                let parameters =
+                    Feeders::query_config(self.deps.storage, &config, self.env.block.time)?;
+                Ok(to_binary(&PricesResponse {
+                    prices: Feeds::<OracleBase>::with(config).get_prices(
+                        self.deps.storage,
+                        parameters,
+                        currencies,
+                    )?,
+                })?)
+            }
             _ => {
                 unreachable!()
             } // should be done already
