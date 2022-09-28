@@ -1,5 +1,6 @@
 stages:
   - prepare
+  - check
   - test
   - build
 
@@ -29,6 +30,13 @@ prepare_node:
     - echo 'y' | apt install jq
     - mkdir -p $CARGO_HOME
     - rustc --version && cargo --version
+
+check_wasm:cargo:
+  stage: check
+  script:
+    - cargo install cosmwasm-check
+    - cargo workspaces exec --no-bail cargo wasm
+    - $CARGO_HOME/bin/cosmwasm-check ./target/wasm32-unknown-unknown/debug/*.wasm
 
 schema:cargo:
   stage: test
