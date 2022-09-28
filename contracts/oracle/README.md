@@ -100,7 +100,7 @@ nolusd query wasm contract-state smart $CONTRACT "$DENOM_PAIRS_QUERY" --output j
 
 * update supported currency paths
 ```
-CURRENCY_PATHS_UPDATE='{"currency_paths":[["A","B"],["C","D","B"],["E","F","G","B"]]}'
+CURRENCY_PATHS_UPDATE='{"currency_paths": {"paths": [["A","B"],["C","D","B"],["E","F","G","B"]]}}'
 nolusd tx wasm execute $CONTRACT "$CURRENCY_PATHS_UPDATE" --amount 100unls --from wasm_admin $TXFLAG -y
 ```
 
