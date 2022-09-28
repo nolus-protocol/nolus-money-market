@@ -42,6 +42,7 @@ pub trait CoinVisitor {
 }
 
 struct CoinTransformer<'a>(&'a CosmWasmCoin);
+
 impl<'a, C> SingleVisitor<C> for CoinTransformer<'a>
 where
     C: Currency,
@@ -53,16 +54,10 @@ where
     fn on(self) -> Result<Self::Output> {
         Ok(from_cosmwasm_internal(self.0))
     }
-
-    fn on_unknown(self) -> Result<Self::Output> {
-        Err(Error::UnexpectedCurrency(
-            self.0.denom.clone(),
-            C::SYMBOL.into(),
-        ))
-    }
 }
 
 struct CoinTransformerAny<'a, V>(&'a CosmWasmCoin, V);
+
 impl<'a, G, V> AnyVisitor<G> for CoinTransformerAny<'a, V>
 where
     G: Group,
@@ -76,11 +71,8 @@ where
         C: Currency,
     {
         let coin = Coin::new(self.0.amount.into());
-        self.1.on::<C>(coin)
-    }
 
-    fn on_unknown(self) -> StdResult<Self::Output, Self::Error> {
-        self.1.on_unknown()
+        self.1.on::<C>(coin)
     }
 }
 
@@ -121,20 +113,23 @@ mod test {
     #[test]
     fn from_cosmwasm_unexpected() {
         let c1 = from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Usdc::SYMBOL));
+
         assert_eq!(
-            Err(Error::UnexpectedCurrency(
+            c1,
+            Err(Error::Finance(finance::error::Error::UnexpectedCurrency(
                 Usdc::SYMBOL.into(),
                 Nls::SYMBOL.into()
-            )),
-            c1
+            ))),
         );
+
         let c2 = from_cosmwasm_impl::<Usdc>(CosmWasmCoin::new(12, Nls::SYMBOL));
+
         assert_eq!(
-            Err(Error::UnexpectedCurrency(
+            c2,
+            Err(Error::Finance(finance::error::Error::UnexpectedCurrency(
                 Nls::SYMBOL.into(),
                 Usdc::SYMBOL.into(),
-            )),
-            c2
+            ))),
         );
     }
 

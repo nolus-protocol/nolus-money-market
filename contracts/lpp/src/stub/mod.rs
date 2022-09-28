@@ -30,8 +30,6 @@ pub trait WithLpp {
     where
         L: Lpp<C>,
         C: Currency + Serialize;
-
-    fn unknown_lpn(self, symbol: SymbolOwned) -> StdResult<Self::Output, Self::Error>;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -54,35 +52,29 @@ impl LppRef {
         &self.addr
     }
 
-    pub fn execute<V, O, E>(self, cmd: V, querier: &QuerierWrapper) -> StdResult<O, E>
+    pub fn execute<V>(self, cmd: V, querier: &QuerierWrapper) -> StdResult<V::Output, V::Error>
     where
-        V: WithLpp<Output = O, Error = E>,
+        V: WithLpp,
+        finance::error::Error: Into<V::Error>,
     {
-        struct CurrencyVisitor<'a, V, O, E>
-        where
-            V: WithLpp<Output = O, Error = E>,
-        {
+        struct CurrencyVisitor<'a, V> {
             cmd: V,
             lpp_ref: LppRef,
             querier: &'a QuerierWrapper<'a>,
         }
 
-        impl<'a, V, O, E> AnyVisitor<Lpns> for CurrencyVisitor<'a, V, O, E>
+        impl<'a, V> AnyVisitor<Lpns> for CurrencyVisitor<'a, V>
         where
-            V: WithLpp<Output = O, Error = E>,
+            V: WithLpp,
         {
-            type Output = O;
-            type Error = E;
+            type Output = V::Output;
+            type Error = V::Error;
 
             fn on<C>(self) -> StdResult<Self::Output, Self::Error>
             where
                 C: Currency + Serialize + DeserializeOwned,
             {
                 self.cmd.exec(self.lpp_ref.into_stub::<C>(self.querier))
-            }
-
-            fn on_unknown(self) -> StdResult<Self::Output, Self::Error> {
-                self.cmd.unknown_lpn(self.lpp_ref.currency)
             }
         }
 

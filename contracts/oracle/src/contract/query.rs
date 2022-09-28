@@ -73,7 +73,4 @@ impl<'a> AnyVisitor<PaymentGroup> for QueryWithOracleBase<'a> {
         }?;
         Ok(res)
     }
-    fn on_unknown(self) -> Result<Self::Output, Self::Error> {
-        Err(ContractError::UnknownCurrency {})
-    }
 }

@@ -49,8 +49,6 @@ pub trait WithLppLender {
     where
         L: LppLender<C>,
         C: Currency + Serialize;
-
-    fn unknown_lpn(self, symbol: SymbolOwned) -> StdResult<Self::Output, Self::Error>;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -89,11 +87,9 @@ impl LppLenderRef {
     ) -> StdResult<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLppLender,
+        finance::error::Error: Into<Cmd::Error>,
     {
-        struct CurrencyVisitor<'a, Cmd>
-        where
-            Cmd: WithLppLender,
-        {
+        struct CurrencyVisitor<'a, Cmd> {
             cmd: Cmd,
             lpp_ref: LppLenderRef,
             querier: &'a QuerierWrapper<'a>,
@@ -111,10 +107,6 @@ impl LppLenderRef {
                 C: Currency + Serialize + DeserializeOwned,
             {
                 self.cmd.exec(self.lpp_ref.into_stub::<C>(self.querier))
-            }
-
-            fn on_unknown(self) -> StdResult<Self::Output, Self::Error> {
-                self.cmd.unknown_lpn(self.lpp_ref.currency)
             }
         }
 

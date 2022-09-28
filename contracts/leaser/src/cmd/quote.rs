@@ -43,13 +43,6 @@ impl WithLppLender for Quote {
             annual_interest_rate_margin: self.lease_interest_rate_margin,
         })
     }
-
-    fn unknown_lpn(
-        self,
-        symbol: finance::currency::SymbolOwned,
-    ) -> Result<Self::Output, Self::Error> {
-        Err(ContractError::UnknownCurrency { symbol })
-    }
 }
 
 impl Quote {

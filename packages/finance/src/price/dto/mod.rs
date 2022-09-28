@@ -80,8 +80,6 @@ pub trait WithPrice {
     where
         C: 'static + Currency + DeserializeOwned + Serialize,
         QuoteC: 'static + Currency + DeserializeOwned + Serialize;
-
-    fn unknown(self) -> Result<Self::Output, Self::Error>;
 }
 
 pub trait WithBase<C>
@@ -94,6 +92,4 @@ where
     fn exec<QuoteC>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
         QuoteC: Currency;
-
-    fn unknown(self) -> Result<Self::Output, Self::Error>;
 }

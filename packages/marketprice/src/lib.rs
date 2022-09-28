@@ -42,10 +42,6 @@ impl WithPrice for Multiply {
     {
         execute::<PaymentGroup, Multiplier<C, QuoteC>, QuoteC>(self.p2, Multiplier::new(p1))
     }
-
-    fn unknown(self) -> Result<Self::Output, Self::Error> {
-        Err(PriceFeedsError::UnknownCurrency {})
-    }
 }
 
 pub struct Multiplier<C1, QuoteC1>
@@ -80,9 +76,5 @@ where
         QuoteC2: Currency,
     {
         Ok(PriceDTO::try_from(self.p1.lossy_mul(p2))?)
-    }
-
-    fn unknown(self) -> Result<Self::Output, Self::Error> {
-        Err(PriceFeedsError::UnknownCurrency {})
     }
 }
