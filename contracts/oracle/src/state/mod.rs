@@ -12,6 +12,6 @@ pub struct Config {
     pub base_asset: SymbolOwned,
     pub owner: Addr,
     pub price_feed_period: Duration,
-    pub feeders_percentage_needed: Percent,
+    pub expected_feeders: Percent,
     pub timealarms_contract: Addr,
 }

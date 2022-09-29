@@ -32,14 +32,14 @@ pub(crate) const CREATOR: &str = "creator";
 pub(crate) fn dummy_instantiate_msg(
     base_asset: SymbolOwned,
     price_feed_period_secs: u32,
-    feeders_percentage_needed: Percent,
+    expected_feeders: Percent,
     currency_paths: Vec<ResolutionPath>,
     alarms_addr: String,
 ) -> InstantiateMsg {
     InstantiateMsg {
         base_asset,
         price_feed_period_secs,
-        feeders_percentage_needed,
+        expected_feeders,
         currency_paths,
         timealarms_addr: alarms_addr,
     }

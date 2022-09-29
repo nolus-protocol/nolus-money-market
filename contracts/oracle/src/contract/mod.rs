@@ -69,7 +69,7 @@ impl<'a> AnyVisitor<PaymentGroup> for InstantiateWithCurrency<'a> {
             C::SYMBOL.to_string(),
             self.owner,
             Duration::from_secs(self.msg.price_feed_period_secs),
-            self.msg.feeders_percentage_needed,
+            self.msg.expected_feeders,
             self.deps.api.addr_validate(&self.msg.timealarms_addr)?,
         )
         .store(self.deps.storage)?;
@@ -116,13 +116,8 @@ pub fn execute(
     match msg {
         ExecuteMsg::Config {
             price_feed_period_secs,
-            feeders_percentage_needed,
-        } => try_configure(
-            deps,
-            info,
-            price_feed_period_secs,
-            feeders_percentage_needed,
-        ),
+            expected_feeders,
+        } => try_configure(deps, info, price_feed_period_secs, expected_feeders),
         ExecuteMsg::RegisterFeeder { feeder_address } => {
             Feeders::try_register(deps, info, feeder_address)
         }
@@ -192,7 +187,7 @@ mod tests {
         assert_eq!(CREATOR.to_string(), value.owner.to_string());
         assert_eq!(Usdc::SYMBOL.to_string(), value.base_asset);
         assert_eq!(Duration::from_secs(60), value.price_feed_period);
-        assert_eq!(Percent::from_percent(50), value.feeders_percentage_needed);
+        assert_eq!(Percent::from_percent(50), value.expected_feeders);
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::SupportedDenomPairs {}).unwrap();
         let value: Vec<CurrencyPair> = from_binary(&res).unwrap();

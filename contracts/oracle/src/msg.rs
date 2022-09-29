@@ -13,7 +13,7 @@ use crate::state::supported_pairs::ResolutionPath;
 pub struct InstantiateMsg {
     pub base_asset: String,
     pub price_feed_period_secs: u32,
-    pub feeders_percentage_needed: Percent,
+    pub expected_feeders: Percent,
     pub currency_paths: Vec<ResolutionPath>,
     pub timealarms_addr: String,
 }
@@ -32,7 +32,7 @@ pub enum ExecuteMsg {
     },
     Config {
         price_feed_period_secs: u32,
-        feeders_percentage_needed: Percent,
+        expected_feeders: Percent,
     },
     CurrencyPaths {
         paths: Vec<ResolutionPath>,
@@ -64,7 +64,7 @@ pub enum QueryMsg {
 pub struct ConfigResponse {
     pub base_asset: SymbolOwned,
     pub price_feed_period: Duration,
-    pub feeders_percentage_needed: Percent,
+    pub expected_feeders: Percent,
     pub owner: Addr,
 }
 

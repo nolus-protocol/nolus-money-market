@@ -14,14 +14,14 @@ impl Config {
         denom: String,
         owner: Addr,
         price_feed_period: Duration,
-        feeders_percentage_needed: Percent,
+        expected_feeders: Percent,
         timealarms_contract: Addr,
     ) -> Self {
         Config {
             base_asset: denom,
             owner,
             price_feed_period,
-            feeders_percentage_needed,
+            expected_feeders,
             timealarms_contract,
         }
     }
@@ -41,7 +41,7 @@ impl Config {
     ) -> Result<(), ContractError> {
         Self::STORAGE.update(storage, |mut c| -> StdResult<_> {
             c.price_feed_period = price_feed_period;
-            c.feeders_percentage_needed = expected_feeders;
+            c.expected_feeders = expected_feeders;
             Ok(c)
         })?;
         Ok(())

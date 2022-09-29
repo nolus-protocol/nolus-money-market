@@ -10,7 +10,7 @@ pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
         base_asset: config.base_asset,
         owner: config.owner,
         price_feed_period: config.price_feed_period,
-        feeders_percentage_needed: config.feeders_percentage_needed,
+        expected_feeders: config.expected_feeders,
     })
 }
 
@@ -18,16 +18,16 @@ pub fn try_configure(
     deps: DepsMut,
     info: MessageInfo,
     price_feed_period: u32,
-    feeders_percentage_needed: Percent,
+    expected_feeders: Percent,
 ) -> Result<Response, ContractError> {
     let config = Config::load(deps.storage)?;
     if info.sender != config.owner {
         return Err(ContractError::Unauthorized {});
     }
 
-    if feeders_percentage_needed == Percent::ZERO || feeders_percentage_needed > Percent::HUNDRED {
+    if expected_feeders == Percent::ZERO || expected_feeders > Percent::HUNDRED {
         return Err(ContractError::Configuration(
-            "Percent of expected available feeders should be > 0 and <= 100".to_string(),
+            "Percent of expected available feeders should be > 0 and <= 1000".to_string(),
         ));
     }
     if price_feed_period == 0 {
@@ -38,7 +38,7 @@ pub fn try_configure(
     Config::update(
         deps.storage,
         Duration::from_secs(price_feed_period),
-        feeders_percentage_needed,
+        expected_feeders,
     )?;
 
     Ok(Response::new())
@@ -77,7 +77,7 @@ mod tests {
         let unauth_info = mock_info("anyone", &coins(2, Nls::SYMBOL));
         let msg = ExecuteMsg::Config {
             price_feed_period_secs: 15,
-            feeders_percentage_needed: Percent::from_percent(12),
+            expected_feeders: Percent::from_percent(12),
         };
         let _res = execute(deps.as_mut(), mock_env(), unauth_info, msg).unwrap();
     }
@@ -95,14 +95,14 @@ mod tests {
 
         let msg = ExecuteMsg::Config {
             price_feed_period_secs: 33,
-            feeders_percentage_needed: Percent::from_percent(44),
+            expected_feeders: Percent::from_percent(44),
         };
         let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         // should now be 12
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
-        assert_eq!(Percent::from_percent(44), value.feeders_percentage_needed);
+        assert_eq!(Percent::from_percent(44), value.expected_feeders);
         assert_eq!(Duration::from_secs(33), value.price_feed_period);
     }
 

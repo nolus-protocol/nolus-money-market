@@ -42,7 +42,7 @@ impl MarketOracleWrapper {
         let msg = InstantiateMsg {
             base_asset: denom.to_string(),
             price_feed_period_secs: 60,
-            feeders_percentage_needed: Percent::from_percent(1),
+            expected_feeders: Percent::from_percent(1),
             currency_paths: vec![vec![NATIVE_DENOM.to_string(), Usdc::SYMBOL.to_string()]],
             timealarms_addr: timealarms_addr.to_string(),
         };
