@@ -48,6 +48,10 @@ impl<'a> AnyVisitor<PaymentGroup> for ExecWithOracleBase<'a> {
     {
         match self.msg {
             ExecuteMsg::CurrencyPaths { paths } => {
+                let config = Config::load(self.deps.storage)?;
+                if self.sender != config.owner {
+                    return Err(ContractError::Unauthorized {});
+                }
                 SupportedPairs::<OracleBase>::new(paths)?.save(self.deps.storage)?;
                 Ok(Response::default())
             }

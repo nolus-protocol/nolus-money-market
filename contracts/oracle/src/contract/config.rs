@@ -17,14 +17,28 @@ pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
 pub fn try_configure(
     deps: DepsMut,
     info: MessageInfo,
-    price_feed_period: Duration,
+    price_feed_period: u32,
     feeders_percentage_needed: Percent,
 ) -> Result<Response, ContractError> {
+    let config = Config::load(deps.storage)?;
+    if info.sender != config.owner {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    if feeders_percentage_needed == Percent::ZERO || feeders_percentage_needed > Percent::HUNDRED {
+        return Err(ContractError::Configuration(
+            "Percent of expected available feeders should be > 0 and <= 100".to_string(),
+        ));
+    }
+    if price_feed_period == 0 {
+        return Err(ContractError::Configuration(
+            "Price feed period can not be 0".to_string(),
+        ));
+    }
     Config::update(
         deps.storage,
-        price_feed_period,
+        Duration::from_secs(price_feed_period),
         feeders_percentage_needed,
-        info.sender,
     )?;
 
     Ok(Response::new())

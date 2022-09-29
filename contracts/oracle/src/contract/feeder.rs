@@ -46,12 +46,16 @@ impl Feeders {
         info: MessageInfo,
         address: String,
     ) -> Result<Response, ContractError> {
+        let f_address = deps.api.addr_validate(&address)?;
+        if !Self::is_feeder(deps.storage, &f_address)? {
+            return Err(ContractError::UnknownFeeder {});
+        }
+
         let config = Config::load(deps.storage)?;
         if info.sender != config.owner {
             return Err(ContractError::Unauthorized {});
         }
 
-        let f_address = deps.api.addr_validate(&address)?;
         Self::FEEDERS.remove(deps, f_address)?;
         Ok(Response::default())
     }

@@ -56,6 +56,9 @@ pub enum ContractError {
     #[error("[Oracle] ParseError {err:?}")]
     ParseError { err: String },
 
+    #[error("[Oracle] Configuration error: {0}")]
+    Configuration(String),
+
     #[error("[Oracle] {0}")]
     Platform(#[from] platform::error::Error),
 

@@ -37,16 +37,11 @@ impl Config {
     pub fn update(
         storage: &mut dyn Storage,
         price_feed_period: Duration,
-        feeders_percentage_needed: Percent,
-        sender: Addr,
+        expected_feeders: Percent,
     ) -> Result<(), ContractError> {
-        let config = Self::STORAGE.load(storage)?;
-        if sender != config.owner {
-            return Err(ContractError::Unauthorized {});
-        }
         Self::STORAGE.update(storage, |mut c| -> StdResult<_> {
             c.price_feed_period = price_feed_period;
-            c.feeders_percentage_needed = feeders_percentage_needed;
+            c.feeders_percentage_needed = expected_feeders;
             Ok(c)
         })?;
         Ok(())

@@ -120,7 +120,7 @@ pub fn execute(
         } => try_configure(
             deps,
             info,
-            Duration::from_secs(price_feed_period_secs),
+            price_feed_period_secs,
             feeders_percentage_needed,
         ),
         ExecuteMsg::RegisterFeeder { feeder_address } => {
