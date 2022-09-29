@@ -10,6 +10,7 @@ use currency::payment::PaymentGroup;
 use finance::{
     currency::{visit_any, AnyVisitor, Currency},
     duration::Duration,
+    percent::Percent,
 };
 
 use crate::{
@@ -65,6 +66,19 @@ impl<'a> AnyVisitor<PaymentGroup> for InstantiateWithCurrency<'a> {
     {
         set_contract_version(self.deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+        if self.msg.expected_feeders == Percent::ZERO
+            || self.msg.expected_feeders > Percent::HUNDRED
+        {
+            return Err(ContractError::Configuration(
+                "Percent of expected available feeders should be > 0 and <= 1000".to_string(),
+            ));
+        }
+        if self.msg.price_feed_period_secs == 0 {
+            return Err(ContractError::Configuration(
+                "Price feed period can not be 0".to_string(),
+            ));
+        }
+
         Config::new(
             C::SYMBOL.to_string(),
             self.owner,
@@ -72,6 +86,7 @@ impl<'a> AnyVisitor<PaymentGroup> for InstantiateWithCurrency<'a> {
             self.msg.expected_feeders,
             self.deps.api.addr_validate(&self.msg.timealarms_addr)?,
         )
+        .validate()?
         .store(self.deps.storage)?;
 
         SupportedPairs::<C>::new(self.msg.currency_paths)?.save(self.deps.storage)?;

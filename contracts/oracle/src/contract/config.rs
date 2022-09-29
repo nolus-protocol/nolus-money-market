@@ -49,6 +49,7 @@ mod tests {
     use cosmwasm_std::{
         coins, from_binary,
         testing::{mock_env, mock_info},
+        DepsMut, MessageInfo, Response,
     };
 
     use currency::{lpn::Usdc, native::Nls, test::TestCurrencyA};
@@ -107,6 +108,51 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "Price feed period can not be 0")]
+    fn configure_invalid_period() {
+        let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
+
+        let msg = ExecuteMsg::Config {
+            price_feed_period_secs: 0,
+            expected_feeders: Percent::from_percent(44),
+        };
+        execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+    }
+
+    #[test]
+    fn configure_feeders_percent() {
+        let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
+        let expected_err = ContractError::Configuration(
+            "Percent of expected available feeders should be > 0 and <= 1000".to_string(),
+        );
+
+        let err = exec_configure(deps.as_mut(), &info, 120, 0).unwrap_err();
+        assert_eq!(expected_err, err);
+        let err = exec_configure(deps.as_mut(), &info, 120, 1001).unwrap_err();
+        assert_eq!(expected_err, err);
+        let err = exec_configure(deps.as_mut(), &info, 120, 10401).unwrap_err();
+        assert_eq!(expected_err, err);
+        let err = exec_configure(deps.as_mut(), &info, 0, 10401).unwrap_err();
+        assert_eq!(expected_err, err);
+        let err = exec_configure(deps.as_mut(), &info, 0, 101).unwrap_err();
+        assert_eq!(expected_err, err);
+        exec_configure(deps.as_mut(), &info, 120, 14).unwrap();
+    }
+
+    fn exec_configure(
+        deps: DepsMut,
+        info: &MessageInfo,
+        period: u32,
+        f_percent: u16,
+    ) -> Result<Response, ContractError> {
+        let msg = ExecuteMsg::Config {
+            price_feed_period_secs: period,
+            expected_feeders: Percent::from_percent(f_percent),
+        };
+        execute(deps, mock_env(), info.to_owned(), msg)
+    }
+
+    #[test]
     fn config_supported_pairs() {
         let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
@@ -124,6 +170,18 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::SupportedDenomPairs {}).unwrap();
         let value: Vec<ResolutionPath> = from_binary(&res).unwrap();
         assert_eq!(test_vec, value);
+    }
+
+    #[test]
+    #[should_panic(expected = "Unauthorized")]
+    fn config_supported_pairs_unauthorized() {
+        let (mut deps, _) = setup_test(dummy_default_instantiate_msg());
+        let info = mock_info("user", &coins(1000, Nls::SYMBOL));
+
+        let msg = ExecuteMsg::CurrencyPaths {
+            paths: vec![vec![Nls::SYMBOL.to_string(), Usdc::SYMBOL.to_string()]],
+        };
+        execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     }
 
     #[test]

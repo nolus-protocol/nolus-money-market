@@ -26,6 +26,20 @@ impl Config {
         }
     }
 
+    pub fn validate(self) -> Result<Config, ContractError> {
+        if self.expected_feeders == Percent::ZERO || self.expected_feeders > Percent::HUNDRED {
+            return Err(ContractError::Configuration(
+                "Percent of expected available feeders should be > 0 and <= 1000".to_string(),
+            ));
+        }
+        if self.price_feed_period == Duration::from_secs(0) {
+            return Err(ContractError::Configuration(
+                "Price feed period can not be 0".to_string(),
+            ));
+        }
+        Ok(self)
+    }
+
     pub fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
         Self::STORAGE.save(storage, &self)
     }
