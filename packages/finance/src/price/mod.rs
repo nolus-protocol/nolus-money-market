@@ -39,7 +39,7 @@ where
 type DoubleAmount = <Amount as HigherRank<Amount>>::Type;
 type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
 
-/// Represents the price of a currency in a quote currency, ref: https://en.wikipedia.org/wiki/Currency_pair
+/// Represents the price of a currency in a quote currency, ref: <https://en.wikipedia.org/wiki/Currency_pair>
 ///
 /// The price is always kept in a canonical form of the underlying ratio. The simplifies equality and comparison operations.
 /// For example, Price<EUR, USD> 1.15, generally represented as EURUSD or EUR/USD, means that one EUR is exchanged for 1.15 USD.
