@@ -133,9 +133,9 @@ fn test_update_config_invalid_liability() {
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
     #[serde(rename_all = "snake_case")]
     pub struct Liability {
-        init_percent: Percent,
-        healthy_percent: Percent,
-        max_percent: Percent,
+        initial: Percent,
+        healthy: Percent,
+        max: Percent,
         first_liq_warn: Percent,
         second_liq_warn: Percent,
         third_liq_warn: Percent,
@@ -156,9 +156,9 @@ fn test_update_config_invalid_liability() {
     }
 
     let liability = Liability {
-        init_percent: Percent::from_percent(55),
-        healthy_percent: Percent::from_percent(55),
-        max_percent: Percent::from_percent(55),
+        initial: Percent::from_percent(55),
+        healthy: Percent::from_percent(55),
+        max: Percent::from_percent(55),
         first_liq_warn: Percent::from_percent(55),
         second_liq_warn: Percent::from_percent(55),
         third_liq_warn: Percent::from_percent(55),

@@ -312,7 +312,7 @@ mod test {
     #[test]
     fn deserialize_invalid_state() {
         let deserialized: Liability = from_slice(
-            br#"{"init_percent":40,"healthy_percent":30,"first_liq_warn":2,"second_liq_warn":3,"third_liq_warn":2,"max_percent":20,"recalc_time":36000}"#,
+            br#"{"initial":40,"healthy":30,"first_liq_warn":2,"second_liq_warn":3,"third_liq_warn":2,"max":20,"recalc_time":36000}"#,
         )
         .unwrap();
         assert_eq!(
