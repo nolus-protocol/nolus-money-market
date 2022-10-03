@@ -354,7 +354,7 @@ fn liquidation_warning_price_1() {
     liquidation_warning(
         PriceDTO::new(
             create_coin(2085713).into(), // ref: 2085713
-            create_coin(137159).into(), // ref: 1857159
+            create_coin(137159).into(),  // ref: 1857159
         ),
         LeaserWrapper::liability().first_liq_warn_percent(),
         "1",
