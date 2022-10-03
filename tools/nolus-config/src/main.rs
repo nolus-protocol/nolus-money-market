@@ -117,7 +117,7 @@ fn write_currency(
     currency_dir: &PathBuf,
     lib_rs: &mut File,
     currency_source: CurrencyFilenameSource,
-) {
+) -> Result<(), Error> {
     lib_rs.write_all(format!("\n\tpub mod {};\n", currency_source.filename()).as_bytes())?;
 
     let mut currency_path = currency_dir.clone();
@@ -126,10 +126,10 @@ fn write_currency(
 
     currency_path.set_extension("rs");
 
-    currency_source.generate_source(File::create(currency_path)?)?;
+    currency_source.generate_source(File::create(currency_path)?).map_err(Into::into)
 }
 
-fn write_group(group_dir: &PathBuf, lib_rs: &mut File, group_source: GroupFilenameSource) {
+fn write_group(group_dir: &PathBuf, lib_rs: &mut File, group_source: GroupFilenameSource) -> Result<(), Error> {
     lib_rs.write_all(format!("\n\tpub mod {};\n", group_source.filename()).as_bytes())?;
 
     let mut group_path = group_dir.clone();
@@ -138,5 +138,5 @@ fn write_group(group_dir: &PathBuf, lib_rs: &mut File, group_source: GroupFilena
 
     group_path.set_extension("rs");
 
-    group_source.generate_source(File::create(group_path)?)?;
+    group_source.generate_source(File::create(group_path)?).map_err(Into::into)
 }
