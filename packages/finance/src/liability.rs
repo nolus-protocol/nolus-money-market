@@ -91,7 +91,7 @@ impl Liability {
             third_liq_warn: third_liquidity_warning,
             recalc_time: Duration::from_hours(recalc_hours),
         };
-        debug_assert!(obj.invariant_held().is_ok());
+        debug_assert_eq!(Ok(()), obj.invariant_held()); // use '*assert_eq!()' to have the error displayed
         obj
     }
 
@@ -120,43 +120,35 @@ impl Liability {
     }
 
     pub fn invariant_held(&self) -> Result<()> {
-        // TODO restrict further the accepted percents to 100 since there is no much sense of having no borrow
-        Self::broken_invariant(self.initial > Percent::ZERO, "Initial % should not be zero")?;
+        Self::check_invariant(self.initial > Percent::ZERO, "Initial % should not be zero")?;
 
-        Self::broken_invariant(
-            self.healthy >= self.initial,
-            "Healthy % should be >= initial %",
+        Self::check_invariant(
+            self.initial <= self.healthy,
+            "Initial % should be <= healthy %",
         )?;
 
-        Self::broken_invariant(
-            self.first_liq_warn > self.healthy,
-            "First liquidation % should be > healthy %",
+        Self::check_invariant(
+            self.healthy < self.first_liq_warn,
+            "Healthy % should be < first liquidation %",
         )?;
-        Self::broken_invariant(
-            self.second_liq_warn > self.first_liq_warn,
-            "Second liquidation % should be > first liquidation %",
+        Self::check_invariant(
+            self.first_liq_warn < self.second_liq_warn,
+            "First liquidation % should be < second liquidation %",
         )?;
-        Self::broken_invariant(
-            self.third_liq_warn > self.second_liq_warn,
-            "Third liquidation % should be > second liquidation %",
+        Self::check_invariant(
+            self.second_liq_warn < self.third_liq_warn,
+            "Second liquidation % should be < third liquidation %",
         )?;
-        Self::broken_invariant(
-            self.max > self.third_liq_warn,
-            "Max % should be > third liquidation %",
+        Self::check_invariant(
+            self.third_liq_warn < self.max,
+            "Third liquidation % should be < max %",
         )?;
-        Self::broken_invariant(self.max <= Percent::HUNDRED, "Max % should be <= 100%")?;
-        Self::broken_invariant(
+        Self::check_invariant(self.max <= Percent::HUNDRED, "Max % should be <= 100%")?;
+        Self::check_invariant(
             self.recalc_time >= Duration::HOUR,
             "Recalculate cadence in seconds should be >= 1h",
         )?;
 
-        Ok(())
-    }
-
-    fn broken_invariant(check: bool, msg: &str) -> Result<()> {
-        if !check {
-            return Err(Error::broken_invariant_err::<Liability>(msg));
-        }
         Ok(())
     }
 
@@ -172,6 +164,13 @@ impl Liability {
         // borrow = init% / (100% - init%) * downpayment
         let ratio = Rational::new(self.initial, Percent::HUNDRED - self.initial);
         ratio.of(downpayment)
+    }
+
+    fn check_invariant(check: bool, msg: &str) -> Result<()> {
+        if !check {
+            return Err(Error::broken_invariant_err::<Liability>(msg));
+        }
+        Ok(())
     }
 }
 
@@ -312,7 +311,7 @@ mod test {
         )
         .unwrap();
         assert_eq!(
-            Error::broken_invariant_err::<Liability>("Healthy % should be >= initial %"),
+            Error::broken_invariant_err::<Liability>("Initial % should be <= healthy %"),
             deserialized.invariant_held().unwrap_err()
         );
     }
