@@ -285,7 +285,11 @@ mod tests {
                     - lease.liability.recalculation_time()
                     - lease.liability.recalculation_time()),
                 &Status::Warning(
-                    LeaseInfo::new(Addr::unchecked(String::new()), Default::default()),
+                    LeaseInfo::new(
+                        Addr::unchecked(String::new()),
+                        lease_addr.clone(),
+                        Default::default(),
+                    ),
                     WarningLevel::Second,
                 ),
             )
@@ -332,7 +336,11 @@ mod tests {
                 &(lease.loan.grace_period_end() - lease.liability.recalculation_time()
                     + Duration::from_nanos(1)),
                 &Status::Warning(
-                    LeaseInfo::new(Addr::unchecked(String::new()), Default::default()),
+                    LeaseInfo::new(
+                        Addr::unchecked(String::new()),
+                        lease_addr.clone(),
+                        Default::default(),
+                    ),
                     WarningLevel::Second,
                 ),
             )

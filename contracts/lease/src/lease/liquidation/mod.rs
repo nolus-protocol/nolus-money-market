@@ -83,7 +83,10 @@ where
             (self.liability.first_liq_warn_percent(), WarningLevel::First)
         };
 
-        Status::Warning(LeaseInfo::new(self.customer.clone(), ltv), level)
+        Status::Warning(
+            LeaseInfo::new(self.customer.clone(), self.lease_addr.clone(), ltv),
+            level,
+        )
     }
 
     fn liquidate_on_liability(
@@ -138,7 +141,7 @@ where
 
         let receipt = self.no_reschedule_repay(liquidation_lpn, now)?;
 
-        let info = LeaseInfo::new(self.customer.clone(), ltv);
+        let info = LeaseInfo::new(self.customer.clone(), self.lease_addr.clone(), ltv);
 
         let liquidation_info = LiquidationInfo {
             cause,
@@ -196,6 +199,7 @@ where
     Asset: Currency,
 {
     pub customer: Addr,
+    pub lease: Addr,
     pub ltv: Percent,
     _asset: PhantomData<Asset>,
 }
@@ -204,9 +208,10 @@ impl<Asset> LeaseInfo<Asset>
 where
     Asset: Currency,
 {
-    pub fn new(customer: Addr, ltv: Percent) -> Self {
+    pub fn new(customer: Addr, lease: Addr, ltv: Percent) -> Self {
         Self {
             customer,
+            lease,
             ltv,
             _asset: PhantomData,
         }
@@ -320,6 +325,7 @@ mod tests {
             Status::Warning(
                 LeaseInfo::new(
                     lease.customer.clone(),
+                    lease_addr.clone(),
                     lease.liability.first_liq_warn_percent(),
                 ),
                 WarningLevel::First,
@@ -353,6 +359,7 @@ mod tests {
             Status::Warning(
                 LeaseInfo::new(
                     lease.customer.clone(),
+                    lease_addr.clone(),
                     lease.liability.second_liq_warn_percent(),
                 ),
                 WarningLevel::Second,
@@ -386,6 +393,7 @@ mod tests {
             Status::Warning(
                 LeaseInfo::new(
                     lease.customer.clone(),
+                    lease_addr.clone(),
                     lease.liability.third_liq_warn_percent(),
                 ),
                 WarningLevel::Third,
@@ -452,7 +460,11 @@ mod tests {
                 .liquidate_on_liability(coin(lease_amount), coin(800), LEASE_START)
                 .unwrap(),
             Status::PartialLiquidation {
-                info: LeaseInfo::new(Addr::unchecked("customer"), lease.liability.max_percent()),
+                info: LeaseInfo::new(
+                    Addr::unchecked("customer"),
+                    lease_addr.clone(),
+                    lease.liability.max_percent()
+                ),
                 liquidation_info: LiquidationInfo {
                     cause: Cause::Liability,
                     lease: lease_addr.clone(),
@@ -497,7 +509,11 @@ mod tests {
                 .liquidate_on_liability(coin(lease_amount), coin(5000), LEASE_START)
                 .unwrap(),
             Status::FullLiquidation {
-                info: LeaseInfo::new(Addr::unchecked("customer"), lease.liability.max_percent()),
+                info: LeaseInfo::new(
+                    Addr::unchecked("customer"),
+                    lease_addr.clone(),
+                    lease.liability.max_percent()
+                ),
                 liquidation_info: LiquidationInfo {
                     cause: Cause::Liability,
                     lease: lease_addr.clone(),
