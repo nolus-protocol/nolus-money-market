@@ -45,17 +45,13 @@ impl Liability {
     ) -> Self {
         assert!(initial > Percent::ZERO);
         assert!(delta_to_max > Percent::ZERO);
-        assert!(
-            initial.checked_add(delta_to_healthy).is_ok(),
-            "healthy percent overflow"
-        );
-        let healthy = initial + delta_to_healthy;
+        let healthy = initial
+            .checked_add(delta_to_healthy)
+            .expect("healthy percent overflow");
 
-        assert!(
-            healthy.checked_add(delta_to_max).is_ok(),
-            "max percent overflow"
-        );
-        let max = healthy + delta_to_max;
+        let max = healthy
+            .checked_add(delta_to_max)
+            .expect("max percent overflow");
 
         let third_liquidity_warning = max
             .checked_sub(minus_delta_of_third_liq_warn)
