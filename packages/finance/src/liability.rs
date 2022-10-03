@@ -18,15 +18,15 @@ pub struct Liability {
     /// The healty percentage of the amount due versus the locked collateral
     /// healthy >= initial
     healthy: Percent,
-    /// The maximum percentage of the amount due versus the locked collateral
-    /// max > healthy
-    max: Percent,
     /// The percentage above which the first liquidity warning is issued.
     first_liq_warn: Percent,
     /// The percentage above which the second liquidity warning is issued.
     second_liq_warn: Percent,
     /// The percentage above which the third liquidity warning is issued.
     third_liq_warn: Percent,
+    /// The maximum percentage of the amount due versus the locked collateral
+    /// max > healthy
+    max: Percent,
     /// At what time cadence to recalculate the liability
     ///
     /// Limitation: recalc_time >= 1 hour
