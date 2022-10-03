@@ -38,27 +38,24 @@ where
     }
 }
 
-fn emit_warning<Asset>(batch: Batch, info: &LeaseInfo<Asset>, level: WarningLevel) -> Response
-where
-    Asset: Currency,
-{
-    batch
-        .into_emitter(TYPE::LiquidationWarning)
-        .emit("customer", &info.customer)
-        .emit_percent_amount("ltv", info.ltv)
-        .emit_to_string_value("level", level.to_uint())
-        .emit_currency::<_, Asset>("lease-asset")
-        .into()
-}
-
 fn emit_lease_info<Asset>(emitter: Emitter, info: &LeaseInfo<Asset>) -> Emitter
 where
     Asset: Currency,
 {
     emitter
         .emit("customer", &info.customer)
+        .emit("lease", &info.lease)
         .emit_percent_amount("ltv", info.ltv)
         .emit_currency::<_, Asset>("lease-asset")
+}
+
+fn emit_warning<Asset>(batch: Batch, info: &LeaseInfo<Asset>, level: WarningLevel) -> Response
+where
+    Asset: Currency,
+{
+    emit_lease_info(batch.into_emitter(TYPE::LiquidationWarning), info)
+        .emit_to_string_value("level", level.to_uint())
+        .into()
 }
 
 fn emit_liquidation_info<Lpn>(emitter: Emitter, info: &LiquidationInfo<Lpn>) -> Emitter
