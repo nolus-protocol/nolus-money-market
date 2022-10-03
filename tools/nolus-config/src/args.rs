@@ -26,11 +26,10 @@ pub enum Subcommand {
     /// Generate setup script based on the passed template.
     ///
     /// Aliases: gen-script
-    SetupScript,
-    // SetupScript {
-    //     #[clap(short, long, value_parser=path_parser)]
-    //     deploy_template: PathBuf,
-    // },
+    SetupScript {
+        #[clap(short, long, value_parser = path_parser)]
+        script_file: PathBuf,
+    },
 }
 
 fn path_parser(input: &str) -> Result<PathBuf, clap::Error> {

@@ -9,7 +9,7 @@ use serde_json::Deserializer;
 
 use crate::{
     args::{Args, Subcommand},
-    currencies::Currencies,
+    currencies::{Currencies, CurrencyFilenameSource, GroupFilenameSource},
     error::Error,
 };
 
@@ -26,55 +26,82 @@ fn main() -> Result<(), Error> {
 
     match args.subcommand {
         Subcommand::GenerateCurrencies { output_dir } => generate_currencies(output_dir)?,
-        Subcommand::SetupScript => {}
+        Subcommand::SetupScript { .. } => {}
     }
 
     Ok(())
 }
 
 fn generate_currencies(output_dir: PathBuf) -> Result<(), Error> {
-    let currencies: Currencies =
-        <Currencies as Deserialize>::deserialize(&mut Deserializer::from_reader(
-            &mut {
-                let mut buf = Vec::new();
+    let currencies: Currencies = read_currencies()?;
 
-                stdin().read_to_end(&mut buf)?;
+    let currency_dir = currency_dir(&output_dir)?;
 
-                buf
-            }
-            .as_slice(),
-        ))
-        .map_err(Error::from_deserialization)?;
+    let group_dir = group_dir(&output_dir)?;
 
-    let currency_dir = {
-        let mut currency_dir = output_dir.clone();
+    let mut lib_rs = create_lib_rs(output_dir)?;
 
-        currency_dir.push("currencies");
+    let generated = currencies.generate("crate::currencies");
 
-        if currency_dir.exists() {
-            remove_dir_all(&currency_dir)?;
+    lib_rs.write_all(b"pub mod currencies {")?;
+
+    for currency_source in generated.currencies.iter() {
+        write_currency(&currency_dir, &mut lib_rs, currency_source)?;
+    }
+
+    lib_rs.write_all(b"}\n\npub mod groups {")?;
+
+    for group_source in generated.groups.iter() {
+        write_group(&group_dir, &mut lib_rs, group_source)?;
+    }
+
+    lib_rs.write_all(b"}\n").map_err(Into::into)
+}
+
+fn read_currencies() -> Result<Currencies, Error> {
+    <Currencies as Deserialize>::deserialize(&mut Deserializer::from_reader(
+        &mut {
+            let mut buf = Vec::new();
+
+            stdin().read_to_end(&mut buf)?;
+
+            buf
         }
+        .as_slice(),
+    ))
+    .map_err(Error::from_deserialization)
+}
 
-        create_dir(&currency_dir)?;
+fn currency_dir(output_dir: &PathBuf) -> Result<PathBuf, Error> {
+    let mut currency_dir = output_dir.clone();
 
-        currency_dir
-    };
+    currency_dir.push("currencies");
 
-    let group_dir = {
-        let mut group_dir = output_dir.clone();
+    if currency_dir.exists() {
+        remove_dir_all(&currency_dir)?;
+    }
 
-        group_dir.push("groups");
+    create_dir(&currency_dir)?;
 
-        if group_dir.exists() {
-            remove_dir_all(&group_dir)?;
-        }
+    Ok(currency_dir)
+}
 
-        create_dir(&group_dir)?;
+fn group_dir(output_dir: &PathBuf) -> Result<PathBuf, Error> {
+    let mut group_dir = output_dir.clone();
 
-        group_dir
-    };
+    group_dir.push("groups");
 
-    let mut lib_rs = File::create({
+    if group_dir.exists() {
+        remove_dir_all(&group_dir)?;
+    }
+
+    create_dir(&group_dir)?;
+
+    Ok(group_dir)
+}
+
+fn create_lib_rs(output_dir: PathBuf) -> Result<File, Error> {
+    File::create({
         let mut lib_rs_path = output_dir;
 
         lib_rs_path.push("lib");
@@ -82,37 +109,34 @@ fn generate_currencies(output_dir: PathBuf) -> Result<(), Error> {
         lib_rs_path.set_extension("rs");
 
         lib_rs_path
-    })?;
+    })
+    .map_err(Into::into)
+}
 
-    let generated = currencies.generate("crate::currencies");
+fn write_currency(
+    currency_dir: &PathBuf,
+    lib_rs: &mut File,
+    currency_source: CurrencyFilenameSource,
+) {
+    lib_rs.write_all(format!("\n\tpub mod {};\n", currency_source.filename()).as_bytes())?;
 
-    lib_rs.write_all(b"pub mod currencies {")?;
+    let mut currency_path = currency_dir.clone();
 
-    for currency_source in generated.currencies.iter() {
-        lib_rs.write_all(format!("\n\tpub mod {};\n", currency_source.filename()).as_bytes())?;
+    currency_path.push(currency_source.filename());
 
-        let mut currency_path = currency_dir.clone();
+    currency_path.set_extension("rs");
 
-        currency_path.push(currency_source.filename());
+    currency_source.generate_source(File::create(currency_path)?)?;
+}
 
-        currency_path.set_extension("rs");
+fn write_group(group_dir: &PathBuf, lib_rs: &mut File, group_source: GroupFilenameSource) {
+    lib_rs.write_all(format!("\n\tpub mod {};\n", group_source.filename()).as_bytes())?;
 
-        currency_source.generate_source(File::create(currency_path)?)?;
-    }
+    let mut group_path = group_dir.clone();
 
-    lib_rs.write_all(b"}\n\npub mod groups {")?;
+    group_path.push(group_source.filename());
 
-    for group_source in generated.groups.iter() {
-        lib_rs.write_all(format!("\n\tpub mod {};\n", group_source.filename()).as_bytes())?;
+    group_path.set_extension("rs");
 
-        let mut group_path = group_dir.clone();
-
-        group_path.push(group_source.filename());
-
-        group_path.set_extension("rs");
-
-        group_source.generate_source(File::create(group_path)?)?;
-    }
-
-    lib_rs.write_all(b"}\n").map_err(Into::into)
+    group_source.generate_source(File::create(group_path)?)?;
 }
