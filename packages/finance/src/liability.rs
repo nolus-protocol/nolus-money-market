@@ -13,13 +13,13 @@ use crate::{
 #[serde(rename_all = "snake_case")]
 pub struct Liability {
     /// The initial percentage of the amount due versus the locked collateral
-    /// init_percent > 0
+    /// initial > 0
     initial: Percent,
     /// The healty percentage of the amount due versus the locked collateral
-    /// healthy_percent >= init_percent
+    /// healthy >= initial
     healthy: Percent,
     /// The maximum percentage of the amount due versus the locked collateral
-    /// max_percent > healthy_percent
+    /// max > healthy
     max: Percent,
     /// The percentage above which the first liquidity warning is issued.
     first_liq_warn: Percent,
