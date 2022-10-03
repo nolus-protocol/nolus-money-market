@@ -340,7 +340,7 @@ fn liquidation_warning(price: PriceDTO, percent: Percent, level: &str) {
 #[test]
 #[should_panic = "No liquidation warning emitted!"]
 #[ignore = "No support for currencies different than LPN"]
-fn liquidation_warning_0() {
+fn liquidation_warning_price_0() {
     liquidation_warning(
         PriceDTO::new(create_coin(2085713).into(), create_coin(1857159).into()),
         LeaserWrapper::liability().healthy_percent(),
@@ -350,11 +350,11 @@ fn liquidation_warning_0() {
 
 #[test]
 #[ignore = "No support for currencies different than LPN"]
-fn liquidation_warning_1() {
+fn liquidation_warning_price_1() {
     liquidation_warning(
         PriceDTO::new(
             create_coin(2085713).into(), // ref: 2085713
-            create_coin(1837159).into(), // ref: 1857159
+            create_coin(137159).into(), // ref: 1857159
         ),
         LeaserWrapper::liability().first_liq_warn_percent(),
         "1",
@@ -363,7 +363,7 @@ fn liquidation_warning_1() {
 
 #[test]
 #[ignore = "No support for currencies different than LPN"]
-fn liquidation_warning_2() {
+fn liquidation_warning_price_2() {
     liquidation_warning(
         PriceDTO::new(
             create_coin(2085713).into(), // ref: 2085713
@@ -376,7 +376,7 @@ fn liquidation_warning_2() {
 
 #[test]
 #[ignore = "No support for currencies different than LPN"]
-fn liquidation_warning_3() {
+fn liquidation_warning_price_3() {
     liquidation_warning(
         PriceDTO::new(
             create_coin(2085713).into(), // ref: 2085713
