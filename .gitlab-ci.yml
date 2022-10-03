@@ -35,7 +35,7 @@ check_wasm:cargo:
   stage: check
   script:
     - cargo install cosmwasm-check
-    - cargo workspaces exec --no-bail cargo wasm
+    - cargo workspaces exec --no-bail cargo build --target wasm32-unknown-unknown
     - $CARGO_HOME/bin/cosmwasm-check ./target/wasm32-unknown-unknown/debug/*.wasm
 
 schema:cargo:
