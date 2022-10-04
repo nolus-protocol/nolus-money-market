@@ -1,5 +1,5 @@
 use schemars::JsonSchema;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     coin::CoinDTO, currency::Currency, error::Error, fractionable::HigherRank, price::Price,
@@ -78,8 +78,8 @@ pub trait WithPrice {
 
     fn exec<C, QuoteC>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
-        C: 'static + Currency + DeserializeOwned + Serialize,
-        QuoteC: 'static + Currency + DeserializeOwned + Serialize;
+        C: Currency,
+        QuoteC: Currency;
 }
 
 pub trait WithBase<C>

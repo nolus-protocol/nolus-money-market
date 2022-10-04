@@ -1,5 +1,3 @@
-use serde::{de::DeserializeOwned, Serialize};
-
 use currency::payment::PaymentGroup;
 use error::PriceFeedsError;
 use finance::{
@@ -37,8 +35,8 @@ impl WithPrice for Multiply {
 
     fn exec<C, QuoteC>(self, p1: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
-        C: 'static + Currency + DeserializeOwned + Serialize,
-        QuoteC: 'static + Currency + DeserializeOwned + Serialize,
+        C: Currency,
+        QuoteC: Currency,
     {
         execute::<PaymentGroup, Multiplier<C, QuoteC>, QuoteC>(self.p2, Multiplier::new(p1))
     }
@@ -46,7 +44,7 @@ impl WithPrice for Multiply {
 
 pub struct Multiplier<C1, QuoteC1>
 where
-    C1: Currency + Serialize + DeserializeOwned,
+    C1: Currency,
     QuoteC1: Currency,
 {
     p1: Price<C1, QuoteC1>,
@@ -54,7 +52,7 @@ where
 
 impl<C1, QuoteC1> Multiplier<C1, QuoteC1>
 where
-    C1: Currency + Serialize + DeserializeOwned,
+    C1: Currency,
     QuoteC1: Currency,
 {
     fn new(p: Price<C1, QuoteC1>) -> Self {
@@ -64,7 +62,7 @@ where
 
 impl<C1, QuoteC1> WithBase<QuoteC1> for Multiplier<C1, QuoteC1>
 where
-    C1: Currency + Serialize + DeserializeOwned,
+    C1: Currency,
     QuoteC1: Currency,
 {
     type Output = PriceDTO;

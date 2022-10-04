@@ -1,7 +1,6 @@
 use cosmwasm_std::{Addr, DepsMut, Env, Response};
-use serde::{de::DeserializeOwned, Serialize};
 
-use currency::payment::PaymentGroup;
+use currency::lpn::Lpns;
 use finance::currency::{visit_any, AnyVisitor, Currency};
 
 use crate::{
@@ -38,13 +37,13 @@ impl<'a> ExecWithOracleBase<'a> {
     }
 }
 
-impl<'a> AnyVisitor<PaymentGroup> for ExecWithOracleBase<'a> {
+impl<'a> AnyVisitor<Lpns> for ExecWithOracleBase<'a> {
     type Output = Response;
     type Error = ContractError;
 
     fn on<OracleBase>(self) -> Result<Self::Output, Self::Error>
     where
-        OracleBase: 'static + Currency + DeserializeOwned + Serialize,
+        OracleBase: Currency,
     {
         match self.msg {
             ExecuteMsg::CurrencyPaths { paths } => {

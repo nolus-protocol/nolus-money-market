@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use cosmwasm_std::{to_binary, Binary, Deps, Env};
 use serde::{de::DeserializeOwned, Serialize};
 
-use currency::payment::PaymentGroup;
+use currency::lpn::Lpns;
 use finance::currency::{visit_any, AnyVisitor, Currency};
 use marketprice::error::PriceFeedsError;
 
@@ -30,7 +30,7 @@ impl<'a> QueryWithOracleBase<'a> {
     }
 }
 
-impl<'a> AnyVisitor<PaymentGroup> for QueryWithOracleBase<'a> {
+impl<'a> AnyVisitor<Lpns> for QueryWithOracleBase<'a> {
     type Output = Binary;
     type Error = ContractError;
 

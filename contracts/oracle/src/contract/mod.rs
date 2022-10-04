@@ -4,9 +4,8 @@ use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
 };
 use cw2::set_contract_version;
-use serde::{de::DeserializeOwned, Serialize};
 
-use currency::payment::PaymentGroup;
+use currency::lpn::Lpns;
 use finance::{
     currency::{visit_any, AnyVisitor, Currency},
     duration::Duration,
@@ -56,13 +55,13 @@ impl<'a> InstantiateWithCurrency<'a> {
     }
 }
 
-impl<'a> AnyVisitor<PaymentGroup> for InstantiateWithCurrency<'a> {
+impl<'a> AnyVisitor<Lpns> for InstantiateWithCurrency<'a> {
     type Output = Response;
     type Error = ContractError;
 
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
-        C: 'static + Currency + DeserializeOwned + Serialize,
+        C: Currency,
     {
         set_contract_version(self.deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 

@@ -1,5 +1,3 @@
-use serde::{de::DeserializeOwned, Serialize};
-
 use crate::{
     coin::{Coin, CoinDTO},
     currency::{visit_any, AnyVisitor, Currency, Group},
@@ -39,7 +37,7 @@ where
 
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
-        C: Currency + Serialize + DeserializeOwned,
+        C: Currency,
     {
         visit_any::<G, _>(
             &self.price_dto.amount_quote.symbol().clone(),
@@ -55,7 +53,7 @@ where
 
 struct QuoteCVisitor<C, Cmd>
 where
-    C: Currency + Serialize + DeserializeOwned,
+    C: Currency,
 {
     base: Coin<C>,
     quote_dto: CoinDTO,
@@ -64,7 +62,7 @@ where
 
 impl<C, G, Cmd> AnyVisitor<G> for QuoteCVisitor<C, Cmd>
 where
-    C: Currency + Serialize + DeserializeOwned,
+    C: Currency,
     G: Group,
     Cmd: WithPrice,
 {
@@ -73,7 +71,7 @@ where
 
     fn on<QuoteC>(self) -> Result<Self::Output, Self::Error>
     where
-        QuoteC: Currency + Serialize + DeserializeOwned,
+        QuoteC: Currency,
     {
         self.cmd.exec(Price::new(
             self.base,

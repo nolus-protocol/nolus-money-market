@@ -13,7 +13,7 @@ pub mod dto;
 
 pub fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
 where
-    C: 'static + Currency,
+    C: Currency,
 {
     debug_assert!(!amount.is_zero());
     PriceBuilder(amount)
@@ -21,7 +21,7 @@ where
 
 pub struct PriceBuilder<C>(Coin<C>)
 where
-    C: 'static + Currency;
+    C: Currency;
 
 impl<C> PriceBuilder<C>
 where
@@ -47,8 +47,8 @@ type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct Price<C, QuoteC>
 where
-    C: 'static + Currency,
-    QuoteC: 'static + Currency,
+    C: Currency,
+    QuoteC: Currency,
 {
     amount: Coin<C>,
     amount_quote: Coin<QuoteC>,
