@@ -17,6 +17,9 @@ impl Member<PaymentGroup> for Atom {}
 impl Member<PaymentGroup> for Nls {}
 
 pub struct PaymentGroup {}
+
+const DESCR: &str = "payment";
+
 impl Group for PaymentGroup {
     type ResolveError = Error;
 
@@ -38,7 +41,7 @@ impl Group for PaymentGroup {
             TestCurrencyC::SYMBOL => visitor.on::<TestCurrencyC>(),
             #[cfg(feature = "testing")]
             TestCurrencyD::SYMBOL => visitor.on::<TestCurrencyD>(),
-            _ => Err(Error::NotInCurrencyGroup(symbol.into()).into()),
+            _ => Err(Error::NotInCurrencyGroup(symbol.into(), DESCR.into()).into()),
         }
     }
 }

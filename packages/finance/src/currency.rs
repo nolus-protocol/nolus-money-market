@@ -87,7 +87,7 @@ mod test {
     use crate::{
         currency::{Currency, SingleVisitor},
         error::Error,
-        test::currency::{Nls, TestCurrencies, Usdc},
+        test::currency::{Nls, TestCurrencies, Usdc, DESCR},
     };
 
     use super::AnyVisitor;
@@ -159,7 +159,7 @@ mod test {
 
         assert_eq!(
             super::visit_any(DENOM, ExpectUnknownCurrency),
-            Err(Error::NotInCurrencyGroup(DENOM.into())),
+            Err(Error::NotInCurrencyGroup(DENOM.into(), DESCR.into())),
         );
     }
 

@@ -48,6 +48,7 @@ pub mod currency {
     impl Member<TestExtraCurrencies> for Dai {}
 
     pub struct TestCurrencies {}
+    pub const DESCR: &str = "test";
     impl Group for TestCurrencies {
         type ResolveError = Error;
 
@@ -59,12 +60,13 @@ pub mod currency {
             match symbol {
                 Usdc::SYMBOL => visitor.on::<Usdc>(),
                 Nls::SYMBOL => visitor.on::<Nls>(),
-                _ => Err(Error::NotInCurrencyGroup(symbol.into()).into()),
+                _ => Err(Error::NotInCurrencyGroup(symbol.into(), DESCR.into()).into()),
             }
         }
     }
 
     pub struct TestExtraCurrencies {}
+    pub const DESCR_EXTRA: &str = "test_extra";
     impl Group for TestExtraCurrencies {
         type ResolveError = Error;
 
@@ -77,7 +79,7 @@ pub mod currency {
                 Usdc::SYMBOL => visitor.on::<Usdc>(),
                 Nls::SYMBOL => visitor.on::<Nls>(),
                 Dai::SYMBOL => visitor.on::<Dai>(),
-                _ => Err(Error::NotInCurrencyGroup(symbol.into()).into()),
+                _ => Err(Error::NotInCurrencyGroup(symbol.into(), DESCR_EXTRA.into()).into()),
             }
         }
     }

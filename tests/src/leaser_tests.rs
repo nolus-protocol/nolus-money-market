@@ -30,7 +30,7 @@ fn open_lease_another_currency() {
 }
 
 #[test]
-#[should_panic(expected = "is not defined in the given currency group")]
+#[should_panic(expected = "is not defined in the lpns currency group")]
 fn init_lpp_with_unknown_currency() {
     let user_addr = Addr::unchecked(USER);
 

@@ -17,6 +17,8 @@ impl Member<Lpns> for Usdc {}
 // TODO REMOVE once migrate off the single currency version
 impl Member<Lpns> for Atom {}
 
+const DESCR: &str = "lpns";
+
 pub struct Lpns {}
 impl Group for Lpns {
     type ResolveError = Error;
@@ -29,7 +31,7 @@ impl Group for Lpns {
         match symbol {
             Usdc::SYMBOL => visitor.on::<Usdc>(),
             Atom::SYMBOL => visitor.on::<Atom>(),
-            _ => Err(Error::NotInCurrencyGroup(symbol.into()).into()),
+            _ => Err(Error::NotInCurrencyGroup(symbol.into(), DESCR.into()).into()),
         }
     }
 }

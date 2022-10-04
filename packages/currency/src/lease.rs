@@ -26,6 +26,8 @@ impl Member<LeaseGroup> for Usdc {}
 
 pub struct LeaseGroup {}
 
+const DESCR: &str = "lease";
+
 impl Group for LeaseGroup {
     type ResolveError = Error;
 
@@ -38,7 +40,7 @@ impl Group for LeaseGroup {
             Atom::SYMBOL => visitor.on::<Atom>(),
             Osmo::SYMBOL => visitor.on::<Osmo>(),
             Usdc::SYMBOL => visitor.on::<Usdc>(),
-            _ => Err(Error::NotInCurrencyGroup(symbol.into()).into()),
+            _ => Err(Error::NotInCurrencyGroup(symbol.into(), DESCR.into()).into()),
         }
     }
 }
