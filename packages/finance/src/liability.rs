@@ -167,10 +167,11 @@ impl Liability {
     }
 
     fn check_invariant(check: bool, msg: &str) -> Result<()> {
-        if !check {
-            return Err(Error::broken_invariant_err::<Liability>(msg));
+        if check {
+            Ok(())
+        } else {
+            Err(Error::broken_invariant_err::<Liability>(msg))
         }
-        Ok(())
     }
 }
 
