@@ -13,20 +13,20 @@ use crate::{
 #[serde(rename_all = "snake_case")]
 pub struct Liability {
     /// The initial percentage of the amount due versus the locked collateral
-    /// init_percent > 0
-    init_percent: Percent,
+    /// initial > 0
+    initial: Percent,
     /// The healty percentage of the amount due versus the locked collateral
-    /// healthy_percent >= init_percent
-    healthy_percent: Percent,
-    /// The maximum percentage of the amount due versus the locked collateral
-    /// max_percent > healthy_percent
-    max_percent: Percent,
+    /// healthy >= initial
+    healthy: Percent,
     /// The percentage above which the first liquidity warning is issued.
     first_liq_warn: Percent,
     /// The percentage above which the second liquidity warning is issued.
     second_liq_warn: Percent,
     /// The percentage above which the third liquidity warning is issued.
     third_liq_warn: Percent,
+    /// The maximum percentage of the amount due versus the locked collateral
+    /// max > healthy
+    max: Percent,
     /// At what time cadence to recalculate the liability
     ///
     /// Limitation: recalc_time >= 1 hour
@@ -35,29 +35,25 @@ pub struct Liability {
 
 impl Liability {
     pub fn new(
-        init_percent: Percent,
-        delta_to_healthy_percent: Percent,
-        delta_to_max_percent: Percent,
+        initial: Percent,
+        delta_to_healthy: Percent,
+        delta_to_max: Percent,
         minus_delta_of_first_liq_warn: Percent,
         minus_delta_of_second_liq_warn: Percent,
         minus_delta_of_third_liq_warn: Percent,
         recalc_hours: u16,
     ) -> Self {
-        assert!(init_percent > Percent::ZERO);
-        assert!(delta_to_max_percent > Percent::ZERO);
-        assert!(
-            init_percent.checked_add(delta_to_healthy_percent).is_ok(),
-            "healthy percent overflow"
-        );
-        let healthy_percent = init_percent + delta_to_healthy_percent;
+        assert!(initial > Percent::ZERO);
+        assert!(delta_to_max > Percent::ZERO);
+        let healthy = initial
+            .checked_add(delta_to_healthy)
+            .expect("healthy percent overflow");
 
-        assert!(
-            healthy_percent.checked_add(delta_to_max_percent).is_ok(),
-            "max percent overflow"
-        );
-        let max_percent = healthy_percent + delta_to_max_percent;
+        let max = healthy
+            .checked_add(delta_to_max)
+            .expect("max percent overflow");
 
-        let third_liquidity_warning = max_percent
+        let third_liquidity_warning = max
             .checked_sub(minus_delta_of_third_liq_warn)
             .expect("percentage underflow");
 
@@ -80,27 +76,27 @@ impl Liability {
         );
 
         assert!(
-            healthy_percent < first_liquidity_warning,
+            healthy < first_liquidity_warning,
             "First liquidity warning is below healthy percentage!",
         );
 
         assert!(recalc_hours > 0);
 
         let obj = Self {
-            init_percent,
-            healthy_percent,
-            max_percent,
+            initial,
+            healthy,
+            max,
             first_liq_warn: first_liquidity_warning,
             second_liq_warn: second_liquidity_warning,
             third_liq_warn: third_liquidity_warning,
             recalc_time: Duration::from_hours(recalc_hours),
         };
-        debug_assert!(obj.invariant_held().is_ok());
+        debug_assert_eq!(Ok(()), obj.invariant_held()); // use '*assert_eq!()' to have the error displayed
         obj
     }
 
     pub const fn healthy_percent(&self) -> Percent {
-        self.healthy_percent
+        self.healthy
     }
 
     pub const fn first_liq_warn_percent(&self) -> Percent {
@@ -116,7 +112,7 @@ impl Liability {
     }
 
     pub const fn max_percent(&self) -> Percent {
-        self.max_percent
+        self.max
     }
 
     pub const fn recalculation_time(&self) -> Duration {
@@ -124,49 +120,35 @@ impl Liability {
     }
 
     pub fn invariant_held(&self) -> Result<()> {
-        // TODO restrict further the accepted percents to 100 since there is no much sense of having no borrow
-        Self::broken_invariant(
-            self.init_percent > Percent::ZERO,
-            "Initial % should not be zero",
+        Self::check_invariant(self.initial > Percent::ZERO, "Initial % should not be zero")?;
+
+        Self::check_invariant(
+            self.initial <= self.healthy,
+            "Initial % should be <= healthy %",
         )?;
 
-        Self::broken_invariant(
-            self.healthy_percent >= self.init_percent,
-            "Healthy % should be >= initial %",
+        Self::check_invariant(
+            self.healthy < self.first_liq_warn,
+            "Healthy % should be < first liquidation %",
         )?;
-
-        Self::broken_invariant(
-            self.first_liq_warn > self.healthy_percent,
-            "First liquidation % should be > healthy %",
+        Self::check_invariant(
+            self.first_liq_warn < self.second_liq_warn,
+            "First liquidation % should be < second liquidation %",
         )?;
-        Self::broken_invariant(
-            self.second_liq_warn > self.first_liq_warn,
-            "Second liquidation % should be > first liquidation %",
+        Self::check_invariant(
+            self.second_liq_warn < self.third_liq_warn,
+            "Second liquidation % should be < third liquidation %",
         )?;
-        Self::broken_invariant(
-            self.third_liq_warn > self.second_liq_warn,
-            "Third liquidation % should be > second liquidation %",
+        Self::check_invariant(
+            self.third_liq_warn < self.max,
+            "Third liquidation % should be < max %",
         )?;
-        Self::broken_invariant(
-            self.max_percent > self.third_liq_warn,
-            "Max % should be > third liquidation %",
-        )?;
-        Self::broken_invariant(
-            self.max_percent <= Percent::HUNDRED,
-            "Max % should be <= 100%",
-        )?;
-        Self::broken_invariant(
+        Self::check_invariant(self.max <= Percent::HUNDRED, "Max % should be <= 100%")?;
+        Self::check_invariant(
             self.recalc_time >= Duration::HOUR,
             "Recalculate cadence in seconds should be >= 1h",
         )?;
 
-        Ok(())
-    }
-
-    fn broken_invariant(check: bool, msg: &str) -> Result<()> {
-        if !check {
-            return Err(Error::broken_invariant_err::<Liability>(msg));
-        }
         Ok(())
     }
 
@@ -175,13 +157,21 @@ impl Liability {
         P: Percentable,
     {
         use crate::fraction::Fraction;
-        debug_assert!(self.init_percent < Percent::HUNDRED);
+        debug_assert!(self.initial < Percent::HUNDRED);
 
         // borrow = init%.of(borrow + downpayment)
         // (100% - init%).of(borrow) = init%.of(downpayment)
         // borrow = init% / (100% - init%) * downpayment
-        let ratio = Rational::new(self.init_percent, Percent::HUNDRED - self.init_percent);
+        let ratio = Rational::new(self.initial, Percent::HUNDRED - self.initial);
         ratio.of(downpayment)
+    }
+
+    fn check_invariant(check: bool, msg: &str) -> Result<()> {
+        if check {
+            Ok(())
+        } else {
+            Err(Error::broken_invariant_err::<Liability>(msg))
+        }
     }
 }
 
@@ -208,9 +198,9 @@ mod test {
         );
         assert_eq!(
             Liability {
-                init_percent: Percent::from_percent(10),
-                healthy_percent: Percent::from_percent(10),
-                max_percent: Percent::from_percent(15),
+                initial: Percent::from_percent(10),
+                healthy: Percent::from_percent(10),
+                max: Percent::from_percent(15),
                 first_liq_warn: Percent::from_percent(12),
                 second_liq_warn: Percent::from_percent(13),
                 third_liq_warn: Percent::from_percent(14),
@@ -233,9 +223,9 @@ mod test {
         );
         assert_eq!(
             Liability {
-                init_percent: Percent::from_percent(1),
-                healthy_percent: Percent::from_percent(1),
-                max_percent: Percent::from_percent(2),
+                initial: Percent::from_percent(1),
+                healthy: Percent::from_percent(1),
+                max: Percent::from_percent(2),
                 first_liq_warn: Percent::from_permille(17),
                 second_liq_warn: Percent::from_permille(18),
                 third_liq_warn: Percent::from_permille(19),
@@ -318,11 +308,11 @@ mod test {
     #[test]
     fn deserialize_invalid_state() {
         let deserialized: Liability = from_slice(
-            br#"{"init_percent":40,"healthy_percent":30,"first_liq_warn":2,"second_liq_warn":3,"third_liq_warn":2,"max_percent":20,"recalc_time":36000}"#,
+            br#"{"initial":40,"healthy":30,"first_liq_warn":2,"second_liq_warn":3,"third_liq_warn":2,"max":20,"recalc_time":36000}"#,
         )
         .unwrap();
         assert_eq!(
-            Error::broken_invariant_err::<Liability>("Healthy % should be >= initial %"),
+            Error::broken_invariant_err::<Liability>("Initial % should be <= healthy %"),
             deserialized.invariant_held().unwrap_err()
         );
     }
@@ -333,9 +323,9 @@ mod test {
         let downpayment = Coin::<Currency>::new(d);
         let percent = Percent::from_percent(p);
         let calculated = Liability {
-            init_percent: percent,
-            healthy_percent: Percent::from_percent(99),
-            max_percent: Percent::from_percent(100),
+            initial: percent,
+            healthy: Percent::from_percent(99),
+            max: Percent::from_percent(100),
             first_liq_warn: Percent::from_permille(992),
             second_liq_warn: Percent::from_permille(995),
             third_liq_warn: Percent::from_permille(998),
