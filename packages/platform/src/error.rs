@@ -8,8 +8,14 @@ pub enum Error {
     #[error("[Platform] Expecting funds of {0} but found none")]
     NoFunds(String),
 
+    #[error("[Platform] Expecting funds but found none")]
+    NoFundsAny(),
+
     #[error("[Platform] Expecting funds of {0} but found extra ones")]
     UnexpectedFunds(String),
+
+    #[error("[Platform] Expecting funds consisting of a single coin but found more coins")]
+    UnexpectedFundsAny(),
 
     #[error("[Platform] {0}")]
     Finance(#[from] finance::error::Error),

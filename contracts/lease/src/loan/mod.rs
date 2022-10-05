@@ -1,6 +1,6 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use cosmwasm_std::{Addr, Reply, Timestamp};
+use cosmwasm_std::{Addr, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use finance::{
@@ -24,11 +24,10 @@ use crate::error::{ContractError, ContractResult};
 
 pub use self::state::State;
 pub(crate) use self::{
-    liability::LiabilityStatus, open::Receipt as OpenReceipt, repay::Receipt as RepayReceipt,
+    liability::LiabilityStatus, repay::Receipt as RepayReceipt,
 };
 
 mod liability;
-mod open;
 mod repay;
 mod state;
 
@@ -149,21 +148,6 @@ where
         );
 
         (dto, lpp_batch.merge(profit_batch))
-    }
-
-    pub(crate) fn open_loan_req(&mut self, amount: Coin<Lpn>) -> ContractResult<()> {
-        self.lpp.open_loan_req(amount)?;
-
-        Ok(())
-    }
-
-    pub(crate) fn open_loan_resp(&mut self, resp: Reply) -> ContractResult<OpenReceipt<Lpn>> {
-        let response = self.lpp.open_loan_resp(resp)?;
-
-        Ok(OpenReceipt {
-            annual_interest_rate: response.annual_interest_rate + self.annual_margin_interest,
-            borrowed: response.principal_due,
-        })
     }
 
     pub(crate) fn grace_period_end(&self) -> Timestamp {

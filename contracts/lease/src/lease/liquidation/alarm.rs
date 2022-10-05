@@ -54,6 +54,7 @@ where
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub(in crate::lease) fn initial_alarm_schedule(
         &mut self,
         lease_amount: Coin<Asset>,

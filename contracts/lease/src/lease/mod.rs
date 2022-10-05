@@ -3,11 +3,7 @@ use std::marker::PhantomData;
 use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use serde::Serialize;
 
-use finance::{
-    currency::{self, Currency},
-    liability::Liability,
-    price::Price,
-};
+use finance::{currency::Currency, liability::Liability, price::Price};
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleBatch};
 use platform::{
@@ -35,7 +31,6 @@ mod downpayment_dto;
 mod dto;
 mod factory;
 mod liquidation;
-mod open;
 mod repay;
 
 pub trait WithLease {
@@ -106,14 +101,6 @@ where
         oracle: Oracle,
         profit: Profit,
     ) -> Self {
-        assert_eq!(
-            Lpn::SYMBOL,
-            dto.currency,
-            "[Single currency version] The LPN '{}' should match the currency of the lease '{}'",
-            Lpn::SYMBOL,
-            dto.currency
-        );
-
         Self {
             lease_addr,
             customer: dto.customer,
@@ -214,11 +201,7 @@ where
     }
 
     fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
-        if currency::equal::<Asset, Lpn>() {
-            Ok(Price::identity())
-        } else {
-            Ok(self.oracle.price_of::<Asset>()?)
-        }
+        Ok(self.oracle.price_of::<Asset>()?)
     }
 }
 

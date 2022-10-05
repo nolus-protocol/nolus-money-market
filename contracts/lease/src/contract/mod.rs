@@ -14,7 +14,6 @@ use self::state::Controller;
 mod alarms;
 mod close;
 mod cmd;
-mod open;
 mod repay;
 mod state;
 

@@ -4,7 +4,7 @@ use cosmwasm_std::{wasm_execute, Addr, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    currency::{Currency, SymbolOwned},
+    currency::{Currency, SymbolOwned, self},
     price::{dto::PriceDTO, Price},
 };
 use marketprice::alarms::Alarm;
@@ -146,6 +146,10 @@ where
     where
         C: Currency,
     {
+        if currency::equal::<C, OracleBase>() {
+            return Ok(Price::identity());
+        }
+
         let msg = QueryMsg::Price {
             currency: C::SYMBOL.to_string(),
         };

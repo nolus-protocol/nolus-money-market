@@ -4,7 +4,7 @@ use cosmwasm_std::Coin as CosmWasmCoin;
 
 use finance::{
     coin::Coin,
-    currency::{visit, AnyVisitor, Currency, Group, SingleVisitor},
+    currency::{visit, visit_any, AnyVisitor, Currency, Group, SingleVisitor},
 };
 
 use crate::error::{Error, Result};
@@ -31,6 +31,18 @@ where
     CosmWasmCoin::new(coin.into(), C::SYMBOL)
 }
 
+pub(crate) fn from_cosmwasm_any_impl<G, V>(
+    coin: CosmWasmCoin,
+    v: V,
+) -> StdResult<V::Output, V::Error>
+where
+    G: Group,
+    V: CoinVisitor,
+    G::ResolveError: Into<V::Error>,
+{
+    visit_any::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
+}
+
 pub trait CoinVisitor {
     type Output;
     type Error;
@@ -38,7 +50,6 @@ pub trait CoinVisitor {
     fn on<C>(&self, coin: Coin<C>) -> StdResult<Self::Output, Self::Error>
     where
         C: Currency;
-    fn on_unknown(&self) -> StdResult<Self::Output, Self::Error>;
 }
 
 struct CoinTransformer<'a>(&'a CosmWasmCoin);
