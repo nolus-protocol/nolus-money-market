@@ -1,13 +1,13 @@
 use std::marker::PhantomData;
 
-use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
+use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
 use finance::{currency::Currency, liability::Liability, price::Price};
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleBatch};
 use platform::{
-    bank::{BankAccount, BankAccountView, FixedAddressSenderBuilder},
+    bank::{BankAccount, BankAccountView},
     batch::Batch,
 };
 use profit::stub::Profit as ProfitTrait;
@@ -19,12 +19,12 @@ use crate::{
     msg::StateResponse,
 };
 
-use self::factory::Factory;
 pub(super) use self::{
     downpayment_dto::DownpaymentDTO,
     dto::LeaseDTO,
     liquidation::{LeaseInfo, LiquidationInfo, OnAlarmResult, Status, WarningLevel},
     repay::Result as RepayResult,
+    with_lease::{execute, WithLease},
 };
 
 mod downpayment_dto;
@@ -32,46 +32,7 @@ mod dto;
 mod factory;
 mod liquidation;
 mod repay;
-
-pub trait WithLease {
-    type Output;
-    type Error;
-
-    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
-        self,
-        lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
-    ) -> Result<Self::Output, Self::Error>
-    where
-        Lpn: Currency + Serialize,
-        Lpp: LppLenderTrait<Lpn>,
-        TimeAlarms: TimeAlarmsTrait,
-        Oracle: OracleTrait<Lpn>,
-        Profit: ProfitTrait,
-        Asset: Currency + Serialize;
-}
-
-pub fn execute<Cmd, SenderBuilder>(
-    dto: LeaseDTO,
-    cmd: Cmd,
-    addr: &Addr,
-    sender_builder: SenderBuilder,
-    querier: &QuerierWrapper,
-) -> Result<Cmd::Output, Cmd::Error>
-where
-    Cmd: WithLease,
-    finance::error::Error: Into<Cmd::Error>,
-    time_alarms::error::ContractError: Into<Cmd::Error>,
-    market_price_oracle::error::ContractError: Into<Cmd::Error>,
-    profit::error::ContractError: Into<Cmd::Error>,
-    SenderBuilder: FixedAddressSenderBuilder,
-{
-    let lpp = dto.loan.lpp().clone();
-
-    lpp.execute(
-        Factory::new(cmd, dto, addr, sender_builder, querier),
-        querier,
-    )
-}
+mod with_lease;
 
 pub struct Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> {
     lease_addr: &'r Addr,
