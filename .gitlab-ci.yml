@@ -19,7 +19,6 @@ default:
 
 cache:
   paths:
-    - target/
     - cargo_home/
 
 prepare_node:
