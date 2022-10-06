@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{coin::Coin, currency::Currency};
 use platform::{
-    bank::{FixedAddressSender, FixedAddressSenderBuilder},
+    bank::{FixedAddressSender, LazySenderStub},
     batch::Batch,
 };
 
@@ -55,20 +55,15 @@ impl ProfitRef {
         Ok(Self { addr })
     }
 
-    pub fn execute<SenderBuilder, Cmd>(
-        self,
-        sender_builder: SenderBuilder,
-        cmd: Cmd,
-    ) -> StdResult<Cmd::Output, Cmd::Error>
+    pub fn execute<Cmd>(self, cmd: Cmd) -> StdResult<Cmd::Output, Cmd::Error>
     where
-        SenderBuilder: FixedAddressSenderBuilder,
         Cmd: WithProfit,
     {
         let profit_address = self.addr.clone();
 
         cmd.exec(ProfitStub {
             profit_ref: self,
-            sender: sender_builder.build(profit_address),
+            sender: LazySenderStub::new(profit_address),
         })
     }
 }

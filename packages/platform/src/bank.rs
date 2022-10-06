@@ -27,12 +27,6 @@ where
         C: Currency;
 }
 
-pub trait FixedAddressSenderBuilder {
-    type Built: FixedAddressSender;
-
-    fn build(self, address: Addr) -> Self::Built;
-}
-
 pub trait FixedAddressSender
 where
     Self: Into<Batch>,
@@ -157,23 +151,18 @@ where
     }
 }
 
-#[derive(Default)]
-pub struct LazySenderStubBuilder;
+pub struct LazySenderStub {
+    receiver: Addr,
+    amounts: Vec<CwCoin>,
+}
 
-impl FixedAddressSenderBuilder for LazySenderStubBuilder {
-    type Built = LazySenderStub;
-
-    fn build(self, address: Addr) -> Self::Built {
-        LazySenderStub {
-            address,
+impl LazySenderStub {
+    pub fn new(receiver: Addr) -> Self {
+        Self {
+            receiver,
             amounts: Vec::new(),
         }
     }
-}
-
-pub struct LazySenderStub {
-    address: Addr,
-    amounts: Vec<CwCoin>,
 }
 
 impl FixedAddressSender for LazySenderStub
@@ -200,7 +189,7 @@ impl From<LazySenderStub> for Batch {
 
         if !stub.amounts.is_empty() {
             batch.schedule_execute_no_reply(BankMsg::Send {
-                to_address: stub.address.to_string(),
+                to_address: stub.receiver.to_string(),
                 amount: stub.amounts,
             });
         }

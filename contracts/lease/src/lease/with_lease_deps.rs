@@ -5,7 +5,6 @@ use cosmwasm_std::QuerierWrapper;
 use finance::currency::{self, AnyVisitor, Currency, Symbol};
 use lpp::stub::lender::{LppLender as LppLenderTrait, LppLenderRef, WithLppLender};
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
-use platform::bank::FixedAddressSenderBuilder;
 use profit::stub::{Profit as ProfitTrait, ProfitRef, WithProfit};
 use serde::{de::DeserializeOwned, Serialize};
 use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef, WithTimeAlarms};
@@ -30,14 +29,13 @@ pub trait WithLeaseDeps {
         Asset: Currency + Serialize;
 }
 
-pub fn execute<Cmd, SenderBuilder>(
+pub fn execute<Cmd>(
     cmd: Cmd,
     asset: Symbol,
     lpp: LppLenderRef,
     profit: ProfitRef,
     alarms: TimeAlarmsRef,
     oracle: OracleRef,
-    sender_builder: SenderBuilder,
     querier: &QuerierWrapper,
 ) -> Result<Cmd::Output, Cmd::Error>
 where
@@ -45,7 +43,6 @@ where
     finance::error::Error: Into<Cmd::Error>,
     market_price_oracle::error::ContractError: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
-    SenderBuilder: FixedAddressSenderBuilder,
 {
     currency::visit_any(
         asset,
@@ -55,26 +52,23 @@ where
             profit,
             alarms,
             oracle,
-            sender_builder,
             querier,
         },
     )
 }
 
-struct FactoryStage1<'r, Cmd, SenderBuilder> {
+struct FactoryStage1<'r, Cmd> {
     cmd: Cmd,
     lpp: LppLenderRef,
     profit: ProfitRef,
     oracle: OracleRef,
     alarms: TimeAlarmsRef,
-    sender_builder: SenderBuilder,
     querier: &'r QuerierWrapper<'r>,
 }
 
-impl<'r, Cmd, SenderBuilder> AnyVisitor<LeaseGroup> for FactoryStage1<'r, Cmd, SenderBuilder>
+impl<'r, Cmd> AnyVisitor<LeaseGroup> for FactoryStage1<'r, Cmd>
 where
     Cmd: WithLeaseDeps,
-    SenderBuilder: FixedAddressSenderBuilder,
     finance::error::Error: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
     market_price_oracle::error::ContractError: Into<Cmd::Error>,
@@ -93,30 +87,27 @@ where
                 profit: self.profit,
                 alarms: self.alarms,
                 oracle: self.oracle,
-                sender_builder: self.sender_builder,
                 querier: self.querier,
             },
             self.querier,
         )
     }
 }
-struct FactoryStage2<'r, Cmd, Asset, SenderBuilder> {
+struct FactoryStage2<'r, Cmd, Asset> {
     cmd: Cmd,
     asset: PhantomData<Asset>,
     profit: ProfitRef,
     oracle: OracleRef,
     alarms: TimeAlarmsRef,
-    sender_builder: SenderBuilder,
     querier: &'r QuerierWrapper<'r>,
 }
 
-impl<'r, Cmd, Asset, SenderBuilder> WithLppLender for FactoryStage2<'r, Cmd, Asset, SenderBuilder>
+impl<'r, Cmd, Asset> WithLppLender for FactoryStage2<'r, Cmd, Asset>
 where
     Cmd: WithLeaseDeps,
     Asset: Currency + Serialize,
     market_price_oracle::error::ContractError: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
-    SenderBuilder: FixedAddressSenderBuilder,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;
@@ -127,7 +118,6 @@ where
         Lpp: LppLenderTrait<Lpn>,
     {
         self.profit.execute(
-            self.sender_builder,
             FactoryStage3 {
                 cmd: self.cmd,
                 asset: self.asset,

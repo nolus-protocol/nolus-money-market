@@ -2,7 +2,6 @@ use cosmwasm_std::{Addr, QuerierWrapper};
 use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef};
-use platform::bank::FixedAddressSenderBuilder;
 use profit::stub::Profit as ProfitTrait;
 use serde::Serialize;
 use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef};
@@ -29,11 +28,10 @@ pub trait WithLease {
         Asset: Currency + Serialize;
 }
 
-pub fn execute<Cmd, SenderBuilder>(
+pub fn execute<Cmd>(
     lease_dto: LeaseDTO,
     cmd: Cmd,
     addr: &Addr,
-    sender_builder: SenderBuilder,
     querier: &QuerierWrapper,
 ) -> Result<Cmd::Output, Cmd::Error>
 where
@@ -42,7 +40,6 @@ where
     time_alarms::error::ContractError: Into<Cmd::Error>,
     market_price_oracle::error::ContractError: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
-    SenderBuilder: FixedAddressSenderBuilder,
 {
     let asset = lease_dto.currency.clone();
     let lpp = lease_dto.loan.lpp().clone();
@@ -59,7 +56,6 @@ where
         profit,
         alarms,
         oracle,
-        sender_builder,
         querier,
     )
 }
