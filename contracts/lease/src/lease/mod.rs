@@ -29,10 +29,10 @@ pub(super) use self::{
 
 mod downpayment_dto;
 mod dto;
-mod factory;
 mod liquidation;
 mod repay;
 mod with_lease;
+mod with_lease_deps;
 
 pub struct Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> {
     lease_addr: &'r Addr,
