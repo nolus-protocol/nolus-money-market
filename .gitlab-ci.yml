@@ -1,5 +1,6 @@
 stages:
   - prepare
+  - clean
   - check
   - test
   - build
@@ -29,6 +30,11 @@ prepare_node:
     - echo 'y' | apt install jq
     - mkdir -p $CARGO_HOME
     - rustc --version && cargo --version
+
+clean:cargo:
+  stage: clean
+  script:
+    - cargo workspaces exec --no-bail cargo clean --target wasm32-unknown-unknown
 
 check_wasm:cargo:
   stage: check
