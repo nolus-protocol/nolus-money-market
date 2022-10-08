@@ -104,6 +104,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{
+        from_slice,
         testing::{MockApi, MockQuerier},
         Addr, QuerierWrapper, Timestamp,
     };
@@ -113,26 +114,23 @@ mod test {
     use lpp::stub::lender::LppLenderRef;
 
     use crate::{
+        error::ContractError,
         msg::{LoanForm, NewLeaseForm},
-        repay_id::ReplyId,
+        reply_id::ReplyId,
     };
 
     #[test]
-    #[should_panic]
     fn amount_to_borrow_broken_invariant() {
         let lpp = "sdgg22d";
+        let liability: Liability = from_slice(
+            br#"{"initial":40,"healthy":50,"first_liq_warn":52,"second_liq_warn":53,"third_liq_warn":54,"max":54,"recalc_time":36000}"#,
+        )
+        .unwrap();
+        assert!(liability.invariant_held().is_err());
         let lease = NewLeaseForm {
             customer: "ss1s1".into(),
             currency: ToOwned::to_owned(Nls::SYMBOL),
-            liability: Liability::new(
-                Percent::from_percent(10),
-                Percent::from_percent(0),
-                Percent::from_percent(0),
-                Percent::default(),
-                Percent::default(),
-                Percent::default(),
-                100,
-            ),
+            liability,
             loan: LoanForm {
                 annual_margin_interest: Percent::from_percent(0),
                 lpp: lpp.into(),
@@ -144,12 +142,17 @@ mod test {
             market_price_oracle: Addr::unchecked("oracle"),
         };
         let api = MockApi::default();
-        let _ = lease.into_lease(
-            &Addr::unchecked("test"),
-            Timestamp::from_nanos(1000),
-            &api,
-            &QuerierWrapper::new(&MockQuerier::default()),
-            LppLenderRef::unchecked::<_, Nls>(lpp, ReplyId::OpenLoanReq.into()),
-        );
+        let err = lease
+            .into_lease(
+                &Addr::unchecked("test"),
+                Timestamp::from_nanos(1000),
+                &api,
+                &QuerierWrapper::new(&MockQuerier::default()),
+                LppLenderRef::unchecked::<_, Nls>(lpp, ReplyId::OpenLoanReq.into()),
+            )
+            .unwrap_err();
+
+        // TODO assert_eq!(err, ContractError::FinanceError(..)));
+        assert!(matches!(dbg!(err), ContractError::ProfitError(..)));
     }
 }

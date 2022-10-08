@@ -10,7 +10,7 @@ use crate::{
     contract::cmd::{OpenLoanReq, OpenLoanReqResult},
     error::ContractResult,
     msg::NewLeaseForm,
-    repay_id::ReplyId,
+    reply_id::ReplyId,
 };
 
 use super::{Controller, NoLeaseFinish, Response};

@@ -43,6 +43,7 @@ pub struct Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> {
     oracle: Oracle,
 }
 
+#[derive(Debug)]
 pub(crate) struct IntoDTOResult {
     pub dto: LeaseDTO,
     pub batch: Batch,
@@ -221,7 +222,7 @@ mod tests {
         stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},
     };
 
-    use crate::{loan::Loan, msg::StateResponse, repay_id::ReplyId};
+    use crate::{loan::Loan, msg::StateResponse, reply_id::ReplyId};
 
     use super::Lease;
 
@@ -302,7 +303,7 @@ mod tests {
         fn from(_: LppLenderLocalStubUnreachable) -> Self {
             Self {
                 lpp_ref: LppLenderRef::unchecked::<_, TestLpn>(
-                    Addr::unchecked("local_test_lpp_lender_addr"),
+                    "local_test_lpp_lender_addr",
                     ReplyId::OpenLoanReq.into(),
                 ),
                 batch: Batch::default(),
