@@ -20,7 +20,6 @@ use crate::{
 };
 
 pub(super) use self::{
-    downpayment_dto::DownpaymentDTO,
     dto::LeaseDTO,
     liquidation::{LeaseInfo, LiquidationInfo, OnAlarmResult, Status, WarningLevel},
     repay::Result as RepayResult,
@@ -28,7 +27,6 @@ pub(super) use self::{
     with_lease_deps::{execute as execute_deps, WithLeaseDeps},
 };
 
-mod downpayment_dto;
 mod dto;
 mod liquidation;
 mod repay;

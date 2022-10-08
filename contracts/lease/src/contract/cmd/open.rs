@@ -16,7 +16,7 @@ use lpp::stub::{
 use market_price_oracle::{convert, stub::OracleRef};
 use platform::{bank, batch::Batch, coin_legacy::CoinVisitor};
 
-use crate::{error::ContractError, lease::DownpaymentDTO, msg::NewLeaseForm};
+use crate::{error::ContractError, msg::NewLeaseForm};
 
 pub struct OpenLoanReq<'a> {
     form: &'a NewLeaseForm,
@@ -79,7 +79,7 @@ impl<'a, Lpn> CoinVisitor for DownpaymentHandler<'a, Lpn>
 where
     Lpn: Currency,
 {
-    type Output = (DownpaymentDTO, Coin<Lpn>);
+    type Output = (CoinDTO, Coin<Lpn>);
 
     type Error = ContractError;
 
@@ -88,23 +88,23 @@ where
         C: Currency,
     {
         let downpayment_lpn = convert::to_base(self.oracle.clone(), in_amount, self.querier)?;
-        let downpayment = DownpaymentDTO::new(in_amount.into());
+        let downpayment = in_amount.into();
         Ok((downpayment, downpayment_lpn))
     }
 }
 
 pub struct OpenLoanReqResult {
     pub(in crate::contract) batch: Batch,
-    pub(in crate::contract) downpayment: DownpaymentDTO,
+    pub(in crate::contract) downpayment: CoinDTO,
 }
 
 pub struct OpenLoanResp {
     reply: Reply,
-    downpayment: DownpaymentDTO,
+    downpayment: CoinDTO,
 }
 
 impl OpenLoanResp {
-    pub fn new(reply: Reply, downpayment: DownpaymentDTO) -> Self {
+    pub fn new(reply: Reply, downpayment: CoinDTO) -> Self {
         Self { reply, downpayment }
     }
 }
@@ -133,7 +133,7 @@ impl WithLppLender for OpenLoanResp {
 
 pub struct OpenLoanRespResult {
     pub(in crate::contract) lpp: LppLenderRef,
-    pub(in crate::contract) downpayment: DownpaymentDTO,
+    pub(in crate::contract) downpayment: CoinDTO,
     pub(in crate::contract) principal: CoinDTO,
     pub(in crate::contract) annual_interest_rate: Percent,
 }

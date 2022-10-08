@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use cosmwasm_std::{DepsMut, Env, Reply};
+use finance::coin::CoinDTO;
 use lpp::stub::lender::LppLenderRef;
 use platform::batch::{Batch, Emit, Emitter};
 use serde::{Deserialize, Serialize};
@@ -9,7 +10,7 @@ use crate::{
     contract::cmd::{OpenLoanResp, OpenLoanRespResult},
     error::{ContractError, ContractResult},
     event::TYPE,
-    lease::{DownpaymentDTO, LeaseDTO},
+    lease::LeaseDTO,
     msg::NewLeaseForm,
     repay_id::ReplyId,
 };
@@ -20,7 +21,7 @@ use super::{Active, Controller, Response};
 pub struct NoLeaseFinish {
     pub(super) form: NewLeaseForm,
     pub(super) lpp: LppLenderRef,
-    pub(super) downpayment: DownpaymentDTO,
+    pub(super) downpayment: CoinDTO,
 }
 
 impl Controller for NoLeaseFinish {
@@ -73,5 +74,5 @@ fn build_emitter(
         .emit("currency", dto.currency.clone())
         .emit("loan-pool-id", dto.loan.lpp().addr())
         .emit_coin_dto("loan", open_result.principal)
-        .emit_coin_dto("downpayment", open_result.downpayment.into())
+        .emit_coin_dto("downpayment", open_result.downpayment)
 }
