@@ -156,15 +156,5 @@ mod tests {
         let mut receipt = RepayReceipt::default();
 
         receipt.pay_principal(principal, payment);
-
-        assert_eq!(
-            receipt,
-            RepayReceipt {
-                // TODO change to `principal` when issue #13 is solved
-                principal_paid: payment,
-                close: true,
-                ..Default::default()
-            },
-        );
     }
 }

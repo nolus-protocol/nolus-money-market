@@ -1,10 +1,14 @@
 use cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, Env, QuerierWrapper};
+use std::result::Result as StdResult;
 
-use finance::{coin::Coin, currency::Currency};
+use finance::{
+    coin::Coin,
+    currency::{Currency, Group},
+};
 
 use crate::{
     batch::Batch,
-    coin_legacy::{from_cosmwasm_impl, to_cosmwasm_impl},
+    coin_legacy::{from_cosmwasm_any_impl, from_cosmwasm_impl, to_cosmwasm_impl, CoinVisitor},
     error::{Error, Result},
 };
 
@@ -23,12 +27,6 @@ where
         C: Currency;
 }
 
-pub trait FixedAddressSenderBuilder {
-    type Built: FixedAddressSender;
-
-    fn build(self, address: Addr) -> Self::Built;
-}
-
 pub trait FixedAddressSender
 where
     Self: Into<Batch>,
@@ -42,17 +40,24 @@ pub fn received<C>(cw_amount: Vec<CwCoin>) -> Result<Coin<C>>
 where
     C: Currency,
 {
-    match cw_amount.len() {
-        0 => Err(Error::no_funds::<C>()),
-        1 => {
-            let first = cw_amount
-                .into_iter()
-                .next()
-                .expect("there is at least a coin");
-            Ok(from_cosmwasm_impl(first)?)
-        }
-        _ => Err(Error::unexpected_funds::<C>()),
-    }
+    received_one(
+        cw_amount,
+        Error::no_funds::<C>,
+        Error::unexpected_funds::<C>,
+    )
+    .and_then(from_cosmwasm_impl)
+}
+
+pub fn received_any<G, V>(cw_amount: Vec<CwCoin>, visitor: V) -> StdResult<V::Output, V::Error>
+where
+    V: CoinVisitor,
+    G: Group,
+    Error: Into<V::Error>,
+    G::ResolveError: Into<V::Error>,
+{
+    received_one(cw_amount, Error::NoFundsAny, Error::UnexpectedFundsAny)
+        .map_err(Into::into)
+        .and_then(|coin| from_cosmwasm_any_impl::<G, _>(coin, visitor))
 }
 
 pub struct BankView<'a> {
@@ -124,23 +129,40 @@ impl<'a> From<BankStub<'a>> for Batch {
     }
 }
 
-#[derive(Default)]
-pub struct LazySenderStubBuilder;
-
-impl FixedAddressSenderBuilder for LazySenderStubBuilder {
-    type Built = LazySenderStub;
-
-    fn build(self, address: Addr) -> Self::Built {
-        LazySenderStub {
-            address,
-            amounts: Vec::new(),
+fn received_one<NoFundsErr, UnexpFundsErr>(
+    cw_amount: Vec<CwCoin>,
+    no_funds_err: NoFundsErr,
+    unexp_funds_err: UnexpFundsErr,
+) -> Result<CwCoin>
+where
+    NoFundsErr: FnOnce() -> Error,
+    UnexpFundsErr: FnOnce() -> Error,
+{
+    match cw_amount.len() {
+        0 => Err(no_funds_err()),
+        1 => {
+            let first = cw_amount
+                .into_iter()
+                .next()
+                .expect("there is at least a coin");
+            Ok(first)
         }
+        _ => Err(unexp_funds_err()),
     }
 }
 
 pub struct LazySenderStub {
-    address: Addr,
+    receiver: Addr,
     amounts: Vec<CwCoin>,
+}
+
+impl LazySenderStub {
+    pub fn new(receiver: Addr) -> Self {
+        Self {
+            receiver,
+            amounts: Vec::new(),
+        }
+    }
 }
 
 impl FixedAddressSender for LazySenderStub
@@ -167,7 +189,7 @@ impl From<LazySenderStub> for Batch {
 
         if !stub.amounts.is_empty() {
             batch.schedule_execute_no_reply(BankMsg::Send {
-                to_address: stub.address.to_string(),
+                to_address: stub.receiver.to_string(),
                 amount: stub.amounts,
             });
         }

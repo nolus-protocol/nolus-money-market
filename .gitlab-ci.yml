@@ -1,5 +1,6 @@
 stages:
   - prepare
+  - clean
   - check
   - test
   - build
@@ -19,7 +20,6 @@ default:
 
 cache:
   paths:
-    - target/
     - cargo_home/
 
 prepare_node:
@@ -30,6 +30,7 @@ prepare_node:
     - echo 'y' | apt install jq
     - mkdir -p $CARGO_HOME
     - rustc --version && cargo --version
+    - cargo install cargo-workspaces
 
 check_wasm:cargo:
   stage: check
@@ -44,7 +45,6 @@ schema:cargo:
     SCHEMA_DIR: "contracts-schemas"
     SCHEMA_DIR_RESULT: "schemas.tar.gz"
   script:
-    - cargo install cargo-workspaces
     - cargo workspaces exec --no-bail cargo run --example schema
     - /bin/bash ./scripts/collect-contracts-schemas.sh $SCHEMA_DIR
     - tar -czvf $SCHEMA_DIR_RESULT $SCHEMA_DIR
@@ -68,7 +68,6 @@ test:cargo:
 lint:cargo:
   stage: test
   script:
-    - rustup component add clippy
     - ./lint.sh
 
 build-and-optimization:cargo:

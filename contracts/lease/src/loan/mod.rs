@@ -1,6 +1,6 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use cosmwasm_std::{Addr, Reply, Timestamp};
+use cosmwasm_std::{Addr, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use finance::{
@@ -23,12 +23,9 @@ use profit::stub::{Profit as ProfitTrait, ProfitBatch, ProfitRef};
 use crate::error::{ContractError, ContractResult};
 
 pub use self::state::State;
-pub(crate) use self::{
-    liability::LiabilityStatus, open::Receipt as OpenReceipt, repay::Receipt as RepayReceipt,
-};
+pub(crate) use self::{liability::LiabilityStatus, repay::Receipt as RepayReceipt};
 
 mod liability;
-mod open;
 mod repay;
 mod state;
 
@@ -43,7 +40,7 @@ pub(crate) struct LoanDTO {
 }
 
 impl LoanDTO {
-    fn new_raw(
+    fn new(
         annual_margin_interest: Percent,
         lpp: LppLenderRef,
         interest_due_period: Duration,
@@ -61,32 +58,9 @@ impl LoanDTO {
             profit,
         }
     }
-    pub(crate) fn new(
-        start: Timestamp,
-        lpp: LppLenderRef,
-        annual_margin_interest: Percent,
-        interest_due_period: Duration,
-        grace_period: Duration,
-        profit: ProfitRef,
-    ) -> ContractResult<Self> {
-        if grace_period >= interest_due_period {
-            Err(ContractError::InvalidParameters(format!(
-                "The grace period, currently {}, must be shorter that an interest period, currently {}, to avoid overlapping",
-                grace_period,
-                interest_due_period,
-            )))
-        } else {
-            Ok(Self::new_raw(
-                annual_margin_interest,
-                lpp,
-                interest_due_period,
-                grace_period,
-                InterestPeriod::with_interest(annual_margin_interest)
-                    .from(start)
-                    .spanning(interest_due_period),
-                profit,
-            ))
-        }
+
+    pub(crate) fn annual_margin_interest(&self) -> Percent {
+        self.annual_margin_interest
     }
 
     pub(crate) fn lpp(&self) -> &LppLenderRef {
@@ -114,18 +88,67 @@ where
     Lpp: LppLenderTrait<Lpn>,
     Profit: ProfitTrait,
 {
+    pub(super) fn new(
+        start: Timestamp,
+        lpp: Lpp,
+        annual_margin_interest: Percent,
+        interest_due_period: Duration,
+        grace_period: Duration,
+        profit: Profit,
+    ) -> ContractResult<Self> {
+        if grace_period >= interest_due_period {
+            Err(ContractError::InvalidParameters(format!(
+                "The grace period, currently {}, must be shorter that an interest period, currently {}, to avoid overlapping",
+                grace_period,
+                interest_due_period,
+            )))
+        } else {
+            let current_period = InterestPeriod::with_interest(annual_margin_interest)
+                .from(start)
+                .spanning(interest_due_period);
+            Ok(Self::new_raw(
+                annual_margin_interest,
+                PhantomData,
+                lpp,
+                interest_due_period,
+                grace_period,
+                current_period,
+                profit,
+            ))
+        }
+    }
+
     pub(super) fn from_dto(dto: LoanDTO, lpp: Lpp, profit: Profit) -> Self {
-        let res = Self {
-            annual_margin_interest: dto.annual_margin_interest,
-            lpn: PhantomData,
+        Self::new_raw(
+            dto.annual_margin_interest,
+            PhantomData,
             lpp,
-            interest_due_period: dto.interest_due_period,
-            grace_period: dto.grace_period,
-            current_period: dto.current_period,
+            dto.interest_due_period,
+            dto.grace_period,
+            dto.current_period,
             profit,
-        };
-        debug_assert!(res.grace_period < res.interest_due_period);
-        res
+        )
+    }
+
+    fn new_raw(
+        annual_margin_interest: Percent,
+        lpn: PhantomData<Lpn>,
+        lpp: Lpp,
+        interest_due_period: Duration,
+        grace_period: Duration,
+        current_period: InterestPeriod<Units, Percent>,
+        profit: Profit,
+    ) -> Self {
+        debug_assert!(grace_period < interest_due_period);
+        Self {
+            annual_margin_interest,
+            lpn,
+            lpp,
+            interest_due_period,
+            grace_period,
+            current_period,
+            profit,
+        }
     }
 
     pub(super) fn into_dto(self) -> (LoanDTO, Batch) {
@@ -139,7 +162,7 @@ where
             batch: profit_batch,
         } = self.profit.into();
 
-        let dto = LoanDTO::new_raw(
+        let dto = LoanDTO::new(
             self.annual_margin_interest,
             lpp_ref,
             self.interest_due_period,
@@ -149,21 +172,6 @@ where
         );
 
         (dto, lpp_batch.merge(profit_batch))
-    }
-
-    pub(crate) fn open_loan_req(&mut self, amount: Coin<Lpn>) -> ContractResult<()> {
-        self.lpp.open_loan_req(amount)?;
-
-        Ok(())
-    }
-
-    pub(crate) fn open_loan_resp(&mut self, resp: Reply) -> ContractResult<OpenReceipt<Lpn>> {
-        let response = self.lpp.open_loan_resp(resp)?;
-
-        Ok(OpenReceipt {
-            annual_interest_rate: response.annual_interest_rate + self.annual_margin_interest,
-            borrowed: response.principal_due,
-        })
     }
 
     pub(crate) fn grace_period_end(&self) -> Timestamp {
@@ -225,7 +233,6 @@ where
         if loan_payment.is_zero() {
             // in practice not possible, but in theory it is if two consecutive repayments are received
             // with the same 'by' time.
-            // TODO return profit.batch + lpp.batch
             return Ok(receipt);
         }
 
@@ -441,13 +448,8 @@ mod tests {
     use serde::{Deserialize, Serialize};
 
     use finance::{
-        coin::Coin,
-        currency::Currency,
-        duration::Duration,
-        fraction::Fraction,
-        interest::InterestPeriod,
-        percent::Percent,
-        test::currency::{Nls, Usdc},
+        coin::Coin, currency::Currency, duration::Duration, fraction::Fraction,
+        interest::InterestPeriod, percent::Percent, test::currency::Usdc,
     };
     use lpp::{
         error::ContractError as LppError,
@@ -461,12 +463,9 @@ mod tests {
         },
     };
     use platform::{bank::BankAccountView, error::Result as PlatformResult};
-    use profit::stub::{Profit, ProfitBatch, ProfitRef};
+    use profit::stub::{Profit, ProfitBatch};
 
-    use crate::{
-        loan::{repay::Receipt as RepayReceipt, Loan, LoanDTO},
-        repay_id::ReplyId,
-    };
+    use crate::loan::{repay::Receipt as RepayReceipt, Loan};
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(500); // 50%
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
@@ -558,30 +557,19 @@ mod tests {
     }
 
     fn create_loan(
-        addr: &str,
         loan_response: Option<LoanResponse<TestCurrency>>,
     ) -> Loan<TestCurrency, LppLenderLocalStub, ProfitLocalStub> {
-        let lpp_ref = LppLenderRef::unchecked::<_, Nls>(addr, ReplyId::OpenLoanReq.into());
-
-        let profit_ref = ProfitRef::unchecked(addr);
-
-        let loan_dto = LoanDTO::new(
+        Loan::new(
             LEASE_START,
-            lpp_ref,
-            MARGIN_INTEREST_RATE,
-            Duration::YEAR,
-            Duration::from_secs(0),
-            profit_ref,
-        )
-        .unwrap();
-
-        Loan::from_dto(
-            loan_dto,
             LppLenderLocalStub {
                 loan: loan_response,
             },
+            MARGIN_INTEREST_RATE,
+            Duration::YEAR,
+            Duration::from_secs(0),
             ProfitLocalStub {},
         )
+        .expect("loan test instance should be setup correctly")
     }
 
     #[test]
@@ -604,7 +592,7 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let mut loan = create_loan(addr, Some(loan_resp));
+        let mut loan = create_loan(Some(loan_resp));
 
         let receipt = loan
             .repay(
@@ -643,7 +631,7 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let mut loan = create_loan(addr, Some(loan_resp));
+        let mut loan = create_loan(Some(loan_resp));
 
         let receipt = loan
             .repay(
@@ -683,7 +671,7 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let mut loan = create_loan(addr, Some(loan_resp));
+        let mut loan = create_loan(Some(loan_resp));
         let margin_interest = MARGIN_INTEREST_RATE.of(lease_coin);
         let end_of_due_period = LEASE_START + Duration::YEAR;
         {
@@ -729,7 +717,7 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let mut loan = create_loan(addr, Some(loan_resp));
+        let mut loan = create_loan(Some(loan_resp));
 
         let receipt = loan
             .repay(
@@ -770,7 +758,7 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let mut lease = create_loan(addr, Some(loan));
+        let mut lease = create_loan(Some(loan));
 
         let receipt = lease
             .repay(repay_coin, LEASE_START, Addr::unchecked(addr))
@@ -808,7 +796,7 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let mut loan = create_loan(addr, Some(loan_resp));
+        let mut loan = create_loan(Some(loan_resp));
 
         let receipt = loan
             .repay(
@@ -851,7 +839,7 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let mut lease = create_loan(addr, Some(loan));
+        let mut lease = create_loan(Some(loan));
 
         let receipt = lease
             .repay(lease_coin, LEASE_START, Addr::unchecked(addr))
@@ -934,7 +922,7 @@ mod tests {
             interest_paid: LEASE_START,
         };
 
-        let loan = create_loan(LEASE_ADDRESS, Some(loan_resp.clone()));
+        let loan = create_loan(Some(loan_resp.clone()));
         let now = LEASE_START + period;
 
         let (expected_margin_overdue, expected_margin_due) =

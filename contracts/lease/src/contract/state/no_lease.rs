@@ -2,15 +2,15 @@ use std::fmt::Display;
 
 use cosmwasm_std::{DepsMut, Env, MessageInfo};
 use cw2::set_contract_version;
+use lpp::stub::lender::LppLenderRef;
+use market_price_oracle::stub::OracleRef;
 use serde::{Deserialize, Serialize};
 
-use platform::bank::LazySenderStubBuilder;
-
 use crate::{
-    contract::open::{OpenLoanReq, OpenLoanReqResult},
+    contract::cmd::{OpenLoanReq, OpenLoanReqResult},
     error::ContractResult,
-    lease,
     msg::NewLeaseForm,
+    repay_id::ReplyId,
 };
 
 use super::{Controller, NoLeaseFinish, Response};
@@ -25,27 +25,31 @@ impl Controller for NoLease {
     fn instantiate(
         self,
         deps: &mut DepsMut,
-        env: Env,
+        _env: Env,
         info: MessageInfo,
         form: NewLeaseForm,
     ) -> ContractResult<Response> {
         set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-        let form_cloned = form.clone();
-        let lease = form.into_lease_dto(env.block.time, deps.api, &deps.querier)?;
+        let lpp = LppLenderRef::try_new(
+            deps.api.addr_validate(&form.loan.lpp)?,
+            &deps.querier,
+            ReplyId::OpenLoanReq.into(),
+        )?;
 
-        let OpenLoanReqResult { batch, downpayment } = lease::execute(
-            lease,
-            OpenLoanReq::new(info.funds),
-            &env.contract.address,
-            LazySenderStubBuilder,
+        let oracle = OracleRef::try_from(form.market_price_oracle.clone(), &deps.querier)
+            .expect("Market Price Oracle is not deployed, or wrong address is passed!");
+
+        let OpenLoanReqResult { batch, downpayment } = lpp.clone().execute(
+            OpenLoanReq::new(&form, info.funds, oracle, &deps.querier),
             &deps.querier,
         )?;
 
         Ok(Response::from(
             batch,
             NoLeaseFinish {
-                form: form_cloned,
+                form,
+                lpp,
                 downpayment,
             },
         ))

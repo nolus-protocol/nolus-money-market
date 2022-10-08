@@ -15,7 +15,7 @@ use super::Coin;
 /// framework does not support type parameterization.
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CoinDTO {
-    amount: u128,
+    amount: Amount,
     symbol: SymbolOwned,
 }
 

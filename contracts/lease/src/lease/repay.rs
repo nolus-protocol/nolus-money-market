@@ -14,6 +14,8 @@ use crate::{
     loan::RepayReceipt,
 };
 
+use super::IntoDTOResult;
+
 impl<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
     Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
@@ -34,7 +36,10 @@ where
 
         self.reschedule_on_repay(lease_amount, &now)?;
 
-        let (lease_dto, batch) = self.into_dto();
+        let IntoDTOResult {
+            dto: lease_dto,
+            batch,
+        } = self.into_dto();
 
         Ok(Result {
             batch,
