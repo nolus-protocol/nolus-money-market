@@ -92,15 +92,15 @@ where
                 if second_in_path.eq(price.quote().symbol()) {
                     return Ok(());
                 }
-                Err(ContractError::InvalidDenomPair((
+                Err(ContractError::InvalidDenomPair(
                     price.base().symbol().to_string(),
                     price.quote().symbol().to_string(),
-                )))
+                ))
             }
-            None => Err(ContractError::InvalidDenomPair((
+            None => Err(ContractError::InvalidDenomPair(
                 price.base().symbol().to_string(),
                 price.quote().symbol().to_string(),
-            ))),
+            )),
         }
     }
 }

@@ -10,7 +10,6 @@ use finance::{
     percent::Percent,
     test::{self},
 };
-use lease::error::ContractError;
 use leaser::msg::{QueryMsg, QuoteResponse};
 
 use crate::common::{lpp_wrapper::mock_lpp_quote_query, test_case::TestCase, ADMIN, USER};
@@ -42,8 +41,6 @@ fn init_lpp_with_unknown_currency() {
 }
 
 #[test]
-#[should_panic(expected = "Single currency version")]
-#[ignore = "re-enable it when the open lease refacturing is over"]
 fn open_lease_not_in_lpn_currency() {
     let user_addr = Addr::unchecked(USER);
 
@@ -68,13 +65,17 @@ fn open_lease_not_in_lpn_currency() {
         &coins(3, lpn),
     );
     let err = res.unwrap_err();
-    let root_err = err.root_cause().downcast_ref::<ContractError>().unwrap();
-    assert_eq!(
-        &ContractError::UnknownCurrency {
-            symbol: ToOwned::to_owned(lpn)
-        },
-        root_err
-    );
+    // For some reason the downcasting does not work. That is due to different TypeId-s of LeaseError and the root
+    // cause stored into the err. Suppose that is a flaw of the cw-multi-test.
+    // dbg!(err.root_cause().downcast_ref::<LeaseError>());
+    // assert_eq!(
+    //     &LeaseError::OracleError(OracleError::Std(StdError::GenericErr { msg: "".into() })),
+    //     root_err
+    // );
+    assert!(err
+        .root_cause()
+        .to_string()
+        .contains("Unsupported currency"));
 }
 
 #[test]

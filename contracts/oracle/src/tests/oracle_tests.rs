@@ -105,8 +105,8 @@ fn feed_indirect_price() {
 }
 
 #[test]
-#[should_panic(expected = "InvalidDenomPair")]
-fn query_prices_unsuppoted_denom() {
+#[should_panic(expected = "UnsupportedCurrency")]
+fn query_prices_unsupported_denom() {
     let (deps, _) = setup_test(dummy_default_instantiate_msg());
 
     // query for unsupported denom should fail

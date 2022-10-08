@@ -10,7 +10,7 @@ use finance::{
     currency::{Currency, SymbolOwned},
 };
 
-use crate::error::ContractError;
+use crate::error::{self, ContractError};
 
 use self::serde::TreeStore;
 
@@ -76,10 +76,10 @@ where
         let mut prev = &edges[0];
         for edge in edges[1..].iter() {
             if edge.0 == prev.0 {
-                return Err(ContractError::InvalidDenomPair((
+                return Err(ContractError::InvalidDenomPair(
                     edge.0 .0.to_owned(),
                     edge.1.to_owned(),
-                )));
+                ));
             }
             prev = edge;
         }
@@ -168,10 +168,10 @@ where
             }
             Ok(path)
         } else {
-            Err(ContractError::InvalidDenomPair((
+            Err(ContractError::InvalidDenomPair(
                 query.to_owned(),
                 B::SYMBOL.to_owned(),
-            )))
+            ))
         }
     }
 
@@ -180,16 +180,17 @@ where
             let affected = node.bfs().iter.map(|v| v.data.clone()).collect();
             Ok(affected)
         } else {
-            Err(ContractError::InvalidDenomPair(pair.to_owned()))
+            Err(ContractError::InvalidDenomPair(
+                pair.0.to_owned(),
+                pair.1.to_owned(),
+            ))
         }
     }
 
     pub fn validate_supported(&self, query: &SymbolOwned) -> Result<(), ContractError> {
         self.supported_currencies
             .binary_search(query)
-            .map_err(|_| {
-                ContractError::InvalidDenomPair((query.to_owned(), B::SYMBOL.to_owned()))
-            })?;
+            .map_err(|_| error::unsupported_currency::<B>(query))?;
         Ok(())
     }
 

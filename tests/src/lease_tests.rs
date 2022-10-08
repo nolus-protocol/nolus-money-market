@@ -40,7 +40,7 @@ fn create_test_case() -> TestCase {
     );
     test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000, Lpn::SYMBOL);
     test_case.init_timealarms_with_funds(5_000_000);
-    test_case.init_oracle_with_funds(None, 5_000_000);
+    test_case.init_oracle(None);
     test_case.init_treasury();
     test_case.init_profit(24);
     test_case.init_leaser();

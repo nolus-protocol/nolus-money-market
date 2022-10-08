@@ -100,13 +100,13 @@ impl LeaseWrapper {
     }
 
     fn lease_instantiate_msg(
-        denom: &str,
+        lease_currency: &str,
         addresses: LeaseWrapperAddresses,
         config: LeaseWrapperConfig,
     ) -> NewLeaseForm {
         NewLeaseForm {
             customer: config.customer,
-            currency: denom.to_string(),
+            currency: lease_currency.to_string(),
             liability: Liability::new(
                 config.liability_init_percent,
                 config.liability_delta_to_healthy_percent,
