@@ -45,7 +45,14 @@ impl Controller for NoLease {
             &deps.querier,
         )?;
 
-        Ok(Response::from(batch, NoLeaseFinish { form, lpp, downpayment }))
+        Ok(Response::from(
+            batch,
+            NoLeaseFinish {
+                form,
+                lpp,
+                downpayment,
+            },
+        ))
     }
 }
 

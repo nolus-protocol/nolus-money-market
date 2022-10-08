@@ -4,7 +4,7 @@ use cosmwasm_std::{wasm_execute, Addr, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    currency::{Currency, SymbolOwned, self},
+    currency::{self, Currency, SymbolOwned},
     price::{dto::PriceDTO, Price},
 };
 use marketprice::alarms::Alarm;

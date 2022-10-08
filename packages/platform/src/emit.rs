@@ -1,8 +1,8 @@
 use cosmwasm_std::{Env, Event, Response, Timestamp};
 
 use finance::{
-    coin::{Amount, Coin},
-    currency::Currency,
+    coin::{Amount, Coin, CoinDTO},
+    currency::{Currency, Symbol},
     percent::Percent,
 };
 
@@ -35,12 +35,12 @@ where
     }
 
     /// Specialization of [`emit`](Self::emit) for [`Coin`]'s amount.
-    fn emit_coin_amount<K, C>(self, event_key: K, coin: Coin<C>) -> Self
+    fn emit_coin_amount<K, A>(self, event_key: K, coin_amount: A) -> Self
     where
         K: Into<String>,
-        C: Currency,
+        A: Into<Amount>,
     {
-        self.emit_to_string_value(event_key, Amount::from(coin))
+        self.emit_to_string_value(event_key, coin_amount.into())
     }
 
     /// Specialization of [`emit`](Self::emit) for [`Currency`] implementors.
@@ -49,7 +49,15 @@ where
         K: Into<String>,
         C: Currency,
     {
-        self.emit(event_key, C::SYMBOL)
+        self.emit_currency_symbol(event_key, C::SYMBOL)
+    }
+
+    /// Specialization of [`emit`](Self::emit) for [`Currency`]'s symbol.
+    fn emit_currency_symbol<K>(self, event_key: K, currency_symbol: Symbol) -> Self
+    where
+        K: Into<String>,
+    {
+        self.emit(event_key, currency_symbol)
     }
 
     /// Specialization of [`emit`](Self::emit) for [`Percent`]'s amount in [`Units`](finance::percent::Units).
@@ -65,12 +73,19 @@ where
         K: Into<String>,
         C: Currency,
     {
+        self.emit_coin_dto(event_key, coin.into())
+    }
+
+    fn emit_coin_dto<K>(self, event_key: K, coin: CoinDTO) -> Self
+    where
+        K: Into<String>,
+    {
         let key = event_key.into();
         let amount_key = key.clone() + "-amount";
         let symbol_key = key + "-symbol";
 
-        self.emit_coin_amount(amount_key, coin)
-            .emit_currency::<_, C>(symbol_key)
+        self.emit_coin_amount(amount_key, coin.amount())
+            .emit_currency_symbol(symbol_key, coin.symbol())
     }
 
     fn emit_tx_info(self, env: &Env) -> Self {

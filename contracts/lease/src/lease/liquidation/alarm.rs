@@ -17,7 +17,7 @@ use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractResult,
-    lease::{Lease, LiquidationInfo, OnAlarmResult, Status, WarningLevel},
+    lease::{IntoDTOResult, Lease, LiquidationInfo, OnAlarmResult, Status, WarningLevel},
     loan::LiabilityStatus,
 };
 
@@ -31,6 +31,20 @@ where
     Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
+    #[inline]
+    pub(in crate::lease) fn initial_alarm_schedule(
+        &mut self,
+        lease_amount: Coin<Asset>,
+        now: &Timestamp,
+    ) -> ContractResult<()> {
+        self.reschedule(
+            lease_amount,
+            total(lease_amount, self.price_of_lease_currency()?),
+            now,
+            &Status::None,
+        )
+    }
+
     pub(crate) fn on_price_alarm<B>(
         self,
         now: Timestamp,
@@ -51,21 +65,6 @@ where
         B: BankAccountView,
     {
         self.on_alarm(Self::act_on_overdue, now, account)
-    }
-
-    #[inline]
-    #[allow(dead_code)]
-    pub(in crate::lease) fn initial_alarm_schedule(
-        &mut self,
-        lease_amount: Coin<Asset>,
-        now: &Timestamp,
-    ) -> ContractResult<()> {
-        self.reschedule(
-            lease_amount,
-            total(lease_amount, self.price_of_lease_currency()?),
-            now,
-            &Status::None,
-        )
     }
 
     #[inline]
@@ -139,7 +138,10 @@ where
         self,
         liquidation_status: Status<Lpn, Asset>,
     ) -> OnAlarmResult<Lpn, Asset> {
-        let (lease_dto, batch) = self.into_dto();
+        let IntoDTOResult {
+            dto: lease_dto,
+            batch,
+        } = self.into_dto();
 
         OnAlarmResult {
             batch,
@@ -171,7 +173,7 @@ where
             Status::FullLiquidation { .. }
         ));
 
-        self.time_alarms
+        self.alarms
             .add_alarm({
                 self.loan
                     .grace_period_end()
@@ -262,12 +264,10 @@ mod tests {
 
     #[test]
     fn reschedule_time_alarm_recalc() {
-        let interest_rate = Percent::from_permille(50);
-        // LPP loan
         let loan = LoanResponse {
             principal_due: coin(300),
             interest_due: coin(0),
-            annual_interest_rate: interest_rate,
+            annual_interest_rate: Percent::from_permille(50),
             interest_paid: Timestamp::from_nanos(0),
         };
 
@@ -296,7 +296,9 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(lease.time_alarms.batch, {
+        // TODO: add a test that the initial alarms are set
+
+        assert_eq!(lease.alarms.batch, {
             let mut batch = Batch::default();
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
@@ -347,7 +349,7 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(lease.time_alarms.batch, {
+        assert_eq!(lease.alarms.batch, {
             let mut batch = Batch::default();
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {

@@ -1,22 +1,22 @@
 use std::marker::PhantomData;
 
-use cosmwasm_std::{Coin as CwCoin, Env, QuerierWrapper, Reply};
+use cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 use currency::payment::PaymentGroup;
 use serde::Serialize;
 
-use finance::{coin::Coin, currency::Currency};
+use finance::{
+    coin::{Coin, CoinDTO},
+    currency::Currency,
+    percent::Percent,
+};
 use lpp::stub::{
-    lender::{LppLender as LppLenderTrait, WithLppLender},
+    lender::{LppLender as LppLenderTrait, LppLenderRef, WithLppLender},
     LppBatch,
 };
 use market_price_oracle::{convert, stub::OracleRef};
-use platform::{
-    bank,
-    batch::{Batch, Emit, Emitter},
-    coin_legacy::CoinVisitor,
-};
+use platform::{bank, batch::Batch, coin_legacy::CoinVisitor};
 
-use crate::{error::ContractError, event::TYPE, lease::DownpaymentDTO, msg::NewLeaseForm};
+use crate::{error::ContractError, lease::DownpaymentDTO, msg::NewLeaseForm};
 
 pub struct OpenLoanReq<'a> {
     form: &'a NewLeaseForm,
@@ -98,31 +98,19 @@ pub struct OpenLoanReqResult {
     pub(in crate::contract) downpayment: DownpaymentDTO,
 }
 
-pub struct OpenLoanResp<'a> {
+pub struct OpenLoanResp {
     reply: Reply,
-    form: &'a NewLeaseForm,
     downpayment: DownpaymentDTO,
-    env: &'a Env,
 }
 
-impl<'a> OpenLoanResp<'a> {
-    pub fn new(
-        reply: Reply,
-        form: &'a NewLeaseForm,
-        downpayment: DownpaymentDTO,
-        env: &'a Env,
-    ) -> Self {
-        Self {
-            reply,
-            form,
-            downpayment,
-            env,
-        }
+impl OpenLoanResp {
+    pub fn new(reply: Reply, downpayment: DownpaymentDTO) -> Self {
+        Self { reply, downpayment }
     }
 }
 
-impl<'a> WithLppLender for OpenLoanResp<'a> {
-    type Output = Emitter;
+impl WithLppLender for OpenLoanResp {
+    type Output = OpenLoanRespResult;
 
     type Error = ContractError;
 
@@ -133,20 +121,19 @@ impl<'a> WithLppLender for OpenLoanResp<'a> {
     {
         let loan_resp = lpp.open_loan_resp(self.reply)?;
         let LppBatch { lpp_ref, batch } = lpp.into();
-        Ok(batch
-            .into_emitter(TYPE::Open)
-            .emit_tx_info(self.env)
-            .emit("id", self.env.contract.address.clone())
-            .emit("customer", self.form.customer.clone())
-            //TODO get rid of the manual calculation when the event got emitted after the lease creation
-            .emit_percent_amount(
-                "air",
-                loan_resp.annual_interest_rate + self.form.loan.annual_margin_interest,
-            )
-            .emit("currency", self.form.currency.clone())
-            .emit("loan-pool-id", lpp_ref.addr())
-            .emit_coin("loan", loan_resp.principal_due)
-            .emit("downpayment-symbol", self.downpayment.symbol())
-            .emit_to_string_value("downpayment-amount", self.downpayment.amount()))
+        debug_assert_eq!(Batch::default(), batch);
+        Ok(OpenLoanRespResult {
+            lpp: lpp_ref,
+            downpayment: self.downpayment,
+            principal: loan_resp.principal_due.into(),
+            annual_interest_rate: loan_resp.annual_interest_rate,
+        })
     }
+}
+
+pub struct OpenLoanRespResult {
+    pub(in crate::contract) lpp: LppLenderRef,
+    pub(in crate::contract) downpayment: DownpaymentDTO,
+    pub(in crate::contract) principal: CoinDTO,
+    pub(in crate::contract) annual_interest_rate: Percent,
 }

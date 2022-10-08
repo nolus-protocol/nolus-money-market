@@ -117,17 +117,15 @@ where
         Lpn: Currency + Serialize,
         Lpp: LppLenderTrait<Lpn>,
     {
-        self.profit.execute(
-            FactoryStage3 {
-                cmd: self.cmd,
-                asset: self.asset,
-                lpn: PhantomData::<Lpn>,
-                lpp,
-                oracle: self.oracle,
-                alarms: self.alarms,
-                querier: self.querier,
-            },
-        )
+        self.profit.execute(FactoryStage3 {
+            cmd: self.cmd,
+            asset: self.asset,
+            lpn: PhantomData::<Lpn>,
+            lpp,
+            oracle: self.oracle,
+            alarms: self.alarms,
+            querier: self.querier,
+        })
     }
 }
 

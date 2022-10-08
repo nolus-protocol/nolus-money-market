@@ -342,7 +342,7 @@ fn open_lease_impl(currency: SymbolStatic) {
 
     let lpp_addr: &str = test_case.lpp_addr.as_ref().unwrap().as_str(); // 0
 
-    // let time_alarms_addr: &str = test_case.timealarms.as_ref().unwrap().as_str(); // 1
+    let time_alarms_addr: &str = test_case.timealarms.as_ref().unwrap().as_str(); // 1
 
     let _oracle_addr: &str = test_case.oracle.as_ref().unwrap().as_str(); // 2
 
@@ -368,7 +368,7 @@ fn open_lease_impl(currency: SymbolStatic) {
         .unwrap();
 
     // ensure the attributes were relayed from the sub-message
-    
+
     // TODO form -> Lease, self.initial_alarm_schedule(account.balance()?, now)?;
     // assert_eq!(
     //     res.events.len(),
@@ -494,13 +494,12 @@ fn open_lease_impl(currency: SymbolStatic) {
     //     );
     // }
 
-    // TODO form -> Lease, self.initial_alarm_schedule(account.balance()?, now)?;
-    // let leaser_reply = res.events.remove(0);
-    // assert_eq!(leaser_reply.ty.as_str(), "execute");
-    // assert_eq!(
-    //     leaser_reply.attributes,
-    //     [("_contract_addr", time_alarms_addr),]
-    // );
+    let leaser_reply = res.events.remove(0);
+    assert_eq!(leaser_reply.ty.as_str(), "execute");
+    assert_eq!(
+        leaser_reply.attributes,
+        [("_contract_addr", time_alarms_addr),]
+    );
 
     let leaser_reply = res.events.remove(0);
     assert_eq!(leaser_reply.ty.as_str(), "reply");
