@@ -31,6 +31,3 @@ thiserror = { version = "1.0" }
 [dev-dependencies]
 cosmwasm-schema = "1.0.0"
 cw-multi-test = "0.13"
-lpp = { path = "../lpp", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
-lease = { path = "../lease", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
-finance = { path = "../../packages/finance", version = "0.1.0", default-features = false, features = ["testing"] }
