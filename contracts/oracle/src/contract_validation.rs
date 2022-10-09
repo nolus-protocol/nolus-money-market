@@ -2,6 +2,7 @@ use cosmwasm_std::{
     Addr, ContractInfoResponse, Empty, QuerierWrapper, QueryRequest, StdResult, WasmQuery,
 };
 
+//TODO move to the platform
 pub fn validate_contract_addr(querier: &QuerierWrapper, contract_address: &Addr) -> StdResult<()> {
     get_contract_info(querier, contract_address).map(|_| ())
 }

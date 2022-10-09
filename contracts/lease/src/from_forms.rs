@@ -103,21 +103,30 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
 
 #[cfg(test)]
 mod test {
+    use std::any::type_name;
+
     use cosmwasm_std::{
         from_slice,
         testing::{MockApi, MockQuerier},
-        Addr, QuerierWrapper, Timestamp,
+        to_binary, Addr, ContractResult, QuerierWrapper, SystemResult, Timestamp, WasmQuery, QuerierResult,
     };
 
-    use finance::{currency::Currency, duration::Duration, test::currency::Nls};
+    use currency::{lease::Osmo, lpn::Usdc};
+    use finance::error::Error as FinanceError;
+    use finance::{currency::Currency, duration::Duration};
     use finance::{liability::Liability, percent::Percent};
     use lpp::stub::lender::LppLenderRef;
+    use market_price_oracle::msg::ConfigResponse as OracleConfigResponse;
+    use profit::msg::ConfigResponse as ProfitConfigResponse;
 
     use crate::{
         error::ContractError,
         msg::{LoanForm, NewLeaseForm},
         reply_id::ReplyId,
     };
+    const PROFIT_ADDR: &str = "f78wgdw";
+    const ORACLE_ADDR: &str = "f383hddnslni";
+    type Lpn = Usdc;
 
     #[test]
     fn amount_to_borrow_broken_invariant() {
@@ -129,30 +138,63 @@ mod test {
         assert!(liability.invariant_held().is_err());
         let lease = NewLeaseForm {
             customer: "ss1s1".into(),
-            currency: ToOwned::to_owned(Nls::SYMBOL),
+            currency: ToOwned::to_owned(Osmo::SYMBOL),
             liability,
             loan: LoanForm {
                 annual_margin_interest: Percent::from_percent(0),
                 lpp: lpp.into(),
                 interest_due_period: Duration::from_secs(100),
                 grace_period: Duration::from_secs(10),
-                profit: "profit".into(),
+                profit: PROFIT_ADDR.into(),
             },
             time_alarms: Addr::unchecked("timealarms"),
-            market_price_oracle: Addr::unchecked("oracle"),
+            market_price_oracle: Addr::unchecked(ORACLE_ADDR),
         };
         let api = MockApi::default();
+
+        let mut querier = MockQuerier::default();
+        querier.update_wasm(config_req_handler);
         let err = lease
             .into_lease(
                 &Addr::unchecked("test"),
                 Timestamp::from_nanos(1000),
                 &api,
-                &QuerierWrapper::new(&MockQuerier::default()),
-                LppLenderRef::unchecked::<_, Nls>(lpp, ReplyId::OpenLoanReq.into()),
+                &QuerierWrapper::new(&querier),
+                LppLenderRef::unchecked::<_, Lpn>(lpp, ReplyId::OpenLoanReq.into()),
             )
             .unwrap_err();
 
-        // TODO assert_eq!(err, ContractError::FinanceError(..)));
-        assert!(matches!(dbg!(err), ContractError::ProfitError(..)));
+        assert_eq!(
+            err,
+            ContractError::from(FinanceError::BrokenInvariant(
+                type_name::<Liability>().into(),
+                "Third liquidation % should be < max %".into()
+            ))
+        );
+    }
+
+    fn config_req_handler(request: &WasmQuery) -> QuerierResult {
+        match request {
+            WasmQuery::Smart {
+                contract_addr,
+                msg: _,
+            } => {
+                let resp = if contract_addr == PROFIT_ADDR {
+                    to_binary(&ProfitConfigResponse { cadence_hours: 2 })
+                } else if contract_addr == ORACLE_ADDR {
+                    to_binary(&OracleConfigResponse {
+                        base_asset: Lpn::SYMBOL.into(),
+                        expected_feeders: Percent::from_percent(50),
+                        owner: Addr::unchecked("3d3"),
+                        price_feed_period: Duration::from_secs(12),
+                    })
+                } else {
+                    unreachable!()
+                }
+                .unwrap();
+                SystemResult::Ok(ContractResult::Ok(resp))
+            }
+            &_ => unreachable!(),
+        }
     }
 }

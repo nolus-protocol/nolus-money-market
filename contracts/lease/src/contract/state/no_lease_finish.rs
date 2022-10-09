@@ -35,7 +35,6 @@ impl Controller for NoLeaseFinish {
                     .lpp
                     .execute(OpenLoanResp::new(msg, self.downpayment), &deps.querier)?;
 
-                // TODO pass the lpp ref
                 let lease = self.form.into_lease(
                     &env.contract.address,
                     env.block.time,
