@@ -1,6 +1,6 @@
 #[cfg(feature = "cosmwasm-bindings")]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{Addr, Api, DepsMut, Env, MessageInfo, Reply, Response, StdResult};
+use cosmwasm_std::{DepsMut, Env, MessageInfo, Reply, Response};
 use cw2::set_contract_version;
 
 use crate::{
@@ -36,10 +36,6 @@ pub fn execute(
         ExecuteMsg::AddAlarm { time } => TimeAlarms::try_add(deps, info.sender, time),
         ExecuteMsg::Notify {} => TimeAlarms::try_notify(deps.storage, env.block.time),
     }
-}
-
-pub fn get_sender(api: &dyn Api, info: MessageInfo) -> StdResult<Addr> {
-    api.addr_validate(info.sender.as_str())
 }
 
 #[cfg_attr(feature = "cosmwasm-bindings", entry_point)]

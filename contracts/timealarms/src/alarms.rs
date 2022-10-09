@@ -3,10 +3,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use currency::native::Nls;
-use platform::batch::Batch;
+use platform::{batch::Batch, contract};
 use time_oracle::{AlarmError, Alarms, Id};
 
-use crate::{contract_validation::validate_contract_addr, msg::ExecuteAlarmMsg, ContractError};
+use crate::{msg::ExecuteAlarmMsg, ContractError};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct TimeAlarms {}
@@ -23,7 +23,7 @@ impl TimeAlarms {
         address: Addr,
         time: Timestamp,
     ) -> Result<Response, ContractError> {
-        validate_contract_addr(&deps.querier, &address)?;
+        contract::validate_addr(&deps.querier, &address)?;
         Self::TIME_ALARMS.add(deps.storage, address, time)?;
         Ok(Response::new())
     }
@@ -64,11 +64,10 @@ mod tests {
         testing::{mock_dependencies, MockQuerier},
         Addr, QuerierWrapper, Timestamp,
     };
+    use platform::contract;
 
     use crate::{
-        alarms::TimeAlarms,
-        contract_validation::{tests::valid_contract_query, validate_contract_addr},
-        ContractError,
+        alarms::TimeAlarms, ContractError,
     };
 
     #[test]
@@ -80,9 +79,10 @@ mod tests {
                 .is_err()
         );
 
-        let expected_error = ContractError::Std(
-            validate_contract_addr(&deps.as_mut().querier, &msg_sender).unwrap_err(),
-        );
+        let expected_error: ContractError =
+            contract::validate_addr(&deps.as_mut().querier, &msg_sender)
+                .unwrap_err()
+                .into();
 
         let result =
             TimeAlarms::try_add(deps.as_mut(), msg_sender, Timestamp::from_nanos(8)).unwrap_err();
@@ -93,7 +93,7 @@ mod tests {
     #[test]
     fn try_add_valid_contract_address() {
         let mut mock_querier = MockQuerier::default();
-        mock_querier.update_wasm(valid_contract_query);
+        mock_querier.update_wasm(contract::testing::valid_contract_handler);
         let querier = QuerierWrapper::new(&mock_querier);
         let mut deps_temp = mock_dependencies();
         let mut deps = deps_temp.as_mut();

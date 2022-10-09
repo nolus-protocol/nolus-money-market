@@ -1,9 +1,9 @@
 use std::result::Result as StdResult;
 
-use cosmwasm_std::{wasm_execute, Addr, Timestamp};
+use cosmwasm_std::{wasm_execute, Addr, QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
-use platform::batch::Batch;
+use platform::{batch::Batch, contract};
 
 use crate::{msg::ExecuteMsg, ContractError};
 
@@ -38,6 +38,12 @@ pub struct TimeAlarmsRef {
 }
 
 impl TimeAlarmsRef {
+    pub fn try_from(addr: Addr, querier: &QuerierWrapper) -> Result<Self> {
+        contract::validate_addr(querier, &addr)?;
+
+        Ok(Self { addr })
+    }
+
     fn owned_by(&self, addr: &Addr) -> bool {
         &self.addr == addr
     }
@@ -54,12 +60,6 @@ impl TimeAlarmsRef {
             time_alarms_ref: self,
             batch: Default::default(),
         }
-    }
-}
-
-impl From<Addr> for TimeAlarmsRef {
-    fn from(addr: Addr) -> Self {
-        Self { addr }
     }
 }
 

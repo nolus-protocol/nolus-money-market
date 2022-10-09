@@ -45,7 +45,7 @@ where
     let lpp = lease_dto.loan.lpp().clone();
     let profit = lease_dto.loan.profit().clone();
     // TODO store alarms and oracle Ref-s at the LeaseDTO
-    let alarms = TimeAlarmsRef::try_from(lease_dto.time_alarms.clone())
+    let alarms = TimeAlarmsRef::try_from(lease_dto.time_alarms.clone(), querier)
         .expect("Time Alarms is not deployed, or wrong address is passed!");
     let oracle = OracleRef::try_from(lease_dto.oracle.clone(), querier)
         .expect("Market Price Oracle is not deployed, or wrong address is passed!");

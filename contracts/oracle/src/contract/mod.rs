@@ -11,9 +11,9 @@ use finance::{
     duration::Duration,
     percent::Percent,
 };
+use platform::contract;
 
 use crate::{
-    contract_validation::validate_contract_addr,
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     state::{supported_pairs::SupportedPairs, Config},
@@ -139,7 +139,7 @@ pub fn execute(
             Feeders::try_remove(deps, info, feeder_address)
         }
         ExecuteMsg::AddPriceAlarm { alarm } => {
-            validate_contract_addr(&deps.querier, &info.sender)?;
+            contract::validate_addr(&deps.querier, &info.sender)?;
             MarketAlarms::try_add_price_alarm(deps.storage, info.sender, alarm)
         }
         ExecuteMsg::RemovePriceAlarm {} => MarketAlarms::remove(deps.storage, info.sender),

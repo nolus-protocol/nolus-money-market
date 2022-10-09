@@ -25,9 +25,7 @@ impl NewLeaseForm {
         oracle: OracleRef,
     ) -> ContractResult<IntoDTOResult> {
         let profit = ProfitRef::try_from(api.addr_validate(&self.loan.profit)?, querier)?;
-        // TODO check the address simmilarly to the profit
-        let alarms = TimeAlarmsRef::try_from(api.addr_validate(&self.time_alarms)?).unwrap();
-        // .expect("Time Alarms is not deployed, or wrong address is passed!");
+        let alarms = TimeAlarmsRef::try_from(api.addr_validate(&self.time_alarms)?, querier)?;
 
         lease::execute_deps(
             LeaseFactory {
@@ -107,8 +105,8 @@ mod test {
     use cosmwasm_std::{
         from_slice,
         testing::{MockApi, MockQuerier},
-        to_binary, Addr, ContractResult, QuerierResult, QuerierWrapper, SystemResult, Timestamp,
-        WasmQuery,
+        to_binary, Addr, ContractInfoResponse, ContractResult, QuerierResult, QuerierWrapper,
+        SystemResult, Timestamp, WasmQuery,
     };
 
     use currency::{lease::Osmo, lpn::Usdc};
@@ -175,27 +173,28 @@ mod test {
     }
 
     fn config_req_handler(request: &WasmQuery) -> QuerierResult {
-        match request {
+        let resp = match request {
             WasmQuery::Smart {
                 contract_addr,
                 msg: _,
-            } => {
-                let resp = if contract_addr == PROFIT_ADDR {
-                    to_binary(&ProfitConfigResponse { cadence_hours: 2 })
-                } else if contract_addr == ORACLE_ADDR {
-                    to_binary(&OracleConfigResponse {
-                        base_asset: Lpn::SYMBOL.into(),
-                        expected_feeders: Percent::from_percent(50),
-                        owner: Addr::unchecked("3d3"),
-                        price_feed_period: Duration::from_secs(12),
-                    })
-                } else {
-                    unreachable!()
-                }
-                .unwrap();
-                SystemResult::Ok(ContractResult::Ok(resp))
+            } => if contract_addr == PROFIT_ADDR {
+                to_binary(&ProfitConfigResponse { cadence_hours: 2 })
+            } else if contract_addr == ORACLE_ADDR {
+                to_binary(&OracleConfigResponse {
+                    base_asset: Lpn::SYMBOL.into(),
+                    expected_feeders: Percent::from_percent(50),
+                    owner: Addr::unchecked("3d3"),
+                    price_feed_period: Duration::from_secs(12),
+                })
+            } else {
+                unreachable!()
+            }
+            .unwrap(),
+            WasmQuery::ContractInfo { contract_addr: _ } => {
+                to_binary(&ContractInfoResponse::new(20, "creator")).unwrap()
             }
             &_ => unreachable!(),
-        }
+        };
+        SystemResult::Ok(ContractResult::Ok(resp))
     }
 }

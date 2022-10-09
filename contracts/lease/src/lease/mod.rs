@@ -105,12 +105,12 @@ where
         let (loan_dto, loan_batch) = self.loan.into_dto();
 
         let TimeAlarmsBatch {
-            time_alarms_ref: time_alarms_dto,
+            time_alarms_ref,
             batch: time_alarms_batch,
         } = self.alarms.into();
 
         let OracleBatch {
-            oracle_ref: oracle_dto,
+            oracle_ref,
             batch: oracle_batch,
         } = self.oracle.into();
 
@@ -120,8 +120,8 @@ where
                 ToOwned::to_owned(Asset::SYMBOL),
                 self.liability,
                 loan_dto,
-                time_alarms_dto.into(),
-                oracle_dto.into(),
+                time_alarms_ref.into(),
+                oracle_ref.into(),
             ),
             batch: loan_batch.merge(time_alarms_batch).merge(oracle_batch),
         }
