@@ -139,7 +139,7 @@ where
         liquidation_status: Status<Lpn, Asset>,
     ) -> OnAlarmResult<Lpn, Asset> {
         let IntoDTOResult {
-            dto: lease_dto,
+            lease: lease_dto,
             batch,
         } = self.into_dto();
 

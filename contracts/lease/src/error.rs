@@ -36,11 +36,8 @@ pub enum ContractError {
     #[error("[Lease] {0}")]
     ProfitError(#[from] ProfitError),
 
-    #[error("[Lease] Unknown currency symbol: {symbol:?}")]
-    UnknownCurrency { symbol: String },
-
-    #[error("[Lease] Error in opening an underlying loan: {0}")]
-    OpenLoanError(String),
+    #[error("[Lease] No downpayment sent")]
+    NoDownpaymentError(),
 
     #[error("[Lease] The underlying loan is not fully repaid")]
     LoanNotPaid(),
@@ -53,8 +50,6 @@ pub enum ContractError {
 
     #[error("[Lease] The operation '{0}' is not supported in state '{1}'")]
     UnsupportedOperation(String, String),
-    // Add any other custom errors you like here.
-    // Look at https://docs.rs/thiserror/1.0.35/thiserror/ for details.
 }
 
 impl ContractError {

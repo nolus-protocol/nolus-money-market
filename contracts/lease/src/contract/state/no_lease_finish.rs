@@ -52,8 +52,8 @@ impl Controller for NoLeaseFinish {
                     &deps.querier,
                     (open_result.lpp.clone(), self.oracle),
                 )?;
-                let emitter = build_emitter(lease.batch, &env, &lease.dto, open_result);
-                Ok(Response::from(emitter, Active { lease: lease.dto }))
+                let emitter = build_emitter(lease.batch, &env, &lease.lease, open_result);
+                Ok(Response::from(emitter, Active { lease: lease.lease }))
             }
         }
     }

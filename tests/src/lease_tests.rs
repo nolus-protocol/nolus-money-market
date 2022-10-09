@@ -56,6 +56,12 @@ fn calculate_interest(principal: LeaseCoin, interest_rate: Percent, duration: u6
 }
 
 fn open_lease(test_case: &mut TestCase, value: LeaseCoin) -> Addr {
+    try_open_lease(test_case, value).unwrap();
+
+    get_lease_address(test_case)
+}
+
+fn try_open_lease(test_case: &mut TestCase, value: LeaseCoin) -> Result<AppResponse, anyhow::Error> {
     test_case
         .app
         .execute_contract(
@@ -66,9 +72,6 @@ fn open_lease(test_case: &mut TestCase, value: LeaseCoin) -> Addr {
             },
             &[to_cosmwasm(value)],
         )
-        .unwrap();
-
-    get_lease_address(test_case)
 }
 
 fn get_lease_address(test_case: &TestCase) -> Addr {
@@ -193,6 +196,14 @@ fn expected_newly_opened_state(
         Timestamp::default(),
         Timestamp::default(),
     )
+}
+
+#[test]
+fn open_zero_downpayment() {
+    let mut test_case = create_test_case();
+    let downpayment = create_coin(0);
+    let res = try_open_lease(&mut test_case, downpayment);
+    assert!(res.is_err());
 }
 
 #[test]

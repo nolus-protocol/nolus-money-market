@@ -36,14 +36,11 @@ where
 
         self.reschedule_on_repay(lease_amount, &now)?;
 
-        let IntoDTOResult {
-            dto: lease_dto,
-            batch,
-        } = self.into_dto();
+        let IntoDTOResult { lease, batch } = self.into_dto();
 
         Ok(Result {
             batch,
-            lease_dto,
+            lease,
             receipt,
         })
     }
@@ -64,6 +61,6 @@ where
     Lpn: Currency,
 {
     pub batch: Batch,
-    pub lease_dto: LeaseDTO,
+    pub lease: LeaseDTO,
     pub receipt: RepayReceipt<Lpn>,
 }

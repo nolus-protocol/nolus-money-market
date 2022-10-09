@@ -4,7 +4,6 @@ use serde::Serialize;
 use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
-use platform::bank::BankAccount;
 use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
@@ -13,21 +12,17 @@ use crate::{
     lease::{Lease, WithLease},
 };
 
-pub struct LeaseState<Bank> {
+pub struct LeaseState {
     now: Timestamp,
-    account: Bank,
 }
 
-impl<Bank> LeaseState<Bank> {
-    pub fn new(now: Timestamp, account: Bank) -> Self {
-        Self { now, account }
+impl LeaseState {
+    pub fn new(now: Timestamp) -> Self {
+        Self { now }
     }
 }
 
-impl<Bank> WithLease for LeaseState<Bank>
-where
-    Bank: BankAccount,
-{
+impl WithLease for LeaseState {
     type Output = Binary;
 
     type Error = ContractError;
@@ -44,7 +39,7 @@ where
         Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
-        let resp = lease.state(self.now, &self.account)?;
+        let resp = lease.state(self.now)?;
         to_binary(&resp).map_err(ContractError::from)
     }
 }

@@ -1,37 +1,26 @@
-use cosmwasm_std::{Addr, Timestamp};
+use cosmwasm_std::Addr;
 use serde::Serialize;
 
 use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
-use platform::{
-    bank::BankAccount,
-    batch::{Emit, Emitter},
-};
+use platform::bank::BankAccount;
 use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractError,
-    event::TYPE,
-    lease::{Lease, WithLease},
+    lease::{IntoDTOResult, Lease, WithLease},
 };
 
 pub struct Close<'a, Bank> {
     sender: &'a Addr,
-    lease: Addr,
     account: Bank,
-    now: Timestamp,
 }
 
 impl<'a, Bank> Close<'a, Bank> {
-    pub fn new(sender: &'a Addr, lease: Addr, account: Bank, now: Timestamp) -> Self {
-        Self {
-            sender,
-            lease,
-            account,
-            now,
-        }
+    pub fn new(sender: &'a Addr, account: Bank) -> Self {
+        Self { sender, account }
     }
 }
 
@@ -39,7 +28,7 @@ impl<'a, Bank> WithLease for Close<'a, Bank>
 where
     Bank: BankAccount,
 {
-    type Output = Emitter;
+    type Output = IntoDTOResult;
 
     type Error = ContractError;
 
@@ -61,11 +50,6 @@ where
 
         let result = lease.close(self.account)?;
 
-        let emitter = result
-            .into_emitter(TYPE::Close)
-            .emit("id", self.lease)
-            .emit_timestamp("at", &self.now);
-
-        Ok(emitter)
+        Ok(result)
     }
 }

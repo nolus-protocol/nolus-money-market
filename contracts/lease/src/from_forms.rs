@@ -29,6 +29,7 @@ impl NewLeaseForm {
         deps: (LppLenderRef, OracleRef),
     ) -> ContractResult<IntoDTOResult> {
         // debug_assert_eq!(&self.currency, amount.symbol()); TODO
+        debug_assert!(amount > 0);
 
         let profit = ProfitRef::try_from(api.addr_validate(&self.loan.profit)?, querier)?;
         let alarms = TimeAlarmsRef::try_from(api.addr_validate(&self.time_alarms)?, querier)?;

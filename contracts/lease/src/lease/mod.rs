@@ -4,10 +4,7 @@ use serde::Serialize;
 use finance::{coin::Coin, currency::Currency, liability::Liability, price::Price};
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleBatch};
-use platform::{
-    bank::{BankAccount, BankAccountView},
-    batch::Batch,
-};
+use platform::{bank::BankAccount, batch::Batch};
 use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch};
 
@@ -45,8 +42,8 @@ where
 }
 
 #[derive(Debug)]
-pub(crate) struct IntoDTOResult {
-    pub dto: LeaseDTO,
+pub struct IntoDTOResult {
+    pub lease: LeaseDTO,
     pub batch: Batch,
 }
 
@@ -69,6 +66,8 @@ where
         loan: Loan<Lpn, Lpp, Profit>,
         deps: (TimeAlarms, Oracle),
     ) -> ContractResult<Self> {
+        debug_assert!(!amount.is_zero());
+
         let mut res = Self {
             lease_addr,
             customer,
@@ -118,7 +117,7 @@ where
         } = self.oracle.into();
 
         IntoDTOResult {
-            dto: LeaseDTO::new(
+            lease: LeaseDTO::new(
                 self.customer,
                 self.amount.into(),
                 self.liability,
@@ -142,32 +141,25 @@ where
         self.oracle.owned_by(addr)
     }
 
-    pub(crate) fn close<B>(self, mut account: B) -> ContractResult<Batch>
+    pub(crate) fn close<B>(mut self, mut account: B) -> ContractResult<IntoDTOResult>
     where
         B: BankAccount,
     {
-        let state = self.state(Timestamp::from_nanos(u64::MAX), &account)?;
+        let state = self.state(Timestamp::from_nanos(u64::MAX))?;
         match state {
             StateResponse::Opened { .. } => Err(ContractError::LoanNotPaid()),
             StateResponse::Paid(..) => {
-                let balance = account.balance::<Lpn>()?;
-                account.send(balance, &self.customer);
+                account.send(self.amount, &self.customer);
+                self.amount = Coin::<Asset>::default();
 
-                Ok(account.into())
+                Ok(self.into_dto())
             }
             StateResponse::Closed() => Err(ContractError::LoanClosed()),
         }
     }
 
-    pub(crate) fn state<B>(
-        &self,
-        now: Timestamp,
-        account: &B,
-    ) -> ContractResult<StateResponse<Lpn, Lpn>>
-    where
-        B: BankAccountView,
-    {
-        let lease_amount = account.balance::<Lpn>().map_err(ContractError::from)?;
+    pub(crate) fn state(&self, now: Timestamp) -> ContractResult<StateResponse<Asset, Lpn>> {
+        let lease_amount = self.amount;
 
         if lease_amount.is_zero() {
             Ok(StateResponse::Closed())
@@ -603,7 +595,7 @@ mod tests {
             ProfitLocalStubUnreachable {},
         )
         .into_dto();
-        Lease::from_dto(into_dto.dto, lease_addr, lpp, time_alarms, oracle, profit)
+        Lease::from_dto(into_dto.lease, lease_addr, lpp, time_alarms, oracle, profit)
     }
 
     pub fn lease_setup(
@@ -636,12 +628,6 @@ mod tests {
         )
     }
 
-    pub fn create_bank_account(lease_amount: u128) -> BankStub {
-        BankStub {
-            balance: lease_amount,
-        }
-    }
-
     pub fn request_state(
         lease: Lease<
             TestCurrency,
@@ -651,9 +637,8 @@ mod tests {
             TimeAlarmsLocalStub,
             OracleLocalStub,
         >,
-        bank_account: &BankStub,
     ) -> StateResponse<TestCurrency, TestCurrency> {
-        lease.state(LEASE_STATE_AT, bank_account).unwrap()
+        lease.state(LEASE_STATE_AT).unwrap()
     }
 
     pub fn coin(a: u128) -> Coin<TestCurrency> {
@@ -673,7 +658,6 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let bank_account = create_bank_account(lease_amount);
         let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
             &lease_addr,
@@ -683,7 +667,7 @@ mod tests {
             Addr::unchecked(String::new()),
         );
 
-        let res = request_state(lease, &bank_account);
+        let res = request_state(lease);
         let exp = StateResponse::Opened {
             amount: coin(lease_amount),
             interest_rate,
@@ -703,7 +687,6 @@ mod tests {
     // Paid state -> Lease's balance in the loan's currency > 0, loan doesn't exist in the lpp anymore
     fn state_paid() {
         let lease_amount = 1000;
-        let bank_account = create_bank_account(lease_amount);
         let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
             &lease_addr,
@@ -713,7 +696,7 @@ mod tests {
             Addr::unchecked(String::new()),
         );
 
-        let res = request_state(lease, &bank_account);
+        let res = request_state(lease);
         let exp = StateResponse::Paid(coin(lease_amount));
         assert_eq!(exp, res);
     }
@@ -721,8 +704,6 @@ mod tests {
     #[test]
     // Closed state -> Lease's balance in the loan's currency = 0, loan doesn't exist in the lpp anymore
     fn state_closed() {
-        let lease_amount = 0;
-        let bank_account = create_bank_account(lease_amount);
         let lease_addr = Addr::unchecked("lease");
         let lease = lease_setup(
             &lease_addr,
@@ -732,7 +713,7 @@ mod tests {
             Addr::unchecked(String::new()),
         );
 
-        let res = request_state(lease, &bank_account);
+        let res = request_state(lease);
         let exp = StateResponse::Closed();
         assert_eq!(exp, res);
     }
@@ -753,11 +734,7 @@ mod tests {
             profit_stub,
         );
 
-        let bank_account = create_bank_account(0);
-
-        let res = lease
-            .state(Timestamp::from_nanos(0), &bank_account)
-            .unwrap();
+        let res = lease.state(Timestamp::from_nanos(0)).unwrap();
 
         let exp = StateResponse::Closed();
         assert_eq!(exp, res);

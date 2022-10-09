@@ -5,7 +5,7 @@ use cosmwasm_std::{
 };
 use serde::{Deserialize, Serialize};
 
-use platform::{bank::BankStub, batch::Emitter};
+use platform::{bank::BankStub, batch::Emit};
 
 use crate::{
     contract::{
@@ -15,7 +15,8 @@ use crate::{
         repay::{Repay, RepayResult},
     },
     error::ContractResult,
-    lease::{self, LeaseDTO},
+    event::TYPE,
+    lease::{self, IntoDTOResult, LeaseDTO},
     msg::{ExecuteMsg, StateQuery},
 };
 
@@ -39,17 +40,17 @@ impl Controller for Active {
         let resp = match msg {
             ExecuteMsg::Repay() => {
                 let RepayResult {
-                    lease_dto: lease_updated,
+                    lease: lease_updated,
                     emitter,
                 } = try_repay(&deps.querier, &env, account, info, self.lease)?;
 
                 into_resp(emitter, lease_updated)
             }
             ExecuteMsg::Close() => {
-                let lease_cloned = self.lease.clone();
-                let resp = try_close(&deps.querier, &env, account, info, self.lease)?;
+                let RepayResult { lease, emitter } =
+                    try_close(&deps.querier, &env, account, info, self.lease)?;
 
-                into_resp(resp, lease_cloned)
+                into_resp(emitter, lease)
             }
             ExecuteMsg::PriceAlarm() => {
                 let AlarmResult {
@@ -72,12 +73,10 @@ impl Controller for Active {
     }
 
     fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
-        let bank = BankStub::my_account(&env, &deps.querier);
-
         // TODO think on taking benefit from having a LppView trait
         lease::execute(
             self.lease,
-            LeaseState::new(env.block.time, bank),
+            LeaseState::new(env.block.time),
             &env.contract.address,
             &deps.querier,
         )
@@ -111,20 +110,23 @@ fn try_close(
     account: BankStub,
     info: MessageInfo,
     lease: LeaseDTO,
-) -> ContractResult<Emitter> {
-    let emitter = lease::execute(
+) -> ContractResult<RepayResult> {
+    //TODO Move RepayResult into this layer, rename to, for example, ExecuteResult
+    // and refactor try_* to return it
+    // Take the emitting out of the commands layer
+    let IntoDTOResult { lease, batch } = lease::execute(
         lease,
-        Close::new(
-            &info.sender,
-            env.contract.address.clone(),
-            account,
-            env.block.time,
-        ),
+        Close::new(&info.sender, account),
         &env.contract.address,
         querier,
     )?;
 
-    Ok(emitter)
+    let emitter = batch
+        .into_emitter(TYPE::Close)
+        .emit("id", env.contract.address.clone())
+        .emit_tx_info(env);
+
+    Ok(RepayResult { emitter, lease })
 }
 
 fn try_on_price_alarm(

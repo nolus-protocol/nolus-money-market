@@ -43,7 +43,7 @@ where
 }
 
 pub struct RepayResult {
-    pub lease_dto: LeaseDTO,
+    pub lease: LeaseDTO,
     pub emitter: Emitter,
 }
 
@@ -76,7 +76,7 @@ where
 
         let LeaseRepayResult {
             batch,
-            lease_dto,
+            lease: lease_dto,
             receipt,
         } = lease.repay(lease_amount, payment, self.env.block.time)?;
 
@@ -94,6 +94,9 @@ where
             .emit_coin_amount("principal", receipt.principal_paid())
             .emit_coin_amount("change", receipt.change());
 
-        Ok(RepayResult { lease_dto, emitter })
+        Ok(RepayResult {
+            lease: lease_dto,
+            emitter,
+        })
     }
 }

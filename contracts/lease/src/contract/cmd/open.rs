@@ -59,14 +59,18 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
                 querier: self.querier,
             },
         )?;
-        let borrow_lpn = self.form.liability.init_borrow_amount(downpayment_lpn);
+        if downpayment_lpn.is_zero() {
+            Err(Self::Error::NoDownpaymentError())
+        } else {
+            let borrow_lpn = self.form.liability.init_borrow_amount(downpayment_lpn);
 
-        lpp.open_loan_req(borrow_lpn)?;
+            lpp.open_loan_req(borrow_lpn)?;
 
-        Ok(OpenLoanReqResult {
-            batch: lpp.into().batch,
-            downpayment,
-        })
+            Ok(Self::Output {
+                batch: lpp.into().batch,
+                downpayment,
+            })
+        }
     }
 }
 
