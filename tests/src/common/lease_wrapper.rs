@@ -123,8 +123,8 @@ impl LeaseWrapper {
                 grace_period: config.grace_period,
                 profit: addresses.profit.into_string(),
             },
-            time_alarms: addresses.time_alarms,
-            market_price_oracle: addresses.oracle,
+            time_alarms: addresses.time_alarms.into_string(),
+            market_price_oracle: addresses.oracle.into_string(),
         }
     }
 }

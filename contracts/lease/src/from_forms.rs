@@ -25,9 +25,9 @@ impl NewLeaseForm {
     ) -> ContractResult<IntoDTOResult> {
         let profit = ProfitRef::try_from(api.addr_validate(&self.loan.profit)?, querier)?;
         // TODO check the address simmilarly to the profit
-        let alarms = TimeAlarmsRef::try_from(self.time_alarms.clone()).unwrap();
+        let alarms = TimeAlarmsRef::try_from(api.addr_validate(&self.time_alarms)?).unwrap();
         // .expect("Time Alarms is not deployed, or wrong address is passed!");
-        let oracle = OracleRef::try_from(self.market_price_oracle.clone(), querier)?;
+        let oracle = OracleRef::try_from(api.addr_validate(&self.market_price_oracle)?, querier)?;
         // .expect("Market Price Oracle is not deployed, or wrong address is passed!");
 
         lease::execute_deps(
@@ -108,7 +108,8 @@ mod test {
     use cosmwasm_std::{
         from_slice,
         testing::{MockApi, MockQuerier},
-        to_binary, Addr, ContractResult, QuerierWrapper, SystemResult, Timestamp, WasmQuery, QuerierResult,
+        to_binary, Addr, ContractResult, QuerierResult, QuerierWrapper, SystemResult, Timestamp,
+        WasmQuery,
     };
 
     use currency::{lease::Osmo, lpn::Usdc};
@@ -147,8 +148,8 @@ mod test {
                 grace_period: Duration::from_secs(10),
                 profit: PROFIT_ADDR.into(),
             },
-            time_alarms: Addr::unchecked("timealarms"),
-            market_price_oracle: Addr::unchecked(ORACLE_ADDR),
+            time_alarms: "timealarms".into(),
+            market_price_oracle: ORACLE_ADDR.into(),
         };
         let api = MockApi::default();
 

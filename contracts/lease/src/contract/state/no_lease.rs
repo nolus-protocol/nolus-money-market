@@ -37,8 +37,11 @@ impl Controller for NoLease {
             ReplyId::OpenLoanReq.into(),
         )?;
 
-        let oracle = OracleRef::try_from(form.market_price_oracle.clone(), &deps.querier)
-            .expect("Market Price Oracle is not deployed, or wrong address is passed!");
+        let oracle = OracleRef::try_from(
+            deps.api.addr_validate(&form.market_price_oracle)?,
+            &deps.querier,
+        )
+        .expect("Market Price Oracle is not deployed, or wrong address is passed!");
 
         let OpenLoanReqResult { batch, downpayment } = lpp.clone().execute(
             OpenLoanReq::new(&form, info.funds, oracle, &deps.querier),

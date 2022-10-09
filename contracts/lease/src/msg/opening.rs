@@ -1,4 +1,3 @@
-use cosmwasm_std::Addr;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -11,10 +10,13 @@ pub struct NewLeaseForm {
     pub customer: String,
     /// Symbol of the currency this lease will be about.
     pub currency: SymbolOwned,
+    /// Liability parameters
     pub liability: Liability,
     pub loan: LoanForm,
-    pub time_alarms: Addr,
-    pub market_price_oracle: Addr,
+    /// The time alarms contract the lease uses to get time notifications
+    pub time_alarms: String,
+    /// The oracle contract that sends market price alerts to the lease
+    pub market_price_oracle: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

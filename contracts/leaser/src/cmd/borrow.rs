@@ -49,8 +49,8 @@ impl Borrow {
                 grace_period: config.repayment.grace_period,
                 profit: config.profit.into_string(),
             },
-            time_alarms: config.time_alarms,
-            market_price_oracle: config.market_price_oracle,
+            time_alarms: config.time_alarms.into_string(),
+            market_price_oracle: config.market_price_oracle.into_string(),
         }
     }
 }
