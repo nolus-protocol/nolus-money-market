@@ -81,7 +81,6 @@ where
         Ok(res)
     }
 
-    // TODO rename -> into_lease and move to the DTO
     pub(super) fn from_dto(
         dto: LeaseDTO,
         lease_addr: &'r Addr,
@@ -139,8 +138,6 @@ where
         self.oracle.owned_by(addr)
     }
 
-    // TODO add the lease address as a field in Lease<>
-    //  and populate it on LeaseDTO.execute as LeaseFactory
     pub(crate) fn close<B>(self, mut account: B) -> ContractResult<Batch>
     where
         B: BankAccount,
@@ -259,7 +256,6 @@ mod tests {
         }
     }
 
-    // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl LppLender<TestLpn> for LppLenderLocalStub {
         fn open_loan_req(&mut self, _amount: Coin<TestLpn>) -> LppResult<()> {
             unreachable!()

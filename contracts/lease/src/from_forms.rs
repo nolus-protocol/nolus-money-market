@@ -1,6 +1,9 @@
 use cosmwasm_std::{Addr, Api, QuerierWrapper, Timestamp};
 
-use finance::currency::Currency;
+use finance::{
+    coin::{Amount, Coin},
+    currency::Currency,
+};
 use lpp::stub::lender::{LppLender as LppLenderTrait, LppLenderRef};
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef};
 use profit::stub::{Profit as ProfitTrait, ProfitRef};
@@ -17,28 +20,32 @@ use crate::{
 impl NewLeaseForm {
     pub(crate) fn into_lease(
         self,
-        addr: &Addr,
+        lease_addr: &Addr,
         start_at: Timestamp,
+        // amount: &CoinDTO, TODO
+        amount: Amount,
         api: &dyn Api,
         querier: &QuerierWrapper,
-        lpp: LppLenderRef,
-        oracle: OracleRef,
+        deps: (LppLenderRef, OracleRef),
     ) -> ContractResult<IntoDTOResult> {
+        // debug_assert_eq!(&self.currency, amount.symbol()); TODO
+
         let profit = ProfitRef::try_from(api.addr_validate(&self.loan.profit)?, querier)?;
         let alarms = TimeAlarmsRef::try_from(api.addr_validate(&self.time_alarms)?, querier)?;
 
         lease::execute_deps(
             LeaseFactory {
                 form: &self,
-                addr,
+                lease_addr,
                 start_at,
+                amount,
                 api,
             },
             &self.currency,
-            lpp,
+            deps.0,
             profit,
             alarms,
-            oracle,
+            deps.1,
             querier,
         )
     }
@@ -46,8 +53,10 @@ impl NewLeaseForm {
 
 struct LeaseFactory<'a> {
     form: &'a NewLeaseForm,
-    addr: &'a Addr,
+    lease_addr: &'a Addr,
     start_at: Timestamp,
+    // amount: &'a CoinDTO, TODO
+    amount: Amount,
     api: &'a dyn Api,
 }
 
@@ -71,8 +80,6 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         Profit: ProfitTrait,
     {
         let customer = self.api.addr_validate(&self.form.customer)?;
-        //TODO pass in the real amount as Coin<Asset>
-        let amount = 0.into();
         let liability = self.form.liability;
         liability.invariant_held()?;
 
@@ -84,9 +91,10 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             self.form.loan.grace_period,
             profit,
         )?;
+        let amount: Coin<Asset> = self.amount.into();
 
         Ok(Lease::<_, Asset, _, _, _, _>::new(
-            self.addr,
+            self.lease_addr,
             customer,
             amount,
             self.start_at,
@@ -156,10 +164,13 @@ mod test {
             .into_lease(
                 &Addr::unchecked("test"),
                 Timestamp::from_nanos(1000),
+                10,
                 &api,
                 &QuerierWrapper::new(&querier),
-                LppLenderRef::unchecked::<_, Lpn>(lpp, ReplyId::OpenLoanReq.into()),
-                OracleRef::unchecked::<_, Lpn>(ORACLE_ADDR),
+                (
+                    LppLenderRef::unchecked::<_, Lpn>(lpp, ReplyId::OpenLoanReq.into()),
+                    OracleRef::unchecked::<_, Lpn>(ORACLE_ADDR),
+                ),
             )
             .unwrap_err();
 

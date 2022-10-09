@@ -37,13 +37,20 @@ impl Controller for NoLeaseFinish {
                     .lpp
                     .execute(OpenLoanResp::new(msg, self.downpayment), &deps.querier)?;
 
+                //TODO replace with the actual coin once get the GAMM trx result
+                assert_eq!(
+                    open_result.downpayment.symbol(),
+                    open_result.principal.symbol()
+                );
+                let amount = open_result.downpayment.amount() + open_result.principal.amount();
+                
                 let lease = self.form.into_lease(
                     &env.contract.address,
                     env.block.time,
+                    amount,
                     deps.api,
                     &deps.querier,
-                    open_result.lpp.clone(),
-                    self.oracle,
+                    (open_result.lpp.clone(), self.oracle),
                 )?;
                 let emitter = build_emitter(lease.batch, &env, &lease.dto, open_result);
                 Ok(Response::from(emitter, Active { lease: lease.dto }))

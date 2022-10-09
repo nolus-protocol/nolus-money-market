@@ -492,7 +492,6 @@ mod tests {
         loan: Option<LoanResponse<TestCurrency>>,
     }
 
-    // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl LppLender<TestCurrency> for LppLenderLocalStub {
         fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
             unreachable!()
@@ -541,7 +540,6 @@ mod tests {
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     struct ProfitLocalStub {}
 
-    // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl Profit for ProfitLocalStub {
         fn send<C>(&mut self, _coins: Coin<C>)
         where
