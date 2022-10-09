@@ -1,7 +1,9 @@
 use cosmwasm_std::Addr;
+use market_price_oracle::stub::OracleRef;
 use serde::{Deserialize, Serialize};
 
 use finance::{currency::SymbolOwned, liability::Liability};
+use time_alarms::stub::TimeAlarmsRef;
 
 use crate::loan::LoanDTO;
 
@@ -11,8 +13,8 @@ pub struct LeaseDTO {
     pub(crate) currency: SymbolOwned,
     pub(crate) liability: Liability,
     pub(crate) loan: LoanDTO,
-    pub(crate) time_alarms: Addr,
-    pub(crate) oracle: Addr,
+    pub(crate) time_alarms: TimeAlarmsRef,
+    pub(crate) oracle: OracleRef,
 }
 
 impl LeaseDTO {
@@ -21,8 +23,8 @@ impl LeaseDTO {
         currency: SymbolOwned,
         liability: Liability,
         loan: LoanDTO,
-        time_alarms: Addr,
-        oracle: Addr,
+        time_alarms: TimeAlarmsRef,
+        oracle: OracleRef,
     ) -> Self {
         Self {
             customer,

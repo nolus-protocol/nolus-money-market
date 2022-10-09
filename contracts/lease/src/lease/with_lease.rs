@@ -1,10 +1,10 @@
 use cosmwasm_std::{Addr, QuerierWrapper};
 use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
-use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef};
+use market_price_oracle::stub::Oracle as OracleTrait;
 use profit::stub::Profit as ProfitTrait;
 use serde::Serialize;
-use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef};
+use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use super::{
     with_lease_deps::{self, WithLeaseDeps},
@@ -44,11 +44,8 @@ where
     let asset = lease_dto.currency.clone();
     let lpp = lease_dto.loan.lpp().clone();
     let profit = lease_dto.loan.profit().clone();
-    // TODO store alarms and oracle Ref-s at the LeaseDTO
-    let alarms = TimeAlarmsRef::try_from(lease_dto.time_alarms.clone(), querier)
-        .expect("Time Alarms is not deployed, or wrong address is passed!");
-    let oracle = OracleRef::try_from(lease_dto.oracle.clone(), querier)
-        .expect("Market Price Oracle is not deployed, or wrong address is passed!");
+    let alarms = lease_dto.time_alarms.clone();
+    let oracle = lease_dto.oracle.clone();
 
     with_lease_deps::execute(
         Factory::new(cmd, lease_dto, addr),

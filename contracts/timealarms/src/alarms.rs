@@ -66,9 +66,7 @@ mod tests {
     };
     use platform::contract;
 
-    use crate::{
-        alarms::TimeAlarms, ContractError,
-    };
+    use crate::{alarms::TimeAlarms, ContractError};
 
     #[test]
     fn try_add_invalid_contract_address() {

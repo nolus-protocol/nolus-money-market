@@ -54,12 +54,6 @@ pub struct OracleRef {
     base_currency: SymbolOwned,
 }
 
-impl From<OracleRef> for Addr {
-    fn from(oracle_ref: OracleRef) -> Self {
-        oracle_ref.addr
-    }
-}
-
 impl OracleRef {
     pub fn try_from(addr: Addr, querier: &QuerierWrapper) -> Result<Self> {
         let resp: ConfigResponse = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config {})?;

@@ -63,12 +63,6 @@ impl TimeAlarmsRef {
     }
 }
 
-impl From<TimeAlarmsRef> for Addr {
-    fn from(oracle_ref: TimeAlarmsRef) -> Self {
-        oracle_ref.addr
-    }
-}
-
 #[cfg(feature = "testing")]
 impl TimeAlarmsRef {
     pub fn unchecked<A>(addr: A) -> Self

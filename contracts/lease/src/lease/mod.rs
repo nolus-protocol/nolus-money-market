@@ -120,8 +120,8 @@ where
                 ToOwned::to_owned(Asset::SYMBOL),
                 self.liability,
                 loan_dto,
-                time_alarms_ref.into(),
-                oracle_ref.into(),
+                time_alarms_ref,
+                oracle_ref,
             ),
             batch: loan_batch.merge(time_alarms_batch).merge(oracle_batch),
         }
