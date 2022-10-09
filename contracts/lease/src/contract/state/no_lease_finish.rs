@@ -43,7 +43,7 @@ impl Controller for NoLeaseFinish {
                     open_result.principal.symbol()
                 );
                 let amount = open_result.downpayment.amount() + open_result.principal.amount();
-                
+
                 let lease = self.form.into_lease(
                     &env.contract.address,
                     env.block.time,
@@ -80,7 +80,7 @@ fn build_emitter(
             "air",
             open_result.annual_interest_rate + dto.loan.annual_margin_interest(),
         )
-        .emit("currency", dto.currency.clone())
+        .emit("currency", dto.amount.symbol())
         .emit("loan-pool-id", dto.loan.lpp().addr())
         .emit_coin_dto("loan", open_result.principal)
         .emit_coin_dto("downpayment", open_result.downpayment)

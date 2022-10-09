@@ -2,7 +2,7 @@ use cosmwasm_std::Addr;
 use market_price_oracle::stub::OracleRef;
 use serde::{Deserialize, Serialize};
 
-use finance::{currency::SymbolOwned, liability::Liability};
+use finance::{coin::CoinDTO, liability::Liability};
 use time_alarms::stub::TimeAlarmsRef;
 
 use crate::loan::LoanDTO;
@@ -10,7 +10,7 @@ use crate::loan::LoanDTO;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct LeaseDTO {
     pub(crate) customer: Addr,
-    pub(crate) currency: SymbolOwned,
+    pub(crate) amount: CoinDTO,
     pub(crate) liability: Liability,
     pub(crate) loan: LoanDTO,
     pub(crate) time_alarms: TimeAlarmsRef,
@@ -20,7 +20,7 @@ pub struct LeaseDTO {
 impl LeaseDTO {
     pub(crate) fn new(
         customer: Addr,
-        currency: SymbolOwned,
+        amount: CoinDTO,
         liability: Liability,
         loan: LoanDTO,
         time_alarms: TimeAlarmsRef,
@@ -28,7 +28,7 @@ impl LeaseDTO {
     ) -> Self {
         Self {
             customer,
-            currency,
+            amount,
             liability,
             loan,
             time_alarms,

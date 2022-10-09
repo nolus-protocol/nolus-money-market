@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use cosmwasm_std::{Addr, Timestamp};
 use serde::Serialize;
 
@@ -33,10 +31,13 @@ mod repay;
 mod with_lease;
 mod with_lease_deps;
 
-pub struct Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> {
+pub struct Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
+where
+    Asset: Currency,
+{
     lease_addr: &'r Addr,
     customer: Addr,
-    _asset: PhantomData<Asset>,
+    amount: Coin<Asset>,
     liability: Liability,
     loan: Loan<Lpn, Lpp, Profit>,
     alarms: TimeAlarms,
@@ -71,7 +72,7 @@ where
         let mut res = Self {
             lease_addr,
             customer,
-            _asset: PhantomData::<Asset>,
+            amount,
             liability,
             loan,
             alarms: deps.0,
@@ -89,14 +90,17 @@ where
         oracle: Oracle,
         profit: Profit,
     ) -> Self {
+        let amount = dto.amount.try_into().expect(
+            "The DTO -> Lease conversion should have resulted in Asset == dto.amount.symbol()",
+        );
         Self {
             lease_addr,
             customer: dto.customer,
+            amount,
             liability: dto.liability,
             loan: Loan::from_dto(dto.loan, lpp, profit),
             alarms: time_alarms,
             oracle,
-            _asset: PhantomData,
         }
     }
 
@@ -116,7 +120,7 @@ where
         IntoDTOResult {
             dto: LeaseDTO::new(
                 self.customer,
-                ToOwned::to_owned(Asset::SYMBOL),
+                self.amount.into(),
                 self.liability,
                 loan_dto,
                 time_alarms_ref,

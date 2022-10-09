@@ -41,7 +41,7 @@ where
     market_price_oracle::error::ContractError: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
 {
-    let asset = lease_dto.currency.clone();
+    let asset = lease_dto.amount.symbol().clone();
     let lpp = lease_dto.loan.lpp().clone();
     let profit = lease_dto.loan.profit().clone();
     let alarms = lease_dto.time_alarms.clone();
