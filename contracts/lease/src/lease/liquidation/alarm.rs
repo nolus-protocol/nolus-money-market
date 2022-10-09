@@ -258,9 +258,39 @@ mod tests {
     use time_alarms::msg::ExecuteMsg::AddAlarm;
 
     use crate::lease::{
-        tests::{coin, lease_setup},
+        self,
+        tests::{
+            coin, lease_setup, LppLenderLocalStubUnreachable, OracleLocalStub,
+            ProfitLocalStubUnreachable, TimeAlarmsLocalStub, LEASE_START,
+        },
         LeaseInfo, Status, WarningLevel,
     };
+
+    #[test]
+    fn initial_alarm_schedule() {
+        let lease_addr = Addr::unchecked("lease");
+        let lease = lease::tests::create_lease(
+            &lease_addr,
+            LppLenderLocalStubUnreachable {},
+            TimeAlarmsLocalStub::from(Addr::unchecked(String::new())),
+            OracleLocalStub::from(Addr::unchecked(String::new())),
+            ProfitLocalStubUnreachable,
+        );
+        assert_eq!(lease.alarms.batch, {
+            let mut batch = Batch::default();
+
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: String::new(),
+                msg: to_binary(&AddAlarm {
+                    time: LEASE_START + lease.liability.recalculation_time(),
+                })
+                .unwrap(),
+                funds: vec![],
+            });
+
+            batch
+        });
+    }
 
     #[test]
     fn reschedule_time_alarm_recalc() {
@@ -295,8 +325,6 @@ mod tests {
                 ),
             )
             .unwrap();
-
-        // TODO: add a test that the initial alarms are set
 
         assert_eq!(lease.alarms.batch, {
             let mut batch = Batch::default();

@@ -253,6 +253,12 @@ mod tests {
         loan: Option<LoanResponse<TestLpn>>,
     }
 
+    impl From<Option<LoanResponse<TestLpn>>> for LppLenderLocalStub {
+        fn from(loan: Option<LoanResponse<TestLpn>>) -> Self {
+            Self { loan }
+        }
+    }
+
     // TODO define a MockLpp trait to avoid implementing Lpp-s from scratch
     impl LppLender<TestLpn> for LppLenderLocalStub {
         fn open_loan_req(&mut self, _amount: Coin<TestLpn>) -> LppResult<()> {
@@ -406,6 +412,15 @@ mod tests {
         pub batch: Batch,
     }
 
+    impl From<Addr> for OracleLocalStub {
+        fn from(oracle: Addr) -> Self {
+            Self {
+                address: oracle,
+                batch: Batch::default(),
+            }
+        }
+    }
+
     impl<OracleBase> Oracle<OracleBase> for OracleLocalStub
     where
         OracleBase: Currency + Serialize,
@@ -477,6 +492,15 @@ mod tests {
     pub struct ProfitLocalStub {
         address: Addr,
         pub batch: Batch,
+    }
+
+    impl From<Addr> for ProfitLocalStub {
+        fn from(profit: Addr) -> Self {
+            Self {
+                address: profit,
+                batch: Batch::default(),
+            }
+        }
     }
 
     impl Profit for ProfitLocalStub {
@@ -599,21 +623,9 @@ mod tests {
         let lpp_stub = LppLenderLocalStub {
             loan: loan_response,
         };
-
-        let time_alarms_stub = TimeAlarmsLocalStub {
-            address: time_alarms_addr,
-            batch: Batch::default(),
-        };
-
-        let oracle_stub = OracleLocalStub {
-            address: oracle_addr,
-            batch: Batch::default(),
-        };
-
-        let profit_stub = ProfitLocalStub {
-            address: profit_addr,
-            batch: Batch::default(),
-        };
+        let time_alarms_stub: TimeAlarmsLocalStub = time_alarms_addr.into();
+        let oracle_stub: OracleLocalStub = oracle_addr.into();
+        let profit_stub: ProfitLocalStub = profit_addr.into();
 
         load_lease(
             lease_addr,
