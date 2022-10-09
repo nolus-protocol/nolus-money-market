@@ -22,13 +22,12 @@ impl NewLeaseForm {
         api: &dyn Api,
         querier: &QuerierWrapper,
         lpp: LppLenderRef,
+        oracle: OracleRef,
     ) -> ContractResult<IntoDTOResult> {
         let profit = ProfitRef::try_from(api.addr_validate(&self.loan.profit)?, querier)?;
         // TODO check the address simmilarly to the profit
         let alarms = TimeAlarmsRef::try_from(api.addr_validate(&self.time_alarms)?).unwrap();
         // .expect("Time Alarms is not deployed, or wrong address is passed!");
-        let oracle = OracleRef::try_from(api.addr_validate(&self.market_price_oracle)?, querier)?;
-        // .expect("Market Price Oracle is not deployed, or wrong address is passed!");
 
         lease::execute_deps(
             LeaseFactory {
@@ -117,7 +116,7 @@ mod test {
     use finance::{currency::Currency, duration::Duration};
     use finance::{liability::Liability, percent::Percent};
     use lpp::stub::lender::LppLenderRef;
-    use market_price_oracle::msg::ConfigResponse as OracleConfigResponse;
+    use market_price_oracle::{msg::ConfigResponse as OracleConfigResponse, stub::OracleRef};
     use profit::msg::ConfigResponse as ProfitConfigResponse;
 
     use crate::{
@@ -162,6 +161,7 @@ mod test {
                 &api,
                 &QuerierWrapper::new(&querier),
                 LppLenderRef::unchecked::<_, Lpn>(lpp, ReplyId::OpenLoanReq.into()),
+                OracleRef::unchecked::<_, Lpn>(ORACLE_ADDR),
             )
             .unwrap_err();
 

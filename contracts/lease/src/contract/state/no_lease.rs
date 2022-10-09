@@ -44,7 +44,7 @@ impl Controller for NoLease {
         .expect("Market Price Oracle is not deployed, or wrong address is passed!");
 
         let OpenLoanReqResult { batch, downpayment } = lpp.clone().execute(
-            OpenLoanReq::new(&form, info.funds, oracle, &deps.querier),
+            OpenLoanReq::new(&form, info.funds, oracle.clone(), &deps.querier),
             &deps.querier,
         )?;
 
@@ -53,6 +53,7 @@ impl Controller for NoLease {
             NoLeaseFinish {
                 form,
                 lpp,
+                oracle,
                 downpayment,
             },
         ))

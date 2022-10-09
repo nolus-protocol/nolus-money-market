@@ -3,6 +3,7 @@ use std::fmt::Display;
 use cosmwasm_std::{DepsMut, Env, Reply};
 use finance::coin::CoinDTO;
 use lpp::stub::lender::LppLenderRef;
+use market_price_oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +22,7 @@ use super::{Active, Controller, Response};
 pub struct NoLeaseFinish {
     pub(super) form: NewLeaseForm,
     pub(super) lpp: LppLenderRef,
+    pub(super) oracle: OracleRef,
     pub(super) downpayment: CoinDTO,
 }
 
@@ -41,6 +43,7 @@ impl Controller for NoLeaseFinish {
                     deps.api,
                     &deps.querier,
                     open_result.lpp.clone(),
+                    self.oracle,
                 )?;
                 let emitter = build_emitter(lease.batch, &env, &lease.dto, open_result);
                 Ok(Response::from(emitter, Active { lease: lease.dto }))
