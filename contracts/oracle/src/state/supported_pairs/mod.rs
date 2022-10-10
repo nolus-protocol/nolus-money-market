@@ -75,7 +75,7 @@ where
         // check for unambiguous edges
         let mut prev = &edges[0];
         for edge in edges[1..].iter() {
-            if edge.0 == prev.0 {
+            if edge.0 .0 == prev.0 .0 {
                 return Err(ContractError::InvalidDenomPair(
                     edge.0 .0.to_owned(),
                     edge.1.to_owned(),
@@ -288,7 +288,7 @@ mod tests {
     fn test_wrong_paths() {
         SupportedPairs::<TheCurrency>::new(vec![
             vec!["token0".into(), "token1".into(), TheCurrency::SYMBOL.into()],
-            vec!["token0".into(), "token2".into(), TheCurrency::SYMBOL.into()],
+            vec!["token0".into(), TheCurrency::SYMBOL.into()],
         ])
         .unwrap();
     }
