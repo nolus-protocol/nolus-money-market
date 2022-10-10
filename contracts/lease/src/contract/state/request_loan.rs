@@ -19,14 +19,14 @@ use crate::{
 use super::{Active, Controller, Response};
 
 #[derive(Serialize, Deserialize)]
-pub struct LoanRequested {
+pub struct RequestLoan {
     pub(super) form: NewLeaseForm,
     pub(super) lpp: LppLenderRef,
     pub(super) oracle: OracleRef,
     pub(super) downpayment: CoinDTO,
 }
 
-impl Controller for LoanRequested {
+impl Controller for RequestLoan {
     fn reply(self, deps: &mut DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
         let id = ReplyId::try_from(msg.id)
             .map_err(|_| ContractError::InvalidParameters("Invalid reply ID passed!".into()))?;
@@ -59,7 +59,7 @@ impl Controller for LoanRequested {
     }
 }
 
-impl Display for LoanRequested {
+impl Display for RequestLoan {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("loan requested")
     }

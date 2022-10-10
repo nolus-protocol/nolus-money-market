@@ -13,7 +13,7 @@ use crate::{
     reply_id::ReplyId,
 };
 
-use super::{Controller, LoanRequested, Response};
+use super::{Controller, RequestLoan, Response};
 
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -50,7 +50,7 @@ impl Controller for NoLease {
 
         Ok(Response::from(
             batch,
-            LoanRequested {
+            RequestLoan {
                 form,
                 lpp,
                 oracle,

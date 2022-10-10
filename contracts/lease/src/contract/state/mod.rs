@@ -9,17 +9,17 @@ use crate::{
     msg::{ExecuteMsg, NewLeaseForm, StateQuery},
 };
 
-pub use self::{active::Active, loan_requested::LoanRequested, no_lease::NoLease};
+pub use self::{active::Active, request_loan::RequestLoan, no_lease::NoLease};
 
 mod active;
-mod loan_requested;
+mod request_loan;
 mod no_lease;
 
 #[enum_dispatch(Controller)]
 #[derive(Serialize, Deserialize)]
 pub enum State {
     NoLease,
-    LoanRequested,
+    RequestLoan,
     Active,
 }
 
@@ -27,7 +27,7 @@ impl Display for State {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             State::NoLease(inner) => inner.fmt(f),
-            State::LoanRequested(inner) => inner.fmt(f),
+            State::RequestLoan(inner) => inner.fmt(f),
             State::Active(inner) => inner.fmt(f),
         }
     }
