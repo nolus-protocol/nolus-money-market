@@ -33,16 +33,11 @@ impl Controller for RequestLoan {
 
         match id {
             ReplyId::OpenLoanReq => {
-                let open_result = self
-                    .lpp
-                    .execute(OpenLoanResp::new(msg, self.downpayment), &deps.querier)?;
+                let open_result = self.lpp.execute(OpenLoanResp::new(msg), &deps.querier)?;
 
                 //TODO replace with the actual coin once get the GAMM trx result
-                assert_eq!(
-                    open_result.downpayment.symbol(),
-                    open_result.principal.symbol()
-                );
-                let amount = open_result.downpayment.amount() + open_result.principal.amount();
+                assert_eq!(self.downpayment.symbol(), open_result.principal.symbol());
+                let amount = self.downpayment.amount() + open_result.principal.amount();
 
                 let lease = self.form.into_lease(
                     &env.contract.address,
@@ -52,7 +47,13 @@ impl Controller for RequestLoan {
                     &deps.querier,
                     (open_result.lpp.clone(), self.oracle),
                 )?;
-                let emitter = build_emitter(lease.batch, &env, &lease.lease, open_result);
+                let emitter = build_emitter(
+                    lease.batch,
+                    &env,
+                    &lease.lease,
+                    open_result,
+                    self.downpayment,
+                );
                 Ok(Response::from(emitter, Active { lease: lease.lease }))
             }
         }
@@ -70,6 +71,7 @@ fn build_emitter(
     env: &Env,
     dto: &LeaseDTO,
     open_result: OpenLoanRespResult,
+    downpayment: CoinDTO,
 ) -> Emitter {
     batch
         .into_emitter(TYPE::Open)
@@ -83,5 +85,5 @@ fn build_emitter(
         .emit("currency", dto.amount.symbol())
         .emit("loan-pool-id", dto.loan.lpp().addr())
         .emit_coin_dto("loan", open_result.principal)
-        .emit_coin_dto("downpayment", open_result.downpayment)
+        .emit_coin_dto("downpayment", downpayment)
 }

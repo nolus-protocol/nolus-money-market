@@ -104,12 +104,11 @@ pub struct OpenLoanReqResult {
 
 pub struct OpenLoanResp {
     reply: Reply,
-    downpayment: CoinDTO,
 }
 
 impl OpenLoanResp {
-    pub fn new(reply: Reply, downpayment: CoinDTO) -> Self {
-        Self { reply, downpayment }
+    pub fn new(reply: Reply) -> Self {
+        Self { reply }
     }
 }
 
@@ -128,7 +127,6 @@ impl WithLppLender for OpenLoanResp {
         debug_assert_eq!(Batch::default(), batch);
         Ok(OpenLoanRespResult {
             lpp: lpp_ref,
-            downpayment: self.downpayment,
             principal: loan_resp.principal_due.into(),
             annual_interest_rate: loan_resp.annual_interest_rate,
         })
@@ -137,7 +135,6 @@ impl WithLppLender for OpenLoanResp {
 
 pub struct OpenLoanRespResult {
     pub(in crate::contract) lpp: LppLenderRef,
-    pub(in crate::contract) downpayment: CoinDTO,
     pub(in crate::contract) principal: CoinDTO,
     pub(in crate::contract) annual_interest_rate: Percent,
 }
