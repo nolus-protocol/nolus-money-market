@@ -35,18 +35,17 @@ impl Controller for Active {
         info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        let account = BankStub::my_account(&env, &deps.querier);
-
         let resp = match msg {
             ExecuteMsg::Repay() => {
                 let RepayResult {
                     lease: lease_updated,
                     emitter,
-                } = try_repay(&deps.querier, &env, account, info, self.lease)?;
+                } = try_repay(&deps.querier, &env, info, self.lease)?;
 
                 into_resp(emitter, lease_updated)
             }
             ExecuteMsg::Close() => {
+                let account = BankStub::my_account(&env, &deps.querier);
                 let RepayResult { lease, emitter } =
                     try_close(&deps.querier, &env, account, info, self.lease)?;
 
@@ -56,7 +55,7 @@ impl Controller for Active {
                 let AlarmResult {
                     response,
                     lease_dto: lease_updated,
-                } = try_on_price_alarm(&deps.querier, &env, account, info, self.lease)?;
+                } = try_on_price_alarm(&deps.querier, &env, info, self.lease)?;
 
                 into_resp(response, lease_updated)
             }
@@ -64,7 +63,7 @@ impl Controller for Active {
                 let AlarmResult {
                     response,
                     lease_dto: lease_updated,
-                } = try_on_time_alarm(&deps.querier, &env, account, info, self.lease)?;
+                } = try_on_time_alarm(&deps.querier, &env, info, self.lease)?;
 
                 into_resp(response, lease_updated)
             }
@@ -92,13 +91,12 @@ impl Display for Active {
 fn try_repay(
     querier: &QuerierWrapper,
     env: &Env,
-    account: BankStub,
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<RepayResult> {
     lease::execute(
         lease,
-        Repay::new(info.funds, account, env),
+        Repay::new(info.funds, env),
         &env.contract.address,
         querier,
     )
@@ -132,13 +130,12 @@ fn try_close(
 fn try_on_price_alarm(
     querier: &QuerierWrapper,
     env: &Env,
-    account: BankStub,
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<AlarmResult> {
     lease::execute(
         lease,
-        PriceAlarm::new(env, &info.sender, account, env.block.time),
+        PriceAlarm::new(env, &info.sender, env.block.time),
         &env.contract.address,
         querier,
     )
@@ -147,13 +144,12 @@ fn try_on_price_alarm(
 fn try_on_time_alarm(
     querier: &QuerierWrapper,
     env: &Env,
-    account: BankStub,
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<AlarmResult> {
     lease::execute(
         lease,
-        TimeAlarm::new(env, &info.sender, account, env.block.time),
+        TimeAlarm::new(env, &info.sender, env.block.time),
         &env.contract.address,
         querier,
     )

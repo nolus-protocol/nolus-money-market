@@ -1,14 +1,11 @@
 use cosmwasm_std::{Coin as CwCoin, Env};
 use serde::Serialize;
 
-use finance::{
-    currency::Currency,
-    price::{total, Price},
-};
+use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use platform::{
-    bank::{self, BankAccountView},
+    bank::{self},
     batch::{Emit, Emitter},
 };
 use profit::stub::Profit as ProfitTrait;
@@ -20,25 +17,14 @@ use crate::{
     lease::{Lease, LeaseDTO, RepayResult as LeaseRepayResult, WithLease},
 };
 
-pub struct Repay<'a, Bank>
-where
-    Bank: BankAccountView,
-{
+pub struct Repay<'a> {
     payment: Vec<CwCoin>,
     env: &'a Env,
-    account: Bank,
 }
 
-impl<'a, Bank> Repay<'a, Bank>
-where
-    Bank: BankAccountView,
-{
-    pub fn new(payment: Vec<CwCoin>, account: Bank, env: &'a Env) -> Self {
-        Self {
-            payment,
-            env,
-            account,
-        }
+impl<'a> Repay<'a> {
+    pub fn new(payment: Vec<CwCoin>, env: &'a Env) -> Self {
+        Self { payment, env }
     }
 }
 
@@ -47,10 +33,7 @@ pub struct RepayResult {
     pub emitter: Emitter,
 }
 
-impl<'a, Bank> WithLease for Repay<'a, Bank>
-where
-    Bank: BankAccountView,
-{
+impl<'a> WithLease for Repay<'a> {
     type Output = RepayResult;
 
     type Error = ContractError;
@@ -70,15 +53,11 @@ where
         // TODO 'receive' the payment from the bank using any currency it might be in
         let payment = bank::received::<Lpn>(self.payment)?;
 
-        // TODO adjust/remove this logic when support for multiple currencies is added
-        //  because this only works for `Asset = Lpn`
-        let lease_amount = self.account.balance::<Asset>()? - total(payment, Price::identity());
-
         let LeaseRepayResult {
             batch,
             lease: lease_dto,
             receipt,
-        } = lease.repay(lease_amount, payment, self.env.block.time)?;
+        } = lease.repay(payment, self.env.block.time)?;
 
         let emitter = batch
             .into_emitter(TYPE::Repay)

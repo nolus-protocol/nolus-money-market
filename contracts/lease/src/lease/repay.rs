@@ -28,13 +28,12 @@ where
 {
     pub(crate) fn repay(
         mut self,
-        lease_amount: Coin<Asset>,
         payment: Coin<Lpn>,
         now: Timestamp,
     ) -> ContractResult<Result<Lpn>> {
         let receipt = self.no_reschedule_repay(payment, now)?;
 
-        self.reschedule_on_repay(lease_amount, &now)?;
+        self.reschedule_on_repay(&now)?;
 
         let IntoDTOResult { lease, batch } = self.into_dto();
 

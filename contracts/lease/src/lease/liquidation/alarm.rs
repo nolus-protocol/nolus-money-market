@@ -11,7 +11,6 @@ use finance::{
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
 use marketprice::alarms::Alarm;
-use platform::bank::BankAccountView;
 use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
@@ -34,49 +33,27 @@ where
     #[inline]
     pub(in crate::lease) fn initial_alarm_schedule(
         &mut self,
-        lease_amount: Coin<Asset>,
         now: &Timestamp,
     ) -> ContractResult<()> {
-        self.reschedule(
-            lease_amount,
-            total(lease_amount, self.price_of_lease_currency()?),
-            now,
-            &Status::None,
-        )
+        self.reschedule(self.lease_amount_lpn()?, now, &Status::None)
     }
 
-    pub(crate) fn on_price_alarm<B>(
+    pub(crate) fn on_price_alarm(
         self,
         now: Timestamp,
-        account: &B,
-    ) -> ContractResult<OnAlarmResult<Lpn, Asset>>
-    where
-        B: BankAccountView,
-    {
-        self.on_alarm(Self::act_on_liability, now, account)
+    ) -> ContractResult<OnAlarmResult<Lpn, Asset>> {
+        self.on_alarm(Self::act_on_liability, now)
     }
 
-    pub(crate) fn on_time_alarm<B>(
-        self,
-        now: Timestamp,
-        account: &B,
-    ) -> ContractResult<OnAlarmResult<Lpn, Asset>>
-    where
-        B: BankAccountView,
-    {
-        self.on_alarm(Self::act_on_overdue, now, account)
+    pub(crate) fn on_time_alarm(self, now: Timestamp) -> ContractResult<OnAlarmResult<Lpn, Asset>> {
+        self.on_alarm(Self::act_on_overdue, now)
     }
 
     #[inline]
-    pub(in crate::lease) fn reschedule_on_repay(
-        &mut self,
-        lease_amount: Coin<Asset>,
-        now: &Timestamp,
-    ) -> ContractResult<()> {
-        let lease_lpn = total(lease_amount, self.price_of_lease_currency()?);
+    pub(in crate::lease) fn reschedule_on_repay(&mut self, now: &Timestamp) -> ContractResult<()> {
+        let lease_lpn = self.lease_amount_lpn()?;
 
         self.reschedule(
-            lease_amount,
             lease_lpn,
             now,
             &self.handle_warnings(
@@ -87,11 +64,10 @@ where
         )
     }
 
-    fn on_alarm<F, B>(
+    fn on_alarm<F>(
         mut self,
         handler: F,
         now: Timestamp,
-        account: &B,
     ) -> ContractResult<OnAlarmResult<Lpn, Asset>>
     where
         F: FnOnce(
@@ -101,9 +77,8 @@ where
             Percent,
             Coin<Lpn>,
         ) -> ContractResult<Status<Lpn, Asset>>,
-        B: BankAccountView,
     {
-        let mut lease_amount = account.balance::<Asset>()?;
+        let mut lease_amount = self.amount;
 
         let price_to_lpn = self.price_of_lease_currency()?;
 
@@ -128,7 +103,7 @@ where
         }
 
         if !matches!(status, Status::FullLiquidation { .. }) {
-            self.reschedule(lease_amount, lease_lpn, &now, &status)?;
+            self.reschedule(lease_lpn, &now, &status)?;
         }
 
         Ok(self.into_on_alarm_result(status))
@@ -153,14 +128,13 @@ where
     #[inline]
     fn reschedule(
         &mut self,
-        lease_amount: Coin<Asset>,
         lease_lpn: Coin<Lpn>,
         now: &Timestamp,
         liquidation_status: &Status<Lpn, Asset>,
     ) -> ContractResult<()> {
         self.reschedule_time_alarm(now, liquidation_status)?;
 
-        self.reschedule_price_alarm(lease_amount, lease_lpn, now, liquidation_status)
+        self.reschedule_price_alarm(lease_lpn, now, liquidation_status)
     }
 
     fn reschedule_time_alarm(
@@ -184,7 +158,6 @@ where
 
     fn reschedule_price_alarm(
         &mut self,
-        lease_amount: Coin<Asset>,
         lease_lpn: Coin<Lpn>,
         now: &Timestamp,
         liquidation_status: &Status<Lpn, Asset>,
@@ -221,10 +194,10 @@ where
             )?
             .total_lpn;
 
-        let below = self.price_alarm_by_percent(lease_amount, total_liability, below)?;
+        let below = self.price_alarm_by_percent(total_liability, below)?;
 
         let above = above
-            .map(|above| self.price_alarm_by_percent(lease_amount, total_liability, above))
+            .map(|above| self.price_alarm_by_percent(total_liability, above))
             .transpose()?;
 
         self.oracle
@@ -238,13 +211,12 @@ where
 
     fn price_alarm_by_percent(
         &self,
-        lease_amount: Coin<Asset>,
         liability: Coin<Lpn>,
         percent: Percent,
     ) -> ContractResult<Price<Asset, Lpn>> {
-        assert!(!lease_amount.is_zero(), "Loan already paid!");
+        assert!(!self.amount.is_zero(), "Loan already paid!");
 
-        Ok(total_of(percent.of(lease_amount)).is(liability))
+        Ok(total_of(percent.of(self.amount)).is(liability))
     }
 }
 
@@ -260,7 +232,7 @@ mod tests {
     use crate::lease::{
         self,
         tests::{
-            coin, lease_setup, LppLenderLocalStubUnreachable, OracleLocalStub,
+            coin, open_lease, LppLenderLocalStubUnreachable, OracleLocalStub,
             ProfitLocalStubUnreachable, TimeAlarmsLocalStub, LEASE_START,
         },
         LeaseInfo, Status, WarningLevel,
@@ -271,6 +243,7 @@ mod tests {
         let lease_addr = Addr::unchecked("lease");
         let lease = lease::tests::create_lease(
             &lease_addr,
+            10.into(),
             LppLenderLocalStubUnreachable {},
             TimeAlarmsLocalStub::from(Addr::unchecked(String::new())),
             OracleLocalStub::from(Addr::unchecked(String::new())),
@@ -302,8 +275,9 @@ mod tests {
         };
 
         let lease_addr = Addr::unchecked("lease");
-        let mut lease = lease_setup(
+        let mut lease = open_lease(
             &lease_addr,
+            20.into(),
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -354,8 +328,9 @@ mod tests {
         };
 
         let lease_addr = Addr::unchecked("lease");
-        let mut lease = lease_setup(
+        let mut lease = open_lease(
             &lease_addr,
+            300.into(),
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -396,7 +371,6 @@ mod tests {
     #[test]
     #[ignore = "No support for same currency prices. Without Price's debug assertion, runs successfully."]
     fn price_alarm_by_percent() {
-        let lease_amount = 1000;
         let interest_rate = Percent::from_permille(50);
         // LPP loan
         let loan = LoanResponse {
@@ -407,8 +381,9 @@ mod tests {
         };
 
         let lease_addr = Addr::unchecked("lease");
-        let lease = lease_setup(
+        let lease = open_lease(
             &lease_addr,
+            300.into(),
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -417,7 +392,7 @@ mod tests {
 
         assert_eq!(
             lease
-                .price_alarm_by_percent(coin(lease_amount), coin(500), Percent::from_percent(50))
+                .price_alarm_by_percent(coin(500), Percent::from_percent(50))
                 .unwrap(),
             total_of(coin(5)).is(coin(3))
         );

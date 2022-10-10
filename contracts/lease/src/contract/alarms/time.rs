@@ -4,7 +4,6 @@ use serde::Serialize;
 use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
-use platform::bank::BankAccountView;
 use profit::stub::Profit as ProfitTrait;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
@@ -14,34 +13,19 @@ use crate::{
     lease::{Lease, OnAlarmResult, WithLease},
 };
 
-pub struct TimeAlarm<'a, B>
-where
-    B: BankAccountView,
-{
+pub struct TimeAlarm<'a> {
     env: &'a Env,
     sender: &'a Addr,
-    account: B,
     now: Timestamp,
 }
 
-impl<'a, B> TimeAlarm<'a, B>
-where
-    B: BankAccountView,
-{
-    pub fn new(env: &'a Env, sender: &'a Addr, account: B, now: Timestamp) -> Self {
-        Self {
-            env,
-            sender,
-            account,
-            now,
-        }
+impl<'a> TimeAlarm<'a> {
+    pub fn new(env: &'a Env, sender: &'a Addr, now: Timestamp) -> Self {
+        Self { env, sender, now }
     }
 }
 
-impl<'a, B> WithLease for TimeAlarm<'a, B>
-where
-    B: BankAccountView,
-{
+impl<'a> WithLease for TimeAlarm<'a> {
     type Output = AlarmResult;
 
     type Error = ContractError;
@@ -66,7 +50,7 @@ where
             batch,
             lease_dto,
             liquidation_status,
-        } = lease.on_time_alarm(self.now, &self.account)?;
+        } = lease.on_time_alarm(self.now)?;
 
         Ok(AlarmResult {
             response: emit_events(self.env, &liquidation_status, batch),

@@ -264,7 +264,7 @@ mod tests {
 
     use crate::{
         lease::{
-            tests::{coin, lease_setup, LEASE_START},
+            tests::{coin, open_lease, LEASE_START},
             LeaseInfo, LiquidationInfo, Status, WarningLevel,
         },
         loan::{LiabilityStatus, RepayReceipt},
@@ -274,7 +274,6 @@ mod tests {
 
     #[test]
     fn warnings_none() {
-        let _lease_amount = 1000;
         let interest_rate = Percent::from_permille(50);
         // LPP loan
         let loan = LoanResponse {
@@ -285,8 +284,9 @@ mod tests {
         };
 
         let lease_addr = Addr::unchecked("lease");
-        let lease = lease_setup(
+        let lease = open_lease(
             &lease_addr,
+            10.into(),
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -301,7 +301,6 @@ mod tests {
 
     #[test]
     fn warnings_first() {
-        let _lease_amount = 1000;
         let interest_rate = Percent::from_permille(50);
         // LPP loan
         let loan = LoanResponse {
@@ -312,8 +311,9 @@ mod tests {
         };
 
         let lease_addr = Addr::unchecked("lease");
-        let lease = lease_setup(
+        let lease = open_lease(
             &lease_addr,
+            10.into(),
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -335,7 +335,6 @@ mod tests {
 
     #[test]
     fn warnings_second() {
-        let _lease_amount = 1000;
         let interest_rate = Percent::from_permille(50);
         // LPP loan
         let loan = LoanResponse {
@@ -346,8 +345,9 @@ mod tests {
         };
 
         let lease_addr = Addr::unchecked("lease");
-        let lease = lease_setup(
+        let lease = open_lease(
             &lease_addr,
+            10.into(),
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -369,7 +369,6 @@ mod tests {
 
     #[test]
     fn warnings_third() {
-        let _lease_amount = 1000;
         let interest_rate = Percent::from_permille(50);
         // LPP loan
         let loan = LoanResponse {
@@ -380,8 +379,9 @@ mod tests {
         };
 
         let lease_addr = Addr::unchecked("lease");
-        let lease = lease_setup(
+        let lease = open_lease(
             &lease_addr,
+            10.into(),
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -413,8 +413,9 @@ mod tests {
         };
 
         let lease_addr = Addr::unchecked("lease");
-        let lease = lease_setup(
+        let lease = open_lease(
             &lease_addr,
+            10.into(),
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -447,8 +448,9 @@ mod tests {
         };
 
         let lease_addr = Addr::unchecked("lease");
-        let mut lease = lease_setup(
+        let mut lease = open_lease(
             &lease_addr,
+            lease_amount.into(),
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -496,8 +498,9 @@ mod tests {
         };
 
         let lease_addr = Addr::unchecked("lease");
-        let mut lease = lease_setup(
+        let mut lease = open_lease(
             &lease_addr,
+            lease_amount.into(),
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),

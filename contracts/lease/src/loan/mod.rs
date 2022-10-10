@@ -243,7 +243,6 @@ where
         //  - [better separation of responsabilities + even lower trx cost] include the remaining interest due up to this moment in the Lpp.query_loan response
         //  and send repayment amount up to the principal + interest due. The remainder is left in the lease
 
-        // TODO For repayment, use not only the amount received but also the amount present in the lease. The latter may have been left as a surplus from a previous payment.
         self.lpp.repay_loan_req(loan_payment)?;
 
         debug_assert_eq!(receipt.total(), payment);

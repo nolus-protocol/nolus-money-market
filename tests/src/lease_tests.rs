@@ -61,17 +61,18 @@ fn open_lease(test_case: &mut TestCase, value: LeaseCoin) -> Addr {
     get_lease_address(test_case)
 }
 
-fn try_open_lease(test_case: &mut TestCase, value: LeaseCoin) -> Result<AppResponse, anyhow::Error> {
-    test_case
-        .app
-        .execute_contract(
-            Addr::unchecked(USER),
-            test_case.leaser_addr.clone().unwrap(),
-            &leaser::msg::ExecuteMsg::OpenLease {
-                currency: LeaseCurrency::SYMBOL.into(),
-            },
-            &[to_cosmwasm(value)],
-        )
+fn try_open_lease(
+    test_case: &mut TestCase,
+    value: LeaseCoin,
+) -> Result<AppResponse, anyhow::Error> {
+    test_case.app.execute_contract(
+        Addr::unchecked(USER),
+        test_case.leaser_addr.clone().unwrap(),
+        &leaser::msg::ExecuteMsg::OpenLease {
+            currency: LeaseCurrency::SYMBOL.into(),
+        },
+        &[to_cosmwasm(value)],
+    )
 }
 
 fn get_lease_address(test_case: &TestCase) -> Addr {
@@ -261,14 +262,19 @@ fn state_paid_when_overpaid() {
 
     let overpayment = create_coin(5);
     let payment = borrowed + overpayment;
-    let expected_amount = downpayment + payment;
 
     repay(&mut test_case, &lease_address, payment);
 
-    let query_result = state_query(&test_case, &lease_address.into_string());
-    let expected_result = StateResponse::Paid(expected_amount);
+    let query_result = state_query(&test_case, &lease_address.clone().into_string());
 
-    assert_eq!(query_result, expected_result);
+    let balance = test_case
+        .app
+        .wrap()
+        .query_all_balances(lease_address)
+        .unwrap();
+    assert_eq!(vec!(to_cosmwasm(downpayment + payment)), balance);
+
+    assert_eq!(query_result, StateResponse::Paid(downpayment + borrowed));
 }
 
 #[test]
