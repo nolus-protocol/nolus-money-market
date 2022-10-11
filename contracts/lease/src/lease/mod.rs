@@ -157,7 +157,11 @@ where
                 account.send(self.amount, &self.customer);
                 self.amount = Coin::<Asset>::default();
 
-                Ok(self.into_dto())
+                let IntoDTOResult { lease, batch } = self.into_dto();
+                Ok(IntoDTOResult {
+                    lease,
+                    batch: batch.merge(account.into()),
+                })
             }
             StateResponse::Closed() => Err(ContractError::LoanClosed()),
         }
