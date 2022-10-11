@@ -12,13 +12,6 @@ impl DispatchLog {
         DispatchLog { last_dispatch }
     }
 
-    pub fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
-        Self::STORAGE.save(storage, &self)
-    }
-    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
-        Self::STORAGE.load(storage)
-    }
-
     pub fn last_dispatch(storage: &dyn Storage) -> StdResult<Timestamp> {
         match Self::STORAGE.load(storage) {
             Ok(l) => Ok(l.last_dispatch),
