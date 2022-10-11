@@ -1,10 +1,11 @@
-use cosmwasm_std::{Addr, StdError};
-use cw_multi_test::Executor;
-
 use profit::{
     contract::{execute, instantiate, query},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     ContractError,
+};
+use sdk::{
+    cosmwasm_std::{Addr, StdError},
+    cw_multi_test::Executor,
 };
 
 use crate::common::{ContractWrapper, MockApp};

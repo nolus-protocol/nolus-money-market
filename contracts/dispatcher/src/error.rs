@@ -1,7 +1,8 @@
 use std::convert::Infallible;
 
-use cosmwasm_std::{Addr, StdError};
 use thiserror::Error;
+
+use sdk::cosmwasm_std::{Addr, StdError};
 
 #[derive(Error, Debug)]
 pub enum ContractError {

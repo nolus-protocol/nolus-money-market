@@ -1,11 +1,13 @@
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{
-        to_binary, Addr, Binary, Coin, CosmosMsg, Deps, Empty, Env, StdResult, Uint128, WasmMsg,
-    };
-    use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
-    use schemars::JsonSchema;
     use serde::{Deserialize, Serialize};
+
+    use sdk::{
+        cosmwasm_ext::CosmosMsg,
+        cosmwasm_std::{to_binary, Addr, Binary, Coin, Deps, Env, StdResult, Uint128, WasmMsg},
+        schemars::{self, JsonSchema},
+        testing::{new_app, App, Contract, ContractWrapper, Executor},
+    };
 
     use crate::{msg::ExecuteMsg, tests::dummy_default_instantiate_msg};
 
@@ -38,7 +40,7 @@ mod tests {
     fn mock_query(_deps: Deps, _env: Env, _msg: QueryMsg) -> StdResult<Binary> {
         to_binary(&MockResponse {})
     }
-    pub fn contract_template() -> Box<dyn Contract<Empty>> {
+    pub fn contract_template() -> Box<Contract> {
         let contract = ContractWrapper::new(
             crate::contract::execute,
             crate::contract::instantiate,
@@ -47,7 +49,7 @@ mod tests {
         .with_reply(crate::contract::reply);
         Box::new(contract)
     }
-    pub fn timealarms_template() -> Box<dyn Contract<Empty>> {
+    pub fn timealarms_template() -> Box<Contract> {
         let contract = ContractWrapper::new(
             timealarms::contract::execute,
             timealarms::contract::instantiate,
@@ -60,7 +62,7 @@ mod tests {
     const ADMIN: &str = "admin";
     const NATIVE_DENOM: &str = "denom";
     fn mock_app() -> App {
-        AppBuilder::new().build(|router, _, storage| {
+        new_app().build(|router, _, storage| {
             router
                 .bank
                 .init_balance(
@@ -107,12 +109,13 @@ mod tests {
         CwTemplateContract(cw_template_contract_addr)
     }
     mod register_feeder {
-        use cosmwasm_std::{Addr, Timestamp};
-        use cw_multi_test::Executor;
-
         use finance::{
             coin::Coin,
             price::{self, dto::PriceDTO},
+        };
+        use sdk::{
+            cosmwasm_std::{Addr, Timestamp},
+            cw_multi_test::{self, Executor},
         };
 
         use crate::{
@@ -131,14 +134,18 @@ mod tests {
         /// The mock for loan SC. It mimics the scheme for time notification.
         /// If GATE, it returns Ok on notifications, returns Err otherwise.
         mod mock_loan {
-            use cosmwasm_std::{
-                Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo, Response, StdError,
-                StdResult, Timestamp,
-            };
-            use cw_multi_test::{App, Contract, ContractWrapper, Executor};
-            use cw_storage_plus::Item;
-            use schemars::JsonSchema;
             use serde::{Deserialize, Serialize};
+
+            use sdk::{
+                cosmwasm_ext::Response,
+                cosmwasm_std::{
+                    Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo, StdError, StdResult,
+                    Timestamp,
+                },
+                cw_storage_plus::Item,
+                schemars::{self, JsonSchema},
+                testing::{App, Contract, ContractWrapper, Executor},
+            };
 
             use crate::tests::integration_tests::tests::CwTemplateContract;
 
@@ -181,7 +188,7 @@ mod tests {
             fn query(_: Deps, _: Env, _msg: MockExecuteMsg) -> StdResult<Binary> {
                 Err(StdError::generic_err("not implemented"))
             }
-            fn contract_template() -> Box<dyn Contract<Empty>> {
+            fn contract_template() -> Box<Contract> {
                 let contract = ContractWrapper::new(execute, instantiate, query);
                 Box::new(contract)
             }

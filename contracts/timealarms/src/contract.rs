@@ -1,7 +1,10 @@
-#[cfg(feature = "cosmwasm-bindings")]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Reply, Response};
-use cw2::set_contract_version;
+#[cfg(feature = "contract-with-bindings")]
+use sdk::cosmwasm_std::entry_point;
+use sdk::{
+    cosmwasm_ext::Response,
+    cosmwasm_std::{DepsMut, Env, MessageInfo, Reply},
+    cw2::set_contract_version,
+};
 
 use crate::{
     alarms::TimeAlarms,
@@ -13,7 +16,7 @@ use crate::{
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -25,7 +28,7 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -38,7 +41,7 @@ pub fn execute(
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let res = match msg.result {
         cosmwasm_std::SubMsgResult::Ok(_) => {
@@ -54,7 +57,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{
+    use sdk::cosmwasm_std::{
         coins,
         testing::{mock_dependencies, mock_env, mock_info},
     };

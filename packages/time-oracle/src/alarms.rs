@@ -1,6 +1,9 @@
-use cosmwasm_std::{Addr, Order, StdResult, Storage, Timestamp};
-use cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, MultiIndex};
 use serde::{Deserialize, Serialize};
+
+use sdk::{
+    cosmwasm_std::{Addr, Order, StdResult, Storage, Timestamp},
+    cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, MultiIndex},
+};
 
 use crate::AlarmError;
 
@@ -49,7 +52,7 @@ impl<'a> Alarms<'a> {
 
     fn alarms(&self) -> IndexedMap<TimeSeconds, Alarm, AlarmIndexes<'a>> {
         let indexes = AlarmIndexes {
-            alarms: MultiIndex::new(|d| d.time, self.namespace_alarms, self.namespace_index),
+            alarms: MultiIndex::new(|_, d| d.time, self.namespace_alarms, self.namespace_index),
         };
         IndexedMap::new(self.namespace_alarms, indexes)
     }
@@ -98,7 +101,7 @@ pub trait AlarmDispatcher {
 
 #[cfg(test)]
 pub mod tests {
-    use cosmwasm_std::testing;
+    use sdk::cosmwasm_std::testing;
 
     use super::*;
 

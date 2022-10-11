@@ -1,9 +1,12 @@
-use cosmwasm_std::{Addr, DepsMut, Response, StdResult, Storage, Timestamp};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use currency::native::Nls;
 use platform::{batch::Batch, contract};
+use sdk::{
+    cosmwasm_ext::Response,
+    cosmwasm_std::{Addr, DepsMut, StdResult, Storage, Timestamp},
+    schemars::{self, JsonSchema},
+};
 use time_oracle::{AlarmError, Alarms, Id};
 
 use crate::{msg::ExecuteAlarmMsg, ContractError};
@@ -60,11 +63,11 @@ impl TimeAlarms {
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{
+    use platform::contract;
+    use sdk::cosmwasm_std::{
         testing::{mock_dependencies, MockQuerier},
         Addr, QuerierWrapper, Timestamp,
     };
-    use platform::contract;
 
     use crate::{alarms::TimeAlarms, ContractError};
 

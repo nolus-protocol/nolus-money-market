@@ -1,11 +1,12 @@
 use std::fmt::Display;
 
-use cosmwasm_std::{
-    Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Response as CwResponse,
-};
 use serde::{Deserialize, Serialize};
 
 use platform::{bank::BankStub, batch::Emit};
+use sdk::{
+    cosmwasm_ext::Response as CwResponse,
+    cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper},
+};
 
 use crate::{
     contract::{
@@ -15,7 +16,7 @@ use crate::{
         repay::{Repay, RepayResult},
     },
     error::ContractResult,
-    event::TYPE,
+    event::Type,
     lease::{self, IntoDTOResult, LeaseDTO},
     msg::{ExecuteMsg, StateQuery},
 };
@@ -120,7 +121,7 @@ fn try_close(
     )?;
 
     let emitter = batch
-        .into_emitter(TYPE::Close)
+        .into_emitter(Type::Close)
         .emit("id", env.contract.address.clone())
         .emit_tx_info(env);
 

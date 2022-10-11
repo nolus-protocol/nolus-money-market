@@ -1,11 +1,10 @@
 use std::result::Result as StdResult;
 
-use cosmwasm_std::Coin as CosmWasmCoin;
-
 use finance::{
     coin::Coin,
     currency::{visit, visit_any, AnyVisitor, Currency, Group, SingleVisitor},
 };
+use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
 use crate::error::{Error, Result};
 
@@ -97,12 +96,11 @@ where
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::Coin as CosmWasmCoin;
-
     use finance::{
         currency::Currency,
         test::currency::{Nls, Usdc},
     };
+    use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
     use crate::{coin_legacy::from_cosmwasm_impl, error::Error};
 

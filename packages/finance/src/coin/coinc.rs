@@ -1,5 +1,6 @@
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::Amount,
@@ -58,7 +59,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::to_vec;
+    use sdk::cosmwasm_std::to_vec;
 
     use crate::{
         coin::{Coin, CoinDTO},

@@ -1,10 +1,9 @@
-use cosmwasm_std::{Env, Response};
-
 use finance::currency::Currency;
 use platform::batch::{Batch, Emit, Emitter};
+use sdk::{cosmwasm_ext::Response, cosmwasm_std::Env};
 
 use crate::{
-    event::TYPE,
+    event::Type,
     lease::{LeaseDTO, LeaseInfo, LiquidationInfo, Status, WarningLevel},
 };
 
@@ -53,7 +52,7 @@ fn emit_warning<Asset>(batch: Batch, info: &LeaseInfo<Asset>, level: WarningLeve
 where
     Asset: Currency,
 {
-    emit_lease_info(batch.into_emitter(TYPE::LiquidationWarning), info)
+    emit_lease_info(batch.into_emitter(Type::LiquidationWarning), info)
         .emit_to_string_value("level", level.to_uint())
         .into()
 }
@@ -86,7 +85,7 @@ where
 {
     emit_liquidation_info(
         emit_lease_info(
-            batch.into_emitter(TYPE::Liquidation).emit_tx_info(env),
+            batch.into_emitter(Type::Liquidation).emit_tx_info(env),
             lease_info,
         ),
         liquidation_info,

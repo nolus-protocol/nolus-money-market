@@ -1,16 +1,15 @@
 pub mod error;
 pub mod msg;
 pub mod nlpn;
+
+#[cfg(any(feature = "stub", test))]
 pub mod stub;
 
-#[cfg(feature = "cosmwasm")]
-pub mod event;
-
-#[cfg(feature = "cosmwasm")]
+#[cfg(any(feature = "contract", test))]
 pub mod contract;
-
-#[cfg(feature = "cosmwasm")]
-mod state;
-
-#[cfg(feature = "cosmwasm")]
+#[cfg(any(feature = "contract", test))]
+pub mod event;
+#[cfg(any(feature = "contract", test))]
 mod lpp;
+#[cfg(any(feature = "contract", test))]
+mod state;

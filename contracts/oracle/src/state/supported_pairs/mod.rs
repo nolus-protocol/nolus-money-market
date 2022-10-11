@@ -1,13 +1,15 @@
 use std::{fmt::Debug, marker::PhantomData};
 
 use ::serde::{Deserialize, Serialize};
-use cosmwasm_std::{StdError, StdResult, Storage};
-use cw_storage_plus::Item;
-use trees::{Node as TreeNode, Tree, TreeWalk, walk::Visit};
+use trees::{walk::Visit, Node as TreeNode, Tree, TreeWalk};
 
 use finance::{
     coin::serde::{deserialize as deserialize_currency, serialize as serialize_currency},
     currency::{Currency, SymbolOwned},
+};
+use sdk::{
+    cosmwasm_std::{StdError, StdResult, Storage},
+    cw_storage_plus::Item,
 };
 
 use crate::error::{self, ContractError};
@@ -169,8 +171,8 @@ where
             Ok(path)
         } else {
             Err(ContractError::InvalidDenomPair(
-                query.to_owned(),
-                B::SYMBOL.to_owned(),
+                ToOwned::to_owned(query),
+                ToOwned::to_owned(B::SYMBOL),
             ))
         }
     }
@@ -200,11 +202,11 @@ where
 
         while let Some(visit) = walk.next() {
             match visit {
-               Visit::Leaf(node) | Visit::Begin(node) => {
+                Visit::Leaf(node) | Visit::Begin(node) => {
                     if let Some(parent) = node.parent() {
                         edges.push((node.data().to_owned(), parent.data().to_owned()))
                     }
-                },
+                }
                 _ => (),
             }
         }
@@ -215,9 +217,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::testing;
-
     use finance::{currency::Currency, test::currency::Usdc};
+    use sdk::cosmwasm_std::testing;
 
     use super::*;
 
@@ -309,8 +310,10 @@ mod tests {
         let tree = SupportedPairs::<Usdc>::new(paths).unwrap();
 
         let response = tree.query_supported_pairs();
-        let mut response: Vec<(&str, &str)> = response.iter()
-            .map(|(from, to)| (from.as_str(), to.as_str())).collect();
+        let mut response: Vec<(&str, &str)> = response
+            .iter()
+            .map(|(from, to)| (from.as_str(), to.as_str()))
+            .collect();
         response.sort();
 
         let mut expected = vec![

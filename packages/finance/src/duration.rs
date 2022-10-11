@@ -3,9 +3,12 @@ use std::{
     ops::{Add, Sub},
 };
 
-use cosmwasm_std::{Timestamp, Uint128};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use sdk::{
+    cosmwasm_std::{Timestamp, Uint128},
+    schemars::{self, JsonSchema},
+};
 
 use crate::{
     fraction::Fraction,
@@ -156,7 +159,7 @@ impl Display for Duration {
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::Timestamp as T;
+    use sdk::cosmwasm_std::Timestamp as T;
 
     use crate::duration::{Duration as D, Units};
 

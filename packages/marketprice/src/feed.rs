@@ -1,10 +1,12 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{Addr, Timestamp};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use finance::{duration::Duration, price::dto::PriceDTO};
+use sdk::{
+    cosmwasm_std::{Addr, Timestamp},
+    schemars::{self, JsonSchema},
+};
 
 use crate::{error::PriceFeedsError, market_price::Parameters};
 

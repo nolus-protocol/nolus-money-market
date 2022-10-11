@@ -4,12 +4,12 @@ version = "0.1.0"
 authors = ["Gancho Manev <g.manev@nolus.io>"]
 edition = "2021"
 
-[dependencies]
-cosmwasm-std = "1.0.0"
-schemars = "0.8"
-serde = { version = "1.0", default-features = false, features = ["derive"] }
-thiserror = { version = "1.0" }
-gcd = "2.1.0"
-
 [features]
 testing = []
+
+[dependencies]
+sdk = { path = "../../packages/sdk", features = ["cosmos", "schema"] }
+
+gcd = "2.1.0"
+thiserror = "1.0.37"
+serde = { version = "1.0.145", default-features = false, features = ["derive"] }

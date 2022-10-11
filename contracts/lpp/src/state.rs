@@ -1,7 +1,9 @@
-pub use config::Config;
-pub use deposit::Deposit;
-pub use loan::{Loan, LoanData};
-pub use total::Total;
+pub use self::{
+    config::Config,
+    deposit::Deposit,
+    loan::{Loan, LoanData},
+    total::Total,
+};
 
 mod config;
 mod deposit;

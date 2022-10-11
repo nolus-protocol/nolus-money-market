@@ -1,10 +1,13 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage};
-use cw_storage_plus::Item;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
+use sdk::{
+    cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage},
+    cw_storage_plus::Item,
+    schemars::{self, JsonSchema},
+};
 
 /// Errors returned from Feeders
 #[derive(Error, Debug, PartialEq)]
@@ -47,11 +50,10 @@ impl<'f> PriceFeeders<'f> {
     }
 
     pub fn register(&self, deps: DepsMut, address: Addr) -> Result<(), PriceFeedersError> {
-
         let mut db = self.0.may_load(deps.storage)?.unwrap_or_default();
 
         if db.contains(&address) {
-            return Err(PriceFeedersError::FeederAlreadyRegistered {  })
+            return Err(PriceFeedersError::FeederAlreadyRegistered {});
         }
 
         db.insert(address);

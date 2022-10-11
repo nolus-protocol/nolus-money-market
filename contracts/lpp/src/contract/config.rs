@@ -1,6 +1,8 @@
-use cosmwasm_std::{Deps, DepsMut, Response};
-
 use finance::percent::Percent;
+use sdk::{
+    cosmwasm_ext::Response,
+    cosmwasm_std::{Deps, DepsMut},
+};
 
 use crate::{error::ContractError, msg::QueryConfigResponse, state::Config};
 

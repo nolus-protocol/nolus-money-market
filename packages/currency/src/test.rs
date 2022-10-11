@@ -1,7 +1,7 @@
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use finance::currency::{Currency, Member, SymbolStatic};
+use sdk::schemars::{self, JsonSchema};
 
 use crate::payment::PaymentGroup;
 

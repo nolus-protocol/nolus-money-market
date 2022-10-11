@@ -10,30 +10,32 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["cosmwasm-bindings"]
-cosmwasm-bindings = ["cosmwasm"]
-cosmwasm = []
+default = ["contract-with-bindings"]
+contract-with-bindings = ["contract"]
+contract = []
 
 [dependencies]
-lpp = { path = "../lpp", version = "0.1.0", default-features = false}
-oracle = { path = "../oracle", version = "0.1.0", default-features = false}
-timealarms = { path = "../timealarms", version = "0.1.0", default-features = false}
-treasury = { path = "../treasury", version = "0.1.0", default-features = false}
-finance = { path = "../../packages/finance", version = "0.1.0", default-features = false }
-platform = { path = "../../packages/platform", version = "0.1.0", default-features = false }
-marketprice = { path = "../../packages/marketprice", version = "0.1.0", default-features = false }
-currency = { path = "../../packages/currency", version = "0.1.0", default-features = false }
+lpp = { path = "../lpp", default-features = false, features = ["stub"] }
+oracle = { path = "../oracle", default-features = false, features = ["stub", "convert"] }
+timealarms = { path = "../timealarms", default-features = false }
+treasury = { path = "../treasury", default-features = false }
+currency = { path = "../../packages/currency" }
+finance = { path = "../../packages/finance" }
+marketprice = { path = "../../packages/marketprice" }
+platform = { path = "../../packages/platform" }
+sdk = { path = "../../packages/sdk", features = ["contract"] }
 
-cosmwasm-std = { version = "1.0.0", default-features = false, features = ["abort"] }
-cosmwasm-storage = "1.0.0"
-cw-storage-plus = "0.13.2"
-cw2 = "0.13.2"
-schemars = "0.8.8"
-serde = { version = "1.0.137", default-features = false, features = ["derive"] }
-thiserror = { version = "1.0.31" }
+# Required as a dependency by `entry_point` attribute macro
+# Version will be selected by `sdk` package
+# TODO/Rust-1.64 remove in favour of workspace inheritance
+#  cosmwasm-std = { workspace = true }
+cosmwasm-std = { version = "1", default-features = false }
+
+serde = { version = "1.0.145", default-features = false, features = ["derive"] }
+thiserror = "1.0.37"
 
 [dev-dependencies]
-cosmwasm-schema = "1.0.0"
-cw-multi-test = "0.13.2"
-anyhow = "1.0.57"
+anyhow = "1.0.65"
 
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+sdk = { path = "../../packages/sdk", version = "0.1.0", default-features = false, features = ["testing"] }

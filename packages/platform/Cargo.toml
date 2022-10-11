@@ -8,12 +8,12 @@ edition = "2021"
 testing = []
 
 [dependencies]
-cosmwasm-std = "1.0.0"
-serde = { version = "1.0", default-features = false }
-thiserror = { version = "1.0" }
+finance = { path = "../../packages/finance" }
+sdk = { path = "../../packages/sdk", features = ["cosmos"] }
 
-finance = { path = "../../packages/finance", version = "0.1.0", default-features = false }
 prost = "0.11.0"
+serde = { version = "1.0.145", default-features = false }
+thiserror = "1.0.37"
 
 [dev-dependencies]
-finance = { path = "../../packages/finance", version = "0.1.0", default-features = false, features = [ "testing" ] }
+finance = { path = "../../packages/finance", features = ["testing"] }

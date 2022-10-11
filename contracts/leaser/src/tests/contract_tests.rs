@@ -1,14 +1,16 @@
-use cosmwasm_std::{
-    coins, from_binary,
-    testing::{mock_dependencies, mock_env, mock_info},
-    to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
-};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use finance::{
     currency::Currency, duration::Duration, liability::Liability, percent::Percent,
     test::currency::Usdc,
+};
+use sdk::{
+    cosmwasm_std::{
+        coins, from_binary,
+        testing::{mock_dependencies, mock_env, mock_info},
+        to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
+    },
+    schemars::{self, JsonSchema},
 };
 
 use crate::{

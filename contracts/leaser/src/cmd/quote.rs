@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use cosmwasm_std::StdResult;
 use serde::Serialize;
 
 use finance::{
@@ -10,6 +9,7 @@ use lpp::{
     msg::QueryQuoteResponse,
     stub::lender::{LppLender as LppLenderTrait, WithLppLender},
 };
+use sdk::cosmwasm_std::StdResult;
 
 use crate::{msg::QuoteResponse, ContractError};
 

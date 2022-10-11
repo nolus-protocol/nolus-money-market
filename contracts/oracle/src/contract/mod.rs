@@ -1,10 +1,3 @@
-#[cfg(feature = "cosmwasm-bindings")]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response,
-};
-use cw2::set_contract_version;
-
 use currency::lpn::Lpns;
 use finance::{
     currency::{visit_any, AnyVisitor, Currency},
@@ -12,6 +5,13 @@ use finance::{
     percent::Percent,
 };
 use platform::contract;
+#[cfg(feature = "contract-with-bindings")]
+use sdk::cosmwasm_std::entry_point;
+use sdk::{
+    cosmwasm_ext::Response,
+    cosmwasm_std::{from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cw2::set_contract_version,
+};
 
 use crate::{
     error::ContractError,
@@ -94,7 +94,7 @@ impl<'a> AnyVisitor<Lpns> for InstantiateWithCurrency<'a> {
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -108,7 +108,7 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?),
@@ -120,7 +120,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -147,7 +147,7 @@ pub fn execute(
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let resp = match msg.result {
         cosmwasm_std::SubMsgResult::Ok(resp) => {

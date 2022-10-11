@@ -1,7 +1,7 @@
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use finance::{currency::SymbolOwned, duration::Duration, liability::Liability, percent::Percent};
+use sdk::schemars::{self, JsonSchema};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

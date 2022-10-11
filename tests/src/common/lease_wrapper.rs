@@ -1,11 +1,12 @@
-use cosmwasm_std::{coin, Addr};
-use cw_multi_test::Executor;
-
 use finance::{duration::Duration, liability::Liability, percent::Percent};
 use lease::{
     contract::{execute, instantiate, query, reply},
     error::ContractError,
     msg::{ExecuteMsg, LoanForm, NewLeaseForm, StateQuery},
+};
+use sdk::{
+    cosmwasm_std::{coin, Addr, Empty},
+    cw_multi_test::Executor,
 };
 
 use crate::common::{ContractWrapper, MockApp};
@@ -155,7 +156,7 @@ type LeaseContractWrapperReply = Box<
         ContractError,
         StateQuery,
         ContractError,
-        cosmwasm_std::Empty,
+        Empty,
         anyhow::Error,
         ContractError,
     >,

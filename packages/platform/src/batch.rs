@@ -1,7 +1,10 @@
-use cosmwasm_std::{to_binary, Addr, Coin as CoinCw, CosmosMsg, Response, SubMsg, WasmMsg};
 use serde::Serialize;
 
 use finance::{coin::Coin, currency::Currency};
+use sdk::{
+    cosmwasm_ext::{CosmosMsg, Response, SubMsg},
+    cosmwasm_std::{to_binary, Addr, Coin as CoinCw, WasmMsg},
+};
 
 pub use crate::emit::{Emit, Emitter};
 use crate::{coin_legacy::to_cosmwasm_impl, error::Result};
@@ -181,7 +184,10 @@ impl From<Batch> for Response {
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{CosmosMsg, Empty, Event, Response};
+    use sdk::{
+        cosmwasm_ext::{CosmosMsg, Response},
+        cosmwasm_std::{Event, WasmMsg},
+    };
 
     use crate::emit::Emit;
 
@@ -196,7 +202,9 @@ mod test {
     #[test]
     fn no_events() {
         let mut b = Batch::default();
-        b.schedule_execute_no_reply(CosmosMsg::Custom(Empty {}));
+        b.schedule_execute_no_reply(CosmosMsg::Wasm(WasmMsg::ClearAdmin {
+            contract_addr: "".to_string(),
+        }));
         let resp: Response = b.into();
         assert_eq!(1, resp.messages.len());
         assert_eq!(0, resp.attributes.len());

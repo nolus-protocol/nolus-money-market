@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, ContractInfoResponse, QuerierWrapper, WasmQuery};
+use sdk::cosmwasm_std::{Addr, ContractInfoResponse, QuerierWrapper, WasmQuery};
 
 use crate::error::{Error, Result};
 
@@ -15,7 +15,7 @@ pub fn validate_addr(querier: &QuerierWrapper, contract_address: &Addr) -> Resul
 
 #[cfg(test)]
 pub mod tests {
-    use cosmwasm_std::{testing::MockQuerier, Addr, QuerierWrapper};
+    use sdk::cosmwasm_std::{testing::MockQuerier, Addr, QuerierWrapper};
 
     use crate::contract::testing::valid_contract_handler;
 
@@ -39,9 +39,9 @@ pub mod tests {
     }
 }
 
-#[cfg(feature = "testing")]
+#[cfg(any(feature = "testing", test))]
 pub mod testing {
-    use cosmwasm_std::{
+    use sdk::cosmwasm_std::{
         to_binary, ContractInfoResponse, ContractResult, QuerierResult, SystemResult, WasmQuery,
     };
 

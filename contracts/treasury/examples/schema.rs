@@ -1,8 +1,6 @@
-use std::env::current_dir;
-use std::fs::create_dir_all;
+use std::{env::current_dir, fs::create_dir_all};
 
-use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
-
+use sdk::cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 use treasury::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
 
 fn main() {

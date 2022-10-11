@@ -1,15 +1,15 @@
 pub mod error;
 pub mod msg;
 
-#[cfg(feature = "cosmwasm")]
+#[cfg(any(feature = "contract", test))]
 pub mod contract;
-#[cfg(feature = "cosmwasm")]
+#[cfg(any(feature = "contract", test))]
 mod event;
-#[cfg(feature = "cosmwasm")]
+#[cfg(any(feature = "contract", test))]
 mod from_forms;
-#[cfg(feature = "cosmwasm")]
+#[cfg(any(feature = "contract", test))]
 mod lease;
-#[cfg(feature = "cosmwasm")]
+#[cfg(any(feature = "contract", test))]
 mod loan;
-#[cfg(feature = "cosmwasm")]
+#[cfg(any(feature = "contract", test))]
 pub mod reply_id;

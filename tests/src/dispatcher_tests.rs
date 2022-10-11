@@ -1,8 +1,9 @@
-use cosmwasm_std::{coins, Addr, Coin};
-use cw_multi_test::{ContractWrapper, Executor};
-
 use currency::{lpn::Usdc, native::Nls};
 use finance::currency::Currency;
+use sdk::{
+    cosmwasm_std::{coins, Addr, Coin as CwCoin},
+    cw_multi_test::{ContractWrapper, Executor},
+};
 
 use crate::common::{
     lpp_wrapper::mock_lpp_query, oracle_wrapper::mock_oracle_query, test_case::TestCase, ADMIN,
@@ -80,7 +81,7 @@ fn on_alarm() {
     test_case.send_funds(&test_case.timealarms.clone().unwrap(), coins(500, denom));
 
     assert_eq!(
-        Coin::new(0, Nls::SYMBOL),
+        CwCoin::new(0, Nls::SYMBOL),
         test_case
             .app
             .wrap()
@@ -200,7 +201,7 @@ fn on_alarm() {
     );
 
     assert_eq!(
-        Coin::new(11, NATIVE_DENOM),
+        CwCoin::new(11, NATIVE_DENOM),
         test_case
             .app
             .wrap()

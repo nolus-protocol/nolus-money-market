@@ -1,6 +1,5 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use cosmwasm_std::{Addr, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use finance::{
@@ -19,6 +18,7 @@ use lpp::{
 };
 use platform::batch::Batch;
 use profit::stub::{Profit as ProfitTrait, ProfitBatch, ProfitRef};
+use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::error::{ContractError, ContractResult};
 

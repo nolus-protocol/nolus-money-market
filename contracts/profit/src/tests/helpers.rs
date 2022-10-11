@@ -1,6 +1,10 @@
-use cosmwasm_std::{to_binary, Addr, CosmosMsg, StdResult, WasmMsg};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use sdk::{
+    cosmwasm_ext::CosmosMsg,
+    cosmwasm_std::{to_binary, Addr, StdResult, WasmMsg},
+    schemars::{self, JsonSchema},
+};
 
 use crate::msg::ExecuteMsg;
 

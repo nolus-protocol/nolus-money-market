@@ -1,11 +1,13 @@
-#[cfg(feature = "cosmwasm-bindings")]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response, StdError, Storage,
-};
-use cw2::set_contract_version;
-
 use platform::reply::from_instantiate;
+#[cfg(feature = "contract-with-bindings")]
+use sdk::cosmwasm_std::entry_point;
+use sdk::{
+    cosmwasm_ext::Response,
+    cosmwasm_std::{
+        to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, StdError, Storage,
+    },
+    cw2::set_contract_version,
+};
 
 use crate::{
     cmd::Borrow,
@@ -19,7 +21,7 @@ use crate::{
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -52,7 +54,7 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
     deps: DepsMut,
     _env: Env,
@@ -69,7 +71,7 @@ pub fn execute(
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::Config {} => to_binary(&Leaser::query_config(deps)?),
@@ -79,7 +81,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
     res.map_err(ContractError::from)
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     match on_reply(deps.api, deps.storage, msg.clone()) {
         Ok(resp) => Ok(resp),

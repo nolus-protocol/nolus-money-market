@@ -1,10 +1,13 @@
-use cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Response, Storage, Uint128};
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::{coin::Coin, currency::Currency};
 use platform::{
     bank::{self, BankAccount, BankStub},
     batch::Batch,
+};
+use sdk::{
+    cosmwasm_ext::Response,
+    cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage, Uint128},
 };
 
 use crate::{
@@ -232,13 +235,13 @@ mod test {
         let balance_nlpn = query_balance(deps.as_ref().storage, Addr::unchecked("lender2"))
             .unwrap()
             .balance;
-        assert_eq!(balance_nlpn, rest_nlpn.into());
+        assert_eq!(balance_nlpn.u128(), rest_nlpn);
 
         // full withdraw
         try_withdraw::<TheCurrency>(deps.as_mut(), env, info, rest_nlpn.into()).unwrap();
         let balance_nlpn = query_balance(deps.as_ref().storage, Addr::unchecked("lender2"))
             .unwrap()
             .balance;
-        assert_eq!(balance_nlpn, zero.into());
+        assert_eq!(balance_nlpn.u128(), zero);
     }
 }

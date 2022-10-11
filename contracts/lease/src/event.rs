@@ -1,4 +1,4 @@
-pub enum TYPE {
+pub enum Type {
     Open,
     Close,
     Repay,
@@ -6,7 +6,7 @@ pub enum TYPE {
     Liquidation,
 }
 
-impl TYPE {
+impl Type {
     /// 'wasm-' is always prepended by the runtime
     pub const fn as_str(&self) -> &'static str {
         match self {
@@ -19,8 +19,8 @@ impl TYPE {
     }
 }
 
-impl From<TYPE> for String {
-    fn from(ty: TYPE) -> Self {
+impl From<Type> for String {
+    fn from(ty: Type) -> Self {
         String::from(ty.as_str())
     }
 }

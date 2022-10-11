@@ -1,10 +1,12 @@
-use cosmwasm_std::{Addr, Uint64};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use finance::{
     coin::CoinDTO, currency::SymbolOwned, duration::Duration, liability::Liability,
     percent::Percent,
+};
+use sdk::{
+    cosmwasm_std::{Addr, Uint64},
+    schemars::{self, JsonSchema},
 };
 
 use crate::{state::config::Config, ContractError};

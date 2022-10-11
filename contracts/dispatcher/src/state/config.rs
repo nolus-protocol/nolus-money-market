@@ -1,5 +1,7 @@
-use cosmwasm_std::{Addr, StdResult, Storage};
-use cw_storage_plus::Item;
+use sdk::{
+    cosmwasm_std::{Addr, StdResult, Storage},
+    cw_storage_plus::Item,
+};
 
 use crate::error::ContractError;
 

@@ -1,11 +1,13 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::Addr;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use finance::{currency::SymbolOwned, duration::Duration, percent::Percent, price::dto::PriceDTO};
 use marketprice::alarms::Alarm;
+use sdk::{
+    cosmwasm_std::Addr,
+    schemars::{self, JsonSchema},
+};
 
 use crate::state::supported_pairs::ResolutionPath;
 

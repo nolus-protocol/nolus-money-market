@@ -1,7 +1,8 @@
-use cosmwasm_std::{coins, Addr, Coin, Uint64};
-use cw_multi_test::{next_block, Executor};
-
 use finance::{coin::Amount, currency::Symbol};
+use sdk::{
+    cosmwasm_std::{coins, Addr, Coin as CwCoin, Empty, Uint64},
+    cw_multi_test::{next_block, Executor},
+};
 
 use crate::common::{lease_wrapper::LeaseWrapperAddresses, ContractWrapper, MockApp};
 
@@ -37,7 +38,7 @@ type OptionalContractWrapperStd = Option<
         oracle::ContractError,
         oracle::msg::QueryMsg,
         oracle::ContractError,
-        cosmwasm_std::Empty,
+        Empty,
         anyhow::Error,
         oracle::ContractError,
     >,
@@ -61,7 +62,7 @@ impl TestCase {
         Self::with_reserve(denom, &coins(10_000, denom))
     }
 
-    pub fn with_reserve(denom: &str, reserve: &[Coin]) -> Self {
+    pub fn with_reserve(denom: &str, reserve: &[CwCoin]) -> Self {
         Self {
             app: mock_app(reserve),
             dispatcher_addr: None,
@@ -76,7 +77,7 @@ impl TestCase {
         }
     }
 
-    pub fn send_funds(&mut self, user_addr: &Addr, funds: Vec<Coin>) -> &mut Self {
+    pub fn send_funds(&mut self, user_addr: &Addr, funds: Vec<CwCoin>) -> &mut Self {
         self.app
             .send_tokens(Addr::unchecked(ADMIN), user_addr.clone(), &funds)
             .unwrap();
@@ -84,7 +85,7 @@ impl TestCase {
         self
     }
 
-    pub fn init(&mut self, user: &Addr, init_funds: Vec<Coin>) -> &mut Self {
+    pub fn init(&mut self, user: &Addr, init_funds: Vec<CwCoin>) -> &mut Self {
         self.lease_code_id = Some(LeaseWrapper::default().store(&mut self.app));
         // Bonus: set some funds on the user for future proposals
         let admin = Addr::unchecked(ADMIN);

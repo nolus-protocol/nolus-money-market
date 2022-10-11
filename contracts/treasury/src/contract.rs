@@ -1,13 +1,15 @@
-#[cfg(feature = "cosmwasm-bindings")]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Response, Storage};
-use cw2::set_contract_version;
-
 use currency::native::Nls;
 use finance::coin::Coin;
 use platform::{
     bank::{BankAccount, BankStub},
     batch::Batch,
+};
+#[cfg(feature = "contract-with-bindings")]
+use sdk::cosmwasm_std::entry_point;
+use sdk::{
+    cosmwasm_ext::Response,
+    cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Storage},
+    cw2::set_contract_version,
 };
 
 use crate::{
@@ -20,7 +22,7 @@ use crate::{
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -35,7 +37,7 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,

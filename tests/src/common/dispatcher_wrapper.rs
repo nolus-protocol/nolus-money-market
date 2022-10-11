@@ -1,10 +1,11 @@
-use cosmwasm_std::{Addr, StdError};
-use cw_multi_test::Executor;
-
 use rewards_dispatcher::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     state::tvl_intervals::{Intervals, Stop},
+};
+use sdk::{
+    cosmwasm_std::{Addr, StdError},
+    cw_multi_test::Executor,
 };
 
 use crate::common::{ContractWrapper, MockApp};

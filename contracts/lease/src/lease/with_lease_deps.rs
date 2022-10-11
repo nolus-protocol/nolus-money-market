@@ -1,12 +1,13 @@
 use std::marker::PhantomData;
 
+use serde::{de::DeserializeOwned, Serialize};
+
 use ::currency::lease::LeaseGroup;
-use cosmwasm_std::QuerierWrapper;
 use finance::currency::{self, AnyVisitor, Currency, Symbol};
 use lpp::stub::lender::{LppLender as LppLenderTrait, LppLenderRef, WithLppLender};
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
 use profit::stub::{Profit as ProfitTrait, ProfitRef, WithProfit};
-use serde::{de::DeserializeOwned, Serialize};
+use sdk::cosmwasm_std::QuerierWrapper;
 use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef, WithTimeAlarms};
 
 pub trait WithLeaseDeps {

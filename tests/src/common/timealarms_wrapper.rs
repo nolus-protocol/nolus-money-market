@@ -1,7 +1,8 @@
-use cosmwasm_std::{coins, Addr, StdError};
-use cw_multi_test::Executor;
-
 use finance::{coin::Amount, currency::SymbolOwned};
+use sdk::{
+    cosmwasm_std::{coins, Addr, Empty, StdError},
+    cw_multi_test::Executor,
+};
 use timealarms::{
     contract::{execute, instantiate, reply},
     msg::{ExecuteMsg, InstantiateMsg},
@@ -57,7 +58,7 @@ type TimeAlarmsContractWrapper = ContractWrapper<
     ContractError,
     MockQueryMsg,
     StdError,
-    cosmwasm_std::Empty,
+    Empty,
     anyhow::Error,
     ContractError,
 >;

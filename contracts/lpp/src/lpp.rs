@@ -1,7 +1,3 @@
-use cosmwasm_std::{
-    Addr, ContractInfoResponse, Deps, DepsMut, Env, QueryRequest, StdResult, Storage, Timestamp,
-    Uint64, WasmQuery,
-};
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::{
@@ -13,6 +9,10 @@ use finance::{
     ratio::Rational,
 };
 use platform::bank::BankView;
+use sdk::cosmwasm_std::{
+    Addr, ContractInfoResponse, Deps, DepsMut, Env, QueryRequest, StdResult, Storage, Timestamp,
+    Uint64, WasmQuery,
+};
 
 use crate::{
     error::ContractError,
