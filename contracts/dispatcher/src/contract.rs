@@ -1,16 +1,18 @@
-#[cfg(feature = "cosmwasm-bindings")]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{
-    ensure, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Storage,
-    Timestamp,
-};
-use cw2::set_contract_version;
-
 use currency::native::Nls;
 use finance::duration::Duration;
 use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
+#[cfg(feature = "contract-with-bindings")]
+use sdk::cosmwasm_std::entry_point;
+use sdk::{
+    cosmwasm_ext::Response,
+    cosmwasm_std::{
+        ensure, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Storage,
+        Timestamp,
+    },
+    cw2::set_contract_version,
+};
 
 use crate::{
     cmd::Dispatch,
@@ -24,7 +26,7 @@ use crate::{
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     env: Env,
@@ -70,7 +72,7 @@ fn validate_addr(deps: Deps, addr: Addr) -> Result<Addr, ContractError> {
         .map_err(|_| ContractError::InvalidContractAddress(addr))
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,
@@ -97,7 +99,7 @@ pub fn try_config(
     Ok(Response::new().add_attribute("method", "config"))
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps.storage)?),
@@ -144,7 +146,7 @@ pub fn try_dispatch(
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{
+    use sdk::cosmwasm_std::{
         coins, from_binary,
         testing::{mock_dependencies_with_balance, mock_env, mock_info},
         Addr, DepsMut,

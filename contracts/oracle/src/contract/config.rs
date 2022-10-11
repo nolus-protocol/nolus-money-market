@@ -1,6 +1,8 @@
-use cosmwasm_std::{Deps, DepsMut, MessageInfo, Response};
-
 use finance::{duration::Duration, percent::Percent};
+use sdk::{
+    cosmwasm_ext::Response,
+    cosmwasm_std::{Deps, DepsMut, MessageInfo},
+};
 
 use crate::{msg::ConfigResponse, state::Config, ContractError};
 
@@ -46,14 +48,16 @@ pub fn try_configure(
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{
-        coins, from_binary,
-        testing::{mock_env, mock_info},
-        DepsMut, MessageInfo, Response,
-    };
-
     use currency::{lpn::Usdc, native::Nls, test::TestCurrencyA};
     use finance::{currency::Currency, duration::Duration, percent::Percent};
+    use sdk::{
+        cosmwasm_ext::Response,
+        cosmwasm_std::{
+            coins, from_binary,
+            testing::{mock_env, mock_info},
+            DepsMut, MessageInfo,
+        },
+    };
 
     use crate::{
         contract::{execute, query},

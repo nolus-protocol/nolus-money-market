@@ -1,8 +1,7 @@
-use cosmwasm_std::{Addr, Timestamp};
-
 use finance::{coin::Coin, currency::Currency, percent::Percent};
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use profit::stub::Profit as ProfitTrait;
+use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{
     error::{ContractError, ContractResult},

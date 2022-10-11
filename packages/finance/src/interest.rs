@@ -1,7 +1,8 @@
 use std::{cmp, fmt::Debug, marker::PhantomData, ops::Sub};
 
-use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
+
+use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     duration::Duration,
@@ -118,7 +119,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::Timestamp;
+    use sdk::cosmwasm_std::Timestamp;
 
     use crate::{
         coin::Coin,

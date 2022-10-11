@@ -1,11 +1,12 @@
-use cosmwasm_std::{Addr, Uint64};
-use cw_multi_test::Executor;
-
 use finance::{duration::Duration, liability::Liability, percent::Percent};
 use leaser::{
     contract::{execute, instantiate, query, reply},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg, Repayment},
     ContractError,
+};
+use sdk::{
+    cosmwasm_std::{Addr, Empty, Uint64},
+    cw_multi_test::Executor,
 };
 
 use crate::common::{ContractWrapper, MockApp};
@@ -79,7 +80,7 @@ type LeaserContractWrapperReply = Box<
         ContractError,
         QueryMsg,
         ContractError,
-        cosmwasm_std::Empty,
+        Empty,
         anyhow::Error,
         ContractError,
     >,

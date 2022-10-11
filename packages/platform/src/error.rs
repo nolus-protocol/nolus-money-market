@@ -1,7 +1,7 @@
-use cosmwasm_std::StdError;
 use thiserror::Error;
 
 use finance::currency::Currency;
+use sdk::cosmwasm_std::StdError;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {

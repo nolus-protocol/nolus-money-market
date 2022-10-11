@@ -1,6 +1,6 @@
 use std::result::Result as StdResult;
 
-use cosmwasm_std::{Addr, StdError};
+use sdk::cosmwasm_std::{Addr, StdError};
 use thiserror::Error;
 
 #[derive(Debug, PartialEq, Error)]

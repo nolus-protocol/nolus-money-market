@@ -1,11 +1,14 @@
-#[cfg(feature = "cosmwasm-bindings")]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response};
-use cw2::set_contract_version;
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::lpn::Lpns;
 use finance::currency::{visit_any, AnyVisitor, Currency};
+#[cfg(feature = "contract-with-bindings")]
+use sdk::cosmwasm_std::entry_point;
+use sdk::{
+    cosmwasm_ext::Response,
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
+    cw2::set_contract_version,
+};
 
 use crate::{
     error::ContractError,
@@ -59,7 +62,7 @@ impl<'a> AnyVisitor<Lpns> for InstantiateWithLpn<'a> {
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
@@ -130,7 +133,7 @@ impl<'a> AnyVisitor<Lpns> for ExecuteWithLpn<'a> {
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
     deps: DepsMut,
     env: Env,

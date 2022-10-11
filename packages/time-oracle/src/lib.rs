@@ -1,5 +1,6 @@
-use cosmwasm_std::StdError;
 use thiserror::Error;
+
+use sdk::cosmwasm_std::StdError;
 
 pub use crate::{
     alarms::{AlarmDispatcher, Alarms, Id},

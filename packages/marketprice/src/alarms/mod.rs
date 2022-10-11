@@ -1,7 +1,7 @@
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use finance::{currency::SymbolOwned, price::dto::PriceDTO};
+use sdk::schemars::{self, JsonSchema};
 
 pub mod errors;
 pub mod price;

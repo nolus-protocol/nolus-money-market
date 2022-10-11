@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{to_binary, Binary, Deps, Env};
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::lpn::Lpns;
 use finance::currency::{visit_any, AnyVisitor, Currency};
 use marketprice::error::PriceFeedsError;
+use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
 
 use crate::{
     msg::{PricesResponse, QueryMsg},

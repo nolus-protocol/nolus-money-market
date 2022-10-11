@@ -1,8 +1,8 @@
-use cosmwasm_std::Addr;
-use market_price_oracle::stub::OracleRef;
 use serde::{Deserialize, Serialize};
 
 use finance::{coin::CoinDTO, liability::Liability};
+use market_price_oracle::stub::OracleRef;
+use sdk::cosmwasm_std::Addr;
 use time_alarms::stub::TimeAlarmsRef;
 
 use crate::loan::LoanDTO;

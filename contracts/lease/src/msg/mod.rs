@@ -1,6 +1,9 @@
-use cosmwasm_std::Timestamp;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use sdk::{
+    cosmwasm_std::Timestamp,
+    schemars::{self, JsonSchema},
+};
 
 pub use self::{
     opening::{LoanForm, NewLeaseForm},

@@ -1,7 +1,8 @@
 use std::any::type_name;
 
-use cosmwasm_std::{OverflowError, StdError};
 use thiserror::Error;
+
+use sdk::cosmwasm_std::{OverflowError, StdError};
 
 use crate::currency::Currency;
 

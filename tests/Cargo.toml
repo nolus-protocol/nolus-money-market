@@ -6,26 +6,20 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-
 [dependencies]
-cosmwasm-std = { version = "1.0.0", default-features = false, features = ["abort"] }
+rewards_dispatcher = { path = "../contracts/dispatcher", default-features = false, features = ["contract"] }
+lease = { path = "../contracts/lease", default-features = false, features = ["contract"] }
+leaser = { path = "../contracts/leaser", default-features = false, features = ["contract"] }
+lpp = { path = "../contracts/lpp", default-features = false, features = ["contract"] }
+oracle = { path = "../contracts/oracle", default-features = false, features = ["contract"] }
+profit = { path = "../contracts/profit", default-features = false, features = ["contract"] }
+timealarms = { path = "../contracts/timealarms", default-features = false, features = ["contract"] }
+treasury = { path = "../contracts/treasury", default-features = false, features = ["contract"] }
+currency = { path = "../packages/currency" }
+finance = { path = "../packages/finance", features = ["testing"] }
+marketprice = { path = "../packages/marketprice" }
+platform = { path = "../packages/platform", features = ["testing"] }
+sdk = { path = "../packages/sdk", features = ["cosmos", "neutron", "testing"] }
 
-
-[dev-dependencies]
-cosmwasm-schema = "1.0.0"
-cw-multi-test = "0.13.2"
-anyhow = "1.0.57"
-serde = { version = "1.0.137", default-features = false, features = ["derive"] }
-
-finance = { path = "../packages/finance", version = "0.1.0", default-features = false }
-platform = { path = "../packages/platform", version = "0.1.0", default-features = false }
-currency = { path = "../packages/currency", version = "0.1.0", default-features = false }
-treasury = { path = "../contracts/treasury", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
-lease = { path = "../contracts/lease", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
-leaser = { path = "../contracts/leaser", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
-lpp = { path = "../contracts/lpp", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
-oracle = { path = "../contracts/oracle", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
-rewards_dispatcher = { path = "../contracts/dispatcher", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
-profit = { path = "../contracts/profit", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
-marketprice = { path = "../packages/marketprice", version = "0.1.0", default-features = false}
-timealarms = { path = "../contracts/timealarms", version = "0.1.0", default-features = false, features = ["cosmwasm"]}
+anyhow = "1.0.65"
+serde = { version = "1.0.145", default-features = false, features = ["derive"] }

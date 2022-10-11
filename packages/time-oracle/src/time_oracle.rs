@@ -1,5 +1,7 @@
-use cosmwasm_std::{StdResult, Storage, Timestamp};
-use cw_storage_plus::Item;
+use sdk::{
+    cosmwasm_std::{StdResult, Storage, Timestamp},
+    cw_storage_plus::Item,
+};
 
 pub struct TimeOracle<'a>(Item<'a, Timestamp>);
 
@@ -21,7 +23,7 @@ impl<'a> TimeOracle<'a> {
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::testing;
+    use sdk::cosmwasm_std::testing;
 
     use super::*;
 

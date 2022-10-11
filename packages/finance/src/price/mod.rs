@@ -1,5 +1,6 @@
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::{Amount, Coin},
@@ -175,7 +176,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{Uint128, Uint256};
+    use sdk::cosmwasm_std::{Uint128, Uint256};
 
     use crate::{
         coin::{Amount, Coin as CoinT},

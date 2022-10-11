@@ -5,8 +5,8 @@ authors = ["Vladimir Kolesnikov <v.kolesnikov@nolus.io>"]
 edition = "2021"
 
 [dependencies]
-cosmwasm-std = "1.0.0"
-cw-storage-plus = "0.13.2"
-serde = { version = "1.0", default-features = false, features = ["derive"] }
-thiserror = { version = "1.0" }
-platform = { path = "../../packages/platform", version = "0.1.0", default-features = false }
+platform = { path = "../../packages/platform" }
+sdk = { path = "../../packages/sdk", features = ["storage"] }
+
+serde = { version = "1.0.145", default-features = false, features = ["derive"] }
+thiserror = "1.0.37"

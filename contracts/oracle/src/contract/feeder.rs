@@ -1,12 +1,15 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{Addr, DepsMut, MessageInfo, Response, StdResult, Storage, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use finance::{fraction::Fraction, percent::Percent};
 use marketprice::{feeders::PriceFeeders, market_price::Parameters};
+use sdk::{
+    cosmwasm_ext::Response,
+    cosmwasm_std::{Addr, DepsMut, MessageInfo, StdResult, Storage, Timestamp},
+};
 
-use crate::{state::Config, ContractError};
+use crate::{ContractError, state::Config};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Feeders {
@@ -92,19 +95,19 @@ impl Feeders {
 mod tests {
     use std::collections::HashSet;
 
-    use cosmwasm_std::{
-        coins, from_binary,
-        testing::{mock_env, mock_info},
-        Addr, DepsMut, MessageInfo, Response,
-    };
-
     use currency::native::Nls;
     use finance::{currency::Currency, percent::Percent};
+    use sdk::{cosmwasm_ext::Response, cosmwasm_std::{
+        Addr, coins,
+        DepsMut,
+        from_binary, MessageInfo, testing::{mock_env, mock_info},
+    }};
 
     use crate::{
         contract::{execute, feeder::Feeders, query},
+        ContractError,
         msg::{ExecuteMsg, QueryMsg},
-        tests::{dummy_default_instantiate_msg, setup_test}, ContractError,
+        tests::{dummy_default_instantiate_msg, setup_test},
     };
 
     #[test]
@@ -184,7 +187,11 @@ mod tests {
         assert!(!resp.contains(&Addr::unchecked("addr0001")));
     }
 
-    fn register(deps: DepsMut, info: &MessageInfo, address: &str) -> Result<Response, ContractError> {
+    fn register(
+        deps: DepsMut,
+        info: &MessageInfo,
+        address: &str,
+    ) -> Result<Response, ContractError> {
         let msg = ExecuteMsg::RegisterFeeder {
             feeder_address: address.to_string(),
         };

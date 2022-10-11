@@ -1,4 +1,4 @@
-use cosmwasm_std::{Uint128, Uint256};
+use sdk::cosmwasm_std::{Uint128, Uint256};
 
 use super::HigherRank;
 

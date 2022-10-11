@@ -1,7 +1,12 @@
-#[cfg(feature = "cosmwasm-bindings")]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response as CwResponse};
-use cw_storage_plus::Item;
+#[cfg(feature = "contract-with-bindings")]
+use sdk::cosmwasm_std::entry_point;
+use sdk::{
+    cw_storage_plus::Item,
+    {
+        cosmwasm_ext::Response as CwResponse,
+        cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    },
+};
 
 use crate::{
     contract::state::{Response, State},
@@ -19,7 +24,7 @@ mod state;
 
 const DB_ITEM: Item<State> = Item::new("state");
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
     mut deps: DepsMut,
     env: Env,
@@ -40,7 +45,7 @@ pub fn instantiate(
         )
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(mut deps: DepsMut, env: Env, msg: Reply) -> ContractResult<CwResponse> {
     load_mut(&deps)?.reply(&mut deps, env, msg).and_then(
         |Response {
@@ -54,7 +59,7 @@ pub fn reply(mut deps: DepsMut, env: Env, msg: Reply) -> ContractResult<CwRespon
     )
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
     mut deps: DepsMut,
     env: Env,
@@ -75,7 +80,7 @@ pub fn execute(
         )
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, msg: StateQuery) -> ContractResult<Binary> {
     load(&deps)?.query(deps, env, msg)
 }

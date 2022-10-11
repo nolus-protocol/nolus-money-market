@@ -1,7 +1,6 @@
 use std::{env::current_dir, fs::create_dir_all};
 
-use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
-
+use sdk::cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 use timealarms::msg::{ExecuteMsg, InstantiateMsg};
 
 fn main() {

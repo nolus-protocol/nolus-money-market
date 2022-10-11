@@ -1,5 +1,3 @@
-use cosmwasm_std::{Addr, Timestamp, Uint128, Uint64};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use currency::native::Nls;
@@ -8,6 +6,10 @@ use finance::{
     currency::Currency,
     percent::Percent,
     price::Price,
+};
+use sdk::{
+    cosmwasm_std::{Addr, Timestamp, Uint128, Uint64},
+    schemars::{self, JsonSchema},
 };
 
 use crate::nlpn::NLpn;

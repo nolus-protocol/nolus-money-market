@@ -32,8 +32,9 @@ where
 mod test {
     use std::{any::type_name, fmt::Debug};
 
-    use cosmwasm_std::{from_slice, to_vec, StdError};
     use serde::{de::DeserializeOwned, Deserialize, Serialize};
+
+    use sdk::cosmwasm_std::{from_slice, to_vec, StdError};
 
     use crate::{
         coin::Coin,

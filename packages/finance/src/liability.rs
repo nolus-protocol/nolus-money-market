@@ -1,5 +1,6 @@
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     duration::Duration,
@@ -177,7 +178,7 @@ impl Liability {
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::from_slice;
+    use sdk::cosmwasm_std::from_slice;
 
     use crate::{
         coin::Coin, duration::Duration, error::Error, percent::Percent, test::currency::Usdc,

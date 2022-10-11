@@ -1,6 +1,7 @@
-use cosmwasm_std::StdError;
 use semver::Error as SemverError;
 use thiserror::Error;
+
+use sdk::cosmwasm_std::StdError;
 
 #[derive(Error, Debug)]
 pub enum ContractError {

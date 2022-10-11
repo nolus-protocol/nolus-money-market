@@ -6,7 +6,8 @@ use std::{
 
 use ::serde::{Deserialize, Serialize};
 use gcd::Gcd;
-use schemars::JsonSchema;
+
+use sdk::schemars::{self, JsonSchema};
 
 use crate::currency::Currency;
 

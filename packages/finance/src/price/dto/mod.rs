@@ -1,5 +1,6 @@
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::CoinDTO, currency::Currency, error::Error, fractionable::HigherRank, price::Price,

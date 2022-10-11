@@ -1,12 +1,14 @@
 use std::cmp;
 
-use cosmwasm_std::{Addr, StdResult, Storage, Timestamp};
-use cw_storage_plus::Map;
-use schemars::JsonSchema;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use finance::{
     coin::Coin, currency::Currency, duration::Duration, interest::InterestPeriod, percent::Percent,
+};
+use sdk::{
+    cosmwasm_std::{Addr, StdResult, Storage, Timestamp},
+    cw_storage_plus::Map,
+    schemars::{self, JsonSchema},
 };
 
 use crate::error::ContractError;

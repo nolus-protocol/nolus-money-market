@@ -8,9 +8,9 @@ variables:
   CARGO_HOME: $CI_PROJECT_DIR/cargo_home
 
 default:
-# use specific tag here in order to
-# 1) be able to control the build, and
-# 2) update to a newer version. With "latest" and the default '-if-not-present' Docker executor policy that is not possible.
+  # use specific tag here in order to
+  # 1) be able to control the build, and
+  # 2) update to a newer version. With "latest" and the default '-if-not-present' Docker executor policy that is not possible.
   image: "rust:1.63"
 
 .version_build:
@@ -41,7 +41,7 @@ check_wasm:cargo:
   script:
     - cargo install cosmwasm-check
     - cargo workspaces exec --no-bail cargo build --target wasm32-unknown-unknown
-    - $CARGO_HOME/bin/cosmwasm-check ./target/wasm32-unknown-unknown/debug/*.wasm
+    - $CARGO_HOME/bin/cosmwasm-check --available-capabilities "staking,stargate,cosmwasm_1_1,iterator,neutron" ./target/wasm32-unknown-unknown/debug/*.wasm
 
 test:cargo:
   stage: test
@@ -60,7 +60,7 @@ build-and-optimization:cargo:
   tags:
     - shell
   rules:
-    - !reference [.version_build, rules]
+    - !reference [ .version_build, rules ]
   script:
     - sudo docker run --rm -v "$(pwd)":/code --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target
       --mount type=volume,source=rustup_dir_cache,target=/usr/local/rustup
@@ -70,12 +70,12 @@ build-and-optimization:cargo:
     - sudo cp scripts/deploy-contracts-genesis.sh artifacts/
   artifacts:
     paths:
-    - artifacts/
+      - artifacts/
 
 schema:cargo:
   stage: build
   rules:
-    - !reference [.version_build, rules]
+    - !reference [ .version_build, rules ]
   variables:
     SCHEMA_DIR: "contracts-schemas"
     SCHEMA_DIR_RESULT: "schemas.tar.gz"

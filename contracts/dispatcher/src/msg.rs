@@ -1,6 +1,9 @@
-use cosmwasm_std::{Addr, Timestamp};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
+
+use sdk::{
+    cosmwasm_std::{Addr, Timestamp},
+    schemars::{self, JsonSchema},
+};
 
 use crate::state::tvl_intervals::Intervals;
 

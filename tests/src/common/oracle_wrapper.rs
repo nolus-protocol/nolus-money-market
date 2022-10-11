@@ -1,6 +1,3 @@
-use cosmwasm_std::{to_binary, Addr, Binary, Deps, Env};
-use cw_multi_test::Executor;
-
 use currency::{lpn::Usdc, native::Nls};
 use finance::{
     coin::Coin,
@@ -12,6 +9,10 @@ use oracle::{
     contract::{execute, instantiate, query, reply},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     ContractError,
+};
+use sdk::{
+    cosmwasm_std::{to_binary, Addr, Binary, Deps, Empty, Env},
+    cw_multi_test::Executor,
 };
 
 use crate::common::{ContractWrapper, MockApp};
@@ -86,7 +87,7 @@ type OracleContractWrapper = ContractWrapper<
     ContractError,
     QueryMsg,
     ContractError,
-    cosmwasm_std::Empty,
+    Empty,
     anyhow::Error,
     ContractError,
 >;

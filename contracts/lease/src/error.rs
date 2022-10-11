@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use cosmwasm_std::StdError;
 use thiserror::Error;
 
 use finance::error::Error as FinanceError;
@@ -8,6 +7,7 @@ use lpp::error::ContractError as LppError;
 use market_price_oracle::error::ContractError as OracleError;
 use platform::error::Error as PlatformError;
 use profit::error::ContractError as ProfitError;
+use sdk::cosmwasm_std::StdError;
 use time_alarms::error::ContractError as TimeAlarmsError;
 
 #[derive(Error, Debug, PartialEq)]

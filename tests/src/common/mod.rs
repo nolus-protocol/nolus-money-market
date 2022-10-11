@@ -1,14 +1,17 @@
-use cosmwasm_std::{
-    coins,
-    testing::{mock_env, MockApi},
-    to_binary, Addr, Api, Binary, BlockInfo, CanonicalAddr, Coin, Deps, Env, RecoverPubkeyError,
-    StdResult, Timestamp, VerificationError,
-};
-use cw_multi_test::{App, AppBuilder, BankKeeper};
 use serde::{Deserialize, Serialize};
 
 use currency::native::Nls;
 use finance::{currency::Currency, duration::Duration};
+use sdk::{
+    cosmwasm_std::{
+        coins,
+        testing::{mock_env, MockApi},
+        to_binary, Addr, Api, Binary, BlockInfo, CanonicalAddr, Coin as CwCoin, Deps, Empty, Env,
+        RecoverPubkeyError, StdResult, Timestamp, VerificationError,
+    },
+    neutron_sdk::bindings::msg::NeutronMsg,
+    testing::{self, new_app, App},
+};
 
 type ContractWrapper<
     ExecMsg,
@@ -17,25 +20,25 @@ type ContractWrapper<
     InstErr,
     QueryMsg,
     QueryErr,
-    Sudo = cosmwasm_std::Empty,
+    Sudo = Empty,
     SudoErr = anyhow::Error,
     ReplyErr = anyhow::Error,
-    MigrMsg = cosmwasm_std::Empty,
+    MigrMsg = Empty,
     MigrErr = anyhow::Error,
-> = cw_multi_test::ContractWrapper<
-    ExecMsg,             // execute msg
-    InstMsg,             // instantiate msg
-    QueryMsg,            // query msg
-    ExecErr,             // execute err
-    InstErr,             // instantiate err
-    QueryErr,            // query err
-    cosmwasm_std::Empty, // C
-    cosmwasm_std::Empty, // Q
-    Sudo,                // sudo msg
-    SudoErr,             // sudo err
-    ReplyErr,            // reply err
-    MigrMsg,             // migrate msg
-    MigrErr,             // migrate err
+> = testing::ContractWrapper<
+    ExecMsg,    // execute msg
+    InstMsg,    // instantiate msg
+    QueryMsg,   // query msg
+    ExecErr,    // execute err
+    InstErr,    // instantiate err
+    QueryErr,   // query err
+    NeutronMsg, // C
+    Empty,      // Q
+    Sudo,       // sudo msg
+    SudoErr,    // sudo err
+    ReplyErr,   // reply err
+    MigrMsg,    // migrate msg
+    MigrErr,    // migrate err
 >;
 
 #[cfg(test)]
@@ -145,9 +148,9 @@ fn mock_query(_deps: Deps, _env: Env, _msg: MockQueryMsg) -> StdResult<Binary> {
     to_binary(&MockResponse {})
 }
 
-pub type MockApp = App<BankKeeper, ApiWithNullAddresses<MockApi>>;
+pub type MockApp = App<NeutronMsg, Empty, Empty, ApiWithNullAddresses<MockApi>>;
 
-pub fn mock_app(init_funds: &[Coin]) -> MockApp {
+pub fn mock_app(init_funds: &[CwCoin]) -> MockApp {
     let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);
 
     let mock_start_block = BlockInfo {
@@ -159,9 +162,9 @@ pub fn mock_app(init_funds: &[Coin]) -> MockApp {
     let mut funds = coins(100000, NATIVE_DENOM);
     funds.append(&mut init_funds.to_vec());
 
-    AppBuilder::new()
-        .with_block(mock_start_block)
+    new_app()
         .with_api(ApiWithNullAddresses::from(MockApi::default()))
+        .with_block(mock_start_block)
         .build(|router, _, storage| {
             router
                 .bank

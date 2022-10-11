@@ -1,9 +1,11 @@
 use std::collections::HashSet;
 
-use cosmwasm_std::{Addr, Deps, DepsMut, MessageInfo, Response, StdResult};
-
 use finance::{coin::CoinDTO, liability::Liability, percent::Percent};
 use lpp::stub::lender::LppLenderRef;
+use sdk::{
+    cosmwasm_ext::Response,
+    cosmwasm_std::{Addr, Deps, DepsMut, MessageInfo, StdResult},
+};
 
 use crate::{
     cmd::Quote,

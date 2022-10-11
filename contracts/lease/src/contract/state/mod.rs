@@ -1,8 +1,12 @@
 use std::fmt::Display;
 
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Response as CwResponse};
 use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
+
+use sdk::{
+    cosmwasm_ext::Response as CwResponse,
+    cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+};
 
 use crate::{
     error::{ContractError as Err, ContractResult},

@@ -1,7 +1,8 @@
 use std::any::type_name;
 
-use cosmwasm_std::StdError;
 use thiserror::Error;
+
+use sdk::cosmwasm_std::StdError;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {

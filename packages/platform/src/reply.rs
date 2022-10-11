@@ -2,9 +2,10 @@
 //!
 //! Here are defined wrappers for deserializing such structures.
 
-use cosmwasm_std::{from_binary, Addr, Api, Binary, Reply, StdError, StdResult};
 use prost::Message;
 use serde::{de::DeserializeOwned, Deserialize};
+
+use sdk::cosmwasm_std::{from_binary, Addr, Api, Binary, Reply, StdError, StdResult};
 
 pub struct InstantiateResponse<T> {
     pub address: Addr,

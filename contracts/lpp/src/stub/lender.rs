@@ -1,6 +1,5 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::lpn::Lpns;
@@ -12,6 +11,7 @@ use platform::{
     batch::{Batch, ReplyId},
     reply::from_execute,
 };
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp};
 
 use crate::{
     error::ContractError,
@@ -237,12 +237,11 @@ impl<'a, C> From<LppLenderStub<'a, C>> for LppBatch<LppLenderRef> {
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{
-        from_binary, testing::MockQuerier, Addr, CosmosMsg, QuerierWrapper, ReplyOn, Response,
-        WasmMsg,
-    };
-
     use finance::{coin::Coin, currency::Currency, test::currency::Nls};
+    use sdk::{
+        cosmwasm_ext::{CosmosMsg, Response},
+        cosmwasm_std::{from_binary, testing::MockQuerier, Addr, QuerierWrapper, ReplyOn, WasmMsg},
+    };
 
     use crate::{msg::ExecuteMsg, stub::LppBatch};
 

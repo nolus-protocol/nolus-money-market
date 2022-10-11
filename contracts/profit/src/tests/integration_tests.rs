@@ -1,9 +1,11 @@
-use cosmwasm_std::{Addr, Coin, Empty, Uint128};
-use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
+use sdk::{
+    cosmwasm_std::{Addr, Coin, Uint128},
+    testing::{new_app, App, Contract, ContractWrapper, Executor},
+};
 
 use crate::{msg::InstantiateMsg, tests::helpers::CwTemplateContract};
 
-pub fn contract_template() -> Box<dyn Contract<Empty>> {
+pub fn contract_template() -> Box<Contract> {
     let contract = ContractWrapper::new(
         crate::contract::execute,
         crate::contract::instantiate,
@@ -17,7 +19,7 @@ const ADMIN: &str = "ADMIN";
 const NATIVE_DENOM: &str = "denom";
 
 fn mock_app() -> App {
-    AppBuilder::new().build(|router, _, storage| {
+    new_app().build(|router, _, storage| {
         router
             .bank
             .init_balance(

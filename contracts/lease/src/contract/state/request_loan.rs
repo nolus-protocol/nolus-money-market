@@ -1,16 +1,17 @@
 use std::fmt::Display;
 
-use cosmwasm_std::{DepsMut, Env, Reply};
+use serde::{Deserialize, Serialize};
+
 use finance::coin::CoinDTO;
 use lpp::stub::lender::LppLenderRef;
 use market_price_oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
-use serde::{Deserialize, Serialize};
+use sdk::cosmwasm_std::{DepsMut, Env, Reply};
 
 use crate::{
     contract::cmd::{OpenLoanResp, OpenLoanRespResult},
     error::{ContractError, ContractResult},
-    event::TYPE,
+    event::Type,
     lease::LeaseDTO,
     msg::NewLeaseForm,
     reply_id::ReplyId,
@@ -74,7 +75,7 @@ fn build_emitter(
     downpayment: CoinDTO,
 ) -> Emitter {
     batch
-        .into_emitter(TYPE::Open)
+        .into_emitter(Type::Open)
         .emit_tx_info(env)
         .emit("id", env.contract.address.clone())
         .emit("customer", dto.customer.clone())

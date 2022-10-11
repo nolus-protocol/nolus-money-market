@@ -1,4 +1,3 @@
-use cosmwasm_std::{Coin as CwCoin, Env};
 use serde::Serialize;
 
 use finance::currency::Currency;
@@ -9,11 +8,12 @@ use platform::{
     batch::{Emit, Emitter},
 };
 use profit::stub::Profit as ProfitTrait;
+use sdk::cosmwasm_std::{Coin as CwCoin, Env};
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractError,
-    event::TYPE,
+    event::Type,
     lease::{Lease, LeaseDTO, RepayResult as LeaseRepayResult, WithLease},
 };
 
@@ -60,7 +60,7 @@ impl<'a> WithLease for Repay<'a> {
         } = lease.repay(payment, self.env.block.time)?;
 
         let emitter = batch
-            .into_emitter(TYPE::Repay)
+            .into_emitter(Type::Repay)
             .emit_tx_info(self.env)
             .emit("to", self.env.contract.address.clone())
             .emit_currency::<_, Lpn>("payment-symbol")

@@ -1,6 +1,7 @@
-use cosmwasm_std::{Addr, Coin, StdError};
-use cw_multi_test::Executor;
-
+use sdk::{
+    cosmwasm_std::{Addr, Coin as CwCoin, StdError},
+    cw_multi_test::Executor,
+};
 use treasury::{
     msg::{ExecuteMsg, InstantiateMsg},
     ContractError,
@@ -28,7 +29,7 @@ impl TreasuryWrapper {
             code_id,
             Addr::unchecked(ADMIN),
             &msg,
-            &[Coin::new(1000, denom), Coin::new(1000, NATIVE_DENOM)],
+            &[CwCoin::new(1000, denom), CwCoin::new(1000, NATIVE_DENOM)],
             "treasury",
             None,
         )

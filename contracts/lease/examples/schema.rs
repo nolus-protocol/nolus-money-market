@@ -1,8 +1,7 @@
 use std::{env::current_dir, fs::create_dir_all};
 
-use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
-
 use lease::msg::{ExecuteMsg, NewLeaseForm, StateQuery};
+use sdk::cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
 fn main() {
     let mut out_dir = current_dir().unwrap();
@@ -18,16 +17,18 @@ fn main() {
 #[cfg(test)]
 #[test]
 fn test_repay_representation() {
-    use cosmwasm_std::{from_slice, to_vec};
     use lease::msg::ExecuteMsg;
-    use schemars::_serde_json::to_string;
+    use sdk::{
+        cosmwasm_std::{from_slice, to_vec},
+        schemars::_serde_json::to_string,
+    };
 
     let msg = ExecuteMsg::Repay();
     let repay_bin = to_vec(&msg).expect("serialization failed");
     assert_eq!(msg, from_slice(&repay_bin).expect("deserialization failed"));
 
     assert_eq!(
-        r#"{"repay":[]}"#,
-        to_string(&msg).expect("deserialization failed")
+        to_string(&msg).expect("deserialization failed"),
+        r#"{"repay":[]}"#
     );
 }

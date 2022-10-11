@@ -1,6 +1,5 @@
 use std::result::Result as StdResult;
 
-use cosmwasm_std::{Addr, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
 use finance::{coin::Coin, currency::Currency};
@@ -8,6 +7,7 @@ use platform::{
     bank::{FixedAddressSender, LazySenderStub},
     batch::Batch,
 };
+use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
     error::Result,
