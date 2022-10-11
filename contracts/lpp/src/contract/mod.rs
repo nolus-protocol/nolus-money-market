@@ -223,7 +223,7 @@ impl<'a> AnyVisitor<Lpns> for QueryWithLpn<'a> {
     }
 }
 
-#[cfg_attr(feature = "cosmwasm-bindings", entry_point)]
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::Config() => to_binary(&config::query_config(&deps)?)?,
