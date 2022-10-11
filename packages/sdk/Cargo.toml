@@ -18,28 +18,34 @@ neutron = ["cosmwasm-std/stargate", "dep:neutron-sdk"]
 [dependencies]
 # TODO/Rust-1.64 remove in favour of workspace inheritance
 #  cosmwasm-std = { workspace = true }
-cosmwasm-std = "1.1.4"
+cosmwasm-std = "1"
+
 # TODO/Rust-1.64 remove in favour of workspace inheritance
 #  cosmwasm-storage = { workspace = true, optional = true }
-cosmwasm-storage = { version = "1.1.4", optional = true }
-# Pinned down to match version of Neutron SDK's Protobuf generated sources
-protobuf = "=3.1"
-# TODO/Rust-1.64 remove in favour of workspace inheritance
-#  cw-storage-plus = { workspace = true, optional = true }
-cw-storage-plus = { version = "0.15.1", optional = true }
-# TODO/Rust-1.64 remove in favour of workspace inheritance
-#  cw2 = { workspace = true, optional = true }
-cw2 = { version = "0.15.1", optional = true }
+cosmwasm-storage = { version = "1", optional = true }
+
 # TODO/Rust-1.64 remove in favour of workspace inheritance
 #  cosmwasm-schema = { workspace = true, optional = true }
-cosmwasm-schema = { version = "1.1.4", optional = true }
-# TODO/Rust-1.64 remove in favour of workspace inheritance
-#  neutron-sdk = { workspace = true }
-neutron-sdk = { git = "https://github.com/neutron-org/neutron-contracts", rev = "e9b2a9d9179d3c136ba024870e762bcb046b0f8c", optional = true }
+cosmwasm-schema = { version = "1", optional = true }
 
-serde = { version = "1.0.145", default-features = false, optional = true }
+# TODO/Rust-1.64 remove in favour of workspace inheritance
+#  cw-storage-plus = { workspace = true, optional = true }
+cw-storage-plus = { version = "0.15", optional = true }
+
+# TODO/Rust-1.64 remove in favour of workspace inheritance
+#  cw2 = { workspace = true, optional = true }
+cw2 = { version = "0.15", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # TODO/Rust-1.64 remove in favour of workspace inheritance
 #  cw-multi-test = { workspace = true, optional = true }
-cw-multi-test = { version = "0.15.1", optional = true }
+cw-multi-test = { version = "0.15", optional = true }
+
+# Pinned down to match version of Neutron SDK's Protobuf generated sources
+protobuf = "=3.1"
+
+# TODO/Rust-1.64 remove in favour of workspace inheritance
+#  neutron-sdk = { workspace = true }
+neutron-sdk = { git = "https://github.com/neutron-org/neutron-contracts", rev = "e9b2a9d9179d3c136ba024870e762bcb046b0f8c", optional = true }
+
+serde = { version = "1", default-features = false, optional = true }
