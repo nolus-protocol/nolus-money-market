@@ -41,7 +41,7 @@ check_wasm:cargo:
   script:
     - cargo install cosmwasm-check
     - cargo workspaces exec --no-bail cargo build --target wasm32-unknown-unknown
-    - $CARGO_HOME/bin/cosmwasm-check --available-features "staking,stargate,cosmwasm_1_1,iterator,neutron" ./target/wasm32-unknown-unknown/debug/*.wasm
+    - $CARGO_HOME/bin/cosmwasm-check --available-capabilities "staking,stargate,cosmwasm_1_1,iterator,neutron" ./target/wasm32-unknown-unknown/debug/*.wasm
 
 test:cargo:
   stage: test
