@@ -95,7 +95,7 @@ mod tests {
     use cosmwasm_std::{
         coins, from_binary,
         testing::{mock_env, mock_info},
-        Addr, DepsMut, MessageInfo,
+        Addr, DepsMut, MessageInfo, Response,
     };
 
     use currency::native::Nls;
@@ -104,7 +104,7 @@ mod tests {
     use crate::{
         contract::{execute, feeder::Feeders, query},
         msg::{ExecuteMsg, QueryMsg},
-        tests::{dummy_default_instantiate_msg, setup_test},
+        tests::{dummy_default_instantiate_msg, setup_test}, ContractError,
     };
 
     #[test]
@@ -130,7 +130,7 @@ mod tests {
         let info = mock_info("USER", &coins(1000, Nls::SYMBOL));
 
         // register new feeder address
-        register(deps.as_mut(), &info, "addr0000");
+        register(deps.as_mut(), &info, "addr0000").unwrap();
     }
 
     #[test]
@@ -138,7 +138,7 @@ mod tests {
         let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
         // register new feeder address
-        register(deps.as_mut(), &info, "addr0000");
+        register(deps.as_mut(), &info, "addr0000").unwrap();
 
         // check if the new address is added to FEEDERS Item
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
@@ -147,14 +147,10 @@ mod tests {
         assert!(resp.contains(&Addr::unchecked("addr0000")));
 
         // should not add the same address twice
-        register(deps.as_mut(), &info, "addr0000");
-        // validate that the address in not added twice
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
-        let resp: HashSet<Addr> = from_binary(&res).unwrap();
-        assert_eq!(2, resp.len());
+        assert!(register(deps.as_mut(), &info, "addr0000").is_err());
 
         // register new feeder address
-        register(deps.as_mut(), &info, "addr0001");
+        register(deps.as_mut(), &info, "addr0001").unwrap();
         // check if the new address is added to FEEDERS Item
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
         let resp: HashSet<Addr> = from_binary(&res).unwrap();
@@ -167,10 +163,10 @@ mod tests {
     fn remove_feeder() {
         let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
-        register(deps.as_mut(), &info, "addr0000");
-        register(deps.as_mut(), &info, "addr0001");
-        register(deps.as_mut(), &info, "addr0002");
-        register(deps.as_mut(), &info, "addr0003");
+        register(deps.as_mut(), &info, "addr0000").unwrap();
+        register(deps.as_mut(), &info, "addr0001").unwrap();
+        register(deps.as_mut(), &info, "addr0002").unwrap();
+        register(deps.as_mut(), &info, "addr0003").unwrap();
 
         // check if the new address is added to FEEDERS Item
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
@@ -188,11 +184,11 @@ mod tests {
         assert!(!resp.contains(&Addr::unchecked("addr0001")));
     }
 
-    fn register(deps: DepsMut, info: &MessageInfo, address: &str) {
+    fn register(deps: DepsMut, info: &MessageInfo, address: &str) -> Result<Response, ContractError> {
         let msg = ExecuteMsg::RegisterFeeder {
             feeder_address: address.to_string(),
         };
-        let _res = execute(deps, mock_env(), info.to_owned(), msg).unwrap();
+        execute(deps, mock_env(), info.to_owned(), msg)
     }
     fn remove(deps: DepsMut, info: &MessageInfo, address: &str) {
         let msg = ExecuteMsg::RemoveFeeder {

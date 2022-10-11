@@ -45,7 +45,7 @@ fn register_feeder() {
 
     // should return error that address is already added
     let res = control.register(deps.as_mut(), f_address);
-    assert!(res.is_ok());
+    assert!(res.is_err());
 
     let f_address = deps.api.addr_validate("address2").unwrap();
     control.register(deps.as_mut(), f_address).unwrap();

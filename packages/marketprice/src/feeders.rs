@@ -47,17 +47,27 @@ impl<'f> PriceFeeders<'f> {
     }
 
     pub fn register(&self, deps: DepsMut, address: Addr) -> Result<(), PriceFeedersError> {
-        let add_new_address = |mut addrs: HashSet<Addr>| -> StdResult<HashSet<Addr>> {
-            addrs.insert(address.clone());
-            Ok(addrs)
-        };
 
-        match self.0.may_load(deps.storage)? {
-            None => self.0.save(deps.storage, &HashSet::from([address]))?,
-            Some(_) => {
-                self.0.update(deps.storage, add_new_address)?;
-            }
+        let mut db = self.0.may_load(deps.storage)?.unwrap_or_default();
+
+        if db.contains(&address) {
+            return Err(PriceFeedersError::FeederAlreadyRegistered {  })
         }
+
+        db.insert(address);
+        self.0.save(deps.storage, &db)?;
+
+        // let add_new_address = |mut addrs: HashSet<Addr>| -> StdResult<HashSet<Addr>> {
+        //     addrs.insert(address.clone());
+        //     Ok(addrs)
+        // };
+
+        // match self.0.may_load(deps.storage)? {
+        //     None => self.0.save(deps.storage, &HashSet::from([address]))?,
+        //     Some(_) => {
+        //         self.0.update(deps.storage, add_new_address)?;
+        //     }
+        // }
 
         Ok(())
     }
