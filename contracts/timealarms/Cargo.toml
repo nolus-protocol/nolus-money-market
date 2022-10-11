@@ -36,4 +36,4 @@ thiserror = "1.0.37"
 platform = { path = "../../packages/platform", features = ["testing"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-sdk = { path = "../../packages/sdk", default-features = false, features = ["cosmos", "neutron", "storage", "testing"] }
+sdk = { path = "../../packages/sdk", default-features = false, features = ["cosmos", "storage", "testing"] }
