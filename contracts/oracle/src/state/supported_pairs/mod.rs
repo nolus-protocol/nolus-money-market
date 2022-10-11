@@ -3,7 +3,7 @@ use std::{fmt::Debug, marker::PhantomData};
 use ::serde::{Deserialize, Serialize};
 use cosmwasm_std::{StdError, StdResult, Storage};
 use cw_storage_plus::Item;
-use trees::{Node as TreeNode, Tree};
+use trees::{Node as TreeNode, Tree, TreeWalk, walk::Visit};
 
 use finance::{
     coin::serde::{deserialize as deserialize_currency, serialize as serialize_currency},
@@ -194,12 +194,22 @@ where
         Ok(())
     }
 
-    pub fn query_supported_pairs(&self) -> Vec<CurrencyPair> {
-        self.supported_currencies
-            .iter()
-            .cloned()
-            .map(|c| (c, B::SYMBOL.to_owned()))
-            .collect()
+    pub fn query_supported_pairs(self) -> Vec<CurrencyPair> {
+        let mut edges = vec![];
+        let mut walk = TreeWalk::from(self.tree.0);
+
+        while let Some(visit) = walk.next() {
+            match visit {
+               Visit::Leaf(node) | Visit::Begin(node) => {
+                    if let Some(parent) = node.parent() {
+                        edges.push((node.data().to_owned(), parent.data().to_owned()))
+                    }
+                },
+                _ => (),
+            }
+        }
+
+        edges
     }
 }
 
@@ -291,5 +301,28 @@ mod tests {
             vec!["token0".into(), TheCurrency::SYMBOL.into()],
         ])
         .unwrap();
+    }
+
+    #[test]
+    fn test_query_supported_pairs() {
+        let paths = test_case();
+        let tree = SupportedPairs::<Usdc>::new(paths).unwrap();
+
+        let response = tree.query_supported_pairs();
+        let mut response: Vec<(&str, &str)> = response.iter()
+            .map(|(from, to)| (from.as_str(), to.as_str())).collect();
+        response.sort();
+
+        let mut expected = vec![
+            ("token0", "token1"),
+            ("token1", "token2"),
+            ("token2", TheCurrency::SYMBOL),
+            ("token3", "token4"),
+            ("token4", TheCurrency::SYMBOL),
+            ("token5", "token1"),
+        ];
+        expected.sort();
+
+        assert_eq!(response, expected);
     }
 }
