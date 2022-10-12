@@ -27,7 +27,7 @@ add_wasm_messages() {
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "treasury" "$((++id))" "$admin_addr" "$treasury_init_tokens"  "" "$treasury_init_msg"
   _export_to_file  "treasury" "$TREASURY_ADDRESS" "$contracts_info_file"
 
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lease" "$((++id))" "$admin_addr" "" "--instantiate-only-address $LEASER_ADDRESS"
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lease" "$((++id))" "$admin_addr" "" "" "'{}'"
 
   local -r lpp_init_msg='{"denom":"'$lpp_native'","lease_code_id":"'$LEASE_CODE_ID'"}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lpp" "$((++id))" "$admin_addr" "" "" "$lpp_init_msg"
