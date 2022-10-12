@@ -2,7 +2,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use finance::{coin::Coin, currency::Currency};
 use platform::{
-    bank::{self, BankAccount, BankStub},
+    bank::{self, BankAccount},
     batch::Batch,
 };
 use sdk::{
@@ -65,7 +65,7 @@ where
         .ok_or(ContractError::NoDeposit {})?
         .withdraw(deps.storage, amount_nlpn)?;
 
-    let mut bank = BankStub::my_account(&env, &deps.querier);
+    let mut bank = bank::my_account(&env, &deps.querier);
     bank.send(payment_lpn, &lender_addr);
 
     if let Some(reward) = maybe_reward {

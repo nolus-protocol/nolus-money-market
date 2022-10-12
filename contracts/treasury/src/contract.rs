@@ -1,7 +1,7 @@
 use currency::native::Nls;
 use finance::coin::Coin;
 use platform::{
-    bank::{BankAccount, BankStub},
+    bank::{self, BankAccount},
     batch::Batch,
 };
 #[cfg(feature = "contract-with-bindings")]
@@ -50,7 +50,7 @@ pub fn execute(
             try_configure_reward_transfer(deps, sender, rewards_dispatcher)
         }
         ExecuteMsg::SendRewards { amount } => {
-            let bank_account = BankStub::my_account(&env, &deps.querier);
+            let bank_account = bank::my_account(&env, &deps.querier);
 
             let bank_account = try_send_rewards(deps.storage, sender, amount, bank_account)?;
             let batch: Batch = bank_account.into();

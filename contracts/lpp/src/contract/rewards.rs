@@ -3,7 +3,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use currency::native::Nls;
 use finance::{coin::Coin, currency::Currency};
 use platform::{
-    bank::{self, BankAccount, BankStub},
+    bank::{self, BankAccount},
     batch::Batch,
 };
 use sdk::{
@@ -41,7 +41,7 @@ pub fn try_claim_rewards(
         return Err(ContractError::NoRewards {});
     }
 
-    let mut bank = BankStub::my_account(&env, &deps.querier);
+    let mut bank = bank::my_account(&env, &deps.querier);
     bank.send(reward, &recipient);
 
     let batch: Batch = bank.into();

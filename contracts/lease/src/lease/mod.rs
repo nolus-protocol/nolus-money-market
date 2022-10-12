@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use finance::{
     coin::Coin,
-    currency::Currency,
+    currency::{self, Currency},
     liability::Liability,
     price::{total, Price},
 };
@@ -146,7 +146,7 @@ where
         self.oracle.owned_by(addr)
     }
 
-    pub(crate) fn close<B>(mut self, mut account: B) -> ContractResult<IntoDTOResult>
+    pub(crate) fn close<B>(mut self, account: B) -> ContractResult<IntoDTOResult>
     where
         B: BankAccount,
     {
@@ -154,13 +154,13 @@ where
         match state {
             StateResponse::Opened { .. } => Err(ContractError::LoanNotPaid()),
             StateResponse::Paid(..) => {
-                account.send(self.amount, &self.customer);
+                let bank_transfers = self.send_funds_to_customer(account)?;
                 self.amount = Coin::<Asset>::default();
 
                 let IntoDTOResult { lease, batch } = self.into_dto();
                 Ok(IntoDTOResult {
                     lease,
-                    batch: batch.merge(account.into()),
+                    batch: batch.merge(bank_transfers),
                 })
             }
             StateResponse::Closed() => Err(ContractError::LoanClosed()),
@@ -198,16 +198,37 @@ where
     fn lease_amount_lpn(&self) -> ContractResult<Coin<Lpn>> {
         Ok(total(self.amount, self.price_of_lease_currency()?))
     }
+
+    fn send_funds_to_customer<B>(&self, mut account: B) -> ContractResult<Batch>
+    where
+        B: BankAccount,
+    {
+        let balance_lpn = account.balance::<Lpn>()?;
+        let surplus = if currency::equal::<Lpn, Asset>() {
+            // TODO remove once migrate to multi-currency version
+            let lease_lpn = self.lease_amount_lpn()?;
+            debug_assert!(balance_lpn >= lease_lpn);
+            balance_lpn - lease_lpn
+        } else {
+            balance_lpn
+        };
+        if !surplus.is_zero() {
+            account.send(surplus, &self.customer);
+        }
+
+        account.send(self.amount, &self.customer);
+        Ok(account.into())
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{wasm_execute, Addr, Timestamp};
+    use cosmwasm_std::{wasm_execute, Addr, BankMsg, Timestamp};
     use serde::{Deserialize, Serialize};
 
     use finance::{
-        coin::{Amount, Coin, CoinDTO},
-        currency::Currency,
+        coin::Coin,
+        currency::{self, Currency},
         duration::Duration,
         interest::InterestPeriod,
         liability::Liability,
@@ -227,7 +248,7 @@ mod tests {
     use market_price_oracle::stub::{Oracle, OracleBatch, OracleRef};
     use marketprice::alarms::Alarm;
     use platform::{
-        bank::{BankAccount, BankAccountView},
+        bank::{BankAccountView, BankStub},
         batch::Batch,
         error::Result as PlatformResult,
     };
@@ -241,64 +262,28 @@ mod tests {
 
     use super::Lease;
 
+    const CUSTOMER: &str = "customer";
     pub const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
     pub const LEASE_START: Timestamp = Timestamp::from_nanos(100);
     pub const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
     pub type TestCurrency = Usdc;
     pub type LppResult<T> = Result<T, LppError>;
 
-    #[derive(Debug)]
-    pub struct BankStub<SendC>
-    where
-        SendC: Currency,
-    {
-        balance: Amount,
-        send_exp: Coin<SendC>,
+    type TestLpn = TestCurrency;
+
+    pub struct MockBankView {
+        balance: Coin<TestCurrency>,
     }
 
-    impl<SendC> BankStub<SendC>
-    where
-        SendC: Currency,
-    {
-        fn new(balance: Amount, send_exp: Coin<SendC>) -> Self {
-            Self { balance, send_exp }
-        }
-    }
-
-    impl<SendC> BankAccountView for BankStub<SendC>
-    where
-        SendC: Currency,
-    {
+    impl BankAccountView for MockBankView {
         fn balance<C>(&self) -> PlatformResult<Coin<C>>
         where
             C: Currency,
         {
-            Ok(Coin::<C>::new(self.balance))
+            assert!(currency::equal::<C, TestCurrency>());
+            Ok(Coin::<C>::new(self.balance.into()))
         }
     }
-
-    impl<SendC> BankAccount for BankStub<SendC>
-    where
-        SendC: Currency,
-    {
-        fn send<C>(&mut self, amount: Coin<C>, _to: &Addr)
-        where
-            C: Currency,
-        {
-            assert_eq!(self.send_exp, CoinDTO::from(amount).try_into().unwrap())
-        }
-    }
-
-    impl<SendC> From<BankStub<SendC>> for Batch
-    where
-        SendC: Currency,
-    {
-        fn from(_stub: BankStub<SendC>) -> Self {
-            Self::default()
-        }
-    }
-    type TestLpn = TestCurrency;
-
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     pub struct LppLenderLocalStub {
         loan: Option<LoanResponse<TestLpn>>,
@@ -618,7 +603,7 @@ mod tests {
 
         Lease::new(
             lease_addr,
-            Addr::unchecked("customer"),
+            Addr::unchecked(CUSTOMER),
             amount,
             LEASE_START,
             Liability::new(
@@ -771,19 +756,22 @@ mod tests {
     // Closed state -> Lease's balance in the loan's currency = 0, loan doesn't exist in the lpp anymore
     fn state_closed() {
         let lease_addr = Addr::unchecked("lease");
+        let lease_amount = 10.into();
         let time_alarms_addr = Addr::unchecked(String::new());
         let oracle_addr = Addr::unchecked(String::new());
         let profit_addr = Addr::unchecked(String::new());
-        let amount = 10.into();
         let lease = open_lease(
             &lease_addr,
-            amount,
+            lease_amount,
             None,
             time_alarms_addr,
             oracle_addr,
             profit_addr,
         );
-        let res = lease.close(BankStub::new(0, amount)).unwrap();
+        let account = BankStub::new(MockBankView {
+            balance: lease_amount,
+        });
+        let res = lease.close(account).unwrap();
         let lease = Lease::<_, TestCurrency, _, _, _, _>::from_dto(
             res.lease,
             &lease_addr,
@@ -795,5 +783,61 @@ mod tests {
         let res = lease.state(LEASE_STATE_AT).unwrap();
         let exp = StateResponse::Closed();
         assert_eq!(exp, res);
+    }
+
+    #[test]
+    fn close_no_surplus() {
+        let lease_addr = Addr::unchecked("lease");
+        let lease_amount = 10.into();
+        let time_alarms_addr = Addr::unchecked(String::new());
+        let oracle_addr = Addr::unchecked(String::new());
+        let profit_addr = Addr::unchecked(String::new());
+        let lease = open_lease(
+            &lease_addr,
+            lease_amount,
+            None,
+            time_alarms_addr,
+            oracle_addr,
+            profit_addr,
+        );
+        let account = BankStub::new(MockBankView {
+            balance: lease_amount,
+        });
+        let res = lease.close(account).unwrap();
+        assert_eq!(res.batch, expect_bank_send(Batch::default(), lease_amount));
+    }
+
+    #[test]
+    fn close_with_surplus() {
+        let lease_addr = Addr::unchecked("lease");
+        let lease_amount = 10.into();
+        let surplus_amount = 2.into();
+        let time_alarms_addr = Addr::unchecked(String::new());
+        let oracle_addr = Addr::unchecked(String::new());
+        let profit_addr = Addr::unchecked(String::new());
+        let lease = open_lease(
+            &lease_addr,
+            lease_amount,
+            None,
+            time_alarms_addr,
+            oracle_addr,
+            profit_addr,
+        );
+        let account = BankStub::new(MockBankView {
+            balance: lease_amount + surplus_amount,
+        });
+        let res = lease.close(account).unwrap();
+        assert_eq!(res.batch, {
+            let surplus_sent = expect_bank_send(Batch::default(), surplus_amount);
+            expect_bank_send(surplus_sent, lease_amount)
+        });
+    }
+
+    fn expect_bank_send(mut batch: Batch, amount: Coin<TestCurrency>) -> Batch {
+        batch.schedule_execute_no_reply(BankMsg::Send {
+            amount: vec![cosmwasm_std::coin(amount.into(), TestCurrency::SYMBOL)],
+            to_address: CUSTOMER.into(),
+        });
+        batch
     }
 }

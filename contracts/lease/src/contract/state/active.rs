@@ -2,7 +2,10 @@ use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
 
-use platform::{bank::BankStub, batch::Emit};
+use platform::{
+    bank::{self},
+    batch::Emit,
+};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper},
@@ -46,9 +49,8 @@ impl Controller for Active {
                 into_resp(emitter, lease_updated)
             }
             ExecuteMsg::Close() => {
-                let account = BankStub::my_account(&env, &deps.querier);
                 let RepayResult { lease, emitter } =
-                    try_close(&deps.querier, &env, account, info, self.lease)?;
+                    try_close(&deps.querier, &env, info, self.lease)?;
 
                 into_resp(emitter, lease)
             }
@@ -106,13 +108,13 @@ fn try_repay(
 fn try_close(
     querier: &QuerierWrapper,
     env: &Env,
-    account: BankStub,
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<RepayResult> {
     //TODO Move RepayResult into this layer, rename to, for example, ExecuteResult
     // and refactor try_* to return it
     // Take the emitting out of the commands layer
+    let account = bank::my_account(env, querier);
     let IntoDTOResult { lease, batch } = lease::execute(
         lease,
         Close::new(&info.sender, account),

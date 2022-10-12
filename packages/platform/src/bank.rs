@@ -84,21 +84,34 @@ impl<'a> BankAccountView for BankView<'a> {
     }
 }
 
-pub struct BankStub<'a> {
-    view: BankView<'a>,
+pub struct BankStub<View>
+where
+    View: BankAccountView,
+{
+    view: View,
     batch: Batch,
 }
 
-impl<'a> BankStub<'a> {
-    pub fn my_account(env: &'a Env, querier: &'a QuerierWrapper) -> Self {
+impl<View> BankStub<View>
+where
+    View: BankAccountView,
+{
+    pub fn new(view: View) -> Self {
         Self {
-            view: BankView::my_account(env, querier),
+            view,
             batch: Batch::default(),
         }
     }
 }
 
-impl<'a> BankAccountView for BankStub<'a> {
+pub fn my_account<'a>(env: &'a Env, querier: &'a QuerierWrapper) -> BankStub<BankView<'a>> {
+    BankStub::new(BankView::my_account(env, querier))
+}
+
+impl<View> BankAccountView for BankStub<View>
+where
+    View: BankAccountView,
+{
     fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: Currency,
@@ -107,9 +120,10 @@ impl<'a> BankAccountView for BankStub<'a> {
     }
 }
 
-impl<'a> BankAccount for BankStub<'a>
+impl<View> BankAccount for BankStub<View>
 where
     Self: BankAccountView + Into<Batch>,
+    View: BankAccountView,
 {
     fn send<C>(&mut self, amount: Coin<C>, to: &Addr)
     where
@@ -123,8 +137,11 @@ where
     }
 }
 
-impl<'a> From<BankStub<'a>> for Batch {
-    fn from(stub: BankStub) -> Self {
+impl<View> From<BankStub<View>> for Batch
+where
+    View: BankAccountView,
+{
+    fn from(stub: BankStub<View>) -> Self {
         stub.batch
     }
 }

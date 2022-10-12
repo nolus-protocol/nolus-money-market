@@ -1,7 +1,7 @@
 use currency::native::Nls;
 use finance::{coin::Coin, duration::Duration};
 use platform::{
-    bank::{BankAccount, BankAccountView, BankStub},
+    bank::{self, BankAccount, BankAccountView},
     batch::{Batch, Emit, Emitter},
 };
 use sdk::{
@@ -54,7 +54,7 @@ impl Profit {
             Duration::from_hours(config.cadence_hours),
         )?;
 
-        let mut bank = BankStub::my_account(&env, &deps.querier);
+        let mut bank = bank::my_account(&env, &deps.querier);
         //TODO: currenty only Nls profit is transfered as there is no swap functionality
         let balance: Coin<Nls> = bank.balance()?;
         bank.send(balance, &config.treasury);
