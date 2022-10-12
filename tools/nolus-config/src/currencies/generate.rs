@@ -4,7 +4,7 @@ use std::{
     slice::Iter,
 };
 
-use crate::{CURRENCY_TEMPLATE, GROUP_TEMPLATE};
+use crate::{currencies::group::CurrencyTickerPair, CURRENCY_TEMPLATE, GROUP_TEMPLATE};
 
 use super::{
     currency::{Currency, Token as CurrencyToken},
@@ -80,14 +80,14 @@ impl Currencies {
                         .map(|position| {
                             let (left, right) = template.split_at(position);
 
-                            (left, right.get(element.len()..).unwrap_or(""), placeholder)
+                            (left, &right[element.len()..], placeholder)
                         })
                 };
 
                 template
                     .find('$')
                     .and_then(|left_position| {
-                        if dbg!(&template[..left_position])
+                        if template[..left_position]
                             .find("#name#")
                             .or_else(|| template[..left_position].find("#currencies_module#"))
                             .is_some()
@@ -101,9 +101,7 @@ impl Currencies {
                             .map(|right_position| {
                                 (
                                     &template[..left_position],
-                                    template
-                                        .get(left_position + right_position + 2..)
-                                        .unwrap_or(""),
+                                    &template[left_position + right_position + 2 /* Two enclosing dollar signs */..],
                                     GroupToken::ForEachCurrency({
                                         let functor: OuterTemplateFunctor<
                                             RepeatSequenceGroupToken,
@@ -116,7 +114,7 @@ impl Currencies {
 
                                                     (
                                                         left,
-                                                        right.get(element.len()..).unwrap_or(""),
+                                                        &right[element.len()..],
                                                         placeholder,
                                                     )
                                                 })
@@ -199,16 +197,22 @@ impl Currencies {
         let groups = self
             .currencies
             .iter()
-            .fold::<BTreeMap<String, Vec<String>>, _>(BTreeMap::new(), |mut groups, currency| {
-                currency.groups().iter().cloned().for_each(|group| {
-                    groups
-                        .entry(group)
-                        .or_default()
-                        .push(currency.normalized_ticker().clone())
-                });
+            .fold::<BTreeMap<String, Vec<CurrencyTickerPair>>, _>(
+                BTreeMap::new(),
+                |mut groups, currency| {
+                    currency.groups().iter().cloned().for_each(|group| {
+                        groups
+                            .entry(group)
+                            .or_default()
+                            .push(CurrencyTickerPair::new(
+                                currency.ticker().clone(),
+                                currency.normalized_ticker().clone(),
+                            ))
+                    });
 
-                groups
-            })
+                    groups
+                },
+            )
             .into_iter()
             .map(|(name, currencies)| Group::new(&name, currencies))
             .collect::<Vec<_>>();
@@ -216,10 +220,61 @@ impl Currencies {
         let currency_functor =
             |currency: Currency| (currency.ticker().to_ascii_lowercase(), currency);
 
+        let currencies = self
+            .currencies
+            .into_iter()
+            .map(currency_functor)
+            .collect::<BTreeMap<_, _>>();
+
+        if !currencies
+            .values()
+            .any(|currency| currency.ticker() == "NLS")
+        {
+            panic!("Nolus /NLS/ not defined!");
+        }
+
+        let lpns = groups
+            .iter()
+            .find(|group| group.name() == "Lpns")
+            .expect("Liquidity provider's pool group /Lpns/ not defined!");
+
+        currencies.values().for_each(|currency| {
+            if currency.groups().iter().any(|group| ["Lease", "Payment"].contains(&group.as_str())) {
+                assert_ne!(
+                    currency.resolution_paths().len(),
+                    0,
+                    "\"{}\" doesn't define any resolution paths!",
+                    currency.ticker()
+                );
+            }
+
+            currency.resolution_paths().iter().for_each(|path| {
+                assert!(
+                    path.len() > 1,
+                    "One of \"{}\"'s resolution paths doesn't contain at least two elements!",
+                    currency.ticker()
+                );
+
+                if &path[0] != currency.ticker() {
+                    panic!(
+                        "One of \"{}\"'s resolution paths doesn't start with the currency itself!",
+                        currency.ticker()
+                    );
+                }
+
+                if !lpns.currencies().iter().map(|ticker_pair| ticker_pair.raw()).any(|ticker| ticker == &path[path.len() - 1]) {
+                    panic!(
+                        "One of \"{}\"'s resolution paths doesn't end with a currency from the Lpns group!",
+                        currency.ticker()
+                    );
+                }
+            })
+        });
+
         GenerationResult {
             currencies: CurrencySources {
                 template: currency_template,
-                currencies: self.currencies.into_iter().map(currency_functor).collect(),
+                currencies,
             },
             groups: GroupSources {
                 currencies_module,

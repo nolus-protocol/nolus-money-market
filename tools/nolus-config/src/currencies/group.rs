@@ -1,13 +1,14 @@
 use std::io::{Error as IOError, Write};
 
+#[derive(Debug)]
 pub(super) struct Group {
     name: String,
     filename: String,
-    currencies: Vec<String>,
+    currencies: Vec<CurrencyTickerPair>,
 }
 
 impl Group {
-    pub(super) fn new(name: &str, currencies: Vec<String>) -> Self {
+    pub(super) fn new(name: &str, currencies: Vec<CurrencyTickerPair>) -> Self {
         Self {
             name: name
                 .get(..1)
@@ -37,7 +38,7 @@ impl Group {
                 Token::CurrenciesModule => writer.write_all(currencies_module)?,
                 Token::ForEachCurrency(template) => {
                     for currency in &self.currencies {
-                        let currency = currency.as_bytes();
+                        let currency = currency.normalized().as_bytes();
 
                         for token in template {
                             writer.write_all(match token {
@@ -55,8 +56,16 @@ impl Group {
         Ok(())
     }
 
+    pub(super) fn name(&self) -> &String {
+        &self.name
+    }
+
     pub(super) fn filename(&self) -> &String {
         &self.filename
+    }
+
+    pub(super) fn currencies(&self) -> &Vec<CurrencyTickerPair> {
+        &self.currencies
     }
 }
 
@@ -74,4 +83,22 @@ pub(super) enum RepeatSequenceToken {
     Name,
     CurrenciesModule,
     Currency,
+}
+
+#[derive(Debug)]
+pub(super) struct CurrencyTickerPair {
+    raw: String,
+    normalized: String,
+}
+
+impl CurrencyTickerPair {
+    pub(super) fn new(raw: String, normalized: String) -> Self {
+        Self { raw, normalized }
+    }
+    pub fn raw(&self) -> &String {
+        &self.raw
+    }
+    pub fn normalized(&self) -> &String {
+        &self.normalized
+    }
 }

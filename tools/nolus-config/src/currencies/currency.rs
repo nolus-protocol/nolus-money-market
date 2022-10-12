@@ -77,6 +77,10 @@ impl Currency {
     pub(super) fn groups(&self) -> &Vec<String> {
         &self.groups
     }
+
+    pub(super) fn resolution_paths(&self) -> &Vec<Vec<String>> {
+        &self.resolution_paths
+    }
 }
 
 pub(super) enum Token {
