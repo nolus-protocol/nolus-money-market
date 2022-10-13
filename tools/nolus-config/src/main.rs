@@ -1,5 +1,6 @@
 use std::{
-    fs::{create_dir, remove_dir_all, File},
+    ffi::OsStr,
+    fs::{create_dir, remove_dir_all, remove_file, File},
     io::{stdin, Read, Write},
     path::PathBuf,
 };
@@ -34,6 +35,8 @@ fn main() -> Result<(), Error> {
 
 fn generate_currencies(output_dir: PathBuf) -> Result<(), Error> {
     let currencies: Currencies = read_currencies()?;
+
+    clean_output_dir(&output_dir)?;
 
     let currency_dir = currency_dir(&output_dir)?;
 
@@ -72,14 +75,26 @@ fn read_currencies() -> Result<Currencies, Error> {
     .map_err(Error::from_deserialization)
 }
 
+fn clean_output_dir(output_dir: &PathBuf) -> Result<(), Error> {
+    for entry in output_dir.read_dir()? {
+        let entry = entry?;
+
+        if ![OsStr::new("."), OsStr::new("..")].contains(&entry.file_name().as_os_str()) {
+            (if entry.file_type()?.is_dir() {
+                remove_dir_all
+            } else {
+                remove_file
+            }(entry.path()))?;
+        }
+    }
+
+    Ok(())
+}
+
 fn currency_dir(output_dir: &PathBuf) -> Result<PathBuf, Error> {
     let mut currency_dir = output_dir.clone();
 
     currency_dir.push("currencies");
-
-    if currency_dir.exists() {
-        remove_dir_all(&currency_dir)?;
-    }
 
     create_dir(&currency_dir)?;
 
@@ -90,10 +105,6 @@ fn group_dir(output_dir: &PathBuf) -> Result<PathBuf, Error> {
     let mut group_dir = output_dir.clone();
 
     group_dir.push("groups");
-
-    if group_dir.exists() {
-        remove_dir_all(&group_dir)?;
-    }
 
     create_dir(&group_dir)?;
 
@@ -126,10 +137,16 @@ fn write_currency(
 
     currency_path.set_extension("rs");
 
-    currency_source.generate_source(File::create(currency_path)?).map_err(Into::into)
+    currency_source
+        .generate_source(File::create(currency_path)?)
+        .map_err(Into::into)
 }
 
-fn write_group(group_dir: &PathBuf, lib_rs: &mut File, group_source: GroupFilenameSource) -> Result<(), Error> {
+fn write_group(
+    group_dir: &PathBuf,
+    lib_rs: &mut File,
+    group_source: GroupFilenameSource,
+) -> Result<(), Error> {
     lib_rs.write_all(format!("\n\tpub mod {};\n", group_source.filename()).as_bytes())?;
 
     let mut group_path = group_dir.clone();
@@ -138,5 +155,7 @@ fn write_group(group_dir: &PathBuf, lib_rs: &mut File, group_source: GroupFilena
 
     group_path.set_extension("rs");
 
-    group_source.generate_source(File::create(group_path)?).map_err(Into::into)
+    group_source
+        .generate_source(File::create(group_path)?)
+        .map_err(Into::into)
 }
