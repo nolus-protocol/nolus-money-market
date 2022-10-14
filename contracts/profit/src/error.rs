@@ -1,7 +1,8 @@
 use std::result::Result as StdResult;
 
-use sdk::cosmwasm_std::{Addr, StdError};
 use thiserror::Error;
+
+use sdk::cosmwasm_std::{Addr, StdError};
 
 #[derive(Debug, PartialEq, Error)]
 pub enum ContractError {

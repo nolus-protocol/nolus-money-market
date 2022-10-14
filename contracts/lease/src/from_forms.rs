@@ -111,13 +111,6 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
 mod test {
     use std::any::type_name;
 
-    use cosmwasm_std::{
-        from_slice,
-        testing::{MockApi, MockQuerier},
-        to_binary, Addr, ContractInfoResponse, ContractResult, QuerierResult, QuerierWrapper,
-        SystemResult, Timestamp, WasmQuery,
-    };
-
     use currency::{lease::Osmo, lpn::Usdc};
     use finance::error::Error as FinanceError;
     use finance::{currency::Currency, duration::Duration};
@@ -125,6 +118,12 @@ mod test {
     use lpp::stub::lender::LppLenderRef;
     use market_price_oracle::{msg::ConfigResponse as OracleConfigResponse, stub::OracleRef};
     use profit::msg::ConfigResponse as ProfitConfigResponse;
+    use sdk::cosmwasm_std::{
+        from_slice,
+        testing::{MockApi, MockQuerier},
+        to_binary, Addr, ContractInfoResponse, ContractResult, QuerierResult, QuerierWrapper,
+        SystemResult, Timestamp, WasmQuery,
+    };
 
     use crate::{
         error::ContractError,

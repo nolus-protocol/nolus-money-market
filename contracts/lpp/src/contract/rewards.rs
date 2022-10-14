@@ -72,12 +72,11 @@ pub fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsRespons
 
 #[cfg(test)]
 mod test {
+    use finance::test::currency::Usdc;
     use sdk::cosmwasm_std::{
         coin,
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
     };
-
-    use finance::test::currency::Usdc;
 
     use crate::contract::lender;
 

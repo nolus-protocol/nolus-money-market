@@ -223,7 +223,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{wasm_execute, Addr, BankMsg, Timestamp};
     use serde::{Deserialize, Serialize};
 
     use finance::{
@@ -253,6 +252,7 @@ mod tests {
         error::Result as PlatformResult,
     };
     use profit::stub::{Profit, ProfitBatch, ProfitRef};
+    use sdk::cosmwasm_std::{wasm_execute, Addr, BankMsg, Timestamp};
     use time_alarms::{
         msg::ExecuteMsg::AddAlarm,
         stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},

@@ -86,13 +86,12 @@ fn try_transfer(
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{
+    use finance::{currency::Currency, duration::Duration, test::currency::Nls};
+    use sdk::cosmwasm_std::{
         coins, from_binary,
         testing::{mock_dependencies_with_balance, mock_env, mock_info},
         to_binary, Addr, BankMsg, CosmosMsg, SubMsg, WasmMsg,
     };
-
-    use finance::{currency::Currency, duration::Duration, test::currency::Nls};
 
     use crate::{
         error::ContractError,

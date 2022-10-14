@@ -173,10 +173,9 @@ fn err_as_ok(err: &str) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{from_binary, testing::mock_env};
-
     use currency::{lpn::Usdc, native::Nls};
     use finance::{currency::Currency, duration::Duration, percent::Percent};
+    use sdk::cosmwasm_std::{from_binary, testing::mock_env};
 
     use crate::{
         contract::query,

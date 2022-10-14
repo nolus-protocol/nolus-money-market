@@ -1,8 +1,7 @@
 use std::marker::PhantomData;
 
-use sdk::cosmwasm_std::QuerierWrapper;
-
 use finance::{coin::Coin, currency::Currency, price};
+use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{
     stub::{Oracle, OracleRef, WithOracle},

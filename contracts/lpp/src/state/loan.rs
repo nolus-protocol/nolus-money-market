@@ -139,9 +139,8 @@ where
 
 #[cfg(test)]
 mod test {
-    use sdk::cosmwasm_std::testing;
-
     use finance::{duration::Duration, test::currency::Usdc};
+    use sdk::cosmwasm_std::testing;
 
     use super::*;
 
