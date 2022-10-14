@@ -72,7 +72,7 @@ pub fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsRespons
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{
+    use sdk::cosmwasm_std::{
         coin,
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
     };

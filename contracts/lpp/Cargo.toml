@@ -23,12 +23,6 @@ finance = { path = "../../packages/finance" }
 platform = { path = "../../packages/platform" }
 sdk = { path = "../../packages/sdk", features = ["contract"] }
 
-# Required as a dependency by `entry_point` attribute macro
-# Version will be selected by `sdk` package
-# TODO/Rust-1.64 remove in favour of workspace inheritance
-#  cosmwasm-std = { workspace = true }
-cosmwasm-std = { version = "1", default-features = false }
-
 thiserror = "1.0.37"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 
