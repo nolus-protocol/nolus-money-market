@@ -95,10 +95,11 @@ where
             .emit_timestamp("at", &env.block.time)
             .emit_to_string_value(
                 "idx",
+                // TODO use `.expect(...)` when layer 1 upgrades to `wasmd` v0.29
                 env.transaction
                     .as_ref()
                     .map(|transaction| transaction.index)
-                    .expect("transaction index should be present"),
+                    .unwrap_or_default(),
             )
     }
 }
