@@ -27,7 +27,7 @@ add_wasm_messages() {
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "treasury" "$((++id))" "$admin_addr" "$treasury_init_tokens"  "" "$treasury_init_msg"
   _export_to_file  "treasury" "$TREASURY_ADDRESS" "$contracts_info_file"
 
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lease" "$((++id))" "$admin_addr" "" ""
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lease" "$((++id))" "$admin_addr" "" "--instantiate-only-address $LEASER_ADDRESS"
 
   local -r lpp_init_msg='{"denom":"'$lpp_native'","lease_code_id":"'$LEASE_CODE_ID'"}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lpp" "$((++id))" "$admin_addr" "" "" "$lpp_init_msg"
@@ -116,12 +116,12 @@ _add_wasm_message() {
       amount_flag="--amount $init_tokens"
   fi
 
-  run_cmd "$genesis_home_dir" add-wasm-genesis-message store "$wasm_code_path/$contract_name.wasm" --run-as "$admin_addr" "$instantiate_policy"
+  run_cmd "$genesis_home_dir" add-wasm-genesis-message store "$wasm_code_path/$contract_name.wasm" --run-as "$admin_addr" $instantiate_policy
 
   if [[ $# -eq 8 ]]; then
     local -r init_msg="$8"
 
     run_cmd "$genesis_home_dir" add-wasm-genesis-message instantiate-contract "$code_id" "$init_msg" --label "$contract_name" \
-      --run-as "$admin_addr" --admin "$admin_addr" "$amount_flag"
+      --run-as "$admin_addr" --no-admin $amount_flag
   fi
 }
