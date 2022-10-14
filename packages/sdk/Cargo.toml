@@ -36,12 +36,9 @@ cw-storage-plus = { version = "0.15", optional = true }
 #  cw2 = { workspace = true, optional = true }
 cw2 = { version = "0.15", optional = true }
 
-[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# Pinned down to match version of Neutron SDK's Protobuf generated sources
 # TODO/Rust-1.64 remove in favour of workspace inheritance
 #  cw-multi-test = { workspace = true, optional = true }
-cw-multi-test = { version = "0.15", optional = true }
-
-# Pinned down to match version of Neutron SDK's Protobuf generated sources
 protobuf = "=3.1"
 
 # TODO/Rust-1.64 remove in favour of workspace inheritance
@@ -49,3 +46,8 @@ protobuf = "=3.1"
 neutron-sdk = { git = "https://github.com/neutron-org/neutron-contracts", rev = "e9b2a9d9179d3c136ba024870e762bcb046b0f8c", optional = true }
 
 serde = { version = "1", default-features = false, optional = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# TODO/Rust-1.64 remove in favour of workspace inheritance
+#  cw-multi-test = { workspace = true, optional = true }
+cw-multi-test = { version = "0.15", optional = true }

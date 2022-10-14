@@ -40,7 +40,7 @@ check_wasm:cargo:
   stage: check
   script:
     - cargo install cosmwasm-check
-    - cargo workspaces exec --no-bail cargo build --target wasm32-unknown-unknown
+    - cargo workspaces exec cargo build --target wasm32-unknown-unknown
     - $CARGO_HOME/bin/cosmwasm-check --available-capabilities "staking,stargate,cosmwasm_1_1,iterator,neutron" ./target/wasm32-unknown-unknown/debug/*.wasm
 
 test:cargo:
@@ -80,7 +80,7 @@ schema:cargo:
     SCHEMA_DIR: "contracts-schemas"
     SCHEMA_DIR_RESULT: "schemas.tar.gz"
   script:
-    - cargo workspaces exec --no-bail cargo run --example schema
+    - cargo workspaces exec cargo run --example schema
     - /bin/bash ./scripts/collect-contracts-schemas.sh $SCHEMA_DIR
     - tar -czvf $SCHEMA_DIR_RESULT $SCHEMA_DIR
   artifacts:
