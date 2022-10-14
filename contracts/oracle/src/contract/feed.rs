@@ -64,10 +64,14 @@ where
         sender_raw: &Addr,
         prices: Vec<PriceDTO>,
     ) -> Result<(), ContractError> {
-        let tree: SupportedPairs<OracleBase> = SupportedPairs::load(storage)?;
+        let supported_pairs = SupportedPairs::<OracleBase>::load(storage)?.query_supported_pairs();
         let filtered: Vec<PriceDTO> = prices
             .iter()
-            .filter(|price| self.valid_price(price, &tree).is_ok())
+            .filter(|price| {
+                supported_pairs.iter().any(|(base, quote)| {
+                    price.base().symbol() == base && price.quote().symbol() == quote
+                })
+            })
             .map(|p| p.to_owned())
             .collect();
         if filtered.is_empty() {
@@ -83,28 +87,6 @@ where
         )?;
 
         Ok(())
-    }
-    fn valid_price(
-        &self,
-        price: &PriceDTO,
-        tree: &SupportedPairs<OracleBase>,
-    ) -> Result<(), ContractError> {
-        let path = tree.load_path(price.base().symbol())?;
-        match path.get(1) {
-            Some(second_in_path) => {
-                if second_in_path.eq(price.quote().symbol()) {
-                    return Ok(());
-                }
-                Err(ContractError::InvalidDenomPair(
-                    price.base().symbol().to_string(),
-                    price.quote().symbol().to_string(),
-                ))
-            }
-            None => Err(ContractError::InvalidDenomPair(
-                price.base().symbol().to_string(),
-                price.quote().symbol().to_string(),
-            )),
-        }
     }
 }
 

@@ -13,7 +13,7 @@ use crate::{
     Multiply,
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Parameters {
     price_feed_period: Duration,
     required_feeders_cnt: usize,
@@ -62,13 +62,7 @@ impl<'m> PriceFeeds<'m> {
         if let Some((first, elements)) = path.split_first() {
             let mut base = first;
             for quote in elements {
-                let price_dto =
-                    match self.load(storage, base.to_string(), quote.to_string(), parameters) {
-                        Ok(price) => price,
-                        Err(err) => {
-                            return Err(err);
-                        }
-                    };
+                let price_dto = self.load(storage, base.to_string(), quote.to_string(), parameters)?;
                 base = quote;
                 resolution_path.push(price_dto);
             }
