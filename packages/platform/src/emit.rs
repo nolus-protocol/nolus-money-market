@@ -95,11 +95,10 @@ where
             .emit_timestamp("at", &env.block.time)
             .emit_to_string_value(
                 "idx",
-                // TODO remove when issue is fixed (https://github.com/CosmWasm/wasmd/issues/932)
                 env.transaction
                     .as_ref()
                     .map(|transaction| transaction.index)
-                    .unwrap_or_default(),
+                    .expect("transaction index should be present"),
             )
     }
 }
