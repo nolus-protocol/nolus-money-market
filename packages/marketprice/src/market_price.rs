@@ -62,7 +62,8 @@ impl<'m> PriceFeeds<'m> {
         if let Some((first, elements)) = path.split_first() {
             let mut base = first;
             for quote in elements {
-                let price_dto = self.load(storage, base.to_string(), quote.to_string(), parameters)?;
+                let price_dto =
+                    self.load(storage, base.to_string(), quote.to_string(), parameters)?;
                 base = quote;
                 resolution_path.push(price_dto);
             }

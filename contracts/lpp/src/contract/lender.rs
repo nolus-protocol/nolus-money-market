@@ -109,12 +109,11 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
 // TODO: add more tests
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{
+    use finance::{price, test::currency::Usdc};
+    use sdk::cosmwasm_std::{
         coin,
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
     };
-
-    use finance::{price, test::currency::Usdc};
 
     use super::*;
 

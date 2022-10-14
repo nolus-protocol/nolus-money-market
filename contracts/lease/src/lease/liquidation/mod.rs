@@ -257,10 +257,9 @@ impl WarningLevel {
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{Addr, Timestamp};
-
     use finance::percent::Percent;
     use lpp::msg::LoanResponse;
+    use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{
         lease::{

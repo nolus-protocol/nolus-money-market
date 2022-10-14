@@ -443,7 +443,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{Addr, Timestamp};
     use serde::{Deserialize, Serialize};
 
     use finance::{
@@ -463,6 +462,7 @@ mod tests {
     };
     use platform::{bank::BankAccountView, error::Result as PlatformResult};
     use profit::stub::{Profit, ProfitBatch};
+    use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::loan::{repay::Receipt as RepayReceipt, Loan};
 

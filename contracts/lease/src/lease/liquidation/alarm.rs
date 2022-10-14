@@ -222,11 +222,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use cosmwasm_std::{to_binary, Addr, Timestamp, WasmMsg};
-
     use finance::{duration::Duration, percent::Percent, price::total_of};
     use lpp::msg::LoanResponse;
     use platform::batch::Batch;
+    use sdk::cosmwasm_std::{to_binary, Addr, Timestamp, WasmMsg};
     use time_alarms::msg::ExecuteMsg::AddAlarm;
 
     use crate::lease::{
