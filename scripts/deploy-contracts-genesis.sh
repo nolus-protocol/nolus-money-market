@@ -122,6 +122,6 @@ _add_wasm_message() {
     local -r init_msg="$8"
 
     run_cmd "$genesis_home_dir" add-wasm-genesis-message instantiate-contract "$code_id" "$init_msg" --label "$contract_name" \
-      --run-as "$admin_addr" --admin "$admin_addr" $amount_flag
+      --run-as "$admin_addr" --no-admin $amount_flag
   fi
 }
