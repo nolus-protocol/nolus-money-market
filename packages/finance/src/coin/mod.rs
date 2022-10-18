@@ -30,7 +30,7 @@ where
     // https://github.com/GREsau/schemars/issues/89
     #[serde(serialize_with = "serde::serialize")]
     #[serde(deserialize_with = "serde::deserialize")]
-    symbol: PhantomData<C>,
+    ticker: PhantomData<C>,
 }
 
 impl<C> Coin<C>
@@ -40,7 +40,7 @@ where
     pub fn new(amount: Amount) -> Self {
         Self {
             amount,
-            symbol: PhantomData::<C>,
+            ticker: PhantomData::<C>,
         }
     }
 
@@ -73,7 +73,7 @@ where
     fn add(self, rhs: Coin<C>) -> Self::Output {
         Self::Output {
             amount: self.amount + rhs.amount,
-            symbol: self.symbol,
+            ticker: self.ticker,
         }
     }
 }
@@ -87,7 +87,7 @@ where
     fn sub(self, rhs: Coin<C>) -> Self::Output {
         Self::Output {
             amount: self.amount - rhs.amount,
-            symbol: self.symbol,
+            ticker: self.ticker,
         }
     }
 }
@@ -119,7 +119,7 @@ where
     fn mul(self, rhs: Amount) -> Self::Output {
         Self::Output {
             amount: self.amount * rhs,
-            symbol: self.symbol,
+            ticker: self.ticker,
         }
     }
 }
@@ -133,7 +133,7 @@ where
     fn div(self, rhs: Amount) -> Self::Output {
         Self::Output {
             amount: self.amount / rhs,
-            symbol: self.symbol,
+            ticker: self.ticker,
         }
     }
 }
@@ -143,7 +143,7 @@ where
     C: Currency,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{} {}", self.amount, C::SYMBOL))
+        f.write_fmt(format_args!("{} {}", self.amount, C::TICKER))
     }
 }
 

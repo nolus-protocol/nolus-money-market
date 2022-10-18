@@ -71,15 +71,15 @@ mod tests {
     #[should_panic(expected = "Unauthorized")]
     fn configure_unauthorized() {
         let msg = dummy_instantiate_msg(
-            Usdc::SYMBOL.to_string(),
+            Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            vec![vec![Nls::SYMBOL.to_string(), Usdc::SYMBOL.to_string()]],
+            vec![vec![Nls::TICKER.to_string(), Usdc::TICKER.to_string()]],
             "timealarms".to_string(),
         );
         let (mut deps, _) = setup_test(msg);
 
-        let unauth_info = mock_info("anyone", &coins(2, Nls::SYMBOL));
+        let unauth_info = mock_info("anyone", &coins(2, Nls::TICKER));
         let msg = ExecuteMsg::Config {
             price_feed_period_secs: 15,
             expected_feeders: Percent::from_percent(12),
@@ -90,10 +90,10 @@ mod tests {
     #[test]
     fn configure() {
         let msg = dummy_instantiate_msg(
-            Usdc::SYMBOL.to_string(),
+            Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            vec![vec![Nls::SYMBOL.to_string(), Usdc::SYMBOL.to_string()]],
+            vec![vec![Nls::TICKER.to_string(), Usdc::TICKER.to_string()]],
             "timealarms".to_string(),
         );
         let (mut deps, info) = setup_test(msg);
@@ -161,8 +161,8 @@ mod tests {
         let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
         let test_vec = vec![
-            vec![TestCurrencyA::SYMBOL.to_string(), Usdc::SYMBOL.to_string()],
-            vec![Nls::SYMBOL.to_string(), Usdc::SYMBOL.to_string()],
+            vec![TestCurrencyA::TICKER.to_string(), Usdc::TICKER.to_string()],
+            vec![Nls::TICKER.to_string(), Usdc::TICKER.to_string()],
         ];
 
         let msg = ExecuteMsg::CurrencyPaths {
@@ -180,10 +180,10 @@ mod tests {
     #[should_panic(expected = "Unauthorized")]
     fn config_supported_pairs_unauthorized() {
         let (mut deps, _) = setup_test(dummy_default_instantiate_msg());
-        let info = mock_info("user", &coins(1000, Nls::SYMBOL));
+        let info = mock_info("user", &coins(1000, Nls::TICKER));
 
         let msg = ExecuteMsg::CurrencyPaths {
-            paths: vec![vec![Nls::SYMBOL.to_string(), Usdc::SYMBOL.to_string()]],
+            paths: vec![vec![Nls::TICKER.to_string(), Usdc::TICKER.to_string()]],
         };
         execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     }
@@ -194,15 +194,15 @@ mod tests {
 
         let msg = ExecuteMsg::CurrencyPaths {
             paths: vec![
-                vec![TestCurrencyA::SYMBOL.to_string(), Usdc::SYMBOL.to_string()],
-                vec![Nls::SYMBOL.to_string(), Nls::SYMBOL.to_string()],
+                vec![TestCurrencyA::TICKER.to_string(), Usdc::TICKER.to_string()],
+                vec![Nls::TICKER.to_string(), Nls::TICKER.to_string()],
             ],
         };
         let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
         assert_eq!(
             ContractError::InvalidResolutionPath(vec![
-                Nls::SYMBOL.to_string(),
-                Nls::SYMBOL.to_string()
+                Nls::TICKER.to_string(),
+                Nls::TICKER.to_string()
             ]),
             err
         );

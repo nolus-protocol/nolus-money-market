@@ -51,7 +51,7 @@ where
         K: Into<String>,
         C: Currency,
     {
-        self.emit_currency_symbol(event_key, C::SYMBOL)
+        self.emit_currency_symbol(event_key, C::TICKER)
     }
 
     /// Specialization of [`emit`](Self::emit) for [`Currency`]'s symbol.
@@ -87,7 +87,7 @@ where
         let symbol_key = key + "-symbol";
 
         self.emit_coin_amount(amount_key, coin.amount())
-            .emit_currency_symbol(symbol_key, coin.symbol())
+            .emit_currency_symbol(symbol_key, coin.ticker())
     }
 
     fn emit_tx_info(self, env: &Env) -> Self {

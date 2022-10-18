@@ -80,11 +80,11 @@ impl OracleRef {
         V: WithOracle<OracleBase>,
         ContractError: Into<V::Error>,
     {
-        if OracleBase::SYMBOL == self.base_currency {
+        if OracleBase::TICKER == self.base_currency {
             cmd.exec(self.into_stub::<OracleBase>(querier))
         } else {
             Err(ContractError::CurrencyMismatch {
-                expected: OracleBase::SYMBOL.into(),
+                expected: OracleBase::TICKER.into(),
                 found: self.base_currency,
             }
             .into())
@@ -110,7 +110,7 @@ impl OracleRef {
     {
         Self {
             addr: Addr::unchecked(addr),
-            base_currency: C::SYMBOL.into(),
+            base_currency: C::TICKER.into(),
         }
     }
 }
@@ -145,7 +145,7 @@ where
         }
 
         let msg = QueryMsg::Price {
-            currency: C::SYMBOL.to_string(),
+            currency: C::TICKER.to_string(),
         };
         let dto: PriceDTO = self
             .querier

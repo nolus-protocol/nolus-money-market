@@ -835,7 +835,7 @@ mod tests {
 
     fn expect_bank_send(mut batch: Batch, amount: Coin<TestCurrency>) -> Batch {
         batch.schedule_execute_no_reply(BankMsg::Send {
-            amount: vec![cosmwasm_std::coin(amount.into(), TestCurrency::SYMBOL)],
+            amount: vec![cosmwasm_std::coin(amount.into(), TestCurrency::TICKER)],
             to_address: CUSTOMER.into(),
         });
         batch

@@ -139,17 +139,17 @@ mod test {
 
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,
-            TheCurrency::SYMBOL.into(),
+            TheCurrency::TICKER.into(),
             1000u64.into(),
         )
         .unwrap();
 
         // initial deposit
         lpp_balance += init_deposit;
-        let info = mock_info("lender1", &[coin(init_deposit, TheCurrency::SYMBOL)]);
+        let info = mock_info("lender1", &[coin(init_deposit, TheCurrency::TICKER)]);
         deps.querier.update_balance(
             MOCK_CONTRACT_ADDR,
-            vec![coin(lpp_balance, TheCurrency::SYMBOL)],
+            vec![coin(lpp_balance, TheCurrency::TICKER)],
         );
         try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
 
@@ -157,7 +157,7 @@ mod test {
         lpp_balance += lpp_balance_push;
         deps.querier.update_balance(
             MOCK_CONTRACT_ADDR,
-            vec![coin(lpp_balance, TheCurrency::SYMBOL)],
+            vec![coin(lpp_balance, TheCurrency::TICKER)],
         );
 
         let price = query_ntoken_price(deps.as_ref(), env.clone()).unwrap().0;
@@ -168,10 +168,10 @@ mod test {
 
         // deposit to check,
         lpp_balance += test_deposit;
-        let info = mock_info("lender2", &[coin(test_deposit, TheCurrency::SYMBOL)]);
+        let info = mock_info("lender2", &[coin(test_deposit, TheCurrency::TICKER)]);
         deps.querier.update_balance(
             MOCK_CONTRACT_ADDR,
-            vec![coin(lpp_balance, TheCurrency::SYMBOL)],
+            vec![coin(lpp_balance, TheCurrency::TICKER)],
         );
         try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
 
@@ -187,10 +187,10 @@ mod test {
 
         // should not change asserts for lender2
         lpp_balance += post_deposit;
-        let info = mock_info("lender3", &[coin(post_deposit, TheCurrency::SYMBOL)]);
+        let info = mock_info("lender3", &[coin(post_deposit, TheCurrency::TICKER)]);
         deps.querier.update_balance(
             MOCK_CONTRACT_ADDR,
-            vec![coin(lpp_balance, TheCurrency::SYMBOL)],
+            vec![coin(lpp_balance, TheCurrency::TICKER)],
         );
         try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
 
@@ -204,7 +204,7 @@ mod test {
         );
 
         //try to deposit zero
-        let info = mock_info("lender4", &[coin(zero, TheCurrency::SYMBOL)]);
+        let info = mock_info("lender4", &[coin(zero, TheCurrency::TICKER)]);
         let result = try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info);
         assert!(result.is_err());
 

@@ -13,7 +13,7 @@ where
     G::ResolveError: Into<Cmd::Error>,
 {
     visit_any::<G, _>(
-        &price.amount.symbol().clone(),
+        &price.amount.ticker().clone(),
         CVisitor {
             price_dto: price,
             cmd,
@@ -40,7 +40,7 @@ where
         C: Currency,
     {
         visit_any::<G, _>(
-            &self.price_dto.amount_quote.symbol().clone(),
+            &self.price_dto.amount_quote.ticker().clone(),
             QuoteCVisitor {
                 base: Coin::<C>::try_from(self.price_dto.amount)
                     .expect("Got different currency in visitor!"),

@@ -23,7 +23,7 @@ use crate::{
 const CREATOR: &str = "creator";
 const LPP_ADDR: &str = "test";
 type TheCurrency = Usdc;
-const DENOM: &str = TheCurrency::SYMBOL;
+const DENOM: &str = TheCurrency::TICKER;
 const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
 
 fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::InstantiateMsg {

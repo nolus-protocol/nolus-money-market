@@ -39,14 +39,14 @@ impl Error {
     where
         C: Currency,
     {
-        Self::NoFunds(C::SYMBOL.into())
+        Self::NoFunds(C::TICKER.into())
     }
 
     pub fn unexpected_funds<C>() -> Self
     where
         C: Currency,
     {
-        Self::UnexpectedFunds(C::SYMBOL.into())
+        Self::UnexpectedFunds(C::TICKER.into())
     }
 }
 

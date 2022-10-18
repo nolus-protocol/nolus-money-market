@@ -29,7 +29,7 @@ fn create_coin(amount: u128) -> LeaseCoin {
 
 fn create_test_case() -> TestCase {
     let mut test_case = TestCase::with_reserve(
-        Lpn::SYMBOL,
+        Lpn::TICKER,
         &[
             to_cosmwasm(LeaseCoin::new(10_000_000_000_000_000_000_000_000_000)),
             to_cosmwasm(LppCoin::new(10_000_000_000_000_000_000_000_000_000)),
@@ -39,7 +39,7 @@ fn create_test_case() -> TestCase {
         &Addr::unchecked("user"),
         vec![to_cosmwasm(create_coin(1_000_000_000_000_000_000_000_000))],
     );
-    test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000, Lpn::SYMBOL);
+    test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000, Lpn::TICKER);
     test_case.init_timealarms_with_funds(5_000_000);
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -70,7 +70,7 @@ fn try_open_lease(
         Addr::unchecked(USER),
         test_case.leaser_addr.clone().unwrap(),
         &leaser::msg::ExecuteMsg::OpenLease {
-            currency: LeaseCurrency::SYMBOL.into(),
+            currency: LeaseCurrency::TICKER.into(),
         },
         &[to_cosmwasm(value)],
     )
@@ -352,7 +352,7 @@ fn liquidation_warning(price: PriceDTO, percent: Percent, level: &str) {
         .find(|attribute| attribute.key == "lease-asset")
         .expect("Lease Asset attribute not present!");
 
-    assert_eq!(&attribute.value, price.quote().symbol());
+    assert_eq!(&attribute.value, price.quote().ticker());
 }
 
 #[test]

@@ -79,7 +79,7 @@ impl<'a> BankAccountView for BankView<'a> {
     where
         C: Currency,
     {
-        let coin = self.querier.query_balance(self.addr, C::SYMBOL)?;
+        let coin = self.querier.query_balance(self.addr, C::TICKER)?;
         from_cosmwasm_impl(coin)
     }
 }

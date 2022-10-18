@@ -29,18 +29,18 @@ impl Group for PaymentGroup {
         Self::ResolveError: Into<V::Error>,
     {
         match symbol {
-            Usdc::SYMBOL => visitor.on::<Usdc>(),
-            Osmo::SYMBOL => visitor.on::<Osmo>(),
-            Atom::SYMBOL => visitor.on::<Atom>(),
-            Nls::SYMBOL => visitor.on::<Nls>(),
+            Usdc::TICKER => visitor.on::<Usdc>(),
+            Osmo::TICKER => visitor.on::<Osmo>(),
+            Atom::TICKER => visitor.on::<Atom>(),
+            Nls::TICKER => visitor.on::<Nls>(),
             #[cfg(feature = "testing")]
-            TestCurrencyA::SYMBOL => visitor.on::<TestCurrencyA>(),
+            TestCurrencyA::TICKER => visitor.on::<TestCurrencyA>(),
             #[cfg(feature = "testing")]
-            TestCurrencyB::SYMBOL => visitor.on::<TestCurrencyB>(),
+            TestCurrencyB::TICKER => visitor.on::<TestCurrencyB>(),
             #[cfg(feature = "testing")]
-            TestCurrencyC::SYMBOL => visitor.on::<TestCurrencyC>(),
+            TestCurrencyC::TICKER => visitor.on::<TestCurrencyC>(),
             #[cfg(feature = "testing")]
-            TestCurrencyD::SYMBOL => visitor.on::<TestCurrencyD>(),
+            TestCurrencyD::TICKER => visitor.on::<TestCurrencyD>(),
             _ => Err(Error::NotInCurrencyGroup(symbol.into(), DESCR.into()).into()),
         }
     }

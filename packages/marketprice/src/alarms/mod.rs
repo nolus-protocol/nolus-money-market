@@ -35,9 +35,9 @@ impl Alarm {
     {
         let below = below.into();
         let above = above.map(Into::into);
-        let currency: SymbolOwned = below.base().symbol().into();
+        let currency: SymbolOwned = below.base().ticker().into();
         debug_assert!(
-            above.is_none() || above.as_ref().map(|price| price.base().symbol()) == Some(&currency)
+            above.is_none() || above.as_ref().map(|price| price.base().ticker()) == Some(&currency)
         );
         Self {
             currency,

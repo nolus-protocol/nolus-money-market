@@ -392,7 +392,7 @@ mod test {
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
-        Config::new(TheCurrency::SYMBOL.into(), lease_code_id)
+        Config::new(TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -481,7 +481,7 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        Config::new(TheCurrency::SYMBOL.into(), lease_code_id)
+        Config::new(TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -503,7 +503,7 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        Config::new(TheCurrency::SYMBOL.into(), lease_code_id)
+        Config::new(TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -525,7 +525,7 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        Config::new(TheCurrency::SYMBOL.into(), lease_code_id)
+        Config::new(TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -581,7 +581,7 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        Config::new(TheCurrency::SYMBOL.into(), lease_code_id)
+        Config::new(TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -709,6 +709,6 @@ mod test {
     }
 
     fn coin_cw(amount: u128) -> CwCoin {
-        cosmwasm_std::coin(amount, TheCurrency::SYMBOL)
+        cosmwasm_std::coin(amount, TheCurrency::TICKER)
     }
 }

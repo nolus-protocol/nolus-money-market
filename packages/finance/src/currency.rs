@@ -12,7 +12,7 @@ pub type SymbolOwned = String;
 // satisfy trait bounds with regards of the lifetimes
 // Foe example, https://stackoverflow.com/questions/70774093/generic-type-that-implements-deserializeowned
 pub trait Currency: Copy + Ord + Default + Debug + 'static {
-    const SYMBOL: SymbolStatic;
+    const TICKER: SymbolStatic;
 }
 
 pub trait Member<G>
@@ -52,10 +52,10 @@ where
     C: Currency,
     Error: Into<V::Error>,
 {
-    if symbol == C::SYMBOL {
+    if symbol == C::TICKER {
         visitor.on()
     } else {
-        Err(Error::UnexpectedCurrency(symbol.into(), C::SYMBOL.into()).into())
+        Err(Error::UnexpectedCurrency(symbol.into(), C::TICKER.into()).into())
     }
 }
 
@@ -147,10 +147,10 @@ mod test {
     #[test]
     fn visit_any() {
         let v_usdc = Expect::<Usdc>::new();
-        assert_eq!(Ok(true), super::visit_any(Usdc::SYMBOL, v_usdc));
+        assert_eq!(Ok(true), super::visit_any(Usdc::TICKER, v_usdc));
 
         let v_nls = Expect::<Nls>::new();
-        assert_eq!(Ok(true), super::visit_any(Nls::SYMBOL, v_nls));
+        assert_eq!(Ok(true), super::visit_any(Nls::TICKER, v_nls));
     }
 
     #[test]
@@ -166,10 +166,10 @@ mod test {
     #[test]
     fn visit_one() {
         let v_usdc = Expect::<Usdc>::new();
-        assert_eq!(super::visit(Usdc::SYMBOL, v_usdc), Ok(true));
+        assert_eq!(super::visit(Usdc::TICKER, v_usdc), Ok(true));
 
         let v_nls = Expect::<Nls>::new();
-        assert_eq!(super::visit(Nls::SYMBOL, v_nls), Ok(true));
+        assert_eq!(super::visit(Nls::TICKER, v_nls), Ok(true));
     }
 
     #[test]
@@ -178,7 +178,7 @@ mod test {
 
         assert_eq!(
             super::visit::<Nls, _>(DENOM, ExpectUnknownCurrency),
-            Err(Error::UnexpectedCurrency(DENOM.into(), Nls::SYMBOL.into())),
+            Err(Error::UnexpectedCurrency(DENOM.into(), Nls::TICKER.into())),
         );
     }
 }

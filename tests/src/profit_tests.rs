@@ -9,7 +9,7 @@ use crate::common::{test_case::TestCase, ADMIN, USER};
 
 #[test]
 fn on_alarm_from_unknown() {
-    let denom = Usdc::SYMBOL;
+    let denom = Usdc::TICKER;
     let user_addr = Addr::unchecked(USER);
 
     let mut test_case = TestCase::new(denom);
@@ -44,7 +44,7 @@ fn on_alarm_from_unknown() {
 #[test]
 #[should_panic(expected = "EmptyBalance. No profit to dispatch")]
 fn on_alarm_zero_balance() {
-    let denom = Usdc::SYMBOL;
+    let denom = Usdc::TICKER;
     let time_oracle_addr = Addr::unchecked("time");
 
     let mut test_case = TestCase::new(denom);
@@ -64,7 +64,7 @@ fn on_alarm_zero_balance() {
 
 #[test]
 fn on_alarm_transfer() {
-    let denom = Nls::SYMBOL;
+    let denom = Nls::TICKER;
     let time_oracle_addr = Addr::unchecked("time");
 
     let mut test_case = TestCase::new(denom);
@@ -122,7 +122,7 @@ fn on_alarm_transfer() {
             ("at", test_case.app.block_info().time.nanos().to_string()),
             ("idx", String::from("0")),
             ("profit-amount-amount", String::from("100")),
-            ("profit-amount-symbol", Nls::SYMBOL.to_string())
+            ("profit-amount-symbol", Nls::TICKER.to_string())
         ]
     );
     let profit_exec = &res.events[2];
@@ -138,7 +138,7 @@ fn on_alarm_transfer() {
                 "sender",
                 test_case.profit_addr.as_ref().unwrap().to_string()
             ),
-            ("amount", format!("{}{}", 100, Nls::SYMBOL))
+            ("amount", format!("{}{}", 100, Nls::TICKER))
         ]
     );
     let profit_exec = &res.events[3];

@@ -55,7 +55,7 @@ fn feed_direct_price() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::Prices {
-            currencies: HashSet::from([TestCurrencyD::SYMBOL.to_string()]),
+            currencies: HashSet::from([TestCurrencyD::TICKER.to_string()]),
         },
     )
     .unwrap();
@@ -91,7 +91,7 @@ fn feed_indirect_price() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::Price {
-            currency: TestCurrencyA::SYMBOL.to_string(),
+            currency: TestCurrencyA::TICKER.to_string(),
         },
     )
     .unwrap();
@@ -125,18 +125,18 @@ fn feed_prices_unsupported_pairs() {
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct X;
     impl Currency for X {
-        const SYMBOL: SymbolStatic = "X";
+        const TICKER: SymbolStatic = "X";
     }
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct C;
     impl Currency for C {
-        const SYMBOL: SymbolStatic = "C";
+        const TICKER: SymbolStatic = "C";
     }
 
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct D;
     impl Currency for D {
-        const SYMBOL: SymbolStatic = "D";
+        const TICKER: SymbolStatic = "D";
     }
 
     let prices = vec![

@@ -139,7 +139,7 @@ impl LppLenderRef {
     {
         Self {
             addr: Addr::unchecked(addr),
-            currency: Lpn::SYMBOL.into(),
+            currency: Lpn::TICKER.into(),
             open_loan_req_id,
         }
     }
@@ -255,7 +255,7 @@ mod test {
         let addr = Addr::unchecked("defd2r2");
         let lpp = LppLenderRef {
             addr: addr.clone(),
-            currency: ToOwned::to_owned(Nls::SYMBOL),
+            currency: ToOwned::to_owned(Nls::TICKER),
             open_loan_req_id: OPEN_LOAN_REQ_ID,
         };
         let borrow_amount = Coin::<Nls>::new(10);

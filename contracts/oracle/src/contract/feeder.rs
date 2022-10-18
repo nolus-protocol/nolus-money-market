@@ -133,7 +133,7 @@ mod tests {
     #[should_panic(expected = "Unauthorized")]
     fn register_unauthorized() {
         let (mut deps, _) = setup_test(dummy_default_instantiate_msg());
-        let info = mock_info("USER", &coins(1000, Nls::SYMBOL));
+        let info = mock_info("USER", &coins(1000, Nls::TICKER));
 
         // register new feeder address
         register(deps.as_mut(), &info, "addr0000").unwrap();

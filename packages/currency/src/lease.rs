@@ -10,14 +10,14 @@ use crate::lpn::Usdc;
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Atom {}
 impl Currency for Atom {
-    const SYMBOL: SymbolStatic = "ibc/uh8328hffw";
+    const TICKER: SymbolStatic = "ibc/uh8328hffw";
 }
 impl Member<LeaseGroup> for Atom {}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Osmo {}
 impl Currency for Osmo {
-    const SYMBOL: SymbolStatic = "ibc/akskvnsf8sfu";
+    const TICKER: SymbolStatic = "ibc/akskvnsf8sfu";
 }
 impl Member<LeaseGroup> for Osmo {}
 
@@ -37,9 +37,9 @@ impl Group for LeaseGroup {
         Error: Into<V::Error>,
     {
         match symbol {
-            Atom::SYMBOL => visitor.on::<Atom>(),
-            Osmo::SYMBOL => visitor.on::<Osmo>(),
-            Usdc::SYMBOL => visitor.on::<Usdc>(),
+            Atom::TICKER => visitor.on::<Atom>(),
+            Osmo::TICKER => visitor.on::<Osmo>(),
+            Usdc::TICKER => visitor.on::<Usdc>(),
             _ => Err(Error::NotInCurrencyGroup(symbol.into(), DESCR.into()).into()),
         }
     }

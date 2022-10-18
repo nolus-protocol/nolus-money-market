@@ -60,7 +60,7 @@ pub mod treasury_wrapper;
 
 pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
-pub const NATIVE_DENOM: &str = Nls::SYMBOL;
+pub const NATIVE_DENOM: &str = Nls::TICKER;
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 struct MockResponse {}

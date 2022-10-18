@@ -71,7 +71,7 @@ where
     ExpC: Currency,
 {
     ContractError::CurrencyMismatch {
-        expected: ExpC::SYMBOL.into(),
+        expected: ExpC::TICKER.into(),
         found,
     }
 }
@@ -81,7 +81,7 @@ where
     C: Currency,
 {
     ContractError::UnsupportedCurrency {
-        base: C::SYMBOL.into(),
+        base: C::TICKER.into(),
         unsupported: unsupported.into(),
     }
 }

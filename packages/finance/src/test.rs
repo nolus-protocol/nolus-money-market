@@ -23,7 +23,7 @@ pub mod currency {
     )]
     pub struct Usdc;
     impl Currency for Usdc {
-        const SYMBOL: SymbolStatic = "uusdc";
+        const TICKER: SymbolStatic = "uusdc";
     }
     impl Member<TestCurrencies> for Usdc {}
     impl Member<TestExtraCurrencies> for Usdc {}
@@ -33,7 +33,7 @@ pub mod currency {
     )]
     pub struct Nls;
     impl Currency for Nls {
-        const SYMBOL: SymbolStatic = "unls";
+        const TICKER: SymbolStatic = "unls";
     }
     impl Member<TestCurrencies> for Nls {}
     impl Member<TestExtraCurrencies> for Nls {}
@@ -43,7 +43,7 @@ pub mod currency {
     )]
     pub struct Dai;
     impl Currency for Dai {
-        const SYMBOL: SymbolStatic = "udai";
+        const TICKER: SymbolStatic = "udai";
     }
     impl Member<TestExtraCurrencies> for Dai {}
 
@@ -58,8 +58,8 @@ pub mod currency {
             Error: Into<V::Error>,
         {
             match symbol {
-                Usdc::SYMBOL => visitor.on::<Usdc>(),
-                Nls::SYMBOL => visitor.on::<Nls>(),
+                Usdc::TICKER => visitor.on::<Usdc>(),
+                Nls::TICKER => visitor.on::<Nls>(),
                 _ => Err(Error::NotInCurrencyGroup(symbol.into(), DESCR.into()).into()),
             }
         }
@@ -76,9 +76,9 @@ pub mod currency {
             Error: Into<V::Error>,
         {
             match symbol {
-                Usdc::SYMBOL => visitor.on::<Usdc>(),
-                Nls::SYMBOL => visitor.on::<Nls>(),
-                Dai::SYMBOL => visitor.on::<Dai>(),
+                Usdc::TICKER => visitor.on::<Usdc>(),
+                Nls::TICKER => visitor.on::<Nls>(),
+                Dai::TICKER => visitor.on::<Dai>(),
                 _ => Err(Error::NotInCurrencyGroup(symbol.into(), DESCR_EXTRA.into()).into()),
             }
         }

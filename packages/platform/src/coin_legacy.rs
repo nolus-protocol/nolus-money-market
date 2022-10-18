@@ -27,7 +27,7 @@ pub(crate) fn to_cosmwasm_impl<C>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: Currency,
 {
-    CosmWasmCoin::new(coin.into(), C::SYMBOL)
+    CosmWasmCoin::new(coin.into(), C::TICKER)
 }
 
 pub(crate) fn from_cosmwasm_any_impl<G, V>(
@@ -90,7 +90,7 @@ fn from_cosmwasm_internal<C>(coin: &CosmWasmCoin) -> Coin<C>
 where
     C: Currency,
 {
-    debug_assert_eq!(C::SYMBOL, coin.denom);
+    debug_assert_eq!(C::TICKER, coin.denom);
     Coin::new(coin.amount.into())
 }
 
@@ -116,28 +116,28 @@ mod test {
 
     #[test]
     fn from_cosmwasm() {
-        let c1 = from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Nls::SYMBOL));
+        let c1 = from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Nls::TICKER));
         assert_eq!(Ok(Coin::<Nls>::new(12)), c1);
     }
     #[test]
     fn from_cosmwasm_unexpected() {
-        let c1 = from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Usdc::SYMBOL));
+        let c1 = from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Usdc::TICKER));
 
         assert_eq!(
             c1,
             Err(Error::Finance(finance::error::Error::UnexpectedCurrency(
-                Usdc::SYMBOL.into(),
-                Nls::SYMBOL.into()
+                Usdc::TICKER.into(),
+                Nls::TICKER.into()
             ))),
         );
 
-        let c2 = from_cosmwasm_impl::<Usdc>(CosmWasmCoin::new(12, Nls::SYMBOL));
+        let c2 = from_cosmwasm_impl::<Usdc>(CosmWasmCoin::new(12, Nls::TICKER));
 
         assert_eq!(
             c2,
             Err(Error::Finance(finance::error::Error::UnexpectedCurrency(
-                Nls::SYMBOL.into(),
-                Usdc::SYMBOL.into(),
+                Nls::TICKER.into(),
+                Usdc::TICKER.into(),
             ))),
         );
     }
@@ -146,11 +146,11 @@ mod test {
     fn to_cosmwasm() {
         let amount = 326;
         assert_eq!(
-            CosmWasmCoin::new(amount, Nls::SYMBOL),
+            CosmWasmCoin::new(amount, Nls::TICKER),
             to_cosmwasm_impl(Coin::<Nls>::new(amount))
         );
         assert_eq!(
-            CosmWasmCoin::new(amount, Usdc::SYMBOL),
+            CosmWasmCoin::new(amount, Usdc::TICKER),
             to_cosmwasm_impl(Coin::<Usdc>::new(amount))
         );
     }

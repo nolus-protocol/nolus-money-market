@@ -9,7 +9,7 @@ where
     S: Serializer,
     C: Currency,
 {
-    serializer.serialize_str(C::SYMBOL)
+    serializer.serialize_str(C::TICKER)
 }
 pub fn deserialize<'de, D, C>(deserializer: D) -> Result<PhantomData<C>, D::Error>
 where
@@ -17,11 +17,11 @@ where
     C: Currency,
 {
     let symbol = String::deserialize(deserializer)?;
-    if symbol != C::SYMBOL {
+    if symbol != C::TICKER {
         Err(Error::custom(format!(
             "invalid type: found: {}, expected: {}",
             symbol,
-            C::SYMBOL
+            C::TICKER
         )))
     } else {
         Ok(PhantomData::<C>)
@@ -44,17 +44,17 @@ mod test {
 
     #[test]
     fn serialize_deserialize() {
-        serialize_deserialize_coin::<Nls>(u128::MIN, r#"{"amount":"0","symbol":"unls"}"#);
-        serialize_deserialize_coin::<Nls>(123, r#"{"amount":"123","symbol":"unls"}"#);
+        serialize_deserialize_coin::<Nls>(u128::MIN, r#"{"amount":"0","ticker":"unls"}"#);
+        serialize_deserialize_coin::<Nls>(123, r#"{"amount":"123","ticker":"unls"}"#);
         serialize_deserialize_coin::<Nls>(
             u128::MAX,
-            r#"{"amount":"340282366920938463463374607431768211455","symbol":"unls"}"#,
+            r#"{"amount":"340282366920938463463374607431768211455","ticker":"unls"}"#,
         );
-        serialize_deserialize_coin::<Usdc>(u128::MIN, r#"{"amount":"0","symbol":"uusdc"}"#);
-        serialize_deserialize_coin::<Usdc>(7368953, r#"{"amount":"7368953","symbol":"uusdc"}"#);
+        serialize_deserialize_coin::<Usdc>(u128::MIN, r#"{"amount":"0","ticker":"uusdc"}"#);
+        serialize_deserialize_coin::<Usdc>(7368953, r#"{"amount":"7368953","ticker":"uusdc"}"#);
         serialize_deserialize_coin::<Usdc>(
             u128::MAX,
-            r#"{"amount":"340282366920938463463374607431768211455","symbol":"uusdc"}"#,
+            r#"{"amount":"340282366920938463463374607431768211455","ticker":"uusdc"}"#,
         );
     }
 
@@ -92,7 +92,7 @@ mod test {
         };
         serialize_deserialize_impl(
             coin_container,
-            r#"{"coin":{"amount":"10","symbol":"uusdc"}}"#,
+            r#"{"coin":{"amount":"10","ticker":"uusdc"}}"#,
         );
     }
 

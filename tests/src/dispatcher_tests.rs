@@ -13,7 +13,7 @@ use crate::common::{
 #[test]
 #[should_panic(expected = "Zero Reward")]
 fn on_alarm_zero_reward() {
-    let denom = Usdc::SYMBOL;
+    let denom = Usdc::TICKER;
 
     let user = Addr::unchecked(USER);
     let mut test_case = TestCase::new(denom);
@@ -48,7 +48,7 @@ fn on_alarm_zero_reward() {
 
 #[test]
 fn on_alarm() {
-    let denom = Usdc::SYMBOL;
+    let denom = Usdc::TICKER;
 
     let lender = Addr::unchecked(USER);
 
@@ -81,11 +81,11 @@ fn on_alarm() {
     test_case.send_funds(&test_case.timealarms.clone().unwrap(), coins(500, denom));
 
     assert_eq!(
-        CwCoin::new(0, Nls::SYMBOL),
+        CwCoin::new(0, Nls::TICKER),
         test_case
             .app
             .wrap()
-            .query_balance(test_case.lpp_addr.clone().unwrap(), Nls::SYMBOL)
+            .query_balance(test_case.lpp_addr.clone().unwrap(), Nls::TICKER)
             .unwrap()
     );
 
@@ -138,7 +138,7 @@ fn on_alarm() {
                 test_case.dispatcher_addr.clone().unwrap().to_string()
             ),
             ("rewards-amount", String::from("11")),
-            ("rewards-symbol", String::from(Nls::SYMBOL)),
+            ("rewards-symbol", String::from(Nls::TICKER)),
             ("height", test_case.app.block_info().height.to_string()),
             ("at", test_case.app.block_info().time.nanos().to_string()),
             ("idx", 0.to_string()),
@@ -225,7 +225,7 @@ fn on_alarm() {
 #[test]
 #[should_panic(expected = "Unauthorized")]
 fn test_config_unauthorized() {
-    let denom = Usdc::SYMBOL;
+    let denom = Usdc::TICKER;
     let user_addr = Addr::unchecked(USER);
     let mut test_case = TestCase::new(denom);
     test_case
@@ -260,7 +260,7 @@ fn test_config_unauthorized() {
 
 #[test]
 fn test_config() {
-    let denom = Usdc::SYMBOL;
+    let denom = Usdc::TICKER;
     let user_addr = Addr::unchecked(ADMIN);
     let mut test_case = TestCase::new(denom);
     test_case

@@ -41,7 +41,7 @@ impl MarketOracleWrapper {
             base_asset: base_currency.to_string(),
             price_feed_period_secs: 60,
             expected_feeders: Percent::from_percent(1),
-            currency_paths: vec![vec![NATIVE_DENOM.to_string(), Usdc::SYMBOL.to_string()]],
+            currency_paths: vec![vec![NATIVE_DENOM.to_string(), Usdc::TICKER.to_string()]],
             timealarms_addr: timealarms_addr.to_string(),
         };
 

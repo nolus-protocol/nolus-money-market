@@ -69,7 +69,7 @@ where
             .iter()
             .filter(|price| {
                 supported_pairs.iter().any(|(base, quote)| {
-                    price.base().symbol() == base && price.quote().symbol() == quote
+                    price.base().ticker() == base && price.quote().ticker() == quote
                 })
             })
             .map(|p| p.to_owned())

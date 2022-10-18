@@ -9,5 +9,5 @@ use sdk::schemars::{self, JsonSchema};
 pub struct NLpn;
 impl Currency for NLpn {
     // should not be visible
-    const SYMBOL: SymbolStatic = "nlpn";
+    const TICKER: SymbolStatic = "nlpn";
 }

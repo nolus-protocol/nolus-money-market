@@ -17,7 +17,7 @@ use super::Coin;
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CoinDTO {
     amount: Amount,
-    symbol: SymbolOwned,
+    ticker: SymbolOwned,
 }
 
 impl CoinDTO {
@@ -25,8 +25,8 @@ impl CoinDTO {
         self.amount
     }
 
-    pub const fn symbol(&self) -> &SymbolOwned {
-        &self.symbol
+    pub const fn ticker(&self) -> &SymbolOwned {
+        &self.ticker
     }
 }
 
@@ -37,10 +37,10 @@ where
     type Error = Error;
 
     fn try_from(coin: CoinDTO) -> Result<Self, Self::Error> {
-        if C::SYMBOL == coin.symbol {
+        if C::TICKER == coin.ticker {
             Ok(Self::new(coin.amount))
         } else {
-            Err(Error::UnexpectedCurrency(coin.symbol, C::SYMBOL.into()))
+            Err(Error::UnexpectedCurrency(coin.ticker, C::TICKER.into()))
         }
     }
 }
@@ -52,7 +52,7 @@ where
     fn from(coin: Coin<C>) -> Self {
         Self {
             amount: coin.amount,
-            symbol: C::SYMBOL.into(),
+            ticker: C::TICKER.into(),
         }
     }
 }
@@ -69,7 +69,7 @@ mod test {
     #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
     struct MyTestCurrency;
     impl Currency for MyTestCurrency {
-        const SYMBOL: SymbolStatic = "qwerty";
+        const TICKER: SymbolStatic = "qwerty";
     }
 
     #[test]

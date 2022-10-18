@@ -138,12 +138,12 @@ pub mod tests {
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct BTH;
     impl Currency for BTH {
-        const SYMBOL: SymbolStatic = "BTH";
+        const TICKER: SymbolStatic = "BTH";
     }
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct ETH;
     impl Currency for ETH {
-        const SYMBOL: SymbolStatic = "ETH";
+        const TICKER: SymbolStatic = "ETH";
     }
 
     #[test]
@@ -195,7 +195,7 @@ pub mod tests {
         #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
         pub struct OtherCoin;
         impl Currency for OtherCoin {
-            const SYMBOL: SymbolStatic = "OtherCoin";
+            const TICKER: SymbolStatic = "OtherCoin";
         }
 
         let hooks = PriceHooks::new("hooks", "hooks_sequence");

@@ -8,5 +8,5 @@ use sdk::schemars::{self, JsonSchema};
 )]
 pub struct Nls;
 impl Currency for Nls {
-    const SYMBOL: SymbolStatic = "unls";
+    const TICKER: SymbolStatic = "unls";
 }

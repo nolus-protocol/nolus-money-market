@@ -46,21 +46,21 @@ pub(crate) fn dummy_instantiate_msg(
 
 pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
     dummy_instantiate_msg(
-        Usdc::SYMBOL.to_string(),
+        Usdc::TICKER.to_string(),
         60,
         Percent::from_percent(50),
         vec![
             vec![
-                TestCurrencyA::SYMBOL.to_string(),
-                TestCurrencyB::SYMBOL.to_string(),
-                TestCurrencyC::SYMBOL.to_string(),
-                Usdc::SYMBOL.to_string(),
+                TestCurrencyA::TICKER.to_string(),
+                TestCurrencyB::TICKER.to_string(),
+                TestCurrencyC::TICKER.to_string(),
+                Usdc::TICKER.to_string(),
             ],
-            vec![TestCurrencyD::SYMBOL.to_string(), Usdc::SYMBOL.to_string()],
+            vec![TestCurrencyD::TICKER.to_string(), Usdc::TICKER.to_string()],
             vec![
-                Nls::SYMBOL.to_string(),
-                TestCurrencyD::SYMBOL.to_string(),
-                Usdc::SYMBOL.to_string(),
+                Nls::TICKER.to_string(),
+                TestCurrencyD::TICKER.to_string(),
+                Usdc::TICKER.to_string(),
             ],
         ],
         "timealarms".to_string(),
@@ -98,7 +98,7 @@ pub(crate) fn setup_test(
     msg: InstantiateMsg,
 ) -> (OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo) {
     let mut deps = mock_dependencies();
-    let info = mock_info(CREATOR, &coins(1000, Nls::SYMBOL));
+    let info = mock_info(CREATOR, &coins(1000, Nls::TICKER));
     let res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
     assert_eq!(0, res.messages.len());
 

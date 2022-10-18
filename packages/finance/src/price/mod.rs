@@ -188,7 +188,7 @@ mod test {
     #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
     struct QuoteQuoteCurrency {}
     impl Currency for QuoteQuoteCurrency {
-        const SYMBOL: crate::currency::SymbolStatic = "mycutecoin";
+        const TICKER: crate::currency::SymbolStatic = "mycutecoin";
     }
     type QuoteQuoteCoin = CoinT<QuoteQuoteCurrency>;
     type QuoteCoin = CoinT<Usdc>;

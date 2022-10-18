@@ -145,7 +145,7 @@ mod test {
         assert!(liability.invariant_held().is_err());
         let lease = NewLeaseForm {
             customer: "ss1s1".into(),
-            currency: ToOwned::to_owned(Osmo::SYMBOL),
+            currency: Osmo::TICKER.into(),
             liability,
             loan: LoanForm {
                 annual_margin_interest: Percent::from_percent(0),
@@ -193,7 +193,7 @@ mod test {
                 to_binary(&ProfitConfigResponse { cadence_hours: 2 })
             } else if contract_addr == ORACLE_ADDR {
                 to_binary(&OracleConfigResponse {
-                    base_asset: Lpn::SYMBOL.into(),
+                    base_asset: Lpn::TICKER.into(),
                     expected_feeders: Percent::from_percent(50),
                     owner: Addr::unchecked("3d3"),
                     price_feed_period: Duration::from_secs(12),

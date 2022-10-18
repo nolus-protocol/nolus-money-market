@@ -130,8 +130,8 @@ impl<'m> PriceFeeds<'m> {
             self.0.update(
                 storage,
                 (
-                    price_dto.base().symbol().to_string(),
-                    price_dto.quote().symbol().to_string(),
+                    price_dto.base().ticker().to_string(),
+                    price_dto.quote().ticker().to_string(),
                 ),
                 update_market_price,
             )?;

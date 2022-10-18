@@ -12,7 +12,7 @@ use crate::payment::PaymentGroup;
 pub struct TestCurrencyA;
 
 impl Currency for TestCurrencyA {
-    const SYMBOL: SymbolStatic = "TestCurrencyA";
+    const TICKER: SymbolStatic = "TestCurrencyA";
 }
 
 #[derive(
@@ -22,7 +22,7 @@ impl Currency for TestCurrencyA {
 pub struct TestCurrencyB;
 
 impl Currency for TestCurrencyB {
-    const SYMBOL: SymbolStatic = "TestCurrencyB";
+    const TICKER: SymbolStatic = "TestCurrencyB";
 }
 
 #[derive(
@@ -32,7 +32,7 @@ impl Currency for TestCurrencyB {
 pub struct TestCurrencyC;
 
 impl Currency for TestCurrencyC {
-    const SYMBOL: SymbolStatic = "TestCurrencyC";
+    const TICKER: SymbolStatic = "TestCurrencyC";
 }
 
 #[derive(
@@ -42,7 +42,7 @@ impl Currency for TestCurrencyC {
 pub struct TestCurrencyD;
 
 impl Currency for TestCurrencyD {
-    const SYMBOL: SymbolStatic = "TestCurrencyD";
+    const TICKER: SymbolStatic = "TestCurrencyD";
 }
 
 impl Member<PaymentGroup> for TestCurrencyA {}

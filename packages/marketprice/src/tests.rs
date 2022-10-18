@@ -67,8 +67,8 @@ fn marketprice_add_feed_expect_err() {
     let ts = Timestamp::from_seconds(now.as_secs());
     let params = Parameters::new(MINUTE, 50, ts);
     let path = vec![
-        TestCurrencyA::SYMBOL.to_string(),
-        TestCurrencyB::SYMBOL.to_string(),
+        TestCurrencyA::TICKER.to_string(),
+        TestCurrencyB::TICKER.to_string(),
     ];
     let expected_err = market.price(&deps.storage, params, path).unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
@@ -127,8 +127,8 @@ fn marketprice_add_feed() {
             &deps.storage,
             query,
             vec![
-                TestCurrencyA::SYMBOL.to_string(),
-                TestCurrencyB::SYMBOL.to_string(),
+                TestCurrencyA::TICKER.to_string(),
+                TestCurrencyB::TICKER.to_string(),
             ],
         )
         .unwrap_err();
@@ -141,8 +141,8 @@ fn marketprice_add_feed() {
             &deps.storage,
             query,
             vec![
-                TestCurrencyA::SYMBOL.to_string(),
-                TestCurrencyB::SYMBOL.to_string(),
+                TestCurrencyA::TICKER.to_string(),
+                TestCurrencyB::TICKER.to_string(),
             ],
         )
         .unwrap();
@@ -155,22 +155,22 @@ fn marketprice_follow_the_path() {
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct Den0;
     impl Currency for Den0 {
-        const SYMBOL: SymbolStatic = "Den0";
+        const TICKER: SymbolStatic = "Den0";
     }
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct DenX;
     impl Currency for DenX {
-        const SYMBOL: SymbolStatic = "DenX";
+        const TICKER: SymbolStatic = "DenX";
     }
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct DenZ;
     impl Currency for DenZ {
-        const SYMBOL: SymbolStatic = "DenZ";
+        const TICKER: SymbolStatic = "DenZ";
     }
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct DenC;
     impl Currency for DenC {
-        const SYMBOL: SymbolStatic = "DenC";
+        const TICKER: SymbolStatic = "DenC";
     }
 
     let mut deps = mock_dependencies();
@@ -251,10 +251,10 @@ fn marketprice_follow_the_path() {
             &deps.storage,
             query,
             vec![
-                Atom::SYMBOL.to_string(),
-                Osmo::SYMBOL.to_string(),
-                Nls::SYMBOL.to_string(),
-                Usdc::SYMBOL.to_string(),
+                Atom::TICKER.to_string(),
+                Osmo::TICKER.to_string(),
+                Nls::TICKER.to_string(),
+                Usdc::TICKER.to_string(),
             ],
         )
         .unwrap();
@@ -269,7 +269,7 @@ fn marketprice_follow_the_path() {
         .price(
             &deps.storage,
             query,
-            vec![Atom::SYMBOL.to_string(), Usdc::SYMBOL.to_string()],
+            vec![Atom::TICKER.to_string(), Usdc::TICKER.to_string()],
         )
         .unwrap_err();
     assert_eq!(price_resp, PriceFeedsError::NoPrice());
@@ -281,7 +281,7 @@ fn marketprice_follow_the_path() {
             .price(
                 &deps.storage,
                 query,
-                vec![DenX::SYMBOL.to_string(), Usdc::SYMBOL.to_string()],
+                vec![DenX::TICKER.to_string(), Usdc::TICKER.to_string()],
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice()
@@ -294,7 +294,7 @@ fn marketprice_follow_the_path() {
             .price(
                 &deps.storage,
                 query,
-                vec![DenX::SYMBOL.to_string(), TestCurrencyA::SYMBOL.to_string()]
+                vec![DenX::TICKER.to_string(), TestCurrencyA::TICKER.to_string()]
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice {}

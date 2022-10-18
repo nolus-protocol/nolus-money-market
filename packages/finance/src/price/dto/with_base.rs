@@ -43,7 +43,7 @@ where
     G::ResolveError: Into<Cmd::Error>,
 {
     visit_any::<G, _>(
-        &price.amount_quote.symbol().clone(),
+        &price.amount_quote.ticker().clone(),
         QuoteCVisitor {
             base: Coin::<C>::try_from(price.amount).expect("Got different currency in visitor!"),
             quote_dto: price.amount_quote,

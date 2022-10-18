@@ -94,7 +94,7 @@ mod test {
 
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,
-            TheCurrency::SYMBOL.into(),
+            TheCurrency::TICKER.into(),
             1000u64.into(),
         )
         .unwrap();
@@ -105,10 +105,10 @@ mod test {
         assert_eq!(response, Err(ContractError::NoDeposit {}));
 
         lpp_balance += deposit;
-        let info = mock_info("lender", &[coin(deposit, TheCurrency::SYMBOL)]);
+        let info = mock_info("lender", &[coin(deposit, TheCurrency::TICKER)]);
         deps.querier.update_balance(
             MOCK_CONTRACT_ADDR,
-            vec![coin(lpp_balance, TheCurrency::SYMBOL)],
+            vec![coin(lpp_balance, TheCurrency::TICKER)],
         );
         lender::try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
 

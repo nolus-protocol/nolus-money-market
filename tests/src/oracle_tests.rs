@@ -22,7 +22,7 @@ use crate::common::{
 
 type Currency = Usdc;
 type TheCoin = Coin<Currency>;
-const DENOM: &str = Usdc::SYMBOL;
+const DENOM: &str = Usdc::TICKER;
 
 fn create_coin(amount: u128) -> TheCoin {
     Coin::<Currency>::new(amount)
@@ -232,7 +232,7 @@ fn test_config_update() {
         .query_wasm_smart(
             test_case.oracle.clone().unwrap(),
             &OracleQ::Price {
-                currency: Nls::SYMBOL.to_owned(),
+                currency: Nls::TICKER.to_owned(),
             },
         )
         .unwrap();
@@ -263,7 +263,7 @@ fn test_config_update() {
     let price: Result<PriceDTO, _> = test_case.app.wrap().query_wasm_smart(
         test_case.oracle.clone().unwrap(),
         &OracleQ::Price {
-            currency: Nls::SYMBOL.to_owned(),
+            currency: Nls::TICKER.to_owned(),
         },
     );
 

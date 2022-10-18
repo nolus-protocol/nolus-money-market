@@ -10,7 +10,7 @@ use crate::lease::Atom;
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Usdc;
 impl Currency for Usdc {
-    const SYMBOL: SymbolStatic = "ibc/fj29fj0fj";
+    const TICKER: SymbolStatic = "ibc/fj29fj0fj";
 }
 impl Member<Lpns> for Usdc {}
 
@@ -29,8 +29,8 @@ impl Group for Lpns {
         Self::ResolveError: Into<V::Error>,
     {
         match symbol {
-            Usdc::SYMBOL => visitor.on::<Usdc>(),
-            Atom::SYMBOL => visitor.on::<Atom>(),
+            Usdc::TICKER => visitor.on::<Usdc>(),
+            Atom::TICKER => visitor.on::<Atom>(),
             _ => Err(Error::NotInCurrencyGroup(symbol.into(), DESCR.into()).into()),
         }
     }

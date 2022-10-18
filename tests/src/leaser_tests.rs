@@ -20,14 +20,14 @@ type TheCurrency = Usdc;
 
 #[test]
 fn open_lease() {
-    open_lease_impl(Usdc::SYMBOL);
+    open_lease_impl(Usdc::TICKER);
 }
 
 #[test]
 #[should_panic(expected = "Invalid denom pair")]
 // in single denom version lease can be opened only in the oracle base denom
 fn open_lease_another_currency() {
-    open_lease_impl(Atom::SYMBOL);
+    open_lease_impl(Atom::TICKER);
 }
 
 #[test]
@@ -46,8 +46,8 @@ fn init_lpp_with_unknown_currency() {
 fn open_lease_not_in_lpn_currency() {
     let user_addr = Addr::unchecked(USER);
 
-    let lpn = Usdc::SYMBOL;
-    let lease_currency = Atom::SYMBOL;
+    let lpn = Usdc::TICKER;
+    let lease_currency = Atom::TICKER;
 
     let mut test_case = TestCase::new(lpn);
     test_case.init(&user_addr, coins(500, lpn));
@@ -85,7 +85,7 @@ fn open_multiple_loans() {
     let user_addr = Addr::unchecked(USER);
     let user1_addr = Addr::unchecked("user1");
 
-    const LPN: SymbolStatic = Usdc::SYMBOL;
+    const LPN: SymbolStatic = Usdc::TICKER;
 
     let mut test_case = TestCase::new(LPN);
     test_case.init(&user_addr, coins(500, LPN));
@@ -170,7 +170,7 @@ fn open_multiple_loans() {
 }
 #[test]
 fn test_quote() {
-    const LPN: SymbolStatic = TheCurrency::SYMBOL;
+    const LPN: SymbolStatic = TheCurrency::TICKER;
 
     let user_addr = Addr::unchecked(USER);
     let mut test_case = TestCase::new(LPN);
@@ -230,7 +230,7 @@ fn test_quote() {
 
 #[test]
 fn test_quote_fixed_rate() {
-    const LPN: SymbolStatic = TheCurrency::SYMBOL;
+    const LPN: SymbolStatic = TheCurrency::TICKER;
 
     let user_addr = Addr::unchecked(USER);
     let mut test_case = TestCase::new(LPN);
@@ -284,7 +284,7 @@ fn test_quote_fixed_rate() {
 #[test]
 #[should_panic(expected = "Insufficient balance")]
 fn open_loans_lpp_fails() {
-    const LPN: SymbolStatic = Usdc::SYMBOL;
+    const LPN: SymbolStatic = Usdc::TICKER;
     let user_addr = Addr::unchecked(USER);
 
     fn mock_lpp_execute(

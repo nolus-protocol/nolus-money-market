@@ -37,7 +37,7 @@ impl Controller for RequestLoan {
                 let open_result = self.lpp.execute(OpenLoanResp::new(msg), &deps.querier)?;
 
                 //TODO replace with the actual coin once get the GAMM trx result
-                assert_eq!(self.downpayment.symbol(), open_result.principal.symbol());
+                assert_eq!(self.downpayment.ticker(), open_result.principal.ticker());
                 let amount = self.downpayment.amount() + open_result.principal.amount();
 
                 let lease = self.form.into_lease(
@@ -83,7 +83,7 @@ fn build_emitter(
             "air",
             open_result.annual_interest_rate + dto.loan.annual_margin_interest(),
         )
-        .emit("currency", dto.amount.symbol())
+        .emit("currency", dto.amount.ticker())
         .emit("loan-pool-id", dto.loan.lpp().addr())
         .emit_coin_dto("loan", open_result.principal)
         .emit_coin_dto("downpayment", downpayment)

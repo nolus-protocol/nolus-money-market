@@ -107,7 +107,7 @@ impl LppRef {
     {
         Self {
             addr: Addr::unchecked(addr),
-            currency: Lpn::SYMBOL.into(),
+            currency: Lpn::TICKER.into(),
         }
     }
 }

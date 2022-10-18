@@ -34,7 +34,7 @@ type TheCurrency = Usdc;
 #[test]
 #[should_panic(expected = "Unauthorized contract Id")]
 fn open_loan_unauthorized_contract_id() {
-    let denom = TheCurrency::SYMBOL;
+    let denom = TheCurrency::TICKER;
     let user_addr = Addr::unchecked(USER);
 
     let mut test_case = TestCase::new(denom);
@@ -66,7 +66,7 @@ fn open_loan_unauthorized_contract_id() {
 #[test]
 #[should_panic(expected = "No liquidity")]
 fn open_loan_no_liquidity() {
-    let denom = TheCurrency::SYMBOL;
+    let denom = TheCurrency::TICKER;
     let user_addr = Addr::unchecked(USER);
 
     let mut test_case = TestCase::new(denom);
@@ -106,7 +106,7 @@ fn deposit_and_withdraw() {
     let withdraw_amount_nlpn = 1000u128;
     let rest_nlpn = test_deposit / pushed_price - withdraw_amount_nlpn;
 
-    let denom = TheCurrency::SYMBOL;
+    let denom = TheCurrency::TICKER;
     let admin = Addr::unchecked(ADMIN);
 
     let lender1 = Addr::unchecked("lender1");
@@ -119,10 +119,10 @@ fn deposit_and_withdraw() {
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app, 0, String::new());
     let market_price_oracle = MarketOracleWrapper::default().instantiate(
         &mut app,
-        TheCurrency::SYMBOL,
+        TheCurrency::TICKER,
         time_alarms.as_str(),
     );
-    let treasury = TreasuryWrapper::default().instantiate(&mut app, TheCurrency::SYMBOL);
+    let treasury = TreasuryWrapper::default().instantiate(&mut app, TheCurrency::TICKER);
     let profit = ProfitWrapper::default().instantiate(&mut app, 24, &treasury, &time_alarms);
 
     app.send_tokens(admin.clone(), lender1.clone(), &[coin(init_deposit, denom)])
@@ -324,7 +324,7 @@ fn deposit_and_withdraw() {
 
 #[test]
 fn loan_open_wrong_id() {
-    let denom = TheCurrency::SYMBOL;
+    let denom = TheCurrency::TICKER;
     let admin = Addr::unchecked(ADMIN);
     let lender = Addr::unchecked("lender");
     let hacker = Addr::unchecked("Mallory");
@@ -357,7 +357,7 @@ fn loan_open_wrong_id() {
 fn loan_open_and_repay() {
     const YEAR: u64 = Duration::YEAR.nanos();
 
-    let denom = TheCurrency::SYMBOL;
+    let denom = TheCurrency::TICKER;
     let admin = Addr::unchecked(ADMIN);
     let lender = Addr::unchecked("lender");
     let hacker = Addr::unchecked("Mallory");
@@ -386,7 +386,7 @@ fn loan_open_and_repay() {
     dbg!(interest1);
 
     // net setup
-    let mut app = mock_app(&[coin(app_balance, denom), coin(app_balance, Nls::SYMBOL)]);
+    let mut app = mock_app(&[coin(app_balance, denom), coin(app_balance, Nls::TICKER)]);
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate(&mut app, lease_id.into(), denom, 0);
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app, 0, String::new());
@@ -555,14 +555,14 @@ fn loan_open_and_repay() {
     app.send_tokens(
         admin,
         loan_addr2.clone(),
-        &[coin(repay_interest_part, Nls::SYMBOL)],
+        &[coin(repay_interest_part, Nls::TICKER)],
     )
     .unwrap();
     app.execute_contract(
         loan_addr2,
         lpp.clone(),
         &ExecuteLpp::RepayLoan(),
-        &[coin(repay_interest_part, Nls::SYMBOL)],
+        &[coin(repay_interest_part, Nls::TICKER)],
     )
     .unwrap_err();
 
@@ -661,7 +661,7 @@ fn loan_open_and_repay() {
 fn compare_lpp_states() {
     const YEAR: u64 = Duration::YEAR.nanos();
 
-    let denom = TheCurrency::SYMBOL;
+    let denom = TheCurrency::TICKER;
     let admin = Addr::unchecked(ADMIN);
     let lender = Addr::unchecked("lender");
     let hacker = Addr::unchecked("Mallory");
@@ -688,7 +688,7 @@ fn compare_lpp_states() {
     dbg!(interest1);
 
     // net setup
-    let mut app = mock_app(&[coin(app_balance, denom), coin(app_balance, Nls::SYMBOL)]);
+    let mut app = mock_app(&[coin(app_balance, denom), coin(app_balance, Nls::TICKER)]);
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate(&mut app, lease_id.into(), denom, 0);
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app, 0, String::new());
@@ -857,14 +857,14 @@ fn compare_lpp_states() {
     app.send_tokens(
         admin,
         loan_addr2.clone(),
-        &[coin(repay_interest_part, Nls::SYMBOL)],
+        &[coin(repay_interest_part, Nls::TICKER)],
     )
     .unwrap();
     app.execute_contract(
         loan_addr2,
         lpp.clone(),
         &ExecuteLpp::RepayLoan(),
-        &[coin(repay_interest_part, Nls::SYMBOL)],
+        &[coin(repay_interest_part, Nls::TICKER)],
     )
     .unwrap_err();
 
@@ -975,7 +975,7 @@ fn test_rewards() {
     let lender_reward2 =
         tot_rewards2 * (deposit2 / pushed_price) / (deposit1 + deposit2 / pushed_price);
 
-    let denom = TheCurrency::SYMBOL;
+    let denom = TheCurrency::TICKER;
     let admin = Addr::unchecked(ADMIN);
 
     let lender1 = Addr::unchecked("lender1");
@@ -985,7 +985,7 @@ fn test_rewards() {
     // TODO: any checks for the sender of rewards?
     let treasury = Addr::unchecked("treasury");
 
-    let mut app = mock_app(&[coin(app_balance, denom), coin(app_balance, Nls::SYMBOL)]);
+    let mut app = mock_app(&[coin(app_balance, denom), coin(app_balance, Nls::TICKER)]);
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate(&mut app, lease_id.into(), denom, 0);
 
@@ -996,7 +996,7 @@ fn test_rewards() {
     app.send_tokens(
         admin.clone(),
         treasury.clone(),
-        &[coin(treasury_balance, Nls::SYMBOL)],
+        &[coin(treasury_balance, Nls::TICKER)],
     )
     .unwrap();
 
@@ -1005,7 +1005,7 @@ fn test_rewards() {
         treasury.clone(),
         lpp.clone(),
         &ExecuteLpp::DistributeRewards(),
-        &[coin(tot_rewards0, Nls::SYMBOL)],
+        &[coin(tot_rewards0, Nls::TICKER)],
     )
     .unwrap_err();
 
@@ -1026,7 +1026,7 @@ fn test_rewards() {
         treasury.clone(),
         lpp.clone(),
         &ExecuteLpp::DistributeRewards(),
-        &[coin(tot_rewards1, Nls::SYMBOL)],
+        &[coin(tot_rewards1, Nls::TICKER)],
     )
     .unwrap();
 
@@ -1099,7 +1099,7 @@ fn test_rewards() {
 
     let balance = app
         .wrap()
-        .query_balance(lender1.clone(), Nls::SYMBOL)
+        .query_balance(lender1.clone(), Nls::TICKER)
         .unwrap();
     assert_eq!(balance.amount.u128(), tot_rewards1);
 
@@ -1107,7 +1107,7 @@ fn test_rewards() {
         treasury,
         lpp.clone(),
         &ExecuteLpp::DistributeRewards(),
-        &[coin(tot_rewards2, Nls::SYMBOL)],
+        &[coin(tot_rewards2, Nls::TICKER)],
     )
     .unwrap();
 
@@ -1148,7 +1148,7 @@ fn test_rewards() {
 
     let balance = app
         .wrap()
-        .query_balance(lender1.clone(), Nls::SYMBOL)
+        .query_balance(lender1.clone(), Nls::TICKER)
         .unwrap();
     assert_eq!(balance.amount.u128(), tot_rewards1 + lender_reward1);
 
@@ -1176,6 +1176,6 @@ fn test_rewards() {
         .unwrap();
 
     assert_eq!(resp.rewards, Coin::new(0));
-    let balance = app.wrap().query_balance(recipient, Nls::SYMBOL).unwrap();
+    let balance = app.wrap().query_balance(recipient, Nls::TICKER).unwrap();
     assert_eq!(balance.amount.u128(), lender_reward2);
 }

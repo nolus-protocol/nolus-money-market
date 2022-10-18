@@ -133,7 +133,7 @@ where
 
     fn validate_path(path: &ResolutionPath) -> Result<(), ContractError> {
         if let Some(base) = path.last() {
-            if base != B::SYMBOL || path.len() < 2 {
+            if base != B::TICKER || path.len() < 2 {
                 return Err(ContractError::InvalidResolutionPath(path.clone()));
             }
         } else {
@@ -172,7 +172,7 @@ where
         } else {
             Err(ContractError::InvalidDenomPair(
                 ToOwned::to_owned(query),
-                ToOwned::to_owned(B::SYMBOL),
+                ToOwned::to_owned(B::TICKER),
             ))
         }
     }
@@ -225,7 +225,7 @@ mod tests {
     type TheCurrency = Usdc;
 
     fn test_case() -> Vec<ResolutionPath> {
-        let base = TheCurrency::SYMBOL;
+        let base = TheCurrency::TICKER;
         vec![
             vec!["token0", "token1", "token2", base],
             vec!["token3", "token4", base],
@@ -261,7 +261,7 @@ mod tests {
         let tree = SupportedPairs::<Usdc>::new(paths).unwrap();
 
         let mut resp = tree
-            .load_affected(&("token2".into(), TheCurrency::SYMBOL.into()))
+            .load_affected(&("token2".into(), TheCurrency::TICKER.into()))
             .unwrap();
         resp.sort();
 
@@ -298,8 +298,8 @@ mod tests {
     #[should_panic]
     fn test_wrong_paths() {
         SupportedPairs::<TheCurrency>::new(vec![
-            vec!["token0".into(), "token1".into(), TheCurrency::SYMBOL.into()],
-            vec!["token0".into(), TheCurrency::SYMBOL.into()],
+            vec!["token0".into(), "token1".into(), TheCurrency::TICKER.into()],
+            vec!["token0".into(), TheCurrency::TICKER.into()],
         ])
         .unwrap();
     }
@@ -319,9 +319,9 @@ mod tests {
         let mut expected = vec![
             ("token0", "token1"),
             ("token1", "token2"),
-            ("token2", TheCurrency::SYMBOL),
+            ("token2", TheCurrency::TICKER),
             ("token3", "token4"),
-            ("token4", TheCurrency::SYMBOL),
+            ("token4", TheCurrency::TICKER),
             ("token5", "token1"),
         ];
         expected.sort();
