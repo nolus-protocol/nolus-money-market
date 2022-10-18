@@ -8,5 +8,6 @@ use sdk::schemars::{self, JsonSchema};
 )]
 pub struct Nls;
 impl Currency for Nls {
-    const TICKER: SymbolStatic = "unls";
+    const TICKER: SymbolStatic = "NLS";
+    const BANK_SYMBOL: SymbolStatic = "unls";
 }

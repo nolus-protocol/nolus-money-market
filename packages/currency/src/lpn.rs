@@ -10,7 +10,8 @@ use crate::lease::Atom;
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Usdc;
 impl Currency for Usdc {
-    const TICKER: SymbolStatic = "ibc/fj29fj0fj";
+    const TICKER: SymbolStatic = "USDC";
+    const BANK_SYMBOL: SymbolStatic = "ibc/TBD";
 }
 impl Member<Lpns> for Usdc {}
 

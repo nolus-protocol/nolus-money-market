@@ -161,8 +161,8 @@ mod tests {
         let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
         let test_vec = vec![
-            vec![TestCurrencyA::TICKER.to_string(), Usdc::TICKER.to_string()],
             vec![Nls::TICKER.to_string(), Usdc::TICKER.to_string()],
+            vec![TestCurrencyA::TICKER.to_string(), Usdc::TICKER.to_string()],
         ];
 
         let msg = ExecuteMsg::CurrencyPaths {

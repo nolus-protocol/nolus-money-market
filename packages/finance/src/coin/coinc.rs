@@ -70,6 +70,7 @@ mod test {
     struct MyTestCurrency;
     impl Currency for MyTestCurrency {
         const TICKER: SymbolStatic = "qwerty";
+        const BANK_SYMBOL: SymbolStatic = "ibc/1";
     }
 
     #[test]

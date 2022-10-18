@@ -156,21 +156,25 @@ fn marketprice_follow_the_path() {
     pub struct Den0;
     impl Currency for Den0 {
         const TICKER: SymbolStatic = "Den0";
+        const BANK_SYMBOL: SymbolStatic = "ibc/den0";
     }
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct DenX;
     impl Currency for DenX {
         const TICKER: SymbolStatic = "DenX";
+        const BANK_SYMBOL: SymbolStatic = "ibc/denX";
     }
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct DenZ;
     impl Currency for DenZ {
         const TICKER: SymbolStatic = "DenZ";
+        const BANK_SYMBOL: SymbolStatic = "ibc/denZ";
     }
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct DenC;
     impl Currency for DenC {
         const TICKER: SymbolStatic = "DenC";
+        const BANK_SYMBOL: SymbolStatic = "ibc/denC";
     }
 
     let mut deps = mock_dependencies();

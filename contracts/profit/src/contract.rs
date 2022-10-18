@@ -86,7 +86,8 @@ fn try_transfer(
 
 #[cfg(test)]
 mod tests {
-    use finance::{currency::Currency, duration::Duration, test::currency::Nls};
+    use currency::native::Nls;
+    use finance::{currency::Currency, duration::Duration};
     use sdk::cosmwasm_std::{
         coins, from_binary,
         testing::{mock_dependencies_with_balance, mock_env, mock_info},

@@ -180,7 +180,7 @@ mod test {
 
     use crate::{
         coin::{Amount, Coin as CoinT},
-        currency::Currency,
+        currency::{Currency, SymbolStatic},
         price::{self, Price},
         test::currency::{Nls, Usdc},
     };
@@ -188,7 +188,8 @@ mod test {
     #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
     struct QuoteQuoteCurrency {}
     impl Currency for QuoteQuoteCurrency {
-        const TICKER: crate::currency::SymbolStatic = "mycutecoin";
+        const TICKER: SymbolStatic = "mycutecoin";
+        const BANK_SYMBOL: SymbolStatic = "ibc/dcnqweuio2938fh2f";
     }
     type QuoteQuoteCoin = CoinT<QuoteQuoteCurrency>;
     type QuoteCoin = CoinT<Usdc>;

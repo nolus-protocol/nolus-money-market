@@ -1,12 +1,11 @@
 use std::collections::HashSet;
 
-use currency::lpn::Usdc;
+use currency::{lpn::Usdc, native::Nls};
 use finance::{
     coin::{Amount, Coin},
     currency::Currency as _,
     percent::Percent,
     price::{self, dto::PriceDTO},
-    test::currency::Nls,
 };
 use leaser::msg::QueryMsg;
 use oracle::msg::QueryMsg as OracleQ;

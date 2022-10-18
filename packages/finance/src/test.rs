@@ -24,6 +24,7 @@ pub mod currency {
     pub struct Usdc;
     impl Currency for Usdc {
         const TICKER: SymbolStatic = "uusdc";
+        const BANK_SYMBOL: SymbolStatic = "ibc/uusdc";
     }
     impl Member<TestCurrencies> for Usdc {}
     impl Member<TestExtraCurrencies> for Usdc {}
@@ -34,6 +35,7 @@ pub mod currency {
     pub struct Nls;
     impl Currency for Nls {
         const TICKER: SymbolStatic = "unls";
+        const BANK_SYMBOL: SymbolStatic = "ibc/unls";
     }
     impl Member<TestCurrencies> for Nls {}
     impl Member<TestExtraCurrencies> for Nls {}
@@ -44,6 +46,7 @@ pub mod currency {
     pub struct Dai;
     impl Currency for Dai {
         const TICKER: SymbolStatic = "udai";
+        const BANK_SYMBOL: SymbolStatic = "ibc/udai";
     }
     impl Member<TestExtraCurrencies> for Dai {}
 

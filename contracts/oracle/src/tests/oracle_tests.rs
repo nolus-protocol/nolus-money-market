@@ -126,17 +126,20 @@ fn feed_prices_unsupported_pairs() {
     pub struct X;
     impl Currency for X {
         const TICKER: SymbolStatic = "X";
+        const BANK_SYMBOL: SymbolStatic = "ibc/X";
     }
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct C;
     impl Currency for C {
         const TICKER: SymbolStatic = "C";
+        const BANK_SYMBOL: SymbolStatic = "ibc/C";
     }
 
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct D;
     impl Currency for D {
         const TICKER: SymbolStatic = "D";
+        const BANK_SYMBOL: SymbolStatic = "ibc/D";
     }
 
     let prices = vec![

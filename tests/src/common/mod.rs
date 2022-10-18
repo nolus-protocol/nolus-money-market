@@ -1,6 +1,6 @@
+use currency::native::Nls;
 use serde::{Deserialize, Serialize};
 
-use currency::native::Nls;
 use finance::{currency::Currency, duration::Duration};
 use sdk::{
     cosmwasm_std::{

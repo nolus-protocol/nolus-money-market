@@ -13,6 +13,7 @@ pub struct TestCurrencyA;
 
 impl Currency for TestCurrencyA {
     const TICKER: SymbolStatic = "TestCurrencyA";
+    const BANK_SYMBOL: SymbolStatic = "ibc/TestCurrencyA";
 }
 
 #[derive(
@@ -23,6 +24,7 @@ pub struct TestCurrencyB;
 
 impl Currency for TestCurrencyB {
     const TICKER: SymbolStatic = "TestCurrencyB";
+    const BANK_SYMBOL: SymbolStatic = "ibc/TestCurrencyB";
 }
 
 #[derive(
@@ -33,6 +35,7 @@ pub struct TestCurrencyC;
 
 impl Currency for TestCurrencyC {
     const TICKER: SymbolStatic = "TestCurrencyC";
+    const BANK_SYMBOL: SymbolStatic = "ibc/TestCurrencyC";
 }
 
 #[derive(
@@ -43,6 +46,7 @@ pub struct TestCurrencyD;
 
 impl Currency for TestCurrencyD {
     const TICKER: SymbolStatic = "TestCurrencyD";
+    const BANK_SYMBOL: SymbolStatic = "ibc/TestCurrencyD";
 }
 
 impl Member<PaymentGroup> for TestCurrencyA {}
