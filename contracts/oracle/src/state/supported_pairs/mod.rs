@@ -19,7 +19,23 @@ use self::serde::TreeStore;
 mod serde;
 
 pub type ResolutionPath = Vec<SymbolOwned>;
-pub type CurrencyPair = (SymbolOwned, SymbolOwned);
+
+// TODO: move to finance/currency
+pub type PoolId = u64;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct CurrencyPair {
+    pub base: SymbolOwned,
+    pub quote: SymbolOwned,
+    pub pool_id: PoolId,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct Swap {
+    pool_id: PoolId,
+    base: SymbolOwned,
+}
+
 type Node = TreeNode<SymbolOwned>;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -170,10 +186,7 @@ where
             }
             Ok(path)
         } else {
-            Err(ContractError::InvalidDenomPair(
-                ToOwned::to_owned(query),
-                ToOwned::to_owned(B::TICKER),
-            ))
+            Err(error::unsupported_currency::<B>(query))
         }
     }
 
