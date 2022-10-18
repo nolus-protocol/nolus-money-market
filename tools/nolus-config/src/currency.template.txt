@@ -7,5 +7,5 @@ use finance::currency::{Currency, SymbolStatic};
 pub struct #normalized_ticker#;
 
 impl Currency for #normalized_ticker# {
-    const SYMBOL: SymbolStatic = "#symbol#";
+    const TICKER: SymbolStatic = "#ticker#";
 }
