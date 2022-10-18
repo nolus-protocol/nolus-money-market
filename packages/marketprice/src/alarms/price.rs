@@ -158,8 +158,8 @@ pub mod tests {
         let price1 = price::total_of(Coin::<BTH>::new(1000000)).is(Coin::<Nls>::new(456789));
         let price2 = price::total_of(Coin::<ETH>::new(1000000)).is(Coin::<Nls>::new(123456));
 
-        let expected_alarm1 = Alarm::new("BTH".to_string(), price1, None);
-        let expected_alarm2 = Alarm::new("ETH".to_string(), price2, None);
+        let expected_alarm1 = Alarm::new(price1, None);
+        let expected_alarm2 = Alarm::new(price2, None);
 
         assert!(hooks
             .add_or_update(storage, &addr1, expected_alarm1.clone())
@@ -208,8 +208,8 @@ pub mod tests {
         let price1 = price::total_of(Coin::<BTH>::new(1000000)).is(Coin::<OtherCoin>::new(456789));
         let price2 = price::total_of(Coin::<ETH>::new(1000000)).is(Coin::<OtherCoin>::new(123456));
 
-        let expected_alarm1 = Alarm::new("some_coin".to_string(), price1, None);
-        let expected_alarm2 = Alarm::new("some_coin".to_string(), price2, None);
+        let expected_alarm1 = Alarm::new(price1, None);
+        let expected_alarm2 = Alarm::new(price2, None);
 
         assert!(hooks
             .add_or_update(storage, &addr1, expected_alarm1.clone())

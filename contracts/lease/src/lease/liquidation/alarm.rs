@@ -201,11 +201,7 @@ where
             .transpose()?;
 
         self.oracle
-            .add_alarm(Alarm::new::<PriceDTO>(
-                ToOwned::to_owned(Asset::SYMBOL),
-                below.into(),
-                above.map(Into::into),
-            ))
+            .add_alarm(Alarm::new(below.into(), above.map(Into::<PriceDTO>::into)))
             .map_err(Into::into)
     }
 

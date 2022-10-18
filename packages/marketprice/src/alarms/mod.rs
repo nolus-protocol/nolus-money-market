@@ -23,20 +23,26 @@ pub enum Event {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Alarm {
-    currency: SymbolOwned, // this can be removed if we can take the currency from the Price object
+    currency: SymbolOwned, // TODO this can be removed if we can take the currency from the Price object
     below: PriceDTO,
     above: Option<PriceDTO>,
 }
 
 impl Alarm {
-    pub fn new<P>(currency: SymbolOwned, below: P, above: Option<P>) -> Alarm
+    pub fn new<P>(below: P, above: Option<P>) -> Alarm
     where
         P: Into<PriceDTO>,
     {
+        let below = below.into();
+        let above = above.map(Into::into);
+        let currency: SymbolOwned = below.base().symbol().into();
+        debug_assert!(
+            above.is_none() || above.as_ref().map(|price| price.base().symbol()) == Some(&currency)
+        );
         Self {
             currency,
-            below: below.into(),
-            above: above.map(Into::into),
+            below,
+            above,
         }
     }
 
