@@ -24,33 +24,33 @@ add_wasm_messages() {
   local id=0
 
   local -r treasury_init_msg='{}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "treasury" "$((++id))" "$admin_addr" "$treasury_init_tokens"  "" "$treasury_init_msg"
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "treasury" "$((++id))" "$admin_addr" "$treasury_init_tokens"  "--instantiate-only-address $admin_addr" "$treasury_init_msg"
   _export_to_file  "treasury" "$TREASURY_ADDRESS" "$contracts_info_file"
 
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lease" "$((++id))" "$admin_addr" "" "--instantiate-only-address $LEASER_ADDRESS"
 
   local -r lpp_init_msg='{"denom":"'$lpp_native'","lease_code_id":"'$LEASE_CODE_ID'"}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lpp" "$((++id))" "$admin_addr" "" "" "$lpp_init_msg"
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "lpp" "$((++id))" "$admin_addr" "" "--instantiate-only-address $admin_addr" "$lpp_init_msg"
   _export_to_file  "lpp" "$LPP_ADDRESS" "$contracts_info_file"
 
   local -r timealarms_init_msg='{}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "timealarms" "$((++id))" "$admin_addr" "" "" "$timealarms_init_msg"
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "timealarms" "$((++id))" "$admin_addr" "" "--instantiate-only-address $admin_addr" "$timealarms_init_msg"
   _export_to_file  "timealarms" "$TIMEALARMS_ADDRESS" "$contracts_info_file"
 
   local -r oracle_init_msg='{"base_asset":"'$lpp_native'","price_feed_period_secs":60,"expected_feeders":500,"currency_paths":[["OSMO","'$lpp_native'"],["LUNA","OSMO","'$lpp_native'"],["IRIS","OSMO","'$lpp_native'"]], "timealarms_addr":"'$TIMEALARMS_ADDRESS'"}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "oracle" "$((++id))" "$admin_addr" "" "" "$oracle_init_msg"
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "oracle" "$((++id))" "$admin_addr" "" "--instantiate-only-address $admin_addr" "$oracle_init_msg"
   _export_to_file  "oracle" "$ORACLE_ADDRESS" "$contracts_info_file"
 
   local -r profit_init_msg='{"cadence_hours":7200,"treasury":"'$TREASURY_ADDRESS'","timealarms":"'$TIMEALARMS_ADDRESS'"}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "profit" "$((++id))" "$admin_addr" "" "" "$profit_init_msg"
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "profit" "$((++id))" "$admin_addr" "" "--instantiate-only-address $admin_addr" "$profit_init_msg"
   _export_to_file  "profit" "$PROFIT_ADDRESS" "$contracts_info_file"
 
   local -r leaser_init_msg='{"lease_code_id":"'$LEASE_CODE_ID'","lease_interest_rate_margin":30,"liability":{"initial":650,"healthy":700,"first_liq_warn":720,"second_liq_warn":750,"third_liq_warn":780,"max":800,"recalc_time":7200000000000},"lpp_ust_addr":"'$LPP_ADDRESS'","time_alarms":"'$TIMEALARMS_ADDRESS'","market_price_oracle":"'$ORACLE_ADDRESS'","profit":"'$PROFIT_ADDRESS'","repayment":{"period":5184000000000000,"grace_period":864000000000000}}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "leaser" "$((++id))"  "$admin_addr" "" "" "$leaser_init_msg"
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "leaser" "$((++id))"  "$admin_addr" "" "--instantiate-only-address $admin_addr" "$leaser_init_msg"
   _export_to_file  "leaser" "$LEASER_ADDRESS" "$contracts_info_file"
 
   local -r dispatcher_init_msg='{"cadence_hours":7200,"lpp":"'$LPP_ADDRESS'","treasury":"'$TREASURY_ADDRESS'","timealarms":"'$TIMEALARMS_ADDRESS'","oracle":"'$ORACLE_ADDRESS'","tvl_to_apr":{"intervals":[{"tvl":0,"apr":300},{"tvl":1000,"apr":90},{"tvl":1000000,"apr":30}]}}'
-  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "rewards_dispatcher" "$((++id))" "$admin_addr" "" "" "$dispatcher_init_msg"
+  _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "rewards_dispatcher" "$((++id))" "$admin_addr" "" "--instantiate-only-address $admin_addr" "$dispatcher_init_msg"
   _export_to_file  "rewards_dispatcher" "$REWARDS_DISPATCHER_ADDRESS" "$contracts_info_file"
 }
 
