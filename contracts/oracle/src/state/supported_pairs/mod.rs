@@ -24,16 +24,15 @@ pub type ResolutionPath = Vec<SymbolOwned>;
 pub type PoolId = u64;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct CurrencyPair {
-    pub base: SymbolOwned,
-    pub quote: SymbolOwned,
-    pub pool_id: PoolId,
+pub struct SwapLeg {
+    pub from: SymbolOwned,
+    pub to: SwapTarget,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct Swap {
+pub struct SwapTarget {
     pool_id: PoolId,
-    base: SymbolOwned,
+    target: SymbolOwned,
 }
 
 type Node = TreeNode<SymbolOwned>;

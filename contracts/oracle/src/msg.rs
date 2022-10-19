@@ -9,7 +9,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::state::supported_pairs::{ResolutionPath, Swap, CurrencyPair};
+use crate::state::supported_pairs::{ResolutionPath, SwapTarget, SwapLeg};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -59,13 +59,15 @@ pub enum QueryMsg {
     Price { currency: SymbolOwned },
     // returns a list of supported denom pairs
     SupportedDenomPairs {},
-    SwapPaths(SymbolOwned, SymbolOwned),
+    SwapPath {
+        from: SymbolOwned,
+        to: SymbolOwned,
+    },
 }
 
-pub type SupportedCurrencyPairsResponse = Vec<CurrencyPair>;
+pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;
 
-// see '[Market Data Price Oracle] Provide swap paths for any supported currency pairs'
-pub type SwapPathResponse = Vec<Swap>;
+pub type SwapPathResponse = Vec<SwapTarget>;
 
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
