@@ -45,7 +45,7 @@ where
     market_price_oracle::error::ContractError: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
 {
-    currency::visit_any(
+    currency::visit_any_on_ticker(
         asset,
         FactoryStage1 {
             cmd,

@@ -1,7 +1,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::lpn::Lpns;
-use finance::currency::{visit_any, AnyVisitor, Currency};
+use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -46,7 +46,7 @@ impl<'a> InstantiateWithLpn<'a> {
 
     pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<Response, ContractError> {
         let context = Self { deps, msg };
-        visit_any(&context.msg.denom.clone(), context)
+        visit_any_on_ticker(&context.msg.denom.clone(), context)
     }
 }
 
@@ -117,7 +117,7 @@ impl<'a> ExecuteWithLpn<'a> {
         };
 
         let config = Config::load(context.deps.storage)?;
-        visit_any(&config.currency, context)
+        visit_any_on_ticker(&config.currency, context)
     }
 }
 
@@ -207,7 +207,7 @@ impl<'a> QueryWithLpn<'a> {
         let context = Self { deps, env, msg };
 
         let config = Config::load(context.deps.storage)?;
-        visit_any(&config.currency, context)
+        visit_any_on_ticker(&config.currency, context)
     }
 }
 

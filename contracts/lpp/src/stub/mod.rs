@@ -3,7 +3,7 @@ use std::{marker::PhantomData, result::Result as StdResult};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::lpn::Lpns;
-use finance::currency::{visit_any, AnyVisitor, Currency, SymbolOwned};
+use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -78,7 +78,7 @@ impl LppRef {
             }
         }
 
-        visit_any(
+        visit_any_on_ticker(
             &self.currency.clone(),
             CurrencyVisitor {
                 cmd,

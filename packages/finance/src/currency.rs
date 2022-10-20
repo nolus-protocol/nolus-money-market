@@ -98,7 +98,7 @@ where
         C: 'static + Currency + Member<G> + Serialize + DeserializeOwned;
 }
 
-pub fn visit_any<G, V>(ticker: Symbol, visitor: V) -> Result<V::Output, V::Error>
+pub fn visit_any_on_ticker<G, V>(ticker: Symbol, visitor: V) -> Result<V::Output, V::Error>
 where
     G: Group,
     V: AnyVisitor<G>,
@@ -200,16 +200,16 @@ mod test {
     #[test]
     fn visit_any() {
         let v_usdc = Expect::<Usdc>::new();
-        assert_eq!(Ok(true), super::visit_any(Usdc::TICKER, v_usdc));
+        assert_eq!(Ok(true), super::visit_any_on_ticker(Usdc::TICKER, v_usdc));
 
         let v_nls = Expect::<Nls>::new();
-        assert_eq!(Ok(true), super::visit_any(Nls::TICKER, v_nls));
+        assert_eq!(Ok(true), super::visit_any_on_ticker(Nls::TICKER, v_nls));
 
         assert_eq!(
             Err(Error::not_in_currency_group::<_, TestCurrencies>(
                 Nls::BANK_SYMBOL
             )),
-            super::visit_any(Nls::BANK_SYMBOL, ExpectUnknownCurrency)
+            super::visit_any_on_ticker(Nls::BANK_SYMBOL, ExpectUnknownCurrency)
         );
     }
 
@@ -218,7 +218,7 @@ mod test {
         const DENOM: &str = "my_fancy_coin";
 
         assert_eq!(
-            super::visit_any(DENOM, ExpectUnknownCurrency),
+            super::visit_any_on_ticker(DENOM, ExpectUnknownCurrency),
             Err(Error::not_in_currency_group::<_, TestCurrencies>(DENOM)),
         );
     }

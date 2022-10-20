@@ -1,6 +1,6 @@
 use crate::{
     coin::{Coin, CoinDTO},
-    currency::{visit_any, AnyVisitor, Currency, Group},
+    currency::{visit_any_on_ticker, AnyVisitor, Currency, Group},
     error::Error,
     price::Price,
 };
@@ -43,7 +43,7 @@ where
     C: Currency,
     Error: Into<Cmd::Error>,
 {
-    visit_any::<G, _>(
+    visit_any_on_ticker::<G, _>(
         &price.amount_quote.ticker().clone(),
         QuoteCVisitor {
             base: Coin::<C>::try_from(price.amount).expect("Got different currency in visitor!"),

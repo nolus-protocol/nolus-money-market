@@ -1,6 +1,6 @@
 use currency::lpn::Lpns;
 use finance::{
-    currency::{visit_any, AnyVisitor, Currency},
+    currency::{visit_any_on_ticker, AnyVisitor, Currency},
     duration::Duration,
     percent::Percent,
 };
@@ -51,7 +51,7 @@ impl<'a> InstantiateWithCurrency<'a> {
         owner: Addr,
     ) -> Result<Response, ContractError> {
         let context = Self { deps, msg, owner };
-        visit_any(&context.msg.base_asset.clone(), context)
+        visit_any_on_ticker(&context.msg.base_asset.clone(), context)
     }
 }
 

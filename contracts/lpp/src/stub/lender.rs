@@ -5,7 +5,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use currency::lpn::Lpns;
 use finance::{
     coin::Coin,
-    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
+    currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned},
 };
 use platform::{
     batch::{Batch, ReplyId},
@@ -110,7 +110,7 @@ impl LppLenderRef {
             }
         }
 
-        visit_any(
+        visit_any_on_ticker(
             &self.currency.clone(),
             CurrencyVisitor {
                 cmd,
