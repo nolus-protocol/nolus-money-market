@@ -1,26 +1,26 @@
 use currency::{lpn::Usdc, native::Nls};
 use finance::currency::Currency;
+use rewards_dispatcher::ContractError;
 use sdk::{
-    cosmwasm_std::{coins, Addr, Coin as CwCoin},
+    cosmwasm_std::{Addr, Coin as CwCoin},
     cw_multi_test::{ContractWrapper, Executor},
 };
 
 use crate::common::{
-    lpp_wrapper::mock_lpp_query, oracle_wrapper::mock_oracle_query, test_case::TestCase, ADMIN,
-    NATIVE_DENOM, USER,
+    cwcoins, lpp_wrapper::mock_lpp_query, native_cwcoin, oracle_wrapper::mock_oracle_query,
+    test_case::TestCase, Native, ADMIN, USER,
 };
 
 #[test]
-#[should_panic(expected = "Zero Reward")]
 fn on_alarm_zero_reward() {
-    let denom = Usdc::TICKER;
+    type Lpn = Usdc;
 
     let user = Addr::unchecked(USER);
-    let mut test_case = TestCase::new(denom);
-    test_case.init(&user, coins(500, denom));
+    let mut test_case = TestCase::<Usdc>::new();
+    test_case.init(&user, cwcoins::<Lpn, _>(500));
 
     test_case
-        .init_lpp(None, denom)
+        .init_lpp(None)
         .init_timealarms()
         .init_oracle(Some(
             ContractWrapper::new(
@@ -33,40 +33,42 @@ fn on_alarm_zero_reward() {
         .init_treasury()
         .init_dispatcher();
 
-    test_case.send_funds(&test_case.timealarms.clone().unwrap(), coins(500, denom));
+    test_case.send_funds(
+        &test_case.timealarms.clone().unwrap(),
+        cwcoins::<Lpn, _>(500),
+    );
 
-    test_case
+    let err = test_case
         .app
         .execute_contract(
             test_case.timealarms.unwrap(),
             test_case.dispatcher_addr.as_ref().unwrap().clone(),
             &rewards_dispatcher::msg::ExecuteMsg::TimeAlarm(test_case.app.block_info().time),
-            &coins(40, denom),
+            &cwcoins::<Lpn, _>(40),
         )
-        .unwrap();
+        .unwrap_err();
+    let root_err = err.root_cause().downcast_ref::<ContractError>();
+    assert!(matches!(root_err, Some(&ContractError::ZeroReward {})));
 }
 
 #[test]
 fn on_alarm() {
-    let denom = Usdc::TICKER;
+    type Lpn = Usdc;
 
     let lender = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::new(denom);
+    let mut test_case = TestCase::<Usdc>::new();
     test_case
-        .init(&lender, coins(500, denom))
+        .init(&lender, cwcoins::<Lpn, _>(500))
         .init_timealarms()
         .init_oracle(None);
 
     test_case
-        .init_lpp(
-            Some(ContractWrapper::new(
-                lpp::contract::execute,
-                lpp::contract::instantiate,
-                mock_lpp_query,
-            )),
-            denom,
-        )
+        .init_lpp(Some(ContractWrapper::new(
+            lpp::contract::execute,
+            lpp::contract::instantiate,
+            mock_lpp_query,
+        )))
         .init_timealarms()
         .init_oracle(Some(
             ContractWrapper::new(
@@ -78,7 +80,10 @@ fn on_alarm() {
         ))
         .init_treasury()
         .init_dispatcher();
-    test_case.send_funds(&test_case.timealarms.clone().unwrap(), coins(500, denom));
+    test_case.send_funds(
+        &test_case.timealarms.clone().unwrap(),
+        cwcoins::<Lpn, _>(500),
+    );
 
     assert_eq!(
         CwCoin::new(0, Nls::TICKER),
@@ -104,7 +109,7 @@ fn on_alarm() {
             lender.clone(),
             test_case.lpp_addr.clone().unwrap(),
             &lpp::msg::ExecuteMsg::Deposit {},
-            &coins(100, denom),
+            &cwcoins::<Lpn, _>(100),
         )
         .unwrap();
 
@@ -177,7 +182,7 @@ fn on_alarm() {
                 "sender",
                 &test_case.treasury_addr.clone().unwrap().to_string()
             ),
-            ("amount", &format!("11{}", NATIVE_DENOM))
+            ("amount", &format!("11{}", Native::BANK_SYMBOL))
         ]
     );
 
@@ -201,11 +206,11 @@ fn on_alarm() {
     );
 
     assert_eq!(
-        CwCoin::new(11, NATIVE_DENOM),
+        native_cwcoin(11),
         test_case
             .app
             .wrap()
-            .query_balance(test_case.lpp_addr.clone().unwrap(), NATIVE_DENOM)
+            .query_balance(test_case.lpp_addr.clone().unwrap(), Native::BANK_SYMBOL)
             .unwrap()
     );
 
@@ -225,12 +230,12 @@ fn on_alarm() {
 #[test]
 #[should_panic(expected = "Unauthorized")]
 fn test_config_unauthorized() {
-    let denom = Usdc::TICKER;
+    type Lpn = Usdc;
     let user_addr = Addr::unchecked(USER);
-    let mut test_case = TestCase::new(denom);
+    let mut test_case = TestCase::<Usdc>::new();
     test_case
-        .init(&user_addr, coins(500, denom))
-        .init_lpp(None, denom)
+        .init(&user_addr, cwcoins::<Lpn, _>(500))
+        .init_lpp(None)
         .init_treasury()
         .init_timealarms()
         .init_oracle(None)
@@ -253,19 +258,19 @@ fn test_config_unauthorized() {
             user_addr,
             test_case.dispatcher_addr.clone().unwrap(),
             &rewards_dispatcher::msg::ExecuteMsg::Config { cadence_hours: 30 },
-            &coins(40, denom),
+            &cwcoins::<Lpn, _>(40),
         )
         .unwrap();
 }
 
 #[test]
 fn test_config() {
-    let denom = Usdc::TICKER;
+    type Lpn = Usdc;
     let user_addr = Addr::unchecked(ADMIN);
-    let mut test_case = TestCase::new(denom);
+    let mut test_case = TestCase::<Usdc>::new();
     test_case
-        .init(&user_addr, coins(500, denom))
-        .init_lpp(None, denom)
+        .init(&user_addr, cwcoins::<Lpn, _>(500))
+        .init_lpp(None)
         .init_treasury()
         .init_timealarms()
         .init_oracle(None)
@@ -288,7 +293,7 @@ fn test_config() {
             user_addr,
             test_case.dispatcher_addr.clone().unwrap(),
             &rewards_dispatcher::msg::ExecuteMsg::Config { cadence_hours: 30 },
-            &coins(40, denom),
+            &cwcoins::<Lpn, _>(40),
         )
         .unwrap();
     let resp: rewards_dispatcher::msg::ConfigResponse = test_case

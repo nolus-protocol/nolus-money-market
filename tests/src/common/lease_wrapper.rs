@@ -1,11 +1,14 @@
-use finance::{duration::Duration, liability::Liability, percent::Percent};
+use finance::{
+    coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
+};
 use lease::{
     contract::{execute, instantiate, query, reply},
     error::ContractError,
     msg::{ExecuteMsg, LoanForm, NewLeaseForm, StateQuery},
 };
+use platform::coin_legacy;
 use sdk::{
-    cosmwasm_std::{coin, Addr, Empty},
+    cosmwasm_std::{Addr, Empty},
     cw_multi_test::Executor,
 };
 
@@ -32,8 +35,6 @@ pub struct LeaseWrapperConfig {
     pub annual_margin_interest: Percent,
     pub interest_due_period: Duration,
     pub grace_period: Duration,
-
-    pub downpayment: u128,
 }
 
 impl Default for LeaseWrapperConfig {
@@ -51,9 +52,6 @@ impl Default for LeaseWrapperConfig {
             annual_margin_interest: Percent::from_percent(0), // 3.1%
             interest_due_period: Duration::from_secs(100), // 90 days TODO use a crate for daytime calculations
             grace_period: Duration::from_secs(10), // 10 days TODO use a crate for daytime calculations
-
-            // TODO: extend to Coin (downpayment and lpn can be different)
-            downpayment: 1000u128,
         }
     }
 }
@@ -64,27 +62,30 @@ impl LeaseWrapper {
     }
 
     #[track_caller]
-    pub fn instantiate(
+    pub fn instantiate<D>(
         self,
         app: &mut MockApp,
         code_id: Option<u64>,
         addresses: LeaseWrapperAddresses,
-        denom: &str,
+        lease_currency: &str,
+        downpayment: Coin<D>,
         config: LeaseWrapperConfig,
-    ) -> Addr {
+    ) -> Addr
+    where
+        D: Currency,
+    {
         let code_id = match code_id {
             Some(id) => id,
             None => app.store_code(self.contract_wrapper),
         };
 
-        let downpayment = config.downpayment;
-        let msg = Self::lease_instantiate_msg(denom, addresses, config);
+        let msg = Self::lease_instantiate_msg(lease_currency, addresses, config);
 
         let result = app.instantiate_contract(
             code_id,
             Addr::unchecked(ADMIN),
             &msg,
-            &[coin(downpayment, denom)],
+            &[coin_legacy::to_cosmwasm(downpayment)],
             "lease",
             None,
         );
@@ -107,7 +108,7 @@ impl LeaseWrapper {
     ) -> NewLeaseForm {
         NewLeaseForm {
             customer: config.customer,
-            currency: lease_currency.to_string(),
+            currency: lease_currency.into(),
             liability: Liability::new(
                 config.liability_init_percent,
                 config.liability_delta_to_healthy_percent,

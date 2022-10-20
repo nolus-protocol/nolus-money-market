@@ -1,33 +1,37 @@
 use std::collections::HashSet;
 
-use currency::{lease::Atom, lpn::Usdc};
+use currency::{
+    lease::{Atom, Osmo},
+    lpn::Usdc,
+};
 use finance::{
     coin::Coin,
-    currency::{Currency, SymbolStatic},
+    currency::Currency,
     percent::Percent,
     test::{self},
 };
 use leaser::msg::{QueryMsg, QuoteResponse};
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{coins, Addr, DepsMut, Env, Event, MessageInfo},
+    cosmwasm_std::{Addr, DepsMut, Env, Event, MessageInfo},
     cw_multi_test::{next_block, ContractWrapper, Executor},
 };
 
-use crate::common::{lpp_wrapper::mock_lpp_quote_query, test_case::TestCase, ADMIN, USER};
+use crate::common::{
+    cwcoin, cwcoins, lpp_wrapper::mock_lpp_quote_query, test_case::TestCase, ADMIN, USER,
+};
 
 type TheCurrency = Usdc;
 
 #[test]
 fn open_lease() {
-    open_lease_impl(Usdc::TICKER);
+    open_lease_impl::<Usdc, Usdc, Usdc>();
 }
 
 #[test]
-#[should_panic(expected = "Invalid denom pair")]
-// in single denom version lease can be opened only in the oracle base denom
-fn open_lease_another_currency() {
-    open_lease_impl(Atom::TICKER);
+#[should_panic(expected = "Unsupported currency")]
+fn open_lease_unsupported_currency_by_oracle() {
+    open_lease_impl::<Usdc, Atom, Usdc>();
 }
 
 #[test]
@@ -35,23 +39,23 @@ fn open_lease_another_currency() {
 fn init_lpp_with_unknown_currency() {
     let user_addr = Addr::unchecked(USER);
 
-    let unknown_lpn = "token";
+    type NotLpn = Osmo;
 
-    let mut test_case = TestCase::new(unknown_lpn);
-    test_case.init(&user_addr, coins(500, unknown_lpn));
-    test_case.init_lpp(None, unknown_lpn);
+    let mut test_case = TestCase::<NotLpn>::new();
+    test_case.init(&user_addr, cwcoins::<NotLpn, _>(500));
+    test_case.init_lpp(None);
 }
 
 #[test]
 fn open_lease_not_in_lpn_currency() {
     let user_addr = Addr::unchecked(USER);
 
-    let lpn = Usdc::TICKER;
+    type Lpn = Usdc;
     let lease_currency = Atom::TICKER;
 
-    let mut test_case = TestCase::new(lpn);
-    test_case.init(&user_addr, coins(500, lpn));
-    test_case.init_lpp(None, lpn);
+    let mut test_case = TestCase::<Lpn>::new();
+    test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
+    test_case.init_lpp(None);
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -62,9 +66,9 @@ fn open_lease_not_in_lpn_currency() {
         user_addr.clone(),
         test_case.leaser_addr.unwrap(),
         &leaser::msg::ExecuteMsg::OpenLease {
-            currency: lease_currency.to_string(),
+            currency: lease_currency.into(),
         },
-        &coins(3, lpn),
+        &[cwcoin::<Lpn, _>(3)],
     );
     let err = res.unwrap_err();
     // For some reason the downcasting does not work. That is due to different TypeId-s of LeaseError and the root
@@ -85,11 +89,11 @@ fn open_multiple_loans() {
     let user_addr = Addr::unchecked(USER);
     let user1_addr = Addr::unchecked("user1");
 
-    const LPN: SymbolStatic = Usdc::TICKER;
+    type Lpn = Usdc;
 
-    let mut test_case = TestCase::new(LPN);
-    test_case.init(&user_addr, coins(500, LPN));
-    test_case.init_lpp(None, LPN);
+    let mut test_case = TestCase::<Lpn>::new();
+    test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
+    test_case.init_lpp(None);
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -98,7 +102,11 @@ fn open_multiple_loans() {
 
     test_case
         .app
-        .send_tokens(Addr::unchecked(ADMIN), user1_addr.clone(), &coins(50, LPN))
+        .send_tokens(
+            Addr::unchecked(ADMIN),
+            user1_addr.clone(),
+            &[cwcoin::<Lpn, _>(50)],
+        )
         .unwrap();
 
     let resp: HashSet<Addr> = test_case
@@ -121,9 +129,9 @@ fn open_multiple_loans() {
                 user_addr.clone(),
                 test_case.leaser_addr.clone().unwrap(),
                 &leaser::msg::ExecuteMsg::OpenLease {
-                    currency: LPN.to_string(),
+                    currency: Lpn::TICKER.into(),
                 },
-                &coins(3, LPN),
+                &[cwcoin::<Lpn, _>(3)],
             )
             .unwrap();
         test_case.app.update_block(next_block);
@@ -139,9 +147,9 @@ fn open_multiple_loans() {
             user1_addr.clone(),
             test_case.leaser_addr.as_ref().unwrap().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: LPN.to_string(),
+                currency: Lpn::TICKER.into(),
             },
-            &coins(30, LPN),
+            &[cwcoin::<Lpn, _>(30)],
         )
         .unwrap();
     test_case.app.update_block(next_block);
@@ -170,12 +178,12 @@ fn open_multiple_loans() {
 }
 #[test]
 fn test_quote() {
-    const LPN: SymbolStatic = TheCurrency::TICKER;
+    type Lpn = TheCurrency;
 
     let user_addr = Addr::unchecked(USER);
-    let mut test_case = TestCase::new(LPN);
-    test_case.init(&user_addr, coins(500, LPN));
-    test_case.init_lpp(None, LPN);
+    let mut test_case = TestCase::<Lpn>::new();
+    test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
+    test_case.init_lpp(None);
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -230,19 +238,16 @@ fn test_quote() {
 
 #[test]
 fn test_quote_fixed_rate() {
-    const LPN: SymbolStatic = TheCurrency::TICKER;
+    type Lpn = TheCurrency;
 
     let user_addr = Addr::unchecked(USER);
-    let mut test_case = TestCase::new(LPN);
-    test_case.init(&user_addr, coins(500, LPN));
-    test_case.init_lpp(
-        Some(ContractWrapper::new(
-            lpp::contract::execute,
-            lpp::contract::instantiate,
-            mock_lpp_quote_query,
-        )),
-        LPN,
-    );
+    let mut test_case = TestCase::<Lpn>::new();
+    test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
+    test_case.init_lpp(Some(ContractWrapper::new(
+        lpp::contract::execute,
+        lpp::contract::instantiate,
+        mock_lpp_quote_query,
+    )));
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -284,7 +289,8 @@ fn test_quote_fixed_rate() {
 #[test]
 #[should_panic(expected = "Insufficient balance")]
 fn open_loans_lpp_fails() {
-    const LPN: SymbolStatic = Usdc::TICKER;
+    type Lpn = Usdc;
+
     let user_addr = Addr::unchecked(USER);
 
     fn mock_lpp_execute(
@@ -301,17 +307,14 @@ fn open_loans_lpp_fails() {
         }
     }
 
-    let mut test_case = TestCase::new(LPN);
+    let mut test_case = TestCase::<Lpn>::new();
     test_case
-        .init(&user_addr, coins(500, LPN))
-        .init_lpp(
-            Some(ContractWrapper::new(
-                mock_lpp_execute,
-                lpp::contract::instantiate,
-                lpp::contract::query,
-            )),
-            LPN,
-        )
+        .init(&user_addr, cwcoins::<Lpn, _>(500))
+        .init_lpp(Some(ContractWrapper::new(
+            mock_lpp_execute,
+            lpp::contract::instantiate,
+            lpp::contract::query,
+        )))
         .init_timealarms()
         .init_oracle(None)
         .init_treasury()
@@ -324,19 +327,24 @@ fn open_loans_lpp_fails() {
             user_addr.clone(),
             test_case.leaser_addr.as_ref().unwrap().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: LPN.to_string(),
+                currency: Lpn::TICKER.into(),
             },
-            &coins(30, LPN),
+            &[cwcoin::<Lpn, _>(30)],
         )
         .unwrap();
 }
 
-fn open_lease_impl(currency: SymbolStatic) {
+fn open_lease_impl<Lpn, LeaseC, DownpaymentC>()
+where
+    Lpn: Currency,
+    LeaseC: Currency,
+    DownpaymentC: Currency,
+{
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::new(currency);
-    test_case.init(&user_addr, coins(500, currency));
-    test_case.init_lpp(None, currency);
+    let mut test_case = TestCase::<Lpn>::new();
+    test_case.init(&user_addr, vec![cwcoin::<DownpaymentC, _>(500)]);
+    test_case.init_lpp(None);
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -364,9 +372,9 @@ fn open_lease_impl(currency: SymbolStatic) {
             user_addr.clone(),
             test_case.leaser_addr.clone().unwrap(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: currency.to_string(),
+                currency: LeaseC::TICKER.into(),
             },
-            &coins(40, currency),
+            &[cwcoin::<DownpaymentC, _>(40)],
         )
         .unwrap();
 
@@ -415,7 +423,7 @@ fn open_lease_impl(currency: SymbolStatic) {
         [
             ("recipient", lease_addr),
             ("sender", lpp_addr),
-            ("amount", &format!("{}{}", "74", currency))
+            ("amount", &format!("{}{}", "74", Lpn::BANK_SYMBOL))
         ]
     );
 
@@ -455,7 +463,7 @@ fn open_lease_impl(currency: SymbolStatic) {
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute == ("currency", currency),));
+        .any(|attribute| attribute == ("currency", Lpn::TICKER),));
     assert!(lease_exec_open
         .attributes
         .iter()
@@ -467,11 +475,11 @@ fn open_lease_impl(currency: SymbolStatic) {
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute == ("loan-symbol", currency),));
+        .any(|attribute| attribute == ("loan-symbol", Lpn::TICKER),));
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute == ("downpayment-symbol", currency),));
+        .any(|attribute| attribute == ("downpayment-symbol", Lpn::TICKER),));
     assert!(lease_exec_open
         .attributes
         .iter()
@@ -522,11 +530,11 @@ fn open_lease_impl(currency: SymbolStatic) {
     );
 
     assert_eq!(
-        coins(460, currency),
+        cwcoins::<Lpn, _>(460),
         test_case.app.wrap().query_all_balances(user_addr).unwrap()
     );
     assert_eq!(
-        coins(114, currency),
+        cwcoins::<Lpn, _>(114),
         test_case.app.wrap().query_all_balances(lease_addr).unwrap()
     );
 }

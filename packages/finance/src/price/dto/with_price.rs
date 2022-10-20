@@ -1,6 +1,7 @@
 use crate::{
     coin::{Coin, CoinDTO},
     currency::{visit_any, AnyVisitor, Currency, Group},
+    error::Error,
     price::Price,
 };
 
@@ -10,7 +11,7 @@ pub fn execute<G, Cmd>(price: PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Er
 where
     G: Group,
     Cmd: WithPrice,
-    G::ResolveError: Into<Cmd::Error>,
+    Error: Into<Cmd::Error>,
 {
     visit_any::<G, _>(
         &price.amount.ticker().clone(),
@@ -30,7 +31,7 @@ impl<G, Cmd> AnyVisitor<G> for CVisitor<Cmd>
 where
     G: Group,
     Cmd: WithPrice,
-    G::ResolveError: Into<Cmd::Error>,
+    Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;

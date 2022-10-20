@@ -1,10 +1,10 @@
 use currency::native::Nls;
+use platform::coin_legacy;
 use serde::{Deserialize, Serialize};
 
-use finance::{currency::Currency, duration::Duration};
+use finance::{coin::Coin, currency::Currency, duration::Duration};
 use sdk::{
     cosmwasm_std::{
-        coins,
         testing::{mock_env, MockApi},
         to_binary, Addr, Api, Binary, BlockInfo, CanonicalAddr, Coin as CwCoin, Deps, Empty, Env,
         RecoverPubkeyError, StdResult, Timestamp, VerificationError,
@@ -60,7 +60,30 @@ pub mod treasury_wrapper;
 
 pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
-pub const NATIVE_DENOM: &str = Nls::TICKER;
+pub type Native = Nls;
+
+pub fn native_cwcoin<A>(amount: A) -> CwCoin
+where
+    A: Into<Coin<Native>>,
+{
+    cwcoin::<Native, A>(amount)
+}
+
+pub fn cwcoin<C, A>(amount: A) -> CwCoin
+where
+    C: Currency,
+    A: Into<Coin<C>>,
+{
+    coin_legacy::to_cosmwasm(amount.into())
+}
+
+pub fn cwcoins<C, A>(amount: A) -> Vec<CwCoin>
+where
+    C: Currency,
+    A: Into<Coin<C>>,
+{
+    vec![cwcoin(amount)]
+}
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 struct MockResponse {}
@@ -159,7 +182,7 @@ pub fn mock_app(init_funds: &[CwCoin]) -> MockApp {
         chain_id: "cosmos-testnet-14002".to_string(),
     };
 
-    let mut funds = coins(100000, NATIVE_DENOM);
+    let mut funds = vec![native_cwcoin(100000)];
     funds.append(&mut init_funds.to_vec());
 
     new_app()

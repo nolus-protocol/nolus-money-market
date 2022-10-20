@@ -13,9 +13,8 @@ where
 pub mod currency {
     use serde::{Deserialize, Serialize};
 
-    use crate::{
-        currency::{AnyVisitor, Currency, Group, Member, Symbol, SymbolStatic},
-        error::Error,
+    use crate::currency::{
+        AnyVisitor, Currency, Group, MaybeAnyVisitResult, Member, Symbol, SymbolStatic,
     };
 
     #[derive(
@@ -51,39 +50,51 @@ pub mod currency {
     impl Member<TestExtraCurrencies> for Dai {}
 
     pub struct TestCurrencies {}
-    pub const DESCR: &str = "test";
     impl Group for TestCurrencies {
-        type ResolveError = Error;
+        const DESCR: SymbolStatic = "test";
 
-        fn resolve<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
+        fn maybe_visit_on_ticker<V>(symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<Self, V>
         where
             V: AnyVisitor<Self>,
-            Error: Into<V::Error>,
         {
             match symbol {
-                Usdc::TICKER => visitor.on::<Usdc>(),
-                Nls::TICKER => visitor.on::<Nls>(),
-                _ => Err(Error::NotInCurrencyGroup(symbol.into(), DESCR.into()).into()),
+                Usdc::TICKER => Ok(visitor.on::<Usdc>()),
+                Nls::TICKER => Ok(visitor.on::<Nls>()),
+                _ => Err(visitor),
             }
+        }
+
+        fn maybe_visit_on_bank_symbol<V>(_: Symbol, _: V) -> MaybeAnyVisitResult<Self, V>
+        where
+            Self: Sized,
+            V: AnyVisitor<Self>,
+        {
+            unreachable!()
         }
     }
 
     pub struct TestExtraCurrencies {}
-    pub const DESCR_EXTRA: &str = "test_extra";
     impl Group for TestExtraCurrencies {
-        type ResolveError = Error;
+        const DESCR: SymbolStatic = "test_extra";
 
-        fn resolve<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
+        fn maybe_visit_on_ticker<V>(symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<Self, V>
         where
             V: AnyVisitor<Self>,
-            Error: Into<V::Error>,
         {
             match symbol {
-                Usdc::TICKER => visitor.on::<Usdc>(),
-                Nls::TICKER => visitor.on::<Nls>(),
-                Dai::TICKER => visitor.on::<Dai>(),
-                _ => Err(Error::NotInCurrencyGroup(symbol.into(), DESCR_EXTRA.into()).into()),
+                Usdc::TICKER => Ok(visitor.on::<Usdc>()),
+                Nls::TICKER => Ok(visitor.on::<Nls>()),
+                Dai::TICKER => Ok(visitor.on::<Dai>()),
+                _ => Err(visitor),
             }
+        }
+
+        fn maybe_visit_on_bank_symbol<V>(_: Symbol, _: V) -> MaybeAnyVisitResult<Self, V>
+        where
+            Self: Sized,
+            V: AnyVisitor<Self>,
+        {
+            unreachable!()
         }
     }
 }

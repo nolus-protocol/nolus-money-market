@@ -3,6 +3,7 @@ use std::result::Result as StdResult;
 use finance::{
     coin::Coin,
     currency::{Currency, Group},
+    error::Error as FinanceError,
 };
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, Env, QuerierWrapper};
 
@@ -52,8 +53,8 @@ pub fn received_any<G, V>(cw_amount: Vec<CwCoin>, visitor: V) -> StdResult<V::Ou
 where
     V: CoinVisitor,
     G: Group,
+    FinanceError: Into<V::Error>,
     Error: Into<V::Error>,
-    G::ResolveError: Into<V::Error>,
 {
     received_one(cw_amount, Error::NoFundsAny, Error::UnexpectedFundsAny)
         .map_err(Into::into)
@@ -79,7 +80,7 @@ impl<'a> BankAccountView for BankView<'a> {
     where
         C: Currency,
     {
-        let coin = self.querier.query_balance(self.addr, C::TICKER)?;
+        let coin = self.querier.query_balance(self.addr, C::BANK_SYMBOL)?;
         from_cosmwasm_impl(coin)
     }
 }
@@ -106,6 +107,14 @@ where
 
 pub fn my_account<'a>(env: &'a Env, querier: &'a QuerierWrapper) -> BankStub<BankView<'a>> {
     BankStub::new(BankView::my_account(env, querier))
+}
+
+#[cfg(feature = "testing")]
+pub fn balance<'a, C>(addr: &'a Addr, querier: &'a QuerierWrapper<'a>) -> Result<Coin<C>>
+where
+    C: Currency,
+{
+    BankView { addr, querier }.balance()
 }
 
 impl<View> BankAccountView for BankStub<View>

@@ -1,6 +1,7 @@
 use crate::{
     coin::{Coin, CoinDTO},
     currency::{visit_any, AnyVisitor, Currency, Group},
+    error::Error,
     price::Price,
 };
 
@@ -40,7 +41,7 @@ where
     G: Group,
     Cmd: WithBase<C>,
     C: Currency,
-    G::ResolveError: Into<Cmd::Error>,
+    Error: Into<Cmd::Error>,
 {
     visit_any::<G, _>(
         &price.amount_quote.ticker().clone(),

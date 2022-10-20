@@ -1,12 +1,18 @@
-use finance::{coin::Amount, currency::Symbol};
+use std::marker::PhantomData;
+
+use finance::{
+    coin::Coin,
+    currency::{Currency, Symbol},
+};
 use sdk::{
-    cosmwasm_std::{coins, Addr, Coin as CwCoin, Empty, Uint64},
+    cosmwasm_std::{Addr, Coin as CwCoin, Empty, Uint64},
     cw_multi_test::{next_block, Executor},
 };
 
 use crate::common::{lease_wrapper::LeaseWrapperAddresses, ContractWrapper, MockApp};
 
 use super::{
+    cwcoin,
     dispatcher_wrapper::DispatcherWrapper,
     lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
     leaser_wrapper::LeaserWrapper,
@@ -44,7 +50,7 @@ type OptionalContractWrapperStd = Option<
     >,
 >;
 
-pub struct TestCase {
+pub struct TestCase<Lpn> {
     pub app: MockApp,
     pub dispatcher_addr: Option<Addr>,
     pub treasury_addr: Option<Addr>,
@@ -54,15 +60,18 @@ pub struct TestCase {
     pub oracle: Option<Addr>,
     pub timealarms: Option<Addr>,
     pub lease_code_id: Option<u64>,
-    denom: String,
+    _lpn: PhantomData<Lpn>,
 }
 
-impl TestCase {
-    pub fn new(denom: &str) -> Self {
-        Self::with_reserve(denom, &coins(10_000, denom))
+impl<Lpn> TestCase<Lpn>
+where
+    Lpn: Currency,
+{
+    pub fn new() -> Self {
+        Self::with_reserve(&[cwcoin::<Lpn, _>(10_000)])
     }
 
-    pub fn with_reserve(denom: &str, reserve: &[CwCoin]) -> Self {
+    pub fn with_reserve(reserve: &[CwCoin]) -> Self {
         Self {
             app: mock_app(reserve),
             dispatcher_addr: None,
@@ -73,7 +82,7 @@ impl TestCase {
             oracle: None,
             timealarms: None,
             lease_code_id: None,
-            denom: denom.to_string(),
+            _lpn: PhantomData,
         }
     }
 
@@ -103,8 +112,11 @@ impl TestCase {
         self
     }
 
-    pub fn get_lease_instance(&mut self) -> Addr {
-        LeaseWrapper::default().instantiate(
+    pub fn open_lease<D>(&mut self, lease_currency: Symbol) -> Addr
+    where
+        D: Currency,
+    {
+        LeaseWrapper::default().instantiate::<D>(
             &mut self.app,
             self.lease_code_id,
             LeaseWrapperAddresses {
@@ -125,7 +137,8 @@ impl TestCase {
                     .clone()
                     .expect("Profit contract not instantiated!"),
             },
-            &self.denom,
+            lease_currency,
+            1000.into(),
             LeaseWrapperConfig::default(),
         )
     }
@@ -135,20 +148,18 @@ impl TestCase {
         self
     }
 
-    pub fn init_lpp(
-        &mut self,
-        custom_wrapper: OptionalContractWrapper,
-        symbol: Symbol,
-    ) -> &mut Self {
-        self.init_lpp_with_funds(custom_wrapper, 400, symbol)
+    pub fn init_lpp(&mut self, custom_wrapper: OptionalContractWrapper) -> &mut Self {
+        self.init_lpp_with_funds(custom_wrapper, 400.into())
     }
 
     pub fn init_lpp_with_funds(
         &mut self,
         custom_wrapper: OptionalContractWrapper,
-        amount: Amount,
-        symbol: Symbol,
-    ) -> &mut Self {
+        init_balance: Coin<Lpn>,
+    ) -> &mut Self
+    where
+        Lpn: Currency,
+    {
         let mocked_lpp = match custom_wrapper {
             Some(wrapper) => LppWrapper::with_contract_wrapper(wrapper),
             None => LppWrapper::default(),
@@ -158,8 +169,7 @@ impl TestCase {
                 .instantiate(
                     &mut self.app,
                     Uint64::new(self.lease_code_id.unwrap()),
-                    symbol,
-                    amount,
+                    init_balance,
                 )
                 .0,
         );
@@ -188,8 +198,7 @@ impl TestCase {
     }
 
     pub fn init_treasury(&mut self) -> &mut Self {
-        self.treasury_addr =
-            Some(TreasuryWrapper::default().instantiate(&mut self.app, &self.denom));
+        self.treasury_addr = Some(TreasuryWrapper::default().instantiate::<Lpn>(&mut self.app));
         self.app.update_block(next_block);
 
         self
@@ -208,15 +217,7 @@ impl TestCase {
     }
 
     pub fn init_timealarms(&mut self) -> &mut Self {
-        self.init_timealarms_with_funds(0)
-    }
-
-    pub fn init_timealarms_with_funds(&mut self, amount: Amount) -> &mut Self {
-        self.timealarms = Some(TimeAlarmsWrapper::default().instantiate(
-            &mut self.app,
-            amount,
-            self.denom.clone(),
-        ));
+        self.timealarms = Some(TimeAlarmsWrapper::default().instantiate(&mut self.app));
         self.app.update_block(next_block);
 
         self
@@ -229,9 +230,8 @@ impl TestCase {
         };
 
         self.oracle = Some(
-            mocked_oracle.instantiate(
+            mocked_oracle.instantiate::<Lpn>(
                 &mut self.app,
-                &self.denom,
                 self.timealarms
                     .as_ref()
                     .expect("Time Alarms not initialized!")

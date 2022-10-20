@@ -9,33 +9,34 @@ use finance::{
 };
 use leaser::msg::QueryMsg;
 use oracle::msg::QueryMsg as OracleQ;
-use platform::coin_legacy::to_cosmwasm;
+use platform::coin_legacy;
 use sdk::{
-    cosmwasm_std::{coins, wasm_execute, Addr, Event},
+    cosmwasm_std::{wasm_execute, Addr, Coin as CwCoin, Event},
     cw_multi_test::Executor,
 };
 
 use crate::common::{
-    leaser_wrapper::LeaserWrapper, test_case::TestCase, AppExt, ADMIN, NATIVE_DENOM,
+    leaser_wrapper::LeaserWrapper, native_cwcoin, test_case::TestCase, AppExt, ADMIN,
 };
 
-type Currency = Usdc;
-type TheCoin = Coin<Currency>;
-const DENOM: &str = Usdc::TICKER;
+type Lpn = Usdc;
+type TheCoin = Coin<Lpn>;
 
-fn create_coin(amount: u128) -> TheCoin {
-    Coin::<Currency>::new(amount)
+fn cw_coin<CoinT>(coin: CoinT) -> CwCoin
+where
+    CoinT: Into<Coin<Lpn>>,
+{
+    coin_legacy::to_cosmwasm(coin.into())
 }
 
-fn create_test_case() -> TestCase {
-    let mut test_case =
-        TestCase::with_reserve(DENOM, &coins(10_000_000_000_000_000_000_000_000_000, DENOM));
+fn create_test_case() -> TestCase<Lpn> {
+    let mut test_case = TestCase::with_reserve(&[cw_coin(10_000_000_000_000_000_000_000_000_000)]);
     test_case.init(
         &Addr::unchecked(ADMIN),
-        vec![to_cosmwasm(create_coin(1_000_000_000_000_000_000_000_000))],
+        vec![cw_coin(1_000_000_000_000_000_000_000_000)],
     );
-    test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000, DENOM);
-    test_case.init_timealarms_with_funds(5_000_000);
+    test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000.into());
+    test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
     test_case.init_profit(24);
@@ -57,7 +58,7 @@ fn internal_test_integration_setup_test() {
                 &oracle::msg::ExecuteMsg::RegisterFeeder {
                     feeder_address: ADMIN.into(),
                 },
-                vec![to_cosmwasm(create_coin(1000))],
+                vec![cw_coin(1000)],
             )
             .unwrap()
             .into(),
@@ -76,7 +77,7 @@ fn internal_test_integration_setup_test() {
                     )
                     .unwrap()],
                 },
-                vec![to_cosmwasm(create_coin(1000))],
+                vec![cw_coin(1000)],
             )
             .unwrap()
             .into(),
@@ -84,23 +85,23 @@ fn internal_test_integration_setup_test() {
         .expect("Oracle not properly connected!");
 }
 
-fn open_lease(test_case: &mut TestCase, value: TheCoin) -> Addr {
+fn open_lease(test_case: &mut TestCase<Lpn>, value: TheCoin) -> Addr {
     test_case
         .app
         .execute_contract(
             Addr::unchecked(ADMIN),
             test_case.leaser_addr.clone().unwrap(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: DENOM.to_string(),
+                currency: Lpn::TICKER.into(),
             },
-            &[to_cosmwasm(value)],
+            &[cw_coin(value)],
         )
         .unwrap();
 
     get_lease_address(test_case)
 }
 
-fn get_lease_address(test_case: &TestCase) -> Addr {
+fn get_lease_address(test_case: &TestCase<Lpn>) -> Addr {
     let query_response: HashSet<Addr> = test_case
         .app
         .wrap()
@@ -128,14 +129,14 @@ fn integration_with_timealarms() {
                 &oracle::msg::ExecuteMsg::RegisterFeeder {
                     feeder_address: ADMIN.into(),
                 },
-                vec![to_cosmwasm(create_coin(10000))],
+                vec![cw_coin(10000)],
             )
             .unwrap()
             .into(),
         )
         .unwrap();
 
-    let _lease = open_lease(&mut test_case, create_coin(1_000));
+    let _lease = open_lease(&mut test_case, TheCoin::from(1_000));
 
     test_case.app.time_shift(
         LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::GRACE_PERIOD + LeaserWrapper::GRACE_PERIOD,
@@ -143,7 +144,7 @@ fn integration_with_timealarms() {
 
     test_case.send_funds(
         &test_case.profit_addr.clone().unwrap(),
-        coins(500, NATIVE_DENOM),
+        vec![native_cwcoin(500)],
     );
 
     let resp = test_case
@@ -158,7 +159,7 @@ fn integration_with_timealarms() {
                     )
                     .unwrap()],
                 },
-                vec![to_cosmwasm(create_coin(10000))],
+                vec![cw_coin(10000)],
             )
             .unwrap()
             .into(),
@@ -179,7 +180,7 @@ fn test_config_update() {
     let base = 2;
     let quote = 10;
 
-    fn add_feeder(test_case: &mut TestCase, addr: impl Into<String>) {
+    fn add_feeder(test_case: &mut TestCase<Lpn>, addr: impl Into<String>) {
         test_case
             .app
             .execute(
@@ -197,7 +198,7 @@ fn test_config_update() {
             .unwrap();
     }
 
-    fn add_price(test_case: &mut TestCase, addr: &Addr, base: Amount, quote: Amount) {
+    fn add_price(test_case: &mut TestCase<Lpn>, addr: &Addr, base: Amount, quote: Amount) {
         test_case
             .app
             .execute(

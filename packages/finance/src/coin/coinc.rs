@@ -4,7 +4,7 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::Amount,
-    currency::{Currency, SymbolOwned},
+    currency::{self, Currency, SingleVisitor, SymbolOwned},
     error::Error,
 };
 
@@ -37,11 +37,20 @@ where
     type Error = Error;
 
     fn try_from(coin: CoinDTO) -> Result<Self, Self::Error> {
-        if C::TICKER == coin.ticker {
-            Ok(Self::new(coin.amount))
-        } else {
-            Err(Error::UnexpectedCurrency(coin.ticker, C::TICKER.into()))
+        struct CoinFactory<'a>(&'a CoinDTO);
+        impl<'a, CC> SingleVisitor<CC> for CoinFactory<'a>
+        where
+            CC: Currency,
+        {
+            type Output = Coin<CC>;
+            type Error = Error;
+
+            fn on(self) -> Result<Self::Output, Self::Error> {
+                Ok(Self::Output::new(self.0.amount))
+            }
         }
+        currency::maybe_visit_on_ticker(&coin.ticker, CoinFactory(&coin))
+            .unwrap_or_else(|_| Err(Error::unexpected_ticker::<_, C>(&coin.ticker)))
     }
 }
 
@@ -59,7 +68,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use sdk::cosmwasm_std::to_vec;
+    use sdk::cosmwasm_std::{from_slice, to_vec};
 
     use crate::{
         coin::{Coin, CoinDTO},
@@ -77,5 +86,16 @@ mod test {
     fn same_representation() {
         let coin = Coin::<MyTestCurrency>::new(4215);
         assert_eq!(to_vec(&coin), to_vec(&CoinDTO::from(coin)));
+    }
+
+    #[test]
+    fn compatible_deserialization() {
+        let coin = Coin::<MyTestCurrency>::new(85);
+        assert_eq!(
+            coin,
+            to_vec(&CoinDTO::from(coin))
+                .and_then(|buf| from_slice(&buf))
+                .expect("correct raw bytes")
+        );
     }
 }

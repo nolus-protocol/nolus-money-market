@@ -297,8 +297,8 @@ where
 #[cfg(test)]
 mod test {
     use finance::{duration::Duration, percent::Units, price, test::currency::Usdc};
+    use platform::coin_legacy;
     use sdk::cosmwasm_std::{
-        self,
         testing::{self, MOCK_CONTRACT_ADDR},
         Addr, Coin as CwCoin, Timestamp, Uint64,
     };
@@ -709,6 +709,6 @@ mod test {
     }
 
     fn coin_cw(amount: u128) -> CwCoin {
-        cosmwasm_std::coin(amount, TheCurrency::TICKER)
+        coin_legacy::to_cosmwasm::<TheCurrency>(amount.into())
     }
 }

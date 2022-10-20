@@ -46,7 +46,7 @@ pub struct TestCurrencyD;
 
 impl Currency for TestCurrencyD {
     const TICKER: SymbolStatic = "TestCurrencyD";
-    const BANK_SYMBOL: SymbolStatic = "ibc/TestCurrencyD";
+    const BANK_SYMBOL: SymbolStatic = "ibc/TestCurrency";
 }
 
 impl Member<PaymentGroup> for TestCurrencyA {}
