@@ -56,7 +56,6 @@ impl Group for PaymentGroup {
             .or_else(|v| maybe_visit::<Weth, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Wbtc, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Nls, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Nls, _>(bank_symbol, v))
             .map_err(|v| v.0)
     }
 }
