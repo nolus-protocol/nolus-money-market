@@ -11,6 +11,7 @@ mod duration;
 mod percent;
 
 pub trait Fractionable<U> {
+    #[track_caller]
     fn safe_mul<F>(self, fraction: &F) -> Self
     where
         F: Ratio<U>;
@@ -36,6 +37,7 @@ where
     D: Mul<D, Output = D> + Div<D, Output = D>,
     U: PartialEq + Into<D>,
 {
+    #[track_caller]
     fn safe_mul<R>(self, ratio: &R) -> Self
     where
         R: Ratio<U>,

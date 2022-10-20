@@ -40,6 +40,7 @@ where
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
+    #[track_caller]
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
         C: Currency,
@@ -73,6 +74,7 @@ where
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
+    #[track_caller]
     fn on<QuoteC>(self) -> Result<Self::Output, Self::Error>
     where
         QuoteC: Currency,

@@ -62,6 +62,7 @@ impl Duration {
         Self::from_nanos(days as Units * Self::UNITS_IN_DAY)
     }
 
+    #[track_caller]
     pub fn between(start: Timestamp, end: Timestamp) -> Self {
         debug_assert!(start <= end);
         Self(end.nanos() - start.nanos())
@@ -83,6 +84,7 @@ impl Duration {
         self.millis() / 1000
     }
 
+    #[track_caller]
     pub fn annualized_slice_of<T>(&self, annual_amount: T) -> T
     where
         T: TimeSliceable,
@@ -122,6 +124,7 @@ impl TryFrom<u128> for Duration {
 impl Add<Duration> for Timestamp {
     type Output = Self;
 
+    #[track_caller]
     fn add(self, rhs: Duration) -> Self::Output {
         self.plus_nanos(rhs.nanos())
     }
@@ -130,6 +133,7 @@ impl Add<Duration> for Timestamp {
 impl Add<Duration> for Duration {
     type Output = Self;
 
+    #[track_caller]
     fn add(self, rhs: Duration) -> Self::Output {
         Self::from_nanos(self.nanos().add(rhs.nanos()))
     }
@@ -138,6 +142,7 @@ impl Add<Duration> for Duration {
 impl Sub<Duration> for Timestamp {
     type Output = Self;
 
+    #[track_caller]
     fn sub(self, rhs: Duration) -> Self::Output {
         self.minus_nanos(rhs.nanos())
     }
@@ -146,6 +151,7 @@ impl Sub<Duration> for Timestamp {
 impl Sub<Duration> for Duration {
     type Output = Self;
 
+    #[track_caller]
     fn sub(self, rhs: Duration) -> Self::Output {
         Self::from_nanos(self.nanos().sub(rhs.nanos()))
     }
