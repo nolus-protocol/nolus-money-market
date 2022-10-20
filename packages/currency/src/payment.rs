@@ -1,8 +1,10 @@
-use finance::currency::{AnyVisitor, Group, MaybeAnyVisitResult, Member, Symbol, SymbolStatic};
+use finance::currency::{
+    self, AnyVisitor, Group, MaybeAnyVisitResult, Member, Symbol, SymbolStatic,
+};
 
 use crate::{
-    lease::{Atom, Osmo, Wbtc, Weth},
-    lpn::Usdc,
+    lease::{Atom, LeaseGroup, Osmo, Wbtc, Weth},
+    lpn::{Lpns, Usdc},
     native::Nls,
     SingleVisitorAdapter,
 };
@@ -19,43 +21,31 @@ pub struct PaymentGroup {}
 impl Group for PaymentGroup {
     const DESCR: SymbolStatic = "payment";
 
-    fn maybe_visit_on_ticker<V>(ticker: Symbol, visitor: V) -> MaybeAnyVisitResult<Self, V>
+    fn maybe_visit_on_ticker<V>(ticker: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        V: AnyVisitor<Self>,
+        V: AnyVisitor,
     {
-        use finance::currency::maybe_visit_on_ticker as maybe_visit;
-        let v: SingleVisitorAdapter<Self, _> = visitor.into();
-        // TODO revisit the need to type parameterize AnyVisitor by Group
-        // LeaseGroup::maybe_visit_on_ticker(symbol, visitor)
-        //     .or_else(|v| Lpns::maybe_visit_on_ticker(symbol, v))
-        //     .or_else(|v| maybe_visit::<Nls, _>(symbol, v))
-        //     .map_err(|v| v.0)
-
-        maybe_visit::<Usdc, _>(ticker, v)
-            .or_else(|v| maybe_visit::<Osmo, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Atom, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Weth, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Wbtc, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Nls, _>(ticker, v))
+        LeaseGroup::maybe_visit_on_ticker(ticker, visitor)
+            .or_else(|v| Lpns::maybe_visit_on_ticker(ticker, v))
+            .or_else(|v| {
+                currency::maybe_visit_on_ticker::<Nls, _>(ticker, SingleVisitorAdapter::from(v))
+            })
             .map_err(|v| v.0)
     }
 
-    fn maybe_visit_on_bank_symbol<V>(
-        bank_symbol: Symbol,
-        visitor: V,
-    ) -> MaybeAnyVisitResult<Self, V>
+    fn maybe_visit_on_bank_symbol<V>(bank_symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
     where
         Self: Sized,
-        V: AnyVisitor<Self>,
+        V: AnyVisitor,
     {
-        use finance::currency::maybe_visit_on_bank_symbol as maybe_visit;
-        let v: SingleVisitorAdapter<Self, _> = visitor.into();
-        maybe_visit::<Usdc, _>(bank_symbol, v)
-            .or_else(|v| maybe_visit::<Osmo, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Atom, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Weth, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Wbtc, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Nls, _>(bank_symbol, v))
+        LeaseGroup::maybe_visit_on_bank_symbol(bank_symbol, visitor)
+            .or_else(|v| Lpns::maybe_visit_on_bank_symbol(bank_symbol, v))
+            .or_else(|v| {
+                currency::maybe_visit_on_bank_symbol::<Nls, _>(
+                    bank_symbol,
+                    SingleVisitorAdapter::from(v),
+                )
+            })
             .map_err(|v| v.0)
     }
 }

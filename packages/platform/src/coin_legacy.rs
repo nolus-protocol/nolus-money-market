@@ -71,9 +71,8 @@ where
 
 struct CoinTransformerAny<'a, V>(&'a CosmWasmCoin, V);
 
-impl<'a, G, V> AnyVisitor<G> for CoinTransformerAny<'a, V>
+impl<'a, V> AnyVisitor for CoinTransformerAny<'a, V>
 where
-    G: Group,
     V: CoinVisitor,
 {
     type Output = V::Output;

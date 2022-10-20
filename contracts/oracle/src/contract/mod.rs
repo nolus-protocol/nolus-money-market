@@ -51,11 +51,11 @@ impl<'a> InstantiateWithCurrency<'a> {
         owner: Addr,
     ) -> Result<Response, ContractError> {
         let context = Self { deps, msg, owner };
-        visit_any_on_ticker(&context.msg.base_asset.clone(), context)
+        visit_any_on_ticker::<Lpns, _>(&context.msg.base_asset.clone(), context)
     }
 }
 
-impl<'a> AnyVisitor<Lpns> for InstantiateWithCurrency<'a> {
+impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
     type Output = Response;
     type Error = ContractError;
 

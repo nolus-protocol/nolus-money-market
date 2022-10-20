@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use crate::{
     coin::{Coin, CoinDTO},
     currency::{visit_any_on_ticker, AnyVisitor, Currency, Group},
@@ -16,18 +18,20 @@ where
     visit_any_on_ticker::<G, _>(
         &price.amount.ticker().clone(),
         CVisitor {
+            group: PhantomData::<G>,
             price_dto: price,
             cmd,
         },
     )
 }
 
-struct CVisitor<Cmd> {
+struct CVisitor<G, Cmd> {
+    group: PhantomData<G>,
     price_dto: PriceDTO,
     cmd: Cmd,
 }
 
-impl<G, Cmd> AnyVisitor<G> for CVisitor<Cmd>
+impl<G, Cmd> AnyVisitor for CVisitor<G, Cmd>
 where
     G: Group,
     Cmd: WithPrice,
@@ -61,10 +65,9 @@ where
     cmd: Cmd,
 }
 
-impl<C, G, Cmd> AnyVisitor<G> for QuoteCVisitor<C, Cmd>
+impl<C, Cmd> AnyVisitor for QuoteCVisitor<C, Cmd>
 where
     C: Currency,
-    G: Group,
     Cmd: WithPrice,
 {
     type Output = Cmd::Output;

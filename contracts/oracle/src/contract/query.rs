@@ -26,11 +26,11 @@ impl<'a> QueryWithOracleBase<'a> {
         let visitor = Self { deps, env, msg };
 
         let config = Config::load(visitor.deps.storage)?;
-        visit_any_on_ticker(&config.base_asset, visitor)
+        visit_any_on_ticker::<Lpns, _>(&config.base_asset, visitor)
     }
 }
 
-impl<'a> AnyVisitor<Lpns> for QueryWithOracleBase<'a> {
+impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
     type Output = Binary;
     type Error = ContractError;
 

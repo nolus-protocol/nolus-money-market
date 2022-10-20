@@ -35,11 +35,11 @@ impl<'a> ExecWithOracleBase<'a> {
         };
 
         let config = Config::load(visitor.deps.storage)?;
-        visit_any_on_ticker(&config.base_asset, visitor)
+        visit_any_on_ticker::<Lpns, _>(&config.base_asset, visitor)
     }
 }
 
-impl<'a> AnyVisitor<Lpns> for ExecWithOracleBase<'a> {
+impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
     type Output = Response;
     type Error = ContractError;
 

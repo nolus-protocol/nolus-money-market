@@ -1,6 +1,4 @@
-use std::marker::PhantomData;
-
-use finance::currency::{AnyVisitor, Currency, Group, Member, SingleVisitor};
+use finance::currency::{AnyVisitor, Currency, SingleVisitor};
 use serde::{de::DeserializeOwned, Serialize};
 
 pub mod lease;
@@ -8,19 +6,18 @@ pub mod lpn;
 pub mod native;
 pub mod payment;
 
-struct SingleVisitorAdapter<G, V>(V, PhantomData<G>);
+struct SingleVisitorAdapter<V>(V);
 
-impl<G, V> From<V> for SingleVisitorAdapter<G, V> {
+impl<V> From<V> for SingleVisitorAdapter<V> {
     fn from(any_visitor: V) -> Self {
-        Self(any_visitor, PhantomData)
+        Self(any_visitor)
     }
 }
 
-impl<C, G, V> SingleVisitor<C> for SingleVisitorAdapter<G, V>
+impl<C, V> SingleVisitor<C> for SingleVisitorAdapter<V>
 where
-    C: 'static + Currency + Member<G> + Serialize + DeserializeOwned,
-    G: Group,
-    V: AnyVisitor<G>,
+    C: 'static + Currency + Serialize + DeserializeOwned,
+    V: AnyVisitor,
 {
     type Output = V::Output;
     type Error = V::Error;

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use finance::currency::{
-    AnyVisitor, Currency, Group, MaybeAnyVisitResult, Member, Symbol, SymbolStatic,
+    self, AnyVisitor, Currency, Group, MaybeAnyVisitResult, Member, Symbol, SymbolStatic,
 };
 
 use crate::SingleVisitorAdapter;
@@ -18,25 +18,20 @@ pub struct Lpns {}
 impl Group for Lpns {
     const DESCR: SymbolStatic = "lpns";
 
-    fn maybe_visit_on_ticker<V>(ticker: Symbol, visitor: V) -> MaybeAnyVisitResult<Self, V>
+    fn maybe_visit_on_ticker<V>(ticker: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        V: AnyVisitor<Self>,
+        V: AnyVisitor,
     {
-        use finance::currency::maybe_visit_on_ticker as maybe_visit;
-        let v: SingleVisitorAdapter<Self, _> = visitor.into();
-        maybe_visit::<Usdc, _>(ticker, v).map_err(|v| v.0)
+        let v: SingleVisitorAdapter<_> = visitor.into();
+        currency::maybe_visit_on_ticker::<Usdc, _>(ticker, v).map_err(|v| v.0)
     }
 
-    fn maybe_visit_on_bank_symbol<V>(
-        bank_symbol: Symbol,
-        visitor: V,
-    ) -> MaybeAnyVisitResult<Self, V>
+    fn maybe_visit_on_bank_symbol<V>(bank_symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
     where
         Self: Sized,
-        V: AnyVisitor<Self>,
+        V: AnyVisitor,
     {
-        use finance::currency::maybe_visit_on_bank_symbol as maybe_visit;
-        let v: SingleVisitorAdapter<Self, _> = visitor.into();
-        maybe_visit::<Usdc, _>(bank_symbol, v).map_err(|v| v.0)
+        let v: SingleVisitorAdapter<_> = visitor.into();
+        currency::maybe_visit_on_bank_symbol::<Usdc, _>(bank_symbol, v).map_err(|v| v.0)
     }
 }

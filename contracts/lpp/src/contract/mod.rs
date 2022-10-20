@@ -1,6 +1,6 @@
+use currency::lpn::Lpns;
 use serde::{de::DeserializeOwned, Serialize};
 
-use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
@@ -46,11 +46,11 @@ impl<'a> InstantiateWithLpn<'a> {
 
     pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<Response, ContractError> {
         let context = Self { deps, msg };
-        visit_any_on_ticker(&context.msg.denom.clone(), context)
+        visit_any_on_ticker::<Lpns, _>(&context.msg.denom.clone(), context)
     }
 }
 
-impl<'a> AnyVisitor<Lpns> for InstantiateWithLpn<'a> {
+impl<'a> AnyVisitor for InstantiateWithLpn<'a> {
     type Output = Response;
     type Error = ContractError;
 
@@ -117,11 +117,11 @@ impl<'a> ExecuteWithLpn<'a> {
         };
 
         let config = Config::load(context.deps.storage)?;
-        visit_any_on_ticker(&config.currency, context)
+        visit_any_on_ticker::<Lpns, _>(&config.currency, context)
     }
 }
 
-impl<'a> AnyVisitor<Lpns> for ExecuteWithLpn<'a> {
+impl<'a> AnyVisitor for ExecuteWithLpn<'a> {
     type Output = Response;
     type Error = ContractError;
 
@@ -207,11 +207,11 @@ impl<'a> QueryWithLpn<'a> {
         let context = Self { deps, env, msg };
 
         let config = Config::load(context.deps.storage)?;
-        visit_any_on_ticker(&config.currency, context)
+        visit_any_on_ticker::<Lpns, _>(&config.currency, context)
     }
 }
 
-impl<'a> AnyVisitor<Lpns> for QueryWithLpn<'a> {
+impl<'a> AnyVisitor for QueryWithLpn<'a> {
     type Output = Binary;
     type Error = ContractError;
 

@@ -46,12 +46,12 @@ pub struct LeaseGroup {}
 impl Group for LeaseGroup {
     const DESCR: SymbolStatic = "lease";
 
-    fn maybe_visit_on_ticker<V>(ticker: Symbol, visitor: V) -> MaybeAnyVisitResult<Self, V>
+    fn maybe_visit_on_ticker<V>(ticker: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
     where
-        V: AnyVisitor<Self>,
+        V: AnyVisitor,
     {
         use finance::currency::maybe_visit_on_ticker as maybe_visit;
-        let v: SingleVisitorAdapter<Self, _> = visitor.into();
+        let v: SingleVisitorAdapter<_> = visitor.into();
         maybe_visit::<Atom, _>(ticker, v)
             .or_else(|v| maybe_visit::<Osmo, _>(ticker, v))
             .or_else(|v| maybe_visit::<Weth, _>(ticker, v))
@@ -60,16 +60,13 @@ impl Group for LeaseGroup {
             .map_err(|v| v.0)
     }
 
-    fn maybe_visit_on_bank_symbol<V>(
-        bank_symbol: Symbol,
-        visitor: V,
-    ) -> MaybeAnyVisitResult<Self, V>
+    fn maybe_visit_on_bank_symbol<V>(bank_symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
     where
         Self: Sized,
-        V: AnyVisitor<Self>,
+        V: AnyVisitor,
     {
         use finance::currency::maybe_visit_on_bank_symbol as maybe_visit;
-        let v: SingleVisitorAdapter<Self, _> = visitor.into();
+        let v: SingleVisitorAdapter<_> = visitor.into();
         maybe_visit::<Atom, _>(bank_symbol, v)
             .or_else(|v| maybe_visit::<Osmo, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Weth, _>(bank_symbol, v))

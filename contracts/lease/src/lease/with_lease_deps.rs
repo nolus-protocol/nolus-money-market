@@ -45,7 +45,7 @@ where
     market_price_oracle::error::ContractError: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
 {
-    currency::visit_any_on_ticker(
+    currency::visit_any_on_ticker::<LeaseGroup, _>(
         asset,
         FactoryStage1 {
             cmd,
@@ -67,7 +67,7 @@ struct FactoryStage1<'r, Cmd> {
     querier: &'r QuerierWrapper<'r>,
 }
 
-impl<'r, Cmd> AnyVisitor<LeaseGroup> for FactoryStage1<'r, Cmd>
+impl<'r, Cmd> AnyVisitor for FactoryStage1<'r, Cmd>
 where
     Cmd: WithLeaseDeps,
     finance::error::Error: Into<Cmd::Error>,

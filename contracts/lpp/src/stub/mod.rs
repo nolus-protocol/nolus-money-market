@@ -63,7 +63,7 @@ impl LppRef {
             querier: &'a QuerierWrapper<'a>,
         }
 
-        impl<'a, V> AnyVisitor<Lpns> for CurrencyVisitor<'a, V>
+        impl<'a, V> AnyVisitor for CurrencyVisitor<'a, V>
         where
             V: WithLpp,
         {
@@ -78,7 +78,7 @@ impl LppRef {
             }
         }
 
-        visit_any_on_ticker(
+        visit_any_on_ticker::<Lpns, _>(
             &self.currency.clone(),
             CurrencyVisitor {
                 cmd,

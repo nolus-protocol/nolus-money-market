@@ -16,10 +16,9 @@ where
     cmd: Cmd,
 }
 
-impl<C, G, Cmd> AnyVisitor<G> for QuoteCVisitor<C, Cmd>
+impl<C, Cmd> AnyVisitor for QuoteCVisitor<C, Cmd>
 where
     C: Currency,
-    G: Group,
     Cmd: WithBase<C>,
 {
     type Output = Cmd::Output;
