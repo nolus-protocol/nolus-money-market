@@ -1,9 +1,13 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use currency::lpn::Usdc;
 use finance::{
-    coin::Coin, currency::Currency as _, duration::Duration, interest::InterestPeriod,
-    percent::Percent, price::dto::PriceDTO,
+    coin::{Amount, Coin},
+    currency::Currency as _,
+    duration::Duration,
+    interest::InterestPeriod,
+    percent::Percent,
+    price::dto::PriceDTO,
 };
 use lease::msg::{StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
@@ -412,23 +416,57 @@ fn liquidation_time_alarm(time_pass: Duration) {
     let downpayment = create_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment);
 
+    let (base_amount,) = if let StateResponse::Opened { amount, .. } =
+        state_query(&test_case, &lease_address.to_string())
+    {
+        (Amount::from(amount),)
+    } else {
+        unreachable!()
+    };
+
     test_case.app.time_shift(time_pass);
 
     let response = test_case
         .app
         .execute_contract(
-            test_case.timealarms.unwrap(),
-            lease_address,
+            test_case.timealarms.clone().unwrap(),
+            lease_address.clone(),
             &lease::msg::ExecuteMsg::TimeAlarm(test_case.app.block_info().time),
             &[to_cosmwasm(create_coin(10000))],
         )
         .unwrap();
 
-    response
+    let liquidation_attributes: HashMap<String, String> = response
         .events
-        .iter()
+        .into_iter()
         .find(|event| event.ty == "wasm-ls-liquidation")
-        .expect("No liquidation emitted!");
+        .expect("No liquidation emitted!")
+        .attributes
+        .into_iter()
+        .map(|attribute| (attribute.key, attribute.value))
+        .collect();
+
+    let query_result = state_query(&test_case, &lease_address.into_string());
+
+    if let StateResponse::Opened {
+        amount,
+        previous_margin_due,
+        previous_interest_due,
+        ..
+    } = query_result
+    {
+        assert_eq!(
+            Amount::from(amount),
+            base_amount
+                - liquidation_attributes["liquidation-amount"]
+                    .parse::<Amount>()
+                    .unwrap()
+        );
+
+        assert!(previous_margin_due.is_zero());
+
+        assert!(previous_interest_due.is_zero());
+    }
 }
 
 #[test]
