@@ -1,10 +1,9 @@
 use std::time::SystemTime;
 
 use currency::{
-    lease::{Atom, Osmo},
+    lease::{Atom, Osmo, Wbtc, Weth},
     lpn::Usdc,
     native::Nls,
-    test::{TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD},
 };
 use finance::{
     coin::Coin,
@@ -66,10 +65,7 @@ fn marketprice_add_feed_expect_err() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
     let params = Parameters::new(MINUTE, 50, ts);
-    let path = vec![
-        TestCurrencyA::TICKER.to_string(),
-        TestCurrencyB::TICKER.to_string(),
-    ];
+    let path = vec![Osmo::TICKER.to_string(), Atom::TICKER.to_string()];
     let expected_err = market.price(&deps.storage, params, path).unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
 }
@@ -99,12 +95,10 @@ fn marketprice_add_feed() {
     let market = PriceFeeds::new("foo");
     let f_address = deps.api.addr_validate("address1").unwrap();
 
-    let price1 = price::total_of(Coin::<TestCurrencyA>::new(10)).is(Coin::<TestCurrencyB>::new(5));
-    let price2 = price::total_of(Coin::<TestCurrencyA>::new(10000000000))
-        .is(Coin::<TestCurrencyC>::new(1000000009));
+    let price1 = price::total_of(Coin::<Osmo>::new(10)).is(Coin::<Atom>::new(5));
+    let price2 = price::total_of(Coin::<Osmo>::new(10000000000)).is(Coin::<Weth>::new(1000000009));
     let price3 =
-        price::total_of(Coin::<TestCurrencyA>::new(10000000000000))
-            .is(Coin::<TestCurrencyD>::new(100000000000002));
+        price::total_of(Coin::<Osmo>::new(10000000000000)).is(Coin::<Wbtc>::new(100000000000002));
 
     let prices: Vec<PriceDTO> = vec![
         PriceDTO::try_from(price1).unwrap(),
@@ -126,10 +120,7 @@ fn marketprice_add_feed() {
         .price(
             &deps.storage,
             query,
-            vec![
-                TestCurrencyA::TICKER.to_string(),
-                TestCurrencyB::TICKER.to_string(),
-            ],
+            vec![Osmo::TICKER.to_string(), Atom::TICKER.to_string()],
         )
         .unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
@@ -140,10 +131,7 @@ fn marketprice_add_feed() {
         .price(
             &deps.storage,
             query,
-            vec![
-                TestCurrencyA::TICKER.to_string(),
-                TestCurrencyB::TICKER.to_string(),
-            ],
+            vec![Osmo::TICKER.to_string(), Atom::TICKER.to_string()],
         )
         .unwrap();
 
@@ -298,7 +286,7 @@ fn marketprice_follow_the_path() {
             .price(
                 &deps.storage,
                 query,
-                vec![DenX::TICKER.to_string(), TestCurrencyA::TICKER.to_string()]
+                vec![DenX::TICKER.to_string(), Osmo::TICKER.to_string()]
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice {}

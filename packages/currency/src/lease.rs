@@ -22,6 +22,22 @@ impl Currency for Osmo {
 }
 impl Member<LeaseGroup> for Osmo {}
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
+pub struct Weth {}
+impl Currency for Weth {
+    const TICKER: SymbolStatic = "WETH";
+    const BANK_SYMBOL: SymbolStatic = "ibc/TBDweth";
+}
+impl Member<LeaseGroup> for Weth {}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
+pub struct Wbtc {}
+impl Currency for Wbtc {
+    const TICKER: SymbolStatic = "WBTC";
+    const BANK_SYMBOL: SymbolStatic = "ibc/TBDwbtc";
+}
+impl Member<LeaseGroup> for Wbtc {}
+
 // TODO REMOVE once migrate off the single currency version
 impl Member<LeaseGroup> for Usdc {}
 
@@ -38,6 +54,8 @@ impl Group for LeaseGroup {
         let v: SingleVisitorAdapter<Self, _> = visitor.into();
         maybe_visit::<Atom, _>(ticker, v)
             .or_else(|v| maybe_visit::<Osmo, _>(ticker, v))
+            .or_else(|v| maybe_visit::<Weth, _>(ticker, v))
+            .or_else(|v| maybe_visit::<Wbtc, _>(ticker, v))
             .or_else(|v| maybe_visit::<Usdc, _>(ticker, v))
             .map_err(|v| v.0)
     }
@@ -54,6 +72,8 @@ impl Group for LeaseGroup {
         let v: SingleVisitorAdapter<Self, _> = visitor.into();
         maybe_visit::<Atom, _>(bank_symbol, v)
             .or_else(|v| maybe_visit::<Osmo, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<Weth, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<Wbtc, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Usdc, _>(bank_symbol, v))
             .map_err(|v| v.0)
     }

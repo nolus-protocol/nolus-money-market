@@ -8,9 +8,6 @@ pub mod lpn;
 pub mod native;
 pub mod payment;
 
-#[cfg(feature = "testing")]
-pub mod test;
-
 struct SingleVisitorAdapter<G, V>(V, PhantomData<G>);
 
 impl<G, V> From<V> for SingleVisitorAdapter<G, V> {

@@ -1,7 +1,7 @@
 use currency::{
+    lease::{Atom, Osmo, Wbtc, Weth},
     lpn::Usdc,
     native::Nls,
-    test::{TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD},
 };
 use finance::{
     coin::Coin,
@@ -51,15 +51,15 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
         Percent::from_percent(50),
         vec![
             vec![
-                TestCurrencyA::TICKER.to_string(),
-                TestCurrencyB::TICKER.to_string(),
-                TestCurrencyC::TICKER.to_string(),
+                Osmo::TICKER.to_string(),
+                Atom::TICKER.to_string(),
+                Weth::TICKER.to_string(),
                 Usdc::TICKER.to_string(),
             ],
-            vec![TestCurrencyD::TICKER.to_string(), Usdc::TICKER.to_string()],
+            vec![Wbtc::TICKER.to_string(), Usdc::TICKER.to_string()],
             vec![
                 Nls::TICKER.to_string(),
-                TestCurrencyD::TICKER.to_string(),
+                Wbtc::TICKER.to_string(),
                 Usdc::TICKER.to_string(),
             ],
         ],
@@ -70,26 +70,14 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
 pub(crate) fn dummy_feed_prices_msg() -> ExecuteMsg {
     ExecuteMsg::FeedPrices {
         prices: vec![
-            PriceDTO::try_from(price::total_of(Coin::<TestCurrencyA>::new(10)).is(Coin::<
-                TestCurrencyB,
-            >::new(
-                12
-            )))
-            .unwrap(),
-            PriceDTO::try_from(price::total_of(Coin::<TestCurrencyB>::new(10)).is(Coin::<
-                TestCurrencyC,
-            >::new(
-                32
-            )))
-            .unwrap(),
-            PriceDTO::try_from(
-                price::total_of(Coin::<TestCurrencyC>::new(10)).is(Coin::<Usdc>::new(12)),
-            )
-            .unwrap(),
-            PriceDTO::try_from(
-                price::total_of(Coin::<TestCurrencyD>::new(10)).is(Coin::<Usdc>::new(120)),
-            )
-            .unwrap(),
+            PriceDTO::try_from(price::total_of(Coin::<Osmo>::new(10)).is(Coin::<Atom>::new(12)))
+                .unwrap(),
+            PriceDTO::try_from(price::total_of(Coin::<Atom>::new(10)).is(Coin::<Weth>::new(32)))
+                .unwrap(),
+            PriceDTO::try_from(price::total_of(Coin::<Weth>::new(10)).is(Coin::<Usdc>::new(12)))
+                .unwrap(),
+            PriceDTO::try_from(price::total_of(Coin::<Wbtc>::new(10)).is(Coin::<Usdc>::new(120)))
+                .unwrap(),
         ],
     }
 }

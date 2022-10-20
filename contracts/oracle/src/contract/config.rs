@@ -48,7 +48,7 @@ pub fn try_configure(
 
 #[cfg(test)]
 mod tests {
-    use currency::{lpn::Usdc, native::Nls, test::TestCurrencyA};
+    use currency::{lease::Osmo, lpn::Usdc, native::Nls};
     use finance::{currency::Currency, duration::Duration, percent::Percent};
     use sdk::{
         cosmwasm_ext::Response,
@@ -162,7 +162,7 @@ mod tests {
 
         let test_vec = vec![
             vec![Nls::TICKER.to_string(), Usdc::TICKER.to_string()],
-            vec![TestCurrencyA::TICKER.to_string(), Usdc::TICKER.to_string()],
+            vec![Osmo::TICKER.to_string(), Usdc::TICKER.to_string()],
         ];
 
         let msg = ExecuteMsg::CurrencyPaths {
@@ -194,7 +194,7 @@ mod tests {
 
         let msg = ExecuteMsg::CurrencyPaths {
             paths: vec![
-                vec![TestCurrencyA::TICKER.to_string(), Usdc::TICKER.to_string()],
+                vec![Osmo::TICKER.to_string(), Usdc::TICKER.to_string()],
                 vec![Nls::TICKER.to_string(), Nls::TICKER.to_string()],
             ],
         };

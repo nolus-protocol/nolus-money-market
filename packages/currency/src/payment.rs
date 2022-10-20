@@ -1,9 +1,7 @@
 use finance::currency::{AnyVisitor, Group, MaybeAnyVisitResult, Member, Symbol, SymbolStatic};
 
-#[cfg(feature = "testing")]
-use crate::test::{TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD};
 use crate::{
-    lease::{Atom, Osmo},
+    lease::{Atom, Osmo, Wbtc, Weth},
     lpn::Usdc,
     native::Nls,
     SingleVisitorAdapter,
@@ -12,6 +10,8 @@ use crate::{
 impl Member<PaymentGroup> for Usdc {}
 impl Member<PaymentGroup> for Osmo {}
 impl Member<PaymentGroup> for Atom {}
+impl Member<PaymentGroup> for Weth {}
+impl Member<PaymentGroup> for Wbtc {}
 impl Member<PaymentGroup> for Nls {}
 
 pub struct PaymentGroup {}
@@ -34,14 +34,9 @@ impl Group for PaymentGroup {
         maybe_visit::<Usdc, _>(ticker, v)
             .or_else(|v| maybe_visit::<Osmo, _>(ticker, v))
             .or_else(|v| maybe_visit::<Atom, _>(ticker, v))
+            .or_else(|v| maybe_visit::<Weth, _>(ticker, v))
+            .or_else(|v| maybe_visit::<Wbtc, _>(ticker, v))
             .or_else(|v| maybe_visit::<Nls, _>(ticker, v))
-            .or_else(|v| {
-                #[cfg(feature = "testing")]
-                maybe_visit::<TestCurrencyA, _>(ticker, v)
-                    .or_else(|v| maybe_visit::<TestCurrencyB, _>(ticker, v))
-                    .or_else(|v| maybe_visit::<TestCurrencyC, _>(ticker, v))
-                    .or_else(|v| maybe_visit::<TestCurrencyD, _>(ticker, v))
-            })
             .map_err(|v| v.0)
     }
 
@@ -58,14 +53,10 @@ impl Group for PaymentGroup {
         maybe_visit::<Usdc, _>(bank_symbol, v)
             .or_else(|v| maybe_visit::<Osmo, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Atom, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<Weth, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<Wbtc, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Nls, _>(bank_symbol, v))
-            .or_else(|v| {
-                #[cfg(feature = "testing")]
-                maybe_visit::<TestCurrencyA, _>(bank_symbol, v)
-                    .or_else(|v| maybe_visit::<TestCurrencyB, _>(bank_symbol, v))
-                    .or_else(|v| maybe_visit::<TestCurrencyC, _>(bank_symbol, v))
-                    .or_else(|v| maybe_visit::<TestCurrencyD, _>(bank_symbol, v))
-            })
+            .or_else(|v| maybe_visit::<Nls, _>(bank_symbol, v))
             .map_err(|v| v.0)
     }
 }

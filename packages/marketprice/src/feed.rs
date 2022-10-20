@@ -88,8 +88,8 @@ impl PriceFeed {
 #[cfg(test)]
 mod tests {
     use currency::{
+        lease::{Atom, Osmo},
         native::Nls,
-        test::{TestCurrencyA, TestCurrencyB},
     };
     use finance::{
         coin::Coin,
@@ -100,19 +100,19 @@ mod tests {
     // we ensure this rounds up (as it calculates needed votes)
     fn compare_prices() {
         let p1 = PriceDTO::try_from(
-            price::total_of(Coin::<TestCurrencyA>::new(1000000)).is(Coin::<Nls>::new(123456)),
+            price::total_of(Coin::<Osmo>::new(1000000)).is(Coin::<Nls>::new(123456)),
         )
         .unwrap();
         let p2 = PriceDTO::try_from(
-            price::total_of(Coin::<TestCurrencyA>::new(1000000)).is(Coin::<Nls>::new(789456)),
+            price::total_of(Coin::<Osmo>::new(1000000)).is(Coin::<Nls>::new(789456)),
         )
         .unwrap();
         let p3 = PriceDTO::try_from(
-            price::total_of(Coin::<TestCurrencyA>::new(1000000)).is(Coin::<Nls>::new(3456)),
+            price::total_of(Coin::<Osmo>::new(1000000)).is(Coin::<Nls>::new(3456)),
         )
         .unwrap();
         let p4 = PriceDTO::try_from(
-            price::total_of(Coin::<TestCurrencyB>::new(1000000)).is(Coin::<Nls>::new(3456)),
+            price::total_of(Coin::<Atom>::new(1000000)).is(Coin::<Nls>::new(3456)),
         )
         .unwrap();
         assert!(p1.lt(&p2));
