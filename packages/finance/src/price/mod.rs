@@ -126,6 +126,7 @@ where
         }
     }
 
+    #[track_caller]
     fn bits_above_max(double_amount: DoubleAmount) -> u32 {
         const BITS_MAX_AMOUNT: u32 = Amount::BITS;
         let higher_half: Amount = IntermediateAmount::try_from(double_amount >> BITS_MAX_AMOUNT)
@@ -134,6 +135,7 @@ where
         BITS_MAX_AMOUNT - higher_half.leading_zeros()
     }
 
+    #[track_caller]
     fn trim_down(double_amount: DoubleAmount, bits: u32) -> Amount {
         debug_assert!(bits <= Amount::BITS);
         let amount: IntermediateAmount = (double_amount >> bits)

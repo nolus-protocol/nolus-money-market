@@ -35,6 +35,7 @@ pub struct Liability {
 }
 
 impl Liability {
+    #[track_caller]
     pub fn new(
         initial: Percent,
         delta_to_healthy: Percent,

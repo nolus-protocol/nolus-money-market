@@ -24,6 +24,7 @@ where
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
+    #[track_caller]
     fn on<QuoteC>(self) -> Result<Self::Output, Self::Error>
     where
         QuoteC: Currency,
@@ -35,6 +36,7 @@ where
     }
 }
 
+#[track_caller]
 pub fn execute<G, Cmd, C>(price: PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
 where
     G: Group,

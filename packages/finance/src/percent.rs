@@ -67,6 +67,7 @@ impl Percent {
 }
 
 impl Fraction<Units> for Percent {
+    #[track_caller]
     fn of<A>(&self, whole: A) -> A
     where
         A: Fractionable<Units>,
@@ -96,6 +97,7 @@ impl Ratio<Units> for Rational<Percent> {
 }
 
 impl Display for Percent {
+    #[track_caller]
     fn fmt(&self, f: &mut Formatter) -> Result {
         let whole = (self.0) / Self::UNITS_TO_PERCENT_RATIO;
         let fractional = (self.0)
@@ -114,6 +116,7 @@ impl Display for Percent {
 impl Add<Percent> for Percent {
     type Output = Self;
 
+    #[track_caller]
     fn add(self, rhs: Self) -> Self {
         Self(
             self.0
@@ -126,6 +129,7 @@ impl Add<Percent> for Percent {
 impl<'a> Add<&'a Percent> for Percent {
     type Output = Self;
 
+    #[track_caller]
     fn add(self, rhs: &'a Percent) -> Self {
         self + *rhs
     }
@@ -134,6 +138,7 @@ impl<'a> Add<&'a Percent> for Percent {
 impl Sub<Percent> for Percent {
     type Output = Self;
 
+    #[track_caller]
     fn sub(self, rhs: Self) -> Self {
         Self(
             self.0
@@ -146,6 +151,7 @@ impl Sub<Percent> for Percent {
 impl<'a> Sub<&'a Percent> for Percent {
     type Output = Self;
 
+    #[track_caller]
     fn sub(self, rhs: &'a Percent) -> Self {
         self - *rhs
     }
