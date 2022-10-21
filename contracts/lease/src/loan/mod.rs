@@ -109,7 +109,7 @@ where
                 lpp,
                 interest_due_period,
                 grace_period,
-                Self::construct_period(annual_margin_interest, start, interest_due_period),
+                Self::due_period(annual_margin_interest, start, interest_due_period),
                 profit,
             ))
         }
@@ -262,7 +262,7 @@ where
         let margin_interest_overdue_period = if self.overdue_at(now) {
             self.current_period
         } else {
-            self.construct_new_period_with_start_and_period(
+            self.due_period_from_with_length(
                 self.current_period.till() - self.interest_due_period,
                 Duration::default(),
             )
@@ -415,7 +415,7 @@ where
     fn open_next_period(&mut self) {
         debug_assert!(self.current_period.zero_length());
 
-        self.current_period = self.construct_new_period_with_start(self.current_period.till());
+        self.current_period = self.due_period_from(self.current_period.till());
     }
 
     fn overdue_at(&self, when: Timestamp) -> bool {
@@ -423,20 +423,20 @@ where
     }
 
     #[inline]
-    fn construct_new_period_with_start(&self, start: Timestamp) -> InterestPeriod<Units, Percent> {
-        Self::construct_period(self.annual_margin_interest, start, self.interest_due_period)
+    fn due_period_from(&self, start: Timestamp) -> InterestPeriod<Units, Percent> {
+        Self::due_period(self.annual_margin_interest, start, self.interest_due_period)
     }
 
     #[inline]
-    fn construct_new_period_with_start_and_period(
+    fn due_period_from_with_length(
         &self,
         start: Timestamp,
         period: Duration,
     ) -> InterestPeriod<Units, Percent> {
-        Self::construct_period(self.annual_margin_interest, start, period)
+        Self::due_period(self.annual_margin_interest, start, period)
     }
 
-    fn construct_period(
+    fn due_period(
         margin_interest: Percent,
         start: Timestamp,
         period: Duration,
