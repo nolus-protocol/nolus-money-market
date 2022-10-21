@@ -103,16 +103,13 @@ where
                 interest_due_period,
             )))
         } else {
-            let current_period = InterestPeriod::with_interest(annual_margin_interest)
-                .from(start)
-                .spanning(interest_due_period);
             Ok(Self::new_raw(
                 annual_margin_interest,
                 PhantomData,
                 lpp,
                 interest_due_period,
                 grace_period,
-                current_period,
+                Self::construct_period(annual_margin_interest, start, interest_due_period),
                 profit,
             ))
         }
@@ -140,6 +137,7 @@ where
         profit: Profit,
     ) -> Self {
         debug_assert!(grace_period < interest_due_period);
+
         Self {
             annual_margin_interest,
             lpn,
@@ -264,7 +262,10 @@ where
         let margin_interest_overdue_period = if self.overdue_at(now) {
             self.current_period
         } else {
-            self.current_period.spanning(Duration::default())
+            self.construct_new_period_with_start_and_period(
+                self.current_period.till() - self.interest_due_period,
+                Duration::default(),
+            )
         };
 
         let margin_interest_due_period = self
@@ -346,7 +347,9 @@ where
 
         receipt.pay_previous_interest(previous_interest_paid);
 
-        if previous_interest_paid == previous_interest_due {
+        if previous_interest_due != Coin::default()
+            && previous_interest_paid == previous_interest_due
+        {
             self.open_next_period();
         }
 
@@ -413,13 +416,35 @@ where
     fn open_next_period(&mut self) {
         debug_assert!(self.current_period.zero_length());
 
-        self.current_period = InterestPeriod::with_interest(self.annual_margin_interest)
-            .from(self.current_period.till())
-            .spanning(self.interest_due_period);
+        self.current_period = self.construct_new_period_with_start(self.current_period.till());
     }
 
     fn overdue_at(&self, when: Timestamp) -> bool {
         self.current_period.till() <= when
+    }
+
+    #[inline]
+    fn construct_new_period_with_start(&self, start: Timestamp) -> InterestPeriod<Units, Percent> {
+        Self::construct_period(self.annual_margin_interest, start, self.interest_due_period)
+    }
+
+    #[inline]
+    fn construct_new_period_with_start_and_period(
+        &self,
+        start: Timestamp,
+        period: Duration,
+    ) -> InterestPeriod<Units, Percent> {
+        Self::construct_period(self.annual_margin_interest, start, period)
+    }
+
+    fn construct_period(
+        margin_interest: Percent,
+        start: Timestamp,
+        period: Duration,
+    ) -> InterestPeriod<Units, Percent> {
+        InterestPeriod::with_interest(margin_interest)
+            .from(start)
+            .spanning(period)
     }
 
     fn debug_check_start_due_before(&self, when: Timestamp, when_descr: &str) {
@@ -618,7 +643,7 @@ mod tests {
         let repay_amount = lease_amount / 4;
         let repay_coin = coin(repay_amount);
 
-        let interest_rate = Percent::from_permille(0);
+        let interest_rate = Percent::from_permille(50);
 
         // LPP loan
         let loan_resp = LoanResponse {
@@ -630,13 +655,9 @@ mod tests {
 
         let mut loan = create_loan(Some(loan_resp));
 
-        let receipt = loan
-            .repay(
-                repay_coin,
-                LEASE_START + Duration::from_nanos(Duration::YEAR.nanos() - 1),
-                Addr::unchecked(addr),
-            )
-            .unwrap();
+        let now = LEASE_START + Duration::from_nanos(Duration::YEAR.nanos() - 1);
+
+        let receipt = loan.repay(repay_coin, now, Addr::unchecked(addr)).unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = RepayReceipt::default();
@@ -645,6 +666,12 @@ mod tests {
 
             receipt
         },);
+
+        let state = loan.state(now, Addr::unchecked(addr)).unwrap().unwrap();
+
+        assert_eq!(state.previous_margin_interest_due, Coin::default());
+
+        assert_eq!(state.previous_interest_due, Coin::default());
     }
 
     #[test]
