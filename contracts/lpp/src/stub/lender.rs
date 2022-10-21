@@ -67,7 +67,7 @@ impl LppLenderRef {
         let resp: QueryConfigResponse =
             querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
 
-        let currency = resp.lpn_symbol;
+        let currency = resp.lpn_ticker;
 
         Ok(Self {
             addr,

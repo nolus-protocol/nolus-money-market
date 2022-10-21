@@ -39,14 +39,18 @@ impl<'a> InstantiateWithLpn<'a> {
     {
         set_contract_version(self.deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-        LiquidityPool::<LPN>::store(self.deps.storage, self.msg.denom, self.msg.lease_code_id)?;
+        LiquidityPool::<LPN>::store(
+            self.deps.storage,
+            self.msg.lpn_ticker,
+            self.msg.lease_code_id,
+        )?;
 
         Ok(Response::new().add_attribute("method", "instantiate"))
     }
 
     pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<Response, ContractError> {
         let context = Self { deps, msg };
-        visit_any_on_ticker::<Lpns, _>(&context.msg.denom.clone(), context)
+        visit_any_on_ticker::<Lpns, _>(&context.msg.lpn_ticker.clone(), context)
     }
 }
 
@@ -117,7 +121,7 @@ impl<'a> ExecuteWithLpn<'a> {
         };
 
         let config = Config::load(context.deps.storage)?;
-        visit_any_on_ticker::<Lpns, _>(&config.currency, context)
+        visit_any_on_ticker::<Lpns, _>(&config.lpn_ticker, context)
     }
 }
 
@@ -207,7 +211,7 @@ impl<'a> QueryWithLpn<'a> {
         let context = Self { deps, env, msg };
 
         let config = Config::load(context.deps.storage)?;
-        visit_any_on_ticker::<Lpns, _>(&config.currency, context)
+        visit_any_on_ticker::<Lpns, _>(&config.lpn_ticker, context)
     }
 }
 

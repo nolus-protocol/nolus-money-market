@@ -45,7 +45,7 @@ impl LppWrapper {
     {
         let lpp_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {
-            denom: Lpn::TICKER.into(),
+            lpn_ticker: Lpn::TICKER.into(),
             lease_code_id,
         };
 

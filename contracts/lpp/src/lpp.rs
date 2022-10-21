@@ -65,8 +65,12 @@ impl<LPN> LiquidityPool<LPN>
 where
     LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
-    pub fn store(storage: &mut dyn Storage, denom: String, lease_code_id: Uint64) -> StdResult<()> {
-        Config::new(denom, lease_code_id).store(storage)?;
+    pub fn store(
+        storage: &mut dyn Storage,
+        lpn_ticker: String,
+        lease_code_id: Uint64,
+    ) -> StdResult<()> {
+        Config::new(lpn_ticker, lease_code_id).store(storage)?;
         Total::<LPN>::new().store(storage)?;
         Ok(())
     }

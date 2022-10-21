@@ -11,7 +11,7 @@ use crate::nlpn::NLpn;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct Config {
-    pub currency: String,
+    pub lpn_ticker: String,
     pub lease_code_id: Uint64,
     pub base_interest_rate: Percent,
     pub utilization_optimal: Percent,
@@ -21,9 +21,9 @@ pub struct Config {
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn new(currency: String, lease_code_id: Uint64) -> Self {
+    pub fn new(lpn_ticker: String, lease_code_id: Uint64) -> Self {
         Config {
-            currency,
+            lpn_ticker,
             lease_code_id,
             base_interest_rate: Percent::from_percent(7),
             utilization_optimal: Percent::from_percent(70),
