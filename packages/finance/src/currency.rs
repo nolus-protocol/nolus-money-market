@@ -123,77 +123,25 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::marker::PhantomData;
 
     use crate::{
-        currency::{Currency, SingleVisitor},
+        currency::Currency,
         error::Error,
-        test::currency::{Dai, Nls, TestCurrencies, Usdc},
+        test::{
+            currency::{Dai, Nls, TestCurrencies, Usdc},
+            visitor::{Expect, ExpectUnknownCurrency},
+        },
     };
 
-    use super::AnyVisitor;
-
-    struct Expect<C>(PhantomData<C>);
-
-    impl<C> Expect<C> {
-        fn new() -> Self {
-            Self(PhantomData)
-        }
-    }
-    impl<C> AnyVisitor for Expect<C>
-    where
-        C: 'static,
-    {
-        type Output = bool;
-        type Error = Error;
-
-        fn on<Cin>(self) -> Result<Self::Output, Self::Error>
-        where
-            Cin: 'static,
-        {
-            assert!(super::equal::<C, Cin>());
-            Ok(super::equal::<C, Cin>())
-        }
-    }
-    impl<C> SingleVisitor<C> for Expect<C> {
-        type Output = bool;
-        type Error = Error;
-
-        fn on(self) -> Result<Self::Output, Self::Error> {
-            Ok(true)
-        }
-    }
-
-    struct ExpectUnknownCurrency;
-    impl AnyVisitor for ExpectUnknownCurrency {
-        type Output = bool;
-        type Error = Error;
-
-        fn on<C>(self) -> Result<Self::Output, Self::Error>
-        where
-            C: Currency,
-        {
-            unreachable!();
-        }
-    }
-
-    impl<C> SingleVisitor<C> for ExpectUnknownCurrency {
-        type Output = bool;
-        type Error = Error;
-
-        fn on(self) -> Result<Self::Output, Self::Error> {
-            unreachable!();
-        }
-    }
     #[test]
     fn visit_any() {
-        let v_usdc = Expect::<Usdc>::new();
+        let v_usdc = Expect::<Usdc>::default();
         assert_eq!(
             Ok(true),
             super::visit_any_on_ticker::<TestCurrencies, _>(Usdc::TICKER, v_usdc)
         );
 
-        let v_nls = Expect::<Nls>::new();
+        let v_nls = Expect::<Nls>::default();
         assert_eq!(
             Ok(true),
             super::visit_any_on_ticker::<TestCurrencies, _>(Nls::TICKER, v_nls)
@@ -222,13 +170,13 @@ mod test {
 
     #[test]
     fn visit_on_bank_symbol() {
-        let v_usdc = Expect::<Usdc>::new();
+        let v_usdc = Expect::<Usdc>::default();
         assert_eq!(
             super::visit_on_bank_symbol(Usdc::BANK_SYMBOL, v_usdc),
             Ok(true)
         );
 
-        let v_nls = Expect::<Nls>::new();
+        let v_nls = Expect::<Nls>::default();
         assert_eq!(
             super::visit_on_bank_symbol(Nls::BANK_SYMBOL, v_nls),
             Ok(true)

@@ -34,3 +34,35 @@ impl Group for Lpns {
         currency::maybe_visit_on_bank_symbol::<Usdc, _>(bank_symbol, v).map_err(|v| v.0)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use finance::currency::Currency;
+
+    use crate::{
+        lease::Osmo,
+        native::Nls,
+        test::{
+            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
+            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
+        },
+    };
+
+    use super::{Lpns, Usdc};
+
+    #[test]
+    fn maybe_visit_on_ticker() {
+        maybe_visit_on_ticker_impl::<Usdc, Lpns>();
+        maybe_visit_on_ticker_err::<Usdc, Lpns>(Usdc::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Usdc, Lpns>(Nls::TICKER);
+        maybe_visit_on_ticker_err::<Usdc, Lpns>(Osmo::TICKER);
+    }
+
+    #[test]
+    fn maybe_visit_on_bank_symbol() {
+        maybe_visit_on_bank_symbol_impl::<Usdc, Lpns>();
+        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Usdc::TICKER);
+        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Nls::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Usdc, Lpns>(Osmo::BANK_SYMBOL);
+    }
+}

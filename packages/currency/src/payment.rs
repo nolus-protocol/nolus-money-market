@@ -35,3 +35,44 @@ impl Group for PaymentGroup {
             .map_err(|v| v.0)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use finance::currency::Currency;
+
+    use crate::{
+        lease::{Osmo, Atom, Weth, Wbtc},
+        test::{
+            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
+            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
+        }, native::Nls, lpn::Usdc,
+    };
+
+    use super::PaymentGroup;
+
+    #[test]
+    fn maybe_visit_on_ticker() {
+        maybe_visit_on_ticker_impl::<Atom, PaymentGroup>();
+        maybe_visit_on_ticker_impl::<Osmo, PaymentGroup>();
+        maybe_visit_on_ticker_impl::<Weth, PaymentGroup>();
+        maybe_visit_on_ticker_impl::<Wbtc, PaymentGroup>();
+        maybe_visit_on_ticker_impl::<Usdc, PaymentGroup>();
+        maybe_visit_on_ticker_impl::<Nls, PaymentGroup>();
+        maybe_visit_on_ticker_err::<Atom, PaymentGroup>(Atom::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Usdc, PaymentGroup>(Nls::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Usdc, PaymentGroup>(Usdc::BANK_SYMBOL);
+    }
+
+    #[test]
+    fn maybe_visit_on_bank_symbol() {
+        maybe_visit_on_bank_symbol_impl::<Atom, PaymentGroup>();
+        maybe_visit_on_bank_symbol_impl::<Osmo, PaymentGroup>();
+        maybe_visit_on_bank_symbol_impl::<Weth, PaymentGroup>();
+        maybe_visit_on_bank_symbol_impl::<Wbtc, PaymentGroup>();
+        maybe_visit_on_bank_symbol_impl::<Usdc, PaymentGroup>();
+        maybe_visit_on_bank_symbol_impl::<Nls, PaymentGroup>();
+        maybe_visit_on_bank_symbol_err::<Atom, PaymentGroup>(Atom::TICKER);
+        maybe_visit_on_bank_symbol_err::<Usdc, PaymentGroup>(Nls::TICKER);
+        maybe_visit_on_bank_symbol_err::<Usdc, PaymentGroup>(Usdc::TICKER);
+    }
+}

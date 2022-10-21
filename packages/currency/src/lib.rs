@@ -26,3 +26,57 @@ where
         self.0.on::<C>()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use finance::{
+        currency::{Currency, Group, Symbol},
+        test::visitor::Expect,
+    };
+
+    #[track_caller]
+    pub fn maybe_visit_on_ticker_impl<C, G>()
+    where
+        C: Currency,
+        G: Group,
+    {
+        let v = Expect::<C>::default();
+        assert_eq!(Ok(Ok(true)), G::maybe_visit_on_ticker(C::TICKER, v));
+    }
+
+    #[track_caller]
+    pub fn maybe_visit_on_ticker_err<C, G>(unknown_ticker: Symbol)
+    where
+        C: Currency,
+        G: Group,
+    {
+        let v = Expect::<C>::default();
+        assert_eq!(Err(v.clone()), G::maybe_visit_on_ticker(unknown_ticker, v));
+    }
+
+    #[track_caller]
+    pub fn maybe_visit_on_bank_symbol_impl<C, G>()
+    where
+        C: Currency,
+        G: Group,
+    {
+        let v = Expect::<C>::default();
+        assert_eq!(
+            Ok(Ok(true)),
+            G::maybe_visit_on_bank_symbol(C::BANK_SYMBOL, v)
+        );
+    }
+
+    #[track_caller]
+    pub fn maybe_visit_on_bank_symbol_err<C, G>(unknown_ticker: Symbol)
+    where
+        C: Currency,
+        G: Group,
+    {
+        let v = Expect::<C>::default();
+        assert_eq!(
+            Err(v.clone()),
+            G::maybe_visit_on_bank_symbol(unknown_ticker, v)
+        );
+    }
+}

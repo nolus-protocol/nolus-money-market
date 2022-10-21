@@ -68,3 +68,42 @@ impl Group for LeaseGroup {
             .map_err(|v| v.0)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use finance::currency::Currency;
+
+    use crate::{
+        lease::Osmo,
+        test::{
+            maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
+            maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
+        }, native::Nls,
+    };
+
+    use super::{Atom, LeaseGroup, Usdc, Wbtc, Weth};
+
+    #[test]
+    fn maybe_visit_on_ticker() {
+        maybe_visit_on_ticker_impl::<Atom, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<Osmo, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<Weth, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<Wbtc, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<Usdc, LeaseGroup>(); // TODO REMOVE once migrate off the single currency version
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Usdc::BANK_SYMBOL);
+    }
+
+    #[test]
+    fn maybe_visit_on_bank_symbol() {
+        maybe_visit_on_bank_symbol_impl::<Atom, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<Osmo, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<Weth, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<Wbtc, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<Usdc, LeaseGroup>(); // TODO REMOVE once migrate off the single currency version
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Usdc::TICKER);
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
+    }
+}
