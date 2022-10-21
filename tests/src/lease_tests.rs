@@ -25,7 +25,7 @@ type Lpn = Usdc;
 type LeaseCurrency = Lpn;
 type LeaseCoin = Coin<LeaseCurrency>;
 
-const DOWNPAYMENT: u128 = 10;
+const DOWNPAYMENT: u128 = 1_000_000_000_000;
 
 fn create_coin(amount: u128) -> LeaseCoin {
     Coin::<LeaseCurrency>::new(amount)
@@ -237,6 +237,59 @@ fn state_opened_when_partially_paid() {
     let query_result = state_query(&test_case, &lease_address.into_string());
 
     assert_eq!(expected_result, query_result);
+}
+
+#[test]
+fn state_opened_when_partially_paid_after_time() {
+    let mut test_case = create_test_case();
+    let downpayment = create_coin(DOWNPAYMENT);
+
+    let lease_address = open_lease(&mut test_case, downpayment);
+
+    test_case.app.time_shift(Duration::from_nanos(
+        LeaserWrapper::REPAYMENT_PERIOD.nanos() >> 1,
+    ));
+
+    let query_result = state_query(&test_case, &lease_address.to_string());
+
+    if let StateResponse::Opened {
+        previous_margin_due,
+        previous_interest_due,
+        current_margin_due,
+        ..
+    } = query_result
+    {
+        repay(
+            &mut test_case,
+            &lease_address,
+            previous_margin_due + previous_interest_due + (current_margin_due / 2),
+        );
+    } else {
+        unreachable!();
+    }
+
+    let query_result = state_query(&test_case, &lease_address.into_string());
+
+    if let StateResponse::Opened {
+        previous_margin_due,
+        previous_interest_due,
+        ..
+    } = query_result
+    {
+        assert_eq!(
+            previous_margin_due,
+            Coin::default(),
+            "Expected 0 for margin interest due, got {previous_margin_due}"
+        );
+
+        assert_eq!(
+            previous_interest_due,
+            Coin::default(),
+            "Expected 0 for interest due, got {previous_interest_due}"
+        );
+    } else {
+        unreachable!()
+    }
 }
 
 #[test]

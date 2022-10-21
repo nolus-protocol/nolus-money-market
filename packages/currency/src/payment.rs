@@ -41,11 +41,13 @@ mod test {
     use finance::currency::Currency;
 
     use crate::{
-        lease::{Osmo, Atom, Weth, Wbtc},
+        lease::{Atom, Osmo, Wbtc, Weth},
+        lpn::Usdc,
+        native::Nls,
         test::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-        }, native::Nls, lpn::Usdc,
+        },
     };
 
     use super::PaymentGroup;
