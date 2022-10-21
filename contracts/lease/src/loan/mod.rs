@@ -347,8 +347,7 @@ where
 
         receipt.pay_previous_interest(previous_interest_paid);
 
-        if previous_interest_paid == previous_interest_due
-        {
+        if previous_interest_paid == previous_interest_due {
             self.open_next_period();
         }
 

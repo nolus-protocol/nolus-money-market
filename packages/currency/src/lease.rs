@@ -75,10 +75,11 @@ mod test {
 
     use crate::{
         lease::Osmo,
+        native::Nls,
         test::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
-        }, native::Nls,
+        },
     };
 
     use super::{Atom, LeaseGroup, Usdc, Wbtc, Weth};
