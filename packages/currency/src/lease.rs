@@ -72,7 +72,8 @@ pub struct Cro {}
 impl Currency for Cro {
     const TICKER: SymbolStatic = "CRO";
     /// full ibc route: transfer/channel-0/transfer/channel-5/basecro
-    const BANK_SYMBOL: SymbolStatic = "ibc/E1BCC0F7B932E654B1A930F72B76C0678D55095387E2A4D8F00E941A8F82EE48";
+    const BANK_SYMBOL: SymbolStatic =
+        "ibc/E1BCC0F7B932E654B1A930F72B76C0678D55095387E2A4D8F00E941A8F82EE48";
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
@@ -80,7 +81,8 @@ pub struct Secret {}
 impl Currency for Secret {
     const TICKER: SymbolStatic = "SCRT";
     /// full ibc route: transfer/channel-0/transfer/channel-88/uscrt
-    const BANK_SYMBOL: SymbolStatic = "ibc/EA00FFF0335B07B5CD1530B7EB3D2C710620AE5B168C71AFF7B50532D690E107";
+    const BANK_SYMBOL: SymbolStatic =
+        "ibc/EA00FFF0335B07B5CD1530B7EB3D2C710620AE5B168C71AFF7B50532D690E107";
 }
 
 pub struct LeaseGroup {}
