@@ -39,7 +39,7 @@ impl<'a> AnyVisitor<Lpns> for QueryWithOracleBase<'a> {
         OracleBase: 'static + Currency + DeserializeOwned + Serialize,
     {
         let res = match self.msg {
-            QueryMsg::SupportedDenomPairs {} => Ok(to_binary(
+            QueryMsg::SupportedCurrencyPairs {} => Ok(to_binary(
                 &SupportedPairs::<OracleBase>::load(self.deps.storage)?.query_supported_pairs(),
             )?),
 

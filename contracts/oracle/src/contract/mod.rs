@@ -88,7 +88,7 @@ impl<'a> AnyVisitor<Lpns> for InstantiateWithCurrency<'a> {
         .validate()?
         .store(self.deps.storage)?;
 
-        SupportedPairs::<C>::new(self.msg.currency_paths)?.save(self.deps.storage)?;
+        SupportedPairs::<C>::new(self.msg.swap_tree)?.save(self.deps.storage)?;
 
         Ok(Response::new().add_attribute("method", "instantiate"))
     }
@@ -176,11 +176,12 @@ mod tests {
     use currency::{lpn::Usdc, native::Nls};
     use finance::{currency::Currency, duration::Duration, percent::Percent};
     use sdk::cosmwasm_std::{from_binary, testing::mock_env};
+    use trees::tr;
 
     use crate::{
         contract::query,
         msg::{ConfigResponse, QueryMsg},
-        state::supported_pairs::CurrencyPair,
+        state::supported_pairs::{SwapLeg, SwapTarget, TreeStore},
         tests::{dummy_instantiate_msg, setup_test, CREATOR},
     };
 
@@ -190,7 +191,7 @@ mod tests {
             Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            vec![vec![Nls::TICKER.to_string(), Usdc::TICKER.to_string()]],
+            TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Nls::TICKER.to_string()))),
             "timealarms".to_string(),
         );
         let (deps, _) = setup_test(msg);
@@ -202,11 +203,22 @@ mod tests {
         assert_eq!(Duration::from_secs(60), value.price_feed_period);
         assert_eq!(Percent::from_percent(50), value.expected_feeders);
 
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::SupportedDenomPairs {}).unwrap();
-        let value: Vec<CurrencyPair> = from_binary(&res).unwrap();
-        assert_eq!(
-            vec![(Nls::TICKER.to_string(), Usdc::TICKER.to_string())],
-            value
-        );
+        let res = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::SupportedCurrencyPairs {},
+        )
+        .unwrap();
+        let value: Vec<SwapLeg> = from_binary(&res).unwrap();
+
+        let expected = vec![SwapLeg {
+            from: Nls::TICKER.into(),
+            to: SwapTarget {
+                pool_id: 1,
+                target: Usdc::TICKER.to_owned(),
+            },
+        }];
+
+        assert_eq!(expected, value);
     }
 }

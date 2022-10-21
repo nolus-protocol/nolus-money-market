@@ -5,7 +5,7 @@ use finance::{
     coin::Coin,
     currency::{Currency, SymbolStatic},
     percent::Percent,
-    test::{self},
+    test,
 };
 use leaser::msg::{QueryMsg, QuoteResponse};
 use sdk::{
@@ -24,7 +24,7 @@ fn open_lease() {
 }
 
 #[test]
-#[should_panic(expected = "Invalid denom pair")]
+#[should_panic(expected = "[Oracle] Invalid base currency (USDC != ATOM)")]
 // in single denom version lease can be opened only in the oracle base denom
 fn open_lease_another_currency() {
     open_lease_impl(Atom::TICKER);

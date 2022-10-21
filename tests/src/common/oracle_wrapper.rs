@@ -8,12 +8,14 @@ use finance::{
 use oracle::{
     contract::{execute, instantiate, query, reply},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    state::supported_pairs::TreeStore,
     ContractError,
 };
 use sdk::{
     cosmwasm_std::{to_binary, Addr, Binary, Deps, Empty, Env},
     cw_multi_test::Executor,
 };
+use trees::tr;
 
 use crate::common::{ContractWrapper, MockApp};
 
@@ -41,7 +43,7 @@ impl MarketOracleWrapper {
             base_asset: base_currency.to_string(),
             price_feed_period_secs: 60,
             expected_feeders: Percent::from_percent(1),
-            currency_paths: vec![vec![NATIVE_DENOM.to_string(), Usdc::TICKER.to_string()]],
+            swap_tree: TreeStore(tr((0, Usdc::TICKER.into())) / tr((1, NATIVE_DENOM.to_string()))),
             timealarms_addr: timealarms_addr.to_string(),
         };
 
