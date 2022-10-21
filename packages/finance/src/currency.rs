@@ -60,12 +60,6 @@ where
     maybe_visit_impl(bank_symbol, C::BANK_SYMBOL, visitor)
 }
 
-pub trait Member<G>
-where
-    G: Group,
-{
-}
-
 pub type MaybeAnyVisitResult<V> =
     Result<Result<<V as AnyVisitor>::Output, <V as AnyVisitor>::Error>, V>;
 

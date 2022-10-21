@@ -13,9 +13,7 @@ where
 pub mod currency {
     use serde::{Deserialize, Serialize};
 
-    use crate::currency::{
-        AnyVisitor, Currency, Group, MaybeAnyVisitResult, Member, Symbol, SymbolStatic,
-    };
+    use crate::currency::{AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
@@ -25,8 +23,6 @@ pub mod currency {
         const TICKER: SymbolStatic = "uusdc";
         const BANK_SYMBOL: SymbolStatic = "ibc/uusdc";
     }
-    impl Member<TestCurrencies> for Usdc {}
-    impl Member<TestExtraCurrencies> for Usdc {}
 
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
@@ -36,8 +32,6 @@ pub mod currency {
         const TICKER: SymbolStatic = "unls";
         const BANK_SYMBOL: SymbolStatic = "ibc/unls";
     }
-    impl Member<TestCurrencies> for Nls {}
-    impl Member<TestExtraCurrencies> for Nls {}
 
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
@@ -47,7 +41,6 @@ pub mod currency {
         const TICKER: SymbolStatic = "udai";
         const BANK_SYMBOL: SymbolStatic = "ibc/udai";
     }
-    impl Member<TestExtraCurrencies> for Dai {}
 
     pub struct TestCurrencies {}
     impl Group for TestCurrencies {

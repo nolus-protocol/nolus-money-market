@@ -1,20 +1,6 @@
-use finance::currency::{
-    self, AnyVisitor, Group, MaybeAnyVisitResult, Member, Symbol, SymbolStatic,
-};
+use finance::currency::{self, AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 
-use crate::{
-    lease::{Atom, LeaseGroup, Osmo, Wbtc, Weth},
-    lpn::{Lpns, Usdc},
-    native::Nls,
-    SingleVisitorAdapter,
-};
-
-impl Member<PaymentGroup> for Usdc {}
-impl Member<PaymentGroup> for Osmo {}
-impl Member<PaymentGroup> for Atom {}
-impl Member<PaymentGroup> for Weth {}
-impl Member<PaymentGroup> for Wbtc {}
-impl Member<PaymentGroup> for Nls {}
+use crate::{lease::LeaseGroup, lpn::Lpns, native::Nls, SingleVisitorAdapter};
 
 pub struct PaymentGroup {}
 

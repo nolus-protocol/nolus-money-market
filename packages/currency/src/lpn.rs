@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use finance::currency::{
-    self, AnyVisitor, Currency, Group, MaybeAnyVisitResult, Member, Symbol, SymbolStatic,
+    self, AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic,
 };
 
 use crate::SingleVisitorAdapter;
@@ -12,7 +12,6 @@ impl Currency for Usdc {
     const TICKER: SymbolStatic = "USDC";
     const BANK_SYMBOL: SymbolStatic = "ibc/TBDusdc";
 }
-impl Member<Lpns> for Usdc {}
 
 pub struct Lpns {}
 impl Group for Lpns {

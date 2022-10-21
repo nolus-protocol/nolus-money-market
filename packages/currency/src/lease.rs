@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{
-    AnyVisitor, Currency, Group, MaybeAnyVisitResult, Member, Symbol, SymbolStatic,
-};
+use finance::currency::{AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 
 use crate::{lpn::Usdc, SingleVisitorAdapter};
 
@@ -12,7 +10,6 @@ impl Currency for Atom {
     const TICKER: SymbolStatic = "ATOM";
     const BANK_SYMBOL: SymbolStatic = "ibc/TBDatom";
 }
-impl Member<LeaseGroup> for Atom {}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Osmo {}
@@ -20,7 +17,6 @@ impl Currency for Osmo {
     const TICKER: SymbolStatic = "OSMO";
     const BANK_SYMBOL: SymbolStatic = "ibc/TBDosmo";
 }
-impl Member<LeaseGroup> for Osmo {}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Weth {}
@@ -28,7 +24,6 @@ impl Currency for Weth {
     const TICKER: SymbolStatic = "WETH";
     const BANK_SYMBOL: SymbolStatic = "ibc/TBDweth";
 }
-impl Member<LeaseGroup> for Weth {}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Wbtc {}
@@ -36,10 +31,6 @@ impl Currency for Wbtc {
     const TICKER: SymbolStatic = "WBTC";
     const BANK_SYMBOL: SymbolStatic = "ibc/TBDwbtc";
 }
-impl Member<LeaseGroup> for Wbtc {}
-
-// TODO REMOVE once migrate off the single currency version
-impl Member<LeaseGroup> for Usdc {}
 
 pub struct LeaseGroup {}
 
@@ -56,6 +47,7 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Osmo, _>(ticker, v))
             .or_else(|v| maybe_visit::<Weth, _>(ticker, v))
             .or_else(|v| maybe_visit::<Wbtc, _>(ticker, v))
+            // TODO REMOVE once migrate off the single currency version
             .or_else(|v| maybe_visit::<Usdc, _>(ticker, v))
             .map_err(|v| v.0)
     }
@@ -71,6 +63,7 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Osmo, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Weth, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Wbtc, _>(bank_symbol, v))
+            // TODO REMOVE once migrate off the single currency version
             .or_else(|v| maybe_visit::<Usdc, _>(bank_symbol, v))
             .map_err(|v| v.0)
     }
