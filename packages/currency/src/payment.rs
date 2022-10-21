@@ -41,7 +41,7 @@ mod test {
     use finance::currency::Currency;
 
     use crate::{
-        lease::{Atom, Osmo, Wbtc, Weth},
+        lease::{Atom, Cro, Evmos, Juno, Osmo, Secret, Stars, Wbtc, Weth},
         lpn::Usdc,
         native::Nls,
         test::{
@@ -58,6 +58,11 @@ mod test {
         maybe_visit_on_ticker_impl::<Osmo, PaymentGroup>();
         maybe_visit_on_ticker_impl::<Weth, PaymentGroup>();
         maybe_visit_on_ticker_impl::<Wbtc, PaymentGroup>();
+        maybe_visit_on_ticker_impl::<Evmos, PaymentGroup>();
+        maybe_visit_on_ticker_impl::<Juno, PaymentGroup>();
+        maybe_visit_on_ticker_impl::<Stars, PaymentGroup>();
+        maybe_visit_on_ticker_impl::<Cro, PaymentGroup>();
+        maybe_visit_on_ticker_impl::<Secret, PaymentGroup>();
         maybe_visit_on_ticker_impl::<Usdc, PaymentGroup>();
         maybe_visit_on_ticker_impl::<Nls, PaymentGroup>();
         maybe_visit_on_ticker_err::<Atom, PaymentGroup>(Atom::BANK_SYMBOL);
@@ -71,6 +76,11 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Osmo, PaymentGroup>();
         maybe_visit_on_bank_symbol_impl::<Weth, PaymentGroup>();
         maybe_visit_on_bank_symbol_impl::<Wbtc, PaymentGroup>();
+        maybe_visit_on_bank_symbol_impl::<Evmos, PaymentGroup>();
+        maybe_visit_on_bank_symbol_impl::<Juno, PaymentGroup>();
+        maybe_visit_on_bank_symbol_impl::<Stars, PaymentGroup>();
+        maybe_visit_on_bank_symbol_impl::<Cro, PaymentGroup>();
+        maybe_visit_on_bank_symbol_impl::<Secret, PaymentGroup>();
         maybe_visit_on_bank_symbol_impl::<Usdc, PaymentGroup>();
         maybe_visit_on_bank_symbol_impl::<Nls, PaymentGroup>();
         maybe_visit_on_bank_symbol_err::<Atom, PaymentGroup>(Atom::TICKER);
