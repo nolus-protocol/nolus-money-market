@@ -80,8 +80,13 @@ schema:cargo:
     SCHEMA_DIR: "contracts-schemas"
     SCHEMA_DIR_RESULT: "schemas.tar.gz"
   script:
-    - cargo workspaces exec cargo run --example schema
-    - /bin/bash ./scripts/collect-contracts-schemas.sh $SCHEMA_DIR
+    - gen_schema() {
+        local -r contract="$1" ;
+        mkdir "$SCHEMA_DIR/$contract" && cargo run -p "$contract" --example schema -- "$SCHEMA_DIR/$contract" ;
+      }
+    - rm -fr "$SCHEMA_DIR" && mkdir "$SCHEMA_DIR"
+    - gen_schema "lease" && gen_schema "leaser" && gen_schema "lpp" && gen_schema "oracle" && gen_schema "profit" && 
+        gen_schema "rewards_dispatcher" && gen_schema "timealarms" && gen_schema "treasury"
     - tar -czvf $SCHEMA_DIR_RESULT $SCHEMA_DIR
   artifacts:
     name: "schemas-$CI_COMMIT_REF_SLUG"
