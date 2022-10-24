@@ -8,11 +8,16 @@ use trees::{tr, Tree};
 
 use finance::currency::SymbolOwned;
 
-#[derive(Clone, PartialEq, Eq)]
-pub struct TreeStore(pub Tree<SymbolOwned>);
+use super::PoolId;
+
+pub type Leg = (PoolId, SymbolOwned);
+
+// #[derive(Clone, PartialEq, Eq, Debug, sdk::schemars::JsonSchema)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TreeStore(pub Tree<Leg>);
 
 impl Deref for TreeStore {
-    type Target = Tree<SymbolOwned>;
+    type Target = Tree<Leg>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -33,7 +38,7 @@ impl Serialize for TreeStore {
     }
 }
 
-struct TreeStoreRef<'b>(pub &'b trees::Node<SymbolOwned>);
+struct TreeStoreRef<'b>(pub &'b trees::Node<Leg>);
 
 impl<'b> Serialize for TreeStoreRef<'b> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

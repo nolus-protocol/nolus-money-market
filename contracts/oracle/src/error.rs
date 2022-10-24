@@ -4,8 +4,6 @@ use finance::currency::{Currency, SymbolOwned};
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use sdk::cosmwasm_std::{Addr, StdError};
 
-use crate::state::supported_pairs::ResolutionPath;
-
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("[Oracle] [Std] {0}")]
@@ -35,20 +33,17 @@ pub enum ContractError {
     #[error("[Oracle] Invalid denom pair ({0}, {1})")]
     InvalidDenomPair(SymbolOwned, SymbolOwned),
 
-    #[error("[Oracle] Invalid denom pair")]
-    InvalidResolutionPath(ResolutionPath),
+    #[error("[Oracle] Invalid base currency ({0} != {1})")]
+    InvalidBaseCurrency(SymbolOwned, SymbolOwned),
+
+    #[error("[Oracle] Duplicated nodes in the currency tree")]
+    DuplicatedNodes {},
 
     #[error("[Oracle] No feeder data for the specified address")]
     UnknownFeeder {},
 
-    #[error("[Oracle] There are no authorized feeders")]
-    NoAuthorizedFeeders {},
-
     #[error("[Oracle] Invalid alarm notification address: {0:?}")]
     InvalidAlarmAddress(Addr),
-
-    #[error("[Oracle] ParseError {err:?}")]
-    ParseError { err: String },
 
     #[error("[Oracle] Configuration error: {0}")]
     Configuration(String),

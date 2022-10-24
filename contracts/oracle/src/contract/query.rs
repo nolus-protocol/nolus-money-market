@@ -39,7 +39,7 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
         OracleBase: 'static + Currency + DeserializeOwned + Serialize,
     {
         let res = match self.msg {
-            QueryMsg::SupportedDenomPairs {} => Ok(to_binary(
+            QueryMsg::SupportedCurrencyPairs {} => Ok(to_binary(
                 &SupportedPairs::<OracleBase>::load(self.deps.storage)?.query_supported_pairs(),
             )?),
 
@@ -67,6 +67,10 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                     )?,
                 })?)
             }
+            QueryMsg::SwapPath { from, to } => Ok(to_binary(
+                &SupportedPairs::<OracleBase>::load(self.deps.storage)?
+                    .load_swap_path(&from, &to)?,
+            )?),
             _ => {
                 unreachable!()
             } // should be done already

@@ -528,6 +528,7 @@ dependencies = [
  "serde",
  "timealarms",
  "treasury",
+ "trees",
 ]
 
 [[package]]

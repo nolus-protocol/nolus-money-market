@@ -8,7 +8,7 @@ use finance::{
     coin::Coin,
     currency::Currency,
     percent::Percent,
-    test::{self},
+    test,
 };
 use leaser::msg::{QueryMsg, QuoteResponse};
 use sdk::{

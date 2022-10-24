@@ -9,18 +9,18 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::state::supported_pairs::ResolutionPath;
+use crate::state::supported_pairs::{SwapLeg, SwapTarget, TreeStore};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct InstantiateMsg {
     pub base_asset: String,
     pub price_feed_period_secs: u32,
     pub expected_feeders: Percent,
-    pub currency_paths: Vec<ResolutionPath>,
+    pub swap_tree: TreeStore,
     pub timealarms_addr: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     RegisterFeeder {
@@ -36,8 +36,8 @@ pub enum ExecuteMsg {
         price_feed_period_secs: u32,
         expected_feeders: Percent,
     },
-    CurrencyPaths {
-        paths: Vec<ResolutionPath>,
+    SwapTree {
+        tree: TreeStore,
     },
     AddPriceAlarm {
         alarm: Alarm,
@@ -58,8 +58,13 @@ pub enum QueryMsg {
     Prices { currencies: HashSet<SymbolOwned> },
     Price { currency: SymbolOwned },
     // returns a list of supported denom pairs
-    SupportedDenomPairs {},
+    SupportedCurrencyPairs {},
+    SwapPath { from: SymbolOwned, to: SymbolOwned },
 }
+
+pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;
+
+pub type SwapPathResponse = Vec<SwapTarget>;
 
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

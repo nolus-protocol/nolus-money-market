@@ -48,12 +48,12 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
         OracleBase: Currency,
     {
         match self.msg {
-            ExecuteMsg::CurrencyPaths { paths } => {
+            ExecuteMsg::SwapTree { tree } => {
                 let config = Config::load(self.deps.storage)?;
                 if self.sender != config.owner {
                     return Err(ContractError::Unauthorized {});
                 }
-                SupportedPairs::<OracleBase>::new(paths)?.save(self.deps.storage)?;
+                SupportedPairs::<OracleBase>::new(tree)?.save(self.deps.storage)?;
                 Ok(Response::default())
             }
             ExecuteMsg::FeedPrices { prices } => try_feed_prices::<OracleBase>(

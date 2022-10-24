@@ -23,3 +23,4 @@ sdk = { path = "../packages/sdk", features = ["cosmos", "neutron", "testing"] }
 
 anyhow = "1.0.65"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
+trees = "0.4.2"

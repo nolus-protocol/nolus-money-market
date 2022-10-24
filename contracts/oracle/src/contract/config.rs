@@ -58,11 +58,12 @@ mod tests {
             DepsMut, MessageInfo,
         },
     };
+    use trees::tr;
 
     use crate::{
         contract::{execute, query},
         msg::{ConfigResponse, ExecuteMsg, QueryMsg},
-        state::supported_pairs::ResolutionPath,
+        state::supported_pairs::{SwapLeg, SwapTarget, TreeStore},
         tests::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test},
         ContractError,
     };
@@ -74,7 +75,7 @@ mod tests {
             Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            vec![vec![Nls::TICKER.to_string(), Usdc::TICKER.to_string()]],
+            TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Nls::TICKER.to_string()))),
             "timealarms".to_string(),
         );
         let (mut deps, _) = setup_test(msg);
@@ -93,7 +94,7 @@ mod tests {
             Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            vec![vec![Nls::TICKER.to_string(), Usdc::TICKER.to_string()]],
+            TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Nls::TICKER.to_string()))),
             "timealarms".to_string(),
         );
         let (mut deps, info) = setup_test(msg);
@@ -160,20 +161,44 @@ mod tests {
     fn config_supported_pairs() {
         let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
-        let test_vec = vec![
-            vec![Nls::TICKER.to_string(), Usdc::TICKER.to_string()],
-            vec![Osmo::TICKER.to_string(), Usdc::TICKER.to_string()],
-        ];
+        let test_tree = tr((0, Usdc::TICKER.into()))
+            / tr((1, Nls::TICKER.into()))
+            / tr((2, Osmo::TICKER.into()));
 
-        let msg = ExecuteMsg::CurrencyPaths {
-            paths: test_vec.clone(),
+        let msg = ExecuteMsg::SwapTree {
+            tree: TreeStore(test_tree),
         };
         let res = execute(deps.as_mut(), mock_env(), info, msg);
         assert!(res.is_ok());
 
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::SupportedDenomPairs {}).unwrap();
-        let value: Vec<ResolutionPath> = from_binary(&res).unwrap();
-        assert_eq!(test_vec, value);
+        let res = query(
+            deps.as_ref(),
+            mock_env(),
+            QueryMsg::SupportedCurrencyPairs {},
+        )
+        .unwrap();
+        let mut value: Vec<SwapLeg> = from_binary(&res).unwrap();
+        value.sort_by(|a, b| a.from.cmp(&b.from));
+
+        let mut expected = vec![
+            SwapLeg {
+                from: Nls::TICKER.into(),
+                to: SwapTarget {
+                    pool_id: 1,
+                    target: Usdc::TICKER.to_owned(),
+                },
+            },
+            SwapLeg {
+                from: Osmo::TICKER.into(),
+                to: SwapTarget {
+                    pool_id: 2,
+                    target: Usdc::TICKER.to_owned(),
+                },
+            },
+        ];
+        expected.sort_by(|a, b| a.from.cmp(&b.from));
+
+        assert_eq!(expected, value);
     }
 
     #[test]
@@ -182,29 +207,26 @@ mod tests {
         let (mut deps, _) = setup_test(dummy_default_instantiate_msg());
         let info = mock_info("user", &coins(1000, Nls::TICKER));
 
-        let msg = ExecuteMsg::CurrencyPaths {
-            paths: vec![vec![Nls::TICKER.to_string(), Usdc::TICKER.to_string()]],
+        let msg = ExecuteMsg::SwapTree {
+            tree: TreeStore(tr((0, Usdc::TICKER.into())) / tr((1, Nls::TICKER.into()))),
         };
+
         execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     }
 
     #[test]
+    #[should_panic]
     fn invalid_supported_pairs() {
         let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
-        let msg = ExecuteMsg::CurrencyPaths {
-            paths: vec![
-                vec![Osmo::TICKER.to_string(), Usdc::TICKER.to_string()],
-                vec![Nls::TICKER.to_string(), Nls::TICKER.to_string()],
-            ],
+        let test_tree = tr((0, Usdc::TICKER.into()))
+            / tr((1, Nls::TICKER.into()))
+            / tr((2, Nls::TICKER.into()));
+
+        let msg = ExecuteMsg::SwapTree {
+            tree: TreeStore(test_tree),
         };
-        let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
-        assert_eq!(
-            ContractError::InvalidResolutionPath(vec![
-                Nls::TICKER.to_string(),
-                Nls::TICKER.to_string()
-            ]),
-            err
-        );
+
+        execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     }
 }

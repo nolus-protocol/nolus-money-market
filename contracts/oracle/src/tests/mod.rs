@@ -14,11 +14,12 @@ use sdk::cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
     MemoryStorage, MessageInfo, OwnedDeps,
 };
+use trees::tr;
 
 use crate::{
     contract::{execute, instantiate},
     msg::{ExecuteMsg, InstantiateMsg},
-    state::supported_pairs::ResolutionPath,
+    state::supported_pairs::TreeStore,
 };
 
 #[cfg(test)]
@@ -32,14 +33,14 @@ pub(crate) fn dummy_instantiate_msg(
     base_asset: SymbolOwned,
     price_feed_period_secs: u32,
     expected_feeders: Percent,
-    currency_paths: Vec<ResolutionPath>,
+    swap_tree: TreeStore,
     alarms_addr: String,
 ) -> InstantiateMsg {
     InstantiateMsg {
         base_asset,
         price_feed_period_secs,
         expected_feeders,
-        currency_paths,
+        swap_tree,
         timealarms_addr: alarms_addr,
     }
 }
@@ -49,20 +50,13 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
         Usdc::TICKER.to_string(),
         60,
         Percent::from_percent(50),
-        vec![
-            vec![
-                Osmo::TICKER.to_string(),
-                Atom::TICKER.to_string(),
-                Weth::TICKER.to_string(),
-                Usdc::TICKER.to_string(),
-            ],
-            vec![Wbtc::TICKER.to_string(), Usdc::TICKER.to_string()],
-            vec![
-                Nls::TICKER.to_string(),
-                Wbtc::TICKER.to_string(),
-                Usdc::TICKER.to_string(),
-            ],
-        ],
+        TreeStore(
+            tr((0, Usdc::TICKER.to_string()))
+                / (tr((3, Weth::TICKER.to_string()))
+                    / (tr((2, Atom::TICKER.to_string()))
+                        / tr((1, Osmo::TICKER.to_string()))))
+                / (tr((4, Wbtc::TICKER.to_string())) / (tr((5, Nls::TICKER.to_string())))),
+        ),
         "timealarms".to_string(),
     )
 }

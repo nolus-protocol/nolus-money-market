@@ -49,7 +49,6 @@ where
         let tree: SupportedPairs<OracleBase> = SupportedPairs::load(storage)?;
         let mut prices: Vec<PriceDTO> = vec![];
         for currency in currencies {
-            tree.validate_supported(&currency)?;
             let path = tree.load_path(&currency)?;
             let price = Self::MARKET_PRICE.price(storage, parameters, path)?;
             prices.push(price);
@@ -68,8 +67,8 @@ where
         let filtered: Vec<PriceDTO> = prices
             .iter()
             .filter(|price| {
-                supported_pairs.iter().any(|(base, quote)| {
-                    price.base().ticker() == base && price.quote().ticker() == quote
+                supported_pairs.iter().any(|leg| {
+                    price.base().ticker() == &leg.from && price.quote().ticker() == &leg.to.target
                 })
             })
             .map(|p| p.to_owned())
