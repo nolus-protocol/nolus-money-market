@@ -29,7 +29,7 @@ fn open_lease() {
 }
 
 #[test]
-#[should_panic(expected = "[Oracle] Invalid base currency (USDC != ATOM)")]
+#[should_panic(expected = "Unsupported currency")]
 fn open_lease_unsupported_currency_by_oracle() {
     open_lease_impl::<Usdc, Atom, Usdc>();
 }
