@@ -41,7 +41,9 @@ impl MarketOracleWrapper {
             base_asset: BaseC::TICKER.into(),
             price_feed_period_secs: 60,
             expected_feeders: Percent::from_percent(1),
-            swap_tree: TreeStore(tr((0, Usdc::TICKER.into())) / tr((1, Native::TICKER.to_string()))),
+            swap_tree: TreeStore(
+                tr((0, Usdc::TICKER.into())) / tr((1, Native::TICKER.to_string())),
+            ),
             timealarms_addr: timealarms_addr.to_string(),
         };
 

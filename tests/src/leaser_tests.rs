@@ -4,12 +4,7 @@ use currency::{
     lease::{Atom, Osmo},
     lpn::Usdc,
 };
-use finance::{
-    coin::Coin,
-    currency::Currency,
-    percent::Percent,
-    test,
-};
+use finance::{coin::Coin, currency::Currency, percent::Percent, test};
 use leaser::msg::{QueryMsg, QuoteResponse};
 use sdk::{
     cosmwasm_ext::Response,

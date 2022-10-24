@@ -53,8 +53,7 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
         TreeStore(
             tr((0, Usdc::TICKER.to_string()))
                 / (tr((3, Weth::TICKER.to_string()))
-                    / (tr((2, Atom::TICKER.to_string()))
-                        / tr((1, Osmo::TICKER.to_string()))))
+                    / (tr((2, Atom::TICKER.to_string())) / tr((1, Osmo::TICKER.to_string()))))
                 / (tr((4, Wbtc::TICKER.to_string())) / (tr((5, Nls::TICKER.to_string())))),
         ),
         "timealarms".to_string(),
