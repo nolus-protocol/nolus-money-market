@@ -40,6 +40,7 @@ serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 timealarms = { path = "../timealarms", default-features = false, features = ["contract"] }
 currency = { path = "../../packages/currency", features = ["testing"] }
 finance = { path = "../../packages/finance", features = ["testing"] }
+schema = { path = "../../packages/schema" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 sdk = { path = "../../packages/sdk", default-features = false, features = ["testing"] }

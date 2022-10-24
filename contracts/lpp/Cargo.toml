@@ -34,3 +34,4 @@ serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
 finance = { path = "../../packages/finance", features = ["testing"] }
+schema = { path = "../../packages/schema" }

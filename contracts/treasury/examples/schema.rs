@@ -1,13 +1,8 @@
-use std::{env::current_dir, fs::create_dir_all};
-
-use sdk::cosmwasm_schema::{export_schema, remove_schemas, schema_for};
+use sdk::cosmwasm_schema::{export_schema, schema_for};
 use treasury::msg::{ExecuteMsg, InstantiateMsg, MigrateMsg};
 
 fn main() {
-    let mut out_dir = current_dir().unwrap();
-    out_dir.push("schema");
-    create_dir_all(&out_dir).unwrap();
-    remove_schemas(&out_dir).unwrap();
+    let out_dir = schema::prep_out_dir().expect("The output directory should be valid");
 
     export_schema(&schema_for!(InstantiateMsg), &out_dir);
     export_schema(&schema_for!(ExecuteMsg), &out_dir);

@@ -30,6 +30,7 @@ serde = { version = "1.0.145", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
 finance = { path = "../../packages/finance", features = ["testing"] }
+schema = { path = "../../packages/schema" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 sdk = { path = "../../packages/sdk", features = ["testing"] }

@@ -571,6 +571,7 @@ dependencies = [
  "oracle",
  "platform",
  "profit",
+ "schema",
  "sdk",
  "serde",
  "thiserror",
@@ -586,6 +587,7 @@ dependencies = [
  "lease",
  "lpp",
  "platform",
+ "schema",
  "sdk",
  "serde",
  "thiserror",
@@ -605,6 +607,7 @@ dependencies = [
  "currency",
  "finance",
  "platform",
+ "schema",
  "sdk",
  "serde",
  "thiserror",
@@ -691,6 +694,7 @@ dependencies = [
  "finance",
  "marketprice",
  "platform",
+ "schema",
  "sdk",
  "serde",
  "thiserror",
@@ -743,6 +747,7 @@ dependencies = [
  "currency",
  "finance",
  "platform",
+ "schema",
  "sdk",
  "serde",
  "thiserror",
@@ -865,6 +870,7 @@ dependencies = [
  "marketprice",
  "oracle",
  "platform",
+ "schema",
  "sdk",
  "serde",
  "thiserror",
@@ -888,6 +894,13 @@ name = "ryu"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4501abdff3ae82a1c1b477a17252eb69cee9e66eb915c1abaa4f44d873df9f09"
+
+[[package]]
+name = "schema"
+version = "0.1.0"
+dependencies = [
+ "thiserror",
+]
 
 [[package]]
 name = "schemars"
@@ -1157,6 +1170,7 @@ dependencies = [
  "currency",
  "finance",
  "platform",
+ "schema",
  "sdk",
  "serde",
  "thiserror",
@@ -1172,6 +1186,7 @@ dependencies = [
  "finance",
  "lpp",
  "platform",
+ "schema",
  "sdk",
  "semver",
  "serde",
