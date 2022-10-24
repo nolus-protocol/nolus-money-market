@@ -168,16 +168,14 @@ where
     }
 
     pub(crate) fn state(&self, now: Timestamp) -> ContractResult<StateResponse<Asset, Lpn>> {
-        let lease_amount = self.amount;
-
-        if lease_amount.is_zero() {
+        if self.amount.is_zero() {
             Ok(StateResponse::Closed())
         } else {
             let loan_state = self.loan.state(now, self.lease_addr.clone())?;
 
-            loan_state.map_or(Ok(StateResponse::Paid(lease_amount)), |state| {
+            loan_state.map_or(Ok(StateResponse::Paid(self.amount)), |state| {
                 Ok(StateResponse::Opened {
-                    amount: lease_amount,
+                    amount: self.amount,
                     interest_rate: state.annual_interest,
                     interest_rate_margin: state.annual_interest_margin,
                     principal_due: state.principal_due,
@@ -207,16 +205,20 @@ where
         let surplus = if currency::equal::<Lpn, Asset>() {
             // TODO remove once migrate to multi-currency version
             let lease_lpn = self.lease_amount_lpn()?;
+
             debug_assert!(balance_lpn >= lease_lpn);
+
             balance_lpn - lease_lpn
         } else {
             balance_lpn
         };
+
         if !surplus.is_zero() {
             account.send(surplus, &self.customer);
         }
 
         account.send(self.amount, &self.customer);
+
         Ok(account.into())
     }
 }
@@ -835,7 +837,7 @@ mod tests {
 
     fn expect_bank_send(mut batch: Batch, amount: Coin<TestCurrency>) -> Batch {
         batch.schedule_execute_no_reply(BankMsg::Send {
-            amount: vec![cosmwasm_std::coin(amount.into(), TestCurrency::TICKER)],
+            amount: vec![cosmwasm_std::coin(amount.into(), TestCurrency::BANK_SYMBOL)],
             to_address: CUSTOMER.into(),
         });
         batch

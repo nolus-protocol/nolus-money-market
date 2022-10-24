@@ -78,11 +78,9 @@ where
             Coin<Lpn>,
         ) -> ContractResult<Status<Lpn, Asset>>,
     {
-        let mut lease_amount = self.amount;
-
         let price_to_lpn = self.price_of_lease_currency()?;
 
-        let lease_lpn = total(lease_amount, price_to_lpn);
+        let lease_lpn = total(self.amount, price_to_lpn);
 
         let LiabilityStatus {
             ltv,
@@ -99,7 +97,7 @@ where
             ..
         } = &status
         {
-            lease_amount -= total(receipt.total(), price_to_lpn.inv());
+            self.amount -= total(receipt.total(), price_to_lpn.inv());
         }
 
         if !matches!(status, Status::FullLiquidation { .. }) {

@@ -169,7 +169,7 @@ mod tests {
     #[test]
     fn transfer() {
         use timealarms::msg::ExecuteMsg as AlarmsExecuteMsg;
-        let mut deps = mock_dependencies_with_balance(&coins(20, Nls::TICKER));
+        let mut deps = mock_dependencies_with_balance(&coins(20, Nls::BANK_SYMBOL));
 
         let msg = instantiate_msg();
         let info = mock_info("timealarms", &coins(2, "unolus"));
@@ -185,7 +185,7 @@ mod tests {
             vec![
                 SubMsg::new(BankMsg::Send {
                     to_address: "treasury".to_string(),
-                    amount: coins(20, Nls::TICKER),
+                    amount: coins(20, Nls::BANK_SYMBOL),
                 }),
                 SubMsg::new(WasmMsg::Execute {
                     contract_addr: "timealarms".to_string(),

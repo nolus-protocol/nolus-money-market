@@ -25,7 +25,7 @@ pub fn query_config(deps: &Deps) -> Result<QueryConfigResponse, ContractError> {
     let config = Config::load(deps.storage)?;
 
     Ok(QueryConfigResponse {
-        lpn_symbol: config.currency,
+        lpn_ticker: config.lpn_ticker,
         lease_code_id: config.lease_code_id,
         base_interest_rate: config.base_interest_rate,
         utilization_optimal: config.utilization_optimal,

@@ -48,6 +48,7 @@ where
         self.amount == Amount::default()
     }
 
+    #[track_caller]
     pub(super) fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>)
     where
         OtherC: Currency,
@@ -70,6 +71,7 @@ where
 {
     type Output = Self;
 
+    #[track_caller]
     fn add(self, rhs: Coin<C>) -> Self::Output {
         Self::Output {
             amount: self.amount + rhs.amount,
@@ -84,6 +86,7 @@ where
 {
     type Output = Self;
 
+    #[track_caller]
     fn sub(self, rhs: Coin<C>) -> Self::Output {
         Self::Output {
             amount: self.amount - rhs.amount,
@@ -96,6 +99,7 @@ impl<C> AddAssign<Coin<C>> for Coin<C>
 where
     C: Currency,
 {
+    #[track_caller]
     fn add_assign(&mut self, rhs: Coin<C>) {
         self.amount += rhs.amount;
     }
@@ -105,6 +109,7 @@ impl<C> SubAssign<Coin<C>> for Coin<C>
 where
     C: Currency,
 {
+    #[track_caller]
     fn sub_assign(&mut self, rhs: Coin<C>) {
         self.amount -= rhs.amount;
     }
@@ -116,6 +121,7 @@ where
 {
     type Output = Self;
 
+    #[track_caller]
     fn mul(self, rhs: Amount) -> Self::Output {
         Self::Output {
             amount: self.amount * rhs,
@@ -130,6 +136,7 @@ where
 {
     type Output = Self;
 
+    #[track_caller]
     fn div(self, rhs: Amount) -> Self::Output {
         Self::Output {
             amount: self.amount / rhs,

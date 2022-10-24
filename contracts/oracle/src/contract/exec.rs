@@ -1,5 +1,5 @@
 use currency::lpn::Lpns;
-use finance::currency::{visit_any, AnyVisitor, Currency};
+use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, DepsMut, Env},
@@ -35,11 +35,11 @@ impl<'a> ExecWithOracleBase<'a> {
         };
 
         let config = Config::load(visitor.deps.storage)?;
-        visit_any(&config.base_asset, visitor)
+        visit_any_on_ticker::<Lpns, _>(&config.base_asset, visitor)
     }
 }
 
-impl<'a> AnyVisitor<Lpns> for ExecWithOracleBase<'a> {
+impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
     type Output = Response;
     type Error = ContractError;
 

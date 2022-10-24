@@ -1,19 +1,20 @@
-use currency::{lpn::Usdc, native::Nls};
-use finance::currency::Currency;
-use sdk::{
-    cosmwasm_std::{coins, Addr, Coin as CwCoin},
-    cw_multi_test::Executor,
+use currency::lpn::Usdc;
+use finance::{
+    coin::{Amount, Coin},
+    currency::Currency,
 };
+use platform::bank;
+use sdk::{cosmwasm_std::Addr, cw_multi_test::Executor};
 
-use crate::common::{test_case::TestCase, ADMIN, USER};
+use crate::common::{cwcoins, test_case::TestCase, Native, ADMIN, USER};
 
 #[test]
 fn on_alarm_from_unknown() {
-    let denom = Usdc::TICKER;
+    type Lpn = Usdc;
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::new(denom);
-    test_case.init(&user_addr, coins(500, denom));
+    let mut test_case = TestCase::<Lpn>::new();
+    test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
     test_case.init_treasury().init_timealarms().init_profit(2);
 
     let treasury_balance = test_case
@@ -26,7 +27,7 @@ fn on_alarm_from_unknown() {
         user_addr,
         test_case.profit_addr.as_ref().unwrap().clone(),
         &profit::msg::ExecuteMsg::TimeAlarm(test_case.app.block_info().time),
-        &coins(40, denom),
+        &cwcoins::<Lpn, _>(40),
     );
     assert!(res.is_err());
 
@@ -44,11 +45,11 @@ fn on_alarm_from_unknown() {
 #[test]
 #[should_panic(expected = "EmptyBalance. No profit to dispatch")]
 fn on_alarm_zero_balance() {
-    let denom = Usdc::TICKER;
+    type Lpn = Usdc;
     let time_oracle_addr = Addr::unchecked("time");
 
-    let mut test_case = TestCase::new(denom);
-    test_case.init(&time_oracle_addr, coins(500, denom));
+    let mut test_case = TestCase::<Lpn>::new();
+    test_case.init(&time_oracle_addr, cwcoins::<Lpn, _>(500));
     test_case.init_treasury().init_timealarms().init_profit(2);
 
     test_case
@@ -64,21 +65,17 @@ fn on_alarm_zero_balance() {
 
 #[test]
 fn on_alarm_transfer() {
-    let denom = Nls::TICKER;
-    let time_oracle_addr = Addr::unchecked("time");
+    type Lpn = Usdc;
 
-    let mut test_case = TestCase::new(denom);
-    test_case.init(&time_oracle_addr, coins(500, denom));
+    let mut test_case = TestCase::<Lpn>::new();
     test_case.init_treasury().init_timealarms().init_profit(2);
 
-    assert_eq!(
-        CwCoin::new(2000, denom),
-        test_case
-            .app
-            .wrap()
-            .query_balance(test_case.treasury_addr.as_ref().unwrap(), denom)
-            .unwrap()
-    );
+    let init_balance = bank::balance::<Native>(
+        test_case.treasury_addr.as_ref().unwrap(),
+        &test_case.app.wrap(),
+    )
+    .unwrap();
+    let profit = Coin::<Native>::from(100);
 
     //send tokens to the profit contract
     test_case
@@ -86,7 +83,7 @@ fn on_alarm_transfer() {
         .send_tokens(
             Addr::unchecked(ADMIN),
             test_case.profit_addr.clone().unwrap(),
-            &coins(100, denom),
+            &cwcoins::<Native, _>(profit),
         )
         .unwrap();
 
@@ -121,8 +118,8 @@ fn on_alarm_transfer() {
             ("height", test_case.app.block_info().height.to_string()),
             ("at", test_case.app.block_info().time.nanos().to_string()),
             ("idx", String::from("0")),
-            ("profit-amount-amount", String::from("100")),
-            ("profit-amount-symbol", Nls::TICKER.to_string())
+            ("profit-amount-amount", Amount::from(profit).to_string()),
+            ("profit-amount-symbol", Native::TICKER.into())
         ]
     );
     let profit_exec = &res.events[2];
@@ -138,7 +135,10 @@ fn on_alarm_transfer() {
                 "sender",
                 test_case.profit_addr.as_ref().unwrap().to_string()
             ),
-            ("amount", format!("{}{}", 100, Nls::TICKER))
+            (
+                "amount",
+                format!("{}{}", Amount::from(profit), Native::BANK_SYMBOL)
+            )
         ]
     );
     let profit_exec = &res.events[3];
@@ -152,11 +152,11 @@ fn on_alarm_transfer() {
     );
 
     assert_eq!(
-        CwCoin::new(2100, denom),
-        test_case
-            .app
-            .wrap()
-            .query_balance(test_case.treasury_addr.unwrap(), denom)
-            .unwrap()
+        init_balance + profit,
+        bank::balance::<Native>(
+            test_case.treasury_addr.as_ref().unwrap(),
+            &test_case.app.wrap(),
+        )
+        .unwrap()
     );
 }

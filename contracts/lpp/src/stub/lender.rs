@@ -1,11 +1,11 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
+use currency::lpn::Lpns;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use currency::lpn::Lpns;
 use finance::{
     coin::Coin,
-    currency::{visit_any, AnyVisitor, Currency, SymbolOwned},
+    currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned},
 };
 use platform::{
     batch::{Batch, ReplyId},
@@ -67,7 +67,7 @@ impl LppLenderRef {
         let resp: QueryConfigResponse =
             querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
 
-        let currency = resp.lpn_symbol;
+        let currency = resp.lpn_ticker;
 
         Ok(Self {
             addr,
@@ -95,7 +95,7 @@ impl LppLenderRef {
             querier: &'a QuerierWrapper<'a>,
         }
 
-        impl<'a, Cmd> AnyVisitor<Lpns> for CurrencyVisitor<'a, Cmd>
+        impl<'a, Cmd> AnyVisitor for CurrencyVisitor<'a, Cmd>
         where
             Cmd: WithLppLender,
         {
@@ -110,7 +110,7 @@ impl LppLenderRef {
             }
         }
 
-        visit_any(
+        visit_any_on_ticker::<Lpns, _>(
             &self.currency.clone(),
             CurrencyVisitor {
                 cmd,

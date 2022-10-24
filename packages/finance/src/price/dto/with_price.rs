@@ -1,6 +1,9 @@
+use std::marker::PhantomData;
+
 use crate::{
     coin::{Coin, CoinDTO},
-    currency::{visit_any, AnyVisitor, Currency, Group},
+    currency::{visit_any_on_ticker, AnyVisitor, Currency, Group},
+    error::Error,
     price::Price,
 };
 
@@ -10,36 +13,39 @@ pub fn execute<G, Cmd>(price: PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Er
 where
     G: Group,
     Cmd: WithPrice,
-    G::ResolveError: Into<Cmd::Error>,
+    Error: Into<Cmd::Error>,
 {
-    visit_any::<G, _>(
+    visit_any_on_ticker::<G, _>(
         &price.amount.ticker().clone(),
         CVisitor {
+            group: PhantomData::<G>,
             price_dto: price,
             cmd,
         },
     )
 }
 
-struct CVisitor<Cmd> {
+struct CVisitor<G, Cmd> {
+    group: PhantomData<G>,
     price_dto: PriceDTO,
     cmd: Cmd,
 }
 
-impl<G, Cmd> AnyVisitor<G> for CVisitor<Cmd>
+impl<G, Cmd> AnyVisitor for CVisitor<G, Cmd>
 where
     G: Group,
     Cmd: WithPrice,
-    G::ResolveError: Into<Cmd::Error>,
+    Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
+    #[track_caller]
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
         C: Currency,
     {
-        visit_any::<G, _>(
+        visit_any_on_ticker::<G, _>(
             &self.price_dto.amount_quote.ticker().clone(),
             QuoteCVisitor {
                 base: Coin::<C>::try_from(self.price_dto.amount)
@@ -60,15 +66,15 @@ where
     cmd: Cmd,
 }
 
-impl<C, G, Cmd> AnyVisitor<G> for QuoteCVisitor<C, Cmd>
+impl<C, Cmd> AnyVisitor for QuoteCVisitor<C, Cmd>
 where
     C: Currency,
-    G: Group,
     Cmd: WithPrice,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
+    #[track_caller]
     fn on<QuoteC>(self) -> Result<Self::Output, Self::Error>
     where
         QuoteC: Currency,

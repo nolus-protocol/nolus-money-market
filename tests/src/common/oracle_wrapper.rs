@@ -19,7 +19,7 @@ use trees::tr;
 
 use crate::common::{ContractWrapper, MockApp};
 
-use super::{ADMIN, NATIVE_DENOM};
+use super::{Native, ADMIN};
 
 pub struct MarketOracleWrapper {
     contract_wrapper: Box<OracleContractWrapper>,
@@ -32,18 +32,16 @@ impl MarketOracleWrapper {
         }
     }
     #[track_caller]
-    pub fn instantiate(
-        self,
-        app: &mut MockApp,
-        base_currency: &str,
-        timealarms_addr: &str,
-    ) -> Addr {
+    pub fn instantiate<BaseC>(self, app: &mut MockApp, timealarms_addr: &str) -> Addr
+    where
+        BaseC: Currency,
+    {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {
-            base_asset: base_currency.to_string(),
+            base_asset: BaseC::TICKER.into(),
             price_feed_period_secs: 60,
             expected_feeders: Percent::from_percent(1),
-            swap_tree: TreeStore(tr((0, Usdc::TICKER.into())) / tr((1, NATIVE_DENOM.to_string()))),
+            swap_tree: TreeStore(tr((0, Usdc::TICKER.into())) / tr((1, Native::TICKER.to_string()))),
             timealarms_addr: timealarms_addr.to_string(),
         };
 

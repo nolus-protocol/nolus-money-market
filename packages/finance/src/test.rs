@@ -13,10 +13,7 @@ where
 pub mod currency {
     use serde::{Deserialize, Serialize};
 
-    use crate::{
-        currency::{AnyVisitor, Currency, Group, Member, Symbol, SymbolStatic},
-        error::Error,
-    };
+    use crate::currency::{AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
@@ -26,8 +23,6 @@ pub mod currency {
         const TICKER: SymbolStatic = "uusdc";
         const BANK_SYMBOL: SymbolStatic = "ibc/uusdc";
     }
-    impl Member<TestCurrencies> for Usdc {}
-    impl Member<TestExtraCurrencies> for Usdc {}
 
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
@@ -37,8 +32,6 @@ pub mod currency {
         const TICKER: SymbolStatic = "unls";
         const BANK_SYMBOL: SymbolStatic = "ibc/unls";
     }
-    impl Member<TestCurrencies> for Nls {}
-    impl Member<TestExtraCurrencies> for Nls {}
 
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
@@ -48,42 +41,115 @@ pub mod currency {
         const TICKER: SymbolStatic = "udai";
         const BANK_SYMBOL: SymbolStatic = "ibc/udai";
     }
-    impl Member<TestExtraCurrencies> for Dai {}
 
     pub struct TestCurrencies {}
-    pub const DESCR: &str = "test";
     impl Group for TestCurrencies {
-        type ResolveError = Error;
+        const DESCR: SymbolStatic = "test";
 
-        fn resolve<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
+        fn maybe_visit_on_ticker<V>(symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
         where
-            V: AnyVisitor<Self>,
-            Error: Into<V::Error>,
+            V: AnyVisitor,
         {
             match symbol {
-                Usdc::TICKER => visitor.on::<Usdc>(),
-                Nls::TICKER => visitor.on::<Nls>(),
-                _ => Err(Error::NotInCurrencyGroup(symbol.into(), DESCR.into()).into()),
+                Usdc::TICKER => Ok(visitor.on::<Usdc>()),
+                Nls::TICKER => Ok(visitor.on::<Nls>()),
+                _ => Err(visitor),
             }
+        }
+
+        fn maybe_visit_on_bank_symbol<V>(_: Symbol, _: V) -> MaybeAnyVisitResult<V>
+        where
+            Self: Sized,
+            V: AnyVisitor,
+        {
+            unreachable!()
         }
     }
 
     pub struct TestExtraCurrencies {}
-    pub const DESCR_EXTRA: &str = "test_extra";
     impl Group for TestExtraCurrencies {
-        type ResolveError = Error;
+        const DESCR: SymbolStatic = "test_extra";
 
-        fn resolve<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
+        fn maybe_visit_on_ticker<V>(symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
         where
-            V: AnyVisitor<Self>,
-            Error: Into<V::Error>,
+            V: AnyVisitor,
         {
             match symbol {
-                Usdc::TICKER => visitor.on::<Usdc>(),
-                Nls::TICKER => visitor.on::<Nls>(),
-                Dai::TICKER => visitor.on::<Dai>(),
-                _ => Err(Error::NotInCurrencyGroup(symbol.into(), DESCR_EXTRA.into()).into()),
+                Usdc::TICKER => Ok(visitor.on::<Usdc>()),
+                Nls::TICKER => Ok(visitor.on::<Nls>()),
+                Dai::TICKER => Ok(visitor.on::<Dai>()),
+                _ => Err(visitor),
             }
+        }
+
+        fn maybe_visit_on_bank_symbol<V>(_: Symbol, _: V) -> MaybeAnyVisitResult<V>
+        where
+            Self: Sized,
+            V: AnyVisitor,
+        {
+            unreachable!()
+        }
+    }
+}
+
+pub mod visitor {
+    use std::marker::PhantomData;
+
+    use crate::{
+        currency::{equal, AnyVisitor, Currency, SingleVisitor},
+        error::Error,
+    };
+
+    #[derive(Debug, PartialEq, Eq, Clone)]
+    pub struct Expect<C>(PhantomData<C>);
+
+    impl<C> Default for Expect<C> {
+        fn default() -> Self {
+            Self(Default::default())
+        }
+    }
+    impl<C> AnyVisitor for Expect<C>
+    where
+        C: 'static,
+    {
+        type Output = bool;
+        type Error = Error;
+
+        fn on<Cin>(self) -> Result<Self::Output, Self::Error>
+        where
+            Cin: 'static,
+        {
+            Ok(equal::<C, Cin>())
+        }
+    }
+    impl<C> SingleVisitor<C> for Expect<C> {
+        type Output = bool;
+        type Error = Error;
+
+        fn on(self) -> Result<Self::Output, Self::Error> {
+            Ok(true)
+        }
+    }
+
+    pub struct ExpectUnknownCurrency;
+    impl AnyVisitor for ExpectUnknownCurrency {
+        type Output = bool;
+        type Error = Error;
+
+        fn on<C>(self) -> Result<Self::Output, Self::Error>
+        where
+            C: Currency,
+        {
+            unreachable!();
+        }
+    }
+
+    impl<C> SingleVisitor<C> for ExpectUnknownCurrency {
+        type Output = bool;
+        type Error = Error;
+
+        fn on(self) -> Result<Self::Output, Self::Error> {
+            unreachable!();
         }
     }
 }

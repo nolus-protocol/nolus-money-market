@@ -65,8 +65,12 @@ impl<LPN> LiquidityPool<LPN>
 where
     LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
-    pub fn store(storage: &mut dyn Storage, denom: String, lease_code_id: Uint64) -> StdResult<()> {
-        Config::new(denom, lease_code_id).store(storage)?;
+    pub fn store(
+        storage: &mut dyn Storage,
+        lpn_ticker: String,
+        lease_code_id: Uint64,
+    ) -> StdResult<()> {
+        Config::new(lpn_ticker, lease_code_id).store(storage)?;
         Total::<LPN>::new().store(storage)?;
         Ok(())
     }
@@ -297,8 +301,8 @@ where
 #[cfg(test)]
 mod test {
     use finance::{duration::Duration, percent::Units, price, test::currency::Usdc};
+    use platform::coin_legacy;
     use sdk::cosmwasm_std::{
-        self,
         testing::{self, MOCK_CONTRACT_ADDR},
         Addr, Coin as CwCoin, Timestamp, Uint64,
     };
@@ -709,6 +713,6 @@ mod test {
     }
 
     fn coin_cw(amount: u128) -> CwCoin {
-        cosmwasm_std::coin(amount, TheCurrency::TICKER)
+        coin_legacy::to_cosmwasm::<TheCurrency>(amount.into())
     }
 }

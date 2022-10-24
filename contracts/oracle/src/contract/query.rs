@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::lpn::Lpns;
-use finance::currency::{visit_any, AnyVisitor, Currency};
+use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
 use marketprice::error::PriceFeedsError;
 use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
 
@@ -26,11 +26,11 @@ impl<'a> QueryWithOracleBase<'a> {
         let visitor = Self { deps, env, msg };
 
         let config = Config::load(visitor.deps.storage)?;
-        visit_any(&config.base_asset, visitor)
+        visit_any_on_ticker::<Lpns, _>(&config.base_asset, visitor)
     }
 }
 
-impl<'a> AnyVisitor<Lpns> for QueryWithOracleBase<'a> {
+impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
     type Output = Binary;
     type Error = ContractError;
 

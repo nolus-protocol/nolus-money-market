@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use currency::{
+    lease::{Atom, Osmo, Wbtc, Weth},
     lpn::Usdc,
-    test::{TestCurrencyA, TestCurrencyB, TestCurrencyC, TestCurrencyD},
 };
 use finance::{
     coin::Coin,
@@ -39,23 +39,22 @@ fn feed_prices_unknown_feeder() {
 fn feed_direct_price() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
-    let expected_price = PriceDTO::try_from(
-        price::total_of(Coin::<TestCurrencyD>::new(10)).is(Coin::<Usdc>::new(120)),
-    )
-    .unwrap();
+    let expected_price =
+        PriceDTO::try_from(price::total_of(Coin::<Wbtc>::new(10)).is(Coin::<Usdc>::new(120)))
+            .unwrap();
 
-    // Feed direct price TestCurrencyD/OracleBaseAsset
+    // Feed direct price Wbtc/OracleBaseAsset
     let msg = ExecuteMsg::FeedPrices {
         prices: vec![expected_price.clone()],
     };
     let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    // query price for TestCurrencyA
+    // query price for Osmo
     let res = query(
         deps.as_ref(),
         mock_env(),
         QueryMsg::Prices {
-            currencies: HashSet::from([TestCurrencyD::TICKER.to_string()]),
+            currencies: HashSet::from([Wbtc::TICKER.to_string()]),
         },
     )
     .unwrap();
@@ -67,38 +66,34 @@ fn feed_direct_price() {
 fn feed_indirect_price() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
-    let price_a_to_b = PriceDTO::try_from(
-        price::total_of(Coin::<TestCurrencyA>::new(10)).is(Coin::<TestCurrencyB>::new(120)),
-    )
-    .unwrap();
-    let price_b_to_c = PriceDTO::try_from(
-        price::total_of(Coin::<TestCurrencyB>::new(10)).is(Coin::<TestCurrencyC>::new(5)),
-    )
-    .unwrap();
-    let price_c_to_usdc = PriceDTO::try_from(
-        price::total_of(Coin::<TestCurrencyC>::new(10)).is(Coin::<Usdc>::new(5)),
-    )
-    .unwrap();
+    let price_a_to_b =
+        PriceDTO::try_from(price::total_of(Coin::<Osmo>::new(10)).is(Coin::<Atom>::new(120)))
+            .unwrap();
+    let price_b_to_c =
+        PriceDTO::try_from(price::total_of(Coin::<Atom>::new(10)).is(Coin::<Weth>::new(5)))
+            .unwrap();
+    let price_c_to_usdc =
+        PriceDTO::try_from(price::total_of(Coin::<Weth>::new(10)).is(Coin::<Usdc>::new(5)))
+            .unwrap();
 
-    // Feed indirect price from TestCurrencyA to OracleBaseAsset
+    // Feed indirect price from Osmo to OracleBaseAsset
     let msg = ExecuteMsg::FeedPrices {
         prices: vec![price_a_to_b, price_b_to_c, price_c_to_usdc],
     };
     let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-    // query price for TestCurrencyA
+    // query price for Osmo
     let res = query(
         deps.as_ref(),
         mock_env(),
         QueryMsg::Price {
-            currency: TestCurrencyA::TICKER.to_string(),
+            currency: Osmo::TICKER.to_string(),
         },
     )
     .unwrap();
 
     let expected_price =
-        PriceDTO::try_from(price::total_of(Coin::<TestCurrencyA>::new(1)).is(Coin::<Usdc>::new(3)))
-            .unwrap();
+        PriceDTO::try_from(price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Usdc>::new(3))).unwrap();
     let value: PriceDTO = from_binary(&res).unwrap();
     assert_eq!(expected_price, value)
 }

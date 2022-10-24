@@ -8,7 +8,7 @@ use sdk::schemars::{self, JsonSchema};
 pub struct NewLeaseForm {
     /// The customer who wants to open a lease.
     pub customer: String,
-    /// Symbol of the currency this lease will be about.
+    /// Ticker of the currency this lease will be about.
     pub currency: SymbolOwned,
     /// Liability parameters
     pub liability: Liability,

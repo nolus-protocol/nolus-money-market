@@ -109,6 +109,7 @@ mod tests {
         CwTemplateContract(cw_template_contract_addr)
     }
     mod register_feeder {
+        use currency::lease::{Atom, Weth};
         use finance::{
             coin::Coin,
             price::{self, dto::PriceDTO},
@@ -122,7 +123,7 @@ mod tests {
             msg::ExecuteMsg,
             tests::{
                 integration_tests::tests::{mock_app, timealarms_instantiate},
-                TestCurrencyA, TestCurrencyB, TestCurrencyC,
+                Osmo,
             },
         };
 
@@ -241,21 +242,18 @@ mod tests {
             };
             app.execute_contract(Addr::unchecked(ADMIN), oracle.addr(), &msg, &[])
                 .unwrap();
-            let feed_msg =
-                ExecuteMsg::FeedPrices {
-                    prices: vec![
-                        PriceDTO::try_from(
-                            price::total_of(Coin::<TestCurrencyA>::new(1))
-                                .is(Coin::<TestCurrencyB>::new(100)),
-                        )
-                        .unwrap(),
-                        PriceDTO::try_from(
-                            price::total_of(Coin::<TestCurrencyA>::new(1))
-                                .is(Coin::<TestCurrencyC>::new(200)),
-                        )
-                        .unwrap(),
-                    ],
-                };
+            let feed_msg = ExecuteMsg::FeedPrices {
+                prices: vec![
+                    PriceDTO::try_from(
+                        price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Atom>::new(100)),
+                    )
+                    .unwrap(),
+                    PriceDTO::try_from(
+                        price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Weth>::new(200)),
+                    )
+                    .unwrap(),
+                ],
+            };
             app.update_block(|bl| bl.time = Timestamp::from_nanos(0));
             // instantiate loan, add alarms
             let loan = mock_loan::proper_instantiate(&mut app);

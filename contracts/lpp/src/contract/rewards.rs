@@ -73,10 +73,9 @@ pub fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsRespons
 #[cfg(test)]
 mod test {
     use finance::test::currency::Usdc;
-    use sdk::cosmwasm_std::{
-        coin,
-        testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
-    };
+    use platform::coin_legacy;
+    use sdk::cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
+    use sdk::cosmwasm_std::Coin as CwCoin;
 
     use crate::contract::lender;
 
@@ -105,16 +104,21 @@ mod test {
         assert_eq!(response, Err(ContractError::NoDeposit {}));
 
         lpp_balance += deposit;
-        let info = mock_info("lender", &[coin(deposit, TheCurrency::TICKER)]);
-        deps.querier.update_balance(
-            MOCK_CONTRACT_ADDR,
-            vec![coin(lpp_balance, TheCurrency::TICKER)],
-        );
+        let info = mock_info("lender", &cwcoins(deposit));
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, cwcoins(lpp_balance));
         lender::try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
 
         // pending rewards == 0
         let info = mock_info("lender", &[]);
         let response = try_claim_rewards(deps.as_mut(), env, info, None);
         assert_eq!(response, Err(ContractError::NoRewards {}));
+    }
+
+    fn cwcoins<A>(amount: A) -> Vec<CwCoin>
+    where
+        A: Into<Coin<TheCurrency>>,
+    {
+        vec![coin_legacy::to_cosmwasm::<TheCurrency>(amount.into())]
     }
 }

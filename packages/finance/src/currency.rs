@@ -1,4 +1,4 @@
-use std::{any::TypeId, error::Error as ErrorTrait, fmt::Debug};
+use std::{any::TypeId, fmt::Debug};
 
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -16,22 +16,6 @@ pub trait Currency: Copy + Ord + Default + Debug + 'static {
     const BANK_SYMBOL: SymbolStatic;
 }
 
-pub trait Member<G>
-where
-    G: Group,
-{
-}
-
-pub trait Group {
-    type ResolveError: ErrorTrait;
-
-    fn resolve<V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
-    where
-        Self: Sized,
-        V: AnyVisitor<Self>,
-        Self::ResolveError: Into<V::Error>;
-}
-
 pub fn equal<C1, C2>() -> bool
 where
     C1: 'static,
@@ -47,111 +31,131 @@ pub trait SingleVisitor<C> {
     fn on(self) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn visit<C, V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
+pub fn visit_on_bank_symbol<C, V>(bank_symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
 where
     V: SingleVisitor<C>,
     C: Currency,
     Error: Into<V::Error>,
 {
-    if symbol == C::TICKER {
-        visitor.on()
-    } else {
-        Err(Error::UnexpectedCurrency(symbol.into(), C::TICKER.into()).into())
-    }
+    maybe_visit_on_bank_symbol(bank_symbol, visitor)
+        .unwrap_or_else(|_| Err(Error::unexpected_bank_symbol::<_, C>(bank_symbol).into()))
 }
 
-pub trait AnyVisitor<G>
+pub type MaybeVisitResult<C, V> =
+    Result<Result<<V as SingleVisitor<C>>::Output, <V as SingleVisitor<C>>::Error>, V>;
+
+pub fn maybe_visit_on_ticker<C, V>(ticker: Symbol, visitor: V) -> MaybeVisitResult<C, V>
 where
-    G: Group,
+    C: Currency,
+    V: SingleVisitor<C>,
 {
+    maybe_visit_impl(ticker, C::TICKER, visitor)
+}
+
+pub fn maybe_visit_on_bank_symbol<C, V>(bank_symbol: Symbol, visitor: V) -> MaybeVisitResult<C, V>
+where
+    V: SingleVisitor<C>,
+    C: Currency,
+{
+    maybe_visit_impl(bank_symbol, C::BANK_SYMBOL, visitor)
+}
+
+pub type MaybeAnyVisitResult<V> =
+    Result<Result<<V as AnyVisitor>::Output, <V as AnyVisitor>::Error>, V>;
+
+pub trait Group {
+    const DESCR: SymbolStatic;
+
+    fn maybe_visit_on_ticker<V>(symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
+    where
+        Self: Sized,
+        V: AnyVisitor;
+
+    fn maybe_visit_on_bank_symbol<V>(bank_symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
+    where
+        Self: Sized,
+        V: AnyVisitor;
+}
+
+pub trait AnyVisitor {
     type Output;
     type Error;
 
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
-        C: 'static + Currency + Member<G> + Serialize + DeserializeOwned;
+        C: 'static + Currency + Serialize + DeserializeOwned;
 }
 
-pub fn visit_any<G, V>(symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
+pub fn visit_any_on_ticker<G, V>(ticker: Symbol, visitor: V) -> Result<V::Output, V::Error>
 where
     G: Group,
-    V: AnyVisitor<G>,
-    G::ResolveError: Into<V::Error>,
+    V: AnyVisitor,
+    Error: Into<V::Error>,
 {
-    G::resolve(symbol, visitor)
+    G::maybe_visit_on_ticker(ticker, visitor)
+        .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, G>(ticker).into()))
+}
+
+pub fn visit_any_on_bank_symbol<G, V>(
+    bank_symbol: Symbol,
+    visitor: V,
+) -> Result<V::Output, V::Error>
+where
+    G: Group,
+    V: AnyVisitor,
+    Error: Into<V::Error>,
+{
+    G::maybe_visit_on_bank_symbol(bank_symbol, visitor)
+        .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, G>(bank_symbol).into()))
+}
+
+fn maybe_visit_impl<C, V>(symbol: Symbol, symbol_exp: Symbol, visitor: V) -> MaybeVisitResult<C, V>
+where
+    V: SingleVisitor<C>,
+    C: Currency,
+{
+    if symbol == symbol_exp {
+        Ok(visitor.on())
+    } else {
+        Err(visitor)
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use std::marker::PhantomData;
 
     use crate::{
-        currency::{Currency, SingleVisitor},
+        currency::Currency,
         error::Error,
-        test::currency::{Nls, TestCurrencies, Usdc, DESCR},
+        test::{
+            currency::{Dai, Nls, TestCurrencies, Usdc},
+            visitor::{Expect, ExpectUnknownCurrency},
+        },
     };
 
-    use super::AnyVisitor;
-
-    struct Expect<C>(PhantomData<C>);
-
-    impl<C> Expect<C> {
-        fn new() -> Self {
-            Self(PhantomData)
-        }
-    }
-    impl<C> AnyVisitor<TestCurrencies> for Expect<C>
-    where
-        C: 'static,
-    {
-        type Output = bool;
-        type Error = Error;
-
-        fn on<Cin>(self) -> Result<Self::Output, Self::Error>
-        where
-            Cin: 'static,
-        {
-            assert!(super::equal::<C, Cin>());
-            Ok(true)
-        }
-    }
-    impl<C> SingleVisitor<C> for Expect<C> {
-        type Output = bool;
-        type Error = Error;
-
-        fn on(self) -> Result<Self::Output, Self::Error> {
-            Ok(true)
-        }
-    }
-
-    struct ExpectUnknownCurrency;
-    impl AnyVisitor<TestCurrencies> for ExpectUnknownCurrency {
-        type Output = bool;
-        type Error = Error;
-
-        fn on<C>(self) -> Result<Self::Output, Self::Error>
-        where
-            C: Currency,
-        {
-            unreachable!();
-        }
-    }
-
-    impl<C> SingleVisitor<C> for ExpectUnknownCurrency {
-        type Output = bool;
-        type Error = Error;
-
-        fn on(self) -> Result<Self::Output, Self::Error> {
-            unreachable!();
-        }
-    }
     #[test]
     fn visit_any() {
-        let v_usdc = Expect::<Usdc>::new();
-        assert_eq!(Ok(true), super::visit_any(Usdc::TICKER, v_usdc));
+        let v_usdc = Expect::<Usdc>::default();
+        assert_eq!(
+            Ok(true),
+            super::visit_any_on_ticker::<TestCurrencies, _>(Usdc::TICKER, v_usdc)
+        );
 
-        let v_nls = Expect::<Nls>::new();
-        assert_eq!(Ok(true), super::visit_any(Nls::TICKER, v_nls));
+        let v_nls = Expect::<Nls>::default();
+        assert_eq!(
+            Ok(true),
+            super::visit_any_on_ticker::<TestCurrencies, _>(Nls::TICKER, v_nls)
+        );
+
+        assert_eq!(
+            Err(Error::not_in_currency_group::<_, TestCurrencies>(
+                Dai::BANK_SYMBOL
+            )),
+            super::visit_any_on_ticker::<TestCurrencies, _>(
+                Dai::BANK_SYMBOL,
+                ExpectUnknownCurrency
+            )
+        );
     }
 
     #[test]
@@ -159,27 +163,33 @@ mod test {
         const DENOM: &str = "my_fancy_coin";
 
         assert_eq!(
-            super::visit_any(DENOM, ExpectUnknownCurrency),
-            Err(Error::NotInCurrencyGroup(DENOM.into(), DESCR.into())),
+            super::visit_any_on_ticker::<TestCurrencies, _>(DENOM, ExpectUnknownCurrency),
+            Err(Error::not_in_currency_group::<_, TestCurrencies>(DENOM)),
         );
     }
 
     #[test]
-    fn visit_one() {
-        let v_usdc = Expect::<Usdc>::new();
-        assert_eq!(super::visit(Usdc::TICKER, v_usdc), Ok(true));
+    fn visit_on_bank_symbol() {
+        let v_usdc = Expect::<Usdc>::default();
+        assert_eq!(
+            super::visit_on_bank_symbol(Usdc::BANK_SYMBOL, v_usdc),
+            Ok(true)
+        );
 
-        let v_nls = Expect::<Nls>::new();
-        assert_eq!(super::visit(Nls::TICKER, v_nls), Ok(true));
+        let v_nls = Expect::<Nls>::default();
+        assert_eq!(
+            super::visit_on_bank_symbol(Nls::BANK_SYMBOL, v_nls),
+            Ok(true)
+        );
     }
 
     #[test]
-    fn visit_one_unexpected() {
+    fn visit_on_bank_symbol_unexpected() {
         const DENOM: &str = "my_fancy_coin";
 
         assert_eq!(
-            super::visit::<Nls, _>(DENOM, ExpectUnknownCurrency),
-            Err(Error::UnexpectedCurrency(DENOM.into(), Nls::TICKER.into())),
+            super::visit_on_bank_symbol::<Nls, _>(DENOM, ExpectUnknownCurrency),
+            Err(Error::unexpected_bank_symbol::<_, Nls>(DENOM,)),
         );
     }
 }

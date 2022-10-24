@@ -1,6 +1,7 @@
 use crate::{
     coin::{Coin, CoinDTO},
-    currency::{visit_any, AnyVisitor, Currency, Group},
+    currency::{visit_any_on_ticker, AnyVisitor, Currency, Group},
+    error::Error,
     price::Price,
 };
 
@@ -15,15 +16,15 @@ where
     cmd: Cmd,
 }
 
-impl<C, G, Cmd> AnyVisitor<G> for QuoteCVisitor<C, Cmd>
+impl<C, Cmd> AnyVisitor for QuoteCVisitor<C, Cmd>
 where
     C: Currency,
-    G: Group,
     Cmd: WithBase<C>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
+    #[track_caller]
     fn on<QuoteC>(self) -> Result<Self::Output, Self::Error>
     where
         QuoteC: Currency,
@@ -35,14 +36,15 @@ where
     }
 }
 
+#[track_caller]
 pub fn execute<G, Cmd, C>(price: PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
 where
     G: Group,
     Cmd: WithBase<C>,
     C: Currency,
-    G::ResolveError: Into<Cmd::Error>,
+    Error: Into<Cmd::Error>,
 {
-    visit_any::<G, _>(
+    visit_any_on_ticker::<G, _>(
         &price.amount_quote.ticker().clone(),
         QuoteCVisitor {
             base: Coin::<C>::try_from(price.amount).expect("Got different currency in visitor!"),

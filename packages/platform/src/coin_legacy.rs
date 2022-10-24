@@ -2,7 +2,10 @@ use std::result::Result as StdResult;
 
 use finance::{
     coin::Coin,
-    currency::{visit, visit_any, AnyVisitor, Currency, Group, SingleVisitor},
+    currency::{
+        visit_any_on_bank_symbol, visit_on_bank_symbol, AnyVisitor, Currency, Group, SingleVisitor,
+    },
+    error::Error as FinanceError,
 };
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
@@ -12,7 +15,7 @@ pub(crate) fn from_cosmwasm_impl<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
 where
     C: Currency,
 {
-    visit(&coin.denom, CoinTransformer(&coin))
+    visit_on_bank_symbol(&coin.denom, CoinTransformer(&coin))
 }
 
 #[cfg(feature = "testing")]
@@ -27,7 +30,7 @@ pub(crate) fn to_cosmwasm_impl<C>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: Currency,
 {
-    CosmWasmCoin::new(coin.into(), C::TICKER)
+    CosmWasmCoin::new(coin.into(), C::BANK_SYMBOL)
 }
 
 pub(crate) fn from_cosmwasm_any_impl<G, V>(
@@ -37,9 +40,9 @@ pub(crate) fn from_cosmwasm_any_impl<G, V>(
 where
     G: Group,
     V: CoinVisitor,
-    G::ResolveError: Into<V::Error>,
+    FinanceError: Into<V::Error>,
 {
-    visit_any::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
+    visit_any_on_bank_symbol::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
 }
 
 pub trait CoinVisitor {
@@ -68,9 +71,8 @@ where
 
 struct CoinTransformerAny<'a, V>(&'a CosmWasmCoin, V);
 
-impl<'a, G, V> AnyVisitor<G> for CoinTransformerAny<'a, V>
+impl<'a, V> AnyVisitor for CoinTransformerAny<'a, V>
 where
-    G: Group,
     V: CoinVisitor,
 {
     type Output = V::Output;
@@ -90,7 +92,7 @@ fn from_cosmwasm_internal<C>(coin: &CosmWasmCoin) -> Coin<C>
 where
     C: Currency,
 {
-    debug_assert_eq!(C::TICKER, coin.denom);
+    debug_assert_eq!(C::BANK_SYMBOL, coin.denom);
     Coin::new(coin.amount.into())
 }
 
@@ -116,29 +118,27 @@ mod test {
 
     #[test]
     fn from_cosmwasm() {
-        let c1 = from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Nls::TICKER));
+        let c1 = from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Nls::BANK_SYMBOL));
         assert_eq!(Ok(Coin::<Nls>::new(12)), c1);
     }
     #[test]
     fn from_cosmwasm_unexpected() {
-        let c1 = from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Usdc::TICKER));
+        let c1 = from_cosmwasm_impl::<Nls>(CosmWasmCoin::new(12, Usdc::BANK_SYMBOL));
 
         assert_eq!(
             c1,
-            Err(Error::Finance(finance::error::Error::UnexpectedCurrency(
-                Usdc::TICKER.into(),
-                Nls::TICKER.into()
-            ))),
+            Err(Error::Finance(
+                finance::error::Error::unexpected_bank_symbol::<_, Nls>(Usdc::BANK_SYMBOL,)
+            )),
         );
 
-        let c2 = from_cosmwasm_impl::<Usdc>(CosmWasmCoin::new(12, Nls::TICKER));
+        let c2 = from_cosmwasm_impl::<Usdc>(CosmWasmCoin::new(12, Nls::BANK_SYMBOL));
 
         assert_eq!(
             c2,
-            Err(Error::Finance(finance::error::Error::UnexpectedCurrency(
-                Nls::TICKER.into(),
-                Usdc::TICKER.into(),
-            ))),
+            Err(Error::Finance(
+                finance::error::Error::unexpected_bank_symbol::<_, Usdc>(Nls::BANK_SYMBOL,)
+            )),
         );
     }
 
@@ -146,11 +146,11 @@ mod test {
     fn to_cosmwasm() {
         let amount = 326;
         assert_eq!(
-            CosmWasmCoin::new(amount, Nls::TICKER),
+            CosmWasmCoin::new(amount, Nls::BANK_SYMBOL),
             to_cosmwasm_impl(Coin::<Nls>::new(amount))
         );
         assert_eq!(
-            CosmWasmCoin::new(amount, Usdc::TICKER),
+            CosmWasmCoin::new(amount, Usdc::BANK_SYMBOL),
             to_cosmwasm_impl(Coin::<Usdc>::new(amount))
         );
     }

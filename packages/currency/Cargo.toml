@@ -13,3 +13,6 @@ sdk = { path = "../../packages/sdk", features = ["schema"] }
 
 thiserror = "1.0"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
+
+[dev-dependencies]
+finance = { path = "../../packages/finance", features = ["testing"] }

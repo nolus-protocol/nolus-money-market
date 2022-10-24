@@ -30,6 +30,7 @@ impl<U, T> Fraction<U> for Rational<T>
 where
     Self: Ratio<U>,
 {
+    #[track_caller]
     fn of<A>(&self, whole: A) -> A
     where
         A: Fractionable<U>,

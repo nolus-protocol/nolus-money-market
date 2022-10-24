@@ -16,8 +16,7 @@ use crate::nlpn::NLpn;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
-    // TODO: maybe change to currency ?
-    pub denom: String,
+    pub lpn_ticker: String,
     pub lease_code_id: Uint64,
 }
 
@@ -78,7 +77,7 @@ pub enum QueryMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct QueryConfigResponse {
-    pub lpn_symbol: String,
+    pub lpn_ticker: String,
     pub lease_code_id: Uint64,
     pub base_interest_rate: Percent,
     pub utilization_optimal: Percent,

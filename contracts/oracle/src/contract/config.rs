@@ -48,7 +48,7 @@ pub fn try_configure(
 
 #[cfg(test)]
 mod tests {
-    use currency::{lpn::Usdc, native::Nls, test::TestCurrencyA};
+    use currency::{lease::Osmo, lpn::Usdc, native::Nls};
     use finance::{currency::Currency, duration::Duration, percent::Percent};
     use sdk::{
         cosmwasm_ext::Response,
@@ -163,7 +163,7 @@ mod tests {
 
         let test_tree = tr((0, Usdc::TICKER.into()))
             / tr((1, Nls::TICKER.into()))
-            / tr((2, TestCurrencyA::TICKER.into()));
+            / tr((2, Osmo::TICKER.into()));
 
         let msg = ExecuteMsg::SwapTree {
             tree: TreeStore(test_tree),
@@ -189,7 +189,7 @@ mod tests {
                 },
             },
             SwapLeg {
-                from: TestCurrencyA::TICKER.into(),
+                from: Osmo::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 2,
                     target: Usdc::TICKER.to_owned(),
