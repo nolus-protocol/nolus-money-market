@@ -10,7 +10,7 @@ use cosmwasm_std::{
     CustomQuery, Empty,
 };
 use cw_multi_test::{
-    BankKeeper, FailingDistribution, FailingModule, FailingStaking, Module, Wasm, WasmKeeper,
+    BankKeeper, DistributionKeeper, FailingModule, Module, StakeKeeper, Wasm, WasmKeeper,
 };
 pub use cw_multi_test::{ContractWrapper, Executor};
 #[cfg(feature = "neutron")]
@@ -31,8 +31,8 @@ pub type AppBuilder<Exec = CustomMsg, Query = Empty, Sudo = Empty> = cw_multi_te
     MockStorage,
     FailingModule<Exec, Query, Sudo>,
     WasmKeeper<Exec, Query>,
-    FailingStaking,
-    FailingDistribution,
+    StakeKeeper,
+    DistributionKeeper,
 >;
 
 pub type Contract = dyn cw_multi_test::Contract<CustomMsg>;

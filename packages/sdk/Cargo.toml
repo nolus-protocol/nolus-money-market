@@ -30,24 +30,19 @@ cosmwasm-schema = { version = "1", optional = true }
 
 # TODO/Rust-1.64 remove in favour of workspace inheritance
 #  cw-storage-plus = { workspace = true, optional = true }
-cw-storage-plus = { version = "0.15", optional = true }
+cw-storage-plus = { version = "0.16", optional = true }
 
 # TODO/Rust-1.64 remove in favour of workspace inheritance
 #  cw2 = { workspace = true, optional = true }
-cw2 = { version = "0.15", optional = true }
-
-# Pinned down to match version of Neutron SDK's Protobuf generated sources
-# TODO/Rust-1.64 remove in favour of workspace inheritance
-#  cw-multi-test = { workspace = true, optional = true }
-protobuf = "=3.1"
+cw2 = { version = "0.16", optional = true }
 
 # TODO/Rust-1.64 remove in favour of workspace inheritance
 #  neutron-sdk = { workspace = true }
-neutron-sdk = { git = "https://github.com/neutron-org/neutron-contracts", rev = "e9b2a9d9179d3c136ba024870e762bcb046b0f8c", optional = true }
+neutron-sdk = { git = "https://github.com/neutron-org/neutron-contracts", rev = "2a3c862cb57f5123f196bcd5c9983ed78549c295", optional = true }
 
 serde = { version = "1", default-features = false, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 # TODO/Rust-1.64 remove in favour of workspace inheritance
 #  cw-multi-test = { workspace = true, optional = true }
-cw-multi-test = { version = "0.15", optional = true }
+cw-multi-test = { version = "0.16", optional = true }
