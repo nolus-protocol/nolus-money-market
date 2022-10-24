@@ -112,6 +112,61 @@ where
         }
     }
 
+    pub fn load_swap_path(
+        &self,
+        from: &SymbolOwned,
+        to: &SymbolOwned,
+    ) -> Result<Vec<SwapTarget>, ContractError> {
+        let mut path_from = if let Some(mut node) = Self::find_node(self.tree.root(), from) {
+            let mut path = vec![];
+            while let Some(parent) = node.parent() {
+                path.push(SwapLeg {
+                    from: node.data().1.to_owned(),
+                    to: SwapTarget {
+                        pool_id: node.data().0,
+                        target: parent.data().1.to_owned(),
+                    },
+                });
+                node = parent;
+            }
+            Ok(path)
+        } else {
+            Err(error::unsupported_currency::<B>(from))
+        }?;
+
+        let mut path_to = if let Some(mut node) = Self::find_node(self.tree.root(), to) {
+            let mut path = vec![];
+            while let Some(parent) = node.parent() {
+                path.push(SwapLeg {
+                    from: parent.data().1.to_owned(),
+                    to: SwapTarget {
+                        pool_id: node.data().0,
+                        target: node.data().1.to_owned(),
+                    },
+                });
+                node = parent;
+            }
+            Ok(path)
+        } else {
+            Err(error::unsupported_currency::<B>(to))
+        }?;
+
+        while let (Some(to_leg), Some(from_leg)) = (path_to.last(), path_from.last()) {
+            if to_leg.to.target == from_leg.from {
+                path_from.pop();
+                path_to.pop();
+            } else {
+                break;
+            }
+        }
+
+        path_to.reverse();
+        path_from.append(&mut path_to);
+        let result = path_from.iter_mut().map(|leg| &leg.to).cloned().collect();
+
+        Ok(result)
+    }
+
     pub fn load_affected(&self, pair: &CurrencyPair) -> Result<Vec<SymbolOwned>, ContractError> {
         if let Some(node) = Self::find_node(self.tree.root(), &pair.0) {
             let affected = node.bfs().iter.map(|v| v.data.1.clone()).collect();
@@ -222,6 +277,61 @@ mod tests {
                 TheCurrency::TICKER.to_string()
             ]
         );
+    }
+
+    #[test]
+    fn test_load_swap_path() {
+        let tree = SupportedPairs::<Usdc>::new(test_case()).unwrap();
+
+        let resp = tree
+            .load_swap_path(&"token5".into(), &TheCurrency::TICKER.into())
+            .unwrap();
+        let expect = vec![
+            SwapTarget {
+                pool_id: 5,
+                target: "token1".into(),
+            },
+            SwapTarget {
+                pool_id: 1,
+                target: "token2".into(),
+            },
+            SwapTarget {
+                pool_id: 2,
+                target: TheCurrency::TICKER.into(),
+            },
+        ];
+
+        assert_eq!(resp, expect);
+
+        let resp = tree
+            .load_swap_path(&"token6".into(), &"token5".into())
+            .unwrap();
+        let expect = vec![
+            SwapTarget {
+                pool_id: 6,
+                target: "token1".into(),
+            },
+            SwapTarget {
+                pool_id: 5,
+                target: "token5".into(),
+            },
+        ];
+        assert_eq!(resp, expect);
+
+        let resp = tree
+            .load_swap_path(&"token2".into(), &"token4".into())
+            .unwrap();
+        let expect = vec![
+            SwapTarget {
+                pool_id: 2,
+                target: TheCurrency::TICKER.into(),
+            },
+            SwapTarget {
+                pool_id: 4,
+                target: "token4".into(),
+            },
+        ];
+        assert_eq!(resp, expect);
     }
 
     #[test]

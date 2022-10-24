@@ -67,6 +67,10 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                     )?,
                 })?)
             }
+            QueryMsg::SwapPath { from, to } => Ok(to_binary(
+                &SupportedPairs::<OracleBase>::load(self.deps.storage)?
+                    .load_swap_path(&from, &to)?,
+            )?),
             _ => {
                 unreachable!()
             } // should be done already
