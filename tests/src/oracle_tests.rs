@@ -1,6 +1,10 @@
 use std::collections::HashSet;
 
-use currency::{lpn::Usdc, native::Nls};
+use currency::{
+    lease::{Osmo, Wbtc, Weth},
+    lpn::Usdc,
+    native::Nls,
+};
 use finance::{
     coin::{Amount, Coin},
     currency::Currency as _,
@@ -8,7 +12,10 @@ use finance::{
     price::{self, dto::PriceDTO},
 };
 use leaser::msg::QueryMsg;
-use oracle::msg::QueryMsg as OracleQ;
+use oracle::{
+    msg::QueryMsg as OracleQ,
+    state::supported_pairs::{SwapTarget, TreeStore},
+};
 use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{wasm_execute, Addr, Coin as CwCoin, Event},
@@ -18,6 +25,8 @@ use sdk::{
 use crate::common::{
     leaser_wrapper::LeaserWrapper, native_cwcoin, test_case::TestCase, AppExt, ADMIN,
 };
+
+use trees::tr;
 
 type Lpn = Usdc;
 type TheCoin = Coin<Lpn>;
@@ -268,4 +277,46 @@ fn test_config_update() {
     );
 
     assert!(price.is_err());
+}
+
+#[test]
+fn test_swap_path() {
+    let mut test_case = create_test_case();
+    let admin = Addr::unchecked(ADMIN);
+    let msg = oracle::msg::ExecuteMsg::SwapTree {
+        tree: TreeStore(
+            tr((0, Usdc::TICKER.into()))
+                / (tr((1, Osmo::TICKER.to_string()))
+                    / tr((2, Weth::TICKER.to_string()))
+                    / tr((3, Wbtc::TICKER.to_string()))),
+        ),
+    };
+    test_case
+        .app
+        .execute_contract(admin, test_case.oracle.clone().unwrap(), &msg, &[])
+        .unwrap();
+    let resp: oracle::msg::SwapPathResponse = test_case
+        .app
+        .wrap()
+        .query_wasm_smart(
+            test_case.oracle.unwrap(),
+            &OracleQ::SwapPath {
+                from: Wbtc::TICKER.into(),
+                to: Weth::TICKER.into(),
+            },
+        )
+        .unwrap();
+
+    let expect = vec![
+        SwapTarget {
+            pool_id: 3,
+            target: Osmo::TICKER.into(),
+        },
+        SwapTarget {
+            pool_id: 2,
+            target: Weth::TICKER.into(),
+        },
+    ];
+
+    assert_eq!(resp, expect);
 }
