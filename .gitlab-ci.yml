@@ -43,6 +43,11 @@ check_wasm:cargo:
     - cargo workspaces exec cargo build --target wasm32-unknown-unknown
     - $CARGO_HOME/bin/cosmwasm-check --available-capabilities "staking,stargate,cosmwasm_1_1,iterator,neutron" ./target/wasm32-unknown-unknown/debug/*.wasm
 
+check_wasm_size:cargo:
+  stage: check
+  script:
+    - du -BK artifacts/*.wasm | sed -r 's/K\s+\S+$//' | grep -E '[89][[:digit:]]{2}|[[:digit:]]{4,}' | wc -l | sh -c 'read input; if test "$input" = "0"; then exit 0; else exit 1; fi;'
+
 test:cargo:
   stage: test
   coverage: '/^\d+.\d+% coverage/'
