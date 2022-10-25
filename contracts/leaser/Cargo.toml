@@ -2,7 +2,7 @@
 name = "leaser"
 version = "0.1.0"
 authors = ["Nikola Terziev <n.terziev@nolus.io>", "Gancho Manev <g.manev@nolus.io>"]
-edition = "2021"
+edition.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -20,13 +20,10 @@ platform = { path = "../../packages/platform" }
 sdk = { path = "../../packages/sdk", features = ["contract"] }
 
 # Required as a dependency by `entry_point` attribute macro
-# Version will be selected by `sdk` package
-# TODO/Rust-1.64 remove in favour of workspace inheritance
-#  cosmwasm-std = { workspace = true }
-cosmwasm-std = { version = "1", default-features = false }
+cosmwasm-std = { workspace = true }
 
-thiserror = "1.0.37"
-serde = { version = "1.0.145", default-features = false, features = ["derive"] }
+thiserror = "1"
+serde = { version = "1", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
 finance = { path = "../../packages/finance", features = ["testing"] }

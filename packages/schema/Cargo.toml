@@ -2,7 +2,7 @@
 name = "schema"
 version = "0.1.0"
 authors = ["Gancho Manev <g.manev@nolus.io>"]
-edition = "2021"
+edition.workspace = true
 
 [dependencies]
-thiserror = "1.0.37"
+thiserror = "1"

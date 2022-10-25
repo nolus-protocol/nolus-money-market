@@ -1,17 +1,18 @@
 [workspace]
 members = ["packages/*", "contracts/*", "tests"]
 
-# TODO use workspace inheritance to manage versions instead of versioning `sdk` package
-[workspace.dependencies]
-cosmwasm-std = "1.1.5"
-cosmwasm-storage = "1.1.5"
-cosmwasm-schema = "1.1.5"
-cw-storage-plus = "0.16.0"
-cw-multi-test = "0.16.0"
+[workspace.package]
+rust-version = "1.64"
+edition = "2021"
 
-[workspace.dependencies.neutron-sdk]
-git = "https://github.com/neutron-org/neutron-contracts"
-rev = "2a3c862cb57f5123f196bcd5c9983ed78549c295"
+[workspace.dependencies]
+cosmwasm-std = "^1.1.5"
+cosmwasm-storage = "^1.1.5"
+cosmwasm-schema = "^1.1.5"
+cw-storage-plus = "^0.16.0"
+cw2 = "^0.16.0"
+cw-multi-test = "^0.16.0"
+neutron-sdk = { git = "https://github.com/neutron-org/neutron-contracts", rev = "2a3c862cb57f5123f196bcd5c9983ed78549c295" }
 
 [profile.release.package.treasury]
 codegen-units = 1

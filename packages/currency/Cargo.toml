@@ -2,7 +2,7 @@
 name = "currency"
 version = "0.1.0"
 authors = ["Gancho Manev <g.manev@nolus.io>"]
-edition = "2021"
+edition.workspace = true
 
 [features]
 testing = []
@@ -11,8 +11,8 @@ testing = []
 finance = { path = "../../packages/finance" }
 sdk = { path = "../../packages/sdk", features = ["schema"] }
 
-thiserror = "1.0"
-serde = { version = "1.0.145", default-features = false, features = ["derive"] }
+thiserror = "1"
+serde = { version = "1", default-features = false, features = ["derive"] }
 
 [dev-dependencies]
 finance = { path = "../../packages/finance", features = ["testing"] }

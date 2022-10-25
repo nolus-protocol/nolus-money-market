@@ -1,5 +1,5 @@
 [toolchain]
-channel = "1.63" # Update accordingly to cosmwasm/workspace-optimizer's Rust version
+channel = "1.64" # Update accordingly to cosmwasm/workspace-optimizer's Rust version
 targets = [ "wasm32-unknown-unknown" ]
 components = [ "clippy", "rustfmt" ]
 profile = "minimal"
