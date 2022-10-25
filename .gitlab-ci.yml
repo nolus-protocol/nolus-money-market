@@ -67,7 +67,7 @@ build-and-optimization:cargo:
       --mount type=volume,source=cargo_dir_cache,target=/usr/local/cargo
       --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry
       cosmwasm/workspace-optimizer:0.12.9
-    - du -BK artifacts/*.wasm | sed -r 's/K\s+\S+$//' | grep -E '[89][[:digit:]]{2}|[[:digit:]]{4,}' | wc -l | sh -c 'read input; if test "$input" = "0"; then exit 0; else exit 1; fi;'
+    - find artifacts/ -size +800k | wc -l | sh -c 'read input; if !test "$input" = "0"; then exit 1; fi'
     - sudo cp scripts/deploy-contracts-genesis.sh artifacts/
   artifacts:
     paths:
