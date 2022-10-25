@@ -18,10 +18,11 @@ codegen-units = 1
 incremental = false
 
 [profile.release]
-opt-level = 3
+opt-level = "s"
 debug = false
+strip = "symbols"
 rpath = false
 lto = true
 debug-assertions = false
-panic = 'abort'
+panic = "abort"
 overflow-checks = true
