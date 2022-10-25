@@ -56,7 +56,6 @@ where
 {
     const DB_ITEM: Item<'a, SupportedPairs<B>> = Item::new("supported_pairs");
 
-    // TODO: add checks for empty paths
     pub fn new(tree: TreeStore) -> Result<Self, ContractError> {
         if tree.root().data().1 != B::TICKER {
             return Err(ContractError::InvalidBaseCurrency(

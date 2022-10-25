@@ -53,11 +53,7 @@ impl PriceFeed {
     // in a configurable period T in seconds
     // provide the last price for a requested pair unless the previous condition is met.
     pub fn get_price(&self, parameters: Parameters) -> Result<Observation, PriceFeedsError> {
-        let res = self.observations.last().cloned();
-        let last_feed = match res {
-            Some(f) => f,
-            None => return Err(PriceFeedsError::NoPrice {}),
-        };
+        let last_feed = self.observations.last().ok_or(PriceFeedsError::NoPrice {})?;
 
         // check if last reported feed is older than the required refresh time
         if PriceFeed::is_old_feed(parameters.block_time(), last_feed.time, parameters.period()) {
@@ -68,7 +64,7 @@ impl PriceFeed {
             return Err(PriceFeedsError::NoPrice {});
         }
 
-        Ok(last_feed)
+        Ok(last_feed.to_owned())
     }
 
     fn is_old_feed(time_now: Timestamp, feed_time: Timestamp, price_feed_period: Duration) -> bool {

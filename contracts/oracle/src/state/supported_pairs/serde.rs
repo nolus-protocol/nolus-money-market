@@ -12,7 +12,6 @@ use super::PoolId;
 
 pub type Leg = (PoolId, SymbolOwned);
 
-// #[derive(Clone, PartialEq, Eq, Debug, sdk::schemars::JsonSchema)]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TreeStore(pub Tree<Leg>);
 
