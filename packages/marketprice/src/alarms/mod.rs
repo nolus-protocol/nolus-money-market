@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{currency::SymbolOwned, price::dto::PriceDTO};
+use finance::price::dto::PriceDTO;
 use sdk::schemars::{self, JsonSchema};
 
 pub mod errors;
@@ -23,7 +23,6 @@ pub enum Event {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Alarm {
-    currency: SymbolOwned, // TODO this can be removed if we can take the currency from the Price object
     below: PriceDTO,
     above: Option<PriceDTO>,
 }
@@ -35,15 +34,11 @@ impl Alarm {
     {
         let below = below.into();
         let above = above.map(Into::into);
-        let currency: SymbolOwned = below.base().ticker().into();
         debug_assert!(
-            above.is_none() || above.as_ref().map(|price| price.base().ticker()) == Some(&currency)
+            above.is_none()
+                || above.as_ref().map(|price| price.base().ticker()) == Some(below.base().ticker())
         );
-        Self {
-            currency,
-            below,
-            above,
-        }
+        Self { below, above }
     }
 
     pub fn should_fire(&self, current_price: PriceDTO) -> bool {

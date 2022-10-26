@@ -96,7 +96,7 @@ impl<'m> PriceHooks<'m> {
             .prefix(())
             .range(storage, None, None, Order::Ascending)
             .filter_map(|item| item.ok())
-            .map(|(_, hook)| hook.currency)
+            .map(|(_, hook)| hook.below.base().ticker().into())
             .collect();
         Ok(hook_denoms)
     }
