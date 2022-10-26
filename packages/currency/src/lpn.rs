@@ -10,7 +10,9 @@ use crate::SingleVisitorAdapter;
 pub struct Usdc;
 impl Currency for Usdc {
     const TICKER: SymbolStatic = "USDC";
-    const BANK_SYMBOL: SymbolStatic = "ibc/TBDusdc";
+    /// full ibc route: transfer/channel-0/transfer/channel-208/uusdc
+    const BANK_SYMBOL: SymbolStatic =
+        "ibc/7FBDBEEEBA9C50C4BCDF7BF438EAB99E64360833D240B32655C96E319559E911";
 }
 
 pub struct Lpns {}
