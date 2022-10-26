@@ -3,6 +3,7 @@ name = "schema"
 version = "0.1.0"
 authors = ["Gancho Manev <g.manev@nolus.io>"]
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 thiserror = "1"

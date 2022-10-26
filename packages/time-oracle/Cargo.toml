@@ -3,6 +3,7 @@ name = "time-oracle"
 version = "0.1.0"
 authors = ["Vladimir Kolesnikov <v.kolesnikov@nolus.io>"]
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 platform = { path = "../../packages/platform" }

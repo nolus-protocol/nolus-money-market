@@ -3,6 +3,7 @@ name = "leaser"
 version = "0.1.0"
 authors = ["Nikola Terziev <n.terziev@nolus.io>", "Gancho Manev <g.manev@nolus.io>"]
 edition.workspace = true
+license.workspace = true
 
 [lib]
 crate-type = ["cdylib", "rlib"]

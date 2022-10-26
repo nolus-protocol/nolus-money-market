@@ -3,6 +3,7 @@ name = "marketprice"
 version = "0.1.0"
 authors = ["Nina Nikolova <n.nikolova@nolus.io>"]
 edition.workspace = true
+license.workspace = true
 
 [dependencies]
 currency = { path = "../../packages/currency" }

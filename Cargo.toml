@@ -4,6 +4,7 @@ members = ["packages/*", "contracts/*", "tests"]
 [workspace.package]
 rust-version = "1.64"
 edition = "2021"
+license = "Apache-2.0"
 
 [workspace.dependencies]
 cosmwasm-std = "^1.1.5"
