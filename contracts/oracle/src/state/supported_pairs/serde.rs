@@ -16,7 +16,7 @@ pub type Leg = (PoolId, SymbolOwned);
 // a mock for TreeStore to generate json schema
 /// Note: A tree is a sequence of node `[pool_id, "ticker"]` and subtrees: `[root,[node,[leaf]], [leaf]]`
 #[derive(JsonSchema)]
-#[schemars(untagged, rename="Tree")]
+#[schemars(untagged, rename = "Tree")]
 pub enum SubTree {
     Node(Leg),
     Branch(Vec<SubTree>),
