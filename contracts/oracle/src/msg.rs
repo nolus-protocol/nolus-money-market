@@ -9,18 +9,19 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::state::supported_pairs::{SwapLeg, SwapTarget, TreeStore};
+use crate::state::supported_pairs::{SwapLeg, SwapTarget, TreeStore, SubTree};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
     pub base_asset: String,
     pub price_feed_period_secs: u32,
     pub expected_feeders: Percent,
+    #[schemars(with= "Vec<SubTree>")]
     pub swap_tree: TreeStore,
     pub timealarms_addr: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     RegisterFeeder {
@@ -37,6 +38,7 @@ pub enum ExecuteMsg {
         expected_feeders: Percent,
     },
     SwapTree {
+        #[schemars(with= "Vec<SubTree>")]
         tree: TreeStore,
     },
     AddPriceAlarm {

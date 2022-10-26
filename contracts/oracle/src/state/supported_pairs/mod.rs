@@ -15,7 +15,7 @@ use sdk::{
 use crate::error::{self, ContractError};
 
 use self::serde::Leg;
-pub use self::serde::TreeStore;
+pub use self::serde::{TreeStore, SubTree};
 
 mod serde;
 
