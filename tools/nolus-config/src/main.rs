@@ -2,7 +2,7 @@ use std::{
     ffi::OsStr,
     fs::{create_dir, remove_dir_all, remove_file, File},
     io::{stdin, Read, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 use serde::Deserialize;
@@ -38,9 +38,9 @@ fn generate_currencies(output_dir: PathBuf) -> Result<(), Error> {
 
     clean_output_dir(&output_dir)?;
 
-    let currency_dir = currency_dir(&output_dir)?;
+    let currency_dir = currency_dir(output_dir.clone())?;
 
-    let group_dir = group_dir(&output_dir)?;
+    let group_dir = group_dir(output_dir.clone())?;
 
     let mut lib_rs = create_lib_rs(output_dir)?;
 
@@ -49,13 +49,13 @@ fn generate_currencies(output_dir: PathBuf) -> Result<(), Error> {
     lib_rs.write_all(b"pub mod currencies {")?;
 
     for currency_source in generated.currencies.iter() {
-        write_currency(&currency_dir, &mut lib_rs, currency_source)?;
+        write_currency(currency_dir.clone(), &mut lib_rs, currency_source)?;
     }
 
     lib_rs.write_all(b"}\n\npub mod groups {")?;
 
     for group_source in generated.groups.iter() {
-        write_group(&group_dir, &mut lib_rs, group_source)?;
+        write_group(group_dir.clone(), &mut lib_rs, group_source)?;
     }
 
     lib_rs.write_all(b"}\n").map_err(Into::into)
@@ -75,7 +75,7 @@ fn read_currencies() -> Result<Currencies, Error> {
     .map_err(Error::from_deserialization)
 }
 
-fn clean_output_dir(output_dir: &PathBuf) -> Result<(), Error> {
+fn clean_output_dir(output_dir: &Path) -> Result<(), Error> {
     for entry in output_dir.read_dir()? {
         let entry = entry?;
 
@@ -91,24 +91,20 @@ fn clean_output_dir(output_dir: &PathBuf) -> Result<(), Error> {
     Ok(())
 }
 
-fn currency_dir(output_dir: &PathBuf) -> Result<PathBuf, Error> {
-    let mut currency_dir = output_dir.clone();
+fn currency_dir(mut output_dir: PathBuf) -> Result<PathBuf, Error> {
+    output_dir.push("currencies");
 
-    currency_dir.push("currencies");
+    create_dir(&output_dir)?;
 
-    create_dir(&currency_dir)?;
-
-    Ok(currency_dir)
+    Ok(output_dir)
 }
 
-fn group_dir(output_dir: &PathBuf) -> Result<PathBuf, Error> {
-    let mut group_dir = output_dir.clone();
+fn group_dir(mut output_dir: PathBuf) -> Result<PathBuf, Error> {
+    output_dir.push("groups");
 
-    group_dir.push("groups");
+    create_dir(&output_dir)?;
 
-    create_dir(&group_dir)?;
-
-    Ok(group_dir)
+    Ok(output_dir)
 }
 
 fn create_lib_rs(output_dir: PathBuf) -> Result<File, Error> {
@@ -125,13 +121,11 @@ fn create_lib_rs(output_dir: PathBuf) -> Result<File, Error> {
 }
 
 fn write_currency(
-    currency_dir: &PathBuf,
+    mut currency_path: PathBuf,
     lib_rs: &mut File,
     currency_source: CurrencyFilenameSource,
 ) -> Result<(), Error> {
     lib_rs.write_all(format!("\n\tpub mod {};\n", currency_source.filename()).as_bytes())?;
-
-    let mut currency_path = currency_dir.clone();
 
     currency_path.push(currency_source.filename());
 
@@ -143,13 +137,11 @@ fn write_currency(
 }
 
 fn write_group(
-    group_dir: &PathBuf,
+    mut group_path: PathBuf,
     lib_rs: &mut File,
     group_source: GroupFilenameSource,
 ) -> Result<(), Error> {
     lib_rs.write_all(format!("\n\tpub mod {};\n", group_source.filename()).as_bytes())?;
-
-    let mut group_path = group_dir.clone();
 
     group_path.push(group_source.filename());
 
