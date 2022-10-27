@@ -9,7 +9,7 @@ use finance::{
     percent::Percent,
 };
 use lpp::stub::{
-    lender::{LppLender as LppLenderTrait, LppLenderRef, WithLppLender},
+    lender::{LppLender as LppLenderTrait, WithLppLender},
     LppBatch,
 };
 use market_price_oracle::{convert, stub::OracleRef};
@@ -123,10 +123,9 @@ impl WithLppLender for OpenLoanResp {
         LppLender: LppLenderTrait<Lpn>,
     {
         let loan_resp = lpp.open_loan_resp(self.reply)?;
-        let LppBatch { lpp_ref, batch } = lpp.into();
+        let LppBatch { lpp_ref: _, batch } = lpp.into();
         debug_assert_eq!(Batch::default(), batch);
         Ok(OpenLoanRespResult {
-            lpp: lpp_ref,
             principal: loan_resp.principal_due.into(),
             annual_interest_rate: loan_resp.annual_interest_rate,
         })
@@ -134,7 +133,6 @@ impl WithLppLender for OpenLoanResp {
 }
 
 pub struct OpenLoanRespResult {
-    pub(in crate::contract) lpp: LppLenderRef,
     pub(in crate::contract) principal: CoinDTO,
     pub(in crate::contract) annual_interest_rate: Percent,
 }

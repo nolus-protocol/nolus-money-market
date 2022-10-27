@@ -1,10 +1,13 @@
 use std::fmt::Display;
 
+use finance::coin::CoinDTO;
+use lpp::stub::lender::LppLenderRef;
+use market_price_oracle::stub::OracleRef;
 use serde::{Deserialize, Serialize};
 
 use platform::{
     bank::{self},
-    batch::Emit,
+    batch::{Batch, Emit, Emitter},
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -12,11 +15,11 @@ use sdk::{
 };
 
 use crate::{
-    api::{ExecuteMsg, StateQuery},
+    api::{ExecuteMsg, NewLeaseForm, StateQuery},
     contract::{
         alarms::{price::PriceAlarm, time::TimeAlarm, AlarmResult},
         close::Close,
-        cmd::LeaseState,
+        cmd::{LeaseState, OpenLoanRespResult},
         repay::{Repay, RepayResult},
     },
     error::ContractResult,
@@ -31,6 +34,32 @@ pub struct Active {
     pub(super) lease: LeaseDTO,
 }
 
+impl Active {
+    pub fn new(
+        deps: &DepsMut,
+        env: &Env,
+        form: NewLeaseForm,
+        downpayment: CoinDTO,
+        loan: OpenLoanRespResult,
+        lpp: LppLenderRef,
+        oracle: OracleRef,
+    ) -> ContractResult<(Emitter, Self)> {
+        assert_eq!(downpayment.ticker(), loan.principal.ticker());
+        //TODO replace with the actual coin once get the Osmosys GAMM trx result
+        let amount = downpayment.amount() + loan.principal.amount();
+
+        let IntoDTOResult { lease, batch } = form.into_lease(
+            &env.contract.address,
+            env.block.time,
+            amount,
+            deps.api,
+            &deps.querier,
+            (lpp, oracle),
+        )?;
+        let emitter = build_emitter(batch, env, &lease, loan, downpayment);
+        Ok((emitter, Self { lease }))
+    }
+}
 impl Controller for Active {
     fn execute(
         self,
@@ -163,4 +192,26 @@ where
     R: Into<CwResponse>,
 {
     Response::from(resp, Active { lease })
+}
+
+fn build_emitter(
+    batch: Batch,
+    env: &Env,
+    dto: &LeaseDTO,
+    open_result: OpenLoanRespResult,
+    downpayment: CoinDTO,
+) -> Emitter {
+    batch
+        .into_emitter(Type::Open)
+        .emit_tx_info(env)
+        .emit("id", env.contract.address.clone())
+        .emit("customer", dto.customer.clone())
+        .emit_percent_amount(
+            "air",
+            open_result.annual_interest_rate + dto.loan.annual_margin_interest(),
+        )
+        .emit("currency", dto.amount.ticker())
+        .emit("loan-pool-id", dto.loan.lpp().addr())
+        .emit_coin_dto("loan", open_result.principal)
+        .emit_coin_dto("downpayment", downpayment)
 }

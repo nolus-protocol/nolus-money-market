@@ -5,27 +5,23 @@ use serde::{Deserialize, Serialize};
 use finance::coin::CoinDTO;
 use lpp::stub::lender::LppLenderRef;
 use market_price_oracle::stub::OracleRef;
-use platform::batch::{Batch, Emit, Emitter};
 use sdk::cosmwasm_std::{DepsMut, Env, Reply};
 
 use crate::{
     api::NewLeaseForm,
-    contract::cmd::{OpenLoanResp, OpenLoanRespResult},
-    contract::state::Active,
+    contract::cmd::OpenLoanResp,
     error::{ContractError, ContractResult},
-    event::Type,
-    lease::LeaseDTO,
     reply_id::ReplyId,
 };
 
-use super::{Controller, Response};
+use super::{Active, Controller, Response};
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestLoan {
     pub(super) form: NewLeaseForm,
+    pub(super) downpayment: CoinDTO,
     pub(super) lpp: LppLenderRef,
     pub(super) oracle: OracleRef,
-    pub(super) downpayment: CoinDTO,
 }
 
 impl Controller for RequestLoan {
@@ -35,28 +31,21 @@ impl Controller for RequestLoan {
 
         match id {
             ReplyId::OpenLoanReq => {
-                let open_result = self.lpp.execute(OpenLoanResp::new(msg), &deps.querier)?;
+                let loan = self
+                    .lpp
+                    .clone()
+                    .execute(OpenLoanResp::new(msg), &deps.querier)?;
 
-                //TODO replace with the actual coin once get the GAMM trx result
-                assert_eq!(self.downpayment.ticker(), open_result.principal.ticker());
-                let amount = self.downpayment.amount() + open_result.principal.amount();
-
-                let lease = self.form.into_lease(
-                    &env.contract.address,
-                    env.block.time,
-                    amount,
-                    deps.api,
-                    &deps.querier,
-                    (open_result.lpp.clone(), self.oracle),
-                )?;
-                let emitter = build_emitter(
-                    lease.batch,
+                let (emitter, next_state) = Active::new(
+                    deps,
                     &env,
-                    &lease.lease,
-                    open_result,
+                    self.form,
                     self.downpayment,
-                );
-                Ok(Response::from(emitter, Active { lease: lease.lease }))
+                    loan,
+                    self.lpp,
+                    self.oracle,
+                )?;
+                Ok(Response::from(emitter, next_state))
             }
         }
     }
@@ -66,26 +55,4 @@ impl Display for RequestLoan {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("loan requested")
     }
-}
-
-fn build_emitter(
-    batch: Batch,
-    env: &Env,
-    dto: &LeaseDTO,
-    open_result: OpenLoanRespResult,
-    downpayment: CoinDTO,
-) -> Emitter {
-    batch
-        .into_emitter(Type::Open)
-        .emit_tx_info(env)
-        .emit("id", env.contract.address.clone())
-        .emit("customer", dto.customer.clone())
-        .emit_percent_amount(
-            "air",
-            open_result.annual_interest_rate + dto.loan.annual_margin_interest(),
-        )
-        .emit("currency", dto.amount.ticker())
-        .emit("loan-pool-id", dto.loan.lpp().addr())
-        .emit_coin_dto("loan", open_result.principal)
-        .emit_coin_dto("downpayment", downpayment)
 }
