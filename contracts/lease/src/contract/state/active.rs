@@ -198,7 +198,7 @@ fn build_emitter(
     batch: Batch,
     env: &Env,
     dto: &LeaseDTO,
-    open_result: OpenLoanRespResult,
+    loan: OpenLoanRespResult,
     downpayment: CoinDTO,
 ) -> Emitter {
     batch
@@ -208,10 +208,10 @@ fn build_emitter(
         .emit("customer", dto.customer.clone())
         .emit_percent_amount(
             "air",
-            open_result.annual_interest_rate + dto.loan.annual_margin_interest(),
+            loan.annual_interest_rate + dto.loan.annual_margin_interest(),
         )
         .emit("currency", dto.amount.ticker())
         .emit("loan-pool-id", dto.loan.lpp().addr())
-        .emit_coin_dto("loan", open_result.principal)
+        .emit_coin_dto("loan", loan.principal)
         .emit_coin_dto("downpayment", downpayment)
 }
