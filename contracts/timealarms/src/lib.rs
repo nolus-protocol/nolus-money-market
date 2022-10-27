@@ -10,6 +10,3 @@ pub mod stub;
 mod alarms;
 #[cfg(any(feature = "contract", test))]
 pub mod contract;
-
-#[cfg(test)]
-pub mod tests;

@@ -18,12 +18,12 @@ use oracle::{
 };
 use platform::coin_legacy;
 use sdk::{
-    cosmwasm_std::{wasm_execute, Addr, Coin as CwCoin, Event},
+    cosmwasm_std::{wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
     cw_multi_test::Executor,
 };
 
 use crate::common::{
-    leaser_wrapper::LeaserWrapper, native_cwcoin, test_case::TestCase, AppExt, ADMIN,
+    leaser_wrapper::LeaserWrapper, native_cwcoin, test_case::TestCase, AppExt, ADMIN, USER,
 };
 
 use trees::tr;
@@ -52,6 +52,31 @@ fn create_test_case() -> TestCase<Lpn> {
     test_case.init_leaser();
 
     test_case
+}
+
+#[test]
+fn register_feeder() {
+    let mut test_case = create_test_case();
+    let user = Addr::unchecked(USER);
+    let admin = Addr::unchecked(ADMIN);
+
+    // only admin can register new feeder, other user should result in error
+    let msg = oracle::msg::ExecuteMsg::RegisterFeeder {
+        feeder_address: USER.to_string(),
+    };
+    test_case
+        .app
+        .execute_contract(user, test_case.oracle.clone().unwrap(), &msg, &[])
+        .unwrap_err();
+
+    // check if admin can register new feeder
+    let msg = oracle::msg::ExecuteMsg::RegisterFeeder {
+        feeder_address: ADMIN.to_string(),
+    };
+    test_case
+        .app
+        .execute_contract(admin, test_case.oracle.clone().unwrap(), &msg, &[])
+        .unwrap();
 }
 
 #[test]
@@ -123,6 +148,26 @@ fn get_lease_address(test_case: &TestCase<Lpn>) -> Addr {
         .unwrap();
     assert_eq!(query_response.len(), 1);
     query_response.iter().next().unwrap().clone()
+}
+
+#[test]
+#[should_panic]
+fn wrong_timealarms_addr() {
+    let mut test_case = create_test_case();
+
+    let alarm_msg = timealarms::msg::ExecuteMsg::AddAlarm {
+        time: Timestamp::from_seconds(100),
+    };
+
+    test_case
+        .app
+        .execute_contract(
+            Addr::unchecked(USER),
+            test_case.oracle.clone().unwrap(),
+            &alarm_msg,
+            &[],
+        )
+        .unwrap();
 }
 
 #[test]

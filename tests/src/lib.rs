@@ -21,3 +21,6 @@ mod lease_tests;
 
 #[cfg(test)]
 mod oracle_tests;
+
+#[cfg(test)]
+mod timealarms_tests;
