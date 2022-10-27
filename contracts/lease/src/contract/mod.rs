@@ -13,7 +13,10 @@ use crate::{
     error::{ContractError, ContractResult},
 };
 
-use self::{state::Controller, msg::{NewLeaseForm, ExecuteMsg, StateQuery}};
+use self::{
+    msg::{ExecuteMsg, NewLeaseForm, StateQuery},
+    state::Controller,
+};
 
 mod alarms;
 mod close;
