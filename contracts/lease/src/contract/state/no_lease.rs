@@ -1,20 +1,12 @@
 use std::fmt::Display;
 
-use serde::{Deserialize, Serialize};
-
-use lpp::stub::lender::LppLenderRef;
-use market_price_oracle::stub::OracleRef;
 use sdk::{
     cosmwasm_std::{DepsMut, Env, MessageInfo},
     cw2::set_contract_version,
 };
+use serde::{Deserialize, Serialize};
 
-use crate::{
-    api::NewLeaseForm,
-    contract::cmd::{OpenLoanReq, OpenLoanReqResult},
-    error::ContractResult,
-    reply_id::ReplyId,
-};
+use crate::{api::NewLeaseForm, error::ContractResult};
 
 use super::{Controller, RequestLoan, Response};
 
@@ -34,32 +26,9 @@ impl Controller for NoLease {
     ) -> ContractResult<Response> {
         set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-        let lpp = LppLenderRef::try_new(
-            deps.api.addr_validate(&form.loan.lpp)?,
-            &deps.querier,
-            ReplyId::OpenLoanReq.into(),
-        )?;
+        let (batch, next_state) = RequestLoan::new(deps, info, form)?;
 
-        let oracle = OracleRef::try_from(
-            deps.api.addr_validate(&form.market_price_oracle)?,
-            &deps.querier,
-        )
-        .expect("Market Price Oracle is not deployed, or wrong address is passed!");
-
-        let OpenLoanReqResult { batch, downpayment } = lpp.clone().execute(
-            OpenLoanReq::new(&form, info.funds, oracle.clone(), &deps.querier),
-            &deps.querier,
-        )?;
-
-        Ok(Response::from(
-            batch,
-            RequestLoan {
-                form,
-                lpp,
-                oracle,
-                downpayment,
-            },
-        ))
+        Ok(Response::from(batch, next_state))
     }
 }
 
