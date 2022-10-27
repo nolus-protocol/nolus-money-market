@@ -9,7 +9,7 @@ use sdk::{
 };
 
 use crate::{
-    contract::msg::{ExecuteMsg, NewLeaseForm, StateQuery},
+    api::{ExecuteMsg, NewLeaseForm, StateQuery},
     error::{ContractError as Err, ContractResult},
 };
 

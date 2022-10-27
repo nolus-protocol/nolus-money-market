@@ -9,8 +9,9 @@ use platform::batch::{Batch, Emit, Emitter};
 use sdk::cosmwasm_std::{DepsMut, Env, Reply};
 
 use crate::{
+    api::NewLeaseForm,
     contract::cmd::{OpenLoanResp, OpenLoanRespResult},
-    contract::{msg::NewLeaseForm, state::Active},
+    contract::state::Active,
     error::{ContractError, ContractResult},
     event::Type,
     lease::LeaseDTO,

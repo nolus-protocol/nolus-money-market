@@ -9,7 +9,7 @@ use finance::{
     percent::Percent,
     price::dto::PriceDTO,
 };
-use lease::contract::msg::{ExecuteMsg, StateQuery, StateResponse};
+use lease::api::{ExecuteMsg, StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
 use sdk::{
     cosmwasm_std::{Addr, Timestamp},

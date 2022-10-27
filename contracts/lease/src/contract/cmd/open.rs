@@ -16,7 +16,7 @@ use market_price_oracle::{convert, stub::OracleRef};
 use platform::{bank, batch::Batch, coin_legacy::CoinVisitor};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
-use crate::{contract::msg::NewLeaseForm, error::ContractError};
+use crate::{api::NewLeaseForm, error::ContractError};
 
 pub struct OpenLoanReq<'a> {
     form: &'a NewLeaseForm,

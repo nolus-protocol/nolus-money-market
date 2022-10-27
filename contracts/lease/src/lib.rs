@@ -1,3 +1,4 @@
+pub mod api;
 pub mod error;
 
 #[cfg(any(feature = "contract", test))]

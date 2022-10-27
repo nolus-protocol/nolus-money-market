@@ -5,10 +5,11 @@ use sdk::{
     cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
 
-use crate::contract::state::Controller;
+use crate::{
+    api::{ExecuteMsg, NewLeaseForm, StateQuery},
+    contract::state::Controller,
+};
 use crate::{contract::state::Response, error::ContractResult};
-
-use self::msg::{ExecuteMsg, NewLeaseForm, StateQuery};
 
 mod alarms;
 mod close;

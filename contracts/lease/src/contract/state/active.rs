@@ -12,11 +12,11 @@ use sdk::{
 };
 
 use crate::{
+    api::{ExecuteMsg, StateQuery},
     contract::{
         alarms::{price::PriceAlarm, time::TimeAlarm, AlarmResult},
         close::Close,
         cmd::LeaseState,
-        msg::{ExecuteMsg, StateQuery},
         repay::{Repay, RepayResult},
     },
     error::ContractResult,

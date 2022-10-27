@@ -14,7 +14,7 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch};
 
 use crate::{
-    contract::msg::StateResponse,
+    api::StateResponse,
     error::{ContractError, ContractResult},
     loan::Loan,
 };
@@ -260,7 +260,7 @@ mod tests {
         stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},
     };
 
-    use crate::{contract::msg::StateResponse, loan::Loan, reply_id::ReplyId};
+    use crate::{api::StateResponse, loan::Loan, reply_id::ReplyId};
 
     use super::Lease;
 
