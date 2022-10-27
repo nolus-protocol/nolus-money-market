@@ -1,3 +1,5 @@
+#![cfg(not(target_arch = "wasm32"))]
+
 use std::{
     ffi::OsStr,
     fs::{create_dir, remove_dir_all, remove_file, File},
