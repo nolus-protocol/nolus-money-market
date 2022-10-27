@@ -16,12 +16,11 @@ use crate::{
         alarms::{price::PriceAlarm, time::TimeAlarm, AlarmResult},
         close::Close,
         cmd::LeaseState,
-        repay::{Repay, RepayResult},
+        repay::{Repay, RepayResult}, msg::{ExecuteMsg, StateQuery},
     },
     error::ContractResult,
     event::Type,
     lease::{self, IntoDTOResult, LeaseDTO},
-    msg::{ExecuteMsg, StateQuery},
 };
 
 use super::{Controller, Response};

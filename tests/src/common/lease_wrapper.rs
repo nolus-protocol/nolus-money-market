@@ -2,9 +2,8 @@ use finance::{
     coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
 };
 use lease::{
-    contract::{execute, instantiate, query, reply},
+    contract::{execute, instantiate, query, reply, msg::{NewLeaseForm, LoanForm, ExecuteMsg, StateQuery}, },
     error::ContractError,
-    msg::{ExecuteMsg, LoanForm, NewLeaseForm, StateQuery},
 };
 use platform::coin_legacy;
 use sdk::{

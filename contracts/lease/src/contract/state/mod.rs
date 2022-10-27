@@ -9,14 +9,15 @@ use sdk::{
 };
 
 use crate::{
+    contract::msg::{ExecuteMsg, NewLeaseForm, StateQuery},
     error::{ContractError as Err, ContractResult},
-    msg::{ExecuteMsg, NewLeaseForm, StateQuery},
 };
 
 pub use self::{active::Active, no_lease::NoLease, request_loan::RequestLoan};
 
 mod active;
 mod no_lease;
+// mod open_ica_account;
 mod request_loan;
 
 #[enum_dispatch(Controller)]
@@ -94,6 +95,10 @@ where
     fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<Binary> {
         err("query", &self)
     }
+
+    // fn sudo(self, _deps: &mut DepsMut, _env: Env, _msg: SudoMsg) -> ContractResult<Response> {
+    //     err("sudo", &self)
+    // }
 }
 
 fn err<D, R>(op: &str, state: &D) -> ContractResult<R>

@@ -1,4 +1,4 @@
-use lease::msg::{ExecuteMsg, NewLeaseForm, StateQuery};
+use lease::contract::msg::{ExecuteMsg, NewLeaseForm, StateQuery};
 use sdk::cosmwasm_schema::{export_schema, schema_for};
 
 fn main() {
@@ -11,7 +11,7 @@ fn main() {
 #[cfg(test)]
 #[test]
 fn test_repay_representation() {
-    use lease::msg::ExecuteMsg;
+    use lease::contract::msg::ExecuteMsg;
     use sdk::{
         cosmwasm_std::{from_slice, to_vec},
         schemars::_serde_json::to_string,

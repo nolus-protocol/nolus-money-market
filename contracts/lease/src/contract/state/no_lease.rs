@@ -10,9 +10,8 @@ use sdk::{
 };
 
 use crate::{
-    contract::cmd::{OpenLoanReq, OpenLoanReqResult},
+    contract::{cmd::{OpenLoanReq, OpenLoanReqResult}, msg::NewLeaseForm},
     error::ContractResult,
-    msg::NewLeaseForm,
     reply_id::ReplyId,
 };
 

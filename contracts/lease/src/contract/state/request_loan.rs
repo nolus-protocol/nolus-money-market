@@ -10,14 +10,14 @@ use sdk::cosmwasm_std::{DepsMut, Env, Reply};
 
 use crate::{
     contract::cmd::{OpenLoanResp, OpenLoanRespResult},
+    contract::{msg::NewLeaseForm, state::Active},
     error::{ContractError, ContractResult},
     event::Type,
     lease::LeaseDTO,
-    msg::NewLeaseForm,
     reply_id::ReplyId,
 };
 
-use super::{Active, Controller, Response};
+use super::{Controller, Response};
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestLoan {

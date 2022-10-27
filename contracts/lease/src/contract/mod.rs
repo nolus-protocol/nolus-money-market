@@ -11,14 +11,15 @@ use sdk::{
 use crate::{
     contract::state::{Response, State},
     error::{ContractError, ContractResult},
-    msg::{ExecuteMsg, NewLeaseForm, StateQuery},
 };
 
-use self::state::Controller;
+use self::{state::Controller, msg::{NewLeaseForm, ExecuteMsg, StateQuery}};
 
 mod alarms;
 mod close;
 mod cmd;
+// mod dex;
+pub mod msg;
 mod repay;
 mod state;
 

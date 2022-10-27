@@ -9,7 +9,7 @@ use finance::{
     percent::Percent,
     price::dto::PriceDTO,
 };
-use lease::msg::{StateQuery, StateResponse};
+use lease::contract::msg::{StateQuery, StateResponse, ExecuteMsg};
 use leaser::msg::{QueryMsg, QuoteResponse};
 use sdk::{
     cosmwasm_std::{Addr, Timestamp},
@@ -98,7 +98,7 @@ fn repay(test_case: &mut TestCase<Lpn>, contract_addr: &Addr, value: LeaseCoin) 
         .execute_contract(
             Addr::unchecked(USER),
             contract_addr.clone(),
-            &lease::msg::ExecuteMsg::Repay {},
+            &ExecuteMsg::Repay {},
             &cwcoins::<LeaseCurrency, _>(value),
         )
         .unwrap()
@@ -110,7 +110,7 @@ fn close(test_case: &mut TestCase<Lpn>, contract_addr: &Addr) -> AppResponse {
         .execute_contract(
             Addr::unchecked(USER),
             contract_addr.clone(),
-            &lease::msg::ExecuteMsg::Close {},
+            &ExecuteMsg::Close {},
             &[],
         )
         .unwrap()
@@ -346,7 +346,7 @@ fn price_alarm_unauthorized() {
             .execute_contract(
                 Addr::unchecked(ADMIN),
                 lease_address,
-                &lease::msg::ExecuteMsg::PriceAlarm(),
+                &ExecuteMsg::PriceAlarm(),
                 &cwcoins::<LeaseCurrency, _>(10000),
             )
             .unwrap()
@@ -365,7 +365,7 @@ fn liquidation_warning(price: PriceDTO, percent: Percent, level: &str) {
         .execute_contract(
             test_case.oracle.unwrap(),
             lease_address,
-            &lease::msg::ExecuteMsg::PriceAlarm(),
+            &ExecuteMsg::PriceAlarm(),
             &cwcoins::<LeaseCurrency, _>(10000),
         )
         .unwrap();
@@ -481,7 +481,7 @@ fn liquidation_time_alarm(time_pass: Duration) {
         .execute_contract(
             test_case.timealarms.clone().unwrap(),
             lease_address.clone(),
-            &lease::msg::ExecuteMsg::TimeAlarm(test_case.app.block_info().time),
+            &ExecuteMsg::TimeAlarm(test_case.app.block_info().time),
             &[],
         )
         .unwrap();

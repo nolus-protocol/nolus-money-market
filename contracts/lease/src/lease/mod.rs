@@ -15,8 +15,7 @@ use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch};
 
 use crate::{
     error::{ContractError, ContractResult},
-    loan::Loan,
-    msg::StateResponse,
+    loan::Loan, contract::msg::StateResponse,
 };
 
 pub(super) use self::{
@@ -260,7 +259,7 @@ mod tests {
         stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},
     };
 
-    use crate::{loan::Loan, msg::StateResponse, reply_id::ReplyId};
+    use crate::{loan::Loan, reply_id::ReplyId, contract::msg::StateResponse};
 
     use super::Lease;
 

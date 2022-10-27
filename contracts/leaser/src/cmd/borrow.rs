@@ -1,5 +1,5 @@
 use finance::currency::SymbolOwned;
-use lease::msg::{LoanForm, NewLeaseForm};
+use lease::contract::msg::{LoanForm, NewLeaseForm};
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
