@@ -53,7 +53,9 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                 if self.sender != config.owner {
                     return Err(ContractError::Unauthorized {});
                 }
-                SupportedPairs::<OracleBase>::new(tree)?.save(self.deps.storage)?;
+                SupportedPairs::<OracleBase>::new(tree)?
+                    .validate_tickers()?
+                    .save(self.deps.storage)?;
                 Ok(Response::default())
             }
             ExecuteMsg::FeedPrices { prices } => try_feed_prices::<OracleBase>(

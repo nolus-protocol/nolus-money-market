@@ -88,7 +88,9 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
         .validate()?
         .store(self.deps.storage)?;
 
-        SupportedPairs::<C>::new(self.msg.swap_tree)?.save(self.deps.storage)?;
+        SupportedPairs::<C>::new(self.msg.swap_tree)?
+            .validate_tickers()?
+            .save(self.deps.storage)?;
 
         Ok(Response::new().add_attribute("method", "instantiate"))
     }

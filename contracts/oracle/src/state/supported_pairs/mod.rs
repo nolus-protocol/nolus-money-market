@@ -1,12 +1,14 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use ::serde::{Deserialize, Serialize};
+use ::serde::{de::DeserializeOwned, Deserialize, Serialize};
 use trees::{walk::Visit, Node as TreeNode, TreeWalk};
 
+use currency::payment::PaymentGroup;
 use finance::{
     coin::serde::{deserialize as deserialize_currency, serialize as serialize_currency},
-    currency::{Currency, SymbolOwned},
+    currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned},
 };
+
 use sdk::{
     cosmwasm_std::{StdError, StdResult, Storage},
     cw_storage_plus::Item,
@@ -78,6 +80,27 @@ where
             tree,
             _type: PhantomData,
         })
+    }
+
+    pub fn validate_tickers(&self) -> Result<&Self, ContractError> {
+        struct TickerChecker;
+        impl AnyVisitor for TickerChecker {
+            type Output = ();
+            type Error = ContractError;
+
+            fn on<C>(self) -> Result<Self::Output, Self::Error>
+            where
+                C: 'static + finance::currency::Currency + Serialize + DeserializeOwned,
+            {
+                Ok(())
+            }
+        }
+
+        for swap in self.tree.bfs().iter {
+            visit_any_on_ticker::<PaymentGroup, _>(swap.data.1.as_str(), TickerChecker)?;
+        }
+
+        Ok(self)
     }
 
     pub fn load(storage: &dyn Storage) -> StdResult<Self> {
