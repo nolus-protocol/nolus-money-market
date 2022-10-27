@@ -106,7 +106,6 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
     })
 }
 
-// TODO: add more tests
 #[cfg(test)]
 mod test {
     use currency::lpn::Usdc;

@@ -12,9 +12,6 @@ use sdk::{
 
 use crate::error::ContractError;
 
-// TODO: evaluate fixed or rust_decimal instead of cosmwasm_std::Decimal
-// https://docs.rs/fixed/latest/fixed/index.html
-// https://docs.rs/rust_decimal/latest/rust_decimal/index.html
 #[derive(Serialize, Deserialize, Debug, JsonSchema)]
 pub struct Total<LPN>
 where
@@ -114,7 +111,6 @@ where
             )
         };
 
-        // TODO: maybe add -= for Coin?
         self.total_principal_due -= loan_principal_payment;
 
         self.last_update_time = ctime;
