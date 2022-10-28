@@ -1,21 +1,27 @@
 use std::marker::PhantomData;
 
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 
+use currency::{lease::LeaseGroup, payment::PaymentGroup};
 use finance::{
-    coin::Coin, coin::CoinDTO, currency::Currency, liability::Liability, percent::Percent,
+    coin::{Coin, CoinDTO},
+    currency::{AnyVisitor, Currency, Group, SymbolOwned},
+    liability::Liability,
+    percent::Percent,
+    price::total,
 };
 use lpp::{
     msg::QueryQuoteResponse,
     stub::lender::{LppLender as LppLenderTrait, WithLppLender},
 };
-use sdk::cosmwasm_std::StdResult;
+use oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
+use sdk::cosmwasm_std::{QuerierWrapper, StdResult};
 
 use crate::{msg::QuoteResponse, ContractError};
 
 use super::Quote;
 
-impl WithLppLender for Quote {
+impl<'r> WithLppLender for Quote<'r> {
     type Output = QuoteResponse;
     type Error = ContractError;
 
@@ -24,52 +30,50 @@ impl WithLppLender for Quote {
         Lpp: LppLenderTrait<Lpn>,
         Lpn: Currency + Serialize,
     {
-        let lpp_quote = LppQuote::new(lpp)?;
-
-        let downpayment_lpn: Coin<Lpn> = self.downpayment.try_into()?;
-
-        if downpayment_lpn.is_zero() {
-            return Err(ContractError::ZeroDownpayment {});
-        }
-
-        let borrow = self.liability.init_borrow_amount(downpayment_lpn);
-        let total = borrow + downpayment_lpn;
-
-        let annual_interest_rate = lpp_quote.with(borrow)?;
-        Ok(QuoteResponse {
-            total: total.into(),
-            borrow: borrow.into(),
-            annual_interest_rate,
-            annual_interest_rate_margin: self.lease_interest_rate_margin,
-        })
+        self.oracle.execute(
+            QuoteStage2 {
+                downpayment: self.downpayment,
+                currency: self.currency,
+                lpp_quote: LppQuote::new(lpp)?,
+                liability: self.liability,
+                lease_interest_rate_margin: self.lease_interest_rate_margin,
+            },
+            &self.querier,
+        )
     }
 }
 
-impl Quote {
+impl<'r> Quote<'r> {
     pub fn new(
+        querier: QuerierWrapper<'r>,
         downpayment: CoinDTO,
+        currency: SymbolOwned,
+        oracle: OracleRef,
         liability: Liability,
         lease_interest_rate_margin: Percent,
     ) -> StdResult<Quote> {
         Ok(Self {
+            querier,
+            currency,
             downpayment,
+            oracle,
             liability,
             lease_interest_rate_margin,
         })
     }
 }
 
-pub struct LppQuote<'a, Lpn, Lpp> {
-    lpn: PhantomData<&'a Lpn>,
+pub struct LppQuote<Lpn, Lpp> {
+    lpn: PhantomData<Lpn>,
     lpp: Lpp,
 }
 
-impl<'a, Lpn, Lpp> LppQuote<'a, Lpn, Lpp>
+impl<Lpn, Lpp> LppQuote<Lpn, Lpp>
 where
     Lpp: LppLenderTrait<Lpn>,
     Lpn: Currency,
 {
-    pub fn new(lpp: Lpp) -> StdResult<LppQuote<'a, Lpn, Lpp>> {
+    pub fn new(lpp: Lpp) -> StdResult<LppQuote<Lpn, Lpp>> {
         Ok(Self {
             lpn: PhantomData,
             lpp,
@@ -87,5 +91,147 @@ where
         };
 
         Ok(annual_interest_rate)
+    }
+}
+
+struct QuoteStage2<Lpn, Lpp>
+where
+    Lpn: Currency,
+    Lpp: LppLenderTrait<Lpn>,
+{
+    downpayment: CoinDTO,
+    currency: SymbolOwned,
+    lpp_quote: LppQuote<Lpn, Lpp>,
+    liability: Liability,
+    lease_interest_rate_margin: Percent,
+}
+
+impl<Lpn, Lpp> WithOracle<Lpn> for QuoteStage2<Lpn, Lpp>
+where
+    Lpn: Currency,
+    Lpp: LppLenderTrait<Lpn>,
+{
+    type Output = QuoteResponse;
+    type Error = ContractError;
+
+    fn exec<O>(self, oracle: O) -> Result<Self::Output, Self::Error>
+    where
+        O: OracleTrait<Lpn>,
+    {
+        let downpayment = self.downpayment.ticker().clone();
+
+        PaymentGroup::maybe_visit_on_ticker(
+            &downpayment,
+            QuoteStage3 {
+                downpayment: self.downpayment,
+                currency: self.currency,
+                lpp_quote: self.lpp_quote,
+                oracle,
+                liability: self.liability,
+                lease_interest_rate_margin: self.lease_interest_rate_margin,
+            },
+        )
+        .map_err(|_| ContractError::UnknownCurrency {
+            symbol: downpayment,
+        })?
+    }
+}
+
+struct QuoteStage3<Lpn, Lpp, Oracle>
+where
+    Lpn: Currency,
+    Lpp: LppLenderTrait<Lpn>,
+    Oracle: OracleTrait<Lpn>,
+{
+    downpayment: CoinDTO,
+    currency: SymbolOwned,
+    lpp_quote: LppQuote<Lpn, Lpp>,
+    oracle: Oracle,
+    liability: Liability,
+    lease_interest_rate_margin: Percent,
+}
+
+impl<Lpn, Lpp, Oracle> AnyVisitor for QuoteStage3<Lpn, Lpp, Oracle>
+where
+    Lpn: Currency,
+    Lpp: LppLenderTrait<Lpn>,
+    Oracle: OracleTrait<Lpn>,
+{
+    type Output = QuoteResponse;
+    type Error = ContractError;
+
+    fn on<C>(self) -> Result<Self::Output, Self::Error>
+    where
+        C: 'static + Currency + Serialize + DeserializeOwned,
+    {
+        LeaseGroup::maybe_visit_on_ticker(
+            &self.currency,
+            QuoteStage4 {
+                downpayment: TryInto::<Coin<C>>::try_into(self.downpayment)?,
+                lpp_quote: self.lpp_quote,
+                oracle: self.oracle,
+                liability: self.liability,
+                lease_interest_rate_margin: self.lease_interest_rate_margin,
+            },
+        )
+        .map_err({
+            let symbol = self.currency;
+
+            |_| ContractError::UnknownCurrency { symbol }
+        })?
+        .map_err(Into::into)
+    }
+}
+
+struct QuoteStage4<Lpn, Dpc, Lpp, Oracle>
+where
+    Lpn: Currency,
+    Dpc: Currency,
+    Lpp: LppLenderTrait<Lpn>,
+    Oracle: OracleTrait<Lpn>,
+{
+    downpayment: Coin<Dpc>,
+    lpp_quote: LppQuote<Lpn, Lpp>,
+    oracle: Oracle,
+    liability: Liability,
+    lease_interest_rate_margin: Percent,
+}
+
+impl<Lpn, Dpc, Lpp, Oracle> AnyVisitor for QuoteStage4<Lpn, Dpc, Lpp, Oracle>
+where
+    Lpn: Currency,
+    Dpc: Currency,
+    Lpp: LppLenderTrait<Lpn>,
+    Oracle: OracleTrait<Lpn>,
+{
+    type Output = QuoteResponse;
+    type Error = ContractError;
+
+    fn on<C>(self) -> Result<Self::Output, Self::Error>
+    where
+        C: 'static + Currency + Serialize + DeserializeOwned,
+    {
+        let downpayment_lpn = total(self.downpayment, self.oracle.price_of()?);
+
+        if downpayment_lpn.is_zero() {
+            return Err(ContractError::ZeroDownpayment {});
+        }
+
+        let borrow = self.liability.init_borrow_amount(downpayment_lpn);
+
+        let asset_price = self.oracle.price_of::<C>()?.inv();
+
+        let borrow_asset = total(borrow, asset_price);
+
+        let total_asset = total(downpayment_lpn, asset_price) + borrow_asset;
+
+        let annual_interest_rate = self.lpp_quote.with(borrow)?;
+
+        Ok(QuoteResponse {
+            total: total_asset.into(),
+            borrow: borrow_asset.into(),
+            annual_interest_rate,
+            annual_interest_rate_margin: self.lease_interest_rate_margin,
+        })
     }
 }

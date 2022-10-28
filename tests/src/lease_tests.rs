@@ -128,6 +128,7 @@ fn quote_query(test_case: &TestCase<Lpn>, amount: LeaseCoin) -> QuoteResponse {
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Quote {
                 downpayment: amount.into(),
+                currency: Lpn::TICKER.into(),
             },
         )
         .unwrap()

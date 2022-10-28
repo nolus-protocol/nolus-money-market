@@ -15,9 +15,12 @@ use crate::{state::config::Config, ContractError};
 pub struct InstantiateMsg {
     pub lease_code_id: Uint64,
     pub lpp_ust_addr: Addr,
-    pub lease_interest_rate_margin: Percent, // LeaseInterestRateMargin%, for example 3%
-    pub liability: Liability,                // LeaseMaxLiability%, for example 80%
-    pub repayment: Repayment,                // GracePeriodSec, for example 10 days = 10*24*60*60
+    pub lease_interest_rate_margin: Percent,
+    // LeaseInterestRateMargin%, for example 3%
+    pub liability: Liability,
+    // LeaseMaxLiability%, for example 80%
+    pub repayment: Repayment,
+    // GracePeriodSec, for example 10 days = 10*24*60*60
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
     pub profit: Addr,
@@ -25,7 +28,8 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Repayment {
-    pub period: Duration,       // PeriodLengthSec, for example 90 days = 90*24*60*60
+    pub period: Duration,
+    // PeriodLengthSec, for example 90 days = 90*24*60*60
     pub grace_period: Duration, // GracePeriodSec, for example 10 days = 10*24*60*60
 }
 
@@ -46,8 +50,13 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config {},
-    Quote { downpayment: CoinDTO },
-    Leases { owner: Addr },
+    Quote {
+        downpayment: CoinDTO,
+        currency: SymbolOwned,
+    },
+    Leases {
+        owner: Addr,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

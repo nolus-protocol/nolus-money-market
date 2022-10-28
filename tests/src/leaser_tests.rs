@@ -171,6 +171,7 @@ fn open_multiple_loans() {
         .unwrap();
     assert_eq!(loans, user0_loans);
 }
+
 #[test]
 fn test_quote() {
     type Lpn = TheCurrency;
@@ -192,17 +193,18 @@ fn test_quote() {
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Quote {
                 downpayment: test::funds::<TheCurrency>(100),
+                currency: TheCurrency::TICKER.into(),
             },
         )
         .unwrap();
 
     assert_eq!(
-        Coin::<TheCurrency>::new(185),
-        resp.borrow.try_into().unwrap()
+        TryInto::<Coin<TheCurrency>>::try_into(resp.borrow).unwrap(),
+        Coin::new(185)
     );
     assert_eq!(
-        Coin::<TheCurrency>::new(285),
-        resp.total.try_into().unwrap()
+        TryInto::<Coin<TheCurrency>>::try_into(resp.total).unwrap(),
+        Coin::new(285)
     );
 
     /*   TODO: test with different time periods and amounts in LPP
@@ -220,15 +222,19 @@ fn test_quote() {
             test_case.leaser_addr.unwrap(),
             &QueryMsg::Quote {
                 downpayment: test::funds::<TheCurrency>(15),
+                currency: TheCurrency::TICKER.into(),
             },
         )
         .unwrap();
 
     assert_eq!(
-        Coin::<TheCurrency>::new(27),
-        resp.borrow.try_into().unwrap()
+        TryInto::<Coin<TheCurrency>>::try_into(resp.borrow).unwrap(),
+        Coin::new(27)
     );
-    assert_eq!(Coin::<TheCurrency>::new(42), resp.total.try_into().unwrap());
+    assert_eq!(
+        TryInto::<Coin<TheCurrency>>::try_into(resp.total).unwrap(),
+        Coin::new(42)
+    );
 }
 
 #[test]
@@ -256,17 +262,18 @@ fn test_quote_fixed_rate() {
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Quote {
                 downpayment: test::funds::<TheCurrency>(100),
+                currency: TheCurrency::TICKER.into(),
             },
         )
         .unwrap();
 
     assert_eq!(
-        Coin::<TheCurrency>::new(185),
-        resp.borrow.try_into().unwrap()
+        TryInto::<Coin<TheCurrency>>::try_into(resp.borrow).unwrap(),
+        Coin::new(185)
     );
     assert_eq!(
-        Coin::<TheCurrency>::new(285),
-        resp.total.try_into().unwrap()
+        TryInto::<Coin<TheCurrency>>::try_into(resp.total).unwrap(),
+        Coin::new(285)
     );
 
     /*   TODO: test with different time periods and amounts in LPP
@@ -276,9 +283,9 @@ fn test_quote_fixed_rate() {
         3% margin_interest_rate of the leaser
     */
 
-    assert_eq!(Percent::HUNDRED, resp.annual_interest_rate,);
+    assert_eq!(resp.annual_interest_rate, Percent::HUNDRED);
 
-    assert_eq!(Percent::from_percent(3), resp.annual_interest_rate_margin,);
+    assert_eq!(resp.annual_interest_rate_margin, Percent::from_percent(3));
 }
 
 #[test]
@@ -434,51 +441,51 @@ where
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute == ("_contract_addr", lease_addr),));
+        .any(|attribute| attribute == ("_contract_addr", lease_addr)));
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute.key == "height",));
+        .any(|attribute| attribute.key == "height"));
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute.key == "idx",));
+        .any(|attribute| attribute.key == "idx"));
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute == ("id", lease_addr),));
+        .any(|attribute| attribute == ("id", lease_addr)));
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute == ("customer", USER),));
+        .any(|attribute| attribute == ("customer", USER)));
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute == ("air", "105"),));
+        .any(|attribute| attribute == ("air", "105")));
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute == ("currency", Lpn::TICKER),));
+        .any(|attribute| attribute == ("currency", Lpn::TICKER)));
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute == ("loan-pool-id", lpp_addr),));
+        .any(|attribute| attribute == ("loan-pool-id", lpp_addr)));
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute == ("loan-amount", "74"),));
+        .any(|attribute| attribute == ("loan-amount", "74")));
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute == ("loan-symbol", Lpn::TICKER),));
+        .any(|attribute| attribute == ("loan-symbol", Lpn::TICKER)));
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute == ("downpayment-symbol", Lpn::TICKER),));
+        .any(|attribute| attribute == ("downpayment-symbol", Lpn::TICKER)));
     assert!(lease_exec_open
         .attributes
         .iter()
-        .any(|attribute| attribute == ("downpayment-amount", "40"),));
+        .any(|attribute| attribute == ("downpayment-amount", "40")));
 
     // TODO: Add test cases which are with currency different than LPN and uncomment section
     // if currency != Lpn::SYMBOL {
