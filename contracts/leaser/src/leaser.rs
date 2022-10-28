@@ -32,7 +32,7 @@ impl Leaser {
     pub fn query_quote(
         deps: Deps,
         downpayment: CoinDTO,
-        currency: SymbolOwned,
+        lease_asset: SymbolOwned,
     ) -> Result<QuoteResponse, ContractError> {
         let config = Config::load(deps.storage)?;
 
@@ -44,7 +44,7 @@ impl Leaser {
             Quote::new(
                 deps.querier,
                 downpayment,
-                currency,
+                lease_asset,
                 oracle,
                 config.liability,
                 config.lease_interest_rate_margin,

@@ -199,7 +199,7 @@ fn test_quote() {
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Quote {
                 downpayment: test::funds::<TheCurrency>(100),
-                currency: TheCurrency::TICKER.into(),
+                lease_asset: TheCurrency::TICKER.into(),
             },
         )
         .unwrap();
@@ -228,7 +228,7 @@ fn test_quote() {
             test_case.leaser_addr.unwrap(),
             &QueryMsg::Quote {
                 downpayment: test::funds::<TheCurrency>(15),
-                currency: TheCurrency::TICKER.into(),
+                lease_asset: TheCurrency::TICKER.into(),
             },
         )
         .unwrap();
@@ -314,7 +314,7 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Quote {
                 downpayment: downpayment.into(),
-                currency: Cro::TICKER.into(),
+                lease_asset: Cro::TICKER.into(),
             },
         )
         .unwrap();
@@ -374,7 +374,7 @@ fn test_quote_fixed_rate() {
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Quote {
                 downpayment: test::funds::<TheCurrency>(100),
-                currency: TheCurrency::TICKER.into(),
+                lease_asset: TheCurrency::TICKER.into(),
             },
         )
         .unwrap();

@@ -7,7 +7,7 @@ pub mod quote;
 
 pub struct Quote<'r> {
     querier: QuerierWrapper<'r>,
-    currency: SymbolOwned,
+    lease_asset: SymbolOwned,
     downpayment: CoinDTO,
     oracle: OracleRef,
     liability: Liability,

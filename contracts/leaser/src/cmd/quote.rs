@@ -33,7 +33,7 @@ impl<'r> WithLppLender for Quote<'r> {
         self.oracle.execute(
             QuoteStage2 {
                 downpayment: self.downpayment,
-                currency: self.currency,
+                lease_asset: self.lease_asset,
                 lpp_quote: LppQuote::new(lpp)?,
                 liability: self.liability,
                 lease_interest_rate_margin: self.lease_interest_rate_margin,
@@ -47,14 +47,14 @@ impl<'r> Quote<'r> {
     pub fn new(
         querier: QuerierWrapper<'r>,
         downpayment: CoinDTO,
-        currency: SymbolOwned,
+        lease_asset: SymbolOwned,
         oracle: OracleRef,
         liability: Liability,
         lease_interest_rate_margin: Percent,
     ) -> StdResult<Quote> {
         Ok(Self {
             querier,
-            currency,
+            lease_asset,
             downpayment,
             oracle,
             liability,
@@ -100,7 +100,7 @@ where
     Lpp: LppLenderTrait<Lpn>,
 {
     downpayment: CoinDTO,
-    currency: SymbolOwned,
+    lease_asset: SymbolOwned,
     lpp_quote: LppQuote<Lpn, Lpp>,
     liability: Liability,
     lease_interest_rate_margin: Percent,
@@ -124,7 +124,7 @@ where
             &downpayment,
             QuoteStage3 {
                 downpayment: self.downpayment,
-                currency: self.currency,
+                lease_asset: self.lease_asset,
                 lpp_quote: self.lpp_quote,
                 oracle,
                 liability: self.liability,
@@ -144,7 +144,7 @@ where
     Oracle: OracleTrait<Lpn>,
 {
     downpayment: CoinDTO,
-    currency: SymbolOwned,
+    lease_asset: SymbolOwned,
     lpp_quote: LppQuote<Lpn, Lpp>,
     oracle: Oracle,
     liability: Liability,
@@ -165,7 +165,7 @@ where
         C: 'static + Currency + Serialize + DeserializeOwned,
     {
         LeaseGroup::maybe_visit_on_ticker(
-            &self.currency,
+            &self.lease_asset,
             QuoteStage4 {
                 downpayment: TryInto::<Coin<C>>::try_into(self.downpayment)?,
                 lpp_quote: self.lpp_quote,
@@ -175,7 +175,7 @@ where
             },
         )
         .map_err({
-            let symbol = self.currency;
+            let symbol = self.lease_asset;
 
             |_| ContractError::UnknownCurrency { symbol }
         })?
@@ -207,9 +207,9 @@ where
     type Output = QuoteResponse;
     type Error = ContractError;
 
-    fn on<C>(self) -> Result<Self::Output, Self::Error>
+    fn on<Asset>(self) -> Result<Self::Output, Self::Error>
     where
-        C: 'static + Currency + Serialize + DeserializeOwned,
+        Asset: 'static + Currency + Serialize + DeserializeOwned,
     {
         let downpayment_lpn = total(self.downpayment, self.oracle.price_of()?);
 
@@ -219,7 +219,7 @@ where
 
         let borrow = self.liability.init_borrow_amount(downpayment_lpn);
 
-        let asset_price = self.oracle.price_of::<C>()?.inv();
+        let asset_price = self.oracle.price_of::<Asset>()?.inv();
 
         let borrow_asset = total(borrow, asset_price);
 

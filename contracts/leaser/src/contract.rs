@@ -77,8 +77,8 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
         QueryMsg::Config {} => to_binary(&Leaser::query_config(deps)?),
         QueryMsg::Quote {
             downpayment,
-            currency,
-        } => to_binary(&Leaser::query_quote(deps, downpayment, currency)?),
+            lease_asset,
+        } => to_binary(&Leaser::query_quote(deps, downpayment, lease_asset)?),
         QueryMsg::Leases { owner } => to_binary(&Leaser::query_loans(deps, owner)?),
     };
     res.map_err(ContractError::from)
