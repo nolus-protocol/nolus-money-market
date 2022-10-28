@@ -1,7 +1,5 @@
 use currency::payment::PaymentGroup;
-use finance::{
-    currency::SymbolOwned, duration::Duration, price::dto::with_price, price::dto::PriceDTO,
-};
+use finance::{currency::SymbolOwned, duration::Duration, price::dto::PriceDTO};
 use sdk::{
     cosmwasm_std::{Addr, StdResult, Storage, Timestamp},
     cw_storage_plus::Map,
@@ -10,7 +8,6 @@ use sdk::{
 use crate::{
     error::PriceFeedsError,
     feed::{Observation, PriceFeed},
-    Multiply,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -68,7 +65,7 @@ impl<'m> PriceFeeds<'m> {
                 resolution_path.push(price_dto);
             }
         }
-        PriceFeeds::calculate_price(&mut resolution_path)
+        PriceFeeds::calculate_price(&resolution_path)
     }
 
     pub fn load(
@@ -83,27 +80,17 @@ impl<'m> PriceFeeds<'m> {
             None => Err(PriceFeedsError::NoPrice()),
         }
     }
-    // TODO remove move price calculation to the finance library
-    fn calculate_price(
-        resolution_path: &mut DenomResolutionPath,
-    ) -> Result<PriceDTO, PriceFeedsError> {
-        let mut first = match resolution_path.first() {
-            Some(price) => Ok(price.to_owned()),
-            None => Err(PriceFeedsError::NoPrice {}),
-        }?;
 
-        if resolution_path.len() == 1 {
-            return Ok(first);
+    fn calculate_price(resolution_path: &DenomResolutionPath) -> Result<PriceDTO, PriceFeedsError> {
+        if let Some((first, rest)) = resolution_path.split_first() {
+            rest.iter()
+                .fold(Ok(first.to_owned()), |result_c1, c2| {
+                    result_c1.and_then(|c1| c1.multiply::<PaymentGroup>(c2))
+                })
+                .map_err(|e| e.into())
+        } else {
+            Err(PriceFeedsError::NoPrice {})
         }
-        resolution_path.remove(0);
-        for p in resolution_path.iter() {
-            first = with_price::execute::<PaymentGroup, Multiply>(
-                first.clone(),
-                Multiply::with(p.to_owned()),
-            )?;
-        }
-
-        Ok(first)
     }
 
     pub fn feed(
