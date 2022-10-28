@@ -1,9 +1,25 @@
+use currency::{lease::Osmo, lpn::Usdc};
+use finance::{
+    coin::Coin,
+    currency::Currency,
+    duration::Duration,
+    price::{self, dto::PriceDTO},
+};
+use sdk::{
+    cosmwasm_std::{coin, Addr, Timestamp},
+    cw_multi_test::Executor,
+};
+
+use crate::{
+    common::{test_case::TestCase, AppExt, ADMIN},
+    timealarms_tests::mock_lease::proper_instantiate,
+};
+
 /// The mock for lease SC. It mimics the scheme for time notification.
 /// If GATE, it returns Ok on notifications, returns Err otherwise.
 mod mock_lease {
     use serde::{Deserialize, Serialize};
 
-    use crate::common::{MockApp, ADMIN};
     use sdk::{
         cosmwasm_ext::Response,
         cosmwasm_std::{
@@ -14,7 +30,10 @@ mod mock_lease {
         testing::{Contract, ContractWrapper, Executor},
     };
 
+    use crate::common::{MockApp, ADMIN};
+
     const GATE: Item<bool> = Item::new("alarm gate");
+
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
     #[serde(rename_all = "snake_case")]
     pub enum MockExecuteMsg {
@@ -23,10 +42,12 @@ mod mock_lease {
         // setup GATE
         Gate(bool),
     }
+
     fn instantiate(deps: DepsMut, _: Env, _: MessageInfo, _: Empty) -> StdResult<Response> {
         GATE.save(deps.storage, &true)?;
         Ok(Response::new().add_attribute("method", "instantiate"))
     }
+
     fn execute(deps: DepsMut, _: Env, _: MessageInfo, msg: MockExecuteMsg) -> StdResult<Response> {
         match msg {
             MockExecuteMsg::TimeAlarm(time) => {
@@ -43,13 +64,16 @@ mod mock_lease {
             }
         }
     }
+
     fn query(_: Deps, _: Env, _msg: MockExecuteMsg) -> StdResult<Binary> {
         Err(StdError::generic_err("not implemented"))
     }
+
     fn contract_template() -> Box<Contract> {
         let contract = ContractWrapper::new(execute, instantiate, query);
         Box::new(contract)
     }
+
     pub fn proper_instantiate(app: &mut MockApp) -> Addr {
         let cw_template_id = app.store_code(contract_template());
         app.instantiate_contract(
@@ -64,20 +88,6 @@ mod mock_lease {
     }
 }
 
-use currency::{lease::Osmo, lpn::Usdc};
-use finance::{
-    coin::Coin,
-    currency::Currency,
-    duration::Duration,
-    price::{self, dto::PriceDTO},
-};
-use sdk::cosmwasm_std::{coin, Addr, Timestamp};
-
-use crate::{
-    common::{test_case::TestCase, AppExt, ADMIN},
-    timealarms_tests::mock_lease::proper_instantiate,
-};
-use sdk::cw_multi_test::Executor;
 type Lpn = Usdc;
 
 #[test]
@@ -91,7 +101,13 @@ fn test_time_notify() {
         vec![coin(1_000_000_000_000_000_000_000_000, Lpn::BANK_SYMBOL)],
     );
 
-    test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000.into());
+    test_case.init_lpp_with_funds(
+        None,
+        vec![coin(
+            5_000_000_000_000_000_000_000_000_000,
+            Lpn::BANK_SYMBOL,
+        )],
+    );
     test_case.init_timealarms();
     test_case.init_oracle(None);
 

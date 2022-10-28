@@ -1,14 +1,20 @@
 use std::collections::HashSet;
 
 use currency::{
-    lease::{Atom, Osmo},
+    lease::{Atom, Cro, Osmo},
     lpn::Usdc,
 };
-use finance::{coin::Coin, currency::Currency, percent::Percent, test};
+use finance::price::{total, total_of};
+use finance::{
+    coin::{Amount, Coin},
+    currency::Currency,
+    percent::Percent,
+    test,
+};
 use leaser::msg::{QueryMsg, QuoteResponse};
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, DepsMut, Env, Event, MessageInfo},
+    cosmwasm_std::{coin, Addr, DepsMut, Env, Event, MessageInfo},
     cw_multi_test::{next_block, ContractWrapper, Executor},
 };
 
@@ -235,6 +241,112 @@ fn test_quote() {
         TryInto::<Coin<TheCurrency>>::try_into(resp.total).unwrap(),
         Coin::new(42)
     );
+}
+
+fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin<TheCurrency>) {
+    use super::oracle_tests::{add_feeder, feed_price};
+
+    type Lpn = TheCurrency;
+
+    const LPNS: Amount = 5_000_000_000_000;
+    const OSMOS: Amount = 5_000_000_000_000;
+    const CROS: Amount = 5_000_000_000_000;
+
+    const USER_ATOMS: Amount = 5_000_000_000;
+
+    let lpp_reserve = vec![
+        cwcoin::<Lpn, _>(LPNS),
+        cwcoin::<Osmo, _>(OSMOS),
+        cwcoin::<Cro, _>(CROS),
+    ];
+
+    let user_reserve = cwcoins::<Atom, _>(USER_ATOMS);
+
+    let user_addr = Addr::unchecked(USER);
+    let mut test_case = TestCase::<Lpn>::with_reserve(&{
+        let mut reserve = cwcoins::<Lpn, _>(1_000_000_000);
+
+        reserve.extend_from_slice(lpp_reserve.as_slice());
+
+        reserve.extend_from_slice(user_reserve.as_slice());
+
+        reserve
+    });
+    test_case.init(&user_addr, user_reserve);
+    test_case.init_lpp_with_funds(
+        None,
+        vec![
+            coin(LPNS, Lpn::BANK_SYMBOL),
+            coin(OSMOS, Osmo::BANK_SYMBOL),
+            coin(CROS, Cro::BANK_SYMBOL),
+        ],
+    );
+    test_case.init_timealarms();
+    test_case.init_oracle(None);
+    test_case.init_treasury();
+    test_case.init_profit(24);
+    test_case.init_leaser();
+
+    let feeder_addr = Addr::unchecked("feeder1");
+
+    add_feeder(&mut test_case, feeder_addr.as_str());
+
+    let dpn_lpn_base = Coin::<Osmo>::new(1);
+    let dpn_lpn_quote = Coin::<Lpn>::new(2);
+    let dpn_lpn_price = total_of(dpn_lpn_base).is(dpn_lpn_quote);
+
+    let lpn_asset_base = Coin::<Lpn>::new(1);
+    let lpn_asset_quote = Coin::<Cro>::new(2);
+    let lpn_asset_price = total_of(lpn_asset_base).is(lpn_asset_quote);
+
+    feed_price::<Osmo, TheCurrency>(&mut test_case, &feeder_addr, dpn_lpn_base, dpn_lpn_quote);
+    feed_price::<Cro, TheCurrency>(
+        &mut test_case,
+        &feeder_addr,
+        lpn_asset_quote,
+        lpn_asset_base,
+    );
+
+    let resp: QuoteResponse = test_case
+        .app
+        .wrap()
+        .query_wasm_smart(
+            test_case.leaser_addr.clone().unwrap(),
+            &QueryMsg::Quote {
+                downpayment: downpayment.into(),
+                currency: Cro::TICKER.into(),
+            },
+        )
+        .unwrap();
+
+    assert_eq!(
+        TryInto::<Coin<Cro>>::try_into(resp.borrow).unwrap(),
+        total(borrow_after_mul2, lpn_asset_price),
+        "Borrow amount is different!"
+    );
+    assert_eq!(
+        TryInto::<Coin<Cro>>::try_into(resp.total).unwrap(),
+        total(
+            total(downpayment, dpn_lpn_price) + borrow_after_mul2,
+            lpn_asset_price
+        ),
+        "Total amount is different!"
+    );
+}
+
+#[test]
+fn test_quote_with_conversion_100() {
+    common_quote_with_conversion(Coin::new(100), Coin::new(371));
+}
+
+#[test]
+fn test_quote_with_conversion_200() {
+    common_quote_with_conversion(Coin::new(200), Coin::new(742));
+}
+
+#[test]
+fn test_quote_with_conversion_5000() {
+    common_quote_with_conversion(Coin::new(5000), Coin::new(18571));
 }
 
 #[test]

@@ -11,6 +11,7 @@ use finance::{
 };
 use lease::api::{ExecuteMsg, StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
+use sdk::cosmwasm_std::coin;
 use sdk::{
     cosmwasm_std::{Addr, Timestamp},
     cw_multi_test::{AppResponse, Executor},
@@ -40,7 +41,13 @@ fn create_test_case() -> TestCase<Lpn> {
         &Addr::unchecked("user"),
         cwcoins::<LeaseCurrency, _>(1_000_000_000_000_000_000_000_000),
     );
-    test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000.into());
+    test_case.init_lpp_with_funds(
+        None,
+        vec![coin(
+            5_000_000_000_000_000_000_000_000_000,
+            Lpn::BANK_SYMBOL,
+        )],
+    );
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
