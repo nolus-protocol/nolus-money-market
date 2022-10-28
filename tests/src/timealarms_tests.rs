@@ -64,7 +64,7 @@ mod mock_lease {
     }
 }
 
-use currency::{lpn::Usdc, native::Nls};
+use currency::{lease::Osmo, lpn::Usdc};
 use finance::{
     coin::Coin,
     currency::Currency,
@@ -100,7 +100,7 @@ fn test_time_notify() {
 
     let feed_msg = oracle::msg::ExecuteMsg::FeedPrices {
         prices: vec![PriceDTO::try_from(
-            price::total_of(Coin::<Nls>::new(5)).is(Coin::<Usdc>::new(7)),
+            price::total_of(Coin::<Osmo>::new(5)).is(Coin::<Usdc>::new(7)),
         )
         .unwrap()],
     };

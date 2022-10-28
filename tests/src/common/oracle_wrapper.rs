@@ -1,4 +1,4 @@
-use currency::{lpn::Usdc, native::Nls};
+use currency::{lease::Osmo, lpn::Usdc, native::Nls};
 use finance::{
     coin::Coin,
     currency::Currency,
@@ -19,7 +19,7 @@ use trees::tr;
 
 use crate::common::{ContractWrapper, MockApp};
 
-use super::{Native, ADMIN};
+use super::ADMIN;
 
 pub struct MarketOracleWrapper {
     contract_wrapper: Box<OracleContractWrapper>,
@@ -41,9 +41,7 @@ impl MarketOracleWrapper {
             base_asset: BaseC::TICKER.into(),
             price_feed_period_secs: 60,
             expected_feeders: Percent::from_percent(1),
-            swap_tree: TreeStore(
-                tr((0, Usdc::TICKER.into())) / tr((1, Native::TICKER.to_string())),
-            ),
+            swap_tree: TreeStore(tr((0, Usdc::TICKER.into())) / tr((1, Osmo::TICKER.to_string()))),
             timealarms_addr: timealarms_addr.to_string(),
         };
 

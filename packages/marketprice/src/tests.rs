@@ -1,9 +1,8 @@
 use std::time::SystemTime;
 
 use currency::{
-    lease::{Atom, Osmo, Wbtc, Weth},
+    lease::{Atom, Cro, Osmo, Wbtc, Weth},
     lpn::Usdc,
-    native::Nls,
 };
 use finance::{
     coin::Coin,
@@ -177,14 +176,14 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Nls>::new(1)).is(Coin::<Usdc>::new(3)),
+        price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(3)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Nls>::new(1)).is(Coin::<DenX>::new(3)),
+        price::total_of(Coin::<Cro>::new(1)).is(Coin::<DenX>::new(3)),
     )
     .unwrap();
 
@@ -198,20 +197,20 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Nls>::new(1)).is(Coin::<Usdc>::new(3)),
+        price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(3)),
     )
     .unwrap();
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Nls>::new(2)),
+        price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Cro>::new(2)),
     )
     .unwrap();
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Nls>::new(1)).is(Coin::<Osmo>::new(3)),
+        price::total_of(Coin::<Cro>::new(1)).is(Coin::<Osmo>::new(3)),
     )
     .unwrap();
 
@@ -245,7 +244,7 @@ fn marketprice_follow_the_path() {
             vec![
                 Atom::TICKER.to_string(),
                 Osmo::TICKER.to_string(),
-                Nls::TICKER.to_string(),
+                Cro::TICKER.to_string(),
                 Usdc::TICKER.to_string(),
             ],
         )

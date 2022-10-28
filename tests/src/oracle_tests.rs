@@ -3,7 +3,6 @@ use std::collections::HashSet;
 use currency::{
     lease::{Osmo, Wbtc, Weth},
     lpn::Usdc,
-    native::Nls,
 };
 use finance::{
     coin::{Amount, Coin},
@@ -19,7 +18,7 @@ use oracle::{
 use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
-    cw_multi_test::Executor,
+    cw_multi_test::{AppResponse, Executor},
 };
 
 use crate::common::{
@@ -30,6 +29,7 @@ use trees::tr;
 
 type Lpn = Usdc;
 type TheCoin = Coin<Lpn>;
+type BaseC = Osmo;
 
 fn cw_coin<CoinT>(coin: CoinT) -> CwCoin
 where
@@ -52,6 +52,32 @@ fn create_test_case() -> TestCase<Lpn> {
     test_case.init_leaser();
 
     test_case
+}
+
+fn feed_price(
+    test_case: &mut TestCase<Lpn>,
+    addr: &Addr,
+    base: Amount,
+    quote: Amount,
+) -> AppResponse {
+    test_case
+        .app
+        .execute(
+            addr.clone(),
+            wasm_execute(
+                test_case.oracle.clone().unwrap(),
+                &oracle::msg::ExecuteMsg::FeedPrices {
+                    prices: vec![PriceDTO::try_from(
+                        price::total_of(Coin::<BaseC>::new(base)).is(Coin::<Usdc>::new(quote)),
+                    )
+                    .unwrap()],
+                },
+                vec![],
+            )
+            .unwrap()
+            .into(),
+        )
+        .expect("Oracle not properly connected!")
 }
 
 #[test]
@@ -99,24 +125,7 @@ fn internal_test_integration_setup_test() {
         )
         .unwrap();
 
-    test_case
-        .app
-        .execute(
-            Addr::unchecked(ADMIN),
-            wasm_execute(
-                test_case.oracle.clone().unwrap(),
-                &oracle::msg::ExecuteMsg::FeedPrices {
-                    prices: vec![PriceDTO::try_from(
-                        price::total_of(Coin::<Nls>::new(5)).is(Coin::<Usdc>::new(7)),
-                    )
-                    .unwrap()],
-                },
-                vec![cw_coin(1000)],
-            )
-            .unwrap()
-            .into(),
-        )
-        .expect("Oracle not properly connected!");
+    let _ = feed_price(&mut test_case, &Addr::unchecked(ADMIN), 5, 7);
 }
 
 fn open_lease(test_case: &mut TestCase<Lpn>, value: TheCoin) -> Addr {
@@ -201,24 +210,7 @@ fn integration_with_timealarms() {
         vec![native_cwcoin(500)],
     );
 
-    let resp = test_case
-        .app
-        .execute(
-            Addr::unchecked(ADMIN),
-            wasm_execute(
-                test_case.oracle.clone().unwrap(),
-                &oracle::msg::ExecuteMsg::FeedPrices {
-                    prices: vec![PriceDTO::try_from(
-                        price::total_of(Coin::<Nls>::new(5)).is(Coin::<Usdc>::new(7)),
-                    )
-                    .unwrap()],
-                },
-                vec![cw_coin(10000)],
-            )
-            .unwrap()
-            .into(),
-        )
-        .unwrap();
+    let resp = feed_price(&mut test_case, &Addr::unchecked(ADMIN), 5, 7);
 
     resp.assert_event(&Event::new("wasm").add_attribute("alarm", "success"))
 }
@@ -252,33 +244,12 @@ fn test_config_update() {
             .unwrap();
     }
 
-    fn add_price(test_case: &mut TestCase<Lpn>, addr: &Addr, base: Amount, quote: Amount) {
-        test_case
-            .app
-            .execute(
-                addr.clone(),
-                wasm_execute(
-                    test_case.oracle.clone().unwrap(),
-                    &oracle::msg::ExecuteMsg::FeedPrices {
-                        prices: vec![PriceDTO::try_from(
-                            price::total_of(Coin::<Nls>::new(base)).is(Coin::<Usdc>::new(quote)),
-                        )
-                        .unwrap()],
-                    },
-                    vec![],
-                )
-                .unwrap()
-                .into(),
-            )
-            .expect("Oracle not properly connected!");
-    }
-
     add_feeder(&mut test_case, &feeder1);
     add_feeder(&mut test_case, &feeder2);
     add_feeder(&mut test_case, &feeder3);
 
-    add_price(&mut test_case, &feeder1, base, quote);
-    add_price(&mut test_case, &feeder2, base, quote);
+    feed_price(&mut test_case, &feeder1, base, quote);
+    feed_price(&mut test_case, &feeder2, base, quote);
 
     let price: PriceDTO = test_case
         .app
@@ -286,14 +257,14 @@ fn test_config_update() {
         .query_wasm_smart(
             test_case.oracle.clone().unwrap(),
             &OracleQ::Price {
-                currency: Nls::TICKER.to_owned(),
+                currency: BaseC::TICKER.to_owned(),
             },
         )
         .unwrap();
 
     assert_eq!(
         price,
-        PriceDTO::try_from(price::total_of(Coin::<Nls>::new(base)).is(Coin::<Usdc>::new(quote)),)
+        PriceDTO::try_from(price::total_of(Coin::<BaseC>::new(base)).is(Coin::<Usdc>::new(quote)),)
             .unwrap()
     );
 
@@ -317,7 +288,7 @@ fn test_config_update() {
     let price: Result<PriceDTO, _> = test_case.app.wrap().query_wasm_smart(
         test_case.oracle.clone().unwrap(),
         &OracleQ::Price {
-            currency: Nls::TICKER.to_owned(),
+            currency: BaseC::TICKER.to_owned(),
         },
     );
 
@@ -331,7 +302,7 @@ fn test_swap_path() {
     let msg = oracle::msg::ExecuteMsg::SwapTree {
         tree: TreeStore(
             tr((0, Usdc::TICKER.into()))
-                / (tr((1, Osmo::TICKER.to_string()))
+                / (tr((1, BaseC::TICKER.to_string()))
                     / tr((2, Weth::TICKER.to_string()))
                     / tr((3, Wbtc::TICKER.to_string()))),
         ),
@@ -355,7 +326,7 @@ fn test_swap_path() {
     let expect = vec![
         SwapTarget {
             pool_id: 3,
-            target: Osmo::TICKER.into(),
+            target: BaseC::TICKER.into(),
         },
         SwapTarget {
             pool_id: 2,

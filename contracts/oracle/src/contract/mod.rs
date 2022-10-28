@@ -175,7 +175,7 @@ fn err_as_ok(err: &str) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use currency::{lpn::Usdc, native::Nls};
+    use currency::{lease::Osmo, lpn::Usdc};
     use finance::{currency::Currency, duration::Duration, percent::Percent};
     use sdk::cosmwasm_std::{from_binary, testing::mock_env};
     use trees::tr;
@@ -193,7 +193,7 @@ mod tests {
             Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Nls::TICKER.to_string()))),
+            TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Osmo::TICKER.to_string()))),
             "timealarms".to_string(),
         );
         let (deps, _) = setup_test(msg);
@@ -214,7 +214,7 @@ mod tests {
         let value: Vec<SwapLeg> = from_binary(&res).unwrap();
 
         let expected = vec![SwapLeg {
-            from: Nls::TICKER.into(),
+            from: Osmo::TICKER.into(),
             to: SwapTarget {
                 pool_id: 1,
                 target: Usdc::TICKER.to_owned(),

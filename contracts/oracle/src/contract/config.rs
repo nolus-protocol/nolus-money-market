@@ -48,7 +48,11 @@ pub fn try_configure(
 
 #[cfg(test)]
 mod tests {
-    use currency::{lease::Osmo, lpn::Usdc, native::Nls};
+    use currency::{
+        lease::{Cro, Osmo},
+        lpn::Usdc,
+        native::Nls,
+    };
     use finance::{currency::Currency, duration::Duration, percent::Percent};
     use sdk::{
         cosmwasm_ext::Response,
@@ -75,7 +79,7 @@ mod tests {
             Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Nls::TICKER.to_string()))),
+            TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Cro::TICKER.to_string()))),
             "timealarms".to_string(),
         );
         let (mut deps, _) = setup_test(msg);
@@ -94,7 +98,7 @@ mod tests {
             Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Nls::TICKER.to_string()))),
+            TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Cro::TICKER.to_string()))),
             "timealarms".to_string(),
         );
         let (mut deps, info) = setup_test(msg);
@@ -162,7 +166,7 @@ mod tests {
         let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
         let test_tree = tr((0, Usdc::TICKER.into()))
-            / tr((1, Nls::TICKER.into()))
+            / tr((1, Cro::TICKER.into()))
             / tr((2, Osmo::TICKER.into()));
 
         let msg = ExecuteMsg::SwapTree {
@@ -182,7 +186,7 @@ mod tests {
 
         let mut expected = vec![
             SwapLeg {
-                from: Nls::TICKER.into(),
+                from: Cro::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 1,
                     target: Usdc::TICKER.to_owned(),
@@ -208,7 +212,7 @@ mod tests {
         let info = mock_info("user", &coins(1000, Nls::TICKER));
 
         let msg = ExecuteMsg::SwapTree {
-            tree: TreeStore(tr((0, Usdc::TICKER.into())) / tr((1, Nls::TICKER.into()))),
+            tree: TreeStore(tr((0, Usdc::TICKER.into())) / tr((1, Cro::TICKER.into()))),
         };
 
         execute(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -220,8 +224,8 @@ mod tests {
         let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
         let test_tree = tr((0, Usdc::TICKER.into()))
-            / tr((1, Nls::TICKER.into()))
-            / tr((2, Nls::TICKER.into()));
+            / tr((1, Cro::TICKER.into()))
+            / tr((2, Cro::TICKER.into()));
 
         let msg = ExecuteMsg::SwapTree {
             tree: TreeStore(test_tree),
