@@ -9,7 +9,7 @@ use crate::{
 
 use super::{PriceDTO, WithPrice};
 
-pub fn execute<G, Cmd>(price: PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
+pub fn execute<G, Cmd>(price: &PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
 where
     G: Group,
     Cmd: WithPrice,
@@ -25,13 +25,13 @@ where
     )
 }
 
-struct CVisitor<G, Cmd> {
+struct CVisitor<'a, G, Cmd> {
     group: PhantomData<G>,
-    price_dto: PriceDTO,
+    price_dto: &'a PriceDTO,
     cmd: Cmd,
 }
 
-impl<G, Cmd> AnyVisitor for CVisitor<G, Cmd>
+impl<'a, G, Cmd> AnyVisitor for CVisitor<'a, G, Cmd>
 where
     G: Group,
     Cmd: WithPrice,
@@ -48,25 +48,25 @@ where
         visit_any_on_ticker::<G, _>(
             &self.price_dto.amount_quote.ticker().clone(),
             QuoteCVisitor {
-                base: Coin::<C>::try_from(self.price_dto.amount)
+                base: Coin::<C>::try_from(&self.price_dto.amount)
                     .expect("Got different currency in visitor!"),
-                quote_dto: self.price_dto.amount_quote,
+                quote_dto: &self.price_dto.amount_quote,
                 cmd: self.cmd,
             },
         )
     }
 }
 
-struct QuoteCVisitor<C, Cmd>
+struct QuoteCVisitor<'a, C, Cmd>
 where
     C: Currency,
 {
     base: Coin<C>,
-    quote_dto: CoinDTO,
+    quote_dto: &'a CoinDTO,
     cmd: Cmd,
 }
 
-impl<C, Cmd> AnyVisitor for QuoteCVisitor<C, Cmd>
+impl<'a, C, Cmd> AnyVisitor for QuoteCVisitor<'a, C, Cmd>
 where
     C: Currency,
     Cmd: WithPrice,

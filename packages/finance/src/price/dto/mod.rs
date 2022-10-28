@@ -57,10 +57,7 @@ impl PriceDTO {
     where
         G: Group,
     {
-        with_price::execute::<G, Multiply<G>>(
-            self.to_owned(),
-            Multiply::<G>::with(other.to_owned()),
-        )
+        with_price::execute::<G, Multiply<G>>(self, Multiply::<G>::with(other))
     }
 }
 

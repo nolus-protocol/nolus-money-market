@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use crate::{
-    error::Error,
     currency::{Currency, Group},
+    error::Error,
     price::{
         dto::{with_base::execute, PriceDTO},
         dto::{WithBase, WithPrice},
@@ -10,23 +10,29 @@ use crate::{
     },
 };
 
-pub struct Multiply<G> 
-    where G: Group,
+pub struct Multiply<'a, G>
+where
+    G: Group,
 {
-    p2: PriceDTO,
+    p2: &'a PriceDTO,
     _group: PhantomData<G>,
 }
 
-impl<G> Multiply<G> 
-    where G: Group,
+impl<'a, G> Multiply<'a, G>
+where
+    G: Group,
 {
-    pub fn with(p2: PriceDTO) -> Self {
-        Self { p2, _group: PhantomData }
+    pub fn with(p2: &'a PriceDTO) -> Self {
+        Self {
+            p2,
+            _group: PhantomData,
+        }
     }
 }
 
-impl<G> WithPrice for Multiply<G> 
-    where G: Group,
+impl<'a, G> WithPrice for Multiply<'a, G>
+where
+    G: Group,
 {
     type Output = PriceDTO;
 

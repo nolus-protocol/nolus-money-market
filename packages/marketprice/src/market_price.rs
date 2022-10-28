@@ -80,7 +80,7 @@ impl<'m> PriceFeeds<'m> {
             None => Err(PriceFeedsError::NoPrice()),
         }
     }
-    // TODO remove move price calculation to the finance library
+
     fn calculate_price(resolution_path: &DenomResolutionPath) -> Result<PriceDTO, PriceFeedsError> {
         if let Some((first, rest)) = resolution_path.split_first() {
             rest.iter()

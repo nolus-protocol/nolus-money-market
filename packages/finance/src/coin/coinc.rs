@@ -30,13 +30,13 @@ impl CoinDTO {
     }
 }
 
-impl<C> TryFrom<CoinDTO> for Coin<C>
+impl<C> TryFrom<&CoinDTO> for Coin<C>
 where
     C: Currency,
 {
     type Error = Error;
 
-    fn try_from(coin: CoinDTO) -> Result<Self, Self::Error> {
+    fn try_from(coin: &CoinDTO) -> Result<Self, Self::Error> {
         struct CoinFactory<'a>(&'a CoinDTO);
         impl<'a, CC> SingleVisitor<CC> for CoinFactory<'a>
         where
@@ -49,8 +49,19 @@ where
                 Ok(Self::Output::new(self.0.amount))
             }
         }
-        currency::maybe_visit_on_ticker(&coin.ticker, CoinFactory(&coin))
+        currency::maybe_visit_on_ticker(&coin.ticker, CoinFactory(coin))
             .unwrap_or_else(|_| Err(Error::unexpected_ticker::<_, C>(&coin.ticker)))
+    }
+}
+
+impl<C> TryFrom<CoinDTO> for Coin<C>
+where
+    C: Currency,
+{
+    type Error = Error;
+
+    fn try_from(coin: CoinDTO) -> Result<Self, Self::Error> {
+        Self::try_from(&coin)
     }
 }
 
