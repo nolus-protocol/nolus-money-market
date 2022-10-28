@@ -3,9 +3,16 @@ use serde::{Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    coin::CoinDTO, currency::Currency, error::Error, fractionable::HigherRank, price::Price,
+    coin::CoinDTO,
+    currency::{Currency, Group},
+    error::Error,
+    fractionable::HigherRank,
+    price::Price,
 };
 
+use self::math::Multiply;
+
+pub mod math;
 pub mod with_base;
 pub mod with_price;
 
@@ -44,6 +51,16 @@ impl PriceDTO {
 
     pub const fn quote(&self) -> &CoinDTO {
         &self.amount_quote
+    }
+
+    pub fn multiply<G>(&self, other: &Self) -> Result<PriceDTO, Error>
+    where
+        G: Group,
+    {
+        with_price::execute::<G, Multiply<G>>(
+            self.to_owned(),
+            Multiply::<G>::with(other.to_owned()),
+        )
     }
 }
 
@@ -93,4 +110,23 @@ where
     fn exec<QuoteC>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
         QuoteC: Currency;
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        coin::Coin,
+        test::currency::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
+    };
+
+    use super::*;
+
+    #[test]
+    fn test_multiply_groups() {
+        let p1 = PriceDTO::new(Coin::<Usdc>::new(10).into(), Coin::<Dai>::new(5).into());
+        let p2 = PriceDTO::new(Coin::<Dai>::new(20).into(), Coin::<Nls>::new(5).into());
+
+        p1.multiply::<TestExtraCurrencies>(&p2).unwrap();
+        p1.multiply::<TestCurrencies>(&p2).unwrap_err();
+    }
 }
