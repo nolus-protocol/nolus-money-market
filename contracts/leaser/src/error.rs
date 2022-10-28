@@ -16,6 +16,9 @@ pub enum ContractError {
     Lpp(#[from] lpp::error::ContractError),
 
     #[error("[Leaser] {0}")]
+    Oracle(#[from] oracle::error::ContractError),
+
+    #[error("[Leaser] {0}")]
     Platform(#[from] platform::error::Error),
 
     #[error("[Leaser] Unauthorized")]
@@ -52,4 +55,4 @@ impl ContractError {
     }
 }
 
-pub type ContractResult<T> = core::result::Result<T, ContractError>;
+pub type ContractResult<T> = Result<T, ContractError>;

@@ -37,10 +37,10 @@ impl<C> Coin<C>
 where
     C: Currency,
 {
-    pub fn new(amount: Amount) -> Self {
+    pub const fn new(amount: Amount) -> Self {
         Self {
             amount,
-            ticker: PhantomData::<C>,
+            ticker: PhantomData,
         }
     }
 

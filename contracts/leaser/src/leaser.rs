@@ -1,7 +1,9 @@
 use std::collections::HashSet;
 
+use finance::currency::SymbolOwned;
 use finance::{coin::CoinDTO, liability::Liability, percent::Percent};
 use lpp::stub::lender::LppLenderRef;
+use oracle::stub::OracleRef;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, Deps, DepsMut, MessageInfo, StdResult},
@@ -27,14 +29,23 @@ impl Leaser {
         Loans::get(deps.storage, owner)
     }
 
-    pub fn query_quote(deps: Deps, downpayment: CoinDTO) -> Result<QuoteResponse, ContractError> {
+    pub fn query_quote(
+        deps: Deps,
+        downpayment: CoinDTO,
+        lease_asset: SymbolOwned,
+    ) -> Result<QuoteResponse, ContractError> {
         let config = Config::load(deps.storage)?;
 
         let lpp = LppLenderRef::try_new(config.lpp_addr, &deps.querier, 0xDEADC0DEDEADC0DE)?;
 
+        let oracle = OracleRef::try_from(config.market_price_oracle, &deps.querier)?;
+
         let resp = lpp.execute(
             Quote::new(
+                deps.querier,
                 downpayment,
+                lease_asset,
+                oracle,
                 config.liability,
                 config.lease_interest_rate_margin,
             )?,

@@ -1,12 +1,14 @@
 use std::collections::HashSet;
 
+use trees::tr;
+
 use currency::{
     lease::{Osmo, Wbtc, Weth},
     lpn::Usdc,
 };
 use finance::{
-    coin::{Amount, Coin},
-    currency::Currency as _,
+    coin::Coin,
+    currency::Currency,
     percent::Percent,
     price::{self, dto::PriceDTO},
 };
@@ -16,6 +18,7 @@ use oracle::{
     state::supported_pairs::{SwapTarget, TreeStore},
 };
 use platform::coin_legacy;
+use sdk::cosmwasm_std::coin;
 use sdk::{
     cosmwasm_std::{wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
     cw_multi_test::{AppResponse, Executor},
@@ -24,8 +27,6 @@ use sdk::{
 use crate::common::{
     leaser_wrapper::LeaserWrapper, native_cwcoin, test_case::TestCase, AppExt, ADMIN, USER,
 };
-
-use trees::tr;
 
 type Lpn = Usdc;
 type TheCoin = Coin<Lpn>;
@@ -44,7 +45,13 @@ fn create_test_case() -> TestCase<Lpn> {
         &Addr::unchecked(ADMIN),
         vec![cw_coin(1_000_000_000_000_000_000_000_000)],
     );
-    test_case.init_lpp_with_funds(None, 5_000_000_000_000_000_000_000_000_000.into());
+    test_case.init_lpp_with_funds(
+        None,
+        vec![coin(
+            5_000_000_000_000_000_000_000_000_000,
+            Lpn::BANK_SYMBOL,
+        )],
+    );
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -54,12 +61,34 @@ fn create_test_case() -> TestCase<Lpn> {
     test_case
 }
 
-fn feed_price(
+pub fn add_feeder(test_case: &mut TestCase<Lpn>, addr: impl Into<String>) {
+    test_case
+        .app
+        .execute(
+            Addr::unchecked(ADMIN),
+            wasm_execute(
+                test_case.oracle.clone().unwrap(),
+                &oracle::msg::ExecuteMsg::RegisterFeeder {
+                    feeder_address: addr.into(),
+                },
+                vec![],
+            )
+            .unwrap()
+            .into(),
+        )
+        .unwrap();
+}
+
+pub fn feed_price<C1, C2>(
     test_case: &mut TestCase<Lpn>,
     addr: &Addr,
-    base: Amount,
-    quote: Amount,
-) -> AppResponse {
+    base: Coin<C1>,
+    quote: Coin<C2>,
+) -> AppResponse
+where
+    C1: Currency,
+    C2: Currency,
+{
     test_case
         .app
         .execute(
@@ -67,10 +96,7 @@ fn feed_price(
             wasm_execute(
                 test_case.oracle.clone().unwrap(),
                 &oracle::msg::ExecuteMsg::FeedPrices {
-                    prices: vec![PriceDTO::try_from(
-                        price::total_of(Coin::<BaseC>::new(base)).is(Coin::<Usdc>::new(quote)),
-                    )
-                    .unwrap()],
+                    prices: vec![PriceDTO::try_from(price::total_of(base).is(quote)).unwrap()],
                 },
                 vec![],
             )
@@ -125,7 +151,12 @@ fn internal_test_integration_setup_test() {
         )
         .unwrap();
 
-    let _ = feed_price(&mut test_case, &Addr::unchecked(ADMIN), 5, 7);
+    let _ = feed_price::<BaseC, Usdc>(
+        &mut test_case,
+        &Addr::unchecked(ADMIN),
+        Coin::new(5),
+        Coin::new(7),
+    );
 }
 
 fn open_lease(test_case: &mut TestCase<Lpn>, value: TheCoin) -> Addr {
@@ -210,7 +241,12 @@ fn integration_with_timealarms() {
         vec![native_cwcoin(500)],
     );
 
-    let resp = feed_price(&mut test_case, &Addr::unchecked(ADMIN), 5, 7);
+    let resp = feed_price::<BaseC, Usdc>(
+        &mut test_case,
+        &Addr::unchecked(ADMIN),
+        Coin::new(5),
+        Coin::new(7),
+    );
 
     resp.assert_event(&Event::new("wasm").add_attribute("alarm", "success"))
 }
@@ -226,30 +262,12 @@ fn test_config_update() {
     let base = 2;
     let quote = 10;
 
-    fn add_feeder(test_case: &mut TestCase<Lpn>, addr: impl Into<String>) {
-        test_case
-            .app
-            .execute(
-                Addr::unchecked(ADMIN),
-                wasm_execute(
-                    test_case.oracle.clone().unwrap(),
-                    &oracle::msg::ExecuteMsg::RegisterFeeder {
-                        feeder_address: addr.into(),
-                    },
-                    vec![],
-                )
-                .unwrap()
-                .into(),
-            )
-            .unwrap();
-    }
-
     add_feeder(&mut test_case, &feeder1);
     add_feeder(&mut test_case, &feeder2);
     add_feeder(&mut test_case, &feeder3);
 
-    feed_price(&mut test_case, &feeder1, base, quote);
-    feed_price(&mut test_case, &feeder2, base, quote);
+    feed_price::<BaseC, Usdc>(&mut test_case, &feeder1, Coin::new(base), Coin::new(quote));
+    feed_price::<BaseC, Usdc>(&mut test_case, &feeder2, Coin::new(base), Coin::new(quote));
 
     let price: PriceDTO = test_case
         .app
@@ -257,14 +275,14 @@ fn test_config_update() {
         .query_wasm_smart(
             test_case.oracle.clone().unwrap(),
             &OracleQ::Price {
-                currency: BaseC::TICKER.to_owned(),
+                currency: BaseC::TICKER.into(),
             },
         )
         .unwrap();
 
     assert_eq!(
         price,
-        PriceDTO::try_from(price::total_of(Coin::<BaseC>::new(base)).is(Coin::<Usdc>::new(quote)),)
+        PriceDTO::try_from(price::total_of(Coin::<BaseC>::new(base)).is(Coin::<Usdc>::new(quote)))
             .unwrap()
     );
 
@@ -288,7 +306,7 @@ fn test_config_update() {
     let price: Result<PriceDTO, _> = test_case.app.wrap().query_wasm_smart(
         test_case.oracle.clone().unwrap(),
         &OracleQ::Price {
-            currency: BaseC::TICKER.to_owned(),
+            currency: BaseC::TICKER.into(),
         },
     );
 

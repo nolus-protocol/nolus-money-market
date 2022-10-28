@@ -1,9 +1,6 @@
 use std::marker::PhantomData;
 
-use finance::{
-    coin::Coin,
-    currency::{Currency, Symbol},
-};
+use finance::currency::{Currency, Symbol};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Empty, Uint64},
     cw_multi_test::{next_block, Executor},
@@ -94,18 +91,30 @@ where
         self
     }
 
-    pub fn init(&mut self, user: &Addr, init_funds: Vec<CwCoin>) -> &mut Self {
+    pub fn init(&mut self, user: &Addr, mut init_funds: Vec<CwCoin>) -> &mut Self {
         self.lease_code_id = Some(LeaseWrapper::default().store(&mut self.app));
         // Bonus: set some funds on the user for future proposals
         let admin = Addr::unchecked(ADMIN);
+
         if !init_funds.is_empty() && user != &admin {
+            let coin_sort_fn = |coin: &CwCoin| (coin.denom.clone(), coin.amount.u128());
+
+            init_funds.sort_by_key(coin_sort_fn);
+
             self.app
                 .send_tokens(admin, user.clone(), &init_funds)
                 .unwrap();
 
             assert_eq!(
+                {
+                    let mut funds = self.app.wrap().query_all_balances(user).unwrap();
+
+                    funds.sort_by_key(coin_sort_fn);
+
+                    funds
+                },
                 init_funds,
-                self.app.wrap().query_all_balances(user).unwrap()
+                "Initial funds are not the same!"
             );
         }
 
@@ -149,13 +158,13 @@ where
     }
 
     pub fn init_lpp(&mut self, custom_wrapper: OptionalContractWrapper) -> &mut Self {
-        self.init_lpp_with_funds(custom_wrapper, 400.into())
+        self.init_lpp_with_funds(custom_wrapper, vec![CwCoin::new(400, Lpn::BANK_SYMBOL)])
     }
 
     pub fn init_lpp_with_funds(
         &mut self,
         custom_wrapper: OptionalContractWrapper,
-        init_balance: Coin<Lpn>,
+        init_balance: Vec<CwCoin>,
     ) -> &mut Self
     where
         Lpn: Currency,
@@ -166,7 +175,7 @@ where
         };
         self.lpp_addr = Some(
             mocked_lpp
-                .instantiate(
+                .instantiate::<Lpn>(
                     &mut self.app,
                     Uint64::new(self.lease_code_id.unwrap()),
                     init_balance,

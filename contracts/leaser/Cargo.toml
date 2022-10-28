@@ -16,6 +16,8 @@ contract = []
 [dependencies]
 lease = { path = "../lease", default-features = false }
 lpp = { path = "../lpp", default-features = false }
+oracle = { path = "../oracle", default-features = false, features = ["stub"] }
+currency = { path = "../../packages/currency" }
 finance = { path = "../../packages/finance" }
 platform = { path = "../../packages/platform" }
 sdk = { path = "../../packages/sdk", features = ["contract"] }

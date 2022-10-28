@@ -1,12 +1,13 @@
 use currency::lpn::Usdc;
+
 use finance::{coin::Coin, currency::Currency, percent::Percent};
 use lpp::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
-use platform::coin_legacy;
+
 use sdk::{
-    cosmwasm_std::{to_binary, Addr, Binary, Deps, Env, Uint64},
+    cosmwasm_std::{to_binary, Addr, Binary, Coin as CwCoin, Deps, Env, Uint64},
     cw_multi_test::Executor,
 };
 
@@ -38,7 +39,7 @@ impl LppWrapper {
         self,
         app: &mut MockApp,
         lease_code_id: Uint64,
-        init_balance: Coin<Lpn>,
+        init_balance: Vec<CwCoin>,
     ) -> (Addr, u64)
     where
         Lpn: Currency,
@@ -49,15 +50,16 @@ impl LppWrapper {
             lease_code_id,
         };
 
-        let funds = if init_balance.is_zero() {
-            vec![]
-        } else {
-            vec![coin_legacy::to_cosmwasm(init_balance)]
-        };
-
         (
-            app.instantiate_contract(lpp_id, Addr::unchecked(ADMIN), &msg, &funds, "lpp", None)
-                .unwrap(),
+            app.instantiate_contract(
+                lpp_id,
+                Addr::unchecked(ADMIN),
+                &msg,
+                &init_balance,
+                "lpp",
+                None,
+            )
+            .unwrap(),
             lpp_id,
         )
     }
