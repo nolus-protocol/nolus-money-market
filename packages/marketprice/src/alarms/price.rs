@@ -140,12 +140,14 @@ pub mod tests {
     impl Currency for BTH {
         const TICKER: SymbolStatic = "BTH";
         const BANK_SYMBOL: SymbolStatic = "ibc/bth";
+        const DEX_SYMBOL: SymbolStatic = "ibc/dex_bth";
     }
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
     pub struct ETH;
     impl Currency for ETH {
         const TICKER: SymbolStatic = "ETH";
         const BANK_SYMBOL: SymbolStatic = "ibc/eth";
+        const DEX_SYMBOL: SymbolStatic = "ibc/dex_eth";
     }
 
     #[test]
@@ -199,6 +201,7 @@ pub mod tests {
         impl Currency for OtherCoin {
             const TICKER: SymbolStatic = "OtherCoin";
             const BANK_SYMBOL: SymbolStatic = "ibc/other_coin";
+            const DEX_SYMBOL: SymbolStatic = "ibc/dex_other_coin";
         }
 
         let hooks = PriceHooks::new("hooks", "hooks_sequence");

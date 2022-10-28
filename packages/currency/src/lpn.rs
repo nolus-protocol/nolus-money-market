@@ -13,6 +13,10 @@ impl Currency for Usdc {
     /// full ibc route: transfer/channel-0/transfer/channel-208/uusdc
     const BANK_SYMBOL: SymbolStatic =
         "ibc/7FBDBEEEBA9C50C4BCDF7BF438EAB99E64360833D240B32655C96E319559E911";
+
+    /// full ibc route: transfer/channel-208/uusdc
+    const DEX_SYMBOL: SymbolStatic =
+        "ibc/D189335C6E4A68B513C10AB227BF1C1D38C746766278BA3EEB4FB14124F1D858";
 }
 
 pub struct Lpns {}

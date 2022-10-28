@@ -12,8 +12,14 @@ pub type SymbolOwned = String;
 // satisfy trait bounds with regards of the lifetimes
 // Foe example, https://stackoverflow.com/questions/70774093/generic-type-that-implements-deserializeowned
 pub trait Currency: Copy + Ord + Default + Debug + 'static {
+    /// Identifier of the currency
     const TICKER: SymbolStatic;
+
+    /// Symbol at the Nolus network used by the Cosmos-SDK modules, mainly the Banking one
     const BANK_SYMBOL: SymbolStatic;
+
+    /// Symbol at the Dex network
+    const DEX_SYMBOL: SymbolStatic;
 }
 
 pub fn equal<C1, C2>() -> bool

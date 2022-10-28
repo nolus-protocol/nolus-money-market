@@ -22,6 +22,7 @@ pub mod currency {
     impl Currency for Usdc {
         const TICKER: SymbolStatic = "uusdc";
         const BANK_SYMBOL: SymbolStatic = "ibc/uusdc";
+        const DEX_SYMBOL: SymbolStatic = "ibc/dex_uusdc";
     }
 
     #[derive(
@@ -31,6 +32,7 @@ pub mod currency {
     impl Currency for Nls {
         const TICKER: SymbolStatic = "unls";
         const BANK_SYMBOL: SymbolStatic = "ibc/unls";
+        const DEX_SYMBOL: SymbolStatic = "ibc/dex_unls";
     }
 
     #[derive(
@@ -40,6 +42,7 @@ pub mod currency {
     impl Currency for Dai {
         const TICKER: SymbolStatic = "udai";
         const BANK_SYMBOL: SymbolStatic = "ibc/udai";
+        const DEX_SYMBOL: SymbolStatic = "ibc/dex_udai";
     }
 
     pub struct TestCurrencies {}
