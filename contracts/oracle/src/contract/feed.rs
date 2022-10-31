@@ -104,14 +104,14 @@ where
     }
 
     let config = Config::load(storage)?;
-    let oracle = Feeds::<OracleBase>::with(config.clone());
+    let oracle = Feeds::<OracleBase>::with(config);
 
     // Store the new price feed
     oracle.feed_prices(storage, block_time, &sender_raw, prices)?;
 
     let mut batch = Batch::default();
     batch.schedule_execute_wasm_reply_error::<_, Nls>(
-        &config.timealarms_contract,
+        &oracle.config.timealarms_contract,
         timealarms::msg::ExecuteMsg::Notify(),
         None,
         1,
@@ -121,7 +121,7 @@ where
     let hooks_currencies = MarketAlarms::get_hooks_currencies(storage)?;
 
     if !hooks_currencies.is_empty() {
-        let parameters = Feeders::query_config(storage, &config, block_time)?;
+        let parameters = Feeders::query_config(storage, &oracle.config, block_time)?;
         // re-calculate the price of these currencies
         let updated_prices: Vec<PriceDTO> =
             oracle.get_prices(storage, parameters, hooks_currencies)?;

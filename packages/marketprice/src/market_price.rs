@@ -98,29 +98,27 @@ impl<'m> PriceFeeds<'m> {
         storage: &mut dyn Storage,
         current_block_time: Timestamp,
         sender_raw: &Addr,
-        prices: Vec<PriceDTO>,
+        mut prices: Vec<PriceDTO>,
         price_feed_period: Duration,
     ) -> Result<(), PriceFeedsError> {
-        for price_dto in prices {
-            let update_market_price = |old: Option<PriceFeed>| -> StdResult<PriceFeed> {
-                let new_feed =
-                    Observation::new(sender_raw.clone(), current_block_time, price_dto.clone());
-                match old {
-                    Some(mut feed) => {
-                        feed.update(new_feed, price_feed_period);
-                        Ok(feed)
-                    }
-                    None => Ok(PriceFeed::new(new_feed)),
-                }
-            };
-
+        while let Some(price_dto) = prices.pop() {
             self.0.update(
                 storage,
                 (
                     price_dto.base().ticker().to_string(),
                     price_dto.quote().ticker().to_string(),
                 ),
-                update_market_price,
+                |old: Option<PriceFeed>| -> StdResult<PriceFeed> {
+                    let new_feed =
+                        Observation::new(sender_raw.clone(), current_block_time, price_dto);
+
+                    if let Some(mut feed) = old {
+                        feed.update(new_feed, price_feed_period);
+                        Ok(feed)
+                    } else {
+                        Ok(PriceFeed::new(new_feed))
+                    }
+                },
             )?;
         }
 

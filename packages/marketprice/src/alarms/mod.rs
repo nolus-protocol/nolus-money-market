@@ -41,7 +41,7 @@ impl Alarm {
         Self { below, above }
     }
 
-    pub fn should_fire(&self, current_price: PriceDTO) -> bool {
+    pub fn should_fire(&self, current_price: &PriceDTO) -> bool {
         current_price.lt(&self.below)
             || (self.above.is_some() && current_price.gt(self.above.as_ref().unwrap()))
     }

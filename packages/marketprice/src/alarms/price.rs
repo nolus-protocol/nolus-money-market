@@ -74,7 +74,7 @@ impl<'m> PriceHooks<'m> {
     ) -> Result<(), AlarmError> {
         let affected_contracts: Vec<_> = self.get_affected(storage, updated_prices)?;
 
-        for (addr, alarm, _) in affected_contracts {
+        for (addr, alarm) in affected_contracts {
             let next_id = self.id_seq.next(storage)?;
 
             batch
@@ -105,16 +105,15 @@ impl<'m> PriceHooks<'m> {
         &self,
         storage: &mut dyn Storage,
         updated_prices: Vec<PriceDTO>,
-    ) -> StdResult<Vec<(Addr, Alarm, PriceDTO)>> {
-        let mut affected: Vec<(Addr, Alarm, PriceDTO)> = vec![];
+    ) -> StdResult<Vec<(Addr, Alarm)>> {
+        let mut affected: Vec<(Addr, Alarm)> = vec![];
         for price in updated_prices {
             let mut events: Vec<_> = self
                 .hooks
                 .prefix(())
                 .range(storage, None, None, Order::Ascending)
                 .filter_map(|item| item.ok())
-                .filter(|(_, alarm)| alarm.should_fire(price.clone()))
-                .map(|(addr, alarm)| (addr, alarm, price.clone()))
+                .filter(|(_, alarm)| alarm.should_fire(&price))
                 .collect();
 
             affected.append(&mut events);
