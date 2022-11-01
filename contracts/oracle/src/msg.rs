@@ -52,6 +52,8 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     // returns the contract configuration
     Config {},
+    // returns the supported currencies tree
+    SwapTree {},
     // returns all registered feeders
     Feeders {},
     // check if an address belongs to a registered feeder
@@ -75,6 +77,12 @@ pub struct ConfigResponse {
     pub price_feed_period: Duration,
     pub expected_feeders: Percent,
     pub owner: Addr,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+pub struct SwapTreeResponse {
+    #[schemars(with = "Vec<SubTree>")]
+    pub tree: TreeStore,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

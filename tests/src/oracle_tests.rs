@@ -354,3 +354,27 @@ fn test_swap_path() {
 
     assert_eq!(resp, expect);
 }
+
+#[test]
+fn test_query_swap_tree() {
+    let mut test_case = create_test_case();
+    let admin = Addr::unchecked(ADMIN);
+    let tree = TreeStore(
+        tr((0, Usdc::TICKER.into()))
+            / (tr((1, BaseC::TICKER.to_string()))
+                / tr((2, Weth::TICKER.to_string()))
+                / tr((3, Wbtc::TICKER.to_string()))),
+    );
+    let msg = oracle::msg::ExecuteMsg::SwapTree { tree: tree.clone() };
+    test_case
+        .app
+        .execute_contract(admin, test_case.oracle.clone().unwrap(), &msg, &[])
+        .unwrap();
+    let resp: oracle::msg::SwapTreeResponse = test_case
+        .app
+        .wrap()
+        .query_wasm_smart(test_case.oracle.unwrap(), &OracleQ::SwapTree {})
+        .unwrap();
+
+    assert_eq!(tree, resp.tree);
+}

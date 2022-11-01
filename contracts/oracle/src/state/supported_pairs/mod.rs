@@ -228,6 +228,10 @@ where
 
         legs
     }
+
+    pub fn query_swap_tree(self) -> TreeStore {
+        self.tree
+    }
 }
 
 #[cfg(test)]

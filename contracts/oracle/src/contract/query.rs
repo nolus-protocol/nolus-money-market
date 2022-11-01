@@ -8,7 +8,7 @@ use marketprice::error::PriceFeedsError;
 use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
 
 use crate::{
-    msg::{PricesResponse, QueryMsg},
+    msg::{PricesResponse, QueryMsg, SwapTreeResponse},
     state::{supported_pairs::SupportedPairs, Config},
     ContractError,
 };
@@ -71,9 +71,12 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                 &SupportedPairs::<OracleBase>::load(self.deps.storage)?
                     .load_swap_path(&from, &to)?,
             )?),
+            QueryMsg::SwapTree {} => Ok(to_binary(&SwapTreeResponse {
+                tree: SupportedPairs::<OracleBase>::load(self.deps.storage)?.query_swap_tree(),
+            })?),
             _ => {
-                unreachable!()
-            } // should be done already
+                unreachable!() // should be done already
+            }
         }?;
         Ok(res)
     }
