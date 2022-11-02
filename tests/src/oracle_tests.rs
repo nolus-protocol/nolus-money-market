@@ -18,7 +18,7 @@ use oracle::{
     state::supported_pairs::{SwapTarget, TreeStore},
 };
 use platform::coin_legacy;
-use sdk::cosmwasm_std::coin;
+use sdk::{cosmwasm_std::coin, schemars::_serde_json::from_str};
 use sdk::{
     cosmwasm_std::{wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
     cw_multi_test::{AppResponse, Executor},
@@ -377,4 +377,36 @@ fn test_query_swap_tree() {
         .unwrap();
 
     assert_eq!(tree, resp.tree);
+}
+
+#[test]
+#[should_panic]
+fn test_zero_price_dto() {
+    let mut test_case = create_test_case();
+
+    let feeder1 = Addr::unchecked("feeder1");
+
+    add_feeder(&mut test_case, &feeder1);
+
+    // can be created only via deserialization
+    let price: PriceDTO = from_str(
+        r#"{"amount":{"amount":0,"ticker":"OSMO"},"amount_quote":{"amount":1,"ticker":"USDC"}}"#,
+    )
+    .unwrap();
+
+    test_case
+        .app
+        .execute(
+            feeder1,
+            wasm_execute(
+                test_case.oracle.clone().unwrap(),
+                &oracle::msg::ExecuteMsg::FeedPrices {
+                    prices: vec![price],
+                },
+                vec![],
+            )
+            .unwrap()
+            .into(),
+        )
+        .unwrap();
 }

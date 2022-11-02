@@ -1,6 +1,9 @@
 use thiserror::Error;
 
-use finance::currency::{Currency, SymbolOwned};
+use finance::{
+    currency::{Currency, SymbolOwned},
+    price::dto::PriceDTO,
+};
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use sdk::cosmwasm_std::{Addr, StdError};
 
@@ -32,6 +35,9 @@ pub enum ContractError {
 
     #[error("[Oracle] Invalid denom pair ({0}, {1})")]
     InvalidDenomPair(SymbolOwned, SymbolOwned),
+
+    #[error("[Oracle] Invalid price {0:?}")]
+    InvalidPriceDTO(PriceDTO),
 
     #[error("[Oracle] Invalid base currency ({0} != {1})")]
     InvalidBaseCurrency(SymbolOwned, SymbolOwned),

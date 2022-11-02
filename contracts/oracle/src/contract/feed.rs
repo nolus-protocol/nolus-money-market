@@ -64,14 +64,21 @@ where
         prices: Vec<PriceDTO>,
     ) -> Result<(), ContractError> {
         let supported_pairs = SupportedPairs::<OracleBase>::load(storage)?.query_supported_pairs();
+
+        // validate prices
+        for price in prices.iter() {
+            if price.base().amount() == 0 || price.quote().amount() == 0 {
+                return Err(ContractError::InvalidPriceDTO(price.to_owned()));
+            }
+        }
+
         let filtered: Vec<PriceDTO> = prices
-            .iter()
+            .into_iter()
             .filter(|price| {
                 supported_pairs.iter().any(|leg| {
                     price.base().ticker() == &leg.from && price.quote().ticker() == &leg.to.target
                 })
             })
-            .map(|p| p.to_owned())
             .collect();
         if filtered.is_empty() {
             return Err(ContractError::UnsupportedDenomPairs {});
