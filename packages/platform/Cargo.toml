@@ -13,8 +13,8 @@ finance = { path = "../../packages/finance" }
 sdk = { path = "../../packages/sdk", features = ["cosmos"] }
 
 prost = "0.11.0"
-serde = { version = "1.0.145", default-features = false }
-thiserror = "1.0.37"
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 finance = { path = "../../packages/finance", features = ["testing"] }

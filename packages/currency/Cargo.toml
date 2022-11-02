@@ -12,8 +12,8 @@ testing = []
 finance = { path = "../../packages/finance" }
 sdk = { path = "../../packages/sdk", features = ["schema"] }
 
-thiserror = "1"
-serde = { version = "1", default-features = false, features = ["derive"] }
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 finance = { path = "../../packages/finance", features = ["testing"] }

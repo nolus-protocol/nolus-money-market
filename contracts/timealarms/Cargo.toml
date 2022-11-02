@@ -27,8 +27,8 @@ time-oracle = { path = "../../packages/time-oracle" }
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
 
-serde = { version = "1", default-features = false, features = ["derive"] }
-thiserror = "1"
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 platform = { path = "../../packages/platform", features = ["testing"] }

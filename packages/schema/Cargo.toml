@@ -6,4 +6,4 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-thiserror = "1"
+thiserror = { workspace = true }

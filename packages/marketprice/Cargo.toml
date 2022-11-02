@@ -11,8 +11,8 @@ finance = { path = "../../packages/finance" }
 platform = { path = "../../packages/platform" }
 sdk = { path = "../../packages/sdk", features = ["storage", "schema"] }
 
-thiserror = "1"
-serde = { version = "1", default-features = false, features = ["derive"] }
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 currency = { path = "../../packages/currency", features = ["testing"] }

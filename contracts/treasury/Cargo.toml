@@ -25,8 +25,8 @@ sdk = { path = "../../packages/sdk", features = ["contract"] }
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
 
-thiserror = "1"
-serde = { version = "1", default-features = false, features = ["derive"] }
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 semver = "1"
 
 [dev-dependencies]

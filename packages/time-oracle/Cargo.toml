@@ -9,5 +9,5 @@ license.workspace = true
 platform = { path = "../../packages/platform" }
 sdk = { path = "../../packages/sdk", features = ["storage"] }
 
-serde = { version = "1", default-features = false, features = ["derive"] }
-thiserror = "1"
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }

@@ -34,8 +34,8 @@ sdk = { path = "../../packages/sdk", features = ["contract"] }
 cosmwasm-std = { workspace = true }
 
 enum_dispatch = "0.3.8"
-thiserror = "1"
-serde = { version = "1", default-features = false, features = ["derive"] }
+thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 time_alarms = { path = "../timealarms", package = "timealarms", default-features = false, features = ["testing"] }
