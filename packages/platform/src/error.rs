@@ -22,6 +22,9 @@ pub enum Error {
 
     #[error("[Platform] [Std] {0}")]
     CosmWasmError(#[from] StdError),
+
+    #[error("[Lease] [Deserialization] {0}")]
+    Deserialization(#[from] serde_json_wasm::de::Error),
 }
 
 impl Error {
