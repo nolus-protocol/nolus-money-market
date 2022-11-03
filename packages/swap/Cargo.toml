@@ -14,5 +14,5 @@ platform = { path = "../platform", default-features = false }
 sdk = { path = "../../packages/sdk", features = ["cosmos"] }
 
 osmosis-std = { version = "0.12", default-features = false }
-thiserror = "1.0.37"
+thiserror = { workspace = true }
 
