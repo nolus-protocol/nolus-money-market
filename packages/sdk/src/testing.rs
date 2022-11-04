@@ -9,17 +9,15 @@ use cosmwasm_std::{
     testing::{MockApi, MockStorage},
     CustomQuery, Empty,
 };
-use cw_multi_test::{
-    BankKeeper, DistributionKeeper, FailingModule, Module, StakeKeeper, Wasm, WasmKeeper,
-};
+use cw_multi_test::{BankKeeper, DistributionKeeper, FailingModule, StakeKeeper, WasmKeeper};
 pub use cw_multi_test::{ContractWrapper, Executor};
 #[cfg(feature = "neutron")]
 use neutron_sdk::bindings::msg::NeutronMsg as CustomMsg;
 use serde::de::DeserializeOwned;
 
-pub type App<Exec = CustomMsg, Query = Empty, Sudo = Empty, Api = MockApi> = cw_multi_test::App<
+pub type App<Exec = CustomMsg, Query = Empty, Sudo = Empty> = cw_multi_test::App<
     BankKeeper,
-    Api,
+    MockApi,
     MockStorage,
     FailingModule<Exec, Query, Sudo>,
     WasmKeeper<Exec, Query>,
@@ -42,8 +40,6 @@ where
     Exec: Debug + PartialEq + JsonSchema + DeserializeOwned + Clone + 'static,
     Query: Debug + CustomQuery + DeserializeOwned + 'static,
     Sudo: Debug,
-    FailingModule<Exec, Query, Sudo>: Module<ExecT = Exec, QueryT = Query, SudoT = Sudo>,
-    WasmKeeper<Exec, Query>: Wasm<Exec, Query>,
 {
     AppBuilder::new()
         .with_custom(FailingModule::<Exec, Query, Sudo>::new())

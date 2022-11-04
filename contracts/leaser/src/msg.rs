@@ -9,7 +9,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::{ContractError, state::config::Config};
+use crate::{state::config::Config, ContractError};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {

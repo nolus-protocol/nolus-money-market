@@ -5,9 +5,8 @@ use serde::{Deserialize, Serialize};
 use finance::{coin::Coin, currency::Currency, duration::Duration};
 use sdk::{
     cosmwasm_std::{
-        testing::{mock_env, MockApi},
-        to_binary, Addr, Api, Binary, BlockInfo, CanonicalAddr, Coin as CwCoin, Deps, Empty, Env,
-        RecoverPubkeyError, StdResult, Timestamp, VerificationError,
+        testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin as CwCoin, Deps, Empty, Env,
+        StdResult, Timestamp,
     },
     neutron_sdk::bindings::msg::NeutronMsg,
     testing::{self, new_app, App},
@@ -90,88 +89,11 @@ struct MockResponse {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 struct MockQueryMsg {}
 
-#[derive(Default)]
-pub struct ApiWithNullAddresses<A>(A)
-where
-    A: Api;
-
-impl<A> From<A> for ApiWithNullAddresses<A>
-where
-    A: Api,
-{
-    fn from(api: A) -> Self {
-        Self(api)
-    }
-}
-
-impl<A> Api for ApiWithNullAddresses<A>
-where
-    A: Api,
-{
-    fn addr_validate(&self, human: &str) -> StdResult<Addr> {
-        if human.is_empty() {
-            Ok(Addr::unchecked(String::default()))
-        } else {
-            self.0.addr_validate(human)
-        }
-    }
-
-    fn addr_canonicalize(&self, human: &str) -> StdResult<CanonicalAddr> {
-        self.0.addr_canonicalize(human)
-    }
-
-    fn addr_humanize(&self, canonical: &CanonicalAddr) -> StdResult<Addr> {
-        self.0.addr_humanize(canonical)
-    }
-
-    fn secp256k1_verify(
-        &self,
-        message_hash: &[u8],
-        signature: &[u8],
-        public_key: &[u8],
-    ) -> Result<bool, VerificationError> {
-        self.0.secp256k1_verify(message_hash, signature, public_key)
-    }
-
-    fn secp256k1_recover_pubkey(
-        &self,
-        message_hash: &[u8],
-        signature: &[u8],
-        recovery_param: u8,
-    ) -> Result<Vec<u8>, RecoverPubkeyError> {
-        self.0
-            .secp256k1_recover_pubkey(message_hash, signature, recovery_param)
-    }
-
-    fn ed25519_verify(
-        &self,
-        message: &[u8],
-        signature: &[u8],
-        public_key: &[u8],
-    ) -> Result<bool, VerificationError> {
-        self.0.ed25519_verify(message, signature, public_key)
-    }
-
-    fn ed25519_batch_verify(
-        &self,
-        messages: &[&[u8]],
-        signatures: &[&[u8]],
-        public_keys: &[&[u8]],
-    ) -> Result<bool, VerificationError> {
-        self.0
-            .ed25519_batch_verify(messages, signatures, public_keys)
-    }
-
-    fn debug(&self, message: &str) {
-        self.0.debug(message)
-    }
-}
-
 fn mock_query(_deps: Deps, _env: Env, _msg: MockQueryMsg) -> StdResult<Binary> {
     to_binary(&MockResponse {})
 }
 
-pub type MockApp = App<NeutronMsg, Empty, Empty, ApiWithNullAddresses<MockApi>>;
+pub type MockApp = App<NeutronMsg, Empty, Empty>;
 
 pub fn mock_app(init_funds: &[CwCoin]) -> MockApp {
     let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);
@@ -186,7 +108,6 @@ pub fn mock_app(init_funds: &[CwCoin]) -> MockApp {
     funds.append(&mut init_funds.to_vec());
 
     new_app()
-        .with_api(ApiWithNullAddresses::from(MockApi::default()))
         .with_block(mock_start_block)
         .build(|router, _, storage| {
             router
