@@ -8,6 +8,7 @@ use finance::{
     coin::serde::{deserialize as deserialize_currency, serialize as serialize_currency},
     currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned},
 };
+use swap::SwapTarget;
 
 use sdk::{
     cosmwasm_std::{StdError, StdResult, Storage},
@@ -24,19 +25,10 @@ mod serde;
 pub type ResolutionPath = Vec<SymbolOwned>;
 pub type CurrencyPair = (SymbolOwned, SymbolOwned);
 
-// TODO: move to finance/currency
-pub type PoolId = u64;
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SwapLeg {
     pub from: SymbolOwned,
     pub to: SwapTarget,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
-pub struct SwapTarget {
-    pub pool_id: PoolId,
-    pub target: SymbolOwned,
 }
 
 type Node = TreeNode<Leg>;

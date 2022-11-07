@@ -178,12 +178,13 @@ mod tests {
     use currency::{lease::Osmo, lpn::Usdc};
     use finance::{currency::Currency, duration::Duration, percent::Percent};
     use sdk::cosmwasm_std::{from_binary, testing::mock_env};
+    use swap::SwapTarget;
     use trees::tr;
 
     use crate::{
         contract::query,
         msg::{ConfigResponse, QueryMsg},
-        state::supported_pairs::{SwapLeg, SwapTarget, TreeStore},
+        state::supported_pairs::{SwapLeg, TreeStore},
         tests::{dummy_instantiate_msg, setup_test, CREATOR},
     };
 

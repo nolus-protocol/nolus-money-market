@@ -22,6 +22,7 @@ testing = []
 timealarms = { path = "../timealarms", default-features = false }
 currency = { path = "../../packages/currency" }
 finance = { path = "../../packages/finance" }
+swap = { path = "../../packages/swap" }
 marketprice = { path = "../../packages/marketprice" }
 platform = { path = "../../packages/platform" }
 sdk = { path = "../../packages/sdk", features = ["contract"] }

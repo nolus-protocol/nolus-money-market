@@ -62,12 +62,13 @@ mod tests {
             DepsMut, MessageInfo,
         },
     };
+    use swap::SwapTarget;
     use trees::tr;
 
     use crate::{
         contract::{execute, query},
         msg::{ConfigResponse, ExecuteMsg, QueryMsg},
-        state::supported_pairs::{SwapLeg, SwapTarget, TreeStore},
+        state::supported_pairs::{SwapLeg, TreeStore},
         tests::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test},
         ContractError,
     };

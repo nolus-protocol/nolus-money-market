@@ -9,7 +9,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::state::supported_pairs::{SubTree, SwapLeg, SwapTarget, TreeStore};
+use crate::state::supported_pairs::{SubTree, SwapLeg, TreeStore};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -67,8 +67,6 @@ pub enum QueryMsg {
 }
 
 pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;
-
-pub type SwapPathResponse = Vec<SwapTarget>;
 
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

@@ -9,7 +9,7 @@ use trees::{tr, Tree};
 
 use finance::currency::SymbolOwned;
 
-use super::PoolId;
+use swap::PoolId;
 
 pub type Leg = (PoolId, SymbolOwned);
 

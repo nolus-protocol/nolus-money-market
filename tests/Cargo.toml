@@ -18,6 +18,7 @@ timealarms = { path = "../contracts/timealarms", default-features = false, featu
 treasury = { path = "../contracts/treasury", default-features = false, features = ["contract"] }
 currency = { path = "../packages/currency" }
 finance = { path = "../packages/finance", features = ["testing"] }
+swap = { path = "../packages/swap" }
 marketprice = { path = "../packages/marketprice" }
 platform = { path = "../packages/platform", features = ["testing"] }
 sdk = { path = "../packages/sdk", features = ["cosmos", "neutron", "testing"] }

@@ -8,11 +8,10 @@ license.workspace = true
 [dependencies]
 finance = { path = "../finance", default-features = false }
 currency = { path = "../currency", default-features = false }
-# TODO move swap related types to this crate and consume them from the oracle
-oracle = { path = "../../contracts/oracle", default-features = false }
 platform = { path = "../platform", default-features = false }
 sdk = { path = "../../packages/sdk", features = ["cosmos"] }
 
 osmosis-std = { version = "0.12", default-features = false }
 thiserror = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 

@@ -3,23 +3,33 @@ use finance::{
     coin::CoinDTO,
     currency::{self, AnyVisitor, Currency, Symbol, SymbolOwned},
 };
-use oracle::{msg::SwapPathResponse, state::supported_pairs::SwapTarget};
 use osmosis_std::types::{
     cosmos::base::v1beta1::Coin,
     osmosis::gamm::v1beta1::{MsgSwapExactAmountIn, SwapAmountInRoute},
 };
 use platform::ica::Batch;
 use sdk::cosmwasm_std::Addr;
+use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
 
 pub mod error;
 
+pub type PoolId = u64;
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub struct SwapTarget {
+    pub pool_id: PoolId,
+    pub target: SymbolOwned,
+}
+
+pub type SwapPath = Vec<SwapTarget>;
+
 pub fn exact_amount_in(
     batch: &mut Batch,
     sender: &Addr,
     token_in: &CoinDTO,
-    swap_path: &SwapPathResponse,
+    swap_path: &SwapPath,
 ) -> Result<()> {
     const MSG_TYPE: &str = "/osmosis.gamm.v1beta1.MsgSwapExactAmountIn";
     // TODO bring the token balances, weights and swapFee-s from the DEX pools
@@ -87,9 +97,9 @@ fn to_dex_symbol(ticker: Symbol) -> Result<SymbolOwned> {
 
 #[cfg(test)]
 mod test {
+    use super::SwapTarget;
     use currency::lpn::Usdc;
     use finance::currency::{Currency, SymbolStatic};
-    use oracle::state::supported_pairs::SwapTarget;
     use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 
     use crate::error::Error;

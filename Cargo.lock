@@ -544,6 +544,7 @@ dependencies = [
  "rewards_dispatcher",
  "sdk",
  "serde",
+ "swap",
  "timealarms",
  "treasury",
  "trees",
@@ -727,6 +728,7 @@ dependencies = [
  "schema",
  "sdk",
  "serde",
+ "swap",
  "thiserror",
  "time-oracle",
  "timealarms",
@@ -1156,10 +1158,10 @@ version = "0.1.0"
 dependencies = [
  "currency",
  "finance",
- "oracle",
  "osmosis-std",
  "platform",
  "sdk",
+ "serde",
  "thiserror",
 ]
 

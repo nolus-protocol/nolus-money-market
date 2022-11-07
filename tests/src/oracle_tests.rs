@@ -13,16 +13,14 @@ use finance::{
     price::{self, dto::PriceDTO},
 };
 use leaser::msg::QueryMsg;
-use oracle::{
-    msg::QueryMsg as OracleQ,
-    state::supported_pairs::{SwapTarget, TreeStore},
-};
+use oracle::{msg::QueryMsg as OracleQ, state::supported_pairs::TreeStore};
 use platform::coin_legacy;
 use sdk::{cosmwasm_std::coin, schemars::_serde_json::from_str};
 use sdk::{
     cosmwasm_std::{wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
     cw_multi_test::{AppResponse, Executor},
 };
+use swap::SwapTarget;
 
 use crate::common::{
     leaser_wrapper::LeaserWrapper, native_cwcoin, test_case::TestCase, AppExt, ADMIN, USER,
@@ -329,7 +327,7 @@ fn test_swap_path() {
         .app
         .execute_contract(admin, test_case.oracle.clone().unwrap(), &msg, &[])
         .unwrap();
-    let resp: oracle::msg::SwapPathResponse = test_case
+    let resp: swap::SwapPath = test_case
         .app
         .wrap()
         .query_wasm_smart(
