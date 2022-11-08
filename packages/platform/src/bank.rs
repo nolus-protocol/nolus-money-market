@@ -1,7 +1,7 @@
 use std::result::Result as StdResult;
 
 use finance::{
-    coin::Coin,
+    coin::{Coin, WithCoin},
     currency::{Currency, Group},
     error::Error as FinanceError,
 };
@@ -9,7 +9,7 @@ use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, Env, QuerierWrapper};
 
 use crate::{
     batch::Batch,
-    coin_legacy::{from_cosmwasm_any_impl, from_cosmwasm_impl, to_cosmwasm_impl, CoinVisitor},
+    coin_legacy::{from_cosmwasm_any_impl, from_cosmwasm_impl, to_cosmwasm_impl},
     error::{Error, Result},
 };
 
@@ -49,16 +49,16 @@ where
     .and_then(from_cosmwasm_impl)
 }
 
-pub fn received_any<G, V>(cw_amount: Vec<CwCoin>, visitor: V) -> StdResult<V::Output, V::Error>
+pub fn received_any<G, V>(cw_amount: Vec<CwCoin>, cmd: V) -> StdResult<V::Output, V::Error>
 where
-    V: CoinVisitor,
+    V: WithCoin,
     G: Group,
     FinanceError: Into<V::Error>,
     Error: Into<V::Error>,
 {
     received_one(cw_amount, Error::NoFundsAny, Error::UnexpectedFundsAny)
         .map_err(Into::into)
-        .and_then(|coin| from_cosmwasm_any_impl::<G, _>(coin, visitor))
+        .and_then(|coin| from_cosmwasm_any_impl::<G, _>(coin, cmd))
 }
 
 pub struct BankView<'a> {

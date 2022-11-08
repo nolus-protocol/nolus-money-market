@@ -52,6 +52,7 @@ where
 }
 
 #[derive(Default)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
 pub struct Batch {
     msgs: Vec<ProtobufAny>,
 }

@@ -1,14 +1,15 @@
 use serde::{Deserialize, Serialize};
+use std::result::Result as StdResult;
 
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::Amount,
-    currency::{self, Currency, SingleVisitor, SymbolOwned},
+    currency::{self, AnyVisitor, Currency, Group, SingleVisitor, SymbolOwned},
     error::Error,
 };
 
-use super::Coin;
+use super::{Coin, WithCoin};
 
 /// A type designed to be used in the init, execute and query incoming messages.
 /// It is a non-currency-parameterized version of finance::coin::Coin<C> with
@@ -27,6 +28,31 @@ impl CoinDTO {
 
     pub const fn ticker(&self) -> &SymbolOwned {
         &self.ticker
+    }
+
+    pub fn with_coin<G, V>(&self, cmd: V) -> StdResult<V::Output, V::Error>
+    where
+        G: Group,
+        V: WithCoin,
+        Error: Into<V::Error>,
+    {
+        struct CoinTransformerAny<'a, V>(&'a CoinDTO, V);
+
+        impl<'a, V> AnyVisitor for CoinTransformerAny<'a, V>
+        where
+            V: WithCoin,
+        {
+            type Output = V::Output;
+            type Error = V::Error;
+
+            fn on<C>(self) -> StdResult<Self::Output, Self::Error>
+            where
+                C: Currency,
+            {
+                self.1.on::<C>(self.0.amount().into())
+            }
+        }
+        currency::visit_any_on_ticker::<G, _>(&self.ticker, CoinTransformerAny(self, cmd))
     }
 }
 

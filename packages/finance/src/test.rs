@@ -60,12 +60,16 @@ pub mod currency {
             }
         }
 
-        fn maybe_visit_on_bank_symbol<V>(_: Symbol, _: V) -> MaybeAnyVisitResult<V>
+        fn maybe_visit_on_bank_symbol<V>(symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
         where
             Self: Sized,
             V: AnyVisitor,
         {
-            unreachable!()
+            match symbol {
+                Usdc::BANK_SYMBOL => Ok(visitor.on::<Usdc>()),
+                Nls::BANK_SYMBOL => Ok(visitor.on::<Nls>()),
+                _ => Err(visitor),
+            }
         }
     }
 
@@ -153,6 +157,34 @@ pub mod visitor {
 
         fn on(self) -> Result<Self::Output, Self::Error> {
             unreachable!();
+        }
+    }
+}
+
+pub mod coin {
+    use crate::{
+        coin::{Amount, Coin, WithCoin},
+        currency::{equal, Currency},
+        error::Error,
+    };
+
+    pub struct Expect<CExp>(pub Coin<CExp>)
+    where
+        CExp: Currency;
+
+    impl<CExp> WithCoin for Expect<CExp>
+    where
+        CExp: Currency,
+    {
+        type Output = bool;
+
+        type Error = Error;
+
+        fn on<C>(&self, coin: Coin<C>) -> Result<Self::Output, Self::Error>
+        where
+            C: Currency,
+        {
+            Ok(equal::<CExp, C>() && Amount::from(coin) == self.0.into())
         }
     }
 }

@@ -4,7 +4,7 @@ use serde::Serialize;
 
 use currency::payment::PaymentGroup;
 use finance::{
-    coin::{Coin, CoinDTO},
+    coin::{Coin, CoinDTO, WithCoin},
     currency::Currency,
     percent::Percent,
 };
@@ -13,7 +13,7 @@ use lpp::stub::{
     LppBatch,
 };
 use market_price_oracle::{convert, stub::OracleRef};
-use platform::{bank, batch::Batch, coin_legacy::CoinVisitor};
+use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
 use crate::{api::NewLeaseForm, error::ContractError};
@@ -79,7 +79,7 @@ struct DownpaymentHandler<'a, Lpn> {
     _lpn: PhantomData<Lpn>,
     querier: &'a QuerierWrapper<'a>,
 }
-impl<'a, Lpn> CoinVisitor for DownpaymentHandler<'a, Lpn>
+impl<'a, Lpn> WithCoin for DownpaymentHandler<'a, Lpn>
 where
     Lpn: Currency,
 {

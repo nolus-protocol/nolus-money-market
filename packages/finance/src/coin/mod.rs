@@ -2,6 +2,7 @@ use std::{
     fmt::{Debug, Display, Formatter},
     marker::PhantomData,
     ops::{Add, AddAssign, Div, Mul, Sub, SubAssign},
+    result::Result as StdResult,
 };
 
 use ::serde::{Deserialize, Serialize};
@@ -170,6 +171,15 @@ where
     fn from(coin: Coin<C>) -> Self {
         coin.amount
     }
+}
+
+pub trait WithCoin {
+    type Output;
+    type Error;
+
+    fn on<C>(&self, coin: Coin<C>) -> StdResult<Self::Output, Self::Error>
+    where
+        C: Currency;
 }
 
 #[cfg(test)]

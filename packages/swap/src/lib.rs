@@ -1,14 +1,11 @@
 use ::currency::payment::PaymentGroup;
 use finance::{
     coin::CoinDTO,
-    currency::{self, AnyVisitor, Currency, Symbol, SymbolOwned},
+    currency::{self, Symbol, SymbolOwned},
 };
-use osmosis_std::types::{
-    cosmos::base::v1beta1::Coin,
-    osmosis::gamm::v1beta1::{MsgSwapExactAmountIn, SwapAmountInRoute},
-};
-use platform::ica::Batch;
-use sdk::cosmwasm_std::Addr;
+use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountIn, SwapAmountInRoute};
+use platform::{coin_legacy, denom::dex::DexMapper, ica::Batch};
+use sdk::cosmwasm_std::{Addr, Coin as CwCoin};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{Error, Result};
@@ -16,6 +13,7 @@ use crate::error::{Error, Result};
 pub mod error;
 
 pub type PoolId = u64;
+type SwapGroup = PaymentGroup;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SwapTarget {
@@ -38,13 +36,13 @@ pub fn exact_amount_in(
     // Then apply the parameterized maximum slippage to get the minimum amount.
     // For the first version, we accept whatever price impact and slippage.
     const MIN_OUT_AMOUNT: &str = "0";
-    let routes = into_route(swap_path)?;
-    let token_in = Some(into_coin(token_in)?);
+    let routes = to_route(swap_path)?;
+    let token_in = Some(to_cwcoin(token_in)?);
     let token_out_min_amount = MIN_OUT_AMOUNT.into();
     let msg = MsgSwapExactAmountIn {
         sender: sender.into(),
         routes,
-        token_in,
+        token_in: token_in.map(Into::into),
         token_out_min_amount,
     };
 
@@ -52,13 +50,13 @@ pub fn exact_amount_in(
     Ok(())
 }
 
-fn into_route(swap_path: &[SwapTarget]) -> Result<Vec<SwapAmountInRoute>> {
+fn to_route(swap_path: &[SwapTarget]) -> Result<Vec<SwapAmountInRoute>> {
     swap_path
         .iter()
         .map(|swap_target| {
             to_dex_symbol(&swap_target.target).map(|dex_symbol| SwapTarget {
                 pool_id: swap_target.pool_id,
-                target: dex_symbol,
+                target: dex_symbol.into(),
             })
         })
         .map(|maybe_swap_target| {
@@ -70,37 +68,24 @@ fn into_route(swap_path: &[SwapTarget]) -> Result<Vec<SwapAmountInRoute>> {
         .collect()
 }
 
-fn into_coin(token: &CoinDTO) -> Result<Coin> {
-    Ok(Coin {
-        denom: to_dex_symbol(token.ticker())?,
-        amount: token.amount().to_string(),
-    })
+fn to_cwcoin(token: &CoinDTO) -> Result<CwCoin> {
+    coin_legacy::to_cosmwasm_on_network::<SwapGroup, DexMapper>(token).map_err(Error::from)
 }
 
-fn to_dex_symbol(ticker: Symbol) -> Result<SymbolOwned> {
-    type SwapGroup = PaymentGroup;
-
-    struct ToDEXSymbol {}
-    impl AnyVisitor for ToDEXSymbol {
-        type Output = SymbolOwned;
-        type Error = Error;
-
-        fn on<C>(self) -> Result<Self::Output>
-        where
-            C: Currency,
-        {
-            Ok(C::DEX_SYMBOL.into())
-        }
-    }
-    currency::visit_any_on_ticker::<SwapGroup, _>(ticker, ToDEXSymbol {})
+fn to_dex_symbol(ticker: Symbol) -> Result<Symbol> {
+    currency::visit_any_on_ticker::<SwapGroup, _>(ticker, DexMapper {}).map_err(Error::from)
 }
 
 #[cfg(test)]
 mod test {
     use super::SwapTarget;
     use currency::lpn::Usdc;
-    use finance::currency::{Currency, SymbolStatic};
+    use finance::{
+        coin::Coin,
+        currency::{Currency, SymbolStatic},
+    };
     use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
+    use sdk::cosmwasm_std::Coin as CwCoin;
 
     use crate::error::Error;
 
@@ -110,7 +95,7 @@ mod test {
     fn to_dex_symbol() {
         type Currency = Usdc;
         assert_eq!(
-            Ok(Currency::DEX_SYMBOL.into()),
+            Ok(Currency::DEX_SYMBOL),
             super::to_dex_symbol(Currency::TICKER)
         );
     }
@@ -119,8 +104,17 @@ mod test {
     fn to_dex_symbol_err() {
         assert!(matches!(
             super::to_dex_symbol(INVALID_TICKER),
-            Err(Error::Finance(_))
+            Err(Error::Platform(_))
         ));
+    }
+
+    #[test]
+    fn to_cwcoin() {
+        let coin: Coin<Usdc> = 3541415.into();
+        assert_eq!(
+            CwCoin::new(coin.into(), Usdc::DEX_SYMBOL),
+            super::to_cwcoin(&coin.into()).unwrap()
+        );
     }
 
     #[test]
@@ -133,7 +127,7 @@ mod test {
             pool_id: 2,
             token_out_denom: Usdc::DEX_SYMBOL.into(),
         }];
-        assert_eq!(Ok(expected), super::into_route(&path));
+        assert_eq!(Ok(expected), super::to_route(&path));
     }
 
     #[test]
@@ -142,6 +136,6 @@ mod test {
             pool_id: 2,
             target: INVALID_TICKER.into(),
         }];
-        assert!(matches!(super::into_route(&path), Err(Error::Finance(_))));
+        assert!(matches!(super::to_route(&path), Err(Error::Platform(_))));
     }
 }

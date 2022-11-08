@@ -1,7 +1,7 @@
-use std::result::Result as StdResult;
+use std::{marker::PhantomData, result::Result as StdResult};
 
 use finance::{
-    coin::Coin,
+    coin::{Coin, CoinDTO, WithCoin},
     currency::{
         visit_any_on_bank_symbol, visit_on_bank_symbol, AnyVisitor, Currency, Group, SingleVisitor,
     },
@@ -9,13 +9,28 @@ use finance::{
 };
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
-use crate::error::{Error, Result};
+use crate::{
+    denom::{local::BankMapper, CurrencyMapper},
+    error::{Error, Result},
+};
 
 pub(crate) fn from_cosmwasm_impl<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
 where
     C: Currency,
 {
     visit_on_bank_symbol(&coin.denom, CoinTransformer(&coin))
+}
+
+pub(crate) fn from_cosmwasm_any_impl<G, V>(
+    coin: CosmWasmCoin,
+    v: V,
+) -> StdResult<V::Output, V::Error>
+where
+    G: Group,
+    V: WithCoin,
+    FinanceError: Into<V::Error>,
+{
+    visit_any_on_bank_symbol::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
 }
 
 #[cfg(feature = "testing")]
@@ -30,28 +45,38 @@ pub(crate) fn to_cosmwasm_impl<C>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: Currency,
 {
-    CosmWasmCoin::new(coin.into(), C::BANK_SYMBOL)
+    to_cosmwasm_on_network_impl::<C, BankMapper>(coin)
 }
 
-pub(crate) fn from_cosmwasm_any_impl<G, V>(
-    coin: CosmWasmCoin,
-    v: V,
-) -> StdResult<V::Output, V::Error>
+pub fn to_cosmwasm_on_network<'a, G, CM>(coin_dto: &CoinDTO) -> Result<CosmWasmCoin>
 where
     G: Group,
-    V: CoinVisitor,
-    FinanceError: Into<V::Error>,
+    CM: CurrencyMapper<'a>,
 {
-    visit_any_on_bank_symbol::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
+    struct CoinTransformer<CM>(PhantomData<CM>);
+    impl<'ci, CM> WithCoin for CoinTransformer<CM>
+    where
+        CM: CurrencyMapper<'ci>,
+    {
+        type Output = CosmWasmCoin;
+        type Error = Error;
+
+        fn on<C>(&self, coin: Coin<C>) -> Result<Self::Output>
+        where
+            C: Currency,
+        {
+            Ok(to_cosmwasm_on_network_impl::<C, CM>(coin))
+        }
+    }
+    coin_dto.with_coin::<G, _>(CoinTransformer(PhantomData::<CM>))
 }
 
-pub trait CoinVisitor {
-    type Output;
-    type Error;
-
-    fn on<C>(&self, coin: Coin<C>) -> StdResult<Self::Output, Self::Error>
-    where
-        C: Currency;
+fn to_cosmwasm_on_network_impl<'a, C, CM>(coin: Coin<C>) -> CosmWasmCoin
+where
+    C: Currency,
+    CM: CurrencyMapper<'a>,
+{
+    CosmWasmCoin::new(coin.into(), CM::map::<C>())
 }
 
 struct CoinTransformer<'a>(&'a CosmWasmCoin);
@@ -73,7 +98,7 @@ struct CoinTransformerAny<'a, V>(&'a CosmWasmCoin, V);
 
 impl<'a, V> AnyVisitor for CoinTransformerAny<'a, V>
 where
-    V: CoinVisitor,
+    V: WithCoin,
 {
     type Output = V::Output;
     type Error = V::Error;
@@ -100,7 +125,10 @@ where
 mod test {
     use finance::{
         currency::Currency,
-        test::currency::{Nls, Usdc},
+        test::{
+            coin,
+            currency::{Nls, TestCurrencies, Usdc},
+        },
     };
     use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
@@ -139,6 +167,50 @@ mod test {
             Err(Error::Finance(
                 finance::error::Error::unexpected_bank_symbol::<_, Usdc>(Nls::BANK_SYMBOL,)
             )),
+        );
+    }
+
+    #[test]
+    fn from_cosmwasm_any_impl() {
+        let amount = 42;
+        type TheCurrency = Usdc;
+        assert_eq!(
+            Ok(true),
+            super::from_cosmwasm_any_impl::<TestCurrencies, _>(
+                CosmWasmCoin::new(amount, TheCurrency::BANK_SYMBOL),
+                coin::Expect(Coin::<TheCurrency>::from(amount))
+            )
+        );
+    }
+
+    #[test]
+    fn from_cosmwasm_any_impl_err() {
+        let amount = 42;
+        type TheCurrency = Usdc;
+        type AnotherCurrency = Nls;
+        assert_eq!(
+            Ok(false),
+            super::from_cosmwasm_any_impl::<TestCurrencies, _>(
+                CosmWasmCoin::new(amount + 1, TheCurrency::BANK_SYMBOL),
+                coin::Expect(Coin::<TheCurrency>::from(amount))
+            )
+        );
+        assert_eq!(
+            Ok(false),
+            super::from_cosmwasm_any_impl::<TestCurrencies, _>(
+                CosmWasmCoin::new(amount, TheCurrency::BANK_SYMBOL),
+                coin::Expect(Coin::<AnotherCurrency>::from(amount))
+            )
+        );
+        assert_eq!(
+            Err(finance::error::Error::not_in_currency_group::<
+                _,
+                TestCurrencies,
+            >(TheCurrency::DEX_SYMBOL)),
+            super::from_cosmwasm_any_impl::<TestCurrencies, _>(
+                CosmWasmCoin::new(amount, TheCurrency::DEX_SYMBOL),
+                coin::Expect(Coin::<TheCurrency>::from(amount))
+            )
         );
     }
 
