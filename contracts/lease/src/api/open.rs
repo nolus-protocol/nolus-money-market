@@ -5,6 +5,8 @@ use serde::Deserialize;
 use finance::{currency::SymbolOwned, duration::Duration, liability::Liability, percent::Percent};
 use sdk::schemars::{self, JsonSchema};
 
+use super::dex::ConnectionParams;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct NewLeaseForm {
@@ -19,8 +21,8 @@ pub struct NewLeaseForm {
     pub time_alarms: String,
     /// The oracle contract that sends market price alerts to the lease
     pub market_price_oracle: String,
-    // /// Dex connection parameters
-    // pub dex: ConnectionParams,
+    /// Dex connection parameters
+    pub dex: ConnectionParams,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

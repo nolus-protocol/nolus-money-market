@@ -1,3 +1,4 @@
+use lease::api::dex::ConnectionParams;
 use serde::{Deserialize, Serialize};
 
 use finance::{
@@ -24,6 +25,7 @@ pub struct InstantiateMsg {
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
     pub profit: Addr,
+    pub dex: ConnectionParams,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

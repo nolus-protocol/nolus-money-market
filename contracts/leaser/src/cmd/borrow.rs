@@ -53,6 +53,7 @@ impl Borrow {
             },
             time_alarms: config.time_alarms.into_string(),
             market_price_oracle: config.market_price_oracle.into_string(),
+            dex: config.dex,
         }
     }
 }

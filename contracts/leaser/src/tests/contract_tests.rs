@@ -1,3 +1,4 @@
+use lease::api::dex::{ConnectionParams, Ics20Channel};
 use serde::{Deserialize, Serialize};
 
 use finance::{
@@ -44,6 +45,13 @@ fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::Ins
         time_alarms: Addr::unchecked("timealarms"),
         market_price_oracle: Addr::unchecked("oracle"),
         profit: Addr::unchecked("profit"),
+        dex: ConnectionParams {
+            connection_id: "connection-0".into(),
+            transfer_channel: Ics20Channel {
+                local_endpoint: "channel-0".into(),
+                remote_endpoint: "channel-2048".into(),
+            },
+        },
     }
 }
 

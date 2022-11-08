@@ -82,6 +82,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
     {
         let customer = self.api.addr_validate(&self.form.customer)?;
         let liability = self.form.liability;
+        // TODO move the validity check immediatelly after the form is received
         liability.invariant_held()?;
 
         let loan = Loan::new(
@@ -125,6 +126,7 @@ mod test {
         SystemResult, Timestamp, WasmQuery,
     };
 
+    use crate::api::dex::{ConnectionParams, Ics20Channel};
     use crate::api::{LoanForm, NewLeaseForm};
     use crate::{error::ContractError, reply_id::ReplyId};
 
@@ -153,6 +155,13 @@ mod test {
             },
             time_alarms: "timealarms".into(),
             market_price_oracle: ORACLE_ADDR.into(),
+            dex: ConnectionParams {
+                connection_id: "conn-0".into(),
+                transfer_channel: Ics20Channel {
+                    local_endpoint: "channel-5".into(),
+                    remote_endpoint: "channel-1341".into(),
+                },
+            },
         };
         let api = MockApi::default();
 

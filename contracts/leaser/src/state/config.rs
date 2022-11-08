@@ -1,3 +1,4 @@
+use lease::api::dex::ConnectionParams;
 use serde::{Deserialize, Serialize};
 
 use finance::{liability::Liability, percent::Percent};
@@ -23,6 +24,7 @@ pub struct Config {
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
     pub profit: Addr,
+    pub dex: ConnectionParams,
 }
 
 impl Config {
@@ -39,6 +41,7 @@ impl Config {
             time_alarms: msg.time_alarms,
             market_price_oracle: msg.market_price_oracle,
             profit: msg.profit,
+            dex: msg.dex,
         })
     }
 

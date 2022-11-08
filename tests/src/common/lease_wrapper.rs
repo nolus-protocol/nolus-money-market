@@ -2,7 +2,10 @@ use finance::{
     coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
 };
 use lease::{
-    api::{ExecuteMsg, LoanForm, NewLeaseForm, StateQuery},
+    api::{
+        dex::{ConnectionParams, Ics20Channel},
+        ExecuteMsg, LoanForm, NewLeaseForm, StateQuery,
+    },
     contract::{execute, instantiate, query, reply},
     error::ContractError,
 };
@@ -35,6 +38,8 @@ pub struct LeaseWrapperConfig {
     pub annual_margin_interest: Percent,
     pub interest_due_period: Duration,
     pub grace_period: Duration,
+    // Dex
+    pub dex: ConnectionParams,
 }
 
 impl Default for LeaseWrapperConfig {
@@ -52,6 +57,14 @@ impl Default for LeaseWrapperConfig {
             annual_margin_interest: Percent::from_percent(0), // 3.1%
             interest_due_period: Duration::from_secs(100), // 90 days TODO use a crate for daytime calculations
             grace_period: Duration::from_secs(10), // 10 days TODO use a crate for daytime calculations
+
+            dex: ConnectionParams {
+                connection_id: "connection-0".into(),
+                transfer_channel: Ics20Channel {
+                    local_endpoint: "channel-0".into(),
+                    remote_endpoint: "channel-2048".into(),
+                },
+            },
         }
     }
 }
@@ -127,6 +140,7 @@ impl LeaseWrapper {
             },
             time_alarms: addresses.time_alarms.into_string(),
             market_price_oracle: addresses.oracle.into_string(),
+            dex: config.dex,
         }
     }
 }

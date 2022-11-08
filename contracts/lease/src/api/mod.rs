@@ -10,6 +10,8 @@ pub use self::{
     query::{StateQuery, StateResponse},
 };
 
+pub mod dex;
+// TODO consider defining the modules public instead of just selected items
 mod open;
 mod query;
 
