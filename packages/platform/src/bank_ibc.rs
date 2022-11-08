@@ -2,7 +2,10 @@ use std::marker::PhantomData;
 
 use crate::{
     coin_legacy::{self},
-    denom::{CurrencyMapper, DexChainCurrencyMapper, LocalChainCurrencyMapper},
+    denom::{
+        dex::DexMapper, local::BankMapper, CurrencyMapper, DexChainCurrencyMapper,
+        LocalChainCurrencyMapper,
+    },
     error::{Error, Result},
     ica::Batch as IcaBatch,
 };
@@ -10,6 +13,10 @@ use finance::{coin::CoinDTO, currency::Group};
 use sdk::cosmwasm_std::{Addr, Coin as CwCoin, IbcMsg, IbcTimeout, Timestamp};
 
 use crate::batch::Batch;
+
+pub type LocalChainSender<'c> = Sender<'c, BankMapper>;
+
+pub type DexChainSender<'c> = Sender<'c, DexMapper>;
 
 pub struct Sender<'c, CM> {
     channel: &'c str,
@@ -33,12 +40,12 @@ where
         }
     }
 
-    pub fn send<G>(&mut self, amount: CoinDTO) -> Result<()>
+    pub fn send<G>(&mut self, amount: &CoinDTO) -> Result<()>
     where
         G: Group,
     {
         self.amounts
-            .push(coin_legacy::to_cosmwasm_on_network::<G, CM>(&amount)?);
+            .push(coin_legacy::to_cosmwasm_on_network::<G, CM>(amount)?);
         Ok(())
     }
 
@@ -117,8 +124,8 @@ mod test {
 
         let coin1: Coin<Dai> = 234214.into();
         let coin2: Coin<Usdc> = 234214.into();
-        sender.send::<TestExtraCurrencies>(coin1.into()).unwrap();
-        sender.send::<TestExtraCurrencies>(coin2.into()).unwrap();
+        sender.send::<TestExtraCurrencies>(&coin1.into()).unwrap();
+        sender.send::<TestExtraCurrencies>(&coin2.into()).unwrap();
 
         assert_eq!(Batch::from(sender), {
             let mut batch = Batch::default();
@@ -147,8 +154,8 @@ mod test {
 
         let coin1: Coin<Nls> = 63.into();
         let coin2: Coin<Usdc> = 2.into();
-        sender.send::<TestExtraCurrencies>(coin1.into()).unwrap();
-        sender.send::<TestExtraCurrencies>(coin2.into()).unwrap();
+        sender.send::<TestExtraCurrencies>(&coin1.into()).unwrap();
+        sender.send::<TestExtraCurrencies>(&coin2.into()).unwrap();
 
         assert_eq!(IcaBatch::try_from(sender), {
             let mut batch = IcaBatch::default();

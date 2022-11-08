@@ -16,10 +16,13 @@ use self::impl_::OpenAckVersion;
 /// It is unique for a lease and allows the support of multiple accounts per lease
 const ICA_ACCOUNT_ID: &str = "0";
 
-pub fn register_account(connection: String) -> LocalBatch {
+pub fn register_account<C>(connection: C) -> LocalBatch
+where
+    C: Into<String>,
+{
     let mut batch = LocalBatch::default();
     batch.schedule_execute_no_reply(NeutronMsg::register_interchain_account(
-        connection,
+        connection.into(),
         ICA_ACCOUNT_ID.into(),
     ));
     batch
@@ -30,19 +33,20 @@ pub fn parse_register_response(api: &dyn Api, response: &str) -> Result<Addr> {
     api.addr_validate(&open_ack.address).map_err(Error::from)
 }
 
-pub fn submit_transaction<M>(
-    connection: String,
+pub fn submit_transaction<C, M>(
+    connection: C,
     messages: Batch,
     memo: M,
     timeout: Duration,
 ) -> LocalBatch
 where
+    C: Into<String>,
     M: Into<String>,
 {
     let mut batch = LocalBatch::default();
 
     batch.schedule_execute_no_reply(NeutronMsg::submit_tx(
-        connection,
+        connection.into(),
         ICA_ACCOUNT_ID.into(),
         messages.msgs,
         memo.into(),
