@@ -920,7 +920,6 @@ dependencies = [
 name = "rewards_dispatcher"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "cosmwasm-std",
  "currency",
  "finance",

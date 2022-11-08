@@ -17,6 +17,7 @@ neutron-sdk = { git = "https://github.com/neutron-org/neutron-contracts", rev = 
 serde = { version = "^1.0.147", default-features = false }
 serde-json-wasm = { version = "^0.4", default-features = false }
 thiserror = { version = "=1.0.34", default-features = false }
+anyhow = "^1"
 
 [profile.release.package.treasury]
 codegen-units = 1

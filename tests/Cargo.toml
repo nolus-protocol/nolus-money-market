@@ -7,7 +7,7 @@ license.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 rewards_dispatcher = { path = "../contracts/dispatcher", default-features = false, features = ["contract"] }
 lease = { path = "../contracts/lease", default-features = false, features = ["contract"] }
 leaser = { path = "../contracts/leaser", default-features = false, features = ["contract"] }
@@ -23,6 +23,6 @@ marketprice = { path = "../packages/marketprice" }
 platform = { path = "../packages/platform", features = ["testing"] }
 sdk = { path = "../packages/sdk", features = ["cosmos", "neutron", "testing"] }
 
-anyhow = "1"
+anyhow = { workspace = true }
 serde = { version = "1", default-features = false, features = ["derive"] }
 trees = "0.4.2"

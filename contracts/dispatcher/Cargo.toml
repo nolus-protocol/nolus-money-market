@@ -33,7 +33,6 @@ serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-anyhow = "1"
 schema = { path = "../../packages/schema" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
