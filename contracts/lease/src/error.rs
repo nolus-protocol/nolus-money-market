@@ -8,6 +8,7 @@ use market_price_oracle::error::ContractError as OracleError;
 use platform::error::Error as PlatformError;
 use profit::error::ContractError as ProfitError;
 use sdk::cosmwasm_std::StdError;
+use swap::error::Error as SwapError;
 use time_alarms::error::ContractError as TimeAlarmsError;
 
 #[derive(Error, Debug, PartialEq)]
@@ -35,6 +36,9 @@ pub enum ContractError {
 
     #[error("[Lease] {0}")]
     ProfitError(#[from] ProfitError),
+
+    #[error("[Lease] {0}")]
+    SwapError(#[from] SwapError),
 
     #[error("[Lease] No downpayment sent")]
     NoDownpaymentError(),

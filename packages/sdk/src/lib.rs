@@ -13,7 +13,7 @@ pub use cw_storage_plus;
 #[cfg(feature = "neutron")]
 pub use neutron_sdk;
 
-#[cfg(feature = "testing")]
+#[cfg(all(not(target_arch = "wasm32"), feature = "testing"))]
 pub mod testing;
 
 pub mod cosmwasm_ext {

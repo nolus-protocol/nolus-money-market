@@ -11,7 +11,12 @@ license.workspace = true
 contract = ["schema", "storage", "dep:cw2"]
 schema = ["dep:cosmwasm-schema"]
 storage = ["dep:cosmwasm-storage", "dep:cw-storage-plus"]
-testing = ["dep:cw-multi-test", "dep:cosmwasm-schema", "dep:serde"]
+testing = [
+    "dep:cw-multi-test",
+    "dep:cosmwasm-schema",
+    "dep:serde",
+    "dep:anyhow",
+]
 cosmos_ibc = ["cosmos", "cosmwasm-std/ibc3"]
 cosmos = []
 neutron = ["cosmwasm-std/stargate", "dep:neutron-sdk"]
@@ -28,3 +33,4 @@ serde = { workspace = true, optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 cw-multi-test = { workspace = true, optional = true }
+anyhow = { workspace = true, optional = true }

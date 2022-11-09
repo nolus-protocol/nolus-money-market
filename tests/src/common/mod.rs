@@ -93,7 +93,7 @@ fn mock_query(_deps: Deps, _env: Env, _msg: MockQueryMsg) -> StdResult<Binary> {
     to_binary(&MockResponse {})
 }
 
-pub type MockApp = App<NeutronMsg, Empty, Empty>;
+pub type MockApp = App<NeutronMsg, Empty>;
 
 pub fn mock_app(init_funds: &[CwCoin]) -> MockApp {
     let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);

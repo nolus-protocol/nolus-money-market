@@ -31,30 +31,28 @@ use super::{Controller, Response};
 
 #[derive(Serialize, Deserialize)]
 pub struct Active {
-    pub(super) lease: LeaseDTO,
+    lease: LeaseDTO,
 }
 
 impl Active {
     pub fn new(
-        deps: &DepsMut,
+        cw_deps: &DepsMut,
         env: &Env,
         form: NewLeaseForm,
         downpayment: CoinDTO,
         loan: OpenLoanRespResult,
-        lpp: LppLenderRef,
-        oracle: OracleRef,
+        amount: CoinDTO,
+        deps: (LppLenderRef, OracleRef),
     ) -> ContractResult<(Emitter, Self)> {
         assert_eq!(downpayment.ticker(), loan.principal.ticker());
-        //TODO replace with the actual coin once get the Osmosys GAMM trx result
-        let amount = downpayment.amount() + loan.principal.amount();
 
         let IntoDTOResult { lease, batch } = form.into_lease(
             &env.contract.address,
             env.block.time,
-            amount,
-            deps.api,
-            &deps.querier,
-            (lpp, oracle),
+            &amount,
+            cw_deps.api,
+            &cw_deps.querier,
+            deps,
         )?;
         let emitter = build_emitter(batch, env, &lease, loan, downpayment);
         Ok((emitter, Self { lease }))
@@ -116,7 +114,7 @@ impl Controller for Active {
 
 impl Display for Active {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("active lease")
+        f.write_str("active lease in idle state")
     }
 }
 

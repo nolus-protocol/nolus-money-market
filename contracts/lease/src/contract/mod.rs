@@ -3,6 +3,7 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    neutron_sdk::sudo::msg::SudoMsg,
 };
 
 use crate::{
@@ -14,7 +15,6 @@ use crate::{contract::state::Response, error::ContractResult};
 mod alarms;
 mod close;
 mod cmd;
-// mod dex;
 pub mod msg;
 mod repay;
 mod state;
@@ -73,6 +73,20 @@ pub fn execute(
                 Ok(cw_response)
             },
         )
+}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn sudo(mut deps: DepsMut, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
+    impl_::load_mut(&deps)?.sudo(&mut deps, env, msg).and_then(
+        |Response {
+             cw_response,
+             next_state,
+         }| {
+            impl_::save(&next_state, &mut deps)?;
+
+            Ok(cw_response)
+        },
+    )
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

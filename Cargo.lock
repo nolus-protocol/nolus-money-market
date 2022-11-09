@@ -593,6 +593,7 @@ dependencies = [
  "schema",
  "sdk",
  "serde",
+ "swap",
  "thiserror",
  "timealarms",
 ]
@@ -987,6 +988,7 @@ dependencies = [
 name = "sdk"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cosmwasm-storage",

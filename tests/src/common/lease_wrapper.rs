@@ -6,14 +6,11 @@ use lease::{
         dex::{ConnectionParams, Ics20Channel},
         ExecuteMsg, LoanForm, NewLeaseForm, StateQuery,
     },
-    contract::{execute, instantiate, query, reply},
+    contract::{execute, instantiate, query, reply, sudo},
     error::ContractError,
 };
 use platform::coin_legacy;
-use sdk::{
-    cosmwasm_std::{Addr, Empty},
-    cw_multi_test::Executor,
-};
+use sdk::{cosmwasm_std::Addr, cw_multi_test::Executor, neutron_sdk::sudo::msg::SudoMsg};
 
 use crate::common::{ContractWrapper, MockApp};
 
@@ -147,7 +144,9 @@ impl LeaseWrapper {
 
 impl Default for LeaseWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(execute, instantiate, query).with_reply(reply);
+        let contract = ContractWrapper::new(execute, instantiate, query)
+            .with_reply(reply)
+            .with_sudo(sudo);
 
         Self {
             contract_wrapper: Box::new(contract),
@@ -171,8 +170,8 @@ type LeaseContractWrapperReply = Box<
         ContractError,
         StateQuery,
         ContractError,
-        Empty,
-        anyhow::Error,
+        SudoMsg,
+        ContractError,
         ContractError,
     >,
 >;

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    neutron_sdk::sudo::msg::SudoMsg,
 };
 
 use crate::{
@@ -13,26 +14,37 @@ use crate::{
     error::{ContractError as Err, ContractResult},
 };
 
-pub use self::{active::Active, no_lease::NoLease, request_loan::RequestLoan};
+pub use self::{
+    active::Active, buy_asset::BuyAsset, no_lease::NoLease, open_ica_account::OpenIcaAccount,
+    request_loan::RequestLoan, transfer_out::TransferOut,
+};
 
 mod active;
+mod buy_asset;
 mod no_lease;
-// mod open_ica_account;
+mod open_ica_account;
 mod request_loan;
+mod transfer_out;
 
 #[enum_dispatch(Controller)]
 #[derive(Serialize, Deserialize)]
 pub enum State {
     NoLease,
     RequestLoan,
+    OpenIcaAccount,
+    TransferOut,
+    BuyAsset,
     Active,
 }
 
 impl Display for State {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
+        match &self {
             State::NoLease(inner) => inner.fmt(f),
             State::RequestLoan(inner) => inner.fmt(f),
+            State::OpenIcaAccount(inner) => inner.fmt(f),
+            State::TransferOut(inner) => inner.fmt(f),
+            State::BuyAsset(inner) => inner.fmt(f),
             State::Active(inner) => inner.fmt(f),
         }
     }
@@ -96,9 +108,9 @@ where
         err("query", &self)
     }
 
-    // fn sudo(self, _deps: &mut DepsMut, _env: Env, _msg: SudoMsg) -> ContractResult<Response> {
-    //     err("sudo", &self)
-    // }
+    fn sudo(self, _deps: &mut DepsMut, _env: Env, _msg: SudoMsg) -> ContractResult<Response> {
+        err("sudo", &self)
+    }
 }
 
 fn err<D, R>(op: &str, state: &D) -> ContractResult<R>

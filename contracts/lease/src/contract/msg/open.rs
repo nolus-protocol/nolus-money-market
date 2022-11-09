@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use finance::{
-    coin::{Amount, Coin},
+    coin::{Coin, CoinDTO},
     currency::Currency,
 };
 use lpp::stub::lender::{LppLender as LppLenderTrait, LppLenderRef};
@@ -22,14 +22,13 @@ impl NewLeaseForm {
         self,
         lease_addr: &Addr,
         start_at: Timestamp,
-        // amount: &CoinDTO, TODO
-        amount: Amount,
+        amount: &CoinDTO,
         api: &dyn Api,
         querier: &QuerierWrapper,
         deps: (LppLenderRef, OracleRef),
     ) -> ContractResult<IntoDTOResult> {
-        // debug_assert_eq!(&self.currency, amount.symbol()); TODO
-        debug_assert!(amount > 0);
+        debug_assert_eq!(&self.currency, amount.ticker());
+        debug_assert!(amount.amount() > 0);
 
         let profit = ProfitRef::try_from(api.addr_validate(&self.loan.profit)?, querier)?;
         let alarms = TimeAlarmsRef::try_from(api.addr_validate(&self.time_alarms)?, querier)?;
@@ -56,8 +55,7 @@ struct LeaseFactory<'a> {
     form: &'a NewLeaseForm,
     lease_addr: &'a Addr,
     start_at: Timestamp,
-    // amount: &'a CoinDTO, TODO
-    amount: Amount,
+    amount: &'a CoinDTO,
     api: &'a dyn Api,
 }
 
@@ -93,7 +91,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             self.form.loan.grace_period,
             profit,
         )?;
-        let amount: Coin<Asset> = self.amount.into();
+        let amount: Coin<Asset> = self.amount.try_into()?;
 
         Ok(Lease::<_, Asset, _, _, _, _>::new(
             self.lease_addr,
@@ -113,6 +111,7 @@ mod test {
     use std::any::type_name;
 
     use currency::{lease::Osmo, lpn::Usdc};
+    use finance::coin::Coin;
     use finance::error::Error as FinanceError;
     use finance::{currency::Currency, duration::Duration};
     use finance::{liability::Liability, percent::Percent};
@@ -136,6 +135,7 @@ mod test {
 
     #[test]
     fn amount_to_borrow_broken_invariant() {
+        type LeaseCurrency = Osmo;
         let lpp = "sdgg22d";
         let liability: Liability = from_slice(
             br#"{"initial":40,"healthy":50,"first_liq_warn":52,"second_liq_warn":53,"third_liq_warn":54,"max":54,"recalc_time":36000}"#,
@@ -144,7 +144,7 @@ mod test {
         assert!(liability.invariant_held().is_err());
         let lease = NewLeaseForm {
             customer: "ss1s1".into(),
-            currency: Osmo::TICKER.into(),
+            currency: LeaseCurrency::TICKER.into(),
             liability,
             loan: LoanForm {
                 annual_margin_interest: Percent::from_percent(0),
@@ -171,7 +171,7 @@ mod test {
             .into_lease(
                 &Addr::unchecked("test"),
                 Timestamp::from_nanos(1000),
-                10,
+                &Coin::<LeaseCurrency>::from(10).into(),
                 &api,
                 &QuerierWrapper::new(&querier),
                 (

@@ -16,14 +16,13 @@ use crate::{
     reply_id::ReplyId,
 };
 
-use super::{Active, Controller, Response};
+use super::{Controller, OpenIcaAccount, Response};
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestLoan {
-    pub(super) form: NewLeaseForm,
-    pub(super) downpayment: CoinDTO,
-    pub(super) lpp: LppLenderRef,
-    pub(super) oracle: OracleRef,
+    form: NewLeaseForm,
+    downpayment: CoinDTO,
+    deps: (LppLenderRef, OracleRef),
 }
 
 impl RequestLoan {
@@ -53,34 +52,27 @@ impl RequestLoan {
             RequestLoan {
                 form,
                 downpayment,
-                lpp,
-                oracle,
+                deps: (lpp, oracle),
             },
         ))
     }
 }
 impl Controller for RequestLoan {
-    fn reply(self, deps: &mut DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
+    fn reply(self, deps: &mut DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
         let id = ReplyId::try_from(msg.id)
             .map_err(|_| ContractError::InvalidParameters("Invalid reply ID passed!".into()))?;
 
         match id {
             ReplyId::OpenLoanReq => {
                 let loan = self
-                    .lpp
+                    .deps
+                    .0
                     .clone()
                     .execute(OpenLoanResp::new(msg), &deps.querier)?;
 
-                let (emitter, next_state) = Active::new(
-                    deps,
-                    &env,
-                    self.form,
-                    self.downpayment,
-                    loan,
-                    self.lpp,
-                    self.oracle,
-                )?;
-                Ok(Response::from(emitter, next_state))
+                let (batch, next_state) =
+                    OpenIcaAccount::new(self.form, self.downpayment, loan, self.deps);
+                Ok(Response::from(batch, next_state))
             }
         }
     }
@@ -88,6 +80,6 @@ impl Controller for RequestLoan {
 
 impl Display for RequestLoan {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("loan requested")
+        f.write_str("requesting a loan")
     }
 }

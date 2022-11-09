@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use currency::payment::PaymentGroup;
 use finance::{
@@ -132,6 +132,7 @@ impl WithLppLender for OpenLoanResp {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct OpenLoanRespResult {
     pub(in crate::contract) principal: CoinDTO,
     pub(in crate::contract) annual_interest_rate: Percent,

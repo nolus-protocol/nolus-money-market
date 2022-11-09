@@ -25,12 +25,14 @@ use crate::common::{
 type TheCurrency = Usdc;
 
 #[test]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn open_lease() {
     open_lease_impl::<Usdc, Usdc, Usdc>();
 }
 
 #[test]
 #[should_panic(expected = "Unsupported currency")]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn open_lease_unsupported_currency_by_oracle() {
     open_lease_impl::<Usdc, Atom, Usdc>();
 }
@@ -48,6 +50,7 @@ fn init_lpp_with_unknown_currency() {
 }
 
 #[test]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn open_lease_not_in_lpn_currency() {
     let user_addr = Addr::unchecked(USER);
 

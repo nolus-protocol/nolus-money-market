@@ -11,7 +11,7 @@ use finance::{
 };
 use lease::api::{ExecuteMsg, StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
-use sdk::cosmwasm_std::coin;
+use sdk::{cosmwasm_std::coin, neutron_sdk::sudo::msg::SudoMsg};
 use sdk::{
     cosmwasm_std::{Addr, Timestamp},
     cw_multi_test::{AppResponse, Executor},
@@ -65,12 +65,16 @@ fn calculate_interest(principal: LeaseCoin, interest_rate: Percent, duration: u6
 }
 
 fn open_lease(test_case: &mut TestCase<Lpn>, value: LeaseCoin) -> Addr {
-    try_open_lease(test_case, value).unwrap();
+    try_init_lease(test_case, value).unwrap();
 
-    get_lease_address(test_case)
+    let lease = get_lease_address(test_case);
+
+    try_transfer_out(test_case, &lease).unwrap();
+
+    lease
 }
 
-fn try_open_lease(
+fn try_init_lease(
     test_case: &mut TestCase<Lpn>,
     value: LeaseCoin,
 ) -> Result<AppResponse, anyhow::Error> {
@@ -97,6 +101,28 @@ fn get_lease_address(test_case: &TestCase<Lpn>) -> Addr {
         .unwrap();
     assert_eq!(query_response.len(), 1);
     query_response.iter().next().unwrap().clone()
+}
+
+fn try_transfer_out(
+    test_case: &mut TestCase<Lpn>,
+    lease: &Addr,
+) -> Result<AppResponse, anyhow::Error> {
+    let dex_address = "dex_addr_lease";
+    let version = format!(
+        "{{\"version\":\"\", \"controller_connection_id\":\"\", 
+                                \"host_connection_id\":\"\", \"address\":\"{}\", \"encoding\":\"\",
+                                \"tx_type\":\"\" }}",
+        dex_address
+    );
+    test_case.app.wasm_sudo(
+        lease.to_owned(),
+        &SudoMsg::OpenAck {
+            port_id: "".into(),
+            channel_id: "".into(),
+            counterparty_channel_id: "".into(),
+            counterparty_version: version,
+        },
+    )
 }
 
 fn repay(test_case: &mut TestCase<Lpn>, contract_addr: &Addr, value: LeaseCoin) -> AppResponse {
@@ -213,11 +239,12 @@ fn expected_newly_opened_state(
 fn open_zero_downpayment() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(0);
-    let res = try_open_lease(&mut test_case, downpayment);
+    let res = try_init_lease(&mut test_case, downpayment);
     assert!(res.is_err());
 }
 
 #[test]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn state_opened_when_no_payments() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
@@ -230,6 +257,7 @@ fn state_opened_when_no_payments() {
 }
 
 #[test]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn state_opened_when_partially_paid() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
@@ -248,6 +276,7 @@ fn state_opened_when_partially_paid() {
 }
 
 #[test]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn state_opened_when_partially_paid_after_time() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
@@ -301,6 +330,7 @@ fn state_opened_when_partially_paid_after_time() {
 }
 
 #[test]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn state_paid() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
@@ -317,6 +347,7 @@ fn state_paid() {
 }
 
 #[test]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn state_paid_when_overpaid() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
@@ -342,6 +373,7 @@ fn state_paid_when_overpaid() {
 
 #[test]
 #[should_panic = "Unauthorized"]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn price_alarm_unauthorized() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
@@ -529,12 +561,14 @@ fn liquidation_time_alarm(time_pass: Duration) {
 
 #[test]
 #[should_panic = "No liquidation emitted!"]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn liquidation_time_alarm_0() {
     liquidation_time_alarm(LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1));
 }
 
 #[test]
 #[should_panic = "No liquidation emitted!"]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn liquidation_time_alarm_1() {
     liquidation_time_alarm(
         LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::GRACE_PERIOD - Duration::from_nanos(1),
@@ -542,11 +576,13 @@ fn liquidation_time_alarm_1() {
 }
 
 #[test]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn liquidation_time_alarm_2() {
     liquidation_time_alarm(LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::GRACE_PERIOD);
 }
 
 #[test]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn compare_state_with_manual_calculation() {
     const DOWNPAYMENT: u128 = 1_000_000;
 
@@ -581,6 +617,7 @@ fn compare_state_with_manual_calculation() {
 }
 
 #[test]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn compare_state_with_lpp_state_implicit_time() {
     const DOWNPAYMENT: u128 = 1_000_000;
 
@@ -627,6 +664,7 @@ fn compare_state_with_lpp_state_implicit_time() {
 }
 
 #[test]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn compare_state_with_lpp_state_explicit_time() {
     const DOWNPAYMENT: u128 = 1_000_000;
 
@@ -670,6 +708,7 @@ fn compare_state_with_lpp_state_explicit_time() {
 }
 
 #[test]
+#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn state_closed() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(DOWNPAYMENT);
