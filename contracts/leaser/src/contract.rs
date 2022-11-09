@@ -62,6 +62,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+        ExecuteMsg::SetupDex(params) => Leaser::try_setup_dex(deps, info, params),
         ExecuteMsg::OpenLease { currency } => Borrow::with(deps, info.funds, info.sender, currency),
         ExecuteMsg::Config {
             lease_interest_rate_margin,

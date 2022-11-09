@@ -1,3 +1,4 @@
+use cosmwasm_std::Deps;
 use lease::api::dex::{ConnectionParams, Ics20Channel};
 use serde::{Deserialize, Serialize};
 
@@ -6,6 +7,7 @@ use finance::{
     test::currency::Usdc,
 };
 use sdk::{
+    cosmwasm_ext::Response,
     cosmwasm_std::{
         coins, from_binary,
         testing::{mock_dependencies, mock_env, mock_info},
@@ -17,7 +19,9 @@ use sdk::{
 use crate::{
     cmd::Borrow,
     contract::{execute, instantiate, query},
+    error::ContractResult,
     msg::{ConfigResponse, ExecuteMsg, QueryMsg, Repayment},
+    state::config::Config,
     ContractError,
 };
 
@@ -45,23 +49,49 @@ fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::Ins
         time_alarms: Addr::unchecked("timealarms"),
         market_price_oracle: Addr::unchecked("oracle"),
         profit: Addr::unchecked("profit"),
-        dex: ConnectionParams {
-            connection_id: "connection-0".into(),
-            transfer_channel: Ics20Channel {
-                local_endpoint: "channel-0".into(),
-                remote_endpoint: "channel-2048".into(),
-            },
+    }
+}
+
+fn owner() -> MessageInfo {
+    mock_info(CREATOR, &coins(2, DENOM))
+}
+
+fn customer() -> MessageInfo {
+    mock_info("addr0000", &coins(2, DENOM))
+}
+
+fn setup_test_case(deps: DepsMut) {
+    let lpp_addr = Addr::unchecked(LPP_ADDR);
+    let msg = leaser_instantiate_msg(1, lpp_addr);
+
+    let resp = instantiate(deps, mock_env(), owner(), msg).unwrap();
+    assert!(resp.messages.is_empty());
+}
+
+fn query_config(deps: Deps) -> Config {
+    let res = query(deps, mock_env(), QueryMsg::Config {}).unwrap();
+    let config_response: ConfigResponse = from_binary(&res).unwrap();
+    config_response.config
+}
+
+fn dex_params() -> ConnectionParams {
+    ConnectionParams {
+        connection_id: "connection-0".into(),
+        transfer_channel: Ics20Channel {
+            local_endpoint: "channel-0".into(),
+            remote_endpoint: "channel-2048".into(),
         },
     }
 }
 
-fn setup_test_case(deps: DepsMut) -> MessageInfo {
-    let lpp_addr = Addr::unchecked(LPP_ADDR);
-    let msg = leaser_instantiate_msg(1, lpp_addr);
+fn setup_dex_ok(deps: DepsMut) {
+    let resp = setup_dex(deps, owner()).expect("dex update passed");
+    assert!(resp.messages.is_empty());
+}
 
-    let info = mock_info(CREATOR, &coins(2, DENOM));
-    let _res = instantiate(deps, mock_env(), info.clone(), msg).unwrap();
-    info
+fn setup_dex(deps: DepsMut, info: MessageInfo) -> ContractResult<Response> {
+    let msg = ExecuteMsg::SetupDex(dex_params());
+    execute(deps, mock_env(), info, msg)
 }
 
 #[test]
@@ -70,9 +100,8 @@ fn proper_initialization() {
 
     let lpp_addr = Addr::unchecked(LPP_ADDR);
     let msg = leaser_instantiate_msg(1, lpp_addr.clone());
-    let info = mock_info(CREATOR, &coins(1000, DENOM));
 
-    let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+    let res = instantiate(deps.as_mut(), mock_env(), owner(), msg).unwrap();
     assert_eq!(0, res.messages.len());
 
     // it worked, let's query the state
@@ -97,19 +126,17 @@ fn test_update_config() {
         12,
     );
     let expected_repaiment = Repayment::new(Duration::from_secs(100), Duration::from_secs(10));
-    let info = setup_test_case(deps.as_mut());
+    setup_test_case(deps.as_mut());
     let msg = ExecuteMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
         liability: expected_liability,
         repayment: expected_repaiment.clone(),
     };
-    execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+    execute(deps.as_mut(), mock_env(), owner(), msg).unwrap();
 
-    let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_response: ConfigResponse = from_binary(&res).unwrap();
-
-    assert_eq!(expected_liability, config_response.config.liability);
-    assert_eq!(expected_repaiment, config_response.config.repayment);
+    let config = query_config(deps.as_ref());
+    assert_eq!(expected_liability, config.liability);
+    assert_eq!(expected_repaiment, config.repayment);
 }
 
 #[test]
@@ -126,13 +153,13 @@ fn test_update_config_invalid_repay_period() {
         12,
     );
     let expected_repaiment = Repayment::new(Duration::from_secs(18000), Duration::from_secs(23000));
-    let info = setup_test_case(deps.as_mut());
+    setup_test_case(deps.as_mut());
     let msg = ExecuteMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
         liability: expected_liability,
         repayment: expected_repaiment,
     };
-    execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+    execute(deps.as_mut(), mock_env(), owner(), msg).unwrap();
 }
 
 #[test]
@@ -182,9 +209,9 @@ fn test_update_config_invalid_liability() {
 
     let msg: ExecuteMsg = from_binary(&to_binary(&mock_msg).unwrap()).unwrap();
 
-    let info = setup_test_case(deps.as_mut());
+    setup_test_case(deps.as_mut());
 
-    execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+    execute(deps.as_mut(), mock_env(), owner(), msg).unwrap();
 }
 
 #[test]
@@ -207,33 +234,69 @@ fn test_update_config_unauthorized() {
         repayment: expected_repaiment,
     };
 
-    let info = mock_info("addr0000", coins(40, DENOM).as_ref());
-    let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
+    let err = execute(deps.as_mut(), mock_env(), customer(), msg).unwrap_err();
     assert_eq!(ContractError::Unauthorized {}, err);
+}
+
+#[test]
+fn test_no_dex_setup() {
+    let mut deps = mock_dependencies();
+    setup_test_case(deps.as_mut());
+
+    let config = query_config(deps.as_ref());
+    assert!(config.dex.is_none());
+
+    let msg = ExecuteMsg::OpenLease {
+        currency: DENOM.to_string(),
+    };
+
+    let res = execute(deps.as_mut(), mock_env(), customer(), msg);
+    assert_eq!(Err(ContractError::NoDEXConnectivitySetup {}), res);
+}
+
+#[test]
+fn test_setup_dex_unauthorized() {
+    let mut deps = mock_dependencies();
+    setup_test_case(deps.as_mut());
+
+    let res = setup_dex(deps.as_mut(), customer());
+    assert_eq!(Err(ContractError::Unauthorized {}), res);
+}
+
+#[test]
+fn test_setup_dex_again() {
+    let mut deps = mock_dependencies();
+    setup_test_case(deps.as_mut());
+
+    setup_dex_ok(deps.as_mut());
+
+    let res = setup_dex(deps.as_mut(), owner());
+    assert_eq!(Err(ContractError::DEXConnectivityAlreadySetup {}), res);
+
+    let res = setup_dex(deps.as_mut(), customer());
+    assert_eq!(Err(ContractError::Unauthorized {}), res);
 }
 
 #[test]
 fn test_open_lease() {
     let mut deps = mock_dependencies();
     setup_test_case(deps.as_mut());
+    setup_dex_ok(deps.as_mut());
 
-    let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
-    let config_response: ConfigResponse = from_binary(&res).unwrap();
-    let config = config_response.config;
+    let config = query_config(deps.as_ref());
 
-    // try open lease with enought UST
     let msg = ExecuteMsg::OpenLease {
         currency: DENOM.to_string(),
     };
-    let info = mock_info("addr0000", coins(40, DENOM).as_ref());
+    let info = customer();
     let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-    let msg = Borrow::open_lease_msg(info.sender, config, DENOM.to_string());
+    let msg = Borrow::open_lease_msg(info.sender, config, DENOM.to_string()).unwrap();
     assert_eq!(
         res.messages,
         vec![SubMsg::reply_on_success(
             CosmosMsg::Wasm(WasmMsg::Instantiate {
-                funds: coins(40, DENOM),
+                funds: info.funds,
                 msg: to_binary(&msg).unwrap(),
                 admin: None,
                 code_id: 1,

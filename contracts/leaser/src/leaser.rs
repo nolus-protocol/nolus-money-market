@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use finance::currency::SymbolOwned;
 use finance::{coin::CoinDTO, liability::Liability, percent::Percent};
+use lease::api::dex::ConnectionParams;
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use sdk::{
@@ -55,13 +56,27 @@ impl Leaser {
         Ok(resp)
     }
 
+    pub fn try_setup_dex(
+        deps: DepsMut,
+        info: MessageInfo,
+        params: ConnectionParams,
+    ) -> ContractResult<Response> {
+        let config = Config::load(deps.storage)?;
+        if info.sender != config.owner {
+            return Err(ContractError::Unauthorized {});
+        }
+        Config::setup_dex(deps.storage, params)?;
+
+        Ok(Response::default())
+    }
+
     pub fn try_configure(
         deps: DepsMut,
         info: MessageInfo,
         lease_interest_rate_margin: Percent,
         liability: Liability,
         repayment: Repayment,
-    ) -> Result<Response, ContractError> {
+    ) -> ContractResult<Response> {
         let config = Config::load(deps.storage)?;
         if info.sender != config.owner {
             return Err(ContractError::Unauthorized {});

@@ -25,7 +25,6 @@ pub struct InstantiateMsg {
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
     pub profit: Addr,
-    pub dex: ConnectionParams,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -39,6 +38,7 @@ pub struct Repayment {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    SetupDex(ConnectionParams),
     Config {
         lease_interest_rate_margin: Percent,
         liability: Liability,

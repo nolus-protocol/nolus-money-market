@@ -9,6 +9,7 @@ use sdk::{
 };
 
 use crate::{
+    error::ContractResult,
     msg::{InstantiateMsg, Repayment},
     ContractError,
 };
@@ -24,7 +25,7 @@ pub struct Config {
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
     pub profit: Addr,
-    pub dex: ConnectionParams,
+    pub dex: Option<ConnectionParams>,
 }
 
 impl Config {
@@ -41,7 +42,7 @@ impl Config {
             time_alarms: msg.time_alarms,
             market_price_oracle: msg.market_price_oracle,
             profit: msg.profit,
-            dex: msg.dex,
+            dex: None,
         })
     }
 
@@ -53,6 +54,18 @@ impl Config {
         Self::STORAGE.load(storage)
     }
 
+    pub fn setup_dex(storage: &mut dyn Storage, params: ConnectionParams) -> ContractResult<()> {
+        Self::STORAGE.update(storage, |mut c| {
+            if c.dex.is_none() {
+                c.dex = Some(params);
+                Ok(c)
+            } else {
+                Err(ContractError::DEXConnectivityAlreadySetup {})
+            }
+        })?;
+        Ok(())
+    }
+
     pub fn update(
         storage: &mut dyn Storage,
         lease_interest_rate_margin: Percent,
@@ -60,11 +73,11 @@ impl Config {
         repayment: Repayment,
     ) -> Result<(), ContractError> {
         Self::load(storage)?;
-        Self::STORAGE.update(storage, |mut c| -> Result<Config, ContractError> {
+        Self::STORAGE.update(storage, |mut c| {
             c.lease_interest_rate_margin = lease_interest_rate_margin;
             c.liability = liability;
             c.repayment = repayment;
-            Ok(c)
+            ContractResult::Ok(c)
         })?;
         Ok(())
     }

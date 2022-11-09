@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use finance::currency::{Currency, Symbol};
+use lease::api::dex::{ConnectionParams, Ics20Channel};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Empty, Uint64},
     cw_multi_test::{next_block, Executor},
@@ -201,6 +202,21 @@ where
                 self.profit_addr.clone().expect("Profit not initialized!"),
             ),
         );
+        self.app
+            .execute_contract(
+                Addr::unchecked(ADMIN),
+                self.leaser_addr.clone().unwrap(),
+                &leaser::msg::ExecuteMsg::SetupDex(ConnectionParams {
+                    connection_id: "connection-0".into(),
+                    transfer_channel: Ics20Channel {
+                        local_endpoint: "channel-0".into(),
+                        remote_endpoint: "channel-422".into(),
+                    },
+                }),
+                &[cwcoin::<Lpn, _>(3)],
+            )
+            .unwrap();
+
         self.app.update_block(next_block);
 
         self

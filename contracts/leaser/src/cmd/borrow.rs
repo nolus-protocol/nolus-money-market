@@ -7,6 +7,7 @@ use sdk::{
 };
 
 use crate::{
+    error::ContractResult,
     state::{config::Config, leaser::Loans},
     ContractError,
 };
@@ -26,7 +27,7 @@ impl Borrow {
         let mut batch = Batch::default();
         batch.schedule_instantiate_wasm_on_success_reply(
             config.lease_code_id,
-            Self::open_lease_msg(sender, config, currency),
+            Self::open_lease_msg(sender, config, currency)?,
             Some(amount),
             "lease",
             None,
@@ -39,21 +40,24 @@ impl Borrow {
         sender: Addr,
         config: Config,
         currency: SymbolOwned,
-    ) -> NewLeaseForm {
-        NewLeaseForm {
-            customer: sender.into_string(),
-            currency,
-            liability: config.liability,
-            loan: LoanForm {
-                annual_margin_interest: config.lease_interest_rate_margin,
-                lpp: config.lpp_addr.into_string(),
-                interest_due_period: config.repayment.period,
-                grace_period: config.repayment.grace_period,
-                profit: config.profit.into_string(),
-            },
-            time_alarms: config.time_alarms.into_string(),
-            market_price_oracle: config.market_price_oracle.into_string(),
-            dex: config.dex,
-        }
+    ) -> ContractResult<NewLeaseForm> {
+        config
+            .dex
+            .map(|dex| NewLeaseForm {
+                customer: sender.into_string(),
+                currency,
+                liability: config.liability,
+                loan: LoanForm {
+                    annual_margin_interest: config.lease_interest_rate_margin,
+                    lpp: config.lpp_addr.into_string(),
+                    interest_due_period: config.repayment.period,
+                    grace_period: config.repayment.grace_period,
+                    profit: config.profit.into_string(),
+                },
+                time_alarms: config.time_alarms.into_string(),
+                market_price_oracle: config.market_price_oracle.into_string(),
+                dex,
+            })
+            .ok_or(ContractError::NoDEXConnectivitySetup {})
     }
 }

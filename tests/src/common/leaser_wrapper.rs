@@ -1,5 +1,4 @@
 use finance::{duration::Duration, liability::Liability, percent::Percent};
-use lease::api::dex::{ConnectionParams, Ics20Channel};
 use leaser::{
     contract::{execute, instantiate, query, reply},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg, Repayment},
@@ -56,13 +55,6 @@ impl LeaserWrapper {
             time_alarms,
             market_price_oracle,
             profit,
-            dex: ConnectionParams {
-                connection_id: "connection-10".into(),
-                transfer_channel: Ics20Channel {
-                    local_endpoint: "channel-6".into(),
-                    remote_endpoint: "channel-101".into(),
-                },
-            },
         };
 
         app.instantiate_contract(code_id, Addr::unchecked(ADMIN), &msg, &[], "leaser", None)
