@@ -255,6 +255,7 @@ mod tests {
     };
     use profit::stub::{Profit, ProfitBatch, ProfitRef};
     use sdk::cosmwasm_std::{wasm_execute, Addr, BankMsg, Timestamp};
+    use swap::SwapTarget;
     use time_alarms::{
         msg::ExecuteMsg::AddAlarm,
         stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},
@@ -485,6 +486,14 @@ mod tests {
 
             Ok(())
         }
+
+        fn swap_path(
+            &self,
+            _: currency::SymbolOwned,
+            _: currency::SymbolOwned,
+        ) -> market_price_oracle::stub::Result<Vec<SwapTarget>> {
+            unimplemented!()
+        }
     }
 
     impl From<OracleLocalStub> for OracleBatch {
@@ -515,6 +524,14 @@ mod tests {
 
         fn add_alarm(&mut self, _alarm: Alarm) -> market_price_oracle::stub::Result<()> {
             unreachable!()
+        }
+
+        fn swap_path(
+            &self,
+            _: currency::SymbolOwned,
+            _: currency::SymbolOwned,
+        ) -> market_price_oracle::stub::Result<Vec<SwapTarget>> {
+            unimplemented!()
         }
     }
 

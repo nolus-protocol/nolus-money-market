@@ -9,6 +9,7 @@ use finance::{
 use marketprice::alarms::Alarm;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr, QuerierWrapper};
+use swap::SwapTarget;
 
 use crate::{
     msg::{ConfigResponse, ExecuteMsg, QueryMsg},
@@ -34,6 +35,8 @@ where
         C: Currency;
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()>;
+
+    fn swap_path(&self, from: SymbolOwned, to: SymbolOwned) -> Result<Vec<SwapTarget>>;
 }
 
 pub trait WithOracle<OracleBase>
@@ -163,6 +166,14 @@ where
         )?);
 
         Ok(())
+    }
+
+    fn swap_path(&self, from: SymbolOwned, to: SymbolOwned) -> Result<Vec<SwapTarget>> {
+        let msg = QueryMsg::SwapPath { from, to };
+
+        self.querier
+            .query_wasm_smart(self.addr().clone(), &msg)
+            .map_err(ContractError::from)
     }
 }
 
