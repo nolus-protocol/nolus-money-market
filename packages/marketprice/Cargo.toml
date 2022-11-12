@@ -5,11 +5,15 @@ authors = ["Nina Nikolova <n.nikolova@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 
+[features]
+testing = []
+
 [dependencies]
 currency = { path = "../../packages/currency" }
 finance = { path = "../../packages/finance" }
 platform = { path = "../../packages/platform" }
 sdk = { path = "../../packages/sdk", features = ["storage", "schema"] }
+swap = { path = "../../packages/swap" }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

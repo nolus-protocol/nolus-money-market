@@ -46,7 +46,7 @@ where
     oracle: Oracle,
 }
 
-#[derive(Debug)]
+#[cfg_attr(test, derive(Debug))]
 pub struct IntoDTOResult {
     pub lease: LeaseDTO,
     pub batch: Batch,

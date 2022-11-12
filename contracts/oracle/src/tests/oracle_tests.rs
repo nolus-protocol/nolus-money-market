@@ -10,6 +10,7 @@ use finance::{
     price,
     price::dto::PriceDTO,
 };
+use marketprice::SpotPrice;
 use sdk::cosmwasm_std::{
     from_binary,
     testing::{mock_env, mock_info},
@@ -93,8 +94,9 @@ fn feed_indirect_price() {
     .unwrap();
 
     let expected_price =
-        PriceDTO::try_from(price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Usdc>::new(3))).unwrap();
-    let value: PriceDTO = from_binary(&res).unwrap();
+        SpotPrice::try_from(price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Usdc>::new(3)))
+            .unwrap();
+    let value: SpotPrice = from_binary(&res).unwrap();
     assert_eq!(expected_price, value)
 }
 

@@ -4,10 +4,7 @@ use cosmwasm_std::Addr;
 use currency::lease::Osmo;
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    coin::{Coin, CoinDTO},
-    duration::Duration,
-};
+use finance::{coin::Coin, duration::Duration};
 use lpp::stub::lender::LppLenderRef;
 use market_price_oracle::stub::OracleRef;
 use platform::{
@@ -19,15 +16,20 @@ use sdk::{
     cosmwasm_std::{DepsMut, Env},
     neutron_sdk::sudo::msg::SudoMsg,
 };
+use swap::trx;
 
-use crate::{api::NewLeaseForm, contract::cmd::OpenLoanRespResult, error::ContractResult};
+use crate::{
+    api::{DownpaymentCoin, NewLeaseForm},
+    contract::cmd::OpenLoanRespResult,
+    error::ContractResult,
+};
 
 use super::{active::Active, Controller, Response};
 
 #[derive(Serialize, Deserialize)]
 pub struct BuyAsset {
     form: NewLeaseForm,
-    downpayment: CoinDTO,
+    downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     dex_account: Addr,
     deps: (LppLenderRef, OracleRef),
@@ -38,7 +40,7 @@ const ICA_TRX_TIMEOUT: Duration = Duration::from_days(1);
 impl BuyAsset {
     pub(super) fn new(
         form: NewLeaseForm,
-        downpayment: CoinDTO,
+        downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
         dex_account: Addr,
         deps: (LppLenderRef, OracleRef),
@@ -47,8 +49,8 @@ impl BuyAsset {
         let swap_path = vec![];
         let mut batch = Batch::default();
         // TODO apply nls_swap_fee on the downpayment only!
-        swap::exact_amount_in(&mut batch, &dex_account, &downpayment, &swap_path)?;
-        swap::exact_amount_in(&mut batch, &dex_account, &loan.principal, &swap_path)?;
+        trx::exact_amount_in(&mut batch, &dex_account, &downpayment, &swap_path)?;
+        trx::exact_amount_in(&mut batch, &dex_account, &loan.principal, &swap_path)?;
         let local_batch =
             ica::submit_transaction(&form.dex.connection_id, batch, "memo", ICA_TRX_TIMEOUT);
 

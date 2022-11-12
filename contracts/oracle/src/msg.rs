@@ -2,8 +2,8 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use finance::{currency::SymbolOwned, duration::Duration, percent::Percent, price::dto::PriceDTO};
-use marketprice::alarms::Alarm;
+use finance::{currency::SymbolOwned, duration::Duration, percent::Percent};
+use marketprice::{alarms::Alarm, SpotPrice};
 use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
@@ -21,7 +21,8 @@ pub struct InstantiateMsg {
     pub timealarms_addr: String,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     RegisterFeeder {
@@ -31,7 +32,7 @@ pub enum ExecuteMsg {
         feeder_address: String,
     },
     FeedPrices {
-        prices: Vec<PriceDTO>,
+        prices: Vec<SpotPrice>,
     },
     Config {
         price_feed_period_secs: u32,
@@ -85,7 +86,7 @@ pub struct SwapTreeResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct PricesResponse {
-    pub prices: Vec<PriceDTO>,
+    pub prices: Vec<SpotPrice>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

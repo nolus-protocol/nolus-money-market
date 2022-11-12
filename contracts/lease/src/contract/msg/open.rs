@@ -1,9 +1,6 @@
 use serde::Serialize;
 
-use finance::{
-    coin::{Coin, CoinDTO},
-    currency::Currency,
-};
+use finance::{coin::Coin, currency::Currency};
 use lpp::stub::lender::{LppLender as LppLenderTrait, LppLenderRef};
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef};
 use profit::stub::{Profit as ProfitTrait, ProfitRef};
@@ -11,7 +8,7 @@ use sdk::cosmwasm_std::{Addr, Api, QuerierWrapper, Timestamp};
 use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef};
 
 use crate::{
-    api::NewLeaseForm,
+    api::{LeaseCoin, NewLeaseForm},
     error::{ContractError, ContractResult},
     lease::{self, IntoDTOResult, Lease, WithLeaseDeps},
     loan::Loan,
@@ -22,7 +19,7 @@ impl NewLeaseForm {
         self,
         lease_addr: &Addr,
         start_at: Timestamp,
-        amount: &CoinDTO,
+        amount: &LeaseCoin,
         api: &dyn Api,
         querier: &QuerierWrapper,
         deps: (LppLenderRef, OracleRef),
@@ -55,7 +52,7 @@ struct LeaseFactory<'a> {
     form: &'a NewLeaseForm,
     lease_addr: &'a Addr,
     start_at: Timestamp,
-    amount: &'a CoinDTO,
+    amount: &'a LeaseCoin,
     api: &'a dyn Api,
 }
 

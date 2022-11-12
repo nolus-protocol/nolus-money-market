@@ -11,6 +11,7 @@ use finance::{
 };
 use lease::api::{ExecuteMsg, StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
+use marketprice::SpotPrice;
 use sdk::{cosmwasm_std::coin, neutron_sdk::sudo::msg::SudoMsg};
 use sdk::{
     cosmwasm_std::{Addr, Timestamp},
@@ -393,7 +394,7 @@ fn price_alarm_unauthorized() {
     );
 }
 
-fn liquidation_warning(price: PriceDTO, percent: Percent, level: &str) {
+fn liquidation_warning(price: SpotPrice, percent: Percent, level: &str) {
     const DOWNPAYMENT: u128 = 1_000_000;
 
     let mut test_case = create_test_case();

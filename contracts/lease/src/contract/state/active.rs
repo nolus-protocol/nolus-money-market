@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use finance::coin::CoinDTO;
 use lpp::stub::lender::LppLenderRef;
 use market_price_oracle::stub::OracleRef;
 use serde::{Deserialize, Serialize};
@@ -15,7 +14,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{ExecuteMsg, NewLeaseForm, StateQuery},
+    api::{DownpaymentCoin, ExecuteMsg, LeaseCoin, NewLeaseForm, StateQuery},
     contract::{
         alarms::{price::PriceAlarm, time::TimeAlarm, AlarmResult},
         close::Close,
@@ -39,9 +38,9 @@ impl Active {
         cw_deps: &DepsMut,
         env: &Env,
         form: NewLeaseForm,
-        downpayment: CoinDTO,
+        downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        amount: CoinDTO,
+        amount: LeaseCoin,
         deps: (LppLenderRef, OracleRef),
     ) -> ContractResult<(Emitter, Self)> {
         assert_eq!(downpayment.ticker(), loan.principal.ticker());
@@ -197,7 +196,7 @@ fn build_emitter(
     env: &Env,
     dto: &LeaseDTO,
     loan: OpenLoanRespResult,
-    downpayment: CoinDTO,
+    downpayment: DownpaymentCoin,
 ) -> Emitter {
     batch
         .into_emitter(Type::Open)

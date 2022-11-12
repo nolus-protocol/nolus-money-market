@@ -3,7 +3,7 @@ use crate::{
     currency::Currency,
 };
 
-pub fn funds<C>(amount: u128) -> CoinDTO
+pub fn funds<G, C>(amount: u128) -> CoinDTO<G>
 where
     C: Currency,
 {
@@ -45,6 +45,7 @@ pub mod currency {
         const DEX_SYMBOL: SymbolStatic = "ibc/dex_udai";
     }
 
+    #[derive(Debug, PartialEq, Eq)]
     pub struct TestCurrencies {}
     impl Group for TestCurrencies {
         const DESCR: SymbolStatic = "test";
@@ -73,6 +74,7 @@ pub mod currency {
         }
     }
 
+    #[derive(PartialEq, Eq)]
     pub struct TestExtraCurrencies {}
     impl Group for TestExtraCurrencies {
         const DESCR: SymbolStatic = "test_extra";

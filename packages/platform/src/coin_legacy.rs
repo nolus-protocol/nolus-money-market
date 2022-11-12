@@ -48,7 +48,7 @@ where
     to_cosmwasm_on_network_impl::<C, BankMapper>(coin)
 }
 
-pub fn to_cosmwasm_on_network<'a, G, CM>(coin_dto: &CoinDTO) -> Result<CosmWasmCoin>
+pub fn to_cosmwasm_on_network<'a, G, CM>(coin_dto: &CoinDTO<G>) -> Result<CosmWasmCoin>
 where
     G: Group,
     CM: CurrencyMapper<'a>,
@@ -68,7 +68,7 @@ where
             Ok(to_cosmwasm_on_network_impl::<C, CM>(coin))
         }
     }
-    coin_dto.with_coin::<G, _>(CoinTransformer(PhantomData::<CM>))
+    coin_dto.with_coin(CoinTransformer(PhantomData::<CM>))
 }
 
 fn to_cosmwasm_on_network_impl<'a, C, CM>(coin: Coin<C>) -> CosmWasmCoin

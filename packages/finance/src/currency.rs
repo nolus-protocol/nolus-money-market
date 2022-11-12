@@ -69,7 +69,7 @@ where
 pub type MaybeAnyVisitResult<V> =
     Result<Result<<V as AnyVisitor>::Output, <V as AnyVisitor>::Error>, V>;
 
-pub trait Group {
+pub trait Group: PartialEq {
     const DESCR: SymbolStatic;
 
     fn maybe_visit_on_ticker<V>(symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<V>

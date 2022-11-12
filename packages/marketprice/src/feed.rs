@@ -2,34 +2,34 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use finance::{duration::Duration, price::dto::PriceDTO};
+use finance::duration::Duration;
 use sdk::{
     cosmwasm_std::{Addr, Timestamp},
     schemars::{self, JsonSchema},
 };
 
-use crate::{error::PriceFeedsError, market_price::Parameters};
+use crate::{error::PriceFeedsError, market_price::Parameters, SpotPrice};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq, JsonSchema)]
 pub struct Observation {
     feeder_addr: Addr,
     time: Timestamp,
-    price: PriceDTO,
+    price: SpotPrice,
 }
 impl Observation {
-    pub fn new(feeder_addr: Addr, time: Timestamp, price: PriceDTO) -> Observation {
+    pub fn new(feeder_addr: Addr, time: Timestamp, price: SpotPrice) -> Observation {
         Observation {
             feeder_addr,
             time,
             price,
         }
     }
-    pub fn price(&self) -> PriceDTO {
+    pub fn price(&self) -> SpotPrice {
         self.price.clone()
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 pub struct PriceFeed {
     observations: Vec<Observation>,
 }
@@ -86,32 +86,31 @@ impl PriceFeed {
 
 #[cfg(test)]
 mod tests {
-    use currency::{
-        lease::{Atom, Osmo},
-        native::Nls,
-    };
+    use currency::{lease::Osmo, lpn::Usdc};
     use finance::{
         coin::Coin,
-        price::{self, dto::PriceDTO},
+        price::{self},
     };
+
+    use crate::SpotPrice;
 
     #[test]
     // we ensure this rounds up (as it calculates needed votes)
     fn compare_prices() {
-        let p1 = PriceDTO::try_from(
-            price::total_of(Coin::<Osmo>::new(1000000)).is(Coin::<Nls>::new(123456)),
+        let p1 = SpotPrice::try_from(
+            price::total_of(Coin::<Osmo>::new(1000000)).is(Coin::<Usdc>::new(123456)),
         )
         .unwrap();
-        let p2 = PriceDTO::try_from(
-            price::total_of(Coin::<Osmo>::new(1000000)).is(Coin::<Nls>::new(789456)),
+        let p2 = SpotPrice::try_from(
+            price::total_of(Coin::<Osmo>::new(1000000)).is(Coin::<Usdc>::new(789456)),
         )
         .unwrap();
-        let p3 = PriceDTO::try_from(
-            price::total_of(Coin::<Osmo>::new(1000000)).is(Coin::<Nls>::new(3456)),
+        let p3 = SpotPrice::try_from(
+            price::total_of(Coin::<Osmo>::new(1000000)).is(Coin::<Usdc>::new(3456)),
         )
         .unwrap();
-        let p4 = PriceDTO::try_from(
-            price::total_of(Coin::<Atom>::new(1000000)).is(Coin::<Nls>::new(3456)),
+        let p4 = SpotPrice::try_from(
+            price::total_of(Coin::<Osmo>::new(1000000)).is(Coin::<Usdc>::new(3456)),
         )
         .unwrap();
         assert!(p1.lt(&p2));

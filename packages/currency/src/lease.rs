@@ -1,3 +1,4 @@
+use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
 use finance::currency::{AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
@@ -127,6 +128,8 @@ impl Currency for Secret {
         "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A";
 }
 
+#[derive(PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
 pub struct LeaseGroup {}
 
 impl Group for LeaseGroup {

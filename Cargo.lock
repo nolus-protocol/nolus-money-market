@@ -644,6 +644,7 @@ dependencies = [
  "platform",
  "sdk",
  "serde",
+ "swap",
  "thiserror",
 ]
 

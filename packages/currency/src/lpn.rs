@@ -1,3 +1,4 @@
+use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
 use finance::currency::{
@@ -19,6 +20,8 @@ impl Currency for Usdc {
         "ibc/D189335C6E4A68B513C10AB227BF1C1D38C746766278BA3EEB4FB14124F1D858";
 }
 
+#[derive(Clone, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct Lpns {}
 impl Group for Lpns {
     const DESCR: SymbolStatic = "lpns";

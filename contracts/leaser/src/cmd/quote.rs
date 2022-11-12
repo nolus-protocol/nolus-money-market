@@ -1,10 +1,11 @@
 use std::marker::PhantomData;
 
+use lease::api::DownpaymentCoin;
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::{lease::LeaseGroup, payment::PaymentGroup};
 use finance::{
-    coin::{Coin, CoinDTO},
+    coin::Coin,
     currency::{AnyVisitor, Currency, Group, SymbolOwned},
     liability::Liability,
     percent::Percent,
@@ -46,7 +47,7 @@ impl<'r> WithLppLender for Quote<'r> {
 impl<'r> Quote<'r> {
     pub fn new(
         querier: QuerierWrapper<'r>,
-        downpayment: CoinDTO,
+        downpayment: DownpaymentCoin,
         lease_asset: SymbolOwned,
         oracle: OracleRef,
         liability: Liability,
@@ -99,7 +100,7 @@ where
     Lpn: Currency,
     Lpp: LppLenderTrait<Lpn>,
 {
-    downpayment: CoinDTO,
+    downpayment: DownpaymentCoin,
     lease_asset: SymbolOwned,
     lpp_quote: LppQuote<Lpn, Lpp>,
     liability: Liability,
@@ -143,7 +144,7 @@ where
     Lpp: LppLenderTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
 {
-    downpayment: CoinDTO,
+    downpayment: DownpaymentCoin,
     lease_asset: SymbolOwned,
     lpp_quote: LppQuote<Lpn, Lpp>,
     oracle: Oracle,

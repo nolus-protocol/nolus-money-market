@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use cosmwasm_std::{DepsMut, Env};
-use finance::coin::CoinDTO;
 use lpp::stub::lender::LppLenderRef;
 use market_price_oracle::stub::OracleRef;
 use platform::{batch::Batch, ica};
@@ -9,7 +8,7 @@ use sdk::neutron_sdk::sudo::msg::SudoMsg;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    api::NewLeaseForm,
+    api::{DownpaymentCoin, NewLeaseForm},
     contract::{cmd::OpenLoanRespResult, state::transfer_out::TransferOut},
     error::ContractResult,
 };
@@ -19,7 +18,7 @@ use super::{Controller, Response};
 #[derive(Serialize, Deserialize)]
 pub struct OpenIcaAccount {
     form: NewLeaseForm,
-    downpayment: CoinDTO,
+    downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     deps: (LppLenderRef, OracleRef),
 }
@@ -27,7 +26,7 @@ pub struct OpenIcaAccount {
 impl OpenIcaAccount {
     pub(super) fn new(
         form: NewLeaseForm,
-        downpayment: CoinDTO,
+        downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
         deps: (LppLenderRef, OracleRef),
     ) -> (Batch, Self) {

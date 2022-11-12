@@ -12,6 +12,7 @@ crate-type = ["cdylib", "rlib"]
 default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
 contract = []
+testing = []
 
 [dependencies]
 lease = { path = "../lease", default-features = false }

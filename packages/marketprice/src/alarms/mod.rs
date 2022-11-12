@@ -1,36 +1,39 @@
 use serde::{Deserialize, Serialize};
 
-use finance::price::dto::PriceDTO;
 use sdk::schemars::{self, JsonSchema};
+
+use crate::SpotPrice;
 
 pub mod errors;
 pub mod price;
 
 pub type Id = u64;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
     PriceAlarm(Alarm),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(test, derive(Debug))]
 #[serde(rename_all = "snake_case")]
 pub enum Event {
-    Below(PriceDTO),
-    Above(PriceDTO),
+    Below(SpotPrice),
+    Above(SpotPrice),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 pub struct Alarm {
-    below: PriceDTO,
-    above: Option<PriceDTO>,
+    below: SpotPrice,
+    above: Option<SpotPrice>,
 }
 
 impl Alarm {
     pub fn new<P>(below: P, above: Option<P>) -> Alarm
     where
-        P: Into<PriceDTO>,
+        P: Into<SpotPrice>,
     {
         let below = below.into();
         let above = above.map(Into::into);
@@ -41,8 +44,8 @@ impl Alarm {
         Self { below, above }
     }
 
-    pub fn should_fire(&self, current_price: &PriceDTO) -> bool {
-        current_price.lt(&self.below)
-            || (self.above.is_some() && current_price.gt(self.above.as_ref().unwrap()))
+    pub fn should_fire(&self, current_price: &SpotPrice) -> bool {
+        current_price < &self.below
+            || (self.above.is_some() && current_price > self.above.as_ref().unwrap())
     }
 }

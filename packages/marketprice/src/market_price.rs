@@ -1,5 +1,5 @@
 use currency::payment::PaymentGroup;
-use finance::{currency::SymbolOwned, duration::Duration, price::dto::PriceDTO};
+use finance::{currency::SymbolOwned, duration::Duration};
 use sdk::{
     cosmwasm_std::{Addr, StdResult, Storage, Timestamp},
     cw_storage_plus::Map,
@@ -8,6 +8,7 @@ use sdk::{
 use crate::{
     error::PriceFeedsError,
     feed::{Observation, PriceFeed},
+    SpotPrice,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -40,7 +41,7 @@ impl Parameters {
     }
 }
 
-type DenomResolutionPath = Vec<PriceDTO>;
+type DenomResolutionPath = Vec<SpotPrice>;
 pub struct PriceFeeds<'m>(Map<'m, (SymbolOwned, SymbolOwned), PriceFeed>);
 
 impl<'m> PriceFeeds<'m> {
@@ -53,7 +54,7 @@ impl<'m> PriceFeeds<'m> {
         storage: &dyn Storage,
         parameters: Parameters,
         path: Vec<SymbolOwned>,
-    ) -> Result<PriceDTO, PriceFeedsError> {
+    ) -> Result<SpotPrice, PriceFeedsError> {
         let mut resolution_path = DenomResolutionPath::new();
 
         if let Some((first, elements)) = path.split_first() {
@@ -74,14 +75,16 @@ impl<'m> PriceFeeds<'m> {
         base: SymbolOwned,
         quote: SymbolOwned,
         parameters: Parameters,
-    ) -> Result<PriceDTO, PriceFeedsError> {
+    ) -> Result<SpotPrice, PriceFeedsError> {
         match self.0.may_load(storage, (base, quote))? {
             Some(feed) => Ok(feed.get_price(parameters)?.price()),
             None => Err(PriceFeedsError::NoPrice()),
         }
     }
 
-    fn calculate_price(resolution_path: &DenomResolutionPath) -> Result<PriceDTO, PriceFeedsError> {
+    fn calculate_price(
+        resolution_path: &DenomResolutionPath,
+    ) -> Result<SpotPrice, PriceFeedsError> {
         if let Some((first, rest)) = resolution_path.split_first() {
             rest.iter()
                 .fold(Ok(first.to_owned()), |result_c1, c2| {
@@ -98,7 +101,7 @@ impl<'m> PriceFeeds<'m> {
         storage: &mut dyn Storage,
         current_block_time: Timestamp,
         sender_raw: &Addr,
-        mut prices: Vec<PriceDTO>,
+        mut prices: Vec<SpotPrice>,
         price_feed_period: Duration,
     ) -> Result<(), PriceFeedsError> {
         while let Some(price_dto) = prices.pop() {

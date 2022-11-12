@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::payment::PaymentGroup;
 use finance::{
-    coin::{Coin, CoinDTO, WithCoin},
+    coin::{Coin, WithCoin},
     currency::Currency,
     percent::Percent,
 };
@@ -16,7 +16,10 @@ use market_price_oracle::{convert, stub::OracleRef};
 use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
-use crate::{api::NewLeaseForm, error::ContractError};
+use crate::{
+    api::{DownpaymentCoin, NewLeaseForm},
+    error::ContractError,
+};
 
 pub struct OpenLoanReq<'a> {
     form: &'a NewLeaseForm,
@@ -83,7 +86,7 @@ impl<'a, Lpn> WithCoin for DownpaymentHandler<'a, Lpn>
 where
     Lpn: Currency,
 {
-    type Output = (CoinDTO, Coin<Lpn>);
+    type Output = (DownpaymentCoin, Coin<Lpn>);
 
     type Error = ContractError;
 
@@ -99,7 +102,7 @@ where
 
 pub struct OpenLoanReqResult {
     pub(in crate::contract) batch: Batch,
-    pub(in crate::contract) downpayment: CoinDTO,
+    pub(in crate::contract) downpayment: DownpaymentCoin,
 }
 
 pub struct OpenLoanResp {
@@ -134,6 +137,6 @@ impl WithLppLender for OpenLoanResp {
 
 #[derive(Serialize, Deserialize)]
 pub struct OpenLoanRespResult {
-    pub(in crate::contract) principal: CoinDTO,
+    pub(in crate::contract) principal: DownpaymentCoin,
     pub(in crate::contract) annual_interest_rate: Percent,
 }

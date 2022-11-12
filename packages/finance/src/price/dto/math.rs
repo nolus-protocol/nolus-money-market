@@ -4,37 +4,32 @@ use crate::{
     currency::{Currency, Group},
     error::Error,
     price::{
-        dto::{with_base::execute, PriceDTO},
-        dto::{WithBase, WithPrice},
+        dto::{PriceDTO, WithBase, WithPrice},
         Price,
     },
 };
 
-pub struct Multiply<'a, G>
-where
-    G: Group,
-{
-    p2: &'a PriceDTO,
-    _group: PhantomData<G>,
+use super::with_base;
+
+pub struct Multiply<'a, G1, QuoteG1, QuoteG2> {
+    p2: &'a PriceDTO<QuoteG1, QuoteG2>,
+    _g1: PhantomData<G1>,
 }
 
-impl<'a, G> Multiply<'a, G>
-where
-    G: Group,
-{
-    pub fn with(p2: &'a PriceDTO) -> Self {
+impl<'a, G1, QuoteG1, QuoteG2> Multiply<'a, G1, QuoteG1, QuoteG2> {
+    pub fn with(p2: &'a PriceDTO<QuoteG1, QuoteG2>) -> Self {
         Self {
             p2,
-            _group: PhantomData,
+            _g1: PhantomData,
         }
     }
 }
 
-impl<'a, G> WithPrice for Multiply<'a, G>
+impl<'a, G1, QuoteG1, QuoteG2> WithPrice for Multiply<'a, G1, QuoteG1, QuoteG2>
 where
-    G: Group,
+    QuoteG2: Group,
 {
-    type Output = PriceDTO;
+    type Output = PriceDTO<G1, QuoteG2>;
 
     type Error = Error;
 
@@ -43,34 +38,40 @@ where
         C: Currency,
         QuoteC: Currency,
     {
-        execute::<G, Multiplier<C, QuoteC>, QuoteC>(self.p2, Multiplier::new(p1))
+        with_base::execute(self.p2, Multiplier::new(p1))
     }
 }
 
-pub struct Multiplier<C1, QuoteC1>
+pub struct Multiplier<G1, QuoteG2, C1, QuoteC1>
 where
     C1: Currency,
     QuoteC1: Currency,
 {
     p1: Price<C1, QuoteC1>,
+    _g1: PhantomData<G1>,
+    _quote_g2: PhantomData<QuoteG2>,
 }
 
-impl<C1, QuoteC1> Multiplier<C1, QuoteC1>
+impl<G1, QuoteG2, C1, QuoteC1> Multiplier<G1, QuoteG2, C1, QuoteC1>
 where
     C1: Currency,
     QuoteC1: Currency,
 {
     fn new(p: Price<C1, QuoteC1>) -> Self {
-        Self { p1: p }
+        Self {
+            p1: p,
+            _g1: PhantomData,
+            _quote_g2: PhantomData,
+        }
     }
 }
 
-impl<C1, QuoteC1> WithBase<QuoteC1> for Multiplier<C1, QuoteC1>
+impl<G1, QuoteG2, C1, QuoteC1> WithBase<QuoteC1> for Multiplier<G1, QuoteG2, C1, QuoteC1>
 where
     C1: Currency,
     QuoteC1: Currency,
 {
-    type Output = PriceDTO;
+    type Output = PriceDTO<G1, QuoteG2>;
 
     type Error = Error;
 

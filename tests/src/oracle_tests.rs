@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use marketprice::SpotPrice;
 use trees::tr;
 
 use currency::{
@@ -267,7 +268,7 @@ fn test_config_update() {
     feed_price::<BaseC, Usdc>(&mut test_case, &feeder1, Coin::new(base), Coin::new(quote));
     feed_price::<BaseC, Usdc>(&mut test_case, &feeder2, Coin::new(base), Coin::new(quote));
 
-    let price: PriceDTO = test_case
+    let price: SpotPrice = test_case
         .app
         .wrap()
         .query_wasm_smart(
@@ -301,7 +302,7 @@ fn test_config_update() {
         )
         .expect("Oracle not properly connected!");
 
-    let price: Result<PriceDTO, _> = test_case.app.wrap().query_wasm_smart(
+    let price: Result<SpotPrice, _> = test_case.app.wrap().query_wasm_smart(
         test_case.oracle.clone().unwrap(),
         &OracleQ::Price {
             currency: BaseC::TICKER.into(),
@@ -387,7 +388,7 @@ fn test_zero_price_dto() {
     add_feeder(&mut test_case, &feeder1);
 
     // can be created only via deserialization
-    let price: PriceDTO = from_str(
+    let price: SpotPrice = from_str(
         r#"{"amount":{"amount":0,"ticker":"OSMO"},"amount_quote":{"amount":1,"ticker":"USDC"}}"#,
     )
     .unwrap();

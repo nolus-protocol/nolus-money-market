@@ -1,3 +1,5 @@
+use currency::{lease::LeaseGroup, payment::PaymentGroup};
+use finance::coin::CoinDTO;
 use serde::{Deserialize, Serialize};
 
 use sdk::{
@@ -14,6 +16,9 @@ pub mod dex;
 // TODO consider defining the modules public instead of just selected items
 mod open;
 mod query;
+
+pub type DownpaymentCoin = CoinDTO<PaymentGroup>;
+pub type LeaseCoin = CoinDTO<LeaseGroup>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

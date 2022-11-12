@@ -1,10 +1,8 @@
-use lease::api::dex::ConnectionParams;
+use lease::api::{dex::ConnectionParams, DownpaymentCoin, LeaseCoin};
+use lpp::msg::LppCoin;
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    coin::CoinDTO, currency::SymbolOwned, duration::Duration, liability::Liability,
-    percent::Percent,
-};
+use finance::{currency::SymbolOwned, duration::Duration, liability::Liability, percent::Percent};
 use sdk::{
     cosmwasm_std::{Addr, Uint64},
     schemars::{self, JsonSchema},
@@ -54,7 +52,7 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     Config {},
     Quote {
-        downpayment: CoinDTO,
+        downpayment: DownpaymentCoin,
         lease_asset: SymbolOwned,
     },
     Leases {
@@ -68,10 +66,11 @@ pub struct ConfigResponse {
 }
 
 // totalUST, borrowUST, annualInterestRate%
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
 pub struct QuoteResponse {
-    pub total: CoinDTO,
-    pub borrow: CoinDTO,
+    pub total: LeaseCoin,
+    pub borrow: LppCoin,
     pub annual_interest_rate: Percent,
     pub annual_interest_rate_margin: Percent,
 }

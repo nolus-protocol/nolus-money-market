@@ -57,7 +57,7 @@ fn open_loan_unauthorized_contract_id() {
             lease_addr,
             test_case.lpp_addr.unwrap(),
             &lpp::msg::ExecuteMsg::OpenLoan {
-                amount: test::funds::<Lpn>(100),
+                amount: test::funds::<_, Lpn>(100),
             },
             &[lpn_cwcoin(200)],
         )
@@ -85,7 +85,7 @@ fn open_loan_no_liquidity() {
             lease_addr,
             test_case.lpp_addr.unwrap(),
             &lpp::msg::ExecuteMsg::OpenLoan {
-                amount: test::funds::<Lpn>(100),
+                amount: test::funds::<_, Lpn>(100),
             },
             &[lpn_cwcoin(200)],
         )

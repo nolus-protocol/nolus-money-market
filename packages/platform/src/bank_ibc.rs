@@ -40,7 +40,7 @@ where
         }
     }
 
-    pub fn send<G>(&mut self, amount: &CoinDTO) -> Result<()>
+    pub fn send<G>(&mut self, amount: &CoinDTO<G>) -> Result<()>
     where
         G: Group,
     {

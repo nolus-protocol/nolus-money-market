@@ -4,7 +4,7 @@ use cosmwasm_std::{Addr, Timestamp};
 use currency::payment::PaymentGroup;
 use serde::{Deserialize, Serialize};
 
-use finance::{coin::CoinDTO, duration::Duration};
+use finance::duration::Duration;
 use lpp::stub::lender::LppLenderRef;
 use market_price_oracle::stub::OracleRef;
 use platform::{bank_ibc::LocalChainSender, batch::Batch};
@@ -13,14 +13,18 @@ use sdk::{
     neutron_sdk::sudo::msg::SudoMsg,
 };
 
-use crate::{api::NewLeaseForm, contract::cmd::OpenLoanRespResult, error::ContractResult};
+use crate::{
+    api::{DownpaymentCoin, NewLeaseForm},
+    contract::cmd::OpenLoanRespResult,
+    error::ContractResult,
+};
 
 use super::{buy_asset::BuyAsset, Controller, Response};
 
 #[derive(Serialize, Deserialize)]
 pub struct TransferOut {
     form: NewLeaseForm,
-    downpayment: CoinDTO,
+    downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
     dex_account: Addr,
     deps: (LppLenderRef, OracleRef),
@@ -31,7 +35,7 @@ const ICA_TRANSFER_TIMEOUT: Duration = Duration::from_secs(60);
 impl TransferOut {
     pub(super) fn new(
         form: NewLeaseForm,
-        downpayment: CoinDTO,
+        downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
         dex_account: Addr,
         deps: (LppLenderRef, OracleRef),

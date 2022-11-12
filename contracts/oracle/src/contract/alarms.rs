@@ -2,8 +2,11 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use finance::{currency::SymbolOwned, price::dto::PriceDTO};
-use marketprice::alarms::{price::PriceHooks, Alarm};
+use finance::currency::SymbolOwned;
+use marketprice::{
+    alarms::{price::PriceHooks, Alarm},
+    SpotPrice,
+};
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
@@ -38,7 +41,7 @@ impl MarketAlarms {
 
     pub fn try_notify_hooks(
         storage: &mut dyn Storage,
-        updated_prices: Vec<PriceDTO>,
+        updated_prices: Vec<SpotPrice>,
         batch: &mut Batch,
     ) -> Result<(), ContractError> {
         Ok(Self::PRICE_ALARMS.notify(storage, updated_prices, batch)?)

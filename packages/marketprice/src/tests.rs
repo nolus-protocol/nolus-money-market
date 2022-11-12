@@ -19,6 +19,7 @@ use crate::{
     error::PriceFeedsError,
     feeders::PriceFeeders,
     market_price::{Parameters, PriceFeeds},
+    SpotPrice,
 };
 
 const MINUTE: Duration = Duration::from_secs(60);
@@ -81,7 +82,7 @@ fn marketprice_add_feed_empty_vec() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let prices: Vec<PriceDTO> = Vec::new();
+    let prices: Vec<SpotPrice> = Vec::new();
     market
         .feed(&mut deps.storage, ts, &f_address, prices, MINUTE)
         .unwrap();
@@ -99,10 +100,10 @@ fn marketprice_add_feed() {
     let price3 =
         price::total_of(Coin::<Osmo>::new(10000000000000)).is(Coin::<Wbtc>::new(100000000000002));
 
-    let prices: Vec<PriceDTO> = vec![
-        PriceDTO::try_from(price1).unwrap(),
-        PriceDTO::try_from(price2).unwrap(),
-        PriceDTO::try_from(price3).unwrap(),
+    let prices = vec![
+        SpotPrice::try_from(price1).unwrap(),
+        SpotPrice::try_from(price2).unwrap(),
+        SpotPrice::try_from(price3).unwrap(),
     ];
 
     let now = SystemTime::now()
@@ -312,7 +313,7 @@ where
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
 
-    let price: PriceDTO = PriceDTO::try_from(price).unwrap();
+    let price = SpotPrice::try_from(price).unwrap();
 
     market.feed(deps.storage, ts, &f_address, vec![price], MINUTE)?;
     Ok(())

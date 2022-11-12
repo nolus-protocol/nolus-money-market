@@ -1,7 +1,10 @@
 [package]
 name = "lease"
 version = "0.1.0"
-authors = ["Nikola Terziev <n.terziev@nolus.io>", "Gancho Manev <g.manev@nolus.io>"]
+authors = [
+    "Nikola Terziev <n.terziev@nolus.io>",
+    "Gancho Manev <g.manev@nolus.io>",
+]
 edition.workspace = true
 license.workspace = true
 
@@ -21,14 +24,18 @@ contract = []
 
 [dependencies]
 lpp = { path = "../lpp", default-features = false, features = ["stub"] }
-market_price_oracle = { path = "../oracle", package = "oracle", default-features = false, features = ["stub", "convert"] }
+market_price_oracle = { path = "../oracle", package = "oracle", default-features = false, features = [
+    "convert",
+] }
 profit = { path = "../profit", default-features = false, features = ["stub"] }
-time_alarms = { path = "../timealarms", package = "timealarms", default-features = false, features = ["stub"] }
+time_alarms = { path = "../timealarms", package = "timealarms", default-features = false, features = [
+    "stub",
+] }
 currency = { path = "../../packages/currency" }
 finance = { path = "../../packages/finance" }
 marketprice = { path = "../../packages/marketprice" }
 platform = { path = "../../packages/platform" }
-swap = { path = "../../packages/swap" }
+swap = { path = "../../packages/swap", features = ["trx"] }
 sdk = { path = "../../packages/sdk", features = ["contract"] }
 
 # Required as a dependency by `entry_point` attribute macro
@@ -39,11 +46,19 @@ thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-time_alarms = { path = "../timealarms", package = "timealarms", default-features = false, features = ["testing"] }
+time_alarms = { path = "../timealarms", package = "timealarms", default-features = false, features = [
+    "testing",
+] }
 lpp = { path = "../lpp", default-features = false, features = ["testing"] }
-profit = { path = "../profit", default-features = false, features = ["testing"] }
-market_price_oracle = { path = "../oracle", package = "oracle", default-features = false, features = ["testing"] }
+profit = { path = "../profit", default-features = false, features = [
+    "testing",
+] }
+market_price_oracle = { path = "../oracle", package = "oracle", default-features = false, features = [
+    "testing",
+] }
 finance = { path = "../../packages/finance", features = ["testing"] }
+currency = { path = "../../packages/currency", features = ["testing"] }
+marketprice = { path = "../../packages/marketprice", features = ["testing"] }
 platform = { path = "../../packages/platform", features = ["testing"] }
 schema = { path = "../../packages/schema" }
 

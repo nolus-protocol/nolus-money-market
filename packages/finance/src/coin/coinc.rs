@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::result::Result as StdResult;
+use std::{marker::PhantomData, result::Result as StdResult};
 
 use sdk::schemars::{self, JsonSchema};
 
@@ -16,12 +16,14 @@ use super::{Coin, WithCoin};
 /// the same representation on the wire. The aim is to use it everywhere the cosmwasm
 /// framework does not support type parameterization.
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, JsonSchema)]
-pub struct CoinDTO {
+pub struct CoinDTO<G> {
     amount: Amount,
     ticker: SymbolOwned,
+    #[serde(skip)]
+    _g: PhantomData<G>,
 }
 
-impl CoinDTO {
+impl<G> CoinDTO<G> {
     pub const fn amount(&self) -> Amount {
         self.amount
     }
@@ -29,16 +31,19 @@ impl CoinDTO {
     pub const fn ticker(&self) -> &SymbolOwned {
         &self.ticker
     }
-
-    pub fn with_coin<G, V>(&self, cmd: V) -> StdResult<V::Output, V::Error>
+}
+impl<G> CoinDTO<G>
+where
+    G: Group,
+{
+    pub fn with_coin<V>(&self, cmd: V) -> StdResult<V::Output, V::Error>
     where
-        G: Group,
         V: WithCoin,
         Error: Into<V::Error>,
     {
-        struct CoinTransformerAny<'a, V>(&'a CoinDTO, V);
+        struct CoinTransformerAny<'a, G, V>(&'a CoinDTO<G>, V);
 
-        impl<'a, V> AnyVisitor for CoinTransformerAny<'a, V>
+        impl<'a, G, V> AnyVisitor for CoinTransformerAny<'a, G, V>
         where
             V: WithCoin,
         {
@@ -56,15 +61,19 @@ impl CoinDTO {
     }
 }
 
-impl<C> TryFrom<&CoinDTO> for Coin<C>
+impl<G, C> TryFrom<&CoinDTO<G>> for Coin<C>
 where
     C: Currency,
 {
     type Error = Error;
 
-    fn try_from(coin: &CoinDTO) -> Result<Self, Self::Error> {
-        struct CoinFactory<'a>(&'a CoinDTO);
-        impl<'a, CC> SingleVisitor<CC> for CoinFactory<'a>
+    // TODO consider adding some compile-time check that a currency belongs to a group
+    // one option is to revive the trait Member<Group> that currencies to impl
+    // another option is to add an associated trait type to Currency pointing to its direct group
+    // the still open quenstion to the both solution is how to express a 'sub-group' relationship
+    fn try_from(coin: &CoinDTO<G>) -> Result<Self, Self::Error> {
+        struct CoinFactory<'a, G>(&'a CoinDTO<G>);
+        impl<'a, G, CC> SingleVisitor<CC> for CoinFactory<'a, G>
         where
             CC: Currency,
         {
@@ -80,18 +89,18 @@ where
     }
 }
 
-impl<C> TryFrom<CoinDTO> for Coin<C>
+impl<G, C> TryFrom<CoinDTO<G>> for Coin<C>
 where
     C: Currency,
 {
     type Error = Error;
 
-    fn try_from(coin: CoinDTO) -> Result<Self, Self::Error> {
+    fn try_from(coin: CoinDTO<G>) -> Result<Self, Self::Error> {
         Self::try_from(&coin)
     }
 }
 
-impl<C> From<Coin<C>> for CoinDTO
+impl<G, C> From<Coin<C>> for CoinDTO<G>
 where
     C: Currency,
 {
@@ -99,6 +108,7 @@ where
         Self {
             amount: coin.amount,
             ticker: C::TICKER.into(),
+            _g: PhantomData,
         }
     }
 }
@@ -120,10 +130,12 @@ mod test {
         const DEX_SYMBOL: SymbolStatic = "ibc/2";
     }
 
+    struct MyTestGroup {}
+
     #[test]
     fn same_representation() {
         let coin = Coin::<MyTestCurrency>::new(4215);
-        assert_eq!(to_vec(&coin), to_vec(&CoinDTO::from(coin)));
+        assert_eq!(to_vec(&coin), to_vec(&CoinDTO::<MyTestGroup>::from(coin)));
     }
 
     #[test]
@@ -131,7 +143,7 @@ mod test {
         let coin = Coin::<MyTestCurrency>::new(85);
         assert_eq!(
             coin,
-            to_vec(&CoinDTO::from(coin))
+            to_vec(&CoinDTO::<MyTestGroup>::from(coin))
                 .and_then(|buf| from_slice(&buf))
                 .expect("correct raw bytes")
         );

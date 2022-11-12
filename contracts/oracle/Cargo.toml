@@ -15,8 +15,8 @@ default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
 contract = ["stub", "convert"]
 convert = ["stub"]
+testing = ["stub"]
 stub = []
-testing = []
 
 [dependencies]
 timealarms = { path = "../timealarms", default-features = false }
@@ -40,6 +40,7 @@ timealarms = { path = "../timealarms", default-features = false, features = ["co
 currency = { path = "../../packages/currency", features = ["testing"] }
 finance = { path = "../../packages/finance", features = ["testing"] }
 schema = { path = "../../packages/schema" }
+marketprice = { path = "../../packages/marketprice", features = ["testing"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 sdk = { path = "../../packages/sdk", default-features = false, features = ["testing"] }

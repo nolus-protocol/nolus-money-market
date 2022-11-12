@@ -7,16 +7,16 @@ use crate::{
 
 use super::{PriceDTO, WithBase};
 
-struct QuoteCVisitor<'a, C, Cmd>
+struct QuoteCVisitor<'a, QuoteG, C, Cmd>
 where
     C: Currency,
 {
     base: Coin<C>,
-    quote_dto: &'a CoinDTO,
+    quote_dto: &'a CoinDTO<QuoteG>,
     cmd: Cmd,
 }
 
-impl<'a, C, Cmd> AnyVisitor for QuoteCVisitor<'a, C, Cmd>
+impl<'a, QuoteG, C, Cmd> AnyVisitor for QuoteCVisitor<'a, QuoteG, C, Cmd>
 where
     C: Currency,
     Cmd: WithBase<C>,
@@ -37,14 +37,17 @@ where
 }
 
 #[track_caller]
-pub fn execute<G, Cmd, C>(price: &PriceDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
+pub fn execute<G, QuoteG, Cmd, C>(
+    price: &PriceDTO<G, QuoteG>,
+    cmd: Cmd,
+) -> Result<Cmd::Output, Cmd::Error>
 where
-    G: Group,
+    QuoteG: Group,
     Cmd: WithBase<C>,
     C: Currency,
     Error: Into<Cmd::Error>,
 {
-    visit_any_on_ticker::<G, _>(
+    visit_any_on_ticker::<QuoteG, _>(
         &price.amount_quote.ticker().clone(),
         QuoteCVisitor {
             base: Coin::<C>::try_from(&price.amount).expect("Got different currency in visitor!"),

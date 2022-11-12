@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::native::Nls;
+use currency::{lpn::Lpns, native::Nls};
 use finance::{
     coin::{Coin, CoinDTO},
     currency::Currency,
@@ -14,13 +14,17 @@ use sdk::{
 
 use crate::nlpn::NLpn;
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+pub type LppCoin = CoinDTO<Lpns>;
+
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
+#[cfg_attr(feature = "testing", derive(Debug))]
 pub struct InstantiateMsg {
     pub lpn_ticker: String,
     pub lease_code_id: Uint64,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
+#[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     UpdateParameters {
@@ -30,7 +34,7 @@ pub enum ExecuteMsg {
     },
 
     OpenLoan {
-        amount: CoinDTO,
+        amount: LppCoin,
     },
     RepayLoan(),
 
@@ -46,12 +50,13 @@ pub enum ExecuteMsg {
     },
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
+#[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
     Config(),
     Quote {
-        amount: CoinDTO,
+        amount: LppCoin,
     },
     Loan {
         lease_addr: Addr,

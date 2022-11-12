@@ -201,7 +201,7 @@ fn test_quote() {
         .query_wasm_smart(
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Quote {
-                downpayment: test::funds::<TheCurrency>(100),
+                downpayment: test::funds::<_, TheCurrency>(100),
                 lease_asset: TheCurrency::TICKER.into(),
             },
         )
@@ -230,7 +230,7 @@ fn test_quote() {
         .query_wasm_smart(
             test_case.leaser_addr.unwrap(),
             &QueryMsg::Quote {
-                downpayment: test::funds::<TheCurrency>(15),
+                downpayment: test::funds::<_, TheCurrency>(15),
                 lease_asset: TheCurrency::TICKER.into(),
             },
         )
@@ -376,7 +376,7 @@ fn test_quote_fixed_rate() {
         .query_wasm_smart(
             test_case.leaser_addr.clone().unwrap(),
             &QueryMsg::Quote {
-                downpayment: test::funds::<TheCurrency>(100),
+                downpayment: test::funds::<_, TheCurrency>(100),
                 lease_asset: TheCurrency::TICKER.into(),
             },
         )

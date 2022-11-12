@@ -1,13 +1,15 @@
 use std::collections::HashSet;
 
 use currency::native::Nls;
-use finance::{currency::SymbolOwned, price::dto::PriceDTO};
+use finance::currency::SymbolOwned;
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, Order, StdResult, Storage},
     cw_storage_plus::{Item, Map},
 };
+
+use crate::SpotPrice;
 
 use super::{errors::AlarmError, Alarm, ExecuteAlarmMsg};
 
@@ -69,7 +71,7 @@ impl<'m> PriceHooks<'m> {
     pub fn notify(
         &self,
         storage: &mut dyn Storage,
-        updated_prices: Vec<PriceDTO>,
+        updated_prices: Vec<SpotPrice>,
         batch: &mut Batch,
     ) -> Result<(), AlarmError> {
         let affected_contracts: Vec<_> = self.get_affected(storage, updated_prices)?;
@@ -104,7 +106,7 @@ impl<'m> PriceHooks<'m> {
     pub fn get_affected(
         &self,
         storage: &mut dyn Storage,
-        updated_prices: Vec<PriceDTO>,
+        updated_prices: Vec<SpotPrice>,
     ) -> StdResult<Vec<(Addr, Alarm)>> {
         let mut affected: Vec<(Addr, Alarm)> = vec![];
         for price in updated_prices {

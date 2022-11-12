@@ -4,13 +4,12 @@ use cosmwasm_std::MessageInfo;
 use platform::batch::Batch;
 use serde::{Deserialize, Serialize};
 
-use finance::coin::CoinDTO;
 use lpp::stub::lender::LppLenderRef;
 use market_price_oracle::stub::OracleRef;
 use sdk::cosmwasm_std::{DepsMut, Env, Reply};
 
 use crate::{
-    api::NewLeaseForm,
+    api::{DownpaymentCoin, NewLeaseForm},
     contract::cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
     error::{ContractError, ContractResult},
     reply_id::ReplyId,
@@ -21,7 +20,7 @@ use super::{Controller, OpenIcaAccount, Response};
 #[derive(Serialize, Deserialize)]
 pub struct RequestLoan {
     form: NewLeaseForm,
-    downpayment: CoinDTO,
+    downpayment: DownpaymentCoin,
     deps: (LppLenderRef, OracleRef),
 }
 

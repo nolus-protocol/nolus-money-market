@@ -75,19 +75,14 @@ where
         K: Into<String>,
         C: Currency,
     {
-        self.emit_coin_dto(event_key, coin.into())
+        emit_coinable(self, event_key, coin.into(), C::TICKER)
     }
 
-    fn emit_coin_dto<K>(self, event_key: K, coin: CoinDTO) -> Self
+    fn emit_coin_dto<K, G>(self, event_key: K, coin: CoinDTO<G>) -> Self
     where
         K: Into<String>,
     {
-        let key = event_key.into();
-        let amount_key = key.clone() + "-amount";
-        let symbol_key = key + "-symbol";
-
-        self.emit_coin_amount(amount_key, coin.amount())
-            .emit_currency_symbol(symbol_key, coin.ticker())
+        emit_coinable(self, event_key, coin.amount(), coin.ticker())
     }
 
     fn emit_tx_info(self, env: &Env) -> Self {
@@ -140,4 +135,18 @@ impl Emit for Emitter {
 
         self
     }
+}
+
+fn emit_coinable<E, K>(emitter: E, event_key: K, amount: Amount, ticker: Symbol) -> E
+where
+    E: Emit,
+    K: Into<String>,
+{
+    let key = event_key.into();
+    let amount_key = key.clone() + "-amount";
+    let symbol_key = key + "-symbol";
+
+    emitter
+        .emit_coin_amount(amount_key, amount)
+        .emit_currency_symbol(symbol_key, ticker)
 }

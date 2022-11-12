@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 
 use finance::currency::SymbolOwned;
-use finance::{coin::CoinDTO, liability::Liability, percent::Percent};
+use finance::{liability::Liability, percent::Percent};
 use lease::api::dex::ConnectionParams;
+use lease::api::DownpaymentCoin;
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use sdk::{
@@ -32,7 +33,7 @@ impl Leaser {
 
     pub fn query_quote(
         deps: Deps,
-        downpayment: CoinDTO,
+        downpayment: DownpaymentCoin,
         lease_asset: SymbolOwned,
     ) -> Result<QuoteResponse, ContractError> {
         let config = Config::load(deps.storage)?;

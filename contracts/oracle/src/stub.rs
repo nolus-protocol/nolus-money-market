@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 
 use finance::{
     currency::{self, Currency, SymbolOwned},
-    price::{dto::PriceDTO, Price},
+    price::Price,
 };
-use marketprice::alarms::Alarm;
+use marketprice::{alarms::Alarm, SpotPrice};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr, QuerierWrapper};
 use swap::SwapTarget;
@@ -150,7 +150,7 @@ where
         let msg = QueryMsg::Price {
             currency: C::TICKER.to_string(),
         };
-        let dto: PriceDTO = self
+        let dto: SpotPrice = self
             .querier
             .query_wasm_smart(self.addr().clone(), &msg)
             .map_err(ContractError::from)?;

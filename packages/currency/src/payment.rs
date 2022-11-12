@@ -1,7 +1,10 @@
 use finance::currency::{AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
+use sdk::schemars::{self, JsonSchema};
+use serde::{Deserialize, Serialize};
 
 use crate::{lease::LeaseGroup, lpn::Lpns};
 
+#[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct PaymentGroup {}
 
 impl Group for PaymentGroup {

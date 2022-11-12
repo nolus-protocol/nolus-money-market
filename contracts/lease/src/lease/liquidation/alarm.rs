@@ -5,11 +5,11 @@ use finance::{
     currency::{self, Currency},
     fraction::Fraction,
     percent::Percent,
-    price::{dto::PriceDTO, total, total_of, Price},
+    price::{total, total_of, Price},
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use market_price_oracle::stub::Oracle as OracleTrait;
-use marketprice::alarms::Alarm;
+use marketprice::{alarms::Alarm, SpotPrice};
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
 use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
@@ -199,7 +199,7 @@ where
             .transpose()?;
 
         self.oracle
-            .add_alarm(Alarm::new(below.into(), above.map(Into::<PriceDTO>::into)))
+            .add_alarm(Alarm::new(below.into(), above.map(Into::<SpotPrice>::into)))
             .map_err(Into::into)
     }
 

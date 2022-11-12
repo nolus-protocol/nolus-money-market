@@ -1,13 +1,9 @@
+use marketprice::SpotPrice;
 use trees::tr;
 
 use currency::lease::Cro;
 use currency::{lease::Osmo, lpn::Usdc, native::Nls};
-use finance::{
-    coin::Coin,
-    currency::Currency,
-    percent::Percent,
-    price::{dto::PriceDTO, total_of},
-};
+use finance::{coin::Coin, currency::Currency, percent::Percent, price::total_of};
 use oracle::{
     contract::{execute, instantiate, query, reply},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
@@ -79,7 +75,7 @@ pub fn mock_oracle_query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, 
         QueryMsg::Prices { currencies: _ } => to_binary(&oracle::msg::PricesResponse {
             prices: vec![price.into()],
         }),
-        QueryMsg::Price { currency: _ } => to_binary(&PriceDTO::from(price)),
+        QueryMsg::Price { currency: _ } => to_binary(&SpotPrice::from(price)),
         _ => Ok(query(deps, env, msg)?),
     }?;
 

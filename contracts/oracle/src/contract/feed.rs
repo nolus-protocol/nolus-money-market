@@ -3,11 +3,11 @@ use std::{collections::HashSet, marker::PhantomData};
 use serde::{Deserialize, Serialize};
 
 use currency::native::Nls;
-use finance::{
-    currency::{Currency, SymbolOwned},
-    price::dto::PriceDTO,
+use finance::currency::{Currency, SymbolOwned};
+use marketprice::{
+    market_price::{Parameters, PriceFeeds},
+    SpotPrice,
 };
-use marketprice::market_price::{Parameters, PriceFeeds};
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
@@ -45,9 +45,9 @@ where
         storage: &dyn Storage,
         parameters: Parameters,
         currencies: HashSet<SymbolOwned>,
-    ) -> Result<Vec<PriceDTO>, ContractError> {
+    ) -> Result<Vec<SpotPrice>, ContractError> {
         let tree: SupportedPairs<OracleBase> = SupportedPairs::load(storage)?;
-        let mut prices: Vec<PriceDTO> = vec![];
+        let mut prices: Vec<SpotPrice> = vec![];
         for currency in currencies {
             let path = tree.load_path(&currency)?;
             let price = Self::MARKET_PRICE.price(storage, parameters, path)?;
@@ -61,7 +61,7 @@ where
         storage: &mut dyn Storage,
         block_time: Timestamp,
         sender_raw: &Addr,
-        prices: Vec<PriceDTO>,
+        prices: Vec<SpotPrice>,
     ) -> Result<(), ContractError> {
         let supported_pairs = SupportedPairs::<OracleBase>::load(storage)?.query_supported_pairs();
 
@@ -72,7 +72,7 @@ where
             }
         }
 
-        let filtered: Vec<PriceDTO> = prices
+        let filtered: Vec<SpotPrice> = prices
             .into_iter()
             .filter(|price| {
                 supported_pairs.iter().any(|leg| {
@@ -100,7 +100,7 @@ pub fn try_feed_prices<OracleBase>(
     storage: &mut dyn Storage,
     block_time: Timestamp,
     sender_raw: Addr,
-    prices: Vec<PriceDTO>,
+    prices: Vec<SpotPrice>,
 ) -> Result<Response, ContractError>
 where
     OracleBase: Currency,
@@ -130,7 +130,7 @@ where
     if !hooks_currencies.is_empty() {
         let parameters = Feeders::query_config(storage, &oracle.config, block_time)?;
         // re-calculate the price of these currencies
-        let updated_prices: Vec<PriceDTO> =
+        let updated_prices: Vec<SpotPrice> =
             oracle.get_prices(storage, parameters, hooks_currencies)?;
         // try notify affected subscribers
         MarketAlarms::try_notify_hooks(storage, updated_prices, &mut batch)?;
