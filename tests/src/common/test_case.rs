@@ -93,7 +93,7 @@ where
     }
 
     pub fn init(&mut self, user: &Addr, mut init_funds: Vec<CwCoin>) -> &mut Self {
-        self.lease_code_id = Some(LeaseWrapper::default().store(&mut self.app));
+        self.init_lease();
         // Bonus: set some funds on the user for future proposals
         let admin = Addr::unchecked(ADMIN);
 

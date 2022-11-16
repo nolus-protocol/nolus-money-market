@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 use finance::currency::Currency;
-use sdk::cosmwasm_std::StdError;
+use sdk::cosmwasm_std::{Addr, StdError};
 
 #[derive(Error, Debug, PartialEq)]
 pub enum Error {
@@ -16,6 +16,9 @@ pub enum Error {
 
     #[error("[Platform] Expecting funds consisting of a single coin but found more coins")]
     UnexpectedFundsAny(),
+
+    #[error("[Platform] Expecting code id {0} for the contract {1}")]
+    UnexpectedCode(String, String),
 
     #[error("[Platform] {0}")]
     Finance(#[from] finance::error::Error),
@@ -40,6 +43,13 @@ impl Error {
         C: Currency,
     {
         Self::UnexpectedFunds(C::TICKER.into())
+    }
+
+    pub fn unexpected_code<A>(exp_code_id: u64, instance: A) -> Self
+    where
+        A: Into<Addr>,
+    {
+        Self::UnexpectedCode(exp_code_id.to_string(), instance.into().into())
     }
 }
 

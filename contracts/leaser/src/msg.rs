@@ -25,6 +25,7 @@ pub struct InstantiateMsg {
     pub profit: Addr,
 }
 
+// TODO use it as a property of the LoanForm and move if to the lease api
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Repayment {
     /// PeriodLengthSec, for example 90 days = 90*24*60*60
@@ -81,6 +82,7 @@ impl Repayment {
             period: period_time,
             grace_period: grace_period_time,
         }
+        // TODO check the invariants here as well + wire them up to its container object
     }
 
     pub fn validate_period(&self) -> Result<(), ContractError> {

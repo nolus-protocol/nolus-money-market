@@ -21,9 +21,6 @@ pub enum ContractError {
     #[error("[Lpp] Unknown currency")]
     UnknownCurrency {},
 
-    #[error("[Lpp] Unauthorized contract Id")]
-    ContractId {},
-
     #[error("[Lpp] No liquidity")]
     NoLiquidity {},
 

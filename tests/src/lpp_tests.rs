@@ -34,7 +34,7 @@ use crate::common::{
 type Lpn = Usdc;
 
 #[test]
-#[should_panic(expected = "Unauthorized contract Id")]
+#[should_panic(expected = "Expecting code id 1 for the contract contract5")]
 fn open_loan_unauthorized_contract_id() {
     let user_addr = Addr::unchecked(USER);
 

@@ -8,11 +8,8 @@ use finance::{
     price::{self, Price},
     ratio::Rational,
 };
-use platform::bank::BankView;
-use sdk::cosmwasm_std::{
-    Addr, ContractInfoResponse, Deps, DepsMut, Env, QueryRequest, StdResult, Storage, Timestamp,
-    Uint64, WasmQuery,
-};
+use platform::{bank::BankView, contract};
+use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, StdResult, Storage, Timestamp, Uint64};
 
 use crate::{
     error::ContractError,
@@ -136,19 +133,8 @@ where
     }
 
     pub fn validate_lease_addr(&self, deps: &Deps, lease_addr: &Addr) -> Result<(), ContractError> {
-        let querier = deps.querier;
-        let q_msg = QueryRequest::Wasm(WasmQuery::ContractInfo {
-            contract_addr: lease_addr.to_string(),
-        });
-        let q_resp: ContractInfoResponse = querier
-            .query(&q_msg)
-            .map_err(|_| ContractError::ContractId {})?;
-
-        if q_resp.code_id != self.config.lease_code_id.u64() {
-            Err(ContractError::ContractId {})
-        } else {
-            Ok(())
-        }
+        contract::validate_code_id(&deps.querier, lease_addr, self.config.lease_code_id.u64())
+            .map_err(ContractError::from)
     }
 
     pub fn withdraw_lpn(
