@@ -63,10 +63,6 @@ where
         sender_raw: &Addr,
         prices: Vec<SpotPrice>,
     ) -> Result<(), ContractError> {
-        if prices.is_empty() {
-            return Ok(());
-        }
-
         let supported_pairs = SupportedPairs::<OracleBase>::load(storage)?.query_supported_pairs();
 
         // validate prices
@@ -76,15 +72,12 @@ where
             }
         }
 
-        let filtered: Vec<SpotPrice> = prices
-            .into_iter()
-            .filter(|price| {
-                supported_pairs.iter().any(|leg| {
-                    price.base().ticker() == &leg.from && price.quote().ticker() == &leg.to.target
-                })
-            })
-            .collect();
-        if filtered.is_empty() {
+        if !prices.iter().all(|price| {
+            supported_pairs
+                .iter()
+                .find(|leg| price.base().ticker() == &leg.from && price.quote().ticker() == &leg.to.target)
+                .is_some()
+        }) {
             return Err(ContractError::UnsupportedDenomPairs {});
         }
 
@@ -92,7 +85,7 @@ where
             storage,
             block_time,
             sender_raw,
-            filtered,
+            prices,
             self.config.price_feed_period,
         )?;
 
@@ -117,8 +110,10 @@ where
     let config = Config::load(storage)?;
     let oracle = Feeds::<OracleBase>::with(config);
 
-    // Store the new price feed
-    oracle.feed_prices(storage, block_time, &sender_raw, prices)?;
+    if prices.is_empty() {
+        // Store the new price feed
+        oracle.feed_prices(storage, block_time, &sender_raw, prices)?;
+    }
 
     let mut batch = Batch::default();
     batch.schedule_execute_wasm_reply_error::<_, Nls>(
