@@ -44,7 +44,7 @@ type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
 ///
 /// The price is always kept in a canonical form of the underlying ratio. The simplifies equality and comparison operations.
 /// For example, Price<EUR, USD> 1.15, generally represented as EURUSD or EUR/USD, means that one EUR is exchanged for 1.15 USD.
-/// Both amounts a price if composed of should be non-zero.
+/// Both amounts a price is composed of should be non-zero.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct Price<C, QuoteC>
 where

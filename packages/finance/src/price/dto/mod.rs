@@ -74,10 +74,7 @@ where
     type Error = Error;
 
     fn try_from(value: &PriceDTO<G, QuoteG>) -> Result<Self, Self::Error> {
-        Ok(Price::new(
-            (&value.amount).try_into()?,
-            (&value.amount_quote).try_into()?,
-        ))
+        Ok(super::total_of((&value.amount).try_into()?).is((&value.amount_quote).try_into()?))
     }
 }
 

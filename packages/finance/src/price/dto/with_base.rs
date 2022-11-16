@@ -2,7 +2,7 @@ use crate::{
     coin::{Coin, CoinDTO},
     currency::{visit_any_on_ticker, AnyVisitor, Currency, Group},
     error::Error,
-    price::Price,
+    price::{self},
 };
 
 use super::{PriceDTO, WithBase};
@@ -29,10 +29,10 @@ where
     where
         QuoteC: Currency,
     {
-        self.cmd.exec(Price::new(
-            self.base,
-            Coin::<QuoteC>::try_from(self.quote_dto).expect("Got different currency in visitor!"),
-        ))
+        let amount_quote =
+            Coin::<QuoteC>::try_from(self.quote_dto).expect("Got different currency in visitor!");
+        let price = price::total_of(self.base).is(amount_quote);
+        self.cmd.exec(price)
     }
 }
 
