@@ -63,6 +63,10 @@ where
         sender_raw: &Addr,
         prices: Vec<SpotPrice>,
     ) -> Result<(), ContractError> {
+        if prices.is_empty() {
+            return Ok(());
+        }
+
         let supported_pairs = SupportedPairs::<OracleBase>::load(storage)?.query_supported_pairs();
 
         // validate prices
