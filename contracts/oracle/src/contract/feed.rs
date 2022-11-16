@@ -72,11 +72,10 @@ where
             }
         }
 
-        if !prices.iter().all(|price| {
-            supported_pairs
+        if prices.iter().any(|price| {
+            !supported_pairs
                 .iter()
-                .find(|leg| price.base().ticker() == &leg.from && price.quote().ticker() == &leg.to.target)
-                .is_some()
+                .any(|leg| price.base().ticker() == &leg.from && price.quote().ticker() == &leg.to.target)
         }) {
             return Err(ContractError::UnsupportedDenomPairs {});
         }
