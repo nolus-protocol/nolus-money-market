@@ -110,7 +110,7 @@ where
     let config = Config::load(storage)?;
     let oracle = Feeds::<OracleBase>::with(config);
 
-    if prices.is_empty() {
+    if !prices.is_empty() {
         // Store the new price feed
         oracle.feed_prices(storage, block_time, &sender_raw, prices)?;
     }
