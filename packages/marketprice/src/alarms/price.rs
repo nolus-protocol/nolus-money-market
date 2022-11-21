@@ -126,30 +126,14 @@ impl<'m> PriceHooks<'m> {
 
 #[cfg(test)]
 pub mod tests {
-    use currency::native::Nls;
-    use finance::{
-        coin::Coin,
-        currency::{Currency, SymbolStatic},
-        price,
+    use currency::{
+        lease::{Cro, Wbtc, Weth},
+        lpn::Usdc,
     };
+    use finance::{coin::Coin, currency::Currency, price};
     use sdk::cosmwasm_std::{testing::mock_dependencies, Addr};
 
     use crate::alarms::{price::PriceHooks, Alarm};
-
-    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-    pub struct BTH;
-    impl Currency for BTH {
-        const TICKER: SymbolStatic = "BTH";
-        const BANK_SYMBOL: SymbolStatic = "ibc/bth";
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_bth";
-    }
-    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-    pub struct ETH;
-    impl Currency for ETH {
-        const TICKER: SymbolStatic = "ETH";
-        const BANK_SYMBOL: SymbolStatic = "ibc/eth";
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_eth";
-    }
 
     #[test]
     fn test_add() {
@@ -160,8 +144,8 @@ pub mod tests {
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
 
-        let price1 = price::total_of(Coin::<BTH>::new(1000000)).is(Coin::<Nls>::new(456789));
-        let price2 = price::total_of(Coin::<ETH>::new(1000000)).is(Coin::<Nls>::new(123456));
+        let price1 = price::total_of(Coin::<Wbtc>::new(1000000)).is(Coin::<Usdc>::new(456789));
+        let price2 = price::total_of(Coin::<Weth>::new(1000000)).is(Coin::<Usdc>::new(123456));
 
         let expected_alarm1 = Alarm::new(price1, None);
         let expected_alarm2 = Alarm::new(price2, None);
@@ -191,20 +175,12 @@ pub mod tests {
 
         assert_eq!(hooks.get(storage, addr1).unwrap(), expected_alarm2);
 
-        assert!(hook_denoms.contains("BTH"));
-        assert!(hook_denoms.contains("ETH"));
+        assert!(hook_denoms.contains(Wbtc::TICKER));
+        assert!(hook_denoms.contains(Weth::TICKER));
     }
 
     #[test]
     fn test_remove() {
-        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-        pub struct OtherCoin;
-        impl Currency for OtherCoin {
-            const TICKER: SymbolStatic = "OtherCoin";
-            const BANK_SYMBOL: SymbolStatic = "ibc/other_coin";
-            const DEX_SYMBOL: SymbolStatic = "ibc/dex_other_coin";
-        }
-
         let hooks = PriceHooks::new("hooks", "hooks_sequence");
         let storage = &mut mock_dependencies().storage;
 
@@ -212,8 +188,8 @@ pub mod tests {
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
 
-        let price1 = price::total_of(Coin::<BTH>::new(1000000)).is(Coin::<OtherCoin>::new(456789));
-        let price2 = price::total_of(Coin::<ETH>::new(1000000)).is(Coin::<OtherCoin>::new(123456));
+        let price1 = price::total_of(Coin::<Wbtc>::new(1000000)).is(Coin::<Cro>::new(456789));
+        let price2 = price::total_of(Coin::<Weth>::new(1000000)).is(Coin::<Cro>::new(123456));
 
         let expected_alarm1 = Alarm::new(price1, None);
         let expected_alarm2 = Alarm::new(price2, None);

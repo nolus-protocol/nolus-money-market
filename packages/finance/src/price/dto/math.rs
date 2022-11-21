@@ -11,12 +11,22 @@ use crate::{
 
 use super::with_base;
 
-pub struct Multiply<'a, G1, QuoteG1, QuoteG2> {
+pub struct Multiply<'a, G1, QuoteG1, QuoteG2>
+where
+    G1: Group,
+    QuoteG1: Group,
+    QuoteG2: Group,
+{
     p2: &'a PriceDTO<QuoteG1, QuoteG2>,
     _g1: PhantomData<G1>,
 }
 
-impl<'a, G1, QuoteG1, QuoteG2> Multiply<'a, G1, QuoteG1, QuoteG2> {
+impl<'a, G1, QuoteG1, QuoteG2> Multiply<'a, G1, QuoteG1, QuoteG2>
+where
+    G1: Group,
+    QuoteG1: Group,
+    QuoteG2: Group,
+{
     pub fn with(p2: &'a PriceDTO<QuoteG1, QuoteG2>) -> Self {
         Self {
             p2,
@@ -27,6 +37,8 @@ impl<'a, G1, QuoteG1, QuoteG2> Multiply<'a, G1, QuoteG1, QuoteG2> {
 
 impl<'a, G1, QuoteG1, QuoteG2> WithPrice for Multiply<'a, G1, QuoteG1, QuoteG2>
 where
+    G1: Group,
+    QuoteG1: Group,
     QuoteG2: Group,
 {
     type Output = PriceDTO<G1, QuoteG2>;
@@ -68,6 +80,8 @@ where
 
 impl<G1, QuoteG2, C1, QuoteC1> WithBase<QuoteC1> for Multiplier<G1, QuoteG2, C1, QuoteC1>
 where
+    G1: Group,
+    QuoteG2: Group,
     C1: Currency,
     QuoteC1: Currency,
 {

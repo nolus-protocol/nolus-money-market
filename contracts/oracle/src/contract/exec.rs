@@ -11,7 +11,7 @@ use crate::{
     state::{supported_pairs::SupportedPairs, Config},
 };
 
-use super::feed::try_feed_prices;
+use super::{feed::try_feed_prices, feeder::Feeders};
 
 pub struct ExecWithOracleBase<'a> {
     deps: DepsMut<'a>,
@@ -58,12 +58,18 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                     .save(self.deps.storage)?;
                 Ok(Response::default())
             }
-            ExecuteMsg::FeedPrices { prices } => try_feed_prices::<OracleBase>(
-                self.deps.storage,
-                self.env.block.time,
-                self.sender,
-                prices,
-            ),
+            ExecuteMsg::FeedPrices { prices } => {
+                if !Feeders::is_feeder(self.deps.storage, &self.sender)? {
+                    return Err(ContractError::UnknownFeeder {});
+                }
+
+                try_feed_prices::<OracleBase>(
+                    self.deps.storage,
+                    self.env.block.time,
+                    self.sender,
+                    prices,
+                )
+            }
             _ => {
                 unreachable!()
             }

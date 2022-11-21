@@ -5,6 +5,7 @@ use sdk::schemars::{self, JsonSchema};
 use crate::{
     coin::{Amount, Coin},
     currency::{self, Currency},
+    error::{Error, Result},
     fraction::Fraction,
     fractionable::HigherRank,
     ratio::Rational,
@@ -16,7 +17,6 @@ pub fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
 where
     C: Currency,
 {
-    debug_assert!(!amount.is_zero());
     PriceBuilder(amount)
 }
 
@@ -32,7 +32,6 @@ where
     where
         QuoteC: Currency,
     {
-        debug_assert!(!to.is_zero());
         Price::new(self.0, to)
     }
 }
@@ -45,6 +44,8 @@ type IntermediateAmount = <Amount as HigherRank<Amount>>::Intermediate;
 /// The price is always kept in a canonical form of the underlying ratio. The simplifies equality and comparison operations.
 /// For example, Price<EUR, USD> 1.15, generally represented as EURUSD or EUR/USD, means that one EUR is exchanged for 1.15 USD.
 /// Both amounts a price is composed of should be non-zero.
+///
+/// Not designed to be used in public APIs
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct Price<C, QuoteC>
 where
@@ -61,15 +62,13 @@ where
     QuoteC: Currency,
 {
     fn new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
-        debug_assert!(
-            Amount::from(amount) == Amount::from(amount_quote) || !currency::equal::<C, QuoteC>()
-        );
-
         let (amount_normalized, amount_quote_normalized) = amount.into_coprime_with(amount_quote);
-        Self {
+        let res = Self {
             amount: amount_normalized,
             amount_quote: amount_quote_normalized,
-        }
+        };
+        debug_assert_eq!(Ok(()), res.invariant_held());
+        res
     }
 
     /// Returns a new [`Price`] which represents identity mapped, one to one, currency pair.
@@ -124,6 +123,23 @@ where
             amount: self.amount_quote,
             amount_quote: self.amount,
         }
+    }
+
+    fn invariant_held(&self) -> Result<()> {
+        Self::check(!self.amount.is_zero(), "The amount should not be zero")
+            .and(Self::check(
+                !self.amount_quote.is_zero(),
+                "The quote amount should not be zero",
+            ))
+            .and(Self::check(
+                Amount::from(self.amount) == Amount::from(self.amount_quote)
+                    || !currency::equal::<C, QuoteC>(),
+                "The price should be equal to the identity if the currencies match",
+            ))
+    }
+
+    fn check(invariant: bool, msg: &str) -> Result<()> {
+        Error::broken_invariant_if::<Self>(!invariant, msg)
     }
 
     #[track_caller]
@@ -448,5 +464,54 @@ mod test {
         let price2 = price::total_of(amount2).is(quote2);
         let exp = price::total_of(amount_exp).is(quote_exp);
         assert_eq!(exp, price1.lossy_mul(price2));
+    }
+}
+
+#[cfg(test)]
+mod test_invariant {
+
+    use crate::{
+        coin::Coin,
+        currency::Currency,
+        price::Price,
+        test::currency::{Nls, Usdc},
+    };
+
+    #[test]
+    #[should_panic = "zero"]
+    fn base_zero() {
+        new_invalid(Coin::<Usdc>::new(0), Coin::<Nls>::new(5));
+    }
+
+    #[test]
+    #[should_panic = "zero"]
+    fn quote_zero() {
+        new_invalid(Coin::<Usdc>::new(10), Coin::<Nls>::new(0));
+    }
+
+    #[test]
+    #[should_panic = "should be equal to the identity if the currencies match"]
+    fn currencies_match() {
+        new_invalid(Coin::<Nls>::new(4), Coin::<Nls>::new(5));
+    }
+
+    #[test]
+    fn currencies_match_ok() {
+        assert_eq!(
+            Price::identity(),
+            Price::new(Coin::<Nls>::new(4), Coin::<Nls>::new(4))
+        );
+    }
+
+    fn new_invalid<C, QuoteC>(base: Coin<C>, quote: Coin<QuoteC>)
+    where
+        C: Currency,
+        QuoteC: Currency,
+    {
+        let _p = Price::new(base, quote);
+        #[cfg(not(debug_assertions))]
+        {
+            _p.invariant_held().expect("should have returned an error");
+        }
     }
 }

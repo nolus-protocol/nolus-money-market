@@ -4,6 +4,8 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::SpotPrice;
 
+use self::errors::AlarmError;
+
 pub mod errors;
 pub mod price;
 
@@ -13,14 +15,6 @@ pub type Id = u64;
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
     PriceAlarm(Alarm),
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(test, derive(Debug))]
-#[serde(rename_all = "snake_case")]
-pub enum Event {
-    Below(SpotPrice),
-    Above(SpotPrice),
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
@@ -37,15 +31,73 @@ impl Alarm {
     {
         let below = below.into();
         let above = above.map(Into::into);
-        debug_assert!(
-            above.is_none()
-                || above.as_ref().map(|price| price.base().ticker()) == Some(below.base().ticker())
-        );
-        Self { below, above }
+        let res = Self { below, above };
+        debug_assert_eq!(Ok(()), res.invariant_held());
+        res
     }
 
     pub fn should_fire(&self, current_price: &SpotPrice) -> bool {
         current_price < &self.below
             || (self.above.is_some() && current_price > self.above.as_ref().unwrap())
+    }
+
+    // TODO implement the same trick of checking the invariant in desialization of the objects
+    // we we did for PriceDTO
+    pub fn invariant_held(&self) -> Result<(), AlarmError> {
+        if let Some(above) = &self.above {
+            if self.below.base().ticker() != above.base().ticker()
+                || self.below.quote().ticker() != above.quote().ticker()
+            {
+                errors::add_alarm_error("Mismatch of above alarm and below alarm currencies")?
+            }
+            if &self.below >= above {
+                errors::add_alarm_error(
+                    "The below alarm price should be less than the above alarm price",
+                )?
+            }
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use currency::lease::Weth;
+    use finance::coin::Coin;
+    use sdk::cosmwasm_std::from_slice;
+
+    use crate::{alarms::Alarm, SpotPrice};
+    use sdk::cosmwasm_std::StdError;
+
+    #[test]
+    fn below_price_ok() {
+        let exp_price = SpotPrice::new(Coin::<Weth>::new(10).into(), Coin::<Weth>::new(10).into());
+        let exp_res = Ok(Alarm::new(exp_price, None));
+        assert_eq!(exp_res, from_slice(br#"{"below": {"amount": {"amount": "10", "ticker": "WETH"}, "amount_quote": {"amount": "10", "ticker": "WETH"}}}"#));
+    }
+
+    #[test]
+    fn below_price_err() {
+        assert_err(from_slice(br#"{"below": {"amount": {"amount": "2", "ticker": "WBTC"}, "amount_quote": {"amount": "10", "ticker": "WBTC"}}}"#), "The price should be equal to the identity if the currencies match");
+        assert_err(from_slice(br#"{"below": {"amount": {"amount": "5", "ticker": "DAI"}, "amount_quote": {"amount": "0", "ticker": "DAI"}}}"#), "The quote amount should not be zero");
+        assert_err(from_slice(br#"{"below": {"amount": {"amount": "0", "ticker": "DAI"}, "amount_quote": {"amount": "5", "ticker": "DAI"}}}"#), "The amount should not be zero");
+    }
+
+    #[test]
+    fn above_price_zero() {
+        let r = from_slice(
+            br#"{"below": {"amount": {"amount": "0", "ticker": "ABC"}, "amount_quote": {"amount": "10", "ticker": "ABC"}}}"#,
+        );
+        assert_err(r, "The amount should not be zero");
+    }
+
+    fn assert_err(r: Result<Alarm, StdError>, msg: &str) {
+        assert!(matches!(
+            r,
+            Err(StdError::ParseErr {
+                target_type,
+                msg: real_msg
+            }) if target_type.contains("Alarm") && real_msg.contains(msg)
+        ));
     }
 }

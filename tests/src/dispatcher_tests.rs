@@ -52,6 +52,7 @@ fn on_alarm_zero_reward() {
 }
 
 #[test]
+#[ignore = "No support for swapping NLS to other currencies"]
 fn on_alarm() {
     type Lpn = Usdc;
 

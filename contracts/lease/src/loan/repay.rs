@@ -146,6 +146,7 @@ mod tests {
         );
     }
 
+    #[cfg(debug_assertions)]
     #[test]
     #[should_panic = "Payment exceeds principal!"]
     fn pay_principal_overpaid() {

@@ -57,7 +57,7 @@ where
         Ok(prices)
     }
 
-    pub fn feed_prices(
+    fn feed_prices(
         &self,
         storage: &mut dyn Storage,
         block_time: Timestamp,
@@ -65,13 +65,6 @@ where
         prices: Vec<SpotPrice>,
     ) -> Result<(), ContractError> {
         let supported_pairs = SupportedPairs::<OracleBase>::load(storage)?.query_supported_pairs();
-
-        // validate prices
-        for price in prices.iter() {
-            if price.base().amount() == 0 || price.quote().amount() == 0 {
-                return Err(ContractError::InvalidPriceDTO(price.to_owned()));
-            }
-        }
 
         if prices.iter().any(|price| {
             !supported_pairs.iter().any(
@@ -107,11 +100,6 @@ pub fn try_feed_prices<OracleBase>(
 where
     OracleBase: Currency,
 {
-    // Check feeder permission
-    if !Feeders::is_feeder(storage, &sender_raw)? {
-        return Err(ContractError::UnknownFeeder {});
-    }
-
     let config = Config::load(storage)?;
     let oracle = Feeds::<OracleBase>::with(config);
 

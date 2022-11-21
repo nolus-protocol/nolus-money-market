@@ -4,12 +4,7 @@ use currency::{
     lease::{Atom, Osmo, Wbtc, Weth},
     lpn::Usdc,
 };
-use finance::{
-    coin::Coin,
-    currency::{Currency, SymbolStatic},
-    price,
-    price::dto::PriceDTO,
-};
+use finance::{coin::Coin, currency::Currency, price, price::dto::PriceDTO};
 use marketprice::SpotPrice;
 use sdk::cosmwasm_std::{
     from_binary,
@@ -119,32 +114,12 @@ fn query_prices_unsupported_denom() {
 #[test]
 fn feed_prices_unsupported_pairs() {
     let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
-    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-    pub struct X;
-    impl Currency for X {
-        const TICKER: SymbolStatic = "X";
-        const BANK_SYMBOL: SymbolStatic = "ibc/X";
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_X";
-    }
-    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-    pub struct C;
-    impl Currency for C {
-        const TICKER: SymbolStatic = "C";
-        const BANK_SYMBOL: SymbolStatic = "ibc/C";
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_C";
-    }
-
-    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-    pub struct D;
-    impl Currency for D {
-        const TICKER: SymbolStatic = "D";
-        const BANK_SYMBOL: SymbolStatic = "ibc/D";
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_D";
-    }
 
     let prices = vec![
-        PriceDTO::try_from(price::total_of(Coin::<X>::new(10)).is(Coin::<C>::new(12))).unwrap(),
-        PriceDTO::try_from(price::total_of(Coin::<X>::new(10)).is(Coin::<D>::new(22))).unwrap(),
+        PriceDTO::try_from(price::total_of(Coin::<Atom>::new(10)).is(Coin::<Wbtc>::new(12)))
+            .unwrap(),
+        PriceDTO::try_from(price::total_of(Coin::<Atom>::new(10)).is(Coin::<Weth>::new(22)))
+            .unwrap(),
     ];
 
     let msg = ExecuteMsg::FeedPrices { prices };

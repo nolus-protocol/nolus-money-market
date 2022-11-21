@@ -31,6 +31,10 @@ impl<G> CoinDTO<G> {
     pub const fn ticker(&self) -> &SymbolOwned {
         &self.ticker
     }
+
+    pub fn is_zero(&self) -> bool {
+        self.amount == Amount::default()
+    }
 }
 impl<G> CoinDTO<G>
 where

@@ -1,12 +1,12 @@
 use std::time::SystemTime;
 
 use currency::{
-    lease::{Atom, Cro, Osmo, Wbtc, Weth},
+    lease::{Atom, Cro, Evmos, Juno, Osmo, Wbtc, Weth},
     lpn::Usdc,
 };
 use finance::{
     coin::Coin,
-    currency::{Currency, SymbolStatic},
+    currency::Currency,
     duration::Duration,
     price::{self, dto::PriceDTO, Price},
 };
@@ -140,42 +140,13 @@ fn marketprice_add_feed() {
 
 #[test]
 fn marketprice_follow_the_path() {
-    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-    pub struct Den0;
-    impl Currency for Den0 {
-        const TICKER: SymbolStatic = "Den0";
-        const BANK_SYMBOL: SymbolStatic = "ibc/den0";
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_den0";
-    }
-    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-    pub struct DenX;
-    impl Currency for DenX {
-        const TICKER: SymbolStatic = "DenX";
-        const BANK_SYMBOL: SymbolStatic = "ibc/denX";
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_denX";
-    }
-    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-    pub struct DenZ;
-    impl Currency for DenZ {
-        const TICKER: SymbolStatic = "DenZ";
-        const BANK_SYMBOL: SymbolStatic = "ibc/denZ";
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_denZ";
-    }
-    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-    pub struct DenC;
-    impl Currency for DenC {
-        const TICKER: SymbolStatic = "DenC";
-        const BANK_SYMBOL: SymbolStatic = "ibc/denC";
-        const DEX_SYMBOL: SymbolStatic = "ibc/dex_denC";
-    }
-
     let mut deps = mock_dependencies();
     let market = PriceFeeds::new("foo");
 
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Atom>::new(1)).is(Coin::<Den0>::new(1)),
+        price::total_of(Coin::<Atom>::new(1)).is(Coin::<Weth>::new(1)),
     )
     .unwrap();
     feed_price(
@@ -188,7 +159,7 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<Cro>::new(1)).is(Coin::<DenX>::new(3)),
+        price::total_of(Coin::<Cro>::new(1)).is(Coin::<Wbtc>::new(3)),
     )
     .unwrap();
 
@@ -222,7 +193,7 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<DenZ>::new(1)).is(Coin::<DenX>::new(3)),
+        price::total_of(Coin::<Evmos>::new(1)).is(Coin::<Wbtc>::new(3)),
     )
     .unwrap();
 
@@ -236,7 +207,7 @@ fn marketprice_follow_the_path() {
     feed_price(
         deps.as_mut(),
         &market,
-        price::total_of(Coin::<DenC>::new(1)).is(Coin::<Usdc>::new(3)),
+        price::total_of(Coin::<Juno>::new(1)).is(Coin::<Usdc>::new(3)),
     )
     .unwrap();
 
@@ -277,7 +248,7 @@ fn marketprice_follow_the_path() {
             .price(
                 &deps.storage,
                 query,
-                vec![DenX::TICKER.to_string(), Usdc::TICKER.to_string()],
+                vec![Wbtc::TICKER.to_string(), Usdc::TICKER.to_string()],
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice()
@@ -290,7 +261,7 @@ fn marketprice_follow_the_path() {
             .price(
                 &deps.storage,
                 query,
-                vec![DenX::TICKER.to_string(), Osmo::TICKER.to_string()]
+                vec![Wbtc::TICKER.to_string(), Osmo::TICKER.to_string()]
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice {}

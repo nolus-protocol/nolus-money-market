@@ -34,8 +34,12 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn broken_invariant_err<T>(msg: &str) -> Self {
-        Self::BrokenInvariant(type_name::<T>().into(), msg.into())
+    pub fn broken_invariant_if<T>(check: bool, msg: &str) -> Result<()> {
+        if check {
+            Err(Self::BrokenInvariant(type_name::<T>().into(), msg.into()))
+        } else {
+            Ok(())
+        }
     }
 
     pub fn no_funds<C>() -> Self
@@ -91,7 +95,7 @@ mod test {
         let test_x_type_name: &str = type_name::<TestX>();
         const CAUSE: &str = "TestX failed";
 
-        let err = Error::broken_invariant_err::<TestX>(CAUSE);
+        let err = Error::broken_invariant_if::<TestX>(true, CAUSE).expect_err("unexpected result");
         assert_eq!(
             &Error::BrokenInvariant(test_x_type_name.into(), CAUSE.into()),
             &err

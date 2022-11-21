@@ -7,28 +7,40 @@ use sdk::schemars::{self, JsonSchema};
 use crate::{
     coin::CoinDTO,
     currency::{Currency, Group},
-    error::Error,
+    error::{Error, Result as FinanceResult},
     price::Price,
 };
 
 use self::math::Multiply;
 
 pub mod math;
+mod unchecked;
 pub mod with_base;
 pub mod with_price;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub struct PriceDTO<G, QuoteG> {
+#[serde(try_from = "unchecked::PriceDTO<G, QuoteG>")]
+pub struct PriceDTO<G, QuoteG>
+where
+    G: Group,
+    QuoteG: Group,
+{
     amount: CoinDTO<G>,
     amount_quote: CoinDTO<QuoteG>,
 }
 
-impl<G, QuoteG> PriceDTO<G, QuoteG> {
+impl<G, QuoteG> PriceDTO<G, QuoteG>
+where
+    G: Group,
+    QuoteG: Group,
+{
     pub fn new(base: CoinDTO<G>, quote: CoinDTO<QuoteG>) -> Self {
-        Self {
+        let res = Self {
             amount: base,
             amount_quote: quote,
-        }
+        };
+        debug_assert_eq!(Ok(()), res.invariant_held());
+        res
     }
 
     pub const fn base(&self) -> &CoinDTO<G> {
@@ -38,26 +50,57 @@ impl<G, QuoteG> PriceDTO<G, QuoteG> {
     pub const fn quote(&self) -> &CoinDTO<QuoteG> {
         &self.amount_quote
     }
-}
 
-impl<G, QuoteG> PriceDTO<G, QuoteG>
-where
-    G: Group,
-    QuoteG: Group,
-{
     pub fn multiply<QuoteG2>(
         &self,
         other: &PriceDTO<QuoteG, QuoteG2>,
-    ) -> Result<PriceDTO<G, QuoteG2>, Error>
+    ) -> FinanceResult<PriceDTO<G, QuoteG2>>
     where
         QuoteG2: Group,
     {
         with_price::execute(self, Multiply::with(other))
     }
+
+    fn invariant_held(&self) -> FinanceResult<()> {
+        struct Validator {}
+        impl WithPrice for Validator {
+            type Output = ();
+            type Error = Error;
+
+            fn exec<C, QuoteC>(self, price: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
+            where
+                C: Currency,
+                QuoteC: Currency,
+            {
+                price.invariant_held()
+            }
+        }
+        Self::check(!self.base().is_zero(), "The amount should not be zero")
+            .and_then(|_| {
+                Self::check(
+                    !self.quote().is_zero(),
+                    "The quote amount should not be zero",
+                )
+            })
+            .and_then(|_| {
+                Self::check(
+                    self.amount.ticker() != self.amount_quote.ticker()
+                        || self.amount.amount() == self.amount_quote.amount(),
+                    "The price should be equal to the identity if the currencies match",
+                )
+            })
+            .and_then(|_| with_price::execute(self, Validator {}))
+    }
+
+    fn check(invariant: bool, msg: &str) -> FinanceResult<()> {
+        Error::broken_invariant_if::<Self>(!invariant, msg)
+    }
 }
 
 impl<G, QuoteG, C, QuoteC> From<Price<C, QuoteC>> for PriceDTO<G, QuoteG>
 where
+    G: Group,
+    QuoteG: Group,
     C: Currency,
     QuoteC: Currency,
 {
@@ -68,6 +111,8 @@ where
 
 impl<G, QuoteG, C, QuoteC> TryFrom<&PriceDTO<G, QuoteG>> for Price<C, QuoteC>
 where
+    G: Group,
+    QuoteG: Group,
     C: Currency,
     QuoteC: Currency,
 {
@@ -80,6 +125,8 @@ where
 
 impl<G, QuoteG, C, QuoteC> TryFrom<PriceDTO<G, QuoteG>> for Price<C, QuoteC>
 where
+    G: Group,
+    QuoteG: Group,
     C: Currency,
     QuoteC: Currency,
 {
@@ -96,13 +143,18 @@ where
     QuoteG: Group,
 {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        struct Comparator<'a, G, QuoteG> {
+        struct Comparator<'a, G, QuoteG>
+        where
+            G: Group,
+            QuoteG: Group,
+        {
             other: &'a PriceDTO<G, QuoteG>,
         }
 
         impl<'a, G, QuoteG> WithPrice for Comparator<'a, G, QuoteG>
         where
-            G: PartialEq,
+            G: PartialEq + Group,
+            QuoteG: Group,
         {
             type Output = Option<Ordering>;
             type Error = Error;
@@ -148,7 +200,6 @@ mod test {
 
     use crate::{
         coin::Coin,
-        error::Error,
         price::{dto::PriceDTO, Price},
         test::currency::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
     };
@@ -169,22 +220,6 @@ mod test {
             p1.multiply(&p2)
         );
     }
-    #[test]
-    fn test_multiply_err() {
-        let p1 = PriceDTO::<TestCurrencies, TestCurrencies>::new(
-            Coin::<Usdc>::new(10).into(),
-            Coin::<Dai>::new(5).into(),
-        );
-        let p2 = PriceDTO::<TestCurrencies, TestCurrencies>::new(
-            Coin::<Dai>::new(20).into(),
-            Coin::<Nls>::new(5).into(),
-        );
-
-        assert!(matches!(
-            p1.multiply(&p2),
-            Err(Error::NotInCurrencyGroup(_, _))
-        ));
-    }
 
     #[test]
     fn test_cmp() {
@@ -204,5 +239,141 @@ mod test {
             Price::new(Coin::<Usdc>::new(20), Coin::<Nls>::new(5000)).into();
         let p2 = Price::new(Coin::<Usdc>::new(20), Coin::<Dai>::new(5000)).into();
         let _ = p1 < p2;
+    }
+}
+
+#[cfg(test)]
+mod test_invariant {
+
+    use std::fmt::Debug;
+
+    use sdk::cosmwasm_std::{from_slice, StdError, StdResult};
+    use serde::Deserialize;
+
+    use crate::{
+        coin::{Coin, CoinDTO},
+        currency::{Currency, Group},
+        test::currency::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
+    };
+
+    use super::PriceDTO;
+
+    type TC = TestExtraCurrencies;
+
+    #[test]
+    #[should_panic = "zero"]
+    fn base_zero() {
+        new_invalid(Coin::<Usdc>::new(0), Coin::<Nls>::new(5));
+    }
+
+    #[test]
+    fn base_zero_json() {
+        let r = load::<Usdc, Nls>(br#"{"amount": {"amount": "0", "ticker": "uusdc"}, "amount_quote": {"amount": "5", "ticker": "unls"}}"#);
+        assert_err(r, "not be zero");
+    }
+
+    #[test]
+    #[should_panic = "zero"]
+    fn quote_zero() {
+        new_invalid(Coin::<Usdc>::new(10), Coin::<Nls>::new(0));
+    }
+
+    #[test]
+    fn quote_zero_json() {
+        let r = load::<Usdc, Nls>(br#"{"amount": {"amount": "10", "ticker": "uusdc"}, "amount_quote": {"amount": "0", "ticker": "unls"}}"#);
+        assert_err(r, "not be zero");
+    }
+
+    #[test]
+    #[should_panic = "should be equal to the identity if the currencies match"]
+    fn currencies_match() {
+        new_invalid(Coin::<Nls>::new(4), Coin::<Nls>::new(5));
+    }
+
+    #[test]
+    fn currencies_match_json() {
+        let r = load::<Dai, Dai>(br#"{"amount": {"amount": "10", "ticker": "udai"}, "amount_quote": {"amount": "5", "ticker": "udai"}}"#);
+        assert_err(r, "should be equal to the identity if the currencies match");
+    }
+
+    #[test]
+    fn currencies_match_ok() {
+        let p = PriceDTO::<TC, TC>::new(Coin::<Nls>::new(4).into(), Coin::<Nls>::new(4).into());
+        assert_eq!(&CoinDTO::<TC>::from(Coin::<Nls>::new(4)), p.base());
+    }
+
+    #[test]
+    fn currencies_match_ok_json() {
+        let p = load::<Nls, Nls>(br#"{"amount": {"amount": "4", "ticker": "unls"}, "amount_quote": {"amount": "4", "ticker": "unls"}}"#).expect("should have an identity");
+        assert_eq!(&CoinDTO::<TC>::from(Coin::<Nls>::new(4)), p.base());
+    }
+
+    #[test]
+    #[should_panic = "NotInCurrencyGroup"]
+    fn group_mismatch() {
+        new_invalid_with_groups::<TestCurrencies, TestCurrencies, _, _>(
+            Coin::<Nls>::new(4),
+            Coin::<Dai>::new(5),
+        );
+    }
+
+    #[test]
+    fn group_mismatch_json() {
+        let r = load_with_groups::<TC, TestCurrencies, Nls, Dai>(br#"{"amount": {"amount": "4", "ticker": "unls"}, "amount_quote": {"amount": "5", "ticker": "udai"}}"#);
+        assert_err(r, "not defined in the test currency group");
+    }
+
+    fn new_invalid<C, QuoteC>(base: Coin<C>, quote: Coin<QuoteC>)
+    where
+        C: Currency,
+        QuoteC: Currency,
+    {
+        new_invalid_with_groups::<TC, TC, C, QuoteC>(base, quote);
+    }
+
+    fn new_invalid_with_groups<G, QuoteG, C, QuoteC>(base: Coin<C>, quote: Coin<QuoteC>)
+    where
+        G: Group,
+        QuoteG: Group,
+        C: Currency,
+        QuoteC: Currency,
+    {
+        let _p = PriceDTO::<G, QuoteG>::new(base.into(), quote.into());
+        #[cfg(not(debug_assertions))]
+        {
+            _p.invariant_held().expect("should have returned an error");
+        }
+    }
+
+    fn load<C, QuoteC>(json: &[u8]) -> StdResult<PriceDTO<TC, TC>>
+    where
+        C: Currency,
+        QuoteC: Currency,
+    {
+        load_with_groups::<TC, TC, C, QuoteC>(json)
+    }
+
+    fn load_with_groups<G, QuoteG, C, QuoteC>(json: &[u8]) -> StdResult<PriceDTO<G, QuoteG>>
+    where
+        G: Group + for<'a> Deserialize<'a> + Debug,
+        QuoteG: Group + for<'a> Deserialize<'a> + Debug,
+        C: Currency,
+        QuoteC: Currency,
+    {
+        from_slice::<PriceDTO<G, QuoteG>>(json)
+    }
+
+    fn assert_err<G, QuoteG>(r: Result<PriceDTO<G, QuoteG>, StdError>, msg: &str)
+    where
+        G: Group,
+        QuoteG: Group,
+    {
+        assert!(matches!(
+            r,
+            Err(StdError::ParseErr {
+                target_type,
+                msg: real_msg
+            }) if target_type.contains("PriceDTO") && real_msg.contains(msg)
+        ));
     }
 }

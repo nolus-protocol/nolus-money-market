@@ -45,7 +45,7 @@ pub mod currency {
         const DEX_SYMBOL: SymbolStatic = "ibc/dex_udai";
     }
 
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Deserialize)]
     pub struct TestCurrencies {}
     impl Group for TestCurrencies {
         const DESCR: SymbolStatic = "test";
@@ -74,7 +74,7 @@ pub mod currency {
         }
     }
 
-    #[derive(PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Deserialize)]
     pub struct TestExtraCurrencies {}
     impl Group for TestExtraCurrencies {
         const DESCR: SymbolStatic = "test_extra";

@@ -42,6 +42,7 @@ pub fn execute<G, QuoteG, Cmd, C>(
     cmd: Cmd,
 ) -> Result<Cmd::Output, Cmd::Error>
 where
+    G: Group,
     QuoteG: Group,
     Cmd: WithBase<C>,
     C: Currency,

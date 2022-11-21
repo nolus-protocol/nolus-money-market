@@ -26,7 +26,11 @@ where
     )
 }
 
-struct CVisitor<'a, G, QuoteG, Cmd> {
+struct CVisitor<'a, G, QuoteG, Cmd>
+where
+    G: Group,
+    QuoteG: Group,
+{
     price_dto: &'a PriceDTO<G, QuoteG>,
     cmd: Cmd,
 }
