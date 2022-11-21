@@ -13,9 +13,10 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, Storage, Timestamp},
 };
+use swap::SwapTarget;
 
 use crate::{
-    state::{supported_pairs::SupportedPairs, Config},
+    state::{supported_pairs::SupportedPairs, supported_pairs::SwapLeg, Config},
     ContractError,
 };
 
@@ -73,9 +74,14 @@ where
         }
 
         if prices.iter().any(|price| {
-            !supported_pairs
-                .iter()
-                .any(|leg| price.base().ticker() == &leg.from && price.quote().ticker() == &leg.to.target)
+            !supported_pairs.iter().any(
+                |SwapLeg {
+                     from,
+                     to: SwapTarget { target: to, .. },
+                 }| {
+                    price.base().ticker() == from && price.quote().ticker() == to
+                },
+            )
         }) {
             return Err(ContractError::UnsupportedDenomPairs {});
         }
