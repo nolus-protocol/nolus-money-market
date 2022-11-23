@@ -8,6 +8,7 @@ use self::errors::AlarmError;
 
 pub mod errors;
 pub mod price;
+mod unchecked;
 
 pub type Id = u64;
 
@@ -19,6 +20,7 @@ pub enum ExecuteAlarmMsg {
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
+#[serde(try_from = "unchecked::Alarm")]
 pub struct Alarm {
     below: SpotPrice,
     above: Option<SpotPrice>,
@@ -41,9 +43,7 @@ impl Alarm {
             || (self.above.is_some() && current_price > self.above.as_ref().unwrap())
     }
 
-    // TODO implement the same trick of checking the invariant in desialization of the objects
-    // we we did for PriceDTO
-    pub fn invariant_held(&self) -> Result<(), AlarmError> {
+    fn invariant_held(&self) -> Result<(), AlarmError> {
         if let Some(above) = &self.above {
             if self.below.base().ticker() != above.base().ticker()
                 || self.below.quote().ticker() != above.quote().ticker()
@@ -78,19 +78,44 @@ mod test {
 
     #[test]
     fn below_price_err() {
-        assert_err(from_slice(br#"{"below": {"amount": {"amount": "2", "ticker": "WBTC"}, "amount_quote": {"amount": "10", "ticker": "WBTC"}}}"#), "The price should be equal to the identity if the currencies match");
-        assert_err(from_slice(br#"{"below": {"amount": {"amount": "5", "ticker": "DAI"}, "amount_quote": {"amount": "0", "ticker": "DAI"}}}"#), "The quote amount should not be zero");
-        assert_err(from_slice(br#"{"below": {"amount": {"amount": "0", "ticker": "DAI"}, "amount_quote": {"amount": "5", "ticker": "DAI"}}}"#), "The amount should not be zero");
+        assert_err(from_slice(br#"{"below": {"amount": {"amount": "2", "ticker": "WBTC"}, "amount_quote": {"amount": "10", "ticker": "WBTC"}}}"#), 
+                                "The price should be equal to the identity if the currencies match");
+        assert_err(from_slice(br#"{"below": {"amount": {"amount": "5", "ticker": "DAI"}, "amount_quote": {"amount": "0", "ticker": "DAI"}}}"#),
+                                "The quote amount should not be zero");
+        assert_err(from_slice(br#"{"below": {"amount": {"amount": "0", "ticker": "DAI"}, "amount_quote": {"amount": "5", "ticker": "DAI"}}}"#),
+                                "The amount should not be zero");
     }
 
     #[test]
     fn above_price_zero() {
-        let r = from_slice(
-            br#"{"below": {"amount": {"amount": "0", "ticker": "ABC"}, "amount_quote": {"amount": "10", "ticker": "ABC"}}}"#,
-        );
-        assert_err(r, "The amount should not be zero");
+        assert_err(from_slice(br#"{"below": {"amount": {"amount": "0", "ticker": "ABC"}, "amount_quote": {"amount": "10", "ticker": "ABC"}}}"#),
+                                "The amount should not be zero");
     }
 
+    #[test]
+    fn currencies_mismatch() {
+        assert_err(from_slice(br#"{"below": {"amount": {"amount": "2", "ticker": "WBTC"}, 
+                                                "amount_quote": {"amount": "10", "ticker": "CRO"}},
+                                        "above": {"amount": {"amount": "2", "ticker": "WBTC"}, 
+                                                "amount_quote": {"amount": "10", "ticker": "WETH"}}}"#), 
+                                "Mismatch of ");
+        assert_err(from_slice(br#"{"below": {"amount": {"amount": "2", "ticker": "WBTC"}, 
+                                                "amount_quote": {"amount": "10", "ticker": "CRO"}},
+                                        "above": {"amount": {"amount": "2", "ticker": "WETH"}, 
+                                                "amount_quote": {"amount": "10", "ticker": "CRO"}}}"#),
+                                "Mismatch of ");
+    }
+
+    #[test]
+    fn below_not_less_than_above() {
+        assert_err(from_slice(br#"{"below": {"amount": {"amount": "2", "ticker": "WBTC"}, 
+                                                "amount_quote": {"amount": "10", "ticker": "CRO"}},
+                                        "above": {"amount": {"amount": "2", "ticker": "WBTC"}, 
+                                                "amount_quote": {"amount": "9", "ticker": "CRO"}}}"#),
+                                "should be less than the above");
+    }
+
+    #[track_caller]
     fn assert_err(r: Result<Alarm, StdError>, msg: &str) {
         assert!(matches!(
             r,
