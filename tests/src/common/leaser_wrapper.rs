@@ -32,7 +32,7 @@ impl LeaserWrapper {
             Percent::from_percent(2),
             Percent::from_percent(3),
             Percent::from_percent(2),
-            1,
+            Duration::from_hours(1),
         )
     }
 

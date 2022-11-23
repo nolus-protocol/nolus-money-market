@@ -46,7 +46,7 @@ fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::Ins
             Percent::from_percent(2),
             Percent::from_percent(3),
             Percent::from_percent(2),
-            1,
+            Duration::from_hours(1),
         ),
         lease_interest_payment: InterestPaymentSpec::new(
             Duration::from_days(90),
@@ -129,7 +129,7 @@ fn test_update_config() {
         Percent::from_percent(1),
         Percent::from_percent(2),
         Percent::from_percent(1),
-        12,
+        Duration::from_hours(12),
     );
     let expected_repaiment =
         InterestPaymentSpec::new(Duration::from_secs(100), Duration::from_secs(10));
@@ -147,7 +147,7 @@ fn test_update_config() {
 }
 
 #[test]
-#[should_panic(expected = "BrokenInvariant")]
+#[should_panic(expected = "Healthy % should be < first liquidation %")]
 fn test_update_config_invalid_liability() {
     let mut deps = mock_dependencies();
 
@@ -211,7 +211,7 @@ fn test_update_config_unauthorized() {
         Percent::from_percent(1),
         Percent::from_percent(2),
         Percent::from_percent(1),
-        12,
+        Duration::from_hours(12),
     );
     let expected_repaiment =
         InterestPaymentSpec::new(Duration::from_secs(12), Duration::from_secs(10));

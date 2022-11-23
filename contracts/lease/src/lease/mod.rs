@@ -634,7 +634,7 @@ mod tests {
                 Percent::from_percent(2),
                 Percent::from_percent(3),
                 Percent::from_percent(2),
-                24,
+                Duration::from_hours(24),
             ),
             loan,
             (time_alarms, oracle),

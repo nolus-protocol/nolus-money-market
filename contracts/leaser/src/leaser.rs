@@ -82,7 +82,6 @@ impl Leaser {
         if info.sender != config.owner {
             return Err(ContractError::Unauthorized {});
         }
-        liability.invariant_held()?;
         Config::update(
             deps.storage,
             lease_interest_rate_margin,

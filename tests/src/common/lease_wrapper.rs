@@ -30,7 +30,7 @@ pub struct LeaseWrapperConfig {
     pub liability_minus_delta_to_first_liq_warn: Percent,
     pub liability_minus_delta_to_second_liq_warn: Percent,
     pub liability_minus_delta_to_third_liq_warn: Percent,
-    pub liability_recalc_hours: u16,
+    pub liability_recalc_time: Duration,
     // LoanForm
     pub annual_margin_interest: Percent,
     pub interest_payment: InterestPaymentSpec,
@@ -48,7 +48,7 @@ impl Default for LeaseWrapperConfig {
             liability_minus_delta_to_first_liq_warn: Percent::from_percent(2),
             liability_minus_delta_to_second_liq_warn: Percent::from_percent(3),
             liability_minus_delta_to_third_liq_warn: Percent::from_percent(2),
-            liability_recalc_hours: 20 * 24,
+            liability_recalc_time: Duration::from_days(20),
 
             annual_margin_interest: Percent::from_percent(0), // 3.1%
             interest_payment: InterestPaymentSpec::new(
@@ -127,7 +127,7 @@ impl LeaseWrapper {
                 config.liability_minus_delta_to_first_liq_warn,
                 config.liability_minus_delta_to_second_liq_warn,
                 config.liability_minus_delta_to_third_liq_warn,
-                config.liability_recalc_hours,
+                config.liability_recalc_time,
             ),
             loan: LoanForm {
                 annual_margin_interest: config.annual_margin_interest,
