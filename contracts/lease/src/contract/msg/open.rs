@@ -30,15 +30,18 @@ impl NewLeaseForm {
         let profit = ProfitRef::try_from(api.addr_validate(&self.loan.profit)?, querier)?;
         let alarms = TimeAlarmsRef::try_from(api.addr_validate(&self.time_alarms)?, querier)?;
 
+        let cmd = LeaseFactory {
+            form: self,
+            lease_addr,
+            start_at,
+            amount,
+            api,
+        };
+        //TODO avoid cloning by extending the trait WithLeaseDeps to provide it
+        let asset_currency = cmd.form.currency.clone();
         lease::execute_deps(
-            LeaseFactory {
-                form: &self,
-                lease_addr,
-                start_at,
-                amount,
-                api,
-            },
-            &self.currency,
+            cmd,
+            &asset_currency,
             deps.0,
             profit,
             alarms,
@@ -49,7 +52,7 @@ impl NewLeaseForm {
 }
 
 struct LeaseFactory<'a> {
-    form: &'a NewLeaseForm,
+    form: NewLeaseForm,
     lease_addr: &'a Addr,
     start_at: Timestamp,
     amount: &'a LeaseCoin,
@@ -84,10 +87,9 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             self.start_at,
             lpp,
             self.form.loan.annual_margin_interest,
-            self.form.loan.interest_due_period,
-            self.form.loan.grace_period,
+            self.form.loan.interest_payment,
             profit,
-        )?;
+        );
         let amount: Coin<Asset> = self.amount.try_into()?;
 
         Ok(Lease::<_, Asset, _, _, _, _>::new(
@@ -123,7 +125,7 @@ mod test {
     };
 
     use crate::api::dex::{ConnectionParams, Ics20Channel};
-    use crate::api::{LoanForm, NewLeaseForm};
+    use crate::api::{InterestPaymentSpec, LoanForm, NewLeaseForm};
     use crate::{error::ContractError, reply_id::ReplyId};
 
     const PROFIT_ADDR: &str = "f78wgdw";
@@ -146,8 +148,10 @@ mod test {
             loan: LoanForm {
                 annual_margin_interest: Percent::from_percent(0),
                 lpp: lpp.into(),
-                interest_due_period: Duration::from_secs(100),
-                grace_period: Duration::from_secs(10),
+                interest_payment: InterestPaymentSpec::new(
+                    Duration::from_secs(100),
+                    Duration::from_secs(10),
+                ),
                 profit: PROFIT_ADDR.into(),
             },
             time_alarms: "timealarms".into(),

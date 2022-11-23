@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{any::type_name, fmt::Display};
 
 use thiserror::Error;
 
@@ -54,6 +54,9 @@ pub enum ContractError {
 
     #[error("[Lease] The operation '{0}' is not supported in state '{1}'")]
     UnsupportedOperation(String, String),
+
+    #[error("[Finance] Programming error or invalid serialized object of '{0}' type, cause '{1}'")]
+    BrokenInvariant(String, String),
 }
 
 impl ContractError {
@@ -63,6 +66,14 @@ impl ContractError {
         State: Display,
     {
         Self::UnsupportedOperation(op.into(), format!("{}", state))
+    }
+
+    pub fn broken_invariant_if<T>(check: bool, msg: &str) -> ContractResult<()> {
+        if check {
+            Err(Self::BrokenInvariant(type_name::<T>().into(), msg.into()))
+        } else {
+            Ok(())
+        }
     }
 }
 

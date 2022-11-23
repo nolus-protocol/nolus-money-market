@@ -8,7 +8,7 @@ use sdk::{
 };
 
 pub use self::{
-    open::{LoanForm, NewLeaseForm},
+    open::{InterestPaymentSpec, LoanForm, NewLeaseForm},
     query::{StateQuery, StateResponse},
 };
 

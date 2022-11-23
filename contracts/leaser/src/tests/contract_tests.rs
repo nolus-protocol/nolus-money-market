@@ -1,5 +1,8 @@
 use cosmwasm_std::Deps;
-use lease::api::dex::{ConnectionParams, Ics20Channel};
+use lease::api::{
+    dex::{ConnectionParams, Ics20Channel},
+    InterestPaymentSpec,
+};
 use serde::{Deserialize, Serialize};
 
 use finance::{
@@ -20,7 +23,7 @@ use crate::{
     cmd::Borrow,
     contract::{execute, instantiate, query},
     error::ContractResult,
-    msg::{ConfigResponse, ExecuteMsg, QueryMsg, Repayment},
+    msg::{ConfigResponse, ExecuteMsg, QueryMsg},
     state::config::Config,
     ContractError,
 };
@@ -45,7 +48,10 @@ fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::Ins
             Percent::from_percent(2),
             1,
         ),
-        repayment: Repayment::new(Duration::from_days(90), Duration::from_days(10)),
+        lease_interest_payment: InterestPaymentSpec::new(
+            Duration::from_days(90),
+            Duration::from_days(10),
+        ),
         time_alarms: Addr::unchecked("timealarms"),
         market_price_oracle: Addr::unchecked("oracle"),
         profit: Addr::unchecked("profit"),
@@ -125,41 +131,19 @@ fn test_update_config() {
         Percent::from_percent(1),
         12,
     );
-    let expected_repaiment = Repayment::new(Duration::from_secs(100), Duration::from_secs(10));
+    let expected_repaiment =
+        InterestPaymentSpec::new(Duration::from_secs(100), Duration::from_secs(10));
     setup_test_case(deps.as_mut());
     let msg = ExecuteMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
         liability: expected_liability,
-        repayment: expected_repaiment.clone(),
+        lease_interest_payment: expected_repaiment.clone(),
     };
     execute(deps.as_mut(), mock_env(), owner(), msg).unwrap();
 
     let config = query_config(deps.as_ref());
     assert_eq!(expected_liability, config.liability);
-    assert_eq!(expected_repaiment, config.repayment);
-}
-
-#[test]
-#[should_panic(expected = "Period length should be greater than grace period")]
-fn test_update_config_invalid_repay_period() {
-    let mut deps = mock_dependencies();
-    let expected_liability = Liability::new(
-        Percent::from_percent(55),
-        Percent::from_percent(5),
-        Percent::from_percent(5),
-        Percent::from_percent(1),
-        Percent::from_percent(2),
-        Percent::from_percent(1),
-        12,
-    );
-    let expected_repaiment = Repayment::new(Duration::from_secs(18000), Duration::from_secs(23000));
-    setup_test_case(deps.as_mut());
-    let msg = ExecuteMsg::Config {
-        lease_interest_rate_margin: Percent::from_percent(5),
-        liability: expected_liability,
-        repayment: expected_repaiment,
-    };
-    execute(deps.as_mut(), mock_env(), owner(), msg).unwrap();
+    assert_eq!(expected_repaiment, config.lease_interest_payment);
 }
 
 #[test]
@@ -185,7 +169,7 @@ fn test_update_config_invalid_liability() {
         Config {
             lease_interest_rate_margin: Percent,
             liability: Liability,
-            repayment: Repayment,
+            lease_interest_payment: InterestPaymentSpec,
         },
         OpenLease {
             currency: String,
@@ -204,7 +188,10 @@ fn test_update_config_invalid_liability() {
     let mock_msg = MockExecuteMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
         liability,
-        repayment: Repayment::new(Duration::from_secs(10), Duration::from_secs(10)),
+        lease_interest_payment: InterestPaymentSpec::new(
+            Duration::from_secs(20),
+            Duration::from_secs(10),
+        ),
     };
 
     let msg: ExecuteMsg = from_binary(&to_binary(&mock_msg).unwrap()).unwrap();
@@ -226,12 +213,13 @@ fn test_update_config_unauthorized() {
         Percent::from_percent(1),
         12,
     );
-    let expected_repaiment = Repayment::new(Duration::from_secs(10), Duration::from_secs(10));
+    let expected_repaiment =
+        InterestPaymentSpec::new(Duration::from_secs(12), Duration::from_secs(10));
     setup_test_case(deps.as_mut());
     let msg = ExecuteMsg::Config {
         lease_interest_rate_margin: Percent::from_percent(5),
         liability: expected_liability,
-        repayment: expected_repaiment,
+        lease_interest_payment: expected_repaiment,
     };
 
     let err = execute(deps.as_mut(), mock_env(), customer(), msg).unwrap_err();

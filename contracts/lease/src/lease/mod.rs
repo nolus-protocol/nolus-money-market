@@ -261,7 +261,11 @@ mod tests {
         stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},
     };
 
-    use crate::{api::StateResponse, loan::Loan, reply_id::ReplyId};
+    use crate::{
+        api::{InterestPaymentSpec, StateResponse},
+        loan::Loan,
+        reply_id::ReplyId,
+    };
 
     use super::Lease;
 
@@ -614,11 +618,9 @@ mod tests {
             LEASE_START,
             lpp,
             MARGIN_INTEREST_RATE,
-            Duration::from_days(100),
-            Duration::from_days(10),
+            InterestPaymentSpec::new(Duration::from_days(100), Duration::from_days(10)),
             profit,
-        )
-        .unwrap();
+        );
 
         Lease::new(
             lease_addr,

@@ -4,7 +4,7 @@ use finance::{
 use lease::{
     api::{
         dex::{ConnectionParams, Ics20Channel},
-        ExecuteMsg, LoanForm, NewLeaseForm, StateQuery,
+        ExecuteMsg, InterestPaymentSpec, LoanForm, NewLeaseForm, StateQuery,
     },
     contract::{execute, instantiate, query, reply, sudo},
     error::ContractError,
@@ -33,8 +33,7 @@ pub struct LeaseWrapperConfig {
     pub liability_recalc_hours: u16,
     // LoanForm
     pub annual_margin_interest: Percent,
-    pub interest_due_period: Duration,
-    pub grace_period: Duration,
+    pub interest_payment: InterestPaymentSpec,
     // Dex
     pub dex: ConnectionParams,
 }
@@ -52,8 +51,10 @@ impl Default for LeaseWrapperConfig {
             liability_recalc_hours: 20 * 24,
 
             annual_margin_interest: Percent::from_percent(0), // 3.1%
-            interest_due_period: Duration::from_secs(100), // 90 days TODO use a crate for daytime calculations
-            grace_period: Duration::from_secs(10), // 10 days TODO use a crate for daytime calculations
+            interest_payment: InterestPaymentSpec::new(
+                Duration::from_secs(100),
+                Duration::from_secs(10),
+            ),
 
             dex: ConnectionParams {
                 connection_id: "connection-0".into(),
@@ -131,8 +132,7 @@ impl LeaseWrapper {
             loan: LoanForm {
                 annual_margin_interest: config.annual_margin_interest,
                 lpp: addresses.lpp.into_string(),
-                interest_due_period: config.interest_due_period,
-                grace_period: config.grace_period,
+                interest_payment: config.interest_payment,
                 profit: addresses.profit.into_string(),
             },
             time_alarms: addresses.time_alarms.into_string(),

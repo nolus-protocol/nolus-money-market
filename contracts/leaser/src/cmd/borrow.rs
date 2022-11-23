@@ -50,8 +50,7 @@ impl Borrow {
                 loan: LoanForm {
                     annual_margin_interest: config.lease_interest_rate_margin,
                     lpp: config.lpp_addr.into_string(),
-                    interest_due_period: config.repayment.period,
-                    grace_period: config.repayment.grace_period,
+                    interest_payment: config.lease_interest_payment,
                     profit: config.profit.into_string(),
                 },
                 time_alarms: config.time_alarms.into_string(),

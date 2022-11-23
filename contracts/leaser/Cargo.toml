@@ -30,6 +30,7 @@ thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
+lease = { path = "../lease", default-features = false, features = ["testing"]}
 finance = { path = "../../packages/finance", features = ["testing"] }
 schema = { path = "../../packages/schema" }
 

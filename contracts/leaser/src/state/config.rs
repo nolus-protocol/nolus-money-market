@@ -1,4 +1,4 @@
-use lease::api::dex::ConnectionParams;
+use lease::api::{dex::ConnectionParams, InterestPaymentSpec};
 use serde::{Deserialize, Serialize};
 
 use finance::{liability::Liability, percent::Percent};
@@ -8,11 +8,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::{
-    error::ContractResult,
-    msg::{InstantiateMsg, Repayment},
-    ContractError,
-};
+use crate::{error::ContractResult, msg::InstantiateMsg, ContractError};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Config {
@@ -21,7 +17,7 @@ pub struct Config {
     pub lpp_addr: Addr,
     pub lease_interest_rate_margin: Percent,
     pub liability: Liability,
-    pub repayment: Repayment,
+    pub lease_interest_payment: InterestPaymentSpec,
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
     pub profit: Addr,
@@ -38,7 +34,7 @@ impl Config {
             lpp_addr: msg.lpp_ust_addr,
             lease_interest_rate_margin: msg.lease_interest_rate_margin,
             liability: msg.liability,
-            repayment: msg.repayment,
+            lease_interest_payment: msg.lease_interest_payment,
             time_alarms: msg.time_alarms,
             market_price_oracle: msg.market_price_oracle,
             profit: msg.profit,
@@ -70,13 +66,13 @@ impl Config {
         storage: &mut dyn Storage,
         lease_interest_rate_margin: Percent,
         liability: Liability,
-        repayment: Repayment,
+        repayment: InterestPaymentSpec,
     ) -> Result<(), ContractError> {
         Self::load(storage)?;
         Self::STORAGE.update(storage, |mut c| {
             c.lease_interest_rate_margin = lease_interest_rate_margin;
             c.liability = liability;
-            c.repayment = repayment;
+            c.lease_interest_payment = repayment;
             ContractResult::Ok(c)
         })?;
         Ok(())

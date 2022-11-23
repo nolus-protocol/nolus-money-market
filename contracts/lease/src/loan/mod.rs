@@ -20,7 +20,10 @@ use platform::batch::Batch;
 use profit::stub::{Profit as ProfitTrait, ProfitBatch, ProfitRef};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
-use crate::error::{ContractError, ContractResult};
+use crate::{
+    api::InterestPaymentSpec,
+    error::{ContractError, ContractResult},
+};
 
 pub use self::state::State;
 pub(crate) use self::{liability::LiabilityStatus, repay::Receipt as RepayReceipt};
@@ -33,8 +36,7 @@ mod state;
 pub(crate) struct LoanDTO {
     annual_margin_interest: Percent,
     lpp: LppLenderRef,
-    interest_due_period: Duration,
-    grace_period: Duration,
+    interest_payment_spec: InterestPaymentSpec,
     current_period: InterestPeriod<Units, Percent>,
     profit: ProfitRef,
 }
@@ -43,17 +45,14 @@ impl LoanDTO {
     fn new(
         annual_margin_interest: Percent,
         lpp: LppLenderRef,
-        interest_due_period: Duration,
-        grace_period: Duration,
+        interest_payment_spec: InterestPaymentSpec,
         current_period: InterestPeriod<Units, Percent>,
         profit: ProfitRef,
     ) -> Self {
-        debug_assert!(grace_period < interest_due_period);
         Self {
             annual_margin_interest,
             lpp,
-            interest_due_period,
-            grace_period,
+            interest_payment_spec,
             current_period,
             profit,
         }
@@ -76,8 +75,7 @@ pub struct Loan<Lpn, Lpp, Profit> {
     annual_margin_interest: Percent,
     lpn: PhantomData<Lpn>,
     lpp: Lpp,
-    interest_due_period: Duration,
-    grace_period: Duration,
+    interest_payment_spec: InterestPaymentSpec,
     current_period: InterestPeriod<Units, Percent>,
     profit: Profit,
 }
@@ -92,60 +90,37 @@ where
         start: Timestamp,
         lpp: Lpp,
         annual_margin_interest: Percent,
-        interest_due_period: Duration,
-        grace_period: Duration,
+        interest_payment_spec: InterestPaymentSpec,
         profit: Profit,
-    ) -> ContractResult<Self> {
-        if grace_period >= interest_due_period {
-            Err(ContractError::InvalidParameters(format!(
-                "The grace period, currently {}, must be shorter that an interest period, currently {}, to avoid overlapping",
-                grace_period,
-                interest_due_period,
-            )))
-        } else {
-            Ok(Self::new_raw(
-                annual_margin_interest,
-                PhantomData,
-                lpp,
-                interest_due_period,
-                grace_period,
-                Self::due_period(annual_margin_interest, start, interest_due_period),
-                profit,
-            ))
+    ) -> Self {
+        let current_period = Self::due_period(
+            annual_margin_interest,
+            start,
+            interest_payment_spec.due_period(),
+        );
+        Self {
+            annual_margin_interest,
+            lpn: PhantomData,
+            lpp,
+            interest_payment_spec,
+            current_period,
+            profit,
         }
     }
 
     pub(super) fn from_dto(dto: LoanDTO, lpp: Lpp, profit: Profit) -> Self {
-        Self::new_raw(
-            dto.annual_margin_interest,
-            PhantomData,
-            lpp,
-            dto.interest_due_period,
-            dto.grace_period,
-            dto.current_period,
-            profit,
-        )
-    }
-
-    fn new_raw(
-        annual_margin_interest: Percent,
-        lpn: PhantomData<Lpn>,
-        lpp: Lpp,
-        interest_due_period: Duration,
-        grace_period: Duration,
-        current_period: InterestPeriod<Units, Percent>,
-        profit: Profit,
-    ) -> Self {
-        debug_assert!(grace_period < interest_due_period);
-
-        Self {
-            annual_margin_interest,
-            lpn,
-            lpp,
-            interest_due_period,
-            grace_period,
-            current_period,
-            profit,
+        {
+            let annual_margin_interest = dto.annual_margin_interest;
+            let interest_payment_spec = dto.interest_payment_spec;
+            let current_period = dto.current_period;
+            Self {
+                annual_margin_interest,
+                lpn: PhantomData,
+                lpp,
+                interest_payment_spec,
+                current_period,
+                profit,
+            }
         }
     }
 
@@ -163,8 +138,7 @@ where
         let dto = LoanDTO::new(
             self.annual_margin_interest,
             lpp_ref,
-            self.interest_due_period,
-            self.grace_period,
+            self.interest_payment_spec,
             self.current_period,
             profit_ref,
         );
@@ -173,7 +147,7 @@ where
     }
 
     pub(crate) fn grace_period_end(&self) -> Timestamp {
-        self.current_period.till() + self.grace_period
+        self.current_period.till() + self.interest_payment_spec.grace_period()
     }
 
     pub(crate) fn repay(
@@ -263,7 +237,7 @@ where
             self.current_period
         } else {
             self.due_period_from_with_length(
-                self.current_period.till() - self.interest_due_period,
+                self.current_period.till() - self.interest_payment_spec.due_period(),
                 Duration::default(),
             )
         };
@@ -423,7 +397,11 @@ where
 
     #[inline]
     fn due_period_from(&self, start: Timestamp) -> InterestPeriod<Units, Percent> {
-        Self::due_period(self.annual_margin_interest, start, self.interest_due_period)
+        Self::due_period(
+            self.annual_margin_interest,
+            start,
+            self.interest_payment_spec.due_period(),
+        )
     }
 
     #[inline]
@@ -456,10 +434,10 @@ where
     }
     fn debug_check_before_period_end(&self, when: Timestamp) {
         debug_assert!(
-            when <= self.current_period.till() + self.interest_due_period,
+            when <= self.current_period.till() + self.interest_payment_spec.due_period(),
             "Payment is tried at {}s which is not within the current or next period ending at {}s",
             when,
-            self.current_period.till() + self.interest_due_period,
+            self.current_period.till() + self.interest_payment_spec.due_period(),
         );
     }
 }
@@ -487,7 +465,10 @@ mod tests {
     use profit::stub::{Profit, ProfitBatch};
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
-    use crate::loan::{repay::Receipt as RepayReceipt, Loan};
+    use crate::{
+        api::InterestPaymentSpec,
+        loan::{repay::Receipt as RepayReceipt, Loan},
+    };
 
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(500); // 50%
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
@@ -585,11 +566,9 @@ mod tests {
                 loan: loan_response,
             },
             MARGIN_INTEREST_RATE,
-            Duration::YEAR,
-            Duration::from_secs(0),
+            InterestPaymentSpec::new(Duration::YEAR, Duration::from_secs(0)),
             ProfitLocalStub {},
         )
-        .expect("loan test instance should be setup correctly")
     }
 
     #[test]

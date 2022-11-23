@@ -1,5 +1,3 @@
-use std::any::type_name;
-
 use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError;
@@ -32,9 +30,6 @@ pub enum ContractError {
     #[error("[Leaser] ParseError {err:?}")]
     ParseError { err: String },
 
-    #[error("[Leaser] Validation {0}")]
-    Validation(String),
-
     #[error("[Leaser] Custom Error val: {val:?}")]
     CustomError { val: String },
 
@@ -52,12 +47,6 @@ pub enum ContractError {
 
     #[error("[Leaser] DEX connectivity already setup")]
     DEXConnectivityAlreadySetup {},
-}
-
-impl ContractError {
-    pub fn validation_err<T>(str: String) -> Self {
-        Self::Validation(format!("[ {} ] {}", String::from(type_name::<T>()), str))
-    }
 }
 
 pub type ContractResult<T> = Result<T, ContractError>;

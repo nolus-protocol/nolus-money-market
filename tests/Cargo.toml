@@ -9,7 +9,7 @@ license.workspace = true
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 rewards_dispatcher = { path = "../contracts/dispatcher", default-features = false, features = ["contract"] }
-lease = { path = "../contracts/lease", default-features = false, features = ["contract"] }
+lease = { path = "../contracts/lease", default-features = false, features = ["contract", "testing"] }
 leaser = { path = "../contracts/leaser", default-features = false, features = ["contract", "testing"] }
 lpp = { path = "../contracts/lpp", default-features = false, features = ["contract", "testing"] }
 oracle = { path = "../contracts/oracle", default-features = false, features = ["contract", "testing"] }

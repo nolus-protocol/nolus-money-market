@@ -21,6 +21,7 @@ test = true
 default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
 contract = []
+testing = []
 
 [dependencies]
 lpp = { path = "../lpp", default-features = false, features = ["stub"] }

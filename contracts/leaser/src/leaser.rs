@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use finance::currency::SymbolOwned;
 use finance::{liability::Liability, percent::Percent};
 use lease::api::dex::ConnectionParams;
-use lease::api::DownpaymentCoin;
+use lease::api::{DownpaymentCoin, InterestPaymentSpec};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use sdk::{
@@ -14,7 +14,7 @@ use sdk::{
 use crate::{
     cmd::Quote,
     error::{ContractError, ContractResult},
-    msg::{ConfigResponse, QuoteResponse, Repayment},
+    msg::{ConfigResponse, QuoteResponse},
     state::config::Config,
     state::leaser::Loans,
 };
@@ -76,19 +76,18 @@ impl Leaser {
         info: MessageInfo,
         lease_interest_rate_margin: Percent,
         liability: Liability,
-        repayment: Repayment,
+        lease_interest_payment: InterestPaymentSpec,
     ) -> ContractResult<Response> {
         let config = Config::load(deps.storage)?;
         if info.sender != config.owner {
             return Err(ContractError::Unauthorized {});
         }
         liability.invariant_held()?;
-        repayment.validate_period()?;
         Config::update(
             deps.storage,
             lease_interest_rate_margin,
             liability,
-            repayment,
+            lease_interest_payment,
         )?;
 
         Ok(Response::default())

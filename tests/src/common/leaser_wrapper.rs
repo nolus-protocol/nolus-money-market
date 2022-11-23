@@ -1,7 +1,8 @@
 use finance::{duration::Duration, liability::Liability, percent::Percent};
+use lease::api::InterestPaymentSpec;
 use leaser::{
     contract::{execute, instantiate, query, reply},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, Repayment},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     ContractError,
 };
 use sdk::{
@@ -51,7 +52,10 @@ impl LeaserWrapper {
             lpp_ust_addr: lpp_addr.clone(),
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
             liability: Self::liability(),
-            repayment: Repayment::new(Self::REPAYMENT_PERIOD, Self::GRACE_PERIOD),
+            lease_interest_payment: InterestPaymentSpec::new(
+                Self::REPAYMENT_PERIOD,
+                Self::GRACE_PERIOD,
+            ),
             time_alarms,
             market_price_oracle,
             profit,

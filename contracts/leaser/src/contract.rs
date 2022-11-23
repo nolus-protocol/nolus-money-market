@@ -67,8 +67,14 @@ pub fn execute(
         ExecuteMsg::Config {
             lease_interest_rate_margin,
             liability,
-            repayment,
-        } => Leaser::try_configure(deps, info, lease_interest_rate_margin, liability, repayment),
+            lease_interest_payment,
+        } => Leaser::try_configure(
+            deps,
+            info,
+            lease_interest_rate_margin,
+            liability,
+            lease_interest_payment,
+        ),
     }
 }
 
