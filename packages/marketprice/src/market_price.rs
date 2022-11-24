@@ -101,10 +101,11 @@ impl<'m> PriceFeeds<'m> {
         storage: &mut dyn Storage,
         current_block_time: Timestamp,
         sender_raw: &Addr,
-        mut prices: Vec<SpotPrice>,
+        prices: &Vec<SpotPrice>,
         price_feed_period: Duration,
     ) -> Result<(), PriceFeedsError> {
-        while let Some(price_dto) = prices.pop() {
+        // while let Some(price_dto) = prices.pop() {
+        for price_dto in prices {
             self.0.update(
                 storage,
                 (
@@ -112,8 +113,11 @@ impl<'m> PriceFeeds<'m> {
                     price_dto.quote().ticker().to_string(),
                 ),
                 |old: Option<PriceFeed>| -> StdResult<PriceFeed> {
-                    let new_feed =
-                        Observation::new(sender_raw.clone(), current_block_time, price_dto);
+                    let new_feed = Observation::new(
+                        sender_raw.clone(),
+                        current_block_time,
+                        price_dto.to_owned(),
+                    );
 
                     if let Some(mut feed) = old {
                         feed.update(new_feed, price_feed_period);

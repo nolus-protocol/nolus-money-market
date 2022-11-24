@@ -23,7 +23,7 @@ pub use self::serde::{SubTree, TreeStore};
 mod serde;
 
 pub type ResolutionPath = Vec<SymbolOwned>;
-pub type CurrencyPair = (SymbolOwned, SymbolOwned);
+pub type CurrencyPair<'a> = (&'a SymbolOwned, &'a SymbolOwned);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SwapLeg {
@@ -181,8 +181,8 @@ where
         Ok(result)
     }
 
-    pub fn load_affected(&self, pair: &CurrencyPair) -> Result<Vec<SymbolOwned>, ContractError> {
-        if let Some(node) = Self::find_node(self.tree.root(), &pair.0) {
+    pub fn load_affected(&self, pair: CurrencyPair) -> Result<Vec<SymbolOwned>, ContractError> {
+        if let Some(node) = Self::find_node(self.tree.root(), pair.0) {
             let affected = node.bfs().iter.map(|v| v.data.1.clone()).collect();
             Ok(affected)
         } else {
@@ -357,7 +357,7 @@ mod tests {
         let tree = SupportedPairs::<Usdc>::new(test_case()).unwrap();
 
         let mut resp = tree
-            .load_affected(&("token2".into(), TheCurrency::TICKER.into()))
+            .load_affected((&"token2".into(), &TheCurrency::TICKER.into()))
             .unwrap();
         resp.sort();
 

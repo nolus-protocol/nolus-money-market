@@ -84,7 +84,7 @@ fn marketprice_add_feed_empty_vec() {
 
     let prices: Vec<SpotPrice> = Vec::new();
     market
-        .feed(&mut deps.storage, ts, &f_address, prices, MINUTE)
+        .feed(&mut deps.storage, ts, &f_address, &prices, MINUTE)
         .unwrap();
 }
 
@@ -112,7 +112,7 @@ fn marketprice_add_feed() {
     let ts = Timestamp::from_seconds(now.as_secs());
 
     market
-        .feed(&mut deps.storage, ts, &f_address, prices, MINUTE)
+        .feed(&mut deps.storage, ts, &f_address, &prices, MINUTE)
         .unwrap();
     // requite 50 feeders available => NoPrice
     let query = Parameters::new(MINUTE, 50, ts);
@@ -286,6 +286,6 @@ where
 
     let price = SpotPrice::try_from(price).unwrap();
 
-    market.feed(deps.storage, ts, &f_address, vec![price], MINUTE)?;
+    market.feed(deps.storage, ts, &f_address, &vec![price], MINUTE)?;
     Ok(())
 }

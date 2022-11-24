@@ -1,18 +1,14 @@
-use std::collections::HashSet;
-
-use serde::{Deserialize, Serialize};
-
-use finance::currency::SymbolOwned;
 use marketprice::{
-    alarms::{price::PriceHooks, Alarm},
+    alarms::{price::PriceAlarms, Alarm},
     SpotPrice,
 };
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, StdResult, Storage},
+    cosmwasm_std::{Addr, Storage},
     schemars::{self, JsonSchema},
 };
+use serde::{Deserialize, Serialize};
 
 use crate::ContractError;
 
@@ -20,10 +16,17 @@ use crate::ContractError;
 pub struct MarketAlarms {}
 
 impl MarketAlarms {
-    const PRICE_ALARMS: PriceHooks<'static> = PriceHooks::new("hooks", "hooks_sequence");
+    const PRICE_ALARMS: PriceAlarms<'static> = PriceAlarms::new(
+        "alarms_below",
+        "index_below",
+        "alarms_above",
+        "index_above",
+        "msg_id",
+    );
 
     pub fn remove(storage: &mut dyn Storage, addr: Addr) -> Result<Response, ContractError> {
-        Ok(Self::PRICE_ALARMS.remove(storage, addr)?)
+        Self::PRICE_ALARMS.remove(storage, addr)?;
+        Ok(Response::default())
     }
 
     pub fn try_add_price_alarm(
@@ -33,10 +36,6 @@ impl MarketAlarms {
     ) -> Result<Response, ContractError> {
         Self::PRICE_ALARMS.add_or_update(storage, &addr, alarm)?;
         Ok(Response::new())
-    }
-
-    pub fn get_hooks_currencies(storage: &dyn Storage) -> StdResult<HashSet<SymbolOwned>> {
-        Self::PRICE_ALARMS.get_hook_denoms(storage)
     }
 
     pub fn try_notify_hooks(

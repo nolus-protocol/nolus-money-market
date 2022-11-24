@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
-use marketprice::error::PriceFeedsError;
+use marketprice::{error::PriceFeedsError, SpotPrice};
 use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
 
 use crate::{
@@ -47,25 +47,27 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                 let config = Config::load(self.deps.storage)?;
                 let parameters =
                     Feeders::query_config(self.deps.storage, &config, self.env.block.time)?;
-                match Feeds::<OracleBase>::with(config)
+                if let Some(price) = Feeds::<OracleBase>::with(config)
                     .get_prices(self.deps.storage, parameters, HashSet::from([currency]))?
-                    .first()
+                    .pop()
                 {
-                    Some(price) => Ok(to_binary(price)?),
-                    None => Err(ContractError::PriceFeedsError(PriceFeedsError::NoPrice())),
+                    Ok(to_binary(&price?)?)
+                } else {
+                    Err(ContractError::PriceFeedsError(PriceFeedsError::NoPrice()))
                 }
             }
             QueryMsg::Prices { currencies } => {
                 let config = Config::load(self.deps.storage)?;
+
                 let parameters =
                     Feeders::query_config(self.deps.storage, &config, self.env.block.time)?;
-                Ok(to_binary(&PricesResponse {
-                    prices: Feeds::<OracleBase>::with(config).get_prices(
-                        self.deps.storage,
-                        parameters,
-                        currencies,
-                    )?,
-                })?)
+
+                let prices = Feeds::<OracleBase>::with(config)
+                    .get_prices(self.deps.storage, parameters, currencies)?
+                    .into_iter()
+                    .collect::<Result<Vec<SpotPrice>, _>>()?;
+
+                Ok(to_binary(&PricesResponse { prices })?)
             }
             QueryMsg::SwapPath { from, to } => Ok(to_binary(
                 &SupportedPairs::<OracleBase>::load(self.deps.storage)?

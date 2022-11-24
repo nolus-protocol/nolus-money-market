@@ -15,15 +15,15 @@ pub type Id = u64;
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
-    PriceAlarm(Alarm),
+    PriceAlarm(),
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(try_from = "unchecked::Alarm")]
 pub struct Alarm {
-    below: SpotPrice,
-    above: Option<SpotPrice>,
+    pub(crate) below: SpotPrice,
+    pub(crate) above: Option<SpotPrice>,
 }
 
 impl Alarm {
