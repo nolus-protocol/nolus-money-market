@@ -38,7 +38,7 @@ impl MarketAlarms {
         Ok(Response::new())
     }
 
-    pub fn try_notify_hooks(
+    pub fn try_notify_alarms(
         storage: &mut dyn Storage,
         updated_prices: Vec<SpotPrice>,
         batch: &mut Batch,

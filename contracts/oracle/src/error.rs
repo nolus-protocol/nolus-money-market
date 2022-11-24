@@ -16,7 +16,7 @@ pub enum ContractError {
     PriceFeedsError(#[from] PriceFeedsError),
 
     #[error("[Oracle] {0}")]
-    HooksError(#[from] AlarmError),
+    AlarmError(#[from] AlarmError),
 
     #[error("[Oracle] {0}")]
     Finance(#[from] finance::error::Error),

@@ -137,7 +137,7 @@ where
             .filter(|price| price.is_ok())
             .collect::<Result<Vec<SpotPrice>, _>>()?;
         // try notify affected subscribers
-        MarketAlarms::try_notify_hooks(storage, updated_prices, &mut batch)?;
+        MarketAlarms::try_notify_alarms(storage, updated_prices, &mut batch)?;
     }
 
     Ok(Response::from(batch))
