@@ -5,11 +5,7 @@ use sdk::{
     cw_storage_plus::Map,
 };
 
-use crate::{
-    error::PriceFeedsError,
-    feed::{Observation, PriceFeed},
-    SpotPrice,
-};
+use crate::{error::PriceFeedsError, feed::PriceFeed, SpotPrice};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Parameters {
@@ -113,15 +109,12 @@ impl<'m> PriceFeeds<'m> {
                     price_dto.quote().ticker().to_string(),
                 ),
                 |old: Option<PriceFeed>| -> StdResult<PriceFeed> {
-                    let new_feed =
-                        Observation::new(sender_raw.clone(), current_block_time, price_dto);
-
-                    if let Some(mut feed) = old {
-                        feed.update(new_feed, price_feed_period);
-                        Ok(feed)
-                    } else {
-                        Ok(PriceFeed::new(new_feed))
-                    }
+                    Ok(old.unwrap_or_default().add_observation(
+                        sender_raw.clone(),
+                        current_block_time,
+                        price_dto,
+                        price_feed_period,
+                    ))
                 },
             )?;
         }

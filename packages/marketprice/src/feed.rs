@@ -11,45 +11,46 @@ use sdk::{
 use crate::{error::PriceFeedsError, market_price::Parameters, SpotPrice};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct Observation {
+struct Observation {
     feeder_addr: Addr,
     time: Timestamp,
     price: SpotPrice,
 }
 impl Observation {
-    pub fn new(feeder_addr: Addr, time: Timestamp, price: SpotPrice) -> Observation {
+    fn new(feeder_addr: Addr, time: Timestamp, price: SpotPrice) -> Observation {
         Observation {
             feeder_addr,
             time,
             price,
         }
     }
-    pub fn price(&self) -> SpotPrice {
-        self.price.clone()
-    }
 
-    pub fn valid(&self, at: Timestamp, validity: Duration) -> bool {
+    fn valid(&self, at: Timestamp, validity: Duration) -> bool {
         self.time + validity > at
     }
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Default, PartialEq, Eq, JsonSchema)]
 pub struct PriceFeed {
     observations: Vec<Observation>,
 }
 
 impl PriceFeed {
-    pub fn new(observation: Observation) -> PriceFeed {
-        PriceFeed {
-            observations: vec![observation],
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    pub fn update(&mut self, observation: Observation, observations_validity: Duration) {
-        self.observations
-            .retain(valid_observations(observation.time, observations_validity));
+    pub fn add_observation(
+        mut self,
+        from: Addr,
+        at: Timestamp,
+        price: SpotPrice,
+        validity: Duration,
+    ) -> Self {
+        self.observations.retain(valid_observations(at, validity));
 
-        self.observations.push(observation);
+        self.observations.push(Observation::new(from, at, price));
+        self
     }
 
     // provide no price for a pair if there are no observations from at least configurable percentage * <number_of_whitelisted_feeders>
@@ -103,7 +104,7 @@ mod test {
 
     use crate::{error::PriceFeedsError, market_price::Parameters, SpotPrice};
 
-    use super::{Observation, PriceFeed};
+    use super::PriceFeed;
 
     #[test]
     fn old_observations() {
@@ -118,7 +119,8 @@ mod test {
             .is(Coin::<Usdc>::new(5000))
             .into();
 
-        let mut feed = PriceFeed::new(Observation::new(feeder1.clone(), feed1_time, feed1_price));
+        let mut feed = PriceFeed::new();
+        feed = feed.add_observation(feeder1.clone(), feed1_time, feed1_price, params.period());
 
         assert_eq!(Err(PriceFeedsError::NoPrice()), feed.get_price(params));
 
@@ -126,8 +128,10 @@ mod test {
         let feed2_price: SpotPrice = price::total_of(Coin::<Weth>::new(19))
             .is(Coin::<Usdc>::new(5000))
             .into();
-        feed.update(
-            Observation::new(feeder1, feed2_time, feed2_price.clone()),
+        feed = feed.add_observation(
+            feeder1,
+            feed2_time,
+            feed2_price.clone(),
             Duration::from_nanos(0),
         );
         assert_eq!(Ok(feed2_price), feed.get_price(params));
@@ -144,7 +148,8 @@ mod test {
             .is(Coin::<Usdc>::new(5000))
             .into();
 
-        let feed = PriceFeed::new(Observation::new(feeder1, feed1_time, feed1_price.clone()));
+        let mut feed = PriceFeed::new();
+        feed = feed.add_observation(feeder1, feed1_time, feed1_price.clone(), validity_period);
 
         let params_two_feeders = Parameters::new(validity_period, 2, block_time);
         assert_eq!(
@@ -167,17 +172,15 @@ mod test {
             .is(Coin::<Usdc>::new(5000))
             .into();
 
-        let mut feed = PriceFeed::new(Observation::new(feeder1, feed1_time, feed1_price));
+        let mut feed = PriceFeed::new();
+        feed = feed.add_observation(feeder1, feed1_time, feed1_price, validity_period);
 
         let feeder2 = Addr::unchecked("feeder2");
         let feed2_time = block_time - validity_period + Duration::from_nanos(1);
         let feed2_price: SpotPrice = price::total_of(Coin::<Weth>::new(19))
             .is(Coin::<Usdc>::new(5000))
             .into();
-        feed.update(
-            Observation::new(feeder2, feed2_time, feed2_price),
-            validity_period,
-        );
+        feed = feed.add_observation(feeder2, feed2_time, feed2_price, validity_period);
 
         let params_feed1_and_2_in = Parameters::new(validity_period, 2, feed2_time);
         assert!(feed.get_price(params_feed1_and_2_in).is_ok());
