@@ -48,7 +48,7 @@ impl PriceFeed {
     pub fn update(&mut self, new_feed: Observation, price_feed_period: Duration) {
         // drop all feeds older than the required refresh time
         self.observations
-            .retain(|f| f.valid(new_feed.time, price_feed_period));
+            .retain(valid_observations(new_feed.time, price_feed_period));
 
         self.observations.push(new_feed);
     }
@@ -66,21 +66,30 @@ impl PriceFeed {
             return Err(PriceFeedsError::NoPrice {});
         }
 
-        if !self.has_enough_feeders(parameters.feeders()) {
+        if !self.has_enough_feeders(&parameters) {
             return Err(PriceFeedsError::NoPrice {});
         }
 
         Ok(last_feed.price.clone())
     }
 
-    fn has_enough_feeders(&self, required_feeders_cnt: usize) -> bool {
-        let unique_reported_feeders = PriceFeed::filter_uniq(&self.observations);
-        unique_reported_feeders.len() >= required_feeders_cnt
+    fn has_enough_feeders(&self, params: &Parameters) -> bool {
+        self.count_unique_feeders(params) >= params.feeders()
     }
 
-    fn filter_uniq(vec: &[Observation]) -> HashSet<&Addr> {
-        vec.iter().map(|o| &o.feeder_addr).collect::<HashSet<_>>()
+    fn count_unique_feeders(&self, params: &Parameters) -> usize {
+        let mut valid_observations = valid_observations(params.block_time(), params.period());
+        self.observations
+            .iter()
+            .filter(|&o| valid_observations(o))
+            .map(|o| &o.feeder_addr)
+            .collect::<HashSet<_>>()
+            .len()
     }
+}
+
+fn valid_observations(at: Timestamp, period: Duration) -> impl FnMut(&Observation) -> bool {
+    move |o: &Observation| o.valid(at, period)
 }
 
 #[cfg(test)]
@@ -123,5 +132,61 @@ mod test {
             Duration::from_nanos(0),
         );
         assert_eq!(Ok(feed2_price), feed.get_price(params));
+    }
+
+    #[test]
+    fn less_feeders() {
+        let validity_period = Duration::from_secs(60);
+        let block_time = Timestamp::from_seconds(100);
+
+        let feeder1 = Addr::unchecked("feeder1");
+        let feed1_time = block_time;
+        let feed1_price: SpotPrice = price::total_of(Coin::<Weth>::new(20))
+            .is(Coin::<Usdc>::new(5000))
+            .into();
+
+        let feed = PriceFeed::new(Observation::new(feeder1, feed1_time, feed1_price.clone()));
+
+        let params_two_feeders = Parameters::new(validity_period, 2, block_time);
+        assert_eq!(
+            Err(PriceFeedsError::NoPrice()),
+            feed.get_price(params_two_feeders)
+        );
+
+        let params_one_feeder = Parameters::new(validity_period, 1, block_time);
+        assert_eq!(Ok(feed1_price), feed.get_price(params_one_feeder));
+    }
+
+    #[test]
+    fn less_feeders_with_valid_observations() {
+        let validity_period = Duration::from_secs(60);
+        let block_time = Timestamp::from_seconds(100);
+
+        let feeder1 = Addr::unchecked("feeder1");
+        let feed1_time = block_time - validity_period;
+        let feed1_price: SpotPrice = price::total_of(Coin::<Weth>::new(20))
+            .is(Coin::<Usdc>::new(5000))
+            .into();
+
+        let mut feed = PriceFeed::new(Observation::new(feeder1, feed1_time, feed1_price));
+
+        let feeder2 = Addr::unchecked("feeder2");
+        let feed2_time = block_time - validity_period + Duration::from_nanos(1);
+        let feed2_price: SpotPrice = price::total_of(Coin::<Weth>::new(19))
+            .is(Coin::<Usdc>::new(5000))
+            .into();
+        feed.update(
+            Observation::new(feeder2, feed2_time, feed2_price),
+            validity_period,
+        );
+
+        let params_feed1_and_2_in = Parameters::new(validity_period, 2, feed2_time);
+        assert!(feed.get_price(params_feed1_and_2_in).is_ok());
+
+        let params_feed2_in = Parameters::new(validity_period, 2, block_time);
+        assert_eq!(
+            Err(PriceFeedsError::NoPrice()),
+            feed.get_price(params_feed2_in)
+        );
     }
 }
