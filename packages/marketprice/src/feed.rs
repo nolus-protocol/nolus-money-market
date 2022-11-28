@@ -39,38 +39,33 @@ pub struct PriceFeed {
 }
 
 impl PriceFeed {
-    pub fn new(new_feed: Observation) -> PriceFeed {
+    pub fn new(observation: Observation) -> PriceFeed {
         PriceFeed {
-            observations: vec![new_feed],
+            observations: vec![observation],
         }
     }
 
-    pub fn update(&mut self, new_feed: Observation, price_feed_period: Duration) {
-        // drop all feeds older than the required refresh time
+    pub fn update(&mut self, observation: Observation, observations_validity: Duration) {
         self.observations
-            .retain(valid_observations(new_feed.time, price_feed_period));
+            .retain(valid_observations(observation.time, observations_validity));
 
-        self.observations.push(new_feed);
+        self.observations.push(observation);
     }
 
-    // provide no price for a pair if there are no feeds from at least configurable percentage * <number_of_whitelisted_feeders>
+    // provide no price for a pair if there are no observations from at least configurable percentage * <number_of_whitelisted_feeders>
     // in a configurable period T in seconds
     // provide the last price for a requested pair unless the previous condition is met.
     pub fn get_price(&self, parameters: Parameters) -> Result<SpotPrice, PriceFeedsError> {
-        let last_feed = self
-            .observations
+        let last_observation = self
+            .valid_observations(&parameters)
             .last()
             .ok_or(PriceFeedsError::NoPrice {})?;
-
-        if !last_feed.valid(parameters.block_time(), parameters.period()) {
-            return Err(PriceFeedsError::NoPrice {});
-        }
 
         if !self.has_enough_feeders(&parameters) {
             return Err(PriceFeedsError::NoPrice {});
         }
 
-        Ok(last_feed.price.clone())
+        Ok(last_observation.price.clone())
     }
 
     fn has_enough_feeders(&self, params: &Parameters) -> bool {
@@ -78,13 +73,17 @@ impl PriceFeed {
     }
 
     fn count_unique_feeders(&self, params: &Parameters) -> usize {
-        let mut valid_observations = valid_observations(params.block_time(), params.period());
-        self.observations
-            .iter()
-            .filter(|&o| valid_observations(o))
+        self.valid_observations(params)
             .map(|o| &o.feeder_addr)
             .collect::<HashSet<_>>()
             .len()
+    }
+
+    fn valid_observations(&self, params: &Parameters) -> impl Iterator<Item = &Observation> {
+        let mut valid_observations = valid_observations(params.block_time(), params.period());
+        self.observations
+            .iter()
+            .filter(move |&o| valid_observations(o))
     }
 }
 
