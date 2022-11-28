@@ -83,38 +83,3 @@ impl PriceFeed {
         vec.iter().map(|o| &o.feeder_addr).collect::<HashSet<_>>()
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use currency::{lease::Osmo, lpn::Usdc};
-    use finance::{
-        coin::Coin,
-        price::{self},
-    };
-
-    use crate::SpotPrice;
-
-    #[test]
-    // we ensure this rounds up (as it calculates needed votes)
-    fn compare_prices() {
-        let p1 = SpotPrice::try_from(
-            price::total_of(Coin::<Osmo>::new(1000000)).is(Coin::<Usdc>::new(123456)),
-        )
-        .unwrap();
-        let p2 = SpotPrice::try_from(
-            price::total_of(Coin::<Osmo>::new(1000000)).is(Coin::<Usdc>::new(789456)),
-        )
-        .unwrap();
-        let p3 = SpotPrice::try_from(
-            price::total_of(Coin::<Osmo>::new(1000000)).is(Coin::<Usdc>::new(3456)),
-        )
-        .unwrap();
-        let p4 = SpotPrice::try_from(
-            price::total_of(Coin::<Osmo>::new(1000000)).is(Coin::<Usdc>::new(3456)),
-        )
-        .unwrap();
-        assert!(p1.lt(&p2));
-        assert!(p3.lt(&p2));
-        assert!(p4.lt(&p2));
-    }
-}
