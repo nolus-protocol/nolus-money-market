@@ -63,6 +63,7 @@ impl<'m> PriceFeeds<'m> {
                 let price_dto =
                     self.load(storage, base.to_string(), quote.to_string(), parameters)?;
                 base = quote;
+                //TODO multiply immediatelly than collecting in a vector and then PriceFeeds::calculate_price
                 resolution_path.push(price_dto);
             }
         }
@@ -77,7 +78,7 @@ impl<'m> PriceFeeds<'m> {
         parameters: Parameters,
     ) -> Result<SpotPrice, PriceFeedsError> {
         match self.0.may_load(storage, (base, quote))? {
-            Some(feed) => Ok(feed.get_price(parameters)?.price()),
+            Some(feed) => Ok(feed.get_price(parameters)?),
             None => Err(PriceFeedsError::NoPrice()),
         }
     }
