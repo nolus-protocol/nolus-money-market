@@ -45,54 +45,6 @@ impl<'m> PriceFeeds<'m> {
         PriceFeeds(Map::new(namespace))
     }
 
-    pub fn price(
-        &self,
-        storage: &dyn Storage,
-        parameters: Parameters,
-        path: Vec<SymbolOwned>,
-    ) -> Result<SpotPrice, PriceFeedsError> {
-        let mut resolution_path = DenomResolutionPath::new();
-
-        if let Some((first, elements)) = path.split_first() {
-            let mut base = first;
-            for quote in elements {
-                let price_dto =
-                    self.load(storage, base.to_string(), quote.to_string(), parameters)?;
-                base = quote;
-                //TODO multiply immediatelly than collecting in a vector and then PriceFeeds::calculate_price
-                resolution_path.push(price_dto);
-            }
-        }
-        PriceFeeds::calculate_price(&resolution_path)
-    }
-
-    pub fn load(
-        &self,
-        storage: &dyn Storage,
-        base: SymbolOwned,
-        quote: SymbolOwned,
-        parameters: Parameters,
-    ) -> Result<SpotPrice, PriceFeedsError> {
-        match self.0.may_load(storage, (base, quote))? {
-            Some(feed) => Ok(feed.get_price(parameters)?),
-            None => Err(PriceFeedsError::NoPrice()),
-        }
-    }
-
-    fn calculate_price(
-        resolution_path: &DenomResolutionPath,
-    ) -> Result<SpotPrice, PriceFeedsError> {
-        if let Some((first, rest)) = resolution_path.split_first() {
-            rest.iter()
-                .fold(Ok(first.to_owned()), |result_c1, c2| {
-                    result_c1.and_then(|c1| c1.multiply::<PaymentGroup>(c2))
-                })
-                .map_err(|e| e.into())
-        } else {
-            Err(PriceFeedsError::NoPrice {})
-        }
-    }
-
     pub fn feed(
         &self,
         storage: &mut dyn Storage,
@@ -120,5 +72,53 @@ impl<'m> PriceFeeds<'m> {
         }
 
         Ok(())
+    }
+
+    pub fn price(
+        &self,
+        storage: &dyn Storage,
+        parameters: Parameters,
+        path: Vec<SymbolOwned>,
+    ) -> Result<SpotPrice, PriceFeedsError> {
+        let mut resolution_path = DenomResolutionPath::new();
+
+        if let Some((first, elements)) = path.split_first() {
+            let mut base = first;
+            for quote in elements {
+                let price_dto =
+                    self.price_of_feed(storage, base.to_string(), quote.to_string(), parameters)?;
+                base = quote;
+                //TODO multiply immediatelly than collecting in a vector and then PriceFeeds::calculate_price
+                resolution_path.push(price_dto);
+            }
+        }
+        PriceFeeds::calculate_price(&resolution_path)
+    }
+
+    fn price_of_feed(
+        &self,
+        storage: &dyn Storage,
+        base: SymbolOwned,
+        quote: SymbolOwned,
+        parameters: Parameters,
+    ) -> Result<SpotPrice, PriceFeedsError> {
+        match self.0.may_load(storage, (base, quote))? {
+            Some(feed) => Ok(feed.get_price(parameters)?),
+            None => Err(PriceFeedsError::NoPrice()),
+        }
+    }
+
+    fn calculate_price(
+        resolution_path: &DenomResolutionPath,
+    ) -> Result<SpotPrice, PriceFeedsError> {
+        if let Some((first, rest)) = resolution_path.split_first() {
+            rest.iter()
+                .fold(Ok(first.to_owned()), |result_c1, c2| {
+                    result_c1.and_then(|c1| c1.multiply::<PaymentGroup>(c2))
+                })
+                .map_err(|e| e.into())
+        } else {
+            Err(PriceFeedsError::NoPrice {})
+        }
     }
 }

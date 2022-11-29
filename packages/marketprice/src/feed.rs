@@ -10,26 +10,6 @@ use sdk::{
 
 use crate::{error::PriceFeedsError, market_price::Parameters, SpotPrice};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-struct Observation {
-    feeder_addr: Addr,
-    time: Timestamp,
-    price: SpotPrice,
-}
-impl Observation {
-    fn new(feeder_addr: Addr, time: Timestamp, price: SpotPrice) -> Observation {
-        Observation {
-            feeder_addr,
-            time,
-            price,
-        }
-    }
-
-    fn valid(&self, at: Timestamp, validity: Duration) -> bool {
-        self.time + validity > at
-    }
-}
-
 #[derive(Serialize, Deserialize, Default, PartialEq, Eq, JsonSchema)]
 pub struct PriceFeed {
     observations: Vec<Observation>,
@@ -90,6 +70,26 @@ impl PriceFeed {
 
 fn valid_observations(at: Timestamp, period: Duration) -> impl FnMut(&Observation) -> bool {
     move |o: &Observation| o.valid(at, period)
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+struct Observation {
+    feeder_addr: Addr,
+    time: Timestamp,
+    price: SpotPrice,
+}
+impl Observation {
+    fn new(feeder_addr: Addr, time: Timestamp, price: SpotPrice) -> Observation {
+        Observation {
+            feeder_addr,
+            time,
+            price,
+        }
+    }
+
+    fn valid(&self, at: Timestamp, validity: Duration) -> bool {
+        self.time + validity > at
+    }
 }
 
 #[cfg(test)]
