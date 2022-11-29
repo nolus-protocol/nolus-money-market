@@ -8,7 +8,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::{error::PriceFeedsError, market_price::Parameters, SpotPrice};
+use crate::{error::PriceFeedsError, market_price::Config, SpotPrice};
 
 #[derive(Serialize, Deserialize, Default, PartialEq, Eq, JsonSchema)]
 pub struct PriceFeed {
@@ -36,32 +36,32 @@ impl PriceFeed {
     // provide no price for a pair if there are no observations from at least configurable percentage * <number_of_whitelisted_feeders>
     // in a configurable period T in seconds
     // provide the last price for a requested pair unless the previous condition is met.
-    pub fn get_price(&self, parameters: Parameters) -> Result<SpotPrice, PriceFeedsError> {
+    pub fn get_price(&self, config: Config) -> Result<SpotPrice, PriceFeedsError> {
         let last_observation = self
-            .valid_observations(&parameters)
+            .valid_observations(&config)
             .last()
             .ok_or(PriceFeedsError::NoPrice {})?;
 
-        if !self.has_enough_feeders(&parameters) {
+        if !self.has_enough_feeders(&config) {
             return Err(PriceFeedsError::NoPrice {});
         }
 
         Ok(last_observation.price.clone())
     }
 
-    fn has_enough_feeders(&self, params: &Parameters) -> bool {
-        self.count_unique_feeders(params) >= params.feeders()
+    fn has_enough_feeders(&self, config: &Config) -> bool {
+        self.count_unique_feeders(config) >= config.feeders()
     }
 
-    fn count_unique_feeders(&self, params: &Parameters) -> usize {
-        self.valid_observations(params)
+    fn count_unique_feeders(&self, config: &Config) -> usize {
+        self.valid_observations(config)
             .map(|o| &o.feeder_addr)
             .collect::<HashSet<_>>()
             .len()
     }
 
-    fn valid_observations(&self, params: &Parameters) -> impl Iterator<Item = &Observation> {
-        let mut valid_observations = valid_observations(params.block_time(), params.period());
+    fn valid_observations(&self, config: &Config) -> impl Iterator<Item = &Observation> {
+        let mut valid_observations = valid_observations(config.block_time(), config.period());
         self.observations
             .iter()
             .filter(move |&o| valid_observations(o))
@@ -102,7 +102,7 @@ mod test {
     };
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
-    use crate::{error::PriceFeedsError, market_price::Parameters, SpotPrice};
+    use crate::{error::PriceFeedsError, market_price::Config, SpotPrice};
 
     use super::PriceFeed;
 
@@ -111,7 +111,7 @@ mod test {
         const ONE_FEEDER: usize = 1;
         let validity_period = Duration::from_secs(60);
         let block_time = Timestamp::from_seconds(100);
-        let params = Parameters::new(validity_period, ONE_FEEDER, block_time);
+        let config = Config::new(validity_period, ONE_FEEDER, block_time);
 
         let feeder1 = Addr::unchecked("feeder1");
         let feed1_time = block_time - validity_period;
@@ -120,9 +120,9 @@ mod test {
             .into();
 
         let mut feed = PriceFeed::new();
-        feed = feed.add_observation(feeder1.clone(), feed1_time, feed1_price, params.period());
+        feed = feed.add_observation(feeder1.clone(), feed1_time, feed1_price, config.period());
 
-        assert_eq!(Err(PriceFeedsError::NoPrice()), feed.get_price(params));
+        assert_eq!(Err(PriceFeedsError::NoPrice()), feed.get_price(config));
 
         let feed2_time = feed1_time + Duration::from_nanos(1);
         let feed2_price: SpotPrice = price::total_of(Coin::<Weth>::new(19))
@@ -134,7 +134,7 @@ mod test {
             feed2_price.clone(),
             Duration::from_nanos(0),
         );
-        assert_eq!(Ok(feed2_price), feed.get_price(params));
+        assert_eq!(Ok(feed2_price), feed.get_price(config));
     }
 
     #[test]
@@ -151,14 +151,14 @@ mod test {
         let mut feed = PriceFeed::new();
         feed = feed.add_observation(feeder1, feed1_time, feed1_price.clone(), validity_period);
 
-        let params_two_feeders = Parameters::new(validity_period, 2, block_time);
+        let config_two_feeders = Config::new(validity_period, 2, block_time);
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feed.get_price(params_two_feeders)
+            feed.get_price(config_two_feeders)
         );
 
-        let params_one_feeder = Parameters::new(validity_period, 1, block_time);
-        assert_eq!(Ok(feed1_price), feed.get_price(params_one_feeder));
+        let config_one_feeder = Config::new(validity_period, 1, block_time);
+        assert_eq!(Ok(feed1_price), feed.get_price(config_one_feeder));
     }
 
     #[test]
@@ -182,13 +182,13 @@ mod test {
             .into();
         feed = feed.add_observation(feeder2, feed2_time, feed2_price, validity_period);
 
-        let params_feed1_and_2_in = Parameters::new(validity_period, 2, feed2_time);
-        assert!(feed.get_price(params_feed1_and_2_in).is_ok());
+        let config_feed1_and_2_in = Config::new(validity_period, 2, feed2_time);
+        assert!(feed.get_price(config_feed1_and_2_in).is_ok());
 
-        let params_feed2_in = Parameters::new(validity_period, 2, block_time);
+        let config_feed2_in = Config::new(validity_period, 2, block_time);
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feed.get_price(params_feed2_in)
+            feed.get_price(config_feed2_in)
         );
     }
 }

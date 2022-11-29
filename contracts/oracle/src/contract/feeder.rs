@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 
 use finance::{fraction::Fraction, percent::Percent};
-use marketprice::{feeders::PriceFeeders, market_price::Parameters};
+use marketprice::{feeders::PriceFeeders, market_price::Config as PriceConfig};
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, DepsMut, MessageInfo, StdResult, Storage, Timestamp},
@@ -74,16 +74,16 @@ impl Feeders {
             .expect("usize overflow")
     }
 
-    pub(crate) fn query_config(
+    pub(crate) fn price_config(
         storage: &dyn Storage,
         config: &Config,
         block_time: Timestamp,
-    ) -> StdResult<Parameters> {
+    ) -> StdResult<PriceConfig> {
         let registered_feeders = Self::FEEDERS.get(storage)?;
         let all_feeders_cnt = registered_feeders.len();
         let feeders_needed = Self::feeders_needed(all_feeders_cnt, config.expected_feeders);
 
-        Ok(Parameters::new(
+        Ok(PriceConfig::new(
             config.price_feed_period,
             feeders_needed,
             block_time,

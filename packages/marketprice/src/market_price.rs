@@ -8,19 +8,19 @@ use sdk::{
 use crate::{error::PriceFeedsError, feed::PriceFeed, SpotPrice};
 
 #[derive(Clone, Copy, Debug)]
-pub struct Parameters {
+pub struct Config {
     price_feed_period: Duration,
     required_feeders_cnt: usize,
     block_time: Timestamp,
 }
 
-impl Parameters {
+impl Config {
     pub fn new(
         price_feed_period: Duration,
         required_feeders_cnt: usize,
         block_time: Timestamp,
     ) -> Self {
-        Parameters {
+        Config {
             price_feed_period,
             required_feeders_cnt,
             block_time,
@@ -77,7 +77,7 @@ impl<'m> PriceFeeds<'m> {
     pub fn price(
         &self,
         storage: &dyn Storage,
-        parameters: Parameters,
+        config: Config,
         path: Vec<SymbolOwned>,
     ) -> Result<SpotPrice, PriceFeedsError> {
         let mut resolution_path = DenomResolutionPath::new();
@@ -86,7 +86,7 @@ impl<'m> PriceFeeds<'m> {
             let mut base = first;
             for quote in elements {
                 let price_dto =
-                    self.price_of_feed(storage, base.to_string(), quote.to_string(), parameters)?;
+                    self.price_of_feed(storage, base.to_string(), quote.to_string(), config)?;
                 base = quote;
                 //TODO multiply immediatelly than collecting in a vector and then PriceFeeds::calculate_price
                 resolution_path.push(price_dto);
@@ -100,10 +100,10 @@ impl<'m> PriceFeeds<'m> {
         storage: &dyn Storage,
         base: SymbolOwned,
         quote: SymbolOwned,
-        parameters: Parameters,
+        config: Config,
     ) -> Result<SpotPrice, PriceFeedsError> {
         match self.0.may_load(storage, (base, quote))? {
-            Some(feed) => Ok(feed.get_price(parameters)?),
+            Some(feed) => Ok(feed.get_price(config)?),
             None => Err(PriceFeedsError::NoPrice()),
         }
     }

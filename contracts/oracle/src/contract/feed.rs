@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use currency::native::Nls;
 use finance::currency::{Currency, SymbolOwned};
 use marketprice::{
-    market_price::{Parameters, PriceFeeds},
+    market_price::{Config as PriceConfig, PriceFeeds},
     SpotPrice,
 };
 use platform::batch::Batch;
@@ -44,14 +44,14 @@ where
     pub fn get_prices(
         &self,
         storage: &dyn Storage,
-        parameters: Parameters,
+        config: PriceConfig,
         currencies: HashSet<SymbolOwned>,
     ) -> Result<Vec<SpotPrice>, ContractError> {
         let tree: SupportedPairs<OracleBase> = SupportedPairs::load(storage)?;
         let mut prices: Vec<SpotPrice> = vec![];
         for currency in currencies {
             let path = tree.load_path(&currency)?;
-            let price = Self::MARKET_PRICE.price(storage, parameters, path)?;
+            let price = Self::MARKET_PRICE.price(storage, config, path)?;
             prices.push(price);
         }
         Ok(prices)
@@ -120,10 +120,10 @@ where
     let hooks_currencies = MarketAlarms::get_hooks_currencies(storage)?;
 
     if !hooks_currencies.is_empty() {
-        let parameters = Feeders::query_config(storage, &oracle.config, block_time)?;
+        let config = Feeders::price_config(storage, &oracle.config, block_time)?;
         // re-calculate the price of these currencies
         let updated_prices: Vec<SpotPrice> =
-            oracle.get_prices(storage, parameters, hooks_currencies)?;
+            oracle.get_prices(storage, config, hooks_currencies)?;
         // try notify affected subscribers
         MarketAlarms::try_notify_hooks(storage, updated_prices, &mut batch)?;
     }
