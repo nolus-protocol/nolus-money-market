@@ -68,6 +68,7 @@ impl PriceFeed {
     }
 }
 
+#[track_caller]
 fn valid_observations(at: Timestamp, period: Duration) -> impl FnMut(&Observation) -> bool {
     move |o: &Observation| o.valid(at, period)
 }
@@ -87,7 +88,14 @@ impl Observation {
         }
     }
 
+    #[track_caller]
     fn valid(&self, at: Timestamp, validity: Duration) -> bool {
+        debug_assert!(
+            self.time <= at,
+            "An observation got at {}secs is checked for validity against a past moment at {}secs",
+            self.time,
+            at
+        );
         self.time + validity > at
     }
 }
