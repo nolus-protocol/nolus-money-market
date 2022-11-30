@@ -7,17 +7,17 @@ edition = "2021"
 license = "Apache-2.0"
 
 [workspace.dependencies]
-cosmwasm-std = { version = "^1.1.5", default-features = false }
-cosmwasm-storage = "^1.1.5"
-cosmwasm-schema = "^1.1.5"
-cw-storage-plus = "^0.16.0"
-cw2 = "^0.16.0"
-cw-multi-test = "^0.16.0"
+cosmwasm-std = { version = "1.1", default-features = false }
+cosmwasm-storage = "1.1"
+cosmwasm-schema = "1.1"
+cw-storage-plus = "1"
+cw2 = "1"
+cw-multi-test = "=0.16.0"
 neutron-sdk = { git = "https://github.com/neutron-org/neutron-contracts", rev = "2a3c862cb57f5123f196bcd5c9983ed78549c295" }
-serde = { version = "^1.0.147", default-features = false }
+serde = { version = "1", default-features = false }
 serde-json-wasm = { version = "^0.4", default-features = false }
-thiserror = { version = "=1.0.34", default-features = false }
-anyhow = "^1"
+thiserror = { version = "1", default-features = false }
+anyhow = "1"
 
 [profile.release.package.treasury]
 codegen-units = 1
