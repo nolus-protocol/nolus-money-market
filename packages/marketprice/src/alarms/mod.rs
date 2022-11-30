@@ -15,7 +15,7 @@ pub type Id = u64;
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
-    PriceAlarm(Alarm),
+    PriceAlarm(),
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]

@@ -147,8 +147,8 @@ pub mod tests {
         let alarms = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
         let storage = &mut testing::mock_dependencies().storage;
         let mut dispatcher = MockAlarmDispatcher::default();
-        let t1 = Timestamp::from_seconds(1);
-        let t2 = Timestamp::from_seconds(2);
+        let t1 = Timestamp::from_seconds(10);
+        let t2 = Timestamp::from_seconds(20);
         let addr1 = Addr::unchecked("addr1");
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");

@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use serde::{Deserialize, Serialize};
 
 use finance::{currency::SymbolOwned, duration::Duration, percent::Percent};
@@ -60,7 +58,7 @@ pub enum QueryMsg {
     // check if an address belongs to a registered feeder
     IsFeeder { address: Addr },
     // returns the price of the denom against the base asset
-    Prices { currencies: HashSet<SymbolOwned> },
+    Prices { currencies: Vec<SymbolOwned> },
     Price { currency: SymbolOwned },
     // returns a list of supported denom pairs
     SupportedCurrencyPairs {},

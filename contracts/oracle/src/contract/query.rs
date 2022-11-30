@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::lpn::Lpns;
@@ -47,12 +45,13 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                 let config = Config::load(self.deps.storage)?;
                 let price_config =
                     Feeders::price_config(self.deps.storage, &config, self.env.block.time)?;
-                match Feeds::<OracleBase>::with(config)
-                    .get_prices(self.deps.storage, price_config, HashSet::from([currency]))?
+                if let Some(price) = Feeds::<OracleBase>::with(config)
+                    .get_prices(self.deps.storage, price_config, &[currency])?
                     .first()
                 {
-                    Some(price) => Ok(to_binary(price)?),
-                    None => Err(ContractError::PriceFeedsError(PriceFeedsError::NoPrice())),
+                    Ok(to_binary(price)?)
+                } else {
+                    Err(ContractError::PriceFeedsError(PriceFeedsError::NoPrice()))
                 }
             }
             QueryMsg::Prices { currencies } => {
@@ -63,7 +62,7 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                     prices: Feeds::<OracleBase>::with(config).get_prices(
                         self.deps.storage,
                         price_config,
-                        currencies,
+                        &currencies,
                     )?,
                 })?)
             }

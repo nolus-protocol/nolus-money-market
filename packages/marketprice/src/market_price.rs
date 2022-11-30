@@ -50,10 +50,10 @@ impl<'m> PriceFeeds<'m> {
         storage: &mut dyn Storage,
         current_block_time: Timestamp,
         sender_raw: &Addr,
-        mut prices: Vec<SpotPrice>,
+        prices: &[SpotPrice],
         price_feed_period: Duration,
     ) -> Result<(), PriceFeedsError> {
-        while let Some(price_dto) = prices.pop() {
+        for price_dto in prices {
             self.0.update(
                 storage,
                 (
@@ -64,7 +64,7 @@ impl<'m> PriceFeeds<'m> {
                     Ok(old.unwrap_or_default().add_observation(
                         sender_raw.clone(),
                         current_block_time,
-                        price_dto,
+                        price_dto.to_owned(),
                         price_feed_period,
                     ))
                 },
