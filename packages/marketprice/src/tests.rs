@@ -10,15 +10,12 @@ use finance::{
     duration::Duration,
     price::{self, dto::PriceDTO, Price},
 };
-use sdk::cosmwasm_std::{
-    testing::{mock_dependencies, mock_env},
-    Api, DepsMut, Timestamp,
-};
+use sdk::cosmwasm_std::{testing::mock_dependencies, Api, DepsMut, Timestamp};
 
 use crate::{
     error::PriceFeedsError,
     feeders::PriceFeeders,
-    market_price::{Parameters, PriceFeeds},
+    market_price::{Config, PriceFeeds},
     SpotPrice,
 };
 
@@ -64,9 +61,9 @@ fn marketprice_add_feed_expect_err() {
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
-    let params = Parameters::new(MINUTE, 50, ts);
+    let config = Config::new(MINUTE, 50, ts);
     let path = vec![Osmo::TICKER.to_string(), Atom::TICKER.to_string()];
-    let expected_err = market.price(&deps.storage, params, path).unwrap_err();
+    let expected_err = market.price(&deps.storage, config, path).unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
 }
 
@@ -115,7 +112,7 @@ fn marketprice_add_feed() {
         .feed(&mut deps.storage, ts, &f_address, &prices, MINUTE)
         .unwrap();
     // requite 50 feeders available => NoPrice
-    let query = Parameters::new(MINUTE, 50, ts);
+    let query = Config::new(MINUTE, 50, ts);
     let err = market
         .price(
             &deps.storage,
@@ -126,7 +123,7 @@ fn marketprice_add_feed() {
     assert_eq!(err, PriceFeedsError::NoPrice {});
 
     // requite 1 feeders available => Price
-    let query = Parameters::new(MINUTE, 1, ts);
+    let query = Config::new(MINUTE, 1, ts);
     let price_resp = market
         .price(
             &deps.storage,
@@ -204,7 +201,7 @@ fn marketprice_follow_the_path() {
     )
     .unwrap();
 
-    feed_price(
+    let last_feed_time = feed_price(
         deps.as_mut(),
         &market,
         price::total_of(Coin::<Juno>::new(1)).is(Coin::<Usdc>::new(3)),
@@ -212,7 +209,7 @@ fn marketprice_follow_the_path() {
     .unwrap();
 
     // valid search denom pair
-    let query = Parameters::new(MINUTE, 1, mock_env().block.time);
+    let query = Config::new(MINUTE, 1, last_feed_time);
     let price_resp = market
         .price(
             &deps.storage,
@@ -226,12 +223,12 @@ fn marketprice_follow_the_path() {
         )
         .unwrap();
     let expected = price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(6));
-    let expected_dto = PriceDTO::try_from(expected).unwrap();
+    let expected_dto = PriceDTO::from(expected);
 
     assert_eq!(expected_dto, price_resp);
 
     // first and second part of denom pair are the same
-    let query = Parameters::new(MINUTE, 1, mock_env().block.time);
+    let query = Config::new(MINUTE, 1, last_feed_time);
     let price_resp = market
         .price(
             &deps.storage,
@@ -242,7 +239,7 @@ fn marketprice_follow_the_path() {
     assert_eq!(price_resp, PriceFeedsError::NoPrice());
 
     // second part of denome pair doesn't exists in the storage
-    let query = Parameters::new(MINUTE, 1, mock_env().block.time);
+    let query = Config::new(MINUTE, 1, last_feed_time);
     assert_eq!(
         market
             .price(
@@ -255,7 +252,7 @@ fn marketprice_follow_the_path() {
     );
 
     // first part of denome pair doesn't exists in the storage
-    let query = Parameters::new(MINUTE, 1, mock_env().block.time);
+    let query = Config::new(MINUTE, 1, last_feed_time);
     assert_eq!(
         market
             .price(
@@ -272,7 +269,7 @@ fn feed_price<C1, C2>(
     deps: DepsMut,
     market: &PriceFeeds,
     price: Price<C1, C2>,
-) -> Result<(), PriceFeedsError>
+) -> Result<Timestamp, PriceFeedsError>
 where
     C1: Currency,
     C2: Currency,
@@ -287,5 +284,5 @@ where
     let price = SpotPrice::try_from(price).unwrap();
 
     market.feed(deps.storage, ts, &f_address, &[price], MINUTE)?;
-    Ok(())
+    Ok(ts)
 }

@@ -200,9 +200,11 @@ mod test {
 
     use crate::{
         coin::Coin,
-        price::{dto::PriceDTO, Price},
+        price::{self, dto::PriceDTO, Price},
         test::currency::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
     };
+
+    type TestPriceDTO = PriceDTO<TestExtraCurrencies, TestCurrencies>;
 
     #[test]
     fn test_multiply() {
@@ -210,10 +212,7 @@ mod test {
             Coin::<Usdc>::new(10).into(),
             Coin::<Dai>::new(5).into(),
         );
-        let p2 = PriceDTO::<TestExtraCurrencies, TestCurrencies>::new(
-            Coin::<Dai>::new(20).into(),
-            Coin::<Nls>::new(5).into(),
-        );
+        let p2 = TestPriceDTO::new(Coin::<Dai>::new(20).into(), Coin::<Nls>::new(5).into());
 
         assert_eq!(
             Ok(Price::new(Coin::<Usdc>::new(8), Coin::<Nls>::new(1)).into()),
@@ -223,13 +222,34 @@ mod test {
 
     #[test]
     fn test_cmp() {
-        let p1: PriceDTO<TestCurrencies, TestExtraCurrencies> =
-            Price::new(Coin::<Usdc>::new(20), Coin::<Dai>::new(5000)).into();
+        let p1: TestPriceDTO = price::total_of(Coin::<Dai>::new(20))
+            .is(Coin::<Usdc>::new(5000))
+            .into();
         assert!(p1 == p1);
         assert_eq!(Some(Ordering::Equal), p1.partial_cmp(&p1));
 
-        let p2 = Price::new(Coin::<Usdc>::new(20), Coin::<Dai>::new(5001)).into();
+        let p2 = price::total_of(Coin::<Dai>::new(20))
+            .is(Coin::<Usdc>::new(5001))
+            .into();
         assert!(p1 < p2);
+
+        let p3: TestPriceDTO = price::total_of(Coin::<Dai>::new(1000000))
+            .is(Coin::<Usdc>::new(789456))
+            .into();
+        let p4 = price::total_of(Coin::<Dai>::new(1000000))
+            .is(Coin::<Usdc>::new(123456))
+            .into();
+        assert!(p3 >= p4);
+
+        let p5 = price::total_of(Coin::<Dai>::new(1000000))
+            .is(Coin::<Usdc>::new(3456))
+            .into();
+        assert!(p3 >= p5);
+
+        let p6 = price::total_of(Coin::<Dai>::new(1000000))
+            .is(Coin::<Usdc>::new(3456))
+            .into();
+        assert!(p3 >= p6);
     }
 
     #[test]

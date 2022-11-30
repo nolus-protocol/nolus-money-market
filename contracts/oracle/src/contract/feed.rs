@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use currency::native::Nls;
 use finance::currency::{Currency, SymbolOwned};
 use marketprice::{
-    market_price::{Parameters, PriceFeeds},
+    market_price::{Config as PriceConfig, PriceFeeds},
     SpotPrice,
 };
 use platform::batch::Batch;
@@ -45,14 +45,14 @@ where
     pub fn get_prices(
         &self,
         storage: &dyn Storage,
-        parameters: Parameters,
+        config: PriceConfig,
         currencies: &[SymbolOwned],
     ) -> Result<Vec<SpotPrice>, ContractError> {
         let tree: SupportedPairs<OracleBase> = SupportedPairs::load(storage)?;
         let mut prices = vec![];
         for currency in currencies {
             let path = tree.load_path(currency)?;
-            let price = Self::MARKET_PRICE.price(storage, parameters, path)?;
+            let price = Self::MARKET_PRICE.price(storage, config, path)?;
             prices.push(price);
         }
         Ok(prices)

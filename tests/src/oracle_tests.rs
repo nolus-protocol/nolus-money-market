@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 
-use marketprice::SpotPrice;
+use marketprice::{alarms::Alarm, SpotPrice};
 use trees::tr;
 
 use currency::{
-    lease::{Osmo, Wbtc, Weth},
+    lease::{Cro, Osmo, Wbtc, Weth},
     lpn::Usdc,
 };
 use finance::{
@@ -147,6 +147,53 @@ fn internal_test_integration_setup_test() {
             )
             .unwrap()
             .into(),
+        )
+        .unwrap();
+
+    let _ = feed_price::<BaseC, Usdc>(
+        &mut test_case,
+        &Addr::unchecked(ADMIN),
+        Coin::new(5),
+        Coin::new(7),
+    );
+}
+
+#[test]
+#[ignore = "issue #26"]
+fn feed_price_with_alarm_issue() {
+    let mut test_case = create_test_case();
+
+    test_case
+        .app
+        .execute(
+            Addr::unchecked(ADMIN),
+            wasm_execute(
+                test_case.oracle.clone().unwrap(),
+                &oracle::msg::ExecuteMsg::RegisterFeeder {
+                    feeder_address: ADMIN.into(),
+                },
+                vec![cw_coin(1000)],
+            )
+            .unwrap()
+            .into(),
+        )
+        .unwrap();
+
+    let lease = open_lease(&mut test_case, Coin::new(1000));
+
+    // there is no price in the oracle and feed for this alarm
+    test_case
+        .app
+        .execute_contract(
+            lease,
+            test_case.oracle.clone().unwrap(),
+            &oracle::msg::ExecuteMsg::AddPriceAlarm {
+                alarm: Alarm::new(
+                    price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(1)),
+                    None,
+                ),
+            },
+            &[],
         )
         .unwrap();
 

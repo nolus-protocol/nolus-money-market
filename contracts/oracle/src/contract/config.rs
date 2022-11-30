@@ -27,6 +27,7 @@ pub fn try_configure(
         return Err(ContractError::Unauthorized {});
     }
 
+    //TODO merge the next checks with the code in Config::validate()
     if expected_feeders == Percent::ZERO || expected_feeders > Percent::HUNDRED {
         return Err(ContractError::Configuration(
             "Percent of expected available feeders should be > 0 and <= 1000".to_string(),
@@ -37,6 +38,7 @@ pub fn try_configure(
             "Price feed period can not be 0".to_string(),
         ));
     }
+    // TODO make sure the price_feed_period >= last block time
     Config::update(
         deps.storage,
         Duration::from_secs(price_feed_period),
