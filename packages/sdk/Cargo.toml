@@ -16,6 +16,7 @@ testing = [
     "dep:cosmwasm-schema",
     "dep:serde",
     "dep:anyhow",
+    "cosmos_ibc",
 ]
 cosmos_ibc = ["cosmos", "cosmwasm-std/ibc3"]
 cosmos = []

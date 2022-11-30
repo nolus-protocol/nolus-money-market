@@ -1,11 +1,8 @@
 use self::neutron::Module as NeutronModule;
 #[cfg(not(feature = "neutron"))]
 use cosmwasm_std::Empty as CustomMsg;
-use cosmwasm_std::{
-    testing::{MockApi, MockStorage},
-    Empty,
-};
-use cw_multi_test::{BankKeeper, BasicAppBuilder, DistributionKeeper, StakeKeeper, WasmKeeper};
+use cosmwasm_std::{testing::{MockApi, MockStorage}, Empty, IbcMsg, IbcQuery, GovMsg};
+use cw_multi_test::{BankKeeper, BasicAppBuilder, DistributionKeeper, FailingModule, StakeKeeper, WasmKeeper};
 pub use cw_multi_test::{ContractWrapper, Executor};
 #[cfg(feature = "neutron")]
 use neutron_sdk::bindings::msg::NeutronMsg as CustomMsg;
@@ -21,6 +18,8 @@ pub type AppBuilder<Exec = CustomMsg, Query = Empty> = cw_multi_test::AppBuilder
     WasmKeeper<Exec, Query>,
     StakeKeeper,
     DistributionKeeper,
+    FailingModule<IbcMsg, IbcQuery, Empty>,
+    FailingModule<GovMsg, Empty, Empty>,
 >;
 
 pub type Contract = dyn cw_multi_test::Contract<CustomMsg>;
