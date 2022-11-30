@@ -44,6 +44,8 @@ pub enum ExecuteMsg {
         alarm: Alarm,
     },
     RemovePriceAlarm {},
+    /// Returns [`AlarmsDispatchResponse`] as response data.
+    DispatchAlarms { max_amount: u32 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -63,6 +65,8 @@ pub enum QueryMsg {
     // returns a list of supported denom pairs
     SupportedCurrencyPairs {},
     SwapPath { from: SymbolOwned, to: SymbolOwned },
+    /// Returns [`AlarmsDispatchResponse`] as response data.
+    DispatchToAlarms {},
 }
 
 pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;
@@ -92,3 +96,14 @@ pub struct PricesResponse {
 pub enum ExecuteAlarmMsg {
     PriceAlarm(),
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AlarmsDispatchResponse {
+    NoAlarms {},
+    RemainingForDispatch {
+        /// `min(remaining_alarms, u32::MAX) as u32`
+        remaining_alarms: u32,
+    },
+}
+
