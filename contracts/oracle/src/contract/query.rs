@@ -1,10 +1,8 @@
-use std::collections::HashSet;
-
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
-use marketprice::{error::PriceFeedsError, SpotPrice};
+use marketprice::error::PriceFeedsError;
 use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
 
 use crate::{
@@ -48,10 +46,10 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                 let parameters =
                     Feeders::query_config(self.deps.storage, &config, self.env.block.time)?;
                 if let Some(price) = Feeds::<OracleBase>::with(config)
-                    .get_prices(self.deps.storage, parameters, HashSet::from([currency]))?
-                    .pop()
+                    .get_prices(self.deps.storage, parameters, &[currency])?
+                    .last()
                 {
-                    Ok(to_binary(&price?)?)
+                    Ok(to_binary(price)?)
                 } else {
                     Err(ContractError::PriceFeedsError(PriceFeedsError::NoPrice()))
                 }
@@ -62,12 +60,13 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                 let parameters =
                     Feeders::query_config(self.deps.storage, &config, self.env.block.time)?;
 
-                let prices = Feeds::<OracleBase>::with(config)
-                    .get_prices(self.deps.storage, parameters, currencies)?
-                    .into_iter()
-                    .collect::<Result<Vec<SpotPrice>, _>>()?;
-
-                Ok(to_binary(&PricesResponse { prices })?)
+                Ok(to_binary(&PricesResponse {
+                    prices: Feeds::<OracleBase>::with(config).get_prices(
+                        self.deps.storage,
+                        parameters,
+                        &currencies,
+                    )?,
+                })?)
             }
             QueryMsg::SwapPath { from, to } => Ok(to_binary(
                 &SupportedPairs::<OracleBase>::load(self.deps.storage)?

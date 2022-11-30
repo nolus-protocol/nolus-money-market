@@ -31,7 +31,7 @@ pub struct PriceAlarms<'m> {
     id_seq: Item<'m, AlarmReplyId>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 struct AlarmStore(CoinDTO<SwapGroup>);
 
 const NORM_SCALE: u128 = 1_000_000_000;
@@ -274,7 +274,7 @@ pub mod tests {
                 storage,
                 &addr3,
                 Alarm::new(
-                    price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(25)),
+                    price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(20)),
                     None,
                 ),
             )
@@ -354,7 +354,7 @@ pub mod tests {
                 storage,
                 &addr3,
                 Alarm::new(
-                    price::total_of(Coin::<Weth>::new(1)).is(Coin::<Usdc>::new(10)),
+                    price::total_of(Coin::<Weth>::new(1)).is(Coin::<Usdc>::new(30)),
                     None,
                 ),
             )
@@ -374,7 +374,7 @@ pub mod tests {
                 storage,
                 &addr5,
                 Alarm::new(
-                    price::total_of(Coin::<Weth>::new(1)).is(Coin::<Usdc>::new(30)),
+                    price::total_of(Coin::<Weth>::new(1)).is(Coin::<Usdc>::new(20)),
                     Some(price::total_of(Coin::<Weth>::new(1)).is(Coin::<Usdc>::new(35))),
                 ),
             )
@@ -411,6 +411,6 @@ pub mod tests {
             })
             .collect();
 
-        assert_eq!(resp, vec![addr2, addr5, addr4]);
+        assert_eq!(resp, vec![addr2, addr3, addr4]);
     }
 }

@@ -286,6 +286,6 @@ where
 
     let price = SpotPrice::try_from(price).unwrap();
 
-    market.feed(deps.storage, ts, &f_address, &vec![price], MINUTE)?;
+    market.feed(deps.storage, ts, &f_address, &[price], MINUTE)?;
     Ok(())
 }

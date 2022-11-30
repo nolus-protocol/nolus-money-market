@@ -101,10 +101,9 @@ impl<'m> PriceFeeds<'m> {
         storage: &mut dyn Storage,
         current_block_time: Timestamp,
         sender_raw: &Addr,
-        prices: &Vec<SpotPrice>,
+        prices: &[SpotPrice],
         price_feed_period: Duration,
     ) -> Result<(), PriceFeedsError> {
-        // while let Some(price_dto) = prices.pop() {
         for price_dto in prices {
             self.0.update(
                 storage,

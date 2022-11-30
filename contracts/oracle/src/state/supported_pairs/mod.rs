@@ -6,7 +6,7 @@ use trees::{walk::Visit, Node as TreeNode, TreeWalk};
 use currency::payment::PaymentGroup;
 use finance::{
     coin::serde::{deserialize as deserialize_currency, serialize as serialize_currency},
-    currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned},
+    currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned, Symbol},
 };
 use swap::SwapTarget;
 
@@ -23,7 +23,7 @@ pub use self::serde::{SubTree, TreeStore};
 mod serde;
 
 pub type ResolutionPath = Vec<SymbolOwned>;
-pub type CurrencyPair<'a> = (&'a SymbolOwned, &'a SymbolOwned);
+pub type CurrencyPair<'a> = (Symbol<'a>, Symbol<'a>);
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct SwapLeg {
@@ -105,8 +105,8 @@ where
         Self::DB_ITEM.save(storage, self)
     }
 
-    fn find_node<'b>(node: &'b Node, query: &SymbolOwned) -> Option<&'b Node> {
-        if &node.data().1 == query {
+    fn find_node<'b>(node: &'b Node, query: Symbol) -> Option<&'b Node> {
+        if node.data().1 == query {
             Some(node)
         } else {
             node.iter().find_map(|child| Self::find_node(child, query))
@@ -183,6 +183,13 @@ where
 
     pub fn load_affected(&self, pair: CurrencyPair) -> Result<Vec<SymbolOwned>, ContractError> {
         if let Some(node) = Self::find_node(self.tree.root(), pair.0) {
+            if let Some(parent) = node.parent() {
+                if parent.data().1 != pair.1 {
+                    return Err(ContractError::InvalidDenomPair(pair.0.to_owned(), pair.1.to_owned()));
+                }
+            } else {
+                return Err(ContractError::InvalidDenomPair(pair.0.to_owned(), pair.1.to_owned()));
+            }
             let affected = node.bfs().iter.map(|v| v.data.1.clone()).collect();
             Ok(affected)
         } else {
@@ -357,7 +364,7 @@ mod tests {
         let tree = SupportedPairs::<Usdc>::new(test_case()).unwrap();
 
         let mut resp = tree
-            .load_affected((&"token2".into(), &TheCurrency::TICKER.into()))
+            .load_affected(("token2", TheCurrency::TICKER))
             .unwrap();
         resp.sort();
 

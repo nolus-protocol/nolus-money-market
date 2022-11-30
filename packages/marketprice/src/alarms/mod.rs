@@ -22,8 +22,8 @@ pub enum ExecuteAlarmMsg {
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(try_from = "unchecked::Alarm")]
 pub struct Alarm {
-    pub(crate) below: SpotPrice,
-    pub(crate) above: Option<SpotPrice>,
+    below: SpotPrice,
+    above: Option<SpotPrice>,
 }
 
 impl Alarm {

@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use currency::{
     lease::{Atom, Osmo, Wbtc, Weth},
     lpn::Usdc,
@@ -50,7 +48,7 @@ fn feed_direct_price() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::Prices {
-            currencies: HashSet::from([Wbtc::TICKER.to_string()]),
+            currencies: vec![Wbtc::TICKER.to_string()],
         },
     )
     .unwrap();
@@ -105,7 +103,7 @@ fn query_prices_unsupported_denom() {
         deps.as_ref(),
         mock_env(),
         QueryMsg::Prices {
-            currencies: HashSet::from(["dummy".to_string()]),
+            currencies: vec!["dummy".to_string()],
         },
     )
     .unwrap();
