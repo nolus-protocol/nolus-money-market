@@ -37,6 +37,7 @@ impl PriceFeed {
     // in a configurable period T in seconds
     // provide the last price for a requested pair unless the previous condition is met.
     pub fn get_price(&self, config: Config) -> Result<SpotPrice, PriceFeedsError> {
+        // self.valid_observations(&config).filter_map(f)
         let last_observation = self
             .valid_observations(&config)
             .last()
