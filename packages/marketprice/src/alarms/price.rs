@@ -187,6 +187,8 @@ impl<'m> PriceAlarms<'m> {
         let alarms_above = self.alarms_above();
 
         for price in updated_prices {
+            let inv_normalized_price = AlarmStore::inv_normalize(&price)?.0.amount();
+
             alarms_below
                 .idx
                 .0
@@ -195,7 +197,7 @@ impl<'m> PriceAlarms<'m> {
                     storage,
                     None,
                     Some(Bound::exclusive((
-                        AlarmStore::inv_normalize(&price)?.0.amount(),
+                        inv_normalized_price,
                         Addr::unchecked(""),
                     ))),
                     Order::Ascending,
@@ -209,7 +211,7 @@ impl<'m> PriceAlarms<'m> {
                 .range(
                     storage,
                     Some(Bound::exclusive((
-                        AlarmStore::inv_normalize(&price)?.0.amount(),
+                        inv_normalized_price,
                         Addr::unchecked(""),
                     ))),
                     None,
