@@ -18,6 +18,9 @@ use super::{Coin, WithCoin};
 #[derive(Clone, PartialEq, Eq, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct CoinDTO<G> {
     amount: Amount,
+    // TODO either
+    // use a reference type, e.g. SymbolStatic, and validate instances on deserialization, or
+    // keep a Coin<C> in a Box<Member<G>> replacing all the struct member variables
     ticker: SymbolOwned,
     #[serde(skip)]
     _g: PhantomData<G>,
