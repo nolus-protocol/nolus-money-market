@@ -77,7 +77,7 @@ pub enum QueryMsg {
         to: SymbolOwned,
     },
     /// Returns [`Status`] as response data.
-    AlarmsToDispatch {},
+    Status {},
 }
 
 pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;

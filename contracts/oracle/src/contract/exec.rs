@@ -70,6 +70,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                     prices,
                 )
             }
+            ExecuteMsg::DispatchAlarms { .. } => todo!("Implement API for dispatching alarms."),
             _ => {
                 unreachable!()
             }

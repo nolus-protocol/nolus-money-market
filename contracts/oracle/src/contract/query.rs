@@ -73,6 +73,7 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
             QueryMsg::SwapTree {} => Ok(to_binary(&SwapTreeResponse {
                 tree: SupportedPairs::<OracleBase>::load(self.deps.storage)?.query_swap_tree(),
             })?),
+            QueryMsg::Status {} => todo!("Implement API for retrieving undelivered alarms count."),
             _ => {
                 unreachable!() // should be done already
             }

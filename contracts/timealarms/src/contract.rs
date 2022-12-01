@@ -1,3 +1,4 @@
+use cosmwasm_std::{Binary, Deps};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -11,6 +12,7 @@ use crate::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg},
 };
+use crate::msg::QueryMsg;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
@@ -38,6 +40,14 @@ pub fn execute(
     match msg {
         ExecuteMsg::AddAlarm { time } => TimeAlarms::try_add(deps, env, info.sender, time),
         ExecuteMsg::Notify {} => TimeAlarms::try_notify(deps.storage, env.block.time),
+        ExecuteMsg::DispatchAlarms { .. } => todo!("Implement API for dispatching alarms"),
+    }
+}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn query(_deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+    match msg {
+        QueryMsg::Status {} => todo!("Implement API for retrieving undelivered alarms count."),
     }
 }
 
