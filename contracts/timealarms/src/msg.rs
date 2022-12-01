@@ -11,16 +11,21 @@ pub struct InstantiateMsg {}
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    AddAlarm { time: Timestamp },
+    AddAlarm {
+        time: Timestamp,
+    },
     Notify(),
-    /// Returns [`AlarmsDispatchResponse`] as response data.
-    DispatchAlarms { max_amount: u32 },
+    /// Returns [`Status`] as response data.
+    DispatchAlarms {
+        max_count: u32,
+    },
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
-    DispatchToAlarms {},
+    /// Returns [`Status`] as response data.
+    Status {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
@@ -31,14 +36,12 @@ pub enum ExecuteAlarmMsg {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum AlarmsDispatchResponse {
+pub enum Status {
     NextAlarm {
-        /// Timestamp in nanoseconds since the start of the Unix epoch
-        unix_time: u64,
+        timestamp: Timestamp,
     },
     RemainingForDispatch {
         /// `min(remaining_alarms, u32::MAX) as u32`
         remaining_alarms: u32,
     },
 }
-
