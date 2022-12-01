@@ -6,7 +6,7 @@ use trees::{walk::Visit, Node as TreeNode, TreeWalk};
 use currency::payment::PaymentGroup;
 use finance::{
     coin::serde::{deserialize as deserialize_currency, serialize as serialize_currency},
-    currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned, Symbol},
+    currency::{visit_any_on_ticker, AnyVisitor, Currency, Symbol, SymbolOwned},
 };
 use swap::SwapTarget;
 
@@ -185,10 +185,16 @@ where
         if let Some(node) = Self::find_node(self.tree.root(), pair.0) {
             if let Some(parent) = node.parent() {
                 if parent.data().1 != pair.1 {
-                    return Err(ContractError::InvalidDenomPair(pair.0.to_owned(), pair.1.to_owned()));
+                    return Err(ContractError::InvalidDenomPair(
+                        pair.0.to_owned(),
+                        pair.1.to_owned(),
+                    ));
                 }
             } else {
-                return Err(ContractError::InvalidDenomPair(pair.0.to_owned(), pair.1.to_owned()));
+                return Err(ContractError::InvalidDenomPair(
+                    pair.0.to_owned(),
+                    pair.1.to_owned(),
+                ));
             }
             let affected = node.bfs().iter.map(|v| v.data.1.clone()).collect();
             Ok(affected)
@@ -363,9 +369,7 @@ mod tests {
     fn test_load_affected() {
         let tree = SupportedPairs::<Usdc>::new(test_case()).unwrap();
 
-        let mut resp = tree
-            .load_affected(("token2", TheCurrency::TICKER))
-            .unwrap();
+        let mut resp = tree.load_affected(("token2", TheCurrency::TICKER)).unwrap();
         resp.sort();
 
         let mut expect = vec![
