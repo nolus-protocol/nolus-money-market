@@ -16,7 +16,6 @@ pub use self::coinc::CoinDTO;
 
 mod coinc;
 pub mod serde;
-pub mod serde_no_currency;
 
 pub type Amount = u128;
 
