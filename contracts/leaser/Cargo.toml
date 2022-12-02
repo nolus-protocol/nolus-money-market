@@ -5,8 +5,6 @@ authors = ["Nikola Terziev <n.terziev@nolus.io>", "Gancho Manev <g.manev@nolus.i
 edition.workspace = true
 license.workspace = true
 
-resolver = "2"
-
 [lib]
 crate-type = ["cdylib", "rlib"]
 

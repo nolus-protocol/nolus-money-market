@@ -5,8 +5,6 @@ authors = ["Vladimir Kolesnikov <v.kolesnikov@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 
-resolver = "2"
-
 [dependencies]
 platform = { path = "../../packages/platform" }
 sdk = { path = "../../packages/sdk", features = ["storage"] }

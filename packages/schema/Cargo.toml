@@ -5,7 +5,5 @@ authors = ["Gancho Manev <g.manev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 
-resolver = "2"
-
 [dependencies]
 thiserror = { workspace = true }
