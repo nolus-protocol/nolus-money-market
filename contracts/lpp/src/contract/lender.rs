@@ -132,7 +132,6 @@ mod test {
         let test_deposit = 10_004;
         let rounding_error = test_deposit % pushed_price; // should be 4 for this setup
         let post_deposit = 1_000_000;
-        // let loan = 1_000_000;
         let overdraft = 5_000;
         let withdraw_amount_nlpn = 1000u128;
         let rest_nlpn = 1000u128;
@@ -140,6 +139,7 @@ mod test {
 
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,
+            Addr::unchecked("admin"),
             TheCurrency::TICKER.into(),
             1000u64.into(),
         )

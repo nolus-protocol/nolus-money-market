@@ -93,6 +93,7 @@ mod test {
 
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,
+            Addr::unchecked("admin"),
             TheCurrency::TICKER.into(),
             1000u64.into(),
         )

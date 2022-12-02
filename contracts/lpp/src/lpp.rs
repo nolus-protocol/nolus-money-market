@@ -64,10 +64,11 @@ where
 {
     pub fn store(
         storage: &mut dyn Storage,
+        owner: Addr,
         lpn_ticker: String,
         lease_code_id: Uint64,
     ) -> StdResult<()> {
-        Config::new(lpn_ticker, lease_code_id).store(storage)?;
+        Config::new(owner, lpn_ticker, lease_code_id).store(storage)?;
         Total::<LPN>::new().store(storage)?;
         Ok(())
     }
@@ -305,8 +306,9 @@ mod test {
         let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
         let env = testing::mock_env();
         let lease_code_id = Uint64::new(123);
+        let admin = Addr::unchecked("admin");
 
-        Config::new(balance_mock.denom.clone(), lease_code_id)
+        Config::new(admin, balance_mock.denom.clone(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -328,12 +330,13 @@ mod test {
         let balance_mock = coin_cw(10_000_000);
         let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
         let mut env = testing::mock_env();
+        let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         env.block.time = Timestamp::from_nanos(0);
 
         let lease_code_id = Uint64::new(123);
 
-        Config::new(balance_mock.denom, lease_code_id)
+        Config::new(admin, balance_mock.denom, lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -378,11 +381,12 @@ mod test {
 
         let mut deps = testing::mock_dependencies_with_balance(&[coin_cw(lpp_balance as u128)]);
         let mut env = testing::mock_env();
+        let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
-        Config::new(TheCurrency::TICKER.into(), lease_code_id)
+        Config::new(admin, TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -468,10 +472,11 @@ mod test {
     fn try_open_loan_with_no_liquidity() {
         let mut deps = testing::mock_dependencies();
         let env = testing::mock_env();
+        let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        Config::new(TheCurrency::TICKER.into(), lease_code_id)
+        Config::new(admin, TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -490,10 +495,11 @@ mod test {
         let balance_mock = [coin_cw(10_000_000)];
         let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
         let env = testing::mock_env();
+        let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        Config::new(TheCurrency::TICKER.into(), lease_code_id)
+        Config::new(admin, TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -512,10 +518,11 @@ mod test {
         let balance_mock = [coin_cw(10_000_000)];
         let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
         let env = testing::mock_env();
+        let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        Config::new(TheCurrency::TICKER.into(), lease_code_id)
+        Config::new(admin, TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -568,10 +575,11 @@ mod test {
         let balance_mock = [coin_cw(10_000_000)];
         let mut deps = testing::mock_dependencies_with_balance(&balance_mock);
         let env = testing::mock_env();
+        let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        Config::new(TheCurrency::TICKER.into(), lease_code_id)
+        Config::new(admin, TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -611,11 +619,12 @@ mod test {
         let balance_mock = coin_cw(0); // will deposit something later
         let mut deps = testing::mock_dependencies_with_balance(&[balance_mock.clone()]);
         let mut env = testing::mock_env();
+        let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
-        Config::new(balance_mock.denom, lease_code_id)
+        Config::new(admin, balance_mock.denom, lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
 

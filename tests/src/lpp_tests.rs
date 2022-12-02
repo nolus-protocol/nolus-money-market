@@ -1,16 +1,12 @@
 use currency::{lpn::Usdc, native::Nls};
 use finance::{
-    coin::Coin,
-    currency::Currency,
-    duration::Duration,
-    fraction::Fraction,
-    percent::Percent,
-    price,
-    test::{self},
+    coin::Coin, currency::Currency, duration::Duration, fraction::Fraction, percent::Percent,
+    price, test,
 };
 use lpp::msg::{
     BalanceResponse, ExecuteMsg as ExecuteLpp, LppBalanceResponse, PriceResponse,
-    QueryLoanResponse, QueryMsg as QueryLpp, QueryQuoteResponse, RewardsResponse,
+    QueryConfigResponse, QueryLoanResponse, QueryMsg as QueryLpp, QueryQuoteResponse,
+    RewardsResponse,
 };
 use platform::{bank, coin_legacy};
 use sdk::{
@@ -32,6 +28,58 @@ use crate::common::{
 };
 
 type Lpn = Usdc;
+
+#[test]
+fn config_update_parameters() {
+    let admin = Addr::unchecked(ADMIN);
+    let hacker = Addr::unchecked("Mallory");
+
+    let app_balance = 10_000_000_000u128;
+
+    let base_interest_rate = Percent::from_percent(21);
+    let addon_optimal_interest_rate = Percent::from_percent(20);
+    let utilization_optimal = Percent::from_percent(55);
+
+    let mut app = mock_app(&[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)]);
+    let lease_id = LeaseWrapper::default().store(&mut app);
+    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(&mut app, lease_id.into(), vec![]);
+
+    app.execute_contract(
+        hacker,
+        lpp.clone(),
+        &ExecuteLpp::UpdateParameters {
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        },
+        &[],
+    )
+    .unwrap_err();
+
+    app.execute_contract(
+        admin,
+        lpp.clone(),
+        &ExecuteLpp::UpdateParameters {
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        },
+        &[],
+    )
+    .unwrap();
+
+    let quote: QueryConfigResponse = app
+        .wrap()
+        .query_wasm_smart(lpp, &QueryLpp::Config())
+        .unwrap();
+
+    assert_eq!(quote.base_interest_rate, base_interest_rate);
+    assert_eq!(quote.utilization_optimal, utilization_optimal);
+    assert_eq!(
+        quote.addon_optimal_interest_rate,
+        addon_optimal_interest_rate
+    );
+}
 
 #[test]
 #[should_panic(expected = "Expecting code id 1 for the contract contract5")]
@@ -400,7 +448,7 @@ fn loan_open_and_repay() {
 
     // initial deposit
     app.execute_contract(
-        lender.clone(),
+        lender,
         lpp.clone(),
         &ExecuteLpp::Deposit(),
         &[lpn_cwcoin(init_deposit)],
@@ -408,7 +456,7 @@ fn loan_open_and_repay() {
     .unwrap();
 
     app.execute_contract(
-        lender,
+        admin.clone(),
         lpp.clone(),
         &ExecuteLpp::UpdateParameters {
             base_interest_rate,
@@ -694,7 +742,7 @@ fn compare_lpp_states() {
 
     // initial deposit
     app.execute_contract(
-        lender.clone(),
+        lender,
         lpp.clone(),
         &ExecuteLpp::Deposit(),
         &[lpn_cwcoin(init_deposit)],
@@ -702,7 +750,7 @@ fn compare_lpp_states() {
     .unwrap();
 
     app.execute_contract(
-        lender,
+        admin.clone(),
         lpp.clone(),
         &ExecuteLpp::UpdateParameters {
             base_interest_rate,

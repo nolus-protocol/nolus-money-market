@@ -1,3 +1,4 @@
+use cosmwasm_std::MessageInfo;
 use finance::percent::Percent;
 use sdk::{
     cosmwasm_ext::Response,
@@ -8,16 +9,24 @@ use crate::{error::ContractError, msg::QueryConfigResponse, state::Config};
 
 pub fn try_update_parameters(
     deps: DepsMut,
+    info: MessageInfo,
     base_interest_rate: Percent,
     utilization_optimal: Percent,
     addon_optimal_interest_rate: Percent,
 ) -> Result<Response, ContractError> {
-    Config::load(deps.storage)?.update(
+    let mut config = Config::load(deps.storage)?;
+
+    if config.owner != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    config.update(
         deps.storage,
         base_interest_rate,
         utilization_optimal,
         addon_optimal_interest_rate,
     )?;
+
     Ok(Response::new().add_attribute("method", "try_update_parameters"))
 }
 

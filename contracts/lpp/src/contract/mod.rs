@@ -28,6 +28,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
+    info: MessageInfo,
     msg: InstantiateMsg,
 }
 
@@ -41,6 +42,7 @@ impl<'a> InstantiateWithLpn<'a> {
 
         LiquidityPool::<LPN>::store(
             self.deps.storage,
+            self.info.sender,
             self.msg.lpn_ticker,
             self.msg.lease_code_id,
         )?;
@@ -48,8 +50,12 @@ impl<'a> InstantiateWithLpn<'a> {
         Ok(Response::new().add_attribute("method", "instantiate"))
     }
 
-    pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<Response, ContractError> {
-        let context = Self { deps, msg };
+    pub fn cmd(
+        deps: DepsMut<'a>,
+        info: MessageInfo,
+        msg: InstantiateMsg,
+    ) -> Result<Response, ContractError> {
+        let context = Self { deps, info, msg };
         visit_any_on_ticker::<Lpns, _>(&context.msg.lpn_ticker.clone(), context)
     }
 }
@@ -70,10 +76,10 @@ impl<'a> AnyVisitor for InstantiateWithLpn<'a> {
 pub fn instantiate(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    InstantiateWithLpn::cmd(deps, msg)
+    InstantiateWithLpn::cmd(deps, info, msg)
 }
 
 struct ExecuteWithLpn<'a> {
@@ -152,6 +158,7 @@ pub fn execute(
             addon_optimal_interest_rate,
         } => config::try_update_parameters(
             deps,
+            info,
             base_interest_rate,
             utilization_optimal,
             addon_optimal_interest_rate,
