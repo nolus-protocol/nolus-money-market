@@ -5,6 +5,8 @@ authors = ["Nina Nikolova <n.nikolova@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 
+resolver = "2"
+
 [features]
 testing = []
 

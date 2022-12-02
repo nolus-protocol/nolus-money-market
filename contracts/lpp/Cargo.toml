@@ -5,6 +5,8 @@ authors = ["v.kolesnikov <v.kolesnikov@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 
+resolver = "2"
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 

@@ -5,6 +5,8 @@ authors = ["Gancho Manev <g.manev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 
+resolver = "2"
+
 [features]
 trx = ["dep:sdk", "dep:osmosis-std"]
 
