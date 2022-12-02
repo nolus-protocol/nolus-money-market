@@ -1,3 +1,4 @@
+use cosmwasm_std::Env;
 use serde::{Deserialize, Serialize};
 
 use currency::native::Nls;
@@ -23,9 +24,13 @@ impl TimeAlarms {
 
     pub fn try_add(
         deps: DepsMut,
+        env: Env,
         address: Addr,
         time: Timestamp,
     ) -> Result<Response, ContractError> {
+        if time < env.block.time {
+            return Err(ContractError::InvalidAlarm(time));
+        }
         contract::validate_addr(&deps.querier, &address)?;
         Self::TIME_ALARMS.add(deps.storage, address, time)?;
         Ok(Response::new())
@@ -65,7 +70,7 @@ impl TimeAlarms {
 mod tests {
     use platform::contract;
     use sdk::cosmwasm_std::{
-        testing::{mock_dependencies, MockQuerier},
+        testing::{self, mock_dependencies, MockQuerier},
         Addr, QuerierWrapper, Timestamp,
     };
 
@@ -74,19 +79,25 @@ mod tests {
     #[test]
     fn try_add_invalid_contract_address() {
         let mut deps = mock_dependencies();
+        let mut env = testing::mock_env();
+        env.block.time = Timestamp::from_seconds(0);
+
         let msg_sender = Addr::unchecked("some address");
-        assert!(
-            TimeAlarms::try_add(deps.as_mut(), msg_sender.clone(), Timestamp::from_nanos(8))
-                .is_err()
-        );
+        assert!(TimeAlarms::try_add(
+            deps.as_mut(),
+            env.clone(),
+            msg_sender.clone(),
+            Timestamp::from_nanos(8)
+        )
+        .is_err());
 
         let expected_error: ContractError =
             contract::validate_addr(&deps.as_mut().querier, &msg_sender)
                 .unwrap_err()
                 .into();
 
-        let result =
-            TimeAlarms::try_add(deps.as_mut(), msg_sender, Timestamp::from_nanos(8)).unwrap_err();
+        let result = TimeAlarms::try_add(deps.as_mut(), env, msg_sender, Timestamp::from_nanos(8))
+            .unwrap_err();
 
         assert_eq!(expected_error, result);
     }
@@ -99,8 +110,26 @@ mod tests {
         let mut deps_temp = mock_dependencies();
         let mut deps = deps_temp.as_mut();
         deps.querier = querier;
+        let mut env = testing::mock_env();
+        env.block.time = Timestamp::from_seconds(0);
 
         let msg_sender = Addr::unchecked("some address");
-        assert!(TimeAlarms::try_add(deps, msg_sender, Timestamp::from_nanos(4)).is_ok());
+        assert!(TimeAlarms::try_add(deps, env, msg_sender, Timestamp::from_nanos(4)).is_ok());
+    }
+
+    #[test]
+    fn try_add_alarm_in_the_past() {
+        let mut mock_querier = MockQuerier::default();
+        mock_querier.update_wasm(contract::testing::valid_contract_handler);
+        let querier = QuerierWrapper::new(&mock_querier);
+        let mut deps_temp = mock_dependencies();
+        let mut deps = deps_temp.as_mut();
+        deps.querier = querier;
+
+        let mut env = testing::mock_env();
+        env.block.time = Timestamp::from_seconds(100);
+
+        let msg_sender = Addr::unchecked("some address");
+        TimeAlarms::try_add(deps, env, msg_sender, Timestamp::from_nanos(4)).unwrap_err();
     }
 }

@@ -1,3 +1,4 @@
+use cosmwasm_std::Timestamp;
 use thiserror::Error;
 
 use sdk::cosmwasm_std::{Addr, StdError};
@@ -14,6 +15,9 @@ pub enum ContractError {
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
     #[error("[TimeAlarms] Invalid alarm notification address: {0:?}")]
     InvalidAlarmAddress(Addr),
+
+    #[error("[TimeAlarms] Alarm is in the past: {0:?}")]
+    InvalidAlarm(Timestamp),
 
     #[error("[Platform] {0}")]
     Platform(#[from] platform::error::Error),

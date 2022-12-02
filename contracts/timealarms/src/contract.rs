@@ -36,7 +36,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::AddAlarm { time } => TimeAlarms::try_add(deps, info.sender, time),
+        ExecuteMsg::AddAlarm { time } => TimeAlarms::try_add(deps, env, info.sender, time),
         ExecuteMsg::Notify {} => TimeAlarms::try_notify(deps.storage, env.block.time),
     }
 }
