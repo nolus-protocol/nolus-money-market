@@ -1110,6 +1110,17 @@ fn test_rewards() {
     )
     .unwrap_err();
 
+    // check reward claim with nonvalid recipient
+    app.execute_contract(
+        lender1.clone(),
+        lpp.clone(),
+        &ExecuteLpp::ClaimRewards {
+            other_recipient: Some(Addr::unchecked("-")),
+        },
+        &[],
+    )
+    .unwrap_err();
+
     // check reward claim
     app.execute_contract(
         lender1.clone(),

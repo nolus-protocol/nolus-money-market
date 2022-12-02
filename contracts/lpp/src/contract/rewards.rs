@@ -31,7 +31,11 @@ pub fn try_claim_rewards(
     info: MessageInfo,
     other_recipient: Option<Addr>,
 ) -> Result<Response, ContractError> {
-    let recipient = other_recipient.unwrap_or_else(|| info.sender.clone());
+    let recipient = other_recipient
+        .map(|recipient| deps.api.addr_validate(recipient.as_str()))
+        .transpose()?
+        .unwrap_or_else(|| info.sender.clone());
+
     let mut deposit =
         Deposit::may_load(deps.storage, info.sender)?.ok_or(ContractError::NoDeposit {})?;
 
