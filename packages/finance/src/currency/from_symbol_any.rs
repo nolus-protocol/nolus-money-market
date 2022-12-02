@@ -2,6 +2,8 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::Error;
 
+use self::impl_any_tickers::FirstTickerVisitor;
+
 use super::{Currency, Group, Symbol};
 
 pub trait AnyVisitor {
@@ -10,7 +12,16 @@ pub trait AnyVisitor {
 
     fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
-        C: 'static + Currency + Serialize + DeserializeOwned;
+        C: Currency + Serialize + DeserializeOwned;
+}
+pub trait AnyVisitorPair {
+    type Output;
+    type Error;
+
+    fn on<C1, C2>(self) -> Result<Self::Output, Self::Error>
+    where
+        C1: Currency,
+        C2: Currency;
 }
 
 pub fn visit_any_on_ticker<G, V>(ticker: Symbol, visitor: V) -> Result<V::Output, V::Error>
@@ -21,6 +32,20 @@ where
 {
     G::maybe_visit_on_ticker(ticker, visitor)
         .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, G>(ticker).into()))
+}
+
+pub fn visit_any_on_tickers<G1, G2, V>(
+    ticker1: Symbol,
+    ticker2: Symbol,
+    visitor: V,
+) -> Result<V::Output, V::Error>
+where
+    G1: Group,
+    G2: Group,
+    V: AnyVisitorPair,
+    Error: Into<V::Error>,
+{
+    visit_any_on_ticker::<G1, _>(ticker1, FirstTickerVisitor::<G2, _>::new(ticker2, visitor))
 }
 
 pub fn visit_any_on_bank_symbol<G, V>(
@@ -36,15 +61,95 @@ where
         .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, G>(bank_symbol).into()))
 }
 
+mod impl_any_tickers {
+    use std::marker::PhantomData;
+
+    use crate::{
+        currency::{Currency, Group, Symbol},
+        error::Error,
+    };
+
+    use super::{visit_any_on_ticker, AnyVisitor, AnyVisitorPair};
+
+    pub struct FirstTickerVisitor<'a, G2, V>
+    where
+        G2: Group,
+        V: AnyVisitorPair,
+    {
+        ticker2: Symbol<'a>,
+        group2: PhantomData<G2>,
+        visitor: V,
+    }
+    impl<'a, G2, V> FirstTickerVisitor<'a, G2, V>
+    where
+        G2: Group,
+        V: AnyVisitorPair,
+    {
+        pub fn new(ticker2: Symbol<'a>, visitor: V) -> Self {
+            Self {
+                ticker2,
+                group2: PhantomData::<G2>,
+                visitor,
+            }
+        }
+    }
+    impl<'a, G2, V> AnyVisitor for FirstTickerVisitor<'a, G2, V>
+    where
+        G2: Group,
+        V: AnyVisitorPair,
+        Error: Into<V::Error>,
+    {
+        type Output = <V as AnyVisitorPair>::Output;
+        type Error = <V as AnyVisitorPair>::Error;
+
+        fn on<C1>(self) -> Result<Self::Output, Self::Error>
+        where
+            C1: Currency,
+        {
+            visit_any_on_ticker::<G2, _>(
+                self.ticker2,
+                SecondTickerVisitor {
+                    currency1: PhantomData::<C1>,
+                    visitor: self.visitor,
+                },
+            )
+        }
+    }
+
+    struct SecondTickerVisitor<C1, V>
+    where
+        C1: Currency,
+        V: AnyVisitorPair,
+    {
+        currency1: PhantomData<C1>,
+        visitor: V,
+    }
+    impl<C1, V> AnyVisitor for SecondTickerVisitor<C1, V>
+    where
+        C1: Currency,
+        V: AnyVisitorPair,
+    {
+        type Output = <V as AnyVisitorPair>::Output;
+        type Error = <V as AnyVisitorPair>::Error;
+
+        fn on<C2>(self) -> Result<Self::Output, Self::Error>
+        where
+            C2: Currency,
+        {
+            self.visitor.on::<C1, C2>()
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
 
     use crate::{
-        currency::Currency,
+        currency::{Currency, Group},
         error::Error,
         test::{
-            currency::{Dai, Nls, TestCurrencies, Usdc},
-            visitor::{Expect, ExpectUnknownCurrency},
+            currency::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
+            visitor::{Expect, ExpectPair, ExpectUnknownCurrency},
         },
     };
 
@@ -81,5 +186,39 @@ mod test {
             super::visit_any_on_ticker::<TestCurrencies, _>(DENOM, ExpectUnknownCurrency),
             Err(Error::not_in_currency_group::<_, TestCurrencies>(DENOM)),
         );
+    }
+
+    #[test]
+    fn visit_any_tickers() {
+        visit_any_tickers_ok::<TestCurrencies, TestCurrencies, Usdc, Nls>();
+        visit_any_tickers_ok::<TestExtraCurrencies, TestCurrencies, Dai, Usdc>();
+        visit_any_tickers_ok::<TestCurrencies, TestCurrencies, Nls, Nls>();
+
+        visit_any_tickers_fail::<TestCurrencies, TestCurrencies, Dai, Nls>();
+    }
+
+    fn visit_any_tickers_ok<G1, G2, C1, C2>()
+    where
+        G1: Group,
+        G2: Group,
+        C1: 'static + Currency,
+        C2: 'static + Currency,
+    {
+        let v_c1_c2 = ExpectPair::<C1, C2>::default();
+        assert_eq!(
+            Ok(true),
+            super::visit_any_on_tickers::<G1, G2, _>(C1::TICKER, C2::TICKER, v_c1_c2)
+        );
+    }
+
+    fn visit_any_tickers_fail<G1, G2, C1, C2>()
+    where
+        G1: Group,
+        G2: Group,
+        C1: 'static + Currency,
+        C2: 'static + Currency,
+    {
+        let v_c1_c2 = ExpectPair::<C1, C2>::default();
+        assert!(super::visit_any_on_tickers::<G1, G2, _>(C1::TICKER, C2::TICKER, v_c1_c2).is_err());
     }
 }

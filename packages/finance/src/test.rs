@@ -105,7 +105,7 @@ pub mod visitor {
     use std::marker::PhantomData;
 
     use crate::{
-        currency::{equal, AnyVisitor, Currency, SingleVisitor},
+        currency::{equal, AnyVisitor, AnyVisitorPair, Currency, SingleVisitor},
         error::Error,
     };
 
@@ -159,6 +159,29 @@ pub mod visitor {
 
         fn on(self) -> Result<Self::Output, Self::Error> {
             unreachable!();
+        }
+    }
+
+    pub struct ExpectPair<C1, C2>(PhantomData<C1>, PhantomData<C2>);
+    impl<C1, C2> Default for ExpectPair<C1, C2> {
+        fn default() -> Self {
+            Self(Default::default(), Default::default())
+        }
+    }
+    impl<C1, C2> AnyVisitorPair for ExpectPair<C1, C2>
+    where
+        C1: 'static,
+        C2: 'static,
+    {
+        type Output = bool;
+        type Error = Error;
+
+        fn on<C1in, C2in>(self) -> Result<Self::Output, Self::Error>
+        where
+            C1in: Currency,
+            C2in: Currency,
+        {
+            Ok(equal::<C1, C1in>() && equal::<C2, C2in>())
         }
     }
 }

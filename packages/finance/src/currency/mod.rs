@@ -4,7 +4,9 @@ pub use from_symbol::{
     maybe_visit_on_bank_symbol, maybe_visit_on_ticker, visit_on_bank_symbol, MaybeVisitResult,
     SingleVisitor,
 };
-pub use from_symbol_any::{visit_any_on_bank_symbol, visit_any_on_ticker, AnyVisitor};
+pub use from_symbol_any::{
+    visit_any_on_bank_symbol, visit_any_on_ticker, visit_any_on_tickers, AnyVisitor, AnyVisitorPair,
+};
 pub use group::{Group, MaybeAnyVisitResult};
 
 mod from_symbol;

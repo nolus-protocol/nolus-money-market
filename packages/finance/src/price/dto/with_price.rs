@@ -1,8 +1,6 @@
 use crate::{
-    coin::{Coin, CoinDTO},
-    currency::{visit_any_on_ticker, AnyVisitor, Currency, Group},
+    currency::{self, AnyVisitorPair, Currency, Group},
     error::Error,
-    price::{self},
 };
 
 use super::{PriceDTO, WithPrice};
@@ -17,25 +15,24 @@ where
     Cmd: WithPrice,
     Error: Into<Cmd::Error>,
 {
-    visit_any_on_ticker::<G, _>(
-        &price.amount.ticker().clone(),
-        CVisitor {
-            price_dto: price,
-            cmd,
-        },
+    currency::visit_any_on_tickers::<G, QuoteG, _>(
+        price.amount.ticker(),
+        price.amount_quote.ticker(),
+        PairVisitor { price, cmd },
     )
 }
 
-struct CVisitor<'a, G, QuoteG, Cmd>
+struct PairVisitor<'a, G, QuoteG, Cmd>
 where
     G: Group,
     QuoteG: Group,
+    Cmd: WithPrice,
 {
-    price_dto: &'a PriceDTO<G, QuoteG>,
+    price: &'a PriceDTO<G, QuoteG>,
     cmd: Cmd,
 }
 
-impl<'a, G, QuoteG, Cmd> AnyVisitor for CVisitor<'a, G, QuoteG, Cmd>
+impl<'a, G, QuoteG, Cmd> AnyVisitorPair for PairVisitor<'a, G, QuoteG, Cmd>
 where
     G: Group,
     QuoteG: Group,
@@ -45,48 +42,12 @@ where
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
-    #[track_caller]
-    fn on<C>(self) -> Result<Self::Output, Self::Error>
+    fn on<C1, C2>(self) -> Result<Self::Output, Self::Error>
     where
-        C: Currency,
+        C1: Currency,
+        C2: Currency,
     {
-        visit_any_on_ticker::<QuoteG, _>(
-            &self.price_dto.amount_quote.ticker().clone(),
-            QuoteCVisitor {
-                base: Coin::<C>::try_from(&self.price_dto.amount)
-                    .expect("Got different currency in visitor!"),
-                quote_dto: &self.price_dto.amount_quote,
-                cmd: self.cmd,
-            },
-        )
-    }
-}
-
-struct QuoteCVisitor<'a, QuoteG, C, Cmd>
-where
-    C: Currency,
-{
-    base: Coin<C>,
-    quote_dto: &'a CoinDTO<QuoteG>,
-    cmd: Cmd,
-}
-
-impl<'a, QuoteG, C, Cmd> AnyVisitor for QuoteCVisitor<'a, QuoteG, C, Cmd>
-where
-    C: Currency,
-    Cmd: WithPrice,
-{
-    type Output = Cmd::Output;
-    type Error = Cmd::Error;
-
-    #[track_caller]
-    fn on<QuoteC>(self) -> Result<Self::Output, Self::Error>
-    where
-        QuoteC: Currency,
-    {
-        let amount_quote =
-            Coin::<QuoteC>::try_from(self.quote_dto).expect("Got different currency in visitor!");
-        let price = price::total_of(self.base).is(amount_quote);
-        self.cmd.exec(price)
+        let price = self.price.try_into().map_err(Error::into)?;
+        self.cmd.exec::<C1, C2>(price)
     }
 }
