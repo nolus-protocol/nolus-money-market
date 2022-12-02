@@ -29,7 +29,7 @@ pub trait WithLpp {
     fn exec<C, L>(self, lpp: L) -> StdResult<Self::Output, Self::Error>
     where
         L: Lpp<C>,
-        C: Currency + Serialize;
+        C: Currency;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

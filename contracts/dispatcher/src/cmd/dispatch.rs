@@ -1,5 +1,3 @@
-use serde::Serialize;
-
 use currency::native::Nls;
 use finance::{coin::Coin, currency::Currency, duration::Duration, interest::InterestPeriod};
 use lpp::stub::{Lpp as LppTrait, WithLpp};
@@ -18,7 +16,7 @@ impl<'a> WithLpp for Dispatch<'a> {
     fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
         Lpp: LppTrait<Lpn>,
-        Lpn: Currency + Serialize,
+        Lpn: Currency,
     {
         // get LPP balance: TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
         let resp = lpp.lpp_balance()?;
