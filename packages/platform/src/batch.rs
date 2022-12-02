@@ -12,7 +12,7 @@ use crate::{coin_legacy::to_cosmwasm_impl, error::Result};
 pub type ReplyId = u64;
 
 #[derive(Default)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
+#[cfg_attr(any(debug_assertions, test, feature = "testing"), derive(Debug, PartialEq))]
 pub struct Batch {
     msgs: Vec<SubMsg>,
 }
