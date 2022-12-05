@@ -46,7 +46,6 @@ impl Config {
     }
 }
 
-type DenomResolutionPath = Vec<SpotPrice>;
 pub type PriceFeedBin = Vec<u8>;
 pub struct PriceFeeds<'m>(Map<'m, (SymbolOwned, SymbolOwned), PriceFeedBin>);
 
@@ -89,20 +88,19 @@ impl<'m> PriceFeeds<'m> {
         &self,
         storage: &dyn Storage,
         config: Config,
-        path: Vec<SymbolOwned>,
+        path: &[SymbolOwned],
     ) -> Result<SpotPrice, PriceFeedsError> {
-        let mut resolution_path = DenomResolutionPath::new();
-
-        if let Some((first, elements)) = path.split_first() {
-            let mut base = first;
-            for quote in elements {
-                let price_dto = self.price_of_feed(storage, base, quote, config)?;
-                base = quote;
-                //TODO multiply immediatelly than collecting in a vector and then PriceFeeds::calculate_price
-                resolution_path.push(price_dto);
-            }
-        }
-        PriceFeeds::calculate_price(&resolution_path)
+        path.windows(2)
+            .map(|c: &[SymbolOwned]| self.price_of_feed(storage, &c[0], &c[1], config))
+            .reduce(|result_c1, result_c2| {
+                result_c1.and_then(|c1| {
+                    result_c2.and_then(|c2| {
+                        c1.multiply::<PaymentGroup>(&c2)
+                            .map_err(PriceFeedsError::from)
+                    })
+                })
+            })
+            .unwrap_or(Err(PriceFeedsError::NoPrice()))
     }
 
     fn price_of_feed(
@@ -135,20 +133,6 @@ impl<'m> PriceFeeds<'m> {
             feed_bin,
             CalculatePrice(config),
         )
-    }
-
-    fn calculate_price(
-        resolution_path: &DenomResolutionPath,
-    ) -> Result<SpotPrice, PriceFeedsError> {
-        if let Some((first, rest)) = resolution_path.split_first() {
-            rest.iter()
-                .fold(Ok(first.to_owned()), |result_c1, c2| {
-                    result_c1.and_then(|c1| c1.multiply::<PaymentGroup>(c2))
-                })
-                .map_err(|e| e.into())
-        } else {
-            Err(PriceFeedsError::NoPrice {})
-        }
     }
 }
 

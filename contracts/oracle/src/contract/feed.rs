@@ -52,7 +52,7 @@ where
         let mut prices = vec![];
         for currency in currencies {
             let path = tree.load_path(currency)?;
-            let price = Self::MARKET_PRICE.price(storage, config, path)?;
+            let price = Self::MARKET_PRICE.price(storage, config, &path)?;
             prices.push(price);
         }
         Ok(prices)

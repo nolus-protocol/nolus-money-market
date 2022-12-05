@@ -62,8 +62,8 @@ fn marketprice_add_feed_expect_err() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
     let config = Config::new(MINUTE, 50, ts);
-    let path = vec![Osmo::TICKER.to_string(), Atom::TICKER.to_string()];
-    let expected_err = market.price(&deps.storage, config, path).unwrap_err();
+    let path = [Osmo::TICKER.to_string(), Atom::TICKER.to_string()];
+    let expected_err = market.price(&deps.storage, config, &path).unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
 }
 
@@ -117,7 +117,7 @@ fn marketprice_add_feed() {
         .price(
             &deps.storage,
             query,
-            vec![Osmo::TICKER.to_string(), Atom::TICKER.to_string()],
+            &[Osmo::TICKER.to_string(), Atom::TICKER.to_string()],
         )
         .unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
@@ -128,7 +128,7 @@ fn marketprice_add_feed() {
         .price(
             &deps.storage,
             query,
-            vec![Osmo::TICKER.to_string(), Atom::TICKER.to_string()],
+            &[Osmo::TICKER.to_string(), Atom::TICKER.to_string()],
         )
         .unwrap();
 
@@ -214,7 +214,7 @@ fn marketprice_follow_the_path() {
         .price(
             &deps.storage,
             query,
-            vec![
+            &[
                 Atom::TICKER.to_string(),
                 Osmo::TICKER.to_string(),
                 Cro::TICKER.to_string(),
@@ -233,7 +233,7 @@ fn marketprice_follow_the_path() {
         .price(
             &deps.storage,
             query,
-            vec![Atom::TICKER.to_string(), Usdc::TICKER.to_string()],
+            &[Atom::TICKER.to_string(), Usdc::TICKER.to_string()],
         )
         .unwrap_err();
     assert_eq!(price_resp, PriceFeedsError::NoPrice());
@@ -245,7 +245,7 @@ fn marketprice_follow_the_path() {
             .price(
                 &deps.storage,
                 query,
-                vec![Wbtc::TICKER.to_string(), Usdc::TICKER.to_string()],
+                &[Wbtc::TICKER.to_string(), Usdc::TICKER.to_string()],
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice()
@@ -258,7 +258,7 @@ fn marketprice_follow_the_path() {
             .price(
                 &deps.storage,
                 query,
-                vec![Wbtc::TICKER.to_string(), Osmo::TICKER.to_string()]
+                &[Wbtc::TICKER.to_string(), Osmo::TICKER.to_string()]
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice {}
