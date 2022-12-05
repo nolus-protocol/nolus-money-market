@@ -6,8 +6,10 @@ pub mod error;
 pub mod feed;
 pub mod feeders;
 pub mod market_price;
+mod with_feed;
 
 #[cfg(test)]
 mod tests;
 
+type CurrencyGroup = SwapGroup;
 pub type SpotPrice = PriceDTO<SwapGroup, SwapGroup>;

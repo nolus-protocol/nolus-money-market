@@ -1,11 +1,20 @@
 use currency::payment::PaymentGroup;
-use finance::{currency::SymbolOwned, duration::Duration};
+use finance::{
+    currency::{Currency, Symbol, SymbolOwned},
+    duration::Duration,
+};
 use sdk::{
-    cosmwasm_std::{Addr, StdResult, Storage, Timestamp},
+    cosmwasm_std::{Addr, Storage, Timestamp},
     cw_storage_plus::Map,
 };
+use serde::Serialize;
 
-use crate::{error::PriceFeedsError, feed::PriceFeed, SpotPrice};
+use crate::{
+    error::PriceFeedsError,
+    feed::PriceFeed,
+    with_feed::{self, WithPriceFeed},
+    CurrencyGroup, SpotPrice,
+};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Config {
@@ -38,7 +47,8 @@ impl Config {
 }
 
 type DenomResolutionPath = Vec<SpotPrice>;
-pub struct PriceFeeds<'m>(Map<'m, (SymbolOwned, SymbolOwned), PriceFeed>);
+pub type PriceFeedBin = Vec<u8>;
+pub struct PriceFeeds<'m>(Map<'m, (SymbolOwned, SymbolOwned), PriceFeedBin>);
 
 impl<'m> PriceFeeds<'m> {
     pub const fn new(namespace: &'m str) -> PriceFeeds {
@@ -53,20 +63,21 @@ impl<'m> PriceFeeds<'m> {
         prices: &[SpotPrice],
         price_feed_period: Duration,
     ) -> Result<(), PriceFeedsError> {
-        for price_dto in prices {
+        for price in prices {
             self.0.update(
                 storage,
                 (
-                    price_dto.base().ticker().to_string(),
-                    price_dto.quote().ticker().to_string(),
+                    price.base().ticker().to_string(),
+                    price.quote().ticker().to_string(),
                 ),
-                |old: Option<PriceFeed>| -> StdResult<PriceFeed> {
-                    Ok(old.unwrap_or_default().add_observation(
-                        sender_raw.clone(),
+                |feed: Option<PriceFeedBin>| -> Result<PriceFeedBin, PriceFeedsError> {
+                    add_observation(
+                        feed,
+                        sender_raw,
                         current_block_time,
-                        price_dto.to_owned(),
+                        price,
                         price_feed_period,
-                    ))
+                    )
                 },
             )?;
         }
@@ -85,8 +96,7 @@ impl<'m> PriceFeeds<'m> {
         if let Some((first, elements)) = path.split_first() {
             let mut base = first;
             for quote in elements {
-                let price_dto =
-                    self.price_of_feed(storage, base.to_string(), quote.to_string(), config)?;
+                let price_dto = self.price_of_feed(storage, base, quote, config)?;
                 base = quote;
                 //TODO multiply immediatelly than collecting in a vector and then PriceFeeds::calculate_price
                 resolution_path.push(price_dto);
@@ -98,14 +108,33 @@ impl<'m> PriceFeeds<'m> {
     fn price_of_feed(
         &self,
         storage: &dyn Storage,
-        base: SymbolOwned,
-        quote: SymbolOwned,
+        base: Symbol,
+        quote: Symbol,
         config: Config,
     ) -> Result<SpotPrice, PriceFeedsError> {
-        match self.0.may_load(storage, (base, quote))? {
-            Some(feed) => Ok(feed.get_price(config)?),
-            None => Err(PriceFeedsError::NoPrice()),
+        struct CalculatePrice(Config);
+        impl WithPriceFeed for CalculatePrice {
+            type Output = SpotPrice;
+            type Error = PriceFeedsError;
+
+            fn exec<C, QuoteC>(
+                self,
+                feed: PriceFeed<C, QuoteC>,
+            ) -> Result<Self::Output, Self::Error>
+            where
+                C: Currency,
+                QuoteC: Currency,
+            {
+                feed.get_price(self.0).map(Into::into)
+            }
         }
+        let feed_bin = self.0.may_load(storage, (base.into(), quote.into()))?;
+        with_feed::execute::<CurrencyGroup, CurrencyGroup, _>(
+            base,
+            quote,
+            feed_bin,
+            CalculatePrice(config),
+        )
     }
 
     fn calculate_price(
@@ -121,4 +150,49 @@ impl<'m> PriceFeeds<'m> {
             Err(PriceFeedsError::NoPrice {})
         }
     }
+}
+
+fn add_observation(
+    feed_bin: Option<PriceFeedBin>,
+    from: &Addr,
+    at: Timestamp,
+    price: &SpotPrice,
+    validity: Duration,
+) -> Result<PriceFeedBin, PriceFeedsError> {
+    struct AddObservation<'a> {
+        from: &'a Addr,
+        at: Timestamp,
+        price: &'a SpotPrice,
+        validity: Duration,
+    }
+
+    impl<'a> WithPriceFeed for AddObservation<'a> {
+        type Output = PriceFeedBin;
+        type Error = PriceFeedsError;
+
+        fn exec<C, QuoteC>(self, feed: PriceFeed<C, QuoteC>) -> Result<Self::Output, Self::Error>
+        where
+            C: Currency + Serialize,
+            QuoteC: Currency + Serialize,
+        {
+            let feed = feed.add_observation(
+                self.from.clone(),
+                self.at,
+                self.price.try_into()?,
+                self.validity,
+            );
+            rmp_serde::to_vec(&feed).map_err(Into::into)
+        }
+    }
+    with_feed::execute::<CurrencyGroup, CurrencyGroup, _>(
+        price.base().ticker(),
+        price.quote().ticker(),
+        feed_bin,
+        AddObservation {
+            from,
+            at,
+            price,
+            validity,
+        },
+    )
 }
