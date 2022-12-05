@@ -20,8 +20,8 @@ pub trait AnyVisitorPair {
 
     fn on<C1, C2>(self) -> Result<Self::Output, Self::Error>
     where
-        C1: Currency,
-        C2: Currency;
+        C1: Currency + Serialize + DeserializeOwned,
+        C2: Currency + Serialize + DeserializeOwned;
 }
 
 pub fn visit_any_on_ticker<G, V>(ticker: Symbol, visitor: V) -> Result<V::Output, V::Error>
@@ -64,6 +64,8 @@ where
 mod impl_any_tickers {
     use std::marker::PhantomData;
 
+    use serde::{de::DeserializeOwned, Serialize};
+
     use crate::{
         currency::{Currency, Group, Symbol},
         error::Error,
@@ -104,7 +106,7 @@ mod impl_any_tickers {
 
         fn on<C1>(self) -> Result<Self::Output, Self::Error>
         where
-            C1: Currency,
+            C1: Currency + Serialize + DeserializeOwned,
         {
             visit_any_on_ticker::<G2, _>(
                 self.ticker2,
@@ -126,7 +128,7 @@ mod impl_any_tickers {
     }
     impl<C1, V> AnyVisitor for SecondTickerVisitor<C1, V>
     where
-        C1: Currency,
+        C1: Currency + Serialize + DeserializeOwned,
         V: AnyVisitorPair,
     {
         type Output = <V as AnyVisitorPair>::Output;
@@ -134,7 +136,7 @@ mod impl_any_tickers {
 
         fn on<C2>(self) -> Result<Self::Output, Self::Error>
         where
-            C2: Currency,
+            C2: Currency + Serialize + DeserializeOwned,
         {
             self.visitor.on::<C1, C2>()
         }

@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
@@ -178,8 +178,8 @@ pub trait WithPrice {
 
     fn exec<C, QuoteC>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
-        C: Currency,
-        QuoteC: Currency;
+        C: Currency + Serialize + DeserializeOwned,
+        QuoteC: Currency + Serialize + DeserializeOwned;
 }
 
 pub trait WithBase<C>
