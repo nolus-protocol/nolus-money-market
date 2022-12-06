@@ -22,10 +22,6 @@ rmp-serde = { version = "1", default-features = false }
 thiserror = { version = "1", default-features = false }
 anyhow = "1"
 
-[profile.release.package.treasury]
-codegen-units = 1
-incremental = false
-
 [profile.release]
 opt-level = "s"
 debug = false
