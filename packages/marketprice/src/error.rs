@@ -37,14 +37,8 @@ pub enum PriceFeedsError {
     FeedSerdeError(String),
 }
 
-impl From<rmp_serde::decode::Error> for PriceFeedsError {
-    fn from(err: rmp_serde::decode::Error) -> Self {
-        Self::FeedSerdeError(format!("Error during deserialization: {}", err))
-    }
-}
-
-impl From<rmp_serde::encode::Error> for PriceFeedsError {
-    fn from(err: rmp_serde::encode::Error) -> Self {
-        Self::FeedSerdeError(format!("Error during serialization: {}", err))
+impl From<postcard::Error> for PriceFeedsError {
+    fn from(err: postcard::Error) -> Self {
+        Self::FeedSerdeError(format!("Error during (de-)serialization: {}", err))
     }
 }

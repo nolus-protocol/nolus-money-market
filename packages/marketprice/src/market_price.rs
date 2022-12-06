@@ -165,7 +165,7 @@ fn add_observation(
                 self.price.try_into()?,
                 self.validity,
             );
-            rmp_serde::to_vec(&feed).map_err(Into::into)
+            postcard::to_allocvec(&feed).map_err(Into::into)
         }
     }
     with_feed::execute::<CurrencyGroup, CurrencyGroup, _>(

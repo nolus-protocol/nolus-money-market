@@ -1,7 +1,7 @@
 use finance::currency::{self, AnyVisitorPair, Currency, Group, Symbol};
 use finance::error::Error as FinanceError;
-use rmp_serde::decode::Error as DecodeError;
 use serde::{de::DeserializeOwned, Serialize};
+use postcard::Error as DecodeError;
 
 use crate::{feed::PriceFeed, market_price::PriceFeedBin};
 
@@ -52,7 +52,7 @@ where
             self.feed_bin
                 .map_or_else(
                     || Ok(PriceFeed::<C1, C2>::default()),
-                    |bin| rmp_serde::from_slice(&bin).map_err(Into::into),
+                    |bin| postcard::from_bytes(&bin).map_err(Into::into),
                 )
                 .and_then(|feed| self.cmd.exec(feed))
         }

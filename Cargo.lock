@@ -96,6 +96,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cobs"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67ba02a97a2bd10f4b59b25c7973101c79642302776489e030cd13cdab09ed15"
+
+[[package]]
 name = "const-oid"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -653,7 +659,7 @@ dependencies = [
  "currency",
  "finance",
  "platform",
- "rmp-serde",
+ "postcard",
  "sdk",
  "serde",
  "swap",
@@ -803,6 +809,16 @@ dependencies = [
  "serde",
  "serde-json-wasm",
  "thiserror",
+]
+
+[[package]]
+name = "postcard"
+version = "1.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c2b180dc0bade59f03fd005cb967d3f1e5f69b13922dad0cd6e047cb8af2363"
+dependencies = [
+ "cobs",
+ "serde",
 ]
 
 [[package]]
@@ -958,28 +974,6 @@ dependencies = [
  "crypto-bigint",
  "hmac",
  "zeroize",
-]
-
-[[package]]
-name = "rmp"
-version = "0.8.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44519172358fd6d58656c86ab8e7fbc9e1490c3e8f14d35ed78ca0dd07403c9f"
-dependencies = [
- "byteorder",
- "num-traits",
- "paste",
-]
-
-[[package]]
-name = "rmp-serde"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c5b13be192e0220b8afb7222aa5813cb62cc269ebb5cac346ca6487681d2913e"
-dependencies = [
- "byteorder",
- "rmp",
- "serde",
 ]
 
 [[package]]
