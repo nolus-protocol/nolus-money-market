@@ -8,10 +8,7 @@ use finance::{
     currency::Currency,
     percent::Percent,
 };
-use lpp::stub::{
-    lender::{LppLender as LppLenderTrait, WithLppLender},
-    LppBatch,
-};
+use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
 use market_price_oracle::{convert, stub::OracleRef};
 use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
@@ -126,8 +123,14 @@ impl WithLppLender for OpenLoanResp {
         LppLender: LppLenderTrait<Lpn>,
     {
         let loan_resp = lpp.open_loan_resp(self.reply)?;
-        let LppBatch { lpp_ref: _, batch } = lpp.into();
-        debug_assert_eq!(Batch::default(), batch);
+
+        #[cfg(debug_assertions)]
+        {
+            use lpp::stub::LppBatch;
+
+            let LppBatch { lpp_ref: _, batch } = lpp.into();
+            debug_assert_eq!(Batch::default(), batch);
+        }
         Ok(OpenLoanRespResult {
             principal: loan_resp.principal_due.into(),
             annual_interest_rate: loan_resp.annual_interest_rate,
