@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{error::PriceFeedsError, market_price::Config};
 
-#[derive(Serialize, Deserialize, Default, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct PriceFeed<C, QuoteC>
 where
     C: Currency,
