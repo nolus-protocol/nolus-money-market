@@ -86,7 +86,7 @@ where
     move |o: &Observation<_, _>| o.valid(at, period)
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize)]
 struct Observation<C, QuoteC>
 where
     C: Currency,
