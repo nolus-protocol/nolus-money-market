@@ -1,4 +1,5 @@
-use marketprice::alarms::{price::PriceAlarms, Alarm};
+use marketprice::{alarms::{price::PriceAlarms, Alarm}, SpotPrice};
+use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, Storage},
@@ -35,13 +36,14 @@ impl MarketAlarms {
     }
 
     // TODO: separation of price feed and alarms notification
-    /*
     pub fn try_notify_alarms(
         storage: &mut dyn Storage,
-        updated_prices: Vec<SpotPrice>,
-        batch: &mut Batch,
-    ) -> Result<(), ContractError> {
-        Ok(Self::PRICE_ALARMS.notify(storage, updated_prices, batch)?)
+        mut batch: Batch,
+        prices: &[SpotPrice],
+        max_count: u32,
+    ) -> Result<Response, ContractError>
+    {
+        Self::PRICE_ALARMS.notify(storage, &mut batch, prices, max_count)?;
+        Ok(batch.into())
     }
-    */
 }

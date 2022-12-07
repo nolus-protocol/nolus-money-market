@@ -159,10 +159,12 @@ impl<'m> PriceAlarms<'m> {
     pub fn notify(
         &self,
         storage: &mut dyn Storage,
-        updated_prices: Vec<SpotPrice>,
         batch: &mut Batch,
+        prices: &[SpotPrice],
+        mut max_count: u32,
     ) -> Result<(), AlarmError> {
         let mut next_id = self.id_seq.may_load(storage)?.unwrap_or(0);
+        let mut start_id = next_id;
 
         #[inline]
         fn proc(
@@ -186,8 +188,8 @@ impl<'m> PriceAlarms<'m> {
         let alarms_below = self.alarms_below();
         let alarms_above = self.alarms_above();
 
-        for price in updated_prices {
-            let inv_normalized_price = AlarmStore::inv_normalize(&price)?.0.amount();
+        for price in prices {
+            let inv_normalized_price = AlarmStore::inv_normalize(price)?.0.amount();
 
             alarms_below
                 .idx
@@ -202,7 +204,11 @@ impl<'m> PriceAlarms<'m> {
                     ))),
                     Order::Ascending,
                 )
+                .take(max_count.try_into()?)
                 .try_for_each(|alarm| proc(batch, alarm?.0, &mut next_id))?;
+
+            max_count -= u32::try_from(next_id - start_id)?;
+            start_id = next_id;
 
             alarms_above
                 .idx
@@ -217,7 +223,11 @@ impl<'m> PriceAlarms<'m> {
                     None,
                     Order::Ascending,
                 )
+                .take(max_count.try_into()?)
                 .try_for_each(|addr| proc(batch, addr?.0, &mut next_id))?;
+
+            max_count -= u32::try_from(next_id - start_id)?;
+            start_id = next_id;
         }
 
         self.id_seq.save(storage, &next_id)?;
@@ -290,10 +300,11 @@ pub mod tests {
         alarms
             .notify(
                 storage,
-                vec![price::total_of(Coin::<Atom>::new(1))
+                &mut batch,
+                &[price::total_of(Coin::<Atom>::new(1))
                     .is(Coin::<Usdc>::new(15))
                     .into()],
-                &mut batch,
+                10
             )
             .unwrap();
 
@@ -387,7 +398,8 @@ pub mod tests {
         alarms
             .notify(
                 storage,
-                vec![
+                &mut batch,
+                &[
                     price::total_of(Coin::<Atom>::new(1))
                         .is(Coin::<Usdc>::new(15))
                         .into(),
@@ -395,7 +407,7 @@ pub mod tests {
                         .is(Coin::<Usdc>::new(26))
                         .into(),
                 ],
-                &mut batch,
+                10,
             )
             .unwrap();
 
@@ -413,6 +425,41 @@ pub mod tests {
             })
             .collect();
 
-        assert_eq!(resp, vec![addr2, addr3, addr4]);
+        assert_eq!(resp, vec![addr2.clone(), addr3.clone(), addr4]);
+
+        let mut batch = Batch::default();
+
+        // check limited max_count
+        alarms
+            .notify(
+                storage,
+                &mut batch,
+                &[
+                    price::total_of(Coin::<Atom>::new(1))
+                        .is(Coin::<Usdc>::new(15))
+                        .into(),
+                    price::total_of(Coin::<Weth>::new(1))
+                        .is(Coin::<Usdc>::new(26))
+                        .into(),
+                ],
+                2,
+            )
+            .unwrap();
+
+        let resp = Response::from(batch);
+        let resp: Vec<_> = resp
+            .messages
+            .into_iter()
+            .map(|m| {
+                if let CosmosMsg::Wasm(WasmMsg::Execute { contract_addr, .. }) = m.msg {
+                    Some(contract_addr)
+                } else {
+                    None
+                }
+                .unwrap()
+            })
+            .collect();
+
+        assert_eq!(resp, vec![addr2, addr3]);
     }
 }

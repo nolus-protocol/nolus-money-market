@@ -15,6 +15,9 @@ pub enum AlarmError {
 
     #[error("[Market Price] {0}")]
     Finance(#[from] finance::error::Error),
+
+    #[error("[Market Price] {0}")]
+    Math(#[from] std::num::TryFromIntError),
 }
 
 pub fn add_alarm_error<T>(description: T) -> Result<(), AlarmError>
