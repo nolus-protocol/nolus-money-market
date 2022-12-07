@@ -14,8 +14,6 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{error::PriceFeedsError, feed::PriceFeed, CurrencyGroup, SpotPrice};
 
-// TODO limit the necessary traits
-#[derive(Clone, Copy, Debug)]
 pub struct Config {
     price_feed_period: Duration,
     required_feeders_cnt: usize,
@@ -86,7 +84,7 @@ impl<'m> PriceFeeds<'m> {
     pub fn price<'a, QuoteC, Iter>(
         &'m self,
         storage: &'a dyn Storage,
-        config: Config,
+        config: &'a Config,
         leaf_to_root: Iter,
     ) -> Result<SpotPrice, PriceFeedsError>
     where
@@ -108,7 +106,7 @@ impl<'m> PriceFeeds<'m> {
     fn price_of_feed<C, QuoteC>(
         &self,
         storage: &dyn Storage,
-        config: Config,
+        config: &Config,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError>
     where
         C: Currency + DeserializeOwned,
@@ -142,7 +140,7 @@ where
     currency_path: Iter,
     feeds: &'a PriceFeeds<'a>,
     storage: &'a dyn Storage,
-    config: Config,
+    config: &'a Config,
     price: Price<BaseC, QuoteC>,
 }
 impl<'a, Iter, BaseC, QuoteC> PriceCollect<'a, Iter, BaseC, QuoteC>
@@ -155,7 +153,7 @@ where
         mut currency_path: Iter,
         feeds: &'a PriceFeeds<'a>,
         storage: &'a dyn Storage,
-        config: Config,
+        config: &'a Config,
         price: Price<BaseC, QuoteC>,
     ) -> Result<SpotPrice, PriceFeedsError> {
         if let Some(next_currency) = currency_path.next() {
@@ -270,12 +268,16 @@ mod test {
 
         assert_eq!(
             Ok(Price::<Atom, Atom>::identity().into()),
-            feeds.price::<Atom, _>(&storage, config(), [Atom::TICKER].into_iter())
+            feeds.price::<Atom, _>(&storage, &config(), [Atom::TICKER].into_iter())
         );
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<Atom, _>(&storage, config(), [Wbtc::TICKER, Atom::TICKER].into_iter())
+            feeds.price::<Atom, _>(
+                &storage,
+                &config(),
+                [Wbtc::TICKER, Atom::TICKER].into_iter()
+            )
         );
     }
 
@@ -299,11 +301,19 @@ mod test {
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<Atom, _>(&storage, config(), [Wbtc::TICKER, Atom::TICKER].into_iter())
+            feeds.price::<Atom, _>(
+                &storage,
+                &config(),
+                [Wbtc::TICKER, Atom::TICKER].into_iter()
+            )
         );
         assert_eq!(
             Ok(new_price),
-            feeds.price::<Usdc, _>(&storage, config(), [Wbtc::TICKER, Usdc::TICKER].into_iter())
+            feeds.price::<Usdc, _>(
+                &storage,
+                &config(),
+                [Wbtc::TICKER, Usdc::TICKER].into_iter()
+            )
         );
     }
 
@@ -311,6 +321,7 @@ mod test {
     fn feed_pairs() {
         let feeds = PriceFeeds::new(FEEDS_NAMESPACE);
         let mut storage = MemoryStorage::new();
+        let config = config();
         let new_price12 = price::total_of(Coin::<Wbtc>::new(1)).is(Coin::<Osmo>::new(2));
         let new_price23 = price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Usdc>::new(3));
         let new_price24 = price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Stars>::new(4));
@@ -327,29 +338,25 @@ mod test {
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<Cro, _>(&storage, config(), [Wbtc::TICKER, Cro::TICKER].into_iter())
+            feeds.price::<Cro, _>(&storage, &config, [Wbtc::TICKER, Cro::TICKER].into_iter())
         );
         assert_eq!(
             Ok(new_price12.into()),
-            feeds.price::<Osmo, _>(&storage, config(), [Wbtc::TICKER, Osmo::TICKER].into_iter())
+            feeds.price::<Osmo, _>(&storage, &config, [Wbtc::TICKER, Osmo::TICKER].into_iter())
         );
         assert_eq!(
             Ok(new_price23.into()),
-            feeds.price::<Usdc, _>(&storage, config(), [Osmo::TICKER, Usdc::TICKER].into_iter())
+            feeds.price::<Usdc, _>(&storage, &config, [Osmo::TICKER, Usdc::TICKER].into_iter())
         );
         assert_eq!(
             Ok(new_price24.into()),
-            feeds.price::<Stars, _>(
-                &storage,
-                config(),
-                [Osmo::TICKER, Stars::TICKER].into_iter()
-            )
+            feeds.price::<Stars, _>(&storage, &config, [Osmo::TICKER, Stars::TICKER].into_iter())
         );
         assert_eq!(
             Ok(new_price12.lossy_mul(new_price23).into()),
             feeds.price::<Usdc, _>(
                 &storage,
-                config(),
+                &config,
                 [Wbtc::TICKER, Osmo::TICKER, Usdc::TICKER].into_iter()
             )
         );
@@ -357,7 +364,7 @@ mod test {
             Ok(new_price12.lossy_mul(new_price24).into()),
             feeds.price::<Stars, _>(
                 &storage,
-                config(),
+                &config,
                 [Wbtc::TICKER, Osmo::TICKER, Stars::TICKER].into_iter()
             )
         );

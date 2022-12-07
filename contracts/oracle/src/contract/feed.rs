@@ -45,7 +45,7 @@ where
     pub fn get_prices(
         &self,
         storage: &dyn Storage,
-        config: PriceConfig,
+        config: &PriceConfig,
         currencies: &[SymbolOwned],
     ) -> Result<Vec<SpotPrice>, ContractError> {
         let tree: SupportedPairs<OracleBase> = SupportedPairs::load(storage)?;

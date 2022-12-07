@@ -65,7 +65,7 @@ fn marketprice_add_feed_expect_err() {
     let expected_err = market
         .price::<Atom, _>(
             &deps.storage,
-            config,
+            &config,
             [Osmo::TICKER, Atom::TICKER].into_iter(),
         )
         .unwrap_err();
@@ -112,23 +112,23 @@ fn marketprice_add_feed() {
     market
         .feed(&mut deps.storage, ts, &f_address, &prices, MINUTE)
         .unwrap();
-    // requite 50 feeders available => NoPrice
+    // require 50 feeders available => NoPrice
     let query = Config::new(MINUTE, 50, ts);
     let err = market
         .price::<Atom, _>(
             &deps.storage,
-            query,
+            &query,
             [Osmo::TICKER, Atom::TICKER].into_iter(),
         )
         .unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
 
-    // requite 1 feeders available => Price
+    // require 1 feeders available => Price
     let query = Config::new(MINUTE, 1, ts);
     let price_resp = market
         .price::<Atom, _>(
             &deps.storage,
-            query,
+            &query,
             [Osmo::TICKER, Atom::TICKER].into_iter(),
         )
         .unwrap();
@@ -214,7 +214,7 @@ fn marketprice_follow_the_path() {
     let price_resp = market
         .price::<Usdc, _>(
             &deps.storage,
-            query,
+            &query,
             [Atom::TICKER, Osmo::TICKER, Cro::TICKER, Usdc::TICKER].into_iter(),
         )
         .unwrap();
@@ -228,7 +228,7 @@ fn marketprice_follow_the_path() {
     let price_resp = market
         .price::<Usdc, _>(
             &deps.storage,
-            query,
+            &query,
             [Atom::TICKER, Usdc::TICKER].into_iter(),
         )
         .unwrap_err();
@@ -240,7 +240,7 @@ fn marketprice_follow_the_path() {
         market
             .price::<Usdc, _>(
                 &deps.storage,
-                query,
+                &query,
                 [Wbtc::TICKER, Usdc::TICKER].into_iter(),
             )
             .unwrap_err(),
@@ -253,7 +253,7 @@ fn marketprice_follow_the_path() {
         market
             .price::<Osmo, _>(
                 &deps.storage,
-                query,
+                &query,
                 [Wbtc::TICKER, Osmo::TICKER].into_iter()
             )
             .unwrap_err(),

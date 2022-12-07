@@ -41,14 +41,14 @@ where
     // provide no price for a pair if there are no observations from at least configurable percentage * <number_of_whitelisted_feeders>
     // in a configurable period T in seconds
     // provide the last price for a requested pair unless the previous condition is met.
-    pub fn get_price(&self, config: Config) -> Result<Price<C, QuoteC>, PriceFeedsError> {
+    pub fn get_price(&self, config: &Config) -> Result<Price<C, QuoteC>, PriceFeedsError> {
         // self.valid_observations(&config).filter_map(f)
         let last_observation = self
-            .valid_observations(&config)
+            .valid_observations(config)
             .last()
             .ok_or(PriceFeedsError::NoPrice {})?;
 
-        if !self.has_enough_feeders(&config) {
+        if !self.has_enough_feeders(config) {
             return Err(PriceFeedsError::NoPrice {});
         }
 
@@ -149,12 +149,12 @@ mod test {
         let mut feed = PriceFeed::new();
         feed = feed.add_observation(feeder1.clone(), feed1_time, feed1_price, config.period());
 
-        assert_eq!(Err(PriceFeedsError::NoPrice()), feed.get_price(config));
+        assert_eq!(Err(PriceFeedsError::NoPrice()), feed.get_price(&config));
 
         let feed2_time = feed1_time + Duration::from_nanos(1);
         let feed2_price = price::total_of(Coin::<Weth>::new(19)).is(Coin::<Usdc>::new(5000));
         feed = feed.add_observation(feeder1, feed2_time, feed2_price, Duration::from_nanos(0));
-        assert_eq!(Ok(feed2_price), feed.get_price(config));
+        assert_eq!(Ok(feed2_price), feed.get_price(&config));
     }
 
     #[test]
@@ -172,11 +172,11 @@ mod test {
         let config_two_feeders = Config::new(validity_period, 2, block_time);
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feed.get_price(config_two_feeders)
+            feed.get_price(&config_two_feeders)
         );
 
         let config_one_feeder = Config::new(validity_period, 1, block_time);
-        assert_eq!(Ok(feed1_price), feed.get_price(config_one_feeder));
+        assert_eq!(Ok(feed1_price), feed.get_price(&config_one_feeder));
     }
 
     #[test]
@@ -197,12 +197,12 @@ mod test {
         feed = feed.add_observation(feeder2, feed2_time, feed2_price, validity_period);
 
         let config_feed1_and_2_in = Config::new(validity_period, 2, feed2_time);
-        assert!(feed.get_price(config_feed1_and_2_in).is_ok());
+        assert!(feed.get_price(&config_feed1_and_2_in).is_ok());
 
         let config_feed2_in = Config::new(validity_period, 2, block_time);
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feed.get_price(config_feed2_in)
+            feed.get_price(&config_feed2_in)
         );
     }
 }
