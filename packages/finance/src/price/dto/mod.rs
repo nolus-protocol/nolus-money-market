@@ -11,9 +11,6 @@ use crate::{
     price::Price,
 };
 
-use self::math::Multiply;
-
-pub mod math;
 mod unchecked;
 pub mod with_base;
 pub mod with_price;
@@ -49,16 +46,6 @@ where
 
     pub const fn quote(&self) -> &CoinDTO<QuoteG> {
         &self.amount_quote
-    }
-
-    pub fn multiply<QuoteG2>(
-        &self,
-        other: &PriceDTO<QuoteG, QuoteG2>,
-    ) -> FinanceResult<PriceDTO<G, QuoteG2>>
-    where
-        QuoteG2: Group,
-    {
-        with_price::execute(self, Multiply::with(other))
     }
 
     fn invariant_held(&self) -> FinanceResult<()> {
@@ -205,20 +192,6 @@ mod test {
     };
 
     type TestPriceDTO = PriceDTO<TestExtraCurrencies, TestCurrencies>;
-
-    #[test]
-    fn test_multiply() {
-        let p1 = PriceDTO::<TestCurrencies, TestExtraCurrencies>::new(
-            Coin::<Usdc>::new(10).into(),
-            Coin::<Dai>::new(5).into(),
-        );
-        let p2 = TestPriceDTO::new(Coin::<Dai>::new(20).into(), Coin::<Nls>::new(5).into());
-
-        assert_eq!(
-            Ok(Price::new(Coin::<Usdc>::new(8), Coin::<Nls>::new(1)).into()),
-            p1.multiply(&p2)
-        );
-    }
 
     #[test]
     fn test_cmp() {
