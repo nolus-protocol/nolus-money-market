@@ -222,15 +222,13 @@ where
 
         let asset_price = self.oracle.price_of::<Asset>()?.inv();
 
-        let borrow_asset = total(borrow, asset_price);
-
-        let total_asset = total(downpayment_lpn, asset_price) + borrow_asset;
+        let total_asset = total(downpayment_lpn + borrow, asset_price);
 
         let annual_interest_rate = self.lpp_quote.with(borrow)?;
 
         Ok(QuoteResponse {
             total: total_asset.into(),
-            borrow: borrow_asset.into(),
+            borrow: borrow.into(),
             annual_interest_rate,
             annual_interest_rate_margin: self.lease_interest_rate_margin,
         })
