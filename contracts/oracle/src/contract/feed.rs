@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::native::Nls;
 use finance::currency::{Currency, SymbolOwned};
@@ -31,7 +31,7 @@ pub struct Feeds<OracleBase> {
 
 impl<OracleBase> Feeds<OracleBase>
 where
-    OracleBase: Currency,
+    OracleBase: Currency + DeserializeOwned,
 {
     const MARKET_PRICE: PriceFeeds<'static> = PriceFeeds::new("market_price");
 
@@ -52,7 +52,8 @@ where
         let mut prices = vec![];
         for currency in currencies {
             let path = tree.load_path(currency)?;
-            let price = Self::MARKET_PRICE.price(storage, config, &path)?;
+            let leaf_to_root = path.iter().map(|owned| owned.as_str());
+            let price = Self::MARKET_PRICE.price::<OracleBase, _>(storage, config, leaf_to_root)?;
             prices.push(price);
         }
         Ok(prices)
@@ -98,7 +99,7 @@ pub fn try_feed_prices<OracleBase>(
     prices: Vec<SpotPrice>,
 ) -> Result<Response, ContractError>
 where
-    OracleBase: Currency,
+    OracleBase: Currency + DeserializeOwned,
 {
     let config = Config::load(storage)?;
     let oracle = Feeds::<OracleBase>::with(config);

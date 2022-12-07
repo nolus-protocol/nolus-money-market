@@ -1,21 +1,20 @@
-use currency::payment::PaymentGroup;
 use finance::{
-    currency::{Currency, Symbol, SymbolOwned},
+    currency::{self, AnyVisitor, Currency, Symbol, SymbolOwned},
     duration::Duration,
+    price::{
+        dto::{with_price, WithPrice},
+        Price,
+    },
 };
 use sdk::{
     cosmwasm_std::{Addr, Storage, Timestamp},
     cw_storage_plus::Map,
 };
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{
-    error::PriceFeedsError,
-    feed::PriceFeed,
-    with_feed::{self, WithPriceFeed},
-    CurrencyGroup, SpotPrice,
-};
+use crate::{error::PriceFeedsError, feed::PriceFeed, CurrencyGroup, SpotPrice};
 
+// TODO limit the necessary traits
 #[derive(Clone, Copy, Debug)]
 pub struct Config {
     price_feed_period: Duration,
@@ -84,54 +83,118 @@ impl<'m> PriceFeeds<'m> {
         Ok(())
     }
 
-    pub fn price(
-        &self,
-        storage: &dyn Storage,
+    pub fn price<'a, QuoteC, Iter>(
+        &'m self,
+        storage: &'a dyn Storage,
         config: Config,
-        path: &[SymbolOwned],
-    ) -> Result<SpotPrice, PriceFeedsError> {
-        path.windows(2)
-            .map(|c: &[SymbolOwned]| self.price_of_feed(storage, &c[0], &c[1], config))
-            .reduce(|result_c1, result_c2| {
-                result_c1.and_then(|c1| {
-                    result_c2.and_then(|c2| {
-                        c1.multiply::<PaymentGroup>(&c2)
-                            .map_err(PriceFeedsError::from)
-                    })
-                })
-            })
-            .unwrap_or(Err(PriceFeedsError::NoPrice()))
+        leaf_to_root: Iter,
+    ) -> Result<SpotPrice, PriceFeedsError>
+    where
+        'm: 'a,
+        QuoteC: Currency + DeserializeOwned,
+        Iter: Iterator<Item = Symbol<'a>> + DoubleEndedIterator,
+    {
+        let mut root_to_leaf = leaf_to_root.rev();
+        assert_eq!(Some(QuoteC::TICKER), root_to_leaf.next());
+        PriceCollect::do_collect(
+            root_to_leaf,
+            self,
+            storage,
+            config,
+            Price::<QuoteC, QuoteC>::identity(),
+        )
     }
 
-    fn price_of_feed(
+    fn price_of_feed<C, QuoteC>(
         &self,
         storage: &dyn Storage,
-        base: Symbol,
-        quote: Symbol,
         config: Config,
-    ) -> Result<SpotPrice, PriceFeedsError> {
-        struct CalculatePrice(Config);
-        impl WithPriceFeed for CalculatePrice {
-            type Output = SpotPrice;
-            type Error = PriceFeedsError;
+    ) -> Result<Price<C, QuoteC>, PriceFeedsError>
+    where
+        C: Currency + DeserializeOwned,
+        QuoteC: Currency + DeserializeOwned,
+    {
+        let feed_bin = self
+            .0
+            .may_load(storage, (C::TICKER.into(), QuoteC::TICKER.into()))?;
+        load_feed(feed_bin).and_then(|feed| feed.get_price(config))
+    }
+}
 
-            fn exec<C, QuoteC>(
-                self,
-                feed: PriceFeed<C, QuoteC>,
-            ) -> Result<Self::Output, Self::Error>
-            where
-                C: Currency,
-                QuoteC: Currency,
-            {
-                feed.get_price(self.0).map(Into::into)
-            }
+fn load_feed<BaseC, QuoteC>(
+    feed_bin: Option<PriceFeedBin>,
+) -> Result<PriceFeed<BaseC, QuoteC>, PriceFeedsError>
+where
+    BaseC: Currency + DeserializeOwned,
+    QuoteC: Currency + DeserializeOwned,
+{
+    feed_bin.map_or_else(
+        || Ok(PriceFeed::<BaseC, QuoteC>::default()),
+        |bin| postcard::from_bytes(&bin).map_err(Into::into),
+    )
+}
+struct PriceCollect<'a, Iter, BaseC, QuoteC>
+where
+    Iter: Iterator<Item = Symbol<'a>>,
+    BaseC: Currency,
+    QuoteC: Currency,
+{
+    currency_path: Iter,
+    feeds: &'a PriceFeeds<'a>,
+    storage: &'a dyn Storage,
+    config: Config,
+    price: Price<BaseC, QuoteC>,
+}
+impl<'a, Iter, BaseC, QuoteC> PriceCollect<'a, Iter, BaseC, QuoteC>
+where
+    Iter: Iterator<Item = Symbol<'a>>,
+    BaseC: Currency + DeserializeOwned,
+    QuoteC: Currency,
+{
+    fn do_collect(
+        mut currency_path: Iter,
+        feeds: &'a PriceFeeds<'a>,
+        storage: &'a dyn Storage,
+        config: Config,
+        price: Price<BaseC, QuoteC>,
+    ) -> Result<SpotPrice, PriceFeedsError> {
+        if let Some(next_currency) = currency_path.next() {
+            let next_collect = PriceCollect {
+                currency_path,
+                feeds,
+                storage,
+                config,
+                price,
+            };
+            currency::visit_any_on_ticker::<CurrencyGroup, _>(next_currency, next_collect)
+        } else {
+            Ok(price.into())
         }
-        let feed_bin = self.0.may_load(storage, (base.into(), quote.into()))?;
-        with_feed::execute::<CurrencyGroup, CurrencyGroup, _>(
-            base,
-            quote,
-            feed_bin,
-            CalculatePrice(config),
+    }
+}
+impl<'a, Iter, QuoteC, QuoteQuoteC> AnyVisitor for PriceCollect<'a, Iter, QuoteC, QuoteQuoteC>
+where
+    Iter: Iterator<Item = Symbol<'a>>,
+    QuoteC: Currency + DeserializeOwned,
+    QuoteQuoteC: Currency,
+{
+    type Output = SpotPrice;
+    type Error = PriceFeedsError;
+
+    fn on<C>(self) -> Result<Self::Output, Self::Error>
+    where
+        C: Currency + Serialize + DeserializeOwned,
+    {
+        let next_price = self
+            .feeds
+            .price_of_feed::<C, _>(self.storage, self.config)?;
+        let total_price = next_price.lossy_mul(self.price);
+        PriceCollect::do_collect(
+            self.currency_path,
+            self.feeds,
+            self.storage,
+            self.config,
+            total_price,
         )
     }
 }
@@ -144,39 +207,163 @@ fn add_observation(
     validity: Duration,
 ) -> Result<PriceFeedBin, PriceFeedsError> {
     struct AddObservation<'a> {
+        feed_bin: Option<PriceFeedBin>,
         from: &'a Addr,
         at: Timestamp,
-        price: &'a SpotPrice,
         validity: Duration,
     }
 
-    impl<'a> WithPriceFeed for AddObservation<'a> {
+    impl<'a> WithPrice for AddObservation<'a> {
         type Output = PriceFeedBin;
         type Error = PriceFeedsError;
 
-        fn exec<C, QuoteC>(self, feed: PriceFeed<C, QuoteC>) -> Result<Self::Output, Self::Error>
+        fn exec<C, QuoteC>(self, price: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
         where
-            C: Currency + Serialize,
-            QuoteC: Currency + Serialize,
+            C: Currency + Serialize + DeserializeOwned,
+            QuoteC: Currency + Serialize + DeserializeOwned,
         {
-            let feed = feed.add_observation(
-                self.from.clone(),
-                self.at,
-                self.price.try_into()?,
-                self.validity,
-            );
-            postcard::to_allocvec(&feed).map_err(Into::into)
+            load_feed(self.feed_bin).and_then(|feed| {
+                let feed = feed.add_observation(self.from.clone(), self.at, price, self.validity);
+                postcard::to_allocvec(&feed).map_err(Into::into)
+            })
         }
     }
-    with_feed::execute::<CurrencyGroup, CurrencyGroup, _>(
-        price.base().ticker(),
-        price.quote().ticker(),
-        feed_bin,
+    with_price::execute(
+        price,
         AddObservation {
+            feed_bin,
             from,
             at,
-            price,
             validity,
         },
     )
+}
+
+#[cfg(test)]
+mod test {
+    use currency::{
+        lease::{Atom, Cro, Osmo, Stars, Wbtc},
+        lpn::Usdc,
+    };
+    use finance::{
+        coin::Coin,
+        currency::Currency,
+        duration::Duration,
+        price::{self, Price},
+    };
+    use sdk::cosmwasm_std::{Addr, MemoryStorage, Timestamp};
+
+    use crate::{error::PriceFeedsError, market_price::Config, SpotPrice};
+
+    use super::PriceFeeds;
+
+    const FEEDS_NAMESPACE: &str = "feeds";
+    const REQUIRED_FEEDERS_CNT: usize = 1;
+    const FEEDER: &str = "0xifeege";
+    const FEED_MAX_AGE: Duration = Duration::from_secs(30);
+    const NOW: Timestamp = Timestamp::from_seconds(FEED_MAX_AGE.secs() * 2);
+
+    #[test]
+    fn no_feed() {
+        let feeds = PriceFeeds::new(FEEDS_NAMESPACE);
+        let storage = MemoryStorage::new();
+
+        assert_eq!(
+            Ok(Price::<Atom, Atom>::identity().into()),
+            feeds.price::<Atom, _>(&storage, config(), [Atom::TICKER].into_iter())
+        );
+
+        assert_eq!(
+            Err(PriceFeedsError::NoPrice()),
+            feeds.price::<Atom, _>(&storage, config(), [Wbtc::TICKER, Atom::TICKER].into_iter())
+        );
+    }
+
+    #[test]
+    fn feed_pair() {
+        let feeds = PriceFeeds::new(FEEDS_NAMESPACE);
+        let mut storage = MemoryStorage::new();
+        let new_price: SpotPrice = price::total_of(Coin::<Wbtc>::new(1))
+            .is(Coin::<Usdc>::new(18500))
+            .into();
+
+        feeds
+            .feed(
+                &mut storage,
+                NOW,
+                &Addr::unchecked(FEEDER),
+                &[new_price.clone()],
+                FEED_MAX_AGE,
+            )
+            .unwrap();
+
+        assert_eq!(
+            Err(PriceFeedsError::NoPrice()),
+            feeds.price::<Atom, _>(&storage, config(), [Wbtc::TICKER, Atom::TICKER].into_iter())
+        );
+        assert_eq!(
+            Ok(new_price),
+            feeds.price::<Usdc, _>(&storage, config(), [Wbtc::TICKER, Usdc::TICKER].into_iter())
+        );
+    }
+
+    #[test]
+    fn feed_pairs() {
+        let feeds = PriceFeeds::new(FEEDS_NAMESPACE);
+        let mut storage = MemoryStorage::new();
+        let new_price12 = price::total_of(Coin::<Wbtc>::new(1)).is(Coin::<Osmo>::new(2));
+        let new_price23 = price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Usdc>::new(3));
+        let new_price24 = price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Stars>::new(4));
+
+        feeds
+            .feed(
+                &mut storage,
+                NOW,
+                &Addr::unchecked(FEEDER),
+                &[new_price24.into(), new_price12.into(), new_price23.into()],
+                FEED_MAX_AGE,
+            )
+            .unwrap();
+
+        assert_eq!(
+            Err(PriceFeedsError::NoPrice()),
+            feeds.price::<Cro, _>(&storage, config(), [Wbtc::TICKER, Cro::TICKER].into_iter())
+        );
+        assert_eq!(
+            Ok(new_price12.into()),
+            feeds.price::<Osmo, _>(&storage, config(), [Wbtc::TICKER, Osmo::TICKER].into_iter())
+        );
+        assert_eq!(
+            Ok(new_price23.into()),
+            feeds.price::<Usdc, _>(&storage, config(), [Osmo::TICKER, Usdc::TICKER].into_iter())
+        );
+        assert_eq!(
+            Ok(new_price24.into()),
+            feeds.price::<Stars, _>(
+                &storage,
+                config(),
+                [Osmo::TICKER, Stars::TICKER].into_iter()
+            )
+        );
+        assert_eq!(
+            Ok(new_price12.lossy_mul(new_price23).into()),
+            feeds.price::<Usdc, _>(
+                &storage,
+                config(),
+                [Wbtc::TICKER, Osmo::TICKER, Usdc::TICKER].into_iter()
+            )
+        );
+        assert_eq!(
+            Ok(new_price12.lossy_mul(new_price24).into()),
+            feeds.price::<Stars, _>(
+                &storage,
+                config(),
+                [Wbtc::TICKER, Osmo::TICKER, Stars::TICKER].into_iter()
+            )
+        );
+    }
+
+    fn config() -> Config {
+        Config::new(FEED_MAX_AGE, REQUIRED_FEEDERS_CNT, NOW)
+    }
 }

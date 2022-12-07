@@ -62,8 +62,13 @@ fn marketprice_add_feed_expect_err() {
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
     let config = Config::new(MINUTE, 50, ts);
-    let path = [Osmo::TICKER.to_string(), Atom::TICKER.to_string()];
-    let expected_err = market.price(&deps.storage, config, &path).unwrap_err();
+    let expected_err = market
+        .price::<Atom, _>(
+            &deps.storage,
+            config,
+            [Osmo::TICKER, Atom::TICKER].into_iter(),
+        )
+        .unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
 }
 
@@ -97,11 +102,7 @@ fn marketprice_add_feed() {
     let price3 =
         price::total_of(Coin::<Osmo>::new(10000000000000)).is(Coin::<Wbtc>::new(100000000000002));
 
-    let prices = vec![
-        SpotPrice::try_from(price1).unwrap(),
-        SpotPrice::try_from(price2).unwrap(),
-        SpotPrice::try_from(price3).unwrap(),
-    ];
+    let prices = vec![price1.into(), price2.into(), price3.into()];
 
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -114,10 +115,10 @@ fn marketprice_add_feed() {
     // requite 50 feeders available => NoPrice
     let query = Config::new(MINUTE, 50, ts);
     let err = market
-        .price(
+        .price::<Atom, _>(
             &deps.storage,
             query,
-            &[Osmo::TICKER.to_string(), Atom::TICKER.to_string()],
+            [Osmo::TICKER, Atom::TICKER].into_iter(),
         )
         .unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
@@ -125,10 +126,10 @@ fn marketprice_add_feed() {
     // requite 1 feeders available => Price
     let query = Config::new(MINUTE, 1, ts);
     let price_resp = market
-        .price(
+        .price::<Atom, _>(
             &deps.storage,
             query,
-            &[Osmo::TICKER.to_string(), Atom::TICKER.to_string()],
+            [Osmo::TICKER, Atom::TICKER].into_iter(),
         )
         .unwrap();
 
@@ -211,15 +212,10 @@ fn marketprice_follow_the_path() {
     // valid search denom pair
     let query = Config::new(MINUTE, 1, last_feed_time);
     let price_resp = market
-        .price(
+        .price::<Usdc, _>(
             &deps.storage,
             query,
-            &[
-                Atom::TICKER.to_string(),
-                Osmo::TICKER.to_string(),
-                Cro::TICKER.to_string(),
-                Usdc::TICKER.to_string(),
-            ],
+            [Atom::TICKER, Osmo::TICKER, Cro::TICKER, Usdc::TICKER].into_iter(),
         )
         .unwrap();
     let expected = price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(6));
@@ -230,10 +226,10 @@ fn marketprice_follow_the_path() {
     // first and second part of denom pair are the same
     let query = Config::new(MINUTE, 1, last_feed_time);
     let price_resp = market
-        .price(
+        .price::<Usdc, _>(
             &deps.storage,
             query,
-            &[Atom::TICKER.to_string(), Usdc::TICKER.to_string()],
+            [Atom::TICKER, Usdc::TICKER].into_iter(),
         )
         .unwrap_err();
     assert_eq!(price_resp, PriceFeedsError::NoPrice());
@@ -242,10 +238,10 @@ fn marketprice_follow_the_path() {
     let query = Config::new(MINUTE, 1, last_feed_time);
     assert_eq!(
         market
-            .price(
+            .price::<Usdc, _>(
                 &deps.storage,
                 query,
-                &[Wbtc::TICKER.to_string(), Usdc::TICKER.to_string()],
+                [Wbtc::TICKER, Usdc::TICKER].into_iter(),
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice()
@@ -255,10 +251,10 @@ fn marketprice_follow_the_path() {
     let query = Config::new(MINUTE, 1, last_feed_time);
     assert_eq!(
         market
-            .price(
+            .price::<Osmo, _>(
                 &deps.storage,
                 query,
-                &[Wbtc::TICKER.to_string(), Osmo::TICKER.to_string()]
+                [Wbtc::TICKER, Osmo::TICKER].into_iter()
             )
             .unwrap_err(),
         PriceFeedsError::NoPrice {}

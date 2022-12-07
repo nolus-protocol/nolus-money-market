@@ -4,6 +4,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, DepsMut, Env},
 };
+use serde::de::DeserializeOwned;
 
 use crate::{
     error::ContractError,
@@ -45,7 +46,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
 
     fn on<OracleBase>(self) -> Result<Self::Output, Self::Error>
     where
-        OracleBase: Currency,
+        OracleBase: Currency + DeserializeOwned,
     {
         match self.msg {
             ExecuteMsg::SwapTree { tree } => {
