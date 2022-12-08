@@ -110,11 +110,10 @@ pub enum ExecuteAlarmMsg {
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub struct SentAlarmsResponse(pub u32);
+pub struct DispatchAlarmsResponse(pub u32);
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct AlarmsStatusResponse {
-        /// `min(remaining_alarms, u32::MAX) as u32`
-        pub remaining_alarms: u32,
+    pub remaining_alarms: bool,
 }

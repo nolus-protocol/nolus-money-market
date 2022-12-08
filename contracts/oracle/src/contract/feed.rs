@@ -16,14 +16,15 @@ use sdk::{
 use swap::SwapTarget;
 
 use crate::{
+    msg::AlarmsStatusResponse,
     state::{
         supported_pairs::{SupportedPairs, SwapLeg},
         Config,
     },
-    ContractError, msg::AlarmsStatusResponse,
+    ContractError,
 };
 
-use super::{feeder::Feeders, alarms::MarketAlarms};
+use super::{alarms::MarketAlarms, feeder::Feeders};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Feeds<OracleBase> {
@@ -122,31 +123,36 @@ where
     Ok(Response::from(batch))
 }
 
-    // TODO: optimize
-    pub fn get_all_prices<OracleBase>(
-        storage: &dyn Storage,
-        block_time: Timestamp,
-    ) -> Result<Vec<SpotPrice>, ContractError> 
-    where
-        OracleBase: Currency + DeserializeOwned,
+// TODO: optimize
+pub fn get_all_prices<OracleBase>(
+    storage: &dyn Storage,
+    block_time: Timestamp,
+) -> Result<Vec<SpotPrice>, ContractError>
+where
+    OracleBase: Currency + DeserializeOwned,
 {
-        let tree: SupportedPairs<OracleBase> = SupportedPairs::load(storage)?;
+    let tree: SupportedPairs<OracleBase> = SupportedPairs::load(storage)?;
 
-        let config = Config::load(storage)?;
-        let oracle = Feeds::<OracleBase>::with(config);
-        let price_config = Feeders::price_config(storage, &oracle.config, block_time)?;
+    let config = Config::load(storage)?;
+    let oracle = Feeds::<OracleBase>::with(config);
+    let price_config = Feeders::price_config(storage, &oracle.config, block_time)?;
 
-        let mut prices = vec![];
-        for leg in SupportedPairs::<OracleBase>::load(storage)?.query_supported_pairs().into_iter() {
-            let path = tree.load_path(&leg.from)?;
-            let path = path.iter().map(|owned| owned.as_str());
-            // we need to gather all available prices without NoPrice error
-            if let Ok(price) = Feeds::<OracleBase>::MARKET_PRICE.price::<OracleBase, _>(storage, &price_config, path) {
-                prices.push(price);
-            }
+    let mut prices = vec![];
+    for leg in SupportedPairs::<OracleBase>::load(storage)?
+        .query_supported_pairs()
+        .into_iter()
+    {
+        let path = tree.load_path(&leg.from)?;
+        let path = path.iter().map(|owned| owned.as_str());
+        // we need to gather all available prices without NoPrice error
+        if let Ok(price) =
+            Feeds::<OracleBase>::MARKET_PRICE.price::<OracleBase, _>(storage, &price_config, path)
+        {
+            prices.push(price);
         }
-        Ok(prices)
     }
+    Ok(prices)
+}
 
 pub fn try_notify_alarms<OracleBase>(
     storage: &mut dyn Storage,

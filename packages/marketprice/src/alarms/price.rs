@@ -162,17 +162,14 @@ impl<'m> PriceAlarms<'m> {
         &self,
         storage: &dyn Storage,
         prices: &[SpotPrice],
-    ) -> Result<AlarmsCount, AlarmError> {
-
-        let mut alarms = 0usize;
-
+    ) -> Result<bool, AlarmError> {
         let alarms_below = self.alarms_below();
         let alarms_above = self.alarms_above();
 
-        for price in prices {
+        let results = prices.iter().map(|price| -> Result<bool, AlarmError> {
             let inv_normalized_price = AlarmStore::inv_normalize(price)?.0.amount();
 
-            alarms += alarms_below
+            Ok(alarms_below
                 .idx
                 .0
                 .sub_prefix(price.base().ticker().into())
@@ -184,24 +181,33 @@ impl<'m> PriceAlarms<'m> {
                         Addr::unchecked(""),
                     ))),
                     Order::Ascending,
-                ).count();
+                )
+                .next()
+                .is_some()
+                | alarms_above
+                    .idx
+                    .0
+                    .sub_prefix(price.base().ticker().into())
+                    .range(
+                        storage,
+                        Some(Bound::exclusive((
+                            inv_normalized_price,
+                            Addr::unchecked(""),
+                        ))),
+                        None,
+                        Order::Ascending,
+                    )
+                    .next()
+                    .is_some())
+        });
 
-            alarms += alarms_above
-                .idx
-                .0
-                .sub_prefix(price.base().ticker().into())
-                .range(
-                    storage,
-                    Some(Bound::exclusive((
-                        inv_normalized_price,
-                        Addr::unchecked(""),
-                    ))),
-                    None,
-                    Order::Ascending,
-                ).count();
+        for res in results {
+            if res? {
+                return Ok(true);
+            }
         }
 
-        Ok(alarms.try_into()?)
+        Ok(false)
     }
 
     pub fn notify(
@@ -353,7 +359,7 @@ pub mod tests {
                 &[price::total_of(Coin::<Atom>::new(1))
                     .is(Coin::<Usdc>::new(15))
                     .into()],
-                10
+                10,
             )
             .unwrap();
 
@@ -390,6 +396,22 @@ pub mod tests {
         let addr3 = Addr::unchecked("addr3");
         let addr4 = Addr::unchecked("addr4");
         let addr5 = Addr::unchecked("addr5");
+
+        let resp = alarms
+            .query_alarms(
+                storage,
+                &[
+                    price::total_of(Coin::<Atom>::new(1))
+                        .is(Coin::<Usdc>::new(15))
+                        .into(),
+                    price::total_of(Coin::<Weth>::new(1))
+                        .is(Coin::<Usdc>::new(26))
+                        .into(),
+                ],
+            )
+            .unwrap();
+
+        assert_eq!(resp, false);
 
         alarms
             .add_or_update(
@@ -442,7 +464,6 @@ pub mod tests {
             )
             .unwrap();
 
-
         let resp = alarms
             .query_alarms(
                 storage,
@@ -453,11 +474,11 @@ pub mod tests {
                     price::total_of(Coin::<Weth>::new(1))
                         .is(Coin::<Usdc>::new(26))
                         .into(),
-                ]
+                ],
             )
             .unwrap();
 
-        assert_eq!(resp, 3);
+        assert_eq!(resp, true);
 
         let mut batch = Batch::default();
 
