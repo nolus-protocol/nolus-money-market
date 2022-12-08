@@ -71,8 +71,9 @@ where
         let mut prices = vec![];
         for leg in SupportedPairs::<OracleBase>::load(storage)?.query_supported_pairs().into_iter() {
             let path = tree.load_path(&leg.from)?;
+            let path = path.iter().map(|owned| owned.as_str());
             // we need to gather all available prices without NoPrice error
-            if let Ok(price) = Self::MARKET_PRICE.price(storage, config, path) {
+            if let Ok(price) = Self::MARKET_PRICE.price::<OracleBase, _>(storage, &config, path) {
                 prices.push(price);
             }
         }
@@ -147,7 +148,7 @@ pub fn try_notify_alarms<OracleBase>(
     max_count: u32,
 ) -> Result<Response, ContractError>
 where
-    OracleBase: Currency,
+    OracleBase: Currency + DeserializeOwned,
 {
     let config = Config::load(storage)?;
     let oracle = Feeds::<OracleBase>::with(config);
