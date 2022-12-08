@@ -411,7 +411,7 @@ pub mod tests {
             )
             .unwrap();
 
-        assert_eq!(resp, false);
+        assert!(resp);
 
         alarms
             .add_or_update(
@@ -478,7 +478,7 @@ pub mod tests {
             )
             .unwrap();
 
-        assert_eq!(resp, true);
+        assert!(resp);
 
         let mut batch = Batch::default();
 
