@@ -23,6 +23,8 @@ use super::{errors::AlarmError, Alarm, ExecuteAlarmMsg};
 
 pub type AlarmReplyId = u64;
 
+pub type AlarmsCount = u32;
+
 pub struct PriceAlarms<'m> {
     alarms_below_namespace: &'m str,
     alarms_above_namespace: &'m str,
@@ -156,13 +158,60 @@ impl<'m> PriceAlarms<'m> {
         Ok(())
     }
 
+    pub fn query_alarms(
+        &self,
+        storage: &dyn Storage,
+        prices: &[SpotPrice],
+    ) -> Result<AlarmsCount, AlarmError> {
+
+        let mut alarms = 0usize;
+
+        let alarms_below = self.alarms_below();
+        let alarms_above = self.alarms_above();
+
+        for price in prices {
+            let inv_normalized_price = AlarmStore::inv_normalize(price)?.0.amount();
+
+            alarms += alarms_below
+                .idx
+                .0
+                .sub_prefix(price.base().ticker().into())
+                .range(
+                    storage,
+                    None,
+                    Some(Bound::exclusive((
+                        inv_normalized_price,
+                        Addr::unchecked(""),
+                    ))),
+                    Order::Ascending,
+                ).count();
+
+            alarms += alarms_above
+                .idx
+                .0
+                .sub_prefix(price.base().ticker().into())
+                .range(
+                    storage,
+                    Some(Bound::exclusive((
+                        inv_normalized_price,
+                        Addr::unchecked(""),
+                    ))),
+                    None,
+                    Order::Ascending,
+                ).count();
+        }
+
+        Ok(alarms.try_into()?)
+    }
+
     pub fn notify(
         &self,
         storage: &mut dyn Storage,
         batch: &mut Batch,
         prices: &[SpotPrice],
-        mut max_count: u32,
-    ) -> Result<(), AlarmError> {
+        max_count: u32,
+    ) -> Result<AlarmsCount, AlarmError> {
+        let mut count = max_count.try_into()?;
         let mut next_id = self.id_seq.may_load(storage)?.unwrap_or(0);
         let mut start_id = next_id;
 
@@ -204,10 +253,10 @@ impl<'m> PriceAlarms<'m> {
                     ))),
                     Order::Ascending,
                 )
-                .take(max_count.try_into()?)
+                .take(count)
                 .try_for_each(|alarm| proc(batch, alarm?.0, &mut next_id))?;
 
-            max_count -= u32::try_from(next_id - start_id)?;
+            count -= usize::try_from(next_id - start_id)?;
             start_id = next_id;
 
             alarms_above
@@ -223,16 +272,16 @@ impl<'m> PriceAlarms<'m> {
                     None,
                     Order::Ascending,
                 )
-                .take(max_count.try_into()?)
+                .take(count)
                 .try_for_each(|addr| proc(batch, addr?.0, &mut next_id))?;
 
-            max_count -= u32::try_from(next_id - start_id)?;
+            count -= usize::try_from(next_id - start_id)?;
             start_id = next_id;
         }
 
         self.id_seq.save(storage, &next_id)?;
 
-        Ok(())
+        Ok(max_count - u32::try_from(count)?)
     }
 }
 
@@ -393,9 +442,26 @@ pub mod tests {
             )
             .unwrap();
 
+
+        let resp = alarms
+            .query_alarms(
+                storage,
+                &[
+                    price::total_of(Coin::<Atom>::new(1))
+                        .is(Coin::<Usdc>::new(15))
+                        .into(),
+                    price::total_of(Coin::<Weth>::new(1))
+                        .is(Coin::<Usdc>::new(26))
+                        .into(),
+                ]
+            )
+            .unwrap();
+
+        assert_eq!(resp, 3);
+
         let mut batch = Batch::default();
 
-        alarms
+        let sent = alarms
             .notify(
                 storage,
                 &mut batch,
@@ -426,11 +492,12 @@ pub mod tests {
             .collect();
 
         assert_eq!(resp, vec![addr2.clone(), addr3.clone(), addr4]);
+        assert_eq!(sent, 3);
 
         let mut batch = Batch::default();
 
         // check limited max_count
-        alarms
+        let sent = alarms
             .notify(
                 storage,
                 &mut batch,
@@ -461,5 +528,6 @@ pub mod tests {
             .collect();
 
         assert_eq!(resp, vec![addr2, addr3]);
+        assert_eq!(sent, 2);
     }
 }

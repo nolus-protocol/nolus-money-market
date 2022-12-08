@@ -1,3 +1,4 @@
+use cosmwasm_std::to_binary;
 use marketprice::{alarms::{price::PriceAlarms, Alarm}, SpotPrice};
 use platform::batch::Batch;
 use sdk::{
@@ -7,7 +8,7 @@ use sdk::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::ContractError;
+use crate::{ContractError, msg::{SentAlarmsResponse, AlarmsStatusResponse}};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct MarketAlarms {}
@@ -35,7 +36,6 @@ impl MarketAlarms {
         Ok(Response::new())
     }
 
-    // TODO: separation of price feed and alarms notification
     pub fn try_notify_alarms(
         storage: &mut dyn Storage,
         mut batch: Batch,
@@ -43,7 +43,16 @@ impl MarketAlarms {
         max_count: u32,
     ) -> Result<Response, ContractError>
     {
-        Self::PRICE_ALARMS.notify(storage, &mut batch, prices, max_count)?;
-        Ok(batch.into())
+        let sent = Self::PRICE_ALARMS.notify(storage, &mut batch, prices, max_count)?;
+        Ok(Response::from(batch).set_data(to_binary(&SentAlarmsResponse(sent))?))
+    }
+
+    pub fn try_query_alarms(
+        storage: &dyn Storage,
+        prices: &[SpotPrice],
+    ) -> Result<AlarmsStatusResponse, ContractError>
+    {
+        let remaining_alarms = Self::PRICE_ALARMS.query_alarms(storage, prices)?;
+        Ok(AlarmsStatusResponse { remaining_alarms })
     }
 }

@@ -11,7 +11,10 @@ use crate::{
     ContractError,
 };
 
-use super::{feed::Feeds, feeder::Feeders};
+use super::{
+    feed::{try_query_alarms, Feeds},
+    feeder::Feeders,
+};
 
 pub struct QueryWithOracleBase<'a> {
     deps: Deps<'a>,
@@ -73,7 +76,10 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
             QueryMsg::SwapTree {} => Ok(to_binary(&SwapTreeResponse {
                 tree: SupportedPairs::<OracleBase>::load(self.deps.storage)?.query_swap_tree(),
             })?),
-            QueryMsg::Status {} => todo!("Implement API for retrieving undelivered alarms count."),
+            QueryMsg::AlarmsStatus {} => Ok(to_binary(&try_query_alarms::<OracleBase>(
+                self.deps.storage,
+                self.env.block.time,
+            )?)?),
             _ => {
                 unreachable!() // should be done already
             }
