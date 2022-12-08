@@ -397,7 +397,7 @@ pub mod tests {
         let addr4 = Addr::unchecked("addr4");
         let addr5 = Addr::unchecked("addr5");
 
-        let resp = alarms
+        let remaining_alarms = alarms
             .query_alarms(
                 storage,
                 &[
@@ -411,7 +411,7 @@ pub mod tests {
             )
             .unwrap();
 
-        assert!(resp);
+        assert!(!remaining_alarms);
 
         alarms
             .add_or_update(
@@ -464,7 +464,7 @@ pub mod tests {
             )
             .unwrap();
 
-        let resp = alarms
+        let remaining_alarms = alarms
             .query_alarms(
                 storage,
                 &[
@@ -478,7 +478,7 @@ pub mod tests {
             )
             .unwrap();
 
-        assert!(resp);
+        assert!(remaining_alarms);
 
         let mut batch = Batch::default();
 
