@@ -95,7 +95,7 @@ where
             wasm_execute(
                 test_case.oracle.clone().unwrap(),
                 &oracle::msg::ExecuteMsg::FeedPrices {
-                    prices: vec![PriceDTO::try_from(price::total_of(base).is(quote)).unwrap()],
+                    prices: vec![price::total_of(base).is(quote).into()],
                 },
                 vec![],
             )

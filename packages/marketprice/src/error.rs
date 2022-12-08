@@ -23,10 +23,22 @@ pub enum PriceFeedsError {
 
     #[error("Found currency {0} expecting {1}")]
     UnexpectedCurrency(String, String),
+
     #[error("{0}")]
     FromInfallible(#[from] Infallible),
+
     #[error("{0}")]
     Finance(#[from] finance::error::Error),
+
     #[error("Unknown currency")]
     UnknownCurrency {},
+
+    #[error("{0}")]
+    FeedSerdeError(String),
+}
+
+impl From<postcard::Error> for PriceFeedsError {
+    fn from(err: postcard::Error) -> Self {
+        Self::FeedSerdeError(format!("Error during (de-)serialization: {}", err))
+    }
 }

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::currency::{AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 
-use crate::{lpn::Usdc, SingleVisitorAdapter};
+use crate::SingleVisitorAdapter;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
 pub struct Atom {}
@@ -150,8 +150,6 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Stars, _>(ticker, v))
             .or_else(|v| maybe_visit::<Cro, _>(ticker, v))
             .or_else(|v| maybe_visit::<Secret, _>(ticker, v))
-            // TODO REMOVE once migrate off the single currency version
-            .or_else(|v| maybe_visit::<Usdc, _>(ticker, v))
             .map_err(|v| v.0)
     }
 
@@ -171,8 +169,6 @@ impl Group for LeaseGroup {
             .or_else(|v| maybe_visit::<Stars, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Cro, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Secret, _>(bank_symbol, v))
-            // TODO REMOVE once migrate off the single currency version
-            .or_else(|v| maybe_visit::<Usdc, _>(bank_symbol, v))
             .map_err(|v| v.0)
     }
 }
@@ -183,6 +179,7 @@ mod test {
 
     use crate::{
         lease::Osmo,
+        lpn::Usdc,
         native::Nls,
         test::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
@@ -190,7 +187,7 @@ mod test {
         },
     };
 
-    use super::{Atom, Cro, Evmos, Juno, LeaseGroup, Secret, Stars, Usdc, Wbtc, Weth};
+    use super::{Atom, Cro, Evmos, Juno, LeaseGroup, Secret, Stars, Wbtc, Weth};
 
     #[test]
     fn maybe_visit_on_ticker() {
@@ -203,7 +200,7 @@ mod test {
         maybe_visit_on_ticker_impl::<Stars, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Cro, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Secret, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<Usdc, LeaseGroup>(); // TODO REMOVE once migrate off the single currency version
+        maybe_visit_on_ticker_err::<Usdc, LeaseGroup>(Usdc::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Usdc::BANK_SYMBOL);
@@ -220,7 +217,7 @@ mod test {
         maybe_visit_on_bank_symbol_impl::<Stars, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Cro, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Secret, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<Usdc, LeaseGroup>(); // TODO REMOVE once migrate off the single currency version
+        maybe_visit_on_bank_symbol_err::<Usdc, LeaseGroup>(Usdc::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Usdc::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);

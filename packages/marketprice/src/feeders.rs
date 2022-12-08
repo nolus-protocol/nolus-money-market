@@ -1,12 +1,10 @@
 use std::collections::HashSet;
 
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use sdk::{
     cosmwasm_std::{Addr, DepsMut, StdError, StdResult, Storage},
     cw_storage_plus::Item,
-    schemars::{self, JsonSchema},
 };
 
 /// Errors returned from Feeders
@@ -74,14 +72,4 @@ impl<'f> PriceFeeders<'f> {
 
         Ok(())
     }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct FeedersResponse {
-    pub addresses: HashSet<Addr>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct FeederResponse {
-    pub exists: bool,
 }

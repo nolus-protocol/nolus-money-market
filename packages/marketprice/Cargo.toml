@@ -17,6 +17,7 @@ swap = { path = "../../packages/swap" }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+postcard = { workspace = true, features = ["alloc"] }
 
 [dev-dependencies]
 currency = { path = "../../packages/currency", features = ["testing"] }

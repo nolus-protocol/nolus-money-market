@@ -10,4 +10,5 @@ pub mod market_price;
 #[cfg(test)]
 mod tests;
 
+type CurrencyGroup = SwapGroup;
 pub type SpotPrice = PriceDTO<SwapGroup, SwapGroup>;

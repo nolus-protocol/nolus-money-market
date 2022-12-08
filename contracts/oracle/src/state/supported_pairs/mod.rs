@@ -113,6 +113,7 @@ where
         }
     }
 
+    // TODO return Symbol-s or an Iterator<Item = Symbol>
     pub fn load_path(&self, query: &SymbolOwned) -> Result<ResolutionPath, ContractError> {
         if let Some(mut node) = Self::find_node(self.tree.root(), query) {
             let mut path = vec![node.data().1.to_owned()];
