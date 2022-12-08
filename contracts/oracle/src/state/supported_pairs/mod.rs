@@ -4,10 +4,7 @@ use ::serde::{de::DeserializeOwned, Deserialize, Serialize};
 use trees::{walk::Visit, Node as TreeNode, TreeWalk};
 
 use currency::payment::PaymentGroup;
-use finance::{
-    coin::serde::{deserialize as deserialize_currency, serialize as serialize_currency},
-    currency::{visit_any_on_ticker, AnyVisitor, Currency, Symbol, SymbolOwned},
-};
+use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency, Symbol, SymbolOwned};
 use swap::SwapTarget;
 
 use sdk::{
@@ -39,8 +36,6 @@ where
     B: Currency,
 {
     tree: TreeStore,
-    #[serde(serialize_with = "serialize_currency")]
-    #[serde(deserialize_with = "deserialize_currency")]
     _type: PhantomData<B>,
 }
 

@@ -15,7 +15,7 @@ use crate::currency::Currency;
 pub use self::coinc::CoinDTO;
 
 mod coinc;
-pub mod serde;
+mod serde;
 
 pub type Amount = u128;
 
@@ -27,13 +27,7 @@ where
     C: Currency,
 {
     amount: Amount,
-    // using `with` for both directions implies implementing JsonSchema for that type
-    // https://github.com/GREsau/schemars/issues/89
-    // TODO revert the Serialize impl to use the default impl, i.e. not including the currency
-    // the motivation is that the currency should be externally known in order to ser-de this type
-    // If we need the serialized datato contain the currency then use another type, for example CoinDTO.
-    #[serde(serialize_with = "serde::serialize")]
-    #[serde(deserialize_with = "serde::deserialize")]
+    #[serde(skip)]
     ticker: PhantomData<C>,
 }
 

@@ -140,9 +140,11 @@ mod test {
     struct MyTestGroup {}
 
     #[test]
-    fn same_representation() {
+    fn longer_representation() {
         let coin = Coin::<MyTestCurrency>::new(4215);
-        assert_eq!(to_vec(&coin), to_vec(&CoinDTO::<MyTestGroup>::from(coin)));
+        let coin_len = to_vec(&coin).unwrap().len();
+        let coindto_len = to_vec(&CoinDTO::<MyTestGroup>::from(coin)).unwrap().len();
+        assert!(coin_len < coindto_len);
     }
 
     #[test]
