@@ -12,7 +12,7 @@ use crate::{
     state::{supported_pairs::SupportedPairs, Config},
 };
 
-use super::{feed::try_feed_prices, feeder::Feeders};
+use super::{feed, feeder::Feeders};
 
 pub struct ExecWithOracleBase<'a> {
     deps: DepsMut<'a>,
@@ -64,12 +64,17 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                     return Err(ContractError::UnknownFeeder {});
                 }
 
-                try_feed_prices::<OracleBase>(
+                feed::try_feed_prices::<OracleBase>(
                     self.deps.storage,
                     self.env.block.time,
                     self.sender,
                     prices,
                 )
+            }
+            ExecuteMsg::DispatchAlarms { max_count } => { 
+                feed::try_notify_alarms::<OracleBase>(self.deps.storage, 
+                    self.env.block.time,
+                    max_count)
             }
             _ => {
                 unreachable!()

@@ -205,6 +205,53 @@ fn feed_price_with_alarm_issue() {
     );
 }
 
+#[test]
+fn feed_price_with_alarm() {
+    let mut test_case = create_test_case();
+
+    test_case
+        .app
+        .execute(
+            Addr::unchecked(ADMIN),
+            wasm_execute(
+                test_case.oracle.clone().unwrap(),
+                &oracle::msg::ExecuteMsg::RegisterFeeder {
+                    feeder_address: ADMIN.into(),
+                },
+                vec![cw_coin(1000)],
+            )
+            .unwrap()
+            .into(),
+        )
+        .unwrap();
+
+    let lease = open_lease(&mut test_case, Coin::new(1000));
+
+    test_case
+        .app
+        .execute_contract(
+            lease,
+            test_case.oracle.clone().unwrap(),
+            &oracle::msg::ExecuteMsg::AddPriceAlarm {
+                alarm: Alarm::new(
+                    price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(10)),
+                    None,
+                ),
+            },
+            &[],
+        )
+        .unwrap();
+
+    let res = feed_price::<Cro, Usdc>(
+        &mut test_case,
+        &Addr::unchecked(ADMIN),
+        Coin::new(1),
+        Coin::new(5),
+    );
+
+    dbg!(res);
+}
+
 fn open_lease(test_case: &mut TestCase<Lpn>, value: TheCoin) -> Addr {
     test_case
         .app

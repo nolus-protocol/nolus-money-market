@@ -44,6 +44,10 @@ pub enum ExecuteMsg {
         alarm: Alarm,
     },
     RemovePriceAlarm {},
+    /// Returns [`Status`] as response data.
+    DispatchAlarms {
+        max_count: u32,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
@@ -56,13 +60,24 @@ pub enum QueryMsg {
     // returns all registered feeders
     Feeders {},
     // check if an address belongs to a registered feeder
-    IsFeeder { address: Addr },
+    IsFeeder {
+        address: Addr,
+    },
     // returns the price of the denom against the base asset
-    Prices { currencies: Vec<SymbolOwned> },
-    Price { currency: SymbolOwned },
+    Prices {
+        currencies: Vec<SymbolOwned>,
+    },
+    Price {
+        currency: SymbolOwned,
+    },
     // returns a list of supported denom pairs
     SupportedCurrencyPairs {},
-    SwapPath { from: SymbolOwned, to: SymbolOwned },
+    SwapPath {
+        from: SymbolOwned,
+        to: SymbolOwned,
+    },
+    /// Returns [`Status`] as response data.
+    AlarmsStatus {},
 }
 
 pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;
@@ -91,4 +106,14 @@ pub struct PricesResponse {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
     PriceAlarm(),
+}
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct DispatchAlarmsResponse(pub u32);
+
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub struct AlarmsStatusResponse {
+    pub remaining_alarms: bool,
 }

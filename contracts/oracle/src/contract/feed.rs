@@ -16,12 +16,15 @@ use sdk::{
 use swap::SwapTarget;
 
 use crate::{
+    msg::AlarmsStatusResponse,
     state::{
         supported_pairs::{SupportedPairs, SwapLeg},
         Config,
     },
     ContractError,
 };
+
+use super::{alarms::MarketAlarms, feeder::Feeders};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Feeds<OracleBase> {
@@ -120,38 +123,57 @@ where
     Ok(Response::from(batch))
 }
 
-// TODO: separation of price feed and alarms notification
-/*
+// TODO: optimize
+pub fn get_all_prices<OracleBase>(
+    storage: &dyn Storage,
+    block_time: Timestamp,
+) -> Result<Vec<SpotPrice>, ContractError>
+where
+    OracleBase: Currency + DeserializeOwned,
+{
+    let tree: SupportedPairs<OracleBase> = SupportedPairs::load(storage)?;
+
+    let config = Config::load(storage)?;
+    let oracle = Feeds::<OracleBase>::with(config);
+    let price_config = Feeders::price_config(storage, &oracle.config, block_time)?;
+
+    let mut prices = vec![];
+    for leg in SupportedPairs::<OracleBase>::load(storage)?
+        .query_supported_pairs()
+        .into_iter()
+    {
+        let path = tree.load_path(&leg.from)?;
+        let path = path.iter().map(|owned| owned.as_str());
+        // we need to gather all available prices without NoPrice error
+        if let Ok(price) =
+            Feeds::<OracleBase>::MARKET_PRICE.price::<OracleBase, _>(storage, &price_config, path)
+        {
+            prices.push(price);
+        }
+    }
+    Ok(prices)
+}
+
 pub fn try_notify_alarms<OracleBase>(
     storage: &mut dyn Storage,
     block_time: Timestamp,
-    prices: Vec<SpotPrice>,
+    max_count: u32,
 ) -> Result<Response, ContractError>
 where
-    OracleBase: Currency,
+    OracleBase: Currency + DeserializeOwned,
 {
-    let config = Config::load(storage)?;
-    let oracle = Feeds::<OracleBase>::with(config);
-    let supported_pairs = SupportedPairs::<OracleBase>::load(storage)?;
-
-    let mut batch = Batch::default();
-
-    let affected = prices
-        .into_iter()
-        .map(|price| supported_pairs.load_affected((price.base().ticker(), price.quote().ticker())))
-        .try_fold(vec![], |mut acc, el| -> Result<_, ContractError> {
-            acc.extend(el?);
-            Ok(acc)
-        })?;
-
-    if !affected.is_empty() {
-        let parameters = Feeders::query_config(storage, &oracle.config, block_time)?;
-        // re-calculate the price of these currencies
-        let updated_prices = oracle
-            .get_prices(storage, parameters, &affected)?;
-        // try notify affected subscribers
-        MarketAlarms::try_notify_alarms(storage, updated_prices, &mut batch)?;
-    }
-    Ok(Response::from(batch))
+    let batch = Batch::default();
+    let prices = get_all_prices::<OracleBase>(storage, block_time)?;
+    MarketAlarms::try_notify_alarms(storage, batch, &prices, max_count)
 }
-*/
+
+pub fn try_query_alarms<OracleBase>(
+    storage: &dyn Storage,
+    block_time: Timestamp,
+) -> Result<AlarmsStatusResponse, ContractError>
+where
+    OracleBase: Currency + DeserializeOwned,
+{
+    let prices = get_all_prices::<OracleBase>(storage, block_time)?;
+    MarketAlarms::try_query_alarms(storage, &prices)
+}
