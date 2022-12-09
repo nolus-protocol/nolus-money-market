@@ -1,4 +1,4 @@
-use cosmwasm_std::Env;
+use cosmwasm_std::{to_binary, Env};
 use serde::{Deserialize, Serialize};
 
 use currency::native::Nls;
@@ -10,7 +10,10 @@ use sdk::{
 };
 use time_oracle::{AlarmError, Alarms, Id};
 
-use crate::{msg::ExecuteAlarmMsg, ContractError};
+use crate::{
+    msg::{DispatchAlarmsResponse, ExecuteAlarmMsg},
+    ContractError,
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct TimeAlarms {}
@@ -39,6 +42,7 @@ impl TimeAlarms {
     pub fn try_notify(
         storage: &mut dyn Storage,
         ctime: Timestamp,
+        max_count: u32,
     ) -> Result<Response, ContractError> {
         use time_oracle::AlarmDispatcher;
 
@@ -60,9 +64,18 @@ impl TimeAlarms {
         let mut batch = Batch::default();
         let mut dispatcher = OracleAlarmDispatcher { batch: &mut batch };
 
-        Self::TIME_ALARMS.notify(storage, &mut dispatcher, ctime)?;
+        let sent = Self::TIME_ALARMS.notify(storage, &mut dispatcher, ctime, max_count)?;
 
-        Ok(batch.into())
+        Ok(Response::from(batch).set_data(to_binary(&DispatchAlarmsResponse(sent))?))
+    }
+
+    pub fn try_query_remaining_alarms(
+        storage: &dyn Storage,
+        ctime: Timestamp,
+    ) -> Result<bool, ContractError> {
+        Self::TIME_ALARMS
+            .query_remaining_alarms(storage, ctime)
+            .map_err(|e| e.into())
     }
 }
 

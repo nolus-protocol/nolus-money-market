@@ -334,12 +334,15 @@ fn integration_with_timealarms() {
         vec![native_cwcoin(500)],
     );
 
-    let resp = feed_price::<BaseC, Usdc>(
-        &mut test_case,
-        &Addr::unchecked(ADMIN),
-        Coin::new(5),
-        Coin::new(7),
-    );
+    let resp = test_case
+        .app
+        .execute_contract(
+            Addr::unchecked(ADMIN),
+            test_case.timealarms.unwrap(),
+            &timealarms::msg::ExecuteMsg::DispatchAlarms { max_count: 10 },
+            &[],
+        )
+        .unwrap();
 
     resp.assert_event(&Event::new("wasm").add_attribute("alarm", "success"))
 }

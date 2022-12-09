@@ -20,4 +20,7 @@ pub enum AlarmError {
 
     #[error("{0}")]
     Platform(#[from] platform::error::Error),
+
+    #[error("[Market Price] {0}")]
+    Math(#[from] std::num::TryFromIntError),
 }
