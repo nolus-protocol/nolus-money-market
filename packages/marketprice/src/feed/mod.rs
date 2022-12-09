@@ -7,6 +7,10 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{error::PriceFeedsError, market_price::Config};
 
+use self::observation::Observation;
+
+mod observation;
+
 #[derive(Serialize, Deserialize, Default)]
 pub struct PriceFeed<C, QuoteC>
 where
@@ -32,7 +36,8 @@ where
         price: Price<C, QuoteC>,
         validity: Duration,
     ) -> Self {
-        self.observations.retain(valid_observations(at, validity));
+        self.observations
+            .retain(observation::valid_at(at, validity));
 
         self.observations.push(Observation::new(from, at, price));
         self
@@ -52,7 +57,7 @@ where
             return Err(PriceFeedsError::NoPrice {});
         }
 
-        Ok(last_observation.price)
+        Ok(last_observation.price())
     }
 
     fn has_enough_feeders(&self, config: &Config) -> bool {
@@ -61,63 +66,16 @@ where
 
     fn count_unique_feeders(&self, config: &Config) -> usize {
         self.valid_observations(config)
-            .map(|o| &o.feeder_addr)
+            .map(Observation::feeder)
             .collect::<HashSet<_>>()
             .len()
     }
 
     fn valid_observations(&self, config: &Config) -> impl Iterator<Item = &Observation<C, QuoteC>> {
-        let mut valid_observations = valid_observations(config.block_time(), config.period());
+        let mut valid_observations = observation::valid_at(config.block_time(), config.period());
         self.observations
             .iter()
             .filter(move |&o| valid_observations(o))
-    }
-}
-
-#[track_caller]
-fn valid_observations<C, QuoteC>(
-    at: Timestamp,
-    period: Duration,
-) -> impl FnMut(&Observation<C, QuoteC>) -> bool
-where
-    C: Currency,
-    QuoteC: Currency,
-{
-    move |o: &Observation<_, _>| o.valid(at, period)
-}
-
-#[derive(Serialize, Deserialize)]
-struct Observation<C, QuoteC>
-where
-    C: Currency,
-    QuoteC: Currency,
-{
-    feeder_addr: Addr,
-    time: Timestamp,
-    price: Price<C, QuoteC>,
-}
-impl<C, QuoteC> Observation<C, QuoteC>
-where
-    C: Currency,
-    QuoteC: Currency,
-{
-    fn new(feeder_addr: Addr, time: Timestamp, price: Price<C, QuoteC>) -> Observation<C, QuoteC> {
-        Observation {
-            feeder_addr,
-            time,
-            price,
-        }
-    }
-
-    #[track_caller]
-    fn valid(&self, at: Timestamp, validity: Duration) -> bool {
-        debug_assert!(
-            self.time <= at,
-            "An observation got at {}secs is checked for validity against a past moment at {}secs",
-            self.time,
-            at
-        );
-        self.time + validity > at
     }
 }
 
