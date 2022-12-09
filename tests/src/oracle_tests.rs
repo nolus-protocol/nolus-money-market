@@ -158,8 +158,8 @@ fn internal_test_integration_setup_test() {
     );
 }
 
+// test for issue #26. It was resolved in MR !132 by separation of price feeding and alarms delivery processes
 #[test]
-#[ignore = "issue #26"]
 fn feed_price_with_alarm_issue() {
     let mut test_case = create_test_case();
 
