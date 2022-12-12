@@ -78,7 +78,7 @@ impl TryFrom<Vec<RewardScale>> for RewardScales {
     type Error = StdError;
 
     fn try_from(mut reward_scales: Vec<RewardScale>) -> Result<Self, Self::Error> {
-        if reward_scales.iter().any(|stop| stop.tvl == 0) {
+        if !reward_scales.iter().any(|reward_scale| reward_scale.tvl == 0) {
             return Err(StdError::generic_err("No zero TVL reward scale found!"));
         }
 
