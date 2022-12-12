@@ -1,7 +1,7 @@
 use rewards_dispatcher::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::tvl_intervals::{Intervals, Stop},
+    state::reward_scales::{RewardScale, RewardScales},
 };
 use sdk::{
     cosmwasm_std::{Addr, StdError},
@@ -33,7 +33,11 @@ impl DispatcherWrapper {
             oracle: oracle.clone(),
             timealarms: timealarms.clone(),
             treasury: treasury.clone(),
-            tvl_to_apr: Intervals::from(vec![Stop::new(0, 10), Stop::new(1000000, 10)]).unwrap(),
+            tvl_to_apr: RewardScales::try_from(vec![
+                RewardScale::new(0, 10),
+                RewardScale::new(1000000, 10),
+            ])
+            .unwrap(),
         };
 
         app.instantiate_contract(

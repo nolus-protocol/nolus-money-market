@@ -154,7 +154,7 @@ mod tests {
 
     use crate::{
         msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
-        state::tvl_intervals::{Intervals, Stop},
+        state::reward_scales::{RewardScale, RewardScales},
         ContractError,
     };
 
@@ -167,7 +167,11 @@ mod tests {
             oracle: Addr::unchecked("oracle"),
             timealarms: Addr::unchecked("timealarms"),
             treasury: Addr::unchecked("treasury"),
-            tvl_to_apr: Intervals::from(vec![Stop::new(0, 5), Stop::new(1000000, 10)]).unwrap(),
+            tvl_to_apr: RewardScales::try_from(vec![
+                RewardScale::new(0, 5),
+                RewardScale::new(1000000, 10),
+            ])
+            .unwrap(),
         };
         let info = mock_info("creator", &coins(1000, "unolus"));
 
