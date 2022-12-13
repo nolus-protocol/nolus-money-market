@@ -92,7 +92,7 @@ impl RewardScale {
 impl TryFrom<Vec<Bar>> for RewardScale {
     type Error = StdError;
 
-    fn try_from(mut bars: Vec<Bar>) -> Result<Self, Self::Error> {
+    fn try_from(bars: Vec<Bar>) -> Result<Self, Self::Error> {
         if bars.is_empty() {
             return Err(StdError::generic_err("Argument vector contains no bars!"));
         }
@@ -187,7 +187,7 @@ mod tests {
         assert_eq!(res.get_apr(100051), Percent::from_permille(12));
         assert_eq!(res.get_apr(149999), Percent::from_permille(12));
         assert_eq!(res.get_apr(150000), Percent::from_permille(15));
-        assert_eq!(res.get_apr(2000300), Percent::from_permille(15));
+        assert_eq!(res.get_apr(200300), Percent::from_permille(15));
         assert_eq!(res.get_apr(3000000), Percent::from_permille(20));
         assert_eq!(res.get_apr(3000200), Percent::from_permille(20));
         assert_eq!(res.get_apr(13000200), Percent::from_permille(20));
