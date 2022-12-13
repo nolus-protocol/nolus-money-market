@@ -167,11 +167,7 @@ mod tests {
             oracle: Addr::unchecked("oracle"),
             timealarms: Addr::unchecked("timealarms"),
             treasury: Addr::unchecked("treasury"),
-            tvl_to_apr: RewardScale::try_from(vec![
-                Bar::new(0, 5),
-                Bar::new(1000000, 10),
-            ])
-            .unwrap(),
+            tvl_to_apr: RewardScale::try_from(vec![Bar::new(0, 5), Bar::new(1000000, 10)]).unwrap(),
         };
         let info = mock_info("creator", &coins(1000, "unolus"));
 

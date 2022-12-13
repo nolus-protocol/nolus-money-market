@@ -33,11 +33,8 @@ impl DispatcherWrapper {
             oracle: oracle.clone(),
             timealarms: timealarms.clone(),
             treasury: treasury.clone(),
-            tvl_to_apr: RewardScale::try_from(vec![
-                Bar::new(0, 10),
-                Bar::new(1000000, 10),
-            ])
-            .unwrap(),
+            tvl_to_apr: RewardScale::try_from(vec![Bar::new(0, 10), Bar::new(1000000, 10)])
+                .unwrap(),
         };
 
         app.instantiate_contract(

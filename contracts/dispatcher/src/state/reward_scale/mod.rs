@@ -58,10 +58,7 @@ impl RewardScale {
     }
 
     pub fn get_apr(&self, lpp_balance: u128) -> StdResult<Percent> {
-        let idx = match self
-            .bars
-            .binary_search(&Bar::new(lpp_balance as u32, 0))
-        {
+        let idx = match self.bars.binary_search(&Bar::new(lpp_balance as u32, 0)) {
             Ok(i) => i,
             Err(e) => e - 1,
         };
@@ -92,9 +89,7 @@ impl TryFrom<Vec<Bar>> for RewardScale {
             return Err(StdError::generic_err("Duplicate reward scales found!"));
         }
 
-        Ok(RewardScale {
-            bars: reward_scale,
-        })
+        Ok(RewardScale { bars: reward_scale })
     }
 }
 
@@ -123,8 +118,7 @@ mod tests {
         let res = RewardScale::try_from(vec![Bar::new(30000, 6)]);
         assert!(res.is_err());
 
-        let res = RewardScale::try_from(vec![Bar::new(0, 6), Bar::new(30000, 10)])
-            .unwrap();
+        let res = RewardScale::try_from(vec![Bar::new(0, 6), Bar::new(30000, 10)]).unwrap();
         assert_eq!(res.bars.len(), 2);
         assert_eq!(res.bars.get(0).unwrap().tvl, 0);
         assert_eq!(res.bars.get(0).unwrap().apr, Percent::from_permille(6));
