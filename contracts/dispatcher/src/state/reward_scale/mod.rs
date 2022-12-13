@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-
 use serde::{Deserialize, Serialize};
 
 use finance::percent::Percent;
@@ -10,7 +8,7 @@ use sdk::{
 
 mod unchecked;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 pub struct Bar {
     pub tvl: u32,
     pub apr: Percent,
@@ -22,18 +20,6 @@ impl Bar {
             tvl,
             apr: Percent::from_permille(apr),
         }
-    }
-}
-
-impl PartialOrd for Bar {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Bar {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.tvl.cmp(&other.tvl)
     }
 }
 
@@ -53,43 +39,38 @@ impl RewardScale {
         }
     }
 
-    pub fn add(&mut self, mut stops: Vec<Bar>) {
-        self.bars.append(&mut stops);
+    pub fn add(&mut self, mut bars: Vec<Bar>) {
+        self.bars.append(&mut bars);
     }
 
     pub fn get_apr(&self, lpp_balance: u128) -> StdResult<Percent> {
-        let idx = match self.bars.binary_search(&Bar::new(lpp_balance as u32, 0)) {
-            Ok(i) => i,
-            Err(e) => e - 1,
-        };
-        let arp = match self.bars.get(idx) {
-            Some(tvl) => tvl.apr,
-            None => return Err(StdError::generic_err("ARP not found")),
-        };
-
-        Ok(arp)
+        self.bars
+            .binary_search_by_key(&lpp_balance, |bar| bar.tvl.into())
+            .map_or_else(|index| index.checked_sub(1), Some)
+            .and_then(|index| self.bars.get(index).map(|bar| bar.apr))
+            .ok_or_else(|| StdError::generic_err("ARP not found"))
     }
 }
 
 impl TryFrom<Vec<Bar>> for RewardScale {
     type Error = StdError;
 
-    fn try_from(mut reward_scale: Vec<Bar>) -> Result<Self, Self::Error> {
-        if !reward_scale.iter().any(|bar| bar.tvl == 0) {
+    fn try_from(mut bars: Vec<Bar>) -> Result<Self, Self::Error> {
+        if !bars.iter().any(|bar| bar.tvl == Default::default()) {
             return Err(StdError::generic_err("No zero TVL reward scale bar found!"));
         }
 
-        reward_scale.sort_unstable();
+        bars.sort_unstable();
 
-        if reward_scale
+        if bars
             .iter()
-            .zip(reward_scale.iter().skip(1))
+            .zip(bars.iter().skip(1))
             .any(|(left, right)| left.tvl == right.tvl)
         {
             return Err(StdError::generic_err("Duplicate reward scales found!"));
         }
 
-        Ok(RewardScale { bars: reward_scale })
+        Ok(RewardScale { bars })
     }
 }
 
