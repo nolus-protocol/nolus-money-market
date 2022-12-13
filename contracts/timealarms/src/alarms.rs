@@ -69,12 +69,9 @@ impl TimeAlarms {
         Ok(Response::from(batch).set_data(to_binary(&DispatchAlarmsResponse(sent))?))
     }
 
-    pub fn try_query_remaining_alarms(
-        storage: &dyn Storage,
-        ctime: Timestamp,
-    ) -> Result<bool, ContractError> {
+    pub fn try_any_alarm(storage: &dyn Storage, ctime: Timestamp) -> Result<bool, ContractError> {
         Self::TIME_ALARMS
-            .query_remaining_alarms(storage, ctime)
+            .any_alarm(storage, ctime)
             .map_err(|e| e.into())
     }
 }

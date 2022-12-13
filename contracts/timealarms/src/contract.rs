@@ -1,17 +1,15 @@
-use cosmwasm_std::{Binary, Deps};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, SubMsgResult},
     cw2::set_contract_version,
 };
 
-use crate::msg::QueryMsg;
 use crate::{
     alarms::TimeAlarms,
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
 
 // version info for migration info
@@ -48,20 +46,21 @@ pub fn execute(
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::AlarmsStatus {} => Ok(cosmwasm_std::to_binary(
-            &TimeAlarms::try_query_remaining_alarms(deps.storage, env.block.time)?,
-        )?),
+        QueryMsg::AlarmsStatus {} => Ok(sdk::cosmwasm_std::to_binary(&TimeAlarms::try_any_alarm(
+            deps.storage,
+            env.block.time,
+        )?)?),
     }
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let res = match msg.result {
-        cosmwasm_std::SubMsgResult::Ok(_) => {
+        SubMsgResult::Ok(_) => {
             TimeAlarms::remove(deps.storage, msg.id)?;
             Response::new().add_attribute("alarm", "success")
         }
-        cosmwasm_std::SubMsgResult::Err(err) => Response::new()
+        SubMsgResult::Err(err) => Response::new()
             .add_attribute("alarm", "error")
             .add_attribute("error", err),
     };

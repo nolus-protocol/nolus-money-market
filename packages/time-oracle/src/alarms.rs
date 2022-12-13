@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{Addr, Order, StdResult, Storage, Timestamp},
+    cosmwasm_std::{Addr, Order, StdError, StdResult, Storage, Timestamp},
     cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, MultiIndex},
 };
 
 use crate::AlarmError;
 
 type TimeSeconds = u64;
-type AlarmsCount = u32;
+pub type AlarmsCount = u32;
 pub type Id = u64;
 
 fn as_seconds(from: Timestamp) -> TimeSeconds {
@@ -73,6 +73,20 @@ impl<'a> Alarms<'a> {
         self.alarms().remove(storage, id)
     }
 
+    fn alarms_selection<'b>(
+        &self,
+        storage: &'b dyn Storage,
+        ctime: Timestamp,
+        max_id: Id,
+    ) -> impl Iterator<Item = Result<(Id, Alarm), StdError>> + 'b {
+        self.alarms().idx.alarms.range(
+            storage,
+            None,
+            Some(Bound::inclusive((as_seconds(ctime), max_id))),
+            Order::Ascending,
+        )
+    }
+
     pub fn notify(
         &self,
         storage: &mut dyn Storage,
@@ -84,15 +98,7 @@ impl<'a> Alarms<'a> {
         let mut count = 0;
 
         let timestamps = self
-            .alarms()
-            .idx
-            .alarms
-            .range(
-                storage,
-                None,
-                Some(Bound::inclusive((as_seconds(ctime), max_id))),
-                Order::Ascending,
-            )
+            .alarms_selection(storage, ctime, max_id)
             .take(max_count.try_into()?);
         for timestamp in timestamps {
             let (id, alarm) = timestamp?;
@@ -103,25 +109,10 @@ impl<'a> Alarms<'a> {
         Ok(count)
     }
 
-    pub fn query_remaining_alarms(
-        &self,
-        storage: &dyn Storage,
-        ctime: Timestamp,
-    ) -> Result<bool, AlarmError> {
+    pub fn any_alarm(&self, storage: &dyn Storage, ctime: Timestamp) -> Result<bool, AlarmError> {
         let max_id = self.next_id.may_load(storage)?.unwrap_or_default();
 
-        Ok(self
-            .alarms()
-            .idx
-            .alarms
-            .range(
-                storage,
-                None,
-                Some(Bound::inclusive((as_seconds(ctime), max_id))),
-                Order::Ascending,
-            )
-            .next()
-            .is_some())
+        Ok(self.alarms_selection(storage, ctime, max_id).any(|_| true))
     }
 }
 
@@ -167,7 +158,7 @@ pub mod tests {
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
 
-        assert!(!alarms.query_remaining_alarms(storage, t3).unwrap());
+        assert!(!alarms.any_alarm(storage, t3).unwrap());
 
         assert_eq!(alarms.add(storage, addr1, t1), Ok(0));
         // same timestamp
@@ -175,8 +166,8 @@ pub mod tests {
         // different timestamp
         assert_eq!(alarms.add(storage, addr3, t2), Ok(2));
 
-        assert!(!alarms.query_remaining_alarms(storage, t0).unwrap());
-        assert!(alarms.query_remaining_alarms(storage, t3).unwrap());
+        assert!(!alarms.any_alarm(storage, t0).unwrap());
+        assert!(alarms.any_alarm(storage, t3).unwrap());
     }
 
     #[test]

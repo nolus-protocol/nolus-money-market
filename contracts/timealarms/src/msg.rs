@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use time_oracle::AlarmsCount;
 
 use sdk::{
     cosmwasm_std::Timestamp,
@@ -16,7 +17,7 @@ pub enum ExecuteMsg {
     },
     /// Returns [`DispatchAlarmsResponse`] as response data.
     DispatchAlarms {
-        max_count: u32,
+        max_count: AlarmsCount,
     },
 }
 
@@ -35,7 +36,7 @@ pub enum ExecuteAlarmMsg {
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 /// number of sent alarms
-pub struct DispatchAlarmsResponse(pub u32);
+pub struct DispatchAlarmsResponse(pub AlarmsCount);
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

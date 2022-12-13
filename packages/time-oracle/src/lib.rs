@@ -10,6 +10,8 @@ pub use crate::{
 mod alarms;
 mod time_oracle;
 
+pub use alarms::AlarmsCount;
+
 #[derive(Error, Debug, PartialEq)]
 pub enum AlarmError {
     #[error("{0}")]
