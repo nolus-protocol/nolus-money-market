@@ -21,10 +21,9 @@ impl Profit {
         info: MessageInfo,
         cadence_hours: u16,
     ) -> Result<Response, ContractError> {
-        let config = Config::load(deps.storage)?;
-        if info.sender != config.owner {
-            return Err(ContractError::Unauthorized {});
-        }
+        crate::access_control::OWNER
+            .assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+
         Config::update(deps.storage, cadence_hours)?;
 
         Ok(Response::new())
@@ -34,11 +33,10 @@ impl Profit {
         env: Env,
         info: MessageInfo,
     ) -> Result<Emitter, ContractError> {
-        let config = Config::load(deps.storage)?;
+        crate::access_control::TIMEALARMS
+            .assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
 
-        if info.sender != config.timealarms {
-            return Err(ContractError::UnrecognisedAlarm(info.sender));
-        }
+        let config = Config::load(deps.storage)?;
 
         let balance = deps.querier.query_all_balances(&env.contract.address)?;
 
@@ -49,7 +47,7 @@ impl Profit {
         let current_time = env.block.time;
 
         let msg = Self::alarm_subscribe_msg(
-            &config.timealarms,
+            &info.sender,
             current_time,
             Duration::from_hours(config.cadence_hours),
         )?;

@@ -10,7 +10,7 @@ pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
     let config = Config::load(deps.storage)?;
     Ok(ConfigResponse {
         base_asset: config.base_asset,
-        owner: config.owner,
+        owner: crate::access_control::OWNER.get_address::<_, ContractError>(deps)?,
         price_feed_period: config.price_feed_period,
         expected_feeders: config.expected_feeders,
     })
@@ -22,10 +22,7 @@ pub fn try_configure(
     price_feed_period: u32,
     expected_feeders: Percent,
 ) -> Result<Response, ContractError> {
-    let config = Config::load(deps.storage)?;
-    if info.sender != config.owner {
-        return Err(ContractError::Unauthorized {});
-    }
+    crate::access_control::OWNER.assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
 
     //TODO merge the next checks with the code in Config::validate()
     if expected_feeders == Percent::ZERO || expected_feeders > Percent::HUNDRED {

@@ -23,7 +23,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    mut deps: DepsMut,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -48,7 +48,9 @@ pub fn instantiate(
             ))
         })?;
 
-    let config = Config::new(info.sender, msg)?;
+    crate::access_control::OWNER.set_address(deps.branch(), info.sender)?;
+
+    let config = Config::new(msg)?;
     config.store(deps.storage)?;
 
     Ok(Response::default())

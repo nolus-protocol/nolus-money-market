@@ -14,11 +14,9 @@ pub fn try_update_parameters(
     utilization_optimal: Percent,
     addon_optimal_interest_rate: Percent,
 ) -> Result<Response, ContractError> {
-    let mut config = Config::load(deps.storage)?;
+    crate::access_control::OWNER.assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
 
-    if config.owner != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
+    let mut config = Config::load(deps.storage)?;
 
     config.update(
         deps.storage,

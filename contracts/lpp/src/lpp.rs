@@ -64,12 +64,13 @@ where
 {
     pub fn store(
         storage: &mut dyn Storage,
-        owner: Addr,
         lpn_ticker: String,
         lease_code_id: Uint64,
     ) -> StdResult<()> {
-        Config::new(owner, lpn_ticker, lease_code_id).store(storage)?;
+        Config::new(lpn_ticker, lease_code_id).store(storage)?;
+
         Total::<LPN>::new().store(storage)?;
+
         Ok(())
     }
 
@@ -308,7 +309,11 @@ mod test {
         let lease_code_id = Uint64::new(123);
         let admin = Addr::unchecked("admin");
 
-        Config::new(admin, balance_mock.denom.clone(), lease_code_id)
+        crate::access_control::OWNER
+            .set_address(deps.as_mut(), admin)
+            .unwrap();
+
+        Config::new(balance_mock.denom.clone(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -336,7 +341,11 @@ mod test {
 
         let lease_code_id = Uint64::new(123);
 
-        Config::new(admin, balance_mock.denom, lease_code_id)
+        crate::access_control::OWNER
+            .set_address(deps.as_mut(), admin)
+            .unwrap();
+
+        Config::new(balance_mock.denom, lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -386,7 +395,11 @@ mod test {
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
-        Config::new(admin, TheCurrency::TICKER.into(), lease_code_id)
+        crate::access_control::OWNER
+            .set_address(deps.as_mut(), admin)
+            .unwrap();
+
+        Config::new(TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -476,7 +489,11 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        Config::new(admin, TheCurrency::TICKER.into(), lease_code_id)
+        crate::access_control::OWNER
+            .set_address(deps.as_mut(), admin)
+            .unwrap();
+
+        Config::new(TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -499,7 +516,11 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        Config::new(admin, TheCurrency::TICKER.into(), lease_code_id)
+        crate::access_control::OWNER
+            .set_address(deps.as_mut(), admin)
+            .unwrap();
+
+        Config::new(TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -522,7 +543,11 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        Config::new(admin, TheCurrency::TICKER.into(), lease_code_id)
+        crate::access_control::OWNER
+            .set_address(deps.as_mut(), admin)
+            .unwrap();
+
+        Config::new(TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -579,7 +604,11 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        Config::new(admin, TheCurrency::TICKER.into(), lease_code_id)
+        crate::access_control::OWNER
+            .set_address(deps.as_mut(), admin)
+            .unwrap();
+
+        Config::new(TheCurrency::TICKER.into(), lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
         Total::<TheCurrency>::new()
@@ -624,7 +653,11 @@ mod test {
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
-        Config::new(admin, balance_mock.denom, lease_code_id)
+        crate::access_control::OWNER
+            .set_address(deps.as_mut(), admin)
+            .unwrap();
+
+        Config::new(balance_mock.denom, lease_code_id)
             .store(deps.as_mut().storage)
             .expect("can't initialize Config");
 

@@ -7,6 +7,8 @@ pub mod msg;
 pub mod stub;
 
 #[cfg(any(feature = "contract", test))]
+mod access_control;
+#[cfg(any(feature = "contract", test))]
 pub mod contract;
 #[cfg(any(feature = "contract", test))]
 pub mod profit;

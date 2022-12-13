@@ -33,10 +33,9 @@ impl Feeders {
         info: MessageInfo,
         address: String,
     ) -> Result<Response, ContractError> {
-        let config = Config::load(deps.storage)?;
-        if info.sender != config.owner {
-            return Err(ContractError::Unauthorized {});
-        }
+        crate::access_control::OWNER
+            .assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+
         // check if address is valid
         let f_address = deps.api.addr_validate(&address)?;
         Self::FEEDERS.register(deps, f_address)?;
@@ -49,14 +48,13 @@ impl Feeders {
         info: MessageInfo,
         address: String,
     ) -> Result<Response, ContractError> {
+        crate::access_control::OWNER
+            .assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+
         let f_address = deps.api.addr_validate(&address)?;
+
         if !Self::is_feeder(deps.storage, &f_address)? {
             return Err(ContractError::UnknownFeeder {});
-        }
-
-        let config = Config::load(deps.storage)?;
-        if info.sender != config.owner {
-            return Err(ContractError::Unauthorized {});
         }
 
         Self::FEEDERS.remove(deps, f_address)?;

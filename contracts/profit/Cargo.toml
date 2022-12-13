@@ -21,7 +21,7 @@ testing = []
 timealarms = { path = "../timealarms", default-features = false }
 currency = { path = "../../packages/currency" }
 finance = { path = "../../packages/finance" }
-platform = { path = "../../packages/platform" }
+platform = { path = "../../packages/platform", features = ["access-control"] }
 sdk = { path = "../../packages/sdk", features = ["contract"] }
 
 # Required as a dependency by `entry_point` attribute macro

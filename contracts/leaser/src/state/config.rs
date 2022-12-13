@@ -1,7 +1,7 @@
-use lease::api::{dex::ConnectionParams, InterestPaymentSpec};
 use serde::{Deserialize, Serialize};
 
 use finance::{liability::Liability, percent::Percent};
+use lease::api::{dex::ConnectionParams, InterestPaymentSpec};
 use sdk::{
     cosmwasm_std::{Addr, StdResult, Storage},
     cw_storage_plus::Item,
@@ -12,7 +12,6 @@ use crate::{error::ContractResult, msg::InstantiateMsg, ContractError};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Config {
-    pub owner: Addr,
     pub lease_code_id: u64,
     pub lpp_addr: Addr,
     pub lease_interest_rate_margin: Percent,
@@ -27,9 +26,8 @@ pub struct Config {
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn new(sender: Addr, msg: InstantiateMsg) -> Result<Self, ContractError> {
+    pub fn new(msg: InstantiateMsg) -> Result<Self, ContractError> {
         Ok(Config {
-            owner: sender,
             lease_code_id: msg.lease_code_id.u64(),
             lpp_addr: msg.lpp_ust_addr,
             lease_interest_rate_margin: msg.lease_interest_rate_margin,
@@ -69,11 +67,11 @@ impl Config {
         repayment: InterestPaymentSpec,
     ) -> Result<(), ContractError> {
         Self::load(storage)?;
-        Self::STORAGE.update(storage, |mut c| {
+        Self::STORAGE.update(storage, |mut c| -> ContractResult<Config> {
             c.lease_interest_rate_margin = lease_interest_rate_margin;
             c.liability = liability;
             c.lease_interest_payment = repayment;
-            ContractResult::Ok(c)
+            Ok(c)
         })?;
         Ok(())
     }

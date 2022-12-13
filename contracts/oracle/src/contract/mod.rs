@@ -59,7 +59,7 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
     type Output = Response;
     type Error = ContractError;
 
-    fn on<C>(self) -> Result<Self::Output, Self::Error>
+    fn on<C>(mut self) -> Result<Self::Output, Self::Error>
     where
         C: Currency,
     {
@@ -78,9 +78,10 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
             ));
         }
 
+        crate::access_control::OWNER.set_address(self.deps.branch(), self.owner)?;
+
         Config::new(
             C::TICKER.to_string(),
-            self.owner,
             Duration::from_secs(self.msg.price_feed_period_secs),
             self.msg.expected_feeders,
         )

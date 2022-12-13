@@ -28,7 +28,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -40,12 +40,13 @@ pub fn instantiate(
     let timealarms_addr = validate_addr(deps.as_ref(), msg.timealarms)?;
     let treasury_addr = validate_addr(deps.as_ref(), msg.treasury)?;
 
+    crate::access_control::OWNER.set_address(deps.branch(), info.sender)?;
+    crate::access_control::TIMEALARMS.set_address(deps.branch(), timealarms_addr.clone())?;
+
     Config::new(
-        info.sender,
         msg.cadence_hours,
         lpp_addr,
         oracle_addr,
-        timealarms_addr.clone(),
         treasury_addr,
         msg.tvl_to_apr,
     )
@@ -90,10 +91,8 @@ pub fn try_config(
     info: MessageInfo,
     cadence_hours: u16,
 ) -> Result<Response, ContractError> {
-    let config = Config::load(deps.storage)?;
-    if info.sender != config.owner {
-        return Err(ContractError::Unauthorized {});
-    }
+    crate::access_control::OWNER.assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+
     Config::update(deps.storage, cadence_hours)?;
 
     Ok(Response::new().add_attribute("method", "config"))
@@ -121,18 +120,26 @@ pub fn try_dispatch(
 ) -> Result<Response, ContractError> {
     let block_time = env.block.time;
     ensure!(time >= block_time, ContractError::AlarmTimeValidation {});
+
+    crate::access_control::TIMEALARMS
+        .assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+
     let config = Config::load(deps.storage)?;
 
-    if info.sender != config.timealarms {
-        return Err(ContractError::UnrecognisedAlarm(info.sender));
-    }
     let last_dispatch = DispatchLog::last_dispatch(deps.storage)?;
     let oracle = OracleRef::try_from(config.oracle.clone(), &deps.querier)?;
 
     let lpp_address = config.lpp.clone();
     let lpp = LppRef::try_new(lpp_address.clone(), &deps.querier)?;
     let emitter: Emitter = lpp.execute(
-        Dispatch::new(oracle, last_dispatch, config, block_time, deps.querier)?,
+        Dispatch::new(
+            deps.as_ref(),
+            oracle,
+            last_dispatch,
+            config,
+            block_time,
+            deps.querier,
+        )?,
         &deps.querier,
     )?;
     // Store the current time for use for the next calculation.
@@ -206,7 +213,7 @@ mod tests {
         let msg = ExecuteMsg::Config { cadence_hours: 20 };
         let res = execute(deps.as_mut(), mock_env(), unauth_info, msg);
         match res {
-            Err(ContractError::Unauthorized {}) => {}
+            Err(ContractError::Unauthorized(..)) => {}
             _ => panic!("Must return unauthorized error"),
         }
 

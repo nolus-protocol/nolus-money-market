@@ -22,7 +22,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    mut deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -32,8 +32,10 @@ pub fn instantiate(
     let treasury = validate_addr(deps.as_ref(), msg.treasury)?;
     let timealarms = validate_addr(deps.as_ref(), msg.timealarms)?;
 
-    Config::new(info.sender, msg.cadence_hours, treasury, timealarms.clone())
-        .store(deps.storage)?;
+    crate::access_control::OWNER.set_address(deps.branch(), info.sender)?;
+    crate::access_control::TIMEALARMS.set_address(deps.branch(), timealarms.clone())?;
+
+    Config::new(msg.cadence_hours, treasury).store(deps.storage)?;
     let subscribe_msg = Profit::alarm_subscribe_msg(
         &timealarms,
         env.block.time,
@@ -152,7 +154,7 @@ mod tests {
         let msg = ExecuteMsg::Config { cadence_hours: 20 };
         let res = execute(deps.as_mut(), mock_env(), unauth_info, msg);
         match res {
-            Err(ContractError::Unauthorized {}) => {}
+            Err(ContractError::Unauthorized(..)) => {}
             _ => panic!("Must return unauthorized error"),
         }
 

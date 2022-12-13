@@ -6,6 +6,7 @@ edition.workspace = true
 license.workspace = true
 
 [features]
+access-control = ["dep:cw-controllers"]
 testing = []
 
 [dependencies]
@@ -16,6 +17,8 @@ prost = "0.11.0"
 thiserror = { workspace = true }
 serde = { workspace = true }
 serde-json-wasm = { workspace = true }
+
+cw-controllers = { workspace = true, optional = true }
 
 [dev-dependencies]
 finance = { path = "../../packages/finance", features = ["testing"] }

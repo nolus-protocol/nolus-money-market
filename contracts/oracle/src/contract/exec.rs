@@ -50,10 +50,9 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
     {
         match self.msg {
             ExecuteMsg::SwapTree { tree } => {
-                let config = Config::load(self.deps.storage)?;
-                if self.sender != config.owner {
-                    return Err(ContractError::Unauthorized {});
-                }
+                crate::access_control::OWNER
+                    .assert_address::<_, Self::Error>(self.deps.as_ref(), &self.sender)?;
+
                 SupportedPairs::<OracleBase>::new(tree)?
                     .validate_tickers()?
                     .save(self.deps.storage)?;

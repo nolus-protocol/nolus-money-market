@@ -95,9 +95,12 @@ mod test {
         let mut lpp_balance = 0;
         let deposit = 20_000;
 
+        crate::access_control::OWNER
+            .set_address(deps.as_mut(), Addr::unchecked("admin"))
+            .unwrap();
+
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,
-            Addr::unchecked("admin"),
             TheCurrency::TICKER.into(),
             1000u64.into(),
         )

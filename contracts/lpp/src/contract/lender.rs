@@ -137,9 +137,12 @@ mod test {
         let rest_nlpn = 1000u128;
         let zero = 0u128;
 
+        crate::access_control::OWNER
+            .set_address(deps.as_mut(), Addr::unchecked("admin"))
+            .unwrap();
+
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,
-            Addr::unchecked("admin"),
             TheCurrency::TICKER.into(),
             1000u64.into(),
         )

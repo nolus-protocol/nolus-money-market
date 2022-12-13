@@ -9,3 +9,6 @@ pub mod error;
 pub mod ica;
 pub mod ids;
 pub mod reply;
+
+#[cfg(feature = "access-control")]
+pub mod access_control;

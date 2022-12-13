@@ -3,7 +3,7 @@ use finance::{coin::Coin, currency::Currency, duration::Duration, interest::Inte
 use lpp::stub::{Lpp as LppTrait, WithLpp};
 use oracle::{convert, stub::OracleRef};
 use platform::batch::{Batch, Emit, Emitter};
-use sdk::cosmwasm_std::{QuerierWrapper, StdResult, Timestamp};
+use sdk::cosmwasm_std::{Deps, QuerierWrapper, StdResult, Timestamp};
 
 use crate::{cmd::Result as DispatcherResult, state::Config, ContractError};
 
@@ -55,6 +55,7 @@ impl<'a> WithLpp for Dispatch<'a> {
 
 impl<'a> Dispatch<'a> {
     pub fn new(
+        deps: Deps<'a>,
         oracle_ref: OracleRef,
         last_dispatch: Timestamp,
         config: Config,
@@ -62,6 +63,7 @@ impl<'a> Dispatch<'a> {
         querier: QuerierWrapper<'a>,
     ) -> StdResult<Dispatch<'a>> {
         Ok(Self {
+            deps,
             oracle_ref,
             last_dispatch,
             config,
@@ -91,7 +93,7 @@ impl<'a> Dispatch<'a> {
 
         batch
             .schedule_execute_wasm_no_reply::<_, Nls>(
-                &self.config.timealarms,
+                &crate::access_control::TIMEALARMS.get_address::<_, ContractError>(self.deps)?,
                 &timealarms::msg::ExecuteMsg::AddAlarm {
                     time: self.block_time + Duration::from_hours(self.config.cadence_hours),
                 },

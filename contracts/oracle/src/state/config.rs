@@ -13,13 +13,11 @@ impl Config {
 
     pub fn new(
         denom: String,
-        owner: Addr,
         price_feed_period: Duration,
         expected_feeders: Percent,
     ) -> Self {
         Config {
             base_asset: denom,
-            owner,
             price_feed_period,
             expected_feeders,
         }

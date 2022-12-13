@@ -34,15 +34,16 @@ struct InstantiateWithLpn<'a> {
 
 impl<'a> InstantiateWithLpn<'a> {
     // could be moved directly to on<LPN>()
-    fn do_work<LPN>(self) -> Result<Response, ContractError>
+    fn do_work<LPN>(mut self) -> Result<Response, ContractError>
     where
         LPN: 'static + Currency + Serialize + DeserializeOwned,
     {
         set_contract_version(self.deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
+        crate::access_control::OWNER.set_address(self.deps.branch(), self.info.sender.clone())?;
+
         LiquidityPool::<LPN>::store(
             self.deps.storage,
-            self.info.sender,
             self.msg.lpn_ticker,
             self.msg.lease_code_id,
         )?;

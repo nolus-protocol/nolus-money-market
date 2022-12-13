@@ -2,13 +2,14 @@ use currency::native::Nls;
 use finance::{coin::Coin, currency::Currency};
 use oracle::stub::OracleRef;
 use platform::batch::Batch;
-use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Deps, QuerierWrapper, Timestamp};
 
 use crate::state::Config;
 
 mod dispatch;
 
 pub struct Dispatch<'a> {
+    deps: Deps<'a>,
     last_dispatch: Timestamp,
     oracle_ref: OracleRef,
     config: Config,

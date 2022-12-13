@@ -9,6 +9,7 @@ use finance::{
     currency::Currency, duration::Duration, liability::Liability, percent::Percent,
     test::currency::Usdc,
 };
+use platform::access_control::Unauthorized;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
@@ -114,7 +115,6 @@ fn proper_initialization() {
     let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_response: ConfigResponse = from_binary(&res).unwrap();
     let config = config_response.config;
-    assert_eq!(CREATOR, config.owner);
     assert_eq!(1, config.lease_code_id);
     assert_eq!(lpp_addr, config.lpp_addr);
 }
@@ -223,7 +223,7 @@ fn test_update_config_unauthorized() {
     };
 
     let err = execute(deps.as_mut(), mock_env(), customer(), msg).unwrap_err();
-    assert_eq!(ContractError::Unauthorized {}, err);
+    assert_eq!(ContractError::Unauthorized(Unauthorized), err);
 }
 
 #[test]
@@ -248,7 +248,7 @@ fn test_setup_dex_unauthorized() {
     setup_test_case(deps.as_mut());
 
     let res = setup_dex(deps.as_mut(), customer());
-    assert_eq!(Err(ContractError::Unauthorized {}), res);
+    assert_eq!(Err(ContractError::Unauthorized(Unauthorized)), res);
 }
 
 #[test]
@@ -262,7 +262,7 @@ fn test_setup_dex_again() {
     assert_eq!(Err(ContractError::DEXConnectivityAlreadySetup {}), res);
 
     let res = setup_dex(deps.as_mut(), customer());
-    assert_eq!(Err(ContractError::Unauthorized {}), res);
+    assert_eq!(Err(ContractError::Unauthorized(Unauthorized)), res);
 }
 
 #[test]
