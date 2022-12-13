@@ -1,10 +1,5 @@
-use currency::{lease::Osmo, lpn::Usdc};
-use finance::{
-    coin::Coin,
-    currency::Currency,
-    duration::Duration,
-    price::{self, dto::PriceDTO},
-};
+use currency::lpn::Usdc;
+use finance::{currency::Currency, duration::Duration};
 use sdk::{
     cosmwasm_std::{coin, Addr, Timestamp},
     cw_multi_test::Executor,
@@ -101,34 +96,11 @@ fn test_time_notify() {
         vec![coin(1_000_000_000_000_000_000_000_000, Lpn::BANK_SYMBOL)],
     );
 
-    test_case.init_lpp_with_funds(
-        None,
-        vec![coin(
-            5_000_000_000_000_000_000_000_000_000,
-            Lpn::BANK_SYMBOL,
-        )],
-    );
     test_case.init_timealarms();
-    test_case.init_oracle(None);
 
     let timealarms = test_case.timealarms.clone().unwrap();
-    let oracle = test_case.oracle.clone().unwrap();
 
-    let feed_msg = oracle::msg::ExecuteMsg::FeedPrices {
-        prices: vec![PriceDTO::try_from(
-            price::total_of(Coin::<Osmo>::new(5)).is(Coin::<Usdc>::new(7)),
-        )
-        .unwrap()],
-    };
-
-    // prepare oracle
-    let msg = oracle::msg::ExecuteMsg::RegisterFeeder {
-        feeder_address: ADMIN.to_string(),
-    };
-    test_case
-        .app
-        .execute_contract(Addr::unchecked(ADMIN), oracle.clone(), &msg, &[])
-        .unwrap();
+    let dispatch_msg = timealarms::msg::ExecuteMsg::DispatchAlarms { max_count: 100 };
 
     test_case
         .app
@@ -149,7 +121,7 @@ fn test_time_notify() {
     };
     test_case
         .app
-        .execute_contract(lease.clone(), timealarms, &alarm_msg, &[])
+        .execute_contract(lease.clone(), timealarms.clone(), &alarm_msg, &[])
         .unwrap();
 
     // advance by 5 seconds
@@ -158,7 +130,12 @@ fn test_time_notify() {
     // trigger notification, the GATE is open, events are stacked for the whole chain of contracts calls
     let resp = test_case
         .app
-        .execute_contract(Addr::unchecked(ADMIN), oracle.clone(), &feed_msg, &[])
+        .execute_contract(
+            Addr::unchecked(ADMIN),
+            timealarms.clone(),
+            &dispatch_msg,
+            &[],
+        )
         .unwrap();
     let attr = resp
         .events
@@ -178,7 +155,12 @@ fn test_time_notify() {
         .unwrap();
     let resp = test_case
         .app
-        .execute_contract(Addr::unchecked(ADMIN), oracle.clone(), &feed_msg, &[])
+        .execute_contract(
+            Addr::unchecked(ADMIN),
+            timealarms.clone(),
+            &dispatch_msg,
+            &[],
+        )
         .unwrap();
     let attr = resp
         .events
@@ -196,7 +178,7 @@ fn test_time_notify() {
         .unwrap();
     let resp = test_case
         .app
-        .execute_contract(Addr::unchecked(ADMIN), oracle, &feed_msg, &[])
+        .execute_contract(Addr::unchecked(ADMIN), timealarms, &dispatch_msg, &[])
         .unwrap();
     let attr = resp
         .events

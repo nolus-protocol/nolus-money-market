@@ -1,7 +1,6 @@
-use cosmwasm_std::Timestamp;
 use thiserror::Error;
 
-use sdk::cosmwasm_std::{Addr, StdError};
+use sdk::cosmwasm_std::{Addr, StdError, Timestamp};
 use time_oracle::AlarmError;
 
 #[derive(Error, Debug, PartialEq)]

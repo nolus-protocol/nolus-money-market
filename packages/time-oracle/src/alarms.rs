@@ -1,13 +1,14 @@
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{Addr, Order, StdResult, Storage, Timestamp},
+    cosmwasm_std::{Addr, Order, StdError, StdResult, Storage, Timestamp},
     cw_storage_plus::{Bound, Index, IndexList, IndexedMap, Item, MultiIndex},
 };
 
 use crate::AlarmError;
 
 type TimeSeconds = u64;
+pub type AlarmsCount = u32;
 pub type Id = u64;
 
 fn as_seconds(from: Timestamp) -> TimeSeconds {
@@ -72,26 +73,42 @@ impl<'a> Alarms<'a> {
         self.alarms().remove(storage, id)
     }
 
+    fn alarms_selection<'b>(
+        &self,
+        storage: &'b dyn Storage,
+        ctime: Timestamp,
+        max_id: Id,
+    ) -> impl Iterator<Item = Result<(Id, Alarm), StdError>> + 'b {
+        self.alarms().idx.alarms.range(
+            storage,
+            None,
+            Some(Bound::inclusive((as_seconds(ctime), max_id))),
+            Order::Ascending,
+        )
+    }
+
     pub fn notify(
         &self,
         storage: &mut dyn Storage,
         dispatcher: &mut impl AlarmDispatcher,
         ctime: Timestamp,
-    ) -> Result<(), AlarmError> {
+        max_count: AlarmsCount,
+    ) -> Result<AlarmsCount, AlarmError> {
         let max_id = self.next_id.may_load(storage)?.unwrap_or_default();
 
-        let timestamps = self.alarms().idx.alarms.range(
-            storage,
-            None,
-            Some(Bound::inclusive((as_seconds(ctime), max_id))),
-            Order::Ascending,
-        );
-        for timestamp in timestamps {
-            let (id, alarm) = timestamp?;
-            dispatcher.send_to(id, alarm.addr, ctime)?;
-        }
+        self.alarms_selection(storage, ctime, max_id)
+            .take(max_count.try_into()?)
+            .try_fold(0, |count, timestamp| -> Result<AlarmsCount, AlarmError> {
+                let (id, alarm) = timestamp?;
+                dispatcher.send_to(id, alarm.addr, ctime)?;
+                Ok(count + 1)
+            })
+    }
 
-        Ok(())
+    pub fn any_alarm(&self, storage: &dyn Storage, ctime: Timestamp) -> Result<bool, AlarmError> {
+        let max_id = self.next_id.may_load(storage)?.unwrap_or_default();
+
+        Ok(self.alarms_selection(storage, ctime, max_id).any(|_| true))
     }
 }
 
@@ -129,17 +146,24 @@ pub mod tests {
         let alarms = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
         let storage = &mut testing::mock_dependencies().storage;
 
+        let t0 = Timestamp::from_seconds(0);
         let t1 = Timestamp::from_seconds(1);
         let t2 = Timestamp::from_seconds(2);
+        let t3 = Timestamp::from_seconds(3);
         let addr1 = Addr::unchecked("addr1");
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
+
+        assert!(!alarms.any_alarm(storage, t3).unwrap());
 
         assert_eq!(alarms.add(storage, addr1, t1), Ok(0));
         // same timestamp
         assert_eq!(alarms.add(storage, addr2, t1), Ok(1));
         // different timestamp
         assert_eq!(alarms.add(storage, addr3, t2), Ok(2));
+
+        assert!(!alarms.any_alarm(storage, t0).unwrap());
+        assert!(alarms.any_alarm(storage, t3).unwrap());
     }
 
     #[test]
@@ -168,7 +192,7 @@ pub mod tests {
             .remove(storage, err_id)
             .expect("remove alarm with unknown id");
 
-        assert_eq!(alarms.notify(storage, &mut dispatcher, t2), Ok(()));
+        assert_eq!(alarms.notify(storage, &mut dispatcher, t2, 100), Ok(1));
         assert_eq!(dispatcher.0, [id2]);
     }
 
@@ -194,14 +218,14 @@ pub mod tests {
         // rest
         alarms.add(storage, addr4, t4).expect("can't set alarms");
 
-        assert_eq!(alarms.notify(storage, &mut dispatcher, t1), Ok(()));
+        assert_eq!(alarms.notify(storage, &mut dispatcher, t1, 100), Ok(2));
         assert_eq!(dispatcher.0, [id1, id2]);
         dispatcher
             .clean_alarms(storage, &alarms)
             .expect("can't clean up alarms db");
 
         let mut dispatcher = MockAlarmDispatcher::default();
-        assert_eq!(alarms.notify(storage, &mut dispatcher, t3), Ok(()));
+        assert_eq!(alarms.notify(storage, &mut dispatcher, t3, 100), Ok(1));
         assert_eq!(dispatcher.0, [id3]);
     }
 }

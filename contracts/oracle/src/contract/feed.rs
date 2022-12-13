@@ -2,7 +2,6 @@ use std::marker::PhantomData;
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use currency::native::Nls;
 use finance::currency::{Currency, SymbolOwned};
 use marketprice::{
     market_price::{Config as PriceConfig, PriceFeeds},
@@ -112,15 +111,7 @@ where
         oracle.feed_prices(storage, block_time, &sender_raw, &prices)?;
     }
 
-    let mut batch = Batch::default();
-    batch.schedule_execute_wasm_reply_error::<_, Nls>(
-        &oracle.config.timealarms_contract,
-        timealarms::msg::ExecuteMsg::Notify(),
-        None,
-        1,
-    )?;
-
-    Ok(Response::from(batch))
+    Ok(Response::default())
 }
 
 // TODO: optimize
