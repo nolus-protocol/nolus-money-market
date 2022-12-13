@@ -8,7 +8,7 @@ use sdk::{
     cosmwasm_std::{Addr, DepsMut, StdResult, Storage, Timestamp},
     schemars::{self, JsonSchema},
 };
-use time_oracle::{AlarmError, Alarms, Id};
+use time_oracle::{AlarmError, Alarms, AlarmsCount, Id};
 
 use crate::{
     msg::{DispatchAlarmsResponse, ExecuteAlarmMsg},
@@ -42,7 +42,7 @@ impl TimeAlarms {
     pub fn try_notify(
         storage: &mut dyn Storage,
         ctime: Timestamp,
-        max_count: u32,
+        max_count: AlarmsCount,
     ) -> Result<Response, ContractError> {
         use time_oracle::AlarmDispatcher;
 
