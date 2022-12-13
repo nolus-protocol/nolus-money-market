@@ -208,7 +208,7 @@ where
         liability: Coin<Lpn>,
         percent: Percent,
     ) -> ContractResult<Price<Asset, Lpn>> {
-        assert!(!self.amount.is_zero(), "Loan already paid!");
+        debug_assert!(!self.amount.is_zero(), "Loan already paid!");
 
         Ok(total_of(percent.of(self.amount)).is(liability))
     }

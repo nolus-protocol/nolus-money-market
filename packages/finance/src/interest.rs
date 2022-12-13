@@ -52,7 +52,7 @@ where
 
     #[track_caller]
     pub fn shift_start(self, delta: Duration) -> Self {
-        assert!(delta <= self.length);
+        debug_assert!(delta <= self.length);
         let res = Self {
             start: self.start + delta,
             length: self.length - delta,

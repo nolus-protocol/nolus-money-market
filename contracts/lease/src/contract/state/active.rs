@@ -43,7 +43,7 @@ impl Active {
         amount: LeaseCoin,
         deps: (LppLenderRef, OracleRef),
     ) -> ContractResult<(Emitter, Self)> {
-        assert_eq!(downpayment.ticker(), loan.principal.ticker());
+        debug_assert_eq!(downpayment.ticker(), loan.principal.ticker());
 
         let IntoDTOResult { lease, batch } = form.into_lease(
             &env.contract.address,

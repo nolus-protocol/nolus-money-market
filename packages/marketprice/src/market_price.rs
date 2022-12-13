@@ -93,7 +93,7 @@ impl<'m> PriceFeeds<'m> {
         Iter: Iterator<Item = Symbol<'a>> + DoubleEndedIterator,
     {
         let mut root_to_leaf = leaf_to_root.rev();
-        assert_eq!(Some(QuoteC::TICKER), root_to_leaf.next());
+        debug_assert_eq!(Some(QuoteC::TICKER), root_to_leaf.next());
         PriceCollect::do_collect(
             root_to_leaf,
             self,
