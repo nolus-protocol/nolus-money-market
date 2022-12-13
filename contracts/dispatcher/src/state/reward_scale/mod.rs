@@ -55,6 +55,8 @@ impl RewardScale {
             return Err(StdError::generic_err("Argument vector contains no bars!"));
         }
 
+        bars.sort_unstable();
+
         if bars
             .iter()
             .zip(bars.iter().skip(1))
