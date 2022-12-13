@@ -188,9 +188,9 @@ mod tests {
         assert_eq!(res.get_apr(149999), Percent::from_permille(12));
         assert_eq!(res.get_apr(150000), Percent::from_permille(15));
         assert_eq!(res.get_apr(200300), Percent::from_permille(15));
-        assert_eq!(res.get_apr(3000000), Percent::from_permille(20));
-        assert_eq!(res.get_apr(3000200), Percent::from_permille(20));
-        assert_eq!(res.get_apr(13000200), Percent::from_permille(20));
+        assert_eq!(res.get_apr(300000), Percent::from_permille(20));
+        assert_eq!(res.get_apr(300200), Percent::from_permille(20));
+        assert_eq!(res.get_apr(1300200), Percent::from_permille(20));
         assert_eq!(res.get_apr(Amount::MAX), Percent::from_permille(20));
         assert_eq!(res.get_apr(Amount::MIN), Percent::from_permille(6));
     }
