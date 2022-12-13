@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::percent::Percent;
+use finance::{coin::Amount, percent::Percent};
 use sdk::{
     cosmwasm_std::{StdError, StdResult},
     schemars::{self, JsonSchema},
@@ -43,7 +43,7 @@ impl RewardScale {
         self.bars.append(&mut bars);
     }
 
-    pub fn get_apr(&self, lpp_balance: u128) -> StdResult<Percent> {
+    pub fn get_apr(&self, lpp_balance: Amount) -> StdResult<Percent> {
         self.bars
             .binary_search_by_key(&lpp_balance, |bar| bar.tvl.into())
             .map_or_else(|index| index.checked_sub(1), Some)
@@ -56,7 +56,7 @@ impl TryFrom<Vec<Bar>> for RewardScale {
     type Error = StdError;
 
     fn try_from(mut bars: Vec<Bar>) -> Result<Self, Self::Error> {
-        if !bars.iter().any(|bar| bar.tvl == Default::default()) {
+        if !bars.iter().any(|bar| bar.tvl == u32::default()) {
             return Err(StdError::generic_err("No zero TVL reward scale bar found!"));
         }
 
@@ -76,6 +76,7 @@ impl TryFrom<Vec<Bar>> for RewardScale {
 
 #[cfg(test)]
 mod tests {
+    use finance::coin::Amount;
     use finance::percent::Percent;
 
     use crate::state::reward_scale::Bar;
@@ -128,7 +129,10 @@ mod tests {
         assert_eq!(res.get_apr(3000000).unwrap(), Percent::from_permille(20));
         assert_eq!(res.get_apr(3000200).unwrap(), Percent::from_permille(20));
         assert_eq!(res.get_apr(13000200).unwrap(), Percent::from_permille(20));
-        assert_eq!(res.get_apr(u128::MAX).unwrap(), Percent::from_permille(20));
-        assert_eq!(res.get_apr(u128::MIN).unwrap(), Percent::from_permille(6));
+        assert_eq!(
+            res.get_apr(Amount::MAX).unwrap(),
+            Percent::from_permille(20)
+        );
+        assert_eq!(res.get_apr(Amount::MIN).unwrap(), Percent::from_permille(6));
     }
 }
