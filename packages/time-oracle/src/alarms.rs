@@ -95,18 +95,14 @@ impl<'a> Alarms<'a> {
         max_count: AlarmsCount,
     ) -> Result<AlarmsCount, AlarmError> {
         let max_id = self.next_id.may_load(storage)?.unwrap_or_default();
-        let mut count = 0;
 
-        let timestamps = self
-            .alarms_selection(storage, ctime, max_id)
-            .take(max_count.try_into()?);
-        for timestamp in timestamps {
-            let (id, alarm) = timestamp?;
-            dispatcher.send_to(id, alarm.addr, ctime)?;
-            count += 1;
-        }
-
-        Ok(count)
+        self.alarms_selection(storage, ctime, max_id)
+            .take(max_count.try_into()?)
+            .try_fold(0, |count, timestamp| -> Result<AlarmsCount, AlarmError> {
+                let (id, alarm) = timestamp?;
+                dispatcher.send_to(id, alarm.addr, ctime)?;
+                Ok(count + 1)
+            })
     }
 
     pub fn any_alarm(&self, storage: &dyn Storage, ctime: Timestamp) -> Result<bool, AlarmError> {
