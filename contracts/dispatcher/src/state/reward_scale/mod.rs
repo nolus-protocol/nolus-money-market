@@ -51,10 +51,6 @@ impl RewardScale {
     }
 
     pub fn add(&mut self, mut bars: Vec<Bar>) -> StdResult<()> {
-        if bars.is_empty() {
-            return Err(StdError::generic_err("Argument vector contains no bars!"));
-        }
-
         bars.sort_unstable();
 
         if bars
