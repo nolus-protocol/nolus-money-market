@@ -5,7 +5,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::state::reward_scales::RewardScales;
+use crate::state::reward_scale::RewardScale;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -14,7 +14,7 @@ pub struct InstantiateMsg {
     pub oracle: Addr,
     pub timealarms: Addr,
     pub treasury: Addr,
-    pub tvl_to_apr: RewardScales,
+    pub tvl_to_apr: RewardScale,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

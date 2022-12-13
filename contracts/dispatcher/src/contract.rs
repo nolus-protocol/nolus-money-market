@@ -154,7 +154,7 @@ mod tests {
 
     use crate::{
         msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
-        state::reward_scales::{RewardScale, RewardScales},
+        state::reward_scale::{Bar, RewardScale},
         ContractError,
     };
 
@@ -167,9 +167,9 @@ mod tests {
             oracle: Addr::unchecked("oracle"),
             timealarms: Addr::unchecked("timealarms"),
             treasury: Addr::unchecked("treasury"),
-            tvl_to_apr: RewardScales::try_from(vec![
-                RewardScale::new(0, 5),
-                RewardScale::new(1000000, 10),
+            tvl_to_apr: RewardScale::try_from(vec![
+                Bar::new(0, 5),
+                Bar::new(1000000, 10),
             ])
             .unwrap(),
         };

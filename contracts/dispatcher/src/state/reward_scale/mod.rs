@@ -11,27 +11,27 @@ use sdk::{
 mod unchecked;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-pub struct RewardScale {
+pub struct Bar {
     pub tvl: u32,
     pub apr: Percent,
 }
 
-impl RewardScale {
+impl Bar {
     pub fn new(tvl: u32, apr: u32) -> Self {
-        RewardScale {
+        Bar {
             tvl,
             apr: Percent::from_permille(apr),
         }
     }
 }
 
-impl PartialOrd for RewardScale {
+impl PartialOrd for Bar {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for RewardScale {
+impl Ord for Bar {
     fn cmp(&self, other: &Self) -> Ordering {
         self.tvl.cmp(&other.tvl)
     }
@@ -41,31 +41,31 @@ impl Ord for RewardScale {
 // The list represents intervals of TVL amounts starting from the given min TVL.
 // A valid configuration shall include a pair with minTVL_thousands == 0.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
-#[serde(try_from = "unchecked::RewardScales", into = "unchecked::RewardScales")]
-pub struct RewardScales {
-    scales: Vec<RewardScale>,
+#[serde(try_from = "unchecked::RewardScale", into = "unchecked::RewardScale")]
+pub struct RewardScale {
+    bars: Vec<Bar>,
 }
 
-impl RewardScales {
+impl RewardScale {
     pub fn new(initial_apr: u32) -> Self {
-        RewardScales {
-            scales: vec![RewardScale::new(0, initial_apr)],
+        RewardScale {
+            bars: vec![Bar::new(0, initial_apr)],
         }
     }
 
-    pub fn add(&mut self, mut stops: Vec<RewardScale>) {
-        self.scales.append(&mut stops);
+    pub fn add(&mut self, mut stops: Vec<Bar>) {
+        self.bars.append(&mut stops);
     }
 
     pub fn get_apr(&self, lpp_balance: u128) -> StdResult<Percent> {
         let idx = match self
-            .scales
-            .binary_search(&RewardScale::new(lpp_balance as u32, 0))
+            .bars
+            .binary_search(&Bar::new(lpp_balance as u32, 0))
         {
             Ok(i) => i,
             Err(e) => e - 1,
         };
-        let arp = match self.scales.get(idx) {
+        let arp = match self.bars.get(idx) {
             Some(tvl) => tvl.apr,
             None => return Err(StdError::generic_err("ARP not found")),
         };
@@ -74,26 +74,26 @@ impl RewardScales {
     }
 }
 
-impl TryFrom<Vec<RewardScale>> for RewardScales {
+impl TryFrom<Vec<Bar>> for RewardScale {
     type Error = StdError;
 
-    fn try_from(mut reward_scales: Vec<RewardScale>) -> Result<Self, Self::Error> {
-        if !reward_scales.iter().any(|reward_scale| reward_scale.tvl == 0) {
-            return Err(StdError::generic_err("No zero TVL reward scale found!"));
+    fn try_from(mut reward_scale: Vec<Bar>) -> Result<Self, Self::Error> {
+        if !reward_scale.iter().any(|bar| bar.tvl == 0) {
+            return Err(StdError::generic_err("No zero TVL reward scale bar found!"));
         }
 
-        reward_scales.sort_unstable();
+        reward_scale.sort_unstable();
 
-        if reward_scales
+        if reward_scale
             .iter()
-            .zip(reward_scales.iter().skip(1))
+            .zip(reward_scale.iter().skip(1))
             .any(|(left, right)| left.tvl == right.tvl)
         {
             return Err(StdError::generic_err("Duplicate reward scales found!"));
         }
 
-        Ok(RewardScales {
-            scales: reward_scales,
+        Ok(RewardScale {
+            bars: reward_scale,
         })
     }
 }
@@ -102,43 +102,43 @@ impl TryFrom<Vec<RewardScale>> for RewardScales {
 mod tests {
     use finance::percent::Percent;
 
-    use crate::state::reward_scales::RewardScale;
+    use crate::state::reward_scale::Bar;
 
-    use super::RewardScales;
+    use super::RewardScale;
 
     #[test]
     fn interval_new() {
-        let cfg = RewardScales::new(6);
-        let initial = cfg.scales.get(0).unwrap();
+        let cfg = RewardScale::new(6);
+        let initial = cfg.bars.get(0).unwrap();
         assert_eq!(0, initial.tvl);
         assert_eq!(Percent::from_permille(6), initial.apr);
-        assert_eq!(1, cfg.scales.len());
+        assert_eq!(1, cfg.bars.len());
     }
 
     #[test]
     fn interval_from() {
-        let res = RewardScales::try_from(vec![]);
+        let res = RewardScale::try_from(vec![]);
         assert!(res.is_err());
 
-        let res = RewardScales::try_from(vec![RewardScale::new(30000, 6)]);
+        let res = RewardScale::try_from(vec![Bar::new(30000, 6)]);
         assert!(res.is_err());
 
-        let res = RewardScales::try_from(vec![RewardScale::new(0, 6), RewardScale::new(30000, 10)])
+        let res = RewardScale::try_from(vec![Bar::new(0, 6), Bar::new(30000, 10)])
             .unwrap();
-        assert_eq!(res.scales.len(), 2);
-        assert_eq!(res.scales.get(0).unwrap().tvl, 0);
-        assert_eq!(res.scales.get(0).unwrap().apr, Percent::from_permille(6));
-        assert_eq!(res.scales.get(1).unwrap().tvl, 30000);
-        assert_eq!(res.scales.get(1).unwrap().apr, Percent::from_permille(10));
+        assert_eq!(res.bars.len(), 2);
+        assert_eq!(res.bars.get(0).unwrap().tvl, 0);
+        assert_eq!(res.bars.get(0).unwrap().apr, Percent::from_permille(6));
+        assert_eq!(res.bars.get(1).unwrap().tvl, 30000);
+        assert_eq!(res.bars.get(1).unwrap().apr, Percent::from_permille(10));
     }
     #[test]
     fn interval_get_apr() {
-        let res = RewardScales::try_from(vec![
-            RewardScale::new(0, 6),
-            RewardScale::new(30000, 10),
-            RewardScale::new(150000, 15),
-            RewardScale::new(3000000, 20),
-            RewardScale::new(100000, 12),
+        let res = RewardScale::try_from(vec![
+            Bar::new(0, 6),
+            Bar::new(30000, 10),
+            Bar::new(150000, 15),
+            Bar::new(3000000, 20),
+            Bar::new(100000, 12),
         ])
         .unwrap();
         assert_eq!(res.get_apr(0).unwrap(), Percent::from_permille(6));

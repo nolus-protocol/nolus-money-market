@@ -5,7 +5,7 @@ use sdk::{
 
 use crate::error::ContractError;
 
-use super::{reward_scales::RewardScales, Config};
+use super::{reward_scale::RewardScale, Config};
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("dispatcher_config");
@@ -17,7 +17,7 @@ impl Config {
         oracle: Addr,
         timealarms: Addr,
         treasury: Addr,
-        tvl_to_apr: RewardScales,
+        tvl_to_apr: RewardScale,
     ) -> Self {
         Config {
             cadence_hours,

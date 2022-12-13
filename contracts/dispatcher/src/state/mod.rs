@@ -5,11 +5,11 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use self::reward_scales::RewardScales;
+use self::reward_scale::RewardScale;
 
 pub mod config;
 pub mod dispatch_log;
-pub mod reward_scales;
+pub mod reward_scale;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct DispatchLog {
@@ -30,5 +30,5 @@ pub struct Config {
     // address to time alarms contract
     pub timealarms: Addr,
     // A list of (minTVL_MNLS: u32, APR%o) which defines the APR as per the TVL.
-    pub tvl_to_apr: RewardScales,
+    pub tvl_to_apr: RewardScale,
 }
