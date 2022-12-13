@@ -34,7 +34,7 @@ prepare_node:
     - cargo install cargo-workspaces
 
 format:cargo:
-  stage: format
+  stage: formatting
   script:
     - cargo fmt --check
 
