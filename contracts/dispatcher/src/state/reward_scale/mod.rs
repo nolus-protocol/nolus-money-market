@@ -55,6 +55,14 @@ impl RewardScale {
             return Err(StdError::generic_err("Argument vector contains no bars!"));
         }
 
+        if bars
+            .iter()
+            .zip(bars.iter().skip(1))
+            .any(|(left, right)| left.tvl == right.tvl)
+        {
+            return Err(StdError::generic_err("Duplicate reward scales found!"));
+        }
+
         if bars.iter().any(|bar| {
             self.bars
                 .binary_search_by_key(&bar.tvl, |bar| bar.tvl)
@@ -85,21 +93,19 @@ impl TryFrom<Vec<Bar>> for RewardScale {
     type Error = StdError;
 
     fn try_from(mut bars: Vec<Bar>) -> Result<Self, Self::Error> {
+        if bars.is_empty() {
+            return Err(StdError::generic_err("Argument vector contains no bars!"));
+        }
+
         if !bars.iter().any(|bar| bar.tvl == Default::default()) {
             return Err(StdError::generic_err("No zero TVL reward scale bar found!"));
         }
 
-        bars.sort_unstable();
+        let mut value = Self { bars: vec![] };
 
-        if bars
-            .iter()
-            .zip(bars.iter().skip(1))
-            .any(|(left, right)| left.tvl == right.tvl)
-        {
-            return Err(StdError::generic_err("Duplicate reward scales found!"));
-        }
+        value.add(bars)?;
 
-        Ok(RewardScale { bars })
+        Ok(value)
     }
 }
 
