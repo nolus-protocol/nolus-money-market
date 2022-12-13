@@ -71,11 +71,11 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                     prices,
                 )
             }
-            ExecuteMsg::DispatchAlarms { max_count } => { 
-                feed::try_notify_alarms::<OracleBase>(self.deps.storage, 
-                    self.env.block.time,
-                    max_count)
-            }
+            ExecuteMsg::DispatchAlarms { max_count } => feed::try_notify_alarms::<OracleBase>(
+                self.deps.storage,
+                self.env.block.time,
+                max_count,
+            ),
             _ => {
                 unreachable!()
             }

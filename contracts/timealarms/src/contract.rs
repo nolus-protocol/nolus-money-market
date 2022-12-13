@@ -7,12 +7,12 @@ use sdk::{
     cw2::set_contract_version,
 };
 
+use crate::msg::QueryMsg;
 use crate::{
     alarms::TimeAlarms,
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg},
 };
-use crate::msg::QueryMsg;
 
 // version info for migration info
 const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
