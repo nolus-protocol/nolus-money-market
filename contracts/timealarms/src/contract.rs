@@ -6,6 +6,7 @@ use sdk::{
     cw2::set_contract_version,
 };
 
+use crate::msg::QueryMsg;
 use crate::{
     alarms::TimeAlarms,
     error::ContractError,
