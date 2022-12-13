@@ -126,7 +126,7 @@ impl Deposit {
         let partial_price = price::total_of(globals.balance_nlpn).is(rewards);
 
         if let Some(ref mut reward_per_token) = globals.reward_per_token {
-            *reward_per_token = reward_per_token.lossy_add(partial_price);
+            *reward_per_token += partial_price;
         } else {
             globals.reward_per_token = Some(partial_price);
         }

@@ -47,6 +47,15 @@ where
     }
 
     #[track_caller]
+    pub fn checked_add(self, rhs: Self) -> Option<Self> {
+        let may_amount = self.amount.checked_add(rhs.amount);
+        may_amount.map(|amount| Self {
+            amount,
+            ticker: self.ticker,
+        })
+    }
+
+    #[track_caller]
     pub(super) fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>)
     where
         OtherC: Currency,
@@ -63,6 +72,7 @@ where
         )
     }
 }
+
 impl<C> Add<Coin<C>> for Coin<C>
 where
     C: Currency,
@@ -71,10 +81,8 @@ where
 
     #[track_caller]
     fn add(self, rhs: Coin<C>) -> Self::Output {
-        Self::Output {
-            amount: self.amount + rhs.amount,
-            ticker: self.ticker,
-        }
+        self.checked_add(rhs)
+            .expect("should not overflow with real data")
     }
 }
 
@@ -217,6 +225,38 @@ mod test {
     fn is_zero() {
         assert!(usdc(0).is_zero());
         assert!(!usdc(1).is_zero());
+    }
+
+    #[test]
+    fn checked_add() {
+        let amount1 = 10;
+        let amount2 = 20;
+
+        assert_eq!(
+            Some(usdc(amount1 + amount2)),
+            usdc(amount1).checked_add(usdc(amount2))
+        );
+
+        assert_eq!(
+            Some(usdc(Amount::MAX)),
+            usdc(Amount::MAX).checked_add(usdc(Amount::default()))
+        );
+
+        assert_eq!(
+            Some(usdc(Amount::MAX)),
+            usdc(Amount::MAX - amount2).checked_add(usdc(amount2))
+        );
+
+        assert_eq!(
+            None,
+            usdc(Amount::MAX - amount2).checked_add(usdc(amount2 + 1))
+        );
+    }
+
+    #[test]
+    #[should_panic = "overflow with real data"]
+    fn add_panic() {
+        _ = usdc(Amount::MAX) + usdc(1);
     }
 
     #[test]

@@ -1,3 +1,5 @@
+use std::ops::{Add, AddAssign};
+
 use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
@@ -77,6 +79,22 @@ where
             amount: Coin::new(1),
             amount_quote: Coin::new(1),
         }
+    }
+
+    pub fn checked_add(self, rhs: Self) -> Option<Self> {
+        // let b1 = b / gcd(b, d), and d1 = d / gcd(b, d), then
+        // a / b + c / d = (a * d1 + c * b1) / (b1 * d1 * gcd(b, d))
+        // taking into account that Price is like amount_quote/amount
+        let (a1, c1) = self.amount.into_coprime_with(rhs.amount);
+        debug_assert_eq!(0, Amount::from(self.amount) % Amount::from(a1));
+        debug_assert_eq!(0, Amount::from(rhs.amount) % Amount::from(c1));
+        let gcd: Amount = (self.amount / Amount::from(a1)).into();
+        debug_assert_eq!(gcd, Amount::from(rhs.amount / Amount::from(c1)));
+
+        let may_amount_quote =
+            (self.amount_quote * Amount::from(c1)).checked_add(rhs.amount_quote * Amount::from(a1));
+        let amount = a1 * c1.into() * gcd;
+        may_amount_quote.map(|amount_quote| Self::new(amount, amount_quote))
     }
 
     /// Add two prices rounding each of them to 1.10-18, simmilarly to
@@ -180,6 +198,31 @@ where
     }
 }
 
+impl<C, QuoteC> Add<Price<C, QuoteC>> for Price<C, QuoteC>
+where
+    C: Currency,
+    QuoteC: Currency,
+{
+    type Output = Price<C, QuoteC>;
+
+    fn add(self, rhs: Price<C, QuoteC>) -> Self::Output {
+        self.checked_add(rhs)
+            .or_else(|| Some(self.lossy_add(rhs)))
+            .expect("should not overflow with real data")
+    }
+}
+
+impl<C, QuoteC> AddAssign<Price<C, QuoteC>> for Price<C, QuoteC>
+where
+    C: Currency,
+    QuoteC: Currency,
+{
+    #[track_caller]
+    fn add_assign(&mut self, rhs: Price<C, QuoteC>) {
+        *self = self.add(rhs);
+    }
+}
+
 /// Calculates the amount of given coins in another currency, referred here as `quote currency`
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
@@ -194,6 +237,8 @@ where
 
 #[cfg(test)]
 mod test {
+    use std::ops::{Add, AddAssign};
+
     use sdk::cosmwasm_std::{Uint128, Uint256};
 
     use crate::{
@@ -307,14 +352,26 @@ mod test {
     }
 
     #[test]
-    fn add() {
+    fn add_no_round() {
+        add_impl(c(1), q(2), c(5), q(10), c(1), q(4));
+        add_impl(c(2), q(1), c(10), q(5), c(1), q(1));
+        add_impl(c(2), q(3), c(10), q(14), c(10), q(29));
+    }
+
+    #[test]
+    fn add_round() {
+        add_impl(c(Amount::MAX), q(1), c(1), q(1), c(1), q(1));
+    }
+
+    #[test]
+    fn lossy_add_no_round() {
         lossy_add_impl(c(1), q(2), c(5), q(10), c(1), q(4));
         lossy_add_impl(c(2), q(1), c(10), q(5), c(1), q(1));
         lossy_add_impl(c(2), q(3), c(10), q(14), c(10), q(29));
     }
 
     #[test]
-    fn lossy_add() {
+    fn lossy_add_round() {
         // 1/3 + 2/7 = 13/21 that is 0.(619047)*...
         let amount_exp = 1_000_000_000_000_000_000;
         let quote_exp = 619_047_619_047_619_047;
@@ -428,6 +485,23 @@ mod test {
         assert_eq!(input, super::total(expected, price.inv()));
     }
 
+    fn add_impl(
+        amount1: Coin,
+        quote1: QuoteCoin,
+        amount2: Coin,
+        quote2: QuoteCoin,
+        amount_exp: Coin,
+        quote_exp: QuoteCoin,
+    ) {
+        let mut price1 = price::total_of(amount1).is(quote1);
+        let price2 = price::total_of(amount2).is(quote2);
+        let exp = price::total_of(amount_exp).is(quote_exp);
+        assert_eq!(exp, price1.add(price2));
+        price1.add_assign(price2);
+        assert_eq!(exp, price1);
+    }
+
+    #[track_caller]
     fn lossy_add_impl(
         amount1: Coin,
         quote1: QuoteCoin,
