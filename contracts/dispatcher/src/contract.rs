@@ -146,12 +146,14 @@ pub fn try_dispatch(
 
 #[cfg(test)]
 mod tests {
+    use finance::percent::Percent;
     use sdk::cosmwasm_std::{
         coins, from_binary,
         testing::{mock_dependencies_with_balance, mock_env, mock_info},
         Addr, DepsMut,
     };
 
+    use crate::state::reward_scale::TotalValueLocked;
     use crate::{
         msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
         state::reward_scale::{Bar, RewardScale},
@@ -167,7 +169,17 @@ mod tests {
             oracle: Addr::unchecked("oracle"),
             timealarms: Addr::unchecked("timealarms"),
             treasury: Addr::unchecked("treasury"),
-            tvl_to_apr: RewardScale::try_from(vec![Bar::new(0, 5), Bar::new(1000000, 10)]).unwrap(),
+            tvl_to_apr: RewardScale::try_from(vec![
+                Bar {
+                    tvl: TotalValueLocked::new(0),
+                    apr: Percent::from_permille(5),
+                },
+                Bar {
+                    tvl: TotalValueLocked::new(1000),
+                    apr: Percent::from_permille(10),
+                },
+            ])
+            .unwrap(),
         };
         let info = mock_info("creator", &coins(1000, "unolus"));
 

@@ -23,7 +23,7 @@ impl<'a> WithLpp for Dispatch<'a> {
         let tvl: Coin<Lpn> = resp.balance + resp.total_principal_due + resp.total_interest_due;
 
         // get annual percentage of return from configuration
-        let apr_permille = self.config.tvl_to_apr.get_apr(tvl.into())?;
+        let apr_permille = self.config.tvl_to_apr.get_apr(tvl.into());
 
         // Calculate the reward in LPN,
         // which matches TVLdenom, since the last calculation

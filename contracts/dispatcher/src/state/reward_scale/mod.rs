@@ -8,19 +8,27 @@ use sdk::{
 
 mod unchecked;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
-pub struct Bar {
-    pub tvl: u32,
-    pub apr: Percent,
+#[derive(
+    Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Default, Serialize, Deserialize, JsonSchema,
+)]
+#[repr(transparent)]
+#[serde(transparent)]
+pub struct TotalValueLocked(u32);
+
+impl TotalValueLocked {
+    pub fn new(thousands: u32) -> Self {
+        Self(thousands)
+    }
+
+    pub fn to_amount(&self) -> Amount {
+        Amount::from(self.0) * 1000
+    }
 }
 
-impl Bar {
-    pub fn new(tvl: u32, apr: u32) -> Self {
-        Bar {
-            tvl,
-            apr: Percent::from_permille(apr),
-        }
-    }
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
+pub struct Bar {
+    pub tvl: TotalValueLocked,
+    pub apr: Percent,
 }
 
 // A list of (minTVL_thousands: u32, APR%o) which defines the APR as per the TVL.
@@ -33,22 +41,43 @@ pub struct RewardScale {
 }
 
 impl RewardScale {
-    pub fn new(initial_apr: u32) -> Self {
+    pub fn new(initial_apr: Percent) -> Self {
         RewardScale {
-            bars: vec![Bar::new(0, initial_apr)],
+            bars: vec![Bar {
+                tvl: Default::default(),
+                apr: initial_apr,
+            }],
         }
     }
 
-    pub fn add(&mut self, mut bars: Vec<Bar>) {
+    pub fn add(&mut self, mut bars: Vec<Bar>) -> StdResult<()> {
+        if bars.is_empty() {
+            return Err(StdError::generic_err("Argument vector contains no bars!"));
+        }
+
+        if bars.iter().any(|bar| {
+            self.bars
+                .binary_search_by_key(&bar.tvl, |bar| bar.tvl)
+                .is_ok()
+        }) {
+            return Err(StdError::generic_err(
+                "Argument bars duplicate already defined bars!",
+            ));
+        }
+
         self.bars.append(&mut bars);
+
+        self.bars.sort_unstable();
+
+        Ok(())
     }
 
-    pub fn get_apr(&self, lpp_balance: Amount) -> StdResult<Percent> {
-        self.bars
-            .binary_search_by_key(&lpp_balance, |bar| bar.tvl.into())
-            .map_or_else(|index| index.checked_sub(1), Some)
-            .and_then(|index| self.bars.get(index).map(|bar| bar.apr))
-            .ok_or_else(|| StdError::generic_err("ARP not found"))
+    pub fn get_apr(&self, lpp_balance: Amount) -> Percent {
+        self.bars[self
+            .bars
+            .partition_point(|bar| bar.tvl.to_amount() <= lpp_balance)
+            .saturating_sub(1)]
+        .apr
     }
 }
 
@@ -56,7 +85,7 @@ impl TryFrom<Vec<Bar>> for RewardScale {
     type Error = StdError;
 
     fn try_from(mut bars: Vec<Bar>) -> Result<Self, Self::Error> {
-        if !bars.iter().any(|bar| bar.tvl == u32::default()) {
+        if !bars.iter().any(|bar| bar.tvl == Default::default()) {
             return Err(StdError::generic_err("No zero TVL reward scale bar found!"));
         }
 
@@ -76,63 +105,87 @@ impl TryFrom<Vec<Bar>> for RewardScale {
 
 #[cfg(test)]
 mod tests {
-    use finance::coin::Amount;
-    use finance::percent::Percent;
+    use finance::{coin::Amount, percent::Percent};
 
-    use crate::state::reward_scale::Bar;
-
-    use super::RewardScale;
+    use super::{Bar, RewardScale, TotalValueLocked};
 
     #[test]
-    fn interval_new() {
-        let cfg = RewardScale::new(6);
-        let initial = cfg.bars.get(0).unwrap();
-        assert_eq!(0, initial.tvl);
-        assert_eq!(Percent::from_permille(6), initial.apr);
-        assert_eq!(1, cfg.bars.len());
+    fn rewards_scale_new() {
+        let cfg = RewardScale::new(Percent::from_permille(6));
+        let initial = cfg.bars.first().unwrap();
+        assert_eq!(initial.tvl, Default::default());
+        assert_eq!(initial.apr, Percent::from_permille(6));
+        assert_eq!(cfg.bars.len(), 1);
     }
 
     #[test]
-    fn interval_from() {
-        let res = RewardScale::try_from(vec![]);
-        assert!(res.is_err());
+    fn rewards_from() {
+        let _ = RewardScale::try_from(vec![]).unwrap_err();
 
-        let res = RewardScale::try_from(vec![Bar::new(30000, 6)]);
-        assert!(res.is_err());
+        let _ = RewardScale::try_from(vec![Bar {
+            tvl: TotalValueLocked::new(30),
+            apr: Percent::from_permille(6),
+        }])
+        .unwrap_err();
 
-        let res = RewardScale::try_from(vec![Bar::new(0, 6), Bar::new(30000, 10)]).unwrap();
-        assert_eq!(res.bars.len(), 2);
-        assert_eq!(res.bars.get(0).unwrap().tvl, 0);
-        assert_eq!(res.bars.get(0).unwrap().apr, Percent::from_permille(6));
-        assert_eq!(res.bars.get(1).unwrap().tvl, 30000);
-        assert_eq!(res.bars.get(1).unwrap().apr, Percent::from_permille(10));
-    }
-    #[test]
-    fn interval_get_apr() {
         let res = RewardScale::try_from(vec![
-            Bar::new(0, 6),
-            Bar::new(30000, 10),
-            Bar::new(150000, 15),
-            Bar::new(3000000, 20),
-            Bar::new(100000, 12),
+            Bar {
+                tvl: Default::default(),
+                apr: Percent::from_permille(6),
+            },
+            Bar {
+                tvl: TotalValueLocked::new(30),
+                apr: Percent::from_permille(10),
+            },
         ])
         .unwrap();
-        assert_eq!(res.get_apr(0).unwrap(), Percent::from_permille(6));
-        assert_eq!(res.get_apr(1000).unwrap(), Percent::from_permille(6));
-        assert_eq!(res.get_apr(29999).unwrap(), Percent::from_permille(6));
-        assert_eq!(res.get_apr(30000).unwrap(), Percent::from_permille(10));
-        assert_eq!(res.get_apr(30001).unwrap(), Percent::from_permille(10));
-        assert_eq!(res.get_apr(100051).unwrap(), Percent::from_permille(12));
-        assert_eq!(res.get_apr(149999).unwrap(), Percent::from_permille(12));
-        assert_eq!(res.get_apr(150000).unwrap(), Percent::from_permille(15));
-        assert_eq!(res.get_apr(2000300).unwrap(), Percent::from_permille(15));
-        assert_eq!(res.get_apr(3000000).unwrap(), Percent::from_permille(20));
-        assert_eq!(res.get_apr(3000200).unwrap(), Percent::from_permille(20));
-        assert_eq!(res.get_apr(13000200).unwrap(), Percent::from_permille(20));
-        assert_eq!(
-            res.get_apr(Amount::MAX).unwrap(),
-            Percent::from_permille(20)
-        );
-        assert_eq!(res.get_apr(Amount::MIN).unwrap(), Percent::from_permille(6));
+
+        assert_eq!(res.bars.len(), 2);
+        assert_eq!(res.bars[0].tvl, Default::default());
+        assert_eq!(res.bars[0].apr, Percent::from_permille(6));
+        assert_eq!(res.bars[1].tvl, TotalValueLocked::new(30));
+        assert_eq!(res.bars[1].apr, Percent::from_permille(10));
+    }
+
+    #[test]
+    fn rewards_scale_get_apr() {
+        let res = RewardScale::try_from(vec![
+            Bar {
+                tvl: Default::default(),
+                apr: Percent::from_permille(6),
+            },
+            Bar {
+                tvl: TotalValueLocked::new(30),
+                apr: Percent::from_permille(10),
+            },
+            Bar {
+                tvl: TotalValueLocked::new(150),
+                apr: Percent::from_permille(15),
+            },
+            Bar {
+                tvl: TotalValueLocked::new(300),
+                apr: Percent::from_permille(20),
+            },
+            Bar {
+                tvl: TotalValueLocked::new(100),
+                apr: Percent::from_permille(12),
+            },
+        ])
+        .unwrap();
+
+        assert_eq!(res.get_apr(0), Percent::from_permille(6));
+        assert_eq!(res.get_apr(1000), Percent::from_permille(6));
+        assert_eq!(res.get_apr(29999), Percent::from_permille(6));
+        assert_eq!(res.get_apr(30000), Percent::from_permille(10));
+        assert_eq!(res.get_apr(30001), Percent::from_permille(10));
+        assert_eq!(res.get_apr(100051), Percent::from_permille(12));
+        assert_eq!(res.get_apr(149999), Percent::from_permille(12));
+        assert_eq!(res.get_apr(150000), Percent::from_permille(15));
+        assert_eq!(res.get_apr(2000300), Percent::from_permille(15));
+        assert_eq!(res.get_apr(3000000), Percent::from_permille(20));
+        assert_eq!(res.get_apr(3000200), Percent::from_permille(20));
+        assert_eq!(res.get_apr(13000200), Percent::from_permille(20));
+        assert_eq!(res.get_apr(Amount::MAX), Percent::from_permille(20));
+        assert_eq!(res.get_apr(Amount::MIN), Percent::from_permille(6));
     }
 }
