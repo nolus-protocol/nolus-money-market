@@ -25,7 +25,7 @@ pub enum ContractError {
     #[error(
         "[Leaser] LeaseHealthyLiability% must be less than LeaseMaxLiability% and LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
     )]
-    IvalidLiability {},
+    InvalidLiability {},
 
     #[error("[Leaser] ParseError {err:?}")]
     ParseError { err: String },
