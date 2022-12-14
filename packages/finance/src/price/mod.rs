@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign};
+use std::ops::{Add, AddAssign, Div, Mul};
 
 use serde::{Deserialize, Serialize};
 
@@ -223,6 +223,21 @@ where
     }
 }
 
+// TODO for completeness implement the Sub and SubAssign counterparts
+
+impl<C, QuoteC> Div<Amount> for Price<C, QuoteC>
+where
+    C: Currency,
+    QuoteC: Currency,
+{
+    type Output = Self;
+
+    #[track_caller]
+    fn div(self, rhs: Amount) -> Self::Output {
+        Self::Output::new(self.amount.mul(rhs), self.amount_quote)
+    }
+}
+
 /// Calculates the amount of given coins in another currency, referred here as `quote currency`
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
@@ -237,7 +252,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::ops::{Add, AddAssign};
+    use std::ops::{Add, AddAssign, Div};
 
     use sdk::cosmwasm_std::{Uint128, Uint256};
 
@@ -408,7 +423,7 @@ mod test {
     }
 
     #[test]
-    fn mul() {
+    fn lossy_mul_no_round() {
         lossy_mul_impl(c(1), q(2), q(2), qq(1), c(1), qq(1));
         lossy_mul_impl(c(2), q(3), q(18), qq(5), c(12), qq(5));
         lossy_mul_impl(c(7), q(3), q(11), qq(21), c(11), qq(9));
@@ -447,6 +462,13 @@ mod test {
         let a_exp = shift_product(a, a, SHIFTS);
         let q_exp = shift_product(q1, q2, SHIFTS);
         lossy_mul_impl(c(a), q(q1), q(a), qq(q2), c(a_exp), qq(q_exp));
+    }
+
+    #[test]
+    fn div() {
+        div_impl(c(1), q(2), 5, c(5), q(2));
+        div_impl(c(1), q(2), 10, c(5), q(1));
+        div_impl(c(2), q(3), 2, c(4), q(3));
     }
 
     fn c(a: Amount) -> Coin {
@@ -538,6 +560,18 @@ mod test {
         let price2 = price::total_of(amount2).is(quote2);
         let exp = price::total_of(amount_exp).is(quote_exp);
         assert_eq!(exp, price1.lossy_mul(price2));
+    }
+
+    fn div_impl(
+        amount1: Coin,
+        quote1: QuoteCoin,
+        amount2: Amount,
+        amount_exp: Coin,
+        quote_exp: QuoteCoin,
+    ) {
+        let price1 = price::total_of(amount1).is(quote1);
+        let exp = price::total_of(amount_exp).is(quote_exp);
+        assert_eq!(exp, price1.div(amount2));
     }
 }
 

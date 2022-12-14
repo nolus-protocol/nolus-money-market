@@ -26,6 +26,7 @@ impl Config {
         required_feeders_cnt: usize,
         block_time: Timestamp,
     ) -> Self {
+        debug_assert!(Timestamp::default() + price_feed_period <= block_time);
         Config {
             price_feed_period,
             required_feeders_cnt,

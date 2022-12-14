@@ -10,6 +10,7 @@ use crate::{error::PriceFeedsError, market_price::Config};
 use self::observation::Observation;
 
 mod observation;
+mod sample;
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct PriceFeed<C, QuoteC>
@@ -47,17 +48,21 @@ where
     // in a configurable period T in seconds
     // provide the last price for a requested pair unless the previous condition is met.
     pub fn get_price(&self, config: &Config) -> Result<Price<C, QuoteC>, PriceFeedsError> {
-        // self.valid_observations(&config).filter_map(f)
-        let last_observation = self
-            .valid_observations(config)
-            .last()
-            .ok_or(PriceFeedsError::NoPrice {})?;
+        let observations = self.valid_observations(config);
+        let mut samples = sample::from_observations(
+            observations,
+            config.block_time() - config.period(),
+            config.period(), // this effectively means only one Sample. TODO add sample period config
+        );
+        // TODO add discounting factor in the config
+        let last_sample = samples.next().ok_or(PriceFeedsError::NoPrice {})?;
+        let price = last_sample.price().ok_or(PriceFeedsError::NoPrice {})?;
 
-        if !self.has_enough_feeders(config) {
-            return Err(PriceFeedsError::NoPrice {});
+        if self.has_enough_feeders(config) {
+            Ok(price)
+        } else {
+            Err(PriceFeedsError::NoPrice {})
         }
-
-        Ok(last_observation.price())
     }
 
     fn has_enough_feeders(&self, config: &Config) -> bool {
@@ -140,7 +145,7 @@ mod test {
     #[test]
     fn less_feeders_with_valid_observations() {
         let validity_period = Duration::from_secs(60);
-        let block_time = Timestamp::from_seconds(100);
+        let block_time = Timestamp::from_seconds(150);
 
         let feeder1 = Addr::unchecked("feeder1");
         let feed1_time = block_time - validity_period;

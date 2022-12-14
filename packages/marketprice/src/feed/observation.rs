@@ -3,6 +3,7 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug))]
 pub struct Observation<C, QuoteC>
 where
     C: Currency,
@@ -22,7 +23,10 @@ where
     C: Currency,
     QuoteC: Currency,
 {
-    move |o: &Observation<_, _>| o.valid(at, period)
+    move |o: &Observation<_, _>| {
+        debug_assert!(o.seen(at));
+        Duration::between(o.time, at) < period
+    }
 }
 
 impl<C, QuoteC> Observation<C, QuoteC>
@@ -50,14 +54,7 @@ where
         self.price
     }
 
-    #[track_caller]
-    fn valid(&self, at: Timestamp, validity: Duration) -> bool {
-        debug_assert!(
-            self.time <= at,
-            "An observation got at {}secs is checked for validity against a past moment at {}secs",
-            self.time,
-            at
-        );
-        self.time + validity > at
+    pub fn seen(&self, before_or_at: Timestamp) -> bool {
+        self.time <= before_or_at
     }
 }

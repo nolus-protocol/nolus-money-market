@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use finance::{fraction::Fraction, percent::Percent};
+use finance::{duration::Duration, fraction::Fraction, percent::Percent};
 use marketprice::{feeders::PriceFeeders, market_price::Config as PriceConfig};
 use sdk::{
     cosmwasm_ext::Response,
@@ -84,7 +84,9 @@ impl Feeders {
         let feeders_needed = Self::feeders_needed(all_feeders_cnt, config.expected_feeders);
 
         Ok(PriceConfig::new(
-            config.price_feed_period,
+            config
+                .price_feed_period
+                .min(Duration::from_nanos(block_time.nanos())),
             feeders_needed,
             block_time,
         ))
