@@ -1,5 +1,6 @@
 stages:
   - prepare
+  - formatting
   - check
   - test
   - build
@@ -29,7 +30,13 @@ prepare_node:
     - echo 'y' | apt install jq
     - mkdir -p $CARGO_HOME
     - rustc --version && cargo --version
+    - rustup component add rustfmt
     - cargo install cargo-workspaces
+
+format:cargo:
+  stage: formatting
+  script:
+    - cargo fmt --check
 
 lint:cargo:
   stage: check
