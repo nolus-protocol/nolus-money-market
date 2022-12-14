@@ -165,10 +165,10 @@ where
         if value <= Percent::HUNDRED {
             Ok(value)
         } else {
-            Err(DeserializeError::invalid_value(
-                serde::de::Unexpected::Unsigned(value.units().into()),
-                &"Value equal or below 1000‰!",
-            ))
+            Err(DeserializeError::custom(format!(
+                "Value equal or below 1000 expected, got {}!",
+                value.units()
+            )))
         }
     })
 }
