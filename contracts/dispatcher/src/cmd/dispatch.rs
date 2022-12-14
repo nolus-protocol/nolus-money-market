@@ -23,11 +23,11 @@ impl<'a> WithLpp for Dispatch<'a> {
         let tvl: Coin<Lpn> = resp.balance + resp.total_principal_due + resp.total_interest_due;
 
         // get annual percentage of return from configuration
-        let arp_permille = self.config.tvl_to_apr.get_apr(tvl.into())?;
+        let apr_permille = self.config.tvl_to_apr.get_apr(tvl.into())?;
 
         // Calculate the reward in LPN,
         // which matches TVLdenom, since the last calculation
-        let reward_in_lppdenom = InterestPeriod::with_interest(arp_permille)
+        let reward_in_lppdenom = InterestPeriod::with_interest(apr_permille)
             .from(self.last_dispatch)
             .spanning(Duration::between(self.last_dispatch, self.block_time))
             .interest(tvl);
