@@ -475,6 +475,7 @@ dependencies = [
  "gcd",
  "sdk",
  "serde",
+ "serde_json",
  "thiserror",
 ]
 
