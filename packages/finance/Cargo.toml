@@ -14,6 +14,3 @@ sdk = { path = "../../packages/sdk", features = ["cosmos", "schema"] }
 gcd = "2.1"
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
-
-[dev-dependencies]
-serde_json = "1"

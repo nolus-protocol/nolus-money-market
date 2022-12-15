@@ -35,3 +35,6 @@ currency = { path = "../../packages/currency", features = ["testing"] }
 finance = { path = "../../packages/finance", features = ["testing"] }
 platform = { path = "../../packages/platform", features = ["testing"] }
 schema = { path = "../../packages/schema" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+serde_json = "1"

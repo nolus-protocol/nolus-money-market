@@ -3,7 +3,7 @@ use std::{
     ops::{Add, Sub},
 };
 
-use serde::{de::Error as DeserializeError, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 use sdk::{
     cosmwasm_std::{OverflowError, OverflowOperation},
@@ -157,25 +157,8 @@ impl<'a> Sub<&'a Percent> for Percent {
     }
 }
 
-pub fn deserialize_hundred_capped<'de, D>(deserializer: D) -> Result<Percent, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    Percent::deserialize(deserializer).and_then(|value| {
-        if value <= Percent::HUNDRED {
-            Ok(value)
-        } else {
-            Err(DeserializeError::custom(format!(
-                "Value equal or below 1000 expected, got {}!",
-                value.units()
-            )))
-        }
-    })
-}
-
 #[cfg(test)]
 pub(super) mod test {
-    use std::ops::Add;
     use std::{
         fmt::{Debug, Display},
         ops::{Div, Mul},
@@ -319,26 +302,6 @@ pub(super) mod test {
         let r = Rational::new(n, d);
         let res: Percent = <Rational<Units> as Fraction<Units>>::of(&r, Percent::HUNDRED);
         assert_eq!(Percent::from_permille(n * 1000 / d), res);
-    }
-
-    #[test]
-    fn deserialize_capped() {
-        use super::deserialize_hundred_capped;
-
-        assert_eq!(
-            deserialize_hundred_capped(&mut serde_json::Deserializer::from_str(
-                &serde_json::to_string(&Percent::HUNDRED).unwrap()
-            ))
-            .unwrap(),
-            Percent::HUNDRED
-        );
-
-        assert!(
-            deserialize_hundred_capped(&mut serde_json::Deserializer::from_str(
-                &serde_json::to_string(&Percent::HUNDRED.add(Percent::from_permille(1))).unwrap()
-            ))
-            .is_err()
-        );
     }
 
     pub(crate) fn test_of<P>(permille: Units, quantity: P, exp: P)

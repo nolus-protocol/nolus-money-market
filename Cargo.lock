@@ -475,7 +475,6 @@ dependencies = [
  "gcd",
  "sdk",
  "serde",
- "serde_json",
  "thiserror",
 ]
 
@@ -661,6 +660,7 @@ dependencies = [
  "schema",
  "sdk",
  "serde",
+ "serde_json",
  "thiserror",
 ]
 

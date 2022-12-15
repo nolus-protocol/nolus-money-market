@@ -13,3 +13,5 @@ pub mod event;
 mod lpp;
 #[cfg(any(feature = "contract", test))]
 mod state;
+
+mod serde_utils;
