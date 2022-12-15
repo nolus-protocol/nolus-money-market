@@ -50,11 +50,14 @@ impl RewardScale {
         }
     }
 
-    pub fn add(self, bars: Vec<Bar>) -> StdResult<Self> {
-        self.internal_add::<false>(bars)
+    pub fn add_non_overlapping(self, bars: Vec<Bar>) -> StdResult<Self> {
+        self.internal_add_non_overlapping::<false>(bars)
     }
 
-    fn internal_add<const NEW: bool>(mut self, mut bars: Vec<Bar>) -> StdResult<Self> {
+    fn internal_add_non_overlapping<const NEW: bool>(
+        mut self,
+        mut bars: Vec<Bar>,
+    ) -> StdResult<Self> {
         self.bars.append(&mut bars);
 
         self.bars.sort_unstable();
@@ -96,7 +99,7 @@ impl TryFrom<Vec<Bar>> for RewardScale {
             return Err(StdError::generic_err("No zero TVL reward scale bar found!"));
         }
 
-        Self { bars: vec![] }.internal_add::<true>(bars)
+        Self { bars: vec![] }.internal_add_non_overlapping::<true>(bars)
     }
 }
 
