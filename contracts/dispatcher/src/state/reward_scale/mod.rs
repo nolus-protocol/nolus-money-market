@@ -50,32 +50,29 @@ impl RewardScale {
         }
     }
 
-    pub fn add(&mut self, mut bars: Vec<Bar>) -> StdResult<()> {
-        bars.sort_unstable();
+    pub fn add(self, bars: Vec<Bar>) -> StdResult<Self> {
+        self.internal_add::<false>(bars)
+    }
 
-        if bars
-            .iter()
-            .zip(bars.iter().skip(1))
-            .any(|(left, right)| left.tvl == right.tvl)
-        {
-            return Err(StdError::generic_err("Duplicate reward scales found!"));
-        }
-
-        if bars.iter().any(|bar| {
-            self.bars
-                .binary_search_by_key(&bar.tvl, |bar| bar.tvl)
-                .is_ok()
-        }) {
-            return Err(StdError::generic_err(
-                "Argument bars duplicate already defined bars!",
-            ));
-        }
-
+    fn internal_add<const NEW: bool>(mut self, mut bars: Vec<Bar>) -> StdResult<Self> {
         self.bars.append(&mut bars);
 
         self.bars.sort_unstable();
 
-        Ok(())
+        if self
+            .bars
+            .iter()
+            .zip(self.bars.iter().skip(1))
+            .any(|(left, right)| left.tvl == right.tvl)
+        {
+            return Err(StdError::generic_err(if NEW {
+                "Argument vector contains duplicates!"
+            } else {
+                "Argument vector contains duplicates of already defined bars!"
+            }));
+        }
+
+        Ok(self)
     }
 
     pub fn get_apr(&self, lpp_balance: Amount) -> Percent {
@@ -99,11 +96,7 @@ impl TryFrom<Vec<Bar>> for RewardScale {
             return Err(StdError::generic_err("No zero TVL reward scale bar found!"));
         }
 
-        let mut value = Self { bars: vec![] };
-
-        value.add(bars)?;
-
-        Ok(value)
+        Self { bars: vec![] }.internal_add::<true>(bars)
     }
 }
 
