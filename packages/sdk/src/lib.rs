@@ -18,14 +18,11 @@ pub mod testing;
 
 pub mod cosmwasm_ext {
     #[cfg(not(feature = "neutron"))]
-    pub use cosmwasm_std::{CosmosMsg, Response, SubMsg};
-
+    pub use cosmwasm_std::Empty as CustomMsg;
     #[cfg(feature = "neutron")]
-    pub type Response = cosmwasm_std::Response<neutron_sdk::bindings::msg::NeutronMsg>;
+    pub use neutron_sdk::bindings::msg::NeutronMsg as CustomMsg;
 
-    #[cfg(feature = "neutron")]
-    pub type CosmosMsg = cosmwasm_std::CosmosMsg<neutron_sdk::bindings::msg::NeutronMsg>;
-
-    #[cfg(feature = "neutron")]
-    pub type SubMsg = cosmwasm_std::SubMsg<neutron_sdk::bindings::msg::NeutronMsg>;
+    pub type Response = cosmwasm_std::Response<CustomMsg>;
+    pub type CosmosMsg = cosmwasm_std::CosmosMsg<CustomMsg>;
+    pub type SubMsg = cosmwasm_std::SubMsg<CustomMsg>;
 }
