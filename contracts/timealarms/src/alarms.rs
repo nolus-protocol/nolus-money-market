@@ -1,17 +1,16 @@
-use cosmwasm_std::{to_binary, Env};
+use sdk::{
+    cosmwasm_ext::Response,
+    cosmwasm_std::{to_binary, Addr, DepsMut, Env, StdResult, Storage, Timestamp},
+    schemars::{self, JsonSchema},
+};
 use serde::{Deserialize, Serialize};
 
 use currency::native::Nls;
 use platform::{batch::Batch, contract};
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, DepsMut, StdResult, Storage, Timestamp},
-    schemars::{self, JsonSchema},
-};
 use time_oracle::{AlarmError, Alarms, AlarmsCount, Id};
 
 use crate::{
-    msg::{DispatchAlarmsResponse, ExecuteAlarmMsg},
+    msg::{AlarmsStatusResponse, DispatchAlarmsResponse, ExecuteAlarmMsg},
     ContractError,
 };
 
@@ -69,10 +68,14 @@ impl TimeAlarms {
         Ok(Response::from(batch).set_data(to_binary(&DispatchAlarmsResponse(sent))?))
     }
 
-    pub fn try_any_alarm(storage: &dyn Storage, ctime: Timestamp) -> Result<bool, ContractError> {
+    pub fn try_any_alarm(
+        storage: &dyn Storage,
+        ctime: Timestamp,
+    ) -> Result<AlarmsStatusResponse, ContractError> {
         Self::TIME_ALARMS
             .any_alarm(storage, ctime)
-            .map_err(|e| e.into())
+            .map(|remaining_alarms| AlarmsStatusResponse { remaining_alarms })
+            .map_err(Into::into)
     }
 }
 
