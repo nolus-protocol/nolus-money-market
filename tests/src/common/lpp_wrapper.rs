@@ -40,6 +40,9 @@ impl LppWrapper {
         app: &mut MockApp,
         lease_code_id: Uint64,
         init_balance: Vec<CwCoin>,
+        base_interest_rate: Percent,
+        utilization_optimal: Percent,
+        addon_optimal_interest_rate: Percent,
     ) -> (Addr, u64)
     where
         Lpn: Currency,
@@ -48,6 +51,9 @@ impl LppWrapper {
         let msg = InstantiateMsg {
             lpn_ticker: Lpn::TICKER.into(),
             lease_code_id,
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
         };
 
         (

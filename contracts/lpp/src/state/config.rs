@@ -7,7 +7,10 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::nlpn::NLpn;
+use crate::{
+    error::{ContractError, ContractResult},
+    nlpn::NLpn,
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct Config {
@@ -21,14 +24,26 @@ pub struct Config {
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn new(lpn_ticker: String, lease_code_id: Uint64) -> Self {
-        Config {
+    pub fn new(
+        lpn_ticker: String,
+        lease_code_id: Uint64,
+        base_interest_rate: Percent,
+        utilization_optimal: Percent,
+        addon_optimal_interest_rate: Percent,
+    ) -> ContractResult<Self> {
+        Self::validate_input(
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        )?;
+
+        Ok(Config {
             lpn_ticker,
             lease_code_id,
             base_interest_rate: Percent::from_percent(7),
             utilization_optimal: Percent::from_percent(70),
             addon_optimal_interest_rate: Percent::from_percent(2),
-        }
+        })
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
@@ -45,12 +60,18 @@ impl Config {
         base_interest_rate: Percent,
         utilization_optimal: Percent,
         addon_optimal_interest_rate: Percent,
-    ) -> StdResult<()> {
+    ) -> ContractResult<()> {
+        Self::validate_input(
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        )?;
+
         self.base_interest_rate = base_interest_rate;
         self.utilization_optimal = utilization_optimal;
         self.addon_optimal_interest_rate = addon_optimal_interest_rate;
 
-        self.store(storage)
+        self.store(storage).map_err(Into::into)
     }
 
     pub fn initial_derivative_price<LPN>() -> Price<NLpn, LPN>
@@ -58,5 +79,31 @@ impl Config {
         LPN: Currency + Serialize + DeserializeOwned,
     {
         Price::identity()
+    }
+
+    fn validate_input(
+        base_interest_rate: Percent,
+        utilization_optimal: Percent,
+        addon_optimal_interest_rate: Percent,
+    ) -> ContractResult<()> {
+        if base_interest_rate > Percent::HUNDRED {
+            return Err(ContractError::InvalidConfigParameter(
+                "Base interest rate can't be greater than 100%!",
+            ));
+        }
+
+        if utilization_optimal > Percent::HUNDRED {
+            return Err(ContractError::InvalidConfigParameter(
+                "Optimal utilization can't be greater than 100%!",
+            ));
+        }
+
+        if addon_optimal_interest_rate > Percent::HUNDRED {
+            return Err(ContractError::InvalidConfigParameter(
+                "Addon optimal interest rate can't be greater than 100%!",
+            ));
+        }
+
+        Ok(())
     }
 }

@@ -27,6 +27,10 @@ type Lpn = Usdc;
 type LeaseCurrency = Lpn;
 type LeaseCoin = Coin<LeaseCurrency>;
 
+const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
+const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
+const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
+
 const DOWNPAYMENT: u128 = 1_000_000_000_000;
 
 fn create_coin(amount: u128) -> LeaseCoin {
@@ -48,6 +52,9 @@ fn create_test_case() -> TestCase<Lpn> {
             5_000_000_000_000_000_000_000_000_000,
             Lpn::BANK_SYMBOL,
         )],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
     );
     test_case.init_timealarms();
     test_case.init_oracle(None);

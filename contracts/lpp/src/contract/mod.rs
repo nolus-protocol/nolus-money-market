@@ -43,10 +43,21 @@ impl<'a> InstantiateWithLpn<'a> {
 
         SingleUserAccess::new_contract_owner(self.info.sender).store(self.deps.storage)?;
 
+        let InstantiateMsg {
+            lpn_ticker,
+            lease_code_id,
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        } = self.msg;
+
         LiquidityPool::<LPN>::store(
             self.deps.storage,
-            self.msg.lpn_ticker,
-            self.msg.lease_code_id,
+            lpn_ticker,
+            lease_code_id,
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
         )?;
 
         Ok(Response::new().add_attribute("method", "instantiate"))

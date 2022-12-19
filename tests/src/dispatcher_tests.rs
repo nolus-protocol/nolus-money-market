@@ -1,6 +1,6 @@
 use access_control::Unauthorized;
 use currency::{lpn::Usdc, native::Nls};
-use finance::currency::Currency;
+use finance::{currency::Currency, percent::Percent};
 use rewards_dispatcher::ContractError;
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
@@ -12,6 +12,10 @@ use crate::common::{
     test_case::TestCase, Native, ADMIN, USER,
 };
 
+const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
+const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
+const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
+
 #[test]
 fn on_alarm_zero_reward() {
     type Lpn = Usdc;
@@ -21,7 +25,12 @@ fn on_alarm_zero_reward() {
     test_case.init(&user, cwcoins::<Lpn, _>(500));
 
     test_case
-        .init_lpp(None)
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
         .init_timealarms()
         .init_oracle(Some(
             ContractWrapper::new(
@@ -66,11 +75,16 @@ fn on_alarm() {
         .init_oracle(None);
 
     test_case
-        .init_lpp(Some(ContractWrapper::new(
-            lpp::contract::execute,
-            lpp::contract::instantiate,
-            mock_lpp_query,
-        )))
+        .init_lpp(
+            Some(ContractWrapper::new(
+                lpp::contract::execute,
+                lpp::contract::instantiate,
+                mock_lpp_query,
+            )),
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
         .init_timealarms()
         .init_oracle(Some(
             ContractWrapper::new(
@@ -236,7 +250,12 @@ fn test_config_unauthorized() {
     let mut test_case = TestCase::<Usdc>::new();
     test_case
         .init(&user_addr, cwcoins::<Lpn, _>(500))
-        .init_lpp(None)
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
         .init_treasury()
         .init_timealarms()
         .init_oracle(None)
@@ -276,7 +295,12 @@ fn test_config() {
     let mut test_case = TestCase::<Usdc>::new();
     test_case
         .init(&user_addr, cwcoins::<Lpn, _>(500))
-        .init_lpp(None)
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
         .init_treasury()
         .init_timealarms()
         .init_oracle(None)

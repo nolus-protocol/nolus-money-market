@@ -21,6 +21,9 @@ pub type LppCoin = CoinDTO<Lpns>;
 pub struct InstantiateMsg {
     pub lpn_ticker: String,
     pub lease_code_id: Uint64,
+    pub base_interest_rate: Percent,
+    pub utilization_optimal: Percent,
+    pub addon_optimal_interest_rate: Percent,
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
@@ -28,11 +31,8 @@ pub struct InstantiateMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     UpdateParameters {
-        #[serde(deserialize_with = "crate::serde_utils::finance::deserialize_hundred_capped")]
         base_interest_rate: Percent,
-        #[serde(deserialize_with = "crate::serde_utils::finance::deserialize_hundred_capped")]
         utilization_optimal: Percent,
-        #[serde(deserialize_with = "crate::serde_utils::finance::deserialize_hundred_capped")]
         addon_optimal_interest_rate: Percent,
     },
 

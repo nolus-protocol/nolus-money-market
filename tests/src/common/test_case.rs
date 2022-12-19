@@ -1,6 +1,9 @@
 use std::marker::PhantomData;
 
-use finance::currency::{Currency, Symbol};
+use finance::{
+    currency::{Currency, Symbol},
+    percent::Percent,
+};
 use lease::api::dex::{ConnectionParams, Ics20Channel};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Empty, Uint64},
@@ -158,14 +161,29 @@ where
         self
     }
 
-    pub fn init_lpp(&mut self, custom_wrapper: OptionalContractWrapper) -> &mut Self {
-        self.init_lpp_with_funds(custom_wrapper, vec![CwCoin::new(400, Lpn::BANK_SYMBOL)])
+    pub fn init_lpp(
+        &mut self,
+        custom_wrapper: OptionalContractWrapper,
+        base_interest_rate: Percent,
+        utilization_optimal: Percent,
+        addon_optimal_interest_rate: Percent,
+    ) -> &mut Self {
+        self.init_lpp_with_funds(
+            custom_wrapper,
+            vec![CwCoin::new(400, Lpn::BANK_SYMBOL)],
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        )
     }
 
     pub fn init_lpp_with_funds(
         &mut self,
         custom_wrapper: OptionalContractWrapper,
         init_balance: Vec<CwCoin>,
+        base_interest_rate: Percent,
+        utilization_optimal: Percent,
+        addon_optimal_interest_rate: Percent,
     ) -> &mut Self
     where
         Lpn: Currency,
@@ -180,6 +198,9 @@ where
                     &mut self.app,
                     Uint64::new(self.lease_code_id.unwrap()),
                     init_balance,
+                    base_interest_rate,
+                    utilization_optimal,
+                    addon_optimal_interest_rate,
                 )
                 .0,
         );

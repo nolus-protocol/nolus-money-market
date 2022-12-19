@@ -110,7 +110,7 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
 mod test {
     use access_control::SingleUserAccess;
     use currency::lpn::Usdc;
-    use finance::price;
+    use finance::{percent::Percent, price};
     use platform::coin_legacy;
     use sdk::cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
@@ -120,6 +120,10 @@ mod test {
     use super::*;
 
     type TheCurrency = Usdc;
+
+    const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
+    const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
+    const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
 
     #[test]
     fn test_deposit() {
@@ -146,6 +150,9 @@ mod test {
             deps.as_mut().storage,
             TheCurrency::TICKER.into(),
             1000u64.into(),
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
         )
         .unwrap();
 
