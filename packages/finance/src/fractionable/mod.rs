@@ -6,7 +6,6 @@ use std::{
 use crate::{duration::Units as TimeUnits, percent::Units as PercentUnits, ratio::Ratio};
 
 mod coin;
-mod deprecated;
 mod duration;
 mod percent;
 
