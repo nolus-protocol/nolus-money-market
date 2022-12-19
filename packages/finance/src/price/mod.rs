@@ -9,8 +9,9 @@ use crate::{
     currency::{self, Currency},
     error::{Error, Result},
     fraction::Fraction,
-    fractionable::HigherRank,
-    ratio::Rational,
+    fractionable::{Fractionable, HigherRank},
+    percent::Units as PercentUnits,
+    ratio::{Ratio, Rational},
 };
 
 pub mod dto;
@@ -238,6 +239,22 @@ where
     }
 }
 
+impl<C, QuoteC> Fractionable<PercentUnits> for Price<C, QuoteC>
+where
+    C: Currency,
+    QuoteC: Currency,
+{
+    fn safe_mul<F>(self, fraction: &F) -> Self
+    where
+        F: Ratio<PercentUnits>,
+    {
+        Price::new(
+            self.amount * 1000u128,
+            (self.amount_quote * 1000u128).safe_mul(fraction),
+        )
+    }
+}
+
 /// Calculates the amount of given coins in another currency, referred here as `quote currency`
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
@@ -259,6 +276,7 @@ mod test {
     use crate::{
         coin::{Amount, Coin as CoinT},
         currency::{Currency, SymbolStatic},
+        percent::Percent,
         price::{self, Price},
         test::currency::{Nls, Usdc},
     };
@@ -469,6 +487,19 @@ mod test {
         div_impl(c(1), q(2), 5, c(5), q(2));
         div_impl(c(1), q(2), 10, c(5), q(1));
         div_impl(c(2), q(3), 2, c(4), q(3));
+    }
+
+    #[test]
+    fn percentable() {
+        use crate::fraction::Fraction;
+
+        let price = super::total_of(c(1)).is(q(1000));
+        let percent = Percent::from_permille(1);
+        assert_eq!(percent.of(price), super::total_of(c(1)).is(q(1)));
+
+        let price = super::total_of(c(10)).is(q(1));
+        let percent = Percent::from_percent(20);
+        assert_eq!(percent.of(price), super::total_of(c(50)).is(q(1)));
     }
 
     fn c(a: Amount) -> Coin {
