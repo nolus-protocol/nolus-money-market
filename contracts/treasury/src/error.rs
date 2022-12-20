@@ -14,9 +14,6 @@ pub enum ContractError {
     #[error("[Treasury] {0}")]
     Unauthorized(#[from] platform::access_control::Unauthorized),
 
-    #[error("[Treasury] {0}")]
-    AccessControlNotSetup(#[from] platform::access_control::NotSet),
-
     #[error("[Treasury] Rewards dispatcher is not configured")]
     NotConfigured {},
 }

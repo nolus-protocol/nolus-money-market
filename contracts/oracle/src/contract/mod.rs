@@ -4,7 +4,7 @@ use finance::{
     duration::Duration,
     percent::Percent,
 };
-use platform::contract;
+use platform::{access_control::SingleUserAccess, contract};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -59,7 +59,7 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
     type Output = Response;
     type Error = ContractError;
 
-    fn on<C>(mut self) -> Result<Self::Output, Self::Error>
+    fn on<C>(self) -> Result<Self::Output, Self::Error>
     where
         C: Currency,
     {
@@ -78,7 +78,8 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
             ));
         }
 
-        crate::access_control::OWNER.set_address(self.deps.branch(), self.owner)?;
+        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, self.owner)
+            .store(self.deps.storage)?;
 
         Config::new(
             C::TICKER.to_string(),
@@ -113,7 +114,7 @@ pub fn instantiate(
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::Config {} => Ok(to_binary(&query_config(deps)?)?),
+        QueryMsg::Config {} => Ok(to_binary(&query_config(deps.storage)?)?),
         QueryMsg::Feeders {} => Ok(to_binary(&Feeders::get(deps.storage)?)?),
         QueryMsg::IsFeeder { address } => {
             Ok(to_binary(&Feeders::is_feeder(deps.storage, &address)?)?)
@@ -133,7 +134,7 @@ pub fn execute(
         ExecuteMsg::Config {
             price_feed_period_secs,
             expected_feeders,
-        } => try_configure(deps, info, price_feed_period_secs, expected_feeders),
+        } => try_configure(deps.storage, info, price_feed_period_secs, expected_feeders),
         ExecuteMsg::RegisterFeeder { feeder_address } => {
             Feeders::try_register(deps, info, feeder_address)
         }
@@ -175,11 +176,12 @@ fn err_as_ok(err: &str) -> Response {
 
 #[cfg(test)]
 mod tests {
+    use swap::SwapTarget;
+    use trees::tr;
+
     use currency::{lease::Osmo, lpn::Usdc};
     use finance::{currency::Currency, duration::Duration, percent::Percent};
     use sdk::cosmwasm_std::{from_binary, testing::mock_env};
-    use swap::SwapTarget;
-    use trees::tr;
 
     use crate::{
         contract::query,

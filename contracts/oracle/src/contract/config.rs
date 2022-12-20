@@ -1,28 +1,32 @@
 use finance::{duration::Duration, percent::Percent};
+use platform::access_control::SingleUserAccess;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Deps, DepsMut, MessageInfo},
+    cosmwasm_std::{MessageInfo, Storage},
 };
 
 use crate::{msg::ConfigResponse, state::Config, ContractError};
 
-pub fn query_config(deps: Deps) -> Result<ConfigResponse, ContractError> {
-    let config = Config::load(deps.storage)?;
+pub fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, ContractError> {
+    let config = Config::load(storage)?;
+
     Ok(ConfigResponse {
         base_asset: config.base_asset,
-        owner: crate::access_control::OWNER.get_address::<_, ContractError>(deps)?,
+        owner: SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
+            .into_address(),
         price_feed_period: config.price_feed_period,
         expected_feeders: config.expected_feeders,
     })
 }
 
 pub fn try_configure(
-    deps: DepsMut,
+    storage: &mut dyn Storage,
     info: MessageInfo,
     price_feed_period: u32,
     expected_feeders: Percent,
 ) -> Result<Response, ContractError> {
-    crate::access_control::OWNER.assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+    SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
+        .check_access(&info.sender)?;
 
     //TODO merge the next checks with the code in Config::validate()
     if expected_feeders == Percent::ZERO || expected_feeders > Percent::HUNDRED {
@@ -37,7 +41,7 @@ pub fn try_configure(
     }
     // TODO make sure the price_feed_period >= last block time
     Config::update(
-        deps.storage,
+        storage,
         Duration::from_secs(price_feed_period),
         expected_feeders,
     )?;
@@ -47,6 +51,9 @@ pub fn try_configure(
 
 #[cfg(test)]
 mod tests {
+    use swap::SwapTarget;
+    use trees::tr;
+
     use currency::{
         lease::{Cro, Osmo},
         lpn::Usdc,
@@ -61,8 +68,6 @@ mod tests {
             DepsMut, MessageInfo,
         },
     };
-    use swap::SwapTarget;
-    use trees::tr;
 
     use crate::{
         contract::{execute, query},

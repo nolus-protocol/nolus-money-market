@@ -1,5 +1,6 @@
 use cosmwasm_std::MessageInfo;
 use finance::percent::Percent;
+use platform::access_control::SingleUserAccess;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Deps, DepsMut},
@@ -14,7 +15,8 @@ pub fn try_update_parameters(
     utilization_optimal: Percent,
     addon_optimal_interest_rate: Percent,
 ) -> Result<Response, ContractError> {
-    crate::access_control::OWNER.assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+    SingleUserAccess::load(deps.storage, crate::access_control::OWNER_NAMESPACE)?
+        .check_access(&info.sender)?;
 
     let mut config = Config::load(deps.storage)?;
 

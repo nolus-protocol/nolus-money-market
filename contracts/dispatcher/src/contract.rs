@@ -2,7 +2,10 @@ use currency::native::Nls;
 use finance::duration::Duration;
 use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
-use platform::batch::{Batch, Emit, Emitter};
+use platform::{
+    access_control::SingleUserAccess,
+    batch::{Batch, Emit, Emitter},
+};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -28,7 +31,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    mut deps: DepsMut,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -40,8 +43,13 @@ pub fn instantiate(
     let timealarms_addr = validate_addr(deps.as_ref(), msg.timealarms)?;
     let treasury_addr = validate_addr(deps.as_ref(), msg.treasury)?;
 
-    crate::access_control::OWNER.set_address(deps.branch(), info.sender)?;
-    crate::access_control::TIMEALARMS.set_address(deps.branch(), timealarms_addr.clone())?;
+    SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, info.sender)
+        .store(deps.storage)?;
+    SingleUserAccess::new(
+        crate::access_control::TIMEALARMS_NAMESPACE,
+        timealarms_addr.clone(),
+    )
+    .store(deps.storage)?;
 
     Config::new(
         msg.cadence_hours,
@@ -81,19 +89,20 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Config { cadence_hours } => try_config(deps, info, cadence_hours),
+        ExecuteMsg::Config { cadence_hours } => try_config(deps.storage, info, cadence_hours),
         ExecuteMsg::TimeAlarm(time) => try_dispatch(deps, env, info, time),
     }
 }
 
 pub fn try_config(
-    deps: DepsMut,
+    storage: &mut dyn Storage,
     info: MessageInfo,
     cadence_hours: u16,
 ) -> Result<Response, ContractError> {
-    crate::access_control::OWNER.assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+    SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
+        .check_access(&info.sender)?;
 
-    Config::update(deps.storage, cadence_hours)?;
+    Config::update(storage, cadence_hours)?;
 
     Ok(Response::new().add_attribute("method", "config"))
 }
@@ -121,8 +130,8 @@ pub fn try_dispatch(
     let block_time = env.block.time;
     ensure!(time >= block_time, ContractError::AlarmTimeValidation {});
 
-    crate::access_control::TIMEALARMS
-        .assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+    SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
+        .check_access(&info.sender)?;
 
     let config = Config::load(deps.storage)?;
 
@@ -133,7 +142,7 @@ pub fn try_dispatch(
     let lpp = LppRef::try_new(lpp_address.clone(), &deps.querier)?;
     let emitter: Emitter = lpp.execute(
         Dispatch::new(
-            deps.as_ref(),
+            deps.storage,
             oracle,
             last_dispatch,
             config,
@@ -160,10 +169,9 @@ mod tests {
         Addr, DepsMut,
     };
 
-    use crate::state::reward_scale::TotalValueLocked;
     use crate::{
         msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
-        state::reward_scale::{Bar, RewardScale},
+        state::reward_scale::{Bar, RewardScale, TotalValueLocked},
         ContractError,
     };
 

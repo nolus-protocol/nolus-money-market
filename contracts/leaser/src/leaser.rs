@@ -1,14 +1,13 @@
 use std::collections::HashSet;
 
-use finance::currency::SymbolOwned;
-use finance::{liability::Liability, percent::Percent};
-use lease::api::dex::ConnectionParams;
-use lease::api::{DownpaymentCoin, InterestPaymentSpec};
+use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
+use lease::api::{dex::ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
+use platform::access_control::SingleUserAccess;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, Deps, DepsMut, MessageInfo, StdResult},
+    cosmwasm_std::{Addr, Deps, MessageInfo, StdResult, Storage},
 };
 
 use crate::{
@@ -58,30 +57,30 @@ impl Leaser {
     }
 
     pub fn try_setup_dex(
-        deps: DepsMut,
+        storage: &mut dyn Storage,
         info: MessageInfo,
         params: ConnectionParams,
     ) -> ContractResult<Response> {
-        crate::access_control::OWNER
-            .assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+        SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
+            .check_access(&info.sender)?;
 
-        Config::setup_dex(deps.storage, params)?;
+        Config::setup_dex(storage, params)?;
 
         Ok(Response::default())
     }
 
     pub fn try_configure(
-        deps: DepsMut,
+        storage: &mut dyn Storage,
         info: MessageInfo,
         lease_interest_rate_margin: Percent,
         liability: Liability,
         lease_interest_payment: InterestPaymentSpec,
     ) -> ContractResult<Response> {
-        crate::access_control::OWNER
-            .assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+        SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
+            .check_access(&info.sender)?;
 
         Config::update(
-            deps.storage,
+            storage,
             lease_interest_rate_margin,
             liability,
             lease_interest_payment,

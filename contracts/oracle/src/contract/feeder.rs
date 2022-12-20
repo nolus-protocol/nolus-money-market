@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{duration::Duration, fraction::Fraction, percent::Percent};
 use marketprice::{feeders::PriceFeeders, market_price::Config as PriceConfig};
+use platform::access_control::SingleUserAccess;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, DepsMut, MessageInfo, StdResult, Storage, Timestamp},
@@ -33,8 +34,8 @@ impl Feeders {
         info: MessageInfo,
         address: String,
     ) -> Result<Response, ContractError> {
-        crate::access_control::OWNER
-            .assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+        SingleUserAccess::load(deps.storage, crate::access_control::OWNER_NAMESPACE)?
+            .check_access(&info.sender)?;
 
         // check if address is valid
         let f_address = deps.api.addr_validate(&address)?;
@@ -48,8 +49,8 @@ impl Feeders {
         info: MessageInfo,
         address: String,
     ) -> Result<Response, ContractError> {
-        crate::access_control::OWNER
-            .assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+        SingleUserAccess::load(deps.storage, crate::access_control::OWNER_NAMESPACE)?
+            .check_access(&info.sender)?;
 
         let f_address = deps.api.addr_validate(&address)?;
 

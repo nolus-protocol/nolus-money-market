@@ -1,12 +1,13 @@
 use currency::native::Nls;
 use finance::coin::Coin;
 use platform::{
+    access_control::SingleUserAccess,
     bank::{self, BankAccount},
     batch::Batch,
 };
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{entry_point, Addr, Deps, DepsMut, Env, MessageInfo},
+    cosmwasm_std::{entry_point, Addr, DepsMut, Env, MessageInfo, Storage},
     cw2::set_contract_version,
 };
 
@@ -28,7 +29,8 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    crate::access_control::OWNER.set_address(deps, info.sender)?;
+    SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, info.sender)
+        .store(deps.storage)?;
 
     Ok(Response::default())
 }
@@ -48,7 +50,7 @@ pub fn execute(
         ExecuteMsg::SendRewards { amount } => {
             let bank_account = bank::my_account(&env, &deps.querier);
 
-            let bank_account = try_send_rewards(deps.as_ref(), sender, amount, bank_account)?;
+            let bank_account = try_send_rewards(deps.storage, sender, amount, bank_account)?;
             let batch: Batch = bank_account.into();
             let mut response: Response = batch.into();
             response = response.add_attribute("method", "try_send_rewards");
@@ -62,17 +64,22 @@ fn try_configure_reward_transfer(
     sender: Addr,
     rewards_dispatcher: Addr,
 ) -> Result<Response, ContractError> {
-    crate::access_control::OWNER.assert_address::<_, ContractError>(deps.as_ref(), &sender)?;
+    SingleUserAccess::load(deps.storage, crate::access_control::OWNER_NAMESPACE)?
+        .check_access(&sender)?;
 
     deps.api.addr_validate(rewards_dispatcher.as_str())?;
 
-    crate::access_control::REWARDS_DISPATCHER.set_address(deps, rewards_dispatcher)?;
+    SingleUserAccess::new(
+        crate::access_control::REWARDS_DISPATCHER_NAMESPACE,
+        rewards_dispatcher,
+    )
+    .store(deps.storage)?;
 
     Ok(Response::new().add_attribute("method", "try_configure_reward_transfer"))
 }
 
 fn try_send_rewards<B>(
-    deps: Deps,
+    storage: &dyn Storage,
     sender: Addr,
     amount: Coin<Nls>,
     mut account: B,
@@ -80,7 +87,8 @@ fn try_send_rewards<B>(
 where
     B: BankAccount,
 {
-    crate::access_control::REWARDS_DISPATCHER.assert_address::<_, ContractError>(deps, &sender)?;
+    SingleUserAccess::load(storage, crate::access_control::REWARDS_DISPATCHER_NAMESPACE)?
+        .check_access(&sender)?;
 
     account.send(amount, &sender);
 

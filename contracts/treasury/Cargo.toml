@@ -22,8 +22,6 @@ finance = { path = "../../packages/finance" }
 platform = { path = "../../packages/platform", features = ["access-control"] }
 sdk = { path = "../../packages/sdk", features = ["contract"] }
 
-cw-controllers = { workspace = true }
-
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
 

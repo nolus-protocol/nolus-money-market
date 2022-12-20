@@ -1,6 +1,4 @@
 use finance::{duration::Duration, percent::Percent};
-#[cfg(any(feature = "contract", test))]
-use sdk::cosmwasm_std::DepsMut;
 use sdk::{
     cosmwasm_std::{Addr, StdResult, Storage},
     cw_storage_plus::Item,

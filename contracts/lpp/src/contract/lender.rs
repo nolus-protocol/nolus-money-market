@@ -110,7 +110,7 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
 mod test {
     use currency::lpn::Usdc;
     use finance::price;
-    use platform::coin_legacy;
+    use platform::{access_control::SingleUserAccess, coin_legacy};
     use sdk::cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
         Coin as CwCoin,
@@ -137,9 +137,12 @@ mod test {
         let rest_nlpn = 1000u128;
         let zero = 0u128;
 
-        crate::access_control::OWNER
-            .set_address(deps.as_mut(), Addr::unchecked("admin"))
-            .unwrap();
+        SingleUserAccess::new(
+            crate::access_control::OWNER_NAMESPACE,
+            Addr::unchecked("admin"),
+        )
+        .store(deps.as_mut().storage)
+        .unwrap();
 
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,

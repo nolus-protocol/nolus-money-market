@@ -27,9 +27,6 @@ pub enum ContractError {
     #[error("[Dispatcher] {0}")]
     Unauthorized(#[from] platform::access_control::Unauthorized),
 
-    #[error("[Dispatcher] {0}")]
-    AccessControlNotSetup(#[from] platform::access_control::NotSet),
-
     #[error("[Dispatcher] Unknown currency symbol: {symbol:?}")]
     UnknownCurrency { symbol: String },
 

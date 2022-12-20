@@ -1,13 +1,14 @@
 use currency::native::Nls;
 use finance::{coin::Coin, duration::Duration};
 use platform::{
+    access_control::SingleUserAccess,
     bank::{self, BankAccount, BankAccountView},
     batch::{Batch, Emit, Emitter},
 };
 use sdk::{
     cosmwasm_ext::{CosmosMsg, Response},
     cosmwasm_std::{
-        to_binary, Addr, DepsMut, Env, MessageInfo, StdResult, Storage, Timestamp, WasmMsg,
+        to_binary, Addr, Deps, Env, MessageInfo, StdResult, Storage, Timestamp, WasmMsg,
     },
 };
 
@@ -17,24 +18,24 @@ pub struct Profit {}
 
 impl Profit {
     pub(crate) fn try_config(
-        deps: DepsMut,
+        storage: &mut dyn Storage,
         info: MessageInfo,
         cadence_hours: u16,
     ) -> Result<Response, ContractError> {
-        crate::access_control::OWNER
-            .assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+        SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
+            .check_access(&info.sender)?;
 
-        Config::update(deps.storage, cadence_hours)?;
+        Config::update(storage, cadence_hours)?;
 
         Ok(Response::new())
     }
     pub(crate) fn transfer(
-        deps: DepsMut,
+        deps: Deps,
         env: Env,
         info: MessageInfo,
     ) -> Result<Emitter, ContractError> {
-        crate::access_control::TIMEALARMS
-            .assert_address::<_, ContractError>(deps.as_ref(), &info.sender)?;
+        SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
+            .check_access(&info.sender)?;
 
         let config = Config::load(deps.storage)?;
 

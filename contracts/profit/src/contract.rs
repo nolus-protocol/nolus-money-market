@@ -1,4 +1,5 @@
 use finance::duration::Duration;
+use platform::access_control::SingleUserAccess;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -22,7 +23,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    mut deps: DepsMut,
+    deps: DepsMut,
     env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -32,8 +33,13 @@ pub fn instantiate(
     let treasury = validate_addr(deps.as_ref(), msg.treasury)?;
     let timealarms = validate_addr(deps.as_ref(), msg.timealarms)?;
 
-    crate::access_control::OWNER.set_address(deps.branch(), info.sender)?;
-    crate::access_control::TIMEALARMS.set_address(deps.branch(), timealarms.clone())?;
+    SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, info.sender)
+        .store(deps.storage)?;
+    SingleUserAccess::new(
+        crate::access_control::TIMEALARMS_NAMESPACE,
+        timealarms.clone(),
+    )
+    .store(deps.storage)?;
 
     Config::new(msg.cadence_hours, treasury).store(deps.storage)?;
     let subscribe_msg = Profit::alarm_subscribe_msg(
@@ -55,8 +61,10 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Config { cadence_hours } => Profit::try_config(deps, info, cadence_hours),
-        ExecuteMsg::TimeAlarm(time) => try_transfer(deps, env, info, time),
+        ExecuteMsg::Config { cadence_hours } => {
+            Profit::try_config(deps.storage, info, cadence_hours)
+        }
+        ExecuteMsg::TimeAlarm(time) => try_transfer(deps.as_ref(), env, info, time),
     }
 }
 
@@ -74,7 +82,7 @@ fn validate_addr(deps: Deps, addr: Addr) -> Result<Addr, ContractError> {
 }
 
 fn try_transfer(
-    deps: DepsMut,
+    deps: Deps,
     env: Env,
     info: MessageInfo,
     time: Timestamp,

@@ -1,4 +1,4 @@
-use platform::reply::from_instantiate;
+use platform::{access_control::SingleUserAccess, reply::from_instantiate};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -23,7 +23,7 @@ const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    mut deps: DepsMut,
+    deps: DepsMut,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -48,7 +48,8 @@ pub fn instantiate(
             ))
         })?;
 
-    crate::access_control::OWNER.set_address(deps.branch(), info.sender)?;
+    SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, info.sender)
+        .store(deps.storage)?;
 
     let config = Config::new(msg)?;
     config.store(deps.storage)?;
@@ -64,14 +65,14 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::SetupDex(params) => Leaser::try_setup_dex(deps, info, params),
+        ExecuteMsg::SetupDex(params) => Leaser::try_setup_dex(deps.storage, info, params),
         ExecuteMsg::OpenLease { currency } => Borrow::with(deps, info.funds, info.sender, currency),
         ExecuteMsg::Config {
             lease_interest_rate_margin,
             liability,
             lease_interest_payment,
         } => Leaser::try_configure(
-            deps,
+            deps.storage,
             info,
             lease_interest_rate_margin,
             liability,

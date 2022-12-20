@@ -289,7 +289,7 @@ where
 #[cfg(test)]
 mod test {
     use finance::{duration::Duration, percent::Units, price, test::currency::Usdc};
-    use platform::coin_legacy;
+    use platform::{access_control::SingleUserAccess, coin_legacy};
     use sdk::cosmwasm_std::{
         testing::{self, MOCK_CONTRACT_ADDR},
         Addr, Coin as CwCoin, Timestamp, Uint64,
@@ -309,8 +309,8 @@ mod test {
         let lease_code_id = Uint64::new(123);
         let admin = Addr::unchecked("admin");
 
-        crate::access_control::OWNER
-            .set_address(deps.as_mut(), admin)
+        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+            .store(deps.as_mut().storage)
             .unwrap();
 
         Config::new(balance_mock.denom.clone(), lease_code_id)
@@ -341,8 +341,8 @@ mod test {
 
         let lease_code_id = Uint64::new(123);
 
-        crate::access_control::OWNER
-            .set_address(deps.as_mut(), admin)
+        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+            .store(deps.as_mut().storage)
             .unwrap();
 
         Config::new(balance_mock.denom, lease_code_id)
@@ -395,8 +395,8 @@ mod test {
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
-        crate::access_control::OWNER
-            .set_address(deps.as_mut(), admin)
+        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+            .store(deps.as_mut().storage)
             .unwrap();
 
         Config::new(TheCurrency::TICKER.into(), lease_code_id)
@@ -489,8 +489,8 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        crate::access_control::OWNER
-            .set_address(deps.as_mut(), admin)
+        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+            .store(deps.as_mut().storage)
             .unwrap();
 
         Config::new(TheCurrency::TICKER.into(), lease_code_id)
@@ -516,8 +516,8 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        crate::access_control::OWNER
-            .set_address(deps.as_mut(), admin)
+        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+            .store(deps.as_mut().storage)
             .unwrap();
 
         Config::new(TheCurrency::TICKER.into(), lease_code_id)
@@ -543,8 +543,8 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        crate::access_control::OWNER
-            .set_address(deps.as_mut(), admin)
+        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+            .store(deps.as_mut().storage)
             .unwrap();
 
         Config::new(TheCurrency::TICKER.into(), lease_code_id)
@@ -604,8 +604,8 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        crate::access_control::OWNER
-            .set_address(deps.as_mut(), admin)
+        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+            .store(deps.as_mut().storage)
             .unwrap();
 
         Config::new(TheCurrency::TICKER.into(), lease_code_id)
@@ -653,8 +653,8 @@ mod test {
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
-        crate::access_control::OWNER
-            .set_address(deps.as_mut(), admin)
+        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+            .store(deps.as_mut().storage)
             .unwrap();
 
         Config::new(balance_mock.denom, lease_code_id)

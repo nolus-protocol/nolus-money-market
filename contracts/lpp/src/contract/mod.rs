@@ -1,7 +1,8 @@
-use currency::lpn::Lpns;
 use serde::{de::DeserializeOwned, Serialize};
 
+use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
+use platform::access_control::SingleUserAccess;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -34,13 +35,14 @@ struct InstantiateWithLpn<'a> {
 
 impl<'a> InstantiateWithLpn<'a> {
     // could be moved directly to on<LPN>()
-    fn do_work<LPN>(mut self) -> Result<Response, ContractError>
+    fn do_work<LPN>(self) -> Result<Response, ContractError>
     where
         LPN: 'static + Currency + Serialize + DeserializeOwned,
     {
         set_contract_version(self.deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-        crate::access_control::OWNER.set_address(self.deps.branch(), self.info.sender.clone())?;
+        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, self.info.sender)
+            .store(self.deps.storage)?;
 
         LiquidityPool::<LPN>::store(
             self.deps.storage,
