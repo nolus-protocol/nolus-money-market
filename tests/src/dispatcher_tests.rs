@@ -7,14 +7,14 @@ use sdk::{
     cw_multi_test::{ContractWrapper, Executor},
 };
 
-use crate::common::{
-    cwcoins, lpp_wrapper::mock_lpp_query, native_cwcoin, oracle_wrapper::mock_oracle_query,
-    test_case::TestCase, Native, ADMIN, USER,
+use crate::{
+    common::{ADDON_OPTIMAL_INTEREST_RATE,
+             ADMIN,
+             BASE_INTEREST_RATE,
+             cwcoins, lpp_wrapper::mock_lpp_query, Native, native_cwcoin,
+             oracle_wrapper::mock_oracle_query, test_case::TestCase, USER, UTILIZATION_OPTIMAL,
+    },
 };
-
-const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
-const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
-const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
 
 #[test]
 fn on_alarm_zero_reward() {

@@ -21,15 +21,12 @@ use sdk::{
 use crate::{
     common::{
         cwcoin, cwcoins, lpp_wrapper::mock_lpp_quote_query, test_case::TestCase, ADMIN, USER,
+        BASE_INTEREST_RATE, UTILIZATION_OPTIMAL, ADDON_OPTIMAL_INTEREST_RATE,
     },
     oracle_tests::{add_feeder, feed_price},
 };
 
 type TheCurrency = Usdc;
-
-const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
-const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
-const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
 
 #[test]
 #[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]

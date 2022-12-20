@@ -25,13 +25,10 @@ use crate::common::{
     timealarms_wrapper::TimeAlarmsWrapper,
     treasury_wrapper::TreasuryWrapper,
     AppExt, ADMIN, USER,
+    BASE_INTEREST_RATE, UTILIZATION_OPTIMAL, ADDON_OPTIMAL_INTEREST_RATE
 };
 
 type Lpn = Usdc;
-
-const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
-const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
-const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
 
 #[test]
 fn config_update_parameters() {

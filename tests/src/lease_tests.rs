@@ -19,6 +19,7 @@ use sdk::{
 };
 
 use crate::common::{
+    UTILIZATION_OPTIMAL, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE,
     cwcoin, cwcoins, leaser_wrapper::LeaserWrapper, test_case::TestCase, AppExt, ADMIN, USER,
 };
 
@@ -26,10 +27,6 @@ type Lpn = Usdc;
 
 type LeaseCurrency = Lpn;
 type LeaseCoin = Coin<LeaseCurrency>;
-
-const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
-const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
-const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
 
 const DOWNPAYMENT: u128 = 1_000_000_000_000;
 

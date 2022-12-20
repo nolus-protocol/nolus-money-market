@@ -88,19 +88,19 @@ impl Config {
     ) -> ContractResult<()> {
         if base_interest_rate > Percent::HUNDRED {
             return Err(ContractError::InvalidConfigParameter(
-                "Base interest rate can't be greater than 100%!",
+                "Base interest rate should not be greater than 100%!",
             ));
         }
 
         if utilization_optimal > Percent::HUNDRED {
             return Err(ContractError::InvalidConfigParameter(
-                "Optimal utilization can't be greater than 100%!",
+                "Optimal utilization should not be greater than 100%!",
             ));
         }
 
         if addon_optimal_interest_rate > Percent::HUNDRED {
             return Err(ContractError::InvalidConfigParameter(
-                "Addon optimal interest rate can't be greater than 100%!",
+                "Addon optimal interest rate should not be greater than 100%!",
             ));
         }
 

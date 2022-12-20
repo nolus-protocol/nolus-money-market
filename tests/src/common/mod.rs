@@ -2,7 +2,7 @@ use currency::native::Nls;
 use platform::coin_legacy;
 use serde::{Deserialize, Serialize};
 
-use finance::{coin::Coin, currency::Currency, duration::Duration};
+use finance::{coin::Coin, currency::Currency, duration::Duration, percent::Percent};
 use sdk::{
     cosmwasm_std::{
         testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin as CwCoin, Deps, Empty, Env,
@@ -11,6 +11,10 @@ use sdk::{
     neutron_sdk::bindings::msg::NeutronMsg,
     testing::{self, new_app, App},
 };
+
+pub(crate) const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
+pub(crate) const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
+pub(crate) const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
 
 type ContractWrapper<
     ExecMsg,

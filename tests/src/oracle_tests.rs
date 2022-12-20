@@ -25,15 +25,12 @@ use swap::SwapTarget;
 
 use crate::common::{
     leaser_wrapper::LeaserWrapper, native_cwcoin, test_case::TestCase, AppExt, ADMIN, USER,
+    BASE_INTEREST_RATE, UTILIZATION_OPTIMAL, ADDON_OPTIMAL_INTEREST_RATE
 };
 
 type Lpn = Usdc;
 type TheCoin = Coin<Lpn>;
 type BaseC = Osmo;
-
-const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
-const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
-const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
 
 fn cw_coin<CoinT>(coin: CoinT) -> CwCoin
 where
