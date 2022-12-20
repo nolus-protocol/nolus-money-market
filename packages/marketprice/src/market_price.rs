@@ -117,7 +117,7 @@ impl<'m> PriceFeeds<'m> {
         let feed_bin = self
             .0
             .may_load(storage, (C::TICKER.into(), QuoteC::TICKER.into()))?;
-        load_feed(feed_bin).and_then(|feed| feed.get_price(config))
+        load_feed(feed_bin).and_then(|feed| feed.calc_price(config))
     }
 }
 
