@@ -45,7 +45,9 @@ pub fn execute(
     let sender = info.sender;
     match msg {
         ExecuteMsg::ConfigureRewardTransfer { rewards_dispatcher } => {
-            try_configure_reward_transfer(deps, sender, rewards_dispatcher)
+            platform::contract::validate_addr(&deps.querier, &rewards_dispatcher)?;
+
+            try_configure_reward_transfer(deps.storage, sender, rewards_dispatcher)
         }
         ExecuteMsg::SendRewards { amount } => {
             let bank_account = bank::my_account(&env, &deps.querier);
@@ -60,20 +62,18 @@ pub fn execute(
 }
 
 fn try_configure_reward_transfer(
-    deps: DepsMut,
+    storage: &mut dyn Storage,
     sender: Addr,
     rewards_dispatcher: Addr,
 ) -> Result<Response, ContractError> {
-    SingleUserAccess::load(deps.storage, crate::access_control::OWNER_NAMESPACE)?
+    SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
         .check_access(&sender)?;
-
-    deps.api.addr_validate(rewards_dispatcher.as_str())?;
 
     SingleUserAccess::new(
         crate::access_control::REWARDS_DISPATCHER_NAMESPACE,
         rewards_dispatcher,
     )
-    .store(deps.storage)?;
+    .store(storage)?;
 
     Ok(Response::new().add_attribute("method", "try_configure_reward_transfer"))
 }

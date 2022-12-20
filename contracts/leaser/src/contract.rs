@@ -30,29 +30,15 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    deps.api
-        .addr_validate(msg.lpp_ust_addr.as_str())
-        .map_err(|_| {
-            StdError::generic_err(format!(
-                "Invalid LPP address provided! Input: {:?}",
-                msg.lpp_ust_addr.as_str(),
-            ))
-        })?;
-
-    deps.api
-        .addr_validate(msg.market_price_oracle.as_str())
-        .map_err(|_| {
-            StdError::generic_err(format!(
-                "Invalid Market Price Oracle address provided! Input: {:?}",
-                msg.market_price_oracle.as_str(),
-            ))
-        })?;
+    platform::contract::validate_addr(&deps.querier, &msg.lpp_ust_addr)?;
+    platform::contract::validate_addr(&deps.querier, &msg.time_alarms)?;
+    platform::contract::validate_addr(&deps.querier, &msg.market_price_oracle)?;
+    platform::contract::validate_addr(&deps.querier, &msg.profit)?;
 
     SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, info.sender)
         .store(deps.storage)?;
 
-    let config = Config::new(msg)?;
-    config.store(deps.storage)?;
+    Config::new(msg)?.store(deps.storage)?;
 
     Ok(Response::default())
 }

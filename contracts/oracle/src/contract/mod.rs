@@ -143,6 +143,7 @@ pub fn execute(
         }
         ExecuteMsg::AddPriceAlarm { alarm } => {
             contract::validate_addr(&deps.querier, &info.sender)?;
+
             MarketAlarms::try_add_price_alarm(deps.storage, info.sender, alarm)
         }
         ExecuteMsg::RemovePriceAlarm {} => MarketAlarms::remove(deps.storage, info.sender),

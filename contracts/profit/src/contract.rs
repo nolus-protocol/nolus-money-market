@@ -30,20 +30,20 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let treasury = validate_addr(deps.as_ref(), msg.treasury)?;
-    let timealarms = validate_addr(deps.as_ref(), msg.timealarms)?;
+    platform::contract::validate_addr(&deps.querier, &msg.treasury)?;
+    platform::contract::validate_addr(&deps.querier, &msg.timealarms)?;
 
     SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, info.sender)
         .store(deps.storage)?;
     SingleUserAccess::new(
         crate::access_control::TIMEALARMS_NAMESPACE,
-        timealarms.clone(),
+        msg.timealarms.clone(),
     )
     .store(deps.storage)?;
 
-    Config::new(msg.cadence_hours, treasury).store(deps.storage)?;
+    Config::new(msg.cadence_hours, msg.treasury).store(deps.storage)?;
     let subscribe_msg = Profit::alarm_subscribe_msg(
-        &timealarms,
+        &msg.timealarms,
         env.block.time,
         Duration::from_hours(msg.cadence_hours),
     )?;
@@ -75,22 +75,19 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-fn validate_addr(deps: Deps, addr: Addr) -> Result<Addr, ContractError> {
-    deps.api
-        .addr_validate(addr.as_str())
-        .map_err(|_| ContractError::InvalidContractAddress(addr))
-}
-
 fn try_transfer(
     deps: Deps,
     env: Env,
     info: MessageInfo,
     time: Timestamp,
 ) -> Result<Response, ContractError> {
+    SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?.check_access(&info.sender)?;
+
     ensure!(
         time >= env.block.time,
         ContractError::AlarmTimeValidation {}
     );
+
     Ok(Profit::transfer(deps, env, info)?.into())
 }
 

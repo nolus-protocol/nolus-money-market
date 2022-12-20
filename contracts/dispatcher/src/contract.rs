@@ -38,33 +38,34 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let lpp_addr = validate_addr(deps.as_ref(), msg.lpp)?;
-    let oracle_addr = validate_addr(deps.as_ref(), msg.oracle)?;
-    let timealarms_addr = validate_addr(deps.as_ref(), msg.timealarms)?;
-    let treasury_addr = validate_addr(deps.as_ref(), msg.treasury)?;
+    platform::contract::validate_addr(&deps.querier, &msg.lpp)?;
+    platform::contract::validate_addr(&deps.querier, &msg.oracle)?;
+    platform::contract::validate_addr(&deps.querier, &msg.timealarms)?;
+    platform::contract::validate_addr(&deps.querier, &msg.treasury)?;
 
     SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, info.sender)
         .store(deps.storage)?;
     SingleUserAccess::new(
         crate::access_control::TIMEALARMS_NAMESPACE,
-        timealarms_addr.clone(),
+        msg.timealarms.clone(),
     )
     .store(deps.storage)?;
 
     Config::new(
         msg.cadence_hours,
-        lpp_addr,
-        oracle_addr,
-        treasury_addr,
+        msg.lpp,
+        msg.oracle,
+        msg.treasury,
         msg.tvl_to_apr,
     )
     .store(deps.storage)?;
     DispatchLog::update(deps.storage, env.block.time)?;
 
     let mut batch = Batch::default();
+
     batch
         .schedule_execute_wasm_no_reply::<_, Nls>(
-            &timealarms_addr,
+            &msg.timealarms_addr,
             &timealarms::msg::ExecuteMsg::AddAlarm {
                 time: env.block.time + Duration::from_hours(msg.cadence_hours),
             },
@@ -73,12 +74,6 @@ pub fn instantiate(
         .map_err(ContractError::from)?;
 
     Ok(Response::from(batch))
-}
-
-fn validate_addr(deps: Deps, addr: Addr) -> Result<Addr, ContractError> {
-    deps.api
-        .addr_validate(addr.as_str())
-        .map_err(|_| ContractError::InvalidContractAddress(addr))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -115,10 +110,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
-    let config = Config::load(storage)?;
-    Ok(ConfigResponse {
-        cadence_hours: config.cadence_hours,
-    })
+    let Config { cadence_hours, .. } = Config::load(storage)?;
+
+    Ok(ConfigResponse { cadence_hours })
 }
 
 pub fn try_dispatch(

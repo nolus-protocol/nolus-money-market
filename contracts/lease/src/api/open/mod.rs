@@ -1,12 +1,15 @@
-use crate::error::ContractError;
-use crate::error::ContractResult;
-
-use serde::Serialize;
-
-use serde::Deserialize;
+use serde::{
+    Serialize,
+    Deserialize
+};
 
 use finance::{currency::SymbolOwned, duration::Duration, liability::Liability, percent::Percent};
-use sdk::schemars::{self, JsonSchema};
+use sdk::{schemars::{self, JsonSchema}, cosmwasm_std::Addr};
+
+use crate::{
+    error::ContractError,
+    error::ContractResult
+};
 
 use super::dex::ConnectionParams;
 
@@ -16,7 +19,7 @@ mod unchecked;
 #[serde(rename_all = "snake_case")]
 pub struct NewLeaseForm {
     /// The customer who wants to open a lease.
-    pub customer: String,
+    pub customer: Addr,
     /// Ticker of the currency this lease will be about.
     pub currency: SymbolOwned,
     /// Liability parameters
@@ -24,9 +27,9 @@ pub struct NewLeaseForm {
     /// Loan parameters
     pub loan: LoanForm,
     /// The time alarms contract the lease uses to get time notifications
-    pub time_alarms: String,
+    pub time_alarms: Addr,
     /// The oracle contract that sends market price alerts to the lease
-    pub market_price_oracle: String,
+    pub market_price_oracle: Addr,
     /// Dex connection parameters
     pub dex: ConnectionParams,
 }
@@ -41,11 +44,11 @@ pub struct LoanForm {
     /// The amount, a part of any payment, goes to the Profit contract.
     pub annual_margin_interest: Percent,
     /// The Liquidity Provider Pool, LPP, that lends the necessary amount for this lease.
-    pub lpp: String,
+    pub lpp: Addr,
     /// Interest repayment parameters
     pub interest_payment: InterestPaymentSpec,
     /// The Profit contract to which the margin interest is sent.
-    pub profit: String,
+    pub profit: Addr,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
