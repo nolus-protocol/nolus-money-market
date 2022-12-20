@@ -41,7 +41,7 @@ where
     C: Currency,
     QuoteC: Currency,
 {
-    pub fn price(&self) -> Option<Price<C, QuoteC>> {
+    pub fn into_maybe_price(self) -> Option<Price<C, QuoteC>> {
         self.price
     }
 }

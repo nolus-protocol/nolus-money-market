@@ -8,6 +8,7 @@ use crate::{duration::Units as TimeUnits, percent::Units as PercentUnits, ratio:
 mod coin;
 mod duration;
 mod percent;
+mod price;
 
 pub trait Fractionable<U> {
     #[track_caller]

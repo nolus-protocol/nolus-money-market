@@ -94,7 +94,8 @@ impl<'m> PriceFeeds<'m> {
         Iter: Iterator<Item = Symbol<'a>> + DoubleEndedIterator,
     {
         let mut root_to_leaf = leaf_to_root.rev();
-        debug_assert_eq!(Some(QuoteC::TICKER), root_to_leaf.next());
+        let _root = root_to_leaf.next();
+        debug_assert_eq!(Some(QuoteC::TICKER), _root);
         PriceCollect::do_collect(
             root_to_leaf,
             self,
@@ -116,7 +117,7 @@ impl<'m> PriceFeeds<'m> {
         let feed_bin = self
             .0
             .may_load(storage, (C::TICKER.into(), QuoteC::TICKER.into()))?;
-        load_feed(feed_bin).and_then(|feed| feed.get_price(config))
+        load_feed(feed_bin).and_then(|feed| feed.calc_price(config))
     }
 }
 
@@ -187,7 +188,7 @@ where
         let next_price = self
             .feeds
             .price_of_feed::<C, _>(self.storage, self.config)?;
-        let total_price = next_price.lossy_mul(self.price);
+        let total_price = next_price * self.price;
         PriceCollect::do_collect(
             self.currency_path,
             self.feeds,
@@ -354,7 +355,7 @@ mod test {
             feeds.price::<Stars, _>(&storage, &config, [Osmo::TICKER, Stars::TICKER].into_iter())
         );
         assert_eq!(
-            Ok(new_price12.lossy_mul(new_price23).into()),
+            Ok((new_price12 * new_price23).into()),
             feeds.price::<Usdc, _>(
                 &storage,
                 &config,
@@ -362,7 +363,7 @@ mod test {
             )
         );
         assert_eq!(
-            Ok(new_price12.lossy_mul(new_price24).into()),
+            Ok((new_price12 * new_price24).into()),
             feeds.price::<Stars, _>(
                 &storage,
                 &config,

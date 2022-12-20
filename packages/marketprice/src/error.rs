@@ -1,4 +1,4 @@
-use std::convert::Infallible;
+use std::{convert::Infallible, num::TryFromIntError};
 
 use thiserror::Error;
 
@@ -26,6 +26,9 @@ pub enum PriceFeedsError {
 
     #[error("{0}")]
     FromInfallible(#[from] Infallible),
+
+    #[error("{0}")]
+    TryFromInt(#[from] TryFromIntError),
 
     #[error("{0}")]
     Finance(#[from] finance::error::Error),
