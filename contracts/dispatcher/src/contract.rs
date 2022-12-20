@@ -11,8 +11,7 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
-        ensure, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Storage,
-        Timestamp,
+        ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Storage, Timestamp,
     },
     cw2::set_contract_version,
 };
@@ -65,7 +64,7 @@ pub fn instantiate(
 
     batch
         .schedule_execute_wasm_no_reply::<_, Nls>(
-            &msg.timealarms_addr,
+            &msg.timealarms,
             &timealarms::msg::ExecuteMsg::AddAlarm {
                 time: env.block.time + Duration::from_hours(msg.cadence_hours),
             },

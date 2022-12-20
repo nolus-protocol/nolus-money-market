@@ -8,11 +8,8 @@ use sdk::{
 
 use crate::{
     api::{ExecuteMsg, NewLeaseForm, StateQuery},
-    contract::{
-        state::Controller,
-        state::Response
-    },
-    error::ContractResult
+    contract::{state::Controller, state::Response},
+    error::ContractResult,
 };
 
 mod alarms;

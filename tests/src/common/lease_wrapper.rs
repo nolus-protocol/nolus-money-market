@@ -22,7 +22,7 @@ pub struct LeaseWrapper {
 
 pub struct LeaseWrapperConfig {
     //NewLeaseForm
-    pub customer: String,
+    pub customer: Addr,
     // Liability
     pub liability_init_percent: Percent,
     pub liability_delta_to_healthy_percent: Percent,
@@ -41,7 +41,7 @@ pub struct LeaseWrapperConfig {
 impl Default for LeaseWrapperConfig {
     fn default() -> Self {
         Self {
-            customer: USER.to_string(),
+            customer: Addr::unchecked(USER),
             liability_init_percent: Percent::from_percent(65),
             liability_delta_to_healthy_percent: Percent::from_percent(5),
             liability_delta_to_max_percent: Percent::from_percent(10),
@@ -131,12 +131,12 @@ impl LeaseWrapper {
             ),
             loan: LoanForm {
                 annual_margin_interest: config.annual_margin_interest,
-                lpp: addresses.lpp.into_string(),
+                lpp: addresses.lpp,
                 interest_payment: config.interest_payment,
-                profit: addresses.profit.into_string(),
+                profit: addresses.profit,
             },
-            time_alarms: addresses.time_alarms.into_string(),
-            market_price_oracle: addresses.oracle.into_string(),
+            time_alarms: addresses.time_alarms,
+            market_price_oracle: addresses.oracle,
             dex: config.dex,
         }
     }

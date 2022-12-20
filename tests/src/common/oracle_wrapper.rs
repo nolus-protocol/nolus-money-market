@@ -1,9 +1,8 @@
-use marketprice::SpotPrice;
 use trees::tr;
 
-use currency::lease::Cro;
-use currency::{lease::Osmo, lpn::Usdc, native::Nls};
+use currency::{lease::{Cro, Osmo}, lpn::Usdc, native::Nls};
 use finance::{coin::Coin, currency::Currency, percent::Percent, price::total_of};
+use marketprice::SpotPrice;
 use oracle::{
     contract::{execute, instantiate, query, reply},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},

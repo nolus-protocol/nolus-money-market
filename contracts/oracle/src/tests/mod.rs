@@ -1,3 +1,5 @@
+use trees::tr;
+
 use currency::{
     lease::{Atom, Cro, Osmo, Wbtc, Weth},
     lpn::Usdc,
@@ -14,7 +16,6 @@ use sdk::cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
     MemoryStorage, MessageInfo, OwnedDeps,
 };
-use trees::tr;
 
 use crate::{
     contract::{execute, instantiate},

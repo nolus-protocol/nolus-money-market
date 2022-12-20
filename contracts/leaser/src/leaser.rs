@@ -14,10 +14,7 @@ use crate::{
     cmd::Quote,
     error::{ContractError, ContractResult},
     msg::{ConfigResponse, QuoteResponse},
-    state::{
-        config::Config,
-        leaser::Loans,
-    },
+    state::{config::Config, leaser::Loans},
 };
 
 pub struct Leaser {}

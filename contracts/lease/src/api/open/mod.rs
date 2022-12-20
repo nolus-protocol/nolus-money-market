@@ -1,15 +1,12 @@
-use serde::{
-    Serialize,
-    Deserialize
-};
+use serde::{Deserialize, Serialize};
 
 use finance::{currency::SymbolOwned, duration::Duration, liability::Liability, percent::Percent};
-use sdk::{schemars::{self, JsonSchema}, cosmwasm_std::Addr};
-
-use crate::{
-    error::ContractError,
-    error::ContractResult
+use sdk::{
+    cosmwasm_std::Addr,
+    schemars::{self, JsonSchema},
 };
+
+use crate::{error::ContractError, error::ContractResult};
 
 use super::dex::ConnectionParams;
 

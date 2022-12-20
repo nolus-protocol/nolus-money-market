@@ -5,7 +5,7 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
-        ensure, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Timestamp,
+        ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Timestamp,
     },
     cw2::set_contract_version,
 };
@@ -81,7 +81,8 @@ fn try_transfer(
     info: MessageInfo,
     time: Timestamp,
 ) -> Result<Response, ContractError> {
-    SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?.check_access(&info.sender)?;
+    SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
+        .check_access(&info.sender)?;
 
     ensure!(
         time >= env.block.time,

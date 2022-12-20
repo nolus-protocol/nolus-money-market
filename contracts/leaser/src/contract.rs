@@ -3,9 +3,7 @@ use platform::{access_control::SingleUserAccess, reply::from_instantiate};
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{
-        to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, StdError, Storage,
-    },
+    cosmwasm_std::{to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage},
     cw2::set_contract_version,
 };
 
