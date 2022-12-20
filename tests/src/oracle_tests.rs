@@ -24,8 +24,8 @@ use sdk::{
 use swap::SwapTarget;
 
 use crate::common::{
-    leaser_wrapper::LeaserWrapper, native_cwcoin, test_case::TestCase, AppExt, ADMIN, USER,
-    BASE_INTEREST_RATE, UTILIZATION_OPTIMAL, ADDON_OPTIMAL_INTEREST_RATE
+    leaser_wrapper::LeaserWrapper, native_cwcoin, test_case::TestCase, AppExt,
+    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type Lpn = Usdc;

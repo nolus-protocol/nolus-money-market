@@ -20,8 +20,8 @@ use sdk::{
 
 use crate::{
     common::{
-        cwcoin, cwcoins, lpp_wrapper::mock_lpp_quote_query, test_case::TestCase, ADMIN, USER,
-        BASE_INTEREST_RATE, UTILIZATION_OPTIMAL, ADDON_OPTIMAL_INTEREST_RATE,
+        cwcoin, cwcoins, lpp_wrapper::mock_lpp_quote_query, test_case::TestCase,
+        ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
     },
     oracle_tests::{add_feeder, feed_price},
 };

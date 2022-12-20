@@ -19,8 +19,8 @@ use sdk::{
 };
 
 use crate::common::{
-    UTILIZATION_OPTIMAL, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE,
-    cwcoin, cwcoins, leaser_wrapper::LeaserWrapper, test_case::TestCase, AppExt, ADMIN, USER,
+    cwcoin, cwcoins, leaser_wrapper::LeaserWrapper, test_case::TestCase, AppExt,
+    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type Lpn = Usdc;
