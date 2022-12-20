@@ -178,7 +178,9 @@ where
         let amount: IntermediateAmount = (double_amount >> bits)
             .try_into()
             .expect("insufficient bits to trim");
-        amount.into()
+        let res = amount.into();
+        assert!(res > 0, "price overflow during multiplication");
+        res
     }
 }
 
@@ -469,10 +471,8 @@ mod test {
         lossy_mul_shifts_impl(5, 63);
     }
 
-    //TODO fix it ASAP
     #[test]
     #[should_panic = "overflow"]
-    #[ignore = "overflow bug"]
     fn lossy_mul_overflow() {
         const SHIFTS: u8 = 23;
         let a1 = u128::MAX - 1;
