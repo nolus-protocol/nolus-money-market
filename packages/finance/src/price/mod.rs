@@ -9,8 +9,7 @@ use crate::{
     currency::{self, Currency},
     error::{Error, Result},
     fraction::Fraction,
-    fractionable::{Fractionable, HigherRank},
-    percent::Units as PercentUnits,
+    fractionable::HigherRank,
     ratio::{Ratio, Rational},
 };
 
@@ -64,6 +63,7 @@ where
     C: Currency,
     QuoteC: Currency,
 {
+    #[track_caller]
     fn new(amount: Coin<C>, amount_quote: Coin<QuoteC>) -> Self {
         let (amount_normalized, amount_quote_normalized) = amount.into_coprime_with(amount_quote);
         let res = Self {
@@ -112,21 +112,23 @@ where
         total_of(factored_amount).is(factored_total)
     }
 
-    pub fn lossy_mul<QuoteQuoteC>(self, rhs: Price<QuoteC, QuoteQuoteC>) -> Price<C, QuoteQuoteC>
+    /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
+    /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
+    /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
+    pub fn lossy_mul<R>(self, rhs: &R) -> Self
     where
-        QuoteQuoteC: Currency,
+        R: Ratio<Amount>,
     {
-        // Price(a, b) * Price(c, d) = Price(a * c, b * d)
-        // first try to convert (a, d) and (b, c) into co-prime numbers
-        let (amount_normalized, rhs_amount_quote_normalized) =
-            self.amount.into_coprime_with(rhs.amount_quote);
-        let (amount_quote_normalized, rhs_amount_normalized) =
-            self.amount_quote.into_coprime_with(rhs.amount);
+        let (amount_normalized, rhs_nominator_normalized) =
+            self.amount.into_coprime_with(Coin::<C>::from(rhs.parts()));
+        let (amount_quote_normalized, rhs_denominator_normalized) = self
+            .amount_quote
+            .into_coprime_with(Coin::<QuoteC>::from(rhs.total()));
 
         let double_amount =
-            DoubleAmount::from(amount_normalized) * DoubleAmount::from(rhs_amount_normalized);
+            DoubleAmount::from(amount_normalized) * DoubleAmount::from(rhs_denominator_normalized);
         let double_amount_quote = DoubleAmount::from(amount_quote_normalized)
-            * DoubleAmount::from(rhs_amount_quote_normalized);
+            * DoubleAmount::from(rhs_nominator_normalized);
 
         let extra_bits =
             Self::bits_above_max(double_amount).max(Self::bits_above_max(double_amount_quote));
@@ -187,7 +189,7 @@ where
 {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         // a/b < c/d if and only if a * d < b * c
-        // taking into account that Price is like amount_quote/amount
+        // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
         type DoubleType = <Amount as HigherRank<Amount>>::Type;
 
         let a: DoubleType = self.amount_quote.into();
@@ -226,6 +228,25 @@ where
 
 // TODO for completeness implement the Sub and SubAssign counterparts
 
+impl<C, QuoteC, QuoteQuoteC> Mul<Price<QuoteC, QuoteQuoteC>> for Price<C, QuoteC>
+where
+    C: Currency,
+    QuoteC: Currency,
+    QuoteQuoteC: Currency,
+{
+    type Output = Price<C, QuoteQuoteC>;
+
+    #[track_caller]
+    fn mul(self, rhs: Price<QuoteC, QuoteQuoteC>) -> Self::Output {
+        // Price(a, b) * Price(c, d) = Price(a, d) * Rational(b / c)
+        // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
+
+        Self::Output::new(self.amount, rhs.amount_quote)
+            .lossy_mul(&Rational::new(self.amount_quote, rhs.amount))
+    }
+}
+
+// TODO replace it with a call to Price::lossy_mul
 impl<C, QuoteC> Div<Amount> for Price<C, QuoteC>
 where
     C: Currency,
@@ -236,22 +257,6 @@ where
     #[track_caller]
     fn div(self, rhs: Amount) -> Self::Output {
         Self::Output::new(self.amount.mul(rhs), self.amount_quote)
-    }
-}
-
-impl<C, QuoteC> Fractionable<PercentUnits> for Price<C, QuoteC>
-where
-    C: Currency,
-    QuoteC: Currency,
-{
-    fn safe_mul<F>(self, fraction: &F) -> Self
-    where
-        F: Ratio<PercentUnits>,
-    {
-        Price::new(
-            self.amount * 1000u128,
-            (self.amount_quote * 1000u128).safe_mul(fraction),
-        )
     }
 }
 
@@ -269,15 +274,15 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::ops::{Add, AddAssign, Div};
+    use std::ops::{Add, AddAssign, Div, Mul};
 
     use sdk::cosmwasm_std::{Uint128, Uint256};
 
     use crate::{
         coin::{Amount, Coin as CoinT},
         currency::{Currency, SymbolStatic},
-        percent::Percent,
         price::{self, Price},
+        ratio::Rational,
         test::currency::{Nls, Usdc},
     };
 
@@ -457,29 +462,33 @@ mod test {
 
     #[test]
     fn lossy_mul_few_shifts() {
-        let a1 = u128::MAX - 1;
-        let q1 = 5;
-        let a2: Amount = 3;
-        let q2 = 7;
-        assert!(a1 % q1 != 0 && a1 % q2 != 0);
-        assert!(a2 % q1 != 0 && a2 % q2 != 0);
-        const SHIFTS: u32 = 2;
-        assert_eq!(0, a2 >> SHIFTS);
-        let a_exp = shift_product(a1, a2, SHIFTS);
-        let q_exp = shift_product(q1, q2, SHIFTS);
-        lossy_mul_impl(c(a1), q(q1), q(a2), qq(q2), c(a_exp), qq(q_exp));
+        lossy_mul_shifts_impl(5, 1);
+        lossy_mul_shifts_impl(5, 2);
+        lossy_mul_shifts_impl(5, 7);
+        lossy_mul_shifts_impl(5, 16);
+        lossy_mul_shifts_impl(5, 63);
     }
 
+    //TODO fix it ASAP
     #[test]
-    fn lossy_mul_many_shifts() {
-        let a = u128::MAX - 1;
-        let q1 = u128::MAX;
-        let q2 = 7;
-        assert!(a % q1 != 0 && a % q2 != 0);
-        const SHIFTS: u32 = 128;
-        let a_exp = shift_product(a, a, SHIFTS);
-        let q_exp = shift_product(q1, q2, SHIFTS);
-        lossy_mul_impl(c(a), q(q1), q(a), qq(q2), c(a_exp), qq(q_exp));
+    #[should_panic = "overflow"]
+    #[ignore = "overflow bug"]
+    fn lossy_mul_overflow() {
+        const SHIFTS: u8 = 23;
+        let a1 = u128::MAX - 1;
+        let q1 = 7;
+        let a2: Amount = 1 << SHIFTS;
+        let q2 = a2 / q1 - 1; // the aim is q1 * q2 < a2
+
+        assert!(a1 % q1 != 0);
+        assert!(a1 % q2 != 0);
+        assert!(a2 % q1 != 0);
+        assert!(a2 % q2 != 0);
+
+        assert!(shift_product(a1, a2, SHIFTS) == 0 || shift_product(q1, q2, SHIFTS) == 0);
+        let price1 = price::total_of(c(a1)).is(q(q1));
+        let price2 = price::total_of(q(a2)).is(qq(q2));
+        _ = price1.mul(price2);
     }
 
     #[test]
@@ -487,19 +496,6 @@ mod test {
         div_impl(c(1), q(2), 5, c(5), q(2));
         div_impl(c(1), q(2), 10, c(5), q(1));
         div_impl(c(2), q(3), 2, c(4), q(3));
-    }
-
-    #[test]
-    fn percentable() {
-        use crate::fraction::Fraction;
-
-        let price = super::total_of(c(1)).is(q(1000));
-        let percent = Percent::from_permille(1);
-        assert_eq!(percent.of(price), super::total_of(c(1)).is(q(1)));
-
-        let price = super::total_of(c(10)).is(q(1));
-        let percent = Percent::from_percent(20);
-        assert_eq!(percent.of(price), super::total_of(c(50)).is(q(1)));
     }
 
     fn c(a: Amount) -> Coin {
@@ -546,12 +542,23 @@ mod test {
         amount_exp: Coin,
         quote_exp: QuoteCoin,
     ) {
-        let mut price1 = price::total_of(amount1).is(quote1);
+        let price1 = price::total_of(amount1).is(quote1);
         let price2 = price::total_of(amount2).is(quote2);
         let exp = price::total_of(amount_exp).is(quote_exp);
         assert_eq!(exp, price1.add(price2));
-        price1.add_assign(price2);
-        assert_eq!(exp, price1);
+        assert!({
+            price1.checked_add(price2).map_or_else(
+                || exp == price1.lossy_add(price2),
+                |v| v == price1.add(price2),
+            )
+        });
+        assert!(exp == price1.lossy_add(price2));
+        assert!(exp >= price1);
+        assert!(exp >= price2);
+
+        let mut price3 = price1;
+        price3.add_assign(price2);
+        assert_eq!(exp, price3);
     }
 
     #[track_caller]
@@ -567,14 +574,15 @@ mod test {
         let price2 = price::total_of(amount2).is(quote2);
         let exp = price::total_of(amount_exp).is(quote_exp);
         assert_eq!(exp, price1.lossy_add(price2));
+        assert!(exp <= price1.add(price2));
     }
 
-    fn shift_product<A1, A2>(a1: A1, a2: A2, shifts: u32) -> Amount
+    fn shift_product<A1, A2>(a1: A1, a2: A2, shifts: u8) -> Amount
     where
         A1: Into<Uint256>,
         A2: Into<Uint256>,
     {
-        Uint128::try_from((a1.into() * a2.into()) >> shifts)
+        Uint128::try_from((a1.into() * a2.into()) >> u32::from(shifts))
             .expect("Incorrect test setup")
             .into()
     }
@@ -590,7 +598,27 @@ mod test {
         let price1 = price::total_of(amount1).is(quote1);
         let price2 = price::total_of(amount2).is(quote2);
         let exp = price::total_of(amount_exp).is(quote_exp);
-        assert_eq!(exp, price1.lossy_mul(price2));
+        assert_eq!(exp, price1.mul(price2));
+
+        let price3 = price::total_of(amount1).is(quote2);
+        let ratio = Rational::new(quote1, amount2);
+        assert_eq!(exp, price3.lossy_mul(&ratio));
+    }
+
+    fn lossy_mul_shifts_impl(q1: Amount, shifts: u8) {
+        let a1 = u128::MAX - 1;
+        let a2: Amount = 1 << shifts;
+        let q2 = a2 / q1 + 3; // the aim is q1 * q2 > a2
+
+        assert!(a1 % q1 != 0);
+        assert!(a1 % q2 != 0);
+        assert!(a2 % q1 != 0);
+        assert!(a2 % q2 != 0);
+        assert_eq!(1, a2 >> shifts);
+
+        let a_exp = shift_product(a1, a2, shifts);
+        let q_exp = shift_product(q1, q2, shifts);
+        lossy_mul_impl(c(a1), q(q1), q(a2), qq(q2), c(a_exp), qq(q_exp));
     }
 
     fn div_impl(

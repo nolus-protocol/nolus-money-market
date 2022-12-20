@@ -187,7 +187,7 @@ where
         let next_price = self
             .feeds
             .price_of_feed::<C, _>(self.storage, self.config)?;
-        let total_price = next_price.lossy_mul(self.price);
+        let total_price = next_price * self.price;
         PriceCollect::do_collect(
             self.currency_path,
             self.feeds,
@@ -354,7 +354,7 @@ mod test {
             feeds.price::<Stars, _>(&storage, &config, [Osmo::TICKER, Stars::TICKER].into_iter())
         );
         assert_eq!(
-            Ok(new_price12.lossy_mul(new_price23).into()),
+            Ok((new_price12 * new_price23).into()),
             feeds.price::<Usdc, _>(
                 &storage,
                 &config,
@@ -362,7 +362,7 @@ mod test {
             )
         );
         assert_eq!(
-            Ok(new_price12.lossy_mul(new_price24).into()),
+            Ok((new_price12 * new_price24).into()),
             feeds.price::<Stars, _>(
                 &storage,
                 &config,
