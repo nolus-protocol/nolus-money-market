@@ -7,7 +7,7 @@ use finance::{
 };
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
-use crate::{error::PriceFeedsError, market_price::Config};
+use crate::{error::PriceFeedsError, feed::sample::Sample, market_price::Config};
 
 use self::observation::Observation;
 
@@ -60,6 +60,8 @@ where
         // TODO: move to config
         const SAMPLE_PERIOD: Duration = Duration::from_secs(5);
         let discount_factor = Percent::from_percent(75);
+        assert!(discount_factor < Percent::HUNDRED);
+        assert!(SAMPLE_PERIOD < config.period());
 
         let observations = self.valid_observations(config);
         let validity_period = config.block_time() - config.period();
@@ -68,12 +70,11 @@ where
 
         samples
             .take((config.period().nanos() / SAMPLE_PERIOD.nanos()).try_into()?)
-            .fold(None, |price, sample| match (price, sample.price()) {
-                (Some(p), Some(s)) => {
-                    Some(discount_factor.of(s) + (Percent::HUNDRED - discount_factor).of(p))
-                }
-                (None, Some(s)) => Some(s),
-                _ => None,
+            .map(Sample::into_maybe_price)
+            .skip_while(Option::is_none)
+            .map(|price| Option::expect(price, "sample prices should keep being present"))
+            .reduce(|acc, sample_price| {
+                discount_factor.of(sample_price) + (Percent::HUNDRED - discount_factor).of(acc)
             })
             .ok_or(PriceFeedsError::NoPrice {})
     }
