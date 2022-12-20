@@ -33,20 +33,18 @@ impl<'r> SingleUserAccess<'r> {
         &self.address
     }
 
-    pub fn into_address(self) -> Addr {
-        self.address
-    }
-
-    pub fn address_mut(&mut self) -> &mut Addr {
-        &mut self.address
-    }
-
     pub fn check_access(&self, addr: &Addr) -> Result<(), Unauthorized> {
         if &self.address == addr {
             Ok(())
         } else {
             Err(Unauthorized)
         }
+    }
+}
+
+impl<'r> From<SingleUserAccess<'r>> for Addr {
+    fn from(value: SingleUserAccess<'r>) -> Self {
+        value.address
     }
 }
 

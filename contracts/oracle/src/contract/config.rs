@@ -12,8 +12,7 @@ pub fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, ContractErr
 
     Ok(ConfigResponse {
         base_asset: config.base_asset,
-        owner: SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
-            .into_address(),
+        owner: SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?.into(),
         price_feed_period: config.price_feed_period,
         expected_feeders: config.expected_feeders,
     })
