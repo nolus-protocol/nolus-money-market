@@ -82,40 +82,10 @@ where
         }
     }
 
-    pub fn checked_add(self, rhs: Self) -> Option<Self> {
-        // let b1 = b / gcd(b, d), and d1 = d / gcd(b, d), then
-        // a / b + c / d = (a * d1 + c * b1) / (b1 * d1 * gcd(b, d))
-        // taking into account that Price is like amount_quote/amount
-        let (a1, c1) = self.amount.into_coprime_with(rhs.amount);
-        debug_assert_eq!(0, Amount::from(self.amount) % Amount::from(a1));
-        debug_assert_eq!(0, Amount::from(rhs.amount) % Amount::from(c1));
-        let gcd: Amount = (self.amount / Amount::from(a1)).into();
-        debug_assert_eq!(gcd, Amount::from(rhs.amount / Amount::from(c1)));
-
-        let may_amount_quote =
-            (self.amount_quote * Amount::from(c1)).checked_add(rhs.amount_quote * Amount::from(a1));
-        let amount = a1 * c1.into() * gcd;
-        may_amount_quote.map(|amount_quote| Self::new(amount, amount_quote))
-    }
-
-    /// Add two prices rounding each of them to 1.10-18, simmilarly to
-    /// the precision provided by cosmwasm::Decimal.
-    ///
-    /// TODO Implement a variable precision algorithm depending on the
-    /// value of the prices. The rounding would be done by shifting to
-    /// the right both amounts of the price with a bigger denominator
-    /// until a * d + b * c and b * d do not overflow.
-    pub fn lossy_add(self, rhs: Self) -> Self {
-        const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
-        let factored_amount = FACTOR.into();
-        let factored_total = total(factored_amount, self) + total(factored_amount, rhs);
-        total_of(factored_amount).is(factored_total)
-    }
-
     /// Price(amount, amount_quote) * Ratio(nominator / denominator) = Price(amount * denominator, amount_quote * nominator)
     /// where the pairs (amount, nominator) and (amount_quote, denominator) are transformed into co-prime numbers.
     /// Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-    pub fn lossy_mul<R>(self, rhs: &R) -> Self
+    pub(crate) fn lossy_mul<R>(self, rhs: &R) -> Self
     where
         R: Ratio<Amount>,
     {
@@ -161,6 +131,36 @@ where
 
     fn check(invariant: bool, msg: &str) -> Result<()> {
         Error::broken_invariant_if::<Self>(!invariant, msg)
+    }
+
+    fn checked_add(self, rhs: Self) -> Option<Self> {
+        // let b1 = b / gcd(b, d), and d1 = d / gcd(b, d), then
+        // a / b + c / d = (a * d1 + c * b1) / (b1 * d1 * gcd(b, d))
+        // taking into account that Price is like amount_quote/amount
+        let (a1, c1) = self.amount.into_coprime_with(rhs.amount);
+        debug_assert_eq!(0, Amount::from(self.amount) % Amount::from(a1));
+        debug_assert_eq!(0, Amount::from(rhs.amount) % Amount::from(c1));
+        let gcd: Amount = (self.amount / Amount::from(a1)).into();
+        debug_assert_eq!(gcd, Amount::from(rhs.amount / Amount::from(c1)));
+
+        let may_amount_quote =
+            (self.amount_quote * Amount::from(c1)).checked_add(rhs.amount_quote * Amount::from(a1));
+        let amount = a1 * c1.into() * gcd;
+        may_amount_quote.map(|amount_quote| Self::new(amount, amount_quote))
+    }
+
+    /// Add two prices rounding each of them to 1.10-18, simmilarly to
+    /// the precision provided by cosmwasm::Decimal.
+    ///
+    /// TODO Implement a variable precision algorithm depending on the
+    /// value of the prices. The rounding would be done by shifting to
+    /// the right both amounts of the price with a bigger denominator
+    /// until a * d + b * c and b * d do not overflow.
+    fn lossy_add(self, rhs: Self) -> Self {
+        const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
+        let factored_amount = FACTOR.into();
+        let factored_total = total(factored_amount, self) + total(factored_amount, rhs);
+        total_of(factored_amount).is(factored_total)
     }
 
     #[track_caller]
