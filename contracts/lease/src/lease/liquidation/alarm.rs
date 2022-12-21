@@ -8,11 +8,11 @@ use finance::{
     price::{total, total_of, Price},
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
-use market_price_oracle::stub::Oracle as OracleTrait;
+use oracle::stub::Oracle as OracleTrait;
 use marketprice::{alarms::Alarm, SpotPrice};
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
-use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
+use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractResult,
@@ -220,7 +220,7 @@ mod tests {
     use lpp::msg::LoanResponse;
     use platform::batch::Batch;
     use sdk::cosmwasm_std::{to_binary, Addr, Timestamp, WasmMsg};
-    use time_alarms::msg::ExecuteMsg::AddAlarm;
+    use timealarms::msg::ExecuteMsg::AddAlarm;
 
     use crate::lease::{
         self,

@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use lpp::stub::lender::LppLenderRef;
-use market_price_oracle::stub::OracleRef;
+use oracle::stub::OracleRef;
 use serde::{Deserialize, Serialize};
 
 use platform::{

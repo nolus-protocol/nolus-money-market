@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
 use lpp::stub::lender::LppLenderRef;
-use market_price_oracle::stub::OracleRef;
+use oracle::stub::OracleRef;
 use platform::{bank_ibc::LocalChainSender, batch::Batch};
 use sdk::{
     cosmwasm_std::{DepsMut, Env},

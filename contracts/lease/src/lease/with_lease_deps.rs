@@ -5,10 +5,10 @@ use serde::{de::DeserializeOwned, Serialize};
 use ::currency::lease::LeaseGroup;
 use finance::currency::{self, AnyVisitor, Currency, Symbol};
 use lpp::stub::lender::{LppLender as LppLenderTrait, LppLenderRef, WithLppLender};
-use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
+use oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
 use profit::stub::{Profit as ProfitTrait, ProfitRef, WithProfit};
 use sdk::cosmwasm_std::QuerierWrapper;
-use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef, WithTimeAlarms};
+use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef, WithTimeAlarms};
 
 pub trait WithLeaseDeps {
     type Output;
@@ -42,7 +42,7 @@ pub fn execute<Cmd>(
 where
     Cmd: WithLeaseDeps,
     finance::error::Error: Into<Cmd::Error>,
-    market_price_oracle::error::ContractError: Into<Cmd::Error>,
+    oracle::error::ContractError: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
 {
     currency::visit_any_on_ticker::<LeaseGroup, _>(
@@ -72,7 +72,7 @@ where
     Cmd: WithLeaseDeps,
     finance::error::Error: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
-    market_price_oracle::error::ContractError: Into<Cmd::Error>,
+    oracle::error::ContractError: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;
@@ -107,7 +107,7 @@ impl<'r, Cmd, Asset> WithLppLender for FactoryStage2<'r, Cmd, Asset>
 where
     Cmd: WithLeaseDeps,
     Asset: Currency + Serialize,
-    market_price_oracle::error::ContractError: Into<Cmd::Error>,
+    oracle::error::ContractError: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
@@ -146,7 +146,7 @@ where
     Asset: Currency + Serialize,
     Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
-    market_price_oracle::error::ContractError: Into<Cmd::Error>,
+    oracle::error::ContractError: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;

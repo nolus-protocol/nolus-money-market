@@ -7,11 +7,11 @@ use finance::{
     price::{total, Price},
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
-use market_price_oracle::stub::{Oracle as OracleTrait, OracleBatch};
+use oracle::stub::{Oracle as OracleTrait, OracleBatch};
 use platform::{bank::BankAccount, batch::Batch};
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::{Addr, Timestamp};
-use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch};
+use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch};
 
 use crate::{
     api::StateResponse,
@@ -245,8 +245,8 @@ mod tests {
             LppBatch,
         },
     };
-    use market_price_oracle::msg::ExecuteMsg::AddPriceAlarm;
-    use market_price_oracle::stub::{Oracle, OracleBatch, OracleRef};
+    use oracle::msg::ExecuteMsg::AddPriceAlarm;
+    use oracle::stub::{Oracle, OracleBatch, OracleRef};
     use marketprice::alarms::Alarm;
     use platform::{
         bank::{BankAccountView, BankStub},
@@ -256,7 +256,7 @@ mod tests {
     use profit::stub::{Profit, ProfitBatch, ProfitRef};
     use sdk::cosmwasm_std::{wasm_execute, Addr, BankMsg, Timestamp};
     use swap::SwapTarget;
-    use time_alarms::{
+    use timealarms::{
         msg::ExecuteMsg::AddAlarm,
         stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},
     };
@@ -414,7 +414,7 @@ mod tests {
             &self.address == addr
         }
 
-        fn add_alarm(&mut self, time: Timestamp) -> time_alarms::stub::Result<()> {
+        fn add_alarm(&mut self, time: Timestamp) -> timealarms::stub::Result<()> {
             self.batch.schedule_execute_no_reply(wasm_execute(
                 self.address.clone(),
                 &AddAlarm { time },
@@ -441,7 +441,7 @@ mod tests {
             unreachable!()
         }
 
-        fn add_alarm(&mut self, _time: Timestamp) -> time_alarms::stub::Result<()> {
+        fn add_alarm(&mut self, _time: Timestamp) -> timealarms::stub::Result<()> {
             unreachable!()
         }
     }
@@ -474,14 +474,14 @@ mod tests {
             &self.address == addr
         }
 
-        fn price_of<C>(&self) -> market_price_oracle::stub::Result<Price<C, OracleBase>>
+        fn price_of<C>(&self) -> oracle::stub::Result<Price<C, OracleBase>>
         where
             C: Currency,
         {
             Ok(Price::identity())
         }
 
-        fn add_alarm(&mut self, alarm: Alarm) -> market_price_oracle::stub::Result<()> {
+        fn add_alarm(&mut self, alarm: Alarm) -> oracle::stub::Result<()> {
             self.batch.schedule_execute_no_reply(wasm_execute(
                 self.address.clone(),
                 &AddPriceAlarm { alarm },
@@ -495,7 +495,7 @@ mod tests {
             &self,
             _: currency::SymbolOwned,
             _: currency::SymbolOwned,
-        ) -> market_price_oracle::stub::Result<Vec<SwapTarget>> {
+        ) -> oracle::stub::Result<Vec<SwapTarget>> {
             unimplemented!()
         }
     }
@@ -519,14 +519,14 @@ mod tests {
             unreachable!()
         }
 
-        fn price_of<C>(&self) -> market_price_oracle::stub::Result<Price<C, OracleBase>>
+        fn price_of<C>(&self) -> oracle::stub::Result<Price<C, OracleBase>>
         where
             C: Currency,
         {
             Ok(Price::identity())
         }
 
-        fn add_alarm(&mut self, _alarm: Alarm) -> market_price_oracle::stub::Result<()> {
+        fn add_alarm(&mut self, _alarm: Alarm) -> oracle::stub::Result<()> {
             unreachable!()
         }
 
@@ -534,7 +534,7 @@ mod tests {
             &self,
             _: currency::SymbolOwned,
             _: currency::SymbolOwned,
-        ) -> market_price_oracle::stub::Result<Vec<SwapTarget>> {
+        ) -> oracle::stub::Result<Vec<SwapTarget>> {
             unimplemented!()
         }
     }

@@ -2,14 +2,14 @@ use serde::Serialize;
 
 use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
-use market_price_oracle::stub::Oracle as OracleTrait;
+use oracle::stub::Oracle as OracleTrait;
 use platform::{
     bank::{self},
     batch::{Emit, Emitter},
 };
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::{Coin as CwCoin, Env};
-use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
+use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractError,

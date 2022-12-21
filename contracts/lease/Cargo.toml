@@ -24,20 +24,20 @@ contract = []
 testing = []
 
 [dependencies]
-lpp = { path = "../lpp", default-features = false, features = ["stub"] }
-market_price_oracle = { path = "../oracle", package = "oracle", default-features = false, features = [
+lpp = { workspace = true, features = ["stub"] }
+oracle = { workspace = true, features = [
     "convert",
 ] }
-profit = { path = "../profit", default-features = false, features = ["stub"] }
-time_alarms = { path = "../timealarms", package = "timealarms", default-features = false, features = [
+profit = { workspace = true, features = ["stub"] }
+timealarms = { workspace = true, features = [
     "stub",
 ] }
-currency = { path = "../../packages/currency" }
-finance = { path = "../../packages/finance" }
-marketprice = { path = "../../packages/marketprice" }
-platform = { path = "../../packages/platform" }
-swap = { path = "../../packages/swap", features = ["trx"] }
-sdk = { path = "../../packages/sdk", features = ["contract"] }
+currency = { workspace = true }
+finance = { workspace = true }
+marketprice = { workspace = true }
+platform = { workspace = true }
+swap = { workspace = true, features = ["trx"] }
+sdk = { workspace = true, features = ["contract"] }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
@@ -47,21 +47,21 @@ thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-time_alarms = { path = "../timealarms", package = "timealarms", default-features = false, features = [
+timealarms = { workspace = true, features = [
     "testing",
 ] }
-lpp = { path = "../lpp", default-features = false, features = ["testing"] }
-profit = { path = "../profit", default-features = false, features = [
+lpp = { workspace = true, features = ["testing"] }
+profit = { workspace = true, features = [
     "testing",
 ] }
-market_price_oracle = { path = "../oracle", package = "oracle", default-features = false, features = [
+oracle = { workspace = true, features = [
     "testing",
 ] }
-finance = { path = "../../packages/finance", features = ["testing"] }
-currency = { path = "../../packages/currency", features = ["testing"] }
-marketprice = { path = "../../packages/marketprice", features = ["testing"] }
-platform = { path = "../../packages/platform", features = ["testing"] }
-schema = { path = "../../packages/schema" }
+finance = { workspace = true, features = ["testing"] }
+currency = { workspace = true, features = ["testing"] }
+marketprice = { workspace = true, features = ["testing"] }
+platform = { workspace = true, features = ["testing"] }
+schema = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 sdk = { path = "../../packages/sdk", features = ["testing"] }

@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use cosmwasm_std::{DepsMut, Env};
 use lpp::stub::lender::LppLenderRef;
-use market_price_oracle::stub::OracleRef;
+use oracle::stub::OracleRef;
 use platform::{batch::Batch, ica};
 use sdk::neutron_sdk::sudo::msg::SudoMsg;
 use serde::{Deserialize, Serialize};

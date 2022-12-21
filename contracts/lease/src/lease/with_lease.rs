@@ -2,10 +2,10 @@ use serde::Serialize;
 
 use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
-use market_price_oracle::stub::Oracle as OracleTrait;
+use oracle::stub::Oracle as OracleTrait;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
-use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
+use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use super::{
     with_lease_deps::{self, WithLeaseDeps},
@@ -38,8 +38,8 @@ pub fn execute<Cmd>(
 where
     Cmd: WithLease,
     finance::error::Error: Into<Cmd::Error>,
-    time_alarms::error::ContractError: Into<Cmd::Error>,
-    market_price_oracle::error::ContractError: Into<Cmd::Error>,
+    timealarms::error::ContractError: Into<Cmd::Error>,
+    oracle::error::ContractError: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
 {
     let asset = lease_dto.amount.ticker().clone();

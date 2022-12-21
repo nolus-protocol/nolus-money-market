@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{coin::Coin, duration::Duration};
 use lpp::stub::lender::LppLenderRef;
-use market_price_oracle::stub::OracleRef;
+use oracle::stub::OracleRef;
 use platform::{
     self,
     batch::Batch as LocalBatch,

@@ -5,7 +5,7 @@ use platform::batch::Batch;
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::lender::LppLenderRef;
-use market_price_oracle::stub::OracleRef;
+use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::{DepsMut, Env, Reply};
 
 use crate::{

@@ -2,9 +2,7 @@ use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError;
 
-pub use crate::{
-    alarms::{AlarmDispatcher, Alarms, Id},
-};
+pub use crate::alarms::{AlarmDispatcher, Alarms, Id};
 
 mod alarms;
 

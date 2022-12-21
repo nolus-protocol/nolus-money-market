@@ -2,10 +2,10 @@ use serde::Serialize;
 
 use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
-use market_price_oracle::stub::Oracle as OracleTrait;
+use oracle::stub::Oracle as OracleTrait;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::{to_binary, Binary, Timestamp};
-use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
+use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractError,

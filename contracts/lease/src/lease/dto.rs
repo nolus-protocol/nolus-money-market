@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 use finance::liability::Liability;
-use market_price_oracle::stub::OracleRef;
+use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::Addr;
-use time_alarms::stub::TimeAlarmsRef;
+use timealarms::stub::TimeAlarmsRef;
 
 use crate::{api::LeaseCoin, loan::LoanDTO};
 

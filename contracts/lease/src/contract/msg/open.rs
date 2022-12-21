@@ -2,10 +2,10 @@ use serde::Serialize;
 
 use finance::{coin::Coin, currency::Currency};
 use lpp::stub::lender::{LppLender as LppLenderTrait, LppLenderRef};
-use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef};
+use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use profit::stub::{Profit as ProfitTrait, ProfitRef};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
-use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef};
+use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef};
 
 use crate::{
     api::{LeaseCoin, NewLeaseForm},

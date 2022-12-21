@@ -9,7 +9,7 @@ use finance::{
     percent::Percent,
 };
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
-use market_price_oracle::{convert, stub::OracleRef};
+use oracle::{convert, stub::OracleRef};
 use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 

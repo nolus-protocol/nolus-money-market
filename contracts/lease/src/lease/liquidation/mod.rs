@@ -10,11 +10,11 @@ use finance::{
     ratio::Rational,
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
-use market_price_oracle::stub::Oracle as OracleTrait;
+use oracle::stub::Oracle as OracleTrait;
 use platform::{batch::Batch, generate_ids};
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::{Addr, Timestamp};
-use time_alarms::stub::TimeAlarms as TimeAlarmsTrait;
+use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractResult,
