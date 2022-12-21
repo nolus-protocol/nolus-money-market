@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use finance::{currency::Currency, duration::Duration, price::Price};
+use finance::{
+    currency::Currency, duration::Duration, fraction::Fraction, price::Price, ratio::Rational,
+};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use super::observation::Observation;
@@ -86,12 +88,9 @@ where
                 .expect("should have been checked that there is at least one member");
 
             let sum = values.fold(*first, |acc, current| acc + *current);
-            let amount = prices_number
-                .try_into()
-                .expect("usize should convert into u128");
-            self.last_sample = Sample {
-                price: Some(sum / amount),
-            }
+            let part = Rational::new(1, prices_number);
+            let avg = <Rational<usize> as Fraction<usize>>::of(&part, sum);
+            self.last_sample = Sample { price: Some(avg) }
         }
         self.sample_prices.clear();
         self.sample_start = self.sample_start + self.sample_span;

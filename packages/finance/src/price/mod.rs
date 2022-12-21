@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Div, Mul};
+use std::ops::{Add, AddAssign, Mul};
 
 use serde::{Deserialize, Serialize};
 
@@ -192,13 +192,12 @@ where
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         // a/b < c/d if and only if a * d < b * c
         // Please note that Price(amount, amount_quote) is like Ratio(amount_quote / amount).
-        type DoubleType = <Amount as HigherRank<Amount>>::Type;
 
-        let a: DoubleType = self.amount_quote.into();
-        let d: DoubleType = other.amount.into();
+        let a: DoubleAmount = self.amount_quote.into();
+        let d: DoubleAmount = other.amount.into();
 
-        let b: DoubleType = self.amount.into();
-        let c: DoubleType = other.amount_quote.into();
+        let b: DoubleAmount = self.amount.into();
+        let c: DoubleAmount = other.amount_quote.into();
         (a * d).partial_cmp(&(b * c))
     }
 }
@@ -248,19 +247,6 @@ where
     }
 }
 
-impl<C, QuoteC> Div<Amount> for Price<C, QuoteC>
-where
-    C: Currency,
-    QuoteC: Currency,
-{
-    type Output = Self;
-
-    #[track_caller]
-    fn div(self, rhs: Amount) -> Self::Output {
-        self.lossy_mul(&Rational::new(1, rhs))
-    }
-}
-
 /// Calculates the amount of given coins in another currency, referred here as `quote currency`
 ///
 /// For example, total(10 EUR, 1.01 EURUSD) = 10.1 USD
@@ -275,7 +261,7 @@ where
 
 #[cfg(test)]
 mod test {
-    use std::ops::{Add, AddAssign, Div, Mul};
+    use std::ops::{Add, AddAssign, Mul};
 
     use sdk::cosmwasm_std::{Uint128, Uint256};
 
@@ -490,14 +476,6 @@ mod test {
         _ = price1.mul(price2);
     }
 
-    #[test]
-    fn div() {
-        div_impl(c(1), q(2), 5, c(5), q(2));
-        div_impl(c(1), q(2), 10, c(5), q(1));
-        div_impl(c(2), q(3), 2, c(4), q(3));
-        div_impl(c(Amount::MAX), q(16), 4, c(Amount::MAX), q(4));
-    }
-
     fn c(a: Amount) -> Coin {
         Coin::new(a)
     }
@@ -619,18 +597,6 @@ mod test {
         let a_exp = shift_product(a1, a2, shifts);
         let q_exp = shift_product(q1, q2, shifts);
         lossy_mul_impl(c(a1), q(q1), q(a2), qq(q2), c(a_exp), qq(q_exp));
-    }
-
-    fn div_impl(
-        amount1: Coin,
-        quote1: QuoteCoin,
-        amount2: Amount,
-        amount_exp: Coin,
-        quote_exp: QuoteCoin,
-    ) {
-        let price1 = price::total_of(amount1).is(quote1);
-        let exp = price::total_of(amount_exp).is(quote_exp);
-        assert_eq!(exp, price1.div(amount2));
     }
 }
 
