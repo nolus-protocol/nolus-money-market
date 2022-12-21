@@ -12,19 +12,11 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::nlpn::NLpn;
+use crate::{nlpn::NLpn, state::Config};
 
 pub type LppCoin = CoinDTO<Lpns>;
 
-#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
-#[cfg_attr(feature = "testing", derive(Debug))]
-pub struct InstantiateMsg {
-    pub lpn_ticker: String,
-    pub lease_code_id: Uint64,
-    pub base_interest_rate: Percent,
-    pub utilization_optimal: Percent,
-    pub addon_optimal_interest_rate: Percent,
-}
+pub type InstantiateMsg = Config;
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]

@@ -1,11 +1,9 @@
 use currency::lpn::Usdc;
-
 use finance::{coin::Coin, currency::Currency, percent::Percent};
 use lpp::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
-
 use sdk::{
     cosmwasm_std::{to_binary, Addr, Binary, Coin as CwCoin, Deps, Env, Uint64},
     cw_multi_test::Executor,

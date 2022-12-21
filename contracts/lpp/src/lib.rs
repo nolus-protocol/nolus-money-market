@@ -12,4 +12,4 @@ pub mod event;
 #[cfg(any(feature = "contract", test))]
 mod lpp;
 #[cfg(any(feature = "contract", test))]
-mod state;
+pub mod state;
