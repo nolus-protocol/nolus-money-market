@@ -978,7 +978,6 @@ dependencies = [
  "currency",
  "finance",
  "lpp",
- "marketprice",
  "oracle",
  "platform",
  "schema",
