@@ -248,7 +248,6 @@ where
     }
 }
 
-// TODO replace it with a call to Price::lossy_mul
 impl<C, QuoteC> Div<Amount> for Price<C, QuoteC>
 where
     C: Currency,
@@ -258,7 +257,7 @@ where
 
     #[track_caller]
     fn div(self, rhs: Amount) -> Self::Output {
-        Self::Output::new(self.amount.mul(rhs), self.amount_quote)
+        self.lossy_mul(&Rational::new(1, rhs))
     }
 }
 
@@ -496,6 +495,7 @@ mod test {
         div_impl(c(1), q(2), 5, c(5), q(2));
         div_impl(c(1), q(2), 10, c(5), q(1));
         div_impl(c(2), q(3), 2, c(4), q(3));
+        div_impl(c(Amount::MAX), q(16), 4, c(Amount::MAX), q(4));
     }
 
     fn c(a: Amount) -> Coin {
