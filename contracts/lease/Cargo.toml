@@ -64,4 +64,4 @@ platform = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-sdk = { path = "../../packages/sdk", features = ["testing"] }
+sdk = { workspace = true, features = ["testing"] }

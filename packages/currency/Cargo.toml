@@ -9,11 +9,11 @@ license.workspace = true
 testing = []
 
 [dependencies]
-finance = { path = "../../packages/finance" }
-sdk = { path = "../../packages/sdk", features = ["schema"] }
+finance = { workspace = true }
+sdk = { workspace = true, features = ["schema"] }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-finance = { path = "../../packages/finance", features = ["testing"] }
+finance = { workspace = true, features = ["testing"] }

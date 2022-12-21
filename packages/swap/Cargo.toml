@@ -9,10 +9,10 @@ license.workspace = true
 trx = ["dep:sdk", "dep:osmosis-std"]
 
 [dependencies]
-finance = { path = "../finance", default-features = false }
-currency = { path = "../currency", default-features = false }
-platform = { path = "../platform", default-features = false }
-sdk = { path = "../../packages/sdk", features = ["cosmos"], optional = true }
+finance = { workspace = true }
+currency = { workspace = true }
+platform = { workspace = true }
+sdk = { workspace = true, features = ["cosmos"], optional = true }
 
 osmosis-std = { version = "0.12", default-features = false, optional = true }
 thiserror = { workspace = true }

@@ -9,19 +9,19 @@ license.workspace = true
 testing = []
 
 [dependencies]
-currency = { path = "../../packages/currency" }
-finance = { path = "../../packages/finance" }
-platform = { path = "../../packages/platform" }
-sdk = { path = "../../packages/sdk", features = ["storage", "schema"] }
-swap = { path = "../../packages/swap" }
+currency = { workspace = true }
+finance = { workspace = true }
+platform = { workspace = true }
+sdk = { workspace = true, features = ["storage", "schema"] }
+swap = { workspace = true }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 postcard = { workspace = true, features = ["alloc"] }
 
 [dev-dependencies]
-currency = { path = "../../packages/currency", features = ["testing"] }
-finance = { path = "../../packages/finance", features = ["testing"] }
+currency = { workspace = true, features = ["testing"] }
+finance = { workspace = true, features = ["testing"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-sdk = { path = "../../packages/sdk", features = ["testing"] }
+sdk = { workspace = true, features = ["testing"] }

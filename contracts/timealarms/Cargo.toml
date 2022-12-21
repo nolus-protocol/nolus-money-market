@@ -18,11 +18,11 @@ stub = []
 testing = []
 
 [dependencies]
-currency = { path = "../../packages/currency" }
-finance = { path = "../../packages/finance" }
-platform = { path = "../../packages/platform" }
-sdk = { path = "../../packages/sdk", features = ["contract"] }
-time-oracle = { path = "../../packages/time-oracle" }
+currency = { workspace = true }
+finance = { workspace = true }
+platform = { workspace = true }
+sdk = { workspace = true, features = ["contract"] }
+time-oracle = { workspace = true }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
@@ -31,8 +31,8 @@ thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-platform = { path = "../../packages/platform", features = ["testing"] }
-schema = { path = "../../packages/schema" }
+platform = { workspace = true, features = ["testing"] }
+schema = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-sdk = { path = "../../packages/sdk", default-features = false, features = ["cosmos", "storage", "testing"] }
+sdk = { workspace = true, features = ["cosmos", "storage", "testing"] }

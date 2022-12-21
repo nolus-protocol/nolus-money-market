@@ -6,8 +6,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-platform = { path = "../../packages/platform" }
-sdk = { path = "../../packages/sdk", features = ["storage"] }
+platform = { workspace = true }
+sdk = { workspace = true, features = ["storage"] }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

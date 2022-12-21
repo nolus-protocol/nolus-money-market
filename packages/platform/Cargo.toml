@@ -9,8 +9,8 @@ license.workspace = true
 testing = []
 
 [dependencies]
-finance = { path = "../../packages/finance" }
-sdk = { path = "../../packages/sdk", features = ["cosmos", "cosmos_ibc", "neutron"] }
+finance = { workspace = true }
+sdk = { workspace = true, features = ["cosmos", "cosmos_ibc", "neutron"] }
 
 prost = "0.11.0"
 thiserror = { workspace = true }
@@ -18,4 +18,4 @@ serde = { workspace = true }
 serde-json-wasm = { workspace = true }
 
 [dev-dependencies]
-finance = { path = "../../packages/finance", features = ["testing"] }
+finance = { workspace = true, features = ["testing"] }

@@ -9,7 +9,7 @@ license.workspace = true
 testing = []
 
 [dependencies]
-sdk = { path = "../../packages/sdk", features = ["cosmos", "schema"] }
+sdk = { workspace = true, features = ["cosmos", "schema"] }
 
 gcd = "2.1"
 thiserror = { workspace = true }
