@@ -161,6 +161,7 @@ mod tests {
         testing::{mock_dependencies_with_balance, mock_env, mock_info},
         Addr, DepsMut,
     };
+    use sdk::testing::customized_mock_deps_with_contracts;
 
     use crate::{
         msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
@@ -170,13 +171,18 @@ mod tests {
 
     use super::{execute, instantiate, query};
 
+    const LPP_ADDR: &str = "lpp";
+    const ORACLE_ADDR: &str = "oracle";
+    const TIMEALARMS_ADDR: &str = "timealarms";
+    const TREASURY_ADDR: &str = "treasury";
+
     fn do_instantiate(deps: DepsMut) {
         let msg = InstantiateMsg {
             cadence_hours: 10,
-            lpp: Addr::unchecked("lpp"),
-            oracle: Addr::unchecked("oracle"),
-            timealarms: Addr::unchecked("timealarms"),
-            treasury: Addr::unchecked("treasury"),
+            lpp: Addr::unchecked(LPP_ADDR),
+            oracle: Addr::unchecked(ORACLE_ADDR),
+            timealarms: Addr::unchecked(TIMEALARMS_ADDR),
+            treasury: Addr::unchecked(TREASURY_ADDR),
             tvl_to_apr: RewardScale::try_from(vec![
                 Bar {
                     tvl: TotalValueLocked::new(0),
@@ -197,7 +203,10 @@ mod tests {
 
     #[test]
     fn proper_initialization() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        let mut deps = customized_mock_deps_with_contracts(
+            mock_dependencies_with_balance(&coins(2, "token")),
+            [LPP_ADDR, TIMEALARMS_ADDR, ORACLE_ADDR, TREASURY_ADDR],
+        );
         do_instantiate(deps.as_mut());
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
@@ -207,7 +216,11 @@ mod tests {
 
     #[test]
     fn configure() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        let mut deps = customized_mock_deps_with_contracts(
+            mock_dependencies_with_balance(&coins(2, "token")),
+            [LPP_ADDR, TIMEALARMS_ADDR, ORACLE_ADDR, TREASURY_ADDR],
+        );
+
         do_instantiate(deps.as_mut());
 
         let unauth_info = mock_info("anyone", &coins(2, "token"));

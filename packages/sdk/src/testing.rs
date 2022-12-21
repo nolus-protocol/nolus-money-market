@@ -2,8 +2,9 @@ use self::neutron::Module as NeutronModule;
 #[cfg(not(feature = "neutron"))]
 use cosmwasm_std::Empty as CustomMsg;
 use cosmwasm_std::{
-    testing::{MockApi, MockStorage},
-    Empty, GovMsg, IbcMsg, IbcQuery,
+    testing::{mock_dependencies, MockApi, MockQuerier, MockStorage},
+    Binary, ContractResult, Empty, GovMsg, IbcMsg, IbcQuery, OwnedDeps, SystemError, SystemResult,
+    WasmQuery,
 };
 use cw_multi_test::{
     BankKeeper, BasicAppBuilder, DistributionKeeper, FailingModule, StakeKeeper, WasmKeeper,
@@ -28,6 +29,38 @@ pub type AppBuilder<Exec = CustomMsg, Query = Empty> = cw_multi_test::AppBuilder
 >;
 
 pub type Contract = dyn cw_multi_test::Contract<CustomMsg>;
+
+pub fn mock_deps_with_contracts<const N: usize>(
+    contracts: [&'static str; N],
+) -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
+    customized_mock_deps_with_contracts(mock_dependencies(), contracts)
+}
+
+pub fn customized_mock_deps_with_contracts<const N: usize>(
+    mut deps: OwnedDeps<MockStorage, MockApi, MockQuerier>,
+    contracts: [&'static str; N],
+) -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
+    deps.querier.update_wasm(move |query| match query {
+        WasmQuery::ContractInfo { contract_addr }
+            if contracts.contains(&contract_addr.as_str()) =>
+        {
+            SystemResult::Ok(ContractResult::Ok(Binary(Vec::from(
+                br#"{"code_id":0,"creator":"","admin":null,"pinned":false,"ibc_port":null}"#
+                    as &[u8],
+            ))))
+        }
+        WasmQuery::Smart { contract_addr, .. }
+        | WasmQuery::Raw { contract_addr, .. }
+        | WasmQuery::ContractInfo { contract_addr, .. } => {
+            SystemResult::Err(SystemError::NoSuchContract {
+                addr: contract_addr.clone(),
+            })
+        }
+        _ => unimplemented!(),
+    });
+
+    deps
+}
 
 pub fn new_app() -> AppBuilder {
     BasicAppBuilder::<CustomMsg, Empty>::new_custom()

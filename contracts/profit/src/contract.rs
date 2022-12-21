@@ -101,6 +101,7 @@ mod tests {
         testing::{mock_dependencies_with_balance, mock_env, mock_info},
         to_binary, Addr, BankMsg, CosmosMsg, SubMsg, WasmMsg,
     };
+    use sdk::testing::customized_mock_deps_with_contracts;
 
     use crate::{
         error::ContractError,
@@ -109,21 +110,27 @@ mod tests {
 
     use super::{execute, instantiate, query};
 
+    const TREASURY_ADDR: &str = "treasury";
+    const TIMEALARMS_ADDR: &str = "timealarms";
+
     fn instantiate_msg() -> InstantiateMsg {
         InstantiateMsg {
             cadence_hours: 10,
-            treasury: Addr::unchecked("treasury"),
-            timealarms: Addr::unchecked("timealarms"),
+            treasury: Addr::unchecked(TREASURY_ADDR),
+            timealarms: Addr::unchecked(TIMEALARMS_ADDR),
         }
     }
     #[test]
     fn proper_initialization() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        let mut deps = customized_mock_deps_with_contracts(
+            mock_dependencies_with_balance(&coins(2, "token")),
+            [TREASURY_ADDR, TIMEALARMS_ADDR],
+        );
 
-        let timealarms_addr = Addr::unchecked("timealarms");
+        let timealarms_addr = Addr::unchecked(TIMEALARMS_ADDR);
         let msg = InstantiateMsg {
             cadence_hours: 16,
-            treasury: Addr::unchecked("treasury"),
+            treasury: Addr::unchecked(TREASURY_ADDR),
             timealarms: timealarms_addr.clone(),
         };
         let info = mock_info("creator", &coins(1000, "unolus"));
@@ -150,7 +157,10 @@ mod tests {
 
     #[test]
     fn configure() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        let mut deps = customized_mock_deps_with_contracts(
+            mock_dependencies_with_balance(&coins(2, "token")),
+            [TREASURY_ADDR, TIMEALARMS_ADDR],
+        );
 
         let msg = instantiate_msg();
         let info = mock_info("creator", &coins(2, "token"));
@@ -177,7 +187,10 @@ mod tests {
     #[test]
     fn transfer() {
         use timealarms::msg::ExecuteMsg as AlarmsExecuteMsg;
-        let mut deps = mock_dependencies_with_balance(&coins(20, Nls::BANK_SYMBOL));
+        let mut deps = customized_mock_deps_with_contracts(
+            mock_dependencies_with_balance(&coins(20, Nls::BANK_SYMBOL)),
+            [TREASURY_ADDR, TIMEALARMS_ADDR],
+        );
 
         let msg = instantiate_msg();
         let info = mock_info("timealarms", &coins(2, "unolus"));
