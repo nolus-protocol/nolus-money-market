@@ -56,7 +56,7 @@ test:cargo:
   script:
     - cargo install cargo-tarpaulin
     - cargo tarpaulin --out Xml
-    - cargo tarpaulin --release --out Xml
+    - cargo test --release
   artifacts:
     reports:
       coverage_report:
