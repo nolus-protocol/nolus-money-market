@@ -164,8 +164,7 @@ fn deposit_and_withdraw() {
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(&mut app, lease_id.into(), vec![]);
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app);
-    let market_price_oracle =
-        MarketOracleWrapper::default().instantiate::<Lpn>(&mut app, time_alarms.as_str());
+    let market_price_oracle = MarketOracleWrapper::default().instantiate::<Lpn>(&mut app);
     let treasury = TreasuryWrapper::default().instantiate::<Lpn>(&mut app);
     let profit = ProfitWrapper::default().instantiate(&mut app, 24, &treasury, &time_alarms);
 
@@ -432,7 +431,7 @@ fn loan_open_and_repay() {
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(&mut app, lease_id.into(), vec![]);
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app);
-    let oracle = MarketOracleWrapper::default().instantiate::<Lpn>(&mut app, time_alarms.as_str());
+    let oracle = MarketOracleWrapper::default().instantiate::<Lpn>(&mut app);
     let treasury = TreasuryWrapper::default().instantiate::<Lpn>(&mut app);
     let profit = ProfitWrapper::default().instantiate(&mut app, 24, &treasury, &time_alarms);
     let lease_addresses = LeaseWrapperAddresses {
@@ -731,8 +730,7 @@ fn compare_lpp_states() {
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(&mut app, lease_id.into(), vec![]);
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app);
-    let market_oracle =
-        MarketOracleWrapper::default().instantiate::<Lpn>(&mut app, time_alarms.as_str());
+    let market_oracle = MarketOracleWrapper::default().instantiate::<Lpn>(&mut app);
     let treasury = TreasuryWrapper::default().instantiate::<Lpn>(&mut app);
     let profit = ProfitWrapper::default().instantiate(&mut app, 24, &treasury, &time_alarms);
     app.send_tokens(admin.clone(), lender.clone(), &[lpn_cwcoin(init_deposit)])

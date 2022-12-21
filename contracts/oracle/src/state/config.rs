@@ -16,14 +16,12 @@ impl Config {
         owner: Addr,
         price_feed_period: Duration,
         expected_feeders: Percent,
-        timealarms_contract: Addr,
     ) -> Self {
         Config {
             base_asset: denom,
             owner,
             price_feed_period,
             expected_feeders,
-            timealarms_contract,
         }
     }
 
@@ -57,22 +55,6 @@ impl Config {
         Self::STORAGE.update(storage, |mut c| -> StdResult<_> {
             c.price_feed_period = price_feed_period;
             c.expected_feeders = expected_feeders;
-            Ok(c)
-        })?;
-        Ok(())
-    }
-
-    pub fn set_time_alarms_address(
-        storage: &mut dyn Storage,
-        timealarms_contract: Addr,
-        sender: Addr,
-    ) -> Result<(), ContractError> {
-        let config = Self::STORAGE.load(storage)?;
-        if sender != config.owner {
-            return Err(ContractError::Unauthorized {});
-        }
-        Self::STORAGE.update(storage, |mut c| -> StdResult<_> {
-            c.timealarms_contract = timealarms_contract;
             Ok(c)
         })?;
         Ok(())

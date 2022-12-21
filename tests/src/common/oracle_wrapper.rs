@@ -30,7 +30,7 @@ impl MarketOracleWrapper {
         }
     }
     #[track_caller]
-    pub fn instantiate<BaseC>(self, app: &mut MockApp, timealarms_addr: &str) -> Addr
+    pub fn instantiate<BaseC>(self, app: &mut MockApp) -> Addr
     where
         BaseC: Currency,
     {
@@ -44,7 +44,6 @@ impl MarketOracleWrapper {
                     / tr((1, Osmo::TICKER.to_string()))
                     / tr((3, Cro::TICKER.to_string())),
             ),
-            timealarms_addr: timealarms_addr.to_string(),
         };
 
         app.instantiate_contract(

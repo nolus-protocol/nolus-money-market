@@ -254,15 +254,7 @@ where
             None => MarketOracleWrapper::default(),
         };
 
-        self.oracle = Some(
-            mocked_oracle.instantiate::<Lpn>(
-                &mut self.app,
-                self.timealarms
-                    .as_ref()
-                    .expect("Time Alarms not initialized!")
-                    .as_str(),
-            ),
-        );
+        self.oracle = Some(mocked_oracle.instantiate::<Lpn>(&mut self.app));
         self.app.update_block(next_block);
 
         self

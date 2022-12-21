@@ -32,14 +32,12 @@ pub(crate) fn dummy_instantiate_msg(
     price_feed_period_secs: u32,
     expected_feeders: Percent,
     swap_tree: TreeStore,
-    alarms_addr: String,
 ) -> InstantiateMsg {
     InstantiateMsg {
         base_asset,
         price_feed_period_secs,
         expected_feeders,
         swap_tree,
-        timealarms_addr: alarms_addr,
     }
 }
 
@@ -54,7 +52,6 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
                     / (tr((2, Atom::TICKER.to_string())) / tr((1, Osmo::TICKER.to_string()))))
                 / (tr((4, Wbtc::TICKER.to_string())) / (tr((5, Cro::TICKER.to_string())))),
         ),
-        "timealarms".to_string(),
     )
 }
 

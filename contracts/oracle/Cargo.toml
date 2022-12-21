@@ -19,14 +19,12 @@ testing = ["stub"]
 stub = []
 
 [dependencies]
-timealarms = { path = "../timealarms", default-features = false }
 currency = { path = "../../packages/currency" }
 finance = { path = "../../packages/finance" }
 swap = { path = "../../packages/swap" }
 marketprice = { path = "../../packages/marketprice" }
 platform = { path = "../../packages/platform" }
 sdk = { path = "../../packages/sdk", features = ["contract"] }
-time-oracle = { path = "../../packages/time-oracle" }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
@@ -36,7 +34,6 @@ trees = "0.4.2"
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-timealarms = { path = "../timealarms", default-features = false, features = ["contract"] }
 currency = { path = "../../packages/currency", features = ["testing"] }
 finance = { path = "../../packages/finance", features = ["testing"] }
 schema = { path = "../../packages/schema" }

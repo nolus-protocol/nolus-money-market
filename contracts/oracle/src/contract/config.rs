@@ -83,7 +83,6 @@ mod tests {
             60,
             Percent::from_percent(50),
             TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Cro::TICKER.to_string()))),
-            "timealarms".to_string(),
         );
         let (mut deps, _) = setup_test(msg);
 
@@ -102,7 +101,6 @@ mod tests {
             60,
             Percent::from_percent(50),
             TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Cro::TICKER.to_string()))),
-            "timealarms".to_string(),
         );
         let (mut deps, info) = setup_test(msg);
 

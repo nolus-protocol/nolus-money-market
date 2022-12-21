@@ -15,5 +15,4 @@ pub struct Config {
     pub owner: Addr,
     pub price_feed_period: Duration,
     pub expected_feeders: Percent,
-    pub timealarms_contract: Addr,
 }

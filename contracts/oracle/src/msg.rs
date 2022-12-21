@@ -16,7 +16,6 @@ pub struct InstantiateMsg {
     pub expected_feeders: Percent,
     #[schemars(with = "Vec<SubTree>")]
     pub swap_tree: TreeStore,
-    pub timealarms_addr: String,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]

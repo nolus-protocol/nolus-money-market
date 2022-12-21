@@ -83,7 +83,6 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
             self.owner,
             Duration::from_secs(self.msg.price_feed_period_secs),
             self.msg.expected_feeders,
-            self.deps.api.addr_validate(&self.msg.timealarms_addr)?,
         )
         .validate()?
         .store(self.deps.storage)?;
@@ -195,7 +194,6 @@ mod tests {
             60,
             Percent::from_percent(50),
             TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Osmo::TICKER.to_string()))),
-            "timealarms".to_string(),
         );
         let (deps, _) = setup_test(msg);
 
