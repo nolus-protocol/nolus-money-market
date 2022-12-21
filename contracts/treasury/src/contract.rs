@@ -5,9 +5,12 @@ use platform::{
     bank::{self, BankAccount},
     batch::Batch,
 };
+#[cfg(feature = "contract-with-bindings")]
+use sdk::cosmwasm_std::entry_point;
+
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{entry_point, Addr, DepsMut, Env, MessageInfo, Storage},
+    cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Storage},
     cw2::set_contract_version,
 };
 
