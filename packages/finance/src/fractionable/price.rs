@@ -127,6 +127,12 @@ mod test {
             test_impl(c(Amount::MAX), q(8), 4, 9, c(exp_c), q(exp_q));
         }
 
+        #[test]
+        #[should_panic]
+        fn overflow() {
+            test_impl(c(2), q(Amount::MAX), 9, 4, c(1), q(Amount::MAX));
+        }
+
         #[track_caller]
         fn test_impl(
             amount1: Coin<Dai>,
