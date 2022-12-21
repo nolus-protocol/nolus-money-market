@@ -3,6 +3,14 @@
 version = 3
 
 [[package]]
+name = "access-control"
+version = "0.1.0"
+dependencies = [
+ "sdk",
+ "thiserror",
+]
+
+[[package]]
 name = "ahash"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -559,6 +567,7 @@ dependencies = [
 name = "integration_tests"
 version = "0.1.0"
 dependencies = [
+ "access-control",
  "anyhow",
  "currency",
  "finance",
@@ -630,6 +639,7 @@ dependencies = [
 name = "leaser"
 version = "0.1.0"
 dependencies = [
+ "access-control",
  "cosmwasm-std",
  "currency",
  "finance",
@@ -653,6 +663,7 @@ checksum = "db6d7e329c562c5dfab7a46a2afabc8b987ab9a4834c9d1ca04dc54c1546cef8"
 name = "lpp"
 version = "0.1.0"
 dependencies = [
+ "access-control",
  "cosmwasm-std",
  "currency",
  "finance",
@@ -752,6 +763,7 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 name = "oracle"
 version = "0.1.0"
 dependencies = [
+ "access-control",
  "cosmwasm-std",
  "currency",
  "finance",
@@ -844,6 +856,7 @@ dependencies = [
 name = "profit"
 version = "0.1.0"
 dependencies = [
+ "access-control",
  "cosmwasm-std",
  "currency",
  "finance",
@@ -960,6 +973,7 @@ dependencies = [
 name = "rewards_dispatcher"
 version = "0.1.0"
 dependencies = [
+ "access-control",
  "cosmwasm-std",
  "currency",
  "finance",
@@ -1309,6 +1323,7 @@ dependencies = [
 name = "treasury"
 version = "0.1.0"
 dependencies = [
+ "access-control",
  "cosmwasm-std",
  "currency",
  "finance",

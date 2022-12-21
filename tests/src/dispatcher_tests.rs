@@ -1,3 +1,4 @@
+use access_control::Unauthorized;
 use currency::{lpn::Usdc, native::Nls};
 use finance::currency::Currency;
 use rewards_dispatcher::ContractError;
@@ -229,7 +230,6 @@ fn on_alarm() {
 }
 
 #[test]
-#[should_panic(expected = "Unauthorized")]
 fn test_config_unauthorized() {
     type Lpn = Usdc;
     let user_addr = Addr::unchecked(USER);
@@ -253,15 +253,20 @@ fn test_config_unauthorized() {
 
     assert_eq!(10, resp.cadence_hours);
 
-    let _res = test_case
-        .app
-        .execute_contract(
-            user_addr,
-            test_case.dispatcher_addr.clone().unwrap(),
-            &rewards_dispatcher::msg::ExecuteMsg::Config { cadence_hours: 30 },
-            &cwcoins::<Lpn, _>(40),
-        )
-        .unwrap();
+    assert_eq!(
+        test_case
+            .app
+            .execute_contract(
+                user_addr,
+                test_case.dispatcher_addr.clone().unwrap(),
+                &rewards_dispatcher::msg::ExecuteMsg::Config { cadence_hours: 30 },
+                &cwcoins::<Lpn, _>(40),
+            )
+            .unwrap_err()
+            .downcast_ref::<ContractError>()
+            .unwrap(),
+        &ContractError::Unauthorized(Unauthorized),
+    );
 }
 
 #[test]

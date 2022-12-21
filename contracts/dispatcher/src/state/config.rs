@@ -11,20 +11,16 @@ impl Config {
     const STORAGE: Item<'static, Self> = Item::new("dispatcher_config");
 
     pub fn new(
-        owner: Addr,
         cadence_hours: u16,
         lpp: Addr,
         oracle: Addr,
-        timealarms: Addr,
         treasury: Addr,
         tvl_to_apr: RewardScale,
     ) -> Self {
         Config {
             cadence_hours,
-            owner,
             lpp,
             oracle,
-            timealarms,
             tvl_to_apr,
             treasury,
         }
@@ -40,11 +36,13 @@ impl Config {
 
     pub fn update(storage: &mut dyn Storage, cadence_hours: u16) -> Result<(), ContractError> {
         Self::load(storage)?;
+
         Self::STORAGE.update(storage, |mut c| -> Result<Config, ContractError> {
             c.cadence_hours = cadence_hours;
 
             Ok(c)
         })?;
+
         Ok(())
     }
 }

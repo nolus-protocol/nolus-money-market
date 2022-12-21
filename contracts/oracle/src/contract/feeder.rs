@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
+use access_control::SingleUserAccess;
 use finance::{duration::Duration, fraction::Fraction, percent::Percent};
 use marketprice::{feeders::PriceFeeders, market_price::Config as PriceConfig};
 use sdk::{
@@ -33,10 +34,9 @@ impl Feeders {
         info: MessageInfo,
         address: String,
     ) -> Result<Response, ContractError> {
-        let config = Config::load(deps.storage)?;
-        if info.sender != config.owner {
-            return Err(ContractError::Unauthorized {});
-        }
+        SingleUserAccess::load(deps.storage, crate::access_control::OWNER_NAMESPACE)?
+            .check_access(&info.sender)?;
+
         // check if address is valid
         let f_address = deps.api.addr_validate(&address)?;
         Self::FEEDERS.register(deps, f_address)?;
@@ -49,14 +49,13 @@ impl Feeders {
         info: MessageInfo,
         address: String,
     ) -> Result<Response, ContractError> {
+        SingleUserAccess::load(deps.storage, crate::access_control::OWNER_NAMESPACE)?
+            .check_access(&info.sender)?;
+
         let f_address = deps.api.addr_validate(&address)?;
+
         if !Self::is_feeder(deps.storage, &f_address)? {
             return Err(ContractError::UnknownFeeder {});
-        }
-
-        let config = Config::load(deps.storage)?;
-        if info.sender != config.owner {
-            return Err(ContractError::Unauthorized {});
         }
 
         Self::FEEDERS.remove(deps, f_address)?;

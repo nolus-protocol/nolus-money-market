@@ -1,10 +1,11 @@
+use access_control::SingleUserAccess;
 use finance::duration::Duration;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
-        ensure, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Timestamp,
+        ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Timestamp,
     },
     cw2::set_contract_version,
 };
@@ -29,13 +30,20 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let treasury = validate_addr(deps.as_ref(), msg.treasury)?;
-    let timealarms = validate_addr(deps.as_ref(), msg.timealarms)?;
+    platform::contract::validate_addr(&deps.querier, &msg.treasury)?;
+    platform::contract::validate_addr(&deps.querier, &msg.timealarms)?;
 
-    Config::new(info.sender, msg.cadence_hours, treasury, timealarms.clone())
+    SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, info.sender)
         .store(deps.storage)?;
+    SingleUserAccess::new(
+        crate::access_control::TIMEALARMS_NAMESPACE,
+        msg.timealarms.clone(),
+    )
+    .store(deps.storage)?;
+
+    Config::new(msg.cadence_hours, msg.treasury).store(deps.storage)?;
     let subscribe_msg = Profit::alarm_subscribe_msg(
-        &timealarms,
+        &msg.timealarms,
         env.block.time,
         Duration::from_hours(msg.cadence_hours),
     )?;
@@ -53,8 +61,10 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Config { cadence_hours } => Profit::try_config(deps, info, cadence_hours),
-        ExecuteMsg::TimeAlarm(time) => try_transfer(deps, env, info, time),
+        ExecuteMsg::Config { cadence_hours } => {
+            Profit::try_config(deps.storage, info, cadence_hours)
+        }
+        ExecuteMsg::TimeAlarm(time) => try_transfer(deps.as_ref(), env, info, time),
     }
 }
 
@@ -65,22 +75,20 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-fn validate_addr(deps: Deps, addr: Addr) -> Result<Addr, ContractError> {
-    deps.api
-        .addr_validate(addr.as_str())
-        .map_err(|_| ContractError::InvalidContractAddress(addr))
-}
-
 fn try_transfer(
-    deps: DepsMut,
+    deps: Deps,
     env: Env,
     info: MessageInfo,
     time: Timestamp,
 ) -> Result<Response, ContractError> {
+    SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
+        .check_access(&info.sender)?;
+
     ensure!(
         time >= env.block.time,
         ContractError::AlarmTimeValidation {}
     );
+
     Ok(Profit::transfer(deps, env, info)?.into())
 }
 
@@ -93,6 +101,7 @@ mod tests {
         testing::{mock_dependencies_with_balance, mock_env, mock_info},
         to_binary, Addr, BankMsg, CosmosMsg, SubMsg, WasmMsg,
     };
+    use sdk::testing::customized_mock_deps_with_contracts;
 
     use crate::{
         error::ContractError,
@@ -101,21 +110,27 @@ mod tests {
 
     use super::{execute, instantiate, query};
 
+    const TREASURY_ADDR: &str = "treasury";
+    const TIMEALARMS_ADDR: &str = "timealarms";
+
     fn instantiate_msg() -> InstantiateMsg {
         InstantiateMsg {
             cadence_hours: 10,
-            treasury: Addr::unchecked("treasury"),
-            timealarms: Addr::unchecked("timealarms"),
+            treasury: Addr::unchecked(TREASURY_ADDR),
+            timealarms: Addr::unchecked(TIMEALARMS_ADDR),
         }
     }
     #[test]
     fn proper_initialization() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        let mut deps = customized_mock_deps_with_contracts(
+            mock_dependencies_with_balance(&coins(2, "token")),
+            [TREASURY_ADDR, TIMEALARMS_ADDR],
+        );
 
-        let timealarms_addr = Addr::unchecked("timealarms");
+        let timealarms_addr = Addr::unchecked(TIMEALARMS_ADDR);
         let msg = InstantiateMsg {
             cadence_hours: 16,
-            treasury: Addr::unchecked("treasury"),
+            treasury: Addr::unchecked(TREASURY_ADDR),
             timealarms: timealarms_addr.clone(),
         };
         let info = mock_info("creator", &coins(1000, "unolus"));
@@ -142,7 +157,10 @@ mod tests {
 
     #[test]
     fn configure() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        let mut deps = customized_mock_deps_with_contracts(
+            mock_dependencies_with_balance(&coins(2, "token")),
+            [TREASURY_ADDR, TIMEALARMS_ADDR],
+        );
 
         let msg = instantiate_msg();
         let info = mock_info("creator", &coins(2, "token"));
@@ -152,7 +170,7 @@ mod tests {
         let msg = ExecuteMsg::Config { cadence_hours: 20 };
         let res = execute(deps.as_mut(), mock_env(), unauth_info, msg);
         match res {
-            Err(ContractError::Unauthorized {}) => {}
+            Err(ContractError::Unauthorized(..)) => {}
             _ => panic!("Must return unauthorized error"),
         }
 
@@ -169,7 +187,10 @@ mod tests {
     #[test]
     fn transfer() {
         use timealarms::msg::ExecuteMsg as AlarmsExecuteMsg;
-        let mut deps = mock_dependencies_with_balance(&coins(20, Nls::BANK_SYMBOL));
+        let mut deps = customized_mock_deps_with_contracts(
+            mock_dependencies_with_balance(&coins(20, Nls::BANK_SYMBOL)),
+            [TREASURY_ADDR, TIMEALARMS_ADDR],
+        );
 
         let msg = instantiate_msg();
         let info = mock_info("timealarms", &coins(2, "unolus"));

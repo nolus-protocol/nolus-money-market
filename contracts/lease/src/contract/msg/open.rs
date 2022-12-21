@@ -4,7 +4,7 @@ use finance::{coin::Coin, currency::Currency};
 use lpp::stub::lender::{LppLender as LppLenderTrait, LppLenderRef};
 use market_price_oracle::stub::{Oracle as OracleTrait, OracleRef};
 use profit::stub::{Profit as ProfitTrait, ProfitRef};
-use sdk::cosmwasm_std::{Addr, Api, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use time_alarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef};
 
 use crate::{
@@ -20,22 +20,20 @@ impl NewLeaseForm {
         lease_addr: &Addr,
         start_at: Timestamp,
         amount: &LeaseCoin,
-        api: &dyn Api,
         querier: &QuerierWrapper,
         deps: (LppLenderRef, OracleRef),
     ) -> ContractResult<IntoDTOResult> {
         debug_assert_eq!(&self.currency, amount.ticker());
         debug_assert!(amount.amount() > 0);
 
-        let profit = ProfitRef::try_from(api.addr_validate(&self.loan.profit)?, querier)?;
-        let alarms = TimeAlarmsRef::try_from(api.addr_validate(&self.time_alarms)?, querier)?;
+        let profit = ProfitRef::try_from(self.loan.profit.clone(), querier)?;
+        let alarms = TimeAlarmsRef::try_from(self.time_alarms.clone(), querier)?;
 
         let cmd = LeaseFactory {
             form: self,
             lease_addr,
             start_at,
             amount,
-            api,
         };
         //TODO avoid cloning by extending the trait WithLeaseDeps to provide it
         let asset_currency = cmd.form.currency.clone();
@@ -56,7 +54,6 @@ struct LeaseFactory<'a> {
     lease_addr: &'a Addr,
     start_at: Timestamp,
     amount: &'a LeaseCoin,
-    api: &'a dyn Api,
 }
 
 impl<'a> WithLeaseDeps for LeaseFactory<'a> {
@@ -78,7 +75,6 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
     {
-        let customer = self.api.addr_validate(&self.form.customer)?;
         let liability = self.form.liability;
 
         let loan = Loan::new(
@@ -92,7 +88,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
 
         Ok(Lease::<_, Asset, _, _, _, _>::new(
             self.lease_addr,
-            customer,
+            self.form.customer,
             amount,
             self.start_at,
             liability,

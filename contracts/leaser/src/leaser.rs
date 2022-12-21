@@ -1,22 +1,20 @@
 use std::collections::HashSet;
 
-use finance::currency::SymbolOwned;
-use finance::{liability::Liability, percent::Percent};
-use lease::api::dex::ConnectionParams;
-use lease::api::{DownpaymentCoin, InterestPaymentSpec};
+use access_control::SingleUserAccess;
+use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
+use lease::api::{dex::ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, Deps, DepsMut, MessageInfo, StdResult},
+    cosmwasm_std::{Addr, Deps, MessageInfo, StdResult, Storage},
 };
 
 use crate::{
     cmd::Quote,
     error::{ContractError, ContractResult},
     msg::{ConfigResponse, QuoteResponse},
-    state::config::Config,
-    state::leaser::Loans,
+    state::{config::Config, leaser::Loans},
 };
 
 pub struct Leaser {}
@@ -58,32 +56,30 @@ impl Leaser {
     }
 
     pub fn try_setup_dex(
-        deps: DepsMut,
+        storage: &mut dyn Storage,
         info: MessageInfo,
         params: ConnectionParams,
     ) -> ContractResult<Response> {
-        let config = Config::load(deps.storage)?;
-        if info.sender != config.owner {
-            return Err(ContractError::Unauthorized {});
-        }
-        Config::setup_dex(deps.storage, params)?;
+        SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
+            .check_access(&info.sender)?;
+
+        Config::setup_dex(storage, params)?;
 
         Ok(Response::default())
     }
 
     pub fn try_configure(
-        deps: DepsMut,
+        storage: &mut dyn Storage,
         info: MessageInfo,
         lease_interest_rate_margin: Percent,
         liability: Liability,
         lease_interest_payment: InterestPaymentSpec,
     ) -> ContractResult<Response> {
-        let config = Config::load(deps.storage)?;
-        if info.sender != config.owner {
-            return Err(ContractError::Unauthorized {});
-        }
+        SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
+            .check_access(&info.sender)?;
+
         Config::update(
-            deps.storage,
+            storage,
             lease_interest_rate_margin,
             liability,
             lease_interest_payment,

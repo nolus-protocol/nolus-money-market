@@ -15,8 +15,8 @@ pub enum ContractError {
     #[error("[Lpp] {0}")]
     Platform(#[from] platform::error::Error),
 
-    #[error("[Lpp] Unauthorized")]
-    Unauthorized {},
+    #[error("[Lpp] {0}")]
+    Unauthorized(#[from] access_control::Unauthorized),
 
     #[error("[Lpp] Unknown currency")]
     UnknownCurrency {},

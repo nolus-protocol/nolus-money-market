@@ -1,22 +1,23 @@
-use cosmwasm_std::Deps;
-use lease::api::{
-    dex::{ConnectionParams, Ics20Channel},
-    InterestPaymentSpec,
-};
 use serde::{Deserialize, Serialize};
 
+use access_control::Unauthorized;
 use finance::{
     currency::Currency, duration::Duration, liability::Liability, percent::Percent,
     test::currency::Usdc,
+};
+use lease::api::{
+    dex::{ConnectionParams, Ics20Channel},
+    InterestPaymentSpec,
 };
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
         coins, from_binary,
-        testing::{mock_dependencies, mock_env, mock_info},
-        to_binary, Addr, CosmosMsg, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
+        testing::{mock_env, mock_info},
+        to_binary, Addr, CosmosMsg, Deps, DepsMut, MessageInfo, SubMsg, Uint64, WasmMsg,
     },
     schemars::{self, JsonSchema},
+    testing::mock_deps_with_contracts,
 };
 
 use crate::{
@@ -30,7 +31,12 @@ use crate::{
 
 const CREATOR: &str = "creator";
 const LPP_ADDR: &str = "test";
+const TIMEALARMS_ADDR: &str = "timealarms";
+const ORACLE_ADDR: &str = "oracle";
+const PROFIT_ADDR: &str = "profit";
+
 type TheCurrency = Usdc;
+
 const DENOM: &str = TheCurrency::TICKER;
 const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(30);
 
@@ -52,9 +58,9 @@ fn leaser_instantiate_msg(lease_code_id: u64, lpp_addr: Addr) -> crate::msg::Ins
             Duration::from_days(90),
             Duration::from_days(10),
         ),
-        time_alarms: Addr::unchecked("timealarms"),
-        market_price_oracle: Addr::unchecked("oracle"),
-        profit: Addr::unchecked("profit"),
+        time_alarms: Addr::unchecked(TIMEALARMS_ADDR),
+        market_price_oracle: Addr::unchecked(ORACLE_ADDR),
+        profit: Addr::unchecked(PROFIT_ADDR),
     }
 }
 
@@ -102,7 +108,7 @@ fn setup_dex(deps: DepsMut, info: MessageInfo) -> ContractResult<Response> {
 
 #[test]
 fn proper_initialization() {
-    let mut deps = mock_dependencies();
+    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
 
     let lpp_addr = Addr::unchecked(LPP_ADDR);
     let msg = leaser_instantiate_msg(1, lpp_addr.clone());
@@ -114,14 +120,14 @@ fn proper_initialization() {
     let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
     let config_response: ConfigResponse = from_binary(&res).unwrap();
     let config = config_response.config;
-    assert_eq!(CREATOR, config.owner);
     assert_eq!(1, config.lease_code_id);
     assert_eq!(lpp_addr, config.lpp_addr);
 }
 
 #[test]
 fn test_update_config() {
-    let mut deps = mock_dependencies();
+    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
+
     let expected_liability = Liability::new(
         Percent::from_percent(55),
         Percent::from_percent(5),
@@ -149,7 +155,7 @@ fn test_update_config() {
 #[test]
 #[should_panic(expected = "Healthy % should be < first liquidation %")]
 fn test_update_config_invalid_liability() {
-    let mut deps = mock_dependencies();
+    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
 
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
     #[serde(rename_all = "snake_case")]
@@ -203,7 +209,8 @@ fn test_update_config_invalid_liability() {
 
 #[test]
 fn test_update_config_unauthorized() {
-    let mut deps = mock_dependencies();
+    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
+
     let expected_liability = Liability::new(
         Percent::from_percent(55),
         Percent::from_percent(5),
@@ -223,12 +230,13 @@ fn test_update_config_unauthorized() {
     };
 
     let err = execute(deps.as_mut(), mock_env(), customer(), msg).unwrap_err();
-    assert_eq!(ContractError::Unauthorized {}, err);
+    assert_eq!(ContractError::Unauthorized(Unauthorized), err);
 }
 
 #[test]
 fn test_no_dex_setup() {
-    let mut deps = mock_dependencies();
+    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
+
     setup_test_case(deps.as_mut());
 
     let config = query_config(deps.as_ref());
@@ -244,16 +252,18 @@ fn test_no_dex_setup() {
 
 #[test]
 fn test_setup_dex_unauthorized() {
-    let mut deps = mock_dependencies();
+    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
+
     setup_test_case(deps.as_mut());
 
     let res = setup_dex(deps.as_mut(), customer());
-    assert_eq!(Err(ContractError::Unauthorized {}), res);
+    assert_eq!(Err(ContractError::Unauthorized(Unauthorized)), res);
 }
 
 #[test]
 fn test_setup_dex_again() {
-    let mut deps = mock_dependencies();
+    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
+
     setup_test_case(deps.as_mut());
 
     setup_dex_ok(deps.as_mut());
@@ -262,12 +272,13 @@ fn test_setup_dex_again() {
     assert_eq!(Err(ContractError::DEXConnectivityAlreadySetup {}), res);
 
     let res = setup_dex(deps.as_mut(), customer());
-    assert_eq!(Err(ContractError::Unauthorized {}), res);
+    assert_eq!(Err(ContractError::Unauthorized(Unauthorized)), res);
 }
 
 #[test]
 fn test_open_lease() {
-    let mut deps = mock_dependencies();
+    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
+
     setup_test_case(deps.as_mut());
     setup_dex_ok(deps.as_mut());
 

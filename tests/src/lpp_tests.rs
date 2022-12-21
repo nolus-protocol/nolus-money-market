@@ -681,10 +681,10 @@ fn loan_open_and_repay() {
         .query_wasm_smart(lpp, &QueryLpp::LppBalance())
         .unwrap();
 
-    // accumulated interest, both paid and unpaid
+    // total unpaid interest
     assert_eq!(
         resp.total_interest_due,
-        (interest1.of(loan1) + interest2.of(loan2) / 2u128).into()
+        (interest2.of(loan2) / 2u128).into()
     );
     assert_eq!(resp.total_principal_due, loan2.into());
     assert_eq!(
@@ -979,10 +979,10 @@ fn compare_lpp_states() {
         .query_wasm_smart(lpp, &QueryLpp::LppBalance())
         .unwrap();
 
-    // accumulated interest, both paid and unpaid
+    // total unpaid interest
     assert_eq!(
         resp.total_interest_due,
-        (interest1.of(loan1) + interest2.of(loan2) / 2u128).into()
+        (interest2.of(loan2) / 2u128).into()
     );
     assert_eq!(resp.total_principal_due, loan2.into());
     assert_eq!(

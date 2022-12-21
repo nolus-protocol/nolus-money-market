@@ -1,8 +1,8 @@
-use cosmwasm_std::MessageInfo;
+use access_control::SingleUserAccess;
 use finance::percent::Percent;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Deps, DepsMut},
+    cosmwasm_std::{Deps, DepsMut, MessageInfo},
 };
 
 use crate::{error::ContractError, msg::QueryConfigResponse, state::Config};
@@ -14,11 +14,10 @@ pub fn try_update_parameters(
     utilization_optimal: Percent,
     addon_optimal_interest_rate: Percent,
 ) -> Result<Response, ContractError> {
-    let mut config = Config::load(deps.storage)?;
+    SingleUserAccess::load(deps.storage, crate::access_control::OWNER_NAMESPACE)?
+        .check_access(&info.sender)?;
 
-    if config.owner != info.sender {
-        return Err(ContractError::Unauthorized {});
-    }
+    let mut config = Config::load(deps.storage)?;
 
     config.update(
         deps.storage,

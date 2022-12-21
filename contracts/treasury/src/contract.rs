@@ -1,21 +1,19 @@
+use access_control::SingleUserAccess;
 use currency::native::Nls;
 use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount},
     batch::Batch,
 };
-#[cfg(feature = "contract-with-bindings")]
-use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Storage},
+    cosmwasm_std::{entry_point, Addr, DepsMut, Env, MessageInfo, Storage},
     cw2::set_contract_version,
 };
 
 use crate::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg},
-    state::{self, ADMIN, REWARDS_DISPATCHER},
 };
 
 // version info for migration info
@@ -31,8 +29,8 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let admin = info.sender;
-    ADMIN.save(deps.storage, &admin)?;
+    SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, info.sender)
+        .store(deps.storage)?;
 
     Ok(Response::default())
 }
@@ -47,7 +45,9 @@ pub fn execute(
     let sender = info.sender;
     match msg {
         ExecuteMsg::ConfigureRewardTransfer { rewards_dispatcher } => {
-            try_configure_reward_transfer(deps, sender, rewards_dispatcher)
+            platform::contract::validate_addr(&deps.querier, &rewards_dispatcher)?;
+
+            try_configure_reward_transfer(deps.storage, sender, rewards_dispatcher)
         }
         ExecuteMsg::SendRewards { amount } => {
             let bank_account = bank::my_account(&env, &deps.querier);
@@ -62,18 +62,24 @@ pub fn execute(
 }
 
 fn try_configure_reward_transfer(
-    deps: DepsMut,
+    storage: &mut dyn Storage,
     sender: Addr,
     rewards_dispatcher: Addr,
 ) -> Result<Response, ContractError> {
-    state::assert_admin(deps.storage, sender)?;
-    deps.api.addr_validate(rewards_dispatcher.as_str())?;
-    REWARDS_DISPATCHER.save(deps.storage, &rewards_dispatcher)?;
+    SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
+        .check_access(&sender)?;
+
+    SingleUserAccess::new(
+        crate::access_control::REWARDS_DISPATCHER_NAMESPACE,
+        rewards_dispatcher,
+    )
+    .store(storage)?;
+
     Ok(Response::new().add_attribute("method", "try_configure_reward_transfer"))
 }
 
 fn try_send_rewards<B>(
-    storage: &mut dyn Storage,
+    storage: &dyn Storage,
     sender: Addr,
     amount: Coin<Nls>,
     mut account: B,
@@ -81,7 +87,9 @@ fn try_send_rewards<B>(
 where
     B: BankAccount,
 {
-    state::assert_rewards_dispatcher(storage, &sender)?;
+    SingleUserAccess::load(storage, crate::access_control::REWARDS_DISPATCHER_NAMESPACE)?
+        .check_access(&sender)?;
+
     account.send(amount, &sender);
 
     Ok(account)

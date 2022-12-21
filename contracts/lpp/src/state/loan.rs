@@ -31,6 +31,15 @@ where
     data: LoanData<LPN>,
 }
 
+pub struct RepayShares<LPN>
+where
+    LPN: Currency,
+{
+    pub interest: Coin<LPN>,
+    pub principal: Coin<LPN>,
+    pub excess: Coin<LPN>,
+}
+
 impl<LPN> Loan<LPN>
 where
     LPN: Currency + Serialize + DeserializeOwned,
@@ -76,7 +85,7 @@ where
         storage: &mut dyn Storage,
         ctime: Timestamp,
         repay_amount: Coin<LPN>,
-    ) -> Result<(Coin<LPN>, Coin<LPN>), ContractError> {
+    ) -> Result<RepayShares<LPN>, ContractError> {
         let time_delta = Duration::between(self.data.interest_paid, ctime);
 
         let (interest_period, interest_pay_excess) =
@@ -85,6 +94,7 @@ where
                 .spanning(time_delta)
                 .pay(self.data.principal_due, repay_amount, ctime);
 
+        let loan_interest_payment = repay_amount - interest_pay_excess;
         let loan_principal_payment = cmp::min(interest_pay_excess, self.data.principal_due);
         let excess_received = interest_pay_excess - loan_principal_payment;
 
@@ -103,8 +113,11 @@ where
                 },
             )?;
         }
-
-        Ok((loan_principal_payment, excess_received))
+        Ok(RepayShares {
+            interest: loan_interest_payment,
+            principal: loan_principal_payment,
+            excess: excess_received,
+        })
     }
 
     pub fn query(storage: &dyn Storage, lease_addr: Addr) -> StdResult<Option<LoanData<LPN>>> {
@@ -180,11 +193,12 @@ mod test {
         assert_eq!(interest, 100u128.into());
 
         // partial repay
-        let (principal_payment, excess_received) = loan
+        let payment = loan
             .repay(deps.as_mut().storage, time, 600u128.into())
             .expect("should repay");
-        assert_eq!(principal_payment, 500u128.into());
-        assert_eq!(excess_received, 0u128.into());
+        assert_eq!(payment.interest, 100u128.into());
+        assert_eq!(payment.principal, 500u128.into());
+        assert_eq!(payment.excess, 0u128.into());
 
         let resp = Loan::<Usdc>::query(deps.as_ref().storage, addr.clone())
             .expect("should query loan")
@@ -196,11 +210,12 @@ mod test {
             Loan::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 
         // repay with excess, should close the loan
-        let (principal_payment, excess_received) = loan
+        let payment = loan
             .repay(deps.as_mut().storage, time, 600u128.into())
             .expect("should repay");
-        assert_eq!(principal_payment, 500u128.into());
-        assert_eq!(excess_received, 100u128.into());
+        assert_eq!(payment.interest, 0u128.into());
+        assert_eq!(payment.principal, 500u128.into());
+        assert_eq!(payment.excess, 100u128.into());
 
         // is it cleaned up?
         let is_none = Loan::<Usdc>::query(deps.as_ref().storage, addr)

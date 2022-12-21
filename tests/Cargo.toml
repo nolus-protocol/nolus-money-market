@@ -8,21 +8,23 @@ license.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-rewards_dispatcher = { path = "../contracts/dispatcher", default-features = false, features = ["contract"] }
-lease = { path = "../contracts/lease", default-features = false, features = ["contract", "testing"] }
-leaser = { path = "../contracts/leaser", default-features = false, features = ["contract", "testing"] }
-lpp = { path = "../contracts/lpp", default-features = false, features = ["contract", "testing"] }
-oracle = { path = "../contracts/oracle", default-features = false, features = ["contract", "testing"] }
-profit = { path = "../contracts/profit", default-features = false, features = ["contract"] }
-timealarms = { path = "../contracts/timealarms", default-features = false, features = ["contract"] }
-treasury = { path = "../contracts/treasury", default-features = false, features = ["contract"] }
-currency = { path = "../packages/currency", features = ["testing"]}
-finance = { path = "../packages/finance", features = ["testing"] }
-swap = { path = "../packages/swap" }
-marketprice = { path = "../packages/marketprice", features = ["testing"] }
-platform = { path = "../packages/platform", features = ["testing"] }
-sdk = { path = "../packages/sdk", features = ["cosmos", "neutron", "testing"] }
+lease = { workspace = true, features = ["contract", "testing"] }
+leaser = { workspace = true, features = ["contract", "testing"] }
+lpp = { workspace = true, features = ["contract", "testing"] }
+oracle = { workspace = true, features = ["contract", "testing"] }
+profit = { workspace = true, features = ["contract"] }
+rewards_dispatcher = { workspace = true, features = ["contract"] }
+timealarms = { workspace = true, features = ["contract"] }
+treasury = { workspace = true, features = ["contract"] }
+
+access-control = { workspace = true }
+currency = { workspace = true, features = ["testing"]}
+finance = { workspace = true, features = ["testing"] }
+marketprice = { workspace = true, features = ["testing"] }
+platform = { workspace = true, features = ["testing"] }
+sdk = { workspace = true, features = ["cosmos", "neutron", "testing"] }
+swap = { workspace = true }
 
 anyhow = { workspace = true }
-serde = { version = "1", default-features = false, features = ["derive"] }
+serde = { workspace = true, features = ["derive"] }
 trees = "0.4.2"

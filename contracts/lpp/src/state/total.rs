@@ -94,10 +94,11 @@ where
     pub fn repay(
         &mut self,
         ctime: Timestamp,
+        loan_interest_payment: Coin<LPN>,
         loan_principal_payment: Coin<LPN>,
         loan_interest_rate: Percent,
     ) -> Result<&Self, ContractError> {
-        self.total_interest_due = self.total_interest_due_by_now(ctime);
+        self.total_interest_due = self.total_interest_due_by_now(ctime) - loan_interest_payment;
 
         self.annual_interest_rate = if self.total_principal_due == loan_principal_payment {
             Rational::new(Coin::<LPN>::new(0), Coin::<LPN>::new(100))
@@ -148,12 +149,17 @@ mod test {
         assert_eq!(interest_due, Coin::new(1000));
 
         total
-            .repay(env.block.time, Coin::new(5000), Percent::from_percent(20))
+            .repay(
+                env.block.time,
+                Coin::new(1000),
+                Coin::new(5000),
+                Percent::from_percent(20),
+            )
             .expect("should repay");
         assert_eq!(total.total_principal_due(), Coin::new(5000));
 
         env.block.time = Timestamp::from_nanos(env.block.time.nanos() + Duration::YEAR.nanos() / 2);
         let interest_due = total.total_interest_due_by_now(env.block.time);
-        assert_eq!(interest_due, 1500u128.into());
+        assert_eq!(interest_due, 500u128.into());
     }
 }

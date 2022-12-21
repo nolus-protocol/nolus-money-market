@@ -44,17 +44,17 @@ impl Borrow {
         config
             .dex
             .map(|dex| NewLeaseForm {
-                customer: sender.into_string(),
+                customer: sender,
                 currency,
                 liability: config.liability,
                 loan: LoanForm {
                     annual_margin_interest: config.lease_interest_rate_margin,
-                    lpp: config.lpp_addr.into_string(),
+                    lpp: config.lpp_addr,
                     interest_payment: config.lease_interest_payment,
-                    profit: config.profit.into_string(),
+                    profit: config.profit,
                 },
-                time_alarms: config.time_alarms.into_string(),
-                market_price_oracle: config.market_price_oracle.into_string(),
+                time_alarms: config.time_alarms,
+                market_price_oracle: config.market_price_oracle,
                 dex,
             })
             .ok_or(ContractError::NoDEXConnectivitySetup {})

@@ -1,9 +1,10 @@
+use access_control::SingleUserAccess;
 use currency::native::Nls;
 use finance::{coin::Coin, currency::Currency, duration::Duration, interest::InterestPeriod};
 use lpp::stub::{Lpp as LppTrait, WithLpp};
 use oracle::{convert, stub::OracleRef};
 use platform::batch::{Batch, Emit, Emitter};
-use sdk::cosmwasm_std::{QuerierWrapper, StdResult, Timestamp};
+use sdk::cosmwasm_std::{QuerierWrapper, StdResult, Storage, Timestamp};
 
 use crate::{cmd::Result as DispatcherResult, state::Config, ContractError};
 
@@ -55,6 +56,7 @@ impl<'a> WithLpp for Dispatch<'a> {
 
 impl<'a> Dispatch<'a> {
     pub fn new(
+        storage: &'a dyn Storage,
         oracle_ref: OracleRef,
         last_dispatch: Timestamp,
         config: Config,
@@ -62,6 +64,7 @@ impl<'a> Dispatch<'a> {
         querier: QuerierWrapper<'a>,
     ) -> StdResult<Dispatch<'a>> {
         Ok(Self {
+            storage,
             oracle_ref,
             last_dispatch,
             config,
@@ -91,7 +94,8 @@ impl<'a> Dispatch<'a> {
 
         batch
             .schedule_execute_wasm_no_reply::<_, Nls>(
-                &self.config.timealarms,
+                SingleUserAccess::load(self.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
+                    .address(),
                 &timealarms::msg::ExecuteMsg::AddAlarm {
                     time: self.block_time + Duration::from_hours(self.config.cadence_hours),
                 },
