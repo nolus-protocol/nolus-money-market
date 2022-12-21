@@ -237,18 +237,18 @@ where
     ) -> Result<Coin<LPN>, ContractError> {
         let loan = Loan::load(deps.storage, lease_addr)?;
         let loan_annual_interest_rate = loan.data().annual_interest_rate;
-        let (loan_principal_payment, excess_received) =
-            loan.repay(deps.storage, env.block.time, repay_amount)?;
+        let payment = loan.repay(deps.storage, env.block.time, repay_amount)?;
 
         self.total
             .repay(
                 env.block.time,
-                loan_principal_payment,
+                payment.interest,
+                payment.principal,
                 loan_annual_interest_rate,
             )?
             .store(deps.storage)?;
 
-        Ok(excess_received)
+        Ok(payment.excess)
     }
 
     pub fn query_loan_outstanding_interest(
@@ -700,7 +700,7 @@ mod test {
 
         assert_eq!(annual_interest_rate, Percent::from_percent(20));
 
-        lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(5_000_000))
+        lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000_000))
             .expect("can't open loan");
         deps.querier
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);
@@ -724,9 +724,33 @@ mod test {
             .calculate_price(&deps.as_ref(), &env, Coin::new(0))
             .expect("should get price");
         assert_eq!(
-            price::total(Coin::<NLpn>::new(1), price.get()),
+            price::total(Coin::<NLpn>::new(1000), price.get()),
             price::total(
-                Coin::<NLpn>::new(1),
+                Coin::<NLpn>::new(1000),
+                price::total_of(Coin::new(10)).is(Coin::new(11))
+            )
+        );
+
+        // should not change tvl/price
+        let excess = lpp
+            .try_repay_loan(&mut deps.as_mut(), &env, loan, Coin::new(6_000_000))
+            .unwrap();
+        assert_eq!(excess, Coin::new(0));
+
+        deps.querier
+            .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(11_000_000)]);
+        let total_lpn = lpp
+            .total_lpn(&deps.as_ref(), &env)
+            .expect("should query total_lpn");
+        assert_eq!(total_lpn, 11_000_000u128.into());
+
+        let price = lpp
+            .calculate_price(&deps.as_ref(), &env, Coin::new(0))
+            .expect("should get price");
+        assert_eq!(
+            price::total(Coin::<NLpn>::new(1000), price.get()),
+            price::total(
+                Coin::<NLpn>::new(1000),
                 price::total_of(Coin::new(10)).is(Coin::new(11))
             )
         );
@@ -735,10 +759,6 @@ mod test {
             .withdraw_lpn(&deps.as_ref(), &env, 1000u128.into())
             .expect("should withdraw");
         assert_eq!(withdraw, Coin::new(1100));
-
-        // too much
-        let withdraw = lpp.withdraw_lpn(&deps.as_ref(), &env, 10_000_000u128.into());
-        assert!(withdraw.is_err());
     }
 
     fn coin_cw(amount: u128) -> CwCoin {
