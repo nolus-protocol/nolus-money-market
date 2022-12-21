@@ -1,5 +1,7 @@
 # Smart Contracts
 
+<br /><p align="center"><img alt="Nolus.js" src="docs/money-market-logo.svg" width="100"/></p><br />
+
 Implementation of the core business logic as cosmwasm contracts.
 
 ## Recommended user's workspace
