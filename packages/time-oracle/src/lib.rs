@@ -4,11 +4,9 @@ use sdk::cosmwasm_std::StdError;
 
 pub use crate::{
     alarms::{AlarmDispatcher, Alarms, Id},
-    time_oracle::TimeOracle,
 };
 
 mod alarms;
-mod time_oracle;
 
 pub use alarms::AlarmsCount;
 
