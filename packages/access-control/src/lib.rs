@@ -51,3 +51,53 @@ impl<'r> From<SingleUserAccess<'r>> for Addr {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, thiserror::Error)]
 #[error("[Access Control] Checked address doesn't match the one associated with access control variable!")]
 pub struct Unauthorized;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sdk::cosmwasm_std::testing::MockStorage;
+
+    #[test]
+    fn store_load() {
+        const NAMESPACE: &str = "ownership";
+
+        let mut storage = MockStorage::new();
+
+        let original = SingleUserAccess::new(NAMESPACE, Addr::unchecked("cosmic address"));
+
+        original.store(&mut storage).unwrap();
+
+        let loaded = SingleUserAccess::load(&storage, NAMESPACE).unwrap();
+
+        assert_eq!(loaded.storage_namespace, original.storage_namespace);
+        assert_eq!(loaded.address, original.address);
+    }
+
+    #[test]
+    fn load_fail() {
+        const NAMESPACE: &str = "ownership";
+
+        let storage = MockStorage::new();
+
+        assert!(SingleUserAccess::load(&storage, NAMESPACE).is_err());
+    }
+
+    fn check_addr_template(store: &str, check: &str) -> Result<(), Unauthorized> {
+        SingleUserAccess::new("ownership", Addr::unchecked(store))
+            .check_access(&Addr::unchecked(check))
+    }
+
+    #[test]
+    fn check() {
+        const ADDRESS: &str = "cosmic address";
+
+        check_addr_template(ADDRESS, ADDRESS).unwrap();
+    }
+    #[test]
+    fn check_fail() {
+        assert_eq!(
+            check_addr_template("cosmic address", "osmotic address").unwrap_err(),
+            Unauthorized
+        );
+    }
+}

@@ -10,3 +10,6 @@ license.workspace = true
 [dependencies]
 sdk = { workspace = true, features = ["cosmos", "storage"] }
 thiserror = { workspace = true }
+
+[dev-dependencies]
+sdk = { workspace = true, features = ["cosmos", "storage", "testing"] }
