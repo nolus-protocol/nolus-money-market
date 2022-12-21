@@ -9,6 +9,7 @@ mod coin;
 mod duration;
 mod percent;
 mod price;
+mod usize;
 
 pub trait Fractionable<U> {
     #[track_caller]

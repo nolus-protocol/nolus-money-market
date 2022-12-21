@@ -128,7 +128,7 @@ mod test {
         }
 
         #[test]
-        #[should_panic]
+        #[should_panic = "price overflow"]
         fn overflow() {
             test_impl(c(2), q(Amount::MAX), 9, 4, c(1), q(Amount::MAX));
         }

@@ -19,7 +19,6 @@ pub struct Feeders {
 
 impl Feeders {
     const FEEDERS: PriceFeeders<'static> = PriceFeeders::new("feeders");
-    const PRECISION_FACTOR: u128 = 1_000_000_000;
 
     pub(crate) fn get(storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
         Self::FEEDERS.get(storage)
@@ -62,17 +61,6 @@ impl Feeders {
         Ok(Response::default())
     }
 
-    // this is a helper function so Decimal works with u64 rather than Uint128
-    // also, we must *round up* here, as we need 8, not 7 feeders to reach 50% of 15 total
-    fn feeders_needed(weight: usize, percentage: Percent) -> usize {
-        let weight128 = u128::try_from(weight).expect("usize to u128 overflow");
-
-        let res = percentage.of(Self::PRECISION_FACTOR * weight128);
-        ((res + Self::PRECISION_FACTOR - 1) / Self::PRECISION_FACTOR)
-            .try_into()
-            .expect("usize overflow")
-    }
-
     pub(crate) fn price_config(
         storage: &dyn Storage,
         config: &Config,
@@ -89,6 +77,10 @@ impl Feeders {
             feeders_needed,
             block_time,
         ))
+    }
+
+    fn feeders_needed(all_feaders: usize, min_feeders: Percent) -> usize {
+        min_feeders.of(all_feaders)
     }
 }
 
@@ -115,19 +107,16 @@ mod tests {
     };
 
     #[test]
-    // we ensure this rounds up (as it calculates needed votes)
     fn feeders_needed_rounds_properly() {
-        // round up right below 1
-        assert_eq!(8, Feeders::feeders_needed(3, Percent::from_percent(255)));
-        // round up right over 1
-        assert_eq!(8, Feeders::feeders_needed(3, Percent::from_percent(254)));
-        assert_eq!(77, Feeders::feeders_needed(30, Percent::from_percent(254)));
+        assert_eq!(7, Feeders::feeders_needed(3, Percent::from_percent(255)));
+        assert_eq!(30, Feeders::feeders_needed(30, Percent::from_percent(100)));
 
-        // exact matches don't round
         assert_eq!(17, Feeders::feeders_needed(34, Percent::from_percent(50)));
+        assert_eq!(16, Feeders::feeders_needed(33, Percent::from_percent(50)));
         assert_eq!(12, Feeders::feeders_needed(48, Percent::from_percent(25)));
-        assert_eq!(2, Feeders::feeders_needed(132, Percent::from_percent(1)));
-        assert_eq!(2, Feeders::feeders_needed(189, Percent::from_percent(1)));
+        assert_eq!(1, Feeders::feeders_needed(132, Percent::from_percent(1)));
+        assert_eq!(1, Feeders::feeders_needed(199, Percent::from_percent(1)));
+        assert_eq!(2, Feeders::feeders_needed(200, Percent::from_percent(1)));
     }
 
     #[test]
