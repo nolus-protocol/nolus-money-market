@@ -9,7 +9,7 @@ use finance::{
     ratio::Rational,
 };
 use platform::{bank::BankView, contract};
-use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, StdResult, Storage, Timestamp, Uint64};
+use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, StdResult, Storage, Timestamp};
 
 use crate::{
     error::{ContractError, ContractResult},

@@ -1,5 +1,5 @@
 use access_control::SingleUserAccess;
-use finance::percent::Percent;
+
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Deps, DepsMut, MessageInfo},

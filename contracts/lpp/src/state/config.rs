@@ -1,17 +1,13 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use finance::{currency::Currency, percent::Percent, price::Price};
+use finance::{currency::Currency, price::Price};
 use sdk::{
     cosmwasm_std::{StdResult, Storage, Uint64},
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
 
-use crate::{
-    borrow::InterestRate,
-    error::{ContractError, ContractResult},
-    nlpn::NLpn,
-};
+use crate::{borrow::InterestRate, nlpn::NLpn};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct Config {
@@ -23,11 +19,7 @@ pub struct Config {
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub const fn new(
-        lpn_ticker: String,
-        lease_code_id: Uint64,
-        borrow_rate: InterestRate,
-    ) -> Self {
+    pub const fn new(lpn_ticker: String, lease_code_id: Uint64, borrow_rate: InterestRate) -> Self {
         Self {
             lpn_ticker,
             lease_code_id,
