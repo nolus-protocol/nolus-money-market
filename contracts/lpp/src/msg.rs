@@ -12,7 +12,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::{nlpn::NLpn, state::Config};
+use crate::{borrow::InterestRate, nlpn::NLpn, state::Config};
 
 pub type LppCoin = CoinDTO<Lpns>;
 
@@ -22,27 +22,17 @@ pub type InstantiateMsg = Config;
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    UpdateParameters {
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
-    },
+    UpdateParameters { interest_rate: InterestRate },
 
-    OpenLoan {
-        amount: LppCoin,
-    },
+    OpenLoan { amount: LppCoin },
     RepayLoan(),
 
     Deposit(),
     // CW20 interface, withdraw from lender deposit
-    Burn {
-        amount: Uint128,
-    },
+    Burn { amount: Uint128 },
 
     DistributeRewards(),
-    ClaimRewards {
-        other_recipient: Option<Addr>,
-    },
+    ClaimRewards { other_recipient: Option<Addr> },
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]

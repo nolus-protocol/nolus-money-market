@@ -2,7 +2,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
-use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
+use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -43,22 +43,7 @@ impl<'a> InstantiateWithLpn<'a> {
 
         SingleUserAccess::new_contract_owner(self.info.sender).store(self.deps.storage)?;
 
-        let InstantiateMsg {
-            lpn_ticker,
-            lease_code_id,
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
-        } = self.msg;
-
-        LiquidityPool::<LPN>::store(
-            self.deps.storage,
-            lpn_ticker,
-            lease_code_id,
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
-        )?;
+        LiquidityPool::<LPN>::store(self.deps.storage, self.msg)?;
 
         Ok(Response::new().add_attribute("method", "instantiate"))
     }
@@ -69,7 +54,8 @@ impl<'a> InstantiateWithLpn<'a> {
         msg: InstantiateMsg,
     ) -> Result<Response, ContractError> {
         let context = Self { deps, info, msg };
-        visit_any_on_ticker::<Lpns, _>(&context.msg.lpn_ticker.clone(), context)
+
+        visit_any_on_ticker::<Lpns, _>(&SymbolOwned::from(context.msg.lpn_ticker()), context)
     }
 }
 
@@ -140,7 +126,8 @@ impl<'a> ExecuteWithLpn<'a> {
         };
 
         let config = Config::load(context.deps.storage)?;
-        visit_any_on_ticker::<Lpns, _>(&config.lpn_ticker, context)
+
+        visit_any_on_ticker::<Lpns, _>(config.lpn_ticker(), context)
     }
 }
 
@@ -165,17 +152,9 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     // no currency context variants
     match msg {
-        ExecuteMsg::UpdateParameters {
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
-        } => config::try_update_parameters(
-            deps,
-            info,
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
-        ),
+        ExecuteMsg::UpdateParameters { interest_rate } => {
+            config::try_update_parameters(deps, info, interest_rate)
+        }
         ExecuteMsg::DistributeRewards() => rewards::try_distribute_rewards(deps, info),
         ExecuteMsg::ClaimRewards { other_recipient } => {
             rewards::try_claim_rewards(deps, env, info, other_recipient)
@@ -231,7 +210,8 @@ impl<'a> QueryWithLpn<'a> {
         let context = Self { deps, env, msg };
 
         let config = Config::load(context.deps.storage)?;
-        visit_any_on_ticker::<Lpns, _>(&config.lpn_ticker, context)
+
+        visit_any_on_ticker::<Lpns, _>(config.lpn_ticker(), context)
     }
 }
 

@@ -84,7 +84,7 @@ mod test {
         Coin as CwCoin,
     };
 
-    use crate::contract::lender;
+    use crate::{borrow::InterestRate, contract::lender, state::Config};
 
     use super::*;
 
@@ -108,11 +108,16 @@ mod test {
 
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,
-            TheCurrency::TICKER.into(),
-            1000u64.into(),
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
+            Config::new(
+                TheCurrency::TICKER.into(),
+                1000u64.into(),
+                InterestRate::new(
+                    BASE_INTEREST_RATE,
+                    UTILIZATION_OPTIMAL,
+                    ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+            ),
         )
         .unwrap();
 

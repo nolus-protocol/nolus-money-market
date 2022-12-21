@@ -3,10 +3,13 @@ use finance::{
     coin::Coin, currency::Currency, duration::Duration, fraction::Fraction, percent::Percent,
     price, test,
 };
-use lpp::msg::{
-    BalanceResponse, ExecuteMsg as ExecuteLpp, LppBalanceResponse, PriceResponse,
-    QueryConfigResponse, QueryLoanResponse, QueryMsg as QueryLpp, QueryQuoteResponse,
-    RewardsResponse,
+use lpp::{
+    borrow::InterestRate,
+    msg::{
+        BalanceResponse, ExecuteMsg as ExecuteLpp, LppBalanceResponse, PriceResponse,
+        QueryConfigResponse, QueryLoanResponse, QueryMsg as QueryLpp, QueryQuoteResponse,
+        RewardsResponse,
+    },
 };
 use platform::{bank, coin_legacy};
 use sdk::{
@@ -55,9 +58,12 @@ fn config_update_parameters() {
         hacker,
         lpp.clone(),
         &ExecuteLpp::UpdateParameters {
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
+            interest_rate: InterestRate::new(
+                base_interest_rate,
+                utilization_optimal,
+                addon_optimal_interest_rate,
+            )
+            .expect("Couldn't construct interest rate value!"),
         },
         &[],
     )
@@ -67,9 +73,12 @@ fn config_update_parameters() {
         admin,
         lpp.clone(),
         &ExecuteLpp::UpdateParameters {
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
+            interest_rate: InterestRate::new(
+                base_interest_rate,
+                utilization_optimal,
+                addon_optimal_interest_rate,
+            )
+            .expect("Couldn't construct interest rate value!"),
         },
         &[],
     )
@@ -496,9 +505,12 @@ fn loan_open_and_repay() {
         admin.clone(),
         lpp.clone(),
         &ExecuteLpp::UpdateParameters {
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
+            interest_rate: InterestRate::new(
+                base_interest_rate,
+                utilization_optimal,
+                addon_optimal_interest_rate,
+            )
+            .expect("Couldn't construct interest rate value!"),
         },
         &[],
     )
@@ -796,9 +808,12 @@ fn compare_lpp_states() {
         admin.clone(),
         lpp.clone(),
         &ExecuteLpp::UpdateParameters {
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
+            interest_rate: InterestRate::new(
+                base_interest_rate,
+                utilization_optimal,
+                addon_optimal_interest_rate,
+            )
+            .expect("Couldn't construct interest rate value!"),
         },
         &[],
     )

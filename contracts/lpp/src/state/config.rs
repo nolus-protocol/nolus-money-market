@@ -8,42 +8,43 @@ use sdk::{
 };
 
 use crate::{
+    borrow::InterestRate,
     error::{ContractError, ContractResult},
     nlpn::NLpn,
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct Config {
-    pub lpn_ticker: String,
-    pub lease_code_id: Uint64,
-    pub base_interest_rate: Percent,
-    pub utilization_optimal: Percent,
-    pub addon_optimal_interest_rate: Percent,
+    lpn_ticker: String,
+    lease_code_id: Uint64,
+    borrow_rate: InterestRate,
 }
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn new(
+    pub const fn new(
         lpn_ticker: String,
         lease_code_id: Uint64,
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
-    ) -> ContractResult<Self> {
-        Self::validate_input(
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
-        )?;
-
-        Ok(Config {
+        borrow_rate: InterestRate,
+    ) -> Self {
+        Self {
             lpn_ticker,
             lease_code_id,
-            base_interest_rate: Percent::from_percent(7),
-            utilization_optimal: Percent::from_percent(70),
-            addon_optimal_interest_rate: Percent::from_percent(2),
-        })
+            borrow_rate,
+        }
+    }
+
+    pub fn lpn_ticker(&self) -> &str {
+        &self.lpn_ticker
+    }
+
+    pub const fn lease_code_id(&self) -> Uint64 {
+        self.lease_code_id
+    }
+
+    pub const fn borrow_rate(&self) -> &InterestRate {
+        &self.borrow_rate
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
@@ -54,24 +55,17 @@ impl Config {
         Self::STORAGE.load(storage)
     }
 
-    pub fn update(
-        &mut self,
+    pub fn update_borrow_rate(
         storage: &mut dyn Storage,
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
-    ) -> ContractResult<()> {
-        Self::validate_input(
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
-        )?;
+        borrow_rate: InterestRate,
+    ) -> StdResult<()> {
+        Self::STORAGE
+            .update(storage, |mut config| {
+                config.borrow_rate = borrow_rate;
 
-        self.base_interest_rate = base_interest_rate;
-        self.utilization_optimal = utilization_optimal;
-        self.addon_optimal_interest_rate = addon_optimal_interest_rate;
-
-        self.store(storage).map_err(Into::into)
+                Ok(config)
+            })
+            .map(|_| ())
     }
 
     pub fn initial_derivative_price<LPN>() -> Price<NLpn, LPN>
@@ -79,31 +73,5 @@ impl Config {
         LPN: Currency + Serialize + DeserializeOwned,
     {
         Price::identity()
-    }
-
-    fn validate_input(
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
-    ) -> ContractResult<()> {
-        if base_interest_rate > Percent::HUNDRED {
-            return Err(ContractError::InvalidConfigParameter(
-                "Base interest rate should not be greater than 100%!",
-            ));
-        }
-
-        if utilization_optimal > Percent::HUNDRED {
-            return Err(ContractError::InvalidConfigParameter(
-                "Optimal utilization should not be greater than 100%!",
-            ));
-        }
-
-        if addon_optimal_interest_rate > Percent::HUNDRED {
-            return Err(ContractError::InvalidConfigParameter(
-                "Addon optimal interest rate should not be greater than 100%!",
-            ));
-        }
-
-        Ok(())
     }
 }
