@@ -245,9 +245,9 @@ mod tests {
             LppBatch,
         },
     };
+    use marketprice::alarms::Alarm;
     use oracle::msg::ExecuteMsg::AddPriceAlarm;
     use oracle::stub::{Oracle, OracleBatch, OracleRef};
-    use marketprice::alarms::Alarm;
     use platform::{
         bank::{BankAccountView, BankStub},
         batch::Batch,
