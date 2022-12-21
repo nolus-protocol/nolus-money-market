@@ -1,9 +1,8 @@
-use cosmwasm_std::MessageInfo;
+use access_control::SingleUserAccess;
 use finance::percent::Percent;
-use platform::access_control::SingleUserAccess;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Deps, DepsMut},
+    cosmwasm_std::{Deps, DepsMut, MessageInfo},
 };
 
 use crate::{error::ContractError, msg::QueryConfigResponse, state::Config};

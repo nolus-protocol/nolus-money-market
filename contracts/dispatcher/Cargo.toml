@@ -16,15 +16,17 @@ contract-with-bindings = ["contract"]
 contract = []
 
 [dependencies]
-lpp = { path = "../lpp", default-features = false, features = ["stub"] }
-oracle = { path = "../oracle", default-features = false, features = ["stub", "convert"] }
-timealarms = { path = "../timealarms", default-features = false }
-treasury = { path = "../treasury", default-features = false }
-currency = { path = "../../packages/currency" }
-finance = { path = "../../packages/finance" }
-marketprice = { path = "../../packages/marketprice" }
-platform = { path = "../../packages/platform", features = ["access-control"] }
-sdk = { path = "../../packages/sdk", features = ["contract"] }
+lpp = { workspace = true, features = ["stub"] }
+oracle = { workspace = true, features = ["stub", "convert"] }
+timealarms = { workspace = true }
+treasury = { workspace = true }
+
+access-control = { workspace = true }
+currency = { workspace = true }
+finance = { workspace = true }
+marketprice = { workspace = true }
+platform = { workspace = true }
+sdk = { workspace = true, features = ["contract"] }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
@@ -33,7 +35,7 @@ serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-schema = { path = "../../packages/schema" }
+schema = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
-sdk = { path = "../../packages/sdk", default-features = false, features = ["testing"] }
+sdk = { workspace = true, default-features = false, features = ["testing"] }

@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 
+use access_control::SingleUserAccess;
 use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
 use lease::api::{dex::ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use platform::access_control::SingleUserAccess;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, Deps, MessageInfo, StdResult, Storage},

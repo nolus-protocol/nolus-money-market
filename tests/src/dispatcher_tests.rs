@@ -1,6 +1,6 @@
+use access_control::Unauthorized;
 use currency::{lpn::Usdc, native::Nls};
 use finance::currency::Currency;
-use platform::access_control::Unauthorized;
 use rewards_dispatcher::ContractError;
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},

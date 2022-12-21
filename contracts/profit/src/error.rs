@@ -13,7 +13,7 @@ pub enum ContractError {
     Platform(#[from] platform::error::Error),
 
     #[error("[Profit] {0}")]
-    Unauthorized(#[from] platform::access_control::Unauthorized),
+    Unauthorized(#[from] access_control::Unauthorized),
 
     #[error("[Profit] Alarm time validation failed")]
     AlarmTimeValidation {},

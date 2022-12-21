@@ -2,9 +2,9 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
+use access_control::SingleUserAccess;
 use finance::{duration::Duration, fraction::Fraction, percent::Percent};
 use marketprice::{feeders::PriceFeeders, market_price::Config as PriceConfig};
-use platform::access_control::SingleUserAccess;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, DepsMut, MessageInfo, StdResult, Storage, Timestamp},

@@ -288,8 +288,9 @@ where
 
 #[cfg(test)]
 mod test {
+    use access_control::SingleUserAccess;
     use finance::{duration::Duration, percent::Units, price, test::currency::Usdc};
-    use platform::{access_control::SingleUserAccess, coin_legacy};
+    use platform::coin_legacy;
     use sdk::cosmwasm_std::{
         testing::{self, MOCK_CONTRACT_ADDR},
         Addr, Coin as CwCoin, Timestamp, Uint64,

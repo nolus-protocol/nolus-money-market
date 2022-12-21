@@ -1,3 +1,4 @@
+use access_control::SingleUserAccess;
 use finance::{duration::Duration, percent::Percent};
 use sdk::{
     cosmwasm_std::{Addr, StdResult, Storage},

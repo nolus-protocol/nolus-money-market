@@ -1,7 +1,7 @@
+use access_control::SingleUserAccess;
 use currency::native::Nls;
 use finance::coin::Coin;
 use platform::{
-    access_control::SingleUserAccess,
     bank::{self, BankAccount},
     batch::Batch,
 };

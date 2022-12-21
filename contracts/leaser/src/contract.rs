@@ -1,4 +1,5 @@
-use platform::{access_control::SingleUserAccess, reply::from_instantiate};
+use access_control::SingleUserAccess;
+use platform::reply::from_instantiate;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{

@@ -108,9 +108,10 @@ pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceRespons
 
 #[cfg(test)]
 mod test {
+    use access_control::SingleUserAccess;
     use currency::lpn::Usdc;
     use finance::price;
-    use platform::{access_control::SingleUserAccess, coin_legacy};
+    use platform::coin_legacy;
     use sdk::cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
         Coin as CwCoin,

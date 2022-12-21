@@ -1,10 +1,11 @@
+use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
 use finance::{
     currency::{visit_any_on_ticker, AnyVisitor, Currency},
     duration::Duration,
     percent::Percent,
 };
-use platform::{access_control::SingleUserAccess, contract};
+use platform::contract;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{

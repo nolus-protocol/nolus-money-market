@@ -1,5 +1,5 @@
+use access_control::SingleUserAccess;
 use finance::duration::Duration;
-use platform::access_control::SingleUserAccess;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{

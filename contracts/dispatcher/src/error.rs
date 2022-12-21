@@ -25,7 +25,7 @@ pub enum ContractError {
     FromInfallible(#[from] Infallible),
 
     #[error("[Dispatcher] {0}")]
-    Unauthorized(#[from] platform::access_control::Unauthorized),
+    Unauthorized(#[from] access_control::Unauthorized),
 
     #[error("[Dispatcher] Unknown currency symbol: {symbol:?}")]
     UnknownCurrency { symbol: String },

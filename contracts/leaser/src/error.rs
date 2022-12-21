@@ -20,7 +20,7 @@ pub enum ContractError {
     Platform(#[from] platform::error::Error),
 
     #[error("[Leaser] {0}")]
-    Unauthorized(#[from] platform::access_control::Unauthorized),
+    Unauthorized(#[from] access_control::Unauthorized),
 
     #[error(
         "[Leaser] LeaseHealthyLiability% must be less than LeaseMaxLiability% and LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"

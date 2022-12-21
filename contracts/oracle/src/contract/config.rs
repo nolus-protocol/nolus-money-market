@@ -1,5 +1,5 @@
+use access_control::SingleUserAccess;
 use finance::{duration::Duration, percent::Percent};
-use platform::access_control::SingleUserAccess;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{MessageInfo, Storage},

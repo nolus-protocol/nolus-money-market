@@ -76,8 +76,9 @@ pub fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsRespons
 
 #[cfg(test)]
 mod test {
+    use access_control::SingleUserAccess;
     use finance::test::currency::Usdc;
-    use platform::{access_control::SingleUserAccess, coin_legacy};
+    use platform::coin_legacy;
     use sdk::cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
         Coin as CwCoin,

@@ -1,8 +1,8 @@
 use serde::{de::DeserializeOwned, Serialize};
 
+use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
-use platform::access_control::SingleUserAccess;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{

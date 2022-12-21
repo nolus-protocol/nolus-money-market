@@ -1,11 +1,9 @@
+use access_control::SingleUserAccess;
 use currency::native::Nls;
 use finance::duration::Duration;
 use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
-use platform::{
-    access_control::SingleUserAccess,
-    batch::{Batch, Emit, Emitter},
-};
+use platform::batch::{Batch, Emit, Emitter};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{

@@ -16,11 +16,13 @@ contract-with-bindings = ["contract"]
 contract = []
 
 [dependencies]
-lpp = { path = "../lpp", default-features = false }
-currency = { path = "../../packages/currency" }
-finance = { path = "../../packages/finance" }
-platform = { path = "../../packages/platform", features = ["access-control"] }
-sdk = { path = "../../packages/sdk", features = ["contract"] }
+lpp = { workspace = true }
+
+access-control = { workspace = true }
+currency = { workspace = true }
+finance = { workspace = true }
+platform = { workspace = true }
+sdk = { workspace = true, features = ["contract"] }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
@@ -30,4 +32,4 @@ serde = { workspace = true, features = ["derive"] }
 semver = "1"
 
 [dev-dependencies]
-schema = { path = "../../packages/schema" }
+schema = { workspace = true }

@@ -49,5 +49,5 @@ impl<'r> From<SingleUserAccess<'r>> for Addr {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, thiserror::Error)]
-#[error("[Platform~Access Control] Checked address doesn't match the one associated with access control variable!")]
+#[error("[Access Control] Checked address doesn't match the one associated with access control variable!")]
 pub struct Unauthorized;

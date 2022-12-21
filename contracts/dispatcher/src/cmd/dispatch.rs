@@ -1,11 +1,9 @@
+use access_control::SingleUserAccess;
 use currency::native::Nls;
 use finance::{coin::Coin, currency::Currency, duration::Duration, interest::InterestPeriod};
 use lpp::stub::{Lpp as LppTrait, WithLpp};
 use oracle::{convert, stub::OracleRef};
-use platform::{
-    access_control::SingleUserAccess,
-    batch::{Batch, Emit, Emitter},
-};
+use platform::batch::{Batch, Emit, Emitter};
 use sdk::cosmwasm_std::{QuerierWrapper, StdResult, Storage, Timestamp};
 
 use crate::{cmd::Result as DispatcherResult, state::Config, ContractError};
