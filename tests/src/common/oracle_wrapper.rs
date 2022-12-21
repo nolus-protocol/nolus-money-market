@@ -1,6 +1,10 @@
 use trees::tr;
 
-use currency::{lease::{Cro, Osmo}, lpn::Usdc, native::Nls};
+use currency::{
+    lease::{Cro, Osmo},
+    lpn::Usdc,
+    native::Nls,
+};
 use finance::{coin::Coin, currency::Currency, percent::Percent, price::total_of};
 use marketprice::SpotPrice;
 use oracle::{
