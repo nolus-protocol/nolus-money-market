@@ -1,4 +1,3 @@
-use cosmwasm_std::Addr;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use finance::{currency::Currency, percent::Percent, price::Price};
@@ -17,20 +16,18 @@ pub struct Config {
     pub base_interest_rate: Percent,
     pub utilization_optimal: Percent,
     pub addon_optimal_interest_rate: Percent,
-    pub owner: Addr,
 }
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn new(owner: Addr, lpn_ticker: String, lease_code_id: Uint64) -> Self {
+    pub fn new(lpn_ticker: String, lease_code_id: Uint64) -> Self {
         Config {
             lpn_ticker,
             lease_code_id,
             base_interest_rate: Percent::from_percent(7),
             utilization_optimal: Percent::from_percent(70),
             addon_optimal_interest_rate: Percent::from_percent(2),
-            owner,
         }
     }
 

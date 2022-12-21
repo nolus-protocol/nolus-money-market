@@ -1,3 +1,4 @@
+use access_control::SingleUserAccess;
 use currency::native::Nls;
 use finance::{coin::Coin, duration::Duration};
 use platform::{
@@ -7,7 +8,7 @@ use platform::{
 use sdk::{
     cosmwasm_ext::{CosmosMsg, Response},
     cosmwasm_std::{
-        to_binary, Addr, DepsMut, Env, MessageInfo, StdResult, Storage, Timestamp, WasmMsg,
+        to_binary, Addr, Deps, Env, MessageInfo, StdResult, Storage, Timestamp, WasmMsg,
     },
 };
 
@@ -17,28 +18,26 @@ pub struct Profit {}
 
 impl Profit {
     pub(crate) fn try_config(
-        deps: DepsMut,
+        storage: &mut dyn Storage,
         info: MessageInfo,
         cadence_hours: u16,
     ) -> Result<Response, ContractError> {
-        let config = Config::load(deps.storage)?;
-        if info.sender != config.owner {
-            return Err(ContractError::Unauthorized {});
-        }
-        Config::update(deps.storage, cadence_hours)?;
+        SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
+            .check_access(&info.sender)?;
+
+        Config::update(storage, cadence_hours)?;
 
         Ok(Response::new())
     }
     pub(crate) fn transfer(
-        deps: DepsMut,
+        deps: Deps,
         env: Env,
         info: MessageInfo,
     ) -> Result<Emitter, ContractError> {
-        let config = Config::load(deps.storage)?;
+        SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
+            .check_access(&info.sender)?;
 
-        if info.sender != config.timealarms {
-            return Err(ContractError::UnrecognisedAlarm(info.sender));
-        }
+        let config = Config::load(deps.storage)?;
 
         let balance = deps.querier.query_all_balances(&env.contract.address)?;
 
@@ -49,7 +48,7 @@ impl Profit {
         let current_time = env.block.time;
 
         let msg = Self::alarm_subscribe_msg(
-            &config.timealarms,
+            &info.sender,
             current_time,
             Duration::from_hours(config.cadence_hours),
         )?;

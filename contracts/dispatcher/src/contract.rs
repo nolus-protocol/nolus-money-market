@@ -1,3 +1,4 @@
+use access_control::SingleUserAccess;
 use currency::native::Nls;
 use finance::duration::Duration;
 use lpp::stub::LppRef;
@@ -8,8 +9,7 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
-        ensure, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Storage,
-        Timestamp,
+        ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Storage, Timestamp,
     },
     cw2::set_contract_version,
 };
@@ -35,27 +35,34 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    let lpp_addr = validate_addr(deps.as_ref(), msg.lpp)?;
-    let oracle_addr = validate_addr(deps.as_ref(), msg.oracle)?;
-    let timealarms_addr = validate_addr(deps.as_ref(), msg.timealarms)?;
-    let treasury_addr = validate_addr(deps.as_ref(), msg.treasury)?;
+    platform::contract::validate_addr(&deps.querier, &msg.lpp)?;
+    platform::contract::validate_addr(&deps.querier, &msg.oracle)?;
+    platform::contract::validate_addr(&deps.querier, &msg.timealarms)?;
+    platform::contract::validate_addr(&deps.querier, &msg.treasury)?;
+
+    SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, info.sender)
+        .store(deps.storage)?;
+    SingleUserAccess::new(
+        crate::access_control::TIMEALARMS_NAMESPACE,
+        msg.timealarms.clone(),
+    )
+    .store(deps.storage)?;
 
     Config::new(
-        info.sender,
         msg.cadence_hours,
-        lpp_addr,
-        oracle_addr,
-        timealarms_addr.clone(),
-        treasury_addr,
+        msg.lpp,
+        msg.oracle,
+        msg.treasury,
         msg.tvl_to_apr,
     )
     .store(deps.storage)?;
     DispatchLog::update(deps.storage, env.block.time)?;
 
     let mut batch = Batch::default();
+
     batch
         .schedule_execute_wasm_no_reply::<_, Nls>(
-            &timealarms_addr,
+            &msg.timealarms,
             &timealarms::msg::ExecuteMsg::AddAlarm {
                 time: env.block.time + Duration::from_hours(msg.cadence_hours),
             },
@@ -66,12 +73,6 @@ pub fn instantiate(
     Ok(Response::from(batch))
 }
 
-fn validate_addr(deps: Deps, addr: Addr) -> Result<Addr, ContractError> {
-    deps.api
-        .addr_validate(addr.as_str())
-        .map_err(|_| ContractError::InvalidContractAddress(addr))
-}
-
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
     deps: DepsMut,
@@ -80,21 +81,20 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Config { cadence_hours } => try_config(deps, info, cadence_hours),
+        ExecuteMsg::Config { cadence_hours } => try_config(deps.storage, info, cadence_hours),
         ExecuteMsg::TimeAlarm(time) => try_dispatch(deps, env, info, time),
     }
 }
 
 pub fn try_config(
-    deps: DepsMut,
+    storage: &mut dyn Storage,
     info: MessageInfo,
     cadence_hours: u16,
 ) -> Result<Response, ContractError> {
-    let config = Config::load(deps.storage)?;
-    if info.sender != config.owner {
-        return Err(ContractError::Unauthorized {});
-    }
-    Config::update(deps.storage, cadence_hours)?;
+    SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
+        .check_access(&info.sender)?;
+
+    Config::update(storage, cadence_hours)?;
 
     Ok(Response::new().add_attribute("method", "config"))
 }
@@ -107,10 +107,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 }
 
 fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
-    let config = Config::load(storage)?;
-    Ok(ConfigResponse {
-        cadence_hours: config.cadence_hours,
-    })
+    let Config { cadence_hours, .. } = Config::load(storage)?;
+
+    Ok(ConfigResponse { cadence_hours })
 }
 
 pub fn try_dispatch(
@@ -121,18 +120,26 @@ pub fn try_dispatch(
 ) -> Result<Response, ContractError> {
     let block_time = env.block.time;
     ensure!(time >= block_time, ContractError::AlarmTimeValidation {});
+
+    SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
+        .check_access(&info.sender)?;
+
     let config = Config::load(deps.storage)?;
 
-    if info.sender != config.timealarms {
-        return Err(ContractError::UnrecognisedAlarm(info.sender));
-    }
     let last_dispatch = DispatchLog::last_dispatch(deps.storage)?;
     let oracle = OracleRef::try_from(config.oracle.clone(), &deps.querier)?;
 
     let lpp_address = config.lpp.clone();
     let lpp = LppRef::try_new(lpp_address.clone(), &deps.querier)?;
     let emitter: Emitter = lpp.execute(
-        Dispatch::new(oracle, last_dispatch, config, block_time, deps.querier)?,
+        Dispatch::new(
+            deps.storage,
+            oracle,
+            last_dispatch,
+            config,
+            block_time,
+            deps.querier,
+        )?,
         &deps.querier,
     )?;
     // Store the current time for use for the next calculation.
@@ -152,23 +159,28 @@ mod tests {
         testing::{mock_dependencies_with_balance, mock_env, mock_info},
         Addr, DepsMut,
     };
+    use sdk::testing::customized_mock_deps_with_contracts;
 
-    use crate::state::reward_scale::TotalValueLocked;
     use crate::{
         msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
-        state::reward_scale::{Bar, RewardScale},
+        state::reward_scale::{Bar, RewardScale, TotalValueLocked},
         ContractError,
     };
 
     use super::{execute, instantiate, query};
 
+    const LPP_ADDR: &str = "lpp";
+    const ORACLE_ADDR: &str = "oracle";
+    const TIMEALARMS_ADDR: &str = "timealarms";
+    const TREASURY_ADDR: &str = "treasury";
+
     fn do_instantiate(deps: DepsMut) {
         let msg = InstantiateMsg {
             cadence_hours: 10,
-            lpp: Addr::unchecked("lpp"),
-            oracle: Addr::unchecked("oracle"),
-            timealarms: Addr::unchecked("timealarms"),
-            treasury: Addr::unchecked("treasury"),
+            lpp: Addr::unchecked(LPP_ADDR),
+            oracle: Addr::unchecked(ORACLE_ADDR),
+            timealarms: Addr::unchecked(TIMEALARMS_ADDR),
+            treasury: Addr::unchecked(TREASURY_ADDR),
             tvl_to_apr: RewardScale::try_from(vec![
                 Bar {
                     tvl: TotalValueLocked::new(0),
@@ -189,7 +201,10 @@ mod tests {
 
     #[test]
     fn proper_initialization() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        let mut deps = customized_mock_deps_with_contracts(
+            mock_dependencies_with_balance(&coins(2, "token")),
+            [LPP_ADDR, TIMEALARMS_ADDR, ORACLE_ADDR, TREASURY_ADDR],
+        );
         do_instantiate(deps.as_mut());
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
@@ -199,14 +214,18 @@ mod tests {
 
     #[test]
     fn configure() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        let mut deps = customized_mock_deps_with_contracts(
+            mock_dependencies_with_balance(&coins(2, "token")),
+            [LPP_ADDR, TIMEALARMS_ADDR, ORACLE_ADDR, TREASURY_ADDR],
+        );
+
         do_instantiate(deps.as_mut());
 
         let unauth_info = mock_info("anyone", &coins(2, "token"));
         let msg = ExecuteMsg::Config { cadence_hours: 20 };
         let res = execute(deps.as_mut(), mock_env(), unauth_info, msg);
         match res {
-            Err(ContractError::Unauthorized {}) => {}
+            Err(ContractError::Unauthorized(..)) => {}
             _ => panic!("Must return unauthorized error"),
         }
 

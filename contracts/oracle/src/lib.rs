@@ -11,6 +11,9 @@ pub mod stub;
 pub mod convert;
 
 #[cfg(any(feature = "contract", test))]
+pub mod access_control;
+#[cfg(any(feature = "contract", test))]
 pub mod contract;
+
 #[cfg(test)]
 pub mod tests;

@@ -1,3 +1,5 @@
+use trees::tr;
+
 use currency::{
     lease::{Atom, Cro, Osmo, Wbtc, Weth},
     lpn::Usdc,
@@ -14,7 +16,6 @@ use sdk::cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
     MemoryStorage, MessageInfo, OwnedDeps,
 };
-use trees::tr;
 
 use crate::{
     contract::{execute, instantiate},
@@ -76,7 +77,7 @@ pub(crate) fn setup_test(
     let mut deps = mock_dependencies();
     let info = mock_info(CREATOR, &coins(1000, Nls::TICKER));
     let res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
-    assert_eq!(0, res.messages.len());
+    assert_eq!(res.messages.len(), 0);
 
     // register single feeder address
     let msg = ExecuteMsg::RegisterFeeder {

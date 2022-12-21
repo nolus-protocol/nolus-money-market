@@ -1,6 +1,6 @@
 use finance::{duration::Duration, percent::Percent};
 use sdk::{
-    cosmwasm_std::{Addr, StdResult, Storage},
+    cosmwasm_std::{StdResult, Storage},
     cw_storage_plus::Item,
 };
 
@@ -11,15 +11,9 @@ use super::Config;
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn new(
-        denom: String,
-        owner: Addr,
-        price_feed_period: Duration,
-        expected_feeders: Percent,
-    ) -> Self {
+    pub fn new(denom: String, price_feed_period: Duration, expected_feeders: Percent) -> Self {
         Config {
             base_asset: denom,
-            owner,
             price_feed_period,
             expected_feeders,
         }

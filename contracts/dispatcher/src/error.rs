@@ -4,7 +4,7 @@ use thiserror::Error;
 
 use sdk::cosmwasm_std::{Addr, StdError};
 
-#[derive(Error, Debug)]
+#[derive(Error, PartialEq, Debug)]
 pub enum ContractError {
     #[error("[Dispatcher] [Std] {0}")]
     Std(#[from] StdError),
@@ -24,8 +24,8 @@ pub enum ContractError {
     #[error("[Dispatcher] [Infallible] {0}")]
     FromInfallible(#[from] Infallible),
 
-    #[error("[Dispatcher] Unauthorized")]
-    Unauthorized {},
+    #[error("[Dispatcher] {0}")]
+    Unauthorized(#[from] access_control::Unauthorized),
 
     #[error("[Dispatcher] Unknown currency symbol: {symbol:?}")]
     UnknownCurrency { symbol: String },

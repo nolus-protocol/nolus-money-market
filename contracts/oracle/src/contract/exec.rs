@@ -1,10 +1,12 @@
+use serde::de::DeserializeOwned;
+
+use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, DepsMut, Env},
 };
-use serde::de::DeserializeOwned;
 
 use crate::{
     error::ContractError,
@@ -50,13 +52,13 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
     {
         match self.msg {
             ExecuteMsg::SwapTree { tree } => {
-                let config = Config::load(self.deps.storage)?;
-                if self.sender != config.owner {
-                    return Err(ContractError::Unauthorized {});
-                }
+                SingleUserAccess::load(self.deps.storage, crate::access_control::OWNER_NAMESPACE)?
+                    .check_access(&self.sender)?;
+
                 SupportedPairs::<OracleBase>::new(tree)?
                     .validate_tickers()?
                     .save(self.deps.storage)?;
+
                 Ok(Response::default())
             }
             ExecuteMsg::FeedPrices { prices } => {

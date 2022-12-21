@@ -76,10 +76,13 @@ pub fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsRespons
 
 #[cfg(test)]
 mod test {
+    use access_control::SingleUserAccess;
     use finance::test::currency::Usdc;
     use platform::coin_legacy;
-    use sdk::cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR};
-    use sdk::cosmwasm_std::Coin as CwCoin;
+    use sdk::cosmwasm_std::{
+        testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},
+        Coin as CwCoin,
+    };
 
     use crate::contract::lender;
 
@@ -95,9 +98,15 @@ mod test {
         let mut lpp_balance = 0;
         let deposit = 20_000;
 
+        SingleUserAccess::new(
+            crate::access_control::OWNER_NAMESPACE,
+            Addr::unchecked("admin"),
+        )
+        .store(deps.as_mut().storage)
+        .unwrap();
+
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,
-            Addr::unchecked("admin"),
             TheCurrency::TICKER.into(),
             1000u64.into(),
         )

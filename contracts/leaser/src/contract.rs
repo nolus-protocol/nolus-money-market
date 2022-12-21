@@ -1,11 +1,10 @@
+use access_control::SingleUserAccess;
 use platform::reply::from_instantiate;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{
-        to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, StdError, Storage,
-    },
+    cosmwasm_std::{to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage},
     cw2::set_contract_version,
 };
 
@@ -30,26 +29,15 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    deps.api
-        .addr_validate(msg.lpp_ust_addr.as_str())
-        .map_err(|_| {
-            StdError::generic_err(format!(
-                "Invalid LPP address provided! Input: {:?}",
-                msg.lpp_ust_addr.as_str(),
-            ))
-        })?;
+    platform::contract::validate_addr(&deps.querier, &msg.lpp_ust_addr)?;
+    platform::contract::validate_addr(&deps.querier, &msg.time_alarms)?;
+    platform::contract::validate_addr(&deps.querier, &msg.market_price_oracle)?;
+    platform::contract::validate_addr(&deps.querier, &msg.profit)?;
 
-    deps.api
-        .addr_validate(msg.market_price_oracle.as_str())
-        .map_err(|_| {
-            StdError::generic_err(format!(
-                "Invalid Market Price Oracle address provided! Input: {:?}",
-                msg.market_price_oracle.as_str(),
-            ))
-        })?;
+    SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, info.sender)
+        .store(deps.storage)?;
 
-    let config = Config::new(info.sender, msg)?;
-    config.store(deps.storage)?;
+    Config::new(msg)?.store(deps.storage)?;
 
     Ok(Response::default())
 }
@@ -62,14 +50,14 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::SetupDex(params) => Leaser::try_setup_dex(deps, info, params),
+        ExecuteMsg::SetupDex(params) => Leaser::try_setup_dex(deps.storage, info, params),
         ExecuteMsg::OpenLease { currency } => Borrow::with(deps, info.funds, info.sender, currency),
         ExecuteMsg::Config {
             lease_interest_rate_margin,
             liability,
             lease_interest_payment,
         } => Leaser::try_configure(
-            deps,
+            deps.storage,
             info,
             lease_interest_rate_margin,
             liability,

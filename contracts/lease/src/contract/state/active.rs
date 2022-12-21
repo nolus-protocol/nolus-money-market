@@ -49,7 +49,6 @@ impl Active {
             &env.contract.address,
             env.block.time,
             &amount,
-            cw_deps.api,
             &cw_deps.querier,
             deps,
         )?;

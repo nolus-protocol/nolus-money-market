@@ -4,6 +4,8 @@ pub mod error;
 pub mod msg;
 
 #[cfg(feature = "contract")]
+pub mod access_control;
+#[cfg(feature = "contract")]
 mod cmd;
 #[cfg(feature = "contract")]
 pub mod contract;

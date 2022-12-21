@@ -8,9 +8,9 @@ use sdk::{
 
 use crate::{
     api::{ExecuteMsg, NewLeaseForm, StateQuery},
-    contract::state::Controller,
+    contract::{state::Controller, state::Response},
+    error::ContractResult,
 };
-use crate::{contract::state::Response, error::ContractResult};
 
 mod alarms;
 mod close;
@@ -26,6 +26,13 @@ pub fn instantiate(
     info: MessageInfo,
     form: NewLeaseForm,
 ) -> ContractResult<CwResponse> {
+    deps.api.addr_validate(form.customer.as_str())?;
+
+    platform::contract::validate_addr(&deps.querier, &form.time_alarms)?;
+    platform::contract::validate_addr(&deps.querier, &form.market_price_oracle)?;
+    platform::contract::validate_addr(&deps.querier, &form.loan.lpp)?;
+    platform::contract::validate_addr(&deps.querier, &form.loan.profit)?;
+
     impl_::load_mut(&deps)?
         .instantiate(&mut deps, env, info, form)
         .and_then(
