@@ -65,7 +65,7 @@ impl<'a> Alarms<'a> {
             addr,
         };
         self.alarms().save(storage, id, &alarm)?;
-        self.next_id.save(storage, &(id + 1))?;
+        self.next_id.save(storage, &id.wrapping_add(1))?;
         Ok(id)
     }
 
@@ -227,5 +227,33 @@ pub mod tests {
         let mut dispatcher = MockAlarmDispatcher::default();
         assert_eq!(alarms.notify(storage, &mut dispatcher, t3, 100), Ok(1));
         assert_eq!(dispatcher.0, [id3]);
+    }
+
+    #[test]
+    fn test_id_overflow() {
+        let mut deps = testing::mock_dependencies();
+        let alarms = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
+
+        let id_item: Item<Id> = Item::new("alarms_next_id");
+        id_item.save(&mut deps.storage, &(Id::MAX)).unwrap();
+
+        let id = alarms
+            .add(
+                &mut deps.storage,
+                Addr::unchecked("test"),
+                Timestamp::from_seconds(1),
+            )
+            .unwrap();
+        assert_eq!(id, Id::MAX);
+
+        // overflow
+        let id = alarms
+            .add(
+                &mut deps.storage,
+                Addr::unchecked("test"),
+                Timestamp::from_seconds(2),
+            )
+            .unwrap();
+        assert_eq!(id, 0);
     }
 }

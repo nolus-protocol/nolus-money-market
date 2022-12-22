@@ -236,7 +236,7 @@ impl<'m> PriceAlarms<'m> {
                 )
                 .map_err(AlarmError::from)?;
 
-            *next_id += 1;
+            *next_id = next_id.wrapping_add(1);
             Ok(())
         }
 
@@ -262,7 +262,7 @@ impl<'m> PriceAlarms<'m> {
                 .take(count)
                 .try_for_each(|alarm| proc(batch, alarm?.0, &mut next_id))?;
 
-            count -= usize::try_from(next_id - start_id)?;
+            count -= usize::try_from(next_id.wrapping_sub(start_id))?;
             start_id = next_id;
 
             alarms_above
@@ -550,5 +550,64 @@ pub mod tests {
 
         assert_eq!(resp, vec![addr2, addr3]);
         assert_eq!(sent, 2);
+    }
+
+    #[test]
+    fn test_id_overflow() {
+        let storage = &mut mock_dependencies().storage;
+        let alarms = PriceAlarms::new(
+            "alarms_below",
+            "index_below",
+            "alarms_above",
+            "index_above",
+            "alarms_sequence",
+        );
+
+        let id_item: Item<AlarmReplyId> = Item::new("alarms_sequence");
+        id_item.save(storage, &AlarmReplyId::MAX).unwrap();
+
+        let addr1 = Addr::unchecked("addr1");
+        let addr2 = Addr::unchecked("addr2");
+
+        alarms
+            .add_or_update(
+                storage,
+                &addr1,
+                Alarm::new(
+                    price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(20)),
+                    None,
+                ),
+            )
+            .unwrap();
+
+        alarms
+            .add_or_update(
+                storage,
+                &addr2,
+                Alarm::new(
+                    price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(30)),
+                    None,
+                ),
+            )
+            .unwrap();
+
+        let mut batch = Batch::default();
+        let sent = alarms
+            .notify(
+                storage,
+                &mut batch,
+                &[price::total_of(Coin::<Atom>::new(1))
+                    .is(Coin::<Usdc>::new(10))
+                    .into()],
+                10,
+            )
+            .unwrap();
+
+        assert_eq!(sent, 2);
+
+        let resp = Response::from(batch);
+        let resp: Vec<_> = resp.messages.into_iter().map(|m| m.id).collect();
+
+        assert_eq!(resp, vec![AlarmReplyId::MAX, 0]);
     }
 }

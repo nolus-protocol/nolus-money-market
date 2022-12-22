@@ -20,7 +20,7 @@ impl<'a> InstantiateReplyIdSeq<'a> {
 
     pub fn next(&self, store: &mut dyn Storage) -> Result<InstantiateReplyId, ContractError> {
         let mut next_seq = self.0.load(store).unwrap_or(0);
-        next_seq += 1;
+        next_seq = next_seq.wrapping_add(1);
         self.0.save(store, &next_seq)?;
         Ok(next_seq)
     }
@@ -75,5 +75,27 @@ impl Loans {
 
     pub fn remove(storage: &mut dyn Storage, msg_id: u64) {
         PENDING.remove(storage, msg_id);
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use sdk::cosmwasm_std::testing;
+
+    #[test]
+    fn test_id_overflow() {
+        let mut deps = testing::mock_dependencies();
+        let id_item: Item<InstantiateReplyId> = Item::new("instantiate_reply_ids");
+        id_item
+            .save(&mut deps.storage, &(InstantiateReplyId::MAX - 1))
+            .unwrap();
+
+        let id = Loans::next(&mut deps.storage, Addr::unchecked("test")).unwrap();
+        assert_eq!(id, InstantiateReplyId::MAX);
+
+        // overflow
+        let id = Loans::next(&mut deps.storage, Addr::unchecked("test")).unwrap();
+        assert_eq!(id, 0);
     }
 }
