@@ -52,8 +52,12 @@ where
     /// Observations older than a configurable period are not taken into consideration.
     /// Calculate the price at a sample period as per the formula:
     /// discounting_factor * avg_price_during_the_period + (1 - discounting_factor) * price_at_the_previos_period
-    pub fn calc_price(&self, config: &Config) -> Result<Price<C, QuoteC>, PriceFeedsError> {
-        if !self.has_enough_feeders(config) {
+    pub fn calc_price(
+        &self,
+        config: &Config,
+        at: Timestamp,
+    ) -> Result<Price<C, QuoteC>, PriceFeedsError> {
+        if !self.has_enough_feeders(config, at) {
             return Err(PriceFeedsError::NoPrice {});
         }
 
@@ -63,8 +67,9 @@ where
         assert!(discount_factor < Percent::HUNDRED);
         assert!(SAMPLE_PERIOD < config.period());
 
-        let observations = self.valid_observations(config);
-        let validity_period = config.block_time() - config.period();
+        let observations = self.valid_observations(config, at);
+        //TODO move to the Config as `valid_since` -> Timestamp
+        let validity_period = at - config.period();
 
         let samples = sample::from_observations(observations, validity_period, SAMPLE_PERIOD);
 
@@ -79,19 +84,23 @@ where
             .ok_or(PriceFeedsError::NoPrice {})
     }
 
-    fn has_enough_feeders(&self, config: &Config) -> bool {
-        self.count_unique_feeders(config) >= config.feeders()
+    fn has_enough_feeders(&self, config: &Config, at: Timestamp) -> bool {
+        self.count_unique_feeders(config, at) >= config.feeders()
     }
 
-    fn count_unique_feeders(&self, config: &Config) -> usize {
-        self.valid_observations(config)
+    fn count_unique_feeders(&self, config: &Config, at: Timestamp) -> usize {
+        self.valid_observations(config, at)
             .map(Observation::feeder)
             .collect::<HashSet<_>>()
             .len()
     }
 
-    fn valid_observations(&self, config: &Config) -> impl Iterator<Item = &Observation<C, QuoteC>> {
-        let mut valid_observations = observation::valid_at(config.block_time(), config.period());
+    fn valid_observations(
+        &self,
+        config: &Config,
+        at: Timestamp,
+    ) -> impl Iterator<Item = &Observation<C, QuoteC>> {
+        let mut valid_observations = observation::valid_at(at, config.period());
         self.observations
             .iter()
             .filter(move |&o| valid_observations(o))
@@ -117,7 +126,7 @@ mod test {
         const ONE_FEEDER: usize = 1;
         let validity_period = Duration::from_secs(60);
         let block_time = Timestamp::from_seconds(100);
-        let config = Config::new(validity_period, ONE_FEEDER, block_time);
+        let config = Config::new(validity_period, ONE_FEEDER);
 
         let feeder1 = Addr::unchecked("feeder1");
         let feed1_time = block_time - validity_period;
@@ -126,12 +135,15 @@ mod test {
         let mut feed = PriceFeed::new();
         feed = feed.add_observation(feeder1.clone(), feed1_time, feed1_price, config.period());
 
-        assert_eq!(Err(PriceFeedsError::NoPrice()), feed.calc_price(&config));
+        assert_eq!(
+            Err(PriceFeedsError::NoPrice()),
+            feed.calc_price(&config, block_time)
+        );
 
         let feed2_time = feed1_time + Duration::from_nanos(1);
         let feed2_price = price(19, 5000);
         feed = feed.add_observation(feeder1, feed2_time, feed2_price, Duration::from_nanos(0));
-        assert_eq!(Ok(feed2_price), feed.calc_price(&config));
+        assert_eq!(Ok(feed2_price), feed.calc_price(&config, block_time));
     }
 
     #[test]
@@ -146,14 +158,17 @@ mod test {
         let mut feed = PriceFeed::new();
         feed = feed.add_observation(feeder1, feed1_time, feed1_price, validity_period);
 
-        let config_two_feeders = Config::new(validity_period, 2, block_time);
+        let config_two_feeders = Config::new(validity_period, 2);
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feed.calc_price(&config_two_feeders)
+            feed.calc_price(&config_two_feeders, block_time)
         );
 
-        let config_one_feeder = Config::new(validity_period, 1, block_time);
-        assert_eq!(Ok(feed1_price), feed.calc_price(&config_one_feeder));
+        let config_one_feeder = Config::new(validity_period, 1);
+        assert_eq!(
+            Ok(feed1_price),
+            feed.calc_price(&config_one_feeder, block_time)
+        );
     }
 
     #[test]
@@ -173,13 +188,13 @@ mod test {
         let feed2_price = price(19, 5000);
         feed = feed.add_observation(feeder2, feed2_time, feed2_price, validity_period);
 
-        let config_feed1_and_2_in = Config::new(validity_period, 2, feed2_time);
-        assert!(feed.calc_price(&config_feed1_and_2_in).is_ok());
+        let config_feed1_and_2_in = Config::new(validity_period, 2);
+        assert!(feed.calc_price(&config_feed1_and_2_in, feed2_time).is_ok());
 
-        let config_feed2_in = Config::new(validity_period, 2, block_time);
+        let config_feed2_in = Config::new(validity_period, 2);
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feed.calc_price(&config_feed2_in)
+            feed.calc_price(&config_feed2_in, block_time)
         );
     }
 
@@ -187,7 +202,7 @@ mod test {
     fn ema_price() {
         let validity_period = Duration::from_secs(60);
         let block_time = Timestamp::from_seconds(100);
-        let config = Config::new(validity_period, 1, block_time);
+        let config = Config::new(validity_period, 1);
 
         let s1 = block_time - Duration::from_secs(12);
         let s21 = block_time - Duration::from_secs(7);
@@ -204,7 +219,7 @@ mod test {
         feed = feed.add_observation(feeder2, s22, price(19, 5000 - 10), config.period());
         feed = feed.add_observation(feeder1, s3, price(19, 5000), config.period());
 
-        assert_eq!(Ok(price(19, 5010)), feed.calc_price(&config));
+        assert_eq!(Ok(price(19, 5010)), feed.calc_price(&config, block_time));
     }
 
     fn price(c: Amount, q: Amount) -> Price<Weth, Usdc> {

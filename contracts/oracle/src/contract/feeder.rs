@@ -3,11 +3,11 @@ use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 
 use access_control::SingleUserAccess;
-use finance::{duration::Duration, fraction::Fraction, percent::Percent};
+use finance::{fraction::Fraction, percent::Percent};
 use marketprice::{feeders::PriceFeeders, market_price::Config as PriceConfig};
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, DepsMut, MessageInfo, StdResult, Storage, Timestamp},
+    cosmwasm_std::{Addr, DepsMut, MessageInfo, StdResult, Storage},
 };
 
 use crate::{state::Config, ContractError};
@@ -61,22 +61,12 @@ impl Feeders {
         Ok(Response::default())
     }
 
-    pub(crate) fn price_config(
-        storage: &dyn Storage,
-        config: &Config,
-        block_time: Timestamp,
-    ) -> StdResult<PriceConfig> {
+    pub(crate) fn price_config(storage: &dyn Storage, config: &Config) -> StdResult<PriceConfig> {
         let registered_feeders = Self::FEEDERS.get(storage)?;
         let all_feeders_cnt = registered_feeders.len();
         let feeders_needed = Self::feeders_needed(all_feeders_cnt, config.expected_feeders);
 
-        Ok(PriceConfig::new(
-            config
-                .price_feed_period
-                .min(Duration::from_nanos(block_time.nanos())),
-            feeders_needed,
-            block_time,
-        ))
+        Ok(PriceConfig::new(config.price_feed_period, feeders_needed))
     }
 
     fn feeders_needed(all_feaders: usize, min_feeders: Percent) -> usize {

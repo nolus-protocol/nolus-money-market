@@ -61,11 +61,12 @@ fn marketprice_add_feed_expect_err() {
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
-    let config = Config::new(MINUTE, 50, ts);
+    let config = Config::new(MINUTE, 50);
     let expected_err = market
         .price::<Atom, _>(
             &deps.storage,
             &config,
+            ts,
             [Osmo::TICKER, Atom::TICKER].into_iter(),
         )
         .unwrap_err();
@@ -113,22 +114,24 @@ fn marketprice_add_feed() {
         .feed(&mut deps.storage, ts, &f_address, &prices, MINUTE)
         .unwrap();
     // require 50 feeders available => NoPrice
-    let query = Config::new(MINUTE, 50, ts);
+    let query = Config::new(MINUTE, 50);
     let err = market
         .price::<Atom, _>(
             &deps.storage,
             &query,
+            ts,
             [Osmo::TICKER, Atom::TICKER].into_iter(),
         )
         .unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
 
     // require 1 feeders available => Price
-    let query = Config::new(MINUTE, 1, ts);
+    let query = Config::new(MINUTE, 1);
     let price_resp = market
         .price::<Atom, _>(
             &deps.storage,
             &query,
+            ts,
             [Osmo::TICKER, Atom::TICKER].into_iter(),
         )
         .unwrap();
@@ -210,11 +213,12 @@ fn marketprice_follow_the_path() {
     .unwrap();
 
     // valid search denom pair
-    let query = Config::new(MINUTE, 1, last_feed_time);
+    let query = Config::new(MINUTE, 1);
     let price_resp = market
         .price::<Usdc, _>(
             &deps.storage,
             &query,
+            last_feed_time,
             [Atom::TICKER, Osmo::TICKER, Cro::TICKER, Usdc::TICKER].into_iter(),
         )
         .unwrap();
@@ -224,23 +228,25 @@ fn marketprice_follow_the_path() {
     assert_eq!(expected_dto, price_resp);
 
     // first and second part of denom pair are the same
-    let query = Config::new(MINUTE, 1, last_feed_time);
+    let query = Config::new(MINUTE, 1);
     let price_resp = market
         .price::<Usdc, _>(
             &deps.storage,
             &query,
+            last_feed_time,
             [Atom::TICKER, Usdc::TICKER].into_iter(),
         )
         .unwrap_err();
     assert_eq!(price_resp, PriceFeedsError::NoPrice());
 
     // second part of denome pair doesn't exists in the storage
-    let query = Config::new(MINUTE, 1, last_feed_time);
+    let query = Config::new(MINUTE, 1);
     assert_eq!(
         market
             .price::<Usdc, _>(
                 &deps.storage,
                 &query,
+                last_feed_time,
                 [Wbtc::TICKER, Usdc::TICKER].into_iter(),
             )
             .unwrap_err(),
@@ -248,12 +254,13 @@ fn marketprice_follow_the_path() {
     );
 
     // first part of denome pair doesn't exists in the storage
-    let query = Config::new(MINUTE, 1, last_feed_time);
+    let query = Config::new(MINUTE, 1);
     assert_eq!(
         market
             .price::<Osmo, _>(
                 &deps.storage,
                 &query,
+                last_feed_time,
                 [Wbtc::TICKER, Osmo::TICKER].into_iter()
             )
             .unwrap_err(),

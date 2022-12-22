@@ -48,6 +48,7 @@ where
         &self,
         storage: &dyn Storage,
         config: &PriceConfig,
+        at: Timestamp,
         currencies: &[SymbolOwned],
     ) -> Result<Vec<SpotPrice>, ContractError> {
         let tree: SupportedPairs<OracleBase> = SupportedPairs::load(storage)?;
@@ -55,7 +56,8 @@ where
         for currency in currencies {
             let path = tree.load_path(currency)?;
             let leaf_to_root = path.iter().map(|owned| owned.as_str());
-            let price = Self::MARKET_PRICE.price::<OracleBase, _>(storage, config, leaf_to_root)?;
+            let price =
+                Self::MARKET_PRICE.price::<OracleBase, _>(storage, config, at, leaf_to_root)?;
             prices.push(price);
         }
         Ok(prices)
@@ -117,7 +119,7 @@ where
 // TODO: optimize
 pub fn get_all_prices<OracleBase>(
     storage: &dyn Storage,
-    block_time: Timestamp,
+    at: Timestamp,
 ) -> Result<Vec<SpotPrice>, ContractError>
 where
     OracleBase: Currency + DeserializeOwned,
@@ -126,7 +128,7 @@ where
 
     let config = Config::load(storage)?;
     let oracle = Feeds::<OracleBase>::with(config);
-    let price_config = Feeders::price_config(storage, &oracle.config, block_time)?;
+    let price_config = Feeders::price_config(storage, &oracle.config)?;
 
     let mut prices = vec![];
     for leg in SupportedPairs::<OracleBase>::load(storage)?
@@ -136,9 +138,12 @@ where
         let path = tree.load_path(&leg.from)?;
         let path = path.iter().map(|owned| owned.as_str());
         // we need to gather all available prices without NoPrice error
-        if let Ok(price) =
-            Feeds::<OracleBase>::MARKET_PRICE.price::<OracleBase, _>(storage, &price_config, path)
-        {
+        if let Ok(price) = Feeds::<OracleBase>::MARKET_PRICE.price::<OracleBase, _>(
+            storage,
+            &price_config,
+            at,
+            path,
+        ) {
             prices.push(price);
         }
     }
