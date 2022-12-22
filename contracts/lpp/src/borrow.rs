@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use finance::percent::Units;
 use finance::{
-    coin::Coin, currency::Currency, fraction::Fraction, percent::Percent, ratio::Rational,
+    coin::Coin,
+    currency::Currency,
+    fraction::Fraction,
+    percent::{Percent, Units},
+    ratio::Rational,
 };
 use sdk::schemars::{self, JsonSchema};
 
