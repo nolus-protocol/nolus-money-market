@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use finance::percent::Units;
 use finance::{
     coin::Coin, currency::Currency, fraction::Fraction, percent::Percent, ratio::Rational,
 };
@@ -57,14 +58,26 @@ impl InterestRate {
     where
         Lpn: Currency,
     {
-        // utilization % / utilization_optimal %
-        let utilization_rel = Rational::new(
-            total_liability,
-            self.utilization_optimal().of(total_liability + balance),
+        // UNDO:
+        //   // utilization % / utilization_optimal %
+        //   let utilization_rel = Rational::new(
+        //       total_liability,
+        //       self.utilization_optimal().of(total_liability + balance),
+        //   );
+        //
+        //   self.base_interest_rate()
+        //       + Fraction::<Coin<Lpn>>::of(&utilization_rel, self.addon_optimal_interest_rate())
+
+        let utilization = Percent::from_ratio(total_liability, balance);
+
+        let config = Rational::new(
+            self.addon_optimal_interest_rate.units(),
+            self.utilization_optimal.units(),
         );
 
-        self.base_interest_rate()
-            + Fraction::<Coin<Lpn>>::of(&utilization_rel, self.addon_optimal_interest_rate())
+        let add = Fraction::<Units>::of(&config, utilization);
+
+        self.base_interest_rate + add
     }
 
     fn validate(&self) -> bool {
@@ -160,7 +173,8 @@ mod tests {
                     rate,
                     &(0..=25)
                         .flat_map(|liability| {
-                            (0..=25)
+                            // UNDO: (0..=25)
+                            (1..=25)
                                 .map(move |balance| InOut((liability, balance), (base_rate, 1000)))
                         })
                         .collect::<Vec<_>>(),
