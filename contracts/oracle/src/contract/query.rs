@@ -9,7 +9,7 @@ use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
 
 use crate::{
     msg::{PricesResponse, QueryMsg, SwapTreeResponse},
-    state::{supported_pairs::SupportedPairs, Config},
+    state::{config::Config, supported_pairs::SupportedPairs},
     ContractError,
 };
 

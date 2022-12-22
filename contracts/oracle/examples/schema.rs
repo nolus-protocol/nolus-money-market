@@ -1,6 +1,6 @@
 use oracle::{
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::Config,
+    state::config::Config,
 };
 use sdk::cosmwasm_schema::{export_schema, schema_for};
 

@@ -9,7 +9,7 @@ use sdk::{
     cosmwasm_std::{Addr, DepsMut, MessageInfo, StdResult, Storage},
 };
 
-use crate::{state::Config, ContractError};
+use crate::{state::config::Config, ContractError};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct Feeders {

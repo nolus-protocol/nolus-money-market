@@ -142,7 +142,7 @@ where
     OracleBase: Currency + DeserializeOwned,
 {
     let total_registered = Feeders::total_registered(storage)?;
-    use crate::state::Config as OracleConfig;
+    use crate::state::config::Config as OracleConfig;
     let config = OracleConfig::load(storage)?;
     let price_config = Config::new(config.price_feed_period, config.expected_feeders);
     let oracle = Feeds::<OracleBase>::with(price_config);

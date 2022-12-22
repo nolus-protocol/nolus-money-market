@@ -13,7 +13,7 @@ use sdk::{
 use crate::{
     error::ContractError,
     msg::ExecuteMsg,
-    state::{supported_pairs::SupportedPairs, Config},
+    state::{config::Config, supported_pairs::SupportedPairs},
 };
 
 use super::{

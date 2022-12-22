@@ -5,7 +5,7 @@ use sdk::{
     cosmwasm_std::{MessageInfo, Storage},
 };
 
-use crate::{msg::ConfigResponse, state::Config, ContractError};
+use crate::{msg::ConfigResponse, state::config::Config, ContractError};
 
 pub fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, ContractError> {
     let config = Config::load(storage)?;
