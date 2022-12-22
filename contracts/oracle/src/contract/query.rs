@@ -47,9 +47,10 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
             QueryMsg::Price { currency } => {
                 let config = Config::load(self.deps.storage)?;
                 let price_config = Feeders::price_config(self.deps.storage, &config)?;
+                let feeds = Feeds::<OracleBase>::with(price_config);
                 let at = self.env.block.time;
-                if let Some(price) = Feeds::<OracleBase>::with(config)
-                    .get_prices(self.deps.storage, &price_config, at, &[currency])?
+                if let Some(price) = feeds
+                    .calc_prices(self.deps.storage, at, &[currency])?
                     .first()
                 {
                     Ok(to_binary(price)?)
@@ -60,14 +61,10 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
             QueryMsg::Prices { currencies } => {
                 let config = Config::load(self.deps.storage)?;
                 let price_config = Feeders::price_config(self.deps.storage, &config)?;
+                let feeds = Feeds::<OracleBase>::with(price_config);
                 let at = self.env.block.time;
                 Ok(to_binary(&PricesResponse {
-                    prices: Feeds::<OracleBase>::with(config).get_prices(
-                        self.deps.storage,
-                        &price_config,
-                        at,
-                        &currencies,
-                    )?,
+                    prices: feeds.calc_prices(self.deps.storage, at, &currencies)?,
                 })?)
             }
             QueryMsg::SwapPath { from, to } => Ok(to_binary(

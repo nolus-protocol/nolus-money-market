@@ -37,10 +37,10 @@ where
         from: Addr,
         at: Timestamp,
         price: Price<C, QuoteC>,
-        validity: Duration,
+        feed_validity: Duration,
     ) -> Self {
         self.observations
-            .retain(observation::valid_at(at, validity));
+            .retain(observation::valid_at(at, feed_validity));
 
         self.observations.push(Observation::new(from, at, price));
         self
@@ -65,16 +65,17 @@ where
         const SAMPLE_PERIOD: Duration = Duration::from_secs(5);
         let discount_factor = Percent::from_percent(75);
         assert!(discount_factor < Percent::HUNDRED);
-        assert!(SAMPLE_PERIOD < config.period());
+        assert!(SAMPLE_PERIOD < config.feed_validity());
 
         let observations = self.valid_observations(config, at);
         //TODO move to the Config as `valid_since` -> Timestamp
-        let validity_period = at - config.period();
+        debug_assert!(Timestamp::default() + config.feed_validity() <= at);
+        let validity_period = at - config.feed_validity();
 
         let samples = sample::from_observations(observations, validity_period, SAMPLE_PERIOD);
 
         samples
-            .take((config.period().nanos() / SAMPLE_PERIOD.nanos()).try_into()?)
+            .take((config.feed_validity().nanos() / SAMPLE_PERIOD.nanos()).try_into()?)
             .map(Sample::into_maybe_price)
             .skip_while(Option::is_none)
             .map(|price| Option::expect(price, "sample prices should keep being present"))
@@ -100,7 +101,7 @@ where
         config: &Config,
         at: Timestamp,
     ) -> impl Iterator<Item = &Observation<C, QuoteC>> {
-        let mut valid_observations = observation::valid_at(at, config.period());
+        let mut valid_observations = observation::valid_at(at, config.feed_validity());
         self.observations
             .iter()
             .filter(move |&o| valid_observations(o))
@@ -133,7 +134,12 @@ mod test {
         let feed1_price = price(20, 5000);
 
         let mut feed = PriceFeed::new();
-        feed = feed.add_observation(feeder1.clone(), feed1_time, feed1_price, config.period());
+        feed = feed.add_observation(
+            feeder1.clone(),
+            feed1_time,
+            feed1_price,
+            config.feed_validity(),
+        );
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
@@ -213,11 +219,21 @@ mod test {
         let feeder2 = Addr::unchecked("feeder2");
 
         let mut feed = PriceFeed::new();
-        feed = feed.add_observation(feeder1.clone(), s1, price(19, 5160), config.period());
-        feed = feed.add_observation(feeder1.clone(), s21, price(19, 5500), config.period());
-        feed = feed.add_observation(feeder1.clone(), s22, price(19, 5000 + 10), config.period());
-        feed = feed.add_observation(feeder2, s22, price(19, 5000 - 10), config.period());
-        feed = feed.add_observation(feeder1, s3, price(19, 5000), config.period());
+        feed = feed.add_observation(feeder1.clone(), s1, price(19, 5160), config.feed_validity());
+        feed = feed.add_observation(
+            feeder1.clone(),
+            s21,
+            price(19, 5500),
+            config.feed_validity(),
+        );
+        feed = feed.add_observation(
+            feeder1.clone(),
+            s22,
+            price(19, 5000 + 10),
+            config.feed_validity(),
+        );
+        feed = feed.add_observation(feeder2, s22, price(19, 5000 - 10), config.feed_validity());
+        feed = feed.add_observation(feeder1, s3, price(19, 5000), config.feed_validity());
 
         assert_eq!(Ok(price(19, 5010)), feed.calc_price(&config, block_time));
     }

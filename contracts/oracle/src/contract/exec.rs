@@ -1,3 +1,5 @@
+use cosmwasm_std::{Storage, Timestamp};
+use marketprice::SpotPrice;
 use serde::de::DeserializeOwned;
 
 use access_control::SingleUserAccess;
@@ -14,7 +16,10 @@ use crate::{
     state::{supported_pairs::SupportedPairs, Config},
 };
 
-use super::{feed, feeder::Feeders};
+use super::{
+    feed::{self, Feeds},
+    feeder::Feeders,
+};
 
 pub struct ExecWithOracleBase<'a> {
     deps: DepsMut<'a>,
@@ -66,7 +71,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                     return Err(ContractError::UnknownFeeder {});
                 }
 
-                feed::try_feed_prices::<OracleBase>(
+                try_feed_prices::<OracleBase>(
                     self.deps.storage,
                     self.env.block.time,
                     self.sender,
@@ -83,4 +88,24 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
             }
         }
     }
+}
+
+fn try_feed_prices<OracleBase>(
+    storage: &mut dyn Storage,
+    block_time: Timestamp,
+    sender: Addr,
+    prices: Vec<SpotPrice>,
+) -> Result<Response, ContractError>
+where
+    OracleBase: Currency + DeserializeOwned,
+{
+    let config = Config::load(storage)?;
+    let price_config = Feeders::price_config(storage, &config)?;
+    let oracle = Feeds::<OracleBase>::with(price_config);
+
+    if !prices.is_empty() {
+        oracle.feed_prices(storage, block_time, &sender, &prices)?;
+    }
+
+    Ok(Response::default())
 }

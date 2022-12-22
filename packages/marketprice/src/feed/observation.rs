@@ -17,7 +17,7 @@ where
 #[track_caller]
 pub fn valid_at<C, QuoteC>(
     at: Timestamp,
-    period: Duration,
+    validity: Duration,
 ) -> impl FnMut(&Observation<C, QuoteC>) -> bool
 where
     C: Currency,
@@ -25,7 +25,7 @@ where
 {
     move |o: &Observation<_, _>| {
         debug_assert!(o.seen(at));
-        Duration::between(o.time, at) < period
+        Duration::between(o.time, at) < validity
     }
 }
 

@@ -15,31 +15,37 @@ use serde::{de::DeserializeOwned, Serialize};
 use crate::{error::PriceFeedsError, feed::PriceFeed, CurrencyGroup, SpotPrice};
 
 pub struct Config {
-    price_feed_period: Duration,
+    feed_validity: Duration,
     required_feeders_cnt: usize,
 }
 
 impl Config {
     pub fn new(price_feed_period: Duration, required_feeders_cnt: usize) -> Self {
         Config {
-            price_feed_period,
+            feed_validity: price_feed_period,
             required_feeders_cnt,
         }
     }
     pub fn feeders(&self) -> usize {
         self.required_feeders_cnt
     }
-    pub fn period(&self) -> Duration {
-        self.price_feed_period
+    pub fn feed_validity(&self) -> Duration {
+        self.feed_validity
     }
 }
 
 pub type PriceFeedBin = Vec<u8>;
-pub struct PriceFeeds<'m>(Map<'m, (SymbolOwned, SymbolOwned), PriceFeedBin>);
+pub struct PriceFeeds<'m> {
+    storage: Map<'m, (SymbolOwned, SymbolOwned), PriceFeedBin>,
+    config: Config,
+}
 
 impl<'m> PriceFeeds<'m> {
-    pub const fn new(namespace: &'m str) -> PriceFeeds {
-        PriceFeeds(Map::new(namespace))
+    pub const fn new(namespace: &'m str, config: Config) -> Self {
+        Self {
+            storage: Map::new(namespace),
+            config,
+        }
     }
 
     pub fn feed(
@@ -48,10 +54,9 @@ impl<'m> PriceFeeds<'m> {
         current_block_time: Timestamp,
         sender_raw: &Addr,
         prices: &[SpotPrice],
-        price_feed_period: Duration,
     ) -> Result<(), PriceFeedsError> {
         for price in prices {
-            self.0.update(
+            self.storage.update(
                 storage,
                 (
                     price.base().ticker().to_string(),
@@ -63,7 +68,7 @@ impl<'m> PriceFeeds<'m> {
                         sender_raw,
                         current_block_time,
                         price,
-                        price_feed_period,
+                        self.config.feed_validity(),
                     )
                 },
             )?;
@@ -75,7 +80,6 @@ impl<'m> PriceFeeds<'m> {
     pub fn price<'a, QuoteC, Iter>(
         &'m self,
         storage: &'a dyn Storage,
-        config: &'a Config,
         at: Timestamp,
         leaf_to_root: Iter,
     ) -> Result<SpotPrice, PriceFeedsError>
@@ -84,7 +88,6 @@ impl<'m> PriceFeeds<'m> {
         QuoteC: Currency + DeserializeOwned,
         Iter: Iterator<Item = Symbol<'a>> + DoubleEndedIterator,
     {
-        debug_assert!(Timestamp::default() + config.price_feed_period <= at);
         let mut root_to_leaf = leaf_to_root.rev();
         let _root = root_to_leaf.next();
         debug_assert_eq!(Some(QuoteC::TICKER), _root);
@@ -92,7 +95,6 @@ impl<'m> PriceFeeds<'m> {
             root_to_leaf,
             self,
             storage,
-            config,
             at,
             Price::<QuoteC, QuoteC>::identity(),
         )
@@ -101,7 +103,6 @@ impl<'m> PriceFeeds<'m> {
     fn price_of_feed<C, QuoteC>(
         &self,
         storage: &dyn Storage,
-        config: &Config,
         at: Timestamp,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError>
     where
@@ -109,9 +110,9 @@ impl<'m> PriceFeeds<'m> {
         QuoteC: Currency + DeserializeOwned,
     {
         let feed_bin = self
-            .0
+            .storage
             .may_load(storage, (C::TICKER.into(), QuoteC::TICKER.into()))?;
-        load_feed(feed_bin).and_then(|feed| feed.calc_price(config, at))
+        load_feed(feed_bin).and_then(|feed| feed.calc_price(&self.config, at))
     }
 }
 
@@ -136,7 +137,6 @@ where
     currency_path: Iter,
     feeds: &'a PriceFeeds<'a>,
     storage: &'a dyn Storage,
-    config: &'a Config,
     at: Timestamp,
     price: Price<BaseC, QuoteC>,
 }
@@ -150,17 +150,14 @@ where
         mut currency_path: Iter,
         feeds: &'a PriceFeeds<'a>,
         storage: &'a dyn Storage,
-        config: &'a Config,
         at: Timestamp,
         price: Price<BaseC, QuoteC>,
     ) -> Result<SpotPrice, PriceFeedsError> {
         if let Some(next_currency) = currency_path.next() {
-            //TODO use self instead of creating a new instance
             let next_collect = PriceCollect {
                 currency_path,
                 feeds,
                 storage,
-                config,
                 at,
                 price,
             };
@@ -183,15 +180,12 @@ where
     where
         C: Currency + Serialize + DeserializeOwned,
     {
-        let next_price = self
-            .feeds
-            .price_of_feed::<C, _>(self.storage, self.config, self.at)?;
+        let next_price = self.feeds.price_of_feed::<C, _>(self.storage, self.at)?;
         let total_price = next_price * self.price;
         PriceCollect::do_collect(
             self.currency_path,
             self.feeds,
             self.storage,
-            self.config,
             self.at,
             total_price,
         )
@@ -203,13 +197,13 @@ fn add_observation(
     from: &Addr,
     at: Timestamp,
     price: &SpotPrice,
-    validity: Duration,
+    feed_validity: Duration,
 ) -> Result<PriceFeedBin, PriceFeedsError> {
     struct AddObservation<'a> {
         feed_bin: Option<PriceFeedBin>,
         from: &'a Addr,
         at: Timestamp,
-        validity: Duration,
+        feed_validity: Duration,
     }
 
     impl<'a> WithPrice for AddObservation<'a> {
@@ -222,7 +216,8 @@ fn add_observation(
             QuoteC: Currency + Serialize + DeserializeOwned,
         {
             load_feed(self.feed_bin).and_then(|feed| {
-                let feed = feed.add_observation(self.from.clone(), self.at, price, self.validity);
+                let feed =
+                    feed.add_observation(self.from.clone(), self.at, price, self.feed_validity);
                 postcard::to_allocvec(&feed).map_err(Into::into)
             })
         }
@@ -233,7 +228,7 @@ fn add_observation(
             feed_bin,
             from,
             at,
-            validity,
+            feed_validity,
         },
     )
 }
@@ -264,28 +259,23 @@ mod test {
 
     #[test]
     fn no_feed() {
-        let feeds = PriceFeeds::new(FEEDS_NAMESPACE);
+        let feeds = PriceFeeds::new(FEEDS_NAMESPACE, config());
         let storage = MemoryStorage::new();
 
         assert_eq!(
             Ok(Price::<Atom, Atom>::identity().into()),
-            feeds.price::<Atom, _>(&storage, &config(), NOW, [Atom::TICKER].into_iter())
+            feeds.price::<Atom, _>(&storage, NOW, [Atom::TICKER].into_iter())
         );
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<Atom, _>(
-                &storage,
-                &config(),
-                NOW,
-                [Wbtc::TICKER, Atom::TICKER].into_iter()
-            )
+            feeds.price::<Atom, _>(&storage, NOW, [Wbtc::TICKER, Atom::TICKER].into_iter())
         );
     }
 
     #[test]
     fn feed_pair() {
-        let feeds = PriceFeeds::new(FEEDS_NAMESPACE);
+        let feeds = PriceFeeds::new(FEEDS_NAMESPACE, config());
         let mut storage = MemoryStorage::new();
         let new_price: SpotPrice = price::total_of(Coin::<Wbtc>::new(1))
             .is(Coin::<Usdc>::new(18500))
@@ -297,35 +287,23 @@ mod test {
                 NOW,
                 &Addr::unchecked(FEEDER),
                 &[new_price.clone()],
-                FEED_MAX_AGE,
             )
             .unwrap();
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<Atom, _>(
-                &storage,
-                &config(),
-                NOW,
-                [Wbtc::TICKER, Atom::TICKER].into_iter()
-            )
+            feeds.price::<Atom, _>(&storage, NOW, [Wbtc::TICKER, Atom::TICKER].into_iter())
         );
         assert_eq!(
             Ok(new_price),
-            feeds.price::<Usdc, _>(
-                &storage,
-                &config(),
-                NOW,
-                [Wbtc::TICKER, Usdc::TICKER].into_iter()
-            )
+            feeds.price::<Usdc, _>(&storage, NOW, [Wbtc::TICKER, Usdc::TICKER].into_iter())
         );
     }
 
     #[test]
     fn feed_pairs() {
-        let feeds = PriceFeeds::new(FEEDS_NAMESPACE);
+        let feeds = PriceFeeds::new(FEEDS_NAMESPACE, config());
         let mut storage = MemoryStorage::new();
-        let config = config();
         let new_price12 = price::total_of(Coin::<Wbtc>::new(1)).is(Coin::<Osmo>::new(2));
         let new_price23 = price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Usdc>::new(3));
         let new_price24 = price::total_of(Coin::<Osmo>::new(1)).is(Coin::<Stars>::new(4));
@@ -336,51 +314,29 @@ mod test {
                 NOW,
                 &Addr::unchecked(FEEDER),
                 &[new_price24.into(), new_price12.into(), new_price23.into()],
-                FEED_MAX_AGE,
             )
             .unwrap();
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<Cro, _>(
-                &storage,
-                &config,
-                NOW,
-                [Wbtc::TICKER, Cro::TICKER].into_iter()
-            )
+            feeds.price::<Cro, _>(&storage, NOW, [Wbtc::TICKER, Cro::TICKER].into_iter())
         );
         assert_eq!(
             Ok(new_price12.into()),
-            feeds.price::<Osmo, _>(
-                &storage,
-                &config,
-                NOW,
-                [Wbtc::TICKER, Osmo::TICKER].into_iter()
-            )
+            feeds.price::<Osmo, _>(&storage, NOW, [Wbtc::TICKER, Osmo::TICKER].into_iter())
         );
         assert_eq!(
             Ok(new_price23.into()),
-            feeds.price::<Usdc, _>(
-                &storage,
-                &config,
-                NOW,
-                [Osmo::TICKER, Usdc::TICKER].into_iter()
-            )
+            feeds.price::<Usdc, _>(&storage, NOW, [Osmo::TICKER, Usdc::TICKER].into_iter())
         );
         assert_eq!(
             Ok(new_price24.into()),
-            feeds.price::<Stars, _>(
-                &storage,
-                &config,
-                NOW,
-                [Osmo::TICKER, Stars::TICKER].into_iter()
-            )
+            feeds.price::<Stars, _>(&storage, NOW, [Osmo::TICKER, Stars::TICKER].into_iter())
         );
         assert_eq!(
             Ok((new_price12 * new_price23).into()),
             feeds.price::<Usdc, _>(
                 &storage,
-                &config,
                 NOW,
                 [Wbtc::TICKER, Osmo::TICKER, Usdc::TICKER].into_iter()
             )
@@ -389,7 +345,6 @@ mod test {
             Ok((new_price12 * new_price24).into()),
             feeds.price::<Stars, _>(
                 &storage,
-                &config,
                 NOW,
                 [Wbtc::TICKER, Osmo::TICKER, Stars::TICKER].into_iter()
             )
