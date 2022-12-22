@@ -1,9 +1,10 @@
+use cosmwasm_std::{Storage, Timestamp};
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::lpn::Lpns;
-use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
-use marketprice::config::Config as PriceConfig;
+use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned};
 use marketprice::error::PriceFeedsError;
+use marketprice::{config::Config as PriceConfig, SpotPrice};
 use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
 
 use crate::{
@@ -46,31 +47,20 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
             )?),
 
             QueryMsg::Price { currency } => {
-                let config = Config::load(self.deps.storage)?;
-                let total_feeders = Feeders::total_registered(self.deps.storage)?;
-                let price_config =
-                    PriceConfig::new(config.price_feed_period, config.expected_feeders);
-                let feeds = Feeds::<OracleBase>::with(price_config);
-                let at = self.env.block.time;
-                if let Some(price) = feeds
-                    .calc_prices(self.deps.storage, at, total_feeders, &[currency])?
-                    .first()
-                {
+                let prices =
+                    calc_prices::<OracleBase>(self.deps.storage, self.env.block.time, &[currency])?;
+
+                if let Some(price) = prices.first() {
                     Ok(to_binary(price)?)
                 } else {
+                    // TODO check whether this branch is reachable at all
                     Err(ContractError::PriceFeedsError(PriceFeedsError::NoPrice()))
                 }
             }
             QueryMsg::Prices { currencies } => {
-                let config = Config::load(self.deps.storage)?;
-                let total_feeders = Feeders::total_registered(self.deps.storage)?;
-                let price_config =
-                    PriceConfig::new(config.price_feed_period, config.expected_feeders);
-                let feeds = Feeds::<OracleBase>::with(price_config);
-                let at = self.env.block.time;
-                Ok(to_binary(&PricesResponse {
-                    prices: feeds.calc_prices(self.deps.storage, at, total_feeders, &currencies)?,
-                })?)
+                let prices =
+                    calc_prices::<OracleBase>(self.deps.storage, self.env.block.time, &currencies)?;
+                Ok(to_binary(&PricesResponse { prices })?)
             }
             QueryMsg::SwapPath { from, to } => Ok(to_binary(
                 &SupportedPairs::<OracleBase>::load(self.deps.storage)?
@@ -89,4 +79,20 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
         }?;
         Ok(res)
     }
+}
+
+fn calc_prices<OracleBase>(
+    storage: &dyn Storage,
+    at: Timestamp,
+    currencies: &[SymbolOwned],
+) -> Result<Vec<SpotPrice>, ContractError>
+where
+    OracleBase: 'static + Currency + DeserializeOwned + Serialize,
+{
+    let config = Config::load(storage)?;
+    let total_feeders = Feeders::total_registered(storage)?;
+    let price_config = PriceConfig::new(config.price_feed_period, config.expected_feeders);
+    let feeds = Feeds::<OracleBase>::with(price_config);
+    let prices = feeds.calc_prices(storage, at, total_feeders, currencies)?;
+    Ok(prices)
 }
