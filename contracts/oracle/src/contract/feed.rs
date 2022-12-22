@@ -3,10 +3,7 @@ use std::marker::PhantomData;
 use serde::de::DeserializeOwned;
 
 use finance::currency::{Currency, SymbolOwned};
-use marketprice::{
-    market_price::{Config, PriceFeeds},
-    SpotPrice,
-};
+use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
@@ -68,12 +65,13 @@ where
         &self,
         storage: &dyn Storage,
         at: Timestamp,
+        total_feeders: usize,
         currencies: &[SymbolOwned],
     ) -> Result<Vec<SpotPrice>, ContractError> {
         let tree: SupportedPairs<OracleBase> = SupportedPairs::load(storage)?;
         let mut prices = vec![];
         for currency in currencies {
-            let price = self.calc_price(&tree, storage, currency, at)?;
+            let price = self.calc_price(&tree, storage, currency, at, total_feeders)?;
             prices.push(price);
         }
         Ok(prices)
@@ -83,11 +81,12 @@ where
         &self,
         storage: &dyn Storage,
         at: Timestamp,
+        total_feeders: usize,
     ) -> Result<Vec<SpotPrice>, ContractError> {
         let tree: SupportedPairs<OracleBase> = SupportedPairs::load(storage)?;
         let mut prices = vec![];
         for leg in tree.clone().query_supported_pairs() {
-            if let Ok(price) = self.calc_price(&tree, storage, &leg.from, at) {
+            if let Ok(price) = self.calc_price(&tree, storage, &leg.from, at, total_feeders) {
                 prices.push(price);
             }
         }
@@ -100,12 +99,13 @@ where
         storage: &dyn Storage,
         currency: &SymbolOwned,
         at: Timestamp,
+        total_feeders: usize,
     ) -> Result<SpotPrice, ContractError> {
         let path = tree.load_path(currency)?;
         let leaf_to_root = path.iter().map(|owned| owned.as_str());
         let price = self
             .feeds
-            .price::<OracleBase, _>(storage, at, leaf_to_root)?;
+            .price::<OracleBase, _>(storage, at, total_feeders, leaf_to_root)?;
         Ok(price)
     }
 }
@@ -141,9 +141,10 @@ fn calc_all_prices<OracleBase>(
 where
     OracleBase: Currency + DeserializeOwned,
 {
-    use crate::state::Config;
-    let config = Config::load(storage)?;
-    let price_config = Feeders::price_config(storage, &config)?;
+    let total_registered = Feeders::total_registered(storage)?;
+    use crate::state::Config as OracleConfig;
+    let config = OracleConfig::load(storage)?;
+    let price_config = Config::new(config.price_feed_period, config.expected_feeders);
     let oracle = Feeds::<OracleBase>::with(price_config);
-    oracle.calc_all_prices(storage, block_time)
+    oracle.calc_all_prices(storage, block_time, total_registered)
 }

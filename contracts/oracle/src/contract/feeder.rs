@@ -3,8 +3,7 @@ use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 
 use access_control::SingleUserAccess;
-use finance::{fraction::Fraction, percent::Percent};
-use marketprice::{feeders::PriceFeeders, market_price::Config as PriceConfig};
+use marketprice::feeders::PriceFeeders;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, DepsMut, MessageInfo, StdResult, Storage},
@@ -61,16 +60,8 @@ impl Feeders {
         Ok(Response::default())
     }
 
-    pub(crate) fn price_config(storage: &dyn Storage, config: &Config) -> StdResult<PriceConfig> {
-        let registered_feeders = Self::FEEDERS.get(storage)?;
-        let all_feeders_cnt = registered_feeders.len();
-        let feeders_needed = Self::feeders_needed(all_feeders_cnt, config.expected_feeders);
-
-        Ok(PriceConfig::new(config.price_feed_period, feeders_needed))
-    }
-
-    fn feeders_needed(all_feaders: usize, min_feeders: Percent) -> usize {
-        min_feeders.of(all_feaders)
+    pub(crate) fn total_registered(storage: &dyn Storage) -> StdResult<usize> {
+        Self::get(storage).map(|c| c.len())
     }
 }
 
@@ -79,7 +70,7 @@ mod tests {
     use std::collections::HashSet;
 
     use currency::native::Nls;
-    use finance::{currency::Currency, percent::Percent};
+    use finance::currency::Currency;
     use sdk::{
         cosmwasm_ext::Response,
         cosmwasm_std::{
@@ -90,24 +81,11 @@ mod tests {
     };
 
     use crate::{
-        contract::{execute, feeder::Feeders, query},
+        contract::{execute, query},
         msg::{ExecuteMsg, QueryMsg},
         tests::{dummy_default_instantiate_msg, setup_test},
         ContractError,
     };
-
-    #[test]
-    fn feeders_needed_rounds_properly() {
-        assert_eq!(7, Feeders::feeders_needed(3, Percent::from_percent(255)));
-        assert_eq!(30, Feeders::feeders_needed(30, Percent::from_percent(100)));
-
-        assert_eq!(17, Feeders::feeders_needed(34, Percent::from_percent(50)));
-        assert_eq!(16, Feeders::feeders_needed(33, Percent::from_percent(50)));
-        assert_eq!(12, Feeders::feeders_needed(48, Percent::from_percent(25)));
-        assert_eq!(1, Feeders::feeders_needed(132, Percent::from_percent(1)));
-        assert_eq!(1, Feeders::feeders_needed(199, Percent::from_percent(1)));
-        assert_eq!(2, Feeders::feeders_needed(200, Percent::from_percent(1)));
-    }
 
     #[test]
     #[should_panic(expected = "Unauthorized")]

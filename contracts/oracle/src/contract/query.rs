@@ -2,6 +2,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
+use marketprice::config::Config as PriceConfig;
 use marketprice::error::PriceFeedsError;
 use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
 
@@ -46,11 +47,13 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
 
             QueryMsg::Price { currency } => {
                 let config = Config::load(self.deps.storage)?;
-                let price_config = Feeders::price_config(self.deps.storage, &config)?;
+                let total_feeders = Feeders::total_registered(self.deps.storage)?;
+                let price_config =
+                    PriceConfig::new(config.price_feed_period, config.expected_feeders);
                 let feeds = Feeds::<OracleBase>::with(price_config);
                 let at = self.env.block.time;
                 if let Some(price) = feeds
-                    .calc_prices(self.deps.storage, at, &[currency])?
+                    .calc_prices(self.deps.storage, at, total_feeders, &[currency])?
                     .first()
                 {
                     Ok(to_binary(price)?)
@@ -60,11 +63,13 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
             }
             QueryMsg::Prices { currencies } => {
                 let config = Config::load(self.deps.storage)?;
-                let price_config = Feeders::price_config(self.deps.storage, &config)?;
+                let total_feeders = Feeders::total_registered(self.deps.storage)?;
+                let price_config =
+                    PriceConfig::new(config.price_feed_period, config.expected_feeders);
                 let feeds = Feeds::<OracleBase>::with(price_config);
                 let at = self.env.block.time;
                 Ok(to_binary(&PricesResponse {
-                    prices: feeds.calc_prices(self.deps.storage, at, &currencies)?,
+                    prices: feeds.calc_prices(self.deps.storage, at, total_feeders, &currencies)?,
                 })?)
             }
             QueryMsg::SwapPath { from, to } => Ok(to_binary(

@@ -8,18 +8,18 @@ use finance::{
     coin::Coin,
     currency::Currency,
     duration::Duration,
+    percent::Percent,
     price::{self, dto::PriceDTO, Price},
 };
 use sdk::cosmwasm_std::{testing::mock_dependencies, Api, DepsMut, Timestamp};
 
 use crate::{
-    error::PriceFeedsError,
-    feeders::PriceFeeders,
-    market_price::{Config, PriceFeeds},
+    config::Config, error::PriceFeedsError, feeders::PriceFeeders, market_price::PriceFeeds,
     SpotPrice,
 };
 
 const MINUTE: Duration = Duration::from_secs(60);
+const TOTAL_FEEDERS: usize = 1;
 
 #[test]
 fn register_feeder() {
@@ -55,15 +55,19 @@ fn register_feeder() {
 #[test]
 fn marketprice_add_feed_expect_err() {
     let deps = mock_dependencies();
-    let config = Config::new(MINUTE, 50);
-    let market = PriceFeeds::new("foo", config);
+    let market = PriceFeeds::new("foo", config());
 
     let now = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap();
     let ts = Timestamp::from_seconds(now.as_secs());
     let expected_err = market
-        .price::<Atom, _>(&deps.storage, ts, [Osmo::TICKER, Atom::TICKER].into_iter())
+        .price::<Atom, _>(
+            &deps.storage,
+            ts,
+            TOTAL_FEEDERS,
+            [Osmo::TICKER, Atom::TICKER].into_iter(),
+        )
         .unwrap_err();
     assert_eq!(expected_err, PriceFeedsError::NoPrice {});
 }
@@ -71,8 +75,7 @@ fn marketprice_add_feed_expect_err() {
 #[test]
 fn marketprice_add_feed_empty_vec() {
     let mut deps = mock_dependencies();
-    let config = Config::new(MINUTE, 50);
-    let market = PriceFeeds::new("foo", config);
+    let market = PriceFeeds::new("foo", config());
     let f_address = deps.api.addr_validate("address1").unwrap();
 
     let now = SystemTime::now()
@@ -89,8 +92,7 @@ fn marketprice_add_feed_empty_vec() {
 #[test]
 fn marketprice_add_feed() {
     let mut deps = mock_dependencies();
-    let config = Config::new(MINUTE, 50);
-    let market = PriceFeeds::new("foo", config);
+    let market = PriceFeeds::new("foo", config());
     let f_address = deps.api.addr_validate("address1").unwrap();
 
     let price1 = price::total_of(Coin::<Osmo>::new(10)).is(Coin::<Atom>::new(5));
@@ -109,17 +111,23 @@ fn marketprice_add_feed() {
         .feed(&mut deps.storage, ts, &f_address, &prices)
         .unwrap();
     let err = market
-        .price::<Atom, _>(&deps.storage, ts, [Osmo::TICKER, Atom::TICKER].into_iter())
+        .price::<Atom, _>(
+            &deps.storage,
+            ts,
+            TOTAL_FEEDERS + TOTAL_FEEDERS,
+            [Osmo::TICKER, Atom::TICKER].into_iter(),
+        )
         .unwrap_err();
     assert_eq!(err, PriceFeedsError::NoPrice {});
 
     {
-        // require 1 feeders available => Price
-        let config = Config::new(MINUTE, 1);
-        let market = PriceFeeds::new("foo", config);
-
         let price_resp = market
-            .price::<Atom, _>(&deps.storage, ts, [Osmo::TICKER, Atom::TICKER].into_iter())
+            .price::<Atom, _>(
+                &deps.storage,
+                ts,
+                TOTAL_FEEDERS,
+                [Osmo::TICKER, Atom::TICKER].into_iter(),
+            )
             .unwrap();
 
         assert_eq!(PriceDTO::try_from(price1).unwrap(), price_resp);
@@ -129,8 +137,7 @@ fn marketprice_add_feed() {
 #[test]
 fn marketprice_follow_the_path() {
     let mut deps = mock_dependencies();
-    let config = Config::new(MINUTE, 1);
-    let market = PriceFeeds::new("foo", config);
+    let market = PriceFeeds::new("foo", config());
 
     feed_price(
         deps.as_mut(),
@@ -204,6 +211,7 @@ fn marketprice_follow_the_path() {
         .price::<Usdc, _>(
             &deps.storage,
             last_feed_time,
+            TOTAL_FEEDERS,
             [Atom::TICKER, Osmo::TICKER, Cro::TICKER, Usdc::TICKER].into_iter(),
         )
         .unwrap();
@@ -217,6 +225,7 @@ fn marketprice_follow_the_path() {
         .price::<Usdc, _>(
             &deps.storage,
             last_feed_time,
+            TOTAL_FEEDERS,
             [Atom::TICKER, Usdc::TICKER].into_iter(),
         )
         .unwrap_err();
@@ -228,6 +237,7 @@ fn marketprice_follow_the_path() {
             .price::<Usdc, _>(
                 &deps.storage,
                 last_feed_time,
+                TOTAL_FEEDERS,
                 [Wbtc::TICKER, Usdc::TICKER].into_iter(),
             )
             .unwrap_err(),
@@ -240,6 +250,7 @@ fn marketprice_follow_the_path() {
             .price::<Osmo, _>(
                 &deps.storage,
                 last_feed_time,
+                TOTAL_FEEDERS,
                 [Wbtc::TICKER, Osmo::TICKER].into_iter()
             )
             .unwrap_err(),
@@ -267,4 +278,8 @@ where
 
     market.feed(deps.storage, ts, &f_address, &[price])?;
     Ok(ts)
+}
+
+fn config() -> Config {
+    Config::new(MINUTE, Percent::HUNDRED)
 }

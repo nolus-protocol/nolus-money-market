@@ -12,27 +12,7 @@ use sdk::{
 };
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{error::PriceFeedsError, feed::PriceFeed, CurrencyGroup, SpotPrice};
-
-pub struct Config {
-    feed_validity: Duration,
-    required_feeders_cnt: usize,
-}
-
-impl Config {
-    pub fn new(price_feed_period: Duration, required_feeders_cnt: usize) -> Self {
-        Config {
-            feed_validity: price_feed_period,
-            required_feeders_cnt,
-        }
-    }
-    pub fn feeders(&self) -> usize {
-        self.required_feeders_cnt
-    }
-    pub fn feed_validity(&self) -> Duration {
-        self.feed_validity
-    }
-}
+use crate::{config::Config, error::PriceFeedsError, feed::PriceFeed, CurrencyGroup, SpotPrice};
 
 pub type PriceFeedBin = Vec<u8>;
 pub struct PriceFeeds<'m> {
@@ -51,7 +31,7 @@ impl<'m> PriceFeeds<'m> {
     pub fn feed(
         &self,
         storage: &mut dyn Storage,
-        current_block_time: Timestamp,
+        at: Timestamp,
         sender_raw: &Addr,
         prices: &[SpotPrice],
     ) -> Result<(), PriceFeedsError> {
@@ -63,13 +43,7 @@ impl<'m> PriceFeeds<'m> {
                     price.quote().ticker().to_string(),
                 ),
                 |feed: Option<PriceFeedBin>| -> Result<PriceFeedBin, PriceFeedsError> {
-                    add_observation(
-                        feed,
-                        sender_raw,
-                        current_block_time,
-                        price,
-                        self.config.feed_validity(),
-                    )
+                    add_observation(feed, sender_raw, at, price, self.config.feed_validity())
                 },
             )?;
         }
@@ -81,6 +55,7 @@ impl<'m> PriceFeeds<'m> {
         &'m self,
         storage: &'a dyn Storage,
         at: Timestamp,
+        total_feeders: usize,
         leaf_to_root: Iter,
     ) -> Result<SpotPrice, PriceFeedsError>
     where
@@ -96,6 +71,7 @@ impl<'m> PriceFeeds<'m> {
             self,
             storage,
             at,
+            total_feeders,
             Price::<QuoteC, QuoteC>::identity(),
         )
     }
@@ -104,6 +80,7 @@ impl<'m> PriceFeeds<'m> {
         &self,
         storage: &dyn Storage,
         at: Timestamp,
+        total_feeders: usize,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError>
     where
         C: Currency + DeserializeOwned,
@@ -112,7 +89,7 @@ impl<'m> PriceFeeds<'m> {
         let feed_bin = self
             .storage
             .may_load(storage, (C::TICKER.into(), QuoteC::TICKER.into()))?;
-        load_feed(feed_bin).and_then(|feed| feed.calc_price(&self.config, at))
+        load_feed(feed_bin).and_then(|feed| feed.calc_price(&self.config, at, total_feeders))
     }
 }
 
@@ -138,6 +115,7 @@ where
     feeds: &'a PriceFeeds<'a>,
     storage: &'a dyn Storage,
     at: Timestamp,
+    total_feeders: usize,
     price: Price<BaseC, QuoteC>,
 }
 impl<'a, Iter, BaseC, QuoteC> PriceCollect<'a, Iter, BaseC, QuoteC>
@@ -151,6 +129,7 @@ where
         feeds: &'a PriceFeeds<'a>,
         storage: &'a dyn Storage,
         at: Timestamp,
+        total_feeders: usize,
         price: Price<BaseC, QuoteC>,
     ) -> Result<SpotPrice, PriceFeedsError> {
         if let Some(next_currency) = currency_path.next() {
@@ -159,6 +138,7 @@ where
                 feeds,
                 storage,
                 at,
+                total_feeders,
                 price,
             };
             currency::visit_any_on_ticker::<CurrencyGroup, _>(next_currency, next_collect)
@@ -180,13 +160,16 @@ where
     where
         C: Currency + Serialize + DeserializeOwned,
     {
-        let next_price = self.feeds.price_of_feed::<C, _>(self.storage, self.at)?;
+        let next_price =
+            self.feeds
+                .price_of_feed::<C, _>(self.storage, self.at, self.total_feeders)?;
         let total_price = next_price * self.price;
         PriceCollect::do_collect(
             self.currency_path,
             self.feeds,
             self.storage,
             self.at,
+            self.total_feeders,
             total_price,
         )
     }
@@ -243,6 +226,7 @@ mod test {
         coin::Coin,
         currency::Currency,
         duration::Duration,
+        percent::Percent,
         price::{self, Price},
     };
     use sdk::cosmwasm_std::{Addr, MemoryStorage, Timestamp};
@@ -252,8 +236,8 @@ mod test {
     use super::PriceFeeds;
 
     const FEEDS_NAMESPACE: &str = "feeds";
-    const REQUIRED_FEEDERS_CNT: usize = 1;
     const FEEDER: &str = "0xifeege";
+    const TOTAL_FEEDERS: usize = 1;
     const FEED_MAX_AGE: Duration = Duration::from_secs(30);
     const NOW: Timestamp = Timestamp::from_seconds(FEED_MAX_AGE.secs() * 2);
 
@@ -264,12 +248,17 @@ mod test {
 
         assert_eq!(
             Ok(Price::<Atom, Atom>::identity().into()),
-            feeds.price::<Atom, _>(&storage, NOW, [Atom::TICKER].into_iter())
+            feeds.price::<Atom, _>(&storage, NOW, TOTAL_FEEDERS, [Atom::TICKER].into_iter())
         );
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<Atom, _>(&storage, NOW, [Wbtc::TICKER, Atom::TICKER].into_iter())
+            feeds.price::<Atom, _>(
+                &storage,
+                NOW,
+                TOTAL_FEEDERS,
+                [Wbtc::TICKER, Atom::TICKER].into_iter()
+            )
         );
     }
 
@@ -292,11 +281,21 @@ mod test {
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<Atom, _>(&storage, NOW, [Wbtc::TICKER, Atom::TICKER].into_iter())
+            feeds.price::<Atom, _>(
+                &storage,
+                NOW,
+                TOTAL_FEEDERS,
+                [Wbtc::TICKER, Atom::TICKER].into_iter()
+            )
         );
         assert_eq!(
             Ok(new_price),
-            feeds.price::<Usdc, _>(&storage, NOW, [Wbtc::TICKER, Usdc::TICKER].into_iter())
+            feeds.price::<Usdc, _>(
+                &storage,
+                NOW,
+                TOTAL_FEEDERS,
+                [Wbtc::TICKER, Usdc::TICKER].into_iter()
+            )
         );
     }
 
@@ -319,25 +318,46 @@ mod test {
 
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
-            feeds.price::<Cro, _>(&storage, NOW, [Wbtc::TICKER, Cro::TICKER].into_iter())
+            feeds.price::<Cro, _>(
+                &storage,
+                NOW,
+                TOTAL_FEEDERS,
+                [Wbtc::TICKER, Cro::TICKER].into_iter()
+            )
         );
         assert_eq!(
             Ok(new_price12.into()),
-            feeds.price::<Osmo, _>(&storage, NOW, [Wbtc::TICKER, Osmo::TICKER].into_iter())
+            feeds.price::<Osmo, _>(
+                &storage,
+                NOW,
+                TOTAL_FEEDERS,
+                [Wbtc::TICKER, Osmo::TICKER].into_iter()
+            )
         );
         assert_eq!(
             Ok(new_price23.into()),
-            feeds.price::<Usdc, _>(&storage, NOW, [Osmo::TICKER, Usdc::TICKER].into_iter())
+            feeds.price::<Usdc, _>(
+                &storage,
+                NOW,
+                TOTAL_FEEDERS,
+                [Osmo::TICKER, Usdc::TICKER].into_iter()
+            )
         );
         assert_eq!(
             Ok(new_price24.into()),
-            feeds.price::<Stars, _>(&storage, NOW, [Osmo::TICKER, Stars::TICKER].into_iter())
+            feeds.price::<Stars, _>(
+                &storage,
+                NOW,
+                TOTAL_FEEDERS,
+                [Osmo::TICKER, Stars::TICKER].into_iter()
+            )
         );
         assert_eq!(
             Ok((new_price12 * new_price23).into()),
             feeds.price::<Usdc, _>(
                 &storage,
                 NOW,
+                TOTAL_FEEDERS,
                 [Wbtc::TICKER, Osmo::TICKER, Usdc::TICKER].into_iter()
             )
         );
@@ -346,12 +366,13 @@ mod test {
             feeds.price::<Stars, _>(
                 &storage,
                 NOW,
+                TOTAL_FEEDERS,
                 [Wbtc::TICKER, Osmo::TICKER, Stars::TICKER].into_iter()
             )
         );
     }
 
     fn config() -> Config {
-        Config::new(FEED_MAX_AGE, REQUIRED_FEEDERS_CNT)
+        Config::new(FEED_MAX_AGE, Percent::HUNDRED)
     }
 }

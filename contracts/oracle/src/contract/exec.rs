@@ -99,8 +99,9 @@ fn try_feed_prices<OracleBase>(
 where
     OracleBase: Currency + DeserializeOwned,
 {
+    use marketprice::config::Config as PriceConfig;
     let config = Config::load(storage)?;
-    let price_config = Feeders::price_config(storage, &config)?;
+    let price_config = PriceConfig::new(config.price_feed_period, config.expected_feeders);
     let oracle = Feeds::<OracleBase>::with(price_config);
 
     if !prices.is_empty() {
