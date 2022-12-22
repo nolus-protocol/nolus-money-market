@@ -20,6 +20,18 @@ impl InterestRate {
         utilization_optimal: Percent,
         addon_optimal_interest_rate: Percent,
     ) -> Option<Self> {
+        Self::private_new(
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        )
+    }
+
+    fn private_new(
+        base_interest_rate: Percent,
+        utilization_optimal: Percent,
+        addon_optimal_interest_rate: Percent,
+    ) -> Option<Self> {
         let value = Self {
             base_interest_rate,
             utilization_optimal,
@@ -74,7 +86,7 @@ impl TryFrom<UncheckedInterestRate> for InterestRate {
     type Error = &'static str;
 
     fn try_from(value: UncheckedInterestRate) -> Result<Self, Self::Error> {
-        Self::new(
+        Self::private_new(
             value.base_interest_rate,
             value.utilization_optimal,
             value.addon_optimal_interest_rate,
