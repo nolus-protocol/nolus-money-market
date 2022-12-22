@@ -8,7 +8,7 @@ use finance::{
     price::Price,
 };
 use sdk::{
-    cosmwasm_std::{Addr, Timestamp, Uint128, Uint64},
+    cosmwasm_std::{Addr, Timestamp, Uint128},
     schemars::{self, JsonSchema},
 };
 
@@ -62,16 +62,6 @@ pub enum QueryMsg {
     Rewards {
         address: Addr,
     },
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct QueryConfigResponse {
-    pub lpn_ticker: String,
-    pub lease_code_id: Uint64,
-    pub base_interest_rate: Percent,
-    pub utilization_optimal: Percent,
-    pub addon_optimal_interest_rate: Percent,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

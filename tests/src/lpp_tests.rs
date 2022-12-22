@@ -7,10 +7,11 @@ use lpp::{
     borrow::InterestRate,
     msg::{
         BalanceResponse, ExecuteMsg as ExecuteLpp, LppBalanceResponse, PriceResponse,
-        QueryConfigResponse, QueryLoanResponse, QueryMsg as QueryLpp, QueryQuoteResponse,
+        QueryLoanResponse, QueryMsg as QueryLpp, QueryQuoteResponse,
         RewardsResponse,
     },
 };
+use lpp::state::Config;
 use platform::{bank, coin_legacy};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin},
@@ -84,15 +85,15 @@ fn config_update_parameters() {
     )
     .unwrap();
 
-    let quote: QueryConfigResponse = app
+    let quote: Config = app
         .wrap()
         .query_wasm_smart(lpp, &QueryLpp::Config())
         .unwrap();
 
-    assert_eq!(quote.base_interest_rate, base_interest_rate);
-    assert_eq!(quote.utilization_optimal, utilization_optimal);
+    assert_eq!(quote.borrow_rate().base_interest_rate(), base_interest_rate);
+    assert_eq!(quote.borrow_rate().utilization_optimal(), utilization_optimal);
     assert_eq!(
-        quote.addon_optimal_interest_rate,
+        quote.borrow_rate().addon_optimal_interest_rate(),
         addon_optimal_interest_rate
     );
 }

@@ -55,17 +55,17 @@ impl InterestRate {
 
     pub fn calculate<Lpn>(
         &self,
-        total_liability_past_quote: Coin<Lpn>,
-        total_balance_past_quote: Coin<Lpn>,
+        total_liability: Coin<Lpn>,
+        balance: Coin<Lpn>,
     ) -> Percent
     where
         Lpn: Currency,
     {
         // utilization % / utilization_optimal %
         let utilization_rel = Rational::new(
-            total_liability_past_quote,
+            total_liability,
             self.utilization_optimal()
-                .of(total_liability_past_quote + total_balance_past_quote),
+                .of(total_liability + balance),
         );
 
         self.base_interest_rate()
