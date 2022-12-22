@@ -10,7 +10,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 use crate::{
     error::{ContractError, ContractResult},
     msg::{LppBalanceResponse, QueryMsg},
-    state::Config
+    state::Config,
 };
 
 pub mod lender;
@@ -41,8 +41,7 @@ pub struct LppRef {
 
 impl LppRef {
     pub fn try_new(addr: Addr, querier: &QuerierWrapper) -> ContractResult<Self> {
-        let resp: Config =
-            querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
+        let resp: Config = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
 
         let currency = resp.lpn_ticker().into();
 

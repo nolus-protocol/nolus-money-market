@@ -16,11 +16,11 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp};
 use crate::{
     error::ContractError,
     msg::{
-        ExecuteMsg, LoanResponse, QueryLoanOutstandingInterestResponse,
-        QueryLoanResponse, QueryMsg, QueryQuoteResponse,
+        ExecuteMsg, LoanResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
+        QueryMsg, QueryQuoteResponse,
     },
+    state::Config,
     stub::{ContractResult, LppBatch},
-    state::Config
 };
 
 pub trait LppLender<Lpn>
@@ -65,8 +65,7 @@ impl LppLenderRef {
         querier: &QuerierWrapper,
         open_loan_req_id: ReplyId,
     ) -> ContractResult<Self> {
-        let resp: Config =
-            querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
+        let resp: Config = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
 
         let currency = resp.lpn_ticker().into();
 

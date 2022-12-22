@@ -1,11 +1,11 @@
 use currency::native::Nls;
 use lpp::{
     msg::{
-        BalanceResponse, ExecuteMsg, InstantiateMsg, LoanResponse, LppBalanceResponse, PriceResponse,
-        QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg,
+        BalanceResponse, ExecuteMsg, InstantiateMsg, LoanResponse, LppBalanceResponse,
+        PriceResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg,
         QueryQuoteResponse, RewardsResponse,
     },
-    state::Config
+    state::Config,
 };
 use sdk::cosmwasm_schema::{export_schema, schema_for};
 
