@@ -71,7 +71,7 @@ impl InterestRate {
         //   self.base_interest_rate()
         //       + Fraction::<Coin<Lpn>>::of(&utilization_rel, self.addon_optimal_interest_rate())
 
-        let utilization = Percent::from_ratio(total_liability, balance);
+        let utilization = Percent::from_ratio(total_liability, total_liability + balance);
 
         let config = Rational::new(
             self.addon_optimal_interest_rate.units(),
@@ -205,14 +205,16 @@ mod tests {
         #[test]
         /// Verifies when optimal utilization rate is equal to zero, result is equal to the base interest rate.
         fn test_set_3() {
-            for base_interest_rate in 0..=1000 {
+            for base_rate in 0..=1000 {
                 for addon_rate in 0..=1000 {
-                    let rate = rate(base_interest_rate, 0, addon_rate);
+                    let rate = rate(base_rate, 0, addon_rate);
+
+                    let base_rate = base_rate.into();
 
                     do_test_calculate(
                         rate,
                         &(0..=1000)
-                            .map(move |balance| InOut((0, balance), (0, 1000)))
+                            .map(move |balance| InOut((0, balance), (base_rate, 1000)))
                             .collect::<Vec<_>>(),
                     );
                 }
