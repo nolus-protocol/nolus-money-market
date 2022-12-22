@@ -22,7 +22,7 @@ pub type InstantiateMsg = Config;
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    UpdateParameters { interest_rate: InterestRate },
+    NewBorrowRate { borrow_rate: InterestRate },
 
     OpenLoan { amount: LppCoin },
     RepayLoan(),

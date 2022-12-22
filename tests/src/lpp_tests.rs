@@ -57,8 +57,8 @@ fn config_update_parameters() {
     app.execute_contract(
         hacker,
         lpp.clone(),
-        &ExecuteLpp::UpdateParameters {
-            interest_rate: InterestRate::new(
+        &ExecuteLpp::NewBorrowRate {
+            borrow_rate: InterestRate::new(
                 base_interest_rate,
                 utilization_optimal,
                 addon_optimal_interest_rate,
@@ -72,8 +72,8 @@ fn config_update_parameters() {
     app.execute_contract(
         admin,
         lpp.clone(),
-        &ExecuteLpp::UpdateParameters {
-            interest_rate: InterestRate::new(
+        &ExecuteLpp::NewBorrowRate {
+            borrow_rate: InterestRate::new(
                 base_interest_rate,
                 utilization_optimal,
                 addon_optimal_interest_rate,
@@ -504,8 +504,8 @@ fn loan_open_and_repay() {
     app.execute_contract(
         admin.clone(),
         lpp.clone(),
-        &ExecuteLpp::UpdateParameters {
-            interest_rate: InterestRate::new(
+        &ExecuteLpp::NewBorrowRate {
+            borrow_rate: InterestRate::new(
                 base_interest_rate,
                 utilization_optimal,
                 addon_optimal_interest_rate,
@@ -807,8 +807,8 @@ fn compare_lpp_states() {
     app.execute_contract(
         admin.clone(),
         lpp.clone(),
-        &ExecuteLpp::UpdateParameters {
-            interest_rate: InterestRate::new(
+        &ExecuteLpp::NewBorrowRate {
+            borrow_rate: InterestRate::new(
                 base_interest_rate,
                 utilization_optimal,
                 addon_optimal_interest_rate,

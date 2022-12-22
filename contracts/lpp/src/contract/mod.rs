@@ -152,9 +152,9 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     // no currency context variants
     match msg {
-        ExecuteMsg::UpdateParameters { interest_rate } => {
-            config::try_update_parameters(deps, info, interest_rate)
-        }
+        ExecuteMsg::NewBorrowRate {
+            borrow_rate: interest_rate,
+        } => config::try_update_parameters(deps, info, interest_rate),
         ExecuteMsg::DistributeRewards() => rewards::try_distribute_rewards(deps, info),
         ExecuteMsg::ClaimRewards { other_recipient } => {
             rewards::try_claim_rewards(deps, env, info, other_recipient)

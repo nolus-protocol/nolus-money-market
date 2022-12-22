@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use finance::percent::Percent;
+use finance::{
+    coin::Coin, currency::Currency, fraction::Fraction, percent::Percent, ratio::Rational,
+};
 use sdk::schemars::{self, JsonSchema};
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -12,6 +14,7 @@ pub struct InterestRate {
 }
 
 impl InterestRate {
+    #[cfg(any(test, feature = "testing"))]
     pub fn new(
         base_interest_rate: Percent,
         utilization_optimal: Percent,
@@ -36,6 +39,28 @@ impl InterestRate {
 
     pub fn addon_optimal_interest_rate(&self) -> Percent {
         self.addon_optimal_interest_rate
+    }
+
+    pub fn calculate<Lpn>(
+        &self,
+        total_liability_past_quote: Coin<Lpn>,
+        total_balance_past_quote: Coin<Lpn>,
+    ) -> Percent
+    where
+        Lpn: Currency,
+    {
+        // utilization % / utilization_optimal %
+        let utilization_rel = Rational::new(
+            total_liability_past_quote,
+            self.utilization_optimal()
+                .of(total_liability_past_quote + total_balance_past_quote),
+        );
+
+        self.base_interest_rate()
+            + <Rational<Coin<Lpn>> as Fraction<Coin<Lpn>>>::of(
+                &utilization_rel,
+                self.addon_optimal_interest_rate(),
+            )
     }
 
     fn validate(&self) -> bool {

@@ -3,10 +3,8 @@ use serde::{de::DeserializeOwned, Serialize};
 use finance::{
     coin::Coin,
     currency::Currency,
-    fraction::Fraction,
     percent::Percent,
     price::{self, Price},
-    ratio::Rational,
 };
 use platform::{bank::BankView, contract};
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, StdResult, Storage, Timestamp};
@@ -162,28 +160,15 @@ where
             return Ok(None);
         }
 
-        let interest_rate = self.config.borrow_rate();
-
         let total_principal_due = self.total.total_principal_due();
         let total_interest = self.total.total_interest_due_by_now(env.block.time);
         let total_liability_past_quote = total_principal_due + quote + total_interest;
         let total_balance_past_quote = balance - quote;
 
-        // utilization % / utilization_optimal %
-        let utilization_rel = Rational::new(
+        Ok(Some(self.config.borrow_rate().calculate(
             total_liability_past_quote,
-            interest_rate
-                .utilization_optimal()
-                .of(total_liability_past_quote + total_balance_past_quote),
-        );
-
-        let quote_interest_rate = interest_rate.base_interest_rate()
-            + Fraction::<Coin<LPN>>::of(
-                &utilization_rel,
-                interest_rate.addon_optimal_interest_rate(),
-            );
-
-        Ok(Some(quote_interest_rate))
+            total_balance_past_quote,
+        )))
     }
 
     pub fn try_open_loan(
