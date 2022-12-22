@@ -256,7 +256,7 @@ where
     QuoteC: Currency,
 {
     let ratio_impl = Rational::new(of, price.amount);
-    <Rational<Coin<C>> as Fraction<Coin<C>>>::of(&ratio_impl, price.amount_quote)
+    Fraction::<Coin<C>>::of(&ratio_impl, price.amount_quote)
 }
 
 #[cfg(test)]

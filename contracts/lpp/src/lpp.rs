@@ -186,10 +186,7 @@ where
         );
 
         let quote_interest_rate = base_interest_rate
-            + <Rational<Coin<LPN>> as Fraction<Coin<LPN>>>::of(
-                &utilization_rel,
-                addon_optimal_interest_rate,
-            );
+            + Fraction::<Coin<LPN>>::of(&utilization_rel, addon_optimal_interest_rate);
 
         Ok(Some(quote_interest_rate))
     }

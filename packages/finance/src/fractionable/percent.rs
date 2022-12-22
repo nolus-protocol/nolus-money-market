@@ -102,10 +102,7 @@ mod test {
             let ratio_one = Rational::new(Coin::<Nls>::new(u128::MAX), Coin::<Nls>::new(u128::MAX));
             assert_eq!(
                 Percent::from_permille(Units::MAX),
-                <Percent as Fractionable<Coin<_>>>::safe_mul(
-                    Percent::from_permille(Units::MAX),
-                    &ratio_one
-                )
+                Fractionable::<Coin<_>>::safe_mul(Percent::from_permille(Units::MAX), &ratio_one)
             );
         }
     }

@@ -88,11 +88,11 @@ impl Ratio<Units> for Percent {
 
 impl Ratio<Units> for Rational<Percent> {
     fn parts(&self) -> Units {
-        <Self as Ratio<Percent>>::parts(self).units()
+        Ratio::<Percent>::parts(self).units()
     }
 
     fn total(&self) -> Units {
-        <Self as Ratio<Percent>>::total(self).units()
+        Ratio::<Percent>::total(self).units()
     }
 }
 
@@ -292,7 +292,7 @@ pub(super) mod test {
     fn rational_of_percents() {
         let v = 14u32;
         let r = Rational::new(Percent::HUNDRED, Percent::HUNDRED);
-        assert_eq!(v, <Rational<Percent> as Fraction<u32>>::of(&r, v));
+        assert_eq!(v, Fraction::<u32>::of(&r, v));
     }
 
     #[test]
@@ -300,7 +300,7 @@ pub(super) mod test {
         let n: Units = 189;
         let d: Units = 1890;
         let r = Rational::new(n, d);
-        let res: Percent = <Rational<Units> as Fraction<Units>>::of(&r, Percent::HUNDRED);
+        let res: Percent = Fraction::<Units>::of(&r, Percent::HUNDRED);
         assert_eq!(Percent::from_permille(n * 1000 / d), res);
     }
 

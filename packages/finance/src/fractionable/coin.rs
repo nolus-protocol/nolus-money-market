@@ -55,18 +55,12 @@ mod test {
 
         assert_eq!(
             Coin::<Nls>::new(1000),
-            <Coin::<Nls> as Fractionable<u32>>::safe_mul(
-                Coin::<Nls>::new(2),
-                &Rational::new(1000u32, 2u32)
-            )
+            Fractionable::<u32>::safe_mul(Coin::<Nls>::new(2), &Rational::new(1000u32, 2u32))
         );
 
         assert_eq!(
             Coin::<Nls>::new(2 * Amount::from(u32::MAX)),
-            <Coin::<Nls> as Fractionable<u32>>::safe_mul(
-                Coin::<Nls>::new(2),
-                &Rational::new(u32::MAX, 1u32)
-            )
+            Fractionable::<u32>::safe_mul(Coin::<Nls>::new(2), &Rational::new(u32::MAX, 1u32))
         );
     }
 }

@@ -89,7 +89,7 @@ where
 
             let sum = values.fold(*first, |acc, current| acc + *current);
             let part = Rational::new(1, prices_number);
-            let avg = <Rational<usize> as Fraction<usize>>::of(&part, sum);
+            let avg = Fraction::<usize>::of(&part, sum);
             self.last_sample = Sample { price: Some(avg) }
         }
         self.sample_prices.clear();

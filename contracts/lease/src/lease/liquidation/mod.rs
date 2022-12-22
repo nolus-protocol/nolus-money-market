@@ -103,8 +103,7 @@ where
         );
         let extra_liability_lpn =
             liability_lpn - liability_lpn.min(self.liability.healthy_percent().of(lease_lpn));
-        let liquidation_lpn =
-            <Rational<Percent> as Fraction<Units>>::of(&multiplier, extra_liability_lpn);
+        let liquidation_lpn = Fraction::<Units>::of(&multiplier, extra_liability_lpn);
 
         self.liquidate(
             Cause::Liability,

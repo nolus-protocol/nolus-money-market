@@ -145,7 +145,7 @@ mod test {
             let price = price::total_of(amount1).is(quote1);
             let ratio = Rational::new(nominator, denominator);
             assert_eq!(
-                <Rational<usize> as Fraction<usize>>::of(&ratio, price),
+                Fraction::<usize>::of(&ratio, price),
                 price::total_of(amount_exp).is(quote_exp)
             );
         }

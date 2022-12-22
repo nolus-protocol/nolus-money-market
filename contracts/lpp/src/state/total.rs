@@ -77,10 +77,8 @@ where
 
         // TODO: get ride of fully qualified syntax
         self.annual_interest_rate = Rational::new(
-            <Rational<Coin<LPN>> as Fraction<Coin<LPN>>>::of(
-                &self.annual_interest_rate,
-                self.total_principal_due,
-            ) + loan_interest_rate.of(amount),
+            Fraction::<Coin<LPN>>::of(&self.annual_interest_rate, self.total_principal_due)
+                + loan_interest_rate.of(amount),
             self.total_principal_due + amount,
         );
 
@@ -104,10 +102,8 @@ where
             Rational::new(Coin::<LPN>::new(0), Coin::<LPN>::new(100))
         } else {
             Rational::new(
-                <Rational<Coin<LPN>> as Fraction<Coin<LPN>>>::of(
-                    &self.annual_interest_rate,
-                    self.total_principal_due,
-                ) - loan_interest_rate.of(loan_principal_payment),
+                Fraction::<Coin<LPN>>::of(&self.annual_interest_rate, self.total_principal_due)
+                    - loan_interest_rate.of(loan_principal_payment),
                 self.total_principal_due - loan_principal_payment,
             )
         };
