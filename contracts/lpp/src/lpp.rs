@@ -3,16 +3,14 @@ use serde::{de::DeserializeOwned, Serialize};
 use finance::{
     coin::Coin,
     currency::Currency,
-    fraction::Fraction,
     percent::Percent,
     price::{self, Price},
-    ratio::Rational,
 };
 use platform::{bank::BankView, contract};
-use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, StdResult, Storage, Timestamp, Uint64};
+use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, StdResult, Storage, Timestamp};
 
 use crate::{
-    error::ContractError,
+    error::{ContractError, ContractResult},
     msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse},
     nlpn::NLpn,
     state::{Config, Deposit, Loan, LoanData, Total},
@@ -62,13 +60,8 @@ impl<LPN> LiquidityPool<LPN>
 where
     LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
-    pub fn store(
-        storage: &mut dyn Storage,
-        lpn_ticker: String,
-        lease_code_id: Uint64,
-    ) -> StdResult<()> {
-        Config::new(lpn_ticker, lease_code_id).store(storage)?;
-
+    pub fn store(storage: &mut dyn Storage, config: Config) -> ContractResult<()> {
+        config.store(storage)?;
         Total::<LPN>::new().store(storage)?;
 
         Ok(())
@@ -135,7 +128,7 @@ where
     }
 
     pub fn validate_lease_addr(&self, deps: &Deps, lease_addr: &Addr) -> Result<(), ContractError> {
-        contract::validate_code_id(&deps.querier, lease_addr, self.config.lease_code_id.u64())
+        contract::validate_code_id(&deps.querier, lease_addr, self.config.lease_code_id().u64())
             .map_err(ContractError::from)
     }
 
@@ -167,28 +160,15 @@ where
             return Ok(None);
         }
 
-        let Config {
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
-            ..
-        } = self.config;
-
         let total_principal_due = self.total.total_principal_due();
         let total_interest = self.total.total_interest_due_by_now(env.block.time);
         let total_liability_past_quote = total_principal_due + quote + total_interest;
         let total_balance_past_quote = balance - quote;
 
-        // utilization % / utilization_optimal %
-        let utilization_rel = Rational::new(
+        Ok(Some(self.config.borrow_rate().calculate(
             total_liability_past_quote,
-            utilization_optimal.of(total_liability_past_quote + total_balance_past_quote),
-        );
-
-        let quote_interest_rate = base_interest_rate
-            + Fraction::<Coin<LPN>>::of(&utilization_rel, addon_optimal_interest_rate);
-
-        Ok(Some(quote_interest_rate))
+            total_balance_past_quote,
+        )))
     }
 
     pub fn try_open_loan(
@@ -293,11 +273,18 @@ mod test {
         Addr, Coin as CwCoin, Timestamp, Uint64,
     };
 
-    use crate::state::{Config, Deposit, Total};
+    use crate::{
+        borrow::InterestRate,
+        state::{Config, Deposit, Total},
+    };
 
     use super::*;
 
     type TheCurrency = Usdc;
+
+    const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
+    const UTILIZATION_OPTIMAL: Percent = Percent::from_permille(700);
+    const ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(20);
 
     #[test]
     fn test_balance() {
@@ -311,9 +298,18 @@ mod test {
             .store(deps.as_mut().storage)
             .unwrap();
 
-        Config::new(balance_mock.denom.clone(), lease_code_id)
-            .store(deps.as_mut().storage)
-            .expect("can't initialize Config");
+        Config::new(
+            balance_mock.denom.clone(),
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+        )
+        .store(deps.as_mut().storage)
+        .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
             .expect("can't initialize Total");
@@ -343,9 +339,18 @@ mod test {
             .store(deps.as_mut().storage)
             .unwrap();
 
-        Config::new(balance_mock.denom, lease_code_id)
-            .store(deps.as_mut().storage)
-            .expect("can't initialize Config");
+        Config::new(
+            balance_mock.denom,
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+        )
+        .store(deps.as_mut().storage)
+        .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
             .expect("can't initialize Total");
@@ -397,9 +402,18 @@ mod test {
             .store(deps.as_mut().storage)
             .unwrap();
 
-        Config::new(TheCurrency::TICKER.into(), lease_code_id)
-            .store(deps.as_mut().storage)
-            .expect("can't initialize Config");
+        Config::new(
+            TheCurrency::TICKER.into(),
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+        )
+        .store(deps.as_mut().storage)
+        .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
             .expect("can't initialize Total");
@@ -491,9 +505,18 @@ mod test {
             .store(deps.as_mut().storage)
             .unwrap();
 
-        Config::new(TheCurrency::TICKER.into(), lease_code_id)
-            .store(deps.as_mut().storage)
-            .expect("can't initialize Config");
+        Config::new(
+            TheCurrency::TICKER.into(),
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+        )
+        .store(deps.as_mut().storage)
+        .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
             .expect("can't initialize Total");
@@ -518,9 +541,18 @@ mod test {
             .store(deps.as_mut().storage)
             .unwrap();
 
-        Config::new(TheCurrency::TICKER.into(), lease_code_id)
-            .store(deps.as_mut().storage)
-            .expect("can't initialize Config");
+        Config::new(
+            TheCurrency::TICKER.into(),
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+        )
+        .store(deps.as_mut().storage)
+        .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
             .expect("can't initialize Total");
@@ -545,9 +577,18 @@ mod test {
             .store(deps.as_mut().storage)
             .unwrap();
 
-        Config::new(TheCurrency::TICKER.into(), lease_code_id)
-            .store(deps.as_mut().storage)
-            .expect("can't initialize Config");
+        Config::new(
+            TheCurrency::TICKER.into(),
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+        )
+        .store(deps.as_mut().storage)
+        .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
             .expect("can't initialize Total");
@@ -606,9 +647,18 @@ mod test {
             .store(deps.as_mut().storage)
             .unwrap();
 
-        Config::new(TheCurrency::TICKER.into(), lease_code_id)
-            .store(deps.as_mut().storage)
-            .expect("can't initialize Config");
+        Config::new(
+            TheCurrency::TICKER.into(),
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+        )
+        .store(deps.as_mut().storage)
+        .expect("Failed to store Config!");
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)
             .expect("can't initialize Total");
@@ -655,20 +705,30 @@ mod test {
             .store(deps.as_mut().storage)
             .unwrap();
 
-        Config::new(balance_mock.denom, lease_code_id)
-            .store(deps.as_mut().storage)
-            .expect("can't initialize Config");
+        Config::new(
+            balance_mock.denom,
+            lease_code_id,
+            InterestRate::new(
+                BASE_INTEREST_RATE,
+                UTILIZATION_OPTIMAL,
+                ADDON_OPTIMAL_INTEREST_RATE,
+            )
+            .expect("Couldn't construct interest rate value!"),
+        )
+        .store(deps.as_mut().storage)
+        .expect("Failed to store Config!");
 
         // simplify calculation
-        Config::load(deps.as_ref().storage)
-            .expect("can't load Config")
-            .update(
-                deps.as_mut().storage,
+        Config::update_borrow_rate(
+            deps.as_mut().storage,
+            InterestRate::new(
                 Percent::from_percent(18),
                 Percent::from_percent(50),
                 Percent::from_percent(2),
             )
-            .expect("should update config");
+            .expect("Couldn't construct interest rate value!"),
+        )
+        .expect("should update config");
 
         Total::<TheCurrency>::new()
             .store(deps.as_mut().storage)

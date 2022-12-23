@@ -10,7 +10,7 @@ use gcd::Gcd;
 
 use sdk::schemars::{self, JsonSchema};
 
-use crate::currency::Currency;
+use crate::{currency::Currency, zero::Zero};
 
 pub use self::coinc::CoinDTO;
 
@@ -71,6 +71,16 @@ where
             Coin::<OtherC>::new(other.amount / gcd),
         )
     }
+}
+
+impl<C> Zero for Coin<C>
+where
+    C: Currency,
+{
+    const VALUE: Self = Self {
+        amount: Zero::VALUE,
+        ticker: PhantomData,
+    };
 }
 
 impl<C> Add<Coin<C>> for Coin<C>
@@ -256,7 +266,7 @@ mod test {
     #[test]
     #[should_panic = "overflow with real data"]
     fn add_panic() {
-        _ = usdc(Amount::MAX) + usdc(1);
+        let _ = usdc(Amount::MAX) + usdc(1);
     }
 
     #[test]

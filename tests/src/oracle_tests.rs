@@ -24,7 +24,8 @@ use sdk::{
 use swap::SwapTarget;
 
 use crate::common::{
-    leaser_wrapper::LeaserWrapper, native_cwcoin, test_case::TestCase, AppExt, ADMIN, USER,
+    leaser_wrapper::LeaserWrapper, native_cwcoin, test_case::TestCase, AppExt,
+    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type Lpn = Usdc;
@@ -50,6 +51,9 @@ fn create_test_case() -> TestCase<Lpn> {
             5_000_000_000_000_000_000_000_000_000,
             Lpn::BANK_SYMBOL,
         )],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
     );
     test_case.init_timealarms();
     test_case.init_oracle(None);

@@ -1,6 +1,8 @@
+pub mod borrow;
 pub mod error;
 pub mod msg;
 pub mod nlpn;
+pub mod state;
 
 #[cfg(any(feature = "stub", test))]
 pub mod stub;
@@ -11,7 +13,3 @@ pub mod contract;
 pub mod event;
 #[cfg(any(feature = "contract", test))]
 mod lpp;
-#[cfg(any(feature = "contract", test))]
-mod state;
-
-mod serde_utils;

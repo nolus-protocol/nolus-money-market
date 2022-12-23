@@ -1,34 +1,42 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use finance::{currency::Currency, percent::Percent, price::Price};
+use finance::{currency::Currency, price::Price};
 use sdk::{
     cosmwasm_std::{StdResult, Storage, Uint64},
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
 
-use crate::nlpn::NLpn;
+use crate::{borrow::InterestRate, nlpn::NLpn};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct Config {
-    pub lpn_ticker: String,
-    pub lease_code_id: Uint64,
-    pub base_interest_rate: Percent,
-    pub utilization_optimal: Percent,
-    pub addon_optimal_interest_rate: Percent,
+    lpn_ticker: String,
+    lease_code_id: Uint64,
+    borrow_rate: InterestRate,
 }
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn new(lpn_ticker: String, lease_code_id: Uint64) -> Self {
-        Config {
+    pub const fn new(lpn_ticker: String, lease_code_id: Uint64, borrow_rate: InterestRate) -> Self {
+        Self {
             lpn_ticker,
             lease_code_id,
-            base_interest_rate: Percent::from_percent(7),
-            utilization_optimal: Percent::from_percent(70),
-            addon_optimal_interest_rate: Percent::from_percent(2),
+            borrow_rate,
         }
+    }
+
+    pub fn lpn_ticker(&self) -> &str {
+        &self.lpn_ticker
+    }
+
+    pub const fn lease_code_id(&self) -> Uint64 {
+        self.lease_code_id
+    }
+
+    pub const fn borrow_rate(&self) -> &InterestRate {
+        &self.borrow_rate
     }
 
     pub fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
@@ -39,18 +47,17 @@ impl Config {
         Self::STORAGE.load(storage)
     }
 
-    pub fn update(
-        &mut self,
+    pub fn update_borrow_rate(
         storage: &mut dyn Storage,
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
+        borrow_rate: InterestRate,
     ) -> StdResult<()> {
-        self.base_interest_rate = base_interest_rate;
-        self.utilization_optimal = utilization_optimal;
-        self.addon_optimal_interest_rate = addon_optimal_interest_rate;
+        Self::STORAGE
+            .update(storage, |mut config| {
+                config.borrow_rate = borrow_rate;
 
-        self.store(storage)
+                Ok(config)
+            })
+            .map(|_| ())
     }
 
     pub fn initial_derivative_price<LPN>() -> Price<NLpn, LPN>

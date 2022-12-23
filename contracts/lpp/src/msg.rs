@@ -8,49 +8,31 @@ use finance::{
     price::Price,
 };
 use sdk::{
-    cosmwasm_std::{Addr, Timestamp, Uint128, Uint64},
+    cosmwasm_std::{Addr, Timestamp, Uint128},
     schemars::{self, JsonSchema},
 };
 
-use crate::nlpn::NLpn;
+use crate::{borrow::InterestRate, nlpn::NLpn, state::Config};
 
 pub type LppCoin = CoinDTO<Lpns>;
 
-#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
-#[cfg_attr(feature = "testing", derive(Debug))]
-pub struct InstantiateMsg {
-    pub lpn_ticker: String,
-    pub lease_code_id: Uint64,
-}
+pub type InstantiateMsg = Config;
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    UpdateParameters {
-        #[serde(deserialize_with = "crate::serde_utils::finance::deserialize_hundred_capped")]
-        base_interest_rate: Percent,
-        #[serde(deserialize_with = "crate::serde_utils::finance::deserialize_hundred_capped")]
-        utilization_optimal: Percent,
-        #[serde(deserialize_with = "crate::serde_utils::finance::deserialize_hundred_capped")]
-        addon_optimal_interest_rate: Percent,
-    },
+    NewBorrowRate { borrow_rate: InterestRate },
 
-    OpenLoan {
-        amount: LppCoin,
-    },
+    OpenLoan { amount: LppCoin },
     RepayLoan(),
 
     Deposit(),
     // CW20 interface, withdraw from lender deposit
-    Burn {
-        amount: Uint128,
-    },
+    Burn { amount: Uint128 },
 
     DistributeRewards(),
-    ClaimRewards {
-        other_recipient: Option<Addr>,
-    },
+    ClaimRewards { other_recipient: Option<Addr> },
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
@@ -80,16 +62,6 @@ pub enum QueryMsg {
     Rewards {
         address: Addr,
     },
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct QueryConfigResponse {
-    pub lpn_ticker: String,
-    pub lease_code_id: Uint64,
-    pub base_interest_rate: Percent,
-    pub utilization_optimal: Percent,
-    pub addon_optimal_interest_rate: Percent,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

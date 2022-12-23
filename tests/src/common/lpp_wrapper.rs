@@ -1,11 +1,10 @@
 use currency::lpn::Usdc;
-
 use finance::{coin::Coin, currency::Currency, percent::Percent};
 use lpp::{
+    borrow::InterestRate,
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
-
 use sdk::{
     cosmwasm_std::{to_binary, Addr, Binary, Coin as CwCoin, Deps, Env, Uint64},
     cw_multi_test::Executor,
@@ -40,15 +39,24 @@ impl LppWrapper {
         app: &mut MockApp,
         lease_code_id: Uint64,
         init_balance: Vec<CwCoin>,
+        base_interest_rate: Percent,
+        utilization_optimal: Percent,
+        addon_optimal_interest_rate: Percent,
     ) -> (Addr, u64)
     where
         Lpn: Currency,
     {
         let lpp_id = app.store_code(self.contract_wrapper);
-        let msg = InstantiateMsg {
-            lpn_ticker: Lpn::TICKER.into(),
+        let msg = InstantiateMsg::new(
+            Lpn::TICKER.into(),
             lease_code_id,
-        };
+            InterestRate::new(
+                base_interest_rate,
+                utilization_optimal,
+                addon_optimal_interest_rate,
+            )
+            .expect("Couldn't construct interest rate value!"),
+        );
 
         (
             app.instantiate_contract(

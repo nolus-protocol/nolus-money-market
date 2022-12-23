@@ -3,10 +3,13 @@ use finance::{
     coin::Coin, currency::Currency, duration::Duration, fraction::Fraction, percent::Percent,
     price, test,
 };
-use lpp::msg::{
-    BalanceResponse, ExecuteMsg as ExecuteLpp, LppBalanceResponse, PriceResponse,
-    QueryConfigResponse, QueryLoanResponse, QueryMsg as QueryLpp, QueryQuoteResponse,
-    RewardsResponse,
+use lpp::{
+    borrow::InterestRate,
+    msg::{
+        BalanceResponse, ExecuteMsg as ExecuteLpp, LppBalanceResponse, PriceResponse,
+        QueryLoanResponse, QueryMsg as QueryLpp, QueryQuoteResponse, RewardsResponse,
+    },
+    state::Config,
 };
 use platform::{bank, coin_legacy};
 use sdk::{
@@ -24,7 +27,7 @@ use crate::common::{
     test_case::TestCase,
     timealarms_wrapper::TimeAlarmsWrapper,
     treasury_wrapper::TreasuryWrapper,
-    AppExt, ADMIN, USER,
+    AppExt, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type Lpn = Usdc;
@@ -42,15 +45,25 @@ fn config_update_parameters() {
 
     let mut app = mock_app(&[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)]);
     let lease_id = LeaseWrapper::default().store(&mut app);
-    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(&mut app, lease_id.into(), vec![]);
+    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
+        &mut app,
+        lease_id.into(),
+        vec![],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    );
 
     app.execute_contract(
         hacker,
         lpp.clone(),
-        &ExecuteLpp::UpdateParameters {
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
+        &ExecuteLpp::NewBorrowRate {
+            borrow_rate: InterestRate::new(
+                base_interest_rate,
+                utilization_optimal,
+                addon_optimal_interest_rate,
+            )
+            .expect("Couldn't construct interest rate value!"),
         },
         &[],
     )
@@ -59,24 +72,30 @@ fn config_update_parameters() {
     app.execute_contract(
         admin,
         lpp.clone(),
-        &ExecuteLpp::UpdateParameters {
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
+        &ExecuteLpp::NewBorrowRate {
+            borrow_rate: InterestRate::new(
+                base_interest_rate,
+                utilization_optimal,
+                addon_optimal_interest_rate,
+            )
+            .expect("Couldn't construct interest rate value!"),
         },
         &[],
     )
     .unwrap();
 
-    let quote: QueryConfigResponse = app
+    let quote: Config = app
         .wrap()
         .query_wasm_smart(lpp, &QueryLpp::Config())
         .unwrap();
 
-    assert_eq!(quote.base_interest_rate, base_interest_rate);
-    assert_eq!(quote.utilization_optimal, utilization_optimal);
+    assert_eq!(quote.borrow_rate().base_interest_rate(), base_interest_rate);
     assert_eq!(
-        quote.addon_optimal_interest_rate,
+        quote.borrow_rate().utilization_optimal(),
+        utilization_optimal
+    );
+    assert_eq!(
+        quote.borrow_rate().addon_optimal_interest_rate(),
         addon_optimal_interest_rate
     );
 }
@@ -88,7 +107,12 @@ fn open_loan_unauthorized_contract_id() {
 
     let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, vec![lpn_cwcoin(500)]);
-    test_case.init_lpp(None);
+    test_case.init_lpp(
+        None,
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    );
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -119,7 +143,12 @@ fn open_loan_no_liquidity() {
 
     let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, vec![lpn_cwcoin(500)]);
-    test_case.init_lpp(None);
+    test_case.init_lpp(
+        None,
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    );
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -162,7 +191,14 @@ fn deposit_and_withdraw() {
 
     let mut app = mock_app(&[lpn_cwcoin(app_balance)]);
     let lease_id = LeaseWrapper::default().store(&mut app);
-    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(&mut app, lease_id.into(), vec![]);
+    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
+        &mut app,
+        lease_id.into(),
+        vec![],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    );
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app);
     let market_price_oracle = MarketOracleWrapper::default().instantiate::<Lpn>(&mut app);
     let treasury = TreasuryWrapper::default().instantiate::<Lpn>(&mut app);
@@ -378,7 +414,14 @@ fn loan_open_wrong_id() {
 
     let mut app = mock_app(&lpn_cwcoins(app_balance));
     let lease_id = LeaseWrapper::default().store(&mut app);
-    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(&mut app, lease_id.into(), vec![]);
+    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
+        &mut app,
+        lease_id.into(),
+        vec![],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    );
     app.send_tokens(admin.clone(), lender, &lpn_cwcoins(init_deposit))
         .unwrap();
     app.send_tokens(admin, hacker.clone(), &lpn_cwcoins(hacker_balance))
@@ -429,7 +472,14 @@ fn loan_open_and_repay() {
     // net setup
     let mut app = mock_app(&[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)]);
     let lease_id = LeaseWrapper::default().store(&mut app);
-    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(&mut app, lease_id.into(), vec![]);
+    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
+        &mut app,
+        lease_id.into(),
+        vec![],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    );
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app);
     let oracle = MarketOracleWrapper::default().instantiate::<Lpn>(&mut app);
     let treasury = TreasuryWrapper::default().instantiate::<Lpn>(&mut app);
@@ -457,10 +507,13 @@ fn loan_open_and_repay() {
     app.execute_contract(
         admin.clone(),
         lpp.clone(),
-        &ExecuteLpp::UpdateParameters {
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
+        &ExecuteLpp::NewBorrowRate {
+            borrow_rate: InterestRate::new(
+                base_interest_rate,
+                utilization_optimal,
+                addon_optimal_interest_rate,
+            )
+            .expect("Couldn't construct interest rate value!"),
         },
         &[],
     )
@@ -728,7 +781,14 @@ fn compare_lpp_states() {
         coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),
     ]);
     let lease_id = LeaseWrapper::default().store(&mut app);
-    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(&mut app, lease_id.into(), vec![]);
+    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
+        &mut app,
+        lease_id.into(),
+        vec![],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    );
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app);
     let market_oracle = MarketOracleWrapper::default().instantiate::<Lpn>(&mut app);
     let treasury = TreasuryWrapper::default().instantiate::<Lpn>(&mut app);
@@ -750,10 +810,13 @@ fn compare_lpp_states() {
     app.execute_contract(
         admin.clone(),
         lpp.clone(),
-        &ExecuteLpp::UpdateParameters {
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
+        &ExecuteLpp::NewBorrowRate {
+            borrow_rate: InterestRate::new(
+                base_interest_rate,
+                utilization_optimal,
+                addon_optimal_interest_rate,
+            )
+            .expect("Couldn't construct interest rate value!"),
         },
         &[],
     )
@@ -1021,7 +1084,14 @@ fn test_rewards() {
         coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),
     ]);
     let lease_id = LeaseWrapper::default().store(&mut app);
-    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(&mut app, lease_id.into(), vec![]);
+    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
+        &mut app,
+        lease_id.into(),
+        vec![],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    );
 
     app.send_tokens(admin.clone(), lender1.clone(), &[lpn_cwcoin(deposit1)])
         .unwrap();

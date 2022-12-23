@@ -3,7 +3,9 @@ use std::{
     ops::{Div, Mul},
 };
 
-use crate::{duration::Units as TimeUnits, percent::Units as PercentUnits, ratio::Ratio};
+use crate::{
+    duration::Units as TimeUnits, percent::Units as PercentUnits, ratio::Ratio, zero::Zero,
+};
 
 mod coin;
 mod duration;
@@ -36,7 +38,7 @@ where
     <D as TryInto<DIntermediate>>::Error: Debug,
     DIntermediate: Into<T>,
     D: Mul<D, Output = D> + Div<D, Output = D>,
-    U: PartialEq + Into<D>,
+    U: Zero + PartialEq + Into<D>,
 {
     #[track_caller]
     fn safe_mul<R>(self, ratio: &R) -> Self
@@ -44,6 +46,13 @@ where
         R: Ratio<U>,
     {
         // TODO debug_assert_eq!(T::BITS * 2, D::BITS);
+
+        // TODO
+        //  debug_assert!(
+        //      ratio.total() != Zero::VALUE,
+        //      "Ratio's total is equal to zero!"
+        //  );
+
         if ratio.parts() == ratio.total() {
             self
         } else {

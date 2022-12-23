@@ -20,7 +20,8 @@ use sdk::{
 
 use crate::{
     common::{
-        cwcoin, cwcoins, lpp_wrapper::mock_lpp_quote_query, test_case::TestCase, ADMIN, USER,
+        cwcoin, cwcoins, lpp_wrapper::mock_lpp_quote_query, test_case::TestCase,
+        ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
     },
     oracle_tests::{add_feeder, feed_price},
 };
@@ -49,7 +50,12 @@ fn init_lpp_with_unknown_currency() {
 
     let mut test_case = TestCase::<NotLpn>::new();
     test_case.init(&user_addr, cwcoins::<NotLpn, _>(500));
-    test_case.init_lpp(None);
+    test_case.init_lpp(
+        None,
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    );
 }
 
 #[test]
@@ -62,7 +68,12 @@ fn open_lease_not_in_lpn_currency() {
 
     let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
-    test_case.init_lpp(None);
+    test_case.init_lpp(
+        None,
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    );
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -100,7 +111,12 @@ fn open_multiple_loans() {
 
     let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
-    test_case.init_lpp(None);
+    test_case.init_lpp(
+        None,
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    );
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -193,7 +209,12 @@ fn test_quote() {
     let user_addr = Addr::unchecked(USER);
     let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
-    test_case.init_lpp(None);
+    test_case.init_lpp(
+        None,
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    );
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -264,6 +285,9 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
             coin(OSMOS, Osmo::BANK_SYMBOL),
             coin(CROS, LeaseCurrency::BANK_SYMBOL),
         ],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
     );
     test_case.init_timealarms();
     test_case.init_oracle(None);
@@ -332,11 +356,16 @@ fn test_quote_fixed_rate() {
     let user_addr = Addr::unchecked(USER);
     let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
-    test_case.init_lpp(Some(ContractWrapper::new(
-        lpp::contract::execute,
-        lpp::contract::instantiate,
-        mock_lpp_quote_query,
-    )));
+    test_case.init_lpp(
+        Some(ContractWrapper::new(
+            lpp::contract::execute,
+            lpp::contract::instantiate,
+            mock_lpp_quote_query,
+        )),
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    );
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();
@@ -418,11 +447,16 @@ fn open_loans_lpp_fails() {
     let mut test_case = TestCase::<Lpn>::new();
     test_case
         .init(&user_addr, cwcoins::<Lpn, _>(500))
-        .init_lpp(Some(ContractWrapper::new(
-            mock_lpp_execute,
-            lpp::contract::instantiate,
-            lpp::contract::query,
-        )))
+        .init_lpp(
+            Some(ContractWrapper::new(
+                mock_lpp_execute,
+                lpp::contract::instantiate,
+                lpp::contract::query,
+            )),
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
         .init_timealarms()
         .init_oracle(None)
         .init_treasury()
@@ -452,7 +486,12 @@ where
 
     let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, vec![cwcoin::<DownpaymentC, _>(500)]);
-    test_case.init_lpp(None);
+    test_case.init_lpp(
+        None,
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    );
     test_case.init_timealarms();
     test_case.init_oracle(None);
     test_case.init_treasury();

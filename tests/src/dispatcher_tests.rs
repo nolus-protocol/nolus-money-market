@@ -9,7 +9,8 @@ use sdk::{
 
 use crate::common::{
     cwcoins, lpp_wrapper::mock_lpp_query, native_cwcoin, oracle_wrapper::mock_oracle_query,
-    test_case::TestCase, Native, ADMIN, USER,
+    test_case::TestCase, Native, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER,
+    UTILIZATION_OPTIMAL,
 };
 
 #[test]
@@ -21,7 +22,12 @@ fn on_alarm_zero_reward() {
     test_case.init(&user, cwcoins::<Lpn, _>(500));
 
     test_case
-        .init_lpp(None)
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
         .init_timealarms()
         .init_oracle(Some(
             ContractWrapper::new(
@@ -66,11 +72,16 @@ fn on_alarm() {
         .init_oracle(None);
 
     test_case
-        .init_lpp(Some(ContractWrapper::new(
-            lpp::contract::execute,
-            lpp::contract::instantiate,
-            mock_lpp_query,
-        )))
+        .init_lpp(
+            Some(ContractWrapper::new(
+                lpp::contract::execute,
+                lpp::contract::instantiate,
+                mock_lpp_query,
+            )),
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
         .init_timealarms()
         .init_oracle(Some(
             ContractWrapper::new(
@@ -236,7 +247,12 @@ fn test_config_unauthorized() {
     let mut test_case = TestCase::<Usdc>::new();
     test_case
         .init(&user_addr, cwcoins::<Lpn, _>(500))
-        .init_lpp(None)
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
         .init_treasury()
         .init_timealarms()
         .init_oracle(None)
@@ -276,7 +292,12 @@ fn test_config() {
     let mut test_case = TestCase::<Usdc>::new();
     test_case
         .init(&user_addr, cwcoins::<Lpn, _>(500))
-        .init_lpp(None)
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
         .init_treasury()
         .init_timealarms()
         .init_oracle(None)
