@@ -4,8 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::PriceFeedsError;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema)]
 #[serde(try_from = "unchecked::Config")]
 pub struct Config {
     feed_validity: Duration,

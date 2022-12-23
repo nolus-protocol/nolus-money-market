@@ -1,15 +1,16 @@
+use serde::{Deserialize, Serialize};
+
 use finance::{currency::SymbolOwned, duration::Duration, percent::Percent};
+use marketprice::config::Config as PriceConfig;
 use sdk::{
     cosmwasm_std::{StdResult, Storage},
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
-use serde::{Deserialize, Serialize};
 
 use crate::ContractError;
-use marketprice::config::Config as PriceConfig;
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema)]
 pub struct Config {
     pub base_asset: SymbolOwned,
     pub price_config: PriceConfig,
