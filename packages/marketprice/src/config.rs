@@ -2,7 +2,11 @@ use finance::{duration::Duration, fraction::Fraction, percent::Percent};
 use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+use crate::error::PriceFeedsError;
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Clone))]
+#[serde(try_from = "unchecked::Config")]
 pub struct Config {
     feed_validity: Duration,
     min_feeders: Percent,
@@ -22,6 +26,37 @@ impl Config {
 
     pub fn feed_validity(&self) -> Duration {
         self.feed_validity
+    }
+
+    fn invariant_held(&self) -> Result<(), PriceFeedsError> {
+        Ok(())
+    }
+}
+
+mod unchecked {
+    use crate::error::PriceFeedsError;
+    use finance::{duration::Duration, percent::Percent};
+    use serde::Deserialize;
+
+    use super::Config as ValidatedConfig;
+
+    #[derive(Deserialize)]
+    pub(super) struct Config {
+        feed_validity: Duration,
+        min_feeders: Percent,
+    }
+
+    impl TryFrom<Config> for ValidatedConfig {
+        type Error = PriceFeedsError;
+
+        fn try_from(dto: Config) -> Result<Self, Self::Error> {
+            let res = Self {
+                feed_validity: dto.feed_validity,
+                min_feeders: dto.min_feeders,
+            };
+            res.invariant_held()?;
+            Ok(res)
+        }
     }
 }
 
