@@ -27,6 +27,9 @@ pub enum PriceFeedsError {
     #[error("{0}")]
     FromInfallible(#[from] Infallible),
 
+    #[error("Configuration error: {0}")]
+    Configuration(String),
+
     #[error("{0}")]
     TryFromInt(#[from] TryFromIntError),
 
@@ -43,5 +46,13 @@ pub enum PriceFeedsError {
 impl From<postcard::Error> for PriceFeedsError {
     fn from(err: postcard::Error) -> Self {
         Self::FeedSerdeError(format!("Error during (de-)serialization: {}", err))
+    }
+}
+
+pub(crate) fn config_error_if(check: bool, msg: &str) -> Result<(), PriceFeedsError> {
+    if check {
+        Err(PriceFeedsError::Configuration(msg.into()))
+    } else {
+        Ok(())
     }
 }

@@ -8,6 +8,7 @@ use currency::{
 use finance::{
     coin::Coin,
     currency::{Currency, SymbolOwned},
+    duration::Duration,
     percent::Percent,
     price::{self, dto::PriceDTO},
 };
@@ -20,8 +21,9 @@ use sdk::cosmwasm_std::{
 use crate::{
     contract::{execute, instantiate},
     msg::{ExecuteMsg, InstantiateMsg},
-    state::supported_pairs::TreeStore,
+    state::{config::Config, supported_pairs::TreeStore},
 };
+use marketprice::config::Config as PriceConfig;
 
 #[cfg(test)]
 mod oracle_tests;
@@ -35,9 +37,13 @@ pub(crate) fn dummy_instantiate_msg(
     swap_tree: TreeStore,
 ) -> InstantiateMsg {
     InstantiateMsg {
-        base_asset,
-        price_feed_period_secs,
-        expected_feeders,
+        config: Config {
+            base_asset,
+            price_config: PriceConfig::new(
+                Duration::from_secs(price_feed_period_secs),
+                expected_feeders,
+            ),
+        },
         swap_tree,
     }
 }

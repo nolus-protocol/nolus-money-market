@@ -5,12 +5,15 @@ use currency::{
     lpn::Usdc,
     native::Nls,
 };
-use finance::{coin::Coin, currency::Currency, percent::Percent, price::total_of};
+use finance::{
+    coin::Coin, currency::Currency, duration::Duration, percent::Percent, price::total_of,
+};
+use marketprice::config::Config as PriceConfig;
 use marketprice::SpotPrice;
 use oracle::{
     contract::{execute, instantiate, query, reply},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::supported_pairs::TreeStore,
+    state::{config::Config, supported_pairs::TreeStore},
     ContractError,
 };
 use sdk::{
@@ -39,9 +42,10 @@ impl MarketOracleWrapper {
     {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {
-            base_asset: BaseC::TICKER.into(),
-            price_feed_period_secs: 60,
-            expected_feeders: Percent::from_percent(1),
+            config: Config {
+                base_asset: BaseC::TICKER.into(),
+                price_config: PriceConfig::new(Duration::from_secs(60), Percent::from_percent(1)),
+            },
             swap_tree: TreeStore(
                 tr((0, Usdc::TICKER.into()))
                     / tr((1, Osmo::TICKER.to_string()))

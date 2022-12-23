@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use marketprice::config::Config as PriceConfig;
 use marketprice::{alarms::Alarm, SpotPrice};
 use trees::tr;
 
@@ -10,6 +11,7 @@ use currency::{
 use finance::{
     coin::Coin,
     currency::Currency,
+    duration::Duration,
     percent::Percent,
     price::{self, dto::PriceDTO},
 };
@@ -392,10 +394,10 @@ fn test_config_update() {
             admin,
             wasm_execute(
                 test_case.oracle.clone().unwrap(),
-                &oracle::msg::ExecuteMsg::Config {
-                    price_feed_period_secs: 60,
-                    expected_feeders: Percent::from_percent(100),
-                },
+                &oracle::msg::ExecuteMsg::UpdateConfig(PriceConfig::new(
+                    Duration::from_secs(60),
+                    Percent::from_percent(100),
+                )),
                 vec![],
             )
             .unwrap()

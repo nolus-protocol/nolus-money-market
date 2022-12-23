@@ -1,10 +1,6 @@
 use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
-use finance::{
-    currency::{visit_any_on_ticker, AnyVisitor, Currency},
-    duration::Duration,
-    percent::Percent,
-};
+use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
 use platform::contract;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
@@ -17,7 +13,7 @@ use sdk::{
 use crate::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::{config::Config, supported_pairs::SupportedPairs},
+    state::supported_pairs::SupportedPairs,
 };
 
 use self::{
@@ -52,7 +48,7 @@ impl<'a> InstantiateWithCurrency<'a> {
         owner: Addr,
     ) -> Result<Response, ContractError> {
         let context = Self { deps, msg, owner };
-        visit_any_on_ticker::<Lpns, _>(&context.msg.base_asset.clone(), context)
+        visit_any_on_ticker::<Lpns, _>(&context.msg.config.base_asset.clone(), context)
     }
 }
 
@@ -64,29 +60,9 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
     where
         C: Currency,
     {
-        set_contract_version(self.deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
-        if self.msg.expected_feeders == Percent::ZERO
-            || self.msg.expected_feeders > Percent::HUNDRED
-        {
-            return Err(ContractError::Configuration(
-                "Percent of expected available feeders should be > 0 and <= 1000".to_string(),
-            ));
-        }
-        if self.msg.price_feed_period_secs == 0 {
-            return Err(ContractError::Configuration(
-                "Price feed period can not be 0".to_string(),
-            ));
-        }
-
         SingleUserAccess::new_contract_owner(self.owner).store(self.deps.storage)?;
 
-        Config::new(
-            C::TICKER.to_string(),
-            Duration::from_secs(self.msg.price_feed_period_secs),
-            self.msg.expected_feeders,
-        )?
-        .store(self.deps.storage)?;
+        self.msg.config.store(self.deps.storage)?;
 
         SupportedPairs::<C>::new(self.msg.swap_tree)?
             .validate_tickers()?
@@ -130,10 +106,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Config {
-            price_feed_period_secs,
-            expected_feeders,
-        } => try_configure(deps.storage, info, price_feed_period_secs, expected_feeders),
+        ExecuteMsg::UpdateConfig(price_config) => try_configure(deps.storage, info, price_config),
         ExecuteMsg::RegisterFeeder { feeder_address } => {
             Feeders::try_register(deps, info, feeder_address)
         }

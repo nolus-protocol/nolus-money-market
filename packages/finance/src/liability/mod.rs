@@ -252,7 +252,7 @@ mod test {
     #[track_caller]
     fn assert_load_err(json: &[u8], msg: &str) {
         assert!(matches!(
-            dbg!(from_slice::<Liability>(json)),
+            from_slice::<Liability>(json),
             Err(StdError::ParseErr {
                 target_type,
                 msg: real_msg

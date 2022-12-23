@@ -1,22 +1,20 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{currency::SymbolOwned, percent::Percent};
+use crate::state::{
+    config::Config,
+    supported_pairs::{SubTree, SwapLeg, TreeStore},
+};
+use finance::currency::SymbolOwned;
+use marketprice::config::Config as PriceConfig;
 use marketprice::{alarms::Alarm, SpotPrice};
 use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
 };
 
-use crate::state::{
-    config::Config,
-    supported_pairs::{SubTree, SwapLeg, TreeStore},
-};
-
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
-    pub base_asset: String,
-    pub price_feed_period_secs: u32,
-    pub expected_feeders: Percent,
+    pub config: Config,
     #[schemars(with = "Vec<SubTree>")]
     pub swap_tree: TreeStore,
 }
@@ -34,10 +32,7 @@ pub enum ExecuteMsg {
     FeedPrices {
         prices: Vec<SpotPrice>,
     },
-    Config {
-        price_feed_period_secs: u32,
-        expected_feeders: Percent,
-    },
+    UpdateConfig(PriceConfig),
     SwapTree {
         #[schemars(with = "Vec<SubTree>")]
         tree: TreeStore,

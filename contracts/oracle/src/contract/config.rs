@@ -1,11 +1,10 @@
+use crate::{msg::ConfigResponse, state::config::Config, ContractError};
 use access_control::SingleUserAccess;
-use finance::{duration::Duration, percent::Percent};
+use marketprice::config::Config as PriceConfig;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{MessageInfo, Storage},
 };
-
-use crate::{msg::ConfigResponse, state::config::Config, ContractError};
 
 pub fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, ContractError> {
     let owner = SingleUserAccess::load_contract_owner(storage)?.into();
@@ -17,34 +16,18 @@ pub fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, ContractErr
 pub fn try_configure(
     storage: &mut dyn Storage,
     info: MessageInfo,
-    price_feed_period: u32,
-    expected_feeders: Percent,
+    price_config: PriceConfig,
 ) -> Result<Response, ContractError> {
     SingleUserAccess::check_owner_access::<ContractError>(storage, &info.sender)?;
 
-    //TODO merge the next checks with the code in Config::validate()
-    if expected_feeders == Percent::ZERO || expected_feeders > Percent::HUNDRED {
-        return Err(ContractError::Configuration(
-            "Percent of expected available feeders should be > 0 and <= 1000".to_string(),
-        ));
-    }
-    if price_feed_period == 0 {
-        return Err(ContractError::Configuration(
-            "Price feed period can not be 0".to_string(),
-        ));
-    }
-    // TODO make sure the price_feed_period >= last block time
-    Config::update(
-        storage,
-        Duration::from_secs(price_feed_period),
-        expected_feeders,
-    )?;
+    Config::update(storage, price_config)?;
 
     Ok(Response::new())
 }
 
 #[cfg(test)]
 mod tests {
+    use marketprice::config::Config as PriceConfig;
     use swap::SwapTarget;
     use trees::tr;
 
@@ -54,13 +37,9 @@ mod tests {
         native::Nls,
     };
     use finance::{currency::Currency, duration::Duration, percent::Percent};
-    use sdk::{
-        cosmwasm_ext::Response,
-        cosmwasm_std::{
-            coins, from_binary,
-            testing::{mock_env, mock_info},
-            DepsMut, MessageInfo,
-        },
+    use sdk::cosmwasm_std::{
+        coins, from_binary,
+        testing::{mock_env, mock_info},
     };
 
     use crate::{
@@ -71,7 +50,6 @@ mod tests {
             supported_pairs::{SwapLeg, TreeStore},
         },
         tests::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test},
-        ContractError,
     };
 
     #[test]
@@ -86,10 +64,10 @@ mod tests {
         let (mut deps, _) = setup_test(msg);
 
         let unauth_info = mock_info("anyone", &coins(2, Nls::TICKER));
-        let msg = ExecuteMsg::Config {
-            price_feed_period_secs: 15,
-            expected_feeders: Percent::from_percent(12),
-        };
+        let msg = ExecuteMsg::UpdateConfig(PriceConfig::new(
+            Duration::from_secs(15),
+            Percent::from_percent(12),
+        ));
         let _res = execute(deps.as_mut(), mock_env(), unauth_info, msg).unwrap();
     }
 
@@ -104,10 +82,10 @@ mod tests {
         );
         let (mut deps, info) = setup_test(msg);
 
-        let msg = ExecuteMsg::Config {
-            price_feed_period_secs: 33,
-            expected_feeders: Percent::from_percent(44),
-        };
+        let msg = ExecuteMsg::UpdateConfig(PriceConfig::new(
+            Duration::from_secs(33),
+            Percent::from_percent(44),
+        ));
         let _res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
@@ -125,51 +103,6 @@ mod tests {
             },
             value
         );
-    }
-
-    #[test]
-    #[should_panic(expected = "Price feed period can not be 0")]
-    fn configure_invalid_period() {
-        let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
-
-        let msg = ExecuteMsg::Config {
-            price_feed_period_secs: 0,
-            expected_feeders: Percent::from_percent(44),
-        };
-        execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-    }
-
-    #[test]
-    fn configure_feeders_percent() {
-        let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
-        let expected_err = ContractError::Configuration(
-            "Percent of expected available feeders should be > 0 and <= 1000".to_string(),
-        );
-
-        let err = exec_configure(deps.as_mut(), &info, 120, 0).unwrap_err();
-        assert_eq!(expected_err, err);
-        let err = exec_configure(deps.as_mut(), &info, 120, 1001).unwrap_err();
-        assert_eq!(expected_err, err);
-        let err = exec_configure(deps.as_mut(), &info, 120, 10401).unwrap_err();
-        assert_eq!(expected_err, err);
-        let err = exec_configure(deps.as_mut(), &info, 0, 10401).unwrap_err();
-        assert_eq!(expected_err, err);
-        let err = exec_configure(deps.as_mut(), &info, 0, 101).unwrap_err();
-        assert_eq!(expected_err, err);
-        exec_configure(deps.as_mut(), &info, 120, 14).unwrap();
-    }
-
-    fn exec_configure(
-        deps: DepsMut,
-        info: &MessageInfo,
-        period: u32,
-        f_percent: u16,
-    ) -> Result<Response, ContractError> {
-        let msg = ExecuteMsg::Config {
-            price_feed_period_secs: period,
-            expected_feeders: Percent::from_percent(f_percent),
-        };
-        execute(deps, mock_env(), info.to_owned(), msg)
     }
 
     #[test]

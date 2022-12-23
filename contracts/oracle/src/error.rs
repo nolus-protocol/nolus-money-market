@@ -45,9 +45,6 @@ pub enum ContractError {
     #[error("[Oracle] Invalid alarm notification address: {0:?}")]
     InvalidAlarmAddress(Addr),
 
-    #[error("[Oracle] Configuration error: {0}")]
-    Configuration(String),
-
     #[error("[Oracle] {0}")]
     Platform(#[from] platform::error::Error),
 
