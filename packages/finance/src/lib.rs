@@ -9,5 +9,7 @@ pub mod liability;
 pub mod percent;
 pub mod price;
 pub mod ratio;
+pub mod zero;
+
 #[cfg(any(test, feature = "testing"))]
 pub mod test;
