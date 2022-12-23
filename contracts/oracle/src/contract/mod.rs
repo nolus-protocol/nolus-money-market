@@ -86,8 +86,7 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
             C::TICKER.to_string(),
             Duration::from_secs(self.msg.price_feed_period_secs),
             self.msg.expected_feeders,
-        )
-        .validate()?
+        )?
         .store(self.deps.storage)?;
 
         SupportedPairs::<C>::new(self.msg.swap_tree)?
@@ -188,26 +187,39 @@ mod tests {
     use crate::{
         contract::query,
         msg::{ConfigResponse, QueryMsg},
-        state::supported_pairs::{SwapLeg, TreeStore},
-        tests::{dummy_instantiate_msg, setup_test, CREATOR},
+        state::{
+            config::Config,
+            supported_pairs::{SwapLeg, TreeStore},
+        },
+        tests::{dummy_instantiate_msg, setup_test},
     };
 
     #[test]
     fn proper_initialization() {
+        use marketprice::config::Config as PriceConfig;
         let msg = dummy_instantiate_msg(
             Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
             TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Osmo::TICKER.to_string()))),
         );
-        let (deps, _) = setup_test(msg);
+        let (deps, info) = setup_test(msg);
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
-        assert_eq!(CREATOR.to_string(), value.owner.to_string());
-        assert_eq!(Usdc::TICKER.to_string(), value.base_asset);
-        assert_eq!(Duration::from_secs(60), value.price_feed_period);
-        assert_eq!(Percent::from_percent(50), value.expected_feeders);
+        assert_eq!(
+            ConfigResponse {
+                owner: info.sender,
+                config: Config {
+                    base_asset: Usdc::TICKER.into(),
+                    price_config: PriceConfig::new(
+                        Duration::from_secs(60),
+                        Percent::from_percent(50)
+                    )
+                }
+            },
+            value
+        );
 
         let res = query(
             deps.as_ref(),

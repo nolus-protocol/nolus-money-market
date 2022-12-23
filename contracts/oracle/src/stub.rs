@@ -61,7 +61,7 @@ impl OracleRef {
     pub fn try_from(addr: Addr, querier: &QuerierWrapper) -> Result<Self> {
         let resp: ConfigResponse = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config {})?;
 
-        let base_currency = resp.base_asset;
+        let base_currency = resp.config.base_asset;
 
         Ok(Self {
             addr,

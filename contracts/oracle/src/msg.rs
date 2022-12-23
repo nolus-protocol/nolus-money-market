@@ -1,13 +1,16 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{currency::SymbolOwned, duration::Duration, percent::Percent};
+use finance::{currency::SymbolOwned, percent::Percent};
 use marketprice::{alarms::Alarm, SpotPrice};
 use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
 };
 
-use crate::state::supported_pairs::{SubTree, SwapLeg, TreeStore};
+use crate::state::{
+    config::Config,
+    supported_pairs::{SubTree, SwapLeg, TreeStore},
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -84,10 +87,8 @@ pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct ConfigResponse {
-    pub base_asset: SymbolOwned,
-    pub price_feed_period: Duration,
-    pub expected_feeders: Percent,
     pub owner: Addr,
+    pub config: Config,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

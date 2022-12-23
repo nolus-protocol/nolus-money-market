@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned};
 use marketprice::error::PriceFeedsError;
-use marketprice::{config::Config as PriceConfig, SpotPrice};
+use marketprice::SpotPrice;
 use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
 
 use crate::{
@@ -89,10 +89,9 @@ fn calc_prices<OracleBase>(
 where
     OracleBase: 'static + Currency + DeserializeOwned + Serialize,
 {
-    let config = Config::load(storage)?;
     let total_feeders = Feeders::total_registered(storage)?;
-    let price_config = PriceConfig::new(config.price_feed_period, config.expected_feeders);
-    let feeds = Feeds::<OracleBase>::with(price_config);
+    let config = Config::load(storage)?;
+    let feeds = Feeds::<OracleBase>::with(config.price_config);
     let prices = feeds.calc_prices(storage, at, total_feeders, currencies)?;
     Ok(prices)
 }

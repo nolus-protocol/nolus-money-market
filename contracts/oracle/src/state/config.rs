@@ -7,37 +7,44 @@ use sdk::{
 use serde::{Deserialize, Serialize};
 
 use crate::ContractError;
+use marketprice::config::Config as PriceConfig;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Config {
     pub base_asset: SymbolOwned,
-    pub price_feed_period: Duration,
-    pub expected_feeders: Percent,
+    pub price_config: PriceConfig,
 }
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("config");
 
-    pub fn new(denom: String, price_feed_period: Duration, expected_feeders: Percent) -> Self {
-        Config {
-            base_asset: denom,
-            price_feed_period,
-            expected_feeders,
-        }
+    pub fn new(
+        base_asset: SymbolOwned,
+        price_feed_period: Duration,
+        expected_feeders: Percent,
+    ) -> Result<Self, ContractError> {
+        Self::validate(price_feed_period, expected_feeders)?;
+        Ok(Config {
+            base_asset,
+            price_config: PriceConfig::new(price_feed_period, expected_feeders),
+        })
     }
 
-    pub fn validate(self) -> Result<Config, ContractError> {
-        if self.expected_feeders == Percent::ZERO || self.expected_feeders > Percent::HUNDRED {
+    fn validate(
+        price_feed_period: Duration,
+        expected_feeders: Percent,
+    ) -> Result<(), ContractError> {
+        if expected_feeders == Percent::ZERO || expected_feeders > Percent::HUNDRED {
             return Err(ContractError::Configuration(
                 "Percent of expected available feeders should be > 0 and <= 1000".to_string(),
             ));
         }
-        if self.price_feed_period == Duration::from_secs(0) {
+        if price_feed_period == Duration::from_secs(0) {
             return Err(ContractError::Configuration(
                 "Price feed period can not be 0".to_string(),
             ));
         }
-        Ok(self)
+        Ok(())
     }
 
     pub fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
@@ -54,8 +61,7 @@ impl Config {
         expected_feeders: Percent,
     ) -> Result<(), ContractError> {
         Self::STORAGE.update(storage, |mut c| -> StdResult<_> {
-            c.price_feed_period = price_feed_period;
-            c.expected_feeders = expected_feeders;
+            c.price_config = PriceConfig::new(price_feed_period, expected_feeders);
             Ok(c)
         })?;
         Ok(())

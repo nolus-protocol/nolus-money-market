@@ -8,14 +8,10 @@ use sdk::{
 use crate::{msg::ConfigResponse, state::config::Config, ContractError};
 
 pub fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, ContractError> {
+    let owner = SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?.into();
     let config = Config::load(storage)?;
 
-    Ok(ConfigResponse {
-        base_asset: config.base_asset,
-        owner: SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?.into(),
-        price_feed_period: config.price_feed_period,
-        expected_feeders: config.expected_feeders,
-    })
+    Ok(ConfigResponse { owner, config })
 }
 
 pub fn try_configure(
@@ -71,7 +67,10 @@ mod tests {
     use crate::{
         contract::{execute, query},
         msg::{ConfigResponse, ExecuteMsg, QueryMsg},
-        state::supported_pairs::{SwapLeg, TreeStore},
+        state::{
+            config::Config,
+            supported_pairs::{SwapLeg, TreeStore},
+        },
         tests::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test},
         ContractError,
     };
@@ -97,6 +96,7 @@ mod tests {
 
     #[test]
     fn configure() {
+        use marketprice::config::Config as PriceConfig;
         let msg = dummy_instantiate_msg(
             Usdc::TICKER.to_string(),
             60,
@@ -109,13 +109,23 @@ mod tests {
             price_feed_period_secs: 33,
             expected_feeders: Percent::from_percent(44),
         };
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let _res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-        // should now be 12
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
-        assert_eq!(Percent::from_percent(44), value.expected_feeders);
-        assert_eq!(Duration::from_secs(33), value.price_feed_period);
+        assert_eq!(
+            ConfigResponse {
+                owner: info.sender,
+                config: Config {
+                    base_asset: Usdc::TICKER.into(),
+                    price_config: PriceConfig::new(
+                        Duration::from_secs(33),
+                        Percent::from_percent(44)
+                    )
+                }
+            },
+            value
+        );
     }
 
     #[test]
