@@ -395,9 +395,9 @@ fn test_config_update() {
             wasm_execute(
                 test_case.oracle.clone().unwrap(),
                 &oracle::msg::ExecuteMsg::UpdateConfig(PriceConfig::new(
-                    Duration::from_secs(60),
                     Percent::from_percent(100),
                     Duration::from_secs(5),
+                    12,
                     Percent::from_percent(75),
                 )),
                 vec![],

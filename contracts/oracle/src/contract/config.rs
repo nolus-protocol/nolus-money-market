@@ -65,9 +65,9 @@ mod tests {
 
         let unauth_info = mock_info("anyone", &coins(2, Nls::TICKER));
         let msg = ExecuteMsg::UpdateConfig(PriceConfig::new(
-            Duration::from_secs(15),
             Percent::from_percent(12),
             Duration::from_secs(5),
+            3,
             Percent::from_percent(88),
         ));
         let _res = execute(deps.as_mut(), mock_env(), unauth_info, msg).unwrap();
@@ -85,9 +85,9 @@ mod tests {
         let (mut deps, info) = setup_test(msg);
 
         let msg = ExecuteMsg::UpdateConfig(PriceConfig::new(
-            Duration::from_secs(33),
             Percent::from_percent(44),
             Duration::from_secs(5),
+            7,
             Percent::from_percent(88),
         ));
         let _res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
@@ -100,9 +100,9 @@ mod tests {
                 config: Config {
                     base_asset: Usdc::TICKER.into(),
                     price_config: PriceConfig::new(
-                        Duration::from_secs(33),
                         Percent::from_percent(44),
                         Duration::from_secs(5),
+                        7,
                         Percent::from_percent(88),
                     )
                 }

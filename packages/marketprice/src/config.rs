@@ -17,6 +17,8 @@ use crate::error::{self, PriceFeedsError};
 pub struct Config {
     min_feeders: Percent,
     sample_period: Duration,
+    samples_number: usize,
+    /// transient property equals to `sample_period` * `samples_number`
     feed_validity: Duration,
     discount_factor: Percent,
 }
@@ -24,19 +26,39 @@ pub struct Config {
 impl Config {
     #[cfg(any(test, feature = "testing"))]
     pub fn new(
-        feed_validity: Duration,
         min_feeders: Percent,
         sample_period: Duration,
+        samples_number: usize,
         discount_factor: Percent,
     ) -> Self {
-        let res = Config {
+        Self::new_private(
+            min_feeders,
+            dbg!(sample_period),
+            dbg!(samples_number),
+            discount_factor,
+        )
+        .unwrap()
+    }
+
+    fn new_private(
+        min_feeders: Percent,
+        sample_period: Duration,
+        samples_number: usize,
+        discount_factor: Percent,
+    ) -> Result<Self, PriceFeedsError> {
+        let feed_validity = sample_period.checked_mul(samples_number);
+        error::config_error_if(
+            feed_validity.is_none(),
+            "Overflow multiplying sample period by samples number",
+        )?;
+        Self {
             min_feeders,
             sample_period,
-            feed_validity,
+            samples_number,
+            feed_validity: feed_validity.expect("'is_none' should have been checked"),
             discount_factor,
-        };
-        debug_assert_eq!(Ok(()), res.invariant_held());
-        res
+        }
+        .check_invariant()
     }
 
     pub fn min_feeders(&self, total: usize) -> usize {
@@ -47,8 +69,8 @@ impl Config {
         self.sample_period
     }
 
-    pub fn feed_validity(&self) -> Duration {
-        self.feed_validity
+    pub fn samples_number(&self) -> usize {
+        self.samples_number
     }
 
     pub fn feed_valid_since(&self, now: Timestamp) -> Timestamp {
@@ -63,15 +85,10 @@ impl Config {
         self.discount_factor
     }
 
-    fn invariant_held(&self) -> Result<(), PriceFeedsError> {
+    fn check_invariant(self) -> Result<Self, PriceFeedsError> {
         error::config_error_if(
             self.min_feeders == Percent::ZERO || self.min_feeders > Percent::HUNDRED,
             "The minumum feeders should be greater than 0 and less or equal to 100%",
-        )?;
-
-        error::config_error_if(
-            self.feed_validity == Duration::default(),
-            "The price feeds validity should be longer than zero",
         )?;
 
         error::config_error_if(
@@ -80,16 +97,19 @@ impl Config {
         )?;
 
         error::config_error_if(
-            self.sample_period > self.feed_validity,
-            "The sample period should not be longer than the feeds validity",
+            self.samples_number == usize::default(),
+            "The price feeds validity should be longer than zero",
         )?;
+
+        debug_assert!(self.feed_validity > Duration::default());
+        debug_assert!(self.sample_period <= self.feed_validity);
 
         error::config_error_if(
             self.discount_factor == Percent::ZERO || self.discount_factor > Percent::HUNDRED,
             "The discounting factor should be greater than 0 and less or equal to 100%",
         )?;
 
-        Ok(())
+        Ok(self)
     }
 }
 
@@ -104,7 +124,7 @@ mod unchecked {
     pub(super) struct Config {
         min_feeders: Percent,
         sample_period_secs: u32,
-        feed_validity_secs: u32,
+        samples_number: usize,
         discount_factor: Percent,
     }
 
@@ -114,12 +134,9 @@ mod unchecked {
                 min_feeders: o.min_feeders,
                 sample_period_secs: expect_u32_secs(
                     o.sample_period,
-                    "Programming error! The feed validity has been increased!",
+                    "Programming error! The sample period has been increased!",
                 ),
-                feed_validity_secs: expect_u32_secs(
-                    o.feed_validity,
-                    "Programming error! The feed validity has been increased!",
-                ),
+                samples_number: o.samples_number,
                 discount_factor: o.discount_factor,
             }
         }
@@ -129,13 +146,12 @@ mod unchecked {
         type Error = PriceFeedsError;
 
         fn try_from(dto: Config) -> Result<Self, Self::Error> {
-            let res = Self {
-                min_feeders: dto.min_feeders,
-                sample_period: Duration::from_secs(dto.sample_period_secs),
-                feed_validity: Duration::from_secs(dto.feed_validity_secs),
-                discount_factor: dto.discount_factor,
-            };
-            res.invariant_held()?;
+            let res = Self::new_private(
+                dto.min_feeders,
+                Duration::from_secs(dto.sample_period_secs),
+                dto.samples_number,
+                dto.discount_factor,
+            )?;
             Ok(res)
         }
     }
@@ -155,9 +171,9 @@ mod test {
     #[test]
     fn feed_valid_since() {
         let c = Config::new(
-            Duration::from_secs(60),
             Percent::from_permille(1),
             Duration::from_secs(5),
+            12,
             Percent::from_permille(1000),
         );
         assert_eq!(
@@ -184,9 +200,9 @@ mod test {
 
     fn min_feders_impl(min_feeders: u16, total: usize, exp: usize) {
         let c = Config::new(
-            Duration::HOUR,
             Percent::from_percent(min_feeders),
             Duration::HOUR,
+            1,
             Percent::from_percent(75),
         );
         assert_eq!(exp, c.min_feeders(total));
@@ -214,7 +230,7 @@ mod test {
         deserialize_fail(0, 10, 42, 22);
         deserialize_fail(1001, 10, 42, 22);
         deserialize_fail(10, 0, 42, 22);
-        deserialize_fail(10, 43, 42, 22);
+        deserialize_fail(10, 43, 0, 22);
         deserialize_fail(10, 0, 0, 22);
         deserialize_fail(10, 43, 42, 0);
         deserialize_fail(10, 43, 42, 1001);
@@ -232,18 +248,24 @@ mod test {
 
     #[test]
     fn serde() {
-        serde_impl(10, 1, 2, 800);
+        serde_impl(10, 1, 1, 800);
+        serde_impl(10, u32::MAX, 1, 800);
         serde_impl(1, 10, 10, 1);
         serde_impl(1, 10, 40, 123);
         serde_impl(1000, 2, 3, 1000);
         serde_impl(351, 13522, 13522, 750);
     }
 
-    fn serde_impl(min_feeders: u32, sample_period: u32, feed_validity: u32, discount_factor: u32) {
+    fn serde_impl(
+        min_feeders: u32,
+        sample_period: u32,
+        samples_number: usize,
+        discount_factor: u32,
+    ) {
         let c = Config::new(
-            Duration::from_secs(feed_validity),
             Percent::from_permille(min_feeders),
             Duration::from_secs(sample_period),
+            samples_number,
             Percent::from_permille(discount_factor),
         );
         assert_eq!(from_slice(&to_vec(&c).unwrap()), Ok(c));
@@ -252,28 +274,28 @@ mod test {
     fn deserialize_pass(
         min_feeders: u32,
         sample_period: u32,
-        feed_validity: u32,
+        samples_number: usize,
         discount_factor: u32,
     ) {
         assert_eq!(
             Config::new(
-                Duration::from_secs(feed_validity),
                 Percent::from_permille(min_feeders),
                 Duration::from_secs(sample_period),
+                samples_number,
                 Percent::from_permille(discount_factor),
             ),
-            deserialize(min_feeders, sample_period, feed_validity, discount_factor).unwrap()
+            deserialize(min_feeders, sample_period, samples_number, discount_factor).unwrap()
         );
     }
 
     fn deserialize_fail(
         min_feeders: u32,
         sample_period: u32,
-        feed_validity: u32,
+        samples_number: usize,
         discount_factor: u32,
     ) {
         assert!(matches!(
-            deserialize(min_feeders, sample_period, feed_validity, discount_factor).unwrap_err(),
+            deserialize(min_feeders, sample_period, samples_number, discount_factor).unwrap_err(),
             StdError::ParseErr { .. }
         ));
     }
@@ -281,11 +303,11 @@ mod test {
     fn deserialize(
         min_feeders: u32,
         sample_period: u32,
-        feed_validity: u32,
+        samples_number: usize,
         discount_factor: u32,
     ) -> Result<Config, StdError> {
         from_slice(
-            format!("{{\"min_feeders\": {min_feeders}, \"sample_period_secs\": {sample_period},\"feed_validity_secs\": {feed_validity}, \"discount_factor\": {discount_factor}}}")
+            format!("{{\"min_feeders\": {min_feeders}, \"sample_period_secs\": {sample_period},\"samples_number\": {samples_number}, \"discount_factor\": {discount_factor}}}")
                 .as_bytes(),
         )
     }

@@ -185,9 +185,9 @@ mod tests {
                 config: Config {
                     base_asset: Usdc::TICKER.into(),
                     price_config: PriceConfig::new(
-                        Duration::from_secs(60),
                         Percent::from_percent(50),
                         Duration::from_secs(60),
+                        1,
                         Percent::from_percent(88),
                     )
                 }

@@ -245,7 +245,8 @@ mod test {
     const FEEDER: &str = "0xifeege";
     const TOTAL_FEEDERS: usize = 1;
     const FEED_VALIDITY: Duration = Duration::from_secs(30);
-    const SAMPLE_PERIOD_SECS: u32 = 5;
+    const SAMPLE_PERIOD_SECS: Duration = Duration::from_secs(5);
+    const SAMPLES_NUMBER: usize = 6;
     const DISCOUNTING_FACTOR: Percent = Percent::from_permille(750);
 
     const NOW: Timestamp = Timestamp::from_seconds(FEED_VALIDITY.secs() * 2);
@@ -383,9 +384,9 @@ mod test {
 
     fn config() -> Config {
         Config::new(
-            FEED_VALIDITY,
             Percent::HUNDRED,
-            Duration::from_secs(SAMPLE_PERIOD_SECS),
+            SAMPLE_PERIOD_SECS,
+            SAMPLES_NUMBER,
             DISCOUNTING_FACTOR,
         )
     }

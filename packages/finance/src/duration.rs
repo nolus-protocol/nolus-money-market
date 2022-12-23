@@ -18,7 +18,6 @@ use crate::{
 
 pub type Units = u64;
 
-/// A more storage and compute optimal version of its counterpart in the std::time.
 /// Designed to represent a timespan between cosmwasm_std::Timestamp-s.
 ///
 /// Implementation note: We use `as` safely for numeric upcasts instead of `from/into`
@@ -82,6 +81,14 @@ impl Duration {
 
     pub const fn secs(&self) -> Units {
         self.millis() / 1000
+    }
+
+    pub fn checked_mul(&self, rhs: usize) -> Option<Self> {
+        if let Ok(rhs_units) = rhs.try_into() {
+            self.nanos().checked_mul(rhs_units).map(Self::from_nanos)
+        } else {
+            None
+        }
     }
 
     #[track_caller]
@@ -252,5 +259,21 @@ mod tests {
     #[test]
     fn year() {
         assert_eq!(D::from_days(365), D::YEAR);
+    }
+
+    #[test]
+    fn checked_mul() {
+        assert_eq!(Some(D::from_secs(10)), D::from_secs(5).checked_mul(2));
+        assert_eq!(Some(D::from_secs(0)), D::from_secs(5).checked_mul(0));
+    }
+
+    #[test]
+    fn checked_mul_overflow() {
+        assert_eq!(None, D::from_nanos(Units::MAX).checked_mul(2));
+        assert_eq!(
+            None,
+            D::from_nanos(Units::MAX / Units::try_from(usize::MAX).unwrap() + 1)
+                .checked_mul(usize::MAX)
+        );
     }
 }

@@ -45,9 +45,9 @@ impl MarketOracleWrapper {
             config: Config {
                 base_asset: BaseC::TICKER.into(),
                 price_config: PriceConfig::new(
-                    Duration::from_secs(60),
                     Percent::from_percent(1),
                     Duration::from_secs(5),
+                    12,
                     Percent::from_percent(75),
                 ),
             },

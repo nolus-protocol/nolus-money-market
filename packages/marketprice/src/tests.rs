@@ -18,9 +18,9 @@ use crate::{
     SpotPrice,
 };
 
-const MINUTE: Duration = Duration::from_secs(60);
 const TOTAL_FEEDERS: usize = 1;
 const SAMPLE_PERIOD_SECS: u32 = 5;
+const SAMPLES_NUMBER: usize = 12;
 const DISCOUNTING_FACTOR: Percent = Percent::from_permille(750);
 
 #[test]
@@ -284,9 +284,9 @@ where
 
 fn config() -> Config {
     Config::new(
-        MINUTE,
         Percent::HUNDRED,
         Duration::from_secs(SAMPLE_PERIOD_SECS),
+        SAMPLES_NUMBER,
         DISCOUNTING_FACTOR,
     )
 }
