@@ -68,7 +68,7 @@ fn try_configure_reward_transfer(
     sender: Addr,
     rewards_dispatcher: Addr,
 ) -> Result<Response, ContractError> {
-    SingleUserAccess::load_and_check_owner_access::<ContractError>(storage, &sender)?;
+    SingleUserAccess::check_owner_access::<ContractError>(storage, &sender)?;
 
     SingleUserAccess::new(
         crate::access_control::REWARDS_DISPATCHER_NAMESPACE,

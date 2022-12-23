@@ -3,7 +3,7 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-pub const CONTRACT_OWNER_NAMESPACE: &str = "contract_owner";
+const CONTRACT_OWNER_NAMESPACE: &str = "contract_owner";
 
 pub struct SingleUserAccess<'r> {
     storage_namespace: &'r str,
@@ -68,7 +68,7 @@ impl SingleUserAccess<'static> {
         Self::load(storage, CONTRACT_OWNER_NAMESPACE)
     }
 
-    pub fn load_and_check_owner_access<E>(storage: &dyn Storage, addr: &Addr) -> Result<(), E>
+    pub fn check_owner_access<E>(storage: &dyn Storage, addr: &Addr) -> Result<(), E>
     where
         StdError: Into<E>,
         Unauthorized: Into<E>,

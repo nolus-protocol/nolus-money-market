@@ -20,7 +20,7 @@ pub fn try_configure(
     price_feed_period: u32,
     expected_feeders: Percent,
 ) -> Result<Response, ContractError> {
-    SingleUserAccess::load_and_check_owner_access::<ContractError>(storage, &info.sender)?;
+    SingleUserAccess::check_owner_access::<ContractError>(storage, &info.sender)?;
 
     //TODO merge the next checks with the code in Config::validate()
     if expected_feeders == Percent::ZERO || expected_feeders > Percent::HUNDRED {

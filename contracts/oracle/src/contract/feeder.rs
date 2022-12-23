@@ -32,7 +32,7 @@ impl Feeders {
         info: MessageInfo,
         address: String,
     ) -> Result<Response, ContractError> {
-        SingleUserAccess::load_and_check_owner_access::<ContractError>(deps.storage, &info.sender)?;
+        SingleUserAccess::check_owner_access::<ContractError>(deps.storage, &info.sender)?;
 
         // check if address is valid
         let f_address = deps.api.addr_validate(&address)?;
@@ -46,7 +46,7 @@ impl Feeders {
         info: MessageInfo,
         address: String,
     ) -> Result<Response, ContractError> {
-        SingleUserAccess::load_and_check_owner_access::<ContractError>(deps.storage, &info.sender)?;
+        SingleUserAccess::check_owner_access::<ContractError>(deps.storage, &info.sender)?;
 
         let f_address = deps.api.addr_validate(&address)?;
 

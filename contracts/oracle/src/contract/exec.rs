@@ -57,7 +57,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
     {
         match self.msg {
             ExecuteMsg::SwapTree { tree } => {
-                SingleUserAccess::load_and_check_owner_access::<ContractError>(
+                SingleUserAccess::check_owner_access::<ContractError>(
                     self.deps.storage,
                     &self.sender,
                 )?;
