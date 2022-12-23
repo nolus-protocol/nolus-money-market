@@ -62,21 +62,18 @@ where
             return Err(PriceFeedsError::NoPrice {});
         }
 
-        // TODO: move to config
-        const SAMPLE_PERIOD: Duration = Duration::from_secs(5);
-        let discount_factor = Percent::from_percent(75);
-        assert!(discount_factor < Percent::HUNDRED);
-        assert!(SAMPLE_PERIOD < config.feed_validity());
-
         let observations = self.valid_observations(config.feed_validity(), at);
         //TODO move to the Config as `valid_since` -> Timestamp
         debug_assert!(Timestamp::default() + config.feed_validity() <= at);
         let validity_period = at - config.feed_validity();
 
-        let samples = sample::from_observations(observations, validity_period, SAMPLE_PERIOD);
+        let samples =
+            sample::from_observations(observations, validity_period, config.sample_period());
+
+        let discount_factor = config.discount_factor();
 
         samples
-            .take((config.feed_validity().nanos() / SAMPLE_PERIOD.nanos()).try_into()?)
+            .take((config.feed_validity().nanos() / config.sample_period().nanos()).try_into()?)
             .map(Sample::into_maybe_price)
             .skip_while(Option::is_none)
             .map(|price| Option::expect(price, "sample prices should keep being present"))
@@ -125,12 +122,19 @@ mod test {
     use super::PriceFeed;
 
     const ONE_FEEDER: usize = 1;
+    const SAMPLE_PERIOD_SECS: u32 = 5;
+    const DISCOUNTING_FACTOR: Percent = Percent::from_permille(750);
 
     #[test]
     fn old_observations() {
         let validity_period = Duration::from_secs(60);
         let block_time = Timestamp::from_seconds(100);
-        let config = Config::new(validity_period, Percent::HUNDRED);
+        let config = Config::new(
+            validity_period,
+            Percent::HUNDRED,
+            Duration::from_secs(SAMPLE_PERIOD_SECS),
+            DISCOUNTING_FACTOR,
+        );
 
         let feeder1 = Addr::unchecked("feeder1");
         let feed1_time = block_time - validity_period;
@@ -170,7 +174,12 @@ mod test {
         let mut feed = PriceFeed::new();
         feed = feed.add_observation(feeder1, feed1_time, feed1_price, validity_period);
 
-        let config = Config::new(validity_period, Percent::HUNDRED);
+        let config = Config::new(
+            validity_period,
+            Percent::HUNDRED,
+            Duration::from_secs(SAMPLE_PERIOD_SECS),
+            DISCOUNTING_FACTOR,
+        );
         assert_eq!(
             Err(PriceFeedsError::NoPrice()),
             feed.calc_price(&config, block_time, ONE_FEEDER + ONE_FEEDER)
@@ -199,7 +208,12 @@ mod test {
         let feed2_price = price(19, 5000);
         feed = feed.add_observation(feeder2, feed2_time, feed2_price, validity_period);
 
-        let config = Config::new(validity_period, Percent::from_percent(50));
+        let config = Config::new(
+            validity_period,
+            Percent::from_percent(50),
+            Duration::from_secs(SAMPLE_PERIOD_SECS),
+            DISCOUNTING_FACTOR,
+        );
         assert_eq!(
             Ok(price(19, 5050)),
             feed.calc_price(&config, feed2_time, ONE_FEEDER + ONE_FEEDER)
@@ -231,7 +245,12 @@ mod test {
     fn ema_price() {
         let validity_period = Duration::from_secs(60);
         let block_time = Timestamp::from_seconds(100);
-        let config = Config::new(validity_period, Percent::HUNDRED);
+        let config = Config::new(
+            validity_period,
+            Percent::HUNDRED,
+            Duration::from_secs(SAMPLE_PERIOD_SECS),
+            DISCOUNTING_FACTOR,
+        );
 
         let s1 = block_time - Duration::from_secs(12);
         let s21 = block_time - Duration::from_secs(7);

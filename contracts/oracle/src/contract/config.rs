@@ -67,6 +67,8 @@ mod tests {
         let msg = ExecuteMsg::UpdateConfig(PriceConfig::new(
             Duration::from_secs(15),
             Percent::from_percent(12),
+            Duration::from_secs(5),
+            Percent::from_percent(88),
         ));
         let _res = execute(deps.as_mut(), mock_env(), unauth_info, msg).unwrap();
     }
@@ -85,6 +87,8 @@ mod tests {
         let msg = ExecuteMsg::UpdateConfig(PriceConfig::new(
             Duration::from_secs(33),
             Percent::from_percent(44),
+            Duration::from_secs(5),
+            Percent::from_percent(88),
         ));
         let _res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
@@ -97,7 +101,9 @@ mod tests {
                     base_asset: Usdc::TICKER.into(),
                     price_config: PriceConfig::new(
                         Duration::from_secs(33),
-                        Percent::from_percent(44)
+                        Percent::from_percent(44),
+                        Duration::from_secs(5),
+                        Percent::from_percent(88),
                     )
                 }
             },

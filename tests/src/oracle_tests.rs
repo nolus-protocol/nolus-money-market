@@ -397,6 +397,8 @@ fn test_config_update() {
                 &oracle::msg::ExecuteMsg::UpdateConfig(PriceConfig::new(
                     Duration::from_secs(60),
                     Percent::from_percent(100),
+                    Duration::from_secs(5),
+                    Percent::from_percent(75),
                 )),
                 vec![],
             )

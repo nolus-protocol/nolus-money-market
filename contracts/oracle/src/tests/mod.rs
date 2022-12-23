@@ -42,6 +42,8 @@ pub(crate) fn dummy_instantiate_msg(
             price_config: PriceConfig::new(
                 Duration::from_secs(price_feed_period_secs),
                 expected_feeders,
+                Duration::from_secs(price_feed_period_secs),
+                Percent::from_percent(88),
             ),
         },
         swap_tree,

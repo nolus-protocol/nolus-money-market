@@ -238,8 +238,11 @@ mod test {
     const FEEDS_NAMESPACE: &str = "feeds";
     const FEEDER: &str = "0xifeege";
     const TOTAL_FEEDERS: usize = 1;
-    const FEED_MAX_AGE: Duration = Duration::from_secs(30);
-    const NOW: Timestamp = Timestamp::from_seconds(FEED_MAX_AGE.secs() * 2);
+    const FEED_VALIDITY: Duration = Duration::from_secs(30);
+    const SAMPLE_PERIOD_SECS: u32 = 5;
+    const DISCOUNTING_FACTOR: Percent = Percent::from_permille(750);
+
+    const NOW: Timestamp = Timestamp::from_seconds(FEED_VALIDITY.secs() * 2);
 
     #[test]
     fn no_feed() {
@@ -373,6 +376,11 @@ mod test {
     }
 
     fn config() -> Config {
-        Config::new(FEED_MAX_AGE, Percent::HUNDRED)
+        Config::new(
+            FEED_VALIDITY,
+            Percent::HUNDRED,
+            Duration::from_secs(SAMPLE_PERIOD_SECS),
+            DISCOUNTING_FACTOR,
+        )
     }
 }
