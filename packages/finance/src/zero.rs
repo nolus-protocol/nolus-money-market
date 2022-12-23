@@ -24,6 +24,6 @@ macro_rules! impl_cw_zero {
     };
 }
 
-impl_zero!(i8, u8, i16, u16, i32, u32, i64, u64, i128, u128);
+impl_zero!(i8, u8, i16, u16, i32, u32, i64, u64, i128, u128, isize, usize);
 
 impl_cw_zero!(Uint64, Uint128, Uint256, Uint512);
