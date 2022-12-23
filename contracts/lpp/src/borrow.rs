@@ -61,16 +61,6 @@ impl InterestRate {
     where
         Lpn: Currency,
     {
-        // UNDO:
-        //   // utilization % / utilization_optimal %
-        //   let utilization_rel = Rational::new(
-        //       total_liability,
-        //       self.utilization_optimal().of(total_liability + balance),
-        //   );
-        //
-        //   self.base_interest_rate()
-        //       + Fraction::<Coin<Lpn>>::of(&utilization_rel, self.addon_optimal_interest_rate())
-
         let utilization = Percent::from_ratio(total_liability, total_liability + balance);
 
         let config = Rational::new(
@@ -176,9 +166,10 @@ mod tests {
                     rate,
                     &(0..=25)
                         .flat_map(|liability| {
-                            // UNDO: (0..=25)
-                            (1..=25)
-                                .map(move |balance| InOut((liability, balance), (base_rate, 1000)))
+                            (0..=25).filter_map(move |balance| {
+                                (liability != 0 || balance != 0)
+                                    .then_some(InOut((liability, balance), (base_rate, 1000)))
+                            })
                         })
                         .collect::<Vec<_>>(),
                 );
@@ -195,7 +186,7 @@ mod tests {
 
                 do_test_calculate(
                     rate,
-                    &(0..=1000)
+                    &(1..=1000)
                         .map(move |balance| InOut((0, balance), (base_rate, 1000)))
                         .collect::<Vec<_>>(),
                 );
@@ -203,8 +194,17 @@ mod tests {
         }
 
         #[test]
-        /// Verifies when optimal utilization rate is equal to zero, result is equal to the base interest rate.
+        /// Verifies when liability and balance are both equal to zero, assertion fails.
+        #[should_panic(expected = "equal to zero")]
         fn test_set_3() {
+            let rate = rate(1000, 1000, 1000);
+
+            do_test_calculate(rate, &[InOut((0, 0), (0, 1))]);
+        }
+
+        #[test]
+        /// Verifies when optimal utilization rate is equal to zero, result is equal to the base interest rate.
+        fn test_set_4() {
             for base_rate in 0..=1000 {
                 for addon_rate in 0..=1000 {
                     let rate = rate(base_rate, 0, addon_rate);
@@ -213,8 +213,8 @@ mod tests {
 
                     do_test_calculate(
                         rate,
-                        &(0..=1000)
-                            .map(move |balance| InOut((0, balance), (base_rate, 1000)))
+                        &(1..=1000)
+                            .map(move |value| InOut((value, value), (base_rate, 1000)))
                             .collect::<Vec<_>>(),
                     );
                 }
@@ -223,7 +223,7 @@ mod tests {
 
         #[test]
         /// Verifies correctness of results against manually calculated, thus verified, set.
-        fn test_set_4() {
+        fn test_set_5() {
             let rate = rate(100, 500, 250);
 
             let set = [
