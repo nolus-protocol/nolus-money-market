@@ -8,7 +8,7 @@ use sdk::{
 use crate::{msg::ConfigResponse, state::config::Config, ContractError};
 
 pub fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, ContractError> {
-    let owner = SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?.into();
+    let owner = SingleUserAccess::load_contract_owner(storage)?.into();
     let config = Config::load(storage)?;
 
     Ok(ConfigResponse { owner, config })
@@ -20,8 +20,7 @@ pub fn try_configure(
     price_feed_period: u32,
     expected_feeders: Percent,
 ) -> Result<Response, ContractError> {
-    SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
-        .check_access(&info.sender)?;
+    SingleUserAccess::load_and_check_owner_access::<ContractError>(storage, &info.sender)?;
 
     //TODO merge the next checks with the code in Config::validate()
     if expected_feeders == Percent::ZERO || expected_feeders > Percent::HUNDRED {

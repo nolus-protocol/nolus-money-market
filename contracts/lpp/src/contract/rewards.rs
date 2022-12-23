@@ -98,12 +98,9 @@ mod test {
         let mut lpp_balance = 0;
         let deposit = 20_000;
 
-        SingleUserAccess::new(
-            crate::access_control::OWNER_NAMESPACE,
-            Addr::unchecked("admin"),
-        )
-        .store(deps.as_mut().storage)
-        .unwrap();
+        SingleUserAccess::new_contract_owner(Addr::unchecked("admin"))
+            .store(deps.as_mut().storage)
+            .unwrap();
 
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,

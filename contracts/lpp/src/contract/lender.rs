@@ -138,12 +138,9 @@ mod test {
         let rest_nlpn = 1000u128;
         let zero = 0u128;
 
-        SingleUserAccess::new(
-            crate::access_control::OWNER_NAMESPACE,
-            Addr::unchecked("admin"),
-        )
-        .store(deps.as_mut().storage)
-        .unwrap();
+        SingleUserAccess::new_contract_owner(Addr::unchecked("admin"))
+            .store(deps.as_mut().storage)
+            .unwrap();
 
         LiquidityPool::<TheCurrency>::store(
             deps.as_mut().storage,

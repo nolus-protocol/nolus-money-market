@@ -22,8 +22,7 @@ impl Profit {
         info: MessageInfo,
         cadence_hours: u16,
     ) -> Result<Response, ContractError> {
-        SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
-            .check_access(&info.sender)?;
+        SingleUserAccess::load_and_check_owner_access::<ContractError>(storage, &info.sender)?;
 
         Config::update(storage, cadence_hours)?;
 

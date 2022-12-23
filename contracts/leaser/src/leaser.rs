@@ -60,8 +60,7 @@ impl Leaser {
         info: MessageInfo,
         params: ConnectionParams,
     ) -> ContractResult<Response> {
-        SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
-            .check_access(&info.sender)?;
+        SingleUserAccess::load_and_check_owner_access::<ContractError>(storage, &info.sender)?;
 
         Config::setup_dex(storage, params)?;
 
@@ -75,8 +74,7 @@ impl Leaser {
         liability: Liability,
         lease_interest_payment: InterestPaymentSpec,
     ) -> ContractResult<Response> {
-        SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
-            .check_access(&info.sender)?;
+        SingleUserAccess::load_and_check_owner_access::<ContractError>(storage, &info.sender)?;
 
         Config::update(
             storage,

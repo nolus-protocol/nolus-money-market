@@ -307,7 +307,7 @@ mod test {
         let lease_code_id = Uint64::new(123);
         let admin = Addr::unchecked("admin");
 
-        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+        SingleUserAccess::new_contract_owner(admin)
             .store(deps.as_mut().storage)
             .unwrap();
 
@@ -339,7 +339,7 @@ mod test {
 
         let lease_code_id = Uint64::new(123);
 
-        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+        SingleUserAccess::new_contract_owner(admin)
             .store(deps.as_mut().storage)
             .unwrap();
 
@@ -393,7 +393,7 @@ mod test {
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
-        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+        SingleUserAccess::new_contract_owner(admin)
             .store(deps.as_mut().storage)
             .unwrap();
 
@@ -487,7 +487,7 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+        SingleUserAccess::new_contract_owner(admin)
             .store(deps.as_mut().storage)
             .unwrap();
 
@@ -514,7 +514,7 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+        SingleUserAccess::new_contract_owner(admin)
             .store(deps.as_mut().storage)
             .unwrap();
 
@@ -541,7 +541,7 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+        SingleUserAccess::new_contract_owner(admin)
             .store(deps.as_mut().storage)
             .unwrap();
 
@@ -602,7 +602,7 @@ mod test {
         let loan = Addr::unchecked("loan");
         let lease_code_id = Uint64::new(123);
 
-        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+        SingleUserAccess::new_contract_owner(admin)
             .store(deps.as_mut().storage)
             .unwrap();
 
@@ -651,7 +651,7 @@ mod test {
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
-        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, admin)
+        SingleUserAccess::new_contract_owner(admin)
             .store(deps.as_mut().storage)
             .unwrap();
 

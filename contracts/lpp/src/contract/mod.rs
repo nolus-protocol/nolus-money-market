@@ -41,8 +41,7 @@ impl<'a> InstantiateWithLpn<'a> {
     {
         set_contract_version(self.deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, self.info.sender)
-            .store(self.deps.storage)?;
+        SingleUserAccess::new_contract_owner(self.info.sender).store(self.deps.storage)?;
 
         LiquidityPool::<LPN>::store(
             self.deps.storage,

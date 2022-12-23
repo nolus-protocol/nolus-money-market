@@ -40,8 +40,7 @@ pub fn instantiate(
     platform::contract::validate_addr(&deps.querier, &msg.timealarms)?;
     platform::contract::validate_addr(&deps.querier, &msg.treasury)?;
 
-    SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, info.sender)
-        .store(deps.storage)?;
+    SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
     SingleUserAccess::new(
         crate::access_control::TIMEALARMS_NAMESPACE,
         msg.timealarms.clone(),
@@ -91,8 +90,7 @@ pub fn try_config(
     info: MessageInfo,
     cadence_hours: u16,
 ) -> Result<Response, ContractError> {
-    SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
-        .check_access(&info.sender)?;
+    SingleUserAccess::load_and_check_owner_access::<ContractError>(storage, &info.sender)?;
 
     Config::update(storage, cadence_hours)?;
 

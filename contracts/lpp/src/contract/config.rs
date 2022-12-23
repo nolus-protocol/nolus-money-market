@@ -14,8 +14,7 @@ pub fn try_update_parameters(
     utilization_optimal: Percent,
     addon_optimal_interest_rate: Percent,
 ) -> Result<Response, ContractError> {
-    SingleUserAccess::load(deps.storage, crate::access_control::OWNER_NAMESPACE)?
-        .check_access(&info.sender)?;
+    SingleUserAccess::load_and_check_owner_access::<ContractError>(deps.storage, &info.sender)?;
 
     let mut config = Config::load(deps.storage)?;
 

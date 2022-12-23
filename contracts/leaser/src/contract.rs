@@ -34,8 +34,7 @@ pub fn instantiate(
     platform::contract::validate_addr(&deps.querier, &msg.market_price_oracle)?;
     platform::contract::validate_addr(&deps.querier, &msg.profit)?;
 
-    SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, info.sender)
-        .store(deps.storage)?;
+    SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
 
     Config::new(msg)?.store(deps.storage)?;
 

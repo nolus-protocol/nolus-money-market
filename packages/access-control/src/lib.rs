@@ -1,7 +1,9 @@
 use sdk::{
-    cosmwasm_std::{Addr, StdResult, Storage},
+    cosmwasm_std::{Addr, StdError, StdResult, Storage},
     cw_storage_plus::Item,
 };
+
+pub const CONTRACT_OWNER_NAMESPACE: &str = "contract_owner";
 
 pub struct SingleUserAccess<'r> {
     storage_namespace: &'r str,
@@ -40,6 +42,39 @@ impl<'r> SingleUserAccess<'r> {
             Err(Unauthorized)
         }
     }
+
+    pub fn load_and_check_access<E>(
+        storage: &dyn Storage,
+        namespace: &'r str,
+        addr: &Addr,
+    ) -> Result<(), E>
+    where
+        StdError: Into<E>,
+        Unauthorized: Into<E>,
+    {
+        Self::load(storage, namespace)
+            .map_err(Into::into)?
+            .check_access(addr)
+            .map_err(|_| Unauthorized.into())
+    }
+}
+
+impl SingleUserAccess<'static> {
+    pub const fn new_contract_owner(address: Addr) -> Self {
+        Self::new(CONTRACT_OWNER_NAMESPACE, address)
+    }
+
+    pub fn load_contract_owner(storage: &dyn Storage) -> StdResult<Self> {
+        Self::load(storage, CONTRACT_OWNER_NAMESPACE)
+    }
+
+    pub fn load_and_check_owner_access<E>(storage: &dyn Storage, addr: &Addr) -> Result<(), E>
+    where
+        StdError: Into<E>,
+        Unauthorized: Into<E>,
+    {
+        Self::load_and_check_access(storage, CONTRACT_OWNER_NAMESPACE, addr)
+    }
 }
 
 impl<'r> From<SingleUserAccess<'r>> for Addr {
@@ -54,8 +89,9 @@ pub struct Unauthorized;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use sdk::cosmwasm_std::testing::MockStorage;
+
+    use super::*;
 
     #[test]
     fn store_load() {

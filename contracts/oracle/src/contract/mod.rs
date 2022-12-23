@@ -79,8 +79,7 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
             ));
         }
 
-        SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, self.owner)
-            .store(self.deps.storage)?;
+        SingleUserAccess::new_contract_owner(self.owner).store(self.deps.storage)?;
 
         Config::new(
             C::TICKER.to_string(),

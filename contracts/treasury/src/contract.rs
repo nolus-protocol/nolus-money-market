@@ -32,8 +32,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-    SingleUserAccess::new(crate::access_control::OWNER_NAMESPACE, info.sender)
-        .store(deps.storage)?;
+    SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
 
     Ok(Response::default())
 }
@@ -69,8 +68,7 @@ fn try_configure_reward_transfer(
     sender: Addr,
     rewards_dispatcher: Addr,
 ) -> Result<Response, ContractError> {
-    SingleUserAccess::load(storage, crate::access_control::OWNER_NAMESPACE)?
-        .check_access(&sender)?;
+    SingleUserAccess::load_and_check_owner_access::<ContractError>(storage, &sender)?;
 
     SingleUserAccess::new(
         crate::access_control::REWARDS_DISPATCHER_NAMESPACE,

@@ -57,8 +57,10 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
     {
         match self.msg {
             ExecuteMsg::SwapTree { tree } => {
-                SingleUserAccess::load(self.deps.storage, crate::access_control::OWNER_NAMESPACE)?
-                    .check_access(&self.sender)?;
+                SingleUserAccess::load_and_check_owner_access::<ContractError>(
+                    self.deps.storage,
+                    &self.sender,
+                )?;
 
                 SupportedPairs::<OracleBase>::new(tree)?
                     .validate_tickers()?
