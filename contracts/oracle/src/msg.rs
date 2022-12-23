@@ -13,10 +13,7 @@ use sdk::{
 };
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(
-    any(test, feature = "testing"),
-    derive(Debug, Clone),
-)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 pub struct InstantiateMsg {
     pub config: Config,
     #[schemars(with = "Vec<SubTree>")]
@@ -85,10 +82,7 @@ pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;
 
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(
-    any(test, feature = "testing"),
-    derive(Debug, Clone),
-)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 pub struct ConfigResponse {
     pub owner: Addr,
     pub config: Config,

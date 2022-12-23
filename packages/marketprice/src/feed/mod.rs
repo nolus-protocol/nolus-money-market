@@ -2,9 +2,7 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    currency::Currency, duration::Duration, fraction::Fraction, percent::Percent, price::Price,
-};
+use finance::{currency::Currency, fraction::Fraction, percent::Percent, price::Price};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{config::Config, error::PriceFeedsError, feed::sample::Sample};
@@ -37,10 +35,10 @@ where
         from: Addr,
         at: Timestamp,
         price: Price<C, QuoteC>,
-        feed_validity: Duration,
+        valid_since: Timestamp,
     ) -> Self {
         self.observations
-            .retain(observation::valid_at(at, feed_validity));
+            .retain(observation::valid_since(valid_since));
 
         self.observations.push(Observation::new(from, at, price));
         self
@@ -58,17 +56,14 @@ where
         at: Timestamp,
         total_feeders: usize,
     ) -> Result<Price<C, QuoteC>, PriceFeedsError> {
-        if !self.has_enough_feeders(config, at, total_feeders) {
+        let valid_since = config.feed_valid_since(at);
+        if !self.has_enough_feeders(valid_since, config, total_feeders) {
             return Err(PriceFeedsError::NoPrice {});
         }
 
-        let observations = self.valid_observations(config.feed_validity(), at);
-        //TODO move to the Config as `valid_since` -> Timestamp
-        debug_assert!(Timestamp::default() + config.feed_validity() <= at);
-        let validity_period = at - config.feed_validity();
+        let observations = self.valid_observations(valid_since);
 
-        let samples =
-            sample::from_observations(observations, validity_period, config.sample_period());
+        let samples = sample::from_observations(observations, valid_since, config.sample_period());
 
         let discount_factor = config.discount_factor();
 
@@ -83,12 +78,12 @@ where
             .ok_or(PriceFeedsError::NoPrice {})
     }
 
-    fn has_enough_feeders(&self, config: &Config, at: Timestamp, total_feeders: usize) -> bool {
-        self.count_unique_feeders(config.feed_validity(), at) >= config.min_feeders(total_feeders)
+    fn has_enough_feeders(&self, since: Timestamp, config: &Config, total_feeders: usize) -> bool {
+        self.count_unique_feeders(since) >= config.min_feeders(total_feeders)
     }
 
-    fn count_unique_feeders(&self, validity: Duration, at: Timestamp) -> usize {
-        self.valid_observations(validity, at)
+    fn count_unique_feeders(&self, since: Timestamp) -> usize {
+        self.valid_observations(since)
             .map(Observation::feeder)
             .collect::<HashSet<_>>()
             .len()
@@ -96,10 +91,9 @@ where
 
     fn valid_observations(
         &self,
-        validity: Duration,
-        at: Timestamp,
+        since: Timestamp,
     ) -> impl Iterator<Item = &Observation<C, QuoteC>> {
-        let mut valid_observations = observation::valid_at(at, validity);
+        let mut valid_observations = observation::valid_since(since);
         self.observations
             .iter()
             .filter(move |&o| valid_observations(o))
@@ -145,7 +139,7 @@ mod test {
             feeder1.clone(),
             feed1_time,
             feed1_price,
-            config.feed_validity(),
+            config.feed_valid_since(feed1_time),
         );
 
         assert_eq!(
@@ -155,7 +149,7 @@ mod test {
 
         let feed2_time = feed1_time + Duration::from_nanos(1);
         let feed2_price = price(19, 5000);
-        feed = feed.add_observation(feeder1, feed2_time, feed2_price, Duration::from_nanos(0));
+        feed = feed.add_observation(feeder1, feed2_time, feed2_price, feed2_time);
         assert_eq!(
             Ok(feed2_price),
             feed.calc_price(&config, block_time, ONE_FEEDER)
@@ -172,7 +166,12 @@ mod test {
         let feed1_price = price(20, 5000);
 
         let mut feed = PriceFeed::new();
-        feed = feed.add_observation(feeder1, feed1_time, feed1_price, validity_period);
+        feed = feed.add_observation(
+            feeder1,
+            feed1_time,
+            feed1_price,
+            block_time - validity_period,
+        );
 
         let config = Config::new(
             validity_period,
@@ -201,12 +200,22 @@ mod test {
         let feed1_price = price(19, 5100);
 
         let mut feed = PriceFeed::new();
-        feed = feed.add_observation(feeder1, feed1_time, feed1_price, validity_period);
+        feed = feed.add_observation(
+            feeder1,
+            feed1_time,
+            feed1_price,
+            feed1_time - validity_period,
+        );
 
         let feeder2 = Addr::unchecked("feeder2");
         let feed2_time = block_time - validity_period + Duration::from_nanos(1);
         let feed2_price = price(19, 5000);
-        feed = feed.add_observation(feeder2, feed2_time, feed2_price, validity_period);
+        feed = feed.add_observation(
+            feeder2,
+            feed2_time,
+            feed2_price,
+            feed2_time - validity_period,
+        );
 
         let config = Config::new(
             validity_period,
@@ -261,21 +270,31 @@ mod test {
         let feeder2 = Addr::unchecked("feeder2");
 
         let mut feed = PriceFeed::new();
-        feed = feed.add_observation(feeder1.clone(), s1, price(19, 5160), config.feed_validity());
+        feed = feed.add_observation(
+            feeder1.clone(),
+            s1,
+            price(19, 5160),
+            s1 - config.feed_validity(),
+        );
         feed = feed.add_observation(
             feeder1.clone(),
             s21,
             price(19, 5500),
-            config.feed_validity(),
+            s21 - config.feed_validity(),
         );
         feed = feed.add_observation(
             feeder1.clone(),
             s22,
             price(19, 5000 + 10),
-            config.feed_validity(),
+            s22 - config.feed_validity(),
         );
-        feed = feed.add_observation(feeder2, s22, price(19, 5000 - 10), config.feed_validity());
-        feed = feed.add_observation(feeder1, s3, price(19, 5000), config.feed_validity());
+        feed = feed.add_observation(
+            feeder2,
+            s22,
+            price(19, 5000 - 10),
+            s22 - config.feed_validity(),
+        );
+        feed = feed.add_observation(feeder1, s3, price(19, 5000), s3 - config.feed_validity());
 
         assert_eq!(
             Ok(price(19, 5010)),

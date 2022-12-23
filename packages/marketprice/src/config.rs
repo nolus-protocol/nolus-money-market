@@ -1,5 +1,8 @@
 use finance::{duration::Duration, fraction::Fraction, percent::Percent};
-use sdk::schemars::{self, JsonSchema};
+use sdk::{
+    cosmwasm_std::Timestamp,
+    schemars::{self, JsonSchema},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::error::{self, PriceFeedsError};
@@ -45,8 +48,15 @@ impl Config {
     }
 
     pub fn feed_validity(&self) -> Duration {
-        // TODO make sure the feed_validity >= last block time
         self.feed_validity
+    }
+
+    pub fn feed_valid_since(&self, now: Timestamp) -> Timestamp {
+        if Timestamp::default() + self.feed_validity <= now {
+            now - self.feed_validity
+        } else {
+            Timestamp::default()
+        }
     }
 
     pub fn discount_factor(&self) -> Percent {
@@ -138,9 +148,39 @@ mod unchecked {
 #[cfg(test)]
 mod test {
     use finance::{duration::Duration, percent::Percent};
-    use sdk::cosmwasm_std::{from_slice, to_vec, StdError};
+    use sdk::cosmwasm_std::{from_slice, to_vec, StdError, Timestamp};
 
     use crate::config::Config;
+
+    #[test]
+    fn feed_valid_since() {
+        let c = Config::new(
+            Duration::from_secs(60),
+            Percent::from_permille(1),
+            Duration::from_secs(5),
+            Percent::from_permille(1000),
+        );
+        assert_eq!(
+            Timestamp::from_seconds(0),
+            c.feed_valid_since(Timestamp::from_seconds(0))
+        );
+        assert_eq!(
+            Timestamp::from_seconds(0),
+            c.feed_valid_since(Timestamp::from_seconds(40))
+        );
+        assert_eq!(
+            Timestamp::from_seconds(0),
+            c.feed_valid_since(Timestamp::from_seconds(60))
+        );
+        assert_eq!(
+            Timestamp::from_seconds(1),
+            c.feed_valid_since(Timestamp::from_seconds(61))
+        );
+        assert_eq!(
+            Timestamp::from_seconds(40),
+            c.feed_valid_since(Timestamp::from_seconds(100))
+        );
+    }
 
     fn min_feders_impl(min_feeders: u16, total: usize, exp: usize) {
         let c = Config::new(

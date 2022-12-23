@@ -1,4 +1,4 @@
-use finance::{currency::Currency, duration::Duration, price::Price};
+use finance::{currency::Currency, price::Price};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 use serde::{Deserialize, Serialize};
 
@@ -15,18 +15,12 @@ where
 }
 
 #[track_caller]
-pub fn valid_at<C, QuoteC>(
-    at: Timestamp,
-    validity: Duration,
-) -> impl FnMut(&Observation<C, QuoteC>) -> bool
+pub fn valid_since<C, QuoteC>(since: Timestamp) -> impl FnMut(&Observation<C, QuoteC>) -> bool
 where
     C: Currency,
     QuoteC: Currency,
 {
-    move |o: &Observation<_, _>| {
-        debug_assert!(o.seen(at));
-        Duration::between(o.time, at) < validity
-    }
+    move |o: &Observation<_, _>| o.time > since
 }
 
 impl<C, QuoteC> Observation<C, QuoteC>

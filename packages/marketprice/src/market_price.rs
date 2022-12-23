@@ -1,6 +1,5 @@
 use finance::{
     currency::{self, AnyVisitor, Currency, Symbol, SymbolOwned},
-    duration::Duration,
     price::{
         dto::{with_price, WithPrice},
         Price,
@@ -43,7 +42,13 @@ impl<'m> PriceFeeds<'m> {
                     price.quote().ticker().to_string(),
                 ),
                 |feed: Option<PriceFeedBin>| -> Result<PriceFeedBin, PriceFeedsError> {
-                    add_observation(feed, sender_raw, at, price, self.config.feed_validity())
+                    add_observation(
+                        feed,
+                        sender_raw,
+                        at,
+                        price,
+                        self.config.feed_valid_since(at),
+                    )
                 },
             )?;
         }
@@ -180,13 +185,14 @@ fn add_observation(
     from: &Addr,
     at: Timestamp,
     price: &SpotPrice,
-    feed_validity: Duration,
+    valid_since: Timestamp,
 ) -> Result<PriceFeedBin, PriceFeedsError> {
+    debug_assert!(valid_since < at);
     struct AddObservation<'a> {
         feed_bin: Option<PriceFeedBin>,
         from: &'a Addr,
         at: Timestamp,
-        feed_validity: Duration,
+        valid_since: Timestamp,
     }
 
     impl<'a> WithPrice for AddObservation<'a> {
@@ -200,7 +206,7 @@ fn add_observation(
         {
             load_feed(self.feed_bin).and_then(|feed| {
                 let feed =
-                    feed.add_observation(self.from.clone(), self.at, price, self.feed_validity);
+                    feed.add_observation(self.from.clone(), self.at, price, self.valid_since);
                 postcard::to_allocvec(&feed).map_err(Into::into)
             })
         }
@@ -211,7 +217,7 @@ fn add_observation(
             feed_bin,
             from,
             at,
-            feed_validity,
+            valid_since,
         },
     )
 }
