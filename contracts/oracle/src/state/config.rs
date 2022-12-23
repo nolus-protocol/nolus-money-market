@@ -8,7 +8,8 @@ use sdk::{
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 pub struct Config {
     pub base_asset: SymbolOwned,
     pub price_config: PriceConfig,

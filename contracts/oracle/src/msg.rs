@@ -12,7 +12,11 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(
+    any(test, feature = "testing"),
+    derive(Debug, Clone),
+)]
 pub struct InstantiateMsg {
     pub config: Config,
     #[schemars(with = "Vec<SubTree>")]
@@ -80,7 +84,11 @@ pub enum QueryMsg {
 pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;
 
 // We define a custom struct for each query response
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(
+    any(test, feature = "testing"),
+    derive(Debug, Clone),
+)]
 pub struct ConfigResponse {
     pub owner: Addr,
     pub config: Config,

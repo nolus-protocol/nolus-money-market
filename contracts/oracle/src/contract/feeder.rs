@@ -11,7 +11,7 @@ use sdk::{
 
 use crate::{state::config::Config, ContractError};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct Feeders {
     config: Config,
 }
