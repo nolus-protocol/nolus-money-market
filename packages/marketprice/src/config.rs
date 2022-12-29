@@ -17,7 +17,10 @@ use crate::error::{self, PriceFeedsError};
 pub struct Config {
     min_feeders: Percent,
     sample_period: Duration,
-    samples_number: usize,
+    /// The number of samples to take into account on price calculation
+    ///
+    /// It is not `usize` due to a generated float instruction in the Wasm32 output.
+    samples_number: u16,
     /// transient property equals to `sample_period` * `samples_number`
     feed_validity: Duration,
     discount_factor: Percent,
@@ -28,7 +31,7 @@ impl Config {
     pub fn new(
         min_feeders: Percent,
         sample_period: Duration,
-        samples_number: usize,
+        samples_number: u16,
         discount_factor: Percent,
     ) -> Self {
         Self::new_private(
@@ -43,22 +46,23 @@ impl Config {
     fn new_private(
         min_feeders: Percent,
         sample_period: Duration,
-        samples_number: usize,
+        samples_number: u16,
         discount_factor: Percent,
     ) -> Result<Self, PriceFeedsError> {
-        let feed_validity = sample_period.checked_mul(samples_number);
-        error::config_error_if(
-            feed_validity.is_none(),
-            "Overflow multiplying sample period by samples number",
-        )?;
-        Self {
-            min_feeders,
-            sample_period,
-            samples_number,
-            feed_validity: feed_validity.expect("'is_none' should have been checked"),
-            discount_factor,
+        if let Some(feed_validity) = sample_period.checked_mul(samples_number) {
+            Self {
+                min_feeders,
+                sample_period,
+                samples_number,
+                feed_validity,
+                discount_factor,
+            }
+            .check_invariant()
+        } else {
+            Err(PriceFeedsError::Configuration(
+                "Overflow multiplying sample period by samples number".into(),
+            ))
         }
-        .check_invariant()
     }
 
     pub fn min_feeders(&self, total: usize) -> usize {
@@ -69,7 +73,7 @@ impl Config {
         self.sample_period
     }
 
-    pub fn samples_number(&self) -> usize {
+    pub fn samples_number(&self) -> u16 {
         self.samples_number
     }
 
@@ -97,7 +101,7 @@ impl Config {
         )?;
 
         error::config_error_if(
-            self.samples_number == usize::default(),
+            self.samples_number == u16::default(),
             "The price feeds validity should be longer than zero",
         )?;
 
@@ -124,7 +128,7 @@ mod unchecked {
     pub(super) struct Config {
         min_feeders: Percent,
         sample_period_secs: u32,
-        samples_number: usize,
+        samples_number: u16,
         discount_factor: Percent,
     }
 
@@ -256,12 +260,7 @@ mod test {
         serde_impl(351, 13522, 13522, 750);
     }
 
-    fn serde_impl(
-        min_feeders: u32,
-        sample_period: u32,
-        samples_number: usize,
-        discount_factor: u32,
-    ) {
+    fn serde_impl(min_feeders: u32, sample_period: u32, samples_number: u16, discount_factor: u32) {
         let c = Config::new(
             Percent::from_permille(min_feeders),
             Duration::from_secs(sample_period),
@@ -274,7 +273,7 @@ mod test {
     fn deserialize_pass(
         min_feeders: u32,
         sample_period: u32,
-        samples_number: usize,
+        samples_number: u16,
         discount_factor: u32,
     ) {
         assert_eq!(
@@ -291,7 +290,7 @@ mod test {
     fn deserialize_fail(
         min_feeders: u32,
         sample_period: u32,
-        samples_number: usize,
+        samples_number: u16,
         discount_factor: u32,
     ) {
         assert!(matches!(
@@ -303,7 +302,7 @@ mod test {
     fn deserialize(
         min_feeders: u32,
         sample_period: u32,
-        samples_number: usize,
+        samples_number: u16,
         discount_factor: u32,
     ) -> Result<Config, StdError> {
         from_slice(

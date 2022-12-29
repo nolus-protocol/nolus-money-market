@@ -67,7 +67,7 @@ where
 
         let discount_factor = config.discount_factor();
 
-        let samples_nb = config.samples_number();
+        let samples_nb = config.samples_number().try_into()?;
 
         samples
             .take(samples_nb)
@@ -119,7 +119,7 @@ mod test {
 
     const ONE_FEEDER: usize = 1;
     const SAMPLE_PERIOD: Duration = Duration::from_secs(5);
-    const SAMPLES_NUMBER: usize = 12;
+    const SAMPLES_NUMBER: u16 = 12;
     const VALIDITY: Duration = Duration::from_secs(60);
     const DISCOUNTING_FACTOR: Percent = Percent::from_permille(750);
 

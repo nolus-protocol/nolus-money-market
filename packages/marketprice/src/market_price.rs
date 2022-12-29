@@ -246,7 +246,7 @@ mod test {
     const TOTAL_FEEDERS: usize = 1;
     const FEED_VALIDITY: Duration = Duration::from_secs(30);
     const SAMPLE_PERIOD_SECS: Duration = Duration::from_secs(5);
-    const SAMPLES_NUMBER: usize = 6;
+    const SAMPLES_NUMBER: u16 = 6;
     const DISCOUNTING_FACTOR: Percent = Percent::from_permille(750);
 
     const NOW: Timestamp = Timestamp::from_seconds(FEED_VALIDITY.secs() * 2);

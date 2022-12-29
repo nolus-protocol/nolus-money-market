@@ -20,7 +20,7 @@ use crate::{
 
 const TOTAL_FEEDERS: usize = 1;
 const SAMPLE_PERIOD_SECS: u32 = 5;
-const SAMPLES_NUMBER: usize = 12;
+const SAMPLES_NUMBER: u16 = 12;
 const DISCOUNTING_FACTOR: Percent = Percent::from_permille(750);
 
 #[test]
