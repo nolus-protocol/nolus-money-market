@@ -14,6 +14,7 @@ use crate::{
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
     ratio::Rational,
+    zero::Zero,
 };
 
 pub type Units = u64;
@@ -99,7 +100,7 @@ impl Duration {
     pub fn into_slice_per_ratio<U>(self, amount: U, annual_amount: U) -> Self
     where
         Self: Fractionable<U>,
-        U: Default + PartialEq + Copy,
+        U: Zero + Debug + PartialEq + Copy,
     {
         Rational::new(amount, annual_amount).of(self)
     }

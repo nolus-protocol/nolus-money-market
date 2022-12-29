@@ -1,6 +1,7 @@
 use sdk::cosmwasm_std::{Uint128, Uint256, Uint512, Uint64};
 
 pub trait Zero {
+    //TODO rename to ZERO
     const VALUE: Self;
 }
 

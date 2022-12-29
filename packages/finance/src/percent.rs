@@ -15,6 +15,7 @@ use crate::{
     fraction::Fraction,
     fractionable::Fractionable,
     ratio::{Ratio, Rational},
+    zero::Zero,
 };
 
 pub type Units = u32;
@@ -41,7 +42,7 @@ impl Percent {
 
     pub fn from_ratio<FractionUnit>(nominator: FractionUnit, denominator: FractionUnit) -> Self
     where
-        FractionUnit: Default + Copy + PartialEq,
+        FractionUnit: Zero + Debug + Copy + PartialEq,
         Self: Fractionable<FractionUnit>,
     {
         Rational::new(nominator, denominator).of(Percent::HUNDRED)
@@ -64,6 +65,10 @@ impl Percent {
             .map(Self::from_permille)
             .ok_or_else(|| OverflowError::new(OverflowOperation::Sub, self, other).into())
     }
+}
+
+impl Zero for Percent {
+    const VALUE: Self = Self::ZERO;
 }
 
 impl Fraction<Units> for Percent {

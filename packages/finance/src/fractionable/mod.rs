@@ -47,12 +47,6 @@ where
     {
         // TODO debug_assert_eq!(T::BITS * 2, D::BITS);
 
-        // TODO
-        //  debug_assert!(
-        //      ratio.total() != Zero::VALUE,
-        //      "Ratio's total is equal to zero!"
-        //  );
-
         if ratio.parts() == ratio.total() {
             self
         } else {

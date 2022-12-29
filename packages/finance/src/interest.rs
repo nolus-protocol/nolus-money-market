@@ -8,6 +8,7 @@ use crate::{
     duration::Duration,
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
+    zero::Zero,
 };
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -87,18 +88,23 @@ where
     /// equal to the payment minus the returned change.
     pub fn pay<P>(self, principal: P, payment: P, by: Timestamp) -> (Self, P)
     where
-        P: Default + Copy + Ord + Sub<Output = P> + Fractionable<U> + TimeSliceable,
+        P: Zero + Debug + Copy + Ord + Sub<Output = P> + Fractionable<U> + TimeSliceable,
         Duration: Fractionable<P>,
     {
         let by_within_period = self.move_within_period(by);
         let interest_due_per_period = self.interest_by(principal, by_within_period);
 
-        let period = Duration::between(self.start, by_within_period);
-        let repayment = cmp::min(interest_due_per_period, payment);
-        let period_paid_for = period.into_slice_per_ratio(repayment, interest_due_per_period);
+        if interest_due_per_period == P::VALUE {
+            (self, payment)
+        } else {
+            let repayment = cmp::min(interest_due_per_period, payment);
 
-        let change = payment - repayment;
-        (self.shift_start(period_paid_for), change)
+            let period = Duration::between(self.start, by_within_period);
+            let period_paid_for = period.into_slice_per_ratio(repayment, interest_due_per_period);
+
+            let change = payment - repayment;
+            (self.shift_start(period_paid_for), change)
+        }
     }
 
     fn move_within_period(&self, t: Timestamp) -> Timestamp {
@@ -123,43 +129,139 @@ mod tests {
     use sdk::cosmwasm_std::Timestamp;
 
     use crate::{
-        coin::Coin,
-        duration::Duration,
-        fraction::Fraction,
-        percent::Percent,
-        ratio::Rational,
-        test::currency::{Nls, Usdc},
+        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, ratio::Rational,
+        test::currency::Usdc, zero::Zero,
     };
 
     use super::InterestPeriod;
 
+    type MyCoin = Coin<Usdc>;
+    const PERIOD_START: Timestamp = Timestamp::from_nanos(0);
+    const PERIOD_LENGTH: Duration = Duration::YEAR;
+
     #[test]
-    fn pay() {
+    fn pay_zero_principal() {
         let p = Percent::from_percent(10);
-        let principal = Coin::<Usdc>::new(1000);
-        let payment = Coin::<Usdc>::new(200);
-        let ip = InterestPeriod::with_interest(p)
-            .from(Timestamp::from_nanos(0))
-            .spanning(Duration::YEAR);
-        let (ip_res, change) = ip.pay(principal, payment, ip.till());
-        let ip_exp = InterestPeriod::with_interest(p)
-            .from(ip.till())
-            .spanning(Duration::from_secs(0));
-        assert_eq!(ip_exp, ip_res);
-        assert_eq!(payment - p.of(principal), change);
+        let principal = MyCoin::VALUE;
+        let payment = MyCoin::new(300);
+        let by = PERIOD_START + PERIOD_LENGTH;
+        pay_impl(
+            p,
+            principal,
+            payment,
+            by,
+            PERIOD_START,
+            PERIOD_LENGTH,
+            payment,
+        );
+    }
+
+    #[test]
+    fn pay_zero_payment() {
+        let p = Percent::from_percent(10);
+        let principal = MyCoin::new(1000);
+        let payment = MyCoin::VALUE;
+        let by = PERIOD_START + PERIOD_LENGTH;
+        pay_impl(
+            p,
+            principal,
+            payment,
+            by,
+            PERIOD_START,
+            PERIOD_LENGTH,
+            payment,
+        );
+    }
+
+    #[test]
+    fn pay_outside_period() {
+        let p = Percent::from_percent(10);
+        let principal = MyCoin::new(1000);
+        let payment = MyCoin::new(345);
+        let exp_change = payment - p.of(principal);
+        pay_impl(
+            p,
+            principal,
+            payment,
+            PERIOD_START + PERIOD_LENGTH + PERIOD_LENGTH,
+            PERIOD_START + PERIOD_LENGTH,
+            Duration::from_nanos(0),
+            exp_change,
+        );
+
+        pay_impl(
+            p,
+            principal,
+            payment,
+            PERIOD_START,
+            PERIOD_START,
+            PERIOD_LENGTH,
+            payment,
+        );
+    }
+
+    #[test]
+    fn pay_all_due() {
+        let p = Percent::from_percent(10);
+        let principal = MyCoin::new(1000);
+        let payment = MyCoin::new(300);
+        let by = PERIOD_START + PERIOD_LENGTH;
+        let exp_change = payment - p.of(principal);
+        pay_impl(
+            p,
+            principal,
+            payment,
+            by,
+            by,
+            Duration::from_nanos(0),
+            exp_change,
+        );
     }
 
     #[test]
     fn interest() {
-        type MyCoin = Coin<Nls>;
         let whole = MyCoin::new(1001);
         let part = MyCoin::new(125);
         let r = Rational::new(part, whole);
 
-        let res = InterestPeriod::<MyCoin, Rational<MyCoin>>::with_interest(r)
-            .from(Timestamp::from_nanos(0))
-            .spanning(Duration::YEAR)
-            .interest(whole);
+        let res = ip::<MyCoin, _>(r).interest(whole);
         assert_eq!(part, res);
+    }
+
+    #[test]
+    fn interest_zero() {
+        let principal = MyCoin::new(1001);
+        let r = Rational::new(MyCoin::VALUE, principal);
+
+        let res = ip::<MyCoin, _>(r).interest(principal);
+        assert_eq!(MyCoin::VALUE, res);
+    }
+
+    fn pay_impl(
+        p: Percent,
+        principal: MyCoin,
+        payment: MyCoin,
+        by: Timestamp,
+        exp_start: Timestamp,
+        exp_length: Duration,
+        exp_change: MyCoin,
+    ) {
+        let ip = ip(p);
+        let (ip_res, change) = ip.pay(principal, payment, by);
+        let ip_exp = InterestPeriod::with_interest(p)
+            .from(exp_start)
+            .spanning(exp_length);
+        assert_eq!(ip_exp, ip_res);
+        assert_eq!(exp_change, change);
+    }
+
+    fn ip<U, F>(fraction: F) -> InterestPeriod<U, F>
+    where
+        U: PartialEq,
+        F: Copy + Fraction<U>,
+    {
+        InterestPeriod::with_interest(fraction)
+            .from(PERIOD_START)
+            .spanning(PERIOD_LENGTH)
     }
 }

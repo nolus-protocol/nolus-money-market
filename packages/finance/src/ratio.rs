@@ -1,8 +1,10 @@
+use std::fmt::Debug;
+
 use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
-use crate::{fraction::Fraction, fractionable::Fractionable};
+use crate::{fraction::Fraction, fractionable::Fractionable, zero::Zero};
 
 // TODO review whether it may gets simpler if extend Fraction
 pub trait Ratio<U> {
@@ -17,8 +19,14 @@ pub struct Rational<U> {
     denominator: U,
 }
 
-impl<U> Rational<U> {
-    pub const fn new(nominator: U, denominator: U) -> Self {
+impl<U> Rational<U>
+where
+    U: Zero + Debug + PartialEq<U>,
+{
+    #[track_caller]
+    pub fn new(nominator: U, denominator: U) -> Self {
+        debug_assert_ne!(denominator, Zero::VALUE);
+
         Self {
             nominator,
             denominator,
@@ -41,7 +49,7 @@ where
 
 impl<U, T> Ratio<U> for Rational<T>
 where
-    T: Default + Copy + PartialEq + Into<U>,
+    T: Zero + Copy + PartialEq + Into<U>,
 {
     fn parts(&self) -> U {
         self.nominator.into()
