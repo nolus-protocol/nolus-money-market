@@ -68,7 +68,7 @@ impl Percent {
 }
 
 impl Zero for Percent {
-    const VALUE: Self = Self::ZERO;
+    const ZERO: Self = Self::ZERO;
 }
 
 impl Fraction<Units> for Percent {

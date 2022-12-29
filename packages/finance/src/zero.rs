@@ -1,15 +1,14 @@
 use sdk::cosmwasm_std::{Uint128, Uint256, Uint512, Uint64};
 
 pub trait Zero {
-    //TODO rename to ZERO
-    const VALUE: Self;
+    const ZERO: Self;
 }
 
 macro_rules! impl_zero {
     ($($type: ty),+ $(,)?) => {
         $(
             impl Zero for $type {
-                const VALUE: Self = 0;
+                const ZERO: Self = 0;
             }
         )+
     };
@@ -19,7 +18,7 @@ macro_rules! impl_cw_zero {
     ($($type: ty),+ $(,)?) => {
         $(
             impl Zero for $type {
-                const VALUE: Self = Self::zero();
+                const ZERO: Self = Self::zero();
             }
         )+
     };

@@ -94,7 +94,7 @@ where
         let by_within_period = self.move_within_period(by);
         let interest_due_per_period = self.interest_by(principal, by_within_period);
 
-        if interest_due_per_period == P::VALUE {
+        if interest_due_per_period == P::ZERO {
             (self, payment)
         } else {
             let repayment = cmp::min(interest_due_per_period, payment);
@@ -142,7 +142,7 @@ mod tests {
     #[test]
     fn pay_zero_principal() {
         let p = Percent::from_percent(10);
-        let principal = MyCoin::VALUE;
+        let principal = MyCoin::ZERO;
         let payment = MyCoin::new(300);
         let by = PERIOD_START + PERIOD_LENGTH;
         pay_impl(
@@ -160,7 +160,7 @@ mod tests {
     fn pay_zero_payment() {
         let p = Percent::from_percent(10);
         let principal = MyCoin::new(1000);
-        let payment = MyCoin::VALUE;
+        let payment = MyCoin::ZERO;
         let by = PERIOD_START + PERIOD_LENGTH;
         pay_impl(
             p,
@@ -231,10 +231,10 @@ mod tests {
     #[test]
     fn interest_zero() {
         let principal = MyCoin::new(1001);
-        let r = Rational::new(MyCoin::VALUE, principal);
+        let r = Rational::new(MyCoin::ZERO, principal);
 
         let res = ip::<MyCoin, _>(r).interest(principal);
-        assert_eq!(MyCoin::VALUE, res);
+        assert_eq!(MyCoin::ZERO, res);
     }
 
     fn pay_impl(

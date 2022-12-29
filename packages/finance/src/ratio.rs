@@ -25,7 +25,7 @@ where
 {
     #[track_caller]
     pub fn new(nominator: U, denominator: U) -> Self {
-        debug_assert_ne!(denominator, Zero::VALUE);
+        debug_assert_ne!(denominator, Zero::ZERO);
 
         Self {
             nominator,

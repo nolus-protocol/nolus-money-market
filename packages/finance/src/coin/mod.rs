@@ -77,8 +77,8 @@ impl<C> Zero for Coin<C>
 where
     C: Currency,
 {
-    const VALUE: Self = Self {
-        amount: Zero::VALUE,
+    const ZERO: Self = Self {
+        amount: Zero::ZERO,
         ticker: PhantomData,
     };
 }
