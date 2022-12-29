@@ -1,10 +1,11 @@
+use cosmwasm_std::ensure;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::native::Nls;
 use finance::{
     coin::Coin,
     currency::Currency,
-    price::{self, Price},
+    price::{self, total_of, Price},
 };
 use sdk::{
     cosmwasm_std::{Addr, DepsMut, StdResult, Storage},
@@ -68,6 +69,11 @@ impl Deposit {
             return Err(ContractError::ZeroDepositFunds);
         }
 
+        ensure!(
+            price.get() >= total_of(Coin::new(1)).is(Coin::new(1)),
+            ContractError::NlpnPriceError
+        );
+
         let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
         self.update_rewards(&globals);
 
@@ -76,7 +82,10 @@ impl Deposit {
 
         Self::DEPOSITS.save(storage, self.addr.clone(), &self.data)?;
 
-        globals.balance_nlpn += deposited_nlpn;
+        globals.balance_nlpn = globals
+            .balance_nlpn
+            .checked_add(deposited_nlpn)
+            .ok_or(ContractError::OverflowError)?;
 
         Self::GLOBALS.save(storage, &globals)?;
 

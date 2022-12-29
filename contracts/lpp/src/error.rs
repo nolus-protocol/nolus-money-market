@@ -1,5 +1,3 @@
-use std::num::TryFromIntError;
-
 use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError;
@@ -60,8 +58,11 @@ pub enum ContractError {
     #[error("[Lpp] Insufficient balance")]
     InsufficientBalance,
 
-    #[error("[Lpp] [TryFromIntError] {0}")]
-    OverflowError(#[from] TryFromIntError),
+    #[error("[Lpp] Balance overflow")]
+    OverflowError,
+
+    #[error("[Lpp] programming error: nlpn price less than 1")]
+    NlpnPriceError,
 
     #[error("[Lpp] Custom Error val: {val:?}")]
     CustomError { val: String },
