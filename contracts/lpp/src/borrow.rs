@@ -61,7 +61,12 @@ impl InterestRate {
     where
         Lpn: Currency,
     {
-        let utilization = Percent::from_ratio(total_liability, total_liability + balance);
+        let total_value = total_liability + balance;
+        let utilization = if total_value.is_zero() {
+            Percent::ZERO
+        } else {
+            Percent::from_ratio(total_liability, total_value)
+        };
 
         let config = Rational::new(
             self.addon_optimal_interest_rate.units(),
@@ -161,13 +166,11 @@ mod tests {
         .is_none());
     }
 
-    /// Test suit specifically for verifying correctness of [`InterestRate::calculate`](InterestRate::calculate).
+    /// Test suit specifically for verifying correctness of [`InterestRate::calculate`](InterestRate::calculate).cargo fmt
     mod calculate {
         use finance::{
             coin::{Amount, Coin},
-            fraction::Fraction,
-            percent::Percent,
-            ratio::Rational,
+            percent::{Percent, Units},
         };
 
         use crate::{borrow::InterestRate, nlpn::NLpn};
@@ -192,12 +195,12 @@ mod tests {
             .expect("Rates should be less or equal to a thousand!")
         }
 
-        fn ratio(n: u128, d: u128) -> Percent {
-            Fraction::<Coin<NLpn>>::of(&Rational::new(n, d), Percent::HUNDRED)
+        fn ratio(n: Units, d: Units) -> Percent {
+            Percent::from_ratio(n, d)
         }
 
         #[derive(Copy, Clone)]
-        struct InOut((Amount, Amount), (u128, u128));
+        struct InOut((Amount, Amount), (Units, Units));
 
         fn in_out(InOut((l, b), (n, d)): InOut) -> ((Coin<NLpn>, Coin<NLpn>), Percent) {
             ((Coin::new(l), Coin::new(b)), ratio(n, d))
@@ -219,8 +222,6 @@ mod tests {
             for base_rate in 0..=1000 {
                 let rate = rate(base_rate, 1000, 0);
 
-                let base_rate = base_rate.into();
-
                 do_test_calculate(
                     rate,
                     &(0..=25)
@@ -241,8 +242,6 @@ mod tests {
             for base_rate in 0..=1000 {
                 let rate = rate(base_rate, 1000, 1000);
 
-                let base_rate = base_rate.into();
-
                 do_test_calculate(
                     rate,
                     &(1..=1000)
@@ -253,13 +252,11 @@ mod tests {
         }
 
         #[test]
-        /// Verifies when liability and balance are both equal to zero, assertion fails.
-        #[should_panic(expected = "equal to zero")]
-        #[ignore = "Related to TODO in `finance`"]
-        fn test_set_3() {
+        fn test_corner_set() {
             let rate = rate(1000, 1000, 1000);
 
-            do_test_calculate(rate, &[InOut((0, 0), (0, 1))]);
+            let set = [InOut((0, 0), (1, 1)), InOut((10, 0), (2, 1))];
+            do_test_calculate(rate, &set);
         }
 
         #[test]
