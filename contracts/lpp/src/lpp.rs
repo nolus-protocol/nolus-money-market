@@ -124,6 +124,11 @@ where
             price::total_of(balance_nlpn).is(self.total_lpn(deps, env)? - received)
         };
 
+        debug_assert!(
+            price >= Config::initial_derivative_price(),
+            "[Lpp] programming error: nlpn price less than initial"
+        );
+
         Ok(NTokenPrice { price })
     }
 

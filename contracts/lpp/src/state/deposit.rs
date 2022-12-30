@@ -11,7 +11,7 @@ use sdk::{
     cw_storage_plus::{Item, Map},
 };
 
-use crate::{error::ContractError, lpp::NTokenPrice, nlpn::NLpn, state::Config};
+use crate::{error::ContractError, lpp::NTokenPrice, nlpn::NLpn};
 
 #[derive(Debug)]
 pub struct Deposit {
@@ -67,11 +67,6 @@ impl Deposit {
         if amount_lpn.is_zero() {
             return Err(ContractError::ZeroDepositFunds);
         }
-
-        debug_assert!(
-            price.get() >= Config::initial_derivative_price(),
-            "[Lpp] programming error: nlpn price less than 1"
-        );
 
         let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
         self.update_rewards(&globals);
