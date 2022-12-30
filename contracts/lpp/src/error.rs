@@ -61,9 +61,6 @@ pub enum ContractError {
     #[error("[Lpp] Balance overflow")]
     OverflowError,
 
-    #[error("[Lpp] programming error: nlpn price less than 1")]
-    NlpnPriceError,
-
     #[error("[Lpp] Custom Error val: {val:?}")]
     CustomError { val: String },
     // Add any other custom errors you like here.

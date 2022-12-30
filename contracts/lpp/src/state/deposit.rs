@@ -1,18 +1,17 @@
-use cosmwasm_std::ensure;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::native::Nls;
 use finance::{
     coin::Coin,
     currency::Currency,
-    price::{self, total_of, Price},
+    price::{self, Price},
 };
 use sdk::{
     cosmwasm_std::{Addr, DepsMut, StdResult, Storage},
     cw_storage_plus::{Item, Map},
 };
 
-use crate::{error::ContractError, lpp::NTokenPrice, nlpn::NLpn};
+use crate::{error::ContractError, lpp::NTokenPrice, nlpn::NLpn, state::Config};
 
 #[derive(Debug)]
 pub struct Deposit {
@@ -69,9 +68,9 @@ impl Deposit {
             return Err(ContractError::ZeroDepositFunds);
         }
 
-        ensure!(
-            price.get() >= total_of(Coin::new(1)).is(Coin::new(1)),
-            ContractError::NlpnPriceError
+        debug_assert!(
+            price.get() >= Config::initial_derivative_price(),
+            "[Lpp] programming error: nlpn price less than 1"
         );
 
         let mut globals = Self::GLOBALS.may_load(storage)?.unwrap_or_default();
