@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{self, PriceFeedsError};
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
+#[derive(Clone, Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 #[serde(try_from = "unchecked::Config")]
 #[serde(into = "unchecked::Config")]
 pub struct Config {
