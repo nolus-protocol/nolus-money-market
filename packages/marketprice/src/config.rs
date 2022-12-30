@@ -8,12 +8,9 @@ use serde::{Deserialize, Serialize};
 use crate::error::{self, PriceFeedsError};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(
-    any(test, feature = "testing"),
-    derive(Debug, Clone),
-    serde(into = "unchecked::Config")
-)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(try_from = "unchecked::Config")]
+#[serde(into = "unchecked::Config")]
 pub struct Config {
     min_feeders: Percent,
     sample_period: Duration,
