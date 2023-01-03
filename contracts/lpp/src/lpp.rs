@@ -396,7 +396,7 @@ mod test {
             (20 * 1000 * (lpp_balance - amount) / lpp_balance / 700 + 70) as Units,
         );
 
-        let mut deps = testing::mock_dependencies_with_balance(&[coin_cw(lpp_balance as u128)]);
+        let mut deps = testing::mock_dependencies_with_balance(&[coin_cw(lpp_balance)]);
         let mut env = testing::mock_env();
         let admin = Addr::unchecked("admin");
         let loan = Addr::unchecked("loan");
