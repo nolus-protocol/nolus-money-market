@@ -7,10 +7,10 @@ use crate::{
         LocalChainCurrencyMapper,
     },
     error::{Error, Result},
-    ica::Batch as IcaBatch,
+    ica::{Batch as IcaBatch, HostAccount},
 };
 use finance::{coin::CoinDTO, currency::Group};
-use sdk::cosmwasm_std::{Addr, Coin as CwCoin, IbcMsg, IbcTimeout, Timestamp};
+use sdk::cosmwasm_std::{Coin as CwCoin, IbcMsg, IbcTimeout, Timestamp};
 
 use crate::batch::Batch;
 
@@ -20,7 +20,7 @@ pub type DexChainSender<'c> = Sender<'c, DexMapper>;
 
 pub struct Sender<'c, CM> {
     channel: &'c str,
-    receiver: &'c Addr,
+    receiver: HostAccount,
     timeout: Timestamp,
     currency_mapper: PhantomData<CM>,
     amounts: Vec<CwCoin>,
@@ -30,7 +30,7 @@ impl<'c, CM> Sender<'c, CM>
 where
     CM: CurrencyMapper<'c>,
 {
-    pub fn new(channel: &'c str, receiver: &'c Addr, timeout: Timestamp) -> Self {
+    pub fn new(channel: &'c str, receiver: HostAccount, timeout: Timestamp) -> Self {
         Self {
             channel,
             receiver,
@@ -55,13 +55,13 @@ where
         let timeout = self.timeout;
         self.amounts
             .into_iter()
-            .map(move |amount| new_msg(channel, receiver, amount, timeout))
+            .map(move |amount| new_msg(channel, receiver.clone(), amount, timeout))
     }
 }
 
 const IBC_TRANSFER_TYPE: &str = "/ibc.applications.transfer.v2.FungibleTokenPacketData";
 
-fn new_msg(channel: &str, receiver: &Addr, amount: CwCoin, timeout: Timestamp) -> IbcMsg {
+fn new_msg(channel: &str, receiver: HostAccount, amount: CwCoin, timeout: Timestamp) -> IbcMsg {
     IbcMsg::Transfer {
         channel_id: channel.into(),
         to_address: receiver.into(),
@@ -105,22 +105,22 @@ mod test {
         coin::Coin,
         test::currency::{Dai, Nls, TestExtraCurrencies, Usdc},
     };
-    use sdk::cosmwasm_std::{Addr, Timestamp};
+    use sdk::cosmwasm_std::Timestamp;
 
     use crate::{
         bank_ibc::{new_msg, Sender, IBC_TRANSFER_TYPE},
         batch::Batch,
         coin_legacy::{self},
         denom::{dex::DexMapper, local::BankMapper},
-        ica::Batch as IcaBatch,
+        ica::{Batch as IcaBatch, HostAccount},
     };
 
     #[test]
     fn local_send() {
         let channel = "channel-0";
-        let receiver = Addr::unchecked("receiver");
+        let receiver: HostAccount = receiver();
         let timeout = Timestamp::from_seconds(100);
-        let mut sender = Sender::<BankMapper>::new(channel, &receiver, timeout);
+        let mut sender = Sender::<BankMapper>::new(channel, receiver.clone(), timeout);
 
         let coin1: Coin<Dai> = 234214.into();
         let coin2: Coin<Usdc> = 234214.into();
@@ -131,13 +131,13 @@ mod test {
             let mut batch = Batch::default();
             batch.schedule_execute_no_reply(new_msg(
                 channel,
-                &receiver,
+                receiver.clone(),
                 coin_legacy::to_cosmwasm_impl(coin1),
                 timeout,
             ));
             batch.schedule_execute_no_reply(new_msg(
                 channel,
-                &receiver,
+                receiver,
                 coin_legacy::to_cosmwasm_impl(coin2),
                 timeout,
             ));
@@ -148,9 +148,9 @@ mod test {
     #[test]
     fn remote_send() {
         let channel = "channel-1045";
-        let receiver = Addr::unchecked("receiver");
+        let receiver = receiver();
         let timeout = Timestamp::from_seconds(100);
-        let mut sender = Sender::<DexMapper>::new(channel, &receiver, timeout);
+        let mut sender = Sender::<DexMapper>::new(channel, receiver.clone(), timeout);
 
         let coin1: Coin<Nls> = 63.into();
         let coin2: Coin<Usdc> = 2.into();
@@ -164,7 +164,7 @@ mod test {
                     IBC_TRANSFER_TYPE,
                     new_msg(
                         channel,
-                        &receiver,
+                        receiver.clone(),
                         coin_legacy::to_cosmwasm_on_network::<TestExtraCurrencies, DexMapper>(
                             &coin1.into(),
                         )
@@ -178,7 +178,7 @@ mod test {
                     IBC_TRANSFER_TYPE,
                     new_msg(
                         channel,
-                        &receiver,
+                        receiver,
                         coin_legacy::to_cosmwasm_on_network::<TestExtraCurrencies, DexMapper>(
                             &coin2.into(),
                         )
@@ -189,5 +189,9 @@ mod test {
                 .unwrap();
             Ok(batch)
         });
+    }
+
+    fn receiver() -> HostAccount {
+        String::from("receiver").try_into().unwrap()
     }
 }

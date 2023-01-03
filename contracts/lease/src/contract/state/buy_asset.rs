@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use cosmwasm_std::Addr;
 use currency::lease::Osmo;
 use serde::{Deserialize, Serialize};
 
@@ -10,7 +9,7 @@ use oracle::stub::OracleRef;
 use platform::{
     self,
     batch::Batch as LocalBatch,
-    ica::{self, Batch},
+    ica::{self, Batch, HostAccount},
 };
 use sdk::{
     cosmwasm_std::{DepsMut, Env},
@@ -31,7 +30,7 @@ pub struct BuyAsset {
     form: NewLeaseForm,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    dex_account: Addr,
+    dex_account: HostAccount,
     deps: (LppLenderRef, OracleRef),
 }
 
@@ -42,15 +41,15 @@ impl BuyAsset {
         form: NewLeaseForm,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        dex_account: Addr,
+        dex_account: HostAccount,
         deps: (LppLenderRef, OracleRef),
     ) -> ContractResult<(LocalBatch, Self)> {
         // TODO introduce 'fn swap_path' on the Oracle stub
         let swap_path = vec![];
         let mut batch = Batch::default();
         // TODO apply nls_swap_fee on the downpayment only!
-        trx::exact_amount_in(&mut batch, &dex_account, &downpayment, &swap_path)?;
-        trx::exact_amount_in(&mut batch, &dex_account, &loan.principal, &swap_path)?;
+        trx::exact_amount_in(&mut batch, dex_account.clone(), &downpayment, &swap_path)?;
+        trx::exact_amount_in(&mut batch, dex_account.clone(), &loan.principal, &swap_path)?;
         let local_batch =
             ica::submit_transaction(&form.dex.connection_id, batch, "memo", ICA_TRX_TIMEOUT);
 

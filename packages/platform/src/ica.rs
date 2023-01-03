@@ -1,9 +1,9 @@
 use finance::duration::Duration;
 use sdk::{
-    cosmwasm_std::{to_binary, Addr, Api},
+    cosmwasm_std::to_binary,
     neutron_sdk::bindings::{msg::NeutronMsg, types::ProtobufAny},
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     batch::Batch as LocalBatch,
@@ -15,6 +15,28 @@ use self::impl_::OpenAckVersion;
 /// Identifier of the ICA account opened by a lease
 /// It is unique for a lease and allows the support of multiple accounts per lease
 const ICA_ACCOUNT_ID: &str = "0";
+
+/// ICA Host Account
+///
+/// Holds the address on the ICA host network
+#[derive(Clone, Serialize, Deserialize)]
+pub struct HostAccount(String);
+impl TryFrom<String> for HostAccount {
+    type Error = Error;
+    fn try_from(addr: String) -> Result<Self> {
+        if addr.is_empty() {
+            Err(Error::InvalidICAHostAccount())
+        } else {
+            Ok(Self(addr))
+        }
+    }
+}
+
+impl From<HostAccount> for String {
+    fn from(account: HostAccount) -> Self {
+        account.0
+    }
+}
 
 pub fn register_account<C>(connection: C) -> LocalBatch
 where
@@ -28,9 +50,9 @@ where
     batch
 }
 
-pub fn parse_register_response(api: &dyn Api, response: &str) -> Result<Addr> {
+pub fn parse_register_response(response: &str) -> Result<HostAccount> {
     let open_ack = serde_json_wasm::from_str::<OpenAckVersion>(response)?;
-    api.addr_validate(&open_ack.address).map_err(Error::from)
+    open_ack.address.try_into()
 }
 
 pub fn submit_transaction<C, M>(

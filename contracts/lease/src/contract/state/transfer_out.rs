@@ -1,13 +1,13 @@
 use std::fmt::Display;
 
-use cosmwasm_std::{Addr, Timestamp};
+use cosmwasm_std::Timestamp;
 use currency::payment::PaymentGroup;
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use platform::{bank_ibc::LocalChainSender, batch::Batch};
+use platform::{bank_ibc::LocalChainSender, batch::Batch, ica::HostAccount};
 use sdk::{
     cosmwasm_std::{DepsMut, Env},
     neutron_sdk::sudo::msg::SudoMsg,
@@ -26,7 +26,7 @@ pub struct TransferOut {
     form: NewLeaseForm,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    dex_account: Addr,
+    dex_account: HostAccount,
     deps: (LppLenderRef, OracleRef),
 }
 
@@ -37,13 +37,13 @@ impl TransferOut {
         form: NewLeaseForm,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        dex_account: Addr,
+        dex_account: HostAccount,
         deps: (LppLenderRef, OracleRef),
         now: Timestamp,
     ) -> ContractResult<(Batch, Self)> {
         let mut ibc_sender = LocalChainSender::new(
             &form.dex.transfer_channel.local_endpoint,
-            &dex_account,
+            dex_account.clone(),
             now + ICA_TRANSFER_TIMEOUT,
         );
         // TODO apply nls_swap_fee on the downpayment only!

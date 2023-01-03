@@ -3,8 +3,12 @@ use finance::{
     currency::{self, Symbol},
 };
 use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountIn, SwapAmountInRoute};
-use platform::{coin_legacy, denom::dex::DexMapper, ica::Batch};
-use sdk::cosmwasm_std::{Addr, Coin as CwCoin};
+use platform::{
+    coin_legacy,
+    denom::dex::DexMapper,
+    ica::{Batch, HostAccount},
+};
+use sdk::cosmwasm_std::Coin as CwCoin;
 
 use crate::{
     error::{Error, Result},
@@ -15,7 +19,7 @@ type SwapCoin = CoinDTO<SwapGroup>;
 
 pub fn exact_amount_in(
     batch: &mut Batch,
-    sender: &Addr,
+    sender: HostAccount,
     token_in: &SwapCoin,
     swap_path: &SwapPath,
 ) -> Result<()> {

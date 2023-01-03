@@ -26,7 +26,10 @@ pub enum Error {
     #[error("[Platform] [Std] {0}")]
     CosmWasmError(#[from] StdError),
 
-    #[error("[Lease] [Deserialization] {0}")]
+    #[error("[ICA] Invalid ICA host account")]
+    InvalidICAHostAccount(),
+
+    #[error("[ICA] [Deserialization] {0}")]
     Deserialization(#[from] serde_json_wasm::de::Error),
 }
 

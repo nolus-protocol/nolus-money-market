@@ -44,7 +44,7 @@ impl OpenIcaAccount {
 }
 
 impl Controller for OpenIcaAccount {
-    fn sudo(self, deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
+    fn sudo(self, _deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::OpenAck {
                 port_id: _,
@@ -52,7 +52,7 @@ impl Controller for OpenIcaAccount {
                 counterparty_channel_id: _,
                 counterparty_version,
             } => {
-                let dex_account = ica::parse_register_response(deps.api, &counterparty_version)?;
+                let dex_account = ica::parse_register_response(&counterparty_version)?;
 
                 let (batch, next_state) = TransferOut::new(
                     self.form,
