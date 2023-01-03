@@ -12,7 +12,7 @@ default:
   # use specific tag here in order to
   # 1) be able to control the build, and
   # 2) update to a newer version. With "latest" and the default '-if-not-present' Docker executor policy that is not possible.
-  image: "rust:1.65"
+  image: "rust:1.66"
 
 .version_build:
   rules:
@@ -74,7 +74,7 @@ build-and-optimization:cargo:
       --mount type=volume,source=rustup_dir_cache,target=/usr/local/rustup
       --mount type=volume,source=cargo_dir_cache,target=/usr/local/cargo
       --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry
-      cosmwasm/workspace-optimizer:0.12.10
+      cosmwasm/workspace-optimizer:0.12.11
     - find artifacts/ -size +800k | wc -l | sh -c 'read input; if !test "$input" = "0"; then exit 1; fi'
     - sudo cp scripts/deploy-contracts-genesis.sh artifacts/
   artifacts:
