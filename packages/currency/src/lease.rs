@@ -1,11 +1,31 @@
-use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
 
+use sdk::schemars::{self, JsonSchema};
 use finance::currency::{AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 
 use crate::SingleVisitorAdapter;
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize)]
+macro_rules! define_currency {
+    ($(($ident:ident, $ticker:ident)),*) => {
+        $(
+            #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+            pub struct $ident {}
+
+            impl Currency for $ident {
+                const TICKER: SymbolStatic = ::core::stringify!($ticker);
+
+                const BANK_SYMBOL: SymbolStatic = $crate::constants::$ticker.bank;
+
+                const DEX_SYMBOL: SymbolStatic = $crate::constants::$ticker.dex;
+            }
+        )*
+    };
+}
+
+#[cfg(test)]
+define_currency!((Atom1, ATOM1));
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
 pub struct Atom {}
 impl Currency for Atom {
     const TICKER: SymbolStatic = "ATOM";
