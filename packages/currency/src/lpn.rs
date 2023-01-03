@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use sdk::schemars::{self, JsonSchema};
 use finance::currency::{
     self, AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic,
 };
+use sdk::schemars::{self, JsonSchema};
 
 use crate::{define_currency, define_symbol, SingleVisitorAdapter};
 

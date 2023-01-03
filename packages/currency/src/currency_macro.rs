@@ -8,7 +8,18 @@ macro_rules! define_currency {
         $ident:ident,
         $ticker:path $(,)?
     ) => {
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, $crate::define::Serialize, $crate::define::Deserialize)]
+        #[derive(
+            Debug,
+            Clone,
+            Copy,
+            PartialEq,
+            Eq,
+            PartialOrd,
+            Ord,
+            Default,
+            $crate::define::Serialize,
+            $crate::define::Deserialize,
+        )]
         pub struct $ident {}
 
         impl $crate::currency_macro::Currency for $ident {
