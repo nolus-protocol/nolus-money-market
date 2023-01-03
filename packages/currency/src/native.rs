@@ -1,4 +1,4 @@
-use crate::{define_currency, define_symbol};
+use crate::{currency_macro::schemars, define_currency, define_symbol};
 
 define_symbol! {
     NLS {

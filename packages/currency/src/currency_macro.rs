@@ -1,6 +1,7 @@
-use serde::{Deserialize, Serialize};
+pub use serde::{Deserialize, Serialize};
 
-use finance::currency::{Currency, SymbolStatic};
+pub use finance::currency::{Currency, SymbolStatic};
+pub use sdk::schemars::{self, JsonSchema};
 
 #[macro_export]
 macro_rules! define_currency {
@@ -17,17 +18,18 @@ macro_rules! define_currency {
             PartialOrd,
             Ord,
             Default,
-            $crate::define::Serialize,
-            $crate::define::Deserialize,
+            $crate::currency_macro::Serialize,
+            $crate::currency_macro::Deserialize,
+            $crate::currency_macro::JsonSchema,
         )]
         pub struct $ident {}
 
         impl $crate::currency_macro::Currency for $ident {
-            const TICKER: SymbolStatic = ::core::stringify!($ticker);
+            const TICKER: $crate::currency_macro::SymbolStatic = ::core::stringify!($ticker);
 
-            const BANK_SYMBOL: SymbolStatic = $ticker.bank;
+            const BANK_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.bank;
 
-            const DEX_SYMBOL: SymbolStatic = $ticker.dex;
+            const DEX_SYMBOL: $crate::currency_macro::SymbolStatic = $ticker.dex;
         }
     };
 }
