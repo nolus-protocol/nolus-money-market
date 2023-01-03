@@ -1,7 +1,9 @@
-use finance::currency::{AnyVisitor, Currency, SingleVisitor};
 use serde::{de::DeserializeOwned, Serialize};
 
-mod constants;
+use finance::currency::{AnyVisitor, Currency, SingleVisitor};
+
+mod symbols_macro;
+mod currency_macro;
 pub mod lease;
 pub mod lpn;
 pub mod native;
