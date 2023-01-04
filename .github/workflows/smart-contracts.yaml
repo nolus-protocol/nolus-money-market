@@ -1,0 +1,33 @@
+name: Smart Contracts
+run-name: "Building smart contracts by ${{ github.actor }}"
+
+on:
+  workflow_run:
+    workflows:
+      - "General Rust Workflow"
+    types:
+      - "completed"
+
+env:
+  CARGO_TERM_COLOR: "always"
+
+jobs:
+  strict-linting:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - name: "Running linter"
+        run: "sh ./lint.sh"
+  check-wasm:
+    runs-on: "ubuntu-latest"
+    needs:
+      - "strict-linting"
+    steps:
+      - name: "Installing cargo-workspaces"
+        run: "cargo install cargo-workspaces"
+      - name: "Installing cosmwasm-check"
+        run: "cargo install cosmwasm-check"
+      - name: "Building WASM binaries"
+        run: "cargo workspaces exec cargo build --target wasm32-unknown-unknown"
+      - name: "Checking WASM binaries"
+        run: "cosmwasm-check --available-capabilities staking,stargate,cosmwasm_1_1,iterator,neutron ./target/wasm32-unknown-unknown/debug/*.wasm"
