@@ -1,7 +1,7 @@
 use std::{
     fmt::{Debug, Display, Formatter},
     marker::PhantomData,
-    ops::{Add, AddAssign, Div, Mul, Sub, SubAssign},
+    ops::{Add, AddAssign, Div, Sub, SubAssign},
     result::Result as StdResult,
 };
 
@@ -56,6 +56,15 @@ where
     }
 
     #[track_caller]
+    pub fn checked_mul(self, rhs: Amount) -> Option<Self> {
+        let may_amount = self.amount.checked_mul(rhs);
+        may_amount.map(|amount| Self {
+            amount,
+            ticker: self.ticker,
+        })
+    }
+
+    #[track_caller]
     pub(super) fn into_coprime_with<OtherC>(self, other: Coin<OtherC>) -> (Self, Coin<OtherC>)
     where
         OtherC: Currency,
@@ -92,7 +101,7 @@ where
     #[track_caller]
     fn add(self, rhs: Coin<C>) -> Self::Output {
         self.checked_add(rhs)
-            .expect("should not overflow with real data")
+            .expect("addition should not overflow with real data")
     }
 }
 
@@ -128,21 +137,6 @@ where
     #[track_caller]
     fn sub_assign(&mut self, rhs: Coin<C>) {
         self.amount -= rhs.amount;
-    }
-}
-
-impl<C> Mul<Amount> for Coin<C>
-where
-    C: Currency,
-{
-    type Output = Self;
-
-    #[track_caller]
-    fn mul(self, rhs: Amount) -> Self::Output {
-        Self::Output {
-            amount: self.amount * rhs,
-            ticker: self.ticker,
-        }
     }
 }
 
@@ -267,6 +261,26 @@ mod test {
     #[should_panic = "overflow with real data"]
     fn add_panic() {
         let _ = usdc(Amount::MAX) + usdc(1);
+    }
+
+    #[test]
+    fn checked_mul() {
+        let amount1 = 10;
+        let amount2 = 20;
+
+        assert_eq!(
+            Some(usdc(amount1 * amount2)),
+            usdc(amount1).checked_mul(amount2)
+        );
+
+        assert_eq!(Some(usdc(Amount::MAX)), usdc(Amount::MAX).checked_mul(1));
+
+        assert_eq!(
+            Some(usdc(Amount::MAX)),
+            usdc(Amount::MAX / 5).checked_mul(5)
+        );
+
+        assert_eq!(None, usdc(Amount::MAX / 5).checked_mul(5 + 1));
     }
 
     #[test]

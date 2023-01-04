@@ -134,8 +134,8 @@ where
     }
 
     fn checked_add(self, rhs: Self) -> Option<Self> {
-        // let b1 = b / gcd(b, d), and d1 = d / gcd(b, d), then
-        // a / b + c / d = (a * d1 + c * b1) / (b1 * d1 * gcd(b, d))
+        // let a1 = a / gcd(a, c), and c1 = c / gcd(a, c), then
+        // b / a + d / c = (b * c1 + d * a1) / (a1 * c1 * gcd(a, c))
         // taking into account that Price is like amount_quote/amount
         let (a1, c1) = self.amount.into_coprime_with(rhs.amount);
         debug_assert_eq!(0, Amount::from(self.amount) % Amount::from(a1));
@@ -143,10 +143,17 @@ where
         let gcd: Amount = (self.amount / Amount::from(a1)).into();
         debug_assert_eq!(gcd, Amount::from(rhs.amount / Amount::from(c1)));
 
-        let may_amount_quote =
-            (self.amount_quote * Amount::from(c1)).checked_add(rhs.amount_quote * Amount::from(a1));
-        let amount = a1 * c1.into() * gcd;
-        may_amount_quote.map(|amount_quote| Self::new(amount, amount_quote))
+        let may_b_c1 = self.amount_quote.checked_mul(c1.into());
+        let may_d_a1 = rhs.amount_quote.checked_mul(a1.into());
+        let may_amount_quote = may_b_c1
+            .zip(may_d_a1)
+            .and_then(|(b_c1, d_a1)| b_c1.checked_add(d_a1));
+        let may_amount = a1
+            .checked_mul(c1.into())
+            .and_then(|a1_c1| a1_c1.checked_mul(gcd));
+        may_amount_quote
+            .zip(may_amount)
+            .map(|(amount_quote, amount)| Self::new(amount, amount_quote))
     }
 
     /// Add two prices rounding each of them to 1.10-18, simmilarly to
