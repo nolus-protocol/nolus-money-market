@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use cosmwasm_std::QuerierWrapper;
 use currency::lease::Osmo;
 use serde::{Deserialize, Serialize};
 
@@ -54,38 +55,41 @@ impl BuyAsset {
         }
     }
 
-    pub(super) fn enter_state(&self) -> ContractResult<LocalBatch> {
-        // querier: &QuerierWrapper,
-        // deps.1.execute(cmd, querier)
-        let swap_path = vec![];
+    pub(super) fn enter_state(&self, querier: &QuerierWrapper) -> ContractResult<LocalBatch> {
         let mut batch = Batch::default();
         // TODO apply nls_swap_fee on the downpayment only!
-        trx::exact_amount_in(
-            &mut batch,
-            self.dex_account.clone(),
-            &self.downpayment,
-            &swap_path,
-        )?;
-        trx::exact_amount_in(
-            &mut batch,
-            self.dex_account.clone(),
-            &self.loan.principal,
-            &swap_path,
-        )?;
+        self.add_swap_trx(&self.downpayment, querier, &mut batch)?;
+        self.add_swap_trx(&self.loan.principal, querier, &mut batch)?;
         let local_batch =
             ica::submit_transaction(&self.form.dex.connection_id, batch, "memo", ICA_TRX_TIMEOUT);
 
         Ok(local_batch)
+    }
+
+    fn add_swap_trx(
+        &self,
+        coin: &DownpaymentCoin,
+        querier: &QuerierWrapper,
+        batch: &mut Batch,
+    ) -> ContractResult<()> {
+        let swap_path =
+            self.deps
+                .1
+                .swap_path(coin.ticker().into(), self.form.currency.clone(), querier)?;
+        trx::exact_amount_in(batch, self.dex_account.clone(), coin, &swap_path)?;
+        Ok(())
     }
 }
 
 impl Controller for BuyAsset {
     fn sudo(self, deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
-            SudoMsg::Response {
-                request: _,
-                data: _,
-            } => {
+            SudoMsg::Response { request: _, data } => {
+                deps.api.debug("!!!!!!!!!!       SWAP Result        !!!!!!!!!");
+                deps.api.debug(
+                    std::str::from_utf8(data.as_slice())
+                        .expect("the data should be a valid string"),
+                );
                 // TODO transfer (downpayment - transferred_and_swapped), i.e. the nls_swap_fee to the profit
                 // TODO parse the response to obtain the lease amount
                 let amount =

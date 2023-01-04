@@ -35,8 +35,6 @@ where
         C: Currency;
 
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()>;
-
-    fn swap_path(&self, from: SymbolOwned, to: SymbolOwned) -> Result<Vec<SwapTarget>>;
 }
 
 pub trait WithOracle<OracleBase>
@@ -92,6 +90,19 @@ impl OracleRef {
             }
             .into())
         }
+    }
+
+    pub fn swap_path(
+        &self,
+        from: SymbolOwned,
+        to: SymbolOwned,
+        querier: &QuerierWrapper,
+    ) -> Result<Vec<SwapTarget>> {
+        let msg = QueryMsg::SwapPath { from, to };
+
+        querier
+            .query_wasm_smart(self.addr.clone(), &msg)
+            .map_err(ContractError::from)
     }
 
     fn into_stub<'a, OracleBase>(self, querier: &'a QuerierWrapper) -> OracleStub<'a, OracleBase> {
@@ -166,14 +177,6 @@ where
         )?);
 
         Ok(())
-    }
-
-    fn swap_path(&self, from: SymbolOwned, to: SymbolOwned) -> Result<Vec<SwapTarget>> {
-        let msg = QueryMsg::SwapPath { from, to };
-
-        self.querier
-            .query_wasm_smart(self.addr().clone(), &msg)
-            .map_err(ContractError::from)
     }
 }
 

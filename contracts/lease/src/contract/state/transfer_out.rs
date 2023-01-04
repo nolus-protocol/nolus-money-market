@@ -1,7 +1,6 @@
 use std::fmt::Display;
 
 use cosmwasm_std::Timestamp;
-use currency::payment::PaymentGroup;
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
@@ -56,15 +55,15 @@ impl TransferOut {
             now + ICA_TRANSFER_TIMEOUT,
         );
         // TODO apply nls_swap_fee on the downpayment only!
-        ibc_sender.send::<PaymentGroup>(&self.downpayment)?;
-        ibc_sender.send::<PaymentGroup>(&self.loan.principal)?;
+        ibc_sender.send(&self.downpayment)?;
+        ibc_sender.send(&self.loan.principal)?;
 
         Ok(ibc_sender.into())
     }
 }
 
 impl Controller for TransferOut {
-    fn sudo(self, _deps: &mut DepsMut, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
+    fn sudo(self, deps: &mut DepsMut, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response {
                 request: _,
@@ -77,7 +76,7 @@ impl Controller for TransferOut {
                     self.dex_account,
                     self.deps,
                 );
-                let batch = next_state.enter_state()?;
+                let batch = next_state.enter_state(&deps.querier)?;
                 Ok(Response::from(batch, next_state))
             }
             SudoMsg::Timeout { request: _ } => todo!(),
