@@ -1,7 +1,7 @@
 use std::{
     fmt::{Debug, Display, Formatter},
     marker::PhantomData,
-    ops::{Add, AddAssign, Div, Sub, SubAssign},
+    ops::{Add, AddAssign, Sub, SubAssign},
     result::Result as StdResult,
 };
 
@@ -43,7 +43,7 @@ where
     }
 
     pub fn is_zero(&self) -> bool {
-        self.amount == Amount::default()
+        self.amount == Zero::ZERO
     }
 
     #[track_caller]
@@ -58,6 +58,15 @@ where
     #[track_caller]
     pub fn checked_mul(self, rhs: Amount) -> Option<Self> {
         let may_amount = self.amount.checked_mul(rhs);
+        may_amount.map(|amount| Self {
+            amount,
+            ticker: self.ticker,
+        })
+    }
+
+    #[track_caller]
+    pub fn checked_div(self, rhs: Amount) -> Option<Self> {
+        let may_amount = self.amount.checked_div(rhs);
         may_amount.map(|amount| Self {
             amount,
             ticker: self.ticker,
@@ -137,21 +146,6 @@ where
     #[track_caller]
     fn sub_assign(&mut self, rhs: Coin<C>) {
         self.amount -= rhs.amount;
-    }
-}
-
-impl<C> Div<Amount> for Coin<C>
-where
-    C: Currency,
-{
-    type Output = Self;
-
-    #[track_caller]
-    fn div(self, rhs: Amount) -> Self::Output {
-        Self::Output {
-            amount: self.amount / rhs,
-            ticker: self.ticker,
-        }
     }
 }
 
@@ -291,15 +285,15 @@ mod test {
     }
 
     #[test]
-    fn div() {
-        assert_eq!(usdc(18 / 3), usdc(18) / 3);
-        assert_eq!(usdc(0), usdc(0) / 5);
-        assert_eq!(usdc(17 / 3), usdc(17) / 3);
+    fn checked_div() {
+        assert_eq!(Some(usdc(18 / 3)), usdc(18).checked_div(3));
+        assert_eq!(Some(usdc(0)), usdc(0).checked_div(5));
+        assert_eq!(Some(usdc(17 / 3)), usdc(17).checked_div(3));
     }
 
     #[test]
     fn div_ceil() {
-        assert_eq!(usdc(17 / 3), usdc(17) / 3);
+        assert_eq!(Some(usdc(17 / 3)), usdc(17).checked_div(3));
     }
 
     #[test]

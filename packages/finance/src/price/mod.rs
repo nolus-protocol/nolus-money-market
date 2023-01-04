@@ -140,8 +140,12 @@ where
         let (a1, c1) = self.amount.into_coprime_with(rhs.amount);
         debug_assert_eq!(0, Amount::from(self.amount) % Amount::from(a1));
         debug_assert_eq!(0, Amount::from(rhs.amount) % Amount::from(c1));
-        let gcd: Amount = (self.amount / Amount::from(a1)).into();
-        debug_assert_eq!(gcd, Amount::from(rhs.amount / Amount::from(c1)));
+        let gcd: Amount = self
+            .amount
+            .checked_div(a1.into())
+            .expect("invariant on amount != 0 should have passed!")
+            .into();
+        debug_assert_eq!(gcd, rhs.amount.checked_div(c1.into()).unwrap().into());
 
         let may_b_c1 = self.amount_quote.checked_mul(c1.into());
         let may_d_a1 = rhs.amount_quote.checked_mul(a1.into());

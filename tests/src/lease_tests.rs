@@ -304,7 +304,9 @@ fn state_opened_when_partially_paid_after_time() {
         repay(
             &mut test_case,
             &lease_address,
-            previous_margin_due + previous_interest_due + (current_margin_due / 2),
+            previous_margin_due
+                + previous_interest_due
+                + (current_margin_due.checked_div(2).unwrap()),
         );
     } else {
         unreachable!();
