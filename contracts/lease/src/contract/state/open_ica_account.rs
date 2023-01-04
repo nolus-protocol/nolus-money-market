@@ -29,17 +29,17 @@ impl OpenIcaAccount {
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
         deps: (LppLenderRef, OracleRef),
-    ) -> (Batch, Self) {
-        let batch = ica::register_account(&form.dex.connection_id);
-        (
-            batch,
-            Self {
-                form,
-                downpayment,
-                loan,
-                deps,
-            },
-        )
+    ) -> Self {
+        Self {
+            form,
+            downpayment,
+            loan,
+            deps,
+        }
+    }
+
+    pub(super) fn enter_state(&self) -> Batch {
+        ica::register_account(&self.form.dex.connection_id)
     }
 }
 

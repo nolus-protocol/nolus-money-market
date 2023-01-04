@@ -66,8 +66,8 @@ impl Controller for RequestLoan {
                     .clone()
                     .execute(OpenLoanResp::new(msg), &deps.querier)?;
 
-                let (batch, next_state) =
-                    OpenIcaAccount::new(self.form, self.downpayment, loan, self.deps);
+                let next_state = OpenIcaAccount::new(self.form, self.downpayment, loan, self.deps);
+                let batch = next_state.enter_state();
                 Ok(Response::from(batch, next_state))
             }
         }
