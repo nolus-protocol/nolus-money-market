@@ -39,27 +39,27 @@ impl TransferOut {
         loan: OpenLoanRespResult,
         dex_account: HostAccount,
         deps: (LppLenderRef, OracleRef),
-        now: Timestamp,
-    ) -> ContractResult<(Batch, Self)> {
+    ) -> Self {
+        Self {
+            form,
+            downpayment,
+            loan,
+            dex_account,
+            deps,
+        }
+    }
+
+    pub(super) fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
         let mut ibc_sender = LocalChainSender::new(
-            &form.dex.transfer_channel.local_endpoint,
-            dex_account.clone(),
+            &self.form.dex.transfer_channel.local_endpoint,
+            self.dex_account.clone(),
             now + ICA_TRANSFER_TIMEOUT,
         );
         // TODO apply nls_swap_fee on the downpayment only!
-        ibc_sender.send::<PaymentGroup>(&downpayment)?;
-        ibc_sender.send::<PaymentGroup>(&loan.principal)?;
+        ibc_sender.send::<PaymentGroup>(&self.downpayment)?;
+        ibc_sender.send::<PaymentGroup>(&self.loan.principal)?;
 
-        Ok((
-            ibc_sender.into(),
-            Self {
-                form,
-                downpayment,
-                loan,
-                dex_account,
-                deps,
-            },
-        ))
+        Ok(ibc_sender.into())
     }
 }
 

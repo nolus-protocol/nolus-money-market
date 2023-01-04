@@ -54,14 +54,14 @@ impl Controller for OpenIcaAccount {
             } => {
                 let dex_account = ica::parse_register_response(&counterparty_version)?;
 
-                let (batch, next_state) = TransferOut::new(
+                let next_state = TransferOut::new(
                     self.form,
                     self.downpayment,
                     self.loan,
                     dex_account,
                     self.deps,
-                    env.block.time,
-                )?;
+                );
+                let batch = next_state.enter_state(env.block.time)?;
                 Ok(Response::from(batch, next_state))
             }
             SudoMsg::Timeout { request: _ } => todo!(),
