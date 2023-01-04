@@ -1,7 +1,5 @@
 use std::fmt::Display;
 
-use lpp::stub::lender::LppLenderRef;
-use oracle::stub::OracleRef;
 use serde::{Deserialize, Serialize};
 
 use platform::{
@@ -14,7 +12,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{DownpaymentCoin, ExecuteMsg, LeaseCoin, NewLeaseForm, StateQuery},
+    api::{DownpaymentCoin, ExecuteMsg, StateQuery},
     contract::{
         alarms::{price::PriceAlarm, time::TimeAlarm, AlarmResult},
         close::Close,
@@ -34,26 +32,18 @@ pub struct Active {
 }
 
 impl Active {
-    pub fn new(
-        cw_deps: &DepsMut,
+    pub(super) fn new(lease: LeaseDTO) -> Self {
+        Self { lease }
+    }
+
+    pub(super) fn enter_state(
+        &self,
+        batch: Batch,
         env: &Env,
-        form: NewLeaseForm,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        amount: LeaseCoin,
-        deps: (LppLenderRef, OracleRef),
-    ) -> ContractResult<(Emitter, Self)> {
-        debug_assert_eq!(downpayment.ticker(), loan.principal.ticker());
-
-        let IntoDTOResult { lease, batch } = form.into_lease(
-            &env.contract.address,
-            env.block.time,
-            &amount,
-            &cw_deps.querier,
-            deps,
-        )?;
-        let emitter = build_emitter(batch, env, &lease, loan, downpayment);
-        Ok((emitter, Self { lease }))
+    ) -> Emitter {
+        build_emitter(batch, env, &self.lease, loan, downpayment)
     }
 }
 impl Controller for Active {

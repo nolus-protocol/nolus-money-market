@@ -21,6 +21,7 @@ use crate::{
     api::{DownpaymentCoin, NewLeaseForm},
     contract::cmd::OpenLoanRespResult,
     error::ContractResult,
+    lease::IntoDTOResult,
 };
 
 use super::{active::Active, Controller, Response};
@@ -90,15 +91,18 @@ impl Controller for BuyAsset {
                 let amount =
                     Coin::<Osmo>::new(self.downpayment.amount() + self.loan.principal.amount())
                         .into();
-                let (emitter, next_state) = Active::new(
-                    deps,
-                    &env,
-                    self.form,
-                    self.downpayment,
-                    self.loan,
-                    amount,
+                debug_assert_eq!(self.downpayment.ticker(), self.loan.principal.ticker());
+
+                let IntoDTOResult { lease, batch } = self.form.into_lease(
+                    &env.contract.address,
+                    env.block.time,
+                    &amount,
+                    &deps.querier,
                     self.deps,
                 )?;
+
+                let next_state = Active::new(lease);
+                let emitter = next_state.enter_state(batch, &env, self.downpayment, self.loan);
                 Ok(Response::from(emitter, next_state))
             }
             SudoMsg::Timeout { request: _ } => todo!(),
