@@ -167,11 +167,12 @@ where
     /// value of the prices. The rounding would be done by shifting to
     /// the right both amounts of the price with a bigger denominator
     /// until a * d + b * c and b * d do not overflow.
-    fn lossy_add(self, rhs: Self) -> Self {
+    fn lossy_add(self, rhs: Self) -> Option<Self> {
         const FACTOR: Amount = 1_000_000_000_000_000_000; // 1*10^18
         let factored_amount = FACTOR.into();
-        let factored_total = total(factored_amount, self) + total(factored_amount, rhs);
-        total_of(factored_amount).is(factored_total)
+        let may_factored_total =
+            total(factored_amount, self).checked_add(total(factored_amount, rhs));
+        may_factored_total.map(|factored_total| total_of(factored_amount).is(factored_total))
     }
 
     #[track_caller]
@@ -222,8 +223,8 @@ where
 
     fn add(self, rhs: Price<C, QuoteC>) -> Self::Output {
         self.checked_add(rhs)
-            .or_else(|| Some(self.lossy_add(rhs)))
-            .expect("should not overflow with real data")
+            .or_else(|| self.lossy_add(rhs))
+            .expect("should not observe huge prices")
     }
 }
 
@@ -537,11 +538,11 @@ mod test {
         assert_eq!(exp, price1.add(price2));
         assert!({
             price1.checked_add(price2).map_or_else(
-                || exp == price1.lossy_add(price2),
+                || Some(exp) == price1.lossy_add(price2),
                 |v| v == price1.add(price2),
             )
         });
-        assert!(exp == price1.lossy_add(price2));
+        assert!(Some(exp) == price1.lossy_add(price2));
         assert!(exp >= price1);
         assert!(exp >= price2);
 
@@ -562,7 +563,7 @@ mod test {
         let price1 = price::total_of(amount1).is(quote1);
         let price2 = price::total_of(amount2).is(quote2);
         let exp = price::total_of(amount_exp).is(quote_exp);
-        assert_eq!(exp, price1.lossy_add(price2));
+        assert_eq!(Some(exp), price1.lossy_add(price2));
         assert!(exp <= price1.add(price2));
     }
 
