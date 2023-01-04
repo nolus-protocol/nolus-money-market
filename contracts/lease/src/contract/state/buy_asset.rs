@@ -43,26 +43,38 @@ impl BuyAsset {
         loan: OpenLoanRespResult,
         dex_account: HostAccount,
         deps: (LppLenderRef, OracleRef),
-    ) -> ContractResult<(LocalBatch, Self)> {
-        // TODO introduce 'fn swap_path' on the Oracle stub
+    ) -> Self {
+        Self {
+            form,
+            downpayment,
+            loan,
+            dex_account,
+            deps,
+        }
+    }
+
+    pub(super) fn enter_state(&self) -> ContractResult<LocalBatch> {
+        // querier: &QuerierWrapper,
+        // deps.1.execute(cmd, querier)
         let swap_path = vec![];
         let mut batch = Batch::default();
         // TODO apply nls_swap_fee on the downpayment only!
-        trx::exact_amount_in(&mut batch, dex_account.clone(), &downpayment, &swap_path)?;
-        trx::exact_amount_in(&mut batch, dex_account.clone(), &loan.principal, &swap_path)?;
+        trx::exact_amount_in(
+            &mut batch,
+            self.dex_account.clone(),
+            &self.downpayment,
+            &swap_path,
+        )?;
+        trx::exact_amount_in(
+            &mut batch,
+            self.dex_account.clone(),
+            &self.loan.principal,
+            &swap_path,
+        )?;
         let local_batch =
-            ica::submit_transaction(&form.dex.connection_id, batch, "memo", ICA_TRX_TIMEOUT);
+            ica::submit_transaction(&self.form.dex.connection_id, batch, "memo", ICA_TRX_TIMEOUT);
 
-        Ok((
-            local_batch,
-            Self {
-                form,
-                downpayment,
-                loan,
-                dex_account,
-                deps,
-            },
-        ))
+        Ok(local_batch)
     }
 }
 

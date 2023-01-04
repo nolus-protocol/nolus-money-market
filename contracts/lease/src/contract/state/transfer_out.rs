@@ -70,13 +70,14 @@ impl Controller for TransferOut {
                 request: _,
                 data: _,
             } => {
-                let (batch, next_state) = BuyAsset::new(
+                let next_state = BuyAsset::new(
                     self.form,
                     self.downpayment,
                     self.loan,
                     self.dex_account,
                     self.deps,
-                )?;
+                );
+                let batch = next_state.enter_state()?;
                 Ok(Response::from(batch, next_state))
             }
             SudoMsg::Timeout { request: _ } => todo!(),
