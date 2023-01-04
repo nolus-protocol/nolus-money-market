@@ -1,17 +1,27 @@
 name: Rust
-run-name: "${{ github.actor }} is "
+run-name: "Build by ${{ github.actor }}"
 
 on:
   workflow_dispatch:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - "README.md"
   pull_request:
     branches: [ "main" ]
+    paths-ignore:
+      - "README.md"
 
 env:
   CARGO_TERM_COLOR: "always"
 
 jobs:
+  check-lock-file:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - name: "Check Formatting"
+        run: "cargo check -p sdk --locked"
   check-formatting:
     runs-on: "ubuntu-latest"
     steps:
@@ -20,11 +30,34 @@ jobs:
         run: "cargo fmt --check"
   check-dependencies:
     runs-on: "ubuntu-latest"
-    needs:
-      - "check-formatting"
     steps:
       - uses: "actions/checkout@v3"
       - name: "Install cargo-audit"
         run: "cargo install cargo-audit"
       - name: "Audit dependencies"
         run: "cargo audit"
+  linting:
+    runs-on: "ubuntu-latest"
+    needs:
+      - "check-formatting"
+      - "check-dependencies"
+    steps:
+      - uses: "actions/checkout@v3"
+      - name: "Installing linter"
+        run: "rustup component add clippy"
+      - name: "Running linter"
+        run: "sh lint.sh"
+  check-wasm:
+    runs-on: "ubuntu-latest"
+    needs:
+      - "linting"
+    steps:
+      - uses: "actions/checkout@v3"
+      - name: "Installing cargo-workspaces"
+        run: "cargo install cargo-workspaces"
+      - name: "Installing cosmwasm-check"
+        run: "cargo install cosmwasm-check"
+      - name: "Build WASM binaries"
+        run: "cargo workspaces exec cargo build --target wasm32-unknown-unknown"
+      - name: "Check WASM binaries"
+        run: "$CARGO_HOME/bin/cosmwasm-check --available-capabilities staking,stargate,cosmwasm_1_1,iterator,neutron ./target/wasm32-unknown-unknown/debug/*.wasm"
