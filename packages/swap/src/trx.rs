@@ -48,15 +48,9 @@ fn to_route(swap_path: &[SwapTarget]) -> Result<Vec<SwapAmountInRoute>> {
     swap_path
         .iter()
         .map(|swap_target| {
-            to_dex_symbol(&swap_target.target).map(|dex_symbol| SwapTarget {
+            to_dex_symbol(&swap_target.target).map(|dex_symbol| SwapAmountInRoute {
                 pool_id: swap_target.pool_id,
-                target: dex_symbol.into(),
-            })
-        })
-        .map(|maybe_swap_target| {
-            maybe_swap_target.map(|swap_target| SwapAmountInRoute {
-                pool_id: swap_target.pool_id,
-                token_out_denom: swap_target.target,
+                token_out_denom: dex_symbol.into(),
             })
         })
         .collect()
