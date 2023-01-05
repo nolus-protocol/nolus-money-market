@@ -85,7 +85,8 @@ impl Controller for BuyAsset {
     fn sudo(self, deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response { request: _, data } => {
-                deps.api.debug("!!!!!!!!!!       SWAP Result        !!!!!!!!!");
+                deps.api
+                    .debug("!!!!!!!!!!       SWAP Result        !!!!!!!!!");
                 deps.api.debug(
                     std::str::from_utf8(data.as_slice())
                         .expect("the data should be a valid string"),
