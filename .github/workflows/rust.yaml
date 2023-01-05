@@ -4,11 +4,15 @@ run-name: "Running general Rust workflow by ${{ github.actor }}"
 on:
   workflow_dispatch:
   push:
-    branches: [ "main" ]
+    branches:
+      - "main"
+    tags:
+      - '*'
     paths-ignore:
       - "README.md"
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - "main"
     paths-ignore:
       - "README.md"
 
