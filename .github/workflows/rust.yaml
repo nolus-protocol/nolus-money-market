@@ -1,5 +1,5 @@
 name: General Rust Workflow
-run-name: "Building Rust by ${{ github.actor }}"
+run-name: "Running general Rust workflow by ${{ github.actor }}"
 
 on:
   workflow_dispatch:
@@ -43,7 +43,7 @@ jobs:
       - "check-dependencies"
     steps:
       - uses: "actions/checkout@v3"
-      - name: "Installing linter"
+      - name: "Install linter"
         run: "rustup component add clippy"
       - name: "Running linter"
         run: "cargo clippy --all-targets"
@@ -53,5 +53,16 @@ jobs:
       - "linting"
     steps:
       - uses: "actions/checkout@v3"
-      - name: "Running tests"
-        run: "cargo test"
+      - name: "Install cargo-tarpaulin"
+        run: "cargo install cargo-tarpaulin"
+      - name: "Run code coverage testing"
+        run: "cargo tarpaulin --out Xml >> output.log"
+      - name: "Produce code coverage summary"
+        run: "(tail --lines=1 output.log | sed -r -e 's/^([0-9]+(\.[0-9]+)?%).*/# Code coverage: \1/') >> $GITHUB_STEP_SUMMARY"
+      - name: "Archive code coverage results"
+        uses: "actions/upload-artifact@v1"
+        with:
+          name: "code-coverage-report"
+          path: "cobertura.xml"
+      - name: "Run tests in release profile"
+        run: "cargo test --release"
