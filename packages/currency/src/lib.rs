@@ -1,10 +1,13 @@
-use finance::currency::{AnyVisitor, Currency, SingleVisitor};
 use serde::{de::DeserializeOwned, Serialize};
 
+use finance::currency::{AnyVisitor, Currency, SingleVisitor};
+
+mod currency_macro;
 pub mod lease;
 pub mod lpn;
 pub mod native;
 pub mod payment;
+mod symbols_macro;
 
 struct SingleVisitorAdapter<V>(V);
 
