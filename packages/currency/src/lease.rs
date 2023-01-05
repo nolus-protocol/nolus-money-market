@@ -3,6 +3,11 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::{define_currency, define_symbol, SingleVisitorAdapter};
 
+// Resources:
+// 1. Symbol hashes are computed using the SHA256 Hash Generator https://coding.tools/sha256
+// 2. Currencies that come from Axelar are documented at https://docs.axelar.dev/resources
+// 3. IBC routes from https://github.com/Nolus-Protocol/Wiki/blob/main/testnet-rila/currencies.json
+
 define_symbol! {
     ATOM {
         {
@@ -46,10 +51,12 @@ define_symbol! {
             dex: "ibc/EA1D43981D5C9A1C4AAEA9C23BB1D4FA126BA9BC7020A25E0AE4AA841EA25DC5",
         },
         alt: {
-            /// full ibc route: transfer/channel-0/transfer/channel-208/weth-wei
-            bank: "ibc/A7C4A3FB19E88ABE60416125F9189DA680800F4CDD14E3C10C874E022BEFF04C",
-            /// full ibc route: transfer/channel-208/weth-wei
-            dex: "ibc/EA1D43981D5C9A1C4AAEA9C23BB1D4FA126BA9BC7020A25E0AE4AA841EA25DC5",
+            /// full ibc route: transfer/channel-0/transfer/channel-312/eth-wei
+            bank: "ibc/E402E4FDD236172DB494E3E8A38D97BE641DD2CE2D089C1F116F5897CDBD40E9",
+            /// full ibc route: transfer/channel-312/eth-wei
+            /// channel-312 is the official channel with Axelar as per https://docs.axelar.dev/resources/testnet
+            /// with WETH currency listed as `eth-wei`
+            dex: "ibc/8AE11672A7DF38BF7B484AB642C5C85BA4A94810D57AE8945151818CD6179427",
         },
     }
 }
@@ -64,10 +71,12 @@ define_symbol! {
             dex: "ibc/D1542AA8762DB13087D8364F3EA6509FD6F009A34F00426AF9E4F9FA85CBBF1F",
         },
         alt: {
-            /// full ibc route: transfer/channel-0/transfer/channel-208/wbtc-satoshi
-            bank: "ibc/84E70F4A34FB2DE135FD3A04FDDF53B7DA4206080AA785C8BAB7F8B26299A221",
-            /// full ibc route: transfer/channel-208/wbtc-satoshi
-            dex: "ibc/D1542AA8762DB13087D8364F3EA6509FD6F009A34F00426AF9E4F9FA85CBBF1F",
+            /// full ibc route: transfer/channel-0/transfer/channel-312/btc-satoshi
+            bank: "ibc/215A3334E07EAE7E7B47617272472CAF903E99EDE3A80A2CF7CA8BE1F761AC68",
+            /// full ibc route: transfer/channel-312/btc-satoshi
+            /// channel-312 is the official channel with Axelar as per https://docs.axelar.dev/resources/testnet
+            /// but there is no WBTC currency listed
+            dex: "ibc/BDA12A41BCF2DFB005A0794876E0E71D9538E0A7EB9607F600435EDDE5393EC4",
         },
     }
 }
@@ -82,10 +91,10 @@ define_symbol! {
             dex: "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
         },
         alt: {
-            /// full ibc route: transfer/channel-0/transfer/channel-204/aevmos
-            bank: "ibc/A59A9C955F1AB8B76671B00C1A0482C64A6590352944BB5880E5122358F7E1CE",
-            /// full ibc route: transfer/channel-204/aevmos
-            dex: "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
+            /// full ibc route: transfer/channel-0/transfer/channel-227/atevmos
+            bank: "ibc/E716E3AA644A2225D13AC25196F13A4B9BBB518EF059F31ED6CAF26D157C4870",
+            /// full ibc route: transfer/channel-227/atevmos
+            dex: "ibc/3A7AC1F623B3475EE1F3CF849FBC4751FCEB956327ED4E5D49C676828EF9533E",
         },
     }
 }

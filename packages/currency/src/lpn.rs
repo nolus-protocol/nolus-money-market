@@ -12,10 +12,10 @@ define_symbol! {
             dex: "ibc/D189335C6E4A68B513C10AB227BF1C1D38C746766278BA3EEB4FB14124F1D858",
         },
         alt: {
-            /// full ibc route: transfer/channel-0/transfer/channel-208/uusdc
-            bank: "ibc/7FBDBEEEBA9C50C4BCDF7BF438EAB99E64360833D240B32655C96E319559E911",
-            /// full ibc route: transfer/channel-208/uusdc
-            dex: "ibc/D189335C6E4A68B513C10AB227BF1C1D38C746766278BA3EEB4FB14124F1D858",
+            /// full ibc route: transfer/channel-0/transfer/channel-312/uausdc
+            bank: "ibc/3DF30ED1342A40EA6E4941CBBE1FD4C7591F8DBA662D8162560E6A1429B018D4",
+            /// full ibc route: transfer/channel-312/uausdc
+            dex: "ibc/75C8E3091D507A5A111C652F9C76C2E53059E24759A98B523723E02FA33EEF51",
         },
     }
 }
