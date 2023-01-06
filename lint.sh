@@ -5,4 +5,4 @@
 cargo clippy --workspace --verbose --all-targets -- -D warnings -D future-incompatible \
             -D nonstandard-style -D rust-2018-compatibility -D rust-2018-idioms \
             -D rust-2021-compatibility -D unused -D clippy::all \
-            -A elided-lifetimes-in-paths -A deprecated
+            -A elided-lifetimes-in-paths
