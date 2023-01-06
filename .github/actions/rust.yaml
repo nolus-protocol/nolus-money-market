@@ -1,0 +1,29 @@
+name: 'General Rust Actions'
+description: 'General Rust actions for linting, checking and testing'
+author: "Kiril Mihaylov <k.mihaylov@nolus.io>"
+
+inputs:
+  linting:
+    description: 'Boolean value indicating whether to include linting or not.'
+    required: true
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - uses: "actions/checkout@v3"
+    - name: "Check workspace & dependency versions"
+      shell: "sh"
+      run: "cargo check --locked"
+    - name: "Check formatting"
+      shell: "sh"
+      run: "cargo fmt --check"
+    - uses: "./.github/actions/cargo-audit.yaml"
+    - if: "${{ inputs.linting }} == \"true\""
+      shell: "sh"
+      run: "rustup component add clippy"
+    - name: "Run linter"
+      if: "${{ inputs.linting }} == \"true\""
+      shell: "sh"
+      run: "sh ./lint.sh"
+    - uses: "./.github/actions/code-coverage.yaml"
