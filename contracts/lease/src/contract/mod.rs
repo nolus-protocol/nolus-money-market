@@ -3,6 +3,7 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cw2::set_contract_version,
     neutron_sdk::sudo::msg::SudoMsg,
 };
 
@@ -12,6 +13,8 @@ use crate::{
     error::ContractResult,
 };
 
+use self::state::RequestLoan;
+
 mod alarms;
 mod close;
 mod cmd;
@@ -19,10 +22,13 @@ pub mod msg;
 mod repay;
 mod state;
 
+const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
+const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
     mut deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     form: NewLeaseForm,
 ) -> ContractResult<CwResponse> {
@@ -33,18 +39,11 @@ pub fn instantiate(
     platform::contract::validate_addr(&deps.querier, &form.loan.lpp)?;
     platform::contract::validate_addr(&deps.querier, &form.loan.profit)?;
 
-    impl_::load_mut(&deps)?
-        .instantiate(&mut deps, env, info, form)
-        .and_then(
-            |Response {
-                 cw_response,
-                 next_state,
-             }| {
-                impl_::save(&next_state, &mut deps)?;
+    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 
-                Ok(cw_response)
-            },
-        )
+    let (batch, next_state) = RequestLoan::new(&mut deps, info, form)?;
+    impl_::save(&next_state.into(), &mut deps)?;
+    Ok(batch.into())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -114,7 +113,7 @@ mod impl_ {
     const STATE_DB_KEY: Item<State> = Item::new("state");
 
     pub(super) fn load(deps: &Deps) -> ContractResult<State> {
-        Ok(STATE_DB_KEY.may_load(deps.storage)?.unwrap_or_default())
+        Ok(STATE_DB_KEY.load(deps.storage)?)
     }
 
     pub(super) fn load_mut(deps: &DepsMut) -> ContractResult<State> {

@@ -10,18 +10,17 @@ use sdk::{
 };
 
 use crate::{
-    api::{ExecuteMsg, NewLeaseForm, StateQuery},
+    api::{ExecuteMsg, StateQuery},
     error::{ContractError as Err, ContractResult},
 };
 
 pub use self::{
-    active::Active, buy_asset::BuyAsset, no_lease::NoLease, open_ica_account::OpenIcaAccount,
+    active::Active, buy_asset::BuyAsset, open_ica_account::OpenIcaAccount,
     request_loan::RequestLoan, transfer_out::TransferOut,
 };
 
 mod active;
 mod buy_asset;
-mod no_lease;
 mod open_ica_account;
 mod request_loan;
 mod transfer_out;
@@ -29,7 +28,6 @@ mod transfer_out;
 #[enum_dispatch(Controller)]
 #[derive(Serialize, Deserialize)]
 pub enum State {
-    NoLease,
     RequestLoan,
     OpenIcaAccount,
     TransferOut,
@@ -40,19 +38,12 @@ pub enum State {
 impl Display for State {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
-            State::NoLease(inner) => inner.fmt(f),
             State::RequestLoan(inner) => inner.fmt(f),
             State::OpenIcaAccount(inner) => inner.fmt(f),
             State::TransferOut(inner) => inner.fmt(f),
             State::BuyAsset(inner) => inner.fmt(f),
             State::Active(inner) => inner.fmt(f),
         }
-    }
-}
-
-impl Default for State {
-    fn default() -> Self {
-        NoLease {}.into()
     }
 }
 
@@ -80,16 +71,6 @@ where
     Self: Sized,
     Self: Display,
 {
-    fn instantiate(
-        self,
-        _deps: &mut DepsMut,
-        _env: Env,
-        _info: MessageInfo,
-        _form: NewLeaseForm,
-    ) -> ContractResult<Response> {
-        err("instantiate", &self)
-    }
-
     fn reply(self, _deps: &mut DepsMut, _env: Env, _msg: Reply) -> ContractResult<Response> {
         err("reply", &self)
     }
