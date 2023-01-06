@@ -62,7 +62,7 @@ jobs:
       - name: "Run code coverage testing"
         run: "cargo tarpaulin --out Xml >> output.log"
       - name: "Produce code coverage summary"
-        run: "(tail --lines=1 output.log | sed -r -e 's/^([0-9]+(\.[0-9]+)?%).*/# Code coverage: \1/') >> $GITHUB_STEP_SUMMARY"
+        run: "(tail --lines=1 output.log | sed -r -e 's/^([0-9]+(\\.[0-9]+)?%).*/# Code coverage: \\1/') >> $GITHUB_STEP_SUMMARY"
       - name: "Archive code coverage results"
         uses: "actions/upload-artifact@v1"
         with:
