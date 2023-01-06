@@ -80,8 +80,9 @@ impl Loans {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use sdk::cosmwasm_std::testing;
+
+    use super::*;
 
     #[test]
     fn test_id_overflow() {

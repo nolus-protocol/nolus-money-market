@@ -1,6 +1,8 @@
-use crate::error::ContractError;
-use finance::duration::Duration;
 use serde::Deserialize;
+
+use finance::duration::Duration;
+
+use crate::error::ContractError;
 
 use super::InterestPaymentSpec as ValidatedInterestPaymentSpec;
 

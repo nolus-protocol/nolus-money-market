@@ -1,5 +1,6 @@
-use sdk::schemars::{self, JsonSchema};
 use serde::{Deserialize, Serialize};
+
+use sdk::schemars::{self, JsonSchema};
 
 /// Parameters needed to operate with the Dex network
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

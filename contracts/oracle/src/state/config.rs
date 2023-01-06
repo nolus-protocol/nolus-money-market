@@ -1,4 +1,5 @@
-use crate::ContractError;
+use serde::{Deserialize, Serialize};
+
 use finance::currency::SymbolOwned;
 use marketprice::config::Config as PriceConfig;
 use sdk::{
@@ -6,7 +7,8 @@ use sdk::{
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
-use serde::{Deserialize, Serialize};
+
+use crate::ContractError;
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]

@@ -1,8 +1,8 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use currency::lpn::Lpns;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use currency::lpn::Lpns;
 use finance::{
     coin::Coin,
     currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned},

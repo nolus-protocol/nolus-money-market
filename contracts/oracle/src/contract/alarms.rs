@@ -1,4 +1,5 @@
-use cosmwasm_std::to_binary;
+use serde::{Deserialize, Serialize};
+
 use marketprice::{
     alarms::{price::PriceAlarms, Alarm},
     SpotPrice,
@@ -6,10 +7,9 @@ use marketprice::{
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, Storage},
+    cosmwasm_std::{to_binary, Addr, Storage},
     schemars::{self, JsonSchema},
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{
     msg::{AlarmsStatusResponse, DispatchAlarmsResponse},

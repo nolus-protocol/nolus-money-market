@@ -64,10 +64,9 @@ impl Alarm {
 mod test {
     use currency::lease::Weth;
     use finance::coin::Coin;
-    use sdk::cosmwasm_std::from_slice;
+    use sdk::cosmwasm_std::{from_slice, StdError};
 
     use crate::{alarms::Alarm, SpotPrice};
-    use sdk::cosmwasm_std::StdError;
 
     #[test]
     fn below_price_ok() {

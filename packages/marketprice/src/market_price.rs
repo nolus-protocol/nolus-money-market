@@ -1,3 +1,5 @@
+use serde::{de::DeserializeOwned, Serialize};
+
 use finance::{
     currency::{self, AnyVisitor, Currency, Symbol, SymbolOwned},
     price::{
@@ -9,7 +11,6 @@ use sdk::{
     cosmwasm_std::{Addr, Storage, Timestamp},
     cw_storage_plus::Map,
 };
-use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{config::Config, error::PriceFeedsError, feed::PriceFeed, CurrencyGroup, SpotPrice};
 

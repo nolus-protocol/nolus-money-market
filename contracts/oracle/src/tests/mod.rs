@@ -12,6 +12,7 @@ use finance::{
     percent::Percent,
     price::{self, dto::PriceDTO},
 };
+use marketprice::config::Config as PriceConfig;
 use sdk::cosmwasm_std::{
     coins,
     testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
@@ -23,7 +24,6 @@ use crate::{
     msg::{ExecuteMsg, InstantiateMsg},
     state::{config::Config, supported_pairs::TreeStore},
 };
-use marketprice::config::Config as PriceConfig;
 
 #[cfg(test)]
 mod oracle_tests;

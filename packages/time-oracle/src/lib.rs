@@ -1,12 +1,11 @@
 use thiserror::Error;
 
+pub use alarms::AlarmsCount;
 use sdk::cosmwasm_std::StdError;
 
 pub use crate::alarms::{AlarmDispatcher, Alarms, Id};
 
 mod alarms;
-
-pub use alarms::AlarmsCount;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum AlarmError {

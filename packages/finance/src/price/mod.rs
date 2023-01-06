@@ -614,7 +614,6 @@ mod test {
 
 #[cfg(test)]
 mod test_invariant {
-
     use crate::{
         coin::Coin,
         currency::Currency,

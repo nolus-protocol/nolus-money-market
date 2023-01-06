@@ -1,19 +1,17 @@
 use std::fmt::Display;
 
-use cosmwasm_std::QuerierWrapper;
-use currency::lease::Osmo;
 use serde::{Deserialize, Serialize};
 
+use currency::lease::Osmo;
 use finance::{coin::Coin, duration::Duration};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use platform::{
-    self,
     batch::Batch as LocalBatch,
     ica::{self, Batch, HostAccount},
 };
 use sdk::{
-    cosmwasm_std::{DepsMut, Env},
+    cosmwasm_std::{DepsMut, Env, QuerierWrapper},
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use swap::trx;

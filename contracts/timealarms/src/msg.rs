@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
-use time_oracle::AlarmsCount;
 
 use sdk::{
     cosmwasm_std::Timestamp,
     schemars::{self, JsonSchema},
 };
+use time_oracle::AlarmsCount;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {}

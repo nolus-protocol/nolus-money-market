@@ -1,9 +1,10 @@
+use serde::{Deserialize, Serialize};
+
 use finance::duration::Duration;
 use sdk::{
     cosmwasm_std::to_binary,
     neutron_sdk::bindings::{msg::NeutronMsg, types::ProtobufAny},
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{
     batch::Batch as LocalBatch,

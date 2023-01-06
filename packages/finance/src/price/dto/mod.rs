@@ -237,11 +237,11 @@ mod test {
 
 #[cfg(test)]
 mod test_invariant {
-
     use std::fmt::Debug;
 
-    use sdk::cosmwasm_std::{from_slice, StdError, StdResult};
     use serde::Deserialize;
+
+    use sdk::cosmwasm_std::{from_slice, StdError, StdResult};
 
     use crate::{
         coin::{Coin, CoinDTO},

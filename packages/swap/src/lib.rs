@@ -1,6 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 use currency::payment::PaymentGroup;
 use finance::currency::SymbolOwned;
-use serde::{Deserialize, Serialize};
 
 pub mod error;
 #[cfg(feature = "trx")]

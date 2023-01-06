@@ -1,10 +1,11 @@
-use crate::{msg::ConfigResponse, state::config::Config, ContractError};
 use access_control::SingleUserAccess;
 use marketprice::config::Config as PriceConfig;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{MessageInfo, Storage},
 };
+
+use crate::{msg::ConfigResponse, state::config::Config, ContractError};
 
 pub fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, ContractError> {
     let owner = SingleUserAccess::load_contract_owner(storage)?.into();
@@ -27,8 +28,6 @@ pub fn try_configure(
 
 #[cfg(test)]
 mod tests {
-    use marketprice::config::Config as PriceConfig;
-    use swap::SwapTarget;
     use trees::tr;
 
     use currency::{
@@ -37,10 +36,12 @@ mod tests {
         native::Nls,
     };
     use finance::{currency::Currency, duration::Duration, percent::Percent};
+    use marketprice::config::Config as PriceConfig;
     use sdk::cosmwasm_std::{
         coins, from_binary,
         testing::{mock_env, mock_info},
     };
+    use swap::SwapTarget;
 
     use crate::{
         contract::{execute, query},

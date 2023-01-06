@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use currency::native::Nls;
 use finance::{
     coin::{Amount, Coin, CoinDTO},
@@ -14,7 +16,6 @@ use sdk::{
         Bound, Index, IndexList, IndexedMap, IntKey, Item, Key, MultiIndex, Prefixer, PrimaryKey,
     },
 };
-use serde::{Deserialize, Serialize};
 use swap::SwapGroup;
 
 use crate::SpotPrice;
@@ -293,13 +294,14 @@ impl<'m> PriceAlarms<'m> {
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
     use currency::{
         lease::{Atom, Weth},
         lpn::Usdc,
     };
     use finance::{coin::Coin, price};
     use sdk::cosmwasm_std::{testing::mock_dependencies, Addr, CosmosMsg, Response, WasmMsg};
+
+    use super::*;
 
     #[test]
     fn test_add_remove() {

@@ -5,12 +5,11 @@ use trees::{walk::Visit, Node as TreeNode, TreeWalk};
 
 use currency::payment::PaymentGroup;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency, Symbol, SymbolOwned};
-use swap::SwapTarget;
-
 use sdk::{
     cosmwasm_std::{StdError, StdResult, Storage},
     cw_storage_plus::Item,
 };
+use swap::SwapTarget;
 
 use crate::error::{self, ContractError};
 
@@ -237,9 +236,10 @@ where
 
 #[cfg(test)]
 mod tests {
+    use trees::tr;
+
     use finance::{currency::Currency, test::currency::Usdc};
     use sdk::cosmwasm_std::testing;
-    use trees::tr;
 
     use super::*;
 

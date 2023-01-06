@@ -93,7 +93,6 @@ impl InterestPaymentSpec {
 
 #[cfg(test)]
 mod test_invariant {
-
     use finance::duration::Duration;
     use sdk::cosmwasm_std::{from_slice, StdError};
 

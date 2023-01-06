@@ -1,4 +1,3 @@
-use self::neutron::Module as NeutronModule;
 #[cfg(not(feature = "neutron"))]
 use cosmwasm_std::Empty as CustomMsg;
 use cosmwasm_std::{
@@ -12,6 +11,8 @@ use cw_multi_test::{
 pub use cw_multi_test::{ContractWrapper, Executor};
 #[cfg(feature = "neutron")]
 use neutron_sdk::bindings::msg::NeutronMsg as CustomMsg;
+
+use self::neutron::Module as NeutronModule;
 
 pub type App<Exec = CustomMsg, Query = Empty> =
     cw_multi_test::App<BankKeeper, MockApi, MockStorage, NeutronModule, WasmKeeper<Exec, Query>>;
@@ -69,10 +70,9 @@ pub fn new_app() -> AppBuilder {
 }
 
 mod neutron {
+    use anyhow::{bail, Result as AnyResult};
     use cosmwasm_schema::schemars::JsonSchema;
     use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Empty, Querier, Storage};
-
-    use anyhow::{bail, Result as AnyResult};
     use cw_multi_test::{AppResponse, CosmosRouter, Module as CwModule};
     use neutron_sdk::bindings::msg::NeutronMsg;
     use serde::de::DeserializeOwned;

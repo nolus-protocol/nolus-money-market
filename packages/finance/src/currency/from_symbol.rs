@@ -52,7 +52,6 @@ where
 
 #[cfg(test)]
 mod test {
-
     use crate::{
         currency::Currency,
         error::Error,

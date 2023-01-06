@@ -1,7 +1,7 @@
-use currency::{lease::LeaseGroup, payment::PaymentGroup};
-use finance::coin::CoinDTO;
 use serde::{Deserialize, Serialize};
 
+use currency::{lease::LeaseGroup, payment::PaymentGroup};
+use finance::coin::CoinDTO;
 use sdk::{
     cosmwasm_std::Timestamp,
     schemars::{self, JsonSchema},

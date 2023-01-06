@@ -1,5 +1,5 @@
-use std::io::Error as IoError;
-use std::{env, fs::create_dir_all, path::PathBuf};
+use std::{env, fs::create_dir_all, io::Error as IoError, path::PathBuf};
+
 use thiserror::Error as ThisError;
 
 pub fn prep_out_dir() -> Result<PathBuf, Error> {

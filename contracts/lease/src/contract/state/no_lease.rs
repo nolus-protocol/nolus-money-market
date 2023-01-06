@@ -1,10 +1,11 @@
 use std::fmt::Display;
 
+use serde::{Deserialize, Serialize};
+
 use sdk::{
     cosmwasm_std::{DepsMut, Env, MessageInfo},
     cw2::set_contract_version,
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{api::NewLeaseForm, error::ContractResult};
 

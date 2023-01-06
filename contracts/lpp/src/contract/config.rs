@@ -1,5 +1,4 @@
 use access_control::SingleUserAccess;
-
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Deps, DepsMut, MessageInfo, StdResult},

@@ -1,13 +1,12 @@
-use cosmwasm_std::{Storage, Timestamp};
-use marketprice::SpotPrice;
 use serde::de::DeserializeOwned;
 
 use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
+use marketprice::SpotPrice;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, DepsMut, Env},
+    cosmwasm_std::{Addr, DepsMut, Env, Storage, Timestamp},
 };
 
 use crate::{

@@ -1,8 +1,8 @@
-use currency::native::Nls;
-use platform::coin_legacy;
 use serde::{Deserialize, Serialize};
 
+use currency::native::Nls;
 use finance::{coin::Coin, currency::Currency, duration::Duration, percent::Percent};
+use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{
         testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin as CwCoin, Deps, Empty, Env,

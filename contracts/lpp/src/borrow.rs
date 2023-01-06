@@ -108,8 +108,9 @@ struct UncheckedInterestRate {
 
 #[cfg(test)]
 mod tests {
-    use crate::borrow::InterestRate;
     use finance::percent::Percent;
+
+    use crate::borrow::InterestRate;
 
     #[test]
     fn test_constructor() {

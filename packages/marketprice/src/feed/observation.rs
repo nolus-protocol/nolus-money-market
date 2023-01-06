@@ -1,6 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 use finance::{currency::Currency, price::Price};
 use sdk::cosmwasm_std::{Addr, Timestamp};
-use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug))]

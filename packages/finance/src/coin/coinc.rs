@@ -1,5 +1,6 @@
-use serde::{Deserialize, Serialize};
 use std::{marker::PhantomData, result::Result as StdResult};
+
+use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 

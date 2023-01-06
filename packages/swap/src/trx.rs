@@ -1,8 +1,9 @@
+use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountIn, SwapAmountInRoute};
+
 use finance::{
     coin::CoinDTO,
     currency::{self, Symbol},
 };
-use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountIn, SwapAmountInRoute};
 use platform::{
     coin_legacy,
     denom::dex::DexMapper,
@@ -66,16 +67,18 @@ fn to_dex_symbol(ticker: Symbol) -> Result<Symbol> {
 
 #[cfg(test)]
 mod test {
-    use super::SwapTarget;
+    use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
+
     use currency::lpn::Usdc;
     use finance::{
         coin::Coin,
         currency::{Currency, SymbolStatic},
     };
-    use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
     use sdk::cosmwasm_std::Coin as CwCoin;
 
     use crate::error::Error;
+
+    use super::SwapTarget;
 
     const INVALID_TICKER: SymbolStatic = "NotATicker";
 

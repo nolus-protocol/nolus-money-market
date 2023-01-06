@@ -149,12 +149,12 @@ fn err_as_ok(err: &str) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use swap::SwapTarget;
     use trees::tr;
 
     use currency::{lease::Osmo, lpn::Usdc};
     use finance::{currency::Currency, duration::Duration, percent::Percent};
     use sdk::cosmwasm_std::{from_binary, testing::mock_env};
+    use swap::SwapTarget;
 
     use crate::{
         contract::query,

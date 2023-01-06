@@ -2,9 +2,9 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use crate::error::Error;
 
-use self::impl_any_tickers::FirstTickerVisitor;
-
 use super::{Currency, Group, Symbol};
+
+use self::impl_any_tickers::FirstTickerVisitor;
 
 pub trait AnyVisitor {
     type Output;
@@ -145,7 +145,6 @@ mod impl_any_tickers {
 
 #[cfg(test)]
 mod test {
-
     use crate::{
         currency::{Currency, Group},
         error::Error,

@@ -1,12 +1,14 @@
 use std::fmt::Display;
 
-use cosmwasm_std::MessageInfo;
-use platform::batch::Batch;
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use sdk::cosmwasm_std::{DepsMut, Env, Reply};
+use platform::batch::Batch;
+use sdk::{
+    cosmwasm_std::MessageInfo,
+    cosmwasm_std::{DepsMut, Env, Reply},
+};
 
 use crate::{
     api::{DownpaymentCoin, NewLeaseForm},

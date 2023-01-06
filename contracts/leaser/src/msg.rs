@@ -1,8 +1,8 @@
-use lease::api::{dex::ConnectionParams, DownpaymentCoin, InterestPaymentSpec, LeaseCoin};
-use lpp::msg::LppCoin;
 use serde::{Deserialize, Serialize};
 
 use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
+use lease::api::{dex::ConnectionParams, DownpaymentCoin, InterestPaymentSpec, LeaseCoin};
+use lpp::msg::LppCoin;
 use sdk::{
     cosmwasm_std::{Addr, Uint64},
     schemars::{self, JsonSchema},

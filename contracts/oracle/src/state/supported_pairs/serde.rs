@@ -1,6 +1,5 @@
 use std::ops::{Deref, DerefMut};
 
-use sdk::schemars::{self, JsonSchema};
 use serde::{
     de, de::SeqAccess, de::Visitor, ser::SerializeSeq, Deserialize, Deserializer, Serialize,
     Serializer,
@@ -8,7 +7,7 @@ use serde::{
 use trees::{tr, Tree};
 
 use finance::currency::SymbolOwned;
-
+use sdk::schemars::{self, JsonSchema};
 use swap::PoolId;
 
 pub type Leg = (PoolId, SymbolOwned);

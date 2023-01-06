@@ -1,9 +1,10 @@
+use serde::{Deserialize, Serialize};
+
 use finance::{duration::Duration, fraction::Fraction, percent::Percent};
 use sdk::{
     cosmwasm_std::Timestamp,
     schemars::{self, JsonSchema},
 };
-use serde::{Deserialize, Serialize};
 
 use crate::error::{self, PriceFeedsError};
 
@@ -115,9 +116,11 @@ impl Config {
 }
 
 mod unchecked {
-    use crate::error::PriceFeedsError;
-    use finance::{duration::Duration, percent::Percent};
     use serde::{Deserialize, Serialize};
+
+    use finance::{duration::Duration, percent::Percent};
+
+    use crate::error::PriceFeedsError;
 
     use super::Config as ValidatedConfig;
 

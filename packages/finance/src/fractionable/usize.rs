@@ -1,5 +1,6 @@
-use super::Fractionable;
 use crate::{percent::Units as PercentUnits, ratio::Ratio};
+
+use super::Fractionable;
 
 impl Fractionable<PercentUnits> for usize {
     fn safe_mul<F>(self, fraction: &F) -> Self

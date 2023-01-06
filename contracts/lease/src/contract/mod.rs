@@ -102,8 +102,10 @@ pub fn query(deps: Deps, env: Env, msg: StateQuery) -> ContractResult<Binary> {
 }
 
 mod impl_ {
-    use cosmwasm_std::{Deps, DepsMut};
-    use sdk::cw_storage_plus::Item;
+    use sdk::{
+        cosmwasm_std::{Deps, DepsMut},
+        cw_storage_plus::Item,
+    };
 
     use crate::error::{ContractError, ContractResult};
 

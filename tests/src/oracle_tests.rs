@@ -1,7 +1,5 @@
 use std::collections::HashSet;
 
-use marketprice::config::Config as PriceConfig;
-use marketprice::{alarms::Alarm, SpotPrice};
 use trees::tr;
 
 use currency::{
@@ -16,12 +14,13 @@ use finance::{
     price::{self, dto::PriceDTO},
 };
 use leaser::msg::QueryMsg;
+use marketprice::{alarms::Alarm, config::Config as PriceConfig, SpotPrice};
 use oracle::{msg::QueryMsg as OracleQ, state::supported_pairs::TreeStore};
 use platform::coin_legacy;
-use sdk::{cosmwasm_std::coin, schemars::_serde_json::from_str};
 use sdk::{
-    cosmwasm_std::{wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
+    cosmwasm_std::{coin, wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
     cw_multi_test::{AppResponse, Executor},
+    schemars::_serde_json::from_str,
 };
 use swap::SwapTarget;
 

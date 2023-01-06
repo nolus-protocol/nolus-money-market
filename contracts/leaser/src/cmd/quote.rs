@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use lease::api::DownpaymentCoin;
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::{lease::LeaseGroup, payment::PaymentGroup};
@@ -11,6 +10,7 @@ use finance::{
     percent::Percent,
     price::total,
 };
+use lease::api::DownpaymentCoin;
 use lpp::{
     msg::QueryQuoteResponse,
     stub::lender::{LppLender as LppLenderTrait, WithLppLender},

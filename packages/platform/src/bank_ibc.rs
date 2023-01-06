@@ -1,6 +1,10 @@
 use std::marker::PhantomData;
 
+use finance::{coin::CoinDTO, currency::Group};
+use sdk::cosmwasm_std::{Coin as CwCoin, IbcMsg, IbcTimeout, Timestamp};
+
 use crate::{
+    batch::Batch,
     coin_legacy::{self},
     denom::{
         dex::DexMapper, local::BankMapper, CurrencyMapper, DexChainCurrencyMapper,
@@ -9,10 +13,6 @@ use crate::{
     error::{Error, Result},
     ica::{Batch as IcaBatch, HostAccount},
 };
-use finance::{coin::CoinDTO, currency::Group};
-use sdk::cosmwasm_std::{Coin as CwCoin, IbcMsg, IbcTimeout, Timestamp};
-
-use crate::batch::Batch;
 
 pub type LocalChainSender<'c> = Sender<'c, BankMapper>;
 
