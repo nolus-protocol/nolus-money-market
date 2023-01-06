@@ -1,12 +1,12 @@
-use currency::lpn::Usdc;
-use finance::{currency::Currency, duration::Duration};
+use currency::{lpn::Usdc, native::Nls};
+use finance::{coin::Coin, currency::Currency, duration::Duration};
 use sdk::{
-    cosmwasm_std::{coin, Addr, Timestamp},
+    cosmwasm_std::{coin, Addr, Attribute, Timestamp},
     cw_multi_test::Executor,
 };
 
 use crate::{
-    common::{test_case::TestCase, AppExt, ADMIN},
+    common::{cwcoin, test_case::TestCase, AppExt, ADMIN},
     timealarms_tests::mock_lease::proper_instantiate,
 };
 
@@ -187,4 +187,51 @@ fn test_time_notify() {
         .find(|atr| atr.key == "lease_reply")
         .unwrap();
     assert_eq!(attr.value, test_case.app.block_info().time.to_string());
+}
+
+#[test]
+fn test_profit_alarms() {
+    let admin = Addr::unchecked(ADMIN);
+    let mut test_case = TestCase::<Lpn>::with_reserve(&[
+        cwcoin(Coin::<Lpn>::new(1_000_000)),
+        cwcoin(Coin::<Nls>::new(1_000_000)),
+    ]);
+    test_case.init(
+        &admin,
+        vec![
+            cwcoin(Coin::<Lpn>::new(100_000)),
+            cwcoin(Coin::<Nls>::new(100_000)),
+        ],
+    );
+    test_case.init_timealarms();
+    test_case.init_treasury();
+    test_case.init_profit(1);
+
+    test_case
+        .app
+        .send_tokens(
+            admin.clone(),
+            test_case.profit_addr.clone().unwrap(),
+            &[cwcoin(Coin::<Nls>::new(100_000))],
+        )
+        .unwrap();
+
+    test_case.app.time_shift(Duration::from_hours(10));
+
+    let dispatch_msg = timealarms::msg::ExecuteMsg::DispatchAlarms { max_count: 1 };
+
+    let resp = test_case
+        .app
+        .execute_contract(
+            Addr::unchecked(ADMIN),
+            test_case.timealarms.clone().unwrap(),
+            &dispatch_msg,
+            &[],
+        )
+        .unwrap();
+
+    assert_eq!(
+        resp.events.last().unwrap().attributes.last().unwrap(),
+        Attribute::new("alarm", "success")
+    );
 }
