@@ -13,9 +13,14 @@ define_symbol! {
         },
         alt: {
             /// full ibc route: transfer/channel-0/transfer/channel-312/uausdc
-            bank: "ibc/3DF30ED1342A40EA6E4941CBBE1FD4C7591F8DBA662D8162560E6A1429B018D4",
+            // bank: "ibc/3DF30ED1342A40EA6E4941CBBE1FD4C7591F8DBA662D8162560E6A1429B018D4",
+            /// full ibc route: transfer/channel-0/transfer/channel-261/udws
+            bank: "ibc/9B44527BABE15E11BDB470A4B16E32A6F79D1DDE383B0687C2320B2C8614C309",
             /// full ibc route: transfer/channel-312/uausdc
-            dex: "ibc/75C8E3091D507A5A111C652F9C76C2E53059E24759A98B523723E02FA33EEF51",
+            // dex: "ibc/75C8E3091D507A5A111C652F9C76C2E53059E24759A98B523723E02FA33EEF51",
+            /// full ibc route: transfer/channel-261/udws
+            /// borrowed from osmosis.pool_id = 672 as a currency with enough liquidity
+            dex: "ibc/902BDADA0D46931BF5DEBE0648CC1FE137AA4B7346475DD0490D503C937A12BD",
         },
     }
 }
