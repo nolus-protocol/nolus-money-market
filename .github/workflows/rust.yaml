@@ -20,12 +20,12 @@ env:
   CARGO_TERM_COLOR: "always"
 
 jobs:
-  check-lock-file:
+  check-workspace:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v3"
-      - name: "Check Formatting"
-        run: "cargo check -p sdk --locked"
+      - name: "Run checker"
+        run: "cargo check --locked"
   check-formatting:
     runs-on: "ubuntu-latest"
     steps:
