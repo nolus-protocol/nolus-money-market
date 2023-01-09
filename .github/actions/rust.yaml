@@ -25,5 +25,5 @@ runs:
     - name: "Run linter"
       if: "${{ inputs.linting }} == \"true\""
       shell: "sh"
-      run: "sh ./lint.sh"
+      run: "cargo clippy --workspace --all-targets -- -D warnings"
     - uses: "./.github/actions/code-coverage.yaml"
