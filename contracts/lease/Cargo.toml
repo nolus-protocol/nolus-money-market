@@ -25,19 +25,17 @@ testing = []
 
 [dependencies]
 lpp = { workspace = true, features = ["stub"] }
-oracle = { workspace = true, features = [
-    "convert",
-] }
+oracle = { workspace = true, features = ["convert"] }
 profit = { workspace = true, features = ["stub"] }
-timealarms = { workspace = true, features = [
-    "stub",
-] }
+timealarms = { workspace = true, features = ["stub"] }
+
 currency = { workspace = true }
 finance = { workspace = true }
 marketprice = { workspace = true }
 platform = { workspace = true }
 swap = { workspace = true, features = ["trx"] }
 sdk = { workspace = true, features = ["contract"] }
+versioning = { workspace = true }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
@@ -47,16 +45,10 @@ thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-timealarms = { workspace = true, features = [
-    "testing",
-] }
+timealarms = { workspace = true, features = ["testing"] }
 lpp = { workspace = true, features = ["testing"] }
-profit = { workspace = true, features = [
-    "testing",
-] }
-oracle = { workspace = true, features = [
-    "testing",
-] }
+profit = { workspace = true, features = ["testing"] }
+oracle = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
 currency = { workspace = true, features = ["testing"] }
 marketprice = { workspace = true, features = ["testing"] }

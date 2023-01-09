@@ -7,8 +7,8 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
-    cw2::set_contract_version,
 };
+use versioning::Version;
 
 use crate::{
     error::ContractError,
@@ -32,8 +32,7 @@ mod feeder;
 pub mod query;
 
 // version info for migration info
-const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+const CONTRACT_VERSION: Version = 0;
 
 struct InstantiateWithCurrency<'a> {
     deps: DepsMut<'a>,
@@ -79,7 +78,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
 
     InstantiateWithCurrency::cmd(deps, msg, info.sender)?;
 

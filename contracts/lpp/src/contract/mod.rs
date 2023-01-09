@@ -8,8 +8,8 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
-    cw2::set_contract_version,
 };
+use versioning::Version;
 
 use crate::{
     error::ContractError,
@@ -24,8 +24,7 @@ mod lender;
 mod rewards;
 
 // version info for migration info
-const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+const CONTRACT_VERSION: Version = 0;
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
@@ -39,7 +38,7 @@ impl<'a> InstantiateWithLpn<'a> {
     where
         LPN: 'static + Currency + Serialize + DeserializeOwned,
     {
-        set_contract_version(self.deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+        versioning::initialize::<CONTRACT_VERSION>(self.deps.storage)?;
 
         SingleUserAccess::new_contract_owner(self.info.sender).store(self.deps.storage)?;
 

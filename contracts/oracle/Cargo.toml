@@ -26,6 +26,7 @@ marketprice = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 swap = { workspace = true }
+versioning = { workspace = true }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }

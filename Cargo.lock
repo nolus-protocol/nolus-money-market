@@ -609,6 +609,7 @@ dependencies = [
  "swap",
  "thiserror",
  "timealarms",
+ "versioning",
 ]
 
 [[package]]
@@ -627,6 +628,7 @@ dependencies = [
  "sdk",
  "serde",
  "thiserror",
+ "versioning",
 ]
 
 [[package]]
@@ -649,6 +651,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+ "versioning",
 ]
 
 [[package]]
@@ -751,6 +754,7 @@ dependencies = [
  "swap",
  "thiserror",
  "trees",
+ "versioning",
 ]
 
 [[package]]
@@ -842,6 +846,7 @@ dependencies = [
  "serde",
  "thiserror",
  "timealarms",
+ "versioning",
 ]
 
 [[package]]
@@ -962,6 +967,7 @@ dependencies = [
  "thiserror",
  "timealarms",
  "treasury",
+ "versioning",
 ]
 
 [[package]]
@@ -1022,7 +1028,6 @@ dependencies = [
  "cosmwasm-storage",
  "cw-multi-test",
  "cw-storage-plus 1.0.1",
- "cw2",
  "neutron-sdk",
  "serde",
 ]
@@ -1292,6 +1297,7 @@ dependencies = [
  "serde",
  "thiserror",
  "time-oracle",
+ "versioning",
 ]
 
 [[package]]
@@ -1309,6 +1315,7 @@ dependencies = [
  "semver",
  "serde",
  "thiserror",
+ "versioning",
 ]
 
 [[package]]
@@ -1346,6 +1353,15 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "versioning"
+version = "0.0.0"
+dependencies = [
+ "sdk",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "wasi"
