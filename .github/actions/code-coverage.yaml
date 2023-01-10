@@ -1,0 +1,30 @@
+name: 'Run code coverage test'
+description: 'Action for running code coverage testing'
+author: "Kiril Mihaylov <k.mihaylov@nolus.io>"
+
+inputs:
+  release-testing:
+    description: 'Boolean value indicating whether to include test run in release profile or not.'
+    required: true
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - shell: "sh"
+      run: "cargo install cargo-tarpaulin"
+    - name: "Run code coverage testing"
+      shell: "sh"
+      run: "cargo tarpaulin --out Xml >> output.log"
+    - name: "Produce code coverage summary"
+      shell: "sh"
+      run: "(tail --lines=1 output.log | sed -r -e 's/^([0-9]+(\\.[0-9]+)?%).*/# Code coverage: \\1/') >> $GITHUB_STEP_SUMMARY"
+    - name: "Archive code coverage results"
+      uses: "actions/upload-artifact@v3"
+      with:
+        name: "code-coverage-report"
+        path: "cobertura.xml"
+    - name: "Run tests in release profile"
+      if: "${{ inputs.release-testing }} == \"true\""
+      shell: "sh"
+      run: "cargo test --release"

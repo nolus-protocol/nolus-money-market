@@ -1,0 +1,86 @@
+name: Smart Contracts
+run-name: "Building smart contracts by ${{ github.actor }}"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+    tags:
+      - '*'
+    paths-ignore:
+      - "README.md"
+  pull_request:
+    branches:
+      - "main"
+    paths-ignore:
+      - "README.md"
+
+env:
+  CARGO_TERM_COLOR: "always"
+
+jobs:
+  check-formatting:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "./.github/actions/check-formatting.yaml"
+  check-codebase:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "./.github/actions/check-codebase.yaml"
+  audit-dependencies:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "./.github/actions/audit-dependencies.yaml"
+  linting:
+    runs-on: "ubuntu-latest"
+    needs:
+      - "check-formatting"
+      - "check-codebase"
+      - "audit-dependencies"
+    steps:
+      - uses: "actions/checkout@v3"
+      - name: "Run linter"
+        run: "sh ./lint.sh"
+  code-coverage:
+    runs-on: "ubuntu-latest"
+    needs:
+      - "linting"
+    steps:
+      - uses: "actions/checkout@v3"
+      - uses: "./.github/actions/code-coverage.yaml"
+        with:
+          release-testing: "true"
+  check-wasm:
+    runs-on: "ubuntu-latest"
+    needs:
+      - "code-coverage"
+    steps:
+      - uses: "actions/checkout@v3"
+      - run: "cargo install cargo-workspaces"
+      - run: "cargo install cosmwasm-check"
+      - name: "Building WASM binaries"
+        run: "cargo workspaces exec cargo build --target wasm32-unknown-unknown"
+      - name: "Checking WASM binaries"
+        run: "cosmwasm-check --available-capabilities staking,stargate,cosmwasm_1_1,iterator,neutron ./target/wasm32-unknown-unknown/debug/*.wasm"
+  build-optimized:
+    runs-on: "ubuntu-latest"
+    needs:
+      - "check-wasm"
+    if: "github.ref_type == 'tag'"
+    steps:
+      - uses: "actions/checkout@v3"
+      - name: "Run workspace-optimizer docker image"
+        run: "sudo docker run --rm -v \"$(pwd)\":/code --mount type=volume,source=\"$(basename \"$(pwd)\")_cache\",target=/code/target --mount type=volume,source=rustup_dir_cache,target=/usr/local/rustup --mount type=volume,source=cargo_dir_cache,target=/usr/local/cargo --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.11"
+      - name: "Check for WASM binaries larger than allowed limit"
+        run: "find artifacts/ -size +800k | wc -l | sh -c 'read input; if !test \"$input\" = \"0\"; then exit 1; fi'"
+      - name: "Copy deployment script to artifacts directory"
+        run: "sudo cp scripts/deploy-contracts-genesis.sh artifacts/"
+      - name: "Archive artifacts"
+        uses: "actions/upload-artifact@v3"
+        with:
+          name: "optimized-binaries"
+          path: "artifacts/"

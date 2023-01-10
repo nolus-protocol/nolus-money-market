@@ -1,0 +1,10 @@
+name: 'Check codebase'
+description: "Action for checking codebase and dependencies' versions"
+author: "Kiril Mihaylov <k.mihaylov@nolus.io>"
+
+runs:
+  using: composite
+  steps:
+    - name: "Check codebase & dependency versions"
+      shell: "sh"
+      run: "cargo check --locked"
