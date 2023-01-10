@@ -1,0 +1,13 @@
+name: "Check formatting"
+description: "Action for checking codebase's formatting"
+author: "Kiril Mihaylov <k.mihaylov@nolus.io>"
+
+runs:
+  using: composite
+  steps:
+    - uses: "actions/checkout@v3"
+    - shell: "sh"
+      run: "rustup component add rustfmt"
+    - name: "Check formatting"
+      shell: "sh"
+      run: "cargo fmt --check"
