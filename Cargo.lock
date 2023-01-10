@@ -1319,6 +1319,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree"
+version = "0.1.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "trees"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
