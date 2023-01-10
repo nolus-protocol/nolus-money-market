@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{Binary, StdError, StdResult, Storage, to_binary},
+    cosmwasm_std::{to_binary, Binary, StdError, StdResult, Storage},
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
@@ -23,29 +23,12 @@ pub fn upgrade_contract<const VERSION: Version>(storage: &mut dyn Storage) -> St
 }
 
 #[derive(
-    Debug,
-    Copy,
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Default,
-    Hash,
-    Serialize,
-    Deserialize,
-    JsonSchema,
-)]
-#[serde(rename_all = "snake_case")]
-pub struct QueryVersion {}
-
-#[derive(
-Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Serialize, Deserialize, JsonSchema,
+    Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Serialize, Deserialize, JsonSchema,
 )]
 #[serde(untagged, rename_all = "snake_case")]
 pub enum WithVersion<Q> {
     Version {
-        version: QueryVersion,
+        version: (),
     },
     Query {
         #[serde(flatten)]
@@ -63,9 +46,7 @@ impl<Q> WithVersion<Q> {
         F: FnOnce(Q) -> StdResult<Binary>,
     {
         match self {
-            WithVersion::Version {
-                version: QueryVersion {},
-            } => to_binary(&VERSION),
+            WithVersion::Version { version: () } => to_binary(&VERSION),
             WithVersion::Query { query } => f(query),
         }
     }
@@ -75,40 +56,45 @@ impl<Q> WithVersion<Q> {
 mod tests {
     use serde::{Deserialize, Serialize};
 
-    use super::{QueryVersion, WithVersion};
+    use super::WithVersion;
 
     #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
     #[serde(rename_all = "snake_case")]
     enum VariantsQuery {
         Abc {},
         Def {},
+        Version {},
     }
 
-    const QUERY_VERSION: WithVersion<VariantsQuery> = WithVersion::Version {
-        version: QueryVersion {},
-    };
+    const VERSION: WithVersion<VariantsQuery> = WithVersion::Version { version: () };
 
     const QUERY_ABC: WithVersion<VariantsQuery> = WithVersion::new_query(VariantsQuery::Abc {});
 
     const QUERY_DEF: WithVersion<VariantsQuery> = WithVersion::new_query(VariantsQuery::Def {});
 
+    const QUERY_VERSION: WithVersion<VariantsQuery> =
+        WithVersion::new_query(VariantsQuery::Version {});
+
     fn assert_query_serde(value: WithVersion<VariantsQuery>) {
         assert_eq!(
-            serde_json::from_str::<WithVersion<VariantsQuery>>(&serde_json::to_string(&value).unwrap())
-                .unwrap(),
+            serde_json::from_str::<WithVersion<VariantsQuery>>(
+                &serde_json::to_string(&value).unwrap()
+            )
+            .unwrap(),
             value
         );
     }
 
     #[test]
     fn test_query_serde() {
-        assert_query_serde(QUERY_VERSION);
+        assert_query_serde(VERSION);
         assert_query_serde(QUERY_ABC);
         assert_query_serde(QUERY_DEF);
+        assert_query_serde(QUERY_VERSION);
 
         assert_eq!(
-            serde_json::from_str::<WithVersion<VariantsQuery>>(r#"{"version":{}}"#).unwrap(),
-            QUERY_VERSION
+            serde_json::from_str::<WithVersion<VariantsQuery>>(r#"{"version":null}"#).unwrap(),
+            VERSION
         );
 
         assert_eq!(
@@ -119,6 +105,11 @@ mod tests {
         assert_eq!(
             serde_json::from_str::<WithVersion<VariantsQuery>>(r#"{"def":{}}"#).unwrap(),
             QUERY_DEF
+        );
+
+        assert_eq!(
+            serde_json::from_str::<WithVersion<VariantsQuery>>(r#"{"version":{}}"#).unwrap(),
+            QUERY_VERSION
         );
     }
 }
