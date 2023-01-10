@@ -5,8 +5,8 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage},
-    cw2::set_contract_version,
 };
+use versioning::Version;
 
 use crate::{
     cmd::Borrow,
@@ -17,8 +17,7 @@ use crate::{
 };
 
 // version info for migration info
-const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+const CONTRACT_VERSION: Version = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -27,12 +26,12 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-
     platform::contract::validate_addr(&deps.querier, &msg.lpp_ust_addr)?;
     platform::contract::validate_addr(&deps.querier, &msg.time_alarms)?;
     platform::contract::validate_addr(&deps.querier, &msg.market_price_oracle)?;
     platform::contract::validate_addr(&deps.querier, &msg.profit)?;
+
+    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
 
     SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
 

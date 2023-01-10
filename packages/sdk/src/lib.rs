@@ -4,8 +4,6 @@ pub use cosmwasm_schema::{self, schemars};
 pub use cosmwasm_std;
 #[cfg(feature = "storage")]
 pub use cosmwasm_storage;
-#[cfg(feature = "contract")]
-pub use cw2;
 #[cfg(all(not(target_arch = "wasm32"), feature = "testing"))]
 pub use cw_multi_test;
 #[cfg(feature = "storage")]

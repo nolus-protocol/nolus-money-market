@@ -3,9 +3,9 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply},
-    cw2::set_contract_version,
     neutron_sdk::sudo::msg::SudoMsg,
 };
+use versioning::Version;
 
 use crate::{
     api::{ExecuteMsg, NewLeaseForm, StateQuery},
@@ -22,8 +22,7 @@ pub mod msg;
 mod repay;
 mod state;
 
-const CONTRACT_NAME: &str = env!("CARGO_PKG_NAME");
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+const CONTRACT_VERSION: Version = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -39,7 +38,7 @@ pub fn instantiate(
     platform::contract::validate_addr(&deps.querier, &form.loan.lpp)?;
     platform::contract::validate_addr(&deps.querier, &form.loan.profit)?;
 
-    set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
 
     let (batch, next_state) = RequestLoan::new(&mut deps, info, form)?;
     impl_::save(&next_state.into(), &mut deps)?;
