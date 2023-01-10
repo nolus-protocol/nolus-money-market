@@ -1,10 +1,8 @@
+use prost::Message;
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
-use sdk::{
-    cosmwasm_std::to_binary,
-    neutron_sdk::bindings::{msg::NeutronMsg, types::ProtobufAny},
-};
+use sdk::neutron_sdk::bindings::{msg::NeutronMsg, types::ProtobufAny};
 
 use crate::{
     batch::Batch as LocalBatch,
@@ -88,10 +86,13 @@ impl Batch {
     pub fn add_message<T, M>(&mut self, msg_type: T, msg: M) -> Result<()>
     where
         T: Into<String>,
-        M: Serialize,
+        M: Message,
     {
+        let mut buf = Vec::with_capacity(msg.encoded_len());
+        msg.encode_raw(&mut buf);
+
         self.msgs
-            .push(ProtobufAny::new(msg_type.into(), to_binary(&msg)?));
+            .push(ProtobufAny::new(msg_type.into(), buf.into()));
         Ok(())
     }
 }

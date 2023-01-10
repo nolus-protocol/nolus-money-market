@@ -6,18 +6,10 @@ pub trait CurrencyMapper<'a> {
         C: Currency;
 }
 
-// A marker interface on #CurrencyMapper implementations to denote
-// they should be used only on the local chain.
-pub trait LocalChainCurrencyMapper {}
-
-// A marker interface on #CurrencyMapper implementations to denote
-// they should be used only on the DEX chain.
-pub trait DexChainCurrencyMapper {}
-
 pub mod local {
     use finance::currency::{Currency, Symbol};
 
-    use super::{CurrencyMapper, LocalChainCurrencyMapper};
+    use super::CurrencyMapper;
 
     pub struct BankMapper {}
     impl<'a> CurrencyMapper<'a> for BankMapper {
@@ -28,8 +20,6 @@ pub mod local {
             C::BANK_SYMBOL
         }
     }
-
-    impl LocalChainCurrencyMapper for BankMapper {}
 }
 
 pub mod dex {
@@ -37,7 +27,7 @@ pub mod dex {
 
     use crate::error::Error;
 
-    use super::{CurrencyMapper, DexChainCurrencyMapper};
+    use super::CurrencyMapper;
 
     pub struct DexMapper {}
     impl<'a> CurrencyMapper<'a> for DexMapper {
@@ -60,6 +50,4 @@ pub mod dex {
             Ok(C::DEX_SYMBOL)
         }
     }
-
-    impl DexChainCurrencyMapper for DexMapper {}
 }

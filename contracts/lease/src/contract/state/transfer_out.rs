@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use finance::duration::Duration;
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use platform::{bank_ibc::LocalChainSender, batch::Batch, ica::HostAccount};
+use platform::{bank_ibc::local::Sender, batch::Batch, ica::HostAccount};
 use sdk::{
     cosmwasm_std::{DepsMut, Env},
     neutron_sdk::sudo::msg::SudoMsg,
@@ -49,7 +49,7 @@ impl TransferOut {
     }
 
     pub(super) fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
-        let mut ibc_sender = LocalChainSender::new(
+        let mut ibc_sender = Sender::new(
             &self.form.dex.transfer_channel.local_endpoint,
             self.dex_account.clone(),
             now + ICA_TRANSFER_TIMEOUT,

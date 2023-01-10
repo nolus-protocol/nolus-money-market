@@ -1,3 +1,5 @@
+#[cfg(feature = "cosmos_ibc")]
+pub use cosmos_sdk_proto;
 #[cfg(feature = "schema")]
 pub use cosmwasm_schema::{self, schemars};
 #[cfg(feature = "cosmos")]
