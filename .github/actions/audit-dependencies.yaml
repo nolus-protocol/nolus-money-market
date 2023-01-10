@@ -5,7 +5,6 @@ author: "Kiril Mihaylov <k.mihaylov@nolus.io>"
 runs:
   using: composite
   steps:
-    - uses: "actions/checkout@v3"
     - shell: "sh"
       run: "cargo install cargo-audit"
     - name: "Audit dependencies"
