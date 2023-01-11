@@ -14,6 +14,7 @@ use crate::{
 mod unchecked;
 pub mod with_base;
 pub mod with_price;
+pub mod with_quote;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(try_from = "unchecked::PriceDTO<G, QuoteG>")]
@@ -179,6 +180,18 @@ where
     fn exec<QuoteC>(self, _: Price<C, QuoteC>) -> Result<Self::Output, Self::Error>
     where
         QuoteC: Currency;
+}
+
+pub trait WithQuote<C>
+where
+    C: Currency,
+{
+    type Output;
+    type Error;
+
+    fn exec<Base>(self, _: Price<Base, C>) -> Result<Self::Output, Self::Error>
+    where
+        Base: Currency;
 }
 
 #[cfg(test)]
