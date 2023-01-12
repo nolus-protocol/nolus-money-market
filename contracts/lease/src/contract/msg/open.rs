@@ -10,7 +10,7 @@ use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef};
 use crate::{
     api::{LeaseCoin, NewLeaseForm},
     error::{ContractError, ContractResult},
-    lease::{self, IntoDTOResult, Lease, WithLeaseDeps},
+    lease::{IntoDTOResult, Lease, with_lease_deps::{self, WithLeaseDeps}},
     loan::Loan,
 };
 
@@ -37,7 +37,7 @@ impl NewLeaseForm {
         };
         //TODO avoid cloning by extending the trait WithLeaseDeps to provide it
         let asset_currency = cmd.form.currency.clone();
-        lease::execute_deps(
+        with_lease_deps::execute(
             cmd,
             &asset_currency,
             deps.0,

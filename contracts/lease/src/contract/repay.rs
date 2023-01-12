@@ -14,7 +14,7 @@ use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 use crate::{
     error::ContractError,
     event::Type,
-    lease::{Lease, LeaseDTO, RepayResult as LeaseRepayResult, WithLease},
+    lease::{with_lease::WithLease, Lease, LeaseDTO, RepayResult as LeaseRepayResult},
 };
 
 pub struct Repay<'a> {

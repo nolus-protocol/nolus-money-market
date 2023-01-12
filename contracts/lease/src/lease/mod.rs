@@ -23,15 +23,13 @@ pub(super) use self::{
     dto::LeaseDTO,
     liquidation::{LeaseInfo, LiquidationInfo, OnAlarmResult, Status, WarningLevel},
     repay::Result as RepayResult,
-    with_lease::{execute, WithLease},
-    with_lease_deps::{execute as execute_deps, WithLeaseDeps},
 };
 
 mod dto;
 mod liquidation;
 mod repay;
-mod with_lease;
-mod with_lease_deps;
+pub(crate) mod with_lease;
+pub(crate) mod with_lease_deps;
 
 pub struct Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where

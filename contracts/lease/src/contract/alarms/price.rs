@@ -10,7 +10,7 @@ use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 use crate::{
     contract::alarms::{emit_events, AlarmResult},
     error::ContractError,
-    lease::{Lease, OnAlarmResult, WithLease},
+    lease::{with_lease::WithLease, Lease, OnAlarmResult},
 };
 
 pub struct PriceAlarm<'a> {

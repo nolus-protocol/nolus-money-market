@@ -10,7 +10,7 @@ use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractError,
-    lease::{IntoDTOResult, Lease, WithLease},
+    lease::{with_lease::WithLease, IntoDTOResult, Lease},
 };
 
 pub struct Close<'a, Bank> {

@@ -9,7 +9,7 @@ use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractError,
-    lease::{Lease, WithLease},
+    lease::{with_lease::WithLease, Lease},
 };
 
 pub struct LeaseState {

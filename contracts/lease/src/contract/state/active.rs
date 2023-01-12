@@ -21,7 +21,7 @@ use crate::{
     },
     error::ContractResult,
     event::Type,
-    lease::{self, IntoDTOResult, LeaseDTO},
+    lease::{with_lease, IntoDTOResult, LeaseDTO},
 };
 
 use super::{Controller, Response};
@@ -91,7 +91,7 @@ impl Controller for Active {
 
     fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
         // TODO think on taking benefit from having a LppView trait
-        lease::execute(
+        with_lease::execute(
             self.lease,
             LeaseState::new(env.block.time),
             &env.contract.address,
@@ -112,7 +112,7 @@ fn try_repay(
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<RepayResult> {
-    lease::execute(
+    with_lease::execute(
         lease,
         Repay::new(info.funds, env),
         &env.contract.address,
@@ -130,7 +130,7 @@ fn try_close(
     // and refactor try_* to return it
     // Take the emitting out of the commands layer
     let account = bank::my_account(env, querier);
-    let IntoDTOResult { lease, batch } = lease::execute(
+    let IntoDTOResult { lease, batch } = with_lease::execute(
         lease,
         Close::new(&info.sender, account),
         &env.contract.address,
@@ -151,7 +151,7 @@ fn try_on_price_alarm(
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<AlarmResult> {
-    lease::execute(
+    with_lease::execute(
         lease,
         PriceAlarm::new(env, &info.sender, env.block.time),
         &env.contract.address,
@@ -165,7 +165,7 @@ fn try_on_time_alarm(
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<AlarmResult> {
-    lease::execute(
+    with_lease::execute(
         lease,
         TimeAlarm::new(env, &info.sender, env.block.time),
         &env.contract.address,
