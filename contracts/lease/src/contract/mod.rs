@@ -1,3 +1,5 @@
+use ::currency::lease::LeaseGroup;
+use finance::currency;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -31,6 +33,7 @@ pub fn instantiate(
     info: MessageInfo,
     form: NewLeaseForm,
 ) -> ContractResult<CwResponse> {
+    currency::validate::<LeaseGroup>(&form.currency)?;
     deps.api.addr_validate(form.customer.as_str())?;
 
     platform::contract::validate_addr(&deps.querier, &form.time_alarms)?;

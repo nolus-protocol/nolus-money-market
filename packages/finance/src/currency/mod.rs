@@ -9,6 +9,8 @@ pub use from_symbol_any::{
 };
 pub use group::{Group, MaybeAnyVisitResult};
 
+use crate::error::{Error, Result};
+
 mod from_symbol;
 mod from_symbol_any;
 mod group;
@@ -37,4 +39,42 @@ where
     C2: 'static,
 {
     TypeId::of::<C1>() == TypeId::of::<C2>()
+}
+
+pub fn validate<G>(ticker: Symbol) -> Result<()>
+where
+    G: Group,
+{
+    struct SupportedLeaseCurrency {}
+    impl AnyVisitor for SupportedLeaseCurrency {
+        type Error = Error;
+        type Output = ();
+        fn on<C>(self) -> Result<Self::Output>
+        where
+            C: Currency,
+        {
+            Ok(())
+        }
+    }
+    visit_any_on_ticker::<G, _>(ticker, SupportedLeaseCurrency {})
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        currency::Currency,
+        error::Error,
+        test::currency::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
+    };
+
+    #[test]
+    fn validate() {
+        assert_eq!(Ok(()), super::validate::<TestCurrencies>(Usdc::TICKER));
+        assert_eq!(Ok(()), super::validate::<TestCurrencies>(Nls::TICKER));
+        assert_eq!(
+            Err(Error::not_in_currency_group::<_, TestCurrencies>(Dai::TICKER)),
+            super::validate::<TestCurrencies>(Dai::TICKER)
+        );
+        assert_eq!(Ok(()), super::validate::<TestExtraCurrencies>(Dai::TICKER));
+    }
 }
