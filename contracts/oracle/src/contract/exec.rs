@@ -4,6 +4,7 @@ use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
 use marketprice::SpotPrice;
+use platform::contract;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, DepsMut, Env, Storage, Timestamp},
@@ -16,6 +17,7 @@ use crate::{
 };
 
 use super::{
+    alarms::MarketAlarms,
     feed::{self, Feeds},
     feeder::Feeders,
 };
@@ -84,6 +86,15 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                 self.env.block.time,
                 max_count,
             ),
+            ExecuteMsg::AddPriceAlarm { alarm } => {
+                contract::validate_addr(&self.deps.querier, &self.sender)?;
+                MarketAlarms::try_add_price_alarm::<OracleBase>(
+                    self.deps.storage,
+                    self.sender,
+                    alarm,
+                )
+            }
+            ExecuteMsg::RemovePriceAlarm {} => MarketAlarms::remove(self.deps.storage, self.sender),
             _ => {
                 unreachable!()
             }

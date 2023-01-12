@@ -1,12 +1,15 @@
+use std::marker::PhantomData;
+
 use serde::{Deserialize, Serialize};
 
 use currency::native::Nls;
 use finance::{
     coin::{Amount, Coin, CoinDTO},
-    currency::SymbolOwned,
+    currency::{Currency, SymbolOwned},
     price::{
         self,
-        dto::{with_price, WithPrice},
+        dto::{with_quote, WithQuote},
+        Price,
     },
 };
 use platform::batch::Batch;
@@ -20,7 +23,7 @@ use swap::SwapGroup;
 
 use crate::SpotPrice;
 
-use super::{errors::AlarmError, Alarm, ExecuteAlarmMsg};
+use super::{errors::AlarmError, ExecuteAlarmMsg};
 
 pub type AlarmReplyId = u64;
 
@@ -38,19 +41,18 @@ pub struct PriceAlarms<'m> {
 struct AlarmStore(CoinDTO<SwapGroup>);
 
 const NORM_SCALE: u128 = 1_000_000_000;
-struct InvNormalizeCmd;
+struct InvNormalizeCmd<QuoteC>(PhantomData<QuoteC>);
 
-impl WithPrice for InvNormalizeCmd {
+impl<QuoteC> WithQuote<QuoteC> for InvNormalizeCmd<QuoteC>
+where
+    QuoteC: Currency,
+{
     type Output = AlarmStore;
     type Error = finance::error::Error;
 
-    fn exec<C, QuoteC>(
-        self,
-        price: finance::price::Price<C, QuoteC>,
-    ) -> Result<Self::Output, Self::Error>
+    fn exec<BaseC>(self, price: Price<BaseC, QuoteC>) -> Result<Self::Output, Self::Error>
     where
-        C: finance::currency::Currency,
-        QuoteC: finance::currency::Currency,
+        BaseC: Currency,
     {
         Ok(AlarmStore(
             price::total(Coin::new(NORM_SCALE), price.inv()).into(),
@@ -59,8 +61,11 @@ impl WithPrice for InvNormalizeCmd {
 }
 
 impl AlarmStore {
-    fn inv_normalize(price: &SpotPrice) -> Result<Self, AlarmError> {
-        let alarm = with_price::execute(price, InvNormalizeCmd)?;
+    fn inv_normalize<BaseC>(price: &SpotPrice) -> Result<Self, AlarmError>
+    where
+        BaseC: Currency,
+    {
+        let alarm = with_quote::execute(price, InvNormalizeCmd::<BaseC>(PhantomData))?;
         Ok(alarm)
     }
 }
@@ -130,27 +135,36 @@ impl<'m> PriceAlarms<'m> {
     }
 
     // TODO: rename
-    pub fn add_or_update(
+    pub fn add_alarm_below<BaseC>(
         &self,
         storage: &mut dyn Storage,
         addr: &Addr,
-        alarm: Alarm,
-    ) -> Result<(), AlarmError> {
-        self.alarms_below().save(
+        alarm: &SpotPrice,
+    ) -> Result<(), AlarmError>
+    where
+        BaseC: Currency,
+    {
+        Ok(self.alarms_below().save(
             storage,
             addr.to_owned(),
-            &AlarmStore::inv_normalize(&alarm.below)?,
-        )?;
+            &AlarmStore::inv_normalize::<BaseC>(alarm)?,
+        )?)
+    }
 
-        if let Some(alarm) = alarm.above {
-            self.alarms_above().save(
-                storage,
-                addr.to_owned(),
-                &AlarmStore::inv_normalize(&alarm)?,
-            )?;
-        }
-
-        Ok(())
+    pub fn add_alarm_above<BaseC>(
+        &self,
+        storage: &mut dyn Storage,
+        addr: &Addr,
+        alarm: &SpotPrice,
+    ) -> Result<(), AlarmError>
+    where
+        BaseC: Currency,
+    {
+        Ok(self.alarms_above().save(
+            storage,
+            addr.to_owned(),
+            &AlarmStore::inv_normalize::<BaseC>(alarm)?,
+        )?)
     }
 
     pub fn remove(&self, storage: &mut dyn Storage, addr: Addr) -> Result<(), AlarmError> {
@@ -159,17 +173,19 @@ impl<'m> PriceAlarms<'m> {
         Ok(())
     }
 
-    pub fn query_alarms(
+    pub fn query_alarms<BaseC>(
         &self,
         storage: &dyn Storage,
         prices: &[SpotPrice],
-    ) -> Result<bool, AlarmError> {
+    ) -> Result<bool, AlarmError>
+    where
+        BaseC: Currency,
+    {
         let alarms_below = self.alarms_below();
         let alarms_above = self.alarms_above();
 
         let results = prices.iter().map(|price| -> Result<bool, AlarmError> {
-            let inv_normalized_price = AlarmStore::inv_normalize(price)?.0.amount();
-
+            let inv_normalized_price = AlarmStore::inv_normalize::<BaseC>(price)?.0.amount();
             Ok(alarms_below
                 .idx
                 .0
@@ -211,13 +227,16 @@ impl<'m> PriceAlarms<'m> {
         Ok(false)
     }
 
-    pub fn notify(
+    pub fn notify<BaseC>(
         &self,
         storage: &mut dyn Storage,
         batch: &mut Batch,
         prices: &[SpotPrice],
         max_count: u32,
-    ) -> Result<AlarmsCount, AlarmError> {
+    ) -> Result<AlarmsCount, AlarmError>
+    where
+        BaseC: Currency,
+    {
         let mut count = max_count.try_into()?;
         let mut next_id = self.id_seq.may_load(storage)?.unwrap_or(0);
         let mut start_id = next_id;
@@ -245,7 +264,7 @@ impl<'m> PriceAlarms<'m> {
         let alarms_above = self.alarms_above();
 
         for price in prices {
-            let inv_normalized_price = AlarmStore::inv_normalize(price)?.0.amount();
+            let inv_normalized_price = AlarmStore::inv_normalize::<BaseC>(price)?.0.amount();
 
             alarms_below
                 .idx
@@ -303,6 +322,54 @@ pub mod tests {
 
     use super::*;
 
+    type Base = Usdc;
+
+    #[test]
+    #[should_panic]
+    fn add_below_wrong_base() {
+        let alarms = PriceAlarms::new(
+            "alarms_below",
+            "index_below",
+            "alarms_above",
+            "index_above",
+            "alarms_sequence",
+        );
+        let storage = &mut mock_dependencies().storage;
+
+        alarms
+            .add_alarm_below::<Base>(
+                storage,
+                &Addr::unchecked("addr1"),
+                &price::total_of(Coin::<Base>::new(1))
+                    .is(Coin::<Atom>::new(20))
+                    .into(),
+            )
+            .unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn add_above_wrong_base() {
+        let alarms = PriceAlarms::new(
+            "alarms_below",
+            "index_below",
+            "alarms_above",
+            "index_above",
+            "alarms_sequence",
+        );
+        let storage = &mut mock_dependencies().storage;
+
+        alarms
+            .add_alarm_above::<Base>(
+                storage,
+                &Addr::unchecked("addr1"),
+                &price::total_of(Coin::<Base>::new(1))
+                    .is(Coin::<Atom>::new(20))
+                    .into(),
+            )
+            .unwrap();
+    }
+
     #[test]
     fn test_add_remove() {
         let alarms = PriceAlarms::new(
@@ -319,33 +386,40 @@ pub mod tests {
         let addr3 = Addr::unchecked("addr3");
 
         alarms
-            .add_or_update(
+            .add_alarm_below::<Base>(
                 storage,
                 &addr1,
-                Alarm::new(
-                    price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(20)),
-                    None,
-                ),
+                &price::total_of(Coin::<Atom>::new(1))
+                    .is(Coin::<Base>::new(20))
+                    .into(),
             )
             .unwrap();
+
         alarms
-            .add_or_update(
+            .add_alarm_below::<Base>(
                 storage,
                 &addr2,
-                Alarm::new(
-                    price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(5)),
-                    Some(price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(10))),
-                ),
+                &price::total_of(Coin::<Atom>::new(1))
+                    .is(Coin::<Base>::new(5))
+                    .into(),
             )
             .unwrap();
         alarms
-            .add_or_update(
+            .add_alarm_above::<Base>(
+                storage,
+                &addr2,
+                &price::total_of(Coin::<Atom>::new(1))
+                    .is(Coin::<Base>::new(10))
+                    .into(),
+            )
+            .unwrap();
+        alarms
+            .add_alarm_below::<Base>(
                 storage,
                 &addr3,
-                Alarm::new(
-                    price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(20)),
-                    None,
-                ),
+                &price::total_of(Coin::<Atom>::new(1))
+                    .is(Coin::<Base>::new(20))
+                    .into(),
             )
             .unwrap();
 
@@ -355,11 +429,11 @@ pub mod tests {
         let mut batch = Batch::default();
 
         alarms
-            .notify(
+            .notify::<Base>(
                 storage,
                 &mut batch,
                 &[price::total_of(Coin::<Atom>::new(1))
-                    .is(Coin::<Usdc>::new(15))
+                    .is(Coin::<Base>::new(15))
                     .into()],
                 10,
             )
@@ -383,6 +457,30 @@ pub mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn test_notify_wrong_base() {
+        let alarms = PriceAlarms::new(
+            "alarms_below",
+            "index_below",
+            "alarms_above",
+            "index_above",
+            "alarms_sequence",
+        );
+        let storage = &mut mock_dependencies().storage;
+
+        let mut batch = Batch::default();
+
+        let _ = alarms.notify::<Base>(
+            storage,
+            &mut batch,
+            &[price::total_of(Coin::<Atom>::new(1))
+                .is(Coin::<Weth>::new(15))
+                .into()],
+            10,
+        );
+    }
+
+    #[test]
     fn test_notify() {
         let alarms = PriceAlarms::new(
             "alarms_below",
@@ -400,14 +498,14 @@ pub mod tests {
         let addr5 = Addr::unchecked("addr5");
 
         let remaining_alarms = alarms
-            .query_alarms(
+            .query_alarms::<Base>(
                 storage,
                 &[
                     price::total_of(Coin::<Atom>::new(1))
-                        .is(Coin::<Usdc>::new(15))
+                        .is(Coin::<Base>::new(15))
                         .into(),
                     price::total_of(Coin::<Weth>::new(1))
-                        .is(Coin::<Usdc>::new(26))
+                        .is(Coin::<Base>::new(26))
                         .into(),
                 ],
             )
@@ -416,65 +514,78 @@ pub mod tests {
         assert!(!remaining_alarms);
 
         alarms
-            .add_or_update(
+            .add_alarm_below::<Base>(
                 storage,
                 &addr1,
-                Alarm::new(
-                    price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(10)),
-                    None,
-                ),
+                &price::total_of(Coin::<Atom>::new(1))
+                    .is(Coin::<Base>::new(10))
+                    .into(),
             )
             .unwrap();
         alarms
-            .add_or_update(
+            .add_alarm_below::<Base>(
                 storage,
                 &addr2,
-                Alarm::new(
-                    price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(20)),
-                    None,
-                ),
+                &price::total_of(Coin::<Atom>::new(1))
+                    .is(Coin::<Base>::new(20))
+                    .into(),
             )
             .unwrap();
         alarms
-            .add_or_update(
+            .add_alarm_below::<Base>(
                 storage,
                 &addr3,
-                Alarm::new(
-                    price::total_of(Coin::<Weth>::new(1)).is(Coin::<Usdc>::new(30)),
-                    None,
-                ),
+                &price::total_of(Coin::<Weth>::new(1))
+                    .is(Coin::<Base>::new(30))
+                    .into(),
             )
             .unwrap();
         alarms
-            .add_or_update(
+            .add_alarm_below::<Base>(
                 storage,
                 &addr4,
-                Alarm::new(
-                    price::total_of(Coin::<Weth>::new(1)).is(Coin::<Usdc>::new(20)),
-                    Some(price::total_of(Coin::<Weth>::new(1)).is(Coin::<Usdc>::new(25))),
-                ),
+                &price::total_of(Coin::<Weth>::new(1))
+                    .is(Coin::<Base>::new(20))
+                    .into(),
             )
             .unwrap();
         alarms
-            .add_or_update(
+            .add_alarm_above::<Base>(
+                storage,
+                &addr4,
+                &price::total_of(Coin::<Weth>::new(1))
+                    .is(Coin::<Base>::new(25))
+                    .into(),
+            )
+            .unwrap();
+        alarms
+            .add_alarm_below::<Base>(
                 storage,
                 &addr5,
-                Alarm::new(
-                    price::total_of(Coin::<Weth>::new(1)).is(Coin::<Usdc>::new(20)),
-                    Some(price::total_of(Coin::<Weth>::new(1)).is(Coin::<Usdc>::new(35))),
-                ),
+                &price::total_of(Coin::<Weth>::new(1))
+                    .is(Coin::<Base>::new(20))
+                    .into(),
+            )
+            .unwrap();
+        alarms
+            .add_alarm_above::<Base>(
+                storage,
+                &addr5,
+                &price::total_of(Coin::<Weth>::new(1))
+                    .is(Coin::<Base>::new(35))
+                    .into(),
             )
             .unwrap();
 
         let remaining_alarms = alarms
-            .query_alarms(
+            .query_alarms::<Base>(
                 storage,
                 &[
                     price::total_of(Coin::<Atom>::new(1))
-                        .is(Coin::<Usdc>::new(15))
+                        .is(Coin::<Base>::new(15))
                         .into(),
                     price::total_of(Coin::<Weth>::new(1))
-                        .is(Coin::<Usdc>::new(26))
+                        .is(Coin::<Base>::new(26))
                         .into(),
                 ],
             )
@@ -485,15 +596,15 @@ pub mod tests {
         let mut batch = Batch::default();
 
         let sent = alarms
-            .notify(
+            .notify::<Base>(
                 storage,
                 &mut batch,
                 &[
                     price::total_of(Coin::<Atom>::new(1))
-                        .is(Coin::<Usdc>::new(15))
+                        .is(Coin::<Base>::new(15))
                         .into(),
                     price::total_of(Coin::<Weth>::new(1))
-                        .is(Coin::<Usdc>::new(26))
+                        .is(Coin::<Base>::new(26))
                         .into(),
                 ],
                 10,
@@ -521,15 +632,15 @@ pub mod tests {
 
         // check limited max_count
         let sent = alarms
-            .notify(
+            .notify::<Base>(
                 storage,
                 &mut batch,
                 &[
                     price::total_of(Coin::<Atom>::new(1))
-                        .is(Coin::<Usdc>::new(15))
+                        .is(Coin::<Base>::new(15))
                         .into(),
                     price::total_of(Coin::<Weth>::new(1))
-                        .is(Coin::<Usdc>::new(26))
+                        .is(Coin::<Base>::new(26))
                         .into(),
                 ],
                 2,
@@ -555,6 +666,26 @@ pub mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn test_query_wrong_base() {
+        let alarms = PriceAlarms::new(
+            "alarms_below",
+            "index_below",
+            "alarms_above",
+            "index_above",
+            "alarms_sequence",
+        );
+        let storage = &mut mock_dependencies().storage;
+
+        let _ = alarms.query_alarms::<Base>(
+            storage,
+            &[price::total_of(Coin::<Atom>::new(1))
+                .is(Coin::<Weth>::new(15))
+                .into()],
+        );
+    }
+
+    #[test]
     fn test_id_overflow() {
         let storage = &mut mock_dependencies().storage;
         let alarms = PriceAlarms::new(
@@ -572,34 +703,32 @@ pub mod tests {
         let addr2 = Addr::unchecked("addr2");
 
         alarms
-            .add_or_update(
+            .add_alarm_below::<Base>(
                 storage,
                 &addr1,
-                Alarm::new(
-                    price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(20)),
-                    None,
-                ),
+                &price::total_of(Coin::<Atom>::new(1))
+                    .is(Coin::<Base>::new(20))
+                    .into(),
             )
             .unwrap();
 
         alarms
-            .add_or_update(
+            .add_alarm_below::<Base>(
                 storage,
                 &addr2,
-                Alarm::new(
-                    price::total_of(Coin::<Atom>::new(1)).is(Coin::<Usdc>::new(30)),
-                    None,
-                ),
+                &price::total_of(Coin::<Atom>::new(1))
+                    .is(Coin::<Base>::new(30))
+                    .into(),
             )
             .unwrap();
 
         let mut batch = Batch::default();
         let sent = alarms
-            .notify(
+            .notify::<Base>(
                 storage,
                 &mut batch,
                 &[price::total_of(Coin::<Atom>::new(1))
-                    .is(Coin::<Usdc>::new(10))
+                    .is(Coin::<Base>::new(10))
                     .into()],
                 10,
             )

@@ -1,5 +1,4 @@
-use serde::{Deserialize, Serialize};
-
+use finance::currency::Currency;
 use marketprice::{
     alarms::{price::PriceAlarms, Alarm},
     SpotPrice,
@@ -8,7 +7,6 @@ use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{to_binary, Addr, Storage},
-    schemars::{self, JsonSchema},
 };
 
 use crate::{
@@ -16,8 +14,7 @@ use crate::{
     ContractError,
 };
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct MarketAlarms {}
+pub struct MarketAlarms;
 
 impl MarketAlarms {
     const PRICE_ALARMS: PriceAlarms<'static> = PriceAlarms::new(
@@ -33,30 +30,42 @@ impl MarketAlarms {
         Ok(Response::default())
     }
 
-    pub fn try_add_price_alarm(
+    pub fn try_add_price_alarm<BaseC>(
         storage: &mut dyn Storage,
         addr: Addr,
         alarm: Alarm,
-    ) -> Result<Response, ContractError> {
-        Self::PRICE_ALARMS.add_or_update(storage, &addr, alarm)?;
+    ) -> Result<Response, ContractError>
+    where
+        BaseC: Currency,
+    {
+        if let Some(above) = alarm.above {
+            Self::PRICE_ALARMS.add_alarm_above::<BaseC>(storage, &addr, &above)?;
+        }
+        Self::PRICE_ALARMS.add_alarm_below::<BaseC>(storage, &addr, &alarm.below)?;
         Ok(Response::new())
     }
 
-    pub fn try_notify_alarms(
+    pub fn try_notify_alarms<BaseC>(
         storage: &mut dyn Storage,
         mut batch: Batch,
         prices: &[SpotPrice],
         max_count: u32,
-    ) -> Result<Response, ContractError> {
-        let sent = Self::PRICE_ALARMS.notify(storage, &mut batch, prices, max_count)?;
+    ) -> Result<Response, ContractError>
+    where
+        BaseC: Currency,
+    {
+        let sent = Self::PRICE_ALARMS.notify::<BaseC>(storage, &mut batch, prices, max_count)?;
         Ok(Response::from(batch).set_data(to_binary(&DispatchAlarmsResponse(sent))?))
     }
 
-    pub fn try_query_alarms(
+    pub fn try_query_alarms<BaseC>(
         storage: &dyn Storage,
         prices: &[SpotPrice],
-    ) -> Result<AlarmsStatusResponse, ContractError> {
-        let remaining_alarms = Self::PRICE_ALARMS.query_alarms(storage, prices)?;
+    ) -> Result<AlarmsStatusResponse, ContractError>
+    where
+        BaseC: Currency,
+    {
+        let remaining_alarms = Self::PRICE_ALARMS.query_alarms::<BaseC>(storage, prices)?;
         Ok(AlarmsStatusResponse { remaining_alarms })
     }
 }
