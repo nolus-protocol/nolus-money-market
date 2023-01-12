@@ -72,7 +72,9 @@ mod test {
         assert_eq!(Ok(()), super::validate::<TestCurrencies>(Usdc::TICKER));
         assert_eq!(Ok(()), super::validate::<TestCurrencies>(Nls::TICKER));
         assert_eq!(
-            Err(Error::not_in_currency_group::<_, TestCurrencies>(Dai::TICKER)),
+            Err(Error::not_in_currency_group::<_, TestCurrencies>(
+                Dai::TICKER
+            )),
             super::validate::<TestCurrencies>(Dai::TICKER)
         );
         assert_eq!(Ok(()), super::validate::<TestExtraCurrencies>(Dai::TICKER));
