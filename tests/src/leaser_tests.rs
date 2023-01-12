@@ -108,6 +108,7 @@ fn open_multiple_loans() {
     let user1_addr = Addr::unchecked("user1");
 
     type Lpn = Usdc;
+    type LeaseCurrency = Atom;
 
     let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
@@ -152,7 +153,7 @@ fn open_multiple_loans() {
                 user_addr.clone(),
                 test_case.leaser_addr.clone().unwrap(),
                 &leaser::msg::ExecuteMsg::OpenLease {
-                    currency: Lpn::TICKER.into(),
+                    currency: LeaseCurrency::TICKER.into(),
                 },
                 &[cwcoin::<Lpn, _>(3)],
             )
@@ -170,7 +171,7 @@ fn open_multiple_loans() {
             user1_addr.clone(),
             test_case.leaser_addr.as_ref().unwrap().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: Lpn::TICKER.into(),
+                currency: LeaseCurrency::TICKER.into(),
             },
             &[cwcoin::<Lpn, _>(30)],
         )
@@ -427,6 +428,7 @@ where
 #[should_panic(expected = "Insufficient balance")]
 fn open_loans_lpp_fails() {
     type Lpn = Usdc;
+    type LeaseCurrency = Atom;
 
     let user_addr = Addr::unchecked(USER);
 
@@ -469,7 +471,7 @@ fn open_loans_lpp_fails() {
             user_addr.clone(),
             test_case.leaser_addr.as_ref().unwrap().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: Lpn::TICKER.into(),
+                currency: LeaseCurrency::TICKER.into(),
             },
             &[cwcoin::<Lpn, _>(30)],
         )

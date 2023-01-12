@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use trees::tr;
 
 use currency::{
-    lease::{Cro, Osmo, Wbtc, Weth},
+    lease::{Atom, Cro, Osmo, Wbtc, Weth},
     lpn::Usdc,
 };
 use finance::{
@@ -30,6 +30,7 @@ use crate::common::{
 };
 
 type Lpn = Usdc;
+type LeaseCurrency = Atom;
 type TheCoin = Coin<Lpn>;
 type BaseC = Osmo;
 
@@ -264,7 +265,7 @@ fn open_lease(test_case: &mut TestCase<Lpn>, value: TheCoin) -> Addr {
             Addr::unchecked(ADMIN),
             test_case.leaser_addr.clone().unwrap(),
             &leaser::msg::ExecuteMsg::OpenLease {
-                currency: Lpn::TICKER.into(),
+                currency: LeaseCurrency::TICKER.into(),
             },
             &[cw_coin(value)],
         )
