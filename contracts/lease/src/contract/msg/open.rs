@@ -10,7 +10,10 @@ use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef};
 use crate::{
     api::{LeaseCoin, NewLeaseForm},
     error::{ContractError, ContractResult},
-    lease::{IntoDTOResult, Lease, with_lease_deps::{self, WithLeaseDeps}},
+    lease::{
+        with_lease_deps::{self, WithLeaseDeps},
+        IntoDTOResult, Lease,
+    },
     loan::Loan,
 };
 
