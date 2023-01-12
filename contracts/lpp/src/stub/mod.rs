@@ -93,7 +93,6 @@ impl LppRef {
             lpp_ref: self,
             currency: PhantomData::<C>,
             querier,
-            batch: Batch::default(),
         }
     }
 }
@@ -116,7 +115,6 @@ struct LppStub<'a, C> {
     lpp_ref: LppRef,
     currency: PhantomData<C>,
     querier: &'a QuerierWrapper<'a>,
-    batch: Batch,
 }
 
 impl<'a, C> LppStub<'a, C> {
@@ -146,7 +144,7 @@ impl<'a, C> From<LppStub<'a, C>> for LppBatch<LppRef> {
     fn from(stub: LppStub<'a, C>) -> Self {
         Self {
             lpp_ref: stub.lpp_ref,
-            batch: stub.batch,
+            batch: Batch::default(),
         }
     }
 }
