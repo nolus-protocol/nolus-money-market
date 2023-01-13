@@ -1,13 +1,8 @@
-#![no_std]
+#![cfg_attr(not(any(feature = "std", test)), no_std)]
 
 extern crate alloc;
 
-pub use self::{
-    node::Node,
-    traversable::{NodeIter, Tranversable},
-};
+pub use self::{node::Node, tree::Tree};
 
 mod node;
-mod traversable;
-
-pub type Tree<T> = Node<T>;
+mod tree;
