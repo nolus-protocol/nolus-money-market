@@ -8,11 +8,11 @@ use platform::{
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper},
+    cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper},
 };
 
 use crate::{
-    api::{DownpaymentCoin, ExecuteMsg, StateQuery},
+    api::{DownpaymentCoin, ExecuteMsg, StateQuery, StateResponse},
     contract::{
         alarms::{price::PriceAlarm, time::TimeAlarm, AlarmResult},
         close::Close,
@@ -89,7 +89,7 @@ impl Controller for Active {
         Ok(resp)
     }
 
-    fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
+    fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         // TODO think on taking benefit from having a LppView trait
         with_lease::execute(
             self.lease,

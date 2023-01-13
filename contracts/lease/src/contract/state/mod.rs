@@ -5,12 +5,12 @@ use serde::{Deserialize, Serialize};
 
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, Reply},
     neutron_sdk::sudo::msg::SudoMsg,
 };
 
 use crate::{
-    api::{ExecuteMsg, StateQuery},
+    api::{ExecuteMsg, StateQuery, StateResponse},
     error::{ContractError as Err, ContractResult},
 };
 
@@ -85,7 +85,7 @@ where
         err("execute", &self)
     }
 
-    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<Binary> {
+    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         err("query", &self)
     }
 

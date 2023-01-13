@@ -1,4 +1,5 @@
 use ::currency::lease::LeaseGroup;
+use cosmwasm_std::to_binary;
 use finance::currency;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
@@ -12,7 +13,7 @@ use versioning::Version;
 use crate::{
     api::{ExecuteMsg, NewLeaseForm, StateQuery},
     contract::{state::Controller, state::Response},
-    error::ContractResult,
+    error::{ContractError, ContractResult},
 };
 
 use self::state::RequestLoan;
@@ -99,7 +100,8 @@ pub fn sudo(mut deps: DepsMut, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, msg: StateQuery) -> ContractResult<Binary> {
-    impl_::load(&deps)?.query(deps, env, msg)
+    let resp = impl_::load(&deps)?.query(deps, env, msg)?;
+    to_binary(&resp).map_err(ContractError::from)
 }
 
 mod impl_ {

@@ -4,7 +4,7 @@ use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
 use profit::stub::Profit as ProfitTrait;
-use sdk::cosmwasm_std::{to_binary, Binary, Timestamp};
+use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
@@ -24,7 +24,7 @@ impl LeaseState {
 }
 
 impl WithLease for LeaseState {
-    type Output = Binary;
+    type Output = StateResponse;
 
     type Error = ContractError;
 
@@ -41,7 +41,6 @@ impl WithLease for LeaseState {
         Asset: Currency + Serialize,
     {
         let state = lease.state(self.now)?;
-        let resp = StateResponse::opened_from(state, None);
-        to_binary(&resp).map_err(ContractError::from)
+        Ok(StateResponse::opened_from(state, None))
     }
 }
