@@ -1323,6 +1323,7 @@ name = "tree"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "serde-json-wasm 0.5.0",
 ]
 
 [[package]]
