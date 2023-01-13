@@ -1,0 +1,15 @@
+name: 'Cache Rust tooling and Cargo registry'
+description: 'Action for caching both Rust and Cargo caches'
+author: "Kiril Mihaylov <k.mihaylov@nolus.io>"
+
+runs:
+  using: composite
+  steps:
+    - uses: "actions/cache@v3"
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+        key: ${{ runner.os }}-cargo

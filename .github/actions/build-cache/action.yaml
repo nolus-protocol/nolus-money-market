@@ -1,0 +1,12 @@
+name: 'Cache tooling & builds'
+description: 'Action for caching both Rust and Cargo caches, and build output'
+author: "Kiril Mihaylov <k.mihaylov@nolus.io>"
+
+runs:
+  using: composite
+  steps:
+    - uses: "./.github/actions/rust-cache"
+    - uses: "actions/cache@v3"
+      with:
+        path: "target/"
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}

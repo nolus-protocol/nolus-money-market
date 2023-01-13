@@ -24,16 +24,19 @@ jobs:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v3"
+      - uses: "./.github/actions/rust-cache"
       - uses: "./.github/actions/check-formatting"
   check-codebase:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v3"
+      - uses: "./.github/actions/rust-cache"
       - uses: "./.github/actions/check-codebase"
   audit-dependencies:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v3"
+      - uses: "./.github/actions/rust-cache"
       - uses: "./.github/actions/audit-dependencies"
   linting:
     runs-on: "ubuntu-latest"
@@ -43,6 +46,7 @@ jobs:
       - "audit-dependencies"
     steps:
       - uses: "actions/checkout@v3"
+      - uses: "./.github/actions/rust-cache"
       - name: "Run linter"
         run: "sh ./lint.sh"
   code-coverage:
@@ -51,6 +55,7 @@ jobs:
       - "linting"
     steps:
       - uses: "actions/checkout@v3"
+      - uses: "./.github/actions/build-cache"
       - uses: "./.github/actions/code-coverage"
         with:
           release-testing: "true"
@@ -60,6 +65,7 @@ jobs:
       - "code-coverage"
     steps:
       - uses: "actions/checkout@v3"
+      - uses: "./.github/actions/rust-cache"
       - run: "cargo install cargo-workspaces"
       - run: "cargo install cosmwasm-check"
       - name: "Building WASM binaries"
