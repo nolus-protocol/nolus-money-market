@@ -24,6 +24,7 @@ use crate::common::{
 };
 
 type Lpn = Usdc;
+type LpnCoin = Coin<Lpn>;
 
 type LeaseCurrency = Lpn;
 type LeaseCoin = Coin<LeaseCurrency>;
@@ -172,10 +173,7 @@ fn quote_query(test_case: &TestCase<Lpn>, amount: LeaseCoin) -> QuoteResponse {
         .unwrap()
 }
 
-fn state_query(
-    test_case: &TestCase<Lpn>,
-    contract_addr: &String,
-) -> StateResponse<LeaseCurrency, LeaseCurrency> {
+fn state_query(test_case: &TestCase<Lpn>, contract_addr: &String) -> StateResponse {
     test_case
         .app
         .wrap()
@@ -190,9 +188,9 @@ fn expected_open_state(
     last_paid: Timestamp,
     current_period_start: Timestamp,
     now: Timestamp,
-) -> StateResponse<LeaseCurrency, LeaseCurrency> {
+) -> StateResponse {
     let quote_result = quote_query(test_case, downpayment);
-    let total = quote_result.total.try_into().unwrap();
+    let total: LeaseCoin = quote_result.total.try_into().unwrap();
     let expected = total - downpayment - payments;
     let (overdue, due) = (
         current_period_start
@@ -201,26 +199,30 @@ fn expected_open_state(
         now.nanos().saturating_sub(current_period_start.nanos()),
     );
     StateResponse::Opened {
-        amount: total,
+        amount: total.into(),
         interest_rate: quote_result.annual_interest_rate,
         interest_rate_margin: quote_result.annual_interest_rate_margin,
-        principal_due: expected,
+        principal_due: expected.into(),
         previous_margin_due: calculate_interest(
             expected,
             quote_result.annual_interest_rate_margin,
             overdue,
-        ),
+        )
+        .into(),
         previous_interest_due: calculate_interest(
             expected,
             quote_result.annual_interest_rate,
             overdue,
-        ),
+        )
+        .into(),
         current_margin_due: calculate_interest(
             expected,
             quote_result.annual_interest_rate_margin,
             due,
-        ),
-        current_interest_due: calculate_interest(expected, quote_result.annual_interest_rate, due),
+        )
+        .into(),
+        current_interest_due: calculate_interest(expected, quote_result.annual_interest_rate, due)
+            .into(),
         validity: block_time(test_case),
     }
 }
@@ -229,7 +231,7 @@ fn expected_newly_opened_state(
     test_case: &TestCase<Lpn>,
     downpayment: LeaseCoin,
     payments: LeaseCoin,
-) -> StateResponse<LeaseCurrency, LeaseCurrency> {
+) -> StateResponse {
     expected_open_state(
         test_case,
         downpayment,
@@ -301,12 +303,16 @@ fn state_opened_when_partially_paid_after_time() {
         ..
     } = query_result
     {
+        let current_margin_to_pay: LpnCoin = LpnCoin::try_from(current_margin_due)
+            .unwrap()
+            .checked_div(2)
+            .unwrap();
         repay(
             &mut test_case,
             &lease_address,
-            previous_margin_due
-                + previous_interest_due
-                + (current_margin_due.checked_div(2).unwrap()),
+            LpnCoin::try_from(previous_margin_due).unwrap()
+                + previous_interest_due.try_into().unwrap()
+                + current_margin_to_pay,
         );
     } else {
         unreachable!();
@@ -320,16 +326,16 @@ fn state_opened_when_partially_paid_after_time() {
         ..
     } = query_result
     {
-        assert_eq!(
-            previous_margin_due,
-            Coin::default(),
-            "Expected 0 for margin interest due, got {previous_margin_due}"
+        assert!(
+            previous_margin_due.is_zero(),
+            "Expected 0 for margin interest due, got {}",
+            previous_margin_due.amount()
         );
 
-        assert_eq!(
-            previous_interest_due,
-            Coin::default(),
-            "Expected 0 for interest due, got {previous_interest_due}"
+        assert!(
+            previous_interest_due.is_zero(),
+            "Expected 0 for interest due, got {}",
+            previous_interest_due.amount()
         );
     } else {
         unreachable!()
@@ -347,7 +353,7 @@ fn state_paid() {
     repay(&mut test_case, &lease_address, borrowed);
 
     let expected_amount = downpayment + borrowed;
-    let expected_result = StateResponse::Paid(expected_amount);
+    let expected_result = StateResponse::Paid(expected_amount.into());
     let query_result = state_query(&test_case, &lease_address.into_string());
 
     assert_eq!(expected_result, query_result);
@@ -375,7 +381,10 @@ fn state_paid_when_overpaid() {
         .unwrap();
     assert_eq!(cwcoins::<LeaseCurrency, _>(downpayment + payment), balance);
 
-    assert_eq!(query_result, StateResponse::Paid(downpayment + borrowed));
+    assert_eq!(
+        query_result,
+        StateResponse::Paid((downpayment + borrowed).into())
+    );
 }
 
 #[test]
@@ -513,10 +522,10 @@ fn liquidation_time_alarm(time_pass: Duration) {
     let downpayment = create_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment);
 
-    let (base_amount,) = if let StateResponse::Opened { amount, .. } =
+    let base_amount = if let StateResponse::Opened { amount, .. } =
         state_query(&test_case, &lease_address.to_string())
     {
-        (Amount::from(amount),)
+        LeaseCoin::try_from(amount).unwrap()
     } else {
         unreachable!()
     };
@@ -553,11 +562,12 @@ fn liquidation_time_alarm(time_pass: Duration) {
     } = query_result
     {
         assert_eq!(
-            Amount::from(amount),
+            LeaseCoin::try_from(amount).unwrap(),
             base_amount
                 - liquidation_attributes["liquidation-amount"]
                     .parse::<Amount>()
                     .unwrap()
+                    .into()
         );
 
         assert!(previous_margin_due.is_zero());
@@ -609,14 +619,14 @@ fn compare_state_with_manual_calculation() {
 
     let query_result = state_query(&test_case, &lease_address.into_string());
     let expected_result = StateResponse::Opened {
-        amount: Coin::new(1_000_000 + 1_857_142),
+        amount: Coin::<LeaseCurrency>::new(1_000_000 + 1_857_142).into(),
         interest_rate: quote_result.annual_interest_rate,
         interest_rate_margin: quote_result.annual_interest_rate_margin,
-        principal_due: Coin::new(1_857_142),
-        previous_margin_due: create_coin(13_737),
-        previous_interest_due: create_coin(32_054),
-        current_margin_due: create_coin(13_737),
-        current_interest_due: create_coin(32_055),
+        principal_due: Coin::<Lpn>::new(1_857_142).into(),
+        previous_margin_due: create_coin(13_737).into(),
+        previous_interest_due: create_coin(32_054).into(),
+        current_margin_due: create_coin(13_737).into(),
+        current_interest_due: create_coin(32_055).into(),
         validity: block_time(&test_case),
     };
 
@@ -659,7 +669,11 @@ fn compare_state_with_lpp_state_implicit_time() {
         ..
     } = state_query(&test_case, &lease_address.into_string())
     {
-        (principal_due, previous_interest_due + current_interest_due)
+        (
+            LpnCoin::try_from(principal_due).unwrap(),
+            LpnCoin::try_from(previous_interest_due).unwrap()
+                + LpnCoin::try_from(current_interest_due).unwrap(),
+        )
     } else {
         unreachable!();
     };
@@ -706,7 +720,8 @@ fn compare_state_with_lpp_state_explicit_time() {
         ..
     } = state_query(&test_case, &lease_address.into_string())
     {
-        previous_interest_due + current_interest_due
+        LpnCoin::try_from(previous_interest_due).unwrap()
+            + LpnCoin::try_from(current_interest_due).unwrap()
     } else {
         unreachable!();
     };

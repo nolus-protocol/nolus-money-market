@@ -8,6 +8,7 @@ use sdk::cosmwasm_std::{to_binary, Binary, Timestamp};
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
+    api::StateResponse,
     error::ContractError,
     lease::{with_lease::WithLease, Lease},
 };
@@ -39,7 +40,7 @@ impl WithLease for LeaseState {
         Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
-        let resp = lease.state(self.now)?;
+        let resp: StateResponse = lease.state(self.now)?.into();
         to_binary(&resp).map_err(ContractError::from)
     }
 }
