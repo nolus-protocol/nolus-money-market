@@ -27,7 +27,61 @@ pub enum StateResponse {
         current_margin_due: LpnCoin,
         current_interest_due: LpnCoin,
         validity: Timestamp,
+        in_progress: Option<opened::OngoingTrx>,
     },
-    Paid(LeaseCoin),
+    Paid {
+        amount: LeaseCoin,
+        in_progress: Option<paid::ClosingTrx>,
+    },
     Closed(),
+}
+
+pub mod opened {
+    use sdk::schemars::{self, JsonSchema};
+    use serde::{Deserialize, Serialize};
+
+    use crate::api::{DownpaymentCoin, LpnCoin};
+
+    #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+    #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
+    #[serde(rename_all = "snake_case")]
+    pub enum OngoingTrx {
+        Repayment {
+            payment: DownpaymentCoin,
+            in_progress: RepayTrx,
+        },
+        Liquidation {
+            amount_out: LpnCoin,
+            in_progress: LiquidateTrx,
+        },
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+    #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
+    #[serde(rename_all = "snake_case")]
+    pub enum RepayTrx {
+        TransferOut,
+        Swap,
+        TransferIn,
+    }
+
+    #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+    #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
+    #[serde(rename_all = "snake_case")]
+    pub enum LiquidateTrx {
+        Swap,
+        TransferIn,
+    }
+}
+
+pub mod paid {
+    use sdk::schemars::{self, JsonSchema};
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+    #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
+    #[serde(rename_all = "snake_case")]
+    pub enum ClosingTrx {
+        TransferIn,
+    }
 }

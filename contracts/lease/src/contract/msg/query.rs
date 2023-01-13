@@ -1,25 +1,32 @@
 use finance::currency::Currency;
 
-use crate::{api::StateResponse, lease::State};
+use crate::{
+    api::{opened, paid, StateResponse},
+    lease::State,
+};
 
-impl<Asset, Lpn> From<State<Asset, Lpn>> for StateResponse
-where
-    Asset: Currency,
-    Lpn: Currency,
-{
-    fn from(state: State<Asset, Lpn>) -> Self {
-        match state {
-            State::Opened {
-                amount,
-                interest_rate,
-                interest_rate_margin,
-                principal_due,
-                previous_margin_due,
-                previous_interest_due,
-                current_margin_due,
-                current_interest_due,
-                validity,
-            } => Self::Opened {
+impl StateResponse {
+    pub fn opened_from<Asset, Lpn>(
+        lease_state: State<Asset, Lpn>,
+        in_progress: Option<opened::OngoingTrx>,
+    ) -> Self
+    where
+        Asset: Currency,
+        Lpn: Currency,
+    {
+        if let State::Opened {
+            amount,
+            interest_rate,
+            interest_rate_margin,
+            principal_due,
+            previous_margin_due,
+            previous_interest_due,
+            current_margin_due,
+            current_interest_due,
+            validity,
+        } = lease_state
+        {
+            Self::Opened {
                 amount: amount.into(),
                 interest_rate,
                 interest_rate_margin,
@@ -29,9 +36,28 @@ where
                 current_margin_due: current_margin_due.into(),
                 current_interest_due: current_interest_due.into(),
                 validity,
-            },
-            State::Paid(amount) => Self::Paid(amount.into()),
-            State::Closed() => Self::Closed(),
+                in_progress,
+            }
+        } else {
+            unreachable!();
+        }
+    }
+
+    pub fn paid_from<Asset, Lpn>(
+        lease_state: State<Asset, Lpn>,
+        in_progress: Option<paid::ClosingTrx>,
+    ) -> Self
+    where
+        Asset: Currency,
+        Lpn: Currency,
+    {
+        if let State::Paid(amount) = lease_state {
+            Self::Paid {
+                amount: amount.into(),
+                in_progress,
+            }
+        } else {
+            unreachable!();
         }
     }
 }

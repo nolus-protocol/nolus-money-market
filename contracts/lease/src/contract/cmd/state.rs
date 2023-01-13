@@ -40,7 +40,8 @@ impl WithLease for LeaseState {
         Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
-        let resp: StateResponse = lease.state(self.now)?.into();
+        let state = lease.state(self.now)?;
+        let resp = StateResponse::opened_from(state, None);
         to_binary(&resp).map_err(ContractError::from)
     }
 }

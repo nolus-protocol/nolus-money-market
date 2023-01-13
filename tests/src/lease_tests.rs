@@ -224,6 +224,7 @@ fn expected_open_state(
         current_interest_due: calculate_interest(expected, quote_result.annual_interest_rate, due)
             .into(),
         validity: block_time(test_case),
+        in_progress: None,
     }
 }
 
@@ -353,7 +354,10 @@ fn state_paid() {
     repay(&mut test_case, &lease_address, borrowed);
 
     let expected_amount = downpayment + borrowed;
-    let expected_result = StateResponse::Paid(expected_amount.into());
+    let expected_result = StateResponse::Paid {
+        amount: expected_amount.into(),
+        in_progress: None,
+    };
     let query_result = state_query(&test_case, &lease_address.into_string());
 
     assert_eq!(expected_result, query_result);
@@ -383,7 +387,10 @@ fn state_paid_when_overpaid() {
 
     assert_eq!(
         query_result,
-        StateResponse::Paid((downpayment + borrowed).into())
+        StateResponse::Paid {
+            amount: (downpayment + borrowed).into(),
+            in_progress: None
+        }
     );
 }
 
@@ -628,6 +635,7 @@ fn compare_state_with_manual_calculation() {
         current_margin_due: create_coin(13_737).into(),
         current_interest_due: create_coin(32_055).into(),
         validity: block_time(&test_case),
+        in_progress: None,
     };
 
     assert_eq!(dbg!(query_result), expected_result);

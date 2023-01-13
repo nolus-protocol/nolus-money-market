@@ -9,7 +9,7 @@ use sdk::{
 
 pub use self::{
     open::{InterestPaymentSpec, LoanForm, NewLeaseForm},
-    query::{StateQuery, StateResponse},
+    query::{opened, paid, StateQuery, StateResponse},
 };
 
 pub mod dex;
