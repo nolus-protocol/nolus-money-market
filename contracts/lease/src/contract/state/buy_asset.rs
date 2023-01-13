@@ -3,7 +3,11 @@ use std::fmt::Display;
 use serde::{Deserialize, Serialize};
 
 use currency::lease::Osmo;
-use finance::{coin::Coin, duration::Duration};
+use finance::{
+    coin::{Coin, CoinDTO},
+    currency::Group,
+    duration::Duration,
+};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use platform::{
@@ -64,12 +68,15 @@ impl BuyAsset {
         Ok(local_batch)
     }
 
-    fn add_swap_trx(
+    fn add_swap_trx<G>(
         &self,
-        coin: &DownpaymentCoin,
+        coin: &CoinDTO<G>,
         querier: &QuerierWrapper,
         batch: &mut Batch,
-    ) -> ContractResult<()> {
+    ) -> ContractResult<()>
+    where
+        G: Group,
+    {
         let swap_path =
             self.deps
                 .1

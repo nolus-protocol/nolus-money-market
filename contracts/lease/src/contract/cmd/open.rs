@@ -14,7 +14,7 @@ use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
 use crate::{
-    api::{DownpaymentCoin, NewLeaseForm},
+    api::{DownpaymentCoin, LpnCoin, NewLeaseForm},
     error::ContractError,
 };
 
@@ -140,6 +140,6 @@ impl WithLppLender for OpenLoanResp {
 
 #[derive(Serialize, Deserialize)]
 pub struct OpenLoanRespResult {
-    pub(in crate::contract) principal: DownpaymentCoin,
+    pub(in crate::contract) principal: LpnCoin,
     pub(in crate::contract) annual_interest_rate: Percent,
 }

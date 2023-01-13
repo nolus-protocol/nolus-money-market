@@ -18,7 +18,7 @@ pub struct StateQuery {}
 pub enum StateResponse {
     Opening {
         downpayment: DownpaymentCoin,
-        loan: DownpaymentCoin, // TODO replace with LpnCoin,
+        loan: LpnCoin,
         loan_interest_rate: Percent,
         in_progress: opening::OngoingTrx,
     },
