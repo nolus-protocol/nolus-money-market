@@ -6,7 +6,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use super::{LeaseCoin, LpnCoin};
+use super::{DownpaymentCoin, LeaseCoin, LpnCoin};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -15,8 +15,13 @@ pub struct StateQuery {}
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
 #[serde(rename_all = "snake_case")]
-#[allow(clippy::large_enum_variant)] // TODO consider removing it once have added all intermediate states
 pub enum StateResponse {
+    Opening {
+        downpayment: DownpaymentCoin,
+        loan: DownpaymentCoin, // TODO replace with LpnCoin,
+        loan_interest_rate: Percent,
+        in_progress: opening::OngoingTrx,
+    },
     Opened {
         amount: LeaseCoin,
         interest_rate: Percent,
@@ -34,6 +39,20 @@ pub enum StateResponse {
         in_progress: Option<paid::ClosingTrx>,
     },
     Closed(),
+}
+
+pub mod opening {
+    use sdk::schemars::{self, JsonSchema};
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+    #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
+    #[serde(rename_all = "snake_case")]
+    pub enum OngoingTrx {
+        OpenIcaAccount,
+        TransferOut { ica_account: String },
+        BuyAsset { ica_account: String },
+    }
 }
 
 pub mod opened {

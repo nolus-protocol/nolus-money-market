@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use cosmwasm_std::{to_binary, Binary, Deps};
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::lender::LppLenderRef;
@@ -11,9 +12,9 @@ use sdk::{
 };
 
 use crate::{
-    api::{DownpaymentCoin, NewLeaseForm},
+    api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
     contract::{cmd::OpenLoanRespResult, state::transfer_out::TransferOut},
-    error::ContractResult,
+    error::{ContractError, ContractResult},
 };
 
 use super::{Controller, Response};
@@ -74,6 +75,16 @@ impl Controller for OpenIcaAccount {
             } => todo!(),
             _ => todo!(),
         }
+    }
+
+    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<Binary> {
+        let resp = StateResponse::Opening {
+            downpayment: self.downpayment,
+            loan: self.loan.principal,
+            loan_interest_rate: self.loan.annual_interest_rate,
+            in_progress: OngoingTrx::OpenIcaAccount {},
+        };
+        to_binary(&resp).map_err(ContractError::from)
     }
 }
 
