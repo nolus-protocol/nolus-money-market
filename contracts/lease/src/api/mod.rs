@@ -17,7 +17,8 @@ pub mod dex;
 mod open;
 mod query;
 
-pub type DownpaymentCoin = CoinDTO<PaymentGroup>;
+pub type PaymentCoin = CoinDTO<PaymentGroup>;
+pub type DownpaymentCoin = PaymentCoin;
 pub type LeaseCoin = CoinDTO<LeaseGroup>;
 pub type LpnCoin = CoinDTO<Lpns>;
 

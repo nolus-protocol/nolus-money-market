@@ -59,14 +59,14 @@ pub mod opened {
     use sdk::schemars::{self, JsonSchema};
     use serde::{Deserialize, Serialize};
 
-    use crate::api::{DownpaymentCoin, LpnCoin};
+    use crate::api::{LpnCoin, PaymentCoin};
 
     #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
     #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
     #[serde(rename_all = "snake_case")]
     pub enum OngoingTrx {
         Repayment {
-            payment: DownpaymentCoin,
+            payment: PaymentCoin,
             in_progress: RepayTrx,
         },
         Liquidation {
