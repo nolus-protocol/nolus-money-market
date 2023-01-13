@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use cosmwasm_std::Deps;
 use serde::{Deserialize, Serialize};
 
 use currency::lease::Osmo;
@@ -21,7 +22,7 @@ use sdk::{
 use swap::trx;
 
 use crate::{
-    api::{DownpaymentCoin, NewLeaseForm},
+    api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
     contract::cmd::OpenLoanRespResult,
     error::ContractResult,
     lease::IntoDTOResult,
@@ -122,6 +123,17 @@ impl Controller for BuyAsset {
             } => todo!(),
             _ => todo!(),
         }
+    }
+
+    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+        Ok(StateResponse::Opening {
+            downpayment: self.downpayment,
+            loan: self.loan.principal,
+            loan_interest_rate: self.loan.annual_interest_rate,
+            in_progress: OngoingTrx::BuyAsset {
+                ica_account: self.dex_account.into(),
+            },
+        })
     }
 }
 

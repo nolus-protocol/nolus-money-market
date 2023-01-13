@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use cosmwasm_std::Timestamp;
+use cosmwasm_std::{Deps, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
@@ -13,7 +13,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{DownpaymentCoin, NewLeaseForm},
+    api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
     contract::cmd::OpenLoanRespResult,
     error::ContractResult,
 };
@@ -86,6 +86,17 @@ impl Controller for TransferOut {
             } => todo!(),
             _ => todo!(),
         }
+    }
+
+    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+        Ok(StateResponse::Opening {
+            downpayment: self.downpayment,
+            loan: self.loan.principal,
+            loan_interest_rate: self.loan.annual_interest_rate,
+            in_progress: OngoingTrx::TransferOut {
+                ica_account: self.dex_account.into(),
+            },
+        })
     }
 }
 
