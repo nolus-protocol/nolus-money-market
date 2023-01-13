@@ -200,8 +200,8 @@ fn expected_open_state(
     );
     StateResponse::Opened {
         amount: total.into(),
-        interest_rate: quote_result.annual_interest_rate,
-        interest_rate_margin: quote_result.annual_interest_rate_margin,
+        loan_interest_rate: quote_result.annual_interest_rate,
+        margin_interest_rate: quote_result.annual_interest_rate_margin,
         principal_due: expected.into(),
         previous_margin_due: calculate_interest(
             expected,
@@ -627,8 +627,8 @@ fn compare_state_with_manual_calculation() {
     let query_result = state_query(&test_case, &lease_address.into_string());
     let expected_result = StateResponse::Opened {
         amount: Coin::<LeaseCurrency>::new(1_000_000 + 1_857_142).into(),
-        interest_rate: quote_result.annual_interest_rate,
-        interest_rate_margin: quote_result.annual_interest_rate_margin,
+        loan_interest_rate: quote_result.annual_interest_rate,
+        margin_interest_rate: quote_result.annual_interest_rate_margin,
         principal_due: Coin::<Lpn>::new(1_857_142).into(),
         previous_margin_due: create_coin(13_737).into(),
         previous_interest_due: create_coin(32_054).into(),

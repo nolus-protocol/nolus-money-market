@@ -24,8 +24,8 @@ pub enum StateResponse {
     },
     Opened {
         amount: LeaseCoin,
-        interest_rate: Percent,
-        interest_rate_margin: Percent,
+        loan_interest_rate: Percent,
+        margin_interest_rate: Percent,
         principal_due: LpnCoin,
         previous_margin_due: LpnCoin,
         previous_interest_due: LpnCoin,

@@ -28,8 +28,8 @@ impl StateResponse {
         {
             Self::Opened {
                 amount: amount.into(),
-                interest_rate,
-                interest_rate_margin,
+                loan_interest_rate: interest_rate,
+                margin_interest_rate: interest_rate_margin,
                 principal_due: principal_due.into(),
                 previous_margin_due: previous_margin_due.into(),
                 previous_interest_due: previous_interest_due.into(),
