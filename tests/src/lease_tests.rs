@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use currency::lease::Atom;
 
 use currency::lpn::Usdc;
 use finance::{
@@ -474,22 +475,22 @@ fn liquidation_warning(price: SpotPrice, percent: Percent, level: &str) {
 
 #[test]
 #[should_panic = "No liquidation warning emitted!"]
-#[ignore = "No support for currencies different than LPN"]
+#[ignore = "Failure during instantiation; No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn liquidation_warning_price_0() {
     liquidation_warning(
-        PriceDTO::new(create_coin(2085713).into(), create_coin(1857159).into()),
+        PriceDTO::new(create_coin(2085713).into(), Coin::<Atom>::new(1857159).into()),
         LeaserWrapper::liability().healthy_percent(),
         "N/A",
     );
 }
 
 #[test]
-#[ignore = "No support for currencies different than LPN"]
+#[ignore = "Failure during instantiation; No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn liquidation_warning_price_1() {
     liquidation_warning(
         PriceDTO::new(
             create_coin(2085713).into(), // ref: 2085713
-            create_coin(137159).into(),  // ref: 1857159
+            Coin::<Atom>::new(137159).into(),  // ref: 1857159
         ),
         LeaserWrapper::liability().first_liq_warn_percent(),
         "1",
@@ -497,12 +498,12 @@ fn liquidation_warning_price_1() {
 }
 
 #[test]
-#[ignore = "No support for currencies different than LPN"]
+#[ignore = "Failure during instantiation; No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn liquidation_warning_price_2() {
     liquidation_warning(
         PriceDTO::new(
             create_coin(2085713).into(), // ref: 2085713
-            create_coin(1757159).into(), // ref: 1857159
+            Coin::<Atom>::new(1757159).into(), // ref: 1857159
         ),
         LeaserWrapper::liability().second_liq_warn_percent(),
         "2",
@@ -510,12 +511,12 @@ fn liquidation_warning_price_2() {
 }
 
 #[test]
-#[ignore = "No support for currencies different than LPN"]
+#[ignore = "Failure during instantiation; No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn liquidation_warning_price_3() {
     liquidation_warning(
         PriceDTO::new(
             create_coin(2085713).into(), // ref: 2085713
-            create_coin(1707159).into(), // ref: 1857159
+            Coin::<Atom>::new(1707159).into(), // ref: 1857159
         ),
         LeaserWrapper::liability().third_liq_warn_percent(),
         "3",

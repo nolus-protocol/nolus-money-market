@@ -216,7 +216,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use finance::{duration::Duration, percent::Percent, price::total_of};
+    use finance::{duration::Duration, percent::Percent};
+    #[cfg(not(debug_assertions))]
+    use finance::price::total_of;
     use lpp::msg::LoanResponse;
     use platform::batch::Batch;
     use sdk::cosmwasm_std::{to_binary, Addr, Timestamp, WasmMsg};
@@ -362,7 +364,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "No support for same currency prices. Without Price's debug assertion, runs successfully."]
+    #[cfg(not(debug_assertions))]
     fn price_alarm_by_percent() {
         let interest_rate = Percent::from_permille(50);
         // LPP loan
