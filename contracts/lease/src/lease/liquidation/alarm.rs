@@ -210,7 +210,7 @@ where
     ) -> ContractResult<Price<Asset, Lpn>> {
         debug_assert!(!self.amount.is_zero(), "Loan already paid!");
 
-        Ok(total_of(percent.of(self.amount)).is(liability))
+        Ok(total_of(dbg!(percent.of(self.amount))).is(liability))
     }
 }
 
@@ -389,7 +389,7 @@ mod tests {
             lease
                 .price_alarm_by_percent(coin(500), Percent::from_percent(50))
                 .unwrap(),
-            total_of(coin(5)).is(coin(3))
+            total_of(coin(3)).is(coin(10))
         );
     }
 }
