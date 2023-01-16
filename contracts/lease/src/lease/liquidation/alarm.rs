@@ -8,8 +8,8 @@ use finance::{
     price::{total, total_of, Price},
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
-use marketprice::{alarms::Alarm, SpotPrice};
-use oracle::stub::Oracle as OracleTrait;
+use marketprice::SpotPrice;
+use oracle::{alarms::Alarm, stub::Oracle as OracleTrait};
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;

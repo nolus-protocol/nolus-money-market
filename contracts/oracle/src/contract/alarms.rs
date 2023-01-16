@@ -1,8 +1,6 @@
+use crate::alarms::Alarm;
 use finance::currency::Currency;
-use marketprice::{
-    alarms::{price::PriceAlarms, Alarm},
-    SpotPrice,
-};
+use marketprice::{alarms::PriceAlarms, SpotPrice};
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
@@ -38,10 +36,10 @@ impl MarketAlarms {
     where
         BaseC: Currency,
     {
-        if let Some(above) = alarm.above {
-            Self::PRICE_ALARMS.add_alarm_above::<BaseC>(storage, &addr, &above)?;
+        if let Some(above) = alarm.above() {
+            Self::PRICE_ALARMS.add_alarm_above::<BaseC>(storage, &addr, above)?;
         }
-        Self::PRICE_ALARMS.add_alarm_below::<BaseC>(storage, &addr, &alarm.below)?;
+        Self::PRICE_ALARMS.add_alarm_below::<BaseC>(storage, &addr, alarm.below())?;
         Ok(Response::new())
     }
 
