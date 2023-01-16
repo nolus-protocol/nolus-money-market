@@ -1,5 +1,5 @@
 name: Smart Contracts
-run-name: "Building smart contracts by ${{ github.actor }}"
+run-name: "Building smart contracts, triggered by ${{ github.actor }}"
 
 on:
   workflow_dispatch:
@@ -55,7 +55,7 @@ jobs:
       - "linting"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "./.github/actions/build-cache"
+      - uses: "./.github/actions/rust-cache"
       - uses: "./.github/actions/code-coverage"
         with:
           release-testing: "true"
