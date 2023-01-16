@@ -56,6 +56,7 @@ impl Controller for OpenIcaAccount {
                 counterparty_channel_id: _,
                 counterparty_version,
             } => {
+                let this_addr = env.contract.address;
                 let dex_account = ica::parse_register_response(&counterparty_version)?;
 
                 let next_state = TransferOut::new(
@@ -65,7 +66,7 @@ impl Controller for OpenIcaAccount {
                     dex_account,
                     self.deps,
                 );
-                let batch = next_state.enter_state(env.block.time)?;
+                let batch = next_state.enter_state(this_addr, env.block.time)?;
                 Ok(Response::from(batch, next_state))
             }
             SudoMsg::Timeout { request: _ } => todo!(),

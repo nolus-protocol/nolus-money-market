@@ -2,7 +2,10 @@ use prost::Message;
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
-use sdk::neutron_sdk::bindings::{msg::NeutronMsg, types::ProtobufAny};
+use sdk::neutron_sdk::bindings::{
+    msg::{IbcFee, NeutronMsg},
+    types::ProtobufAny,
+};
 
 use crate::{
     batch::Batch as LocalBatch,
@@ -72,6 +75,11 @@ where
         messages.msgs,
         memo.into(),
         timeout.secs(),
+        IbcFee {
+            recv_fee: vec![],
+            ack_fee: vec![],
+            timeout_fee: vec![],
+        },
     ));
     batch
 }

@@ -1,9 +1,10 @@
 use std::fmt::Display;
 
-use cosmwasm_std::{Deps, Timestamp};
+use cosmwasm_std::{Addr, Deps, Timestamp};
+use currency::native::Nls;
 use serde::{Deserialize, Serialize};
 
-use finance::duration::Duration;
+use finance::{coin::Coin, duration::Duration};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use platform::{bank_ibc::local::Sender, batch::Batch, ica::HostAccount};
@@ -48,11 +49,14 @@ impl TransferOut {
         }
     }
 
-    pub(super) fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
+    pub(super) fn enter_state(&self, sender: Addr, now: Timestamp) -> ContractResult<Batch> {
         let mut ibc_sender = Sender::new(
             &self.form.dex.transfer_channel.local_endpoint,
+            sender,
             self.dex_account.clone(),
             now + ICA_TRANSFER_TIMEOUT,
+            Coin::<Nls>::new(400000),
+            Coin::<Nls>::new(200000),
         );
         // TODO apply nls_swap_fee on the downpayment only!
         ibc_sender.send(&self.downpayment)?;
