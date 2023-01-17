@@ -94,24 +94,41 @@ jobs:
     if: "github.ref_type == 'tag'"
     steps:
       - uses: "actions/checkout@v3"
+      - shell: "sh"
+        run: |
+          build() {
+            sudo docker run --rm -v "$(pwd)":/code -v "$(pwd)/artifacts_${1}_net":/code/artifacts --mount type=volume,source="$(basename \"$(pwd)\")_cache",target=/code/target --mount type=volume,source=rustup_dir_cache,target=/usr/local/rustup --mount type=volume,source=cargo_dir_cache,target=/usr/local/cargo --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.11 --env ALT_NET_SYMBOLS=${2}
+          }
+
+          check_sizes() {
+            find artifacts_${1}_net/ -size +800k | wc -l | read large_files_count
+
+            if !test "$large_files_count" = "0";
+              then exit 1;
+            fi
+          }
+
+          copy_deploy_script() {
+            sudo cp scripts/deploy-contracts-genesis.sh artifacts_${1}_net/
+          }
       - name: "Run workspace-optimizer docker image for test-net"
         shell: "sh"
-        run: "sudo docker run --rm -v \"$(pwd)\":/code -v \"$(pwd)/artifacts_test_net\":/code/artifacts --mount type=volume,source=\"$(basename \"$(pwd)\")_cache\",target=/code/target --mount type=volume,source=rustup_dir_cache,target=/usr/local/rustup --mount type=volume,source=cargo_dir_cache,target=/usr/local/cargo --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.11 --env ALT_NET_SYMBOLS=1"
-      - name: "Check for WASM binaries larger than allowed limit"
+        run: "build test 1"
+      - name: "Check for test-net WASM binaries larger than allowed limit"
         shell: "sh"
-        run: "find artifacts_test_net/ -size +800k | wc -l | sh -c 'read input; if !test \"$input\" = \"0\"; then exit 1; fi'"
-      - name: "Copy deployment script to artifacts directory"
+        run: "check_sizes test"
+      - name: "Copy deployment script to test-net artifacts directory"
         shell: "sh"
-        run: "sudo cp scripts/deploy-contracts-genesis.sh artifacts_test_net/"
+        run: "copy_deploy_script test"
       - name: "Run workspace-optimizer docker image for main-net"
         shell: "sh"
-        run: "sudo docker run --rm -v \"$(pwd)\":/code -v \"$(pwd)/artifacts_main_net\":/code/artifacts --mount type=volume,source=\"$(basename \"$(pwd)\")_cache\",target=/code/target --mount type=volume,source=rustup_dir_cache,target=/usr/local/rustup --mount type=volume,source=cargo_dir_cache,target=/usr/local/cargo --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry cosmwasm/workspace-optimizer:0.12.11"
-      - name: "Check for WASM binaries larger than allowed limit"
+        run: "build main 0"
+      - name: "Check for main-net WASM binaries larger than allowed limit"
         shell: "sh"
-        run: "find artifacts_main_net/ -size +800k | wc -l | sh -c 'read input; if !test \"$input\" = \"0\"; then exit 1; fi'"
-      - name: "Copy deployment script to artifacts directory"
+        run: "check_sizes main"
+      - name: "Copy deployment script to main-net artifacts directory"
         shell: "sh"
-        run: "sudo cp scripts/deploy-contracts-genesis.sh artifacts_main_net/"
+        run: "copy_deploy_script main"
       - name: "Archive test-net artifacts"
         uses: "actions/upload-artifact@v3"
         with:
