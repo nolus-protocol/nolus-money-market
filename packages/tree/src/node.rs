@@ -4,13 +4,13 @@ use crate::tree::Tree;
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Raw<T> {
-    parent: usize,
+    parent: u16,
     value: T,
 }
 
 impl<T> Raw<T> {
     #[inline]
-    pub(crate) fn parent(&self) -> usize {
+    pub(crate) fn parent(&self) -> u16 {
         self.parent
     }
 
@@ -22,17 +22,17 @@ impl<T> Raw<T> {
 
 pub struct Node<'r, T> {
     tree: &'r Tree<T>,
-    this: usize,
+    this: u16,
 }
 
 impl<'r, T> Node<'r, T> {
     #[inline]
     pub fn value(&self) -> &T {
-        &self.tree.get(self.this).value
+        &self.tree.get(self.this.into()).value
     }
 
     pub fn parent(&self) -> Option<Self> {
-        let this = self.tree.get(self.this);
+        let this = self.tree.get(self.this.into());
 
         (this.parent != self.this).then_some(Node {
             tree: self.tree,
@@ -46,7 +46,7 @@ impl<'r, T> Node<'r, T> {
     }
 
     #[inline]
-    pub(crate) const fn with_index(tree: &'r Tree<T>, this: usize) -> Self {
+    pub(crate) const fn with_index(tree: &'r Tree<T>, this: u16) -> Self {
         Self { tree, this }
     }
 }

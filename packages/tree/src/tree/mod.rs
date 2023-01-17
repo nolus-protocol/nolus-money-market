@@ -21,12 +21,20 @@ impl<T> Tree<T> {
     where
         F: FnMut(&T) -> bool,
     {
-        self.nodes.iter().enumerate().find_map(|(index, raw_node)| {
-            f(raw_node.value()).then(|| Node::with_index(self, index))
+        let mut index = 0;
+
+        self.nodes.iter().find_map(|raw_node| {
+            f(raw_node.value()).then(|| {
+                let result = Node::with_index(self, index);
+
+                index += 1;
+
+                result
+            })
         })
     }
 
-    pub(crate) fn get(&self, index: usize) -> &RawNode<T> {
-        &self.nodes[index]
+    pub(crate) fn get(&self, index: u16) -> &RawNode<T> {
+        &self.nodes[usize::from(index)]
     }
 }
