@@ -15,21 +15,21 @@ Implementation of the core business logic as cosmwasm contracts.
 
 2. Install the `wasm32` target
 
-```sh
-rustup target install wasm32-unknown-unknown
-```
+   ```sh
+   rustup target install wasm32-unknown-unknown
+   ```
 
 3. Install the Rust linter
 
-```sh
-rustup component add clippy
-```
+   ```sh
+   rustup component add clippy
+   ```
 
 4. Install a set of handy tools
 
-```sh
-cargo install cargo-edit cargo-workspaces cargo-expand
-```
+   ```sh
+   cargo install cargo-edit cargo-workspaces cargo-expand
+   ```
 
 ### Build
 
@@ -45,7 +45,24 @@ cargo build --target=wasm32-unknown-unknown
 docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/workspace-optimizer:0.12.10
+  cosmwasm/workspace-optimizer:0.12.11
+```
+
+### Build for test net
+
+* A non-optimized version of a contract, run in a contract directory:
+
+```sh
+ALT_NET_SYMBOLS=1 cargo build --target=wasm32-unknown-unknown
+```
+
+* An optimized and verifiable version of all contracts, run on the workspace directory:
+
+```sh
+docker run --rm -v "$(pwd)":/code \
+  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
+  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
+  cosmwasm/workspace-optimizer:0.12.11 --env ALT_NET_SYMBOLS=1
 ```
 
 ### Test
@@ -193,69 +210,69 @@ This userAccount address will be transmitted as a sender when we want to send me
 
 1. After building the code of the smart contract, we get the .wasm file we need. The first step is to access this file:
 
-```ts
-import * as fs from "fs";
-
-const wasmBinary: Buffer = fs.readFileSync("./oracle.wasm");
-```
+   ```ts
+   import * as fs from "fs";
+   
+   const wasmBinary: Buffer = fs.readFileSync("./oracle.wasm");
+   ```
 
 2. Now we can upload a wasm binary:
 
-```ts
-const customFees = {
-    upload: {
-        amount: [{amount: "2000000", denom: "unolus"}],
-        gas: "2000000",
-    },
-    init: {
-        amount: [{amount: "500000", denom: "unolus"}],
-        gas: "500000",
-    },
-    exec: {
-        amount: [{amount: "500000", denom: "unolus"}],
-        gas: "500000",
-    }
-};
-
-const uploadReceipt = await userClient.upload(userAccount.address, wasmBinary, customFees.upload);
-const codeId = uploadReceipt.codeId;
-```
+   ```ts
+   const customFees = {
+       upload: {
+           amount: [{amount: "2000000", denom: "unolus"}],
+           gas: "2000000",
+       },
+       init: {
+           amount: [{amount: "500000", denom: "unolus"}],
+           gas: "500000",
+       },
+       exec: {
+           amount: [{amount: "500000", denom: "unolus"}],
+           gas: "500000",
+       }
+   };
+   
+   const uploadReceipt = await userClient.upload(userAccount.address, wasmBinary, customFees.upload);
+   const codeId = uploadReceipt.codeId;
+   ```
 
 3. Then we can instantiate the contract and get its address:
 
-```ts
-const instatiateMsg = {
-            "base_asset": "ust",
-            "price_feed_period": 60,
-            "feeders_percentage_needed": 50,
-        };
-const contract: InstantiateResult = await userClient.instantiate(userAccount.address, codeId, instatiateMsg, "test", customFees.init);
-contractAddress = contract.contractAddress;
-```
-
-This **contractAddress** variable is our entry point to the contract. When we send an exacute or query message, we give this address to the methods.
+   ```ts
+   const instatiateMsg = {
+               "base_asset": "ust",
+               "price_feed_period": 60,
+               "feeders_percentage_needed": 50,
+           };
+   const contract: InstantiateResult = await userClient.instantiate(userAccount.address, codeId, instatiateMsg, "test", customFees.init);
+   contractAddress = contract.contractAddress;
+   ```
+   
+   This **contractAddress** variable is our entry point to the contract. When we send an exacute or query message, we give this address to the methods.
 
 4. How to send a execute message:
 
-```ts
-const addFeederMsg = {
-            "register_feeder": {
-                "feeder_address":"nolus1gzk...."
-            },
-        };
-await userClient.execute(userAccount.address, contractAddress, addFeederMsg, customFees.exec);
-```
+   ```ts
+   const addFeederMsg = {
+               "register_feeder": {
+                   "feeder_address":"nolus1gzk...."
+               },
+           };
+   await userClient.execute(userAccount.address, contractAddress, addFeederMsg, customFees.exec);
+   ```
 
 5. How to send a query message:
 
-```ts
-const isFeederMsg = {
-            "is_feeder": {
-                "address":"nolus1gzk...."
-            },
-        };
-await userClient.queryContractSmart(contractAddress, isFeederMsg);
-```
+   ```ts
+   const isFeederMsg = {
+               "is_feeder": {
+                   "address":"nolus1gzk...."
+               },
+           };
+   await userClient.queryContractSmart(contractAddress, isFeederMsg);
+   ```
 
 These json messages that we form (including the initial message) depend on what the contract expects to receive in order to provide us with certain functionality. We can check this from the generated json schemas.
 
@@ -297,7 +314,7 @@ Add dependency versions update by installing `crates` extension
 * [Rust Design Patterns](https://rust-unofficial.github.io/patterns/)
 * A collection of resources to guide programmers to write [Idiomatic Rust code](https://github.com/mre/idiomatic-rust)
 * [Node to Rust series](https://vino.dev/blog/node-to-rust-day-1-rustup/)
-* Advanced concepts like ownership, type conversions, etc [The Rustonomicon](https://doc.rust-lang.org/stable/nomicon/index.html)
+* Advanced concepts like ownership, type conversions, etc. [The Rustonomicon](https://doc.rust-lang.org/stable/nomicon/index.html)
 * A nice collection of [selected posts](https://github.com/brson/rust-anthology/blob/master/master-list.md)
 
 ### Rust and Blockchains
