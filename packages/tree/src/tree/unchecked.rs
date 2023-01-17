@@ -20,12 +20,17 @@ impl<T> TryFrom<Unchecked<T>> for Tree<T> {
             }
         }
 
+        let mut index: u16 = 0;
+
         value
             .nodes
             .iter()
             .skip(1)
-            .enumerate()
-            .all(|(index, raw_node)| raw_node.parent() <= index)
+            .all(|raw_node| {
+                index += 1;
+
+                raw_node.parent() <= index
+            })
             .then_some(Tree { nodes: value.nodes })
             .ok_or(Error::MaybeCyclic)
     }
