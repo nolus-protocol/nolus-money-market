@@ -24,13 +24,11 @@ impl<T> Tree<T> {
         let mut index = 0;
 
         self.nodes.iter().find_map(|raw_node| {
-            f(raw_node.value()).then(|| {
-                let result = Node::with_index(self, index);
+            let result = f(raw_node.value()).then(|| Node::with_index(self, index));
 
-                index += 1;
+            index += 1;
 
-                result
-            })
+            result
         })
     }
 

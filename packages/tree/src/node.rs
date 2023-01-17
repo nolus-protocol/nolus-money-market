@@ -28,11 +28,11 @@ pub struct Node<'r, T> {
 impl<'r, T> Node<'r, T> {
     #[inline]
     pub fn value(&self) -> &T {
-        &self.tree.get(self.this.into()).value
+        &self.tree.get(self.this).value
     }
 
     pub fn parent(&self) -> Option<Self> {
-        let this = self.tree.get(self.this.into());
+        let this = self.tree.get(self.this);
 
         (this.parent != self.this).then_some(Node {
             tree: self.tree,
