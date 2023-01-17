@@ -5,6 +5,8 @@ author: "Kiril Mihaylov <k.mihaylov@nolus.io>"
 runs:
   using: composite
   steps:
+    - shell: "sh"
+      run: "cargo install cargo-workspaces"
     - name: "Check codebase"
       shell: "sh"
-      run: "cargo check"
+      run: "cargo workspace exec cargo check"
