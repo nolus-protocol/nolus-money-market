@@ -46,5 +46,4 @@ impl Display for Error {
     }
 }
 
-#[cfg(any(feature = "std", test))]
 impl std::error::Error for Error {}
