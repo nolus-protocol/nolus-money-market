@@ -29,7 +29,7 @@ impl<T> TryFrom<Unchecked<T>> for Tree<T> {
             .all(|raw_node| {
                 index += 1;
 
-                raw_node.parent() <= index
+                raw_node.parent() < index
             })
             .then_some(Tree { nodes: value.nodes })
             .ok_or(Error::MaybeCyclic)
