@@ -16,7 +16,6 @@ use crate::{
     state::{config::Config, leaser::Loans},
 };
 
-// version info for migration info
 const CONTRACT_VERSION: Version = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -49,7 +48,6 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::SetupDex(params) => Leaser::try_setup_dex(deps.storage, info, params),
-        ExecuteMsg::OpenLease { currency } => Borrow::with(deps, info.funds, info.sender, currency),
         ExecuteMsg::Config {
             lease_interest_rate_margin,
             liability,
@@ -61,6 +59,10 @@ pub fn execute(
             liability,
             lease_interest_payment,
         ),
+        ExecuteMsg::MigrateLeases { new_code_id } => {
+            Leaser::try_migrate_leases(deps.storage, info, new_code_id)
+        }
+        ExecuteMsg::OpenLease { currency } => Borrow::with(deps, info.funds, info.sender, currency),
     }
 }
 
@@ -83,9 +85,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
         Ok(resp) => Ok(resp),
         Err(err) => {
             Loans::remove(deps.storage, msg.id);
-            Err(ContractError::CustomError {
-                val: err.to_string(),
-            })
+            Err(err)
         }
     }
 }

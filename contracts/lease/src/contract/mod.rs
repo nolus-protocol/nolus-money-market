@@ -6,12 +6,13 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cw_storage_plus::Item,
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use versioning::Version;
 
 use crate::{
-    api::{ExecuteMsg, NewLeaseForm, StateQuery},
+    api::{ExecuteMsg, MigrateMsg, NewLeaseForm, StateQuery},
     contract::{state::Controller, state::Response},
     error::{ContractError, ContractResult},
 };
@@ -47,6 +48,15 @@ pub fn instantiate(
     let (batch, next_state) = RequestLoan::new(&mut deps, info, form)?;
     impl_::save(&next_state.into(), &mut deps)?;
     Ok(batch.into())
+}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
+    // the version is 0 so the previos code was deployed in the previos epoch
+    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
+    Item::<bool>::new("contract_info").remove(deps.storage);
+
+    Ok(CwResponse::default())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

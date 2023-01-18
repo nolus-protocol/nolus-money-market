@@ -10,9 +10,11 @@ use sdk::{
 
 use crate::{error::ContractResult, msg::InstantiateMsg, ContractError};
 
+type CodeId = u64;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct Config {
-    pub lease_code_id: u64,
+    pub lease_code_id: CodeId,
     pub lpp_addr: Addr,
     pub lease_interest_rate_margin: Percent,
     pub liability: Liability,
@@ -66,11 +68,21 @@ impl Config {
         liability: Liability,
         repayment: InterestPaymentSpec,
     ) -> Result<(), ContractError> {
-        Self::load(storage)?;
         Self::STORAGE.update(storage, |mut c| -> ContractResult<Config> {
             c.lease_interest_rate_margin = lease_interest_rate_margin;
             c.liability = liability;
             c.lease_interest_payment = repayment;
+            Ok(c)
+        })?;
+        Ok(())
+    }
+
+    pub fn update_lease_code(
+        storage: &mut dyn Storage,
+        new_code: CodeId,
+    ) -> Result<(), ContractError> {
+        Self::STORAGE.update(storage, |mut c| -> ContractResult<Config> {
+            c.lease_code_id = new_code;
             Ok(c)
         })?;
         Ok(())

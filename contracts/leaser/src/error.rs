@@ -22,16 +22,8 @@ pub enum ContractError {
     #[error("[Leaser] {0}")]
     Unauthorized(#[from] access_control::Unauthorized),
 
-    #[error(
-        "[Leaser] LeaseHealthyLiability% must be less than LeaseMaxLiability% and LeaseInitialLiability% must be less or equal to LeaseHealthyLiability%"
-    )]
-    InvalidLiability {},
-
     #[error("[Leaser] ParseError {err:?}")]
     ParseError { err: String },
-
-    #[error("[Leaser] Custom Error val: {val:?}")]
-    CustomError { val: String },
 
     #[error("[Leaser] Cannot open lease with zero downpayment")]
     ZeroDownpayment {},

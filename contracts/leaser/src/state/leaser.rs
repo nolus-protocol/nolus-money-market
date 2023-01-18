@@ -1,11 +1,10 @@
-use std::collections::HashSet;
-
 use sdk::{
     cosmwasm_std::{Addr, StdResult, Storage},
     cw_storage_plus::{Item, Map},
 };
+use std::collections::HashSet;
 
-use crate::ContractError;
+use crate::{error::ContractResult, ContractError};
 
 const IDS: InstantiateReplyIdSeq = InstantiateReplyIdSeq::new("instantiate_reply_ids");
 const PENDING: Map<InstantiateReplyId, Addr> = Map::new("pending_instance_creations");
@@ -29,6 +28,7 @@ impl<'a> InstantiateReplyIdSeq<'a> {
 pub struct Loans {}
 
 impl Loans {
+    // customer to leases
     const STORAGE: Map<'static, Addr, HashSet<Addr>> = Map::new("loans");
 
     pub fn next(
@@ -76,13 +76,54 @@ impl Loans {
     pub fn remove(storage: &mut dyn Storage, msg_id: u64) {
         PENDING.remove(storage, msg_id);
     }
+
+    pub fn iter(storage: &dyn Storage) -> impl Iterator<Item = ContractResult<Addr>> + '_ {
+        Self::STORAGE
+            .prefix(())
+            .range_raw(storage, None, None, cosmwasm_std::Order::Ascending)
+            .map(|may_kv| may_kv.map(|kv| kv.1).map_err(Into::into))
+            .map(transpose)
+            .flatten()
+    }
+}
+
+fn transpose<T, TI, E>(res: Result<TI, E>) -> impl Iterator<Item = Result<T, E>>
+where
+    TI: IntoIterator<Item = T>,
+{
+    enum ResultIter<I, E> {
+        Ok(I),
+        Err(Option<E>),
+    }
+
+    impl<I, T, E> Iterator for ResultIter<I, E>
+    where
+        I: Iterator<Item = T>,
+    {
+        type Item = Result<I::Item, E>;
+        fn next(&mut self) -> Option<Self::Item> {
+            match self {
+                Self::Ok(i) => i.next().map(Result::Ok),
+                Self::Err(e) => e.take().map(Result::Err),
+            }
+        }
+    }
+
+    match res {
+        Ok(r) => ResultIter::Ok(r.into_iter()),
+        Err(e) => ResultIter::Err(Some(e)),
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use sdk::cosmwasm_std::testing;
+    use cosmwasm_std::Addr;
+    use sdk::{cosmwasm_std::testing, cw_storage_plus::Item};
 
-    use super::*;
+    use crate::{
+        error::ContractResult,
+        state::leaser::{InstantiateReplyId, Loans},
+    };
 
     #[test]
     fn test_id_overflow() {
@@ -98,5 +139,24 @@ mod test {
         // overflow
         let id = Loans::next(&mut deps.storage, Addr::unchecked("test")).unwrap();
         assert_eq!(id, 0);
+    }
+
+    #[test]
+    fn transpose_ok() {
+        let items = [Addr::unchecked("1"), Addr::unchecked("2")];
+        let mut iter = super::transpose(ContractResult::Ok(items.clone()));
+        assert_eq!(Some(ContractResult::Ok(items[0].clone())), iter.next());
+        assert_eq!(Some(ContractResult::Ok(items[1].clone())), iter.next());
+        assert_eq!(None, iter.next());
+    }
+
+    #[test]
+    fn transpose_err() {
+        let cause = access_control::Unauthorized;
+        let input: ContractResult<[Addr; 0]> = ContractResult::Err(cause.clone().into());
+        let exp: ContractResult<Addr> = ContractResult::Err(cause.into());
+        let mut iter = super::transpose::<Addr, [Addr; 0], _>(input);
+        assert_eq!(Some(exp), iter.next());
+        assert_eq!(None, iter.next());
     }
 }

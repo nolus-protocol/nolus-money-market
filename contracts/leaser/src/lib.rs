@@ -10,6 +10,8 @@ pub mod contract;
 #[cfg(any(feature = "contract", test))]
 mod leaser;
 #[cfg(any(feature = "contract", test))]
+mod migrate;
+#[cfg(any(feature = "contract", test))]
 pub mod state;
 
 #[cfg(test)]

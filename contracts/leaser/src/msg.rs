@@ -33,6 +33,9 @@ pub enum ExecuteMsg {
         liability: Liability,
         lease_interest_payment: InterestPaymentSpec,
     },
+    MigrateLeases {
+        new_code_id: Uint64,
+    },
     OpenLease {
         currency: SymbolOwned,
     },

@@ -22,6 +22,9 @@ pub type DownpaymentCoin = PaymentCoin;
 pub type LeaseCoin = CoinDTO<LeaseGroup>;
 pub type LpnCoin = CoinDTO<Lpns>;
 
+#[derive(Serialize, Deserialize)]
+pub struct MigrateMsg {}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {

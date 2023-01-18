@@ -1,18 +1,20 @@
 use std::collections::HashSet;
 
 use access_control::SingleUserAccess;
+
 use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
 use lease::api::{dex::ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, Deps, MessageInfo, StdResult, Storage},
+    cosmwasm_std::{Addr, Deps, MessageInfo, StdResult, Storage, Uint64},
 };
 
 use crate::{
     cmd::Quote,
     error::{ContractError, ContractResult},
+    migrate::MigrateBatch,
     msg::{ConfigResponse, QuoteResponse},
     state::{config::Config, leaser::Loans},
 };
@@ -84,5 +86,18 @@ impl Leaser {
         )?;
 
         Ok(Response::default())
+    }
+
+    pub fn try_migrate_leases(
+        storage: &mut dyn Storage,
+        info: MessageInfo,
+        new_code_id: Uint64,
+    ) -> ContractResult<Response> {
+        SingleUserAccess::check_owner_access::<ContractError>(storage, &info.sender)?;
+
+        Config::update_lease_code(storage, new_code_id.u64())?;
+
+        let batch = Loans::iter(storage).collect::<ContractResult<MigrateBatch>>()?;
+        batch.try_into()
     }
 }
