@@ -47,20 +47,18 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::SetupDex(params) => LeaserAdmin::try_setup_dex(deps.storage, info, params),
+        ExecuteMsg::SetupDex(params) => LeaserAdmin::new(deps.storage, info)?.try_setup_dex(params),
         ExecuteMsg::Config {
             lease_interest_rate_margin,
             liability,
             lease_interest_payment,
-        } => LeaserAdmin::try_configure(
-            deps.storage,
-            info,
+        } => LeaserAdmin::new(deps.storage, info)?.try_configure(
             lease_interest_rate_margin,
             liability,
             lease_interest_payment,
         ),
         ExecuteMsg::MigrateLeases { new_code_id } => {
-            LeaserAdmin::try_migrate_leases(deps.storage, info, new_code_id)
+            LeaserAdmin::new(deps.storage, info)?.try_migrate_leases(new_code_id)
         }
         ExecuteMsg::OpenLease { currency } => Borrow::with(deps, info.funds, info.sender, currency),
     }

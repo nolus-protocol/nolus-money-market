@@ -58,31 +58,29 @@ impl Leaser {
     }
 }
 
-pub struct LeaserAdmin {}
-impl LeaserAdmin {
-    pub fn try_setup_dex(
-        storage: &mut dyn Storage,
-        info: MessageInfo,
-        params: ConnectionParams,
-    ) -> ContractResult<Response> {
+pub struct LeaserAdmin<'a> {
+    storage: &'a mut dyn Storage,
+}
+impl<'a> LeaserAdmin<'a> {
+    pub fn new(storage: &'a mut dyn Storage, info: MessageInfo) -> ContractResult<Self> {
         SingleUserAccess::check_owner_access::<ContractError>(storage, &info.sender)?;
+        Ok(LeaserAdmin { storage })
+    }
 
-        Config::setup_dex(storage, params)?;
+    pub fn try_setup_dex(&mut self, params: ConnectionParams) -> ContractResult<Response> {
+        Config::setup_dex(self.storage, params)?;
 
         Ok(Response::default())
     }
 
     pub fn try_configure(
-        storage: &mut dyn Storage,
-        info: MessageInfo,
+        &mut self,
         lease_interest_rate_margin: Percent,
         liability: Liability,
         lease_interest_payment: InterestPaymentSpec,
     ) -> ContractResult<Response> {
-        SingleUserAccess::check_owner_access::<ContractError>(storage, &info.sender)?;
-
         Config::update(
-            storage,
+            self.storage,
             lease_interest_rate_margin,
             liability,
             lease_interest_payment,
@@ -91,16 +89,10 @@ impl LeaserAdmin {
         Ok(Response::default())
     }
 
-    pub fn try_migrate_leases(
-        storage: &mut dyn Storage,
-        info: MessageInfo,
-        new_code_id: Uint64,
-    ) -> ContractResult<Response> {
-        SingleUserAccess::check_owner_access::<ContractError>(storage, &info.sender)?;
+    pub fn try_migrate_leases(&mut self, new_code_id: Uint64) -> ContractResult<Response> {
+        Config::update_lease_code(self.storage, new_code_id.u64())?;
 
-        Config::update_lease_code(storage, new_code_id.u64())?;
-
-        let batch = Leases::iter(storage).collect::<ContractResult<MigrateBatch>>()?;
+        let batch = Leases::iter(self.storage).collect::<ContractResult<MigrateBatch>>()?;
         batch.try_into()
     }
 }
