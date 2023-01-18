@@ -73,10 +73,6 @@ impl Loans {
         })
     }
 
-    pub fn remove(storage: &mut dyn Storage, msg_id: u64) {
-        PENDING.remove(storage, msg_id);
-    }
-
     pub fn iter(storage: &dyn Storage) -> impl Iterator<Item = ContractResult<Addr>> + '_ {
         Self::STORAGE
             .prefix(())

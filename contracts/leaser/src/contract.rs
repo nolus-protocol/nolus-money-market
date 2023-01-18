@@ -4,7 +4,7 @@ use platform::reply::from_instantiate;
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
 use versioning::Version;
 
@@ -81,26 +81,13 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    match on_reply(deps.api, deps.storage, msg.clone()) {
-        Ok(resp) => Ok(resp),
-        Err(err) => {
-            Loans::remove(deps.storage, msg.id);
-            Err(err)
-        }
-    }
-}
-
-fn on_reply(
-    api: &dyn Api,
-    storage: &mut dyn Storage,
-    msg: Reply,
-) -> Result<Response, ContractError> {
-    let contract_addr = from_instantiate::<()>(api, msg.clone())
+    let msg_id = msg.id;
+    let contract_addr = from_instantiate::<()>(deps.api, msg)
         .map(|r| r.address)
         .map_err(|err| ContractError::ParseError {
             err: err.to_string(),
         })?;
 
-    Loans::save(storage, msg.id, contract_addr.clone())?;
+    Loans::save(deps.storage, msg_id, contract_addr.clone())?;
     Ok(Response::new().add_attribute("lease_address", contract_addr))
 }
