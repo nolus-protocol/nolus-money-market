@@ -27,7 +27,7 @@ impl<'a> Leaser<'a> {
     pub fn new(deps: Deps<'a>) -> Self {
         Self { deps }
     }
-    pub fn query_config(&self) -> ContractResult<ConfigResponse> {
+    pub fn config(&self) -> ContractResult<ConfigResponse> {
         let config = Config::load(self.deps.storage)?;
         Ok(ConfigResponse { config })
     }
@@ -36,7 +36,7 @@ impl<'a> Leaser<'a> {
         Leases::get(self.deps.storage, owner)
     }
 
-    pub fn query_quote(
+    pub fn quote(
         &self,
         downpayment: DownpaymentCoin,
         lease_asset: SymbolOwned,
