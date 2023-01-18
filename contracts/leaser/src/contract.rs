@@ -13,7 +13,7 @@ use crate::{
     error::ContractError,
     leaser::Leaser,
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::{config::Config, leaser::Loans},
+    state::{config::Config, leases::Leases},
 };
 
 const CONTRACT_VERSION: Version = 0;
@@ -88,6 +88,6 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
             err: err.to_string(),
         })?;
 
-    Loans::save(deps.storage, msg_id, contract_addr.clone())?;
+    Leases::save(deps.storage, msg_id, contract_addr.clone())?;
     Ok(Response::new().add_attribute("lease_address", contract_addr))
 }

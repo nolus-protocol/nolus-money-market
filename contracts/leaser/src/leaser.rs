@@ -16,7 +16,7 @@ use crate::{
     error::{ContractError, ContractResult},
     migrate::MigrateBatch,
     msg::{ConfigResponse, QuoteResponse},
-    state::{config::Config, leaser::Loans},
+    state::{config::Config, leases::Leases},
 };
 
 pub struct Leaser {}
@@ -28,7 +28,7 @@ impl Leaser {
     }
 
     pub fn query_loans(deps: Deps, owner: Addr) -> StdResult<HashSet<Addr>> {
-        Loans::get(deps.storage, owner)
+        Leases::get(deps.storage, owner)
     }
 
     pub fn query_quote(
@@ -97,7 +97,7 @@ impl Leaser {
 
         Config::update_lease_code(storage, new_code_id.u64())?;
 
-        let batch = Loans::iter(storage).collect::<ContractResult<MigrateBatch>>()?;
+        let batch = Leases::iter(storage).collect::<ContractResult<MigrateBatch>>()?;
         batch.try_into()
     }
 }

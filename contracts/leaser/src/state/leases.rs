@@ -25,9 +25,9 @@ impl<'a> InstantiateReplyIdSeq<'a> {
     }
 }
 
-pub struct Loans {}
+pub struct Leases {}
 
-impl Loans {
+impl Leases {
     // customer to leases
     const STORAGE: Map<'static, Addr, HashSet<Addr>> = Map::new("loans");
 
@@ -117,7 +117,7 @@ mod test {
 
     use crate::{
         error::ContractResult,
-        state::leaser::{InstantiateReplyId, Loans},
+        state::leases::{InstantiateReplyId, Leases},
     };
 
     #[test]
@@ -128,11 +128,11 @@ mod test {
             .save(&mut deps.storage, &(InstantiateReplyId::MAX - 1))
             .unwrap();
 
-        let id = Loans::next(&mut deps.storage, Addr::unchecked("test")).unwrap();
+        let id = Leases::next(&mut deps.storage, Addr::unchecked("test")).unwrap();
         assert_eq!(id, InstantiateReplyId::MAX);
 
         // overflow
-        let id = Loans::next(&mut deps.storage, Addr::unchecked("test")).unwrap();
+        let id = Leases::next(&mut deps.storage, Addr::unchecked("test")).unwrap();
         assert_eq!(id, 0);
     }
 
