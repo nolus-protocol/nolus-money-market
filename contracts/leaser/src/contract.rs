@@ -10,7 +10,7 @@ use versioning::Version;
 
 use crate::{
     cmd::Borrow,
-    error::ContractError,
+    error::{ContractError, ContractResult},
     leaser::{Leaser, LeaserAdmin},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     state::{config::Config, leases::Leases},
@@ -24,7 +24,7 @@ pub fn instantiate(
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     platform::contract::validate_addr(&deps.querier, &msg.lpp_ust_addr)?;
     platform::contract::validate_addr(&deps.querier, &msg.time_alarms)?;
     platform::contract::validate_addr(&deps.querier, &msg.market_price_oracle)?;
@@ -45,7 +45,7 @@ pub fn execute(
     _env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::SetupDex(params) => LeaserAdmin::new(deps.storage, info)?.try_setup_dex(params),
         ExecuteMsg::Config {
@@ -65,7 +65,7 @@ pub fn execute(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     let res = match msg {
         QueryMsg::Config {} => to_binary(&Leaser::query_config(deps)?),
         QueryMsg::Quote {
@@ -78,7 +78,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
     let msg_id = msg.id;
     let contract_addr = from_instantiate::<()>(deps.api, msg)
         .map(|r| r.address)

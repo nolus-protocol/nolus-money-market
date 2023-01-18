@@ -14,9 +14,7 @@ use crate::state::config::Config;
 pub struct InstantiateMsg {
     pub lease_code_id: Uint64,
     pub lpp_ust_addr: Addr,
-    /// LeaseInterestRateMargin%, for example 3%
     pub lease_interest_rate_margin: Percent,
-    /// LeaseMaxLiability%, for example 80%
     pub liability: Liability,
     pub lease_interest_payment: InterestPaymentSpec,
     pub time_alarms: Addr,
