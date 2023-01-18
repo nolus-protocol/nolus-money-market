@@ -4,7 +4,7 @@ use platform::reply::from_instantiate;
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply}, cw_storage_plus::Item,
 };
 use versioning::Version;
 
@@ -35,6 +35,15 @@ pub fn instantiate(
     SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
 
     Config::new(msg)?.store(deps.storage)?;
+
+    Ok(Response::default())
+}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: ()) -> ContractResult<Response> {
+    // the version is 0 so the previos code was deployed in the previos epoch
+    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
+    Item::<bool>::new("contract_info").remove(deps.storage);
 
     Ok(Response::default())
 }
