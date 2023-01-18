@@ -21,6 +21,10 @@ use crate::{
 
 use super::{buy_asset::BuyAsset, Controller, Response};
 
+const ICA_TRANSFER_TIMEOUT: Duration = Duration::from_secs(60);
+const ICA_TRANSFER_ACK_TIP: Coin<Nls> = Coin::new(1);
+const ICA_TRANSFER_TIMEOUT_TIP: Coin<Nls> = ICA_TRANSFER_ACK_TIP;
+
 #[derive(Serialize, Deserialize)]
 pub struct TransferOut {
     form: NewLeaseForm,
@@ -29,8 +33,6 @@ pub struct TransferOut {
     dex_account: HostAccount,
     deps: (LppLenderRef, OracleRef),
 }
-
-const ICA_TRANSFER_TIMEOUT: Duration = Duration::from_secs(60);
 
 impl TransferOut {
     pub(super) fn new(
@@ -55,8 +57,8 @@ impl TransferOut {
             sender,
             self.dex_account.clone(),
             now + ICA_TRANSFER_TIMEOUT,
-            Coin::<Nls>::new(400000),
-            Coin::<Nls>::new(200000),
+            ICA_TRANSFER_ACK_TIP,
+            ICA_TRANSFER_TIMEOUT_TIP,
         );
         // TODO apply nls_swap_fee on the downpayment only!
         ibc_sender.send(&self.downpayment)?;
