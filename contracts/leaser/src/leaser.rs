@@ -27,7 +27,7 @@ impl Leaser {
         Ok(ConfigResponse { config })
     }
 
-    pub fn query_loans(deps: Deps, owner: Addr) -> StdResult<HashSet<Addr>> {
+    pub fn customer_leases(deps: Deps, owner: Addr) -> StdResult<HashSet<Addr>> {
         Leases::get(deps.storage, owner)
     }
 
@@ -56,7 +56,10 @@ impl Leaser {
 
         Ok(resp)
     }
+}
 
+pub struct LeaserAdmin {}
+impl LeaserAdmin {
     pub fn try_setup_dex(
         storage: &mut dyn Storage,
         info: MessageInfo,

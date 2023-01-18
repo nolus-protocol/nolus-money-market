@@ -11,7 +11,7 @@ use versioning::Version;
 use crate::{
     cmd::Borrow,
     error::ContractError,
-    leaser::Leaser,
+    leaser::{Leaser, LeaserAdmin},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     state::{config::Config, leases::Leases},
 };
@@ -47,12 +47,12 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::SetupDex(params) => Leaser::try_setup_dex(deps.storage, info, params),
+        ExecuteMsg::SetupDex(params) => LeaserAdmin::try_setup_dex(deps.storage, info, params),
         ExecuteMsg::Config {
             lease_interest_rate_margin,
             liability,
             lease_interest_payment,
-        } => Leaser::try_configure(
+        } => LeaserAdmin::try_configure(
             deps.storage,
             info,
             lease_interest_rate_margin,
@@ -60,7 +60,7 @@ pub fn execute(
             lease_interest_payment,
         ),
         ExecuteMsg::MigrateLeases { new_code_id } => {
-            Leaser::try_migrate_leases(deps.storage, info, new_code_id)
+            LeaserAdmin::try_migrate_leases(deps.storage, info, new_code_id)
         }
         ExecuteMsg::OpenLease { currency } => Borrow::with(deps, info.funds, info.sender, currency),
     }
@@ -74,7 +74,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> Result<Binary, ContractErr
             downpayment,
             lease_asset,
         } => to_binary(&Leaser::query_quote(deps, downpayment, lease_asset)?),
-        QueryMsg::Leases { owner } => to_binary(&Leaser::query_loans(deps, owner)?),
+        QueryMsg::Leases { owner } => to_binary(&Leaser::customer_leases(deps, owner)?),
     };
     res.map_err(ContractError::from)
 }
