@@ -19,39 +19,44 @@ use crate::{
     state::{config::Config, leases::Leases},
 };
 
-pub struct Leaser {}
+pub struct Leaser<'a> {
+    deps: Deps<'a>,
+}
 
-impl Leaser {
-    pub fn query_config(deps: Deps) -> ContractResult<ConfigResponse> {
-        let config = Config::load(deps.storage)?;
+impl<'a> Leaser<'a> {
+    pub fn new(deps: Deps<'a>) -> Self {
+        Self { deps }
+    }
+    pub fn query_config(&self) -> ContractResult<ConfigResponse> {
+        let config = Config::load(self.deps.storage)?;
         Ok(ConfigResponse { config })
     }
 
-    pub fn customer_leases(deps: Deps, owner: Addr) -> StdResult<HashSet<Addr>> {
-        Leases::get(deps.storage, owner)
+    pub fn customer_leases(&self, owner: Addr) -> StdResult<HashSet<Addr>> {
+        Leases::get(self.deps.storage, owner)
     }
 
     pub fn query_quote(
-        deps: Deps,
+        &self,
         downpayment: DownpaymentCoin,
         lease_asset: SymbolOwned,
     ) -> Result<QuoteResponse, ContractError> {
-        let config = Config::load(deps.storage)?;
+        let config = Config::load(self.deps.storage)?;
 
-        let lpp = LppLenderRef::try_new(config.lpp_addr, &deps.querier, 0xDEADC0DEDEADC0DE)?;
+        let lpp = LppLenderRef::try_new(config.lpp_addr, &self.deps.querier, 0xDEADC0DEDEADC0DE)?;
 
-        let oracle = OracleRef::try_from(config.market_price_oracle, &deps.querier)?;
+        let oracle = OracleRef::try_from(config.market_price_oracle, &self.deps.querier)?;
 
         let resp = lpp.execute(
             Quote::new(
-                deps.querier,
+                self.deps.querier,
                 downpayment,
                 lease_asset,
                 oracle,
                 config.liability,
                 config.lease_interest_rate_margin,
             )?,
-            &deps.querier,
+            &self.deps.querier,
         )?;
 
         Ok(resp)
