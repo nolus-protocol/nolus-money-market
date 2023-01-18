@@ -82,8 +82,7 @@ impl Loans {
             .prefix(())
             .range_raw(storage, None, None, cosmwasm_std::Order::Ascending)
             .map(|may_kv| may_kv.map(|kv| kv.1).map_err(Into::into))
-            .map(transpose)
-            .flatten()
+            .flat_map(transpose)
     }
 }
 
@@ -153,7 +152,7 @@ mod test {
     #[test]
     fn transpose_err() {
         let cause = access_control::Unauthorized;
-        let input: ContractResult<[Addr; 0]> = ContractResult::Err(cause.clone().into());
+        let input: ContractResult<[Addr; 0]> = ContractResult::Err(cause.into());
         let exp: ContractResult<Addr> = ContractResult::Err(cause.into());
         let mut iter = super::transpose::<Addr, [Addr; 0], _>(input);
         assert_eq!(Some(exp), iter.next());
