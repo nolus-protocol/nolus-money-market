@@ -26,7 +26,7 @@ impl NewLeaseForm {
         querier: &QuerierWrapper,
         deps: (LppLenderRef, OracleRef),
     ) -> ContractResult<IntoDTOResult> {
-        debug_assert_eq!(&self.currency, amount.ticker());
+        debug_assert_eq!(amount.ticker(), &self.currency);
         debug_assert!(amount.amount() > 0);
 
         let profit = ProfitRef::try_from(self.loan.profit.clone(), querier)?;

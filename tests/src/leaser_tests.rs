@@ -1,44 +1,50 @@
-use std::collections::HashSet;
+use std::{any::type_name, collections::HashSet};
 
 use currency::{
     lease::{Atom, Cro, Osmo},
     lpn::Usdc,
 };
-use finance::price::{total, total_of};
 use finance::{
     coin::{Amount, Coin},
     currency::Currency,
     percent::Percent,
+    price::{total, total_of},
     test,
 };
 use leaser::msg::{QueryMsg, QuoteResponse};
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{coin, Addr, DepsMut, Env, Event, MessageInfo},
-    cw_multi_test::{next_block, ContractWrapper, Executor},
+    cosmwasm_std::{Addr, coin, Coin as CwCoin, DepsMut, Env, Event, MessageInfo},
+    cw_multi_test::{ContractWrapper, Executor, next_block},
+    testing::new_custom_msg_queue,
 };
 
-use crate::{
-    common::{
-        cwcoin, cwcoins, lpp_wrapper::mock_lpp_quote_query, test_case::TestCase,
-        ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
-    },
-    oracle_tests::{add_feeder, feed_price},
+use crate::common::{
+    ADDON_OPTIMAL_INTEREST_RATE, ADMIN,
+    BASE_INTEREST_RATE,
+    cwcoin,
+    cwcoins,
+    lease_wrapper::complete_lease_initialization,
+    lpp_wrapper::mock_lpp_quote_query, oracle_wrapper::{add_feeder, feed_price}, test_case::TestCase, USER, UTILIZATION_OPTIMAL,
 };
 
 type TheCurrency = Usdc;
 
 #[test]
-#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
-fn open_lease() {
-    open_lease_impl::<Usdc, Usdc, Usdc>();
+fn open_osmo_lease() {
+    open_lease_impl::<Usdc, Osmo, Usdc>(true);
+}
+
+#[test]
+#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
+fn open_cro_lease() {
+    open_lease_impl::<Usdc, Cro, Usdc>(true);
 }
 
 #[test]
 #[should_panic(expected = "Unsupported currency")]
-#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
 fn open_lease_unsupported_currency_by_oracle() {
-    open_lease_impl::<Usdc, Atom, Usdc>();
+    open_lease_impl::<Usdc, Atom, Usdc>(false);
 }
 
 #[test]
@@ -48,7 +54,7 @@ fn init_lpp_with_unknown_currency() {
 
     type NotLpn = Osmo;
 
-    let mut test_case = TestCase::<NotLpn>::new();
+    let mut test_case = TestCase::<NotLpn>::new(None);
     test_case.init(&user_addr, cwcoins::<NotLpn, _>(500));
     test_case.init_lpp(
         None,
@@ -59,14 +65,16 @@ fn init_lpp_with_unknown_currency() {
 }
 
 #[test]
-#[ignore = "No support for stargate CosmosMsg-s at cw-multi-test, https://app.clickup.com/t/2zgr1q6"]
+#[should_panic = "Unsupported currency"]
 fn open_lease_not_in_lpn_currency() {
     let user_addr = Addr::unchecked(USER);
 
     type Lpn = Usdc;
     let lease_currency = Atom::TICKER;
 
-    let mut test_case = TestCase::<Lpn>::new();
+    let neutron_message_queue = new_custom_msg_queue();
+
+    let mut test_case = TestCase::<Lpn>::new(Some(neutron_message_queue.clone()));
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
     test_case.init_lpp(
         None,
@@ -80,15 +88,28 @@ fn open_lease_not_in_lpn_currency() {
     test_case.init_profit(24);
     test_case.init_leaser();
 
-    let res = test_case.app.execute_contract(
-        user_addr.clone(),
-        test_case.leaser_addr.unwrap(),
-        &leaser::msg::ExecuteMsg::OpenLease {
-            currency: lease_currency.into(),
-        },
-        &[cwcoin::<Lpn, _>(3)],
+    let downpayment: CwCoin = cwcoin::<Lpn, _>(3);
+
+    let _res = test_case
+        .app
+        .execute_contract(
+            user_addr.clone(),
+            test_case.leaser_addr.unwrap(),
+            &leaser::msg::ExecuteMsg::OpenLease {
+                currency: lease_currency.into(),
+            },
+            &[downpayment.clone()],
+        )
+        .unwrap();
+
+    complete_lease_initialization::<Lpn>(
+        &mut test_case.app,
+        &neutron_message_queue,
+        &Addr::unchecked("contract6"),
+        downpayment,
     );
-    let err = res.unwrap_err();
+
+    // let err = res.unwrap_err();
     // For some reason the downcasting does not work. That is due to different TypeId-s of LeaseError and the root
     // cause stored into the err. Suppose that is a flaw of the cw-multi-test.
     // dbg!(err.root_cause().downcast_ref::<LeaseError>());
@@ -96,10 +117,11 @@ fn open_lease_not_in_lpn_currency() {
     //     &LeaseError::OracleError(OracleError::Std(StdError::GenericErr { msg: "".into() })),
     //     root_err
     // );
-    assert!(err
-        .root_cause()
-        .to_string()
-        .contains("Unsupported currency"));
+
+    // assert!(err
+    //     .root_cause()
+    //     .to_string()
+    //     .contains("Unsupported currency"));
 }
 
 #[test]
@@ -110,7 +132,7 @@ fn open_multiple_loans() {
     type Lpn = Usdc;
     type LeaseCurrency = Atom;
 
-    let mut test_case = TestCase::<Lpn>::new();
+    let mut test_case = TestCase::<Lpn>::new(None);
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
     test_case.init_lpp(
         None,
@@ -208,7 +230,7 @@ fn test_quote() {
     type LeaseCurrency = Osmo;
 
     let user_addr = Addr::unchecked(USER);
-    let mut test_case = TestCase::<Lpn>::new();
+    let mut test_case = TestCase::<Lpn>::new(None);
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
     test_case.init_lpp(
         None,
@@ -223,7 +245,7 @@ fn test_quote() {
     test_case.init_leaser();
 
     let feeder = setup_feeder(&mut test_case);
-    feed_price::<LeaseCurrency, Lpn>(&mut test_case, &feeder, Coin::new(2), Coin::new(1));
+    feed_price::<_, LeaseCurrency, Lpn>(&mut test_case, &feeder, Coin::new(2), Coin::new(1));
 
     let resp = query_quote::<_, Downpayment, LeaseCurrency>(&test_case, Coin::new(100));
 
@@ -269,7 +291,7 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
     let user_reserve = cwcoins::<Atom, _>(USER_ATOMS);
 
     let user_addr = Addr::unchecked(USER);
-    let mut test_case = TestCase::<Lpn>::with_reserve(&{
+    let mut test_case = TestCase::<Lpn>::with_reserve(None, &{
         let mut reserve = cwcoins::<Lpn, _>(1_000_000_000);
 
         reserve.extend_from_slice(lpp_reserve.as_slice());
@@ -308,8 +330,8 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
     let lpn_asset_quote = Coin::<LeaseCurrency>::new(2);
     let lpn_asset_price = total_of(lpn_asset_base).is(lpn_asset_quote);
 
-    feed_price::<Osmo, TheCurrency>(&mut test_case, &feeder_addr, dpn_lpn_base, dpn_lpn_quote);
-    feed_price::<LeaseCurrency, TheCurrency>(
+    feed_price::<_, Osmo, TheCurrency>(&mut test_case, &feeder_addr, dpn_lpn_base, dpn_lpn_quote);
+    feed_price::<_, LeaseCurrency, TheCurrency>(
         &mut test_case,
         &feeder_addr,
         lpn_asset_quote,
@@ -355,7 +377,7 @@ fn test_quote_fixed_rate() {
     type LeaseCurrency = Osmo;
 
     let user_addr = Addr::unchecked(USER);
-    let mut test_case = TestCase::<Lpn>::new();
+    let mut test_case = TestCase::<Lpn>::new(None);
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
     test_case.init_lpp(
         Some(ContractWrapper::new(
@@ -374,7 +396,7 @@ fn test_quote_fixed_rate() {
     test_case.init_leaser();
 
     let feeder = setup_feeder(&mut test_case);
-    feed_price::<LeaseCurrency, Lpn>(&mut test_case, &feeder, Coin::new(3), Coin::new(1));
+    feed_price::<_, LeaseCurrency, Lpn>(&mut test_case, &feeder, Coin::new(3), Coin::new(1));
     let resp =
         query_quote::<_, Downpayment, LeaseCurrency>(&test_case, Coin::<Downpayment>::new(100));
 
@@ -446,7 +468,7 @@ fn open_loans_lpp_fails() {
         }
     }
 
-    let mut test_case = TestCase::<Lpn>::new();
+    let mut test_case = TestCase::<Lpn>::new(None);
     test_case
         .init(&user_addr, cwcoins::<Lpn, _>(500))
         .init_lpp(
@@ -478,7 +500,7 @@ fn open_loans_lpp_fails() {
         .unwrap();
 }
 
-fn open_lease_impl<Lpn, LeaseC, DownpaymentC>()
+fn open_lease_impl<Lpn, LeaseC, DownpaymentC>(feed_prices: bool)
 where
     Lpn: Currency,
     LeaseC: Currency,
@@ -486,7 +508,7 @@ where
 {
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::<Lpn>::new();
+    let mut test_case = TestCase::<Lpn>::new(Some(new_custom_msg_queue()));
     test_case.init(&user_addr, vec![cwcoin::<DownpaymentC, _>(500)]);
     test_case.init_lpp(
         None,
@@ -500,191 +522,61 @@ where
     test_case.init_profit(24);
     test_case.init_leaser();
 
-    let lpp_addr: &str = test_case.lpp_addr.as_ref().unwrap().as_str(); // 0
+    let _lpp_addr: Addr = test_case.lpp_addr.as_ref().unwrap().clone(); // 0
 
-    let time_alarms_addr: &str = test_case.timealarms.as_ref().unwrap().as_str(); // 1
+    let _time_alarms_addr: Addr = test_case.timealarms.as_ref().unwrap().clone(); // 1
 
-    let _oracle_addr: &str = test_case.oracle.as_ref().unwrap().as_str(); // 2
+    let _oracle_addr: Addr = test_case.oracle.as_ref().unwrap().clone(); // 2
 
-    let _treasury_addr: &str = test_case.leaser_addr.as_ref().unwrap().as_str(); // 3
+    let _treasury_addr: Addr = test_case.leaser_addr.as_ref().unwrap().clone(); // 3
 
-    let _profit_addr: &str = test_case.leaser_addr.as_ref().unwrap().as_str(); // 4
+    let _profit_addr: Addr = test_case.leaser_addr.as_ref().unwrap().clone(); // 4
 
-    let leaser_addr: &str = test_case.leaser_addr.as_ref().unwrap().as_str(); // 5
+    let leaser_addr: Addr = test_case.leaser_addr.as_ref().unwrap().clone(); // 5
 
     let lease_addr: Addr = Addr::unchecked("contract6"); // 6
-    let lease_addr: &str = lease_addr.as_str();
 
-    let mut res = test_case
+    if feed_prices {
+        add_feeder(&mut test_case, user_addr.clone());
+
+        if type_name::<DownpaymentC>() != type_name::<Lpn>() {
+            feed_price(
+                &mut test_case,
+                &user_addr,
+                Coin::<DownpaymentC>::new(1),
+                Coin::<Lpn>::new(1),
+            );
+        }
+
+        if type_name::<LeaseC>() != type_name::<Lpn>() {
+            feed_price(
+                &mut test_case,
+                &user_addr,
+                Coin::<LeaseC>::new(1),
+                Coin::<Lpn>::new(1),
+            );
+        }
+    }
+
+    let downpayment: CwCoin = cwcoin::<DownpaymentC, _>(40);
+
+    test_case
         .app
         .execute_contract(
             user_addr.clone(),
-            test_case.leaser_addr.clone().unwrap(),
+            leaser_addr,
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: LeaseC::TICKER.into(),
             },
-            &[cwcoin::<DownpaymentC, _>(40)],
+            &[downpayment.clone()],
         )
         .unwrap();
 
-    // ensure the attributes were relayed from the sub-message
-
-    // TODO form -> Lease, self.initial_alarm_schedule(account.balance()?, now)?;
-    // assert_eq!(
-    //     res.events.len(),
-    //     // TODO: Add test cases which are with currency different than LPN and uncomment section
-    //     // if currency == TheCurrency::SYMBOL {
-    //     10 // } else {
-    //        //     11
-    //        // }
-    // );
-
-    // reflect only returns standard wasm-execute event
-    let leaser_exec = res.events.remove(0);
-    assert_eq!(leaser_exec.ty.as_str(), "execute");
-    assert_eq!(leaser_exec.attributes, [("_contract_addr", leaser_addr)]);
-
-    let lease_inst = res.events.remove(0);
-    assert_eq!(lease_inst.ty.as_str(), "instantiate");
-    assert_eq!(
-        lease_inst.attributes,
-        [
-            ("_contract_addr", lease_addr),
-            ("code_id", &test_case.lease_code_id.unwrap().to_string())
-        ]
-    );
-
-    let lpp_exec = res.events.remove(0);
-    assert_eq!(lpp_exec.ty.as_str(), "execute");
-    assert_eq!(lpp_exec.attributes, [("_contract_addr", lpp_addr)]);
-
-    let lpp_wasm = res.events.remove(0);
-    assert_eq!(lpp_wasm.ty.as_str(), "wasm");
-    assert_eq!(
-        lpp_wasm.attributes,
-        [("_contract_addr", lpp_addr), ("method", "try_open_loan"),]
-    );
-
-    let transfer_event = res.events.remove(0);
-    assert_eq!(transfer_event.ty.as_str(), "transfer");
-    assert_eq!(
-        transfer_event.attributes,
-        [
-            ("recipient", lease_addr),
-            ("sender", lpp_addr),
-            ("amount", &format!("{}{}", "74", Lpn::BANK_SYMBOL))
-        ]
-    );
-
-    let lease_reply = res.events.remove(0);
-    assert_eq!(lease_reply.ty.as_str(), "reply");
-    assert_eq!(
-        lease_reply.attributes,
-        [("_contract_addr", lease_addr), ("mode", "handle_success"),]
-    );
-
-    let lease_exec_open = res.events.remove(0);
-    assert_eq!(lease_exec_open.ty.as_str(), "wasm-ls-open");
-    assert!(lease_exec_open
-        .attributes
-        .iter()
-        .any(|attribute| attribute == ("_contract_addr", lease_addr)));
-    assert!(lease_exec_open
-        .attributes
-        .iter()
-        .any(|attribute| attribute.key == "height"));
-    assert!(lease_exec_open
-        .attributes
-        .iter()
-        .any(|attribute| attribute.key == "idx"));
-    assert!(lease_exec_open
-        .attributes
-        .iter()
-        .any(|attribute| attribute == ("id", lease_addr)));
-    assert!(lease_exec_open
-        .attributes
-        .iter()
-        .any(|attribute| attribute == ("customer", USER)));
-    assert!(lease_exec_open
-        .attributes
-        .iter()
-        .any(|attribute| attribute == ("air", "105")));
-    assert!(lease_exec_open
-        .attributes
-        .iter()
-        .any(|attribute| attribute == ("currency", Lpn::TICKER)));
-    assert!(lease_exec_open
-        .attributes
-        .iter()
-        .any(|attribute| attribute == ("loan-pool-id", lpp_addr)));
-    assert!(lease_exec_open
-        .attributes
-        .iter()
-        .any(|attribute| attribute == ("loan-amount", "74")));
-    assert!(lease_exec_open
-        .attributes
-        .iter()
-        .any(|attribute| attribute == ("loan-symbol", Lpn::TICKER)));
-    assert!(lease_exec_open
-        .attributes
-        .iter()
-        .any(|attribute| attribute == ("downpayment-symbol", Lpn::TICKER)));
-    assert!(lease_exec_open
-        .attributes
-        .iter()
-        .any(|attribute| attribute == ("downpayment-amount", "40")));
-
-    // TODO: Add test cases which are with currency different than LPN and uncomment section
-    // if currency != Lpn::SYMBOL {
-    //     let oracle_exec = res.events.remove(0);
-    //     assert_eq!(oracle_exec.ty.as_str(), "execute");
-    //     assert_eq!(
-    //         oracle_exec.attributes,
-    //         [("_contract_addr", oracle_addr)]
-    //     );
-    //
-    //     let oracle_wasm = res.events.remove(0);
-    //     assert_eq!(oracle_wasm.ty.as_str(), "wasm");
-    //     assert_eq!(
-    //         oracle_wasm.attributes,
-    //         [
-    //             ("_contract_addr", oracle_addr),
-    //             ("method", "try_add_price_hook"),
-    //         ]
-    //     );
-    // }
-
-    let leaser_reply = res.events.remove(0);
-    assert_eq!(leaser_reply.ty.as_str(), "execute");
-    assert_eq!(
-        leaser_reply.attributes,
-        [("_contract_addr", time_alarms_addr),]
-    );
-
-    let leaser_reply = res.events.remove(0);
-    assert_eq!(leaser_reply.ty.as_str(), "reply");
-    assert_eq!(
-        leaser_reply.attributes,
-        [("_contract_addr", leaser_addr), ("mode", "handle_success"),]
-    );
-
-    let lease_opened = res.events.remove(0);
-    assert_eq!(lease_opened.ty.as_str(), "wasm");
-    assert_eq!(
-        lease_opened.attributes,
-        [
-            ("_contract_addr", leaser_addr),
-            ("lease_address", lease_addr)
-        ]
-    );
-
-    assert_eq!(
-        cwcoins::<Lpn, _>(460),
-        test_case.app.wrap().query_all_balances(user_addr).unwrap()
-    );
-    assert_eq!(
-        cwcoins::<Lpn, _>(114),
-        test_case.app.wrap().query_all_balances(lease_addr).unwrap()
+    complete_lease_initialization::<Lpn>(
+        &mut test_case.app,
+        test_case.custom_message_queue.as_deref().unwrap(),
+        &lease_addr,
+        downpayment,
     );
 }
 

@@ -44,7 +44,10 @@ fn config_update_parameters() {
     let addon_optimal_interest_rate = Percent::from_percent(20);
     let utilization_optimal = Percent::from_percent(55);
 
-    let mut app = mock_app(&[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)]);
+    let mut app = mock_app(
+        None,
+        &[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)],
+    );
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
         &mut app,
@@ -106,7 +109,7 @@ fn config_update_parameters() {
 fn open_loan_unauthorized_contract_id() {
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::<Lpn>::new();
+    let mut test_case = TestCase::<Lpn>::new(None);
     test_case.init(&user_addr, vec![lpn_cwcoin(500)]);
     test_case.init_lpp(
         None,
@@ -142,7 +145,7 @@ fn open_loan_unauthorized_contract_id() {
 fn open_loan_no_liquidity() {
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::<Lpn>::new();
+    let mut test_case = TestCase::<Lpn>::new(None);
     test_case.init(&user_addr, vec![lpn_cwcoin(500)]);
     test_case.init_lpp(
         None,
@@ -190,7 +193,7 @@ fn deposit_and_withdraw() {
     let lender2 = Addr::unchecked("lender2");
     let lender3 = Addr::unchecked("lender3");
 
-    let mut app = mock_app(&[lpn_cwcoin(app_balance)]);
+    let mut app = mock_app(None, &[lpn_cwcoin(app_balance)]);
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
         &mut app,
@@ -413,7 +416,7 @@ fn loan_open_wrong_id() {
     let init_deposit = 20_000_000u128;
     let loan = 10_000u128;
 
-    let mut app = mock_app(&lpn_cwcoins(app_balance));
+    let mut app = mock_app(None, &lpn_cwcoins(app_balance));
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
         &mut app,
@@ -471,7 +474,10 @@ fn loan_open_and_repay() {
     dbg!(interest1);
 
     // net setup
-    let mut app = mock_app(&[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)]);
+    let mut app = mock_app(
+        None,
+        &[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)],
+    );
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
         &mut app,
@@ -777,10 +783,13 @@ fn compare_lpp_states() {
     dbg!(interest1);
 
     // net setup
-    let mut app = mock_app(&[
-        lpn_cwcoin(app_balance),
-        coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),
-    ]);
+    let mut app = mock_app(
+        None,
+        &[
+            lpn_cwcoin(app_balance),
+            coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),
+        ],
+    );
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
         &mut app,
@@ -1080,10 +1089,13 @@ fn test_rewards() {
     // TODO: any checks for the sender of rewards?
     let treasury = Addr::unchecked("treasury");
 
-    let mut app = mock_app(&[
-        lpn_cwcoin(app_balance),
-        coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),
-    ]);
+    let mut app = mock_app(
+        None,
+        &[
+            lpn_cwcoin(app_balance),
+            coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),
+        ],
+    );
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
         &mut app,

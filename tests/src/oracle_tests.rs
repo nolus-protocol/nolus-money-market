@@ -19,13 +19,13 @@ use oracle::{msg::QueryMsg as OracleQ, state::supported_pairs::TreeStore};
 use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{coin, wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
-    cw_multi_test::{AppResponse, Executor},
+    cw_multi_test::Executor,
     schemars::_serde_json::from_str,
 };
 use swap::SwapTarget;
 
 use crate::common::{
-    leaser_wrapper::LeaserWrapper, native_cwcoin, test_case::TestCase, AppExt,
+    leaser_wrapper::LeaserWrapper, native_cwcoin, oracle_wrapper, test_case::TestCase, AppExt,
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -42,7 +42,8 @@ where
 }
 
 fn create_test_case() -> TestCase<Lpn> {
-    let mut test_case = TestCase::with_reserve(&[cw_coin(10_000_000_000_000_000_000_000_000_000)]);
+    let mut test_case =
+        TestCase::with_reserve(None, &[cw_coin(10_000_000_000_000_000_000_000_000_000)]);
     test_case.init(
         &Addr::unchecked(ADMIN),
         vec![cw_coin(1_000_000_000_000_000_000_000_000)],
@@ -64,51 +65,6 @@ fn create_test_case() -> TestCase<Lpn> {
     test_case.init_leaser();
 
     test_case
-}
-
-pub fn add_feeder(test_case: &mut TestCase<Lpn>, addr: impl Into<String>) {
-    test_case
-        .app
-        .execute(
-            Addr::unchecked(ADMIN),
-            wasm_execute(
-                test_case.oracle.clone().unwrap(),
-                &oracle::msg::ExecuteMsg::RegisterFeeder {
-                    feeder_address: addr.into(),
-                },
-                vec![],
-            )
-            .unwrap()
-            .into(),
-        )
-        .unwrap();
-}
-
-pub fn feed_price<C1, C2>(
-    test_case: &mut TestCase<Lpn>,
-    addr: &Addr,
-    base: Coin<C1>,
-    quote: Coin<C2>,
-) -> AppResponse
-where
-    C1: Currency,
-    C2: Currency,
-{
-    test_case
-        .app
-        .execute(
-            addr.clone(),
-            wasm_execute(
-                test_case.oracle.clone().unwrap(),
-                &oracle::msg::ExecuteMsg::FeedPrices {
-                    prices: vec![price::total_of(base).is(quote).into()],
-                },
-                vec![],
-            )
-            .unwrap()
-            .into(),
-        )
-        .expect("Oracle not properly connected!")
 }
 
 #[test]
@@ -156,7 +112,7 @@ fn internal_test_integration_setup_test() {
         )
         .unwrap();
 
-    let _ = feed_price::<BaseC, Usdc>(
+    let _ = oracle_wrapper::feed_price::<_, BaseC, Usdc>(
         &mut test_case,
         &Addr::unchecked(ADMIN),
         Coin::new(5),
@@ -203,7 +159,7 @@ fn feed_price_with_alarm_issue() {
         )
         .unwrap();
 
-    let _ = feed_price::<BaseC, Usdc>(
+    let _ = oracle_wrapper::feed_price::<_, BaseC, Usdc>(
         &mut test_case,
         &Addr::unchecked(ADMIN),
         Coin::new(5),
@@ -248,7 +204,7 @@ fn feed_price_with_alarm() {
         )
         .unwrap();
 
-    let res = feed_price::<Cro, Usdc>(
+    let res = oracle_wrapper::feed_price::<_, Cro, Usdc>(
         &mut test_case,
         &Addr::unchecked(ADMIN),
         Coin::new(1),
@@ -364,12 +320,22 @@ fn test_config_update() {
     let base = 2;
     let quote = 10;
 
-    add_feeder(&mut test_case, &feeder1);
-    add_feeder(&mut test_case, &feeder2);
-    add_feeder(&mut test_case, &feeder3);
+    oracle_wrapper::add_feeder(&mut test_case, &feeder1);
+    oracle_wrapper::add_feeder(&mut test_case, &feeder2);
+    oracle_wrapper::add_feeder(&mut test_case, &feeder3);
 
-    feed_price::<BaseC, Usdc>(&mut test_case, &feeder1, Coin::new(base), Coin::new(quote));
-    feed_price::<BaseC, Usdc>(&mut test_case, &feeder2, Coin::new(base), Coin::new(quote));
+    oracle_wrapper::feed_price::<_, BaseC, Usdc>(
+        &mut test_case,
+        &feeder1,
+        Coin::new(base),
+        Coin::new(quote),
+    );
+    oracle_wrapper::feed_price::<_, BaseC, Usdc>(
+        &mut test_case,
+        &feeder2,
+        Coin::new(base),
+        Coin::new(quote),
+    );
 
     let price: SpotPrice = test_case
         .app
@@ -490,7 +456,7 @@ fn test_zero_price_dto() {
 
     let feeder1 = Addr::unchecked("feeder1");
 
-    add_feeder(&mut test_case, &feeder1);
+    oracle_wrapper::add_feeder(&mut test_case, &feeder1);
 
     // can be created only via deserialization
     let price: SpotPrice = from_str(

@@ -4,12 +4,12 @@ use currency::native::Nls;
 use finance::{coin::Coin, currency::Currency, duration::Duration, percent::Percent};
 use platform::coin_legacy;
 use sdk::{
+    cosmwasm_ext::CustomMsg,
     cosmwasm_std::{
         testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin as CwCoin, Deps, Empty, Env,
         StdResult, Timestamp,
     },
-    neutron_sdk::bindings::msg::NeutronMsg,
-    testing::{self, new_app, App},
+    testing::{self, new_app, App, CustomMessageQueue},
 };
 
 pub(crate) const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
@@ -29,19 +29,19 @@ type ContractWrapper<
     MigrMsg = Empty,
     MigrErr = anyhow::Error,
 > = testing::ContractWrapper<
-    ExecMsg,    // execute msg
-    InstMsg,    // instantiate msg
-    QueryMsg,   // query msg
-    ExecErr,    // execute err
-    InstErr,    // instantiate err
-    QueryErr,   // query err
-    NeutronMsg, // C
-    Empty,      // Q
-    Sudo,       // sudo msg
-    SudoErr,    // sudo err
-    ReplyErr,   // reply err
-    MigrMsg,    // migrate msg
-    MigrErr,    // migrate err
+    ExecMsg,   // execute msg
+    InstMsg,   // instantiate msg
+    QueryMsg,  // query msg
+    ExecErr,   // execute err
+    InstErr,   // instantiate err
+    QueryErr,  // query err
+    CustomMsg, // C
+    Empty,     // Q
+    Sudo,      // sudo msg
+    SudoErr,   // sudo err
+    ReplyErr,  // reply err
+    MigrMsg,   // migrate msg
+    MigrErr,   // migrate err
 >;
 
 #[cfg(test)]
@@ -97,9 +97,12 @@ fn mock_query(_deps: Deps, _env: Env, _msg: MockQueryMsg) -> StdResult<Binary> {
     to_binary(&MockResponse {})
 }
 
-pub type MockApp = App<NeutronMsg, Empty>;
+pub type MockApp = App<CustomMsg, Empty>;
 
-pub fn mock_app(init_funds: &[CwCoin]) -> MockApp {
+pub fn mock_app(
+    custom_message_queue: Option<CustomMessageQueue>,
+    init_funds: &[CwCoin],
+) -> MockApp {
     let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);
 
     let mock_start_block = BlockInfo {
@@ -111,7 +114,7 @@ pub fn mock_app(init_funds: &[CwCoin]) -> MockApp {
     let mut funds = vec![native_cwcoin(100000)];
     funds.append(&mut init_funds.to_vec());
 
-    new_app()
+    new_app(custom_message_queue)
         .with_block(mock_start_block)
         .build(|router, _, storage| {
             router

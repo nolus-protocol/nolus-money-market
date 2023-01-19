@@ -1,5 +1,5 @@
-#[cfg(not(feature = "neutron"))]
-use cosmwasm_std::Empty as CustomMsg;
+use std::{cell::RefCell, collections::VecDeque, rc::Rc};
+
 use cosmwasm_std::{
     testing::{mock_dependencies, MockApi, MockQuerier, MockStorage},
     Binary, ContractResult, Empty, GovMsg, IbcMsg, IbcQuery, OwnedDeps, SystemError, SystemResult,
@@ -9,19 +9,19 @@ use cw_multi_test::{
     BankKeeper, BasicAppBuilder, DistributionKeeper, FailingModule, StakeKeeper, WasmKeeper,
 };
 pub use cw_multi_test::{ContractWrapper, Executor};
-#[cfg(feature = "neutron")]
-use neutron_sdk::bindings::msg::NeutronMsg as CustomMsg;
 
-use self::neutron::Module as NeutronModule;
+use crate::cosmwasm_ext::CustomMsg;
+
+use self::custom_msg::Module as CustomMsgModule;
 
 pub type App<Exec = CustomMsg, Query = Empty> =
-    cw_multi_test::App<BankKeeper, MockApi, MockStorage, NeutronModule, WasmKeeper<Exec, Query>>;
+    cw_multi_test::App<BankKeeper, MockApi, MockStorage, CustomMsgModule, WasmKeeper<Exec, Query>>;
 
 pub type AppBuilder<Exec = CustomMsg, Query = Empty> = cw_multi_test::AppBuilder<
     BankKeeper,
     MockApi,
     MockStorage,
-    NeutronModule,
+    CustomMsgModule,
     WasmKeeper<Exec, Query>,
     StakeKeeper,
     DistributionKeeper,
@@ -30,6 +30,13 @@ pub type AppBuilder<Exec = CustomMsg, Query = Empty> = cw_multi_test::AppBuilder
 >;
 
 pub type Contract = dyn cw_multi_test::Contract<CustomMsg>;
+
+pub type CustomMessageQueue = Rc<RefCell<VecDeque<CustomMsg>>>;
+pub type CustomMessageQueueRef<'r> = &'r RefCell<VecDeque<CustomMsg>>;
+
+pub fn new_custom_msg_queue() -> CustomMessageQueue {
+    Rc::new(RefCell::default())
+}
 
 pub fn mock_deps_with_contracts<const N: usize>(
     contracts: [&'static str; N],
@@ -63,23 +70,35 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
     deps
 }
 
-pub fn new_app() -> AppBuilder {
+pub fn new_app(custom_message_queue: Option<CustomMessageQueue>) -> AppBuilder {
     BasicAppBuilder::<CustomMsg, Empty>::new_custom()
-        .with_custom(NeutronModule {})
-        .with_wasm::<NeutronModule, _>(WasmKeeper::new())
+        .with_custom(CustomMsgModule::new(custom_message_queue))
+        .with_wasm::<CustomMsgModule, _>(WasmKeeper::new())
 }
 
-mod neutron {
+mod custom_msg {
     use anyhow::{bail, Result as AnyResult};
     use cosmwasm_schema::schemars::JsonSchema;
     use cosmwasm_std::{Addr, Api, Binary, BlockInfo, CustomQuery, Empty, Querier, Storage};
-    use cw_multi_test::{AppResponse, CosmosRouter, Module as CwModule};
-    use neutron_sdk::bindings::msg::NeutronMsg;
+    use cw_multi_test::{AppResponse, CosmosRouter, Module as ModuleTrait};
     use serde::de::DeserializeOwned;
 
-    pub struct Module {}
-    impl CwModule for Module {
-        type ExecT = NeutronMsg;
+    use crate::cosmwasm_ext::CustomMsg;
+
+    use super::CustomMessageQueue;
+
+    pub struct Module {
+        message_queue: Option<CustomMessageQueue>,
+    }
+
+    impl Module {
+        pub fn new(message_queue: Option<CustomMessageQueue>) -> Self {
+            Self { message_queue }
+        }
+    }
+
+    impl ModuleTrait for Module {
+        type ExecT = CustomMsg;
 
         type QueryT = Empty;
 
@@ -92,20 +111,17 @@ mod neutron {
             _router: &dyn CosmosRouter<ExecC = ExecC, QueryC = QueryC>,
             _block: &BlockInfo,
             _sender: Addr,
-            _msg: Self::ExecT,
+            msg: Self::ExecT,
         ) -> AnyResult<AppResponse>
         where
-            ExecC: std::fmt::Debug
-                + Clone
-                + PartialEq
-                + JsonSchema
-                + serde::de::DeserializeOwned
-                + 'static,
+            ExecC: std::fmt::Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
             QueryC: CustomQuery + DeserializeOwned + 'static,
         {
-            Ok(AppResponse {
-                ..Default::default()
-            })
+            self.message_queue
+                .as_ref()
+                .map(|queue| queue.borrow_mut().push_back(msg));
+
+            Ok(AppResponse::default())
         }
 
         fn sudo<ExecC, QueryC>(
