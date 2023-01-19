@@ -1,7 +1,7 @@
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
-use finance::duration::Duration;
+use finance::{coin::Coin, currency::Currency, duration::Duration};
 use sdk::neutron_sdk::bindings::{
     msg::{IbcFee, NeutronMsg},
     types::ProtobufAny,
@@ -9,6 +9,7 @@ use sdk::neutron_sdk::bindings::{
 
 use crate::{
     batch::Batch as LocalBatch,
+    coin_legacy,
     error::{Error, Result},
 };
 
@@ -57,15 +58,18 @@ pub fn parse_register_response(response: &str) -> Result<HostAccount> {
     open_ack.address.try_into()
 }
 
-pub fn submit_transaction<C, M>(
-    connection: C,
+pub fn submit_transaction<Conn, M, C>(
+    connection: Conn,
     messages: Batch,
     memo: M,
     timeout: Duration,
+    ack_tip: Coin<C>,
+    timeout_tip: Coin<C>,
 ) -> LocalBatch
 where
-    C: Into<String>,
+    Conn: Into<String>,
     M: Into<String>,
+    C: Currency,
 {
     let mut batch = LocalBatch::default();
 
@@ -77,8 +81,8 @@ where
         timeout.secs(),
         IbcFee {
             recv_fee: vec![],
-            ack_fee: vec![],
-            timeout_fee: vec![],
+            ack_fee: vec![coin_legacy::to_cosmwasm_impl(ack_tip)],
+            timeout_fee: vec![coin_legacy::to_cosmwasm_impl(timeout_tip)],
         },
     ));
     batch

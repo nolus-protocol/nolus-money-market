@@ -3,7 +3,7 @@ use std::fmt::Display;
 use cosmwasm_std::Deps;
 use serde::{Deserialize, Serialize};
 
-use currency::lease::Osmo;
+use currency::{lease::Osmo, native::Nls};
 use finance::{
     coin::{Coin, CoinDTO},
     currency::Group,
@@ -30,6 +30,10 @@ use crate::{
 
 use super::{active::Active, Controller, Response};
 
+const ICA_TRX_TIMEOUT: Duration = Duration::from_days(1);
+const ICA_TRX_ACK_TIP: Coin<Nls> = Coin::new(1);
+const ICA_TRX_TIMEOUT_TIP: Coin<Nls> = ICA_TRX_ACK_TIP;
+
 #[derive(Serialize, Deserialize)]
 pub struct BuyAsset {
     form: NewLeaseForm,
@@ -38,8 +42,6 @@ pub struct BuyAsset {
     dex_account: HostAccount,
     deps: (LppLenderRef, OracleRef),
 }
-
-const ICA_TRX_TIMEOUT: Duration = Duration::from_days(1);
 
 impl BuyAsset {
     pub(super) fn new(
@@ -63,8 +65,14 @@ impl BuyAsset {
         // TODO apply nls_swap_fee on the downpayment only!
         self.add_swap_trx(&self.downpayment, querier, &mut batch)?;
         self.add_swap_trx(&self.loan.principal, querier, &mut batch)?;
-        let local_batch =
-            ica::submit_transaction(&self.form.dex.connection_id, batch, "memo", ICA_TRX_TIMEOUT);
+        let local_batch = ica::submit_transaction(
+            &self.form.dex.connection_id,
+            batch,
+            "memo",
+            ICA_TRX_TIMEOUT,
+            ICA_TRX_ACK_TIP,
+            ICA_TRX_TIMEOUT_TIP,
+        );
 
         Ok(local_batch)
     }

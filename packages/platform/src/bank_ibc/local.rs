@@ -23,8 +23,8 @@ pub struct Sender<'c> {
     sender: Addr,
     receiver: HostAccount,
     timeout: Timestamp,
-    ack_fee: CwCoin,
-    timeout_fee: CwCoin,
+    ack_tip: CwCoin,
+    timeout_tip: CwCoin,
     amounts: Vec<CwCoin>,
 }
 
@@ -34,8 +34,8 @@ impl<'c> Sender<'c> {
         sender: Addr,
         receiver: HostAccount,
         timeout: Timestamp,
-        ack_fee: Coin<C>,
-        timeout_fee: Coin<C>,
+        ack_tip: Coin<C>,
+        timeout_tip: Coin<C>,
     ) -> Self
     where
         C: Currency,
@@ -45,8 +45,8 @@ impl<'c> Sender<'c> {
             sender,
             receiver,
             timeout,
-            ack_fee: coin_legacy::to_cosmwasm_impl(ack_fee),
-            timeout_fee: coin_legacy::to_cosmwasm_impl(timeout_fee),
+            ack_tip: coin_legacy::to_cosmwasm_impl(ack_tip),
+            timeout_tip: coin_legacy::to_cosmwasm_impl(timeout_tip),
             amounts: vec![],
         }
     }
@@ -67,8 +67,8 @@ impl<'c> Sender<'c> {
         let sender = self.sender;
         let receiver = self.receiver;
         let timeout = self.timeout;
-        let ack_fee = self.ack_fee;
-        let timeout_fee = self.timeout_fee;
+        let ack_tip = self.ack_tip;
+        let timeout_tip = self.timeout_tip;
         self.amounts.into_iter().map(move |amount| {
             new_msg(
                 channel,
@@ -76,8 +76,8 @@ impl<'c> Sender<'c> {
                 receiver.clone(),
                 amount,
                 timeout,
-                ack_fee.clone(),
-                timeout_fee.clone(),
+                ack_tip.clone(),
+                timeout_tip.clone(),
             )
         })
     }
@@ -91,8 +91,8 @@ fn new_msg(
     receiver: HostAccount,
     amount: CwCoin,
     timeout: Timestamp,
-    ack_fee: CwCoin,
-    timeout_fee: CwCoin,
+    ack_tip: CwCoin,
+    timeout_tip: CwCoin,
 ) -> NeutronMsg {
     let timeout_height = RequestPacketTimeoutHeight {
         revision_height: None,
@@ -108,8 +108,8 @@ fn new_msg(
         timeout_timestamp: timeout.nanos(),
         fee: IbcFee {
             recv_fee: vec![],
-            ack_fee: vec![ack_fee],
-            timeout_fee: vec![timeout_fee],
+            ack_fee: vec![ack_tip],
+            timeout_fee: vec![timeout_tip],
         },
     }
 }
