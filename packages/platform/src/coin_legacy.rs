@@ -1,7 +1,7 @@
-use std::{marker::PhantomData, result::Result as StdResult};
+use std::marker::PhantomData;
 
 use finance::{
-    coin::{Coin, CoinDTO, WithCoin},
+    coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
     currency::{
         visit_any_on_bank_symbol, visit_on_bank_symbol, AnyVisitor, AnyVisitorResult, Currency,
         Group, SingleVisitor,
@@ -22,15 +22,15 @@ where
     visit_on_bank_symbol(&coin.denom, CoinTransformer(&coin))
 }
 
-pub(crate) fn from_cosmwasm_any_impl<G, V>(
-    coin: CosmWasmCoin,
-    v: V,
-) -> StdResult<V::Output, V::Error>
+pub(crate) fn from_cosmwasm_any_impl<G, V>(coin: CosmWasmCoin, v: V) -> WithCoinResult<V>
+// ) -> StdResult<WithCoinResult<V>, V>
 where
     G: Group,
     V: WithCoin,
     FinanceError: Into<V::Error>,
 {
+    // let r = G::maybe_visit_on_bank_symbol(&coin.denom, CoinTransformerAny(&coin, v));
+    // r.map_err(|transformer| transformer.1)
     visit_any_on_bank_symbol::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
 }
 
@@ -62,7 +62,7 @@ where
         type Output = CosmWasmCoin;
         type Error = Error;
 
-        fn on<C>(&self, coin: Coin<C>) -> Result<Self::Output>
+        fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
         where
             C: Currency,
         {

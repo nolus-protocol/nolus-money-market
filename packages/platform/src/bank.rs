@@ -1,7 +1,5 @@
-use std::result::Result as StdResult;
-
 use finance::{
-    coin::{Coin, WithCoin},
+    coin::{Coin, WithCoin, WithCoinResult},
     currency::{Currency, Group},
     error::Error as FinanceError,
 };
@@ -37,6 +35,7 @@ where
         C: Currency;
 }
 
+/// Ensure a single coin of the specified currency is received by a contract and return it
 pub fn received_one<C>(cw_amount: Vec<CwCoin>) -> Result<Coin<C>>
 where
     C: Currency,
@@ -49,7 +48,9 @@ where
     .and_then(from_cosmwasm_impl)
 }
 
-pub fn received_any<G, V>(cw_amount: Vec<CwCoin>, cmd: V) -> StdResult<V::Output, V::Error>
+/// Run a command on the first coin of the specified group
+// pub fn received_any<G, V>(cw_amount: Vec<CwCoin>, cmd: V) -> Option<WithCoinResult<V>>
+pub fn received_any<G, V>(cw_amount: Vec<CwCoin>, cmd: V) -> WithCoinResult<V>
 where
     V: WithCoin,
     G: Group,
@@ -59,6 +60,11 @@ where
     received_one_impl(cw_amount, Error::NoFundsAny, Error::UnexpectedFundsAny)
         .map_err(Into::into)
         .and_then(|coin| from_cosmwasm_any_impl::<G, _>(coin, cmd))
+    // let r = cw_amount
+    //     .into_iter()
+    //     .map(|coin| from_cosmwasm_any_impl::<G, _>(coin, cmd))
+    //     .find_map(StdResult::<WithCoinResult<V>, V>::ok);
+    // r
 }
 
 pub struct BankView<'a> {

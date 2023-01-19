@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::payment::PaymentGroup;
 use finance::{
-    coin::{Coin, WithCoin},
+    coin::{Coin, WithCoin, WithCoinResult},
     currency::Currency,
     percent::Percent,
 };
@@ -87,7 +87,7 @@ where
 
     type Error = ContractError;
 
-    fn on<C>(&self, in_amount: Coin<C>) -> Result<Self::Output, Self::Error>
+    fn on<C>(&self, in_amount: Coin<C>) -> WithCoinResult<Self>
     where
         C: Currency,
     {

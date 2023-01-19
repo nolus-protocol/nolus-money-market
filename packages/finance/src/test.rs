@@ -188,7 +188,7 @@ pub mod visitor {
 
 pub mod coin {
     use crate::{
-        coin::{Amount, Coin, WithCoin},
+        coin::{Amount, Coin, WithCoin, WithCoinResult},
         currency::{equal, Currency},
         error::Error,
     };
@@ -205,7 +205,7 @@ pub mod coin {
 
         type Error = Error;
 
-        fn on<C>(&self, coin: Coin<C>) -> Result<Self::Output, Self::Error>
+        fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
         where
             C: Currency,
         {
