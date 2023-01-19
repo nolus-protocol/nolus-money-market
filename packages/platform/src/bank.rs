@@ -37,11 +37,11 @@ where
         C: Currency;
 }
 
-pub fn received<C>(cw_amount: Vec<CwCoin>) -> Result<Coin<C>>
+pub fn received_one<C>(cw_amount: Vec<CwCoin>) -> Result<Coin<C>>
 where
     C: Currency,
 {
-    received_one(
+    received_one_impl(
         cw_amount,
         Error::no_funds::<C>,
         Error::unexpected_funds::<C>,
@@ -56,7 +56,7 @@ where
     FinanceError: Into<V::Error>,
     Error: Into<V::Error>,
 {
-    received_one(cw_amount, Error::NoFundsAny, Error::UnexpectedFundsAny)
+    received_one_impl(cw_amount, Error::NoFundsAny, Error::UnexpectedFundsAny)
         .map_err(Into::into)
         .and_then(|coin| from_cosmwasm_any_impl::<G, _>(coin, cmd))
 }
@@ -155,7 +155,7 @@ where
     }
 }
 
-fn received_one<NoFundsErr, UnexpFundsErr>(
+fn received_one_impl<NoFundsErr, UnexpFundsErr>(
     cw_amount: Vec<CwCoin>,
     no_funds_err: NoFundsErr,
     unexp_funds_err: UnexpFundsErr,

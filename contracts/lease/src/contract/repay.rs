@@ -51,7 +51,7 @@ impl<'a> WithLease for Repay<'a> {
         Asset: Currency + Serialize,
     {
         // TODO 'receive' the payment from the bank using any currency it might be in
-        let payment = bank::received::<Lpn>(self.payment)?;
+        let payment = bank::received_one::<Lpn>(self.payment)?;
 
         let LeaseRepayResult {
             batch,
