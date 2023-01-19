@@ -12,7 +12,7 @@ use crate::{
     cmd::Borrow,
     error::{ContractError, ContractResult},
     leaser::{Leaser, LeaserAdmin},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, MigrateMsg},
     state::{config::Config, leases::Leases},
 };
 
@@ -40,7 +40,7 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: ()) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     // the version is 0 so the previos code was deployed in the previos epoch
     versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
     Item::<bool>::new("contract_info").remove(deps.storage);

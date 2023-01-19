@@ -22,6 +22,9 @@ pub struct InstantiateMsg {
     pub profit: Addr,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct MigrateMsg {}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
