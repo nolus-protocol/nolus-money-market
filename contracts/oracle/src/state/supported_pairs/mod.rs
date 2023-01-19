@@ -310,6 +310,11 @@ mod tests {
     fn test_load_swap_path() {
         let tree = SupportedPairs::<Usdc>::new(test_case()).unwrap();
 
+        assert!(tree
+            .load_swap_path(&"token5".into(), &"token5".into())
+            .unwrap()
+            .is_empty());
+
         let resp = tree
             .load_swap_path(&"token5".into(), &TheCurrency::TICKER.into())
             .unwrap();

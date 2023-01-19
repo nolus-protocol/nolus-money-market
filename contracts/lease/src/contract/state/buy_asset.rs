@@ -78,6 +78,7 @@ impl BuyAsset {
     where
         G: Group,
     {
+        //TODO do not add a trx if the coin is of the same lease currency
         let swap_path =
             self.deps
                 .1
