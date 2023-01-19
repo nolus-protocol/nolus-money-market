@@ -193,6 +193,7 @@ pub mod coin {
         error::Error,
     };
 
+    #[derive(PartialEq, Eq, Debug, Clone)]
     pub struct Expect<CExp>(pub Coin<CExp>)
     where
         CExp: Currency;

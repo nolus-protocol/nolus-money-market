@@ -49,19 +49,6 @@ where
     visit_any_on_ticker::<G1, _>(ticker1, FirstTickerVisitor::<G2, _>::new(ticker2, visitor))
 }
 
-pub fn visit_any_on_bank_symbol<G, V>(
-    bank_symbol: Symbol,
-    visitor: V,
-) -> Result<V::Output, V::Error>
-where
-    G: Group,
-    V: AnyVisitor,
-    Error: Into<V::Error>,
-{
-    G::maybe_visit_on_bank_symbol(bank_symbol, visitor)
-        .unwrap_or_else(|_| Err(Error::not_in_currency_group::<_, G>(bank_symbol).into()))
-}
-
 mod impl_any_tickers {
     use std::marker::PhantomData;
 

@@ -51,14 +51,15 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
         Lpn: Currency + Serialize,
         LppLender: LppLenderTrait<Lpn>,
     {
-        let (downpayment, downpayment_lpn) = bank::received_any::<PaymentGroup, _>(
+        let (downpayment, downpayment_lpn) = bank::may_received::<PaymentGroup, _>(
             self.funds_in,
             DownpaymentHandler {
                 oracle: self.oracle,
                 _lpn: PhantomData::<Lpn> {},
                 querier: self.querier,
             },
-        )?;
+        )
+        .ok_or_else(Self::Error::NoDownpaymentError)??;
         if downpayment_lpn.is_zero() {
             Err(Self::Error::NoDownpaymentError())
         } else {

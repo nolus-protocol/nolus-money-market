@@ -1,7 +1,6 @@
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
     currency::{Currency, Group},
-    error::Error as FinanceError,
 };
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, Env, QuerierWrapper};
 
@@ -49,22 +48,22 @@ where
 }
 
 /// Run a command on the first coin of the specified group
-// pub fn received_any<G, V>(cw_amount: Vec<CwCoin>, cmd: V) -> Option<WithCoinResult<V>>
-pub fn received_any<G, V>(cw_amount: Vec<CwCoin>, cmd: V) -> WithCoinResult<V>
+pub fn may_received<G, V>(cw_amount: Vec<CwCoin>, mut cmd: V) -> Option<WithCoinResult<V>>
 where
     V: WithCoin,
     G: Group,
-    FinanceError: Into<V::Error>,
-    Error: Into<V::Error>,
 {
-    received_one_impl(cw_amount, Error::NoFundsAny, Error::UnexpectedFundsAny)
-        .map_err(Into::into)
-        .and_then(|coin| from_cosmwasm_any_impl::<G, _>(coin, cmd))
-    // let r = cw_amount
-    //     .into_iter()
-    //     .map(|coin| from_cosmwasm_any_impl::<G, _>(coin, cmd))
-    //     .find_map(StdResult::<WithCoinResult<V>, V>::ok);
-    // r
+    let mut may_res = None;
+    for coin in cw_amount {
+        cmd = match from_cosmwasm_any_impl::<G, _>(coin, cmd) {
+            Ok(res) => {
+                may_res = Some(res);
+                break;
+            }
+            Err(cmd) => cmd,
+        }
+    }
+    may_res
 }
 
 pub struct BankView<'a> {
@@ -227,5 +226,87 @@ impl From<LazySenderStub> for Batch {
         }
 
         batch
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use finance::{
+        coin::{Amount, Coin},
+        currency::{Currency, SymbolStatic},
+        test::{
+            coin::Expect,
+            currency::{Dai, TestCurrencies, Usdc},
+        },
+    };
+
+    use crate::coin_legacy;
+
+    use super::may_received;
+    type TheCurrency = Usdc;
+    type ExtraCurrency = Dai;
+    const AMOUNT: Amount = 42;
+
+    #[test]
+    fn may_received_no_input() {
+        assert_eq!(
+            None,
+            may_received::<TestCurrencies, _>(vec![], Expect(Coin::<TheCurrency>::from(AMOUNT)))
+        );
+    }
+
+    #[test]
+    fn may_received_not_in_group() {
+        let coin = Coin::<ExtraCurrency>::new(AMOUNT);
+        let in_coin_1 = coin_legacy::to_cosmwasm(coin);
+
+        #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+        struct MyNiceCurrency {}
+        impl Currency for MyNiceCurrency {
+            const BANK_SYMBOL: SymbolStatic = "wdd";
+            const DEX_SYMBOL: SymbolStatic = "dex3rdf";
+            const TICKER: SymbolStatic = "ticedc";
+        }
+        let in_coin_2 = coin_legacy::to_cosmwasm(Coin::<MyNiceCurrency>::new(AMOUNT));
+
+        assert_eq!(
+            None,
+            may_received::<TestCurrencies, _>(vec![in_coin_1, in_coin_2], Expect(coin))
+        );
+    }
+
+    #[test]
+    fn may_received_in_group() {
+        let coin = Coin::<TheCurrency>::new(AMOUNT);
+        let in_coin_1 = coin_legacy::to_cosmwasm(coin);
+        assert_eq!(
+            Some(Ok(true)),
+            may_received::<TestCurrencies, _>(vec![in_coin_1], Expect(coin))
+        );
+    }
+
+    #[test]
+    fn may_received_in_group_others_arround() {
+        let in_coin_1 = coin_legacy::to_cosmwasm(Coin::<ExtraCurrency>::new(AMOUNT + AMOUNT));
+
+        let coin_2 = Coin::<TheCurrency>::new(AMOUNT);
+        let in_coin_2 = coin_legacy::to_cosmwasm(coin_2);
+
+        let coin_3 = Coin::<TheCurrency>::new(AMOUNT + AMOUNT);
+        let in_coin_3 = coin_legacy::to_cosmwasm(coin_3);
+        assert_eq!(
+            Some(Ok(true)),
+            may_received::<TestCurrencies, _>(
+                vec![in_coin_1.clone(), in_coin_2.clone(), in_coin_3.clone()],
+                Expect(coin_2)
+            )
+        );
+        assert_eq!(
+            Some(Ok(true)),
+            may_received::<TestCurrencies, _>(
+                vec![in_coin_1, in_coin_3, in_coin_2],
+                Expect(coin_3)
+            )
+        );
     }
 }
