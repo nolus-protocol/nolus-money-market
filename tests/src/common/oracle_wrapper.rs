@@ -5,11 +5,8 @@ use currency::{
     lpn::Usdc,
     native::Nls,
 };
-use finance::{
-    coin::Coin, currency::Currency, duration::Duration, percent::Percent, price::total_of,
-};
-use marketprice::config::Config as PriceConfig;
-use marketprice::SpotPrice;
+use finance::{coin::Coin, currency::Currency, duration::Duration, percent::Percent, price};
+use marketprice::{config::Config as PriceConfig, SpotPrice};
 use oracle::{
     contract::{execute, instantiate, query, reply},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
@@ -17,13 +14,11 @@ use oracle::{
     ContractError,
 };
 use sdk::{
-    cosmwasm_std::{to_binary, Addr, Binary, Deps, Empty, Env},
-    cw_multi_test::Executor,
+    cosmwasm_std::{to_binary, wasm_execute, Addr, Binary, Deps, Empty, Env},
+    cw_multi_test::{AppResponse, Executor},
 };
 
-use crate::common::{ContractWrapper, MockApp};
-
-use super::ADMIN;
+use super::{test_case::TestCase, ContractWrapper, MockApp, ADMIN};
 
 pub struct MarketOracleWrapper {
     contract_wrapper: Box<OracleContractWrapper>,
@@ -81,7 +76,7 @@ impl Default for MarketOracleWrapper {
 }
 
 pub fn mock_oracle_query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
-    let price = total_of(Coin::<Nls>::new(123456789)).is(Coin::<Usdc>::new(100000000));
+    let price = price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<Usdc>::new(100000000));
     let res = match msg {
         QueryMsg::Prices { currencies: _ } => to_binary(&oracle::msg::PricesResponse {
             prices: vec![price.into()],
@@ -104,3 +99,52 @@ type OracleContractWrapper = ContractWrapper<
     anyhow::Error,
     ContractError,
 >;
+
+pub fn add_feeder<Lpn>(test_case: &mut TestCase<Lpn>, addr: impl Into<String>)
+where
+    Lpn: Currency,
+{
+    test_case
+        .app
+        .execute(
+            Addr::unchecked(ADMIN),
+            wasm_execute(
+                test_case.oracle.clone().unwrap(),
+                &ExecuteMsg::RegisterFeeder {
+                    feeder_address: addr.into(),
+                },
+                vec![],
+            )
+            .unwrap()
+            .into(),
+        )
+        .unwrap();
+}
+
+pub fn feed_price<Lpn, C1, C2>(
+    test_case: &mut TestCase<Lpn>,
+    addr: &Addr,
+    base: Coin<C1>,
+    quote: Coin<C2>,
+) -> AppResponse
+where
+    Lpn: Currency,
+    C1: Currency,
+    C2: Currency,
+{
+    test_case
+        .app
+        .execute(
+            addr.clone(),
+            wasm_execute(
+                test_case.oracle.clone().unwrap(),
+                &ExecuteMsg::FeedPrices {
+                    prices: vec![price::total_of(base).is(quote).into()],
+                },
+                vec![],
+            )
+            .unwrap()
+            .into(),
+        )
+        .expect("Oracle not properly connected!")
+}

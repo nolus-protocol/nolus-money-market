@@ -19,7 +19,7 @@ const ADMIN: &str = "ADMIN";
 const NATIVE_DENOM: &str = "denom";
 
 fn mock_app() -> App {
-    new_app().build(|router, _, storage| {
+    new_app(None).build(|router, _, storage| {
         router
             .bank
             .init_balance(

@@ -13,7 +13,7 @@ fn on_alarm_from_unknown() {
     type Lpn = Usdc;
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::<Lpn>::new();
+    let mut test_case = TestCase::<Lpn>::new(None);
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
     test_case.init_treasury().init_timealarms().init_profit(2);
 
@@ -48,7 +48,7 @@ fn on_alarm_zero_balance() {
     type Lpn = Usdc;
     let time_oracle_addr = Addr::unchecked("time");
 
-    let mut test_case = TestCase::<Lpn>::new();
+    let mut test_case = TestCase::<Lpn>::new(None);
     test_case.init(&time_oracle_addr, cwcoins::<Lpn, _>(500));
     test_case.init_treasury().init_timealarms().init_profit(2);
 
@@ -67,7 +67,7 @@ fn on_alarm_zero_balance() {
 fn on_alarm_transfer() {
     type Lpn = Usdc;
 
-    let mut test_case = TestCase::<Lpn>::new();
+    let mut test_case = TestCase::<Lpn>::new(None);
     test_case.init_treasury().init_timealarms().init_profit(2);
 
     let init_balance = bank::balance::<Native>(

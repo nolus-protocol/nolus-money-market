@@ -87,10 +87,13 @@ type Lpn = Usdc;
 
 #[test]
 fn test_time_notify() {
-    let mut test_case = TestCase::<Lpn>::with_reserve(&[coin(
-        10_000_000_000_000_000_000_000_000_000,
-        Lpn::BANK_SYMBOL,
-    )]);
+    let mut test_case = TestCase::<Lpn>::with_reserve(
+        None,
+        &[coin(
+            10_000_000_000_000_000_000_000_000_000,
+            Lpn::BANK_SYMBOL,
+        )],
+    );
     test_case.init(
         &Addr::unchecked(ADMIN),
         vec![coin(1_000_000_000_000_000_000_000_000, Lpn::BANK_SYMBOL)],
@@ -192,10 +195,13 @@ fn test_time_notify() {
 #[test]
 fn test_profit_alarms() {
     let admin = Addr::unchecked(ADMIN);
-    let mut test_case = TestCase::<Lpn>::with_reserve(&[
-        cwcoin(Coin::<Lpn>::new(1_000_000)),
-        cwcoin(Coin::<Nls>::new(1_000_000)),
-    ]);
+    let mut test_case = TestCase::<Lpn>::with_reserve(
+        None,
+        &[
+            cwcoin(Coin::<Lpn>::new(1_000_000)),
+            cwcoin(Coin::<Nls>::new(1_000_000)),
+        ],
+    );
     test_case.init(
         &admin,
         vec![
