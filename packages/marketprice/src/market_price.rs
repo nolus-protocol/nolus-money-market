@@ -1,7 +1,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::{
-    currency::{self, AnyVisitor, Currency, Symbol, SymbolOwned},
+    currency::{self, AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolOwned},
     price::{
         dto::{with_price, WithPrice},
         Price,
@@ -162,7 +162,7 @@ where
     type Output = SpotPrice;
     type Error = PriceFeedsError;
 
-    fn on<C>(self) -> Result<Self::Output, Self::Error>
+    fn on<C>(self) -> AnyVisitorResult<Self>
     where
         C: Currency + Serialize + DeserializeOwned,
     {

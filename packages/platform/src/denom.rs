@@ -23,7 +23,7 @@ pub mod local {
 }
 
 pub mod dex {
-    use finance::currency::{AnyVisitor, Currency, Symbol, SymbolStatic};
+    use finance::currency::{AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolStatic};
 
     use crate::error::Error;
 
@@ -43,7 +43,7 @@ pub mod dex {
         type Output = SymbolStatic;
         type Error = Error;
 
-        fn on<C>(self) -> Result<Self::Output, Self::Error>
+        fn on<C>(self) -> AnyVisitorResult<Self>
         where
             C: Currency,
         {

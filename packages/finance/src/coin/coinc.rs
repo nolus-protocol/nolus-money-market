@@ -6,7 +6,7 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::Amount,
-    currency::{self, AnyVisitor, Currency, Group, SingleVisitor, SymbolOwned},
+    currency::{self, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor, SymbolOwned},
     error::Error,
 };
 
@@ -58,7 +58,7 @@ where
             type Output = V::Output;
             type Error = V::Error;
 
-            fn on<C>(self) -> StdResult<Self::Output, Self::Error>
+            fn on<C>(self) -> AnyVisitorResult<Self>
             where
                 C: Currency,
             {

@@ -5,7 +5,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use currency::lpn::Lpns;
 use finance::{
     coin::Coin,
-    currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned},
+    currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, SymbolOwned},
 };
 use platform::{
     batch::{Batch, ReplyId},
@@ -102,7 +102,7 @@ impl LppLenderRef {
             type Output = Cmd::Output;
             type Error = Cmd::Error;
 
-            fn on<C>(self) -> StdResult<Self::Output, Self::Error>
+            fn on<C>(self) -> AnyVisitorResult<Self>
             where
                 C: Currency + Serialize + DeserializeOwned,
             {

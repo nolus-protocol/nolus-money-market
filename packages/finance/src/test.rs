@@ -105,7 +105,7 @@ pub mod visitor {
     use std::marker::PhantomData;
 
     use crate::{
-        currency::{equal, AnyVisitor, AnyVisitorPair, Currency, SingleVisitor},
+        currency::{equal, AnyVisitor, AnyVisitorPair, AnyVisitorResult, Currency, SingleVisitor},
         error::Error,
     };
 
@@ -124,7 +124,7 @@ pub mod visitor {
         type Output = bool;
         type Error = Error;
 
-        fn on<Cin>(self) -> Result<Self::Output, Self::Error>
+        fn on<Cin>(self) -> AnyVisitorResult<Self>
         where
             Cin: 'static,
         {
@@ -145,7 +145,7 @@ pub mod visitor {
         type Output = bool;
         type Error = Error;
 
-        fn on<C>(self) -> Result<Self::Output, Self::Error>
+        fn on<C>(self) -> AnyVisitorResult<Self>
         where
             C: Currency,
         {

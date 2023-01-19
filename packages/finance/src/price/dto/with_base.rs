@@ -1,6 +1,6 @@
 use crate::{
     coin::{Coin, CoinDTO},
-    currency::{visit_any_on_ticker, AnyVisitor, Currency, Group},
+    currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Group},
     error::Error,
     price::{self},
 };
@@ -25,7 +25,7 @@ where
     type Error = Cmd::Error;
 
     #[track_caller]
-    fn on<QuoteC>(self) -> Result<Self::Output, Self::Error>
+    fn on<QuoteC>(self) -> AnyVisitorResult<Self>
     where
         QuoteC: Currency,
     {

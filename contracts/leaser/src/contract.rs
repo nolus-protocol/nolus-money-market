@@ -4,7 +4,8 @@ use platform::reply::from_instantiate;
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply}, cw_storage_plus::Item,
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cw_storage_plus::Item,
 };
 use versioning::Version;
 
@@ -12,7 +13,7 @@ use crate::{
     cmd::Borrow,
     error::{ContractError, ContractResult},
     leaser::{Leaser, LeaserAdmin},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, MigrateMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     state::{config::Config, leases::Leases},
 };
 

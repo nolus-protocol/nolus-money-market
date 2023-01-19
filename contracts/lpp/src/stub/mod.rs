@@ -3,7 +3,7 @@ use std::{marker::PhantomData, result::Result as StdResult};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::lpn::Lpns;
-use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned};
+use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, SymbolOwned};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -70,7 +70,7 @@ impl LppRef {
             type Output = V::Output;
             type Error = V::Error;
 
-            fn on<C>(self) -> StdResult<Self::Output, Self::Error>
+            fn on<C>(self) -> AnyVisitorResult<Self>
             where
                 C: Currency + Serialize + DeserializeOwned,
             {

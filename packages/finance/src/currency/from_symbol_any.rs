@@ -6,11 +6,12 @@ use super::{Currency, Group, Symbol};
 
 use self::impl_any_tickers::FirstTickerVisitor;
 
+pub type AnyVisitorResult<V> = Result<<V as AnyVisitor>::Output, <V as AnyVisitor>::Error>;
 pub trait AnyVisitor {
     type Output;
     type Error;
 
-    fn on<C>(self) -> Result<Self::Output, Self::Error>
+    fn on<C>(self) -> AnyVisitorResult<Self>
     where
         C: Currency + Serialize + DeserializeOwned;
 }
@@ -71,7 +72,7 @@ mod impl_any_tickers {
         error::Error,
     };
 
-    use super::{visit_any_on_ticker, AnyVisitor, AnyVisitorPair};
+    use super::{visit_any_on_ticker, AnyVisitor, AnyVisitorPair, AnyVisitorResult};
 
     pub struct FirstTickerVisitor<'a, G2, V>
     where
@@ -104,7 +105,7 @@ mod impl_any_tickers {
         type Output = <V as AnyVisitorPair>::Output;
         type Error = <V as AnyVisitorPair>::Error;
 
-        fn on<C1>(self) -> Result<Self::Output, Self::Error>
+        fn on<C1>(self) -> AnyVisitorResult<Self>
         where
             C1: Currency + Serialize + DeserializeOwned,
         {
@@ -134,7 +135,7 @@ mod impl_any_tickers {
         type Output = <V as AnyVisitorPair>::Output;
         type Error = <V as AnyVisitorPair>::Error;
 
-        fn on<C2>(self) -> Result<Self::Output, Self::Error>
+        fn on<C2>(self) -> AnyVisitorResult<Self>
         where
             C2: Currency + Serialize + DeserializeOwned,
         {

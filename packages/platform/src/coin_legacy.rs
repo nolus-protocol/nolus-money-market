@@ -3,7 +3,8 @@ use std::{marker::PhantomData, result::Result as StdResult};
 use finance::{
     coin::{Coin, CoinDTO, WithCoin},
     currency::{
-        visit_any_on_bank_symbol, visit_on_bank_symbol, AnyVisitor, Currency, Group, SingleVisitor,
+        visit_any_on_bank_symbol, visit_on_bank_symbol, AnyVisitor, AnyVisitorResult, Currency,
+        Group, SingleVisitor,
     },
     error::Error as FinanceError,
 };
@@ -103,7 +104,7 @@ where
     type Output = V::Output;
     type Error = V::Error;
 
-    fn on<C>(self) -> StdResult<Self::Output, Self::Error>
+    fn on<C>(self) -> AnyVisitorResult<Self>
     where
         C: Currency,
     {
