@@ -117,9 +117,9 @@ mod custom_msg {
             ExecC: std::fmt::Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
             QueryC: CustomQuery + DeserializeOwned + 'static,
         {
-            self.message_queue
-                .as_ref()
-                .map(|queue| queue.borrow_mut().push_back(msg));
+            if let Some(queue) = self.message_queue.as_ref() {
+                queue.borrow_mut().push_back(msg)
+            }
 
             Ok(AppResponse::default())
         }

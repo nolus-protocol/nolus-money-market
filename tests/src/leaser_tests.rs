@@ -14,18 +14,18 @@ use finance::{
 use leaser::msg::{QueryMsg, QuoteResponse};
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, coin, Coin as CwCoin, DepsMut, Env, Event, MessageInfo},
-    cw_multi_test::{ContractWrapper, Executor, next_block},
+    cosmwasm_std::{coin, Addr, Coin as CwCoin, DepsMut, Env, Event, MessageInfo},
+    cw_multi_test::{next_block, ContractWrapper, Executor},
     testing::new_custom_msg_queue,
 };
 
 use crate::common::{
-    ADDON_OPTIMAL_INTEREST_RATE, ADMIN,
-    BASE_INTEREST_RATE,
-    cwcoin,
-    cwcoins,
+    cwcoin, cwcoins,
     lease_wrapper::complete_lease_initialization,
-    lpp_wrapper::mock_lpp_quote_query, oracle_wrapper::{add_feeder, feed_price}, test_case::TestCase, USER, UTILIZATION_OPTIMAL,
+    lpp_wrapper::mock_lpp_quote_query,
+    oracle_wrapper::{add_feeder, feed_price},
+    test_case::TestCase,
+    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type TheCurrency = Usdc;
