@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
 
@@ -35,18 +33,6 @@ pub enum State {
     Active,
 }
 
-impl Display for State {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self {
-            State::RequestLoan(inner) => inner.fmt(f),
-            State::OpenIcaAccount(inner) => inner.fmt(f),
-            State::TransferOut(inner) => inner.fmt(f),
-            State::BuyAsset(inner) => inner.fmt(f),
-            State::Active(inner) => inner.fmt(f),
-        }
-    }
-}
-
 pub struct Response {
     pub(super) cw_response: CwResponse,
     pub(super) next_state: State,
@@ -69,10 +55,9 @@ impl Response {
 pub trait Controller
 where
     Self: Sized,
-    Self: Display,
 {
     fn reply(self, _deps: &mut DepsMut, _env: Env, _msg: Reply) -> ContractResult<Response> {
-        err("reply", &self)
+        err("reply")
     }
 
     fn execute(
@@ -82,21 +67,16 @@ where
         _info: MessageInfo,
         _msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        err("execute", &self)
+        err("execute")
     }
 
-    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
-        err("query", &self)
-    }
+    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse>;
 
     fn sudo(self, _deps: &mut DepsMut, _env: Env, _msg: SudoMsg) -> ContractResult<Response> {
-        err("sudo", &self)
+        err("sudo")
     }
 }
 
-fn err<D, R>(op: &str, state: &D) -> ContractResult<R>
-where
-    D: Display,
-{
-    Err(Err::unsupported_operation(op, state))
+fn err<R>(op: &str) -> ContractResult<R> {
+    Err(Err::unsupported_operation(op))
 }

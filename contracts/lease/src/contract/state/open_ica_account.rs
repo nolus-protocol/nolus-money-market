@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use cosmwasm_std::Deps;
 use serde::{Deserialize, Serialize};
 
@@ -85,11 +83,5 @@ impl Controller for OpenIcaAccount {
             loan_interest_rate: self.loan.annual_interest_rate,
             in_progress: OngoingTrx::OpenIcaAccount {},
         })
-    }
-}
-
-impl Display for OpenIcaAccount {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("opening an ICA account")
     }
 }

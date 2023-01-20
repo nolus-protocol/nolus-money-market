@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use cosmwasm_std::Deps;
 use serde::{Deserialize, Serialize};
 
@@ -142,11 +140,5 @@ impl Controller for BuyAsset {
                 ica_account: self.dex_account.into(),
             },
         })
-    }
-}
-
-impl Display for BuyAsset {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("buying lease assets on behalf of the ICA account at the DEX")
     }
 }

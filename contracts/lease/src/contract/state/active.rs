@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use currency::payment::PaymentGroup;
 use finance::coin::IntoDTO;
 use serde::{Deserialize, Serialize};
@@ -99,12 +97,6 @@ impl Controller for Active {
             &env.contract.address,
             &deps.querier,
         )
-    }
-}
-
-impl Display for Active {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("active lease in idle state")
     }
 }
 

@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use cosmwasm_std::{Addr, Deps, Timestamp};
 use currency::native::Nls;
 use serde::{Deserialize, Serialize};
@@ -103,11 +101,5 @@ impl Controller for TransferOut {
                 ica_account: self.dex_account.into(),
             },
         })
-    }
-}
-
-impl Display for TransferOut {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("transferring assets to the ICA account at the DEX")
     }
 }
