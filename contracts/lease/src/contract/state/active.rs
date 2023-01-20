@@ -1,5 +1,7 @@
 use std::fmt::Display;
 
+use currency::payment::PaymentGroup;
+use finance::coin::IntoDTO;
 use serde::{Deserialize, Serialize};
 
 use platform::{
@@ -19,7 +21,7 @@ use crate::{
         cmd::{LeaseState, OpenLoanRespResult},
         repay::{Repay, RepayResult},
     },
-    error::ContractResult,
+    error::{ContractError, ContractResult},
     event::Type,
     lease::{with_lease, IntoDTOResult, LeaseDTO},
 };
@@ -112,12 +114,18 @@ fn try_repay(
     info: MessageInfo,
     lease: LeaseDTO,
 ) -> ContractResult<RepayResult> {
-    with_lease::execute(
-        lease,
-        Repay::new(info.funds, env),
-        &env.contract.address,
-        querier,
-    )
+    let payment = bank::may_received::<PaymentGroup, _>(info.funds, IntoDTO::<PaymentGroup>::new())
+        .ok_or_else(ContractError::NoPaymentError)??;
+    if payment.ticker() == lease.loan.lpp().currency() {
+        with_lease::execute(
+            lease,
+            Repay::new(payment, env),
+            &env.contract.address,
+            querier,
+        )
+    } else {
+        todo!("proceed with TransferOut - Swap - TransferIn before landing to the same Lease::repay call");
+    }
 }
 
 fn try_close(

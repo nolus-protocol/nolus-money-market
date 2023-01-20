@@ -40,8 +40,8 @@ pub enum ContractError {
     #[error("[Lease] {0}")]
     SwapError(#[from] SwapError),
 
-    #[error("[Lease] No downpayment sent")]
-    NoDownpaymentError(),
+    #[error("[Lease] No payment sent")]
+    NoPaymentError(),
 
     #[error("[Lease] The underlying loan is not fully repaid")]
     LoanNotPaid(),

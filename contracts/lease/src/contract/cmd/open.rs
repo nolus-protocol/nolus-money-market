@@ -59,9 +59,9 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
                 querier: self.querier,
             },
         )
-        .ok_or_else(Self::Error::NoDownpaymentError)??;
+        .ok_or_else(Self::Error::NoPaymentError)??;
         if downpayment_lpn.is_zero() {
-            Err(Self::Error::NoDownpaymentError())
+            Err(Self::Error::NoPaymentError())
         } else {
             let borrow_lpn = self.form.liability.init_borrow_amount(downpayment_lpn);
 

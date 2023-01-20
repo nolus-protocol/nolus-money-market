@@ -11,7 +11,7 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::{currency::Currency, zero::Zero};
 
-pub use self::coinc::CoinDTO;
+pub use self::coinc::{CoinDTO, IntoDTO};
 
 mod coinc;
 mod serde;

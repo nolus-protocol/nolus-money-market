@@ -121,6 +121,31 @@ where
     }
 }
 
+pub struct IntoDTO<G> {
+    _g: PhantomData<G>,
+}
+impl<G> IntoDTO<G> {
+    pub fn new() -> Self {
+        Self { _g: PhantomData {} }
+    }
+}
+impl<G> Default for IntoDTO<G> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl<G> WithCoin for IntoDTO<G> {
+    type Output = CoinDTO<G>;
+    type Error = Error;
+
+    fn on<C>(&self, coin: Coin<C>) -> super::WithCoinResult<Self>
+    where
+        C: Currency,
+    {
+        Ok(coin.into())
+    }
+}
+
 #[cfg(test)]
 mod test {
     use sdk::cosmwasm_std::{from_slice, to_vec};

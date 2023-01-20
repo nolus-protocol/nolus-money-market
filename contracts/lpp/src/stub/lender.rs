@@ -5,7 +5,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use currency::lpn::Lpns;
 use finance::{
     coin::Coin,
-    currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, SymbolOwned},
+    currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolOwned},
 };
 use platform::{
     batch::{Batch, ReplyId},
@@ -78,6 +78,10 @@ impl LppLenderRef {
 
     pub fn addr(&self) -> &Addr {
         &self.addr
+    }
+
+    pub fn currency(&self) -> Symbol<'_> {
+        &self.currency
     }
 
     pub fn execute<Cmd>(
