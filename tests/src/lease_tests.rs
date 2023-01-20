@@ -1,24 +1,19 @@
 use std::collections::{HashMap, HashSet};
 
-use currency::{
-    lease::{Atom, Cro},
-    lpn::Usdc,
-};
+use currency::{lease::Osmo, lpn::Usdc};
 use finance::{
     coin::{Amount, Coin},
     currency::Currency as _,
     duration::Duration,
     interest::InterestPeriod,
     percent::Percent,
-    price::dto::PriceDTO,
+    price::{self, Price},
 };
 use lease::api::{ExecuteMsg, StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
-use marketprice::SpotPrice;
 use sdk::{
     cosmwasm_std::{coin, Addr, Timestamp},
     cw_multi_test::{AppResponse, Executor},
-    neutron_sdk::sudo::msg::SudoMsg,
     testing::new_custom_msg_queue,
 };
 
@@ -26,20 +21,32 @@ use crate::common::{
     cwcoin, cwcoins,
     lease_wrapper::complete_lease_initialization,
     leaser_wrapper::LeaserWrapper,
-    oracle_wrapper::{add_feeder, feed_price},
+    oracle_wrapper::{add_feeder, feed_price as oracle_feed_price},
     test_case::TestCase,
     AppExt, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type Lpn = Usdc;
+type LpnCoin = Coin<Lpn>;
 
-type LeaseCurrency = Cro;
+// FIXME; change to `CRO` instead of using `OSMO` after ref. TODO is fixed
+//  ref: contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b
+type LeaseCurrency = Osmo;
 type LeaseCoin = Coin<LeaseCurrency>;
 
 const DOWNPAYMENT: u128 = 1_000_000_000_000;
 
-fn create_coin(amount: u128) -> LeaseCoin {
-    Coin::<LeaseCurrency>::new(amount)
+fn create_lease_coin(amount: u128) -> LeaseCoin {
+    LeaseCoin::new(amount)
+}
+
+fn feed_price(test_case: &mut TestCase<Lpn>) {
+    oracle_feed_price(
+        test_case,
+        &Addr::unchecked(ADMIN),
+        LeaseCoin::new(1),
+        LpnCoin::new(1),
+    );
 }
 
 fn create_test_case() -> TestCase<Lpn> {
@@ -72,17 +79,12 @@ fn create_test_case() -> TestCase<Lpn> {
 
     add_feeder(&mut test_case, ADMIN);
 
-    feed_price(
-        &mut test_case,
-        &Addr::unchecked(ADMIN),
-        Coin::<LeaseCurrency>::new(10),
-        Coin::<Lpn>::new(1),
-    );
+    feed_price(&mut test_case);
 
     test_case
 }
 
-fn calculate_interest(principal: LeaseCoin, interest_rate: Percent, duration: u64) -> LeaseCoin {
+fn calculate_interest(principal: Coin<Lpn>, interest_rate: Percent, duration: u64) -> Coin<Lpn> {
     InterestPeriod::with_interest(interest_rate)
         .from(Timestamp::from_nanos(0))
         .spanning(Duration::from_nanos(duration))
@@ -100,8 +102,6 @@ fn open_lease(test_case: &mut TestCase<Lpn>, value: LeaseCoin) -> Addr {
         &lease,
         cwcoin(value),
     );
-
-    try_transfer_out(test_case, &lease).unwrap();
 
     lease
 }
@@ -139,28 +139,6 @@ fn get_lease_address(test_case: &TestCase<Lpn>) -> Addr {
     query_response.iter().next().unwrap().clone()
 }
 
-fn try_transfer_out(
-    test_case: &mut TestCase<Lpn>,
-    lease: &Addr,
-) -> Result<AppResponse, anyhow::Error> {
-    let dex_address = "dex_addr_lease";
-    let version = format!(
-        "{{\"version\":\"\", \"controller_connection_id\":\"\", 
-                                \"host_connection_id\":\"\", \"address\":\"{}\", \"encoding\":\"\",
-                                \"tx_type\":\"\" }}",
-        dex_address
-    );
-    test_case.app.wasm_sudo(
-        lease.to_owned(),
-        &SudoMsg::OpenAck {
-            port_id: "".into(),
-            channel_id: "".into(),
-            counterparty_channel_id: "".into(),
-            counterparty_version: version,
-        },
-    )
-}
-
 fn repay(test_case: &mut TestCase<Lpn>, contract_addr: &Addr, value: LeaseCoin) -> AppResponse {
     test_case
         .app
@@ -185,8 +163,8 @@ fn close(test_case: &mut TestCase<Lpn>, contract_addr: &Addr) -> AppResponse {
         .unwrap()
 }
 
-fn quote_borrow(test_case: &TestCase<Lpn>, amount: LeaseCoin) -> LeaseCoin {
-    quote_query(test_case, amount).borrow.try_into().unwrap()
+fn quote_borrow(test_case: &TestCase<Lpn>, amount: LeaseCoin) -> LpnCoin {
+    LpnCoin::try_from(quote_query(test_case, amount).borrow).unwrap()
 }
 
 fn quote_query(test_case: &TestCase<Lpn>, amount: LeaseCoin) -> QuoteResponse {
@@ -221,7 +199,7 @@ fn expected_open_state(
 ) -> StateResponse {
     let quote_result = quote_query(test_case, downpayment);
     let total: LeaseCoin = quote_result.total.try_into().unwrap();
-    let expected = total - downpayment - payments;
+    let expected: LpnCoin = price::total(total - downpayment - payments, Price::identity());
     let (overdue, due) = (
         current_period_start
             .nanos()
@@ -274,20 +252,19 @@ fn expected_newly_opened_state(
 }
 
 #[test]
-#[cfg_attr(debug_assertions, should_panic = "[Platform] Expecting funds but found none")]
-#[cfg_attr(not(debug_assertions), should_panic = "[Lease] No payment sent")]
+#[should_panic = "[Lease] No payment sent"]
 fn open_zero_downpayment() {
     let mut test_case = create_test_case();
-    let downpayment = create_coin(0);
+    let downpayment = create_lease_coin(0);
     try_init_lease(&mut test_case, downpayment);
 }
 
 #[test]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
 fn state_opened_when_no_payments() {
     let mut test_case = create_test_case();
-    let downpayment = create_coin(DOWNPAYMENT);
-    let expected_result = expected_newly_opened_state(&test_case, downpayment, create_coin(0));
+    let downpayment = create_lease_coin(DOWNPAYMENT);
+    let expected_result =
+        expected_newly_opened_state(&test_case, downpayment, create_lease_coin(0));
     let lease_address = open_lease(&mut test_case, downpayment);
 
     let query_result = state_query(&test_case, &lease_address.into_string());
@@ -296,14 +273,14 @@ fn state_opened_when_no_payments() {
 }
 
 #[test]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
+#[ignore = "not yet implemented: proceed with TransferOut - Swap - TransferIn before landing to the same Lease::repay call"]
 fn state_opened_when_partially_paid() {
     let mut test_case = create_test_case();
-    let downpayment = create_coin(DOWNPAYMENT);
+    let downpayment = create_lease_coin(DOWNPAYMENT);
 
     let quote_result = quote_query(&test_case, downpayment);
-    let amount: Coin<Usdc> = quote_result.borrow.try_into().unwrap();
-    let partial_payment = create_coin(u128::from(amount) / 2);
+    let amount: LpnCoin = quote_result.borrow.try_into().unwrap();
+    let partial_payment = create_lease_coin(u128::from(amount) / 2);
     let expected_result = expected_newly_opened_state(&test_case, downpayment, partial_payment);
 
     let lease_address = open_lease(&mut test_case, downpayment);
@@ -315,10 +292,10 @@ fn state_opened_when_partially_paid() {
 }
 
 #[test]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
+#[ignore = "not yet implemented: proceed with TransferOut - Swap - TransferIn before landing to the same Lease::repay call"]
 fn state_opened_when_partially_paid_after_time() {
     let mut test_case = create_test_case();
-    let downpayment = create_coin(DOWNPAYMENT);
+    let downpayment = create_lease_coin(DOWNPAYMENT);
 
     let lease_address = open_lease(&mut test_case, downpayment);
 
@@ -335,16 +312,19 @@ fn state_opened_when_partially_paid_after_time() {
         ..
     } = query_result
     {
-        let current_margin_to_pay: LeaseCoin = LeaseCoin::try_from(current_margin_due)
+        let current_margin_to_pay: LpnCoin = LpnCoin::try_from(current_margin_due)
             .unwrap()
             .checked_div(2)
             .unwrap();
         repay(
             &mut test_case,
             &lease_address,
-            LeaseCoin::try_from(previous_margin_due).unwrap()
-                + previous_interest_due.try_into().unwrap()
-                + current_margin_to_pay,
+            price::total(
+                LpnCoin::try_from(previous_margin_due).unwrap()
+                    + LpnCoin::try_from(previous_interest_due).unwrap()
+                    + current_margin_to_pay,
+                Price::identity(),
+            ),
         );
     } else {
         unreachable!();
@@ -375,12 +355,12 @@ fn state_opened_when_partially_paid_after_time() {
 }
 
 #[test]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
+#[ignore = "not yet implemented: proceed with TransferOut - Swap - TransferIn before landing to the same Lease::repay call"]
 fn state_paid() {
     let mut test_case = create_test_case();
-    let downpayment = create_coin(DOWNPAYMENT);
+    let downpayment = create_lease_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment);
-    let borrowed = quote_borrow(&test_case, downpayment);
+    let borrowed = price::total(quote_borrow(&test_case, downpayment), Price::identity());
 
     repay(&mut test_case, &lease_address, borrowed);
 
@@ -395,14 +375,14 @@ fn state_paid() {
 }
 
 #[test]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
+#[ignore = "not yet implemented: proceed with TransferOut - Swap - TransferIn before landing to the same Lease::repay call"]
 fn state_paid_when_overpaid() {
     let mut test_case = create_test_case();
-    let downpayment = create_coin(DOWNPAYMENT);
+    let downpayment = create_lease_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment);
-    let borrowed = quote_borrow(&test_case, downpayment);
+    let borrowed = price::total(quote_borrow(&test_case, downpayment), Price::identity());
 
-    let overpayment = create_coin(5);
+    let overpayment = create_lease_coin(5);
     let payment = borrowed + overpayment;
 
     repay(&mut test_case, &lease_address, payment);
@@ -427,10 +407,9 @@ fn state_paid_when_overpaid() {
 
 #[test]
 #[should_panic = "Unauthorized"]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
 fn price_alarm_unauthorized() {
     let mut test_case = create_test_case();
-    let downpayment = create_coin(DOWNPAYMENT);
+    let downpayment = create_lease_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment);
 
     println!(
@@ -447,12 +426,14 @@ fn price_alarm_unauthorized() {
     );
 }
 
-fn liquidation_warning(price: SpotPrice, percent: Percent, level: &str) {
+fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, percent: Percent, level: &str) {
     const DOWNPAYMENT: u128 = 1_000_000;
 
     let mut test_case = create_test_case();
-    let downpayment = create_coin(DOWNPAYMENT);
+    let downpayment = create_lease_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment);
+
+    oracle_feed_price(&mut test_case, &Addr::unchecked(ADMIN), base, quote);
 
     let response = test_case
         .app
@@ -460,7 +441,8 @@ fn liquidation_warning(price: SpotPrice, percent: Percent, level: &str) {
             test_case.oracle.unwrap(),
             lease_address,
             &ExecuteMsg::PriceAlarm(),
-            &cwcoins::<LeaseCurrency, _>(10000),
+            // &cwcoins::<LeaseCurrency, _>(10000),
+            &[],
         )
         .unwrap();
 
@@ -500,57 +482,51 @@ fn liquidation_warning(price: SpotPrice, percent: Percent, level: &str) {
         .find(|attribute| attribute.key == "lease-asset")
         .expect("Lease Asset attribute not present!");
 
-    assert_eq!(&attribute.value, price.quote().ticker());
+    assert_eq!(&attribute.value, LeaseCurrency::TICKER);
 }
 
 #[test]
 #[should_panic = "No liquidation warning emitted!"]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
 fn liquidation_warning_price_0() {
     liquidation_warning(
-        PriceDTO::new(
-            create_coin(2085713).into(),
-            Coin::<Atom>::new(1857159).into(),
-        ),
+        2085713.into(),
+        1857159.into(),
         LeaserWrapper::liability().healthy_percent(),
         "N/A",
     );
 }
 
 #[test]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
 fn liquidation_warning_price_1() {
     liquidation_warning(
-        PriceDTO::new(
-            create_coin(2085713).into(),      // ref: 2085713
-            Coin::<Atom>::new(137159).into(), // ref: 1857159
-        ),
+        // ref: 2085713
+        2085713.into(),
+        // ref: 1857159
+        1827159.into(),
         LeaserWrapper::liability().first_liq_warn_percent(),
         "1",
     );
 }
 
 #[test]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
 fn liquidation_warning_price_2() {
     liquidation_warning(
-        PriceDTO::new(
-            create_coin(2085713).into(),       // ref: 2085713
-            Coin::<Atom>::new(1757159).into(), // ref: 1857159
-        ),
+        // ref: 2085713
+        2085713.into(),
+        // ref: 1857159
+        1757159.into(),
         LeaserWrapper::liability().second_liq_warn_percent(),
         "2",
     );
 }
 
 #[test]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
 fn liquidation_warning_price_3() {
     liquidation_warning(
-        PriceDTO::new(
-            create_coin(2085713).into(),       // ref: 2085713
-            Coin::<Atom>::new(1707159).into(), // ref: 1857159
-        ),
+        // ref: 2085713
+        2085713.into(),
+        // ref: 1857159
+        1707159.into(),
         LeaserWrapper::liability().third_liq_warn_percent(),
         "3",
     );
@@ -560,7 +536,7 @@ fn liquidation_time_alarm(time_pass: Duration) {
     const DOWNPAYMENT: u128 = 1_000_000;
 
     let mut test_case = create_test_case();
-    let downpayment = create_coin(DOWNPAYMENT);
+    let downpayment = create_lease_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment);
 
     let base_amount = if let StateResponse::Opened { amount, .. } =
@@ -572,6 +548,8 @@ fn liquidation_time_alarm(time_pass: Duration) {
     };
 
     test_case.app.time_shift(time_pass);
+
+    feed_price(&mut test_case);
 
     let response = test_case
         .app
@@ -619,14 +597,12 @@ fn liquidation_time_alarm(time_pass: Duration) {
 
 #[test]
 #[should_panic = "No liquidation emitted!"]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
 fn liquidation_time_alarm_0() {
     liquidation_time_alarm(LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1));
 }
 
 #[test]
 #[should_panic = "No liquidation emitted!"]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
 fn liquidation_time_alarm_1() {
     liquidation_time_alarm(
         LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::GRACE_PERIOD - Duration::from_nanos(1),
@@ -634,23 +610,22 @@ fn liquidation_time_alarm_1() {
 }
 
 #[test]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
 fn liquidation_time_alarm_2() {
     liquidation_time_alarm(LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::GRACE_PERIOD);
 }
 
 #[test]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
 fn compare_state_with_manual_calculation() {
     const DOWNPAYMENT: u128 = 1_000_000;
 
     let mut test_case = create_test_case();
-    let downpayment = create_coin(DOWNPAYMENT);
+    let downpayment = create_lease_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment);
     let quote_result = dbg!(quote_query(&test_case, downpayment));
 
     let query_result = state_query(&test_case, &lease_address.to_string());
-    let expected_result = expected_newly_opened_state(&test_case, downpayment, create_coin(0));
+    let expected_result =
+        expected_newly_opened_state(&test_case, downpayment, create_lease_coin(0));
 
     assert_eq!(dbg!(query_result), expected_result);
 
@@ -664,10 +639,10 @@ fn compare_state_with_manual_calculation() {
         loan_interest_rate: quote_result.annual_interest_rate,
         margin_interest_rate: quote_result.annual_interest_rate_margin,
         principal_due: Coin::<Lpn>::new(1_857_142).into(),
-        previous_margin_due: create_coin(13_737).into(),
-        previous_interest_due: create_coin(32_054).into(),
-        current_margin_due: create_coin(13_737).into(),
-        current_interest_due: create_coin(32_055).into(),
+        previous_margin_due: LpnCoin::new(13_737).into(),
+        previous_interest_due: LpnCoin::new(32_054).into(),
+        current_margin_due: LpnCoin::new(13_737).into(),
+        current_interest_due: LpnCoin::new(32_055).into(),
         validity: block_time(&test_case),
         in_progress: None,
     };
@@ -676,16 +651,16 @@ fn compare_state_with_manual_calculation() {
 }
 
 #[test]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
 fn compare_state_with_lpp_state_implicit_time() {
     const DOWNPAYMENT: u128 = 1_000_000;
 
     let mut test_case = create_test_case();
-    let downpayment = create_coin(DOWNPAYMENT);
+    let downpayment = create_lease_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment);
 
     let query_result = state_query(&test_case, &lease_address.to_string());
-    let expected_result = expected_newly_opened_state(&test_case, downpayment, create_coin(0));
+    let expected_result =
+        expected_newly_opened_state(&test_case, downpayment, create_lease_coin(0));
 
     assert_eq!(dbg!(query_result), expected_result);
 
@@ -693,7 +668,7 @@ fn compare_state_with_lpp_state_implicit_time() {
         LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1),
     );
 
-    let loan_resp: lpp::msg::LoanResponse<LeaseCurrency> = test_case
+    let loan_resp: lpp::msg::LoanResponse<Lpn> = test_case
         .app
         .wrap()
         .query_wasm_smart(
@@ -712,9 +687,9 @@ fn compare_state_with_lpp_state_implicit_time() {
     } = state_query(&test_case, &lease_address.into_string())
     {
         (
-            LeaseCoin::try_from(principal_due).unwrap(),
-            LeaseCoin::try_from(previous_interest_due).unwrap()
-                + LeaseCoin::try_from(current_interest_due).unwrap(),
+            LpnCoin::try_from(principal_due).unwrap(),
+            LpnCoin::try_from(previous_interest_due).unwrap()
+                + LpnCoin::try_from(current_interest_due).unwrap(),
         )
     } else {
         unreachable!();
@@ -727,16 +702,16 @@ fn compare_state_with_lpp_state_implicit_time() {
 }
 
 #[test]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
 fn compare_state_with_lpp_state_explicit_time() {
     const DOWNPAYMENT: u128 = 1_000_000;
 
     let mut test_case = create_test_case();
-    let downpayment = create_coin(DOWNPAYMENT);
+    let downpayment = create_lease_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment);
 
     let query_result = state_query(&test_case, &lease_address.to_string());
-    let expected_result = expected_newly_opened_state(&test_case, downpayment, create_coin(0));
+    let expected_result =
+        expected_newly_opened_state(&test_case, downpayment, create_lease_coin(0));
 
     assert_eq!(dbg!(query_result), expected_result);
 
@@ -744,7 +719,7 @@ fn compare_state_with_lpp_state_explicit_time() {
         LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1),
     );
 
-    let lpp::msg::OutstandingInterest::<LeaseCurrency>(loan_resp) = test_case
+    let lpp::msg::OutstandingInterest::<Lpn>(loan_resp) = test_case
         .app
         .wrap()
         .query_wasm_smart(
@@ -762,8 +737,8 @@ fn compare_state_with_lpp_state_explicit_time() {
         ..
     } = state_query(&test_case, &lease_address.into_string())
     {
-        LeaseCoin::try_from(previous_interest_due).unwrap()
-            + LeaseCoin::try_from(current_interest_due).unwrap()
+        LpnCoin::try_from(previous_interest_due).unwrap()
+            + LpnCoin::try_from(current_interest_due).unwrap()
     } else {
         unreachable!();
     };
@@ -772,19 +747,19 @@ fn compare_state_with_lpp_state_explicit_time() {
 }
 
 #[test]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
+#[ignore = "not yet implemented: proceed with TransferOut - Swap - TransferIn before landing to the same Lease::repay call"]
 fn state_closed() {
     let mut test_case = create_test_case();
-    let downpayment = create_coin(DOWNPAYMENT);
+    let downpayment = create_lease_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment);
-    let borrowed = quote_borrow(&test_case, downpayment);
+    let borrowed = price::total(quote_borrow(&test_case, downpayment), Price::identity());
     repay(&mut test_case, &lease_address, borrowed);
     close(&mut test_case, &lease_address);
 
-    let expected_result = StateResponse::Closed();
     let query_result = state_query(&test_case, &lease_address.into_string());
+    let expected_result = StateResponse::Closed();
 
-    assert_eq!(expected_result, query_result);
+    assert_eq!(query_result, expected_result);
 }
 
 fn block_time(test_case: &TestCase<Lpn>) -> Timestamp {
