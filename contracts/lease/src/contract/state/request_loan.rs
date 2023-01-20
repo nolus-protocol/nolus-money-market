@@ -73,7 +73,12 @@ impl Controller for RequestLoan {
         }
     }
 
-    fn query(self,_deps:cosmwasm_std::Deps,_env:Env,_msg:crate::api::StateQuery) -> ContractResult<crate::api::StateResponse> {
+    fn query(
+        self,
+        _deps: cosmwasm_std::Deps,
+        _env: Env,
+        _msg: crate::api::StateQuery,
+    ) -> ContractResult<crate::api::StateResponse> {
         unreachable!()
     }
 }
