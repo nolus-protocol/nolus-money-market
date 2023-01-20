@@ -111,7 +111,6 @@ impl Controller for BuyAsset {
                 let amount =
                     Coin::<Osmo>::new(self.downpayment.amount() + self.loan.principal.amount())
                         .into();
-                debug_assert_eq!(self.downpayment.ticker(), self.loan.principal.ticker());
 
                 let IntoDTOResult { lease, batch } = self.form.into_lease(
                     &env.contract.address,
