@@ -274,7 +274,8 @@ fn expected_newly_opened_state(
 }
 
 #[test]
-#[should_panic = "[Platform] Expecting funds but found none"]
+#[cfg_attr(debug_assertions, should_panic = "[Platform] Expecting funds but found none")]
+#[cfg_attr(not(debug_assertions), should_panic = "[Lease] No payment sent")]
 fn open_zero_downpayment() {
     let mut test_case = create_test_case();
     let downpayment = create_coin(0);
