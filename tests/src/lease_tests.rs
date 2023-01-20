@@ -16,19 +16,19 @@ use lease::api::{ExecuteMsg, StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
 use marketprice::SpotPrice;
 use sdk::{
-    cosmwasm_std::{Addr, coin, Timestamp},
+    cosmwasm_std::{coin, Addr, Timestamp},
     cw_multi_test::{AppResponse, Executor},
     neutron_sdk::sudo::msg::SudoMsg,
     testing::new_custom_msg_queue,
 };
 
 use crate::common::{
-    ADDON_OPTIMAL_INTEREST_RATE, ADMIN,
-    AppExt,
-    BASE_INTEREST_RATE,
-    cwcoin,
-    cwcoins,
-    lease_wrapper::complete_lease_initialization, leaser_wrapper::LeaserWrapper, oracle_wrapper::{add_feeder, feed_price}, test_case::TestCase, USER, UTILIZATION_OPTIMAL,
+    cwcoin, cwcoins,
+    lease_wrapper::complete_lease_initialization,
+    leaser_wrapper::LeaserWrapper,
+    oracle_wrapper::{add_feeder, feed_price},
+    test_case::TestCase,
+    AppExt, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type Lpn = Usdc;
@@ -118,7 +118,7 @@ fn try_init_lease(test_case: &mut TestCase<Lpn>, value: LeaseCoin) {
             &if value.is_zero() {
                 vec![]
             } else {
-                cwcoins::<LeaseCurrency, _>(value.clone())
+                cwcoins::<LeaseCurrency, _>(value)
             },
         )
         .unwrap();

@@ -239,7 +239,7 @@ pub fn complete_lease_initialization<Lpn>(
 
     assert_eq!(
         expect_ibc_transfer(
-            &custom_message_queue,
+            custom_message_queue,
             ica_channel,
             lease_addr.as_str(),
             ica_addr,
@@ -249,7 +249,7 @@ pub fn complete_lease_initialization<Lpn>(
     );
     assert_eq!(
         expect_ibc_transfer(
-            &custom_message_queue,
+            custom_message_queue,
             ica_channel,
             lease_addr.as_str(),
             ica_addr,
