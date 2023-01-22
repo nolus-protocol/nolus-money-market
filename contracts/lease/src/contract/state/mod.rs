@@ -20,7 +20,6 @@ pub use self::{
 mod active;
 mod buy_asset;
 mod open_ica_account;
-mod opened;
 mod opening;
 mod request_loan;
 mod transfer_out;
