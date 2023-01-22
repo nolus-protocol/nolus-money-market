@@ -20,15 +20,19 @@ pub use self::{
 mod active;
 mod buy_asset;
 mod open_ica_account;
+mod opened;
+mod opening;
 mod request_loan;
 mod transfer_out;
+
+type OpeningTransferOut = transfer_out::Controller<opening::transfer_out::TransferOut>;
 
 #[enum_dispatch(Controller)]
 #[derive(Serialize, Deserialize)]
 pub enum State {
     RequestLoan,
     OpenIcaAccount,
-    TransferOut,
+    OpeningTransferOut,
     BuyAsset,
     Active,
 }
