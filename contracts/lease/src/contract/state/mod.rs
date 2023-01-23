@@ -14,17 +14,18 @@ use crate::{
 
 pub use self::{
     active::Active, buy_asset::BuyAsset, open_ica_account::OpenIcaAccount,
-    request_loan::RequestLoan, transfer_out::TransferOut,
+    request_loan::RequestLoan,
 };
 
 mod active;
 mod buy_asset;
 mod open_ica_account;
+mod opened;
 mod opening;
 mod request_loan;
-mod transfer_out;
 
-type OpeningTransferOut = transfer_out::Controller<opening::transfer_out::TransferOut>;
+type OpeningTransferOut = opening::transfer_out::TransferOut;
+type OpenedTransferOut = opened::repay::transfer_out::TransferOut;
 
 #[enum_dispatch(Controller)]
 #[derive(Serialize, Deserialize)]
@@ -34,6 +35,7 @@ pub enum State {
     OpeningTransferOut,
     BuyAsset,
     Active,
+    OpenedTransferOut,
 }
 
 pub struct Response {

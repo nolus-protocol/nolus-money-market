@@ -11,7 +11,7 @@ use sdk::{
 
 use crate::{
     api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
-    contract::{cmd::OpenLoanRespResult, state::transfer_out::Controller as TransferOutController},
+    contract::cmd::OpenLoanRespResult,
     error::ContractResult,
 };
 
@@ -57,13 +57,13 @@ impl Controller for OpenIcaAccount {
                 let this_addr = env.contract.address;
                 let dex_account = ica::parse_register_response(&counterparty_version)?;
 
-                let next_state = TransferOutController::new(TransferOut::new(
+                let next_state = TransferOut::new(
                     self.form,
                     self.downpayment,
                     self.loan,
                     dex_account,
                     self.deps,
-                ));
+                );
                 let batch = next_state.enter_state(this_addr, env.block.time)?;
                 Ok(Response::from(batch, next_state))
             }
