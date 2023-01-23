@@ -1,13 +1,14 @@
-use core::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter};
 
 use serde::{Deserialize, Serialize};
 
-use super::{NodesField, Tree};
+use super::{Nodes, Tree};
 
 #[derive(Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[repr(transparent)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub(super) struct Unchecked<T> {
-    nodes: NodesField<T>,
+    nodes: Nodes<T>,
 }
 
 impl<T> TryFrom<Unchecked<T>> for Tree<T> {
@@ -15,7 +16,7 @@ impl<T> TryFrom<Unchecked<T>> for Tree<T> {
 
     fn try_from(value: Unchecked<T>) -> Result<Self, Self::Error> {
         if let Some(root) = value.nodes.first() {
-            if root.parent() != 0 {
+            if root.parent() != Tree::<T>::ROOT_PARENT {
                 return Err(Error::InvalidRoot);
             }
         }
