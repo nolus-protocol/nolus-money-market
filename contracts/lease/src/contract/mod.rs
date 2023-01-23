@@ -20,7 +20,6 @@ use crate::{
 use self::state::RequestLoan;
 
 mod alarms;
-mod close;
 mod cmd;
 pub mod msg;
 mod repay;
