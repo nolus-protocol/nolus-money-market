@@ -13,9 +13,10 @@ use crate::{
 };
 
 pub use self::request_loan::RequestLoan;
-use self::{buy_asset::BuyAsset, open_ica_account::OpenIcaAccount, opened::active::Active};
+use self::{
+    open_ica_account::OpenIcaAccount, opened::active::Active, opening::buy_asset::BuyAsset,
+};
 
-mod buy_asset;
 mod open_ica_account;
 mod opened;
 mod opening;

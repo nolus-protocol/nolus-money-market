@@ -21,12 +21,13 @@ use swap::trx;
 
 use crate::{
     api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
-    contract::cmd::OpenLoanRespResult,
+    contract::{
+        cmd::OpenLoanRespResult,
+        state::{opened::active::Active, Controller, Response},
+    },
     error::ContractResult,
     lease::IntoDTOResult,
 };
-
-use super::{opened::active::Active, Controller, Response};
 
 const ICA_TRX_TIMEOUT: Duration = Duration::from_days(1);
 const ICA_TRX_ACK_TIP: Coin<Nls> = Coin::new(1);
