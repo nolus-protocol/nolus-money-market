@@ -24,12 +24,11 @@ pub struct TransferOut {
 }
 
 impl TransferOut {
-    //TODO change to super or crate::contract::state::opening once the other opening states have moved to opening module
-    pub(in crate::contract::state) fn new(lease: LeaseDTO, payment: PaymentCoin) -> Self {
+    pub(in crate::contract::state::opened) fn new(lease: LeaseDTO, payment: PaymentCoin) -> Self {
         Self { lease, payment }
     }
 
-    pub(in crate::contract::state) fn enter_state(
+    pub(in crate::contract::state::opened) fn enter_state(
         &self,
         _sender: Addr,
         _now: Timestamp,
@@ -71,14 +70,14 @@ impl Controller for TransferOut {
     }
 
     fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
-        let _ongoing = OngoingTrx::Repayment {
+        let in_progress = OngoingTrx::Repayment {
             payment: self.payment,
             in_progress: RepayTrx::TransferOut,
         };
-        // TODO pass ongoing to the LeaseState cmd for adding it to the state
+
         with_lease::execute(
             self.lease,
-            LeaseState::new(env.block.time),
+            LeaseState::new(env.block.time, Some(in_progress)),
             &env.contract.address,
             &deps.querier,
         )

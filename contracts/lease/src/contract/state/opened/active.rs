@@ -88,7 +88,7 @@ impl Controller for Active {
         // TODO think on taking benefit from having a LppView trait
         with_lease::execute(
             self.lease,
-            LeaseState::new(env.block.time),
+            LeaseState::new(env.block.time, None),
             &env.contract.address,
             &deps.querier,
         )

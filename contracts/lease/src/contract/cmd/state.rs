@@ -8,18 +8,19 @@ use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
-    api::StateResponse,
+    api::{opened::OngoingTrx, StateResponse},
     error::ContractError,
     lease::{with_lease::WithLease, Lease},
 };
 
 pub struct LeaseState {
     now: Timestamp,
+    in_progress: Option<OngoingTrx>,
 }
 
 impl LeaseState {
-    pub fn new(now: Timestamp) -> Self {
-        Self { now }
+    pub fn new(now: Timestamp, in_progress: Option<OngoingTrx>) -> Self {
+        Self { now, in_progress }
     }
 }
 
@@ -41,6 +42,6 @@ impl WithLease for LeaseState {
         Asset: Currency + Serialize,
     {
         let state = lease.state(self.now)?;
-        Ok(StateResponse::opened_from(state, None))
+        Ok(StateResponse::opened_from(state, self.in_progress))
     }
 }
