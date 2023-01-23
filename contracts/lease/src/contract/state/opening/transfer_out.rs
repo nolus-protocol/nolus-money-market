@@ -1,12 +1,16 @@
 use cosmwasm_std::{Addr, Deps, DepsMut, Env, Timestamp};
 use currency::native::Nls;
-use finance::{coin::Coin, duration::Duration};
+use finance::coin::Coin;
 use sdk::neutron_sdk::sudo::msg::SudoMsg;
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use platform::{bank_ibc::local::Sender, batch::Batch, ica::HostAccount};
+use platform::{
+    bank_ibc::local::{Sender, IBC_TRANSFER_TIMEOUT},
+    batch::Batch,
+    ica::HostAccount,
+};
 
 use crate::{
     api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
@@ -17,7 +21,7 @@ use crate::{
     error::ContractResult,
 };
 
-const ICA_TRANSFER_TIMEOUT: Duration = Duration::from_secs(60);
+//TODO take them as input from the client
 const ICA_TRANSFER_ACK_TIP: Coin<Nls> = Coin::new(1);
 const ICA_TRANSFER_TIMEOUT_TIP: Coin<Nls> = ICA_TRANSFER_ACK_TIP;
 
@@ -59,7 +63,7 @@ impl TransferOut {
             &self.form.dex.transfer_channel.local_endpoint,
             sender,
             self.dex_account.clone(),
-            now + ICA_TRANSFER_TIMEOUT,
+            now + IBC_TRANSFER_TIMEOUT,
             ICA_TRANSFER_ACK_TIP,
             ICA_TRANSFER_TIMEOUT_TIP,
         );
