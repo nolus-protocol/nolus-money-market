@@ -1,4 +1,10 @@
-pub use self::{node::Node, tree::Tree};
+pub use self::{
+    node::NodeRef,
+    tree::{HumanReadableTree, Tree},
+};
 
 mod node;
 mod tree;
+
+#[cfg(test)]
+mod tests;

@@ -3,12 +3,17 @@ use serde::{Deserialize, Serialize};
 use crate::tree::Tree;
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct Raw<T> {
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+pub(crate) struct Node<T> {
     parent: u16,
     value: T,
 }
 
-impl<T> Raw<T> {
+impl<T> Node<T> {
+    pub(crate) fn new(parent: u16, value: T) -> Self {
+        Self { parent, value }
+    }
+
     #[inline]
     pub(crate) fn parent(&self) -> u16 {
         self.parent
@@ -20,29 +25,28 @@ impl<T> Raw<T> {
     }
 }
 
-pub struct Node<'r, T> {
+pub struct NodeRef<'r, T> {
     tree: &'r Tree<T>,
     this: u16,
 }
 
-impl<'r, T> Node<'r, T> {
+impl<'r, T> NodeRef<'r, T> {
     #[inline]
     pub fn value(&self) -> &T {
-        &self.tree.get(self.this).value
+        &self.tree.node(self.this).value
     }
 
     pub fn parent(&self) -> Option<Self> {
-        let this = self.tree.get(self.this);
+        let this = self.tree.node(self.this);
 
-        (this.parent != self.this).then_some(Node {
-            tree: self.tree,
-            this: this.parent,
-        })
-    }
-
-    #[inline]
-    pub(crate) const fn root(tree: &'r Tree<T>) -> Self {
-        Self { tree, this: 0 }
+        if this.parent == self.this {
+            None
+        } else {
+            Some(NodeRef {
+                tree: self.tree,
+                this: this.parent,
+            })
+        }
     }
 
     #[inline]
