@@ -15,8 +15,7 @@ use crate::{
     api::{DownpaymentCoin, ExecuteMsg, StateQuery, StateResponse},
     contract::{
         alarms::{price::PriceAlarm, time::TimeAlarm, AlarmResult},
-        cmd::{Close, LeaseState, OpenLoanRespResult},
-        repay::{Repay, RepayResult},
+        cmd::{Close, LeaseState, OpenLoanRespResult, Repay, RepayResult},
         state::{Controller, Response},
     },
     error::{ContractError, ContractResult},

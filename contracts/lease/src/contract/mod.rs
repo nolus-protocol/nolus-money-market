@@ -22,7 +22,6 @@ use self::state::RequestLoan;
 mod alarms;
 mod cmd;
 pub mod msg;
-mod repay;
 mod state;
 
 const CONTRACT_VERSION: Version = 0;
