@@ -11,11 +11,14 @@ use sdk::{
 
 use crate::{
     api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
-    contract::cmd::OpenLoanRespResult,
+    contract::{
+        cmd::OpenLoanRespResult,
+        state::{Controller, Response},
+    },
     error::ContractResult,
 };
 
-use super::{opening::transfer_out::TransferOut, Controller, Response};
+use super::transfer_out::TransferOut;
 
 #[derive(Serialize, Deserialize)]
 pub struct OpenIcaAccount {
@@ -26,7 +29,7 @@ pub struct OpenIcaAccount {
 }
 
 impl OpenIcaAccount {
-    pub(super) fn new(
+    pub(in crate::contract::state) fn new(
         form: NewLeaseForm,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
@@ -40,7 +43,7 @@ impl OpenIcaAccount {
         }
     }
 
-    pub(super) fn enter_state(&self) -> Batch {
+    pub(in crate::contract::state) fn enter_state(&self) -> Batch {
         ica::register_account(&self.form.dex.connection_id)
     }
 }
