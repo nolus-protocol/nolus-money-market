@@ -1,25 +1,24 @@
 use serde::{Deserialize, Serialize};
 
-use crate::node::{Node, NodeRef};
+use crate::node::{Node, NodeIndex, NodeRef};
 
 pub use self::human_readable::HumanReadableTree;
 
 mod human_readable;
-mod unchecked;
 
 type Nodes<T> = Vec<Node<T>>;
 
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 #[repr(transparent)]
-#[serde(rename_all = "snake_case", try_from = "unchecked::Unchecked<T>")]
+#[serde(rename_all = "snake_case")]
 pub struct Tree<T> {
     nodes: Nodes<T>,
 }
 
 impl<T> Tree<T> {
-    const ROOT_INDEX: u16 = 0;
-    const ROOT_PARENT: u16 = Self::ROOT_INDEX;
+    const ROOT_INDEX: NodeIndex = 0;
+    const ROOT_PARENT: NodeIndex = Self::ROOT_INDEX;
 
     pub fn root(&self) -> Option<NodeRef<T>> {
         (!self.nodes.is_empty()).then(|| NodeRef::with_index(self, Self::ROOT_INDEX))
@@ -29,7 +28,9 @@ impl<T> Tree<T> {
     where
         F: FnMut(&T) -> bool,
     {
-        let mut index = 0;
+        // `Iterator::enumerate` is not used to avoid problems with Rust emitting floating-point
+        // instructions on WASM on some cases where `usize` is used.
+        let mut index: NodeIndex = 0;
 
         self.nodes.iter().find_map(|raw_node| {
             let result = f(raw_node.value()).then(|| NodeRef::with_index(self, index));
@@ -40,7 +41,11 @@ impl<T> Tree<T> {
         })
     }
 
-    pub(crate) fn node(&self, index: u16) -> &Node<T> {
+    pub(crate) fn is_root(&self, index: NodeIndex) -> bool {
+        index == Self::ROOT_INDEX
+    }
+
+    pub(crate) fn node(&self, index: NodeIndex) -> &Node<T> {
         &self.nodes[usize::from(index)]
     }
 }

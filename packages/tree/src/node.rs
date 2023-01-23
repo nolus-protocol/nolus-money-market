@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::tree::Tree;
 
+pub(crate) type NodeIndex = u16;
+
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 pub(crate) struct Node<T> {
@@ -10,12 +12,12 @@ pub(crate) struct Node<T> {
 }
 
 impl<T> Node<T> {
-    pub(crate) fn new(parent: u16, value: T) -> Self {
+    pub(crate) fn new(parent: NodeIndex, value: T) -> Self {
         Self { parent, value }
     }
 
     #[inline]
-    pub(crate) fn parent(&self) -> u16 {
+    pub(crate) fn parent(&self) -> NodeIndex {
         self.parent
     }
 
@@ -27,7 +29,7 @@ impl<T> Node<T> {
 
 pub struct NodeRef<'r, T> {
     tree: &'r Tree<T>,
-    this: u16,
+    this: NodeIndex,
 }
 
 impl<'r, T> NodeRef<'r, T> {
@@ -37,11 +39,11 @@ impl<'r, T> NodeRef<'r, T> {
     }
 
     pub fn parent(&self) -> Option<Self> {
-        let this = self.tree.node(self.this);
-
-        if this.parent == self.this {
+        if self.tree.is_root(self.this) {
             None
         } else {
+            let this = self.tree.node(self.this);
+
             Some(NodeRef {
                 tree: self.tree,
                 this: this.parent,
@@ -50,7 +52,7 @@ impl<'r, T> NodeRef<'r, T> {
     }
 
     #[inline]
-    pub(crate) const fn with_index(tree: &'r Tree<T>, this: u16) -> Self {
+    pub(crate) const fn with_index(tree: &'r Tree<T>, this: NodeIndex) -> Self {
         Self { tree, this }
     }
 }
