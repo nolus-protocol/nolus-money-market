@@ -11,8 +11,8 @@ pub mod price;
 pub mod time;
 
 pub struct AlarmResult {
-    pub(super) response: Response,
-    pub(super) lease_dto: LeaseDTO,
+    pub response: Response,
+    pub lease_dto: LeaseDTO,
 }
 
 fn emit_events<Lpn, Asset>(env: &Env, liquidation: &Status<Lpn, Asset>, batch: Batch) -> Response

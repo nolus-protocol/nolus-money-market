@@ -19,7 +19,6 @@ use crate::{
 
 use self::state::RequestLoan;
 
-mod alarms;
 mod cmd;
 pub mod msg;
 mod state;
