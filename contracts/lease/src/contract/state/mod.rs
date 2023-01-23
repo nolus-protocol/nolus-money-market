@@ -12,12 +12,9 @@ use crate::{
     error::{ContractError as Err, ContractResult},
 };
 
-pub use self::{
-    active::Active, buy_asset::BuyAsset, open_ica_account::OpenIcaAccount,
-    request_loan::RequestLoan,
-};
+pub use self::request_loan::RequestLoan;
+use self::{buy_asset::BuyAsset, open_ica_account::OpenIcaAccount, opened::active::Active};
 
-mod active;
 mod buy_asset;
 mod open_ica_account;
 mod opened;

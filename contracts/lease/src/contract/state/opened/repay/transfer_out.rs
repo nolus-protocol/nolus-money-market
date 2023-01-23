@@ -83,26 +83,4 @@ impl Controller for TransferOut {
             &deps.querier,
         )
     }
-    // fn send(&self, sender: &mut Sender) -> ContractResult<()> {
-    //     // TODO apply nls_swap_fee!
-    //     sender.send(&self.payment)?;
-    //     Ok(())
-    // }
-
-    // fn on_success(self, _platform: &Deps) -> ContractResult<Response> {
-    //     todo!("proceed with Swap - TransferIn before landing to the same Lease::repay call");
-    // }
-
-    // fn into_state(self) -> ContractResult<StateResponse> {
-    //     let ongoing = OngoingTrx::Repayment {
-    //         payment: self.payment,
-    //         in_progress: RepayTrx::TransferOut,
-    //     };
-    //     with_lease::execute(
-    //         self.lease,
-    //         LeaseState::new(env.block.time),
-    //         &env.contract.address,
-    //         &deps.querier,
-    //     )
-    // }
 }

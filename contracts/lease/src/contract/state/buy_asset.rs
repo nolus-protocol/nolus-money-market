@@ -26,7 +26,7 @@ use crate::{
     lease::IntoDTOResult,
 };
 
-use super::{active::Active, Controller, Response};
+use super::{opened::active::Active, Controller, Response};
 
 const ICA_TRX_TIMEOUT: Duration = Duration::from_days(1);
 const ICA_TRX_ACK_TIP: Coin<Nls> = Coin::new(1);

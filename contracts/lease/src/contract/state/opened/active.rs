@@ -18,13 +18,14 @@ use crate::{
         close::Close,
         cmd::{LeaseState, OpenLoanRespResult},
         repay::{Repay, RepayResult},
+        state::{Controller, Response},
     },
     error::{ContractError, ContractResult},
     event::Type,
     lease::{with_lease, IntoDTOResult, LeaseDTO},
 };
 
-use super::{opened::repay::transfer_out::TransferOut, Controller, Response};
+use super::repay::transfer_out::TransferOut;
 
 #[derive(Serialize, Deserialize)]
 pub struct Active {
@@ -34,11 +35,11 @@ pub struct Active {
 }
 
 impl Active {
-    pub(super) fn new(lease: LeaseDTO) -> Self {
+    pub(in crate::contract::state) fn new(lease: LeaseDTO) -> Self {
         Self { lease }
     }
 
-    pub(super) fn enter_state(
+    pub(in crate::contract::state) fn enter_state(
         &self,
         batch: Batch,
         env: &Env,
