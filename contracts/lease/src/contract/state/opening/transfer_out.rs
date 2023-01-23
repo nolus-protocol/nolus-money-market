@@ -35,8 +35,7 @@ pub struct TransferOut {
 }
 
 impl TransferOut {
-    //TODO change to super or crate::contract::state::opening once the other opening states have moved to opening module
-    pub(in crate::contract::state) fn new(
+    pub(super) fn new(
         form: NewLeaseForm,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
@@ -54,11 +53,7 @@ impl TransferOut {
 
     //TODO define a State trait with `fn enter(&self, deps: &Deps)` and
     //simplify the TransferOut::on_success return type to `impl State`
-    pub(in crate::contract::state) fn enter_state(
-        &self,
-        sender: Addr,
-        now: Timestamp,
-    ) -> ContractResult<Batch> {
+    pub(super) fn enter_state(&self, sender: Addr, now: Timestamp) -> ContractResult<Batch> {
         let mut ibc_sender = Sender::new(
             &self.form.dex.transfer_channel.local_endpoint,
             sender,

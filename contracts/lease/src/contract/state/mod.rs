@@ -12,7 +12,7 @@ use crate::{
     error::{ContractError as Err, ContractResult},
 };
 
-pub use self::request_loan::RequestLoan;
+pub use self::opening::request_loan::RequestLoan;
 use self::{
     opened::active::Active,
     opening::{buy_asset::BuyAsset, open_ica_account::OpenIcaAccount},
@@ -20,7 +20,6 @@ use self::{
 
 mod opened;
 mod opening;
-mod request_loan;
 
 type OpeningTransferOut = opening::transfer_out::TransferOut;
 type OpenedTransferOut = opened::repay::transfer_out::TransferOut;

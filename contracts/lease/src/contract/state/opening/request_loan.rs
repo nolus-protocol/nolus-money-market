@@ -10,12 +10,15 @@ use sdk::{
 
 use crate::{
     api::{DownpaymentCoin, NewLeaseForm},
-    contract::cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
+    contract::{
+        cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
+        state::{Controller, Response},
+    },
     error::{ContractError, ContractResult},
     reply_id::ReplyId,
 };
 
-use super::{Controller, OpenIcaAccount, Response};
+use super::open_ica_account::OpenIcaAccount;
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestLoan {

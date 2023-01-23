@@ -29,7 +29,7 @@ pub struct OpenIcaAccount {
 }
 
 impl OpenIcaAccount {
-    pub(in crate::contract::state) fn new(
+    pub(super) fn new(
         form: NewLeaseForm,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
@@ -43,7 +43,7 @@ impl OpenIcaAccount {
         }
     }
 
-    pub(in crate::contract::state) fn enter_state(&self) -> Batch {
+    pub(super) fn enter_state(&self) -> Batch {
         ica::register_account(&self.form.dex.connection_id)
     }
 }
