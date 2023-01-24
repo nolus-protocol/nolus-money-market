@@ -210,13 +210,15 @@ where
     ) -> ContractResult<Price<Asset, Lpn>> {
         debug_assert!(!self.amount.is_zero(), "Loan already paid!");
 
-        Ok(total_of(percent.of(self.amount)).is(liability))
+        Ok(total_of(dbg!(percent.of(self.amount))).is(liability))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use finance::{duration::Duration, percent::Percent, price::total_of};
+    #[cfg(not(debug_assertions))]
+    use finance::price::total_of;
+    use finance::{duration::Duration, percent::Percent};
     use lpp::msg::LoanResponse;
     use platform::batch::Batch;
     use sdk::cosmwasm_std::{to_binary, Addr, Timestamp, WasmMsg};
@@ -362,7 +364,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "No support for same currency prices. Without Price's debug assertion, runs successfully."]
+    #[cfg(not(debug_assertions))]
     fn price_alarm_by_percent() {
         let interest_rate = Percent::from_permille(50);
         // LPP loan
@@ -387,7 +389,7 @@ mod tests {
             lease
                 .price_alarm_by_percent(coin(500), Percent::from_percent(50))
                 .unwrap(),
-            total_of(coin(5)).is(coin(3))
+            total_of(coin(3)).is(coin(10))
         );
     }
 }

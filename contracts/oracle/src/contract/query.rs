@@ -2,7 +2,7 @@ use cosmwasm_std::{Storage, Timestamp};
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::lpn::Lpns;
-use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned};
+use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, SymbolOwned};
 use marketprice::error::PriceFeedsError;
 use marketprice::SpotPrice;
 use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
@@ -37,7 +37,7 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
     type Output = Binary;
     type Error = ContractError;
 
-    fn on<OracleBase>(self) -> Result<Self::Output, Self::Error>
+    fn on<OracleBase>(self) -> AnyVisitorResult<Self>
     where
         OracleBase: 'static + Currency + DeserializeOwned + Serialize,
     {

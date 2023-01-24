@@ -1,24 +1,29 @@
-use std::fmt::Display;
-
-use cosmwasm_std::Timestamp;
+use cosmwasm_std::{Addr, Deps, DepsMut, Env, Timestamp};
+use currency::native::Nls;
+use finance::coin::Coin;
+use sdk::neutron_sdk::sudo::msg::SudoMsg;
 use serde::{Deserialize, Serialize};
 
-use finance::duration::Duration;
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use platform::{bank_ibc::local::Sender, batch::Batch, ica::HostAccount};
-use sdk::{
-    cosmwasm_std::{DepsMut, Env},
-    neutron_sdk::sudo::msg::SudoMsg,
+use platform::{
+    bank_ibc::local::{Sender, IBC_TRANSFER_TIMEOUT},
+    batch::Batch,
+    ica::HostAccount,
 };
 
 use crate::{
-    api::{DownpaymentCoin, NewLeaseForm},
-    contract::cmd::OpenLoanRespResult,
+    api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
+    contract::{
+        cmd::OpenLoanRespResult,
+        state::{BuyAsset, Controller, Response},
+    },
     error::ContractResult,
 };
 
-use super::{buy_asset::BuyAsset, Controller, Response};
+//TODO take them as input from the client
+const ICA_TRANSFER_ACK_TIP: Coin<Nls> = Coin::new(1);
+const ICA_TRANSFER_TIMEOUT_TIP: Coin<Nls> = ICA_TRANSFER_ACK_TIP;
 
 #[derive(Serialize, Deserialize)]
 pub struct TransferOut {
@@ -28,8 +33,6 @@ pub struct TransferOut {
     dex_account: HostAccount,
     deps: (LppLenderRef, OracleRef),
 }
-
-const ICA_TRANSFER_TIMEOUT: Duration = Duration::from_secs(60);
 
 impl TransferOut {
     pub(super) fn new(
@@ -48,11 +51,16 @@ impl TransferOut {
         }
     }
 
-    pub(super) fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
+    //TODO define a State trait with `fn enter(&self, deps: &Deps)` and
+    //simplify the TransferOut::on_success return type to `impl State`
+    pub(super) fn enter_state(&self, sender: Addr, now: Timestamp) -> ContractResult<Batch> {
         let mut ibc_sender = Sender::new(
             &self.form.dex.transfer_channel.local_endpoint,
+            sender,
             self.dex_account.clone(),
-            now + ICA_TRANSFER_TIMEOUT,
+            now + IBC_TRANSFER_TIMEOUT,
+            ICA_TRANSFER_ACK_TIP,
+            ICA_TRANSFER_TIMEOUT_TIP,
         );
         // TODO apply nls_swap_fee on the downpayment only!
         ibc_sender.send(&self.downpayment)?;
@@ -87,10 +95,15 @@ impl Controller for TransferOut {
             _ => todo!(),
         }
     }
-}
 
-impl Display for TransferOut {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("transferring assets to the ICA account at the DEX")
+    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+        Ok(StateResponse::Opening {
+            downpayment: self.downpayment,
+            loan: self.loan.principal,
+            loan_interest_rate: self.loan.annual_interest_rate,
+            in_progress: OngoingTrx::TransferOut {
+                ica_account: self.dex_account.into(),
+            },
+        })
     }
 }

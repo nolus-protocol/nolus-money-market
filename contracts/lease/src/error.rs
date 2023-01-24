@@ -1,4 +1,4 @@
-use std::{any::type_name, fmt::Display};
+use std::any::type_name;
 
 use thiserror::Error;
 
@@ -40,8 +40,8 @@ pub enum ContractError {
     #[error("[Lease] {0}")]
     SwapError(#[from] SwapError),
 
-    #[error("[Lease] No downpayment sent")]
-    NoDownpaymentError(),
+    #[error("[Lease] No payment sent")]
+    NoPaymentError(),
 
     #[error("[Lease] The underlying loan is not fully repaid")]
     LoanNotPaid(),
@@ -52,20 +52,19 @@ pub enum ContractError {
     #[error("[Lease] Invalid parameters: {0}")]
     InvalidParameters(String),
 
-    #[error("[Lease] The operation '{0}' is not supported in state '{1}'")]
-    UnsupportedOperation(String, String),
+    #[error("[Lease] The operation '{0}' is not supported in the current state")]
+    UnsupportedOperation(String),
 
     #[error("[Finance] Programming error or invalid serialized object of '{0}' type, cause '{1}'")]
     BrokenInvariant(String, String),
 }
 
 impl ContractError {
-    pub fn unsupported_operation<Op, State>(op: Op, state: &State) -> Self
+    pub fn unsupported_operation<Op>(op: Op) -> Self
     where
         Op: Into<String>,
-        State: Display,
     {
-        Self::UnsupportedOperation(op.into(), format!("{}", state))
+        Self::UnsupportedOperation(op.into())
     }
 
     pub fn broken_invariant_if<T>(check: bool, msg: &str) -> ContractResult<()> {

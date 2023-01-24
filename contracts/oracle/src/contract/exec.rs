@@ -2,7 +2,7 @@ use serde::de::DeserializeOwned;
 
 use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
-use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
+use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
 use marketprice::SpotPrice;
 use platform::contract;
 use sdk::{
@@ -52,7 +52,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
     type Output = Response;
     type Error = ContractError;
 
-    fn on<OracleBase>(self) -> Result<Self::Output, Self::Error>
+    fn on<OracleBase>(self) -> AnyVisitorResult<Self>
     where
         OracleBase: Currency + DeserializeOwned,
     {

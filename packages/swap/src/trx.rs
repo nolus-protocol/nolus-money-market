@@ -2,7 +2,7 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountIn, SwapAmoun
 
 use finance::{
     coin::CoinDTO,
-    currency::{self, Symbol},
+    currency::{self, Group, Symbol},
 };
 use platform::{
     coin_legacy,
@@ -16,14 +16,15 @@ use crate::{
     SwapGroup, SwapPath, SwapTarget,
 };
 
-type SwapCoin = CoinDTO<SwapGroup>;
-
-pub fn exact_amount_in(
+pub fn exact_amount_in<G>(
     batch: &mut Batch,
     sender: HostAccount,
-    token_in: &SwapCoin,
+    token_in: &CoinDTO<G>,
     swap_path: &SwapPath,
-) -> Result<()> {
+) -> Result<()>
+where
+    G: Group,
+{
     const MSG_TYPE: &str = "/osmosis.gamm.v1beta1.MsgSwapExactAmountIn";
     // TODO bring the token balances, weights and swapFee-s from the DEX pools
     // into the oracle in order to calculate the tokenOut as per the formula at
@@ -57,8 +58,11 @@ fn to_route(swap_path: &[SwapTarget]) -> Result<Vec<SwapAmountInRoute>> {
         .collect()
 }
 
-fn to_cwcoin(token: &SwapCoin) -> Result<CwCoin> {
-    coin_legacy::to_cosmwasm_on_network::<_, DexMapper>(token).map_err(Error::from)
+fn to_cwcoin<G>(token: &CoinDTO<G>) -> Result<CwCoin>
+where
+    G: Group,
+{
+    coin_legacy::to_cosmwasm_on_network::<G, DexMapper>(token).map_err(Error::from)
 }
 
 fn to_dex_symbol(ticker: Symbol) -> Result<Symbol> {
@@ -69,7 +73,7 @@ fn to_dex_symbol(ticker: Symbol) -> Result<Symbol> {
 mod test {
     use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 
-    use currency::lpn::Usdc;
+    use currency::lpn::{Lpns, Usdc};
     use finance::{
         coin::Coin,
         currency::{Currency, SymbolStatic},
@@ -104,7 +108,7 @@ mod test {
         let coin: Coin<Usdc> = 3541415.into();
         assert_eq!(
             CwCoin::new(coin.into(), Usdc::DEX_SYMBOL),
-            super::to_cwcoin(&coin.into()).unwrap()
+            super::to_cwcoin::<Lpns>(&coin.into()).unwrap()
         );
     }
 

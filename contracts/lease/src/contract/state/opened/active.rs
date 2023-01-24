@@ -1,5 +1,5 @@
-use std::fmt::Display;
-
+use currency::payment::PaymentGroup;
+use finance::coin::IntoDTO;
 use serde::{Deserialize, Serialize};
 
 use platform::{
@@ -8,35 +8,38 @@ use platform::{
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper},
+    cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper},
 };
 
 use crate::{
-    api::{DownpaymentCoin, ExecuteMsg, StateQuery},
+    api::{DownpaymentCoin, ExecuteMsg, StateQuery, StateResponse},
     contract::{
-        alarms::{price::PriceAlarm, time::TimeAlarm, AlarmResult},
-        close::Close,
-        cmd::{LeaseState, OpenLoanRespResult},
-        repay::{Repay, RepayResult},
+        cmd::{
+            AlarmResult, Close, LeaseState, OpenLoanRespResult, PriceAlarm, Repay, RepayResult,
+            TimeAlarm,
+        },
+        state::{Controller, Response},
     },
-    error::ContractResult,
+    error::{ContractError, ContractResult},
     event::Type,
     lease::{with_lease, IntoDTOResult, LeaseDTO},
 };
 
-use super::{Controller, Response};
+use super::repay::transfer_out::TransferOut;
 
 #[derive(Serialize, Deserialize)]
 pub struct Active {
     lease: LeaseDTO,
+    // dex: ConnectionParams,
+    // dex_account: HostAccount,
 }
 
 impl Active {
-    pub(super) fn new(lease: LeaseDTO) -> Self {
+    pub(in crate::contract::state) fn new(lease: LeaseDTO) -> Self {
         Self { lease }
     }
 
-    pub(super) fn enter_state(
+    pub(in crate::contract::state) fn enter_state(
         &self,
         batch: Batch,
         env: &Env,
@@ -54,20 +57,13 @@ impl Controller for Active {
         info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        let resp = match msg {
-            ExecuteMsg::Repay() => {
-                let RepayResult {
-                    lease: lease_updated,
-                    emitter,
-                } = try_repay(&deps.querier, &env, info, self.lease)?;
-
-                into_resp(emitter, lease_updated)
-            }
+        match msg {
+            ExecuteMsg::Repay() => try_repay(&deps.querier, &env, info, self.lease),
             ExecuteMsg::Close() => {
                 let RepayResult { lease, emitter } =
                     try_close(&deps.querier, &env, info, self.lease)?;
 
-                into_resp(emitter, lease)
+                Ok(into_resp(emitter, lease))
             }
             ExecuteMsg::PriceAlarm() => {
                 let AlarmResult {
@@ -75,7 +71,7 @@ impl Controller for Active {
                     lease_dto: lease_updated,
                 } = try_on_price_alarm(&deps.querier, &env, info, self.lease)?;
 
-                into_resp(response, lease_updated)
+                Ok(into_resp(response, lease_updated))
             }
             ExecuteMsg::TimeAlarm(_block_time) => {
                 let AlarmResult {
@@ -83,26 +79,19 @@ impl Controller for Active {
                     lease_dto: lease_updated,
                 } = try_on_time_alarm(&deps.querier, &env, info, self.lease)?;
 
-                into_resp(response, lease_updated)
+                Ok(into_resp(response, lease_updated))
             }
-        };
-        Ok(resp)
+        }
     }
 
-    fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
+    fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         // TODO think on taking benefit from having a LppView trait
         with_lease::execute(
             self.lease,
-            LeaseState::new(env.block.time),
+            LeaseState::new(env.block.time, None),
             &env.contract.address,
             &deps.querier,
         )
-    }
-}
-
-impl Display for Active {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("active lease in idle state")
     }
 }
 
@@ -111,13 +100,26 @@ fn try_repay(
     env: &Env,
     info: MessageInfo,
     lease: LeaseDTO,
-) -> ContractResult<RepayResult> {
-    with_lease::execute(
-        lease,
-        Repay::new(info.funds, env),
-        &env.contract.address,
-        querier,
-    )
+) -> ContractResult<Response> {
+    let payment = bank::may_received::<PaymentGroup, _>(info.funds, IntoDTO::<PaymentGroup>::new())
+        .ok_or_else(ContractError::NoPaymentError)??;
+    if payment.ticker() == lease.loan.lpp().currency() {
+        let RepayResult {
+            lease: lease_updated,
+            emitter,
+        } = with_lease::execute(
+            lease,
+            Repay::new(payment, env),
+            &env.contract.address,
+            querier,
+        )?;
+        Ok(into_resp(emitter, lease_updated))
+    } else {
+        let this_addr = env.contract.address.clone();
+        let next_state = TransferOut::new(lease, payment);
+        let batch = next_state.enter_state(this_addr, env.block.time)?;
+        Ok(Response::from(batch, next_state))
+    }
 }
 
 fn try_close(

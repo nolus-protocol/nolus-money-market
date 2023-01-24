@@ -5,7 +5,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use currency::{lease::LeaseGroup, payment::PaymentGroup};
 use finance::{
     coin::Coin,
-    currency::{AnyVisitor, Currency, Group, SymbolOwned},
+    currency::{AnyVisitor, AnyVisitorResult, Currency, Group, SymbolOwned},
     liability::Liability,
     percent::Percent,
     price::total,
@@ -161,7 +161,7 @@ where
     type Output = QuoteResponse;
     type Error = ContractError;
 
-    fn on<C>(self) -> Result<Self::Output, Self::Error>
+    fn on<C>(self) -> AnyVisitorResult<Self>
     where
         C: 'static + Currency + Serialize + DeserializeOwned,
     {
@@ -208,7 +208,7 @@ where
     type Output = QuoteResponse;
     type Error = ContractError;
 
-    fn on<Asset>(self) -> Result<Self::Output, Self::Error>
+    fn on<Asset>(self) -> AnyVisitorResult<Self>
     where
         Asset: 'static + Currency + Serialize + DeserializeOwned,
     {

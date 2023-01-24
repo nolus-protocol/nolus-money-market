@@ -3,7 +3,7 @@ use std::{marker::PhantomData, result::Result as StdResult};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::lpn::Lpns;
-use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned};
+use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, SymbolOwned};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -70,7 +70,7 @@ impl LppRef {
             type Output = V::Output;
             type Error = V::Error;
 
-            fn on<C>(self) -> StdResult<Self::Output, Self::Error>
+            fn on<C>(self) -> AnyVisitorResult<Self>
             where
                 C: Currency + Serialize + DeserializeOwned,
             {
@@ -93,7 +93,6 @@ impl LppRef {
             lpp_ref: self,
             currency: PhantomData::<C>,
             querier,
-            batch: Batch::default(),
         }
     }
 }
@@ -116,7 +115,6 @@ struct LppStub<'a, C> {
     lpp_ref: LppRef,
     currency: PhantomData<C>,
     querier: &'a QuerierWrapper<'a>,
-    batch: Batch,
 }
 
 impl<'a, C> LppStub<'a, C> {
@@ -146,7 +144,7 @@ impl<'a, C> From<LppStub<'a, C>> for LppBatch<LppRef> {
     fn from(stub: LppStub<'a, C>) -> Self {
         Self {
             lpp_ref: stub.lpp_ref,
-            batch: stub.batch,
+            batch: Batch::default(),
         }
     }
 }

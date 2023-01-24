@@ -4,26 +4,28 @@ use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
 use profit::stub::Profit as ProfitTrait;
-use sdk::cosmwasm_std::{to_binary, Binary, Timestamp};
+use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
+    api::{opened::OngoingTrx, StateResponse},
     error::ContractError,
     lease::{with_lease::WithLease, Lease},
 };
 
 pub struct LeaseState {
     now: Timestamp,
+    in_progress: Option<OngoingTrx>,
 }
 
 impl LeaseState {
-    pub fn new(now: Timestamp) -> Self {
-        Self { now }
+    pub fn new(now: Timestamp, in_progress: Option<OngoingTrx>) -> Self {
+        Self { now, in_progress }
     }
 }
 
 impl WithLease for LeaseState {
-    type Output = Binary;
+    type Output = StateResponse;
 
     type Error = ContractError;
 
@@ -39,7 +41,7 @@ impl WithLease for LeaseState {
         Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
-        let resp = lease.state(self.now)?;
-        to_binary(&resp).map_err(ContractError::from)
+        let state = lease.state(self.now)?;
+        Ok(StateResponse::opened_from(state, self.in_progress))
     }
 }

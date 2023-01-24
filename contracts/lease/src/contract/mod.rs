@@ -1,27 +1,26 @@
 use ::currency::lease::LeaseGroup;
+use cosmwasm_std::to_binary;
 use finance::currency;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cw_storage_plus::Item,
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use versioning::Version;
 
 use crate::{
-    api::{ExecuteMsg, NewLeaseForm, StateQuery},
+    api::{ExecuteMsg, MigrateMsg, NewLeaseForm, StateQuery},
     contract::{state::Controller, state::Response},
-    error::ContractResult,
+    error::{ContractError, ContractResult},
 };
 
 use self::state::RequestLoan;
 
-mod alarms;
-mod close;
 mod cmd;
 pub mod msg;
-mod repay;
 mod state;
 
 const CONTRACT_VERSION: Version = 0;
@@ -46,6 +45,15 @@ pub fn instantiate(
     let (batch, next_state) = RequestLoan::new(&mut deps, info, form)?;
     impl_::save(&next_state.into(), &mut deps)?;
     Ok(batch.into())
+}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
+    // the version is 0 so the previos code was deployed in the previos epoch
+    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
+    Item::<bool>::new("contract_info").remove(deps.storage);
+
+    Ok(CwResponse::default())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -99,7 +107,8 @@ pub fn sudo(mut deps: DepsMut, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps, env: Env, msg: StateQuery) -> ContractResult<Binary> {
-    impl_::load(&deps)?.query(deps, env, msg)
+    let resp = impl_::load(&deps)?.query(deps, env, msg)?;
+    to_binary(&resp).map_err(ContractError::from)
 }
 
 mod impl_ {

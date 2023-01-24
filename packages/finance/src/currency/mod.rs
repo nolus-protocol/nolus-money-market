@@ -5,7 +5,7 @@ pub use from_symbol::{
     SingleVisitor,
 };
 pub use from_symbol_any::{
-    visit_any_on_bank_symbol, visit_any_on_ticker, visit_any_on_tickers, AnyVisitor, AnyVisitorPair,
+    visit_any_on_ticker, visit_any_on_tickers, AnyVisitor, AnyVisitorPair, AnyVisitorResult,
 };
 pub use group::{Group, MaybeAnyVisitResult};
 

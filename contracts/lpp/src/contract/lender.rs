@@ -27,7 +27,7 @@ where
     LPN: 'static + Currency + DeserializeOwned + Serialize,
 {
     let lender_addr = info.sender;
-    let amount = bank::received(info.funds)?;
+    let amount = bank::received_one(info.funds)?;
 
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
 

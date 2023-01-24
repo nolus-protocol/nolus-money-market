@@ -2,7 +2,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
-use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency, SymbolOwned};
+use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, SymbolOwned};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -62,7 +62,7 @@ impl<'a> AnyVisitor for InstantiateWithLpn<'a> {
     type Output = Response;
     type Error = ContractError;
 
-    fn on<LPN>(self) -> Result<Self::Output, Self::Error>
+    fn on<LPN>(self) -> AnyVisitorResult<Self>
     where
         LPN: 'static + Currency + DeserializeOwned + Serialize,
     {
@@ -134,7 +134,7 @@ impl<'a> AnyVisitor for ExecuteWithLpn<'a> {
     type Output = Response;
     type Error = ContractError;
 
-    fn on<LPN>(self) -> Result<Self::Output, Self::Error>
+    fn on<LPN>(self) -> AnyVisitorResult<Self>
     where
         LPN: 'static + Currency + DeserializeOwned + Serialize,
     {
@@ -218,7 +218,7 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
     type Output = Binary;
     type Error = ContractError;
 
-    fn on<LPN>(self) -> Result<Self::Output, Self::Error>
+    fn on<LPN>(self) -> AnyVisitorResult<Self>
     where
         LPN: 'static + Currency + DeserializeOwned + Serialize,
     {

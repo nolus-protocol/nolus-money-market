@@ -14,15 +14,16 @@ use crate::state::config::Config;
 pub struct InstantiateMsg {
     pub lease_code_id: Uint64,
     pub lpp_ust_addr: Addr,
-    /// LeaseInterestRateMargin%, for example 3%
     pub lease_interest_rate_margin: Percent,
-    /// LeaseMaxLiability%, for example 80%
     pub liability: Liability,
     pub lease_interest_payment: InterestPaymentSpec,
     pub time_alarms: Addr,
     pub market_price_oracle: Addr,
     pub profit: Addr,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -32,6 +33,9 @@ pub enum ExecuteMsg {
         lease_interest_rate_margin: Percent,
         liability: Liability,
         lease_interest_payment: InterestPaymentSpec,
+    },
+    MigrateLeases {
+        new_code_id: Uint64,
     },
     OpenLease {
         currency: SymbolOwned,

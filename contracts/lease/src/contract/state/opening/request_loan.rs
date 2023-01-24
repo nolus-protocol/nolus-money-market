@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::lender::LppLenderRef;
@@ -12,12 +10,15 @@ use sdk::{
 
 use crate::{
     api::{DownpaymentCoin, NewLeaseForm},
-    contract::cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
+    contract::{
+        cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
+        state::{Controller, Response},
+    },
     error::{ContractError, ContractResult},
     reply_id::ReplyId,
 };
 
-use super::{Controller, OpenIcaAccount, Response};
+use super::open_ica_account::OpenIcaAccount;
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestLoan {
@@ -74,10 +75,13 @@ impl Controller for RequestLoan {
             }
         }
     }
-}
 
-impl Display for RequestLoan {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("requesting a loan")
+    fn query(
+        self,
+        _deps: cosmwasm_std::Deps,
+        _env: Env,
+        _msg: crate::api::StateQuery,
+    ) -> ContractResult<crate::api::StateResponse> {
+        unreachable!()
     }
 }

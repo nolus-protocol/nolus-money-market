@@ -3,27 +3,26 @@ use serde::Serialize;
 use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
-use platform::{
-    bank::{self},
-    batch::{Emit, Emitter},
-};
+use platform::batch::{Emit, Emitter};
 use profit::stub::Profit as ProfitTrait;
-use sdk::cosmwasm_std::{Coin as CwCoin, Env};
+use sdk::cosmwasm_std::Env;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
+    api::PaymentCoin,
     error::ContractError,
     event::Type,
     lease::{with_lease::WithLease, Lease, LeaseDTO, RepayResult as LeaseRepayResult},
 };
 
 pub struct Repay<'a> {
-    payment: Vec<CwCoin>,
+    payment: PaymentCoin,
     env: &'a Env,
 }
 
 impl<'a> Repay<'a> {
-    pub fn new(payment: Vec<CwCoin>, env: &'a Env) -> Self {
+    // TODO once refacture CoinDTO and Group take LpnCoin
+    pub fn new(payment: PaymentCoin, env: &'a Env) -> Self {
         Self { payment, env }
     }
 }
@@ -50,12 +49,11 @@ impl<'a> WithLease for Repay<'a> {
         Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
-        // TODO 'receive' the payment from the bank using any currency it might be in
-        let payment = bank::received::<Lpn>(self.payment)?;
+        let payment = self.payment.try_into()?;
 
         let LeaseRepayResult {
             batch,
-            lease: lease_dto,
+            lease,
             receipt,
         } = lease.repay(payment, self.env.block.time)?;
 
@@ -73,9 +71,6 @@ impl<'a> WithLease for Repay<'a> {
             .emit_coin_amount("principal", receipt.principal_paid())
             .emit_coin_amount("change", receipt.change());
 
-        Ok(RepayResult {
-            lease: lease_dto,
-            emitter,
-        })
+        Ok(RepayResult { lease, emitter })
     }
 }

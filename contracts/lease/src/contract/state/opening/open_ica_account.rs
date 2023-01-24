@@ -1,5 +1,4 @@
-use std::fmt::Display;
-
+use cosmwasm_std::Deps;
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::lender::LppLenderRef;
@@ -11,12 +10,15 @@ use sdk::{
 };
 
 use crate::{
-    api::{DownpaymentCoin, NewLeaseForm},
-    contract::{cmd::OpenLoanRespResult, state::transfer_out::TransferOut},
+    api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
+    contract::{
+        cmd::OpenLoanRespResult,
+        state::{Controller, Response},
+    },
     error::ContractResult,
 };
 
-use super::{Controller, Response};
+use super::transfer_out::TransferOut;
 
 #[derive(Serialize, Deserialize)]
 pub struct OpenIcaAccount {
@@ -55,6 +57,7 @@ impl Controller for OpenIcaAccount {
                 counterparty_channel_id: _,
                 counterparty_version,
             } => {
+                let this_addr = env.contract.address;
                 let dex_account = ica::parse_register_response(&counterparty_version)?;
 
                 let next_state = TransferOut::new(
@@ -64,7 +67,7 @@ impl Controller for OpenIcaAccount {
                     dex_account,
                     self.deps,
                 );
-                let batch = next_state.enter_state(env.block.time)?;
+                let batch = next_state.enter_state(this_addr, env.block.time)?;
                 Ok(Response::from(batch, next_state))
             }
             SudoMsg::Timeout { request: _ } => todo!(),
@@ -75,10 +78,13 @@ impl Controller for OpenIcaAccount {
             _ => todo!(),
         }
     }
-}
 
-impl Display for OpenIcaAccount {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("opening an ICA account")
+    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+        Ok(StateResponse::Opening {
+            downpayment: self.downpayment,
+            loan: self.loan.principal,
+            loan_interest_rate: self.loan.annual_interest_rate,
+            in_progress: OngoingTrx::OpenIcaAccount {},
+        })
     }
 }

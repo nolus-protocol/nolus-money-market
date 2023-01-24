@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::payment::PaymentGroup;
 use finance::{
-    coin::{Coin, WithCoin},
+    coin::{Coin, WithCoin, WithCoinResult},
     currency::Currency,
     percent::Percent,
 };
@@ -14,7 +14,7 @@ use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
 use crate::{
-    api::{DownpaymentCoin, NewLeaseForm},
+    api::{DownpaymentCoin, LpnCoin, NewLeaseForm},
     error::ContractError,
 };
 
@@ -51,16 +51,17 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
         Lpn: Currency + Serialize,
         LppLender: LppLenderTrait<Lpn>,
     {
-        let (downpayment, downpayment_lpn) = bank::received_any::<PaymentGroup, _>(
+        let (downpayment, downpayment_lpn) = bank::may_received::<PaymentGroup, _>(
             self.funds_in,
             DownpaymentHandler {
                 oracle: self.oracle,
                 _lpn: PhantomData::<Lpn> {},
                 querier: self.querier,
             },
-        )?;
+        )
+        .ok_or_else(Self::Error::NoPaymentError)??;
         if downpayment_lpn.is_zero() {
-            Err(Self::Error::NoDownpaymentError())
+            Err(Self::Error::NoPaymentError())
         } else {
             let borrow_lpn = self.form.liability.init_borrow_amount(downpayment_lpn);
 
@@ -87,7 +88,7 @@ where
 
     type Error = ContractError;
 
-    fn on<C>(&self, in_amount: Coin<C>) -> Result<Self::Output, Self::Error>
+    fn on<C>(&self, in_amount: Coin<C>) -> WithCoinResult<Self>
     where
         C: Currency,
     {
@@ -140,6 +141,6 @@ impl WithLppLender for OpenLoanResp {
 
 #[derive(Serialize, Deserialize)]
 pub struct OpenLoanRespResult {
-    pub(in crate::contract) principal: DownpaymentCoin,
+    pub(in crate::contract) principal: LpnCoin,
     pub(in crate::contract) annual_interest_rate: Percent,
 }

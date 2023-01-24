@@ -1,50 +1,38 @@
-use std::fmt::Display;
-
 use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
 
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, Reply},
     neutron_sdk::sudo::msg::SudoMsg,
 };
 
 use crate::{
-    api::{ExecuteMsg, StateQuery},
+    api::{ExecuteMsg, StateQuery, StateResponse},
     error::{ContractError as Err, ContractResult},
 };
 
-pub use self::{
-    active::Active, buy_asset::BuyAsset, open_ica_account::OpenIcaAccount,
-    request_loan::RequestLoan, transfer_out::TransferOut,
+pub use self::opening::request_loan::RequestLoan;
+use self::{
+    opened::active::Active,
+    opening::{buy_asset::BuyAsset, open_ica_account::OpenIcaAccount},
 };
 
-mod active;
-mod buy_asset;
-mod open_ica_account;
-mod request_loan;
-mod transfer_out;
+mod opened;
+mod opening;
+
+type OpeningTransferOut = opening::transfer_out::TransferOut;
+type OpenedTransferOut = opened::repay::transfer_out::TransferOut;
 
 #[enum_dispatch(Controller)]
 #[derive(Serialize, Deserialize)]
 pub enum State {
     RequestLoan,
     OpenIcaAccount,
-    TransferOut,
+    OpeningTransferOut,
     BuyAsset,
     Active,
-}
-
-impl Display for State {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self {
-            State::RequestLoan(inner) => inner.fmt(f),
-            State::OpenIcaAccount(inner) => inner.fmt(f),
-            State::TransferOut(inner) => inner.fmt(f),
-            State::BuyAsset(inner) => inner.fmt(f),
-            State::Active(inner) => inner.fmt(f),
-        }
-    }
+    OpenedTransferOut,
 }
 
 pub struct Response {
@@ -69,10 +57,9 @@ impl Response {
 pub trait Controller
 where
     Self: Sized,
-    Self: Display,
 {
     fn reply(self, _deps: &mut DepsMut, _env: Env, _msg: Reply) -> ContractResult<Response> {
-        err("reply", &self)
+        err("reply")
     }
 
     fn execute(
@@ -82,21 +69,16 @@ where
         _info: MessageInfo,
         _msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        err("execute", &self)
+        err("execute")
     }
 
-    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<Binary> {
-        err("query", &self)
-    }
+    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse>;
 
     fn sudo(self, _deps: &mut DepsMut, _env: Env, _msg: SudoMsg) -> ContractResult<Response> {
-        err("sudo", &self)
+        err("sudo")
     }
 }
 
-fn err<D, R>(op: &str, state: &D) -> ContractResult<R>
-where
-    D: Display,
-{
-    Err(Err::unsupported_operation(op, state))
+fn err<R>(op: &str) -> ContractResult<R> {
+    Err(Err::unsupported_operation(op))
 }

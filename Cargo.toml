@@ -49,7 +49,7 @@ cw-multi-test = "0.16.1"
 cosmos-sdk-proto = { version = "0.16.0", default-features = false }
 
 # Other
-neutron-sdk = { git = "https://github.com/neutron-org/neutron-contracts", rev = "2a3c862cb57f5123f196bcd5c9983ed78549c295" }
+neutron-sdk = { git = "https://github.com/neutron-org/neutron-sdk", rev = "d0f73c0a377759d0d3fed0bd6d30a17b6b3b110e" }
 
 [profile.release]
 opt-level = "s"

@@ -6,7 +6,7 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::Amount,
-    currency::{self, AnyVisitor, Currency, Group, SingleVisitor, SymbolOwned},
+    currency::{self, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor, SymbolOwned},
     error::Error,
 };
 
@@ -58,7 +58,7 @@ where
             type Output = V::Output;
             type Error = V::Error;
 
-            fn on<C>(self) -> StdResult<Self::Output, Self::Error>
+            fn on<C>(self) -> AnyVisitorResult<Self>
             where
                 C: Currency,
             {
@@ -118,6 +118,31 @@ where
             ticker: C::TICKER.into(),
             _g: PhantomData,
         }
+    }
+}
+
+pub struct IntoDTO<G> {
+    _g: PhantomData<G>,
+}
+impl<G> IntoDTO<G> {
+    pub fn new() -> Self {
+        Self { _g: PhantomData {} }
+    }
+}
+impl<G> Default for IntoDTO<G> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+impl<G> WithCoin for IntoDTO<G> {
+    type Output = CoinDTO<G>;
+    type Error = Error;
+
+    fn on<C>(&self, coin: Coin<C>) -> super::WithCoinResult<Self>
+    where
+        C: Currency,
+    {
+        Ok(coin.into())
     }
 }
 

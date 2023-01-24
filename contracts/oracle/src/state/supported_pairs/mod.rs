@@ -4,7 +4,9 @@ use ::serde::{de::DeserializeOwned, Deserialize, Serialize};
 use trees::{walk::Visit, Node as TreeNode, TreeWalk};
 
 use currency::payment::PaymentGroup;
-use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency, Symbol, SymbolOwned};
+use finance::currency::{
+    visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolOwned,
+};
 use sdk::{
     cosmwasm_std::{StdError, StdResult, Storage},
     cw_storage_plus::Item,
@@ -74,7 +76,7 @@ where
             type Output = ();
             type Error = ContractError;
 
-            fn on<C>(self) -> Result<Self::Output, Self::Error>
+            fn on<C>(self) -> AnyVisitorResult<Self>
             where
                 C: 'static + finance::currency::Currency + Serialize + DeserializeOwned,
             {
@@ -309,6 +311,11 @@ mod tests {
     #[test]
     fn test_load_swap_path() {
         let tree = SupportedPairs::<Usdc>::new(test_case()).unwrap();
+
+        assert!(tree
+            .load_swap_path(&"token5".into(), &"token5".into())
+            .unwrap()
+            .is_empty());
 
         let resp = tree
             .load_swap_path(&"token5".into(), &TheCurrency::TICKER.into())

@@ -8,7 +8,7 @@ use sdk::{
 
 use crate::{
     error::ContractResult,
-    state::{config::Config, leaser::Loans},
+    state::{config::Config, leases::Leases},
     ContractError,
 };
 
@@ -22,7 +22,7 @@ impl Borrow {
         currency: SymbolOwned,
     ) -> Result<Response, ContractError> {
         let config = Config::load(deps.storage)?;
-        let instance_reply_id = Loans::next(deps.storage, sender.clone())?;
+        let instance_reply_id = Leases::next(deps.storage, sender.clone())?;
 
         let mut batch = Batch::default();
         batch.schedule_instantiate_wasm_on_success_reply(

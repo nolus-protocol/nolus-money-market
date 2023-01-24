@@ -14,7 +14,6 @@ use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch};
 
 use crate::{
-    api::StateResponse,
     error::{ContractError, ContractResult},
     loan::Loan,
 };
@@ -23,11 +22,13 @@ pub(super) use self::{
     dto::LeaseDTO,
     liquidation::{LeaseInfo, LiquidationInfo, OnAlarmResult, Status, WarningLevel},
     repay::Result as RepayResult,
+    state::State,
 };
 
 mod dto;
 mod liquidation;
 mod repay;
+mod state;
 pub(crate) mod with_lease;
 pub(crate) mod with_lease_deps;
 
@@ -150,8 +151,8 @@ where
     {
         let state = self.state(Timestamp::from_nanos(u64::MAX))?;
         match state {
-            StateResponse::Opened { .. } => Err(ContractError::LoanNotPaid()),
-            StateResponse::Paid(..) => {
+            State::Opened { .. } => Err(ContractError::LoanNotPaid()),
+            State::Paid(..) => {
                 let bank_transfers = self.send_funds_to_customer(account)?;
                 self.amount = Coin::<Asset>::default();
 
@@ -161,18 +162,18 @@ where
                     batch: batch.merge(bank_transfers),
                 })
             }
-            StateResponse::Closed() => Err(ContractError::LoanClosed()),
+            State::Closed() => Err(ContractError::LoanClosed()),
         }
     }
 
-    pub(crate) fn state(&self, now: Timestamp) -> ContractResult<StateResponse<Asset, Lpn>> {
+    pub(crate) fn state(&self, now: Timestamp) -> ContractResult<State<Asset, Lpn>> {
         if self.amount.is_zero() {
-            Ok(StateResponse::Closed())
+            Ok(State::Closed())
         } else {
             let loan_state = self.loan.state(now, self.lease_addr.clone())?;
 
-            loan_state.map_or(Ok(StateResponse::Paid(self.amount)), |state| {
-                Ok(StateResponse::Opened {
+            loan_state.map_or(Ok(State::Paid(self.amount)), |state| {
+                Ok(State::Opened {
                     amount: self.amount,
                     interest_rate: state.annual_interest,
                     interest_rate_margin: state.annual_interest_margin,
@@ -260,13 +261,9 @@ mod tests {
         stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},
     };
 
-    use crate::{
-        api::{InterestPaymentSpec, StateResponse},
-        loan::Loan,
-        reply_id::ReplyId,
-    };
+    use crate::{api::InterestPaymentSpec, loan::Loan, reply_id::ReplyId};
 
-    use super::Lease;
+    use super::{Lease, State};
 
     const CUSTOMER: &str = "customer";
     pub const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
@@ -690,7 +687,7 @@ mod tests {
             TimeAlarmsLocalStub,
             OracleLocalStub,
         >,
-    ) -> StateResponse<TestCurrency, TestCurrency> {
+    ) -> State<TestCurrency, TestCurrency> {
         lease.state(LEASE_STATE_AT).unwrap()
     }
 
@@ -722,7 +719,7 @@ mod tests {
         );
 
         let res = request_state(lease);
-        let exp = StateResponse::Opened {
+        let exp = State::Opened {
             amount: lease_amount,
             interest_rate,
             interest_rate_margin: MARGIN_INTEREST_RATE,
@@ -752,7 +749,7 @@ mod tests {
         );
 
         let res = request_state(lease);
-        let exp = StateResponse::Paid(lease_amount);
+        let exp = State::Paid(lease_amount);
         assert_eq!(exp, res);
     }
 
@@ -785,7 +782,7 @@ mod tests {
             ProfitLocalStubUnreachable {},
         );
         let res = lease.state(LEASE_STATE_AT).unwrap();
-        let exp = StateResponse::Closed();
+        let exp = State::Closed();
         assert_eq!(exp, res);
     }
 

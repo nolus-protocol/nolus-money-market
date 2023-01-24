@@ -8,10 +8,11 @@ use sdk::cosmwasm_std::{Addr, Env, Timestamp};
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
-    contract::alarms::{emit_events, AlarmResult},
     error::ContractError,
     lease::{with_lease::WithLease, Lease, OnAlarmResult},
 };
+
+use super::AlarmResult;
 
 pub struct TimeAlarm<'a> {
     env: &'a Env,
@@ -53,7 +54,7 @@ impl<'a> WithLease for TimeAlarm<'a> {
         } = lease.on_time_alarm(self.now)?;
 
         Ok(AlarmResult {
-            response: emit_events(self.env, &liquidation_status, batch),
+            response: super::emit_events(self.env, &liquidation_status, batch),
             lease_dto,
         })
     }

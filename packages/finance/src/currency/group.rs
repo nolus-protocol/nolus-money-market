@@ -1,4 +1,4 @@
-use super::{AnyVisitor, Symbol, SymbolStatic};
+use super::{AnyVisitor, AnyVisitorResult, Symbol, SymbolStatic};
 
 pub trait Group: PartialEq {
     const DESCR: SymbolStatic;
@@ -14,5 +14,4 @@ pub trait Group: PartialEq {
         V: AnyVisitor;
 }
 
-pub type MaybeAnyVisitResult<V> =
-    Result<Result<<V as AnyVisitor>::Output, <V as AnyVisitor>::Error>, V>;
+pub type MaybeAnyVisitResult<V> = Result<AnyVisitorResult<V>, V>;

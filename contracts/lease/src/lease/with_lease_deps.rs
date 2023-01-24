@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use serde::{de::DeserializeOwned, Serialize};
 
 use ::currency::lease::LeaseGroup;
-use finance::currency::{self, AnyVisitor, Currency, Symbol};
+use finance::currency::{self, AnyVisitor, AnyVisitorResult, Currency, Symbol};
 use lpp::stub::lender::{LppLender as LppLenderTrait, LppLenderRef, WithLppLender};
 use oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
 use profit::stub::{Profit as ProfitTrait, ProfitRef, WithProfit};
@@ -77,7 +77,7 @@ where
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
-    fn on<C>(self) -> Result<Self::Output, Self::Error>
+    fn on<C>(self) -> AnyVisitorResult<Self>
     where
         C: 'static + Currency + Serialize + DeserializeOwned,
     {

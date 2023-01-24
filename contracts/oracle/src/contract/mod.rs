@@ -1,6 +1,6 @@
 use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
-use finance::currency::{visit_any_on_ticker, AnyVisitor, Currency};
+use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -54,7 +54,7 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
     type Output = Response;
     type Error = ContractError;
 
-    fn on<C>(self) -> Result<Self::Output, Self::Error>
+    fn on<C>(self) -> AnyVisitorResult<Self>
     where
         C: Currency,
     {

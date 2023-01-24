@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lease::LeaseGroup, payment::PaymentGroup};
+use currency::{lease::LeaseGroup, lpn::Lpns, payment::PaymentGroup};
 use finance::coin::CoinDTO;
 use sdk::{
     cosmwasm_std::Timestamp,
@@ -9,7 +9,7 @@ use sdk::{
 
 pub use self::{
     open::{InterestPaymentSpec, LoanForm, NewLeaseForm},
-    query::{StateQuery, StateResponse},
+    query::{opened, opening, paid, StateQuery, StateResponse},
 };
 
 pub mod dex;
@@ -17,8 +17,13 @@ pub mod dex;
 mod open;
 mod query;
 
-pub type DownpaymentCoin = CoinDTO<PaymentGroup>;
+pub type PaymentCoin = CoinDTO<PaymentGroup>;
+pub type DownpaymentCoin = PaymentCoin;
 pub type LeaseCoin = CoinDTO<LeaseGroup>;
+pub type LpnCoin = CoinDTO<Lpns>;
+
+#[derive(Serialize, Deserialize)]
+pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

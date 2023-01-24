@@ -1,11 +1,11 @@
-use std::{marker::PhantomData, result::Result as StdResult};
+use std::marker::PhantomData;
+use std::result::Result as StdResult;
 
 use finance::{
-    coin::{Coin, CoinDTO, WithCoin},
+    coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
     currency::{
-        visit_any_on_bank_symbol, visit_on_bank_symbol, AnyVisitor, Currency, Group, SingleVisitor,
+        visit_on_bank_symbol, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor,
     },
-    error::Error as FinanceError,
 };
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
@@ -24,16 +24,16 @@ where
 pub(crate) fn from_cosmwasm_any_impl<G, V>(
     coin: CosmWasmCoin,
     v: V,
-) -> StdResult<V::Output, V::Error>
+) -> StdResult<WithCoinResult<V>, V>
 where
     G: Group,
     V: WithCoin,
-    FinanceError: Into<V::Error>,
 {
-    visit_any_on_bank_symbol::<G, _>(&coin.denom, CoinTransformerAny(&coin, v))
+    G::maybe_visit_on_bank_symbol(&coin.denom, CoinTransformerAny(&coin, v))
+        .map_err(|transformer| transformer.1)
 }
 
-#[cfg(feature = "testing")]
+#[cfg(any(test, feature = "testing"))]
 pub fn to_cosmwasm<C>(coin: Coin<C>) -> CosmWasmCoin
 where
     C: Currency,
@@ -61,7 +61,7 @@ where
         type Output = CosmWasmCoin;
         type Error = Error;
 
-        fn on<C>(&self, coin: Coin<C>) -> Result<Self::Output>
+        fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
         where
             C: Currency,
         {
@@ -103,7 +103,7 @@ where
     type Output = V::Output;
     type Error = V::Error;
 
-    fn on<C>(self) -> StdResult<Self::Output, Self::Error>
+    fn on<C>(self) -> AnyVisitorResult<Self>
     where
         C: Currency,
     {
@@ -175,7 +175,7 @@ mod test {
         let amount = 42;
         type TheCurrency = Usdc;
         assert_eq!(
-            Ok(true),
+            Ok(Ok(true)),
             super::from_cosmwasm_any_impl::<TestCurrencies, _>(
                 CosmWasmCoin::new(amount, TheCurrency::BANK_SYMBOL),
                 coin::Expect(Coin::<TheCurrency>::from(amount))
@@ -189,27 +189,25 @@ mod test {
         type TheCurrency = Usdc;
         type AnotherCurrency = Nls;
         assert_eq!(
-            Ok(false),
+            Ok(Ok(false)),
             super::from_cosmwasm_any_impl::<TestCurrencies, _>(
                 CosmWasmCoin::new(amount + 1, TheCurrency::BANK_SYMBOL),
                 coin::Expect(Coin::<TheCurrency>::from(amount))
             )
         );
         assert_eq!(
-            Ok(false),
+            Ok(Ok(false)),
             super::from_cosmwasm_any_impl::<TestCurrencies, _>(
                 CosmWasmCoin::new(amount, TheCurrency::BANK_SYMBOL),
                 coin::Expect(Coin::<AnotherCurrency>::from(amount))
             )
         );
+        let with_coin = coin::Expect(Coin::<TheCurrency>::from(amount));
         assert_eq!(
-            Err(finance::error::Error::not_in_currency_group::<
-                _,
-                TestCurrencies,
-            >(TheCurrency::DEX_SYMBOL)),
+            Err(with_coin.clone()),
             super::from_cosmwasm_any_impl::<TestCurrencies, _>(
                 CosmWasmCoin::new(amount, TheCurrency::DEX_SYMBOL),
-                coin::Expect(Coin::<TheCurrency>::from(amount))
+                with_coin
             )
         );
     }
