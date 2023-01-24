@@ -18,7 +18,6 @@ pub struct Tree<T> {
 
 impl<T> Tree<T> {
     const ROOT_INDEX: NodeIndex = 0;
-    const ROOT_PARENT: NodeIndex = Self::ROOT_INDEX;
 
     pub fn root(&self) -> Option<NodeRef<T>> {
         (!self.nodes.is_empty()).then(|| NodeRef::with_index(self, Self::ROOT_INDEX))

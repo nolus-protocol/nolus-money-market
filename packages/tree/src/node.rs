@@ -46,7 +46,7 @@ impl<'r, T> NodeRef<'r, T> {
 
             Some(NodeRef {
                 tree: self.tree,
-                this: this.parent,
+                this: this.parent(),
             })
         }
     }
