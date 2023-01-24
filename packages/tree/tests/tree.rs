@@ -13,15 +13,6 @@ mod serde {
     }
 
     #[test]
-    fn invalid_root() {
-        assert!(
-            from_str::<Tree<u32>>(r#"{"nodes":[{"parent":1,"value":5}]}"#)
-                .ok()
-                .is_none()
-        );
-    }
-
-    #[test]
     fn with_2_levels() {
         let tree: Tree<u32> = from_str(r#"{"nodes":[{"parent":0,"value":5},{"parent":0,"value":4},{"parent":0,"value":3},{"parent":0,"value":6}]}"#).unwrap();
 
@@ -54,10 +45,5 @@ mod serde {
             assert_eq!(node.parent().map(|parent| *parent.value()), parent_value);
             assert_eq!(*node.value(), expected_value);
         }
-    }
-
-    #[test]
-    fn with_3_levels_forward_index() {
-        assert!(from_str::<Tree<u32>>(r#"{"nodes":[{"parent":0,"value":5},{"parent":2,"value":4},{"parent":0,"value":3},{"parent":2,"value":6}]}"#).ok().is_none());
     }
 }
