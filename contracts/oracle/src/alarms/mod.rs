@@ -12,8 +12,8 @@ pub type Id = u64;
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(try_from = "unchecked::Alarm")]
 pub struct Alarm {
-    below: SpotPrice,
-    above: Option<SpotPrice>,
+    pub below: SpotPrice,
+    pub above: Option<SpotPrice>,
 }
 
 impl Alarm {
@@ -52,6 +52,12 @@ impl Alarm {
             }
         }
         Ok(())
+    }
+}
+
+impl From<Alarm> for (SpotPrice, Option<SpotPrice>) {
+    fn from(value: Alarm) -> Self {
+        (value.below, value.above)
     }
 }
 

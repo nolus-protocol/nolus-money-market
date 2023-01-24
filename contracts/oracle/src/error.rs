@@ -1,3 +1,5 @@
+use std::num::TryFromIntError;
+
 use thiserror::Error;
 
 use finance::currency::{Currency, SymbolOwned};
@@ -56,6 +58,9 @@ pub enum ContractError {
         base: SymbolOwned,
         unsupported: SymbolOwned,
     },
+
+    #[error("[Oracle] integer conversion {0}")]
+    Conversion(#[from] TryFromIntError),
 }
 
 pub fn currency_mismatch<ExpC>(found: SymbolOwned) -> ContractError

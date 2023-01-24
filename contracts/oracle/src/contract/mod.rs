@@ -115,6 +115,7 @@ pub fn execute(
     }
 }
 
+// TODO: compare gas usage of this solution vs reply on error
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let resp = match msg.result {
