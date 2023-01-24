@@ -14,6 +14,15 @@ mod unchecked;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub struct NewLeaseContract {
+    /// An application form for opening a new lease
+    pub form: NewLeaseForm,
+    /// Connection parameters of a Dex capable to perform currency swaps
+    pub dex: ConnectionParams,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct NewLeaseForm {
     /// The customer who wants to open a lease.
     pub customer: Addr,
@@ -27,8 +36,6 @@ pub struct NewLeaseForm {
     pub time_alarms: Addr,
     /// The oracle contract that sends market price alerts to the lease
     pub market_price_oracle: Addr,
-    /// Dex connection parameters
-    pub dex: ConnectionParams,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

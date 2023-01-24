@@ -19,7 +19,9 @@ use crate::{
             TimeAlarm,
         },
         state::{Controller, Response},
+        Lease,
     },
+    dex::Account,
     error::{ContractError, ContractResult},
     event::Type,
     lease::{with_lease, IntoDTOResult, LeaseDTO},
@@ -29,13 +31,11 @@ use super::repay::transfer_out::TransferOut;
 
 #[derive(Serialize, Deserialize)]
 pub struct Active {
-    lease: LeaseDTO,
-    // dex: ConnectionParams,
-    // dex_account: HostAccount,
+    lease: Lease,
 }
 
 impl Active {
-    pub(in crate::contract::state) fn new(lease: LeaseDTO) -> Self {
+    pub(in crate::contract::state) fn new(lease: Lease) -> Self {
         Self { lease }
     }
 
@@ -46,9 +46,102 @@ impl Active {
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
     ) -> Emitter {
-        build_emitter(batch, env, &self.lease, loan, downpayment)
+        build_emitter(batch, env, &self.lease.lease, loan, downpayment)
+    }
+
+    fn try_repay(
+        self,
+        querier: &QuerierWrapper,
+        env: &Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        let payment =
+            bank::may_received::<PaymentGroup, _>(info.funds, IntoDTO::<PaymentGroup>::new())
+                .ok_or_else(ContractError::NoPaymentError)??;
+        let lease = self.lease;
+        if payment.ticker() == lease.lease.loan.lpp().currency() {
+            let RepayResult {
+                lease: lease_updated,
+                emitter,
+            } = with_lease::execute(
+                lease.lease,
+                Repay::new(payment, env),
+                &env.contract.address,
+                querier,
+            )?;
+            Ok(into_updated_active(lease_updated, lease.dex, emitter))
+        } else {
+            let next_state = TransferOut::new(lease, payment);
+            let batch = next_state.enter_state(env.block.time)?;
+            Ok(Response::from(batch, next_state))
+        }
+    }
+
+    fn try_close(
+        self,
+        querier: &QuerierWrapper,
+        env: &Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        //TODO Move RepayResult into this layer, rename to, for example, ExecuteResult
+        // and refactor try_* to return it
+        // Take the emitting out of the commands layer
+        let account = bank::my_account(env, querier);
+        let IntoDTOResult {
+            lease: lease_updated,
+            batch,
+        } = with_lease::execute(
+            self.lease.lease,
+            Close::new(&info.sender, account),
+            &env.contract.address,
+            querier,
+        )?;
+
+        let emitter = batch
+            .into_emitter(Type::Close)
+            .emit("id", env.contract.address.clone())
+            .emit_tx_info(env);
+
+        Ok(into_updated_active(lease_updated, self.lease.dex, emitter))
+    }
+
+    fn try_on_price_alarm(
+        self,
+        querier: &QuerierWrapper,
+        env: &Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        let AlarmResult {
+            response,
+            lease_dto: lease_updated,
+        } = with_lease::execute(
+            self.lease.lease,
+            PriceAlarm::new(env, &info.sender, env.block.time),
+            &env.contract.address,
+            querier,
+        )?;
+        Ok(into_updated_active(lease_updated, self.lease.dex, response))
+    }
+
+    fn try_on_time_alarm(
+        self,
+        querier: &QuerierWrapper,
+        env: &Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        let AlarmResult {
+            response,
+            lease_dto: lease_updated,
+        } = with_lease::execute(
+            self.lease.lease,
+            TimeAlarm::new(env, &info.sender, env.block.time),
+            &env.contract.address,
+            querier,
+        )?;
+        Ok(into_updated_active(lease_updated, self.lease.dex, response))
     }
 }
+
 impl Controller for Active {
     fn execute(
         self,
@@ -58,36 +151,17 @@ impl Controller for Active {
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         match msg {
-            ExecuteMsg::Repay() => try_repay(&deps.querier, &env, info, self.lease),
-            ExecuteMsg::Close() => {
-                let RepayResult { lease, emitter } =
-                    try_close(&deps.querier, &env, info, self.lease)?;
-
-                Ok(into_resp(emitter, lease))
-            }
-            ExecuteMsg::PriceAlarm() => {
-                let AlarmResult {
-                    response,
-                    lease_dto: lease_updated,
-                } = try_on_price_alarm(&deps.querier, &env, info, self.lease)?;
-
-                Ok(into_resp(response, lease_updated))
-            }
-            ExecuteMsg::TimeAlarm(_block_time) => {
-                let AlarmResult {
-                    response,
-                    lease_dto: lease_updated,
-                } = try_on_time_alarm(&deps.querier, &env, info, self.lease)?;
-
-                Ok(into_resp(response, lease_updated))
-            }
+            ExecuteMsg::Repay() => self.try_repay(&deps.querier, &env, info),
+            ExecuteMsg::Close() => self.try_close(&deps.querier, &env, info),
+            ExecuteMsg::PriceAlarm() => self.try_on_price_alarm(&deps.querier, &env, info),
+            ExecuteMsg::TimeAlarm(_block_time) => self.try_on_time_alarm(&deps.querier, &env, info),
         }
     }
 
     fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         // TODO think on taking benefit from having a LppView trait
         with_lease::execute(
-            self.lease,
+            self.lease.lease,
             LeaseState::new(env.block.time, None),
             &env.contract.address,
             &deps.querier,
@@ -95,97 +169,10 @@ impl Controller for Active {
     }
 }
 
-fn try_repay(
-    querier: &QuerierWrapper,
-    env: &Env,
-    info: MessageInfo,
-    lease: LeaseDTO,
-) -> ContractResult<Response> {
-    let payment = bank::may_received::<PaymentGroup, _>(info.funds, IntoDTO::<PaymentGroup>::new())
-        .ok_or_else(ContractError::NoPaymentError)??;
-    if payment.ticker() == lease.loan.lpp().currency() {
-        let RepayResult {
-            lease: lease_updated,
-            emitter,
-        } = with_lease::execute(
-            lease,
-            Repay::new(payment, env),
-            &env.contract.address,
-            querier,
-        )?;
-        Ok(into_resp(emitter, lease_updated))
-    } else {
-        let this_addr = env.contract.address.clone();
-        let next_state = TransferOut::new(lease, payment);
-        let batch = next_state.enter_state(this_addr, env.block.time)?;
-        Ok(Response::from(batch, next_state))
-    }
-}
-
-fn try_close(
-    querier: &QuerierWrapper,
-    env: &Env,
-    info: MessageInfo,
-    lease: LeaseDTO,
-) -> ContractResult<RepayResult> {
-    //TODO Move RepayResult into this layer, rename to, for example, ExecuteResult
-    // and refactor try_* to return it
-    // Take the emitting out of the commands layer
-    let account = bank::my_account(env, querier);
-    let IntoDTOResult { lease, batch } = with_lease::execute(
-        lease,
-        Close::new(&info.sender, account),
-        &env.contract.address,
-        querier,
-    )?;
-
-    let emitter = batch
-        .into_emitter(Type::Close)
-        .emit("id", env.contract.address.clone())
-        .emit_tx_info(env);
-
-    Ok(RepayResult { emitter, lease })
-}
-
-fn try_on_price_alarm(
-    querier: &QuerierWrapper,
-    env: &Env,
-    info: MessageInfo,
-    lease: LeaseDTO,
-) -> ContractResult<AlarmResult> {
-    with_lease::execute(
-        lease,
-        PriceAlarm::new(env, &info.sender, env.block.time),
-        &env.contract.address,
-        querier,
-    )
-}
-
-fn try_on_time_alarm(
-    querier: &QuerierWrapper,
-    env: &Env,
-    info: MessageInfo,
-    lease: LeaseDTO,
-) -> ContractResult<AlarmResult> {
-    with_lease::execute(
-        lease,
-        TimeAlarm::new(env, &info.sender, env.block.time),
-        &env.contract.address,
-        querier,
-    )
-}
-
-fn into_resp<R>(resp: R, lease: LeaseDTO) -> Response
-where
-    R: Into<CwResponse>,
-{
-    Response::from(resp, Active { lease })
-}
-
 fn build_emitter(
     batch: Batch,
     env: &Env,
-    dto: &LeaseDTO,
+    lease: &LeaseDTO,
     loan: OpenLoanRespResult,
     downpayment: DownpaymentCoin,
 ) -> Emitter {
@@ -193,13 +180,24 @@ fn build_emitter(
         .into_emitter(Type::Open)
         .emit_tx_info(env)
         .emit("id", env.contract.address.clone())
-        .emit("customer", dto.customer.clone())
+        .emit("customer", lease.customer.clone())
         .emit_percent_amount(
             "air",
-            loan.annual_interest_rate + dto.loan.annual_margin_interest(),
+            loan.annual_interest_rate + lease.loan.annual_margin_interest(),
         )
-        .emit("currency", dto.amount.ticker())
-        .emit("loan-pool-id", dto.loan.lpp().addr())
+        .emit("currency", lease.amount.ticker())
+        .emit("loan-pool-id", lease.loan.lpp().addr())
         .emit_coin_dto("loan", loan.principal)
         .emit_coin_dto("downpayment", downpayment)
+}
+
+fn into_updated_active<R>(updated_dto: LeaseDTO, dex: Account, resp: R) -> Response
+where
+    R: Into<CwResponse>,
+{
+    let lease = Lease {
+        lease: updated_dto,
+        dex,
+    };
+    Response::from(resp, Active { lease })
 }

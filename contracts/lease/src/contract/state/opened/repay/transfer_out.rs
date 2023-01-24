@@ -1,7 +1,4 @@
-use cosmwasm_std::{Addr, Deps, DepsMut, Env, Timestamp};
-use currency::native::Nls;
-use finance::coin::Coin;
-use platform::bank_ibc::local::{Sender, IBC_TRANSFER_TIMEOUT};
+use cosmwasm_std::{Deps, DepsMut, Env, Timestamp};
 use platform::batch::Batch;
 use sdk::neutron_sdk::sudo::msg::SudoMsg;
 use serde::{Deserialize, Serialize};
@@ -10,42 +7,29 @@ use crate::api::opened::{OngoingTrx, RepayTrx};
 use crate::api::{PaymentCoin, StateQuery, StateResponse};
 use crate::contract::cmd::LeaseState;
 use crate::contract::state::{Controller, Response};
+use crate::contract::Lease;
 use crate::error::ContractResult;
-use crate::lease::{with_lease, LeaseDTO};
-
-//TODO take them as input from the client
-const ICA_TRANSFER_ACK_TIP: Coin<Nls> = Coin::new(1);
-const ICA_TRANSFER_TIMEOUT_TIP: Coin<Nls> = ICA_TRANSFER_ACK_TIP;
+use crate::lease::with_lease;
 
 #[derive(Serialize, Deserialize)]
 pub struct TransferOut {
-    lease: LeaseDTO,
+    lease: Lease,
     payment: PaymentCoin,
 }
 
 impl TransferOut {
-    pub(in crate::contract::state::opened) fn new(lease: LeaseDTO, payment: PaymentCoin) -> Self {
+    pub(in crate::contract::state::opened) fn new(lease: Lease, payment: PaymentCoin) -> Self {
         Self { lease, payment }
     }
 
     pub(in crate::contract::state::opened) fn enter_state(
         &self,
-        _sender: Addr,
-        _now: Timestamp,
+        now: Timestamp,
     ) -> ContractResult<Batch> {
-        #[allow(unreachable_code)]
-        let mut _ibc_sender = Sender::new(
-            "channel TODO",
-            _sender,
-            "receiver TODO".to_owned().try_into()?,
-            _now + IBC_TRANSFER_TIMEOUT,
-            ICA_TRANSFER_ACK_TIP,
-            ICA_TRANSFER_TIMEOUT_TIP,
-        );
-        // TODO apply nls_swap_fee on the downpayment only!
-        _ibc_sender.send(&self.payment)?;
-
-        Ok(_ibc_sender.into())
+        let mut sender = self.lease.dex.transfer_to(now);
+        // TODO apply nls_swap_fee on the payment!
+        sender.send(&self.payment)?;
+        Ok(sender.into())
     }
 }
 
@@ -76,7 +60,7 @@ impl Controller for TransferOut {
         };
 
         with_lease::execute(
-            self.lease,
+            self.lease.lease,
             LeaseState::new(env.block.time, Some(in_progress)),
             &env.contract.address,
             &deps.querier,

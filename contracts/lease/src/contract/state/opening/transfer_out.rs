@@ -1,16 +1,10 @@
-use cosmwasm_std::{Addr, Deps, DepsMut, Env, Timestamp};
-use currency::native::Nls;
-use finance::coin::Coin;
+use cosmwasm_std::{Deps, DepsMut, Env, Timestamp};
 use sdk::neutron_sdk::sudo::msg::SudoMsg;
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use platform::{
-    bank_ibc::local::{Sender, IBC_TRANSFER_TIMEOUT},
-    batch::Batch,
-    ica::HostAccount,
-};
+use platform::{batch::Batch, ica::HostAccount};
 
 use crate::{
     api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
@@ -18,55 +12,43 @@ use crate::{
         cmd::OpenLoanRespResult,
         state::{BuyAsset, Controller, Response},
     },
+    dex::Account,
     error::ContractResult,
 };
-
-//TODO take them as input from the client
-const ICA_TRANSFER_ACK_TIP: Coin<Nls> = Coin::new(1);
-const ICA_TRANSFER_TIMEOUT_TIP: Coin<Nls> = ICA_TRANSFER_ACK_TIP;
 
 #[derive(Serialize, Deserialize)]
 pub struct TransferOut {
     form: NewLeaseForm,
+    dex_account: Account,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    dex_account: HostAccount,
     deps: (LppLenderRef, OracleRef),
 }
 
 impl TransferOut {
     pub(super) fn new(
         form: NewLeaseForm,
+        dex_account: Account,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        dex_account: HostAccount,
         deps: (LppLenderRef, OracleRef),
     ) -> Self {
         Self {
             form,
+            dex_account,
             downpayment,
             loan,
-            dex_account,
             deps,
         }
     }
 
     //TODO define a State trait with `fn enter(&self, deps: &Deps)` and
     //simplify the TransferOut::on_success return type to `impl State`
-    pub(super) fn enter_state(&self, sender: Addr, now: Timestamp) -> ContractResult<Batch> {
-        let mut ibc_sender = Sender::new(
-            &self.form.dex.transfer_channel.local_endpoint,
-            sender,
-            self.dex_account.clone(),
-            now + IBC_TRANSFER_TIMEOUT,
-            ICA_TRANSFER_ACK_TIP,
-            ICA_TRANSFER_TIMEOUT_TIP,
-        );
-        // TODO apply nls_swap_fee on the downpayment only!
-        ibc_sender.send(&self.downpayment)?;
-        ibc_sender.send(&self.loan.principal)?;
-
-        Ok(ibc_sender.into())
+    pub(super) fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
+        let mut sender = self.dex_account.transfer_to(now);
+        sender.send(&self.downpayment)?;
+        sender.send(&self.loan.principal)?;
+        Ok(sender.into())
     }
 }
 
@@ -79,9 +61,9 @@ impl Controller for TransferOut {
             } => {
                 let next_state = BuyAsset::new(
                     self.form,
+                    self.dex_account,
                     self.downpayment,
                     self.loan,
-                    self.dex_account,
                     self.deps,
                 );
                 let batch = next_state.enter_state(&deps.querier)?;
@@ -102,7 +84,7 @@ impl Controller for TransferOut {
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,
             in_progress: OngoingTrx::TransferOut {
-                ica_account: self.dex_account.into(),
+                ica_account: HostAccount::from(self.dex_account).into(),
             },
         })
     }

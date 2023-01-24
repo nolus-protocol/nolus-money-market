@@ -1,97 +1,61 @@
 use cosmwasm_std::Deps;
 use serde::{Deserialize, Serialize};
 
-use currency::{lease::Osmo, native::Nls};
-use finance::{
-    coin::{Coin, CoinDTO},
-    currency::Group,
-    duration::Duration,
-};
+use currency::lease::Osmo;
+use finance::coin::Coin;
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use platform::{
-    batch::Batch as LocalBatch,
-    ica::{self, Batch, HostAccount},
-};
+use platform::{batch::Batch as LocalBatch, ica::HostAccount};
 use sdk::{
     cosmwasm_std::{DepsMut, Env, QuerierWrapper},
     neutron_sdk::sudo::msg::SudoMsg,
 };
-use swap::trx;
 
 use crate::{
     api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
     contract::{
         cmd::OpenLoanRespResult,
         state::{opened::active::Active, Controller, Response},
+        Lease,
     },
+    dex::Account,
     error::ContractResult,
     lease::IntoDTOResult,
 };
 
-const ICA_TRX_TIMEOUT: Duration = Duration::from_days(1);
-const ICA_TRX_ACK_TIP: Coin<Nls> = Coin::new(1);
-const ICA_TRX_TIMEOUT_TIP: Coin<Nls> = ICA_TRX_ACK_TIP;
-
 #[derive(Serialize, Deserialize)]
 pub struct BuyAsset {
     form: NewLeaseForm,
+    dex_account: Account,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    dex_account: HostAccount,
     deps: (LppLenderRef, OracleRef),
 }
 
 impl BuyAsset {
     pub(super) fn new(
         form: NewLeaseForm,
+        dex_account: Account,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        dex_account: HostAccount,
         deps: (LppLenderRef, OracleRef),
     ) -> Self {
         Self {
             form,
+            dex_account,
             downpayment,
             loan,
-            dex_account,
             deps,
         }
     }
 
     pub(super) fn enter_state(&self, querier: &QuerierWrapper) -> ContractResult<LocalBatch> {
-        let mut batch = Batch::default();
+        let mut swap_trx = self.dex_account.swap(&self.deps.1, querier);
         // TODO apply nls_swap_fee on the downpayment only!
-        self.add_swap_trx(&self.downpayment, querier, &mut batch)?;
-        self.add_swap_trx(&self.loan.principal, querier, &mut batch)?;
-        let local_batch = ica::submit_transaction(
-            &self.form.dex.connection_id,
-            batch,
-            "memo",
-            ICA_TRX_TIMEOUT,
-            ICA_TRX_ACK_TIP,
-            ICA_TRX_TIMEOUT_TIP,
-        );
-
-        Ok(local_batch)
-    }
-
-    fn add_swap_trx<G>(
-        &self,
-        coin: &CoinDTO<G>,
-        querier: &QuerierWrapper,
-        batch: &mut Batch,
-    ) -> ContractResult<()>
-    where
-        G: Group,
-    {
-        //TODO do not add a trx if the coin is of the same lease currency
-        let swap_path =
-            self.deps
-                .1
-                .swap_path(coin.ticker().into(), self.form.currency.clone(), querier)?;
-        trx::exact_amount_in(batch, self.dex_account.clone(), coin, &swap_path)?;
-        Ok(())
+        // TODO do not add a trx if the coin is of the same lease currency
+        swap_trx.swap_exact_in(&self.downpayment, &self.form.currency)?;
+        swap_trx.swap_exact_in(&self.loan.principal, &self.form.currency)?;
+        Ok(swap_trx.into())
     }
 }
 
@@ -118,8 +82,10 @@ impl Controller for BuyAsset {
                     &deps.querier,
                     self.deps,
                 )?;
-
-                let next_state = Active::new(lease);
+                let next_state = Active::new(Lease {
+                    lease,
+                    dex: self.dex_account,
+                });
                 let emitter = next_state.enter_state(batch, &env, self.downpayment, self.loan);
                 Ok(Response::from(emitter, next_state))
             }
@@ -138,7 +104,7 @@ impl Controller for BuyAsset {
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,
             in_progress: OngoingTrx::BuyAsset {
-                ica_account: self.dex_account.into(),
+                ica_account: HostAccount::from(self.dex_account).into(),
             },
         })
     }

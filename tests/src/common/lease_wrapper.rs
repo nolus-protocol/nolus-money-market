@@ -4,7 +4,7 @@ use finance::{
 use lease::{
     api::{
         dex::{ConnectionParams, Ics20Channel},
-        ExecuteMsg, InterestPaymentSpec, LoanForm, NewLeaseForm, StateQuery,
+        ExecuteMsg, InterestPaymentSpec, LoanForm, NewLeaseContract, NewLeaseForm, StateQuery,
     },
     contract::{execute, instantiate, query, reply, sudo},
     error::ContractError,
@@ -116,27 +116,29 @@ impl LeaseWrapper {
         lease_currency: &str,
         addresses: LeaseWrapperAddresses,
         config: LeaseWrapperConfig,
-    ) -> NewLeaseForm {
-        NewLeaseForm {
-            customer: config.customer,
-            currency: lease_currency.into(),
-            liability: Liability::new(
-                config.liability_init_percent,
-                config.liability_delta_to_healthy_percent,
-                config.liability_delta_to_max_percent,
-                config.liability_minus_delta_to_first_liq_warn,
-                config.liability_minus_delta_to_second_liq_warn,
-                config.liability_minus_delta_to_third_liq_warn,
-                config.liability_recalc_time,
-            ),
-            loan: LoanForm {
-                annual_margin_interest: config.annual_margin_interest,
-                lpp: addresses.lpp,
-                interest_payment: config.interest_payment,
-                profit: addresses.profit,
+    ) -> NewLeaseContract {
+        NewLeaseContract {
+            form: NewLeaseForm {
+                customer: config.customer,
+                currency: lease_currency.into(),
+                liability: Liability::new(
+                    config.liability_init_percent,
+                    config.liability_delta_to_healthy_percent,
+                    config.liability_delta_to_max_percent,
+                    config.liability_minus_delta_to_first_liq_warn,
+                    config.liability_minus_delta_to_second_liq_warn,
+                    config.liability_minus_delta_to_third_liq_warn,
+                    config.liability_recalc_time,
+                ),
+                loan: LoanForm {
+                    annual_margin_interest: config.annual_margin_interest,
+                    lpp: addresses.lpp,
+                    interest_payment: config.interest_payment,
+                    profit: addresses.profit,
+                },
+                time_alarms: addresses.time_alarms,
+                market_price_oracle: addresses.oracle,
             },
-            time_alarms: addresses.time_alarms,
-            market_price_oracle: addresses.oracle,
             dex: config.dex,
         }
     }
@@ -166,7 +168,7 @@ type LeaseContractWrapperReply = Box<
     ContractWrapper<
         ExecuteMsg,
         ContractError,
-        NewLeaseForm,
+        NewLeaseContract,
         ContractError,
         StateQuery,
         ContractError,

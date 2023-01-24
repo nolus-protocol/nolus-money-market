@@ -9,7 +9,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{DownpaymentCoin, NewLeaseForm},
+    api::{DownpaymentCoin, NewLeaseContract},
     contract::{
         cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
         state::{Controller, Response},
@@ -22,7 +22,7 @@ use super::open_ica_account::OpenIcaAccount;
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestLoan {
-    form: NewLeaseForm,
+    new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     deps: (LppLenderRef, OracleRef),
 }
@@ -31,25 +31,30 @@ impl RequestLoan {
     pub fn new(
         deps: &mut DepsMut,
         info: MessageInfo,
-        form: NewLeaseForm,
+        new_lease: NewLeaseContract,
     ) -> ContractResult<(Batch, Self)> {
         let lpp = LppLenderRef::try_new(
-            form.loan.lpp.clone(),
+            new_lease.form.loan.lpp.clone(),
             &deps.querier,
             ReplyId::OpenLoanReq.into(),
         )?;
 
-        let oracle = OracleRef::try_from(form.market_price_oracle.clone(), &deps.querier)
+        let oracle = OracleRef::try_from(new_lease.form.market_price_oracle.clone(), &deps.querier)
             .expect("Market Price Oracle is not deployed, or wrong address is passed!");
 
         let OpenLoanReqResult { batch, downpayment } = lpp.clone().execute(
-            OpenLoanReq::new(&form, info.funds, oracle.clone(), &deps.querier),
+            OpenLoanReq::new(
+                &new_lease.form.liability,
+                info.funds,
+                oracle.clone(),
+                &deps.querier,
+            ),
             &deps.querier,
         )?;
         Ok((
             batch,
             RequestLoan {
-                form,
+                new_lease,
                 downpayment,
                 deps: (lpp, oracle),
             },
@@ -69,7 +74,8 @@ impl Controller for RequestLoan {
                     .clone()
                     .execute(OpenLoanResp::new(msg), &deps.querier)?;
 
-                let next_state = OpenIcaAccount::new(self.form, self.downpayment, loan, self.deps);
+                let next_state =
+                    OpenIcaAccount::new(self.new_lease, self.downpayment, loan, self.deps);
                 let batch = next_state.enter_state();
                 Ok(Response::from(batch, next_state))
             }

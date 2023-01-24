@@ -1,5 +1,5 @@
 use finance::currency::SymbolOwned;
-use lease::api::{LoanForm, NewLeaseForm};
+use lease::api::{LoanForm, NewLeaseContract, NewLeaseForm};
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
@@ -40,21 +40,23 @@ impl Borrow {
         sender: Addr,
         config: Config,
         currency: SymbolOwned,
-    ) -> ContractResult<NewLeaseForm> {
+    ) -> ContractResult<NewLeaseContract> {
         config
             .dex
-            .map(|dex| NewLeaseForm {
-                customer: sender,
-                currency,
-                liability: config.liability,
-                loan: LoanForm {
-                    annual_margin_interest: config.lease_interest_rate_margin,
-                    lpp: config.lpp_addr,
-                    interest_payment: config.lease_interest_payment,
-                    profit: config.profit,
+            .map(|dex| NewLeaseContract {
+                form: NewLeaseForm {
+                    customer: sender,
+                    currency,
+                    liability: config.liability,
+                    loan: LoanForm {
+                        annual_margin_interest: config.lease_interest_rate_margin,
+                        lpp: config.lpp_addr,
+                        interest_payment: config.lease_interest_payment,
+                        profit: config.profit,
+                    },
+                    time_alarms: config.time_alarms,
+                    market_price_oracle: config.market_price_oracle,
                 },
-                time_alarms: config.time_alarms,
-                market_price_oracle: config.market_price_oracle,
                 dex,
             })
             .ok_or(ContractError::NoDEXConnectivitySetup {})

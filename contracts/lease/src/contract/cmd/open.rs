@@ -6,6 +6,7 @@ use currency::payment::PaymentGroup;
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
     currency::Currency,
+    liability::Liability,
     percent::Percent,
 };
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
@@ -14,12 +15,12 @@ use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Coin as CwCoin, QuerierWrapper, Reply};
 
 use crate::{
-    api::{DownpaymentCoin, LpnCoin, NewLeaseForm},
+    api::{DownpaymentCoin, LpnCoin},
     error::ContractError,
 };
 
 pub struct OpenLoanReq<'a> {
-    form: &'a NewLeaseForm,
+    liability: &'a Liability,
     funds_in: Vec<CwCoin>,
     oracle: OracleRef,
     querier: &'a QuerierWrapper<'a>,
@@ -27,13 +28,13 @@ pub struct OpenLoanReq<'a> {
 
 impl<'a> OpenLoanReq<'a> {
     pub fn new(
-        form: &'a NewLeaseForm,
+        liability: &'a Liability,
         funds_in: Vec<CwCoin>,
         oracle: OracleRef,
         querier: &'a QuerierWrapper<'a>,
     ) -> Self {
         Self {
-            form,
+            liability,
             funds_in,
             oracle,
             querier,
@@ -63,7 +64,7 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
         if downpayment_lpn.is_zero() {
             Err(Self::Error::NoPaymentError())
         } else {
-            let borrow_lpn = self.form.liability.init_borrow_amount(downpayment_lpn);
+            let borrow_lpn = self.liability.init_borrow_amount(downpayment_lpn);
 
             lpp.open_loan_req(borrow_lpn)?;
 

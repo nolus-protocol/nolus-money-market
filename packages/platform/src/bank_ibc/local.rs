@@ -1,7 +1,6 @@
 use finance::{
     coin::{Coin, CoinDTO},
     currency::{Currency, Group},
-    duration::Duration,
 };
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
@@ -18,8 +17,6 @@ use crate::{
     error::Result,
     ica::HostAccount,
 };
-
-pub const IBC_TRANSFER_TIMEOUT: Duration = Duration::from_secs(60);
 
 pub struct Sender<'c> {
     channel: &'c str,

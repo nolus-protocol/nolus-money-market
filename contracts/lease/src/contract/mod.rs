@@ -9,12 +9,15 @@ use sdk::{
     cw_storage_plus::Item,
     neutron_sdk::sudo::msg::SudoMsg,
 };
+use serde::{Deserialize, Serialize};
 use versioning::Version;
 
 use crate::{
-    api::{ExecuteMsg, MigrateMsg, NewLeaseForm, StateQuery},
+    api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
     contract::{state::Controller, state::Response},
+    dex::Account,
     error::{ContractError, ContractResult},
+    lease::LeaseDTO,
 };
 
 use self::state::RequestLoan;
@@ -30,19 +33,20 @@ pub fn instantiate(
     mut deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    form: NewLeaseForm,
+    new_lease: NewLeaseContract,
 ) -> ContractResult<CwResponse> {
-    currency::validate::<LeaseGroup>(&form.currency)?;
-    deps.api.addr_validate(form.customer.as_str())?;
+    //TODO move the following validation into the deserialization
+    currency::validate::<LeaseGroup>(&new_lease.form.currency)?;
+    deps.api.addr_validate(new_lease.form.customer.as_str())?;
 
-    platform::contract::validate_addr(&deps.querier, &form.time_alarms)?;
-    platform::contract::validate_addr(&deps.querier, &form.market_price_oracle)?;
-    platform::contract::validate_addr(&deps.querier, &form.loan.lpp)?;
-    platform::contract::validate_addr(&deps.querier, &form.loan.profit)?;
+    platform::contract::validate_addr(&deps.querier, &new_lease.form.time_alarms)?;
+    platform::contract::validate_addr(&deps.querier, &new_lease.form.market_price_oracle)?;
+    platform::contract::validate_addr(&deps.querier, &new_lease.form.loan.lpp)?;
+    platform::contract::validate_addr(&deps.querier, &new_lease.form.loan.profit)?;
 
     versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
 
-    let (batch, next_state) = RequestLoan::new(&mut deps, info, form)?;
+    let (batch, next_state) = RequestLoan::new(&mut deps, info, new_lease)?;
     impl_::save(&next_state.into(), &mut deps)?;
     Ok(batch.into())
 }
@@ -109,6 +113,12 @@ pub fn sudo(mut deps: DepsMut, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
 pub fn query(deps: Deps, env: Env, msg: StateQuery) -> ContractResult<Binary> {
     let resp = impl_::load(&deps)?.query(deps, env, msg)?;
     to_binary(&resp).map_err(ContractError::from)
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct Lease {
+    pub lease: LeaseDTO,
+    pub dex: Account,
 }
 
 mod impl_ {
