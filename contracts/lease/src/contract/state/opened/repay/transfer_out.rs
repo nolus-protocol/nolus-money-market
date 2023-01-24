@@ -3,13 +3,13 @@ use platform::batch::Batch;
 use sdk::neutron_sdk::sudo::msg::SudoMsg;
 use serde::{Deserialize, Serialize};
 
-use crate::api::opened::{OngoingTrx, RepayTrx};
+use crate::api::opened::RepayTrx;
 use crate::api::{PaymentCoin, StateQuery, StateResponse};
-use crate::contract::cmd::LeaseState;
-use crate::contract::state::{Controller, Response};
+use crate::contract::state::{opened::repay, Controller, Response};
 use crate::contract::Lease;
 use crate::error::ContractResult;
-use crate::lease::with_lease;
+
+use super::buy_lpn::BuyLpn;
 
 #[derive(Serialize, Deserialize)]
 pub struct TransferOut {
@@ -34,15 +34,15 @@ impl TransferOut {
 }
 
 impl Controller for TransferOut {
-    fn sudo(self, _deps: &mut DepsMut, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
+    fn sudo(self, deps: &mut DepsMut, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response {
                 request: _,
                 data: _,
             } => {
-                todo!(
-                    "proceed with Swap - TransferIn before landing to the same Lease::repay call"
-                );
+                let next_state = BuyLpn::new(self.lease, self.payment);
+                let batch = next_state.enter_state(&deps.querier)?;
+                Ok(Response::from(batch, next_state))
             }
             SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {
@@ -54,16 +54,12 @@ impl Controller for TransferOut {
     }
 
     fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
-        let in_progress = OngoingTrx::Repayment {
-            payment: self.payment,
-            in_progress: RepayTrx::TransferOut,
-        };
-
-        with_lease::execute(
+        repay::query(
             self.lease.lease,
-            LeaseState::new(env.block.time, Some(in_progress)),
-            &env.contract.address,
-            &deps.querier,
+            self.payment,
+            RepayTrx::TransferOut,
+            &deps,
+            &env,
         )
     }
 }
