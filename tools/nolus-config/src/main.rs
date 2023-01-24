@@ -1,70 +1,101 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use std::{
-    ffi::OsStr,
-    fs::{create_dir, remove_dir_all, remove_file, File},
+    borrow::Cow,
+    env::{current_dir, var_os},
+    fs::{create_dir, remove_dir_all, File},
     io::{stdin, Read, Write},
     path::{Path, PathBuf},
 };
 
+use anyhow::{Context, Result as AnyResult};
 use serde::Deserialize;
 use serde_json::Deserializer;
 
+use nolus_config::{CurrencyTemplate, GroupTemplate, ModuleName, Template};
+
 use crate::{
     args::{Args, Subcommand},
-    currencies::{Currencies, CurrencyFilenameSource, GroupFilenameSource},
-    error::Error,
+    currencies::Currencies,
 };
-
-const CURRENCY_TEMPLATE: &str = include_str!("currency.template.txt");
-
-const GROUP_TEMPLATE: &str = include_str!("groups.template.txt");
 
 pub mod args;
 pub mod currencies;
-pub mod error;
 
-fn main() -> Result<(), Error> {
+const LIB_POSTSCRIPT: &str = include_str!("../templates/lib_postscript.plain.txt");
+
+const CURRENCY_POSTSCRIPT: &str = include_str!("../templates/currency_postscript.plain.txt");
+
+const GROUP_POSTSCRIPT: &str = include_str!("../templates/group_postscript.plain.txt");
+
+fn main() -> AnyResult<()> {
     let args: Args = Args::parse();
 
     match args.subcommand {
         Subcommand::GenerateCurrencies { output_dir } => generate_currencies(output_dir)?,
-        Subcommand::SetupScript { .. } => {}
+        Subcommand::SetupScript { .. } => unimplemented!(),
     }
 
     Ok(())
 }
 
-fn generate_currencies(output_dir: PathBuf) -> Result<(), Error> {
-    let currencies: Currencies = read_currencies()?;
+fn generate_currencies(output_dir: PathBuf) -> AnyResult<()> {
+    let currencies: Currencies = read_currencies().context("Couldn't read currencies!")?;
 
-    clean_output_dir(&output_dir)?;
+    clean_output_dir(&output_dir).context("Couldn't clean up directory!")?;
 
-    let currency_dir = currency_dir(output_dir.clone())?;
+    let currencies_dir = currencies_dir(output_dir.clone())?;
 
-    let group_dir = group_dir(output_dir.clone())?;
+    let groups_dir = groups_dir(output_dir.clone())?;
 
-    let mut lib_rs = create_lib_rs(output_dir)?;
+    let mut file_paths = vec![];
 
-    let generated = currencies.generate("crate::currencies");
+    let mut lib_rs =
+        create_lib_rs(output_dir, &mut file_paths).context("Couldn't create `lib.rs` file!")?;
 
-    lib_rs.write_all(b"pub mod currencies {")?;
+    lib_rs.write_all(
+        b"//! Auto-generated. Not intended for manual editing!\n\npub mod currencies {",
+    )?;
 
-    for currency_source in generated.currencies.iter() {
-        write_currency(currency_dir.clone(), &mut lib_rs, currency_source)?;
+    write_down_currencies(&currencies, currencies_dir, &mut lib_rs, &mut file_paths)?;
+
+    lib_rs.write_all(b"\n}\n\npub  mod  groups {")?;
+
+    write_down_groups(&currencies, groups_dir, &mut lib_rs, &mut file_paths)?;
+
+    lib_rs.write_all(b"}\n")?;
+
+    let lib_postscript: &[u8] = LIB_POSTSCRIPT.trim().as_bytes();
+
+    if !lib_postscript.is_empty() {
+        lib_rs.write_all(b"\n")?;
+
+        lib_rs.write_all(lib_postscript)?;
     }
 
-    lib_rs.write_all(b"}\n\npub mod groups {")?;
+    std::process::Command::new({
+        let mut path = var_os("CARGO_HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from("~/.cargo"));
 
-    for group_source in generated.groups.iter() {
-        write_group(group_dir.clone(), &mut lib_rs, group_source)?;
-    }
+        path.push("bin");
+        path.push("rustfmt");
 
-    lib_rs.write_all(b"}\n").map_err(Into::into)
+        path
+    })
+    .current_dir(current_dir().context("Couldn't fetch current working directory!")?)
+    .args(["--emit", "files"])
+    .args(file_paths)
+    .spawn()
+    .context("Couldn't spawn `rustfmt` process!")?
+    .wait()
+    .context("`rustfmt` process exited unexpectedly!")?;
+
+    Ok(())
 }
 
-fn read_currencies() -> Result<Currencies, Error> {
-    <Currencies as Deserialize>::deserialize(&mut Deserializer::from_reader(
+fn read_currencies() -> AnyResult<Currencies> {
+    Currencies::deserialize(&mut Deserializer::from_reader(
         &mut {
             let mut buf = Vec::new();
 
@@ -74,26 +105,35 @@ fn read_currencies() -> Result<Currencies, Error> {
         }
         .as_slice(),
     ))
-    .map_err(Error::from_deserialization)
+    .map_err(Into::into)
 }
 
-fn clean_output_dir(output_dir: &Path) -> Result<(), Error> {
-    for entry in output_dir.read_dir()? {
-        let entry = entry?;
+fn create_lib_rs(mut output_dir: PathBuf, file_paths: &mut Vec<PathBuf>) -> AnyResult<File> {
+    output_dir.push("lib.rs");
 
-        if ![OsStr::new("."), OsStr::new("..")].contains(&entry.file_name().as_os_str()) {
-            (if entry.file_type()?.is_dir() {
-                remove_dir_all
-            } else {
-                remove_file
-            }(entry.path()))?;
-        }
+    let lib_rs = File::create(&output_dir)?;
+
+    file_paths.push(output_dir);
+
+    Ok(lib_rs)
+}
+
+fn clean_output_dir(output_dir: &Path) -> AnyResult<()> {
+    if output_dir.exists() {
+        assert!(
+            output_dir.is_dir(),
+            "Path for output directory points to existing file! Please remove file to proceed!"
+        );
+
+        remove_dir_all(output_dir)?;
     }
+
+    create_dir(output_dir)?;
 
     Ok(())
 }
 
-fn currency_dir(mut output_dir: PathBuf) -> Result<PathBuf, Error> {
+fn currencies_dir(mut output_dir: PathBuf) -> AnyResult<PathBuf> {
     output_dir.push("currencies");
 
     create_dir(&output_dir)?;
@@ -101,7 +141,7 @@ fn currency_dir(mut output_dir: PathBuf) -> Result<PathBuf, Error> {
     Ok(output_dir)
 }
 
-fn group_dir(mut output_dir: PathBuf) -> Result<PathBuf, Error> {
+fn groups_dir(mut output_dir: PathBuf) -> AnyResult<PathBuf> {
     output_dir.push("groups");
 
     create_dir(&output_dir)?;
@@ -109,47 +149,92 @@ fn group_dir(mut output_dir: PathBuf) -> Result<PathBuf, Error> {
     Ok(output_dir)
 }
 
-fn create_lib_rs(output_dir: PathBuf) -> Result<File, Error> {
-    File::create({
-        let mut lib_rs_path = output_dir;
+fn write_down_currencies(
+    currencies: &Currencies,
+    currencies_dir: PathBuf,
+    lib_rs: &mut File,
+    file_paths: &mut Vec<PathBuf>,
+) -> AnyResult<()> {
+    let postscript = CURRENCY_POSTSCRIPT.trim();
 
-        lib_rs_path.push("lib");
-
-        lib_rs_path.set_extension("rs");
-
-        lib_rs_path
+    currencies.currencies_iter().try_for_each(move |currency| {
+        write_down_by_template::<CurrencyTemplate, { CurrencyTemplate::ARRAY_SIZE }>(
+            currencies_dir.clone(),
+            lib_rs,
+            &currency,
+            file_paths,
+            postscript,
+        )
     })
-    .map_err(Into::into)
 }
 
-fn write_currency(
-    mut currency_path: PathBuf,
+fn write_down_groups(
+    currencies: &Currencies,
+    groups_dir: PathBuf,
     lib_rs: &mut File,
-    currency_source: CurrencyFilenameSource,
-) -> Result<(), Error> {
-    lib_rs.write_all(format!("\n\tpub mod {};\n", currency_source.filename()).as_bytes())?;
+    file_paths: &mut Vec<PathBuf>,
+) -> AnyResult<()> {
+    let postscript = GROUP_POSTSCRIPT.trim();
 
-    currency_path.push(currency_source.filename());
-
-    currency_path.set_extension("rs");
-
-    currency_source
-        .generate_source(File::create(currency_path)?)
-        .map_err(Into::into)
+    currencies.groups_iter().try_for_each(move |group| {
+        write_down_by_template::<GroupTemplate, { GroupTemplate::ARRAY_SIZE }>(
+            groups_dir.clone(),
+            lib_rs,
+            &group,
+            file_paths,
+            postscript,
+        )
+    })
 }
 
-fn write_group(
-    mut group_path: PathBuf,
+fn write_down_by_template<T, const N: usize>(
+    dir_path: PathBuf,
     lib_rs: &mut File,
-    group_source: GroupFilenameSource,
-) -> Result<(), Error> {
-    lib_rs.write_all(format!("\n\tpub mod {};\n", group_source.filename()).as_bytes())?;
+    data: &T::SubstitutionData,
+    file_paths: &mut Vec<PathBuf>,
+    postscript: &str,
+) -> AnyResult<()>
+where
+    T: Template<N>,
+    T::SubstitutionData: ModuleName,
+{
+    let name = data.module_name();
 
-    group_path.push(group_source.filename());
+    write_down_segments(
+        dir_path,
+        &name,
+        &T::substitute(data),
+        file_paths,
+        postscript,
+    )?;
 
-    group_path.set_extension("rs");
+    lib_rs.write_all(b"\n\tpub  mod  ")?;
+    lib_rs.write_all(name.as_bytes())?;
+    lib_rs.write_all(b";").map_err(Into::into)
+}
 
-    group_source
-        .generate_source(File::create(group_path)?)
+fn write_down_segments(
+    mut dir_path: PathBuf,
+    module_name: &str,
+    segments: &[Cow<str>],
+    file_paths: &mut Vec<PathBuf>,
+    postscript: &str,
+) -> AnyResult<()> {
+    dir_path.push(module_name);
+
+    dir_path.set_extension("rs");
+
+    let mut module_file: File = File::create(&dir_path)?;
+
+    file_paths.push(dir_path);
+
+    module_file.write_all(b"//! Auto-generated. Not intended for manual editing!\n\n")?;
+
+    segments
+        .iter()
+        .try_for_each(|segment| module_file.write_all(segment.as_bytes()))?;
+
+    module_file
+        .write_all(postscript.as_bytes())
         .map_err(Into::into)
 }

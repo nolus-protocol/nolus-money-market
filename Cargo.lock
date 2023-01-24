@@ -910,9 +910,12 @@ dependencies = [
 name = "nolus-config"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "clap",
+ "heck",
  "serde",
  "serde_json",
+ "sha2 0.10.6",
  "thiserror",
 ]
 

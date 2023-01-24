@@ -1,0 +1,92 @@
+[
+    &"\
+use serde::{Serialize, Deserialize};
+
+use finance::currency::{AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic, maybe_visit_on_ticker as maybe_visit};
+use sdk::schemars::{self, JsonSchema};
+
+use crate::SingleVisitorAdapter;
+pub use crate::",
+    &CurrenciesModule,
+    &"::{
+",
+    &ForEachCurrency {
+        pattern: &[
+            &"    ",
+            &CurrencyModule,
+            &"::",
+            &CurrencyStructName,
+        ],
+        delimiter: ",
+",
+    },
+    &"
+};
+
+#[derive(Debug, Copy, Clone, Ord, Eq, PartialOrd, PartialEq, Default, Serialize, Deserialize, JsonSchema)]
+pub struct ",
+    &StructName,
+    &"Group {}
+
+impl Group for ",
+    &StructName,
+    &"Group {
+    const DESCR: SymbolStatic = \"",
+    &FriendlyName,
+    &"\";
+
+    fn maybe_visit_on_ticker<V>(ticker: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
+    where
+        V: AnyVisitor,
+    {
+        use crate::",
+    &CurrenciesModule,
+    &" as curr;
+
+        let v: SingleVisitorAdapter<_> = visitor.into();
+
+        (",
+    &ForEachCurrency {
+        pattern: &[
+            &"maybe_visit::<curr::",
+            &CurrencyModule,
+            &"::",
+            &CurrencyStructName,
+            &", _>(ticker, v)",
+        ],
+        delimiter: ")
+            .or_else(|v| ",
+    },
+    &")
+            .map_err(|v| v.0)
+    }
+
+    fn maybe_visit_on_bank_symbol<V>(bank_symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
+    where
+        Self: Sized,
+        V: AnyVisitor,
+    {
+        use crate::",
+    &CurrenciesModule,
+    &" as curr;
+
+        let v: SingleVisitorAdapter<_> = visitor.into();
+
+        (",
+    &ForEachCurrency {
+        pattern: &[
+            &"maybe_visit::<curr::",
+            &CurrencyModule,
+            &"::",
+            &CurrencyStructName,
+            &", _>(bank_symbol, v)",
+        ],
+        delimiter: ")
+            .or_else(|v| ",
+    },
+    &")
+            .map_err(|v| v.0)
+    }
+}
+",
+]

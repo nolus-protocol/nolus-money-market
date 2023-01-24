@@ -33,18 +33,24 @@ pub enum Subcommand {
 }
 
 fn path_parser(input: &str) -> Result<PathBuf, clap::Error> {
-    PathBuf::from(input).canonicalize().map_err(|_| {
-        clap::error::Error::raw(
-            clap::error::ErrorKind::InvalidValue,
-            "Provided path can't be resolved and converted to canonical one!",
-        )
-    })
+    let path = PathBuf::from(input);
+
+    if path.exists() {
+        path.canonicalize().map_err(|_| {
+            clap::error::Error::raw(
+                clap::error::ErrorKind::InvalidValue,
+                "Provided path can't be resolved and converted to canonical one!",
+            )
+        })
+    } else {
+        Ok(path)
+    }
 }
 
 fn dir_path_parser(input: &str) -> Result<PathBuf, clap::Error> {
     let path = path_parser(input)?;
 
-    if !path.is_dir() {
+    if path.exists() && !path.is_dir() {
         return Err(clap::error::Error::raw(
             clap::error::ErrorKind::ValueValidation,
             "Provided path doesn't point to a directory!",

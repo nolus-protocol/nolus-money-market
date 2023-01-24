@@ -1,0 +1,32 @@
+[
+    &"\
+use serde::{Deserialize, Serialize};
+
+use finance::currency::{Currency, SymbolStatic};
+use sdk::schemars::{self, JsonSchema};
+
+/// Name: ",
+    &FriendlyName,
+    &"
+#[derive(Debug, Copy, Clone, Ord, Eq, PartialOrd, PartialEq, Default, Serialize, Deserialize, JsonSchema)]
+pub struct ",
+    &StructName,
+    &";
+
+impl Currency for ",
+    &StructName,
+    &" {
+    const TICKER: SymbolStatic = \"",
+    &Ticker,
+    &"\";
+
+    const BANK_SYMBOL: SymbolStatic = \"ibc/",
+    &BankSymbol,
+    &"\";
+
+    const DEX_SYMBOL: SymbolStatic = \"ibc/",
+    &DexSymbol,
+    &"\";
+}
+",
+]
