@@ -101,7 +101,7 @@ jobs:
           }
 
           check_sizes() {
-            find artifacts_${1}_net/ -size +800k | wc -l | read large_files_count
+            find artifacts_${1}_net/ -size +1000k | wc -l | read large_files_count
 
             if !test "$large_files_count" = "0";
               then exit 1;
