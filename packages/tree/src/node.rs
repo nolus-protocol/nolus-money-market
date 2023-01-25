@@ -7,7 +7,7 @@ pub(crate) type NodeIndex = u16;
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 pub(crate) struct Node<T> {
-    parent: u16,
+    parent: NodeIndex,
     value: T,
 }
 

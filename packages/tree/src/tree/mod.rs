@@ -27,8 +27,13 @@ impl<T> Tree<T> {
     where
         F: FnMut(&T) -> bool,
     {
-        // `Iterator::enumerate` is not used to avoid problems with Rust emitting floating-point
-        // instructions on WASM on some cases where `usize` is used.
+        // `Iterator::enumerate` is not used to avoid problems with Rust
+        // emitting floating-point instructions on WASM on some cases where
+        // `usize` is used.
+        //
+        // Using zero as a literal instead of using `ROOT_INDEX` as it
+        // represents the beginning of the vector and not necessarily the
+        // tree's root.
         let mut index: NodeIndex = 0;
 
         self.nodes.iter().find_map(|raw_node| {

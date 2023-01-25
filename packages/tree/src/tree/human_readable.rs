@@ -1,7 +1,10 @@
 use serde::{de::Error, Deserialize, Deserializer};
 
 use crate::{
-    node::Node,
+    node::{
+        Node,
+        NodeIndex,
+    },
     tree::{Nodes, Tree},
 };
 
@@ -15,7 +18,7 @@ pub struct HumanReadableTree<T> {
 impl<T> HumanReadableTree<T> {
     pub fn into_tree(self) -> Tree<T> {
         Tree {
-            nodes: self.root.flatten(0, 0),
+            nodes: self.root.flatten(Tree::<T>::ROOT_INDEX, Tree::<T>::ROOT_INDEX),
         }
     }
 }
@@ -34,7 +37,7 @@ enum HRTNode<T> {
 }
 
 impl<T> HRTNode<T> {
-    fn flatten(self, parent: u16, this: u16) -> Nodes<T> {
+    fn flatten(self, parent: NodeIndex, this: NodeIndex) -> Nodes<T> {
         match self {
             HRTNode::Leaf { value } => {
                 vec![Node::new(parent, value)]
@@ -49,7 +52,7 @@ impl<T> HRTNode<T> {
                             nodes.append(
                                 &mut node.flatten(
                                     this,
-                                    this + u16::try_from(nodes.len())
+                                    this + NodeIndex::try_from(nodes.len())
                                         .expect("Tree contains too many elements!"),
                                 ),
                             );
