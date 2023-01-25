@@ -15,11 +15,11 @@ pub struct TransferIn {
 }
 
 impl TransferIn {
-    pub(in crate::contract::state) fn _new(lease: Lease) -> Self {
+    pub(in crate::contract::state) fn new(lease: Lease) -> Self {
         Self { lease }
     }
 
-    pub(in crate::contract::state) fn _enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
+    pub(in crate::contract::state) fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
         let mut sender = self.lease.dex.transfer_from(now);
         sender.send(&self.lease.lease.amount)?;
         Ok(sender.into())

@@ -19,7 +19,7 @@ use crate::{
             AlarmResult, Close, LeaseState, OpenLoanRespResult, PriceAlarm, Repay, RepayResult,
             TimeAlarm,
         },
-        state::{Controller, Response},
+        state::{paid, Controller, Response},
         Lease,
     },
     dex::Account,
@@ -69,17 +69,16 @@ impl Active {
             querier,
         )?;
 
-        if paid {
-            todo!("into Paid state");
+        let new_lease = Lease {
+            lease: lease_updated,
+            dex: lease.dex,
+        };
+        let resp = if paid {
+            Response::from(emitter, paid::Active::new(new_lease))
         } else {
-            Ok(Response::from(
-                emitter,
-                Active::new(Lease {
-                    lease: lease_updated,
-                    dex: lease.dex,
-                }),
-            ))
-        }
+            Response::from(emitter, Active::new(new_lease))
+        };
+        Ok(resp)
     }
 
     fn try_repay(

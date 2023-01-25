@@ -25,6 +25,7 @@ mod paid;
 type OpeningTransferOut = opening::transfer_out::TransferOut;
 type RepaymentTransferOut = opened::repay::transfer_out::TransferOut;
 type RepaymentTransferIn = opened::repay::transfer_in::TransferIn;
+type PaidActive = paid::Active;
 type ClosingTransferIn = paid::transfer_in::TransferIn;
 
 #[enum_dispatch(Controller)]
@@ -38,6 +39,7 @@ pub enum State {
     RepaymentTransferOut,
     BuyLpn,
     RepaymentTransferIn,
+    PaidActive,
     ClosingTransferIn,
 }
 
