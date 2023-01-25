@@ -1,10 +1,7 @@
 use serde::{de::Error, Deserialize, Deserializer};
 
 use crate::{
-    node::{
-        Node,
-        NodeIndex,
-    },
+    node::{Node, NodeIndex},
     tree::{Nodes, Tree},
 };
 
@@ -18,7 +15,9 @@ pub struct HumanReadableTree<T> {
 impl<T> HumanReadableTree<T> {
     pub fn into_tree(self) -> Tree<T> {
         Tree {
-            nodes: self.root.flatten(Tree::<T>::ROOT_INDEX, Tree::<T>::ROOT_INDEX),
+            nodes: self
+                .root
+                .flatten(Tree::<T>::ROOT_INDEX, Tree::<T>::ROOT_INDEX),
         }
     }
 }
