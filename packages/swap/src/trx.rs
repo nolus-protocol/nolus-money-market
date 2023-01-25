@@ -31,7 +31,7 @@ where
     // https://docs.osmosis.zone/osmosis-core/modules/gamm/#swap.
     // Then apply the parameterized maximum slippage to get the minimum amount.
     // For the first version, we accept whatever price impact and slippage.
-    const MIN_OUT_AMOUNT: &str = "0";
+    const MIN_OUT_AMOUNT: &str = "1";
     let routes = to_route(swap_path)?;
     let token_in = Some(to_cwcoin(token_in)?);
     let token_out_min_amount = MIN_OUT_AMOUNT.into();
