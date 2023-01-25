@@ -6,7 +6,8 @@ use finance::{
 use lease::{
     api::{
         dex::{ConnectionParams, Ics20Channel},
-        ExecuteMsg, InterestPaymentSpec, LoanForm, NewLeaseContract, NewLeaseForm, StateQuery, StateResponse,
+        ExecuteMsg, InterestPaymentSpec, LoanForm, NewLeaseContract, NewLeaseForm, StateQuery,
+        StateResponse,
     },
     contract::{execute, instantiate, query, reply, sudo},
     error::ContractError,
