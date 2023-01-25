@@ -56,7 +56,7 @@ impl Controller for BuyLpn {
                 request: _,
                 details: _,
             } => todo!(),
-            _ => todo!(),
+            _ => unreachable!(),
         }
     }
 

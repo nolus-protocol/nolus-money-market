@@ -49,7 +49,7 @@ impl Controller for TransferOut {
                 request: _,
                 details: _,
             } => todo!(),
-            _ => todo!(),
+            _ => unreachable!(),
         }
     }
 

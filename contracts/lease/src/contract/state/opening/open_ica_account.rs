@@ -80,7 +80,7 @@ impl Controller for OpenIcaAccount {
                 request: _,
                 details: _,
             } => todo!(),
-            _ => todo!(),
+            _ => unreachable!(),
         }
     }
 

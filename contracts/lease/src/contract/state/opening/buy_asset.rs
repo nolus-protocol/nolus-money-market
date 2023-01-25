@@ -94,7 +94,7 @@ impl Controller for BuyAsset {
                 request: _,
                 details: _,
             } => todo!(),
-            _ => todo!(),
+            _ => unreachable!(),
         }
     }
 
