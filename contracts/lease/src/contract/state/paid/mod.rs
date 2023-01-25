@@ -1,7 +1,11 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, Deps};
-use serde::{Serialize, Deserialize};
+use cosmwasm_std::{Deps, DepsMut, Env, MessageInfo};
+use serde::{Deserialize, Serialize};
 
-use crate::{contract::Lease, api::{ExecuteMsg, StateResponse, StateQuery}, error::ContractResult};
+use crate::{
+    api::{ExecuteMsg, StateQuery, StateResponse},
+    contract::Lease,
+    error::ContractResult,
+};
 
 use self::transfer_in::TransferIn;
 
@@ -34,9 +38,13 @@ impl Controller for Active {
                 let next_state = TransferIn::new(self.lease);
                 let batch = next_state.enter_state(env.block.time)?;
                 Ok(Response::from(batch, next_state))
-            },
-            ExecuteMsg::PriceAlarm() => todo!("silently pass or make sure the alarm has been removed"),
-            ExecuteMsg::TimeAlarm(_block_time) => todo!("silently pass or make sure the alarm has been removed"),
+            }
+            ExecuteMsg::PriceAlarm() => {
+                todo!("silently pass or make sure the alarm has been removed")
+            }
+            ExecuteMsg::TimeAlarm(_block_time) => {
+                todo!("silently pass or make sure the alarm has been removed")
+            }
         }
     }
 
