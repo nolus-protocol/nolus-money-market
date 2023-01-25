@@ -8,7 +8,7 @@ use finance::{
 };
 use oracle::stub::OracleRef;
 use platform::{
-    bank_ibc::local::Sender,
+    bank_ibc::{local::Sender as LocalSender, remote::Sender as RemoteSender},
     batch::Batch as LocalBatch,
     ica::{self, Batch as RemoteBatch, HostAccount},
 };
@@ -63,6 +63,16 @@ impl Account {
     pub fn swap<'a>(&'a self, oracle: &'a OracleRef, querier: &'a QuerierWrapper) -> SwapTrx {
         SwapTrx::new(&self.dex.connection_id, &self.ica_account, oracle, querier)
     }
+
+    pub fn transfer_from(&self, now: Timestamp) -> TransferInTrx {
+        TransferInTrx::new(
+            &self.dex.connection_id,
+            &self.dex.transfer_channel.remote_endpoint,
+            &self.ica_account,
+            &self.owner,
+            now,
+        )
+    }
 }
 
 impl From<Account> for HostAccount {
@@ -72,12 +82,12 @@ impl From<Account> for HostAccount {
 }
 
 pub struct TransferOutTrx<'a> {
-    sender: Sender<'a>,
+    sender: LocalSender<'a>,
 }
 
 impl<'a> TransferOutTrx<'a> {
     fn new(channel: &'a str, sender: &Addr, receiver: &HostAccount, now: Timestamp) -> Self {
-        let sender = Sender::new(
+        let sender = LocalSender::new(
             channel,
             sender.clone(),
             receiver.clone(),
@@ -98,7 +108,7 @@ impl<'a> TransferOutTrx<'a> {
 
 impl From<TransferOutTrx<'_>> for LocalBatch {
     fn from(value: TransferOutTrx) -> Self {
-        value.into()
+        value.sender.into()
     }
 }
 
@@ -153,6 +163,45 @@ impl From<SwapTrx<'_>> for LocalBatch {
         ica::submit_transaction(
             value.conn,
             value.batch,
+            "memo",
+            IBC_TIMEOUT,
+            ICA_SWAP_ACK_TIP,
+            ICA_SWAP_TIMEOUT_TIP,
+        )
+    }
+}
+
+pub struct TransferInTrx<'a> {
+    conn: &'a str,
+    sender: RemoteSender<'a>,
+}
+
+impl<'a> TransferInTrx<'a> {
+    fn new(
+        conn: &'a str,
+        channel: &'a str,
+        sender: &HostAccount,
+        receiver: &Addr,
+        now: Timestamp,
+    ) -> Self {
+        let sender =
+            RemoteSender::new(channel, sender.clone(), receiver.clone(), now + IBC_TIMEOUT);
+        TransferInTrx { conn, sender }
+    }
+
+    pub fn send<G>(&mut self, amount: &CoinDTO<G>) -> ContractResult<()>
+    where
+        G: Group,
+    {
+        self.sender.send(amount).map_err(Into::into)
+    }
+}
+
+impl From<TransferInTrx<'_>> for LocalBatch {
+    fn from(value: TransferInTrx) -> Self {
+        ica::submit_transaction(
+            value.conn,
+            value.sender.into(),
             "memo",
             IBC_TIMEOUT,
             ICA_SWAP_ACK_TIP,

@@ -9,26 +9,26 @@ use sdk::cosmwasm_std::Env;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
-    api::PaymentCoin,
+    api::LpnCoin,
     error::ContractError,
     event::Type,
     lease::{with_lease::WithLease, Lease, LeaseDTO, RepayResult as LeaseRepayResult},
 };
 
 pub struct Repay<'a> {
-    payment: PaymentCoin,
+    payment: LpnCoin,
     env: &'a Env,
 }
 
 impl<'a> Repay<'a> {
-    // TODO once refacture CoinDTO and Group take LpnCoin
-    pub fn new(payment: PaymentCoin, env: &'a Env) -> Self {
+    pub fn new(payment: LpnCoin, env: &'a Env) -> Self {
         Self { payment, env }
     }
 }
 
 pub struct RepayResult {
     pub lease: LeaseDTO,
+    pub paid: bool,
     pub emitter: Emitter,
 }
 
@@ -71,6 +71,10 @@ impl<'a> WithLease for Repay<'a> {
             .emit_coin_amount("principal", receipt.principal_paid())
             .emit_coin_amount("change", receipt.change());
 
-        Ok(RepayResult { lease, emitter })
+        Ok(RepayResult {
+            lease,
+            paid: receipt.close(),
+            emitter,
+        })
     }
 }

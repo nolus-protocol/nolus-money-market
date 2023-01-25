@@ -1,4 +1,5 @@
-use currency::payment::PaymentGroup;
+use cosmwasm_std::Addr;
+use currency::{lpn::Lpns, payment::PaymentGroup};
 use finance::coin::IntoDTO;
 use serde::{Deserialize, Serialize};
 
@@ -12,7 +13,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{DownpaymentCoin, ExecuteMsg, StateQuery, StateResponse},
+    api::{DownpaymentCoin, ExecuteMsg, LpnCoin, StateQuery, StateResponse},
     contract::{
         cmd::{
             AlarmResult, Close, LeaseState, OpenLoanRespResult, PriceAlarm, Repay, RepayResult,
@@ -49,29 +50,58 @@ impl Active {
         build_emitter(batch, env, &self.lease.lease, loan, downpayment)
     }
 
+    pub(in crate::contract::state::opened) fn try_repay_lpn(
+        lease: Lease,
+        payment: LpnCoin,
+        contract_addr: &Addr,
+        querier: &QuerierWrapper,
+        env: &Env,
+    ) -> ContractResult<Response> {
+        // TODO return ContractResult<(RepayReceipt, Batch)>
+        let RepayResult {
+            lease: lease_updated,
+            paid,
+            emitter,
+        } = with_lease::execute(
+            lease.lease,
+            Repay::new(payment, env),
+            contract_addr,
+            querier,
+        )?;
+
+        if paid {
+            todo!("into Paid state");
+        } else {
+            Ok(Response::from(
+                emitter,
+                Active::new(Lease {
+                    lease: lease_updated,
+                    dex: lease.dex,
+                }),
+            ))
+        }
+    }
+
     fn try_repay(
         self,
         querier: &QuerierWrapper,
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        let payment =
-            bank::may_received::<PaymentGroup, _>(info.funds, IntoDTO::<PaymentGroup>::new())
-                .ok_or_else(ContractError::NoPaymentError)??;
-        let lease = self.lease;
-        if payment.ticker() == lease.lease.loan.lpp().currency() {
-            let RepayResult {
-                lease: lease_updated,
-                emitter,
-            } = with_lease::execute(
-                lease.lease,
-                Repay::new(payment, env),
-                &env.contract.address,
-                querier,
-            )?;
-            Ok(into_updated_active(lease_updated, lease.dex, emitter))
+        let payment = bank::may_received::<PaymentGroup, _>(
+            info.funds.clone(),
+            IntoDTO::<PaymentGroup>::new(),
+        )
+        .ok_or_else(ContractError::NoPaymentError)??;
+        if payment.ticker() == self.lease.lease.loan.lpp().currency() {
+            // TODO once refacture CoinDTO and Group convert to LpnCoin instead
+            let payment_lpn =
+                bank::may_received::<PaymentGroup, _>(info.funds, IntoDTO::<Lpns>::new())
+                    .ok_or_else(ContractError::NoPaymentError)??;
+
+            Self::try_repay_lpn(self.lease, payment_lpn, &env.contract.address, querier, env)
         } else {
-            let next_state = TransferOut::new(lease, payment);
+            let next_state = TransferOut::new(self.lease, payment);
             let batch = next_state.enter_state(env.block.time)?;
             Ok(Response::from(batch, next_state))
         }

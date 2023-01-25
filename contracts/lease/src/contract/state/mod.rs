@@ -23,6 +23,7 @@ mod opening;
 
 type OpeningTransferOut = opening::transfer_out::TransferOut;
 type RepaymentTransferOut = opened::repay::transfer_out::TransferOut;
+type RepaymentTransferIn = opened::repay::transfer_in::TransferIn;
 
 #[enum_dispatch(Controller)]
 #[derive(Serialize, Deserialize)]
@@ -34,6 +35,7 @@ pub enum State {
     Active,
     RepaymentTransferOut,
     BuyLpn,
+    RepaymentTransferIn,
 }
 
 pub struct Response {

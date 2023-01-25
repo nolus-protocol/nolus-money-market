@@ -42,7 +42,7 @@ where
         token_out_min_amount,
     };
 
-    batch.add_message(MSG_TYPE, msg)?;
+    batch.add_message(MSG_TYPE, msg);
     Ok(())
 }
 

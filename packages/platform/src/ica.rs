@@ -95,7 +95,7 @@ pub struct Batch {
 }
 
 impl Batch {
-    pub fn add_message<T, M>(&mut self, msg_type: T, msg: M) -> Result<()>
+    pub fn add_message<T, M>(&mut self, msg_type: T, msg: M)
     where
         T: Into<String>,
         M: Message,
@@ -105,7 +105,6 @@ impl Batch {
 
         self.msgs
             .push(ProtobufAny::new(msg_type.into(), buf.into()));
-        Ok(())
     }
 }
 

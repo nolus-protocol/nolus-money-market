@@ -1,4 +1,6 @@
 use cosmwasm_std::Deps;
+use currency::lpn::Usdc;
+use finance::coin::Coin;
 use serde::{Deserialize, Serialize};
 
 use platform::batch::Batch as LocalBatch;
@@ -15,6 +17,8 @@ use crate::{
     },
     error::ContractResult,
 };
+
+use super::transfer_in::TransferIn;
 
 #[derive(Serialize, Deserialize)]
 pub struct BuyLpn {
@@ -41,7 +45,11 @@ impl Controller for BuyLpn {
                 request: _,
                 data: _,
             } => {
-                todo!("proceed with TransferIn before landing to the same Lease::repay call");
+                // TODO init payment_lpn with the output of the swap
+                let payment_lpn = Coin::<Usdc>::from(1).into();
+                let next_state = TransferIn::new(self.lease, self.payment, payment_lpn);
+                let batch = next_state.enter_state(_env.block.time)?;
+                Ok(Response::from(batch, next_state))
             }
             SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {

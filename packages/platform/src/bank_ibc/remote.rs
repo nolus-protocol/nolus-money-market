@@ -10,7 +10,7 @@ use sdk::{
 use crate::{
     coin_legacy::{self},
     denom::dex::DexMapper,
-    error::{Error, Result},
+    error::Result,
     ica::{Batch, HostAccount},
 };
 
@@ -85,15 +85,13 @@ fn into_cosmos_sdk_coin(cw_coin: CwCoin) -> CosmosSdkCoin {
     }
 }
 
-impl<'c> TryFrom<Sender<'c>> for Batch {
-    type Error = Error;
-    fn try_from(sender: Sender<'c>) -> Result<Self> {
+impl<'c> From<Sender<'c>> for Batch {
+    fn from(sender: Sender<'c>) -> Self {
         let mut batch = Self::default();
-
         sender
             .into_ibc_msgs()
-            .try_for_each(|msg| batch.add_message(MsgTransfer::TYPE_URL, msg))?;
-        Ok(batch)
+            .for_each(|msg| batch.add_message(MsgTransfer::TYPE_URL, msg));
+        batch
     }
 }
 
@@ -136,30 +134,26 @@ mod test {
 
         assert_eq!(Batch::try_from(funds_sender), {
             let mut batch = Batch::default();
-            batch
-                .add_message(
-                    MsgTransfer::TYPE_URL,
-                    new_msg(
-                        channel,
-                        sender.clone(),
-                        receiver.clone(),
-                        into_cosmos_sdk_coin(coin1),
-                        timeout,
-                    ),
-                )
-                .unwrap();
-            batch
-                .add_message(
-                    MsgTransfer::TYPE_URL,
-                    new_msg(
-                        channel,
-                        sender,
-                        receiver,
-                        into_cosmos_sdk_coin(coin2),
-                        timeout,
-                    ),
-                )
-                .unwrap();
+            batch.add_message(
+                MsgTransfer::TYPE_URL,
+                new_msg(
+                    channel,
+                    sender.clone(),
+                    receiver.clone(),
+                    into_cosmos_sdk_coin(coin1),
+                    timeout,
+                ),
+            );
+            batch.add_message(
+                MsgTransfer::TYPE_URL,
+                new_msg(
+                    channel,
+                    sender,
+                    receiver,
+                    into_cosmos_sdk_coin(coin2),
+                    timeout,
+                ),
+            );
             Ok(batch)
         });
     }
