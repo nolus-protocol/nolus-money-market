@@ -86,6 +86,31 @@ impl MarketAlarms {
         )
     }
 
+    // fn alarms_iter<'a, BaseC>(storage: &'a dyn Storage, price: &SpotPrice) -> Result<impl Iterator<Item = StdResult<Addr>> + 'a, ContractError>
+    //     where BaseC: Currency,
+    // {
+
+    //     struct AlarmsCmd<'a> {
+    //         storage: &'a dyn Storage,
+    //         price_alarms: &'static PriceAlarms<'static>,
+    //     }
+
+    //     impl<'a, BaseC> WithQuote<BaseC> for AlarmsCmd<'a>
+    //         where
+    //         BaseC: Currency,
+    //     {
+    //         type Error = ContractError;
+    //         type Output = impl Iterator<Item = StdResult<Addr>> + 'a;
+    //         fn exec<C>(self, price: Price<C, BaseC>) -> Result<Self::Output, Self::Error>
+    //             where
+    //                 C: Currency {
+    //             Ok(self.price_alarms.alarms(self.storage, price))
+    //         }
+    //     }
+
+    //     with_quote::execute::<_,_,_, BaseC>(price, AlarmsCmd {storage, price_alarms: &Self::PRICE_ALARMS })
+    // }
+
     fn schedule_alarm(
         batch: &mut Batch,
         addr: Addr,
@@ -212,5 +237,166 @@ impl MarketAlarms {
             .any(|remaining_alarms| remaining_alarms);
 
         Ok(AlarmsStatusResponse { remaining_alarms })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use cosmwasm_std::from_binary;
+    use currency::{
+        lease::{Atom, Weth},
+        lpn::Usdc,
+    };
+    use finance::{coin::Coin, price};
+    use sdk::cosmwasm_std::testing::MockStorage;
+
+    type Base = Usdc;
+
+    #[test]
+    #[should_panic]
+    fn wrong_base_currency() {
+        let mut storage = MockStorage::new();
+
+        let addr = Addr::unchecked("addr");
+
+        let _ = MarketAlarms::try_add_price_alarm::<Base>(
+            &mut storage,
+            addr,
+            AlarmDTO::new(
+                price::total_of(Coin::<Base>::new(1)).is(Coin::<Atom>::new(20)),
+                None,
+            ),
+        );
+    }
+
+    #[test]
+    fn add_remove() {
+        let mut storage = MockStorage::new();
+
+        let addr1 = Addr::unchecked("addr1");
+        let addr2 = Addr::unchecked("addr2");
+
+        MarketAlarms::try_add_price_alarm::<Base>(
+            &mut storage,
+            addr1,
+            AlarmDTO::new(
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(20)),
+                None,
+            ),
+        )
+        .unwrap();
+
+        MarketAlarms::try_add_price_alarm::<Base>(
+            &mut storage,
+            addr2.clone(),
+            AlarmDTO::new(
+                price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(20)),
+                Some(price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(30))),
+                // None,
+            ),
+        )
+        .unwrap();
+
+        assert!(
+            MarketAlarms::try_query_alarms::<Base>(
+                &storage,
+                &[price::total_of(Coin::<Weth>::new(1))
+                    .is(Coin::<Base>::new(35))
+                    .into(),]
+            )
+            .unwrap()
+            .remaining_alarms
+        );
+
+        MarketAlarms::remove(&mut storage, addr2).unwrap();
+
+        assert!(
+            !MarketAlarms::try_query_alarms::<Base>(
+                &storage,
+                &[price::total_of(Coin::<Weth>::new(1))
+                    .is(Coin::<Base>::new(10))
+                    .into(),]
+            )
+            .unwrap()
+            .remaining_alarms
+        );
+    }
+
+    #[test]
+    fn notify() {
+        let mut storage = MockStorage::new();
+
+        for x in 0..=5 {
+            let delta = x * 10;
+
+            let addr = Addr::unchecked(format!("addr1_{}", delta));
+
+            MarketAlarms::try_add_price_alarm::<Base>(
+                &mut storage,
+                addr,
+                AlarmDTO::new(
+                    price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(10 + delta)),
+                    Some(price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(30 + delta))),
+                ),
+            )
+            .unwrap();
+
+            let addr = Addr::unchecked(format!("addr2_{}", delta));
+
+            MarketAlarms::try_add_price_alarm::<Base>(
+                &mut storage,
+                addr,
+                AlarmDTO::new(
+                    price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(50 + delta)),
+                    None,
+                ),
+            )
+            .unwrap();
+        }
+
+        let batch = Batch::default();
+
+        let sent = from_binary::<DispatchAlarmsResponse>(
+            &MarketAlarms::try_notify_alarms::<Base>(
+                &mut storage,
+                batch,
+                &[price::total_of(Coin::<Atom>::new(1))
+                    .is(Coin::<Base>::new(25))
+                    .into()],
+                3,
+            )
+            .unwrap()
+            .data
+            .unwrap(),
+        )
+        .unwrap()
+        .0;
+        assert_eq!(sent, 3);
+
+        let batch = Batch::default();
+
+        let sent = from_binary::<DispatchAlarmsResponse>(
+            &MarketAlarms::try_notify_alarms::<Base>(
+                &mut storage,
+                batch,
+                &[
+                    price::total_of(Coin::<Atom>::new(1))
+                        .is(Coin::<Base>::new(35))
+                        .into(),
+                    price::total_of(Coin::<Weth>::new(1))
+                        .is(Coin::<Base>::new(20))
+                        .into(),
+                ],
+                100,
+            )
+            .unwrap()
+            .data
+            .unwrap(),
+        )
+        .unwrap()
+        .0;
+        assert_eq!(sent, 10);
     }
 }
