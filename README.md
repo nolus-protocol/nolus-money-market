@@ -1,4 +1,4 @@
-# Smart Contracts
+# Nolus Money Market
 
 <br /><p align="center"><img alt="nolus-money-market-logo" src="docs/money-market-logo.svg" width="100"/></p><br />
 
