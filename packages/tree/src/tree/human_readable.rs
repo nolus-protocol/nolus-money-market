@@ -1,11 +1,11 @@
-use serde::{de::Error, Deserialize, Deserializer};
+use serde::{de::Error, Deserialize, Deserializer, Serialize};
 
 use crate::{
     node::{Node, NodeIndex},
     tree::{Nodes, Tree},
 };
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[repr(transparent)]
 #[serde(transparent)]
 pub struct HumanReadableTree<T> {
@@ -22,7 +22,7 @@ impl<T> HumanReadableTree<T> {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 #[serde(untagged, rename_all = "snake_case", deny_unknown_fields)]
 enum HRTNode<T> {
     Leaf {

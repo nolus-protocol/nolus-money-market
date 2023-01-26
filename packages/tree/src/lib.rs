@@ -1,6 +1,6 @@
 pub use self::{
     node::NodeRef,
-    tree::{HumanReadableTree, Tree},
+    tree::{FindBy, HumanReadableTree, Subtree, Tree},
 };
 
 mod node;
