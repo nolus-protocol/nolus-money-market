@@ -2,7 +2,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
-use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, SymbolOwned};
+use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -41,8 +41,13 @@ impl<'a> InstantiateWithLpn<'a> {
         versioning::initialize::<CONTRACT_VERSION>(self.deps.storage)?;
 
         SingleUserAccess::new_contract_owner(self.info.sender).store(self.deps.storage)?;
+        SingleUserAccess::new(
+            crate::access_control::LEASE_CODE_ADMIN_KEY,
+            self.msg.lease_code_admin.clone(),
+        )
+        .store(self.deps.storage)?;
 
-        LiquidityPool::<LPN>::store(self.deps.storage, self.msg)?;
+        LiquidityPool::<LPN>::store(self.deps.storage, self.msg.into())?;
 
         Ok(Response::new().add_attribute("method", "instantiate"))
     }
@@ -54,7 +59,7 @@ impl<'a> InstantiateWithLpn<'a> {
     ) -> Result<Response, ContractError> {
         let context = Self { deps, info, msg };
 
-        visit_any_on_ticker::<Lpns, _>(&SymbolOwned::from(context.msg.lpn_ticker()), context)
+        visit_any_on_ticker::<Lpns, _>(&context.msg.lpn_ticker.clone(), context)
     }
 }
 
@@ -77,6 +82,9 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
+    // TODO move these checks on deserialization
+    finance::currency::validate::<Lpns>(&msg.lpn_ticker)?;
+    deps.api.addr_validate(msg.lease_code_admin.as_str())?;
     InstantiateWithLpn::cmd(deps, info, msg)
 }
 
@@ -151,6 +159,9 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     // no currency context variants
     match msg {
+        ExecuteMsg::NewLeaseCode { lease_code_id } => {
+            config::try_update_lease_code(deps, info, lease_code_id)
+        }
         ExecuteMsg::NewBorrowRate {
             borrow_rate: interest_rate,
         } => config::try_update_parameters(deps, info, interest_rate),

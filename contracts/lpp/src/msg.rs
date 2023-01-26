@@ -1,9 +1,10 @@
+use cosmwasm_std::Uint64;
 use serde::{Deserialize, Serialize};
 
 use currency::{lpn::Lpns, native::Nls};
 use finance::{
     coin::{Coin, CoinDTO},
-    currency::Currency,
+    currency::{Currency, SymbolOwned},
     percent::Percent,
     price::Price,
 };
@@ -12,16 +13,22 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::{borrow::InterestRate, nlpn::NLpn, state::Config};
+use crate::{borrow::InterestRate, nlpn::NLpn};
 
 pub type LppCoin = CoinDTO<Lpns>;
 
-pub type InstantiateMsg = Config;
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+pub struct InstantiateMsg {
+    pub lpn_ticker: SymbolOwned,
+    pub lease_code_admin: Addr,
+    pub borrow_rate: InterestRate,
+}
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    NewLeaseCode { lease_code_id: Uint64 },
     NewBorrowRate { borrow_rate: InterestRate },
 
     OpenLoan { amount: LppCoin },

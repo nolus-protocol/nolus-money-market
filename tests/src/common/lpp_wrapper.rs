@@ -47,19 +47,20 @@ impl LppWrapper {
         Lpn: Currency,
     {
         let lpp_id = app.store_code(self.contract_wrapper);
-        let msg = InstantiateMsg::new(
-            Lpn::TICKER.into(),
-            lease_code_id,
-            InterestRate::new(
+        let lease_code_admin = Addr::unchecked(ADMIN);
+        let msg = InstantiateMsg {
+            lpn_ticker: Lpn::TICKER.into(),
+            lease_code_admin: lease_code_admin.clone(),
+            borrow_rate: InterestRate::new(
                 base_interest_rate,
                 utilization_optimal,
                 addon_optimal_interest_rate,
             )
             .expect("Couldn't construct interest rate value!"),
-        );
+        };
 
-        (
-            app.instantiate_contract(
+        let lpp = app
+            .instantiate_contract(
                 lpp_id,
                 Addr::unchecked(ADMIN),
                 &msg,
@@ -67,9 +68,16 @@ impl LppWrapper {
                 "lpp",
                 None,
             )
-            .unwrap(),
-            lpp_id,
+            .unwrap();
+        app.execute_contract(
+            lease_code_admin,
+            lpp.clone(),
+            &ExecuteMsg::NewLeaseCode { lease_code_id },
+            &[],
         )
+        .unwrap();
+
+        (lpp, lpp_id)
     }
 }
 

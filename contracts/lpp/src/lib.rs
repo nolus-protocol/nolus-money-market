@@ -8,6 +8,8 @@ pub mod state;
 pub mod stub;
 
 #[cfg(any(feature = "contract", test))]
+pub mod access_control;
+#[cfg(any(feature = "contract", test))]
 pub mod contract;
 #[cfg(any(feature = "contract", test))]
 pub mod event;
