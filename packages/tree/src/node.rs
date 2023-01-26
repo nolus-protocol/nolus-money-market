@@ -4,8 +4,7 @@ use crate::tree::{Subtree, Tree};
 
 pub(crate) type NodeIndex = u16;
 
-#[derive(Clone, Serialize, Deserialize)]
-#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) struct Node<T> {
     parent: NodeIndex,
     value: T,
@@ -27,6 +26,11 @@ impl<T> Node<T> {
     }
 
     #[inline]
+    pub(crate) fn into_value(self) -> T {
+        self.value
+    }
+
+    #[inline]
     pub(crate) fn map<F, R>(self, f: F) -> Node<R>
     where
         F: FnOnce(T) -> R,
@@ -38,6 +42,8 @@ impl<T> Node<T> {
     }
 }
 
+#[derive(Eq, PartialEq)]
+#[cfg_attr(any(debug_assertions, test), derive(Debug))]
 pub struct NodeRef<'r, T> {
     tree: &'r Tree<T>,
     this: NodeIndex,
@@ -80,7 +86,7 @@ impl<'r, T> NodeRef<'r, T> {
     }
 
     #[inline]
-    pub(crate) fn this_index(&self) -> u16 {
+    pub(crate) fn this_index(&self) -> NodeIndex {
         self.this
     }
 
