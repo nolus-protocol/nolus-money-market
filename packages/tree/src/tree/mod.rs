@@ -28,6 +28,8 @@ pub struct Tree<T> {
 }
 
 impl<T> Tree<T> {
+    const ROOT_PARENT: NodeIndex = 0;
+
     const ROOT_INDEX: NodeIndex = 0;
 
     pub fn root(&self) -> Option<NodeRef<T>> {

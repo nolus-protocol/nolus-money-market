@@ -17,7 +17,7 @@ impl<T> HumanReadableTree<T> {
         Tree {
             nodes: self
                 .root
-                .flatten(Tree::<T>::ROOT_INDEX, Tree::<T>::ROOT_INDEX),
+                .flatten(Tree::<T>::ROOT_PARENT, Tree::<T>::ROOT_INDEX),
         }
     }
 }
