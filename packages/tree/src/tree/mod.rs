@@ -19,10 +19,11 @@ pub trait FindBy {
 
 type Nodes<T> = Vec<Node<T>>;
 
-#[derive(Clone, Serialize, Deserialize)]
-#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+#[derive(Clone, Eq, PartialEq, Serialize)]
+#[cfg_attr(any(debug_assertions, test), derive(Debug))]
+#[cfg_attr(not(debug_assertions), derive(Deserialize))]
 #[repr(transparent)]
-#[serde(rename_all = "snake_case")]
+#[serde(transparent, rename_all = "snake_case")]
 pub struct Tree<T> {
     nodes: Nodes<T>,
 }
@@ -32,8 +33,15 @@ impl<T> Tree<T> {
 
     const ROOT_INDEX: NodeIndex = 0;
 
-    pub fn root(&self) -> Option<NodeRef<T>> {
-        (!self.nodes.is_empty()).then(|| NodeRef::with_index(self, Self::ROOT_INDEX))
+    pub fn root(&self) -> NodeRef<T> {
+        debug_assert!(!self.nodes.is_empty());
+
+        NodeRef::with_index(self, Self::ROOT_INDEX)
+    }
+
+    #[inline]
+    pub fn into_human_readable(self) -> HumanReadableTree<T> {
+        HumanReadableTree::from_tree(self)
     }
 
     pub fn as_subtree(&self) -> Subtree<T> {
@@ -106,6 +114,31 @@ impl<T> Tree<T> {
     #[inline]
     fn vector_range(&self) -> Range<NodeIndex> {
         0..self.node_index_len()
+    }
+}
+
+#[cfg(debug_assertions)]
+impl<'de, T> Deserialize<'de> for Tree<T>
+where
+    T: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let nodes: Nodes<T> = Nodes::deserialize(deserializer)?;
+
+        assert!(!nodes.is_empty());
+        assert_eq!(
+            nodes[usize::from(Self::ROOT_INDEX)].parent_index(),
+            Self::ROOT_PARENT
+        );
+
+        for (index, node) in nodes.iter().enumerate().skip(1) {
+            assert!(usize::from(node.parent_index()) < index);
+        }
+
+        Ok(Self { nodes })
     }
 }
 
