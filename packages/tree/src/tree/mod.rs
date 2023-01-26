@@ -51,9 +51,16 @@ impl<T> Tree<T> {
         }
     }
 
-    pub fn map<F, R>(self, mut f: F) -> Tree<R> where F: FnMut(T) -> R {
+    pub fn map<F, R>(self, mut f: F) -> Tree<R>
+    where
+        F: FnMut(T) -> R,
+    {
         Tree {
-            nodes: self.nodes.into_iter().map(|node| node.map(&mut f)).collect(),
+            nodes: self
+                .nodes
+                .into_iter()
+                .map(|node| node.map(&mut f))
+                .collect(),
         }
     }
 
