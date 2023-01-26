@@ -1,6 +1,6 @@
 use serde_json_wasm::from_str;
 
-use tree::Tree;
+use tree::{FindBy, Tree};
 
 mod serde {
     use super::*;

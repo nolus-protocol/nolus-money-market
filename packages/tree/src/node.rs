@@ -27,8 +27,14 @@ impl<T> Node<T> {
     }
 
     #[inline]
-    pub(crate) fn map<F, R>(self, f: F) -> Node<R> where F: FnOnce(T) -> R {
-        Node { parent: self.parent, value: f(self.value) }
+    pub(crate) fn map<F, R>(self, f: F) -> Node<R>
+    where
+        F: FnOnce(T) -> R,
+    {
+        Node {
+            parent: self.parent,
+            value: f(self.value),
+        }
     }
 }
 
