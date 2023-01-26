@@ -29,6 +29,7 @@ schema = { path = "./packages/schema", default-features = false }
 sdk = { path = "./packages/sdk", default-features = false }
 swap = { path = "./packages/swap", default-features = false }
 time-oracle = { path = "./packages/time-oracle", default-features = false }
+tree = { path = "./packages/tree", default-features = false }
 versioning = { path = "./packages/versioning", default-features = false }
 
 # General

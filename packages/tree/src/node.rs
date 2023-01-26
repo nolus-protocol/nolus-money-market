@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use crate::tree::Tree;
+use crate::tree::{Subtree, Tree};
 
 pub(crate) type NodeIndex = u16;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 pub(crate) struct Node<T> {
     parent: NodeIndex,
@@ -17,13 +17,18 @@ impl<T> Node<T> {
     }
 
     #[inline]
-    pub(crate) fn parent(&self) -> NodeIndex {
+    pub(crate) fn parent_index(&self) -> NodeIndex {
         self.parent
     }
 
     #[inline]
     pub(crate) fn value(&self) -> &T {
         &self.value
+    }
+
+    #[inline]
+    pub(crate) fn map<F, R>(self, f: F) -> Node<R> where F: FnOnce(T) -> R {
+        Node { parent: self.parent, value: f(self.value) }
     }
 }
 
@@ -46,13 +51,59 @@ impl<'r, T> NodeRef<'r, T> {
 
             Some(NodeRef {
                 tree: self.tree,
-                this: this.parent(),
+                this: this.parent_index(),
             })
         }
     }
 
     #[inline]
+    pub fn parents_iter(&self) -> ParentsIter<'r, T> {
+        ParentsIter { node: *self }
+    }
+
+    #[inline]
+    /// This exists as a functional approach to converting node reference into
+    /// a subtree.
+    pub fn to_subtree(&self) -> Subtree<'r, T> {
+        Subtree::from_node(*self)
+    }
+
+    #[inline]
+    pub(crate) fn tree(&self) -> &'r Tree<T> {
+        self.tree
+    }
+
+    #[inline]
+    pub(crate) fn this_index(&self) -> u16 {
+        self.this
+    }
+
+    #[inline]
     pub(crate) const fn with_index(tree: &'r Tree<T>, this: NodeIndex) -> Self {
         Self { tree, this }
+    }
+}
+
+impl<'r, T> Clone for NodeRef<'r, T> {
+    fn clone(&self) -> Self {
+        Self { ..*self }
+    }
+}
+
+impl<'r, T> Copy for NodeRef<'r, T> {}
+
+pub struct ParentsIter<'r, T> {
+    node: NodeRef<'r, T>,
+}
+
+impl<'r, T> Iterator for ParentsIter<'r, T> {
+    type Item = NodeRef<'r, T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let parent = self.node.parent()?;
+
+        self.node = parent;
+
+        Some(parent)
     }
 }
