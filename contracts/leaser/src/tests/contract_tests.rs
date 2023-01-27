@@ -288,7 +288,9 @@ fn test_open_lease() {
         currency: DENOM.to_string(),
     };
     let info = customer();
-    let res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+    let env = mock_env();
+    let admin = env.contract.address.clone();
+    let res = execute(deps.as_mut(), env, info.clone(), msg).unwrap();
 
     let msg = Borrow::open_lease_msg(info.sender, config, DENOM.to_string()).unwrap();
     assert_eq!(
@@ -297,7 +299,7 @@ fn test_open_lease() {
             CosmosMsg::Wasm(WasmMsg::Instantiate {
                 funds: info.funds,
                 msg: to_binary(&msg).unwrap(),
-                admin: None,
+                admin: Some(admin.into()),
                 code_id: 1,
                 label: "lease".to_string()
             }),

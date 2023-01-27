@@ -48,7 +48,7 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Res
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<Response> {
@@ -66,7 +66,13 @@ pub fn execute(
         ExecuteMsg::MigrateLeases { new_code_id } => {
             LeaserAdmin::new(deps.storage, info)?.try_migrate_leases(new_code_id.u64())
         }
-        ExecuteMsg::OpenLease { currency } => Borrow::with(deps, info.funds, info.sender, currency),
+        ExecuteMsg::OpenLease { currency } => Borrow::with(
+            deps,
+            info.funds,
+            info.sender,
+            env.contract.address,
+            currency,
+        ),
     }
 }
 

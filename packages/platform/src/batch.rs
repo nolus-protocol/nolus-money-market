@@ -107,7 +107,7 @@ impl Batch {
         msg: M,
         funds: Option<Vec<CoinCw>>,
         label: &str,
-        admin: Option<String>,
+        admin: Option<Addr>,
         reply_id: ReplyId,
     ) -> Result<()>
     where
@@ -172,11 +172,12 @@ impl Batch {
         msg: M,
         funds: Option<Vec<CoinCw>>,
         label: &str,
-        admin: Option<String>,
+        admin: Option<Addr>,
     ) -> Result<WasmMsg>
     where
         M: Serialize,
     {
+        let admin_str = admin.map(Into::into);
         let msg_bin = to_binary(&msg)?;
         let mut funds_cw = vec![];
         if let Some(coin) = funds {
@@ -184,7 +185,7 @@ impl Batch {
         }
 
         Ok(WasmMsg::Instantiate {
-            admin,
+            admin: admin_str,
             code_id,
             funds: funds_cw,
             label: label.to_string(),

@@ -18,26 +18,27 @@ impl Borrow {
     pub fn with(
         deps: DepsMut,
         amount: Vec<Coin>,
-        sender: Addr,
+        customer: Addr,
+        admin: Addr,
         currency: SymbolOwned,
     ) -> Result<Response, ContractError> {
         let config = Config::load(deps.storage)?;
-        let instance_reply_id = Leases::next(deps.storage, sender.clone())?;
+        let instance_reply_id = Leases::next(deps.storage, customer.clone())?;
 
         let mut batch = Batch::default();
         batch.schedule_instantiate_wasm_on_success_reply(
             config.lease_code_id,
-            Self::open_lease_msg(sender, config, currency)?,
+            Self::open_lease_msg(customer, config, currency)?,
             Some(amount),
             "lease",
-            None,
+            Some(admin), // allows lease migrations from this contract
             instance_reply_id,
         )?;
         Ok(batch.into())
     }
 
     pub(crate) fn open_lease_msg(
-        sender: Addr,
+        customer: Addr,
         config: Config,
         currency: SymbolOwned,
     ) -> ContractResult<NewLeaseContract> {
@@ -45,7 +46,7 @@ impl Borrow {
             .dex
             .map(|dex| NewLeaseContract {
                 form: NewLeaseForm {
-                    customer: sender,
+                    customer,
                     currency,
                     liability: config.liability,
                     loan: LoanForm {
