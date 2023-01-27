@@ -5,7 +5,6 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
-    cw_storage_plus::Item,
 };
 use versioning::Version;
 
@@ -17,7 +16,7 @@ use crate::{
     state::{config::Config, leases::Leases},
 };
 
-const CONTRACT_VERSION: Version = 0;
+const CONTRACT_VERSION: Version = 1;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -42,10 +41,7 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
-    // the version is 0 so the previos code was deployed in the previos epoch
-    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
-    Item::<bool>::new("contract_info").remove(deps.storage);
-
+    versioning::upgrade_contract::<CONTRACT_VERSION>(deps.storage)?;
     Ok(Response::default())
 }
 
@@ -68,7 +64,7 @@ pub fn execute(
             lease_interest_payment,
         ),
         ExecuteMsg::MigrateLeases { new_code_id } => {
-            LeaserAdmin::new(deps.storage, info)?.try_migrate_leases(new_code_id)
+            LeaserAdmin::new(deps.storage, info)?.try_migrate_leases(new_code_id.u64())
         }
         ExecuteMsg::OpenLease { currency } => Borrow::with(deps, info.funds, info.sender, currency),
     }

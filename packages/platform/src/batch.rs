@@ -120,6 +120,22 @@ impl Batch {
         Ok(())
     }
 
+    pub fn schedule_migrate_wasm_no_reply<M>(
+        &mut self,
+        addr: &Addr,
+        msg: M,
+        new_code_id: u64,
+    ) -> Result<()>
+    where
+        M: Serialize,
+    {
+        let wasm_msg = Self::wasm_migrate_msg(addr, msg, new_code_id)?;
+        let msg_cw = SubMsg::new(wasm_msg);
+
+        self.msgs.push(msg_cw);
+        Ok(())
+    }
+
     pub fn merge(self, mut other: Batch) -> Self {
         let mut res = self;
         res.msgs.append(&mut other.msgs);
@@ -172,6 +188,19 @@ impl Batch {
             code_id,
             funds: funds_cw,
             label: label.to_string(),
+            msg: msg_bin,
+        })
+    }
+
+    fn wasm_migrate_msg<M>(addr: &Addr, msg: M, new_code_id: u64) -> Result<WasmMsg>
+    where
+        M: Serialize,
+    {
+        let msg_bin = to_binary(&msg)?;
+
+        Ok(WasmMsg::Migrate {
+            contract_addr: addr.into(),
+            new_code_id,
             msg: msg_bin,
         })
     }

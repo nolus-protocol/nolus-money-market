@@ -2,19 +2,21 @@ use std::collections::HashSet;
 
 use access_control::SingleUserAccess;
 
+use currency::native::Nls;
 use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
 use lease::api::{dex::ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
-use lpp::stub::lender::LppLenderRef;
+use lpp::{msg::ExecuteMsg, stub::lender::LppLenderRef};
 use oracle::stub::OracleRef;
+use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, Deps, MessageInfo, StdResult, Storage, Uint64},
+    cosmwasm_std::{Addr, Deps, MessageInfo, StdResult, Storage},
 };
 
 use crate::{
     cmd::Quote,
     error::{ContractError, ContractResult},
-    migrate::MigrateBatch,
+    migrate::{self},
     msg::{ConfigResponse, QuoteResponse},
     state::{config::Config, leases::Leases},
 };
@@ -94,10 +96,23 @@ impl<'a> LeaserAdmin<'a> {
         Ok(Response::default())
     }
 
-    pub fn try_migrate_leases(&mut self, new_code_id: Uint64) -> ContractResult<Response> {
-        Config::update_lease_code(self.storage, new_code_id.u64())?;
+    pub fn try_migrate_leases(&mut self, new_code_id: u64) -> ContractResult<Response> {
+        Config::update_lease_code(self.storage, new_code_id)?;
 
-        let batch = Leases::iter(self.storage).collect::<ContractResult<MigrateBatch>>()?;
-        batch.try_into()
+        let mut batch = migrate::migrate_leases(Leases::iter(self.storage), new_code_id)?;
+
+        self.update_lpp(new_code_id, &mut batch)?;
+
+        Ok(batch.into())
+    }
+
+    fn update_lpp(&mut self, new_code_id: u64, batch: &mut Batch) -> ContractResult<()> {
+        let lpp = Config::load(self.storage)?.lpp_addr;
+        let lpp_update_code = ExecuteMsg::NewLeaseCode {
+            lease_code_id: new_code_id.into(),
+        };
+        batch
+            .schedule_execute_wasm_no_reply::<_, Nls>(&lpp, lpp_update_code, None)
+            .map_err(Into::into)
     }
 }
