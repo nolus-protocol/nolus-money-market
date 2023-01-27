@@ -8,13 +8,14 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
+    cw_storage_plus::Item,
 };
 use versioning::Version;
 
 use crate::{
-    error::ContractError,
+    error::{ContractError, ContractResult},
     lpp::LiquidityPool,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     state::Config,
 };
 
@@ -23,8 +24,7 @@ mod config;
 mod lender;
 mod rewards;
 
-// version info for migration info
-const CONTRACT_VERSION: Version = 0;
+const CONTRACT_VERSION: Version = 1;
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
@@ -34,7 +34,7 @@ struct InstantiateWithLpn<'a> {
 
 impl<'a> InstantiateWithLpn<'a> {
     // could be moved directly to on<LPN>()
-    fn do_work<LPN>(self) -> Result<Response, ContractError>
+    fn do_work<LPN>(self) -> ContractResult<Response>
     where
         LPN: 'static + Currency + Serialize + DeserializeOwned,
     {
@@ -56,7 +56,7 @@ impl<'a> InstantiateWithLpn<'a> {
         deps: DepsMut<'a>,
         info: MessageInfo,
         msg: InstantiateMsg,
-    ) -> Result<Response, ContractError> {
+    ) -> ContractResult<Response> {
         let context = Self { deps, info, msg };
 
         visit_any_on_ticker::<Lpns, _>(&context.msg.lpn_ticker.clone(), context)
@@ -81,11 +81,27 @@ pub fn instantiate(
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     // TODO move these checks on deserialization
     finance::currency::validate::<Lpns>(&msg.lpn_ticker)?;
     deps.api.addr_validate(msg.lease_code_admin.as_str())?;
     InstantiateWithLpn::cmd(deps, info, msg)
+}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
+    deps.api.addr_validate(msg.lease_code_admin.as_str())?;
+
+    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
+    Item::<bool>::new("contract_info").remove(deps.storage);
+
+    SingleUserAccess::new(
+        crate::access_control::LEASE_CODE_ADMIN_KEY,
+        msg.lease_code_admin,
+    )
+    .store(deps.storage)?;
+
+    Ok(Response::default())
 }
 
 struct ExecuteWithLpn<'a> {
@@ -96,7 +112,7 @@ struct ExecuteWithLpn<'a> {
 }
 
 impl<'a> ExecuteWithLpn<'a> {
-    fn do_work<LPN>(self) -> Result<Response, ContractError>
+    fn do_work<LPN>(self) -> ContractResult<Response>
     where
         LPN: 'static + Currency + Serialize + DeserializeOwned,
     {
@@ -124,7 +140,7 @@ impl<'a> ExecuteWithLpn<'a> {
         env: Env,
         info: MessageInfo,
         msg: ExecuteMsg,
-    ) -> Result<Response, ContractError> {
+    ) -> ContractResult<Response> {
         let context = Self {
             deps,
             env,
@@ -156,7 +172,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     // no currency context variants
     match msg {
         ExecuteMsg::NewLeaseCode { lease_code_id } => {

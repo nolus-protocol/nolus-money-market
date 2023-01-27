@@ -24,6 +24,11 @@ pub struct InstantiateMsg {
     pub borrow_rate: InterestRate,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct MigrateMsg {
+    pub lease_code_admin: Addr,
+}
+
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(rename_all = "snake_case")]
