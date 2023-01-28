@@ -4,11 +4,7 @@ use finance::{
     coin::CoinDTO,
     currency::{self, Group, Symbol},
 };
-use platform::{
-    coin_legacy,
-    denom::dex::DexMapper,
-    ica::{HostAccount, Transaction},
-};
+use platform::{coin_legacy, denom::dex::DexMapper, ica::HostAccount, trx::Transaction};
 use sdk::cosmwasm_std::Coin as CwCoin;
 
 use crate::{

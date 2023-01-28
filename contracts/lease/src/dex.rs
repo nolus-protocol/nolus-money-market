@@ -10,7 +10,8 @@ use oracle::stub::OracleRef;
 use platform::{
     bank_ibc::{local::Sender as LocalSender, remote::Sender as RemoteSender},
     batch::Batch as LocalBatch,
-    ica::{self, HostAccount, Transaction},
+    ica::{self, HostAccount},
+    trx::Transaction,
 };
 use serde::{Deserialize, Serialize};
 use swap::trx;

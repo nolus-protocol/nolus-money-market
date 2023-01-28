@@ -1,16 +1,13 @@
-use prost::Message;
 use serde::{Deserialize, Serialize};
 
 use finance::{coin::Coin, currency::Currency, duration::Duration};
-use sdk::neutron_sdk::bindings::{
-    msg::{IbcFee, NeutronMsg},
-    types::ProtobufAny,
-};
+use sdk::neutron_sdk::bindings::msg::{IbcFee, NeutronMsg};
 
 use crate::{
     batch::Batch,
     coin_legacy,
     error::{Error, Result},
+    trx::Transaction,
 };
 
 use self::impl_::OpenAckVersion;
@@ -76,7 +73,7 @@ where
     batch.schedule_execute_no_reply(NeutronMsg::submit_tx(
         connection.into(),
         ICA_ACCOUNT_ID.into(),
-        trx.msgs,
+        trx.into_msgs(),
         memo.into(),
         timeout.secs(),
         IbcFee {
@@ -86,26 +83,6 @@ where
         },
     ));
     batch
-}
-
-#[derive(Default)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
-pub struct Transaction {
-    msgs: Vec<ProtobufAny>,
-}
-
-impl Transaction {
-    pub fn add_message<T, M>(&mut self, msg_type: T, msg: M)
-    where
-        T: Into<String>,
-        M: Message,
-    {
-        let mut buf = Vec::with_capacity(msg.encoded_len());
-        msg.encode_raw(&mut buf);
-
-        self.msgs
-            .push(ProtobufAny::new(msg_type.into(), buf.into()));
-    }
 }
 
 mod impl_ {

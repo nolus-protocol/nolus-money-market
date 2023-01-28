@@ -11,7 +11,8 @@ use crate::{
     coin_legacy::{self},
     denom::dex::DexMapper,
     error::Result,
-    ica::{HostAccount, Transaction},
+    ica::HostAccount,
+    trx::Transaction,
 };
 
 pub struct Sender<'c> {
@@ -112,7 +113,8 @@ mod test {
 
     use crate::{
         bank_ibc::remote::{new_msg, Sender},
-        ica::{HostAccount, Transaction},
+        ica::HostAccount,
+        trx::Transaction,
     };
 
     #[test]
