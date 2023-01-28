@@ -8,7 +8,7 @@ use sdk::neutron_sdk::bindings::{
 };
 
 use crate::{
-    batch::Batch as LocalBatch,
+    batch::Batch,
     coin_legacy,
     error::{Error, Result},
 };
@@ -41,11 +41,11 @@ impl From<HostAccount> for String {
     }
 }
 
-pub fn register_account<C>(connection: C) -> LocalBatch
+pub fn register_account<C>(connection: C) -> Batch
 where
     C: Into<String>,
 {
-    let mut batch = LocalBatch::default();
+    let mut batch = Batch::default();
     batch.schedule_execute_no_reply(NeutronMsg::register_interchain_account(
         connection.into(),
         ICA_ACCOUNT_ID.into(),
@@ -60,23 +60,23 @@ pub fn parse_register_response(response: &str) -> Result<HostAccount> {
 
 pub fn submit_transaction<Conn, M, C>(
     connection: Conn,
-    messages: Batch,
+    trx: Transaction,
     memo: M,
     timeout: Duration,
     ack_tip: Coin<C>,
     timeout_tip: Coin<C>,
-) -> LocalBatch
+) -> Batch
 where
     Conn: Into<String>,
     M: Into<String>,
     C: Currency,
 {
-    let mut batch = LocalBatch::default();
+    let mut batch = Batch::default();
 
     batch.schedule_execute_no_reply(NeutronMsg::submit_tx(
         connection.into(),
         ICA_ACCOUNT_ID.into(),
-        messages.msgs,
+        trx.msgs,
         memo.into(),
         timeout.secs(),
         IbcFee {
@@ -90,11 +90,11 @@ where
 
 #[derive(Default)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
-pub struct Batch {
+pub struct Transaction {
     msgs: Vec<ProtobufAny>,
 }
 
-impl Batch {
+impl Transaction {
     pub fn add_message<T, M>(&mut self, msg_type: T, msg: M)
     where
         T: Into<String>,

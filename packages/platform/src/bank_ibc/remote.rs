@@ -11,7 +11,7 @@ use crate::{
     coin_legacy::{self},
     denom::dex::DexMapper,
     error::Result,
-    ica::{Batch, HostAccount},
+    ica::{HostAccount, Transaction},
 };
 
 pub struct Sender<'c> {
@@ -85,13 +85,13 @@ fn into_cosmos_sdk_coin(cw_coin: CwCoin) -> CosmosSdkCoin {
     }
 }
 
-impl<'c> From<Sender<'c>> for Batch {
+impl<'c> From<Sender<'c>> for Transaction {
     fn from(sender: Sender<'c>) -> Self {
-        let mut batch = Self::default();
+        let mut trx = Self::default();
         sender
             .into_ibc_msgs()
-            .for_each(|msg| batch.add_message(MsgTransfer::TYPE_URL, msg));
-        batch
+            .for_each(|msg| trx.add_message(MsgTransfer::TYPE_URL, msg));
+        trx
     }
 }
 
@@ -112,7 +112,7 @@ mod test {
 
     use crate::{
         bank_ibc::remote::{new_msg, Sender},
-        ica::{Batch, HostAccount},
+        ica::{HostAccount, Transaction},
     };
 
     #[test]
@@ -132,9 +132,9 @@ mod test {
             .send::<TestExtraCurrencies>(&coin2.into())
             .unwrap();
 
-        assert_eq!(Batch::try_from(funds_sender), {
-            let mut batch = Batch::default();
-            batch.add_message(
+        assert_eq!(Transaction::try_from(funds_sender), {
+            let mut trx = Transaction::default();
+            trx.add_message(
                 MsgTransfer::TYPE_URL,
                 new_msg(
                     channel,
@@ -144,7 +144,7 @@ mod test {
                     timeout,
                 ),
             );
-            batch.add_message(
+            trx.add_message(
                 MsgTransfer::TYPE_URL,
                 new_msg(
                     channel,
@@ -154,7 +154,7 @@ mod test {
                     timeout,
                 ),
             );
-            Ok(batch)
+            Ok(trx)
         });
     }
 

@@ -10,7 +10,7 @@ use oracle::stub::OracleRef;
 use platform::{
     bank_ibc::{local::Sender as LocalSender, remote::Sender as RemoteSender},
     batch::Batch as LocalBatch,
-    ica::{self, Batch as RemoteBatch, HostAccount},
+    ica::{self, HostAccount, Transaction},
 };
 use serde::{Deserialize, Serialize};
 use swap::trx;
@@ -115,7 +115,7 @@ impl From<TransferOutTrx<'_>> for LocalBatch {
 pub struct SwapTrx<'a> {
     conn: &'a str,
     ica_account: &'a HostAccount,
-    batch: RemoteBatch,
+    trx: Transaction,
     oracle: &'a OracleRef,
     querier: &'a QuerierWrapper<'a>,
 }
@@ -127,11 +127,11 @@ impl<'a> SwapTrx<'a> {
         oracle: &'a OracleRef,
         querier: &'a QuerierWrapper,
     ) -> Self {
-        let batch = RemoteBatch::default();
+        let trx = Transaction::default();
         Self {
             conn,
             ica_account,
-            batch,
+            trx,
             oracle,
             querier,
         }
@@ -148,12 +148,7 @@ impl<'a> SwapTrx<'a> {
         let swap_path =
             self.oracle
                 .swap_path(amount.ticker().into(), currency_out.into(), self.querier)?;
-        trx::exact_amount_in(
-            &mut self.batch,
-            self.ica_account.clone(),
-            amount,
-            &swap_path,
-        )?;
+        trx::exact_amount_in(&mut self.trx, self.ica_account.clone(), amount, &swap_path)?;
         Ok(())
     }
 }
@@ -162,7 +157,7 @@ impl From<SwapTrx<'_>> for LocalBatch {
     fn from(value: SwapTrx<'_>) -> Self {
         ica::submit_transaction(
             value.conn,
-            value.batch,
+            value.trx,
             "memo",
             IBC_TIMEOUT,
             ICA_SWAP_ACK_TIP,

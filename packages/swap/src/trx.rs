@@ -7,7 +7,7 @@ use finance::{
 use platform::{
     coin_legacy,
     denom::dex::DexMapper,
-    ica::{Batch, HostAccount},
+    ica::{HostAccount, Transaction},
 };
 use sdk::cosmwasm_std::Coin as CwCoin;
 
@@ -17,7 +17,7 @@ use crate::{
 };
 
 pub fn exact_amount_in<G>(
-    batch: &mut Batch,
+    trx: &mut Transaction,
     sender: HostAccount,
     token_in: &CoinDTO<G>,
     swap_path: &SwapPath,
@@ -42,7 +42,7 @@ where
         token_out_min_amount,
     };
 
-    batch.add_message(MSG_TYPE, msg);
+    trx.add_message(MSG_TYPE, msg);
     Ok(())
 }
 
