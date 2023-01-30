@@ -29,11 +29,11 @@ impl<T> HumanReadableTree<T> {
             root: {
                 let mut child_nodes: BTreeMap<NodeIndex, Vec<HRTNode<T>>> = BTreeMap::new();
 
-                while let Some((start_index, node)) = Self::find_deepest(&mut tree) {
+                while let Some((start_index, node)) = Self::find_deepest(&tree) {
                     let parent_index: NodeIndex = node.parent_index();
 
                     let end_index: NodeIndex =
-                        Self::find_last_child(&mut tree, start_index.into(), parent_index);
+                        Self::find_last_child(&tree, start_index, parent_index);
 
                     let children: Vec<HRTNode<T>> =
                         Self::drain_nodes(&mut tree, &mut child_nodes, start_index, end_index);
@@ -60,18 +60,19 @@ impl<T> HumanReadableTree<T> {
         }
     }
 
-    fn enumerated_rev_iter(tree: &Tree<T>, start_index: NodeIndex) -> impl Iterator<Item=(NodeIndex, &Node<T>)> + '_ {
-        tree.nodes[usize::from(start_index)..].iter()
-            .rev()
-            .map({
-                let mut index: NodeIndex = tree.node_index_len();
+    fn enumerated_rev_iter(
+        tree: &Tree<T>,
+        start_index: NodeIndex,
+    ) -> impl Iterator<Item = (NodeIndex, &Node<T>)> + '_ {
+        tree.nodes[usize::from(start_index)..].iter().rev().map({
+            let mut index: NodeIndex = tree.node_index_len();
 
-                move |node| {
-                    index -= 1;
+            move |node| {
+                index -= 1;
 
-                    (index, node)
-                }
-            })
+                (index, node)
+            }
+        })
     }
 
     fn find_deepest(tree: &Tree<T>) -> Option<(NodeIndex, &Node<T>)> {
@@ -79,7 +80,11 @@ impl<T> HumanReadableTree<T> {
             .max_by_key(|(_, node): &(NodeIndex, &Node<T>)| node.parent_index())
     }
 
-    fn find_last_child(tree: &Tree<T>, start_index: NodeIndex, parent_index: NodeIndex) -> NodeIndex {
+    fn find_last_child(
+        tree: &Tree<T>,
+        start_index: NodeIndex,
+        parent_index: NodeIndex,
+    ) -> NodeIndex {
         Self::enumerated_rev_iter(tree, start_index)
             .find(|(_, node): &(NodeIndex, &Node<T>)| node.parent_index() == parent_index)
             .expect("Subtree should contain at least the first found element!")
