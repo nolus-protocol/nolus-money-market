@@ -18,6 +18,29 @@ on:
 
 env:
   CARGO_TERM_COLOR: "always"
+  OPTIMIZED_BUILD_SCRIPT: |
+    build() {
+      sudo docker run --rm -v "$(pwd)/":"/code/" \
+        -v "$(pwd)/artifacts_${1}_net/":"/code/artifacts/" \
+        --mount type=volume,source="$(basename \"$(pwd) \")_cache",target="/code/target/" \
+        --mount type=volume,source="rustup_dir_cache",target="/usr/local/rustup/" \
+        --mount type=volume,source="cargo_dir_cache",target="/usr/local/cargo/" \
+        --mount type=volume,source="registry_cache",target="/usr/local/cargo/registry/" \
+        --env ALT_NET_SYMBOLS=$(if test "${1}" = "test"; then echo 1; else echo 0; fi) \
+        cosmwasm/workspace-optimizer:0.12.11
+    }
+  CHECK_SIZES_SCRIPT: |
+    check_sizes() {
+      find "artifacts_${1}_net/" -size +1000k | wc -l | read large_files_count
+    
+      if !test "{$large_files_count}" = "0";
+        then exit 1;
+      fi
+    }
+  COPY_DEPLOYMENT_SCRIPT: |
+    copy_deploy_script() {
+      sudo cp "scripts/deploy-contracts-genesis.sh" "artifacts_${1}_net/"
+    }
 
 jobs:
   check-formatting:
@@ -94,41 +117,24 @@ jobs:
     if: "github.ref_type == 'tag'"
     steps:
       - uses: "actions/checkout@v3"
-      - shell: "sh"
-        run: |
-          build() {
-            sudo docker run --rm -v "$(pwd)":/code -v "$(pwd)/artifacts_${1}_net":/code/artifacts --mount type=volume,source="$(basename \"$(pwd)\")_cache",target=/code/target --mount type=volume,source=rustup_dir_cache,target=/usr/local/rustup --mount type=volume,source=cargo_dir_cache,target=/usr/local/cargo --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry --env ALT_NET_SYMBOLS=$(if test "${1}" = "test"; then echo 1; else echo 0; fi) cosmwasm/workspace-optimizer:0.12.11
-          }
-
-          check_sizes() {
-            find artifacts_${1}_net/ -size +1000k | wc -l | read large_files_count
-
-            if !test "$large_files_count" = "0";
-              then exit 1;
-            fi
-          }
-
-          copy_deploy_script() {
-            sudo cp scripts/deploy-contracts-genesis.sh artifacts_${1}_net/
-          }
       - name: "Run workspace-optimizer docker image for test-net"
         shell: "sh"
-        run: "build test"
+        run: "eval \"${OPTIMIZED_BUILD_SCRIPT}\"; build test"
       - name: "Check for test-net WASM binaries larger than allowed limit"
         shell: "sh"
-        run: "check_sizes test"
+        run: "eval \"${CHECK_SIZES_SCRIPT}\"; check_sizes test"
       - name: "Copy deployment script to test-net artifacts directory"
         shell: "sh"
-        run: "copy_deploy_script test"
+        run: "eval \"${COPY_DEPLOYMENT_SCRIPT}\"; copy_deploy_script test"
       - name: "Run workspace-optimizer docker image for main-net"
         shell: "sh"
-        run: "build main"
+        run: "eval \"${OPTIMIZED_BUILD_SCRIPT}\"; build main"
       - name: "Check for main-net WASM binaries larger than allowed limit"
         shell: "sh"
-        run: "check_sizes main"
+        run: "eval \"${CHECK_SIZES_SCRIPT}\"; check_sizes main"
       - name: "Copy deployment script to main-net artifacts directory"
         shell: "sh"
-        run: "copy_deploy_script main"
+        run: "eval \"${COPY_DEPLOYMENT_SCRIPT}\"; copy_deploy_script main"
       - name: "Archive test-net artifacts"
         uses: "actions/upload-artifact@v3"
         with:
