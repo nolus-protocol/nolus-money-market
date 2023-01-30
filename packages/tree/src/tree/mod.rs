@@ -19,8 +19,7 @@ pub trait FindBy {
 
 type Nodes<T> = Vec<Node<T>>;
 
-#[derive(Clone, Eq, PartialEq, Serialize)]
-#[cfg_attr(any(debug_assertions, test), derive(Debug))]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize)]
 #[cfg_attr(not(debug_assertions), derive(Deserialize))]
 #[repr(transparent)]
 #[serde(transparent, rename_all = "snake_case")]
@@ -166,6 +165,14 @@ impl<'r, T> Iterator for TreeIter<'r, T> {
     fn next(&mut self) -> Option<Self::Item> {
         self.range
             .next()
+            .map(|this| NodeRef::with_index(self.tree, this))
+    }
+}
+
+impl<'r, T> DoubleEndedIterator for TreeIter<'r, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.range
+            .next_back()
             .map(|this| NodeRef::with_index(self.tree, this))
     }
 }

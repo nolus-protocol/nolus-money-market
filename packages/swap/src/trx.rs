@@ -108,7 +108,7 @@ mod test {
     use currency::lpn::{Lpns, Usdc};
     use finance::{
         coin::Coin,
-        currency::{Currency, SymbolStatic},
+        currency::{Currency as _, SymbolStatic},
     };
     use sdk::cosmwasm_std::Coin as CwCoin;
 

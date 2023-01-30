@@ -1,5 +1,3 @@
-use trees::tr;
-
 use currency::{
     lease::{Cro, Osmo},
     lpn::Usdc,
@@ -10,7 +8,7 @@ use marketprice::{config::Config as PriceConfig, SpotPrice};
 use oracle::{
     contract::{execute, instantiate, query, reply},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::{config::Config, supported_pairs::TreeStore},
+    state::config::Config,
     ContractError,
 };
 use sdk::{
@@ -46,11 +44,19 @@ impl MarketOracleWrapper {
                     Percent::from_percent(75),
                 ),
             },
-            swap_tree: TreeStore(
-                tr((0, Usdc::TICKER.into()))
-                    / tr((1, Osmo::TICKER.to_string()))
-                    / tr((3, Cro::TICKER.to_string())),
-            ),
+            swap_tree: serde_json_wasm::from_str(&format!(
+                r#"{{
+                    "value":[0,"{usdc}"],
+                    "children":[
+                        {{"value":[1,"{osmo}"]}},
+                        {{"value":[3,"{cro}"]}}
+                    ]
+                }}"#,
+                usdc = Usdc::TICKER,
+                osmo = Osmo::TICKER,
+                cro = Cro::TICKER,
+            ))
+            .unwrap(),
         };
 
         app.instantiate_contract(

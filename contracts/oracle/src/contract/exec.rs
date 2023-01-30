@@ -63,7 +63,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                     &self.sender,
                 )?;
 
-                SupportedPairs::<OracleBase>::new(tree)?
+                SupportedPairs::<OracleBase>::new(tree.into_tree())?
                     .validate_tickers()?
                     .save(self.deps.storage)?;
 

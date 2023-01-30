@@ -57,6 +57,57 @@ mod serde {
         let transformed_back: HumanReadableTree<u32> =
             original.clone().into_tree().into_human_readable();
 
-        assert_eq!(original, transformed_back);
+        assert_eq!(transformed_back, original);
+    }
+
+    #[test]
+    fn parent_iter() {
+        let tree: Tree<u32> = from_str::<HumanReadableTree<u32>>(
+            r#"{"value":5,"children":[{"value":4,"children":[{"value":6},{"value":7}]},{"value":3}]}"#,
+        )
+            .unwrap()
+            .into_tree();
+
+        assert_eq!(
+            tree
+                .find_by(|&v| v == 4)
+                .unwrap()
+                .parents_iter()
+                .map(|node| *node.value())
+                .collect::<Vec<u32>>(),
+            vec![5]
+        );
+
+        assert_eq!(
+            tree
+                .find_by(|&v| v == 4)
+                .unwrap()
+                .parents_iter()
+                .rev()
+                .map(|node| *node.value())
+                .collect::<Vec<u32>>(),
+            vec![5]
+        );
+
+        assert_eq!(
+            tree
+                .find_by(|&v| v == 7)
+                .unwrap()
+                .parents_iter()
+                .map(|node| *node.value())
+                .collect::<Vec<u32>>(),
+            vec![4, 5]
+        );
+
+        assert_eq!(
+            tree
+                .find_by(|&v| v == 7)
+                .unwrap()
+                .parents_iter()
+                .rev()
+                .map(|node| *node.value())
+                .collect::<Vec<u32>>(),
+            vec![5, 4]
+        );
     }
 }

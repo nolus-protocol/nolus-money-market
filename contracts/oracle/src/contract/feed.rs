@@ -101,12 +101,9 @@ where
         at: Timestamp,
         total_feeders: usize,
     ) -> Result<SpotPrice, ContractError> {
-        let path = tree.load_path(currency)?;
-        let leaf_to_root = path.iter().map(|owned| owned.as_str());
-        let price = self
-            .feeds
-            .price::<OracleBase, _>(storage, at, total_feeders, leaf_to_root)?;
-        Ok(price)
+        self.feeds
+            .price::<OracleBase, _>(storage, at, total_feeders, tree.load_path(currency)?)
+            .map_err(Into::into)
     }
 }
 

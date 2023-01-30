@@ -1,5 +1,3 @@
-use trees::tr;
-
 use currency::{
     lease::{Atom, Cro, Osmo, Wbtc, Weth},
     lpn::Usdc,
@@ -18,11 +16,13 @@ use sdk::cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
     MemoryStorage, MessageInfo, OwnedDeps,
 };
+use swap::SwapTarget;
+use tree::HumanReadableTree;
 
 use crate::{
     contract::{execute, instantiate},
     msg::{ExecuteMsg, InstantiateMsg},
-    state::{config::Config, supported_pairs::TreeStore},
+    state::config::Config,
 };
 
 #[cfg(test)]
@@ -34,7 +34,7 @@ pub(crate) fn dummy_instantiate_msg(
     base_asset: SymbolOwned,
     price_feed_period_secs: u32,
     expected_feeders: Percent,
-    swap_tree: TreeStore,
+    swap_tree: HumanReadableTree<SwapTarget>,
 ) -> InstantiateMsg {
     InstantiateMsg {
         config: Config {
@@ -55,12 +55,37 @@ pub(crate) fn dummy_default_instantiate_msg() -> InstantiateMsg {
         Usdc::TICKER.to_string(),
         60,
         Percent::from_percent(50),
-        TreeStore(
-            tr((0, Usdc::TICKER.to_string()))
-                / (tr((3, Weth::TICKER.to_string()))
-                    / (tr((2, Atom::TICKER.to_string())) / tr((1, Osmo::TICKER.to_string()))))
-                / (tr((4, Wbtc::TICKER.to_string())) / (tr((5, Cro::TICKER.to_string())))),
-        ),
+        serde_json_wasm::from_str(&format!(
+            r#"{{
+                "value":[0,"{usdc}"],
+                "children":[
+                    {{
+                        "value":[3,"{weth}"],
+                        "children":[
+                            {{
+                                "value":[2,"{atom}"],
+                                "children":[
+                                    {{"value":[1,"{osmo}"]}}
+                                ]
+                            }}
+                        ]
+                    }},
+                    {{
+                        "value":[4,"{wbtc}"],
+                        "children":[
+                            {{"value":[5,"{cro}"]}}
+                        ]
+                    }}
+                ]
+            }}"#,
+            usdc = Usdc::TICKER,
+            weth = Weth::TICKER,
+            atom = Atom::TICKER,
+            osmo = Osmo::TICKER,
+            wbtc = Wbtc::TICKER,
+            cro = Cro::TICKER,
+        ))
+        .unwrap(),
     )
 }
 

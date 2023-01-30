@@ -67,7 +67,9 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
                     .load_swap_path(&from, &to)?,
             )?),
             QueryMsg::SwapTree {} => Ok(to_binary(&SwapTreeResponse {
-                tree: SupportedPairs::<OracleBase>::load(self.deps.storage)?.query_swap_tree(),
+                tree: SupportedPairs::<OracleBase>::load(self.deps.storage)?
+                    .query_swap_tree()
+                    .into_human_readable(),
             })?),
             QueryMsg::AlarmsStatus {} => Ok(to_binary(&try_query_alarms::<OracleBase>(
                 self.deps.storage,

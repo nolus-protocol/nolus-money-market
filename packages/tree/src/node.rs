@@ -1,3 +1,5 @@
+use std::mem::replace;
+
 use serde::{Deserialize, Serialize};
 
 use crate::tree::{Subtree, Tree};
@@ -50,8 +52,12 @@ pub struct NodeRef<'r, T> {
 }
 
 impl<'r, T> NodeRef<'r, T> {
+    pub fn shorten_lifetime(&self) -> NodeRef<T> {
+        NodeRef { ..*self }
+    }
+
     #[inline]
-    pub fn value(&self) -> &T {
+    pub fn value(&self) -> &'r T {
         &self.tree.node(self.this).value
     }
 
@@ -70,7 +76,9 @@ impl<'r, T> NodeRef<'r, T> {
 
     #[inline]
     pub fn parents_iter(&self) -> ParentsIter<'r, T> {
-        ParentsIter { node: *self }
+        ParentsIter {
+            inner: ParentsIterInner::Unresolved { node: *self },
+        }
     }
 
     #[inline]
@@ -105,17 +113,58 @@ impl<'r, T> Clone for NodeRef<'r, T> {
 impl<'r, T> Copy for NodeRef<'r, T> {}
 
 pub struct ParentsIter<'r, T> {
-    node: NodeRef<'r, T>,
+    inner: ParentsIterInner<'r, T>,
 }
 
 impl<'r, T> Iterator for ParentsIter<'r, T> {
     type Item = NodeRef<'r, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let parent = self.node.parent()?;
+        match &mut self.inner {
+            ParentsIterInner::Unresolved { node } => {
+                let parent = node.parent()?;
 
-        self.node = parent;
+                *node = parent;
 
-        Some(parent)
+                Some(parent)
+            }
+            ParentsIterInner::Resolved { nodes } => nodes.next(),
+        }
     }
+}
+
+impl<'r, T> DoubleEndedIterator for ParentsIter<'r, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        match &mut self.inner {
+            &mut ParentsIterInner::Unresolved { node } => {
+                let mut node: Option<NodeRef<'r, T>> = node.parent();
+
+                {
+                    let mut nodes: Vec<NodeRef<'r, T>> = vec![];
+
+                    if let Some(node) = &mut node {
+                        while let Some(parent) = node.parent() {
+                            nodes.push(replace(node, parent));
+                        }
+                    }
+
+                    self.inner = ParentsIterInner::Resolved {
+                        nodes: nodes.into_iter(),
+                    };
+                }
+
+                node
+            }
+            ParentsIterInner::Resolved { nodes } => nodes.next_back(),
+        }
+    }
+}
+
+enum ParentsIterInner<'r, T> {
+    Unresolved {
+        node: NodeRef<'r, T>,
+    },
+    Resolved {
+        nodes: std::vec::IntoIter<NodeRef<'r, T>>,
+    },
 }

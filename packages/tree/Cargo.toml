@@ -5,8 +5,12 @@ authors = ["Kiril Mihaylov <k.mihaylov@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 
+[features]
+schema = ["dep:schemars"]
+
 [dependencies]
 serde = { workspace = true, features = ["std", "derive"] }
+schemars = { workspace = true, optional = true }
 
 [dev-dependencies]
 serde-json-wasm = { workspace = true }

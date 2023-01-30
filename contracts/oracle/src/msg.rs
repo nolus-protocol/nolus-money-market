@@ -1,17 +1,19 @@
 use serde::{Deserialize, Serialize};
 
 use finance::currency::SymbolOwned;
-use marketprice::{config::Config as PriceConfig, SpotPrice};
+use marketprice::{alarms::Alarm, config::Config as PriceConfig, SpotPrice};
 use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
 };
+use swap::SwapTarget;
+use tree::HumanReadableTree;
 
 use crate::{
     alarms::Alarm,
     state::{
         config::Config,
-        supported_pairs::{SubTree, SwapLeg, TreeStore},
+        supported_pairs::SwapLeg
     },
 };
 
@@ -19,8 +21,7 @@ use crate::{
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 pub struct InstantiateMsg {
     pub config: Config,
-    #[schemars(with = "Vec<SubTree>")]
-    pub swap_tree: TreeStore,
+    pub swap_tree: HumanReadableTree<SwapTarget>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
@@ -38,8 +39,7 @@ pub enum ExecuteMsg {
     },
     UpdateConfig(PriceConfig),
     SwapTree {
-        #[schemars(with = "Vec<SubTree>")]
-        tree: TreeStore,
+        tree: HumanReadableTree<SwapTarget>,
     },
     AddPriceAlarm {
         alarm: Alarm,
@@ -93,8 +93,7 @@ pub struct ConfigResponse {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct SwapTreeResponse {
-    #[schemars(with = "Vec<SubTree>")]
-    pub tree: TreeStore,
+    pub tree: HumanReadableTree<SwapTarget>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

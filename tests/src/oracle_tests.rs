@@ -1,7 +1,5 @@
 use std::collections::HashSet;
 
-use trees::tr;
-
 use currency::{
     lease::{Atom, Cro, Osmo, Wbtc, Weth},
     lpn::Usdc,
@@ -15,7 +13,7 @@ use finance::{
 };
 use leaser::msg::QueryMsg;
 use marketprice::{config::Config as PriceConfig, SpotPrice};
-use oracle::{alarms::Alarm, msg::QueryMsg as OracleQ, state::supported_pairs::TreeStore};
+use oracle::{alarms::Alarm, msg::QueryMsg as OracleQ};
 use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{coin, wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
@@ -23,6 +21,7 @@ use sdk::{
     schemars::_serde_json::from_str,
 };
 use swap::SwapTarget;
+use tree::HumanReadableTree;
 
 use crate::common::{
     leaser_wrapper::LeaserWrapper, native_cwcoin, oracle_wrapper, test_case::TestCase, AppExt,
@@ -388,12 +387,25 @@ fn test_swap_path() {
     let mut test_case = create_test_case();
     let admin = Addr::unchecked(ADMIN);
     let msg = oracle::msg::ExecuteMsg::SwapTree {
-        tree: TreeStore(
-            tr((0, Usdc::TICKER.into()))
-                / (tr((1, BaseC::TICKER.to_string()))
-                    / tr((2, Weth::TICKER.to_string()))
-                    / tr((3, Wbtc::TICKER.to_string()))),
-        ),
+        tree: serde_json_wasm::from_str(&format!(
+            r#"{{
+                "value":[0,"{usdc}"],
+                "children":[
+                    {{
+                        "value":[1,"{base_c}"],
+                        "children":[
+                            {{"value":[2,"{weth}"]}},
+                            {{"value":[3,"{wbtc}"]}}
+                        ]
+                    }}
+                ]
+            }}"#,
+            usdc = Usdc::TICKER,
+            base_c = BaseC::TICKER,
+            weth = Weth::TICKER,
+            wbtc = Wbtc::TICKER,
+        ))
+        .unwrap(),
     };
     test_case
         .app
@@ -429,12 +441,25 @@ fn test_swap_path() {
 fn test_query_swap_tree() {
     let mut test_case = create_test_case();
     let admin = Addr::unchecked(ADMIN);
-    let tree = TreeStore(
-        tr((0, Usdc::TICKER.into()))
-            / (tr((1, BaseC::TICKER.to_string()))
-                / tr((2, Weth::TICKER.to_string()))
-                / tr((3, Wbtc::TICKER.to_string()))),
-    );
+    let tree: HumanReadableTree<SwapTarget> = serde_json_wasm::from_str(&format!(
+        r#"{{
+            "value":[0,"{usdc}"],
+            "children":[
+                {{
+                    "value":[1,"{base_c}"],
+                    "children":[
+                        {{"value":[2,"{weth}"]}},
+                        {{"value":[3,"{wbtc}"]}}
+                    ]
+                }}
+            ]
+        }}"#,
+        usdc = Usdc::TICKER,
+        base_c = BaseC::TICKER,
+        weth = Weth::TICKER,
+        wbtc = Wbtc::TICKER,
+    ))
+    .unwrap();
     let msg = oracle::msg::ExecuteMsg::SwapTree { tree: tree.clone() };
     test_case
         .app
