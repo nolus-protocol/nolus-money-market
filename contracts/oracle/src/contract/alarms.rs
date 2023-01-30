@@ -89,6 +89,45 @@ impl MarketAlarms {
         )
     }
 
+    pub fn try_notify_alarms<BaseC>(
+        storage: &mut dyn Storage,
+        mut batch: Batch,
+        prices: &[SpotPrice],
+        max_count: u32, // TODO: type alias
+    ) -> Result<Response, ContractError>
+    where
+        BaseC: Currency,
+    {
+        let mut next_id = Self::MSG_ID.may_load(storage)?.unwrap_or_default();
+        let initial_id = next_id;
+
+        Self::alarms_iter::<BaseC>(storage, prices)
+            .take(max_count.try_into()?)
+            .try_for_each(|addr| Self::schedule_alarm(&mut batch, addr?, &mut next_id))?;
+
+        Self::MSG_ID.save(storage, &next_id)?;
+
+        let processed = next_id.wrapping_sub(initial_id);
+
+        Ok(Response::from(batch)
+            .set_data(to_binary(&DispatchAlarmsResponse(processed.try_into()?))?))
+    }
+
+    pub fn try_query_alarms<BaseC>(
+        storage: &dyn Storage,
+        prices: &[SpotPrice],
+    ) -> Result<AlarmsStatusResponse, ContractError>
+    where
+        BaseC: Currency,
+    {
+        Ok(AlarmsStatusResponse {
+            remaining_alarms: Self::alarms_iter::<BaseC>(storage, prices)
+                .next()
+                .transpose()?
+                .is_some(),
+        })
+    }
+
     fn alarms_iter<'a, BaseC>(
         storage: &'a dyn Storage,
         prices: &'a [SpotPrice],
@@ -146,45 +185,6 @@ impl MarketAlarms {
         *next_id = next_id.wrapping_add(1);
 
         Ok(())
-    }
-
-    pub fn try_notify_alarms<BaseC>(
-        storage: &mut dyn Storage,
-        mut batch: Batch,
-        prices: &[SpotPrice],
-        max_count: u32, // TODO: type alias
-    ) -> Result<Response, ContractError>
-    where
-        BaseC: Currency,
-    {
-        let mut next_id = Self::MSG_ID.may_load(storage)?.unwrap_or_default();
-        let initial_id = next_id;
-
-        Self::alarms_iter::<BaseC>(storage, prices)
-            .take(max_count.try_into()?)
-            .try_for_each(|addr| Self::schedule_alarm(&mut batch, addr?, &mut next_id))?;
-
-        Self::MSG_ID.save(storage, &next_id)?;
-
-        let processed = next_id.wrapping_sub(initial_id);
-
-        Ok(Response::from(batch)
-            .set_data(to_binary(&DispatchAlarmsResponse(processed.try_into()?))?))
-    }
-
-    pub fn try_query_alarms<BaseC>(
-        storage: &dyn Storage,
-        prices: &[SpotPrice],
-    ) -> Result<AlarmsStatusResponse, ContractError>
-    where
-        BaseC: Currency,
-    {
-        Ok(AlarmsStatusResponse {
-            remaining_alarms: Self::alarms_iter::<BaseC>(storage, prices)
-                .next()
-                .transpose()?
-                .is_some(),
-        })
     }
 }
 

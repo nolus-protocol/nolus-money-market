@@ -99,24 +99,6 @@ impl<'m> PriceAlarms<'m> {
         }
     }
 
-    fn alarms_below(&self) -> IndexedMap<Addr, AlarmStore, AlarmsIndexes> {
-        let indexes = AlarmsIndexes(MultiIndex::new(
-            |_, price| price.to_owned(),
-            self.alarms_below_namespace,
-            self.index_below_namespace,
-        ));
-        IndexedMap::new(self.alarms_below_namespace, indexes)
-    }
-
-    fn alarms_above(&self) -> IndexedMap<Addr, AlarmStore, AlarmsIndexes> {
-        let indexes = AlarmsIndexes(MultiIndex::new(
-            |_, price| price.to_owned(),
-            self.alarms_above_namespace,
-            self.index_above_namespace,
-        ));
-        IndexedMap::new(self.alarms_above_namespace, indexes)
-    }
-
     pub fn add_alarm_below<C, BaseC>(
         &self,
         storage: &mut dyn Storage,
@@ -153,6 +135,41 @@ impl<'m> PriceAlarms<'m> {
         Ok(())
     }
 
+    pub fn alarms<'a, C, BaseC>(
+        &self,
+        storage: &'a dyn Storage,
+        price: Price<C, BaseC>,
+    ) -> AlarmsIterator<'a>
+    where
+        C: Currency,
+        BaseC: Currency,
+    {
+        let norm_price = AlarmStore::new(&price);
+
+        AlarmsIterator(
+            self.iter_below::<C>(storage, &norm_price)
+                .chain(self.iter_above::<C>(storage, &norm_price)),
+        )
+    }
+
+    fn alarms_below(&self) -> IndexedMap<Addr, AlarmStore, AlarmsIndexes> {
+        let indexes = AlarmsIndexes(MultiIndex::new(
+            |_, price| price.to_owned(),
+            self.alarms_below_namespace,
+            self.index_below_namespace,
+        ));
+        IndexedMap::new(self.alarms_below_namespace, indexes)
+    }
+
+    fn alarms_above(&self) -> IndexedMap<Addr, AlarmStore, AlarmsIndexes> {
+        let indexes = AlarmsIndexes(MultiIndex::new(
+            |_, price| price.to_owned(),
+            self.alarms_above_namespace,
+            self.index_above_namespace,
+        ));
+        IndexedMap::new(self.alarms_above_namespace, indexes)
+    }
+
     fn iter_below<'a, C>(&self, storage: &'a dyn Storage, price: &AlarmStore) -> BoxedIter<'a>
     where
         C: Currency,
@@ -183,23 +200,6 @@ impl<'m> PriceAlarms<'m> {
                 None,
                 Order::Ascending,
             )
-    }
-
-    pub fn alarms<'a, C, BaseC>(
-        &self,
-        storage: &'a dyn Storage,
-        price: Price<C, BaseC>,
-    ) -> AlarmsIterator<'a>
-    where
-        C: Currency,
-        BaseC: Currency,
-    {
-        let norm_price = AlarmStore::new(&price);
-
-        AlarmsIterator(
-            self.iter_below::<C>(storage, &norm_price)
-                .chain(self.iter_above::<C>(storage, &norm_price)),
-        )
     }
 }
 
