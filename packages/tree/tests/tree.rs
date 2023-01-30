@@ -69,8 +69,7 @@ mod serde {
             .into_tree();
 
         assert_eq!(
-            tree
-                .find_by(|&v| v == 4)
+            tree.find_by(|&v| v == 4)
                 .unwrap()
                 .parents_iter()
                 .map(|node| *node.value())
@@ -79,8 +78,7 @@ mod serde {
         );
 
         assert_eq!(
-            tree
-                .find_by(|&v| v == 4)
+            tree.find_by(|&v| v == 4)
                 .unwrap()
                 .parents_iter()
                 .rev()
@@ -90,8 +88,7 @@ mod serde {
         );
 
         assert_eq!(
-            tree
-                .find_by(|&v| v == 7)
+            tree.find_by(|&v| v == 7)
                 .unwrap()
                 .parents_iter()
                 .map(|node| *node.value())
@@ -100,8 +97,7 @@ mod serde {
         );
 
         assert_eq!(
-            tree
-                .find_by(|&v| v == 7)
+            tree.find_by(|&v| v == 7)
                 .unwrap()
                 .parents_iter()
                 .rev()
