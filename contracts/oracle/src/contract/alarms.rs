@@ -14,7 +14,7 @@ use marketprice::{
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Addr, Storage},
+    cosmwasm_std::{to_binary, Addr, StdError, Storage},
     cw_storage_plus::Item,
 };
 
@@ -92,7 +92,7 @@ impl MarketAlarms {
     fn alarms_iter<'a, BaseC>(
         storage: &'a dyn Storage,
         prices: &'a [SpotPrice],
-    ) -> impl Iterator<Item = Addr> + 'a
+    ) -> impl Iterator<Item = Result<Addr, StdError>> + 'a
     where
         BaseC: Currency,
     {
@@ -117,7 +117,8 @@ impl MarketAlarms {
 
         prices
             .iter()
-            .map(|price| {
+            // we can flatten, because `AlarmsCmd::exec` always returns `Ok(AlarmsIterator)` and panics if currency check fails
+            .flat_map(|price| {
                 with_quote::execute::<_, _, _, BaseC>(
                     price,
                     AlarmsCmd {
@@ -126,9 +127,6 @@ impl MarketAlarms {
                     },
                 )
             })
-            // we skip errors to process remaining alarms
-            .flatten()
-            .flatten()
             .flatten()
     }
 
@@ -164,10 +162,7 @@ impl MarketAlarms {
 
         Self::alarms_iter::<BaseC>(storage, prices)
             .take(max_count.try_into()?)
-            .for_each(|addr| {
-                // skip the result to avoid blocking other alarms
-                let _ = Self::schedule_alarm(&mut batch, addr, &mut next_id);
-            });
+            .try_for_each(|addr| Self::schedule_alarm(&mut batch, addr?, &mut next_id))?;
 
         Self::MSG_ID.save(storage, &next_id)?;
 
@@ -185,7 +180,10 @@ impl MarketAlarms {
         BaseC: Currency,
     {
         Ok(AlarmsStatusResponse {
-            remaining_alarms: Self::alarms_iter::<BaseC>(storage, prices).any(|_| true),
+            remaining_alarms: Self::alarms_iter::<BaseC>(storage, prices)
+                .next()
+                .transpose()?
+                .is_some(),
         })
     }
 }
@@ -274,6 +272,40 @@ mod test {
     }
 
     #[test]
+    #[should_panic]
+    fn notify_with_wrong_base() {
+        let mut storage = MockStorage::new();
+
+        let batch = Batch::default();
+
+        let _ = MarketAlarms::try_notify_alarms::<Base>(
+            &mut storage,
+            batch,
+            &[price::total_of(Coin::<Base>::new(1))
+                .is(Coin::<Atom>::new(25))
+                .into()],
+            1,
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn notify_with_wrong_currency_group() {
+        let mut storage = MockStorage::new();
+
+        let batch = Batch::default();
+
+        let _ = MarketAlarms::try_notify_alarms::<Base>(
+            &mut storage,
+            batch,
+            &[price::total_of(Coin::<Nls>::new(1))
+                .is(Coin::<Base>::new(25))
+                .into()],
+            1,
+        );
+    }
+
+    #[test]
     fn notify() {
         let mut storage = MockStorage::new();
 
@@ -325,6 +357,10 @@ mod test {
         assert_eq!(sent, 3);
 
         let batch = Batch::default();
+
+        // check msg_id wrapping
+        let id: Item<AlarmReplyId> = Item::new("msg_id");
+        id.save(&mut storage, &(AlarmReplyId::MAX - 5)).unwrap();
 
         let sent = from_binary::<DispatchAlarmsResponse>(
             &MarketAlarms::try_notify_alarms::<Base>(

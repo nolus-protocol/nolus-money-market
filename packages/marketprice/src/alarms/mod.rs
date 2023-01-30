@@ -7,7 +7,7 @@ use finance::{
     currency::{Currency, SymbolOwned},
     price::{self, Price},
 };
-use sdk::cosmwasm_std::{StdError, StdResult};
+use sdk::cosmwasm_std::StdError;
 use sdk::{
     cosmwasm_std::{Addr, Order, Storage},
     cw_storage_plus::{
@@ -33,12 +33,9 @@ struct AlarmStore(CoinDTO<SwapGroup>);
 
 const NORM_SCALE: u128 = 10u128.pow(18);
 
-pub struct AlarmsIterator<'a>(
-    Chain<
-        Box<dyn Iterator<Item = Result<(Addr, AlarmStore), StdError>> + 'a>,
-        Box<dyn Iterator<Item = Result<(Addr, AlarmStore), StdError>> + 'a>,
-    >,
-);
+type BoxedIter<'a> = Box<dyn Iterator<Item = Result<(Addr, AlarmStore), StdError>> + 'a>;
+
+pub struct AlarmsIterator<'a>(Chain<BoxedIter<'a>, BoxedIter<'a>>);
 
 impl<'a> Iterator for AlarmsIterator<'a> {
     type Item = Result<Addr, StdError>;
@@ -156,11 +153,7 @@ impl<'m> PriceAlarms<'m> {
         Ok(())
     }
 
-    fn iter_below<'a, C>(
-        &self,
-        storage: &'a dyn Storage,
-        price: &AlarmStore,
-    ) -> Box<dyn Iterator<Item = StdResult<(Addr, AlarmStore)>> + 'a>
+    fn iter_below<'a, C>(&self, storage: &'a dyn Storage, price: &AlarmStore) -> BoxedIter<'a>
     where
         C: Currency,
     {
@@ -176,11 +169,7 @@ impl<'m> PriceAlarms<'m> {
             )
     }
 
-    fn iter_above<'a, C>(
-        &self,
-        storage: &'a dyn Storage,
-        price: &AlarmStore,
-    ) -> Box<dyn Iterator<Item = StdResult<(Addr, AlarmStore)>> + 'a>
+    fn iter_above<'a, C>(&self, storage: &'a dyn Storage, price: &AlarmStore) -> BoxedIter<'a>
     where
         C: Currency,
     {
