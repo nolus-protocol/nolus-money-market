@@ -14,15 +14,18 @@ use crate::{
 
 pub use self::opening::request_loan::RequestLoan;
 use self::{
-    opened::{active::Active, repay::buy_lpn::BuyLpn},
+    closed::Closed,
+    opened::{repay::buy_lpn::BuyLpn},
     opening::{buy_asset::BuyAsset, open_ica_account::OpenIcaAccount},
 };
 
+mod closed;
 mod opened;
 mod opening;
 mod paid;
 
 type OpeningTransferOut = opening::transfer_out::TransferOut;
+type OpenedActive = opened::active::Active;
 type RepaymentTransferOut = opened::repay::transfer_out::TransferOut;
 type RepaymentTransferIn = opened::repay::transfer_in::TransferIn;
 type PaidActive = paid::Active;
@@ -35,12 +38,13 @@ pub enum State {
     OpenIcaAccount,
     OpeningTransferOut,
     BuyAsset,
-    Active,
+    OpenedActive,
     RepaymentTransferOut,
     BuyLpn,
     RepaymentTransferIn,
     PaidActive,
     ClosingTransferIn,
+    Closed,
 }
 
 pub struct Response {

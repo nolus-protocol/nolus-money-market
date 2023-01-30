@@ -40,6 +40,7 @@ impl Controller for TransferOut {
                 request: _,
                 data: _,
             } => {
+                // TODO [any 'sudo' Response] check 'data' if it is { "error": "..."}
                 let next_state = BuyLpn::new(self.lease, self.payment);
                 let batch = next_state.enter_state(&deps.querier)?;
                 Ok(Response::from(batch, next_state))

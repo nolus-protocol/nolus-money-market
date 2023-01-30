@@ -19,6 +19,7 @@ pub struct Close<'a, Bank> {
 }
 
 impl<'a, Bank> Close<'a, Bank> {
+    // TODO do not pass a sender
     pub fn new(sender: &'a Addr, account: Bank) -> Self {
         Self { sender, account }
     }

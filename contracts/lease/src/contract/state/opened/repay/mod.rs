@@ -5,9 +5,8 @@ use crate::{
         opened::{OngoingTrx, RepayTrx},
         PaymentCoin, StateResponse,
     },
-    contract::cmd::LeaseState,
     error::ContractResult,
-    lease::{with_lease, LeaseDTO},
+    lease::LeaseDTO,
 };
 
 pub mod buy_lpn;
@@ -26,10 +25,5 @@ fn query(
         in_progress,
     };
 
-    with_lease::execute(
-        lease,
-        LeaseState::new(env.block.time, Some(in_progress)),
-        &env.contract.address,
-        &deps.querier,
-    )
+    super::query(lease, Some(in_progress), deps, env)
 }

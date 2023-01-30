@@ -13,7 +13,7 @@ use platform::{
     trx::{self, Transaction},
 };
 use sdk::{
-    cosmos_sdk_proto::{cosmos::base::abci::v1beta1::MsgData, traits::Message},
+    cosmos_sdk_proto::{cosmos::base::abci::v1beta1::MsgData},
     cosmwasm_std::Coin as CwCoin,
 };
 
@@ -71,6 +71,7 @@ where
 
 #[cfg(feature = "testing")]
 pub fn build_exact_amount_in_resp(amount_out: Amount) -> MsgData {
+    use sdk::cosmos_sdk_proto::traits::Message;
     let resp = MsgSwapExactAmountInResponse {
         token_out_amount: amount_out.to_string(),
     };

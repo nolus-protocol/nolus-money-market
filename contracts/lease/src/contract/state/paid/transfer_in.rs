@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::api::paid::ClosingTrx;
 use crate::api::{StateQuery, StateResponse};
+use crate::contract::state::closed::Closed;
 use crate::contract::state::{Controller, Response};
 use crate::contract::Lease;
 use crate::error::ContractResult;
@@ -27,12 +28,16 @@ impl TransferIn {
 }
 
 impl Controller for TransferIn {
-    fn sudo(self, _deps: &mut DepsMut, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
+    fn sudo(self, deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response {
                 request: _,
                 data: _,
-            } => todo!("call Lease::close"),
+            } => {
+                let next_state = Closed::default();
+                let emitter = next_state.enter_state(self.lease.lease, &env, &deps.querier)?;
+                Ok(Response::from(emitter, next_state))
+            }
             SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {
                 request: _,
