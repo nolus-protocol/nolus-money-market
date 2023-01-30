@@ -9,7 +9,7 @@ use sdk::{
         testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin as CwCoin, Deps, Empty, Env,
         StdResult, Timestamp,
     },
-    testing::{self, new_app, App, CustomMessageQueue},
+    testing::{self, new_app, App, CustomMessageSender},
 };
 
 pub(crate) const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
@@ -100,7 +100,7 @@ fn mock_query(_deps: Deps, _env: Env, _msg: MockQueryMsg) -> StdResult<Binary> {
 pub type MockApp = App<CustomMsg, Empty>;
 
 pub fn mock_app(
-    custom_message_queue: Option<CustomMessageQueue>,
+    custom_message_sender: Option<CustomMessageSender>,
     init_funds: &[CwCoin],
 ) -> MockApp {
     let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);
@@ -114,7 +114,7 @@ pub fn mock_app(
     let mut funds = vec![native_cwcoin(100000)];
     funds.append(&mut init_funds.to_vec());
 
-    new_app(custom_message_queue)
+    new_app(custom_message_sender)
         .with_block(mock_start_block)
         .build(|router, _, storage| {
             router

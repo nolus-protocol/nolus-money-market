@@ -1,5 +1,3 @@
-use std::{cell::RefCell, collections::VecDeque, rc::Rc};
-
 use cosmwasm_std::{
     testing::{mock_dependencies, MockApi, MockQuerier, MockStorage},
     Binary, ContractResult, Empty, GovMsg, IbcMsg, IbcQuery, OwnedDeps, SystemError, SystemResult,
@@ -31,11 +29,11 @@ pub type AppBuilder<Exec = CustomMsg, Query = Empty> = cw_multi_test::AppBuilder
 
 pub type Contract = dyn cw_multi_test::Contract<CustomMsg>;
 
-pub type CustomMessageQueue = Rc<RefCell<VecDeque<CustomMsg>>>;
-pub type CustomMessageQueueRef<'r> = &'r RefCell<VecDeque<CustomMsg>>;
+pub type CustomMessageSender = std::sync::mpsc::Sender<CustomMsg>;
+pub type CustomMessageReceiver = std::sync::mpsc::Receiver<CustomMsg>;
 
-pub fn new_custom_msg_queue() -> CustomMessageQueue {
-    Rc::new(RefCell::default())
+pub fn new_custom_msg_queue() -> (CustomMessageSender, CustomMessageReceiver) {
+    std::sync::mpsc::channel()
 }
 
 pub fn mock_deps_with_contracts<const N: usize>(
@@ -70,9 +68,9 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
     deps
 }
 
-pub fn new_app(custom_message_queue: Option<CustomMessageQueue>) -> AppBuilder {
+pub fn new_app(custom_message_sender: Option<CustomMessageSender>) -> AppBuilder {
     BasicAppBuilder::<CustomMsg, Empty>::new_custom()
-        .with_custom(CustomMsgModule::new(custom_message_queue))
+        .with_custom(CustomMsgModule::new(custom_message_sender))
         .with_wasm::<CustomMsgModule, _>(WasmKeeper::new())
 }
 
@@ -85,15 +83,15 @@ mod custom_msg {
 
     use crate::cosmwasm_ext::CustomMsg;
 
-    use super::CustomMessageQueue;
+    use super::CustomMessageSender;
 
     pub struct Module {
-        message_queue: Option<CustomMessageQueue>,
+        message_sender: Option<CustomMessageSender>,
     }
 
     impl Module {
-        pub fn new(message_queue: Option<CustomMessageQueue>) -> Self {
-            Self { message_queue }
+        pub fn new(message_sender: Option<CustomMessageSender>) -> Self {
+            Self { message_sender }
         }
     }
 
@@ -117,8 +115,10 @@ mod custom_msg {
             ExecC: std::fmt::Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
             QueryC: CustomQuery + DeserializeOwned + 'static,
         {
-            if let Some(queue) = self.message_queue.as_ref() {
-                queue.borrow_mut().push_back(msg)
+            if let Some(sender) = self.message_sender.as_ref() {
+                sender
+                    .send(msg)
+                    .expect("Receiver closed but message had to be sent!");
             }
 
             Ok(AppResponse::default())

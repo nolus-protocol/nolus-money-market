@@ -5,7 +5,7 @@ use finance::{
     percent::Percent,
 };
 use lease::api::dex::{ConnectionParams, Ics20Channel};
-use sdk::testing::CustomMessageQueue;
+use sdk::testing::CustomMessageSender;
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Empty, Uint64},
     cw_multi_test::{next_block, Executor},
@@ -54,7 +54,6 @@ type OptionalContractWrapperStd = Option<
 
 pub struct TestCase<Lpn> {
     pub app: MockApp,
-    pub custom_message_queue: Option<CustomMessageQueue>,
     pub dispatcher_addr: Option<Addr>,
     pub treasury_addr: Option<Addr>,
     pub profit_addr: Option<Addr>,
@@ -70,17 +69,16 @@ impl<Lpn> TestCase<Lpn>
 where
     Lpn: Currency,
 {
-    pub fn new(custom_message_queue: Option<CustomMessageQueue>) -> Self {
-        Self::with_reserve(custom_message_queue, &[cwcoin::<Lpn, _>(10_000)])
+    pub fn new(custom_message_sender: Option<CustomMessageSender>) -> Self {
+        Self::with_reserve(custom_message_sender, &[cwcoin::<Lpn, _>(10_000)])
     }
 
     pub fn with_reserve(
-        custom_message_queue: Option<CustomMessageQueue>,
+        custom_message_sender: Option<CustomMessageSender>,
         reserve: &[CwCoin],
     ) -> Self {
         Self {
-            app: mock_app(custom_message_queue.clone(), reserve),
-            custom_message_queue,
+            app: mock_app(custom_message_sender, reserve),
             dispatcher_addr: None,
             treasury_addr: None,
             profit_addr: None,

@@ -1,5 +1,3 @@
-use std::{cell::RefCell, collections::VecDeque};
-
 use finance::{
     coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
 };
@@ -20,7 +18,7 @@ use sdk::{
         bindings::msg::NeutronMsg,
         sudo::msg::{RequestPacket, SudoMsg},
     },
-    testing::CustomMessageQueueRef,
+    testing::CustomMessageReceiver,
 };
 
 use super::{ContractWrapper, MockApp, ADMIN, USER};
@@ -189,7 +187,7 @@ type LeaseContractWrapperReply = Box<
 
 pub fn complete_lease_initialization<Lpn>(
     mock_app: &mut MockApp,
-    custom_message_queue: CustomMessageQueueRef,
+    neutron_message_receiver: &CustomMessageReceiver,
     lease_addr: &Addr,
     downpayment: CwCoin,
 ) where
@@ -199,11 +197,9 @@ pub fn complete_lease_initialization<Lpn>(
         connection_id,
         interchain_account_id,
     } = ({
-        let mut queue = custom_message_queue.borrow_mut();
+        let msg: NeutronMsg = neutron_message_receiver.recv().expect("Expected a Neutron message, but no was available!");
 
-        let msg = queue.pop_front().unwrap();
-
-        assert!(queue.is_empty());
+        let _ = neutron_message_receiver.try_recv().expect_err("Expected queue to be empty, but a second message has been sent!");
 
         msg
     }) else {
@@ -240,7 +236,7 @@ pub fn complete_lease_initialization<Lpn>(
 
     assert_eq!(
         expect_ibc_transfer(
-            custom_message_queue,
+            neutron_message_receiver,
             ica_channel,
             lease_addr.as_str(),
             ica_addr,
@@ -250,7 +246,7 @@ pub fn complete_lease_initialization<Lpn>(
     );
     assert_eq!(
         expect_ibc_transfer(
-            custom_message_queue,
+            neutron_message_receiver,
             ica_channel,
             lease_addr.as_str(),
             ica_addr,
@@ -268,7 +264,7 @@ pub fn complete_lease_initialization<Lpn>(
             interchain_account_id: tx_ica_id,
             msgs,
             ..
-        } = custom_message_queue.borrow_mut().pop_front().unwrap() else {
+        } = neutron_message_receiver.recv().expect("Expected to receive a `SubmitTx` message but no message was available!") else {
             unreachable!("Unexpected message type!")
         };
 
@@ -318,7 +314,7 @@ fn send_blank_response(mock_app: &mut MockApp, lease_addr: &Addr) -> AppResponse
 }
 
 pub fn expect_ibc_transfer(
-    queue: &RefCell<VecDeque<NeutronMsg>>,
+    neutron_message_receiver: &CustomMessageReceiver,
     ica_channel: &str,
     sender_addr: &str,
     ica_addr: &str,
@@ -326,11 +322,15 @@ pub fn expect_ibc_transfer(
 ) -> CwCoin {
     let NeutronMsg::IbcTransfer {
         source_port, source_channel, token, sender, receiver, ..
-    } = queue.borrow_mut().pop_front().unwrap() else {
+    } = neutron_message_receiver.recv().unwrap() else {
         unreachable!("Unexpected message type!")
     };
 
-    assert_eq!(queue.borrow().is_empty(), empty);
+    if empty {
+        neutron_message_receiver
+            .try_recv()
+            .expect_err("Expected queue to be empty, but other message(s) has been sent!");
+    }
 
     assert_eq!(&source_port, "transfer");
     assert_ne!(&source_channel, ica_channel);

@@ -16,7 +16,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{coin, Addr, Coin as CwCoin, DepsMut, Env, Event, MessageInfo},
     cw_multi_test::{next_block, ContractWrapper, Executor},
-    testing::new_custom_msg_queue,
+    testing::{new_custom_msg_queue, CustomMessageReceiver},
 };
 
 use crate::common::{
@@ -72,9 +72,9 @@ fn open_lease_not_in_lpn_currency() {
     type Lpn = Usdc;
     let lease_currency = Atom::TICKER;
 
-    let neutron_message_queue = new_custom_msg_queue();
+    let (neutron_message_sender, neutron_message_receiver) = new_custom_msg_queue();
 
-    let mut test_case = TestCase::<Lpn>::new(Some(neutron_message_queue.clone()));
+    let mut test_case = TestCase::<Lpn>::new(Some(neutron_message_sender));
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
     test_case.init_lpp(
         None,
@@ -104,7 +104,7 @@ fn open_lease_not_in_lpn_currency() {
 
     complete_lease_initialization::<Lpn>(
         &mut test_case.app,
-        &neutron_message_queue,
+        &neutron_message_receiver,
         &Addr::unchecked("contract6"),
         downpayment,
     );
@@ -500,7 +500,7 @@ fn open_loans_lpp_fails() {
         .unwrap();
 }
 
-fn open_lease_impl<Lpn, LeaseC, DownpaymentC>(feed_prices: bool)
+fn open_lease_impl<Lpn, LeaseC, DownpaymentC>(feed_prices: bool) -> CustomMessageReceiver
 where
     Lpn: Currency,
     LeaseC: Currency,
@@ -508,7 +508,9 @@ where
 {
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::<Lpn>::new(Some(new_custom_msg_queue()));
+    let (neutron_message_sender, neutron_message_receiver) = new_custom_msg_queue();
+
+    let mut test_case = TestCase::<Lpn>::new(Some(neutron_message_sender));
     test_case.init(&user_addr, vec![cwcoin::<DownpaymentC, _>(500)]);
     test_case.init_lpp(
         None,
@@ -574,10 +576,12 @@ where
 
     complete_lease_initialization::<Lpn>(
         &mut test_case.app,
-        test_case.custom_message_queue.as_deref().unwrap(),
+        &neutron_message_receiver,
         &lease_addr,
         downpayment,
     );
+
+    neutron_message_receiver
 }
 
 fn lease_addr(events: &[Event]) -> String {
