@@ -1,16 +1,17 @@
 use cosmwasm_std::Deps;
-use currency::lpn::Usdc;
-use finance::coin::Coin;
+use finance::currency::Symbol;
 use serde::{Deserialize, Serialize};
 
-use platform::batch::Batch as LocalBatch;
+use finance::coin::{self};
+use platform::{batch::Batch as LocalBatch, trx};
 use sdk::{
     cosmwasm_std::{DepsMut, Env, QuerierWrapper},
     neutron_sdk::sudo::msg::SudoMsg,
 };
+use swap::trx as swap_trx;
 
 use crate::{
-    api::{opened::RepayTrx, PaymentCoin, StateQuery, StateResponse},
+    api::{opened::RepayTrx, LpnCoin, PaymentCoin, StateQuery, StateResponse},
     contract::{
         state::{opened::repay, Controller, Response},
         Lease,
@@ -33,20 +34,27 @@ impl BuyLpn {
 
     pub(super) fn enter_state(&self, querier: &QuerierWrapper) -> ContractResult<LocalBatch> {
         let mut swap_trx = self.lease.dex.swap(&self.lease.lease.oracle, querier);
-        swap_trx.swap_exact_in(&self.payment, self.lease.lease.loan.lpp().currency())?;
+        swap_trx.swap_exact_in(&self.payment, self.target_currency())?;
         Ok(swap_trx.into())
+    }
+
+    fn decode_response(&self, resp: &[u8]) -> ContractResult<LpnCoin> {
+        let mut resp_msgs = trx::decode_msg_responses(resp)?;
+        let payment_amount = swap_trx::exact_amount_in_resp(&mut resp_msgs)?;
+
+        coin::from_amount_ticker(payment_amount, self.target_currency()).map_err(Into::into)
+    }
+
+    fn target_currency(&self) -> Symbol {
+        self.lease.lease.loan.lpp().currency()
     }
 }
 
 impl Controller for BuyLpn {
     fn sudo(self, _deps: &mut DepsMut, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
-            SudoMsg::Response {
-                request: _,
-                data: _,
-            } => {
-                // TODO init payment_lpn with the output of the swap
-                let payment_lpn = Coin::<Usdc>::from(1).into();
+            SudoMsg::Response { request: _, data } => {
+                let payment_lpn = self.decode_response(data.as_slice())?;
                 let next_state = TransferIn::new(self.lease, self.payment, payment_lpn);
                 let batch = next_state.enter_state(_env.block.time)?;
                 Ok(Response::from(batch, next_state))
