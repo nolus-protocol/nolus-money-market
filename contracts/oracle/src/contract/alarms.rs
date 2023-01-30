@@ -7,7 +7,10 @@ use finance::{
         Price,
     },
 };
-use marketprice::{alarms::PriceAlarms, SpotPrice};
+use marketprice::{
+    alarms::{AlarmsIterator, PriceAlarms},
+    SpotPrice,
+};
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
@@ -86,30 +89,48 @@ impl MarketAlarms {
         )
     }
 
-    // fn alarms_iter<'a, BaseC>(storage: &'a dyn Storage, price: &SpotPrice) -> Result<impl Iterator<Item = StdResult<Addr>> + 'a, ContractError>
-    //     where BaseC: Currency,
-    // {
+    fn alarms_iter<'a, BaseC>(
+        storage: &'a dyn Storage,
+        prices: &'a [SpotPrice],
+    ) -> impl Iterator<Item = Addr> + 'a
+    where
+        BaseC: Currency,
+    {
+        struct AlarmsCmd<'a> {
+            storage: &'a dyn Storage,
+            price_alarms: &'static PriceAlarms<'static>,
+        }
 
-    //     struct AlarmsCmd<'a> {
-    //         storage: &'a dyn Storage,
-    //         price_alarms: &'static PriceAlarms<'static>,
-    //     }
+        impl<'a, BaseC> WithQuote<BaseC> for AlarmsCmd<'a>
+        where
+            BaseC: Currency,
+        {
+            type Error = ContractError;
+            type Output = AlarmsIterator<'a>;
+            fn exec<C>(self, price: Price<C, BaseC>) -> Result<Self::Output, Self::Error>
+            where
+                C: Currency,
+            {
+                Ok(self.price_alarms.alarms(self.storage, price))
+            }
+        }
 
-    //     impl<'a, BaseC> WithQuote<BaseC> for AlarmsCmd<'a>
-    //         where
-    //         BaseC: Currency,
-    //     {
-    //         type Error = ContractError;
-    //         type Output = impl Iterator<Item = StdResult<Addr>> + 'a;
-    //         fn exec<C>(self, price: Price<C, BaseC>) -> Result<Self::Output, Self::Error>
-    //             where
-    //                 C: Currency {
-    //             Ok(self.price_alarms.alarms(self.storage, price))
-    //         }
-    //     }
-
-    //     with_quote::execute::<_,_,_, BaseC>(price, AlarmsCmd {storage, price_alarms: &Self::PRICE_ALARMS })
-    // }
+        prices
+            .iter()
+            .map(|price| {
+                with_quote::execute::<_, _, _, BaseC>(
+                    price,
+                    AlarmsCmd {
+                        storage,
+                        price_alarms: &Self::PRICE_ALARMS,
+                    },
+                )
+            })
+            // we skip errors to process remaining alarms
+            .flatten()
+            .flatten()
+            .flatten()
+    }
 
     fn schedule_alarm(
         batch: &mut Batch,
@@ -138,62 +159,22 @@ impl MarketAlarms {
     where
         BaseC: Currency,
     {
-        struct NotifyCmd<'a> {
-            storage: &'a dyn Storage,
-            price_alarms: &'a PriceAlarms<'static>,
-            max_count: u32,
-            next_id: &'a mut AlarmReplyId,
-            batch: &'a mut Batch,
-        }
-
-        impl<'a, BaseC> WithQuote<BaseC> for NotifyCmd<'a>
-        where
-            BaseC: Currency,
-        {
-            type Error = ContractError;
-            type Output = u32;
-
-            fn exec<C>(self, price: Price<C, BaseC>) -> Result<Self::Output, Self::Error>
-            where
-                C: Currency,
-            {
-                let initial = *self.next_id;
-
-                self.price_alarms
-                    .alarms(self.storage, price)
-                    .take(self.max_count as usize)
-                    .try_for_each(|addr_result| {
-                        addr_result.map(|addr| {
-                            MarketAlarms::schedule_alarm(self.batch, addr, self.next_id)
-                        })?
-                    })?;
-                let processed = *self.next_id - initial;
-                Ok(processed.try_into()?)
-            }
-        }
-
         let mut next_id = Self::MSG_ID.may_load(storage)?.unwrap_or_default();
-        let mut processed = 0u32;
+        let initial_id = next_id;
 
-        prices
-            .iter()
-            .try_for_each(|price| -> Result<(), ContractError> {
-                processed += with_quote::execute::<_, _, _, BaseC>(
-                    price,
-                    NotifyCmd {
-                        storage,
-                        price_alarms: &Self::PRICE_ALARMS,
-                        max_count: max_count - processed,
-                        next_id: &mut next_id,
-                        batch: &mut batch,
-                    },
-                )?;
-                Ok(())
-            })?;
+        Self::alarms_iter::<BaseC>(storage, prices)
+            .take(max_count.try_into()?)
+            .for_each(|addr| {
+                // skip the result to avoid blocking other alarms
+                let _ = Self::schedule_alarm(&mut batch, addr, &mut next_id);
+            });
 
         Self::MSG_ID.save(storage, &next_id)?;
 
-        Ok(Response::from(batch).set_data(to_binary(&DispatchAlarmsResponse(processed))?))
+        let processed = next_id.wrapping_sub(initial_id);
+
+        Ok(Response::from(batch)
+            .set_data(to_binary(&DispatchAlarmsResponse(processed.try_into()?))?))
     }
 
     pub fn try_query_alarms<BaseC>(
@@ -203,40 +184,9 @@ impl MarketAlarms {
     where
         BaseC: Currency,
     {
-        struct QueryCmd<'a> {
-            storage: &'a dyn Storage,
-            price_alarms: &'a PriceAlarms<'static>,
-        }
-
-        impl<'a, BaseC> WithQuote<BaseC> for QueryCmd<'a>
-        where
-            BaseC: Currency,
-        {
-            type Error = ContractError;
-            type Output = bool;
-
-            fn exec<C>(self, price: Price<C, BaseC>) -> Result<Self::Output, Self::Error>
-            where
-                C: Currency,
-            {
-                Ok(self.price_alarms.alarms(self.storage, price).any(|_| true))
-            }
-        }
-
-        let remaining_alarms = prices
-            .iter()
-            .flat_map(|price| {
-                with_quote::execute::<_, _, _, BaseC>(
-                    price,
-                    QueryCmd {
-                        storage,
-                        price_alarms: &Self::PRICE_ALARMS,
-                    },
-                )
-            })
-            .any(|remaining_alarms| remaining_alarms);
-
-        Ok(AlarmsStatusResponse { remaining_alarms })
+        Ok(AlarmsStatusResponse {
+            remaining_alarms: Self::alarms_iter::<BaseC>(storage, prices).any(|_| true),
+        })
     }
 }
 
@@ -294,7 +244,6 @@ mod test {
             AlarmDTO::new(
                 price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(20)),
                 Some(price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(30))),
-                // None,
             ),
         )
         .unwrap();

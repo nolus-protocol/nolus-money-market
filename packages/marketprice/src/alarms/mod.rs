@@ -1,3 +1,5 @@
+use std::iter::Chain;
+
 use serde::{Deserialize, Serialize};
 
 use finance::{
@@ -5,7 +7,7 @@ use finance::{
     currency::{Currency, SymbolOwned},
     price::{self, Price},
 };
-use sdk::cosmwasm_std::StdResult;
+use sdk::cosmwasm_std::{StdError, StdResult};
 use sdk::{
     cosmwasm_std::{Addr, Order, Storage},
     cw_storage_plus::{
@@ -30,6 +32,21 @@ pub struct PriceAlarms<'m> {
 struct AlarmStore(CoinDTO<SwapGroup>);
 
 const NORM_SCALE: u128 = 10u128.pow(18);
+
+pub struct AlarmsIterator<'a>(
+    Chain<
+        Box<dyn Iterator<Item = Result<(Addr, AlarmStore), StdError>> + 'a>,
+        Box<dyn Iterator<Item = Result<(Addr, AlarmStore), StdError>> + 'a>,
+    >,
+);
+
+impl<'a> Iterator for AlarmsIterator<'a> {
+    type Item = Result<Addr, StdError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next().map(|res| res.map(|pair| pair.0))
+    }
+}
 
 impl AlarmStore {
     fn new<C, BaseC>(price: &Price<C, BaseC>) -> Self
@@ -183,16 +200,17 @@ impl<'m> PriceAlarms<'m> {
         &self,
         storage: &'a dyn Storage,
         price: Price<C, BaseC>,
-    ) -> impl Iterator<Item = StdResult<Addr>> + 'a
+    ) -> AlarmsIterator<'a>
     where
         C: Currency,
         BaseC: Currency,
     {
         let norm_price = AlarmStore::new(&price);
 
-        self.iter_below::<C>(storage, &norm_price)
-            .chain(self.iter_above::<C>(storage, &norm_price))
-            .map(|res| res.map(|(addr, _)| addr))
+        AlarmsIterator(
+            self.iter_below::<C>(storage, &norm_price)
+                .chain(self.iter_above::<C>(storage, &norm_price)),
+        )
     }
 }
 
