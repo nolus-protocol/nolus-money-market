@@ -12,10 +12,7 @@ use platform::{
     ica::HostAccount,
     trx::{self, Transaction},
 };
-use sdk::{
-    cosmos_sdk_proto::{cosmos::base::abci::v1beta1::MsgData},
-    cosmwasm_std::Coin as CwCoin,
-};
+use sdk::{cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData, cosmwasm_std::Coin as CwCoin};
 
 use crate::{
     error::{Error, Result},

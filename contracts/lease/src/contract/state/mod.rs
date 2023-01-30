@@ -15,7 +15,7 @@ use crate::{
 pub use self::opening::request_loan::RequestLoan;
 use self::{
     closed::Closed,
-    opened::{repay::buy_lpn::BuyLpn},
+    opened::repay::buy_lpn::BuyLpn,
     opening::{buy_asset::BuyAsset, open_ica_account::OpenIcaAccount},
 };
 
