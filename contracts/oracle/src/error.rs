@@ -2,7 +2,7 @@ use std::num::TryFromIntError;
 
 use thiserror::Error;
 
-use finance::currency::{Currency, SymbolOwned};
+use finance::currency::{Currency, Symbol, SymbolOwned};
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use sdk::cosmwasm_std::{Addr, StdError};
 
@@ -73,7 +73,7 @@ where
     }
 }
 
-pub fn unsupported_currency<C>(unsupported: &SymbolOwned) -> ContractError
+pub fn unsupported_currency<C>(unsupported: Symbol) -> ContractError
 where
     C: Currency,
 {

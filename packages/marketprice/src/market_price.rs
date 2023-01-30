@@ -71,7 +71,7 @@ impl<'m> PriceFeeds<'m> {
     {
         let mut root_to_leaf = leaf_to_root.rev();
         let _root = root_to_leaf.next();
-        debug_assert_eq!(Some(QuoteC::TICKER), _root);
+        debug_assert_eq!(_root, Some(QuoteC::TICKER));
         PriceCollect::do_collect(
             root_to_leaf,
             self,

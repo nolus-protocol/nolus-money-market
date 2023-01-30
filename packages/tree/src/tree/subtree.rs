@@ -5,6 +5,7 @@ use crate::node::{NodeIndex, NodeRef};
 use super::{FindBy, Tree, TreeIter};
 
 #[derive(Copy, Clone)]
+#[cfg_attr(any(debug_assertions, test), derive(Debug))]
 pub struct Subtree<'r, T> {
     tree: &'r Tree<T>,
     subtree_root_index: NodeIndex,
@@ -32,7 +33,7 @@ impl<'r, T> Subtree<'r, T> {
                 // child nodes.
                 for _ in node.tree().nodes[usize::from(node.this_index()) + 1..]
                     .iter()
-                    .take_while(|tree_node| tree_node.parent_index() > node.this_index())
+                    .take_while(|tree_node| tree_node.parent_index() >= node.this_index())
                 {
                     length += 1;
                 }

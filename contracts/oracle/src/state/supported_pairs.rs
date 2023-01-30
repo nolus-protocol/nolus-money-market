@@ -1,0 +1,459 @@
+use std::{fmt::Debug, marker::PhantomData};
+
+use ::serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
+
+use currency::payment::PaymentGroup;
+use finance::currency::{
+    visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolOwned,
+};
+use sdk::{
+    cosmwasm_std::{StdError, StdResult, Storage},
+    cw_storage_plus::Item,
+};
+use swap::SwapTarget;
+use tree::{FindBy as _, NodeRef};
+
+use crate::error::{self, ContractError};
+
+pub type ResolutionPath = Vec<SymbolOwned>;
+pub type CurrencyPair<'a> = (Symbol<'a>, Symbol<'a>);
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct SwapLeg {
+    pub from: SymbolOwned,
+    pub to: SwapTarget,
+}
+
+impl Serialize for SwapLeg {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        (&self.from, &self.to).serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for SwapLeg {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Deserialize::deserialize(deserializer).map(|(from, to)| Self { from, to })
+    }
+}
+
+type Tree = tree::Tree<SwapTarget>;
+
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
+pub struct SupportedPairs<B>
+where
+    B: Currency,
+{
+    tree: Tree,
+    _type: PhantomData<B>,
+}
+
+impl<'a, B> SupportedPairs<B>
+where
+    B: Currency,
+{
+    const DB_ITEM: Item<'a, SupportedPairs<B>> = Item::new("supported_pairs");
+
+    pub fn new(tree: Tree) -> Result<Self, ContractError> {
+        if tree.root().value().target != B::TICKER {
+            return Err(ContractError::InvalidBaseCurrency(
+                tree.root().value().target.clone(),
+                ToOwned::to_owned(B::TICKER),
+            ));
+        }
+
+        // check for duplicated nodes
+        let mut supported_currencies: Vec<&SymbolOwned> =
+            tree.iter().map(|node| &node.value().target).collect();
+
+        supported_currencies.sort();
+
+        if (0..supported_currencies.len() - 1)
+            .any(|index| supported_currencies[index] == supported_currencies[index + 1])
+        {
+            return Err(ContractError::DuplicatedNodes {});
+        }
+
+        Ok(SupportedPairs {
+            tree,
+            _type: PhantomData,
+        })
+    }
+
+    pub fn validate_tickers(&self) -> Result<&Self, ContractError> {
+        struct TickerChecker;
+
+        impl AnyVisitor for TickerChecker {
+            type Output = ();
+            type Error = ContractError;
+
+            fn on<C>(self) -> AnyVisitorResult<Self>
+            where
+                C: Currency + Serialize + DeserializeOwned + 'static,
+            {
+                Ok(())
+            }
+        }
+
+        for swap in self.tree.iter() {
+            visit_any_on_ticker::<PaymentGroup, _>(&swap.value().target, TickerChecker)?;
+        }
+
+        Ok(self)
+    }
+
+    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
+        Self::DB_ITEM
+            .may_load(storage)?
+            .ok_or_else(|| StdError::generic_err("supported pairs tree not found"))
+    }
+
+    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
+        Self::DB_ITEM.save(storage, self)
+    }
+
+    pub fn load_path(
+        &self,
+        query: Symbol,
+    ) -> Result<impl Iterator<Item = Symbol> + DoubleEndedIterator + '_, ContractError> {
+        self.internal_load_path(query)
+            .map(|iter| iter.map(|node| node.value().target.as_str()))
+    }
+
+    pub fn load_swap_path(
+        &self,
+        from: Symbol,
+        to: Symbol,
+    ) -> Result<Vec<SwapTarget>, ContractError> {
+        let path_from = self.internal_load_path(from)?;
+
+        let mut path_to: Vec<_> = self.internal_load_path(to)?.collect();
+
+        let mut path = vec![];
+
+        path.extend(
+            path_from
+                .take_while(|node| {
+                    if let Some((index, _)) = path_to
+                        .iter()
+                        .enumerate()
+                        .rfind(|&(_, to_node)| node.value() == to_node.value())
+                    {
+                        path_to.truncate(index);
+
+                        return false;
+                    }
+
+                    true
+                })
+                .filter_map(|node| {
+                    Some(SwapTarget {
+                        pool_id: node.value().pool_id,
+                        target: node.parent()?.value().target.clone(),
+                    })
+                }),
+        );
+
+        path_to
+            .into_iter()
+            .rev()
+            .for_each(|node| path.push(node.value().clone()));
+
+        Ok(path)
+    }
+
+    pub fn load_affected(&self, pair: CurrencyPair) -> Result<Vec<SymbolOwned>, ContractError> {
+        if let Some(node) = self.tree.find_by(|target| target.target == pair.0) {
+            if node
+                .parent()
+                .map_or(false, |parent| parent.value().target == pair.1)
+            {
+                return Ok(node
+                    .to_subtree()
+                    .iter()
+                    .map(|node| node.value().target.clone())
+                    .collect());
+            }
+        }
+
+        Err(ContractError::InvalidDenomPair(
+            ToOwned::to_owned(pair.0),
+            ToOwned::to_owned(pair.1),
+        ))
+    }
+
+    pub fn query_supported_pairs(self) -> Vec<SwapLeg> {
+        self.tree
+            .iter()
+            .filter_map(|node| {
+                let parent = node.parent()?;
+
+                let SwapTarget {
+                    pool_id,
+                    target: child,
+                } = node.value().clone();
+
+                Some(SwapLeg {
+                    from: child,
+                    to: SwapTarget {
+                        pool_id,
+                        target: parent.value().target.clone(),
+                    },
+                })
+            })
+            .collect()
+    }
+
+    pub fn query_swap_tree(self) -> Tree {
+        self.tree
+    }
+
+    fn internal_load_path(
+        &self,
+        query: Symbol,
+    ) -> Result<
+        impl Iterator<Item = NodeRef<'_, SwapTarget>> + DoubleEndedIterator + '_,
+        ContractError,
+    > {
+        self.tree
+            .find_by(|target| target.target == query)
+            .map(|node| std::iter::once(node).chain(node.parents_iter()))
+            .ok_or_else(|| error::unsupported_currency::<B>(query))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use finance::{currency::Currency, test::currency::Usdc};
+    use sdk::cosmwasm_std::testing;
+    use tree::HumanReadableTree;
+
+    use super::*;
+
+    type TheCurrency = Usdc;
+
+    fn test_case() -> HumanReadableTree<SwapTarget> {
+        let base = TheCurrency::TICKER;
+
+        serde_json_wasm::from_str(&format!(
+            r#"
+            {{
+                "value":[0,"{base}"],
+                "children":[
+                    {{
+                        "value":[4,"token4"],
+                        "children":[
+                            {{"value":[3,"token3"]}}
+                        ]
+                    }},
+                    {{
+                        "value":[2,"token2"],
+                        "children":[
+                            {{
+                                "value":[1,"token1"],
+                                "children":[
+                                    {{"value":[5,"token5"]}},
+                                    {{"value":[6,"token6"]}}
+                                ]
+                            }}
+                        ]
+                    }}
+                ]
+            }}"#
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn test_storage() {
+        let tree = test_case();
+        let sp = SupportedPairs::<Usdc>::new(tree.into_tree()).unwrap();
+        let mut deps = testing::mock_dependencies();
+
+        sp.save(deps.as_mut().storage).unwrap();
+        let restored = SupportedPairs::load(deps.as_ref().storage).unwrap();
+
+        assert_eq!(restored, sp);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_invalid_base() {
+        let tree = serde_json_wasm::from_str(
+            r#"{"value":[0,"invalid"],"children":[{"value":[1,"token1"]}]}"#,
+        )
+        .unwrap();
+
+        SupportedPairs::<TheCurrency>::new(tree).unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_duplicated_nodes() {
+        let tree = serde_json_wasm::from_str(&format!(
+            r#"{{
+                "value":[0,"{ticker}"],
+                "children":[
+                    {{"value":[1,"token1"]}},
+                    {{
+                        "value":[2,"token2"],
+                        "children":[
+                            {{"value":[1,"token1"]}}
+                        ]
+                    }}
+                ]
+            }}"#,
+            ticker = TheCurrency::TICKER,
+        ))
+        .unwrap();
+
+        SupportedPairs::<TheCurrency>::new(tree).unwrap();
+    }
+
+    #[test]
+    fn test_load_path() {
+        let tree = SupportedPairs::<Usdc>::new(test_case().into_tree()).unwrap();
+
+        let resp: Vec<_> = tree.load_path("token5").unwrap().collect();
+        assert_eq!(
+            resp,
+            vec![
+                "token5".to_string(),
+                "token1".to_string(),
+                "token2".to_string(),
+                TheCurrency::TICKER.to_string()
+            ]
+        );
+    }
+
+    #[test]
+    fn test_load_swap_path() {
+        let tree = SupportedPairs::<Usdc>::new(test_case().into_tree()).unwrap();
+
+        assert!(tree.load_swap_path("token5", "token5").unwrap().is_empty());
+
+        let resp = tree.load_swap_path("token5", TheCurrency::TICKER).unwrap();
+        let expect = vec![
+            SwapTarget {
+                pool_id: 5,
+                target: "token1".into(),
+            },
+            SwapTarget {
+                pool_id: 1,
+                target: "token2".into(),
+            },
+            SwapTarget {
+                pool_id: 2,
+                target: TheCurrency::TICKER.into(),
+            },
+        ];
+
+        assert_eq!(resp, expect);
+
+        let resp = tree.load_swap_path("token6", "token5").unwrap();
+        let expect = vec![
+            SwapTarget {
+                pool_id: 6,
+                target: "token1".into(),
+            },
+            SwapTarget {
+                pool_id: 5,
+                target: "token5".into(),
+            },
+        ];
+        assert_eq!(resp, expect);
+
+        let resp = tree.load_swap_path("token2", "token4").unwrap();
+        let expect = vec![
+            SwapTarget {
+                pool_id: 2,
+                target: TheCurrency::TICKER.into(),
+            },
+            SwapTarget {
+                pool_id: 4,
+                target: "token4".into(),
+            },
+        ];
+        assert_eq!(resp, expect);
+    }
+
+    #[test]
+    fn test_load_affected() {
+        let tree = SupportedPairs::<Usdc>::new(test_case().into_tree()).unwrap();
+
+        let mut resp = tree.load_affected(("token2", TheCurrency::TICKER)).unwrap();
+        resp.sort();
+
+        let mut expect = vec![
+            "token1".to_string(),
+            "token2".to_string(),
+            "token5".to_string(),
+            "token6".to_string(),
+        ];
+        expect.sort();
+
+        assert_eq!(resp, expect);
+    }
+
+    #[test]
+    fn test_query_supported_pairs() {
+        let paths = test_case();
+        let tree = SupportedPairs::<Usdc>::new(paths.into_tree()).unwrap();
+
+        let mut response = tree.query_supported_pairs();
+        response.sort_by(|a, b| a.from.cmp(&b.from));
+
+        let mut expected = vec![
+            SwapLeg {
+                from: "token2".into(),
+                to: SwapTarget {
+                    pool_id: 2,
+                    target: TheCurrency::TICKER.into(),
+                },
+            },
+            SwapLeg {
+                from: "token4".into(),
+                to: SwapTarget {
+                    pool_id: 4,
+                    target: TheCurrency::TICKER.into(),
+                },
+            },
+            SwapLeg {
+                from: "token1".into(),
+                to: SwapTarget {
+                    pool_id: 1,
+                    target: "token2".into(),
+                },
+            },
+            SwapLeg {
+                from: "token6".into(),
+                to: SwapTarget {
+                    pool_id: 6,
+                    target: "token1".into(),
+                },
+            },
+            SwapLeg {
+                from: "token5".into(),
+                to: SwapTarget {
+                    pool_id: 5,
+                    target: "token1".into(),
+                },
+            },
+            SwapLeg {
+                from: "token3".into(),
+                to: SwapTarget {
+                    pool_id: 3,
+                    target: "token4".into(),
+                },
+            },
+        ];
+        expected.sort_by(|a, b| a.from.cmp(&b.from));
+
+        assert_eq!(response, expected);
+    }
+}

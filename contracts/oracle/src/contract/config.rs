@@ -28,8 +28,6 @@ pub fn try_configure(
 
 #[cfg(test)]
 mod tests {
-    use trees::tr;
-
     use currency::{
         lease::{Cro, Osmo},
         lpn::Usdc,
@@ -46,10 +44,7 @@ mod tests {
     use crate::{
         contract::{execute, query},
         msg::{ConfigResponse, ExecuteMsg, QueryMsg},
-        state::{
-            config::Config,
-            supported_pairs::{SwapLeg, TreeStore},
-        },
+        state::{config::Config, supported_pairs::SwapLeg},
         tests::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test},
     };
 
@@ -60,7 +55,18 @@ mod tests {
             Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Cro::TICKER.to_string()))),
+            // TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Cro::TICKER.to_string()))),
+            serde_json_wasm::from_str(&format!(
+                r#"{{
+                    "value":[0,"{usdc}"],
+                    "children":[
+                        {{"value":[1,"{cro}"]}}
+                    ]
+                }}"#,
+                usdc = Usdc::TICKER,
+                cro = Cro::TICKER,
+            ))
+            .unwrap(),
         );
         let (mut deps, _) = setup_test(msg);
 
@@ -81,7 +87,17 @@ mod tests {
             Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Cro::TICKER.to_string()))),
+            serde_json_wasm::from_str(&dbg!(format!(
+                r#"{{
+                    "value":[0,"{usdc}"],
+                    "children":[
+                        {{"value":[1,"{cro}"]}}
+                    ]
+                }}"#,
+                usdc = Usdc::TICKER,
+                cro = Cro::TICKER,
+            )))
+            .unwrap(),
         );
         let (mut deps, info) = setup_test(msg);
 
@@ -116,13 +132,21 @@ mod tests {
     fn config_supported_pairs() {
         let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
-        let test_tree = tr((0, Usdc::TICKER.into()))
-            / tr((1, Cro::TICKER.into()))
-            / tr((2, Osmo::TICKER.into()));
+        let test_tree = serde_json_wasm::from_str(&format!(
+            r#"{{
+                "value":[0,"{usdc}"],
+                "children":[
+                    {{"value":[1,"{cro}"]}},
+                    {{"value":[2,"{osmo}"]}}
+                ]
+            }}"#,
+            usdc = Usdc::TICKER,
+            cro = Cro::TICKER,
+            osmo = Osmo::TICKER,
+        ))
+        .unwrap();
 
-        let msg = ExecuteMsg::SwapTree {
-            tree: TreeStore(test_tree),
-        };
+        let msg = ExecuteMsg::SwapTree { tree: test_tree };
         let res = execute(deps.as_mut(), mock_env(), info, msg);
         assert!(res.is_ok());
 
@@ -140,14 +164,14 @@ mod tests {
                 from: Cro::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 1,
-                    target: Usdc::TICKER.to_owned(),
+                    target: Usdc::TICKER.into(),
                 },
             },
             SwapLeg {
                 from: Osmo::TICKER.into(),
                 to: SwapTarget {
                     pool_id: 2,
-                    target: Usdc::TICKER.to_owned(),
+                    target: Usdc::TICKER.into(),
                 },
             },
         ];
@@ -163,7 +187,17 @@ mod tests {
         let info = mock_info("user", &coins(1000, Nls::TICKER));
 
         let msg = ExecuteMsg::SwapTree {
-            tree: TreeStore(tr((0, Usdc::TICKER.into())) / tr((1, Cro::TICKER.into()))),
+            tree: serde_json_wasm::from_str(&format!(
+                r#"{{
+                    "value":[0,"{usdc}"],
+                    "children":[
+                        {{"value":[1,"{cro}"]}}
+                    ]
+                }}"#,
+                usdc = Usdc::TICKER,
+                cro = Cro::TICKER,
+            ))
+            .unwrap(),
         };
 
         execute(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -174,13 +208,20 @@ mod tests {
     fn invalid_supported_pairs() {
         let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
 
-        let test_tree = tr((0, Usdc::TICKER.into()))
-            / tr((1, Cro::TICKER.into()))
-            / tr((2, Cro::TICKER.into()));
+        let test_tree = serde_json_wasm::from_str(&format!(
+            r#"{{
+                "value":[0,"{usdc}"],
+                "children":[
+                    {{"value":[1,"{cro}"]}},
+                    {{"value":[2,"{cro}"]}}
+                ]
+            }}"#,
+            usdc = Usdc::TICKER,
+            cro = Cro::TICKER,
+        ))
+        .unwrap();
 
-        let msg = ExecuteMsg::SwapTree {
-            tree: TreeStore(test_tree),
-        };
+        let msg = ExecuteMsg::SwapTree { tree: test_tree };
 
         execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     }

@@ -18,3 +18,4 @@ sdk = { workspace = true, features = ["cosmos"], optional = true }
 osmosis-std = { version = "0.12", default-features = false, optional = true }
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+schemars = { workspace = true }

@@ -26,13 +26,13 @@ marketprice = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 swap = { workspace = true }
+tree = { workspace = true, features = ["schema"] }
 versioning = { workspace = true }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
 
 thiserror = { workspace = true }
-trees = "0.4.2"
 serde = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
@@ -40,6 +40,8 @@ currency = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
 marketprice = { workspace = true, features = ["testing"] }
+
+serde-json-wasm = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 sdk = { workspace = true, features = ["testing"] }

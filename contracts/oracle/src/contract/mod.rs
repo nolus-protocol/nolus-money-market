@@ -62,7 +62,7 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
 
         self.msg.config.store(self.deps.storage)?;
 
-        SupportedPairs::<C>::new(self.msg.swap_tree)?
+        SupportedPairs::<C>::new(self.msg.swap_tree.into_tree())?
             .validate_tickers()?
             .save(self.deps.storage)?;
 
@@ -142,8 +142,6 @@ fn err_as_ok(err: &str) -> Response {
 
 #[cfg(test)]
 mod tests {
-    use trees::tr;
-
     use currency::{lease::Osmo, lpn::Usdc};
     use finance::{currency::Currency, duration::Duration, percent::Percent};
     use sdk::cosmwasm_std::{from_binary, testing::mock_env};
@@ -152,10 +150,7 @@ mod tests {
     use crate::{
         contract::query,
         msg::{ConfigResponse, QueryMsg},
-        state::{
-            config::Config,
-            supported_pairs::{SwapLeg, TreeStore},
-        },
+        state::{config::Config, supported_pairs::SwapLeg},
         tests::{dummy_instantiate_msg, setup_test},
     };
 
@@ -166,7 +161,18 @@ mod tests {
             Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Osmo::TICKER.to_string()))),
+            // TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Osmo::TICKER.to_string()))),
+            serde_json_wasm::from_str(&format!(
+                r#"{{
+                    "value":[0,"{usdc}"],
+                    "children":[
+                        {{"value":[1,"{osmo}"]}}
+                    ]
+                }}"#,
+                usdc = Usdc::TICKER,
+                osmo = Osmo::TICKER,
+            ))
+            .unwrap(),
         );
         let (deps, info) = setup_test(msg);
 
@@ -200,7 +206,7 @@ mod tests {
             from: Osmo::TICKER.into(),
             to: SwapTarget {
                 pool_id: 1,
-                target: Usdc::TICKER.to_owned(),
+                target: Usdc::TICKER.into(),
             },
         }];
 

@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, mem::replace};
+use std::collections::BTreeMap;
 
 use serde::{de::Error, Deserialize, Deserializer, Serialize};
 
@@ -8,6 +8,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[repr(transparent)]
 #[serde(transparent)]
 pub struct HumanReadableTree<T> {
@@ -31,7 +32,7 @@ impl<T> HumanReadableTree<T> {
                 while let Some((start_index, node)) = Self::find_deepest(&mut tree) {
                     let parent_index: NodeIndex = node.parent_index();
 
-                    let end_index: usize =
+                    let end_index: NodeIndex =
                         Self::find_last_child(&mut tree, start_index.into(), parent_index);
 
                     let children: Vec<HRTNode<T>> =
@@ -59,39 +60,40 @@ impl<T> HumanReadableTree<T> {
         }
     }
 
-    fn find_deepest(tree: &mut Tree<T>) -> Option<(NodeIndex, &Node<T>)> {
-        tree.nodes[1..]
-            .iter()
+    fn enumerated_rev_iter(tree: &Tree<T>, start_index: NodeIndex) -> impl Iterator<Item=(NodeIndex, &Node<T>)> + '_ {
+        tree.nodes[usize::from(start_index)..].iter()
+            .rev()
             .map({
-                let mut index: NodeIndex = 0;
+                let mut index: NodeIndex = tree.node_index_len();
 
                 move |node| {
-                    let new_index: NodeIndex = index + 1;
+                    index -= 1;
 
-                    (replace(&mut index, new_index), node)
+                    (index, node)
                 }
             })
+    }
+
+    fn find_deepest(tree: &Tree<T>) -> Option<(NodeIndex, &Node<T>)> {
+        Self::enumerated_rev_iter(tree, 1)
             .max_by_key(|(_, node): &(NodeIndex, &Node<T>)| node.parent_index())
     }
 
-    fn find_last_child(tree: &mut Tree<T>, start_index: usize, parent_index: NodeIndex) -> usize {
-        start_index
-            + tree.nodes[start_index..]
-                .iter()
-                .enumerate()
-                .rfind(|(_, node): &(usize, &Node<T>)| node.parent_index() == parent_index)
-                .expect("Subtree should contain at least the first found element!")
-                .0
+    fn find_last_child(tree: &Tree<T>, start_index: NodeIndex, parent_index: NodeIndex) -> NodeIndex {
+        Self::enumerated_rev_iter(tree, start_index)
+            .find(|(_, node): &(NodeIndex, &Node<T>)| node.parent_index() == parent_index)
+            .expect("Subtree should contain at least the first found element!")
+            .0
     }
 
     fn drain_nodes(
         tree: &mut Tree<T>,
         child_nodes: &mut BTreeMap<NodeIndex, Vec<HRTNode<T>>>,
         start_index: NodeIndex,
-        end_index: usize,
+        end_index: NodeIndex,
     ) -> Vec<HRTNode<T>> {
         tree.nodes
-            .drain(usize::from(start_index)..=end_index)
+            .drain(dbg!(usize::from(start_index)..=usize::from(end_index)))
             .map({
                 let mut index: NodeIndex = start_index;
 
@@ -114,6 +116,7 @@ impl<T> HumanReadableTree<T> {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 #[serde(untagged, rename_all = "snake_case", deny_unknown_fields)]
 enum HRTNode<T> {
     Leaf {

@@ -556,10 +556,11 @@ dependencies = [
  "rewards_dispatcher",
  "sdk",
  "serde",
+ "serde-json-wasm 0.5.0",
  "swap",
  "timealarms",
  "treasury",
- "trees",
+ "tree",
 ]
 
 [[package]]
@@ -742,9 +743,10 @@ dependencies = [
  "schema",
  "sdk",
  "serde",
+ "serde-json-wasm 0.5.0",
  "swap",
  "thiserror",
- "trees",
+ "tree",
  "versioning",
 ]
 
@@ -1195,6 +1197,7 @@ dependencies = [
  "finance",
  "osmosis-std",
  "platform",
+ "schemars",
  "sdk",
  "serde",
  "thiserror",
@@ -1322,15 +1325,10 @@ dependencies = [
 name = "tree"
 version = "0.1.0"
 dependencies = [
+ "schemars",
  "serde",
  "serde-json-wasm 0.5.0",
 ]
-
-[[package]]
-name = "trees"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0de5f738ceab88e2491a94ddc33c3feeadfa95fedc60363ef110845df12f3878"
 
 [[package]]
 name = "typenum"
