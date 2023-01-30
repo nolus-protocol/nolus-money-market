@@ -1,5 +1,9 @@
 use finance::{
-    coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
+    coin::{Amount, Coin},
+    currency::Currency,
+    duration::Duration,
+    liability::Liability,
+    percent::Percent,
 };
 use lease::{
     api::{
@@ -10,9 +14,9 @@ use lease::{
     contract::{execute, instantiate, query, reply, sudo},
     error::ContractError,
 };
-use platform::coin_legacy;
+use platform::{coin_legacy, trx};
 use sdk::{
-    cosmwasm_std::{to_binary, Addr, Coin as CwCoin, QueryRequest, WasmQuery},
+    cosmwasm_std::{to_binary, Addr, Binary, Coin as CwCoin, QueryRequest, WasmQuery},
     cw_multi_test::{AppResponse, Executor},
     neutron_sdk::{
         bindings::msg::NeutronMsg,
@@ -20,6 +24,7 @@ use sdk::{
     },
     testing::CustomMessageReceiver,
 };
+use swap::trx as swap_trx;
 
 use super::{ContractWrapper, MockApp, ADMIN, USER};
 
@@ -185,6 +190,8 @@ type LeaseContractWrapperReply = Box<
     >,
 >;
 
+// TODO split this mastodont into functions each per state to allow fine control
+// and checks over sent data and received swap results
 pub fn complete_lease_initialization<Lpn>(
     mock_app: &mut MockApp,
     neutron_message_receiver: &CustomMessageReceiver,
@@ -281,7 +288,9 @@ pub fn complete_lease_initialization<Lpn>(
         panic!("Opening lease failed! Lease is expected to be in opening state!");
     };
 
-    send_blank_response(mock_app, lease_addr);
+    // TODO pass the amounts as parameters once split this mastodon into multiple functions, see the TODO at the method signature
+    let swap_resp = swap_exact_in_resp(vec![2857142857000, 142]);
+    send_response(mock_app, lease_addr, swap_resp);
 
     let StateResponse::Opened { .. } = mock_app.wrap().query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: lease_addr.to_string(),
@@ -291,7 +300,21 @@ pub fn complete_lease_initialization<Lpn>(
     };
 }
 
+fn swap_exact_in_resp<I>(amounts: I) -> Binary
+where
+    I: IntoIterator<Item = Amount>,
+{
+    let msgs = amounts
+        .into_iter()
+        .map(swap_trx::build_exact_amount_in_resp);
+    trx::encode_msg_responses(msgs).into()
+}
+
 fn send_blank_response(mock_app: &mut MockApp, lease_addr: &Addr) -> AppResponse {
+    send_response(mock_app, lease_addr, Default::default())
+}
+
+fn send_response(mock_app: &mut MockApp, lease_addr: &Addr, resp: Binary) -> AppResponse {
     mock_app
         .wasm_sudo(
             Addr::unchecked(lease_addr),
@@ -307,7 +330,7 @@ fn send_blank_response(mock_app: &mut MockApp, lease_addr: &Addr) -> AppResponse
                     timeout_height: None,
                     timeout_timestamp: None,
                 },
-                data: Default::default(),
+                data: resp,
             },
         )
         .unwrap()

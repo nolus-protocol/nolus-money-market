@@ -94,9 +94,8 @@ impl Active {
         .ok_or_else(ContractError::NoPaymentError)??;
         if payment.ticker() == self.lease.lease.loan.lpp().currency() {
             // TODO once refacture CoinDTO and Group convert to LpnCoin instead
-            let payment_lpn =
-                bank::may_received::<PaymentGroup, _>(info.funds, IntoDTO::<Lpns>::new())
-                    .ok_or_else(ContractError::NoPaymentError)??;
+            let payment_lpn = bank::may_received::<Lpns, _>(info.funds, IntoDTO::<Lpns>::new())
+                .ok_or_else(ContractError::NoPaymentError)??;
 
             Self::try_repay_lpn(self.lease, payment_lpn, &env.contract.address, querier, env)
         } else {

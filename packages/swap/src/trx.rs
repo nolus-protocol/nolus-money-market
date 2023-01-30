@@ -1,16 +1,29 @@
-use osmosis_std::types::osmosis::gamm::v1beta1::{MsgSwapExactAmountIn, SwapAmountInRoute};
+use osmosis_std::types::osmosis::gamm::v1beta1::{
+    MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
+};
 
 use finance::{
-    coin::CoinDTO,
+    coin::{Amount, CoinDTO},
     currency::{self, Group, Symbol},
 };
-use platform::{coin_legacy, denom::dex::DexMapper, ica::HostAccount, trx::Transaction};
-use sdk::cosmwasm_std::Coin as CwCoin;
+use platform::{
+    coin_legacy,
+    denom::dex::DexMapper,
+    ica::HostAccount,
+    trx::{self, Transaction},
+};
+use sdk::{
+    cosmos_sdk_proto::{cosmos::base::abci::v1beta1::MsgData, traits::Message},
+    cosmwasm_std::Coin as CwCoin,
+};
 
 use crate::{
     error::{Error, Result},
     SwapGroup, SwapPath, SwapTarget,
 };
+
+const REQUEST_MSG_TYPE: &str = "/osmosis.gamm.v1beta1.MsgSwapExactAmountIn";
+const RESPONSE_MSG_TYPE: &str = "/osmosis.gamm.v1beta1.MsgSwapExactAmountInResponse";
 
 pub fn exact_amount_in<G>(
     trx: &mut Transaction,
@@ -21,7 +34,6 @@ pub fn exact_amount_in<G>(
 where
     G: Group,
 {
-    const MSG_TYPE: &str = "/osmosis.gamm.v1beta1.MsgSwapExactAmountIn";
     // TODO bring the token balances, weights and swapFee-s from the DEX pools
     // into the oracle in order to calculate the tokenOut as per the formula at
     // https://docs.osmosis.zone/osmosis-core/modules/gamm/#swap.
@@ -38,8 +50,34 @@ where
         token_out_min_amount,
     };
 
-    trx.add_message(MSG_TYPE, msg);
+    trx.add_message(REQUEST_MSG_TYPE, msg);
     Ok(())
+}
+
+pub fn exact_amount_in_resp<I>(trx_resps: &mut I) -> Result<Amount>
+where
+    I: Iterator<Item = MsgData>,
+{
+    use std::str::FromStr;
+
+    let resp = trx_resps
+        .next()
+        .ok_or_else(|| Error::MissingResponse("swap of exact amount request".into()))?;
+    let amount =
+        trx::decode_msg_response::<_, MsgSwapExactAmountInResponse>(resp, RESPONSE_MSG_TYPE)?
+            .token_out_amount;
+    Amount::from_str(&amount).map_err(|_| Error::InvalidAmount(amount))
+}
+
+#[cfg(feature = "testing")]
+pub fn build_exact_amount_in_resp(amount_out: Amount) -> MsgData {
+    let resp = MsgSwapExactAmountInResponse {
+        token_out_amount: amount_out.to_string(),
+    };
+    MsgData {
+        msg_type: RESPONSE_MSG_TYPE.into(),
+        data: resp.encode_to_vec(),
+    }
 }
 
 fn to_route(swap_path: &[SwapTarget]) -> Result<Vec<SwapAmountInRoute>> {
@@ -128,5 +166,14 @@ mod test {
             target: INVALID_TICKER.into(),
         }];
         assert!(matches!(super::to_route(&path), Err(Error::Platform(_))));
+    }
+
+    #[test]
+    fn resp() {
+        let amount = 20;
+        let mut resp = vec![super::build_exact_amount_in_resp(amount)].into_iter();
+        let parsed = super::exact_amount_in_resp(&mut resp).unwrap();
+        assert_eq!(amount, parsed);
+        assert_eq!(None, resp.next());
     }
 }

@@ -1,18 +1,20 @@
 use cosmwasm_std::Deps;
 use serde::{Deserialize, Serialize};
 
-use currency::lease::Osmo;
-use finance::coin::Coin;
+use finance::coin::{self};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use platform::{batch::Batch as LocalBatch, ica::HostAccount};
+use platform::{batch::Batch as LocalBatch, ica::HostAccount, trx};
 use sdk::{
     cosmwasm_std::{DepsMut, Env, QuerierWrapper},
     neutron_sdk::sudo::msg::SudoMsg,
 };
+use swap::trx as swap_trx;
 
 use crate::{
-    api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
+    api::{
+        opening::OngoingTrx, DownpaymentCoin, LeaseCoin, NewLeaseForm, StateQuery, StateResponse,
+    },
     contract::{
         cmd::OpenLoanRespResult,
         state::{opened::active::Active, Controller, Response},
@@ -50,6 +52,7 @@ impl BuyAsset {
     }
 
     pub(super) fn enter_state(&self, querier: &QuerierWrapper) -> ContractResult<LocalBatch> {
+        // TODO define struct Trx with functions build_request and decode_response -> LpnCoin
         let mut swap_trx = self.dex_account.swap(&self.deps.1, querier);
         // TODO apply nls_swap_fee on the downpayment only!
         // TODO do not add a trx if the coin is of the same lease currency
@@ -57,24 +60,23 @@ impl BuyAsset {
         swap_trx.swap_exact_in(&self.loan.principal, &self.form.currency)?;
         Ok(swap_trx.into())
     }
+
+    fn decode_response(&self, resp: &[u8]) -> ContractResult<LeaseCoin> {
+        let mut resp_msgs = trx::decode_msg_responses(resp)?;
+        let downpayment_amount = swap_trx::exact_amount_in_resp(&mut resp_msgs)?;
+        let borrowed_amount = swap_trx::exact_amount_in_resp(&mut resp_msgs)?;
+
+        coin::from_amount_ticker(downpayment_amount + borrowed_amount, &self.form.currency)
+            .map_err(Into::into)
+    }
 }
 
 impl Controller for BuyAsset {
     fn sudo(self, deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response { request: _, data } => {
-                deps.api
-                    .debug("!!!!!!!!!!       SWAP Result        !!!!!!!!!");
-                deps.api.debug(
-                    std::str::from_utf8(data.as_slice())
-                        .expect("the data should be a valid string"),
-                );
                 // TODO transfer (downpayment - transferred_and_swapped), i.e. the nls_swap_fee to the profit
-                // TODO parse the response to obtain the lease amount
-                let amount =
-                    Coin::<Osmo>::new(self.downpayment.amount() + self.loan.principal.amount())
-                        .into();
-
+                let amount = self.decode_response(data.as_slice())?;
                 let IntoDTOResult { lease, batch } = self.form.into_lease(
                     &env.contract.address,
                     env.block.time,

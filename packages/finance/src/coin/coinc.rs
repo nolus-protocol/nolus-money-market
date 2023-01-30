@@ -1,13 +1,15 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::Amount,
-    currency::{self, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor, SymbolOwned},
-    error::Error,
+    currency::{
+        self, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor, Symbol, SymbolOwned,
+    },
+    error::{Error, Result},
 };
 
 use super::{Coin, WithCoin};
@@ -79,7 +81,7 @@ where
     // one option is to revive the trait Member<Group> that currencies to impl
     // another option is to add an associated trait type to Currency pointing to its direct group
     // the still open quenstion to the both solution is how to express a 'sub-group' relationship
-    fn try_from(coin: &CoinDTO<G>) -> Result<Self, Self::Error> {
+    fn try_from(coin: &CoinDTO<G>) -> StdResult<Self, Self::Error> {
         struct CoinFactory<'a, G>(&'a CoinDTO<G>);
         impl<'a, G, CC> SingleVisitor<CC> for CoinFactory<'a, G>
         where
@@ -88,7 +90,7 @@ where
             type Output = Coin<CC>;
             type Error = Error;
 
-            fn on(self) -> Result<Self::Output, Self::Error> {
+            fn on(self) -> StdResult<Self::Output, Self::Error> {
                 Ok(Self::Output::new(self.0.amount))
             }
         }
@@ -103,7 +105,7 @@ where
 {
     type Error = Error;
 
-    fn try_from(coin: CoinDTO<G>) -> Result<Self, Self::Error> {
+    fn try_from(coin: CoinDTO<G>) -> StdResult<Self, Self::Error> {
         Self::try_from(&coin)
     }
 }
@@ -119,6 +121,25 @@ where
             _g: PhantomData,
         }
     }
+}
+
+pub fn from_amount_ticker<G>(amount: Amount, ticker: Symbol) -> Result<CoinDTO<G>>
+where
+    G: Group,
+{
+    struct Converter<G>(Amount, PhantomData<G>);
+    impl<G> AnyVisitor for Converter<G> {
+        type Output = CoinDTO<G>;
+        type Error = Error;
+        fn on<C>(self) -> AnyVisitorResult<Self>
+        where
+            C: Currency + Serialize + DeserializeOwned,
+        {
+            Ok(Coin::<C>::from(self.0).into())
+        }
+    }
+
+    currency::visit_any_on_ticker::<G, _>(ticker, Converter(amount, PhantomData))
 }
 
 pub struct IntoDTO<G> {
@@ -153,6 +174,8 @@ mod test {
     use crate::{
         coin::{Coin, CoinDTO},
         currency::{Currency, SymbolStatic},
+        error::Error,
+        test::currency::{Dai, TestCurrencies, Usdc},
     };
 
     #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -182,5 +205,37 @@ mod test {
                 .and_then(|buf| from_slice(&buf))
                 .expect("correct raw bytes")
         );
+    }
+
+    #[test]
+    fn from_amount_ticker_ok() {
+        let amount = 20;
+        type TheCurrency = Usdc;
+        assert_eq!(
+            Ok(Coin::<TheCurrency>::from(amount).into()),
+            super::from_amount_ticker::<TestCurrencies>(amount, TheCurrency::TICKER)
+        );
+    }
+
+    #[test]
+    fn from_amount_ticker_not_found() {
+        let amount = 20;
+        type TheCurrency = Usdc;
+        assert!(matches!(
+            super::from_amount_ticker::<TestCurrencies>(amount, TheCurrency::DEX_SYMBOL),
+            Err(Error::NotInCurrencyGroup { .. })
+        ));
+        assert!(matches!(
+            super::from_amount_ticker::<TestCurrencies>(amount, TheCurrency::BANK_SYMBOL),
+            Err(Error::NotInCurrencyGroup { .. })
+        ));
+    }
+
+    #[test]
+    fn from_amount_ticker_not_in_the_group() {
+        assert!(matches!(
+            super::from_amount_ticker::<TestCurrencies>(20, Dai::TICKER),
+            Err(Error::NotInCurrencyGroup { .. })
+        ));
     }
 }

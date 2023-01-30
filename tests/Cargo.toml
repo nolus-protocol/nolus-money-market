@@ -23,7 +23,7 @@ finance = { workspace = true, features = ["testing"] }
 marketprice = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }
 sdk = { workspace = true, features = ["cosmos", "neutron", "testing"] }
-swap = { workspace = true }
+swap = { workspace = true, features = ["testing"] }
 
 anyhow = { workspace = true }
 serde = { workspace = true, features = ["derive"] }

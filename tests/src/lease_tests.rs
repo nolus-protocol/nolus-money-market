@@ -433,8 +433,6 @@ fn price_alarm_unauthorized() {
 }
 
 fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, percent: Percent, level: &str) {
-    const DOWNPAYMENT: u128 = 1_000_000;
-
     let (mut test_case, neutron_message_receiver) = create_test_case();
     let downpayment = create_lease_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, &neutron_message_receiver, downpayment);
@@ -539,8 +537,6 @@ fn liquidation_warning_price_3() {
 }
 
 fn liquidation_time_alarm(time_pass: Duration) {
-    const DOWNPAYMENT: u128 = 1_000_000;
-
     let (mut test_case, neutron_message_receiver) = create_test_case();
     let downpayment = create_lease_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, &neutron_message_receiver, downpayment);
@@ -622,8 +618,6 @@ fn liquidation_time_alarm_2() {
 
 #[test]
 fn compare_state_with_manual_calculation() {
-    const DOWNPAYMENT: u128 = 1_000_000;
-
     let (mut test_case, neutron_message_receiver) = create_test_case();
     let downpayment = create_lease_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, &neutron_message_receiver, downpayment);
@@ -641,14 +635,14 @@ fn compare_state_with_manual_calculation() {
 
     let query_result = state_query(&test_case, &lease_address.into_string());
     let expected_result = StateResponse::Opened {
-        amount: Coin::<LeaseCurrency>::new(1_000_000 + 1_857_142).into(),
+        amount: Coin::<LeaseCurrency>::new(DOWNPAYMENT + 1_857_142_857_142).into(),
         loan_interest_rate: quote_result.annual_interest_rate,
         margin_interest_rate: quote_result.annual_interest_rate_margin,
-        principal_due: Coin::<Lpn>::new(1_857_142).into(),
-        previous_margin_due: LpnCoin::new(13_737).into(),
-        previous_interest_due: LpnCoin::new(32_054).into(),
-        current_margin_due: LpnCoin::new(13_737).into(),
-        current_interest_due: LpnCoin::new(32_055).into(),
+        principal_due: Coin::<Lpn>::new(1_857_142_857_142).into(),
+        previous_margin_due: LpnCoin::new(13_737_769_080).into(),
+        previous_interest_due: LpnCoin::new(32_054_794_520).into(),
+        current_margin_due: LpnCoin::new(13_737_769_080).into(),
+        current_interest_due: LpnCoin::new(32_054_794_520).into(),
         validity: block_time(&test_case),
         in_progress: None,
     };
@@ -658,8 +652,6 @@ fn compare_state_with_manual_calculation() {
 
 #[test]
 fn compare_state_with_lpp_state_implicit_time() {
-    const DOWNPAYMENT: u128 = 1_000_000;
-
     let (mut test_case, neutron_message_receiver) = create_test_case();
     let downpayment = create_lease_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, &neutron_message_receiver, downpayment);
@@ -709,8 +701,6 @@ fn compare_state_with_lpp_state_implicit_time() {
 
 #[test]
 fn compare_state_with_lpp_state_explicit_time() {
-    const DOWNPAYMENT: u128 = 1_000_000;
-
     let (mut test_case, neutron_message_receiver) = create_test_case();
     let downpayment = create_lease_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, &neutron_message_receiver, downpayment);
