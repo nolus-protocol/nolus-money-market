@@ -31,7 +31,7 @@ impl<'r, T> Subtree<'r, T> {
 
                 // Starting from next node so this will only iterate though
                 // child nodes.
-                for _ in node.tree().nodes[usize::from(node.this_index()) + 1..]
+                for _ in node.tree().nodes[usize::from(node.this_index() + 1)..]
                     .iter()
                     .take_while(|tree_node| tree_node.parent_index() >= node.this_index())
                 {

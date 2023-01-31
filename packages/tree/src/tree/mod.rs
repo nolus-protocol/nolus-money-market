@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::node::{Node, NodeIndex, NodeRef};
 
-pub use self::{human_readable::HumanReadableTree, subtree::Subtree};
+pub use self::{
+    human_readable::{HrtNode, HumanReadableTree},
+    subtree::Subtree,
+};
 
 mod human_readable;
 mod subtree;
