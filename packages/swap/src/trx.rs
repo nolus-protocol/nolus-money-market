@@ -68,7 +68,8 @@ where
 
 #[cfg(feature = "testing")]
 pub fn build_exact_amount_in_resp(amount_out: Amount) -> MsgData {
-    use sdk::cosmos_sdk_proto::traits::Message;
+    use sdk::cosmos_sdk_proto::traits::Message as _;
+
     let resp = MsgSwapExactAmountInResponse {
         token_out_amount: amount_out.to_string(),
     };

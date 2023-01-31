@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use serde::{de::Error, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     node::{Node, NodeIndex},
@@ -12,7 +12,7 @@ use crate::{
 #[repr(transparent)]
 #[serde(transparent)]
 pub struct HumanReadableTree<T> {
-    root: HRTNode<T>,
+    root: HrtNode<T>,
 }
 
 impl<T> HumanReadableTree<T> {
@@ -27,7 +27,7 @@ impl<T> HumanReadableTree<T> {
     pub fn from_tree(mut tree: Tree<T>) -> Self {
         Self {
             root: {
-                let mut child_nodes: BTreeMap<NodeIndex, Vec<HRTNode<T>>> = BTreeMap::new();
+                let mut child_nodes: BTreeMap<NodeIndex, Vec<HrtNode<T>>> = BTreeMap::new();
 
                 while let Some((start_index, node)) = Self::find_deepest(&tree) {
                     let parent_index: NodeIndex = node.parent_index();
@@ -35,10 +35,10 @@ impl<T> HumanReadableTree<T> {
                     let end_index: NodeIndex =
                         Self::find_last_child(&tree, start_index, parent_index);
 
-                    let children: Vec<HRTNode<T>> =
+                    let children: Vec<HrtNode<T>> =
                         Self::drain_nodes(&mut tree, &mut child_nodes, start_index, end_index);
 
-                    let result: Option<Vec<HRTNode<T>>> =
+                    let result: Option<Vec<HrtNode<T>>> =
                         child_nodes.insert(parent_index, children);
 
                     debug_assert!(result.is_none());
@@ -46,11 +46,11 @@ impl<T> HumanReadableTree<T> {
 
                 let value: T = tree.nodes.remove(Tree::<T>::ROOT_INDEX.into()).into_value();
 
-                let result: HRTNode<T> =
+                let result: HrtNode<T> =
                     if let Some(children) = child_nodes.remove(&Tree::<T>::ROOT_PARENT) {
-                        HRTNode::Branch { value, children }
+                        HrtNode::Branch { value, children }
                     } else {
-                        HRTNode::Leaf { value }
+                        HrtNode::Leaf { value }
                     };
 
                 debug_assert!(child_nodes.is_empty());
@@ -93,10 +93,10 @@ impl<T> HumanReadableTree<T> {
 
     fn drain_nodes(
         tree: &mut Tree<T>,
-        child_nodes: &mut BTreeMap<NodeIndex, Vec<HRTNode<T>>>,
+        child_nodes: &mut BTreeMap<NodeIndex, Vec<HrtNode<T>>>,
         start_index: NodeIndex,
         end_index: NodeIndex,
-    ) -> Vec<HRTNode<T>> {
+    ) -> Vec<HrtNode<T>> {
         tree.nodes
             .drain(dbg!(usize::from(start_index)..=usize::from(end_index)))
             .map({
@@ -105,14 +105,14 @@ impl<T> HumanReadableTree<T> {
                 move |node: Node<T>| {
                     let value: T = node.into_value();
 
-                    let children: Option<Vec<HRTNode<T>>> = child_nodes.remove(&index);
+                    let children: Option<Vec<HrtNode<T>>> = child_nodes.remove(&index);
 
                     index += 1;
 
                     if let Some(children) = children {
-                        HRTNode::Branch { value, children }
+                        HrtNode::Branch { value, children }
                     } else {
-                        HRTNode::Leaf { value }
+                        HrtNode::Leaf { value }
                     }
                 }
             })
@@ -121,26 +121,39 @@ impl<T> HumanReadableTree<T> {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(untagged, from = "HrtNodeStruct<T>")]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
-#[serde(untagged, rename_all = "snake_case", deny_unknown_fields)]
-enum HRTNode<T> {
-    Leaf {
-        value: T,
-    },
-    Branch {
-        value: T,
-        #[serde(deserialize_with = "node_children")]
-        children: Vec<HRTNode<T>>,
-    },
+#[cfg_attr(feature = "schema", schemars(untagged, deny_unknown_fields))]
+pub enum HrtNode<T> {
+    Leaf { value: T },
+    Branch { value: T, children: Vec<HrtNode<T>> },
 }
 
-impl<T> HRTNode<T> {
+impl<T> From<HrtNodeStruct<T>> for HrtNode<T> {
+    fn from(HrtNodeStruct { value, children }: HrtNodeStruct<T>) -> Self {
+        if children.is_empty() {
+            HrtNode::Leaf { value }
+        } else {
+            HrtNode::Branch { value, children }
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct HrtNodeStruct<T> {
+    value: T,
+    #[serde(default = "Vec::new")]
+    children: Vec<HrtNode<T>>,
+}
+
+impl<T> HrtNode<T> {
     fn flatten(self, parent: NodeIndex, this: NodeIndex) -> Nodes<T> {
         match self {
-            HRTNode::Leaf { value } => {
+            HrtNode::Leaf { value } => {
                 vec![Node::new(parent, value)]
             }
-            HRTNode::Branch { value, children } => {
+            HrtNode::Branch { value, children } => {
                 children
                     .into_iter()
                     .fold(vec![Node::new(parent, value)], |mut nodes, node| {
@@ -161,20 +174,4 @@ impl<T> HRTNode<T> {
             }
         }
     }
-}
-
-fn node_children<'de, D, T>(deserializer: D) -> Result<Vec<HRTNode<T>>, D::Error>
-where
-    D: Deserializer<'de>,
-    T: Deserialize<'de>,
-{
-    let nodes: Vec<HRTNode<T>> = Deserialize::deserialize(deserializer)?;
-
-    if nodes.is_empty() {
-        return Err(Error::custom(
-            r#"When "children" field is present, it has to contain at least one child."#,
-        ));
-    }
-
-    Ok(nodes)
 }
