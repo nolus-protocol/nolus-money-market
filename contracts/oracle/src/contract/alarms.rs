@@ -14,7 +14,7 @@ use marketprice::{
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Addr, StdError, Storage},
+    cosmwasm_std::{to_binary, Addr, Storage},
     cw_storage_plus::Item,
 };
 
@@ -22,6 +22,8 @@ use crate::{
     msg::{AlarmsStatusResponse, DispatchAlarmsResponse},
     ContractError,
 };
+
+use itertools::Itertools;
 
 pub type AlarmReplyId = u64;
 
@@ -131,7 +133,7 @@ impl MarketAlarms {
     fn alarms_iter<'a, BaseC>(
         storage: &'a dyn Storage,
         prices: &'a [SpotPrice],
-    ) -> impl Iterator<Item = Result<Addr, StdError>> + 'a
+    ) -> impl Iterator<Item = Result<Addr, ContractError>> + 'a
     where
         BaseC: Currency,
     {
@@ -156,8 +158,7 @@ impl MarketAlarms {
 
         prices
             .iter()
-            // we can flatten, because `AlarmsCmd::exec` always returns `Ok(AlarmsIterator)` and panics if currency check fails
-            .flat_map(|price| {
+            .map(|price| {
                 with_quote::execute::<_, _, _, BaseC>(
                     price,
                     AlarmsCmd {
@@ -166,7 +167,8 @@ impl MarketAlarms {
                     },
                 )
             })
-            .flatten()
+            .flatten_ok()
+            .flatten_ok()
     }
 
     fn schedule_alarm(
@@ -302,7 +304,9 @@ mod test {
                 .is(Coin::<Base>::new(25))
                 .into()],
             1,
-        );
+        )
+        // behaves differently in release and test profiles
+        .unwrap();
     }
 
     #[test]

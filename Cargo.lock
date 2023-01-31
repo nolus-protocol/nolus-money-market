@@ -745,6 +745,7 @@ dependencies = [
  "cosmwasm-std",
  "currency",
  "finance",
+ "itertools",
  "marketprice",
  "platform",
  "schema",
