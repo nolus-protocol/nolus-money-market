@@ -160,9 +160,7 @@ where
         now: &Timestamp,
         liquidation_status: &Status<Lpn, Asset>,
     ) -> ContractResult<()> {
-        if currency::equal::<Asset, Lpn>() {
-            return Ok(());
-        }
+        debug_assert!(!currency::equal::<Lpn, Asset>());
 
         let (below, above) = match liquidation_status {
             Status::None | Status::PartialLiquidation { .. } => {
@@ -210,47 +208,78 @@ where
     ) -> ContractResult<Price<Asset, Lpn>> {
         debug_assert!(!self.amount.is_zero(), "Loan already paid!");
 
-        Ok(total_of(dbg!(percent.of(self.amount))).is(liability))
+        Ok(total_of(percent.of(self.amount)).is(liability))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use currency::{lease::Cro, lpn::Usdc};
     #[cfg(not(debug_assertions))]
     use finance::price::total_of;
-    use finance::{duration::Duration, percent::Percent};
-    use lpp::msg::LoanResponse;
+    use finance::{coin::Coin, duration::Duration, fraction::Fraction, price::total_of};
+    use marketprice::{alarms::Alarm, SpotPrice};
+    use oracle::msg::ExecuteMsg::AddPriceAlarm;
     use platform::batch::Batch;
-    use sdk::cosmwasm_std::{to_binary, Addr, Timestamp, WasmMsg};
+    use sdk::cosmwasm_std::{to_binary, Addr, WasmMsg};
     use timealarms::msg::ExecuteMsg::AddAlarm;
 
     use crate::lease::{
         self,
         tests::{
-            coin, open_lease, LppLenderLocalStubUnreachable, OracleLocalStub,
-            ProfitLocalStubUnreachable, TimeAlarmsLocalStub, LEASE_START,
+            loan, open_lease, LppLenderLocalStub, OracleLocalStub, ProfitLocalStubUnreachable,
+            TimeAlarmsLocalStub, LEASE_START,
         },
         LeaseInfo, Status, WarningLevel,
     };
 
     #[test]
     fn initial_alarm_schedule() {
+        type Lpn = Usdc;
+        type Asset = Cro;
+        let asset = Coin::from(10);
         let lease_addr = Addr::unchecked("lease");
-        let lease = lease::tests::create_lease(
+        let timealarms_addr = Addr::unchecked("timealarms");
+        let oracle_addr = Addr::unchecked("oracle");
+        let lease = lease::tests::create_lease::<Lpn, Asset, _, _, _, _>(
             &lease_addr,
-            10.into(),
-            LppLenderLocalStubUnreachable {},
-            TimeAlarmsLocalStub::from(Addr::unchecked(String::new())),
-            OracleLocalStub::from(Addr::unchecked(String::new())),
+            asset,
+            LppLenderLocalStub::from(Some(loan())),
+            TimeAlarmsLocalStub::from(timealarms_addr.clone()),
+            OracleLocalStub::from(oracle_addr.clone()),
             ProfitLocalStubUnreachable,
         );
-        assert_eq!(lease.alarms.batch, {
+        let recalc_time = LEASE_START + lease.liability.recalculation_time();
+        let liability_alarm_on = lease.liability.first_liq_warn_percent();
+        let projected_liability = {
+            let l = lease
+                .loan
+                .state(recalc_time, lease_addr.clone())
+                .unwrap()
+                .unwrap();
+            l.principal_due
+                + l.previous_interest_due
+                + l.previous_margin_interest_due
+                + l.current_interest_due
+                + l.current_margin_interest_due
+        };
+
+        assert_eq!(lease.into_dto().batch, {
             let mut batch = Batch::default();
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
-                contract_addr: String::new(),
-                msg: to_binary(&AddAlarm {
-                    time: LEASE_START + lease.liability.recalculation_time(),
+                contract_addr: timealarms_addr.into(),
+                msg: to_binary(&AddAlarm { time: recalc_time }).unwrap(),
+                funds: vec![],
+            });
+
+            let below_alarm: SpotPrice = total_of(liability_alarm_on.of(asset))
+                .is(projected_liability)
+                .into();
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: oracle_addr.into(),
+                msg: to_binary(&AddPriceAlarm {
+                    alarm: Alarm::new(below_alarm, None),
                 })
                 .unwrap(),
                 funds: vec![],
@@ -262,23 +291,15 @@ mod tests {
 
     #[test]
     fn reschedule_time_alarm_recalc() {
-        let loan = LoanResponse {
-            principal_due: coin(300),
-            interest_due: coin(0),
-            annual_interest_rate: Percent::from_permille(50),
-            interest_paid: Timestamp::from_nanos(0),
-        };
-
         let lease_addr = Addr::unchecked("lease");
         let mut lease = open_lease(
             &lease_addr,
             20.into(),
-            Some(loan),
+            Some(loan()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
-
         lease
             .reschedule_time_alarm(
                 &(lease.loan.grace_period_end()
@@ -294,7 +315,6 @@ mod tests {
                 ),
             )
             .unwrap();
-
         assert_eq!(lease.alarms.batch, {
             let mut batch = Batch::default();
 
@@ -313,20 +333,11 @@ mod tests {
 
     #[test]
     fn reschedule_time_alarm_liquidation() {
-        let interest_rate = Percent::from_permille(50);
-        // LPP loan
-        let loan = LoanResponse {
-            principal_due: coin(300),
-            interest_due: coin(0),
-            annual_interest_rate: interest_rate,
-            interest_paid: Timestamp::from_nanos(0),
-        };
-
         let lease_addr = Addr::unchecked("lease");
         let mut lease = open_lease(
             &lease_addr,
             300.into(),
-            Some(loan),
+            Some(loan()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),

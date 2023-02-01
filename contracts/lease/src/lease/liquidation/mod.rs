@@ -262,7 +262,7 @@ mod tests {
 
     use crate::{
         lease::{
-            tests::{coin, open_lease, LEASE_START},
+            tests::{loan, lpn_coin, open_lease, LEASE_START},
             LeaseInfo, LiquidationInfo, Status, WarningLevel,
         },
         loan::{LiabilityStatus, RepayReceipt},
@@ -275,8 +275,8 @@ mod tests {
         let interest_rate = Percent::from_permille(50);
         // LPP loan
         let loan = LoanResponse {
-            principal_due: coin(500),
-            interest_due: coin(100),
+            principal_due: lpn_coin(500),
+            interest_due: lpn_coin(100),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -302,8 +302,8 @@ mod tests {
         let interest_rate = Percent::from_permille(50);
         // LPP loan
         let loan = LoanResponse {
-            principal_due: coin(500),
-            interest_due: coin(100),
+            principal_due: lpn_coin(500),
+            interest_due: lpn_coin(100),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -336,8 +336,8 @@ mod tests {
         let interest_rate = Percent::from_permille(50);
         // LPP loan
         let loan = LoanResponse {
-            principal_due: coin(500),
-            interest_due: coin(100),
+            principal_due: lpn_coin(500),
+            interest_due: lpn_coin(100),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -367,20 +367,11 @@ mod tests {
 
     #[test]
     fn warnings_third() {
-        let interest_rate = Percent::from_permille(50);
-        // LPP loan
-        let loan = LoanResponse {
-            principal_due: coin(500),
-            interest_due: coin(100),
-            annual_interest_rate: interest_rate,
-            interest_paid: Timestamp::from_nanos(0),
-        };
-
         let lease_addr = Addr::unchecked("lease");
         let lease = open_lease(
             &lease_addr,
             10.into(),
-            Some(loan),
+            Some(loan()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -401,12 +392,11 @@ mod tests {
 
     #[test]
     fn liability() {
-        let interest_rate = Percent::from_permille(50);
         // LPP loan
         let loan = LoanResponse {
-            principal_due: coin(500),
-            interest_due: coin(100),
-            annual_interest_rate: interest_rate,
+            principal_due: lpn_coin(500),
+            interest_due: lpn_coin(100),
+            annual_interest_rate: Percent::from_permille(50),
             interest_paid: Timestamp::from_nanos(0),
         };
 
@@ -423,12 +413,12 @@ mod tests {
         assert_eq!(
             lease
                 .loan
-                .liability_status(LEASE_START, Addr::unchecked(String::new()), coin(1000))
+                .liability_status(LEASE_START, Addr::unchecked(String::new()), lpn_coin(1000))
                 .unwrap(),
             LiabilityStatus {
                 ltv: Percent::from_percent(60),
-                total_lpn: coin(100 + 500),
-                overdue_lpn: coin(0),
+                total_lpn: lpn_coin(100 + 500),
+                overdue_lpn: lpn_coin(0),
             }
         );
     }
@@ -439,8 +429,8 @@ mod tests {
         let interest_rate = Percent::from_permille(50);
         // LPP loan
         let loan = LoanResponse {
-            principal_due: coin(500),
-            interest_due: coin(100),
+            principal_due: lpn_coin(500),
+            interest_due: lpn_coin(100),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -457,7 +447,7 @@ mod tests {
 
         assert_eq!(
             lease
-                .liquidate_on_liability(coin(lease_amount), coin(800), LEASE_START)
+                .liquidate_on_liability(lpn_coin(lease_amount), lpn_coin(800), LEASE_START)
                 .unwrap(),
             Status::PartialLiquidation {
                 info: LeaseInfo::new(
@@ -469,12 +459,12 @@ mod tests {
                     cause: Cause::Liability,
                     lease: lease_addr.clone(),
                     receipt: RepayReceipt::new(
-                        coin(0),
-                        coin(0),
-                        coin(0),
-                        coin(100),
-                        coin(233),
-                        coin(0),
+                        lpn_coin(0),
+                        lpn_coin(0),
+                        lpn_coin(0),
+                        lpn_coin(100),
+                        lpn_coin(233),
+                        lpn_coin(0),
                         false
                     ),
                 },
@@ -489,8 +479,8 @@ mod tests {
         let interest_rate = Percent::from_permille(50);
         // LPP loan
         let loan = LoanResponse {
-            principal_due: coin(500),
-            interest_due: coin(100),
+            principal_due: lpn_coin(500),
+            interest_due: lpn_coin(100),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -507,7 +497,7 @@ mod tests {
 
         assert_eq!(
             lease
-                .liquidate_on_liability(coin(lease_amount), coin(5000), LEASE_START)
+                .liquidate_on_liability(lpn_coin(lease_amount), lpn_coin(5000), LEASE_START)
                 .unwrap(),
             Status::FullLiquidation {
                 info: LeaseInfo::new(
@@ -519,12 +509,12 @@ mod tests {
                     cause: Cause::Liability,
                     lease: lease_addr.clone(),
                     receipt: RepayReceipt::new(
-                        coin(0),
-                        coin(0),
-                        coin(0),
-                        coin(100),
-                        coin(500),
-                        coin(400),
+                        lpn_coin(0),
+                        lpn_coin(0),
+                        lpn_coin(0),
+                        lpn_coin(100),
+                        lpn_coin(500),
+                        lpn_coin(400),
                         true,
                     ),
                 },

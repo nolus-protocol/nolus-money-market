@@ -5,7 +5,6 @@ use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::bank::BankAccount;
 use profit::stub::Profit as ProfitTrait;
-use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
@@ -13,19 +12,17 @@ use crate::{
     lease::{with_lease::WithLease, IntoDTOResult, Lease},
 };
 
-pub struct Close<'a, Bank> {
-    sender: &'a Addr,
-    account: Bank,
+pub struct Close<Bank> {
+    lease_account: Bank,
 }
 
-impl<'a, Bank> Close<'a, Bank> {
-    // TODO do not pass a sender
-    pub fn new(sender: &'a Addr, account: Bank) -> Self {
-        Self { sender, account }
+impl<Bank> Close<Bank> {
+    pub fn new(lease_account: Bank) -> Self {
+        Self { lease_account }
     }
 }
 
-impl<'a, Bank> WithLease for Close<'a, Bank>
+impl<Bank> WithLease for Close<Bank>
 where
     Bank: BankAccount,
 {
@@ -45,12 +42,6 @@ where
         Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
-        if !lease.owned_by(self.sender) {
-            return Err(Self::Error::Unauthorized {});
-        }
-
-        let result = lease.close(self.account)?;
-
-        Ok(result)
+        lease.close(self.lease_account)
     }
 }

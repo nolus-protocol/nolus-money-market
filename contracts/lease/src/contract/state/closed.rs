@@ -25,11 +25,10 @@ impl Closed {
         env: &Env,
         querier: &QuerierWrapper,
     ) -> ContractResult<Emitter> {
-        let account = bank::my_account(env, querier);
-        let customer = lease.customer.clone();
+        let lease_account = bank::my_account(env, querier);
         let IntoDTOResult { lease: _, batch } = with_lease::execute(
             lease,
-            Close::new(&customer, account),
+            Close::new(lease_account),
             &env.contract.address,
             querier,
         )?;
