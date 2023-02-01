@@ -38,10 +38,12 @@ type BoxedIter<'a> = Box<dyn Iterator<Item = Result<(Addr, AlarmStore), StdError
 pub struct AlarmsIterator<'a>(Chain<BoxedIter<'a>, BoxedIter<'a>>);
 
 impl<'a> Iterator for AlarmsIterator<'a> {
-    type Item = Result<Addr, StdError>;
+    type Item = Result<Addr, AlarmError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.next().map(|res| res.map(|pair| pair.0))
+        self.0
+            .next()
+            .map(|res| res.map(|pair| pair.0).map_err(Into::into))
     }
 }
 

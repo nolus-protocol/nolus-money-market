@@ -8,13 +8,13 @@ use finance::{
     },
 };
 use marketprice::{
-    alarms::{AlarmsIterator, PriceAlarms},
+    alarms::{errors::AlarmError, AlarmsIterator, PriceAlarms},
     SpotPrice,
 };
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Addr, StdError, Storage},
+    cosmwasm_std::{to_binary, Addr, Storage},
     cw_storage_plus::Item,
 };
 
@@ -131,7 +131,7 @@ impl MarketAlarms {
     fn alarms_iter<'a, BaseC>(
         storage: &'a dyn Storage,
         prices: &'a [SpotPrice],
-    ) -> impl Iterator<Item = Result<Addr, StdError>> + 'a
+    ) -> impl Iterator<Item = Result<Addr, AlarmError>> + 'a
     where
         BaseC: Currency,
     {
@@ -146,6 +146,7 @@ impl MarketAlarms {
         {
             type Error = ContractError;
             type Output = AlarmsIterator<'a>;
+
             fn exec<C>(self, price: Price<C, BaseC>) -> Result<Self::Output, Self::Error>
             where
                 C: Currency,
