@@ -1,127 +1,352 @@
+use std::iter::Chain;
+
 use serde::{Deserialize, Serialize};
 
-use sdk::schemars::{self, JsonSchema};
-
-use crate::SpotPrice;
-
-use self::errors::AlarmError;
+use finance::{
+    coin::{Amount, Coin, CoinDTO},
+    currency::{Currency, SymbolOwned},
+    price::{self, Price},
+};
+use sdk::cosmwasm_std::StdError;
+use sdk::{
+    cosmwasm_std::{Addr, Order, Storage},
+    cw_storage_plus::{
+        Bound, Index, IndexList, IndexedMap, IntKey, Key, MultiIndex, Prefixer, PrimaryKey,
+    },
+};
+use swap::SwapGroup;
 
 pub mod errors;
-pub mod price;
-mod unchecked;
+use errors::AlarmError;
 
-pub type Id = u64;
+pub type AlarmsCount = u32;
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum ExecuteAlarmMsg {
-    PriceAlarm(),
+pub struct PriceAlarms<'m> {
+    alarms_below_namespace: &'m str,
+    alarms_above_namespace: &'m str,
+    index_below_namespace: &'m str,
+    index_above_namespace: &'m str,
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
-#[serde(try_from = "unchecked::Alarm")]
-pub struct Alarm {
-    below: SpotPrice,
-    above: Option<SpotPrice>,
+#[derive(Clone, Serialize, Deserialize, Debug)]
+struct AlarmStore(CoinDTO<SwapGroup>);
+
+const NORM_SCALE: u128 = 10u128.pow(18);
+
+type BoxedIter<'a> = Box<dyn Iterator<Item = Result<(Addr, AlarmStore), StdError>> + 'a>;
+
+pub struct AlarmsIterator<'a>(Chain<BoxedIter<'a>, BoxedIter<'a>>);
+
+impl<'a> Iterator for AlarmsIterator<'a> {
+    type Item = Result<Addr, AlarmError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0
+            .next()
+            .map(|res| res.map(|pair| pair.0).map_err(Into::into))
+    }
 }
 
-impl Alarm {
-    pub fn new<P>(below: P, above: Option<P>) -> Alarm
+impl AlarmStore {
+    fn new<C, BaseC>(price: &Price<C, BaseC>) -> Self
     where
-        P: Into<SpotPrice>,
+        C: Currency,
+        BaseC: Currency,
     {
-        let below = below.into();
-        let above = above.map(Into::into);
-        let res = Self { below, above };
-        debug_assert_eq!(Ok(()), res.invariant_held());
-        res
+        AlarmStore(price::total(Coin::new(NORM_SCALE), price.inv()).into())
     }
+}
 
-    pub fn should_fire(&self, current_price: &SpotPrice) -> bool {
-        current_price < &self.below
-            || (self.above.is_some() && current_price > self.above.as_ref().unwrap())
+impl<'a> PrimaryKey<'a> for AlarmStore {
+    type Prefix = SymbolOwned;
+    type Suffix = Amount;
+    type SubPrefix = ();
+    type SuperSuffix = (SymbolOwned, Amount);
+
+    fn key(&self) -> Vec<sdk::cw_storage_plus::Key> {
+        vec![
+            Key::Ref(self.0.ticker().as_bytes()),
+            Key::Val128(self.0.amount().to_cw_bytes()),
+        ]
     }
+}
 
-    fn invariant_held(&self) -> Result<(), AlarmError> {
-        if let Some(above) = &self.above {
-            if self.below.base().ticker() != above.base().ticker()
-                || self.below.quote().ticker() != above.quote().ticker()
-            {
-                errors::add_alarm_error("Mismatch of above alarm and below alarm currencies")?
-            }
-            if &self.below >= above {
-                errors::add_alarm_error(
-                    "The below alarm price should be less than the above alarm price",
-                )?
-            }
+impl<'a> Prefixer<'a> for AlarmStore {
+    fn prefix(&self) -> Vec<Key> {
+        self.key()
+    }
+}
+
+struct AlarmsIndexes<'a>(MultiIndex<'a, AlarmStore, AlarmStore, Addr>);
+
+impl<'a> IndexList<AlarmStore> for AlarmsIndexes<'a> {
+    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<AlarmStore>> + '_> {
+        let v: Vec<&dyn Index<AlarmStore>> = vec![&self.0];
+        Box::new(v.into_iter())
+    }
+}
+
+impl<'m> PriceAlarms<'m> {
+    pub const fn new(
+        alarms_below_namespace: &'m str,
+        index_below_namespace: &'m str,
+        alarms_above_namespace: &'m str,
+        index_above_namespace: &'m str,
+    ) -> PriceAlarms<'m> {
+        PriceAlarms {
+            alarms_below_namespace,
+            index_below_namespace,
+            alarms_above_namespace,
+            index_above_namespace,
         }
+    }
+
+    pub fn add_alarm_below<C, BaseC>(
+        &self,
+        storage: &mut dyn Storage,
+        addr: &Addr,
+        alarm: Price<C, BaseC>,
+    ) -> Result<(), AlarmError>
+    where
+        C: Currency,
+        BaseC: Currency,
+    {
+        Ok(self
+            .alarms_below()
+            .save(storage, addr.to_owned(), &AlarmStore::new(&alarm))?)
+    }
+
+    pub fn add_alarm_above<C, BaseC>(
+        &self,
+        storage: &mut dyn Storage,
+        addr: &Addr,
+        alarm: Price<C, BaseC>,
+    ) -> Result<(), AlarmError>
+    where
+        C: Currency,
+        BaseC: Currency,
+    {
+        Ok(self
+            .alarms_above()
+            .save(storage, addr.to_owned(), &AlarmStore::new(&alarm))?)
+    }
+
+    pub fn remove(&self, storage: &mut dyn Storage, addr: Addr) -> Result<(), AlarmError> {
+        self.alarms_below().remove(storage, addr.clone())?;
+        self.alarms_above().remove(storage, addr)?;
         Ok(())
+    }
+
+    pub fn alarms<'a, C, BaseC>(
+        &self,
+        storage: &'a dyn Storage,
+        price: Price<C, BaseC>,
+    ) -> AlarmsIterator<'a>
+    where
+        C: Currency,
+        BaseC: Currency,
+    {
+        let norm_price = AlarmStore::new(&price);
+
+        AlarmsIterator(
+            self.iter_below::<C>(storage, &norm_price)
+                .chain(self.iter_above::<C>(storage, &norm_price)),
+        )
+    }
+
+    fn alarms_below(&self) -> IndexedMap<Addr, AlarmStore, AlarmsIndexes> {
+        let indexes = AlarmsIndexes(MultiIndex::new(
+            |_, price| price.to_owned(),
+            self.alarms_below_namespace,
+            self.index_below_namespace,
+        ));
+        IndexedMap::new(self.alarms_below_namespace, indexes)
+    }
+
+    fn alarms_above(&self) -> IndexedMap<Addr, AlarmStore, AlarmsIndexes> {
+        let indexes = AlarmsIndexes(MultiIndex::new(
+            |_, price| price.to_owned(),
+            self.alarms_above_namespace,
+            self.index_above_namespace,
+        ));
+        IndexedMap::new(self.alarms_above_namespace, indexes)
+    }
+
+    fn iter_below<'a, C>(&self, storage: &'a dyn Storage, price: &AlarmStore) -> BoxedIter<'a>
+    where
+        C: Currency,
+    {
+        self.alarms_below()
+            .idx
+            .0
+            .sub_prefix(C::TICKER.into())
+            .range(
+                storage,
+                None,
+                Some(Bound::exclusive((price.0.amount(), Addr::unchecked("")))),
+                Order::Ascending,
+            )
+    }
+
+    fn iter_above<'a, C>(&self, storage: &'a dyn Storage, price: &AlarmStore) -> BoxedIter<'a>
+    where
+        C: Currency,
+    {
+        self.alarms_above()
+            .idx
+            .0
+            .sub_prefix(C::TICKER.into())
+            .range(
+                storage,
+                Some(Bound::exclusive((price.0.amount(), Addr::unchecked("")))),
+                None,
+                Order::Ascending,
+            )
     }
 }
 
 #[cfg(test)]
-mod test {
-    use currency::lease::Weth;
-    use finance::coin::Coin;
-    use sdk::cosmwasm_std::{from_slice, StdError};
+pub mod tests {
+    use currency::{
+        lease::{Atom, Weth},
+        lpn::Usdc,
+    };
+    use finance::{coin::Coin, price};
+    use sdk::cosmwasm_std::{testing::mock_dependencies, Addr};
 
-    use crate::{alarms::Alarm, SpotPrice};
+    use super::*;
+
+    type Base = Usdc;
 
     #[test]
-    fn below_price_ok() {
-        let exp_price = SpotPrice::new(Coin::<Weth>::new(10).into(), Coin::<Weth>::new(10).into());
-        let exp_res = Ok(Alarm::new(exp_price, None));
-        assert_eq!(exp_res, from_slice(br#"{"below": {"amount": {"amount": "10", "ticker": "WETH"}, "amount_quote": {"amount": "10", "ticker": "WETH"}}}"#));
+    fn test_add_remove() {
+        let alarms = PriceAlarms::new("alarms_below", "index_below", "alarms_above", "index_above");
+        let storage = &mut mock_dependencies().storage;
+
+        let addr1 = Addr::unchecked("addr1");
+        let addr2 = Addr::unchecked("addr2");
+        let addr3 = Addr::unchecked("addr3");
+
+        alarms
+            .add_alarm_below(
+                storage,
+                &addr1,
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(20)),
+            )
+            .unwrap();
+
+        alarms
+            .add_alarm_below(
+                storage,
+                &addr2,
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(5)),
+            )
+            .unwrap();
+        alarms
+            .add_alarm_above(
+                storage,
+                &addr2,
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(10)),
+            )
+            .unwrap();
+        alarms
+            .add_alarm_below(
+                storage,
+                &addr3,
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(20)),
+            )
+            .unwrap();
+
+        alarms.remove(storage, addr1).unwrap();
+        alarms.remove(storage, addr2).unwrap();
+
+        let resp: Vec<_> = alarms
+            .alarms(
+                storage,
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(15)),
+            )
+            .collect();
+
+        assert_eq!(resp, vec![Ok(addr3)]);
     }
 
     #[test]
-    fn below_price_err() {
-        assert_err(from_slice(br#"{"below": {"amount": {"amount": "2", "ticker": "WBTC"}, "amount_quote": {"amount": "10", "ticker": "WBTC"}}}"#), 
-                                "The price should be equal to the identity if the currencies match");
-        assert_err(from_slice(br#"{"below": {"amount": {"amount": "5", "ticker": "DAI"}, "amount_quote": {"amount": "0", "ticker": "DAI"}}}"#),
-                                "The quote amount should not be zero");
-        assert_err(from_slice(br#"{"below": {"amount": {"amount": "0", "ticker": "DAI"}, "amount_quote": {"amount": "5", "ticker": "DAI"}}}"#),
-                                "The amount should not be zero");
-    }
+    fn test_alarms_selection() {
+        let alarms = PriceAlarms::new("alarms_below", "index_below", "alarms_above", "index_above");
+        let storage = &mut mock_dependencies().storage;
 
-    #[test]
-    fn above_price_zero() {
-        assert_err(from_slice(br#"{"below": {"amount": {"amount": "0", "ticker": "ABC"}, "amount_quote": {"amount": "10", "ticker": "ABC"}}}"#),
-                                "The amount should not be zero");
-    }
+        let addr1 = Addr::unchecked("addr1");
+        let addr2 = Addr::unchecked("addr2");
+        let addr3 = Addr::unchecked("addr3");
+        let addr4 = Addr::unchecked("addr4");
+        let addr5 = Addr::unchecked("addr5");
 
-    #[test]
-    fn currencies_mismatch() {
-        assert_err(from_slice(br#"{"below": {"amount": {"amount": "2", "ticker": "WBTC"}, 
-                                                "amount_quote": {"amount": "10", "ticker": "CRO"}},
-                                        "above": {"amount": {"amount": "2", "ticker": "WBTC"}, 
-                                                "amount_quote": {"amount": "10", "ticker": "WETH"}}}"#), 
-                                "Mismatch of ");
-        assert_err(from_slice(br#"{"below": {"amount": {"amount": "2", "ticker": "WBTC"}, 
-                                                "amount_quote": {"amount": "10", "ticker": "CRO"}},
-                                        "above": {"amount": {"amount": "2", "ticker": "WETH"}, 
-                                                "amount_quote": {"amount": "10", "ticker": "CRO"}}}"#),
-                                "Mismatch of ");
-    }
+        alarms
+            .add_alarm_below(
+                storage,
+                &addr1,
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(10)),
+            )
+            .unwrap();
+        alarms
+            .add_alarm_below(
+                storage,
+                &addr2,
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(20)),
+            )
+            .unwrap();
+        alarms
+            .add_alarm_below(
+                storage,
+                &addr3,
+                price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(30)),
+            )
+            .unwrap();
+        alarms
+            .add_alarm_below(
+                storage,
+                &addr4,
+                price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(20)),
+            )
+            .unwrap();
+        alarms
+            .add_alarm_above(
+                storage,
+                &addr4,
+                price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(25)),
+            )
+            .unwrap();
+        alarms
+            .add_alarm_below(
+                storage,
+                &addr5,
+                price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(20)),
+            )
+            .unwrap();
+        alarms
+            .add_alarm_above(
+                storage,
+                &addr5,
+                price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(35)),
+            )
+            .unwrap();
 
-    #[test]
-    fn below_not_less_than_above() {
-        assert_err(from_slice(br#"{"below": {"amount": {"amount": "2", "ticker": "WBTC"}, 
-                                                "amount_quote": {"amount": "10", "ticker": "CRO"}},
-                                        "above": {"amount": {"amount": "2", "ticker": "WBTC"}, 
-                                                "amount_quote": {"amount": "9", "ticker": "CRO"}}}"#),
-                                "should be less than the above");
-    }
+        let resp: Vec<_> = alarms
+            .alarms(
+                storage,
+                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(15)),
+            )
+            .collect();
 
-    #[track_caller]
-    fn assert_err(r: Result<Alarm, StdError>, msg: &str) {
-        assert!(matches!(
-            r,
-            Err(StdError::ParseErr {
-                target_type,
-                msg: real_msg
-            }) if target_type.contains("Alarm") && real_msg.contains(msg)
-        ));
+        assert_eq!(resp, vec![Ok(addr2)]);
+
+        let resp: Vec<_> = alarms
+            .alarms(
+                storage,
+                price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(26)),
+            )
+            .collect();
+
+        assert_eq!(resp, vec![Ok(addr3), Ok(addr4)]);
     }
 }

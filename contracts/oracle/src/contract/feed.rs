@@ -120,7 +120,7 @@ where
 {
     let batch = Batch::default();
     let prices = calc_all_prices::<OracleBase>(storage, block_time)?;
-    MarketAlarms::try_notify_alarms(storage, batch, &prices, max_count)
+    MarketAlarms::try_notify_alarms::<OracleBase>(storage, batch, &prices, max_count)
 }
 
 pub fn try_query_alarms<OracleBase>(
@@ -131,7 +131,7 @@ where
     OracleBase: Currency + DeserializeOwned,
 {
     let prices = calc_all_prices::<OracleBase>(storage, block_time)?;
-    MarketAlarms::try_query_alarms(storage, &prices)
+    MarketAlarms::try_query_alarms::<OracleBase>(storage, &prices)
 }
 
 fn calc_all_prices<OracleBase>(

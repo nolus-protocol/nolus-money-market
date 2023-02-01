@@ -6,12 +6,13 @@ use finance::{
     currency::{self, Currency, SymbolOwned},
     price::Price,
 };
-use marketprice::{alarms::Alarm, SpotPrice};
+use marketprice::SpotPrice;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr, QuerierWrapper};
 use swap::SwapTarget;
 
 use crate::{
+    alarms::Alarm,
     msg::{ConfigResponse, ExecuteMsg, QueryMsg},
     ContractError,
 };

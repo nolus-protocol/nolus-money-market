@@ -1,15 +1,18 @@
 use serde::{Deserialize, Serialize};
 
 use finance::currency::SymbolOwned;
-use marketprice::{alarms::Alarm, config::Config as PriceConfig, SpotPrice};
+use marketprice::{config::Config as PriceConfig, SpotPrice};
 use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
 };
 
-use crate::state::{
-    config::Config,
-    supported_pairs::{SubTree, SwapLeg, TreeStore},
+use crate::{
+    alarms::Alarm,
+    state::{
+        config::Config,
+        supported_pairs::{SubTree, SwapLeg, TreeStore},
+    },
 };
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]

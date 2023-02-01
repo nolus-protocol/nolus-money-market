@@ -6,23 +6,4 @@ use sdk::cosmwasm_std::StdError;
 pub enum AlarmError {
     #[error("[Market Price] {0}")]
     Std(#[from] StdError),
-
-    #[error("[Market Price] Error on adding alarm: {0}")]
-    AddAlarm(String),
-
-    #[error("[Market Price] {0}")]
-    Platform(#[from] platform::error::Error),
-
-    #[error("[Market Price] {0}")]
-    Finance(#[from] finance::error::Error),
-
-    #[error("[Market Price] {0}")]
-    Math(#[from] std::num::TryFromIntError),
-}
-
-pub fn add_alarm_error<T>(description: T) -> Result<(), AlarmError>
-where
-    T: Into<String>,
-{
-    Err(AlarmError::AddAlarm(description.into()))
 }

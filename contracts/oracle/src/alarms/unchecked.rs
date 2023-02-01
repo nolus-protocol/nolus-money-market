@@ -1,8 +1,8 @@
 use serde::Deserialize;
 
-use crate::SpotPrice;
+use marketprice::SpotPrice;
 
-use super::{errors::AlarmError, Alarm as ValidatedAlarm};
+use super::{Alarm as ValidatedAlarm, AlarmError};
 
 /// Brings invariant checking as a step in deserializing an Alarm
 #[derive(Deserialize)]

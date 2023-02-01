@@ -1,7 +1,6 @@
 use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
-use platform::contract;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -112,16 +111,11 @@ pub fn execute(
         ExecuteMsg::RemoveFeeder { feeder_address } => {
             Feeders::try_remove(deps, info, feeder_address)
         }
-        ExecuteMsg::AddPriceAlarm { alarm } => {
-            contract::validate_addr(&deps.querier, &info.sender)?;
-
-            MarketAlarms::try_add_price_alarm(deps.storage, info.sender, alarm)
-        }
-        ExecuteMsg::RemovePriceAlarm {} => MarketAlarms::remove(deps.storage, info.sender),
         _ => Ok(ExecWithOracleBase::cmd(deps, env, msg, info.sender)?),
     }
 }
 
+// TODO: compare gas usage of this solution vs reply on error
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let resp = match msg.result {

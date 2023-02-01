@@ -14,8 +14,8 @@ use finance::{
     price::{self, dto::PriceDTO},
 };
 use leaser::msg::QueryMsg;
-use marketprice::{alarms::Alarm, config::Config as PriceConfig, SpotPrice};
-use oracle::{msg::QueryMsg as OracleQ, state::supported_pairs::TreeStore};
+use marketprice::{config::Config as PriceConfig, SpotPrice};
+use oracle::{alarms::Alarm, msg::QueryMsg as OracleQ, state::supported_pairs::TreeStore};
 use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{coin, wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
