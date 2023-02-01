@@ -220,8 +220,8 @@ mod tests {
     use finance::{coin::Coin, duration::Duration, fraction::Fraction, price::total_of};
     #[cfg(not(debug_assertions))]
     use lpp::msg::LoanResponse;
-    use marketprice::{alarms::Alarm, SpotPrice};
-    use oracle::msg::ExecuteMsg::AddPriceAlarm;
+    use marketprice::SpotPrice;
+    use oracle::{alarms::Alarm, msg::ExecuteMsg::AddPriceAlarm};
     use platform::batch::Batch;
     #[cfg(not(debug_assertions))]
     use sdk::cosmwasm_std::Timestamp;
