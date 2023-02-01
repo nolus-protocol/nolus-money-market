@@ -39,26 +39,7 @@ impl Group for ",
     where
         V: AnyVisitor,
     {
-        use crate::",
-    &CurrenciesModule,
-    &" as curr;
-
-        let v: SingleVisitorAdapter<_> = visitor.into();
-
-        (",
-    &ForEachCurrency {
-        pattern: &[
-            &"maybe_visit::<curr::",
-            &CurrencyModule,
-            &"::",
-            &CurrencyStructName,
-            &", _>(ticker, v)",
-        ],
-        delimiter: ")
-            .or_else(|v| ",
-    },
-    &")
-            .map_err(|v| v.0)
+        visit_all(ticker, visitor)
     }
 
     fn maybe_visit_on_bank_symbol<V>(bank_symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
@@ -66,27 +47,28 @@ impl Group for ",
         Self: Sized,
         V: AnyVisitor,
     {
-        use crate::",
-    &CurrenciesModule,
-    &" as curr;
+        visit_all(bank_symbol, visitor)
+    }
+}
 
-        let v: SingleVisitorAdapter<_> = visitor.into();
+fn visit_all<V>(symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
+where
+    V: AnyVisitor,
+{
+    let v: SingleVisitorAdapter<V> = visitor.into();
 
-        (",
+    (",
     &ForEachCurrency {
         pattern: &[
-            &"maybe_visit::<curr::",
-            &CurrencyModule,
-            &"::",
+            &"maybe_visit::<",
             &CurrencyStructName,
-            &", _>(bank_symbol, v)",
+            &", _>(symbol, v)",
         ],
         delimiter: ")
             .or_else(|v| ",
     },
     &")
-            .map_err(|v| v.0)
-    }
+        .map_err(|v| v.0)
 }
 ",
 ]
