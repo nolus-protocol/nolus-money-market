@@ -43,7 +43,7 @@ impl<'r> SingleUserAccess<'r> {
         }
     }
 
-    pub fn load_and_check_access<E>(
+    fn load_and_check_access<E>(
         storage: &dyn Storage,
         namespace: &'r str,
         addr: &Addr,

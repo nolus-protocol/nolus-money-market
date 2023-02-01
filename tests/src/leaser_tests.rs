@@ -3,6 +3,7 @@ use std::{any::type_name, collections::HashSet};
 use currency::{
     lease::{Atom, Cro, Osmo},
     lpn::Usdc,
+    native::Nls,
 };
 use finance::{
     coin::{Amount, Coin},
@@ -65,14 +66,13 @@ fn init_lpp_with_unknown_currency() {
 }
 
 #[test]
-#[should_panic = "Unsupported currency"]
-fn open_lease_not_in_lpn_currency() {
+fn open_lease_not_in_lease_currency() {
     let user_addr = Addr::unchecked(USER);
 
     type Lpn = Usdc;
-    let lease_currency = Atom::TICKER;
+    let lease_currency = Nls::TICKER;
 
-    let (neutron_message_sender, neutron_message_receiver) = new_custom_msg_queue();
+    let (neutron_message_sender, _neutron_message_receiver) = new_custom_msg_queue();
 
     let mut test_case = TestCase::<Lpn>::new(Some(neutron_message_sender));
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
@@ -90,7 +90,7 @@ fn open_lease_not_in_lpn_currency() {
 
     let downpayment: CwCoin = cwcoin::<Lpn, _>(3);
 
-    let _res = test_case
+    let err = test_case
         .app
         .execute_contract(
             user_addr.clone(),
@@ -98,18 +98,10 @@ fn open_lease_not_in_lpn_currency() {
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: lease_currency.into(),
             },
-            &[downpayment.clone()],
+            &[downpayment],
         )
-        .unwrap();
+        .unwrap_err();
 
-    complete_lease_initialization::<Lpn>(
-        &mut test_case.app,
-        &neutron_message_receiver,
-        &Addr::unchecked("contract6"),
-        downpayment,
-    );
-
-    // let err = res.unwrap_err();
     // For some reason the downcasting does not work. That is due to different TypeId-s of LeaseError and the root
     // cause stored into the err. Suppose that is a flaw of the cw-multi-test.
     // dbg!(err.root_cause().downcast_ref::<LeaseError>());
@@ -118,10 +110,10 @@ fn open_lease_not_in_lpn_currency() {
     //     root_err
     // );
 
-    // assert!(err
-    //     .root_cause()
-    //     .to_string()
-    //     .contains("Unsupported currency"));
+    assert!(err
+        .root_cause()
+        .to_string()
+        .contains("which is not defined in the lease currency group"));
 }
 
 #[test]

@@ -47,7 +47,7 @@ impl LppWrapper {
         Lpn: Currency,
     {
         let lpp_id = app.store_code(self.contract_wrapper);
-        let lease_code_admin = Addr::unchecked(ADMIN);
+        let lease_code_admin = Addr::unchecked("contract5");
         let msg = InstantiateMsg {
             lpn_ticker: Lpn::TICKER.into(),
             lease_code_admin: lease_code_admin.clone(),

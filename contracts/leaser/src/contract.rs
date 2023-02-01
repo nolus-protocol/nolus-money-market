@@ -1,5 +1,6 @@
 use access_control::SingleUserAccess;
-use platform::reply::from_instantiate;
+use cosmwasm_std::Storage;
+use platform::{batch::Batch, reply::from_instantiate};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -11,7 +12,7 @@ use versioning::Version;
 use crate::{
     cmd::Borrow,
     error::{ContractError, ContractResult},
-    leaser::{Leaser, LeaserAdmin},
+    leaser::{self, Leaser},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     state::{config::Config, leases::Leases},
 };
@@ -34,9 +35,13 @@ pub fn instantiate(
 
     SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
 
+    let lease_code = msg.lease_code_id;
     Config::new(msg)?.store(deps.storage)?;
+    // require the config to be stored before
+    let mut batch = Batch::default();
+    leaser::update_lpp(deps.storage, lease_code.u64(), &mut batch)?;
 
-    Ok(Response::default())
+    Ok(batch.into())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -53,19 +58,24 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<Response> {
     match msg {
-        ExecuteMsg::SetupDex(params) => LeaserAdmin::new(deps.storage, info)?.try_setup_dex(params),
+        ExecuteMsg::SetupDex(params) => {
+            owner_allowed_only(deps.storage, info, |s| leaser::try_setup_dex(s, params))
+        }
         ExecuteMsg::Config {
             lease_interest_rate_margin,
             liability,
             lease_interest_payment,
-        } => LeaserAdmin::new(deps.storage, info)?.try_configure(
-            lease_interest_rate_margin,
-            liability,
-            lease_interest_payment,
-        ),
-        ExecuteMsg::MigrateLeases { new_code_id } => {
-            LeaserAdmin::new(deps.storage, info)?.try_migrate_leases(new_code_id.u64())
-        }
+        } => owner_allowed_only(deps.storage, info, |s| {
+            leaser::try_configure(
+                s,
+                lease_interest_rate_margin,
+                liability,
+                lease_interest_payment,
+            )
+        }),
+        ExecuteMsg::MigrateLeases { new_code_id } => owner_allowed_only(deps.storage, info, |s| {
+            leaser::try_migrate_leases(s, new_code_id.u64())
+        }),
         ExecuteMsg::OpenLease { currency } => Borrow::with(
             deps,
             info.funds,
@@ -100,4 +110,62 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
 
     Leases::save(deps.storage, msg_id, contract_addr.clone())?;
     Ok(Response::new().add_attribute("lease_address", contract_addr))
+}
+
+fn owner_allowed_only<'a, F, R>(
+    storage: &'a mut dyn Storage,
+    info: MessageInfo,
+    restricted: F,
+) -> ContractResult<R>
+where
+    F: FnOnce(&'a mut dyn Storage) -> ContractResult<R>,
+{
+    SingleUserAccess::check_owner_access::<ContractError>(storage, &info.sender)?;
+    restricted(storage)
+}
+
+#[cfg(test)]
+mod test {
+
+    use access_control::SingleUserAccess;
+    use cosmwasm_std::{
+        testing::{mock_dependencies, mock_info},
+        Addr,
+    };
+
+    use crate::ContractError;
+
+    #[test]
+    fn exec_by_non_owner() {
+        let owner = Addr::unchecked("the big boss");
+        let caller = "bad boy";
+        let mut deps = mock_dependencies();
+        SingleUserAccess::new_contract_owner(owner)
+            .store(&mut deps.storage)
+            .unwrap();
+
+        let err = super::owner_allowed_only::<_, bool>(
+            &mut deps.storage,
+            mock_info(caller, &[]),
+            |_| unreachable!(),
+        )
+        .unwrap_err();
+        assert!(matches!(err, ContractError::Unauthorized(_)))
+    }
+
+    #[test]
+    fn exec_by_owner() {
+        let owner = Addr::unchecked("the big boss");
+        let mut deps = mock_dependencies();
+        SingleUserAccess::new_contract_owner(owner.clone())
+            .store(&mut deps.storage)
+            .unwrap();
+
+        let res =
+            super::owner_allowed_only(&mut deps.storage, mock_info(owner.as_str(), &[]), |_| {
+                Ok(true)
+            })
+            .unwrap();
+        assert!(res);
+    }
 }

@@ -1,7 +1,5 @@
 use std::collections::HashSet;
 
-use access_control::SingleUserAccess;
-
 use currency::native::Nls;
 use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
 use lease::api::{dex::ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
@@ -10,7 +8,7 @@ use oracle::stub::OracleRef;
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, Deps, MessageInfo, StdResult, Storage},
+    cosmwasm_std::{Addr, Deps, StdResult, Storage},
 };
 
 use crate::{
@@ -65,54 +63,51 @@ impl<'a> Leaser<'a> {
     }
 }
 
-pub struct LeaserAdmin<'a> {
-    storage: &'a mut dyn Storage,
+pub fn try_setup_dex(
+    storage: &mut dyn Storage,
+    params: ConnectionParams,
+) -> ContractResult<Response> {
+    Config::setup_dex(storage, params)?;
+
+    Ok(Response::default())
 }
-impl<'a> LeaserAdmin<'a> {
-    pub fn new(storage: &'a mut dyn Storage, info: MessageInfo) -> ContractResult<Self> {
-        SingleUserAccess::check_owner_access::<ContractError>(storage, &info.sender)?;
-        Ok(LeaserAdmin { storage })
-    }
 
-    pub fn try_setup_dex(&mut self, params: ConnectionParams) -> ContractResult<Response> {
-        Config::setup_dex(self.storage, params)?;
+pub fn try_configure(
+    storage: &mut dyn Storage,
+    lease_interest_rate_margin: Percent,
+    liability: Liability,
+    lease_interest_payment: InterestPaymentSpec,
+) -> ContractResult<Response> {
+    Config::update(
+        storage,
+        lease_interest_rate_margin,
+        liability,
+        lease_interest_payment,
+    )?;
 
-        Ok(Response::default())
-    }
+    Ok(Response::default())
+}
 
-    pub fn try_configure(
-        &mut self,
-        lease_interest_rate_margin: Percent,
-        liability: Liability,
-        lease_interest_payment: InterestPaymentSpec,
-    ) -> ContractResult<Response> {
-        Config::update(
-            self.storage,
-            lease_interest_rate_margin,
-            liability,
-            lease_interest_payment,
-        )?;
+pub fn try_migrate_leases(storage: &mut dyn Storage, new_code_id: u64) -> ContractResult<Response> {
+    Config::update_lease_code(storage, new_code_id)?;
 
-        Ok(Response::default())
-    }
+    let mut batch = migrate::migrate_leases(Leases::iter(storage), new_code_id)?;
 
-    pub fn try_migrate_leases(&mut self, new_code_id: u64) -> ContractResult<Response> {
-        Config::update_lease_code(self.storage, new_code_id)?;
+    update_lpp(storage, new_code_id, &mut batch)?;
 
-        let mut batch = migrate::migrate_leases(Leases::iter(self.storage), new_code_id)?;
+    Ok(batch.into())
+}
 
-        self.update_lpp(new_code_id, &mut batch)?;
-
-        Ok(batch.into())
-    }
-
-    fn update_lpp(&mut self, new_code_id: u64, batch: &mut Batch) -> ContractResult<()> {
-        let lpp = Config::load(self.storage)?.lpp_addr;
-        let lpp_update_code = ExecuteMsg::NewLeaseCode {
-            lease_code_id: new_code_id.into(),
-        };
-        batch
-            .schedule_execute_wasm_no_reply::<_, Nls>(&lpp, lpp_update_code, None)
-            .map_err(Into::into)
-    }
+pub(super) fn update_lpp(
+    storage: &mut dyn Storage,
+    new_code_id: u64,
+    batch: &mut Batch,
+) -> ContractResult<()> {
+    let lpp = Config::load(storage)?.lpp_addr;
+    let lpp_update_code = ExecuteMsg::NewLeaseCode {
+        lease_code_id: new_code_id.into(),
+    };
+    batch
+        .schedule_execute_wasm_no_reply::<_, Nls>(&lpp, lpp_update_code, None)
+        .map_err(Into::into)
 }

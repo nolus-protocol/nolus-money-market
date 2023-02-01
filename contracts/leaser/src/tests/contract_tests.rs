@@ -77,7 +77,7 @@ fn setup_test_case(deps: DepsMut) {
     let msg = leaser_instantiate_msg(1, lpp_addr);
 
     let resp = instantiate(deps, mock_env(), owner(), msg).unwrap();
-    assert!(resp.messages.is_empty());
+    assert_eq!(1, resp.messages.len());
 }
 
 fn query_config(deps: Deps) -> Config {
@@ -114,7 +114,7 @@ fn proper_initialization() {
     let msg = leaser_instantiate_msg(1, lpp_addr.clone());
 
     let res = instantiate(deps.as_mut(), mock_env(), owner(), msg).unwrap();
-    assert_eq!(0, res.messages.len());
+    assert_eq!(1, res.messages.len());
 
     // it worked, let's query the state
     let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
