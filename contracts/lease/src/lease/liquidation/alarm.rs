@@ -216,11 +216,15 @@ where
 mod tests {
     use currency::{lease::Cro, lpn::Usdc};
     #[cfg(not(debug_assertions))]
-    use finance::price::total_of;
+    use finance::percent::Percent;
     use finance::{coin::Coin, duration::Duration, fraction::Fraction, price::total_of};
+    #[cfg(not(debug_assertions))]
+    use lpp::msg::LoanResponse;
     use marketprice::{alarms::Alarm, SpotPrice};
     use oracle::msg::ExecuteMsg::AddPriceAlarm;
     use platform::batch::Batch;
+    #[cfg(not(debug_assertions))]
+    use sdk::cosmwasm_std::Timestamp;
     use sdk::cosmwasm_std::{to_binary, Addr, WasmMsg};
     use timealarms::msg::ExecuteMsg::AddAlarm;
 
@@ -380,8 +384,8 @@ mod tests {
         let interest_rate = Percent::from_permille(50);
         // LPP loan
         let loan = LoanResponse {
-            principal_due: coin(300),
-            interest_due: coin(0),
+            principal_due: 300.into(),
+            interest_due: 0.into(),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -398,9 +402,9 @@ mod tests {
 
         assert_eq!(
             lease
-                .price_alarm_by_percent(coin(500), Percent::from_percent(50))
+                .price_alarm_by_percent(Coin::new(500), Percent::from_percent(50))
                 .unwrap(),
-            total_of(coin(3)).is(coin(10))
+            total_of(Coin::new(3)).is(Coin::new(10))
         );
     }
 }
