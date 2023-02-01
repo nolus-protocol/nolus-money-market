@@ -14,7 +14,7 @@ use marketprice::{
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Addr, Storage},
+    cosmwasm_std::{to_binary, Addr, StdError, Storage},
     cw_storage_plus::Item,
 };
 
@@ -22,8 +22,6 @@ use crate::{
     msg::{AlarmsStatusResponse, DispatchAlarmsResponse},
     ContractError,
 };
-
-use itertools::Itertools;
 
 pub type AlarmReplyId = u64;
 
@@ -133,7 +131,7 @@ impl MarketAlarms {
     fn alarms_iter<'a, BaseC>(
         storage: &'a dyn Storage,
         prices: &'a [SpotPrice],
-    ) -> impl Iterator<Item = Result<Addr, ContractError>> + 'a
+    ) -> impl Iterator<Item = Result<Addr, StdError>> + 'a
     where
         BaseC: Currency,
     {
@@ -156,19 +154,16 @@ impl MarketAlarms {
             }
         }
 
-        prices
-            .iter()
-            .map(|price| {
-                with_quote::execute::<_, _, _, BaseC>(
-                    price,
-                    AlarmsCmd {
-                        storage,
-                        price_alarms: &Self::PRICE_ALARMS,
-                    },
-                )
-            })
-            .flatten_ok()
-            .flatten_ok()
+        prices.iter().flat_map(|price| {
+            with_quote::execute::<_, _, _, BaseC>(
+                price,
+                AlarmsCmd {
+                    storage,
+                    price_alarms: &Self::PRICE_ALARMS,
+                },
+            )
+            .expect("Invalid price")
+        })
     }
 
     fn schedule_alarm(
@@ -292,6 +287,7 @@ mod test {
 
     #[test]
     #[should_panic]
+    #[cfg(not(debug_assertions))]
     fn notify_with_wrong_currency_group() {
         let mut storage = MockStorage::new();
 
@@ -304,9 +300,7 @@ mod test {
                 .is(Coin::<Base>::new(25))
                 .into()],
             1,
-        )
-        // behaves differently in release and test profiles
-        .unwrap();
+        );
     }
 
     #[test]

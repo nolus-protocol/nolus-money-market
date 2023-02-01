@@ -34,7 +34,6 @@ cosmwasm-std = { workspace = true }
 thiserror = { workspace = true }
 trees = "0.4.2"
 serde = { workspace = true, features = ["derive"] }
-itertools = "0.10.5"
 
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
