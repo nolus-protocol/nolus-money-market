@@ -78,7 +78,15 @@ pub mod testing {
 
     pub fn valid_contract_handler(_query: &WasmQuery) -> QuerierResult {
         SystemResult::Ok(ContractResult::Ok(
-            to_binary(&ContractInfoResponse::new(CODE_ID, "some data")).unwrap(),
+            to_binary(&{
+                let mut response = ContractInfoResponse::default();
+
+                response.code_id = CODE_ID;
+                response.creator = "some data".into();
+
+                response
+            })
+            .unwrap(),
         ))
     }
 }
