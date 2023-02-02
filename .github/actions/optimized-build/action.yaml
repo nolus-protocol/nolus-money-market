@@ -1,0 +1,51 @@
+name: "Build optimized contracts"
+description: "Action for building optimized versions of the contracts"
+author: "Kiril Mihaylov <k.mihaylov@nolus.io>"
+
+inputs:
+  target_net:
+    description: "Whether to build targeting test-net or main-net. This parameter takes one of these two values: \"test\" and \"main\"."
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: "sh"
+      run: |
+        if test "${1}" = "test";
+          then exit 0;
+        elif test "${1}" = "main";
+          then exit 0;
+        else
+          (
+            echo "Input is neither \"test\", nor \"main\"!"
+            exit 1
+          );
+        fi
+    - name: "Build optimized versions of contracts"
+      shell: "sh"
+      run: |
+        sudo docker run --rm -v "$(pwd)/":"/code/" \
+        -v "$(pwd)/artifacts/":"/code/artifacts/" \
+        --mount type=volume,source="$(basename \"$(pwd) \")_cache",target="/code/target/" \
+        --mount type=volume,source="rustup_dir_cache",target="/usr/local/rustup/" \
+        --mount type=volume,source="cargo_dir_cache",target="/usr/local/cargo/" \
+        --mount type=volume,source="registry_cache",target="/usr/local/cargo/registry/" \
+        --env ALT_NET_SYMBOLS=$(if test "${{ inputs.target_net }}" = "test"; then echo 1; else echo 0; fi) \
+        cosmwasm/workspace-optimizer:0.12.11
+    - name: "Check for WASM binaries larger than allowed limit"
+      shell: "sh"
+      run: |
+        find "artifacts/" -size +1000k | wc -l | read large_files_count
+
+        if ! test "${large_files_count}" = "0";
+          then exit 1;
+        fi
+    - name: "Copy deployment script to artifacts directory"
+      shell: "sh"
+      run: "sudo cp \"scripts/deploy-contracts-genesis.sh\" \"artifacts/\""
+    - name: "Archive ${{ inputs.target_net }}-net artifacts"
+      uses: "actions/upload-artifact@v3"
+      with:
+        name: "optimized-binaries-${{ inputs.target_net }}-net"
+        path: "artifacts/"

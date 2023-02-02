@@ -18,29 +18,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: "always"
-  OPTIMIZED_BUILD_SCRIPT: |
-    build() {
-      sudo docker run --rm -v "$(pwd)/":"/code/" \
-        -v "$(pwd)/artifacts_${1}_net/":"/code/artifacts/" \
-        --mount type=volume,source="$(basename \"$(pwd) \")_cache",target="/code/target/" \
-        --mount type=volume,source="rustup_dir_cache",target="/usr/local/rustup/" \
-        --mount type=volume,source="cargo_dir_cache",target="/usr/local/cargo/" \
-        --mount type=volume,source="registry_cache",target="/usr/local/cargo/registry/" \
-        --env ALT_NET_SYMBOLS=$(if test "${1}" = "test"; then echo 1; else echo 0; fi) \
-        cosmwasm/workspace-optimizer:0.12.11
-    }
-  CHECK_SIZES_SCRIPT: |
-    check_sizes() {
-      find "artifacts_${1}_net/" -size +1000k | wc -l | read large_files_count
-    
-      if !test "{$large_files_count}" = "0";
-        then exit 1;
-      fi
-    }
-  COPY_DEPLOYMENT_SCRIPT: |
-    copy_deploy_script() {
-      sudo cp "scripts/deploy-contracts-genesis.sh" "artifacts_${1}_net/"
-    }
 
 jobs:
   check-formatting:
@@ -108,40 +85,29 @@ jobs:
       - name: "Checking WASM binaries"
         shell: "sh"
         run: "cosmwasm-check --available-capabilities staking,stargate,cosmwasm_1_1,iterator,neutron ./target/wasm32-unknown-unknown/debug/*.wasm"
-  build-optimized:
+  build-optimized-test-net:
     runs-on: "ubuntu-latest"
     needs:
       - "code-coverage"
       - "test-release-profile"
       - "check-wasm"
-    if: "github.ref_type == 'tag'"
+    if: "github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'"
     steps:
       - uses: "actions/checkout@v3"
-      - name: "Run workspace-optimizer docker image for test-net"
-        shell: "sh"
-        run: "eval \"${OPTIMIZED_BUILD_SCRIPT}\"; build test"
-      - name: "Check for test-net WASM binaries larger than allowed limit"
-        shell: "sh"
-        run: "eval \"${CHECK_SIZES_SCRIPT}\"; check_sizes test"
-      - name: "Copy deployment script to test-net artifacts directory"
-        shell: "sh"
-        run: "eval \"${COPY_DEPLOYMENT_SCRIPT}\"; copy_deploy_script test"
-      - name: "Run workspace-optimizer docker image for main-net"
-        shell: "sh"
-        run: "eval \"${OPTIMIZED_BUILD_SCRIPT}\"; build main"
-      - name: "Check for main-net WASM binaries larger than allowed limit"
-        shell: "sh"
-        run: "eval \"${CHECK_SIZES_SCRIPT}\"; check_sizes main"
-      - name: "Copy deployment script to main-net artifacts directory"
-        shell: "sh"
-        run: "eval \"${COPY_DEPLOYMENT_SCRIPT}\"; copy_deploy_script main"
-      - name: "Archive test-net artifacts"
-        uses: "actions/upload-artifact@v3"
+      - name: "Build optimized for test-net"
+        uses: "./.github/actions/optimized-build"
         with:
-          name: "optimized-binaries-test-net"
-          path: "artifacts_test_net/"
-      - name: "Archive main-net artifacts"
-        uses: "actions/upload-artifact@v3"
+          target_net: "test"
+  build-optimized-main-net:
+    runs-on: "ubuntu-latest"
+    needs:
+      - "code-coverage"
+      - "test-release-profile"
+      - "check-wasm"
+    if: "github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'"
+    steps:
+      - uses: "actions/checkout@v3"
+      - name: "Build optimized binaries for main-net"
+        uses: "./.github/actions/optimized-build"
         with:
-          name: "optimized-binaries-main-net"
-          path: "artifacts_main_net/"
+          target_net: "main"
