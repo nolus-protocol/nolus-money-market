@@ -3,6 +3,12 @@ run-name: "Building smart contracts, triggered by ${{ github.actor }}"
 
 on:
   workflow_dispatch:
+    inputs:
+      optimized_build:
+        description: "Check and build optimized binaries."
+        type: "boolean"
+        required: true
+        default: false
   push:
     branches:
       - "main"
@@ -20,61 +26,61 @@ env:
   CARGO_TERM_COLOR: "always"
 
 jobs:
-  check-formatting:
+  check_formatting:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "./.github/actions/rust-cache"
-      - uses: "./.github/actions/check-formatting"
-  check-codebase:
+      - uses: "./.github/actions/rust_cache"
+      - uses: "./.github/actions/check_formatting"
+  check_codebase:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "./.github/actions/rust-cache"
-      - uses: "./.github/actions/check-codebase"
-  audit-dependencies:
+      - uses: "./.github/actions/rust_cache"
+      - uses: "./.github/actions/check_codebase"
+  audit_dependencies:
     runs-on: "ubuntu-latest"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "./.github/actions/rust-cache"
-      - uses: "./.github/actions/audit-dependencies"
+      - uses: "./.github/actions/rust_cache"
+      - uses: "./.github/actions/audit_dependencies"
   linting:
     runs-on: "ubuntu-latest"
     needs:
-      - "check-formatting"
-      - "check-codebase"
-      - "audit-dependencies"
+      - "check_formatting"
+      - "check_codebase"
+      - "audit_dependencies"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "./.github/actions/rust-cache"
+      - uses: "./.github/actions/rust_cache"
       - name: "Run linter"
         shell: "sh"
         run: "./lint.sh"
-  code-coverage:
+  code_coverage:
     runs-on: "ubuntu-latest"
     needs:
       - "linting"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "./.github/actions/rust-cache"
-      - uses: "./.github/actions/code-coverage"
-  test-release-profile:
+      - uses: "./.github/actions/rust_cache"
+      - uses: "./.github/actions/code_coverage"
+  test_release_profile:
     runs-on: "ubuntu-latest"
     needs:
       - "linting"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "./.github/actions/rust-cache"
+      - uses: "./.github/actions/rust_cache"
       - name: "Run tests in release profile"
         shell: "sh"
         run: "cargo test --release"
-  check-wasm:
+  check_wasm:
     runs-on: "ubuntu-latest"
     needs:
       - "linting"
     steps:
       - uses: "actions/checkout@v3"
-      - uses: "./.github/actions/rust-cache"
+      - uses: "./.github/actions/rust_cache"
       - shell: "sh"
         run: "cargo install cargo-workspaces"
       - shell: "sh"
@@ -85,29 +91,29 @@ jobs:
       - name: "Checking WASM binaries"
         shell: "sh"
         run: "cosmwasm-check --available-capabilities staking,stargate,cosmwasm_1_1,iterator,neutron ./target/wasm32-unknown-unknown/debug/*.wasm"
-  build-optimized-test-net:
+  build_optimized_test_net:
     runs-on: "ubuntu-latest"
     needs:
-      - "code-coverage"
-      - "test-release-profile"
-      - "check-wasm"
-    if: "github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'"
+      - "code_coverage"
+      - "test_release_profile"
+      - "check_wasm"
+    if: "github.ref_type == 'tag' || github.event.inputs.optimized_build"
     steps:
       - uses: "actions/checkout@v3"
       - name: "Build optimized for test-net"
-        uses: "./.github/actions/optimized-build"
+        uses: "./.github/actions/optimized_build"
         with:
           target_net: "test"
-  build-optimized-main-net:
+  build_optimized_main_net:
     runs-on: "ubuntu-latest"
     needs:
-      - "code-coverage"
-      - "test-release-profile"
-      - "check-wasm"
-    if: "github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'"
+      - "code_coverage"
+      - "test_release_profile"
+      - "check_wasm"
+    if: "github.ref_type == 'tag' || github.event.inputs.optimized_build"
     steps:
       - uses: "actions/checkout@v3"
       - name: "Build optimized binaries for main-net"
-        uses: "./.github/actions/optimized-build"
+        uses: "./.github/actions/optimized_build"
         with:
           target_net: "main"
