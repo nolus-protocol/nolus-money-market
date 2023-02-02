@@ -263,6 +263,8 @@ pub fn complete_lease_initialization<Lpn>(
         Lpn::BANK_SYMBOL
     );
 
+    // TransferOut sends two IBC transfers so expect two requests
+    send_blank_response(mock_app, lease_addr);
     send_blank_response(mock_app, lease_addr);
 
     {
