@@ -93,7 +93,10 @@ pub fn instantiate(
 pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
     deps.api.addr_validate(msg.lease_code_admin.as_str())?;
 
-    versioning::upgrade_contract::<EXPECTED_MIGRATION_STORAGE_VERSION, CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
+    versioning::upgrade_contract::<EXPECTED_MIGRATION_STORAGE_VERSION, CONTRACT_STORAGE_VERSION>(
+        deps.storage,
+        package_version!(),
+    )?;
 
     Item::<bool>::new("contract_info").remove(deps.storage);
 

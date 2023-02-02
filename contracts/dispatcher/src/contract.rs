@@ -4,14 +4,14 @@ use finance::duration::Duration;
 use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
+#[cfg(feature = "contract-with-bindings")]
+use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
-        Binary, Deps, DepsMut, ensure, Env, MessageInfo, StdResult, Storage, Timestamp, to_binary,
+        ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Storage, Timestamp,
     },
 };
-#[cfg(feature = "contract-with-bindings")]
-use sdk::cosmwasm_std::entry_point;
 use versioning::{package_version, Version};
 
 use crate::{
@@ -153,16 +153,16 @@ pub fn try_dispatch(
 mod tests {
     use finance::percent::Percent;
     use sdk::cosmwasm_std::{
-        Addr, coins,
-        DepsMut,
-        from_binary, testing::{mock_dependencies_with_balance, mock_env, mock_info},
+        coins, from_binary,
+        testing::{mock_dependencies_with_balance, mock_env, mock_info},
+        Addr, DepsMut,
     };
     use sdk::testing::customized_mock_deps_with_contracts;
 
     use crate::{
-        ContractError,
         msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
         state::reward_scale::{Bar, RewardScale, TotalValueLocked},
+        ContractError,
     };
 
     use super::{execute, instantiate, query};

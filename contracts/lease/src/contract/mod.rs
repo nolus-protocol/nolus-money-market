@@ -55,7 +55,10 @@ pub fn instantiate(
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     // the version is 0 so the previos code was deployed in the previos epoch
-    versioning::upgrade_contract::<EXPECTED_MIGRATION_STORAGE_VERSION, CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
+    versioning::upgrade_contract::<EXPECTED_MIGRATION_STORAGE_VERSION, CONTRACT_STORAGE_VERSION>(
+        deps.storage,
+        package_version!(),
+    )?;
 
     Item::<bool>::new("contract_info").remove(deps.storage);
 

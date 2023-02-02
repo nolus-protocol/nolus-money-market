@@ -47,7 +47,10 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
-    versioning::upgrade_contract::<EXPECTED_MIGRATION_STORAGE_VERSION, CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
+    versioning::upgrade_contract::<EXPECTED_MIGRATION_STORAGE_VERSION, CONTRACT_STORAGE_VERSION>(
+        deps.storage,
+        package_version!(),
+    )?;
 
     Ok(Response::default())
 }
