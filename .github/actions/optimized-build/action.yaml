@@ -12,9 +12,9 @@ runs:
   steps:
     - shell: "sh"
       run: |
-        if test "${1}" = "test";
+        if test "${{ inputs.target_net }}" = "test";
           then exit 0;
-        elif test "${1}" = "main";
+        elif test "${{ inputs.target_net }}" = "main";
           then exit 0;
         else
           (
