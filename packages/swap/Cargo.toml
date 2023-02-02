@@ -13,9 +13,8 @@ testing = []
 finance = { workspace = true }
 currency = { workspace = true }
 platform = { workspace = true }
-sdk = { workspace = true, features = ["cosmos"], optional = true }
+sdk = { workspace = true, features = ["cosmos", "schema"], optional = true }
 
 osmosis-std = { version = "0.12", default-features = false, optional = true }
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
-schemars = { workspace = true }
