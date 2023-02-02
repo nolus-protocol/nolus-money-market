@@ -1197,7 +1197,6 @@ dependencies = [
  "finance",
  "osmosis-std",
  "platform",
- "schemars",
  "sdk",
  "serde",
  "thiserror",
@@ -1325,7 +1324,7 @@ dependencies = [
 name = "tree"
 version = "0.1.0"
 dependencies = [
- "schemars",
+ "sdk",
  "serde",
  "serde-json-wasm 0.5.0",
 ]

@@ -2,7 +2,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use currency::payment::PaymentGroup;
 use finance::currency::SymbolOwned;
-use schemars::{self, JsonSchema};
+use sdk::schemars::{self, JsonSchema};
 
 pub mod error;
 #[cfg(feature = "trx")]

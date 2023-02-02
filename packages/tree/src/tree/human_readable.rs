@@ -2,13 +2,15 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+use sdk::schemars::{self, JsonSchema};
+
 use crate::{
     node::{Node, NodeIndex},
     tree::{Nodes, Tree},
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[repr(transparent)]
 #[serde(transparent)]
 pub struct HumanReadableTree<T> {
