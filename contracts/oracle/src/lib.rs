@@ -12,5 +12,8 @@ pub mod convert;
 #[cfg(any(feature = "stub", test))]
 pub mod stub;
 
+#[cfg(any(test, feature = "testing"))]
+mod macros;
+
 #[cfg(test)]
 pub mod tests;

@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "schema")]
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
@@ -124,7 +125,7 @@ impl<T> HumanReadableTree<T> {
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(untagged, from = "HrtNodeStruct<T>")]
-#[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 #[cfg_attr(feature = "schema", schemars(untagged, deny_unknown_fields))]
 pub enum HrtNode<T> {
     Leaf { value: T },
