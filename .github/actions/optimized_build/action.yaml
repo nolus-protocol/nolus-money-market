@@ -36,10 +36,19 @@ runs:
     - name: "Check for WASM binaries larger than allowed limit"
       shell: "sh"
       run: |
-        find "artifacts/" -size +1000k | wc -l | read large_files_count
+        find_files_cmd="find \"artifacts/\" -size +1000k | wc -l"
+
+        large_files_count=$(eval "${find_files_cmd}")
 
         if ! test "${large_files_count}" = "0";
-          then exit 1;
+          then (
+            (
+              echo "There are ${large_files_count} files with size larger than allowed limit!"
+              echo "Those are files are the following:"
+              eval "${find_files_cmd}"
+            ) >> $GITHUB_STEP_SUMMARY
+            exit 1
+          );
         fi
     - name: "Copy deployment script to artifacts directory"
       shell: "sh"
