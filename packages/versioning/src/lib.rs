@@ -1,115 +1,88 @@
-use serde::{Deserialize, Serialize};
-
 use sdk::{
-    cosmwasm_std::{to_binary, Binary, StdError, StdResult, Storage},
+    cosmwasm_std::{StdError, StdResult, Storage},
     cw_storage_plus::Item,
-    schemars::{self, JsonSchema},
 };
 
 pub type Version = u16;
 
-pub const VERSION_ITEM: Item<'static, Version> = Item::new("contract_version");
+pub type SemVer = (Version, Version, Version);
 
-pub fn initialize<const VERSION: Version>(storage: &mut dyn Storage) -> StdResult<()> {
-    VERSION_ITEM.save(storage, &VERSION)
-}
+#[macro_export]
+macro_rules! package_version {
+    () => {{
+        fn package_version() -> $crate::SemVer {
+            const VERSION: &str = ::core::env!("CARGO_PKG_VERSION");
 
-pub fn upgrade_contract<const VERSION: Version>(storage: &mut dyn Storage) -> StdResult<()> {
-    VERSION_ITEM.update(storage, |version| if version.wrapping_add(1) == VERSION {
-        Ok(VERSION)
-    } else {
-        Err(StdError::generic_err("Couldn't upgrade contract because versions aren't adjacent and/or monotonically increasing."))
-    }).map(|_| ())
-}
+            let mut iter = VERSION.split('.');
 
-#[derive(
-    Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Serialize, Deserialize, JsonSchema,
-)]
-#[serde(untagged, rename_all = "snake_case")]
-pub enum WithVersion<Q> {
-    Version {
-        version: (),
-    },
-    Query {
-        #[serde(flatten)]
-        query: Q,
-    },
-}
+            let major: $crate::Version = iter
+                .next()
+                .expect("No major segment in version string!")
+                .parse()
+                .expect("Major segment in version string is not a number!");
+            let minor: $crate::Version = iter
+                .next()
+                .expect("No minor segment in version string!")
+                .parse()
+                .expect("Minor segment in version string is not a number!");
+            let patch: $crate::Version = iter
+                .next()
+                .expect("No patch segment in version string!")
+                .parse()
+                .expect("Patch segment in version string is not a number!");
 
-impl<Q> WithVersion<Q> {
-    pub const fn new_query(query: Q) -> Self {
-        Self::Query { query }
-    }
+            if iter.next().is_some() {
+                ::core::panic!("Unexpected fourth segment found in version string!");
+            };
 
-    pub fn handle_query<const VERSION: Version, F>(self, f: F) -> StdResult<Binary>
-    where
-        F: FnOnce(Q) -> StdResult<Binary>,
-    {
-        match self {
-            WithVersion::Version { version: () } => to_binary(&VERSION),
-            WithVersion::Query { query } => f(query),
+            (major, minor, patch)
         }
-    }
+
+        package_version()
+    }};
 }
 
-#[cfg(test)]
-mod tests {
-    use serde::{Deserialize, Serialize};
+pub const COMPONENT_VERSION_ITEM: Item<'static, SemVer> = Item::new("contract_software_version");
 
-    use super::WithVersion;
+pub const STORAGE_VERSION_ITEM: Item<'static, Version> = Item::new("contract_storage_version");
 
-    #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
-    #[serde(rename_all = "snake_case")]
-    enum VariantsQuery {
-        Abc {},
-        Def {},
-        Version {},
-    }
+pub fn initialize<const STORAGE_VERSION: Version>(
+    storage: &mut dyn Storage,
+    component_version: SemVer,
+) -> StdResult<()> {
+    COMPONENT_VERSION_ITEM.save(storage, &component_version)?;
 
-    const VERSION: WithVersion<VariantsQuery> = WithVersion::Version { version: () };
+    STORAGE_VERSION_ITEM.save(storage, &STORAGE_VERSION)
+}
 
-    const QUERY_ABC: WithVersion<VariantsQuery> = WithVersion::new_query(VariantsQuery::Abc {});
+pub fn upgrade_contract<
+    const EXPECTED_STORAGE_VERSION: Version,
+    const NEW_STORAGE_VERSION: Version,
+>(
+    storage: &mut dyn Storage,
+    component_version: SemVer,
+) -> StdResult<()> {
+    STORAGE_VERSION_ITEM
+        .update(storage, |version| {
+            if version == EXPECTED_STORAGE_VERSION {
+                Ok(NEW_STORAGE_VERSION)
+            } else {
+                Err(StdError::generic_err(
+                    "Couldn't upgrade contract because storage version didn't match expected one!",
+                ))
+            }
+        })
+        .map(|_| ())?;
 
-    const QUERY_DEF: WithVersion<VariantsQuery> = WithVersion::new_query(VariantsQuery::Def {});
-
-    const QUERY_VERSION: WithVersion<VariantsQuery> =
-        WithVersion::new_query(VariantsQuery::Version {});
-
-    fn assert_query_serde(value: WithVersion<VariantsQuery>) {
-        assert_eq!(
-            serde_json::from_str::<WithVersion<VariantsQuery>>(
-                &serde_json::to_string(&value).unwrap()
-            )
-            .unwrap(),
-            value
-        );
-    }
-
-    #[test]
-    fn test_query_serde() {
-        assert_query_serde(VERSION);
-        assert_query_serde(QUERY_ABC);
-        assert_query_serde(QUERY_DEF);
-        assert_query_serde(QUERY_VERSION);
-
-        assert_eq!(
-            serde_json::from_str::<WithVersion<VariantsQuery>>(r#"{"version":null}"#).unwrap(),
-            VERSION
-        );
-
-        assert_eq!(
-            serde_json::from_str::<WithVersion<VariantsQuery>>(r#"{"abc":{}}"#).unwrap(),
-            QUERY_ABC
-        );
-
-        assert_eq!(
-            serde_json::from_str::<WithVersion<VariantsQuery>>(r#"{"def":{}}"#).unwrap(),
-            QUERY_DEF
-        );
-
-        assert_eq!(
-            serde_json::from_str::<WithVersion<VariantsQuery>>(r#"{"version":{}}"#).unwrap(),
-            QUERY_VERSION
-        );
-    }
+    COMPONENT_VERSION_ITEM
+        .update(storage, |version| {
+            if version < component_version {
+                Ok(component_version)
+            } else {
+                Err(StdError::generic_err(
+                    "Couldn't upgrade contract because version isn't monotonically increasing!",
+                ))
+            }
+        })
+        .map(|_| ())
 }

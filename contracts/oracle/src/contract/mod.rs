@@ -7,7 +7,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
-use versioning::Version;
+use versioning::{package_version, Version};
 
 use crate::{
     error::ContractError,
@@ -31,7 +31,8 @@ mod feeder;
 pub mod query;
 
 // version info for migration info
-const CONTRACT_VERSION: Version = 0;
+// const EXPECTED_MIGRATION_STORAGE_VERSION: Version = 0;
+const CONTRACT_STORAGE_VERSION: Version = 0;
 
 struct InstantiateWithCurrency<'a> {
     deps: DepsMut<'a>,
@@ -77,7 +78,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
+    versioning::initialize::<CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
 
     InstantiateWithCurrency::cmd(deps, msg, info.sender)?;
 

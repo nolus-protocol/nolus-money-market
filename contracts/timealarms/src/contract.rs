@@ -4,7 +4,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, SubMsgResult},
 };
-use versioning::Version;
+use versioning::{package_version, Version};
 
 use crate::{
     alarms::TimeAlarms,
@@ -13,6 +13,7 @@ use crate::{
 };
 
 // version info for migration info
+// const EXPECTED_MIGRATION_STORAGE_VERSION: Version = 0;
 const CONTRACT_VERSION: Version = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -22,7 +23,7 @@ pub fn instantiate(
     _info: MessageInfo,
     _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
+    versioning::initialize::<CONTRACT_VERSION>(deps.storage, package_version!())?;
 
     Ok(Response::default())
 }

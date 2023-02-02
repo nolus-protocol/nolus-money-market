@@ -8,7 +8,7 @@ use sdk::{
         ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Timestamp,
     },
 };
-use versioning::Version;
+use versioning::{package_version, Version};
 
 use crate::{
     error::ContractError,
@@ -18,7 +18,8 @@ use crate::{
 };
 
 // version info for migration info
-const CONTRACT_VERSION: Version = 0;
+// const EXPECTED_MIGRATION_STORAGE_VERSION: Version = 0;
+const CONTRACT_STORAGE_VERSION: Version = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -30,7 +31,7 @@ pub fn instantiate(
     platform::contract::validate_addr(&deps.querier, &msg.treasury)?;
     platform::contract::validate_addr(&deps.querier, &msg.timealarms)?;
 
-    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
+    versioning::initialize::<CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
 
     SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
     SingleUserAccess::new(

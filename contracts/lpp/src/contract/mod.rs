@@ -10,7 +10,7 @@ use sdk::{
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
     cw_storage_plus::Item,
 };
-use versioning::Version;
+use versioning::{package_version, Version};
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -24,7 +24,8 @@ mod config;
 mod lender;
 mod rewards;
 
-const CONTRACT_VERSION: Version = 1;
+const EXPECTED_MIGRATION_STORAGE_VERSION: Version = 1;
+const CONTRACT_STORAGE_VERSION: Version = 1;
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
@@ -38,7 +39,7 @@ impl<'a> InstantiateWithLpn<'a> {
     where
         LPN: 'static + Currency + Serialize + DeserializeOwned,
     {
-        versioning::initialize::<CONTRACT_VERSION>(self.deps.storage)?;
+        versioning::initialize::<CONTRACT_STORAGE_VERSION>(self.deps.storage, package_version!())?;
 
         SingleUserAccess::new_contract_owner(self.info.sender).store(self.deps.storage)?;
         SingleUserAccess::new(
@@ -92,7 +93,8 @@ pub fn instantiate(
 pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
     deps.api.addr_validate(msg.lease_code_admin.as_str())?;
 
-    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
+    versioning::upgrade_contract::<EXPECTED_MIGRATION_STORAGE_VERSION, CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
+
     Item::<bool>::new("contract_info").remove(deps.storage);
 
     SingleUserAccess::new(

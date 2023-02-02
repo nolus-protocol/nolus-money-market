@@ -10,7 +10,7 @@ use sdk::{
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use serde::{Deserialize, Serialize};
-use versioning::Version;
+use versioning::{package_version, Version};
 
 use crate::{
     api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
@@ -26,7 +26,8 @@ mod cmd;
 pub mod msg;
 mod state;
 
-const CONTRACT_VERSION: Version = 0;
+const EXPECTED_MIGRATION_STORAGE_VERSION: Version = 0;
+const CONTRACT_STORAGE_VERSION: Version = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -44,7 +45,7 @@ pub fn instantiate(
     platform::contract::validate_addr(&deps.querier, &new_lease.form.loan.lpp)?;
     platform::contract::validate_addr(&deps.querier, &new_lease.form.loan.profit)?;
 
-    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
+    versioning::initialize::<CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
 
     let (batch, next_state) = RequestLoan::new(&mut deps, info, new_lease)?;
     impl_::save(&next_state.into(), &mut deps)?;
@@ -54,7 +55,8 @@ pub fn instantiate(
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     // the version is 0 so the previos code was deployed in the previos epoch
-    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
+    versioning::upgrade_contract::<EXPECTED_MIGRATION_STORAGE_VERSION, CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
+
     Item::<bool>::new("contract_info").remove(deps.storage);
 
     Ok(CwResponse::default())

@@ -4,15 +4,15 @@ use finance::duration::Duration;
 use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
-#[cfg(feature = "contract-with-bindings")]
-use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{
-        ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Storage, Timestamp,
+        Binary, Deps, DepsMut, ensure, Env, MessageInfo, StdResult, Storage, Timestamp, to_binary,
     },
 };
-use versioning::Version;
+#[cfg(feature = "contract-with-bindings")]
+use sdk::cosmwasm_std::entry_point;
+use versioning::{package_version, Version};
 
 use crate::{
     cmd::Dispatch,
@@ -23,7 +23,8 @@ use crate::{
 };
 
 // version info for migration info
-const CONTRACT_VERSION: Version = 0;
+// const EXPECTED_MIGRATION_STORAGE_VERSION: Version = 0;
+const CONTRACT_STORAGE_VERSION: Version = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -32,7 +33,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
+    versioning::initialize::<CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
 
     platform::contract::validate_addr(&deps.querier, &msg.lpp)?;
     platform::contract::validate_addr(&deps.querier, &msg.oracle)?;
@@ -152,16 +153,16 @@ pub fn try_dispatch(
 mod tests {
     use finance::percent::Percent;
     use sdk::cosmwasm_std::{
-        coins, from_binary,
-        testing::{mock_dependencies_with_balance, mock_env, mock_info},
-        Addr, DepsMut,
+        Addr, coins,
+        DepsMut,
+        from_binary, testing::{mock_dependencies_with_balance, mock_env, mock_info},
     };
     use sdk::testing::customized_mock_deps_with_contracts;
 
     use crate::{
+        ContractError,
         msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
         state::reward_scale::{Bar, RewardScale, TotalValueLocked},
-        ContractError,
     };
 
     use super::{execute, instantiate, query};
