@@ -44,19 +44,7 @@ impl MarketOracleWrapper {
                     Percent::from_percent(75),
                 ),
             },
-            swap_tree: serde_json_wasm::from_str(&format!(
-                r#"{{
-                    "value":[0,"{usdc}"],
-                    "children":[
-                        {{"value":[1,"{osmo}"]}},
-                        {{"value":[3,"{cro}"]}}
-                    ]
-                }}"#,
-                usdc = Usdc::TICKER,
-                osmo = Osmo::TICKER,
-                cro = Cro::TICKER,
-            ))
-            .unwrap(),
+            swap_tree: oracle::swap_tree!((1, Osmo::TICKER), (3, Cro::TICKER)),
         };
 
         app.instantiate_contract(

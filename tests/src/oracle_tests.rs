@@ -382,13 +382,9 @@ fn test_config_update() {
     assert!(price.is_err());
 }
 
-#[test]
-fn test_swap_path() {
-    let mut test_case = create_test_case();
-    let admin = Addr::unchecked(ADMIN);
-    let msg = oracle::msg::ExecuteMsg::SwapTree {
-        tree: serde_json_wasm::from_str(&format!(
-            r#"{{
+fn swap_tree() -> HumanReadableTree<SwapTarget> {
+    serde_json_wasm::from_str(&format!(
+        r#"{{
                 "value":[0,"{usdc}"],
                 "children":[
                     {{
@@ -400,13 +396,19 @@ fn test_swap_path() {
                     }}
                 ]
             }}"#,
-            usdc = Usdc::TICKER,
-            base_c = BaseC::TICKER,
-            weth = Weth::TICKER,
-            wbtc = Wbtc::TICKER,
-        ))
-        .unwrap(),
-    };
+        usdc = Usdc::TICKER,
+        base_c = BaseC::TICKER,
+        weth = Weth::TICKER,
+        wbtc = Wbtc::TICKER,
+    ))
+    .unwrap()
+}
+
+#[test]
+fn test_swap_path() {
+    let mut test_case = create_test_case();
+    let admin = Addr::unchecked(ADMIN);
+    let msg = oracle::msg::ExecuteMsg::SwapTree { tree: swap_tree() };
     test_case
         .app
         .execute_contract(admin, test_case.oracle.clone().unwrap(), &msg, &[])
@@ -441,25 +443,7 @@ fn test_swap_path() {
 fn test_query_swap_tree() {
     let mut test_case = create_test_case();
     let admin = Addr::unchecked(ADMIN);
-    let tree: HumanReadableTree<SwapTarget> = serde_json_wasm::from_str(&format!(
-        r#"{{
-            "value":[0,"{usdc}"],
-            "children":[
-                {{
-                    "value":[1,"{base_c}"],
-                    "children":[
-                        {{"value":[2,"{weth}"]}},
-                        {{"value":[3,"{wbtc}"]}}
-                    ]
-                }}
-            ]
-        }}"#,
-        usdc = Usdc::TICKER,
-        base_c = BaseC::TICKER,
-        weth = Weth::TICKER,
-        wbtc = Wbtc::TICKER,
-    ))
-    .unwrap();
+    let tree: HumanReadableTree<SwapTarget> = swap_tree();
     let msg = oracle::msg::ExecuteMsg::SwapTree { tree: tree.clone() };
     test_case
         .app

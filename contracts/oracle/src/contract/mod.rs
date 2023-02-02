@@ -151,6 +151,7 @@ mod tests {
         contract::query,
         msg::{ConfigResponse, QueryMsg},
         state::{config::Config, supported_pairs::SwapLeg},
+        swap_tree,
         tests::{dummy_instantiate_msg, setup_test},
     };
 
@@ -161,18 +162,7 @@ mod tests {
             Usdc::TICKER.to_string(),
             60,
             Percent::from_percent(50),
-            // TreeStore(tr((0, Usdc::TICKER.to_string())) / tr((1, Osmo::TICKER.to_string()))),
-            serde_json_wasm::from_str(&format!(
-                r#"{{
-                    "value":[0,"{usdc}"],
-                    "children":[
-                        {{"value":[1,"{osmo}"]}}
-                    ]
-                }}"#,
-                usdc = Usdc::TICKER,
-                osmo = Osmo::TICKER,
-            ))
-            .unwrap(),
+            swap_tree!((1, Osmo::TICKER)),
         );
         let (deps, info) = setup_test(msg);
 

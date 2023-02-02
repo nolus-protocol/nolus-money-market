@@ -3,6 +3,7 @@ pub use self::{
     tree::{FindBy, HrtNode, HumanReadableTree, Subtree, Tree},
 };
 
+mod macros;
 mod node;
 mod tree;
 
