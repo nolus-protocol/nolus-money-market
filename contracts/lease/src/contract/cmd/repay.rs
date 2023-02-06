@@ -58,7 +58,7 @@ impl<'a> WithLease for Repay<'a> {
             receipt,
         } = lease.repay(payment, self.env.block.time)?;
 
-        let emitter = Emitter::of_type(Type::Repay)
+        let emitter = Emitter::of_type(Type::PaidActive)
             .emit_tx_info(self.env)
             .emit("to", self.env.contract.address.clone())
             .emit_currency::<_, Lpn>("payment-symbol")

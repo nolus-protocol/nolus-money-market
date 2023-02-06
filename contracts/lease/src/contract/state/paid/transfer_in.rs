@@ -30,7 +30,7 @@ impl TransferIn {
     fn on_response(self, env: &Env, querier: &QuerierWrapper) -> ContractResult<Response> {
         let next_state = Closed::default();
         let batch = next_state.enter_state(self.lease.lease, env, querier)?;
-        let emitter = Emitter::of_type(Type::Close)
+        let emitter = Emitter::of_type(Type::Closed)
             .emit("id", env.contract.address.clone())
             .emit_tx_info(env);
 

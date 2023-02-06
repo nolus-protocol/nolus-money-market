@@ -1,9 +1,12 @@
-use cosmwasm_std::Deps;
+use cosmwasm_std::{Binary, Deps, Timestamp};
 use finance::currency::Symbol;
 use serde::{Deserialize, Serialize};
 
 use finance::coin::{self};
-use platform::{batch::Batch as LocalBatch, trx};
+use platform::{
+    batch::{Batch as LocalBatch, Emit, Emitter},
+    trx,
+};
 use sdk::{
     cosmwasm_std::{DepsMut, Env, QuerierWrapper},
     neutron_sdk::sudo::msg::SudoMsg,
@@ -17,6 +20,7 @@ use crate::{
         Lease,
     },
     error::ContractResult,
+    event::Type,
 };
 
 use super::transfer_in::TransferIn;
@@ -38,6 +42,16 @@ impl BuyLpn {
         Ok(swap_trx.into())
     }
 
+    fn on_response(self, resp: Binary, now: Timestamp) -> ContractResult<Response> {
+        let emitter = self.emit_ok();
+        let payment_lpn = self.decode_response(resp.as_slice())?;
+
+        let next_state = TransferIn::new(self.lease, self.payment, payment_lpn);
+        let batch = next_state.enter_state(now)?;
+
+        Ok(Response::from(batch.into_response(emitter), next_state))
+    }
+
     fn decode_response(&self, resp: &[u8]) -> ContractResult<LpnCoin> {
         let mut resp_msgs = trx::decode_msg_responses(resp)?;
         let payment_amount = swap_trx::exact_amount_in_resp(&mut resp_msgs)?;
@@ -48,17 +62,18 @@ impl BuyLpn {
     fn target_currency(&self) -> Symbol {
         self.lease.lease.loan.lpp().currency()
     }
+
+    fn emit_ok(&self) -> Emitter {
+        Emitter::of_type(Type::BuyLpn)
+            .emit("id", self.lease.lease.addr.clone())
+            .emit_coin_dto("payment", self.payment.clone())
+    }
 }
 
 impl Controller for BuyLpn {
-    fn sudo(self, _deps: &mut DepsMut, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
+    fn sudo(self, _deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
-            SudoMsg::Response { request: _, data } => {
-                let payment_lpn = self.decode_response(data.as_slice())?;
-                let next_state = TransferIn::new(self.lease, self.payment, payment_lpn);
-                let batch = next_state.enter_state(_env.block.time)?;
-                Ok(Response::from(batch, next_state))
-            }
+            SudoMsg::Response { request: _, data } => self.on_response(data, env.block.time),
             SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {
                 request: _,

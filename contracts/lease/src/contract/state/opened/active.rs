@@ -36,7 +36,7 @@ impl Active {
         Self { lease }
     }
 
-    pub(in crate::contract::state) fn enter_state(
+    pub(in crate::contract::state) fn emit_ok(
         &self,
         env: &Env,
         downpayment: DownpaymentCoin,
@@ -160,7 +160,7 @@ fn build_emitter(
     loan: OpenLoanRespResult,
     downpayment: DownpaymentCoin,
 ) -> Emitter {
-    Emitter::of_type(Type::Open)
+    Emitter::of_type(Type::OpenedActive)
         .emit_tx_info(env)
         .emit("id", &lease.addr)
         .emit("customer", lease.customer.clone())

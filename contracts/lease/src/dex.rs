@@ -30,11 +30,15 @@ const ICA_SWAP_TIMEOUT_TIP: Coin<Nls> = ICA_SWAP_ACK_TIP;
 pub(crate) struct Account {
     /// The contract at Nolus that owns the account
     owner: Addr,
-    ica_account: HostAccount,
+    dex_account: HostAccount,
     dex: ConnectionParams,
 }
 
 impl Account {
+    pub(crate) fn dex_account(&self) -> &HostAccount {
+        &self.dex_account
+    }
+
     pub fn register_request(dex: &ConnectionParams) -> LocalBatch {
         ica::register_account(&dex.connection_id)
     }
@@ -47,7 +51,7 @@ impl Account {
         let ica_account = ica::parse_register_response(response)?;
         Ok(Self {
             owner,
-            ica_account,
+            dex_account: ica_account,
             dex,
         })
     }
@@ -56,20 +60,20 @@ impl Account {
         TransferOutTrx::new(
             &self.dex.transfer_channel.local_endpoint,
             &self.owner,
-            &self.ica_account,
+            &self.dex_account,
             now,
         )
     }
 
     pub fn swap<'a>(&'a self, oracle: &'a OracleRef, querier: &'a QuerierWrapper) -> SwapTrx {
-        SwapTrx::new(&self.dex.connection_id, &self.ica_account, oracle, querier)
+        SwapTrx::new(&self.dex.connection_id, &self.dex_account, oracle, querier)
     }
 
     pub fn transfer_from(&self, now: Timestamp) -> TransferInTrx {
         TransferInTrx::new(
             &self.dex.connection_id,
             &self.dex.transfer_channel.remote_endpoint,
-            &self.ica_account,
+            &self.dex_account,
             &self.owner,
             now,
         )
@@ -78,7 +82,7 @@ impl Account {
 
 impl From<Account> for HostAccount {
     fn from(account: Account) -> Self {
-        account.ica_account
+        account.dex_account
     }
 }
 

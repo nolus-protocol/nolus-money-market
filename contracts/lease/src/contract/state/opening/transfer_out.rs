@@ -1,11 +1,14 @@
-use cosmwasm_std::{Deps, DepsMut, Env, QuerierWrapper, Timestamp};
+use cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Timestamp};
 use sdk::neutron_sdk::sudo::msg::SudoMsg;
 use serde::{Deserialize, Serialize};
 
 use finance::zero::Zero;
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use platform::{batch::Batch, ica::HostAccount};
+use platform::{
+    batch::{Batch, Emit, Emitter},
+    ica::HostAccount,
+};
 
 use crate::{
     api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
@@ -15,6 +18,7 @@ use crate::{
     },
     dex::Account,
     error::ContractResult,
+    event::Type,
 };
 
 type TransfersNb = u8;
@@ -57,7 +61,13 @@ impl TransferOut {
         Ok(sender.into())
     }
 
-    fn on_response(self, querier: &QuerierWrapper) -> ContractResult<Response> {
+    fn emit_ok(&self, contract: Addr) -> Emitter {
+        Emitter::of_type(Type::OpeningTransferOut)
+            .emit("id", contract)
+            .emit_coin_dto("downpayment", self.downpayment.clone())
+    }
+
+    fn on_response(self, contract: Addr, querier: &QuerierWrapper) -> ContractResult<Response> {
         match self.nb_completed {
             0 => {
                 let next_state = Self {
@@ -67,6 +77,7 @@ impl TransferOut {
                 Ok(Response::from(Batch::default(), next_state))
             }
             1 => {
+                let emitter = self.emit_ok(contract);
                 let next_state = BuyAsset::new(
                     self.form,
                     self.dex_account,
@@ -75,7 +86,8 @@ impl TransferOut {
                     self.deps,
                 );
                 let batch = next_state.enter_state(querier)?;
-                Ok(Response::from(batch, next_state))
+                let resp = batch.into_response(emitter);
+                Ok(Response::from(resp, next_state))
             }
             _ => unreachable!(),
         }
@@ -83,14 +95,14 @@ impl TransferOut {
 }
 
 impl Controller for TransferOut {
-    fn sudo(self, deps: &mut DepsMut, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
+    fn sudo(self, deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response { request: _, data } => {
                 deps.api.debug(&format!(
-                    "[Lease][TransferOut] receive ack '{}'",
+                    "[Lease][Opening][TransferOut] receive ack '{}'",
                     data.to_base64()
                 ));
-                self.on_response(&deps.querier)
+                self.on_response(env.contract.address, &deps.querier)
             }
             SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {
