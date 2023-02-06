@@ -10,6 +10,7 @@ use crate::{api::LeaseCoin, loan::LoanDTO};
 #[derive(Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug))]
 pub struct LeaseDTO {
+    pub(crate) addr: Addr,
     pub(crate) customer: Addr,
     pub(crate) amount: LeaseCoin,
     pub(crate) liability: Liability,
@@ -20,6 +21,7 @@ pub struct LeaseDTO {
 
 impl LeaseDTO {
     pub(crate) fn new(
+        addr: Addr,
         customer: Addr,
         amount: LeaseCoin,
         liability: Liability,
@@ -28,6 +30,7 @@ impl LeaseDTO {
         oracle: OracleRef,
     ) -> Self {
         Self {
+            addr,
             customer,
             amount,
             liability,

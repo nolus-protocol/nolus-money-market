@@ -18,7 +18,7 @@ pub struct TransferIn {
 }
 
 impl TransferIn {
-    pub(in crate::contract::state::opened) fn new(
+    pub(in crate::contract::state) fn new(
         lease: Lease,
         payment: PaymentCoin,
         payment_lpn: LpnCoin,
@@ -46,13 +46,7 @@ impl Controller for TransferIn {
             SudoMsg::Response {
                 request: _,
                 data: _,
-            } => Active::try_repay_lpn(
-                self.lease,
-                self.payment_lpn,
-                &env.contract.address,
-                &deps.querier,
-                &env,
-            ),
+            } => Active::try_repay_lpn(self.lease, self.payment_lpn, &deps.querier, &env),
             SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {
                 request: _,

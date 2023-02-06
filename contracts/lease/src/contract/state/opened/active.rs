@@ -1,4 +1,3 @@
-use cosmwasm_std::Addr;
 use currency::{lpn::Lpns, payment::PaymentGroup};
 use finance::coin::IntoDTO;
 use serde::{Deserialize, Serialize};
@@ -50,7 +49,6 @@ impl Active {
     pub(in crate::contract::state::opened) fn try_repay_lpn(
         lease: Lease,
         payment: LpnCoin,
-        contract_addr: &Addr,
         querier: &QuerierWrapper,
         env: &Env,
     ) -> ContractResult<Response> {
@@ -61,12 +59,7 @@ impl Active {
             lease: lease_updated,
             paid,
             emitter,
-        } = with_lease::execute(
-            lease.lease,
-            Repay::new(payment, env),
-            contract_addr,
-            querier,
-        )?;
+        } = with_lease::execute(lease.lease, Repay::new(payment, env), querier)?;
 
         let new_lease = Lease {
             lease: lease_updated,
@@ -96,7 +89,7 @@ impl Active {
             let payment_lpn = bank::may_received::<Lpns, _>(info.funds, IntoDTO::<Lpns>::new())
                 .ok_or_else(ContractError::NoPaymentError)??;
 
-            Self::try_repay_lpn(self.lease, payment_lpn, &env.contract.address, querier, env)
+            Self::try_repay_lpn(self.lease, payment_lpn, querier, env)
         } else {
             let next_state = TransferOut::new(self.lease, payment);
             let batch = next_state.enter_state(env.block.time)?;
@@ -116,7 +109,6 @@ impl Active {
         } = with_lease::execute(
             self.lease.lease,
             PriceAlarm::new(env, &info.sender, env.block.time),
-            &env.contract.address,
             querier,
         )?;
         Ok(into_updated_active(lease_updated, self.lease.dex, response))
@@ -134,7 +126,6 @@ impl Active {
         } = with_lease::execute(
             self.lease.lease,
             TimeAlarm::new(env, &info.sender, env.block.time),
-            &env.contract.address,
             querier,
         )?;
         Ok(into_updated_active(lease_updated, self.lease.dex, response))
@@ -172,7 +163,7 @@ fn build_emitter(
     batch
         .into_emitter(Type::Open)
         .emit_tx_info(env)
-        .emit("id", env.contract.address.clone())
+        .emit("id", &lease.addr)
         .emit("customer", lease.customer.clone())
         .emit_percent_amount(
             "air",

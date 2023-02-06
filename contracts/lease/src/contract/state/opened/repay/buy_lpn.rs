@@ -28,7 +28,7 @@ pub struct BuyLpn {
 }
 
 impl BuyLpn {
-    pub(super) fn new(lease: Lease, payment: PaymentCoin) -> Self {
+    pub(in crate::contract::state) fn new(lease: Lease, payment: PaymentCoin) -> Self {
         Self { lease, payment }
     }
 

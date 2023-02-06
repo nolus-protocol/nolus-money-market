@@ -26,12 +26,8 @@ impl Closed {
         querier: &QuerierWrapper,
     ) -> ContractResult<Emitter> {
         let lease_account = bank::my_account(env, querier);
-        let IntoDTOResult { lease: _, batch } = with_lease::execute(
-            lease,
-            Close::new(lease_account),
-            &env.contract.address,
-            querier,
-        )?;
+        let IntoDTOResult { lease: _, batch } =
+            with_lease::execute(lease, Close::new(lease_account), querier)?;
 
         let emitter = batch
             .into_emitter(Type::Close)

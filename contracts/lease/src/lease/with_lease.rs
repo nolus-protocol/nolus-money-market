@@ -4,7 +4,7 @@ use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
 use profit::stub::Profit as ProfitTrait;
-use sdk::cosmwasm_std::{Addr, QuerierWrapper};
+use sdk::cosmwasm_std::QuerierWrapper;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use super::{
@@ -32,7 +32,6 @@ pub trait WithLease {
 pub fn execute<Cmd>(
     lease_dto: LeaseDTO,
     cmd: Cmd,
-    addr: &Addr,
     querier: &QuerierWrapper,
 ) -> Result<Cmd::Output, Cmd::Error>
 where
@@ -49,7 +48,7 @@ where
     let oracle = lease_dto.oracle.clone();
 
     with_lease_deps::execute(
-        Factory::new(cmd, lease_dto, addr),
+        Factory::new(cmd, lease_dto),
         &asset,
         lpp,
         profit,
@@ -59,22 +58,17 @@ where
     )
 }
 
-struct Factory<'r, Cmd> {
+struct Factory<Cmd> {
     cmd: Cmd,
     lease_dto: LeaseDTO,
-    lease_addr: &'r Addr,
 }
-impl<'r, Cmd> Factory<'r, Cmd> {
-    fn new(cmd: Cmd, lease_dto: LeaseDTO, lease_addr: &'r Addr) -> Self {
-        Self {
-            cmd,
-            lease_dto,
-            lease_addr,
-        }
+impl<Cmd> Factory<Cmd> {
+    fn new(cmd: Cmd, lease_dto: LeaseDTO) -> Self {
+        Self { cmd, lease_dto }
     }
 }
 
-impl<'r, Cmd> WithLeaseDeps for Factory<'r, Cmd>
+impl<Cmd> WithLeaseDeps for Factory<Cmd>
 where
     Cmd: WithLease,
 {
@@ -98,7 +92,6 @@ where
     {
         self.cmd.exec(Lease::<_, Asset, _, _, _, _>::from_dto(
             self.lease_dto,
-            self.lease_addr,
             lpp,
             time_alarms,
             oracle,

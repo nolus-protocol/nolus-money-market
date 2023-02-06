@@ -78,7 +78,7 @@ impl Controller for BuyAsset {
                 // TODO transfer (downpayment - transferred_and_swapped), i.e. the nls_swap_fee to the profit
                 let amount = self.decode_response(data.as_slice())?;
                 let IntoDTOResult { lease, batch } = self.form.into_lease(
-                    &env.contract.address,
+                    env.contract.address.clone(),
                     env.block.time,
                     &amount,
                     &deps.querier,

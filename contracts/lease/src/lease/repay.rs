@@ -16,8 +16,7 @@ use crate::{
 
 use super::IntoDTOResult;
 
-impl<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
-    Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
+impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
@@ -50,7 +49,7 @@ where
         now: Timestamp,
     ) -> ContractResult<RepayReceipt<Lpn>> {
         self.loan
-            .repay(payment, now, self.lease_addr.clone())
+            .repay(payment, now, self.addr.clone())
             .map_err(Into::into)
     }
 }

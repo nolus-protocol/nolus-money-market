@@ -18,7 +18,7 @@ pub struct TransferOut {
 }
 
 impl TransferOut {
-    pub(in crate::contract::state::opened) fn new(lease: Lease, payment: PaymentCoin) -> Self {
+    pub(in crate::contract::state) fn new(lease: Lease, payment: PaymentCoin) -> Self {
         Self { lease, payment }
     }
 

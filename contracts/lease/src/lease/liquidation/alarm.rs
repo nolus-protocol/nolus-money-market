@@ -20,8 +20,7 @@ use crate::{
     loan::LiabilityStatus,
 };
 
-impl<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
-    Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
+impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
@@ -58,7 +57,7 @@ where
             now,
             &self.handle_warnings(
                 self.loan
-                    .liability_status(*now, self.lease_addr.clone(), lease_lpn)?
+                    .liability_status(*now, self.addr.clone(), lease_lpn)?
                     .ltv,
             ),
         )
@@ -88,7 +87,7 @@ where
             ..
         } = self
             .loan
-            .liability_status(now, self.lease_addr.clone(), lease_lpn)?;
+            .liability_status(now, self.addr.clone(), lease_lpn)?;
 
         let status = handler(&mut self, lease_lpn, now, ltv, liability_lpn)?;
 
@@ -185,7 +184,7 @@ where
             .loan
             .liability_status(
                 *now + self.liability.recalculation_time(),
-                self.lease_addr.clone(),
+                self.addr.clone(),
                 lease_lpn,
             )?
             .total_lpn;
@@ -246,7 +245,7 @@ mod tests {
         let timealarms_addr = Addr::unchecked("timealarms");
         let oracle_addr = Addr::unchecked("oracle");
         let lease = lease::tests::create_lease::<Lpn, Asset, _, _, _, _>(
-            &lease_addr,
+            lease_addr,
             asset,
             LppLenderLocalStub::from(Some(loan())),
             TimeAlarmsLocalStub::from(timealarms_addr.clone()),
@@ -258,7 +257,7 @@ mod tests {
         let projected_liability = {
             let l = lease
                 .loan
-                .state(recalc_time, lease_addr.clone())
+                .state(recalc_time, lease.addr.clone())
                 .unwrap()
                 .unwrap();
             l.principal_due
@@ -297,7 +296,7 @@ mod tests {
     fn reschedule_time_alarm_recalc() {
         let lease_addr = Addr::unchecked("lease");
         let mut lease = open_lease(
-            &lease_addr,
+            lease_addr,
             20.into(),
             Some(loan()),
             Addr::unchecked(String::new()),
@@ -312,7 +311,7 @@ mod tests {
                 &Status::Warning(
                     LeaseInfo::new(
                         Addr::unchecked(String::new()),
-                        lease_addr.clone(),
+                        lease.addr.clone(),
                         Default::default(),
                     ),
                     WarningLevel::Second,
@@ -339,7 +338,7 @@ mod tests {
     fn reschedule_time_alarm_liquidation() {
         let lease_addr = Addr::unchecked("lease");
         let mut lease = open_lease(
-            &lease_addr,
+            lease_addr,
             300.into(),
             Some(loan()),
             Addr::unchecked(String::new()),
@@ -354,7 +353,7 @@ mod tests {
                 &Status::Warning(
                     LeaseInfo::new(
                         Addr::unchecked(String::new()),
-                        lease_addr.clone(),
+                        lease.addr.clone(),
                         Default::default(),
                     ),
                     WarningLevel::Second,
