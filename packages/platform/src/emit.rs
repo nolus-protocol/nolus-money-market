@@ -116,8 +116,7 @@ impl Emitter {
     }
 }
 
-impl From<Emitter> for Response
-{
+impl From<Emitter> for Response {
     fn from(emitter: Emitter) -> Self {
         Response::from(emitter.batch).add_event(emitter.event)
     }
