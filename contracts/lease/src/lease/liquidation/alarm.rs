@@ -391,7 +391,7 @@ mod tests {
 
         let lease_addr = Addr::unchecked("lease");
         let lease = open_lease(
-            &lease_addr,
+            lease_addr,
             300.into(),
             Some(loan),
             Addr::unchecked(String::new()),

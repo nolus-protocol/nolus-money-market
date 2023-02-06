@@ -117,8 +117,6 @@ impl Emitter {
 }
 
 impl From<Emitter> for Response
-where
-    Batch: Into<Response>,
 {
     fn from(emitter: Emitter) -> Self {
         Response::from(emitter.batch).add_event(emitter.event)
