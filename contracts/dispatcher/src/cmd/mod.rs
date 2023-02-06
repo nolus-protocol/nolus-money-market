@@ -22,7 +22,7 @@ pub struct Result {
     pub receipt: Receipt,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Eq, PartialEq)]
 pub struct Receipt {
     pub in_stable: CoinDTO<Lpns>,
     pub in_nls: CoinDTO<Native>,
