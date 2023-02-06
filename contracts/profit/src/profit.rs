@@ -32,7 +32,7 @@ impl Profit {
         deps: Deps,
         env: Env,
         info: MessageInfo,
-    ) -> Result<Emitter, ContractError> {
+    ) -> Result<Response, ContractError> {
         SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
             .check_access(&info.sender)?;
 
@@ -60,10 +60,11 @@ impl Profit {
         let mut batch: Batch = bank.into();
         batch.schedule_execute_no_reply(msg);
 
-        Ok(batch
-            .into_emitter("tr-profit")
-            .emit_tx_info(&env)
-            .emit_coin("profit-amount", balance))
+        Ok(batch.into_response(
+            Emitter::of_type("tr-profit")
+                .emit_tx_info(&env)
+                .emit_coin("profit-amount", balance),
+        ))
         // TODO add in_stable(wasm-tr-profit.profit-amount) The amount transferred in stable.
         //.emit_coin("profit-amount", balance))
     }

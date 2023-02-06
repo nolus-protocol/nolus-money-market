@@ -1,11 +1,10 @@
 use finance::{coin::Coin, currency::Currency};
-use platform::batch::{Batch, Emit, Emitter};
+use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::{Addr, Env};
 
 use crate::nlpn::NLpn;
 
 pub fn emit_deposit<LPN>(
-    batch: Batch,
     env: Env,
     lender_addr: Addr,
     deposited_amount: Coin<LPN>,
@@ -14,8 +13,7 @@ pub fn emit_deposit<LPN>(
 where
     LPN: Currency,
 {
-    batch
-        .into_emitter("lp-deposit")
+    Emitter::of_type("lp-deposit")
         .emit_tx_info(&env)
         .emit("from", lender_addr)
         .emit("to", env.contract.address)
@@ -24,7 +22,6 @@ where
 }
 
 pub fn emit_withdraw<LPN>(
-    batch: Batch,
     env: Env,
     lender_addr: Addr,
     payment_lpn: Coin<LPN>,
@@ -34,8 +31,7 @@ pub fn emit_withdraw<LPN>(
 where
     LPN: Currency,
 {
-    batch
-        .into_emitter("lp-withdraw")
+    Emitter::of_type("lp-withdraw")
         .emit_tx_info(&env)
         .emit("to", lender_addr)
         .emit("from", env.contract.address)

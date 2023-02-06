@@ -1,5 +1,5 @@
-use currency::native::Nls;
-use finance::{coin::Coin, currency::Currency};
+use currency::{lpn::Lpns, native::Native};
+use finance::coin::CoinDTO;
 use oracle::stub::OracleRef;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{QuerierWrapper, Storage, Timestamp};
@@ -17,19 +17,13 @@ pub struct Dispatch<'a> {
     querier: QuerierWrapper<'a>,
 }
 
-pub struct Result<C>
-where
-    C: Currency,
-{
+pub struct Result {
     pub batch: Batch,
-    pub receipt: Receipt<C>,
+    pub receipt: Receipt,
 }
 
-#[derive(Debug, Default, Eq, PartialEq)]
-pub struct Receipt<C>
-where
-    C: Currency,
-{
-    in_stable: Coin<C>,
-    in_nls: Coin<Nls>,
+#[derive(Debug, Eq, PartialEq)]
+pub struct Receipt {
+    pub in_stable: CoinDTO<Lpns>,
+    pub in_nls: CoinDTO<Native>,
 }

@@ -22,18 +22,19 @@ where
 {
     match liquidation {
         Status::None => batch.into(),
-        &Status::Warning(ref info, level) => emit_warning(batch, info, level),
+        &Status::Warning(ref info, level) => batch.into_response(emit_warning(info, level)),
         Status::PartialLiquidation {
             info,
             liquidation_info,
             healthy_ltv,
-        } => emit_liquidation(batch, env, info, liquidation_info)
-            .emit_percent_amount("ltv-healthy", *healthy_ltv)
-            .into(),
+        } => batch.into_response(
+            emit_liquidation(env, info, liquidation_info)
+                .emit_percent_amount("ltv-healthy", *healthy_ltv),
+        ),
         Status::FullLiquidation {
             info,
             liquidation_info,
-        } => emit_liquidation(batch, env, info, liquidation_info).into(),
+        } => batch.into_response(emit_liquidation(env, info, liquidation_info)),
     }
 }
 
@@ -48,13 +49,12 @@ where
         .emit_currency::<_, Asset>("lease-asset")
 }
 
-fn emit_warning<Asset>(batch: Batch, info: &LeaseInfo<Asset>, level: WarningLevel) -> Response
+fn emit_warning<Asset>(info: &LeaseInfo<Asset>, level: WarningLevel) -> Emitter
 where
     Asset: Currency,
 {
-    emit_lease_info(batch.into_emitter(Type::LiquidationWarning), info)
+    emit_lease_info(Emitter::of_type(Type::LiquidationWarning), info)
         .emit_to_string_value("level", level.to_uint())
-        .into()
 }
 
 fn emit_liquidation_info<Lpn>(emitter: Emitter, info: &LiquidationInfo<Lpn>) -> Emitter
@@ -74,7 +74,6 @@ where
 }
 
 fn emit_liquidation<Lpn, Asset>(
-    batch: Batch,
     env: &Env,
     lease_info: &LeaseInfo<Asset>,
     liquidation_info: &LiquidationInfo<Lpn>,
@@ -85,7 +84,7 @@ where
 {
     emit_liquidation_info(
         emit_lease_info(
-            batch.into_emitter(Type::Liquidation).emit_tx_info(env),
+            Emitter::of_type(Type::Liquidation).emit_tx_info(env),
             lease_info,
         ),
         liquidation_info,

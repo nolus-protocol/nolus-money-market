@@ -142,11 +142,8 @@ impl Batch {
         res
     }
 
-    pub fn into_emitter<T>(self, event_type: T) -> Emitter
-    where
-        T: Into<String>,
-    {
-        Emitter::new(self, event_type)
+    pub fn into_response(self, emitter: Emitter) -> Response {
+        Response::from(self).add_event(emitter.into())
     }
 
     fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>
@@ -222,7 +219,7 @@ mod test {
         cosmwasm_std::{Event, WasmMsg},
     };
 
-    use crate::emit::Emit;
+    use crate::{batch::Emitter, emit::Emit};
 
     use super::Batch;
 
@@ -246,8 +243,8 @@ mod test {
 
     #[test]
     fn emit() {
-        let e = Batch::default().into_emitter(TY1).emit(KEY1, VALUE1);
-        let resp: Response = e.into();
+        let e = Emitter::of_type(TY1).emit(KEY1, VALUE1);
+        let resp: Response = Batch::default().into_response(e);
         assert_eq!(1, resp.events.len());
         let exp = Event::new(TY1).add_attribute(KEY1, VALUE1);
         assert_eq!(exp, resp.events[0]);
@@ -255,11 +252,8 @@ mod test {
 
     #[test]
     fn emit_same_attr() {
-        let e = Batch::default()
-            .into_emitter(TY1)
-            .emit(KEY1, VALUE1)
-            .emit(KEY1, VALUE1);
-        let resp: Response = e.into();
+        let e = Emitter::of_type(TY1).emit(KEY1, VALUE1).emit(KEY1, VALUE1);
+        let resp: Response = Batch::default().into_response(e);
         assert_eq!(1, resp.events.len());
         let exp = Event::new(TY1)
             .add_attribute(KEY1, VALUE1)
@@ -269,11 +263,8 @@ mod test {
 
     #[test]
     fn emit_two_attrs() {
-        let e = Batch::default()
-            .into_emitter(TY1)
-            .emit(KEY1, VALUE1)
-            .emit(KEY2, VALUE2);
-        let resp: Response = e.into();
+        let emitter = Emitter::of_type(TY1).emit(KEY1, VALUE1).emit(KEY2, VALUE2);
+        let resp = Batch::default().into_response(emitter);
         assert_eq!(1, resp.events.len());
         let exp = Event::new(TY1)
             .add_attribute(KEY1, VALUE1)

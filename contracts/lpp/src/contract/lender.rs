@@ -39,7 +39,7 @@ where
         price,
     )?;
 
-    Ok(event::emit_deposit(Batch::default(), env, lender_addr, amount, receipts).into())
+    Ok(Batch::default().into_response(event::emit_deposit(env, lender_addr, amount, receipts)))
 }
 
 pub fn try_withdraw<LPN>(
@@ -76,15 +76,13 @@ where
 
     let batch: Batch = bank.into();
 
-    Ok(event::emit_withdraw(
-        batch,
+    Ok(batch.into_response(event::emit_withdraw(
         env,
         lender_addr,
         payment_lpn,
         amount_nlpn,
         maybe_reward.is_some(),
-    )
-    .into())
+    )))
 }
 
 pub fn query_ntoken_price<LPN>(deps: Deps, env: Env) -> Result<PriceResponse<LPN>, ContractError>

@@ -1,15 +1,11 @@
 use cosmwasm_std::{Deps, Env, QuerierWrapper};
-use platform::{
-    bank,
-    batch::{Emit, Emitter},
-};
+use platform::{bank, batch::Batch};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     api::{StateQuery, StateResponse},
     contract::cmd::Close,
     error::ContractResult,
-    event::Type,
     lease::{with_lease, IntoDTOResult, LeaseDTO},
 };
 
@@ -24,17 +20,12 @@ impl Closed {
         lease: LeaseDTO,
         env: &Env,
         querier: &QuerierWrapper,
-    ) -> ContractResult<Emitter> {
+    ) -> ContractResult<Batch> {
         let lease_account = bank::my_account(env, querier);
         let IntoDTOResult { lease: _, batch } =
             with_lease::execute(lease, Close::new(lease_account), querier)?;
 
-        let emitter = batch
-            .into_emitter(Type::Close)
-            .emit("id", env.contract.address.clone())
-            .emit_tx_info(env);
-
-        Ok(emitter)
+        Ok(batch)
     }
 }
 

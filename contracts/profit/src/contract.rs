@@ -87,7 +87,7 @@ fn try_transfer(
         ContractError::AlarmTimeValidation {}
     );
 
-    Ok(Profit::transfer(deps, env, info)?.into())
+    Profit::transfer(deps, env, info)
 }
 
 #[cfg(test)]

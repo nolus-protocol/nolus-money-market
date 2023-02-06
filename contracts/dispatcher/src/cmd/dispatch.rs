@@ -3,7 +3,7 @@ use currency::native::Nls;
 use finance::{coin::Coin, currency::Currency, duration::Duration, interest::InterestPeriod};
 use lpp::stub::{Lpp as LppTrait, WithLpp};
 use oracle::{convert, stub::OracleRef};
-use platform::batch::{Batch, Emit, Emitter};
+use platform::batch::Batch;
 use sdk::cosmwasm_std::{QuerierWrapper, StdResult, Storage, Timestamp};
 
 use crate::{cmd::Result as DispatcherResult, state::Config, ContractError};
@@ -11,7 +11,7 @@ use crate::{cmd::Result as DispatcherResult, state::Config, ContractError};
 use super::Dispatch;
 
 impl<'a> WithLpp for Dispatch<'a> {
-    type Output = Emitter;
+    type Output = DispatcherResult;
     type Error = ContractError;
 
     fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
@@ -41,16 +41,13 @@ impl<'a> WithLpp for Dispatch<'a> {
             convert::from_base(self.oracle_ref.clone(), reward_in_lppdenom, &self.querier)?;
 
         let result = DispatcherResult {
-            batch: self.create_response(reward_unls)?,
+            batch: self.create_batch(reward_unls)?,
             receipt: super::Receipt {
-                in_stable: reward_in_lppdenom,
-                in_nls: reward_unls,
+                in_stable: reward_in_lppdenom.into(),
+                in_nls: reward_unls.into(),
             },
         };
-        Ok(result
-            .batch
-            .into_emitter("tr-rewards")
-            .emit_coin("rewards", result.receipt.in_nls))
+        Ok(result)
     }
 }
 
@@ -73,7 +70,7 @@ impl<'a> Dispatch<'a> {
         })
     }
 
-    fn create_response(&self, reward: Coin<Nls>) -> Result<Batch, ContractError> {
+    fn create_batch(&self, reward: Coin<Nls>) -> Result<Batch, ContractError> {
         let mut batch = Batch::default();
         // Prepare a Send Rewards for the amount of Rewards_uNLS to the Treasury.
         batch

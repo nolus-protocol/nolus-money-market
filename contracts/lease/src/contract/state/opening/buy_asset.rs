@@ -88,8 +88,8 @@ impl Controller for BuyAsset {
                     lease,
                     dex: self.dex_account,
                 });
-                let emitter = next_state.enter_state(batch, &env, self.downpayment, self.loan);
-                Ok(Response::from(emitter, next_state))
+                let emitter = next_state.enter_state(&env, self.downpayment, self.loan);
+                Ok(Response::from(batch.into_response(emitter), next_state))
             }
             SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {

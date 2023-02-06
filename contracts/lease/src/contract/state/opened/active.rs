@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use platform::{
     bank::{self},
-    batch::{Batch, Emit, Emitter},
+    batch::{Emit, Emitter},
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -38,12 +38,11 @@ impl Active {
 
     pub(in crate::contract::state) fn enter_state(
         &self,
-        batch: Batch,
         env: &Env,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
     ) -> Emitter {
-        build_emitter(batch, env, &self.lease.lease, loan, downpayment)
+        build_emitter(env, &self.lease.lease, loan, downpayment)
     }
 
     pub(in crate::contract::state::opened) fn try_repay_lpn(
@@ -58,17 +57,19 @@ impl Active {
         let RepayResult {
             lease: lease_updated,
             paid,
+            batch,
             emitter,
         } = with_lease::execute(lease.lease, Repay::new(payment, env), querier)?;
 
+        let cw_resp = batch.into_response(emitter);
         let new_lease = Lease {
             lease: lease_updated,
             dex: lease.dex,
         };
         let resp = if paid {
-            Response::from(emitter, paid::Active::new(new_lease))
+            Response::from(cw_resp, paid::Active::new(new_lease))
         } else {
-            Response::from(emitter, Active::new(new_lease))
+            Response::from(cw_resp, Active::new(new_lease))
         };
         Ok(resp)
     }
@@ -154,14 +155,12 @@ impl Controller for Active {
 }
 
 fn build_emitter(
-    batch: Batch,
     env: &Env,
     lease: &LeaseDTO,
     loan: OpenLoanRespResult,
     downpayment: DownpaymentCoin,
 ) -> Emitter {
-    batch
-        .into_emitter(Type::Open)
+    Emitter::of_type(Type::Open)
         .emit_tx_info(env)
         .emit("id", &lease.addr)
         .emit("customer", lease.customer.clone())

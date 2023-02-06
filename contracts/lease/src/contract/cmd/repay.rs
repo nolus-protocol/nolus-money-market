@@ -3,7 +3,7 @@ use serde::Serialize;
 use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
-use platform::batch::{Emit, Emitter};
+use platform::batch::{Batch, Emit, Emitter};
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Env;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
@@ -29,6 +29,7 @@ impl<'a> Repay<'a> {
 pub struct RepayResult {
     pub lease: LeaseDTO,
     pub paid: bool,
+    pub batch: Batch,
     pub emitter: Emitter,
 }
 
@@ -57,8 +58,7 @@ impl<'a> WithLease for Repay<'a> {
             receipt,
         } = lease.repay(payment, self.env.block.time)?;
 
-        let emitter = batch
-            .into_emitter(Type::Repay)
+        let emitter = Emitter::of_type(Type::Repay)
             .emit_tx_info(self.env)
             .emit("to", self.env.contract.address.clone())
             .emit_currency::<_, Lpn>("payment-symbol")
@@ -74,6 +74,7 @@ impl<'a> WithLease for Repay<'a> {
         Ok(RepayResult {
             lease,
             paid: receipt.close(),
+            batch,
             emitter,
         })
     }
