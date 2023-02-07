@@ -10,12 +10,13 @@ use super::{
     opened::{
         active::Active as OpenedActiveV1,
         repay::{
-            buy_lpn::BuyLpn as BuyLpnV1, transfer_in::TransferIn as RepaymentTransferInV1,
+            buy_lpn::BuyLpn as BuyLpnV1,
+            transfer_in_init::TransferInInit as RepaymentTransferInInitV1,
             transfer_out::TransferOut as RepaymentTransferOutV1,
         },
     },
     opening::{buy_asset::BuyAsset, open_ica_account::OpenIcaAccount, request_loan::RequestLoan},
-    paid::{transfer_in::TransferIn as ClosingTransferInV1, Active as PaidActiveV1},
+    paid::{transfer_in_init::TransferInInit as ClosingTransferInInitV1, Active as PaidActiveV1},
     State as Statev1,
 };
 use crate::{
@@ -157,7 +158,7 @@ pub struct RepaymentTransferIn {
 }
 impl Migrate for RepaymentTransferIn {
     fn into_last_version(self, lease_addr: Addr) -> Statev1 {
-        Statev1::RepaymentTransferIn(RepaymentTransferInV1::new(
+        Statev1::RepaymentTransferInInit(RepaymentTransferInInitV1::new(
             self.lease.into_last_version(lease_addr),
             self.payment,
             self.payment_lpn,
@@ -181,7 +182,7 @@ pub struct ClosingTransferIn {
 }
 impl Migrate for ClosingTransferIn {
     fn into_last_version(self, lease_addr: Addr) -> Statev1 {
-        Statev1::ClosingTransferIn(ClosingTransferInV1::new(
+        Statev1::ClosingTransferInInit(ClosingTransferInInitV1::new(
             self.lease.into_last_version(lease_addr),
         ))
     }

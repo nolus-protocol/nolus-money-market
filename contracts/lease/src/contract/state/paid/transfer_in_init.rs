@@ -12,11 +12,11 @@ use crate::error::ContractResult;
 use crate::event::Type;
 
 #[derive(Serialize, Deserialize)]
-pub struct TransferIn {
+pub struct TransferInInit {
     lease: Lease,
 }
 
-impl TransferIn {
+impl TransferInInit {
     pub(in crate::contract::state) fn new(lease: Lease) -> Self {
         Self { lease }
     }
@@ -38,7 +38,7 @@ impl TransferIn {
     }
 }
 
-impl Controller for TransferIn {
+impl Controller for TransferInInit {
     fn sudo(self, deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response {

@@ -7,11 +7,11 @@ use crate::{
     error::ContractResult,
 };
 
-use self::transfer_in::TransferIn;
+use self::transfer_in_init::TransferInInit;
 
 use super::{Controller, Response};
 
-pub mod transfer_in;
+pub mod transfer_in_init;
 
 #[derive(Serialize, Deserialize)]
 pub struct Active {
@@ -35,7 +35,7 @@ impl Controller for Active {
         match msg {
             ExecuteMsg::Repay() => todo!("fail"),
             ExecuteMsg::Close() => {
-                let next_state = TransferIn::new(self.lease);
+                let next_state = TransferInInit::new(self.lease);
                 let batch = next_state.enter_state(env.block.time)?;
                 Ok(Response::from(batch, next_state))
             }

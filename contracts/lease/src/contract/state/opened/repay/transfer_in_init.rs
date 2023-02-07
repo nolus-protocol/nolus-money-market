@@ -11,13 +11,13 @@ use crate::contract::Lease;
 use crate::error::ContractResult;
 
 #[derive(Serialize, Deserialize)]
-pub struct TransferIn {
+pub struct TransferInInit {
     lease: Lease,
     payment: PaymentCoin,
     payment_lpn: LpnCoin,
 }
 
-impl TransferIn {
+impl TransferInInit {
     pub(in crate::contract::state) fn new(
         lease: Lease,
         payment: PaymentCoin,
@@ -44,7 +44,7 @@ impl TransferIn {
     }
 }
 
-impl Controller for TransferIn {
+impl Controller for TransferInInit {
     fn sudo(self, deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response {

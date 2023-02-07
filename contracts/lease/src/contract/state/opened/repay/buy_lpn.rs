@@ -23,7 +23,7 @@ use crate::{
     event::Type,
 };
 
-use super::transfer_in::TransferIn;
+use super::transfer_in_init::TransferInInit;
 
 #[derive(Serialize, Deserialize)]
 pub struct BuyLpn {
@@ -46,7 +46,7 @@ impl BuyLpn {
         let emitter = self.emit_ok();
         let payment_lpn = self.decode_response(resp.as_slice())?;
 
-        let next_state = TransferIn::new(self.lease, self.payment, payment_lpn);
+        let next_state = TransferInInit::new(self.lease, self.payment, payment_lpn);
         let batch = next_state.enter_state(now)?;
 
         Ok(Response::from(batch.into_response(emitter), next_state))

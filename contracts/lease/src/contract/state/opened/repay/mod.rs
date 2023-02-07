@@ -10,7 +10,7 @@ use crate::{
 };
 
 pub mod buy_lpn;
-pub mod transfer_in;
+pub mod transfer_in_init;
 pub mod transfer_out;
 
 fn query(
