@@ -129,7 +129,7 @@ where
 
 pub fn update_software(storage: &mut dyn Storage, version: Version) -> StdResult<()> {
     VERSION_STORAGE_KEY.update(storage, |saved_version| {
-        if saved_version.storage != version.software {
+        if saved_version.storage != version.storage {
             return Err(StdError::generic_err(format!("Software update handler called, but storage versions differ! Saved storage version is {saved}, but storage version used by this software is {current}!", saved = saved_version.storage, current = version.storage)));
         }
 
@@ -174,7 +174,7 @@ where
             ));
         }
 
-        if saved_version.software < component_version {
+        if saved_version.software < version.software {
             Ok(version)
         } else {
             Err(StdError::generic_err(
