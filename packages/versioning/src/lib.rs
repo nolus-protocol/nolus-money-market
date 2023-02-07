@@ -99,9 +99,9 @@ where
     MigrateStorageFunctor: FnOnce(&'r mut dyn Storage) -> Result<(), MigrateStorageError>,
     MigrateStorageError: From<StdError> + Error,
 {
-    pub const CW_VERSION_ITEM: Item<'static, String> = Item::new("contract_info");
+    const CW_VERSION_ITEM: Item<'static, String> = Item::new("contract_info");
 
-    pub const OLD_VERSION_ITEM: Item<'static, u16> = Item::new("contract_version");
+    const OLD_VERSION_ITEM: Item<'static, u16> = Item::new("contract_version");
 
     if OLD_VERSION_ITEM.load(storage)? != OLD_COMPATIBILITY_VERSION {
         return Err(StdError::generic_err(
