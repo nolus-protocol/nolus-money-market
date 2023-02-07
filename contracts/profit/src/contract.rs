@@ -17,8 +17,7 @@ use crate::{
     state::config::Config,
 };
 
-// version info for migration info
-// const EXPECTED_MIGRATION_STORAGE_VERSION: Version = 0;
+const CONTRACT_STORAGE_VERSION_FROM: Version = 0;
 const CONTRACT_STORAGE_VERSION: Version = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -50,6 +49,21 @@ pub fn instantiate(
     Ok(Response::new()
         .add_attribute("method", "instantiate")
         .add_message(subscribe_msg))
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct MigrateMsg {}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    versioning::upgrade_old_contract::<0, CONTRACT_STORAGE_VERSION_FROM, CONTRACT_STORAGE_VERSION>(
+        deps.storage,
+        package_version!(),
+    )?;
+
+    sdk::cw_storage_plus::Item::<String>::new("contract_info").remove(deps.storage);
+
+    Ok(Response::default())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

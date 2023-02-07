@@ -55,16 +55,42 @@ pub fn initialize<const STORAGE_VERSION: Version>(
     STORAGE_VERSION_ITEM.save(storage, &STORAGE_VERSION)
 }
 
-pub fn upgrade_contract<
-    const EXPECTED_STORAGE_VERSION: Version,
+// TODO remove when all contracts have been migrated to post-refactor versions
+pub fn upgrade_old_contract<
+    const OLD_COMPATIBILITY_VERSION: Version,
+    const FROM_STORAGE_VERSION: Version,
     const NEW_STORAGE_VERSION: Version,
 >(
     storage: &mut dyn Storage,
     component_version: SemVer,
 ) -> StdResult<()> {
+    pub const OLD_VERSION_ITEM: Item<'static, u16> = Item::new("contract_version");
+
+    if let Some(version) = OLD_VERSION_ITEM
+        .may_load(storage)?
+        .or((OLD_COMPATIBILITY_VERSION == 0).then_some(0))
+    {
+        if version != OLD_COMPATIBILITY_VERSION {
+            return Err(StdError::generic_err(
+                "Couldn't upgrade contract because storage version didn't match expected one!",
+            ));
+        }
+
+        OLD_VERSION_ITEM.remove(storage);
+
+        return initialize::<NEW_STORAGE_VERSION>(storage, component_version);
+    }
+
+    upgrade_contract::<FROM_STORAGE_VERSION, NEW_STORAGE_VERSION>(storage, component_version)
+}
+
+pub fn upgrade_contract<const FROM_STORAGE_VERSION: Version, const NEW_STORAGE_VERSION: Version>(
+    storage: &mut dyn Storage,
+    component_version: SemVer,
+) -> StdResult<()> {
     STORAGE_VERSION_ITEM
         .update(storage, |version| {
-            if version == EXPECTED_STORAGE_VERSION {
+            if version == FROM_STORAGE_VERSION {
                 Ok(NEW_STORAGE_VERSION)
             } else {
                 Err(StdError::generic_err(

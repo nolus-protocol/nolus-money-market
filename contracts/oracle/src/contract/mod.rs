@@ -30,8 +30,7 @@ mod feed;
 mod feeder;
 pub mod query;
 
-// version info for migration info
-// const EXPECTED_MIGRATION_STORAGE_VERSION: Version = 0;
+const CONTRACT_STORAGE_VERSION_FROM: Version = 0;
 const CONTRACT_STORAGE_VERSION: Version = 0;
 
 struct InstantiateWithCurrency<'a> {
@@ -81,6 +80,21 @@ pub fn instantiate(
     versioning::initialize::<CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
 
     InstantiateWithCurrency::cmd(deps, msg, info.sender)?;
+
+    Ok(Response::default())
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct MigrateMsg {}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    versioning::upgrade_old_contract::<0, CONTRACT_STORAGE_VERSION_FROM, CONTRACT_STORAGE_VERSION>(
+        deps.storage,
+        package_version!(),
+    )?;
+
+    sdk::cw_storage_plus::Item::<String>::new("contract_info").remove(deps.storage);
 
     Ok(Response::default())
 }

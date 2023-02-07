@@ -12,9 +12,8 @@ use crate::{
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
 
-// version info for migration info
-// const EXPECTED_MIGRATION_STORAGE_VERSION: Version = 0;
-const CONTRACT_VERSION: Version = 0;
+const CONTRACT_STORAGE_VERSION_FROM: Version = 0;
+const CONTRACT_STORAGE_VERSION: Version = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -23,7 +22,22 @@ pub fn instantiate(
     _info: MessageInfo,
     _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    versioning::initialize::<CONTRACT_VERSION>(deps.storage, package_version!())?;
+    versioning::initialize::<CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
+
+    Ok(Response::default())
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct MigrateMsg {}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    versioning::upgrade_old_contract::<0, CONTRACT_STORAGE_VERSION_FROM, CONTRACT_STORAGE_VERSION>(
+        deps.storage,
+        package_version!(),
+    )?;
+
+    sdk::cw_storage_plus::Item::<String>::new("contract_info").remove(deps.storage);
 
     Ok(Response::default())
 }

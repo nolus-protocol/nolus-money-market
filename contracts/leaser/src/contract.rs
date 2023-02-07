@@ -17,8 +17,8 @@ use crate::{
     state::{config::Config, leases::Leases},
 };
 
-const EXPECTED_MIGRATION_STORAGE_VERSION: Version = 1;
-const CONTRACT_STORAGE_VERSION: Version = 1;
+const CONTRACT_STORAGE_VERSION_FROM: Version = 0;
+const CONTRACT_STORAGE_VERSION: Version = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -46,11 +46,13 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
-    versioning::upgrade_contract::<EXPECTED_MIGRATION_STORAGE_VERSION, CONTRACT_STORAGE_VERSION>(
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    versioning::upgrade_old_contract::<1, CONTRACT_STORAGE_VERSION_FROM, CONTRACT_STORAGE_VERSION>(
         deps.storage,
         package_version!(),
     )?;
+
+    sdk::cw_storage_plus::Item::<String>::new("contract_info").remove(deps.storage);
 
     Ok(Response::default())
 }

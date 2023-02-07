@@ -24,8 +24,8 @@ mod config;
 mod lender;
 mod rewards;
 
-const EXPECTED_MIGRATION_STORAGE_VERSION: Version = 1;
-const CONTRACT_STORAGE_VERSION: Version = 1;
+const CONTRACT_STORAGE_VERSION_FROM: Version = 0;
+const CONTRACT_STORAGE_VERSION: Version = 0;
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
@@ -93,7 +93,7 @@ pub fn instantiate(
 pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
     deps.api.addr_validate(msg.lease_code_admin.as_str())?;
 
-    versioning::upgrade_contract::<EXPECTED_MIGRATION_STORAGE_VERSION, CONTRACT_STORAGE_VERSION>(
+    versioning::upgrade_old_contract::<1, CONTRACT_STORAGE_VERSION_FROM, CONTRACT_STORAGE_VERSION>(
         deps.storage,
         package_version!(),
     )?;
