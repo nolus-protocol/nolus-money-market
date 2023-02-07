@@ -1,3 +1,4 @@
+use cosmwasm_std::QuerierWrapper;
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::{
@@ -6,7 +7,10 @@ use finance::{
     percent::Percent,
     price::{self, Price},
 };
-use platform::{bank::BankView, contract};
+use platform::{
+    bank::{self},
+    contract,
+};
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, StdResult, Storage, Timestamp};
 
 use crate::{
@@ -74,15 +78,18 @@ where
         Ok(LiquidityPool { config, total })
     }
 
-    pub fn balance(&self, deps: &Deps, env: &Env) -> Result<Coin<LPN>, ContractError> {
-        use platform::bank::BankAccountView;
-        let balance = BankView::my_account(env, &deps.querier).balance()?;
+    pub fn balance(
+        &self,
+        account: &Addr,
+        querier: &QuerierWrapper,
+    ) -> Result<Coin<LPN>, ContractError> {
+        let balance = bank::balance(account, querier)?;
 
         Ok(balance)
     }
 
     pub fn total_lpn(&self, deps: &Deps, env: &Env) -> Result<Coin<LPN>, ContractError> {
-        let res = self.balance(deps, env)?
+        let res = self.balance(&env.contract.address, &deps.querier)?
             + self.total.total_principal_due()
             + self.total.total_interest_due_by_now(env.block.time);
 
@@ -94,7 +101,7 @@ where
         deps: &Deps,
         env: &Env,
     ) -> Result<LppBalanceResponse<LPN>, ContractError> {
-        let balance = self.balance(deps, env)?;
+        let balance = self.balance(&env.contract.address, &deps.querier)?;
 
         let total_principal_due = self.total.total_principal_due();
 
@@ -146,7 +153,7 @@ where
         let price = self.calculate_price(deps, env, Coin::new(0))?.get();
         let amount_lpn = price::total(amount_nlpn, price);
 
-        if self.balance(deps, env)? < amount_lpn {
+        if self.balance(&env.contract.address, &deps.querier)? < amount_lpn {
             return Err(ContractError::NoLiquidity {});
         }
 
@@ -155,18 +162,19 @@ where
 
     pub fn query_quote(
         &self,
-        deps: &Deps,
-        env: &Env,
         quote: Coin<LPN>,
+        account: &Addr,
+        querier: &QuerierWrapper,
+        now: Timestamp,
     ) -> Result<Option<Percent>, ContractError> {
-        let balance = self.balance(deps, env)?;
+        let balance = self.balance(account, querier)?;
 
         if quote > balance {
             return Ok(None);
         }
 
         let total_principal_due = self.total.total_principal_due();
-        let total_interest = self.total.total_interest_due_by_now(env.block.time);
+        let total_interest = self.total.total_interest_due_by_now(now);
         let total_liability_past_quote = total_principal_due + quote + total_interest;
         let total_balance_past_quote = balance - quote;
 
@@ -189,10 +197,11 @@ where
 
         let current_time = env.block.time;
 
-        let annual_interest_rate = match self.query_quote(&deps.as_ref(), env, amount)? {
-            Some(rate) => Ok(rate),
-            None => Err(ContractError::NoLiquidity {}),
-        }?;
+        let annual_interest_rate =
+            match self.query_quote(amount, &env.contract.address, &deps.querier, env.block.time)? {
+                Some(rate) => Ok(rate),
+                None => Err(ContractError::NoLiquidity {}),
+            }?;
 
         Loan::open(
             deps.storage,
@@ -323,7 +332,7 @@ mod test {
             .expect("can't load LiquidityPool");
 
         let balance = lpp
-            .balance(&deps.as_ref(), &env)
+            .balance(&env.contract.address, &deps.as_ref().querier)
             .expect("can't get balance");
 
         assert_eq!(balance, balance_mock.amount.into());
@@ -366,7 +375,12 @@ mod test {
         env.block.time = Timestamp::from_nanos(10);
 
         let result = lpp
-            .query_quote(&deps.as_ref(), &env, Coin::new(7_700_000))
+            .query_quote(
+                Coin::new(7_700_000),
+                &env.contract.address,
+                &deps.as_ref().querier,
+                env.block.time,
+            )
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
@@ -381,7 +395,12 @@ mod test {
         env.block.time = Timestamp::from_nanos(10 + Duration::YEAR.nanos());
 
         let result = lpp
-            .query_quote(&deps.as_ref(), &env, Coin::new(1_000_000))
+            .query_quote(
+                Coin::new(1_000_000),
+                &env.contract.address,
+                &deps.as_ref().querier,
+                env.block.time,
+            )
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
@@ -756,7 +775,12 @@ mod test {
             .expect("should deposit");
 
         let annual_interest_rate = lpp
-            .query_quote(&deps.as_ref(), &env, Coin::new(5_000_000))
+            .query_quote(
+                Coin::new(5_000_000),
+                &env.contract.address,
+                &deps.as_ref().querier,
+                env.block.time,
+            )
             .expect("can't query quote")
             .expect("should return some interest_rate");
 

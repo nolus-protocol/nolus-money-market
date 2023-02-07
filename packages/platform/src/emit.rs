@@ -3,12 +3,7 @@ use finance::{
     currency::{Currency, Symbol},
     percent::Percent,
 };
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{Env, Event, Timestamp},
-};
-
-use crate::batch::Batch;
+use sdk::cosmwasm_std::{Env, Event, Timestamp};
 
 pub trait Emit
 where
@@ -100,28 +95,17 @@ where
 }
 
 pub struct Emitter {
-    batch: Batch,
     event: Event,
 }
 
 impl Emitter {
-    pub(crate) fn new<T>(batch: Batch, event_type: T) -> Self
+    pub fn of_type<T>(event_type: T) -> Self
     where
         T: Into<String>,
     {
         Self {
-            batch,
             event: Event::new(event_type.into()),
         }
-    }
-}
-
-impl From<Emitter> for Response
-where
-    Batch: Into<Response>,
-{
-    fn from(emitter: Emitter) -> Self {
-        Response::from(emitter.batch).add_event(emitter.event)
     }
 }
 
@@ -134,6 +118,12 @@ impl Emit for Emitter {
         self.event = self.event.add_attribute(event_key, event_value);
 
         self
+    }
+}
+
+impl From<Emitter> for Event {
+    fn from(value: Emitter) -> Self {
+        value.event
     }
 }
 

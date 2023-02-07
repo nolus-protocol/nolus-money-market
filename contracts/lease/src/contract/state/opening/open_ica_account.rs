@@ -1,9 +1,12 @@
-use cosmwasm_std::Deps;
+use cosmwasm_std::{Addr, Deps, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use platform::batch::Batch;
+use platform::{
+    batch::{Batch, Emit, Emitter},
+    ica::HostAccount,
+};
 use sdk::{
     cosmwasm_std::{DepsMut, Env},
     neutron_sdk::sudo::msg::SudoMsg,
@@ -17,6 +20,7 @@ use crate::{
     },
     dex::Account,
     error::ContractResult,
+    event::Type,
 };
 
 use super::transfer_out::TransferOut;
@@ -47,6 +51,36 @@ impl OpenIcaAccount {
     pub(super) fn enter_state(&self) -> Batch {
         Account::register_request(&self.new_lease.dex)
     }
+
+    fn on_response(
+        self,
+        counterparty_version: String,
+        contract: Addr,
+        now: Timestamp,
+    ) -> ContractResult<Response> {
+        let dex_account = Account::from_register_response(
+            &counterparty_version,
+            contract.clone(),
+            self.new_lease.dex,
+        )?;
+
+        let emitter = Self::emit_ok(contract, dex_account.dex_account().clone());
+        let next_state = TransferOut::new(
+            self.new_lease.form,
+            dex_account,
+            self.downpayment,
+            self.loan,
+            self.deps,
+        );
+        let batch = next_state.enter_state(now)?;
+        Ok(Response::from(batch.into_response(emitter), next_state))
+    }
+
+    fn emit_ok(contract: Addr, dex_account: HostAccount) -> Emitter {
+        Emitter::of_type(Type::OpenIcaAccount)
+            .emit("id", contract)
+            .emit("dex_account", dex_account)
+    }
 }
 
 impl Controller for OpenIcaAccount {
@@ -57,24 +91,7 @@ impl Controller for OpenIcaAccount {
                 channel_id: _,
                 counterparty_channel_id: _,
                 counterparty_version,
-            } => {
-                let this_addr = env.contract.address;
-                let dex_account = Account::from_register_response(
-                    &counterparty_version,
-                    this_addr,
-                    self.new_lease.dex,
-                )?;
-
-                let next_state = TransferOut::new(
-                    self.new_lease.form,
-                    dex_account,
-                    self.downpayment,
-                    self.loan,
-                    self.deps,
-                );
-                let batch = next_state.enter_state(env.block.time)?;
-                Ok(Response::from(batch, next_state))
-            }
+            } => self.on_response(counterparty_version, env.contract.address, env.block.time),
             SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {
                 request: _,

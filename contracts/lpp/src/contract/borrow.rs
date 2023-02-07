@@ -33,7 +33,7 @@ where
 
     let annual_interest_rate = lpp.try_open_loan(&mut deps, &env, lease_addr.clone(), amount)?;
 
-    let mut bank = bank::my_account(&env, &deps.querier);
+    let mut bank = bank::account(&env.contract.address, &deps.querier);
     bank.send(amount, &lease_addr);
 
     let loan_response = LoanResponse {
@@ -72,7 +72,7 @@ where
     let batch = if excess_received.is_zero() {
         Batch::default()
     } else {
-        let mut bank = bank::my_account(&env, &deps.querier);
+        let mut bank = bank::account(&env.contract.address, &deps.querier);
         bank.send(excess_received, &lease_addr);
         bank.into()
     };
@@ -94,7 +94,7 @@ where
 {
     let lpp = LiquidityPool::<LPN>::load(deps.storage)?;
 
-    match lpp.query_quote(deps, env, quote)? {
+    match lpp.query_quote(quote, &env.contract.address, &deps.querier, env.block.time)? {
         Some(quote) => Ok(QueryQuoteResponse::QuoteInterestRate(quote)),
         None => Ok(QueryQuoteResponse::NoLiquidity),
     }

@@ -32,11 +32,11 @@ mod state;
 pub(crate) mod with_lease;
 pub(crate) mod with_lease_deps;
 
-pub struct Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
+pub struct Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
     Asset: Currency,
 {
-    lease_addr: &'r Addr,
+    addr: Addr,
     customer: Addr,
     amount: Coin<Asset>,
     liability: Liability,
@@ -51,8 +51,7 @@ pub struct IntoDTOResult {
     pub batch: Batch,
 }
 
-impl<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
-    Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
+impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
     Asset: Currency + Serialize,
@@ -62,7 +61,7 @@ where
     Profit: ProfitTrait,
 {
     pub(super) fn new(
-        lease_addr: &'r Addr,
+        addr: Addr,
         customer: Addr,
         amount: Coin<Asset>,
         start_at: Timestamp,
@@ -75,7 +74,7 @@ where
         // TODO specify that Lpn is of Lpns and Asset is of LeaseGroup
 
         let mut res = Self {
-            lease_addr,
+            addr,
             customer,
             amount,
             liability,
@@ -89,7 +88,6 @@ where
 
     pub(super) fn from_dto(
         dto: LeaseDTO,
-        lease_addr: &'r Addr,
         lpp: Lpp,
         time_alarms: TimeAlarms,
         oracle: Oracle,
@@ -99,7 +97,7 @@ where
             "The DTO -> Lease conversion should have resulted in Asset == dto.amount.symbol()",
         );
         Self {
-            lease_addr,
+            addr: dto.addr,
             customer: dto.customer,
             amount,
             liability: dto.liability,
@@ -124,6 +122,7 @@ where
 
         IntoDTOResult {
             lease: LeaseDTO::new(
+                self.addr,
                 self.customer,
                 self.amount.into(),
                 self.liability,
@@ -168,7 +167,7 @@ where
         if self.amount.is_zero() {
             Ok(State::Closed())
         } else {
-            let loan_state = self.loan.state(now, self.lease_addr.clone())?;
+            let loan_state = self.loan.state(now, self.addr.clone())?;
 
             loan_state.map_or(Ok(State::Paid(self.amount)), |state| {
                 Ok(State::Opened {
@@ -610,7 +609,7 @@ mod tests {
     }
 
     pub fn create_lease<Lpn, AssetC, L, TA, O, P>(
-        lease_addr: &Addr,
+        addr: Addr,
         amount: Coin<AssetC>,
         lpp: L,
         time_alarms: TA,
@@ -633,7 +632,7 @@ mod tests {
             profit,
         );
         Lease::new(
-            lease_addr,
+            addr,
             Addr::unchecked(CUSTOMER),
             amount,
             LEASE_START,
@@ -653,7 +652,7 @@ mod tests {
     }
 
     pub fn open_lease(
-        lease_addr: &Addr,
+        lease_addr: Addr,
         amount: Coin<TestCurrency>,
         loan_response: Option<LoanResponse<TestLpn>>,
         time_alarms_addr: Addr,
@@ -683,7 +682,7 @@ mod tests {
         let oracle: OracleLocalStub = oracle_addr.into();
         let profit: ProfitLocalStub = profit_addr.into();
 
-        Lease::from_dto(into_dto.lease, lease_addr, lpp, time_alarms, oracle, profit)
+        Lease::from_dto(into_dto.lease, lpp, time_alarms, oracle, profit)
     }
 
     pub fn request_state(
@@ -722,7 +721,7 @@ mod tests {
 
         let lease_addr = Addr::unchecked("lease");
         let lease = open_lease(
-            &lease_addr,
+            lease_addr,
             lease_amount,
             Some(loan.clone()),
             Addr::unchecked(String::new()),
@@ -751,7 +750,7 @@ mod tests {
         let lease_amount = coin(1000);
         let lease_addr = Addr::unchecked("lease");
         let lease = open_lease(
-            &lease_addr,
+            lease_addr,
             lease_amount,
             None,
             Addr::unchecked(String::new()),
@@ -772,7 +771,7 @@ mod tests {
         let oracle_addr = Addr::unchecked(String::new());
         let profit_addr = Addr::unchecked(String::new());
         let lease = open_lease(
-            &lease_addr,
+            lease_addr,
             lease_amount,
             None,
             time_alarms_addr,
@@ -783,7 +782,6 @@ mod tests {
         let res = lease.close(lease_account).unwrap();
         let lease = Lease::<_, TestCurrency, _, _, _, _>::from_dto(
             res.lease,
-            &lease_addr,
             LppLenderLocalStubUnreachable {},
             TimeAlarmsLocalStubUnreachable {},
             OracleLocalStubUnreachable {},
@@ -802,7 +800,7 @@ mod tests {
         let oracle_addr = Addr::unchecked(String::new());
         let profit_addr = Addr::unchecked(String::new());
         let lease = open_lease(
-            &lease_addr,
+            lease_addr,
             lease_amount,
             None,
             time_alarms_addr,
@@ -823,7 +821,7 @@ mod tests {
         let oracle_addr = Addr::unchecked(String::new());
         let profit_addr = Addr::unchecked(String::new());
         let lease = open_lease(
-            &lease_addr,
+            lease_addr,
             lease_amount,
             None,
             time_alarms_addr,

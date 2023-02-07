@@ -1,5 +1,5 @@
-use cosmwasm_std::{Deps, DepsMut, Env, Timestamp};
-use platform::batch::Batch;
+use cosmwasm_std::{Deps, DepsMut, Env, QuerierWrapper, Timestamp};
+use platform::batch::{Batch, Emit, Emitter};
 use sdk::neutron_sdk::sudo::msg::SudoMsg;
 use serde::{Deserialize, Serialize};
 
@@ -9,13 +9,14 @@ use crate::contract::state::closed::Closed;
 use crate::contract::state::{Controller, Response};
 use crate::contract::Lease;
 use crate::error::ContractResult;
+use crate::event::Type;
 
 #[derive(Serialize, Deserialize)]
-pub struct TransferIn {
+pub struct TransferInInit {
     lease: Lease,
 }
 
-impl TransferIn {
+impl TransferInInit {
     pub(in crate::contract::state) fn new(lease: Lease) -> Self {
         Self { lease }
     }
@@ -25,19 +26,25 @@ impl TransferIn {
         sender.send(&self.lease.lease.amount)?;
         Ok(sender.into())
     }
+
+    fn on_response(self, env: &Env, querier: &QuerierWrapper) -> ContractResult<Response> {
+        let next_state = Closed::default();
+        let batch = next_state.enter_state(self.lease.lease, env, querier)?;
+        let emitter = Emitter::of_type(Type::Closed)
+            .emit("id", env.contract.address.clone())
+            .emit_tx_info(env);
+
+        Ok(Response::from(batch.into_response(emitter), next_state))
+    }
 }
 
-impl Controller for TransferIn {
+impl Controller for TransferInInit {
     fn sudo(self, deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response {
                 request: _,
                 data: _,
-            } => {
-                let next_state = Closed::default();
-                let emitter = next_state.enter_state(self.lease.lease, &env, &deps.querier)?;
-                Ok(Response::from(emitter, next_state))
-            }
+            } => self.on_response(&env, &deps.querier),
             SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {
                 request: _,

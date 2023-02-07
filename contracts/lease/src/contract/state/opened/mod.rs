@@ -20,7 +20,6 @@ fn query(
     with_lease::execute(
         lease,
         LeaseState::new(env.block.time, in_progress),
-        &env.contract.address,
         &deps.querier,
     )
 }

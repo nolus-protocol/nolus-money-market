@@ -20,7 +20,7 @@ use crate::{
 impl NewLeaseForm {
     pub(crate) fn into_lease(
         self,
-        lease_addr: &Addr,
+        lease_addr: Addr,
         start_at: Timestamp,
         amount: &LeaseCoin,
         querier: &QuerierWrapper,
@@ -54,7 +54,7 @@ impl NewLeaseForm {
 
 struct LeaseFactory<'a> {
     form: NewLeaseForm,
-    lease_addr: &'a Addr,
+    lease_addr: Addr,
     start_at: Timestamp,
     amount: &'a LeaseCoin,
 }

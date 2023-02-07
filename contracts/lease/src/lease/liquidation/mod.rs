@@ -26,8 +26,7 @@ use super::LeaseDTO;
 
 mod alarm;
 
-impl<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
-    Lease<'r, Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
+impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
@@ -84,7 +83,7 @@ where
         };
 
         Status::Warning(
-            LeaseInfo::new(self.customer.clone(), self.lease_addr.clone(), ltv),
+            LeaseInfo::new(self.customer.clone(), self.addr.clone(), ltv),
             level,
         )
     }
@@ -123,7 +122,7 @@ where
             ltv, overdue_lpn, ..
         } = self
             .loan
-            .liability_status(now, self.lease_addr.clone(), lease_lpn)?;
+            .liability_status(now, self.addr.clone(), lease_lpn)?;
 
         self.liquidate(Cause::Overdue, lease_lpn, overdue_lpn, now, ltv)
     }
@@ -140,11 +139,11 @@ where
 
         let receipt = self.no_reschedule_repay(liquidation_lpn, now)?;
 
-        let info = LeaseInfo::new(self.customer.clone(), self.lease_addr.clone(), ltv);
+        let info = LeaseInfo::new(self.customer.clone(), self.addr.clone(), ltv);
 
         let liquidation_info = LiquidationInfo {
             cause,
-            lease: self.lease_addr.clone(),
+            lease: self.addr.clone(),
             receipt,
         };
 
@@ -283,7 +282,7 @@ mod tests {
 
         let lease_addr = Addr::unchecked("lease");
         let lease = open_lease(
-            &lease_addr,
+            lease_addr,
             10.into(),
             Some(loan),
             Addr::unchecked(String::new()),
@@ -310,7 +309,7 @@ mod tests {
 
         let lease_addr = Addr::unchecked("lease");
         let lease = open_lease(
-            &lease_addr,
+            lease_addr,
             10.into(),
             Some(loan),
             Addr::unchecked(String::new()),
@@ -322,8 +321,8 @@ mod tests {
             lease.handle_warnings(lease.liability.first_liq_warn_percent()),
             Status::Warning(
                 LeaseInfo::new(
-                    lease.customer.clone(),
-                    lease_addr.clone(),
+                    lease.customer,
+                    lease.addr,
                     lease.liability.first_liq_warn_percent(),
                 ),
                 WarningLevel::First,
@@ -344,7 +343,7 @@ mod tests {
 
         let lease_addr = Addr::unchecked("lease");
         let lease = open_lease(
-            &lease_addr,
+            lease_addr,
             10.into(),
             Some(loan),
             Addr::unchecked(String::new()),
@@ -356,8 +355,8 @@ mod tests {
             lease.handle_warnings(lease.liability.second_liq_warn_percent()),
             Status::Warning(
                 LeaseInfo::new(
-                    lease.customer.clone(),
-                    lease_addr.clone(),
+                    lease.customer,
+                    lease.addr,
                     lease.liability.second_liq_warn_percent(),
                 ),
                 WarningLevel::Second,
@@ -369,7 +368,7 @@ mod tests {
     fn warnings_third() {
         let lease_addr = Addr::unchecked("lease");
         let lease = open_lease(
-            &lease_addr,
+            lease_addr,
             10.into(),
             Some(loan()),
             Addr::unchecked(String::new()),
@@ -381,8 +380,8 @@ mod tests {
             lease.handle_warnings(lease.liability.third_liq_warn_percent()),
             Status::Warning(
                 LeaseInfo::new(
-                    lease.customer.clone(),
-                    lease_addr.clone(),
+                    lease.customer,
+                    lease.addr,
                     lease.liability.third_liq_warn_percent(),
                 ),
                 WarningLevel::Third,
@@ -402,7 +401,7 @@ mod tests {
 
         let lease_addr = Addr::unchecked("lease");
         let lease = open_lease(
-            &lease_addr,
+            lease_addr,
             10.into(),
             Some(loan),
             Addr::unchecked(String::new()),
@@ -437,7 +436,7 @@ mod tests {
 
         let lease_addr = Addr::unchecked("lease");
         let mut lease = open_lease(
-            &lease_addr,
+            lease_addr,
             lease_amount.into(),
             Some(loan),
             Addr::unchecked(String::new()),
@@ -452,12 +451,12 @@ mod tests {
             Status::PartialLiquidation {
                 info: LeaseInfo::new(
                     Addr::unchecked("customer"),
-                    lease_addr.clone(),
+                    lease.addr.clone(),
                     lease.liability.max_percent()
                 ),
                 liquidation_info: LiquidationInfo {
                     cause: Cause::Liability,
-                    lease: lease_addr.clone(),
+                    lease: lease.addr,
                     receipt: RepayReceipt::new(
                         lpn_coin(0),
                         lpn_coin(0),
@@ -487,7 +486,7 @@ mod tests {
 
         let lease_addr = Addr::unchecked("lease");
         let mut lease = open_lease(
-            &lease_addr,
+            lease_addr,
             lease_amount.into(),
             Some(loan),
             Addr::unchecked(String::new()),
@@ -502,12 +501,12 @@ mod tests {
             Status::FullLiquidation {
                 info: LeaseInfo::new(
                     Addr::unchecked("customer"),
-                    lease_addr.clone(),
+                    lease.addr.clone(),
                     lease.liability.max_percent()
                 ),
                 liquidation_info: LiquidationInfo {
                     cause: Cause::Liability,
-                    lease: lease_addr.clone(),
+                    lease: lease.addr,
                     receipt: RepayReceipt::new(
                         lpn_coin(0),
                         lpn_coin(0),

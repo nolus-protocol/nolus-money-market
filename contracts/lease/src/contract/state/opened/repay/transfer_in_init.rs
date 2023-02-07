@@ -1,4 +1,4 @@
-use cosmwasm_std::{Deps, DepsMut, Env, Timestamp};
+use cosmwasm_std::{Deps, DepsMut, Env, QuerierWrapper, Timestamp};
 use platform::batch::Batch;
 use sdk::neutron_sdk::sudo::msg::SudoMsg;
 use serde::{Deserialize, Serialize};
@@ -11,14 +11,14 @@ use crate::contract::Lease;
 use crate::error::ContractResult;
 
 #[derive(Serialize, Deserialize)]
-pub struct TransferIn {
+pub struct TransferInInit {
     lease: Lease,
     payment: PaymentCoin,
     payment_lpn: LpnCoin,
 }
 
-impl TransferIn {
-    pub(in crate::contract::state::opened) fn new(
+impl TransferInInit {
+    pub(in crate::contract::state) fn new(
         lease: Lease,
         payment: PaymentCoin,
         payment_lpn: LpnCoin,
@@ -38,21 +38,19 @@ impl TransferIn {
         sender.send(&self.payment_lpn)?;
         Ok(sender.into())
     }
+
+    fn on_response(self, querier: &QuerierWrapper, env: &Env) -> ContractResult<Response> {
+        Active::try_repay_lpn(self.lease, self.payment_lpn, querier, env)
+    }
 }
 
-impl Controller for TransferIn {
+impl Controller for TransferInInit {
     fn sudo(self, deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response {
                 request: _,
                 data: _,
-            } => Active::try_repay_lpn(
-                self.lease,
-                self.payment_lpn,
-                &env.contract.address,
-                &deps.querier,
-                &env,
-            ),
+            } => self.on_response(&deps.querier, &env),
             SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {
                 request: _,

@@ -1,4 +1,4 @@
-use cosmwasm_std::Deps;
+use cosmwasm_std::{Binary, Deps};
 use serde::{Deserialize, Serialize};
 
 use finance::coin::{self};
@@ -61,6 +61,29 @@ impl BuyAsset {
         Ok(swap_trx.into())
     }
 
+    fn on_response(
+        self,
+        resp: Binary,
+        env: &Env,
+        querier: &QuerierWrapper,
+    ) -> ContractResult<Response> {
+        // TODO transfer (downpayment - transferred_and_swapped), i.e. the nls_swap_fee to the profit
+        let amount = self.decode_response(resp.as_slice())?;
+        let IntoDTOResult { lease, batch } = self.form.into_lease(
+            env.contract.address.clone(),
+            env.block.time,
+            &amount,
+            querier,
+            self.deps,
+        )?;
+        let active = Active::new(Lease {
+            lease,
+            dex: self.dex_account,
+        });
+        let emitter = active.emit_ok(env, self.downpayment, self.loan);
+        Ok(Response::from(batch.into_response(emitter), active))
+    }
+
     fn decode_response(&self, resp: &[u8]) -> ContractResult<LeaseCoin> {
         let mut resp_msgs = trx::decode_msg_responses(resp)?;
         let downpayment_amount = swap_trx::exact_amount_in_resp(&mut resp_msgs)?;
@@ -74,23 +97,7 @@ impl BuyAsset {
 impl Controller for BuyAsset {
     fn sudo(self, deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
-            SudoMsg::Response { request: _, data } => {
-                // TODO transfer (downpayment - transferred_and_swapped), i.e. the nls_swap_fee to the profit
-                let amount = self.decode_response(data.as_slice())?;
-                let IntoDTOResult { lease, batch } = self.form.into_lease(
-                    &env.contract.address,
-                    env.block.time,
-                    &amount,
-                    &deps.querier,
-                    self.deps,
-                )?;
-                let next_state = Active::new(Lease {
-                    lease,
-                    dex: self.dex_account,
-                });
-                let emitter = next_state.enter_state(batch, &env, self.downpayment, self.loan);
-                Ok(Response::from(emitter, next_state))
-            }
+            SudoMsg::Response { request: _, data } => self.on_response(data, &env, &deps.querier),
             SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {
                 request: _,

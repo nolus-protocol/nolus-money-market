@@ -6,7 +6,6 @@ use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply},
-    cw_storage_plus::Item,
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use serde::{Deserialize, Serialize};
@@ -20,7 +19,7 @@ use crate::{
     lease::LeaseDTO,
 };
 
-use self::state::RequestLoan;
+use self::state::{v0::Migrate, RequestLoan};
 
 mod cmd;
 pub mod msg;
@@ -53,14 +52,19 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
+pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::upgrade_old_contract::<
-        0,
+        1,
         EXPECTED_MIGRATION_STORAGE_VERSION,
         CONTRACT_STORAGE_VERSION,
     >(deps.storage, package_version!())?;
 
-    Item::<bool>::new("contract_info").remove(deps.storage);
+    sdk::cw_storage_plus::Item::<String>::new("contract_info").remove(deps.storage);
+
+    {
+        let migrated_contract = impl_::load_v0(&deps)?.into_last_version(env.contract.address);
+        impl_::save(&migrated_contract, &mut deps)?;
+    }
 
     Ok(CwResponse::default())
 }
@@ -134,19 +138,26 @@ mod impl_ {
 
     use crate::error::{ContractError, ContractResult};
 
+    use super::state::v0::StateV0;
     use super::state::State;
 
-    const STATE_DB_KEY: Item<State> = Item::new("state");
+    const STATE_DB_KEY: &str = "state";
+    const STATE_DB_ITEM: Item<State> = Item::new(STATE_DB_KEY);
 
     pub(super) fn load(deps: &Deps) -> ContractResult<State> {
-        Ok(STATE_DB_KEY.load(deps.storage)?)
+        Ok(STATE_DB_ITEM.load(deps.storage)?)
     }
 
     pub(super) fn load_mut(deps: &DepsMut) -> ContractResult<State> {
         load(&deps.as_ref())
     }
+
+    pub(super) fn load_v0(deps: &DepsMut) -> ContractResult<StateV0> {
+        Ok(Item::new(STATE_DB_KEY).load(deps.storage)?)
+    }
+
     pub(super) fn save(next_state: &State, deps: &mut DepsMut) -> ContractResult<()> {
-        STATE_DB_KEY
+        STATE_DB_ITEM
             .save(deps.storage, next_state)
             .map_err(ContractError::from)
     }

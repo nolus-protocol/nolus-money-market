@@ -145,7 +145,7 @@ pub fn try_dispatch(
 
     let lpp_address = config.lpp.clone();
     let lpp = LppRef::try_new(lpp_address.clone(), &deps.querier)?;
-    let emitter: Emitter = lpp.execute(
+    let result = lpp.execute(
         Dispatch::new(
             deps.storage,
             oracle,
@@ -159,10 +159,12 @@ pub fn try_dispatch(
     // Store the current time for use for the next calculation.
     DispatchLog::update(deps.storage, env.block.time)?;
 
-    Ok(emitter
+    let emitter = Emitter::of_type("tr-rewards")
         .emit_tx_info(&env)
         .emit_to_string_value("to", lpp_address)
-        .into())
+        .emit_coin_dto("rewards", result.receipt.in_nls);
+
+    Ok(result.batch.into_response(emitter))
 }
 
 #[cfg(test)]

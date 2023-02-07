@@ -20,7 +20,6 @@ use crate::{
 };
 
 const REQUEST_MSG_TYPE: &str = "/osmosis.gamm.v1beta1.MsgSwapExactAmountIn";
-const RESPONSE_MSG_TYPE: &str = "/osmosis.gamm.v1beta1.MsgSwapExactAmountInResponse";
 
 pub fn exact_amount_in<G>(
     trx: &mut Transaction,
@@ -61,7 +60,7 @@ where
         .next()
         .ok_or_else(|| Error::MissingResponse("swap of exact amount request".into()))?;
     let amount =
-        trx::decode_msg_response::<_, MsgSwapExactAmountInResponse>(resp, RESPONSE_MSG_TYPE)?
+        trx::decode_msg_response::<_, MsgSwapExactAmountInResponse>(resp, REQUEST_MSG_TYPE)?
             .token_out_amount;
     Amount::from_str(&amount).map_err(|_| Error::InvalidAmount(amount))
 }
@@ -74,7 +73,7 @@ pub fn build_exact_amount_in_resp(amount_out: Amount) -> MsgData {
         token_out_amount: amount_out.to_string(),
     };
     MsgData {
-        msg_type: RESPONSE_MSG_TYPE.into(),
+        msg_type: REQUEST_MSG_TYPE.into(),
         data: resp.encode_to_vec(),
     }
 }
