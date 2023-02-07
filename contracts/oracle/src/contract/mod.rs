@@ -85,16 +85,45 @@ pub fn instantiate(
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    tree: tree::HumanReadableTree<swap::SwapTarget>,
+}
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+    use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
+    use swap::SwapTarget;
+    use tree::HumanReadableTree;
+
+    use crate::state::config::Config;
+
+    struct UpdateTree<'r>(HumanReadableTree<SwapTarget>, &'r mut dyn Storage);
+
+    impl<'r> AnyVisitor for UpdateTree<'r> {
+        type Output = ();
+        type Error = ContractError;
+
+        fn on<C>(self) -> AnyVisitorResult<Self>
+        where
+            C: Currency + serde::Serialize + serde::de::DeserializeOwned,
+        {
+            SupportedPairs::<C>::new(self.0.into_tree())?
+                .save(self.1)
+                .map_err(Into::into)
+        }
+    }
+
     versioning::upgrade_old_contract::<0, CONTRACT_STORAGE_VERSION_FROM, CONTRACT_STORAGE_VERSION>(
         deps.storage,
         package_version!(),
     )?;
 
-    sdk::cw_storage_plus::Item::<String>::new("contract_info").remove(deps.storage);
+    visit_any_on_ticker::<Lpns, _>(
+        &Config::load(deps.storage)?.base_asset,
+        UpdateTree(msg.tree, deps.storage),
+    )?;
+
+    Item::<String>::new("contract_info").remove(deps.storage);
 
     Ok(Response::default())
 }
