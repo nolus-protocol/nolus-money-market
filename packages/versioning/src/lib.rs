@@ -154,7 +154,7 @@ where
         return Err(StdError::generic_err("Expected and new storage versions are not directly adjacent! This could indicate an error!").into());
     }
 
-    update_version(storage, version.storage, version)?;
+    update_version(storage, FROM_STORAGE_VERSION, version)?;
 
     migrate_storage(storage)
 }
