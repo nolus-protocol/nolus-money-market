@@ -50,9 +50,9 @@ pub fn execute(
             try_configure_reward_transfer(deps.storage, sender, rewards_dispatcher)
         }
         ExecuteMsg::SendRewards { amount } => {
-            let bank_account = bank::my_account(&env, &deps.querier);
+            let mut bank_account = bank::account(&env.contract.address, &deps.querier);
 
-            let bank_account = try_send_rewards(deps.storage, sender, amount, bank_account)?;
+            try_send_rewards(deps.storage, sender, amount, &mut bank_account)?;
             let batch: Batch = bank_account.into();
             let mut response: Response = batch.into();
             response = response.add_attribute("method", "try_send_rewards");
@@ -81,8 +81,8 @@ fn try_send_rewards<B>(
     storage: &dyn Storage,
     sender: Addr,
     amount: Coin<Nls>,
-    mut account: B,
-) -> Result<B, ContractError>
+    account: &mut B,
+) -> Result<(), ContractError>
 where
     B: BankAccount,
 {
@@ -91,5 +91,5 @@ where
 
     account.send(amount, &sender);
 
-    Ok(account)
+    Ok(())
 }

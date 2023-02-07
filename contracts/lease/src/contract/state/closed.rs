@@ -21,7 +21,7 @@ impl Closed {
         env: &Env,
         querier: &QuerierWrapper,
     ) -> ContractResult<Batch> {
-        let lease_account = bank::my_account(env, querier);
+        let lease_account = bank::account(&env.contract.address, querier);
         let IntoDTOResult { lease: _, batch } =
             with_lease::execute(lease, Close::new(lease_account), querier)?;
 

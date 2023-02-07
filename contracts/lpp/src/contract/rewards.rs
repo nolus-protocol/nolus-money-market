@@ -45,7 +45,7 @@ pub fn try_claim_rewards(
         return Err(ContractError::NoRewards {});
     }
 
-    let mut bank = bank::my_account(&env, &deps.querier);
+    let mut bank = bank::account(&env.contract.address, &deps.querier);
     bank.send(reward, &recipient);
 
     let batch: Batch = bank.into();

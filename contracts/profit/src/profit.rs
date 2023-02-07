@@ -52,7 +52,7 @@ impl Profit {
             Duration::from_hours(config.cadence_hours),
         )?;
 
-        let mut bank = bank::my_account(&env, &deps.querier);
+        let mut bank = bank::account(&env.contract.address, &deps.querier);
         //TODO: currenty only Nls profit is transfered as there is no swap functionality
         let balance: Coin<Nls> = bank.balance()?;
         bank.send(balance, &config.treasury);

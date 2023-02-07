@@ -2,7 +2,7 @@ use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
     currency::{Currency, Group},
 };
-use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, Env, QuerierWrapper};
+use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
 use crate::{
     batch::Batch,
@@ -67,16 +67,13 @@ where
 }
 
 pub struct BankView<'a> {
-    addr: &'a Addr,
+    account: &'a Addr,
     querier: &'a QuerierWrapper<'a>,
 }
 
 impl<'a> BankView<'a> {
-    pub fn my_account(env: &'a Env, querier: &'a QuerierWrapper) -> Self {
-        Self {
-            addr: &env.contract.address,
-            querier,
-        }
+    fn account(account: &'a Addr, querier: &'a QuerierWrapper) -> Self {
+        Self { account, querier }
     }
 }
 
@@ -85,7 +82,7 @@ impl<'a> BankAccountView for BankView<'a> {
     where
         C: Currency,
     {
-        let coin = self.querier.query_balance(self.addr, C::BANK_SYMBOL)?;
+        let coin = self.querier.query_balance(self.account, C::BANK_SYMBOL)?;
         from_cosmwasm_impl(coin)
     }
 }
@@ -110,16 +107,15 @@ where
     }
 }
 
-pub fn my_account<'a>(env: &'a Env, querier: &'a QuerierWrapper) -> BankStub<BankView<'a>> {
-    BankStub::new(BankView::my_account(env, querier))
+pub fn account<'a>(account: &'a Addr, querier: &'a QuerierWrapper) -> BankStub<BankView<'a>> {
+    BankStub::new(BankView::account(account, querier))
 }
 
-#[cfg(feature = "testing")]
-pub fn balance<'a, C>(addr: &'a Addr, querier: &'a QuerierWrapper<'a>) -> Result<Coin<C>>
+pub fn balance<'a, C>(account: &'a Addr, querier: &'a QuerierWrapper<'a>) -> Result<Coin<C>>
 where
     C: Currency,
 {
-    BankView { addr, querier }.balance()
+    BankView { account, querier }.balance()
 }
 
 impl<View> BankAccountView for BankStub<View>

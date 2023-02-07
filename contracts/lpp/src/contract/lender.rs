@@ -65,7 +65,7 @@ where
         .ok_or(ContractError::NoDeposit {})?
         .withdraw(deps.storage, amount_nlpn)?;
 
-    let mut bank = bank::my_account(&env, &deps.querier);
+    let mut bank = bank::account(&env.contract.address, &deps.querier);
     bank.send(payment_lpn, &lender_addr);
 
     if let Some(reward) = maybe_reward {
