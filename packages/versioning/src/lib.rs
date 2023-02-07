@@ -69,13 +69,13 @@ macro_rules! package_version {
     }};
 }
 
-const VERSION_ITEM: Item<'static, Version> = Item::new("contract_version");
+const VERSION_STORAGE_KEY: Item<'static, Version> = Item::new("contract_version");
 
 pub fn initialize<const STORAGE_VERSION: VersionSegment>(
     storage: &mut dyn Storage,
     component_version: SemVer,
 ) -> StdResult<()> {
-    VERSION_ITEM.save(
+    VERSION_STORAGE_KEY.save(
         storage,
         &Version {
             storage: STORAGE_VERSION,
@@ -124,7 +124,7 @@ pub fn update_software<const CURRENT_STORAGE_VERSION: VersionSegment>(
     storage: &mut dyn Storage,
     component_version: SemVer,
 ) -> StdResult<()> {
-    VERSION_ITEM.update(storage, |mut version_pair| {
+    VERSION_STORAGE_KEY.update(storage, |mut version_pair| {
         if version_pair.storage != CURRENT_STORAGE_VERSION {
             return Err(StdError::generic_err(format!("Software update handler called, but storage versions differ! Saved storage version is {saved}, but storage version used by this software is {current}!", saved = version_pair.storage, current = CURRENT_STORAGE_VERSION)));
         }
@@ -166,7 +166,7 @@ where
         return Err(StdError::generic_err("Expected and new storage versions are not directly adjacent! This could indicate an error!").into());
     }
 
-    VERSION_ITEM.update(storage, |version_pair| {
+    VERSION_STORAGE_KEY.update(storage, |version_pair| {
         if version_pair.storage != FROM_STORAGE_VERSION {
             return Err(StdError::generic_err(
                 "Couldn't upgrade contract because saved storage version didn't match expected one!",
