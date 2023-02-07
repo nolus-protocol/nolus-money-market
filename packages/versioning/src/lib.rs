@@ -168,7 +168,7 @@ where
     }
 
     VERSION_STORAGE_KEY.update(storage, |saved_version| {
-        if saved_version.storage != version.storage {
+        if saved_version.storage != FROM_STORAGE_VERSION {
             return Err(StdError::generic_err(
                 "Couldn't upgrade contract because saved storage version didn't match expected one!",
             ));
