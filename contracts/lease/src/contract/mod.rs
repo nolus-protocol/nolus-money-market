@@ -52,7 +52,7 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(mut deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
+pub fn migrate(mut deps: DepsMut, env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::upgrade_old_contract::<
         1,
         EXPECTED_MIGRATION_STORAGE_VERSION,
