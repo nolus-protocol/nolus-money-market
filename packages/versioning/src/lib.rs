@@ -159,7 +159,11 @@ where
     migrate_storage(storage)
 }
 
-fn update_version(storage: &mut dyn Storage, expected_storage: VersionSegment, version: Version) -> Result<Version, StdError> {
+fn update_version(
+    storage: &mut dyn Storage,
+    expected_storage: VersionSegment,
+    version: Version,
+) -> Result<Version, StdError> {
     VERSION_STORAGE_KEY.update(storage, |saved_version| {
         if saved_version.storage != expected_storage {
             return Err(StdError::generic_err(format!(
