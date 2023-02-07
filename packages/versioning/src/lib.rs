@@ -127,22 +127,9 @@ where
     migrate_storage_functor.map_or(Ok(()), move |functor| functor(storage))
 }
 
+#[inline]
 pub fn update_software(storage: &mut dyn Storage, version: Version) -> StdResult<()> {
-    VERSION_STORAGE_KEY.update(storage, |saved_version| {
-        if saved_version.storage != version.storage {
-            return Err(StdError::generic_err(format!("Software update handler called, but storage versions differ! Saved storage version is {saved}, but storage version used by this software is {current}!", saved = saved_version.storage, current = version.storage)));
-        }
-
-        if saved_version.software < version.software {
-            Ok(version)
-        } else {
-            Err(StdError::generic_err(
-                "Couldn't upgrade contract because version isn't monotonically increasing!",
-            ))
-        }
-    })?;
-
-    Ok(())
+    update_version(storage, version.storage, version).map(|_| ())
 }
 
 pub fn update_software_and_storage<
@@ -167,11 +154,19 @@ where
         return Err(StdError::generic_err("Expected and new storage versions are not directly adjacent! This could indicate an error!").into());
     }
 
+    update_version(storage, version.storage, version)?;
+
+    migrate_storage(storage)
+}
+
+fn update_version(storage: &mut dyn Storage, expected_storage: VersionSegment, version: Version) -> Result<Version, StdError> {
     VERSION_STORAGE_KEY.update(storage, |saved_version| {
-        if saved_version.storage != FROM_STORAGE_VERSION {
-            return Err(StdError::generic_err(
-                "Couldn't upgrade contract because saved storage version didn't match expected one!",
-            ));
+        if saved_version.storage != expected_storage {
+            return Err(StdError::generic_err(format!(
+                "Software update handler called, but storage versions differ! Saved storage version is {saved}, but storage version used by this software is {current}!",
+                saved = saved_version.storage,
+                current = expected_storage,
+            )));
         }
 
         if saved_version.software < version.software {
@@ -181,7 +176,5 @@ where
                 "Couldn't upgrade contract because software version isn't monotonically increasing!",
             ))
         }
-    })?;
-
-    migrate_storage(storage)
+    })
 }
