@@ -3,8 +3,7 @@ use finance::coin::{Coin, WithCoin, WithCoinResult};
 use finance::currency::Currency;
 use finance::duration::Duration;
 use platform::bank::{self};
-use platform::batch::Batch;
-use sdk::cosmwasm_ext::Response as CwResponse;
+use platform::batch::{Batch, Emit, Emitter};
 use serde::{Deserialize, Serialize};
 use timealarms::stub::{TimeAlarms, TimeAlarmsRef, WithTimeAlarms};
 
@@ -14,6 +13,7 @@ use crate::contract::state::opened::active::Active;
 use crate::contract::state::{opened::repay, Controller, Response};
 use crate::contract::{state, Lease};
 use crate::error::{ContractError, ContractResult};
+use crate::event::Type;
 
 use super::transfer_in_init::TransferInInit;
 
@@ -56,8 +56,9 @@ impl TransferInFinish {
         if received {
             Active::try_repay_lpn(self.lease, self.payment_lpn, querier, env)
         } else {
+            let emitter = self.emit_ok();
             let batch = self.enter_state(self.lease.lease.time_alarms.clone(), env.block.time)?;
-            Ok(Response::from::<CwResponse, _>(batch.into(), self))
+            Ok(Response::from(batch.into_response(emitter), self))
         }
     }
 
@@ -81,6 +82,13 @@ impl TransferInFinish {
 
     fn on_alarm(self, querier: &QuerierWrapper, env: &Env) -> ContractResult<Response> {
         self.try_complete(querier, env)
+    }
+
+    fn emit_ok(&self) -> Emitter {
+        Emitter::of_type(Type::RepaymentTransferIn)
+            .emit("id", self.lease.lease.addr.clone())
+            .emit_coin_dto("payment", self.payment.clone())
+            .emit_coin_dto("payment-stable", self.payment_lpn.clone())
     }
 }
 
