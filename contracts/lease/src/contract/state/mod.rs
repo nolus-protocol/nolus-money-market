@@ -23,6 +23,7 @@ mod closed;
 mod opened;
 mod opening;
 mod paid;
+mod transfer_in;
 pub(super) mod v0;
 
 type OpeningTransferOut = opening::transfer_out::TransferOut;
@@ -32,6 +33,7 @@ type RepaymentTransferInInit = opened::repay::transfer_in_init::TransferInInit;
 type RepaymentTransferInFinish = opened::repay::transfer_in_finish::TransferInFinish;
 type PaidActive = paid::Active;
 type ClosingTransferInInit = paid::transfer_in_init::TransferInInit;
+type ClosingTransferInFinish = paid::transfer_in_finish::TransferInFinish;
 
 #[enum_dispatch(Controller)]
 #[derive(Serialize, Deserialize)]
@@ -47,6 +49,7 @@ pub enum State {
     RepaymentTransferInFinish,
     PaidActive,
     ClosingTransferInInit,
+    ClosingTransferInFinish,
     Closed,
 }
 

@@ -1,31 +1,42 @@
 use cosmwasm_std::{Deps, Env, QuerierWrapper};
-use platform::{bank, batch::Batch};
+use platform::{
+    bank,
+    batch::{Emit, Emitter},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     api::{StateQuery, StateResponse},
     contract::cmd::Close,
     error::ContractResult,
+    event::Type,
     lease::{with_lease, IntoDTOResult, LeaseDTO},
 };
 
-use super::Controller;
+use super::{Controller, Response};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Closed {}
 
 impl Closed {
     pub(super) fn enter_state(
-        &self,
+        self,
         lease: LeaseDTO,
         env: &Env,
         querier: &QuerierWrapper,
-    ) -> ContractResult<Batch> {
+    ) -> ContractResult<Response> {
         let lease_account = bank::account(&env.contract.address, querier);
         let IntoDTOResult { lease: _, batch } =
             with_lease::execute(lease, Close::new(lease_account), querier)?;
 
-        Ok(batch)
+        let emitter = Emitter::of_type(Type::Closed)
+            .emit("id", env.contract.address.clone())
+            .emit_tx_info(env);
+
+        Ok(Response::from(
+            batch.into_response(emitter),
+            Closed::default(),
+        ))
     }
 }
 

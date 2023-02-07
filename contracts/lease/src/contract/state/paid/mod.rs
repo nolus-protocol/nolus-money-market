@@ -11,6 +11,7 @@ use self::transfer_in_init::TransferInInit;
 
 use super::{Controller, Response};
 
+pub mod transfer_in_finish;
 pub mod transfer_in_init;
 
 #[derive(Serialize, Deserialize)]

@@ -2,11 +2,11 @@ use cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper};
 use platform::batch::{Emit, Emitter};
 use serde::{Deserialize, Serialize};
 
-use crate::api::opened::RepayTrx;
-use crate::api::{ExecuteMsg, LpnCoin, PaymentCoin, StateQuery, StateResponse};
-use crate::contract::state::opened::active::Active;
+use crate::api::paid::ClosingTrx;
+use crate::api::{ExecuteMsg, StateQuery, StateResponse};
+use crate::contract::state::closed::Closed;
 use crate::contract::state::transfer_in;
-use crate::contract::state::{opened::repay, Controller, Response};
+use crate::contract::state::{Controller, Response};
 use crate::contract::{state, Lease};
 use crate::error::ContractResult;
 use crate::event::Type;
@@ -16,8 +16,6 @@ use super::transfer_in_init::TransferInInit;
 #[derive(Serialize, Deserialize)]
 pub struct TransferInFinish {
     lease: Lease,
-    payment: PaymentCoin,
-    payment_lpn: LpnCoin,
 }
 
 impl TransferInFinish {
@@ -27,10 +25,10 @@ impl TransferInFinish {
         env: &Env,
     ) -> ContractResult<Response> {
         let received =
-            transfer_in::check_received(&self.payment_lpn, &env.contract.address, querier)?;
+            transfer_in::check_received(&self.lease.lease.amount, &env.contract.address, querier)?;
 
         if received {
-            Active::try_repay_lpn(self.lease, self.payment_lpn, querier, env)
+            Closed::default().enter_state(self.lease.lease, env, querier)
         } else {
             let emitter = self.emit_ok();
             let batch =
@@ -44,20 +42,15 @@ impl TransferInFinish {
     }
 
     fn emit_ok(&self) -> Emitter {
-        Emitter::of_type(Type::RepaymentTransferIn)
+        Emitter::of_type(Type::ClosingTransferIn)
             .emit("id", self.lease.lease.addr.clone())
-            .emit_coin_dto("payment", self.payment.clone())
-            .emit_coin_dto("payment-stable", self.payment_lpn.clone())
+            .emit_coin_dto("payment", self.lease.lease.amount.clone())
     }
 }
 
 impl From<TransferInInit> for TransferInFinish {
     fn from(init: TransferInInit) -> Self {
-        Self {
-            lease: init.lease,
-            payment: init.payment,
-            payment_lpn: init.payment_lpn,
-        }
+        Self { lease: init.lease }
     }
 }
 
@@ -76,13 +69,10 @@ impl Controller for TransferInFinish {
         }
     }
 
-    fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
-        repay::query(
-            self.lease.lease,
-            self.payment,
-            RepayTrx::TransferInFinish,
-            &deps,
-            &env,
-        )
+    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+        Ok(StateResponse::Paid {
+            amount: self.lease.lease.amount,
+            in_progress: Some(ClosingTrx::TransferInFinish),
+        })
     }
 }

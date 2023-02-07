@@ -102,6 +102,7 @@ pub mod paid {
     #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
     #[serde(rename_all = "snake_case")]
     pub enum ClosingTrx {
-        TransferIn,
+        TransferInInit,
+        TransferInFinish,
     }
 }

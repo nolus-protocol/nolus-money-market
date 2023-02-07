@@ -1,19 +1,19 @@
 use cosmwasm_std::{Deps, DepsMut, Env, QuerierWrapper, Timestamp};
-use platform::batch::{Batch, Emit, Emitter};
+use platform::batch::Batch;
 use sdk::neutron_sdk::sudo::msg::SudoMsg;
 use serde::{Deserialize, Serialize};
 
 use crate::api::paid::ClosingTrx;
 use crate::api::{StateQuery, StateResponse};
-use crate::contract::state::closed::Closed;
 use crate::contract::state::{Controller, Response};
 use crate::contract::Lease;
 use crate::error::ContractResult;
-use crate::event::Type;
+
+use super::transfer_in_finish::TransferInFinish;
 
 #[derive(Serialize, Deserialize)]
 pub struct TransferInInit {
-    lease: Lease,
+    pub(super) lease: Lease,
 }
 
 impl TransferInInit {
@@ -28,13 +28,7 @@ impl TransferInInit {
     }
 
     fn on_response(self, env: &Env, querier: &QuerierWrapper) -> ContractResult<Response> {
-        let next_state = Closed::default();
-        let batch = next_state.enter_state(self.lease.lease, env, querier)?;
-        let emitter = Emitter::of_type(Type::Closed)
-            .emit("id", env.contract.address.clone())
-            .emit_tx_info(env);
-
-        Ok(Response::from(batch.into_response(emitter), next_state))
+        TransferInFinish::from(self).try_complete(querier, env)
     }
 }
 
@@ -57,7 +51,7 @@ impl Controller for TransferInInit {
     fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         Ok(StateResponse::Paid {
             amount: self.lease.lease.amount,
-            in_progress: Some(ClosingTrx::TransferIn),
+            in_progress: Some(ClosingTrx::TransferInInit),
         })
     }
 }
