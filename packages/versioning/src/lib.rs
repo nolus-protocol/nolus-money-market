@@ -17,7 +17,7 @@ pub struct SemVer {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub struct VersionPair {
+pub struct Version {
     storage: VersionSegment,
     software: SemVer,
 }
@@ -32,10 +32,13 @@ pub fn parse_semver(version: &str) -> SemVer {
         I: Iterator<Item = &'r str> + ?Sized,
     {
         iter.next()
-            .unwrap_or_else(|| panic!("No {lowercase_name} segment in version string!"))
+            .unwrap_or_else(|| panic!("No {} segment in version string!", lowercase_name))
             .parse()
             .unwrap_or_else(|_| {
-                panic!("{pascal_case_name} segment in version string is not a number!")
+                panic!(
+                    "{} segment in version string is not a number!",
+                    pascal_case_name
+                )
             })
     }
 
@@ -66,15 +69,15 @@ macro_rules! package_version {
     }};
 }
 
-const VERSION_PAIR_ITEM: Item<'static, VersionPair> = Item::new("contract_version_pair");
+const VERSION_ITEM: Item<'static, Version> = Item::new("contract_version");
 
 pub fn initialize<const STORAGE_VERSION: VersionSegment>(
     storage: &mut dyn Storage,
     component_version: SemVer,
 ) -> StdResult<()> {
-    VERSION_PAIR_ITEM.save(
+    VERSION_ITEM.save(
         storage,
-        &VersionPair {
+        &Version {
             storage: STORAGE_VERSION,
             software: component_version,
         },
@@ -96,7 +99,7 @@ where
     MigrateStorageFunctor: FnOnce(&'r mut dyn Storage) -> Result<(), MigrateStorageError>,
     MigrateStorageError: From<StdError> + Error,
 {
-    pub const CW_VERSION_ITEM: Item<'static, u16> = Item::new("contract_info");
+    pub const CW_VERSION_ITEM: Item<'static, String> = Item::new("contract_info");
 
     pub const OLD_VERSION_ITEM: Item<'static, u16> = Item::new("contract_version");
 
@@ -121,7 +124,7 @@ pub fn update_software<const CURRENT_STORAGE_VERSION: VersionSegment>(
     storage: &mut dyn Storage,
     component_version: SemVer,
 ) -> StdResult<()> {
-    VERSION_PAIR_ITEM.update(storage, |mut version_pair| {
+    VERSION_ITEM.update(storage, |mut version_pair| {
         if version_pair.storage != CURRENT_STORAGE_VERSION {
             return Err(StdError::generic_err(format!("Software update handler called, but storage versions differ! Saved storage version is {saved}, but storage version used by this software is {current}!", saved = version_pair.storage, current = CURRENT_STORAGE_VERSION)));
         }
@@ -163,7 +166,7 @@ where
         return Err(StdError::generic_err("Expected and new storage versions are not directly adjacent! This could indicate an error!").into());
     }
 
-    VERSION_PAIR_ITEM.update(storage, |version_pair| {
+    VERSION_ITEM.update(storage, |version_pair| {
         if version_pair.storage != FROM_STORAGE_VERSION {
             return Err(StdError::generic_err(
                 "Couldn't upgrade contract because saved storage version didn't match expected one!",
@@ -171,7 +174,7 @@ where
         }
 
         if version_pair.software < component_version {
-            Ok(VersionPair{storage: NEW_STORAGE_VERSION, software: component_version})
+            Ok(Version {storage: NEW_STORAGE_VERSION, software: component_version})
         } else {
             Err(StdError::generic_err(
                 "Couldn't upgrade contract because software version isn't monotonically increasing!",
