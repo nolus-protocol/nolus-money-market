@@ -8,7 +8,7 @@ use sdk::{
         ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Timestamp,
     },
 };
-use versioning::{package_version, Version};
+use versioning::{package_version, VersionSegment};
 
 use crate::{
     error::ContractError,
@@ -17,8 +17,9 @@ use crate::{
     state::config::Config,
 };
 
-const CONTRACT_STORAGE_VERSION_FROM: Version = 0;
-const CONTRACT_STORAGE_VERSION: Version = 0;
+// version info for migration info
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -56,12 +57,11 @@ pub struct MigrateMsg {}
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    versioning::upgrade_old_contract::<0, CONTRACT_STORAGE_VERSION_FROM, CONTRACT_STORAGE_VERSION>(
+    versioning::upgrade_old_contract::<0, fn(_) -> _, ContractError>(
         deps.storage,
         package_version!(),
+        None,
     )?;
-
-    sdk::cw_storage_plus::Item::<String>::new("contract_info").remove(deps.storage);
 
     Ok(Response::default())
 }

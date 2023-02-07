@@ -7,7 +7,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
-use versioning::{package_version, Version};
+use versioning::{package_version, VersionSegment};
 
 use crate::{
     error::ContractError,
@@ -30,8 +30,9 @@ mod feed;
 mod feeder;
 pub mod query;
 
-const CONTRACT_STORAGE_VERSION_FROM: Version = 0;
-const CONTRACT_STORAGE_VERSION: Version = 0;
+// version info for migration info
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 struct InstantiateWithCurrency<'a> {
     deps: DepsMut<'a>,
@@ -91,7 +92,7 @@ pub struct MigrateMsg {
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
-    use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
+    use sdk::cosmwasm_std::Storage;
     use swap::SwapTarget;
     use tree::HumanReadableTree;
 
@@ -113,17 +114,16 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
         }
     }
 
-    versioning::upgrade_old_contract::<0, CONTRACT_STORAGE_VERSION_FROM, CONTRACT_STORAGE_VERSION>(
+    versioning::upgrade_old_contract::<0, _, ContractError>(
         deps.storage,
         package_version!(),
+        Some(|storage: &mut _| {
+            visit_any_on_ticker::<Lpns, _>(
+                &Config::load(storage)?.base_asset,
+                UpdateTree(msg.tree, storage),
+            )
+        }),
     )?;
-
-    visit_any_on_ticker::<Lpns, _>(
-        &Config::load(deps.storage)?.base_asset,
-        UpdateTree(msg.tree, deps.storage),
-    )?;
-
-    Item::<String>::new("contract_info").remove(deps.storage);
 
     Ok(Response::default())
 }

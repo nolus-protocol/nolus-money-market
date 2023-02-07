@@ -7,10 +7,9 @@ use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Curre
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
-    cw_storage_plus::Item,
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdError},
 };
-use versioning::{package_version, Version};
+use versioning::{package_version, VersionSegment};
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -24,8 +23,9 @@ mod config;
 mod lender;
 mod rewards;
 
-const CONTRACT_STORAGE_VERSION_FROM: Version = 0;
-const CONTRACT_STORAGE_VERSION: Version = 0;
+// version info for migration info
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
@@ -93,18 +93,17 @@ pub fn instantiate(
 pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
     deps.api.addr_validate(msg.lease_code_admin.as_str())?;
 
-    versioning::upgrade_old_contract::<1, CONTRACT_STORAGE_VERSION_FROM, CONTRACT_STORAGE_VERSION>(
+    versioning::upgrade_old_contract::<1, _, StdError>(
         deps.storage,
         package_version!(),
+        Some(|storage| {
+            SingleUserAccess::new(
+                crate::access_control::LEASE_CODE_ADMIN_KEY,
+                msg.lease_code_admin,
+            )
+            .store(storage)
+        }),
     )?;
-
-    Item::<bool>::new("contract_info").remove(deps.storage);
-
-    SingleUserAccess::new(
-        crate::access_control::LEASE_CODE_ADMIN_KEY,
-        msg.lease_code_admin,
-    )
-    .store(deps.storage)?;
 
     Ok(Response::default())
 }

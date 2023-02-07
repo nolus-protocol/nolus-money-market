@@ -1,114 +1,183 @@
+use std::error::Error;
+
+use serde::{Deserialize, Serialize};
+
 use sdk::{
     cosmwasm_std::{StdError, StdResult, Storage},
     cw_storage_plus::Item,
 };
 
-pub type Version = u16;
+pub type VersionSegment = u16;
 
-pub type SemVer = (Version, Version, Version);
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
+pub struct SemVer {
+    major: VersionSegment,
+    minor: VersionSegment,
+    patch: VersionSegment,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct VersionPair {
+    storage: VersionSegment,
+    software: SemVer,
+}
+
+pub fn parse_semver(version: &str) -> SemVer {
+    fn parse_segment<'r, I>(
+        iter: &mut I,
+        lowercase_name: &str,
+        pascal_case_name: &str,
+    ) -> VersionSegment
+    where
+        I: Iterator<Item = &'r str> + ?Sized,
+    {
+        iter.next()
+            .unwrap_or_else(|| panic!("No {lowercase_name} segment in version string!"))
+            .parse()
+            .unwrap_or_else(|_| {
+                panic!("{pascal_case_name} segment in version string is not a number!")
+            })
+    }
+
+    let mut iter = version.split('.');
+
+    let major: VersionSegment = parse_segment(&mut iter, "major", "Major");
+    let minor: VersionSegment = parse_segment(&mut iter, "minor", "Minor");
+    let patch: VersionSegment = parse_segment(&mut iter, "patch", "Patch");
+
+    if iter.next().is_some() {
+        panic!("Unexpected fourth segment found in version string!");
+    };
+
+    SemVer {
+        major,
+        minor,
+        patch,
+    }
+}
 
 #[macro_export]
 macro_rules! package_version {
     () => {{
-        fn package_version() -> $crate::SemVer {
-            const VERSION: &str = ::core::env!("CARGO_PKG_VERSION");
-
-            let mut iter = VERSION.split('.');
-
-            let major: $crate::Version = iter
-                .next()
-                .expect("No major segment in version string!")
-                .parse()
-                .expect("Major segment in version string is not a number!");
-            let minor: $crate::Version = iter
-                .next()
-                .expect("No minor segment in version string!")
-                .parse()
-                .expect("Minor segment in version string is not a number!");
-            let patch: $crate::Version = iter
-                .next()
-                .expect("No patch segment in version string!")
-                .parse()
-                .expect("Patch segment in version string is not a number!");
-
-            if iter.next().is_some() {
-                ::core::panic!("Unexpected fourth segment found in version string!");
-            };
-
-            (major, minor, patch)
-        }
-
-        package_version()
+        $crate::parse_semver(::core::env!(
+            "CARGO_PKG_VERSION",
+            "Cargo package version is not set as an environment variable!",
+        ))
     }};
 }
 
-pub const COMPONENT_VERSION_ITEM: Item<'static, SemVer> = Item::new("contract_software_version");
+const VERSION_PAIR_ITEM: Item<'static, VersionPair> = Item::new("contract_version_pair");
 
-pub const STORAGE_VERSION_ITEM: Item<'static, Version> = Item::new("contract_storage_version");
-
-pub fn initialize<const STORAGE_VERSION: Version>(
+pub fn initialize<const STORAGE_VERSION: VersionSegment>(
     storage: &mut dyn Storage,
     component_version: SemVer,
 ) -> StdResult<()> {
-    COMPONENT_VERSION_ITEM.save(storage, &component_version)?;
-
-    STORAGE_VERSION_ITEM.save(storage, &STORAGE_VERSION)
+    VERSION_PAIR_ITEM.save(
+        storage,
+        &VersionPair {
+            storage: STORAGE_VERSION,
+            software: component_version,
+        },
+    )
 }
 
 // TODO remove when all contracts have been migrated to post-refactor versions
 pub fn upgrade_old_contract<
-    const OLD_COMPATIBILITY_VERSION: Version,
-    const FROM_STORAGE_VERSION: Version,
-    const NEW_STORAGE_VERSION: Version,
+    'r,
+    const OLD_COMPATIBILITY_VERSION: VersionSegment,
+    MigrateStorageFunctor,
+    MigrateStorageError,
 >(
+    storage: &'r mut dyn Storage,
+    component_version: SemVer,
+    migrate_storage_functor: Option<MigrateStorageFunctor>,
+) -> Result<(), MigrateStorageError>
+where
+    MigrateStorageFunctor: FnOnce(&'r mut dyn Storage) -> Result<(), MigrateStorageError>,
+    MigrateStorageError: From<StdError> + Error,
+{
+    pub const CW_VERSION_ITEM: Item<'static, u16> = Item::new("contract_info");
+
+    pub const OLD_VERSION_ITEM: Item<'static, u16> = Item::new("contract_version");
+
+    if OLD_VERSION_ITEM.load(storage)? != OLD_COMPATIBILITY_VERSION {
+        return Err(StdError::generic_err(
+            "Couldn't upgrade contract because storage version didn't match expected one!",
+        )
+        .into());
+    }
+
+    CW_VERSION_ITEM.remove(storage);
+
+    OLD_VERSION_ITEM.remove(storage);
+
+    // Using zero as a starting storage version to mark this as a new epoch.
+    initialize::<0>(storage, component_version)?;
+
+    migrate_storage_functor.map_or(Ok(()), move |functor| functor(storage))
+}
+
+pub fn update_software<const CURRENT_STORAGE_VERSION: VersionSegment>(
     storage: &mut dyn Storage,
     component_version: SemVer,
 ) -> StdResult<()> {
-    pub const OLD_VERSION_ITEM: Item<'static, u16> = Item::new("contract_version");
+    VERSION_PAIR_ITEM.update(storage, |mut version_pair| {
+        if version_pair.storage != CURRENT_STORAGE_VERSION {
+            return Err(StdError::generic_err(format!("Software update handler called, but storage versions differ! Saved storage version is {saved}, but storage version used by this software is {current}!", saved = version_pair.storage, current = CURRENT_STORAGE_VERSION)));
+        }
 
-    if let Some(version) = OLD_VERSION_ITEM
-        .may_load(storage)?
-        .or((OLD_COMPATIBILITY_VERSION == 0).then_some(0))
-    {
-        if version != OLD_COMPATIBILITY_VERSION {
+        if version_pair.software < component_version {
+            version_pair.software = component_version;
+
+            Ok(version_pair)
+        } else {
+            Err(StdError::generic_err(
+                "Couldn't upgrade contract because version isn't monotonically increasing!",
+            ))
+        }
+    })?;
+
+    Ok(())
+}
+
+pub fn update_software_and_storage<
+    'r,
+    const FROM_STORAGE_VERSION: VersionSegment,
+    const NEW_STORAGE_VERSION: VersionSegment,
+    MigrateStorageFunctor,
+    MigrateStorageError,
+>(
+    storage: &'r mut dyn Storage,
+    component_version: SemVer,
+    migrate_storage: MigrateStorageFunctor,
+) -> Result<(), MigrateStorageError>
+where
+    MigrateStorageFunctor: FnOnce(&'r mut dyn Storage) -> Result<(), MigrateStorageError>,
+    MigrateStorageError: From<StdError> + Error,
+{
+    if FROM_STORAGE_VERSION == NEW_STORAGE_VERSION {
+        return Err(StdError::generic_err("Software and storage update handler called, but expected and new storage versions are the same!").into());
+    }
+
+    if FROM_STORAGE_VERSION.wrapping_add(1) != NEW_STORAGE_VERSION {
+        return Err(StdError::generic_err("Expected and new storage versions are not directly adjacent! This could indicate an error!").into());
+    }
+
+    VERSION_PAIR_ITEM.update(storage, |version_pair| {
+        if version_pair.storage != FROM_STORAGE_VERSION {
             return Err(StdError::generic_err(
-                "Couldn't upgrade contract because storage version didn't match expected one!",
+                "Couldn't upgrade contract because saved storage version didn't match expected one!",
             ));
         }
 
-        OLD_VERSION_ITEM.remove(storage);
+        if version_pair.software < component_version {
+            Ok(VersionPair{storage: NEW_STORAGE_VERSION, software: component_version})
+        } else {
+            Err(StdError::generic_err(
+                "Couldn't upgrade contract because software version isn't monotonically increasing!",
+            ))
+        }
+    })?;
 
-        return initialize::<NEW_STORAGE_VERSION>(storage, component_version);
-    }
-
-    upgrade_contract::<FROM_STORAGE_VERSION, NEW_STORAGE_VERSION>(storage, component_version)
-}
-
-pub fn upgrade_contract<const FROM_STORAGE_VERSION: Version, const NEW_STORAGE_VERSION: Version>(
-    storage: &mut dyn Storage,
-    component_version: SemVer,
-) -> StdResult<()> {
-    STORAGE_VERSION_ITEM
-        .update(storage, |version| {
-            if version == FROM_STORAGE_VERSION {
-                Ok(NEW_STORAGE_VERSION)
-            } else {
-                Err(StdError::generic_err(
-                    "Couldn't upgrade contract because storage version didn't match expected one!",
-                ))
-            }
-        })
-        .map(|_| ())?;
-
-    COMPONENT_VERSION_ITEM
-        .update(storage, |version| {
-            if version < component_version {
-                Ok(component_version)
-            } else {
-                Err(StdError::generic_err(
-                    "Couldn't upgrade contract because version isn't monotonically increasing!",
-                ))
-            }
-        })
-        .map(|_| ())
+    migrate_storage(storage)
 }
