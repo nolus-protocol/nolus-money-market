@@ -4,7 +4,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, SubMsgResult},
 };
-use versioning::{package_version, VersionSegment};
+use versioning::{version, VersionSegment};
 
 use crate::{
     alarms::TimeAlarms,
@@ -23,7 +23,7 @@ pub fn instantiate(
     _info: MessageInfo,
     _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    versioning::initialize::<CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
+    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     Ok(Response::default())
 }
@@ -35,7 +35,7 @@ pub struct MigrateMsg {}
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::upgrade_old_contract::<0, fn(_) -> _, ContractError>(
         deps.storage,
-        package_version!(),
+        version!(CONTRACT_STORAGE_VERSION),
         None,
     )?;
 

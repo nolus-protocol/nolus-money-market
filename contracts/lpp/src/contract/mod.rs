@@ -9,7 +9,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdError},
 };
-use versioning::{package_version, VersionSegment};
+use versioning::{version, VersionSegment};
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -39,7 +39,7 @@ impl<'a> InstantiateWithLpn<'a> {
     where
         LPN: 'static + Currency + Serialize + DeserializeOwned,
     {
-        versioning::initialize::<CONTRACT_STORAGE_VERSION>(self.deps.storage, package_version!())?;
+        versioning::initialize(self.deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
         SingleUserAccess::new_contract_owner(self.info.sender).store(self.deps.storage)?;
         SingleUserAccess::new(
@@ -95,7 +95,7 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> ContractResult<Resp
 
     versioning::upgrade_old_contract::<1, _, StdError>(
         deps.storage,
-        package_version!(),
+        version!(CONTRACT_STORAGE_VERSION),
         Some(|storage| {
             SingleUserAccess::new(
                 crate::access_control::LEASE_CODE_ADMIN_KEY,

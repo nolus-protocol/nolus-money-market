@@ -7,7 +7,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
-use versioning::{package_version, VersionSegment};
+use versioning::{version, VersionSegment};
 
 use crate::{
     error::ContractError,
@@ -78,7 +78,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    versioning::initialize::<CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
+    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     InstantiateWithCurrency::cmd(deps, msg, info.sender)?;
 
@@ -116,7 +116,7 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 
     versioning::upgrade_old_contract::<0, _, ContractError>(
         deps.storage,
-        package_version!(),
+        version!(CONTRACT_STORAGE_VERSION),
         Some(|storage: &mut _| {
             visit_any_on_ticker::<Lpns, _>(
                 &Config::load(storage)?.base_asset,

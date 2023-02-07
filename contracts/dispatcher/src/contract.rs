@@ -12,7 +12,7 @@ use sdk::{
         ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Storage, Timestamp,
     },
 };
-use versioning::{package_version, VersionSegment};
+use versioning::{version, VersionSegment};
 
 use crate::{
     cmd::Dispatch,
@@ -33,7 +33,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    versioning::initialize::<CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
+    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     platform::contract::validate_addr(&deps.querier, &msg.lpp)?;
     platform::contract::validate_addr(&deps.querier, &msg.oracle)?;
@@ -79,7 +79,7 @@ pub struct MigrateMsg {}
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::upgrade_old_contract::<0, fn(_) -> _, ContractError>(
         deps.storage,
-        package_version!(),
+        version!(CONTRACT_STORAGE_VERSION),
         None,
     )?;
 

@@ -8,7 +8,7 @@ use sdk::{
         ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Timestamp,
     },
 };
-use versioning::{package_version, VersionSegment};
+use versioning::{version, VersionSegment};
 
 use crate::{
     error::ContractError,
@@ -31,7 +31,7 @@ pub fn instantiate(
     platform::contract::validate_addr(&deps.querier, &msg.treasury)?;
     platform::contract::validate_addr(&deps.querier, &msg.timealarms)?;
 
-    versioning::initialize::<CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
+    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
     SingleUserAccess::new(
@@ -59,7 +59,7 @@ pub struct MigrateMsg {}
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::upgrade_old_contract::<0, fn(_) -> _, ContractError>(
         deps.storage,
-        package_version!(),
+        version!(CONTRACT_STORAGE_VERSION),
         None,
     )?;
 

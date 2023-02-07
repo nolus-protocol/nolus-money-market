@@ -9,7 +9,7 @@ use sdk::{
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
     neutron_sdk::sudo::msg::SudoMsg,
 };
-use versioning::{package_version, VersionSegment};
+use versioning::{version, VersionSegment};
 
 use crate::{
     api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
@@ -45,7 +45,7 @@ pub fn instantiate(
     platform::contract::validate_addr(&deps.querier, &new_lease.form.loan.lpp)?;
     platform::contract::validate_addr(&deps.querier, &new_lease.form.loan.profit)?;
 
-    versioning::initialize::<CONTRACT_STORAGE_VERSION>(deps.storage, package_version!())?;
+    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     let (batch, next_state) = RequestLoan::new(&mut deps, info, new_lease)?;
     impl_::save(deps.storage, &next_state.into())?;
@@ -56,7 +56,7 @@ pub fn instantiate(
 pub fn migrate(deps: DepsMut, env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::upgrade_old_contract::<1, _, _>(
         deps.storage,
-        package_version!(),
+        version!(CONTRACT_STORAGE_VERSION),
         Some(|storage: &mut _| {
             let migrated_contract =
                 impl_::load_v0(storage)?.into_last_version(env.contract.address);
