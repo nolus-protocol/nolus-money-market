@@ -81,7 +81,8 @@ pub mod opened {
     pub enum RepayTrx {
         TransferOut,
         Swap,
-        TransferIn,
+        TransferInInit,
+        TransferInFinish,
     }
 
     #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]

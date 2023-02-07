@@ -5,16 +5,17 @@ use serde::{Deserialize, Serialize};
 
 use crate::api::opened::RepayTrx;
 use crate::api::{LpnCoin, PaymentCoin, StateQuery, StateResponse};
-use crate::contract::state::opened::active::Active;
 use crate::contract::state::{opened::repay, Controller, Response};
 use crate::contract::Lease;
 use crate::error::ContractResult;
 
+use super::transfer_in_finish::TransferInFinish;
+
 #[derive(Serialize, Deserialize)]
 pub struct TransferInInit {
-    lease: Lease,
-    payment: PaymentCoin,
-    payment_lpn: LpnCoin,
+    pub(super) lease: Lease,
+    pub(super) payment: PaymentCoin,
+    pub(super) payment_lpn: LpnCoin,
 }
 
 impl TransferInInit {
@@ -40,7 +41,7 @@ impl TransferInInit {
     }
 
     fn on_response(self, querier: &QuerierWrapper, env: &Env) -> ContractResult<Response> {
-        Active::try_repay_lpn(self.lease, self.payment_lpn, querier, env)
+        TransferInFinish::from(self).try_complete(querier, env)
     }
 }
 
@@ -64,7 +65,7 @@ impl Controller for TransferInInit {
         repay::query(
             self.lease.lease,
             self.payment,
-            RepayTrx::TransferIn,
+            RepayTrx::TransferInInit,
             &deps,
             &env,
         )

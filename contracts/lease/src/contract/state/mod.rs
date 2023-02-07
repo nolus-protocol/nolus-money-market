@@ -29,6 +29,7 @@ type OpeningTransferOut = opening::transfer_out::TransferOut;
 type OpenedActive = opened::active::Active;
 type RepaymentTransferOut = opened::repay::transfer_out::TransferOut;
 type RepaymentTransferInInit = opened::repay::transfer_in_init::TransferInInit;
+type RepaymentTransferInFinish = opened::repay::transfer_in_finish::TransferInFinish;
 type PaidActive = paid::Active;
 type ClosingTransferInInit = paid::transfer_in_init::TransferInInit;
 
@@ -43,6 +44,7 @@ pub enum State {
     RepaymentTransferOut,
     BuyLpn,
     RepaymentTransferInInit,
+    RepaymentTransferInFinish,
     PaidActive,
     ClosingTransferInInit,
     Closed,

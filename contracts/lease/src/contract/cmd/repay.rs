@@ -60,7 +60,7 @@ impl<'a> WithLease for Repay<'a> {
 
         let emitter = Emitter::of_type(Type::PaidActive)
             .emit_tx_info(self.env)
-            .emit("to", self.env.contract.address.clone())
+            .emit("to", lease.addr.clone())
             .emit_currency::<_, Lpn>("payment-symbol")
             .emit_coin_amount("payment-amount", payment)
             .emit_to_string_value("loan-close", receipt.close())
