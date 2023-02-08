@@ -56,6 +56,18 @@ impl Account {
         })
     }
 
+    pub(crate) fn new_migrated(
+        owner: Addr,
+        dex_account: HostAccount,
+        dex: ConnectionParams,
+    ) -> Account {
+        Self {
+            owner,
+            dex_account,
+            dex,
+        }
+    }
+
     pub fn transfer_to(&self, now: Timestamp) -> TransferOutTrx {
         TransferOutTrx::new(
             &self.dex.transfer_channel.local_endpoint,
