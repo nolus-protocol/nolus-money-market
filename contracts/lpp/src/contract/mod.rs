@@ -78,7 +78,7 @@ impl<'a> AnyVisitor for InstantiateWithLpn<'a> {
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -90,7 +90,7 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
     deps.api.addr_validate(msg.lease_code_admin.as_str())?;
 
     versioning::upgrade_old_contract::<1, _, StdError>(
@@ -172,7 +172,7 @@ impl<'a> AnyVisitor for ExecuteWithLpn<'a> {
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -258,7 +258,7 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::Config() => to_binary(&config::query_config(&deps)?)?,
         QueryMsg::Balance { address } => to_binary(&lender::query_balance(deps.storage, address)?)?,

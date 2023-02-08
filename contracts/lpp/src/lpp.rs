@@ -1,6 +1,17 @@
-use cosmwasm_std::QuerierWrapper;
 use serde::{de::DeserializeOwned, Serialize};
 
+use sdk::{
+    cosmwasm_std::{
+        QuerierWrapper,
+        Addr,
+        Deps,
+        DepsMut,
+        Env,
+        StdResult,
+        Storage,
+        Timestamp
+    }
+};
 use finance::{
     coin::Coin,
     currency::Currency,
@@ -11,7 +22,6 @@ use platform::{
     bank::{self},
     contract,
 };
-use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, StdResult, Storage, Timestamp};
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -81,14 +91,14 @@ where
     pub fn balance(
         &self,
         account: &Addr,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
     ) -> Result<Coin<LPN>, ContractError> {
         let balance = bank::balance(account, querier)?;
 
         Ok(balance)
     }
 
-    pub fn total_lpn(&self, deps: &Deps, env: &Env) -> Result<Coin<LPN>, ContractError> {
+    pub fn total_lpn(&self, deps: &Deps<'_>, env: &Env) -> Result<Coin<LPN>, ContractError> {
         let res = self.balance(&env.contract.address, &deps.querier)?
             + self.total.total_principal_due()
             + self.total.total_interest_due_by_now(env.block.time);
@@ -98,7 +108,7 @@ where
 
     pub fn query_lpp_balance(
         &self,
-        deps: &Deps,
+        deps: &Deps<'_>,
         env: &Env,
     ) -> Result<LppBalanceResponse<LPN>, ContractError> {
         let balance = self.balance(&env.contract.address, &deps.querier)?;
@@ -119,7 +129,7 @@ where
 
     pub fn calculate_price(
         &self,
-        deps: &Deps,
+        deps: &Deps<'_>,
         env: &Env,
         received: Coin<LPN>,
     ) -> Result<NTokenPrice<LPN>, ContractError> {
@@ -139,14 +149,18 @@ where
         Ok(NTokenPrice { price })
     }
 
-    pub fn validate_lease_addr(&self, deps: &Deps, lease_addr: &Addr) -> Result<(), ContractError> {
+    pub fn validate_lease_addr(
+        &self,
+        deps: &Deps<'_>,
+        lease_addr: &Addr,
+    ) -> Result<(), ContractError> {
         contract::validate_code_id(&deps.querier, lease_addr, self.config.lease_code_id().u64())
             .map_err(ContractError::from)
     }
 
     pub fn withdraw_lpn(
         &self,
-        deps: &Deps,
+        deps: &Deps<'_>,
         env: &Env,
         amount_nlpn: Coin<NLpn>,
     ) -> Result<Coin<LPN>, ContractError> {
@@ -164,7 +178,7 @@ where
         &self,
         quote: Coin<LPN>,
         account: &Addr,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
         now: Timestamp,
     ) -> Result<Option<Percent>, ContractError> {
         let balance = self.balance(account, querier)?;
@@ -186,7 +200,7 @@ where
 
     pub fn try_open_loan(
         &mut self,
-        deps: &mut DepsMut,
+        deps: &mut DepsMut<'_>,
         env: &Env,
         lease_addr: Addr,
         amount: Coin<LPN>,
@@ -221,7 +235,7 @@ where
     /// return amount of lpp currency to pay back to lease_addr
     pub fn try_repay_loan(
         &mut self,
-        deps: &mut DepsMut,
+        deps: &mut DepsMut<'_>,
         env: &Env,
         lease_addr: Addr,
         repay_amount: Coin<LPN>,

@@ -7,12 +7,16 @@ use finance::{
     currency::{Currency, SymbolOwned},
     price::{self, Price},
 };
-use sdk::cosmwasm_std::StdError;
 use sdk::{
-    cosmwasm_std::{Addr, Order, Storage},
+    cosmwasm_std::{
+        StdError,
+        Addr,
+        Order,
+        Storage
+    },
     cw_storage_plus::{
         Bound, Index, IndexList, IndexedMap, IntKey, Key, MultiIndex, Prefixer, PrimaryKey,
-    },
+    }
 };
 use swap::SwapGroup;
 
@@ -63,7 +67,7 @@ impl<'a> PrimaryKey<'a> for AlarmStore {
     type SubPrefix = ();
     type SuperSuffix = (SymbolOwned, Amount);
 
-    fn key(&self) -> Vec<sdk::cw_storage_plus::Key> {
+    fn key(&self) -> Vec<Key<'_>> {
         vec![
             Key::Ref(self.0.ticker().as_bytes()),
             Key::Val128(self.0.amount().to_cw_bytes()),
@@ -72,7 +76,7 @@ impl<'a> PrimaryKey<'a> for AlarmStore {
 }
 
 impl<'a> Prefixer<'a> for AlarmStore {
-    fn prefix(&self) -> Vec<Key> {
+    fn prefix(&self) -> Vec<Key<'_>> {
         self.key()
     }
 }
@@ -154,7 +158,7 @@ impl<'m> PriceAlarms<'m> {
         )
     }
 
-    fn alarms_below(&self) -> IndexedMap<Addr, AlarmStore, AlarmsIndexes> {
+    fn alarms_below(&self) -> IndexedMap<'_, Addr, AlarmStore, AlarmsIndexes<'_>> {
         let indexes = AlarmsIndexes(MultiIndex::new(
             |_, price| price.to_owned(),
             self.alarms_below_namespace,
@@ -163,7 +167,7 @@ impl<'m> PriceAlarms<'m> {
         IndexedMap::new(self.alarms_below_namespace, indexes)
     }
 
-    fn alarms_above(&self) -> IndexedMap<Addr, AlarmStore, AlarmsIndexes> {
+    fn alarms_above(&self) -> IndexedMap<'_, Addr, AlarmStore, AlarmsIndexes<'_>> {
         let indexes = AlarmsIndexes(MultiIndex::new(
             |_, price| price.to_owned(),
             self.alarms_above_namespace,

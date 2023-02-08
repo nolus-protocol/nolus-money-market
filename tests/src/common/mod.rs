@@ -93,7 +93,7 @@ struct MockResponse {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 struct MockQueryMsg {}
 
-fn mock_query(_deps: Deps, _env: Env, _msg: MockQueryMsg) -> StdResult<Binary> {
+fn mock_query(_deps: Deps<'_>, _env: Env, _msg: MockQueryMsg) -> StdResult<Binary> {
     to_binary(&MockResponse {})
 }
 

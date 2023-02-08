@@ -1,13 +1,25 @@
-use cosmwasm_std::{Deps, DepsMut, Env, QuerierWrapper, Timestamp};
-use platform::batch::Batch;
-use sdk::neutron_sdk::sudo::msg::SudoMsg;
 use serde::{Deserialize, Serialize};
 
-use crate::api::opened::RepayTrx;
-use crate::api::{LpnCoin, PaymentCoin, StateQuery, StateResponse};
-use crate::contract::state::{opened::repay, Controller, Response};
-use crate::contract::Lease;
-use crate::error::ContractResult;
+use platform::batch::Batch;
+use sdk::{
+    cosmwasm_std::{Deps, DepsMut, Env, QuerierWrapper, Timestamp},
+    neutron_sdk::sudo::msg::SudoMsg,
+};
+
+use crate::{
+    api::{
+        LpnCoin,
+        opened::RepayTrx,
+        PaymentCoin,
+        StateQuery,
+        StateResponse,
+    },
+    contract::{
+        Lease,
+        state::{Controller, opened::repay, Response},
+    },
+    error::ContractResult,
+};
 
 use super::transfer_in_finish::TransferInFinish;
 
@@ -40,13 +52,13 @@ impl TransferInInit {
         Ok(sender.into())
     }
 
-    fn on_response(self, querier: &QuerierWrapper, env: &Env) -> ContractResult<Response> {
+    fn on_response(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
         TransferInFinish::from(self).try_complete(querier, env)
     }
 }
 
 impl Controller for TransferInInit {
-    fn sudo(self, deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
+    fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response {
                 request: _,
@@ -61,7 +73,7 @@ impl Controller for TransferInInit {
         }
     }
 
-    fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn query(self, deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         repay::query(
             self.lease.lease,
             self.payment,

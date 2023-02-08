@@ -1,4 +1,4 @@
-use cosmwasm_std::{Deps, Env};
+use sdk::cosmwasm_std::{Deps, Env};
 
 use crate::{
     api::{opened::OngoingTrx, StateResponse},
@@ -13,7 +13,7 @@ pub mod repay;
 fn query(
     lease: LeaseDTO,
     in_progress: Option<OngoingTrx>,
-    deps: &Deps,
+    deps: &Deps<'_>,
     env: &Env,
 ) -> ContractResult<StateResponse> {
     // TODO think on taking benefit from having a LppView trait

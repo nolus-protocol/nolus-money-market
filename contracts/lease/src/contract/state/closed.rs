@@ -1,9 +1,10 @@
-use cosmwasm_std::{Deps, Env, QuerierWrapper};
+use serde::{Deserialize, Serialize};
+
+use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper};
 use platform::{
     bank,
     batch::{Emit, Emitter},
 };
-use serde::{Deserialize, Serialize};
 
 use crate::{
     api::{StateQuery, StateResponse},
@@ -23,7 +24,7 @@ impl Closed {
         self,
         lease: LeaseDTO,
         env: &Env,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
     ) -> ContractResult<Response> {
         let lease_account = bank::account(&env.contract.address, querier);
         let IntoDTOResult { lease: _, batch } =
@@ -41,7 +42,7 @@ impl Closed {
 }
 
 impl Controller for Closed {
-    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         Ok(StateResponse::Closed())
     }
 }

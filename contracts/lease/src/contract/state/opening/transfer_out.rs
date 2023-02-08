@@ -1,7 +1,9 @@
-use cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Timestamp};
-use sdk::neutron_sdk::sudo::msg::SudoMsg;
 use serde::{Deserialize, Serialize};
 
+use sdk::{
+    cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Timestamp},
+    neutron_sdk::sudo::msg::SudoMsg
+};
 use finance::zero::Zero;
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
@@ -67,7 +69,7 @@ impl TransferOut {
             .emit_coin_dto("downpayment", self.downpayment.clone())
     }
 
-    fn on_response(self, contract: Addr, querier: &QuerierWrapper) -> ContractResult<Response> {
+    fn on_response(self, contract: Addr, querier: &QuerierWrapper<'_>) -> ContractResult<Response> {
         match self.nb_completed {
             0 => {
                 let next_state = Self {
@@ -95,7 +97,7 @@ impl TransferOut {
 }
 
 impl Controller for TransferOut {
-    fn sudo(self, deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
+    fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response { request: _, data } => {
                 deps.api.debug(&format!(
@@ -113,7 +115,7 @@ impl Controller for TransferOut {
         }
     }
 
-    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         Ok(StateResponse::Opening {
             downpayment: self.downpayment,
             loan: self.loan.principal,

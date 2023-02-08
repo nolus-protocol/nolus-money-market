@@ -73,7 +73,7 @@ where
     }
 }
 
-pub fn unsupported_currency<C>(unsupported: Symbol) -> ContractError
+pub fn unsupported_currency<C>(unsupported: Symbol<'_>) -> ContractError
 where
     C: Currency,
 {

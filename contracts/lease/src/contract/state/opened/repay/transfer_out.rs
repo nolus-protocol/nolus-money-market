@@ -1,14 +1,25 @@
-use cosmwasm_std::{Deps, DepsMut, Env, QuerierWrapper, Timestamp};
-use platform::batch::{Batch, Emit, Emitter};
-use sdk::neutron_sdk::sudo::msg::SudoMsg;
 use serde::{Deserialize, Serialize};
 
-use crate::api::opened::RepayTrx;
-use crate::api::{PaymentCoin, StateQuery, StateResponse};
-use crate::contract::state::{opened::repay, Controller, Response};
-use crate::contract::Lease;
-use crate::error::ContractResult;
-use crate::event::Type;
+use sdk::{
+    cosmwasm_std::{Deps, DepsMut, Env, QuerierWrapper, Timestamp},
+    neutron_sdk::sudo::msg::SudoMsg
+};
+use platform::batch::{Batch, Emit, Emitter};
+
+use crate::{
+    api::{
+        opened::RepayTrx,
+        PaymentCoin,
+        StateQuery,
+        StateResponse
+    },
+    contract::{
+        state::{opened::repay, Controller, Response},
+        Lease
+    },
+    error::ContractResult,
+    event::Type
+};
 
 use super::buy_lpn::BuyLpn;
 
@@ -33,7 +44,7 @@ impl TransferOut {
         Ok(sender.into())
     }
 
-    fn on_response(self, querier: &QuerierWrapper) -> ContractResult<Response> {
+    fn on_response(self, querier: &QuerierWrapper<'_>) -> ContractResult<Response> {
         let emitter = self.emit_ok();
         let next_state = BuyLpn::new(self.lease, self.payment);
         let batch = next_state.enter_state(querier)?;
@@ -49,7 +60,7 @@ impl TransferOut {
 }
 
 impl Controller for TransferOut {
-    fn sudo(self, deps: &mut DepsMut, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
+    fn sudo(self, deps: &mut DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response { request: _, data } => {
                 deps.api.debug(&format!(
@@ -68,7 +79,7 @@ impl Controller for TransferOut {
         }
     }
 
-    fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn query(self, deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         repay::query(
             self.lease.lease,
             self.payment,

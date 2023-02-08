@@ -97,7 +97,7 @@ where
     coin_legacy::to_cosmwasm_on_network::<G, DexMapper>(token).map_err(Error::from)
 }
 
-fn to_dex_symbol(ticker: Symbol) -> Result<Symbol> {
+fn to_dex_symbol(ticker: Symbol<'_>) -> Result<Symbol<'_>> {
     currency::visit_any_on_ticker::<SwapGroup, _>(ticker, DexMapper {}).map_err(Error::from)
 }
 

@@ -19,7 +19,7 @@ use crate::{
 };
 
 pub fn try_deposit<LPN>(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
 ) -> Result<Response, ContractError>
@@ -43,7 +43,7 @@ where
 }
 
 pub fn try_withdraw<LPN>(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     amount_nlpn: Uint128,
@@ -85,7 +85,10 @@ where
     )))
 }
 
-pub fn query_ntoken_price<LPN>(deps: Deps, env: Env) -> Result<PriceResponse<LPN>, ContractError>
+pub fn query_ntoken_price<LPN>(
+    deps: Deps<'_>,
+    env: Env,
+) -> Result<PriceResponse<LPN>, ContractError>
 where
     LPN: Currency + DeserializeOwned + Serialize,
 {

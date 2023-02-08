@@ -1,5 +1,6 @@
-use crate::{api::dex::ConnectionParams, error::ContractResult};
-use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
+use serde::{Deserialize, Serialize};
+
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use currency::native::Nls;
 use finance::{
     coin::{Coin, CoinDTO},
@@ -13,8 +14,9 @@ use platform::{
     ica::{self, HostAccount},
     trx::Transaction,
 };
-use serde::{Deserialize, Serialize};
 use swap::trx;
+
+use crate::{api::dex::ConnectionParams, error::ContractResult};
 
 const IBC_TIMEOUT: Duration = Duration::from_secs(60);
 
@@ -68,7 +70,7 @@ impl Account {
         }
     }
 
-    pub fn transfer_to(&self, now: Timestamp) -> TransferOutTrx {
+    pub fn transfer_to(&self, now: Timestamp) -> TransferOutTrx<'_> {
         TransferOutTrx::new(
             &self.dex.transfer_channel.local_endpoint,
             &self.owner,
@@ -77,11 +79,15 @@ impl Account {
         )
     }
 
-    pub fn swap<'a>(&'a self, oracle: &'a OracleRef, querier: &'a QuerierWrapper) -> SwapTrx {
+    pub fn swap<'a>(
+        &'a self,
+        oracle: &'a OracleRef,
+        querier: &'a QuerierWrapper<'a>,
+    ) -> SwapTrx<'a> {
         SwapTrx::new(&self.dex.connection_id, &self.dex_account, oracle, querier)
     }
 
-    pub fn transfer_from(&self, now: Timestamp) -> TransferInTrx {
+    pub fn transfer_from(&self, now: Timestamp) -> TransferInTrx<'_> {
         TransferInTrx::new(
             &self.dex.connection_id,
             &self.dex.transfer_channel.remote_endpoint,
@@ -112,6 +118,7 @@ impl<'a> TransferOutTrx<'a> {
             ICA_TRANSFER_ACK_TIP,
             ICA_TRANSFER_TIMEOUT_TIP,
         );
+
         TransferOutTrx { sender }
     }
 
@@ -123,8 +130,8 @@ impl<'a> TransferOutTrx<'a> {
     }
 }
 
-impl From<TransferOutTrx<'_>> for LocalBatch {
-    fn from(value: TransferOutTrx) -> Self {
+impl<'r> From<TransferOutTrx<'r>> for LocalBatch {
+    fn from(value: TransferOutTrx<'r>) -> Self {
         value.sender.into()
     }
 }
@@ -142,7 +149,7 @@ impl<'a> SwapTrx<'a> {
         conn: &'a str,
         ica_account: &'a HostAccount,
         oracle: &'a OracleRef,
-        querier: &'a QuerierWrapper,
+        querier: &'a QuerierWrapper<'a>,
     ) -> Self {
         let trx = Transaction::default();
         Self {
@@ -209,8 +216,8 @@ impl<'a> TransferInTrx<'a> {
     }
 }
 
-impl From<TransferInTrx<'_>> for LocalBatch {
-    fn from(value: TransferInTrx) -> Self {
+impl<'r> From<TransferInTrx<'r>> for LocalBatch {
+    fn from(value: TransferInTrx<'r>) -> Self {
         ica::submit_transaction(
             value.conn,
             value.sender.into(),

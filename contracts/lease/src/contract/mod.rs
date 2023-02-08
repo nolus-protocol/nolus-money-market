@@ -31,7 +31,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    mut deps: DepsMut,
+    mut deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     new_lease: NewLeaseContract,
@@ -53,7 +53,7 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::upgrade_old_contract::<1, _, _>(
         deps.storage,
         version!(CONTRACT_STORAGE_VERSION),
@@ -68,7 +68,7 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<CwR
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn reply(mut deps: DepsMut, env: Env, msg: Reply) -> ContractResult<CwResponse> {
+pub fn reply(mut deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwResponse> {
     impl_::load(deps.storage)?
         .reply(&mut deps, env, msg)
         .and_then(
@@ -85,7 +85,7 @@ pub fn reply(mut deps: DepsMut, env: Env, msg: Reply) -> ContractResult<CwRespon
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
-    mut deps: DepsMut,
+    mut deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -105,7 +105,7 @@ pub fn execute(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(mut deps: DepsMut, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
+pub fn sudo(mut deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     impl_::load(deps.storage)?
         .sudo(&mut deps, env, msg)
         .and_then(
@@ -121,7 +121,7 @@ pub fn sudo(mut deps: DepsMut, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn query(deps: Deps, env: Env, msg: StateQuery) -> ContractResult<Binary> {
+pub fn query(deps: Deps<'_>, env: Env, msg: StateQuery) -> ContractResult<Binary> {
     let resp = impl_::load(deps.storage)?.query(deps, env, msg)?;
     to_binary(&resp).map_err(ContractError::from)
 }
@@ -142,7 +142,7 @@ mod impl_ {
     use super::state::State;
 
     const STATE_DB_KEY: &str = "state";
-    const STATE_DB_ITEM: Item<State> = Item::new(STATE_DB_KEY);
+    const STATE_DB_ITEM: Item<'static, State> = Item::new(STATE_DB_KEY);
 
     pub(super) fn load(storage: &dyn Storage) -> StdResult<State> {
         STATE_DB_ITEM.load(storage)

@@ -261,8 +261,8 @@ fn marketprice_follow_the_path() {
 }
 
 fn feed_price<C1, C2>(
-    deps: DepsMut,
-    market: &PriceFeeds,
+    deps: DepsMut<'_>,
+    market: &PriceFeeds<'_>,
     price: Price<C1, C2>,
 ) -> Result<Timestamp, PriceFeedsError>
 where

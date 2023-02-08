@@ -28,14 +28,15 @@ pub struct PriceFeeders<'f>(Item<'f, HashSet<Addr>>);
 
 // this is the core business logic we expose
 impl<'f> PriceFeeders<'f> {
-    pub const fn new(namespace: &'f str) -> PriceFeeders {
-        PriceFeeders(Item::new(namespace))
+    pub const fn new(namespace: &'f str) -> Self {
+        Self(Item::new(namespace))
     }
 
     pub fn get(&self, storage: &dyn Storage) -> StdResult<HashSet<Addr>> {
         if self.0.may_load(storage)?.is_none() {
             return Ok(HashSet::new());
         }
+
         self.0.load(storage)
     }
 
@@ -43,11 +44,13 @@ impl<'f> PriceFeeders<'f> {
         if self.0.may_load(storage)?.is_none() {
             return Ok(false);
         }
+
         let addrs = self.0.load(storage)?;
+
         Ok(addrs.contains(address))
     }
 
-    pub fn register(&self, deps: DepsMut, address: Addr) -> Result<(), PriceFeedersError> {
+    pub fn register(&self, deps: DepsMut<'_>, address: Addr) -> Result<(), PriceFeedersError> {
         let mut db = self.0.may_load(deps.storage)?.unwrap_or_default();
 
         if db.contains(&address) {
@@ -55,12 +58,13 @@ impl<'f> PriceFeeders<'f> {
         }
 
         db.insert(address);
+
         self.0.save(deps.storage, &db)?;
 
         Ok(())
     }
 
-    pub fn remove(&self, deps: DepsMut, addr: Addr) -> Result<(), PriceFeedersError> {
+    pub fn remove(&self, deps: DepsMut<'_>, addr: Addr) -> Result<(), PriceFeedersError> {
         let remove_address = |mut addrs: HashSet<Addr>| -> StdResult<HashSet<Addr>> {
             addrs.remove(&addr);
             Ok(addrs)

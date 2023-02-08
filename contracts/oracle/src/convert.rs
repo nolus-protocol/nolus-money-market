@@ -11,7 +11,7 @@ use crate::{
 pub fn to_base<BaseC, InC>(
     oracle_ref: OracleRef,
     in_amount: Coin<InC>,
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<'_>,
 ) -> Result<Coin<BaseC>, ContractError>
 where
     BaseC: Currency,
@@ -54,7 +54,7 @@ where
 pub fn from_base<BaseC, OutC>(
     oracle_ref: OracleRef,
     in_amount: Coin<BaseC>,
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<'_>,
 ) -> Result<Coin<OutC>, ContractError>
 where
     BaseC: Currency,

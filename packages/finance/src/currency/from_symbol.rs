@@ -9,7 +9,10 @@ pub trait SingleVisitor<C> {
     fn on(self) -> Result<Self::Output, Self::Error>;
 }
 
-pub fn visit_on_bank_symbol<C, V>(bank_symbol: Symbol, visitor: V) -> Result<V::Output, V::Error>
+pub fn visit_on_bank_symbol<C, V>(
+    bank_symbol: Symbol<'_>,
+    visitor: V,
+) -> Result<V::Output, V::Error>
 where
     V: SingleVisitor<C>,
     C: Currency,
@@ -22,7 +25,7 @@ where
 pub type MaybeVisitResult<C, V> =
     Result<Result<<V as SingleVisitor<C>>::Output, <V as SingleVisitor<C>>::Error>, V>;
 
-pub fn maybe_visit_on_ticker<C, V>(ticker: Symbol, visitor: V) -> MaybeVisitResult<C, V>
+pub fn maybe_visit_on_ticker<C, V>(ticker: Symbol<'_>, visitor: V) -> MaybeVisitResult<C, V>
 where
     C: Currency,
     V: SingleVisitor<C>,
@@ -30,7 +33,10 @@ where
     maybe_visit_impl(ticker, C::TICKER, visitor)
 }
 
-pub fn maybe_visit_on_bank_symbol<C, V>(bank_symbol: Symbol, visitor: V) -> MaybeVisitResult<C, V>
+pub fn maybe_visit_on_bank_symbol<C, V>(
+    bank_symbol: Symbol<'_>,
+    visitor: V,
+) -> MaybeVisitResult<C, V>
 where
     V: SingleVisitor<C>,
     C: Currency,
@@ -38,7 +44,11 @@ where
     maybe_visit_impl(bank_symbol, C::BANK_SYMBOL, visitor)
 }
 
-fn maybe_visit_impl<C, V>(symbol: Symbol, symbol_exp: Symbol, visitor: V) -> MaybeVisitResult<C, V>
+fn maybe_visit_impl<C, V>(
+    symbol: Symbol<'_>,
+    symbol_exp: Symbol<'_>,
+    visitor: V,
+) -> MaybeVisitResult<C, V>
 where
     V: SingleVisitor<C>,
     C: Currency,

@@ -2,12 +2,12 @@ use sdk::cosmwasm_std::{Addr, ContractInfoResponse, QuerierWrapper, WasmQuery};
 
 use crate::error::{Error, Result};
 
-pub fn validate_addr(querier: &QuerierWrapper, contract_address: &Addr) -> Result<()> {
+pub fn validate_addr(querier: &QuerierWrapper<'_>, contract_address: &Addr) -> Result<()> {
     query_info(querier, contract_address).map(|_| ())
 }
 
 pub fn validate_code_id(
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<'_>,
     contract_address: &Addr,
     expected_code_id: u64,
 ) -> Result<()> {
@@ -23,7 +23,10 @@ pub fn validate_code_id(
     })
 }
 
-fn query_info(querier: &QuerierWrapper, contract_address: &Addr) -> Result<ContractInfoResponse> {
+fn query_info(
+    querier: &QuerierWrapper<'_>,
+    contract_address: &Addr,
+) -> Result<ContractInfoResponse> {
     let raw = WasmQuery::ContractInfo {
         contract_addr: contract_address.into(),
     }

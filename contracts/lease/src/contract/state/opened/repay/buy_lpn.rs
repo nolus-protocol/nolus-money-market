@@ -1,14 +1,15 @@
-use cosmwasm_std::{Binary, Deps, Timestamp};
-use finance::currency::Symbol;
 use serde::{Deserialize, Serialize};
 
-use finance::coin::{self};
+use finance::{
+    coin::{self},
+    currency::Symbol,
+};
 use platform::{
     batch::{Batch as LocalBatch, Emit, Emitter},
     trx,
 };
 use sdk::{
-    cosmwasm_std::{DepsMut, Env, QuerierWrapper},
+    cosmwasm_std::{Binary, Deps, DepsMut, Env, QuerierWrapper, Timestamp},
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use swap::trx as swap_trx;
@@ -36,7 +37,7 @@ impl BuyLpn {
         Self { lease, payment }
     }
 
-    pub(super) fn enter_state(&self, querier: &QuerierWrapper) -> ContractResult<LocalBatch> {
+    pub(super) fn enter_state(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
         let mut swap_trx = self.lease.dex.swap(&self.lease.lease.oracle, querier);
         swap_trx.swap_exact_in(&self.payment, self.target_currency())?;
         Ok(swap_trx.into())
@@ -59,7 +60,7 @@ impl BuyLpn {
         coin::from_amount_ticker(payment_amount, self.target_currency()).map_err(Into::into)
     }
 
-    fn target_currency(&self) -> Symbol {
+    fn target_currency(&self) -> Symbol<'_> {
         self.lease.lease.loan.lpp().currency()
     }
 
@@ -71,7 +72,7 @@ impl BuyLpn {
 }
 
 impl Controller for BuyLpn {
-    fn sudo(self, _deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
+    fn sudo(self, _deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response { request: _, data } => self.on_response(data, env.block.time),
             SudoMsg::Timeout { request: _ } => todo!(),
@@ -83,7 +84,7 @@ impl Controller for BuyLpn {
         }
     }
 
-    fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn query(self, deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         repay::query(self.lease.lease, self.payment, RepayTrx::Swap, &deps, &env)
     }
 }

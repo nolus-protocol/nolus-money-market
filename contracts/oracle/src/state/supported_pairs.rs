@@ -119,16 +119,16 @@ where
 
     pub fn load_path(
         &self,
-        query: Symbol,
-    ) -> Result<impl Iterator<Item = Symbol> + DoubleEndedIterator + '_, ContractError> {
+        query: Symbol<'_>,
+    ) -> Result<impl Iterator<Item = Symbol<'_>> + DoubleEndedIterator + '_, ContractError> {
         self.internal_load_path(query)
             .map(|iter| iter.map(|node| node.value().target.as_str()))
     }
 
     pub fn load_swap_path(
         &self,
-        from: Symbol,
-        to: Symbol,
+        from: Symbol<'_>,
+        to: Symbol<'_>,
     ) -> Result<Vec<SwapTarget>, ContractError> {
         let path_from = self.internal_load_path(from)?;
 
@@ -167,7 +167,7 @@ where
         Ok(path)
     }
 
-    pub fn load_affected(&self, pair: CurrencyPair) -> Result<Vec<SymbolOwned>, ContractError> {
+    pub fn load_affected(&self, pair: CurrencyPair<'_>) -> Result<Vec<SymbolOwned>, ContractError> {
         if let Some(node) = self.tree.find_by(|target| target.target == pair.0) {
             if node
                 .parent()
@@ -215,7 +215,7 @@ where
 
     fn internal_load_path(
         &self,
-        query: Symbol,
+        query: Symbol<'_>,
     ) -> Result<
         impl Iterator<Item = NodeRef<'_, SwapTarget>> + DoubleEndedIterator + '_,
         ContractError,

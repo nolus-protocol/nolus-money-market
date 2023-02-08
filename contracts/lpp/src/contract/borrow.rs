@@ -19,7 +19,7 @@ use crate::{
 };
 
 pub fn try_open_loan<LPN>(
-    mut deps: DepsMut,
+    mut deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     amount: Coin<LPN>,
@@ -55,7 +55,7 @@ where
 }
 
 pub fn try_repay_loan<LPN>(
-    mut deps: DepsMut,
+    mut deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
 ) -> Result<Response, ContractError>
@@ -85,7 +85,7 @@ where
 }
 
 pub fn query_quote<LPN>(
-    deps: &Deps,
+    deps: &Deps<'_>,
     env: &Env,
     quote: Coin<LPN>,
 ) -> Result<QueryQuoteResponse, ContractError>

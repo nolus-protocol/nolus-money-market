@@ -25,7 +25,7 @@ mod mock_lease {
 
     use crate::common::{MockApp, ADMIN};
 
-    const GATE: Item<bool> = Item::new("alarm gate");
+    const GATE: Item<'static, bool> = Item::new("alarm gate");
 
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
     #[serde(rename_all = "snake_case")]
@@ -36,13 +36,13 @@ mod mock_lease {
         Gate(bool),
     }
 
-    fn instantiate(deps: DepsMut, _: Env, _: MessageInfo, _: Empty) -> StdResult<Response> {
+    fn instantiate(deps: DepsMut<'_>, _: Env, _: MessageInfo, _: Empty) -> StdResult<Response> {
         GATE.save(deps.storage, &true)?;
         Ok(Response::new().add_attribute("method", "instantiate"))
     }
 
     fn execute(
-        deps: DepsMut,
+        deps: DepsMut<'_>,
         env: Env,
         _: MessageInfo,
         msg: MockExecuteMsg,
@@ -65,7 +65,7 @@ mod mock_lease {
         }
     }
 
-    fn query(_: Deps, _: Env, _msg: MockExecuteMsg) -> StdResult<Binary> {
+    fn query(_: Deps<'_>, _: Env, _msg: MockExecuteMsg) -> StdResult<Binary> {
         Err(StdError::generic_err("not implemented"))
     }
 

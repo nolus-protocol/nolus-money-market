@@ -18,7 +18,7 @@ fn query(
     lease: LeaseDTO,
     payment: PaymentCoin,
     in_progress: RepayTrx,
-    deps: &Deps,
+    deps: &Deps<'_>,
     env: &Env,
 ) -> ContractResult<StateResponse> {
     let in_progress = OngoingTrx::Repayment {

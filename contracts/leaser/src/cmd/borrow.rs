@@ -16,7 +16,7 @@ use super::Borrow;
 
 impl Borrow {
     pub fn with(
-        deps: DepsMut,
+        deps: DepsMut<'_>,
         amount: Vec<Coin>,
         customer: Addr,
         admin: Addr,

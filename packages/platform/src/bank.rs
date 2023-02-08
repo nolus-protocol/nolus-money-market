@@ -72,7 +72,7 @@ pub struct BankView<'a> {
 }
 
 impl<'a> BankView<'a> {
-    fn account(account: &'a Addr, querier: &'a QuerierWrapper) -> Self {
+    fn account(account: &'a Addr, querier: &'a QuerierWrapper<'a>) -> Self {
         Self { account, querier }
     }
 }
@@ -107,7 +107,7 @@ where
     }
 }
 
-pub fn account<'a>(account: &'a Addr, querier: &'a QuerierWrapper) -> BankStub<BankView<'a>> {
+pub fn account<'a>(account: &'a Addr, querier: &'a QuerierWrapper<'a>) -> BankStub<BankView<'a>> {
     BankStub::new(BankView::account(account, querier))
 }
 

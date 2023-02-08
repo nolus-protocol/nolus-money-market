@@ -25,7 +25,7 @@ impl TimeAlarms {
     }
 
     pub fn try_add(
-        deps: DepsMut,
+        deps: DepsMut<'_>,
         env: Env,
         address: Addr,
         time: Timestamp,

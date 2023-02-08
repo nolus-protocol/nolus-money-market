@@ -25,7 +25,7 @@ pub trait AnyVisitorPair {
         C2: Currency + Serialize + DeserializeOwned;
 }
 
-pub fn visit_any_on_ticker<G, V>(ticker: Symbol, visitor: V) -> Result<V::Output, V::Error>
+pub fn visit_any_on_ticker<G, V>(ticker: Symbol<'_>, visitor: V) -> Result<V::Output, V::Error>
 where
     G: Group,
     V: AnyVisitor,
@@ -36,8 +36,8 @@ where
 }
 
 pub fn visit_any_on_tickers<G1, G2, V>(
-    ticker1: Symbol,
-    ticker2: Symbol,
+    ticker1: Symbol<'_>,
+    ticker2: Symbol<'_>,
     visitor: V,
 ) -> Result<V::Output, V::Error>
 where

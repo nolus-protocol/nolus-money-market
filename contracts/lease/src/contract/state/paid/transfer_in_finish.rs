@@ -1,15 +1,28 @@
-use cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper};
-use platform::batch::{Emit, Emitter};
 use serde::{Deserialize, Serialize};
 
-use crate::api::paid::ClosingTrx;
-use crate::api::{ExecuteMsg, StateQuery, StateResponse};
-use crate::contract::state::closed::Closed;
-use crate::contract::state::transfer_in;
-use crate::contract::state::{Controller, Response};
-use crate::contract::{state, Lease};
-use crate::error::ContractResult;
-use crate::event::Type;
+use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper};
+use platform::batch::{Emit, Emitter};
+
+use crate::{
+    api::{
+        ExecuteMsg,
+        StateQuery,
+        StateResponse,
+        paid::ClosingTrx
+    },
+    contract::{
+        state::{
+            closed::Closed,
+            transfer_in,
+            Controller,
+            Response,
+            self
+        },
+        Lease
+    },
+    error::ContractResult,
+    event::Type
+};
 
 use super::transfer_in_init::TransferInInit;
 
@@ -21,7 +34,7 @@ pub struct TransferInFinish {
 impl TransferInFinish {
     pub(super) fn try_complete(
         self,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
         let received =
@@ -37,7 +50,7 @@ impl TransferInFinish {
         }
     }
 
-    fn on_alarm(self, querier: &QuerierWrapper, env: &Env) -> ContractResult<Response> {
+    fn on_alarm(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
         self.try_complete(querier, env)
     }
 
@@ -57,7 +70,7 @@ impl From<TransferInInit> for TransferInFinish {
 impl Controller for TransferInFinish {
     fn execute(
         self,
-        deps: &mut DepsMut,
+        deps: &mut DepsMut<'_>,
         env: Env,
         _info: MessageInfo,
         msg: ExecuteMsg,
@@ -69,7 +82,7 @@ impl Controller for TransferInFinish {
         }
     }
 
-    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         Ok(StateResponse::Paid {
             amount: self.lease.lease.amount,
             in_progress: Some(ClosingTrx::TransferInFinish),

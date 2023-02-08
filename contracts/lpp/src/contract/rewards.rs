@@ -18,7 +18,10 @@ use crate::{
     state::Deposit,
 };
 
-pub fn try_distribute_rewards(deps: DepsMut, info: MessageInfo) -> Result<Response, ContractError> {
+pub fn try_distribute_rewards(
+    deps: DepsMut<'_>,
+    info: MessageInfo,
+) -> Result<Response, ContractError> {
     let amount: Coin<Nls> = bank::received_one(info.funds)?;
     Deposit::distribute_rewards(deps, amount)?;
 
@@ -26,7 +29,7 @@ pub fn try_distribute_rewards(deps: DepsMut, info: MessageInfo) -> Result<Respon
 }
 
 pub fn try_claim_rewards(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     other_recipient: Option<Addr>,
@@ -56,7 +59,7 @@ pub fn try_claim_rewards(
 }
 
 pub fn query_lpp_balance<LPN>(
-    deps: Deps,
+    deps: Deps<'_>,
     env: Env,
 ) -> Result<LppBalanceResponse<LPN>, ContractError>
 where

@@ -26,8 +26,9 @@ struct AlarmIndexes<'a> {
 }
 
 impl<'a> IndexList<Alarm> for AlarmIndexes<'a> {
-    fn get_indexes(&'_ self) -> Box<dyn Iterator<Item = &'_ dyn Index<Alarm>> + '_> {
+    fn get_indexes(&self) -> Box<dyn Iterator<Item = &'_ dyn Index<Alarm>> + '_> {
         let v: Vec<&dyn Index<Alarm>> = vec![&self.alarms];
+
         Box::new(v.into_iter())
     }
 }
@@ -44,28 +45,33 @@ impl<'a> Alarms<'a> {
         namespace_index: &'a str,
         namespace_next_id: &'a str,
     ) -> Self {
-        Alarms {
+        Self {
             namespace_alarms,
             namespace_index,
             next_id: Item::new(namespace_next_id),
         }
     }
 
-    fn alarms(&self) -> IndexedMap<TimeSeconds, Alarm, AlarmIndexes<'a>> {
+    fn alarms(&self) -> IndexedMap<'a, TimeSeconds, Alarm, AlarmIndexes<'a>> {
         let indexes = AlarmIndexes {
             alarms: MultiIndex::new(|_, d| d.time, self.namespace_alarms, self.namespace_index),
         };
+
         IndexedMap::new(self.namespace_alarms, indexes)
     }
 
     pub fn add(&self, storage: &mut dyn Storage, addr: Addr, time: Timestamp) -> StdResult<Id> {
         let id = self.next_id.may_load(storage)?.unwrap_or_default();
+
         let alarm = Alarm {
             time: as_seconds(time),
             addr,
         };
+
         self.alarms().save(storage, id, &alarm)?;
+
         self.next_id.save(storage, &id.wrapping_add(1))?;
+
         Ok(id)
     }
 
@@ -136,7 +142,7 @@ pub mod tests {
     }
 
     impl MockAlarmDispatcher {
-        fn clean_alarms(&self, storage: &mut dyn Storage, alarms: &Alarms) -> StdResult<()> {
+        fn clean_alarms(&self, storage: &mut dyn Storage, alarms: &Alarms<'_>) -> StdResult<()> {
             self.0.iter().try_for_each(|&id| alarms.remove(storage, id))
         }
     }
@@ -234,7 +240,7 @@ pub mod tests {
         let mut deps = testing::mock_dependencies();
         let alarms = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
 
-        let id_item: Item<Id> = Item::new("alarms_next_id");
+        let id_item: Item<'_, Id> = Item::new("alarms_next_id");
         id_item.save(&mut deps.storage, &(Id::MAX)).unwrap();
 
         let id = alarms

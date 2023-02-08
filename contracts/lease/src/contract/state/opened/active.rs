@@ -1,7 +1,7 @@
-use currency::{lpn::Lpns, payment::PaymentGroup};
-use finance::coin::IntoDTO;
 use serde::{Deserialize, Serialize};
 
+use currency::{lpn::Lpns, payment::PaymentGroup};
+use finance::coin::IntoDTO;
 use platform::{
     bank::{self},
     batch::{Emit, Emitter},
@@ -48,7 +48,7 @@ impl Active {
     pub(in crate::contract::state::opened) fn try_repay_lpn(
         lease: Lease,
         payment: LpnCoin,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
         // TODO return ContractResult<(RepayReceipt, Batch)>
@@ -76,7 +76,7 @@ impl Active {
 
     fn try_repay(
         self,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -100,7 +100,7 @@ impl Active {
 
     fn try_on_price_alarm(
         self,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -117,7 +117,7 @@ impl Active {
 
     fn try_on_time_alarm(
         self,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
@@ -136,7 +136,7 @@ impl Active {
 impl Controller for Active {
     fn execute(
         self,
-        deps: &mut DepsMut,
+        deps: &mut DepsMut<'_>,
         env: Env,
         info: MessageInfo,
         msg: ExecuteMsg,
@@ -149,7 +149,7 @@ impl Controller for Active {
         }
     }
 
-    fn query(self, deps: Deps, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn query(self, deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         super::query(self.lease.lease, None, &deps, &env)
     }
 }

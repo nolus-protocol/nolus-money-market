@@ -62,7 +62,7 @@ pub struct LppLenderRef {
 impl LppLenderRef {
     pub fn try_new(
         addr: Addr,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
         open_loan_req_id: ReplyId,
     ) -> ContractResult<Self> {
         let resp: Config = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
@@ -87,7 +87,7 @@ impl LppLenderRef {
     pub fn execute<Cmd>(
         self,
         cmd: Cmd,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
     ) -> StdResult<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLppLender,
@@ -124,7 +124,7 @@ impl LppLenderRef {
         )
     }
 
-    fn into_stub<'a, C>(self, querier: &'a QuerierWrapper) -> LppLenderStub<'a, C> {
+    fn into_stub<'a, C>(self, querier: &'a QuerierWrapper<'a>) -> LppLenderStub<'a, C> {
         LppLenderStub {
             lpp_ref: self,
             currency: PhantomData::<C>,

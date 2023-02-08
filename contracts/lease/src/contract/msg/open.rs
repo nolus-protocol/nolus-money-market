@@ -23,14 +23,14 @@ impl NewLeaseForm {
         lease_addr: Addr,
         start_at: Timestamp,
         amount: &LeaseCoin,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
         deps: (LppLenderRef, OracleRef),
     ) -> ContractResult<IntoDTOResult> {
         debug_assert_eq!(amount.ticker(), &self.currency);
         debug_assert!(amount.amount() > 0);
 
-        let profit = ProfitRef::try_from(self.loan.profit.clone(), querier)?;
-        let alarms = TimeAlarmsRef::try_from(self.time_alarms.clone(), querier)?;
+        let profit = ProfitRef::new(self.loan.profit.clone(), querier)?;
+        let alarms = TimeAlarmsRef::new(self.time_alarms.clone(), querier)?;
 
         let cmd = LeaseFactory {
             form: self,

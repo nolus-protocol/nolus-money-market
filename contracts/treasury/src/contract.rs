@@ -24,7 +24,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     _msg: InstantiateMsg,
@@ -40,7 +40,7 @@ pub fn instantiate(
 pub struct MigrateMsg {}
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::upgrade_old_contract::<0, fn(_) -> _, ContractError>(
         deps.storage,
         version!(CONTRACT_STORAGE_VERSION),
@@ -52,7 +52,7 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,

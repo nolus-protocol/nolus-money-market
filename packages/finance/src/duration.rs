@@ -163,7 +163,7 @@ impl Sub<Duration> for Duration {
 }
 
 impl Display for Duration {
-    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_fmt(format_args!("{} {}", self.nanos(), "nanos"))
     }
 }

@@ -15,9 +15,9 @@ mod subtree;
 pub trait FindBy {
     type Item;
 
-    fn find_by<F>(&self, f: F) -> Option<NodeRef<Self::Item>>
+    fn find_by<F>(&self, f: F) -> Option<NodeRef<'_, Self::Item>>
     where
-        F: FnMut(&Self::Item) -> bool;
+        F: FnMut(&'_ Self::Item) -> bool;
 }
 
 type Nodes<T> = Vec<Node<T>>;
@@ -35,7 +35,7 @@ impl<T> Tree<T> {
 
     const ROOT_INDEX: NodeIndex = 0;
 
-    pub fn root(&self) -> NodeRef<T> {
+    pub fn root(&self) -> NodeRef<'_, T> {
         debug_assert!(!self.nodes.is_empty());
 
         NodeRef::with_index(self, Self::ROOT_INDEX)
@@ -46,7 +46,7 @@ impl<T> Tree<T> {
         HumanReadableTree::from_tree(self)
     }
 
-    pub fn as_subtree(&self) -> Subtree<T> {
+    pub fn as_subtree(&self) -> Subtree<'_, T> {
         Subtree::from_tree(self)
     }
 
@@ -54,7 +54,7 @@ impl<T> Tree<T> {
         self.nodes.is_empty()
     }
 
-    pub fn iter(&self) -> TreeIter<T> {
+    pub fn iter(&self) -> TreeIter<'_, T> {
         TreeIter {
             tree: self,
             range: self.vector_range(),
@@ -81,9 +81,13 @@ impl<T> Tree<T> {
             .expect("Tree has more elements than allowed!")
     }
 
-    pub(crate) fn find_by_within<F>(&self, range: Range<NodeIndex>, mut f: F) -> Option<NodeRef<T>>
+    pub(crate) fn find_by_within<F>(
+        &self,
+        range: Range<NodeIndex>,
+        mut f: F,
+    ) -> Option<NodeRef<'_, T>>
     where
-        F: FnMut(&T) -> bool,
+        F: FnMut(&'_ T) -> bool,
     {
         // `Iterator::enumerate` is not used to avoid problems with Rust
         // emitting floating-point instructions on WASM on some cases where
@@ -183,9 +187,9 @@ impl<'r, T> DoubleEndedIterator for TreeIter<'r, T> {
 impl<T> FindBy for Tree<T> {
     type Item = T;
 
-    fn find_by<F>(&self, f: F) -> Option<NodeRef<T>>
+    fn find_by<F>(&self, f: F) -> Option<NodeRef<'_, T>>
     where
-        F: FnMut(&T) -> bool,
+        F: FnMut(&'_ T) -> bool,
     {
         self.find_by_within(self.vector_range(), f)
     }

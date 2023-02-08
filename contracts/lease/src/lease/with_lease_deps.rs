@@ -32,12 +32,12 @@ pub trait WithLeaseDeps {
 
 pub fn execute<Cmd>(
     cmd: Cmd,
-    asset: Symbol,
+    asset: Symbol<'_>,
     lpp: LppLenderRef,
     profit: ProfitRef,
     alarms: TimeAlarmsRef,
     oracle: OracleRef,
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<'_>,
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLeaseDeps,

@@ -49,7 +49,7 @@ impl From<ProfitRef> for Addr {
 }
 
 impl ProfitRef {
-    pub fn try_from(addr: Addr, querier: &QuerierWrapper) -> Result<Self> {
+    pub fn new(addr: Addr, querier: &QuerierWrapper<'_>) -> Result<Self> {
         let _: ConfigResponse = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config {})?;
 
         Ok(Self { addr })

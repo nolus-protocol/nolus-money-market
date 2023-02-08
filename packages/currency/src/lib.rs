@@ -48,7 +48,7 @@ mod test {
     }
 
     #[track_caller]
-    pub fn maybe_visit_on_ticker_err<C, G>(unknown_ticker: Symbol)
+    pub fn maybe_visit_on_ticker_err<C, G>(unknown_ticker: Symbol<'_>)
     where
         C: Currency,
         G: Group,
@@ -71,7 +71,7 @@ mod test {
     }
 
     #[track_caller]
-    pub fn maybe_visit_on_bank_symbol_err<C, G>(unknown_ticker: Symbol)
+    pub fn maybe_visit_on_bank_symbol_err<C, G>(unknown_ticker: Symbol<'_>)
     where
         C: Currency,
         G: Group,

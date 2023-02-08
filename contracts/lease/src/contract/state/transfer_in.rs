@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use finance::{
     coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
     currency::{Currency, Group},
@@ -14,7 +14,7 @@ const POLLING_INTERVAL: Duration = Duration::from_secs(5);
 pub(super) fn check_received<G>(
     payment: &CoinDTO<G>,
     account: &Addr,
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<'_>,
 ) -> ContractResult<bool>
 where
     G: Group,

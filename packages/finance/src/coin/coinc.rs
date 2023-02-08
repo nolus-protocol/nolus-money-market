@@ -123,7 +123,7 @@ where
     }
 }
 
-pub fn from_amount_ticker<G>(amount: Amount, ticker: Symbol) -> Result<CoinDTO<G>>
+pub fn from_amount_ticker<G>(amount: Amount, ticker: Symbol<'_>) -> Result<CoinDTO<G>>
 where
     G: Group,
 {

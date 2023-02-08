@@ -52,15 +52,15 @@ impl<'r> Quote<'r> {
         oracle: OracleRef,
         liability: Liability,
         lease_interest_rate_margin: Percent,
-    ) -> StdResult<Quote> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             querier,
             lease_asset,
             downpayment,
             oracle,
             liability,
             lease_interest_rate_margin,
-        })
+        }
     }
 }
 

@@ -1,4 +1,3 @@
-use crate::{alarms::Alarm as AlarmDTO, msg::ExecuteAlarmMsg};
 use currency::native::Nls;
 use finance::{
     currency::Currency,
@@ -19,8 +18,13 @@ use sdk::{
 };
 
 use crate::{
-    msg::{AlarmsStatusResponse, DispatchAlarmsResponse},
-    ContractError,
+    alarms::Alarm as AlarmDTO,
+    msg::{
+        ExecuteAlarmMsg,
+        AlarmsStatusResponse,
+        DispatchAlarmsResponse
+    },
+    ContractError
 };
 
 pub type AlarmReplyId = u64;
@@ -358,7 +362,7 @@ mod test {
         let batch = Batch::default();
 
         // check msg_id wrapping
-        let id: Item<AlarmReplyId> = Item::new("msg_id");
+        let id: Item<'_, AlarmReplyId> = Item::new("msg_id");
         id.save(&mut storage, &(AlarmReplyId::MAX - 5)).unwrap();
 
         let sent = from_binary::<DispatchAlarmsResponse>(

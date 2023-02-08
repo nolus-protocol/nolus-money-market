@@ -76,13 +76,13 @@ pub trait Controller
 where
     Self: Sized,
 {
-    fn reply(self, _deps: &mut DepsMut, _env: Env, _msg: Reply) -> ContractResult<Response> {
+    fn reply(self, _deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {
         err("reply")
     }
 
     fn execute(
         self,
-        _deps: &mut DepsMut,
+        _deps: &mut DepsMut<'_>,
         _env: Env,
         _info: MessageInfo,
         _msg: ExecuteMsg,
@@ -90,9 +90,9 @@ where
         err("execute")
     }
 
-    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse>;
+    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse>;
 
-    fn sudo(self, _deps: &mut DepsMut, _env: Env, _msg: SudoMsg) -> ContractResult<Response> {
+    fn sudo(self, _deps: &mut DepsMut<'_>, _env: Env, _msg: SudoMsg) -> ContractResult<Response> {
         err("sudo")
     }
 }

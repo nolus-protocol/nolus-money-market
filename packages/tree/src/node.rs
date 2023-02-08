@@ -52,7 +52,7 @@ pub struct NodeRef<'r, T> {
 }
 
 impl<'r, T> NodeRef<'r, T> {
-    pub fn shorten_lifetime(&self) -> NodeRef<T> {
+    pub fn shorten_lifetime(&self) -> NodeRef<'_, T> {
         NodeRef { ..*self }
     }
 

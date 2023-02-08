@@ -32,7 +32,7 @@ pub trait WithLease {
 pub fn execute<Cmd>(
     lease_dto: LeaseDTO,
     cmd: Cmd,
-    querier: &QuerierWrapper,
+    querier: &QuerierWrapper<'_>,
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLease,

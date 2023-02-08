@@ -447,7 +447,7 @@ fn open_loans_lpp_fails() {
     let user_addr = Addr::unchecked(USER);
 
     fn mock_lpp_execute(
-        deps: DepsMut,
+        deps: DepsMut<'_>,
         env: Env,
         info: MessageInfo,
         msg: lpp::msg::ExecuteMsg,

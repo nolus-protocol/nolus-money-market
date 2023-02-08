@@ -1,15 +1,20 @@
-use cosmwasm_std::{Addr, Deps, Timestamp};
 use serde::{Deserialize, Serialize};
 
+use sdk::{
+    cosmwasm_std::{
+        Addr,
+        Deps,
+        Timestamp,
+        DepsMut,
+        Env
+    },
+    neutron_sdk::sudo::msg::SudoMsg
+};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
     ica::HostAccount,
-};
-use sdk::{
-    cosmwasm_std::{DepsMut, Env},
-    neutron_sdk::sudo::msg::SudoMsg,
 };
 
 use crate::{
@@ -84,7 +89,7 @@ impl OpenIcaAccount {
 }
 
 impl Controller for OpenIcaAccount {
-    fn sudo(self, _deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
+    fn sudo(self, _deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::OpenAck {
                 port_id: _,
@@ -101,7 +106,7 @@ impl Controller for OpenIcaAccount {
         }
     }
 
-    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         Ok(StateResponse::Opening {
             downpayment: self.downpayment,
             loan: self.loan.principal,

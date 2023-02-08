@@ -22,7 +22,7 @@ pub struct Native {}
 impl Group for Native {
     const DESCR: SymbolStatic = "native";
 
-    fn maybe_visit_on_ticker<V>(ticker: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit_on_ticker<V>(ticker: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
     where
         V: AnyVisitor,
     {
@@ -30,7 +30,7 @@ impl Group for Native {
         currency::maybe_visit_on_ticker::<Nls, _>(ticker, v).map_err(|v| v.0)
     }
 
-    fn maybe_visit_on_bank_symbol<V>(bank_symbol: Symbol, visitor: V) -> MaybeAnyVisitResult<V>
+    fn maybe_visit_on_bank_symbol<V>(bank_symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
     where
         Self: Sized,
         V: AnyVisitor,

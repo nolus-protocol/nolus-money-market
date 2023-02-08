@@ -28,7 +28,7 @@ impl Feeders {
     }
 
     pub(crate) fn try_register(
-        deps: DepsMut,
+        deps: DepsMut<'_>,
         info: MessageInfo,
         address: String,
     ) -> Result<Response, ContractError> {
@@ -42,7 +42,7 @@ impl Feeders {
     }
 
     pub(crate) fn try_remove(
-        deps: DepsMut,
+        deps: DepsMut<'_>,
         info: MessageInfo,
         address: String,
     ) -> Result<Response, ContractError> {
@@ -147,7 +147,7 @@ mod tests {
     }
 
     fn register(
-        deps: DepsMut,
+        deps: DepsMut<'_>,
         info: &MessageInfo,
         address: &str,
     ) -> Result<Response, ContractError> {
@@ -156,7 +156,7 @@ mod tests {
         };
         execute(deps, mock_env(), info.to_owned(), msg)
     }
-    fn remove(deps: DepsMut, info: &MessageInfo, address: &str) {
+    fn remove(deps: DepsMut<'_>, info: &MessageInfo, address: &str) {
         let msg = ExecuteMsg::RemoveFeeder {
             feeder_address: address.to_string(),
         };

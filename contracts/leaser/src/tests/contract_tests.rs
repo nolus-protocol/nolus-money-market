@@ -72,7 +72,7 @@ fn customer() -> MessageInfo {
     mock_info("addr0000", &coins(2, DENOM))
 }
 
-fn setup_test_case(deps: DepsMut) {
+fn setup_test_case(deps: DepsMut<'_>) {
     let lpp_addr = Addr::unchecked(LPP_ADDR);
     let msg = leaser_instantiate_msg(1, lpp_addr);
 
@@ -80,7 +80,7 @@ fn setup_test_case(deps: DepsMut) {
     assert_eq!(1, resp.messages.len());
 }
 
-fn query_config(deps: Deps) -> Config {
+fn query_config(deps: Deps<'_>) -> Config {
     let res = query(deps, mock_env(), QueryMsg::Config {}).unwrap();
     let config_response: ConfigResponse = from_binary(&res).unwrap();
     config_response.config
@@ -96,12 +96,12 @@ fn dex_params() -> ConnectionParams {
     }
 }
 
-fn setup_dex_ok(deps: DepsMut) {
+fn setup_dex_ok(deps: DepsMut<'_>) {
     let resp = setup_dex(deps, owner()).expect("dex update passed");
     assert!(resp.messages.is_empty());
 }
 
-fn setup_dex(deps: DepsMut, info: MessageInfo) -> ContractResult<Response> {
+fn setup_dex(deps: DepsMut<'_>, info: MessageInfo) -> ContractResult<Response> {
     let msg = ExecuteMsg::SetupDex(dex_params());
     execute(deps, mock_env(), info, msg)
 }

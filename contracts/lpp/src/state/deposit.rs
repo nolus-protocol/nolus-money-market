@@ -115,7 +115,7 @@ impl Deposit {
         Ok(maybe_reward)
     }
 
-    pub fn distribute_rewards(deps: DepsMut, rewards: Coin<Nls>) -> Result<(), ContractError> {
+    pub fn distribute_rewards(deps: DepsMut<'_>, rewards: Coin<Nls>) -> Result<(), ContractError> {
         let mut globals = Self::GLOBALS.may_load(deps.storage)?.unwrap_or_default();
 
         if globals.balance_nlpn.is_zero() {

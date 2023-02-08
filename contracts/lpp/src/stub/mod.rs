@@ -40,7 +40,7 @@ pub struct LppRef {
 }
 
 impl LppRef {
-    pub fn try_new(addr: Addr, querier: &QuerierWrapper) -> ContractResult<Self> {
+    pub fn try_new(addr: Addr, querier: &QuerierWrapper<'_>) -> ContractResult<Self> {
         let resp: Config = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
 
         let currency = resp.lpn_ticker().into();
@@ -52,7 +52,7 @@ impl LppRef {
         &self.addr
     }
 
-    pub fn execute<V>(self, cmd: V, querier: &QuerierWrapper) -> StdResult<V::Output, V::Error>
+    pub fn execute<V>(self, cmd: V, querier: &QuerierWrapper<'_>) -> StdResult<V::Output, V::Error>
     where
         V: WithLpp,
         finance::error::Error: Into<V::Error>,
@@ -88,7 +88,7 @@ impl LppRef {
         )
     }
 
-    fn into_stub<'a, C>(self, querier: &'a QuerierWrapper) -> LppStub<'a, C> {
+    fn into_stub<'a, C>(self, querier: &'a QuerierWrapper<'_>) -> LppStub<'a, C> {
         LppStub {
             lpp_ref: self,
             currency: PhantomData::<C>,

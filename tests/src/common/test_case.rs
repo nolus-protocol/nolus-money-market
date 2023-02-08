@@ -5,10 +5,10 @@ use finance::{
     percent::Percent,
 };
 use lease::api::dex::{ConnectionParams, Ics20Channel};
-use sdk::testing::CustomMessageSender;
 use sdk::{
+    testing::CustomMessageSender,
     cosmwasm_std::{Addr, Coin as CwCoin, Empty, Uint64},
-    cw_multi_test::{next_block, Executor},
+    cw_multi_test::{next_block, Executor}
 };
 
 use crate::common::{lease_wrapper::LeaseWrapperAddresses, ContractWrapper, MockApp};
@@ -129,7 +129,7 @@ where
         self
     }
 
-    pub fn open_lease<D>(&mut self, lease_currency: Symbol) -> Addr
+    pub fn open_lease<D>(&mut self, lease_currency: Symbol<'_>) -> Addr
     where
         D: Currency,
     {

@@ -73,7 +73,7 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -91,7 +91,7 @@ pub struct MigrateMsg {
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
     use sdk::cosmwasm_std::Storage;
     use swap::SwapTarget;
     use tree::HumanReadableTree;
@@ -129,7 +129,7 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> Result<Response, Co
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::Config {} => Ok(to_binary(&query_config(deps.storage)?)?),
         QueryMsg::Feeders {} => Ok(to_binary(&Feeders::get(deps.storage)?)?),
@@ -142,7 +142,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -161,7 +161,7 @@ pub fn execute(
 
 // TODO: compare gas usage of this solution vs reply on error
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let resp = match msg.result {
         cosmwasm_std::SubMsgResult::Ok(resp) => {
             let data = match resp.data {

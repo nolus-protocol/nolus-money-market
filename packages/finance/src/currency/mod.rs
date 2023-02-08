@@ -1,15 +1,17 @@
 use std::{any::TypeId, fmt::Debug};
 
-pub use from_symbol::{
-    maybe_visit_on_bank_symbol, maybe_visit_on_ticker, visit_on_bank_symbol, MaybeVisitResult,
-    SingleVisitor,
-};
-pub use from_symbol_any::{
-    visit_any_on_ticker, visit_any_on_tickers, AnyVisitor, AnyVisitorPair, AnyVisitorResult,
-};
-pub use group::{Group, MaybeAnyVisitResult};
-
 use crate::error::{Error, Result};
+
+pub use self::{
+    from_symbol_any::{
+        visit_any_on_ticker, visit_any_on_tickers, AnyVisitor, AnyVisitorPair, AnyVisitorResult,
+    },
+    from_symbol::{
+        maybe_visit_on_bank_symbol, maybe_visit_on_ticker, visit_on_bank_symbol, MaybeVisitResult,
+        SingleVisitor,
+    },
+    group::{Group, MaybeAnyVisitResult}
+};
 
 mod from_symbol;
 mod from_symbol_any;
@@ -41,7 +43,7 @@ where
     TypeId::of::<C1>() == TypeId::of::<C2>()
 }
 
-pub fn validate<G>(ticker: Symbol) -> Result<()>
+pub fn validate<G>(ticker: Symbol<'_>) -> Result<()>
 where
     G: Group,
 {

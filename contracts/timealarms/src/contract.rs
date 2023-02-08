@@ -18,7 +18,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     _env: Env,
     _info: MessageInfo,
     _msg: InstantiateMsg,
@@ -32,7 +32,7 @@ pub fn instantiate(
 pub struct MigrateMsg {}
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::upgrade_old_contract::<0, fn(_) -> _, ContractError>(
         deps.storage,
         version!(CONTRACT_STORAGE_VERSION),
@@ -44,7 +44,7 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -58,7 +58,7 @@ pub fn execute(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::AlarmsStatus {} => Ok(sdk::cosmwasm_std::to_binary(&TimeAlarms::try_any_alarm(
             deps.storage,
@@ -68,7 +68,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, ContractErro
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let res = match msg.result {
         SubMsgResult::Ok(_) => {
             TimeAlarms::remove(deps.storage, msg.id)?;

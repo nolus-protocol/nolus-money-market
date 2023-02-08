@@ -29,7 +29,7 @@ impl Profit {
         Ok(Response::new())
     }
     pub(crate) fn transfer(
-        deps: Deps,
+        deps: Deps<'_>,
         env: Env,
         info: MessageInfo,
     ) -> Result<Response, ContractError> {

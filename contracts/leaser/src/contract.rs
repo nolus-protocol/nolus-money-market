@@ -1,11 +1,10 @@
 use access_control::SingleUserAccess;
-use cosmwasm_std::Storage;
 use platform::{batch::Batch, reply::from_instantiate};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{Storage, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
 use versioning::{version, VersionSegment};
 
@@ -23,7 +22,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     _env: Env,
     info: MessageInfo,
     msg: InstantiateMsg,
@@ -47,7 +46,7 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::upgrade_old_contract::<1, fn(_) -> _, ContractError>(
         deps.storage,
         version!(CONTRACT_STORAGE_VERSION),
@@ -59,7 +58,7 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
-    deps: DepsMut,
+    deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
@@ -94,7 +93,7 @@ pub fn execute(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
+pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     let res = match msg {
         QueryMsg::Config {} => to_binary(&Leaser::new(deps).config()?),
         QueryMsg::Quote {
@@ -107,7 +106,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> ContractResult<Response> {
+pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Response> {
     let msg_id = msg.id;
     let contract_addr = from_instantiate::<()>(deps.api, msg)
         .map(|r| r.address)

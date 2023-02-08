@@ -1,5 +1,6 @@
-use cosmwasm_std::{Deps, DepsMut, Env, MessageInfo};
 use serde::{Deserialize, Serialize};
+
+use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo};
 
 use crate::{
     api::{ExecuteMsg, StateQuery, StateResponse},
@@ -7,9 +8,9 @@ use crate::{
     error::ContractResult,
 };
 
-use self::transfer_in_init::TransferInInit;
-
 use super::{Controller, Response};
+
+use self::transfer_in_init::TransferInInit;
 
 pub mod transfer_in_finish;
 pub mod transfer_in_init;
@@ -28,7 +29,7 @@ impl Active {
 impl Controller for Active {
     fn execute(
         self,
-        _deps: &mut DepsMut,
+        _deps: &mut DepsMut<'_>,
         env: Env,
         _info: MessageInfo,
         msg: ExecuteMsg,
@@ -49,7 +50,7 @@ impl Controller for Active {
         }
     }
 
-    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         Ok(StateResponse::Paid {
             amount: self.lease.lease.amount,
             in_progress: None,

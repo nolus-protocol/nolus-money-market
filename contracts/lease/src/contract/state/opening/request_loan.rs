@@ -1,13 +1,9 @@
-use cosmwasm_std::{Addr, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
-use sdk::{
-    cosmwasm_std::MessageInfo,
-    cosmwasm_std::{DepsMut, Env, Reply},
-};
+use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply};
 
 use crate::{
     api::{DownpaymentCoin, NewLeaseContract},
@@ -31,7 +27,7 @@ pub struct RequestLoan {
 
 impl RequestLoan {
     pub fn new(
-        deps: &mut DepsMut,
+        deps: &mut DepsMut<'_>,
         info: MessageInfo,
         new_lease: NewLeaseContract,
     ) -> ContractResult<(Batch, Self)> {
@@ -67,7 +63,7 @@ impl RequestLoan {
         self,
         msg: Reply,
         contract: Addr,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
     ) -> ContractResult<Response> {
         let id = ReplyId::try_from(msg.id)
             .map_err(|_| ContractError::InvalidParameters("Invalid reply ID passed!".into()))?;
@@ -95,13 +91,13 @@ impl RequestLoan {
 }
 
 impl Controller for RequestLoan {
-    fn reply(self, deps: &mut DepsMut, env: Env, msg: Reply) -> ContractResult<Response> {
+    fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
         self.on_response(msg, env.contract.address, &deps.querier)
     }
 
     fn query(
         self,
-        _deps: cosmwasm_std::Deps,
+        _deps: Deps<'_>,
         _env: Env,
         _msg: crate::api::StateQuery,
     ) -> ContractResult<crate::api::StateResponse> {

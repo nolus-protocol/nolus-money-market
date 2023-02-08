@@ -47,7 +47,7 @@ impl<'r, T> Subtree<'r, T> {
         NodeRef::with_index(self.tree, self.subtree_root_index)
     }
 
-    pub fn iter(&self) -> TreeIter<T> {
+    pub fn iter(&self) -> TreeIter<'_, T> {
         TreeIter {
             tree: self.tree,
             range: self.subtree_range(),
@@ -75,9 +75,9 @@ impl<'r, T> From<Subtree<'r, T>> for NodeRef<'r, T> {
 impl<'r, T> FindBy for Subtree<'r, T> {
     type Item = T;
 
-    fn find_by<F>(&self, f: F) -> Option<NodeRef<T>>
+    fn find_by<F>(&self, f: F) -> Option<NodeRef<'_, T>>
     where
-        F: FnMut(&T) -> bool,
+        F: FnMut(&'_ T) -> bool,
     {
         self.tree.find_by_within(self.subtree_range(), f)
     }

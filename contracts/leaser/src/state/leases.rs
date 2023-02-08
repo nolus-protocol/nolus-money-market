@@ -1,19 +1,20 @@
+use std::collections::HashSet;
+
 use sdk::{
     cosmwasm_std::{Addr, StdResult, Storage},
     cw_storage_plus::{Item, Map},
 };
-use std::collections::HashSet;
 
 use crate::{error::ContractResult, ContractError};
 
-const IDS: InstantiateReplyIdSeq = InstantiateReplyIdSeq::new("instantiate_reply_ids");
-const PENDING: Map<InstantiateReplyId, Addr> = Map::new("pending_instance_creations");
+const IDS: InstantiateReplyIdSeq<'static> = InstantiateReplyIdSeq::new("instantiate_reply_ids");
+const PENDING: Map<'static, InstantiateReplyId, Addr> = Map::new("pending_instance_creations");
 
 pub type InstantiateReplyId = u64;
 pub struct InstantiateReplyIdSeq<'a>(Item<'a, InstantiateReplyId>);
 
 impl<'a> InstantiateReplyIdSeq<'a> {
-    pub const fn new(namespace: &'a str) -> InstantiateReplyIdSeq {
+    pub const fn new(namespace: &'a str) -> Self {
         InstantiateReplyIdSeq(Item::new(namespace))
     }
 
@@ -123,7 +124,7 @@ mod test {
     #[test]
     fn test_id_overflow() {
         let mut deps = testing::mock_dependencies();
-        let id_item: Item<InstantiateReplyId> = Item::new("instantiate_reply_ids");
+        let id_item: Item<'_, InstantiateReplyId> = Item::new("instantiate_reply_ids");
         id_item
             .save(&mut deps.storage, &(InstantiateReplyId::MAX - 1))
             .unwrap();

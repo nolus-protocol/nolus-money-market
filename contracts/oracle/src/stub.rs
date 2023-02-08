@@ -57,7 +57,7 @@ pub struct OracleRef {
 }
 
 impl OracleRef {
-    pub fn try_from(addr: Addr, querier: &QuerierWrapper) -> Result<Self> {
+    pub fn try_from(addr: Addr, querier: &QuerierWrapper<'_>) -> Result<Self> {
         let resp: ConfigResponse = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config {})?;
 
         let base_currency = resp.config.base_asset;
@@ -75,7 +75,7 @@ impl OracleRef {
     pub fn execute<OracleBase, V>(
         self,
         cmd: V,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
     ) -> StdResult<V::Output, V::Error>
     where
         OracleBase: Currency,
@@ -97,7 +97,7 @@ impl OracleRef {
         &self,
         from: SymbolOwned,
         to: SymbolOwned,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
     ) -> Result<Vec<SwapTarget>> {
         let msg = QueryMsg::SwapPath { from, to };
 
@@ -106,7 +106,10 @@ impl OracleRef {
             .map_err(ContractError::from)
     }
 
-    fn into_stub<'a, OracleBase>(self, querier: &'a QuerierWrapper) -> OracleStub<'a, OracleBase> {
+    fn into_stub<'a, OracleBase>(
+        self,
+        querier: &'a QuerierWrapper<'a>,
+    ) -> OracleStub<'a, OracleBase> {
         OracleStub {
             oracle_ref: self,
             querier,

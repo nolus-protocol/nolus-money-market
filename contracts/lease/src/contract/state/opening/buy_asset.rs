@@ -1,14 +1,19 @@
-use cosmwasm_std::{Binary, Deps};
 use serde::{Deserialize, Serialize};
 
+use sdk::{
+    cosmwasm_std::{
+        Binary,
+        Deps,
+        DepsMut,
+        Env,
+        QuerierWrapper
+    },
+    neutron_sdk::sudo::msg::SudoMsg
+};
 use finance::coin::{self};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use platform::{batch::Batch as LocalBatch, ica::HostAccount, trx};
-use sdk::{
-    cosmwasm_std::{DepsMut, Env, QuerierWrapper},
-    neutron_sdk::sudo::msg::SudoMsg,
-};
 use swap::trx as swap_trx;
 
 use crate::{
@@ -51,7 +56,7 @@ impl BuyAsset {
         }
     }
 
-    pub(super) fn enter_state(&self, querier: &QuerierWrapper) -> ContractResult<LocalBatch> {
+    pub(super) fn enter_state(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
         // TODO define struct Trx with functions build_request and decode_response -> LpnCoin
         let mut swap_trx = self.dex_account.swap(&self.deps.1, querier);
         // TODO apply nls_swap_fee on the downpayment only!
@@ -65,7 +70,7 @@ impl BuyAsset {
         self,
         resp: Binary,
         env: &Env,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
     ) -> ContractResult<Response> {
         // TODO transfer (downpayment - transferred_and_swapped), i.e. the nls_swap_fee to the profit
         let amount = self.decode_response(resp.as_slice())?;
@@ -95,7 +100,7 @@ impl BuyAsset {
 }
 
 impl Controller for BuyAsset {
-    fn sudo(self, deps: &mut DepsMut, env: Env, msg: SudoMsg) -> ContractResult<Response> {
+    fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response { request: _, data } => self.on_response(data, &env, &deps.querier),
             SudoMsg::Timeout { request: _ } => todo!(),
@@ -107,7 +112,7 @@ impl Controller for BuyAsset {
         }
     }
 
-    fn query(self, _deps: Deps, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         Ok(StateResponse::Opening {
             downpayment: self.downpayment,
             loan: self.loan.principal,
