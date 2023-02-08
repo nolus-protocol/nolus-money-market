@@ -55,7 +55,7 @@ impl<'a> Leaser<'a> {
                 oracle,
                 config.liability,
                 config.lease_interest_rate_margin,
-            )?,
+            ),
             &self.deps.querier,
         )?;
 
