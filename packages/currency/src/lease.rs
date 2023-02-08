@@ -172,8 +172,8 @@ define_symbol! {
 }
 define_currency!(Secret, SCRT);
 
-#[derive(PartialEq, Eq, JsonSchema)]
-#[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
+#[derive(Clone, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct LeaseGroup {}
 
 impl Group for LeaseGroup {
