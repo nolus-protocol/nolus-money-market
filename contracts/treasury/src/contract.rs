@@ -11,7 +11,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Storage},
 };
-use versioning::Version;
+use versioning::{version, VersionSegment};
 
 use crate::{
     error::ContractError,
@@ -19,7 +19,8 @@ use crate::{
 };
 
 // version info for migration info
-const CONTRACT_VERSION: Version = 0;
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -28,9 +29,23 @@ pub fn instantiate(
     info: MessageInfo,
     _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
+    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
+
+    Ok(Response::default())
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct MigrateMsg {}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    versioning::upgrade_old_contract::<0, fn(_) -> _, ContractError>(
+        deps.storage,
+        version!(CONTRACT_STORAGE_VERSION),
+        None,
+    )?;
 
     Ok(Response::default())
 }

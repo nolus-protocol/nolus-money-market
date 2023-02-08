@@ -12,7 +12,7 @@ use sdk::{
         ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Storage, Timestamp,
     },
 };
-use versioning::Version;
+use versioning::{version, VersionSegment};
 
 use crate::{
     cmd::Dispatch,
@@ -23,7 +23,8 @@ use crate::{
 };
 
 // version info for migration info
-const CONTRACT_VERSION: Version = 0;
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -32,7 +33,7 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
+    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     platform::contract::validate_addr(&deps.querier, &msg.lpp)?;
     platform::contract::validate_addr(&deps.querier, &msg.oracle)?;
@@ -69,6 +70,20 @@ pub fn instantiate(
         .map_err(ContractError::from)?;
 
     Ok(Response::from(batch))
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct MigrateMsg {}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    versioning::upgrade_old_contract::<0, fn(_) -> _, ContractError>(
+        deps.storage,
+        version!(CONTRACT_STORAGE_VERSION),
+        None,
+    )?;
+
+    Ok(Response::default())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

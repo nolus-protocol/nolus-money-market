@@ -7,10 +7,9 @@ use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Curre
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
-    cw_storage_plus::Item,
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdError},
 };
-use versioning::Version;
+use versioning::{version, VersionSegment};
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -24,7 +23,9 @@ mod config;
 mod lender;
 mod rewards;
 
-const CONTRACT_VERSION: Version = 1;
+// version info for migration info
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
@@ -38,7 +39,7 @@ impl<'a> InstantiateWithLpn<'a> {
     where
         LPN: 'static + Currency + Serialize + DeserializeOwned,
     {
-        versioning::initialize::<CONTRACT_VERSION>(self.deps.storage)?;
+        versioning::initialize(self.deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
         SingleUserAccess::new_contract_owner(self.info.sender).store(self.deps.storage)?;
         SingleUserAccess::new(
@@ -92,14 +93,17 @@ pub fn instantiate(
 pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
     deps.api.addr_validate(msg.lease_code_admin.as_str())?;
 
-    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
-    Item::<bool>::new("contract_info").remove(deps.storage);
-
-    SingleUserAccess::new(
-        crate::access_control::LEASE_CODE_ADMIN_KEY,
-        msg.lease_code_admin,
-    )
-    .store(deps.storage)?;
+    versioning::upgrade_old_contract::<1, _, StdError>(
+        deps.storage,
+        version!(CONTRACT_STORAGE_VERSION),
+        Some(|storage| {
+            SingleUserAccess::new(
+                crate::access_control::LEASE_CODE_ADMIN_KEY,
+                msg.lease_code_admin,
+            )
+            .store(storage)
+        }),
+    )?;
 
     Ok(Response::default())
 }

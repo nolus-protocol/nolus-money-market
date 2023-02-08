@@ -1,115 +1,184 @@
+use std::error::Error;
+
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{to_binary, Binary, StdError, StdResult, Storage},
+    cosmwasm_std::{StdError, StdResult, Storage},
     cw_storage_plus::Item,
-    schemars::{self, JsonSchema},
 };
 
-pub type Version = u16;
+pub type VersionSegment = u16;
 
-pub const VERSION_ITEM: Item<'static, Version> = Item::new("contract_version");
-
-pub fn initialize<const VERSION: Version>(storage: &mut dyn Storage) -> StdResult<()> {
-    VERSION_ITEM.save(storage, &VERSION)
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
+pub struct SemVer {
+    major: VersionSegment,
+    minor: VersionSegment,
+    patch: VersionSegment,
 }
 
-pub fn upgrade_contract<const VERSION: Version>(storage: &mut dyn Storage) -> StdResult<()> {
-    VERSION_ITEM.update(storage, |version| if version.wrapping_add(1) == VERSION {
-        Ok(VERSION)
-    } else {
-        Err(StdError::generic_err("Couldn't upgrade contract because versions aren't adjacent and/or monotonically increasing."))
-    }).map(|_| ())
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct Version {
+    storage: VersionSegment,
+    software: SemVer,
 }
 
-#[derive(
-    Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Serialize, Deserialize, JsonSchema,
-)]
-#[serde(untagged, rename_all = "snake_case")]
-pub enum WithVersion<Q> {
-    Version {
-        version: (),
-    },
-    Query {
-        #[serde(flatten)]
-        query: Q,
-    },
-}
-
-impl<Q> WithVersion<Q> {
-    pub const fn new_query(query: Q) -> Self {
-        Self::Query { query }
+impl Version {
+    pub fn new(storage: VersionSegment, software: SemVer) -> Self {
+        Self { storage, software }
     }
+}
 
-    pub fn handle_query<const VERSION: Version, F>(self, f: F) -> StdResult<Binary>
+pub fn parse_semver(version: &str) -> SemVer {
+    fn parse_segment<'r, I>(
+        iter: &mut I,
+        lowercase_name: &str,
+        pascal_case_name: &str,
+    ) -> VersionSegment
     where
-        F: FnOnce(Q) -> StdResult<Binary>,
+        I: Iterator<Item = &'r str> + ?Sized,
     {
-        match self {
-            WithVersion::Version { version: () } => to_binary(&VERSION),
-            WithVersion::Query { query } => f(query),
-        }
+        iter.next()
+            .unwrap_or_else(|| panic!("No {} segment in version string!", lowercase_name))
+            .parse()
+            .unwrap_or_else(|_| {
+                panic!(
+                    "{} segment in version string is not a number!",
+                    pascal_case_name
+                )
+            })
+    }
+
+    let mut iter = version.split('.');
+
+    let major: VersionSegment = parse_segment(&mut iter, "major", "Major");
+    let minor: VersionSegment = parse_segment(&mut iter, "minor", "Minor");
+    let patch: VersionSegment = parse_segment(&mut iter, "patch", "Patch");
+
+    if iter.next().is_some() {
+        panic!("Unexpected fourth segment found in version string!");
+    };
+
+    SemVer {
+        major,
+        minor,
+        patch,
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use serde::{Deserialize, Serialize};
+#[macro_export]
+macro_rules! version {
+    ($storage: expr) => {{
+        $crate::Version::new(
+            $storage,
+            $crate::parse_semver(::core::env!(
+                "CARGO_PKG_VERSION",
+                "Cargo package version is not set as an environment variable!",
+            )),
+        )
+    }};
+}
 
-    use super::WithVersion;
+const VERSION_STORAGE_KEY: Item<'static, Version> = Item::new("contract_version");
 
-    #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
-    #[serde(rename_all = "snake_case")]
-    enum VariantsQuery {
-        Abc {},
-        Def {},
-        Version {},
+pub fn initialize(storage: &mut dyn Storage, version: Version) -> StdResult<()> {
+    VERSION_STORAGE_KEY.save(storage, &version)
+}
+
+// TODO remove when all contracts have been migrated to post-refactor versions
+pub fn upgrade_old_contract<
+    'r,
+    const OLD_COMPATIBILITY_VERSION: VersionSegment,
+    MigrateStorageFunctor,
+    MigrateStorageError,
+>(
+    storage: &'r mut dyn Storage,
+    version: Version,
+    migrate_storage_functor: Option<MigrateStorageFunctor>,
+) -> Result<(), MigrateStorageError>
+where
+    MigrateStorageFunctor: FnOnce(&'r mut dyn Storage) -> Result<(), MigrateStorageError>,
+    MigrateStorageError: From<StdError> + Error,
+{
+    const CW_VERSION_ITEM: Item<'static, String> = Item::new("contract_info");
+
+    const OLD_VERSION_ITEM: Item<'static, u16> = Item::new("contract_version");
+
+    if version.storage != 0 {
+        return Err(StdError::generic_err(
+            "Storage version should be set to zero, marking the initial one!",
+        )
+        .into());
     }
 
-    const VERSION: WithVersion<VariantsQuery> = WithVersion::Version { version: () };
-
-    const QUERY_ABC: WithVersion<VariantsQuery> = WithVersion::new_query(VariantsQuery::Abc {});
-
-    const QUERY_DEF: WithVersion<VariantsQuery> = WithVersion::new_query(VariantsQuery::Def {});
-
-    const QUERY_VERSION: WithVersion<VariantsQuery> =
-        WithVersion::new_query(VariantsQuery::Version {});
-
-    fn assert_query_serde(value: WithVersion<VariantsQuery>) {
-        assert_eq!(
-            serde_json::from_str::<WithVersion<VariantsQuery>>(
-                &serde_json::to_string(&value).unwrap()
-            )
-            .unwrap(),
-            value
-        );
+    if OLD_VERSION_ITEM.load(storage)? != OLD_COMPATIBILITY_VERSION {
+        return Err(StdError::generic_err(
+            "Couldn't upgrade contract because storage version didn't match expected one!",
+        )
+        .into());
     }
 
-    #[test]
-    fn test_query_serde() {
-        assert_query_serde(VERSION);
-        assert_query_serde(QUERY_ABC);
-        assert_query_serde(QUERY_DEF);
-        assert_query_serde(QUERY_VERSION);
+    CW_VERSION_ITEM.remove(storage);
 
-        assert_eq!(
-            serde_json::from_str::<WithVersion<VariantsQuery>>(r#"{"version":null}"#).unwrap(),
-            VERSION
-        );
+    OLD_VERSION_ITEM.remove(storage);
 
-        assert_eq!(
-            serde_json::from_str::<WithVersion<VariantsQuery>>(r#"{"abc":{}}"#).unwrap(),
-            QUERY_ABC
-        );
+    // Using zero as a starting storage version to mark this as a new epoch.
+    initialize(storage, version)?;
 
-        assert_eq!(
-            serde_json::from_str::<WithVersion<VariantsQuery>>(r#"{"def":{}}"#).unwrap(),
-            QUERY_DEF
-        );
+    migrate_storage_functor.map_or(Ok(()), move |functor| functor(storage))
+}
 
-        assert_eq!(
-            serde_json::from_str::<WithVersion<VariantsQuery>>(r#"{"version":{}}"#).unwrap(),
-            QUERY_VERSION
-        );
+#[inline]
+pub fn update_software(storage: &mut dyn Storage, version: Version) -> StdResult<()> {
+    update_version(storage, version.storage, version).map(|_| ())
+}
+
+pub fn update_software_and_storage<
+    'r,
+    const FROM_STORAGE_VERSION: VersionSegment,
+    MigrateStorageFunctor,
+    MigrateStorageError,
+>(
+    storage: &'r mut dyn Storage,
+    version: Version,
+    migrate_storage: MigrateStorageFunctor,
+) -> Result<(), MigrateStorageError>
+where
+    MigrateStorageFunctor: FnOnce(&'r mut dyn Storage) -> Result<(), MigrateStorageError>,
+    MigrateStorageError: From<StdError> + Error,
+{
+    if version.storage == FROM_STORAGE_VERSION {
+        return Err(StdError::generic_err("Software and storage update handler called, but expected and new storage versions are the same!").into());
     }
+
+    if version.storage != FROM_STORAGE_VERSION.wrapping_add(1) {
+        return Err(StdError::generic_err("Expected and new storage versions are not directly adjacent! This could indicate an error!").into());
+    }
+
+    update_version(storage, FROM_STORAGE_VERSION, version)?;
+
+    migrate_storage(storage)
+}
+
+fn update_version(
+    storage: &mut dyn Storage,
+    expected_storage: VersionSegment,
+    version: Version,
+) -> Result<Version, StdError> {
+    VERSION_STORAGE_KEY.update(storage, |saved_version| {
+        if saved_version.storage != expected_storage {
+            return Err(StdError::generic_err(format!(
+                "Software update handler called, but storage versions differ! Saved storage version is {saved}, but storage version used by this software is {current}!",
+                saved = saved_version.storage,
+                current = expected_storage,
+            )));
+        }
+
+        if saved_version.software < version.software {
+            Ok(version)
+        } else {
+            Err(StdError::generic_err(
+                "Couldn't upgrade contract because software version isn't monotonically increasing!",
+            ))
+        }
+    })
 }

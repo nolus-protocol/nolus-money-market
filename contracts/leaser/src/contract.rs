@@ -7,7 +7,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
-use versioning::Version;
+use versioning::{version, VersionSegment};
 
 use crate::{
     cmd::Borrow,
@@ -17,7 +17,9 @@ use crate::{
     state::{config::Config, leases::Leases},
 };
 
-const CONTRACT_VERSION: Version = 1;
+// version info for migration info
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -31,7 +33,7 @@ pub fn instantiate(
     platform::contract::validate_addr(&deps.querier, &msg.market_price_oracle)?;
     platform::contract::validate_addr(&deps.querier, &msg.profit)?;
 
-    versioning::initialize::<CONTRACT_VERSION>(deps.storage)?;
+    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
 
@@ -45,8 +47,13 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
-    versioning::upgrade_contract::<CONTRACT_VERSION>(deps.storage)?;
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    versioning::upgrade_old_contract::<1, fn(_) -> _, ContractError>(
+        deps.storage,
+        version!(CONTRACT_STORAGE_VERSION),
+        None,
+    )?;
+
     Ok(Response::default())
 }
 
