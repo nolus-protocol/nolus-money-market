@@ -50,7 +50,7 @@ fn on_alarm_zero_reward() {
         .execute_contract(
             test_case.timealarms.unwrap(),
             test_case.dispatcher_addr.as_ref().unwrap().clone(),
-            &rewards_dispatcher::msg::ExecuteMsg::TimeAlarm(test_case.app.block_info().time),
+            &rewards_dispatcher::msg::ExecuteMsg::TimeAlarm {},
             &cwcoins::<Lpn, _>(40),
         )
         .unwrap_err();
@@ -132,7 +132,7 @@ fn on_alarm() {
         .execute_contract(
             test_case.timealarms.unwrap(),
             test_case.dispatcher_addr.clone().unwrap(),
-            &rewards_dispatcher::msg::ExecuteMsg::TimeAlarm(test_case.app.block_info().time),
+            &rewards_dispatcher::msg::ExecuteMsg::TimeAlarm {},
             &[],
         )
         .unwrap();

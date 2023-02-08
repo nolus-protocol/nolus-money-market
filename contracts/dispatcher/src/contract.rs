@@ -8,9 +8,7 @@ use platform::batch::{Batch, Emit, Emitter};
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{
-        ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Storage, Timestamp,
-    },
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Storage},
 };
 use versioning::{version, VersionSegment};
 
@@ -95,7 +93,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::Config { cadence_hours } => try_config(deps.storage, info, cadence_hours),
-        ExecuteMsg::TimeAlarm(time) => try_dispatch(deps, env, info, time),
+        ExecuteMsg::TimeAlarm {} => try_dispatch(deps, env, info),
     }
 }
 
@@ -124,14 +122,8 @@ fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
     Ok(ConfigResponse { cadence_hours })
 }
 
-pub fn try_dispatch(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
-    time: Timestamp,
-) -> Result<Response, ContractError> {
+pub fn try_dispatch(deps: DepsMut, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     let block_time = env.block.time;
-    ensure!(time >= block_time, ContractError::AlarmTimeValidation {});
 
     SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
         .check_access(&info.sender)?;

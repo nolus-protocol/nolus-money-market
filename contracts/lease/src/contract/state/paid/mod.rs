@@ -43,7 +43,7 @@ impl Controller for Active {
             ExecuteMsg::PriceAlarm() => {
                 todo!("silently pass or make sure the alarm has been removed")
             }
-            ExecuteMsg::TimeAlarm(_block_time) => {
+            ExecuteMsg::TimeAlarm {} => {
                 todo!("silently pass or make sure the alarm has been removed")
             }
         }

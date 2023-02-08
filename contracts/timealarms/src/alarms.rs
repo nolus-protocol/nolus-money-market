@@ -50,10 +50,10 @@ impl TimeAlarms {
         }
 
         impl<'a> AlarmDispatcher for OracleAlarmDispatcher<'a> {
-            fn send_to(&mut self, id: Id, addr: Addr, ctime: Timestamp) -> Result<(), AlarmError> {
+            fn send_to(&mut self, id: Id, addr: Addr) -> Result<(), AlarmError> {
                 Ok(self.batch.schedule_execute_wasm_reply_always::<_, Nls>(
                     &addr,
-                    ExecuteAlarmMsg::TimeAlarm(ctime),
+                    ExecuteAlarmMsg::TimeAlarm {},
                     None,
                     id,
                 )?)
@@ -61,6 +61,7 @@ impl TimeAlarms {
         }
 
         let mut batch = Batch::default();
+
         let mut dispatcher = OracleAlarmDispatcher { batch: &mut batch };
 
         let sent = Self::TIME_ALARMS.notify(storage, &mut dispatcher, ctime, max_count)?;

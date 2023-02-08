@@ -44,9 +44,6 @@ pub enum ContractError {
     #[error("[Dispatcher] Invalid time configuration. Current reward distribution time is before the last distribution time")]
     InvalidTimeConfiguration {},
 
-    #[error("[Dispatcher] Alarm time validation failed")]
-    AlarmTimeValidation {},
-
     #[error("[Dispatcher] Zero Reward")]
     ZeroReward {},
 }

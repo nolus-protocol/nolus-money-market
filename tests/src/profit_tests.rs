@@ -26,7 +26,7 @@ fn on_alarm_from_unknown() {
     let res = test_case.app.execute_contract(
         user_addr,
         test_case.profit_addr.as_ref().unwrap().clone(),
-        &profit::msg::ExecuteMsg::TimeAlarm(test_case.app.block_info().time),
+        &profit::msg::ExecuteMsg::TimeAlarm {},
         &cwcoins::<Lpn, _>(40),
     );
     assert!(res.is_err());
@@ -57,7 +57,7 @@ fn on_alarm_zero_balance() {
         .execute_contract(
             test_case.timealarms.unwrap(),
             test_case.profit_addr.as_ref().unwrap().clone(),
-            &profit::msg::ExecuteMsg::TimeAlarm(test_case.app.block_info().time),
+            &profit::msg::ExecuteMsg::TimeAlarm {},
             &[],
         )
         .unwrap();
@@ -92,7 +92,7 @@ fn on_alarm_transfer() {
         .execute_contract(
             test_case.timealarms.clone().unwrap(),
             test_case.profit_addr.as_ref().unwrap().clone(),
-            &profit::msg::ExecuteMsg::TimeAlarm(test_case.app.block_info().time),
+            &profit::msg::ExecuteMsg::TimeAlarm {},
             &[],
         )
         .unwrap();

@@ -145,7 +145,7 @@ impl Controller for Active {
             ExecuteMsg::Repay() => self.try_repay(&deps.querier, &env, info),
             ExecuteMsg::Close() => todo!("fail"),
             ExecuteMsg::PriceAlarm() => self.try_on_price_alarm(&deps.querier, &env, info),
-            ExecuteMsg::TimeAlarm(_block_time) => self.try_on_time_alarm(&deps.querier, &env, info),
+            ExecuteMsg::TimeAlarm {} => self.try_on_time_alarm(&deps.querier, &env, info),
         }
     }
 

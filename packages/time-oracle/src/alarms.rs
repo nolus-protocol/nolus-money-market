@@ -98,9 +98,11 @@ impl<'a> Alarms<'a> {
 
         self.alarms_selection(storage, ctime, max_id)
             .take(max_count.try_into()?)
-            .try_fold(0, |count, timestamp| -> Result<AlarmsCount, AlarmError> {
-                let (id, alarm) = timestamp?;
-                dispatcher.send_to(id, alarm.addr, ctime)?;
+            .try_fold(0, |count, alarm| -> Result<AlarmsCount, AlarmError> {
+                let (id, alarm) = alarm?;
+
+                dispatcher.send_to(id, alarm.addr)?;
+
                 Ok(count + 1)
             })
     }
@@ -113,7 +115,7 @@ impl<'a> Alarms<'a> {
 }
 
 pub trait AlarmDispatcher {
-    fn send_to(&mut self, id: Id, addr: Addr, ctime: Timestamp) -> Result<(), AlarmError>;
+    fn send_to(&mut self, id: Id, addr: Addr) -> Result<(), AlarmError>;
 }
 
 #[cfg(test)]
@@ -126,18 +128,16 @@ pub mod tests {
     struct MockAlarmDispatcher(pub Vec<Id>);
 
     impl AlarmDispatcher for MockAlarmDispatcher {
-        fn send_to(&mut self, id: Id, _addr: Addr, _ctime: Timestamp) -> Result<(), AlarmError> {
+        fn send_to(&mut self, id: Id, _addr: Addr) -> Result<(), AlarmError> {
             self.0.push(id);
+
             Ok(())
         }
     }
 
     impl MockAlarmDispatcher {
         fn clean_alarms(&self, storage: &mut dyn Storage, alarms: &Alarms) -> StdResult<()> {
-            for id in self.0.iter() {
-                alarms.remove(storage, *id)?;
-            }
-            Ok(())
+            self.0.iter().try_for_each(|&id| alarms.remove(storage, id))
         }
     }
 

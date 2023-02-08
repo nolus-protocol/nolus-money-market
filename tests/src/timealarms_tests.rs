@@ -17,9 +17,7 @@ mod mock_lease {
 
     use sdk::{
         cosmwasm_ext::Response,
-        cosmwasm_std::{
-            Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo, StdError, StdResult, Timestamp,
-        },
+        cosmwasm_std::{Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo, StdError, StdResult},
         cw_storage_plus::Item,
         schemars::{self, JsonSchema},
         testing::{Contract, ContractWrapper, Executor},
@@ -33,7 +31,7 @@ mod mock_lease {
     #[serde(rename_all = "snake_case")]
     pub enum MockExecuteMsg {
         // mimic the scheme
-        TimeAlarm(Timestamp),
+        TimeAlarm {},
         // setup GATE
         Gate(bool),
     }
@@ -43,18 +41,25 @@ mod mock_lease {
         Ok(Response::new().add_attribute("method", "instantiate"))
     }
 
-    fn execute(deps: DepsMut, _: Env, _: MessageInfo, msg: MockExecuteMsg) -> StdResult<Response> {
+    fn execute(
+        deps: DepsMut,
+        env: Env,
+        _: MessageInfo,
+        msg: MockExecuteMsg,
+    ) -> StdResult<Response> {
         match msg {
-            MockExecuteMsg::TimeAlarm(time) => {
+            MockExecuteMsg::TimeAlarm {} => {
                 let gate = GATE.load(deps.storage).expect("storage problem");
+
                 if gate {
-                    Ok(Response::new().add_attribute("lease_reply", time.to_string()))
+                    Ok(Response::new().add_attribute("lease_reply", env.block.time.to_string()))
                 } else {
                     Err(StdError::generic_err("closed gate"))
                 }
             }
             MockExecuteMsg::Gate(gate) => {
                 GATE.update(deps.storage, |_| -> StdResult<bool> { Ok(gate) })?;
+
                 Ok(Response::new().add_attribute("method", "set_gate"))
             }
         }

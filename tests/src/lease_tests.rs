@@ -558,7 +558,7 @@ fn liquidation_time_alarm(time_pass: Duration) {
         .execute_contract(
             test_case.timealarms.clone().unwrap(),
             lease_address.clone(),
-            &ExecuteMsg::TimeAlarm(test_case.app.block_info().time),
+            &ExecuteMsg::TimeAlarm {},
             &[],
         )
         .unwrap();

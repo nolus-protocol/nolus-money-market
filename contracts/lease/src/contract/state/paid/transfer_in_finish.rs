@@ -62,7 +62,7 @@ impl Controller for TransferInFinish {
         _info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        if let ExecuteMsg::TimeAlarm(_) = msg {
+        if matches!(msg, ExecuteMsg::TimeAlarm {}) {
             self.on_alarm(&deps.querier, &env)
         } else {
             state::err(&format!("{:?}", msg))

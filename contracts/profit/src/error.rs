@@ -15,9 +15,6 @@ pub enum ContractError {
     #[error("[Profit] {0}")]
     Unauthorized(#[from] access_control::Unauthorized),
 
-    #[error("[Profit] Alarm time validation failed")]
-    AlarmTimeValidation {},
-
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
     #[error("[Profit] Invalid contract address {0}")]

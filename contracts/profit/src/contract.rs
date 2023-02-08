@@ -4,9 +4,7 @@ use finance::duration::Duration;
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{
-        ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Timestamp,
-    },
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult},
 };
 use versioning::{version, VersionSegment};
 
@@ -77,7 +75,7 @@ pub fn execute(
         ExecuteMsg::Config { cadence_hours } => {
             Profit::try_config(deps.storage, info, cadence_hours)
         }
-        ExecuteMsg::TimeAlarm(time) => try_transfer(deps.as_ref(), env, info, time),
+        ExecuteMsg::TimeAlarm {} => try_transfer(deps.as_ref(), env, info),
     }
 }
 
@@ -88,19 +86,9 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     }
 }
 
-fn try_transfer(
-    deps: Deps,
-    env: Env,
-    info: MessageInfo,
-    time: Timestamp,
-) -> Result<Response, ContractError> {
+fn try_transfer(deps: Deps, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
         .check_access(&info.sender)?;
-
-    ensure!(
-        time >= env.block.time,
-        ContractError::AlarmTimeValidation {}
-    );
 
     Profit::transfer(deps, env, info)
 }
@@ -209,7 +197,7 @@ mod tests {
         let info = mock_info("timealarms", &coins(2, "unolus"));
         let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
-        let msg = ExecuteMsg::TimeAlarm(mock_env().block.time);
+        let msg = ExecuteMsg::TimeAlarm {};
         let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         assert_eq!(2, res.messages.len());

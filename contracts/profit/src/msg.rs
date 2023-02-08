@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{Addr, Timestamp},
+    cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
 };
 
@@ -16,7 +16,7 @@ pub struct InstantiateMsg {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Config { cadence_hours: u16 },
-    TimeAlarm(Timestamp),
+    TimeAlarm {},
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
