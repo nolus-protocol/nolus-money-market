@@ -592,7 +592,7 @@ dependencies = [
 
 [[package]]
 name = "lease"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cosmwasm-std",
  "currency",
@@ -732,7 +732,7 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "oracle"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -827,7 +827,7 @@ dependencies = [
 
 [[package]]
 name = "profit"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -945,7 +945,7 @@ dependencies = [
 
 [[package]]
 name = "rewards_dispatcher"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -1288,7 +1288,7 @@ dependencies = [
 
 [[package]]
 name = "timealarms"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "cosmwasm-std",
  "currency",
