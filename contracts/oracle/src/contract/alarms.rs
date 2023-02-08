@@ -25,13 +25,22 @@ use crate::{
 
 pub type AlarmReplyId = u64;
 
-pub struct MarketAlarms;
+pub struct MarketAlarms(AlarmReplyId);
 
 impl MarketAlarms {
     const PRICE_ALARMS: PriceAlarms<'static> =
         PriceAlarms::new("alarms_below", "index_below", "alarms_above", "index_above");
 
     const MSG_ID: Item<'static, AlarmReplyId> = Item::new("msg_id");
+
+    pub fn load(storage: &dyn Storage) -> Result<Self, ContractError> {
+        let next_id = Self::MSG_ID.may_load(storage)?.unwrap_or_default();
+        Ok(MarketAlarms(next_id))
+    }
+
+    pub fn save(&self, storage: &mut dyn Storage) -> Result<(), ContractError> {
+        Ok(Self::MSG_ID.save(storage, &self.0)?)
+    }
 
     pub fn remove(storage: &mut dyn Storage, addr: Addr) -> Result<Response, ContractError> {
         Self::PRICE_ALARMS.remove(storage, addr)?;
@@ -89,33 +98,31 @@ impl MarketAlarms {
         )
     }
 
-    pub fn try_notify_alarms<BaseC>(
-        storage: &mut dyn Storage,
+    pub fn try_notify_alarms<'a, BaseC>(
+        &mut self,
+        storage: &dyn Storage,
         mut batch: Batch,
-        prices: &[SpotPrice],
+        prices: impl Iterator<Item = SpotPrice> + 'a,
         max_count: u32, // TODO: type alias
     ) -> Result<Response, ContractError>
     where
         BaseC: Currency,
     {
-        let mut next_id = Self::MSG_ID.may_load(storage)?.unwrap_or_default();
-        let initial_id = next_id;
+        let initial_id = self.0;
 
         Self::alarms_iter::<BaseC>(storage, prices)
             .take(max_count.try_into()?)
-            .try_for_each(|addr| Self::schedule_alarm(&mut batch, addr?, &mut next_id))?;
+            .try_for_each(|addr| Self::schedule_alarm(&mut batch, addr?, &mut self.0))?;
 
-        Self::MSG_ID.save(storage, &next_id)?;
-
-        let processed = next_id.wrapping_sub(initial_id);
+        let processed = self.0.wrapping_sub(initial_id);
 
         Ok(Response::from(batch)
             .set_data(to_binary(&DispatchAlarmsResponse(processed.try_into()?))?))
     }
 
-    pub fn try_query_alarms<BaseC>(
+    pub fn try_query_alarms<'a, BaseC>(
         storage: &dyn Storage,
-        prices: &[SpotPrice],
+        prices: impl Iterator<Item = SpotPrice> + 'a,
     ) -> Result<AlarmsStatusResponse, ContractError>
     where
         BaseC: Currency,
@@ -130,7 +137,7 @@ impl MarketAlarms {
 
     fn alarms_iter<'a, BaseC>(
         storage: &'a dyn Storage,
-        prices: &'a [SpotPrice],
+        prices: impl Iterator<Item = SpotPrice> + 'a,
     ) -> impl Iterator<Item = Result<Addr, AlarmError>> + 'a
     where
         BaseC: Currency,
@@ -155,9 +162,9 @@ impl MarketAlarms {
             }
         }
 
-        prices.iter().flat_map(|price| {
+        prices.flat_map(|price| {
             with_quote::execute::<_, _, _, BaseC>(
-                price,
+                &price,
                 AlarmsCmd {
                     storage,
                     price_alarms: &Self::PRICE_ALARMS,
@@ -247,9 +254,10 @@ mod test {
         assert!(
             MarketAlarms::try_query_alarms::<Base>(
                 &storage,
-                &[price::total_of(Coin::<Weth>::new(1))
+                [price::total_of(Coin::<Weth>::new(1))
                     .is(Coin::<Base>::new(35))
                     .into(),]
+                .into_iter()
             )
             .unwrap()
             .remaining_alarms
@@ -260,9 +268,10 @@ mod test {
         assert!(
             !MarketAlarms::try_query_alarms::<Base>(
                 &storage,
-                &[price::total_of(Coin::<Weth>::new(1))
+                [price::total_of(Coin::<Weth>::new(1))
                     .is(Coin::<Base>::new(10))
                     .into(),]
+                .into_iter()
             )
             .unwrap()
             .remaining_alarms
@@ -272,18 +281,21 @@ mod test {
     #[test]
     #[should_panic]
     fn notify_with_wrong_base() {
-        let mut storage = MockStorage::new();
+        let storage = MockStorage::new();
 
         let batch = Batch::default();
 
-        let _ = MarketAlarms::try_notify_alarms::<Base>(
-            &mut storage,
-            batch,
-            &[price::total_of(Coin::<Base>::new(1))
-                .is(Coin::<Atom>::new(25))
-                .into()],
-            1,
-        );
+        let _ = MarketAlarms::load(&storage)
+            .unwrap()
+            .try_notify_alarms::<Base>(
+                &storage,
+                batch,
+                [price::total_of(Coin::<Base>::new(1))
+                    .is(Coin::<Atom>::new(25))
+                    .into()]
+                .into_iter(),
+                1,
+            );
     }
 
     #[test]
@@ -294,14 +306,17 @@ mod test {
 
         let batch = Batch::default();
 
-        let _ = MarketAlarms::try_notify_alarms::<Base>(
-            &mut storage,
-            batch,
-            &[price::total_of(Coin::<Nls>::new(1))
-                .is(Coin::<Base>::new(25))
-                .into()],
-            1,
-        );
+        let _ = MarketAlarms::load(&storage)
+            .unwrap()
+            .try_notify_alarms::<Base>(
+                &mut storage,
+                batch,
+                [price::total_of(Coin::<Nls>::new(1))
+                    .is(Coin::<Base>::new(25))
+                    .into()]
+                .into_iter(),
+                1,
+            );
     }
 
     #[test]
@@ -339,17 +354,20 @@ mod test {
         let batch = Batch::default();
 
         let sent = from_binary::<DispatchAlarmsResponse>(
-            &MarketAlarms::try_notify_alarms::<Base>(
-                &mut storage,
-                batch,
-                &[price::total_of(Coin::<Atom>::new(1))
-                    .is(Coin::<Base>::new(25))
-                    .into()],
-                3,
-            )
-            .unwrap()
-            .data
-            .unwrap(),
+            &MarketAlarms::load(&storage)
+                .unwrap()
+                .try_notify_alarms::<Base>(
+                    &storage,
+                    batch,
+                    [price::total_of(Coin::<Atom>::new(1))
+                        .is(Coin::<Base>::new(25))
+                        .into()]
+                    .into_iter(),
+                    3,
+                )
+                .unwrap()
+                .data
+                .unwrap(),
         )
         .unwrap()
         .0;
@@ -362,22 +380,25 @@ mod test {
         id.save(&mut storage, &(AlarmReplyId::MAX - 5)).unwrap();
 
         let sent = from_binary::<DispatchAlarmsResponse>(
-            &MarketAlarms::try_notify_alarms::<Base>(
-                &mut storage,
-                batch,
-                &[
-                    price::total_of(Coin::<Atom>::new(1))
-                        .is(Coin::<Base>::new(35))
-                        .into(),
-                    price::total_of(Coin::<Weth>::new(1))
-                        .is(Coin::<Base>::new(20))
-                        .into(),
-                ],
-                100,
-            )
-            .unwrap()
-            .data
-            .unwrap(),
+            &MarketAlarms::load(&storage)
+                .unwrap()
+                .try_notify_alarms::<Base>(
+                    &storage,
+                    batch,
+                    [
+                        price::total_of(Coin::<Atom>::new(1))
+                            .is(Coin::<Base>::new(35))
+                            .into(),
+                        price::total_of(Coin::<Weth>::new(1))
+                            .is(Coin::<Base>::new(20))
+                            .into(),
+                    ]
+                    .into_iter(),
+                    100,
+                )
+                .unwrap()
+                .data
+                .unwrap(),
         )
         .unwrap()
         .0;

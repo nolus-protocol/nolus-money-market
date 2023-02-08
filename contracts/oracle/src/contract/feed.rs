@@ -1,15 +1,18 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, ops::Deref};
 
 use serde::de::DeserializeOwned;
 
-use finance::currency::{Currency, SymbolOwned};
+use finance::{
+    currency::{self, AnyVisitorPair, Currency, SymbolOwned},
+    price::Price,
+};
 use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, Storage, Timestamp},
 };
-use swap::SwapTarget;
+use swap::{SwapGroup, SwapTarget};
 
 use crate::{
     msg::AlarmsStatusResponse,
@@ -42,14 +45,14 @@ where
         sender_raw: &Addr,
         prices: &[SpotPrice],
     ) -> Result<(), ContractError> {
-        let supported_pairs = SupportedPairs::<OracleBase>::load(storage)?.query_supported_pairs();
+        let tree = SupportedPairs::<OracleBase>::load(storage)?;
         if prices.iter().any(|price| {
-            !supported_pairs.iter().any(
+            !tree.query_supported_pairs().any(
                 |SwapLeg {
                      from,
                      to: SwapTarget { target: to, .. },
                  }| {
-                    price.base().ticker() == from && price.quote().ticker() == to
+                    price.base().ticker() == &from && price.quote().ticker() == &to
                 },
             )
         }) {
@@ -77,20 +80,85 @@ where
         Ok(prices)
     }
 
-    fn calc_all_prices(
-        &self,
-        storage: &dyn Storage,
+    pub fn all_prices_iter<'a>(
+        self,
+        storage: &'a dyn Storage,
+        tree: &'a SupportedPairs<OracleBase>,
         at: Timestamp,
         total_feeders: usize,
-    ) -> Result<Vec<SpotPrice>, ContractError> {
-        let tree: SupportedPairs<OracleBase> = SupportedPairs::load(storage)?;
-        let mut prices = vec![];
-        for leg in tree.clone().query_supported_pairs() {
-            if let Ok(price) = self.calc_price(&tree, storage, &leg.from, at, total_feeders) {
-                prices.push(price);
+    ) -> Result<impl Iterator<Item = SpotPrice> + 'a, ContractError> {
+        struct LegCmd<'a, 'b, OracleBase>
+        where
+            OracleBase: Currency,
+        {
+            feeds: &'a PriceFeeds<'static>,
+            storage: &'a dyn Storage,
+            at: Timestamp,
+            total_feeders: usize,
+            stack: &'b mut Vec<SpotPrice>,
+            _base: PhantomData<OracleBase>,
+        }
+
+        impl<'a, 'b, OracleBase> AnyVisitorPair for LegCmd<'a, 'b, OracleBase>
+        where
+            OracleBase: Currency,
+        {
+            type Output = SpotPrice;
+            type Error = ContractError;
+            fn on<B, Q>(self) -> Result<Self::Output, Self::Error>
+            where
+                B: Currency + serde::Serialize + DeserializeOwned,
+                Q: Currency + serde::Serialize + DeserializeOwned,
+            {
+                let price_child: Price<B, Q> = self
+                    .feeds
+                    .price::<Q, _>(
+                        self.storage,
+                        self.at,
+                        self.total_feeders,
+                        [B::TICKER, Q::TICKER].iter().map(Deref::deref),
+                    )?
+                    .try_into()?;
+
+                let price: SpotPrice = loop {
+                    match self
+                        .stack
+                        .last()
+                        .map(TryInto::<Price<Q, OracleBase>>::try_into)
+                    {
+                        None => break price_child.into(),
+                        Some(Ok(price_parent)) => break (price_child * price_parent).into(),
+                        _ => {
+                            self.stack.pop();
+                        }
+                    }
+                };
+                self.stack.push(price.clone());
+
+                Ok(price)
             }
         }
-        Ok(prices)
+
+        let res = tree.query_supported_pairs().scan(
+            vec![],
+            move |stack: &mut Vec<SpotPrice>, leg: SwapLeg| {
+                let res = currency::visit_any_on_tickers::<SwapGroup, SwapGroup, _>(
+                    &leg.from,
+                    &leg.to.target,
+                    LegCmd {
+                        feeds: &self.feeds,
+                        storage,
+                        at,
+                        total_feeders,
+                        stack,
+                        _base: PhantomData::<OracleBase>,
+                    },
+                )
+                .expect("price calculation error");
+                Some(res)
+            },
+        );
+        Ok(res)
     }
 
     fn calc_price(
@@ -116,8 +184,12 @@ where
     OracleBase: Currency + DeserializeOwned,
 {
     let batch = Batch::default();
-    let prices = calc_all_prices::<OracleBase>(storage, block_time)?;
-    MarketAlarms::try_notify_alarms::<OracleBase>(storage, batch, &prices, max_count)
+    let tree = SupportedPairs::load(storage)?;
+    let prices = calc_all_prices::<OracleBase>(storage, block_time, &tree)?;
+    let mut alarms = MarketAlarms::load(storage)?;
+    let response = alarms.try_notify_alarms::<OracleBase>(storage, batch, prices, max_count)?;
+    alarms.save(storage)?;
+    Ok(response)
 }
 
 pub fn try_query_alarms<OracleBase>(
@@ -127,14 +199,16 @@ pub fn try_query_alarms<OracleBase>(
 where
     OracleBase: Currency + DeserializeOwned,
 {
-    let prices = calc_all_prices::<OracleBase>(storage, block_time)?;
-    MarketAlarms::try_query_alarms::<OracleBase>(storage, &prices)
+    let tree = SupportedPairs::load(storage)?;
+    let prices = calc_all_prices::<OracleBase>(storage, block_time, &tree)?;
+    MarketAlarms::try_query_alarms::<OracleBase>(storage, prices)
 }
 
-fn calc_all_prices<OracleBase>(
-    storage: &dyn Storage,
+fn calc_all_prices<'a, OracleBase>(
+    storage: &'a dyn Storage,
     block_time: Timestamp,
-) -> Result<Vec<SpotPrice>, ContractError>
+    tree: &'a SupportedPairs<OracleBase>,
+) -> Result<impl Iterator<Item = SpotPrice> + 'a, ContractError>
 where
     OracleBase: Currency + DeserializeOwned,
 {
@@ -142,5 +216,131 @@ where
     use crate::state::config::Config as OracleConfig;
     let config = OracleConfig::load(storage)?;
     let oracle = Feeds::<OracleBase>::with(config.price_config);
-    oracle.calc_all_prices(storage, block_time, total_registered)
+    oracle.all_prices_iter(storage, tree, block_time, total_registered)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use ::currency::{
+        lease::{Atom, Cro, Juno, Osmo, Wbtc, Weth},
+        lpn::Usdc,
+    };
+    use finance::{coin::Coin, duration::Duration, percent::Percent, price};
+    use sdk::cosmwasm_std::testing::{self, MockStorage};
+    use tree::HumanReadableTree;
+
+    type TheCurrency = Usdc;
+
+    fn test_case() -> HumanReadableTree<SwapTarget> {
+        let base = TheCurrency::TICKER;
+        let osmo = Osmo::TICKER;
+        let atom = Atom::TICKER;
+        let weth = Weth::TICKER;
+        let wbtc = Wbtc::TICKER;
+        let juno = Juno::TICKER;
+        let cro = Cro::TICKER;
+
+        serde_json_wasm::from_str(&format!(
+            r#"
+            {{
+                "value":[0,"{base}"],
+                "children":[
+                    {{
+                        "value":[4,"{wbtc}"],
+                        "children":[
+                            {{"value":[3,"{weth}"]}}
+                        ]
+                    }},
+                    {{
+                        "value":[2,"{atom}"],
+                        "children":[
+                            {{
+                                "value":[1,"{osmo}"],
+                                "children":[
+                                    {{"value":[5,"{juno}"]}},
+                                    {{"value":[6,"{cro}"]}}
+                                ]
+                            }}
+                        ]
+                    }}
+                ]
+            }}"#
+        ))
+        .unwrap()
+    }
+
+    #[test]
+    fn all_prices_iter() {
+        let mut storage = MockStorage::new();
+        let env = testing::mock_env();
+        let tree = test_case();
+        let tree = SupportedPairs::<TheCurrency>::new(tree.into_tree()).unwrap();
+        tree.save(&mut storage).unwrap();
+
+        let config = Config::new(
+            Percent::HUNDRED,
+            Duration::from_secs(5),
+            10,
+            Percent::from_percent(50),
+        );
+
+        let oracle: Feeds<TheCurrency> = Feeds::with(config);
+
+        oracle
+            .feed_prices(
+                &mut storage,
+                env.block.time,
+                &Addr::unchecked("feeder"),
+                &[
+                    price::total_of(Coin::<Wbtc>::new(1))
+                        .is(Coin::<TheCurrency>::new(1))
+                        .into(),
+                    price::total_of(Coin::<Atom>::new(2))
+                        .is(Coin::<TheCurrency>::new(1))
+                        .into(),
+                    price::total_of(Coin::<Weth>::new(1))
+                        .is(Coin::<Wbtc>::new(1))
+                        .into(),
+                    price::total_of(Coin::<Osmo>::new(1))
+                        .is(Coin::<Atom>::new(1))
+                        .into(),
+                    price::total_of(Coin::<Cro>::new(3))
+                        .is(Coin::<Osmo>::new(1))
+                        .into(),
+                    price::total_of(Coin::<Juno>::new(1))
+                        .is(Coin::<Osmo>::new(1))
+                        .into(),
+                ],
+            )
+            .unwrap();
+
+        let prices: Vec<_> = oracle
+            .all_prices_iter(&storage, &tree, env.block.time, 1)
+            .unwrap()
+            .collect();
+
+        let expected: Vec<SpotPrice> = vec![
+            price::total_of(Coin::<Wbtc>::new(1))
+                .is(Coin::<TheCurrency>::new(1))
+                .into(),
+            price::total_of(Coin::<Weth>::new(1))
+                .is(Coin::<TheCurrency>::new(1))
+                .into(),
+            price::total_of(Coin::<Atom>::new(2))
+                .is(Coin::<TheCurrency>::new(1))
+                .into(),
+            price::total_of(Coin::<Osmo>::new(2))
+                .is(Coin::<TheCurrency>::new(1))
+                .into(),
+            price::total_of(Coin::<Juno>::new(2))
+                .is(Coin::<TheCurrency>::new(1))
+                .into(),
+            price::total_of(Coin::<Cro>::new(6))
+                .is(Coin::<TheCurrency>::new(1))
+                .into(),
+        ];
+
+        assert_eq!(expected, prices);
+    }
 }
