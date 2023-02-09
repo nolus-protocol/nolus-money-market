@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, ops::Deref};
+use std::marker::PhantomData;
 
 use serde::de::DeserializeOwned;
 
@@ -110,15 +110,9 @@ where
                 B: Currency + serde::Serialize + DeserializeOwned,
                 Q: Currency + serde::Serialize + DeserializeOwned,
             {
-                let price_child: Price<B, Q> = self
-                    .feeds
-                    .price::<Q, _>(
-                        self.storage,
-                        self.at,
-                        self.total_feeders,
-                        [B::TICKER, Q::TICKER].iter().map(Deref::deref),
-                    )?
-                    .try_into()?;
+                let price_child =
+                    self.feeds
+                        .price_of_feed::<B, Q>(self.storage, self.at, self.total_feeders)?;
 
                 let price: SpotPrice = loop {
                     match self
