@@ -19,12 +19,8 @@ use sdk::{
 
 use crate::{
     alarms::Alarm as AlarmDTO,
-    msg::{
-        ExecuteAlarmMsg,
-        AlarmsStatusResponse,
-        DispatchAlarmsResponse
-    },
-    ContractError
+    msg::{AlarmsStatusResponse, DispatchAlarmsResponse, ExecuteAlarmMsg},
+    ContractError,
 };
 
 pub type AlarmReplyId = u64;

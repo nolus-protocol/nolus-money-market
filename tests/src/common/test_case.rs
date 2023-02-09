@@ -6,9 +6,9 @@ use finance::{
 };
 use lease::api::dex::{ConnectionParams, Ics20Channel};
 use sdk::{
-    testing::CustomMessageSender,
     cosmwasm_std::{Addr, Coin as CwCoin, Empty, Uint64},
-    cw_multi_test::{next_block, Executor}
+    cw_multi_test::{next_block, Executor},
+    testing::CustomMessageSender,
 };
 
 use crate::common::{lease_wrapper::LeaseWrapperAddresses, ContractWrapper, MockApp};

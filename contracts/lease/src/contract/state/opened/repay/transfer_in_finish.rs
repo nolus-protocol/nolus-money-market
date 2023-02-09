@@ -4,26 +4,14 @@ use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper};
 
 use crate::{
-    api::{
-        ExecuteMsg,
-        LpnCoin,
-        opened::RepayTrx,
-        PaymentCoin,
-        StateQuery,
-        StateResponse,
-    },
+    api::{opened::RepayTrx, ExecuteMsg, LpnCoin, PaymentCoin, StateQuery, StateResponse},
     contract::{
-        Lease,
         state::{
             self,
-            Controller,
-            opened::{
-                active::Active,
-                repay,
-            },
-            Response,
-            transfer_in,
+            opened::{active::Active, repay},
+            transfer_in, Controller, Response,
         },
+        Lease,
     },
     error::ContractResult,
     event::Type,

@@ -1,22 +1,18 @@
 use serde::{Deserialize, Serialize};
 
+use platform::batch::Batch;
 use sdk::{
     cosmwasm_std::{Deps, DepsMut, Env, QuerierWrapper, Timestamp},
-    neutron_sdk::sudo::msg::SudoMsg
+    neutron_sdk::sudo::msg::SudoMsg,
 };
-use platform::batch::Batch;
 
 use crate::{
+    api::{paid::ClosingTrx, StateQuery, StateResponse},
     contract::{
         state::{Controller, Response},
-        Lease
+        Lease,
     },
-    api::{
-        StateQuery,
-        StateResponse,
-        paid::ClosingTrx
-    },
-    error::ContractResult
+    error::ContractResult,
 };
 
 use super::transfer_in_finish::TransferInFinish;

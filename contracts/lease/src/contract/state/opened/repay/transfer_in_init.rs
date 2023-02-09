@@ -7,16 +7,10 @@ use sdk::{
 };
 
 use crate::{
-    api::{
-        LpnCoin,
-        opened::RepayTrx,
-        PaymentCoin,
-        StateQuery,
-        StateResponse,
-    },
+    api::{opened::RepayTrx, LpnCoin, PaymentCoin, StateQuery, StateResponse},
     contract::{
+        state::{opened::repay, Controller, Response},
         Lease,
-        state::{Controller, opened::repay, Response},
     },
     error::ContractResult,
 };

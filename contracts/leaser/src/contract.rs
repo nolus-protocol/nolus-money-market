@@ -4,7 +4,7 @@ use platform::{batch::Batch, reply::from_instantiate};
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Storage, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage},
 };
 use versioning::{version, VersionSegment};
 

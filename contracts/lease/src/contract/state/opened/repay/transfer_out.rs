@@ -1,24 +1,19 @@
 use serde::{Deserialize, Serialize};
 
+use platform::batch::{Batch, Emit, Emitter};
 use sdk::{
     cosmwasm_std::{Deps, DepsMut, Env, QuerierWrapper, Timestamp},
-    neutron_sdk::sudo::msg::SudoMsg
+    neutron_sdk::sudo::msg::SudoMsg,
 };
-use platform::batch::{Batch, Emit, Emitter};
 
 use crate::{
-    api::{
-        opened::RepayTrx,
-        PaymentCoin,
-        StateQuery,
-        StateResponse
-    },
+    api::{opened::RepayTrx, PaymentCoin, StateQuery, StateResponse},
     contract::{
         state::{opened::repay, Controller, Response},
-        Lease
+        Lease,
     },
     error::ContractResult,
-    event::Type
+    event::Type,
 };
 
 use super::buy_lpn::BuyLpn;

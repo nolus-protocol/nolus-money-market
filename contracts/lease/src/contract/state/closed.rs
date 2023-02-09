@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper};
 use platform::{
     bank,
     batch::{Emit, Emitter},
 };
+use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper};
 
 use crate::{
     api::{StateQuery, StateResponse},

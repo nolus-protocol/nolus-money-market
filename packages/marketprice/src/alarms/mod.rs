@@ -8,15 +8,10 @@ use finance::{
     price::{self, Price},
 };
 use sdk::{
-    cosmwasm_std::{
-        StdError,
-        Addr,
-        Order,
-        Storage
-    },
+    cosmwasm_std::{Addr, Order, StdError, Storage},
     cw_storage_plus::{
         Bound, Index, IndexList, IndexedMap, IntKey, Key, MultiIndex, Prefixer, PrimaryKey,
-    }
+    },
 };
 use swap::SwapGroup;
 

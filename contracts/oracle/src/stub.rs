@@ -168,7 +168,11 @@ where
         let dto: SpotPrice = self
             .querier
             .query_wasm_smart(self.addr().clone(), &msg)
-            .map_err(|error| ContractError::FailedToFetchPrice { from: C::TICKER.into(), to: OracleBase::TICKER.into(), error })?;
+            .map_err(|error| ContractError::FailedToFetchPrice {
+                from: C::TICKER.into(),
+                to: OracleBase::TICKER.into(),
+                error,
+            })?;
 
         Ok(dto.try_into()?)
     }

@@ -1,19 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-use sdk::{
-    cosmwasm_std::{
-        Binary,
-        Deps,
-        DepsMut,
-        Env,
-        QuerierWrapper
-    },
-    neutron_sdk::sudo::msg::SudoMsg
-};
 use finance::coin::{self};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use platform::{batch::Batch as LocalBatch, ica::HostAccount, trx};
+use sdk::{
+    cosmwasm_std::{Binary, Deps, DepsMut, Env, QuerierWrapper},
+    neutron_sdk::sudo::msg::SudoMsg,
+};
 use swap::trx as swap_trx;
 
 use crate::{

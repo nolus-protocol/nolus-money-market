@@ -1,20 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use sdk::{
-    cosmwasm_std::{
-        Addr,
-        Deps,
-        Timestamp,
-        DepsMut,
-        Env
-    },
-    neutron_sdk::sudo::msg::SudoMsg
-};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
     ica::HostAccount,
+};
+use sdk::{
+    cosmwasm_std::{Addr, Deps, DepsMut, Env, Timestamp},
+    neutron_sdk::sudo::msg::SudoMsg,
 };
 
 use crate::{

@@ -1,17 +1,5 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use sdk::{
-    cosmwasm_std::{
-        QuerierWrapper,
-        Addr,
-        Deps,
-        DepsMut,
-        Env,
-        StdResult,
-        Storage,
-        Timestamp
-    }
-};
 use finance::{
     coin::Coin,
     currency::Currency,
@@ -22,6 +10,7 @@ use platform::{
     bank::{self},
     contract,
 };
+use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, StdResult, Storage, Timestamp};
 
 use crate::{
     error::{ContractError, ContractResult},

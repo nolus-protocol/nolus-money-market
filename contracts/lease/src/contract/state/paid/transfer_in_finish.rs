@@ -1,27 +1,16 @@
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper};
 use platform::batch::{Emit, Emitter};
+use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper};
 
 use crate::{
-    api::{
-        ExecuteMsg,
-        StateQuery,
-        StateResponse,
-        paid::ClosingTrx
-    },
+    api::{paid::ClosingTrx, ExecuteMsg, StateQuery, StateResponse},
     contract::{
-        state::{
-            closed::Closed,
-            transfer_in,
-            Controller,
-            Response,
-            self
-        },
-        Lease
+        state::{self, closed::Closed, transfer_in, Controller, Response},
+        Lease,
     },
     error::ContractResult,
-    event::Type
+    event::Type,
 };
 
 use super::transfer_in_init::TransferInInit;

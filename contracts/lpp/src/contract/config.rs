@@ -1,13 +1,7 @@
 use access_control::SingleUserAccess;
 use sdk::{
-    cosmwasm_std::{
-        Uint64,
-        Deps,
-        DepsMut,
-        MessageInfo,
-        StdResult
-    },
     cosmwasm_ext::Response,
+    cosmwasm_std::{Deps, DepsMut, MessageInfo, StdResult, Uint64},
 };
 
 use crate::{borrow::InterestRate, error::ContractError, state::Config};
