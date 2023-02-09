@@ -32,6 +32,13 @@ pub enum ContractError {
     #[error("[Oracle] Invalid feeder address")]
     InvalidAddress {},
 
+    #[error("[Oracle] Failed to fetch price for the pair {from}/{to}! Possibly no price is available! Cause: {error}")]
+    FailedToFetchPrice {
+        from: SymbolOwned,
+        to: SymbolOwned,
+        error: StdError,
+    },
+
     #[error("[Oracle] Invalid denom pair ({0}, {1})")]
     InvalidDenomPair(SymbolOwned, SymbolOwned),
 
