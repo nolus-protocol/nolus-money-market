@@ -1,7 +1,7 @@
 [package]
 name = "time-oracle"
 version = "0.1.0"
-authors = ["Vladimir Kolesnikov <v.kolesnikov@nolus.io>"]
+authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 

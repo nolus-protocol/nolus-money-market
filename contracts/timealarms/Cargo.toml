@@ -1,7 +1,7 @@
 [package]
 name = "timealarms"
 version = "0.2.0"
-authors = ["Nina Nikolova <n.nikolova@nolus.io>"]
+authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 
