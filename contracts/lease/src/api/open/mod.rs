@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{currency::SymbolOwned, duration::Duration, liability::Liability, percent::Percent};
+use finance::{
+    coin::Amount as CoinAmount, currency::SymbolOwned, duration::Duration, liability::Liability,
+    percent::Percent,
+};
 use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
@@ -28,6 +31,9 @@ pub struct NewLeaseForm {
     pub customer: Addr,
     /// Ticker of the currency this lease will be about.
     pub currency: SymbolOwned,
+    /// Optional parameter indicating preferred maximum amount of the currency
+    /// the loan should be opened with.
+    pub max_loan: Option<CoinAmount>,
     /// Liability parameters
     pub liability: Liability,
     /// Loan parameters

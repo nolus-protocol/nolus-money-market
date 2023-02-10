@@ -19,7 +19,7 @@ use sdk::{
 
 use crate::common::{
     cwcoin, cwcoins,
-    lease_wrapper::{LeaseWrapper, LeaseWrapperAddresses, LeaseWrapperConfig},
+    lease_wrapper::{LeaseInitConfig, LeaseWrapper, LeaseWrapperAddresses, LeaseWrapperConfig},
     lpp_wrapper::LppWrapper,
     mock_app,
     oracle_wrapper::MarketOracleWrapper,
@@ -308,8 +308,7 @@ fn deposit_and_withdraw() {
             oracle: market_price_oracle,
             profit,
         },
-        LeaseCurrency::TICKER,
-        loan.into(),
+        LeaseInitConfig::new(LeaseCurrency::TICKER, loan.into(), None),
         LeaseWrapperConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseWrapperConfig::default()
@@ -546,8 +545,7 @@ fn loan_open_and_repay() {
         &mut app,
         Some(lease_id),
         lease_addresses.clone(),
-        LeaseCurrency::TICKER,
-        loan1.into(),
+        LeaseInitConfig::new(LeaseCurrency::TICKER, loan1.into(), None),
         LeaseWrapperConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseWrapperConfig::default()
@@ -607,8 +605,7 @@ fn loan_open_and_repay() {
         &mut app,
         Some(lease_id),
         lease_addresses,
-        LeaseCurrency::TICKER,
-        loan2.into(),
+        LeaseInitConfig::new(LeaseCurrency::TICKER, loan2.into(), None),
         LeaseWrapperConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseWrapperConfig::default()
@@ -860,8 +857,7 @@ fn compare_lpp_states() {
             oracle: market_oracle.clone(),
             profit: profit.clone(),
         },
-        LeaseCurrency::TICKER,
-        loan1.into(),
+        LeaseInitConfig::new(LeaseCurrency::TICKER, loan1.into(), None),
         LeaseWrapperConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseWrapperConfig::default()
@@ -921,8 +917,7 @@ fn compare_lpp_states() {
             oracle: market_oracle,
             profit,
         },
-        LeaseCurrency::TICKER,
-        loan2.into(),
+        LeaseInitConfig::new(LeaseCurrency::TICKER, loan2.into(), None),
         LeaseWrapperConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseWrapperConfig::default()

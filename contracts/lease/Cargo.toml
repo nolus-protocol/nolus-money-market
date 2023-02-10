@@ -1,6 +1,6 @@
 [package]
 name = "lease"
-version = "0.1.6"
+version = "0.2.0"
 authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
