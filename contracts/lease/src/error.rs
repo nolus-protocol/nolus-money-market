@@ -11,6 +11,8 @@ use sdk::cosmwasm_std::StdError;
 use swap::error::Error as SwapError;
 use timealarms::error::ContractError as TimeAlarmsError;
 
+use crate::api::PaymentCoin;
+
 #[derive(Error, Debug, PartialEq)]
 pub enum ContractError {
     #[error("[Lease] [Std] {0}")]
@@ -42,6 +44,9 @@ pub enum ContractError {
 
     #[error("[Lease] No payment sent")]
     NoPaymentError(),
+
+    #[error("[Lease] Insufficient payment amount {0}")]
+    InsufficientPayment(PaymentCoin),
 
     #[error("[Lease] The underlying loan is not fully repaid")]
     LoanNotPaid(),
