@@ -2,9 +2,9 @@
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, SubMsgResult},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, SubMsgResult},
 };
-use versioning::{version, VersionSegment};
+use versioning::{package_version, version, VersionSegment};
 
 use crate::{
     alarms::TimeAlarms,
@@ -60,7 +60,8 @@ pub fn execute(
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::AlarmsStatus {} => Ok(sdk::cosmwasm_std::to_binary(&TimeAlarms::try_any_alarm(
+        QueryMsg::ContractVersion {} => Ok(to_binary(&package_version!())?),
+        QueryMsg::AlarmsStatus {} => Ok(to_binary(&TimeAlarms::try_any_alarm(
             deps.storage,
             env.block.time,
         )?)?),

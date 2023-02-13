@@ -24,6 +24,7 @@ pub enum ExecuteMsg {
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    ContractVersion {},
     AlarmsStatus {},
 }
 
