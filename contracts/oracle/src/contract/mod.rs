@@ -7,7 +7,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
-use versioning::{version, VersionSegment};
+use versioning::{package_version, version, VersionSegment};
 
 use crate::{
     error::ContractError,
@@ -131,6 +131,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<Response
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
+        QueryMsg::ContractVersion {} => Ok(to_binary(&package_version!())?),
         QueryMsg::Config {} => Ok(to_binary(&query_config(deps.storage)?)?),
         QueryMsg::Feeders {} => Ok(to_binary(&Feeders::get(deps.storage)?)?),
         QueryMsg::IsFeeder { address } => {

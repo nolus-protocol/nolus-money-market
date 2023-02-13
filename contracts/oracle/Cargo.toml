@@ -27,7 +27,7 @@ platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 swap = { workspace = true }
 tree = { workspace = true, features = ["schema"] }
-versioning = { workspace = true }
+versioning = { workspace = true, features = ["schema"] }
 
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
