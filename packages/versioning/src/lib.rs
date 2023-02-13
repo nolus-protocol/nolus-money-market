@@ -2,6 +2,8 @@ use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "schema")]
+use sdk::schemars::{self, JsonSchema};
 use sdk::{
     cosmwasm_std::{StdError, StdResult, Storage},
     cw_storage_plus::Item,
@@ -10,6 +12,7 @@ use sdk::{
 pub type VersionSegment = u16;
 
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct SemVer {
     major: VersionSegment,
     minor: VersionSegment,
@@ -17,6 +20,7 @@ pub struct SemVer {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Version {
     storage: VersionSegment,
     software: SemVer,
@@ -66,15 +70,19 @@ pub fn parse_semver(version: &str) -> SemVer {
 }
 
 #[macro_export]
+macro_rules! package_version {
+    () => {{
+        $crate::parse_semver(::core::env!(
+            "CARGO_PKG_VERSION",
+            "Cargo package version is not set as an environment variable!",
+        ))
+    }};
+}
+
+#[macro_export]
 macro_rules! version {
     ($storage: expr) => {{
-        $crate::Version::new(
-            $storage,
-            $crate::parse_semver(::core::env!(
-                "CARGO_PKG_VERSION",
-                "Cargo package version is not set as an environment variable!",
-            )),
-        )
+        $crate::Version::new($storage, $crate::package_version!())
     }};
 }
 
