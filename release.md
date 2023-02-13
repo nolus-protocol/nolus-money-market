@@ -18,8 +18,8 @@
 ## Releases
 12. A new release is always associated with a Git Tag. The opposite is not mandatory although highly recommended.
 13. Releases are **immutable**. Any modifications to the code of a released package must be released as a new version and included in the next release.
-14. A new release encompasses a new or existing release of each Cargo package. This defines the versions of contracts included in a release.
-15. Updates to the next release are supported only. An update to a newer release should be performed sequentially, one by one.
+14. A new release encompasses the latest versions of each Cargo package either new ones or the same as they have appeared in the previous release. This uniquely defines the versions of contracts included in a release.
+15. The only supported release updates are from the previous to the next release. An update to a newer release should be performed sequentially, one by one.
 
 ## Networks
 16. Each Nolus Network runs a specific release. A direct corollary is that a network runs the contract versions as they appear in the release.
