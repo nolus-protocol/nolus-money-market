@@ -26,7 +26,12 @@
 17. Ideally, an update to а new release should happen atomically to guarantee high availability of the services.
 
 # Process
-## TBD
+## Building release notes
+### Commit message convention
+In an attempt to facilitate collecting all significant changes, code commits should follow [this](https://www.conventionalcommits.org/en/v1.0.0/)convention for their messages. The type must be any of the ones listed [here](https://github.com/angular/angular/blob/22b96b9/CONTRIBUTING.md#type).
+
+### Bump Cargo package version
+On ....TBD
 
 # Useful commands
 ## When bumping Cargo packages
@@ -36,8 +41,12 @@ Use this to list the updated Cargo packages since the last or specified Git tag 
 cargo workspaces changed -l [--since <ref>]
 ```
 
-Use this to see the dependency tree of a Cargo package.
-
+Use this to see the dependency tree of a Cargo package:
 ```
 cargo tree -p <package>
+```
+
+Use this to see the dependee tree of a Cargo package:
+```
+cargo tree --workspace -i <package> -e no-dev
 ```
