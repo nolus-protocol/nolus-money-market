@@ -92,49 +92,6 @@ pub fn initialize(storage: &mut dyn Storage, version: Version) -> StdResult<()> 
     VERSION_STORAGE_KEY.save(storage, &version)
 }
 
-// TODO remove when all contracts have been migrated to post-refactor versions
-pub fn upgrade_old_contract<
-    'r,
-    const OLD_COMPATIBILITY_VERSION: VersionSegment,
-    MigrateStorageFunctor,
-    MigrateStorageError,
->(
-    storage: &'r mut dyn Storage,
-    version: Version,
-    migrate_storage_functor: Option<MigrateStorageFunctor>,
-) -> Result<(), MigrateStorageError>
-where
-    MigrateStorageFunctor: FnOnce(&'r mut dyn Storage) -> Result<(), MigrateStorageError>,
-    MigrateStorageError: From<StdError> + Error,
-{
-    const CW_VERSION_ITEM: Item<'static, String> = Item::new("contract_info");
-
-    const OLD_VERSION_ITEM: Item<'static, u16> = Item::new("contract_version");
-
-    if version.storage != 0 {
-        return Err(StdError::generic_err(
-            "Storage version should be set to zero, marking the initial one!",
-        )
-        .into());
-    }
-
-    if OLD_VERSION_ITEM.load(storage)? != OLD_COMPATIBILITY_VERSION {
-        return Err(StdError::generic_err(
-            "Couldn't upgrade contract because storage version didn't match expected one!",
-        )
-        .into());
-    }
-
-    CW_VERSION_ITEM.remove(storage);
-
-    OLD_VERSION_ITEM.remove(storage);
-
-    // Using zero as a starting storage version to mark this as a new epoch.
-    initialize(storage, version)?;
-
-    migrate_storage_functor.map_or(Ok(()), move |functor| functor(storage))
-}
-
 #[inline]
 pub fn update_software(storage: &mut dyn Storage, version: Version) -> StdResult<()> {
     update_version(storage, version.storage, version).map(|_| ())

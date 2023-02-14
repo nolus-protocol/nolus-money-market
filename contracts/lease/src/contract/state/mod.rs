@@ -24,7 +24,6 @@ mod opened;
 mod opening;
 mod paid;
 mod transfer_in;
-pub(super) mod v_old_1;
 
 type OpeningTransferOut = opening::transfer_out::TransferOut;
 type OpenedActive = opened::active::Active;

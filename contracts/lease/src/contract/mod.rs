@@ -19,7 +19,7 @@ use crate::{
     lease::LeaseDTO,
 };
 
-use self::state::{v_old_1::Migrate, RequestLoan};
+use self::state::RequestLoan;
 
 mod cmd;
 pub mod msg;
@@ -54,15 +54,7 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::upgrade_old_contract::<1, _, _>(
-        deps.storage,
-        version!(CONTRACT_STORAGE_VERSION),
-        Some(|storage: &mut _| {
-            let migrated_contract = impl_::load_old_v1(storage)?.into_last_version();
-
-            impl_::save(storage, &migrated_contract)
-        }),
-    )?;
+    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     Ok(CwResponse::default())
 }
@@ -138,7 +130,6 @@ mod impl_ {
         cw_storage_plus::Item,
     };
 
-    use super::state::v_old_1::StateV1;
     use super::state::State;
 
     const STATE_DB_KEY: &str = "state";
@@ -146,10 +137,6 @@ mod impl_ {
 
     pub(super) fn load(storage: &dyn Storage) -> StdResult<State> {
         STATE_DB_ITEM.load(storage)
-    }
-
-    pub(super) fn load_old_v1(storage: &dyn Storage) -> StdResult<StateV1> {
-        Item::new(STATE_DB_KEY).load(storage)
     }
 
     pub(super) fn save(storage: &mut dyn Storage, next_state: &State) -> StdResult<()> {
