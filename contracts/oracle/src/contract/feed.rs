@@ -4,7 +4,7 @@ use serde::de::DeserializeOwned;
 
 use finance::{
     currency::{self, AnyVisitorPair, Currency, SymbolOwned},
-    price::Price,
+    price::{dto::BasePrice, Price},
 };
 use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
 use platform::batch::Batch;
@@ -22,7 +22,10 @@ use crate::{
 
 use super::{alarms::MarketAlarms, feeder::Feeders};
 
-pub struct Feeds<OracleBase> {
+pub struct Feeds<OracleBase>
+where
+    OracleBase: Currency + DeserializeOwned,
+{
     feeds: PriceFeeds<'static>,
     _base: PhantomData<OracleBase>,
 }
@@ -86,7 +89,7 @@ where
         tree: &'a SupportedPairs<OracleBase>,
         at: Timestamp,
         total_feeders: usize,
-    ) -> Result<impl Iterator<Item = SpotPrice> + 'a, ContractError> {
+    ) -> Result<impl Iterator<Item = BasePrice<OracleBase, SwapGroup>> + 'a, ContractError> {
         struct LegCmd<'a, 'b, OracleBase>
         where
             OracleBase: Currency,
@@ -95,38 +98,47 @@ where
             storage: &'a dyn Storage,
             at: Timestamp,
             total_feeders: usize,
-            stack: &'b mut Vec<SpotPrice>,
+            stack: &'b mut Vec<BasePrice<OracleBase, SwapGroup>>,
             _base: PhantomData<OracleBase>,
         }
 
         impl<'a, 'b, OracleBase> AnyVisitorPair for LegCmd<'a, 'b, OracleBase>
         where
-            OracleBase: Currency,
+            OracleBase: Currency + DeserializeOwned,
         {
-            type Output = SpotPrice;
+            type Output = BasePrice<OracleBase, SwapGroup>;
             type Error = ContractError;
             fn on<B, Q>(self) -> Result<Self::Output, Self::Error>
             where
-                B: Currency + serde::Serialize + DeserializeOwned,
-                Q: Currency + serde::Serialize + DeserializeOwned,
+                B: Currency + DeserializeOwned,
+                Q: Currency + DeserializeOwned,
             {
-                let price_child =
-                    self.feeds
-                        .price_of_feed::<B, Q>(self.storage, self.at, self.total_feeders)?;
-
-                let price: SpotPrice = loop {
+                let price: BasePrice<OracleBase, SwapGroup> = loop {
                     match self
                         .stack
                         .last()
                         .map(TryInto::<Price<Q, OracleBase>>::try_into)
                     {
-                        None => break price_child.into(),
-                        Some(Ok(price_parent)) => break (price_child * price_parent).into(),
+                        None => {
+                            break self.feeds.price_of_feed::<B, OracleBase>(
+                                self.storage,
+                                self.at,
+                                self.total_feeders,
+                            )?
+                        }
+                        Some(Ok(price_parent)) => {
+                            break self.feeds.price_of_feed::<B, Q>(
+                                self.storage,
+                                self.at,
+                                self.total_feeders,
+                            )? * price_parent
+                        }
                         _ => {
                             self.stack.pop();
                         }
                     }
-                };
+                }
+                .into();
                 self.stack.push(price.clone());
 
                 Ok(price)
@@ -135,7 +147,7 @@ where
 
         let res = tree.query_supported_pairs().scan(
             vec![],
-            move |stack: &mut Vec<SpotPrice>, leg: SwapLeg| {
+            move |stack: &mut Vec<BasePrice<OracleBase, SwapGroup>>, leg: SwapLeg| {
                 let res = currency::visit_any_on_tickers::<SwapGroup, SwapGroup, _>(
                     &leg.from,
                     &leg.to.target,
@@ -202,7 +214,7 @@ fn calc_all_prices<'a, OracleBase>(
     storage: &'a dyn Storage,
     block_time: Timestamp,
     tree: &'a SupportedPairs<OracleBase>,
-) -> Result<impl Iterator<Item = SpotPrice> + 'a, ContractError>
+) -> Result<impl Iterator<Item = BasePrice<OracleBase, SwapGroup>> + 'a, ContractError>
 where
     OracleBase: Currency + DeserializeOwned,
 {
@@ -314,7 +326,7 @@ mod test {
             .unwrap()
             .collect();
 
-        let expected: Vec<SpotPrice> = vec![
+        let expected: Vec<BasePrice<TheCurrency, SwapGroup>> = vec![
             price::total_of(Coin::<Wbtc>::new(1))
                 .is(Coin::<TheCurrency>::new(1))
                 .into(),

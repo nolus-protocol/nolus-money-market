@@ -1,8 +1,8 @@
-use currency::native::Nls;
+use ::currency::native::Nls;
 use finance::{
-    currency::Currency,
+    currency::{self, AnyVisitor, Currency},
     price::{
-        dto::{with_quote, WithQuote},
+        dto::{with_quote, BasePrice, WithQuote},
         Price,
     },
 };
@@ -16,6 +16,7 @@ use sdk::{
     cosmwasm_std::{to_binary, Addr, Storage},
     cw_storage_plus::Item,
 };
+use swap::SwapGroup;
 
 use crate::{
     alarms::Alarm as AlarmDTO,
@@ -102,7 +103,7 @@ impl MarketAlarms {
         &mut self,
         storage: &dyn Storage,
         mut batch: Batch,
-        prices: impl Iterator<Item = SpotPrice> + 'a,
+        prices: impl Iterator<Item = BasePrice<BaseC, SwapGroup>> + 'a,
         max_count: u32, // TODO: type alias
     ) -> Result<Response, ContractError>
     where
@@ -122,7 +123,7 @@ impl MarketAlarms {
 
     pub fn try_query_alarms<'a, BaseC>(
         storage: &dyn Storage,
-        prices: impl Iterator<Item = SpotPrice> + 'a,
+        prices: impl Iterator<Item = BasePrice<BaseC, SwapGroup>> + 'a,
     ) -> Result<AlarmsStatusResponse, ContractError>
     where
         BaseC: Currency,
@@ -137,37 +138,44 @@ impl MarketAlarms {
 
     fn alarms_iter<'a, BaseC>(
         storage: &'a dyn Storage,
-        prices: impl Iterator<Item = SpotPrice> + 'a,
+        prices: impl Iterator<Item = BasePrice<BaseC, SwapGroup>> + 'a,
     ) -> impl Iterator<Item = Result<Addr, AlarmError>> + 'a
     where
         BaseC: Currency,
     {
-        struct AlarmsCmd<'a> {
+        struct AlarmsCmd<'a, 'b, OracleBase>
+        where
+            OracleBase: Currency,
+        {
             storage: &'a dyn Storage,
             price_alarms: &'static PriceAlarms<'static>,
+            price: &'b BasePrice<OracleBase, SwapGroup>,
         }
 
-        impl<'a, BaseC> WithQuote<BaseC> for AlarmsCmd<'a>
+        impl<'a, 'b, OracleBase> AnyVisitor for AlarmsCmd<'a, 'b, OracleBase>
         where
-            BaseC: Currency,
+            OracleBase: Currency,
         {
             type Error = ContractError;
             type Output = AlarmsIterator<'a>;
 
-            fn exec<C>(self, price: Price<C, BaseC>) -> Result<Self::Output, Self::Error>
+            fn on<C>(self) -> finance::currency::AnyVisitorResult<Self>
             where
-                C: Currency,
+                C: Currency + serde::Serialize + serde::de::DeserializeOwned,
             {
-                Ok(self.price_alarms.alarms(self.storage, price))
+                Ok(self
+                    .price_alarms
+                    .alarms::<C, OracleBase>(self.storage, self.price.try_into()?))
             }
         }
 
         prices.flat_map(|price| {
-            with_quote::execute::<_, _, _, BaseC>(
-                &price,
+            currency::visit_any_on_ticker::<SwapGroup, _>(
+                price.base_ticker(),
                 AlarmsCmd {
                     storage,
                     price_alarms: &Self::PRICE_ALARMS,
+                    price: &price,
                 },
             )
             .expect("Invalid price")
@@ -197,11 +205,11 @@ impl MarketAlarms {
 mod test {
     use super::*;
 
-    use cosmwasm_std::from_binary;
-    use currency::{
+    use ::currency::{
         lease::{Atom, Weth},
         lpn::Usdc,
     };
+    use cosmwasm_std::from_binary;
     use finance::{coin::Coin, price};
     use sdk::cosmwasm_std::testing::MockStorage;
 
@@ -276,26 +284,6 @@ mod test {
             .unwrap()
             .remaining_alarms
         );
-    }
-
-    #[test]
-    #[should_panic]
-    fn notify_with_wrong_base() {
-        let storage = MockStorage::new();
-
-        let batch = Batch::default();
-
-        let _ = MarketAlarms::load(&storage)
-            .unwrap()
-            .try_notify_alarms::<Base>(
-                &storage,
-                batch,
-                [price::total_of(Coin::<Base>::new(1))
-                    .is(Coin::<Atom>::new(25))
-                    .into()]
-                .into_iter(),
-                1,
-            );
     }
 
     #[test]
