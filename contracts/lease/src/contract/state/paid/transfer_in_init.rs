@@ -9,10 +9,11 @@ use sdk::{
 use crate::{
     api::{paid::ClosingTrx, StateQuery, StateResponse},
     contract::{
-        state::{Controller, Response},
+        state::{self, Controller, Response},
         Lease,
     },
     error::ContractResult,
+    event::Type,
 };
 
 use super::transfer_in_finish::TransferInFinish;
@@ -49,13 +50,17 @@ impl Controller for TransferInInit {
                 request: _,
                 data: _,
             } => self.on_response(&env, &deps.querier),
-            SudoMsg::Timeout { request: _ } => todo!(),
+            SudoMsg::Timeout { request: _ } => self.on_timeout(deps.as_ref(), env),
             SudoMsg::Error {
                 request: _,
                 details: _,
             } => todo!(),
             _ => unreachable!(),
         }
+    }
+
+    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        state::on_timeout_retry(self.into(), Type::ClosingTransferIn, deps, env)
     }
 
     fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {

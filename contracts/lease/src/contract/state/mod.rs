@@ -1,5 +1,6 @@
+use cosmwasm_std::{Addr, Api};
 use enum_dispatch::enum_dispatch;
-use platform::batch::Batch;
+use platform::batch::{Batch, Emit, Emitter};
 use serde::{Deserialize, Serialize};
 
 use sdk::{
@@ -11,6 +12,7 @@ use sdk::{
 use crate::{
     api::{ExecuteMsg, StateQuery, StateResponse},
     error::{ContractError as Err, ContractResult},
+    event::Type,
 };
 
 pub use self::opening::request_loan::RequestLoan;
@@ -76,31 +78,55 @@ pub trait Controller
 where
     Self: Sized,
 {
-    fn enter(&self, _deps: Deps<'_>, _env: Env) -> ContractResult<Batch> {
-        err("enter")
+    fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<Batch> {
+        err("enter", deps.api)
     }
 
-    fn reply(self, _deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {
-        err("reply")
+    fn reply(self, deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {
+        err("reply", deps.api)
     }
 
     fn execute(
         self,
-        _deps: &mut DepsMut<'_>,
+        deps: &mut DepsMut<'_>,
         _env: Env,
         _info: MessageInfo,
         _msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        err("execute")
+        err("execute", deps.api)
+    }
+
+    fn sudo(self, deps: &mut DepsMut<'_>, _env: Env, _msg: SudoMsg) -> ContractResult<Response> {
+        err("sudo", deps.api)
+    }
+
+    fn on_timeout(self, deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
+        err("timeout", deps.api)
     }
 
     fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse>;
-
-    fn sudo(self, _deps: &mut DepsMut<'_>, _env: Env, _msg: SudoMsg) -> ContractResult<Response> {
-        err("sudo")
-    }
 }
 
-fn err<R>(op: &str) -> ContractResult<R> {
-    Err(Err::unsupported_operation(op))
+fn err<R>(op: &str, api: &dyn Api) -> ContractResult<R> {
+    let err = Err::unsupported_operation(op);
+    api.debug(&format!("{:?}", op));
+
+    Err(err)
+}
+
+fn on_timeout_retry(
+    state: State,
+    event_type: Type,
+    deps: Deps<'_>,
+    env: Env,
+) -> ContractResult<Response> {
+    let emitter = emit_timeout(event_type, env.contract.address.clone());
+    let batch = state.enter(deps, env)?;
+    Ok(Response::from(batch.into_response(emitter), state))
+}
+
+fn emit_timeout(event_type: Type, contract: Addr) -> Emitter {
+    Emitter::of_type(event_type)
+        .emit("id", contract)
+        .emit("timeout", "")
 }

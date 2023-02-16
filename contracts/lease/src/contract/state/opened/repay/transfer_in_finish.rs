@@ -38,6 +38,7 @@ impl TransferInFinish {
         if received {
             Active::try_repay_lpn(self.lease, self.payment_lpn, querier, env)
         } else {
+            // TODO stop pooling after the remote timeout has elapsed and retry with init
             let emitter = self.emit_ok();
             let batch =
                 transfer_in::setup_alarm(self.lease.lease.time_alarms.clone(), env.block.time)?;
@@ -78,7 +79,7 @@ impl Controller for TransferInFinish {
         if matches!(msg, ExecuteMsg::TimeAlarm {}) {
             self.on_alarm(&deps.querier, &env)
         } else {
-            state::err(&format!("{:?}", msg))
+            state::err(&format!("{:?}", msg), deps.api)
         }
     }
 

@@ -16,7 +16,7 @@ use crate::{
     api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
     contract::{
         cmd::OpenLoanRespResult,
-        state::{BuyAsset, Controller, Response},
+        state::{self, BuyAsset, Controller, Response},
     },
     dex::Account,
     error::ContractResult,
@@ -108,13 +108,17 @@ impl Controller for TransferOut {
                 ));
                 self.on_response(deps.as_ref(), env)
             }
-            SudoMsg::Timeout { request: _ } => todo!(),
+            SudoMsg::Timeout { request: _ } => self.on_timeout(deps.as_ref(), env),
             SudoMsg::Error {
                 request: _,
                 details: _,
             } => todo!(),
             _ => unreachable!(),
         }
+    }
+
+    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        state::on_timeout_retry(self.into(), Type::OpeningTransferOut, deps, env)
     }
 
     fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {

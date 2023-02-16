@@ -71,7 +71,7 @@ impl Controller for TransferInFinish {
         if matches!(msg, ExecuteMsg::TimeAlarm {}) {
             self.on_alarm(&deps.querier, &env)
         } else {
-            state::err(&format!("{:?}", msg))
+            state::err(&format!("{:?}", msg), deps.api)
         }
     }
 

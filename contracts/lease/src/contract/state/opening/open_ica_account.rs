@@ -15,7 +15,7 @@ use crate::{
     api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseContract, StateQuery, StateResponse},
     contract::{
         cmd::OpenLoanRespResult,
-        state::{Controller, Response},
+        state::{self, Controller, Response},
     },
     dex::Account,
     error::ContractResult,
@@ -76,22 +76,10 @@ impl OpenIcaAccount {
         Ok(Response::from(batch.into_response(emitter), transfer_out))
     }
 
-    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        let emitter = Self::emit_timeout(env.contract.address.clone());
-        let batch = self.enter(deps, env)?;
-        Ok(Response::from(batch.into_response(emitter), self))
-    }
-
     fn emit_ok(contract: Addr, dex_account: HostAccount) -> Emitter {
         Emitter::of_type(Type::OpenIcaAccount)
             .emit("id", contract)
             .emit("dex_account", dex_account)
-    }
-
-    fn emit_timeout(contract: Addr) -> Emitter {
-        Emitter::of_type(Type::OpenIcaAccount)
-            .emit("id", contract)
-            .emit("timeout", "")
     }
 }
 
@@ -115,6 +103,10 @@ impl Controller for OpenIcaAccount {
             } => todo!(),
             _ => unreachable!(),
         }
+    }
+
+    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        state::on_timeout_retry(self.into(), Type::OpenIcaAccount, deps, env)
     }
 
     fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
