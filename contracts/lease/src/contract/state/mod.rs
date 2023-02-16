@@ -1,4 +1,5 @@
 use enum_dispatch::enum_dispatch;
+use platform::batch::Batch;
 use serde::{Deserialize, Serialize};
 
 use sdk::{
@@ -75,6 +76,10 @@ pub trait Controller
 where
     Self: Sized,
 {
+    fn enter(&self, _deps: Deps<'_>, _env: Env) -> ContractResult<Batch> {
+        err("enter")
+    }
+
     fn reply(self, _deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {
         err("reply")
     }

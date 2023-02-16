@@ -37,10 +37,7 @@ impl TransferInInit {
         }
     }
 
-    pub(in crate::contract::state::opened) fn enter_state(
-        &self,
-        now: Timestamp,
-    ) -> ContractResult<Batch> {
+    fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
         let mut sender = self.lease.dex.transfer_from(now);
         sender.send(&self.payment_lpn)?;
         Ok(sender.into())
@@ -52,6 +49,10 @@ impl TransferInInit {
 }
 
 impl Controller for TransferInInit {
+    fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
+        self.enter_state(env.block.time)
+    }
+
     fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response {

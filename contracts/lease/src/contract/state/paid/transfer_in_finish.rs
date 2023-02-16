@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper};
 use crate::{
     api::{paid::ClosingTrx, ExecuteMsg, StateQuery, StateResponse},
     contract::{
-        state::{self, closed::Closed, transfer_in, Controller, Response},
+        state::{self, closed::Closed, transfer_in, Controller, Response, State},
         Lease,
     },
     error::ContractResult,
@@ -29,14 +29,18 @@ impl TransferInFinish {
         let received =
             transfer_in::check_received(&self.lease.lease.amount, &env.contract.address, querier)?;
 
-        if received {
-            Closed::default().enter_state(self.lease.lease, env, querier)
+        let (next_state, cw_resp): (State, _) = if received {
+            let closed = Closed::default();
+            let emitter = closed.emit_ok(env, &self.lease.lease);
+            let batch = closed.enter_state(self.lease.lease, querier)?;
+            (closed.into(), batch.into_response(emitter))
         } else {
             let emitter = self.emit_ok();
             let batch =
                 transfer_in::setup_alarm(self.lease.lease.time_alarms.clone(), env.block.time)?;
-            Ok(Response::from(batch.into_response(emitter), self))
-        }
+            (self.into(), batch.into_response(emitter))
+        };
+        Ok(Response::from(cw_resp, next_state))
     }
 
     fn on_alarm(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {

@@ -50,7 +50,7 @@ impl BuyAsset {
         }
     }
 
-    pub(super) fn enter_state(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
+    fn enter_state(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
         // TODO define struct Trx with functions build_request and decode_response -> LpnCoin
         let mut swap_trx = self.dex_account.swap(&self.deps.1, querier);
         // TODO apply nls_swap_fee on the downpayment only!
@@ -94,6 +94,10 @@ impl BuyAsset {
 }
 
 impl Controller for BuyAsset {
+    fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<LocalBatch> {
+        self.enter_state(&deps.querier)
+    }
+
     fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response { request: _, data } => self.on_response(data, &env, &deps.querier),

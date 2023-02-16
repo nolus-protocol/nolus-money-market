@@ -9,7 +9,7 @@ use platform::{
     trx,
 };
 use sdk::{
-    cosmwasm_std::{Binary, Deps, DepsMut, Env, QuerierWrapper, Timestamp},
+    cosmwasm_std::{Binary, Deps, DepsMut, Env, QuerierWrapper},
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use swap::trx as swap_trx;
@@ -37,20 +37,20 @@ impl BuyLpn {
         Self { lease, payment }
     }
 
-    pub(super) fn enter_state(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
+    fn enter_state(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
         let mut swap_trx = self.lease.dex.swap(&self.lease.lease.oracle, querier);
         swap_trx.swap_exact_in(&self.payment, self.target_currency())?;
         Ok(swap_trx.into())
     }
 
-    fn on_response(self, resp: Binary, now: Timestamp) -> ContractResult<Response> {
+    fn on_response(self, resp: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         let emitter = self.emit_ok();
         let payment_lpn = self.decode_response(resp.as_slice())?;
 
-        let next_state = TransferInInit::new(self.lease, self.payment, payment_lpn);
-        let batch = next_state.enter_state(now)?;
+        let transfer_in = TransferInInit::new(self.lease, self.payment, payment_lpn);
+        let batch = transfer_in.enter(deps, env)?;
 
-        Ok(Response::from(batch.into_response(emitter), next_state))
+        Ok(Response::from(batch.into_response(emitter), transfer_in))
     }
 
     fn decode_response(&self, resp: &[u8]) -> ContractResult<LpnCoin> {
@@ -72,9 +72,13 @@ impl BuyLpn {
 }
 
 impl Controller for BuyLpn {
-    fn sudo(self, _deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
+    fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<LocalBatch> {
+        self.enter_state(&deps.querier)
+    }
+
+    fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
-            SudoMsg::Response { request: _, data } => self.on_response(data, env.block.time),
+            SudoMsg::Response { request: _, data } => self.on_response(data, deps.as_ref(), env),
             SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {
                 request: _,

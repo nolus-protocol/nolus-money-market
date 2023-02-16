@@ -29,7 +29,7 @@ impl Active {
 impl Controller for Active {
     fn execute(
         self,
-        _deps: &mut DepsMut<'_>,
+        deps: &mut DepsMut<'_>,
         env: Env,
         _info: MessageInfo,
         msg: ExecuteMsg,
@@ -37,9 +37,9 @@ impl Controller for Active {
         match msg {
             ExecuteMsg::Repay() => todo!("fail"),
             ExecuteMsg::Close() => {
-                let next_state = TransferInInit::new(self.lease);
-                let batch = next_state.enter_state(env.block.time)?;
-                Ok(Response::from(batch, next_state))
+                let transfer_in = TransferInInit::new(self.lease);
+                let batch = transfer_in.enter(deps.as_ref(), env)?;
+                Ok(Response::from(batch, transfer_in))
             }
             ExecuteMsg::PriceAlarm() => {
                 todo!("silently pass or make sure the alarm has been removed")

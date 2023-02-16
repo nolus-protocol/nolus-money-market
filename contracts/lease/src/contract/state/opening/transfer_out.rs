@@ -8,7 +8,7 @@ use platform::{
     ica::HostAccount,
 };
 use sdk::{
-    cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Timestamp},
+    cosmwasm_std::{Addr, Deps, DepsMut, Env, Timestamp},
     neutron_sdk::sudo::msg::SudoMsg,
 };
 
@@ -53,9 +53,7 @@ impl TransferOut {
         }
     }
 
-    //TODO define a State trait with `fn enter(&self, deps: &Deps)` and
-    //simplify the TransferOut::on_success return type to `impl State`
-    pub(super) fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
+    fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
         debug_assert_eq!(self.nb_completed, TransfersNb::ZERO);
         let mut sender = self.dex_account.transfer_to(now);
         sender.send(&self.downpayment)?;
@@ -69,27 +67,27 @@ impl TransferOut {
             .emit_coin_dto("downpayment", self.downpayment.clone())
     }
 
-    fn on_response(self, contract: Addr, querier: &QuerierWrapper<'_>) -> ContractResult<Response> {
+    fn on_response(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         match self.nb_completed {
             0 => {
-                let next_state = Self {
+                let transfer_out = Self {
                     nb_completed: self.nb_completed + 1,
                     ..self
                 };
-                Ok(Response::from(Batch::default(), next_state))
+                Ok(Response::from(Batch::default(), transfer_out))
             }
             1 => {
-                let emitter = self.emit_ok(contract);
-                let next_state = BuyAsset::new(
+                let emitter = self.emit_ok(env.contract.address.clone());
+                let buy_asset = BuyAsset::new(
                     self.form,
                     self.dex_account,
                     self.downpayment,
                     self.loan,
                     self.deps,
                 );
-                let batch = next_state.enter_state(querier)?;
+                let batch = buy_asset.enter(deps, env)?;
                 let resp = batch.into_response(emitter);
-                Ok(Response::from(resp, next_state))
+                Ok(Response::from(resp, buy_asset))
             }
             _ => unreachable!(),
         }
@@ -97,6 +95,10 @@ impl TransferOut {
 }
 
 impl Controller for TransferOut {
+    fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
+        self.enter_state(env.block.time)
+    }
+
     fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response { request: _, data } => {
@@ -104,7 +106,7 @@ impl Controller for TransferOut {
                     "[Lease][Opening][TransferOut] receive ack '{}'",
                     data.to_base64()
                 ));
-                self.on_response(env.contract.address, &deps.querier)
+                self.on_response(deps.as_ref(), env)
             }
             SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {

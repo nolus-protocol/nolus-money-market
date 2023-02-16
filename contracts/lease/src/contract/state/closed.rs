@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use platform::{
     bank,
-    batch::{Emit, Emitter},
+    batch::{Batch, Emit, Emitter},
 };
 use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper};
 
@@ -14,30 +14,30 @@ use crate::{
     lease::{with_lease, IntoDTOResult, LeaseDTO},
 };
 
-use super::{Controller, Response};
+use super::Controller;
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Closed {}
 
 impl Closed {
     pub(super) fn enter_state(
-        self,
+        &self,
         lease: LeaseDTO,
-        env: &Env,
         querier: &QuerierWrapper<'_>,
-    ) -> ContractResult<Response> {
-        let lease_account = bank::account(&env.contract.address, querier);
-        let IntoDTOResult { lease: _, batch } =
-            with_lease::execute(lease, Close::new(lease_account), querier)?;
+    ) -> ContractResult<Batch> {
+        let lease_addr = lease.addr.clone();
+        let lease_account = bank::account(&lease_addr, querier);
+        let IntoDTOResult {
+            lease: _abandon,
+            batch,
+        } = with_lease::execute(lease, Close::new(lease_account), querier)?;
+        Ok(batch)
+    }
 
-        let emitter = Emitter::of_type(Type::Closed)
-            .emit("id", env.contract.address.clone())
-            .emit_tx_info(env);
-
-        Ok(Response::from(
-            batch.into_response(emitter),
-            Closed::default(),
-        ))
+    pub(super) fn emit_ok(&self, env: &Env, lease: &LeaseDTO) -> Emitter {
+        Emitter::of_type(Type::Closed)
+            .emit("id", lease.addr.clone())
+            .emit_tx_info(env)
     }
 }
 

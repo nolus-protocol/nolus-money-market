@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use platform::batch::{Batch, Emit, Emitter};
 use sdk::{
-    cosmwasm_std::{Deps, DepsMut, Env, QuerierWrapper, Timestamp},
+    cosmwasm_std::{Deps, DepsMut, Env, Timestamp},
     neutron_sdk::sudo::msg::SudoMsg,
 };
 
@@ -29,22 +29,19 @@ impl TransferOut {
         Self { lease, payment }
     }
 
-    pub(in crate::contract::state::opened) fn enter_state(
-        &self,
-        now: Timestamp,
-    ) -> ContractResult<Batch> {
+    fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
         let mut sender = self.lease.dex.transfer_to(now);
         // TODO apply nls_swap_fee on the payment!
         sender.send(&self.payment)?;
         Ok(sender.into())
     }
 
-    fn on_response(self, querier: &QuerierWrapper<'_>) -> ContractResult<Response> {
+    fn on_response(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         let emitter = self.emit_ok();
-        let next_state = BuyLpn::new(self.lease, self.payment);
-        let batch = next_state.enter_state(querier)?;
+        let buy_lpn = BuyLpn::new(self.lease, self.payment);
+        let batch = buy_lpn.enter(deps, env)?;
 
-        Ok(Response::from(batch.into_response(emitter), next_state))
+        Ok(Response::from(batch.into_response(emitter), buy_lpn))
     }
 
     fn emit_ok(&self) -> Emitter {
@@ -55,6 +52,10 @@ impl TransferOut {
 }
 
 impl Controller for TransferOut {
+    fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
+        self.enter_state(env.block.time)
+    }
+
     fn sudo(self, deps: &mut DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response { request: _, data } => {
@@ -63,7 +64,7 @@ impl Controller for TransferOut {
                     data.to_base64()
                 ));
 
-                self.on_response(&deps.querier)
+                self.on_response(deps.as_ref(), _env)
             }
             SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {
