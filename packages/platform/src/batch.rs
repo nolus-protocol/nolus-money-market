@@ -142,6 +142,14 @@ impl Batch {
         res
     }
 
+    pub fn len(&self) -> usize {
+        self.msgs.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.msgs.is_empty()
+    }
+
     pub fn into_response(self, emitter: Emitter) -> Response {
         Response::from(self).add_event(emitter.into())
     }
