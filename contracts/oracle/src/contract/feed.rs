@@ -232,7 +232,12 @@ mod test {
         lease::{Atom, Cro, Juno, Osmo, Wbtc, Weth},
         lpn::Usdc,
     };
-    use finance::{coin::Coin, duration::Duration, percent::Percent, price};
+    use finance::{
+        coin::Coin,
+        duration::Duration,
+        percent::Percent,
+        price::{self, dto::PriceDTO},
+    };
     use sdk::cosmwasm_std::testing::{self, MockStorage};
     use tree::HumanReadableTree;
 
@@ -276,6 +281,25 @@ mod test {
         .unwrap()
     }
 
+    fn dto_price<B, Q>(total_of: u128, is: u128) -> PriceDTO<SwapGroup, SwapGroup>
+    where
+        B: Currency,
+        Q: Currency,
+    {
+        price::total_of(Coin::<B>::new(total_of))
+            .is(Coin::<Q>::new(is))
+            .into()
+    }
+
+    fn base_price<C>(total_of: u128, is: u128) -> BasePrice<TheCurrency, SwapGroup>
+    where
+        C: Currency,
+    {
+        price::total_of(Coin::<C>::new(total_of))
+            .is(Coin::new(is))
+            .into()
+    }
+
     #[test]
     fn all_prices_iter() {
         let mut storage = MockStorage::new();
@@ -299,24 +323,12 @@ mod test {
                 env.block.time,
                 &Addr::unchecked("feeder"),
                 &[
-                    price::total_of(Coin::<Wbtc>::new(1))
-                        .is(Coin::<TheCurrency>::new(1))
-                        .into(),
-                    price::total_of(Coin::<Atom>::new(2))
-                        .is(Coin::<TheCurrency>::new(1))
-                        .into(),
-                    price::total_of(Coin::<Weth>::new(1))
-                        .is(Coin::<Wbtc>::new(1))
-                        .into(),
-                    price::total_of(Coin::<Osmo>::new(1))
-                        .is(Coin::<Atom>::new(1))
-                        .into(),
-                    price::total_of(Coin::<Cro>::new(3))
-                        .is(Coin::<Osmo>::new(1))
-                        .into(),
-                    price::total_of(Coin::<Juno>::new(1))
-                        .is(Coin::<Osmo>::new(1))
-                        .into(),
+                    dto_price::<Wbtc, TheCurrency>(1, 1),
+                    dto_price::<Atom, TheCurrency>(2, 1),
+                    dto_price::<Weth, Wbtc>(1, 1),
+                    dto_price::<Osmo, Atom>(1, 1),
+                    dto_price::<Cro, Osmo>(3, 1),
+                    dto_price::<Juno, Osmo>(1, 1),
                 ],
             )
             .unwrap();
@@ -327,24 +339,12 @@ mod test {
             .collect();
 
         let expected: Vec<BasePrice<TheCurrency, SwapGroup>> = vec![
-            price::total_of(Coin::<Wbtc>::new(1))
-                .is(Coin::<TheCurrency>::new(1))
-                .into(),
-            price::total_of(Coin::<Weth>::new(1))
-                .is(Coin::<TheCurrency>::new(1))
-                .into(),
-            price::total_of(Coin::<Atom>::new(2))
-                .is(Coin::<TheCurrency>::new(1))
-                .into(),
-            price::total_of(Coin::<Osmo>::new(2))
-                .is(Coin::<TheCurrency>::new(1))
-                .into(),
-            price::total_of(Coin::<Juno>::new(2))
-                .is(Coin::<TheCurrency>::new(1))
-                .into(),
-            price::total_of(Coin::<Cro>::new(6))
-                .is(Coin::<TheCurrency>::new(1))
-                .into(),
+            base_price::<Wbtc>(1, 1),
+            base_price::<Weth>(1, 1),
+            base_price::<Atom>(2, 1),
+            base_price::<Osmo>(2, 1),
+            base_price::<Juno>(2, 1),
+            base_price::<Cro>(6, 1),
         ];
 
         assert_eq!(expected, prices);
