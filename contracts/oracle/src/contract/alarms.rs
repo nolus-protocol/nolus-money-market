@@ -108,10 +108,6 @@ impl MarketAlarms {
                 },
             )?;
 
-        // let processed = msgs.len().try_into()?;
-        // let batch = msgs.merge(batch);
-
-        // Ok(Response::from(batch).set_data(to_binary(&DispatchAlarmsResponse(processed))?))
         Ok(batch)
     }
 
