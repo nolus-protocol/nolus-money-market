@@ -187,7 +187,7 @@ where
         ))
     }
 
-    pub fn query_supported_pairs(&self) -> impl Iterator<Item = SwapLeg> + '_ {
+    pub fn swap_pairs_df(&self) -> impl Iterator<Item = SwapLeg> + '_ {
         self.tree.iter().filter_map(|node| {
             let parent = node.parent()?;
 
@@ -402,7 +402,7 @@ mod tests {
         let paths = test_case();
         let tree = SupportedPairs::<Usdc>::new(paths.into_tree()).unwrap();
 
-        let mut response: Vec<_> = tree.query_supported_pairs().collect();
+        let mut response: Vec<_> = tree.swap_pairs_df().collect();
         response.sort_by(|a, b| a.from.cmp(&b.from));
 
         let mut expected = vec![

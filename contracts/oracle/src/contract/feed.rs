@@ -49,7 +49,7 @@ where
     ) -> Result<(), ContractError> {
         let tree = SupportedPairs::<OracleBase>::load(storage)?;
         if prices.iter().any(|price| {
-            !tree.query_supported_pairs().any(
+            !tree.swap_pairs_df().any(
                 |SwapLeg {
                      from,
                      to: SwapTarget { target: to, .. },
@@ -89,7 +89,7 @@ where
         at: Timestamp,
         total_feeders: usize,
     ) -> Result<impl Iterator<Item = BasePrice<SwapGroup, OracleBase>> + 'a, ContractError> {
-        let res = tree.query_supported_pairs().scan(
+        let res = tree.swap_pairs_df().scan(
             vec![],
             move |stack: &mut Vec<BasePrice<SwapGroup, OracleBase>>, leg: SwapLeg| {
                 let res = currency::visit_any_on_tickers::<SwapGroup, SwapGroup, _>(
