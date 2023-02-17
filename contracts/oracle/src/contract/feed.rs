@@ -89,61 +89,6 @@ where
         at: Timestamp,
         total_feeders: usize,
     ) -> Result<impl Iterator<Item = BasePrice<OracleBase, SwapGroup>> + 'a, ContractError> {
-        struct LegCmd<'a, 'b, OracleBase>
-        where
-            OracleBase: Currency,
-        {
-            feeds: &'a PriceFeeds<'static>,
-            storage: &'a dyn Storage,
-            at: Timestamp,
-            total_feeders: usize,
-            stack: &'b mut Vec<BasePrice<OracleBase, SwapGroup>>,
-            _base: PhantomData<OracleBase>,
-        }
-
-        impl<'a, 'b, OracleBase> AnyVisitorPair for LegCmd<'a, 'b, OracleBase>
-        where
-            OracleBase: Currency + DeserializeOwned,
-        {
-            type Output = BasePrice<OracleBase, SwapGroup>;
-            type Error = ContractError;
-            fn on<B, Q>(self) -> Result<Self::Output, Self::Error>
-            where
-                B: Currency + DeserializeOwned,
-                Q: Currency + DeserializeOwned,
-            {
-                let price: BasePrice<OracleBase, SwapGroup> = loop {
-                    match self
-                        .stack
-                        .last()
-                        .map(TryInto::<Price<Q, OracleBase>>::try_into)
-                    {
-                        None => {
-                            break self.feeds.price_of_feed::<B, OracleBase>(
-                                self.storage,
-                                self.at,
-                                self.total_feeders,
-                            )?
-                        }
-                        Some(Ok(price_parent)) => {
-                            break self.feeds.price_of_feed::<B, Q>(
-                                self.storage,
-                                self.at,
-                                self.total_feeders,
-                            )? * price_parent
-                        }
-                        _ => {
-                            self.stack.pop();
-                        }
-                    }
-                }
-                .into();
-                self.stack.push(price.clone());
-
-                Ok(price)
-            }
-        }
-
         let res = tree.query_supported_pairs().scan(
             vec![],
             move |stack: &mut Vec<BasePrice<OracleBase, SwapGroup>>, leg: SwapLeg| {
@@ -221,6 +166,64 @@ where
     oracle.all_prices_iter(storage, tree, block_time, total_registered)
 }
 
+struct LegCmd<'a, 'b, OracleBase>
+where
+    OracleBase: Currency,
+{
+    feeds: &'a PriceFeeds<'static>,
+    storage: &'a dyn Storage,
+    at: Timestamp,
+    total_feeders: usize,
+    stack: &'b mut Vec<BasePrice<OracleBase, SwapGroup>>,
+    _base: PhantomData<OracleBase>,
+}
+
+impl<'a, 'b, OracleBase> AnyVisitorPair for LegCmd<'a, 'b, OracleBase>
+where
+    OracleBase: Currency + DeserializeOwned,
+{
+    type Output = BasePrice<OracleBase, SwapGroup>;
+    type Error = ContractError;
+
+    fn on<B, Q>(self) -> Result<Self::Output, Self::Error>
+    where
+        B: Currency + DeserializeOwned,
+        Q: Currency + DeserializeOwned,
+    {
+        let price: BasePrice<OracleBase, SwapGroup> = loop {
+            match self
+                .stack
+                .last()
+                .map(TryInto::<Price<Q, OracleBase>>::try_into)
+            {
+                None => {
+                    debug_assert_eq!(Q::TICKER, OracleBase::TICKER);
+
+                    break self.feeds.price_of_feed::<B, OracleBase>(
+                        self.storage,
+                        self.at,
+                        self.total_feeders,
+                    )?;
+                }
+                Some(Ok(price_parent)) => {
+                    break self.feeds.price_of_feed::<B, Q>(
+                        self.storage,
+                        self.at,
+                        self.total_feeders,
+                    )? * price_parent
+                }
+                _ => {
+                    self.stack.truncate(self.stack.len() - 1);
+                }
+            }
+        }
+        .into();
+        self.stack.push(price.clone());
+
+        Ok(price)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -296,53 +299,96 @@ mod test {
             .into()
     }
 
-    #[test]
-    fn all_prices_iter() {
-        let mut storage = MockStorage::new();
-        let env = testing::mock_env();
-        let tree = test_case();
-        let tree = SupportedPairs::<TheCurrency>::new(tree.into_tree()).unwrap();
-        tree.save(&mut storage).unwrap();
+    mod all_prices_iter {
+        use super::*;
 
-        let config = Config::new(
-            Percent::HUNDRED,
-            Duration::from_secs(5),
-            10,
-            Percent::from_percent(50),
-        );
+        #[test]
+        fn normal() {
+            let mut storage = MockStorage::new();
+            let env = testing::mock_env();
+            let tree = test_case();
+            let tree = SupportedPairs::<TheCurrency>::new(tree.into_tree()).unwrap();
+            tree.save(&mut storage).unwrap();
 
-        let oracle: Feeds<TheCurrency> = Feeds::with(config);
+            let config = Config::new(
+                Percent::HUNDRED,
+                Duration::from_secs(5),
+                10,
+                Percent::from_percent(50),
+            );
 
-        oracle
-            .feed_prices(
-                &mut storage,
-                env.block.time,
-                &Addr::unchecked("feeder"),
-                &[
-                    dto_price::<Wbtc, TheCurrency>(1, 1),
-                    dto_price::<Atom, TheCurrency>(2, 1),
-                    dto_price::<Weth, Wbtc>(1, 1),
-                    dto_price::<Osmo, Atom>(1, 1),
-                    dto_price::<Cro, Osmo>(3, 1),
-                    dto_price::<Juno, Osmo>(1, 1),
-                ],
-            )
-            .unwrap();
+            let oracle: Feeds<TheCurrency> = Feeds::with(config);
 
-        let prices: Vec<_> = oracle
-            .all_prices_iter(&storage, &tree, env.block.time, 1)
-            .unwrap()
-            .collect();
+            oracle
+                .feed_prices(
+                    &mut storage,
+                    env.block.time,
+                    &Addr::unchecked("feeder"),
+                    &[
+                        dto_price::<Wbtc, TheCurrency>(1, 1),
+                        dto_price::<Atom, TheCurrency>(2, 1),
+                        dto_price::<Weth, Wbtc>(1, 1),
+                        dto_price::<Osmo, Atom>(1, 1),
+                        dto_price::<Cro, Osmo>(3, 1),
+                        dto_price::<Juno, Osmo>(1, 1),
+                    ],
+                )
+                .unwrap();
 
-        let expected: Vec<BasePrice<TheCurrency, SwapGroup>> = vec![
-            base_price::<Wbtc>(1, 1),
-            base_price::<Weth>(1, 1),
-            base_price::<Atom>(2, 1),
-            base_price::<Osmo>(2, 1),
-            base_price::<Juno>(2, 1),
-            base_price::<Cro>(6, 1),
-        ];
+            let prices: Vec<_> = oracle
+                .all_prices_iter(&storage, &tree, env.block.time, 1)
+                .unwrap()
+                .collect();
 
-        assert_eq!(expected, prices);
+            let expected: Vec<BasePrice<TheCurrency, SwapGroup>> = vec![
+                base_price::<Wbtc>(1, 1),
+                base_price::<Weth>(1, 1),
+                base_price::<Atom>(2, 1),
+                base_price::<Osmo>(2, 1),
+                base_price::<Juno>(2, 1),
+                base_price::<Cro>(6, 1),
+            ];
+
+            assert_eq!(expected, prices);
+        }
+
+        #[test]
+        #[should_panic]
+        fn missing_price() {
+            let mut storage = MockStorage::new();
+            let env = testing::mock_env();
+            let tree = test_case();
+            let tree = SupportedPairs::<TheCurrency>::new(tree.into_tree()).unwrap();
+            tree.save(&mut storage).unwrap();
+
+            let config = Config::new(
+                Percent::HUNDRED,
+                Duration::from_secs(5),
+                10,
+                Percent::from_percent(50),
+            );
+
+            let oracle: Feeds<TheCurrency> = Feeds::with(config);
+
+            oracle
+                .feed_prices(
+                    &mut storage,
+                    env.block.time,
+                    &Addr::unchecked("feeder"),
+                    &[
+                        dto_price::<Wbtc, TheCurrency>(1, 1),
+                        dto_price::<Atom, TheCurrency>(2, 1),
+                        dto_price::<Weth, Wbtc>(1, 1),
+                        dto_price::<Cro, Osmo>(3, 1),
+                        dto_price::<Juno, Osmo>(1, 1),
+                    ],
+                )
+                .unwrap();
+
+            let _: Vec<_> = oracle
+                .all_prices_iter(&storage, &tree, env.block.time, 1)
+                .unwrap()
+                .collect();
+        }
     }
 }
