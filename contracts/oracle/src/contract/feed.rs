@@ -192,9 +192,8 @@ where
     let batch = Batch::default();
     let tree = SupportedPairs::load(storage)?;
     let prices = calc_all_prices::<OracleBase>(storage, block_time, &tree)?;
-    let mut alarms = MarketAlarms::load(storage)?;
-    let response = alarms.try_notify_alarms::<OracleBase>(storage, batch, prices, max_count)?;
-    alarms.save(storage)?;
+    let response =
+        MarketAlarms.try_notify_alarms::<OracleBase>(storage, batch, prices, max_count)?;
     Ok(response)
 }
 
