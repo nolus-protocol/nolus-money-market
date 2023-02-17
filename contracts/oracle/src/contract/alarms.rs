@@ -266,11 +266,8 @@ mod test {
     fn notify_with_wrong_currency_group() {
         let mut storage = MockStorage::new();
 
-        let batch = Batch::default();
-
         let _ = MarketAlarms.try_notify_alarms::<Base>(
             &mut storage,
-            batch,
             [price::total_of(Coin::<Nls>::new(1))
                 .is(Coin::<Base>::new(25))
                 .into()]
