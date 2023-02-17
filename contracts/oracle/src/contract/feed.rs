@@ -6,7 +6,7 @@ use finance::{
     currency::{self, AnyVisitorPair, Currency, SymbolOwned},
     price::{base::BasePrice, Price},
 };
-use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
+use marketprice::{config::Config, error::PriceFeedsError, market_price::PriceFeeds, SpotPrice};
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, Storage, Timestamp},
@@ -85,29 +85,32 @@ where
     pub fn all_prices_iter<'a>(
         self,
         storage: &'a dyn Storage,
-        tree: &'a SupportedPairs<OracleBase>,
+        swap_pairs_df: impl Iterator<Item = SwapLeg> + 'a,
         at: Timestamp,
         total_feeders: usize,
     ) -> Result<impl Iterator<Item = BasePrice<SwapGroup, OracleBase>> + 'a, ContractError> {
-        let res = tree.swap_pairs_df().scan(
-            vec![],
-            move |stack: &mut Vec<BasePrice<SwapGroup, OracleBase>>, leg: SwapLeg| {
+        let cmd = LegCmd {
+            price_querier: ConfiguredFeeds {
+                feeds: self.feeds,
+                storage,
+                at,
+                total_feeders,
+            },
+            stack: vec![],
+            err: false,
+        };
+        let res = swap_pairs_df
+            .scan(cmd, |cmd, leg| {
                 let res = currency::visit_any_on_tickers::<SwapGroup, SwapGroup, _>(
                     &leg.from,
                     &leg.to.target,
-                    LegCmd {
-                        feeds: &self.feeds,
-                        storage,
-                        at,
-                        total_feeders,
-                        stack,
-                        _base: PhantomData::<OracleBase>,
-                    },
+                    cmd,
                 )
                 .expect("price calculation error");
                 Some(res)
-            },
-        );
+            })
+            // TODO: process errors
+            .flatten();
         Ok(res)
     }
 
@@ -163,26 +166,56 @@ where
     use crate::state::config::Config as OracleConfig;
     let config = OracleConfig::load(storage)?;
     let oracle = Feeds::<OracleBase>::with(config.price_config);
-    oracle.all_prices_iter(storage, tree, block_time, total_registered)
+    oracle.all_prices_iter(storage, tree.swap_pairs_df(), block_time, total_registered)
 }
 
-struct LegCmd<'a, 'b, OracleBase>
+struct LegCmd<OracleBase, Querier>
 where
     OracleBase: Currency,
+    Querier: PriceQuerier,
 {
-    feeds: &'a PriceFeeds<'static>,
-    storage: &'a dyn Storage,
-    at: Timestamp,
-    total_feeders: usize,
-    stack: &'b mut Vec<BasePrice<SwapGroup, OracleBase>>,
-    _base: PhantomData<OracleBase>,
+    price_querier: Querier,
+    stack: Vec<BasePrice<SwapGroup, OracleBase>>,
+    err: bool,
 }
 
-impl<'a, 'b, OracleBase> AnyVisitorPair for LegCmd<'a, 'b, OracleBase>
+impl<Querier, OracleBase> LegCmd<OracleBase, Querier>
+where
+    OracleBase: Currency,
+    Querier: PriceQuerier,
+{
+    // TODO: improve implementation
+    fn recover<B, Q>(&mut self) -> bool
+    where
+        B: Currency,
+        Q: Currency,
+    {
+        if Q::TICKER == OracleBase::TICKER {
+            self.stack.clear();
+            self.err = false;
+        } else {
+            let parent_idx = self
+                .stack
+                .iter()
+                .position(|parent| parent.base_ticker() == Q::TICKER);
+
+            if let Some(n) = parent_idx {
+                self.stack.truncate(n + 1);
+                self.err = false;
+            } else {
+                return false;
+            }
+        }
+        true
+    }
+}
+
+impl<OracleBase, Querier> AnyVisitorPair for &mut LegCmd<OracleBase, Querier>
 where
     OracleBase: Currency + DeserializeOwned,
+    Querier: PriceQuerier,
 {
-    type Output = BasePrice<SwapGroup, OracleBase>;
+    type Output = Option<BasePrice<SwapGroup, OracleBase>>;
     type Error = ContractError;
 
     fn on<B, Q>(self) -> Result<Self::Output, Self::Error>
@@ -190,7 +223,12 @@ where
         B: Currency + DeserializeOwned,
         Q: Currency + DeserializeOwned,
     {
-        let price: BasePrice<SwapGroup, OracleBase> = loop {
+        // recovery mode
+        if self.err && !self.recover::<B, Q>() {
+            return Ok(None);
+        }
+
+        let price: Option<BasePrice<SwapGroup, OracleBase>> = loop {
             match self
                 .stack
                 .last()
@@ -199,33 +237,70 @@ where
                 None => {
                     debug_assert_eq!(Q::TICKER, OracleBase::TICKER);
 
-                    break self.feeds.price_of_feed::<B, OracleBase>(
-                        self.storage,
-                        self.at,
-                        self.total_feeders,
-                    )?;
+                    break self.price_querier.price::<B, OracleBase>()?;
                 }
                 Some(Ok(price_parent)) => {
-                    break self.feeds.price_of_feed::<B, Q>(
-                        self.storage,
-                        self.at,
-                        self.total_feeders,
-                    )? * price_parent
+                    break self
+                        .price_querier
+                        .price::<B, Q>()?
+                        .map(|price| price * price_parent)
                 }
                 _ => {
                     self.stack.truncate(self.stack.len() - 1);
                 }
             }
         }
-        .into();
-        self.stack.push(price.clone());
+        .map(|price| {
+            let bprice: BasePrice<SwapGroup, OracleBase> = price.into();
+            self.stack.push(bprice.clone());
+            bprice
+        });
 
+        if price.is_none() {
+            self.err = true;
+        }
+
+        Ok(price)
+    }
+}
+
+// TODO: rename to something meaningfull
+struct ConfiguredFeeds<'a> {
+    feeds: PriceFeeds<'static>,
+    at: Timestamp,
+    total_feeders: usize,
+    storage: &'a dyn Storage,
+}
+
+trait PriceQuerier {
+    fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
+    where
+        B: Currency + DeserializeOwned,
+        Q: Currency + DeserializeOwned;
+}
+
+impl<'a> PriceQuerier for ConfiguredFeeds<'a> {
+    fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
+    where
+        B: Currency + DeserializeOwned,
+        Q: Currency + DeserializeOwned,
+    {
+        let price = self
+            .feeds
+            .price_of_feed(self.storage, self.at, self.total_feeders)
+            .map(Some)
+            .or_else(|err| match err {
+                PriceFeedsError::NoPrice() => Ok(None),
+                _ => Err(err),
+            })?;
         Ok(price)
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
+
     use super::*;
     use ::currency::{
         lease::{Atom, Cro, Juno, Osmo, Wbtc, Weth},
@@ -233,6 +308,7 @@ mod test {
     };
     use finance::{
         coin::Coin,
+        currency::SymbolStatic,
         duration::Duration,
         percent::Percent,
         price::{self, dto::PriceDTO},
@@ -241,6 +317,33 @@ mod test {
     use tree::HumanReadableTree;
 
     type TheCurrency = Usdc;
+
+    #[derive(Clone)]
+    struct TestFeeds(HashMap<(SymbolStatic, SymbolStatic), PriceDTO<SwapGroup, SwapGroup>>);
+    impl TestFeeds {
+        fn add<B, Q>(&mut self, total_of: u128, is: u128)
+        where
+            B: Currency,
+            Q: Currency,
+        {
+            self.0
+                .insert((B::TICKER, Q::TICKER), dto_price::<B, Q>(total_of, is));
+        }
+    }
+
+    impl PriceQuerier for TestFeeds {
+        fn price<B, Q>(&self) -> Result<Option<Price<B, Q>>, ContractError>
+        where
+            B: Currency + DeserializeOwned,
+            Q: Currency + DeserializeOwned,
+        {
+            Ok(self
+                .0
+                .get(&(B::TICKER, Q::TICKER))
+                .map(Price::try_from)
+                .transpose()?)
+        }
+    }
 
     fn test_case() -> HumanReadableTree<SwapTarget> {
         let base = TheCurrency::TICKER;
@@ -336,7 +439,7 @@ mod test {
                 .unwrap();
 
             let prices: Vec<_> = oracle
-                .all_prices_iter(&storage, &tree, env.block.time, 1)
+                .all_prices_iter(&storage, tree.swap_pairs_df(), env.block.time, 1)
                 .unwrap()
                 .collect();
 
@@ -353,7 +456,6 @@ mod test {
         }
 
         #[test]
-        #[should_panic]
         fn missing_price() {
             let mut storage = MockStorage::new();
             let env = testing::mock_env();
@@ -376,19 +478,113 @@ mod test {
                     env.block.time,
                     &Addr::unchecked("feeder"),
                     &[
-                        dto_price::<Wbtc, TheCurrency>(1, 1),
+                        // dto_price::<Wbtc, TheCurrency>(1, 1),
                         dto_price::<Atom, TheCurrency>(2, 1),
                         dto_price::<Weth, Wbtc>(1, 1),
+                        dto_price::<Osmo, Atom>(1, 1),
                         dto_price::<Cro, Osmo>(3, 1),
                         dto_price::<Juno, Osmo>(1, 1),
                     ],
                 )
                 .unwrap();
 
-            let _: Vec<_> = oracle
-                .all_prices_iter(&storage, &tree, env.block.time, 1)
+            let expected: Vec<BasePrice<SwapGroup, TheCurrency>> = vec![
+                base_price::<Atom>(2, 1),
+                base_price::<Osmo>(2, 1),
+                base_price::<Juno>(2, 1),
+                base_price::<Cro>(6, 1),
+            ];
+
+            let prices: Vec<_> = oracle
+                .all_prices_iter(&storage, tree.swap_pairs_df(), env.block.time, 1)
                 .unwrap()
                 .collect();
+
+            assert_eq!(expected, prices);
+        }
+
+        #[test]
+        fn leg_cmd_normal() {
+            let mut feeds = TestFeeds(HashMap::new());
+            feeds.add::<Wbtc, TheCurrency>(1, 1);
+            feeds.add::<Atom, TheCurrency>(2, 1);
+            feeds.add::<Weth, Wbtc>(2, 1);
+
+            let mut cmd = LegCmd::<TheCurrency, _> {
+                price_querier: feeds.clone(),
+                stack: vec![],
+                err: false,
+            };
+            assert_eq!(
+                cmd.on::<Wbtc, TheCurrency>(),
+                Ok(Some(base_price::<Wbtc>(1, 1)))
+            );
+            assert_eq!(cmd.stack, vec![base_price::<Wbtc>(1, 1)]);
+            assert!(!cmd.err);
+
+            // child
+            assert_eq!(cmd.on::<Weth, Wbtc>(), Ok(Some(base_price::<Weth>(2, 1))));
+            assert_eq!(
+                cmd.stack,
+                vec![base_price::<Wbtc>(1, 1), base_price::<Weth>(2, 1)]
+            );
+            assert!(!cmd.err);
+
+            // hop to the next branch
+            assert_eq!(
+                cmd.on::<Atom, TheCurrency>(),
+                Ok(Some(base_price::<Atom>(2, 1)))
+            );
+            assert_eq!(cmd.stack, vec![base_price::<Atom>(2, 1)]);
+            assert!(!cmd.err);
+        }
+
+        #[test]
+        fn leg_cmd_missing_price() {
+            let mut feeds = TestFeeds(HashMap::new());
+            feeds.add::<Wbtc, TheCurrency>(1, 1);
+            feeds.add::<Atom, TheCurrency>(2, 1);
+            feeds.add::<Weth, Wbtc>(2, 1);
+            feeds.add::<Osmo, Weth>(1, 1);
+            feeds.add::<Cro, Osmo>(3, 1);
+
+            feeds.add::<Juno, Wbtc>(1, 1);
+
+            let mut cmd = LegCmd::<TheCurrency, _> {
+                price_querier: feeds.clone(),
+                stack: vec![base_price::<Wbtc>(1, 1), base_price::<Weth>(2, 1)],
+                err: false,
+            };
+
+            // no price
+            assert_eq!(cmd.on::<Cro, Weth>(), Ok(None));
+            assert_eq!(
+                cmd.stack,
+                vec![base_price::<Wbtc>(1, 1), base_price::<Weth>(2, 1)]
+            );
+            assert!(cmd.err);
+
+            // recover, hop to the top child, clean the stack
+            assert_eq!(
+                cmd.on::<Atom, TheCurrency>(),
+                Ok(Some(base_price::<Atom>(2, 1)))
+            );
+            assert_eq!(cmd.stack, vec![base_price::<Atom>(2, 1)]);
+            assert!(!cmd.err);
+
+            let mut cmd = LegCmd::<TheCurrency, _> {
+                price_querier: feeds.clone(),
+                stack: vec![base_price::<Wbtc>(1, 1), base_price::<Weth>(2, 1)],
+                err: true,
+            };
+
+            // recover, hop to the close child, clean the stack
+            assert_eq!(cmd.on::<Juno, Wbtc>(), Ok(Some(base_price::<Juno>(1, 1))));
+            assert_eq!(
+                cmd.stack,
+                vec![base_price::<Wbtc>(1, 1), base_price::<Juno>(1, 1)]
+            );
+            assert!(!cmd.err);
         }
     }
 }
