@@ -2,7 +2,8 @@ use ::currency::native::Nls;
 use finance::{
     currency::{self, AnyVisitor, Currency},
     price::{
-        dto::{with_quote, BasePrice, WithQuote},
+        base::BasePrice,
+        dto::{with_quote, WithQuote},
         Price,
     },
 };
@@ -85,7 +86,7 @@ impl MarketAlarms {
     pub fn try_notify_alarms<'a, BaseC>(
         &mut self,
         storage: &dyn Storage,
-        prices: impl Iterator<Item = BasePrice<BaseC, SwapGroup>> + 'a,
+        prices: impl Iterator<Item = BasePrice<SwapGroup, BaseC>> + 'a,
         max_count: u32, // TODO: type alias
     ) -> Result<Batch, ContractError>
     where
@@ -116,7 +117,7 @@ impl MarketAlarms {
 
     pub fn try_query_alarms<'a, BaseC>(
         storage: &dyn Storage,
-        prices: impl Iterator<Item = BasePrice<BaseC, SwapGroup>> + 'a,
+        prices: impl Iterator<Item = BasePrice<SwapGroup, BaseC>> + 'a,
     ) -> Result<AlarmsStatusResponse, ContractError>
     where
         BaseC: Currency,
@@ -131,7 +132,7 @@ impl MarketAlarms {
 
     fn alarms_iter<'a, BaseC>(
         storage: &'a dyn Storage,
-        prices: impl Iterator<Item = BasePrice<BaseC, SwapGroup>> + 'a,
+        prices: impl Iterator<Item = BasePrice<SwapGroup, BaseC>> + 'a,
     ) -> impl Iterator<Item = Result<Addr, AlarmError>> + 'a
     where
         BaseC: Currency,
@@ -142,7 +143,7 @@ impl MarketAlarms {
         {
             storage: &'a dyn Storage,
             price_alarms: &'static PriceAlarms<'static>,
-            price: &'b BasePrice<OracleBase, SwapGroup>,
+            price: &'b BasePrice<SwapGroup, OracleBase>,
         }
 
         impl<'a, 'b, OracleBase> AnyVisitor for AlarmsCmd<'a, 'b, OracleBase>

@@ -4,7 +4,7 @@ use serde::de::DeserializeOwned;
 
 use finance::{
     currency::{self, AnyVisitorPair, Currency, SymbolOwned},
-    price::{dto::BasePrice, Price},
+    price::{base::BasePrice, Price},
 };
 use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
 use sdk::{
@@ -88,10 +88,10 @@ where
         tree: &'a SupportedPairs<OracleBase>,
         at: Timestamp,
         total_feeders: usize,
-    ) -> Result<impl Iterator<Item = BasePrice<OracleBase, SwapGroup>> + 'a, ContractError> {
+    ) -> Result<impl Iterator<Item = BasePrice<SwapGroup, OracleBase>> + 'a, ContractError> {
         let res = tree.query_supported_pairs().scan(
             vec![],
-            move |stack: &mut Vec<BasePrice<OracleBase, SwapGroup>>, leg: SwapLeg| {
+            move |stack: &mut Vec<BasePrice<SwapGroup, OracleBase>>, leg: SwapLeg| {
                 let res = currency::visit_any_on_tickers::<SwapGroup, SwapGroup, _>(
                     &leg.from,
                     &leg.to.target,
@@ -155,7 +155,7 @@ fn calc_all_prices<'a, OracleBase>(
     storage: &'a dyn Storage,
     block_time: Timestamp,
     tree: &'a SupportedPairs<OracleBase>,
-) -> Result<impl Iterator<Item = BasePrice<OracleBase, SwapGroup>> + 'a, ContractError>
+) -> Result<impl Iterator<Item = BasePrice<SwapGroup, OracleBase>> + 'a, ContractError>
 where
     OracleBase: Currency + DeserializeOwned,
 {
@@ -174,7 +174,7 @@ where
     storage: &'a dyn Storage,
     at: Timestamp,
     total_feeders: usize,
-    stack: &'b mut Vec<BasePrice<OracleBase, SwapGroup>>,
+    stack: &'b mut Vec<BasePrice<SwapGroup, OracleBase>>,
     _base: PhantomData<OracleBase>,
 }
 
@@ -182,7 +182,7 @@ impl<'a, 'b, OracleBase> AnyVisitorPair for LegCmd<'a, 'b, OracleBase>
 where
     OracleBase: Currency + DeserializeOwned,
 {
-    type Output = BasePrice<OracleBase, SwapGroup>;
+    type Output = BasePrice<SwapGroup, OracleBase>;
     type Error = ContractError;
 
     fn on<B, Q>(self) -> Result<Self::Output, Self::Error>
@@ -190,7 +190,7 @@ where
         B: Currency + DeserializeOwned,
         Q: Currency + DeserializeOwned,
     {
-        let price: BasePrice<OracleBase, SwapGroup> = loop {
+        let price: BasePrice<SwapGroup, OracleBase> = loop {
             match self
                 .stack
                 .last()
@@ -290,7 +290,7 @@ mod test {
             .into()
     }
 
-    fn base_price<C>(total_of: u128, is: u128) -> BasePrice<TheCurrency, SwapGroup>
+    fn base_price<C>(total_of: u128, is: u128) -> BasePrice<SwapGroup, TheCurrency>
     where
         C: Currency,
     {
@@ -340,7 +340,7 @@ mod test {
                 .unwrap()
                 .collect();
 
-            let expected: Vec<BasePrice<TheCurrency, SwapGroup>> = vec![
+            let expected: Vec<BasePrice<SwapGroup, TheCurrency>> = vec![
                 base_price::<Wbtc>(1, 1),
                 base_price::<Weth>(1, 1),
                 base_price::<Atom>(2, 1),

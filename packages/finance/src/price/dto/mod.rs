@@ -5,8 +5,8 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{
-    coin::{Coin, CoinDTO},
-    currency::{Currency, Group, Symbol},
+    coin::CoinDTO,
+    currency::{Currency, Group},
     error::{Error, Result as FinanceResult},
     price::Price,
 };
@@ -192,53 +192,6 @@ where
     fn exec<Base>(self, _: Price<Base, C>) -> Result<Self::Output, Self::Error>
     where
         Base: Currency;
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct BasePrice<QuoteC, BaseG>
-where
-    QuoteC: Currency,
-    BaseG: Group,
-{
-    amount: CoinDTO<BaseG>,
-    amount_quote: Coin<QuoteC>,
-}
-
-impl<QuoteC, BaseG> BasePrice<QuoteC, BaseG>
-where
-    QuoteC: Currency,
-    BaseG: Group,
-{
-    pub fn base_ticker(&self) -> Symbol<'_> {
-        self.amount.ticker()
-    }
-}
-
-impl<C, QuoteC, BaseG> From<Price<C, QuoteC>> for BasePrice<QuoteC, BaseG>
-where
-    C: Currency,
-    QuoteC: Currency,
-    BaseG: Group,
-{
-    fn from(price: Price<C, QuoteC>) -> Self {
-        Self {
-            amount: price.amount.into(),
-            amount_quote: price.amount_quote,
-        }
-    }
-}
-
-impl<C, QuoteC, BaseG> TryFrom<&BasePrice<QuoteC, BaseG>> for Price<C, QuoteC>
-where
-    C: Currency,
-    QuoteC: Currency,
-    BaseG: Group,
-{
-    type Error = Error;
-
-    fn try_from(value: &BasePrice<QuoteC, BaseG>) -> Result<Self, Self::Error> {
-        Ok(super::total_of((&value.amount).try_into()?).is(value.amount_quote))
-    }
 }
 
 #[cfg(test)]
