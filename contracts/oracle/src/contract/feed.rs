@@ -7,7 +7,6 @@ use finance::{
     price::{dto::BasePrice, Price},
 };
 use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
-use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, Storage, Timestamp},
@@ -189,12 +188,10 @@ pub fn try_notify_alarms<OracleBase>(
 where
     OracleBase: Currency + DeserializeOwned,
 {
-    let batch = Batch::default();
     let tree = SupportedPairs::load(storage)?;
     let prices = calc_all_prices::<OracleBase>(storage, block_time, &tree)?;
-    let response =
-        MarketAlarms.try_notify_alarms::<OracleBase>(storage, batch, prices, max_count)?;
-    Ok(response)
+    let batch = MarketAlarms.try_notify_alarms::<OracleBase>(storage, prices, max_count)?;
+    Ok(batch.into())
 }
 
 pub fn try_query_alarms<OracleBase>(

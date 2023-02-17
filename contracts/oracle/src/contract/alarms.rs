@@ -11,15 +11,12 @@ use marketprice::{
     SpotPrice,
 };
 use platform::batch::Batch;
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Addr, Storage},
-};
+use sdk::cosmwasm_std::{Addr, Storage};
 use swap::SwapGroup;
 
 use crate::{
     alarms::Alarm as AlarmDTO,
-    msg::{AlarmsStatusResponse, DispatchAlarmsResponse, ExecuteAlarmMsg},
+    msg::{AlarmsStatusResponse, ExecuteAlarmMsg},
     ContractError,
 };
 
@@ -29,16 +26,16 @@ impl MarketAlarms {
     const PRICE_ALARMS: PriceAlarms<'static> =
         PriceAlarms::new("alarms_below", "index_below", "alarms_above", "index_above");
 
-    pub fn remove(storage: &mut dyn Storage, receiver: Addr) -> Result<Response, ContractError> {
+    pub fn remove(storage: &mut dyn Storage, receiver: Addr) -> Result<(), ContractError> {
         Self::PRICE_ALARMS.remove(storage, receiver)?;
-        Ok(Response::default())
+        Ok(())
     }
 
     pub fn try_add_price_alarm<BaseC>(
         storage: &mut dyn Storage,
         receiver: Addr,
         alarm: AlarmDTO,
-    ) -> Result<Response, ContractError>
+    ) -> Result<(), ContractError>
     where
         BaseC: Currency,
     {
@@ -53,7 +50,7 @@ impl MarketAlarms {
         where
             BaseC: Currency,
         {
-            type Output = Response;
+            type Output = ();
             type Error = ContractError;
 
             fn exec<C>(self, below: Price<C, BaseC>) -> Result<Self::Output, Self::Error>
@@ -69,7 +66,7 @@ impl MarketAlarms {
                 }
                 self.price_alarms
                     .add_alarm_below(self.storage, &self.receiver, below)?;
-                Ok(Response::new())
+                Ok(())
             }
         }
 
@@ -88,14 +85,13 @@ impl MarketAlarms {
     pub fn try_notify_alarms<'a, BaseC>(
         &mut self,
         storage: &dyn Storage,
-        batch: Batch,
         prices: impl Iterator<Item = BasePrice<BaseC, SwapGroup>> + 'a,
         max_count: u32, // TODO: type alias
-    ) -> Result<Response, ContractError>
+    ) -> Result<Batch, ContractError>
     where
         BaseC: Currency,
     {
-        let msgs = Self::alarms_iter::<BaseC>(storage, prices)
+        let batch = Self::alarms_iter::<BaseC>(storage, prices)
             .take(max_count.try_into()?)
             .try_fold(
                 Batch::default(),
@@ -111,10 +107,11 @@ impl MarketAlarms {
                 },
             )?;
 
-        let processed = msgs.len().try_into()?;
-        let batch = msgs.merge(batch);
+        // let processed = msgs.len().try_into()?;
+        // let batch = msgs.merge(batch);
 
-        Ok(Response::from(batch).set_data(to_binary(&DispatchAlarmsResponse(processed))?))
+        // Ok(Response::from(batch).set_data(to_binary(&DispatchAlarmsResponse(processed))?))
+        Ok(batch)
     }
 
     pub fn try_query_alarms<'a, BaseC>(
@@ -187,7 +184,6 @@ mod test {
         lease::{Atom, Weth},
         lpn::Usdc,
     };
-    use cosmwasm_std::from_binary;
     use finance::{coin::Coin, price};
     use sdk::cosmwasm_std::testing::MockStorage;
 
@@ -315,51 +311,35 @@ mod test {
             .unwrap();
         }
 
-        let batch = Batch::default();
-
-        let sent = from_binary::<DispatchAlarmsResponse>(
-            &MarketAlarms
-                .try_notify_alarms::<Base>(
-                    &storage,
-                    batch,
-                    [price::total_of(Coin::<Atom>::new(1))
-                        .is(Coin::<Base>::new(25))
-                        .into()]
-                    .into_iter(),
-                    3,
-                )
-                .unwrap()
-                .data
-                .unwrap(),
-        )
-        .unwrap()
-        .0;
+        let sent = MarketAlarms
+            .try_notify_alarms::<Base>(
+                &storage,
+                [price::total_of(Coin::<Atom>::new(1))
+                    .is(Coin::<Base>::new(25))
+                    .into()]
+                .into_iter(),
+                3,
+            )
+            .unwrap()
+            .len();
         assert_eq!(sent, 3);
 
-        let batch = Batch::default();
-
-        let sent = from_binary::<DispatchAlarmsResponse>(
-            &MarketAlarms
-                .try_notify_alarms::<Base>(
-                    &storage,
-                    batch,
-                    [
-                        price::total_of(Coin::<Atom>::new(1))
-                            .is(Coin::<Base>::new(35))
-                            .into(),
-                        price::total_of(Coin::<Weth>::new(1))
-                            .is(Coin::<Base>::new(20))
-                            .into(),
-                    ]
-                    .into_iter(),
-                    100,
-                )
-                .unwrap()
-                .data
-                .unwrap(),
-        )
-        .unwrap()
-        .0;
+        let sent = MarketAlarms
+            .try_notify_alarms::<Base>(
+                &storage,
+                [
+                    price::total_of(Coin::<Atom>::new(1))
+                        .is(Coin::<Base>::new(35))
+                        .into(),
+                    price::total_of(Coin::<Weth>::new(1))
+                        .is(Coin::<Base>::new(20))
+                        .into(),
+                ]
+                .into_iter(),
+                100,
+            )
+            .unwrap()
+            .len();
         assert_eq!(sent, 10);
     }
 }
