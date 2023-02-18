@@ -114,7 +114,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
         },
     )?;
 
-    Ok(CwResponse::default())
+    Ok(CwResponse::default().set_data(to_binary(sdk::RELEASE_VERSION)?))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

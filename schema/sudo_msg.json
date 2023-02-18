@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SudoMsg",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "register_symbol_group"
+      ],
+      "properties": {
+        "register_symbol_group": {
+          "type": "object",
+          "required": [
+            "specialized_contracts",
+            "symbol"
+          ],
+          "properties": {
+            "specialized_contracts": {
+              "$ref": "#/definitions/SpecializedContractsGroup_for_Addr"
+            },
+            "symbol": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "migrate"
+      ],
+      "properties": {
+        "migrate": {
+          "$ref": "#/definitions/MigrateContractsVariant"
+        }
+      },
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "Addr": {
+      "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+      "type": "string"
+    },
+    "CodeIdWithMigrateMsg_for_Map_of_String": {
+      "type": "object",
+      "required": [
+        "code_id",
+        "migrate_msg"
+      ],
+      "properties": {
+        "code_id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "migrate_msg": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "CodeIdWithMigrateMsg_for_String": {
+      "type": "object",
+      "required": [
+        "code_id",
+        "migrate_msg"
+      ],
+      "properties": {
+        "code_id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "migrate_msg": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "GeneralContractsGroup_for_Nullable_CodeIdWithMigrateMsg_for_String": {
+      "type": "object",
+      "properties": {
+        "profit": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CodeIdWithMigrateMsg_for_String"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "timealarms": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CodeIdWithMigrateMsg_for_String"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "treasury": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CodeIdWithMigrateMsg_for_String"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "MigrateContractsVariant": {
+      "type": "object",
+      "required": [
+        "general_contracts",
+        "release",
+        "specialized_contracts"
+      ],
+      "properties": {
+        "admin_contract": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CodeIdWithMigrateMsg_for_String"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "general_contracts": {
+          "$ref": "#/definitions/GeneralContractsGroup_for_Nullable_CodeIdWithMigrateMsg_for_String"
+        },
+        "release": {
+          "type": "string"
+        },
+        "specialized_contracts": {
+          "$ref": "#/definitions/SpecializedContractsGroup_for_Nullable_CodeIdWithMigrateMsg_for_Map_of_String"
+        }
+      }
+    },
+    "SpecializedContractsGroup_for_Addr": {
+      "type": "object",
+      "required": [
+        "dispatcher",
+        "leaser",
+        "lpp",
+        "oracle"
+      ],
+      "properties": {
+        "dispatcher": {
+          "$ref": "#/definitions/Addr"
+        },
+        "leaser": {
+          "$ref": "#/definitions/Addr"
+        },
+        "lpp": {
+          "$ref": "#/definitions/Addr"
+        },
+        "oracle": {
+          "$ref": "#/definitions/Addr"
+        }
+      }
+    },
+    "SpecializedContractsGroup_for_Nullable_CodeIdWithMigrateMsg_for_Map_of_String": {
+      "type": "object",
+      "properties": {
+        "dispatcher": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CodeIdWithMigrateMsg_for_Map_of_String"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "leaser": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CodeIdWithMigrateMsg_for_Map_of_String"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lpp": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CodeIdWithMigrateMsg_for_Map_of_String"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "oracle": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/CodeIdWithMigrateMsg_for_Map_of_String"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

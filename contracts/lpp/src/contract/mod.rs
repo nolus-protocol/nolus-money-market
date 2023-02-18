@@ -93,7 +93,7 @@ pub fn instantiate(
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    Ok(Response::default())
+    Ok(Response::default().set_data(to_binary(sdk::RELEASE_VERSION)?))
 }
 
 struct ExecuteWithLpn<'a> {

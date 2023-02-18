@@ -1,0 +1,41 @@
+[package]
+name = "admin_contract"
+version = "0.1.0"
+authors = ["The Dev Nolus Team <dev@nolus.io>"]
+edition.workspace = true
+license.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["contract-with-bindings"]
+contract-with-bindings = ["contract"]
+contract = []
+
+[dependencies]
+lpp = { workspace = true, features = ["stub"] }
+oracle = { workspace = true, features = ["stub", "convert"] }
+timealarms = { workspace = true }
+treasury = { workspace = true }
+
+access-control = { workspace = true }
+currency = { workspace = true }
+finance = { workspace = true }
+platform = { workspace = true }
+sdk = { workspace = true, features = ["contract", "cosmos"] }
+versioning = { workspace = true }
+
+# Required as a dependency by `entry_point` attribute macro
+cosmwasm-std = { workspace = true }
+
+serde = { workspace = true, features = ["derive"] }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+schema = { workspace = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+sdk = { workspace = true, default-features = false, features = ["testing"] }
