@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use lpp::stub::lender::LppLenderRef;
-use oracle::stub::OracleRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
     ica::HostAccount,
@@ -12,43 +10,40 @@ use sdk::{
 };
 
 use crate::{
-    api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseContract, StateQuery, StateResponse},
-    contract::{
-        cmd::OpenLoanRespResult,
-        state::{self, Controller, Response},
-    },
+    api::{dex::ConnectionParams, StateQuery, StateResponse},
+    contract::state::{self, Controller, Response},
     dex::Account,
     error::ContractResult,
     event::Type,
 };
 
-use super::transfer_out::TransferOut;
+use super::State;
 
-#[derive(Serialize, Deserialize)]
-pub struct OpenIcaAccount {
-    new_lease: NewLeaseContract,
-    downpayment: DownpaymentCoin,
-    loan: OpenLoanRespResult,
-    deps: (LppLenderRef, OracleRef),
+pub(crate) trait IcaConnectee
+where
+    Self: Into<StateResponse>,
+{
+    type NextState: Controller + Into<State>;
+
+    fn dex(&self) -> &ConnectionParams;
+    fn connected(self, ica_account: Account) -> Self::NextState;
 }
 
-impl OpenIcaAccount {
-    pub(super) fn new(
-        new_lease: NewLeaseContract,
-        downpayment: DownpaymentCoin,
-        loan: OpenLoanRespResult,
-        deps: (LppLenderRef, OracleRef),
-    ) -> Self {
-        Self {
-            new_lease,
-            downpayment,
-            loan,
-            deps,
-        }
+#[derive(Serialize, Deserialize)]
+pub(crate) struct IcaConnector<Connectee> {
+    connectee: Connectee,
+}
+
+impl<Connectee> IcaConnector<Connectee>
+where
+    Connectee: IcaConnectee,
+{
+    pub(super) fn new(connectee: Connectee) -> Self {
+        Self { connectee }
     }
 
     fn enter_state(&self) -> Batch {
-        Account::register_request(&self.new_lease.dex)
+        Account::register_request(self.connectee.dex())
     }
 
     fn on_response(
@@ -58,22 +53,16 @@ impl OpenIcaAccount {
         env: Env,
     ) -> ContractResult<Response> {
         let contract = &env.contract.address;
-        let dex_account = Account::from_register_response(
+        let ica_account = Account::from_register_response(
             &counterparty_version,
             contract.clone(),
-            self.new_lease.dex,
+            self.connectee.dex().clone(),
         )?;
 
-        let emitter = Self::emit_ok(contract.clone(), dex_account.dex_account().clone());
-        let transfer_out = TransferOut::new(
-            self.new_lease.form,
-            dex_account,
-            self.downpayment,
-            self.loan,
-            self.deps,
-        );
-        let batch = transfer_out.enter(deps, env)?;
-        Ok(Response::from(batch.into_response(emitter), transfer_out))
+        let emitter = Self::emit_ok(contract.clone(), ica_account.ica_account().clone());
+        let next_state = self.connectee.connected(ica_account);
+        let batch = next_state.enter(deps, env)?;
+        Ok(Response::from(batch.into_response(emitter), next_state))
     }
 
     fn emit_ok(contract: Addr, dex_account: HostAccount) -> Emitter {
@@ -83,7 +72,11 @@ impl OpenIcaAccount {
     }
 }
 
-impl Controller for OpenIcaAccount {
+impl<Connectee> Controller for IcaConnector<Connectee>
+where
+    Self: Into<State>,
+    Connectee: IcaConnectee,
+{
     fn enter(&self, _deps: Deps<'_>, _env: Env) -> ContractResult<Batch> {
         Ok(self.enter_state())
     }
@@ -106,15 +99,10 @@ impl Controller for OpenIcaAccount {
     }
 
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        state::on_timeout_retry(self.into(), Type::OpenIcaAccount, deps, env)
+        state::on_timeout_retry(self, Type::OpenIcaAccount, deps, env)
     }
 
     fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
-        Ok(StateResponse::Opening {
-            downpayment: self.downpayment,
-            loan: self.loan.principal,
-            loan_interest_rate: self.loan.annual_interest_rate,
-            in_progress: OngoingTrx::OpenIcaAccount {},
-        })
+        Ok(self.connectee.into())
     }
 }

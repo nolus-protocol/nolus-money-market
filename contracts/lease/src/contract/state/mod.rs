@@ -16,18 +16,18 @@ use crate::{
 };
 
 pub use self::opening::request_loan::RequestLoan;
-use self::{
-    closed::Closed,
-    opened::repay::buy_lpn::BuyLpn,
-    opening::{buy_asset::BuyAsset, open_ica_account::OpenIcaAccount},
-};
+use self::{closed::Closed, opened::repay::buy_lpn::BuyLpn, opening::buy_asset::BuyAsset};
 
 mod closed;
 mod opened;
 mod opening;
 mod paid;
+// mod recover_ica;
+mod ica_connector;
 mod transfer_in;
 
+type OpenIcaAccount = ica_connector::IcaConnector<opening::open_ica::OpenIcaAccount>;
+// type RecoverIcaAccount = register_ica::RegisterIca<opening::open_ica::OpenIca>;
 type OpeningTransferOut = opening::transfer_out::TransferOut;
 type OpenedActive = opened::active::Active;
 type RepaymentTransferOut = opened::repay::transfer_out::TransferOut;
@@ -39,9 +39,10 @@ type ClosingTransferInFinish = paid::transfer_in_finish::TransferInFinish;
 
 #[enum_dispatch(Controller)]
 #[derive(Serialize, Deserialize)]
-pub enum State {
+pub(crate) enum State {
     RequestLoan,
     OpenIcaAccount,
+    // RecoverIcaAccount,
     OpeningTransferOut,
     BuyAsset,
     OpenedActive,
@@ -55,7 +56,7 @@ pub enum State {
     Closed,
 }
 
-pub struct Response {
+pub(crate) struct Response {
     pub(super) cw_response: CwResponse,
     pub(super) next_state: State,
 }
@@ -74,7 +75,7 @@ impl Response {
 }
 
 #[enum_dispatch]
-pub trait Controller
+pub(crate) trait Controller
 where
     Self: Sized,
 {
@@ -114,16 +115,32 @@ fn err<R>(op: &str, api: &dyn Api) -> ContractResult<R> {
     Err(err)
 }
 
-fn on_timeout_retry(
-    state: State,
+fn on_timeout_retry<L>(
+    current_state: L,
     event_type: Type,
     deps: Deps<'_>,
     env: Env,
-) -> ContractResult<Response> {
+) -> ContractResult<Response>
+where
+    L: Controller,
+    L: Into<State>,
+{
     let emitter = emit_timeout(event_type, env.contract.address.clone());
-    let batch = state.enter(deps, env)?;
-    Ok(Response::from(batch.into_response(emitter), state))
+    let batch = current_state.enter(deps, env)?;
+    Ok(Response::from(batch.into_response(emitter), current_state))
 }
+
+// fn on_timeout_repair_channel(
+//     current_state: State,
+//     event_type: Type,
+//     deps: Deps<'_>,
+//     env: Env,
+// ) -> ContractResult<Response> {
+//     let emitter = emit_timeout(event_type, env.contract.address.clone());
+//     // register_ica::RegisterIca::new(lease)
+//     let batch = current_state.enter(deps, env)?;
+//     Ok(Response::from(batch.into_response(emitter), current_state))
+// }
 
 fn emit_timeout(event_type: Type, contract: Addr) -> Emitter {
     Emitter::of_type(event_type)

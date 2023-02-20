@@ -9,14 +9,14 @@ use crate::{
     api::{DownpaymentCoin, NewLeaseContract},
     contract::{
         cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
-        state::{Controller, Response},
+        state::{ica_connector::IcaConnector, Controller, Response},
     },
     error::{ContractError, ContractResult},
     event::Type,
     reply_id::ReplyId,
 };
 
-use super::open_ica_account::OpenIcaAccount;
+use super::open_ica::OpenIcaAccount;
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestLoan {
@@ -72,8 +72,12 @@ impl RequestLoan {
                     .execute(OpenLoanResp::new(msg), &deps.querier)?;
 
                 let emitter = self.emit_ok(env.contract.address.clone());
-                let open_ica =
-                    OpenIcaAccount::new(self.new_lease, self.downpayment, loan, self.deps);
+                let open_ica = IcaConnector::new(OpenIcaAccount::new(
+                    self.new_lease,
+                    self.downpayment,
+                    loan,
+                    self.deps,
+                ));
                 let batch = open_ica.enter(deps, env)?;
                 Ok(Response::from(batch.into_response(emitter), open_ica))
             }

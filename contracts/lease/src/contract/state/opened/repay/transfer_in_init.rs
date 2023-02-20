@@ -9,11 +9,10 @@ use sdk::{
 use crate::{
     api::{opened::RepayTrx, LpnCoin, PaymentCoin, StateQuery, StateResponse},
     contract::{
-        state::{self, opened::repay, Controller, Response},
+        state::{opened::repay, Controller, Response},
         Lease,
     },
     error::ContractResult,
-    event::Type,
 };
 
 use super::transfer_in_finish::TransferInFinish;
@@ -60,7 +59,7 @@ impl Controller for TransferInInit {
                 request: _,
                 data: _,
             } => self.on_response(&deps.querier, &env),
-            SudoMsg::Timeout { request: _ } => self.on_timeout(deps.as_ref(), env),
+            SudoMsg::Timeout { request: _ } => todo!(),
             SudoMsg::Error {
                 request: _,
                 details: _,
@@ -69,9 +68,9 @@ impl Controller for TransferInInit {
         }
     }
 
-    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        state::on_timeout_retry(self.into(), Type::RepaymentTransferIn, deps, env)
-    }
+    // fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+    //     state::on_timeout_retry(self, Type::RepaymentTransferIn, deps, env)
+    // }
 
     fn query(self, deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         repay::query(

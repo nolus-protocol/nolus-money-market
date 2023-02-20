@@ -118,7 +118,7 @@ impl Controller for TransferOut {
     }
 
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        state::on_timeout_retry(self.into(), Type::OpeningTransferOut, deps, env)
+        state::on_timeout_retry(self, Type::OpeningTransferOut, deps, env)
     }
 
     fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
