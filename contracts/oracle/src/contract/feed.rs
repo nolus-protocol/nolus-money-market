@@ -1,5 +1,7 @@
 use std::marker::PhantomData;
 
+use ::currency::native::Nls;
+use platform::batch::Batch;
 use serde::de::DeserializeOwned;
 
 use finance::{
@@ -14,7 +16,7 @@ use sdk::{
 use swap::{SwapGroup, SwapTarget};
 
 use crate::{
-    msg::AlarmsStatusResponse,
+    msg::{AlarmsStatusResponse, ExecuteAlarmMsg},
     state::supported_pairs::{SupportedPairs, SwapLeg},
     ContractError,
 };
@@ -138,7 +140,22 @@ where
 {
     let tree = SupportedPairs::load(storage)?;
     let prices = calc_all_prices::<OracleBase>(storage, block_time, &tree)?;
-    let batch = MarketAlarms.try_notify_alarms::<OracleBase>(storage, prices, max_count)?;
+    let batch = MarketAlarms
+        .notify_alarms_iter::<OracleBase>(storage, prices, max_count.try_into()?)
+        .try_fold(
+            Batch::default(),
+            |mut batch, receiver| -> Result<Batch, ContractError> {
+                // TODO: get rid of the Nls dummy type argument
+                batch.schedule_execute_wasm_reply_always::<_, Nls>(
+                    &receiver?,
+                    ExecuteAlarmMsg::PriceAlarm(),
+                    None,
+                    batch.len().try_into()?,
+                )?;
+                Ok(batch)
+            },
+        )?;
+
     Ok(batch.into())
 }
 
@@ -302,21 +319,13 @@ mod test {
     use std::collections::HashMap;
 
     use super::*;
-    use ::currency::{
-        lease::{Atom, Cro, Juno, Osmo, Wbtc, Weth},
-        lpn::Usdc,
-    };
+    use crate::tests::{self, TheCurrency};
+    use ::currency::lease::{Atom, Cro, Juno, Osmo, Wbtc, Weth};
     use finance::{
-        coin::Coin,
-        currency::SymbolStatic,
-        duration::Duration,
-        percent::Percent,
-        price::{self, dto::PriceDTO},
+        currency::SymbolStatic, duration::Duration, percent::Percent, price::dto::PriceDTO,
     };
     use sdk::cosmwasm_std::testing::{self, MockStorage};
     use tree::HumanReadableTree;
-
-    type TheCurrency = Usdc;
 
     #[derive(Clone)]
     struct TestFeeds(HashMap<(SymbolStatic, SymbolStatic), PriceDTO<SwapGroup, SwapGroup>>);
@@ -326,8 +335,10 @@ mod test {
             B: Currency,
             Q: Currency,
         {
-            self.0
-                .insert((B::TICKER, Q::TICKER), dto_price::<B, Q>(total_of, is));
+            self.0.insert(
+                (B::TICKER, Q::TICKER),
+                tests::dto_price::<B, Q>(total_of, is),
+            );
         }
     }
 
@@ -383,25 +394,6 @@ mod test {
         .unwrap()
     }
 
-    fn dto_price<B, Q>(total_of: u128, is: u128) -> PriceDTO<SwapGroup, SwapGroup>
-    where
-        B: Currency,
-        Q: Currency,
-    {
-        price::total_of(Coin::<B>::new(total_of))
-            .is(Coin::<Q>::new(is))
-            .into()
-    }
-
-    fn base_price<C>(total_of: u128, is: u128) -> BasePrice<SwapGroup, TheCurrency>
-    where
-        C: Currency,
-    {
-        price::total_of(Coin::<C>::new(total_of))
-            .is(Coin::new(is))
-            .into()
-    }
-
     mod all_prices_iter {
         use super::*;
 
@@ -428,12 +420,12 @@ mod test {
                     env.block.time,
                     &Addr::unchecked("feeder"),
                     &[
-                        dto_price::<Wbtc, TheCurrency>(1, 1),
-                        dto_price::<Atom, TheCurrency>(2, 1),
-                        dto_price::<Weth, Wbtc>(1, 1),
-                        dto_price::<Osmo, Atom>(1, 1),
-                        dto_price::<Cro, Osmo>(3, 1),
-                        dto_price::<Juno, Osmo>(1, 1),
+                        tests::dto_price::<Wbtc, TheCurrency>(1, 1),
+                        tests::dto_price::<Atom, TheCurrency>(2, 1),
+                        tests::dto_price::<Weth, Wbtc>(1, 1),
+                        tests::dto_price::<Osmo, Atom>(1, 1),
+                        tests::dto_price::<Cro, Osmo>(3, 1),
+                        tests::dto_price::<Juno, Osmo>(1, 1),
                     ],
                 )
                 .unwrap();
@@ -444,12 +436,12 @@ mod test {
                 .collect();
 
             let expected: Vec<BasePrice<SwapGroup, TheCurrency>> = vec![
-                base_price::<Wbtc>(1, 1),
-                base_price::<Weth>(1, 1),
-                base_price::<Atom>(2, 1),
-                base_price::<Osmo>(2, 1),
-                base_price::<Juno>(2, 1),
-                base_price::<Cro>(6, 1),
+                tests::base_price::<Wbtc>(1, 1),
+                tests::base_price::<Weth>(1, 1),
+                tests::base_price::<Atom>(2, 1),
+                tests::base_price::<Osmo>(2, 1),
+                tests::base_price::<Juno>(2, 1),
+                tests::base_price::<Cro>(6, 1),
             ];
 
             assert_eq!(expected, prices);
@@ -478,21 +470,21 @@ mod test {
                     env.block.time,
                     &Addr::unchecked("feeder"),
                     &[
-                        // dto_price::<Wbtc, TheCurrency>(1, 1),
-                        dto_price::<Atom, TheCurrency>(2, 1),
-                        dto_price::<Weth, Wbtc>(1, 1),
-                        dto_price::<Osmo, Atom>(1, 1),
-                        dto_price::<Cro, Osmo>(3, 1),
-                        dto_price::<Juno, Osmo>(1, 1),
+                        // tests::dto_price::<Wbtc, TheCurrency>(1, 1),
+                        tests::dto_price::<Atom, TheCurrency>(2, 1),
+                        tests::dto_price::<Weth, Wbtc>(1, 1),
+                        tests::dto_price::<Osmo, Atom>(1, 1),
+                        tests::dto_price::<Cro, Osmo>(3, 1),
+                        tests::dto_price::<Juno, Osmo>(1, 1),
                     ],
                 )
                 .unwrap();
 
             let expected: Vec<BasePrice<SwapGroup, TheCurrency>> = vec![
-                base_price::<Atom>(2, 1),
-                base_price::<Osmo>(2, 1),
-                base_price::<Juno>(2, 1),
-                base_price::<Cro>(6, 1),
+                tests::base_price::<Atom>(2, 1),
+                tests::base_price::<Osmo>(2, 1),
+                tests::base_price::<Juno>(2, 1),
+                tests::base_price::<Cro>(6, 1),
             ];
 
             let prices: Vec<_> = oracle
@@ -517,25 +509,31 @@ mod test {
             };
             assert_eq!(
                 cmd.on::<Wbtc, TheCurrency>(),
-                Ok(Some(base_price::<Wbtc>(1, 1)))
+                Ok(Some(tests::base_price::<Wbtc>(1, 1)))
             );
-            assert_eq!(cmd.stack, vec![base_price::<Wbtc>(1, 1)]);
+            assert_eq!(cmd.stack, vec![tests::base_price::<Wbtc>(1, 1)]);
             assert!(!cmd.err);
 
             // child
-            assert_eq!(cmd.on::<Weth, Wbtc>(), Ok(Some(base_price::<Weth>(2, 1))));
+            assert_eq!(
+                cmd.on::<Weth, Wbtc>(),
+                Ok(Some(tests::base_price::<Weth>(2, 1)))
+            );
             assert_eq!(
                 cmd.stack,
-                vec![base_price::<Wbtc>(1, 1), base_price::<Weth>(2, 1)]
+                vec![
+                    tests::base_price::<Wbtc>(1, 1),
+                    tests::base_price::<Weth>(2, 1)
+                ]
             );
             assert!(!cmd.err);
 
             // hop to the next branch
             assert_eq!(
                 cmd.on::<Atom, TheCurrency>(),
-                Ok(Some(base_price::<Atom>(2, 1)))
+                Ok(Some(tests::base_price::<Atom>(2, 1)))
             );
-            assert_eq!(cmd.stack, vec![base_price::<Atom>(2, 1)]);
+            assert_eq!(cmd.stack, vec![tests::base_price::<Atom>(2, 1)]);
             assert!(!cmd.err);
         }
 
@@ -552,7 +550,10 @@ mod test {
 
             let mut cmd = LegCmd::<TheCurrency, _> {
                 price_querier: feeds.clone(),
-                stack: vec![base_price::<Wbtc>(1, 1), base_price::<Weth>(2, 1)],
+                stack: vec![
+                    tests::base_price::<Wbtc>(1, 1),
+                    tests::base_price::<Weth>(2, 1),
+                ],
                 err: false,
             };
 
@@ -560,29 +561,41 @@ mod test {
             assert_eq!(cmd.on::<Cro, Weth>(), Ok(None));
             assert_eq!(
                 cmd.stack,
-                vec![base_price::<Wbtc>(1, 1), base_price::<Weth>(2, 1)]
+                vec![
+                    tests::base_price::<Wbtc>(1, 1),
+                    tests::base_price::<Weth>(2, 1)
+                ]
             );
             assert!(cmd.err);
 
             // recover, hop to the top child, clean the stack
             assert_eq!(
                 cmd.on::<Atom, TheCurrency>(),
-                Ok(Some(base_price::<Atom>(2, 1)))
+                Ok(Some(tests::base_price::<Atom>(2, 1)))
             );
-            assert_eq!(cmd.stack, vec![base_price::<Atom>(2, 1)]);
+            assert_eq!(cmd.stack, vec![tests::base_price::<Atom>(2, 1)]);
             assert!(!cmd.err);
 
             let mut cmd = LegCmd::<TheCurrency, _> {
                 price_querier: feeds.clone(),
-                stack: vec![base_price::<Wbtc>(1, 1), base_price::<Weth>(2, 1)],
+                stack: vec![
+                    tests::base_price::<Wbtc>(1, 1),
+                    tests::base_price::<Weth>(2, 1),
+                ],
                 err: true,
             };
 
             // recover, hop to the close child, clean the stack
-            assert_eq!(cmd.on::<Juno, Wbtc>(), Ok(Some(base_price::<Juno>(1, 1))));
+            assert_eq!(
+                cmd.on::<Juno, Wbtc>(),
+                Ok(Some(tests::base_price::<Juno>(1, 1)))
+            );
             assert_eq!(
                 cmd.stack,
-                vec![base_price::<Wbtc>(1, 1), base_price::<Juno>(1, 1)]
+                vec![
+                    tests::base_price::<Wbtc>(1, 1),
+                    tests::base_price::<Juno>(1, 1)
+                ]
             );
             assert!(!cmd.err);
         }

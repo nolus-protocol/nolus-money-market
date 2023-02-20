@@ -1,6 +1,5 @@
-use ::currency::native::Nls;
 use finance::{
-    currency::{self, AnyVisitor, Currency},
+    currency::{self, AnyVisitor, AnyVisitorResult, Currency},
     price::{
         base::BasePrice,
         dto::{with_quote, WithQuote},
@@ -11,15 +10,11 @@ use marketprice::{
     alarms::{errors::AlarmError, AlarmsIterator, PriceAlarms},
     SpotPrice,
 };
-use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, Storage};
+use serde::{de::DeserializeOwned, Serialize};
 use swap::SwapGroup;
 
-use crate::{
-    alarms::Alarm as AlarmDTO,
-    msg::{AlarmsStatusResponse, ExecuteAlarmMsg},
-    ContractError,
-};
+use crate::{alarms::Alarm as AlarmDTO, msg::AlarmsStatusResponse, ContractError};
 
 pub struct MarketAlarms;
 
@@ -83,32 +78,18 @@ impl MarketAlarms {
         )
     }
 
-    pub fn try_notify_alarms<'a, BaseC>(
+    pub fn notify_alarms_iter<'a, BaseC>(
         &mut self,
-        storage: &dyn Storage,
+        storage: &'a dyn Storage,
         prices: impl Iterator<Item = BasePrice<SwapGroup, BaseC>> + 'a,
-        max_count: u32, // TODO: type alias
-    ) -> Result<Batch, ContractError>
+        max_count: usize,
+    ) -> impl Iterator<Item = Result<Addr, ContractError>> + 'a
     where
         BaseC: Currency,
     {
-        let batch = Self::alarms_iter::<BaseC>(storage, prices)
-            .take(max_count.try_into()?)
-            .try_fold(
-                Batch::default(),
-                |mut batch, receiver| -> Result<Batch, ContractError> {
-                    // TODO: get rid of the Nls dummy type argument
-                    batch.schedule_execute_wasm_reply_always::<_, Nls>(
-                        &receiver?,
-                        ExecuteAlarmMsg::PriceAlarm(),
-                        None,
-                        batch.len().try_into()?,
-                    )?;
-                    Ok(batch)
-                },
-            )?;
-
-        Ok(batch)
+        Self::alarms_iter::<BaseC>(storage, prices)
+            .take(max_count)
+            .map(|item| item.map_err(Into::into))
     }
 
     pub fn try_query_alarms<'a, BaseC>(
@@ -149,9 +130,9 @@ impl MarketAlarms {
             type Error = ContractError;
             type Output = AlarmsIterator<'a>;
 
-            fn on<C>(self) -> finance::currency::AnyVisitorResult<Self>
+            fn on<C>(self) -> AnyVisitorResult<Self>
             where
-                C: Currency + serde::Serialize + serde::de::DeserializeOwned,
+                C: Currency + Serialize + DeserializeOwned,
             {
                 Ok(self
                     .price_alarms
@@ -177,14 +158,19 @@ impl MarketAlarms {
 mod test {
     use super::*;
 
-    use ::currency::{
-        lease::{Atom, Weth},
-        lpn::Usdc,
-    };
-    use finance::{coin::Coin, price};
+    use crate::tests::{self, TheCurrency as Base};
+    use ::currency::lease::{Atom, Weth};
     use sdk::cosmwasm_std::testing::MockStorage;
 
-    type Base = Usdc;
+    fn alarm_dto<C>(below: (u128, u128), above: Option<(u128, u128)>) -> AlarmDTO
+    where
+        C: Currency,
+    {
+        AlarmDTO::new(
+            tests::dto_price::<C, Base>(below.0, below.1),
+            above.map(|above| tests::dto_price::<C, Base>(above.0, above.1)),
+        )
+    }
 
     #[test]
     #[should_panic]
@@ -196,10 +182,7 @@ mod test {
         let _ = MarketAlarms::try_add_price_alarm::<Base>(
             &mut storage,
             receiver,
-            AlarmDTO::new(
-                price::total_of(Coin::<Base>::new(1)).is(Coin::<Atom>::new(20)),
-                None,
-            ),
+            AlarmDTO::new(tests::dto_price::<Base, Atom>(1, 20), None),
         );
     }
 
@@ -213,30 +196,21 @@ mod test {
         MarketAlarms::try_add_price_alarm::<Base>(
             &mut storage,
             receiver1,
-            AlarmDTO::new(
-                price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(20)),
-                None,
-            ),
+            alarm_dto::<Atom>((1, 20), None),
         )
         .unwrap();
 
         MarketAlarms::try_add_price_alarm::<Base>(
             &mut storage,
             receiver2.clone(),
-            AlarmDTO::new(
-                price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(20)),
-                Some(price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(30))),
-            ),
+            alarm_dto::<Weth>((1, 20), Some((1, 30))),
         )
         .unwrap();
 
         assert!(
             MarketAlarms::try_query_alarms::<Base>(
                 &storage,
-                [price::total_of(Coin::<Weth>::new(1))
-                    .is(Coin::<Base>::new(35))
-                    .into(),]
-                .into_iter()
+                [tests::base_price::<Weth>(1, 35)].into_iter()
             )
             .unwrap()
             .remaining_alarms
@@ -247,10 +221,7 @@ mod test {
         assert!(
             !MarketAlarms::try_query_alarms::<Base>(
                 &storage,
-                [price::total_of(Coin::<Weth>::new(1))
-                    .is(Coin::<Base>::new(10))
-                    .into(),]
-                .into_iter()
+                [tests::base_price::<Weth>(1, 10)].into_iter()
             )
             .unwrap()
             .remaining_alarms
@@ -261,16 +232,19 @@ mod test {
     #[should_panic]
     #[cfg(not(debug_assertions))]
     fn notify_with_wrong_currency_group() {
+        use ::currency::native::Nls;
+        use finance::{coin::Coin, price};
+
         let mut storage = MockStorage::new();
 
-        let _ = MarketAlarms.try_notify_alarms::<Base>(
+        let _: Vec<_> = MarketAlarms.notify_alarms_iter::<Base>(
             &mut storage,
             [price::total_of(Coin::<Nls>::new(1))
                 .is(Coin::<Base>::new(25))
                 .into()]
             .into_iter(),
             1,
-        );
+        ).collect();
     }
 
     #[test]
@@ -285,10 +259,7 @@ mod test {
             MarketAlarms::try_add_price_alarm::<Base>(
                 &mut storage,
                 receiver,
-                AlarmDTO::new(
-                    price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(10 + delta)),
-                    Some(price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(30 + delta))),
-                ),
+                alarm_dto::<Atom>((1, 10 + delta), Some((1, 30 + delta))),
             )
             .unwrap();
 
@@ -297,43 +268,27 @@ mod test {
             MarketAlarms::try_add_price_alarm::<Base>(
                 &mut storage,
                 receiver,
-                AlarmDTO::new(
-                    price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(50 + delta)),
-                    None,
-                ),
+                alarm_dto::<Weth>((1, 50 + delta), None),
             )
             .unwrap();
         }
 
         let sent = MarketAlarms
-            .try_notify_alarms::<Base>(
-                &storage,
-                [price::total_of(Coin::<Atom>::new(1))
-                    .is(Coin::<Base>::new(25))
-                    .into()]
-                .into_iter(),
-                3,
-            )
-            .unwrap()
-            .len();
+            .notify_alarms_iter::<Base>(&storage, [tests::base_price::<Atom>(1, 25)].into_iter(), 3)
+            .count();
         assert_eq!(sent, 3);
 
         let sent = MarketAlarms
-            .try_notify_alarms::<Base>(
+            .notify_alarms_iter::<Base>(
                 &storage,
                 [
-                    price::total_of(Coin::<Atom>::new(1))
-                        .is(Coin::<Base>::new(35))
-                        .into(),
-                    price::total_of(Coin::<Weth>::new(1))
-                        .is(Coin::<Base>::new(20))
-                        .into(),
+                    tests::base_price::<Atom>(1, 35),
+                    tests::base_price::<Weth>(1, 20),
                 ]
                 .into_iter(),
                 100,
             )
-            .unwrap()
-            .len();
+            .count();
         assert_eq!(sent, 10);
     }
 }

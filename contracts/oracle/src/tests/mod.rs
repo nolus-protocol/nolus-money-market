@@ -8,7 +8,7 @@ use finance::{
     currency::{Currency, SymbolOwned},
     duration::Duration,
     percent::Percent,
-    price::{self, dto::PriceDTO},
+    price::{self, base::BasePrice, dto::PriceDTO},
 };
 use marketprice::config::Config as PriceConfig;
 use sdk::cosmwasm_std::{
@@ -16,7 +16,7 @@ use sdk::cosmwasm_std::{
     testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
     MemoryStorage, MessageInfo, OwnedDeps,
 };
-use swap::SwapTarget;
+use swap::{SwapGroup, SwapTarget};
 use tree::HumanReadableTree;
 
 use crate::{
@@ -29,6 +29,27 @@ use crate::{
 mod oracle_tests;
 
 pub(crate) const CREATOR: &str = "creator";
+
+pub(crate) type TheCurrency = Usdc;
+
+pub(crate) fn dto_price<B, Q>(total_of: u128, is: u128) -> PriceDTO<SwapGroup, SwapGroup>
+where
+    B: Currency,
+    Q: Currency,
+{
+    price::total_of(Coin::<B>::new(total_of))
+        .is(Coin::<Q>::new(is))
+        .into()
+}
+
+pub(crate) fn base_price<C>(total_of: u128, is: u128) -> BasePrice<SwapGroup, TheCurrency>
+where
+    C: Currency,
+{
+    price::total_of(Coin::<C>::new(total_of))
+        .is(Coin::new(is))
+        .into()
+}
 
 pub(crate) fn dummy_instantiate_msg(
     base_asset: SymbolOwned,
