@@ -12,13 +12,16 @@ use sdk::{
 use versioning::{version, VersionSegment};
 
 use crate::{
-    api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
+    api::{dex::ConnectionParams, ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
     contract::{state::Controller, state::Response},
     error::{ContractError, ContractResult},
     lease::LeaseDTO,
 };
 
-use self::{dex::Account, state::RequestLoan};
+use self::{
+    dex::{Account, DexConnectable},
+    state::RequestLoan,
+};
 
 mod cmd;
 mod dex;
@@ -122,6 +125,12 @@ pub fn query(deps: Deps<'_>, env: Env, msg: StateQuery) -> ContractResult<Binary
 pub(crate) struct Lease {
     lease: LeaseDTO,
     dex: Account,
+}
+
+impl DexConnectable for Lease {
+    fn dex(&self) -> &ConnectionParams {
+        self.dex.dex()
+    }
 }
 
 mod impl_ {

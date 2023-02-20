@@ -28,6 +28,10 @@ const ICA_TRANSFER_TIMEOUT_TIP: Coin<Nls> = ICA_TRANSFER_ACK_TIP;
 const ICA_SWAP_ACK_TIP: Coin<Nls> = Coin::new(1);
 const ICA_SWAP_TIMEOUT_TIP: Coin<Nls> = ICA_SWAP_ACK_TIP;
 
+pub(crate) trait DexConnectable {
+    fn dex(&self) -> &ConnectionParams;
+}
+
 #[derive(Serialize, Deserialize)]
 pub(crate) struct Account {
     /// The contract at Nolus that owns the account
@@ -89,6 +93,12 @@ impl Account {
 impl From<Account> for HostAccount {
     fn from(account: Account) -> Self {
         account.dex_account
+    }
+}
+
+impl DexConnectable for Account {
+    fn dex(&self) -> &ConnectionParams {
+        &self.dex
     }
 }
 

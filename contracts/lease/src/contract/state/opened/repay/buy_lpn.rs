@@ -15,9 +15,12 @@ use sdk::{
 use swap::trx as swap_trx;
 
 use crate::{
-    api::{opened::RepayTrx, LpnCoin, PaymentCoin, StateQuery, StateResponse},
+    api::{
+        dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateQuery, StateResponse,
+    },
     contract::{
-        state::{opened::repay, Controller, Response},
+        dex::DexConnectable,
+        state::{self, opened::repay, Controller, Response},
         Lease,
     },
     error::ContractResult,
@@ -71,6 +74,12 @@ impl BuyLpn {
     }
 }
 
+impl DexConnectable for BuyLpn {
+    fn dex(&self) -> &ConnectionParams {
+        self.lease.dex()
+    }
+}
+
 impl Controller for BuyLpn {
     fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<LocalBatch> {
         self.enter_state(&deps.querier)
@@ -79,13 +88,17 @@ impl Controller for BuyLpn {
     fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response { request: _, data } => self.on_response(data, deps.as_ref(), env),
-            SudoMsg::Timeout { request: _ } => todo!(),
+            SudoMsg::Timeout { request: _ } => self.on_timeout(deps.as_ref(), env),
             SudoMsg::Error {
                 request: _,
                 details: _,
             } => todo!(),
             _ => unreachable!(),
         }
+    }
+
+    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        state::on_timeout_repair_channel(self, Type::BuyLpn, deps, env)
     }
 
     fn query(self, deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {

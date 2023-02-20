@@ -10,9 +10,9 @@ use sdk::{
 };
 
 use crate::{
-    api::{dex::ConnectionParams, StateQuery, StateResponse},
+    api::{StateQuery, StateResponse},
     contract::{
-        dex::Account,
+        dex::{Account, DexConnectable},
         state::{self, Controller, Response},
     },
     error::ContractResult,
@@ -27,7 +27,6 @@ where
 {
     type NextState: Controller + Into<State>;
 
-    fn dex(&self) -> &ConnectionParams;
     fn connected(self, ica_account: Account) -> Self::NextState;
 }
 
@@ -38,7 +37,7 @@ pub(crate) struct IcaConnector<Connectee> {
 
 impl<Connectee> IcaConnector<Connectee>
 where
-    Connectee: IcaConnectee,
+    Connectee: IcaConnectee + DexConnectable,
 {
     pub(super) fn new(connectee: Connectee) -> Self {
         Self { connectee }
@@ -77,7 +76,7 @@ where
 impl<Connectee> Controller for IcaConnector<Connectee>
 where
     Self: Into<State>,
-    Connectee: IcaConnectee,
+    Connectee: IcaConnectee + DexConnectable,
 {
     fn enter(&self, _deps: Deps<'_>, _env: Env) -> ContractResult<Batch> {
         Ok(self.enter_state())

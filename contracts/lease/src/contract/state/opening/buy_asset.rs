@@ -12,12 +12,13 @@ use swap::trx as swap_trx;
 
 use crate::{
     api::{
-        opening::OngoingTrx, DownpaymentCoin, LeaseCoin, NewLeaseForm, StateQuery, StateResponse,
+        dex::ConnectionParams, opening::OngoingTrx, DownpaymentCoin, LeaseCoin, NewLeaseForm,
+        StateQuery, StateResponse,
     },
     contract::{
         cmd::OpenLoanRespResult,
-        dex::Account,
-        state::{opened::active::Active, Controller, Response},
+        dex::{Account, DexConnectable},
+        state::{self, opened::active::Active, Controller, Response},
         Lease,
     },
     error::ContractResult,
@@ -93,6 +94,12 @@ impl BuyAsset {
     }
 }
 
+impl DexConnectable for BuyAsset {
+    fn dex(&self) -> &ConnectionParams {
+        self.dex_account.dex()
+    }
+}
+
 impl Controller for BuyAsset {
     fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<LocalBatch> {
         self.enter_state(&deps.querier)
@@ -101,13 +108,17 @@ impl Controller for BuyAsset {
     fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
         match msg {
             SudoMsg::Response { request: _, data } => self.on_response(data, &env, &deps.querier),
-            SudoMsg::Timeout { request: _ } => todo!(),
+            SudoMsg::Timeout { request: _ } => self.on_timeout(deps.as_ref(), env),
             SudoMsg::Error {
                 request: _,
                 details: _,
             } => todo!(),
             _ => unreachable!(),
         }
+    }
+
+    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        state::on_timeout_repair_channel(self, crate::event::Type::RepaymentTransferIn, deps, env)
     }
 
     fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {

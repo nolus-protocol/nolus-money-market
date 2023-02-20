@@ -7,12 +7,14 @@ use sdk::{
 };
 
 use crate::{
-    api::{paid::ClosingTrx, StateQuery, StateResponse},
+    api::{dex::ConnectionParams, paid::ClosingTrx, StateQuery, StateResponse},
     contract::{
-        state::{Controller, Response},
+        dex::DexConnectable,
+        state::{self, Controller, Response},
         Lease,
     },
     error::ContractResult,
+    event::Type,
 };
 
 use super::transfer_in_finish::TransferInFinish;
@@ -38,6 +40,12 @@ impl TransferInInit {
     }
 }
 
+impl DexConnectable for TransferInInit {
+    fn dex(&self) -> &ConnectionParams {
+        self.lease.dex()
+    }
+}
+
 impl Controller for TransferInInit {
     fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
         self.enter_state(env.block.time)
@@ -49,7 +57,7 @@ impl Controller for TransferInInit {
                 request: _,
                 data: _,
             } => self.on_response(&env, &deps.querier),
-            SudoMsg::Timeout { request: _ } => todo!(),
+            SudoMsg::Timeout { request: _ } => self.on_timeout(deps.as_ref(), env),
             SudoMsg::Error {
                 request: _,
                 details: _,
@@ -58,9 +66,9 @@ impl Controller for TransferInInit {
         }
     }
 
-    // fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-    //     state::on_timeout_retry(self, Type::ClosingTransferIn, deps, env)
-    // }
+    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        state::on_timeout_repair_channel(self, Type::ClosingTransferIn, deps, env)
+    }
 
     fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
         Ok(StateResponse::Paid {

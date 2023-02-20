@@ -16,25 +16,36 @@ use crate::{
 };
 
 pub use self::opening::request_loan::RequestLoan;
-use self::{closed::Closed, opened::repay::buy_lpn::BuyLpn, opening::buy_asset::BuyAsset};
+use self::{
+    closed::Closed, ica_connector::IcaConnector, ica_recover::InRecovery,
+    opened::repay::buy_lpn::BuyLpn, opening::buy_asset::BuyAsset,
+};
+
+use super::dex::DexConnectable;
 
 mod closed;
+mod ica_connector;
+mod ica_recover;
 mod opened;
 mod opening;
 mod paid;
-// mod recover_ica;
-mod ica_connector;
 mod transfer_in;
 
 type OpenIcaAccount = ica_connector::IcaConnector<opening::open_ica::OpenIcaAccount>;
 // type RecoverIcaAccount = register_ica::RegisterIca<opening::open_ica::OpenIca>;
 type OpeningTransferOut = opening::transfer_out::TransferOut;
+type BuyAssetRecoverIca = ica_connector::IcaConnector<ica_recover::InRecovery<BuyAsset>>;
 type OpenedActive = opened::active::Active;
 type RepaymentTransferOut = opened::repay::transfer_out::TransferOut;
+type BuyLpnRecoverIca = ica_connector::IcaConnector<ica_recover::InRecovery<BuyLpn>>;
 type RepaymentTransferInInit = opened::repay::transfer_in_init::TransferInInit;
+type RepaymentTransferInInitRecoverIca =
+    ica_connector::IcaConnector<ica_recover::InRecovery<RepaymentTransferInInit>>;
 type RepaymentTransferInFinish = opened::repay::transfer_in_finish::TransferInFinish;
 type PaidActive = paid::Active;
 type ClosingTransferInInit = paid::transfer_in_init::TransferInInit;
+type ClosingTransferInInitRecoverIca =
+    ica_connector::IcaConnector<ica_recover::InRecovery<ClosingTransferInInit>>;
 type ClosingTransferInFinish = paid::transfer_in_finish::TransferInFinish;
 
 #[enum_dispatch(Controller)]
@@ -42,16 +53,19 @@ type ClosingTransferInFinish = paid::transfer_in_finish::TransferInFinish;
 pub(crate) enum State {
     RequestLoan,
     OpenIcaAccount,
-    // RecoverIcaAccount,
     OpeningTransferOut,
     BuyAsset,
+    BuyAssetRecoverIca,
     OpenedActive,
     RepaymentTransferOut,
     BuyLpn,
+    BuyLpnRecoverIca,
     RepaymentTransferInInit,
+    RepaymentTransferInInitRecoverIca,
     RepaymentTransferInFinish,
     PaidActive,
     ClosingTransferInInit,
+    ClosingTransferInInitRecoverIca,
     ClosingTransferInFinish,
     Closed,
 }
@@ -122,25 +136,28 @@ fn on_timeout_retry<L>(
     env: Env,
 ) -> ContractResult<Response>
 where
-    L: Controller,
-    L: Into<State>,
+    L: Controller + Into<State>,
 {
     let emitter = emit_timeout(event_type, env.contract.address.clone());
     let batch = current_state.enter(deps, env)?;
     Ok(Response::from(batch.into_response(emitter), current_state))
 }
 
-// fn on_timeout_repair_channel(
-//     current_state: State,
-//     event_type: Type,
-//     deps: Deps<'_>,
-//     env: Env,
-// ) -> ContractResult<Response> {
-//     let emitter = emit_timeout(event_type, env.contract.address.clone());
-//     // register_ica::RegisterIca::new(lease)
-//     let batch = current_state.enter(deps, env)?;
-//     Ok(Response::from(batch.into_response(emitter), current_state))
-// }
+fn on_timeout_repair_channel<L>(
+    current_state: L,
+    event_type: Type,
+    deps: Deps<'_>,
+    env: Env,
+) -> ContractResult<Response>
+where
+    L: Controller + DexConnectable + Into<State>,
+    IcaConnector<InRecovery<L>>: Into<State>,
+{
+    let emitter = emit_timeout(event_type, env.contract.address.clone());
+    let recover_ica = IcaConnector::new(InRecovery::new(current_state));
+    let batch = recover_ica.enter(deps, env)?;
+    Ok(Response::from(batch.into_response(emitter), recover_ica))
+}
 
 fn emit_timeout(event_type: Type, contract: Addr) -> Emitter {
     Emitter::of_type(event_type)

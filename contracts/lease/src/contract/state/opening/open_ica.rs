@@ -8,7 +8,11 @@ use crate::{
         dex::ConnectionParams, opening::OngoingTrx, DownpaymentCoin, NewLeaseContract,
         StateResponse,
     },
-    contract::{cmd::OpenLoanRespResult, dex::Account, state::ica_connector::IcaConnectee},
+    contract::{
+        cmd::OpenLoanRespResult,
+        dex::{Account, DexConnectable},
+        state::ica_connector::IcaConnectee,
+    },
 };
 
 use super::transfer_out::TransferOut;
@@ -49,7 +53,9 @@ impl IcaConnectee for OpenIcaAccount {
             self.deps,
         )
     }
+}
 
+impl DexConnectable for OpenIcaAccount {
     fn dex(&self) -> &ConnectionParams {
         &self.new_lease.dex
     }
