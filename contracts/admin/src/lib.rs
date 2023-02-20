@@ -184,7 +184,7 @@ fn migrate_managed_contracts(
     store_migration_release(storage, migrate_contracts_variant.release)?;
 
     let general_group_addrs: GeneralContractsGroup<Addr> = load_general_contract_addrs(storage)?;
-    let mut specialized_groups: SpecializedContractAddrsIter =
+    let mut specialized_groups: SpecializedContractAddrsIter<'_> =
         load_specialized_contract_addrs(storage);
 
     let mut batch: Batch = Batch::default();
