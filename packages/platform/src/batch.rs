@@ -279,4 +279,15 @@ mod test {
             .add_attribute(KEY2, VALUE2);
         assert_eq!(exp, resp.events[0]);
     }
+
+    #[test]
+    fn msgs_len() {
+        let mut b = Batch::default();
+        assert!(b.is_empty());
+        b.schedule_execute_no_reply(CosmosMsg::Wasm(WasmMsg::ClearAdmin {
+            contract_addr: "".to_string(),
+        }));
+        assert!(!b.is_empty());
+        assert_eq!(1, b.len());
+    }
 }
