@@ -8,8 +8,7 @@ use crate::{
         dex::ConnectionParams, opening::OngoingTrx, DownpaymentCoin, NewLeaseContract,
         StateResponse,
     },
-    contract::{cmd::OpenLoanRespResult, state::ica_connector::IcaConnectee},
-    dex::Account,
+    contract::{cmd::OpenLoanRespResult, dex::Account, state::ica_connector::IcaConnectee},
 };
 
 use super::transfer_out::TransferOut;

@@ -14,14 +14,14 @@ use versioning::{version, VersionSegment};
 use crate::{
     api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
     contract::{state::Controller, state::Response},
-    dex::Account,
     error::{ContractError, ContractResult},
     lease::LeaseDTO,
 };
 
-use self::state::RequestLoan;
+use self::{dex::Account, state::RequestLoan};
 
 mod cmd;
+mod dex;
 pub mod msg;
 mod state;
 

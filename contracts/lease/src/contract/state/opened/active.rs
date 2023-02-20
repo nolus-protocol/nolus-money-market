@@ -15,10 +15,10 @@ use crate::{
     api::{DownpaymentCoin, ExecuteMsg, LpnCoin, StateQuery, StateResponse},
     contract::{
         cmd::{AlarmResult, OpenLoanRespResult, PriceAlarm, Repay, RepayResult, TimeAlarm},
+        dex::Account,
         state::{paid, Controller, Response},
         Lease,
     },
-    dex::Account,
     error::{ContractError, ContractResult},
     event::Type,
     lease::{with_lease, LeaseDTO},

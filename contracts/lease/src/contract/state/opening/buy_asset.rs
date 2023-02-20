@@ -16,10 +16,10 @@ use crate::{
     },
     contract::{
         cmd::OpenLoanRespResult,
+        dex::Account,
         state::{opened::active::Active, Controller, Response},
         Lease,
     },
-    dex::Account,
     error::ContractResult,
     lease::IntoDTOResult,
 };

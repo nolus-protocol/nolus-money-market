@@ -4,8 +4,6 @@ pub mod error;
 #[cfg(any(feature = "contract", test))]
 pub mod contract;
 #[cfg(any(feature = "contract", test))]
-pub mod dex;
-#[cfg(any(feature = "contract", test))]
 mod event;
 #[cfg(any(feature = "contract", test))]
 mod lease;

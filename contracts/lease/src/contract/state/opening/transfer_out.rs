@@ -16,9 +16,9 @@ use crate::{
     api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
     contract::{
         cmd::OpenLoanRespResult,
+        dex::Account,
         state::{self, BuyAsset, Controller, Response},
     },
-    dex::Account,
     error::ContractResult,
     event::Type,
 };

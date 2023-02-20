@@ -32,20 +32,20 @@ const ICA_SWAP_TIMEOUT_TIP: Coin<Nls> = ICA_SWAP_ACK_TIP;
 pub(crate) struct Account {
     /// The contract at Nolus that owns the account
     owner: Addr,
-    dex_account: HostAccount,
+    dex_account: HostAccount, // TODO rename to `ica_account`
     dex: ConnectionParams,
 }
 
 impl Account {
-    pub(crate) fn dex_account(&self) -> &HostAccount {
+    pub(super) fn ica_account(&self) -> &HostAccount {
         &self.dex_account
     }
 
-    pub fn register_request(dex: &ConnectionParams) -> LocalBatch {
+    pub(super) fn register_request(dex: &ConnectionParams) -> LocalBatch {
         ica::register_account(&dex.connection_id)
     }
 
-    pub fn from_register_response(
+    pub(super) fn from_register_response(
         response: &str,
         owner: Addr,
         dex: ConnectionParams,
@@ -58,7 +58,7 @@ impl Account {
         })
     }
 
-    pub fn transfer_to(&self, now: Timestamp) -> TransferOutTrx<'_> {
+    pub(super) fn transfer_to(&self, now: Timestamp) -> TransferOutTrx<'_> {
         TransferOutTrx::new(
             &self.dex.transfer_channel.local_endpoint,
             &self.owner,
@@ -67,7 +67,7 @@ impl Account {
         )
     }
 
-    pub fn swap<'a>(
+    pub(super) fn swap<'a>(
         &'a self,
         oracle: &'a OracleRef,
         querier: &'a QuerierWrapper<'a>,
@@ -75,7 +75,7 @@ impl Account {
         SwapTrx::new(&self.dex.connection_id, &self.dex_account, oracle, querier)
     }
 
-    pub fn transfer_from(&self, now: Timestamp) -> TransferInTrx<'_> {
+    pub(super) fn transfer_from(&self, now: Timestamp) -> TransferInTrx<'_> {
         TransferInTrx::new(
             &self.dex.connection_id,
             &self.dex.transfer_channel.remote_endpoint,
@@ -92,7 +92,7 @@ impl From<Account> for HostAccount {
     }
 }
 
-pub struct TransferOutTrx<'a> {
+pub(super) struct TransferOutTrx<'a> {
     sender: LocalSender<'a>,
 }
 
@@ -124,7 +124,7 @@ impl<'r> From<TransferOutTrx<'r>> for LocalBatch {
     }
 }
 
-pub struct SwapTrx<'a> {
+pub(super) struct SwapTrx<'a> {
     conn: &'a str,
     ica_account: &'a HostAccount,
     trx: Transaction,
@@ -178,7 +178,7 @@ impl From<SwapTrx<'_>> for LocalBatch {
     }
 }
 
-pub struct TransferInTrx<'a> {
+pub(super) struct TransferInTrx<'a> {
     conn: &'a str,
     sender: RemoteSender<'a>,
 }

@@ -11,8 +11,10 @@ use sdk::{
 
 use crate::{
     api::{dex::ConnectionParams, StateQuery, StateResponse},
-    contract::state::{self, Controller, Response},
-    dex::Account,
+    contract::{
+        dex::Account,
+        state::{self, Controller, Response},
+    },
     error::ContractResult,
     event::Type,
 };
