@@ -7,9 +7,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{
-        dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateResponse,
-    },
+    api::{dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateResponse},
     contract::{
         dex::DexConnectable,
         state::{self, opened::repay, Controller, Response},

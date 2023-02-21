@@ -2,7 +2,7 @@ use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use platform::batch::{Emit, Emitter};
-use sdk::cosmwasm_std::{ DepsMut, Env, MessageInfo, QuerierWrapper};
+use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper};
 
 use crate::{
     api::{opened::RepayTrx, ExecuteMsg, LpnCoin, PaymentCoin, StateResponse},

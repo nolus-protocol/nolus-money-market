@@ -1,4 +1,4 @@
-use cosmwasm_std::{Timestamp, QuerierWrapper};
+use cosmwasm_std::{QuerierWrapper, Timestamp};
 
 use crate::{
     api::{opened::OngoingTrx, StateResponse},
@@ -16,10 +16,5 @@ fn lease_state(
     now: Timestamp,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<StateResponse> {
-    
-    with_lease::execute(
-        lease,
-        LeaseState::new(now, in_progress),
-        querier,
-    )
+    with_lease::execute(lease, LeaseState::new(now, in_progress), querier)
 }

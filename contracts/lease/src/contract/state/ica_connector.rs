@@ -11,7 +11,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{StateResponse},
+    api::StateResponse,
     contract::{
         dex::{Account, DexConnectable},
         state::{self, Controller, Response},
@@ -104,7 +104,11 @@ where
         state::on_timeout_retry(self, Type::OpenIcaAccount, deps, env)
     }
 
-    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
         Ok(self.connectee.into())
     }
 }

@@ -122,7 +122,11 @@ impl Controller for BuyAsset {
         state::on_timeout_repair_channel(self, crate::event::Type::RepaymentTransferIn, deps, env)
     }
 
-    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
         Ok(StateResponse::Opening {
             downpayment: self.downpayment,
             loan: self.loan.principal,

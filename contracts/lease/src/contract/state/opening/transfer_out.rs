@@ -122,7 +122,11 @@ impl Controller for TransferOut {
         state::on_timeout_retry(self, Type::OpeningTransferOut, deps, env)
     }
 
-    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
         Ok(StateResponse::Opening {
             downpayment: self.downpayment,
             loan: self.loan.principal,

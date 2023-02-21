@@ -1,4 +1,4 @@
-use cosmwasm_std::{Timestamp, QuerierWrapper};
+use cosmwasm_std::{QuerierWrapper, Timestamp};
 
 use crate::{
     api::{

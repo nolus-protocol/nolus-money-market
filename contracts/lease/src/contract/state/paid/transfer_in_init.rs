@@ -70,7 +70,11 @@ impl Controller for TransferInInit {
         state::on_timeout_repair_channel(self, Type::ClosingTransferIn, deps, env)
     }
 
-    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
         Ok(StateResponse::Paid {
             amount: self.lease.lease.amount,
             in_progress: Some(ClosingTrx::TransferInInit),

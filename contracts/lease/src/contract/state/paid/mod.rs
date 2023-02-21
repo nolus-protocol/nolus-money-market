@@ -1,7 +1,7 @@
 use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{ DepsMut, Env, MessageInfo};
+use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo};
 
 use crate::{
     api::{ExecuteMsg, StateResponse},
@@ -51,7 +51,11 @@ impl Controller for Active {
         }
     }
 
-    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
         Ok(StateResponse::Paid {
             amount: self.lease.lease.amount,
             in_progress: None,
