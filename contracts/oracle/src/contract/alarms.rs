@@ -14,7 +14,7 @@ use sdk::cosmwasm_std::{Addr, Storage};
 use serde::{de::DeserializeOwned, Serialize};
 use swap::SwapGroup;
 
-use crate::{alarms::Alarm as AlarmDTO, msg::AlarmsStatusResponse, ContractError};
+use crate::{alarms::Alarm as AlarmDTO, ContractError};
 
 pub struct MarketAlarms;
 
@@ -94,16 +94,14 @@ impl MarketAlarms {
     pub fn try_query_alarms<'a, BaseC>(
         storage: &dyn Storage,
         prices: impl Iterator<Item = BasePrice<SwapGroup, BaseC>> + 'a,
-    ) -> Result<AlarmsStatusResponse, ContractError>
+    ) -> Result<bool, ContractError>
     where
         BaseC: Currency,
     {
-        Ok(AlarmsStatusResponse {
-            remaining_alarms: Self::alarms_iter::<BaseC>(storage, prices)
-                .next()
-                .transpose()?
-                .is_some(),
-        })
+        Ok(Self::alarms_iter::<BaseC>(storage, prices)
+            .next()
+            .transpose()?
+            .is_some())
     }
 
     fn alarms_iter<'a, BaseC>(
@@ -229,25 +227,19 @@ mod test {
         )
         .unwrap();
 
-        assert!(
-            MarketAlarms::try_query_alarms::<Base>(
-                &storage,
-                [tests::base_price::<Weth>(1, 35)].into_iter()
-            )
-            .unwrap()
-            .remaining_alarms
-        );
+        assert!(MarketAlarms::try_query_alarms::<Base>(
+            &storage,
+            [tests::base_price::<Weth>(1, 35)].into_iter()
+        )
+        .unwrap());
 
         MarketAlarms::remove(&mut storage, receiver2).unwrap();
 
-        assert!(
-            !MarketAlarms::try_query_alarms::<Base>(
-                &storage,
-                [tests::base_price::<Weth>(1, 10)].into_iter()
-            )
-            .unwrap()
-            .remaining_alarms
-        );
+        assert!(!MarketAlarms::try_query_alarms::<Base>(
+            &storage,
+            [tests::base_price::<Weth>(1, 10)].into_iter()
+        )
+        .unwrap());
     }
 
     #[test]

@@ -168,7 +168,8 @@ where
 {
     let tree = SupportedPairs::load(storage)?;
     let prices = calc_all_prices::<OracleBase>(storage, block_time, &tree)?;
-    MarketAlarms::try_query_alarms::<OracleBase>(storage, prices)
+    let remaining_alarms = MarketAlarms::try_query_alarms::<OracleBase>(storage, prices)?;
+    Ok(AlarmsStatusResponse { remaining_alarms })
 }
 
 fn calc_all_prices<'a, OracleBase>(
