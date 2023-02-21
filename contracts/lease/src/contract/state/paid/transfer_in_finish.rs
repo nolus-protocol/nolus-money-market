@@ -8,7 +8,7 @@ use crate::{
     api::{paid::ClosingTrx, ExecuteMsg, StateResponse},
     contract::{
         state::{self, closed::Closed, transfer_in, Controller, Response, State},
-        Lease,
+        Contract, Lease,
     },
     error::ContractResult,
     event::Type,
@@ -75,7 +75,9 @@ impl Controller for TransferInFinish {
             state::err(&format!("{:?}", msg), deps.api)
         }
     }
+}
 
+impl Contract for TransferInFinish {
     fn state(
         self,
         _now: Timestamp,

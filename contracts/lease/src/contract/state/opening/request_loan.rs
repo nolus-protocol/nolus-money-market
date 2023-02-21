@@ -11,6 +11,7 @@ use crate::{
     contract::{
         cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
         state::{ica_connector::IcaConnector, Controller, Response},
+        Contract,
     },
     error::{ContractError, ContractResult},
     event::Type,
@@ -94,7 +95,9 @@ impl Controller for RequestLoan {
     fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
         self.on_response(deps.as_ref(), env, msg)
     }
+}
 
+impl Contract for RequestLoan {
     fn state(
         self,
         _now: Timestamp,

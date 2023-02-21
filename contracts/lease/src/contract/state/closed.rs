@@ -9,7 +9,7 @@ use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
     api::StateResponse,
-    contract::cmd::Close,
+    contract::{cmd::Close, Contract},
     error::ContractResult,
     event::Type,
     lease::{with_lease, IntoDTOResult, LeaseDTO},
@@ -42,7 +42,9 @@ impl Closed {
     }
 }
 
-impl Controller for Closed {
+impl Controller for Closed {}
+
+impl Contract for Closed {
     fn state(
         self,
         _now: Timestamp,

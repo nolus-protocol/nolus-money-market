@@ -1,3 +1,5 @@
+use cosmwasm_std::{QuerierWrapper, Timestamp};
+use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
 
 use ::currency::lease::LeaseGroup;
@@ -12,7 +14,9 @@ use sdk::{
 use versioning::{version, VersionSegment};
 
 use crate::{
-    api::{dex::ConnectionParams, ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
+    api::{
+        dex::ConnectionParams, ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery, StateResponse,
+    },
     contract::{state::Controller, state::Response},
     error::{ContractError, ContractResult},
     lease::LeaseDTO,
@@ -20,7 +24,7 @@ use crate::{
 
 use self::{
     dex::{Account, DexConnectable},
-    state::RequestLoan,
+    state::{RequestLoan, State},
 };
 
 mod cmd;
@@ -119,6 +123,11 @@ pub fn sudo(mut deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwR
 pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
     let resp = impl_::load(deps.storage)?.state(env.block.time, &deps.querier)?;
     to_binary(&resp).map_err(ContractError::from)
+}
+
+#[enum_dispatch]
+trait Contract {
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse>;
 }
 
 #[derive(Serialize, Deserialize)]

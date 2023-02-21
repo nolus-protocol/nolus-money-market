@@ -5,7 +5,7 @@ use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo};
 
 use crate::{
     api::{ExecuteMsg, StateResponse},
-    contract::Lease,
+    contract::{Contract, Lease},
     error::ContractResult,
 };
 
@@ -50,7 +50,9 @@ impl Controller for Active {
             }
         }
     }
+}
 
+impl Contract for Active {
     fn state(
         self,
         _now: Timestamp,

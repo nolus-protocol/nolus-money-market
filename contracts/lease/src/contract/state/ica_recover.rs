@@ -1,3 +1,4 @@
+use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -5,7 +6,9 @@ use crate::{
     contract::{
         dex::{Account, DexConnectable},
         state::State,
+        Contract,
     },
+    error::ContractResult,
 };
 
 use super::{ica_connector::IcaConnectee, Controller};
@@ -41,8 +44,11 @@ where
     }
 }
 
-impl<S> From<InRecovery<S>> for StateResponse {
-    fn from(_value: InRecovery<S>) -> Self {
-        todo!("use a fn from Controller")
+impl<S> Contract for InRecovery<S>
+where
+    S: Contract,
+{
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+        self.state.state(now, querier)
     }
 }

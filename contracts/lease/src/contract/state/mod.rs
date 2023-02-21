@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Api, QuerierWrapper, Timestamp};
+use cosmwasm_std::{Addr, Api};
 use enum_dispatch::enum_dispatch;
 use platform::batch::{Batch, Emit, Emitter};
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{ExecuteMsg, StateResponse},
+    api::ExecuteMsg,
     error::{ContractError as Err, ContractResult},
     event::Type,
 };
@@ -47,7 +47,7 @@ type ClosingTransferInInitRecoverIca =
     ica_connector::IcaConnector<ica_recover::InRecovery<ClosingTransferInInit>>;
 type ClosingTransferInFinish = paid::transfer_in_finish::TransferInFinish;
 
-#[enum_dispatch(Controller)]
+#[enum_dispatch(Controller, Contract)]
 #[derive(Serialize, Deserialize)]
 pub(crate) enum State {
     RequestLoan,
@@ -117,8 +117,6 @@ where
     fn on_timeout(self, deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
         err("timeout", deps.api)
     }
-
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse>;
 }
 
 fn err<R>(op: &str, api: &dyn Api) -> ContractResult<R> {

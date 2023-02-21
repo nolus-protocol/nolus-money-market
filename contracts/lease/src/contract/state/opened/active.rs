@@ -18,7 +18,7 @@ use crate::{
         cmd::{AlarmResult, OpenLoanRespResult, PriceAlarm, Repay, RepayResult, TimeAlarm},
         dex::Account,
         state::{paid, Controller, Response},
-        Lease,
+        Contract, Lease,
     },
     error::{ContractError, ContractResult},
     event::Type,
@@ -143,7 +143,9 @@ impl Controller for Active {
             ExecuteMsg::TimeAlarm {} => self.try_on_time_alarm(&deps.querier, &env, info),
         }
     }
+}
 
+impl Contract for Active {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         super::lease_state(self.lease.lease, None, now, querier)
     }

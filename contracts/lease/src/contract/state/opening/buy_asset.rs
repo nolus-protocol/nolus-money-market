@@ -20,7 +20,7 @@ use crate::{
         cmd::OpenLoanRespResult,
         dex::{Account, DexConnectable},
         state::{self, opened::active::Active, Controller, Response},
-        Lease,
+        Contract, Lease,
     },
     error::ContractResult,
     lease::IntoDTOResult,
@@ -121,7 +121,9 @@ impl Controller for BuyAsset {
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         state::on_timeout_repair_channel(self, crate::event::Type::RepaymentTransferIn, deps, env)
     }
+}
 
+impl Contract for BuyAsset {
     fn state(
         self,
         _now: Timestamp,

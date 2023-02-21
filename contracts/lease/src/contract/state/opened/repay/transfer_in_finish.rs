@@ -12,7 +12,7 @@ use crate::{
             opened::{active::Active, repay},
             transfer_in, Controller, Response,
         },
-        Lease,
+        Contract, Lease,
     },
     error::ContractResult,
     event::Type,
@@ -83,7 +83,9 @@ impl Controller for TransferInFinish {
             state::err(&format!("{:?}", msg), deps.api)
         }
     }
+}
 
+impl Contract for TransferInFinish {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         repay::query(
             self.lease.lease,

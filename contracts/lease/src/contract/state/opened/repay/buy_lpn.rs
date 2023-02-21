@@ -20,7 +20,7 @@ use crate::{
     contract::{
         dex::DexConnectable,
         state::{self, opened::repay, Controller, Response},
-        Lease,
+        Contract, Lease,
     },
     error::ContractResult,
     event::Type,
@@ -99,7 +99,9 @@ impl Controller for BuyLpn {
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         state::on_timeout_repair_channel(self, Type::BuyLpn, deps, env)
     }
+}
 
+impl Contract for BuyLpn {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         repay::query(self.lease.lease, self.payment, RepayTrx::Swap, now, querier)
     }

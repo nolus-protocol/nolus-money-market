@@ -11,7 +11,7 @@ use crate::{
     contract::{
         dex::DexConnectable,
         state::{self, Controller, Response},
-        Lease,
+        Contract, Lease,
     },
     error::ContractResult,
     event::Type,
@@ -69,7 +69,9 @@ impl Controller for TransferInInit {
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         state::on_timeout_repair_channel(self, Type::ClosingTransferIn, deps, env)
     }
+}
 
+impl Contract for TransferInInit {
     fn state(
         self,
         _now: Timestamp,

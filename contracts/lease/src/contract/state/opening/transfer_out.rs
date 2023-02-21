@@ -19,6 +19,7 @@ use crate::{
         cmd::OpenLoanRespResult,
         dex::Account,
         state::{self, BuyAsset, Controller, Response},
+        Contract,
     },
     error::ContractResult,
     event::Type,
@@ -121,7 +122,9 @@ impl Controller for TransferOut {
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         state::on_timeout_retry(self, Type::OpeningTransferOut, deps, env)
     }
+}
 
+impl Contract for TransferOut {
     fn state(
         self,
         _now: Timestamp,

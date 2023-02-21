@@ -15,6 +15,7 @@ use crate::{
     contract::{
         dex::{Account, DexConnectable},
         state::{self, Controller, Response},
+        Contract,
     },
     error::ContractResult,
     event::Type,
@@ -22,10 +23,7 @@ use crate::{
 
 use super::State;
 
-pub(crate) trait IcaConnectee
-where
-    Self: Into<StateResponse>,
-{
+pub(crate) trait IcaConnectee {
     type NextState: Controller + Into<State>;
 
     fn connected(self, ica_account: Account) -> Self::NextState;
@@ -103,12 +101,13 @@ where
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         state::on_timeout_retry(self, Type::OpenIcaAccount, deps, env)
     }
+}
 
-    fn state(
-        self,
-        _now: Timestamp,
-        _querier: &QuerierWrapper<'_>,
-    ) -> ContractResult<StateResponse> {
-        Ok(self.connectee.into())
+impl<Connectee> Contract for IcaConnector<Connectee>
+where
+    Connectee: Contract,
+{
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+        self.connectee.state(now, querier)
     }
 }

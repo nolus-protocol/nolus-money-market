@@ -11,7 +11,7 @@ use crate::{
     api::{opened::RepayTrx, PaymentCoin, StateResponse},
     contract::{
         state::{self, opened::repay, Controller, Response},
-        Lease,
+        Contract, Lease,
     },
     error::ContractResult,
     event::Type,
@@ -79,7 +79,9 @@ impl Controller for TransferOut {
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         state::on_timeout_retry(self, Type::RepaymentTransferOut, deps, env)
     }
+}
 
+impl Contract for TransferOut {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         repay::query(
             self.lease.lease,

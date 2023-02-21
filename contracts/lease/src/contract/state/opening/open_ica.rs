@@ -1,3 +1,4 @@
+use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::lender::LppLenderRef;
@@ -12,7 +13,9 @@ use crate::{
         cmd::OpenLoanRespResult,
         dex::{Account, DexConnectable},
         state::ica_connector::IcaConnectee,
+        Contract,
     },
+    error::ContractResult,
 };
 
 use super::transfer_out::TransferOut;
@@ -61,13 +64,17 @@ impl DexConnectable for OpenIcaAccount {
     }
 }
 
-impl From<OpenIcaAccount> for StateResponse {
-    fn from(value: OpenIcaAccount) -> Self {
-        StateResponse::Opening {
-            downpayment: value.downpayment,
-            loan: value.loan.principal,
-            loan_interest_rate: value.loan.annual_interest_rate,
+impl Contract for OpenIcaAccount {
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
+        Ok(StateResponse::Opening {
+            downpayment: self.downpayment,
+            loan: self.loan.principal,
+            loan_interest_rate: self.loan.annual_interest_rate,
             in_progress: OngoingTrx::OpenIcaAccount {},
-        }
+        })
     }
 }
