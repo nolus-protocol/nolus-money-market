@@ -1,3 +1,4 @@
+use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use currency::{lpn::Lpns, payment::PaymentGroup};
@@ -12,7 +13,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{DownpaymentCoin, ExecuteMsg, LpnCoin, StateQuery, StateResponse},
+    api::{DownpaymentCoin, ExecuteMsg, LpnCoin, StateResponse},
     contract::{
         cmd::{AlarmResult, OpenLoanRespResult, PriceAlarm, Repay, RepayResult, TimeAlarm},
         dex::Account,
@@ -143,8 +144,8 @@ impl Controller for Active {
         }
     }
 
-    fn query(self, deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
-        super::query(self.lease.lease, None, &deps, &env)
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+        super::lease_state(self.lease.lease, None, now, querier)
     }
 }
 

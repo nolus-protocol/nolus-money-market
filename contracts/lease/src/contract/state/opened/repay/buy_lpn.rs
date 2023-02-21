@@ -1,3 +1,4 @@
+use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use finance::{
@@ -16,7 +17,7 @@ use swap::trx as swap_trx;
 
 use crate::{
     api::{
-        dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateQuery, StateResponse,
+        dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateResponse,
     },
     contract::{
         dex::DexConnectable,
@@ -101,7 +102,7 @@ impl Controller for BuyLpn {
         state::on_timeout_repair_channel(self, Type::BuyLpn, deps, env)
     }
 
-    fn query(self, deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
-        repay::query(self.lease.lease, self.payment, RepayTrx::Swap, &deps, &env)
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+        repay::query(self.lease.lease, self.payment, RepayTrx::Swap, now, querier)
     }
 }

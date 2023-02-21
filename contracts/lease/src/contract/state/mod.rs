@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Api};
+use cosmwasm_std::{Addr, Api, QuerierWrapper, Timestamp};
 use enum_dispatch::enum_dispatch;
 use platform::batch::{Batch, Emit, Emitter};
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{ExecuteMsg, StateQuery, StateResponse},
+    api::{ExecuteMsg, StateResponse},
     error::{ContractError as Err, ContractResult},
     event::Type,
 };
@@ -32,7 +32,6 @@ mod paid;
 mod transfer_in;
 
 type OpenIcaAccount = ica_connector::IcaConnector<opening::open_ica::OpenIcaAccount>;
-// type RecoverIcaAccount = register_ica::RegisterIca<opening::open_ica::OpenIca>;
 type OpeningTransferOut = opening::transfer_out::TransferOut;
 type BuyAssetRecoverIca = ica_connector::IcaConnector<ica_recover::InRecovery<BuyAsset>>;
 type OpenedActive = opened::active::Active;
@@ -119,7 +118,7 @@ where
         err("timeout", deps.api)
     }
 
-    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse>;
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse>;
 }
 
 fn err<R>(op: &str, api: &dyn Api) -> ContractResult<R> {

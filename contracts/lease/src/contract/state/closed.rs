@@ -1,13 +1,14 @@
+use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use platform::{
     bank,
     batch::{Batch, Emit, Emitter},
 };
-use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper};
+use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::{StateQuery, StateResponse},
+    api::{StateResponse},
     contract::cmd::Close,
     error::ContractResult,
     event::Type,
@@ -42,7 +43,7 @@ impl Closed {
 }
 
 impl Controller for Closed {
-    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         Ok(StateResponse::Closed())
     }
 }

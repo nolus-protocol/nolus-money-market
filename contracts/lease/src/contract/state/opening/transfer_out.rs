@@ -1,3 +1,4 @@
+use cosmwasm_std::QuerierWrapper;
 use serde::{Deserialize, Serialize};
 
 use finance::zero::Zero;
@@ -13,7 +14,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
+    api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateResponse},
     contract::{
         cmd::OpenLoanRespResult,
         dex::Account,
@@ -121,7 +122,7 @@ impl Controller for TransferOut {
         state::on_timeout_retry(self, Type::OpeningTransferOut, deps, env)
     }
 
-    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         Ok(StateResponse::Opening {
             downpayment: self.downpayment,
             loan: self.loan.principal,

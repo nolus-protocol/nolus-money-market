@@ -116,8 +116,8 @@ pub fn sudo(mut deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwR
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn query(deps: Deps<'_>, env: Env, msg: StateQuery) -> ContractResult<Binary> {
-    let resp = impl_::load(deps.storage)?.query(deps, env, msg)?;
+pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binary> {
+    let resp = impl_::load(deps.storage)?.state(env.block.time, &deps.querier)?;
     to_binary(&resp).map_err(ContractError::from)
 }
 

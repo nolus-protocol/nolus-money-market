@@ -1,3 +1,4 @@
+use cosmwasm_std::QuerierWrapper;
 use serde::{Deserialize, Serialize};
 
 use platform::batch::{Batch, Emit, Emitter};
@@ -7,7 +8,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{opened::RepayTrx, PaymentCoin, StateQuery, StateResponse},
+    api::{opened::RepayTrx, PaymentCoin, StateResponse},
     contract::{
         state::{self, opened::repay, Controller, Response},
         Lease,
@@ -79,13 +80,13 @@ impl Controller for TransferOut {
         state::on_timeout_retry(self, Type::RepaymentTransferOut, deps, env)
     }
 
-    fn query(self, deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         repay::query(
             self.lease.lease,
             self.payment,
             RepayTrx::TransferOut,
-            &deps,
-            &env,
+            now,
+            querier,
         )
     }
 }

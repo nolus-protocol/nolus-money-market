@@ -1,3 +1,4 @@
+use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use platform::{
@@ -10,7 +11,7 @@ use sdk::{
 };
 
 use crate::{
-    api::{StateQuery, StateResponse},
+    api::{StateResponse},
     contract::{
         dex::{Account, DexConnectable},
         state::{self, Controller, Response},
@@ -103,7 +104,7 @@ where
         state::on_timeout_retry(self, Type::OpenIcaAccount, deps, env)
     }
 
-    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         Ok(self.connectee.into())
     }
 }

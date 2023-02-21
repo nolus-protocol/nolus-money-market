@@ -1,10 +1,11 @@
+use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use platform::batch::{Emit, Emitter};
-use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper};
+use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper};
 
 use crate::{
-    api::{paid::ClosingTrx, ExecuteMsg, StateQuery, StateResponse},
+    api::{paid::ClosingTrx, ExecuteMsg, StateResponse},
     contract::{
         state::{self, closed::Closed, transfer_in, Controller, Response, State},
         Lease,
@@ -75,7 +76,7 @@ impl Controller for TransferInFinish {
         }
     }
 
-    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         Ok(StateResponse::Paid {
             amount: self.lease.lease.amount,
             in_progress: Some(ClosingTrx::TransferInFinish),

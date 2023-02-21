@@ -1,3 +1,4 @@
+use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::lender::LppLenderRef;
@@ -94,11 +95,10 @@ impl Controller for RequestLoan {
         self.on_response(deps.as_ref(), env, msg)
     }
 
-    fn query(
+    fn state(
         self,
-        _deps: Deps<'_>,
-        _env: Env,
-        _msg: crate::api::StateQuery,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
     ) -> ContractResult<crate::api::StateResponse> {
         unreachable!()
     }

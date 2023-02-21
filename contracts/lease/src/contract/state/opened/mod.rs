@@ -1,4 +1,4 @@
-use sdk::cosmwasm_std::{Deps, Env};
+use cosmwasm_std::{Timestamp, QuerierWrapper};
 
 use crate::{
     api::{opened::OngoingTrx, StateResponse},
@@ -10,16 +10,16 @@ use crate::{
 pub mod active;
 pub mod repay;
 
-fn query(
+fn lease_state(
     lease: LeaseDTO,
     in_progress: Option<OngoingTrx>,
-    deps: &Deps<'_>,
-    env: &Env,
+    now: Timestamp,
+    querier: &QuerierWrapper<'_>,
 ) -> ContractResult<StateResponse> {
-    // TODO think on taking benefit from having a LppView trait
+    
     with_lease::execute(
         lease,
-        LeaseState::new(env.block.time, in_progress),
-        &deps.querier,
+        LeaseState::new(now, in_progress),
+        querier,
     )
 }

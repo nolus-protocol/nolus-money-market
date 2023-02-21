@@ -8,7 +8,7 @@ use sdk::{
 
 use crate::{
     api::{
-        dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateQuery, StateResponse,
+        dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateResponse,
     },
     contract::{
         dex::DexConnectable,
@@ -82,13 +82,13 @@ impl Controller for TransferInInit {
         state::on_timeout_repair_channel(self, Type::RepaymentTransferIn, deps, env)
     }
 
-    fn query(self, deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         repay::query(
             self.lease.lease,
             self.payment,
             RepayTrx::TransferInInit,
-            &deps,
-            &env,
+            now,
+            querier,
         )
     }
 }

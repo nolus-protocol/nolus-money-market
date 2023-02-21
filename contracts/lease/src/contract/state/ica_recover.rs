@@ -23,7 +23,7 @@ impl<S> InRecovery<S> {
 
 impl<S> IcaConnectee for InRecovery<S>
 where
-    S: Controller + DexConnectable + Into<State>,
+    S: Controller + Into<State>,
 {
     type NextState = S;
 
