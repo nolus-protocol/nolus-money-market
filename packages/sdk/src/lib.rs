@@ -13,11 +13,6 @@ pub use cw_storage_plus;
 #[cfg(feature = "neutron")]
 pub use neutron_sdk;
 
-pub const RELEASE_VERSION: &str = env!(
-    "RELEASE_VERSION",
-    r#"No release version provided as an environment variable! Please set "RELEASE_VERSION" environment variable!"#,
-);
-
 #[cfg(all(not(target_arch = "wasm32"), feature = "testing"))]
 pub mod testing;
 

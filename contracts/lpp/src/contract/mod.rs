@@ -9,7 +9,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
 };
-use versioning::{version, VersionSegment};
+use versioning::{respond_with_release, version, VersionSegment};
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -93,7 +93,7 @@ pub fn instantiate(
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    Ok(Response::default().set_data(to_binary(sdk::RELEASE_VERSION)?))
+    respond_with_release().map_err(Into::into)
 }
 
 struct ExecuteWithLpn<'a> {

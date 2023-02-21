@@ -4,7 +4,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, SubMsgResult},
 };
-use versioning::{package_version, version, VersionSegment};
+use versioning::{package_version, respond_with_release, version, VersionSegment};
 
 use crate::{
     alarms::TimeAlarms,
@@ -35,7 +35,7 @@ pub struct MigrateMsg {}
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    Ok(Response::default().set_data(to_binary(sdk::RELEASE_VERSION)?))
+    respond_with_release().map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

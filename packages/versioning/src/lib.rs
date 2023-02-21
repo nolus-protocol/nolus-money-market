@@ -5,9 +5,19 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "schema")]
 use sdk::schemars::{self, JsonSchema};
 use sdk::{
-    cosmwasm_std::{StdError, StdResult, Storage},
+    cosmwasm_ext::Response,
+    cosmwasm_std::{to_binary, StdError, StdResult, Storage},
     cw_storage_plus::Item,
 };
+
+const RELEASE_VERSION: &str = env!(
+    "RELEASE_VERSION",
+    r#"No release version provided as an environment variable! Please set "RELEASE_VERSION" environment variable!"#,
+);
+
+pub fn respond_with_release() -> StdResult<Response> {
+    Ok(Response::new().set_data(to_binary(self::RELEASE_VERSION)?))
+}
 
 pub type VersionSegment = u16;
 

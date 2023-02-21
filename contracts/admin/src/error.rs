@@ -13,8 +13,6 @@ pub enum ContractError {
     MissingMigrationMessages { symbol: SymbolOwned },
     #[error("No data in migration response!")]
     NoMigrationResponseData {},
-    #[error("Malformed migration response!")]
-    MalformedMigrationResponse(StdError),
     #[error("Contract returned wrong release string! \"{reported}\" was returned, but \"{expected}\" was expected!")]
     WrongRelease { reported: String, expected: String },
 }
