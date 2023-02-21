@@ -173,6 +173,6 @@ _add_wasm_message() {
 
     run_cmd "$genesis_home_dir" "add-wasm-genesis-message" "instantiate-contract" \
       "$code_id" "$init_msg" "--label" "$contract_name" "--run-as" "$admin_addr" \
-      "--admin" "$(admin_contract_instance_addr)" $amount_flag
+      "--admin" "$admin_addr" $amount_flag
   fi
 }
