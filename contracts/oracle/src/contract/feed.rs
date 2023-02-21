@@ -140,21 +140,21 @@ where
 {
     let tree = SupportedPairs::load(storage)?;
     let prices = calc_all_prices::<OracleBase>(storage, block_time, &tree)?;
-    let batch = MarketAlarms
-        .notify_alarms_iter::<OracleBase>(storage, prices, max_count.try_into()?)
-        .try_fold(
-            Batch::default(),
-            |mut batch, receiver| -> Result<Batch, ContractError> {
-                // TODO: get rid of the Nls dummy type argument
-                batch.schedule_execute_wasm_reply_always::<_, Nls>(
-                    &receiver?,
-                    ExecuteAlarmMsg::PriceAlarm(),
-                    None,
-                    batch.len().try_into()?,
-                )?;
-                Ok(batch)
-            },
-        )?;
+    let batch =
+        MarketAlarms::notify_alarms_iter::<OracleBase>(storage, prices, max_count.try_into()?)
+            .try_fold(
+                Batch::default(),
+                |mut batch, receiver| -> Result<Batch, ContractError> {
+                    // TODO: get rid of the Nls dummy type argument
+                    batch.schedule_execute_wasm_reply_always::<_, Nls>(
+                        &receiver?,
+                        ExecuteAlarmMsg::PriceAlarm(),
+                        None,
+                        batch.len().try_into()?,
+                    )?;
+                    Ok(batch)
+                },
+            )?;
 
     Ok(batch.into())
 }

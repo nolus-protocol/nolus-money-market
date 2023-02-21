@@ -79,7 +79,6 @@ impl MarketAlarms {
     }
 
     pub fn notify_alarms_iter<'a, BaseC>(
-        &mut self,
         storage: &'a dyn Storage,
         prices: impl Iterator<Item = BasePrice<SwapGroup, BaseC>> + 'a,
         max_count: usize,
@@ -172,6 +171,29 @@ mod test {
         )
     }
 
+    fn add_alarms<'a>(
+        storage: &mut dyn Storage,
+        mut alarms: impl Iterator<Item = (&'a str, AlarmDTO)>,
+    ) -> Result<(), ContractError> {
+        alarms.try_for_each(|(receiver, alarm)| -> Result<(), ContractError> {
+            MarketAlarms::try_add_price_alarm::<Base>(storage, Addr::unchecked(receiver), alarm)
+        })
+    }
+
+    fn test_case(storage: &mut dyn Storage) {
+        add_alarms(
+            storage,
+            [
+                ("recv2", alarm_dto::<Weth>((1, 20), Some((1, 50)))),
+                ("recv1", alarm_dto::<Weth>((1, 10), Some((1, 60)))),
+                ("recv3", alarm_dto::<Atom>((1, 20), Some((1, 60)))),
+                ("recv4", alarm_dto::<Atom>((1, 30), Some((1, 70)))),
+            ]
+            .into_iter(),
+        )
+        .unwrap();
+    }
+
     #[test]
     #[should_panic]
     fn wrong_base_currency() {
@@ -237,58 +259,154 @@ mod test {
 
         let mut storage = MockStorage::new();
 
-        let _: Vec<_> = MarketAlarms.notify_alarms_iter::<Base>(
+        let _: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
             &mut storage,
             [price::total_of(Coin::<Nls>::new(1))
                 .is(Coin::<Base>::new(25))
                 .into()]
             .into_iter(),
             1,
-        ).collect();
+        )
+        .collect();
     }
 
     #[test]
-    fn notify() {
+    fn alarms_below_none() {
         let mut storage = MockStorage::new();
 
-        for x in 0..=5 {
-            let delta = x * 10;
+        test_case(&mut storage);
 
-            let receiver = Addr::unchecked(format!("receiver1_{}", delta));
+        let mut sent = MarketAlarms::notify_alarms_iter::<Base>(
+            &storage,
+            [tests::base_price::<Weth>(1, 25)].into_iter(),
+            100,
+        );
 
-            MarketAlarms::try_add_price_alarm::<Base>(
-                &mut storage,
-                receiver,
-                alarm_dto::<Atom>((1, 10 + delta), Some((1, 30 + delta))),
-            )
-            .unwrap();
+        assert!(sent.next().is_none());
+    }
 
-            let receiver = Addr::unchecked(format!("receiver2_{}", delta));
+    #[test]
+    fn alarms_below_mid() {
+        let mut storage = MockStorage::new();
 
-            MarketAlarms::try_add_price_alarm::<Base>(
-                &mut storage,
-                receiver,
-                alarm_dto::<Weth>((1, 50 + delta), None),
-            )
-            .unwrap();
-        }
+        test_case(&mut storage);
 
-        let sent = MarketAlarms
-            .notify_alarms_iter::<Base>(&storage, [tests::base_price::<Atom>(1, 25)].into_iter(), 3)
-            .count();
-        assert_eq!(sent, 3);
+        let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
+            &storage,
+            [tests::base_price::<Weth>(1, 15)].into_iter(),
+            100,
+        )
+        .flatten()
+        .collect();
 
-        let sent = MarketAlarms
-            .notify_alarms_iter::<Base>(
-                &storage,
-                [
-                    tests::base_price::<Atom>(1, 35),
-                    tests::base_price::<Weth>(1, 20),
-                ]
-                .into_iter(),
-                100,
-            )
-            .count();
-        assert_eq!(sent, 10);
+        assert_eq!(sent, vec!["recv2"]);
+    }
+
+    #[test]
+    fn alarms_below_all() {
+        let mut storage = MockStorage::new();
+
+        test_case(&mut storage);
+
+        let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
+            &storage,
+            [tests::base_price::<Weth>(1, 5)].into_iter(),
+            100,
+        )
+        .flatten()
+        .collect();
+
+        assert_eq!(sent, vec!["recv2", "recv1"]);
+    }
+
+    #[test]
+    fn alarms_above_none() {
+        let mut storage = MockStorage::new();
+
+        test_case(&mut storage);
+
+        let mut sent = MarketAlarms::notify_alarms_iter::<Base>(
+            &storage,
+            [tests::base_price::<Weth>(1, 25)].into_iter(),
+            100,
+        );
+
+        assert!(sent.next().is_none());
+    }
+
+    #[test]
+    fn alarms_above_mid() {
+        let mut storage = MockStorage::new();
+
+        test_case(&mut storage);
+
+        let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
+            &storage,
+            [tests::base_price::<Weth>(1, 55)].into_iter(),
+            100,
+        )
+        .flatten()
+        .collect();
+
+        assert_eq!(sent, vec!["recv2"]);
+    }
+
+    #[test]
+    fn alarms_above_all() {
+        let mut storage = MockStorage::new();
+
+        test_case(&mut storage);
+
+        let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
+            &storage,
+            [tests::base_price::<Weth>(1, 65)].into_iter(),
+            100,
+        )
+        .flatten()
+        .collect();
+
+        assert_eq!(sent, vec!["recv1", "recv2"]);
+    }
+
+    #[test]
+    fn alarms_mixed() {
+        let mut storage = MockStorage::new();
+
+        test_case(&mut storage);
+
+        let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
+            &storage,
+            [
+                tests::base_price::<Weth>(1, 65),
+                tests::base_price::<Atom>(1, 25),
+            ]
+            .into_iter(),
+            100,
+        )
+        .flatten()
+        .collect();
+
+        assert_eq!(sent, vec!["recv1", "recv2", "recv4"]);
+    }
+
+    #[test]
+    fn alarms_max_count() {
+        let mut storage = MockStorage::new();
+
+        test_case(&mut storage);
+
+        let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
+            &storage,
+            [
+                tests::base_price::<Weth>(1, 65),
+                tests::base_price::<Atom>(1, 15),
+            ]
+            .into_iter(),
+            3,
+        )
+        .flatten()
+        .collect();
+
+        assert_eq!(sent, vec!["recv1", "recv2", "recv4"]);
     }
 }
