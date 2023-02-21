@@ -9,15 +9,15 @@ use sdk::{
 };
 
 use crate::common::{
-    type_defs::{MaybeMigrateGeneral, MigrateGeneralContracts, MigrateSpecializedContracts},
-    GeneralContractsGroup, SpecializedContractsGroup,
+    type_defs::{MaybeMigrateGeneralContract, MigrateGeneralContracts, MigrateLpnContracts},
+    GeneralContracts, LpnContracts,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub struct InstantiateMsg {
-    pub general_contracts: GeneralContractsGroup<Addr>,
-    pub specialized_contracts: HashMap<SymbolOwned, SpecializedContractsGroup<Addr>>,
+    pub general_contracts: GeneralContracts<Addr>,
+    pub lpn_contracts: HashMap<SymbolOwned, LpnContracts<Addr>>,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -26,17 +26,17 @@ pub struct MigrateMsg {}
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
 pub enum SudoMsg {
-    AddSpecializedGroup {
+    RegisterLpnContracts {
         symbol: SymbolOwned,
-        specialized_contracts: SpecializedContractsGroup<Addr>,
+        contracts: LpnContracts<Addr>,
     },
-    Migrate(Box<MigrateContracts>),
+    MigrateContracts(Box<MigrateContracts>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct MigrateContracts {
     pub release: String,
-    pub admin_contract: MaybeMigrateGeneral,
+    pub admin_contract: MaybeMigrateGeneralContract,
     pub general_contracts: MigrateGeneralContracts,
-    pub specialized_contracts: MigrateSpecializedContracts,
+    pub lpn_contracts: MigrateLpnContracts,
 }

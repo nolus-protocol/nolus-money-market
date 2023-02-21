@@ -2,14 +2,15 @@
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{ensure_eq, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{ensure_eq, Addr, DepsMut, Env, MessageInfo, Reply},
 };
-use state::{ContractGroups, MigrationRelease};
 use versioning::{respond_with_release, version, VersionSegment};
 
 use self::{
+    common::{Contracts, LpnContracts},
     error::ContractError,
     msg::{InstantiateMsg, MigrateMsg, SudoMsg},
+    state::{contracts as state_contracts, migration_release},
 };
 
 pub mod common;
@@ -31,22 +32,19 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    platform::contract::validate_addr(&deps.querier, &msg.general_contracts.profit)?;
-    platform::contract::validate_addr(&deps.querier, &msg.general_contracts.timealarms)?;
-    platform::contract::validate_addr(&deps.querier, &msg.general_contracts.treasury)?;
+    msg.general_contracts
+        .as_ref()
+        .try_for_each(|addr: &Addr| platform::contract::validate_addr(&deps.querier, addr))?;
 
-    for group in msg.specialized_contracts.values() {
-        platform::contract::validate_addr(&deps.querier, &group.dispatcher)?;
-        platform::contract::validate_addr(&deps.querier, &group.leaser)?;
-        platform::contract::validate_addr(&deps.querier, &group.lpp)?;
-        platform::contract::validate_addr(&deps.querier, &group.oracle)?;
-    }
+    msg.lpn_contracts
+        .values()
+        .map(Contracts::as_ref)
+        .try_for_each(|contracts: LpnContracts<&Addr>| {
+            contracts
+                .try_for_each(|addr: &Addr| platform::contract::validate_addr(&deps.querier, addr))
+        })?;
 
-    ContractGroups::store_contract_addrs(
-        deps.storage,
-        msg.general_contracts,
-        msg.specialized_contracts,
-    )?;
+    state_contracts::store(deps.storage, msg.general_contracts, msg.lpn_contracts)?;
 
     Ok(Response::default())
 }
@@ -61,25 +59,20 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Respons
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
     match msg {
-        SudoMsg::AddSpecializedGroup {
-            symbol,
-            specialized_contracts,
-        } => {
-            ContractGroups::add_specialized_group(deps.storage, symbol, specialized_contracts)?;
+        SudoMsg::RegisterLpnContracts { symbol, contracts } => {
+            state_contracts::register_lpn_contracts(deps.storage, symbol, contracts)?;
 
             Ok(Response::default())
         }
-        SudoMsg::Migrate(migrate_contracts_variant) => migrate_contracts::migrate(
-            deps.storage,
-            env.contract.address,
-            migrate_contracts_variant,
-        ),
+        SudoMsg::MigrateContracts(migrate_contracts) => {
+            migrate_contracts::migrate(deps.storage, env.contract.address, migrate_contracts)
+        }
     }
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    let expected_release: String = MigrationRelease::load(deps.storage)?;
+    let expected_release: String = migration_release::load(deps.storage)?;
 
     let reported_release: String =
         platform::reply::from_execute(msg)?.ok_or(ContractError::NoMigrationResponseData {})?;

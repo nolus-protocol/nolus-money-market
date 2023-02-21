@@ -2,14 +2,14 @@ use std::collections::HashMap;
 
 use finance::currency::SymbolOwned;
 
-use super::{CodeIdWithMigrateMsg, GeneralContractsGroup, SpecializedContractsGroup};
+use super::{CodeIdWithMigrateMsg, GeneralContracts, LpnContracts};
 
-pub type MigrateInfo = CodeIdWithMigrateMsg<String>;
+pub type MigrateContract = CodeIdWithMigrateMsg<String>;
 
-pub type MigrateGeneral = CodeIdWithMigrateMsg<String>;
-pub type MaybeMigrateGeneral = Option<MigrateGeneral>;
-pub type MigrateGeneralContracts = GeneralContractsGroup<MaybeMigrateGeneral>;
+pub type MigrateGeneralContract = CodeIdWithMigrateMsg<String>;
+pub type MaybeMigrateGeneralContract = Option<MigrateGeneralContract>;
+pub type MigrateGeneralContracts = GeneralContracts<MaybeMigrateGeneralContract>;
 
-pub type MigrateSpecialized = CodeIdWithMigrateMsg<HashMap<SymbolOwned, String>>;
-pub type MaybeMigrateSpecialized = Option<MigrateSpecialized>;
-pub type MigrateSpecializedContracts = SpecializedContractsGroup<MaybeMigrateSpecialized>;
+pub type MigrateLpnContract = CodeIdWithMigrateMsg<HashMap<SymbolOwned, String>>;
+pub type MaybeMigrateLpnContract = Option<MigrateLpnContract>;
+pub type MigrateLpnContracts = LpnContracts<MaybeMigrateLpnContract>;

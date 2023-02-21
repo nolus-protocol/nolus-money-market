@@ -1,7 +1,2 @@
-mod contract_groups;
-mod migration_release;
-
-pub(crate) use self::{
-    contract_groups::{ContractGroups, SpecializedContractAddrsIter},
-    migration_release::MigrationRelease,
-};
+pub(crate) mod contracts;
+pub(crate) mod migration_release;
