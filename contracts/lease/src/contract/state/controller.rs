@@ -22,11 +22,10 @@ use crate::{
     error::{ContractError, ContractResult},
 };
 
-use super::{opening::request_loan::RequestLoan, Response};
+use super::{opening::request_loan::RequestLoan, v0::Migrate, Response};
 
-// version info for migration info
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 
 #[enum_dispatch]
 pub(crate) trait Controller
@@ -105,7 +104,15 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
+    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _>(
+        deps.storage,
+        version!(CONTRACT_STORAGE_VERSION),
+        |storage: &mut _| {
+            let migrated_contract = super::load_old_v1(storage)?.into_last_version();
+
+            super::save(storage, &migrated_contract)
+        },
+    )?;
 
     Ok(CwResponse::default())
 }

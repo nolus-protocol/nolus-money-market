@@ -28,7 +28,6 @@ pub(crate) trait IcaConnectee {
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct IcaConnector<Connectee> {
-    #[serde(flatten)]
     connectee: Connectee,
 }
 

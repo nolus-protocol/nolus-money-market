@@ -2,6 +2,7 @@ use cosmwasm_std::{Addr, Binary, StdResult, Storage};
 use enum_dispatch::enum_dispatch;
 use platform::batch::{Batch, Emit, Emitter};
 use serde::{Deserialize, Serialize};
+use std::str;
 
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -28,6 +29,7 @@ mod opened;
 mod opening;
 mod paid;
 mod transfer_in;
+mod v0;
 
 type OpenIcaAccount = ica_connector::IcaConnector<opening::open_ica::OpenIcaAccount>;
 type OpeningTransferOut = opening::transfer_out::TransferOut;
@@ -71,6 +73,11 @@ const STATE_DB_ITEM: Item<'static, State> = Item::new("state");
 
 pub(super) fn load(storage: &dyn Storage) -> StdResult<State> {
     STATE_DB_ITEM.load(storage)
+}
+
+pub(super) fn load_old_v1(storage: &dyn Storage) -> StdResult<v0::StateV0> {
+    let old_db_item = Item::new(str::from_utf8(STATE_DB_ITEM.as_slice())?);
+    old_db_item.load(storage)
 }
 
 pub(super) fn save(storage: &mut dyn Storage, next_state: &State) -> StdResult<()> {
