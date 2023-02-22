@@ -5,10 +5,7 @@ use platform::{
     batch::{Batch, Emit, Emitter},
     ica::HostAccount,
 };
-use sdk::{
-    cosmwasm_std::{Addr, Deps, DepsMut, Env},
-    neutron_sdk::sudo::msg::SudoMsg,
-};
+use sdk::cosmwasm_std::{Addr, Deps, Env};
 
 use crate::{
     api::StateResponse,
@@ -81,21 +78,13 @@ where
         Ok(self.enter_state())
     }
 
-    fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
-        match msg {
-            SudoMsg::OpenAck {
-                port_id: _,
-                channel_id: _,
-                counterparty_channel_id: _,
-                counterparty_version,
-            } => self.on_response(counterparty_version, deps.as_ref(), env),
-            SudoMsg::Timeout { request: _ } => self.on_timeout(deps.as_ref(), env),
-            SudoMsg::Error {
-                request: _,
-                details: _,
-            } => todo!(),
-            _ => unreachable!(),
-        }
+    fn on_open_ica(
+        self,
+        counterparty_version: String,
+        deps: Deps<'_>,
+        env: Env,
+    ) -> ContractResult<Response> {
+        self.on_response(counterparty_version, deps, env)
     }
 
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {

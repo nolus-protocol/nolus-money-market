@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Api};
+use cosmwasm_std::{Addr, Api, Binary};
 use enum_dispatch::enum_dispatch;
 use platform::batch::{Batch, Emit, Emitter};
 use serde::{Deserialize, Serialize};
@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, Reply},
-    neutron_sdk::sudo::msg::SudoMsg,
 };
 
 use crate::{
@@ -110,12 +109,25 @@ where
         err("execute", deps.api)
     }
 
-    fn sudo(self, deps: &mut DepsMut<'_>, _env: Env, _msg: SudoMsg) -> ContractResult<Response> {
-        err("sudo", deps.api)
+    fn on_open_ica(
+        self,
+        _counterparty_version: String,
+        deps: Deps<'_>,
+        _env: Env,
+    ) -> ContractResult<Response> {
+        err("sudo response", deps.api)
+    }
+
+    fn on_response(self, _data: Binary, deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
+        err("sudo response", deps.api)
+    }
+
+    fn on_error(self, deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
+        err("sudo error", deps.api)
     }
 
     fn on_timeout(self, deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
-        err("timeout", deps.api)
+        err("sudo timeout", deps.api)
     }
 }
 

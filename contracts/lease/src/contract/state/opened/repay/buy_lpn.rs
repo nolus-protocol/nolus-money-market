@@ -9,10 +9,7 @@ use platform::{
     batch::{Batch as LocalBatch, Emit, Emitter},
     trx,
 };
-use sdk::{
-    cosmwasm_std::{Binary, Deps, DepsMut, Env, QuerierWrapper},
-    neutron_sdk::sudo::msg::SudoMsg,
-};
+use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper};
 use swap::trx as swap_trx;
 
 use crate::{
@@ -84,16 +81,8 @@ impl Controller for BuyLpn {
         self.enter_state(&deps.querier)
     }
 
-    fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
-        match msg {
-            SudoMsg::Response { request: _, data } => self.on_response(data, deps.as_ref(), env),
-            SudoMsg::Timeout { request: _ } => self.on_timeout(deps.as_ref(), env),
-            SudoMsg::Error {
-                request: _,
-                details: _,
-            } => todo!(),
-            _ => unreachable!(),
-        }
+    fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        self.on_response(data, deps, env)
     }
 
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {

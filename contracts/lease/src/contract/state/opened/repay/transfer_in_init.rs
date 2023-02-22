@@ -1,10 +1,8 @@
+use cosmwasm_std::Binary;
 use serde::{Deserialize, Serialize};
 
 use platform::batch::Batch;
-use sdk::{
-    cosmwasm_std::{Deps, DepsMut, Env, QuerierWrapper, Timestamp},
-    neutron_sdk::sudo::msg::SudoMsg,
-};
+use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateResponse},
@@ -61,19 +59,8 @@ impl Controller for TransferInInit {
         self.enter_state(env.block.time)
     }
 
-    fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
-        match msg {
-            SudoMsg::Response {
-                request: _,
-                data: _,
-            } => self.on_response(&deps.querier, &env),
-            SudoMsg::Timeout { request: _ } => self.on_timeout(deps.as_ref(), env),
-            SudoMsg::Error {
-                request: _,
-                details: _,
-            } => todo!(),
-            _ => unreachable!(),
-        }
+    fn on_response(self, _data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        self.on_response(&deps.querier, &env)
     }
 
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {

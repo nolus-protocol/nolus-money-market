@@ -1,11 +1,8 @@
-use cosmwasm_std::QuerierWrapper;
+use cosmwasm_std::{Binary, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
 use platform::batch::{Batch, Emit, Emitter};
-use sdk::{
-    cosmwasm_std::{Deps, DepsMut, Env, Timestamp},
-    neutron_sdk::sudo::msg::SudoMsg,
-};
+use sdk::cosmwasm_std::{Deps, Env, Timestamp};
 
 use crate::{
     api::{opened::RepayTrx, PaymentCoin, StateResponse},
@@ -57,23 +54,8 @@ impl Controller for TransferOut {
         self.enter_state(env.block.time)
     }
 
-    fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
-        match msg {
-            SudoMsg::Response { request: _, data } => {
-                deps.api.debug(&format!(
-                    "[Lease][Repay][TransferOut] receive ack '{}'",
-                    data.to_base64()
-                ));
-
-                self.on_response(deps.as_ref(), env)
-            }
-            SudoMsg::Timeout { request: _ } => self.on_timeout(deps.as_ref(), env),
-            SudoMsg::Error {
-                request: _,
-                details: _,
-            } => todo!(),
-            _ => unreachable!(),
-        }
+    fn on_response(self, _data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        self.on_response(deps, env)
     }
 
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {

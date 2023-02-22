@@ -104,19 +104,33 @@ pub fn execute(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(mut deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
-    impl_::load(deps.storage)?
-        .sudo(&mut deps, env, msg)
-        .and_then(
-            |Response {
-                 cw_response,
-                 next_state,
-             }| {
-                impl_::save(deps.storage, &next_state)?;
+pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
+    let state = impl_::load(deps.storage)?;
+    match msg {
+        SudoMsg::OpenAck {
+            port_id: _,
+            channel_id: _,
+            counterparty_channel_id: _,
+            counterparty_version,
+        } => state.on_open_ica(counterparty_version, deps.as_ref(), env),
+        SudoMsg::Response { request: _, data } => state.on_response(data, deps.as_ref(), env),
+        SudoMsg::Timeout { request: _ } => state.on_timeout(deps.as_ref(), env),
+        SudoMsg::Error {
+            request: _,
+            details: _,
+        } => state.on_error(deps.as_ref(), env),
+        _ => unreachable!(),
+    }
+    .and_then(
+        |Response {
+             cw_response,
+             next_state,
+         }| {
+            impl_::save(deps.storage, &next_state)?;
 
-                Ok(cw_response)
-            },
-        )
+            Ok(cw_response)
+        },
+    )
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
