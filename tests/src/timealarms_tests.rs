@@ -1,9 +1,10 @@
 use currency::{lpn::Usdc, native::Nls};
 use finance::{coin::Coin, currency::Currency, duration::Duration};
 use sdk::{
-    cosmwasm_std::{coin, Addr, Attribute, Timestamp},
-    cw_multi_test::Executor,
+    cosmwasm_std::{coin, from_binary, Addr, Attribute, Timestamp},
+    cw_multi_test::{AppResponse, Executor},
 };
+use timealarms::msg::DispatchAlarmsResponse;
 
 use crate::{
     common::{cwcoin, test_case::TestCase, AppExt, ADMIN},
@@ -90,8 +91,7 @@ mod mock_lease {
 
 type Lpn = Usdc;
 
-#[test]
-fn test_time_notify() {
+fn test_case() -> TestCase<Lpn> {
     let mut test_case = TestCase::<Lpn>::with_reserve(
         None,
         &[coin(
@@ -106,52 +106,101 @@ fn test_time_notify() {
 
     test_case.init_timealarms();
 
-    let timealarms = test_case.timealarms.clone().unwrap();
-
-    let dispatch_msg = timealarms::msg::ExecuteMsg::DispatchAlarms { max_count: 100 };
-
     test_case
         .app
         .update_block(|bl| bl.time = Timestamp::from_nanos(0));
 
-    // instantiate lease, add alarms
-    let lease = proper_instantiate(&mut test_case.app);
+    test_case
+}
 
+fn add_alarm(test_case: &mut TestCase<Lpn>, recv: &Addr, time_secs: u64) {
     let alarm_msg = timealarms::msg::ExecuteMsg::AddAlarm {
-        time: Timestamp::from_seconds(1),
+        time: Timestamp::from_seconds(time_secs),
     };
+    let timealarms = test_case.timealarms.clone().unwrap();
     test_case
         .app
-        .execute_contract(lease.clone(), timealarms.clone(), &alarm_msg, &[])
+        .execute_contract(recv.clone(), timealarms, &alarm_msg, &[])
         .unwrap();
-    let alarm_msg = timealarms::msg::ExecuteMsg::AddAlarm {
-        time: Timestamp::from_seconds(6),
-    };
+}
+
+fn dispatch(test_case: &mut TestCase<Lpn>, max_count: u32) -> AppResponse {
+    let dispatch_msg = timealarms::msg::ExecuteMsg::DispatchAlarms { max_count };
     test_case
         .app
-        .execute_contract(lease.clone(), timealarms.clone(), &alarm_msg, &[])
-        .unwrap();
+        .execute_contract(
+            Addr::unchecked(ADMIN),
+            test_case.timealarms.clone().unwrap(),
+            &dispatch_msg,
+            &[],
+        )
+        .unwrap()
+}
+
+fn any_error(resp: &AppResponse) -> bool {
+    let maybe_attr = resp
+        .events
+        .iter()
+        .flat_map(|ev| &ev.attributes)
+        .find(|atr| atr.key == "alarm");
+
+    matches!(maybe_attr.map(|attr| attr.value.as_str()), Some("error"))
+}
+
+fn sent_alarms(resp: &AppResponse) -> Option<u32> {
+    resp.data
+        .as_ref()
+        .map(|data| from_binary::<DispatchAlarmsResponse>(data).unwrap().0)
+}
+
+#[test]
+fn fired_alarms_are_removed() {
+    let mut test_case = test_case();
+    let lease1 = proper_instantiate(&mut test_case.app);
+    let lease2 = proper_instantiate(&mut test_case.app);
+
+    add_alarm(&mut test_case, &lease1, 1);
+    add_alarm(&mut test_case, &lease1, 2);
+    add_alarm(&mut test_case, &lease2, 3);
 
     // advance by 5 seconds
     test_case.app.time_shift(Duration::from_secs(5));
 
-    // trigger notification, the GATE is open, events are stacked for the whole chain of contracts calls
-    let resp = test_case
-        .app
-        .execute_contract(
-            Addr::unchecked(ADMIN),
-            timealarms.clone(),
-            &dispatch_msg,
-            &[],
-        )
-        .unwrap();
-    let attr = resp
-        .events
-        .iter()
-        .flat_map(|ev| &ev.attributes)
-        .find(|atr| atr.key == "lease_reply")
-        .unwrap();
-    assert_eq!(attr.value, test_case.app.block_info().time.to_string());
+    let resp = dispatch(&mut test_case, 100);
+    assert!(!any_error(&resp));
+    assert_eq!(sent_alarms(&resp), Some(3));
+
+    // try to resend same alarms
+    let resp = dispatch(&mut test_case, 100);
+    assert!(!any_error(&resp));
+    assert_eq!(sent_alarms(&resp), Some(0));
+}
+
+#[test]
+fn test_time_notify() {
+    let mut test_case = test_case();
+
+    // instantiate lease, add alarms
+    let lease1 = proper_instantiate(&mut test_case.app);
+    let lease2 = proper_instantiate(&mut test_case.app);
+
+    add_alarm(&mut test_case, &lease1, 1);
+    add_alarm(&mut test_case, &lease2, 2);
+    add_alarm(&mut test_case, &lease1, 3);
+
+    add_alarm(&mut test_case, &lease1, 6);
+    add_alarm(&mut test_case, &lease2, 7);
+
+    // advance by 5 seconds
+    test_case.app.time_shift(Duration::from_secs(5));
+
+    let resp = dispatch(&mut test_case, 100);
+
+    assert!(!any_error(&resp));
+    assert_eq!(sent_alarms(&resp), Some(3));
+
+    let resp = dispatch(&mut test_case, 100);
+    assert_eq!(sent_alarms(&resp), Some(0));
 
     test_case.app.time_shift(Duration::from_secs(5));
 
@@ -159,42 +208,27 @@ fn test_time_notify() {
     let close_gate = mock_lease::MockExecuteMsg::Gate(false);
     test_case
         .app
-        .execute_contract(Addr::unchecked(ADMIN), lease.clone(), &close_gate, &[])
+        .execute_contract(Addr::unchecked(ADMIN), lease1.clone(), &close_gate, &[])
         .unwrap();
-    let resp = test_case
-        .app
-        .execute_contract(
-            Addr::unchecked(ADMIN),
-            timealarms.clone(),
-            &dispatch_msg,
-            &[],
-        )
-        .unwrap();
-    let attr = resp
-        .events
-        .iter()
-        .flat_map(|ev| &ev.attributes)
-        .find(|atr| atr.key == "alarm")
-        .unwrap();
-    assert_eq!(attr.value, "error");
+    let resp = dispatch(&mut test_case, 100);
+    dbg!(&resp);
+    assert!(any_error(&resp));
 
     // open the GATE, check for remaining alarm
     let open_gate = mock_lease::MockExecuteMsg::Gate(true);
     test_case
         .app
-        .execute_contract(Addr::unchecked(ADMIN), lease, &open_gate, &[])
+        .execute_contract(Addr::unchecked(ADMIN), lease1, &open_gate, &[])
         .unwrap();
-    let resp = test_case
-        .app
-        .execute_contract(Addr::unchecked(ADMIN), timealarms, &dispatch_msg, &[])
-        .unwrap();
-    let attr = resp
-        .events
-        .iter()
-        .flat_map(|ev| &ev.attributes)
-        .find(|atr| atr.key == "lease_reply")
-        .unwrap();
-    assert_eq!(attr.value, test_case.app.block_info().time.to_string());
+
+    let resp = dispatch(&mut test_case, 100);
+    assert!(!any_error(&resp));
+    assert_eq!(sent_alarms(&resp), Some(1));
+
+    // check if something is left
+    let resp = dispatch(&mut test_case, 100);
+    assert!(!any_error(&resp));
+    assert_eq!(sent_alarms(&resp), Some(0));
 }
 
 #[test]
