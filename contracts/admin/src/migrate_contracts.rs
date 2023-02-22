@@ -1,10 +1,9 @@
 use std::iter;
 
-use finance::currency::SymbolOwned;
 use platform::batch::Batch;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, Binary, StdResult, Storage, WasmMsg},
+    cosmwasm_std::{Addr, Binary, Storage, WasmMsg},
 };
 
 use crate::{
@@ -13,12 +12,14 @@ use crate::{
             MaybeMigrateGeneralContract, MaybeMigrateLpnContract, MigrateContract,
             MigrateGeneralContract, MigrateLpnContract, MigrateLpnContracts,
         },
-        Contracts as _, GeneralContracts, LpnContracts,
+        Contracts as _, GeneralContracts,
     },
     error::ContractError,
     msg::MigrateContracts,
     state::{
-        contracts::{self as state_contracts, LpnContractsAddrsIter},
+        contracts::{
+            self as state_contracts, LpnContractsSymbolAddrs, LpnContractsSymbolAddrsResult,
+        },
         migration_release,
     },
 };
@@ -31,8 +32,7 @@ pub(crate) fn migrate(
     migration_release::store(storage, msg.release)?;
 
     let general_contracts_addrs: GeneralContracts<Addr> = state_contracts::load_general(storage)?;
-    let mut lpn_contracts_addrs_iter: LpnContractsAddrsIter<'_> =
-        state_contracts::load_lpn_contracts(storage);
+    let mut lpn_contracts_addrs_iter = state_contracts::load_lpn_contracts(storage);
 
     let mut batch: Batch = Batch::default();
 
@@ -67,11 +67,11 @@ fn add_to_batch(batch: &mut Batch) -> impl FnMut((Addr, MigrateContract)) + '_ {
 fn migrate_lpn_contracts(
     mut contracts: MigrateLpnContracts,
     batch: &mut Batch,
-) -> impl FnMut(StdResult<(SymbolOwned, LpnContracts<Addr>)>) -> Result<(), ContractError> + '_ {
+) -> impl FnMut(LpnContractsSymbolAddrsResult) -> Result<(), ContractError> + '_ {
     let mut add_to_batch = add_to_batch(batch);
 
-    move |result: StdResult<(SymbolOwned, LpnContracts<Addr>)>| -> Result<(), ContractError> {
-        let (symbol, group): (SymbolOwned, LpnContracts<Addr>) = result?;
+    move |result: LpnContractsSymbolAddrsResult| -> Result<(), ContractError> {
+        let (symbol, group): LpnContractsSymbolAddrs = result?;
 
         group
             .zip_iter(contracts.as_mut())

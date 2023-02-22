@@ -50,9 +50,11 @@ pub(crate) fn load_general(storage: &dyn Storage) -> StdResult<GeneralContracts<
     GENERAL_CONTRACTS.load(storage)
 }
 
-pub(crate) fn load_lpn_contracts(storage: &dyn Storage) -> LpnContractsAddrsIter<'_> {
+pub(crate) fn load_lpn_contracts(
+    storage: &dyn Storage,
+) -> impl Iterator<Item = LpnContractsSymbolAddrsResult> + '_ {
     LPN_CONTRACTS.range(storage, None, None, Order::Ascending)
 }
 
-pub(crate) type LpnContractsAddrsIter<'r> =
-    Box<dyn Iterator<Item = StdResult<(SymbolOwned, LpnContracts<Addr>)>> + 'r>;
+pub(crate) type LpnContractsSymbolAddrs = (SymbolOwned, LpnContracts<Addr>);
+pub(crate) type LpnContractsSymbolAddrsResult = StdResult<LpnContractsSymbolAddrs>;
