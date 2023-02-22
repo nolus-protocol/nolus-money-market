@@ -1,14 +1,14 @@
-use cosmwasm_std::Binary;
+use cosmwasm_std::{Binary, DepsMut, MessageInfo};
 use serde::{Deserialize, Serialize};
 
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
-    api::{dex::ConnectionParams, paid::ClosingTrx, StateResponse},
+    api::{dex::ConnectionParams, paid::ClosingTrx, ExecuteMsg, StateResponse},
     contract::{
         dex::DexConnectable,
-        state::{self, Controller, Response},
+        state::{self, controller, Controller, Response},
         Contract, Lease,
     },
     error::ContractResult,
@@ -47,6 +47,21 @@ impl DexConnectable for TransferInInit {
 impl Controller for TransferInInit {
     fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
         self.enter_state(env.block.time)
+    }
+
+    fn execute(
+        self,
+        deps: &mut DepsMut<'_>,
+        _env: Env,
+        _info: MessageInfo,
+        msg: ExecuteMsg,
+    ) -> ContractResult<Response> {
+        match msg {
+            ExecuteMsg::Repay() => controller::err("repay", deps.api),
+            ExecuteMsg::Close() => controller::err("close", deps.api),
+            ExecuteMsg::PriceAlarm() => state::ignore_msg(self),
+            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self),
+        }
     }
 
     fn on_response(self, _data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {

@@ -17,7 +17,7 @@ use crate::{
     contract::{
         cmd::{AlarmResult, OpenLoanRespResult, PriceAlarm, Repay, RepayResult, TimeAlarm},
         dex::Account,
-        state::{paid, Controller, Response},
+        state::{controller, paid, Controller, Response},
         Contract, Lease,
     },
     error::{ContractError, ContractResult},
@@ -138,7 +138,7 @@ impl Controller for Active {
     ) -> ContractResult<Response> {
         match msg {
             ExecuteMsg::Repay() => self.try_repay(deps.as_ref(), env, info),
-            ExecuteMsg::Close() => todo!("fail"),
+            ExecuteMsg::Close() => controller::err("close", deps.api),
             ExecuteMsg::PriceAlarm() => self.try_on_price_alarm(&deps.querier, &env, info),
             ExecuteMsg::TimeAlarm {} => self.try_on_time_alarm(&deps.querier, &env, info),
         }

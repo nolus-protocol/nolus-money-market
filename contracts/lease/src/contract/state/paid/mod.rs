@@ -5,11 +5,11 @@ use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo};
 
 use crate::{
     api::{ExecuteMsg, StateResponse},
-    contract::{Contract, Lease},
+    contract::{state, Contract, Lease},
     error::ContractResult,
 };
 
-use super::{Controller, Response};
+use super::{controller, Controller, Response};
 
 use self::transfer_in_init::TransferInInit;
 
@@ -36,18 +36,14 @@ impl Controller for Active {
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         match msg {
-            ExecuteMsg::Repay() => todo!("fail"),
+            ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => {
                 let transfer_in = TransferInInit::new(self.lease);
                 let batch = transfer_in.enter(deps.as_ref(), env)?;
                 Ok(Response::from(batch, transfer_in))
             }
-            ExecuteMsg::PriceAlarm() => {
-                todo!("silently pass or make sure the alarm has been removed")
-            }
-            ExecuteMsg::TimeAlarm {} => {
-                todo!("silently pass or make sure the alarm has been removed")
-            }
+            ExecuteMsg::PriceAlarm() => state::ignore_msg(self),
+            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self),
         }
     }
 }

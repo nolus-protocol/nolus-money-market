@@ -1,4 +1,4 @@
-use cosmwasm_std::Timestamp;
+use cosmwasm_std::{DepsMut, MessageInfo, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use platform::{
@@ -8,14 +8,14 @@ use platform::{
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::StateResponse,
-    contract::{cmd::Close, Contract},
+    api::{ExecuteMsg, StateResponse},
+    contract::{cmd::Close, state, Contract},
     error::ContractResult,
     event::Type,
     lease::{with_lease, IntoDTOResult, LeaseDTO},
 };
 
-use super::Controller;
+use super::{controller, Controller, Response};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Closed {}
@@ -42,7 +42,22 @@ impl Closed {
     }
 }
 
-impl Controller for Closed {}
+impl Controller for Closed {
+    fn execute(
+        self,
+        deps: &mut DepsMut<'_>,
+        _env: Env,
+        _info: MessageInfo,
+        msg: ExecuteMsg,
+    ) -> ContractResult<Response> {
+        match msg {
+            ExecuteMsg::Repay() => controller::err("repay", deps.api),
+            ExecuteMsg::Close() => controller::err("close", deps.api),
+            ExecuteMsg::PriceAlarm() => state::ignore_msg(self),
+            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self),
+        }
+    }
+}
 
 impl Contract for Closed {
     fn state(

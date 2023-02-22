@@ -130,3 +130,10 @@ fn emit_timeout(event_type: Type, contract: Addr) -> Emitter {
         .emit("id", contract)
         .emit("timeout", "")
 }
+
+fn ignore_msg<S>(state: S) -> ContractResult<Response>
+where
+    S: Into<State>,
+{
+    Ok(Response::from(CwResponse::new(), state))
+}

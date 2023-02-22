@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper};
 use crate::{
     api::{paid::ClosingTrx, ExecuteMsg, StateResponse},
     contract::{
-        state::{closed::Closed, controller, transfer_in, Controller, Response, State},
+        state::{self, closed::Closed, controller, transfer_in, Controller, Response, State},
         Contract, Lease,
     },
     error::ContractResult,
@@ -69,10 +69,11 @@ impl Controller for TransferInFinish {
         _info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        if matches!(msg, ExecuteMsg::TimeAlarm {}) {
-            self.on_alarm(&deps.querier, &env)
-        } else {
-            controller::err(&format!("{:?}", msg), deps.api)
+        match msg {
+            ExecuteMsg::Repay() => controller::err("repay", deps.api),
+            ExecuteMsg::Close() => controller::err("close", deps.api),
+            ExecuteMsg::PriceAlarm() => state::ignore_msg(self),
+            ExecuteMsg::TimeAlarm {} => self.on_alarm(&deps.querier, &env),
         }
     }
 }

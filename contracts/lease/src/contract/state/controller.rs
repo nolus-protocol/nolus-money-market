@@ -57,7 +57,7 @@ where
         deps: Deps<'_>,
         _env: Env,
     ) -> ContractResult<Response> {
-        err("sudo response", deps.api)
+        err("sudo open ica", deps.api)
     }
 
     fn on_response(self, _data: Binary, deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
