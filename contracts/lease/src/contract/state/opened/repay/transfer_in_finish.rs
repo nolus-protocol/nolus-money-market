@@ -8,7 +8,7 @@ use crate::{
     api::{opened::RepayTrx, ExecuteMsg, LpnCoin, PaymentCoin, StateResponse},
     contract::{
         state::{
-            self,
+            controller,
             opened::{active::Active, repay},
             transfer_in, Controller, Response,
         },
@@ -80,7 +80,7 @@ impl Controller for TransferInFinish {
         if matches!(msg, ExecuteMsg::TimeAlarm {}) {
             self.on_alarm(&deps.querier, &env)
         } else {
-            state::err(&format!("{:?}", msg), deps.api)
+            controller::err(&format!("{:?}", msg), deps.api)
         }
     }
 }

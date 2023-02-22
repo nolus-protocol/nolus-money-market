@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Api, Binary};
+use cosmwasm_std::{Addr, Binary, StdResult, Storage};
 use enum_dispatch::enum_dispatch;
 use platform::batch::{Batch, Emit, Emitter};
 use serde::{Deserialize, Serialize};
@@ -6,23 +6,22 @@ use serde::{Deserialize, Serialize};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, Reply},
+    cw_storage_plus::Item,
 };
 
-use crate::{
-    api::ExecuteMsg,
-    error::{ContractError as Err, ContractResult},
-    event::Type,
-};
+use crate::{api::ExecuteMsg, error::ContractResult, event::Type};
 
-pub use self::opening::request_loan::RequestLoan;
 use self::{
-    closed::Closed, ica_connector::IcaConnector, ica_recover::InRecovery,
+    closed::Closed, controller::Controller, ica_connector::IcaConnector, ica_recover::InRecovery,
     opened::repay::buy_lpn::BuyLpn, opening::buy_asset::BuyAsset,
+    opening::request_loan::RequestLoan,
 };
+pub use controller::{execute, instantiate, migrate, query, reply, sudo};
 
 use super::dex::DexConnectable;
 
 mod closed;
+mod controller;
 mod ica_connector;
 mod ica_recover;
 mod opened;
@@ -68,6 +67,16 @@ pub(crate) enum State {
     Closed,
 }
 
+const STATE_DB_ITEM: Item<'static, State> = Item::new("state");
+
+pub(super) fn load(storage: &dyn Storage) -> StdResult<State> {
+    STATE_DB_ITEM.load(storage)
+}
+
+pub(super) fn save(storage: &mut dyn Storage, next_state: &State) -> StdResult<()> {
+    STATE_DB_ITEM.save(storage, next_state)
+}
+
 pub(crate) struct Response {
     pub(super) cw_response: CwResponse,
     pub(super) next_state: State,
@@ -84,58 +93,6 @@ impl Response {
             next_state: next_state.into(),
         }
     }
-}
-
-#[enum_dispatch]
-pub(crate) trait Controller
-where
-    Self: Sized,
-{
-    fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<Batch> {
-        err("enter", deps.api)
-    }
-
-    fn reply(self, deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {
-        err("reply", deps.api)
-    }
-
-    fn execute(
-        self,
-        deps: &mut DepsMut<'_>,
-        _env: Env,
-        _info: MessageInfo,
-        _msg: ExecuteMsg,
-    ) -> ContractResult<Response> {
-        err("execute", deps.api)
-    }
-
-    fn on_open_ica(
-        self,
-        _counterparty_version: String,
-        deps: Deps<'_>,
-        _env: Env,
-    ) -> ContractResult<Response> {
-        err("sudo response", deps.api)
-    }
-
-    fn on_response(self, _data: Binary, deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
-        err("sudo response", deps.api)
-    }
-
-    fn on_error(self, deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
-        err("sudo error", deps.api)
-    }
-
-    fn on_timeout(self, deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
-        err("sudo timeout", deps.api)
-    }
-}
-
-fn err<R>(op: &str, api: &dyn Api) -> ContractResult<R> {
-    let err = Err::unsupported_operation(op);
-    api.debug(&format!("{:?}", op));
-
-    Err(err)
 }
 
 fn on_timeout_retry<L>(
