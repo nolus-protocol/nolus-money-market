@@ -67,6 +67,20 @@ fn create_test_case() -> TestCase<Lpn> {
 }
 
 #[test]
+fn test_lease_serde() {
+    use lease::api::ExecuteMsg::PriceAlarm as LeasePriceAlarm;
+    use oracle::msg::ExecuteAlarmMsg::PriceAlarm;
+
+    let LeasePriceAlarm {} = serde_json_wasm::from_slice(&serde_json_wasm::to_vec(&PriceAlarm {}).unwrap()).unwrap() else {
+        unreachable!()
+    };
+
+    let PriceAlarm {} =
+        serde_json_wasm::from_slice(&serde_json_wasm::to_vec(&LeasePriceAlarm {}).unwrap())
+            .unwrap();
+}
+
+#[test]
 fn register_feeder() {
     let mut test_case = create_test_case();
     let user = Addr::unchecked(USER);

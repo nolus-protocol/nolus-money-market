@@ -91,6 +91,19 @@ mod mock_lease {
 
 type Lpn = Usdc;
 
+#[test]
+fn test_lease_serde() {
+    use lease::api::ExecuteMsg::TimeAlarm as LeaseTimeAlarm;
+    use timealarms::msg::ExecuteAlarmMsg::TimeAlarm;
+
+    let LeaseTimeAlarm {} = serde_json_wasm::from_slice(&serde_json_wasm::to_vec(&TimeAlarm {}).unwrap()).unwrap() else {
+        unreachable!()
+    };
+
+    let TimeAlarm {} =
+        serde_json_wasm::from_slice(&serde_json_wasm::to_vec(&LeaseTimeAlarm {}).unwrap()).unwrap();
+}
+
 fn test_case() -> TestCase<Lpn> {
     let mut test_case = TestCase::<Lpn>::with_reserve(
         None,
