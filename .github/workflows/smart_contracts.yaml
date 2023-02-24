@@ -126,6 +126,16 @@ jobs:
           uses: actions/download-artifact@v3
         - name: Display structure of downloaded files
           run: ls -R
+        - name: Zip test
+          uses: vimtor/action-zip@v1.1
+          with:
+            files: optimized-binaries-test-net
+            dest: optimized-binaries-test-net.zip
+        - name: Zip main
+          uses: vimtor/action-zip@v1.1
+          with:
+            files: optimized-binaries-main-net
+            dest: optimized-binaries-main-net.zip
         # temporary using commit as version until it is merged. Updates node version v12 -> v16
         - uses: "marvinpinto/action-automatic-releases@6273874b61ebc8c71f1a61b2d98e234cf389b303"
           with:
@@ -133,5 +143,5 @@ jobs:
             prerelease: false
             draft: true
             files: |
-              optimized-binaries-test-net
-              optimized-binaries-main-net
+              optimized-binaries-test-net.zip
+              optimized-binaries-main-net.zip
