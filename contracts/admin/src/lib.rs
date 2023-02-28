@@ -7,7 +7,6 @@ use sdk::{
 use versioning::{respond_with_release, version, VersionSegment};
 
 use self::{
-    common::ValidateAddresses as _,
     error::ContractError,
     msg::{InstantiateMsg, MigrateMsg, SudoMsg},
     state::{contracts as state_contracts, migration_release},
@@ -32,8 +31,7 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    msg.general_contracts.validate(&deps.querier)?;
-    msg.lpn_contracts.validate(&deps.querier)?;
+    msg.validate(&deps.querier)?;
 
     state_contracts::store(deps.storage, msg.general_contracts, msg.lpn_contracts)?;
 
