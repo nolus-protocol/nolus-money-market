@@ -111,7 +111,11 @@ fn on_timeout_retry<L>(
 where
     L: Controller + Into<State>,
 {
-    let emitter = emit_timeout(event_type, env.contract.address.clone());
+    let emitter = emit_timeout(
+        event_type,
+        env.contract.address.clone(),
+        TimeoutPolicy::Retry,
+    );
     let batch = current_state.enter(deps, env)?;
     Ok(Response::from(batch.into_response(emitter), current_state))
 }
@@ -126,16 +130,26 @@ where
     L: Controller + DexConnectable + Into<State>,
     IcaConnector<InRecovery<L>>: Into<State>,
 {
-    let emitter = emit_timeout(event_type, env.contract.address.clone());
+    let emitter = emit_timeout(
+        event_type,
+        env.contract.address.clone(),
+        TimeoutPolicy::RepairICS27Channel,
+    );
     let recover_ica = IcaConnector::new(InRecovery::new(current_state));
     let batch = recover_ica.enter(deps, env)?;
     Ok(Response::from(batch.into_response(emitter), recover_ica))
 }
 
-fn emit_timeout(event_type: Type, contract: Addr) -> Emitter {
+#[derive(Debug)]
+enum TimeoutPolicy {
+    Retry,
+    RepairICS27Channel,
+}
+
+fn emit_timeout(event_type: Type, contract: Addr, policy: TimeoutPolicy) -> Emitter {
     Emitter::of_type(event_type)
         .emit("id", contract)
-        .emit("timeout", "")
+        .emit("timeout", format!("{:?}", policy))
 }
 
 fn ignore_msg<S>(state: S) -> ContractResult<Response>
