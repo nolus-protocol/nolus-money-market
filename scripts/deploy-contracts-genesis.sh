@@ -84,10 +84,9 @@ add_wasm_messages() {
 
   local -r admin_contract_init_msg='{"general_contracts":{"profit":"' \
     "$PROFIT_ADDRESS" '","timealarms":"' "$TIMEALARMS_ADDRESS" '","treasury":"' \
-    "$TREASURY_ADDRESS" '"},"specialized_contracts":{"' "$lpp_native" \
-    '":{"dispatcher":"' "$REWARDS_DISPATCHER_ADDRESS" '","leaser":"' \
-    "$LEASER_ADDRESS" '","lpp":"' "$LPP_ADDRESS" '","oracle":"' \
-    "$ORACLE_ADDRESS" '"}}}'
+    "$TREASURY_ADDRESS" '"},"specialized_contracts":{"dispatcher":"' \
+    "$REWARDS_DISPATCHER_ADDRESS" '","leaser":"' "$LEASER_ADDRESS" '","lpp":"' \
+    "$LPP_ADDRESS" '","oracle":"' "$ORACLE_ADDRESS" '"}}}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "admin_contract" \
     "$((++id))" "$admin_addr" "" "--instantiate-only-address $admin_addr" \
     "$admin_contract_init_msg"

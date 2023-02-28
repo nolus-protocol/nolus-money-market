@@ -1,8 +1,17 @@
-use std::array;
+use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 
-use sdk::schemars::{self, JsonSchema};
+use platform::batch::Batch;
+use sdk::{
+    cosmwasm_std::{Addr, Binary, QuerierWrapper, WasmMsg},
+    schemars::{self, JsonSchema},
+};
+
+use crate::{
+    common::type_defs::MaybeMigrateContract,
+    error::{ContractError, Never},
+};
 
 pub(crate) mod type_defs;
 
@@ -13,22 +22,32 @@ pub struct CodeIdWithMigrateMsg<M> {
     pub migrate_msg: M,
 }
 
-pub(crate) trait Contracts {
-    type Item;
+pub(crate) trait ValidateAddresses {
+    fn validate(&self, querier: &QuerierWrapper<'_>) -> Result<(), ContractError>;
+}
 
-    type SelfWith<T>: Contracts<Item = T>;
+pub(crate) trait MigrateContracts {
+    type GatSelf<T>;
 
-    type ZipIter<T>: Iterator<Item = (Self::Item, T)>;
+    type Error: Into<ContractError> + Error;
 
-    fn as_ref(&self) -> Self::SelfWith<&Self::Item>;
+    fn migrate(
+        self,
+        migration_msgs: Self::GatSelf<MaybeMigrateContract>,
+    ) -> Result<Batch, Self::Error>;
+}
 
-    fn as_mut(&mut self) -> Self::SelfWith<&mut Self::Item>;
-
-    fn try_for_each<F, E>(self, f: F) -> Result<(), E>
-    where
-        F: FnMut(Self::Item) -> Result<(), E>;
-
-    fn zip_iter<T>(self, other: Self::SelfWith<T>) -> Self::ZipIter<T>;
+pub fn maybe_migrate_contract(batch: &mut Batch, addr: Addr, migrate: MaybeMigrateContract) {
+    if let Some(migrate) = migrate {
+        batch.schedule_execute_on_success_reply(
+            WasmMsg::Migrate {
+                contract_addr: addr.into_string(),
+                new_code_id: migrate.code_id,
+                msg: Binary(migrate.migrate_msg.into()),
+            },
+            0,
+        );
+    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -41,57 +60,34 @@ pub struct GeneralContracts<T> {
     pub treasury: T,
 }
 
-impl<T> Contracts for GeneralContracts<T> {
-    type Item = T;
-
-    type SelfWith<U> = GeneralContracts<U>;
-
-    type ZipIter<U> = array::IntoIter<(T, U), 5>;
-
-    fn as_ref(&self) -> GeneralContracts<&T> {
-        GeneralContracts {
-            dispatcher: &self.dispatcher,
-            leaser: &self.leaser,
-            profit: &self.profit,
-            timealarms: &self.timealarms,
-            treasury: &self.treasury,
-        }
+impl ValidateAddresses for GeneralContracts<Addr> {
+    fn validate(&self, querier: &QuerierWrapper<'_>) -> Result<(), ContractError> {
+        platform::contract::validate_addr(querier, &self.dispatcher)?;
+        platform::contract::validate_addr(querier, &self.leaser)?;
+        platform::contract::validate_addr(querier, &self.profit)?;
+        platform::contract::validate_addr(querier, &self.timealarms)?;
+        platform::contract::validate_addr(querier, &self.treasury).map_err(Into::into)
     }
+}
 
-    fn as_mut(&mut self) -> Self::SelfWith<&mut T> {
-        GeneralContracts {
-            dispatcher: &mut self.dispatcher,
-            leaser: &mut self.leaser,
-            profit: &mut self.profit,
-            timealarms: &mut self.timealarms,
-            treasury: &mut self.treasury,
-        }
-    }
+impl MigrateContracts for GeneralContracts<Addr> {
+    type GatSelf<T> = GeneralContracts<MaybeMigrateContract>;
 
-    fn try_for_each<F, E>(self, f: F) -> Result<(), E>
-    where
-        F: FnMut(T) -> Result<(), E>,
-    {
-        [
-            self.dispatcher,
-            self.leaser,
-            self.profit,
-            self.timealarms,
-            self.treasury,
-        ]
-        .into_iter()
-        .try_for_each(f)
-    }
+    type Error = Never;
 
-    fn zip_iter<U>(self, other: Self::SelfWith<U>) -> Self::ZipIter<U> {
-        [
-            (self.dispatcher, other.dispatcher),
-            (self.leaser, other.leaser),
-            (self.profit, other.profit),
-            (self.timealarms, other.timealarms),
-            (self.treasury, other.treasury),
-        ]
-        .into_iter()
+    fn migrate(
+        self,
+        migration_msgs: Self::GatSelf<MaybeMigrateContract>,
+    ) -> Result<Batch, Self::Error> {
+        let mut batch: Batch = Batch::default();
+
+        maybe_migrate_contract(&mut batch, self.dispatcher, migration_msgs.dispatcher);
+        maybe_migrate_contract(&mut batch, self.leaser, migration_msgs.leaser);
+        maybe_migrate_contract(&mut batch, self.profit, migration_msgs.profit);
+        maybe_migrate_contract(&mut batch, self.timealarms, migration_msgs.timealarms);
+        maybe_migrate_contract(&mut batch, self.treasury, migration_msgs.treasury);
+
+        Ok(batch)
     }
 }
 
@@ -102,35 +98,27 @@ pub struct LpnContracts<T> {
     pub oracle: T,
 }
 
-impl<T> Contracts for LpnContracts<T> {
-    type Item = T;
-
-    type SelfWith<U> = LpnContracts<U>;
-
-    type ZipIter<U> = array::IntoIter<(T, U), 2>;
-
-    fn as_ref(&self) -> LpnContracts<&T> {
-        LpnContracts {
-            lpp: &self.lpp,
-            oracle: &self.oracle,
-        }
+impl ValidateAddresses for LpnContracts<Addr> {
+    fn validate(&self, querier: &QuerierWrapper<'_>) -> Result<(), ContractError> {
+        platform::contract::validate_addr(querier, &self.lpp)?;
+        platform::contract::validate_addr(querier, &self.oracle).map_err(Into::into)
     }
+}
 
-    fn as_mut(&mut self) -> LpnContracts<&mut T> {
-        LpnContracts {
-            lpp: &mut self.lpp,
-            oracle: &mut self.oracle,
-        }
-    }
+impl MigrateContracts for LpnContracts<Addr> {
+    type GatSelf<T> = LpnContracts<MaybeMigrateContract>;
 
-    fn try_for_each<F, E>(self, f: F) -> Result<(), E>
-    where
-        F: FnMut(T) -> Result<(), E>,
-    {
-        [self.lpp, self.oracle].into_iter().try_for_each(f)
-    }
+    type Error = Never;
 
-    fn zip_iter<U>(self, other: LpnContracts<U>) -> Self::ZipIter<U> {
-        [(self.lpp, other.lpp), (self.oracle, other.oracle)].into_iter()
+    fn migrate(
+        self,
+        migration_msgs: Self::GatSelf<MaybeMigrateContract>,
+    ) -> Result<Batch, Self::Error> {
+        let mut batch: Batch = Batch::default();
+
+        maybe_migrate_contract(&mut batch, self.lpp, migration_msgs.lpp);
+        maybe_migrate_contract(&mut batch, self.oracle, migration_msgs.oracle);
+
+        Ok(batch)
     }
 }
