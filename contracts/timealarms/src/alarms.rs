@@ -1,18 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use currency::native::Nls;
-use platform::{batch::Batch, contract};
+use platform::contract;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Addr, DepsMut, Env, StdResult, Storage, Timestamp},
+    cosmwasm_std::{Addr, DepsMut, Env, StdResult, Storage, Timestamp},
     schemars::{self, JsonSchema},
 };
-use time_oracle::{AlarmError, Alarms, AlarmsCount, Id};
+use time_oracle::{Alarms, AlarmsCount, Id};
 
-use crate::{
-    msg::{AlarmsStatusResponse, DispatchAlarmsResponse, ExecuteAlarmMsg},
-    ContractError,
-};
+use crate::{dispatcher::OracleAlarmDispatcher, msg::AlarmsStatusResponse, ContractError};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct TimeAlarms {}
@@ -43,30 +39,9 @@ impl TimeAlarms {
         ctime: Timestamp,
         max_count: AlarmsCount,
     ) -> Result<Response, ContractError> {
-        use time_oracle::AlarmDispatcher;
-
-        struct OracleAlarmDispatcher<'a> {
-            pub batch: &'a mut Batch,
-        }
-
-        impl<'a> AlarmDispatcher for OracleAlarmDispatcher<'a> {
-            fn send_to(&mut self, id: Id, addr: Addr) -> Result<(), AlarmError> {
-                Ok(self.batch.schedule_execute_wasm_reply_always::<_, Nls>(
-                    &addr,
-                    ExecuteAlarmMsg::TimeAlarm {},
-                    None,
-                    id,
-                )?)
-            }
-        }
-
-        let mut batch = Batch::default();
-
-        let mut dispatcher = OracleAlarmDispatcher { batch: &mut batch };
-
-        let sent = Self::TIME_ALARMS.notify(storage, &mut dispatcher, ctime, max_count)?;
-
-        Ok(Response::from(batch).set_data(to_binary(&DispatchAlarmsResponse(sent))?))
+        let dispatcher = OracleAlarmDispatcher::new();
+        let dispatcher = Self::TIME_ALARMS.notify(storage, dispatcher, ctime, max_count)?;
+        dispatcher.try_into()
     }
 
     pub fn try_any_alarm(

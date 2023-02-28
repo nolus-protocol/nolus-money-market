@@ -796,7 +796,7 @@ dependencies = [
 
 [[package]]
 name = "platform"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "finance",
  "prost 0.11.6",
@@ -1278,7 +1278,7 @@ dependencies = [
 
 [[package]]
 name = "time-oracle"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "platform",
  "sdk",
@@ -1288,7 +1288,7 @@ dependencies = [
 
 [[package]]
 name = "timealarms"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "cosmwasm-std",
  "currency",

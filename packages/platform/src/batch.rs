@@ -142,6 +142,14 @@ impl Batch {
         res
     }
 
+    pub fn len(&self) -> usize {
+        self.msgs.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.msgs.is_empty()
+    }
+
     pub fn into_response(self, emitter: Emitter) -> Response {
         Response::from(self).add_event(emitter.into())
     }
@@ -270,5 +278,20 @@ mod test {
             .add_attribute(KEY1, VALUE1)
             .add_attribute(KEY2, VALUE2);
         assert_eq!(exp, resp.events[0]);
+    }
+
+    #[test]
+    fn msgs_len() {
+        let mut b = Batch::default();
+        assert_eq!(0, b.len());
+        assert!(b.is_empty());
+        b.schedule_execute_no_reply(CosmosMsg::Wasm(WasmMsg::ClearAdmin {
+            contract_addr: "".into(),
+        }));
+        assert_eq!(1, b.len());
+        assert!(!b.is_empty());
+
+        let resp: Response = b.into();
+        assert_eq!(1, resp.messages.len());
     }
 }
