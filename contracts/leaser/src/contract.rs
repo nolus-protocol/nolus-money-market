@@ -6,7 +6,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage},
 };
-use versioning::{version, VersionSegment};
+use versioning::{respond_with_release, version, VersionSegment};
 
 use crate::{
     cmd::Borrow,
@@ -48,7 +48,8 @@ pub fn instantiate(
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
-    Ok(Response::default())
+
+    respond_with_release().map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

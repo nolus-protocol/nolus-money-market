@@ -1,24 +1,20 @@
-use cosmwasm_std::Api;
+use enum_dispatch::enum_dispatch;
 
 use ::currency::lease::LeaseGroup;
-use enum_dispatch::enum_dispatch;
 use finance::currency;
 use platform::batch::Batch;
-
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
-
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
     neutron_sdk::sudo::msg::SudoMsg,
 };
-use versioning::{version, VersionSegment};
+use versioning::{respond_with_release, version, VersionSegment};
 
-use crate::api::{ExecuteMsg, NewLeaseContract};
-use crate::contract::Contract;
 use crate::{
-    api::{MigrateMsg, StateQuery},
+    api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
+    contract::Contract,
     error::{ContractError, ContractResult},
 };
 
@@ -106,7 +102,7 @@ pub fn instantiate(
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    Ok(CwResponse::default())
+    respond_with_release().map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

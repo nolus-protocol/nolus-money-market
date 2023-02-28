@@ -1,6 +1,7 @@
-use cosmwasm_std::{QuerierWrapper, Timestamp};
 use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
+
+use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
 use crate::{
     api::{dex::ConnectionParams, StateResponse},
@@ -8,11 +9,11 @@ use crate::{
     lease::LeaseDTO,
 };
 
+pub use self::state::{execute, instantiate, migrate, query, reply, sudo};
 use self::{
     dex::{Account, DexConnectable},
     state::State,
 };
-pub use state::{execute, instantiate, migrate, query, reply, sudo};
 
 mod cmd;
 mod dex;

@@ -30,6 +30,15 @@ impl Batch {
         self.msgs.push(msg_cw);
     }
 
+    pub fn schedule_execute_on_success_reply<M>(&mut self, msg: M, reply_id: ReplyId)
+    where
+        M: Into<CosmosMsg>,
+    {
+        let msg_cw = SubMsg::reply_on_success(msg, reply_id);
+
+        self.msgs.push(msg_cw);
+    }
+
     pub fn schedule_execute_wasm_no_reply<M, C>(
         &mut self,
         addr: &Addr,
