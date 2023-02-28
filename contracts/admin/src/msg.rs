@@ -6,20 +6,9 @@ use sdk::{
 };
 
 use crate::{
-    common::{
-        type_defs::{
-            MaybeMigrateGeneralContract, MigrateGeneralContracts, MigrateLpnContracts,
-            ValidateAddresses as _,
-        },
-        GeneralContracts, LpnContracts,
-    },
+    common::{type_defs::MigrateContract, GeneralContracts, LpnContracts, ValidateAddresses as _},
     error::ContractError,
 };
-
-// use crate::{
-//     common::{type_defs::MigrateContract, GeneralContracts, LpnContracts, ValidateAddresses as _},
-//     error::ContractError,
-// };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", deny_unknown_fields)]
@@ -40,9 +29,9 @@ pub enum SudoMsg {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct MigrateContracts {
     pub release: String,
-    pub admin_contract: MaybeMigrateGeneralContract,
-    pub general_contracts: MigrateGeneralContracts,
-    pub lpn_contracts: MigrateLpnContracts,
+    pub admin_contract: Option<MigrateContract>,
+    pub general_contracts: GeneralContracts<Option<MigrateContract>>,
+    pub lpn_contracts: LpnContracts<Option<MigrateContract>>,
 }
 
 impl InstantiateMsg {
