@@ -6,9 +6,8 @@ use sdk::{
 };
 
 use crate::{
-    common::{
-        type_defs::{Contracts, MigrateContract},
-        ContractsTemplate,
+    common::type_defs::{
+        Contracts, ContractsMigration, ContractsPostMigrationExecute, MigrateContract,
     },
     error::ContractError,
 };
@@ -32,7 +31,8 @@ pub enum SudoMsg {
 pub struct MigrateContracts {
     pub release: String,
     pub admin_contract: Option<MigrateContract>,
-    pub migration_spec: ContractsTemplate<Option<MigrateContract>>,
+    pub migration_spec: ContractsMigration,
+    pub post_migration_execute: ContractsPostMigrationExecute,
 }
 
 impl InstantiateMsg {

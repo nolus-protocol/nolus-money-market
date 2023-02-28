@@ -7,7 +7,9 @@ use sdk::{
 };
 
 use crate::{
-    common::type_defs::{Contracts, ContractsMigration, MaybeMigrateContract},
+    common::type_defs::{
+        Contracts, ContractsMigration, ContractsPostMigrationExecute, MaybeMigrateContract,
+    },
     error::ContractError,
 };
 
@@ -30,6 +32,16 @@ pub fn maybe_migrate_contract(batch: &mut Batch, addr: Addr, migrate: MaybeMigra
             },
             0,
         );
+    }
+}
+
+pub fn maybe_execute_contract(batch: &mut Batch, addr: Addr, execute: Option<String>) {
+    if let Some(execute) = execute {
+        batch.schedule_execute_no_reply(WasmMsg::Execute {
+            contract_addr: addr.into_string(),
+            msg: Binary(execute.into()),
+            funds: vec![],
+        });
     }
 }
 
@@ -66,6 +78,23 @@ impl Contracts {
         maybe_migrate_contract(&mut batch, self.profit, migration_msgs.profit);
         maybe_migrate_contract(&mut batch, self.timealarms, migration_msgs.timealarms);
         maybe_migrate_contract(&mut batch, self.treasury, migration_msgs.treasury);
+
+        batch
+    }
+
+    pub(crate) fn post_migration_execute(
+        self,
+        execution_msgs: ContractsPostMigrationExecute,
+    ) -> Batch {
+        let mut batch: Batch = Batch::default();
+
+        maybe_execute_contract(&mut batch, self.dispatcher, execution_msgs.dispatcher);
+        maybe_execute_contract(&mut batch, self.leaser, execution_msgs.leaser);
+        maybe_execute_contract(&mut batch, self.lpp, execution_msgs.lpp);
+        maybe_execute_contract(&mut batch, self.oracle, execution_msgs.oracle);
+        maybe_execute_contract(&mut batch, self.profit, execution_msgs.profit);
+        maybe_execute_contract(&mut batch, self.timealarms, execution_msgs.timealarms);
+        maybe_execute_contract(&mut batch, self.treasury, execution_msgs.treasury);
 
         batch
     }

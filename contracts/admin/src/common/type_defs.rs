@@ -7,3 +7,4 @@ pub type MaybeMigrateContract = Option<MigrateContract>;
 
 pub type Contracts = ContractsTemplate<Addr>;
 pub type ContractsMigration = ContractsTemplate<MaybeMigrateContract>;
+pub type ContractsPostMigrationExecute = ContractsTemplate<Option<String>>;
