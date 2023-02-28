@@ -13,13 +13,3 @@ pub enum ContractError {
     #[error("Contract returned wrong release string! \"{reported}\" was returned, but \"{expected}\" was expected!")]
     WrongRelease { reported: String, expected: String },
 }
-
-#[derive(Debug, Error)]
-#[error("This is unreachable!")]
-pub enum Never {}
-
-impl From<Never> for ContractError {
-    fn from(value: Never) -> Self {
-        match value {}
-    }
-}

@@ -26,7 +26,7 @@ pub(crate) fn migrate(
     maybe_migrate_contract(&mut batch, admin_contract_address, msg.admin_contract);
 
     Ok(batch
-        .merge(general_contracts_addrs.migrate(msg.general_contracts)?)
-        .merge(lpn_contracts_addrs.migrate(msg.lpn_contracts)?)
+        .merge(general_contracts_addrs.migrate(msg.general_contracts))
+        .merge(lpn_contracts_addrs.migrate(msg.lpn_contracts))
         .into())
 }

@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use serde::{Deserialize, Serialize};
 
 use platform::batch::Batch;
@@ -8,10 +6,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::{
-    common::type_defs::MaybeMigrateContract,
-    error::{ContractError, Never},
-};
+use crate::{common::type_defs::MaybeMigrateContract, error::ContractError};
 
 pub(crate) mod type_defs;
 
@@ -29,12 +24,7 @@ pub(crate) trait ValidateAddresses {
 pub(crate) trait MigrateContracts {
     type GatSelf<T>;
 
-    type Error: Into<ContractError> + Error;
-
-    fn migrate(
-        self,
-        migration_msgs: Self::GatSelf<MaybeMigrateContract>,
-    ) -> Result<Batch, Self::Error>;
+    fn migrate(self, migration_msgs: Self::GatSelf<MaybeMigrateContract>) -> Batch;
 }
 
 pub fn maybe_migrate_contract(batch: &mut Batch, addr: Addr, migrate: MaybeMigrateContract) {
@@ -73,12 +63,7 @@ impl ValidateAddresses for GeneralContracts<Addr> {
 impl MigrateContracts for GeneralContracts<Addr> {
     type GatSelf<T> = GeneralContracts<MaybeMigrateContract>;
 
-    type Error = Never;
-
-    fn migrate(
-        self,
-        migration_msgs: Self::GatSelf<MaybeMigrateContract>,
-    ) -> Result<Batch, Self::Error> {
+    fn migrate(self, migration_msgs: Self::GatSelf<MaybeMigrateContract>) -> Batch {
         let mut batch: Batch = Batch::default();
 
         maybe_migrate_contract(&mut batch, self.dispatcher, migration_msgs.dispatcher);
@@ -87,7 +72,7 @@ impl MigrateContracts for GeneralContracts<Addr> {
         maybe_migrate_contract(&mut batch, self.timealarms, migration_msgs.timealarms);
         maybe_migrate_contract(&mut batch, self.treasury, migration_msgs.treasury);
 
-        Ok(batch)
+        batch
     }
 }
 
@@ -108,17 +93,12 @@ impl ValidateAddresses for LpnContracts<Addr> {
 impl MigrateContracts for LpnContracts<Addr> {
     type GatSelf<T> = LpnContracts<MaybeMigrateContract>;
 
-    type Error = Never;
-
-    fn migrate(
-        self,
-        migration_msgs: Self::GatSelf<MaybeMigrateContract>,
-    ) -> Result<Batch, Self::Error> {
+    fn migrate(self, migration_msgs: Self::GatSelf<MaybeMigrateContract>) -> Batch {
         let mut batch: Batch = Batch::default();
 
         maybe_migrate_contract(&mut batch, self.lpp, migration_msgs.lpp);
         maybe_migrate_contract(&mut batch, self.oracle, migration_msgs.oracle);
 
-        Ok(batch)
+        batch
     }
 }
