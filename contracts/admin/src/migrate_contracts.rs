@@ -5,7 +5,7 @@ use sdk::{
 };
 
 use crate::{
-    common::{maybe_migrate_contract, GeneralContracts, LpnContracts, MigrateContracts as _},
+    common::{maybe_migrate_contract, type_defs::Contracts},
     error::ContractError,
     msg::MigrateContracts,
     state::{contracts as state_contracts, migration_release},
@@ -18,15 +18,13 @@ pub(crate) fn migrate(
 ) -> Result<Response, ContractError> {
     migration_release::store(storage, msg.release)?;
 
-    let general_contracts_addrs: GeneralContracts<Addr> = state_contracts::load_general(storage)?;
-    let lpn_contracts_addrs: LpnContracts<Addr> = state_contracts::load_lpn_contracts(storage)?;
+    let contracts_addrs: Contracts = state_contracts::load(storage)?;
 
     let mut batch: Batch = Batch::default();
 
     maybe_migrate_contract(&mut batch, admin_contract_address, msg.admin_contract);
 
     Ok(batch
-        .merge(general_contracts_addrs.migrate(msg.general_contracts))
-        .merge(lpn_contracts_addrs.migrate(msg.lpn_contracts))
+        .merge(contracts_addrs.migrate(msg.migration_spec))
         .into())
 }

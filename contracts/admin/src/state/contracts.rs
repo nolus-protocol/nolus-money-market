@@ -1,28 +1,16 @@
 use sdk::{
-    cosmwasm_std::{Addr, StdResult, Storage},
+    cosmwasm_std::{StdResult, Storage},
     cw_storage_plus::Item,
 };
 
-use crate::common::{GeneralContracts, LpnContracts};
+use crate::common::type_defs::Contracts;
 
-const GENERAL_CONTRACTS: Item<'_, GeneralContracts<Addr>> = Item::new("general_contracts");
+const CONTRACTS: Item<'_, Contracts> = Item::new("contracts");
 
-const LPN_CONTRACTS: Item<'_, LpnContracts<Addr>> = Item::new("lpn_contracts");
-
-pub(crate) fn store(
-    storage: &mut dyn Storage,
-    general_contracts: GeneralContracts<Addr>,
-    lpn_contracts: LpnContracts<Addr>,
-) -> StdResult<()> {
-    GENERAL_CONTRACTS.save(storage, &general_contracts)?;
-
-    LPN_CONTRACTS.save(storage, &lpn_contracts)
+pub(crate) fn store(storage: &mut dyn Storage, contracts: Contracts) -> StdResult<()> {
+    CONTRACTS.save(storage, &contracts)
 }
 
-pub(crate) fn load_general(storage: &dyn Storage) -> StdResult<GeneralContracts<Addr>> {
-    GENERAL_CONTRACTS.load(storage)
-}
-
-pub(crate) fn load_lpn_contracts(storage: &dyn Storage) -> StdResult<LpnContracts<Addr>> {
-    LPN_CONTRACTS.load(storage)
+pub(crate) fn load(storage: &dyn Storage) -> StdResult<Contracts> {
+    CONTRACTS.load(storage)
 }

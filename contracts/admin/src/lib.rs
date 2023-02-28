@@ -33,7 +33,7 @@ pub fn instantiate(
 
     msg.validate(&deps.querier)?;
 
-    state_contracts::store(deps.storage, msg.general_contracts, msg.lpn_contracts)?;
+    state_contracts::store(deps.storage, msg.contracts)?;
 
     Ok(Response::default())
 }
