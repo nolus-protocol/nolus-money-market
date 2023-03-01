@@ -61,8 +61,11 @@ runs:
     - name: "Copy deployment script to artifacts directory"
       shell: "sh"
       run: "sudo cp \"scripts/deploy-contracts-genesis.sh\" \"artifacts/\""
+    - name: "Copy deployment script to artifacts directory"
+      shell: "sh"
+      run: "zip -r -j \"optimized-binaries-${{ inputs.target_net }}-net\" \"artifacts/\""
     - name: "Archive ${{ inputs.target_net }}-net artifacts"
       uses: "actions/upload-artifact@v3"
       with:
-        name: "optimized-binaries-${{ inputs.target_net }}-net"
-        path: "artifacts/"
+        name: "optimized-binaries-${{ inputs.target_net }}-net.zip"
+        path: "optimized-binaries-${{ inputs.target_net }}-net.zip"
