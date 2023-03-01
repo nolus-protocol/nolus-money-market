@@ -10,7 +10,7 @@ use sdk::{
     cosmwasm_std::{to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
     neutron_sdk::sudo::msg::SudoMsg,
 };
-use versioning::{respond_with_release, version, VersionSegment};
+use versioning::{version, VersionSegment};
 
 use crate::{
     api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
@@ -102,7 +102,7 @@ pub fn instantiate(
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    respond_with_release().map_err(Into::into)
+    Ok(CwResponse::default())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
