@@ -1,4 +1,8 @@
-use std::{marker::PhantomData, result::Result as StdResult};
+use std::{
+    fmt::{Display, Formatter},
+    marker::PhantomData,
+    result::Result as StdResult,
+};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -68,6 +72,15 @@ where
             }
         }
         currency::visit_any_on_ticker::<G, _>(&self.ticker, CoinTransformerAny(self, cmd))
+    }
+}
+
+impl<G> Display for CoinDTO<G>
+where
+    G: Group,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{} {}", self.amount, self.ticker))
     }
 }
 
@@ -172,10 +185,10 @@ mod test {
     use sdk::cosmwasm_std::{from_slice, to_vec};
 
     use crate::{
-        coin::{Coin, CoinDTO},
-        currency::{Currency, SymbolStatic},
+        coin::{Amount, Coin, CoinDTO},
+        currency::{Currency, Group, SymbolStatic},
         error::Error,
-        test::currency::{Dai, TestCurrencies, Usdc},
+        test::currency::{Dai, Nls, TestCurrencies, Usdc},
     };
 
     #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -237,5 +250,22 @@ mod test {
             super::from_amount_ticker::<TestCurrencies>(20, Dai::TICKER),
             Err(Error::NotInCurrencyGroup { .. })
         ));
+    }
+
+    #[test]
+    fn display() {
+        assert_eq!(
+            "25 uusdc",
+            test_coin::<TestCurrencies, Usdc>(25).to_string()
+        );
+        assert_eq!("0 unls", test_coin::<TestCurrencies, Nls>(0).to_string());
+    }
+
+    fn test_coin<G, C>(amount: Amount) -> CoinDTO<G>
+    where
+        G: Group,
+        C: Currency,
+    {
+        CoinDTO::<G>::from(Coin::<C>::new(amount))
     }
 }

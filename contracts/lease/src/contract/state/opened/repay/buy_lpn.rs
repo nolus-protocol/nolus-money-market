@@ -1,3 +1,4 @@
+use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use finance::{
@@ -8,17 +9,15 @@ use platform::{
     batch::{Batch as LocalBatch, Emit, Emitter},
     trx,
 };
-use sdk::{
-    cosmwasm_std::{Binary, Deps, DepsMut, Env, QuerierWrapper, Timestamp},
-    neutron_sdk::sudo::msg::SudoMsg,
-};
+use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper};
 use swap::trx as swap_trx;
 
 use crate::{
-    api::{opened::RepayTrx, LpnCoin, PaymentCoin, StateQuery, StateResponse},
+    api::{dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateResponse},
     contract::{
-        state::{opened::repay, Controller, Response},
-        Lease,
+        dex::DexConnectable,
+        state::{self, opened::repay, Controller, Response},
+        Contract, Lease,
     },
     error::ContractResult,
     event::Type,
@@ -37,20 +36,20 @@ impl BuyLpn {
         Self { lease, payment }
     }
 
-    pub(super) fn enter_state(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
+    fn enter_state(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
         let mut swap_trx = self.lease.dex.swap(&self.lease.lease.oracle, querier);
         swap_trx.swap_exact_in(&self.payment, self.target_currency())?;
         Ok(swap_trx.into())
     }
 
-    fn on_response(self, resp: Binary, now: Timestamp) -> ContractResult<Response> {
+    fn on_response(self, resp: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         let emitter = self.emit_ok();
         let payment_lpn = self.decode_response(resp.as_slice())?;
 
-        let next_state = TransferInInit::new(self.lease, self.payment, payment_lpn);
-        let batch = next_state.enter_state(now)?;
+        let transfer_in = TransferInInit::new(self.lease, self.payment, payment_lpn);
+        let batch = transfer_in.enter(deps, env)?;
 
-        Ok(Response::from(batch.into_response(emitter), next_state))
+        Ok(Response::from(batch.into_response(emitter), transfer_in))
     }
 
     fn decode_response(&self, resp: &[u8]) -> ContractResult<LpnCoin> {
@@ -71,20 +70,28 @@ impl BuyLpn {
     }
 }
 
+impl DexConnectable for BuyLpn {
+    fn dex(&self) -> &ConnectionParams {
+        self.lease.dex()
+    }
+}
+
 impl Controller for BuyLpn {
-    fn sudo(self, _deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
-        match msg {
-            SudoMsg::Response { request: _, data } => self.on_response(data, env.block.time),
-            SudoMsg::Timeout { request: _ } => todo!(),
-            SudoMsg::Error {
-                request: _,
-                details: _,
-            } => todo!(),
-            _ => unreachable!(),
-        }
+    fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<LocalBatch> {
+        self.enter_state(&deps.querier)
     }
 
-    fn query(self, deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
-        repay::query(self.lease.lease, self.payment, RepayTrx::Swap, &deps, &env)
+    fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        self.on_response(data, deps, env)
+    }
+
+    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        state::on_timeout_repair_channel(self, Type::BuyLpn, deps, env)
+    }
+}
+
+impl Contract for BuyLpn {
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+        repay::query(self.lease.lease, self.payment, RepayTrx::Swap, now, querier)
     }
 }

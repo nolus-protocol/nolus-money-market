@@ -7,9 +7,9 @@ use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Curre
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdError},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
 };
-use versioning::{version, VersionSegment};
+use versioning::{respond_with_release, version, VersionSegment};
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -90,22 +90,10 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
-    deps.api.addr_validate(msg.lease_code_admin.as_str())?;
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    versioning::upgrade_old_contract::<1, _, StdError>(
-        deps.storage,
-        version!(CONTRACT_STORAGE_VERSION),
-        Some(|storage| {
-            SingleUserAccess::new(
-                crate::access_control::LEASE_CODE_ADMIN_KEY,
-                msg.lease_code_admin,
-            )
-            .store(storage)
-        }),
-    )?;
-
-    Ok(Response::default())
+    respond_with_release().map_err(Into::into)
 }
 
 struct ExecuteWithLpn<'a> {

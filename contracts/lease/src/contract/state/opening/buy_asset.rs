@@ -1,25 +1,24 @@
+use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use finance::coin::{self};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use platform::{batch::Batch as LocalBatch, ica::HostAccount, trx};
-use sdk::{
-    cosmwasm_std::{Binary, Deps, DepsMut, Env, QuerierWrapper},
-    neutron_sdk::sudo::msg::SudoMsg,
-};
+use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper};
 use swap::trx as swap_trx;
 
 use crate::{
     api::{
-        opening::OngoingTrx, DownpaymentCoin, LeaseCoin, NewLeaseForm, StateQuery, StateResponse,
+        dex::ConnectionParams, opening::OngoingTrx, DownpaymentCoin, LeaseCoin, NewLeaseForm,
+        StateResponse,
     },
     contract::{
         cmd::OpenLoanRespResult,
-        state::{opened::active::Active, Controller, Response},
-        Lease,
+        dex::{Account, DexConnectable},
+        state::{self, opened::active::Active, Controller, Response},
+        Contract, Lease,
     },
-    dex::Account,
     error::ContractResult,
     lease::IntoDTOResult,
 };
@@ -50,7 +49,7 @@ impl BuyAsset {
         }
     }
 
-    pub(super) fn enter_state(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
+    fn enter_state(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
         // TODO define struct Trx with functions build_request and decode_response -> LpnCoin
         let mut swap_trx = self.dex_account.swap(&self.deps.1, querier);
         // TODO apply nls_swap_fee on the downpayment only!
@@ -93,20 +92,32 @@ impl BuyAsset {
     }
 }
 
+impl DexConnectable for BuyAsset {
+    fn dex(&self) -> &ConnectionParams {
+        self.dex_account.dex()
+    }
+}
+
 impl Controller for BuyAsset {
-    fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
-        match msg {
-            SudoMsg::Response { request: _, data } => self.on_response(data, &env, &deps.querier),
-            SudoMsg::Timeout { request: _ } => todo!(),
-            SudoMsg::Error {
-                request: _,
-                details: _,
-            } => todo!(),
-            _ => unreachable!(),
-        }
+    fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<LocalBatch> {
+        self.enter_state(&deps.querier)
     }
 
-    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        self.on_response(data, &env, &deps.querier)
+    }
+
+    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        state::on_timeout_repair_channel(self, crate::event::Type::RepaymentTransferIn, deps, env)
+    }
+}
+
+impl Contract for BuyAsset {
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
         Ok(StateResponse::Opening {
             downpayment: self.downpayment,
             loan: self.loan.principal,

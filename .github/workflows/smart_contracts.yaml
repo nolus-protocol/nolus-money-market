@@ -24,6 +24,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: "always"
+  RELEASE_VERSION: "{{ github.ref_name }}"
 
 jobs:
   check_formatting:
@@ -117,3 +118,21 @@ jobs:
         uses: "./.github/actions/optimized_build"
         with:
           target_net: "main"
+  draft_release:
+      runs-on: ubuntu-latest
+      needs: [build_optimized_main_net, build_optimized_test_net]
+      permissions: write-all
+      steps:
+        - name: Download artifacts
+          uses: actions/download-artifact@v3
+        - name: Display structure of downloaded files
+          run: ls -R
+        # temporary using commit as version until it is merged. Updates node version v12 -> v16
+        - uses: "marvinpinto/action-automatic-releases@6273874b61ebc8c71f1a61b2d98e234cf389b303"
+          with:
+            repo_token: "${{ secrets.GITHUB_TOKEN }}"
+            prerelease: false
+            draft: true
+            files: |
+              optimized-binaries-test-net
+              optimized-binaries-main-net

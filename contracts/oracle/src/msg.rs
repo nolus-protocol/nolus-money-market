@@ -51,6 +51,8 @@ pub enum ExecuteMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {
+    // Returns contract's semantic version as a package, which is set in `Cargo.toml`.
+    ContractVersion {},
     // returns the contract configuration
     Config {},
     // returns the supported currencies tree

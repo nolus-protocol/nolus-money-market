@@ -1,4 +1,4 @@
-use cosmwasm_std::{Deps, Env};
+use cosmwasm_std::{QuerierWrapper, Timestamp};
 
 use crate::{
     api::{
@@ -18,13 +18,13 @@ fn query(
     lease: LeaseDTO,
     payment: PaymentCoin,
     in_progress: RepayTrx,
-    deps: &Deps<'_>,
-    env: &Env,
+    now: Timestamp,
+    querier: &QuerierWrapper<'_>,
 ) -> ContractResult<StateResponse> {
     let in_progress = OngoingTrx::Repayment {
         payment,
         in_progress,
     };
 
-    super::query(lease, Some(in_progress), deps, env)
+    super::lease_state(lease, Some(in_progress), now, querier)
 }

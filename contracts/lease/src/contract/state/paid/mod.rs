@@ -1,14 +1,15 @@
+use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo};
+use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo};
 
 use crate::{
-    api::{ExecuteMsg, StateQuery, StateResponse},
-    contract::Lease,
+    api::{ExecuteMsg, StateResponse},
+    contract::{state, Contract, Lease},
     error::ContractResult,
 };
 
-use super::{Controller, Response};
+use super::{controller, Controller, Response};
 
 use self::transfer_in_init::TransferInInit;
 
@@ -29,28 +30,30 @@ impl Active {
 impl Controller for Active {
     fn execute(
         self,
-        _deps: &mut DepsMut<'_>,
+        deps: &mut DepsMut<'_>,
         env: Env,
         _info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         match msg {
-            ExecuteMsg::Repay() => todo!("fail"),
+            ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => {
-                let next_state = TransferInInit::new(self.lease);
-                let batch = next_state.enter_state(env.block.time)?;
-                Ok(Response::from(batch, next_state))
+                let transfer_in = TransferInInit::new(self.lease);
+                let batch = transfer_in.enter(deps.as_ref(), env)?;
+                Ok(Response::from(batch, transfer_in))
             }
-            ExecuteMsg::PriceAlarm() => {
-                todo!("silently pass or make sure the alarm has been removed")
-            }
-            ExecuteMsg::TimeAlarm {} => {
-                todo!("silently pass or make sure the alarm has been removed")
-            }
+            ExecuteMsg::PriceAlarm() => state::ignore_msg(self),
+            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self),
         }
     }
+}
 
-    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+impl Contract for Active {
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
         Ok(StateResponse::Paid {
             amount: self.lease.lease.amount,
             in_progress: None,

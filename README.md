@@ -33,36 +33,29 @@ Implementation of the core business logic as cosmwasm contracts.
 
 ### Build
 
-* A non-optimized version of a contract, run in a contract directory:
+The build is controlled with a few environment variables:
+* `RELEASE_VERSION` - an arbitrary string giving the release a name
+* `ALT_NET_SYMBOLS` - `1`, `y` or `Y` if the build is intended for deploy on a test net
+
+**A non-optimized version**
+
+The command below builds a contract if run from the contract directory, 
+or builds all contracts if run from the workspace directory:
 
 ```sh
-cargo build --target=wasm32-unknown-unknown
+RELEASE_VERSION=`date -I` ALT_NET_SYMBOLS=Y cargo build --target=wasm32-unknown-unknown
 ```
 
-* An optimized and verifiable version of all contracts, run on the workspace directory:
+**An optimized version**
+
+The command below builds an optimized and verifiable version of all contracts,
+run from the workspace directory:
 
 ```sh
 docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  cosmwasm/workspace-optimizer:0.12.11
-```
-
-### Build for test net
-
-* A non-optimized version of a contract, run in a contract directory:
-
-```sh
-ALT_NET_SYMBOLS=1 cargo build --target=wasm32-unknown-unknown
-```
-
-* An optimized and verifiable version of all contracts, run on the workspace directory:
-
-```sh
-docker run --rm -v "$(pwd)":/code \
-  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
-  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  --env ALT_NET_SYMBOLS=1 cosmwasm/workspace-optimizer:0.12.11
+  --env RELEASE_VERSION=`date -I` --env ALT_NET_SYMBOLS=Y cosmwasm/workspace-optimizer:0.12.11
 ```
 
 ### Test

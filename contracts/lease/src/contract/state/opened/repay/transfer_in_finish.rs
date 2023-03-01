@@ -1,17 +1,18 @@
+use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use platform::batch::{Emit, Emitter};
-use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper};
+use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper};
 
 use crate::{
-    api::{opened::RepayTrx, ExecuteMsg, LpnCoin, PaymentCoin, StateQuery, StateResponse},
+    api::{opened::RepayTrx, ExecuteMsg, LpnCoin, PaymentCoin, StateResponse},
     contract::{
         state::{
-            self,
+            controller,
             opened::{active::Active, repay},
             transfer_in, Controller, Response,
         },
-        Lease,
+        Contract, Lease,
     },
     error::ContractResult,
     event::Type,
@@ -38,6 +39,7 @@ impl TransferInFinish {
         if received {
             Active::try_repay_lpn(self.lease, self.payment_lpn, querier, env)
         } else {
+            // TODO stop pooling after the remote timeout has elapsed and retry with init
             let emitter = self.emit_ok();
             let batch =
                 transfer_in::setup_alarm(self.lease.lease.time_alarms.clone(), env.block.time)?;
@@ -78,17 +80,19 @@ impl Controller for TransferInFinish {
         if matches!(msg, ExecuteMsg::TimeAlarm {}) {
             self.on_alarm(&deps.querier, &env)
         } else {
-            state::err(&format!("{:?}", msg))
+            controller::err(&format!("{:?}", msg), deps.api)
         }
     }
+}
 
-    fn query(self, deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+impl Contract for TransferInFinish {
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         repay::query(
             self.lease.lease,
             self.payment,
             RepayTrx::TransferInFinish,
-            &deps,
-            &env,
+            now,
+            querier,
         )
     }
 }

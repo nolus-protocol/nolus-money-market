@@ -1,13 +1,14 @@
+use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use platform::batch::{Emit, Emitter};
-use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper};
+use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper};
 
 use crate::{
-    api::{paid::ClosingTrx, ExecuteMsg, StateQuery, StateResponse},
+    api::{paid::ClosingTrx, ExecuteMsg, StateResponse},
     contract::{
-        state::{self, closed::Closed, transfer_in, Controller, Response},
-        Lease,
+        state::{self, closed::Closed, controller, transfer_in, Controller, Response, State},
+        Contract, Lease,
     },
     error::ContractResult,
     event::Type,
@@ -29,14 +30,18 @@ impl TransferInFinish {
         let received =
             transfer_in::check_received(&self.lease.lease.amount, &env.contract.address, querier)?;
 
-        if received {
-            Closed::default().enter_state(self.lease.lease, env, querier)
+        let (next_state, cw_resp): (State, _) = if received {
+            let closed = Closed::default();
+            let emitter = closed.emit_ok(env, &self.lease.lease);
+            let batch = closed.enter_state(self.lease.lease, querier)?;
+            (closed.into(), batch.into_response(emitter))
         } else {
             let emitter = self.emit_ok();
             let batch =
                 transfer_in::setup_alarm(self.lease.lease.time_alarms.clone(), env.block.time)?;
-            Ok(Response::from(batch.into_response(emitter), self))
-        }
+            (self.into(), batch.into_response(emitter))
+        };
+        Ok(Response::from(cw_resp, next_state))
     }
 
     fn on_alarm(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
@@ -64,14 +69,21 @@ impl Controller for TransferInFinish {
         _info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        if matches!(msg, ExecuteMsg::TimeAlarm {}) {
-            self.on_alarm(&deps.querier, &env)
-        } else {
-            state::err(&format!("{:?}", msg))
+        match msg {
+            ExecuteMsg::Repay() => controller::err("repay", deps.api),
+            ExecuteMsg::Close() => controller::err("close", deps.api),
+            ExecuteMsg::PriceAlarm() => state::ignore_msg(self),
+            ExecuteMsg::TimeAlarm {} => self.on_alarm(&deps.querier, &env),
         }
     }
+}
 
-    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+impl Contract for TransferInFinish {
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
         Ok(StateResponse::Paid {
             amount: self.lease.lease.amount,
             in_progress: Some(ClosingTrx::TransferInFinish),

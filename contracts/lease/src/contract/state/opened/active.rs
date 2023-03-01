@@ -1,3 +1,4 @@
+use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use currency::{lpn::Lpns, payment::PaymentGroup};
@@ -12,13 +13,13 @@ use sdk::{
 };
 
 use crate::{
-    api::{DownpaymentCoin, ExecuteMsg, LpnCoin, StateQuery, StateResponse},
+    api::{DownpaymentCoin, ExecuteMsg, LpnCoin, StateResponse},
     contract::{
         cmd::{AlarmResult, OpenLoanRespResult, PriceAlarm, Repay, RepayResult, TimeAlarm},
-        state::{paid, Controller, Response},
-        Lease,
+        dex::Account,
+        state::{controller, paid, Controller, Response},
+        Contract, Lease,
     },
-    dex::Account,
     error::{ContractError, ContractResult},
     event::Type,
     lease::{with_lease, LeaseDTO},
@@ -51,7 +52,6 @@ impl Active {
         querier: &QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
-        // TODO return ContractResult<(RepayReceipt, Batch)>
         // TODO Move RepayResult into this layer, rename to, for example, ExecuteResult
         // and refactor try_* to return it
         let RepayResult {
@@ -74,12 +74,7 @@ impl Active {
         Ok(resp)
     }
 
-    fn try_repay(
-        self,
-        querier: &QuerierWrapper<'_>,
-        env: &Env,
-        info: MessageInfo,
-    ) -> ContractResult<Response> {
+    fn try_repay(self, deps: Deps<'_>, env: Env, info: MessageInfo) -> ContractResult<Response> {
         let payment = bank::may_received::<PaymentGroup, _>(
             info.funds.clone(),
             IntoDTO::<PaymentGroup>::new(),
@@ -90,11 +85,11 @@ impl Active {
             let payment_lpn = bank::may_received::<Lpns, _>(info.funds, IntoDTO::<Lpns>::new())
                 .ok_or_else(ContractError::NoPaymentError)??;
 
-            Self::try_repay_lpn(self.lease, payment_lpn, querier, env)
+            Self::try_repay_lpn(self.lease, payment_lpn, &deps.querier, &env)
         } else {
-            let next_state = TransferOut::new(self.lease, payment);
-            let batch = next_state.enter_state(env.block.time)?;
-            Ok(Response::from(batch, next_state))
+            let transfer_out = TransferOut::new(self.lease, payment);
+            let batch = transfer_out.enter(deps, env)?;
+            Ok(Response::from(batch, transfer_out))
         }
     }
 
@@ -142,15 +137,17 @@ impl Controller for Active {
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         match msg {
-            ExecuteMsg::Repay() => self.try_repay(&deps.querier, &env, info),
-            ExecuteMsg::Close() => todo!("fail"),
+            ExecuteMsg::Repay() => self.try_repay(deps.as_ref(), env, info),
+            ExecuteMsg::Close() => controller::err("close", deps.api),
             ExecuteMsg::PriceAlarm() => self.try_on_price_alarm(&deps.querier, &env, info),
             ExecuteMsg::TimeAlarm {} => self.try_on_time_alarm(&deps.querier, &env, info),
         }
     }
+}
 
-    fn query(self, deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
-        super::query(self.lease.lease, None, &deps, &env)
+impl Contract for Active {
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+        super::lease_state(self.lease.lease, None, now, querier)
     }
 }
 

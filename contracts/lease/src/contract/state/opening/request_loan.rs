@@ -1,22 +1,24 @@
+use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use platform::batch::{Batch, Emit, Emitter};
-use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply};
+use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Reply};
 
 use crate::{
     api::{DownpaymentCoin, NewLeaseContract},
     contract::{
         cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
-        state::{Controller, Response},
+        state::{ica_connector::IcaConnector, Controller, Response},
+        Contract,
     },
     error::{ContractError, ContractResult},
     event::Type,
     reply_id::ReplyId,
 };
 
-use super::open_ica_account::OpenIcaAccount;
+use super::open_ica::OpenIcaAccount;
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestLoan {
@@ -59,12 +61,7 @@ impl RequestLoan {
         ))
     }
 
-    fn on_response(
-        self,
-        msg: Reply,
-        contract: Addr,
-        querier: &QuerierWrapper<'_>,
-    ) -> ContractResult<Response> {
+    fn on_response(self, deps: Deps<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
         let id = ReplyId::try_from(msg.id)
             .map_err(|_| ContractError::InvalidParameters("Invalid reply ID passed!".into()))?;
 
@@ -74,13 +71,17 @@ impl RequestLoan {
                     .deps
                     .0
                     .clone()
-                    .execute(OpenLoanResp::new(msg), querier)?;
+                    .execute(OpenLoanResp::new(msg), &deps.querier)?;
 
-                let emitter = self.emit_ok(contract);
-                let next_state =
-                    OpenIcaAccount::new(self.new_lease, self.downpayment, loan, self.deps);
-                let batch = next_state.enter_state();
-                Ok(Response::from(batch.into_response(emitter), next_state))
+                let emitter = self.emit_ok(env.contract.address.clone());
+                let open_ica = IcaConnector::new(OpenIcaAccount::new(
+                    self.new_lease,
+                    self.downpayment,
+                    loan,
+                    self.deps,
+                ));
+                let batch = open_ica.enter(deps, env)?;
+                Ok(Response::from(batch.into_response(emitter), open_ica))
             }
         }
     }
@@ -92,14 +93,15 @@ impl RequestLoan {
 
 impl Controller for RequestLoan {
     fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
-        self.on_response(msg, env.contract.address, &deps.querier)
+        self.on_response(deps.as_ref(), env, msg)
     }
+}
 
-    fn query(
+impl Contract for RequestLoan {
+    fn state(
         self,
-        _deps: Deps<'_>,
-        _env: Env,
-        _msg: crate::api::StateQuery,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
     ) -> ContractResult<crate::api::StateResponse> {
         unreachable!()
     }

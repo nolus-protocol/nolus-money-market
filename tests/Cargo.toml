@@ -1,7 +1,7 @@
 [package]
 name = "integration_tests"
 version = "0.1.0"
-authors = ["Nina Nikolova <n.nikolova@nolus.io>"]
+authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 
@@ -23,7 +23,7 @@ finance = { workspace = true, features = ["testing"] }
 marketprice = { workspace = true, features = ["testing"] }
 platform = { workspace = true, features = ["testing"] }
 sdk = { workspace = true, features = ["cosmos", "neutron", "testing"] }
-tree = { workspace = true }
+tree = { workspace = true, features = ["testing"] }
 swap = { workspace = true, features = ["testing"] }
 
 anyhow = { workspace = true }

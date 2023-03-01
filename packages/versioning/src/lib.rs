@@ -2,14 +2,27 @@ use std::error::Error;
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "schema")]
+use sdk::schemars::{self, JsonSchema};
 use sdk::{
-    cosmwasm_std::{StdError, StdResult, Storage},
+    cosmwasm_ext::Response,
+    cosmwasm_std::{to_binary, StdError, StdResult, Storage},
     cw_storage_plus::Item,
 };
+
+const RELEASE_VERSION: &str = env!(
+    "RELEASE_VERSION",
+    r#"No release version provided as an environment variable! Please set "RELEASE_VERSION" environment variable!"#,
+);
+
+pub fn respond_with_release() -> StdResult<Response> {
+    Ok(Response::new().set_data(to_binary(self::RELEASE_VERSION)?))
+}
 
 pub type VersionSegment = u16;
 
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct SemVer {
     major: VersionSegment,
     minor: VersionSegment,
@@ -17,6 +30,7 @@ pub struct SemVer {
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct Version {
     storage: VersionSegment,
     software: SemVer,
@@ -66,15 +80,19 @@ pub fn parse_semver(version: &str) -> SemVer {
 }
 
 #[macro_export]
+macro_rules! package_version {
+    () => {{
+        $crate::parse_semver(::core::env!(
+            "CARGO_PKG_VERSION",
+            "Cargo package version is not set as an environment variable!",
+        ))
+    }};
+}
+
+#[macro_export]
 macro_rules! version {
     ($storage: expr) => {{
-        $crate::Version::new(
-            $storage,
-            $crate::parse_semver(::core::env!(
-                "CARGO_PKG_VERSION",
-                "Cargo package version is not set as an environment variable!",
-            )),
-        )
+        $crate::Version::new($storage, $crate::package_version!())
     }};
 }
 
@@ -82,49 +100,6 @@ const VERSION_STORAGE_KEY: Item<'static, Version> = Item::new("contract_version"
 
 pub fn initialize(storage: &mut dyn Storage, version: Version) -> StdResult<()> {
     VERSION_STORAGE_KEY.save(storage, &version)
-}
-
-// TODO remove when all contracts have been migrated to post-refactor versions
-pub fn upgrade_old_contract<
-    'r,
-    const OLD_COMPATIBILITY_VERSION: VersionSegment,
-    MigrateStorageFunctor,
-    MigrateStorageError,
->(
-    storage: &'r mut dyn Storage,
-    version: Version,
-    migrate_storage_functor: Option<MigrateStorageFunctor>,
-) -> Result<(), MigrateStorageError>
-where
-    MigrateStorageFunctor: FnOnce(&'r mut dyn Storage) -> Result<(), MigrateStorageError>,
-    MigrateStorageError: From<StdError> + Error,
-{
-    const CW_VERSION_ITEM: Item<'static, String> = Item::new("contract_info");
-
-    const OLD_VERSION_ITEM: Item<'static, u16> = Item::new("contract_version");
-
-    if version.storage != 0 {
-        return Err(StdError::generic_err(
-            "Storage version should be set to zero, marking the initial one!",
-        )
-        .into());
-    }
-
-    if OLD_VERSION_ITEM.load(storage)? != OLD_COMPATIBILITY_VERSION {
-        return Err(StdError::generic_err(
-            "Couldn't upgrade contract because storage version didn't match expected one!",
-        )
-        .into());
-    }
-
-    CW_VERSION_ITEM.remove(storage);
-
-    OLD_VERSION_ITEM.remove(storage);
-
-    // Using zero as a starting storage version to mark this as a new epoch.
-    initialize(storage, version)?;
-
-    migrate_storage_functor.map_or(Ok(()), move |functor| functor(storage))
 }
 
 #[inline]

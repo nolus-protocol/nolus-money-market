@@ -1,7 +1,7 @@
 [package]
 name = "lpp"
-version = "0.1.0"
-authors = ["v.kolesnikov <v.kolesnikov@nolus.io>"]
+version = "0.1.1"
+authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 

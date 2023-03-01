@@ -93,23 +93,24 @@ impl<'a> Alarms<'a> {
         )
     }
 
-    pub fn notify(
+    pub fn notify<D>(
         &self,
         storage: &mut dyn Storage,
-        dispatcher: &mut impl AlarmDispatcher,
+        dispatcher: D,
         ctime: Timestamp,
         max_count: AlarmsCount,
-    ) -> Result<AlarmsCount, AlarmError> {
+    ) -> Result<D, AlarmError>
+    where
+        D: AlarmDispatcher,
+    {
         let max_id = self.next_id.may_load(storage)?.unwrap_or_default();
 
         self.alarms_selection(storage, ctime, max_id)
             .take(max_count.try_into()?)
-            .try_fold(0, |count, alarm| -> Result<AlarmsCount, AlarmError> {
+            .try_fold(dispatcher, |dispatcher, alarm| {
                 let (id, alarm) = alarm?;
 
-                dispatcher.send_to(id, alarm.addr)?;
-
-                Ok(count + 1)
+                dispatcher.send_to(id, alarm.addr)
             })
     }
 
@@ -120,8 +121,11 @@ impl<'a> Alarms<'a> {
     }
 }
 
-pub trait AlarmDispatcher {
-    fn send_to(&mut self, id: Id, addr: Addr) -> Result<(), AlarmError>;
+pub trait AlarmDispatcher
+where
+    Self: Sized,
+{
+    fn send_to(self, id: Id, addr: Addr) -> Result<Self, AlarmError>;
 }
 
 #[cfg(test)]
@@ -134,10 +138,10 @@ pub mod tests {
     struct MockAlarmDispatcher(pub Vec<Id>);
 
     impl AlarmDispatcher for MockAlarmDispatcher {
-        fn send_to(&mut self, id: Id, _addr: Addr) -> Result<(), AlarmError> {
+        fn send_to(mut self, id: Id, _addr: Addr) -> Result<Self, AlarmError> {
             self.0.push(id);
 
-            Ok(())
+            Ok(self)
         }
     }
 
@@ -176,7 +180,7 @@ pub mod tests {
     fn test_remove() {
         let alarms = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
         let storage = &mut testing::mock_dependencies().storage;
-        let mut dispatcher = MockAlarmDispatcher::default();
+        let dispatcher = MockAlarmDispatcher::default();
         let t1 = Timestamp::from_seconds(10);
         let t2 = Timestamp::from_seconds(20);
         let addr1 = Addr::unchecked("addr1");
@@ -198,7 +202,7 @@ pub mod tests {
             .remove(storage, err_id)
             .expect("remove alarm with unknown id");
 
-        assert_eq!(alarms.notify(storage, &mut dispatcher, t2, 100), Ok(1));
+        let dispatcher = alarms.notify(storage, dispatcher, t2, 100).unwrap();
         assert_eq!(dispatcher.0, [id2]);
     }
 
@@ -206,7 +210,7 @@ pub mod tests {
     fn test_notify() {
         let alarms = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
         let storage = &mut testing::mock_dependencies().storage;
-        let mut dispatcher = MockAlarmDispatcher::default();
+        let dispatcher = MockAlarmDispatcher::default();
         let t1 = Timestamp::from_seconds(1);
         let t2 = Timestamp::from_seconds(2);
         let t3 = Timestamp::from_seconds(3);
@@ -224,14 +228,14 @@ pub mod tests {
         // rest
         alarms.add(storage, addr4, t4).expect("can't set alarms");
 
-        assert_eq!(alarms.notify(storage, &mut dispatcher, t1, 100), Ok(2));
+        let dispatcher = alarms.notify(storage, dispatcher, t1, 100).unwrap();
         assert_eq!(dispatcher.0, [id1, id2]);
         dispatcher
             .clean_alarms(storage, &alarms)
             .expect("can't clean up alarms db");
 
-        let mut dispatcher = MockAlarmDispatcher::default();
-        assert_eq!(alarms.notify(storage, &mut dispatcher, t3, 100), Ok(1));
+        let dispatcher = MockAlarmDispatcher::default();
+        let dispatcher = alarms.notify(storage, dispatcher, t3, 100).unwrap();
         assert_eq!(dispatcher.0, [id3]);
     }
 

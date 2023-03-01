@@ -1,48 +1,70 @@
+use cosmwasm_std::{DepsMut, MessageInfo, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use platform::{
     bank,
-    batch::{Emit, Emitter},
+    batch::{Batch, Emit, Emitter},
 };
-use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper};
+use sdk::cosmwasm_std::{Env, QuerierWrapper};
 
 use crate::{
-    api::{StateQuery, StateResponse},
-    contract::cmd::Close,
+    api::{ExecuteMsg, StateResponse},
+    contract::{cmd::Close, state, Contract},
     error::ContractResult,
     event::Type,
     lease::{with_lease, IntoDTOResult, LeaseDTO},
 };
 
-use super::{Controller, Response};
+use super::{controller, Controller, Response};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Closed {}
 
 impl Closed {
     pub(super) fn enter_state(
-        self,
+        &self,
         lease: LeaseDTO,
-        env: &Env,
         querier: &QuerierWrapper<'_>,
-    ) -> ContractResult<Response> {
-        let lease_account = bank::account(&env.contract.address, querier);
-        let IntoDTOResult { lease: _, batch } =
-            with_lease::execute(lease, Close::new(lease_account), querier)?;
+    ) -> ContractResult<Batch> {
+        let lease_addr = lease.addr.clone();
+        let lease_account = bank::account(&lease_addr, querier);
+        let IntoDTOResult {
+            lease: _abandon,
+            batch,
+        } = with_lease::execute(lease, Close::new(lease_account), querier)?;
+        Ok(batch)
+    }
 
-        let emitter = Emitter::of_type(Type::Closed)
-            .emit("id", env.contract.address.clone())
-            .emit_tx_info(env);
-
-        Ok(Response::from(
-            batch.into_response(emitter),
-            Closed::default(),
-        ))
+    pub(super) fn emit_ok(&self, env: &Env, lease: &LeaseDTO) -> Emitter {
+        Emitter::of_type(Type::Closed)
+            .emit("id", lease.addr.clone())
+            .emit_tx_info(env)
     }
 }
 
 impl Controller for Closed {
-    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn execute(
+        self,
+        deps: &mut DepsMut<'_>,
+        _env: Env,
+        _info: MessageInfo,
+        msg: ExecuteMsg,
+    ) -> ContractResult<Response> {
+        match msg {
+            ExecuteMsg::Repay() => controller::err("repay", deps.api),
+            ExecuteMsg::Close() => controller::err("close", deps.api),
+            ExecuteMsg::PriceAlarm() => state::ignore_msg(self),
+            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self),
+        }
+    }
+}
+
+impl Contract for Closed {
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
         Ok(StateResponse::Closed())
     }
 }

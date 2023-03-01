@@ -7,7 +7,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
-use versioning::{version, VersionSegment};
+use versioning::{package_version, respond_with_release, version, VersionSegment};
 
 use crate::{
     error::ContractError,
@@ -86,51 +86,19 @@ pub fn instantiate(
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct MigrateMsg {
-    tree: tree::HumanReadableTree<swap::SwapTarget>,
-}
+pub struct MigrateMsg {}
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
-    use sdk::cosmwasm_std::Storage;
-    use swap::SwapTarget;
-    use tree::HumanReadableTree;
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    use crate::state::config::Config;
-
-    struct UpdateTree<'r>(HumanReadableTree<SwapTarget>, &'r mut dyn Storage);
-
-    impl<'r> AnyVisitor for UpdateTree<'r> {
-        type Output = ();
-        type Error = ContractError;
-
-        fn on<C>(self) -> AnyVisitorResult<Self>
-        where
-            C: Currency + serde::Serialize + serde::de::DeserializeOwned,
-        {
-            SupportedPairs::<C>::new(self.0.into_tree())?
-                .save(self.1)
-                .map_err(Into::into)
-        }
-    }
-
-    versioning::upgrade_old_contract::<0, _, ContractError>(
-        deps.storage,
-        version!(CONTRACT_STORAGE_VERSION),
-        Some(|storage: &mut _| {
-            visit_any_on_ticker::<Lpns, _>(
-                &Config::load(storage)?.base_asset,
-                UpdateTree(msg.tree, storage),
-            )
-        }),
-    )?;
-
-    Ok(Response::default())
+    respond_with_release().map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
+        QueryMsg::ContractVersion {} => Ok(to_binary(&package_version!())?),
         QueryMsg::Config {} => Ok(to_binary(&query_config(deps.storage)?)?),
         QueryMsg::Feeders {} => Ok(to_binary(&Feeders::get(deps.storage)?)?),
         QueryMsg::IsFeeder { address } => {

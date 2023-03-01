@@ -2,9 +2,9 @@
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, SubMsgResult},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, SubMsgResult},
 };
-use versioning::{version, VersionSegment};
+use versioning::{package_version, respond_with_release, version, VersionSegment};
 
 use crate::{
     alarms::TimeAlarms,
@@ -33,13 +33,9 @@ pub struct MigrateMsg {}
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    versioning::upgrade_old_contract::<0, fn(_) -> _, ContractError>(
-        deps.storage,
-        version!(CONTRACT_STORAGE_VERSION),
-        None,
-    )?;
+    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    Ok(Response::default())
+    respond_with_release().map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -60,7 +56,8 @@ pub fn execute(
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
-        QueryMsg::AlarmsStatus {} => Ok(sdk::cosmwasm_std::to_binary(&TimeAlarms::try_any_alarm(
+        QueryMsg::ContractVersion {} => Ok(to_binary(&package_version!())?),
+        QueryMsg::AlarmsStatus {} => Ok(to_binary(&TimeAlarms::try_any_alarm(
             deps.storage,
             env.block.time,
         )?)?),

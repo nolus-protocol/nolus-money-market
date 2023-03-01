@@ -1,7 +1,7 @@
 [package]
 name = "tree"
 version = "0.1.0"
-authors = ["Kiril Mihaylov <k.mihaylov@nolus.io>"]
+authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 

@@ -30,6 +30,15 @@ impl Batch {
         self.msgs.push(msg_cw);
     }
 
+    pub fn schedule_execute_on_success_reply<M>(&mut self, msg: M, reply_id: ReplyId)
+    where
+        M: Into<CosmosMsg>,
+    {
+        let msg_cw = SubMsg::reply_on_success(msg, reply_id);
+
+        self.msgs.push(msg_cw);
+    }
+
     pub fn schedule_execute_wasm_no_reply<M, C>(
         &mut self,
         addr: &Addr,
@@ -283,11 +292,15 @@ mod test {
     #[test]
     fn msgs_len() {
         let mut b = Batch::default();
+        assert_eq!(0, b.len());
         assert!(b.is_empty());
         b.schedule_execute_no_reply(CosmosMsg::Wasm(WasmMsg::ClearAdmin {
-            contract_addr: "".to_string(),
+            contract_addr: "".into(),
         }));
-        assert!(!b.is_empty());
         assert_eq!(1, b.len());
+        assert!(!b.is_empty());
+
+        let resp: Response = b.into();
+        assert_eq!(1, resp.messages.len());
     }
 }

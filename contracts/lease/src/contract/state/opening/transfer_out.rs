@@ -1,3 +1,4 @@
+use cosmwasm_std::{Binary, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
 use finance::zero::Zero;
@@ -7,18 +8,16 @@ use platform::{
     batch::{Batch, Emit, Emitter},
     ica::HostAccount,
 };
-use sdk::{
-    cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Timestamp},
-    neutron_sdk::sudo::msg::SudoMsg,
-};
+use sdk::cosmwasm_std::{Addr, Deps, Env, Timestamp};
 
 use crate::{
-    api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateQuery, StateResponse},
+    api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateResponse},
     contract::{
         cmd::OpenLoanRespResult,
-        state::{BuyAsset, Controller, Response},
+        dex::Account,
+        state::{self, BuyAsset, Controller, Response},
+        Contract,
     },
-    dex::Account,
     error::ContractResult,
     event::Type,
 };
@@ -53,9 +52,7 @@ impl TransferOut {
         }
     }
 
-    //TODO define a State trait with `fn enter(&self, deps: &Deps)` and
-    //simplify the TransferOut::on_success return type to `impl State`
-    pub(super) fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
+    fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
         debug_assert_eq!(self.nb_completed, TransfersNb::ZERO);
         let mut sender = self.dex_account.transfer_to(now);
         sender.send(&self.downpayment)?;
@@ -69,27 +66,27 @@ impl TransferOut {
             .emit_coin_dto("downpayment", self.downpayment.clone())
     }
 
-    fn on_response(self, contract: Addr, querier: &QuerierWrapper<'_>) -> ContractResult<Response> {
+    fn on_response(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         match self.nb_completed {
             0 => {
-                let next_state = Self {
+                let transfer_out = Self {
                     nb_completed: self.nb_completed + 1,
                     ..self
                 };
-                Ok(Response::from(Batch::default(), next_state))
+                Ok(Response::from(Batch::default(), transfer_out))
             }
             1 => {
-                let emitter = self.emit_ok(contract);
-                let next_state = BuyAsset::new(
+                let emitter = self.emit_ok(env.contract.address.clone());
+                let buy_asset = BuyAsset::new(
                     self.form,
                     self.dex_account,
                     self.downpayment,
                     self.loan,
                     self.deps,
                 );
-                let batch = next_state.enter_state(querier)?;
+                let batch = buy_asset.enter(deps, env)?;
                 let resp = batch.into_response(emitter);
-                Ok(Response::from(resp, next_state))
+                Ok(Response::from(resp, buy_asset))
             }
             _ => unreachable!(),
         }
@@ -97,25 +94,25 @@ impl TransferOut {
 }
 
 impl Controller for TransferOut {
-    fn sudo(self, deps: &mut DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
-        match msg {
-            SudoMsg::Response { request: _, data } => {
-                deps.api.debug(&format!(
-                    "[Lease][Opening][TransferOut] receive ack '{}'",
-                    data.to_base64()
-                ));
-                self.on_response(env.contract.address, &deps.querier)
-            }
-            SudoMsg::Timeout { request: _ } => todo!(),
-            SudoMsg::Error {
-                request: _,
-                details: _,
-            } => todo!(),
-            _ => unreachable!(),
-        }
+    fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
+        self.enter_state(env.block.time)
     }
 
-    fn query(self, _deps: Deps<'_>, _env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn on_response(self, _data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        self.on_response(deps, env)
+    }
+
+    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        state::on_timeout_retry(self, Type::OpeningTransferOut, deps, env)
+    }
+}
+
+impl Contract for TransferOut {
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
         Ok(StateResponse::Opening {
             downpayment: self.downpayment,
             loan: self.loan.principal,

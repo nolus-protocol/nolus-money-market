@@ -62,7 +62,7 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
         )
         .ok_or_else(Self::Error::NoPaymentError)??;
         if downpayment_lpn.is_zero() {
-            Err(Self::Error::NoPaymentError())
+            Err(Self::Error::InsufficientPayment(downpayment))
         } else {
             let borrow_lpn = self.liability.init_borrow_amount(downpayment_lpn);
 

@@ -1,16 +1,14 @@
+use cosmwasm_std::{Binary, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
 use platform::batch::{Batch, Emit, Emitter};
-use sdk::{
-    cosmwasm_std::{Deps, DepsMut, Env, QuerierWrapper, Timestamp},
-    neutron_sdk::sudo::msg::SudoMsg,
-};
+use sdk::cosmwasm_std::{Deps, Env, Timestamp};
 
 use crate::{
-    api::{opened::RepayTrx, PaymentCoin, StateQuery, StateResponse},
+    api::{opened::RepayTrx, PaymentCoin, StateResponse},
     contract::{
-        state::{opened::repay, Controller, Response},
-        Lease,
+        state::{self, opened::repay, Controller, Response},
+        Contract, Lease,
     },
     error::ContractResult,
     event::Type,
@@ -29,22 +27,19 @@ impl TransferOut {
         Self { lease, payment }
     }
 
-    pub(in crate::contract::state::opened) fn enter_state(
-        &self,
-        now: Timestamp,
-    ) -> ContractResult<Batch> {
+    fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
         let mut sender = self.lease.dex.transfer_to(now);
         // TODO apply nls_swap_fee on the payment!
         sender.send(&self.payment)?;
         Ok(sender.into())
     }
 
-    fn on_response(self, querier: &QuerierWrapper<'_>) -> ContractResult<Response> {
+    fn on_response(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         let emitter = self.emit_ok();
-        let next_state = BuyLpn::new(self.lease, self.payment);
-        let batch = next_state.enter_state(querier)?;
+        let buy_lpn = BuyLpn::new(self.lease, self.payment);
+        let batch = buy_lpn.enter(deps, env)?;
 
-        Ok(Response::from(batch.into_response(emitter), next_state))
+        Ok(Response::from(batch.into_response(emitter), buy_lpn))
     }
 
     fn emit_ok(&self) -> Emitter {
@@ -55,32 +50,27 @@ impl TransferOut {
 }
 
 impl Controller for TransferOut {
-    fn sudo(self, deps: &mut DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
-        match msg {
-            SudoMsg::Response { request: _, data } => {
-                deps.api.debug(&format!(
-                    "[Lease][Repay][TransferOut] receive ack '{}'",
-                    data.to_base64()
-                ));
-
-                self.on_response(&deps.querier)
-            }
-            SudoMsg::Timeout { request: _ } => todo!(),
-            SudoMsg::Error {
-                request: _,
-                details: _,
-            } => todo!(),
-            _ => unreachable!(),
-        }
+    fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
+        self.enter_state(env.block.time)
     }
 
-    fn query(self, deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<StateResponse> {
+    fn on_response(self, _data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        self.on_response(deps, env)
+    }
+
+    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        state::on_timeout_retry(self, Type::RepaymentTransferOut, deps, env)
+    }
+}
+
+impl Contract for TransferOut {
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         repay::query(
             self.lease.lease,
             self.payment,
             RepayTrx::TransferOut,
-            &deps,
-            &env,
+            now,
+            querier,
         )
     }
 }
