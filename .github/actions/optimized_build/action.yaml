@@ -11,6 +11,8 @@ runs:
   using: composite
   steps:
     - shell: "sh"
+      run: RELEASE_VERSION="${{ github.ref_name }}-$(date -u -Iminute)"
+    - shell: "sh"
       run: |
         if test "${{ inputs.target_net }}" = "test";
           then exit 0;
@@ -31,7 +33,13 @@ runs:
         --mount type=volume,source="rustup_dir_cache",target="/usr/local/rustup/" \
         --mount type=volume,source="cargo_dir_cache",target="/usr/local/cargo/" \
         --mount type=volume,source="registry_cache",target="/usr/local/cargo/registry/" \
-        --env ALT_NET_SYMBOLS=$(if test "${{ inputs.target_net }}" = "test"; then echo 1; else echo 0; fi) \
+        --env ALT_NET_SYMBOLS=$( \
+            if test "${{ inputs.target_net }}" = "test"; \
+              then echo 1; \
+              else echo 0; \
+            fi \
+          ) \
+        --env RELEASE_VERSION="${{ github.ref_name }}-$(date -Iminute)"
         cosmwasm/workspace-optimizer:0.12.11
     - name: "Check for WASM binaries larger than allowed limit"
       shell: "sh"

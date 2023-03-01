@@ -24,7 +24,9 @@ on:
 
 env:
   CARGO_TERM_COLOR: "always"
-  RELEASE_VERSION: "{{ github.ref_name }}"
+  # Release version is set to `ci` to allow building during checking and testing
+  # pipelines, which is ignored during optimized builds.
+  RELEASE_VERSION: "ci"
 
 jobs:
   check_formatting:
