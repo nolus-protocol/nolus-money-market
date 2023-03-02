@@ -11,8 +11,6 @@ runs:
   using: composite
   steps:
     - shell: "sh"
-      run: RELEASE_VERSION="${{ github.ref_name }}-$(date -u -Iminute)"
-    - shell: "sh"
       run: |
         if test "${{ inputs.target_net }}" = "test";
           then exit 0;
