@@ -816,7 +816,7 @@ dependencies = [
 
 [[package]]
 name = "platform"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "finance",
  "prost 0.11.8",
@@ -1380,7 +1380,7 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "versioning"
-version = "0.0.0"
+version = "0.0.1"
 dependencies = [
  "sdk",
  "serde",

@@ -5,19 +5,12 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "schema")]
 use sdk::schemars::{self, JsonSchema};
 use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, StdError, StdResult, Storage},
+    cosmwasm_std::{StdError, StdResult, Storage},
     cw_storage_plus::Item,
 };
 
-const RELEASE_VERSION: &str = env!(
-    "RELEASE_VERSION",
-    r#"No release version provided as an environment variable! Please set "RELEASE_VERSION" environment variable!"#,
-);
-
-pub fn respond_with_release() -> StdResult<Response> {
-    Ok(Response::new().set_data(to_binary(self::RELEASE_VERSION)?))
-}
+mod release;
+pub use release::release;
 
 pub type VersionSegment = u16;
 
@@ -108,17 +101,16 @@ pub fn update_software(storage: &mut dyn Storage, version: Version) -> StdResult
 }
 
 pub fn update_software_and_storage<
-    'r,
     const FROM_STORAGE_VERSION: VersionSegment,
     MigrateStorageFunctor,
     MigrateStorageError,
 >(
-    storage: &'r mut dyn Storage,
+    storage: &mut dyn Storage,
     version: Version,
     migrate_storage: MigrateStorageFunctor,
 ) -> Result<(), MigrateStorageError>
 where
-    MigrateStorageFunctor: FnOnce(&'r mut dyn Storage) -> Result<(), MigrateStorageError>,
+    MigrateStorageFunctor: FnOnce(&mut dyn Storage) -> Result<(), MigrateStorageError>,
     MigrateStorageError: From<StdError> + Error,
 {
     if version.storage == FROM_STORAGE_VERSION {
@@ -148,7 +140,8 @@ fn update_version(
             )));
         }
 
-        if saved_version.software < version.software {
+        if saved_version.software < version.software
+            || (release::dev_release() && saved_version.software == version.software) {
             Ok(version)
         } else {
             Err(StdError::generic_err(

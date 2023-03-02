@@ -1,12 +1,12 @@
 use access_control::SingleUserAccess;
-use platform::{batch::Batch, reply::from_instantiate};
+use platform::{batch::Batch, reply::from_instantiate, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage},
 };
-use versioning::{respond_with_release, version, VersionSegment};
+use versioning::{version, VersionSegment};
 
 use crate::{
     cmd::Borrow,
@@ -49,7 +49,7 @@ pub fn instantiate(
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    respond_with_release().map_err(Into::into)
+    response::response(versioning::release()).map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
