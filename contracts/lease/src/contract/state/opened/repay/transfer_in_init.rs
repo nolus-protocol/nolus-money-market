@@ -19,9 +19,9 @@ use super::transfer_in_finish::TransferInFinish;
 
 #[derive(Serialize, Deserialize)]
 pub struct TransferInInit {
-    pub(super) lease: Lease,
-    pub(super) payment: PaymentCoin,
-    pub(super) payment_lpn: LpnCoin,
+    lease: Lease,
+    payment: PaymentCoin,
+    payment_lpn: LpnCoin,
 }
 
 impl TransferInInit {
@@ -44,7 +44,8 @@ impl TransferInInit {
     }
 
     fn on_response(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
-        TransferInFinish::from(self).try_complete(querier, env)
+        let finish: TransferInFinish = self.into();
+        finish.try_complete(querier, env)
     }
 }
 
@@ -77,5 +78,11 @@ impl Contract for TransferInInit {
             now,
             querier,
         )
+    }
+}
+
+impl From<TransferInInit> for TransferInFinish {
+    fn from(init: TransferInInit) -> Self {
+        Self::new(init.lease, init.payment, init.payment_lpn)
     }
 }

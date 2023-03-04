@@ -18,8 +18,6 @@ use crate::{
     event::Type,
 };
 
-use super::transfer_in_init::TransferInInit;
-
 #[derive(Serialize, Deserialize)]
 pub struct TransferInFinish {
     lease: Lease,
@@ -28,6 +26,14 @@ pub struct TransferInFinish {
 }
 
 impl TransferInFinish {
+    pub(super) fn new(lease: Lease, payment: PaymentCoin, payment_lpn: LpnCoin) -> Self {
+        Self {
+            lease,
+            payment,
+            payment_lpn,
+        }
+    }
+
     pub(super) fn try_complete(
         self,
         querier: &QuerierWrapper<'_>,
@@ -56,16 +62,6 @@ impl TransferInFinish {
             .emit("id", self.lease.lease.addr.clone())
             .emit_coin_dto("payment", self.payment.clone())
             .emit_coin_dto("payment-stable", self.payment_lpn.clone())
-    }
-}
-
-impl From<TransferInInit> for TransferInFinish {
-    fn from(init: TransferInInit) -> Self {
-        Self {
-            lease: init.lease,
-            payment: init.payment,
-            payment_lpn: init.payment_lpn,
-        }
     }
 }
 
