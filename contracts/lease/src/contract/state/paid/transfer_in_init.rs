@@ -19,7 +19,7 @@ use super::transfer_in_finish::TransferInFinish;
 
 #[derive(Serialize, Deserialize)]
 pub struct TransferInInit {
-    pub(super) lease: Lease,
+    lease: Lease,
 }
 
 impl TransferInInit {
@@ -83,5 +83,11 @@ impl Contract for TransferInInit {
             amount: self.lease.lease.amount,
             in_progress: Some(ClosingTrx::TransferInInit),
         })
+    }
+}
+
+impl From<TransferInInit> for TransferInFinish {
+    fn from(init: TransferInInit) -> Self {
+        Self::new(init.lease)
     }
 }
