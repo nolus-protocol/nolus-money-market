@@ -13,7 +13,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::{borrow::InterestRate, nlpn::NLpn, state::LoanData};
+use crate::{borrow::InterestRate, loan::LoanData, nlpn::NLpn};
 
 pub type LppCoin = CoinDTO<Lpns>;
 

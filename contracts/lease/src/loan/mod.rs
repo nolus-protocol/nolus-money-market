@@ -10,8 +10,8 @@ use finance::{
     percent::{Percent, Units},
 };
 use lpp::{
+    loan::LoanData,
     msg::QueryLoanResponse,
-    state::LoanData,
     stub::{
         lender::{LppLender as LppLenderTrait, LppLenderRef},
         LppBatch,
