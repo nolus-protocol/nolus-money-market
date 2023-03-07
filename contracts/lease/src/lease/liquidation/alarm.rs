@@ -214,15 +214,12 @@ where
 #[cfg(test)]
 mod tests {
     use currency::{lease::Cro, lpn::Usdc};
-    #[cfg(not(debug_assertions))]
     use finance::percent::Percent;
     use finance::{coin::Coin, duration::Duration, fraction::Fraction, price::total_of};
-    #[cfg(not(debug_assertions))]
     use lpp::msg::LoanResponse;
     use marketprice::SpotPrice;
     use oracle::{alarms::Alarm, msg::ExecuteMsg::AddPriceAlarm};
     use platform::batch::Batch;
-    #[cfg(not(debug_assertions))]
     use sdk::cosmwasm_std::Timestamp;
     use sdk::cosmwasm_std::{to_binary, Addr, WasmMsg};
     use timealarms::msg::ExecuteMsg::AddAlarm;
@@ -378,32 +375,30 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(debug_assertions))]
     fn price_alarm_by_percent() {
+        let principal = 300.into();
         let interest_rate = Percent::from_permille(50);
         // LPP loan
         let loan = LoanResponse {
-            principal_due: 300.into(),
-            interest_due: 0.into(),
+            principal_due: principal,
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
 
         let lease_addr = Addr::unchecked("lease");
+        let lease_amount = 1000.into();
         let lease = open_lease(
             lease_addr,
-            300.into(),
+            lease_amount,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
-
+        let alarm_at = Percent::from_percent(80);
         assert_eq!(
-            lease
-                .price_alarm_by_percent(Coin::new(500), Percent::from_percent(50))
-                .unwrap(),
-            total_of(Coin::new(3)).is(Coin::new(10))
+            lease.price_alarm_by_percent(principal, alarm_at).unwrap(),
+            total_of(alarm_at.of(lease_amount)).is(principal)
         );
     }
 }

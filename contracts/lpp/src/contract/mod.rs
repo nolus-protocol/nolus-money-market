@@ -199,19 +199,9 @@ impl<'a> QueryWithLpn<'a> {
                 let quote = amount.try_into()?;
                 to_binary(&borrow::query_quote::<LPN>(&self.deps, &self.env, quote)?)
             }
-            QueryMsg::Loan { lease_addr } => to_binary(&borrow::query_loan::<LPN>(
-                self.deps.storage,
-                self.env,
-                lease_addr,
-            )?),
-            QueryMsg::LoanOutstandingInterest {
-                lease_addr,
-                outstanding_time,
-            } => to_binary(&borrow::query_loan_outstanding_interest::<LPN>(
-                self.deps.storage,
-                lease_addr,
-                outstanding_time,
-            )?),
+            QueryMsg::Loan { lease_addr } => {
+                to_binary(&borrow::query_loan::<LPN>(self.deps.storage, lease_addr)?)
+            }
             QueryMsg::LppBalance() => {
                 to_binary(&rewards::query_lpp_balance::<LPN>(self.deps, self.env)?)
             }

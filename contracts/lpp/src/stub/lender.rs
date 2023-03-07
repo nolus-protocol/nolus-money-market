@@ -11,14 +11,11 @@ use platform::{
     batch::{Batch, ReplyId},
     reply::from_execute,
 };
-use sdk::cosmwasm_std::{Addr, QuerierWrapper, Reply, Timestamp};
+use sdk::cosmwasm_std::{Addr, QuerierWrapper, Reply};
 
 use crate::{
     error::ContractError,
-    msg::{
-        ExecuteMsg, LoanResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse,
-        QueryMsg, QueryQuoteResponse,
-    },
+    msg::{ExecuteMsg, LoanResponse, QueryLoanResponse, QueryMsg, QueryQuoteResponse},
     state::Config,
     stub::{ContractResult, LppBatch},
 };
@@ -34,11 +31,6 @@ where
 
     fn loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>>;
 
-    fn loan_outstanding_interest(
-        &self,
-        lease: impl Into<Addr>,
-        by: Timestamp,
-    ) -> ContractResult<QueryLoanOutstandingInterestResponse<Lpn>>;
     fn quote(&self, amount: Coin<Lpn>) -> ContractResult<QueryQuoteResponse>;
 }
 
@@ -200,20 +192,6 @@ where
     fn loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>> {
         let msg = QueryMsg::Loan {
             lease_addr: lease.into(),
-        };
-        self.querier
-            .query_wasm_smart(self.id(), &msg)
-            .map_err(ContractError::from)
-    }
-
-    fn loan_outstanding_interest(
-        &self,
-        lease: impl Into<Addr>,
-        by: Timestamp,
-    ) -> ContractResult<QueryLoanOutstandingInterestResponse<Lpn>> {
-        let msg = QueryMsg::LoanOutstandingInterest {
-            lease_addr: lease.into(),
-            outstanding_time: by,
         };
         self.querier
             .query_wasm_smart(self.id(), &msg)

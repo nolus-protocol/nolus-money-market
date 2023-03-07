@@ -612,7 +612,7 @@ dependencies = [
 
 [[package]]
 name = "lease"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "cosmwasm-std",
  "currency",
@@ -659,7 +659,7 @@ checksum = "201de327520df007757c1f0adce6e827fe8562fbc28bfd9c15571c66ca1f5f79"
 
 [[package]]
 name = "lpp"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "access-control",
  "cosmwasm-std",

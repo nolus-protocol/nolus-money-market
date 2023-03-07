@@ -140,31 +140,6 @@ where
     pub fn query(storage: &dyn Storage, lease_addr: Addr) -> StdResult<Option<LoanData<LPN>>> {
         Self::STORAGE.may_load(storage, lease_addr)
     }
-
-    pub fn query_outstanding_interest(
-        storage: &dyn Storage,
-        lease_addr: Addr,
-        outstanding_time: Timestamp,
-    ) -> StdResult<Option<Coin<LPN>>> {
-        let maybe_loan = Self::STORAGE.may_load(storage, lease_addr)?;
-
-        if let Some(loan) = maybe_loan {
-            let delta_t = Duration::between(
-                loan.interest_paid,
-                cmp::max(outstanding_time, loan.interest_paid),
-            );
-
-            let interest_period = InterestPeriod::with_interest(loan.annual_interest_rate)
-                .from(loan.interest_paid)
-                .spanning(delta_t);
-
-            let outstanding_interest_amount = interest_period.interest(loan.principal_due);
-
-            Ok(Some(outstanding_interest_amount))
-        } else {
-            Ok(None)
-        }
-    }
 }
 
 #[cfg(test)]
@@ -203,10 +178,7 @@ mod test {
             Loan::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 
         time = Timestamp::from_nanos(Duration::YEAR.nanos() / 2);
-        let interest: Coin<Usdc> =
-            Loan::query_outstanding_interest(deps.as_ref().storage, addr.clone(), time)
-                .expect("should query interest")
-                .expect("should be some interest");
+        let interest: Coin<Usdc> = loan.data.interest_due(time);
         assert_eq!(interest, 100u128.into());
 
         // partial repay

@@ -7,15 +7,13 @@ use platform::{
 };
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Addr, Deps, DepsMut, Env, MessageInfo, Storage, Timestamp},
+    cosmwasm_std::{to_binary, Addr, Deps, DepsMut, Env, MessageInfo, Storage},
 };
 
 use crate::{
     error::ContractError,
     lpp::LiquidityPool,
-    msg::{
-        LoanResponse, QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryQuoteResponse,
-    },
+    msg::{LoanResponse, QueryLoanResponse, QueryQuoteResponse},
 };
 
 pub fn try_open_loan<LPN>(
@@ -101,28 +99,10 @@ where
 
 pub fn query_loan<LPN>(
     storage: &dyn Storage,
-    env: Env,
     lease_addr: Addr,
 ) -> Result<QueryLoanResponse<LPN>, ContractError>
 where
     LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
-    LiquidityPool::<LPN>::load(storage)?.query_loan(storage, &env, lease_addr)
-}
-
-pub fn query_loan_outstanding_interest<LPN>(
-    storage: &dyn Storage,
-    loan: Addr,
-    outstanding_time: Timestamp,
-) -> Result<QueryLoanOutstandingInterestResponse<LPN>, ContractError>
-where
-    LPN: 'static + Currency + Serialize + DeserializeOwned,
-{
-    let interest = LiquidityPool::<LPN>::load(storage)?.query_loan_outstanding_interest(
-        storage,
-        loan,
-        outstanding_time,
-    )?;
-
-    Ok(interest)
+    LiquidityPool::<LPN>::load(storage)?.query_loan(storage, lease_addr)
 }

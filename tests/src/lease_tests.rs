@@ -718,14 +718,13 @@ fn compare_state_with_lpp_state_explicit_time() {
         LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1),
     );
 
-    let lpp::msg::OutstandingInterest::<Lpn>(loan_resp) = test_case
+    let loan: lpp::msg::LoanResponse<Lpn> = test_case
         .app
         .wrap()
         .query_wasm_smart(
             test_case.lpp_addr.clone().unwrap(),
-            &lpp::msg::QueryMsg::LoanOutstandingInterest {
+            &lpp::msg::QueryMsg::Loan {
                 lease_addr: lease_address.clone(),
-                outstanding_time: block_time(&test_case),
             },
         )
         .unwrap();
@@ -742,7 +741,7 @@ fn compare_state_with_lpp_state_explicit_time() {
         unreachable!();
     };
 
-    assert_eq!(query_result, loan_resp);
+    assert_eq!(query_result, loan.interest_due(block_time(&test_case)));
 }
 
 #[test]

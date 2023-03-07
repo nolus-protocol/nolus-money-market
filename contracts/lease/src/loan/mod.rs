@@ -11,6 +11,7 @@ use finance::{
 };
 use lpp::{
     msg::QueryLoanResponse,
+    state::LoanData,
     stub::{
         lender::{LppLender as LppLenderTrait, LppLenderRef},
         LppBatch,
@@ -159,15 +160,13 @@ where
         self.debug_check_start_due_before(by, "before the 'repay-by' time");
         self.debug_check_before_period_end(by);
 
-        let (principal_due, loan_interest_due) = self
-            .load_lpp_loan(lease.clone())?
-            .ok_or(ContractError::LoanClosed())
-            .map(|loan| (loan.principal_due, loan.interest_due(by)))?;
+        let loan = self.load_loan(lease)?.ok_or(ContractError::LoanClosed())?;
+        let loan_interest_due = loan.interest_due(by);
 
         let mut receipt = RepayReceipt::default();
 
         let (mut change, mut loan_payment) = if self.overdue_at(by) {
-            self.repay_previous_period(payment, by, lease, principal_due, &mut receipt)?
+            self.repay_previous_period(payment, by, &loan, &mut receipt)?
         } else {
             (payment, Coin::default())
         };
@@ -184,7 +183,7 @@ where
 
             (change, current_period_paid) = self.repay_current_period(
                 by,
-                principal_due,
+                loan.principal_due,
                 loan_interest_due,
                 &mut receipt,
                 change,
@@ -208,13 +207,6 @@ where
             return Ok(receipt);
         }
 
-        // TODO handle any surplus left after the repayment, options:
-        //  - query again the lpp on the interest due by now + calculate the max repayment by now + send the surplus to the customer, or
-        //  - [better separation of responsabilities, need of a 'reply' contract entry] pay lpp and once the surplus is received send it to the customer, or
-        //  - [better separation of responsabilities + low trx cost] keep the surplus in the lease and send it back on lease.close
-        //  - [better separation of responsabilities + even lower trx cost] include the remaining interest due up to this moment in the Lpp.query_loan response
-        //  and send repayment amount up to the principal + interest due. The remainder is left in the lease
-
         self.lpp.repay_loan_req(loan_payment)?;
 
         debug_assert_eq!(receipt.total(), payment);
@@ -225,7 +217,7 @@ where
     pub(crate) fn state(&self, now: Timestamp, lease: Addr) -> ContractResult<Option<State<Lpn>>> {
         self.debug_check_start_due_before(now, "in the past of");
 
-        let loan = if let Some(loan) = self.load_lpp_loan(lease.clone())? {
+        let loan = if let Some(loan) = self.load_loan(lease)? {
             loan
         } else {
             return Ok(None);
@@ -255,8 +247,7 @@ where
         let previous_margin_interest_due = margin_interest_overdue_period.interest(principal_due);
         let current_margin_interest_due = margin_interest_due_period.interest(principal_due);
 
-        let previous_interest_due =
-            self.load_loan_interest_due(lease, margin_interest_overdue_period.till())?;
+        let previous_interest_due = loan.interest_due(margin_interest_overdue_period.till());
         let current_interest_due = loan.interest_due(now) - previous_interest_due;
 
         Ok(Some(State {
@@ -270,29 +261,7 @@ where
         }))
     }
 
-    fn maybe_load_loan_interest_due(
-        &self,
-        lease: impl Into<Addr>,
-        by: Timestamp,
-    ) -> ContractResult<Option<Coin<Lpn>>> {
-        let interest = self
-            .lpp
-            .loan_outstanding_interest(lease, by)
-            .map_err(ContractError::from)?;
-
-        Ok(interest.map(|interest| interest.0))
-    }
-
-    fn load_loan_interest_due(
-        &self,
-        lease: impl Into<Addr>,
-        by: Timestamp,
-    ) -> ContractResult<Coin<Lpn>> {
-        self.maybe_load_loan_interest_due(lease, by)
-            .and_then(|maybe_interest| maybe_interest.ok_or(ContractError::LoanClosed()))
-    }
-
-    fn load_lpp_loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>> {
+    fn load_loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>> {
         self.lpp.loan(lease).map_err(ContractError::from)
     }
 
@@ -300,12 +269,11 @@ where
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
-        lease: Addr,
-        principal_due: Coin<Lpn>,
+        loan: &LoanData<Lpn>,
         receipt: &mut RepayReceipt<Lpn>,
     ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
-        let (prev_margin_paid, change) = self.repay_margin_interest(principal_due, by, payment)?;
-
+        let (prev_margin_paid, change) =
+            self.repay_margin_interest(loan.principal_due, by, payment)?;
         receipt.pay_previous_margin(prev_margin_paid);
 
         if change.is_zero() {
@@ -314,11 +282,8 @@ where
 
         debug_assert!(self.current_period.zero_length()); // no prev_margin due
 
-        let previous_interest_due =
-            self.load_loan_interest_due(lease, self.current_period.start())?;
-
+        let previous_interest_due = loan.interest_due(self.current_period.start());
         let previous_interest_paid = previous_interest_due.min(change);
-
         receipt.pay_previous_interest(previous_interest_paid);
 
         if previous_interest_paid == previous_interest_due {
@@ -452,10 +417,7 @@ mod tests {
     };
     use lpp::{
         error::ContractError as LppError,
-        msg::{
-            LoanResponse, OutstandingInterest, QueryLoanOutstandingInterestResponse,
-            QueryLoanResponse, QueryQuoteResponse,
-        },
+        msg::{LoanResponse, QueryLoanResponse, QueryQuoteResponse},
         stub::{
             lender::{LppLender, LppLenderRef},
             LppBatch,
@@ -513,20 +475,6 @@ mod tests {
 
         fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestCurrency>> {
             Ok(self.loan.clone())
-        }
-
-        fn loan_outstanding_interest(
-            &self,
-            _lease: impl Into<Addr>,
-            by: Timestamp,
-        ) -> LppResult<QueryLoanOutstandingInterestResponse<TestCurrency>> {
-            Ok(self.loan.as_ref().map(|loan| {
-                OutstandingInterest(interest(
-                    Duration::between(loan.interest_paid, by),
-                    loan.principal_due,
-                    loan.annual_interest_rate,
-                ))
-            }))
         }
 
         fn quote(&self, _amount: Coin<TestCurrency>) -> LppResult<QueryQuoteResponse> {

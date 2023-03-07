@@ -9,7 +9,7 @@ use finance::{
     price::Price,
 };
 use sdk::{
-    cosmwasm_std::{Addr, Timestamp, Uint128},
+    cosmwasm_std::{Addr, Uint128},
     schemars::{self, JsonSchema},
 };
 
@@ -56,11 +56,6 @@ pub enum QueryMsg {
     Loan {
         lease_addr: Addr,
     },
-    LoanOutstandingInterest {
-        lease_addr: Addr,
-        outstanding_time: Timestamp,
-    },
-
     // Deposit
     /// CW20 interface, lender deposit balance
     Balance {
@@ -84,14 +79,6 @@ pub enum QueryQuoteResponse {
 pub type LoanResponse<Lpn> = LoanData<Lpn>;
 
 pub type QueryLoanResponse<Lpn> = Option<LoanResponse<Lpn>>;
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct OutstandingInterest<Lpn>(pub Coin<Lpn>)
-where
-    Lpn: Currency;
-
-pub type QueryLoanOutstandingInterestResponse<Lpn> = Option<OutstandingInterest<Lpn>>;
 
 // Deposit query responses
 
