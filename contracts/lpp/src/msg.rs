@@ -13,7 +13,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::{borrow::InterestRate, nlpn::NLpn};
+use crate::{borrow::InterestRate, nlpn::NLpn, state::LoanData};
 
 pub type LppCoin = CoinDTO<Lpns>;
 
@@ -81,17 +81,7 @@ pub enum QueryQuoteResponse {
     NoLiquidity,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct LoanResponse<Lpn>
-where
-    Lpn: Currency,
-{
-    pub principal_due: Coin<Lpn>,
-    pub interest_due: Coin<Lpn>,
-    pub annual_interest_rate: Percent,
-    pub interest_paid: Timestamp,
-}
+pub type LoanResponse<Lpn> = LoanData<Lpn>;
 
 pub type QueryLoanResponse<Lpn> = Option<LoanResponse<Lpn>>;
 

@@ -269,7 +269,6 @@ mod tests {
             principal_due: Coin::from(100),
             annual_interest_rate: Percent::from_percent(10),
             interest_paid: LEASE_START,
-            interest_due: Coin::ZERO,
         }
     }
     pub struct MockBankView {
@@ -714,7 +713,6 @@ mod tests {
         // LPP loan
         let loan = LoanResponse {
             principal_due: lpn_coin(300),
-            interest_due: lpn_coin(0),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };

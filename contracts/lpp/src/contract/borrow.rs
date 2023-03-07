@@ -38,7 +38,6 @@ where
 
     let loan_response = LoanResponse {
         principal_due: amount,
-        interest_due: Coin::new(0),
         annual_interest_rate,
         interest_paid: env.block.time,
     };

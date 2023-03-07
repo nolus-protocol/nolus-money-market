@@ -16,7 +16,7 @@ use crate::{
     error::{ContractError, ContractResult},
     msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse},
     nlpn::NLpn,
-    state::{Config, Deposit, Loan, LoanData, Total},
+    state::{Config, Deposit, Loan, Total},
 };
 
 pub struct NTokenPrice<LPN>
@@ -260,23 +260,10 @@ where
     pub fn query_loan(
         &self,
         storage: &dyn Storage,
-        env: &Env,
+        _env: &Env,
         addr: Addr,
     ) -> Result<Option<LoanResponse<LPN>>, ContractError> {
-        let maybe_loan = Loan::query(storage, addr.clone())?;
-        let maybe_interest_due =
-            self.query_loan_outstanding_interest(storage, addr, env.block.time)?;
-        maybe_loan
-            .zip(maybe_interest_due)
-            .map(|(loan, interest_due): (LoanData<LPN>, _)| {
-                Ok(LoanResponse {
-                    principal_due: loan.principal_due,
-                    interest_due: interest_due.0,
-                    annual_interest_rate: loan.annual_interest_rate,
-                    interest_paid: loan.interest_paid,
-                })
-            })
-            .transpose()
+        Loan::query(storage, addr).map_err(Into::into)
     }
 }
 
@@ -469,7 +456,7 @@ mod test {
         assert_eq!(loan_response.principal_due, amount.into());
         assert_eq!(loan_response.annual_interest_rate, annual_interest_rate);
         assert_eq!(loan_response.interest_paid, env.block.time);
-        assert_eq!(loan_response.interest_due, 0u128.into());
+        assert_eq!(loan_response.interest_due(env.block.time), 0u128.into());
 
         // wait for year/10
         env.block.time = Timestamp::from_nanos(10 + Duration::YEAR.nanos() / 10);
@@ -495,7 +482,7 @@ mod test {
         assert_eq!(loan_response.principal_due, amount.into());
         assert_eq!(loan_response.annual_interest_rate, annual_interest_rate);
         assert_eq!(loan_response.interest_paid, env.block.time);
-        assert_eq!(loan_response.interest_due, 0u128.into());
+        assert_eq!(loan_response.interest_due(env.block.time), 0u128.into());
 
         // an immediate repay after repay should pass (loan_interest_due==0 bug)
         lpp.try_repay_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(0))
@@ -654,10 +641,6 @@ mod test {
         assert_eq!(
             loan_response_before.interest_paid,
             loan_response_after.interest_paid
-        );
-        assert_eq!(
-            loan_response_before.interest_due,
-            loan_response_after.interest_due
         );
     }
 

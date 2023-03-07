@@ -695,7 +695,10 @@ fn compare_state_with_lpp_state_implicit_time() {
 
     assert_eq!(
         query_result,
-        (loan_resp.principal_due, loan_resp.interest_due)
+        (
+            loan_resp.principal_due,
+            loan_resp.interest_due(test_case.app.block_info().time)
+        )
     );
 }
 

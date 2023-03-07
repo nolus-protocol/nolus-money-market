@@ -147,6 +147,7 @@ where
             receipt,
         };
 
+        // TODO liquidate fully if the remaining value, lease_lpn - liquidation_lpn < 100
         Ok(if liquidation_lpn == lease_lpn {
             Status::FullLiquidation {
                 info,
@@ -255,13 +256,13 @@ impl WarningLevel {
 
 #[cfg(test)]
 mod tests {
-    use finance::percent::Percent;
+    use finance::{duration::Duration, interest::InterestPeriod, percent::Percent};
     use lpp::msg::LoanResponse;
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{
         lease::{
-            tests::{loan, lpn_coin, open_lease, LEASE_START},
+            tests::{coin, loan, lpn_coin, open_lease, LEASE_START, MARGIN_INTEREST_RATE},
             LeaseInfo, LiquidationInfo, Status, WarningLevel,
         },
         loan::{LiabilityStatus, RepayReceipt},
@@ -275,7 +276,6 @@ mod tests {
         // LPP loan
         let loan = LoanResponse {
             principal_due: lpn_coin(500),
-            interest_due: lpn_coin(100),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -302,7 +302,6 @@ mod tests {
         // LPP loan
         let loan = LoanResponse {
             principal_due: lpn_coin(500),
-            interest_due: lpn_coin(100),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -336,7 +335,6 @@ mod tests {
         // LPP loan
         let loan = LoanResponse {
             principal_due: lpn_coin(500),
-            interest_due: lpn_coin(100),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -394,9 +392,8 @@ mod tests {
         // LPP loan
         let loan = LoanResponse {
             principal_due: lpn_coin(500),
-            interest_due: lpn_coin(100),
             annual_interest_rate: Percent::from_permille(50),
-            interest_paid: Timestamp::from_nanos(0),
+            interest_paid: LEASE_START,
         };
 
         let lease_addr = Addr::unchecked("lease");
@@ -408,6 +405,10 @@ mod tests {
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
+        // lease.repay();
+        // 100 days period
+        // 100 interest due
+        // let interest_due = 100.into();
 
         assert_eq!(
             lease
@@ -415,8 +416,8 @@ mod tests {
                 .liability_status(LEASE_START, Addr::unchecked(String::new()), lpn_coin(1000))
                 .unwrap(),
             LiabilityStatus {
-                ltv: Percent::from_percent(60),
-                total_lpn: lpn_coin(100 + 500),
+                ltv: Percent::from_percent(50),
+                total_lpn: lpn_coin(500),
                 overdue_lpn: lpn_coin(0),
             }
         );
@@ -424,29 +425,43 @@ mod tests {
 
     #[test]
     fn liquidate_partial() {
-        let lease_amount = 1000;
-        let interest_rate = Percent::from_permille(50);
+        let lease_amount = coin(100);
+        let lease_amount_lpn = lpn_coin(800);
+        let loan_amount_lpn = lpn_coin(500);
+        let past_open = Duration::from_days(90);
+        let now = LEASE_START + past_open;
+        let interest_rate = Percent::from_percent(114);
         // LPP loan
         let loan = LoanResponse {
-            principal_due: lpn_coin(500),
-            interest_due: lpn_coin(100),
+            principal_due: loan_amount_lpn,
             annual_interest_rate: interest_rate,
-            interest_paid: Timestamp::from_nanos(0),
+            interest_paid: LEASE_START,
         };
 
         let lease_addr = Addr::unchecked("lease");
         let mut lease = open_lease(
             lease_addr,
-            lease_amount.into(),
-            Some(loan),
+            lease_amount,
+            Some(loan.clone()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
 
+        let interest_due = loan.interest_due(now);
+        let exp_liquidation_lpn = lpn_coin(273);
+        let margin_due = InterestPeriod::with_interest(MARGIN_INTEREST_RATE)
+            .from(LEASE_START)
+            .spanning(past_open)
+            .interest(loan_amount_lpn);
+
         assert_eq!(
             lease
-                .liquidate_on_liability(lpn_coin(lease_amount), lpn_coin(800), LEASE_START)
+                .liquidate_on_liability(
+                    lease_amount_lpn,
+                    loan_amount_lpn + interest_due + margin_due,
+                    now
+                )
                 .unwrap(),
             Status::PartialLiquidation {
                 info: LeaseInfo::new(
@@ -459,10 +474,10 @@ mod tests {
                     lease: lease.addr,
                     receipt: RepayReceipt::new(
                         lpn_coin(0),
+                        margin_due,
                         lpn_coin(0),
-                        lpn_coin(0),
-                        lpn_coin(100),
-                        lpn_coin(233),
+                        interest_due,
+                        exp_liquidation_lpn - interest_due - margin_due,
                         lpn_coin(0),
                         false
                     ),
@@ -474,20 +489,29 @@ mod tests {
 
     #[test]
     fn liquidate_full() {
-        let lease_amount = 1000;
-        let interest_rate = Percent::from_permille(50);
+        let lease_amount = coin(100);
+        let lease_amount_lpn = lpn_coin(800);
+        let loan_amount_lpn = lpn_coin(500);
+        let past_open = Duration::from_days(90);
+        let now = LEASE_START + past_open;
+        let interest_rate = Percent::from_percent(242);
         // LPP loan
         let loan = LoanResponse {
-            principal_due: lpn_coin(500),
-            interest_due: lpn_coin(100),
+            principal_due: loan_amount_lpn,
             annual_interest_rate: interest_rate,
-            interest_paid: Timestamp::from_nanos(0),
+            interest_paid: LEASE_START,
         };
+        let interest_due = loan.interest_due(now);
+        let exp_liquidation_lpn = lease_amount_lpn;
+        let margin_due = InterestPeriod::with_interest(MARGIN_INTEREST_RATE)
+            .from(LEASE_START)
+            .spanning(past_open)
+            .interest(loan_amount_lpn);
 
         let lease_addr = Addr::unchecked("lease");
         let mut lease = open_lease(
             lease_addr,
-            lease_amount.into(),
+            lease_amount,
             Some(loan),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
@@ -496,7 +520,11 @@ mod tests {
 
         assert_eq!(
             lease
-                .liquidate_on_liability(lpn_coin(lease_amount), lpn_coin(5000), LEASE_START)
+                .liquidate_on_liability(
+                    lease_amount_lpn,
+                    loan_amount_lpn + interest_due + margin_due,
+                    now
+                )
                 .unwrap(),
             Status::FullLiquidation {
                 info: LeaseInfo::new(
@@ -509,11 +537,11 @@ mod tests {
                     lease: lease.addr,
                     receipt: RepayReceipt::new(
                         lpn_coin(0),
+                        margin_due,
                         lpn_coin(0),
+                        interest_due,
+                        exp_liquidation_lpn - margin_due - interest_due,
                         lpn_coin(0),
-                        lpn_coin(100),
-                        lpn_coin(500),
-                        lpn_coin(400),
                         true,
                     ),
                 },

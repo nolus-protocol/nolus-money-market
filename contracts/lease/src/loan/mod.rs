@@ -159,10 +159,10 @@ where
         self.debug_check_start_due_before(by, "before the 'repay-by' time");
         self.debug_check_before_period_end(by);
 
-        let (principal_due, total_interest_due) = self
+        let (principal_due, loan_interest_due) = self
             .load_lpp_loan(lease.clone())?
             .ok_or(ContractError::LoanClosed())
-            .map(|resp| (resp.principal_due, resp.interest_due))?;
+            .map(|loan| (loan.principal_due, loan.interest_due(by)))?;
 
         let mut receipt = RepayReceipt::default();
 
@@ -185,7 +185,7 @@ where
             (change, current_period_paid) = self.repay_current_period(
                 by,
                 principal_due,
-                total_interest_due,
+                loan_interest_due,
                 &mut receipt,
                 change,
             )?;
@@ -225,13 +225,13 @@ where
     pub(crate) fn state(&self, now: Timestamp, lease: Addr) -> ContractResult<Option<State<Lpn>>> {
         self.debug_check_start_due_before(now, "in the past of");
 
-        let loan_state = if let Some(loan) = self.load_lpp_loan(lease.clone())? {
+        let loan = if let Some(loan) = self.load_lpp_loan(lease.clone())? {
             loan
         } else {
             return Ok(None);
         };
 
-        let principal_due = loan_state.principal_due;
+        let principal_due = loan.principal_due;
 
         let margin_interest_overdue_period = if self.overdue_at(now) {
             self.current_period
@@ -257,10 +257,10 @@ where
 
         let previous_interest_due =
             self.load_loan_interest_due(lease, margin_interest_overdue_period.till())?;
-        let current_interest_due = loan_state.interest_due - previous_interest_due;
+        let current_interest_due = loan.interest_due(now) - previous_interest_due;
 
         Ok(Some(State {
-            annual_interest: loan_state.annual_interest_rate,
+            annual_interest: loan.annual_interest_rate,
             annual_interest_margin: self.annual_margin_interest,
             principal_due,
             previous_interest_due,
@@ -332,7 +332,7 @@ where
         &mut self,
         by: Timestamp,
         principal_due: Coin<Lpn>,
-        total_interest_due: Coin<Lpn>,
+        loan_interest_due: Coin<Lpn>,
         receipt: &mut RepayReceipt<Lpn>,
         change: Coin<Lpn>,
     ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
@@ -345,7 +345,7 @@ where
 
         {
             let curr_interest_paid =
-                change.min(total_interest_due - receipt.previous_interest_paid());
+                change.min(loan_interest_due - receipt.previous_interest_paid());
 
             change -= curr_interest_paid;
 
@@ -586,7 +586,6 @@ mod tests {
         // LPP loan
         let loan_resp = LoanResponse {
             principal_due: lease_coin,
-            interest_due: coin(0),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -625,7 +624,6 @@ mod tests {
         // LPP loan
         let loan_resp = LoanResponse {
             principal_due: lease_coin,
-            interest_due: coin(0),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -667,7 +665,6 @@ mod tests {
         // LPP loan
         let loan_resp = LoanResponse {
             principal_due: lease_coin,
-            interest_due: coin(lease_amount / 2),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -713,7 +710,6 @@ mod tests {
         // LPP loan
         let loan_resp = LoanResponse {
             principal_due: lease_coin,
-            interest_due: interest_coin,
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -754,7 +750,6 @@ mod tests {
         // LPP loan
         let loan = LoanResponse {
             principal_due: lease_coin,
-            interest_due: coin(0),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -792,7 +787,6 @@ mod tests {
         // LPP loan
         let loan_resp = LoanResponse {
             principal_due: lease_coin,
-            interest_due: interest_coin,
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -835,7 +829,6 @@ mod tests {
         // LPP loan
         let loan = LoanResponse {
             principal_due: lease_coin,
-            interest_due: coin(0),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };
@@ -918,7 +911,6 @@ mod tests {
 
         let loan_resp = LoanResponse {
             principal_due,
-            interest_due: interest(period, principal_due, interest_rate),
             annual_interest_rate: interest_rate,
             interest_paid: LEASE_START,
         };
