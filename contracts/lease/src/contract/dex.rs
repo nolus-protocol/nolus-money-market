@@ -18,7 +18,7 @@ use swap::trx;
 
 use crate::{api::dex::ConnectionParams, error::ContractResult};
 
-const IBC_TIMEOUT: Duration = Duration::from_secs(60);
+pub(super) const IBC_TIMEOUT: Duration = Duration::from_secs(60);
 
 //TODO take them as input from the client
 const ICA_TRANSFER_ACK_TIP: Coin<Nls> = Coin::new(1);

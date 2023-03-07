@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 use crate::{
     api::{dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateResponse},
     contract::{
-        dex::DexConnectable,
+        dex::{self, DexConnectable},
         state::{self, opened::repay, Controller, Response},
         Contract, Lease,
     },
@@ -43,9 +43,14 @@ impl TransferInInit {
         Ok(sender.into())
     }
 
-    fn on_response(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
-        let finish: TransferInFinish = self.into();
-        finish.try_complete(querier, env)
+    fn on_response(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        let finish = TransferInFinish::new(
+            self.lease,
+            self.payment,
+            self.payment_lpn,
+            env.block.time + dex::IBC_TIMEOUT,
+        );
+        finish.try_complete(deps, env)
     }
 }
 
@@ -61,7 +66,7 @@ impl Controller for TransferInInit {
     }
 
     fn on_response(self, _data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        self.on_response(&deps.querier, &env)
+        self.on_response(deps, env)
     }
 
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
@@ -78,11 +83,5 @@ impl Contract for TransferInInit {
             now,
             querier,
         )
-    }
-}
-
-impl From<TransferInInit> for TransferInFinish {
-    fn from(init: TransferInInit) -> Self {
-        Self::new(init.lease, init.payment, init.payment_lpn)
     }
 }
