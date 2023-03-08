@@ -9,8 +9,8 @@ use super::Price;
 #[derive(Clone, Debug, PartialEq)]
 pub struct BasePrice<BaseG, QuoteC>
 where
-    QuoteC: Currency,
     BaseG: Group,
+    QuoteC: Currency,
 {
     amount: CoinDTO<BaseG>,
     amount_quote: Coin<QuoteC>,
@@ -18,19 +18,19 @@ where
 
 impl<BaseG, QuoteC> BasePrice<BaseG, QuoteC>
 where
-    QuoteC: Currency,
     BaseG: Group,
+    QuoteC: Currency,
 {
     pub fn base_ticker(&self) -> Symbol<'_> {
         self.amount.ticker()
     }
 }
 
-impl<C, QuoteC, BaseG> From<Price<C, QuoteC>> for BasePrice<BaseG, QuoteC>
+impl<C, BaseG, QuoteC> From<Price<C, QuoteC>> for BasePrice<BaseG, QuoteC>
 where
     C: Currency,
-    QuoteC: Currency,
     BaseG: Group,
+    QuoteC: Currency,
 {
     fn from(price: Price<C, QuoteC>) -> Self {
         Self {
@@ -40,11 +40,11 @@ where
     }
 }
 
-impl<C, QuoteC, BaseG> TryFrom<&BasePrice<BaseG, QuoteC>> for Price<C, QuoteC>
+impl<C, BaseG, QuoteC> TryFrom<&BasePrice<BaseG, QuoteC>> for Price<C, QuoteC>
 where
     C: Currency,
-    QuoteC: Currency,
     BaseG: Group,
+    QuoteC: Currency,
 {
     type Error = Error;
 
