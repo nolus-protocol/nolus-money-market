@@ -1,14 +1,14 @@
-use super::{alarms::MarketAlarms, feeder::Feeders};
+use super::{
+    alarms::{MarketAlarms, PriceResult},
+    feeder::Feeders,
+};
 use crate::{
     msg::{AlarmsStatusResponse, ExecuteAlarmMsg},
     state::supported_pairs::{SupportedPairs, SwapLeg},
     ContractError,
 };
 use ::currency::native::Nls;
-use finance::{
-    currency::{self, Currency, SymbolOwned},
-    price::base::BasePrice,
-};
+use finance::currency::{self, Currency, SymbolOwned};
 use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
 use platform::batch::Batch;
 use sdk::{
@@ -89,7 +89,7 @@ where
         swap_pairs_df: impl Iterator<Item = SwapLeg> + 'a,
         at: Timestamp,
         total_feeders: usize,
-    ) -> Result<impl Iterator<Item = BasePrice<SwapGroup, OracleBase>> + 'a, ContractError> {
+    ) -> impl Iterator<Item = PriceResult<OracleBase>> + 'a {
         let cmd = LegCmd::new(
             FedPrices {
                 feeds: self.feeds,
@@ -99,18 +99,17 @@ where
             },
             vec![],
         );
-        let res = swap_pairs_df
+        swap_pairs_df
             .scan(cmd, |cmd, leg| {
                 let res = currency::visit_any_on_tickers::<SwapGroup, SwapGroup, _>(
                     &leg.from,
                     &leg.to.target,
                     cmd,
-                );
-                let res = res.expect("price calculation error");
+                )
+                .transpose();
                 Some(res)
             })
-            .flatten();
-        Ok(res)
+            .flatten()
     }
 
     fn calc_price(
@@ -173,7 +172,7 @@ fn calc_all_prices<'a, OracleBase>(
     storage: &'a dyn Storage,
     block_time: Timestamp,
     tree: &'a SupportedPairs<OracleBase>,
-) -> Result<impl Iterator<Item = BasePrice<SwapGroup, OracleBase>> + 'a, ContractError>
+) -> Result<impl Iterator<Item = PriceResult<OracleBase>> + 'a, ContractError>
 where
     OracleBase: Currency + DeserializeOwned,
 {
@@ -181,7 +180,7 @@ where
     use crate::state::config::Config as OracleConfig;
     let config = OracleConfig::load(storage)?;
     let oracle = Feeds::<OracleBase>::with(config.price_config);
-    oracle.all_prices_iter(storage, tree.swap_pairs_df(), block_time, total_registered)
+    Ok(oracle.all_prices_iter(storage, tree.swap_pairs_df(), block_time, total_registered))
 }
 
 #[cfg(test)]
@@ -192,10 +191,11 @@ mod test {
     use crate::tests::{self, TheCurrency};
     use ::currency::lease::{Atom, Cro, Juno, Osmo, Wbtc, Weth};
     use finance::{
+        coin::Amount,
         currency::SymbolStatic,
         duration::Duration,
         percent::Percent,
-        price::{dto::PriceDTO, Price}, coin::Amount,
+        price::{dto::PriceDTO, Price},
     };
     use price_querier::PriceQuerier;
     use sdk::cosmwasm_std::testing::{self, MockStorage};
@@ -270,6 +270,7 @@ mod test {
 
     mod all_prices_iter {
         use super::*;
+        use finance::price::base::BasePrice;
 
         #[test]
         fn normal() {
@@ -306,7 +307,7 @@ mod test {
 
             let prices: Vec<_> = oracle
                 .all_prices_iter(&storage, tree.swap_pairs_df(), env.block.time, 1)
-                .unwrap()
+                .flatten()
                 .collect();
 
             let expected: Vec<BasePrice<SwapGroup, TheCurrency>> = vec![
@@ -363,7 +364,7 @@ mod test {
 
             let prices: Vec<_> = oracle
                 .all_prices_iter(&storage, tree.swap_pairs_df(), env.block.time, 1)
-                .unwrap()
+                .flatten()
                 .collect();
 
             assert_eq!(expected, prices);

@@ -1,20 +1,20 @@
+use crate::{alarms::Alarm as AlarmDTO, ContractError};
 use finance::{
-    currency::{self, AnyVisitor, AnyVisitorResult, Currency},
+    currency::Currency,
     price::{
         base::BasePrice,
         dto::{with_quote, WithQuote},
         Price,
     },
 };
-use marketprice::{
-    alarms::{errors::AlarmError, AlarmsIterator, PriceAlarms},
-    SpotPrice,
-};
+use marketprice::{alarms::PriceAlarms, SpotPrice};
 use sdk::cosmwasm_std::{Addr, Storage};
-use serde::{de::DeserializeOwned, Serialize};
 use swap::SwapGroup;
 
-use crate::{alarms::Alarm as AlarmDTO, ContractError};
+mod iter;
+use iter::AlarmsFlatten;
+
+pub type PriceResult<BaseC> = Result<BasePrice<SwapGroup, BaseC>, ContractError>;
 
 pub struct MarketAlarms;
 
@@ -80,74 +80,28 @@ impl MarketAlarms {
 
     pub fn notify_alarms_iter<'a, BaseC>(
         storage: &'a dyn Storage,
-        prices: impl Iterator<Item = BasePrice<SwapGroup, BaseC>> + 'a,
+        prices: impl Iterator<Item = PriceResult<BaseC>> + 'a,
         max_count: usize,
     ) -> impl Iterator<Item = Result<Addr, ContractError>> + 'a
     where
         BaseC: Currency,
     {
-        Self::alarms_iter::<BaseC>(storage, prices)
+        AlarmsFlatten::new(storage, prices)
             .take(max_count)
             .map(|item| item.map_err(Into::into))
     }
 
     pub fn try_query_alarms<'a, BaseC>(
         storage: &dyn Storage,
-        prices: impl Iterator<Item = BasePrice<SwapGroup, BaseC>> + 'a,
+        prices: impl Iterator<Item = PriceResult<BaseC>> + 'a,
     ) -> Result<bool, ContractError>
     where
         BaseC: Currency,
     {
-        Ok(Self::alarms_iter::<BaseC>(storage, prices)
+        Ok(AlarmsFlatten::new(storage, prices)
             .next()
             .transpose()?
             .is_some())
-    }
-
-    fn alarms_iter<'a, BaseC>(
-        storage: &'a dyn Storage,
-        prices: impl Iterator<Item = BasePrice<SwapGroup, BaseC>> + 'a,
-    ) -> impl Iterator<Item = Result<Addr, AlarmError>> + 'a
-    where
-        BaseC: Currency,
-    {
-        struct AlarmsCmd<'a, 'b, OracleBase>
-        where
-            OracleBase: Currency,
-        {
-            storage: &'a dyn Storage,
-            price_alarms: &'static PriceAlarms<'static>,
-            price: &'b BasePrice<SwapGroup, OracleBase>,
-        }
-
-        impl<'a, 'b, OracleBase> AnyVisitor for AlarmsCmd<'a, 'b, OracleBase>
-        where
-            OracleBase: Currency,
-        {
-            type Error = ContractError;
-            type Output = AlarmsIterator<'a>;
-
-            fn on<C>(self) -> AnyVisitorResult<Self>
-            where
-                C: Currency + Serialize + DeserializeOwned,
-            {
-                Ok(self
-                    .price_alarms
-                    .alarms::<C, OracleBase>(self.storage, self.price.try_into()?))
-            }
-        }
-
-        prices.flat_map(|price| {
-            currency::visit_any_on_ticker::<SwapGroup, _>(
-                price.base_ticker(),
-                AlarmsCmd {
-                    storage,
-                    price_alarms: &Self::PRICE_ALARMS,
-                    price: &price,
-                },
-            )
-            .expect("Invalid price")
-        })
     }
 }
 
@@ -178,7 +132,7 @@ mod test {
         })
     }
 
-    fn test_case(storage: &mut dyn Storage) {
+    pub fn test_case(storage: &mut dyn Storage) {
         add_alarms(
             storage,
             [
@@ -229,7 +183,7 @@ mod test {
 
         assert!(MarketAlarms::try_query_alarms::<Base>(
             &storage,
-            [tests::base_price::<Weth>(1, 35)].into_iter()
+            [tests::base_price::<Weth>(1, 35)].into_iter().map(Ok)
         )
         .unwrap());
 
@@ -237,13 +191,12 @@ mod test {
 
         assert!(!MarketAlarms::try_query_alarms::<Base>(
             &storage,
-            [tests::base_price::<Weth>(1, 10)].into_iter()
+            [tests::base_price::<Weth>(1, 10)].into_iter().map(Ok)
         )
         .unwrap());
     }
 
     #[test]
-    #[should_panic]
     #[cfg(not(debug_assertions))]
     fn notify_with_wrong_currency_group() {
         use ::currency::native::Nls;
@@ -251,15 +204,19 @@ mod test {
 
         let mut storage = MockStorage::new();
 
-        let _: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
+        let res = MarketAlarms::notify_alarms_iter::<Base>(
             &mut storage,
             [price::total_of(Coin::<Nls>::new(1))
                 .is(Coin::<Base>::new(25))
                 .into()]
-            .into_iter(),
+            .into_iter()
+            .map(Ok),
             1,
         )
-        .collect();
+        .next()
+        .unwrap();
+
+        assert!(res.is_err())
     }
 
     #[test]
@@ -270,7 +227,7 @@ mod test {
 
         let mut sent = MarketAlarms::notify_alarms_iter::<Base>(
             &storage,
-            [tests::base_price::<Weth>(1, 25)].into_iter(),
+            [tests::base_price::<Weth>(1, 25)].into_iter().map(Ok),
             100,
         );
 
@@ -285,7 +242,7 @@ mod test {
 
         let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
             &storage,
-            [tests::base_price::<Weth>(1, 15)].into_iter(),
+            [tests::base_price::<Weth>(1, 15)].into_iter().map(Ok),
             100,
         )
         .flatten()
@@ -302,7 +259,7 @@ mod test {
 
         let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
             &storage,
-            [tests::base_price::<Weth>(1, 5)].into_iter(),
+            [tests::base_price::<Weth>(1, 5)].into_iter().map(Ok),
             100,
         )
         .flatten()
@@ -319,7 +276,7 @@ mod test {
 
         let mut sent = MarketAlarms::notify_alarms_iter::<Base>(
             &storage,
-            [tests::base_price::<Weth>(1, 25)].into_iter(),
+            [tests::base_price::<Weth>(1, 25)].into_iter().map(Ok),
             100,
         );
 
@@ -334,7 +291,7 @@ mod test {
 
         let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
             &storage,
-            [tests::base_price::<Weth>(1, 55)].into_iter(),
+            [tests::base_price::<Weth>(1, 55)].into_iter().map(Ok),
             100,
         )
         .flatten()
@@ -351,7 +308,7 @@ mod test {
 
         let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
             &storage,
-            [tests::base_price::<Weth>(1, 65)].into_iter(),
+            [tests::base_price::<Weth>(1, 65)].into_iter().map(Ok),
             100,
         )
         .flatten()
@@ -372,7 +329,8 @@ mod test {
                 tests::base_price::<Weth>(1, 65),
                 tests::base_price::<Atom>(1, 25),
             ]
-            .into_iter(),
+            .into_iter()
+            .map(Ok),
             100,
         )
         .flatten()
@@ -393,7 +351,8 @@ mod test {
                 tests::base_price::<Weth>(1, 65),
                 tests::base_price::<Atom>(1, 15),
             ]
-            .into_iter(),
+            .into_iter()
+            .map(Ok),
             3,
         )
         .flatten()
