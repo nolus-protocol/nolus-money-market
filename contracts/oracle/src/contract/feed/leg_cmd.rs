@@ -134,18 +134,11 @@ mod test {
 
         let mut cmd = LegCmd::<TheCurrency, _> {
             price_querier: feeds.clone(),
-            stack: vec![
-                tests::base_price::<Wbtc>(2, 1),
-            ],
+            stack: vec![tests::base_price::<Wbtc>(2, 1)],
         };
 
         assert_eq!(cmd.on::<Cro, Wbtc>(), Ok(None));
-        assert_eq!(
-            cmd.stack,
-            vec![
-                tests::base_price::<Wbtc>(2, 1),
-            ]
-        );
+        assert_eq!(cmd.stack, vec![tests::base_price::<Wbtc>(2, 1),]);
     }
 
     #[test]
@@ -156,18 +149,11 @@ mod test {
 
         let mut cmd = LegCmd::<TheCurrency, _> {
             price_querier: feeds.clone(),
-            stack: vec![
-                tests::base_price::<Wbtc>(2, 1),
-            ],
+            stack: vec![tests::base_price::<Wbtc>(2, 1)],
         };
 
         assert_eq!(cmd.on::<Juno, Weth>(), Ok(None));
-        assert_eq!(
-            cmd.stack,
-            vec![
-                tests::base_price::<Wbtc>(2, 1),
-            ]
-        );
+        assert_eq!(cmd.stack, vec![tests::base_price::<Wbtc>(2, 1),]);
     }
 
     #[test]
@@ -185,7 +171,10 @@ mod test {
             ],
         };
 
-        assert_eq!(cmd.on::<Cro, Wbtc>(), Ok(Some(tests::base_price::<Cro>(8, 1))));
+        assert_eq!(
+            cmd.on::<Cro, Wbtc>(),
+            Ok(Some(tests::base_price::<Cro>(8, 1)))
+        );
         assert_eq!(
             cmd.stack,
             vec![
@@ -203,18 +192,14 @@ mod test {
 
         let mut cmd = LegCmd::<TheCurrency, _> {
             price_querier: feeds.clone(),
-            stack: vec![
-                tests::base_price::<Wbtc>(2, 1),
-            ],
+            stack: vec![tests::base_price::<Wbtc>(2, 1)],
         };
 
-        assert_eq!(cmd.on::<Cro, TheCurrency>(), Ok(Some(tests::base_price::<Cro>(4, 1))));
         assert_eq!(
-            cmd.stack,
-            vec![
-                tests::base_price::<Cro>(4, 1),
-            ]
+            cmd.on::<Cro, TheCurrency>(),
+            Ok(Some(tests::base_price::<Cro>(4, 1)))
         );
+        assert_eq!(cmd.stack, vec![tests::base_price::<Cro>(4, 1),]);
     }
 
     #[test]
@@ -227,13 +212,11 @@ mod test {
             stack: vec![],
         };
 
-        assert_eq!(cmd.on::<Cro, TheCurrency>(), Ok(Some(tests::base_price::<Cro>(4, 1))));
         assert_eq!(
-            cmd.stack,
-            vec![
-                tests::base_price::<Cro>(4, 1),
-            ]
+            cmd.on::<Cro, TheCurrency>(),
+            Ok(Some(tests::base_price::<Cro>(4, 1)))
         );
+        assert_eq!(cmd.stack, vec![tests::base_price::<Cro>(4, 1),]);
     }
 
     #[test]
@@ -243,18 +226,11 @@ mod test {
 
         let mut cmd = LegCmd::<TheCurrency, _> {
             price_querier: feeds.clone(),
-            stack: vec![
-                tests::base_price::<Wbtc>(2, 1),
-            ],
+            stack: vec![tests::base_price::<Wbtc>(2, 1)],
         };
 
         assert_eq!(cmd.on::<Cro, TheCurrency>(), Ok(None));
         // cleaned on the next successful iteration
-        assert_eq!(
-            cmd.stack,
-            vec![
-                tests::base_price::<Wbtc>(2, 1),
-            ]
-        );
+        assert_eq!(cmd.stack, vec![tests::base_price::<Wbtc>(2, 1),]);
     }
 }

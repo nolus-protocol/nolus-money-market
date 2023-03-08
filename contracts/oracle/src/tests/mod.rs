@@ -4,7 +4,7 @@ use currency::{
     native::Nls,
 };
 use finance::{
-    coin::{Coin, Amount},
+    coin::{Amount, Coin},
     currency::{Currency, SymbolOwned},
     duration::Duration,
     percent::Percent,
