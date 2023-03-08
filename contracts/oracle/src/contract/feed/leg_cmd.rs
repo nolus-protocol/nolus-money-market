@@ -42,6 +42,8 @@ where
         B: Currency + DeserializeOwned,
         Q: Currency + DeserializeOwned,
     {
+        // tries to find price for non empty stack (in a branch of the tree)
+        // covers both normal flow and NoPrice cases
         let branch_price = self
             .stack
             .iter()
@@ -59,6 +61,10 @@ where
             .transpose()
             .map(Option::flatten)?;
 
+        // Fallback for the root case: Q==OracleBase.
+        // Here we rely on the SupprtedPairs tree invariant (unique currencies),
+        // if we can find price::<B, OracleBase>, the algorithm is at the root point of the tree,
+        // reseting the stack.
         let idx_price = branch_price.map_or_else(
             || {
                 self.price_querier
