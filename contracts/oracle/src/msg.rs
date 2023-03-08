@@ -21,6 +21,11 @@ pub struct InstantiateMsg {
     pub swap_tree: HumanReadableTree<SwapTarget>,
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct MigrateMsg {
+    pub contract_owner: Addr,
+}
+
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(rename_all = "snake_case")]

@@ -23,7 +23,9 @@ pub struct InstantiateMsg {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub contract_owner: Addr,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]

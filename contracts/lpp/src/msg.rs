@@ -25,7 +25,9 @@ pub struct InstantiateMsg {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub contract_owner: Addr,
+}
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]

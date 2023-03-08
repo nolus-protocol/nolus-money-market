@@ -10,7 +10,7 @@ use versioning::{package_version, version, VersionSegment};
 use crate::{
     alarms::TimeAlarms,
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
 };
 
 // version info for migration info
@@ -28,9 +28,6 @@ pub fn instantiate(
 
     Ok(Response::default())
 }
-
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct MigrateMsg {}
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {

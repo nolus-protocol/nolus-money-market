@@ -11,7 +11,7 @@ use versioning::{version, VersionSegment};
 
 use crate::{
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     profit::Profit,
     state::config::Config,
 };
@@ -51,12 +51,11 @@ pub fn instantiate(
         .add_message(subscribe_msg))
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct MigrateMsg {}
-
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
+
+    SingleUserAccess::new_contract_owner(msg.contract_owner).store(deps.storage)?;
 
     response::response(versioning::release()).map_err(Into::into)
 }
