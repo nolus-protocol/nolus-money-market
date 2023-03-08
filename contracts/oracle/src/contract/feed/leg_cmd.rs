@@ -12,8 +12,21 @@ where
     OracleBase: Currency,
     Querier: PriceQuerier,
 {
-    pub price_querier: Querier,
-    pub stack: Vec<BasePrice<SwapGroup, OracleBase>>,
+    price_querier: Querier,
+    stack: Vec<BasePrice<SwapGroup, OracleBase>>,
+}
+
+impl<OracleBase, Querier> LegCmd<OracleBase, Querier>
+where
+    OracleBase: Currency,
+    Querier: PriceQuerier,
+{
+    pub fn new(price_querier: Querier, stack: Vec<BasePrice<SwapGroup, OracleBase>>) -> Self {
+        Self {
+            price_querier,
+            stack,
+        }
+    }
 }
 
 impl<OracleBase, Querier> AnyVisitorPair for &mut LegCmd<OracleBase, Querier>
@@ -74,10 +87,10 @@ mod test {
         contract::feed::test::TestFeeds,
         tests::{self, TheCurrency},
     };
-    use ::currency::lease::{Atom, Cro, Juno, Osmo, Wbtc, Weth};
+    use ::currency::lease::{Atom, Cro, Juno, Wbtc, Weth};
 
     #[test]
-    fn leg_cmd_normal() {
+    fn leg_cmd_normal_flow() {
         let mut feeds = TestFeeds(HashMap::new());
         feeds.add::<Wbtc, TheCurrency>(1, 1);
         feeds.add::<Atom, TheCurrency>(2, 1);
@@ -115,59 +128,132 @@ mod test {
     }
 
     #[test]
-    fn leg_cmd_missing_price() {
+    fn no_price_in_stack() {
         let mut feeds = TestFeeds(HashMap::new());
-        feeds.add::<Wbtc, TheCurrency>(1, 1);
-        feeds.add::<Atom, TheCurrency>(2, 1);
-        feeds.add::<Weth, Wbtc>(2, 1);
-        feeds.add::<Osmo, Weth>(1, 1);
-        feeds.add::<Cro, Osmo>(3, 1);
-
-        feeds.add::<Juno, Wbtc>(1, 1);
+        feeds.add::<Wbtc, TheCurrency>(2, 1);
 
         let mut cmd = LegCmd::<TheCurrency, _> {
             price_querier: feeds.clone(),
             stack: vec![
-                tests::base_price::<Wbtc>(1, 1),
-                tests::base_price::<Weth>(2, 1),
+                tests::base_price::<Wbtc>(2, 1),
             ],
         };
 
-        // no price
-        assert_eq!(cmd.on::<Cro, Weth>(), Ok(None));
+        assert_eq!(cmd.on::<Cro, Wbtc>(), Ok(None));
         assert_eq!(
             cmd.stack,
             vec![
-                tests::base_price::<Wbtc>(1, 1),
-                tests::base_price::<Weth>(2, 1)
+                tests::base_price::<Wbtc>(2, 1),
             ]
         );
+    }
 
-        // recover, hop to the top child, clean the stack
-        assert_eq!(
-            cmd.on::<Atom, TheCurrency>(),
-            Ok(Some(tests::base_price::<Atom>(2, 1)))
-        );
-        assert_eq!(cmd.stack, vec![tests::base_price::<Atom>(2, 1)]);
+    #[test]
+    fn no_parent_price_in_stack() {
+        let mut feeds = TestFeeds(HashMap::new());
+        feeds.add::<Wbtc, TheCurrency>(2, 1);
+        feeds.add::<Juno, Weth>(3, 1);
 
         let mut cmd = LegCmd::<TheCurrency, _> {
             price_querier: feeds.clone(),
             stack: vec![
-                tests::base_price::<Wbtc>(1, 1),
-                tests::base_price::<Weth>(2, 1),
+                tests::base_price::<Wbtc>(2, 1),
             ],
         };
 
-        // recover, hop to the close child, clean the stack
-        assert_eq!(
-            cmd.on::<Juno, Wbtc>(),
-            Ok(Some(tests::base_price::<Juno>(1, 1)))
-        );
+        assert_eq!(cmd.on::<Juno, Weth>(), Ok(None));
         assert_eq!(
             cmd.stack,
             vec![
-                tests::base_price::<Wbtc>(1, 1),
-                tests::base_price::<Juno>(1, 1)
+                tests::base_price::<Wbtc>(2, 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn hop_parent_in_stack() {
+        let mut feeds = TestFeeds(HashMap::new());
+        feeds.add::<Wbtc, TheCurrency>(2, 1);
+        feeds.add::<Juno, Wbtc>(3, 1);
+        feeds.add::<Cro, Wbtc>(4, 1);
+
+        let mut cmd = LegCmd::<TheCurrency, _> {
+            price_querier: feeds.clone(),
+            stack: vec![
+                tests::base_price::<Wbtc>(2, 1),
+                tests::base_price::<Juno>(6, 1),
+            ],
+        };
+
+        assert_eq!(cmd.on::<Cro, Wbtc>(), Ok(Some(tests::base_price::<Cro>(8, 1))));
+        assert_eq!(
+            cmd.stack,
+            vec![
+                tests::base_price::<Wbtc>(2, 1),
+                tests::base_price::<Cro>(8, 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn hop_to_root() {
+        let mut feeds = TestFeeds(HashMap::new());
+        feeds.add::<Wbtc, TheCurrency>(2, 1);
+        feeds.add::<Cro, TheCurrency>(4, 1);
+
+        let mut cmd = LegCmd::<TheCurrency, _> {
+            price_querier: feeds.clone(),
+            stack: vec![
+                tests::base_price::<Wbtc>(2, 1),
+            ],
+        };
+
+        assert_eq!(cmd.on::<Cro, TheCurrency>(), Ok(Some(tests::base_price::<Cro>(4, 1))));
+        assert_eq!(
+            cmd.stack,
+            vec![
+                tests::base_price::<Cro>(4, 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn price_root_with_empty_stack() {
+        let mut feeds = TestFeeds(HashMap::new());
+        feeds.add::<Cro, TheCurrency>(4, 1);
+
+        let mut cmd = LegCmd::<TheCurrency, _> {
+            price_querier: feeds.clone(),
+            stack: vec![],
+        };
+
+        assert_eq!(cmd.on::<Cro, TheCurrency>(), Ok(Some(tests::base_price::<Cro>(4, 1))));
+        assert_eq!(
+            cmd.stack,
+            vec![
+                tests::base_price::<Cro>(4, 1),
+            ]
+        );
+    }
+
+    #[test]
+    fn no_price_at_root() {
+        let mut feeds = TestFeeds(HashMap::new());
+        feeds.add::<Wbtc, TheCurrency>(2, 1);
+
+        let mut cmd = LegCmd::<TheCurrency, _> {
+            price_querier: feeds.clone(),
+            stack: vec![
+                tests::base_price::<Wbtc>(2, 1),
+            ],
+        };
+
+        assert_eq!(cmd.on::<Cro, TheCurrency>(), Ok(None));
+        // cleaned on the next successful iteration
+        assert_eq!(
+            cmd.stack,
+            vec![
+                tests::base_price::<Wbtc>(2, 1),
             ]
         );
     }

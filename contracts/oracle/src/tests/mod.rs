@@ -4,7 +4,7 @@ use currency::{
     native::Nls,
 };
 use finance::{
-    coin::Coin,
+    coin::{Coin, Amount},
     currency::{Currency, SymbolOwned},
     duration::Duration,
     percent::Percent,
@@ -32,7 +32,7 @@ pub(crate) const CREATOR: &str = "creator";
 
 pub(crate) type TheCurrency = Usdc;
 
-pub(crate) fn dto_price<B, Q>(total_of: u128, is: u128) -> PriceDTO<SwapGroup, SwapGroup>
+pub(crate) fn dto_price<B, Q>(total_of: Amount, is: Amount) -> PriceDTO<SwapGroup, SwapGroup>
 where
     B: Currency,
     Q: Currency,
@@ -42,7 +42,7 @@ where
         .into()
 }
 
-pub(crate) fn base_price<C>(total_of: u128, is: u128) -> BasePrice<SwapGroup, TheCurrency>
+pub(crate) fn base_price<C>(total_of: Amount, is: Amount) -> BasePrice<SwapGroup, TheCurrency>
 where
     C: Currency,
 {

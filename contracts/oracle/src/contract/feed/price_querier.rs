@@ -31,7 +31,7 @@ impl<'a> PriceQuerier for FedPrices<'a> {
     }
 }
 
-pub fn maybe_price<B, Q>(
+fn maybe_price<B, Q>(
     price: Result<Price<B, Q>, PriceFeedsError>,
 ) -> Result<Option<Price<B, Q>>, ContractError>
 where

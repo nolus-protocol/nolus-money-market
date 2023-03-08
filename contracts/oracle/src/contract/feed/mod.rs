@@ -90,26 +90,25 @@ where
         at: Timestamp,
         total_feeders: usize,
     ) -> Result<impl Iterator<Item = BasePrice<SwapGroup, OracleBase>> + 'a, ContractError> {
-        let cmd = LegCmd {
-            price_querier: FedPrices {
+        let cmd = LegCmd::new(
+            FedPrices {
                 feeds: self.feeds,
                 storage,
                 at,
                 total_feeders,
             },
-            stack: vec![],
-        };
+            vec![],
+        );
         let res = swap_pairs_df
             .scan(cmd, |cmd, leg| {
                 let res = currency::visit_any_on_tickers::<SwapGroup, SwapGroup, _>(
                     &leg.from,
                     &leg.to.target,
                     cmd,
-                )
-                .expect("price calculation error");
+                );
+                let res = res.expect("price calculation error");
                 Some(res)
             })
-            // TODO: process errors
             .flatten();
         Ok(res)
     }
@@ -196,7 +195,7 @@ mod test {
         currency::SymbolStatic,
         duration::Duration,
         percent::Percent,
-        price::{dto::PriceDTO, Price},
+        price::{dto::PriceDTO, Price}, coin::Amount,
     };
     use price_querier::PriceQuerier;
     use sdk::cosmwasm_std::testing::{self, MockStorage};
@@ -205,7 +204,7 @@ mod test {
     #[derive(Clone)]
     pub struct TestFeeds(pub HashMap<(SymbolStatic, SymbolStatic), PriceDTO<SwapGroup, SwapGroup>>);
     impl TestFeeds {
-        pub fn add<B, Q>(&mut self, total_of: u128, is: u128)
+        pub fn add<B, Q>(&mut self, total_of: Amount, is: Amount)
         where
             B: Currency,
             Q: Currency,
