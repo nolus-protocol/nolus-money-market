@@ -91,12 +91,7 @@ where
         total_feeders: usize,
     ) -> impl Iterator<Item = PriceResult<OracleBase>> + 'a {
         let cmd = LegCmd::new(
-            FedPrices {
-                feeds: self.feeds,
-                storage,
-                at,
-                total_feeders,
-            },
+            FedPrices::new(storage, self.feeds, at, total_feeders),
             vec![],
         );
         swap_pairs_df

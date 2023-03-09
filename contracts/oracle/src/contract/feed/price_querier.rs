@@ -5,10 +5,26 @@ use sdk::cosmwasm_std::{Storage, Timestamp};
 use serde::de::DeserializeOwned;
 
 pub struct FedPrices<'a> {
-    pub feeds: PriceFeeds<'static>,
-    pub at: Timestamp,
-    pub total_feeders: usize,
-    pub storage: &'a dyn Storage,
+    storage: &'a dyn Storage,
+    feeds: PriceFeeds<'static>,
+    at: Timestamp,
+    total_feeders: usize,
+}
+
+impl<'a> FedPrices<'a> {
+    pub fn new(
+        storage: &'a dyn Storage,
+        feeds: PriceFeeds<'static>,
+        at: Timestamp,
+        total_feeders: usize,
+    ) -> Self {
+        Self {
+            feeds,
+            at,
+            total_feeders,
+            storage,
+        }
+    }
 }
 
 pub trait PriceQuerier {
