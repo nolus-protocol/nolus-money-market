@@ -226,6 +226,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::cmp::Ordering;
+
     use finance::{currency::Currency, test::currency::Usdc};
     use sdk::cosmwasm_std::testing;
     use tree::HumanReadableTree;
@@ -402,8 +404,12 @@ mod tests {
         let paths = test_case();
         let tree = SupportedPairs::<Usdc>::new(paths.into_tree()).unwrap();
 
+        fn leg_cmp(a: &SwapLeg, b: &SwapLeg) -> Ordering {
+            a.from.cmp(&b.from)
+        }
+
         let mut response: Vec<_> = tree.swap_pairs_df().collect();
-        response.sort_by(|a, b| a.from.cmp(&b.from));
+        response.sort_by(leg_cmp);
 
         let mut expected = vec![
             SwapLeg {
@@ -449,7 +455,7 @@ mod tests {
                 },
             },
         ];
-        expected.sort_by(|a, b| a.from.cmp(&b.from));
+        expected.sort_by(leg_cmp);
 
         assert_eq!(response, expected);
     }

@@ -111,6 +111,7 @@ mod test {
 
     use crate::tests::{self, TheCurrency as Base};
     use ::currency::lease::{Atom, Weth};
+    use currency::lease::Juno;
     use sdk::cosmwasm_std::testing::MockStorage;
 
     fn alarm_dto<C>(below: (u128, u128), above: Option<(u128, u128)>) -> AlarmDTO
@@ -140,6 +141,7 @@ mod test {
                 ("recv1", alarm_dto::<Weth>((1, 10), Some((1, 60)))),
                 ("recv3", alarm_dto::<Atom>((1, 20), Some((1, 60)))),
                 ("recv4", alarm_dto::<Atom>((1, 30), Some((1, 70)))),
+                ("recv5", alarm_dto::<Juno>((1, 30), Some((1, 70)))),
             ]
             .into_iter(),
         )

@@ -67,10 +67,9 @@ impl<'a, I> AlarmsFlatten<'a, I> {
                             price: &price,
                         },
                     )
-                    .map(|mut alarms| {
-                        let alarm = alarms.next();
+                    .map(|alarms| {
                         self.alarms = Some(alarms);
-                        alarm.map(|res| res.map_err(ContractError::from))
+                        self.alarms.as_mut().and_then(next_alarm)
                     })
                 })
                 .unwrap_or_else(|err| Some(Err(err)))
@@ -88,10 +87,13 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         self.alarms
             .as_mut()
-            .and_then(|alarms| alarms.next())
-            .map(|res| res.map_err(ContractError::from))
+            .and_then(next_alarm)
             .or_else(|| self.next_price())
     }
+}
+
+fn next_alarm(iter: &mut AlarmsIterator<'_>) -> Option<Result<Addr, ContractError>> {
+    iter.next().map(|res| res.map_err(ContractError::from))
 }
 
 #[cfg(test)]
@@ -99,7 +101,7 @@ mod test {
     use super::super::test::test_case;
     use super::*;
     use crate::tests;
-    use ::currency::lease::{Atom, Cro, Weth};
+    use ::currency::lease::{Atom, Cro, Juno, Weth};
     use sdk::cosmwasm_std::{testing::MockStorage, StdError};
 
     #[test]
@@ -115,6 +117,7 @@ mod test {
                 Ok(tests::base_price::<Cro>(1, 15)), // no alarms for this price
                 Ok(tests::base_price::<Atom>(1, 25)),
                 Err(StdError::generic_err("error").into()),
+                Ok(tests::base_price::<Juno>(1, 25)),
             ]
             .into_iter(),
         );
@@ -129,5 +132,9 @@ mod test {
         // price error propagation
         let res = alarms_iter.next();
         assert_eq!(Some(Err(StdError::generic_err("error").into())), res);
+
+        // continue after an error
+        let res = alarms_iter.next();
+        assert_eq!(Some(Ok(Addr::unchecked("recv5"))), res);
     }
 }
