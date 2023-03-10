@@ -43,7 +43,9 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
     {
         let res = match self.msg {
             QueryMsg::SupportedCurrencyPairs {} => Ok(to_binary(
-                &SupportedPairs::<OracleBase>::load(self.deps.storage)?.query_supported_pairs(),
+                &SupportedPairs::<OracleBase>::load(self.deps.storage)?
+                    .swap_pairs_df()
+                    .collect::<Vec<_>>(),
             )?),
 
             QueryMsg::Price { currency } => {

@@ -13,6 +13,7 @@ use crate::{
     ratio::{Ratio, Rational},
 };
 
+pub mod base;
 pub mod dto;
 
 pub fn total_of<C>(amount: Coin<C>) -> PriceBuilder<C>
