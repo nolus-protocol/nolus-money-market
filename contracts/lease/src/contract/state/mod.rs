@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Binary, StdResult, Storage};
 use enum_dispatch::enum_dispatch;
-use platform::batch::{Batch, Emit, Emitter};
+use platform::batch::{Emit, Emitter};
 use serde::{Deserialize, Serialize};
 use std::str;
 
@@ -13,8 +13,12 @@ use sdk::{
 use crate::{api::ExecuteMsg, error::ContractResult, event::Type};
 
 use self::{
-    closed::Closed, controller::Controller, ica_connector::IcaConnector, ica_recover::InRecovery,
-    opened::repay::buy_lpn::BuyLpn, opening::buy_asset::BuyAsset,
+    closed::Closed,
+    controller::Controller,
+    ica_connector::{Enterable, IcaConnector},
+    ica_recover::InRecovery,
+    opened::repay::buy_lpn::BuyLpn,
+    opening::buy_asset::BuyAsset,
     opening::request_loan::RequestLoan,
 };
 pub use controller::{execute, instantiate, migrate, query, reply, sudo};
@@ -103,7 +107,7 @@ fn on_timeout_retry<L>(
     env: Env,
 ) -> ContractResult<Response>
 where
-    L: Controller + Into<State>,
+    L: Enterable + Into<State>,
 {
     let emitter = emit_timeout(
         event_type,
@@ -117,20 +121,20 @@ where
 fn on_timeout_repair_channel<L>(
     current_state: L,
     event_type: Type,
-    deps: Deps<'_>,
+    _deps: Deps<'_>,
     env: Env,
 ) -> ContractResult<Response>
 where
-    L: Controller + DexConnectable + Into<State>,
+    L: Enterable + Controller + DexConnectable + Into<State>,
     IcaConnector<InRecovery<L>>: Into<State>,
 {
     let emitter = emit_timeout(
         event_type,
-        env.contract.address.clone(),
+        env.contract.address,
         TimeoutPolicy::RepairICS27Channel,
     );
     let recover_ica = IcaConnector::new(InRecovery::new(current_state));
-    let batch = recover_ica.enter(deps, env)?;
+    let batch = recover_ica.enter();
     Ok(Response::from(batch.into_response(emitter), recover_ica))
 }
 

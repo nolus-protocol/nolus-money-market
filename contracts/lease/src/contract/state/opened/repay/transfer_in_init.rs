@@ -8,7 +8,7 @@ use crate::{
     api::{dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateResponse},
     contract::{
         dex::{self, DexConnectable},
-        state::{self, opened::repay, Controller, Response},
+        state::{self, ica_connector::Enterable, opened::repay, Controller, Response},
         Contract, Lease,
     },
     error::ContractResult,
@@ -37,7 +37,7 @@ impl TransferInInit {
         }
     }
 
-    fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
+    pub(super) fn enter(&self, now: Timestamp) -> ContractResult<Batch> {
         let mut sender = self.lease.dex.transfer_from(now);
         sender.send(&self.payment_lpn)?;
         Ok(sender.into())
@@ -60,11 +60,13 @@ impl DexConnectable for TransferInInit {
     }
 }
 
-impl Controller for TransferInInit {
+impl Enterable for TransferInInit {
     fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
-        self.enter_state(env.block.time)
+        self.enter(env.block.time)
     }
+}
 
+impl Controller for TransferInInit {
     fn on_response(self, _data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         self.on_response(deps, env)
     }

@@ -73,15 +73,17 @@ impl RequestLoan {
                     .clone()
                     .execute(OpenLoanResp::new(msg), &deps.querier)?;
 
-                let emitter = self.emit_ok(env.contract.address.clone());
+                let emitter = self.emit_ok(env.contract.address);
                 let open_ica = IcaConnector::new(OpenIcaAccount::new(
                     self.new_lease,
                     self.downpayment,
                     loan,
                     self.deps,
                 ));
-                let batch = open_ica.enter(deps, env)?;
-                Ok(Response::from(batch.into_response(emitter), open_ica))
+                Ok(Response::from(
+                    open_ica.enter().into_response(emitter),
+                    open_ica,
+                ))
             }
         }
     }

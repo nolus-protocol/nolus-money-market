@@ -88,7 +88,7 @@ impl Active {
             Self::try_repay_lpn(self.lease, payment_lpn, &deps.querier, &env)
         } else {
             let transfer_out = TransferOut::new(self.lease, payment);
-            let batch = transfer_out.enter(deps, env)?;
+            let batch = transfer_out.enter(env.block.time)?;
             Ok(Response::from(batch, transfer_out))
         }
     }

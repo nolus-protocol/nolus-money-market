@@ -16,7 +16,7 @@ use crate::{
     contract::{
         cmd::OpenLoanRespResult,
         dex::{Account, DexConnectable},
-        state::{self, opened::active::Active, Controller, Response},
+        state::{self, ica_connector::Enterable, opened::active::Active, Controller, Response},
         Contract, Lease,
     },
     error::ContractResult,
@@ -49,7 +49,7 @@ impl BuyAsset {
         }
     }
 
-    fn enter_state(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
+    pub(super) fn enter(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
         // TODO define struct Trx with functions build_request and decode_response -> LpnCoin
         let mut swap_trx = self.dex_account.swap(&self.deps.1, querier);
         // TODO apply nls_swap_fee on the downpayment only!
@@ -98,11 +98,13 @@ impl DexConnectable for BuyAsset {
     }
 }
 
-impl Controller for BuyAsset {
+impl Enterable for BuyAsset {
     fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<LocalBatch> {
-        self.enter_state(&deps.querier)
+        self.enter(&deps.querier)
     }
+}
 
+impl Controller for BuyAsset {
     fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         self.on_response(data, &env, &deps.querier)
     }

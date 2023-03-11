@@ -15,7 +15,7 @@ use crate::{
     contract::{
         cmd::OpenLoanRespResult,
         dex::Account,
-        state::{self, BuyAsset, Controller, Response},
+        state::{self, ica_connector::Enterable, BuyAsset, Controller, Response},
         Contract,
     },
     error::ContractResult,
@@ -52,7 +52,7 @@ impl TransferOut {
         }
     }
 
-    fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
+    pub(super) fn enter(&self, now: Timestamp) -> ContractResult<Batch> {
         debug_assert_eq!(self.nb_completed, TransfersNb::ZERO);
         let mut sender = self.dex_account.transfer_to(now);
         sender.send(&self.downpayment)?;
@@ -76,7 +76,7 @@ impl TransferOut {
                 Ok(Response::from(Batch::default(), transfer_out))
             }
             1 => {
-                let emitter = self.emit_ok(env.contract.address.clone());
+                let emitter = self.emit_ok(env.contract.address);
                 let buy_asset = BuyAsset::new(
                     self.form,
                     self.dex_account,
@@ -84,7 +84,7 @@ impl TransferOut {
                     self.loan,
                     self.deps,
                 );
-                let batch = buy_asset.enter(deps, env)?;
+                let batch = buy_asset.enter(&deps.querier)?;
                 let resp = batch.into_response(emitter);
                 Ok(Response::from(resp, buy_asset))
             }
@@ -93,11 +93,13 @@ impl TransferOut {
     }
 }
 
-impl Controller for TransferOut {
+impl Enterable for TransferOut {
     fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
-        self.enter_state(env.block.time)
+        self.enter(env.block.time)
     }
+}
 
+impl Controller for TransferOut {
     fn on_response(self, _data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         self.on_response(deps, env)
     }

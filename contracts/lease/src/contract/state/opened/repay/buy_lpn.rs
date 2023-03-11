@@ -16,7 +16,7 @@ use crate::{
     api::{dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateResponse},
     contract::{
         dex::DexConnectable,
-        state::{self, opened::repay, Controller, Response},
+        state::{self, ica_connector::Enterable, opened::repay, Controller, Response},
         Contract, Lease,
     },
     error::ContractResult,
@@ -36,18 +36,18 @@ impl BuyLpn {
         Self { lease, payment }
     }
 
-    fn enter_state(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
+    pub(super) fn enter(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
         let mut swap_trx = self.lease.dex.swap(&self.lease.lease.oracle, querier);
         swap_trx.swap_exact_in(&self.payment, self.target_currency())?;
         Ok(swap_trx.into())
     }
 
-    fn on_response(self, resp: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+    fn on_response(self, resp: Binary, _deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         let emitter = self.emit_ok();
         let payment_lpn = self.decode_response(resp.as_slice())?;
 
         let transfer_in = TransferInInit::new(self.lease, self.payment, payment_lpn);
-        let batch = transfer_in.enter(deps, env)?;
+        let batch = transfer_in.enter(env.block.time)?;
 
         Ok(Response::from(batch.into_response(emitter), transfer_in))
     }
@@ -76,11 +76,13 @@ impl DexConnectable for BuyLpn {
     }
 }
 
-impl Controller for BuyLpn {
+impl Enterable for BuyLpn {
     fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<LocalBatch> {
-        self.enter_state(&deps.querier)
+        self.enter(&deps.querier)
     }
+}
 
+impl Controller for BuyLpn {
     fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         self.on_response(data, deps, env)
     }

@@ -20,8 +20,12 @@ use crate::{
 
 use super::State;
 
+pub(crate) trait Enterable {
+    fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<Batch>;
+}
+
 pub(crate) trait IcaConnectee {
-    type NextState: Controller + Into<State>;
+    type NextState: Enterable + Into<State>;
 
     fn connected(self, ica_account: Account) -> Self::NextState;
 }
@@ -39,7 +43,7 @@ where
         Self { connectee }
     }
 
-    fn enter_state(&self) -> Batch {
+    pub(super) fn enter(&self) -> Batch {
         Account::register_request(self.connectee.dex())
     }
 
@@ -69,15 +73,20 @@ where
     }
 }
 
+impl<Connectee> Enterable for IcaConnector<Connectee>
+where
+    Connectee: IcaConnectee + DexConnectable,
+{
+    fn enter(&self, _deps: Deps<'_>, _env: Env) -> ContractResult<Batch> {
+        Ok(self.enter())
+    }
+}
+
 impl<Connectee> Controller for IcaConnector<Connectee>
 where
     Self: Into<State>,
     Connectee: IcaConnectee + DexConnectable,
 {
-    fn enter(&self, _deps: Deps<'_>, _env: Env) -> ContractResult<Batch> {
-        Ok(self.enter_state())
-    }
-
     fn on_open_ica(
         self,
         counterparty_version: String,

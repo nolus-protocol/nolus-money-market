@@ -11,7 +11,7 @@ use crate::{
     error::ContractResult,
 };
 
-use super::{ica_connector::IcaConnectee, Controller};
+use super::ica_connector::{Enterable, IcaConnectee};
 
 #[derive(Serialize, Deserialize)]
 pub struct InRecovery<S> {
@@ -26,7 +26,7 @@ impl<S> InRecovery<S> {
 
 impl<S> IcaConnectee for InRecovery<S>
 where
-    S: Controller + Into<State>,
+    S: Enterable + Into<State>,
 {
     type NextState = S;
 

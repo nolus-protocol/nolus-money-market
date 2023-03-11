@@ -2,7 +2,6 @@ use enum_dispatch::enum_dispatch;
 
 use ::currency::lease::LeaseGroup;
 use finance::currency;
-use platform::batch::Batch;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -28,10 +27,6 @@ pub(crate) trait Controller
 where
     Self: Sized,
 {
-    fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<Batch> {
-        err("enter", deps.api)
-    }
-
     fn reply(self, deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {
         err("reply", deps.api)
     }

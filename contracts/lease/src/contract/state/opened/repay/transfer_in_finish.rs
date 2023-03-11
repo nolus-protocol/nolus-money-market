@@ -55,7 +55,7 @@ impl TransferInFinish {
             if env.block.time >= self.timeout {
                 let transfer_in = TransferInInit::new(self.lease, self.payment, self.payment_lpn);
                 Ok(Response::from(
-                    transfer_in.enter(deps, env)?.into_response(emitter),
+                    transfer_in.enter(env.block.time)?.into_response(emitter),
                     transfer_in,
                 ))
             } else {
