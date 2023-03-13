@@ -38,7 +38,7 @@ runs:
             fi \
           ) \
         --env RELEASE_VERSION="${{ github.ref_name }}-$(date -Iminute)" \
-        cosmwasm/workspace-optimizer:0.12.11
+        cosmwasm/workspace-optimizer:0.12.12
     - name: "Check for WASM binaries larger than allowed limit"
       shell: "sh"
       run: |
