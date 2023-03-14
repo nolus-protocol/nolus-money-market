@@ -2,8 +2,11 @@ use serde::{Deserialize, Serialize};
 
 use access_control::Unauthorized;
 use finance::{
-    coin::Amount as CoinAmount, currency::Currency, duration::Duration, liability::Liability,
-    percent::Percent, test::currency::Usdc,
+    currency::Currency,
+    duration::Duration,
+    liability::Liability,
+    percent::{NonZeroPercent, NonZeroUnits, Percent},
+    test::currency::Usdc,
 };
 use lease::api::{
     dex::{ConnectionParams, Ics20Channel},
@@ -244,7 +247,7 @@ fn test_no_dex_setup() {
 
     let msg = ExecuteMsg::OpenLease {
         currency: DENOM.to_string(),
-        max_loan: None,
+        max_ltv: None,
     };
 
     let res = execute(deps.as_mut(), mock_env(), customer(), msg);
@@ -276,7 +279,7 @@ fn test_setup_dex_again() {
     assert_eq!(Err(ContractError::Unauthorized(Unauthorized)), res);
 }
 
-fn open_lease_with(max_loan: Option<CoinAmount>) {
+fn open_lease_with(max_ltv: Option<NonZeroPercent>) {
     let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
 
     setup_test_case(deps.as_mut());
@@ -286,14 +289,14 @@ fn open_lease_with(max_loan: Option<CoinAmount>) {
 
     let msg = ExecuteMsg::OpenLease {
         currency: DENOM.to_string(),
-        max_loan,
+        max_ltv,
     };
     let info = customer();
     let env = mock_env();
     let admin = env.contract.address.clone();
     let res = execute(deps.as_mut(), env, info.clone(), msg).unwrap();
 
-    let msg = Borrow::open_lease_msg(info.sender, config, DENOM.to_string(), max_loan).unwrap();
+    let msg = Borrow::open_lease_msg(info.sender, config, DENOM.to_string(), max_ltv).unwrap();
     assert_eq!(
         res.messages,
         vec![SubMsg::reply_on_success(
@@ -316,6 +319,8 @@ fn test_open_lease() {
 
 #[test]
 fn test_open_lease_with_max_loan() {
-    open_lease_with(Some(0));
-    open_lease_with(Some(50));
+    open_lease_with(None);
+    open_lease_with(Some(NonZeroPercent::from_permille(
+        NonZeroUnits::new(50).unwrap(),
+    )));
 }

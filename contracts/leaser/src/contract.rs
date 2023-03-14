@@ -80,7 +80,10 @@ pub fn execute(
         ExecuteMsg::MigrateLeases { new_code_id } => owner_allowed_only(deps.storage, info, |s| {
             leaser::try_migrate_leases(s, new_code_id.u64())
         }),
-        ExecuteMsg::OpenLease { currency, max_loan } => Borrow::with(
+        ExecuteMsg::OpenLease {
+            currency,
+            max_ltv: max_loan,
+        } => Borrow::with(
             deps,
             info.funds,
             info.sender,

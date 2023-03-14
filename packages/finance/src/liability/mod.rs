@@ -6,7 +6,7 @@ use crate::{
     duration::Duration,
     error::{Error, Result},
     fractionable::Percentable,
-    percent::Percent,
+    percent::{NonZeroPercent, Percent},
     ratio::Rational,
 };
 
@@ -91,18 +91,28 @@ impl Liability {
         self.recalc_time
     }
 
-    pub fn init_borrow_amount<P>(&self, downpayment: P) -> P
+    pub fn init_borrow_amount<P>(&self, downpayment: P, max_ltv: Option<NonZeroPercent>) -> P
     where
         P: Percentable,
     {
         use crate::fraction::Fraction;
+
+        debug_assert!(self.initial > Percent::ZERO);
         debug_assert!(self.initial < Percent::HUNDRED);
 
-        // borrow = init%.of(borrow + downpayment)
-        // (100% - init%).of(borrow) = init%.of(downpayment)
-        // borrow = init% / (100% - init%) * downpayment
-        let ratio = Rational::new(self.initial, Percent::HUNDRED - self.initial);
-        ratio.of(downpayment)
+        #[cfg(debug_assertions)]
+        if let Some(max_ltv) = max_ltv {
+            debug_assert!(max_ltv.percent() < Percent::HUNDRED);
+        }
+
+        let percent: Percent = max_ltv.map_or(self.initial, |percent: NonZeroPercent| {
+            percent.percent().min(self.initial)
+        });
+
+        // borrow = percent%.of(borrow + downpayment)
+        // (100% - percent%).of(borrow) = percent%.of(downpayment)
+        // borrow = (percent% / (100% - percent%)).of(downpayment)
+        Rational::new(percent, Percent::HUNDRED - percent).of(downpayment)
     }
 
     fn invariant_held(&self) -> Result<()> {
@@ -147,7 +157,12 @@ fn check(invariant: bool, msg: &str) -> Result<()> {
 mod test {
     use sdk::cosmwasm_std::{from_slice, StdError};
 
-    use crate::{coin::Coin, duration::Duration, percent::Percent, test::currency::Usdc};
+    use crate::{
+        coin::Coin,
+        duration::Duration,
+        percent::{NonZeroPercent, NonZeroUnits, Percent},
+        test::currency::Usdc,
+    };
 
     use super::Liability;
 
@@ -237,12 +252,72 @@ mod test {
 
     #[test]
     fn init_borrow() {
-        test_init_borrow_amount(1000, 10, 111);
-        test_init_borrow_amount(1, 10, 0);
-        test_init_borrow_amount(1000, 99, 990 * 100);
-        test_init_borrow_amount(10, 65, 18);
-        test_init_borrow_amount(1, 65, 1);
-        test_init_borrow_amount(2, 65, 3);
+        test_init_borrow_amount(1000, 10, 111, None);
+        test_init_borrow_amount(1, 10, 0, None);
+        test_init_borrow_amount(1000, 99, 990 * 100, None);
+        test_init_borrow_amount(10, 65, 18, None);
+        test_init_borrow_amount(1, 65, 1, None);
+        test_init_borrow_amount(2, 65, 3, None);
+    }
+
+    #[test]
+    fn init_borrow_max_ltv() {
+        test_init_borrow_amount(
+            1000,
+            10,
+            52,
+            Some(NonZeroPercent::from_permille(
+                NonZeroUnits::new(50).unwrap(),
+            )),
+        );
+        test_init_borrow_amount(
+            1,
+            10,
+            0,
+            Some(NonZeroPercent::from_permille(
+                NonZeroUnits::new(50).unwrap(),
+            )),
+        );
+        test_init_borrow_amount(
+            1000,
+            99,
+            4000,
+            Some(NonZeroPercent::from_permille(
+                NonZeroUnits::new(800).unwrap(),
+            )),
+        );
+        test_init_borrow_amount(
+            10,
+            65,
+            1,
+            Some(NonZeroPercent::from_permille(
+                NonZeroUnits::new(100).unwrap(),
+            )),
+        );
+        test_init_borrow_amount(
+            1,
+            65,
+            1,
+            Some(NonZeroPercent::from_permille(
+                NonZeroUnits::new(650).unwrap(),
+            )),
+        );
+        test_init_borrow_amount(
+            2,
+            65,
+            3,
+            Some(NonZeroPercent::from_permille(
+                NonZeroUnits::new(650).unwrap(),
+            )),
+        );
+        test_init_borrow_amount(
+            2,
+            65,
+            3,
+            Some(NonZeroPercent::from_permille(
+                NonZeroUnits::new(999).unwrap(),
+            )),
+        );
     }
 
     fn assert_load_ok(json: &[u8], exp: Liability) {
@@ -260,7 +335,7 @@ mod test {
         ));
     }
 
-    fn test_init_borrow_amount(d: u128, p: u16, exp: u128) {
+    fn test_init_borrow_amount(d: u128, p: u16, exp: u128, max_p: Option<NonZeroPercent>) {
         use crate::fraction::Fraction;
         type Currency = Usdc;
         let downpayment = Coin::<Currency>::new(d);
@@ -274,8 +349,15 @@ mod test {
             third_liq_warn: Percent::from_permille(998),
             recalc_time: Duration::from_secs(20000),
         }
-        .init_borrow_amount(downpayment);
-        assert_eq!(Coin::<Currency>::new(exp), calculated);
-        assert_eq!(calculated, percent.of(downpayment + calculated));
+        .init_borrow_amount(downpayment, max_p);
+
+        let selected_p = if let Some(max_p) = max_p {
+            max_p.percent().min(percent)
+        } else {
+            percent
+        };
+
+        assert_eq!(calculated, Coin::<Currency>::new(exp));
+        assert_eq!(selected_p.of(downpayment + calculated), calculated);
     }
 }

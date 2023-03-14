@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    coin::Amount as CoinAmount, currency::SymbolOwned, liability::Liability, percent::Percent,
+    currency::SymbolOwned, liability::Liability, percent::NonZeroPercent, percent::Percent,
 };
 use lease::api::{dex::ConnectionParams, DownpaymentCoin, InterestPaymentSpec, LeaseCoin};
 use lpp::msg::LppCoin;
@@ -44,7 +44,7 @@ pub enum ExecuteMsg {
     OpenLease {
         currency: SymbolOwned,
         #[serde(default)]
-        max_loan: Option<CoinAmount>,
+        max_ltv: Option<NonZeroPercent>,
     },
 }
 

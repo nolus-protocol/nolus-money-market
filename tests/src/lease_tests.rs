@@ -5,8 +5,9 @@ use finance::{
     coin::{Amount, Coin},
     currency::Currency as _,
     duration::Duration,
+    fraction::Fraction,
     interest::InterestPeriod,
-    percent::Percent,
+    percent::{NonZeroPercent, NonZeroUnits, Percent},
     price::{self, Price},
 };
 use lease::api::{ExecuteMsg, StateQuery, StateResponse};
@@ -97,7 +98,7 @@ fn open_lease(
     test_case: &mut TestCase<Lpn>,
     neutron_message_receiver: &CustomMessageReceiver,
     value: LeaseCoin,
-    max_loan: Option<Amount>,
+    max_loan: Option<NonZeroPercent>,
 ) -> Addr {
     try_init_lease(test_case, value, max_loan);
 
@@ -113,7 +114,11 @@ fn open_lease(
     lease
 }
 
-fn try_init_lease(test_case: &mut TestCase<Lpn>, value: LeaseCoin, max_loan: Option<Amount>) {
+fn try_init_lease(
+    test_case: &mut TestCase<Lpn>,
+    value: LeaseCoin,
+    max_ltv: Option<NonZeroPercent>,
+) {
     test_case
         .app
         .execute_contract(
@@ -121,7 +126,7 @@ fn try_init_lease(test_case: &mut TestCase<Lpn>, value: LeaseCoin, max_loan: Opt
             test_case.leaser_addr.clone().unwrap(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: LeaseCurrency::TICKER.into(),
-                max_loan,
+                max_ltv,
             },
             &if value.is_zero() {
                 vec![]
@@ -387,12 +392,13 @@ fn state_paid() {
 fn state_paid_with_max_loan() {
     let (mut test_case, neutron_message_receiver) = create_test_case();
     let downpayment = create_lease_coin(DOWNPAYMENT);
-    let borrowed = Coin::new(DOWNPAYMENT / 10);
+    let percent = NonZeroPercent::from_permille(NonZeroUnits::new(10).unwrap());
+    let borrowed = Coin::new(percent.percent().of(DOWNPAYMENT));
     let lease_address = open_lease(
         &mut test_case,
         &neutron_message_receiver,
         downpayment,
-        Some(borrowed.into()),
+        Some(percent),
     );
 
     repay(&mut test_case, &lease_address, borrowed);

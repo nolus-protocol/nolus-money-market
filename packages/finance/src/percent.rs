@@ -1,5 +1,6 @@
 use std::{
     fmt::{Debug, Display, Formatter, Result as FmtResult, Write},
+    num::NonZeroU32,
     ops::{Add, Sub},
 };
 
@@ -19,6 +20,24 @@ use crate::{
 };
 
 pub type Units = u32;
+pub type NonZeroUnits = NonZeroU32;
+
+#[derive(
+    Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,
+)]
+#[serde(rename_all = "snake_case")]
+#[serde(transparent)]
+pub struct NonZeroPercent(NonZeroUnits); //value in permille
+
+impl NonZeroPercent {
+    pub const fn from_permille(units: NonZeroUnits) -> Self {
+        Self(units)
+    }
+
+    pub const fn percent(self) -> Percent {
+        Percent(self.0.get())
+    }
+}
 
 #[derive(
     Copy, Clone, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, JsonSchema,

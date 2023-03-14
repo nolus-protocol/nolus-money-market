@@ -218,7 +218,7 @@ where
             return Err(ContractError::ZeroDownpayment {});
         }
 
-        let borrow = self.liability.init_borrow_amount(downpayment_lpn);
+        let borrow = self.liability.init_borrow_amount(downpayment_lpn, None);
 
         let asset_price = self.oracle.price_of::<Asset>()?.inv();
 

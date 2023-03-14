@@ -1,8 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use finance::{
-    coin::Amount as CoinAmount, currency::SymbolOwned, duration::Duration, liability::Liability,
-    percent::Percent,
+    currency::SymbolOwned,
+    duration::Duration,
+    liability::Liability,
+    percent::{NonZeroPercent, Percent},
 };
 use sdk::{
     cosmwasm_std::Addr,
@@ -31,9 +33,8 @@ pub struct NewLeaseForm {
     pub customer: Addr,
     /// Ticker of the currency this lease will be about.
     pub currency: SymbolOwned,
-    /// Optional parameter indicating preferred maximum amount of the currency
-    /// the loan should be opened with.
-    pub max_loan: Option<CoinAmount>,
+    /// Maximum Loan-to-Value percentage of the new lease, optional.
+    pub max_ltv: Option<NonZeroPercent>,
     /// Liability parameters
     pub liability: Liability,
     /// Loan parameters

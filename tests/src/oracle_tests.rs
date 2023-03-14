@@ -235,7 +235,7 @@ fn open_lease(test_case: &mut TestCase<Lpn>, value: TheCoin) -> Addr {
             test_case.leaser_addr.clone().unwrap(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: LeaseCurrency::TICKER.into(),
-                max_loan: None,
+                max_ltv: None,
             },
             &[cw_coin(value)],
         )

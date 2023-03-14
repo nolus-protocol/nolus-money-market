@@ -3,7 +3,7 @@ use finance::{
     currency::Currency,
     duration::Duration,
     liability::Liability,
-    percent::Percent,
+    percent::{NonZeroPercent, Percent},
 };
 use lease::{
     api::{
@@ -34,18 +34,22 @@ where
 {
     lease_currency: &'r str,
     downpayment: Coin<D>,
-    max_loan: Option<Amount>,
+    max_ltv: Option<NonZeroPercent>,
 }
 
 impl<'r, D> LeaseInitConfig<'r, D>
 where
     D: Currency,
 {
-    pub fn new(lease_currency: &'r str, downpayment: Coin<D>, max_loan: Option<Amount>) -> Self {
+    pub fn new(
+        lease_currency: &'r str,
+        downpayment: Coin<D>,
+        max_ltv: Option<NonZeroPercent>,
+    ) -> Self {
         Self {
             lease_currency,
             downpayment,
-            max_loan,
+            max_ltv,
         }
     }
 }
@@ -127,7 +131,7 @@ impl LeaseWrapper {
             lease_config.lease_currency,
             addresses,
             config,
-            lease_config.max_loan,
+            lease_config.max_ltv,
         );
 
         let result = app.instantiate_contract(
@@ -154,13 +158,13 @@ impl LeaseWrapper {
         lease_currency: &str,
         addresses: LeaseWrapperAddresses,
         config: LeaseWrapperConfig,
-        max_loan: Option<Amount>,
+        max_ltv: Option<NonZeroPercent>,
     ) -> NewLeaseContract {
         NewLeaseContract {
             form: NewLeaseForm {
                 customer: config.customer,
                 currency: lease_currency.into(),
-                max_loan,
+                max_ltv,
                 liability: Liability::new(
                     config.liability_init_percent,
                     config.liability_delta_to_healthy_percent,
