@@ -105,14 +105,14 @@ impl Liability {
             debug_assert!(max_ltv.percent() < Percent::HUNDRED);
         }
 
-        let percent: Percent = max_ltv.map_or(self.initial, |percent: NonZeroPercent| {
-            percent.percent().min(self.initial)
+        let initial_ltv: Percent = max_ltv.map_or(self.initial, |max_ltv: NonZeroPercent| {
+            max_ltv.percent().min(self.initial)
         });
 
         // borrow = percent%.of(borrow + downpayment)
         // (100% - percent%).of(borrow) = percent%.of(downpayment)
         // borrow = (percent% / (100% - percent%)).of(downpayment)
-        Rational::new(percent, Percent::HUNDRED - percent).of(downpayment)
+        Rational::new(initial_ltv, Percent::HUNDRED - initial_ltv).of(downpayment)
     }
 
     fn invariant_held(&self) -> Result<()> {
