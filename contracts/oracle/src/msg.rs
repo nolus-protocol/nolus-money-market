@@ -68,10 +68,9 @@ pub enum QueryMsg {
     IsFeeder {
         address: Addr,
     },
+    // returns all the supported prices
+    Prices {},
     // returns the price of the denom against the base asset
-    Prices {
-        currencies: Vec<SymbolOwned>,
-    },
     Price {
         currency: SymbolOwned,
     },

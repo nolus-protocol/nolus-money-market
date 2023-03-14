@@ -67,22 +67,6 @@ where
         Ok(())
     }
 
-    pub(crate) fn calc_prices(
-        &self,
-        storage: &dyn Storage,
-        at: Timestamp,
-        total_feeders: usize,
-        currencies: &[SymbolOwned],
-    ) -> Result<Vec<SpotPrice>, ContractError> {
-        let tree: SupportedPairs<OracleBase> = SupportedPairs::load(storage)?;
-        let mut prices = vec![];
-        for currency in currencies {
-            let price = self.calc_price(&tree, storage, currency, at, total_feeders)?;
-            prices.push(price);
-        }
-        Ok(prices)
-    }
-
     pub fn all_prices_iter<'a>(
         self,
         storage: &'a dyn Storage,
@@ -107,10 +91,10 @@ where
             .flatten()
     }
 
-    fn calc_price(
+    pub fn calc_price(
         &self,
-        tree: &SupportedPairs<OracleBase>,
         storage: &dyn Storage,
+        tree: &SupportedPairs<OracleBase>,
         currency: &SymbolOwned,
         at: Timestamp,
         total_feeders: usize,
@@ -161,6 +145,40 @@ where
     let prices = calc_all_prices::<OracleBase>(storage, block_time, &tree)?;
     let remaining_alarms = MarketAlarms::try_query_alarms::<OracleBase>(storage, prices)?;
     Ok(AlarmsStatusResponse { remaining_alarms })
+}
+
+pub fn try_query_prices<OracleBase>(
+    storage: &dyn Storage,
+    block_time: Timestamp,
+) -> Result<Vec<SpotPrice>, ContractError>
+where
+    OracleBase: Currency + DeserializeOwned,
+{
+    let tree = SupportedPairs::load(storage)?;
+    let prices = calc_all_prices::<OracleBase>(storage, block_time, &tree)?.try_fold(
+        vec![],
+        |mut v, price| {
+            v.push(price?.into());
+            Ok(v)
+        },
+    );
+    prices
+}
+
+pub fn try_query_price<OracleBase>(
+    storage: &dyn Storage,
+    at: Timestamp,
+    currency: &SymbolOwned,
+) -> Result<SpotPrice, ContractError>
+where
+    OracleBase: Currency + DeserializeOwned,
+{
+    let tree = SupportedPairs::load(storage)?;
+    let total_feeders = Feeders::total_registered(storage)?;
+    use crate::state::config::Config as OracleConfig;
+    let config = OracleConfig::load(storage)?;
+    let oracle = Feeds::<OracleBase>::with(config.price_config);
+    oracle.calc_price(storage, &tree, currency, at, total_feeders)
 }
 
 fn calc_all_prices<'a, OracleBase>(

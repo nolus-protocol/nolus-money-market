@@ -11,7 +11,7 @@ use sdk::cosmwasm_std::{
 
 use crate::{
     contract::{execute, query},
-    msg::{ExecuteMsg, PricesResponse, QueryMsg},
+    msg::{ExecuteMsg, QueryMsg},
     tests::{dummy_default_instantiate_msg, setup_test},
     ContractError,
 };
@@ -47,13 +47,13 @@ fn feed_direct_price() {
     let res = query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::Prices {
-            currencies: vec![Wbtc::TICKER.to_string()],
+        QueryMsg::Price {
+            currency: Wbtc::TICKER.to_string(),
         },
     )
     .unwrap();
-    let value: PricesResponse = from_binary(&res).unwrap();
-    assert_eq!(expected_price, value.prices.first().unwrap().to_owned());
+    let value: SpotPrice = from_binary(&res).unwrap();
+    assert_eq!(expected_price, value);
 }
 
 #[test]
@@ -102,8 +102,8 @@ fn query_prices_unsupported_denom() {
     query(
         deps.as_ref(),
         mock_env(),
-        QueryMsg::Prices {
-            currencies: vec!["dummy".to_string()],
+        QueryMsg::Price {
+            currency: "dummy".to_string(),
         },
     )
     .unwrap();
