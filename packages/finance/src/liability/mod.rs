@@ -100,11 +100,6 @@ impl Liability {
         debug_assert!(self.initial > Percent::ZERO);
         debug_assert!(self.initial < Percent::HUNDRED);
 
-        #[cfg(debug_assertions)]
-        if let Some(max_ltv) = max_ltv {
-            debug_assert!(max_ltv > Percent::ZERO);
-        }
-
         let initial_ltv: Percent =
             max_ltv.map_or(self.initial, |max_ltv| max_ltv.min(self.initial));
 
@@ -263,6 +258,8 @@ mod test {
         test_init_borrow_amount(1, 65, 1, Some(Percent::from_percent(65)));
         test_init_borrow_amount(2, 65, 3, Some(Percent::from_percent(65)));
         test_init_borrow_amount(2, 65, 3, Some(Percent::from_permille(999)));
+
+        test_init_borrow_amount(1000, 65, 0, Some(Percent::ZERO));
     }
 
     fn assert_load_ok(json: &[u8], exp: Liability) {
