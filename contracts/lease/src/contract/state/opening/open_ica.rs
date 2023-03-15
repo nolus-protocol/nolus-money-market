@@ -18,7 +18,7 @@ use crate::{
     error::ContractResult,
 };
 
-use super::transfer_out::TransferOut;
+use super::buy_asset::{BuyAsset, Transfer};
 
 #[derive(Serialize, Deserialize)]
 pub struct OpenIcaAccount {
@@ -45,16 +45,16 @@ impl OpenIcaAccount {
 }
 
 impl IcaConnectee for OpenIcaAccount {
-    type NextState = TransferOut;
+    type NextState = Transfer;
 
     fn connected(self, dex_account: Account) -> Self::NextState {
-        TransferOut::new(
+        Self::NextState::new(BuyAsset::new(
             self.new_lease.form,
             dex_account,
             self.downpayment,
             self.loan,
             self.deps,
-        )
+        ))
     }
 }
 

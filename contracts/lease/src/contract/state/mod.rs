@@ -10,7 +10,7 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-use crate::{api::ExecuteMsg, error::ContractResult, event::Type};
+use crate::{api::ExecuteMsg, error::ContractResult};
 
 use self::{
     closed::Closed,
@@ -18,7 +18,6 @@ use self::{
     ica_connector::{Enterable, IcaConnector},
     ica_recover::InRecovery,
     opened::repay::buy_lpn::BuyLpn,
-    opening::buy_asset::BuyAsset,
     opening::request_loan::RequestLoan,
 };
 pub use controller::{execute, instantiate, migrate, query, reply, sudo};
@@ -35,16 +34,21 @@ mod paid;
 mod transfer_in;
 
 type OpenIcaAccount = ica_connector::IcaConnector<opening::open_ica::OpenIcaAccount>;
-type OpeningTransferOut = opening::transfer_out::TransferOut;
+type OpeningTransferOut = opening::buy_asset::Transfer;
+type BuyAsset = opening::buy_asset::Swap;
 type BuyAssetRecoverIca = ica_connector::IcaConnector<ica_recover::InRecovery<BuyAsset>>;
+
 type OpenedActive = opened::active::Active;
+
 type RepaymentTransferOut = opened::repay::transfer_out::TransferOut;
 type BuyLpnRecoverIca = ica_connector::IcaConnector<ica_recover::InRecovery<BuyLpn>>;
 type RepaymentTransferInInit = opened::repay::transfer_in_init::TransferInInit;
 type RepaymentTransferInInitRecoverIca =
     ica_connector::IcaConnector<ica_recover::InRecovery<RepaymentTransferInInit>>;
 type RepaymentTransferInFinish = opened::repay::transfer_in_finish::TransferInFinish;
+
 type PaidActive = paid::Active;
+
 type ClosingTransferInInit = paid::transfer_in_init::TransferInInit;
 type ClosingTransferInInitRecoverIca =
     ica_connector::IcaConnector<ica_recover::InRecovery<ClosingTransferInInit>>;
@@ -100,17 +104,18 @@ impl Response {
     }
 }
 
-fn on_timeout_retry<L>(
-    current_state: L,
-    event_type: Type,
+fn on_timeout_retry<S, L>(
+    current_state: S,
+    state_label: L,
     deps: Deps<'_>,
     env: Env,
 ) -> ContractResult<Response>
 where
-    L: Enterable + Into<State>,
+    S: Enterable + Into<State>,
+    L: Into<String>,
 {
     let emitter = emit_timeout(
-        event_type,
+        state_label,
         env.contract.address.clone(),
         TimeoutPolicy::Retry,
     );
@@ -118,18 +123,19 @@ where
     Ok(Response::from(batch.into_response(emitter), current_state))
 }
 
-fn on_timeout_repair_channel<L>(
-    current_state: L,
-    event_type: Type,
+fn on_timeout_repair_channel<S, L>(
+    current_state: S,
+    state_label: L,
     _deps: Deps<'_>,
     env: Env,
 ) -> ContractResult<Response>
 where
-    L: Enterable + Controller + DexConnectable + Into<State>,
-    IcaConnector<InRecovery<L>>: Into<State>,
+    S: Enterable + Controller + DexConnectable + Into<State>,
+    IcaConnector<InRecovery<S>>: Into<State>,
+    L: Into<String>,
 {
     let emitter = emit_timeout(
-        event_type,
+        state_label,
         env.contract.address,
         TimeoutPolicy::RepairICS27Channel,
     );
@@ -144,8 +150,11 @@ enum TimeoutPolicy {
     RepairICS27Channel,
 }
 
-fn emit_timeout(event_type: Type, contract: Addr, policy: TimeoutPolicy) -> Emitter {
-    Emitter::of_type(event_type)
+fn emit_timeout<L>(state_label: L, contract: Addr, policy: TimeoutPolicy) -> Emitter
+where
+    L: Into<String>,
+{
+    Emitter::of_type(state_label)
         .emit("id", contract)
         .emit("timeout", format!("{:?}", policy))
 }

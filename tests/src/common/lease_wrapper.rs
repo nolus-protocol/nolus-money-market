@@ -279,6 +279,8 @@ pub fn complete_lease_initialization<Lpn>(
         ),
         downpayment
     );
+    send_blank_response(mock_app, lease_addr);
+    
     assert_eq!(
         expect_ibc_transfer(
             neutron_message_receiver,
@@ -290,9 +292,6 @@ pub fn complete_lease_initialization<Lpn>(
         .denom,
         Lpn::BANK_SYMBOL
     );
-
-    // TransferOut sends two IBC transfers so expect two requests
-    send_blank_response(mock_app, lease_addr);
     send_blank_response(mock_app, lease_addr);
 
     {
