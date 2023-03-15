@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 
 pub struct FedPrices<'a> {
     storage: &'a dyn Storage,
-    feeds: PriceFeeds<'static>,
+    feeds: &'a PriceFeeds<'static>,
     at: Timestamp,
     total_feeders: usize,
 }
@@ -14,7 +14,7 @@ pub struct FedPrices<'a> {
 impl<'a> FedPrices<'a> {
     pub fn new(
         storage: &'a dyn Storage,
-        feeds: PriceFeeds<'static>,
+        feeds: &'a PriceFeeds<'static>,
         at: Timestamp,
         total_feeders: usize,
     ) -> Self {

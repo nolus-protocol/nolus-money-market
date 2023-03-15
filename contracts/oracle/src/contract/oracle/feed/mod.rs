@@ -1,20 +1,11 @@
-use super::{
-    alarms::{MarketAlarms, PriceResult},
-    feeder::Feeders,
-};
 use crate::{
-    msg::{AlarmsStatusResponse, ExecuteAlarmMsg},
+    contract::alarms::PriceResult,
     state::supported_pairs::{SupportedPairs, SwapLeg},
     ContractError,
 };
-use ::currency::native::Nls;
 use finance::currency::{self, Currency, SymbolOwned};
 use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
-use platform::batch::Batch;
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, Storage, Timestamp},
-};
+use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 use serde::de::DeserializeOwned;
 use std::marker::PhantomData;
 use swap::{SwapGroup, SwapTarget};
@@ -68,14 +59,14 @@ where
     }
 
     pub fn all_prices_iter<'a>(
-        self,
+        &'a self,
         storage: &'a dyn Storage,
         swap_pairs_df: impl Iterator<Item = SwapLeg> + 'a,
         at: Timestamp,
         total_feeders: usize,
     ) -> impl Iterator<Item = PriceResult<OracleBase>> + 'a {
         let cmd = LegCmd::new(
-            FedPrices::new(storage, self.feeds, at, total_feeders),
+            FedPrices::new(storage, &self.feeds, at, total_feeders),
             vec![],
         );
         swap_pairs_df
@@ -103,97 +94,6 @@ where
             .price::<OracleBase, _>(storage, at, total_feeders, tree.load_path(currency)?)
             .map_err(Into::into)
     }
-}
-
-pub fn try_notify_alarms<OracleBase>(
-    storage: &mut dyn Storage,
-    block_time: Timestamp,
-    max_count: u32,
-) -> Result<Response, ContractError>
-where
-    OracleBase: Currency + DeserializeOwned,
-{
-    let tree = SupportedPairs::load(storage)?;
-    let prices = calc_all_prices::<OracleBase>(storage, block_time, &tree)?;
-    let batch =
-        MarketAlarms::notify_alarms_iter::<OracleBase>(storage, prices, max_count.try_into()?)
-            .try_fold(
-                Batch::default(),
-                |mut batch, receiver| -> Result<Batch, ContractError> {
-                    // TODO: get rid of the Nls dummy type argument
-                    batch.schedule_execute_wasm_reply_always::<_, Nls>(
-                        &receiver?,
-                        ExecuteAlarmMsg::PriceAlarm(),
-                        None,
-                        batch.len().try_into()?,
-                    )?;
-                    Ok(batch)
-                },
-            )?;
-
-    Ok(batch.into())
-}
-
-pub fn try_query_alarms<OracleBase>(
-    storage: &dyn Storage,
-    block_time: Timestamp,
-) -> Result<AlarmsStatusResponse, ContractError>
-where
-    OracleBase: Currency + DeserializeOwned,
-{
-    let tree = SupportedPairs::load(storage)?;
-    let prices = calc_all_prices::<OracleBase>(storage, block_time, &tree)?;
-    let remaining_alarms = MarketAlarms::try_query_alarms::<OracleBase>(storage, prices)?;
-    Ok(AlarmsStatusResponse { remaining_alarms })
-}
-
-pub fn try_query_prices<OracleBase>(
-    storage: &dyn Storage,
-    block_time: Timestamp,
-) -> Result<Vec<SpotPrice>, ContractError>
-where
-    OracleBase: Currency + DeserializeOwned,
-{
-    let tree = SupportedPairs::load(storage)?;
-    let prices = calc_all_prices::<OracleBase>(storage, block_time, &tree)?.try_fold(
-        vec![],
-        |mut v, price| {
-            v.push(price?.into());
-            Ok(v)
-        },
-    );
-    prices
-}
-
-pub fn try_query_price<OracleBase>(
-    storage: &dyn Storage,
-    at: Timestamp,
-    currency: &SymbolOwned,
-) -> Result<SpotPrice, ContractError>
-where
-    OracleBase: Currency + DeserializeOwned,
-{
-    let tree = SupportedPairs::load(storage)?;
-    let total_feeders = Feeders::total_registered(storage)?;
-    use crate::state::config::Config as OracleConfig;
-    let config = OracleConfig::load(storage)?;
-    let oracle = Feeds::<OracleBase>::with(config.price_config);
-    oracle.calc_price(storage, &tree, currency, at, total_feeders)
-}
-
-fn calc_all_prices<'a, OracleBase>(
-    storage: &'a dyn Storage,
-    block_time: Timestamp,
-    tree: &'a SupportedPairs<OracleBase>,
-) -> Result<impl Iterator<Item = PriceResult<OracleBase>> + 'a, ContractError>
-where
-    OracleBase: Currency + DeserializeOwned,
-{
-    let total_registered = Feeders::total_registered(storage)?;
-    use crate::state::config::Config as OracleConfig;
-    let config = OracleConfig::load(storage)?;
-    let oracle = Feeds::<OracleBase>::with(config.price_config);
-    Ok(oracle.all_prices_iter(storage, tree.swap_pairs_df(), block_time, total_registered))
 }
 
 #[cfg(test)]

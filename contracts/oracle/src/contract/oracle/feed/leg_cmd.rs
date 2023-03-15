@@ -89,10 +89,8 @@ mod test {
 
     use std::collections::HashMap;
 
-    use crate::{
-        contract::feed::test::TestFeeds,
-        tests::{self, TheCurrency},
-    };
+    use crate::contract::oracle::feed::test::TestFeeds;
+    use crate::tests::{self, TheCurrency};
     use ::currency::lease::{Atom, Cro, Juno, Wbtc, Weth};
 
     #[test]

@@ -18,8 +18,7 @@ use crate::{
 
 use super::{
     alarms::MarketAlarms,
-    feed::{self, Feeds},
-    feeder::Feeders,
+    oracle::{feed::Feeds, feeder::Feeders, Oracle},
 };
 
 pub struct ExecWithOracleBase<'a> {
@@ -81,11 +80,10 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                     prices,
                 )
             }
-            ExecuteMsg::DispatchAlarms { max_count } => feed::try_notify_alarms::<OracleBase>(
+            ExecuteMsg::DispatchAlarms { max_count } => Oracle::<OracleBase>::load(
                 self.deps.storage,
-                self.env.block.time,
-                max_count,
-            ),
+            )?
+            .try_notify_alarms(self.deps.storage, self.env.block.time, max_count),
             ExecuteMsg::AddPriceAlarm { alarm } => {
                 contract::validate_addr(&self.deps.querier, &self.sender)?;
                 MarketAlarms::try_add_price_alarm::<OracleBase>(
