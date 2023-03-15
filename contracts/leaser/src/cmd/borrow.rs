@@ -23,10 +23,6 @@ impl Borrow {
         currency: SymbolOwned,
         max_ltv: Option<Percent>,
     ) -> Result<Response, ContractError> {
-        if max_ltv.map_or(false, |max_ltv| max_ltv == Zero::ZERO) {
-            return Err(ContractError::ZeroMaxLtv {});
-        }
-
         let config = Config::load(deps.storage)?;
         let instance_reply_id = Leases::next(deps.storage, customer.clone())?;
 

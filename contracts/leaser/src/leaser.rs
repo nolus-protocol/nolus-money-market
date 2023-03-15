@@ -42,10 +42,6 @@ impl<'a> Leaser<'a> {
         lease_asset: SymbolOwned,
         max_ltv: Option<Percent>,
     ) -> Result<QuoteResponse, ContractError> {
-        if max_ltv.map_or(false, |max_ltv| max_ltv == Zero::ZERO) {
-            return Err(ContractError::ZeroMaxLtv {});
-        }
-
         let config = Config::load(self.deps.storage)?;
 
         let lpp = LppLenderRef::try_new(config.lpp_addr, &self.deps.querier, 0xDEADC0DEDEADC0DE)?;
