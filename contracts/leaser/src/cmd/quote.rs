@@ -38,6 +38,7 @@ impl<'r> WithLppLender for Quote<'r> {
                 lpp_quote: LppQuote::new(lpp)?,
                 liability: self.liability,
                 lease_interest_rate_margin: self.lease_interest_rate_margin,
+                max_ltv: self.max_ltv,
             },
             &self.querier,
         )
@@ -52,7 +53,7 @@ impl<'r> Quote<'r> {
         oracle: OracleRef,
         liability: Liability,
         lease_interest_rate_margin: Percent,
-        _max_ltv: Option<Percent>,
+        max_ltv: Option<Percent>,
     ) -> Self {
         Self {
             querier,
@@ -61,6 +62,7 @@ impl<'r> Quote<'r> {
             oracle,
             liability,
             lease_interest_rate_margin,
+            max_ltv,
         }
     }
 }
@@ -106,6 +108,7 @@ where
     lpp_quote: LppQuote<Lpn, Lpp>,
     liability: Liability,
     lease_interest_rate_margin: Percent,
+    max_ltv: Option<Percent>,
 }
 
 impl<Lpn, Lpp> WithOracle<Lpn> for QuoteStage2<Lpn, Lpp>
@@ -131,6 +134,7 @@ where
                 oracle,
                 liability: self.liability,
                 lease_interest_rate_margin: self.lease_interest_rate_margin,
+                max_ltv: self.max_ltv,
             },
         )
         .map_err(|_| ContractError::UnknownCurrency {
@@ -151,6 +155,7 @@ where
     oracle: Oracle,
     liability: Liability,
     lease_interest_rate_margin: Percent,
+    max_ltv: Option<Percent>,
 }
 
 impl<Lpn, Lpp, Oracle> AnyVisitor for QuoteStage3<Lpn, Lpp, Oracle>
@@ -174,6 +179,7 @@ where
                 oracle: self.oracle,
                 liability: self.liability,
                 lease_interest_rate_margin: self.lease_interest_rate_margin,
+                max_ltv: self.max_ltv,
             },
         )
         .map_err({
@@ -197,6 +203,7 @@ where
     oracle: Oracle,
     liability: Liability,
     lease_interest_rate_margin: Percent,
+    max_ltv: Option<Percent>,
 }
 
 impl<Lpn, Dpc, Lpp, Oracle> AnyVisitor for QuoteStage4<Lpn, Dpc, Lpp, Oracle>
@@ -219,7 +226,9 @@ where
             return Err(ContractError::ZeroDownpayment {});
         }
 
-        let borrow = self.liability.init_borrow_amount(downpayment_lpn, None);
+        let borrow = self
+            .liability
+            .init_borrow_amount(downpayment_lpn, self.max_ltv);
 
         let asset_price = self.oracle.price_of::<Asset>()?.inv();
 

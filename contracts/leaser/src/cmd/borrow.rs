@@ -1,4 +1,4 @@
-use finance::{currency::SymbolOwned, percent::Percent, zero::Zero};
+use finance::{currency::SymbolOwned, percent::Percent};
 use lease::api::{LoanForm, NewLeaseContract, NewLeaseForm};
 use platform::batch::Batch;
 use sdk::{
