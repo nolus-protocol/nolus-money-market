@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use currency::native::Nls;
-use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
+use finance::{currency::SymbolOwned, liability::Liability, percent::Percent, zero::Zero};
 use lease::api::{dex::ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
 use lpp::{msg::ExecuteMsg, stub::lender::LppLenderRef};
 use oracle::stub::OracleRef;
@@ -40,7 +40,12 @@ impl<'a> Leaser<'a> {
         &self,
         downpayment: DownpaymentCoin,
         lease_asset: SymbolOwned,
+        max_ltv: Option<Percent>,
     ) -> Result<QuoteResponse, ContractError> {
+        if max_ltv.map_or(false, |max_ltv| max_ltv == Zero::ZERO) {
+            return Err(ContractError::ZeroMaxLtv {});
+        }
+
         let config = Config::load(self.deps.storage)?;
 
         let lpp = LppLenderRef::try_new(config.lpp_addr, &self.deps.querier, 0xDEADC0DEDEADC0DE)?;
@@ -55,6 +60,7 @@ impl<'a> Leaser<'a> {
                 oracle,
                 config.liability,
                 config.lease_interest_rate_margin,
+                max_ltv,
             ),
             &self.deps.querier,
         )?;

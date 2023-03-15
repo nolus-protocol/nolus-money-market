@@ -5,9 +5,9 @@ use finance::{
     coin::{Amount, Coin},
     currency::Currency as _,
     duration::Duration,
-    fraction::Fraction,
+    fraction::Fraction as _,
     interest::InterestPeriod,
-    percent::{NonZeroPercent, NonZeroUnits, Percent},
+    percent::Percent,
     price::{self, Price},
 };
 use lease::api::{ExecuteMsg, StateQuery, StateResponse};
@@ -98,9 +98,9 @@ fn open_lease(
     test_case: &mut TestCase<Lpn>,
     neutron_message_receiver: &CustomMessageReceiver,
     value: LeaseCoin,
-    max_loan: Option<NonZeroPercent>,
+    max_ltv: Option<Percent>,
 ) -> Addr {
-    try_init_lease(test_case, value, max_loan);
+    try_init_lease(test_case, value, max_ltv);
 
     let lease = get_lease_address(test_case);
 
@@ -114,11 +114,7 @@ fn open_lease(
     lease
 }
 
-fn try_init_lease(
-    test_case: &mut TestCase<Lpn>,
-    value: LeaseCoin,
-    max_ltv: Option<NonZeroPercent>,
-) {
+fn try_init_lease(test_case: &mut TestCase<Lpn>, value: LeaseCoin, max_ltv: Option<Percent>) {
     test_case
         .app
         .execute_contract(
@@ -189,6 +185,7 @@ fn quote_query(test_case: &TestCase<Lpn>, amount: LeaseCoin) -> QuoteResponse {
             &QueryMsg::Quote {
                 downpayment: amount.into(),
                 lease_asset: LeaseCurrency::TICKER.into(),
+                max_ltv: None,
             },
         )
         .unwrap()
@@ -389,11 +386,11 @@ fn state_paid() {
 
 #[test]
 #[ignore = "not yet implemented: proceed with TransferOut - Swap - TransferIn before landing to the same Lease::repay call"]
-fn state_paid_with_max_loan() {
+fn state_paid_with_max_ltv() {
     let (mut test_case, neutron_message_receiver) = create_test_case();
     let downpayment = create_lease_coin(DOWNPAYMENT);
-    let percent = NonZeroPercent::from_permille(NonZeroUnits::new(10).unwrap());
-    let borrowed = Coin::new(percent.percent().of(DOWNPAYMENT));
+    let percent = Percent::from_percent(10);
+    let borrowed = Coin::new(percent.of(DOWNPAYMENT));
     let lease_address = open_lease(
         &mut test_case,
         &neutron_message_receiver,

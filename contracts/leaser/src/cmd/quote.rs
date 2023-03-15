@@ -52,6 +52,7 @@ impl<'r> Quote<'r> {
         oracle: OracleRef,
         liability: Liability,
         lease_interest_rate_margin: Percent,
+        _max_ltv: Option<Percent>,
     ) -> Self {
         Self {
             querier,

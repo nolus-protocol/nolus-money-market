@@ -2,10 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use access_control::Unauthorized;
 use finance::{
-    currency::Currency,
-    duration::Duration,
-    liability::Liability,
-    percent::{NonZeroPercent, NonZeroUnits, Percent},
+    currency::Currency, duration::Duration, liability::Liability, percent::Percent,
     test::currency::Usdc,
 };
 use lease::api::{
@@ -279,7 +276,7 @@ fn test_setup_dex_again() {
     assert_eq!(Err(ContractError::Unauthorized(Unauthorized)), res);
 }
 
-fn open_lease_with(max_ltv: Option<NonZeroPercent>) {
+fn open_lease_with(max_ltv: Option<Percent>) {
     let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
 
     setup_test_case(deps.as_mut());
@@ -318,9 +315,7 @@ fn test_open_lease() {
 }
 
 #[test]
-fn test_open_lease_with_max_loan() {
+fn test_open_lease_with_max_ltv() {
     open_lease_with(None);
-    open_lease_with(Some(NonZeroPercent::from_permille(
-        NonZeroUnits::new(50).unwrap(),
-    )));
+    open_lease_with(Some(Percent::from_percent(5)));
 }

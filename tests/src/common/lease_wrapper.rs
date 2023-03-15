@@ -3,7 +3,7 @@ use finance::{
     currency::Currency,
     duration::Duration,
     liability::Liability,
-    percent::{NonZeroPercent, Percent},
+    percent::Percent,
 };
 use lease::{
     api::{
@@ -34,18 +34,14 @@ where
 {
     lease_currency: &'r str,
     downpayment: Coin<D>,
-    max_ltv: Option<NonZeroPercent>,
+    max_ltv: Option<Percent>,
 }
 
 impl<'r, D> LeaseInitConfig<'r, D>
 where
     D: Currency,
 {
-    pub fn new(
-        lease_currency: &'r str,
-        downpayment: Coin<D>,
-        max_ltv: Option<NonZeroPercent>,
-    ) -> Self {
+    pub fn new(lease_currency: &'r str, downpayment: Coin<D>, max_ltv: Option<Percent>) -> Self {
         Self {
             lease_currency,
             downpayment,
@@ -158,7 +154,7 @@ impl LeaseWrapper {
         lease_currency: &str,
         addresses: LeaseWrapperAddresses,
         config: LeaseWrapperConfig,
-        max_ltv: Option<NonZeroPercent>,
+        max_ltv: Option<Percent>,
     ) -> NewLeaseContract {
         NewLeaseContract {
             form: NewLeaseForm {

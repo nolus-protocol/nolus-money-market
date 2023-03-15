@@ -25,6 +25,9 @@ pub enum ContractError {
     #[error("[Leaser] ParseError {err:?}")]
     ParseError { err: String },
 
+    #[error("[Leaser] Cannot open lease with max initial loan-to-value set to zero")]
+    ZeroMaxLtv {},
+
     #[error("[Leaser] Cannot open lease with zero downpayment")]
     ZeroDownpayment {},
 

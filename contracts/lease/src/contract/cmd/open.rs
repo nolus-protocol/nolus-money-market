@@ -7,7 +7,7 @@ use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
     currency::Currency,
     liability::Liability,
-    percent::{NonZeroPercent, Percent},
+    percent::Percent,
 };
 use lpp::stub::lender::{LppLender as LppLenderTrait, WithLppLender};
 use oracle::{convert, stub::OracleRef};
@@ -22,7 +22,7 @@ use crate::{
 pub struct OpenLoanReq<'a> {
     liability: &'a Liability,
     funds_in: Vec<CwCoin>,
-    max_ltv: Option<NonZeroPercent>,
+    max_ltv: Option<Percent>,
     oracle: OracleRef,
     querier: &'a QuerierWrapper<'a>,
 }
@@ -31,7 +31,7 @@ impl<'a> OpenLoanReq<'a> {
     pub fn new(
         liability: &'a Liability,
         funds_in: Vec<CwCoin>,
-        max_ltv: Option<NonZeroPercent>,
+        max_ltv: Option<Percent>,
         oracle: OracleRef,
         querier: &'a QuerierWrapper<'a>,
     ) -> Self {
