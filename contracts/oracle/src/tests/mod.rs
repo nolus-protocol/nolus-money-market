@@ -19,9 +19,10 @@ use sdk::cosmwasm_std::{
 use swap::{SwapGroup, SwapTarget};
 use tree::HumanReadableTree;
 
+use crate::contract::sudo;
 use crate::{
-    contract::{execute, instantiate},
-    msg::{ExecuteMsg, InstantiateMsg},
+    contract::instantiate,
+    msg::{ExecuteMsg, InstantiateMsg, SudoMsg},
     state::config::Config,
 };
 
@@ -134,10 +135,16 @@ pub(crate) fn setup_test(
     assert_eq!(res.messages.len(), 0);
 
     // register single feeder address
-    let msg = ExecuteMsg::RegisterFeeder {
-        feeder_address: CREATOR.to_string(),
-    };
-    let _res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+    drop(
+        sudo(
+            deps.as_mut(),
+            mock_env(),
+            SudoMsg::RegisterFeeder {
+                feeder_address: CREATOR.to_string(),
+            },
+        )
+        .unwrap(),
+    );
 
     (deps, info)
 }

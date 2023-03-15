@@ -60,7 +60,7 @@ fn proper_instantiate() -> (App, CwTemplateContract) {
 }
 
 mod config {
-    use crate::msg::ExecuteMsg;
+    use crate::msg::SudoMsg;
 
     use super::*;
 
@@ -69,10 +69,12 @@ mod config {
     fn config() {
         let (mut app, cw_template_contract) = proper_instantiate();
 
-        let msg = ExecuteMsg::Config {
-            cadence_hours: 12u16,
-        };
-        let cosmos_msg = cw_template_contract.call(msg).unwrap();
-        app.execute(Addr::unchecked(USER), cosmos_msg).unwrap_err();
+        app.wasm_sudo(
+            cw_template_contract.addr(),
+            &SudoMsg::Config {
+                cadence_hours: 12u16,
+            },
+        )
+        .unwrap_err();
     }
 }

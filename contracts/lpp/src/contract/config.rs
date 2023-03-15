@@ -21,11 +21,8 @@ pub fn try_update_lease_code(
 
 pub fn try_update_parameters(
     deps: DepsMut<'_>,
-    info: MessageInfo,
     interest_rate: InterestRate,
 ) -> Result<Response, ContractError> {
-    SingleUserAccess::check_owner_access::<ContractError>(deps.storage, &info.sender)?;
-
     Config::update_borrow_rate(deps.storage, interest_rate)?;
 
     Ok(Response::new().add_attribute("method", "try_update_parameters"))

@@ -374,11 +374,14 @@ fn test_quote_fixed_rate() {
     let mut test_case = TestCase::<Lpn>::new(None);
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
     test_case.init_lpp(
-        Some(ContractWrapper::new(
-            lpp::contract::execute,
-            lpp::contract::instantiate,
-            mock_lpp_quote_query,
-        )),
+        Some(
+            ContractWrapper::new(
+                lpp::contract::execute,
+                lpp::contract::instantiate,
+                mock_lpp_quote_query,
+            )
+            .with_sudo(lpp::contract::sudo),
+        ),
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
@@ -467,11 +470,14 @@ fn open_loans_lpp_fails() {
     test_case
         .init(&user_addr, cwcoins::<Lpn, _>(500))
         .init_lpp(
-            Some(ContractWrapper::new(
-                mock_lpp_execute,
-                lpp::contract::instantiate,
-                lpp::contract::query,
-            )),
+            Some(
+                ContractWrapper::new(
+                    mock_lpp_execute,
+                    lpp::contract::instantiate,
+                    lpp::contract::query,
+                )
+                .with_sudo(lpp::contract::sudo),
+            ),
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,

@@ -18,7 +18,7 @@ use versioning::{version, VersionSegment};
 use crate::{
     cmd::Dispatch,
     error::ContractError,
-    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     state::Config,
     state::DispatchLog,
 };
@@ -74,10 +74,10 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    SingleUserAccess::new_contract_owner(msg.contract_owner).store(deps.storage)?;
+    SingleUserAccess::remove_contract_owner(deps.storage);
 
     response::response(versioning::release()).map_err(Into::into)
 }
@@ -90,18 +90,21 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Config { cadence_hours } => try_config(deps.storage, info, cadence_hours),
         ExecuteMsg::TimeAlarm {} => try_dispatch(deps, env, info),
+    }
+}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
+    match msg {
+        SudoMsg::Config { cadence_hours } => try_config(deps.storage, cadence_hours),
     }
 }
 
 pub fn try_config(
     storage: &mut dyn Storage,
-    info: MessageInfo,
     cadence_hours: u16,
 ) -> Result<Response, ContractError> {
-    SingleUserAccess::check_owner_access::<ContractError>(storage, &info.sender)?;
-
     Config::update(storage, cadence_hours)?;
 
     Ok(Response::new().add_attribute("method", "config"))
@@ -169,13 +172,13 @@ mod tests {
     };
     use sdk::testing::customized_mock_deps_with_contracts;
 
+    use crate::contract::sudo;
     use crate::{
-        msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
+        msg::{ConfigResponse, InstantiateMsg, QueryMsg, SudoMsg},
         state::reward_scale::{Bar, RewardScale, TotalValueLocked},
-        ContractError,
     };
 
-    use super::{execute, instantiate, query};
+    use super::{instantiate, query};
 
     const LPP_ADDR: &str = "lpp";
     const ORACLE_ADDR: &str = "oracle";
@@ -229,30 +232,34 @@ mod tests {
 
         do_instantiate(deps.as_mut());
 
-        let unauth_info = mock_info("anyone", &coins(2, "token"));
-        let msg = ExecuteMsg::Config { cadence_hours: 20 };
-        let res = execute(deps.as_mut(), mock_env(), unauth_info, msg);
-        match res {
-            Err(ContractError::Unauthorized(..)) => {}
-            _ => panic!("Must return unauthorized error"),
-        }
-
-        let auth_info = mock_info("creator", &coins(2, "token"));
-        let msg = ExecuteMsg::Config { cadence_hours: 12 };
-        let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
+        let _auth_info = mock_info("creator", &coins(2, "token"));
+        drop(
+            sudo(
+                deps.as_mut(),
+                mock_env(),
+                SudoMsg::Config { cadence_hours: 12 },
+            )
+            .unwrap(),
+        );
 
         // should now be 12
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
-        assert_eq!(12, value.cadence_hours);
+        assert_eq!(value.cadence_hours, 12);
 
-        let auth_info = mock_info("creator", &coins(2, "token"));
-        let msg = ExecuteMsg::Config { cadence_hours: 20 };
-        let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
+        let _auth_info = mock_info("creator", &coins(2, "token"));
+        drop(
+            sudo(
+                deps.as_mut(),
+                mock_env(),
+                SudoMsg::Config { cadence_hours: 20 },
+            )
+            .unwrap(),
+        );
 
         // should now be 12
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
-        assert_eq!(20, value.cadence_hours);
+        assert_eq!(value.cadence_hours, 20);
     }
 }

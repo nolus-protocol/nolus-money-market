@@ -2,8 +2,9 @@ use currency::lpn::Usdc;
 use finance::{coin::Coin, currency::Currency, percent::Percent};
 use lpp::{
     borrow::InterestRate,
+    contract::sudo,
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
 };
 use sdk::{
     cosmwasm_std::{to_binary, Addr, Binary, Coin as CwCoin, Deps, Env, Uint64},
@@ -26,6 +27,8 @@ impl LppWrapper {
             InstantiateMsg,
             ContractError,
             QueryMsg,
+            ContractError,
+            SudoMsg,
             ContractError,
         >,
     ) -> Self {
@@ -87,7 +90,8 @@ impl Default for LppWrapper {
             lpp::contract::execute,
             lpp::contract::instantiate,
             lpp::contract::query,
-        );
+        )
+        .with_sudo(sudo);
 
         Self {
             contract_wrapper: Box::new(contract),
@@ -130,5 +134,7 @@ type LppContractWrapper = ContractWrapper<
     InstantiateMsg,
     ContractError,
     QueryMsg,
+    ContractError,
+    SudoMsg,
     ContractError,
 >;

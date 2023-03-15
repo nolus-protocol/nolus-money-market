@@ -6,7 +6,7 @@ use finance::{
 };
 use lease::api::dex::{ConnectionParams, Ics20Channel};
 use sdk::{
-    cosmwasm_std::{Addr, Coin as CwCoin, Empty, Uint64},
+    cosmwasm_std::{Addr, Coin as CwCoin, Uint64},
     cw_multi_test::{next_block, Executor},
     testing::CustomMessageSender,
 };
@@ -30,7 +30,7 @@ use super::{
     ADMIN,
 };
 
-type OptionalContractWrapper = Option<
+type OptionalLppWrapper = Option<
     ContractWrapper<
         lpp::msg::ExecuteMsg,
         lpp::error::ContractError,
@@ -38,10 +38,12 @@ type OptionalContractWrapper = Option<
         lpp::error::ContractError,
         lpp::msg::QueryMsg,
         lpp::error::ContractError,
+        lpp::msg::SudoMsg,
+        lpp::error::ContractError,
     >,
 >;
 
-type OptionalContractWrapperStd = Option<
+type OptionalOracleWrapper = Option<
     ContractWrapper<
         oracle::msg::ExecuteMsg,
         oracle::ContractError,
@@ -49,8 +51,8 @@ type OptionalContractWrapperStd = Option<
         oracle::ContractError,
         oracle::msg::QueryMsg,
         oracle::ContractError,
-        Empty,
-        anyhow::Error,
+        oracle::msg::SudoMsg,
+        oracle::ContractError,
         oracle::ContractError,
     >,
 >;
@@ -169,7 +171,7 @@ where
 
     pub fn init_lpp(
         &mut self,
-        custom_wrapper: OptionalContractWrapper,
+        custom_wrapper: OptionalLppWrapper,
         base_interest_rate: Percent,
         utilization_optimal: Percent,
         addon_optimal_interest_rate: Percent,
@@ -185,7 +187,7 @@ where
 
     pub fn init_lpp_with_funds(
         &mut self,
-        custom_wrapper: OptionalContractWrapper,
+        custom_wrapper: OptionalLppWrapper,
         init_balance: Vec<CwCoin>,
         base_interest_rate: Percent,
         utilization_optimal: Percent,
@@ -230,17 +232,15 @@ where
             ),
         );
         self.app
-            .execute_contract(
-                Addr::unchecked(ADMIN),
+            .wasm_sudo(
                 self.leaser_addr.clone().unwrap(),
-                &leaser::msg::ExecuteMsg::SetupDex(ConnectionParams {
+                &leaser::msg::SudoMsg::SetupDex(ConnectionParams {
                     connection_id: "connection-0".into(),
                     transfer_channel: Ics20Channel {
                         local_endpoint: "channel-0".into(),
                         remote_endpoint: "channel-422".into(),
                     },
                 }),
-                &[cwcoin::<Lpn, _>(3)],
             )
             .unwrap();
 
@@ -275,7 +275,7 @@ where
         self
     }
 
-    pub fn init_oracle(&mut self, custom_wrapper: OptionalContractWrapperStd) -> &mut Self {
+    pub fn init_oracle(&mut self, custom_wrapper: OptionalOracleWrapper) -> &mut Self {
         let mocked_oracle = match custom_wrapper {
             Some(wrapper) => MarketOracleWrapper::with_contract_wrapper(wrapper),
             None => MarketOracleWrapper::default(),
@@ -299,13 +299,11 @@ where
         self.app.update_block(next_block);
 
         self.app
-            .execute_contract(
-                Addr::unchecked(ADMIN),
+            .wasm_sudo(
                 self.treasury_addr.to_owned().unwrap(),
-                &treasury::msg::ExecuteMsg::ConfigureRewardTransfer {
+                &treasury::msg::SudoMsg::ConfigureRewardTransfer {
                     rewards_dispatcher: dispatcher_addr.clone(),
                 },
-                &[],
             )
             .unwrap();
 

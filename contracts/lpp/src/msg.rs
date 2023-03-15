@@ -25,16 +25,13 @@ pub struct InstantiateMsg {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct MigrateMsg {
-    pub contract_owner: Addr,
-}
+pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     NewLeaseCode { lease_code_id: Uint64 },
-    NewBorrowRate { borrow_rate: InterestRate },
 
     OpenLoan { amount: LppCoin },
     RepayLoan(),
@@ -45,6 +42,13 @@ pub enum ExecuteMsg {
 
     DistributeRewards(),
     ClaimRewards { other_recipient: Option<Addr> },
+}
+
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
+#[cfg_attr(feature = "testing", derive(Debug))]
+#[serde(rename_all = "snake_case")]
+pub enum SudoMsg {
+    NewBorrowRate { borrow_rate: InterestRate },
 }
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]

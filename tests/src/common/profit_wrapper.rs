@@ -1,6 +1,6 @@
 use profit::{
-    contract::{execute, instantiate, query},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    contract::{execute, instantiate, query, sudo},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
     ContractError,
 };
 use sdk::{
@@ -39,7 +39,7 @@ impl ProfitWrapper {
 
 impl Default for ProfitWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(execute, instantiate, query);
+        let contract = ContractWrapper::new(execute, instantiate, query).with_sudo(sudo);
 
         Self {
             contract_wrapper: Box::new(contract),
@@ -47,5 +47,13 @@ impl Default for ProfitWrapper {
     }
 }
 
-type ProfitContractWrapper =
-    ContractWrapper<ExecuteMsg, ContractError, InstantiateMsg, ContractError, QueryMsg, StdError>;
+type ProfitContractWrapper = ContractWrapper<
+    ExecuteMsg,
+    ContractError,
+    InstantiateMsg,
+    ContractError,
+    QueryMsg,
+    StdError,
+    SudoMsg,
+    ContractError,
+>;

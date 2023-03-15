@@ -15,7 +15,7 @@ use versioning::{version, VersionSegment};
 use crate::{
     error::{ContractError, ContractResult},
     lpp::LiquidityPool,
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     state::Config,
 };
 
@@ -91,10 +91,10 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    SingleUserAccess::new_contract_owner(msg.contract_owner).store(deps.storage)?;
+    SingleUserAccess::remove_contract_owner(deps.storage);
 
     response::response(versioning::release()).map_err(Into::into)
 }
@@ -173,14 +173,21 @@ pub fn execute(
         ExecuteMsg::NewLeaseCode { lease_code_id } => {
             config::try_update_lease_code(deps, info, lease_code_id)
         }
-        ExecuteMsg::NewBorrowRate {
-            borrow_rate: interest_rate,
-        } => config::try_update_parameters(deps, info, interest_rate),
         ExecuteMsg::DistributeRewards() => rewards::try_distribute_rewards(deps, info),
         ExecuteMsg::ClaimRewards { other_recipient } => {
             rewards::try_claim_rewards(deps, env, info, other_recipient)
         }
         _ => ExecuteWithLpn::cmd(deps, env, info, msg),
+    }
+}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
+    // no currency context variants
+    match msg {
+        SudoMsg::NewBorrowRate {
+            borrow_rate: interest_rate,
+        } => config::try_update_parameters(deps, interest_rate),
     }
 }
 

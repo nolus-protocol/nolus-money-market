@@ -7,7 +7,7 @@ use lpp::{
     borrow::InterestRate,
     msg::{
         BalanceResponse, ExecuteMsg as ExecuteLpp, LppBalanceResponse, PriceResponse,
-        QueryLoanResponse, QueryMsg as QueryLpp, QueryQuoteResponse, RewardsResponse,
+        QueryLoanResponse, QueryMsg as QueryLpp, QueryQuoteResponse, RewardsResponse, SudoMsg,
     },
     state::Config,
 };
@@ -36,9 +36,6 @@ type LeaseCurrency = Atom;
 
 #[test]
 fn config_update_parameters() {
-    let admin = Addr::unchecked(ADMIN);
-    let hacker = Addr::unchecked("Mallory");
-
     let app_balance = 10_000_000_000u128;
 
     let base_interest_rate = Percent::from_percent(21);
@@ -59,35 +56,20 @@ fn config_update_parameters() {
         ADDON_OPTIMAL_INTEREST_RATE,
     );
 
-    app.execute_contract(
-        hacker,
-        lpp.clone(),
-        &ExecuteLpp::NewBorrowRate {
-            borrow_rate: InterestRate::new(
-                base_interest_rate,
-                utilization_optimal,
-                addon_optimal_interest_rate,
-            )
-            .expect("Couldn't construct interest rate value!"),
-        },
-        &[],
-    )
-    .unwrap_err();
-
-    app.execute_contract(
-        admin,
-        lpp.clone(),
-        &ExecuteLpp::NewBorrowRate {
-            borrow_rate: InterestRate::new(
-                base_interest_rate,
-                utilization_optimal,
-                addon_optimal_interest_rate,
-            )
-            .expect("Couldn't construct interest rate value!"),
-        },
-        &[],
-    )
-    .unwrap();
+    drop(
+        app.wasm_sudo(
+            lpp.clone(),
+            &SudoMsg::NewBorrowRate {
+                borrow_rate: InterestRate::new(
+                    base_interest_rate,
+                    utilization_optimal,
+                    addon_optimal_interest_rate,
+                )
+                .expect("Couldn't construct interest rate value!"),
+            },
+        )
+        .unwrap(),
+    );
 
     let quote: Config = app
         .wrap()
@@ -511,10 +493,9 @@ fn loan_open_and_repay() {
     )
     .unwrap();
 
-    app.execute_contract(
-        admin.clone(),
+    app.wasm_sudo(
         lpp.clone(),
-        &ExecuteLpp::NewBorrowRate {
+        &SudoMsg::NewBorrowRate {
             borrow_rate: InterestRate::new(
                 base_interest_rate,
                 utilization_optimal,
@@ -522,7 +503,6 @@ fn loan_open_and_repay() {
             )
             .expect("Couldn't construct interest rate value!"),
         },
-        &[],
     )
     .unwrap();
 
@@ -818,10 +798,9 @@ fn compare_lpp_states() {
     )
     .unwrap();
 
-    app.execute_contract(
-        admin.clone(),
+    app.wasm_sudo(
         lpp.clone(),
-        &ExecuteLpp::NewBorrowRate {
+        &SudoMsg::NewBorrowRate {
             borrow_rate: InterestRate::new(
                 base_interest_rate,
                 utilization_optimal,
@@ -829,7 +808,6 @@ fn compare_lpp_states() {
             )
             .expect("Couldn't construct interest rate value!"),
         },
-        &[],
     )
     .unwrap();
 

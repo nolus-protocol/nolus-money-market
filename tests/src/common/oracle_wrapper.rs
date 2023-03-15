@@ -12,13 +12,13 @@ use finance::{
 };
 use marketprice::{config::Config as PriceConfig, SpotPrice};
 use oracle::{
-    contract::{execute, instantiate, query, reply},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    contract::{execute, instantiate, query, reply, sudo},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
     state::config::Config,
     ContractError,
 };
 use sdk::{
-    cosmwasm_std::{to_binary, wasm_execute, Addr, Binary, Deps, Empty, Env},
+    cosmwasm_std::{to_binary, wasm_execute, Addr, Binary, Deps, Env},
     cw_multi_test::{AppResponse, Executor},
 };
 
@@ -67,7 +67,9 @@ impl MarketOracleWrapper {
 
 impl Default for MarketOracleWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(execute, instantiate, query).with_reply(reply);
+        let contract = ContractWrapper::new(execute, instantiate, query)
+            .with_reply(reply)
+            .with_sudo(sudo);
 
         Self {
             contract_wrapper: Box::new(contract),
@@ -95,8 +97,8 @@ type OracleContractWrapper = ContractWrapper<
     ContractError,
     QueryMsg,
     ContractError,
-    Empty,
-    anyhow::Error,
+    SudoMsg,
+    ContractError,
     ContractError,
 >;
 
@@ -104,21 +106,17 @@ pub fn add_feeder<Lpn>(test_case: &mut TestCase<Lpn>, addr: impl Into<String>)
 where
     Lpn: Currency,
 {
-    test_case
-        .app
-        .execute(
-            Addr::unchecked(ADMIN),
-            wasm_execute(
+    drop(
+        test_case
+            .app
+            .wasm_sudo(
                 test_case.oracle.clone().unwrap(),
-                &ExecuteMsg::RegisterFeeder {
+                &SudoMsg::RegisterFeeder {
                     feeder_address: addr.into(),
                 },
-                vec![],
             )
-            .unwrap()
-            .into(),
-        )
-        .unwrap();
+            .unwrap(),
+    );
 }
 
 pub fn feed_a_price<Lpn, C1, C2>(

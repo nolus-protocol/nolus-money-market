@@ -83,54 +83,44 @@ fn test_lease_serde() {
 #[test]
 fn register_feeder() {
     let mut test_case = create_test_case();
-    let user = Addr::unchecked(USER);
-    let admin = Addr::unchecked(ADMIN);
+    let _user = Addr::unchecked(USER);
+    let _admin = Addr::unchecked(ADMIN);
 
-    // only admin can register new feeder, other user should result in error
-    let msg = oracle::msg::ExecuteMsg::RegisterFeeder {
-        feeder_address: USER.to_string(),
-    };
-    test_case
-        .app
-        .execute_contract(user, test_case.oracle.clone().unwrap(), &msg, &[])
-        .unwrap_err();
-
-    // check if admin can register new feeder
-    let msg = oracle::msg::ExecuteMsg::RegisterFeeder {
+    // check whether can register new feeder
+    let msg = oracle::msg::SudoMsg::RegisterFeeder {
         feeder_address: ADMIN.to_string(),
     };
-    test_case
-        .app
-        .execute_contract(admin, test_case.oracle.clone().unwrap(), &msg, &[])
-        .unwrap();
+
+    drop(
+        test_case
+            .app
+            .wasm_sudo(test_case.oracle.clone().unwrap(), &msg)
+            .unwrap(),
+    );
 }
 
 #[test]
 fn internal_test_integration_setup_test() {
     let mut test_case = create_test_case();
 
-    test_case
-        .app
-        .execute(
-            Addr::unchecked(ADMIN),
-            wasm_execute(
+    drop(
+        test_case
+            .app
+            .wasm_sudo(
                 test_case.oracle.clone().unwrap(),
-                &oracle::msg::ExecuteMsg::RegisterFeeder {
+                &oracle::msg::SudoMsg::RegisterFeeder {
                     feeder_address: ADMIN.into(),
                 },
-                vec![cw_coin(1000)],
             )
-            .unwrap()
-            .into(),
-        )
-        .unwrap();
+            .unwrap(),
+    );
 
-    let _ = oracle_wrapper::feed_price::<_, BaseC, Usdc>(
+    drop(oracle_wrapper::feed_price::<_, BaseC, Usdc>(
         &mut test_case,
         &Addr::unchecked(ADMIN),
         Coin::new(5),
         Coin::new(7),
-    );
+    ));
 }
 
 // test for issue #26. It was resolved in MR !132 by separation of price feeding and alarms delivery processes
@@ -140,17 +130,11 @@ fn feed_price_with_alarm_issue() {
 
     test_case
         .app
-        .execute(
-            Addr::unchecked(ADMIN),
-            wasm_execute(
-                test_case.oracle.clone().unwrap(),
-                &oracle::msg::ExecuteMsg::RegisterFeeder {
-                    feeder_address: ADMIN.into(),
-                },
-                vec![cw_coin(1000)],
-            )
-            .unwrap()
-            .into(),
+        .wasm_sudo(
+            test_case.oracle.clone().unwrap(),
+            &oracle::msg::SudoMsg::RegisterFeeder {
+                feeder_address: ADMIN.into(),
+            },
         )
         .unwrap();
 
@@ -184,21 +168,17 @@ fn feed_price_with_alarm_issue() {
 fn feed_price_with_alarm() {
     let mut test_case = create_test_case();
 
-    test_case
-        .app
-        .execute(
-            Addr::unchecked(ADMIN),
-            wasm_execute(
+    drop(
+        test_case
+            .app
+            .wasm_sudo(
                 test_case.oracle.clone().unwrap(),
-                &oracle::msg::ExecuteMsg::RegisterFeeder {
+                &oracle::msg::SudoMsg::RegisterFeeder {
                     feeder_address: ADMIN.into(),
                 },
-                vec![cw_coin(1000)],
             )
-            .unwrap()
-            .into(),
-        )
-        .unwrap();
+            .unwrap(),
+    );
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
 
@@ -283,23 +263,19 @@ fn wrong_timealarms_addr() {
 fn integration_with_timealarms() {
     let mut test_case = create_test_case();
 
-    test_case
-        .app
-        .execute(
-            Addr::unchecked(ADMIN),
-            wasm_execute(
+    drop(
+        test_case
+            .app
+            .wasm_sudo(
                 test_case.oracle.clone().unwrap(),
-                &oracle::msg::ExecuteMsg::RegisterFeeder {
+                &oracle::msg::SudoMsg::RegisterFeeder {
                     feeder_address: ADMIN.into(),
                 },
-                vec![cw_coin(10000)],
             )
-            .unwrap()
-            .into(),
-        )
-        .unwrap();
+            .unwrap(),
+    );
 
-    let _lease = open_lease(&mut test_case, TheCoin::from(1_000));
+    drop(open_lease(&mut test_case, TheCoin::from(1_000)));
 
     test_case.app.time_shift(
         LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::GRACE_PERIOD + LeaserWrapper::GRACE_PERIOD,
@@ -327,7 +303,7 @@ fn integration_with_timealarms() {
 fn test_config_update() {
     let mut test_case = create_test_case();
 
-    let admin = Addr::unchecked(ADMIN);
+    let _admin = Addr::unchecked(ADMIN);
     let feeder1 = Addr::unchecked("feeder1");
     let feeder2 = Addr::unchecked("feeder2");
     let feeder3 = Addr::unchecked("feeder3");
@@ -368,24 +344,20 @@ fn test_config_update() {
             .unwrap()
     );
 
-    test_case
-        .app
-        .execute(
-            admin,
-            wasm_execute(
+    drop(
+        test_case
+            .app
+            .wasm_sudo(
                 test_case.oracle.clone().unwrap(),
-                &oracle::msg::ExecuteMsg::UpdateConfig(PriceConfig::new(
+                &oracle::msg::SudoMsg::UpdateConfig(PriceConfig::new(
                     Percent::from_percent(100),
                     Duration::from_secs(5),
                     12,
                     Percent::from_percent(75),
                 )),
-                vec![],
             )
-            .unwrap()
-            .into(),
-        )
-        .expect("Oracle not properly connected!");
+            .expect("Oracle not properly connected!"),
+    );
 
     let price: Result<SpotPrice, _> = test_case.app.wrap().query_wasm_smart(
         test_case.oracle.clone().unwrap(),
@@ -422,12 +394,17 @@ fn swap_tree() -> HumanReadableTree<SwapTarget> {
 #[test]
 fn test_swap_path() {
     let mut test_case = create_test_case();
-    let admin = Addr::unchecked(ADMIN);
-    let msg = oracle::msg::ExecuteMsg::SwapTree { tree: swap_tree() };
-    test_case
-        .app
-        .execute_contract(admin, test_case.oracle.clone().unwrap(), &msg, &[])
-        .unwrap();
+
+    drop(
+        test_case
+            .app
+            .wasm_sudo(
+                test_case.oracle.clone().unwrap(),
+                &oracle::msg::SudoMsg::SwapTree { tree: swap_tree() },
+            )
+            .unwrap(),
+    );
+
     let resp: swap::SwapPath = test_case
         .app
         .wrap()
@@ -457,20 +434,26 @@ fn test_swap_path() {
 #[test]
 fn test_query_swap_tree() {
     let mut test_case = create_test_case();
-    let admin = Addr::unchecked(ADMIN);
+
     let tree: HumanReadableTree<SwapTarget> = swap_tree();
-    let msg = oracle::msg::ExecuteMsg::SwapTree { tree: tree.clone() };
-    test_case
-        .app
-        .execute_contract(admin, test_case.oracle.clone().unwrap(), &msg, &[])
-        .unwrap();
+
+    drop(
+        test_case
+            .app
+            .wasm_sudo(
+                test_case.oracle.clone().unwrap(),
+                &oracle::msg::SudoMsg::SwapTree { tree: tree.clone() },
+            )
+            .unwrap(),
+    );
+
     let resp: oracle::msg::SwapTreeResponse = test_case
         .app
         .wrap()
         .query_wasm_smart(test_case.oracle.unwrap(), &OracleQ::SwapTree {})
         .unwrap();
 
-    assert_eq!(tree, resp.tree);
+    assert_eq!(resp.tree, tree);
 }
 
 #[test]
