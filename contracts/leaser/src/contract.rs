@@ -80,12 +80,13 @@ pub fn execute(
         ExecuteMsg::MigrateLeases { new_code_id } => owner_allowed_only(deps.storage, info, |s| {
             leaser::try_migrate_leases(s, new_code_id.u64())
         }),
-        ExecuteMsg::OpenLease { currency } => Borrow::with(
+        ExecuteMsg::OpenLease { currency, max_ltv } => Borrow::with(
             deps,
             info.funds,
             info.sender,
             env.contract.address,
             currency,
+            max_ltv,
         ),
     }
 }
@@ -97,7 +98,8 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
         QueryMsg::Quote {
             downpayment,
             lease_asset,
-        } => to_binary(&Leaser::new(deps).quote(downpayment, lease_asset)?),
+            max_ltv,
+        } => to_binary(&Leaser::new(deps).quote(downpayment, lease_asset, max_ltv)?),
         QueryMsg::Leases { owner } => to_binary(&Leaser::new(deps).customer_leases(owner)?),
     };
     res.map_err(ContractError::from)

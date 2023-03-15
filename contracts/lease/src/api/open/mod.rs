@@ -28,6 +28,8 @@ pub struct NewLeaseForm {
     pub customer: Addr,
     /// Ticker of the currency this lease will be about.
     pub currency: SymbolOwned,
+    /// Maximum Loan-to-Value percentage of the new lease, optional.
+    pub max_ltv: Option<Percent>,
     /// Liability parameters
     pub liability: Liability,
     /// Loan parameters

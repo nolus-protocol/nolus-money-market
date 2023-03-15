@@ -46,6 +46,7 @@ impl RequestLoan {
             OpenLoanReq::new(
                 &new_lease.form.liability,
                 info.funds,
+                new_lease.form.max_ltv,
                 oracle.clone(),
                 &deps.querier,
             ),

@@ -30,6 +30,7 @@ pub struct Percent(Units); //value in permille
 impl Percent {
     pub const ZERO: Self = Self::from_permille(0);
     pub const HUNDRED: Self = Self::from_permille(1000);
+
     const UNITS_TO_PERCENT_RATIO: Units = 10;
 
     pub fn from_percent(percent: u16) -> Self {

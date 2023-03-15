@@ -91,18 +91,22 @@ impl Liability {
         self.recalc_time
     }
 
-    pub fn init_borrow_amount<P>(&self, downpayment: P) -> P
+    pub fn init_borrow_amount<P>(&self, downpayment: P, max_ltv: Option<Percent>) -> P
     where
         P: Percentable,
     {
         use crate::fraction::Fraction;
+
+        debug_assert!(self.initial > Percent::ZERO);
         debug_assert!(self.initial < Percent::HUNDRED);
 
-        // borrow = init%.of(borrow + downpayment)
-        // (100% - init%).of(borrow) = init%.of(downpayment)
-        // borrow = init% / (100% - init%) * downpayment
-        let ratio = Rational::new(self.initial, Percent::HUNDRED - self.initial);
-        ratio.of(downpayment)
+        let initial_ltv: Percent =
+            max_ltv.map_or(self.initial, |max_ltv| max_ltv.min(self.initial));
+
+        // borrow = percent%.of(borrow + downpayment)
+        // (100% - percent%).of(borrow) = percent%.of(downpayment)
+        // borrow = (percent% / (100% - percent%)).of(downpayment)
+        Rational::new(initial_ltv, Percent::HUNDRED - initial_ltv).of(downpayment)
     }
 
     fn invariant_held(&self) -> Result<()> {
@@ -237,12 +241,25 @@ mod test {
 
     #[test]
     fn init_borrow() {
-        test_init_borrow_amount(1000, 10, 111);
-        test_init_borrow_amount(1, 10, 0);
-        test_init_borrow_amount(1000, 99, 990 * 100);
-        test_init_borrow_amount(10, 65, 18);
-        test_init_borrow_amount(1, 65, 1);
-        test_init_borrow_amount(2, 65, 3);
+        test_init_borrow_amount(1000, 10, 111, None);
+        test_init_borrow_amount(1, 10, 0, None);
+        test_init_borrow_amount(1000, 99, 990 * 100, None);
+        test_init_borrow_amount(10, 65, 18, None);
+        test_init_borrow_amount(1, 65, 1, None);
+        test_init_borrow_amount(2, 65, 3, None);
+    }
+
+    #[test]
+    fn init_borrow_max_ltv() {
+        test_init_borrow_amount(1000, 10, 52, Some(Percent::from_percent(5)));
+        test_init_borrow_amount(1, 10, 0, Some(Percent::from_percent(5)));
+        test_init_borrow_amount(1000, 99, 4000, Some(Percent::from_percent(80)));
+        test_init_borrow_amount(10, 65, 1, Some(Percent::from_percent(10)));
+        test_init_borrow_amount(1, 65, 1, Some(Percent::from_percent(65)));
+        test_init_borrow_amount(2, 65, 3, Some(Percent::from_percent(65)));
+        test_init_borrow_amount(2, 65, 3, Some(Percent::from_permille(999)));
+
+        test_init_borrow_amount(1000, 65, 0, Some(Percent::ZERO));
     }
 
     fn assert_load_ok(json: &[u8], exp: Liability) {
@@ -260,9 +277,11 @@ mod test {
         ));
     }
 
-    fn test_init_borrow_amount(d: u128, p: u16, exp: u128) {
-        use crate::fraction::Fraction;
+    fn test_init_borrow_amount(d: u128, p: u16, exp: u128, max_p: Option<Percent>) {
+        use crate::fraction::Fraction as _;
+
         type Currency = Usdc;
+
         let downpayment = Coin::<Currency>::new(d);
         let percent = Percent::from_percent(p);
         let calculated = Liability {
@@ -274,8 +293,11 @@ mod test {
             third_liq_warn: Percent::from_permille(998),
             recalc_time: Duration::from_secs(20000),
         }
-        .init_borrow_amount(downpayment);
-        assert_eq!(Coin::<Currency>::new(exp), calculated);
-        assert_eq!(calculated, percent.of(downpayment + calculated));
+        .init_borrow_amount(downpayment, max_p);
+
+        let selected_p = max_p.map_or(percent, |max_ltv| max_ltv.min(percent));
+
+        assert_eq!(calculated, Coin::<Currency>::new(exp));
+        assert_eq!(selected_p.of(downpayment + calculated), calculated);
     }
 }

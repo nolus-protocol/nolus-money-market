@@ -1,4 +1,4 @@
-use finance::currency::SymbolOwned;
+use finance::{currency::SymbolOwned, percent::Percent};
 use lease::api::{LoanForm, NewLeaseContract, NewLeaseForm};
 use platform::batch::Batch;
 use sdk::{
@@ -21,6 +21,7 @@ impl Borrow {
         customer: Addr,
         admin: Addr,
         currency: SymbolOwned,
+        max_ltv: Option<Percent>,
     ) -> Result<Response, ContractError> {
         let config = Config::load(deps.storage)?;
         let instance_reply_id = Leases::next(deps.storage, customer.clone())?;
@@ -28,7 +29,7 @@ impl Borrow {
         let mut batch = Batch::default();
         batch.schedule_instantiate_wasm_on_success_reply(
             config.lease_code_id,
-            Self::open_lease_msg(customer, config, currency)?,
+            Self::open_lease_msg(customer, config, currency, max_ltv)?,
             Some(amount),
             "lease",
             Some(admin), // allows lease migrations from this contract
@@ -41,6 +42,7 @@ impl Borrow {
         customer: Addr,
         config: Config,
         currency: SymbolOwned,
+        max_ltv: Option<Percent>,
     ) -> ContractResult<NewLeaseContract> {
         config
             .dex
@@ -48,6 +50,7 @@ impl Borrow {
                 form: NewLeaseForm {
                     customer,
                     currency,
+                    max_ltv,
                     liability: config.liability,
                     loan: LoanForm {
                         annual_margin_interest: config.lease_interest_rate_margin,
