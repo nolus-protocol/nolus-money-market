@@ -280,7 +280,7 @@ pub fn complete_lease_initialization<Lpn>(
         downpayment
     );
     send_blank_response(mock_app, lease_addr);
-    
+
     assert_eq!(
         expect_ibc_transfer(
             neutron_message_receiver,
