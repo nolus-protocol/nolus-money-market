@@ -1,5 +1,6 @@
 pub mod buy_asset;
 mod coin_index;
+mod filter;
 mod never;
 pub mod open_ica;
 pub mod request_loan;

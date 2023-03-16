@@ -23,7 +23,10 @@ use crate::{
             controller::Controller,
             ica_connector::{Enterable, IcaConnector},
             ica_recover::InRecovery,
-            opening::swap_task::{CoinVisitor, IterNext, SwapTask as SwapTaskT},
+            opening::{
+                filter::CurrencyFilter,
+                swap_task::{CoinVisitor, IterNext, SwapTask as SwapTaskT},
+            },
             Response, State,
         },
         Contract,
@@ -63,7 +66,6 @@ where
     ) -> ContractResult<Batch> {
         let swap_trx = self.spec.dex_account().swap(self.spec.oracle(), querier);
         // TODO apply nls_swap_fee on the downpayment only!
-        // TODO do not add a trx if the coin is of the same lease currency
         struct SwapWorker<'a>(SwapTrx<'a>, Symbol<'a>);
         impl<'a> CoinVisitor for SwapWorker<'a> {
             type Result = IterNext;
@@ -79,11 +81,13 @@ where
         }
 
         let mut swapper = SwapWorker(swap_trx, self.spec.out_currency());
-        let _res = self.spec.on_coins(&mut swapper)?;
+        let mut filtered_swapper = CurrencyFilter::new(&mut swapper, self.spec.out_currency());
+        let _res = self.spec.on_coins(&mut filtered_swapper)?;
         #[cfg(debug_assertions)]
         {
-            debug_assert_eq!(_res, IterState::Complete);
+            self.debug_check(&filtered_swapper, _res);
         }
+
         Ok(swapper.0.into())
     }
 
@@ -100,19 +104,32 @@ where
             where
                 G: Group,
             {
-                //TODO take into account the input amounts with currency == out_currency
                 self.1 += swap_trx::exact_amount_in_resp(&mut self.0)?;
                 Ok(IterNext::Continue)
             }
         }
         let mut resp = ExactInResponse(trx::decode_msg_responses(resp)?, Amount::ZERO);
-        let _res = self.spec.on_coins(&mut resp)?;
+        let mut filtered_resp = CurrencyFilter::new(&mut resp, self.spec.out_currency());
+        let _res = self.spec.on_coins(&mut filtered_resp)?;
         #[cfg(debug_assertions)]
         {
-            debug_assert_eq!(_res, IterState::Complete);
+            self.debug_check(&filtered_resp, _res);
         }
 
         coin::from_amount_ticker(resp.1, spec.out_currency()).map_err(Into::into)
+    }
+
+    #[cfg(debug_assertions)]
+    fn debug_check<V>(&self, filter: &CurrencyFilter<'_, V>, res: IterState)
+    where
+        V: CoinVisitor,
+    {
+        debug_assert!(
+            filter.passed_through(),
+            "No coins with currency != {}",
+            self.spec.out_currency()
+        );
+        debug_assert_eq!(res, IterState::Complete);
     }
 }
 

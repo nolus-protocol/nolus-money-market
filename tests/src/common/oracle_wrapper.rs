@@ -1,9 +1,15 @@
 use currency::{
-    lease::{Cro, Osmo},
+    lease::{Atom, Cro, Osmo},
     lpn::Usdc,
     native::Nls,
 };
-use finance::{coin::Coin, currency::Currency, duration::Duration, percent::Percent, price};
+use finance::{
+    coin::Coin,
+    currency::Currency,
+    duration::Duration,
+    percent::Percent,
+    price::{self, Price},
+};
 use marketprice::{config::Config as PriceConfig, SpotPrice};
 use oracle::{
     contract::{execute, instantiate, query, reply},
@@ -44,7 +50,7 @@ impl MarketOracleWrapper {
                     Percent::from_percent(75),
                 ),
             },
-            swap_tree: oracle::swap_tree!((1, Osmo::TICKER), (3, Cro::TICKER)),
+            swap_tree: oracle::swap_tree!((1, Osmo::TICKER), (3, Cro::TICKER), (13, Atom::TICKER)),
         };
 
         app.instantiate_contract(
@@ -115,11 +121,10 @@ where
         .unwrap();
 }
 
-pub fn feed_price<Lpn, C1, C2>(
+pub fn feed_a_price<Lpn, C1, C2>(
     test_case: &mut TestCase<Lpn>,
     addr: &Addr,
-    base: Coin<C1>,
-    quote: Coin<C2>,
+    price: Price<C1, C2>,
 ) -> AppResponse
 where
     Lpn: Currency,
@@ -133,7 +138,7 @@ where
             wasm_execute(
                 test_case.oracle.clone().unwrap(),
                 &ExecuteMsg::FeedPrices {
-                    prices: vec![price::total_of(base).is(quote).into()],
+                    prices: vec![price.into()],
                 },
                 vec![],
             )
@@ -141,4 +146,18 @@ where
             .into(),
         )
         .expect("Oracle not properly connected!")
+}
+
+pub fn feed_price<Lpn, C1, C2>(
+    test_case: &mut TestCase<Lpn>,
+    addr: &Addr,
+    base: Coin<C1>,
+    quote: Coin<C2>,
+) -> AppResponse
+where
+    Lpn: Currency,
+    C1: Currency,
+    C2: Currency,
+{
+    feed_a_price(test_case, addr, price::total_of(base).is(quote))
 }

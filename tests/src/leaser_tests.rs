@@ -1,7 +1,7 @@
 use std::{any::type_name, collections::HashSet};
 
 use currency::{
-    lease::{Atom, Cro, Osmo},
+    lease::{Atom, Cro, Juno, Osmo},
     lpn::Usdc,
     native::Nls,
 };
@@ -37,7 +37,6 @@ fn open_osmo_lease() {
 }
 
 #[test]
-#[ignore = "Fixed by TODO; contracts/lease/src/contract/state/buy_asset.rs:109 @ 5ff50b0302ba07a68b00440d670cdf8135fb1f8b"]
 fn open_cro_lease() {
     open_lease_impl::<Usdc, Cro, Usdc>(true);
 }
@@ -45,7 +44,7 @@ fn open_cro_lease() {
 #[test]
 #[should_panic(expected = "Unsupported currency")]
 fn open_lease_unsupported_currency_by_oracle() {
-    open_lease_impl::<Usdc, Atom, Usdc>(false);
+    open_lease_impl::<Usdc, Juno, Usdc>(false);
 }
 
 #[test]
