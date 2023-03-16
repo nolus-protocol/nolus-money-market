@@ -20,15 +20,14 @@ use self::{
     alarms::MarketAlarms,
     config::{query_config, try_configure},
     exec::ExecWithOracleBase,
-    feeder::Feeders,
+    oracle::feeder::Feeders,
     query::QueryWithOracleBase,
 };
 
 mod alarms;
 mod config;
 pub mod exec;
-mod feed;
-mod feeder;
+mod oracle;
 pub mod query;
 
 // version info for migration info

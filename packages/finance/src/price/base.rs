@@ -4,7 +4,7 @@ use crate::{
     error::Error,
 };
 
-use super::Price;
+use super::{dto::PriceDTO, Price};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BasePrice<BaseG, QuoteC>
@@ -50,5 +50,16 @@ where
 
     fn try_from(value: &BasePrice<BaseG, QuoteC>) -> Result<Self, Self::Error> {
         Ok(super::total_of((&value.amount).try_into()?).is(value.amount_quote))
+    }
+}
+
+impl<BaseG, QuoteC, QuoteG> From<BasePrice<BaseG, QuoteC>> for PriceDTO<BaseG, QuoteG>
+where
+    BaseG: Group,
+    QuoteC: Currency,
+    QuoteG: Group,
+{
+    fn from(price: BasePrice<BaseG, QuoteC>) -> Self {
+        Self::new(price.amount, price.amount_quote.into())
     }
 }
