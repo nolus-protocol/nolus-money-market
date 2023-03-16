@@ -23,10 +23,7 @@ use crate::{
             controller::Controller,
             ica_connector::{Enterable, IcaConnector},
             ica_recover::InRecovery,
-            opening::{
-                filter::CurrencyFilter,
-                swap_task::{CoinVisitor, IterNext, SwapTask as SwapTaskT},
-            },
+            opening::swap_task::{CoinVisitor, IterNext, SwapTask as SwapTaskT},
             Response, State,
         },
         Contract,
@@ -66,66 +63,33 @@ where
     ) -> ContractResult<Batch> {
         let swap_trx = self.spec.dex_account().swap(self.spec.oracle(), querier);
         // TODO apply nls_swap_fee on the downpayment only!
-        struct SwapWorker<'a>(SwapTrx<'a>, Symbol<'a>);
-        impl<'a> CoinVisitor for SwapWorker<'a> {
-            type Result = IterNext;
-            type Error = ContractError;
 
-            fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
-            where
-                G: Group,
-            {
-                self.0.swap_exact_in(coin, self.1)?;
-                Ok(IterNext::Continue)
-            }
-        }
-
-        let mut swapper = SwapWorker(swap_trx, self.spec.out_currency());
-        let mut filtered_swapper = CurrencyFilter::new(&mut swapper, self.spec.out_currency());
-        let _res = self.spec.on_coins(&mut filtered_swapper)?;
+        let mut builder = TrxBuilder(swap_trx, self.spec.out_currency(), false);
+        let _res = self.spec.on_coins(&mut builder)?;
         #[cfg(debug_assertions)]
         {
-            self.debug_check(&filtered_swapper, _res);
+            self.debug_check(builder.some(), _res);
         }
 
-        Ok(swapper.0.into())
+        Ok(builder.0.into())
     }
 
     fn decode_response(&self, resp: &[u8], spec: &SwapTask) -> ContractResult<CoinDTO<OutG>> {
-        struct ExactInResponse<I>(I, Amount);
-        impl<I> CoinVisitor for ExactInResponse<I>
-        where
-            I: Iterator<Item = MsgData>,
-        {
-            type Result = IterNext;
-            type Error = swap::error::Error;
-
-            fn visit<G>(&mut self, _coin: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
-            where
-                G: Group,
-            {
-                self.1 += swap_trx::exact_amount_in_resp(&mut self.0)?;
-                Ok(IterNext::Continue)
-            }
-        }
-        let mut resp = ExactInResponse(trx::decode_msg_responses(resp)?, Amount::ZERO);
-        let mut filtered_resp = CurrencyFilter::new(&mut resp, self.spec.out_currency());
-        let _res = self.spec.on_coins(&mut filtered_resp)?;
+        let mut parser =
+            ResponseParser::new(trx::decode_msg_responses(resp)?, self.spec.out_currency());
+        let _res = self.spec.on_coins(&mut parser)?;
         #[cfg(debug_assertions)]
         {
-            self.debug_check(&filtered_resp, _res);
+            self.debug_check(parser.some(), _res);
         }
 
-        coin::from_amount_ticker(resp.1, spec.out_currency()).map_err(Into::into)
+        coin::from_amount_ticker(parser.total_amount(), spec.out_currency()).map_err(Into::into)
     }
 
     #[cfg(debug_assertions)]
-    fn debug_check<V>(&self, filter: &CurrencyFilter<'_, V>, res: IterState)
-    where
-        V: CoinVisitor,
-    {
+    fn debug_check(&self, some: bool, res: IterState) {
         debug_assert!(
-            filter.passed_through(),
+            some,
             "No coins with currency != {}",
             self.spec.out_currency()
         );
@@ -195,5 +159,62 @@ where
 {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         self.spec.state(now, querier)
+    }
+}
+
+struct TrxBuilder<'a>(SwapTrx<'a>, Symbol<'a>, bool);
+impl<'a> TrxBuilder<'a> {
+    #[cfg(debug_assertions)]
+    fn some(&self) -> bool {
+        self.2
+    }
+}
+impl<'a> CoinVisitor for TrxBuilder<'a> {
+    type Result = IterNext;
+    type Error = ContractError;
+
+    fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
+    where
+        G: Group,
+    {
+        if coin.ticker() != self.1 {
+            self.0.swap_exact_in(coin, self.1)?;
+            self.2 = true;
+        }
+        Ok(IterNext::Continue)
+    }
+}
+
+struct ResponseParser<'a, I>(I, Symbol<'a>, Amount, bool);
+impl<'a, I> ResponseParser<'a, I> {
+    fn new(msgs: I, out: Symbol<'a>) -> Self {
+        Self(msgs, out, Amount::ZERO, false)
+    }
+    fn total_amount(&self) -> Amount {
+        self.2
+    }
+    #[cfg(debug_assertions)]
+    fn some(&self) -> bool {
+        self.3
+    }
+}
+impl<'a, I> CoinVisitor for ResponseParser<'a, I>
+where
+    I: Iterator<Item = MsgData>,
+{
+    type Result = IterNext;
+    type Error = swap::error::Error;
+
+    fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
+    where
+        G: Group,
+    {
+        if coin.ticker() == self.1 {
+            self.2 += coin.amount();
+        } else {
+            self.2 += swap_trx::exact_amount_in_resp(&mut self.0)?;
+            self.3 = true;
+        }
+        Ok(IterNext::Continue)
     }
 }
