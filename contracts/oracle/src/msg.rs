@@ -22,9 +22,7 @@ pub struct InstantiateMsg {
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct MigrateMsg {
-    pub contract_owner: Addr,
-}
+pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
