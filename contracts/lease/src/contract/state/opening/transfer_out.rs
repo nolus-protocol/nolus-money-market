@@ -48,6 +48,15 @@ where
     OutG: Group,
     SwapTask: SwapTaskT<OutG>,
 {
+    // TODO remove once the migration from v1 is done
+    pub(in crate::contract::state) fn new_migrate_v1(spec: SwapTask, coin_index: CoinsNb) -> Self {
+        let mut res = Self::new(spec);
+        for _i in 0..coin_index {
+            res = res.next();
+        }
+        res
+    }
+
     pub(super) fn new(spec: SwapTask) -> Self {
         let first_index = Default::default();
         let last_coin_index = Self::last_coin_index(&spec);

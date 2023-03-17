@@ -44,7 +44,8 @@ pub(crate) struct BuyAsset {
 }
 
 impl BuyAsset {
-    pub(super) fn new(
+    // TODO reduce to `pub(super)` move once the migration from v1 is done
+    pub(in crate::contract::state) fn new(
         form: NewLeaseForm,
         dex_account: Account,
         downpayment: DownpaymentCoin,

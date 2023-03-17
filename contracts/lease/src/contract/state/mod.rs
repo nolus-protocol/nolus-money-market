@@ -19,6 +19,7 @@ use self::{
     ica_recover::InRecovery,
     opened::repay::buy_lpn::BuyLpn,
     opening::request_loan::RequestLoan,
+    v1::StateV1,
 };
 pub use controller::{execute, instantiate, migrate, query, reply, sudo};
 
@@ -32,6 +33,7 @@ mod opened;
 mod opening;
 mod paid;
 mod transfer_in;
+mod v1;
 
 type OpenIcaAccount = ica_connector::IcaConnector<opening::open_ica::OpenIcaAccount>;
 type OpeningTransferOut = opening::buy_asset::Transfer;
@@ -80,6 +82,10 @@ const STATE_DB_ITEM: Item<'static, State> = Item::new("state");
 
 pub(super) fn load(storage: &dyn Storage) -> StdResult<State> {
     STATE_DB_ITEM.load(storage)
+}
+
+fn load_v1(storage: &dyn Storage) -> StdResult<StateV1> {
+    Item::new("state").load(storage)
 }
 
 pub(super) fn save(storage: &mut dyn Storage, next_state: &State) -> StdResult<()> {

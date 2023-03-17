@@ -32,7 +32,7 @@ pub(crate) trait IcaConnectee {
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct IcaConnector<Connectee> {
-    connectee: Connectee,
+    pub(super) connectee: Connectee, //TODO make private once the migration is done
 }
 
 impl<Connectee> IcaConnector<Connectee>

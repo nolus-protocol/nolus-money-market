@@ -36,7 +36,7 @@ pub(crate) trait DexConnectable {
 pub(crate) struct Account {
     /// The contract at Nolus that owns the account
     owner: Addr,
-    dex_account: HostAccount, // TODO rename to `ica_account`
+    dex_account: HostAccount,
     dex: ConnectionParams,
 }
 

@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 use crate::{
     api::{dex::ConnectionParams, paid::ClosingTrx, ExecuteMsg, StateResponse},
     contract::{
-        dex::DexConnectable,
+        dex::{self, DexConnectable},
         state::{self, controller, ica_connector::Enterable, Controller, Response},
         Contract, Lease,
     },
@@ -34,7 +34,8 @@ impl TransferInInit {
     }
 
     fn on_response(self, env: &Env, querier: &QuerierWrapper<'_>) -> ContractResult<Response> {
-        TransferInFinish::from(self).try_complete(querier, env)
+        let finish = TransferInFinish::new(self.lease, env.block.time + dex::IBC_TIMEOUT);
+        finish.try_complete(querier, env)
     }
 }
 
@@ -85,11 +86,5 @@ impl Contract for TransferInInit {
             amount: self.lease.lease.amount,
             in_progress: Some(ClosingTrx::TransferInInit),
         })
-    }
-}
-
-impl From<TransferInInit> for TransferInFinish {
-    fn from(init: TransferInInit) -> Self {
-        Self::new(init.lease)
     }
 }
