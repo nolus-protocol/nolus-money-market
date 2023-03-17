@@ -1,6 +1,6 @@
 name: "Build optimized contracts"
 description: "Action for building optimized versions of the contracts"
-author: "Kiril Mihaylov <k.mihaylov@nolus.io>"
+author: "The Dev Nolus Team <dev@nolus.io>"
 
 inputs:
   target_net:
