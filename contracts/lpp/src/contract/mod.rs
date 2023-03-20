@@ -3,6 +3,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
+use platform::response;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -90,10 +91,12 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<Response> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    Ok(Response::default())
+    SingleUserAccess::new_contract_owner(msg.contract_owner).store(deps.storage)?;
+
+    response::response(versioning::release()).map_err(Into::into)
 }
 
 struct ExecuteWithLpn<'a> {
@@ -198,19 +201,9 @@ impl<'a> QueryWithLpn<'a> {
                 let quote = amount.try_into()?;
                 to_binary(&borrow::query_quote::<LPN>(&self.deps, &self.env, quote)?)
             }
-            QueryMsg::Loan { lease_addr } => to_binary(&borrow::query_loan::<LPN>(
-                self.deps.storage,
-                self.env,
-                lease_addr,
-            )?),
-            QueryMsg::LoanOutstandingInterest {
-                lease_addr,
-                outstanding_time,
-            } => to_binary(&borrow::query_loan_outstanding_interest::<LPN>(
-                self.deps.storage,
-                lease_addr,
-                outstanding_time,
-            )?),
+            QueryMsg::Loan { lease_addr } => {
+                to_binary(&borrow::query_loan::<LPN>(self.deps.storage, lease_addr)?)
+            }
             QueryMsg::LppBalance() => {
                 to_binary(&rewards::query_lpp_balance::<LPN>(self.deps, self.env)?)
             }

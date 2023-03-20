@@ -1,8 +1,7 @@
 use currency::native::Nls;
 use lpp::msg::{
     BalanceResponse, ExecuteMsg, InstantiateMsg, LoanResponse, LppBalanceResponse, PriceResponse,
-    QueryLoanOutstandingInterestResponse, QueryLoanResponse, QueryMsg, QueryQuoteResponse,
-    RewardsResponse,
+    QueryLoanResponse, QueryMsg, QueryQuoteResponse, RewardsResponse,
 };
 use sdk::cosmwasm_schema::{export_schema, schema_for};
 
@@ -17,10 +16,6 @@ fn main() {
     export_schema(&schema_for!(QueryQuoteResponse), &out_dir);
     export_schema(&schema_for!(LoanResponse<Nls>), &out_dir);
     export_schema(&schema_for!(QueryLoanResponse<Nls>), &out_dir);
-    export_schema(
-        &schema_for!(QueryLoanOutstandingInterestResponse<Nls>),
-        &out_dir,
-    );
     export_schema(&schema_for!(BalanceResponse), &out_dir);
     export_schema(&schema_for!(PriceResponse<Nls>), &out_dir);
     export_schema(&schema_for!(LppBalanceResponse<Nls>), &out_dir);

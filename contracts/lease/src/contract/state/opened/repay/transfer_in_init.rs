@@ -7,8 +7,8 @@ use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 use crate::{
     api::{dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateResponse},
     contract::{
-        dex::DexConnectable,
-        state::{self, opened::repay, Controller, Response},
+        dex::{self, DexConnectable},
+        state::{self, ica_connector::Enterable, opened::repay, Controller, Response},
         Contract, Lease,
     },
     error::ContractResult,
@@ -19,9 +19,9 @@ use super::transfer_in_finish::TransferInFinish;
 
 #[derive(Serialize, Deserialize)]
 pub struct TransferInInit {
-    pub(super) lease: Lease,
-    pub(super) payment: PaymentCoin,
-    pub(super) payment_lpn: LpnCoin,
+    lease: Lease,
+    payment: PaymentCoin,
+    payment_lpn: LpnCoin,
 }
 
 impl TransferInInit {
@@ -37,14 +37,20 @@ impl TransferInInit {
         }
     }
 
-    fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
+    pub(super) fn enter(&self, now: Timestamp) -> ContractResult<Batch> {
         let mut sender = self.lease.dex.transfer_from(now);
         sender.send(&self.payment_lpn)?;
         Ok(sender.into())
     }
 
-    fn on_response(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
-        TransferInFinish::from(self).try_complete(querier, env)
+    fn on_response(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        let finish = TransferInFinish::new(
+            self.lease,
+            self.payment,
+            self.payment_lpn,
+            env.block.time + dex::IBC_TIMEOUT,
+        );
+        finish.try_complete(deps, env)
     }
 }
 
@@ -54,13 +60,15 @@ impl DexConnectable for TransferInInit {
     }
 }
 
-impl Controller for TransferInInit {
+impl Enterable for TransferInInit {
     fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
-        self.enter_state(env.block.time)
+        self.enter(env.block.time)
     }
+}
 
+impl Controller for TransferInInit {
     fn on_response(self, _data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        self.on_response(&deps.querier, &env)
+        self.on_response(deps, env)
     }
 
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {

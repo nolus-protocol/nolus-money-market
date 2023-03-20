@@ -1,6 +1,7 @@
 use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
+use platform::response;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -11,7 +12,7 @@ use versioning::{package_version, version, VersionSegment};
 
 use crate::{
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     state::supported_pairs::SupportedPairs,
 };
 
@@ -19,15 +20,14 @@ use self::{
     alarms::MarketAlarms,
     config::{query_config, try_configure},
     exec::ExecWithOracleBase,
-    feeder::Feeders,
+    oracle::feeder::Feeders,
     query::QueryWithOracleBase,
 };
 
 mod alarms;
 mod config;
 pub mod exec;
-mod feed;
-mod feeder;
+mod oracle;
 pub mod query;
 
 // version info for migration info
@@ -85,14 +85,11 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct MigrateMsg {}
-
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    Ok(Response::default())
+    response::response(versioning::release()).map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

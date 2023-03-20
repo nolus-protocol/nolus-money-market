@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::{Deps, Env, Timestamp};
 use crate::{
     api::{opened::RepayTrx, PaymentCoin, StateResponse},
     contract::{
-        state::{self, opened::repay, Controller, Response},
+        state::{self, ica_connector::Enterable, opened::repay, Controller, Response},
         Contract, Lease,
     },
     error::ContractResult,
@@ -27,17 +27,20 @@ impl TransferOut {
         Self { lease, payment }
     }
 
-    fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
+    pub(in crate::contract::state::opened) fn enter(
+        &self,
+        now: Timestamp,
+    ) -> ContractResult<Batch> {
         let mut sender = self.lease.dex.transfer_to(now);
         // TODO apply nls_swap_fee on the payment!
         sender.send(&self.payment)?;
         Ok(sender.into())
     }
 
-    fn on_response(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+    fn on_response(self, deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
         let emitter = self.emit_ok();
         let buy_lpn = BuyLpn::new(self.lease, self.payment);
-        let batch = buy_lpn.enter(deps, env)?;
+        let batch = buy_lpn.enter(&deps.querier)?;
 
         Ok(Response::from(batch.into_response(emitter), buy_lpn))
     }
@@ -49,11 +52,13 @@ impl TransferOut {
     }
 }
 
-impl Controller for TransferOut {
+impl Enterable for TransferOut {
     fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
-        self.enter_state(env.block.time)
+        self.enter(env.block.time)
     }
+}
 
+impl Controller for TransferOut {
     fn on_response(self, _data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         self.on_response(deps, env)
     }

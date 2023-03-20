@@ -1,41 +1,32 @@
-use cosmwasm_std::Api;
+use enum_dispatch::enum_dispatch;
 
 use ::currency::lease::LeaseGroup;
-use enum_dispatch::enum_dispatch;
 use finance::currency;
-use platform::batch::Batch;
-
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
-
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use versioning::{version, VersionSegment};
 
-use crate::api::{ExecuteMsg, NewLeaseContract};
-use crate::contract::Contract;
 use crate::{
-    api::{MigrateMsg, StateQuery},
+    api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
+    contract::Contract,
     error::{ContractError, ContractResult},
 };
 
-use super::{opening::request_loan::RequestLoan, v0::Migrate, Response};
+use super::{opening::request_loan::RequestLoan, v1::Migrate, Response};
 
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 1;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
 
 #[enum_dispatch]
 pub(crate) trait Controller
 where
     Self: Sized,
 {
-    fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<Batch> {
-        err("enter", deps.api)
-    }
-
     fn reply(self, deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {
         err("reply", deps.api)
     }
@@ -108,7 +99,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
         deps.storage,
         version!(CONTRACT_STORAGE_VERSION),
         |storage: &mut _| {
-            let migrated_contract = super::load_old_v1(storage)?.into_last_version();
+            let migrated_contract = super::load_v1(storage)?.into_last_version();
 
             super::save(storage, &migrated_contract)
         },

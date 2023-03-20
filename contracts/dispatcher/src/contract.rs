@@ -3,7 +3,10 @@ use currency::native::Nls;
 use finance::duration::Duration;
 use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
-use platform::batch::{Batch, Emit, Emitter};
+use platform::{
+    batch::{Batch, Emit, Emitter},
+    response,
+};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -15,7 +18,7 @@ use versioning::{version, VersionSegment};
 use crate::{
     cmd::Dispatch,
     error::ContractError,
-    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     state::Config,
     state::DispatchLog,
 };
@@ -70,14 +73,13 @@ pub fn instantiate(
     Ok(Response::from(batch))
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct MigrateMsg {}
-
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    Ok(Response::default())
+    SingleUserAccess::new_contract_owner(msg.contract_owner).store(deps.storage)?;
+
+    response::response(versioning::release()).map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

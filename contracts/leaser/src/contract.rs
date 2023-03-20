@@ -1,5 +1,5 @@
 use access_control::SingleUserAccess;
-use platform::{batch::Batch, reply::from_instantiate};
+use platform::{batch::Batch, reply::from_instantiate, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -48,7 +48,8 @@ pub fn instantiate(
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
-    Ok(Response::default())
+
+    response::response(versioning::release()).map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -77,12 +78,13 @@ pub fn execute(
         ExecuteMsg::MigrateLeases { new_code_id } => owner_allowed_only(deps.storage, info, |s| {
             leaser::try_migrate_leases(s, new_code_id.u64())
         }),
-        ExecuteMsg::OpenLease { currency } => Borrow::with(
+        ExecuteMsg::OpenLease { currency, max_ltv } => Borrow::with(
             deps,
             info.funds,
             info.sender,
             env.contract.address,
             currency,
+            max_ltv,
         ),
     }
 }
@@ -94,7 +96,8 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
         QueryMsg::Quote {
             downpayment,
             lease_asset,
-        } => to_binary(&Leaser::new(deps).quote(downpayment, lease_asset)?),
+            max_ltv,
+        } => to_binary(&Leaser::new(deps).quote(downpayment, lease_asset, max_ltv)?),
         QueryMsg::Leases { owner } => to_binary(&Leaser::new(deps).customer_leases(owner)?),
     };
     res.map_err(ContractError::from)

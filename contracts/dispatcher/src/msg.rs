@@ -17,6 +17,11 @@ pub struct InstantiateMsg {
     pub tvl_to_apr: RewardScale,
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct MigrateMsg {
+    pub contract_owner: Addr,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {

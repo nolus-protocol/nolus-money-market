@@ -13,13 +13,13 @@ use lpp::{
 };
 use platform::{bank, coin_legacy};
 use sdk::{
-    cosmwasm_std::{Addr, Coin as CwCoin},
+    cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
     cw_multi_test::Executor,
 };
 
 use crate::common::{
     cwcoin, cwcoins,
-    lease_wrapper::{LeaseWrapper, LeaseWrapperAddresses, LeaseWrapperConfig},
+    lease_wrapper::{LeaseInitConfig, LeaseWrapper, LeaseWrapperAddresses, LeaseWrapperConfig},
     lpp_wrapper::LppWrapper,
     mock_app,
     oracle_wrapper::MarketOracleWrapper,
@@ -27,7 +27,8 @@ use crate::common::{
     test_case::TestCase,
     timealarms_wrapper::TimeAlarmsWrapper,
     treasury_wrapper::TreasuryWrapper,
-    AppExt, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
+    AppExt, MockApp, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER,
+    UTILIZATION_OPTIMAL,
 };
 
 type Lpn = Usdc;
@@ -307,8 +308,7 @@ fn deposit_and_withdraw() {
             oracle: market_price_oracle,
             profit,
         },
-        LeaseCurrency::TICKER,
-        loan.into(),
+        LeaseInitConfig::new(LeaseCurrency::TICKER, loan.into(), None),
         LeaseWrapperConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseWrapperConfig::default()
@@ -545,8 +545,7 @@ fn loan_open_and_repay() {
         &mut app,
         Some(lease_id),
         lease_addresses.clone(),
-        LeaseCurrency::TICKER,
-        loan1.into(),
+        LeaseInitConfig::new(LeaseCurrency::TICKER, loan1.into(), None),
         LeaseWrapperConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseWrapperConfig::default()
@@ -606,8 +605,7 @@ fn loan_open_and_repay() {
         &mut app,
         Some(lease_id),
         lease_addresses,
-        LeaseCurrency::TICKER,
-        loan2.into(),
+        LeaseInitConfig::new(LeaseCurrency::TICKER, loan2.into(), None),
         LeaseWrapperConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseWrapperConfig::default()
@@ -628,7 +626,10 @@ fn loan_open_and_repay() {
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
-    assert_eq!(loan1_resp.interest_due, interest1.of(loan1).into());
+    assert_eq!(
+        loan1_resp.interest_due(block_time(&app)),
+        interest1.of(loan1).into()
+    );
 
     // repay from other addr
     app.execute_contract(
@@ -684,7 +685,7 @@ fn loan_open_and_repay() {
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(
-        loan1_resp.interest_due,
+        loan1_resp.interest_due(block_time(&app)),
         (interest1.of(loan1) - repay_interest_part).into()
     );
 
@@ -710,7 +711,7 @@ fn loan_open_and_repay() {
         .unwrap();
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, (loan1 - repay_due_part).into());
-    assert_eq!(loan1_resp.interest_due, Coin::new(0));
+    assert_eq!(loan1_resp.interest_due(block_time(&app)), Coin::new(0));
 
     // repay interest + due part, close the loan
     app.execute_contract(
@@ -856,8 +857,7 @@ fn compare_lpp_states() {
             oracle: market_oracle.clone(),
             profit: profit.clone(),
         },
-        LeaseCurrency::TICKER,
-        loan1.into(),
+        LeaseInitConfig::new(LeaseCurrency::TICKER, loan1.into(), None),
         LeaseWrapperConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseWrapperConfig::default()
@@ -917,8 +917,7 @@ fn compare_lpp_states() {
             oracle: market_oracle,
             profit,
         },
-        LeaseCurrency::TICKER,
-        loan2.into(),
+        LeaseInitConfig::new(LeaseCurrency::TICKER, loan2.into(), None),
         LeaseWrapperConfig {
             liability_init_percent: Percent::from_percent(50), // simplify case: borrow == downpayment
             ..LeaseWrapperConfig::default()
@@ -939,7 +938,10 @@ fn compare_lpp_states() {
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
-    assert_eq!(loan1_resp.interest_due, interest1.of(loan1).into());
+    assert_eq!(
+        loan1_resp.interest_due(block_time(&app)),
+        interest1.of(loan1).into()
+    );
 
     // repay from other addr
     app.execute_contract(
@@ -995,7 +997,7 @@ fn compare_lpp_states() {
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(
-        loan1_resp.interest_due,
+        loan1_resp.interest_due(block_time(&app)),
         (interest1.of(loan1) - repay_interest_part).into()
     );
 
@@ -1021,7 +1023,7 @@ fn compare_lpp_states() {
         .unwrap();
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, (loan1 - repay_due_part).into());
-    assert_eq!(loan1_resp.interest_due, Coin::new(0));
+    assert_eq!(loan1_resp.interest_due(block_time(&app)), Coin::new(0));
 
     // repay interest + due part, close the loan
     app.execute_contract(
@@ -1314,4 +1316,8 @@ where
     A: Into<Coin<Lpn>>,
 {
     cwcoins(amount)
+}
+
+fn block_time(app: &MockApp) -> Timestamp {
+    app.block_info().time
 }

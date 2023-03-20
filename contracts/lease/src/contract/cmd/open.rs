@@ -22,6 +22,7 @@ use crate::{
 pub struct OpenLoanReq<'a> {
     liability: &'a Liability,
     funds_in: Vec<CwCoin>,
+    max_ltv: Option<Percent>,
     oracle: OracleRef,
     querier: &'a QuerierWrapper<'a>,
 }
@@ -30,12 +31,14 @@ impl<'a> OpenLoanReq<'a> {
     pub fn new(
         liability: &'a Liability,
         funds_in: Vec<CwCoin>,
+        max_ltv: Option<Percent>,
         oracle: OracleRef,
         querier: &'a QuerierWrapper<'a>,
     ) -> Self {
         Self {
             liability,
             funds_in,
+            max_ltv,
             oracle,
             querier,
         }
@@ -61,18 +64,21 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
             },
         )
         .ok_or_else(Self::Error::NoPaymentError)??;
+
         if downpayment_lpn.is_zero() {
-            Err(Self::Error::InsufficientPayment(downpayment))
-        } else {
-            let borrow_lpn = self.liability.init_borrow_amount(downpayment_lpn);
-
-            lpp.open_loan_req(borrow_lpn)?;
-
-            Ok(Self::Output {
-                batch: lpp.into().batch,
-                downpayment,
-            })
+            return Err(Self::Error::InsufficientPayment(downpayment));
         }
+
+        let borrow_lpn = self
+            .liability
+            .init_borrow_amount(downpayment_lpn, self.max_ltv);
+
+        lpp.open_loan_req(borrow_lpn)?;
+
+        Ok(Self::Output {
+            batch: lpp.into().batch,
+            downpayment,
+        })
     }
 }
 
@@ -94,7 +100,9 @@ where
         C: Currency,
     {
         let downpayment_lpn = convert::to_base(self.oracle.clone(), in_amount, self.querier)?;
+
         let downpayment = in_amount.into();
+
         Ok((downpayment, downpayment_lpn))
     }
 }
@@ -131,8 +139,10 @@ impl WithLppLender for OpenLoanResp {
             use lpp::stub::LppBatch;
 
             let LppBatch { lpp_ref: _, batch } = lpp.into();
+
             debug_assert_eq!(Batch::default(), batch);
         }
+
         Ok(OpenLoanRespResult {
             principal: loan_resp.principal_due.into(),
             annual_interest_rate: loan_resp.annual_interest_rate,

@@ -1,6 +1,6 @@
 name: "Build optimized contracts"
 description: "Action for building optimized versions of the contracts"
-author: "Kiril Mihaylov <k.mihaylov@nolus.io>"
+author: "The Dev Nolus Team <dev@nolus.io>"
 
 inputs:
   target_net:
@@ -31,8 +31,14 @@ runs:
         --mount type=volume,source="rustup_dir_cache",target="/usr/local/rustup/" \
         --mount type=volume,source="cargo_dir_cache",target="/usr/local/cargo/" \
         --mount type=volume,source="registry_cache",target="/usr/local/cargo/registry/" \
-        --env ALT_NET_SYMBOLS=$(if test "${{ inputs.target_net }}" = "test"; then echo 1; else echo 0; fi) \
-        cosmwasm/workspace-optimizer:0.12.11
+        --env ALT_NET_SYMBOLS=$( \
+            if test "${{ inputs.target_net }}" = "test"; \
+              then echo 1; \
+              else echo 0; \
+            fi \
+          ) \
+        --env RELEASE_VERSION="${{ github.ref_name }}-$(date -Iminute)" \
+        cosmwasm/workspace-optimizer:0.12.12
     - name: "Check for WASM binaries larger than allowed limit"
       shell: "sh"
       run: |
@@ -57,4 +63,4 @@ runs:
       uses: "actions/upload-artifact@v3"
       with:
         name: "optimized-binaries-${{ inputs.target_net }}-net"
-        path: "artifacts/"
+        path: "artifacts/*"

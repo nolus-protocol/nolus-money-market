@@ -13,6 +13,7 @@ pub struct Quote<'r> {
     oracle: OracleRef,
     liability: Liability,
     lease_interest_rate_margin: Percent,
+    max_ltv: Option<Percent>,
 }
 
 pub struct Borrow {}

@@ -28,6 +28,28 @@ use swap::trx as swap_trx;
 
 use super::{ContractWrapper, MockApp, ADMIN, USER};
 
+pub struct LeaseInitConfig<'r, D>
+where
+    D: Currency,
+{
+    lease_currency: &'r str,
+    downpayment: Coin<D>,
+    max_ltv: Option<Percent>,
+}
+
+impl<'r, D> LeaseInitConfig<'r, D>
+where
+    D: Currency,
+{
+    pub fn new(lease_currency: &'r str, downpayment: Coin<D>, max_ltv: Option<Percent>) -> Self {
+        Self {
+            lease_currency,
+            downpayment,
+            max_ltv,
+        }
+    }
+}
+
 pub struct LeaseWrapper {
     contract_wrapper: LeaseContractWrapperReply,
 }
@@ -90,8 +112,7 @@ impl LeaseWrapper {
         app: &mut MockApp,
         code_id: Option<u64>,
         addresses: LeaseWrapperAddresses,
-        lease_currency: &str,
-        downpayment: Coin<D>,
+        lease_config: LeaseInitConfig<'_, D>,
         config: LeaseWrapperConfig,
     ) -> Addr
     where
@@ -102,13 +123,18 @@ impl LeaseWrapper {
             None => app.store_code(self.contract_wrapper),
         };
 
-        let msg = Self::lease_instantiate_msg(lease_currency, addresses, config);
+        let msg = Self::lease_instantiate_msg(
+            lease_config.lease_currency,
+            addresses,
+            config,
+            lease_config.max_ltv,
+        );
 
         let result = app.instantiate_contract(
             code_id,
             Addr::unchecked(ADMIN),
             &msg,
-            &[coin_legacy::to_cosmwasm(downpayment)],
+            &[coin_legacy::to_cosmwasm(lease_config.downpayment)],
             "lease",
             None,
         );
@@ -128,11 +154,13 @@ impl LeaseWrapper {
         lease_currency: &str,
         addresses: LeaseWrapperAddresses,
         config: LeaseWrapperConfig,
+        max_ltv: Option<Percent>,
     ) -> NewLeaseContract {
         NewLeaseContract {
             form: NewLeaseForm {
                 customer: config.customer,
                 currency: lease_currency.into(),
+                max_ltv,
                 liability: Liability::new(
                     config.liability_init_percent,
                     config.liability_delta_to_healthy_percent,
@@ -251,6 +279,8 @@ pub fn complete_lease_initialization<Lpn>(
         ),
         downpayment
     );
+    send_blank_response(mock_app, lease_addr);
+
     assert_eq!(
         expect_ibc_transfer(
             neutron_message_receiver,
@@ -262,9 +292,6 @@ pub fn complete_lease_initialization<Lpn>(
         .denom,
         Lpn::BANK_SYMBOL
     );
-
-    // TransferOut sends two IBC transfers so expect two requests
-    send_blank_response(mock_app, lease_addr);
     send_blank_response(mock_app, lease_addr);
 
     {

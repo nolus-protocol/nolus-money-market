@@ -14,9 +14,9 @@ use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, StdResult, Sto
 
 use crate::{
     error::{ContractError, ContractResult},
-    msg::{LoanResponse, LppBalanceResponse, OutstandingInterest, PriceResponse},
+    msg::{LoanResponse, LppBalanceResponse, PriceResponse},
     nlpn::NLpn,
-    state::{Config, Deposit, Loan, LoanData, Total},
+    state::{Config, Deposit, Loan, Total},
 };
 
 pub struct NTokenPrice<LPN>
@@ -245,38 +245,12 @@ where
         Ok(payment.excess)
     }
 
-    pub fn query_loan_outstanding_interest(
-        &self,
-        storage: &dyn Storage,
-        addr: Addr,
-        time: Timestamp,
-    ) -> StdResult<Option<OutstandingInterest<LPN>>> {
-        let interest =
-            Loan::query_outstanding_interest(storage, addr, time)?.map(OutstandingInterest);
-
-        Ok(interest)
-    }
-
     pub fn query_loan(
         &self,
         storage: &dyn Storage,
-        env: &Env,
-        addr: Addr,
+        lease_addr: Addr,
     ) -> Result<Option<LoanResponse<LPN>>, ContractError> {
-        let maybe_loan = Loan::query(storage, addr.clone())?;
-        let maybe_interest_due =
-            self.query_loan_outstanding_interest(storage, addr, env.block.time)?;
-        maybe_loan
-            .zip(maybe_interest_due)
-            .map(|(loan, interest_due): (LoanData<LPN>, _)| {
-                Ok(LoanResponse {
-                    principal_due: loan.principal_due,
-                    interest_due: interest_due.0,
-                    annual_interest_rate: loan.annual_interest_rate,
-                    interest_paid: loan.interest_paid,
-                })
-            })
-            .transpose()
+        Loan::query(storage, lease_addr).map_err(Into::into)
     }
 }
 
@@ -421,7 +395,7 @@ mod test {
         let mut deps = testing::mock_dependencies_with_balance(&[coin_cw(lpp_balance)]);
         let mut env = testing::mock_env();
         let admin = Addr::unchecked("admin");
-        let loan = Addr::unchecked("loan");
+        let lease_addr = Addr::unchecked("loan");
         env.block.time = Timestamp::from_nanos(0);
         let lease_code_id = Uint64::new(123);
 
@@ -450,55 +424,56 @@ mod test {
 
         // doesn't exist
         let loan_response = lpp
-            .query_loan(deps.as_ref().storage, &env, loan.clone())
+            .query_loan(deps.as_ref().storage, lease_addr.clone())
             .expect("can't query loan");
         assert_eq!(loan_response, None);
 
         env.block.time = Timestamp::from_nanos(10);
 
-        lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000_000))
-            .expect("can't open loan");
+        lpp.try_open_loan(
+            &mut deps.as_mut(),
+            &env,
+            lease_addr.clone(),
+            Coin::new(5_000_000),
+        )
+        .expect("can't open loan");
         deps.querier
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000_000)]);
 
-        let loan_response = lpp
-            .query_loan(deps.as_ref().storage, &env, loan.clone())
+        let loan = lpp
+            .query_loan(deps.as_ref().storage, lease_addr.clone())
             .expect("can't query loan")
             .expect("should be some response");
 
-        assert_eq!(loan_response.principal_due, amount.into());
-        assert_eq!(loan_response.annual_interest_rate, annual_interest_rate);
-        assert_eq!(loan_response.interest_paid, env.block.time);
-        assert_eq!(loan_response.interest_due, 0u128.into());
+        assert_eq!(loan.principal_due, amount.into());
+        assert_eq!(loan.annual_interest_rate, annual_interest_rate);
+        assert_eq!(loan.interest_paid, env.block.time);
+        assert_eq!(loan.interest_due(env.block.time), 0u128.into());
 
         // wait for year/10
         env.block.time = Timestamp::from_nanos(10 + Duration::YEAR.nanos() / 10);
 
         // pay interest for year/10
-        let payment = lpp
-            .query_loan_outstanding_interest(deps.as_ref().storage, loan.clone(), env.block.time)
-            .expect("can't query outstanding interest")
-            .expect("should be some coins")
-            .0;
+        let payment = loan.interest_due(env.block.time);
 
         let repay = lpp
-            .try_repay_loan(&mut deps.as_mut(), &env, loan.clone(), payment)
+            .try_repay_loan(&mut deps.as_mut(), &env, lease_addr.clone(), payment)
             .expect("can't repay loan");
 
         assert_eq!(repay, 0u128.into());
 
-        let loan_response = lpp
-            .query_loan(deps.as_ref().storage, &env, loan.clone())
+        let loan = lpp
+            .query_loan(deps.as_ref().storage, lease_addr.clone())
             .expect("can't query loan")
             .expect("should be some response");
 
-        assert_eq!(loan_response.principal_due, amount.into());
-        assert_eq!(loan_response.annual_interest_rate, annual_interest_rate);
-        assert_eq!(loan_response.interest_paid, env.block.time);
-        assert_eq!(loan_response.interest_due, 0u128.into());
+        assert_eq!(loan.principal_due, amount.into());
+        assert_eq!(loan.annual_interest_rate, annual_interest_rate);
+        assert_eq!(loan.interest_paid, env.block.time);
+        assert_eq!(loan.interest_due(env.block.time), 0u128.into());
 
         // an immediate repay after repay should pass (loan_interest_due==0 bug)
-        lpp.try_repay_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(0))
+        lpp.try_repay_loan(&mut deps.as_mut(), &env, lease_addr.clone(), Coin::new(0))
             .expect("can't repay loan");
 
         // wait for another year/10
@@ -506,15 +481,15 @@ mod test {
 
         // pay everything + excess
         let payment = lpp
-            .query_loan_outstanding_interest(deps.as_ref().storage, loan.clone(), env.block.time)
-            .expect("can't query outstanding interest")
-            .expect("should be some coins")
-            .0
+            .query_loan(deps.as_ref().storage, lease_addr.clone())
+            .expect("can't query the loan")
+            .expect("should exist")
+            .interest_due(env.block.time)
             + Coin::new(amount)
             + Coin::new(100);
 
         let repay = lpp
-            .try_repay_loan(&mut deps.as_mut(), &env, loan, payment)
+            .try_repay_loan(&mut deps.as_mut(), &env, lease_addr, payment)
             .expect("can't repay loan");
 
         assert_eq!(repay, 100u128.into());
@@ -628,8 +603,8 @@ mod test {
         deps.querier
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000)]);
 
-        let loan_response_before = lpp
-            .query_loan(deps.as_ref().storage, &env, loan.clone())
+        let loan_before = lpp
+            .query_loan(deps.as_ref().storage, loan.clone())
             .expect("can't query loan")
             .expect("should be some response");
 
@@ -637,28 +612,18 @@ mod test {
         lpp.try_repay_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(0))
             .expect("can't repay loan");
 
-        let loan_response_after = lpp
-            .query_loan(deps.as_ref().storage, &env, loan)
+        let loan_after = lpp
+            .query_loan(deps.as_ref().storage, loan)
             .expect("can't query loan")
             .expect("should be some response");
 
         //should not change after zero repay
+        assert_eq!(loan_before.principal_due, loan_after.principal_due);
         assert_eq!(
-            loan_response_before.principal_due,
-            loan_response_after.principal_due
+            loan_before.annual_interest_rate,
+            loan_after.annual_interest_rate
         );
-        assert_eq!(
-            loan_response_before.annual_interest_rate,
-            loan_response_after.annual_interest_rate
-        );
-        assert_eq!(
-            loan_response_before.interest_paid,
-            loan_response_after.interest_paid
-        );
-        assert_eq!(
-            loan_response_before.interest_due,
-            loan_response_after.interest_due
-        );
+        assert_eq!(loan_before.interest_paid, loan_after.interest_paid);
     }
 
     #[test]
@@ -699,10 +664,10 @@ mod test {
             .update_balance(MOCK_CONTRACT_ADDR, vec![coin_cw(5_000)]);
 
         let payment = lpp
-            .query_loan_outstanding_interest(deps.as_ref().storage, loan.clone(), env.block.time)
+            .query_loan(deps.as_ref().storage, loan.clone())
             .expect("can't query outstanding interest")
             .expect("should be some coins")
-            .0;
+            .interest_due(env.block.time);
         assert_eq!(payment, Coin::new(0));
 
         let repay = lpp
@@ -713,7 +678,7 @@ mod test {
 
         // Should be closed
         let loan_response = lpp
-            .query_loan(deps.as_ref().storage, &env, loan)
+            .query_loan(deps.as_ref().storage, loan)
             .expect("can't query loan");
         assert_eq!(loan_response, None);
     }

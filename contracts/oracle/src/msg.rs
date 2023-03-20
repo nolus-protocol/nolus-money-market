@@ -21,6 +21,9 @@ pub struct InstantiateMsg {
     pub swap_tree: HumanReadableTree<SwapTarget>,
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct MigrateMsg {}
+
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(rename_all = "snake_case")]
@@ -63,10 +66,9 @@ pub enum QueryMsg {
     IsFeeder {
         address: Addr,
     },
+    // returns all the supported prices
+    Prices {},
     // returns the price of the denom against the base asset
-    Prices {
-        currencies: Vec<SymbolOwned>,
-    },
     Price {
         currency: SymbolOwned,
     },

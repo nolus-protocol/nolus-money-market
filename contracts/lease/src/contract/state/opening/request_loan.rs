@@ -22,9 +22,9 @@ use super::open_ica::OpenIcaAccount;
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestLoan {
-    new_lease: NewLeaseContract,
-    downpayment: DownpaymentCoin,
-    deps: (LppLenderRef, OracleRef),
+    pub(in crate::contract::state) new_lease: NewLeaseContract, //TODO make them private once the migration is removed
+    pub(in crate::contract::state) downpayment: DownpaymentCoin,
+    pub(in crate::contract::state) deps: (LppLenderRef, OracleRef),
 }
 
 impl RequestLoan {
@@ -46,6 +46,7 @@ impl RequestLoan {
             OpenLoanReq::new(
                 &new_lease.form.liability,
                 info.funds,
+                new_lease.form.max_ltv,
                 oracle.clone(),
                 &deps.querier,
             ),
@@ -73,15 +74,17 @@ impl RequestLoan {
                     .clone()
                     .execute(OpenLoanResp::new(msg), &deps.querier)?;
 
-                let emitter = self.emit_ok(env.contract.address.clone());
+                let emitter = self.emit_ok(env.contract.address);
                 let open_ica = IcaConnector::new(OpenIcaAccount::new(
                     self.new_lease,
                     self.downpayment,
                     loan,
                     self.deps,
                 ));
-                let batch = open_ica.enter(deps, env)?;
-                Ok(Response::from(batch.into_response(emitter), open_ica))
+                Ok(Response::from(
+                    open_ica.enter().into_response(emitter),
+                    open_ica,
+                ))
             }
         }
     }

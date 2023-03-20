@@ -11,7 +11,10 @@ use sdk::{
     testing::CustomMessageSender,
 };
 
-use crate::common::{lease_wrapper::LeaseWrapperAddresses, ContractWrapper, MockApp};
+use crate::common::{
+    lease_wrapper::{LeaseInitConfig, LeaseWrapperAddresses},
+    ContractWrapper, MockApp,
+};
 
 use super::{
     cwcoin,
@@ -154,8 +157,7 @@ where
                     .clone()
                     .expect("Profit contract not instantiated!"),
             },
-            lease_currency,
-            1000.into(),
+            LeaseInitConfig::new(lease_currency, 1000.into(), None),
             LeaseWrapperConfig::default(),
         )
     }

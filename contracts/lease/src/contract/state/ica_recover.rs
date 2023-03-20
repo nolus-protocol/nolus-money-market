@@ -11,7 +11,7 @@ use crate::{
     error::ContractResult,
 };
 
-use super::{ica_connector::IcaConnectee, Controller};
+use super::ica_connector::{Enterable, IcaConnectee};
 
 #[derive(Serialize, Deserialize)]
 pub struct InRecovery<S> {
@@ -22,11 +22,16 @@ impl<S> InRecovery<S> {
     pub(super) fn new(state: S) -> Self {
         Self { state }
     }
+
+    pub fn into_state(self) -> S {
+        //TODO remove once the migration from V1 is done
+        self.state
+    }
 }
 
 impl<S> IcaConnectee for InRecovery<S>
 where
-    S: Controller + Into<State>,
+    S: Enterable + Into<State>,
 {
     type NextState = S;
 

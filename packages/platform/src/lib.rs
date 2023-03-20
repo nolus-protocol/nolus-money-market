@@ -9,4 +9,5 @@ pub mod error;
 pub mod ica;
 pub mod ids;
 pub mod reply;
+pub mod response;
 pub mod trx;

@@ -39,7 +39,7 @@ impl Controller for Active {
             ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => {
                 let transfer_in = TransferInInit::new(self.lease);
-                let batch = transfer_in.enter(deps.as_ref(), env)?;
+                let batch = transfer_in.enter(env.block.time)?;
                 Ok(Response::from(batch, transfer_in))
             }
             ExecuteMsg::PriceAlarm() => state::ignore_msg(self),

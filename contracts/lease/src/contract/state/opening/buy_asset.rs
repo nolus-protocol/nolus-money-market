@@ -1,30 +1,41 @@
-use cosmwasm_std::Timestamp;
-use serde::{Deserialize, Serialize};
-
-use finance::coin::{self};
+use cosmwasm_std::{Env, QuerierWrapper, Timestamp};
+use currency::lease::LeaseGroup;
+use finance::{coin::CoinDTO, currency::Symbol};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use platform::{batch::Batch as LocalBatch, ica::HostAccount, trx};
-use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper};
-use swap::trx as swap_trx;
+use platform::ica::HostAccount;
+use serde::{Deserialize, Serialize};
 
 use crate::{
-    api::{
-        dex::ConnectionParams, opening::OngoingTrx, DownpaymentCoin, LeaseCoin, NewLeaseForm,
-        StateResponse,
-    },
+    api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateResponse},
     contract::{
         cmd::OpenLoanRespResult,
-        dex::{Account, DexConnectable},
-        state::{self, opened::active::Active, Controller, Response},
-        Contract, Lease,
+        dex::Account,
+        state::{opened::active::Active, Response},
+        Lease,
     },
-    error::ContractResult,
+    error::ContractError,
+    event::Type,
     lease::IntoDTOResult,
 };
 
+use super::{
+    swap_coins,
+    swap_exact_in::SwapExactIn,
+    swap_state::{ContractInSwap, SwapState, TransferOutState},
+    swap_task::{
+        CoinVisitor, IterNext, IterState, OutChain, SwapTask as SwapTaskT, REMOTE_OUT_CHAIN,
+    },
+    transfer_out::TransferOut,
+};
+
+const OUT_CHAIN: OutChain = REMOTE_OUT_CHAIN;
+type AssetGroup = LeaseGroup;
+pub(crate) type Transfer = TransferOut<AssetGroup, BuyAsset, OUT_CHAIN>;
+pub(crate) type Swap = SwapExactIn<AssetGroup, BuyAsset, OUT_CHAIN>;
+
 #[derive(Serialize, Deserialize)]
-pub struct BuyAsset {
+pub(crate) struct BuyAsset {
     form: NewLeaseForm,
     dex_account: Account,
     downpayment: DownpaymentCoin,
@@ -33,7 +44,8 @@ pub struct BuyAsset {
 }
 
 impl BuyAsset {
-    pub(super) fn new(
+    // TODO reduce to `pub(super)` move once the migration from v1 is done
+    pub(in crate::contract::state) fn new(
         form: NewLeaseForm,
         dex_account: Account,
         downpayment: DownpaymentCoin,
@@ -49,24 +61,57 @@ impl BuyAsset {
         }
     }
 
-    fn enter_state(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
-        // TODO define struct Trx with functions build_request and decode_response -> LpnCoin
-        let mut swap_trx = self.dex_account.swap(&self.deps.1, querier);
-        // TODO apply nls_swap_fee on the downpayment only!
-        // TODO do not add a trx if the coin is of the same lease currency
-        swap_trx.swap_exact_in(&self.downpayment, &self.form.currency)?;
-        swap_trx.swap_exact_in(&self.loan.principal, &self.form.currency)?;
-        Ok(swap_trx.into())
+    fn state<InP>(self, in_progress_fn: InP) -> StateResponse
+    where
+        InP: FnOnce(String) -> OngoingTrx,
+    {
+        StateResponse::Opening {
+            downpayment: self.downpayment,
+            loan: self.loan.principal,
+            loan_interest_rate: self.loan.annual_interest_rate,
+            in_progress: in_progress_fn(HostAccount::from(self.dex_account).into()),
+        }
     }
 
-    fn on_response(
+    // fn emit_ok(&self) -> Emitter {
+    //     Emitter::of_type(Type::OpeningTransferOut)
+    // }
+}
+
+impl SwapTaskT<AssetGroup> for BuyAsset {
+    type Result = Response;
+    type Error = ContractError;
+    type Label = Type;
+
+    fn label(&self) -> Self::Label {
+        Type::OpeningSwap
+    }
+
+    fn dex_account(&self) -> &Account {
+        &self.dex_account
+    }
+
+    fn oracle(&self) -> &OracleRef {
+        &self.deps.1
+    }
+
+    fn out_currency(&self) -> Symbol<'_> {
+        &self.form.currency
+    }
+
+    fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
+    where
+        Visitor: CoinVisitor<Result = IterNext>,
+    {
+        swap_coins::on_coins(&self.downpayment, &self.loan.principal, visitor)
+    }
+
+    fn finish(
         self,
-        resp: Binary,
-        env: &Env,
+        amount: CoinDTO<AssetGroup>,
         querier: &QuerierWrapper<'_>,
-    ) -> ContractResult<Response> {
-        // TODO transfer (downpayment - transferred_and_swapped), i.e. the nls_swap_fee to the profit
-        let amount = self.decode_response(resp.as_slice())?;
+        env: Env,
+    ) -> Result<Self::Result, Self::Error> {
         let IntoDTOResult { lease, batch } = self.form.into_lease(
             env.contract.address.clone(),
             env.block.time,
@@ -78,53 +123,29 @@ impl BuyAsset {
             lease,
             dex: self.dex_account,
         });
-        let emitter = active.emit_ok(env, self.downpayment, self.loan);
+        let emitter = active.emit_ok(&env, self.downpayment, self.loan);
         Ok(Response::from(batch.into_response(emitter), active))
     }
-
-    fn decode_response(&self, resp: &[u8]) -> ContractResult<LeaseCoin> {
-        let mut resp_msgs = trx::decode_msg_responses(resp)?;
-        let downpayment_amount = swap_trx::exact_amount_in_resp(&mut resp_msgs)?;
-        let borrowed_amount = swap_trx::exact_amount_in_resp(&mut resp_msgs)?;
-
-        coin::from_amount_ticker(downpayment_amount + borrowed_amount, &self.form.currency)
-            .map_err(Into::into)
-    }
 }
 
-impl DexConnectable for BuyAsset {
-    fn dex(&self) -> &ConnectionParams {
-        self.dex_account.dex()
-    }
-}
-
-impl Controller for BuyAsset {
-    fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<LocalBatch> {
-        self.enter_state(&deps.querier)
-    }
-
-    fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        self.on_response(data, &env, &deps.querier)
-    }
-
-    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        state::on_timeout_repair_channel(self, crate::event::Type::RepaymentTransferIn, deps, env)
-    }
-}
-
-impl Contract for BuyAsset {
+impl ContractInSwap<TransferOutState> for BuyAsset {
     fn state(
         self,
         _now: Timestamp,
         _querier: &QuerierWrapper<'_>,
-    ) -> ContractResult<StateResponse> {
-        Ok(StateResponse::Opening {
-            downpayment: self.downpayment,
-            loan: self.loan.principal,
-            loan_interest_rate: self.loan.annual_interest_rate,
-            in_progress: OngoingTrx::BuyAsset {
-                ica_account: HostAccount::from(self.dex_account).into(),
-            },
-        })
+    ) -> Result<StateResponse, ContractError> {
+        let in_progress_fn = |ica_account| OngoingTrx::TransferOut { ica_account };
+        Ok(self.state(in_progress_fn))
+    }
+}
+
+impl ContractInSwap<SwapState> for BuyAsset {
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> Result<StateResponse, ContractError> {
+        let in_progress_fn = |ica_account| OngoingTrx::BuyAsset { ica_account };
+        Ok(self.state(in_progress_fn))
     }
 }

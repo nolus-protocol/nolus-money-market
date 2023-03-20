@@ -1,6 +1,6 @@
 use std::cmp;
 
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Serialize};
 
 use finance::{
     coin::Coin, currency::Currency, duration::Duration, interest::InterestPeriod, percent::Percent,
@@ -8,20 +8,9 @@ use finance::{
 use sdk::{
     cosmwasm_std::{Addr, StdResult, Storage, Timestamp},
     cw_storage_plus::Map,
-    schemars::{self, JsonSchema},
 };
 
-use crate::error::ContractError;
-
-#[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
-pub struct LoanData<LPN>
-where
-    LPN: Currency,
-{
-    pub principal_due: Coin<LPN>,
-    pub annual_interest_rate: Percent,
-    pub interest_paid: Timestamp,
-}
+use crate::{error::ContractError, loan::LoanData};
 
 pub struct Loan<LPN>
 where
@@ -123,39 +112,15 @@ where
     pub fn query(storage: &dyn Storage, lease_addr: Addr) -> StdResult<Option<LoanData<LPN>>> {
         Self::STORAGE.may_load(storage, lease_addr)
     }
-
-    pub fn query_outstanding_interest(
-        storage: &dyn Storage,
-        lease_addr: Addr,
-        outstanding_time: Timestamp,
-    ) -> StdResult<Option<Coin<LPN>>> {
-        let maybe_loan = Self::STORAGE.may_load(storage, lease_addr)?;
-
-        if let Some(loan) = maybe_loan {
-            let delta_t = Duration::between(
-                loan.interest_paid,
-                cmp::max(outstanding_time, loan.interest_paid),
-            );
-
-            let interest_period = InterestPeriod::with_interest(loan.annual_interest_rate)
-                .from(loan.interest_paid)
-                .spanning(delta_t);
-
-            let outstanding_interest_amount = interest_period.interest(loan.principal_due);
-
-            Ok(Some(outstanding_interest_amount))
-        } else {
-            Ok(None)
-        }
-    }
 }
 
 #[cfg(test)]
 mod test {
-    use finance::{duration::Duration, test::currency::Usdc};
+    use cosmwasm_std::{Addr, Timestamp};
+    use finance::{coin::Coin, duration::Duration, percent::Percent, test::currency::Usdc};
     use sdk::cosmwasm_std::testing;
 
-    use super::*;
+    use crate::{error::ContractError, state::Loan};
 
     #[test]
     fn test_open_and_repay_loan() {
@@ -186,10 +151,7 @@ mod test {
             Loan::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 
         time = Timestamp::from_nanos(Duration::YEAR.nanos() / 2);
-        let interest: Coin<Usdc> =
-            Loan::query_outstanding_interest(deps.as_ref().storage, addr.clone(), time)
-                .expect("should query interest")
-                .expect("should be some interest");
+        let interest: Coin<Usdc> = loan.data.interest_due(time);
         assert_eq!(interest, 100u128.into());
 
         // partial repay

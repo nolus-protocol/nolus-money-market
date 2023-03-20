@@ -15,6 +15,7 @@ artifacts
 *.iml
 .idea
 /artifacts
+.vscode
 
 # Deploying process
 setup-dev-network.zip

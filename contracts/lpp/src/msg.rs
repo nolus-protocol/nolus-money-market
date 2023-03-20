@@ -9,11 +9,11 @@ use finance::{
     price::Price,
 };
 use sdk::{
-    cosmwasm_std::{Addr, Timestamp, Uint128},
+    cosmwasm_std::{Addr, Uint128},
     schemars::{self, JsonSchema},
 };
 
-use crate::{borrow::InterestRate, nlpn::NLpn};
+use crate::{borrow::InterestRate, loan::LoanData, nlpn::NLpn};
 
 pub type LppCoin = CoinDTO<Lpns>;
 
@@ -25,7 +25,9 @@ pub struct InstantiateMsg {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub contract_owner: Addr,
+}
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(Debug))]
@@ -56,11 +58,6 @@ pub enum QueryMsg {
     Loan {
         lease_addr: Addr,
     },
-    LoanOutstandingInterest {
-        lease_addr: Addr,
-        outstanding_time: Timestamp,
-    },
-
     // Deposit
     /// CW20 interface, lender deposit balance
     Balance {
@@ -81,27 +78,9 @@ pub enum QueryQuoteResponse {
     NoLiquidity,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct LoanResponse<Lpn>
-where
-    Lpn: Currency,
-{
-    pub principal_due: Coin<Lpn>,
-    pub interest_due: Coin<Lpn>,
-    pub annual_interest_rate: Percent,
-    pub interest_paid: Timestamp,
-}
+pub type LoanResponse<Lpn> = LoanData<Lpn>;
 
 pub type QueryLoanResponse<Lpn> = Option<LoanResponse<Lpn>>;
-
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub struct OutstandingInterest<Lpn>(pub Coin<Lpn>)
-where
-    Lpn: Currency;
-
-pub type QueryLoanOutstandingInterestResponse<Lpn> = Option<OutstandingInterest<Lpn>>;
 
 // Deposit query responses
 

@@ -218,7 +218,6 @@ mod tests {
         coin::Coin,
         currency::{self, Currency},
         duration::Duration,
-        interest::InterestPeriod,
         liability::Liability,
         percent::Percent,
         price::Price,
@@ -226,7 +225,7 @@ mod tests {
     };
     use lpp::{
         error::ContractError as LppError,
-        msg::{LoanResponse, OutstandingInterest, QueryLoanResponse},
+        msg::{LoanResponse, QueryLoanResponse},
         stub::{
             lender::{LppLender, LppLenderRef},
             LppBatch,
@@ -269,7 +268,6 @@ mod tests {
             principal_due: Coin::from(100),
             annual_interest_rate: Percent::from_percent(10),
             interest_paid: LEASE_START,
-            interest_due: Coin::ZERO,
         }
     }
     pub struct MockBankView {
@@ -343,20 +341,6 @@ mod tests {
             Ok(self.loan.clone())
         }
 
-        fn loan_outstanding_interest(
-            &self,
-            _lease: impl Into<Addr>,
-            by: Timestamp,
-        ) -> LppResult<lpp::msg::QueryLoanOutstandingInterestResponse<Lpn>> {
-            Ok(self.loan.as_ref().map(|loan| {
-                OutstandingInterest(
-                    InterestPeriod::with_interest(loan.annual_interest_rate)
-                        .spanning(Duration::between(loan.interest_paid, by))
-                        .interest(loan.principal_due),
-                )
-            }))
-        }
-
         fn quote(&self, _amount: Coin<Lpn>) -> LppResult<lpp::msg::QueryQuoteResponse> {
             unreachable!()
         }
@@ -403,14 +387,6 @@ mod tests {
         }
 
         fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestLpn>> {
-            unreachable!()
-        }
-
-        fn loan_outstanding_interest(
-            &self,
-            _lease: impl Into<Addr>,
-            _by: Timestamp,
-        ) -> LppResult<lpp::msg::QueryLoanOutstandingInterestResponse<TestLpn>> {
             unreachable!()
         }
 
@@ -714,7 +690,6 @@ mod tests {
         // LPP loan
         let loan = LoanResponse {
             principal_due: lpn_coin(300),
-            interest_due: lpn_coin(0),
             annual_interest_rate: interest_rate,
             interest_paid: Timestamp::from_nanos(0),
         };

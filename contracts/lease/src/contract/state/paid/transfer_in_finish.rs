@@ -19,9 +19,15 @@ use super::transfer_in_init::TransferInInit;
 #[derive(Serialize, Deserialize)]
 pub struct TransferInFinish {
     lease: Lease,
+    timeout: Timestamp,
 }
 
 impl TransferInFinish {
+    //TODO revert it back to `pub(super)` once the migration from v1 is done
+    pub(in crate::contract::state) fn new(lease: Lease, timeout: Timestamp) -> Self {
+        Self { lease, timeout }
+    }
+
     pub(super) fn try_complete(
         self,
         querier: &QuerierWrapper<'_>,
@@ -37,9 +43,15 @@ impl TransferInFinish {
             (closed.into(), batch.into_response(emitter))
         } else {
             let emitter = self.emit_ok();
-            let batch =
-                transfer_in::setup_alarm(self.lease.lease.time_alarms.clone(), env.block.time)?;
-            (self.into(), batch.into_response(emitter))
+            if env.block.time >= self.timeout {
+                let back_to_init = TransferInInit::new(self.lease);
+                let batch = back_to_init.enter(env.block.time)?;
+                (back_to_init.into(), batch.into_response(emitter))
+            } else {
+                let batch =
+                    transfer_in::setup_alarm(self.lease.lease.time_alarms.clone(), env.block.time)?;
+                (self.into(), batch.into_response(emitter))
+            }
         };
         Ok(Response::from(cw_resp, next_state))
     }
@@ -52,12 +64,6 @@ impl TransferInFinish {
         Emitter::of_type(Type::ClosingTransferIn)
             .emit("id", self.lease.lease.addr.clone())
             .emit_coin_dto("payment", self.lease.lease.amount.clone())
-    }
-}
-
-impl From<TransferInInit> for TransferInFinish {
-    fn from(init: TransferInInit) -> Self {
-        Self { lease: init.lease }
     }
 }
 

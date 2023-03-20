@@ -18,7 +18,7 @@ use swap::trx;
 
 use crate::{api::dex::ConnectionParams, error::ContractResult};
 
-const IBC_TIMEOUT: Duration = Duration::from_secs(60);
+pub(super) const IBC_TIMEOUT: Duration = Duration::from_secs(60);
 
 //TODO take them as input from the client
 const ICA_TRANSFER_ACK_TIP: Coin<Nls> = Coin::new(1);
@@ -36,7 +36,7 @@ pub(crate) trait DexConnectable {
 pub(crate) struct Account {
     /// The contract at Nolus that owns the account
     owner: Addr,
-    dex_account: HostAccount, // TODO rename to `ica_account`
+    dex_account: HostAccount,
     dex: ConnectionParams,
 }
 

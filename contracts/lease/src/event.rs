@@ -1,7 +1,7 @@
 pub enum Type {
     RequestLoan,
     OpenIcaAccount,
-    OpeningTransferOut,
+    OpeningSwap,
     OpenedActive,
     RepaymentTransferOut,
     BuyLpn,
@@ -19,7 +19,7 @@ impl Type {
         match self {
             Self::RequestLoan => "ls-request-loan",
             Self::OpenIcaAccount => "ls-open-dex-account",
-            Self::OpeningTransferOut => "ls-open-transfer-out",
+            Self::OpeningSwap => "ls-open-swap",
             Self::OpenedActive => "ls-open",
             Self::RepaymentTransferOut => "ls-repay-transfer-out",
             Self::BuyLpn => "ls-repay-buy-lpn",

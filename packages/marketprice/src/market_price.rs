@@ -82,7 +82,7 @@ impl<'m> PriceFeeds<'m> {
         )
     }
 
-    fn price_of_feed<C, QuoteC>(
+    pub fn price_of_feed<C, QuoteC>(
         &self,
         storage: &dyn Storage,
         at: Timestamp,

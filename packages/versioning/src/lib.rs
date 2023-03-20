@@ -9,6 +9,9 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
+mod release;
+pub use release::release;
+
 pub type VersionSegment = u16;
 
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Serialize, Deserialize)]
@@ -98,17 +101,16 @@ pub fn update_software(storage: &mut dyn Storage, version: Version) -> StdResult
 }
 
 pub fn update_software_and_storage<
-    'r,
     const FROM_STORAGE_VERSION: VersionSegment,
     MigrateStorageFunctor,
     MigrateStorageError,
 >(
-    storage: &'r mut dyn Storage,
+    storage: &mut dyn Storage,
     version: Version,
     migrate_storage: MigrateStorageFunctor,
 ) -> Result<(), MigrateStorageError>
 where
-    MigrateStorageFunctor: FnOnce(&'r mut dyn Storage) -> Result<(), MigrateStorageError>,
+    MigrateStorageFunctor: FnOnce(&mut dyn Storage) -> Result<(), MigrateStorageError>,
     MigrateStorageError: From<StdError> + Error,
 {
     if version.storage == FROM_STORAGE_VERSION {
@@ -138,7 +140,8 @@ fn update_version(
             )));
         }
 
-        if saved_version.software < version.software {
+        if saved_version.software < version.software
+            || (release::dev_release() && saved_version.software == version.software) {
             Ok(version)
         } else {
             Err(StdError::generic_err(

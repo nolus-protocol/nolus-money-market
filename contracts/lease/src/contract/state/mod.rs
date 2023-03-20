@@ -1,6 +1,6 @@
 use cosmwasm_std::{Addr, Binary, StdResult, Storage};
 use enum_dispatch::enum_dispatch;
-use platform::batch::{Batch, Emit, Emitter};
+use platform::batch::{Emit, Emitter};
 use serde::{Deserialize, Serialize};
 use std::str;
 
@@ -10,12 +10,16 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-use crate::{api::ExecuteMsg, error::ContractResult, event::Type};
+use crate::{api::ExecuteMsg, error::ContractResult};
 
 use self::{
-    closed::Closed, controller::Controller, ica_connector::IcaConnector, ica_recover::InRecovery,
-    opened::repay::buy_lpn::BuyLpn, opening::buy_asset::BuyAsset,
+    closed::Closed,
+    controller::Controller,
+    ica_connector::{Enterable, IcaConnector},
+    ica_recover::InRecovery,
+    opened::repay::buy_lpn::BuyLpn,
     opening::request_loan::RequestLoan,
+    v1::StateV1,
 };
 pub use controller::{execute, instantiate, migrate, query, reply, sudo};
 
@@ -29,19 +33,24 @@ mod opened;
 mod opening;
 mod paid;
 mod transfer_in;
-mod v0;
+mod v1;
 
 type OpenIcaAccount = ica_connector::IcaConnector<opening::open_ica::OpenIcaAccount>;
-type OpeningTransferOut = opening::transfer_out::TransferOut;
+type OpeningTransferOut = opening::buy_asset::Transfer;
+type BuyAsset = opening::buy_asset::Swap;
 type BuyAssetRecoverIca = ica_connector::IcaConnector<ica_recover::InRecovery<BuyAsset>>;
+
 type OpenedActive = opened::active::Active;
+
 type RepaymentTransferOut = opened::repay::transfer_out::TransferOut;
 type BuyLpnRecoverIca = ica_connector::IcaConnector<ica_recover::InRecovery<BuyLpn>>;
 type RepaymentTransferInInit = opened::repay::transfer_in_init::TransferInInit;
 type RepaymentTransferInInitRecoverIca =
     ica_connector::IcaConnector<ica_recover::InRecovery<RepaymentTransferInInit>>;
 type RepaymentTransferInFinish = opened::repay::transfer_in_finish::TransferInFinish;
+
 type PaidActive = paid::Active;
+
 type ClosingTransferInInit = paid::transfer_in_init::TransferInInit;
 type ClosingTransferInInitRecoverIca =
     ica_connector::IcaConnector<ica_recover::InRecovery<ClosingTransferInInit>>;
@@ -75,9 +84,8 @@ pub(super) fn load(storage: &dyn Storage) -> StdResult<State> {
     STATE_DB_ITEM.load(storage)
 }
 
-pub(super) fn load_old_v1(storage: &dyn Storage) -> StdResult<v0::StateV0> {
-    let old_db_item = Item::new(str::from_utf8(STATE_DB_ITEM.as_slice())?);
-    old_db_item.load(storage)
+fn load_v1(storage: &dyn Storage) -> StdResult<StateV1> {
+    Item::new("state").load(storage)
 }
 
 pub(super) fn save(storage: &mut dyn Storage, next_state: &State) -> StdResult<()> {
@@ -102,40 +110,59 @@ impl Response {
     }
 }
 
-fn on_timeout_retry<L>(
-    current_state: L,
-    event_type: Type,
+fn on_timeout_retry<S, L>(
+    current_state: S,
+    state_label: L,
     deps: Deps<'_>,
     env: Env,
 ) -> ContractResult<Response>
 where
-    L: Controller + Into<State>,
+    S: Enterable + Into<State>,
+    L: Into<String>,
 {
-    let emitter = emit_timeout(event_type, env.contract.address.clone());
+    let emitter = emit_timeout(
+        state_label,
+        env.contract.address.clone(),
+        TimeoutPolicy::Retry,
+    );
     let batch = current_state.enter(deps, env)?;
     Ok(Response::from(batch.into_response(emitter), current_state))
 }
 
-fn on_timeout_repair_channel<L>(
-    current_state: L,
-    event_type: Type,
-    deps: Deps<'_>,
+fn on_timeout_repair_channel<S, L>(
+    current_state: S,
+    state_label: L,
+    _deps: Deps<'_>,
     env: Env,
 ) -> ContractResult<Response>
 where
-    L: Controller + DexConnectable + Into<State>,
-    IcaConnector<InRecovery<L>>: Into<State>,
+    S: Enterable + Controller + DexConnectable + Into<State>,
+    IcaConnector<InRecovery<S>>: Into<State>,
+    L: Into<String>,
 {
-    let emitter = emit_timeout(event_type, env.contract.address.clone());
+    let emitter = emit_timeout(
+        state_label,
+        env.contract.address,
+        TimeoutPolicy::RepairICS27Channel,
+    );
     let recover_ica = IcaConnector::new(InRecovery::new(current_state));
-    let batch = recover_ica.enter(deps, env)?;
+    let batch = recover_ica.enter();
     Ok(Response::from(batch.into_response(emitter), recover_ica))
 }
 
-fn emit_timeout(event_type: Type, contract: Addr) -> Emitter {
-    Emitter::of_type(event_type)
+#[derive(Debug)]
+enum TimeoutPolicy {
+    Retry,
+    RepairICS27Channel,
+}
+
+fn emit_timeout<L>(state_label: L, contract: Addr, policy: TimeoutPolicy) -> Emitter
+where
+    L: Into<String>,
+{
+    Emitter::of_type(state_label)
         .emit("id", contract)
-        .emit("timeout", "")
+        .emit("timeout", format!("{:?}", policy))
 }
 
 fn ignore_msg<S>(state: S) -> ContractResult<Response>

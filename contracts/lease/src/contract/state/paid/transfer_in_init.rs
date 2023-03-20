@@ -7,8 +7,8 @@ use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 use crate::{
     api::{dex::ConnectionParams, paid::ClosingTrx, ExecuteMsg, StateResponse},
     contract::{
-        dex::DexConnectable,
-        state::{self, controller, Controller, Response},
+        dex::{self, DexConnectable},
+        state::{self, controller, ica_connector::Enterable, Controller, Response},
         Contract, Lease,
     },
     error::ContractResult,
@@ -19,7 +19,7 @@ use super::transfer_in_finish::TransferInFinish;
 
 #[derive(Serialize, Deserialize)]
 pub struct TransferInInit {
-    pub(super) lease: Lease,
+    lease: Lease,
 }
 
 impl TransferInInit {
@@ -27,14 +27,15 @@ impl TransferInInit {
         Self { lease }
     }
 
-    fn enter_state(&self, now: Timestamp) -> ContractResult<Batch> {
+    pub(super) fn enter(&self, now: Timestamp) -> ContractResult<Batch> {
         let mut sender = self.lease.dex.transfer_from(now);
         sender.send(&self.lease.lease.amount)?;
         Ok(sender.into())
     }
 
     fn on_response(self, env: &Env, querier: &QuerierWrapper<'_>) -> ContractResult<Response> {
-        TransferInFinish::from(self).try_complete(querier, env)
+        let finish = TransferInFinish::new(self.lease, env.block.time + dex::IBC_TIMEOUT);
+        finish.try_complete(querier, env)
     }
 }
 
@@ -44,11 +45,13 @@ impl DexConnectable for TransferInInit {
     }
 }
 
-impl Controller for TransferInInit {
+impl Enterable for TransferInInit {
     fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
-        self.enter_state(env.block.time)
+        self.enter(env.block.time)
     }
+}
 
+impl Controller for TransferInInit {
     fn execute(
         self,
         deps: &mut DepsMut<'_>,

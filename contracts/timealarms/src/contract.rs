@@ -1,3 +1,4 @@
+use platform::response;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -9,7 +10,7 @@ use versioning::{package_version, version, VersionSegment};
 use crate::{
     alarms::TimeAlarms,
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
 };
 
 // version info for migration info
@@ -28,14 +29,11 @@ pub fn instantiate(
     Ok(Response::default())
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct MigrateMsg {}
-
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    Ok(Response::default())
+    response::response(versioning::release()).map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

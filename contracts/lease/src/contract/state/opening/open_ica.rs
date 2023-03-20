@@ -18,14 +18,14 @@ use crate::{
     error::ContractResult,
 };
 
-use super::transfer_out::TransferOut;
+use super::buy_asset::{BuyAsset, Transfer};
 
 #[derive(Serialize, Deserialize)]
 pub struct OpenIcaAccount {
-    new_lease: NewLeaseContract,
-    downpayment: DownpaymentCoin,
-    loan: OpenLoanRespResult,
-    deps: (LppLenderRef, OracleRef),
+    pub(in crate::contract::state) new_lease: NewLeaseContract, //TODO make them private once the migration is removed
+    pub(in crate::contract::state) downpayment: DownpaymentCoin,
+    pub(in crate::contract::state) loan: OpenLoanRespResult,
+    pub(in crate::contract::state) deps: (LppLenderRef, OracleRef),
 }
 
 impl OpenIcaAccount {
@@ -45,16 +45,16 @@ impl OpenIcaAccount {
 }
 
 impl IcaConnectee for OpenIcaAccount {
-    type NextState = TransferOut;
+    type NextState = Transfer;
 
     fn connected(self, dex_account: Account) -> Self::NextState {
-        TransferOut::new(
+        Self::NextState::new(BuyAsset::new(
             self.new_lease.form,
             dex_account,
             self.downpayment,
             self.loan,
             self.deps,
-        )
+        ))
     }
 }
 
