@@ -52,10 +52,16 @@ runs:
               echo "There are ${large_files_count} files with size larger than allowed limit!"
               echo "Those are files are the following:"
               eval "${find_files_cmd}"
-            ) >> $GITHUB_STEP_SUMMARY
+            ) >> "${GITHUB_STEP_SUMMARY}"
             exit 1
           );
         fi
+    - shell: "sh"
+      run: |
+        (
+          RELEASE_VERSION="${{ github.ref_name }}-$(date -Iminute)"
+          echo "Release version for ${{ inputs.target_net }}-net: \`${RELEASE_VERSION}\`"
+        ) >> "${GITHUB_STEP_SUMMARY}"
     - name: "Copy deployment script to artifacts directory"
       shell: "sh"
       run: "sudo cp \"scripts/deploy-contracts-genesis.sh\" \"artifacts/\""
