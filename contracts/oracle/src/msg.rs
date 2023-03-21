@@ -51,6 +51,15 @@ pub enum ExecuteMsg {
     },
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
+#[serde(rename_all = "snake_case")]
+pub enum SudoMsg {
+    /// The aim is to remove price alarms for leases that are in 
+    /// the process of decommissioning
+    RemovePriceAlarm { receiver: Addr },
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum QueryMsg {

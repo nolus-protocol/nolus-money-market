@@ -93,10 +93,6 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                 )?;
                 Ok(Response::default())
             }
-            ExecuteMsg::RemovePriceAlarm {} => {
-                MarketAlarms::remove(self.deps.storage, self.sender)?;
-                Ok(Response::default())
-            }
             _ => {
                 unreachable!()
             }

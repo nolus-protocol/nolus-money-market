@@ -1,4 +1,5 @@
 use access_control::SingleUserAccess;
+use cosmwasm_std::Storage;
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
 use platform::response;
@@ -12,7 +13,7 @@ use versioning::{package_version, version, VersionSegment};
 
 use crate::{
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     state::supported_pairs::SupportedPairs,
 };
 
@@ -120,30 +121,47 @@ pub fn execute(
         ExecuteMsg::RemoveFeeder { feeder_address } => {
             Feeders::try_remove(deps, info, feeder_address)
         }
+        ExecuteMsg::RemovePriceAlarm {} => {
+            MarketAlarms::remove(deps.storage, info.sender)?;
+            Ok(Response::default())
+        }
         _ => Ok(ExecWithOracleBase::cmd(deps, env, msg, info.sender)?),
     }
 }
 
-// TODO: compare gas usage of this solution vs reply on error
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
+    match msg {
+        SudoMsg::RemovePriceAlarm { receiver } => {
+            MarketAlarms::remove(deps.storage, receiver)?;
+            Ok(Response::default())
+        }
+    }
+}
+
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let resp = match msg.result {
-        cosmwasm_std::SubMsgResult::Ok(resp) => {
-            let data = match resp.data {
-                Some(d) => d,
-                None => return Ok(err_as_ok("No data")),
-            };
-            MarketAlarms::remove(deps.storage, from_binary(&data)?)?;
-            Response::new().add_attribute("alarm", "success")
-        }
-        cosmwasm_std::SubMsgResult::Err(err) => Response::new()
-            .add_attribute("alarm", "error")
-            .add_attribute("error", err),
+        cosmwasm_std::SubMsgResult::Ok(resp) => match resp.data {
+            Some(d) => on_success_alarm(deps.storage, d)?,
+            None => on_err_alarm(
+                "Market alarm receiver's contract not respected! No receiver response!",
+            ),
+        },
+        cosmwasm_std::SubMsgResult::Err(err) => on_err_alarm(err),
     };
     Ok(resp)
 }
 
-fn err_as_ok(err: &str) -> Response {
+fn on_success_alarm(storage: &mut dyn Storage, resp: Binary) -> Result<Response, ContractError> {
+    MarketAlarms::remove(storage, from_binary(&resp)?)?;
+    Ok(Response::new().add_attribute("alarm", "success"))
+}
+
+fn on_err_alarm<S>(err: S) -> Response
+where
+    S: Into<String>,
+{
     Response::new()
         .add_attribute("alarm", "error")
         .add_attribute("error", err)
