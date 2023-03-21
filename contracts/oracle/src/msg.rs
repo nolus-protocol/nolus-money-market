@@ -55,7 +55,7 @@ pub enum ExecuteMsg {
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(rename_all = "snake_case")]
 pub enum SudoMsg {
-    /// The aim is to remove price alarms for leases that are in 
+    /// The aim is to remove price alarms for leases that are in
     /// the process of decommissioning
     RemovePriceAlarm { receiver: Addr },
 }

@@ -10,7 +10,7 @@ use versioning::{package_version, version, VersionSegment};
 use crate::{
     alarms::TimeAlarms,
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
 };
 
 // version info for migration info
@@ -47,6 +47,16 @@ pub fn execute(
         ExecuteMsg::AddAlarm { time } => TimeAlarms::try_add(deps, env, info.sender, time),
         ExecuteMsg::DispatchAlarms { max_count } => {
             TimeAlarms::try_notify(deps.storage, env.block.time, max_count)
+        }
+    }
+}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn sudo(_deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
+    match msg {
+        SudoMsg::RemoveTimeAlarm { receiver: _ } => {
+            // TimeAlarms::remove(deps.storage, receiver)?;
+            Ok(Response::default())
         }
     }
 }
