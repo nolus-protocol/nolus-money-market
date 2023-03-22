@@ -29,7 +29,6 @@ pub struct TransferInFinish {
 }
 
 impl TransferInFinish {
-
     pub(super) fn new(
         lease: Lease,
         payment: PaymentCoin,

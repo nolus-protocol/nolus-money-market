@@ -23,7 +23,6 @@ pub struct TransferInFinish {
 }
 
 impl TransferInFinish {
-
     pub(super) fn new(lease: Lease, timeout: Timestamp) -> Self {
         Self { lease, timeout }
     }

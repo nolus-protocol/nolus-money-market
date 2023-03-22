@@ -45,7 +45,6 @@ pub(crate) struct BuyAsset {
 }
 
 impl BuyAsset {
-
     pub(super) fn new(
         form: NewLeaseForm,
         dex_account: Account,

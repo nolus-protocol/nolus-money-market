@@ -44,7 +44,6 @@ pub(crate) struct SwapExactIn<OutG, SwapTask, const SWAP_OUT_CHAIN: OutChain> {
 }
 
 impl<OutG, SwapTask, const SWAP_OUT_CHAIN: OutChain> SwapExactIn<OutG, SwapTask, SWAP_OUT_CHAIN> {
-
     pub(super) fn new(spec: SwapTask) -> Self {
         Self {
             spec,
