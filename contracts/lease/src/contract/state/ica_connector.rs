@@ -5,37 +5,51 @@ use platform::{
     batch::{Batch, Emit, Emitter},
     ica::HostAccount,
 };
-use sdk::cosmwasm_std::{Addr, Deps, Env};
+use sdk::cosmwasm_std::{Deps, Env};
 
 use crate::{
     api::StateResponse,
     contract::{
         dex::{Account, DexConnectable},
-        state::{self, Controller, Response},
+        state::{self, ica_post_connector::PostConnector, Controller, Response},
         Contract,
     },
     error::ContractResult,
     event::Type,
 };
 
-use super::State;
+use super::{ica_post_connector::Postpone, State};
 
 pub(crate) trait Enterable {
     fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<Batch>;
 }
 
+/// Entity expecting to be connected to ICA
+///
+/// Due to the fact that at the time we get the acknowledgement the underlying channel
+/// is not yet fully functional, we are not allowed to use it right away.
+/// There are usecases that do not use it immediatelly so they are ok to go at
+/// this "preconnection" state. The others should be called in a next block to the
+/// one that delivers the acknowledgement. Usually that could be done with
+/// a time alarm.
 pub(crate) trait IcaConnectee {
+    /// Designates if this entity is ready to process the ICA connection at
+    /// its "preconnection" state.
+    ///
+    /// If true they do other non-ICS27 channel activities.
+    /// If false they rely on a fully functional, and with an open underlying channel, ICA.
+    const PRECONNECTABLE: bool;
     type NextState: Enterable + Into<State>;
 
     fn connected(self, ica_account: Account) -> Self::NextState;
 }
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct IcaConnector<Connectee> {
+pub(crate) struct IcaConnector<const PRECONNECTABLE: bool, Connectee> {
     pub(super) connectee: Connectee, //TODO make private once the migration is done
 }
 
-impl<Connectee> IcaConnector<Connectee>
+impl<const PRECONNECTABLE: bool, Connectee> IcaConnector<PRECONNECTABLE, Connectee>
 where
     Connectee: IcaConnectee + DexConnectable,
 {
@@ -47,33 +61,24 @@ where
         Account::register_request(self.connectee.dex())
     }
 
-    fn on_response(
-        self,
-        counterparty_version: String,
-        deps: Deps<'_>,
-        env: Env,
-    ) -> ContractResult<Response> {
-        let contract = &env.contract.address;
-        let ica_account = Account::from_register_response(
+    fn build_account(&self, counterparty_version: String, env: &Env) -> ContractResult<Account> {
+        let contract = env.contract.address.clone();
+        Account::from_register_response(
             &counterparty_version,
-            contract.clone(),
+            contract,
             self.connectee.dex().clone(),
-        )?;
-
-        let emitter = Self::emit_ok(contract.clone(), ica_account.ica_account().clone());
-        let next_state = self.connectee.connected(ica_account);
-        let batch = next_state.enter(deps, env)?;
-        Ok(Response::from(batch.into_response(emitter), next_state))
+        )
     }
 
-    fn emit_ok(contract: Addr, dex_account: HostAccount) -> Emitter {
+    fn emit_ok(env: &Env, dex_account: HostAccount) -> Emitter {
+        let contract = env.contract.address.clone();
         Emitter::of_type(Type::OpenIcaAccount)
             .emit("id", contract)
             .emit("dex_account", dex_account)
     }
 }
 
-impl<Connectee> Enterable for IcaConnector<Connectee>
+impl<const PRECONNECTABLE: bool, Connectee> Enterable for IcaConnector<PRECONNECTABLE, Connectee>
 where
     Connectee: IcaConnectee + DexConnectable,
 {
@@ -82,7 +87,7 @@ where
     }
 }
 
-impl<Connectee> Controller for IcaConnector<Connectee>
+impl<Connectee> Controller for IcaConnector<true, Connectee>
 where
     Self: Into<State>,
     Connectee: IcaConnectee + DexConnectable,
@@ -93,7 +98,12 @@ where
         deps: Deps<'_>,
         env: Env,
     ) -> ContractResult<Response> {
-        self.on_response(counterparty_version, deps, env)
+        let ica = self.build_account(counterparty_version, &env)?;
+
+        let emitter = Self::emit_ok(&env, ica.ica_account().clone());
+        let next_state = self.connectee.connected(ica);
+        let batch = next_state.enter(deps, env)?;
+        Ok(Response::from(batch.into_response(emitter), next_state))
     }
 
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
@@ -101,7 +111,32 @@ where
     }
 }
 
-impl<Connectee> Contract for IcaConnector<Connectee>
+impl<Connectee> Controller for IcaConnector<false, Connectee>
+where
+    Self: Into<State>,
+    PostConnector<Connectee>: Into<State>,
+    Connectee: IcaConnectee + DexConnectable + Postpone,
+{
+    fn on_open_ica(
+        self,
+        counterparty_version: String,
+        deps: Deps<'_>,
+        env: Env,
+    ) -> ContractResult<Response> {
+        let ica = self.build_account(counterparty_version, &env)?;
+
+        let emitter = Self::emit_ok(&env, ica.ica_account().clone());
+        let next_state = PostConnector::new(self.connectee, ica);
+        let batch = next_state.enter(env.block.time, &deps.querier)?;
+        Ok(Response::from(batch.into_response(emitter), next_state))
+    }
+
+    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        state::on_timeout_retry(self, Type::OpenIcaAccount, deps, env)
+    }
+}
+
+impl<const PRECONNECTABLE: bool, Connectee> Contract for IcaConnector<PRECONNECTABLE, Connectee>
 where
     Connectee: Contract,
 {

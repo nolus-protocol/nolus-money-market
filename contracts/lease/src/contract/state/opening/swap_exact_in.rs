@@ -22,6 +22,7 @@ use crate::{
             self,
             controller::Controller,
             ica_connector::{Enterable, IcaConnector},
+            ica_post_connector::Postpone,
             ica_recover::InRecovery,
             opening::swap_task::{CoinVisitor, IterNext, SwapTask as SwapTaskT},
             Response, State,
@@ -139,7 +140,7 @@ where
     OutG: Group,
     SwapTask: SwapTaskT<OutG, Result = Response, Error = ContractError>,
     Self: Into<State>,
-    IcaConnector<InRecovery<Self>>: Into<State>,
+    IcaConnector<false, InRecovery<Self>>: Into<State>,
 {
     fn on_response(self, resp: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         // TODO transfer (downpayment - transferred_and_swapped), i.e. the nls_swap_fee to the profit
@@ -147,9 +148,9 @@ where
         self.spec.finish(amount, &deps.querier, env)
     }
 
-    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+    fn on_timeout(self, _deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         let state_label = self.spec.label();
-        state::on_timeout_repair_channel(self, state_label, deps, env)
+        state::on_timeout_repair_channel(self, state_label, env)
     }
 }
 
@@ -160,6 +161,18 @@ where
 {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         self.spec.state(now, querier)
+    }
+}
+
+impl<OutG, SwapTask, const SWAP_OUT_CHAIN: OutChain> Postpone
+    for SwapExactIn<OutG, SwapTask, SWAP_OUT_CHAIN>
+where
+    SwapTask: SwapTaskT<OutG>,
+    ContractError: From<SwapTask::Error>,
+{
+    fn setup_alarm(&self, when: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<Batch> {
+        let time_alarms = self.spec.time_alarm(querier)?;
+        time_alarms.setup_alarm(when).map_err(Into::into)
     }
 }
 

@@ -4,6 +4,7 @@ use finance::{
     currency::{Group, Symbol},
 };
 use oracle::stub::OracleRef;
+use timealarms::stub::TimeAlarmsRef;
 
 use crate::contract::dex::Account;
 
@@ -23,6 +24,7 @@ pub(crate) trait SwapTask<OutG> {
     fn label(&self) -> Self::Label;
     fn dex_account(&self) -> &Account;
     fn oracle(&self) -> &OracleRef;
+    fn time_alarm(&self, querier: &QuerierWrapper<'_>) -> Result<TimeAlarmsRef, Self::Error>;
     fn out_currency(&self) -> Symbol<'_>;
 
     /// Call back the worker with each coin this swap is about.

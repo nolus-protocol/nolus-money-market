@@ -8,7 +8,10 @@ use crate::{
     api::{dex::ConnectionParams, paid::ClosingTrx, ExecuteMsg, StateResponse},
     contract::{
         dex::{self, DexConnectable},
-        state::{self, controller, ica_connector::Enterable, Controller, Response},
+        state::{
+            self, controller, ica_connector::Enterable, ica_post_connector::Postpone, Controller,
+            Response,
+        },
         Contract, Lease,
     },
     error::ContractResult,
@@ -71,8 +74,8 @@ impl Controller for TransferInInit {
         self.on_response(&env, &deps.querier)
     }
 
-    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        state::on_timeout_repair_channel(self, Type::ClosingTransferIn, deps, env)
+    fn on_timeout(self, _deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        state::on_timeout_repair_channel(self, Type::ClosingTransferIn, env)
     }
 }
 
@@ -86,5 +89,12 @@ impl Contract for TransferInInit {
             amount: self.lease.lease.amount,
             in_progress: Some(ClosingTrx::TransferInInit),
         })
+    }
+}
+
+impl Postpone for TransferInInit {
+    fn setup_alarm(&self, when: Timestamp, _querier: &QuerierWrapper<'_>) -> ContractResult<Batch> {
+        let time_alarms = self.lease.lease.time_alarms.clone();
+        time_alarms.setup_alarm(when).map_err(Into::into)
     }
 }

@@ -55,6 +55,22 @@ impl TimeAlarmsRef {
         cmd.exec(self.into_stub())
     }
 
+    pub fn setup_alarm(self, when: Timestamp) -> StdResult<Batch, ContractError> {
+        struct SetupAlarm(Timestamp);
+        impl WithTimeAlarms for SetupAlarm {
+            type Output = Batch;
+            type Error = ContractError;
+
+            fn exec<TA>(self, mut time_alarms: TA) -> StdResult<Self::Output, Self::Error>
+            where
+                TA: TimeAlarms,
+            {
+                time_alarms.add_alarm(self.0)?;
+                Ok(time_alarms.into().batch)
+            }
+        }
+        self.execute(SetupAlarm(when))
+    }
     fn into_stub(self) -> TimeAlarmsStub {
         TimeAlarmsStub {
             time_alarms_ref: self,

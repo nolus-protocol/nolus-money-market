@@ -5,7 +5,7 @@ use finance::{
 };
 use platform::{bank, batch::Batch};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
-use timealarms::stub::{TimeAlarms, TimeAlarmsRef, WithTimeAlarms};
+use timealarms::stub::TimeAlarmsRef;
 
 use crate::error::{ContractError, ContractResult};
 
@@ -40,19 +40,7 @@ where
 }
 
 pub(super) fn setup_alarm(time_alarms: TimeAlarmsRef, now: Timestamp) -> ContractResult<Batch> {
-    struct SetupAlarm(Timestamp);
-    impl WithTimeAlarms for SetupAlarm {
-        type Output = Batch;
-        type Error = ContractError;
-
-        fn exec<TA>(self, mut time_alarms: TA) -> Result<Self::Output, Self::Error>
-        where
-            TA: TimeAlarms,
-        {
-            time_alarms.add_alarm(self.0 + POLLING_INTERVAL)?;
-            Ok(time_alarms.into().batch)
-        }
-    }
-
-    time_alarms.execute(SetupAlarm(now))
+    time_alarms
+        .setup_alarm(now + POLLING_INTERVAL)
+        .map_err(Into::into)
 }

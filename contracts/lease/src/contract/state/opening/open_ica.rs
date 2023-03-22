@@ -45,6 +45,8 @@ impl OpenIcaAccount {
 }
 
 impl IcaConnectee for OpenIcaAccount {
+    /// the next transaction is carried on the ICS20 channel so good to go
+    const PRECONNECTABLE: bool = true;
     type NextState = Transfer;
 
     fn connected(self, dex_account: Account) -> Self::NextState {

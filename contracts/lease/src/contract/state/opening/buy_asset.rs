@@ -5,6 +5,7 @@ use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use platform::ica::HostAccount;
 use serde::{Deserialize, Serialize};
+use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateResponse},
@@ -93,6 +94,10 @@ impl SwapTaskT<AssetGroup> for BuyAsset {
 
     fn oracle(&self) -> &OracleRef {
         &self.deps.1
+    }
+
+    fn time_alarm(&self, querier: &QuerierWrapper<'_>) -> Result<TimeAlarmsRef, Self::Error> {
+        TimeAlarmsRef::new(self.form.time_alarms.clone(), querier).map_err(Into::into)
     }
 
     fn out_currency(&self) -> Symbol<'_> {

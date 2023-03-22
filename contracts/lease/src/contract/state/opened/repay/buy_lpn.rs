@@ -16,7 +16,10 @@ use crate::{
     api::{dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateResponse},
     contract::{
         dex::DexConnectable,
-        state::{self, ica_connector::Enterable, opened::repay, Controller, Response},
+        state::{
+            self, ica_connector::Enterable, ica_post_connector::Postpone, opened::repay,
+            Controller, Response,
+        },
         Contract, Lease,
     },
     error::ContractResult,
@@ -87,13 +90,24 @@ impl Controller for BuyLpn {
         self.on_response(data, deps, env)
     }
 
-    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        state::on_timeout_repair_channel(self, Type::BuyLpn, deps, env)
+    fn on_timeout(self, _deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        state::on_timeout_repair_channel(self, Type::BuyLpn, env)
     }
 }
 
 impl Contract for BuyLpn {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         repay::query(self.lease.lease, self.payment, RepayTrx::Swap, now, querier)
+    }
+}
+
+impl Postpone for BuyLpn {
+    fn setup_alarm(
+        &self,
+        when: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<LocalBatch> {
+        let time_alarms = self.lease.lease.time_alarms.clone();
+        time_alarms.setup_alarm(when).map_err(Into::into)
     }
 }

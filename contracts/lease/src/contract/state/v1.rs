@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use super::{
     closed::Closed,
-    ica_connector::{self, IcaConnector},
+    ica_connector::{self, IcaConnectee, IcaConnector},
     ica_recover::{self, InRecovery},
     opened::{
         self,
@@ -31,21 +31,21 @@ use super::{
     State as StateV2,
 };
 
-type OpenIcaAccount = ica_connector::IcaConnector<OpenIcaAccountV1>;
+type OpenIcaAccount = ica_connector::IcaConnector<true, OpenIcaAccountV1>;
 type OpeningTransferOut = TransferOutV1;
 type BuyAsset = BuyAssetV1;
-type BuyAssetRecoverIca = ica_connector::IcaConnector<ica_recover::InRecovery<BuyAssetV1>>;
+type BuyAssetRecoverIca = ica_connector::IcaConnector<false, ica_recover::InRecovery<BuyAssetV1>>;
 type OpenedActive = opened::active::Active;
 type RepaymentTransferOut = opened::repay::transfer_out::TransferOut;
-type BuyLpnRecoverIca = ica_connector::IcaConnector<ica_recover::InRecovery<BuyLpn>>;
+type BuyLpnRecoverIca = ica_connector::IcaConnector<false, ica_recover::InRecovery<BuyLpn>>;
 type RepaymentTransferInInit = opened::repay::transfer_in_init::TransferInInit;
 type RepaymentTransferInInitRecoverIca =
-    ica_connector::IcaConnector<ica_recover::InRecovery<RepaymentTransferInInit>>;
+    ica_connector::IcaConnector<false, ica_recover::InRecovery<RepaymentTransferInInit>>;
 type RepaymentTransferInFinish = PaymentTransferInFinishV1;
 type PaidActive = paid::Active;
 type ClosingTransferInInit = paid::transfer_in_init::TransferInInit;
 type ClosingTransferInInitRecoverIca =
-    ica_connector::IcaConnector<ica_recover::InRecovery<ClosingTransferInInit>>;
+    ica_connector::IcaConnector<false, ica_recover::InRecovery<ClosingTransferInInit>>;
 type ClosingTransferInFinish = PaidTransferInFinishV1;
 
 //2023-03-16T22:53:20
@@ -115,9 +115,9 @@ impl From<OpenIcaAccountV1> for OpenIcaAccountV2 {
         }
     }
 }
-impl Migrate for IcaConnector<OpenIcaAccountV1> {
+impl<const PRECONNECTABLE: bool> Migrate for IcaConnector<PRECONNECTABLE, OpenIcaAccountV1> {
     fn into_last_version(self) -> StateV2 {
-        IcaConnector::<OpenIcaAccountV2> {
+        IcaConnector::<{ <OpenIcaAccountV2 as IcaConnectee>::PRECONNECTABLE }, OpenIcaAccountV2> {
             connectee: self.connectee.into(),
         }
         .into()
