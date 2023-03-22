@@ -22,10 +22,10 @@ use super::buy_asset::{BuyAsset, Transfer};
 
 #[derive(Serialize, Deserialize)]
 pub struct OpenIcaAccount {
-    pub(in crate::contract::state) new_lease: NewLeaseContract, //TODO make them private once the migration is removed
-    pub(in crate::contract::state) downpayment: DownpaymentCoin,
-    pub(in crate::contract::state) loan: OpenLoanRespResult,
-    pub(in crate::contract::state) deps: (LppLenderRef, OracleRef),
+    new_lease: NewLeaseContract,
+    downpayment: DownpaymentCoin,
+    loan: OpenLoanRespResult,
+    deps: (LppLenderRef, OracleRef),
 }
 
 impl OpenIcaAccount {

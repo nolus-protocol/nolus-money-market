@@ -22,9 +22,9 @@ use super::open_ica::OpenIcaAccount;
 
 #[derive(Serialize, Deserialize)]
 pub struct RequestLoan {
-    pub(in crate::contract::state) new_lease: NewLeaseContract, //TODO make them private once the migration is removed
-    pub(in crate::contract::state) downpayment: DownpaymentCoin,
-    pub(in crate::contract::state) deps: (LppLenderRef, OracleRef),
+    new_lease: NewLeaseContract,
+    downpayment: DownpaymentCoin,
+    deps: (LppLenderRef, OracleRef),
 }
 
 impl RequestLoan {

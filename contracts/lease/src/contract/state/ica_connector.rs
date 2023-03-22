@@ -46,7 +46,7 @@ pub(crate) trait IcaConnectee {
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct IcaConnector<const PRECONNECTABLE: bool, Connectee> {
-    pub(super) connectee: Connectee, //TODO make private once the migration is done
+    connectee: Connectee,
 }
 
 impl<const PRECONNECTABLE: bool, Connectee> IcaConnector<PRECONNECTABLE, Connectee>

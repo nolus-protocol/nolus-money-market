@@ -75,7 +75,7 @@ where
     ) -> Result<&Self, ContractError> {
         self.total_interest_due = self.total_interest_due_by_now(ctime);
 
-        // TODO: get ride of fully qualified syntax
+        // TODO: get rid of fully qualified syntax
         self.annual_interest_rate = Rational::new(
             Fraction::<Coin<LPN>>::of(&self.annual_interest_rate, self.total_principal_due)
                 + loan_interest_rate.of(amount),

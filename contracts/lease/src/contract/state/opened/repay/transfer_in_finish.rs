@@ -29,8 +29,8 @@ pub struct TransferInFinish {
 }
 
 impl TransferInFinish {
-    //TODO revert it back to `pub(super)` once the migration from v1 is done
-    pub(in crate::contract::state) fn new(
+
+    pub(super) fn new(
         lease: Lease,
         payment: PaymentCoin,
         payment_lpn: LpnCoin,

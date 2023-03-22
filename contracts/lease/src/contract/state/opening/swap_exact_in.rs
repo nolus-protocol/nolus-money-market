@@ -44,8 +44,8 @@ pub(crate) struct SwapExactIn<OutG, SwapTask, const SWAP_OUT_CHAIN: OutChain> {
 }
 
 impl<OutG, SwapTask, const SWAP_OUT_CHAIN: OutChain> SwapExactIn<OutG, SwapTask, SWAP_OUT_CHAIN> {
-    //TODO reduce to `pub(super)` once the migration from v1 is done
-    pub(in crate::contract::state) fn new(spec: SwapTask) -> Self {
+
+    pub(super) fn new(spec: SwapTask) -> Self {
         Self {
             spec,
             _out_g: PhantomData,
