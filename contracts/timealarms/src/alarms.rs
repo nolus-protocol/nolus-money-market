@@ -1,26 +1,42 @@
-use serde::{Deserialize, Serialize};
-
 use platform::contract;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, DepsMut, Env, StdResult, Storage, Timestamp},
-    schemars::{self, JsonSchema},
+    cosmwasm_std::{Addr, DepsMut, Env, Storage, Timestamp},
 };
-use time_oracle::{Alarms, AlarmsCount, Id};
+use time_oracle::Alarms;
 
-use crate::{dispatcher::OracleAlarmDispatcher, msg::AlarmsStatusResponse, ContractError};
+use crate::{
+    dispatcher::{Id, OracleAlarmDispatcher},
+    msg::{AlarmsCount, AlarmsStatusResponse},
+    ContractError,
+};
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
-pub struct TimeAlarms {}
+pub struct TimeAlarms {
+    time_alarms: Alarms<'static>,
+}
 
 impl TimeAlarms {
-    const TIME_ALARMS: Alarms<'static> = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
+    const ALARMS_NAMESPACE: &'static str = "alarms";
+    const ALARMS_IDX_NAMESPACE: &'static str = "alarms_idx";
+    const REPLY_ID: Id = 0;
 
-    pub(super) fn remove(storage: &mut dyn Storage, msg_id: Id) -> StdResult<()> {
-        Self::TIME_ALARMS.remove(storage, msg_id)
+    pub(super) fn new() -> Self {
+        Self {
+            time_alarms: Alarms::new(Self::ALARMS_NAMESPACE, Self::ALARMS_IDX_NAMESPACE),
+        }
+    }
+
+    pub(super) fn remove(
+        &self,
+        storage: &mut dyn Storage,
+        addr: Addr,
+    ) -> Result<(), ContractError> {
+        self.time_alarms.remove(storage, addr)?;
+        Ok(())
     }
 
     pub(super) fn try_add(
+        &self,
         deps: DepsMut<'_>,
         env: Env,
         address: Addr,
@@ -30,28 +46,41 @@ impl TimeAlarms {
             return Err(ContractError::InvalidAlarm(time));
         }
         contract::validate_addr(&deps.querier, &address)?;
-        Self::TIME_ALARMS.add(deps.storage, address, time)?;
+        self.time_alarms.add(deps.storage, address, time)?;
         Ok(Response::new())
     }
 
     pub(super) fn try_notify(
+        &self,
         storage: &mut dyn Storage,
         ctime: Timestamp,
         max_count: AlarmsCount,
     ) -> Result<Response, ContractError> {
-        let dispatcher = OracleAlarmDispatcher::new();
-        let dispatcher = Self::TIME_ALARMS.notify(storage, dispatcher, ctime, max_count)?;
+        let dispatcher = self
+            .time_alarms
+            .alarms_selection(storage, ctime)
+            .take(max_count.try_into()?)
+            .try_fold(
+                OracleAlarmDispatcher::new(),
+                |dispatcher, alarm| -> Result<OracleAlarmDispatcher, ContractError> {
+                    dispatcher.send_to(Self::REPLY_ID, alarm?.0)
+                },
+            )?;
         dispatcher.try_into()
     }
 
     pub(super) fn try_any_alarm(
+        &self,
         storage: &dyn Storage,
         ctime: Timestamp,
     ) -> Result<AlarmsStatusResponse, ContractError> {
-        Self::TIME_ALARMS
-            .any_alarm(storage, ctime)
-            .map(|remaining_alarms| AlarmsStatusResponse { remaining_alarms })
-            .map_err(Into::into)
+        let remaining_alarms = self
+            .time_alarms
+            .alarms_selection(storage, ctime)
+            .next()
+            .transpose()?
+            .is_some();
+        Ok(AlarmsStatusResponse { remaining_alarms })
     }
 }
 
@@ -72,20 +101,22 @@ mod tests {
         env.block.time = Timestamp::from_seconds(0);
 
         let msg_sender = Addr::unchecked("some address");
-        assert!(TimeAlarms::try_add(
-            deps.as_mut(),
-            env.clone(),
-            msg_sender.clone(),
-            Timestamp::from_nanos(8)
-        )
-        .is_err());
+        assert!(TimeAlarms::new()
+            .try_add(
+                deps.as_mut(),
+                env.clone(),
+                msg_sender.clone(),
+                Timestamp::from_nanos(8)
+            )
+            .is_err());
 
         let expected_error: ContractError =
             contract::validate_addr(&deps.as_mut().querier, &msg_sender)
                 .unwrap_err()
                 .into();
 
-        let result = TimeAlarms::try_add(deps.as_mut(), env, msg_sender, Timestamp::from_nanos(8))
+        let result = TimeAlarms::new()
+            .try_add(deps.as_mut(), env, msg_sender, Timestamp::from_nanos(8))
             .unwrap_err();
 
         assert_eq!(expected_error, result);
@@ -103,7 +134,9 @@ mod tests {
         env.block.time = Timestamp::from_seconds(0);
 
         let msg_sender = Addr::unchecked("some address");
-        assert!(TimeAlarms::try_add(deps, env, msg_sender, Timestamp::from_nanos(4)).is_ok());
+        assert!(TimeAlarms::new()
+            .try_add(deps, env, msg_sender, Timestamp::from_nanos(4))
+            .is_ok());
     }
 
     #[test]
@@ -119,6 +152,8 @@ mod tests {
         env.block.time = Timestamp::from_seconds(100);
 
         let msg_sender = Addr::unchecked("some address");
-        TimeAlarms::try_add(deps, env, msg_sender, Timestamp::from_nanos(4)).unwrap_err();
+        TimeAlarms::new()
+            .try_add(deps, env, msg_sender, Timestamp::from_nanos(4))
+            .unwrap_err();
     }
 }

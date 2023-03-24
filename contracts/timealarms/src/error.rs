@@ -1,3 +1,5 @@
+use std::num::TryFromIntError;
+
 use thiserror::Error;
 
 use sdk::cosmwasm_std::{Addr, StdError, Timestamp};
@@ -18,9 +20,12 @@ pub enum ContractError {
     #[error("[TimeAlarms] Alarm is in the past: {0:?}")]
     InvalidAlarm(Timestamp),
 
-    #[error("[Platform] {0}")]
+    #[error("[TimeAlarms] {0}")]
     Platform(#[from] platform::error::Error),
 
-    #[error("[Oracle] {0}")]
+    #[error("[TimeAlarms] {0}")]
     AlarmError(#[from] AlarmError),
+
+    #[error("[TimeAlarms] integer conversion {0}")]
+    Conversion(#[from] TryFromIntError),
 }

@@ -1,9 +1,9 @@
-use platform::response;
+use platform::{reply, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, SubMsgResult},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
 use versioning::{package_version, version, VersionSegment};
 
@@ -44,9 +44,9 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::AddAlarm { time } => TimeAlarms::try_add(deps, env, info.sender, time),
+        ExecuteMsg::AddAlarm { time } => TimeAlarms::new().try_add(deps, env, info.sender, time),
         ExecuteMsg::DispatchAlarms { max_count } => {
-            TimeAlarms::try_notify(deps.storage, env.block.time, max_count)
+            TimeAlarms::new().try_notify(deps.storage, env.block.time, max_count)
         }
     }
 }
@@ -65,25 +65,29 @@ pub fn sudo(_deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, Con
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
     match msg {
         QueryMsg::ContractVersion {} => Ok(to_binary(&package_version!())?),
-        QueryMsg::AlarmsStatus {} => Ok(to_binary(&TimeAlarms::try_any_alarm(
-            deps.storage,
-            env.block.time,
-        )?)?),
+        QueryMsg::AlarmsStatus {} => Ok(to_binary(
+            &TimeAlarms::new().try_any_alarm(deps.storage, env.block.time)?,
+        )?),
     }
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    let res = match msg.result {
-        SubMsgResult::Ok(_) => {
-            TimeAlarms::remove(deps.storage, msg.id)?;
+    let resp = match reply::from_execute(msg) {
+        Ok(Some(addr)) => {
+            TimeAlarms::new().remove(deps.storage, addr)?;
             Response::new().add_attribute("alarm", "success")
         }
-        SubMsgResult::Err(err) => Response::new()
+        Err(err) => Response::new()
             .add_attribute("alarm", "error")
-            .add_attribute("error", err),
+            .add_attribute("error", err.to_string()),
+
+        Ok(None) => Response::new()
+            .add_attribute("alarm", "error")
+            .add_attribute("error", "No data"),
     };
-    Ok(res)
+
+    Ok(resp)
 }
 
 #[cfg(test)]
