@@ -2,9 +2,9 @@
 
 <br /><p align="center"><img alt="nolus-money-market-logo" src="docs/money-market-logo.svg" width="100"/></p><br />
 
-Implementation of the core business logic as cosmwasm contracts.
+Implementation of the core business logic as CosmWasm contracts.
 
-## Recommended user's workspace
+## Recommended user workspace
 
 ### Setup
 
@@ -35,12 +35,13 @@ Implementation of the core business logic as cosmwasm contracts.
 
 The build is controlled with a few environment variables:
 * `RELEASE_VERSION` - an arbitrary string giving the release a name
-* `ALT_NET_SYMBOLS` - `1`, `y` or `Y` if the build is intended for deploy on a test net
+* `ALT_NET_SYMBOLS` - `1`, `y` or `Y` if the build is intended for deployment
+  on a test net
 
 **A non-optimized version**
 
-The command below builds a contract if run from the contract directory, 
-or builds all contracts if run from the workspace directory:
+The command below builds a contract if ran from the contract directory, 
+or builds all contracts if ran from the workspace directory:
 
 ```sh
 RELEASE_VERSION=dev-release ALT_NET_SYMBOLS=Y cargo build --target=wasm32-unknown-unknown
@@ -60,7 +61,7 @@ docker run --rm -v "$(pwd)":/code \
 
 ### Test
 
-Run the following in a package directory or on the workspace root.
+Run the following in a package directory or in the workspace root.
 
 ```sh
 cargo test
@@ -76,30 +77,38 @@ Run the following in the workspace root.
 
 ### New contracts
 
-Contract's addresses are dependent on the order in which they are deployed in the script.
+Contract addresses are dependent on the order in which they are deployed in the script.
 
 When adding a new contract, and it needs to be deployed with the genesis:
 1. Add it to the `scripts/deploy-contracts-genesis.sh` script.
 2. Ensure you preserve the order:
     * Your contract **is not** a dependency:
-      * Add your initialization logic at the end and fill in the address that you get based on the contract's ID.
+      * Add your initialization logic at the end and fill in the address that you
+        get based on the contract's ID.
     * Your contract **is** a dependency:
-      * Find the position corresponding to contract's position in the dependency tree.
+      * Find the position corresponding to the contract's position in the dependency tree.
       * Assume the address of the first contract that you pushed down.
       * **Shift** down the addresses of the following contracts.
 
-        In the end, you should be left with one contract for which there won't be an address to assume.
-      * After you have done with the address shifting, fill in the contract without an address the one you get based on the contract's ID.
+        In the end, you should be left with one contract for which there won't
+        be an address to assume.
+      * After you are done with the address shifting, fill out the address of the
+        contract in the script file, which you get based on the contract's ID.
 
-### Reordering contracts because one is now dependency
+### Reordering contracts because one is now a dependency
 
-As mentioned in the section above, contract's addresses are dependent on the order in which they are deployed in the script.
+As mentioned in the section above, contract addresses are dependent on the order
+in which they are deployed in the script.
 
-When changing the order of deployment, reorder the contracts' addresses accordingly, thus the order of the actual addresses is **not** changed but contract who owns that address is.
+When changing the order of deployment, reorder the contracts' addresses accordingly,
+so the order of the actual addresses is **not** changed but the contract who owns
+that address is.
 
 ### Upgrade dependencies
 
-Using the previously installed cargo-edit one can easily upgrade the dependencies. For more details please refer to 
+Using the previously installed cargo-edit one can easily upgrade the dependencies.
+
+For more details please refer to 
 
 ```sh
 cargo upgrade --help
@@ -117,6 +126,8 @@ cargo upgrade --workspace cw-storage-plus
 
 * Add new key to be used for the deployment:
 
+Running this command will create a new account called "wallet".
+
 ```sh
 nolusd keys add wallet
 
@@ -128,17 +139,19 @@ nolusd keys add wallet
   mnemonic: ""
 ```
 
-* The new key needs some tockens for the deployment
+* The new key needs some tokens for the deployment
 
-When scripts/init-local-network.sh is started it creates two acconts. One of them is the "treasury" account \
-To find the address of the treasury account, run the folloing command:
+When scripts/init-local-network.sh is started it creates two accounts.
+One of them is the "treasury" account.
+
+To find the address of the treasury account, run the following command:
 
 ```sh
 nolusd keys show -a treasury
 > nolus122f36dx292yy72253ufkt2g8rzheml2pkcfckl
 ```
 
-Use the treasury address to send tockens to the new "wallet" account
+Use the treasury address to send tokens to the new "wallet" account.
 
 ```sh
 nolusd query bank total $NODE
@@ -177,7 +190,7 @@ CODE_ID=$(echo $RES | jq -r '.logs[0].events[-1].attributes[0].value')
 nolusd query wasm list-contract-by-code $CODE_ID --output json
 ```
 
-* you can also download the wasm from the chain and check that the diff between them is empty
+* you can also download the wasm from the chain and check that the difference between them is empty
 
 ```sh
 nolusd query wasm code $CODE_ID download.wasm
@@ -186,10 +199,10 @@ diff artifacts/<contract name>.wasm download.wasm
 
 ### Deploy smart contract TypeScript
 
-**We use the [cosmjs](https://www.npmjs.com/package/@cosmjs/cli) library to work with smart contracts via TypeScript.**
+**We use the [`cosmjs`](https://www.npmjs.com/package/@cosmjs/cli) library to work with smart contracts via TypeScript.**
 
 First of all, make sure you have created a user who has some amount. We will use this user to upload a contract and send it messages. You can use util/ methods in the UAT-test project to create a new user and client or use existing ones.
-Example: the getUserClient() and getUser1Wallet() methods are helpers methods (from UAT-tests/src/util) that do this first step:
+Example: the getUserClient() and getUser1Wallet() methods are helper methods (from UAT-tests/src/util) that do this first step:
 
 ```ts
 let userClient: SigningCosmWasmClient;
@@ -243,9 +256,9 @@ This userAccount address will be transmitted as a sender when we want to send me
    contractAddress = contract.contractAddress;
    ```
    
-   This **contractAddress** variable is our entry point to the contract. When we send an exacute or query message, we give this address to the methods.
+   This **contractAddress** variable is our entry point to the contract. When we send an execute or query message, we give this address to the methods.
 
-4. How to send a execute message:
+4. How to send an execute message:
 
    ```ts
    const addFeederMsg = {
