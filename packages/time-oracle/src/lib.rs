@@ -4,6 +4,7 @@ use thiserror::Error;
 pub use crate::alarms::Alarms;
 
 mod alarms;
+pub mod migrate_v1;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum AlarmError {

@@ -3,7 +3,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{Addr, DepsMut, Env, Storage, Timestamp},
 };
-use time_oracle::Alarms;
+use time_oracle::{migrate_v1::AlarmsOld, Alarms};
 
 use crate::{
     dispatcher::{Id, OracleAlarmDispatcher},
@@ -81,6 +81,17 @@ impl TimeAlarms {
             .transpose()?
             .is_some();
         Ok(AlarmsStatusResponse { remaining_alarms })
+    }
+
+    pub fn migrate_v1(storage: &mut dyn Storage) -> Result<(), ContractError> {
+        AlarmsOld::new(
+            Self::ALARMS_NAMESPACE,
+            Self::ALARMS_IDX_NAMESPACE,
+            "alarms_next_id",
+        )
+        .migrate(storage)?;
+
+        Ok(())
     }
 }
 
