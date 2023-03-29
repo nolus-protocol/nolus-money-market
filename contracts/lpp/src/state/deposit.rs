@@ -21,19 +21,19 @@ pub struct Deposit {
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Default)]
 struct DepositData {
-    pub deposited_nlpn: Coin<NLpn>,
+    deposited_nlpn: Coin<NLpn>,
 
     // Rewards
-    pub reward_per_token: Option<Price<NLpn, Nls>>,
-    pub pending_rewards_nls: Coin<Nls>,
+    reward_per_token: Option<Price<NLpn, Nls>>,
+    pending_rewards_nls: Coin<Nls>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Default)]
 struct DepositsGlobals {
-    pub balance_nlpn: Coin<NLpn>,
+    balance_nlpn: Coin<NLpn>,
 
     // Rewards
-    pub reward_per_token: Option<Price<NLpn, Nls>>,
+    reward_per_token: Option<Price<NLpn, Nls>>,
 }
 
 impl Deposit {
