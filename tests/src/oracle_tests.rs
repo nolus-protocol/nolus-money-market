@@ -17,7 +17,7 @@ use oracle::{alarms::Alarm, msg::QueryMsg as OracleQ};
 use platform::coin_legacy;
 use sdk::{
     cosmwasm_std::{coin, wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
-    cw_multi_test::Executor,
+    cw_multi_test::{AppResponse, Executor},
     schemars::_serde_json::from_str,
 };
 use swap::SwapTarget;
@@ -91,11 +91,14 @@ fn register_feeder() {
         feeder_address: ADMIN.to_string(),
     };
 
-    drop(
-        test_case
-            .app
-            .wasm_sudo(test_case.oracle.clone().unwrap(), &msg)
-            .unwrap(),
+    let response: AppResponse = test_case
+        .app
+        .wasm_sudo(test_case.oracle.clone().unwrap(), &msg)
+        .unwrap();
+    assert_eq!(response.data, None);
+    assert_eq!(
+        &response.events,
+        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
     );
 }
 
@@ -103,24 +106,32 @@ fn register_feeder() {
 fn internal_test_integration_setup_test() {
     let mut test_case = create_test_case();
 
-    drop(
-        test_case
-            .app
-            .wasm_sudo(
-                test_case.oracle.clone().unwrap(),
-                &oracle::msg::SudoMsg::RegisterFeeder {
-                    feeder_address: ADMIN.into(),
-                },
-            )
-            .unwrap(),
+    let response: AppResponse = test_case
+        .app
+        .wasm_sudo(
+            test_case.oracle.clone().unwrap(),
+            &oracle::msg::SudoMsg::RegisterFeeder {
+                feeder_address: ADMIN.into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(response.data, None);
+    assert_eq!(
+        &response.events,
+        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
     );
 
-    drop(oracle_wrapper::feed_price::<_, BaseC, Usdc>(
+    let response: AppResponse = oracle_wrapper::feed_price::<_, BaseC, Usdc>(
         &mut test_case,
         &Addr::unchecked(ADMIN),
         Coin::new(5),
         Coin::new(7),
-    ));
+    );
+    assert_eq!(response.data, None);
+    assert_eq!(
+        &response.events,
+        &[Event::new("execute").add_attribute("_contract_addr", "contract2")]
+    );
 }
 
 // test for issue #26. It was resolved in MR !132 by separation of price feeding and alarms delivery processes
@@ -168,16 +179,19 @@ fn feed_price_with_alarm_issue() {
 fn feed_price_with_alarm() {
     let mut test_case = create_test_case();
 
-    drop(
-        test_case
-            .app
-            .wasm_sudo(
-                test_case.oracle.clone().unwrap(),
-                &oracle::msg::SudoMsg::RegisterFeeder {
-                    feeder_address: ADMIN.into(),
-                },
-            )
-            .unwrap(),
+    let response: AppResponse = test_case
+        .app
+        .wasm_sudo(
+            test_case.oracle.clone().unwrap(),
+            &oracle::msg::SudoMsg::RegisterFeeder {
+                feeder_address: ADMIN.into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(response.data, None);
+    assert_eq!(
+        &response.events,
+        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
     );
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
@@ -263,18 +277,22 @@ fn wrong_timealarms_addr() {
 fn integration_with_timealarms() {
     let mut test_case = create_test_case();
 
-    drop(
-        test_case
-            .app
-            .wasm_sudo(
-                test_case.oracle.clone().unwrap(),
-                &oracle::msg::SudoMsg::RegisterFeeder {
-                    feeder_address: ADMIN.into(),
-                },
-            )
-            .unwrap(),
+    let response: AppResponse = test_case
+        .app
+        .wasm_sudo(
+            test_case.oracle.clone().unwrap(),
+            &oracle::msg::SudoMsg::RegisterFeeder {
+                feeder_address: ADMIN.into(),
+            },
+        )
+        .unwrap();
+    assert_eq!(response.data, None);
+    assert_eq!(
+        &response.events,
+        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
     );
 
+    // Lease address is not relevant.
     drop(open_lease(&mut test_case, TheCoin::from(1_000)));
 
     test_case.app.time_shift(
@@ -344,19 +362,22 @@ fn test_config_update() {
             .unwrap()
     );
 
-    drop(
-        test_case
-            .app
-            .wasm_sudo(
-                test_case.oracle.clone().unwrap(),
-                &oracle::msg::SudoMsg::UpdateConfig(PriceConfig::new(
-                    Percent::from_percent(100),
-                    Duration::from_secs(5),
-                    12,
-                    Percent::from_percent(75),
-                )),
-            )
-            .expect("Oracle not properly connected!"),
+    let response: AppResponse = test_case
+        .app
+        .wasm_sudo(
+            test_case.oracle.clone().unwrap(),
+            &oracle::msg::SudoMsg::UpdateConfig(PriceConfig::new(
+                Percent::from_percent(100),
+                Duration::from_secs(5),
+                12,
+                Percent::from_percent(75),
+            )),
+        )
+        .expect("Oracle not properly connected!");
+    assert_eq!(response.data, None);
+    assert_eq!(
+        &response.events,
+        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
     );
 
     let price: Result<SpotPrice, _> = test_case.app.wrap().query_wasm_smart(
@@ -395,14 +416,17 @@ fn swap_tree() -> HumanReadableTree<SwapTarget> {
 fn test_swap_path() {
     let mut test_case = create_test_case();
 
-    drop(
-        test_case
-            .app
-            .wasm_sudo(
-                test_case.oracle.clone().unwrap(),
-                &oracle::msg::SudoMsg::SwapTree { tree: swap_tree() },
-            )
-            .unwrap(),
+    let response: AppResponse = test_case
+        .app
+        .wasm_sudo(
+            test_case.oracle.clone().unwrap(),
+            &oracle::msg::SudoMsg::SwapTree { tree: swap_tree() },
+        )
+        .unwrap();
+    assert_eq!(response.data, None);
+    assert_eq!(
+        &response.events,
+        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
     );
 
     let resp: swap::SwapPath = test_case
@@ -437,14 +461,17 @@ fn test_query_swap_tree() {
 
     let tree: HumanReadableTree<SwapTarget> = swap_tree();
 
-    drop(
-        test_case
-            .app
-            .wasm_sudo(
-                test_case.oracle.clone().unwrap(),
-                &oracle::msg::SudoMsg::SwapTree { tree: tree.clone() },
-            )
-            .unwrap(),
+    let response: AppResponse = test_case
+        .app
+        .wasm_sudo(
+            test_case.oracle.clone().unwrap(),
+            &oracle::msg::SudoMsg::SwapTree { tree: tree.clone() },
+        )
+        .unwrap();
+    assert_eq!(response.data, None);
+    assert_eq!(
+        &response.events,
+        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
     );
 
     let resp: oracle::msg::SwapTreeResponse = test_case
@@ -471,7 +498,7 @@ fn test_zero_price_dto() {
     )
     .unwrap();
 
-    test_case
+    let response: AppResponse = test_case
         .app
         .execute(
             feeder1,
@@ -486,4 +513,6 @@ fn test_zero_price_dto() {
             .into(),
         )
         .unwrap();
+    assert_eq!(response.data, None);
+    assert_eq!(&response.events, &[]);
 }

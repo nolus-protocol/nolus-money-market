@@ -18,7 +18,7 @@ use oracle::{
     ContractError,
 };
 use sdk::{
-    cosmwasm_std::{to_binary, wasm_execute, Addr, Binary, Deps, Env},
+    cosmwasm_std::{to_binary, wasm_execute, Addr, Binary, Deps, Env, Event},
     cw_multi_test::{AppResponse, Executor},
 };
 
@@ -106,16 +106,21 @@ pub fn add_feeder<Lpn>(test_case: &mut TestCase<Lpn>, addr: impl Into<String>)
 where
     Lpn: Currency,
 {
-    drop(
-        test_case
-            .app
-            .wasm_sudo(
-                test_case.oracle.clone().unwrap(),
-                &SudoMsg::RegisterFeeder {
-                    feeder_address: addr.into(),
-                },
-            )
-            .unwrap(),
+    let response: AppResponse = test_case
+        .app
+        .wasm_sudo(
+            test_case.oracle.clone().unwrap(),
+            &SudoMsg::RegisterFeeder {
+                feeder_address: addr.into(),
+            },
+        )
+        .unwrap();
+
+    assert_eq!(response.data, None);
+
+    assert_eq!(
+        &response.events,
+        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")],
     );
 }
 

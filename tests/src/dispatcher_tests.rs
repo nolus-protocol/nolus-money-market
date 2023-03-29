@@ -2,8 +2,8 @@ use currency::{lpn::Usdc, native::Nls};
 use finance::currency::Currency;
 use rewards_dispatcher::ContractError;
 use sdk::{
-    cosmwasm_std::{Addr, Coin as CwCoin},
-    cw_multi_test::{ContractWrapper, Executor},
+    cosmwasm_std::{Addr, Coin as CwCoin, Event},
+    cw_multi_test::{AppResponse, ContractWrapper, Executor},
 };
 
 use crate::common::{
@@ -273,15 +273,24 @@ fn test_config() {
 
     assert_eq!(10, resp.cadence_hours);
 
-    drop(
-        test_case
-            .app
-            .wasm_sudo(
-                test_case.dispatcher_addr.clone().unwrap(),
-                &rewards_dispatcher::msg::SudoMsg::Config { cadence_hours: 30 },
-            )
-            .unwrap(),
+    let response: AppResponse = test_case
+        .app
+        .wasm_sudo(
+            test_case.dispatcher_addr.clone().unwrap(),
+            &rewards_dispatcher::msg::SudoMsg::Config { cadence_hours: 30 },
+        )
+        .unwrap();
+    assert_eq!(response.data, None);
+    assert_eq!(
+        &response.events,
+        &[
+            Event::new("sudo").add_attribute("_contract_addr", "contract4"),
+            Event::new("wasm")
+                .add_attribute("_contract_addr", "contract4")
+                .add_attribute("method", "config"),
+        ]
     );
+
     let resp: rewards_dispatcher::msg::ConfigResponse = test_case
         .app
         .wrap()

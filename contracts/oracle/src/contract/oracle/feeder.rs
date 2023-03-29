@@ -65,9 +65,8 @@ mod tests {
         cosmwasm_std::{from_binary, testing::mock_env, Addr, DepsMut},
     };
 
-    use crate::contract::sudo;
     use crate::{
-        contract::query,
+        contract::{query, sudo},
         msg::{QueryMsg, SudoMsg},
         tests::{dummy_default_instantiate_msg, setup_test},
         ContractError,
@@ -135,15 +134,24 @@ mod tests {
     }
 
     fn remove(deps: DepsMut<'_>, address: &str) {
-        drop(
-            sudo(
-                deps,
-                mock_env(),
-                SudoMsg::RemoveFeeder {
-                    feeder_address: address.to_string(),
-                },
-            )
-            .unwrap(),
-        );
+        let Response {
+            messages,
+            attributes,
+            events,
+            data,
+            ..
+        }: Response = sudo(
+            deps,
+            mock_env(),
+            SudoMsg::RemoveFeeder {
+                feeder_address: address.to_string(),
+            },
+        )
+        .unwrap();
+
+        assert_eq!(messages.len(), 0);
+        assert_eq!(attributes.len(), 0);
+        assert_eq!(events.len(), 0);
+        assert_eq!(data, None);
     }
 }

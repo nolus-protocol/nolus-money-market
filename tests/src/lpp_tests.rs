@@ -13,8 +13,8 @@ use lpp::{
 };
 use platform::{bank, coin_legacy};
 use sdk::{
-    cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
-    cw_multi_test::Executor,
+    cosmwasm_std::{Addr, Coin as CwCoin, Event, Timestamp},
+    cw_multi_test::{AppResponse, Executor},
 };
 
 use crate::common::{
@@ -56,8 +56,8 @@ fn config_update_parameters() {
         ADDON_OPTIMAL_INTEREST_RATE,
     );
 
-    drop(
-        app.wasm_sudo(
+    let response: AppResponse = app
+        .wasm_sudo(
             lpp.clone(),
             &SudoMsg::NewBorrowRate {
                 borrow_rate: InterestRate::new(
@@ -68,7 +68,17 @@ fn config_update_parameters() {
                 .expect("Couldn't construct interest rate value!"),
             },
         )
-        .unwrap(),
+        .unwrap();
+
+    assert_eq!(response.data, None);
+    assert_eq!(
+        &response.events,
+        &[
+            Event::new("sudo").add_attribute("_contract_addr", "contract0"),
+            Event::new("wasm")
+                .add_attribute("_contract_addr", "contract0")
+                .add_attribute("method", "try_update_parameters"),
+        ]
     );
 
     let quote: Config = app

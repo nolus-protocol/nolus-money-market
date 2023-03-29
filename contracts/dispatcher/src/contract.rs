@@ -158,15 +158,18 @@ fn try_dispatch(deps: DepsMut<'_>, env: Env, info: MessageInfo) -> Result<Respon
 #[cfg(test)]
 mod tests {
     use finance::percent::Percent;
-    use sdk::cosmwasm_std::{
-        coins, from_binary,
-        testing::{mock_dependencies_with_balance, mock_env, mock_info},
-        Addr, DepsMut,
+    use sdk::{
+        cosmwasm_ext::Response,
+        cosmwasm_std::{
+            coins, from_binary,
+            testing::{mock_dependencies_with_balance, mock_env, mock_info},
+            Addr, Attribute, DepsMut,
+        },
+        testing::customized_mock_deps_with_contracts,
     };
-    use sdk::testing::customized_mock_deps_with_contracts;
 
-    use crate::contract::sudo;
     use crate::{
+        contract::sudo,
         msg::{ConfigResponse, InstantiateMsg, QueryMsg, SudoMsg},
         state::reward_scale::{Bar, RewardScale, TotalValueLocked},
     };
@@ -225,30 +228,46 @@ mod tests {
 
         do_instantiate(deps.as_mut());
 
-        let _auth_info = mock_info("creator", &coins(2, "token"));
-        drop(
-            sudo(
-                deps.as_mut(),
-                mock_env(),
-                SudoMsg::Config { cadence_hours: 12 },
-            )
-            .unwrap(),
-        );
+        let Response {
+            messages,
+            attributes,
+            events,
+            data,
+            ..
+        }: Response = sudo(
+            deps.as_mut(),
+            mock_env(),
+            SudoMsg::Config { cadence_hours: 12 },
+        )
+        .unwrap();
+
+        assert_eq!(messages.len(), 0);
+        assert_eq!(attributes, &[Attribute::new("method", "config")]);
+        assert_eq!(events.len(), 0);
+        assert_eq!(data, None);
 
         // should now be 12
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
         assert_eq!(value.cadence_hours, 12);
 
-        let _auth_info = mock_info("creator", &coins(2, "token"));
-        drop(
-            sudo(
-                deps.as_mut(),
-                mock_env(),
-                SudoMsg::Config { cadence_hours: 20 },
-            )
-            .unwrap(),
-        );
+        let Response {
+            messages,
+            attributes,
+            events,
+            data,
+            ..
+        }: Response = sudo(
+            deps.as_mut(),
+            mock_env(),
+            SudoMsg::Config { cadence_hours: 20 },
+        )
+        .unwrap();
+
+        assert_eq!(messages.len(), 0);
+        assert_eq!(&attributes, &[Attribute::new("method", "config")]);
+        assert_eq!(events.len(), 0);
+        assert_eq!(data, None);
 
         // should now be 12
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();

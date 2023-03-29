@@ -3,7 +3,10 @@ use sdk::{
     testing::{new_app, App, Contract, ContractWrapper, Executor},
 };
 
-use crate::{msg::InstantiateMsg, tests::helpers::CwTemplateContract};
+use crate::{
+    msg::{InstantiateMsg, SudoMsg},
+    tests::helpers::CwTemplateContract,
+};
 
 pub fn contract_template() -> Box<Contract> {
     let contract = ContractWrapper::new(
@@ -60,8 +63,6 @@ fn proper_instantiate() -> (App, CwTemplateContract) {
 }
 
 mod config {
-    use crate::msg::SudoMsg;
-
     use super::*;
 
     #[test]

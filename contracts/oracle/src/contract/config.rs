@@ -27,13 +27,14 @@ mod tests {
         lpn::Usdc,
     };
     use finance::{currency::Currency, duration::Duration, percent::Percent};
-
-    use sdk::cosmwasm_std::{from_binary, testing::mock_env};
+    use sdk::{
+        cosmwasm_ext::Response,
+        cosmwasm_std::{from_binary, testing::mock_env}
+    };
     use swap::SwapTarget;
 
-    use crate::contract::sudo;
     use crate::{
-        contract::query,
+        contract::{query, sudo},
         msg::{ConfigResponse, QueryMsg, SudoMsg},
         state::{config::Config, supported_pairs::SwapLeg},
         swap_tree,
@@ -58,7 +59,18 @@ mod tests {
             Percent::from_percent(88),
         ));
 
-        drop(sudo(deps.as_mut(), mock_env(), msg).unwrap());
+        let Response {
+            messages,
+            attributes,
+            events,
+            data,
+            ..
+        }: Response = sudo(deps.as_mut(), mock_env(), msg).unwrap();
+
+        assert_eq!(messages.len(), 0);
+        assert_eq!(attributes.len(), 0);
+        assert_eq!(events.len(), 0);
+        assert_eq!(data, None);
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
@@ -129,13 +141,22 @@ mod tests {
 
         let test_tree = swap_tree!((1, Cro::TICKER), (2, Cro::TICKER));
 
-        drop(
-            sudo(
-                deps.as_mut(),
-                mock_env(),
-                SudoMsg::SwapTree { tree: test_tree },
-            )
-            .unwrap(),
-        );
+        let Response {
+            messages,
+            attributes,
+            events,
+            data,
+            ..
+        }: Response = sudo(
+            deps.as_mut(),
+            mock_env(),
+            SudoMsg::SwapTree { tree: test_tree },
+        )
+        .unwrap();
+
+        assert_eq!(messages.len(), 0);
+        assert_eq!(attributes.len(), 0);
+        assert_eq!(events.len(), 0);
+        assert_eq!(data, None);
     }
 }
