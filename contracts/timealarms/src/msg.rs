@@ -5,7 +5,8 @@ use sdk::{
     cosmwasm_std::Timestamp,
     schemars::{self, JsonSchema},
 };
-use time_oracle::AlarmsCount;
+
+pub type AlarmsCount = u32;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {}

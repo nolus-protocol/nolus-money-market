@@ -1,5 +1,5 @@
 use crate::{
-    msg::{DispatchAlarmsResponse, ExecuteAlarmMsg},
+    msg::{AlarmsCount, DispatchAlarmsResponse, ExecuteAlarmMsg},
     ContractError,
 };
 use currency::native::Nls;
@@ -8,7 +8,8 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{self, Addr},
 };
-use time_oracle::{AlarmDispatcher, AlarmError, AlarmsCount, Id};
+
+pub type Id = u64;
 
 pub(super) struct OracleAlarmDispatcher {
     batch: Batch,
@@ -25,16 +26,17 @@ impl OracleAlarmDispatcher {
             emitter: Emitter::of_type(EVENT_TYPE),
         }
     }
-}
-impl AlarmDispatcher for OracleAlarmDispatcher {
-    fn send_to(mut self, id: Id, addr: Addr) -> Result<Self, AlarmError> {
+
+    pub fn send_to(mut self, id: Id, addr: Addr) -> Result<Self, ContractError> {
         self.emitter = self.emitter.emit(EVENT_KEY, &addr);
+
         self.batch.schedule_execute_wasm_reply_always::<_, Nls>(
             &addr,
             ExecuteAlarmMsg::TimeAlarm {},
             None,
             id,
         )?;
+
         Ok(self)
     }
 }
@@ -57,14 +59,14 @@ impl TryFrom<OracleAlarmDispatcher> for Response {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+
     use crate::dispatcher::{EVENT_KEY, EVENT_TYPE};
 
-    use super::OracleAlarmDispatcher;
     use sdk::{
         cosmwasm_ext::Response,
         cosmwasm_std::{Addr, Event, ReplyOn},
     };
-    use time_oracle::{AlarmDispatcher, Id};
 
     #[test]
     fn empty() {

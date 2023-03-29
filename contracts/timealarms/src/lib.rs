@@ -12,3 +12,5 @@ mod alarms;
 pub mod contract;
 #[cfg(any(feature = "contract", test))]
 mod dispatcher;
+#[cfg(any(feature = "contract", test))]
+pub mod migrate_v1;
