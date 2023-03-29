@@ -10,6 +10,7 @@ use versioning::{package_version, version, VersionSegment};
 use crate::{
     alarms::TimeAlarms,
     error::ContractError,
+    migrate_v1,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
 };
 
@@ -34,7 +35,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Respons
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _>(
         deps.storage,
         version!(CONTRACT_STORAGE_VERSION),
-        |storage: &mut _| TimeAlarms::migrate_v1(storage),
+        |storage: &mut _| migrate_v1::migrate(storage),
     )?;
 
     response::response(versioning::release()).map_err(Into::into)
