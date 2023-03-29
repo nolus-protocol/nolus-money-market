@@ -11,7 +11,7 @@ use crate::{
     state::{contracts as state_contracts, migration_release},
 };
 
-pub(crate) fn migrate(
+pub(super) fn migrate(
     storage: &mut dyn Storage,
     admin_contract_address: Addr,
     msg: MigrateContracts,

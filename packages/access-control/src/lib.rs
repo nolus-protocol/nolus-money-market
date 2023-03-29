@@ -31,6 +31,10 @@ impl<'r> SingleUserAccess<'r> {
         Item::new(self.storage_namespace).save(storage, &self.address)
     }
 
+    pub fn remove(storage: &mut dyn Storage, storage_namespace: &'r str) {
+        Item::<()>::new(storage_namespace).remove(storage)
+    }
+
     pub const fn address(&self) -> &Addr {
         &self.address
     }
@@ -66,6 +70,10 @@ impl SingleUserAccess<'static> {
 
     pub fn load_contract_owner(storage: &dyn Storage) -> StdResult<Self> {
         Self::load(storage, CONTRACT_OWNER_NAMESPACE)
+    }
+
+    pub fn remove_contract_owner(storage: &mut dyn Storage) {
+        Self::remove(storage, CONTRACT_OWNER_NAMESPACE)
     }
 
     pub fn check_owner_access<E>(storage: &dyn Storage, addr: &Addr) -> Result<(), E>

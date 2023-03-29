@@ -1,10 +1,9 @@
-use access_control::Unauthorized;
 use currency::{lpn::Usdc, native::Nls};
 use finance::currency::Currency;
 use rewards_dispatcher::ContractError;
 use sdk::{
-    cosmwasm_std::{Addr, Coin as CwCoin},
-    cw_multi_test::{ContractWrapper, Executor},
+    cosmwasm_std::{Addr, Coin as CwCoin, Event},
+    cw_multi_test::{AppResponse, ContractWrapper, Executor},
 };
 
 use crate::common::{
@@ -35,7 +34,8 @@ fn on_alarm_zero_reward() {
                 oracle::contract::instantiate,
                 mock_oracle_query,
             )
-            .with_reply(oracle::contract::reply),
+            .with_reply(oracle::contract::reply)
+            .with_sudo(oracle::contract::sudo),
         ))
         .init_treasury()
         .init_dispatcher();
@@ -73,11 +73,14 @@ fn on_alarm() {
 
     test_case
         .init_lpp(
-            Some(ContractWrapper::new(
-                lpp::contract::execute,
-                lpp::contract::instantiate,
-                mock_lpp_query,
-            )),
+            Some(
+                ContractWrapper::new(
+                    lpp::contract::execute,
+                    lpp::contract::instantiate,
+                    mock_lpp_query,
+                )
+                .with_sudo(lpp::contract::sudo),
+            ),
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
@@ -89,7 +92,8 @@ fn on_alarm() {
                 oracle::contract::instantiate,
                 mock_oracle_query,
             )
-            .with_reply(oracle::contract::reply),
+            .with_reply(oracle::contract::reply)
+            .with_sudo(oracle::contract::sudo),
         ))
         .init_treasury()
         .init_dispatcher();
@@ -241,51 +245,6 @@ fn on_alarm() {
 }
 
 #[test]
-fn test_config_unauthorized() {
-    type Lpn = Usdc;
-    let user_addr = Addr::unchecked(USER);
-    let mut test_case = TestCase::<Usdc>::new(None);
-    test_case
-        .init(&user_addr, cwcoins::<Lpn, _>(500))
-        .init_lpp(
-            None,
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
-        .init_treasury()
-        .init_timealarms()
-        .init_oracle(None)
-        .init_dispatcher();
-
-    let resp: rewards_dispatcher::msg::ConfigResponse = test_case
-        .app
-        .wrap()
-        .query_wasm_smart(
-            test_case.dispatcher_addr.clone().unwrap(),
-            &rewards_dispatcher::msg::QueryMsg::Config {},
-        )
-        .unwrap();
-
-    assert_eq!(10, resp.cadence_hours);
-
-    assert_eq!(
-        test_case
-            .app
-            .execute_contract(
-                user_addr,
-                test_case.dispatcher_addr.clone().unwrap(),
-                &rewards_dispatcher::msg::ExecuteMsg::Config { cadence_hours: 30 },
-                &cwcoins::<Lpn, _>(40),
-            )
-            .unwrap_err()
-            .downcast_ref::<ContractError>()
-            .unwrap(),
-        &ContractError::Unauthorized(Unauthorized),
-    );
-}
-
-#[test]
 fn test_config() {
     type Lpn = Usdc;
     let user_addr = Addr::unchecked(ADMIN);
@@ -314,15 +273,24 @@ fn test_config() {
 
     assert_eq!(10, resp.cadence_hours);
 
-    let _res = test_case
+    let response: AppResponse = test_case
         .app
-        .execute_contract(
-            user_addr,
+        .wasm_sudo(
             test_case.dispatcher_addr.clone().unwrap(),
-            &rewards_dispatcher::msg::ExecuteMsg::Config { cadence_hours: 30 },
-            &cwcoins::<Lpn, _>(40),
+            &rewards_dispatcher::msg::SudoMsg::Config { cadence_hours: 30 },
         )
         .unwrap();
+    assert_eq!(response.data, None);
+    assert_eq!(
+        &response.events,
+        &[
+            Event::new("sudo").add_attribute("_contract_addr", "contract4"),
+            Event::new("wasm")
+                .add_attribute("_contract_addr", "contract4")
+                .add_attribute("method", "config"),
+        ]
+    );
+
     let resp: rewards_dispatcher::msg::ConfigResponse = test_case
         .app
         .wrap()

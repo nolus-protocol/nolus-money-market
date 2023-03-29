@@ -17,16 +17,19 @@ pub struct InstantiateMsg {
     pub tvl_to_apr: RewardScale,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
-pub struct MigrateMsg {
-    pub contract_owner: Addr,
-}
+#[derive(Serialize, Deserialize)]
+pub struct MigrateMsg {}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    Config { cadence_hours: u16 },
     TimeAlarm {},
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SudoMsg {
+    Config { cadence_hours: u16 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

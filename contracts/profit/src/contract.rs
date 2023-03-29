@@ -11,7 +11,7 @@ use versioning::{version, VersionSegment};
 
 use crate::{
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     profit::Profit,
     state::config::Config,
 };
@@ -52,10 +52,10 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    SingleUserAccess::new_contract_owner(msg.contract_owner).store(deps.storage)?;
+    SingleUserAccess::remove_contract_owner(deps.storage);
 
     response::response(versioning::release()).map_err(Into::into)
 }
@@ -68,10 +68,14 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Config { cadence_hours } => {
-            Profit::try_config(deps.storage, info, cadence_hours)
-        }
         ExecuteMsg::TimeAlarm {} => try_transfer(deps.as_ref(), env, info),
+    }
+}
+
+#[cfg_attr(feature = "contract-with-bindings", entry_point)]
+pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
+    match msg {
+        SudoMsg::Config { cadence_hours } => Profit::try_config(deps.storage, cadence_hours),
     }
 }
 
@@ -93,16 +97,19 @@ fn try_transfer(deps: Deps<'_>, env: Env, info: MessageInfo) -> Result<Response,
 mod tests {
     use currency::native::Nls;
     use finance::{currency::Currency, duration::Duration};
-    use sdk::cosmwasm_std::{
-        coins, from_binary,
-        testing::{mock_dependencies_with_balance, mock_env, mock_info},
-        to_binary, Addr, BankMsg, CosmosMsg, SubMsg, WasmMsg,
+    use sdk::{
+        cosmwasm_ext::Response,
+        cosmwasm_std::{
+            coins, from_binary,
+            testing::{mock_dependencies_with_balance, mock_env, mock_info},
+            to_binary, Addr, BankMsg, CosmosMsg, SubMsg, WasmMsg,
+        },
+        testing::customized_mock_deps_with_contracts,
     };
-    use sdk::testing::customized_mock_deps_with_contracts;
 
     use crate::{
-        error::ContractError,
-        msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
+        contract::sudo,
+        msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
     };
 
     use super::{execute, instantiate, query};
@@ -163,17 +170,23 @@ mod tests {
         let info = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        let unauth_info = mock_info("anyone", &coins(2, "token"));
-        let msg = ExecuteMsg::Config { cadence_hours: 20 };
-        let res = execute(deps.as_mut(), mock_env(), unauth_info, msg);
-        match res {
-            Err(ContractError::Unauthorized(..)) => {}
-            _ => panic!("Must return unauthorized error"),
-        }
+        let Response {
+            messages,
+            attributes,
+            events,
+            data,
+            ..
+        }: Response = sudo(
+            deps.as_mut(),
+            mock_env(),
+            SudoMsg::Config { cadence_hours: 12 },
+        )
+        .unwrap();
 
-        let auth_info = mock_info("creator", &coins(2, "token"));
-        let msg = ExecuteMsg::Config { cadence_hours: 12 };
-        let _res = execute(deps.as_mut(), mock_env(), auth_info, msg).unwrap();
+        assert_eq!(messages.len(), 0);
+        assert_eq!(attributes.len(), 0);
+        assert_eq!(events.len(), 0);
+        assert_eq!(data, None);
 
         // should now be 12
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();

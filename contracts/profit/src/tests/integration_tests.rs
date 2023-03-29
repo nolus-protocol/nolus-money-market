@@ -3,7 +3,10 @@ use sdk::{
     testing::{new_app, App, Contract, ContractWrapper, Executor},
 };
 
-use crate::{msg::InstantiateMsg, tests::helpers::CwTemplateContract};
+use crate::{
+    msg::{InstantiateMsg, SudoMsg},
+    tests::helpers::CwTemplateContract,
+};
 
 pub fn contract_template() -> Box<Contract> {
     let contract = ContractWrapper::new(
@@ -60,8 +63,6 @@ fn proper_instantiate() -> (App, CwTemplateContract) {
 }
 
 mod config {
-    use crate::msg::ExecuteMsg;
-
     use super::*;
 
     #[test]
@@ -69,10 +70,12 @@ mod config {
     fn config() {
         let (mut app, cw_template_contract) = proper_instantiate();
 
-        let msg = ExecuteMsg::Config {
-            cadence_hours: 12u16,
-        };
-        let cosmos_msg = cw_template_contract.call(msg).unwrap();
-        app.execute(Addr::unchecked(USER), cosmos_msg).unwrap_err();
+        app.wasm_sudo(
+            cw_template_contract.addr(),
+            &SudoMsg::Config {
+                cadence_hours: 12u16,
+            },
+        )
+        .unwrap_err();
     }
 }

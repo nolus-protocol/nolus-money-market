@@ -65,7 +65,7 @@ impl<'a> Leaser<'a> {
     }
 }
 
-pub fn try_setup_dex(
+pub(super) fn try_setup_dex(
     storage: &mut dyn Storage,
     params: ConnectionParams,
 ) -> ContractResult<Response> {
@@ -74,7 +74,7 @@ pub fn try_setup_dex(
     Ok(Response::default())
 }
 
-pub fn try_configure(
+pub(super) fn try_configure(
     storage: &mut dyn Storage,
     lease_interest_rate_margin: Percent,
     liability: Liability,
@@ -90,7 +90,10 @@ pub fn try_configure(
     Ok(Response::default())
 }
 
-pub fn try_migrate_leases(storage: &mut dyn Storage, new_code_id: u64) -> ContractResult<Response> {
+pub(super) fn try_migrate_leases(
+    storage: &mut dyn Storage,
+    new_code_id: u64,
+) -> ContractResult<Response> {
     Config::update_lease_code(storage, new_code_id)?;
 
     let mut batch = migrate::migrate_leases(Leases::iter(storage), new_code_id)?;

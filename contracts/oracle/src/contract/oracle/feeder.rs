@@ -2,11 +2,10 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use access_control::SingleUserAccess;
 use marketprice::feeders::PriceFeeders;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, DepsMut, MessageInfo, StdResult, Storage},
+    cosmwasm_std::{Addr, DepsMut, StdResult, Storage},
 };
 
 use crate::{state::config::Config, ContractError};
@@ -29,11 +28,8 @@ impl Feeders {
 
     pub(crate) fn try_register(
         deps: DepsMut<'_>,
-        info: MessageInfo,
         address: String,
     ) -> Result<Response, ContractError> {
-        SingleUserAccess::check_owner_access::<ContractError>(deps.storage, &info.sender)?;
-
         // check if address is valid
         let f_address = deps.api.addr_validate(&address)?;
         Self::FEEDERS.register(deps, f_address)?;
@@ -43,11 +39,8 @@ impl Feeders {
 
     pub(crate) fn try_remove(
         deps: DepsMut<'_>,
-        info: MessageInfo,
         address: String,
     ) -> Result<Response, ContractError> {
-        SingleUserAccess::check_owner_access::<ContractError>(deps.storage, &info.sender)?;
-
         let f_address = deps.api.addr_validate(&address)?;
 
         if !Self::is_feeder(deps.storage, &f_address)? {
@@ -67,40 +60,24 @@ impl Feeders {
 mod tests {
     use std::collections::HashSet;
 
-    use currency::native::Nls;
-    use finance::currency::Currency;
     use sdk::{
         cosmwasm_ext::Response,
-        cosmwasm_std::{
-            coins, from_binary,
-            testing::{mock_env, mock_info},
-            Addr, DepsMut, MessageInfo,
-        },
+        cosmwasm_std::{from_binary, testing::mock_env, Addr, DepsMut},
     };
 
     use crate::{
-        contract::{execute, query},
-        msg::{ExecuteMsg, QueryMsg},
+        contract::{query, sudo},
+        msg::{QueryMsg, SudoMsg},
         tests::{dummy_default_instantiate_msg, setup_test},
         ContractError,
     };
 
     #[test]
-    #[should_panic(expected = "Unauthorized")]
-    fn register_unauthorized() {
-        let (mut deps, _) = setup_test(dummy_default_instantiate_msg());
-        let info = mock_info("USER", &coins(1000, Nls::TICKER));
-
-        // register new feeder address
-        register(deps.as_mut(), &info, "addr0000").unwrap();
-    }
-
-    #[test]
     fn register_feeder() {
-        let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
+        let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
 
         // register new feeder address
-        register(deps.as_mut(), &info, "addr0000").unwrap();
+        register(deps.as_mut(), "addr0000").unwrap();
 
         // check if the new address is added to FEEDERS Item
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
@@ -109,10 +86,10 @@ mod tests {
         assert!(resp.contains(&Addr::unchecked("addr0000")));
 
         // should not add the same address twice
-        assert!(register(deps.as_mut(), &info, "addr0000").is_err());
+        assert!(register(deps.as_mut(), "addr0000").is_err());
 
         // register new feeder address
-        register(deps.as_mut(), &info, "addr0001").unwrap();
+        register(deps.as_mut(), "addr0001").unwrap();
         // check if the new address is added to FEEDERS Item
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
         let resp: HashSet<Addr> = from_binary(&res).unwrap();
@@ -123,12 +100,12 @@ mod tests {
 
     #[test]
     fn remove_feeder() {
-        let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
+        let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
 
-        register(deps.as_mut(), &info, "addr0000").unwrap();
-        register(deps.as_mut(), &info, "addr0001").unwrap();
-        register(deps.as_mut(), &info, "addr0002").unwrap();
-        register(deps.as_mut(), &info, "addr0003").unwrap();
+        register(deps.as_mut(), "addr0000").unwrap();
+        register(deps.as_mut(), "addr0001").unwrap();
+        register(deps.as_mut(), "addr0002").unwrap();
+        register(deps.as_mut(), "addr0003").unwrap();
 
         // check if the new address is added to FEEDERS Item
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
@@ -137,8 +114,8 @@ mod tests {
         assert!(resp.contains(&Addr::unchecked("addr0000")));
         assert!(resp.contains(&Addr::unchecked("addr0001")));
 
-        remove(deps.as_mut(), &info, "addr0000");
-        remove(deps.as_mut(), &info, "addr0001");
+        remove(deps.as_mut(), "addr0000");
+        remove(deps.as_mut(), "addr0001");
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Feeders {}).unwrap();
         let resp: HashSet<Addr> = from_binary(&res).unwrap();
         assert_eq!(3, resp.len());
@@ -146,20 +123,35 @@ mod tests {
         assert!(!resp.contains(&Addr::unchecked("addr0001")));
     }
 
-    fn register(
-        deps: DepsMut<'_>,
-        info: &MessageInfo,
-        address: &str,
-    ) -> Result<Response, ContractError> {
-        let msg = ExecuteMsg::RegisterFeeder {
-            feeder_address: address.to_string(),
-        };
-        execute(deps, mock_env(), info.to_owned(), msg)
+    fn register(deps: DepsMut<'_>, address: &str) -> Result<Response, ContractError> {
+        sudo(
+            deps,
+            mock_env(),
+            SudoMsg::RegisterFeeder {
+                feeder_address: address.to_string(),
+            },
+        )
     }
-    fn remove(deps: DepsMut<'_>, info: &MessageInfo, address: &str) {
-        let msg = ExecuteMsg::RemoveFeeder {
-            feeder_address: address.to_string(),
-        };
-        let _res = execute(deps, mock_env(), info.to_owned(), msg).unwrap();
+
+    fn remove(deps: DepsMut<'_>, address: &str) {
+        let Response {
+            messages,
+            attributes,
+            events,
+            data,
+            ..
+        }: Response = sudo(
+            deps,
+            mock_env(),
+            SudoMsg::RemoveFeeder {
+                feeder_address: address.to_string(),
+            },
+        )
+        .unwrap();
+
+        assert_eq!(messages.len(), 0);
+        assert_eq!(attributes.len(), 0);
+        assert_eq!(events.len(), 0);
+        assert_eq!(data, None);
     }
 }

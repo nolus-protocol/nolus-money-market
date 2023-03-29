@@ -4,7 +4,8 @@ use sdk::{
     cw_multi_test::Executor,
 };
 use treasury::{
-    msg::{ExecuteMsg, InstantiateMsg},
+    contract::sudo,
+    msg::{ExecuteMsg, InstantiateMsg, SudoMsg},
     ContractError,
 };
 
@@ -47,7 +48,8 @@ impl Default for TreasuryWrapper {
             treasury::contract::execute,
             treasury::contract::instantiate,
             mock_query,
-        );
+        )
+        .with_sudo(sudo);
 
         Self {
             contract_wrapper: Box::new(contract),
@@ -62,4 +64,6 @@ type TreasuryContractWrapper = ContractWrapper<
     ContractError,
     MockQueryMsg,
     StdError,
+    SudoMsg,
+    ContractError,
 >;

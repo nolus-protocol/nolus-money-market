@@ -1,5 +1,4 @@
 use access_control::SingleUserAccess;
-use cosmwasm_std::Storage;
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
 use platform::response;
@@ -7,7 +6,9 @@ use platform::response;
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{
+        from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage,
+    },
 };
 use versioning::{package_version, version, VersionSegment};
 
@@ -23,6 +24,7 @@ use self::{
     exec::ExecWithOracleBase,
     oracle::feeder::Feeders,
     query::QueryWithOracleBase,
+    sudo::SudoWithOracleBase,
 };
 
 mod alarms;
@@ -30,6 +32,7 @@ mod config;
 pub mod exec;
 mod oracle;
 pub mod query;
+mod sudo;
 
 // version info for migration info
 // const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
@@ -90,6 +93,8 @@ pub fn instantiate(
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
+    SingleUserAccess::remove_contract_owner(deps.storage);
+
     response::response(versioning::release()).map_err(Into::into)
 }
 
@@ -113,32 +118,25 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
-    match msg {
-        ExecuteMsg::UpdateConfig(price_config) => try_configure(deps.storage, info, price_config),
-        ExecuteMsg::RegisterFeeder { feeder_address } => {
-            Feeders::try_register(deps, info, feeder_address)
-        }
-        ExecuteMsg::RemoveFeeder { feeder_address } => {
-            Feeders::try_remove(deps, info, feeder_address)
-        }
-        ExecuteMsg::RemovePriceAlarm {} => {
-            MarketAlarms::remove(deps.storage, info.sender)?;
-            Ok(Response::default())
-        }
-        _ => Ok(ExecWithOracleBase::cmd(deps, env, msg, info.sender)?),
-    }
+    ExecWithOracleBase::cmd(deps, env, msg, info.sender)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
     match msg {
+        SudoMsg::UpdateConfig(price_config) => try_configure(deps.storage, price_config),
+        SudoMsg::RegisterFeeder { feeder_address } => Feeders::try_register(deps, feeder_address),
+        SudoMsg::RemoveFeeder { feeder_address } => Feeders::try_remove(deps, feeder_address),
         SudoMsg::RemovePriceAlarm { receiver } => {
             MarketAlarms::remove(deps.storage, receiver)?;
+
             Ok(Response::default())
         }
+        _ => SudoWithOracleBase::cmd(deps, msg),
     }
 }
 
+// TODO: compare gas usage of this solution vs reply on error
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let resp = match msg.result {

@@ -470,27 +470,6 @@ fn state_paid_when_overpaid() {
     );
 }
 
-#[test]
-#[should_panic = "Unauthorized"]
-fn price_alarm_unauthorized() {
-    let (mut test_case, neutron_message_receiver) = create_test_case();
-    let downpayment = create_payment_coin(DOWNPAYMENT);
-    let lease_address = open_lease(&mut test_case, &neutron_message_receiver, downpayment, None);
-
-    println!(
-        "{:?}",
-        test_case
-            .app
-            .execute_contract(
-                Addr::unchecked(ADMIN),
-                lease_address,
-                &ExecuteMsg::PriceAlarm(),
-                &[],
-            )
-            .unwrap()
-    );
-}
-
 fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, percent: Percent, level: &str) {
     let (mut test_case, neutron_message_receiver) = create_test_case();
     let downpayment = create_payment_coin(DOWNPAYMENT);

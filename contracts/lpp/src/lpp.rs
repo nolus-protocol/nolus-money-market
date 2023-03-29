@@ -187,7 +187,7 @@ where
         )))
     }
 
-    pub fn try_open_loan(
+    pub(super) fn try_open_loan(
         &mut self,
         deps: &mut DepsMut<'_>,
         env: &Env,
@@ -222,7 +222,7 @@ where
     }
 
     /// return amount of lpp currency to pay back to lease_addr
-    pub fn try_repay_loan(
+    pub(super) fn try_repay_loan(
         &mut self,
         deps: &mut DepsMut<'_>,
         env: &Env,

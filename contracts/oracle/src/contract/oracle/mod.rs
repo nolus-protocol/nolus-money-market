@@ -47,7 +47,7 @@ where
         })
     }
 
-    pub fn try_notify_alarms(
+    pub(super) fn try_notify_alarms(
         &self,
         storage: &dyn Storage,
         block_time: Timestamp,
@@ -76,7 +76,7 @@ where
         Ok(batch.into())
     }
 
-    pub fn try_query_alarms(
+    pub(super) fn try_query_alarms(
         &self,
         storage: &dyn Storage,
         block_time: Timestamp,
@@ -89,7 +89,7 @@ where
         Ok(AlarmsStatusResponse { remaining_alarms })
     }
 
-    pub fn try_query_prices(
+    pub(super) fn try_query_prices(
         &self,
         storage: &dyn Storage,
         block_time: Timestamp,
@@ -106,7 +106,7 @@ where
         prices
     }
 
-    pub fn try_query_price(
+    pub(super) fn try_query_price(
         &self,
         storage: &dyn Storage,
         at: Timestamp,

@@ -1,7 +1,7 @@
 use finance::percent::Percent;
 use rewards_dispatcher::{
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
     state::reward_scale::{Bar, RewardScale, TotalValueLocked},
 };
 use sdk::{
@@ -65,7 +65,8 @@ impl Default for DispatcherWrapper {
             rewards_dispatcher::contract::execute,
             rewards_dispatcher::contract::instantiate,
             rewards_dispatcher::contract::query,
-        );
+        )
+        .with_sudo(rewards_dispatcher::contract::sudo);
 
         Self {
             contract_wrapper: Box::new(contract),
@@ -73,5 +74,13 @@ impl Default for DispatcherWrapper {
     }
 }
 
-type DispatcherContractWrapper =
-    ContractWrapper<ExecuteMsg, ContractError, InstantiateMsg, ContractError, QueryMsg, StdError>;
+type DispatcherContractWrapper = ContractWrapper<
+    ExecuteMsg,
+    ContractError,
+    InstantiateMsg,
+    ContractError,
+    QueryMsg,
+    StdError,
+    SudoMsg,
+    ContractError,
+>;

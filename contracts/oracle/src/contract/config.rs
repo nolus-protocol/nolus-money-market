@@ -1,9 +1,6 @@
 use access_control::SingleUserAccess;
 use marketprice::config::Config as PriceConfig;
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{MessageInfo, Storage},
-};
+use sdk::{cosmwasm_ext::Response, cosmwasm_std::Storage};
 
 use crate::{msg::ConfigResponse, state::config::Config, ContractError};
 
@@ -14,13 +11,10 @@ pub fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, ContractErr
     Ok(ConfigResponse { owner, config })
 }
 
-pub fn try_configure(
+pub(super) fn try_configure(
     storage: &mut dyn Storage,
-    info: MessageInfo,
     price_config: PriceConfig,
 ) -> Result<Response, ContractError> {
-    SingleUserAccess::check_owner_access::<ContractError>(storage, &info.sender)?;
-
     Config::update(storage, price_config)?;
 
     Ok(Response::new())
@@ -31,44 +25,21 @@ mod tests {
     use currency::{
         lease::{Cro, Osmo},
         lpn::Usdc,
-        native::Nls,
     };
     use finance::{currency::Currency, duration::Duration, percent::Percent};
-    use marketprice::config::Config as PriceConfig;
-    use sdk::cosmwasm_std::{
-        coins, from_binary,
-        testing::{mock_env, mock_info},
+    use sdk::{
+        cosmwasm_ext::Response,
+        cosmwasm_std::{from_binary, testing::mock_env},
     };
     use swap::SwapTarget;
 
     use crate::{
-        contract::{execute, query},
-        msg::{ConfigResponse, ExecuteMsg, QueryMsg},
+        contract::{query, sudo},
+        msg::{ConfigResponse, QueryMsg, SudoMsg},
         state::{config::Config, supported_pairs::SwapLeg},
         swap_tree,
         tests::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test},
     };
-
-    #[test]
-    #[should_panic(expected = "Unauthorized")]
-    fn configure_unauthorized() {
-        let msg = dummy_instantiate_msg(
-            Usdc::TICKER.to_string(),
-            60,
-            Percent::from_percent(50),
-            swap_tree!((1, Cro::TICKER)),
-        );
-        let (mut deps, _) = setup_test(msg);
-
-        let unauth_info = mock_info("anyone", &coins(2, Nls::TICKER));
-        let msg = ExecuteMsg::UpdateConfig(PriceConfig::new(
-            Percent::from_percent(12),
-            Duration::from_secs(5),
-            3,
-            Percent::from_percent(88),
-        ));
-        let _res = execute(deps.as_mut(), mock_env(), unauth_info, msg).unwrap();
-    }
 
     #[test]
     fn configure() {
@@ -81,13 +52,25 @@ mod tests {
         );
         let (mut deps, info) = setup_test(msg);
 
-        let msg = ExecuteMsg::UpdateConfig(PriceConfig::new(
+        let msg = SudoMsg::UpdateConfig(PriceConfig::new(
             Percent::from_percent(44),
             Duration::from_secs(5),
             7,
             Percent::from_percent(88),
         ));
-        let _res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+
+        let Response {
+            messages,
+            attributes,
+            events,
+            data,
+            ..
+        }: Response = sudo(deps.as_mut(), mock_env(), msg).unwrap();
+
+        assert_eq!(messages.len(), 0);
+        assert_eq!(attributes.len(), 0);
+        assert_eq!(events.len(), 0);
+        assert_eq!(data, None);
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
@@ -110,12 +93,15 @@ mod tests {
 
     #[test]
     fn config_supported_pairs() {
-        let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
+        let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
 
         let test_tree = swap_tree!((1, Cro::TICKER), (2, Osmo::TICKER));
 
-        let msg = ExecuteMsg::SwapTree { tree: test_tree };
-        let res = execute(deps.as_mut(), mock_env(), info, msg);
+        let res = sudo(
+            deps.as_mut(),
+            mock_env(),
+            SudoMsg::SwapTree { tree: test_tree },
+        );
         assert!(res.is_ok());
 
         let res = query(
@@ -149,27 +135,28 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Unauthorized")]
-    fn config_supported_pairs_unauthorized() {
-        let (mut deps, _) = setup_test(dummy_default_instantiate_msg());
-        let info = mock_info("user", &coins(1000, Nls::TICKER));
-
-        let msg = ExecuteMsg::SwapTree {
-            tree: swap_tree!((1, Cro::TICKER)),
-        };
-
-        execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-    }
-
-    #[test]
     #[should_panic]
     fn invalid_supported_pairs() {
-        let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
+        let (mut deps, _info) = setup_test(dummy_default_instantiate_msg());
 
         let test_tree = swap_tree!((1, Cro::TICKER), (2, Cro::TICKER));
 
-        let msg = ExecuteMsg::SwapTree { tree: test_tree };
+        let Response {
+            messages,
+            attributes,
+            events,
+            data,
+            ..
+        }: Response = sudo(
+            deps.as_mut(),
+            mock_env(),
+            SudoMsg::SwapTree { tree: test_tree },
+        )
+        .unwrap();
 
-        execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+        assert_eq!(messages.len(), 0);
+        assert_eq!(attributes.len(), 0);
+        assert_eq!(events.len(), 0);
+        assert_eq!(data, None);
     }
 }

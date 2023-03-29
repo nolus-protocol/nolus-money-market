@@ -1,4 +1,3 @@
-use access_control::SingleUserAccess;
 use currency::native::Nls;
 use finance::{coin::Coin, duration::Duration};
 use platform::{
@@ -19,23 +18,18 @@ pub struct Profit {}
 impl Profit {
     pub(crate) fn try_config(
         storage: &mut dyn Storage,
-        info: MessageInfo,
         cadence_hours: u16,
     ) -> Result<Response, ContractError> {
-        SingleUserAccess::check_owner_access::<ContractError>(storage, &info.sender)?;
-
         Config::update(storage, cadence_hours)?;
 
         Ok(Response::new())
     }
+
     pub(crate) fn transfer(
         deps: Deps<'_>,
         env: Env,
         info: MessageInfo,
     ) -> Result<Response, ContractError> {
-        SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
-            .check_access(&info.sender)?;
-
         let config = Config::load(deps.storage)?;
 
         let balance = deps.querier.query_all_balances(&env.contract.address)?;

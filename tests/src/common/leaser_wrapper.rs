@@ -1,12 +1,12 @@
 use finance::{duration::Duration, liability::Liability, percent::Percent};
 use lease::api::InterestPaymentSpec;
 use leaser::{
-    contract::{execute, instantiate, query, reply},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
+    contract::{execute, instantiate, query, reply, sudo},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
     ContractError,
 };
 use sdk::{
-    cosmwasm_std::{Addr, Empty, Uint64},
+    cosmwasm_std::{Addr, Uint64},
     cw_multi_test::Executor,
 };
 
@@ -68,7 +68,9 @@ impl LeaserWrapper {
 
 impl Default for LeaserWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(execute, instantiate, query).with_reply(reply);
+        let contract = ContractWrapper::new(execute, instantiate, query)
+            .with_reply(reply)
+            .with_sudo(sudo);
 
         Self {
             contract_wrapper: Box::new(contract),
@@ -84,8 +86,8 @@ type LeaserContractWrapperReply = Box<
         ContractError,
         QueryMsg,
         ContractError,
-        Empty,
-        anyhow::Error,
+        SudoMsg,
+        ContractError,
         ContractError,
     >,
 >;

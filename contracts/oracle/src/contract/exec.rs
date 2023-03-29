@@ -1,6 +1,5 @@
 use serde::de::DeserializeOwned;
 
-use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
 use marketprice::SpotPrice;
@@ -10,11 +9,7 @@ use sdk::{
     cosmwasm_std::{Addr, DepsMut, Env, Storage, Timestamp},
 };
 
-use crate::{
-    error::ContractError,
-    msg::ExecuteMsg,
-    state::{config::Config, supported_pairs::SupportedPairs},
-};
+use crate::{error::ContractError, msg::ExecuteMsg, state::config::Config};
 
 use super::{
     alarms::MarketAlarms,
@@ -56,18 +51,6 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
         OracleBase: Currency + DeserializeOwned,
     {
         match self.msg {
-            ExecuteMsg::SwapTree { tree } => {
-                SingleUserAccess::check_owner_access::<ContractError>(
-                    self.deps.storage,
-                    &self.sender,
-                )?;
-
-                SupportedPairs::<OracleBase>::new(tree.into_tree())?
-                    .validate_tickers()?
-                    .save(self.deps.storage)?;
-
-                Ok(Response::default())
-            }
             ExecuteMsg::FeedPrices { prices } => {
                 if !Feeders::is_feeder(self.deps.storage, &self.sender)? {
                     return Err(ContractError::UnknownFeeder {});
@@ -93,8 +76,10 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                 )?;
                 Ok(Response::default())
             }
-            _ => {
-                unreachable!()
+            ExecuteMsg::RemovePriceAlarm {} => {
+                MarketAlarms::remove(self.deps.storage, self.sender)?;
+
+                Ok(Response::default())
             }
         }
     }

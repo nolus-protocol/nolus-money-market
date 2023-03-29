@@ -11,17 +11,20 @@ use finance::{
     price::{self, base::BasePrice, dto::PriceDTO},
 };
 use marketprice::config::Config as PriceConfig;
-use sdk::cosmwasm_std::{
-    coins,
-    testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
-    MemoryStorage, MessageInfo, OwnedDeps,
+use sdk::{
+    cosmwasm_ext::Response,
+    cosmwasm_std::{
+        coins,
+        testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
+        MemoryStorage, MessageInfo, OwnedDeps,
+    },
 };
 use swap::{SwapGroup, SwapTarget};
 use tree::HumanReadableTree;
 
 use crate::{
-    contract::{execute, instantiate},
-    msg::{ExecuteMsg, InstantiateMsg},
+    contract::{instantiate, sudo},
+    msg::{ExecuteMsg, InstantiateMsg, SudoMsg},
     state::config::Config,
 };
 
@@ -134,10 +137,25 @@ pub(crate) fn setup_test(
     assert_eq!(res.messages.len(), 0);
 
     // register single feeder address
-    let msg = ExecuteMsg::RegisterFeeder {
-        feeder_address: CREATOR.to_string(),
-    };
-    let _res = execute(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+    let Response {
+        messages,
+        attributes,
+        events,
+        data,
+        ..
+    }: Response = sudo(
+        deps.as_mut(),
+        mock_env(),
+        SudoMsg::RegisterFeeder {
+            feeder_address: CREATOR.to_string(),
+        },
+    )
+    .unwrap();
+
+    assert_eq!(messages.len(), 0);
+    assert_eq!(attributes.len(), 0);
+    assert_eq!(events.len(), 0);
+    assert_eq!(data, None);
 
     (deps, info)
 }

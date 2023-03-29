@@ -18,7 +18,7 @@ use crate::{
     state::Deposit,
 };
 
-pub fn try_deposit<LPN>(
+pub(super) fn try_deposit<LPN>(
     deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
@@ -42,7 +42,7 @@ where
     Ok(Batch::default().into_response(event::emit_deposit(env, lender_addr, amount, receipts)))
 }
 
-pub fn try_withdraw<LPN>(
+pub(super) fn try_withdraw<LPN>(
     deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,

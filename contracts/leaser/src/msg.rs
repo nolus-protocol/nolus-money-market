@@ -28,6 +28,19 @@ pub struct MigrateMsg {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
+    OpenLease {
+        currency: SymbolOwned,
+        #[serde(default)]
+        max_ltv: Option<Percent>,
+    },
+    MigrateLeases {
+        new_code_id: Uint64,
+    },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SudoMsg {
     SetupDex(ConnectionParams),
     Config {
         lease_interest_rate_margin: Percent,
@@ -36,11 +49,6 @@ pub enum ExecuteMsg {
     },
     MigrateLeases {
         new_code_id: Uint64,
-    },
-    OpenLease {
-        currency: SymbolOwned,
-        #[serde(default)]
-        max_ltv: Option<Percent>,
     },
 }
 

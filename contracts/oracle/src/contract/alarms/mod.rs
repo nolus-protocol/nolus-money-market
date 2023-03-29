@@ -22,12 +22,12 @@ impl MarketAlarms {
     const PRICE_ALARMS: PriceAlarms<'static> =
         PriceAlarms::new("alarms_below", "index_below", "alarms_above", "index_above");
 
-    pub fn remove(storage: &mut dyn Storage, receiver: Addr) -> Result<(), ContractError> {
+    pub(super) fn remove(storage: &mut dyn Storage, receiver: Addr) -> Result<(), ContractError> {
         Self::PRICE_ALARMS.remove(storage, receiver)?;
         Ok(())
     }
 
-    pub fn try_add_price_alarm<BaseC>(
+    pub(super) fn try_add_price_alarm<BaseC>(
         storage: &mut dyn Storage,
         receiver: Addr,
         alarm: AlarmDTO,
@@ -78,7 +78,7 @@ impl MarketAlarms {
         )
     }
 
-    pub fn notify_alarms_iter<'a, BaseC>(
+    pub(super) fn notify_alarms_iter<'a, BaseC>(
         storage: &'a dyn Storage,
         prices: impl Iterator<Item = PriceResult<BaseC>> + 'a,
         max_count: usize,
@@ -91,7 +91,7 @@ impl MarketAlarms {
             .map(|item| item.map_err(Into::into))
     }
 
-    pub fn try_query_alarms<'a, BaseC>(
+    pub(super) fn try_query_alarms<'a, BaseC>(
         storage: &dyn Storage,
         prices: impl Iterator<Item = PriceResult<BaseC>> + 'a,
     ) -> Result<bool, ContractError>
