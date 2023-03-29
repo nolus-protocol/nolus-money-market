@@ -68,9 +68,9 @@ pub fn execute(
             currency,
             max_ltv,
         ),
-        ExecuteMsg::Sudo { msg } => {
+        ExecuteMsg::MigrateLeases { new_code_id } => {
             SingleUserAccess::check_owner_access(deps.storage, &info.sender)
-                .and_then(move |()| sudo(deps, env, msg))
+                .and_then(move |()| leaser::try_migrate_leases(deps.storage, new_code_id.u64()))
         }
     }
 }

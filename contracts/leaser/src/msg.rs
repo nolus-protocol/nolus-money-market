@@ -33,8 +33,8 @@ pub enum ExecuteMsg {
         #[serde(default)]
         max_ltv: Option<Percent>,
     },
-    Sudo {
-        msg: SudoMsg,
+    MigrateLeases {
+        new_code_id: Uint64,
     },
 }
 

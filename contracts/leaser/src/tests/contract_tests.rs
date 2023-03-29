@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-use access_control::Unauthorized;
 use finance::{
     currency::Currency, duration::Duration, liability::Liability, percent::Percent,
     test::currency::Usdc,
@@ -105,17 +104,6 @@ fn setup_dex(deps: DepsMut<'_>) -> ContractResult<Response> {
     sudo(deps, mock_env(), SudoMsg::SetupDex(dex_params()))
 }
 
-fn setup_dex_with_info(deps: DepsMut<'_>, info: MessageInfo) -> ContractResult<Response> {
-    execute(
-        deps,
-        mock_env(),
-        info,
-        ExecuteMsg::Sudo {
-            msg: SudoMsg::SetupDex(dex_params()),
-        },
-    )
-}
-
 #[test]
 fn proper_initialization() {
     let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
@@ -218,34 +206,6 @@ fn test_update_config_invalid_liability() {
 }
 
 #[test]
-fn test_update_config_unauthorized() {
-    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
-
-    let expected_liability = Liability::new(
-        Percent::from_percent(55),
-        Percent::from_percent(5),
-        Percent::from_percent(5),
-        Percent::from_percent(1),
-        Percent::from_percent(2),
-        Percent::from_percent(1),
-        Duration::from_hours(12),
-    );
-    let expected_repaiment =
-        InterestPaymentSpec::new(Duration::from_secs(12), Duration::from_secs(10));
-    setup_test_case(deps.as_mut());
-    let msg = ExecuteMsg::Sudo {
-        msg: SudoMsg::Config {
-            lease_interest_rate_margin: Percent::from_percent(5),
-            liability: expected_liability,
-            lease_interest_payment: expected_repaiment,
-        },
-    };
-
-    let err = execute(deps.as_mut(), mock_env(), customer(), msg).unwrap_err();
-    assert_eq!(ContractError::Unauthorized(Unauthorized), err);
-}
-
-#[test]
 fn test_no_dex_setup() {
     let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
 
@@ -260,17 +220,7 @@ fn test_no_dex_setup() {
     };
 
     let res = execute(deps.as_mut(), mock_env(), customer(), msg);
-    assert_eq!(Err(ContractError::NoDEXConnectivitySetup {}), res);
-}
-
-#[test]
-fn test_setup_dex_unauthorized() {
-    let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
-
-    setup_test_case(deps.as_mut());
-
-    let res = setup_dex_with_info(deps.as_mut(), customer());
-    assert_eq!(Err(ContractError::Unauthorized(Unauthorized)), res);
+    assert_eq!(res, Err(ContractError::NoDEXConnectivitySetup {}));
 }
 
 #[test]
@@ -281,11 +231,8 @@ fn test_setup_dex_again() {
 
     setup_dex_ok(deps.as_mut());
 
-    let res = setup_dex_with_info(deps.as_mut(), owner());
-    assert_eq!(Err(ContractError::DEXConnectivityAlreadySetup {}), res);
-
-    let res = setup_dex_with_info(deps.as_mut(), customer());
-    assert_eq!(Err(ContractError::Unauthorized(Unauthorized)), res);
+    let res = setup_dex(deps.as_mut());
+    assert_eq!(res, Err(ContractError::DEXConnectivityAlreadySetup {}));
 }
 
 fn open_lease_with(max_ltv: Option<Percent>) {
