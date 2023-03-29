@@ -132,20 +132,30 @@ pub mod tests {
     fn test_migration() {
         let alarms = AlarmsOld::new("alarms", "alarms_idx", "alarms_next_id");
         let storage = &mut testing::mock_dependencies().storage;
-        let t1 = Timestamp::from_seconds(1);
-        let t2 = Timestamp::from_seconds(2);
-        let t3 = Timestamp::from_seconds(3);
-        let t4 = Timestamp::from_seconds(4);
+        let t1 = 1;
+        let t2 = 2;
+        let t3 = 3;
+        let t4 = 4;
         let addr1 = Addr::unchecked("addr1");
         let addr2 = Addr::unchecked("addr2");
         let addr3 = Addr::unchecked("addr3");
         let addr4 = Addr::unchecked("addr4");
 
-        alarms.add(storage, addr1, t1).unwrap();
-        alarms.add(storage, addr2, t1).unwrap();
-        alarms.add(storage, addr3.clone(), t2).unwrap();
-        alarms.add(storage, addr3, t3).unwrap();
-        alarms.add(storage, addr4, t4).unwrap();
+        alarms
+            .add(storage, addr1.clone(), Timestamp::from_seconds(t1))
+            .unwrap();
+        alarms
+            .add(storage, addr2.clone(), Timestamp::from_seconds(t1))
+            .unwrap();
+        alarms
+            .add(storage, addr3.clone(), Timestamp::from_seconds(t2))
+            .unwrap();
+        alarms
+            .add(storage, addr3.clone(), Timestamp::from_seconds(t3))
+            .unwrap();
+        alarms
+            .add(storage, addr4.clone(), Timestamp::from_seconds(t4))
+            .unwrap();
 
         // multiple alarms per address(5) + index(5) + next_id(1)
         assert_eq!(11, storage.range(None, None, Order::Ascending).count());
@@ -154,5 +164,16 @@ pub mod tests {
 
         // single alarm per address(4) + index(4)
         assert_eq!(8, storage.range(None, None, Order::Ascending).count());
+
+        let new_alarms = Alarms::new("alarms", "alarms_idx");
+        let result: Vec<_> = new_alarms
+            .alarms_selection(storage, Timestamp::from_seconds(10))
+            .map(Result::unwrap)
+            .collect();
+
+        assert_eq!(
+            result,
+            vec![(addr1, t1), (addr2, t1), (addr3, t3), (addr4, t4),]
+        );
     }
 }
