@@ -29,7 +29,7 @@ mod tests {
     use finance::{currency::Currency, duration::Duration, percent::Percent};
     use sdk::{
         cosmwasm_ext::Response,
-        cosmwasm_std::{from_binary, testing::mock_env}
+        cosmwasm_std::{from_binary, testing::mock_env},
     };
     use swap::SwapTarget;
 

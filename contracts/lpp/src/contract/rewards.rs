@@ -69,7 +69,10 @@ where
     lpp.query_lpp_balance(&deps, &env)
 }
 
-pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse, ContractError> {
+pub(super) fn query_rewards(
+    storage: &dyn Storage,
+    addr: Addr,
+) -> Result<RewardsResponse, ContractError> {
     let rewards = Deposit::may_load(storage, addr)?
         .ok_or(ContractError::NoDeposit {})?
         .query_rewards(storage)?;
