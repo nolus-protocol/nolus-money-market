@@ -101,10 +101,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, Cont
     }
 }
 
-pub fn try_config(
-    storage: &mut dyn Storage,
-    cadence_hours: u16,
-) -> Result<Response, ContractError> {
+fn try_config(storage: &mut dyn Storage, cadence_hours: u16) -> Result<Response, ContractError> {
     Config::update(storage, cadence_hours)?;
 
     Ok(Response::new().add_attribute("method", "config"))
@@ -123,11 +120,7 @@ fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
     Ok(ConfigResponse { cadence_hours })
 }
 
-pub fn try_dispatch(
-    deps: DepsMut<'_>,
-    env: Env,
-    info: MessageInfo,
-) -> Result<Response, ContractError> {
+fn try_dispatch(deps: DepsMut<'_>, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
     let block_time = env.block.time;
 
     SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?

@@ -6,7 +6,7 @@ use sdk::{
 
 use crate::{borrow::InterestRate, error::ContractError, state::Config};
 
-pub fn try_update_lease_code(
+pub(super) fn try_update_lease_code(
     deps: DepsMut<'_>,
     info: MessageInfo,
     lease_code: Uint64,
@@ -19,7 +19,7 @@ pub fn try_update_lease_code(
     Ok(Response::new().add_attribute("method", "try_update_lease_code"))
 }
 
-pub fn try_update_parameters(
+pub(super) fn try_update_parameters(
     deps: DepsMut<'_>,
     interest_rate: InterestRate,
 ) -> Result<Response, ContractError> {
@@ -28,6 +28,6 @@ pub fn try_update_parameters(
     Ok(Response::new().add_attribute("method", "try_update_parameters"))
 }
 
-pub fn query_config(deps: &Deps<'_>) -> StdResult<Config> {
+pub(super) fn query_config(deps: &Deps<'_>) -> StdResult<Config> {
     Config::load(deps.storage)
 }

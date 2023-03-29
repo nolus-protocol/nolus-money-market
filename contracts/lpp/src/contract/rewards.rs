@@ -18,7 +18,7 @@ use crate::{
     state::Deposit,
 };
 
-pub fn try_distribute_rewards(
+pub(super) fn try_distribute_rewards(
     deps: DepsMut<'_>,
     info: MessageInfo,
 ) -> Result<Response, ContractError> {
@@ -28,7 +28,7 @@ pub fn try_distribute_rewards(
     Ok(Response::new().add_attribute("method", "try_distribute_rewards"))
 }
 
-pub fn try_claim_rewards(
+pub(super) fn try_claim_rewards(
     deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
@@ -58,7 +58,7 @@ pub fn try_claim_rewards(
     Ok(batch)
 }
 
-pub fn query_lpp_balance<LPN>(
+pub(super) fn query_lpp_balance<LPN>(
     deps: Deps<'_>,
     env: Env,
 ) -> Result<LppBalanceResponse<LPN>, ContractError>
@@ -69,7 +69,7 @@ where
     lpp.query_lpp_balance(&deps, &env)
 }
 
-pub fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse, ContractError> {
+pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse, ContractError> {
     let rewards = Deposit::may_load(storage, addr)?
         .ok_or(ContractError::NoDeposit {})?
         .query_rewards(storage)?;

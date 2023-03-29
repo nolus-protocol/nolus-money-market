@@ -11,7 +11,7 @@ pub fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, ContractErr
     Ok(ConfigResponse { owner, config })
 }
 
-pub fn try_configure(
+pub(super) fn try_configure(
     storage: &mut dyn Storage,
     price_config: PriceConfig,
 ) -> Result<Response, ContractError> {

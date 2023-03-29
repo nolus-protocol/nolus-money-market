@@ -16,7 +16,7 @@ use crate::{
     msg::{LoanResponse, QueryLoanResponse, QueryQuoteResponse},
 };
 
-pub fn try_open_loan<LPN>(
+pub(super) fn try_open_loan<LPN>(
     mut deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
@@ -51,7 +51,7 @@ where
     Ok(response)
 }
 
-pub fn try_repay_loan<LPN>(
+pub(super) fn try_repay_loan<LPN>(
     mut deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
@@ -81,7 +81,7 @@ where
     Ok(resp)
 }
 
-pub fn query_quote<LPN>(
+pub(super) fn query_quote<LPN>(
     deps: &Deps<'_>,
     env: &Env,
     quote: Coin<LPN>,

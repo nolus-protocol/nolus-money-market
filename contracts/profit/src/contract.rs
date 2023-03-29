@@ -97,15 +97,20 @@ fn try_transfer(deps: Deps<'_>, env: Env, info: MessageInfo) -> Result<Response,
 mod tests {
     use currency::native::Nls;
     use finance::{currency::Currency, duration::Duration};
-    use sdk::cosmwasm_std::{
-        coins, from_binary,
-        testing::{mock_dependencies_with_balance, mock_env, mock_info},
-        to_binary, Addr, BankMsg, CosmosMsg, SubMsg, WasmMsg,
+    use sdk::{
+        cosmwasm_ext::Response,
+        cosmwasm_std::{
+            coins, from_binary,
+            testing::{mock_dependencies_with_balance, mock_env, mock_info},
+            to_binary, Addr, BankMsg, CosmosMsg, SubMsg, WasmMsg,
+        },
+        testing::customized_mock_deps_with_contracts,
     };
-    use sdk::testing::customized_mock_deps_with_contracts;
 
-    use crate::contract::sudo;
-    use crate::msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg};
+    use crate::{
+        contract::sudo,
+        msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
+    };
 
     use super::{execute, instantiate, query};
 
@@ -165,15 +170,23 @@ mod tests {
         let info = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        let _auth_info = mock_info("creator", &coins(2, "token"));
-        drop(
-            sudo(
-                deps.as_mut(),
-                mock_env(),
-                SudoMsg::Config { cadence_hours: 12 },
-            )
-            .unwrap(),
-        );
+        let Response {
+            messages,
+            attributes,
+            events,
+            data,
+            ..
+        }: Response = sudo(
+            deps.as_mut(),
+            mock_env(),
+            SudoMsg::Config { cadence_hours: 12 },
+        )
+        .unwrap();
+
+        assert_eq!(messages.len(), 0);
+        assert_eq!(attributes.len(), 0);
+        assert_eq!(events.len(), 0);
+        assert_eq!(data, None);
 
         // should now be 12
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();

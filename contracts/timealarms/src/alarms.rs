@@ -16,11 +16,11 @@ pub struct TimeAlarms {}
 impl TimeAlarms {
     const TIME_ALARMS: Alarms<'static> = Alarms::new("alarms", "alarms_idx", "alarms_next_id");
 
-    pub fn remove(storage: &mut dyn Storage, msg_id: Id) -> StdResult<()> {
+    pub(super) fn remove(storage: &mut dyn Storage, msg_id: Id) -> StdResult<()> {
         Self::TIME_ALARMS.remove(storage, msg_id)
     }
 
-    pub fn try_add(
+    pub(super) fn try_add(
         deps: DepsMut<'_>,
         env: Env,
         address: Addr,
@@ -34,7 +34,7 @@ impl TimeAlarms {
         Ok(Response::new())
     }
 
-    pub fn try_notify(
+    pub(super) fn try_notify(
         storage: &mut dyn Storage,
         ctime: Timestamp,
         max_count: AlarmsCount,
@@ -44,7 +44,7 @@ impl TimeAlarms {
         dispatcher.try_into()
     }
 
-    pub fn try_any_alarm(
+    pub(super) fn try_any_alarm(
         storage: &dyn Storage,
         ctime: Timestamp,
     ) -> Result<AlarmsStatusResponse, ContractError> {
