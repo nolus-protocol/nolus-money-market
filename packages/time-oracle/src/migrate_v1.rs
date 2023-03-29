@@ -59,7 +59,7 @@ impl<'a> AlarmsOld<'a> {
         let (alarms, ids) = old_alarms
             .idx
             .alarms
-            .range(storage, None, None, Order::Descending)
+            .range(storage, None, None, Order::Ascending)
             .try_fold(
                 (vec![], vec![]),
                 |mut v: (Vec<AlarmOld>, Vec<Id>), alarm| -> Result<_, StdError> {
@@ -173,7 +173,7 @@ pub mod tests {
 
         assert_eq!(
             result,
-            vec![(addr1, t1), (addr2, t1), (addr3, t3), (addr4, t4),]
+            vec![(addr1, t1), (addr2, t1), (addr3, t2), (addr4, t4),]
         );
     }
 }
