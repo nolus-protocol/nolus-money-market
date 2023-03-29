@@ -318,7 +318,7 @@ fn state_opened_when_partially_paid() {
 
     let query_result = state_query(&test_case, &lease_address.into_string());
 
-    assert_eq!(expected_result, query_result);
+    assert_eq!(query_result, expected_result);
 }
 
 #[test]
@@ -404,7 +404,7 @@ fn state_paid() {
     };
     let query_result = state_query(&test_case, &lease_address.into_string());
 
-    assert_eq!(expected_result, query_result);
+    assert_eq!(query_result, expected_result);
 }
 
 #[test]
@@ -430,7 +430,7 @@ fn state_paid_with_max_ltv() {
     };
     let query_result = state_query(&test_case, &lease_address.into_string());
 
-    assert_eq!(expected_result, query_result);
+    assert_eq!(query_result, expected_result);
 }
 
 #[test]
@@ -457,8 +457,8 @@ fn state_paid_when_overpaid() {
         .query_all_balances(lease_address)
         .unwrap();
     assert_eq!(
-        cwcoins::<PaymentCurrency, _>(downpayment + payment),
-        balance
+        balance,
+        cwcoins::<PaymentCurrency, _>(downpayment + payment)
     );
 
     assert_eq!(

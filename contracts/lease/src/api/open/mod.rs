@@ -74,7 +74,7 @@ impl InterestPaymentSpec {
             due_period,
             grace_period,
         };
-        debug_assert_eq!(Ok(()), res.invariant_held());
+        debug_assert_eq!(res.invariant_held(), Ok(()));
         res
     }
 

@@ -179,14 +179,14 @@ pub(super) mod test {
 
     #[test]
     fn from_percent() {
-        assert_eq!(Percent(0), Percent::from_percent(0));
-        assert_eq!(Percent(100), Percent::from_percent(10));
+        assert_eq!(Percent::from_percent(0), Percent(0));
+        assert_eq!(Percent::from_percent(10), Percent(100));
     }
 
     #[test]
     fn from_permille() {
-        assert_eq!(Percent(0), Percent::from_permille(0));
-        assert_eq!(Percent(10), Percent::from_permille(10));
+        assert_eq!(Percent::from_permille(0), Percent(0));
+        assert_eq!(Percent::from_permille(10), Percent(10));
     }
 
     #[test]

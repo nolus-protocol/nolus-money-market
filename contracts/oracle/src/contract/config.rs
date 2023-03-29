@@ -67,14 +67,15 @@ mod tests {
             ..
         }: Response = sudo(deps.as_mut(), mock_env(), msg).unwrap();
 
-        assert_eq!(messages.len(), 0);
-        assert_eq!(attributes.len(), 0);
-        assert_eq!(events.len(), 0);
-        assert_eq!(data, None);
+        assert!(messages.is_empty());
+        assert!(attributes.is_empty());
+        assert!(events.is_empty());
+        assert!(data.is_none());
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
         assert_eq!(
+            value,
             ConfigResponse {
                 owner: info.sender,
                 config: Config {
@@ -86,8 +87,7 @@ mod tests {
                         Percent::from_percent(88),
                     )
                 }
-            },
-            value
+            }
         );
     }
 
@@ -131,7 +131,7 @@ mod tests {
         ];
         expected.sort_by(|a, b| a.from.cmp(&b.from));
 
-        assert_eq!(expected, value);
+        assert_eq!(value, expected);
     }
 
     #[test]
@@ -154,9 +154,9 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(messages.len(), 0);
-        assert_eq!(attributes.len(), 0);
-        assert_eq!(events.len(), 0);
-        assert_eq!(data, None);
+        assert!(messages.is_empty());
+        assert!(attributes.is_empty());
+        assert!(events.is_empty());
+        assert!(data.is_none());
     }
 }

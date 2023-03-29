@@ -116,7 +116,7 @@ where
         )
         .unwrap();
 
-    assert_eq!(response.data, None);
+    assert!(response.data.is_none());
 
     assert_eq!(
         &response.events,

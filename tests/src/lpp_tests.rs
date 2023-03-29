@@ -70,7 +70,7 @@ fn config_update_parameters() {
         )
         .unwrap();
 
-    assert_eq!(response.data, None);
+    assert!(response.data.is_none());
     assert_eq!(
         &response.events,
         &[
@@ -342,8 +342,8 @@ fn deposit_and_withdraw() {
 
     // check for balance consistency
     assert_eq!(
-        balance_lpp.balance_nlpn,
-        (balance_nlpn1.balance + balance_nlpn2.balance + balance_nlpn3.balance).into()
+        Coin::new((balance_nlpn1.balance + balance_nlpn2.balance + balance_nlpn3.balance).u128()),
+        balance_lpp.balance_nlpn
     );
 
     // try to withdraw with overdraft
@@ -378,7 +378,7 @@ fn deposit_and_withdraw() {
             },
         )
         .unwrap();
-    assert_eq!(rest_nlpn, balance_nlpn.balance.u128());
+    assert_eq!(balance_nlpn.balance.u128(), rest_nlpn);
 
     // full withdraw, should close lender's account
     app.execute_contract(
@@ -394,7 +394,7 @@ fn deposit_and_withdraw() {
         .wrap()
         .query_wasm_smart(lpp, &QueryLpp::Balance { address: lender2 })
         .unwrap();
-    assert_eq!(0, balance_nlpn.balance.u128());
+    assert_eq!(balance_nlpn.balance.u128(), 0);
 }
 
 #[test]
@@ -526,7 +526,7 @@ fn loan_open_and_repay() {
         )
         .unwrap();
     match quote {
-        QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(interest1, quote),
+        QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(quote, interest1),
         _ => panic!("no liquidity"),
     }
 
@@ -562,7 +562,7 @@ fn loan_open_and_repay() {
         .query_wasm_smart(lpp.clone(), &QueryLpp::LppBalance())
         .unwrap();
     dbg!(&resp);
-    assert_eq!(total_interest_due, resp.total_interest_due.into());
+    assert_eq!(resp.total_interest_due, Coin::new(total_interest_due));
 
     let total_liability = loan1 + loan2 + total_interest_due;
     // let utilization2 = Percent::from_permille(
@@ -586,7 +586,7 @@ fn loan_open_and_repay() {
         )
         .unwrap();
     match quote {
-        QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(interest2, quote),
+        QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(quote, interest2),
         _ => panic!("no liquidity"),
     }
 
@@ -831,7 +831,7 @@ fn compare_lpp_states() {
         )
         .unwrap();
     match quote {
-        QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(interest1, quote),
+        QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(quote, interest1),
         _ => panic!("no liquidity"),
     }
 
@@ -872,7 +872,7 @@ fn compare_lpp_states() {
         .query_wasm_smart(lpp.clone(), &QueryLpp::LppBalance())
         .unwrap();
     dbg!(&resp);
-    assert_eq!(total_interest_due, resp.total_interest_due.into());
+    assert_eq!(resp.total_interest_due, Coin::new(total_interest_due));
 
     let total_liability = loan1 + loan2 + total_interest_due;
     let utilization_rel2 = Percent::from_permille(
@@ -891,7 +891,7 @@ fn compare_lpp_states() {
         )
         .unwrap();
     match quote {
-        QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(interest2, quote),
+        QueryQuoteResponse::QuoteInterestRate(quote) => assert_eq!(quote, interest2),
         _ => panic!("no liquidity"),
     }
 

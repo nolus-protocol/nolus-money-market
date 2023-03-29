@@ -44,7 +44,7 @@ mod test {
         G: Group,
     {
         let v = Expect::<C>::default();
-        assert_eq!(Ok(Ok(true)), G::maybe_visit_on_ticker(C::TICKER, v));
+        assert_eq!(G::maybe_visit_on_ticker(C::TICKER, v), Ok(Ok(true)));
     }
 
     #[track_caller]
@@ -54,7 +54,7 @@ mod test {
         G: Group,
     {
         let v = Expect::<C>::default();
-        assert_eq!(Err(v.clone()), G::maybe_visit_on_ticker(unknown_ticker, v));
+        assert_eq!(G::maybe_visit_on_ticker(unknown_ticker, v.clone()), Err(v));
     }
 
     #[track_caller]
@@ -65,8 +65,8 @@ mod test {
     {
         let v = Expect::<C>::default();
         assert_eq!(
-            Ok(Ok(true)),
-            G::maybe_visit_on_bank_symbol(C::BANK_SYMBOL, v)
+            G::maybe_visit_on_bank_symbol(C::BANK_SYMBOL, v),
+            Ok(Ok(true))
         );
     }
 
@@ -78,8 +78,8 @@ mod test {
     {
         let v = Expect::<C>::default();
         assert_eq!(
-            Err(v.clone()),
-            G::maybe_visit_on_bank_symbol(unknown_ticker, v)
+            G::maybe_visit_on_bank_symbol(unknown_ticker, v.clone()),
+            Err(v)
         );
     }
 }

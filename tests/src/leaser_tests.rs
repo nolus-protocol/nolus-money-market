@@ -178,7 +178,7 @@ fn open_multiple_loans() {
         loans.insert(Addr::unchecked(addr));
     }
 
-    assert_eq!(5, loans.len());
+    assert_eq!(loans.len(), 5);
 
     let res = test_case
         .app
@@ -204,7 +204,7 @@ fn open_multiple_loans() {
         )
         .unwrap();
     assert!(resp.contains(&Addr::unchecked(user1_lease_addr)));
-    assert_eq!(1, resp.len());
+    assert_eq!(resp.len(), 1);
 
     let user0_loans: HashSet<Addr> = test_case
         .app
@@ -214,7 +214,7 @@ fn open_multiple_loans() {
             &QueryMsg::Leases { owner: user_addr },
         )
         .unwrap();
-    assert_eq!(loans, user0_loans);
+    assert_eq!(user0_loans, loans);
 }
 
 #[test]

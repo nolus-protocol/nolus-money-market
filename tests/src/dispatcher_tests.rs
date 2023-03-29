@@ -103,12 +103,12 @@ fn on_alarm() {
     );
 
     assert_eq!(
-        CwCoin::new(0, Nls::TICKER),
         test_case
             .app
             .wrap()
             .query_balance(test_case.lpp_addr.clone().unwrap(), Nls::TICKER)
-            .unwrap()
+            .unwrap(),
+        CwCoin::new(0, Nls::TICKER)
     );
 
     let treasury_balance = test_case
@@ -142,7 +142,7 @@ fn on_alarm() {
         .unwrap();
 
     // ensure the attributes were relayed from the sub-message
-    assert_eq!(8, res.events.len(), "{:?}", res.events);
+    assert_eq!(res.events.len(), 8, "{:?}", res.events);
 
     let dispatcher_exec = &res.events[0];
     assert_eq!(dispatcher_exec.ty.as_str(), "execute");
@@ -223,12 +223,12 @@ fn on_alarm() {
     );
 
     assert_eq!(
-        native_cwcoin(11),
         test_case
             .app
             .wrap()
             .query_balance(test_case.lpp_addr.clone().unwrap(), Native::BANK_SYMBOL)
-            .unwrap()
+            .unwrap(),
+        native_cwcoin(11)
     );
 
     //query calculated reward for the lender
@@ -271,7 +271,7 @@ fn test_config() {
         )
         .unwrap();
 
-    assert_eq!(10, resp.cadence_hours);
+    assert_eq!(resp.cadence_hours, 10);
 
     let response: AppResponse = test_case
         .app
@@ -300,7 +300,7 @@ fn test_config() {
         )
         .unwrap();
 
-    assert_eq!(30, resp.cadence_hours);
+    assert_eq!(resp.cadence_hours, 30);
 }
 
 // TODO: moved from contract tests, should be implemented as integration test

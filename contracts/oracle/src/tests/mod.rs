@@ -134,7 +134,7 @@ pub(crate) fn setup_test(
     let mut deps = mock_dependencies();
     let info = mock_info(CREATOR, &coins(1000, Nls::TICKER));
     let res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
-    assert_eq!(res.messages.len(), 0);
+    assert!(res.messages.is_empty());
 
     // register single feeder address
     let Response {
@@ -152,10 +152,10 @@ pub(crate) fn setup_test(
     )
     .unwrap();
 
-    assert_eq!(messages.len(), 0);
-    assert_eq!(attributes.len(), 0);
-    assert_eq!(events.len(), 0);
-    assert_eq!(data, None);
+    assert!(messages.is_empty());
+    assert!(attributes.is_empty());
+    assert!(events.is_empty());
+    assert!(data.is_none());
 
     (deps, info)
 }

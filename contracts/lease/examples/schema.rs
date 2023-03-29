@@ -18,7 +18,7 @@ fn test_repay_representation() {
 
     let msg = ExecuteMsg::Repay();
     let repay_bin = to_vec(&msg).expect("serialization failed");
-    assert_eq!(msg, from_slice(&repay_bin).expect("deserialization failed"));
+    assert_eq!(from_slice(&repay_bin).expect("deserialization failed"), msg);
 
     assert_eq!(
         to_string(&msg).expect("deserialization failed"),
