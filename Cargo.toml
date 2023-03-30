@@ -47,7 +47,7 @@ cw-storage-plus = "1"
 cw-multi-test = "0.16.1"
 
 # Cosmos-sdk
-cosmos-sdk-proto = { version = "0.16.0", default-features = false }
+cosmos-sdk-proto = { version = "0.17", default-features = false }
 
 # Other
 neutron-sdk = { git = "https://github.com/neutron-org/neutron-sdk", rev = "d0f73c0a377759d0d3fed0bd6d30a17b6b3b110e" }
