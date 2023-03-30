@@ -1,14 +1,12 @@
 use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
-use platform::response;
+use platform::{reply, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{
-        from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage,
-    },
+    cosmwasm_std::{to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
 use versioning::{package_version, version, VersionSegment};
 
@@ -139,30 +137,21 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, Cont
 // TODO: compare gas usage of this solution vs reply on error
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> Result<Response, ContractError> {
-    let resp = match msg.result {
-        cosmwasm_std::SubMsgResult::Ok(resp) => match resp.data {
-            Some(d) => on_success_alarm(deps.storage, d)?,
-            None => on_err_alarm(
-                "Market alarm receiver's contract not respected! No receiver response!",
-            ),
-        },
-        cosmwasm_std::SubMsgResult::Err(err) => on_err_alarm(err),
+    let resp = match reply::from_execute(msg) {
+        Ok(Some(addr)) => {
+            MarketAlarms::remove(deps.storage, addr)?;
+            Response::new().add_attribute("alarm", "success")
+        }
+        Err(err) => Response::new()
+            .add_attribute("alarm", "error")
+            .add_attribute("error", err.to_string()),
+
+        Ok(None) => Response::new()
+            .add_attribute("alarm", "error")
+            .add_attribute("error", "No data"),
     };
+
     Ok(resp)
-}
-
-fn on_success_alarm(storage: &mut dyn Storage, resp: Binary) -> Result<Response, ContractError> {
-    MarketAlarms::remove(storage, from_binary(&resp)?)?;
-    Ok(Response::new().add_attribute("alarm", "success"))
-}
-
-fn on_err_alarm<S>(err: S) -> Response
-where
-    S: Into<String>,
-{
-    Response::new()
-        .add_attribute("alarm", "error")
-        .add_attribute("error", err)
 }
 
 #[cfg(test)]
