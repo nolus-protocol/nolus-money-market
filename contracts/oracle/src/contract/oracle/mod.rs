@@ -97,13 +97,11 @@ where
     where
         OracleBase: Currency + DeserializeOwned,
     {
-        let prices = self
-            .calc_all_prices(storage, block_time)?
+        self.calc_all_prices(storage, block_time)?
             .try_fold(vec![], |mut v, price| {
                 v.push(price?.into());
                 Ok(v)
-            });
-        prices
+            })
     }
 
     pub(super) fn try_query_price(
