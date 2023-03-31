@@ -27,8 +27,8 @@ impl Profit {
 
     pub(crate) fn transfer(
         deps: Deps<'_>,
-        env: Env,
-        info: MessageInfo,
+        env: &Env,
+        info: &MessageInfo,
     ) -> Result<Response, ContractError> {
         let config = Config::load(deps.storage)?;
 
@@ -56,7 +56,7 @@ impl Profit {
 
         Ok(batch.into_response(
             Emitter::of_type("tr-profit")
-                .emit_tx_info(&env)
+                .emit_tx_info(env)
                 .emit_coin("profit-amount", balance),
         ))
         // TODO add in_stable(wasm-tr-profit.profit-amount) The amount transferred in stable.

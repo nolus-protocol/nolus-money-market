@@ -89,7 +89,9 @@ fn try_transfer(deps: Deps<'_>, env: Env, info: MessageInfo) -> Result<Response,
     SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
         .check_access(&info.sender)?;
 
-    Profit::transfer(deps, env, info)
+    let response = Profit::transfer(deps, &env, &info)?.set_data(to_binary(&env.contract.address)?);
+
+    Ok(response)
 }
 
 #[cfg(test)]
