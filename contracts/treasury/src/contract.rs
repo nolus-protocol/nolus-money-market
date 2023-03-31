@@ -27,7 +27,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 pub fn instantiate(
     deps: DepsMut<'_>,
     _env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;

@@ -24,7 +24,7 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 pub fn instantiate(
     deps: DepsMut<'_>,
     env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     platform::contract::validate_addr(&deps.querier, &msg.treasury)?;

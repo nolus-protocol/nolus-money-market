@@ -6,7 +6,7 @@ use platform::{reply, response};
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
 use versioning::{package_version, version, VersionSegment};
 
@@ -39,16 +39,11 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 struct InstantiateWithCurrency<'a> {
     deps: DepsMut<'a>,
     msg: InstantiateMsg,
-    owner: Addr,
 }
 
 impl<'a> InstantiateWithCurrency<'a> {
-    pub fn cmd(
-        deps: DepsMut<'a>,
-        msg: InstantiateMsg,
-        owner: Addr,
-    ) -> Result<Response, ContractError> {
-        let context = Self { deps, msg, owner };
+    pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<Response, ContractError> {
+        let context = Self { deps, msg };
         visit_any_on_ticker::<Lpns, _>(&context.msg.config.base_asset.clone(), context)
     }
 }
@@ -75,12 +70,12 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
 pub fn instantiate(
     deps: DepsMut<'_>,
     _env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    InstantiateWithCurrency::cmd(deps, msg, info.sender)?;
+    InstantiateWithCurrency::cmd(deps, msg)?;
 
     Ok(Response::default())
 }

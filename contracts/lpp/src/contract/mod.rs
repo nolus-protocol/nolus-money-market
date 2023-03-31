@@ -30,7 +30,6 @@ const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
 
 struct InstantiateWithLpn<'a> {
     deps: DepsMut<'a>,
-    info: MessageInfo,
     msg: InstantiateMsg,
 }
 
@@ -53,12 +52,8 @@ impl<'a> InstantiateWithLpn<'a> {
         Ok(Response::new().add_attribute("method", "instantiate"))
     }
 
-    pub fn cmd(
-        deps: DepsMut<'a>,
-        info: MessageInfo,
-        msg: InstantiateMsg,
-    ) -> ContractResult<Response> {
-        let context = Self { deps, info, msg };
+    pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> ContractResult<Response> {
+        let context = Self { deps, msg };
 
         visit_any_on_ticker::<Lpns, _>(&context.msg.lpn_ticker.clone(), context)
     }
@@ -80,13 +75,13 @@ impl<'a> AnyVisitor for InstantiateWithLpn<'a> {
 pub fn instantiate(
     deps: DepsMut<'_>,
     _env: Env,
-    info: MessageInfo,
+    _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<Response> {
     // TODO move these checks on deserialization
     finance::currency::validate::<Lpns>(&msg.lpn_ticker)?;
     deps.api.addr_validate(msg.lease_code_admin.as_str())?;
-    InstantiateWithLpn::cmd(deps, info, msg)
+    InstantiateWithLpn::cmd(deps, msg)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
