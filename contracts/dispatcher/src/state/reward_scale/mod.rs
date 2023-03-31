@@ -178,17 +178,50 @@ mod tests {
         .unwrap();
 
         assert_eq!(res.get_apr(0), Percent::from_permille(6));
-        assert_eq!(res.get_apr(1000), Percent::from_permille(6));
-        assert_eq!(res.get_apr(29999), Percent::from_permille(6));
-        assert_eq!(res.get_apr(30000), Percent::from_permille(10));
-        assert_eq!(res.get_apr(30001), Percent::from_permille(10));
-        assert_eq!(res.get_apr(100051), Percent::from_permille(12));
-        assert_eq!(res.get_apr(149999), Percent::from_permille(12));
-        assert_eq!(res.get_apr(150000), Percent::from_permille(15));
-        assert_eq!(res.get_apr(200300), Percent::from_permille(15));
-        assert_eq!(res.get_apr(300000), Percent::from_permille(20));
-        assert_eq!(res.get_apr(300200), Percent::from_permille(20));
-        assert_eq!(res.get_apr(1300200), Percent::from_permille(20));
+        assert_eq!(
+            res.get_apr(TotalValueLocked::SCALE_FACTOR),
+            Percent::from_permille(6)
+        );
+        assert_eq!(
+            res.get_apr(30 * TotalValueLocked::SCALE_FACTOR - 1),
+            Percent::from_permille(6)
+        );
+        assert_eq!(
+            res.get_apr(30 * TotalValueLocked::SCALE_FACTOR),
+            Percent::from_permille(10)
+        );
+        assert_eq!(
+            res.get_apr(30 * TotalValueLocked::SCALE_FACTOR + 1),
+            Percent::from_permille(10)
+        );
+        assert_eq!(
+            res.get_apr(100 * TotalValueLocked::SCALE_FACTOR + 1),
+            Percent::from_permille(12)
+        );
+        assert_eq!(
+            res.get_apr(150 * TotalValueLocked::SCALE_FACTOR - 1),
+            Percent::from_permille(12)
+        );
+        assert_eq!(
+            res.get_apr(150 * TotalValueLocked::SCALE_FACTOR),
+            Percent::from_permille(15)
+        );
+        assert_eq!(
+            res.get_apr(200 * TotalValueLocked::SCALE_FACTOR),
+            Percent::from_permille(15)
+        );
+        assert_eq!(
+            res.get_apr(300 * TotalValueLocked::SCALE_FACTOR),
+            Percent::from_permille(20)
+        );
+        assert_eq!(
+            res.get_apr(300 * TotalValueLocked::SCALE_FACTOR + 1),
+            Percent::from_permille(20)
+        );
+        assert_eq!(
+            res.get_apr(1300 * TotalValueLocked::SCALE_FACTOR + 1),
+            Percent::from_permille(20)
+        );
         assert_eq!(res.get_apr(Amount::MAX), Percent::from_permille(20));
         assert_eq!(res.get_apr(Amount::MIN), Percent::from_permille(6));
     }
