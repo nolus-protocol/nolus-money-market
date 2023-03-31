@@ -7,10 +7,7 @@ use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper};
 use crate::{
     api::{paid::ClosingTrx, ExecuteMsg, StateResponse},
     contract::{
-        state::{
-            self, attach_alarm_response, closed::Closed, controller, transfer_in, Controller,
-            Response, State,
-        },
+        state::{self, closed::Closed, controller, transfer_in, Controller, Response, State},
         Contract, Lease,
     },
     error::ContractResult,
@@ -80,12 +77,10 @@ impl Controller for TransferInFinish {
         match msg {
             ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => controller::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() => state::ignore_msg(self, &env),
-            ExecuteMsg::TimeAlarm {} => {
-                let mut response = self.on_alarm(&deps.querier, &env)?;
-                response.cw_response = attach_alarm_response(response.cw_response, &env)?;
-                Ok(response)
-            }
+            ExecuteMsg::PriceAlarm() => state::ignore_msg(self)?.attach_alarm_response(&env),
+            ExecuteMsg::TimeAlarm {} => self
+                .on_alarm(&deps.querier, &env)?
+                .attach_alarm_response(&env),
         }
     }
 }

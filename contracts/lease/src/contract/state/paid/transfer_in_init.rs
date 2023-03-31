@@ -65,8 +65,8 @@ impl Controller for TransferInInit {
         match msg {
             ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => controller::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() => state::ignore_msg(self, &env),
-            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self, &env),
+            ExecuteMsg::PriceAlarm() => state::ignore_msg(self)?.attach_alarm_response(&env),
+            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self)?.attach_alarm_response(&env),
         }
     }
 

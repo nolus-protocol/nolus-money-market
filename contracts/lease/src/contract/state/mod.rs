@@ -131,6 +131,11 @@ impl Response {
             next_state: next_state.into(),
         }
     }
+
+    pub fn attach_alarm_response(mut self, env: &Env) -> ContractResult<Self> {
+        self.cw_response = self.cw_response.set_data(to_binary(&env.contract.address)?);
+        Ok(self)
+    }
 }
 
 fn on_timeout_retry<S, L>(
@@ -187,16 +192,9 @@ where
         .emit("timeout", format!("{:?}", policy))
 }
 
-fn attach_alarm_response(response: CwResponse, env: &Env) -> ContractResult<CwResponse> {
-    Ok(response.set_data(to_binary(&env.contract.address)?))
-}
-
-fn ignore_msg<S>(state: S, env: &Env) -> ContractResult<Response>
+fn ignore_msg<S>(state: S) -> ContractResult<Response>
 where
     S: Into<State>,
 {
-    Ok(Response::from(
-        attach_alarm_response(CwResponse::new(), env)?,
-        state,
-    ))
+    Ok(Response::from(CwResponse::new(), state))
 }

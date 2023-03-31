@@ -63,14 +63,11 @@ where
         match msg {
             ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => controller::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() => super::ignore_msg(self, &env),
+            ExecuteMsg::PriceAlarm() => super::ignore_msg(self)?.attach_alarm_response(&env),
             ExecuteMsg::TimeAlarm {} => {
                 let next_state = self.connectee.connected(self.ica_account);
                 let batch = next_state.enter(deps.as_ref(), &env)?;
-                Ok(Response::from(
-                    super::attach_alarm_response(batch.into(), &env)?,
-                    next_state,
-                ))
+                Response::from(batch, next_state).attach_alarm_response(&env)
             }
         }
     }

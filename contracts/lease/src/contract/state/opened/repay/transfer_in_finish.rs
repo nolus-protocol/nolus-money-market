@@ -8,7 +8,7 @@ use crate::{
     api::{opened::RepayTrx, ExecuteMsg, LpnCoin, PaymentCoin, StateResponse},
     contract::{
         state::{
-            attach_alarm_response, controller,
+            controller,
             opened::{active::Active, repay},
             transfer_in, Controller, Response,
         },
@@ -87,9 +87,8 @@ impl Controller for TransferInFinish {
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         if matches!(msg, ExecuteMsg::TimeAlarm {}) {
-            let mut response = self.on_alarm(deps.as_ref(), &env)?;
-            response.cw_response = attach_alarm_response(response.cw_response, &env)?;
-            Ok(response)
+            self.on_alarm(deps.as_ref(), &env)?
+                .attach_alarm_response(&env)
         } else {
             controller::err(&format!("{:?}", msg), deps.api)
         }
