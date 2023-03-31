@@ -18,9 +18,11 @@ use versioning::{version, VersionSegment};
 use crate::{
     cmd::Dispatch,
     error::ContractError,
-    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
-    state::Config,
-    state::DispatchLog,
+    msg::{
+        ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, RewardScaleResponse,
+        SudoMsg,
+    },
+    state::{Config, DispatchLog},
 };
 
 // version info for migration info
@@ -110,13 +112,16 @@ fn try_config(storage: &mut dyn Storage, cadence_hours: u16) -> Result<Response,
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps.storage)?),
+        QueryMsg::RewardScale {} => to_binary(&query_reward_scale(deps.storage)?),
     }
 }
 
 fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
-    let Config { cadence_hours, .. } = Config::load(storage)?;
+    Config::load(storage).map(|Config { cadence_hours, .. }| ConfigResponse { cadence_hours })
+}
 
-    Ok(ConfigResponse { cadence_hours })
+fn query_reward_scale(storage: &dyn Storage) -> StdResult<RewardScaleResponse> {
+    Config::load(storage).map(|Config { tvl_to_apr, .. }| tvl_to_apr)
 }
 
 fn try_dispatch(deps: DepsMut<'_>, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
