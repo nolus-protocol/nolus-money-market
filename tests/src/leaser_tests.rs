@@ -252,10 +252,9 @@ fn test_quote() {
     /*   TODO: test with different time periods and amounts in LPP
      */
 
-    assert_eq!(
-        Percent::from_permille(113),
-        resp.annual_interest_rate + resp.annual_interest_rate_margin,
-    ); // hardcoded until LPP contract is merged
+    assert_eq!(resp.annual_interest_rate, Percent::from_permille(94),);
+
+    assert_eq!(resp.annual_interest_rate_margin, Percent::from_permille(30),);
 
     let resp = query_quote::<_, Downpayment, LeaseCurrency>(&test_case, Coin::new(15));
 

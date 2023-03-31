@@ -61,11 +61,13 @@ impl InterestRate {
     where
         Lpn: Currency,
     {
-        let total_value = total_liability + balance;
-        let utilization = if total_value.is_zero() {
+        let utilization = if balance.is_zero() {
             Percent::ZERO
         } else {
-            Percent::from_ratio(total_liability, total_value)
+            Percent::from_ratio(total_liability, balance).min(Percent::from_ratio(
+                self.utilization_optimal.units(),
+                (Percent::HUNDRED - self.utilization_optimal).units(),
+            ))
         };
 
         let config = Rational::new(
@@ -73,9 +75,7 @@ impl InterestRate {
             self.utilization_optimal.units(),
         );
 
-        let add = Fraction::<Units>::of(&config, utilization);
-
-        self.base_interest_rate + add
+        self.base_interest_rate + Fraction::<Units>::of(&config, utilization)
     }
 
     fn validate(&self) -> bool {
@@ -220,8 +220,8 @@ mod tests {
         #[test]
         /// Verifies that when there is no addon optimal interest rate, result is equal to the base interest rate.
         fn test_set_1() {
-            for base_rate in 0..=1000 {
-                let rate = rate(base_rate, 1000, 0);
+            for base_rate in 0..=200 {
+                let rate = rate(base_rate, 500, 0);
 
                 do_test_calculate(
                     rate,
@@ -240,12 +240,12 @@ mod tests {
         #[test]
         /// Verifies that when liability is equal to zero, result is equal to the base interest rate.
         fn test_set_2() {
-            for base_rate in 0..=1000 {
-                let rate = rate(base_rate, 1000, 1000);
+            for base_rate in 0..=100 {
+                let rate = rate(base_rate, 500, 1000);
 
                 do_test_calculate(
                     rate,
-                    &(1..=1000)
+                    &(1..=100)
                         .map(move |balance| InOut((0, balance), (base_rate, 1000)))
                         .collect::<Vec<_>>(),
                 );
@@ -256,31 +256,51 @@ mod tests {
         fn test_corner_set() {
             let rate = rate(1000, 1000, 1000);
 
-            let set = [InOut((0, 0), (1, 1)), InOut((10, 0), (2, 1))];
+            let set = [InOut((0, 0), (1, 1)), InOut((10, 0), (1, 1))];
             do_test_calculate(rate, &set);
         }
 
         #[test]
         /// Verifies correctness of results against manually calculated, thus verified, set.
         fn test_set_4() {
-            let rate = rate(100, 500, 250);
+            let rate = rate(100, 655, 250);
 
             let set = [
-                InOut((10, 1), (554, 1000)),
-                InOut((10, 2), (516, 1000)),
-                InOut((10, 3), (484, 1000)),
-                InOut((10, 4), (457, 1000)),
-                InOut((10, 5), (433, 1000)),
-                InOut((10, 6), (412, 1000)),
-                InOut((10, 7), (394, 1000)),
-                InOut((10, 8), (377, 1000)),
-                InOut((10, 9), (363, 1000)),
-                InOut((10, 10), (35, 100)),
-                InOut((10, 11), (338, 1000)),
-                InOut((10, 12), (327, 1000)),
-                InOut((10, 13), (317, 1000)),
-                InOut((10, 14), (308, 1000)),
-                InOut((10, 15), (3, 10)),
+                InOut((10, 1), (824, 1000)),
+                InOut((10, 2), (824, 1000)),
+                InOut((10, 3), (824, 1000)),
+                InOut((10, 4), (824, 1000)),
+                InOut((10, 5), (824, 1000)),
+                InOut((10, 6), (735, 1000)),
+                InOut((10, 7), (645, 1000)),
+                InOut((10, 8), (577, 1000)),
+                InOut((10, 9), (524, 1000)),
+                InOut((10, 10), (481, 1000)),
+                InOut((10, 11), (446, 1000)),
+                InOut((10, 12), (417, 1000)),
+                InOut((10, 13), (393, 1000)),
+                InOut((10, 14), (372, 1000)),
+                InOut((10, 15), (354, 1000)),
+            ];
+
+            do_test_calculate(rate, &set);
+        }
+
+        #[test]
+        /// Verifies correctness of results against manually calculated, thus verified, set.
+        fn test_set_5() {
+            let rate = rate(120, 700, 20);
+
+            let set = [
+                InOut((0, 0), (3, 25)),
+                InOut((0, 1), (3, 25)),
+                InOut((1, 0), (3, 25)),
+                InOut((1, 9), (123, 1000)),
+                InOut((3, 7), (132, 1000)),
+                InOut((5, 5), (148, 1000)),
+                InOut((7, 3), (186, 1000)),
+                InOut((8, 2), (186, 1000)),
+                InOut((9, 1), (186, 1000)),
             ];
 
             do_test_calculate(rate, &set);

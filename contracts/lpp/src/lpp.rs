@@ -257,7 +257,7 @@ where
 #[cfg(test)]
 mod test {
     use access_control::SingleUserAccess;
-    use finance::{duration::Duration, percent::Units, price, test::currency::Usdc};
+    use finance::{duration::Duration, price, test::currency::Usdc};
     use platform::coin_legacy;
     use sdk::cosmwasm_std::{
         testing::{self, MOCK_CONTRACT_ADDR},
@@ -361,7 +361,7 @@ mod test {
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
-        assert_eq!(result, Percent::from_permille(92));
+        assert_eq!(result, Percent::from_permille(136));
 
         lpp.try_open_loan(&mut deps.as_mut(), &env, loan, Coin::new(7_000_000))
             .expect("can't open loan");
@@ -381,18 +381,29 @@ mod test {
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
-        assert_eq!(result, Percent::from_permille(93));
+        assert_eq!(result, Percent::from_permille(136));
     }
 
     #[test]
     fn test_open_and_repay_loan() {
-        let lpp_balance = 10_000_000;
+        let lpp_balance: u64 = 10_000_000;
         let amount = 5_000_000;
+
+        let base_rate = 70;
+        let addon_rate = 20;
+        let optimal_rate = 700;
+
+        let utilization_const = (optimal_rate * 1000) / (1000 - optimal_rate);
+        let utilization_relative = ((lpp_balance - amount) * 1000) / amount;
+        let utilization = utilization_relative.min(utilization_const);
+
         let annual_interest_rate = Percent::from_permille(
-            (20 * 1000 * (lpp_balance - amount) / lpp_balance / 700 + 70) as Units,
+            (base_rate + ((utilization * addon_rate) / optimal_rate))
+                .try_into()
+                .unwrap(),
         );
 
-        let mut deps = testing::mock_dependencies_with_balance(&[coin_cw(lpp_balance)]);
+        let mut deps = testing::mock_dependencies_with_balance(&[coin_cw(lpp_balance.into())]);
         let mut env = testing::mock_env();
         let admin = Addr::unchecked("admin");
         let lease_addr = Addr::unchecked("loan");
@@ -445,7 +456,7 @@ mod test {
             .expect("can't query loan")
             .expect("should be some response");
 
-        assert_eq!(loan.principal_due, amount.into());
+        assert_eq!(loan.principal_due, Coin::new(amount.into()));
         assert_eq!(loan.annual_interest_rate, annual_interest_rate);
         assert_eq!(loan.interest_paid, env.block.time);
         assert_eq!(loan.interest_due(env.block.time), 0u128.into());
@@ -467,7 +478,7 @@ mod test {
             .expect("can't query loan")
             .expect("should be some response");
 
-        assert_eq!(loan.principal_due, amount.into());
+        assert_eq!(loan.principal_due, Coin::new(amount.into()));
         assert_eq!(loan.annual_interest_rate, annual_interest_rate);
         assert_eq!(loan.interest_paid, env.block.time);
         assert_eq!(loan.interest_due(env.block.time), 0u128.into());
@@ -485,7 +496,7 @@ mod test {
             .expect("can't query the loan")
             .expect("should exist")
             .interest_due(env.block.time)
-            + Coin::new(amount)
+            + Coin::new(amount.into())
             + Coin::new(100);
 
         let repay = lpp
@@ -752,7 +763,7 @@ mod test {
             .expect("can't query quote")
             .expect("should return some interest_rate");
 
-        assert_eq!(annual_interest_rate, Percent::from_percent(20));
+        assert_eq!(annual_interest_rate, Percent::from_permille(220));
 
         lpp.try_open_loan(&mut deps.as_mut(), &env, loan.clone(), Coin::new(5_000_000))
             .expect("can't open loan");
@@ -765,14 +776,14 @@ mod test {
         let total_lpn = lpp
             .total_lpn(&deps.as_ref(), &env)
             .expect("should query total_lpn");
-        assert_eq!(total_lpn, 11_000_000u128.into());
+        assert_eq!(total_lpn, 11_100_000u128.into());
 
         let lpp_balance = lpp
             .query_lpp_balance(&deps.as_ref(), &env)
             .expect("should query_lpp_balance");
         assert_eq!(lpp_balance.balance, Coin::new(5_000_000));
         assert_eq!(lpp_balance.total_principal_due, Coin::new(5_000_000));
-        assert_eq!(lpp_balance.total_interest_due, Coin::new(1_000_000));
+        assert_eq!(lpp_balance.total_interest_due, Coin::new(1_100_000));
 
         let price = lpp
             .calculate_price(&deps.as_ref(), &env, Coin::new(0))
@@ -781,7 +792,7 @@ mod test {
             price::total(Coin::<NLpn>::new(1000), price.get()),
             price::total(
                 Coin::<NLpn>::new(1000),
-                price::total_of(Coin::new(10)).is(Coin::new(11))
+                price::total_of(Coin::new(100)).is(Coin::new(111))
             )
         );
 
@@ -796,7 +807,7 @@ mod test {
         let total_lpn = lpp
             .total_lpn(&deps.as_ref(), &env)
             .expect("should query total_lpn");
-        assert_eq!(total_lpn, 11_000_000u128.into());
+        assert_eq!(total_lpn, 11_100_000u128.into());
 
         let price = lpp
             .calculate_price(&deps.as_ref(), &env, Coin::new(0))
@@ -805,14 +816,14 @@ mod test {
             price::total(Coin::<NLpn>::new(1000), price.get()),
             price::total(
                 Coin::<NLpn>::new(1000),
-                price::total_of(Coin::new(10)).is(Coin::new(11))
+                price::total_of(Coin::new(100)).is(Coin::new(111))
             )
         );
 
         let withdraw = lpp
             .withdraw_lpn(&deps.as_ref(), &env, 1000u128.into())
             .expect("should withdraw");
-        assert_eq!(withdraw, Coin::new(1100));
+        assert_eq!(withdraw, Coin::new(1110));
     }
 
     fn coin_cw(amount: u128) -> CwCoin {

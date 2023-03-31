@@ -1,7 +1,13 @@
 use currency::{lease::Atom, lpn::Usdc, native::Nls};
 use finance::{
-    coin::Coin, currency::Currency, duration::Duration, fraction::Fraction, percent::Percent,
-    price, test,
+    coin::{Amount, Coin},
+    currency::Currency,
+    duration::Duration,
+    fraction::Fraction,
+    percent::{Percent, Units as PercentUnits},
+    price,
+    ratio::Rational,
+    test,
 };
 use lpp::{
     borrow::InterestRate,
@@ -33,6 +39,25 @@ use crate::common::{
 
 type Lpn = Usdc;
 type LeaseCurrency = Atom;
+
+fn general_interest_rate(
+    loan: u32,
+    balance: u32,
+    base_rate: Percent,
+    addon_rate: Percent,
+    optimal_rate: Percent,
+) -> Percent {
+    let utilization_rate = Percent::from_ratio(loan, balance).min(Percent::from_ratio(
+        optimal_rate.units(),
+        (Percent::HUNDRED - optimal_rate).units(),
+    ));
+
+    base_rate
+        + Fraction::<PercentUnits>::of(
+            &Rational::new(addon_rate.units(), optimal_rate.units()),
+            utilization_rate,
+        )
+}
 
 #[test]
 fn config_update_parameters() {
@@ -436,6 +461,20 @@ fn loan_open_wrong_id() {
 
 #[test]
 fn loan_open_and_repay() {
+    const LOCAL_BASE_INTEREST_RATE: Percent = Percent::from_permille(210);
+    const LOCAL_ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(200);
+    const LOCAL_UTILIZATION_OPTIMAL_RATE: Percent = Percent::from_permille(550);
+
+    fn interest_rate(loan: u32, balance: u32) -> Percent {
+        general_interest_rate(
+            loan,
+            balance,
+            LOCAL_BASE_INTEREST_RATE,
+            LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
+            LOCAL_UTILIZATION_OPTIMAL_RATE,
+        )
+    }
+
     const YEAR: u64 = Duration::YEAR.nanos();
 
     let admin = Addr::unchecked(ADMIN);
@@ -444,26 +483,18 @@ fn loan_open_and_repay() {
 
     let app_balance = 10_000_000_000u128;
     let hacker_balance = 10_000_000;
-    let init_deposit = 20_000_000u128;
-    let loan1 = 10_000_000u128;
-    let loan2 = 5_000_000u128;
+    let init_deposit_u32 = 20_000_000u32;
+    let init_deposit = Amount::from(init_deposit_u32);
+    let loan1_u32 = 10_000_000u32;
+    let loan1 = Amount::from(loan1_u32);
+    let balance1_u32 = init_deposit_u32 - loan1_u32;
+    let loan2_u32 = 5_000_000u32;
+    let loan2 = Amount::from(loan2_u32);
     let repay_interest_part = 1_000_000u128;
     let repay_due_part = 1_000_000u128;
     let repay_excess = 1_000_000u128;
 
-    let base_interest_rate = Percent::from_percent(21);
-    let addon_optimal_interest_rate = Percent::from_percent(20);
-    let utilization_optimal = Percent::from_percent(55);
-
-    let utilization_rel1 =
-        Percent::from_permille((1000 * loan1 / utilization_optimal.of(init_deposit)) as u32);
-    let interest1 = base_interest_rate + utilization_rel1.of(addon_optimal_interest_rate);
-    // let utilization1 = Percent::from_permille((1000 * loan1 / init_deposit) as u32);
-    // let interest1 = base_interest_rate + addon_optimal_interest_rate.of(utilization1)
-    //     - addon_optimal_interest_rate.of(utilization_optimal);
-    dbg!(Percent::from_percent(1)); // scale
-    dbg!(utilization_rel1);
-    dbg!(interest1);
+    let interest1 = interest_rate(loan1_u32, balance1_u32);
 
     // net setup
     let mut app = mock_app(
@@ -507,9 +538,9 @@ fn loan_open_and_repay() {
         lpp.clone(),
         &SudoMsg::NewBorrowRate {
             borrow_rate: InterestRate::new(
-                base_interest_rate,
-                utilization_optimal,
-                addon_optimal_interest_rate,
+                LOCAL_BASE_INTEREST_RATE,
+                LOCAL_UTILIZATION_OPTIMAL_RATE,
+                LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
             )
             .expect("Couldn't construct interest rate value!"),
         },
@@ -555,7 +586,8 @@ fn loan_open_and_repay() {
 
     app.time_shift(Duration::from_nanos(YEAR / 2));
 
-    let total_interest_due = interest1.of(loan1) / 2;
+    let total_interest_due_u32 = interest1.of(loan1_u32) / 2;
+    let total_interest_due = Amount::from(total_interest_due_u32);
 
     let resp: LppBalanceResponse<Lpn> = app
         .wrap()
@@ -564,17 +596,7 @@ fn loan_open_and_repay() {
     dbg!(&resp);
     assert_eq!(resp.total_interest_due, Coin::new(total_interest_due));
 
-    let total_liability = loan1 + loan2 + total_interest_due;
-    // let utilization2 = Percent::from_permille(
-    //     (1000 * (total_liability) / (init_deposit + total_interest_due)) as u32,
-    // );
-    // let interest2 = base_interest_rate + addon_optimal_interest_rate.of(utilization2)
-    //     - addon_optimal_interest_rate.of(utilization_optimal);
-    let utilization_rel2 = Percent::from_permille(
-        (1000 * (total_liability) / utilization_optimal.of(init_deposit + total_interest_due))
-            as u32,
-    );
-    let interest2 = base_interest_rate + utilization_rel2.of(addon_optimal_interest_rate);
+    let interest2 = interest_rate(loan1_u32 + loan2_u32 + total_interest_due_u32, balance1_u32);
 
     let quote: QueryQuoteResponse = app
         .wrap()
@@ -746,6 +768,20 @@ fn loan_open_and_repay() {
 
 #[test]
 fn compare_lpp_states() {
+    const LOCAL_BASE_INTEREST_RATE: Percent = Percent::from_permille(210);
+    const LOCAL_ADDON_OPTIMAL_INTEREST_RATE: Percent = Percent::from_permille(200);
+    const LOCAL_UTILIZATION_OPTIMAL_RATE: Percent = Percent::from_permille(550);
+
+    fn interest_rate(loan: u32, balance: u32) -> Percent {
+        general_interest_rate(
+            loan,
+            balance,
+            LOCAL_BASE_INTEREST_RATE,
+            LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
+            LOCAL_UTILIZATION_OPTIMAL_RATE,
+        )
+    }
+
     const YEAR: u64 = Duration::YEAR.nanos();
 
     let admin = Addr::unchecked(ADMIN);
@@ -754,24 +790,18 @@ fn compare_lpp_states() {
 
     let app_balance = 10_000_000_000u128;
     let hacker_balance = 10_000_000;
-    let init_deposit = 20_000_000u128;
-    let loan1 = 10_000_000u128;
-    let loan2 = 5_000_000u128;
+    let init_deposit_u32 = 20_000_000u32;
+    let init_deposit = Amount::from(init_deposit_u32);
+    let loan1_u32 = 10_000_000u32;
+    let loan1 = Amount::from(loan1_u32);
+    let balance1_u32 = init_deposit_u32 - loan1_u32;
+    let loan2_u32 = 5_000_000u32;
+    let loan2 = Amount::from(loan2_u32);
     let repay_interest_part = 1_000_000u128;
     let repay_due_part = 1_000_000u128;
     let repay_excess = 1_000_000u128;
 
-    let base_interest_rate = Percent::from_percent(21);
-    let addon_optimal_interest_rate = Percent::from_percent(20);
-    let utilization_optimal = Percent::from_percent(55);
-
-    let utilization_rel1 =
-        Percent::from_permille((1000 * loan1 / utilization_optimal.of(init_deposit)) as u32);
-    let interest1 = base_interest_rate + utilization_rel1.of(addon_optimal_interest_rate);
-
-    dbg!(Percent::from_percent(1)); // scale
-    dbg!(utilization_rel1);
-    dbg!(interest1);
+    let interest1 = interest_rate(loan1_u32, balance1_u32);
 
     // net setup
     let mut app = mock_app(
@@ -812,9 +842,9 @@ fn compare_lpp_states() {
         lpp.clone(),
         &SudoMsg::NewBorrowRate {
             borrow_rate: InterestRate::new(
-                base_interest_rate,
-                utilization_optimal,
-                addon_optimal_interest_rate,
+                LOCAL_BASE_INTEREST_RATE,
+                LOCAL_UTILIZATION_OPTIMAL_RATE,
+                LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
             )
             .expect("Couldn't construct interest rate value!"),
         },
@@ -865,7 +895,8 @@ fn compare_lpp_states() {
 
     app.time_shift(Duration::from_nanos(YEAR / 2));
 
-    let total_interest_due = interest1.of(loan1) / 2;
+    let total_interest_due_u32 = interest1.of(loan1_u32) / 2;
+    let total_interest_due = Amount::from(total_interest_due_u32);
 
     let resp: LppBalanceResponse<Lpn> = app
         .wrap()
@@ -874,12 +905,7 @@ fn compare_lpp_states() {
     dbg!(&resp);
     assert_eq!(resp.total_interest_due, Coin::new(total_interest_due));
 
-    let total_liability = loan1 + loan2 + total_interest_due;
-    let utilization_rel2 = Percent::from_permille(
-        (1000 * (total_liability) / utilization_optimal.of(init_deposit + total_interest_due))
-            as u32,
-    );
-    let interest2 = base_interest_rate + utilization_rel2.of(addon_optimal_interest_rate);
+    let interest2 = interest_rate(loan1_u32 + loan2_u32 + total_interest_due_u32, balance1_u32);
 
     let quote: QueryQuoteResponse = app
         .wrap()
