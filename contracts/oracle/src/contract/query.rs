@@ -4,8 +4,8 @@ use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
 use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
 
-use super::oracle::Oracle;
 use crate::{
+    contract::oracle::Oracle,
     msg::{PricesResponse, QueryMsg, SwapTreeResponse},
     state::{config::Config, supported_pairs::SupportedPairs},
     ContractError,

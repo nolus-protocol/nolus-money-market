@@ -1,14 +1,12 @@
-use access_control::SingleUserAccess;
 use marketprice::config::Config as PriceConfig;
 use sdk::{cosmwasm_ext::Response, cosmwasm_std::Storage};
 
 use crate::{msg::ConfigResponse, state::config::Config, ContractError};
 
-pub fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, ContractError> {
-    let owner = SingleUserAccess::load_contract_owner(storage)?.into();
+pub(super) fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, ContractError> {
     let config = Config::load(storage)?;
 
-    Ok(ConfigResponse { owner, config })
+    Ok(ConfigResponse { config })
 }
 
 pub(super) fn try_configure(
@@ -50,7 +48,7 @@ mod tests {
             Percent::from_percent(50),
             swap_tree!((1, Cro::TICKER)),
         );
-        let (mut deps, info) = setup_test(msg);
+        let (mut deps, _info) = setup_test(msg);
 
         let msg = SudoMsg::UpdateConfig(PriceConfig::new(
             Percent::from_percent(44),
@@ -77,7 +75,6 @@ mod tests {
         assert_eq!(
             value,
             ConfigResponse {
-                owner: info.sender,
                 config: Config {
                     base_asset: Usdc::TICKER.into(),
                     price_config: PriceConfig::new(

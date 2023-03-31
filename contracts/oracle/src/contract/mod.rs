@@ -171,13 +171,12 @@ mod tests {
             Percent::from_percent(50),
             swap_tree!((1, Osmo::TICKER)),
         );
-        let (deps, info) = setup_test(msg);
+        let (deps, _info) = setup_test(msg);
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::Config {}).unwrap();
         let value: ConfigResponse = from_binary(&res).unwrap();
         assert_eq!(
             ConfigResponse {
-                owner: info.sender,
                 config: Config {
                     base_asset: Usdc::TICKER.into(),
                     price_config: PriceConfig::new(

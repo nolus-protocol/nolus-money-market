@@ -99,7 +99,6 @@ pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 pub struct ConfigResponse {
-    pub owner: Addr,
     pub config: Config,
 }
 
