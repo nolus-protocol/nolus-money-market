@@ -156,7 +156,12 @@ fn try_dispatch(deps: DepsMut<'_>, env: Env, info: MessageInfo) -> Result<Respon
         .emit_to_string_value("to", lpp_address)
         .emit_coin_dto("rewards", result.receipt.in_nls);
 
-    Ok(result.batch.into_response(emitter))
+    let response = result
+        .batch
+        .into_response(emitter)
+        .set_data(to_binary(&env.contract.address)?);
+
+    Ok(response)
 }
 
 #[cfg(test)]
