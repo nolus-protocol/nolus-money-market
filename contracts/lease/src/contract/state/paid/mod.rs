@@ -42,8 +42,8 @@ impl Controller for Active {
                 let batch = transfer_in.enter(env.block.time)?;
                 Ok(Response::from(batch, transfer_in))
             }
-            ExecuteMsg::PriceAlarm() => state::ignore_msg(self),
-            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self),
+            ExecuteMsg::PriceAlarm() => state::ignore_msg(self, &env),
+            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self, &env),
         }
     }
 }

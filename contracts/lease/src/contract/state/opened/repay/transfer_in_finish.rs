@@ -8,7 +8,7 @@ use crate::{
     api::{opened::RepayTrx, ExecuteMsg, LpnCoin, PaymentCoin, StateResponse},
     contract::{
         state::{
-            controller,
+            attach_alarm_response, controller,
             opened::{active::Active, repay},
             transfer_in, Controller, Response,
         },
@@ -43,13 +43,13 @@ impl TransferInFinish {
         }
     }
 
-    pub(super) fn try_complete(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+    pub(super) fn try_complete(self, deps: Deps<'_>, env: &Env) -> ContractResult<Response> {
         let querier = &deps.querier;
         let received =
             transfer_in::check_received(&self.payment_lpn, &env.contract.address, querier)?;
 
         if received {
-            Active::try_repay_lpn(self.lease, self.payment_lpn, querier, &env)
+            Active::try_repay_lpn(self.lease, self.payment_lpn, querier, env)
         } else {
             let emitter = self.emit_ok();
             if env.block.time >= self.timeout {
@@ -66,7 +66,7 @@ impl TransferInFinish {
         }
     }
 
-    fn on_alarm(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+    fn on_alarm(self, deps: Deps<'_>, env: &Env) -> ContractResult<Response> {
         self.try_complete(deps, env)
     }
 
@@ -87,7 +87,9 @@ impl Controller for TransferInFinish {
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         if matches!(msg, ExecuteMsg::TimeAlarm {}) {
-            self.on_alarm(deps.as_ref(), env)
+            let mut response = self.on_alarm(deps.as_ref(), &env)?;
+            response.cw_response = attach_alarm_response(response.cw_response, &env)?;
+            Ok(response)
         } else {
             controller::err(&format!("{:?}", msg), deps.api)
         }

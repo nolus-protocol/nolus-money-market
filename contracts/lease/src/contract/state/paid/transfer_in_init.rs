@@ -49,7 +49,7 @@ impl DexConnectable for TransferInInit {
 }
 
 impl Enterable for TransferInInit {
-    fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
+    fn enter(&self, _deps: Deps<'_>, env: &Env) -> ContractResult<Batch> {
         self.enter(env.block.time)
     }
 }
@@ -58,15 +58,15 @@ impl Controller for TransferInInit {
     fn execute(
         self,
         deps: &mut DepsMut<'_>,
-        _env: Env,
+        env: Env,
         _info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         match msg {
             ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => controller::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() => state::ignore_msg(self),
-            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self),
+            ExecuteMsg::PriceAlarm() => state::ignore_msg(self, &env),
+            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self, &env),
         }
     }
 

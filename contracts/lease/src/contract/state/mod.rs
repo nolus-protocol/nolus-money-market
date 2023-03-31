@@ -1,4 +1,4 @@
-use cosmwasm_std::{Addr, Binary, StdResult, Storage};
+use cosmwasm_std::{to_binary, Addr, Binary, StdResult, Storage};
 use enum_dispatch::enum_dispatch;
 use platform::batch::{Emit, Emitter};
 use serde::{Deserialize, Serialize};
@@ -148,7 +148,7 @@ where
         env.contract.address.clone(),
         TimeoutPolicy::Retry,
     );
-    let batch = current_state.enter(deps, env)?;
+    let batch = current_state.enter(deps, &env)?;
     Ok(Response::from(batch.into_response(emitter), current_state))
 }
 
@@ -187,9 +187,16 @@ where
         .emit("timeout", format!("{:?}", policy))
 }
 
-fn ignore_msg<S>(state: S) -> ContractResult<Response>
+fn attach_alarm_response(response: CwResponse, env: &Env) -> ContractResult<CwResponse> {
+    Ok(response.set_data(to_binary(&env.contract.address)?))
+}
+
+fn ignore_msg<S>(state: S, env: &Env) -> ContractResult<Response>
 where
     S: Into<State>,
 {
-    Ok(Response::from(CwResponse::new(), state))
+    Ok(Response::from(
+        attach_alarm_response(CwResponse::new(), env)?,
+        state,
+    ))
 }

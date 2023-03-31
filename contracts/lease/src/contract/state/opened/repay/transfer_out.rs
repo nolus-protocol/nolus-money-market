@@ -53,7 +53,7 @@ impl TransferOut {
 }
 
 impl Enterable for TransferOut {
-    fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
+    fn enter(&self, _deps: Deps<'_>, env: &Env) -> ContractResult<Batch> {
         self.enter(env.block.time)
     }
 }

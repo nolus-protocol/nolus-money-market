@@ -53,7 +53,7 @@ impl TransferInInit {
             self.payment_lpn,
             env.block.time + dex::IBC_TIMEOUT,
         );
-        finish.try_complete(deps, env)
+        finish.try_complete(deps, &env)
     }
 }
 
@@ -64,7 +64,7 @@ impl DexConnectable for TransferInInit {
 }
 
 impl Enterable for TransferInInit {
-    fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
+    fn enter(&self, _deps: Deps<'_>, env: &Env) -> ContractResult<Batch> {
         self.enter(env.block.time)
     }
 }
