@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
 use lease::api::{dex::ConnectionParams, DownpaymentCoin, InterestPaymentSpec, LeaseCoin};
-use lpp::msg::LppCoin;
+use lpp::msg::LpnCoin;
 use sdk::{
     cosmwasm_std::{Addr, Uint64},
     schemars::{self, JsonSchema},
@@ -76,7 +76,7 @@ pub struct ConfigResponse {
 #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
 pub struct QuoteResponse {
     pub total: LeaseCoin,
-    pub borrow: LppCoin,
+    pub borrow: LpnCoin,
     pub annual_interest_rate: Percent,
     pub annual_interest_rate_margin: Percent,
 }

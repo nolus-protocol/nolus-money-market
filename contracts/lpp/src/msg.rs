@@ -15,7 +15,7 @@ use sdk::{
 
 use crate::{borrow::InterestRate, loan::LoanData, nlpn::NLpn};
 
-pub type LppCoin = CoinDTO<Lpns>;
+pub type LpnCoin = CoinDTO<Lpns>;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
@@ -33,7 +33,7 @@ pub struct MigrateMsg {}
 pub enum ExecuteMsg {
     NewLeaseCode { lease_code_id: Uint64 },
 
-    OpenLoan { amount: LppCoin },
+    OpenLoan { amount: LpnCoin },
     RepayLoan(),
 
     Deposit(),
@@ -57,7 +57,7 @@ pub enum SudoMsg {
 pub enum QueryMsg {
     Config(),
     Quote {
-        amount: LppCoin,
+        amount: LpnCoin,
     },
     Loan {
         lease_addr: Addr,
