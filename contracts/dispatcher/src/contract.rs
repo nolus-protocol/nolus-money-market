@@ -41,7 +41,6 @@ pub fn instantiate(
     platform::contract::validate_addr(&deps.querier, &msg.timealarms)?;
     platform::contract::validate_addr(&deps.querier, &msg.treasury)?;
 
-    SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
     SingleUserAccess::new(
         crate::access_control::TIMEALARMS_NAMESPACE,
         msg.timealarms.clone(),

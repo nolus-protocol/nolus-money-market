@@ -32,8 +32,6 @@ pub fn instantiate(
 ) -> Result<Response, ContractError> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
-
     Ok(Response::default())
 }
 

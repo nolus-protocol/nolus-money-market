@@ -42,7 +42,6 @@ impl<'a> InstantiateWithLpn<'a> {
     {
         versioning::initialize(self.deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-        SingleUserAccess::new_contract_owner(self.info.sender).store(self.deps.storage)?;
         SingleUserAccess::new(
             crate::access_control::LEASE_CODE_ADMIN_KEY,
             self.msg.lease_code_admin.clone(),

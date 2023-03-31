@@ -61,8 +61,6 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
     where
         C: Currency,
     {
-        SingleUserAccess::new_contract_owner(self.owner).store(self.deps.storage)?;
-
         self.msg.config.store(self.deps.storage)?;
 
         SupportedPairs::<C>::new(self.msg.swap_tree.into_tree())?

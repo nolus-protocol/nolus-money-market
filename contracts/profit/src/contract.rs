@@ -32,7 +32,6 @@ pub fn instantiate(
 
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    SingleUserAccess::new_contract_owner(info.sender).store(deps.storage)?;
     SingleUserAccess::new(
         crate::access_control::TIMEALARMS_NAMESPACE,
         msg.timealarms.clone(),
