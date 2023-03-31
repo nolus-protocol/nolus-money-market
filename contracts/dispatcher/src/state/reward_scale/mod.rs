@@ -16,12 +16,16 @@ mod unchecked;
 pub struct TotalValueLocked(u32);
 
 impl TotalValueLocked {
+    pub const SCALE_FACTOR: Amount = 1_000_000_000;
+
     pub fn new(thousands: u32) -> Self {
         Self(thousands)
     }
 
     pub fn to_amount(&self) -> Amount {
-        Amount::from(self.0) * 1000
+        Amount::from(self.0)
+            .checked_mul(Self::SCALE_FACTOR)
+            .expect("Amount goes beyond calculation limits!")
     }
 }
 
