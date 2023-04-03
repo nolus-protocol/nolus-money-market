@@ -1,8 +1,7 @@
-use cosmwasm_std::{Binary, DepsMut, MessageInfo};
 use serde::{Deserialize, Serialize};
 
 use platform::batch::Batch;
-use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{dex::ConnectionParams, paid::ClosingTrx, ExecuteMsg, StateResponse},
@@ -65,8 +64,9 @@ impl Controller for TransferInInit {
         match msg {
             ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => controller::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() => state::ignore_msg(self)?.attach_alarm_response(&env),
-            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self)?.attach_alarm_response(&env),
+            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => {
+                state::ignore_msg(self)?.attach_alarm_response(&env)
+            }
         }
     }
 

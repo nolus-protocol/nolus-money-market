@@ -1,7 +1,6 @@
-use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo};
+use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{ExecuteMsg, StateResponse},
@@ -42,8 +41,9 @@ impl Controller for Active {
                 let batch = transfer_in.enter(env.block.time)?;
                 Ok(Response::from(batch, transfer_in))
             }
-            ExecuteMsg::PriceAlarm() => state::ignore_msg(self)?.attach_alarm_response(&env),
-            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self)?.attach_alarm_response(&env),
+            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => {
+                state::ignore_msg(self)?.attach_alarm_response(&env)
+            }
         }
     }
 }

@@ -1,7 +1,8 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
+use serde::{Deserialize, Serialize};
+
 use finance::duration::Duration;
 use platform::batch::Batch;
-use serde::{Deserialize, Serialize};
+use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::ExecuteMsg,
@@ -66,7 +67,9 @@ where
             ExecuteMsg::PriceAlarm() => super::ignore_msg(self)?.attach_alarm_response(&env),
             ExecuteMsg::TimeAlarm {} => {
                 let next_state = self.connectee.connected(self.ica_account);
+
                 let batch = next_state.enter(deps.as_ref(), &env)?;
+
                 Response::from(batch, next_state).attach_alarm_response(&env)
             }
         }

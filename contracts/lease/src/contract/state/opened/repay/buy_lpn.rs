@@ -1,15 +1,11 @@
-use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    coin::{self},
-    currency::Symbol,
-};
+use finance::{coin, currency::Symbol};
 use platform::{
-    batch::{Batch as LocalBatch, Emit, Emitter},
+    batch::{Batch, Emit, Emitter},
     trx,
 };
-use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper};
+use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 use swap::trx as swap_trx;
 
 use crate::{
@@ -39,7 +35,7 @@ impl BuyLpn {
         Self { lease, payment }
     }
 
-    pub(super) fn enter(&self, querier: &QuerierWrapper<'_>) -> ContractResult<LocalBatch> {
+    pub(super) fn enter(&self, querier: &QuerierWrapper<'_>) -> ContractResult<Batch> {
         let mut swap_trx = self.lease.dex.swap(&self.lease.lease.oracle, querier);
         swap_trx.swap_exact_in(&self.payment, self.target_currency())?;
         Ok(swap_trx.into())
@@ -80,7 +76,7 @@ impl DexConnectable for BuyLpn {
 }
 
 impl Enterable for BuyLpn {
-    fn enter(&self, deps: Deps<'_>, _env: &Env) -> ContractResult<LocalBatch> {
+    fn enter(&self, deps: Deps<'_>, _env: &Env) -> ContractResult<Batch> {
         self.enter(&deps.querier)
     }
 }
@@ -102,11 +98,7 @@ impl Contract for BuyLpn {
 }
 
 impl Postpone for BuyLpn {
-    fn setup_alarm(
-        &self,
-        when: Timestamp,
-        _querier: &QuerierWrapper<'_>,
-    ) -> ContractResult<LocalBatch> {
+    fn setup_alarm(&self, when: Timestamp, _querier: &QuerierWrapper<'_>) -> ContractResult<Batch> {
         let time_alarms = self.lease.lease.time_alarms.clone();
         time_alarms.setup_alarm(when).map_err(Into::into)
     }

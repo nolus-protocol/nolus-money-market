@@ -156,12 +156,9 @@ fn try_dispatch(deps: DepsMut<'_>, env: Env, info: MessageInfo) -> Result<Respon
         .emit_to_string_value("to", lpp_address)
         .emit_coin_dto("rewards", result.receipt.in_nls);
 
-    let response = result
-        .batch
-        .into_response(emitter)
-        .set_data(to_binary(&env.contract.address)?);
-
-    Ok(response)
+    to_binary(&env.contract.address)
+        .map(|data| result.batch.into_response(emitter).set_data(data))
+        .map_err(Into::into)
 }
 
 #[cfg(test)]

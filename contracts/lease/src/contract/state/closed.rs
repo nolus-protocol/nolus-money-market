@@ -1,11 +1,10 @@
-use cosmwasm_std::{DepsMut, MessageInfo, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use platform::{
     bank,
     batch::{Batch, Emit, Emitter},
 };
-use sdk::cosmwasm_std::{Env, QuerierWrapper};
+use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{ExecuteMsg, StateResponse},
@@ -53,8 +52,9 @@ impl Controller for Closed {
         match msg {
             ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => controller::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() => state::ignore_msg(self)?.attach_alarm_response(&env),
-            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self)?.attach_alarm_response(&env),
+            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => {
+                state::ignore_msg(self)?.attach_alarm_response(&env)
+            }
         }
     }
 }

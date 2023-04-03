@@ -1,8 +1,7 @@
-use cosmwasm_std::{Deps, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use platform::batch::{Emit, Emitter};
-use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper};
+use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{opened::RepayTrx, ExecuteMsg, LpnCoin, PaymentCoin, StateResponse},
@@ -87,8 +86,8 @@ impl Controller for TransferInFinish {
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         if matches!(msg, ExecuteMsg::TimeAlarm {}) {
-            self.on_alarm(deps.as_ref(), &env)?
-                .attach_alarm_response(&env)
+            self.on_alarm(deps.as_ref(), &env)
+                .and_then(|response| response.attach_alarm_response(&env))
         } else {
             controller::err(&format!("{:?}", msg), deps.api)
         }

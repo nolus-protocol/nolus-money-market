@@ -1,11 +1,10 @@
-use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use platform::{
     batch::{Batch, Emit, Emitter},
     ica::HostAccount,
 };
-use sdk::cosmwasm_std::{Deps, Env};
+use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     api::StateResponse,

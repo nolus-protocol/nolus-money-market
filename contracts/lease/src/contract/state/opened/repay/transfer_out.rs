@@ -1,8 +1,7 @@
-use cosmwasm_std::{Binary, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
 use platform::batch::{Batch, Emit, Emitter};
-use sdk::cosmwasm_std::{Deps, Env, Timestamp};
+use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{opened::RepayTrx, PaymentCoin, StateResponse},

@@ -1,4 +1,3 @@
-use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use currency::{lpn::Lpns, payment::PaymentGroup};
@@ -9,7 +8,7 @@ use platform::{
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper},
+    cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp},
 };
 
 use crate::{

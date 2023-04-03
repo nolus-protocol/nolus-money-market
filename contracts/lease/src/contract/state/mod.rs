@@ -1,16 +1,21 @@
-use cosmwasm_std::{to_binary, Addr, Binary, StdResult, Storage};
-use enum_dispatch::enum_dispatch;
-use platform::batch::{Emit, Emitter};
-use serde::{Deserialize, Serialize};
 use std::str;
 
+use enum_dispatch::enum_dispatch;
+use serde::{Deserialize, Serialize};
+
+pub use controller::{execute, instantiate, migrate, query, reply, sudo};
+use platform::batch::{Emit, Emitter};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{
+        to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, StdResult, Storage,
+    },
     cw_storage_plus::Item,
 };
 
 use crate::{api::ExecuteMsg, error::ContractResult};
+
+use super::dex::DexConnectable;
 
 use self::{
     closed::Closed,
@@ -20,9 +25,6 @@ use self::{
     opened::repay::buy_lpn::BuyLpn,
     opening::request_loan::RequestLoan,
 };
-pub use controller::{execute, instantiate, migrate, query, reply, sudo};
-
-use super::dex::DexConnectable;
 
 mod closed;
 mod controller;
@@ -34,48 +36,43 @@ mod opening;
 mod paid;
 mod transfer_in;
 
-type OpenIcaAccount = ica_connector::IcaConnector<
+type OpenIcaAccount = IcaConnector<
     { opening::open_ica::OpenIcaAccount::PRECONNECTABLE },
     opening::open_ica::OpenIcaAccount,
 >;
 type OpeningTransferOut = opening::buy_asset::Transfer;
 
 type BuyAsset = opening::buy_asset::Swap;
-type BuyAssetRecoverIca = ica_connector::IcaConnector<
-    { ica_recover::InRecovery::<BuyAsset>::PRECONNECTABLE },
-    ica_recover::InRecovery<BuyAsset>,
->;
-type BuyAssetPostRecoverIca = ica_post_connector::PostConnector<ica_recover::InRecovery<BuyAsset>>;
+type BuyAssetRecoverIca =
+    IcaConnector<{ InRecovery::<BuyAsset>::PRECONNECTABLE }, InRecovery<BuyAsset>>;
+type BuyAssetPostRecoverIca = ica_post_connector::PostConnector<InRecovery<BuyAsset>>;
 
 type OpenedActive = opened::active::Active;
 
 type RepaymentTransferOut = opened::repay::transfer_out::TransferOut;
 
-type BuyLpnRecoverIca = ica_connector::IcaConnector<
-    { ica_recover::InRecovery::<BuyLpn>::PRECONNECTABLE },
-    ica_recover::InRecovery<BuyLpn>,
->;
-type BuyLpnPostRecoverIca = ica_post_connector::PostConnector<ica_recover::InRecovery<BuyLpn>>;
+type BuyLpnRecoverIca = IcaConnector<{ InRecovery::<BuyLpn>::PRECONNECTABLE }, InRecovery<BuyLpn>>;
+type BuyLpnPostRecoverIca = ica_post_connector::PostConnector<InRecovery<BuyLpn>>;
 
 type RepaymentTransferInInit = opened::repay::transfer_in_init::TransferInInit;
-type RepaymentTransferInInitRecoverIca = ica_connector::IcaConnector<
-    { ica_recover::InRecovery::<RepaymentTransferInInit>::PRECONNECTABLE },
-    ica_recover::InRecovery<RepaymentTransferInInit>,
+type RepaymentTransferInInitRecoverIca = IcaConnector<
+    { InRecovery::<RepaymentTransferInInit>::PRECONNECTABLE },
+    InRecovery<RepaymentTransferInInit>,
 >;
 type RepaymentTransferInInitPostRecoverIca =
-    ica_post_connector::PostConnector<ica_recover::InRecovery<RepaymentTransferInInit>>;
+    ica_post_connector::PostConnector<InRecovery<RepaymentTransferInInit>>;
 
 type RepaymentTransferInFinish = opened::repay::transfer_in_finish::TransferInFinish;
 
 type PaidActive = paid::Active;
 
 type ClosingTransferInInit = paid::transfer_in_init::TransferInInit;
-type ClosingTransferInInitRecoverIca = ica_connector::IcaConnector<
-    { ica_recover::InRecovery::<RepaymentTransferInInit>::PRECONNECTABLE },
-    ica_recover::InRecovery<ClosingTransferInInit>,
+type ClosingTransferInInitRecoverIca = IcaConnector<
+    { InRecovery::<RepaymentTransferInInit>::PRECONNECTABLE },
+    InRecovery<ClosingTransferInInit>,
 >;
 type ClosingTransferInInitPostRecoverIca =
-    ica_post_connector::PostConnector<ica_recover::InRecovery<ClosingTransferInInit>>;
+    ica_post_connector::PostConnector<InRecovery<ClosingTransferInInit>>;
 
 type ClosingTransferInFinish = paid::transfer_in_finish::TransferInFinish;
 
