@@ -30,7 +30,7 @@ impl Controller for Active {
     fn execute(
         self,
         deps: &mut DepsMut<'_>,
-        env: Env,
+        env: &Env,
         _info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
@@ -38,12 +38,12 @@ impl Controller for Active {
             ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => {
                 let transfer_in = TransferInInit::new(self.lease);
-                let batch = transfer_in.enter(env.block.time)?;
-                Ok(Response::from(batch, transfer_in))
+
+                transfer_in
+                    .enter(env.block.time)
+                    .map(|batch| Response::from(batch, transfer_in))
             }
-            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => {
-                state::ignore_msg(self)?.attach_alarm_response(&env)
-            }
+            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => state::ignore_msg(self),
         }
     }
 }

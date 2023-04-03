@@ -81,13 +81,12 @@ impl Controller for TransferInFinish {
     fn execute(
         self,
         deps: &mut DepsMut<'_>,
-        env: Env,
+        env: &Env,
         _info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         if matches!(msg, ExecuteMsg::TimeAlarm {}) {
-            self.on_alarm(deps.as_ref(), &env)
-                .and_then(|response| response.attach_alarm_response(&env))
+            self.on_alarm(deps.as_ref(), env)
         } else {
             controller::err(&format!("{:?}", msg), deps.api)
         }

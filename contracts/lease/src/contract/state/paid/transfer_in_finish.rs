@@ -69,17 +69,15 @@ impl Controller for TransferInFinish {
     fn execute(
         self,
         deps: &mut DepsMut<'_>,
-        env: Env,
+        env: &Env,
         _info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         match msg {
             ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => controller::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() => state::ignore_msg(self)?.attach_alarm_response(&env),
-            ExecuteMsg::TimeAlarm {} => self
-                .on_alarm(&deps.querier, &env)?
-                .attach_alarm_response(&env),
+            ExecuteMsg::PriceAlarm() => state::ignore_msg(self),
+            ExecuteMsg::TimeAlarm {} => self.on_alarm(&deps.querier, env),
         }
     }
 }

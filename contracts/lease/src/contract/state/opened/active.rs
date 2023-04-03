@@ -73,7 +73,7 @@ impl Active {
         Ok(resp)
     }
 
-    fn try_repay(self, deps: Deps<'_>, env: Env, info: MessageInfo) -> ContractResult<Response> {
+    fn try_repay(self, deps: Deps<'_>, env: &Env, info: MessageInfo) -> ContractResult<Response> {
         let payment = bank::may_received::<PaymentGroup, _>(
             info.funds.clone(),
             IntoDTO::<PaymentGroup>::new(),
@@ -84,7 +84,7 @@ impl Active {
             let payment_lpn = bank::may_received::<Lpns, _>(info.funds, IntoDTO::<Lpns>::new())
                 .ok_or_else(ContractError::NoPaymentError)??;
 
-            Self::try_repay_lpn(self.lease, payment_lpn, &deps.querier, &env)
+            Self::try_repay_lpn(self.lease, payment_lpn, &deps.querier, env)
         } else {
             let transfer_out = TransferOut::new(self.lease, payment);
             let batch = transfer_out.enter(env.block.time)?;
@@ -131,19 +131,15 @@ impl Controller for Active {
     fn execute(
         self,
         deps: &mut DepsMut<'_>,
-        env: Env,
+        env: &Env,
         info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         match msg {
             ExecuteMsg::Repay() => self.try_repay(deps.as_ref(), env, info),
             ExecuteMsg::Close() => controller::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() => self
-                .try_on_price_alarm(&deps.querier, &env, info)?
-                .attach_alarm_response(&env),
-            ExecuteMsg::TimeAlarm {} => self
-                .try_on_time_alarm(&deps.querier, &env, info)?
-                .attach_alarm_response(&env),
+            ExecuteMsg::PriceAlarm() => self.try_on_price_alarm(&deps.querier, env, info),
+            ExecuteMsg::TimeAlarm {} => self.try_on_time_alarm(&deps.querier, env, info),
         }
     }
 }

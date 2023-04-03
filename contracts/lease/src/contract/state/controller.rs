@@ -34,7 +34,7 @@ where
     fn execute(
         self,
         deps: &mut DepsMut<'_>,
-        _env: Env,
+        _env: &Env,
         _info: MessageInfo,
         _msg: ExecuteMsg,
     ) -> ContractResult<Response> {
@@ -123,18 +123,27 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
-    super::load(deps.storage)?
-        .execute(&mut deps, env, info, msg)
-        .and_then(
-            |Response {
-                 cw_response,
-                 next_state,
-             }| {
-                super::save(deps.storage, &next_state)?;
+    let is_alarm: bool = matches!(
+        &msg,
+        ExecuteMsg::PriceAlarm { .. } | ExecuteMsg::TimeAlarm { .. }
+    );
 
-                Ok(cw_response)
-            },
-        )
+    super::load(deps.storage)?
+        .execute(&mut deps, &env, info, msg)
+        .and_then(|response| {
+            let Response {
+                cw_response,
+                next_state,
+            } = if is_alarm {
+                response.attach_alarm_response(&env)?
+            } else {
+                response
+            };
+
+            super::save(deps.storage, &next_state)?;
+
+            Ok(cw_response)
+        })
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
