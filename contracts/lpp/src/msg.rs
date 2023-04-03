@@ -1,4 +1,3 @@
-use cosmwasm_std::Uint64;
 use serde::{Deserialize, Serialize};
 
 use currency::{lpn::Lpns, native::Nls};
@@ -9,7 +8,7 @@ use finance::{
     price::Price,
 };
 use sdk::{
-    cosmwasm_std::{Addr, Uint128},
+    cosmwasm_std::{Addr, Uint128, Uint64},
     schemars::{self, JsonSchema},
 };
 
