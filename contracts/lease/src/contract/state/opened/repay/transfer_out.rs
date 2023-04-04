@@ -38,10 +38,12 @@ impl TransferOut {
 
     fn on_response(self, deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
         let emitter = self.emit_ok();
-        let buy_lpn = BuyLpn::new(self.lease, self.payment);
-        let batch = buy_lpn.enter(&deps.querier)?;
 
-        Ok(Response::from(batch.into_response(emitter), buy_lpn))
+        let buy_lpn = BuyLpn::new(self.lease, self.payment);
+
+        buy_lpn
+            .enter(&deps.querier)
+            .map(|batch| Response::from(batch.into_response(emitter), buy_lpn))
     }
 
     fn emit_ok(&self) -> Emitter {

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use finance::duration::Duration;
-use platform::batch::Batch;
+use platform::{batch::Batch, response::response_with_messages};
 use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
@@ -57,20 +57,22 @@ where
     fn execute(
         self,
         deps: &mut DepsMut<'_>,
-        env: &Env,
+        env: Env,
         _info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         match msg {
             ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => controller::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() => super::ignore_msg(self),
+            ExecuteMsg::PriceAlarm() => super::ignore_msg(&env, self),
             ExecuteMsg::TimeAlarm {} => {
                 let next_state = self.connectee.connected(self.ica_account);
 
-                next_state
-                    .enter(deps.as_ref(), env)
-                    .map(|batch| Response::from(batch, next_state))
+                next_state.enter(deps.as_ref(), &env).and_then(|batch| {
+                    response_with_messages(batch, &env.contract.address)
+                        .map(|response| Response::from(response, next_state))
+                        .map_err(Into::into)
+                })
             }
         }
     }

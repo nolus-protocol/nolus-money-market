@@ -46,9 +46,10 @@ impl BuyLpn {
         let payment_lpn = self.decode_response(resp.as_slice())?;
 
         let transfer_in = TransferInInit::new(self.lease, self.payment, payment_lpn);
-        let batch = transfer_in.enter(env.block.time)?;
 
-        Ok(Response::from(batch.into_response(emitter), transfer_in))
+        transfer_in
+            .enter(env.block.time)
+            .map(|batch| Response::from(batch.into_response(emitter), transfer_in))
     }
 
     fn decode_response(&self, resp: &[u8]) -> ContractResult<LpnCoin> {

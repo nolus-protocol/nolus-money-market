@@ -8,7 +8,7 @@ use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{ExecuteMsg, StateResponse},
-    contract::{cmd::Close, state, Contract},
+    contract::{cmd::Close, Contract},
     error::ContractResult,
     event::Type,
     lease::{with_lease, IntoDTOResult, LeaseDTO},
@@ -45,14 +45,14 @@ impl Controller for Closed {
     fn execute(
         self,
         deps: &mut DepsMut<'_>,
-        _env: &Env,
+        env: Env,
         _info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         match msg {
             ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => controller::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => state::ignore_msg(self),
+            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => super::ignore_msg(&env, self),
         }
     }
 }

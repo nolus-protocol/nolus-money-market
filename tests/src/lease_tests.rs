@@ -579,6 +579,8 @@ fn liquidation_time_alarm(time_pass: Duration) {
     let downpayment = create_payment_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, &neutron_message_receiver, downpayment, None);
 
+    dbg!("testing");
+
     let lease_amount = if let StateResponse::Opened {
         amount: lease_amount,
         ..

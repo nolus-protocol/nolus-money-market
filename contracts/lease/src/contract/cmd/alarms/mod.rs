@@ -1,5 +1,8 @@
 use finance::currency::Currency;
-use platform::batch::{Batch, Emit, Emitter};
+use platform::{
+    batch::{Batch, Emit, Emitter},
+    response::Response as PlatformResponse,
+};
 use sdk::{cosmwasm_ext::Response, cosmwasm_std::Env};
 
 use crate::{
@@ -11,7 +14,7 @@ pub mod price;
 pub mod time;
 
 pub struct AlarmResult {
-    pub response: Response,
+    pub response: PlatformResponse,
     pub lease_dto: LeaseDTO,
 }
 

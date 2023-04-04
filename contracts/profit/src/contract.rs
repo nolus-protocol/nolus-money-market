@@ -51,12 +51,12 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     SingleUserAccess::remove_contract_owner(deps.storage);
 
-    response::response(versioning::release()).map_err(Into::into)
+    response::response(versioning::release()).map(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -89,8 +89,7 @@ fn try_transfer(deps: Deps<'_>, env: Env, info: MessageInfo) -> Result<Response,
     SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
         .check_access(&info.sender)?;
 
-    Profit::transfer(deps, &env, &info)
-        .and_then(|response| Ok(response.set_data(to_binary(&env.contract.address)?)))
+    Profit::transfer(deps, &env, &info).map(Into::into)
 }
 
 #[cfg(test)]

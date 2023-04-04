@@ -10,7 +10,7 @@ use platform::{
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Storage},
+    cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, StdResult, Storage},
 };
 use versioning::{version, VersionSegment};
 
@@ -36,12 +36,12 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     SingleUserAccess::remove_contract_owner(deps.storage);
 
-    response::response(versioning::release()).map_err(Into::into)
+    response::response(versioning::release()).map(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

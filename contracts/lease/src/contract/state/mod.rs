@@ -4,12 +4,13 @@ use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
 
 pub use controller::{execute, instantiate, migrate, query, reply, sudo};
-use platform::batch::{Emit, Emitter};
+use platform::{
+    batch::{Emit, Emitter},
+    response::response,
+};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{
-        to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, StdResult, Storage,
-    },
+    cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, StdResult, Storage},
     cw_storage_plus::Item,
 };
 
@@ -118,20 +119,15 @@ pub(crate) struct Response {
 }
 
 impl Response {
-    pub fn from<R, S>(resp: R, next_state: S) -> Self
+    fn from<R, S>(response: R, next_state: S) -> Self
     where
         R: Into<CwResponse>,
         S: Into<State>,
     {
         Self {
-            cw_response: resp.into(),
+            cw_response: response.into(),
             next_state: next_state.into(),
         }
-    }
-
-    pub fn attach_alarm_response(mut self, env: &Env) -> ContractResult<Self> {
-        self.cw_response = self.cw_response.set_data(to_binary(&env.contract.address)?);
-        Ok(self)
     }
 }
 
@@ -150,8 +146,10 @@ where
         env.contract.address.clone(),
         TimeoutPolicy::Retry,
     );
-    let batch = current_state.enter(deps, &env)?;
-    Ok(Response::from(batch.into_response(emitter), current_state))
+
+    current_state
+        .enter(deps, &env)
+        .map(|batch| Response::from(batch.into_response(emitter), current_state))
 }
 
 fn on_timeout_repair_channel<S, L>(
@@ -169,9 +167,13 @@ where
         env.contract.address,
         TimeoutPolicy::RepairICS27Channel,
     );
+
     let recover_ica = IcaConnector::new(InRecovery::new(current_state));
-    let batch = recover_ica.enter();
-    Ok(Response::from(batch.into_response(emitter), recover_ica))
+
+    Ok(Response::from(
+        recover_ica.enter().into_response(emitter),
+        recover_ica,
+    ))
 }
 
 #[derive(Debug)]
@@ -189,9 +191,11 @@ where
         .emit("timeout", format!("{:?}", policy))
 }
 
-fn ignore_msg<S>(state: S) -> ContractResult<Response>
+fn ignore_msg<S>(env: &Env, state: S) -> ContractResult<Response>
 where
     S: Into<State>,
 {
-    Ok(Response::from(CwResponse::new(), state))
+    response(&env.contract.address)
+        .map(|response| Response::from(response, state))
+        .map_err(Into::into)
 }

@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 
+use platform::response::response_with_messages;
 use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{ExecuteMsg, StateResponse},
-    contract::{state, Contract, Lease},
+    contract::{Contract, Lease},
     error::ContractResult,
 };
 
@@ -30,7 +31,7 @@ impl Controller for Active {
     fn execute(
         self,
         deps: &mut DepsMut<'_>,
-        env: &Env,
+        env: Env,
         _info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
@@ -41,9 +42,12 @@ impl Controller for Active {
 
                 transfer_in
                     .enter(env.block.time)
-                    .map(|batch| Response::from(batch, transfer_in))
+                    .and_then(|batch| {
+                        response_with_messages(batch, &env.contract.address).map_err(Into::into)
+                    })
+                    .map(|response| Response::from(response, transfer_in))
             }
-            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => state::ignore_msg(self),
+            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => super::ignore_msg(&env, self),
         }
     }
 }
