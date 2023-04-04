@@ -12,7 +12,7 @@ dependencies = [
 
 [[package]]
 name = "admin_contract"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -645,7 +645,7 @@ dependencies = [
 
 [[package]]
 name = "leaser"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -664,13 +664,13 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.140"
+version = "0.2.141"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99227334921fae1a979cf0bfdfcc6b3e5ce376ef57e16fb6fb3ea2ed6095f80c"
+checksum = "3304a64d199bb964be99741b7a14d26972741915b3649639149b2479bb46f4b5"
 
 [[package]]
 name = "lpp"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -763,7 +763,7 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "oracle"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -849,16 +849,16 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.54"
+version = "1.0.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e472a104799c74b514a57226160104aa483546de37e839ec50e3c2e41dd87534"
+checksum = "2b63bdb0cd06f1f4dedf69b254734f9b45af66e4a031e42a7480257d9898b435"
 dependencies = [
  "unicode-ident",
 ]
 
 [[package]]
 name = "profit"
-version = "0.3.0"
+version = "0.2.2"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -975,7 +975,7 @@ dependencies = [
 
 [[package]]
 name = "rewards_dispatcher"
-version = "0.3.0"
+version = "0.2.3"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -1129,7 +1129,7 @@ checksum = "4c614d17805b093df4b147b51339e7e44bf05ef59fba1e45d83500bcfb4d8585"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.11",
+ "syn 2.0.13",
 ]
 
 [[package]]
@@ -1245,9 +1245,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.11"
+version = "2.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21e3787bb71465627110e7d87ed4faaa36c1f61042ee67badb9e2ef173accc40"
+checksum = "4c9da457c5285ac1f936ebd076af6dac17a61cfe7826f2076b4d015cf47bc8ec"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1307,7 +1307,7 @@ checksum = "f9456a42c5b0d803c8cd86e73dd7cc9edd429499f37a3550d286d5e86720569f"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.11",
+ "syn 2.0.13",
 ]
 
 [[package]]
@@ -1347,7 +1347,7 @@ dependencies = [
 
 [[package]]
 name = "timealarms"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "cosmwasm-std",
  "currency",
@@ -1363,7 +1363,7 @@ dependencies = [
 
 [[package]]
 name = "treasury"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "access-control",
  "cosmwasm-std",
