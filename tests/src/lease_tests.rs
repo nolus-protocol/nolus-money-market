@@ -539,6 +539,7 @@ fn liquidation_warning_price_0() {
 }
 
 #[test]
+#[ignore = "liquidations on price have been disabled until https://github.com/nolus-protocol/nolus-money-market/issues/49 gets implemented"]
 fn liquidation_warning_price_1() {
     liquidation_warning(
         // ref: 2085713
@@ -551,6 +552,7 @@ fn liquidation_warning_price_1() {
 }
 
 #[test]
+#[ignore = "liquidations on price have been disabled until https://github.com/nolus-protocol/nolus-money-market/issues/49 gets implemented"]
 fn liquidation_warning_price_2() {
     liquidation_warning(
         // ref: 2085713
@@ -563,6 +565,7 @@ fn liquidation_warning_price_2() {
 }
 
 #[test]
+#[ignore = "liquidations on price have been disabled until https://github.com/nolus-protocol/nolus-money-market/issues/49 gets implemented"]
 fn liquidation_warning_price_3() {
     liquidation_warning(
         // ref: 2085713
@@ -654,6 +657,7 @@ fn liquidation_time_alarm_1() {
 }
 
 #[test]
+#[ignore = "liquidations on time have been disabled until https://github.com/nolus-protocol/nolus-money-market/issues/49 gets implemented"]
 fn liquidation_time_alarm_2() {
     liquidation_time_alarm(LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::GRACE_PERIOD);
 }

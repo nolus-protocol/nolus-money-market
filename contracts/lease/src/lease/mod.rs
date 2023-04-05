@@ -26,6 +26,8 @@ pub(super) use self::{
 };
 
 mod dto;
+//TODO remove once https://github.com/nolus-protocol/nolus-money-market/issues/49 is done
+#[allow(dead_code)]
 mod liquidation;
 mod repay;
 mod state;
