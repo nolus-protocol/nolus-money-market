@@ -40,5 +40,3 @@ pub enum ContractError {
     #[error("[Leaser] DEX connectivity already setup")]
     DEXConnectivityAlreadySetup {},
 }
-
-pub type ContractResult<T> = Result<T, ContractError>;

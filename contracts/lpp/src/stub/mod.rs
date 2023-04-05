@@ -8,8 +8,9 @@ use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
-    error::{ContractError, ContractResult},
+    error::ContractError,
     msg::{LppBalanceResponse, QueryMsg},
+    result::ContractResult,
     state::Config,
 };
 

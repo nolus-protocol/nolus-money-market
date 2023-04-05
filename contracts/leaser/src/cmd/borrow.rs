@@ -7,7 +7,7 @@ use sdk::{
 };
 
 use crate::{
-    error::ContractResult,
+    result::ContractResult,
     state::{config::Config, leases::Leases},
     ContractError,
 };

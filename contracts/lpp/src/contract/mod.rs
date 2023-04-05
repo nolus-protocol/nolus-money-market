@@ -8,14 +8,15 @@ use platform::response;
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
 };
 use versioning::{version, VersionSegment};
 
 use crate::{
-    error::{ContractError, ContractResult},
+    error::ContractError,
     lpp::LiquidityPool,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
+    result::ContractResult,
     state::Config,
 };
 
@@ -85,12 +86,14 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     SingleUserAccess::remove_contract_owner(deps.storage);
 
-    response::response(versioning::release()).map(Into::into)
+    response::response(versioning::release())
+        .map(Into::into)
+        .map_err(Into::into)
 }
 
 struct ExecuteWithLpn<'a> {
@@ -200,6 +203,7 @@ impl<'a> QueryWithLpn<'a> {
         let res = match self.msg {
             QueryMsg::Quote { amount } => {
                 let quote = amount.try_into()?;
+
                 to_binary(&borrow::query_quote::<LPN>(&self.deps, &self.env, quote)?)
             }
             QueryMsg::Loan { lease_addr } => {
@@ -211,10 +215,9 @@ impl<'a> QueryWithLpn<'a> {
             QueryMsg::Price() => {
                 to_binary(&lender::query_ntoken_price::<LPN>(self.deps, self.env)?)
             }
-            _ => {
-                unreachable!()
-            } // should be done already
+            _ => unreachable!("Variants should have been exhausted!"),
         }?;
+
         Ok(res)
     }
 
@@ -240,7 +243,7 @@ impl<'a> AnyVisitor for QueryWithLpn<'a> {
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     let res = match msg {
         QueryMsg::Config() => to_binary(&config::query_config(&deps)?)?,
         QueryMsg::Balance { address } => to_binary(&lender::query_balance(deps.storage, address)?)?,

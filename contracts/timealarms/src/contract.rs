@@ -9,9 +9,9 @@ use versioning::{package_version, version, VersionSegment};
 
 use crate::{
     alarms::TimeAlarms,
-    error::ContractError,
     migrate_v1,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
+    result::ContractResult,
 };
 
 // version info for migration info
@@ -24,14 +24,14 @@ pub fn instantiate(
     _env: Env,
     _info: MessageInfo,
     _msg: InstantiateMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     Ok(Response::default())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _>(
         deps.storage,
         version!(CONTRACT_STORAGE_VERSION),
@@ -49,7 +49,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::AddAlarm { time } => TimeAlarms::new().try_add(deps, env, info.sender, time),
         ExecuteMsg::DispatchAlarms { max_count } => {
@@ -59,7 +59,7 @@ pub fn execute(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
+pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
     match msg {
         SudoMsg::RemoveTimeAlarm { receiver } => {
             TimeAlarms::new().remove(deps.storage, receiver)?;
@@ -69,7 +69,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, Cont
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::ContractVersion {} => Ok(to_binary(&package_version!())?),
         QueryMsg::AlarmsStatus {} => Ok(to_binary(
@@ -79,7 +79,7 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, Contract
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Response> {
     let resp = match reply::from_execute(msg) {
         Ok(Some(addr)) => {
             TimeAlarms::new().remove(deps.storage, addr)?;

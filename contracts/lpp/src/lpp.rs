@@ -13,9 +13,10 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, StdResult, Storage, Timestamp};
 
 use crate::{
-    error::{ContractError, ContractResult},
+    error::ContractError,
     msg::{LoanResponse, LppBalanceResponse, PriceResponse},
     nlpn::NLpn,
+    result::ContractResult,
     state::{Config, Deposit, Loan, Total},
 };
 

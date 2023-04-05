@@ -4,15 +4,16 @@ use platform::{batch::Batch, reply::from_instantiate, response};
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, StdResult},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
 use versioning::{version, VersionSegment};
 
 use crate::{
     cmd::Borrow,
-    error::{ContractError, ContractResult},
+    error::ContractError,
     leaser::{self, Leaser},
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
+    result::ContractResult,
     state::{config::Config, leases::Leases},
 };
 
@@ -46,10 +47,12 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> StdResult<Response> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    response::response(versioning::release()).map(Into::into)
+    response::response(versioning::release())
+        .map(Into::into)
+        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -97,7 +100,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
-    let res = match msg {
+    match msg {
         QueryMsg::Config {} => to_binary(&Leaser::new(deps).config()?),
         QueryMsg::Quote {
             downpayment,
@@ -105,8 +108,8 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
             max_ltv,
         } => to_binary(&Leaser::new(deps).quote(downpayment, lease_asset, max_ltv)?),
         QueryMsg::Leases { owner } => to_binary(&Leaser::new(deps).customer_leases(owner)?),
-    };
-    res.map_err(ContractError::from)
+    }
+    .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

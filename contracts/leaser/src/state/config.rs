@@ -8,7 +8,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::{error::ContractResult, msg::InstantiateMsg, ContractError};
+use crate::{msg::InstantiateMsg, result::ContractResult, ContractError};
 
 type CodeId = u64;
 
