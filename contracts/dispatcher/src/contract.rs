@@ -5,7 +5,7 @@ use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
-    response::{response, response_with_messages},
+    response,
 };
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
@@ -80,7 +80,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> StdResult<Resp
 
     SingleUserAccess::remove_contract_owner(deps.storage);
 
-    response(versioning::release()).map(Into::into)
+    response::response(versioning::release()).map(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -156,7 +156,7 @@ fn try_dispatch(deps: DepsMut<'_>, env: Env, info: MessageInfo) -> Result<Respon
         .emit_to_string_value("to", lpp_address)
         .emit_coin_dto("rewards", result.receipt.in_nls);
 
-    response_with_messages(&env.contract.address, result.batch.into_response(emitter))
+    response::response_with_messages(&env.contract.address, result.batch.into_response(emitter))
         .map(Into::into)
         .map_err(Into::into)
 }
