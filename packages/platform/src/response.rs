@@ -5,39 +5,24 @@ use sdk::{
     cosmwasm_std::{to_binary, Binary, StdResult as CwResult},
 };
 
+#[inline]
 pub fn response<T>(response: &T) -> CwResult<Response>
 where
     T: Serialize + ?Sized,
 {
-    response_with_messages_unchecked(response, CwResponse::new())
+    response_with_messages(response, CwResponse::new())
 }
 
 pub fn response_with_messages<T, U>(response: &T, messages: U) -> CwResult<Response>
 where
     T: Serialize + ?Sized,
-    U: Into<CwResponse> + 'static,
-{
-    debug_assert_ne!(
-        std::any::TypeId::of::<U>(),
-        std::any::TypeId::of::<CwResponse>(),
-        "Possible overwriting of previous response!"
-    );
-    debug_assert_ne!(
-        std::any::TypeId::of::<U>(),
-        std::any::TypeId::of::<Response>(),
-        "Overwriting of previous response!"
-    );
-
-    response_with_messages_unchecked(response, messages)
-}
-
-#[inline]
-fn response_with_messages_unchecked<T, U>(response: &T, messages: U) -> CwResult<Response>
-where
-    T: Serialize + ?Sized,
     U: Into<CwResponse>,
 {
-    to_binary(response).map(|binary: Binary| Response(messages.into().set_data(binary)))
+    let messages: CwResponse = messages.into();
+
+    debug_assert_eq!(messages.data, None, "Overwriting previous response!");
+
+    to_binary(response).map(|binary: Binary| Response(messages.set_data(binary)))
 }
 
 #[repr(transparent)]
