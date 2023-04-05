@@ -55,8 +55,8 @@ impl<'a> WithLease for TimeAlarm<'a> {
         } = lease.on_time_alarm(self.now)?;
 
         response_with_messages(
-            super::emit_events(self.env, &liquidation_status, batch),
             &self.env.contract.address,
+            super::emit_events(self.env, &liquidation_status, batch),
         )
         .map(|response| AlarmResult {
             response,

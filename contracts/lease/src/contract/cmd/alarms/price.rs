@@ -55,8 +55,8 @@ impl<'a> WithLease for PriceAlarm<'a> {
         } = lease.on_price_alarm(self.now)?;
 
         response_with_messages(
-            super::emit_events(self.env, &liquidation_status, batch),
             &self.env.contract.address,
+            super::emit_events(self.env, &liquidation_status, batch),
         )
         .map(|response| AlarmResult {
             response,

@@ -63,7 +63,7 @@ impl TransferInFinish {
             }
         };
 
-        response_with_messages(cw_resp, &env.contract.address)
+        response_with_messages(&env.contract.address, cw_resp)
             .map(|response| Response::from(response, next_state))
             .map_err(Into::into)
     }

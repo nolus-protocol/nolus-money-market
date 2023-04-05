@@ -69,7 +69,7 @@ where
                 let next_state = self.connectee.connected(self.ica_account);
 
                 next_state.enter(deps.as_ref(), &env).and_then(|batch| {
-                    response_with_messages(batch, &env.contract.address)
+                    response_with_messages(&env.contract.address, batch)
                         .map(|response| Response::from(response, next_state))
                         .map_err(Into::into)
                 })

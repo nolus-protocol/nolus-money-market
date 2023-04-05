@@ -43,7 +43,7 @@ impl Controller for Active {
                 transfer_in
                     .enter(env.block.time)
                     .and_then(|batch| {
-                        response_with_messages(batch, &env.contract.address).map_err(Into::into)
+                        response_with_messages(&env.contract.address, batch).map_err(Into::into)
                     })
                     .map(|response| Response::from(response, transfer_in))
             }

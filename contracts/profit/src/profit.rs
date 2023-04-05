@@ -63,7 +63,7 @@ impl Profit {
         // TODO add in_stable(wasm-tr-profit.profit-amount) The amount transferred in stable.
         //.emit_coin("profit-amount", balance))
 
-        response_with_messages(response, &env.contract.address).map_err(Into::into)
+        response_with_messages(&env.contract.address, response).map_err(Into::into)
     }
     pub fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
         let config = Config::load(storage)?;

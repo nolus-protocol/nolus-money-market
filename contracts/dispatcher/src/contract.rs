@@ -156,7 +156,7 @@ fn try_dispatch(deps: DepsMut<'_>, env: Env, info: MessageInfo) -> Result<Respon
         .emit_to_string_value("to", lpp_address)
         .emit_coin_dto("rewards", result.receipt.in_nls);
 
-    response_with_messages(result.batch.into_response(emitter), &env.contract.address)
+    response_with_messages(&env.contract.address, result.batch.into_response(emitter))
         .map(Into::into)
         .map_err(Into::into)
 }

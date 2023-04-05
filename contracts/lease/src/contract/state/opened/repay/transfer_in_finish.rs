@@ -61,14 +61,14 @@ impl TransferInFinish {
                 transfer_in
                     .enter(env.block.time)
                     .and_then(|batch| {
-                        response_with_messages(batch.into_response(emitter), &env.contract.address)
+                        response_with_messages(&env.contract.address, batch.into_response(emitter))
                             .map_err(Into::into)
                     })
                     .map(|response| Response::from(response, transfer_in))
             } else {
                 transfer_in::setup_alarm(self.lease.lease.time_alarms.clone(), env.block.time)
                     .and_then(|batch| {
-                        response_with_messages(batch.into_response(emitter), &env.contract.address)
+                        response_with_messages(&env.contract.address, batch.into_response(emitter))
                             .map_err(Into::into)
                     })
                     .map(|response| Response::from(response, self))
