@@ -13,6 +13,7 @@ use versioning::{package_version, version, VersionSegment};
 use crate::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
+    result::ContractResult,
     state::supported_pairs::SupportedPairs,
 };
 
@@ -42,7 +43,7 @@ struct InstantiateWithCurrency<'a> {
 }
 
 impl<'a> InstantiateWithCurrency<'a> {
-    pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<Response, ContractError> {
+    pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> ContractResult<Response> {
         let context = Self { deps, msg };
         visit_any_on_ticker::<Lpns, _>(&context.msg.config.base_asset.clone(), context)
     }
@@ -72,7 +73,7 @@ pub fn instantiate(
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     InstantiateWithCurrency::cmd(deps, msg)?;
@@ -81,16 +82,18 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     SingleUserAccess::remove_contract_owner(deps.storage);
 
-    response::response(versioning::release()).map_err(Into::into)
+    response::response(versioning::release())
+        .map(Into::into)
+        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::ContractVersion {} => Ok(to_binary(&package_version!())?),
         QueryMsg::Config {} => Ok(to_binary(&query_config(deps.storage)?)?),
@@ -108,12 +111,12 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     ExecWithOracleBase::cmd(deps, env, msg, info.sender)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
+pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
     match msg {
         SudoMsg::UpdateConfig(price_config) => try_configure(deps.storage, price_config),
         SudoMsg::RegisterFeeder { feeder_address } => Feeders::try_register(deps, feeder_address),
@@ -129,7 +132,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, Cont
 
 // TODO: compare gas usage of this solution vs reply on error
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Response> {
     let resp = match reply::from_execute(msg) {
         Ok(Some(addr)) => {
             MarketAlarms::remove(deps.storage, addr)?;

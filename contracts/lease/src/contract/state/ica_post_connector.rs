@@ -1,7 +1,8 @@
-use cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
-use finance::duration::Duration;
-use platform::batch::Batch;
 use serde::{Deserialize, Serialize};
+
+use finance::duration::Duration;
+use platform::{batch::Batch, response::response_with_messages};
+use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::ExecuteMsg,
@@ -63,11 +64,17 @@ where
         match msg {
             ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => controller::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() => super::ignore_msg(self),
+            ExecuteMsg::PriceAlarm() => super::ignore_msg(&env, self),
             ExecuteMsg::TimeAlarm {} => {
                 let next_state = self.connectee.connected(self.ica_account);
-                let batch = next_state.enter(deps.as_ref(), env)?;
-                Ok(Response::from(batch, next_state))
+
+                let address = env.contract.address.clone();
+
+                next_state.enter(deps.as_ref(), env).and_then(|batch| {
+                    response_with_messages(&address, batch)
+                        .map(|response| Response::from(response, next_state))
+                        .map_err(Into::into)
+                })
             }
         }
     }
@@ -80,8 +87,8 @@ where
 {
     fn state(
         self,
-        now: cosmwasm_std::Timestamp,
-        querier: &cosmwasm_std::QuerierWrapper<'_>,
+        now: Timestamp,
+        querier: &QuerierWrapper<'_>,
     ) -> ContractResult<crate::api::StateResponse> {
         self.connectee.state(now, querier)
     }

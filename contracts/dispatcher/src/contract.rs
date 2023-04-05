@@ -22,6 +22,7 @@ use crate::{
         ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, RewardScaleResponse,
         SudoMsg,
     },
+    result::ContractResult,
     state::{Config, DispatchLog},
 };
 
@@ -35,7 +36,7 @@ pub fn instantiate(
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     platform::contract::validate_addr(&deps.querier, &msg.lpp)?;
@@ -75,12 +76,14 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     SingleUserAccess::remove_contract_owner(deps.storage);
 
-    response::response(versioning::release()).map_err(Into::into)
+    response::response(versioning::release())
+        .map(Into::into)
+        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -89,31 +92,32 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::TimeAlarm {} => try_dispatch(deps, env, info),
     }
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
+pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
     match msg {
         SudoMsg::Config { cadence_hours } => try_config(deps.storage, cadence_hours),
     }
 }
 
-fn try_config(storage: &mut dyn Storage, cadence_hours: u16) -> Result<Response, ContractError> {
+fn try_config(storage: &mut dyn Storage, cadence_hours: u16) -> ContractResult<Response> {
     Config::update(storage, cadence_hours)?;
 
     Ok(Response::new().add_attribute("method", "config"))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps.storage)?),
         QueryMsg::RewardScale {} => to_binary(&query_reward_scale(deps.storage)?),
     }
+    .map_err(Into::into)
 }
 
 fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
@@ -124,7 +128,7 @@ fn query_reward_scale(storage: &dyn Storage) -> StdResult<RewardScaleResponse> {
     Config::load(storage).map(|Config { tvl_to_apr, .. }| tvl_to_apr)
 }
 
-fn try_dispatch(deps: DepsMut<'_>, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+fn try_dispatch(deps: DepsMut<'_>, env: Env, info: MessageInfo) -> ContractResult<Response> {
     let block_time = env.block.time;
 
     SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
@@ -156,7 +160,9 @@ fn try_dispatch(deps: DepsMut<'_>, env: Env, info: MessageInfo) -> Result<Respon
         .emit_to_string_value("to", lpp_address)
         .emit_coin_dto("rewards", result.receipt.in_nls);
 
-    Ok(result.batch.into_response(emitter))
+    response::response_with_messages(&env.contract.address, result.batch.into_response(emitter))
+        .map(Into::into)
+        .map_err(Into::into)
 }
 
 #[cfg(test)]

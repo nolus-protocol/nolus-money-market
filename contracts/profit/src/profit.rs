@@ -3,6 +3,7 @@ use finance::{coin::Coin, duration::Duration};
 use platform::{
     bank::{self, BankAccount, BankAccountView},
     batch::{Batch, Emit, Emitter},
+    response::{response_with_messages, Response as PlatformResponse},
 };
 use sdk::{
     cosmwasm_ext::{CosmosMsg, Response},
@@ -27,9 +28,9 @@ impl Profit {
 
     pub(crate) fn transfer(
         deps: Deps<'_>,
-        env: Env,
-        info: MessageInfo,
-    ) -> Result<Response, ContractError> {
+        env: &Env,
+        info: &MessageInfo,
+    ) -> Result<PlatformResponse, ContractError> {
         let config = Config::load(deps.storage)?;
 
         let balance = deps.querier.query_all_balances(&env.contract.address)?;
@@ -54,13 +55,15 @@ impl Profit {
         let mut batch: Batch = bank.into();
         batch.schedule_execute_no_reply(msg);
 
-        Ok(batch.into_response(
+        let response = batch.into_response(
             Emitter::of_type("tr-profit")
-                .emit_tx_info(&env)
+                .emit_tx_info(env)
                 .emit_coin("profit-amount", balance),
-        ))
+        );
         // TODO add in_stable(wasm-tr-profit.profit-amount) The amount transferred in stable.
         //.emit_coin("profit-amount", balance))
+
+        response_with_messages(&env.contract.address, response).map_err(Into::into)
     }
     pub fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
         let config = Config::load(storage)?;

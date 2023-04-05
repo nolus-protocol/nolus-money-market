@@ -1,10 +1,11 @@
-use cosmwasm_std::{Env, QuerierWrapper, Timestamp};
+use serde::{Deserialize, Serialize};
+
 use currency::lease::LeaseGroup;
 use finance::{coin::CoinDTO, currency::Symbol};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use platform::ica::HostAccount;
-use serde::{Deserialize, Serialize};
+use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -123,11 +124,14 @@ impl SwapTaskT<AssetGroup> for BuyAsset {
             querier,
             self.deps,
         )?;
+
         let active = Active::new(Lease {
             lease,
             dex: self.dex_account,
         });
+
         let emitter = active.emit_ok(&env, self.downpayment, self.loan);
+
         Ok(Response::from(batch.into_response(emitter), active))
     }
 }

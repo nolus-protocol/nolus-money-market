@@ -1,13 +1,16 @@
-use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
-use platform::batch::{Emit, Emitter};
-use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper};
+use platform::{
+    batch::{Emit, Emitter},
+    response::response_with_messages,
+};
+use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{paid::ClosingTrx, ExecuteMsg, StateResponse},
     contract::{
-        state::{self, closed::Closed, controller, transfer_in, Controller, Response, State},
+        state,
+        state::{closed::Closed, controller, transfer_in, Controller, Response, State},
         Contract, Lease,
     },
     error::ContractResult,
@@ -37,22 +40,32 @@ impl TransferInFinish {
 
         let (next_state, cw_resp): (State, _) = if received {
             let closed = Closed::default();
+
             let emitter = closed.emit_ok(env, &self.lease.lease);
+
             let batch = closed.enter_state(self.lease.lease, querier)?;
+
             (closed.into(), batch.into_response(emitter))
         } else {
             let emitter = self.emit_ok();
+
             if env.block.time >= self.timeout {
                 let back_to_init = TransferInInit::new(self.lease);
+
                 let batch = back_to_init.enter(env.block.time)?;
+
                 (back_to_init.into(), batch.into_response(emitter))
             } else {
                 let batch =
                     transfer_in::setup_alarm(self.lease.lease.time_alarms.clone(), env.block.time)?;
+
                 (self.into(), batch.into_response(emitter))
             }
         };
-        Ok(Response::from(cw_resp, next_state))
+
+        response_with_messages(&env.contract.address, cw_resp)
+            .map(|response| Response::from(response, next_state))
+            .map_err(Into::into)
     }
 
     fn on_alarm(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
@@ -77,7 +90,7 @@ impl Controller for TransferInFinish {
         match msg {
             ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => controller::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() => state::ignore_msg(self),
+            ExecuteMsg::PriceAlarm() => state::ignore_msg(&env, self),
             ExecuteMsg::TimeAlarm {} => self.on_alarm(&deps.querier, &env),
         }
     }

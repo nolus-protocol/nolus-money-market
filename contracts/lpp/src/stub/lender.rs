@@ -16,8 +16,9 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper, Reply};
 use crate::{
     error::ContractError,
     msg::{ExecuteMsg, LoanResponse, QueryLoanResponse, QueryMsg, QueryQuoteResponse},
+    result::ContractResult,
     state::Config,
-    stub::{ContractResult, LppBatch},
+    stub::LppBatch,
 };
 
 pub trait LppLender<Lpn>

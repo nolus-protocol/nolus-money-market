@@ -1,28 +1,31 @@
-use cosmwasm_std::{Addr, Binary, StdResult, Storage};
-use enum_dispatch::enum_dispatch;
-use platform::batch::{Emit, Emitter};
-use serde::{Deserialize, Serialize};
 use std::str;
 
+use enum_dispatch::enum_dispatch;
+use serde::{Deserialize, Serialize};
+
+pub use controller::{execute, instantiate, migrate, query, reply, sudo};
+use platform::{
+    batch::{Emit as _, Emitter},
+    response,
+};
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, StdResult, Storage},
     cw_storage_plus::Item,
 };
 
 use crate::{api::ExecuteMsg, error::ContractResult};
 
+use super::dex::DexConnectable;
+
 use self::{
     closed::Closed,
     controller::Controller,
-    ica_connector::{Enterable, IcaConnectee, IcaConnector},
+    ica_connector::{Enterable, IcaConnectee as _, IcaConnector},
     ica_recover::InRecovery,
     opened::repay::buy_lpn::BuyLpn,
     opening::request_loan::RequestLoan,
 };
-pub use controller::{execute, instantiate, migrate, query, reply, sudo};
-
-use super::dex::DexConnectable;
 
 mod closed;
 mod controller;
@@ -34,48 +37,43 @@ mod opening;
 mod paid;
 mod transfer_in;
 
-type OpenIcaAccount = ica_connector::IcaConnector<
+type OpenIcaAccount = IcaConnector<
     { opening::open_ica::OpenIcaAccount::PRECONNECTABLE },
     opening::open_ica::OpenIcaAccount,
 >;
 type OpeningTransferOut = opening::buy_asset::Transfer;
 
 type BuyAsset = opening::buy_asset::Swap;
-type BuyAssetRecoverIca = ica_connector::IcaConnector<
-    { ica_recover::InRecovery::<BuyAsset>::PRECONNECTABLE },
-    ica_recover::InRecovery<BuyAsset>,
->;
-type BuyAssetPostRecoverIca = ica_post_connector::PostConnector<ica_recover::InRecovery<BuyAsset>>;
+type BuyAssetRecoverIca =
+    IcaConnector<{ InRecovery::<BuyAsset>::PRECONNECTABLE }, InRecovery<BuyAsset>>;
+type BuyAssetPostRecoverIca = ica_post_connector::PostConnector<InRecovery<BuyAsset>>;
 
 type OpenedActive = opened::active::Active;
 
 type RepaymentTransferOut = opened::repay::transfer_out::TransferOut;
 
-type BuyLpnRecoverIca = ica_connector::IcaConnector<
-    { ica_recover::InRecovery::<BuyLpn>::PRECONNECTABLE },
-    ica_recover::InRecovery<BuyLpn>,
->;
-type BuyLpnPostRecoverIca = ica_post_connector::PostConnector<ica_recover::InRecovery<BuyLpn>>;
+type BuyLpnRecoverIca = IcaConnector<{ InRecovery::<BuyLpn>::PRECONNECTABLE }, InRecovery<BuyLpn>>;
+type BuyLpnPostRecoverIca = ica_post_connector::PostConnector<InRecovery<BuyLpn>>;
 
 type RepaymentTransferInInit = opened::repay::transfer_in_init::TransferInInit;
-type RepaymentTransferInInitRecoverIca = ica_connector::IcaConnector<
-    { ica_recover::InRecovery::<RepaymentTransferInInit>::PRECONNECTABLE },
-    ica_recover::InRecovery<RepaymentTransferInInit>,
+type RepaymentTransferInInitRecoverIca = IcaConnector<
+    { InRecovery::<RepaymentTransferInInit>::PRECONNECTABLE },
+    InRecovery<RepaymentTransferInInit>,
 >;
 type RepaymentTransferInInitPostRecoverIca =
-    ica_post_connector::PostConnector<ica_recover::InRecovery<RepaymentTransferInInit>>;
+    ica_post_connector::PostConnector<InRecovery<RepaymentTransferInInit>>;
 
 type RepaymentTransferInFinish = opened::repay::transfer_in_finish::TransferInFinish;
 
 type PaidActive = paid::Active;
 
 type ClosingTransferInInit = paid::transfer_in_init::TransferInInit;
-type ClosingTransferInInitRecoverIca = ica_connector::IcaConnector<
-    { ica_recover::InRecovery::<RepaymentTransferInInit>::PRECONNECTABLE },
-    ica_recover::InRecovery<ClosingTransferInInit>,
+type ClosingTransferInInitRecoverIca = IcaConnector<
+    { InRecovery::<RepaymentTransferInInit>::PRECONNECTABLE },
+    InRecovery<ClosingTransferInInit>,
 >;
 type ClosingTransferInInitPostRecoverIca =
-    ica_post_connector::PostConnector<ica_recover::InRecovery<ClosingTransferInInit>>;
+    ica_post_connector::PostConnector<InRecovery<ClosingTransferInInit>>;
 
 type ClosingTransferInFinish = paid::transfer_in_finish::TransferInFinish;
 
@@ -121,13 +119,13 @@ pub(crate) struct Response {
 }
 
 impl Response {
-    pub fn from<R, S>(resp: R, next_state: S) -> Self
+    fn from<R, S>(response: R, next_state: S) -> Self
     where
         R: Into<CwResponse>,
         S: Into<State>,
     {
         Self {
-            cw_response: resp.into(),
+            cw_response: response.into(),
             next_state: next_state.into(),
         }
     }
@@ -148,8 +146,10 @@ where
         env.contract.address.clone(),
         TimeoutPolicy::Retry,
     );
-    let batch = current_state.enter(deps, env)?;
-    Ok(Response::from(batch.into_response(emitter), current_state))
+
+    current_state
+        .enter(deps, env)
+        .map(|batch| Response::from(batch.into_response(emitter), current_state))
 }
 
 fn on_timeout_repair_channel<S, L>(
@@ -167,9 +167,13 @@ where
         env.contract.address,
         TimeoutPolicy::RepairICS27Channel,
     );
+
     let recover_ica = IcaConnector::new(InRecovery::new(current_state));
-    let batch = recover_ica.enter();
-    Ok(Response::from(batch.into_response(emitter), recover_ica))
+
+    Ok(Response::from(
+        recover_ica.enter().into_response(emitter),
+        recover_ica,
+    ))
 }
 
 #[derive(Debug)]
@@ -187,9 +191,11 @@ where
         .emit("timeout", format!("{:?}", policy))
 }
 
-fn ignore_msg<S>(state: S) -> ContractResult<Response>
+fn ignore_msg<S>(env: &Env, state: S) -> ContractResult<Response>
 where
     S: Into<State>,
 {
-    Ok(Response::from(CwResponse::new(), state))
+    response::response(&env.contract.address)
+        .map(|response| Response::from(response, state))
+        .map_err(Into::into)
 }

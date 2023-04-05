@@ -1,11 +1,10 @@
-use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use platform::{
     batch::{Batch, Emit, Emitter},
     ica::HostAccount,
 };
-use sdk::cosmwasm_std::{Deps, Env};
+use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     api::StateResponse,
@@ -101,9 +100,12 @@ where
         let ica = self.build_account(counterparty_version, &env)?;
 
         let emitter = Self::emit_ok(&env, ica.ica_account().clone());
+
         let next_state = self.connectee.connected(ica);
-        let batch = next_state.enter(deps, env)?;
-        Ok(Response::from(batch.into_response(emitter), next_state))
+
+        next_state
+            .enter(deps, env)
+            .map(|batch| Response::from(batch.into_response(emitter), next_state))
     }
 
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
@@ -126,9 +128,13 @@ where
         let ica = self.build_account(counterparty_version, &env)?;
 
         let emitter = Self::emit_ok(&env, ica.ica_account().clone());
+
         let next_state = PostConnector::new(self.connectee, ica);
-        let batch = next_state.enter(env.block.time, &deps.querier)?;
-        Ok(Response::from(batch.into_response(emitter), next_state))
+
+        next_state
+            .enter(env.block.time, &deps.querier)
+            .map(|batch| Response::from(batch.into_response(emitter), next_state))
+            .map_err(Into::into)
     }
 
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {

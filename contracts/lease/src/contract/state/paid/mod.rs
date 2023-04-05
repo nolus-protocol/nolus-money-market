@@ -1,11 +1,11 @@
-use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo};
+use platform::response::response_with_messages;
+use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{ExecuteMsg, StateResponse},
-    contract::{state, Contract, Lease},
+    contract::{Contract, Lease},
     error::ContractResult,
 };
 
@@ -39,11 +39,15 @@ impl Controller for Active {
             ExecuteMsg::Repay() => controller::err("repay", deps.api),
             ExecuteMsg::Close() => {
                 let transfer_in = TransferInInit::new(self.lease);
-                let batch = transfer_in.enter(env.block.time)?;
-                Ok(Response::from(batch, transfer_in))
+
+                transfer_in
+                    .enter(env.block.time)
+                    .and_then(|batch| {
+                        response_with_messages(&env.contract.address, batch).map_err(Into::into)
+                    })
+                    .map(|response| Response::from(response, transfer_in))
             }
-            ExecuteMsg::PriceAlarm() => state::ignore_msg(self),
-            ExecuteMsg::TimeAlarm {} => state::ignore_msg(self),
+            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => super::ignore_msg(&env, self),
         }
     }
 }

@@ -3,6 +3,7 @@ use serde::Serialize;
 use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
+use platform::response;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::{Addr, Env, Timestamp};
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
@@ -53,9 +54,14 @@ impl<'a> WithLease for PriceAlarm<'a> {
             liquidation_status,
         } = lease.on_price_alarm(self.now)?;
 
-        Ok(AlarmResult {
-            response: super::emit_events(self.env, &liquidation_status, batch),
+        response::response_with_messages(
+            &self.env.contract.address,
+            super::emit_events(self.env, &liquidation_status, batch),
+        )
+        .map(|response| AlarmResult {
+            response,
             lease_dto,
         })
+        .map_err(Into::into)
     }
 }

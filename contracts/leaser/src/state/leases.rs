@@ -5,7 +5,7 @@ use sdk::{
     cw_storage_plus::{Item, Map},
 };
 
-use crate::{error::ContractResult, ContractError};
+use crate::{error::ContractError, result::ContractResult};
 
 const IDS: InstantiateReplyIdSeq<'static> = InstantiateReplyIdSeq::new("instantiate_reply_ids");
 const PENDING: Map<'static, InstantiateReplyId, Addr> = Map::new("pending_instance_creations");
@@ -116,10 +116,8 @@ mod test {
     use cosmwasm_std::Addr;
     use sdk::{cosmwasm_std::testing, cw_storage_plus::Item};
 
-    use crate::{
-        error::ContractResult,
-        state::leases::{InstantiateReplyId, Leases},
-    };
+    use crate::result::ContractResult;
+    use crate::state::leases::{InstantiateReplyId, Leases};
 
     #[test]
     fn test_id_overflow() {

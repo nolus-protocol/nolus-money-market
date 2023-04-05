@@ -4,10 +4,7 @@ use rewards_dispatcher::{
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
     state::reward_scale::{Bar, RewardScale, TotalValueLocked},
 };
-use sdk::{
-    cosmwasm_std::{Addr, StdError},
-    cw_multi_test::Executor,
-};
+use sdk::{cosmwasm_std::Addr, cw_multi_test::Executor};
 
 use crate::common::{ContractWrapper, MockApp};
 
@@ -80,7 +77,7 @@ type DispatcherContractWrapper = ContractWrapper<
     InstantiateMsg,
     ContractError,
     QueryMsg,
-    StdError,
+    ContractError,
     SudoMsg,
     ContractError,
 >;

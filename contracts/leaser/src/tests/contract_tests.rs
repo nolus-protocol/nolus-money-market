@@ -22,10 +22,10 @@ use sdk::{
 use crate::{
     cmd::Borrow,
     contract::{execute, instantiate, query, sudo},
-    error::ContractResult,
+    error::ContractError,
     msg::{ConfigResponse, ExecuteMsg, QueryMsg, SudoMsg},
+    result::ContractResult,
     state::config::Config,
-    ContractError,
 };
 
 const CREATOR: &str = "creator";

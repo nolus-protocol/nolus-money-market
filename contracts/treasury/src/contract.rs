@@ -15,8 +15,8 @@ use sdk::{
 use versioning::{version, VersionSegment};
 
 use crate::{
-    error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, SudoMsg},
+    result::ContractResult,
 };
 
 // version info for migration info
@@ -29,19 +29,21 @@ pub fn instantiate(
     _env: Env,
     _info: MessageInfo,
     _msg: InstantiateMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     Ok(Response::default())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     SingleUserAccess::remove_contract_owner(deps.storage);
 
-    response::response(versioning::release()).map_err(Into::into)
+    response::response(versioning::release())
+        .map(Into::into)
+        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -50,7 +52,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     let sender = info.sender;
     match msg {
         ExecuteMsg::SendRewards { amount } => {
@@ -66,7 +68,7 @@ pub fn execute(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
+pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
     match msg {
         SudoMsg::ConfigureRewardTransfer { rewards_dispatcher } => {
             platform::contract::validate_addr(&deps.querier, &rewards_dispatcher)?;
@@ -79,7 +81,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, Cont
 fn try_configure_reward_transfer(
     storage: &mut dyn Storage,
     rewards_dispatcher: Addr,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     SingleUserAccess::new(
         crate::access_control::REWARDS_DISPATCHER_NAMESPACE,
         rewards_dispatcher,
@@ -94,7 +96,7 @@ fn try_send_rewards<B>(
     sender: Addr,
     amount: Coin<Nls>,
     account: &mut B,
-) -> Result<(), ContractError>
+) -> ContractResult<()>
 where
     B: BankAccount,
 {

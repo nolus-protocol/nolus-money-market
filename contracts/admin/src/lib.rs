@@ -10,6 +10,7 @@ use versioning::{version, VersionSegment};
 use self::{
     error::ContractError,
     msg::{InstantiateMsg, MigrateMsg, SudoMsg},
+    result::ContractResult,
     state::{contracts as state_contracts, migration_release},
 };
 
@@ -17,6 +18,7 @@ pub mod common;
 pub mod error;
 pub mod migrate_contracts;
 pub mod msg;
+pub mod result;
 pub mod state;
 
 // version info for migration info
@@ -29,7 +31,7 @@ pub fn instantiate(
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     msg.validate(&deps.querier)?;
@@ -40,14 +42,16 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    response::response(versioning::release()).map_err(Into::into)
+    response::response(versioning::release())
+        .map(Into::into)
+        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
+pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
     match msg {
         SudoMsg::MigrateContracts(migrate_contracts) => {
             migrate_contracts::migrate(deps.storage, env.contract.address, migrate_contracts)
@@ -56,7 +60,7 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> Result<Response, Contr
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Response> {
     let expected_release: String = migration_release::load(deps.storage)?;
 
     let reported_release: String =

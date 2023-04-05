@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use finance::{
@@ -9,7 +8,10 @@ use finance::{
     zero::Zero,
 };
 use platform::{batch::Batch, trx};
-use sdk::{cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData, cosmwasm_std::Binary};
+use sdk::{
+    cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData,
+    cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp},
+};
 use swap::trx as swap_trx;
 
 #[cfg(debug_assertions)]

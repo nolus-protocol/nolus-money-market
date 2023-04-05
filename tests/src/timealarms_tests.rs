@@ -251,7 +251,6 @@ fn test_time_notify() {
 }
 
 #[test]
-#[ignore = "TODO: modify profit contract to provide address in the alarm response"]
 fn test_profit_alarms() {
     let admin = Addr::unchecked(ADMIN);
     let mut test_case = TestCase::<Lpn>::with_reserve(

@@ -13,9 +13,10 @@ use sdk::{
 
 use crate::{
     cmd::Quote,
-    error::{ContractError, ContractResult},
+    error::ContractError,
     migrate::{self},
     msg::{ConfigResponse, QuoteResponse},
+    result::ContractResult,
     state::{config::Config, leases::Leases},
 };
 

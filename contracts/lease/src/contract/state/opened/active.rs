@@ -1,15 +1,14 @@
-use cosmwasm_std::Timestamp;
 use serde::{Deserialize, Serialize};
 
 use currency::{lpn::Lpns, payment::PaymentGroup};
 use finance::coin::IntoDTO;
 use platform::{
-    bank::{self},
+    bank,
     batch::{Emit, Emitter},
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper},
+    cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp},
 };
 
 use crate::{
@@ -61,35 +60,39 @@ impl Active {
             emitter,
         } = with_lease::execute(lease.lease, Repay::new(payment, env), querier)?;
 
-        let cw_resp = batch.into_response(emitter);
         let new_lease = Lease {
             lease: lease_updated,
             dex: lease.dex,
         };
-        let resp = if paid {
-            Response::from(cw_resp, paid::Active::new(new_lease))
+
+        let response = batch.into_response(emitter);
+
+        Ok(if paid {
+            Response::from(response, paid::Active::new(new_lease))
         } else {
-            Response::from(cw_resp, Active::new(new_lease))
-        };
-        Ok(resp)
+            Response::from(response, Active::new(new_lease))
+        })
     }
 
-    fn try_repay(self, deps: Deps<'_>, env: Env, info: MessageInfo) -> ContractResult<Response> {
+    fn try_repay(self, deps: Deps<'_>, env: &Env, info: MessageInfo) -> ContractResult<Response> {
         let payment = bank::may_received::<PaymentGroup, _>(
             info.funds.clone(),
             IntoDTO::<PaymentGroup>::new(),
         )
         .ok_or_else(ContractError::NoPaymentError)??;
+
         if payment.ticker() == self.lease.lease.loan.lpp().currency() {
             // TODO once refacture CoinDTO and Group convert to LpnCoin instead
             let payment_lpn = bank::may_received::<Lpns, _>(info.funds, IntoDTO::<Lpns>::new())
                 .ok_or_else(ContractError::NoPaymentError)??;
 
-            Self::try_repay_lpn(self.lease, payment_lpn, &deps.querier, &env)
+            Self::try_repay_lpn(self.lease, payment_lpn, &deps.querier, env)
         } else {
             let transfer_out = TransferOut::new(self.lease, payment);
-            let batch = transfer_out.enter(env.block.time)?;
-            Ok(Response::from(batch, transfer_out))
+
+            transfer_out
+                .enter(env.block.time)
+                .map(|batch| Response::from(batch, transfer_out))
         }
     }
 
@@ -107,6 +110,7 @@ impl Active {
             PriceAlarm::new(env, &info.sender, env.block.time),
             querier,
         )?;
+
         Ok(into_updated_active(lease_updated, self.lease.dex, response))
     }
 
@@ -124,6 +128,7 @@ impl Active {
             TimeAlarm::new(env, &info.sender, env.block.time),
             querier,
         )?;
+
         Ok(into_updated_active(lease_updated, self.lease.dex, response))
     }
 }
@@ -137,7 +142,7 @@ impl Controller for Active {
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         match msg {
-            ExecuteMsg::Repay() => self.try_repay(deps.as_ref(), env, info),
+            ExecuteMsg::Repay() => self.try_repay(deps.as_ref(), &env, info),
             ExecuteMsg::Close() => controller::err("close", deps.api),
             ExecuteMsg::PriceAlarm() => self.try_on_price_alarm(&deps.querier, &env, info),
             ExecuteMsg::TimeAlarm {} => self.try_on_time_alarm(&deps.querier, &env, info),
@@ -179,5 +184,6 @@ where
         lease: updated_dto,
         dex,
     };
+
     Response::from(resp, Active { lease })
 }

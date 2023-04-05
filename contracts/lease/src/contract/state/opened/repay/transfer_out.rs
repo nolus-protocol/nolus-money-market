@@ -1,8 +1,7 @@
-use cosmwasm_std::{Binary, QuerierWrapper};
 use serde::{Deserialize, Serialize};
 
 use platform::batch::{Batch, Emit, Emitter};
-use sdk::cosmwasm_std::{Deps, Env, Timestamp};
+use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{opened::RepayTrx, PaymentCoin, StateResponse},
@@ -39,10 +38,12 @@ impl TransferOut {
 
     fn on_response(self, deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
         let emitter = self.emit_ok();
-        let buy_lpn = BuyLpn::new(self.lease, self.payment);
-        let batch = buy_lpn.enter(&deps.querier)?;
 
-        Ok(Response::from(batch.into_response(emitter), buy_lpn))
+        let buy_lpn = BuyLpn::new(self.lease, self.payment);
+
+        buy_lpn
+            .enter(&deps.querier)
+            .map(|batch| Response::from(batch.into_response(emitter), buy_lpn))
     }
 
     fn emit_ok(&self) -> Emitter {

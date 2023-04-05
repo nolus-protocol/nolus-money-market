@@ -1,8 +1,7 @@
-use cosmwasm_std::Binary;
 use serde::{Deserialize, Serialize};
 
 use platform::batch::Batch;
-use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateResponse},
@@ -42,18 +41,18 @@ impl TransferInInit {
 
     pub(super) fn enter(&self, now: Timestamp) -> ContractResult<Batch> {
         let mut sender = self.lease.dex.transfer_from(now);
-        sender.send(&self.payment_lpn)?;
-        Ok(sender.into())
+
+        sender.send(&self.payment_lpn).map(|()| sender.into())
     }
 
     fn on_response(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        let finish = TransferInFinish::new(
+        TransferInFinish::new(
             self.lease,
             self.payment,
             self.payment_lpn,
             env.block.time + dex::IBC_TIMEOUT,
-        );
-        finish.try_complete(deps, env)
+        )
+        .try_complete(deps, &env)
     }
 }
 

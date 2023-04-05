@@ -10,8 +10,8 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
-    error::Result,
     msg::{ConfigResponse, QueryMsg},
+    result::ContractResult,
 };
 
 pub struct ProfitBatch {
@@ -49,7 +49,7 @@ impl From<ProfitRef> for Addr {
 }
 
 impl ProfitRef {
-    pub fn new(addr: Addr, querier: &QuerierWrapper<'_>) -> Result<Self> {
+    pub fn new(addr: Addr, querier: &QuerierWrapper<'_>) -> ContractResult<Self> {
         let _: ConfigResponse = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config {})?;
 
         Ok(Self { addr })

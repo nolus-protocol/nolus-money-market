@@ -1,8 +1,10 @@
-use cosmwasm_std::{Deps, Timestamp};
 use serde::{Deserialize, Serialize};
 
-use platform::batch::{Emit, Emitter};
-use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper};
+use platform::{
+    batch::{Emit, Emitter},
+    response::response_with_messages,
+};
+use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{opened::RepayTrx, ExecuteMsg, LpnCoin, PaymentCoin, StateResponse},
@@ -43,30 +45,38 @@ impl TransferInFinish {
         }
     }
 
-    pub(super) fn try_complete(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+    pub(super) fn try_complete(self, deps: Deps<'_>, env: &Env) -> ContractResult<Response> {
         let querier = &deps.querier;
         let received =
             transfer_in::check_received(&self.payment_lpn, &env.contract.address, querier)?;
 
         if received {
-            Active::try_repay_lpn(self.lease, self.payment_lpn, querier, &env)
+            Active::try_repay_lpn(self.lease, self.payment_lpn, querier, env)
         } else {
             let emitter = self.emit_ok();
+
             if env.block.time >= self.timeout {
                 let transfer_in = TransferInInit::new(self.lease, self.payment, self.payment_lpn);
-                Ok(Response::from(
-                    transfer_in.enter(env.block.time)?.into_response(emitter),
-                    transfer_in,
-                ))
+
+                transfer_in
+                    .enter(env.block.time)
+                    .and_then(|batch| {
+                        response_with_messages(&env.contract.address, batch.into_response(emitter))
+                            .map_err(Into::into)
+                    })
+                    .map(|response| Response::from(response, transfer_in))
             } else {
-                let batch =
-                    transfer_in::setup_alarm(self.lease.lease.time_alarms.clone(), env.block.time)?;
-                Ok(Response::from(batch.into_response(emitter), self))
+                transfer_in::setup_alarm(self.lease.lease.time_alarms.clone(), env.block.time)
+                    .and_then(|batch| {
+                        response_with_messages(&env.contract.address, batch.into_response(emitter))
+                            .map_err(Into::into)
+                    })
+                    .map(|response| Response::from(response, self))
             }
         }
     }
 
-    fn on_alarm(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+    fn on_alarm(self, deps: Deps<'_>, env: &Env) -> ContractResult<Response> {
         self.try_complete(deps, env)
     }
 
@@ -87,7 +97,7 @@ impl Controller for TransferInFinish {
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         if matches!(msg, ExecuteMsg::TimeAlarm {}) {
-            self.on_alarm(deps.as_ref(), env)
+            self.on_alarm(deps.as_ref(), &env)
         } else {
             controller::err(&format!("{:?}", msg), deps.api)
         }

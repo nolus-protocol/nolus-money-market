@@ -5,14 +5,14 @@ use platform::response;
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
 };
 use versioning::{version, VersionSegment};
 
 use crate::{
-    error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     profit::Profit,
+    result::ContractResult,
     state::config::Config,
 };
 
@@ -26,7 +26,7 @@ pub fn instantiate(
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     platform::contract::validate_addr(&deps.querier, &msg.treasury)?;
     platform::contract::validate_addr(&deps.querier, &msg.timealarms)?;
 
@@ -51,12 +51,14 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     SingleUserAccess::remove_contract_owner(deps.storage);
 
-    response::response(versioning::release()).map_err(Into::into)
+    response::response(versioning::release())
+        .map(Into::into)
+        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -65,31 +67,32 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> Result<Response, ContractError> {
+) -> ContractResult<Response> {
     match msg {
         ExecuteMsg::TimeAlarm {} => try_transfer(deps.as_ref(), env, info),
     }
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
+pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
     match msg {
         SudoMsg::Config { cadence_hours } => Profit::try_config(deps.storage, cadence_hours),
     }
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&Profit::query_config(deps.storage)?),
     }
+    .map_err(Into::into)
 }
 
-fn try_transfer(deps: Deps<'_>, env: Env, info: MessageInfo) -> Result<Response, ContractError> {
+fn try_transfer(deps: Deps<'_>, env: Env, info: MessageInfo) -> ContractResult<Response> {
     SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
         .check_access(&info.sender)?;
 
-    Profit::transfer(deps, env, info)
+    Profit::transfer(deps, &env, &info).map(Into::into)
 }
 
 #[cfg(test)]

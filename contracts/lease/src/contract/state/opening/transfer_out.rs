@@ -1,10 +1,10 @@
 use std::marker::PhantomData;
 
-use cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
-use platform::batch::{Batch, Emitter};
 use serde::{Deserialize, Serialize};
 
 use finance::{coin::CoinDTO, currency::Group, zero::Zero};
+use platform::batch::{Batch, Emitter};
+use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     api::StateResponse,
@@ -132,17 +132,18 @@ where
 {
     fn on_response(self, _resp: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
         let emitter = Emitter::of_type(self.spec.label());
+
         if self.last_coin() {
             let swap = SwapExactIn::new(self.spec);
-            let batch = swap.enter_state(env.block.time, &deps.querier)?;
-            let resp = batch.into_response(emitter);
 
-            Ok(Response::from(resp, swap))
+            swap.enter_state(env.block.time, &deps.querier)
+                .map(|batch| Response::from(batch.into_response(emitter), swap))
         } else {
             let next_transfer = self.next();
-            let batch = next_transfer.enter_state(env.block.time, &deps.querier)?;
 
-            Ok(Response::from(batch.into_response(emitter), next_transfer))
+            next_transfer
+                .enter_state(env.block.time, &deps.querier)
+                .map(|batch| Response::from(batch.into_response(emitter), next_transfer))
         }
     }
 

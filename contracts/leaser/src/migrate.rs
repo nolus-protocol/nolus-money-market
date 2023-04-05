@@ -3,8 +3,7 @@ use sdk::cosmwasm_std::Addr;
 use lease::api::MigrateMsg;
 use platform::batch::Batch;
 
-use crate::error::ContractResult;
-use crate::ContractError;
+use crate::{error::ContractError, result::ContractResult};
 
 pub fn migrate_leases<I>(leases: I, lease_code_id: u64) -> ContractResult<Batch>
 where
