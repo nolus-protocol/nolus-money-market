@@ -130,9 +130,9 @@ pub fn execute(
                  cw_response,
                  next_state,
              }| {
-                super::save(deps.storage, &next_state)
-                    .map(move |()| cw_response)
-                    .map_err(Into::into)
+                super::save(deps.storage, &next_state)?;
+
+                Ok(cw_response)
             },
         )
 }

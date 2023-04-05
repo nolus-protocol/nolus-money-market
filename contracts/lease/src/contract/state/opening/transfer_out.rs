@@ -117,7 +117,7 @@ where
     OutG: Group,
     SwapTask: SwapTaskT<OutG>,
 {
-    fn enter(&self, deps: Deps<'_>, env: &Env) -> ContractResult<Batch> {
+    fn enter(&self, deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
         self.enter_state(env.block.time, &deps.querier)
     }
 }

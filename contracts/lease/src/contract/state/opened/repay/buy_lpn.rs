@@ -77,7 +77,7 @@ impl DexConnectable for BuyLpn {
 }
 
 impl Enterable for BuyLpn {
-    fn enter(&self, deps: Deps<'_>, _env: &Env) -> ContractResult<Batch> {
+    fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<Batch> {
         self.enter(&deps.querier)
     }
 }

@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 
 pub use controller::{execute, instantiate, migrate, query, reply, sudo};
 use platform::{
-    batch::{Emit, Emitter},
-    response::response,
+    batch::{Emit as _, Emitter},
+    response,
 };
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
@@ -21,7 +21,7 @@ use super::dex::DexConnectable;
 use self::{
     closed::Closed,
     controller::Controller,
-    ica_connector::{Enterable, IcaConnectee, IcaConnector},
+    ica_connector::{Enterable, IcaConnectee as _, IcaConnector},
     ica_recover::InRecovery,
     opened::repay::buy_lpn::BuyLpn,
     opening::request_loan::RequestLoan,
@@ -148,7 +148,7 @@ where
     );
 
     current_state
-        .enter(deps, &env)
+        .enter(deps, env)
         .map(|batch| Response::from(batch.into_response(emitter), current_state))
 }
 
@@ -195,7 +195,7 @@ fn ignore_msg<S>(env: &Env, state: S) -> ContractResult<Response>
 where
     S: Into<State>,
 {
-    response(&env.contract.address)
+    response::response(&env.contract.address)
         .map(|response| Response::from(response, state))
         .map_err(Into::into)
 }

@@ -48,7 +48,7 @@ impl DexConnectable for TransferInInit {
 }
 
 impl Enterable for TransferInInit {
-    fn enter(&self, _deps: Deps<'_>, env: &Env) -> ContractResult<Batch> {
+    fn enter(&self, _deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
         self.enter(env.block.time)
     }
 }

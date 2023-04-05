@@ -20,7 +20,7 @@ use crate::{
 use super::{ica_post_connector::Postpone, State};
 
 pub(crate) trait Enterable {
-    fn enter(&self, deps: Deps<'_>, _env: &Env) -> ContractResult<Batch>;
+    fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<Batch>;
 }
 
 /// Entity expecting to be connected to ICA
@@ -81,7 +81,7 @@ impl<const PRECONNECTABLE: bool, Connectee> Enterable for IcaConnector<PRECONNEC
 where
     Connectee: IcaConnectee + DexConnectable,
 {
-    fn enter(&self, _deps: Deps<'_>, _env: &Env) -> ContractResult<Batch> {
+    fn enter(&self, _deps: Deps<'_>, _env: Env) -> ContractResult<Batch> {
         Ok(self.enter())
     }
 }
@@ -104,7 +104,7 @@ where
         let next_state = self.connectee.connected(ica);
 
         next_state
-            .enter(deps, &env)
+            .enter(deps, env)
             .map(|batch| Response::from(batch.into_response(emitter), next_state))
     }
 
