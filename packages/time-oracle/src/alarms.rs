@@ -1,5 +1,5 @@
 use sdk::{
-    cosmwasm_std::{Addr, Order, Storage, Timestamp},
+    cosmwasm_std::{Addr, Order, Storage, Timestamp, StdError as CwError},
     cw_storage_plus::{Bound, Index, IndexList, IndexedMap, MultiIndex},
 };
 
@@ -44,7 +44,14 @@ impl<'a> Alarms<'a> {
         addr: Addr,
         time: Timestamp,
     ) -> Result<(), AlarmError> {
-        self.alarms.save(storage, addr, &as_seconds(time))?;
+        self.alarms.update(storage, addr, |maybe_alarm| {
+            Ok::<_, CwError>(if let Some(alarm_time) = maybe_alarm {
+                as_seconds(time).min(alarm_time)
+            } else {
+                as_seconds(time)
+            })
+        })?;
+
         Ok(())
     }
 
@@ -76,8 +83,9 @@ impl<'a> Alarms<'a> {
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
     use sdk::cosmwasm_std::testing;
+
+    use super::*;
 
     fn query_alarms(
         storage: &dyn Storage,

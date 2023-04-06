@@ -5,8 +5,9 @@ use sdk::{
     cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex},
 };
 
-use super::Alarms;
 use crate::AlarmError;
+
+use super::Alarms;
 
 type TimeSeconds = u64;
 type Id = u64;
@@ -53,41 +54,34 @@ impl<'a> AlarmsOld<'a> {
         }
     }
 
-    pub fn migrate(&self, storage: &mut dyn Storage) -> Result<(), AlarmError> {
+    pub fn migrate(
+        &self,
+        storage: &mut dyn Storage,
+        new_namespace: &str,
+        new_index: &str,
+    ) -> Result<(), AlarmError> {
         let old_alarms = self.alarms();
 
-        let (alarms, ids) = old_alarms
-            .idx
-            .alarms
-            .range(storage, None, None, Order::Ascending)
-            .try_fold(
-                (vec![], vec![]),
-                |mut v: (Vec<AlarmOld>, Vec<Id>), alarm| -> Result<_, StdError> {
-                    let alarm = alarm?;
-                    v.1.push(alarm.0);
-                    if let Some(last) = v.0.last() {
-                        if last.addr != alarm.1.addr {
-                            v.0.push(alarm.1)
-                        }
-                    } else {
-                        v.0.push(alarm.1)
-                    }
-                    Ok(v)
-                },
-            )?;
+        let alarms_new = Alarms::new(new_namespace, new_index);
 
-        // purge all the data
-        for id in ids {
+        loop {
+            let Some(result) = old_alarms.idx.alarms.range(
+                storage,
+                None,
+                None,
+                Order::Ascending
+            ).next() else {
+                break;
+            };
+
+            let (id, alarm) = result?;
+
             old_alarms.remove(storage, id)?;
-        }
-        self.next_id.remove(storage);
 
-        let alarms_new = Alarms::new(self.namespace_alarms, self.namespace_index);
-
-        // restore to new alarms
-        for alarm in alarms {
             alarms_new.add(storage, alarm.addr, Timestamp::from_seconds(alarm.time))?;
         }
+
+        self.next_id.remove(storage);
 
         Ok(())
     }
@@ -158,14 +152,16 @@ pub mod tests {
             .unwrap();
 
         // multiple alarms per address(5) + index(5) + next_id(1)
-        assert_eq!(11, storage.range(None, None, Order::Ascending).count());
+        assert_eq!(storage.range(None, None, Order::Ascending).count(), 11);
 
-        alarms.migrate(storage).unwrap();
+        alarms
+            .migrate(storage, "new_alarms", "new_alarms_idx")
+            .unwrap();
 
         // single alarm per address(4) + index(4)
-        assert_eq!(8, storage.range(None, None, Order::Ascending).count());
+        assert_eq!(storage.range(None, None, Order::Ascending).count(), 8);
 
-        let new_alarms = Alarms::new("alarms", "alarms_idx");
+        let new_alarms = Alarms::new("new_alarms", "new_alarms_idx");
         let result: Vec<_> = new_alarms
             .alarms_selection(storage, Timestamp::from_seconds(10))
             .map(Result::unwrap)
@@ -173,7 +169,7 @@ pub mod tests {
 
         assert_eq!(
             result,
-            vec![(addr1, t1), (addr2, t1), (addr3, t2), (addr4, t4),]
+            vec![(addr1, t1), (addr2, t1), (addr3, t2), (addr4, t4)]
         );
     }
 }
