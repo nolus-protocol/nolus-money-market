@@ -1,5 +1,5 @@
 use sdk::{
-    cosmwasm_std::{Addr, Order, Storage, Timestamp, StdError as CwError},
+    cosmwasm_std::{Addr, Order, StdError as CwError, Storage, Timestamp},
     cw_storage_plus::{Bound, Index, IndexList, IndexedMap, MultiIndex},
 };
 

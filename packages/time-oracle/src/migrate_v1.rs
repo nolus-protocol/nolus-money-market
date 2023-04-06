@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{Addr, Order, StdError, Storage, Timestamp},
+    cosmwasm_std::{Addr, Order, Storage, Timestamp},
     cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex},
 };
 
