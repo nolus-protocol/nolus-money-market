@@ -2,13 +2,13 @@ use finance::{coin::CoinDTO, currency::Group};
 
 use super::swap_task::{CoinVisitor, CoinsNb, IterNext, IterState, SwapTask};
 
-pub(super) fn visit_at_index<T, V, OutG>(
+pub(super) fn visit_at_index<T, V>(
     spec: &T,
     coin_index: CoinsNb,
     visitor: &mut V,
 ) -> Result<IterState, V::Error>
 where
-    T: SwapTask<OutG>,
+    T: SwapTask,
     V: CoinVisitor<Result = ()>,
 {
     let mut coins_visitor = CoinsIndexVisitor(coin_index, visitor);
@@ -55,7 +55,7 @@ mod test {
         test::currency::{Dai, TestCurrencies, TestExtraCurrencies, Usdc},
     };
 
-    use crate::contract::state::opening::{
+    use crate::{
         coin_index::CoinsIndexVisitor,
         swap_coins::TestVisitor,
         swap_task::{CoinVisitor, IterNext},

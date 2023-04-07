@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use currency::native::Nls;
 use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
-use lease::api::{dex::ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
+use lease::api::{ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
 use lpp::{msg::ExecuteMsg, stub::lender::LppLenderRef};
 use oracle::stub::OracleRef;
 use platform::batch::Batch;

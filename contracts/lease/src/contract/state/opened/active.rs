@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use currency::{lpn::Lpns, payment::PaymentGroup};
+use dex::{Account, Enterable};
 use finance::coin::IntoDTO;
 use platform::{
     bank,
@@ -15,8 +16,7 @@ use crate::{
     api::{DownpaymentCoin, ExecuteMsg, LpnCoin, StateResponse},
     contract::{
         cmd::{AlarmResult, OpenLoanRespResult, PriceAlarm, Repay, RepayResult, TimeAlarm},
-        dex::Account,
-        state::{controller, paid, Controller, Response},
+        state::{handler, paid, Handler, Response},
         Contract, Lease,
     },
     error::{ContractError, ContractResult},
@@ -24,7 +24,7 @@ use crate::{
     lease::{with_lease, LeaseDTO},
 };
 
-use super::repay::transfer_out::TransferOut;
+use super::repay::buy_lpn::{self, DexState};
 
 #[derive(Serialize, Deserialize)]
 pub struct Active {
@@ -74,7 +74,7 @@ impl Active {
         })
     }
 
-    fn try_repay(self, deps: Deps<'_>, env: &Env, info: MessageInfo) -> ContractResult<Response> {
+    fn try_repay(self, deps: Deps<'_>, env: Env, info: MessageInfo) -> ContractResult<Response> {
         let payment = bank::may_received::<PaymentGroup, _>(
             info.funds.clone(),
             IntoDTO::<PaymentGroup>::new(),
@@ -86,13 +86,13 @@ impl Active {
             let payment_lpn = bank::may_received::<Lpns, _>(info.funds, IntoDTO::<Lpns>::new())
                 .ok_or_else(ContractError::NoPaymentError)??;
 
-            Self::try_repay_lpn(self.lease, payment_lpn, &deps.querier, env)
+            Self::try_repay_lpn(self.lease, payment_lpn, &deps.querier, &env)
         } else {
-            let transfer_out = TransferOut::new(self.lease, payment);
-
-            transfer_out
-                .enter(env.block.time)
-                .map(|batch| Response::from(batch, transfer_out))
+            let start_buy_lpn = buy_lpn::start(self.lease, payment);
+            start_buy_lpn
+                .enter(deps, env)
+                .map(|batch| Response::from(batch, DexState::from(start_buy_lpn)))
+                .map_err(Into::into)
         }
     }
 
@@ -133,7 +133,7 @@ impl Active {
     }
 }
 
-impl Controller for Active {
+impl Handler for Active {
     fn execute(
         self,
         deps: &mut DepsMut<'_>,
@@ -142,8 +142,8 @@ impl Controller for Active {
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         match msg {
-            ExecuteMsg::Repay() => self.try_repay(deps.as_ref(), &env, info),
-            ExecuteMsg::Close() => controller::err("close", deps.api),
+            ExecuteMsg::Repay() => self.try_repay(deps.as_ref(), env, info),
+            ExecuteMsg::Close() => handler::err("close", deps.api),
             ExecuteMsg::PriceAlarm() => self.try_on_price_alarm(&deps.querier, &env, info),
             ExecuteMsg::TimeAlarm {} => self.try_on_time_alarm(&deps.querier, &env, info),
         }

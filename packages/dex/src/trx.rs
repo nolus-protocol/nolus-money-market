@@ -1,5 +1,3 @@
-use serde::{Deserialize, Serialize};
-
 use currency::native::Nls;
 use finance::{
     coin::{Coin, CoinDTO},
@@ -16,9 +14,10 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use swap::trx;
 
-use crate::{api::dex::ConnectionParams, error::ContractResult};
+use crate::error::Result;
 
-pub(super) const IBC_TIMEOUT: Duration = Duration::from_secs(60);
+/// TODO reduce its visibility once the lease payment gets migrated to the dex package
+pub const IBC_TIMEOUT: Duration = Duration::from_secs(60);
 
 //TODO take them as input from the client
 const ICA_TRANSFER_ACK_TIP: Coin<Nls> = Coin::new(1);
@@ -28,86 +27,18 @@ const ICA_TRANSFER_TIMEOUT_TIP: Coin<Nls> = ICA_TRANSFER_ACK_TIP;
 const ICA_SWAP_ACK_TIP: Coin<Nls> = Coin::new(1);
 const ICA_SWAP_TIMEOUT_TIP: Coin<Nls> = ICA_SWAP_ACK_TIP;
 
-pub(crate) trait DexConnectable {
-    fn dex(&self) -> &ConnectionParams;
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) struct Account {
-    /// The contract at Nolus that owns the account
-    owner: Addr,
-    dex_account: HostAccount,
-    dex: ConnectionParams,
-}
-
-impl Account {
-    pub(super) fn ica_account(&self) -> &HostAccount {
-        &self.dex_account
-    }
-
-    pub(super) fn register_request(dex: &ConnectionParams) -> LocalBatch {
-        ica::register_account(&dex.connection_id)
-    }
-
-    pub(super) fn from_register_response(
-        response: &str,
-        owner: Addr,
-        dex: ConnectionParams,
-    ) -> ContractResult<Self> {
-        let ica_account = ica::parse_register_response(response)?;
-        Ok(Self {
-            owner,
-            dex_account: ica_account,
-            dex,
-        })
-    }
-
-    pub(super) fn transfer_to(&self, now: Timestamp) -> TransferOutTrx<'_> {
-        TransferOutTrx::new(
-            &self.dex.transfer_channel.local_endpoint,
-            &self.owner,
-            &self.dex_account,
-            now,
-        )
-    }
-
-    pub(super) fn swap<'a>(
-        &'a self,
-        oracle: &'a OracleRef,
-        querier: &'a QuerierWrapper<'a>,
-    ) -> SwapTrx<'a> {
-        SwapTrx::new(&self.dex.connection_id, &self.dex_account, oracle, querier)
-    }
-
-    pub(super) fn transfer_from(&self, now: Timestamp) -> TransferInTrx<'_> {
-        TransferInTrx::new(
-            &self.dex.connection_id,
-            &self.dex.transfer_channel.remote_endpoint,
-            &self.dex_account,
-            &self.owner,
-            now,
-        )
-    }
-}
-
-impl From<Account> for HostAccount {
-    fn from(account: Account) -> Self {
-        account.dex_account
-    }
-}
-
-impl DexConnectable for Account {
-    fn dex(&self) -> &ConnectionParams {
-        &self.dex
-    }
-}
-
-pub(super) struct TransferOutTrx<'a> {
+/// TODO reduce its visibility once the lease payment gets migrated to the dex package
+pub struct TransferOutTrx<'a> {
     sender: LocalSender<'a>,
 }
 
 impl<'a> TransferOutTrx<'a> {
-    fn new(channel: &'a str, sender: &Addr, receiver: &HostAccount, now: Timestamp) -> Self {
+    pub(super) fn new(
+        channel: &'a str,
+        sender: &Addr,
+        receiver: &HostAccount,
+        now: Timestamp,
+    ) -> Self {
         let sender = LocalSender::new(
             channel,
             sender.clone(),
@@ -120,7 +51,7 @@ impl<'a> TransferOutTrx<'a> {
         TransferOutTrx { sender }
     }
 
-    pub fn send<G>(&mut self, amount: &CoinDTO<G>) -> ContractResult<()>
+    pub fn send<G>(&mut self, amount: &CoinDTO<G>) -> Result<()>
     where
         G: Group,
     {
@@ -134,7 +65,8 @@ impl<'r> From<TransferOutTrx<'r>> for LocalBatch {
     }
 }
 
-pub(super) struct SwapTrx<'a> {
+/// TODO reduce its visibility once the lease payment gets migrated to the dex package
+pub struct SwapTrx<'a> {
     conn: &'a str,
     ica_account: &'a HostAccount,
     trx: Transaction,
@@ -143,7 +75,7 @@ pub(super) struct SwapTrx<'a> {
 }
 
 impl<'a> SwapTrx<'a> {
-    fn new(
+    pub(super) fn new(
         conn: &'a str,
         ica_account: &'a HostAccount,
         oracle: &'a OracleRef,
@@ -159,11 +91,7 @@ impl<'a> SwapTrx<'a> {
         }
     }
 
-    pub fn swap_exact_in<G>(
-        &mut self,
-        amount: &CoinDTO<G>,
-        currency_out: Symbol<'_>,
-    ) -> ContractResult<()>
+    pub fn swap_exact_in<G>(&mut self, amount: &CoinDTO<G>, currency_out: Symbol<'_>) -> Result<()>
     where
         G: Group,
     {
@@ -188,13 +116,14 @@ impl From<SwapTrx<'_>> for LocalBatch {
     }
 }
 
-pub(super) struct TransferInTrx<'a> {
+/// TODO reduce its visibility once the lease payment gets migrated to the dex package
+pub struct TransferInTrx<'a> {
     conn: &'a str,
     sender: RemoteSender<'a>,
 }
 
 impl<'a> TransferInTrx<'a> {
-    fn new(
+    pub(super) fn new(
         conn: &'a str,
         channel: &'a str,
         sender: &HostAccount,
@@ -206,7 +135,7 @@ impl<'a> TransferInTrx<'a> {
         TransferInTrx { conn, sender }
     }
 
-    pub fn send<G>(&mut self, amount: &CoinDTO<G>) -> ContractResult<()>
+    pub fn send<G>(&mut self, amount: &CoinDTO<G>) -> Result<()>
     where
         G: Group,
     {

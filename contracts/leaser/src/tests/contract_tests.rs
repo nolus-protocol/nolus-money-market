@@ -4,10 +4,7 @@ use finance::{
     currency::Currency, duration::Duration, liability::Liability, percent::Percent,
     test::currency::Usdc,
 };
-use lease::api::{
-    dex::{ConnectionParams, Ics20Channel},
-    InterestPaymentSpec,
-};
+use lease::api::{ConnectionParams, Ics20Channel, InterestPaymentSpec};
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{

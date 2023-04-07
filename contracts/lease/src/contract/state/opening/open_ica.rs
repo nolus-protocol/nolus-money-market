@@ -1,31 +1,25 @@
 use cosmwasm_std::{QuerierWrapper, Timestamp};
+use dex::{Account, ConnectionParams, Contract as DexContract, DexConnectable, IcaConnectee};
 use serde::{Deserialize, Serialize};
 
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
+use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{
-        dex::ConnectionParams, opening::OngoingTrx, DownpaymentCoin, NewLeaseContract,
-        StateResponse,
-    },
-    contract::{
-        cmd::OpenLoanRespResult,
-        dex::{Account, DexConnectable},
-        state::ica_connector::IcaConnectee,
-        Contract,
-    },
+    api::{self, opening::OngoingTrx, DownpaymentCoin, NewLeaseContract, StateResponse},
+    contract::cmd::OpenLoanRespResult,
     error::ContractResult,
 };
 
-use super::buy_asset::{BuyAsset, Transfer};
+use super::buy_asset::{self, DexState, StartState};
 
 #[derive(Serialize, Deserialize)]
-pub struct OpenIcaAccount {
+pub(crate) struct OpenIcaAccount {
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppLenderRef, OracleRef),
+    deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
 }
 
 impl OpenIcaAccount {
@@ -33,7 +27,7 @@ impl OpenIcaAccount {
         new_lease: NewLeaseContract,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        deps: (LppLenderRef, OracleRef),
+        deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
     ) -> Self {
         Self {
             new_lease,
@@ -45,18 +39,17 @@ impl OpenIcaAccount {
 }
 
 impl IcaConnectee for OpenIcaAccount {
-    /// the next transaction is carried on the ICS20 channel so good to go
-    const PRECONNECTABLE: bool = true;
-    type NextState = Transfer;
+    type State = DexState;
+    type NextState = StartState;
 
     fn connected(self, dex_account: Account) -> Self::NextState {
-        Self::NextState::new(BuyAsset::new(
+        buy_asset::start(
             self.new_lease.form,
             dex_account,
             self.downpayment,
             self.loan,
             self.deps,
-        ))
+        )
     }
 }
 
@@ -66,12 +59,10 @@ impl DexConnectable for OpenIcaAccount {
     }
 }
 
-impl Contract for OpenIcaAccount {
-    fn state(
-        self,
-        _now: Timestamp,
-        _querier: &QuerierWrapper<'_>,
-    ) -> ContractResult<StateResponse> {
+impl DexContract for OpenIcaAccount {
+    type StateResponse = ContractResult<api::StateResponse>;
+
+    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> Self::StateResponse {
         Ok(StateResponse::Opening {
             downpayment: self.downpayment,
             loan: self.loan.principal,

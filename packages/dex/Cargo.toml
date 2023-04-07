@@ -1,0 +1,21 @@
+[package]
+name = "dex"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+currency = { workspace = true }
+finance = { workspace = true }
+oracle = { workspace = true, features = ["stub"] }
+timealarms = { workspace = true, features = ["stub"] }
+platform = { workspace = true }
+sdk = { workspace = true, features = ["schema"] }
+swap = { workspace = true, features = ["trx"] }
+
+serde = { workspace = true, features = ["derive"] }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+finance = { workspace = true, features = ["testing"]}

@@ -1,194 +1,80 @@
+use cosmwasm_std::Storage;
+use enum_dispatch::enum_dispatch;
+use platform::batch::Batch;
+use serde::{Deserialize, Serialize};
 use std::str;
 
-use enum_dispatch::enum_dispatch;
-use serde::{Deserialize, Serialize};
-
-pub use controller::{execute, instantiate, migrate, query, reply, sudo};
-use platform::{
-    batch::{Emit as _, Emitter},
-    response,
-};
+use platform::response;
 use sdk::{
-    cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Addr, Binary, Deps, DepsMut, Env, MessageInfo, Reply, StdResult, Storage},
+    cosmwasm_std::{DepsMut, Env, MessageInfo, Reply},
     cw_storage_plus::Item,
 };
 
-use crate::{api::ExecuteMsg, error::ContractResult};
-
-use super::dex::DexConnectable;
-
-use self::{
-    closed::Closed,
-    controller::Controller,
-    ica_connector::{Enterable, IcaConnectee as _, IcaConnector},
-    ica_recover::InRecovery,
-    opened::repay::buy_lpn::BuyLpn,
-    opening::request_loan::RequestLoan,
+use crate::{
+    api::{ExecuteMsg, NewLeaseContract},
+    error::ContractResult,
 };
 
+use self::{dex::State as DexState, lease::State as LeaseState};
+
+pub(crate) use self::handler::{Handler, Response};
+
 mod closed;
-mod controller;
-mod ica_connector;
-mod ica_post_connector;
-mod ica_recover;
+mod dex;
+mod handler;
+mod lease;
 mod opened;
 mod opening;
 mod paid;
-mod transfer_in;
 
-type OpenIcaAccount = IcaConnector<
-    { opening::open_ica::OpenIcaAccount::PRECONNECTABLE },
-    opening::open_ica::OpenIcaAccount,
->;
-type OpeningTransferOut = opening::buy_asset::Transfer;
+type RequestLoan = LeaseState<opening::request_loan::RequestLoan>;
 
-type BuyAsset = opening::buy_asset::Swap;
-type BuyAssetRecoverIca =
-    IcaConnector<{ InRecovery::<BuyAsset>::PRECONNECTABLE }, InRecovery<BuyAsset>>;
-type BuyAssetPostRecoverIca = ica_post_connector::PostConnector<InRecovery<BuyAsset>>;
+type OpenIcaAccount = DexState<::dex::IcaConnector<opening::open_ica::OpenIcaAccount, SwapResult>>;
 
-type OpenedActive = opened::active::Active;
+type BuyAsset = DexState<opening::buy_asset::DexState>;
 
-type RepaymentTransferOut = opened::repay::transfer_out::TransferOut;
+type OpenedActive = LeaseState<opened::active::Active>;
 
-type BuyLpnRecoverIca = IcaConnector<{ InRecovery::<BuyLpn>::PRECONNECTABLE }, InRecovery<BuyLpn>>;
-type BuyLpnPostRecoverIca = ica_post_connector::PostConnector<InRecovery<BuyLpn>>;
+type BuyLpn = DexState<opened::repay::buy_lpn::DexState>;
 
-type RepaymentTransferInInit = opened::repay::transfer_in_init::TransferInInit;
-type RepaymentTransferInInitRecoverIca = IcaConnector<
-    { InRecovery::<RepaymentTransferInInit>::PRECONNECTABLE },
-    InRecovery<RepaymentTransferInInit>,
->;
-type RepaymentTransferInInitPostRecoverIca =
-    ica_post_connector::PostConnector<InRecovery<RepaymentTransferInInit>>;
+type PaidActive = LeaseState<paid::Active>;
 
-type RepaymentTransferInFinish = opened::repay::transfer_in_finish::TransferInFinish;
+type ClosingTransferIn = DexState<paid::transfer_in::DexState>;
 
-type PaidActive = paid::Active;
+type Closed = LeaseState<closed::Closed>;
 
-type ClosingTransferInInit = paid::transfer_in_init::TransferInInit;
-type ClosingTransferInInitRecoverIca = IcaConnector<
-    { InRecovery::<RepaymentTransferInInit>::PRECONNECTABLE },
-    InRecovery<ClosingTransferInInit>,
->;
-type ClosingTransferInInitPostRecoverIca =
-    ica_post_connector::PostConnector<InRecovery<ClosingTransferInInit>>;
+type SwapResult = ContractResult<Response>;
 
-type ClosingTransferInFinish = paid::transfer_in_finish::TransferInFinish;
-
-#[enum_dispatch(Controller, Contract)]
+#[enum_dispatch(Handler, Contract)]
 #[derive(Serialize, Deserialize)]
 pub(crate) enum State {
     RequestLoan,
     OpenIcaAccount,
-    OpeningTransferOut,
     BuyAsset,
-    BuyAssetRecoverIca,
-    BuyAssetPostRecoverIca,
     OpenedActive,
-    RepaymentTransferOut,
     BuyLpn,
-    BuyLpnRecoverIca,
-    BuyLpnPostRecoverIca,
-    RepaymentTransferInInit,
-    RepaymentTransferInInitRecoverIca,
-    RepaymentTransferInInitPostRecoverIca,
-    RepaymentTransferInFinish,
     PaidActive,
-    ClosingTransferInInit,
-    ClosingTransferInInitRecoverIca,
-    ClosingTransferInInitPostRecoverIca,
-    ClosingTransferInFinish,
+    ClosingTransferIn,
     Closed,
 }
 
 const STATE_DB_ITEM: Item<'static, State> = Item::new("state");
 
-pub(super) fn load(storage: &dyn Storage) -> StdResult<State> {
-    STATE_DB_ITEM.load(storage)
+pub(super) fn load(storage: &dyn Storage) -> ContractResult<State> {
+    STATE_DB_ITEM.load(storage).map_err(Into::into)
 }
 
-pub(super) fn save(storage: &mut dyn Storage, next_state: &State) -> StdResult<()> {
-    STATE_DB_ITEM.save(storage, next_state)
+pub(super) fn save(storage: &mut dyn Storage, next_state: &State) -> ContractResult<()> {
+    STATE_DB_ITEM.save(storage, next_state).map_err(Into::into)
 }
 
-pub(crate) struct Response {
-    pub(super) cw_response: CwResponse,
-    pub(super) next_state: State,
-}
-
-impl Response {
-    fn from<R, S>(response: R, next_state: S) -> Self
-    where
-        R: Into<CwResponse>,
-        S: Into<State>,
-    {
-        Self {
-            cw_response: response.into(),
-            next_state: next_state.into(),
-        }
-    }
-}
-
-fn on_timeout_retry<S, L>(
-    current_state: S,
-    state_label: L,
-    deps: Deps<'_>,
-    env: Env,
-) -> ContractResult<Response>
-where
-    S: Enterable + Into<State>,
-    L: Into<String>,
-{
-    let emitter = emit_timeout(
-        state_label,
-        env.contract.address.clone(),
-        TimeoutPolicy::Retry,
-    );
-
-    current_state
-        .enter(deps, env)
-        .map(|batch| Response::from(batch.into_response(emitter), current_state))
-}
-
-fn on_timeout_repair_channel<S, L>(
-    current_state: S,
-    state_label: L,
-    env: Env,
-) -> ContractResult<Response>
-where
-    S: Enterable + Controller + DexConnectable + Into<State>,
-    IcaConnector<false, InRecovery<S>>: Into<State>,
-    L: Into<String>,
-{
-    let emitter = emit_timeout(
-        state_label,
-        env.contract.address,
-        TimeoutPolicy::RepairICS27Channel,
-    );
-
-    let recover_ica = IcaConnector::new(InRecovery::new(current_state));
-
-    Ok(Response::from(
-        recover_ica.enter().into_response(emitter),
-        recover_ica,
-    ))
-}
-
-#[derive(Debug)]
-enum TimeoutPolicy {
-    Retry,
-    RepairICS27Channel,
-}
-
-fn emit_timeout<L>(state_label: L, contract: Addr, policy: TimeoutPolicy) -> Emitter
-where
-    L: Into<String>,
-{
-    Emitter::of_type(state_label)
-        .emit("id", contract)
-        .emit("timeout", format!("{:?}", policy))
+pub(super) fn new_lease(
+    deps: &mut DepsMut<'_>,
+    info: MessageInfo,
+    spec: NewLeaseContract,
+) -> ContractResult<(Batch, State)> {
+    let (batch, start_state) = opening::request_loan::RequestLoan::new(deps, info, spec)?;
+    Ok((batch, start_state.into()))
 }
 
 fn ignore_msg<S>(env: &Env, state: S) -> ContractResult<Response>
@@ -198,4 +84,169 @@ where
     response::response(&env.contract.address)
         .map(|response| Response::from(response, state))
         .map_err(Into::into)
+}
+
+mod impl_from {
+    use super::{
+        BuyAsset, BuyLpn, Closed, ClosingTransferIn, OpenedActive, PaidActive, RequestLoan, State,
+    };
+
+    impl From<super::opening::request_loan::RequestLoan> for State {
+        fn from(value: super::opening::request_loan::RequestLoan) -> Self {
+            RequestLoan::new(value).into()
+        }
+    }
+
+    impl From<super::opening::buy_asset::DexState> for State {
+        fn from(value: super::opening::buy_asset::DexState) -> Self {
+            BuyAsset::new(value).into()
+        }
+    }
+
+    impl From<super::opened::active::Active> for State {
+        fn from(value: super::opened::active::Active) -> Self {
+            OpenedActive::new(value).into()
+        }
+    }
+
+    impl From<super::opened::repay::buy_lpn::DexState> for State {
+        fn from(value: super::opened::repay::buy_lpn::DexState) -> Self {
+            BuyLpn::new(value).into()
+        }
+    }
+
+    impl From<super::paid::Active> for State {
+        fn from(value: super::paid::Active) -> Self {
+            PaidActive::new(value).into()
+        }
+    }
+
+    impl From<super::paid::transfer_in::DexState> for State {
+        fn from(value: super::paid::transfer_in::DexState) -> Self {
+            ClosingTransferIn::new(value).into()
+        }
+    }
+
+    impl From<super::closed::Closed> for State {
+        fn from(value: super::closed::Closed) -> Self {
+            Closed::new(value).into()
+        }
+    }
+}
+
+/// would have used `enum_dispatch` it it supported trait associated types
+mod impl_dex_handler {
+
+    use dex::{ContinueResult, Handler, Result};
+    use sdk::cosmwasm_std::{Binary, Deps, Env};
+
+    use crate::error::ContractResult;
+
+    use super::{Response, State};
+
+    impl Handler for State {
+        type Response = Self;
+        type SwapResult = ContractResult<Response>;
+
+        #[inline]
+        fn on_open_ica(
+            self,
+            counterparty_version: String,
+            deps: Deps<'_>,
+            env: Env,
+        ) -> ContinueResult<Self> {
+            match self {
+                State::RequestLoan(inner) => {
+                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                }
+                State::OpenIcaAccount(inner) => {
+                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                }
+                State::BuyAsset(inner) => {
+                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                }
+                State::OpenedActive(inner) => {
+                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                }
+                State::BuyLpn(inner) => {
+                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                }
+                State::PaidActive(inner) => {
+                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                }
+                State::ClosingTransferIn(inner) => {
+                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                }
+                State::Closed(inner) => {
+                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                }
+            }
+        }
+
+        #[inline]
+        fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> Result<Self> {
+            match self {
+                State::RequestLoan(inner) => {
+                    Handler::on_response(inner, data, deps, env).map_into()
+                }
+                State::OpenIcaAccount(inner) => {
+                    Handler::on_response(inner, data, deps, env).map_into()
+                }
+                State::BuyAsset(inner) => Handler::on_response(inner, data, deps, env).map_into(),
+                State::OpenedActive(inner) => {
+                    Handler::on_response(inner, data, deps, env).map_into()
+                }
+                State::BuyLpn(inner) => Handler::on_response(inner, data, deps, env).map_into(),
+                State::PaidActive(inner) => Handler::on_response(inner, data, deps, env).map_into(),
+                State::ClosingTransferIn(inner) => {
+                    Handler::on_response(inner, data, deps, env).map_into()
+                }
+                State::Closed(inner) => Handler::on_response(inner, data, deps, env).map_into(),
+            }
+        }
+
+        #[inline]
+        fn on_error(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
+            match self {
+                State::RequestLoan(inner) => Handler::on_error(inner, deps, env),
+                State::OpenIcaAccount(inner) => Handler::on_error(inner, deps, env),
+                State::BuyAsset(inner) => Handler::on_error(inner, deps, env),
+                State::OpenedActive(inner) => Handler::on_error(inner, deps, env),
+                State::BuyLpn(inner) => Handler::on_error(inner, deps, env),
+                State::PaidActive(inner) => Handler::on_error(inner, deps, env),
+                State::ClosingTransferIn(inner) => Handler::on_error(inner, deps, env),
+                State::Closed(inner) => Handler::on_error(inner, deps, env),
+            }
+        }
+
+        #[inline]
+        fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
+            match self {
+                State::RequestLoan(inner) => Handler::on_timeout(inner, deps, env),
+                State::OpenIcaAccount(inner) => Handler::on_timeout(inner, deps, env),
+                State::BuyAsset(inner) => Handler::on_timeout(inner, deps, env),
+                State::OpenedActive(inner) => Handler::on_timeout(inner, deps, env),
+                State::BuyLpn(inner) => Handler::on_timeout(inner, deps, env),
+                State::PaidActive(inner) => Handler::on_timeout(inner, deps, env),
+                State::ClosingTransferIn(inner) => Handler::on_timeout(inner, deps, env),
+                State::Closed(inner) => Handler::on_timeout(inner, deps, env),
+            }
+        }
+
+        #[inline]
+        fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> Result<Self> {
+            match self {
+                State::RequestLoan(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
+                State::OpenIcaAccount(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
+                State::BuyAsset(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
+                State::OpenedActive(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
+                State::BuyLpn(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
+                State::PaidActive(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
+                State::ClosingTransferIn(inner) => {
+                    Handler::on_time_alarm(inner, deps, env).map_into()
+                }
+                State::Closed(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
+            }
+        }
+    }
 }

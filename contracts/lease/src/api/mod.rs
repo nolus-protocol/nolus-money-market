@@ -5,11 +5,13 @@ use finance::coin::CoinDTO;
 use sdk::schemars::{self, JsonSchema};
 
 pub use self::{
-    open::{InterestPaymentSpec, LoanForm, NewLeaseContract, NewLeaseForm},
+    open::{
+        ConnectionParams, Ics20Channel, InterestPaymentSpec, LoanForm, NewLeaseContract,
+        NewLeaseForm,
+    },
     query::{opened, opening, paid, StateQuery, StateResponse},
 };
 
-pub mod dex;
 // TODO consider defining the modules public instead of just selected items
 mod open;
 mod query;

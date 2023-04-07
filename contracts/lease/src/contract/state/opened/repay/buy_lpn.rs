@@ -1,106 +1,136 @@
-use serde::{Deserialize, Serialize};
-
-use finance::{coin, currency::Symbol};
-use platform::{
-    batch::{Batch, Emit, Emitter},
-    trx,
+use cosmwasm_std::{Env, QuerierWrapper, Timestamp};
+use currency::lpn::Lpns;
+use dex::{
+    Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalLocalState, SwapState,
+    SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
 };
-use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
-use swap::trx as swap_trx;
+use finance::{coin::CoinDTO, currency::Symbol};
+use oracle::stub::OracleRef;
+use serde::{Deserialize, Serialize};
+use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{dex::ConnectionParams, opened::RepayTrx, LpnCoin, PaymentCoin, StateResponse},
+    api::{self, opened::RepayTrx, PaymentCoin},
     contract::{
-        dex::DexConnectable,
         state::{
-            self, ica_connector::Enterable, ica_post_connector::Postpone, opened::repay,
-            Controller, Response,
+            opened::{active::Active, repay},
+            SwapResult,
         },
-        Contract, Lease,
+        Lease,
     },
     error::ContractResult,
     event::Type,
 };
 
-use super::transfer_in_init::TransferInInit;
+type AssetGroup = Lpns;
+pub(crate) type DexState = dex::StateLocalOut<BuyLpn>;
+
+pub(in crate::contract::state) fn start(
+    lease: Lease,
+    payment: PaymentCoin,
+) -> StartLocalLocalState<BuyLpn> {
+    dex::start_local_local(BuyLpn::new(lease, payment))
+}
+
+type BuyLpnStateResponse = <BuyLpn as SwapTask>::StateResponse;
 
 #[derive(Serialize, Deserialize)]
-pub struct BuyLpn {
+pub(crate) struct BuyLpn {
     lease: Lease,
     payment: PaymentCoin,
 }
 
 impl BuyLpn {
-    pub(in crate::contract::state) fn new(lease: Lease, payment: PaymentCoin) -> Self {
+    fn new(lease: Lease, payment: PaymentCoin) -> Self {
         Self { lease, payment }
     }
 
-    pub(super) fn enter(&self, querier: &QuerierWrapper<'_>) -> ContractResult<Batch> {
-        let mut swap_trx = self.lease.dex.swap(&self.lease.lease.oracle, querier);
-        swap_trx.swap_exact_in(&self.payment, self.target_currency())?;
-        Ok(swap_trx.into())
+    // fn emit_ok(&self) -> Emitter {
+    //     Emitter::of_type(Type::OpeningTransferOut)
+    // }
+}
+
+impl SwapTask for BuyLpn {
+    type OutG = AssetGroup;
+    type Label = Type;
+    type StateResponse = ContractResult<api::StateResponse>;
+    type Result = SwapResult;
+
+    fn label(&self) -> Self::Label {
+        Type::RepaymentSwap
     }
 
-    fn on_response(self, resp: Binary, _deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        let emitter = self.emit_ok();
-        let payment_lpn = self.decode_response(resp.as_slice())?;
-
-        let transfer_in = TransferInInit::new(self.lease, self.payment, payment_lpn);
-
-        transfer_in
-            .enter(env.block.time)
-            .map(|batch| Response::from(batch.into_response(emitter), transfer_in))
+    fn dex_account(&self) -> &Account {
+        &self.lease.dex
     }
 
-    fn decode_response(&self, resp: &[u8]) -> ContractResult<LpnCoin> {
-        let mut resp_msgs = trx::decode_msg_responses(resp)?;
-        let payment_amount = swap_trx::exact_amount_in_resp(&mut resp_msgs)?;
-
-        coin::from_amount_ticker(payment_amount, self.target_currency()).map_err(Into::into)
+    fn oracle(&self) -> &OracleRef {
+        &self.lease.lease.oracle
     }
 
-    fn target_currency(&self) -> Symbol<'_> {
+    fn time_alarm(&self) -> &TimeAlarmsRef {
+        &self.lease.lease.time_alarms
+    }
+
+    fn out_currency(&self) -> Symbol<'_> {
         self.lease.lease.loan.lpp().currency()
     }
 
-    fn emit_ok(&self) -> Emitter {
-        Emitter::of_type(Type::BuyLpn)
-            .emit("id", self.lease.lease.addr.clone())
-            .emit_coin_dto("payment", self.payment.clone())
+    fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
+    where
+        Visitor: CoinVisitor<Result = IterNext>,
+    {
+        dex::on_coin(&self.payment, visitor)
+    }
+
+    fn finish(
+        self,
+        amount_out: CoinDTO<Self::OutG>,
+        env: &Env,
+        querier: &QuerierWrapper<'_>,
+    ) -> Self::Result {
+        Active::try_repay_lpn(self.lease, amount_out, querier, env)
     }
 }
 
-impl DexConnectable for BuyLpn {
-    fn dex(&self) -> &ConnectionParams {
-        self.lease.dex()
+impl ContractInSwap<TransferOutState, BuyLpnStateResponse> for BuyLpn {
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
+        repay::query(
+            self.lease.lease,
+            self.payment,
+            RepayTrx::TransferOut,
+            now,
+            querier,
+        )
     }
 }
 
-impl Enterable for BuyLpn {
-    fn enter(&self, deps: Deps<'_>, _env: Env) -> ContractResult<Batch> {
-        self.enter(&deps.querier)
-    }
-}
-
-impl Controller for BuyLpn {
-    fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        self.on_response(data, deps, env)
-    }
-
-    fn on_timeout(self, _deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        state::on_timeout_repair_channel(self, Type::BuyLpn, env)
-    }
-}
-
-impl Contract for BuyLpn {
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+impl ContractInSwap<SwapState, BuyLpnStateResponse> for BuyLpn {
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
         repay::query(self.lease.lease, self.payment, RepayTrx::Swap, now, querier)
     }
 }
 
-impl Postpone for BuyLpn {
-    fn setup_alarm(&self, when: Timestamp, _querier: &QuerierWrapper<'_>) -> ContractResult<Batch> {
-        let time_alarms = self.lease.lease.time_alarms.clone();
-        time_alarms.setup_alarm(when).map_err(Into::into)
+impl ContractInSwap<TransferInInitState, BuyLpnStateResponse> for BuyLpn {
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
+        repay::query(
+            self.lease.lease,
+            self.payment,
+            RepayTrx::TransferInInit,
+            now,
+            querier,
+        )
+    }
+}
+
+impl ContractInSwap<TransferInFinishState, BuyLpnStateResponse> for BuyLpn {
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> BuyLpnStateResponse {
+        repay::query(
+            self.lease.lease,
+            self.payment,
+            RepayTrx::TransferInInit,
+            now,
+            querier,
+        )
     }
 }

@@ -382,6 +382,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "dex"
+version = "0.1.0"
+dependencies = [
+ "currency",
+ "finance",
+ "oracle",
+ "platform",
+ "sdk",
+ "serde",
+ "swap",
+ "thiserror",
+ "timealarms",
+]
+
+[[package]]
 name = "digest"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -627,6 +642,7 @@ version = "0.3.0"
 dependencies = [
  "cosmwasm-std",
  "currency",
+ "dex",
  "enum_dispatch",
  "finance",
  "lpp",

@@ -1,30 +1,28 @@
-use cosmwasm_std::{Env, QuerierWrapper};
 use finance::{
     coin::CoinDTO,
     currency::{Group, Symbol},
 };
 use oracle::stub::OracleRef;
+use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::contract::dex::Account;
+use crate::account::Account;
 
 pub(super) type CoinsNb = u8;
-pub(super) type OutChain = bool;
-// pub(super) const LOCAL_OUT_CHAIN: OutChain = true;
-pub(super) const REMOTE_OUT_CHAIN: OutChain = false;
 
 /// Specification of a swap process
 ///
 /// Supports up to `CoinsNb::MAX` coins.
-pub(crate) trait SwapTask<OutG> {
-    type Result;
-    type Error;
+pub trait SwapTask {
+    type OutG: Group;
     type Label: Into<String>;
+    type StateResponse;
+    type Result;
 
     fn label(&self) -> Self::Label;
     fn dex_account(&self) -> &Account;
     fn oracle(&self) -> &OracleRef;
-    fn time_alarm(&self, querier: &QuerierWrapper<'_>) -> Result<TimeAlarmsRef, Self::Error>;
+    fn time_alarm(&self) -> &TimeAlarmsRef;
     fn out_currency(&self) -> Symbol<'_>;
 
     /// Call back the worker with each coin this swap is about.
@@ -38,27 +36,27 @@ pub(crate) trait SwapTask<OutG> {
 
     fn finish(
         self,
-        amount: CoinDTO<OutG>,
+        amount_out: CoinDTO<Self::OutG>,
+        env: &Env,
         querier: &QuerierWrapper<'_>,
-        env: Env,
-    ) -> Result<Self::Result, Self::Error>;
+    ) -> Self::Result;
 }
 
 #[derive(PartialEq, Eq)]
 #[cfg_attr(any(debug_assertions, test), derive(Debug))]
-pub(crate) enum IterState {
+pub enum IterState {
     Complete,
     Incomplete,
 }
 
 #[derive(PartialEq, Eq)]
 #[cfg_attr(test, derive(Clone, Debug))]
-pub(crate) enum IterNext {
+pub enum IterNext {
     Stop,
     Continue,
 }
 
-pub(crate) trait CoinVisitor {
+pub trait CoinVisitor {
     type Result;
     type Error;
 

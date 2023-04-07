@@ -1,52 +1,44 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, result::Result as StdResult};
 
+use platform::batch::{Batch, Emitter};
+use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use finance::{coin::CoinDTO, currency::Group, zero::Zero};
-use platform::batch::{Batch, Emitter};
-use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
-    api::StateResponse,
-    contract::{
-        dex::TransferOutTrx,
-        state::{
-            self,
-            controller::Controller,
-            ica_connector::Enterable,
-            opening::{
-                never::{self, Never},
-                swap_task::{CoinVisitor, IterNext},
-            },
-            Response, State,
-        },
-        Contract,
-    },
-    error::{ContractError, ContractResult},
+    error::{Error, Result},
+    ica_connector::Enterable,
+    never::{self, Never},
+    response::{self, ContinueResult, Handler, Result as HandlerResult},
+    swap_task::{CoinVisitor, IterNext},
+    timeout,
+    trx::TransferOutTrx,
+    Contract, ContractInSwap, TransferOutState,
 };
 
 use super::{
     coin_index,
     swap_exact_in::SwapExactIn,
-    swap_state::{ContractInSwap, TransferOutState},
-    swap_task::{CoinsNb, IterState, OutChain, SwapTask as SwapTaskT},
+    swap_task::{CoinsNb, IterState, SwapTask as SwapTaskT},
 };
 
-/// Transfer out a coin to DEX
+/// Transfer out a list of coins to DEX
 ///
 /// Supports up to `CoinsNb::MAX` number of coins.
 #[derive(Serialize, Deserialize)]
-pub(crate) struct TransferOut<OutG, SwapTask, const SWAP_OUT_CHAIN: OutChain> {
+pub struct TransferOut<SwapTask, SEnum> {
     spec: SwapTask,
     coin_index: CoinsNb,
     last_coin_index: CoinsNb,
-    _out_g: PhantomData<OutG>,
+    _state_enum: PhantomData<SEnum>,
 }
 
-impl<OutG, SwapTask, const SWAP_OUT_CHAIN: OutChain> TransferOut<OutG, SwapTask, SWAP_OUT_CHAIN>
+impl<SwapTask, SEnum> TransferOut<SwapTask, SEnum>
 where
-    OutG: Group,
-    SwapTask: SwapTaskT<OutG>,
+    SwapTask: SwapTaskT,
+    Self: Into<SEnum>,
+    SwapExactIn<SwapTask, SEnum>: Into<SEnum>,
 {
     pub(super) fn new(spec: SwapTask) -> Self {
         let first_index = Default::default();
@@ -69,7 +61,7 @@ where
             spec,
             coin_index,
             last_coin_index,
-            _out_g: PhantomData,
+            _state_enum: PhantomData,
         }
     }
 
@@ -87,13 +79,13 @@ where
         counter.last_index()
     }
 
-    fn enter_state(&self, now: Timestamp, _querier: &QuerierWrapper<'_>) -> ContractResult<Batch> {
+    fn enter_state(&self, now: Timestamp, _querier: &QuerierWrapper<'_>) -> Result<Batch> {
         struct SendWorker<'a>(TransferOutTrx<'a>, bool);
         impl<'a> CoinVisitor for SendWorker<'a> {
             type Result = ();
-            type Error = ContractError;
+            type Error = Error;
 
-            fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
+            fn visit<G>(&mut self, coin: &CoinDTO<G>) -> Result<Self::Result>
             where
                 G: Group,
             {
@@ -109,56 +101,67 @@ where
         debug_assert_eq!(iter_state == IterState::Complete, self.last_coin());
         Ok(sender.0.into())
     }
+
+    fn on_response<NextState, Label>(
+        next: NextState,
+        label: Label,
+        deps: Deps<'_>,
+        env: Env,
+    ) -> ContinueResult<Self>
+    where
+        NextState: Enterable + Into<SEnum>,
+        Label: Into<String>,
+    {
+        next.enter(deps, env).and_then(|batch| {
+            let emitter = Emitter::of_type(label);
+            response::res_continue::<_, _, Self>(batch.into_response(emitter), next)
+        })
+    }
 }
 
-impl<OutG, SwapTask, const SWAP_OUT_CHAIN: OutChain> Enterable
-    for TransferOut<OutG, SwapTask, SWAP_OUT_CHAIN>
+impl<SwapTask, SEnum> Enterable for TransferOut<SwapTask, SEnum>
 where
-    OutG: Group,
-    SwapTask: SwapTaskT<OutG>,
+    SwapTask: SwapTaskT,
+    Self: Into<SEnum>,
+    SwapExactIn<SwapTask, SEnum>: Into<SEnum>,
 {
-    fn enter(&self, deps: Deps<'_>, env: Env) -> ContractResult<Batch> {
+    fn enter(&self, deps: Deps<'_>, env: Env) -> Result<Batch> {
         self.enter_state(env.block.time, &deps.querier)
     }
 }
 
-impl<OutG, SwapTask, const SWAP_OUT_CHAIN: OutChain> Controller
-    for TransferOut<OutG, SwapTask, SWAP_OUT_CHAIN>
+impl<SwapTask, SEnum> Handler for TransferOut<SwapTask, SEnum>
 where
-    OutG: Group,
-    SwapTask: SwapTaskT<OutG>,
-    Self: Into<State>,
-    SwapExactIn<OutG, SwapTask, SWAP_OUT_CHAIN>: Into<State>,
+    SwapTask: SwapTaskT,
+    Self: Into<SEnum>,
+    SwapExactIn<SwapTask, SEnum>: Into<SEnum>,
 {
-    fn on_response(self, _resp: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
-        let emitter = Emitter::of_type(self.spec.label());
+    type Response = SEnum;
+    type SwapResult = SwapTask::Result;
 
+    fn on_response(self, _resp: Binary, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
+        let label = self.spec.label();
         if self.last_coin() {
-            let swap = SwapExactIn::new(self.spec);
-
-            swap.enter_state(env.block.time, &deps.querier)
-                .map(|batch| Response::from(batch.into_response(emitter), swap))
+            Self::on_response(SwapExactIn::new(self.spec), label, deps, env)
         } else {
-            let next_transfer = self.next();
-
-            next_transfer
-                .enter_state(env.block.time, &deps.querier)
-                .map(|batch| Response::from(batch.into_response(emitter), next_transfer))
+            Self::on_response(self.next(), label, deps, env)
         }
+        .into()
     }
 
-    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
         let state_label = self.spec.label();
-        state::on_timeout_retry(self, state_label, deps, env)
+        timeout::on_timeout_retry(self, state_label, deps, env)
     }
 }
 
-impl<OutG, SwapTask, const SWAP_OUT_CHAIN: OutChain> Contract
-    for TransferOut<OutG, SwapTask, SWAP_OUT_CHAIN>
+impl<SwapTask, SEnum> Contract for TransferOut<SwapTask, SEnum>
 where
-    SwapTask: ContractInSwap<TransferOutState>,
+    SwapTask: ContractInSwap<TransferOutState, <SwapTask as SwapTaskT>::StateResponse> + SwapTaskT,
 {
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+    type StateResponse = <SwapTask as SwapTaskT>::StateResponse;
+
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Self::StateResponse {
         self.spec.state(now, querier)
     }
 }
@@ -174,7 +177,7 @@ impl CoinVisitor for Counter {
     type Result = IterNext;
     type Error = Never;
 
-    fn visit<G>(&mut self, _coin: &CoinDTO<G>) -> Result<Self::Result, Self::Error>
+    fn visit<G>(&mut self, _coin: &CoinDTO<G>) -> StdResult<Self::Result, Self::Error>
     where
         G: Group,
     {
@@ -195,7 +198,7 @@ mod test {
         test::currency::{TestCurrencies, Usdc},
     };
 
-    use crate::contract::state::opening::swap_task::{CoinVisitor, CoinsNb, IterNext};
+    use crate::swap_task::{CoinVisitor, CoinsNb, IterNext};
 
     use super::Counter;
 

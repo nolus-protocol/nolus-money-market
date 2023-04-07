@@ -1,7 +1,8 @@
+use cosmwasm_std::{QuerierWrapper, Timestamp};
+use dex::Enterable;
 use serde::{Deserialize, Serialize};
 
-use platform::response::response_with_messages;
-use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo};
 
 use crate::{
     api::{ExecuteMsg, StateResponse},
@@ -9,12 +10,11 @@ use crate::{
     error::ContractResult,
 };
 
-use super::{controller, Controller, Response};
+use self::transfer_in::DexState;
 
-use self::transfer_in_init::TransferInInit;
+use super::{handler, Handler, Response};
 
-pub mod transfer_in_finish;
-pub mod transfer_in_init;
+pub mod transfer_in;
 
 #[derive(Serialize, Deserialize)]
 pub struct Active {
@@ -27,7 +27,7 @@ impl Active {
     }
 }
 
-impl Controller for Active {
+impl Handler for Active {
     fn execute(
         self,
         deps: &mut DepsMut<'_>,
@@ -36,16 +36,14 @@ impl Controller for Active {
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         match msg {
-            ExecuteMsg::Repay() => controller::err("repay", deps.api),
+            ExecuteMsg::Repay() => handler::err("repay", deps.api),
             ExecuteMsg::Close() => {
-                let transfer_in = TransferInInit::new(self.lease);
-
-                transfer_in
-                    .enter(env.block.time)
-                    .and_then(|batch| {
-                        response_with_messages(&env.contract.address, batch).map_err(Into::into)
-                    })
-                    .map(|response| Response::from(response, transfer_in))
+                let amount_in = self.lease.lease.amount.clone();
+                let start_transfer_in = transfer_in::start(self.lease, amount_in);
+                start_transfer_in
+                    .enter(deps.as_ref(), env)
+                    .map(|batch| Response::from(batch, DexState::from(start_transfer_in)))
+                    .map_err(Into::into)
             }
             ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => super::ignore_msg(&env, self),
         }

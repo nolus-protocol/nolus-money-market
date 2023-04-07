@@ -8,7 +8,7 @@ use sdk::{
 
 use crate::{error::ContractError, error::ContractResult};
 
-use super::dex::ConnectionParams;
+pub use dex::{ConnectionParams, Ics20Channel};
 
 mod unchecked;
 

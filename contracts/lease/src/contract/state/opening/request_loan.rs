@@ -1,16 +1,21 @@
 use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
+use dex::IcaConnector;
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use platform::batch::{Batch, Emit, Emitter};
+use platform::{
+    batch::{Batch, Emit, Emitter},
+    response::StateMachineResponse,
+};
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Reply};
+use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{DownpaymentCoin, NewLeaseContract},
     contract::{
         cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
-        state::{ica_connector::IcaConnector, Controller, Response},
+        state::{dex::State as LeaseDexState, Handler, Response},
         Contract,
     },
     error::{ContractError, ContractResult},
@@ -21,32 +26,34 @@ use crate::{
 use super::open_ica::OpenIcaAccount;
 
 #[derive(Serialize, Deserialize)]
-pub struct RequestLoan {
+pub(crate) struct RequestLoan {
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
-    deps: (LppLenderRef, OracleRef),
+    deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
 }
 
 impl RequestLoan {
     pub fn new(
         deps: &mut DepsMut<'_>,
         info: MessageInfo,
-        new_lease: NewLeaseContract,
+        spec: NewLeaseContract,
     ) -> ContractResult<(Batch, Self)> {
         let lpp = LppLenderRef::try_new(
-            new_lease.form.loan.lpp.clone(),
+            spec.form.loan.lpp.clone(),
             &deps.querier,
             ReplyId::OpenLoanReq.into(),
         )?;
 
-        let oracle = OracleRef::try_from(new_lease.form.market_price_oracle.clone(), &deps.querier)
+        let oracle = OracleRef::try_from(spec.form.market_price_oracle.clone(), &deps.querier)
             .expect("Market Price Oracle is not deployed, or wrong address is passed!");
+
+        let timealarms = TimeAlarmsRef::new(spec.form.time_alarms.clone(), &deps.querier)?;
 
         let OpenLoanReqResult { batch, downpayment } = lpp.clone().execute(
             OpenLoanReq::new(
-                &new_lease.form.liability,
+                &spec.form.liability,
                 info.funds,
-                new_lease.form.max_ltv,
+                spec.form.max_ltv,
                 oracle.clone(),
                 &deps.querier,
             ),
@@ -55,9 +62,9 @@ impl RequestLoan {
         Ok((
             batch,
             RequestLoan {
-                new_lease,
+                new_lease: spec,
                 downpayment,
-                deps: (lpp, oracle),
+                deps: (lpp, oracle, timealarms),
             },
         ))
     }
@@ -82,10 +89,9 @@ impl RequestLoan {
                     loan,
                     self.deps,
                 ));
-
-                Ok(Response::from(
+                Ok(StateMachineResponse::from(
                     open_ica.enter().into_response(emitter),
-                    open_ica,
+                    LeaseDexState::new(open_ica),
                 ))
             }
         }
@@ -96,7 +102,7 @@ impl RequestLoan {
     }
 }
 
-impl Controller for RequestLoan {
+impl Handler for RequestLoan {
     fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
         self.on_response(deps.as_ref(), env, msg)
     }

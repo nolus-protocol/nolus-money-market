@@ -2,6 +2,7 @@ use std::any::type_name;
 
 use thiserror::Error;
 
+use dex::Error as DexError;
 use finance::error::Error as FinanceError;
 use lpp::error::ContractError as LppError;
 use oracle::error::ContractError as OracleError;
@@ -41,6 +42,9 @@ pub enum ContractError {
 
     #[error("[Lease] {0}")]
     SwapError(#[from] SwapError),
+
+    #[error("[Lease] {0}")]
+    DexError(#[from] DexError),
 
     #[error("[Lease] No payment sent")]
     NoPaymentError(),

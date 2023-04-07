@@ -2,7 +2,7 @@ use finance::{coin::CoinDTO, currency::Group};
 
 use super::swap_task::{CoinVisitor, IterNext, IterState};
 
-pub(crate) fn on_coin<G, Visitor>(
+pub fn on_coin<G, Visitor>(
     coin: &CoinDTO<G>,
     visitor: &mut Visitor,
 ) -> Result<IterState, Visitor::Error>
@@ -13,7 +13,7 @@ where
     visitor.visit(coin).map(|_iter_next| IterState::Complete)
 }
 
-pub(crate) fn on_coins<G1, G2, Visitor>(
+pub fn on_coins<G1, G2, Visitor>(
     coin1: &CoinDTO<G1>,
     coin2: &CoinDTO<G2>,
     visitor: &mut Visitor,
@@ -40,7 +40,7 @@ mod test {
         test::currency::{Dai, TestCurrencies, TestExtraCurrencies, Usdc},
     };
 
-    use crate::contract::state::opening::{
+    use crate::{
         never::{self, Never},
         swap_task::{CoinVisitor, IterNext, IterState},
     };

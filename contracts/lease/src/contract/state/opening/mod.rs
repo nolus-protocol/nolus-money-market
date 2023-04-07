@@ -1,10 +1,3 @@
 pub mod buy_asset;
-mod coin_index;
-mod never;
 pub mod open_ica;
 pub mod request_loan;
-mod swap_coins;
-pub mod swap_exact_in;
-mod swap_state;
-mod swap_task;
-pub mod transfer_out;

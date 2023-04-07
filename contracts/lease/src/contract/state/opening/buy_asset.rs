@@ -1,40 +1,44 @@
+use cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use currency::lease::LeaseGroup;
+use dex::{
+    Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalRemoteState, SwapState,
+    SwapTask, TransferOutState,
+};
 use finance::{coin::CoinDTO, currency::Symbol};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use platform::ica::HostAccount;
-use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
+use platform::{ica::HostAccount, response::StateMachineResponse};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateResponse},
+    api::{self, opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateResponse},
     contract::{
         cmd::OpenLoanRespResult,
-        dex::Account,
-        state::{opened::active::Active, Response},
+        state::{opened::active::Active, SwapResult},
         Lease,
     },
-    error::ContractError,
+    error::ContractResult,
     event::Type,
     lease::IntoDTOResult,
 };
 
-use super::{
-    swap_coins,
-    swap_exact_in::SwapExactIn,
-    swap_state::{ContractInSwap, SwapState, TransferOutState},
-    swap_task::{
-        CoinVisitor, IterNext, IterState, OutChain, SwapTask as SwapTaskT, REMOTE_OUT_CHAIN,
-    },
-    transfer_out::TransferOut,
-};
-
-const OUT_CHAIN: OutChain = REMOTE_OUT_CHAIN;
 type AssetGroup = LeaseGroup;
-pub(crate) type Transfer = TransferOut<AssetGroup, BuyAsset, OUT_CHAIN>;
-pub(crate) type Swap = SwapExactIn<AssetGroup, BuyAsset, OUT_CHAIN>;
+pub(super) type StartState = StartLocalRemoteState<BuyAsset>;
+pub(in crate::contract::state) type DexState = dex::StateRemoteOut<BuyAsset>;
+
+pub(in crate::contract::state::opening) fn start(
+    form: NewLeaseForm,
+    dex_account: Account,
+    downpayment: DownpaymentCoin,
+    loan: OpenLoanRespResult,
+    deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
+) -> StartLocalRemoteState<BuyAsset> {
+    dex::start_local_remote(BuyAsset::new(form, dex_account, downpayment, loan, deps))
+}
+
+type BuyAssetStateResponse = <BuyAsset as SwapTask>::StateResponse;
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct BuyAsset {
@@ -42,16 +46,16 @@ pub(crate) struct BuyAsset {
     dex_account: Account,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppLenderRef, OracleRef),
+    deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
 }
 
 impl BuyAsset {
-    pub(super) fn new(
+    fn new(
         form: NewLeaseForm,
         dex_account: Account,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        deps: (LppLenderRef, OracleRef),
+        deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
     ) -> Self {
         Self {
             form,
@@ -62,16 +66,16 @@ impl BuyAsset {
         }
     }
 
-    fn state<InP>(self, in_progress_fn: InP) -> StateResponse
+    fn state<InP>(self, in_progress_fn: InP) -> BuyAssetStateResponse
     where
         InP: FnOnce(String) -> OngoingTrx,
     {
-        StateResponse::Opening {
+        Ok(StateResponse::Opening {
             downpayment: self.downpayment,
             loan: self.loan.principal,
             loan_interest_rate: self.loan.annual_interest_rate,
             in_progress: in_progress_fn(HostAccount::from(self.dex_account).into()),
-        }
+        })
     }
 
     // fn emit_ok(&self) -> Emitter {
@@ -79,10 +83,11 @@ impl BuyAsset {
     // }
 }
 
-impl SwapTaskT<AssetGroup> for BuyAsset {
-    type Result = Response;
-    type Error = ContractError;
+impl SwapTask for BuyAsset {
+    type OutG = AssetGroup;
     type Label = Type;
+    type StateResponse = ContractResult<api::StateResponse>;
+    type Result = SwapResult;
 
     fn label(&self) -> Self::Label {
         Type::OpeningSwap
@@ -96,8 +101,8 @@ impl SwapTaskT<AssetGroup> for BuyAsset {
         &self.deps.1
     }
 
-    fn time_alarm(&self, querier: &QuerierWrapper<'_>) -> Result<TimeAlarmsRef, Self::Error> {
-        TimeAlarmsRef::new(self.form.time_alarms.clone(), querier).map_err(Into::into)
+    fn time_alarm(&self) -> &TimeAlarmsRef {
+        &self.deps.2
     }
 
     fn out_currency(&self) -> Symbol<'_> {
@@ -108,19 +113,19 @@ impl SwapTaskT<AssetGroup> for BuyAsset {
     where
         Visitor: CoinVisitor<Result = IterNext>,
     {
-        swap_coins::on_coins(&self.downpayment, &self.loan.principal, visitor)
+        dex::on_coins(&self.downpayment, &self.loan.principal, visitor)
     }
 
     fn finish(
         self,
-        amount: CoinDTO<AssetGroup>,
+        amount_out: CoinDTO<Self::OutG>,
+        env: &Env,
         querier: &QuerierWrapper<'_>,
-        env: Env,
-    ) -> Result<Self::Result, Self::Error> {
+    ) -> Self::Result {
         let IntoDTOResult { lease, batch } = self.form.into_lease(
-            env.contract.address.clone(),
+            self.dex_account.owner().clone(),
             env.block.time,
-            &amount,
+            &amount_out,
             querier,
             self.deps,
         )?;
@@ -129,31 +134,24 @@ impl SwapTaskT<AssetGroup> for BuyAsset {
             lease,
             dex: self.dex_account,
         });
-
-        let emitter = active.emit_ok(&env, self.downpayment, self.loan);
-
-        Ok(Response::from(batch.into_response(emitter), active))
+        let emitter = active.emit_ok(env, self.downpayment, self.loan);
+        Ok(StateMachineResponse::from(
+            batch.into_response(emitter),
+            active,
+        ))
     }
 }
 
-impl ContractInSwap<TransferOutState> for BuyAsset {
-    fn state(
-        self,
-        _now: Timestamp,
-        _querier: &QuerierWrapper<'_>,
-    ) -> Result<StateResponse, ContractError> {
+impl ContractInSwap<TransferOutState, BuyAssetStateResponse> for BuyAsset {
+    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> BuyAssetStateResponse {
         let in_progress_fn = |ica_account| OngoingTrx::TransferOut { ica_account };
-        Ok(self.state(in_progress_fn))
+        self.state(in_progress_fn)
     }
 }
 
-impl ContractInSwap<SwapState> for BuyAsset {
-    fn state(
-        self,
-        _now: Timestamp,
-        _querier: &QuerierWrapper<'_>,
-    ) -> Result<StateResponse, ContractError> {
+impl ContractInSwap<SwapState, BuyAssetStateResponse> for BuyAsset {
+    fn state(self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> BuyAssetStateResponse {
         let in_progress_fn = |ica_account| OngoingTrx::BuyAsset { ica_account };
-        Ok(self.state(in_progress_fn))
+        self.state(in_progress_fn)
     }
 }

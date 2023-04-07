@@ -27,6 +27,7 @@ profit = { workspace = true, features = ["stub"] }
 timealarms = { workspace = true, features = ["stub"] }
 
 currency = { workspace = true }
+dex = { workspace = true }
 finance = { workspace = true }
 marketprice = { workspace = true }
 platform = { workspace = true }
@@ -37,7 +38,7 @@ versioning = { workspace = true }
 # Required as a dependency by `entry_point` attribute macro
 cosmwasm-std = { workspace = true }
 
-enum_dispatch = "0.3.8"
+enum_dispatch = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 

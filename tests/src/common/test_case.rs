@@ -4,7 +4,7 @@ use finance::{
     currency::{Currency, Symbol},
     percent::Percent,
 };
-use lease::api::dex::{ConnectionParams, Ics20Channel};
+use lease::api::{ConnectionParams, Ics20Channel};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Uint64},
     cw_multi_test::{next_block, Executor},

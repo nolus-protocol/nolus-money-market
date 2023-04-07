@@ -3,25 +3,19 @@ use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
-use crate::{
-    api::{dex::ConnectionParams, StateResponse},
-    error::ContractResult,
-    lease::LeaseDTO,
-};
+use crate::{api::StateResponse, error::ContractResult, lease::LeaseDTO};
+use dex::{Account, ConnectionParams, DexConnectable};
 
-pub use self::state::{execute, instantiate, migrate, query, reply, sudo};
-use self::{
-    dex::{Account, DexConnectable},
-    state::State,
-};
+pub use self::endpoins::{execute, instantiate, migrate, query, reply, sudo};
+use self::state::State;
 
 mod cmd;
-mod dex;
+mod endpoins;
 pub mod msg;
 mod state;
 
 #[enum_dispatch]
-trait Contract {
+pub(crate) trait Contract {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse>;
 }
 

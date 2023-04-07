@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
-use lease::api::{dex::ConnectionParams, DownpaymentCoin, InterestPaymentSpec, LeaseCoin};
+use lease::api::{ConnectionParams, DownpaymentCoin, InterestPaymentSpec, LeaseCoin};
 use lpp::msg::LpnCoin;
 use sdk::{
     cosmwasm_std::{Addr, Uint64},
