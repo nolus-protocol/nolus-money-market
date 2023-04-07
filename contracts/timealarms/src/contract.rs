@@ -35,7 +35,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _>(
         deps.storage,
         version!(CONTRACT_STORAGE_VERSION),
-        |storage: &mut _| migrate_v1::migrate(storage),
+        |storage: &mut _| migrate_v1::migrate(storage, &TimeAlarms::new()),
     )?;
 
     response::response(versioning::release())

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{Addr, Order, Storage, Timestamp},
+    cosmwasm_std::{Addr, Storage, Timestamp},
     cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex},
 };
 
@@ -57,29 +57,29 @@ impl<'a> AlarmsOld<'a> {
     pub fn migrate(
         &self,
         storage: &mut dyn Storage,
-        new_namespace: &str,
-        new_index: &str,
+        alarms_new: &Alarms,
     ) -> Result<(), AlarmError> {
+        // const BATCH_SIZE: u32 = 100;
+        const PROFIT_ALARM_KEY: u64 = 0;
+        const REWARDS_ALARM_KEY: u64 = 1;
+
         let old_alarms = self.alarms();
+        migrate_alarm(storage, &old_alarms, alarms_new, PROFIT_ALARM_KEY)?;
+        migrate_alarm(storage, &old_alarms, alarms_new, REWARDS_ALARM_KEY)?;
 
-        let alarms_new = Alarms::new(new_namespace, new_index);
+        // loop {
+        //     let keys: Vec<_> = old_alarms
+        //         .keys(storage, None, None, Order::Ascending)
+        //         .take(BATCH_SIZE.try_into().unwrap())
+        //         .map(Result::unwrap)
+        //         .collect();
+        //     if keys.is_empty() {
+        //         break;
+        //     }
 
-        loop {
-            let Some(result) = old_alarms.idx.alarms.range(
-                storage,
-                None,
-                None,
-                Order::Ascending
-            ).next() else {
-                break;
-            };
-
-            let (id, alarm) = result?;
-
-            old_alarms.remove(storage, id)?;
-
-            alarms_new.add(storage, alarm.addr, Timestamp::from_seconds(alarm.time))?;
-        }
+        //     keys.iter()
+        //         .try_for_each(|key| old_alarms.remove(storage, *key))?;
+        // }
 
         self.next_id.remove(storage);
 
@@ -116,9 +116,25 @@ impl<'a> AlarmsOld<'a> {
     }
 }
 
+fn migrate_alarm(
+    storage: &mut dyn Storage,
+    old_alarms: &IndexedMap<u64, AlarmOld, AlarmIndexes>,
+    alarms_new: &Alarms,
+    alarm_key: u64,
+) -> Result<(), AlarmError> {
+    let alarm = old_alarms.may_load(storage, alarm_key);
+    alarm.map_err(Into::into).and_then(|may_alarm| {
+        if let Some(alarm) = may_alarm {
+            alarms_new.add(storage, alarm.addr, Timestamp::from_seconds(alarm.time))
+        } else {
+            Ok(())
+        }
+    })
+}
+
 #[cfg(test)]
 pub mod tests {
-    use sdk::cosmwasm_std::testing;
+    use sdk::cosmwasm_std::{testing, Order};
 
     use super::*;
 
@@ -153,10 +169,8 @@ pub mod tests {
 
         // multiple alarms per address(5) + index(5) + next_id(1)
         assert_eq!(storage.range(None, None, Order::Ascending).count(), 11);
-
-        alarms
-            .migrate(storage, "new_alarms", "new_alarms_idx")
-            .unwrap();
+        let alarms_new = Alarms::new("new_alarms", "new_alarms_idx");
+        alarms.migrate(storage, &alarms_new).unwrap();
 
         // single alarm per address(4) + index(4)
         assert_eq!(storage.range(None, None, Order::Ascending).count(), 8);
