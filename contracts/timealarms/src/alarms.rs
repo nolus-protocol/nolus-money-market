@@ -84,7 +84,7 @@ impl TimeAlarms {
     }
 
     ///TODO remove once the migration is done
-    pub(super) fn alarms(&self) -> &Alarms {
+    pub(super) fn alarms(&self) -> &Alarms<'_> {
         &self.time_alarms
     }
 }

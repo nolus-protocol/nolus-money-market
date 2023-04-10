@@ -57,7 +57,7 @@ impl<'a> AlarmsOld<'a> {
     pub fn migrate(
         &self,
         storage: &mut dyn Storage,
-        alarms_new: &Alarms,
+        alarms_new: &Alarms<'_>,
     ) -> Result<(), AlarmError> {
         // const BATCH_SIZE: u32 = 100;
         const PROFIT_ALARM_KEY: u64 = 0;
@@ -104,8 +104,8 @@ impl<'a> AlarmsOld<'a> {
 
 fn migrate_alarm(
     storage: &mut dyn Storage,
-    old_alarms: &IndexedMap<u64, AlarmOld, AlarmIndexes>,
-    alarms_new: &Alarms,
+    old_alarms: &IndexedMap<'_, u64, AlarmOld, AlarmIndexes<'_>>,
+    alarms_new: &Alarms<'_>,
     alarm_key: u64,
 ) -> Result<(), AlarmError> {
     let alarm = old_alarms.may_load(storage, alarm_key);
