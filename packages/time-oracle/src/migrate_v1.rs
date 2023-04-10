@@ -67,20 +67,6 @@ impl<'a> AlarmsOld<'a> {
         migrate_alarm(storage, &old_alarms, alarms_new, PROFIT_ALARM_KEY)?;
         migrate_alarm(storage, &old_alarms, alarms_new, REWARDS_ALARM_KEY)?;
 
-        // loop {
-        //     let keys: Vec<_> = old_alarms
-        //         .keys(storage, None, None, Order::Ascending)
-        //         .take(BATCH_SIZE.try_into().unwrap())
-        //         .map(Result::unwrap)
-        //         .collect();
-        //     if keys.is_empty() {
-        //         break;
-        //     }
-
-        //     keys.iter()
-        //         .try_for_each(|key| old_alarms.remove(storage, *key))?;
-        // }
-
         self.next_id.remove(storage);
 
         Ok(())
