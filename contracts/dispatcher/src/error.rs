@@ -21,6 +21,9 @@ pub enum ContractError {
     #[error("[Dispatcher] {0}")]
     Finance(#[from] finance::error::Error),
 
+    #[error("[Dispatcher] {0}")]
+    TimeAlarm(#[from] timealarms::error::ContractError),
+
     #[error("[Dispatcher] [Infallible] {0}")]
     FromInfallible(#[from] Infallible),
 

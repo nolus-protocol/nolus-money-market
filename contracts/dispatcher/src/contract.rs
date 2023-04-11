@@ -1,8 +1,7 @@
 use access_control::SingleUserAccess;
-use currency::native::Nls;
+use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use finance::duration::Duration;
 use lpp::stub::LppRef;
-use oracle::stub::OracleRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
     message::Response as MessageResponse,
@@ -14,6 +13,7 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Storage},
 };
+use timealarms::stub::TimeAlarmsRef;
 use versioning::{version, VersionSegment};
 
 use crate::{
@@ -61,17 +61,13 @@ pub fn instantiate(
     .store(deps.storage)?;
     DispatchLog::update(deps.storage, env.block.time)?;
 
-    let mut batch = Batch::default();
-
-    batch.schedule_execute_wasm_no_reply::<_, Nls>(
-        &msg.timealarms,
-        &timealarms::msg::ExecuteMsg::AddAlarm {
-            time: env.block.time + Duration::from_hours(msg.cadence_hours),
-        },
-        None,
-    )?;
-
-    Ok(response::response_only_messages(batch))
+    setup_alarm(
+        msg.timealarms,
+        env.block.time,
+        Duration::from_hours(msg.cadence_hours),
+        &deps.querier,
+    )
+    .map(response::response_only_messages)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -92,8 +88,11 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::TimeAlarm {} => {
+            SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
+                .check_access(&info.sender)?;
+
             let resp = env.contract.address.clone();
-            try_dispatch(deps, env, info).and_then(|messages| {
+            try_dispatch(deps, env, info.sender).and_then(|messages| {
                 response::response_with_messages::<_, _, ContractError>(&resp, messages)
             })
         }
@@ -126,38 +125,47 @@ fn query_reward_scale(storage: &dyn Storage) -> StdResult<RewardScaleResponse> {
     Config::load(storage).map(|Config { tvl_to_apr, .. }| tvl_to_apr)
 }
 
-fn try_dispatch(deps: DepsMut<'_>, env: Env, info: MessageInfo) -> ContractResult<MessageResponse> {
-    let block_time = env.block.time;
-
-    SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
-        .check_access(&info.sender)?;
+fn try_dispatch(deps: DepsMut<'_>, env: Env, timealarm: Addr) -> ContractResult<MessageResponse> {
+    let now = env.block.time;
 
     let config = Config::load(deps.storage)?;
+    let setup_alarm = setup_alarm(
+        timealarm,
+        now,
+        Duration::from_hours(config.cadence_hours),
+        &deps.querier,
+    )?;
 
     let last_dispatch = DispatchLog::last_dispatch(deps.storage)?;
-    let oracle = OracleRef::try_from(config.oracle.clone(), &deps.querier)?;
 
     let lpp_address = config.lpp.clone();
     let lpp = LppRef::try_new(lpp_address.clone(), &deps.querier)?;
     let result = lpp.execute(
-        Dispatch::new(
-            deps.storage,
-            oracle,
-            last_dispatch,
-            config,
-            block_time,
-            deps.querier,
-        )?,
+        Dispatch::new(last_dispatch, config, now, &deps.querier)?,
         &deps.querier,
     )?;
-    // Store the current time for use for the next calculation.
+
     DispatchLog::update(deps.storage, env.block.time)?;
 
     let emitter = Emitter::of_type("tr-rewards")
         .emit_tx_info(&env)
         .emit_to_string_value("to", lpp_address)
         .emit_coin_dto("rewards", result.receipt.in_nls);
-    Ok(MessageResponse::messages_with_events(result.batch, emitter))
+    Ok(MessageResponse::messages_with_events(
+        result.batch.merge(setup_alarm),
+        emitter,
+    ))
+}
+
+fn setup_alarm(
+    timealarm: Addr,
+    now: Timestamp,
+    alarm_in: Duration,
+    querier: &QuerierWrapper<'_>,
+) -> ContractResult<Batch> {
+    TimeAlarmsRef::new(timealarm, querier)
+        .map_err(Into::into)
+        .and_then(|stub| stub.setup_alarm(now + alarm_in).map_err(Into::into))
 }
 
 #[cfg(test)]

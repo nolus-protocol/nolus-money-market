@@ -18,7 +18,7 @@ contract = []
 [dependencies]
 lpp = { workspace = true, features = ["stub"] }
 oracle = { workspace = true, features = ["stub", "convert"] }
-timealarms = { workspace = true }
+timealarms = { workspace = true, features = ["stub"] }
 treasury = { workspace = true }
 
 access-control = { workspace = true }
