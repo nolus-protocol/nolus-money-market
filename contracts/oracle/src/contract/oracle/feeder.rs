@@ -23,30 +23,20 @@ impl Feeders {
         Self::FEEDERS.is_registered(storage, address)
     }
 
-    pub(crate) fn try_register(
-        deps: DepsMut<'_>,
-        address: String,
-    ) -> ContractResult<()> {
+    pub(crate) fn try_register(deps: DepsMut<'_>, address: String) -> ContractResult<()> {
         // check if address is valid
         let f_address = deps.api.addr_validate(&address)?;
-        Self::FEEDERS
-            .register(deps, f_address)
-            .map_err(Into::into)
+        Self::FEEDERS.register(deps, f_address).map_err(Into::into)
     }
 
-    pub(crate) fn try_remove(
-        deps: DepsMut<'_>,
-        address: String,
-    ) -> ContractResult<()> {
+    pub(crate) fn try_remove(deps: DepsMut<'_>, address: String) -> ContractResult<()> {
         let f_address = deps.api.addr_validate(&address)?;
 
         if !Self::is_feeder(deps.storage, &f_address)? {
             return Err(ContractError::UnknownFeeder {});
         }
 
-        Self::FEEDERS
-            .remove(deps, f_address)
-            .map_err(Into::into)
+        Self::FEEDERS.remove(deps, f_address).map_err(Into::into)
     }
 
     pub(crate) fn total_registered(storage: &dyn Storage) -> StdResult<usize> {
