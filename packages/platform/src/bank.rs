@@ -1,6 +1,10 @@
+use std::{error::Error as StdError, result::Result as StdResult};
+
+use serde::{de::DeserializeOwned, Serialize};
+
 use finance::{
-    coin::{Coin, WithCoin, WithCoinResult},
-    currency::{Currency, Group},
+    coin::{Amount as CoinAmount, Coin, WithCoin, WithCoinResult},
+    currency::{maybe_visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Group},
 };
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
@@ -10,10 +14,73 @@ use crate::{
     error::{Error, Result},
 };
 
+trait ReduceResults
+where
+    Self: Iterator<Item = StdResult<Self::InnerItem, Self::Error>>,
+{
+    type InnerItem;
+    type Error: StdError;
+
+    fn reduce_results<F>(&mut self, f: F) -> StdResult<Option<Self::InnerItem>, Self::Error>
+    where
+        F: FnMut(Self::InnerItem, Self::InnerItem) -> Self::InnerItem;
+}
+
+impl<I, T, E> ReduceResults for I
+where
+    I: Iterator<Item = StdResult<T, E>>,
+    E: StdError,
+{
+    type InnerItem = T;
+    type Error = E;
+
+    fn reduce_results<F>(&mut self, mut f: F) -> StdResult<Option<T>, E>
+    where
+        F: FnMut(T, T) -> T,
+    {
+        Ok(
+            if let Some(mut last) = self.next().transpose().map_err(Into::into)? {
+                for item in self {
+                    last = f(last, item.map_err(Into::into)?);
+                }
+
+                Some(last)
+            } else {
+                None
+            },
+        )
+    }
+}
+
+pub trait Aggregate {
+    fn aggregate(self, other: Self) -> Self
+    where
+        Self: Sized;
+}
+
+impl Aggregate for () {
+    fn aggregate(self, _: Self) -> Self {}
+}
+
+impl Aggregate for Batch {
+    fn aggregate(self, other: Self) -> Self {
+        self.merge(other)
+    }
+}
+
 pub trait BankAccountView {
     fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: Currency;
+
+    fn total_balance<G, Cmd>(&self, cmd: Cmd) -> StdResult<Option<Cmd::Output>, Cmd::Error>
+    where
+        G: Group,
+        Cmd: WithCoin,
+        Cmd::Output: Aggregate,
+        Cmd::Error: StdError,
+        Error: Into<Cmd::Error>,
+        finance::error::Error: Into<Cmd::Error>;
 }
 
 pub trait BankAccount
@@ -66,6 +133,29 @@ where
     may_res
 }
 
+struct CoinVisitor<'r, Cmd> {
+    amount: CoinAmount,
+    cmd: &'r Cmd,
+}
+
+impl<'r, Cmd> AnyVisitor for CoinVisitor<'r, Cmd>
+where
+    Cmd: WithCoin,
+    Cmd::Output: Aggregate,
+    Error: Into<Cmd::Error>,
+    finance::error::Error: Into<Cmd::Error>,
+{
+    type Output = Cmd::Output;
+    type Error = Cmd::Error;
+
+    fn on<C>(self) -> AnyVisitorResult<Self>
+    where
+        C: Currency + Serialize + DeserializeOwned,
+    {
+        self.cmd.on(Coin::<C>::new(self.amount))
+    }
+}
+
 pub struct BankView<'a> {
     account: &'a Addr,
     querier: &'a QuerierWrapper<'a>,
@@ -84,6 +174,33 @@ impl<'a> BankAccountView for BankView<'a> {
     {
         let coin = self.querier.query_balance(self.account, C::BANK_SYMBOL)?;
         from_cosmwasm_impl(coin)
+    }
+
+    fn total_balance<G, Cmd>(&self, cmd: Cmd) -> StdResult<Option<Cmd::Output>, Cmd::Error>
+    where
+        G: Group,
+        Cmd: WithCoin,
+        Cmd::Output: Aggregate,
+        Cmd::Error: StdError,
+        Error: Into<Cmd::Error>,
+        finance::error::Error: Into<Cmd::Error>,
+    {
+        self.querier
+            .query_all_balances(self.account)
+            .map_err(Into::<Error>::into)
+            .map_err(Into::<Cmd::Error>::into)?
+            .into_iter()
+            .map(|dto| {
+                maybe_visit_any_on_ticker::<G, _>(
+                    &dto.denom,
+                    CoinVisitor {
+                        amount: dto.amount.into(),
+                        cmd: &cmd,
+                    },
+                )
+            })
+            .filter_map(StdResult::transpose)
+            .reduce_results(Aggregate::aggregate)
     }
 }
 
@@ -127,6 +244,21 @@ where
         C: Currency,
     {
         self.view.balance()
+    }
+
+    fn total_balance<G, Cmd>(
+        &self,
+        cmd: Cmd,
+    ) -> std::result::Result<Option<Cmd::Output>, Cmd::Error>
+    where
+        G: Group,
+        Cmd: WithCoin,
+        Cmd::Output: Aggregate,
+        Cmd::Error: StdError,
+        Error: Into<Cmd::Error>,
+        finance::error::Error: Into<Cmd::Error>,
+    {
+        self.view.total_balance::<G, Cmd>(cmd)
     }
 }
 
@@ -239,6 +371,7 @@ mod test {
     use crate::coin_legacy;
 
     use super::may_received;
+
     type TheCurrency = Usdc;
     type ExtraCurrency = Dai;
     const AMOUNT: Amount = 42;

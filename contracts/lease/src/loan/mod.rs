@@ -394,12 +394,15 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::error::Error as StdError;
+
     use serde::{Deserialize, Serialize};
 
     use finance::{
-        coin::{Amount, Coin},
-        currency::Currency,
+        coin::{Amount, Coin, WithCoin},
+        currency::{Currency, Group},
         duration::Duration,
+        error::Error as FinanceError,
         fraction::Fraction,
         interest::InterestPeriod,
         percent::Percent,
@@ -414,7 +417,10 @@ mod tests {
             LppBatch,
         },
     };
-    use platform::{bank::BankAccountView, error::Result as PlatformResult};
+    use platform::{
+        bank::{Aggregate, BankAccountView},
+        error::{Error as PlatformError, Result as PlatformResult},
+    };
     use profit::stub::{Profit, ProfitBatch};
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -423,7 +429,8 @@ mod tests {
         loan::{repay::Receipt as RepayReceipt, Loan},
     };
 
-    const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(500); // 50%
+    // 50%
+    const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(500);
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
 
     type TestCurrency = Usdc;
@@ -440,6 +447,18 @@ mod tests {
             C: Currency,
         {
             Ok(Coin::<C>::new(self.balance))
+        }
+
+        fn total_balance<G, Cmd>(&self, _: Cmd) -> Result<Option<Cmd::Output>, Cmd::Error>
+        where
+            G: Group,
+            Cmd: WithCoin,
+            Cmd::Output: Aggregate,
+            Cmd::Error: StdError,
+            PlatformError: Into<Cmd::Error>,
+            FinanceError: Into<Cmd::Error>,
+        {
+            unimplemented!()
         }
     }
 

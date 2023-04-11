@@ -213,13 +213,16 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::error::Error as StdError;
+
     use ::currency::{lease::Atom, lpn::Usdc};
     use serde::{Deserialize, Serialize};
 
     use finance::{
-        coin::Coin,
-        currency::{self, Currency},
+        coin::{Coin, WithCoin},
+        currency::{self, Currency, Group},
         duration::Duration,
+        error::Error as FinanceError,
         liability::Liability,
         percent::Percent,
         price::Price,
@@ -239,9 +242,9 @@ mod tests {
         stub::{Oracle, OracleBatch, OracleRef},
     };
     use platform::{
-        bank::{BankAccountView, BankStub},
+        bank::{Aggregate, BankAccountView, BankStub},
         batch::Batch,
-        error::Result as PlatformResult,
+        error::{Error as PlatformError, Result as PlatformResult},
     };
     use profit::stub::{Profit, ProfitBatch, ProfitRef};
     use sdk::cosmwasm_std::{wasm_execute, Addr, BankMsg, Timestamp};
@@ -304,6 +307,18 @@ mod tests {
             } else {
                 unreachable!("Expected {}, found {}", TestCurrency::TICKER, C::TICKER);
             }
+        }
+
+        fn total_balance<G, Cmd>(&self, _: Cmd) -> Result<Option<Cmd::Output>, Cmd::Error>
+        where
+            G: Group,
+            Cmd: WithCoin,
+            Cmd::Output: Aggregate,
+            Cmd::Error: StdError,
+            PlatformError: Into<Cmd::Error>,
+            FinanceError: Into<Cmd::Error>,
+        {
+            unimplemented!()
         }
     }
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

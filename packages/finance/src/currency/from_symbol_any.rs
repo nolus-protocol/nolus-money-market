@@ -25,6 +25,22 @@ pub trait AnyVisitorPair {
         C2: Currency + Serialize + DeserializeOwned;
 }
 
+pub fn maybe_visit_any_on_ticker<G, V>(
+    ticker: Symbol<'_>,
+    visitor: V,
+) -> Result<Option<V::Output>, V::Error>
+where
+    G: Group,
+    V: AnyVisitor,
+    Error: Into<V::Error>,
+{
+    if let Ok(result) = G::maybe_visit_on_ticker(ticker, visitor) {
+        result.map(Some)
+    } else {
+        Ok(None)
+    }
+}
+
 pub fn visit_any_on_ticker<G, V>(ticker: Symbol<'_>, visitor: V) -> Result<V::Output, V::Error>
 where
     G: Group,

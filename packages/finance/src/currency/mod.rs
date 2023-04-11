@@ -8,7 +8,8 @@ pub use self::{
         SingleVisitor,
     },
     from_symbol_any::{
-        visit_any_on_ticker, visit_any_on_tickers, AnyVisitor, AnyVisitorPair, AnyVisitorResult,
+        maybe_visit_any_on_ticker, visit_any_on_ticker, visit_any_on_tickers, AnyVisitor,
+        AnyVisitorPair, AnyVisitorResult,
     },
     group::{Group, MaybeAnyVisitResult},
 };
