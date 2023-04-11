@@ -73,8 +73,8 @@ impl<SwapTask> Enterable for TransferInInit<SwapTask>
 where
     SwapTask: SwapTaskT,
 {
-    fn enter(&self, _deps: Deps<'_>, env: Env) -> Result<Batch> {
-        self.enter_state(env.block.time)
+    fn enter(&self, now: Timestamp, _querier: &QuerierWrapper<'_>) -> Result<Batch> {
+        self.enter_state(now)
     }
 }
 

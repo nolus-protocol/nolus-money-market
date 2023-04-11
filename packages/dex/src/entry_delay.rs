@@ -26,10 +26,10 @@ impl<Enterable> EntryDelay<Enterable> {
 }
 
 impl<Enterable> EnterableT for EntryDelay<Enterable> {
-    fn enter(&self, _deps: Deps<'_>, env: Env) -> DexResult<Batch> {
+    fn enter(&self, now: Timestamp, _querier: &QuerierWrapper<'_>) -> DexResult<Batch> {
         self.time_alarms
             .clone()
-            .setup_alarm(env.block.time + Self::RIGHT_AFTER_NOW)
+            .setup_alarm(now + Self::RIGHT_AFTER_NOW)
             .map_err(Into::into)
     }
 }
@@ -43,7 +43,7 @@ where
 
     fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> Result<Self> {
         self.enterable
-            .enter(deps, env)
+            .enter(env.block.time, &deps.querier)
             .map(|batch| Response::<Self>::from(batch, self.enterable))
             .into()
     }

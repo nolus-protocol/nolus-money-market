@@ -88,7 +88,7 @@ impl Active {
         } else {
             let start_buy_lpn = buy_lpn::start(self.lease, payment);
             start_buy_lpn
-                .enter(deps, env)
+                .enter(env.block.time, &deps.querier)
                 .map(|batch| Response::from(batch, DexState::from(start_buy_lpn)))
                 .map_err(Into::into)
         }

@@ -41,7 +41,7 @@ impl Handler for Active {
                 let amount_in = self.lease.lease.amount.clone();
                 let start_transfer_in = transfer_in::start(self.lease, amount_in);
                 start_transfer_in
-                    .enter(deps.as_ref(), env)
+                    .enter(env.block.time, &deps.querier)
                     .map(|batch| Response::from(batch, DexState::from(start_transfer_in)))
                     .map_err(Into::into)
             }

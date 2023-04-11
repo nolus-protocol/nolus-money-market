@@ -114,8 +114,8 @@ impl<SwapTask, SEnum> Enterable for SwapExactIn<SwapTask, SEnum>
 where
     SwapTask: SwapTaskT,
 {
-    fn enter(&self, deps: Deps<'_>, env: Env) -> Result<Batch> {
-        self.enter_state(env.block.time, &deps.querier)
+    fn enter(&self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Result<Batch> {
+        self.enter_state(now, querier)
     }
 }
 
@@ -141,7 +141,7 @@ where
             .map(|amount_out| TransferInInit::new(self.spec, amount_out))
             .and_then(|next_state| {
                 next_state
-                    .enter(deps, env)
+                    .enter(env.block.time, &deps.querier)
                     .and_then(|resp| response::res_continue::<_, _, Self>(resp, next_state))
             })
             .into()

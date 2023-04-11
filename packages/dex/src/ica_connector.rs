@@ -18,7 +18,7 @@ use crate::{
 };
 
 pub trait Enterable {
-    fn enter(&self, deps: Deps<'_>, _env: Env) -> Result<Batch>;
+    fn enter(&self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Result<Batch>;
 }
 
 pub const ICS27_MESSAGE_ENTERING_NEXT_STATE: bool = true;
@@ -82,7 +82,7 @@ impl<Connectee, SwapResult> Enterable for IcaConnector<Connectee, SwapResult>
 where
     Connectee: IcaConnectee + DexConnectable,
 {
-    fn enter(&self, _deps: Deps<'_>, _env: Env) -> Result<Batch> {
+    fn enter(&self, _now: Timestamp, _querier: &QuerierWrapper<'_>) -> Result<Batch> {
         Ok(self.enter())
     }
 }
@@ -105,7 +105,7 @@ where
         let contract = env.contract.address.clone();
         let next_state = self.connectee.connected(ica);
         next_state
-            .enter(deps, env)
+            .enter(env.block.time, &deps.querier)
             .map(|batch| {
                 message::Response::messages_with_events(batch, Self::emit_ok(contract, dex_account))
             })

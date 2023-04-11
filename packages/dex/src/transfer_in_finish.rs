@@ -68,7 +68,7 @@ where
         if now >= self.timeout {
             let next_state = TransferInInit::new(self.spec, self.amount_in);
             next_state
-                .enter(deps, env)
+                .enter(now, &deps.querier)
                 .map(|batch| MessageResponse::messages_with_events(batch, emitter))
                 .and_then(|resp| response::res_continue::<_, _, Self>(resp, next_state))
                 .into()

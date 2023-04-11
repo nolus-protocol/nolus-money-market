@@ -108,14 +108,14 @@ where
     fn on_response<NextState, Label>(
         next: NextState,
         label: Label,
-        deps: Deps<'_>,
-        env: Env,
+        now: Timestamp,
+        querier: &QuerierWrapper<'_>,
     ) -> ContinueResult<Self>
     where
         NextState: Enterable + Into<SEnum>,
         Label: Into<String>,
     {
-        next.enter(deps, env).and_then(|batch| {
+        next.enter(now, querier).and_then(|batch| {
             let emitter = Emitter::of_type(label);
             response::res_continue::<_, _, Self>(
                 MessageResponse::messages_with_events(batch, emitter),
@@ -131,8 +131,8 @@ where
     Self: Into<SEnum>,
     SwapExactIn<SwapTask, SEnum>: Into<SEnum>,
 {
-    fn enter(&self, deps: Deps<'_>, env: Env) -> Result<Batch> {
-        self.enter_state(env.block.time, &deps.querier)
+    fn enter(&self, now: Timestamp, querier: &QuerierWrapper<'_>) -> Result<Batch> {
+        self.enter_state(now, querier)
     }
 }
 
@@ -147,10 +147,11 @@ where
 
     fn on_response(self, _resp: Binary, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
         let label = self.spec.label();
+        let now = env.block.time;
         if self.last_coin() {
-            Self::on_response(SwapExactIn::new(self.spec), label, deps, env)
+            Self::on_response(SwapExactIn::new(self.spec), label, now, &deps.querier)
         } else {
-            Self::on_response(self.next(), label, deps, env)
+            Self::on_response(self.next(), label, now, &deps.querier)
         }
         .into()
     }
