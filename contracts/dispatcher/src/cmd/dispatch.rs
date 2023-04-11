@@ -10,48 +10,13 @@ use crate::{
     cmd::Result as DispatcherResult, result::ContractResult, state::Config, ContractError,
 };
 
-use super::Dispatch;
-
-impl<'a> WithLpp for Dispatch<'a> {
-    type Output = DispatcherResult;
-    type Error = ContractError;
-
-    fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
-    where
-        Lpp: LppTrait<Lpn>,
-        Lpn: Currency,
-    {
-        // get LPP balance: TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
-        let resp = lpp.lpp_balance()?;
-        let tvl: Coin<Lpn> = resp.balance + resp.total_principal_due + resp.total_interest_due;
-
-        // get annual percentage of return from configuration
-        let apr_permille = self.config.tvl_to_apr.get_apr(tvl.into());
-
-        // Calculate the reward in LPN,
-        // which matches TVLdenom, since the last calculation
-        let reward_in_lppdenom = InterestPeriod::with_interest(apr_permille)
-            .from(self.last_dispatch)
-            .spanning(Duration::between(self.last_dispatch, self.block_time))
-            .interest(tvl);
-
-        if reward_in_lppdenom.is_zero() {
-            return Err(ContractError::ZeroReward {});
-        }
-
-        convert::from_base(self.oracle_ref.clone(), reward_in_lppdenom, &self.querier)
-            .map_err(Into::into)
-            .and_then(|reward_unls| {
-                self.create_batch(reward_unls)
-                    .map(|batch| DispatcherResult {
-                        batch,
-                        receipt: super::Receipt {
-                            in_stable: reward_in_lppdenom.into(),
-                            in_nls: reward_unls.into(),
-                        },
-                    })
-            })
-    }
+pub struct Dispatch<'a> {
+    storage: &'a dyn Storage,
+    last_dispatch: Timestamp,
+    oracle_ref: OracleRef,
+    config: Config,
+    block_time: Timestamp,
+    querier: QuerierWrapper<'a>,
 }
 
 impl<'a> Dispatch<'a> {
@@ -104,5 +69,47 @@ impl<'a> Dispatch<'a> {
             .map_err(ContractError::from)?;
 
         Ok(batch)
+    }
+}
+
+impl<'a> WithLpp for Dispatch<'a> {
+    type Output = DispatcherResult;
+    type Error = ContractError;
+
+    fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
+    where
+        Lpp: LppTrait<Lpn>,
+        Lpn: Currency,
+    {
+        // get LPP balance: TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
+        let resp = lpp.lpp_balance()?;
+        let tvl: Coin<Lpn> = resp.balance + resp.total_principal_due + resp.total_interest_due;
+
+        // get annual percentage of return from configuration
+        let apr_permille = self.config.tvl_to_apr.get_apr(tvl.into());
+
+        // Calculate the reward in LPN,
+        // which matches TVLdenom, since the last calculation
+        let reward_in_lppdenom = InterestPeriod::with_interest(apr_permille)
+            .from(self.last_dispatch)
+            .spanning(Duration::between(self.last_dispatch, self.block_time))
+            .interest(tvl);
+
+        if reward_in_lppdenom.is_zero() {
+            return Err(ContractError::ZeroReward {});
+        }
+
+        convert::from_base(self.oracle_ref.clone(), reward_in_lppdenom, &self.querier)
+            .map_err(Into::into)
+            .and_then(|reward_unls| {
+                self.create_batch(reward_unls)
+                    .map(|batch| DispatcherResult {
+                        batch,
+                        receipt: super::Receipt {
+                            in_stable: reward_in_lppdenom.into(),
+                            in_nls: reward_unls.into(),
+                        },
+                    })
+            })
     }
 }

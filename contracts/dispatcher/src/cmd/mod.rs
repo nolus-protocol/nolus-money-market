@@ -1,21 +1,10 @@
 use currency::{lpn::Lpns, native::Native};
 use finance::coin::CoinDTO;
-use oracle::stub::OracleRef;
 use platform::batch::Batch;
-use sdk::cosmwasm_std::{QuerierWrapper, Storage, Timestamp};
-
-use crate::state::Config;
 
 mod dispatch;
 
-pub struct Dispatch<'a> {
-    storage: &'a dyn Storage,
-    last_dispatch: Timestamp,
-    oracle_ref: OracleRef,
-    config: Config,
-    block_time: Timestamp,
-    querier: QuerierWrapper<'a>,
-}
+pub use dispatch::Dispatch;
 
 pub struct Result {
     pub batch: Batch,
