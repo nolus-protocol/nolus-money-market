@@ -3,13 +3,10 @@ use serde::de::DeserializeOwned;
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
 use marketprice::SpotPrice;
-use platform::contract;
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, DepsMut, Env, Storage, Timestamp},
-};
+use platform::{contract, message::Response as MessageResponse};
+use sdk::cosmwasm_std::{Addr, DepsMut, Env, Storage, Timestamp};
 
-use crate::{error::ContractError, msg::ExecuteMsg, state::config::Config};
+use crate::{error::ContractError, msg::ExecuteMsg, result::ContractResult, state::config::Config};
 
 use super::{
     alarms::MarketAlarms,
@@ -29,7 +26,7 @@ impl<'a> ExecWithOracleBase<'a> {
         env: Env,
         msg: ExecuteMsg,
         sender: Addr,
-    ) -> Result<Response, ContractError> {
+    ) -> ContractResult<MessageResponse> {
         let visitor = Self {
             deps,
             env,
@@ -43,7 +40,7 @@ impl<'a> ExecWithOracleBase<'a> {
 }
 
 impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
-    type Output = Response;
+    type Output = MessageResponse;
     type Error = ContractError;
 
     fn on<OracleBase>(self) -> AnyVisitorResult<Self>
@@ -73,13 +70,11 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                     self.deps.storage,
                     self.sender,
                     alarm,
-                )?;
-                Ok(Response::default())
+                )
+                .map(|()| Default::default())
             }
             ExecuteMsg::RemovePriceAlarm {} => {
-                MarketAlarms::remove(self.deps.storage, self.sender)?;
-
-                Ok(Response::default())
+                MarketAlarms::remove(self.deps.storage, self.sender).map(|()| Default::default())
             }
         }
     }
@@ -90,16 +85,14 @@ fn try_feed_prices<OracleBase>(
     block_time: Timestamp,
     sender: Addr,
     prices: Vec<SpotPrice>,
-) -> Result<Response, ContractError>
+) -> ContractResult<MessageResponse>
 where
     OracleBase: Currency + DeserializeOwned,
 {
     let config = Config::load(storage)?;
     let oracle = Feeds::<OracleBase>::with(config.price_config);
 
-    if !prices.is_empty() {
-        oracle.feed_prices(storage, block_time, &sender, &prices)?;
-    }
-
-    Ok(Response::default())
+    oracle
+        .feed_prices(storage, block_time, &sender, &prices)
+        .map(|()| Default::default())
 }

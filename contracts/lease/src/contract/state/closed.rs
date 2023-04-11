@@ -45,14 +45,14 @@ impl Handler for Closed {
     fn execute(
         self,
         deps: &mut DepsMut<'_>,
-        env: Env,
+        _env: Env,
         _info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         match msg {
             ExecuteMsg::Repay() => handler::err("repay", deps.api),
             ExecuteMsg::Close() => handler::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => super::ignore_msg(&env, self),
+            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => super::ignore_msg(self),
         }
     }
 }

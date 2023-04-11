@@ -11,7 +11,11 @@ use sdk::{
     cw_storage_plus::{Item, Map},
 };
 
-use crate::{error::ContractError, lpp::NTokenPrice, nlpn::NLpn};
+use crate::{
+    error::{ContractError, Result},
+    lpp::NTokenPrice,
+    nlpn::NLpn,
+};
 
 #[derive(Debug)]
 pub struct Deposit {
@@ -60,7 +64,7 @@ impl Deposit {
         storage: &mut dyn Storage,
         amount_lpn: Coin<LPN>,
         price: NTokenPrice<LPN>,
-    ) -> Result<Coin<NLpn>, ContractError>
+    ) -> Result<Coin<NLpn>>
     where
         LPN: Currency + Serialize + DeserializeOwned,
     {
@@ -91,7 +95,7 @@ impl Deposit {
         &mut self,
         storage: &mut dyn Storage,
         amount_nlpn: Coin<NLpn>,
-    ) -> Result<Option<Coin<Nls>>, ContractError> {
+    ) -> Result<Option<Coin<Nls>>> {
         if self.data.deposited_nlpn < amount_nlpn {
             return Err(ContractError::InsufficientBalance);
         }
@@ -115,7 +119,7 @@ impl Deposit {
         Ok(maybe_reward)
     }
 
-    pub fn distribute_rewards(deps: DepsMut<'_>, rewards: Coin<Nls>) -> Result<(), ContractError> {
+    pub fn distribute_rewards(deps: DepsMut<'_>, rewards: Coin<Nls>) -> Result<()> {
         let mut globals = Self::GLOBALS.may_load(deps.storage)?.unwrap_or_default();
 
         if globals.balance_nlpn.is_zero() {

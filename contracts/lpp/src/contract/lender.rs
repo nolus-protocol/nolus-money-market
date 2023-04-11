@@ -4,14 +4,12 @@ use finance::{coin::Coin, currency::Currency};
 use platform::{
     bank::{self, BankAccount},
     batch::Batch,
+    message::Response as MessageResponse,
 };
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage, Uint128},
-};
+use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage, Uint128};
 
 use crate::{
-    error::ContractError,
+    error::{ContractError, Result},
     event,
     lpp::LiquidityPool,
     msg::{BalanceResponse, PriceResponse},
@@ -22,7 +20,7 @@ pub(super) fn try_deposit<LPN>(
     deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
-) -> Result<Response, ContractError>
+) -> Result<MessageResponse>
 where
     LPN: 'static + Currency + DeserializeOwned + Serialize,
 {
@@ -39,7 +37,7 @@ where
         price,
     )?;
 
-    Ok(Batch::default().into_response(event::emit_deposit(env, lender_addr, amount, receipts)))
+    Ok(event::emit_deposit(env, lender_addr, amount, receipts).into())
 }
 
 pub(super) fn try_withdraw<LPN>(
@@ -47,7 +45,7 @@ pub(super) fn try_withdraw<LPN>(
     env: Env,
     info: MessageInfo,
     amount_nlpn: Uint128,
-) -> Result<Response, ContractError>
+) -> Result<MessageResponse>
 where
     LPN: 'static + Currency + DeserializeOwned + Serialize,
 {
@@ -75,20 +73,19 @@ where
     }
 
     let batch: Batch = bank.into();
-
-    Ok(batch.into_response(event::emit_withdraw(
-        env,
-        lender_addr,
-        payment_lpn,
-        amount_nlpn,
-        maybe_reward.is_some(),
-    )))
+    Ok(MessageResponse::messages_with_events(
+        batch,
+        event::emit_withdraw(
+            env,
+            lender_addr,
+            payment_lpn,
+            amount_nlpn,
+            maybe_reward.is_some(),
+        ),
+    ))
 }
 
-pub fn query_ntoken_price<LPN>(
-    deps: Deps<'_>,
-    env: Env,
-) -> Result<PriceResponse<LPN>, ContractError>
+pub fn query_ntoken_price<LPN>(deps: Deps<'_>, env: Env) -> Result<PriceResponse<LPN>>
 where
     LPN: Currency + DeserializeOwned + Serialize,
 {
@@ -98,7 +95,7 @@ where
     Ok(price)
 }
 
-pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceResponse, ContractError> {
+pub fn query_balance(storage: &dyn Storage, addr: Addr) -> Result<BalanceResponse> {
     let balance: u128 = Deposit::query_balance_nlpn(storage, addr)?
         .unwrap_or_default()
         .into();

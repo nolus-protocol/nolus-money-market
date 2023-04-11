@@ -187,7 +187,6 @@ where
 
             |_| ContractError::UnknownCurrency { symbol }
         })?
-        .map_err(Into::into)
     }
 }
 

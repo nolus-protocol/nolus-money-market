@@ -94,6 +94,7 @@ where
     }
 }
 
+#[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
 pub struct Emitter {
     event: Event,
 }

@@ -45,7 +45,7 @@ impl Handler for Active {
                     .map(|batch| Response::from(batch, DexState::from(start_transfer_in)))
                     .map_err(Into::into)
             }
-            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => super::ignore_msg(&env, self),
+            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => super::ignore_msg(self),
         }
     }
 }

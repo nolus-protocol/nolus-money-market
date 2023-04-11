@@ -1,5 +1,6 @@
 use crate::contract::alarms::{MarketAlarms, PriceResult};
 use crate::contract::oracle::feed::Feeds;
+use crate::result::ContractResult;
 use crate::state::config::Config;
 use crate::{
     msg::{AlarmsStatusResponse, ExecuteAlarmMsg},
@@ -9,11 +10,8 @@ use crate::{
 use ::currency::native::Nls;
 use finance::currency::{Currency, SymbolOwned};
 use marketprice::SpotPrice;
-use platform::batch::Batch;
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{Storage, Timestamp},
-};
+use platform::{batch::Batch, message::Response as MessageResponse};
+use sdk::cosmwasm_std::{Storage, Timestamp};
 use serde::de::DeserializeOwned;
 
 use self::feeder::Feeders;
@@ -52,28 +50,27 @@ where
         storage: &dyn Storage,
         block_time: Timestamp,
         max_count: u32,
-    ) -> Result<Response, ContractError>
+    ) -> ContractResult<MessageResponse>
     where
         OracleBase: Currency + DeserializeOwned,
     {
         let prices = self.calc_all_prices(storage, block_time)?;
-        let batch =
-            MarketAlarms::notify_alarms_iter::<OracleBase>(storage, prices, max_count.try_into()?)
-                .try_fold(
-                    Batch::default(),
-                    |mut batch, receiver| -> Result<Batch, ContractError> {
-                        // TODO: get rid of the Nls dummy type argument
-                        batch.schedule_execute_wasm_reply_always::<_, Nls>(
-                            &receiver?,
-                            ExecuteAlarmMsg::PriceAlarm(),
-                            None,
-                            batch.len().try_into()?,
-                        )?;
-                        Ok(batch)
-                    },
-                )?;
 
-        Ok(batch.into())
+        MarketAlarms::notify_alarms_iter::<OracleBase>(storage, prices, max_count.try_into()?)
+            .try_fold(
+                Batch::default(),
+                |mut batch, receiver| -> Result<Batch, ContractError> {
+                    // TODO: get rid of the Nls dummy type argument
+                    batch.schedule_execute_wasm_reply_always::<_, Nls>(
+                        &receiver?,
+                        ExecuteAlarmMsg::PriceAlarm(),
+                        None,
+                        batch.len().try_into()?,
+                    )?;
+                    Ok(batch)
+                },
+            )
+            .map(Into::into)
     }
 
     pub(super) fn try_query_alarms(

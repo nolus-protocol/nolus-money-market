@@ -2,11 +2,16 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use finance::{currency::Currency, price::Price};
 use sdk::{
-    cosmwasm_std::{StdResult, Storage, Uint64},
+    cosmwasm_std::{Storage, Uint64},
     cw_storage_plus::Item,
 };
 
-use crate::{borrow::InterestRate, msg::InstantiateMsg, nlpn::NLpn};
+use crate::{
+    borrow::InterestRate,
+    error::{ContractError, Result},
+    msg::InstantiateMsg,
+    nlpn::NLpn,
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct Config {
@@ -39,17 +44,17 @@ impl Config {
         &self.borrow_rate
     }
 
-    pub fn store(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        Self::STORAGE.save(storage, self)
+    pub fn store(&self, storage: &mut dyn Storage) -> Result<()> {
+        Self::STORAGE.save(storage, self).map_err(Into::into)
     }
 
-    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
-        Self::STORAGE.load(storage)
+    pub fn load(storage: &dyn Storage) -> Result<Self> {
+        Self::STORAGE.load(storage).map_err(Into::into)
     }
 
-    pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Uint64) -> StdResult<()> {
+    pub fn update_lease_code(storage: &mut dyn Storage, lease_code: Uint64) -> Result<()> {
         Self::STORAGE
-            .update(storage, |mut config| {
+            .update::<_, ContractError>(storage, |mut config| {
                 config.lease_code_id = lease_code;
 
                 Ok(config)
@@ -57,10 +62,7 @@ impl Config {
             .map(|_| ())
     }
 
-    pub fn update_borrow_rate(
-        storage: &mut dyn Storage,
-        borrow_rate: InterestRate,
-    ) -> StdResult<()> {
+    pub fn update_borrow_rate(storage: &mut dyn Storage, borrow_rate: InterestRate) -> Result<()> {
         Self::STORAGE
             .update(storage, |mut config| {
                 config.borrow_rate = borrow_rate;

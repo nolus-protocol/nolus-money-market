@@ -6,10 +6,8 @@ use lease::api::{ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
 use lpp::{msg::ExecuteMsg, stub::lender::LppLenderRef};
 use oracle::stub::OracleRef;
 use platform::batch::Batch;
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, Deps, StdResult, Storage},
-};
+use platform::message::Response as MessageResponse;
+use sdk::cosmwasm_std::{Addr, Deps, StdResult, Storage};
 
 use crate::{
     cmd::Quote,
@@ -69,10 +67,10 @@ impl<'a> Leaser<'a> {
 pub(super) fn try_setup_dex(
     storage: &mut dyn Storage,
     params: ConnectionParams,
-) -> ContractResult<Response> {
+) -> ContractResult<MessageResponse> {
     Config::setup_dex(storage, params)?;
 
-    Ok(Response::default())
+    Ok(Default::default())
 }
 
 pub(super) fn try_configure(
@@ -80,7 +78,7 @@ pub(super) fn try_configure(
     lease_interest_rate_margin: Percent,
     liability: Liability,
     lease_interest_payment: InterestPaymentSpec,
-) -> ContractResult<Response> {
+) -> ContractResult<MessageResponse> {
     Config::update(
         storage,
         lease_interest_rate_margin,
@@ -88,32 +86,30 @@ pub(super) fn try_configure(
         lease_interest_payment,
     )?;
 
-    Ok(Response::default())
+    Ok(Default::default())
 }
 
 pub(super) fn try_migrate_leases(
     storage: &mut dyn Storage,
     new_code_id: u64,
-) -> ContractResult<Response> {
+) -> ContractResult<MessageResponse> {
     Config::update_lease_code(storage, new_code_id)?;
 
-    let mut batch = migrate::migrate_leases(Leases::iter(storage), new_code_id)?;
-
-    update_lpp(storage, new_code_id, &mut batch)?;
-
-    Ok(batch.into())
+    migrate::migrate_leases(Leases::iter(storage), new_code_id)
+        .and_then(|batch| update_lpp(storage, new_code_id, batch))
 }
 
 pub(super) fn update_lpp(
     storage: &mut dyn Storage,
     new_code_id: u64,
-    batch: &mut Batch,
-) -> ContractResult<()> {
+    mut batch: Batch,
+) -> ContractResult<MessageResponse> {
     let lpp = Config::load(storage)?.lpp_addr;
     let lpp_update_code = ExecuteMsg::NewLeaseCode {
         lease_code_id: new_code_id.into(),
     };
     batch
         .schedule_execute_wasm_no_reply::<_, Nls>(&lpp, lpp_update_code, None)
+        .map(|()| batch.into())
         .map_err(Into::into)
 }

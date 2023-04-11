@@ -1,13 +1,11 @@
-use platform::contract;
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, DepsMut, Env, Storage, Timestamp},
-};
+use platform::{contract, message::Response as MessageResponse};
+use sdk::cosmwasm_std::{Addr, DepsMut, Env, Storage, Timestamp};
 use time_oracle::Alarms;
 
 use crate::{
     dispatcher::{Id, OracleAlarmDispatcher},
     msg::{AlarmsCount, AlarmsStatusResponse},
+    result::ContractResult,
     ContractError,
 };
 
@@ -41,13 +39,18 @@ impl TimeAlarms {
         env: Env,
         address: Addr,
         time: Timestamp,
-    ) -> Result<Response, ContractError> {
+    ) -> ContractResult<MessageResponse> {
         if time < env.block.time {
             return Err(ContractError::InvalidAlarm(time));
         }
-        contract::validate_addr(&deps.querier, &address)?;
-        self.time_alarms.add(deps.storage, address, time)?;
-        Ok(Response::new())
+        contract::validate_addr(&deps.querier, &address)
+            .map_err(ContractError::from)
+            .and_then(|()| {
+                self.time_alarms
+                    .add(deps.storage, address, time)
+                    .map_err(Into::into)
+            })
+            .map(|()| Default::default())
     }
 
     pub(super) fn try_notify(
@@ -55,9 +58,8 @@ impl TimeAlarms {
         storage: &mut dyn Storage,
         ctime: Timestamp,
         max_count: AlarmsCount,
-    ) -> Result<Response, ContractError> {
-        let dispatcher = self
-            .time_alarms
+    ) -> ContractResult<(u32, MessageResponse)> {
+        self.time_alarms
             .alarms_selection(storage, ctime)
             .take(max_count.try_into()?)
             .try_fold(
@@ -65,8 +67,8 @@ impl TimeAlarms {
                 |dispatcher, alarm| -> Result<OracleAlarmDispatcher, ContractError> {
                     dispatcher.send_to(Self::REPLY_ID, alarm?.0)
                 },
-            )?;
-        dispatcher.try_into()
+            )
+            .map(|dispatcher| (dispatcher.nb_sent(), dispatcher.into()))
     }
 
     pub(super) fn try_any_alarm(

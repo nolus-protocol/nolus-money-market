@@ -8,6 +8,8 @@ mod emit;
 pub mod error;
 pub mod ica;
 pub mod ids;
+pub mod message;
 pub mod reply;
 pub mod response;
+pub mod state_machine;
 pub mod trx;

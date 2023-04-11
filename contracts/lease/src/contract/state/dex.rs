@@ -1,6 +1,6 @@
 use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 use dex::{ContinueResult, Contract as DexContract, Handler as DexHandler, Result as DexResult};
-use platform::response;
+use platform::state_machine;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -30,6 +30,7 @@ impl<H> LeaseHandler for State<H>
 where
     H: DexHandler<SwapResult = ContractResult<Response>>,
     H::Response: Into<ContractState>,
+    Self: Into<ContractState>,
 {
     fn execute(
         self,
@@ -42,6 +43,8 @@ where
         // Then use `enum_dispatch` to implement it on the State itself
         if matches!(msg, ExecuteMsg::TimeAlarm {}) {
             DexHandler::on_time_alarm(self, deps.as_ref(), env).into()
+        } else if matches!(msg, ExecuteMsg::PriceAlarm {}) {
+            super::ignore_msg(self)
         } else {
             handler::err("execute", deps.api)
         }
@@ -64,7 +67,7 @@ where
     ) -> ContinueResult<Self> {
         self.handler
             .on_open_ica(counterparty_version, deps, env)
-            .map(response::from)
+            .map(state_machine::from)
     }
 
     fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> DexResult<Self> {
@@ -72,11 +75,11 @@ where
     }
 
     fn on_error(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
-        self.handler.on_error(deps, env).map(response::from)
+        self.handler.on_error(deps, env).map(state_machine::from)
     }
 
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
-        self.handler.on_timeout(deps, env).map(response::from)
+        self.handler.on_timeout(deps, env).map(state_machine::from)
     }
 
     fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> DexResult<Self> {

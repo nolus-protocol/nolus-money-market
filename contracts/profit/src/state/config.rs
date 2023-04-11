@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 use sdk::{
-    cosmwasm_std::{Addr, StdResult, Storage},
+    cosmwasm_std::{Addr, Storage},
     cw_storage_plus::Item,
     schemars::{self, JsonSchema},
 };
 
-use crate::ContractError;
+use crate::{result::ContractResult, ContractError};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct Config {
@@ -24,15 +24,15 @@ impl Config {
         }
     }
 
-    pub fn store(self, storage: &mut dyn Storage) -> StdResult<()> {
-        Self::STORAGE.save(storage, &self)
+    pub fn store(self, storage: &mut dyn Storage) -> ContractResult<()> {
+        Self::STORAGE.save(storage, &self).map_err(Into::into)
     }
 
-    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
-        Self::STORAGE.load(storage)
+    pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
+        Self::STORAGE.load(storage).map_err(Into::into)
     }
 
-    pub fn update(storage: &mut dyn Storage, cadence_hours: u16) -> Result<(), ContractError> {
+    pub fn update(storage: &mut dyn Storage, cadence_hours: u16) -> ContractResult<()> {
         Self::STORAGE.update(storage, |mut c| -> Result<Config, ContractError> {
             c.cadence_hours = cadence_hours;
 

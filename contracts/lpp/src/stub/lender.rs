@@ -14,9 +14,8 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Reply};
 
 use crate::{
-    error::ContractError,
+    error::{ContractError, Result},
     msg::{ExecuteMsg, LoanResponse, QueryLoanResponse, QueryMsg, QueryQuoteResponse},
-    result::ContractResult,
     state::Config,
     stub::LppBatch,
 };
@@ -26,13 +25,13 @@ where
     Self: Into<LppBatch<LppLenderRef>>,
     Lpn: Currency,
 {
-    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> ContractResult<()>;
-    fn open_loan_resp(&self, resp: Reply) -> ContractResult<LoanResponse<Lpn>>;
-    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> ContractResult<()>;
+    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()>;
+    fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>>;
+    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()>;
 
-    fn loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>>;
+    fn loan(&self, lease: impl Into<Addr>) -> Result<QueryLoanResponse<Lpn>>;
 
-    fn quote(&self, amount: Coin<Lpn>) -> ContractResult<QueryQuoteResponse>;
+    fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse>;
 }
 
 pub trait WithLppLender {
@@ -57,7 +56,7 @@ impl LppLenderRef {
         addr: Addr,
         querier: &QuerierWrapper<'_>,
         open_loan_req_id: ReplyId,
-    ) -> ContractResult<Self> {
+    ) -> Result<Self> {
         let resp: Config = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
 
         let currency = resp.lpn_ticker().into();
@@ -159,7 +158,7 @@ impl<'a, Lpn> LppLender<Lpn> for LppLenderStub<'a, Lpn>
 where
     Lpn: Currency + DeserializeOwned,
 {
-    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> ContractResult<()> {
+    fn open_loan_req(&mut self, amount: Coin<Lpn>) -> Result<()> {
         self.batch
             .schedule_execute_wasm_on_success_reply::<_, Lpn>(
                 &self.id(),
@@ -172,7 +171,7 @@ where
             .map_err(ContractError::from)
     }
 
-    fn open_loan_resp(&self, resp: Reply) -> ContractResult<LoanResponse<Lpn>> {
+    fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>> {
         debug_assert_eq!(resp.id, self.lpp_ref.open_loan_req_id);
 
         from_execute(resp)
@@ -184,13 +183,13 @@ where
             })
     }
 
-    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> ContractResult<()> {
+    fn repay_loan_req(&mut self, repayment: Coin<Lpn>) -> Result<()> {
         self.batch
             .schedule_execute_wasm_no_reply(&self.id(), ExecuteMsg::RepayLoan(), Some(repayment))
             .map_err(ContractError::from)
     }
 
-    fn loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>> {
+    fn loan(&self, lease: impl Into<Addr>) -> Result<QueryLoanResponse<Lpn>> {
         let msg = QueryMsg::Loan {
             lease_addr: lease.into(),
         };
@@ -199,7 +198,7 @@ where
             .map_err(ContractError::from)
     }
 
-    fn quote(&self, amount: Coin<Lpn>) -> ContractResult<QueryQuoteResponse> {
+    fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse> {
         let msg = QueryMsg::Quote {
             amount: amount.into(),
         };
@@ -221,8 +220,9 @@ impl<'a, C> From<LppLenderStub<'a, C>> for LppBatch<LppLenderRef> {
 #[cfg(test)]
 mod test {
     use finance::{coin::Coin, currency::Currency, test::currency::Nls};
+    use platform::response::{self};
     use sdk::{
-        cosmwasm_ext::{CosmosMsg, Response},
+        cosmwasm_ext::{CosmosMsg, Response as CwResponse},
         cosmwasm_std::{from_binary, testing::MockQuerier, Addr, QuerierWrapper, ReplyOn, WasmMsg},
     };
 
@@ -249,7 +249,7 @@ mod test {
             .open_loan_req(borrow_amount)
             .expect("open new loan request failed");
         let LppBatch { lpp_ref: _, batch } = lpp_stub.into();
-        let resp: Response = batch.into();
+        let resp: CwResponse = response::response_only_messages(batch);
         assert_eq!(1, resp.messages.len());
         let msg = &resp.messages[0];
         assert_eq!(msg.id, OPEN_LOAN_REQ_ID);

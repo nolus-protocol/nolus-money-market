@@ -5,25 +5,26 @@ use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
-    response,
+    message::Response as MessageResponse,
+    response::{self},
 };
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
-    cosmwasm_ext::Response,
+    cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Storage},
 };
 use versioning::{version, VersionSegment};
 
 use crate::{
     cmd::Dispatch,
-    error::ContractError,
     msg::{
         ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, RewardScaleResponse,
         SudoMsg,
     },
     result::ContractResult,
     state::{Config, DispatchLog},
+    ContractError,
 };
 
 // version info for migration info
@@ -36,7 +37,7 @@ pub fn instantiate(
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> ContractResult<Response> {
+) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     platform::contract::validate_addr(&deps.querier, &msg.lpp)?;
@@ -62,28 +63,24 @@ pub fn instantiate(
 
     let mut batch = Batch::default();
 
-    batch
-        .schedule_execute_wasm_no_reply::<_, Nls>(
-            &msg.timealarms,
-            &timealarms::msg::ExecuteMsg::AddAlarm {
-                time: env.block.time + Duration::from_hours(msg.cadence_hours),
-            },
-            None,
-        )
-        .map_err(ContractError::from)?;
+    batch.schedule_execute_wasm_no_reply::<_, Nls>(
+        &msg.timealarms,
+        &timealarms::msg::ExecuteMsg::AddAlarm {
+            time: env.block.time + Duration::from_hours(msg.cadence_hours),
+        },
+        None,
+    )?;
 
-    Ok(Response::from(batch))
+    Ok(response::response_only_messages(batch))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     SingleUserAccess::remove_contract_owner(deps.storage);
 
     response::response(versioning::release())
-        .map(Into::into)
-        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -92,23 +89,24 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> ContractResult<Response> {
+) -> ContractResult<CwResponse> {
     match msg {
-        ExecuteMsg::TimeAlarm {} => try_dispatch(deps, env, info),
+        ExecuteMsg::TimeAlarm {} => {
+            let resp = env.contract.address.clone();
+            try_dispatch(deps, env, info).and_then(|messages| {
+                response::response_with_messages::<_, _, ContractError>(&resp, messages)
+            })
+        }
     }
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
+pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
-        SudoMsg::Config { cadence_hours } => try_config(deps.storage, cadence_hours),
+        SudoMsg::Config { cadence_hours } => {
+            Config::update(deps.storage, cadence_hours).map(|()| response::empty_response())
+        }
     }
-}
-
-fn try_config(storage: &mut dyn Storage, cadence_hours: u16) -> ContractResult<Response> {
-    Config::update(storage, cadence_hours)?;
-
-    Ok(Response::new().add_attribute("method", "config"))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -128,7 +126,7 @@ fn query_reward_scale(storage: &dyn Storage) -> StdResult<RewardScaleResponse> {
     Config::load(storage).map(|Config { tvl_to_apr, .. }| tvl_to_apr)
 }
 
-fn try_dispatch(deps: DepsMut<'_>, env: Env, info: MessageInfo) -> ContractResult<Response> {
+fn try_dispatch(deps: DepsMut<'_>, env: Env, info: MessageInfo) -> ContractResult<MessageResponse> {
     let block_time = env.block.time;
 
     SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
@@ -159,21 +157,18 @@ fn try_dispatch(deps: DepsMut<'_>, env: Env, info: MessageInfo) -> ContractResul
         .emit_tx_info(&env)
         .emit_to_string_value("to", lpp_address)
         .emit_coin_dto("rewards", result.receipt.in_nls);
-
-    response::response_with_messages(&env.contract.address, result.batch.into_response(emitter))
-        .map(Into::into)
-        .map_err(Into::into)
+    Ok(MessageResponse::messages_with_events(result.batch, emitter))
 }
 
 #[cfg(test)]
 mod tests {
     use finance::percent::Percent;
     use sdk::{
-        cosmwasm_ext::Response,
+        cosmwasm_ext::Response as CwResponse,
         cosmwasm_std::{
             coins, from_binary,
             testing::{mock_dependencies_with_balance, mock_env, mock_info},
-            Addr, Attribute, DepsMut,
+            Addr, DepsMut,
         },
         testing::customized_mock_deps_with_contracts,
     };
@@ -212,7 +207,7 @@ mod tests {
         };
         let info = mock_info("creator", &coins(1000, "unolus"));
 
-        let res = instantiate(deps, mock_env(), info, msg).unwrap();
+        let res: CwResponse = instantiate(deps, mock_env(), info, msg).unwrap();
         assert_eq!(1, res.messages.len());
     }
 
@@ -238,13 +233,13 @@ mod tests {
 
         do_instantiate(deps.as_mut());
 
-        let Response {
+        let CwResponse {
             messages,
             attributes,
             events,
             data,
             ..
-        }: Response = sudo(
+        }: CwResponse = sudo(
             deps.as_mut(),
             mock_env(),
             SudoMsg::Config { cadence_hours: 12 },
@@ -252,7 +247,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(messages.len(), 0);
-        assert_eq!(attributes, &[Attribute::new("method", "config")]);
+        assert_eq!(attributes.len(), 0);
         assert_eq!(events.len(), 0);
         assert_eq!(data, None);
 
@@ -261,13 +256,13 @@ mod tests {
         let value: ConfigResponse = from_binary(&res).unwrap();
         assert_eq!(value.cadence_hours, 12);
 
-        let Response {
+        let CwResponse {
             messages,
             attributes,
             events,
             data,
             ..
-        }: Response = sudo(
+        }: CwResponse = sudo(
             deps.as_mut(),
             mock_env(),
             SudoMsg::Config { cadence_hours: 20 },
@@ -275,7 +270,7 @@ mod tests {
         .unwrap();
 
         assert_eq!(messages.len(), 0);
-        assert_eq!(&attributes, &[Attribute::new("method", "config")]);
+        assert_eq!(attributes.len(), 0);
         assert_eq!(events.len(), 0);
         assert_eq!(data, None);
 

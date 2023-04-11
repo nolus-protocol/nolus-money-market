@@ -9,7 +9,10 @@ use dex::{
 use finance::{coin::CoinDTO, currency::Symbol};
 use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
-use platform::{ica::HostAccount, response::StateMachineResponse};
+use platform::{
+    ica::HostAccount, message::Response as MessageResponse,
+    state_machine::Response as StateMachineResponse,
+};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -136,7 +139,7 @@ impl SwapTask for BuyAsset {
         });
         let emitter = active.emit_ok(env, self.downpayment, self.loan);
         Ok(StateMachineResponse::from(
-            batch.into_response(emitter),
+            MessageResponse::messages_with_events(batch, emitter),
             active,
         ))
     }

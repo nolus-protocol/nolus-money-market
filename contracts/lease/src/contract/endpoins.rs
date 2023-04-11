@@ -1,6 +1,7 @@
 use ::currency::lease::LeaseGroup;
 use dex::Handler;
 use finance::currency;
+use platform::response;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
@@ -13,7 +14,7 @@ use versioning::{version, VersionSegment};
 use crate::{
     api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
     contract::{state::Handler as LeaseHandler, Contract},
-    error::ContractResult,
+    error::{ContractError, ContractResult},
 };
 
 use super::state::{self, Response, State};
@@ -39,16 +40,16 @@ pub fn instantiate(
 
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    let (batch, next_state) = state::new_lease(&mut deps, info, new_lease)?;
-    state::save(deps.storage, &next_state)?;
-    Ok(batch.into())
+    state::new_lease(&mut deps, info, new_lease)
+        .and_then(|(batch, next_state)| state::save(deps.storage, &next_state).map(|()| batch))
+        .map(response::response_only_messages)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
-
-    Ok(CwResponse::default())
+    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))
+        .map(|()| response::empty_response())
+        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -57,10 +58,11 @@ pub fn reply(mut deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwRe
         .and_then(|state| state.reply(&mut deps, env, msg))
         .and_then(
             |Response {
-                 cw_response,
+                 response,
                  next_state,
-             }| state::save(deps.storage, &next_state).map(|()| cw_response),
+             }| state::save(deps.storage, &next_state).map(|()| response),
         )
+        .map(response::response_only_messages)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -70,14 +72,23 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
+    let may_resp = matches!(msg, ExecuteMsg::TimeAlarm {} | ExecuteMsg::PriceAlarm {})
+        .then(|| env.contract.address.clone());
     state::load(deps.storage)
         .and_then(|state| state.execute(&mut deps, env, info, msg))
         .and_then(
             |Response {
-                 cw_response,
+                 response,
                  next_state,
-             }| state::save(deps.storage, &next_state).map(|()| cw_response),
+             }| state::save(deps.storage, &next_state).map(|()| response),
         )
+        .and_then(|resp| {
+            if let Some(contract_resp) = may_resp {
+                response::response_with_messages::<_, _, ContractError>(&contract_resp, resp)
+            } else {
+                Ok(response::response_only_messages(resp))
+            }
+        })
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -86,10 +97,11 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
         .and_then(|state| process_sudo(msg, state, deps.as_ref(), env))
         .and_then(
             |Response {
-                 cw_response,
+                 response,
                  next_state,
-             }| state::save(deps.storage, &next_state).map(|()| cw_response),
+             }| state::save(deps.storage, &next_state).map(|()| response),
         )
+        .map(response::response_only_messages)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

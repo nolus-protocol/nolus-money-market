@@ -98,12 +98,7 @@ fn config_update_parameters() {
     assert!(response.data.is_none());
     assert_eq!(
         &response.events,
-        &[
-            Event::new("sudo").add_attribute("_contract_addr", "contract0"),
-            Event::new("wasm")
-                .add_attribute("_contract_addr", "contract0")
-                .add_attribute("method", "try_update_parameters"),
-        ]
+        &[Event::new("sudo").add_attribute("_contract_addr", "contract0"),]
     );
 
     let quote: Config = app

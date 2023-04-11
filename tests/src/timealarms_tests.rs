@@ -159,7 +159,7 @@ fn any_error(resp: &AppResponse) -> bool {
         .events
         .iter()
         .flat_map(|ev| &ev.attributes)
-        .find(|atr| atr.key == "alarm");
+        .find(|atr| atr.key == "delivered");
 
     matches!(maybe_attr.map(|attr| attr.value.as_str()), Some("error"))
 }
@@ -296,6 +296,6 @@ fn test_profit_alarms() {
 
     assert_eq!(
         resp.events.last().unwrap().attributes.last().unwrap(),
-        Attribute::new("alarm", "success")
+        Attribute::new("delivered", "success")
     );
 }

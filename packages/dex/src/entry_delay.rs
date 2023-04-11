@@ -1,5 +1,5 @@
 use finance::duration::Duration;
-use platform::{batch::Batch, response};
+use platform::batch::Batch;
 use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 use timealarms::stub::TimeAlarmsRef;
@@ -42,13 +42,9 @@ where
     type SwapResult = SR;
 
     fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> Result<Self> {
-        let alarm_response = env.contract.address.clone();
         self.enterable
             .enter(deps, env)
-            .and_then(|batch| {
-                response::response_with_messages(&alarm_response, batch).map_err(Into::into)
-            })
-            .map(|response| Response::<Self>::from(response, self.enterable))
+            .map(|batch| Response::<Self>::from(batch, self.enterable))
             .into()
     }
 }

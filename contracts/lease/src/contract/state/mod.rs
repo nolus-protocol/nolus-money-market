@@ -4,7 +4,7 @@ use platform::batch::Batch;
 use serde::{Deserialize, Serialize};
 use std::str;
 
-use platform::response;
+use platform::message::Response as MessageResponse;
 use sdk::{
     cosmwasm_std::{DepsMut, Env, MessageInfo, Reply},
     cw_storage_plus::Item,
@@ -77,13 +77,11 @@ pub(super) fn new_lease(
     Ok((batch, start_state.into()))
 }
 
-fn ignore_msg<S>(env: &Env, state: S) -> ContractResult<Response>
+fn ignore_msg<S>(state: S) -> ContractResult<Response>
 where
     S: Into<State>,
 {
-    response::response(&env.contract.address)
-        .map(|response| Response::from(response, state))
-        .map_err(Into::into)
+    Ok(Response::from(MessageResponse::default(), state))
 }
 
 mod impl_from {

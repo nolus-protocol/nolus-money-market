@@ -1,12 +1,9 @@
-use platform::batch::Batch;
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, Storage},
-};
+use platform::{batch::Batch, message::Response as MessageResponse};
+use sdk::cosmwasm_std::{Addr, Storage};
 
+use crate::result::ContractResult;
 use crate::{
     common::{maybe_migrate_contract, type_defs::Contracts},
-    error::ContractError,
     msg::MigrateContracts,
     state::{contracts as state_contracts, migration_release},
 };
@@ -15,7 +12,7 @@ pub(super) fn migrate(
     storage: &mut dyn Storage,
     admin_contract_address: Addr,
     msg: MigrateContracts,
-) -> Result<Response, ContractError> {
+) -> ContractResult<MessageResponse> {
     migration_release::store(storage, msg.release)?;
 
     let contracts_addrs: Contracts = state_contracts::load(storage)?;

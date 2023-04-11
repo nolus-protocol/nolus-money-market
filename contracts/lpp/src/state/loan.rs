@@ -6,11 +6,14 @@ use finance::{
     coin::Coin, currency::Currency, duration::Duration, interest::InterestPeriod, percent::Percent,
 };
 use sdk::{
-    cosmwasm_std::{Addr, StdResult, Storage, Timestamp},
+    cosmwasm_std::{Addr, Storage, Timestamp},
     cw_storage_plus::Map,
 };
 
-use crate::{error::ContractError, loan::LoanData};
+use crate::{
+    error::{ContractError, Result},
+    loan::LoanData,
+};
 
 pub struct Loan<LPN>
 where
@@ -41,7 +44,7 @@ where
         amount: Coin<LPN>,
         annual_interest_rate: Percent,
         current_time: Timestamp,
-    ) -> Result<(), ContractError> {
+    ) -> Result<()> {
         if Self::STORAGE.has(storage, addr.clone()) {
             return Err(ContractError::LoanExists {});
         }
@@ -57,7 +60,7 @@ where
             .map_err(ContractError::Std)
     }
 
-    pub fn load(storage: &dyn Storage, addr: Addr) -> StdResult<Self> {
+    pub fn load(storage: &dyn Storage, addr: Addr) -> Result<Self> {
         let data = Self::STORAGE.load(storage, addr.clone())?;
         let loan = Self { data, addr };
 
@@ -74,7 +77,7 @@ where
         storage: &mut dyn Storage,
         ctime: Timestamp,
         repay_amount: Coin<LPN>,
-    ) -> Result<RepayShares<LPN>, ContractError> {
+    ) -> Result<RepayShares<LPN>> {
         let time_delta = Duration::between(self.data.interest_paid, ctime);
 
         let (interest_period, interest_pay_excess) =
@@ -90,17 +93,13 @@ where
         if self.data.principal_due == loan_principal_payment {
             Self::STORAGE.remove(storage, self.addr);
         } else {
-            Self::STORAGE.update(
-                storage,
-                self.addr,
-                |loan| -> Result<LoanData<LPN>, ContractError> {
-                    let mut loan = loan.ok_or(ContractError::NoLoan {})?;
-                    loan.principal_due -= loan_principal_payment;
-                    loan.interest_paid = interest_period.start();
+            Self::STORAGE.update(storage, self.addr, |loan| -> Result<LoanData<LPN>> {
+                let mut loan = loan.ok_or(ContractError::NoLoan {})?;
+                loan.principal_due -= loan_principal_payment;
+                loan.interest_paid = interest_period.start();
 
-                    Ok(loan)
-                },
-            )?;
+                Ok(loan)
+            })?;
         }
         Ok(RepayShares {
             interest: loan_interest_payment,
@@ -109,8 +108,10 @@ where
         })
     }
 
-    pub fn query(storage: &dyn Storage, lease_addr: Addr) -> StdResult<Option<LoanData<LPN>>> {
-        Self::STORAGE.may_load(storage, lease_addr)
+    pub fn query(storage: &dyn Storage, lease_addr: Addr) -> Result<Option<LoanData<LPN>>> {
+        Self::STORAGE
+            .may_load(storage, lease_addr)
+            .map_err(Into::into)
     }
 }
 

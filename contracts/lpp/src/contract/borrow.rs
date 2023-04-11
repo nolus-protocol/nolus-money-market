@@ -4,14 +4,12 @@ use finance::{coin::Coin, currency::Currency};
 use platform::{
     bank::{self, BankAccount},
     batch::Batch,
+    message::Response as MessageResponse,
 };
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{to_binary, Addr, Deps, DepsMut, Env, MessageInfo, Storage},
-};
+use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
 
 use crate::{
-    error::ContractError,
+    error::Result,
     lpp::LiquidityPool,
     msg::{LoanResponse, QueryLoanResponse, QueryQuoteResponse},
 };
@@ -21,7 +19,7 @@ pub(super) fn try_open_loan<LPN>(
     env: Env,
     info: MessageInfo,
     amount: Coin<LPN>,
-) -> Result<Response, ContractError>
+) -> Result<(LoanResponse<LPN>, MessageResponse)>
 where
     LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
@@ -39,23 +37,16 @@ where
         annual_interest_rate,
         interest_paid: env.block.time,
     };
+    let messages: Batch = bank.into();
 
-    let batch: Batch = bank.into();
-
-    let mut response: Response = batch.into();
-
-    response = response.add_attribute("method", "try_open_loan");
-
-    response = response.set_data(to_binary(&loan_response)?);
-
-    Ok(response)
+    Ok((loan_response, messages.into()))
 }
 
 pub(super) fn try_repay_loan<LPN>(
     mut deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
-) -> Result<Response, ContractError>
+) -> Result<(Coin<LPN>, MessageResponse)>
 where
     LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
@@ -73,19 +64,14 @@ where
         bank.send(excess_received, &lease_addr);
         bank.into()
     };
-
-    let mut resp: Response = batch.into();
-    resp = resp
-        .add_attribute("method", "try_repay_loan")
-        .set_data(to_binary(&excess_received)?);
-    Ok(resp)
+    Ok((excess_received, batch.into()))
 }
 
 pub(super) fn query_quote<LPN>(
     deps: &Deps<'_>,
     env: &Env,
     quote: Coin<LPN>,
-) -> Result<QueryQuoteResponse, ContractError>
+) -> Result<QueryQuoteResponse>
 where
     LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
@@ -97,10 +83,7 @@ where
     }
 }
 
-pub fn query_loan<LPN>(
-    storage: &dyn Storage,
-    lease_addr: Addr,
-) -> Result<QueryLoanResponse<LPN>, ContractError>
+pub fn query_loan<LPN>(storage: &dyn Storage, lease_addr: Addr) -> Result<QueryLoanResponse<LPN>>
 where
     LPN: 'static + Currency + Serialize + DeserializeOwned,
 {

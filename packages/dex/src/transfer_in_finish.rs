@@ -2,7 +2,10 @@ use finance::coin::CoinDTO;
 use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
-use platform::batch::{Emit, Emitter};
+use platform::{
+    batch::{Emit, Emitter},
+    message::Response as MessageResponse,
+};
 
 use crate::{
     response::{self, Handler, Result as HandlerResult},
@@ -66,12 +69,12 @@ where
             let next_state = TransferInInit::new(self.spec, self.amount_in);
             next_state
                 .enter(deps, env)
-                .map(|batch| batch.into_response(emitter))
+                .map(|batch| MessageResponse::messages_with_events(batch, emitter))
                 .and_then(|resp| response::res_continue::<_, _, Self>(resp, next_state))
                 .into()
         } else {
             transfer_in::setup_alarm(self.spec.time_alarm().clone(), now)
-                .map(|batch| batch.into_response(emitter))
+                .map(|batch| MessageResponse::messages_with_events(batch, emitter))
                 .and_then(|resp| response::res_continue::<_, _, Self>(resp, self))
                 .into()
         }

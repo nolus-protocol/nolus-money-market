@@ -6,7 +6,9 @@ use oracle::{convert, stub::OracleRef};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{QuerierWrapper, StdResult, Storage, Timestamp};
 
-use crate::{cmd::Result as DispatcherResult, state::Config, ContractError};
+use crate::{
+    cmd::Result as DispatcherResult, result::ContractResult, state::Config, ContractError,
+};
 
 use super::Dispatch;
 
@@ -37,17 +39,18 @@ impl<'a> WithLpp for Dispatch<'a> {
             return Err(ContractError::ZeroReward {});
         }
 
-        let reward_unls =
-            convert::from_base(self.oracle_ref.clone(), reward_in_lppdenom, &self.querier)?;
-
-        let result = DispatcherResult {
-            batch: self.create_batch(reward_unls)?,
-            receipt: super::Receipt {
-                in_stable: reward_in_lppdenom.into(),
-                in_nls: reward_unls.into(),
-            },
-        };
-        Ok(result)
+        convert::from_base(self.oracle_ref.clone(), reward_in_lppdenom, &self.querier)
+            .map_err(Into::into)
+            .and_then(|reward_unls| {
+                self.create_batch(reward_unls)
+                    .map(|batch| DispatcherResult {
+                        batch,
+                        receipt: super::Receipt {
+                            in_stable: reward_in_lppdenom.into(),
+                            in_nls: reward_unls.into(),
+                        },
+                    })
+            })
     }
 }
 
@@ -70,7 +73,7 @@ impl<'a> Dispatch<'a> {
         })
     }
 
-    fn create_batch(&self, reward: Coin<Nls>) -> Result<Batch, ContractError> {
+    fn create_batch(&self, reward: Coin<Nls>) -> ContractResult<Batch> {
         let mut batch = Batch::default();
         // Prepare a Send Rewards for the amount of Rewards_uNLS to the Treasury.
         batch

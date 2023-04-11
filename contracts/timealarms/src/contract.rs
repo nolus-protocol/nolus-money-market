@@ -1,8 +1,12 @@
-use platform::{reply, response};
+use platform::{
+    batch::{Emit, Emitter},
+    reply,
+    response::{self},
+};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
-    cosmwasm_ext::Response,
+    cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
 use versioning::{package_version, version, VersionSegment};
@@ -10,8 +14,9 @@ use versioning::{package_version, version, VersionSegment};
 use crate::{
     alarms::TimeAlarms,
     migrate_v1,
-    msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
+    msg::{DispatchAlarmsResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
+    ContractError,
 };
 
 // version info for migration info
@@ -24,14 +29,14 @@ pub fn instantiate(
     _env: Env,
     _info: MessageInfo,
     _msg: InstantiateMsg,
-) -> ContractResult<Response> {
+) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    Ok(Response::default())
+    Ok(response::empty_response())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _>(
         deps.storage,
         version!(CONTRACT_STORAGE_VERSION),
@@ -39,8 +44,6 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
     )?;
 
     response::response(versioning::release())
-        .map(Into::into)
-        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -49,22 +52,28 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> ContractResult<Response> {
+) -> ContractResult<CwResponse> {
     match msg {
-        ExecuteMsg::AddAlarm { time } => TimeAlarms::new().try_add(deps, env, info.sender, time),
-        ExecuteMsg::DispatchAlarms { max_count } => {
-            TimeAlarms::new().try_notify(deps.storage, env.block.time, max_count)
-        }
+        ExecuteMsg::AddAlarm { time } => TimeAlarms::new()
+            .try_add(deps, env, info.sender, time)
+            .map(response::response_only_messages),
+        ExecuteMsg::DispatchAlarms { max_count } => TimeAlarms::new()
+            .try_notify(deps.storage, env.block.time, max_count)
+            .and_then(|(total, resp)| {
+                response::response_with_messages::<_, _, ContractError>(
+                    &DispatchAlarmsResponse(total),
+                    resp,
+                )
+            }),
     }
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
+pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
-        SudoMsg::RemoveTimeAlarm { receiver } => {
-            TimeAlarms::new().remove(deps.storage, receiver)?;
-            Ok(Response::default())
-        }
+        SudoMsg::RemoveTimeAlarm { receiver } => TimeAlarms::new()
+            .remove(deps.storage, receiver)
+            .map(|()| Default::default()),
     }
 }
 
@@ -79,22 +88,24 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Response> {
-    let resp = match reply::from_execute(msg) {
-        Ok(Some(addr)) => {
-            TimeAlarms::new().remove(deps.storage, addr)?;
-            Response::new().add_attribute("alarm", "success")
-        }
-        Err(err) => Response::new()
-            .add_attribute("alarm", "error")
-            .add_attribute("error", err.to_string()),
+pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwResponse> {
+    const EVENT_TYPE: &str = "time-alarm";
+    const KEY_DELIVERED: &str = "delivered";
+    const KEY_DETAILS: &str = "details";
 
-        Ok(None) => Response::new()
-            .add_attribute("alarm", "error")
-            .add_attribute("error", "No data"),
-    };
+    match reply::from_execute(msg) {
+        Ok(Some(addr)) => TimeAlarms::new()
+            .remove(deps.storage, addr)
+            .map(|()| Emitter::of_type(EVENT_TYPE).emit(KEY_DELIVERED, "success")),
+        Err(err) => Ok(Emitter::of_type(EVENT_TYPE)
+            .emit(KEY_DELIVERED, "error")
+            .emit(KEY_DETAILS, err.to_string())),
 
-    Ok(resp)
+        Ok(None) => Ok(Emitter::of_type(EVENT_TYPE)
+            .emit(KEY_DELIVERED, "error")
+            .emit(KEY_DETAILS, "no reply")),
+    }
+    .map(response::response_only_messages)
 }
 
 #[cfg(test)]

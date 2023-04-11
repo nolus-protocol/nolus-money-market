@@ -1,8 +1,8 @@
-use platform::response;
+use platform::response::{self};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
-    cosmwasm_ext::Response,
+    cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{ensure_eq, DepsMut, Env, MessageInfo, Reply},
 };
 use versioning::{version, VersionSegment};
@@ -31,36 +31,33 @@ pub fn instantiate(
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> ContractResult<Response> {
+) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     msg.validate(&deps.querier)?;
 
-    state_contracts::store(deps.storage, msg.contracts)?;
-
-    Ok(Response::default())
+    state_contracts::store(deps.storage, msg.contracts).map(|()| response::empty_response())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     response::response(versioning::release())
-        .map(Into::into)
-        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<Response> {
+pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
         SudoMsg::MigrateContracts(migrate_contracts) => {
             migrate_contracts::migrate(deps.storage, env.contract.address, migrate_contracts)
+                .map(response::response_only_messages)
         }
     }
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Response> {
+pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwResponse> {
     let expected_release: String = migration_release::load(deps.storage)?;
 
     let reported_release: String =
@@ -75,5 +72,5 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Respons
         }
     );
 
-    Ok(Response::default())
+    Ok(response::empty_response())
 }

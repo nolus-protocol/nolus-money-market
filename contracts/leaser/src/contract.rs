@@ -39,11 +39,9 @@ pub fn instantiate(
 
     let lease_code = msg.lease_code_id;
     Config::new(msg)?.store(deps.storage)?;
-    // require the config to be stored before
-    let mut batch = Batch::default();
-    leaser::update_lpp(deps.storage, lease_code.u64(), &mut batch)?;
 
-    Ok(batch.into())
+    leaser::update_lpp(deps.storage, lease_code.u64(), Batch::default())
+        .map(response::response_only_messages)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -51,8 +49,6 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     response::response(versioning::release())
-        .map(Into::into)
-        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -76,6 +72,7 @@ pub fn execute(
                 .and_then(move |()| leaser::try_migrate_leases(deps.storage, new_code_id.u64()))
         }
     }
+    .map(response::response_only_messages)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -96,6 +93,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
             leaser::try_migrate_leases(deps.storage, new_code_id.u64())
         }
     }
+    .map(response::response_only_messages)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

@@ -1,5 +1,4 @@
-use marketprice::config::Config as PriceConfig;
-use sdk::{cosmwasm_ext::Response, cosmwasm_std::Storage};
+use sdk::cosmwasm_std::Storage;
 
 use crate::{msg::ConfigResponse, state::config::Config, ContractError};
 
@@ -7,15 +6,6 @@ pub(super) fn query_config(storage: &dyn Storage) -> Result<ConfigResponse, Cont
     let config = Config::load(storage)?;
 
     Ok(ConfigResponse { config })
-}
-
-pub(super) fn try_configure(
-    storage: &mut dyn Storage,
-    price_config: PriceConfig,
-) -> Result<Response, ContractError> {
-    Config::update(storage, price_config)?;
-
-    Ok(Response::new())
 }
 
 #[cfg(test)]

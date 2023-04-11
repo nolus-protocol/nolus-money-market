@@ -10,13 +10,12 @@ use platform::{
     bank::{self},
     contract,
 };
-use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, StdResult, Storage, Timestamp};
+use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Timestamp};
 
 use crate::{
-    error::ContractError,
+    error::{ContractError, Result},
     msg::{LoanResponse, LppBalanceResponse, PriceResponse},
     nlpn::NLpn,
-    result::ContractResult,
     state::{Config, Deposit, Loan, Total},
 };
 
@@ -64,31 +63,27 @@ impl<LPN> LiquidityPool<LPN>
 where
     LPN: 'static + Currency + Serialize + DeserializeOwned,
 {
-    pub fn store(storage: &mut dyn Storage, config: Config) -> ContractResult<()> {
+    pub fn store(storage: &mut dyn Storage, config: Config) -> Result<()> {
         config.store(storage)?;
         Total::<LPN>::new().store(storage)?;
 
         Ok(())
     }
 
-    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
+    pub fn load(storage: &dyn Storage) -> Result<Self> {
         let config = Config::load(storage)?;
         let total = Total::load(storage)?;
 
         Ok(LiquidityPool { config, total })
     }
 
-    pub fn balance(
-        &self,
-        account: &Addr,
-        querier: &QuerierWrapper<'_>,
-    ) -> Result<Coin<LPN>, ContractError> {
+    pub fn balance(&self, account: &Addr, querier: &QuerierWrapper<'_>) -> Result<Coin<LPN>> {
         let balance = bank::balance(account, querier)?;
 
         Ok(balance)
     }
 
-    pub fn total_lpn(&self, deps: &Deps<'_>, env: &Env) -> Result<Coin<LPN>, ContractError> {
+    pub fn total_lpn(&self, deps: &Deps<'_>, env: &Env) -> Result<Coin<LPN>> {
         let res = self.balance(&env.contract.address, &deps.querier)?
             + self.total.total_principal_due()
             + self.total.total_interest_due_by_now(env.block.time);
@@ -96,11 +91,7 @@ where
         Ok(res)
     }
 
-    pub fn query_lpp_balance(
-        &self,
-        deps: &Deps<'_>,
-        env: &Env,
-    ) -> Result<LppBalanceResponse<LPN>, ContractError> {
+    pub fn query_lpp_balance(&self, deps: &Deps<'_>, env: &Env) -> Result<LppBalanceResponse<LPN>> {
         let balance = self.balance(&env.contract.address, &deps.querier)?;
 
         let total_principal_due = self.total.total_principal_due();
@@ -122,7 +113,7 @@ where
         deps: &Deps<'_>,
         env: &Env,
         received: Coin<LPN>,
-    ) -> Result<NTokenPrice<LPN>, ContractError> {
+    ) -> Result<NTokenPrice<LPN>> {
         let balance_nlpn = Deposit::balance_nlpn(deps.storage)?;
 
         let price = if balance_nlpn.is_zero() {
@@ -139,11 +130,7 @@ where
         Ok(NTokenPrice { price })
     }
 
-    pub fn validate_lease_addr(
-        &self,
-        deps: &Deps<'_>,
-        lease_addr: &Addr,
-    ) -> Result<(), ContractError> {
+    pub fn validate_lease_addr(&self, deps: &Deps<'_>, lease_addr: &Addr) -> Result<()> {
         contract::validate_code_id(&deps.querier, lease_addr, self.config.lease_code_id().u64())
             .map_err(ContractError::from)
     }
@@ -153,7 +140,7 @@ where
         deps: &Deps<'_>,
         env: &Env,
         amount_nlpn: Coin<NLpn>,
-    ) -> Result<Coin<LPN>, ContractError> {
+    ) -> Result<Coin<LPN>> {
         let price = self.calculate_price(deps, env, Coin::new(0))?.get();
         let amount_lpn = price::total(amount_nlpn, price);
 
@@ -170,7 +157,7 @@ where
         account: &Addr,
         querier: &QuerierWrapper<'_>,
         now: Timestamp,
-    ) -> Result<Option<Percent>, ContractError> {
+    ) -> Result<Option<Percent>> {
         let balance = self.balance(account, querier)?;
 
         if quote > balance {
@@ -194,7 +181,7 @@ where
         env: &Env,
         lease_addr: Addr,
         amount: Coin<LPN>,
-    ) -> Result<Percent, ContractError> {
+    ) -> Result<Percent> {
         if amount.is_zero() {
             return Err(ContractError::ZeroLoanAmount);
         }
@@ -229,7 +216,7 @@ where
         env: &Env,
         lease_addr: Addr,
         repay_amount: Coin<LPN>,
-    ) -> Result<Coin<LPN>, ContractError> {
+    ) -> Result<Coin<LPN>> {
         let loan = Loan::load(deps.storage, lease_addr)?;
         let loan_annual_interest_rate = loan.data().annual_interest_rate;
         let payment = loan.repay(deps.storage, env.block.time, repay_amount)?;
@@ -250,8 +237,8 @@ where
         &self,
         storage: &dyn Storage,
         lease_addr: Addr,
-    ) -> Result<Option<LoanResponse<LPN>>, ContractError> {
-        Loan::query(storage, lease_addr).map_err(Into::into)
+    ) -> Result<Option<LoanResponse<LPN>>> {
+        Loan::query(storage, lease_addr)
     }
 }
 

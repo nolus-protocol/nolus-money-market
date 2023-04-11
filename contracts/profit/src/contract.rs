@@ -1,10 +1,13 @@
 use access_control::SingleUserAccess;
 use finance::duration::Duration;
-use platform::response;
+use platform::{
+    message::Response as MessageResponse,
+    response::{self},
+};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
-    cosmwasm_ext::Response,
+    cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
 };
 use versioning::{version, VersionSegment};
@@ -14,6 +17,7 @@ use crate::{
     profit::Profit,
     result::ContractResult,
     state::config::Config,
+    ContractError,
 };
 
 // version info for migration info
@@ -26,7 +30,7 @@ pub fn instantiate(
     env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> ContractResult<Response> {
+) -> ContractResult<CwResponse> {
     platform::contract::validate_addr(&deps.querier, &msg.treasury)?;
     platform::contract::validate_addr(&deps.querier, &msg.timealarms)?;
 
@@ -39,26 +43,23 @@ pub fn instantiate(
     .store(deps.storage)?;
 
     Config::new(msg.cadence_hours, msg.treasury).store(deps.storage)?;
-    let subscribe_msg = Profit::alarm_subscribe_msg(
-        &msg.timealarms,
+
+    Profit::setup_alarm(
+        msg.timealarms,
+        &deps.querier,
         env.block.time,
         Duration::from_hours(msg.cadence_hours),
-    )?;
-
-    Ok(Response::new()
-        .add_attribute("method", "instantiate")
-        .add_message(subscribe_msg))
+    )
+    .map(response::response_only_messages)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     SingleUserAccess::remove_contract_owner(deps.storage);
 
     response::response(versioning::release())
-        .map(Into::into)
-        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -67,16 +68,23 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> ContractResult<Response> {
+) -> ContractResult<CwResponse> {
     match msg {
-        ExecuteMsg::TimeAlarm {} => try_transfer(deps.as_ref(), env, info),
+        ExecuteMsg::TimeAlarm {} => {
+            let alarm_recepient = env.contract.address.clone();
+            try_transfer(deps.as_ref(), env, info).and_then(|resp| {
+                response::response_with_messages::<_, _, ContractError>(&alarm_recepient, resp)
+            })
+        }
     }
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
+pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
-        SudoMsg::Config { cadence_hours } => Profit::try_config(deps.storage, cadence_hours),
+        SudoMsg::Config { cadence_hours } => {
+            Profit::try_config(deps.storage, cadence_hours).map(|()| response::empty_response())
+        }
     }
 }
 
@@ -88,11 +96,11 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
     .map_err(Into::into)
 }
 
-fn try_transfer(deps: Deps<'_>, env: Env, info: MessageInfo) -> ContractResult<Response> {
+fn try_transfer(deps: Deps<'_>, env: Env, info: MessageInfo) -> ContractResult<MessageResponse> {
     SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
         .check_access(&info.sender)?;
 
-    Profit::transfer(deps, &env, &info).map(Into::into)
+    Profit::transfer(deps, &env, info.sender)
 }
 
 #[cfg(test)]
@@ -100,7 +108,7 @@ mod tests {
     use currency::native::Nls;
     use finance::{currency::Currency, duration::Duration};
     use sdk::{
-        cosmwasm_ext::Response,
+        cosmwasm_ext::Response as CwResponse,
         cosmwasm_std::{
             coins, from_binary,
             testing::{mock_dependencies_with_balance, mock_env, mock_info},
@@ -141,7 +149,7 @@ mod tests {
         };
         let info = mock_info("creator", &coins(1000, "unolus"));
 
-        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let res: CwResponse = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(1, res.messages.len());
 
         assert_eq!(
@@ -172,13 +180,13 @@ mod tests {
         let info = mock_info("creator", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
 
-        let Response {
+        let CwResponse {
             messages,
             attributes,
             events,
             data,
             ..
-        }: Response = sudo(
+        }: CwResponse = sudo(
             deps.as_mut(),
             mock_env(),
             SudoMsg::Config { cadence_hours: 12 },
@@ -209,7 +217,7 @@ mod tests {
         let _res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
 
         let msg = ExecuteMsg::TimeAlarm {};
-        let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let res: CwResponse = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         assert_eq!(2, res.messages.len());
         println!("{:?}", res.messages);

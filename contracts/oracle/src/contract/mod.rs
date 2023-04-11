@@ -1,11 +1,15 @@
 use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
-use platform::{reply, response};
+use platform::{
+    batch::{Emit, Emitter},
+    reply,
+    response::{self},
+};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
-    cosmwasm_ext::Response,
+    cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
 use versioning::{package_version, version, VersionSegment};
@@ -14,16 +18,12 @@ use crate::{
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
-    state::supported_pairs::SupportedPairs,
+    state::{config::Config, supported_pairs::SupportedPairs},
 };
 
 use self::{
-    alarms::MarketAlarms,
-    config::{query_config, try_configure},
-    exec::ExecWithOracleBase,
-    oracle::feeder::Feeders,
-    query::QueryWithOracleBase,
-    sudo::SudoWithOracleBase,
+    alarms::MarketAlarms, config::query_config, exec::ExecWithOracleBase, oracle::feeder::Feeders,
+    query::QueryWithOracleBase, sudo::SudoWithOracleBase,
 };
 
 mod alarms;
@@ -43,14 +43,17 @@ struct InstantiateWithCurrency<'a> {
 }
 
 impl<'a> InstantiateWithCurrency<'a> {
-    pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> ContractResult<Response> {
+    pub fn cmd(
+        deps: DepsMut<'a>,
+        msg: InstantiateMsg,
+    ) -> ContractResult<<Self as AnyVisitor>::Output> {
         let context = Self { deps, msg };
         visit_any_on_ticker::<Lpns, _>(&context.msg.config.base_asset.clone(), context)
     }
 }
 
 impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
-    type Output = Response;
+    type Output = ();
     type Error = ContractError;
 
     fn on<C>(self) -> AnyVisitorResult<Self>
@@ -63,7 +66,7 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
             .validate_tickers()?
             .save(self.deps.storage)?;
 
-        Ok(Response::new().add_attribute("method", "instantiate"))
+        Ok(())
     }
 }
 
@@ -73,23 +76,21 @@ pub fn instantiate(
     _env: Env,
     _info: MessageInfo,
     msg: InstantiateMsg,
-) -> ContractResult<Response> {
+) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     InstantiateWithCurrency::cmd(deps, msg)?;
 
-    Ok(Response::default())
+    Ok(response::empty_response())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     SingleUserAccess::remove_contract_owner(deps.storage);
 
     response::response(versioning::release())
-        .map(Into::into)
-        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -111,43 +112,41 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> ContractResult<Response> {
-    ExecWithOracleBase::cmd(deps, env, msg, info.sender)
+) -> ContractResult<CwResponse> {
+    ExecWithOracleBase::cmd(deps, env, msg, info.sender).map(response::response_only_messages)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
+pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
-        SudoMsg::UpdateConfig(price_config) => try_configure(deps.storage, price_config),
+        SudoMsg::UpdateConfig(price_config) => Config::update(deps.storage, price_config),
         SudoMsg::RegisterFeeder { feeder_address } => Feeders::try_register(deps, feeder_address),
         SudoMsg::RemoveFeeder { feeder_address } => Feeders::try_remove(deps, feeder_address),
-        SudoMsg::RemovePriceAlarm { receiver } => {
-            MarketAlarms::remove(deps.storage, receiver)?;
-
-            Ok(Response::default())
-        }
+        SudoMsg::RemovePriceAlarm { receiver } => MarketAlarms::remove(deps.storage, receiver),
         _ => SudoWithOracleBase::cmd(deps, msg),
     }
+    .map(|()| response::empty_response())
 }
 
 // TODO: compare gas usage of this solution vs reply on error
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Response> {
-    let resp = match reply::from_execute(msg) {
-        Ok(Some(addr)) => {
-            MarketAlarms::remove(deps.storage, addr)?;
-            Response::new().add_attribute("alarm", "success")
-        }
-        Err(err) => Response::new()
-            .add_attribute("alarm", "error")
-            .add_attribute("error", err.to_string()),
+pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwResponse> {
+    const EVENT_TYPE: &str = "market-alarm";
+    const KEY_DELIVERED: &str = "delivered";
+    const KEY_DETAILS: &str = "details";
 
-        Ok(None) => Response::new()
-            .add_attribute("alarm", "error")
-            .add_attribute("error", "No data"),
-    };
+    match reply::from_execute(msg) {
+        Ok(Some(addr)) => MarketAlarms::remove(deps.storage, addr)
+            .map(|()| Emitter::of_type(EVENT_TYPE).emit(KEY_DELIVERED, "success")),
+        Err(err) => Ok(Emitter::of_type(EVENT_TYPE)
+            .emit(KEY_DELIVERED, "error")
+            .emit(KEY_DETAILS, err.to_string())),
 
-    Ok(resp)
+        Ok(None) => Ok(Emitter::of_type(EVENT_TYPE)
+            .emit(KEY_DELIVERED, "error")
+            .emit(KEY_DETAILS, "no reply")),
+    }
+    .map(response::response_only_messages)
 }
 
 #[cfg(test)]

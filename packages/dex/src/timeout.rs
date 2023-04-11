@@ -1,6 +1,7 @@
 use platform::{
     batch::{Emit, Emitter},
-    response::StateMachineResponse,
+    message::Response as MessageResponse,
+    state_machine::Response as StateMachineResponse,
 };
 use sdk::cosmwasm_std::{Addr, Deps, Env};
 use timealarms::stub::TimeAlarmsRef;
@@ -30,7 +31,7 @@ where
     );
     let batch = current_state.enter(deps, env)?;
     Ok(StateMachineResponse::from(
-        batch.into_response(emitter),
+        MessageResponse::messages_with_events(batch, emitter),
         current_state,
     ))
 }
@@ -54,7 +55,8 @@ where
     );
     let recover_ica = IcaConnector::new(InRecovery::<_, SEnum>::new(current_state, time_alarms));
     let batch = recover_ica.enter();
-    StateMachineResponse::from(batch.into_response(emitter), recover_ica)
+    let resp = MessageResponse::messages_with_events(batch, emitter);
+    StateMachineResponse::from(resp, recover_ica)
 }
 
 #[derive(Debug)]

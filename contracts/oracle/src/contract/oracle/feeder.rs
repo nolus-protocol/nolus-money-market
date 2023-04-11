@@ -3,12 +3,9 @@ use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 
 use marketprice::feeders::PriceFeeders;
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, DepsMut, StdResult, Storage},
-};
+use sdk::cosmwasm_std::{Addr, DepsMut, StdResult, Storage};
 
-use crate::{state::config::Config, ContractError};
+use crate::{result::ContractResult, state::config::Config, ContractError};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
 pub struct Feeders {
@@ -29,26 +26,27 @@ impl Feeders {
     pub(crate) fn try_register(
         deps: DepsMut<'_>,
         address: String,
-    ) -> Result<Response, ContractError> {
+    ) -> ContractResult<()> {
         // check if address is valid
         let f_address = deps.api.addr_validate(&address)?;
-        Self::FEEDERS.register(deps, f_address)?;
-
-        Ok(Response::new())
+        Self::FEEDERS
+            .register(deps, f_address)
+            .map_err(Into::into)
     }
 
     pub(crate) fn try_remove(
         deps: DepsMut<'_>,
         address: String,
-    ) -> Result<Response, ContractError> {
+    ) -> ContractResult<()> {
         let f_address = deps.api.addr_validate(&address)?;
 
         if !Self::is_feeder(deps.storage, &f_address)? {
             return Err(ContractError::UnknownFeeder {});
         }
 
-        Self::FEEDERS.remove(deps, f_address)?;
-        Ok(Response::default())
+        Self::FEEDERS
+            .remove(deps, f_address)
+            .map_err(Into::into)
     }
 
     pub(crate) fn total_registered(storage: &dyn Storage) -> StdResult<usize> {
@@ -58,18 +56,17 @@ impl Feeders {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use sdk::{
-        cosmwasm_ext::Response,
+        cosmwasm_ext::Response as CwResponse,
         cosmwasm_std::{from_binary, testing::mock_env, Addr, DepsMut},
     };
+    use std::collections::HashSet;
 
     use crate::{
         contract::{query, sudo},
         msg::{QueryMsg, SudoMsg},
+        result::ContractResult,
         tests::{dummy_default_instantiate_msg, setup_test},
-        ContractError,
     };
 
     #[test]
@@ -123,7 +120,7 @@ mod tests {
         assert!(!resp.contains(&Addr::unchecked("addr0001")));
     }
 
-    fn register(deps: DepsMut<'_>, address: &str) -> Result<Response, ContractError> {
+    fn register(deps: DepsMut<'_>, address: &str) -> ContractResult<CwResponse> {
         sudo(
             deps,
             mock_env(),
@@ -134,13 +131,13 @@ mod tests {
     }
 
     fn remove(deps: DepsMut<'_>, address: &str) {
-        let Response {
+        let CwResponse {
             messages,
             attributes,
             events,
             data,
             ..
-        }: Response = sudo(
+        }: CwResponse = sudo(
             deps,
             mock_env(),
             SudoMsg::RemoveFeeder {

@@ -8,9 +8,8 @@ use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
-    error::ContractError,
+    error::{ContractError, Result},
     msg::{LppBalanceResponse, QueryMsg},
-    result::ContractResult,
     state::Config,
 };
 
@@ -21,7 +20,7 @@ where
     Self: Into<LppBatch<LppRef>>,
     Lpn: Currency,
 {
-    fn lpp_balance(&self) -> ContractResult<LppBalanceResponse<Lpn>>;
+    fn lpp_balance(&self) -> Result<LppBalanceResponse<Lpn>>;
 }
 
 pub trait WithLpp {
@@ -41,7 +40,7 @@ pub struct LppRef {
 }
 
 impl LppRef {
-    pub fn try_new(addr: Addr, querier: &QuerierWrapper<'_>) -> ContractResult<Self> {
+    pub fn try_new(addr: Addr, querier: &QuerierWrapper<'_>) -> Result<Self> {
         let resp: Config = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config())?;
 
         let currency = resp.lpn_ticker().into();
@@ -128,7 +127,7 @@ impl<'a, Lpn> Lpp<Lpn> for LppStub<'a, Lpn>
 where
     Lpn: Currency + DeserializeOwned,
 {
-    fn lpp_balance(&self) -> ContractResult<LppBalanceResponse<Lpn>> {
+    fn lpp_balance(&self) -> Result<LppBalanceResponse<Lpn>> {
         let msg = QueryMsg::LppBalance();
         self.querier
             .query_wasm_smart(self.id(), &msg)

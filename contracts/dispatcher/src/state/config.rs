@@ -3,7 +3,7 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-use crate::error::ContractError;
+use crate::{error::ContractError, result::ContractResult};
 
 use super::{reward_scale::RewardScale, Config};
 
@@ -34,15 +34,16 @@ impl Config {
         Self::STORAGE.load(storage)
     }
 
-    pub fn update(storage: &mut dyn Storage, cadence_hours: u16) -> Result<(), ContractError> {
+    pub fn update(storage: &mut dyn Storage, cadence_hours: u16) -> ContractResult<()> {
         Self::load(storage)?;
 
-        Self::STORAGE.update(storage, |mut c| -> Result<Config, ContractError> {
-            c.cadence_hours = cadence_hours;
+        Self::STORAGE
+            .update(storage, |mut c| -> Result<Config, ContractError> {
+                c.cadence_hours = cadence_hours;
 
-            Ok(c)
-        })?;
-
-        Ok(())
+                Ok(c)
+            })
+            .map(|_| ())
+            .map_err(Into::into)
     }
 }

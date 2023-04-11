@@ -6,11 +6,9 @@ use finance::coin::IntoDTO;
 use platform::{
     bank,
     batch::{Emit, Emitter},
+    message::Response as MessageResponse,
 };
-use sdk::{
-    cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp},
-};
+use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{DownpaymentCoin, ExecuteMsg, LpnCoin, StateResponse},
@@ -65,7 +63,7 @@ impl Active {
             dex: lease.dex,
         };
 
-        let response = batch.into_response(emitter);
+        let response = MessageResponse::messages_with_events(batch, emitter);
 
         Ok(if paid {
             Response::from(response, paid::Active::new(new_lease))
@@ -178,7 +176,7 @@ fn build_emitter(
 
 fn into_updated_active<R>(updated_dto: LeaseDTO, dex: Account, resp: R) -> Response
 where
-    R: Into<CwResponse>,
+    R: Into<MessageResponse>,
 {
     let lease = Lease {
         lease: updated_dto,

@@ -1,8 +1,10 @@
+use std::vec;
+
 use serde::Serialize;
 
 use finance::{coin::Coin, currency::Currency};
 use sdk::{
-    cosmwasm_ext::{CosmosMsg, Response, SubMsg},
+    cosmwasm_ext::{CosmosMsg, SubMsg},
     cosmwasm_std::{to_binary, Addr, Coin as CoinCw, WasmMsg},
 };
 
@@ -159,10 +161,6 @@ impl Batch {
         self.msgs.is_empty()
     }
 
-    pub fn into_response(self, emitter: Emitter) -> Response {
-        Response::from(self).add_event(emitter.into())
-    }
-
     fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>
     where
         M: Serialize,
@@ -221,72 +219,33 @@ impl Batch {
     }
 }
 
-impl From<Batch> for Response {
-    fn from(p: Batch) -> Self {
-        p.msgs
-            .into_iter()
-            .fold(Self::default(), |res, msg| res.add_submessage(msg))
+impl IntoIterator for Batch {
+    type Item = SubMsg;
+
+    type IntoIter = vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.msgs.into_iter()
     }
 }
 
 #[cfg(test)]
 mod test {
-    use sdk::{
-        cosmwasm_ext::{CosmosMsg, Response},
-        cosmwasm_std::{Event, WasmMsg},
-    };
-
-    use crate::{batch::Emitter, emit::Emit};
+    use sdk::{cosmwasm_ext::CosmosMsg, cosmwasm_std::WasmMsg};
 
     use super::Batch;
-
-    const TY1: &str = "E_TYPE";
-    const KEY1: &str = "my_event_key";
-    const KEY2: &str = "my_other_event_key";
-    const VALUE1: &str = "my_event_value";
-    const VALUE2: &str = "my_other_event_value";
 
     #[test]
     fn no_events() {
         let mut b = Batch::default();
+        assert_eq!(0, b.len());
+        assert!(b.is_empty());
+
         b.schedule_execute_no_reply(CosmosMsg::Wasm(WasmMsg::ClearAdmin {
             contract_addr: "".to_string(),
         }));
-        let resp: Response = b.into();
-        assert_eq!(1, resp.messages.len());
-        assert_eq!(0, resp.attributes.len());
-        assert_eq!(0, resp.events.len());
-    }
-
-    #[test]
-    fn emit() {
-        let e = Emitter::of_type(TY1).emit(KEY1, VALUE1);
-        let resp: Response = Batch::default().into_response(e);
-        assert_eq!(1, resp.events.len());
-        let exp = Event::new(TY1).add_attribute(KEY1, VALUE1);
-        assert_eq!(exp, resp.events[0]);
-    }
-
-    #[test]
-    fn emit_same_attr() {
-        let e = Emitter::of_type(TY1).emit(KEY1, VALUE1).emit(KEY1, VALUE1);
-        let resp: Response = Batch::default().into_response(e);
-        assert_eq!(1, resp.events.len());
-        let exp = Event::new(TY1)
-            .add_attribute(KEY1, VALUE1)
-            .add_attribute(KEY1, VALUE1);
-        assert_eq!(exp, resp.events[0]);
-    }
-
-    #[test]
-    fn emit_two_attrs() {
-        let emitter = Emitter::of_type(TY1).emit(KEY1, VALUE1).emit(KEY2, VALUE2);
-        let resp = Batch::default().into_response(emitter);
-        assert_eq!(1, resp.events.len());
-        let exp = Event::new(TY1)
-            .add_attribute(KEY1, VALUE1)
-            .add_attribute(KEY2, VALUE2);
-        assert_eq!(exp, resp.events[0]);
+        assert_eq!(1, b.len());
+        assert!(!b.is_empty());
     }
 
     #[test]
@@ -298,9 +257,11 @@ mod test {
             contract_addr: "".into(),
         }));
         assert_eq!(1, b.len());
+        b.schedule_execute_no_reply(CosmosMsg::Wasm(WasmMsg::UpdateAdmin {
+            contract_addr: "".into(),
+            admin: "".into(),
+        }));
+        assert_eq!(2, b.len());
         assert!(!b.is_empty());
-
-        let resp: Response = b.into();
-        assert_eq!(1, resp.messages.len());
     }
 }

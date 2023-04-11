@@ -283,12 +283,7 @@ fn test_config() {
     assert_eq!(response.data, None);
     assert_eq!(
         &response.events,
-        &[
-            Event::new("sudo").add_attribute("_contract_addr", "contract4"),
-            Event::new("wasm")
-                .add_attribute("_contract_addr", "contract4")
-                .add_attribute("method", "config"),
-        ]
+        &[Event::new("sudo").add_attribute("_contract_addr", "contract4"),]
     );
 
     let resp: rewards_dispatcher::msg::ConfigResponse = test_case

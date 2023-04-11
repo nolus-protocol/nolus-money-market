@@ -6,7 +6,8 @@ use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
-    response::StateMachineResponse,
+    message::Response as MessageResponse,
+    state_machine::Response as StateMachineResponse,
 };
 use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Reply};
 use timealarms::stub::TimeAlarmsRef;
@@ -90,7 +91,7 @@ impl RequestLoan {
                     self.deps,
                 ));
                 Ok(StateMachineResponse::from(
-                    open_ica.enter().into_response(emitter),
+                    MessageResponse::messages_with_events(open_ica.enter(), emitter),
                     LeaseDexState::new(open_ica),
                 ))
             }

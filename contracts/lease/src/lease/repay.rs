@@ -48,9 +48,7 @@ where
         payment: Coin<Lpn>,
         now: Timestamp,
     ) -> ContractResult<RepayReceipt<Lpn>> {
-        self.loan
-            .repay(payment, now, self.addr.clone())
-            .map_err(Into::into)
+        self.loan.repay(payment, now, self.addr.clone())
     }
 }
 

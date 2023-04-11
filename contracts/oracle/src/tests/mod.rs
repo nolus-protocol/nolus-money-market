@@ -12,7 +12,7 @@ use finance::{
 };
 use marketprice::config::Config as PriceConfig;
 use sdk::{
-    cosmwasm_ext::Response,
+    cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{
         coins,
         testing::{mock_dependencies, mock_env, mock_info, MockApi, MockQuerier},
@@ -133,17 +133,17 @@ pub(crate) fn setup_test(
 ) -> (OwnedDeps<MemoryStorage, MockApi, MockQuerier>, MessageInfo) {
     let mut deps = mock_dependencies();
     let info = mock_info(CREATOR, &coins(1000, Nls::TICKER));
-    let res = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
+    let res: CwResponse = instantiate(deps.as_mut(), mock_env(), info.clone(), msg).unwrap();
     assert!(res.messages.is_empty());
 
     // register single feeder address
-    let Response {
+    let CwResponse {
         messages,
         attributes,
         events,
         data,
         ..
-    }: Response = sudo(
+    }: CwResponse = sudo(
         deps.as_mut(),
         mock_env(),
         SudoMsg::RegisterFeeder {

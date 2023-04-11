@@ -1,10 +1,10 @@
 use std::result::Result as StdResult;
 
-use platform::response::{self, StateMachineResponse};
-use sdk::{
-    cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{Api, Binary, Deps, Env},
+use platform::{
+    message::Response as MessageResponse,
+    state_machine::{self, Response as StateMachineResponse},
 };
+use sdk::cosmwasm_std::{Api, Binary, Deps, Env};
 
 use crate::error::{Error, Result as DexResult};
 
@@ -20,7 +20,7 @@ where
 
 pub fn res_continue<R, S, H>(resp: R, next_state: S) -> ContinueResult<H>
 where
-    R: Into<CwResponse>,
+    R: Into<MessageResponse>,
     S: Into<H::Response>,
     H: Handler,
 {
@@ -78,7 +78,7 @@ where
         RFrom: Into<RTo>,
     {
         match self {
-            Result::Continue(cont_res) => Result::Continue(cont_res.map(response::from)),
+            Result::Continue(cont_res) => Result::Continue(cont_res.map(state_machine::from)),
             Result::Finished(finish_res) => Result::Finished(finish_res),
         }
     }

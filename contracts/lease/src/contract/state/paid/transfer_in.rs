@@ -6,7 +6,9 @@ use dex::{
 };
 use finance::{coin::CoinDTO, currency::Symbol};
 use oracle::stub::OracleRef;
-use platform::response::StateMachineResponse;
+use platform::{
+    message::Response as MessageResponse, state_machine::Response as StateMachineResponse,
+};
 use serde::{Deserialize, Serialize};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -99,7 +101,7 @@ impl SwapTask for TransferIn {
         let emitter = closed.emit_ok(env, &self.lease.lease);
         let batch = closed.enter_state(self.lease.lease, querier)?;
         Ok(StateMachineResponse::from(
-            batch.into_response(emitter),
+            MessageResponse::messages_with_events(batch, emitter),
             closed,
         ))
     }

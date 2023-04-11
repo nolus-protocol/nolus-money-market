@@ -1,5 +1,5 @@
 use enum_dispatch::enum_dispatch;
-use platform::response::StateMachineResponse;
+use platform::state_machine::Response as StateMachineResponse;
 use sdk::cosmwasm_std::{Api, DepsMut, Env, MessageInfo, Reply};
 
 use crate::{

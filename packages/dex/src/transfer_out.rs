@@ -1,6 +1,9 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use platform::batch::{Batch, Emitter};
+use platform::{
+    batch::{Batch, Emitter},
+    message::Response as MessageResponse,
+};
 use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
@@ -114,7 +117,10 @@ where
     {
         next.enter(deps, env).and_then(|batch| {
             let emitter = Emitter::of_type(label);
-            response::res_continue::<_, _, Self>(batch.into_response(emitter), next)
+            response::res_continue::<_, _, Self>(
+                MessageResponse::messages_with_events(batch, emitter),
+                next,
+            )
         })
     }
 }

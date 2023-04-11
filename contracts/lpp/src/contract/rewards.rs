@@ -1,18 +1,15 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use currency::native::Nls;
-use finance::{coin::Coin, currency::Currency};
+use finance::currency::Currency;
 use platform::{
     bank::{self, BankAccount},
     batch::Batch,
+    message::Response as MessageResponse,
 };
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage},
-};
+use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, MessageInfo, Storage};
 
 use crate::{
-    error::ContractError,
+    error::{ContractError, Result},
     lpp::LiquidityPool,
     msg::{LppBalanceResponse, RewardsResponse},
     state::Deposit,
@@ -21,11 +18,11 @@ use crate::{
 pub(super) fn try_distribute_rewards(
     deps: DepsMut<'_>,
     info: MessageInfo,
-) -> Result<Response, ContractError> {
-    let amount: Coin<Nls> = bank::received_one(info.funds)?;
-    Deposit::distribute_rewards(deps, amount)?;
-
-    Ok(Response::new().add_attribute("method", "try_distribute_rewards"))
+) -> Result<MessageResponse> {
+    bank::received_one(info.funds)
+        .map_err(Into::into)
+        .and_then(|amount| Deposit::distribute_rewards(deps, amount))
+        .map(|()| Default::default())
 }
 
 pub(super) fn try_claim_rewards(
@@ -33,7 +30,7 @@ pub(super) fn try_claim_rewards(
     env: Env,
     info: MessageInfo,
     other_recipient: Option<Addr>,
-) -> Result<Response, ContractError> {
+) -> Result<MessageResponse> {
     let recipient = other_recipient
         .map(|recipient| deps.api.addr_validate(recipient.as_str()))
         .transpose()?
@@ -50,18 +47,12 @@ pub(super) fn try_claim_rewards(
 
     let mut bank = bank::account(&env.contract.address, &deps.querier);
     bank.send(reward, &recipient);
-
     let batch: Batch = bank.into();
 
-    let mut batch: Response = batch.into();
-    batch = batch.add_attribute("method", "try_claim_rewards");
-    Ok(batch)
+    Ok(batch.into())
 }
 
-pub(super) fn query_lpp_balance<LPN>(
-    deps: Deps<'_>,
-    env: Env,
-) -> Result<LppBalanceResponse<LPN>, ContractError>
+pub(super) fn query_lpp_balance<LPN>(deps: Deps<'_>, env: Env) -> Result<LppBalanceResponse<LPN>>
 where
     LPN: 'static + Currency + DeserializeOwned + Serialize,
 {
@@ -69,10 +60,7 @@ where
     lpp.query_lpp_balance(&deps, &env)
 }
 
-pub(super) fn query_rewards(
-    storage: &dyn Storage,
-    addr: Addr,
-) -> Result<RewardsResponse, ContractError> {
+pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<RewardsResponse> {
     let rewards = Deposit::may_load(storage, addr)?
         .ok_or(ContractError::NoDeposit {})?
         .query_rewards(storage)?;
@@ -83,7 +71,7 @@ pub(super) fn query_rewards(
 #[cfg(test)]
 mod test {
     use access_control::SingleUserAccess;
-    use finance::{percent::Percent, test::currency::Usdc};
+    use finance::{coin::Coin, percent::Percent, test::currency::Usdc};
     use platform::coin_legacy;
     use sdk::cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},

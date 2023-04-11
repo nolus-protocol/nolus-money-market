@@ -7,13 +7,16 @@ use finance::currency::{
     visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolOwned,
 };
 use sdk::{
-    cosmwasm_std::{StdError, StdResult, Storage},
+    cosmwasm_std::{StdError, Storage},
     cw_storage_plus::Item,
 };
 use swap::SwapTarget;
 use tree::{FindBy as _, NodeRef};
 
-use crate::error::{self, ContractError};
+use crate::{
+    error::{self, ContractError},
+    result::ContractResult,
+};
 
 pub type ResolutionPath = Vec<SymbolOwned>;
 pub type CurrencyPair<'a> = (Symbol<'a>, Symbol<'a>);
@@ -107,14 +110,18 @@ where
         Ok(self)
     }
 
-    pub fn load(storage: &dyn Storage) -> StdResult<Self> {
+    pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
         Self::DB_ITEM
-            .may_load(storage)?
-            .ok_or_else(|| StdError::generic_err("supported pairs tree not found"))
+            .may_load(storage)
+            .map_err(Into::into)
+            .and_then(|may_pairs| {
+                may_pairs
+                    .ok_or_else(|| StdError::generic_err("supported pairs tree not found").into())
+            })
     }
 
-    pub fn save(&self, storage: &mut dyn Storage) -> StdResult<()> {
-        Self::DB_ITEM.save(storage, self)
+    pub fn save(&self, storage: &mut dyn Storage) -> ContractResult<()> {
+        Self::DB_ITEM.save(storage, self).map_err(Into::into)
     }
 
     pub fn load_path(

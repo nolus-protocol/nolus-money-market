@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use platform::{
     batch::{Batch, Emit, Emitter},
     ica::HostAccount,
+    message,
 };
 
 use crate::{
@@ -105,7 +106,9 @@ where
         let next_state = self.connectee.connected(ica);
         next_state
             .enter(deps, env)
-            .map(|batch| batch.into_response(Self::emit_ok(contract, dex_account)))
+            .map(|batch| {
+                message::Response::messages_with_events(batch, Self::emit_ok(contract, dex_account))
+            })
             .map(|cw_resp| Response::<Self>::from(cw_resp, next_state))
     }
 }

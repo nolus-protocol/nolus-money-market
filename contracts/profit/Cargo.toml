@@ -18,13 +18,12 @@ stub = []
 testing = []
 
 [dependencies]
-timealarms = { workspace = true }
-
 access-control = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
+timealarms = { workspace = true, features = ["stub"]}
 versioning = { workspace = true }
 
 # Required as a dependency by `entry_point` attribute macro

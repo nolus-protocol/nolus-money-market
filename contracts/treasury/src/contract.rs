@@ -4,12 +4,12 @@ use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount},
     batch::Batch,
-    response,
+    response::{self},
 };
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
-    cosmwasm_ext::Response,
+    cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{Addr, DepsMut, Env, MessageInfo, Storage},
 };
 use versioning::{version, VersionSegment};
@@ -29,21 +29,19 @@ pub fn instantiate(
     _env: Env,
     _info: MessageInfo,
     _msg: InstantiateMsg,
-) -> ContractResult<Response> {
+) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
-    Ok(Response::default())
+    Ok(response::empty_response())
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<Response> {
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
 
     SingleUserAccess::remove_contract_owner(deps.storage);
 
     response::response(versioning::release())
-        .map(Into::into)
-        .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -52,7 +50,7 @@ pub fn execute(
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
-) -> ContractResult<Response> {
+) -> ContractResult<CwResponse> {
     let sender = info.sender;
     match msg {
         ExecuteMsg::SendRewards { amount } => {
@@ -60,15 +58,13 @@ pub fn execute(
 
             try_send_rewards(deps.storage, sender, amount, &mut bank_account)?;
             let batch: Batch = bank_account.into();
-            let mut response: Response = batch.into();
-            response = response.add_attribute("method", "try_send_rewards");
-            Ok(response)
+            Ok(response::response_only_messages(batch))
         }
     }
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Response> {
+pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
         SudoMsg::ConfigureRewardTransfer { rewards_dispatcher } => {
             platform::contract::validate_addr(&deps.querier, &rewards_dispatcher)?;
@@ -81,14 +77,14 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
 fn try_configure_reward_transfer(
     storage: &mut dyn Storage,
     rewards_dispatcher: Addr,
-) -> ContractResult<Response> {
+) -> ContractResult<CwResponse> {
     SingleUserAccess::new(
         crate::access_control::REWARDS_DISPATCHER_NAMESPACE,
         rewards_dispatcher,
     )
     .store(storage)?;
 
-    Ok(Response::new().add_attribute("method", "try_configure_reward_transfer"))
+    Ok(response::empty_response())
 }
 
 fn try_send_rewards<B>(

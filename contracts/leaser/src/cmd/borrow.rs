@@ -1,10 +1,8 @@
 use finance::{currency::SymbolOwned, percent::Percent};
 use lease::api::{LoanForm, NewLeaseContract, NewLeaseForm};
 use platform::batch::Batch;
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{Addr, Coin, DepsMut},
-};
+use platform::message::Response as MessageResponse;
+use sdk::cosmwasm_std::{Addr, Coin, DepsMut};
 
 use crate::{
     result::ContractResult,
@@ -22,7 +20,7 @@ impl Borrow {
         admin: Addr,
         currency: SymbolOwned,
         max_ltv: Option<Percent>,
-    ) -> Result<Response, ContractError> {
+    ) -> Result<MessageResponse, ContractError> {
         let config = Config::load(deps.storage)?;
         let instance_reply_id = Leases::next(deps.storage, customer.clone())?;
 

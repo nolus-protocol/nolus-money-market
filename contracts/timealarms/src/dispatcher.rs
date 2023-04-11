@@ -1,13 +1,8 @@
-use crate::{
-    msg::{AlarmsCount, DispatchAlarmsResponse, ExecuteAlarmMsg},
-    ContractError,
-};
+use crate::{msg::ExecuteAlarmMsg, ContractError};
 use currency::native::Nls;
 use platform::batch::{Batch, Emit, Emitter};
-use sdk::{
-    cosmwasm_ext::Response,
-    cosmwasm_std::{self, Addr},
-};
+use platform::message::Response as MessageResponse;
+use sdk::cosmwasm_std::Addr;
 
 pub type Id = u64;
 
@@ -39,21 +34,18 @@ impl OracleAlarmDispatcher {
 
         Ok(self)
     }
-}
 
-impl TryFrom<OracleAlarmDispatcher> for Response {
-    type Error = ContractError;
-    fn try_from(value: OracleAlarmDispatcher) -> Result<Self, Self::Error> {
-        let msgs: AlarmsCount = value
-            .batch
+    pub fn nb_sent(&self) -> u32 {
+        self.batch
             .len()
             .try_into()
-            .expect("used with alarms less than or equal to AlarmsCount::MAX");
+            .expect("used with alarms less than or equal to AlarmsCount::MAX")
+    }
+}
 
-        Ok(value
-            .batch
-            .into_response(value.emitter)
-            .set_data(cosmwasm_std::to_binary(&DispatchAlarmsResponse(msgs))?))
+impl From<OracleAlarmDispatcher> for MessageResponse {
+    fn from(value: OracleAlarmDispatcher) -> Self {
+        MessageResponse::messages_with_events(value.batch, value.emitter)
     }
 }
 
@@ -63,18 +55,18 @@ mod test {
 
     use crate::dispatcher::{EVENT_KEY, EVENT_TYPE};
 
+    use platform::response;
     use sdk::{
-        cosmwasm_ext::Response,
+        cosmwasm_ext::Response as CwResponse,
         cosmwasm_std::{Addr, Event, ReplyOn},
     };
 
     #[test]
     fn empty() {
-        let d = OracleAlarmDispatcher::new();
-        let r: Response = d.try_into().unwrap();
-        assert!(!r.events.is_empty());
-        assert_eq!(Event::new(EVENT_TYPE), r.events[0]);
-        assert!(r.messages.is_empty());
+        let d: CwResponse = response::response_only_messages(OracleAlarmDispatcher::new());
+        assert!(!d.events.is_empty());
+        assert_eq!(Event::new(EVENT_TYPE), d.events[0]);
+        assert!(d.messages.is_empty());
     }
 
     #[test]
@@ -83,7 +75,7 @@ mod test {
         let receiver = Addr::unchecked("time_alarm receiver");
 
         let d = d.send_to(Id::MAX, receiver.clone()).unwrap();
-        let r: Response = d.try_into().unwrap();
+        let r: CwResponse = response::response_only_messages(d);
         assert!(!r.events.is_empty());
         assert_eq!(
             Event::new(EVENT_TYPE).add_attribute(EVENT_KEY, receiver),
