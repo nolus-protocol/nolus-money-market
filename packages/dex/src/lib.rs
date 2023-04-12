@@ -7,6 +7,7 @@ mod connectable;
 mod connection;
 mod entry_delay;
 mod error;
+mod filter;
 mod ica_connector;
 mod ica_recover;
 mod never;

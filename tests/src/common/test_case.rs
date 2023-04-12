@@ -312,4 +312,8 @@ where
         self.dispatcher_addr = Some(dispatcher_addr);
         self
     }
+
+    pub fn leaser(&self) -> Addr {
+        self.leaser_addr.clone().unwrap()
+    }
 }

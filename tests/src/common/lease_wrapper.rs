@@ -1,9 +1,12 @@
+use std::sync::mpsc::Receiver;
+
 use finance::{
     coin::{Amount, Coin},
-    currency::Currency,
+    currency::{self, Currency},
     duration::Duration,
     liability::Liability,
     percent::Percent,
+    price::{self, Price},
 };
 use lease::{
     api::{
@@ -24,6 +27,8 @@ use sdk::{
     testing::CustomMessageReceiver,
 };
 use swap::trx as swap_trx;
+
+use crate::common::cwcoin;
 
 use super::{ContractWrapper, MockApp, ADMIN, USER};
 
@@ -217,16 +222,82 @@ type LeaseContractWrapperReply = Box<
     >,
 >;
 
-// TODO split this mastodont into functions each per state to allow fine control
-// and checks over sent data and received swap results
-pub fn complete_lease_initialization<Lpn>(
+pub fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
     mock_app: &mut MockApp,
     neutron_message_receiver: &CustomMessageReceiver,
-    lease_addr: &Addr,
-    downpayment: CwCoin,
+    lease: &Addr,
+    downpayment: Coin<DownpaymentC>,
+    exp_borrow: Coin<Lpn>,
+    exp_lease: Coin<LeaseC>,
 ) where
     Lpn: Currency,
+    DownpaymentC: Currency,
+    LeaseC: Currency,
 {
+    check_state_opening(mock_app, lease);
+
+    let ica_addr = "ica0";
+    let ica_port = format!("icacontroller-{ica_addr}");
+    let ica_port = ica_port.as_str();
+    let ica_channel = format!("channel-{ica_addr}");
+    let ica_channel = ica_channel.as_str();
+    let (connection_id, interchain_account_id) = open_ica(
+        neutron_message_receiver,
+        mock_app,
+        lease,
+        ica_channel,
+        ica_port,
+        ica_addr,
+    );
+    check_state_opening(mock_app, lease);
+
+    transfer_out(
+        neutron_message_receiver,
+        mock_app,
+        lease,
+        downpayment,
+        ica_channel,
+        ica_addr,
+        false,
+    );
+    check_state_opening(mock_app, lease);
+
+    transfer_out(
+        neutron_message_receiver,
+        mock_app,
+        lease,
+        exp_borrow,
+        ica_channel,
+        ica_addr,
+        true,
+    );
+    check_state_opening(mock_app, lease);
+
+    let exp_swap_out = if currency::equal::<DownpaymentC, LeaseC>() {
+        exp_lease - price::total(downpayment, Price::identity())
+    } else {
+        exp_lease
+    };
+    swap::<DownpaymentC, LeaseC>(
+        mock_app,
+        neutron_message_receiver,
+        lease,
+        exp_swap_out,
+        connection_id,
+        interchain_account_id,
+    );
+
+    check_state_opened(mock_app, lease);
+}
+
+fn open_ica(
+    neutron_message_receiver: &Receiver<NeutronMsg>,
+    mock_app: &mut MockApp,
+    lease_addr: &Addr,
+    ica_channel: &str,
+    ica_port: &str,
+    ica_addr: &str,
+) -> (String, String) {
     let NeutronMsg::RegisterInterchainAccount {
         connection_id,
         interchain_account_id,
@@ -239,12 +310,6 @@ pub fn complete_lease_initialization<Lpn>(
     }) else {
         unreachable!("Unexpected message type!")
     };
-
-    let ica_addr = "ica0";
-    let ica_port = format!("icacontroller-{ica_addr}");
-    let ica_port = ica_port.as_str();
-    let ica_channel = format!("channel-{ica_addr}");
-    let ica_channel = ica_channel.as_str();
 
     mock_app
         .wasm_sudo(
@@ -267,32 +332,69 @@ pub fn complete_lease_initialization<Lpn>(
             },
         )
         .unwrap();
+    (connection_id, interchain_account_id)
+}
 
+fn transfer_out<OutC>(
+    neutron_message_receiver: &CustomMessageReceiver,
+    mock_app: &mut MockApp,
+    lease: &Addr,
+    amount_out: Coin<OutC>,
+    ica_channel: &str,
+    ica_addr: &str,
+    last_transfer: bool,
+) where
+    OutC: Currency,
+{
     assert_eq!(
         expect_ibc_transfer(
             neutron_message_receiver,
             ica_channel,
-            lease_addr.as_str(),
+            lease.as_str(),
             ica_addr,
-            false,
+            last_transfer,
         ),
-        downpayment
+        cwcoin(amount_out)
     );
-    send_blank_response(mock_app, lease_addr);
+    send_blank_response(mock_app, lease);
+}
 
-    assert_eq!(
-        expect_ibc_transfer(
-            neutron_message_receiver,
-            ica_channel,
-            lease_addr.as_str(),
-            ica_addr,
-            true,
-        )
-        .denom,
-        Lpn::BANK_SYMBOL
-    );
-    send_blank_response(mock_app, lease_addr);
+fn check_state_opening(mock_app: &mut MockApp, lease: &Addr) {
+    let StateResponse::Opening { .. } = mock_app.wrap().query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: lease.to_string(),
+        msg: to_binary(&StateQuery {}).unwrap(),
+    })).unwrap() else {
+        panic!("Opening lease failed! Lease is expected to be in opening state!");
+    };
+}
 
+fn check_state_opened(mock_app: &mut MockApp, lease: &Addr) {
+    let StateResponse::Opened { .. } = mock_app.wrap().query(&QueryRequest::Wasm(WasmQuery::Smart {
+        contract_addr: lease.to_string(),
+        msg: to_binary(&StateQuery {}).unwrap(),
+    })).unwrap() else {
+        panic!("Opening lease failed! Lease is not yet it opened state!");
+    };
+}
+
+fn swap<DownpaymentC, LeaseC>(
+    mock_app: &mut MockApp,
+    neutron_message_receiver: &Receiver<NeutronMsg>,
+    lease: &Addr,
+    swap_out: Coin<LeaseC>,
+    connection_id: String,
+    interchain_account_id: String,
+) where
+    DownpaymentC: Currency,
+    LeaseC: Currency,
+{
+    let amounts_out: Vec<Amount> = if currency::equal::<DownpaymentC, LeaseC>() {
+        vec![swap_out.into()]
+    } else {
+        let downpayment_out = 1;
+        let borrow_amount = Into::<Amount>::into(swap_out) - downpayment_out;
+        vec![downpayment_out, borrow_amount]
+    };
     {
         let NeutronMsg::SubmitTx {
             connection_id: tx_conn_id,
@@ -305,27 +407,12 @@ pub fn complete_lease_initialization<Lpn>(
 
         assert_eq!(tx_conn_id, connection_id);
         assert_eq!(tx_ica_id, interchain_account_id);
-        // One for downpayment and one for LPP's funding
-        assert_eq!(msgs.len(), 2);
+        assert_eq!(msgs.len(), amounts_out.len());
     }
+    check_state_opening(mock_app, lease);
 
-    let StateResponse::Opening { .. } = mock_app.wrap().query(&QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: lease_addr.to_string(),
-        msg: to_binary(&StateQuery {}).unwrap(),
-    })).unwrap() else {
-        panic!("Opening lease failed! Lease is expected to be in opening state!");
-    };
-
-    // TODO pass the amounts as parameters once split this mastodon into multiple functions, see the TODO at the method signature
-    let swap_resp = swap_exact_in_resp(vec![2857142857000, 142]);
-    send_response(mock_app, lease_addr, swap_resp);
-
-    let StateResponse::Opened { .. } = mock_app.wrap().query(&QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: lease_addr.to_string(),
-        msg: to_binary(&StateQuery {}).unwrap(),
-    })).unwrap() else {
-        panic!("Opening lease failed! Lease is not yet it opened state!");
-    };
+    let swap_resp = swap_exact_in_resp(amounts_out);
+    send_response(mock_app, lease, swap_resp);
 }
 
 fn swap_exact_in_resp<I>(amounts: I) -> Binary
@@ -369,7 +456,7 @@ pub fn expect_ibc_transfer(
     ica_channel: &str,
     sender_addr: &str,
     ica_addr: &str,
-    empty: bool,
+    last_msg: bool,
 ) -> CwCoin {
     let NeutronMsg::IbcTransfer {
         source_port, source_channel, token, sender, receiver, ..
@@ -377,7 +464,7 @@ pub fn expect_ibc_transfer(
         unreachable!("Unexpected message type!")
     };
 
-    if empty {
+    if last_msg {
         neutron_message_receiver
             .try_recv()
             .expect_err("Expected queue to be empty, but other message(s) has been sent!");

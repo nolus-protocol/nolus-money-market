@@ -1,8 +1,11 @@
-use finance::{duration::Duration, liability::Liability, percent::Percent};
+use finance::{
+    coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
+    test,
+};
 use lease::api::InterestPaymentSpec;
 use leaser::{
     contract::{execute, instantiate, query, reply, sudo},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse, SudoMsg},
     ContractError,
 };
 use sdk::{
@@ -91,3 +94,25 @@ type LeaserContractWrapperReply = Box<
         ContractError,
     >,
 >;
+
+pub fn query_quote<LpnC, DownpaymentC, LeaseC>(
+    app: &mut MockApp,
+    leaser: Addr,
+    downpayment: Coin<DownpaymentC>,
+) -> QuoteResponse
+where
+    LpnC: Currency,
+    DownpaymentC: Currency,
+    LeaseC: Currency,
+{
+    app.wrap()
+        .query_wasm_smart(
+            leaser,
+            &QueryMsg::Quote {
+                downpayment: test::funds::<_, DownpaymentC>(downpayment.into()),
+                lease_asset: LeaseC::TICKER.into(),
+                max_ltv: None,
+            },
+        )
+        .unwrap()
+}

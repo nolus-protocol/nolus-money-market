@@ -1,4 +1,4 @@
-use std::{any::type_name, collections::HashSet};
+use std::collections::HashSet;
 
 use currency::{
     lease::{Atom, Cro, Juno, Osmo},
@@ -9,10 +9,9 @@ use finance::{
     coin::{Amount, Coin},
     currency::Currency,
     percent::Percent,
-    price::{total, total_of},
-    test,
+    price::{self, total, total_of, Price},
 };
-use leaser::msg::{QueryMsg, QuoteResponse};
+use leaser::msg::QueryMsg;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{coin, Addr, Coin as CwCoin, DepsMut, Env, Event, MessageInfo},
@@ -23,6 +22,7 @@ use sdk::{
 use crate::common::{
     cwcoin, cwcoins,
     lease_wrapper::complete_lease_initialization,
+    leaser_wrapper,
     lpp_wrapper::mock_lpp_quote_query,
     oracle_wrapper::{add_feeder, feed_price},
     test_case::TestCase,
@@ -238,15 +238,23 @@ fn test_quote() {
     test_case.init_profit(24);
     test_case.init_leaser();
 
+    let price_lease_lpn: Price<LeaseCurrency, Lpn> = price::total_of(2.into()).is(1.into());
     let feeder = setup_feeder(&mut test_case);
     feed_price::<_, LeaseCurrency, Lpn>(&mut test_case, &feeder, Coin::new(2), Coin::new(1));
 
-    let resp = query_quote::<_, Downpayment, LeaseCurrency>(&test_case, Coin::new(100));
+    let leaser = test_case.leaser();
+    let downpayment = Coin::new(100);
+    let borrow = Coin::<Lpn>::new(185);
+    let resp = leaser_wrapper::query_quote::<Lpn, Downpayment, LeaseCurrency>(
+        &mut test_case.app,
+        leaser,
+        downpayment,
+    );
 
-    assert_eq!(resp.borrow.try_into(), Ok(Coin::<Lpn>::new(185)));
+    assert_eq!(resp.borrow.try_into(), Ok(borrow));
     assert_eq!(
         resp.total.try_into(),
-        Ok(Coin::<LeaseCurrency>::new(100 * 2 + 185 * 2))
+        Ok(price::total(downpayment + borrow, price_lease_lpn.inv()))
     );
 
     /*   TODO: test with different time periods and amounts in LPP
@@ -256,7 +264,12 @@ fn test_quote() {
 
     assert_eq!(resp.annual_interest_rate_margin, Percent::from_permille(30),);
 
-    let resp = query_quote::<_, Downpayment, LeaseCurrency>(&test_case, Coin::new(15));
+    let leaser = test_case.leaser();
+    let resp = leaser_wrapper::query_quote::<Lpn, Downpayment, LeaseCurrency>(
+        &mut test_case.app,
+        leaser,
+        Coin::new(15),
+    );
 
     assert_eq!(resp.borrow.try_into(), Ok(Coin::<Lpn>::new(27)));
     assert_eq!(
@@ -331,7 +344,12 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
         lpn_asset_base,
     );
 
-    let resp = query_quote::<_, _, LeaseCurrency>(&test_case, downpayment);
+    let leaser = test_case.leaser();
+    let resp = leaser_wrapper::query_quote::<Lpn, Osmo, LeaseCurrency>(
+        &mut test_case.app,
+        leaser,
+        downpayment,
+    );
 
     assert_eq!(
         resp.borrow.try_into(),
@@ -393,8 +411,11 @@ fn test_quote_fixed_rate() {
 
     let feeder = setup_feeder(&mut test_case);
     feed_price::<_, LeaseCurrency, Lpn>(&mut test_case, &feeder, Coin::new(3), Coin::new(1));
-    let resp =
-        query_quote::<_, Downpayment, LeaseCurrency>(&test_case, Coin::<Downpayment>::new(100));
+    let resp = leaser_wrapper::query_quote::<Lpn, Downpayment, LeaseCurrency>(
+        &mut test_case.app,
+        test_case.leaser_addr.clone().unwrap(),
+        Coin::<Downpayment>::new(100),
+    );
 
     assert_eq!(resp.borrow.try_into(), Ok(Coin::<Lpn>::new(185)));
     assert_eq!(
@@ -418,29 +439,6 @@ fn setup_feeder(test_case: &mut TestCase<Usdc>) -> Addr {
     let feeder = Addr::unchecked("feeder_main");
     add_feeder(test_case, &feeder);
     feeder
-}
-
-fn query_quote<LpnC, DownpaymentC, LeaseC>(
-    test_case: &TestCase<LpnC>,
-    downpayment: Coin<DownpaymentC>,
-) -> QuoteResponse
-where
-    LpnC: Currency,
-    DownpaymentC: Currency,
-    LeaseC: Currency,
-{
-    test_case
-        .app
-        .wrap()
-        .query_wasm_smart(
-            test_case.leaser_addr.clone().unwrap(),
-            &QueryMsg::Quote {
-                downpayment: test::funds::<_, DownpaymentC>(downpayment.into()),
-                lease_asset: LeaseC::TICKER.into(),
-                max_ltv: None,
-            },
-        )
-        .unwrap()
 }
 
 #[test]
@@ -542,7 +540,7 @@ where
     if feed_prices {
         add_feeder(&mut test_case, user_addr.clone());
 
-        if type_name::<DownpaymentC>() != type_name::<Lpn>() {
+        if !finance::currency::equal::<DownpaymentC, Lpn>() {
             feed_price(
                 &mut test_case,
                 &user_addr,
@@ -551,7 +549,7 @@ where
             );
         }
 
-        if type_name::<LeaseC>() != type_name::<Lpn>() {
+        if !finance::currency::equal::<LeaseC, Lpn>() {
             feed_price(
                 &mut test_case,
                 &user_addr,
@@ -561,7 +559,14 @@ where
         }
     }
 
-    let downpayment: CwCoin = cwcoin::<DownpaymentC, _>(40);
+    let downpayment: Coin<DownpaymentC> = Coin::new(40);
+    let quote = leaser_wrapper::query_quote::<Lpn, DownpaymentC, LeaseC>(
+        &mut test_case.app,
+        leaser_addr.clone(),
+        downpayment,
+    );
+    let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
+    let exp_lease = TryInto::<Coin<LeaseC>>::try_into(quote.total).unwrap();
 
     test_case
         .app
@@ -572,15 +577,17 @@ where
                 currency: LeaseC::TICKER.into(),
                 max_ltv: None,
             },
-            &[downpayment.clone()],
+            &[cwcoin(downpayment)],
         )
         .unwrap();
 
-    complete_lease_initialization::<Lpn>(
+    complete_lease_initialization::<Lpn, DownpaymentC, LeaseC>(
         &mut test_case.app,
         &neutron_message_receiver,
         &lease_addr,
         downpayment,
+        exp_borrow,
+        exp_lease,
     );
 
     neutron_message_receiver
