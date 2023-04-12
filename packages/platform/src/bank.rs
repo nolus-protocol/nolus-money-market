@@ -359,21 +359,37 @@ impl From<LazySenderStub> for Batch {
 
 #[cfg(test)]
 mod test {
+    use std::sync::{Mutex, MutexGuard};
+
+    use currency::{
+        lease::Atom,
+        native::{Native, Nls},
+        payment::PaymentGroup,
+    };
     use finance::{
-        coin::{Amount, Coin},
-        currency::{Currency, SymbolStatic},
+        coin::{Amount, Coin, WithCoin, WithCoinResult},
+        currency::{Currency, Group, SymbolStatic},
         test::{
             coin::Expect,
             currency::{Dai, TestCurrencies, Usdc},
         },
     };
+    use sdk::{
+        cosmwasm_std::{coin as cw_coin, Addr, Coin as CwCoin, Empty, QuerierWrapper},
+        cw_multi_test::BasicApp,
+    };
 
-    use crate::coin_legacy;
+    use crate::{
+        bank::{BankAccountView, BankView},
+        coin_legacy,
+        error::Error,
+    };
 
     use super::may_received;
 
     type TheCurrency = Usdc;
     type ExtraCurrency = Dai;
+
     const AMOUNT: Amount = 42;
 
     #[test]
@@ -434,8 +450,90 @@ mod test {
             Some(Ok(true)),
             may_received::<TestCurrencies, _>(
                 vec![in_coin_1, in_coin_3, in_coin_2],
-                Expect(coin_3)
+                Expect(coin_3),
             )
+        );
+    }
+
+    struct Cmd {
+        visited: Mutex<Vec<&'static str>>,
+    }
+
+    impl Cmd {
+        pub const fn new() -> Self {
+            Self {
+                visited: Mutex::new(Vec::new()),
+            }
+        }
+    }
+
+    impl WithCoin for &'_ Cmd {
+        type Output = ();
+        type Error = Error;
+
+        fn on<C>(&self, _: Coin<C>) -> WithCoinResult<Self>
+        where
+            C: Currency,
+        {
+            let mut visited: MutexGuard<'_, Vec<&'static str>> = self.visited.lock().unwrap();
+
+            assert!(!visited.contains(&C::TICKER));
+
+            visited.push(C::TICKER);
+
+            Ok(())
+        }
+    }
+
+    fn total_balance_tester<G>(coins: Vec<CwCoin>, expected: &[&'static str])
+    where
+        G: Group,
+    {
+        let addr: Addr = Addr::unchecked("user");
+
+        let app: BasicApp<Empty, Empty> = sdk::cw_multi_test::App::new(|router, _, storage| {
+            router.bank.init_balance(storage, &addr, coins).unwrap();
+        });
+        let querier: QuerierWrapper<'_> = app.wrap();
+
+        let bank_view: BankView<'_> = BankView::account(&addr, &querier);
+
+        let cmd: Cmd = Cmd::new();
+
+        assert_eq!(
+            bank_view
+                .total_balance::<G, &'_ Cmd>(&cmd)
+                .unwrap()
+                .is_none(),
+            expected.is_empty()
+        );
+
+        assert_eq!(
+            cmd.visited.into_inner().unwrap(),
+            Vec::from_iter(expected.iter().copied())
+        );
+    }
+
+    #[test]
+    fn total_balance_empty() {
+        total_balance_tester::<PaymentGroup>(vec![], &[]);
+    }
+
+    #[test]
+    fn total_balance_same_group() {
+        total_balance_tester::<PaymentGroup>(vec![cw_coin(100, Atom::TICKER)], &[Atom::TICKER]);
+    }
+
+    #[test]
+    fn total_balance_different_group() {
+        total_balance_tester::<Native>(vec![cw_coin(100, Usdc::TICKER)], &[]);
+    }
+
+    #[test]
+    fn total_balance_mixed_group() {
+        total_balance_tester::<Native>(
+            vec![cw_coin(100, Usdc::TICKER), cw_coin(100, Nls::TICKER)],
+            &[Nls::TICKER],
         );
     }
 }

@@ -845,6 +845,7 @@ dependencies = [
 name = "platform"
 version = "0.1.2"
 dependencies = [
+ "currency",
  "finance",
  "prost 0.11.8",
  "sdk",
