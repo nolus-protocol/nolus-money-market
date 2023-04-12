@@ -76,6 +76,7 @@ where
         let mut filtered_swapper = CurrencyFilter::new(&mut swapper, self.spec.out_currency());
         let _res = self.spec.on_coins(&mut filtered_swapper)?;
 
+        #[cfg(debug_assertions)]
         self.debug_check(&filtered_swapper, _res);
 
         Ok(swapper.0.into())
@@ -102,6 +103,7 @@ where
         let mut filtered_resp = CurrencyFilter::new(&mut resp, self.spec.out_currency());
         let _res = self.spec.on_coins(&mut filtered_resp)?;
 
+        #[cfg(debug_assertions)]
         self.debug_check(&filtered_resp, _res);
 
         coin::from_amount_ticker(filtered_resp.filtered() + resp.1, spec.out_currency())
