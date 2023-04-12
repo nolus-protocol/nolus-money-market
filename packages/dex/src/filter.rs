@@ -83,7 +83,7 @@ mod test {
 
         assert_eq!(f.filtered(), 0);
         assert_passed_through::<false>(&f);
-        
+
         assert_eq!(
             f.visit::<TestCurrencies>(&Coin::<FilterCurrency>::new(AMOUNT1).into())
                 .unwrap(),
@@ -91,7 +91,7 @@ mod test {
         );
         assert_eq!(f.filtered(), AMOUNT1);
         assert_passed_through::<false>(&f);
-        
+
         assert_eq!(
             f.visit::<TestCurrencies>(&Coin::<FilterCurrency>::new(AMOUNT1).into())
                 .unwrap(),
