@@ -71,10 +71,10 @@ where
         )
     }
 
-    fn emit_ok(contract: Addr, dex_account: HostAccount) -> Emitter {
+    fn emit_ok(contract: Addr, ica_host: HostAccount) -> Emitter {
         Emitter::of_type(Self::STATE_LABEL)
             .emit("id", contract)
-            .emit("dex_account", dex_account)
+            .emit("ica_host", ica_host)
     }
 }
 
@@ -101,13 +101,13 @@ where
         env: Env,
     ) -> ContinueResult<Self> {
         let ica = self.build_account(counterparty_version, &env)?;
-        let dex_account = ica.ica_account().clone();
+        let ica_host = ica.host().clone();
         let contract = env.contract.address.clone();
         let next_state = self.connectee.connected(ica);
         next_state
             .enter(env.block.time, &deps.querier)
             .map(|batch| {
-                message::Response::messages_with_events(batch, Self::emit_ok(contract, dex_account))
+                message::Response::messages_with_events(batch, Self::emit_ok(contract, ica_host))
             })
             .map(|cw_resp| Response::<Self>::from(cw_resp, next_state))
     }

@@ -6,8 +6,9 @@ use crate::{
     error::Result,
     response::{ContinueResult, Handler, Result as HandlerResult},
     swap_task::SwapTask as SwapTaskT,
-    timeout, ConnectionParams, Contract, ContractInSwap, DexConnectable, Enterable,
-    TransferInInitState, trx::IBC_TIMEOUT,
+    timeout,
+    trx::IBC_TIMEOUT,
+    ConnectionParams, Contract, ContractInSwap, DexConnectable, Enterable, TransferInInitState,
 };
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
@@ -51,11 +52,7 @@ where
     SwapTask::OutG: Clone,
 {
     fn on_response(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
-        let finish = TransferInFinish::new(
-            self.spec,
-            self.amount_in,
-            env.block.time + IBC_TIMEOUT,
-        );
+        let finish = TransferInFinish::new(self.spec, self.amount_in, env.block.time + IBC_TIMEOUT);
         finish.try_complete(deps, env).map_into()
     }
 }

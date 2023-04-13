@@ -18,7 +18,7 @@ use crate::{
 pub struct Account {
     /// The contract at Nolus that owns the account
     owner: Addr,
-    dex_account: HostAccount, // TODO rename to `ica_account`
+    host: HostAccount,
     dex: ConnectionParams,
 }
 
@@ -27,8 +27,8 @@ impl Account {
         &self.owner
     }
 
-    pub(super) fn ica_account(&self) -> &HostAccount {
-        &self.dex_account
+    pub(super) fn host(&self) -> &HostAccount {
+        &self.host
     }
 
     pub(super) fn register_request(dex: &ConnectionParams) -> LocalBatch {
@@ -40,10 +40,10 @@ impl Account {
         owner: Addr,
         dex: ConnectionParams,
     ) -> Result<Self> {
-        let ica_account = ica::parse_register_response(response)?;
+        let host = ica::parse_register_response(response)?;
         Ok(Self {
             owner,
-            dex_account: ica_account,
+            host,
             dex,
         })
     }
@@ -52,7 +52,7 @@ impl Account {
         TransferOutTrx::new(
             &self.dex.transfer_channel.local_endpoint,
             &self.owner,
-            &self.dex_account,
+            &self.host,
             now,
         )
     }
@@ -62,14 +62,14 @@ impl Account {
         oracle: &'a OracleRef,
         querier: &'a QuerierWrapper<'a>,
     ) -> SwapTrx<'a> {
-        SwapTrx::new(&self.dex.connection_id, &self.dex_account, oracle, querier)
+        SwapTrx::new(&self.dex.connection_id, &self.host, oracle, querier)
     }
 
     pub(super) fn transfer_from(&self, now: Timestamp) -> TransferInTrx<'_> {
         TransferInTrx::new(
             &self.dex.connection_id,
             &self.dex.transfer_channel.remote_endpoint,
-            &self.dex_account,
+            &self.host,
             &self.owner,
             now,
         )
@@ -78,7 +78,7 @@ impl Account {
 
 impl From<Account> for HostAccount {
     fn from(account: Account) -> Self {
-        account.dex_account
+        account.host
     }
 }
 
