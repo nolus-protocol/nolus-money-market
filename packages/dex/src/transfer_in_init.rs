@@ -7,7 +7,7 @@ use crate::{
     response::{ContinueResult, Handler, Result as HandlerResult},
     swap_task::SwapTask as SwapTaskT,
     timeout, ConnectionParams, Contract, ContractInSwap, DexConnectable, Enterable,
-    TransferInInitState,
+    TransferInInitState, trx::IBC_TIMEOUT,
 };
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
@@ -54,7 +54,7 @@ where
         let finish = TransferInFinish::new(
             self.spec,
             self.amount_in,
-            env.block.time + crate::IBC_TIMEOUT,
+            env.block.time + IBC_TIMEOUT,
         );
         finish.try_complete(deps, env).map_into()
     }

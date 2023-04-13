@@ -16,8 +16,7 @@ use swap::trx;
 
 use crate::error::Result;
 
-/// TODO reduce its visibility once the lease payment gets migrated to the dex package
-pub const IBC_TIMEOUT: Duration = Duration::from_secs(60);
+pub(super) const IBC_TIMEOUT: Duration = Duration::from_secs(60);
 
 //TODO take them as input from the client
 const ICA_TRANSFER_ACK_TIP: Coin<Nls> = Coin::new(1);
@@ -27,8 +26,7 @@ const ICA_TRANSFER_TIMEOUT_TIP: Coin<Nls> = ICA_TRANSFER_ACK_TIP;
 const ICA_SWAP_ACK_TIP: Coin<Nls> = Coin::new(1);
 const ICA_SWAP_TIMEOUT_TIP: Coin<Nls> = ICA_SWAP_ACK_TIP;
 
-/// TODO reduce its visibility once the lease payment gets migrated to the dex package
-pub struct TransferOutTrx<'a> {
+pub(super) struct TransferOutTrx<'a> {
     sender: LocalSender<'a>,
 }
 
@@ -65,8 +63,7 @@ impl<'r> From<TransferOutTrx<'r>> for LocalBatch {
     }
 }
 
-/// TODO reduce its visibility once the lease payment gets migrated to the dex package
-pub struct SwapTrx<'a> {
+pub(super) struct SwapTrx<'a> {
     conn: &'a str,
     ica_account: &'a HostAccount,
     trx: Transaction,
@@ -116,8 +113,7 @@ impl From<SwapTrx<'_>> for LocalBatch {
     }
 }
 
-/// TODO reduce its visibility once the lease payment gets migrated to the dex package
-pub struct TransferInTrx<'a> {
+pub(super) struct TransferInTrx<'a> {
     conn: &'a str,
     sender: RemoteSender<'a>,
 }

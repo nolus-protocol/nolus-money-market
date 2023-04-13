@@ -44,7 +44,6 @@ pub use {
     transfer_in_finish::TransferInFinish,
     transfer_in_init::TransferInInit,
     transfer_out::TransferOut,
-    trx::IBC_TIMEOUT,
 };
 
 type SwapExactInRecoverIca<SwapTask, SEnum> =

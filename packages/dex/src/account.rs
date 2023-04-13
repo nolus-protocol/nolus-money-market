@@ -48,7 +48,7 @@ impl Account {
         })
     }
 
-    pub fn transfer_to(&self, now: Timestamp) -> TransferOutTrx<'_> {
+    pub(super) fn transfer_to(&self, now: Timestamp) -> TransferOutTrx<'_> {
         TransferOutTrx::new(
             &self.dex.transfer_channel.local_endpoint,
             &self.owner,
@@ -57,8 +57,7 @@ impl Account {
         )
     }
 
-    /// TODO reduce its visibility once the lease payment gets migrated to the dex package
-    pub fn swap<'a>(
+    pub(super) fn swap<'a>(
         &'a self,
         oracle: &'a OracleRef,
         querier: &'a QuerierWrapper<'a>,
@@ -66,8 +65,7 @@ impl Account {
         SwapTrx::new(&self.dex.connection_id, &self.dex_account, oracle, querier)
     }
 
-    /// TODO reduce its visibility once the lease payment gets migrated to the dex package
-    pub fn transfer_from(&self, now: Timestamp) -> TransferInTrx<'_> {
+    pub(super) fn transfer_from(&self, now: Timestamp) -> TransferInTrx<'_> {
         TransferInTrx::new(
             &self.dex.connection_id,
             &self.dex.transfer_channel.remote_endpoint,
