@@ -41,11 +41,7 @@ impl Account {
         dex: ConnectionParams,
     ) -> Result<Self> {
         let host = ica::parse_register_response(response)?;
-        Ok(Self {
-            owner,
-            host,
-            dex,
-        })
+        Ok(Self { owner, host, dex })
     }
 
     pub(super) fn transfer_to(&self, now: Timestamp) -> TransferOutTrx<'_> {
