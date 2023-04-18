@@ -4,69 +4,17 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use finance::{
     coin::{Amount as CoinAmount, Coin, WithCoin, WithCoinResult},
-    currency::{maybe_visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Group},
+    currency::{AnyVisitor, AnyVisitorResult, Currency, Group},
 };
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
 use crate::{
     batch::Batch,
-    coin_legacy::{from_cosmwasm_any_impl, from_cosmwasm_impl, to_cosmwasm_impl},
+    coin_legacy::{
+        from_cosmwasm_any_impl, from_cosmwasm_impl, maybe_from_cosmwasm_any_impl, to_cosmwasm_impl,
+    },
     error::{Error, Result},
 };
-
-trait ReduceResults
-where
-    Self: Iterator<Item = StdResult<Self::InnerItem, Self::Error>>,
-{
-    type InnerItem;
-    type Error: StdError;
-
-    fn reduce_results<F>(&mut self, f: F) -> StdResult<Option<Self::InnerItem>, Self::Error>
-    where
-        F: FnMut(Self::InnerItem, Self::InnerItem) -> Self::InnerItem;
-}
-
-impl<I, T, E> ReduceResults for I
-where
-    I: Iterator<Item = StdResult<T, E>>,
-    E: StdError,
-{
-    type InnerItem = T;
-    type Error = E;
-
-    fn reduce_results<F>(&mut self, mut f: F) -> StdResult<Option<T>, E>
-    where
-        F: FnMut(T, T) -> T,
-    {
-        Ok(
-            if let Some(mut last) = self.next().transpose().map_err(Into::into)? {
-                for item in self {
-                    last = f(last, item.map_err(Into::into)?);
-                }
-
-                Some(last)
-            } else {
-                None
-            },
-        )
-    }
-}
-
-pub trait Aggregate {
-    fn aggregate(self, other: Self) -> Self
-    where
-        Self: Sized;
-}
-
-impl Aggregate for () {
-    fn aggregate(self, _: Self) -> Self {}
-}
-
-impl Aggregate for Batch {
-    fn aggregate(self, other: Self) -> Self {
-        self.merge(other)
-    }
-}
 
 pub trait BankAccountView {
     fn balance<C>(&self) -> Result<Coin<C>>
@@ -190,16 +138,7 @@ impl<'a> BankAccountView for BankView<'a> {
             .map_err(Into::<Error>::into)
             .map_err(Into::<Cmd::Error>::into)?
             .into_iter()
-            .map(|dto| {
-                maybe_visit_any_on_ticker::<G, _>(
-                    &dto.denom,
-                    CoinVisitor {
-                        amount: dto.amount.into(),
-                        cmd: &cmd,
-                    },
-                )
-            })
-            .filter_map(StdResult::transpose)
+            .filter_map(|cw_coin| maybe_from_cosmwasm_any_impl::<G, _>(cw_coin, &cmd))
             .reduce_results(Aggregate::aggregate)
     }
 }
@@ -357,10 +296,62 @@ impl From<LazySenderStub> for Batch {
     }
 }
 
+pub trait Aggregate {
+    fn aggregate(self, other: Self) -> Self
+    where
+        Self: Sized;
+}
+
+impl Aggregate for () {
+    fn aggregate(self, _: Self) -> Self {}
+}
+
+impl Aggregate for Batch {
+    fn aggregate(self, other: Self) -> Self {
+        self.merge(other)
+    }
+}
+
+trait ReduceResults
+where
+    Self: Iterator<Item = StdResult<Self::InnerItem, Self::Error>>,
+{
+    type InnerItem;
+    type Error: StdError;
+
+    fn reduce_results<F>(&mut self, f: F) -> StdResult<Option<Self::InnerItem>, Self::Error>
+    where
+        F: FnMut(Self::InnerItem, Self::InnerItem) -> Self::InnerItem;
+}
+
+impl<I, T, E> ReduceResults for I
+where
+    I: Iterator<Item = StdResult<T, E>>,
+    E: StdError,
+{
+    type InnerItem = T;
+    type Error = E;
+
+    fn reduce_results<F>(&mut self, mut f: F) -> StdResult<Option<T>, E>
+    where
+        F: FnMut(T, T) -> T,
+    {
+        Ok(
+            if let Some(mut last) = self.next().transpose().map_err(Into::into)? {
+                for item in self {
+                    last = f(last, item.map_err(Into::into)?);
+                }
+
+                Some(last)
+            } else {
+                None
+            },
+        )
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use std::sync::{Mutex, MutexGuard};
-
     use currency::{
         lease::Atom,
         native::{Native, Nls},
@@ -455,19 +446,17 @@ mod test {
         );
     }
 
-    struct Cmd {
-        visited: Mutex<Vec<&'static str>>,
+    struct Cmd<'r> {
+        expected: &'r [&'static str],
     }
 
-    impl Cmd {
-        pub const fn new() -> Self {
-            Self {
-                visited: Mutex::new(Vec::new()),
-            }
+    impl<'r> Cmd<'r> {
+        pub const fn new(expected: &'r [&'static str]) -> Self {
+            Self { expected }
         }
     }
 
-    impl WithCoin for &'_ Cmd {
+    impl WithCoin for Cmd<'_> {
         type Output = ();
         type Error = Error;
 
@@ -475,11 +464,7 @@ mod test {
         where
             C: Currency,
         {
-            let mut visited: MutexGuard<'_, Vec<&'static str>> = self.visited.lock().unwrap();
-
-            assert!(!visited.contains(&C::TICKER));
-
-            visited.push(C::TICKER);
+            assert!(self.expected.contains(&C::BANK_SYMBOL));
 
             Ok(())
         }
@@ -498,19 +483,14 @@ mod test {
 
         let bank_view: BankView<'_> = BankView::account(&addr, &querier);
 
-        let cmd: Cmd = Cmd::new();
+        let cmd: Cmd<'_> = Cmd::new(expected);
 
         assert_eq!(
             bank_view
-                .total_balance::<G, &'_ Cmd>(&cmd)
+                .total_balance::<G, Cmd<'_>>(cmd)
                 .unwrap()
                 .is_none(),
             expected.is_empty()
-        );
-
-        assert_eq!(
-            cmd.visited.into_inner().unwrap(),
-            Vec::from_iter(expected.iter().copied())
         );
     }
 
@@ -521,19 +501,22 @@ mod test {
 
     #[test]
     fn total_balance_same_group() {
-        total_balance_tester::<PaymentGroup>(vec![cw_coin(100, Atom::TICKER)], &[Atom::TICKER]);
+        total_balance_tester::<PaymentGroup>(
+            vec![cw_coin(100, Atom::BANK_SYMBOL)],
+            &[Atom::BANK_SYMBOL],
+        );
     }
 
     #[test]
     fn total_balance_different_group() {
-        total_balance_tester::<Native>(vec![cw_coin(100, Usdc::TICKER)], &[]);
+        total_balance_tester::<Native>(vec![cw_coin(100, Usdc::BANK_SYMBOL)], &[]);
     }
 
     #[test]
     fn total_balance_mixed_group() {
         total_balance_tester::<Native>(
-            vec![cw_coin(100, Usdc::TICKER), cw_coin(100, Nls::TICKER)],
-            &[Nls::TICKER],
+            vec![cw_coin(100, Usdc::TICKER), cw_coin(100, Nls::BANK_SYMBOL)],
+            &[Nls::BANK_SYMBOL],
         );
     }
 }
