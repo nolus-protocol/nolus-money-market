@@ -176,6 +176,7 @@ where
 }
 
 pub type WithCoinResult<V> = Result<<V as WithCoin>::Output, <V as WithCoin>::Error>;
+
 pub trait WithCoin {
     type Output;
     type Error;
@@ -183,6 +184,36 @@ pub trait WithCoin {
     fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
     where
         C: Currency;
+}
+
+impl<T> WithCoin for &'_ T
+where
+    T: WithCoin,
+{
+    type Output = T::Output;
+    type Error = T::Error;
+
+    fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
+    where
+        C: Currency,
+    {
+        T::on(self, coin)
+    }
+}
+
+impl<T> WithCoin for &'_ mut T
+where
+    T: WithCoin,
+{
+    type Output = T::Output;
+    type Error = T::Error;
+
+    fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
+    where
+        C: Currency,
+    {
+        T::on(self, coin)
+    }
 }
 
 #[cfg(test)]
