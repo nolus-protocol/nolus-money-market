@@ -28,17 +28,13 @@ pub trait AnyVisitorPair {
 pub fn maybe_visit_any_on_ticker<G, V>(
     ticker: Symbol<'_>,
     visitor: V,
-) -> Result<Option<V::Output>, V::Error>
+) -> Option<Result<V::Output, V::Error>>
 where
     G: Group,
     V: AnyVisitor,
     Error: Into<V::Error>,
 {
-    if let Ok(result) = G::maybe_visit_on_ticker(ticker, visitor) {
-        result.map(Some)
-    } else {
-        Ok(None)
-    }
+    G::maybe_visit_on_ticker(ticker, visitor).ok()
 }
 
 pub fn visit_any_on_ticker<G, V>(ticker: Symbol<'_>, visitor: V) -> Result<V::Output, V::Error>
