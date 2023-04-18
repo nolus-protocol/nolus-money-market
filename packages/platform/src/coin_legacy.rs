@@ -33,6 +33,18 @@ where
         .map_err(|transformer| transformer.1)
 }
 
+#[inline]
+pub(crate) fn maybe_from_cosmwasm_any_impl<G, V>(
+    coin: CosmWasmCoin,
+    v: V,
+) -> Option<WithCoinResult<V>>
+where
+    G: Group,
+    V: WithCoin,
+{
+    G::maybe_visit_on_bank_symbol(&coin.denom, CoinTransformerAny(&coin, v)).ok()
+}
+
 #[cfg(any(test, feature = "testing"))]
 pub fn to_cosmwasm<C>(coin: Coin<C>) -> CosmWasmCoin
 where
