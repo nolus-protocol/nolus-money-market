@@ -6,7 +6,6 @@ use finance::coin::IntoDTO;
 use platform::{
     bank,
     batch::{Emit, Emitter},
-    message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
@@ -49,21 +48,16 @@ impl Active {
         querier: &QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
-        // TODO Move RepayResult into this layer, rename to, for example, ExecuteResult
-        // and refactor try_* to return it
         let RepayResult {
             lease: lease_updated,
             paid,
-            batch,
-            emitter,
+            response,
         } = with_lease::execute(lease.lease, Repay::new(payment, env), querier)?;
 
         let new_lease = Lease {
             lease: lease_updated,
             dex: lease.dex,
         };
-
-        let response = MessageResponse::messages_with_events(batch, emitter);
 
         Ok(if paid {
             Response::from(response, paid::Active::new(new_lease))
