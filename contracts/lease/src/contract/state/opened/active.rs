@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use currency::{lpn::Lpns, payment::PaymentGroup};
-use dex::{Account, Enterable};
+use dex::Enterable;
 use finance::coin::IntoDTO;
 use platform::{
     bank,
@@ -13,7 +13,7 @@ use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timesta
 use crate::{
     api::{DownpaymentCoin, ExecuteMsg, LpnCoin, StateResponse},
     contract::{
-        cmd::{AlarmResult, OpenLoanRespResult, PriceAlarm, Repay, RepayResult, TimeAlarm},
+        cmd::{OpenLoanRespResult, PriceAlarm, Repay, RepayResult, TimeAlarm},
         state::{handler, paid, Handler, Response},
         Contract, Lease,
     },
@@ -100,16 +100,13 @@ impl Active {
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        let AlarmResult {
-            response,
-            lease_dto: lease_updated,
-        } = with_lease::execute(
-            self.lease.lease,
+        let response = with_lease::execute(
+            self.lease.lease.clone(),
             PriceAlarm::new(env, &info.sender, env.block.time),
             querier,
         )?;
 
-        Ok(into_updated_active(lease_updated, self.lease.dex, response))
+        Ok(Response::from(response, self))
     }
 
     fn try_on_time_alarm(
@@ -118,16 +115,13 @@ impl Active {
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
-        let AlarmResult {
-            response,
-            lease_dto: lease_updated,
-        } = with_lease::execute(
-            self.lease.lease,
+        let response = with_lease::execute(
+            self.lease.lease.clone(),
             TimeAlarm::new(env, &info.sender, env.block.time),
             querier,
         )?;
 
-        Ok(into_updated_active(lease_updated, self.lease.dex, response))
+        Ok(Response::from(response, self))
     }
 }
 
@@ -172,16 +166,4 @@ fn build_emitter(
         .emit("loan-pool-id", lease.loan.lpp().addr())
         .emit_coin_dto("loan", loan.principal)
         .emit_coin_dto("downpayment", downpayment)
-}
-
-fn into_updated_active<R>(updated_dto: LeaseDTO, dex: Account, resp: R) -> Response
-where
-    R: Into<MessageResponse>,
-{
-    let lease = Lease {
-        lease: updated_dto,
-        dex,
-    };
-
-    Response::from(resp, Active { lease })
 }

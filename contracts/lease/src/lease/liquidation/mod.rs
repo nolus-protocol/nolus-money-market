@@ -16,8 +16,6 @@ use crate::{
     loan::{LiabilityStatus, RepayReceipt},
 };
 
-use super::LeaseDTO;
-
 mod alarm;
 
 impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
@@ -155,7 +153,6 @@ where
     Asset: Currency,
 {
     pub batch: Batch,
-    pub lease_dto: LeaseDTO,
     pub liquidation_status: Status<Lpn, Asset>,
 }
 

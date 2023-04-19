@@ -110,14 +110,10 @@ where
         self,
         liquidation_status: Status<Lpn, Asset>,
     ) -> OnAlarmResult<Lpn, Asset> {
-        let IntoDTOResult {
-            lease: lease_dto,
-            batch,
-        } = self.into_dto();
+        let IntoDTOResult { lease: _, batch } = self.into_dto();
 
         OnAlarmResult {
             batch,
-            lease_dto,
             liquidation_status,
         }
     }

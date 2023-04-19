@@ -1,4 +1,4 @@
-pub use alarms::{price::PriceAlarm, time::TimeAlarm, AlarmResult};
+pub use alarms::{price::PriceAlarm, time::TimeAlarm};
 pub use close::Close;
 pub use open::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp, OpenLoanRespResult};
 pub use repay::{Repay, RepayResult};

@@ -7,7 +7,7 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{api::LeaseCoin, loan::LoanDTO};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 #[cfg_attr(test, derive(Debug))]
 pub struct LeaseDTO {
     pub(crate) addr: Addr,

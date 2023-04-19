@@ -7,16 +7,11 @@ use sdk::cosmwasm_std::Env;
 
 use crate::{
     event::Type,
-    lease::{LeaseDTO, LeaseInfo, LiquidationInfo, Status, WarningLevel},
+    lease::{LeaseInfo, LiquidationInfo, Status, WarningLevel},
 };
 
 pub mod price;
 pub mod time;
-
-pub struct AlarmResult {
-    pub response: MessageResponse,
-    pub lease_dto: LeaseDTO,
-}
 
 fn emit_events<Lpn, Asset>(
     env: &Env,
