@@ -2,13 +2,7 @@ use std::marker::PhantomData;
 
 use serde::Serialize;
 
-use finance::{
-    coin::Coin,
-    currency::Currency,
-    fraction::Fraction,
-    percent::{Percent, Units},
-    ratio::Rational,
-};
+use finance::{coin::Coin, currency::Currency, percent::Percent};
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::{batch::Batch, generate_ids};
@@ -94,15 +88,7 @@ where
         liability_lpn: Coin<Lpn>,
         now: Timestamp,
     ) -> ContractResult<Status<Lpn, Asset>> {
-        // from 'liability - liquidation = healthy% of (lease - liquidation)' follows
-        // 'liquidation = 100% / (100% - healthy%) of (liability - healthy% of lease)'
-        let multiplier = Rational::new(
-            Percent::HUNDRED,
-            Percent::HUNDRED - self.liability.healthy_percent(),
-        );
-        let extra_liability_lpn =
-            liability_lpn - liability_lpn.min(self.liability.healthy_percent().of(lease_lpn));
-        let liquidation_lpn = Fraction::<Units>::of(&multiplier, extra_liability_lpn);
+        let liquidation_lpn = self.liability.amount_to_liquidate(lease_lpn, liability_lpn);
 
         self.liquidate(
             Cause::Liability,

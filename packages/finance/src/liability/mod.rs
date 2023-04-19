@@ -1,3 +1,5 @@
+use std::ops::Sub;
+
 use serde::{Deserialize, Serialize};
 
 use sdk::schemars::{self, JsonSchema};
@@ -5,8 +7,9 @@ use sdk::schemars::{self, JsonSchema};
 use crate::{
     duration::Duration,
     error::{Error, Result},
+    fraction::Fraction,
     fractionable::Percentable,
-    percent::Percent,
+    percent::{Percent, Units},
     ratio::Rational,
 };
 
@@ -95,18 +98,34 @@ impl Liability {
     where
         P: Percentable,
     {
-        use crate::fraction::Fraction;
-
         debug_assert!(self.initial > Percent::ZERO);
         debug_assert!(self.initial < Percent::HUNDRED);
 
         let initial_ltv: Percent =
             max_ltv.map_or(self.initial, |max_ltv| max_ltv.min(self.initial));
 
-        // borrow = percent%.of(borrow + downpayment)
-        // (100% - percent%).of(borrow) = percent%.of(downpayment)
-        // borrow = (percent% / (100% - percent%)).of(downpayment)
+        // borrow = ltv%.of(borrow + downpayment)
+        // (100% - ltv%).of(borrow) = ltv%.of(downpayment)
+        // borrow = (ltv% / (100% - ltv%)).of(downpayment)
         Rational::new(initial_ltv, Percent::HUNDRED - initial_ltv).of(downpayment)
+    }
+
+    /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
+    /// Otherwise, amount_to_liquidate == total_due
+    pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
+    where
+        P: Percentable + Copy + Ord + Sub<Output = P>,
+    {
+        if lease_amount <= total_due {
+            return lease_amount;
+        }
+
+        // from 'due - liquidation = healthy% of (lease - liquidation)' follows
+        // liquidation = 100% / (100% - healthy%) of (due - healthy% of lease)
+        let multiplier = Rational::new(Percent::HUNDRED, Percent::HUNDRED - self.healthy_percent());
+        let extra_liability_lpn =
+            total_due - total_due.min(self.healthy_percent().of(lease_amount));
+        Fraction::<Units>::of(&multiplier, extra_liability_lpn)
     }
 
     fn invariant_held(&self) -> Result<()> {
@@ -149,9 +168,17 @@ fn check(invariant: bool, msg: &str) -> Result<()> {
 
 #[cfg(test)]
 mod test {
+
     use sdk::cosmwasm_std::{from_slice, StdError};
 
-    use crate::{coin::Coin, duration::Duration, percent::Percent, test::currency::Usdc};
+    use crate::{
+        coin::{Amount, Coin},
+        duration::Duration,
+        fraction::Fraction,
+        percent::Percent,
+        test::currency::Usdc,
+        zero::Zero,
+    };
 
     use super::Liability;
 
@@ -260,6 +287,45 @@ mod test {
         test_init_borrow_amount(2, 65, 3, Some(Percent::from_permille(999)));
 
         test_init_borrow_amount(1000, 65, 0, Some(Percent::ZERO));
+    }
+
+    #[test]
+    fn amount_to_liquidate() {
+        let healthy = 85;
+        let liability = Liability {
+            initial: Percent::from_percent(60),
+            healthy: Percent::from_percent(healthy),
+            max: Percent::from_percent(100),
+            first_liq_warn: Percent::from_permille(992),
+            second_liq_warn: Percent::from_permille(995),
+            third_liq_warn: Percent::from_permille(998),
+            recalc_time: Duration::from_secs(20000),
+        };
+        let lease_amount: Amount = 100;
+        let healthy_amount = Percent::from_percent(healthy).of(lease_amount);
+        amount_to_liquidate_int(liability, lease_amount, healthy_amount - 1, Amount::ZERO);
+        amount_to_liquidate_int(liability, lease_amount, healthy_amount, Amount::ZERO);
+        amount_to_liquidate_int(liability, lease_amount, healthy_amount + 1, 6);
+        amount_to_liquidate_int(liability, lease_amount, healthy_amount + 10, 66);
+        amount_to_liquidate_int(liability, lease_amount, lease_amount - 1, 93);
+        amount_to_liquidate_int(liability, lease_amount, lease_amount, lease_amount);
+        amount_to_liquidate_int(liability, lease_amount, lease_amount + 1, lease_amount);
+        amount_to_liquidate_int(liability, lease_amount, lease_amount + 10, lease_amount);
+    }
+
+    fn amount_to_liquidate_int(liability: Liability, lease: Amount, due: Amount, exp: Amount) {
+        let liq = liability.amount_to_liquidate(lease, due);
+        assert_eq!(exp, liq);
+        if due >= liability.healthy_percent().of(lease) && due <= lease {
+            assert!(
+                liability
+                    .healthy_percent()
+                    .of(lease - exp)
+                    .abs_diff(due - exp)
+                    <= 1,
+                "Lease = {lease}, due = {due}, exp = {exp}"
+            );
+        }
     }
 
     fn assert_load_ok(json: &[u8], exp: Liability) {
