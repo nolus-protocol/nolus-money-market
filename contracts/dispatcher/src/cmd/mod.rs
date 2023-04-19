@@ -2,9 +2,10 @@ use currency::{lpn::Lpns, native::Native};
 use finance::coin::CoinDTO;
 use platform::batch::Batch;
 
-mod dispatch;
+pub use self::{dispatch::Dispatch, reward_calculator::RewardCalculator};
 
-pub use dispatch::Dispatch;
+mod dispatch;
+mod reward_calculator;
 
 pub struct Result {
     pub batch: Batch,

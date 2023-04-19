@@ -1,6 +1,5 @@
 use access_control::SingleUserAccess;
-use cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
-use finance::duration::Duration;
+use finance::{duration::Duration, percent::Percent};
 use lpp::stub::LppRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -11,17 +10,18 @@ use platform::{
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, StdResult, Storage},
+    cosmwasm_std::{
+        to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, StdResult,
+        Storage, Timestamp,
+    },
 };
 use timealarms::stub::TimeAlarmsRef;
 use versioning::{version, VersionSegment};
 
+use crate::cmd::RewardCalculator;
 use crate::{
     cmd::Dispatch,
-    msg::{
-        ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, RewardScaleResponse,
-        SudoMsg,
-    },
+    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
     state::{Config, DispatchLog},
     ContractError,
@@ -112,7 +112,9 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps.storage)?),
-        QueryMsg::RewardScale {} => to_binary(&query_reward_scale(deps.storage)?),
+        QueryMsg::CalculateRewards {} => {
+            to_binary(&query_reward(deps.storage, &deps.querier)?.units())
+        }
     }
     .map_err(Into::into)
 }
@@ -121,8 +123,11 @@ fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
     Config::load(storage).map(|Config { cadence_hours, .. }| ConfigResponse { cadence_hours })
 }
 
-fn query_reward_scale(storage: &dyn Storage) -> StdResult<RewardScaleResponse> {
-    Config::load(storage).map(|Config { tvl_to_apr, .. }| tvl_to_apr)
+fn query_reward(storage: &dyn Storage, querier: &QuerierWrapper<'_>) -> ContractResult<Percent> {
+    let config: Config = Config::load(storage)?;
+
+    LppRef::try_new(config.lpp, querier)?
+        .execute(RewardCalculator::new(&config.tvl_to_apr), querier)
 }
 
 fn try_dispatch(deps: DepsMut<'_>, env: Env, timealarm: Addr) -> ContractResult<MessageResponse> {
