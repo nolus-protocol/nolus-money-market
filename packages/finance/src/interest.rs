@@ -15,6 +15,7 @@ use crate::{
 pub struct InterestPeriod<U, F> {
     start: Timestamp,
     length: Duration,
+    #[serde(skip)]
     interest_units: PhantomData<U>,
     interest: F,
 }

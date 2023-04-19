@@ -34,6 +34,7 @@ pub struct TransferOut<SwapTask, SEnum> {
     spec: SwapTask,
     coin_index: CoinsNb,
     last_coin_index: CoinsNb,
+    #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
 }
 
@@ -43,6 +44,11 @@ where
     Self: Into<SEnum>,
     SwapExactIn<SwapTask, SEnum>: Into<SEnum>,
 {
+    #[cfg(feature = "migration")]
+    pub fn migrate_from(spec: SwapTask, coin_index: CoinsNb, last_coin_index: CoinsNb) -> Self {
+        Self::new_with_index(spec, coin_index, last_coin_index)
+    }
+
     pub(super) fn new(spec: SwapTask) -> Self {
         let first_index = Default::default();
         let last_coin_index = Self::last_coin_index(&spec);

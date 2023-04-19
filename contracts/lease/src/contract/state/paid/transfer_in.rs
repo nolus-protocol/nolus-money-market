@@ -26,10 +26,8 @@ type AssetGroup = LeaseGroup;
 pub(super) type StartState = dex::TransferInInit<TransferIn>;
 pub(in crate::contract::state) type DexState = dex::StateLocalOut<TransferIn>;
 
-pub(in crate::contract::state) fn start(
-    lease: Lease,
-    amount_in: CoinDTO<<TransferIn as SwapTask>::OutG>,
-) -> StartState {
+pub(in crate::contract::state) fn start(lease: Lease) -> StartState {
+    let amount_in = lease.lease.amount.clone();
     StartState::new(TransferIn::new(lease), amount_in)
 }
 

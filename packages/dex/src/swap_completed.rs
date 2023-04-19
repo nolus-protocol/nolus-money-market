@@ -12,6 +12,7 @@ where
 {
     task: SwapTask,
     amount_out: CoinDTO<SwapTask::OutG>,
+    #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
 }
 

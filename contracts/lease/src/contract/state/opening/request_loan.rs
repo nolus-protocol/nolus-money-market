@@ -60,14 +60,13 @@ impl RequestLoan {
             ),
             &deps.querier,
         )?;
-        Ok((
-            batch,
-            RequestLoan {
+        Ok((batch, {
+            Self {
                 new_lease: spec,
                 downpayment,
                 deps: (lpp, oracle, timealarms),
-            },
-        ))
+            }
+        }))
     }
 
     fn on_response(self, deps: Deps<'_>, env: Env, msg: Reply) -> ContractResult<Response> {

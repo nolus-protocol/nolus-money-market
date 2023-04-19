@@ -44,6 +44,11 @@ impl Account {
         Ok(Self { owner, host, dex })
     }
 
+    #[cfg(feature = "migration")]
+    pub fn migrate_to(owner: Addr, host: HostAccount, dex: ConnectionParams) -> Self {
+        Self { owner, host, dex }
+    }
+
     pub(super) fn transfer_to(&self, now: Timestamp) -> TransferOutTrx<'_> {
         TransferOutTrx::new(
             &self.dex.transfer_channel.local_endpoint,

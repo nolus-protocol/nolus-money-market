@@ -42,6 +42,7 @@ pub trait IcaConnectee {
 #[derive(Serialize, Deserialize)]
 pub struct IcaConnector<Connectee, SwapResult> {
     connectee: Connectee,
+    #[serde(skip)]
     _swap_result: PhantomData<SwapResult>,
 }
 

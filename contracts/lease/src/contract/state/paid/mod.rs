@@ -15,6 +15,8 @@ use self::transfer_in::DexState;
 use super::{handler, Handler, Response};
 
 pub mod transfer_in;
+#[cfg(feature = "migration")]
+pub mod v2;
 
 #[derive(Serialize, Deserialize)]
 pub struct Active {
@@ -38,8 +40,7 @@ impl Handler for Active {
         match msg {
             ExecuteMsg::Repay() => handler::err("repay", deps.api),
             ExecuteMsg::Close() => {
-                let amount_in = self.lease.lease.amount.clone();
-                let start_transfer_in = transfer_in::start(self.lease, amount_in);
+                let start_transfer_in = transfer_in::start(self.lease);
                 start_transfer_in
                     .enter(env.block.time, &deps.querier)
                     .map(|batch| Response::from(batch, DexState::from(start_transfer_in)))

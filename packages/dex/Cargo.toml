@@ -5,6 +5,9 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[features]
+migration = []
+
 [dependencies]
 currency = { workspace = true }
 finance = { workspace = true }

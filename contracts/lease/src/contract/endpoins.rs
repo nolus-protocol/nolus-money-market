@@ -17,10 +17,10 @@ use crate::{
     error::{ContractError, ContractResult},
 };
 
-use super::state::{self, Response, State};
+use super::state::{self, Migrate, Response, State};
 
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 1;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 2;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 2;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 3;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -47,9 +47,17 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))
-        .map(|()| response::empty_response())
-        .map_err(Into::into)
+    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _>(
+        deps.storage,
+        version!(CONTRACT_STORAGE_VERSION),
+        |storage: &mut _| {
+            let migrated_contract = state::load_v2(storage)?.into_last_version();
+
+            state::save(storage, &migrated_contract)
+        },
+    )
+    .map(|()| response::empty_response())
+    .map_err(Into::into)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

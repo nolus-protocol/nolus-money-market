@@ -15,6 +15,7 @@ use super::ica_connector::{Enterable, IcaConnectee};
 pub struct InRecovery<S, SEnum> {
     state: S,
     time_alarms: TimeAlarmsRef,
+    #[serde(skip)]
     _state_enum: PhantomData<SEnum>,
 }
 

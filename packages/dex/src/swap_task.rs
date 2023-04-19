@@ -8,7 +8,7 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::account::Account;
 
-pub(super) type CoinsNb = u8;
+pub type CoinsNb = u8;
 
 /// Specification of a swap process
 ///

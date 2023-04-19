@@ -10,6 +10,8 @@ use crate::{
 };
 
 pub mod buy_lpn;
+#[cfg(feature = "migration")]
+pub mod v2;
 
 fn query(
     lease: LeaseDTO,

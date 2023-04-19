@@ -40,7 +40,7 @@ pub use {
     response::{ContinueResult, Handler, Response, Result},
     swap_coins::{on_coin, on_coins},
     swap_exact_in::SwapExactIn,
-    swap_task::{CoinVisitor, IterNext, IterState, SwapTask},
+    swap_task::{CoinVisitor, CoinsNb, IterNext, IterState, SwapTask},
     transfer_in_finish::TransferInFinish,
     transfer_in_init::TransferInInit,
     transfer_out::TransferOut,

@@ -9,6 +9,8 @@ use crate::{
 
 pub mod active;
 pub mod repay;
+#[cfg(feature = "migration")]
+pub mod v2;
 
 fn lease_state(
     lease: LeaseDTO,

@@ -29,6 +29,15 @@ impl<SwapTask> TransferInFinish<SwapTask>
 where
     SwapTask: SwapTaskT,
 {
+    #[cfg(feature = "migration")]
+    pub fn migrate_from(
+        spec: SwapTask,
+        amount_in: CoinDTO<SwapTask::OutG>,
+        timeout: Timestamp,
+    ) -> Self {
+        Self::new(spec, amount_in, timeout)
+    }
+
     pub(super) fn new(
         spec: SwapTask,
         amount_in: CoinDTO<SwapTask::OutG>,

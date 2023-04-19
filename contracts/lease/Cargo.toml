@@ -16,8 +16,9 @@ test = true
 
 [features]
 default = ["contract-with-bindings"]
-contract-with-bindings = ["contract"]
+contract-with-bindings = ["contract", "migration"]
 contract = []
+migration = ["timealarms/testing", "dex/migration"]
 testing = []
 
 [dependencies]

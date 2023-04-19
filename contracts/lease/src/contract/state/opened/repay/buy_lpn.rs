@@ -41,6 +41,11 @@ pub(crate) struct BuyLpn {
 }
 
 impl BuyLpn {
+    #[cfg(feature = "migration")]
+    pub(super) fn migrate_to(lease: Lease, payment: PaymentCoin) -> Self {
+        Self::new(lease, payment)
+    }
+
     fn new(lease: Lease, payment: PaymentCoin) -> Self {
         Self { lease, payment }
     }
