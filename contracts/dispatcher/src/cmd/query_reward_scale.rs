@@ -12,18 +12,29 @@ impl<'r> QueryRewardScale<'r> {
         Self { scale }
     }
 
-    fn reward_scale<Lpn, Lpp>(&self, lpp: &Lpp) -> ContractResult<Percent>
+    pub(super) fn reward_scale<Lpn, Lpp>(&self, lpp: &Lpp) -> ContractResult<ActiveRewardScale<Lpn>>
     where
-        Lpp: LppTrait<Lpn>,
         Lpn: Currency,
+        Lpp: LppTrait<Lpn>,
     {
         // get LPP balance: TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
         let resp = lpp.lpp_balance()?;
         let tvl: Coin<Lpn> = resp.balance + resp.total_principal_due + resp.total_interest_due;
 
         // get annual percentage of return from configuration
-        Ok(self.scale.get_apr(tvl.into()))
+        Ok(ActiveRewardScale {
+            tvl,
+            apr: self.scale.get_apr(tvl.into()),
+        })
     }
+}
+
+pub(super) struct ActiveRewardScale<Lpn>
+where
+    Lpn: Currency,
+{
+    pub tvl: Coin<Lpn>,
+    pub apr: Percent,
 }
 
 impl<'r> WithLpp for QueryRewardScale<'r> {
@@ -37,5 +48,6 @@ impl<'r> WithLpp for QueryRewardScale<'r> {
         Lpp: LppTrait<Lpn>,
     {
         self.reward_scale(&lpp)
+            .map(|ActiveRewardScale { apr, .. }| apr)
     }
 }

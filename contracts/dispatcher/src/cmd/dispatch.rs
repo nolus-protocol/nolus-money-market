@@ -5,9 +5,9 @@ use oracle::{convert, stub::OracleRef};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{QuerierWrapper, StdResult, Timestamp};
 
-use crate::{
-    cmd::Result as DispatcherResult, result::ContractResult, state::Config, ContractError,
-};
+use crate::{result::ContractResult, state::Config, ContractError};
+
+use super::{query_reward_scale::ActiveRewardScale, QueryRewardScale, Result as DispatcherResult};
 
 pub struct Dispatch<'a> {
     last_dispatch: Timestamp,
@@ -63,12 +63,11 @@ impl<'a> WithLpp for Dispatch<'a> {
         Lpp: LppTrait<Lpn>,
         Lpn: Currency,
     {
-        // get LPP balance: TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
-        let resp = lpp.lpp_balance()?;
-        let tvl: Coin<Lpn> = resp.balance + resp.total_principal_due + resp.total_interest_due;
-
         // get annual percentage of return from configuration
-        let apr_permille = self.config.tvl_to_apr.get_apr(tvl.into());
+        let ActiveRewardScale {
+            tvl,
+            apr: apr_permille,
+        } = QueryRewardScale::new(&self.config.tvl_to_apr).reward_scale(&lpp)?;
 
         // Calculate the reward in LPN,
         // which matches TVLdenom, since the last calculation
