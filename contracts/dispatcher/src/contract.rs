@@ -113,7 +113,7 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps.storage)?),
         QueryMsg::CalculateRewards {} => {
-            to_binary(&query_reward_scale(deps.storage, &deps.querier)?.units())
+            to_binary(&query_reward(deps.storage, &deps.querier)?.units())
         }
     }
     .map_err(Into::into)
@@ -123,10 +123,7 @@ fn query_config(storage: &dyn Storage) -> StdResult<ConfigResponse> {
     Config::load(storage).map(|Config { cadence_hours, .. }| ConfigResponse { cadence_hours })
 }
 
-fn query_reward_scale(
-    storage: &dyn Storage,
-    querier: &QuerierWrapper<'_>,
-) -> ContractResult<Percent> {
+fn query_reward(storage: &dyn Storage, querier: &QuerierWrapper<'_>) -> ContractResult<Percent> {
     let config: Config = Config::load(storage)?;
 
     LppRef::try_new(config.lpp, querier)?

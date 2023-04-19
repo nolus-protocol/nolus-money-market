@@ -15,7 +15,7 @@ impl<'r> RewardCalculator<'r> {
         Self { scale }
     }
 
-    pub(super) fn reward_scale<Lpn, Lpp>(&self, lpp: &Lpp) -> ContractResult<ActiveRewardScale<Lpn>>
+    pub(super) fn calculate<Lpn, Lpp>(&self, lpp: &Lpp) -> ContractResult<Reward<Lpn>>
     where
         Lpn: Currency,
         Lpp: LppTrait<Lpn>,
@@ -29,7 +29,7 @@ impl<'r> RewardCalculator<'r> {
                      ..
                  }| balance + total_principal_due + total_interest_due,
             )
-            .map(|tvl: Coin<Lpn>| ActiveRewardScale {
+            .map(|tvl: Coin<Lpn>| Reward {
                 tvl,
                 apr: self.scale.get_apr(tvl.into()),
             })
@@ -37,7 +37,7 @@ impl<'r> RewardCalculator<'r> {
     }
 }
 
-pub(super) struct ActiveRewardScale<Lpn>
+pub(super) struct Reward<Lpn>
 where
     Lpn: Currency,
 {
@@ -55,7 +55,6 @@ impl<'r> WithLpp for RewardCalculator<'r> {
         Lpn: Currency,
         Lpp: LppTrait<Lpn>,
     {
-        self.reward_scale(&lpp)
-            .map(|ActiveRewardScale { apr, .. }| apr)
+        self.calculate(&lpp).map(|Reward { apr, .. }| apr)
     }
 }
