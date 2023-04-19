@@ -7,7 +7,7 @@ use sdk::cosmwasm_std::{QuerierWrapper, StdResult, Timestamp};
 
 use crate::{result::ContractResult, state::Config, ContractError};
 
-use super::{query_reward_scale::ActiveRewardScale, QueryRewardScale, Result as DispatcherResult};
+use super::{reward_calculator::ActiveRewardScale, Result as DispatcherResult, RewardCalculator};
 
 pub struct Dispatch<'a> {
     last_dispatch: Timestamp,
@@ -67,7 +67,7 @@ impl<'a> WithLpp for Dispatch<'a> {
         let ActiveRewardScale {
             tvl,
             apr: apr_permille,
-        } = QueryRewardScale::new(&self.config.tvl_to_apr).reward_scale(&lpp)?;
+        } = RewardCalculator::new(&self.config.tvl_to_apr).reward_scale(&lpp)?;
 
         // Calculate the reward in LPN,
         // which matches TVLdenom, since the last calculation

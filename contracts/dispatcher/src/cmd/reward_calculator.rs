@@ -1,13 +1,16 @@
 use finance::{coin::Coin, currency::Currency, percent::Percent};
-use lpp::stub::{Lpp as LppTrait, WithLpp};
+use lpp::{
+    msg::LppBalanceResponse,
+    stub::{Lpp as LppTrait, WithLpp},
+};
 
 use crate::{result::ContractResult, state::reward_scale::RewardScale, ContractError};
 
-pub struct QueryRewardScale<'r> {
+pub struct RewardCalculator<'r> {
     scale: &'r RewardScale,
 }
 
-impl<'r> QueryRewardScale<'r> {
+impl<'r> RewardCalculator<'r> {
     pub fn new(scale: &'r RewardScale) -> Self {
         Self { scale }
     }
@@ -17,15 +20,20 @@ impl<'r> QueryRewardScale<'r> {
         Lpn: Currency,
         Lpp: LppTrait<Lpn>,
     {
-        // get LPP balance: TVL = BalanceLPN + TotalPrincipalDueLPN + TotalInterestDueLPN
-        let resp = lpp.lpp_balance()?;
-        let tvl: Coin<Lpn> = resp.balance + resp.total_principal_due + resp.total_interest_due;
-
-        // get annual percentage of return from configuration
-        Ok(ActiveRewardScale {
-            tvl,
-            apr: self.scale.get_apr(tvl.into()),
-        })
+        lpp.lpp_balance()
+            .map(
+                |LppBalanceResponse {
+                     balance,
+                     total_principal_due,
+                     total_interest_due,
+                     ..
+                 }| balance + total_principal_due + total_interest_due,
+            )
+            .map(|tvl: Coin<Lpn>| ActiveRewardScale {
+                tvl,
+                apr: self.scale.get_apr(tvl.into()),
+            })
+            .map_err(Into::into)
     }
 }
 
@@ -37,7 +45,7 @@ where
     pub apr: Percent,
 }
 
-impl<'r> WithLpp for QueryRewardScale<'r> {
+impl<'r> WithLpp for RewardCalculator<'r> {
     type Output = Percent;
     type Error = ContractError;
 

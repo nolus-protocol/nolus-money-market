@@ -18,7 +18,7 @@ use sdk::{
 use timealarms::stub::TimeAlarmsRef;
 use versioning::{version, VersionSegment};
 
-use crate::cmd::QueryRewardScale;
+use crate::cmd::RewardCalculator;
 use crate::{
     cmd::Dispatch,
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
@@ -112,7 +112,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
 pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
         QueryMsg::Config {} => to_binary(&query_config(deps.storage)?),
-        QueryMsg::RewardScale {} => {
+        QueryMsg::CalculateRewards {} => {
             to_binary(&query_reward_scale(deps.storage, &deps.querier)?.units())
         }
     }
@@ -130,7 +130,7 @@ fn query_reward_scale(
     let config: Config = Config::load(storage)?;
 
     LppRef::try_new(config.lpp, querier)?
-        .execute(QueryRewardScale::new(&config.tvl_to_apr), querier)
+        .execute(RewardCalculator::new(&config.tvl_to_apr), querier)
 }
 
 fn try_dispatch(deps: DepsMut<'_>, env: Env, timealarm: Addr) -> ContractResult<MessageResponse> {
