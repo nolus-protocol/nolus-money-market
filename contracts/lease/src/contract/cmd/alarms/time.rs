@@ -56,9 +56,14 @@ impl<'a> WithLease for TimeAlarm<'a> {
         //     liquidation_status,
         // } = lease.on_time_alarm(self.now)?;
 
+        // let resp = super::emit_events(self.env, &liquidation_status).map_or_else(
+        //     || MessageResponse::messages_only(batch),
+        //     |events| MessageResponse::messages_with_events(batch, events),
+        // );
+
         // response::response_with_messages(
         //     &self.env.contract.address,
-        //     super::emit_events(self.env, &liquidation_status, batch),
+        //     resp,
         // )
         let IntoDTOResult { batch, lease: _ } = lease.into_dto();
         Ok(batch.into())

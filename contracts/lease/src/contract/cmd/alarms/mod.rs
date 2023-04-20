@@ -1,8 +1,5 @@
 use finance::currency::Currency;
-use platform::{
-    batch::{Batch, Emit, Emitter},
-    message::Response as MessageResponse,
-};
+use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::Env;
 
 use crate::{
@@ -13,36 +10,26 @@ use crate::{
 pub mod price;
 pub mod time;
 
-fn emit_events<Lpn, Asset>(
-    env: &Env,
-    liquidation: &Status<Lpn, Asset>,
-    batch: Batch,
-) -> MessageResponse
+fn emit_events<Lpn, Asset>(env: &Env, liquidation: &Status<Lpn, Asset>) -> Option<Emitter>
 where
     Lpn: Currency,
     Asset: Currency,
 {
     match liquidation {
-        Status::None => batch.into(),
-        &Status::Warning(ref info, level) => {
-            MessageResponse::messages_with_events(batch, emit_warning(info, level))
-        }
+        Status::None => None,
+        &Status::Warning(ref info, level) => Some(emit_warning(info, level)),
         Status::PartialLiquidation {
             info,
             liquidation_info,
             healthy_ltv,
-        } => MessageResponse::messages_with_events(
-            batch,
+        } => Some(
             emit_liquidation(env, info, liquidation_info)
                 .emit_percent_amount("ltv-healthy", *healthy_ltv),
         ),
         Status::FullLiquidation {
             info,
             liquidation_info,
-        } => MessageResponse::messages_with_events(
-            batch,
-            emit_liquidation(env, info, liquidation_info),
-        ),
+        } => Some(emit_liquidation(env, info, liquidation_info)),
     }
 }
 
