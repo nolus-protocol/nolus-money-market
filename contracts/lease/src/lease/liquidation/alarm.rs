@@ -16,7 +16,7 @@ use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractResult,
-    lease::{IntoDTOResult, Lease, LiquidationInfo, OnAlarmResult, Status, WarningLevel},
+    lease::{IntoDTOResult, Lease, OnAlarmResult, Status, WarningLevel},
     loan::LiabilityStatus,
 };
 
@@ -37,11 +37,11 @@ where
         self.reschedule(self.lease_amount_lpn()?, now, &Status::None)
     }
 
-    pub(crate) fn on_price_alarm(self, now: Timestamp) -> ContractResult<OnAlarmResult<Lpn>> {
+    pub(crate) fn on_price_alarm(self, now: Timestamp) -> ContractResult<OnAlarmResult<Asset>> {
         self.on_alarm(Self::act_on_liability, now)
     }
 
-    pub(crate) fn on_time_alarm(self, now: Timestamp) -> ContractResult<OnAlarmResult<Lpn>> {
+    pub(crate) fn on_time_alarm(self, now: Timestamp) -> ContractResult<OnAlarmResult<Asset>> {
         self.on_alarm(Self::act_on_overdue, now)
     }
 
@@ -60,46 +60,46 @@ where
         )
     }
 
-    fn on_alarm<F>(mut self, handler: F, now: Timestamp) -> ContractResult<OnAlarmResult<Lpn>>
+    fn on_alarm<F>(mut self, handler: F, now: Timestamp) -> ContractResult<OnAlarmResult<Asset>>
     where
-        F: FnOnce(
-            &mut Self,
-            Coin<Lpn>,
-            Timestamp,
-            Percent,
-            Coin<Lpn>,
-        ) -> ContractResult<Status<Lpn>>,
+        F: FnOnce(&mut Self, Timestamp, Percent, Coin<Asset>, Coin<Asset>) -> Status<Asset>,
     {
-        let price_to_lpn = self.price_of_lease_currency()?;
+        let price_to_asset = self.price_of_lease_currency()?.inv();
 
-        let lease_lpn = total(self.amount, price_to_lpn);
+        let lease_lpn = total(self.amount, price_to_asset.inv());
 
         let LiabilityStatus {
             ltv,
-            total_lpn: liability_lpn,
-            ..
+            total_lpn: total_due,
+            overdue_lpn: overdue,
         } = self
             .loan
             .liability_status(now, self.addr.clone(), lease_lpn)?;
 
-        let status = handler(&mut self, lease_lpn, now, ltv, liability_lpn)?;
+        let status = handler(
+            &mut self,
+            now,
+            ltv,
+            total(total_due, price_to_asset),
+            total(overdue, price_to_asset),
+        );
 
-        if let Status::PartialLiquidation {
-            liquidation_info: LiquidationInfo { receipt, .. },
-            ..
-        } = &status
-        {
-            self.amount -= total(receipt.total(), price_to_lpn.inv());
-        }
+        // if let Status::PartialLiquidation {
+        //     liquidation_info: LiquidationInfo { receipt, .. },
+        //     ..
+        // } = &status
+        // {
+        //     self.amount -= total(receipt.total(), price_to_asset.inv());
+        // }
 
-        if !matches!(status, Status::FullLiquidation { .. }) {
-            self.reschedule(lease_lpn, &now, &status)?;
-        }
+        // if !matches!(status, Status::FullLiquidation { .. }) {
+        //     self.reschedule(lease_lpn, &now, &status)?;
+        // }
 
         Ok(self.into_on_alarm_result(status))
     }
 
-    fn into_on_alarm_result(self, liquidation_status: Status<Lpn>) -> OnAlarmResult<Lpn> {
+    fn into_on_alarm_result(self, liquidation_status: Status<Asset>) -> OnAlarmResult<Asset> {
         let IntoDTOResult { lease: _, batch } = self.into_dto();
 
         OnAlarmResult {
@@ -113,7 +113,7 @@ where
         &mut self,
         lease_lpn: Coin<Lpn>,
         now: &Timestamp,
-        liquidation_status: &Status<Lpn>,
+        liquidation_status: &Status<Asset>,
     ) -> ContractResult<()> {
         self.reschedule_time_alarm(now, liquidation_status)?;
 
@@ -123,7 +123,7 @@ where
     fn reschedule_time_alarm(
         &mut self,
         now: &Timestamp,
-        liquidation_status: &Status<Lpn>,
+        liquidation_status: &Status<Asset>,
     ) -> ContractResult<()> {
         debug_assert!(!matches!(
             liquidation_status,
@@ -143,7 +143,7 @@ where
         &mut self,
         lease_lpn: Coin<Lpn>,
         now: &Timestamp,
-        liquidation_status: &Status<Lpn>,
+        liquidation_status: &Status<Asset>,
     ) -> ContractResult<()> {
         debug_assert!(!currency::equal::<Lpn, Asset>());
 

@@ -97,32 +97,6 @@ where
 }
 
 #[cfg(test)]
-impl<C> Receipt<C>
-where
-    C: Currency,
-{
-    pub(crate) fn new(
-        previous_margin_paid: Coin<C>,
-        current_margin_paid: Coin<C>,
-        previous_interest_paid: Coin<C>,
-        current_interest_paid: Coin<C>,
-        principal_paid: Coin<C>,
-        change: Coin<C>,
-        close: bool,
-    ) -> Receipt<C> {
-        Self {
-            previous_margin_paid,
-            current_margin_paid,
-            previous_interest_paid,
-            current_interest_paid,
-            principal_paid,
-            change,
-            close,
-        }
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use finance::{coin::Coin, test::currency::Nls};
 

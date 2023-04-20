@@ -20,7 +20,7 @@ use crate::{
 
 pub(super) use self::{
     dto::LeaseDTO,
-    liquidation::{LeaseInfo, LiquidationInfo, OnAlarmResult, Status, WarningLevel},
+    liquidation::{Cause, LeaseInfo, OnAlarmResult, Status, WarningLevel},
     repay::Result as RepayResult,
     state::State,
 };
@@ -34,6 +34,10 @@ mod state;
 pub(crate) mod with_lease;
 pub(crate) mod with_lease_deps;
 
+// TODO look into reducing the type parameters to Lpn and Asset only!
+// the others could be provided on demand when certain operation is being performed
+// then review the methods that take `&mut self` whether could be transformed into `&self`
+// and those that take `self` into `&mut self` or `&self`
 pub struct Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
     Asset: Currency,

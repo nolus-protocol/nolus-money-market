@@ -8,6 +8,7 @@ pub enum Type {
     ClosingTransferIn,
     Closed,
     LiquidationWarning,
+    LiquidationStart,
     Liquidation,
 }
 
@@ -24,6 +25,7 @@ impl Type {
             Self::ClosingTransferIn => "ls-close-transfer-in",
             Self::Closed => "ls-close",
             Self::LiquidationWarning => "ls-liquidation-warning",
+            Self::LiquidationStart => "ls-liquidation-start",
             Self::Liquidation => "ls-liquidation",
         }
     }
