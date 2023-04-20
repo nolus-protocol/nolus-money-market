@@ -992,7 +992,7 @@ dependencies = [
 
 [[package]]
 name = "rewards_dispatcher"
-version = "0.2.3"
+version = "0.3.0"
 dependencies = [
  "access-control",
  "cosmwasm-std",
