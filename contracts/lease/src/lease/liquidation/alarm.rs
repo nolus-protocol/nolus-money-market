@@ -37,14 +37,11 @@ where
         self.reschedule(self.lease_amount_lpn()?, now, &Status::None)
     }
 
-    pub(crate) fn on_price_alarm(
-        self,
-        now: Timestamp,
-    ) -> ContractResult<OnAlarmResult<Lpn, Asset>> {
+    pub(crate) fn on_price_alarm(self, now: Timestamp) -> ContractResult<OnAlarmResult<Lpn>> {
         self.on_alarm(Self::act_on_liability, now)
     }
 
-    pub(crate) fn on_time_alarm(self, now: Timestamp) -> ContractResult<OnAlarmResult<Lpn, Asset>> {
+    pub(crate) fn on_time_alarm(self, now: Timestamp) -> ContractResult<OnAlarmResult<Lpn>> {
         self.on_alarm(Self::act_on_overdue, now)
     }
 
@@ -63,11 +60,7 @@ where
         )
     }
 
-    fn on_alarm<F>(
-        mut self,
-        handler: F,
-        now: Timestamp,
-    ) -> ContractResult<OnAlarmResult<Lpn, Asset>>
+    fn on_alarm<F>(mut self, handler: F, now: Timestamp) -> ContractResult<OnAlarmResult<Lpn>>
     where
         F: FnOnce(
             &mut Self,
@@ -75,7 +68,7 @@ where
             Timestamp,
             Percent,
             Coin<Lpn>,
-        ) -> ContractResult<Status<Lpn, Asset>>,
+        ) -> ContractResult<Status<Lpn>>,
     {
         let price_to_lpn = self.price_of_lease_currency()?;
 
@@ -106,10 +99,7 @@ where
         Ok(self.into_on_alarm_result(status))
     }
 
-    fn into_on_alarm_result(
-        self,
-        liquidation_status: Status<Lpn, Asset>,
-    ) -> OnAlarmResult<Lpn, Asset> {
+    fn into_on_alarm_result(self, liquidation_status: Status<Lpn>) -> OnAlarmResult<Lpn> {
         let IntoDTOResult { lease: _, batch } = self.into_dto();
 
         OnAlarmResult {
@@ -123,7 +113,7 @@ where
         &mut self,
         lease_lpn: Coin<Lpn>,
         now: &Timestamp,
-        liquidation_status: &Status<Lpn, Asset>,
+        liquidation_status: &Status<Lpn>,
     ) -> ContractResult<()> {
         self.reschedule_time_alarm(now, liquidation_status)?;
 
@@ -133,7 +123,7 @@ where
     fn reschedule_time_alarm(
         &mut self,
         now: &Timestamp,
-        liquidation_status: &Status<Lpn, Asset>,
+        liquidation_status: &Status<Lpn>,
     ) -> ContractResult<()> {
         debug_assert!(!matches!(
             liquidation_status,
@@ -153,7 +143,7 @@ where
         &mut self,
         lease_lpn: Coin<Lpn>,
         now: &Timestamp,
-        liquidation_status: &Status<Lpn, Asset>,
+        liquidation_status: &Status<Lpn>,
     ) -> ContractResult<()> {
         debug_assert!(!currency::equal::<Lpn, Asset>());
 
@@ -161,15 +151,24 @@ where
             Status::None | Status::PartialLiquidation { .. } => {
                 (self.liability.first_liq_warn_percent(), None)
             }
-            Status::Warning(_, WarningLevel::First) => (
+            Status::Warning {
+                ltv: _,
+                level: WarningLevel::First,
+            } => (
                 self.liability.second_liq_warn_percent(),
                 Some(self.liability.first_liq_warn_percent()),
             ),
-            Status::Warning(_, WarningLevel::Second) => (
+            Status::Warning {
+                ltv: _,
+                level: WarningLevel::Second,
+            } => (
                 self.liability.third_liq_warn_percent(),
                 Some(self.liability.second_liq_warn_percent()),
             ),
-            Status::Warning(_, WarningLevel::Third) => (
+            Status::Warning {
+                ltv: _,
+                level: WarningLevel::Third,
+            } => (
                 self.liability.max_percent(),
                 Some(self.liability.third_liq_warn_percent()),
             ),
@@ -226,7 +225,7 @@ mod tests {
             loan, open_lease, LppLenderLocalStub, OracleLocalStub, ProfitLocalStubUnreachable,
             TimeAlarmsLocalStub, LEASE_START,
         },
-        LeaseInfo, Status, WarningLevel,
+        Status, WarningLevel,
     };
 
     #[test]
@@ -301,14 +300,10 @@ mod tests {
                 &(lease.loan.grace_period_end()
                     - lease.liability.recalculation_time()
                     - lease.liability.recalculation_time()),
-                &Status::Warning(
-                    LeaseInfo::new(
-                        Addr::unchecked(String::new()),
-                        lease.addr.clone(),
-                        Default::default(),
-                    ),
-                    WarningLevel::Second,
-                ),
+                &Status::Warning {
+                    ltv: Default::default(),
+                    level: WarningLevel::Second,
+                },
             )
             .unwrap();
         assert_eq!(lease.alarms.batch, {
@@ -343,14 +338,10 @@ mod tests {
             .reschedule_time_alarm(
                 &(lease.loan.grace_period_end() - lease.liability.recalculation_time()
                     + Duration::from_nanos(1)),
-                &Status::Warning(
-                    LeaseInfo::new(
-                        Addr::unchecked(String::new()),
-                        lease.addr.clone(),
-                        Default::default(),
-                    ),
-                    WarningLevel::Second,
-                ),
+                &Status::Warning {
+                    ltv: Default::default(),
+                    level: WarningLevel::Second,
+                },
             )
             .unwrap();
 
