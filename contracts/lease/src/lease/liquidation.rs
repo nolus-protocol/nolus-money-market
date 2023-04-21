@@ -17,8 +17,6 @@ use crate::{
 
 use super::Lease;
 
-mod alarm;
-
 impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
     Lpn: Currency + Serialize,

@@ -25,6 +25,7 @@ pub(super) use self::{
     state::State,
 };
 
+mod alarm;
 mod dto;
 //TODO remove once https://github.com/nolus-protocol/nolus-money-market/issues/49 is done
 #[allow(dead_code)]
