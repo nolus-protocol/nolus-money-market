@@ -35,28 +35,21 @@ where
         &mut self,
         now: &Timestamp,
     ) -> ContractResult<()> {
-        self.reschedule(self.lease_amount_lpn()?, now, &Status::None)
+        self.reschedule(now, &Status::None)
     }
 
     #[inline]
     pub(in crate::lease) fn reschedule_on_repay(&mut self, now: &Timestamp) -> ContractResult<()> {
-        let lease_lpn = self.lease_amount_lpn()?;
-
-        self.reschedule(lease_lpn, now, &self.liquidation_status(*now)?)
+        self.reschedule(now, &self.liquidation_status(*now)?)
     }
 
     pub(crate) fn liquidation_status(&self, now: Timestamp) -> ContractResult<Status<Asset>> {
         let price_to_asset = self.price_of_lease_currency()?.inv();
 
-        let lease_lpn = total(self.amount, price_to_asset.inv());
-
         let LiabilityStatus {
-            ltv: _,
             total: total_due,
             previous_interest,
-        } = self
-            .loan
-            .liability_status(now, self.addr.clone(), lease_lpn)?;
+        } = self.loan.liability_status(now, self.addr.clone())?;
 
         let overdue = if self.loan.grace_period_end() <= now {
             previous_interest
@@ -75,13 +68,12 @@ where
     #[inline]
     fn reschedule(
         &mut self,
-        lease_lpn: Coin<Lpn>,
         now: &Timestamp,
         liquidation_status: &Status<Asset>,
     ) -> ContractResult<()> {
         self.reschedule_time_alarm(now, liquidation_status)?;
 
-        self.reschedule_price_alarm(lease_lpn, now, liquidation_status)
+        self.reschedule_price_alarm(now, liquidation_status)
     }
 
     fn reschedule_time_alarm(
@@ -105,7 +97,6 @@ where
 
     fn reschedule_price_alarm(
         &mut self,
-        lease_lpn: Coin<Lpn>,
         now: &Timestamp,
         liquidation_status: &Status<Asset>,
     ) -> ContractResult<()> {
@@ -144,7 +135,6 @@ where
             .liability_status(
                 *now + self.liability.recalculation_time(),
                 self.addr.clone(),
-                lease_lpn,
             )?
             .total;
 

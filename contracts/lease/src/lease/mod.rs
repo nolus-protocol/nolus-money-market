@@ -4,7 +4,7 @@ use finance::{
     coin::Coin,
     currency::{self, Currency},
     liability::Liability,
-    price::{total, Price},
+    price::Price,
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleBatch};
@@ -193,10 +193,6 @@ where
 
     fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
         Ok(self.oracle.price_of::<Asset>()?)
-    }
-
-    fn lease_amount_lpn(&self) -> ContractResult<Coin<Lpn>> {
-        Ok(total(self.amount, self.price_of_lease_currency()?))
     }
 
     fn send_funds_to_customer<B>(&self, mut lease_account: B) -> ContractResult<Batch>

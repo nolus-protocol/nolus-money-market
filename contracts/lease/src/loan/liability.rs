@@ -1,4 +1,4 @@
-use finance::{coin::Coin, currency::Currency, percent::Percent};
+use finance::{coin::Coin, currency::Currency};
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::{Addr, Timestamp};
@@ -18,7 +18,6 @@ where
         &self,
         now: Timestamp,
         lease: A,
-        lease_lpn: Coin<Lpn>,
     ) -> ContractResult<LiabilityStatus<Lpn>>
     where
         A: Into<Addr>,
@@ -34,7 +33,6 @@ where
                     + state.current_interest_due;
 
                 LiabilityStatus {
-                    ltv: Percent::from_ratio(total, lease_lpn),
                     total,
                     previous_interest,
                 }
@@ -48,7 +46,6 @@ pub(crate) struct LiabilityStatus<Lpn>
 where
     Lpn: Currency,
 {
-    pub ltv: Percent,
     pub total: Coin<Lpn>,
     pub previous_interest: Coin<Lpn>,
 }
