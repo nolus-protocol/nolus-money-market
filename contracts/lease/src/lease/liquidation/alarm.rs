@@ -38,22 +38,14 @@ where
         self.reschedule(self.lease_amount_lpn()?, now, &Status::None)
     }
 
-    pub(crate) fn on_price_alarm(self, now: Timestamp) -> ContractResult<Status<Asset>> {
-        self.on_alarm(now)
-    }
-
-    pub(crate) fn on_time_alarm(self, now: Timestamp) -> ContractResult<Status<Asset>> {
-        self.on_alarm(now)
-    }
-
     #[inline]
     pub(in crate::lease) fn reschedule_on_repay(&mut self, now: &Timestamp) -> ContractResult<()> {
         let lease_lpn = self.lease_amount_lpn()?;
 
-        self.reschedule(lease_lpn, now, &self.on_alarm(*now)?)
+        self.reschedule(lease_lpn, now, &self.liquidation_status(*now)?)
     }
 
-    fn on_alarm(&self, now: Timestamp) -> ContractResult<Status<Asset>> {
+    pub(crate) fn liquidation_status(&self, now: Timestamp) -> ContractResult<Status<Asset>> {
         let price_to_asset = self.price_of_lease_currency()?.inv();
 
         let lease_lpn = total(self.amount, price_to_asset.inv());

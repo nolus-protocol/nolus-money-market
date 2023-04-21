@@ -47,10 +47,7 @@ impl<'a> WithLease for PriceAlarm<'a> {
         }
 
         //TODO revive once https://github.com/nolus-protocol/nolus-money-market/issues/49 is done
-        // let OnAlarmResult {
-        //     batch,
-        //     liquidation_status,
-        // } = lease.on_price_alarm(self.now)?;
+        // let liquidation_status = lease.liquidation_status(self.now)?;
 
         // let resp = super::emit_events(self.env, &liquidation_status).map_or_else(
         //     || MessageResponse::messages_only(batch),
