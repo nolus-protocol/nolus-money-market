@@ -25,17 +25,18 @@ where
     {
         self.state(now, lease.into())?
             .map(|state| {
-                let overdue_lpn = state.previous_margin_interest_due + state.previous_interest_due;
+                let previous_interest =
+                    state.previous_margin_interest_due + state.previous_interest_due;
 
-                let total_lpn = state.principal_due
-                    + overdue_lpn
+                let total = state.principal_due
+                    + previous_interest
                     + state.current_margin_interest_due
                     + state.current_interest_due;
 
                 LiabilityStatus {
-                    ltv: Percent::from_ratio(total_lpn, lease_lpn),
-                    total_lpn,
-                    overdue_lpn,
+                    ltv: Percent::from_ratio(total, lease_lpn),
+                    total,
+                    previous_interest,
                 }
             })
             .ok_or(ContractError::LoanClosed())
@@ -48,6 +49,6 @@ where
     Lpn: Currency,
 {
     pub ltv: Percent,
-    pub total_lpn: Coin<Lpn>,
-    pub overdue_lpn: Coin<Lpn>,
+    pub total: Coin<Lpn>,
+    pub previous_interest: Coin<Lpn>,
 }

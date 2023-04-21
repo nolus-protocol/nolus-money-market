@@ -70,8 +70,8 @@ where
 
         let LiabilityStatus {
             ltv,
-            total_lpn: total_due,
-            overdue_lpn: overdue,
+            total: total_due,
+            previous_interest: overdue,
         } = self
             .loan
             .liability_status(now, self.addr.clone(), lease_lpn)?;
@@ -182,7 +182,7 @@ where
                 self.addr.clone(),
                 lease_lpn,
             )?
-            .total_lpn;
+            .total;
 
         let below = self.price_alarm_by_percent(total_liability, below)?;
 

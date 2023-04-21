@@ -315,8 +315,8 @@ mod tests {
                 .unwrap(),
             LiabilityStatus {
                 ltv: Percent::from_percent(50),
-                total_lpn: lpn_coin(500),
-                overdue_lpn: lpn_coin(0),
+                total: lpn_coin(500),
+                previous_interest: lpn_coin(0),
             }
         );
     }
