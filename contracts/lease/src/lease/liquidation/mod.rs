@@ -1,109 +1,98 @@
-use serde::Serialize;
-
-use finance::{coin::Coin, currency::Currency, percent::Percent};
-use lpp::stub::lender::LppLender as LppLenderTrait;
-use oracle::stub::Oracle as OracleTrait;
+use finance::{coin::Coin, currency::Currency, liability::Liability, percent::Percent};
 use platform::{batch::Batch, generate_ids};
-use profit::stub::Profit as ProfitTrait;
-use sdk::cosmwasm_std::{Addr, Timestamp};
-use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
+use sdk::cosmwasm_std::Addr;
 
-use crate::{lease::Lease, loan::RepayReceipt};
+use crate::loan::RepayReceipt;
 
 mod alarm;
 
-impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
+fn check_liability<Asset>(
+    spec: &Liability,
+    asset: Coin<Asset>,
+    total_due: Coin<Asset>,
+    overdue: Coin<Asset>,
+) -> Status<Asset>
 where
-    Lpn: Currency + Serialize,
-    Lpp: LppLenderTrait<Lpn>,
-    TimeAlarms: TimeAlarmsTrait,
-    Oracle: OracleTrait<Lpn>,
-    Profit: ProfitTrait,
-    Asset: Currency + Serialize,
+    Asset: Currency,
 {
-    fn act_on_overdue(
-        &mut self,
-        now: Timestamp,
-        ltv: Percent,
-        _: Coin<Asset>,
-        overdue: Coin<Asset>,
-    ) -> Status<Asset> {
-        if self.loan.grace_period_end() <= now {
-            self.liquidate_on_interest_overdue(overdue)
-        } else {
-            self.handle_warnings(ltv)
-        }
+    let liquidation = may_ask_liquidation_liability(spec, asset, total_due)
+        .max(may_ask_liquidation_overdue(asset, overdue));
+    if liquidation == Status::None {
+        may_emit_warning(spec, asset, total_due)
+    } else {
+        liquidation
+    }
+}
+
+fn may_emit_warning<Asset>(
+    spec: &Liability,
+    asset: Coin<Asset>,
+    total_due: Coin<Asset>,
+) -> Status<Asset>
+where
+    Asset: Currency,
+{
+    let ltv = Percent::from_ratio(total_due, asset);
+    debug_assert!(ltv < spec.max_percent());
+
+    if ltv < spec.first_liq_warn_percent() {
+        return Status::None;
     }
 
-    fn act_on_liability(
-        &mut self,
-        _now: Timestamp,
-        ltv: Percent,
-        total_due: Coin<Asset>,
-        _: Coin<Asset>,
-    ) -> Status<Asset> {
-        if self.liability.max_percent() <= ltv {
-            self.liquidate_on_liability(total_due)
-        } else {
-            self.handle_warnings(ltv)
-        }
-    }
+    let (ltv, level) = if spec.third_liq_warn_percent() <= ltv {
+        (spec.third_liq_warn_percent(), WarningLevel::Third)
+    } else if spec.second_liq_warn_percent() <= ltv {
+        (spec.second_liq_warn_percent(), WarningLevel::Second)
+    } else {
+        debug_assert!(spec.first_liq_warn_percent() <= ltv);
+        (spec.first_liq_warn_percent(), WarningLevel::First)
+    };
 
-    fn handle_warnings(&self, liability: Percent) -> Status<Asset> {
-        debug_assert!(liability < self.liability.max_percent());
+    Status::Warning { ltv, level }
+}
 
-        if liability < self.liability.first_liq_warn_percent() {
-            return Status::None;
-        }
+fn may_ask_liquidation_liability<Asset>(
+    spec: &Liability,
+    asset: Coin<Asset>,
+    total_due: Coin<Asset>,
+) -> Status<Asset>
+where
+    Asset: Currency,
+{
+    may_ask_liquidation(
+        asset,
+        Cause::Liability {
+            ltv: spec.max_percent(),
+            healthy_ltv: spec.healthy_percent(),
+        },
+        spec.amount_to_liquidate(asset, total_due),
+    )
+}
 
-        let (ltv, level) = if self.liability.third_liq_warn_percent() <= liability {
-            (self.liability.third_liq_warn_percent(), WarningLevel::Third)
-        } else if self.liability.second_liq_warn_percent() <= liability {
-            (
-                self.liability.second_liq_warn_percent(),
-                WarningLevel::Second,
-            )
-        } else {
-            debug_assert!(self.liability.first_liq_warn_percent() <= liability);
-            (self.liability.first_liq_warn_percent(), WarningLevel::First)
-        };
+fn may_ask_liquidation_overdue<Asset>(asset: Coin<Asset>, overdue: Coin<Asset>) -> Status<Asset>
+where
+    Asset: Currency,
+{
+    may_ask_liquidation(asset, Cause::Overdue(), overdue)
+}
 
-        Status::Warning { ltv, level }
-    }
-
-    fn liquidate_on_liability(&mut self, total_due: Coin<Asset>) -> Status<Asset> {
-        let liquidation = self.liability.amount_to_liquidate(self.amount, total_due);
-
-        self.liquidate(
-            Cause::Liability {
-                ltv: self.liability.max_percent(),
-                healthy_ltv: self.liability.healthy_percent(),
-            },
-            liquidation,
-        )
-    }
-
-    fn liquidate_on_interest_overdue(&mut self, overdue: Coin<Asset>) -> Status<Asset> {
-        self.liquidate(Cause::Overdue(), overdue)
-    }
-
-    fn liquidate(&mut self, cause: Cause, liquidation: Coin<Asset>) -> Status<Asset> {
-        // let receipt = self.no_reschedule_repay(liquidation_lpn, now)?;
-
-        // let liquidation_info = LiquidationInfo {
-        //     cause,
-        //     lease: self.addr.clone(),
-        //     receipt,
-        // };
-
-        // TODO liquidate fully if the remaining value, lease_lpn - liquidation_lpn < 100
-        if self.amount <= liquidation {
-            Status::FullLiquidation(cause)
-        } else {
-            Status::PartialLiquidation {
-                amount: liquidation,
-                cause,
-            }
+fn may_ask_liquidation<Asset>(
+    asset: Coin<Asset>,
+    cause: Cause,
+    liquidation: Coin<Asset>,
+) -> Status<Asset>
+where
+    Asset: Currency,
+{
+    // TODO liquidate fully if the remaining value, lease_lpn - liquidation_lpn < 100
+    if liquidation.is_zero() {
+        Status::None
+    } else if asset <= liquidation {
+        Status::FullLiquidation(cause)
+    } else {
+        Status::PartialLiquidation {
+            amount: liquidation,
+            cause,
         }
     }
 }
@@ -116,7 +105,8 @@ where
     pub liquidation_status: Status<Lpn>,
 }
 
-#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+#[derive(Eq, PartialEq, Ord, PartialOrd)]
+#[cfg_attr(test, derive(Debug))]
 pub(crate) enum Status<Asset>
 where
     Asset: Currency,
@@ -127,7 +117,8 @@ where
     FullLiquidation(Cause),
 }
 
-#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+#[derive(Eq, PartialEq, Ord, PartialOrd)]
+#[cfg_attr(test, derive(Debug))]
 pub(crate) enum Cause {
     Overdue(),
     Liability { ltv: Percent, healthy_ltv: Percent },
@@ -166,237 +157,485 @@ impl WarningLevel {
 
 #[cfg(test)]
 mod tests {
-    use finance::{coin::Amount, fraction::Fraction, percent::Percent};
-    use lpp::msg::LoanResponse;
-    use sdk::cosmwasm_std::{Addr, Timestamp};
-
-    use crate::{
-        lease::{
-            tests::{coin, loan, lpn_coin, open_lease, LEASE_START},
-            Status, WarningLevel,
-        },
-        loan::LiabilityStatus,
-    };
+    use crate::lease::{liquidation::check_liability, Status, WarningLevel};
+    use currency::lease::Atom;
+    use finance::{duration::Duration, liability::Liability, percent::Percent};
 
     use super::Cause;
 
     #[test]
     fn warnings_none() {
-        let interest_rate = Percent::from_permille(50);
-        // LPP loan
-        let loan = LoanResponse {
-            principal_due: lpn_coin(500),
-            annual_interest_rate: interest_rate,
-            interest_paid: Timestamp::from_nanos(0),
-        };
-
-        let lease_addr = Addr::unchecked("lease");
-        let lease = open_lease(
-            lease_addr,
-            10.into(),
-            Some(loan),
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-        );
-
+        let warn_ltv = Percent::from_percent(51);
+        let spec = liability_with_first(warn_ltv);
         assert_eq!(
-            lease.handle_warnings(Percent::from_percent(60)),
+            check_liability::<Atom>(&spec, 100.into(), 0.into(), 0.into()),
             Status::None,
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 100.into(), 49.into(), 0.into()),
+            Status::None,
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 100.into(), 50.into(), 0.into()),
+            Status::None,
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 505.into(), 1.into()),
+            Status::PartialLiquidation {
+                amount: 1.into(),
+                cause: Cause::Overdue()
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 509.into(), 0.into()),
+            Status::None,
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 510.into(), 0.into()),
+            Status::Warning {
+                ltv: warn_ltv,
+                level: WarningLevel::First
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 510.into(), 1.into()),
+            Status::PartialLiquidation {
+                amount: 1.into(),
+                cause: Cause::Overdue()
+            },
         );
     }
 
     #[test]
     fn warnings_first() {
-        let interest_rate = Percent::from_permille(50);
-        // LPP loan
-        let loan = LoanResponse {
-            principal_due: lpn_coin(500),
-            annual_interest_rate: interest_rate,
-            interest_paid: Timestamp::from_nanos(0),
-        };
-
-        let lease_addr = Addr::unchecked("lease");
-        let lease = open_lease(
-            lease_addr,
-            10.into(),
-            Some(loan),
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-        );
+        let warn_first_ltv = Percent::from_permille(712);
+        let warn_second_ltv = warn_first_ltv + STEP;
+        let spec = liability_with_first(warn_first_ltv);
 
         assert_eq!(
-            lease.handle_warnings(lease.liability.first_liq_warn_percent()),
+            check_liability::<Atom>(&spec, 1000.into(), 711.into(), 0.into()),
+            Status::None,
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 712.into(), 0.into()),
             Status::Warning {
-                ltv: lease.liability.first_liq_warn_percent(),
-                level: WarningLevel::First,
+                ltv: warn_first_ltv,
+                level: WarningLevel::First
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 712.into(), 1.into()),
+            Status::PartialLiquidation {
+                amount: 1.into(),
+                cause: Cause::Overdue()
             }
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 715.into(), 0.into()),
+            Status::Warning {
+                ltv: warn_first_ltv,
+                level: WarningLevel::First
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 721.into(), 0.into()),
+            Status::Warning {
+                ltv: warn_first_ltv,
+                level: WarningLevel::First
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 722.into(), 0.into()),
+            Status::Warning {
+                ltv: warn_second_ltv,
+                level: WarningLevel::Second
+            },
         );
     }
 
     #[test]
     fn warnings_second() {
-        let interest_rate = Percent::from_permille(50);
-        // LPP loan
-        let loan = LoanResponse {
-            principal_due: lpn_coin(500),
-            annual_interest_rate: interest_rate,
-            interest_paid: Timestamp::from_nanos(0),
-        };
-
-        let lease_addr = Addr::unchecked("lease");
-        let lease = open_lease(
-            lease_addr,
-            10.into(),
-            Some(loan),
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-        );
+        let warn_second_ltv = Percent::from_permille(123);
+        let warn_third_ltv = warn_second_ltv + STEP;
+        let spec = liability_with_second(warn_second_ltv);
 
         assert_eq!(
-            lease.handle_warnings(lease.liability.second_liq_warn_percent()),
+            check_liability::<Atom>(&spec, 1000.into(), 122.into(), 0.into()),
             Status::Warning {
-                ltv: lease.liability.second_liq_warn_percent(),
-                level: WarningLevel::Second,
+                ltv: warn_second_ltv - STEP,
+                level: WarningLevel::First
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 123.into(), 0.into()),
+            Status::Warning {
+                ltv: warn_second_ltv,
+                level: WarningLevel::Second
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 124.into(), 0.into()),
+            Status::Warning {
+                ltv: warn_second_ltv,
+                level: WarningLevel::Second
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 128.into(), 1.into()),
+            Status::PartialLiquidation {
+                amount: 1.into(),
+                cause: Cause::Overdue()
             }
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 132.into(), 0.into()),
+            Status::Warning {
+                ltv: warn_second_ltv,
+                level: WarningLevel::Second
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 133.into(), 0.into()),
+            Status::Warning {
+                ltv: warn_third_ltv,
+                level: WarningLevel::Third
+            },
         );
     }
 
     #[test]
     fn warnings_third() {
-        let lease_addr = Addr::unchecked("lease");
-        let lease = open_lease(
-            lease_addr,
-            10.into(),
-            Some(loan()),
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-        );
+        let warn_third_ltv = Percent::from_permille(381);
+        let max_ltv = warn_third_ltv + STEP;
+        let spec = liability_with_third(warn_third_ltv);
 
         assert_eq!(
-            lease.handle_warnings(lease.liability.third_liq_warn_percent()),
+            check_liability::<Atom>(&spec, 1000.into(), 380.into(), 0.into()),
             Status::Warning {
-                ltv: lease.liability.third_liq_warn_percent(),
-                level: WarningLevel::Third,
-            }
+                ltv: warn_third_ltv - STEP,
+                level: WarningLevel::Second
+            },
         );
-    }
-
-    #[test]
-    fn liability() {
-        // LPP loan
-        let loan = LoanResponse {
-            principal_due: lpn_coin(500),
-            annual_interest_rate: Percent::from_permille(50),
-            interest_paid: LEASE_START,
-        };
-
-        let lease_addr = Addr::unchecked("lease");
-        let lease = open_lease(
-            lease_addr,
-            10.into(),
-            Some(loan),
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-        );
-        // lease.repay();
-        // 100 days period
-        // 100 interest due
-        // let interest_due = 100.into();
-
         assert_eq!(
-            lease
-                .loan
-                .liability_status(LEASE_START, Addr::unchecked(String::new()), lpn_coin(1000))
-                .unwrap(),
-            LiabilityStatus {
-                ltv: Percent::from_percent(50),
-                total: lpn_coin(500),
-                previous_interest: lpn_coin(0),
+            check_liability::<Atom>(&spec, 1000.into(), 381.into(), 1.into()),
+            Status::PartialLiquidation {
+                amount: 1.into(),
+                cause: Cause::Overdue()
             }
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 381.into(), 0.into()),
+            Status::Warning {
+                ltv: warn_third_ltv,
+                level: WarningLevel::Third
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 382.into(), 0.into()),
+            Status::Warning {
+                ltv: warn_third_ltv,
+                level: WarningLevel::Third
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 390.into(), 0.into()),
+            Status::Warning {
+                ltv: warn_third_ltv,
+                level: WarningLevel::Third
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 391.into(), 0.into()),
+            Status::PartialLiquidation {
+                amount: 384.into(),
+                cause: Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            },
         );
     }
 
     #[test]
     fn liquidate_partial() {
-        let lease_amount = coin(100);
-        let loan_amount_lpn = lpn_coin(500);
-        let interest_rate = Percent::from_percent(114);
-        // LPP loan
-        let loan = LoanResponse {
-            principal_due: loan_amount_lpn,
-            annual_interest_rate: interest_rate,
-            interest_paid: LEASE_START,
-        };
+        let max_ltv = Percent::from_permille(881);
+        let spec = liability_with_max(max_ltv);
 
-        let lease_addr = Addr::unchecked("lease");
-        let mut lease = open_lease(
-            lease_addr,
-            lease_amount,
-            Some(loan),
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-        );
-
-        let total_due =
-            (lease.liability.max_percent() + Percent::from_percent(10)).of(lease_amount);
-        let exp_liquidate = coin(66);
-        assert!(
-            Amount::from(
-                lease
-                    .liability
-                    .healthy_percent()
-                    .of(lease_amount - exp_liquidate)
-            )
-            .abs_diff(Amount::from(total_due - exp_liquidate))
-                <= 1
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 880.into(), 0.into()),
+            Status::Warning {
+                ltv: max_ltv - STEP,
+                level: WarningLevel::Third
+            },
         );
         assert_eq!(
-            lease.liquidate_on_liability(dbg!(total_due)),
+            check_liability::<Atom>(&spec, 1000.into(), 880.into(), 1.into()),
             Status::PartialLiquidation {
-                amount: exp_liquidate,
+                amount: 1.into(),
+                cause: Cause::Overdue()
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 881.into(), 0.into()),
+            Status::PartialLiquidation {
+                amount: 879.into(),
                 cause: Cause::Liability {
-                    ltv: lease.liability.max_percent(),
-                    healthy_ltv: lease.liability.healthy_percent()
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
                 }
-            }
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 881.into(), 878.into()),
+            Status::PartialLiquidation {
+                amount: 879.into(),
+                cause: Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 881.into(), 879.into()),
+            Status::PartialLiquidation {
+                amount: 879.into(),
+                cause: Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 881.into(), 880.into()),
+            Status::PartialLiquidation {
+                amount: 880.into(),
+                cause: Cause::Overdue()
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 999.into(), 997.into()),
+            Status::PartialLiquidation {
+                amount: 998.into(),
+                cause: Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 1000.into(), 1.into()),
+            Status::FullLiquidation(Cause::Liability {
+                ltv: max_ltv,
+                healthy_ltv: STEP
+            }),
         );
     }
 
     #[test]
     fn liquidate_full() {
-        let lease_amount = coin(100);
-        let loan_amount_lpn = lpn_coin(500);
-        let interest_rate = Percent::from_percent(242);
-        // LPP loan
-        let loan = LoanResponse {
-            principal_due: loan_amount_lpn,
-            annual_interest_rate: interest_rate,
-            interest_paid: LEASE_START,
-        };
-        let lease_addr = Addr::unchecked("lease");
-        let mut lease = open_lease(
-            lease_addr,
-            lease_amount,
-            Some(loan),
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-        );
-
-        let healthy_due = lease.liability.healthy_percent().of(lease_amount);
+        let max_ltv = Percent::from_permille(768);
+        let spec = liability_with_max(max_ltv);
 
         assert_eq!(
-            lease.liquidate_on_liability(healthy_due + lease_amount),
+            check_liability::<Atom>(&spec, 1000.into(), 768.into(), 765.into()),
+            Status::PartialLiquidation {
+                amount: 765.into(),
+                cause: Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 768.into(), 766.into()),
+            Status::PartialLiquidation {
+                amount: 766.into(),
+                cause: Cause::Overdue()
+            },
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 1000.into(), 1.into()),
             Status::FullLiquidation(Cause::Liability {
-                ltv: lease.liability.max_percent(),
-                healthy_ltv: lease.liability.healthy_percent()
+                ltv: max_ltv,
+                healthy_ltv: STEP
+            }),
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 1000.into(), 1000.into()),
+            Status::FullLiquidation(Cause::Liability {
+                ltv: max_ltv,
+                healthy_ltv: STEP
+            }),
+        );
+        assert_eq!(
+            check_liability::<Atom>(&spec, 1000.into(), 999.into(), 1000.into()),
+            Status::FullLiquidation(Cause::Overdue()),
+        );
+    }
+
+    const STEP: Percent = Percent::from_permille(10);
+
+    fn liability_with_first(warn: Percent) -> Liability {
+        liability_with_max(warn + STEP + STEP + STEP)
+    }
+
+    fn liability_with_second(warn: Percent) -> Liability {
+        liability_with_max(warn + STEP + STEP)
+    }
+
+    fn liability_with_third(warn: Percent) -> Liability {
+        liability_with_max(warn + STEP)
+    }
+
+    // init = 1%, healthy = 1%, first = max - 3, second = max - 2, third = max - 1
+    fn liability_with_max(max: Percent) -> Liability {
+        let initial = STEP;
+        assert!(initial < max - STEP - STEP - STEP);
+
+        Liability::new(
+            initial,
+            Percent::ZERO,
+            max - initial,
+            STEP,
+            STEP,
+            STEP,
+            Duration::from_hours(1),
+        )
+    }
+}
+
+#[cfg(test)]
+mod test_status {
+    use currency::lease::Cro;
+    use finance::percent::Percent;
+
+    use crate::lease::{Cause, WarningLevel};
+
+    use super::Status;
+
+    #[test]
+    fn ord() {
+        assert!(
+            Status::<Cro>::None
+                < Status::Warning {
+                    ltv: Percent::from_permille(1),
+                    level: WarningLevel::First
+                }
+        );
+        assert!(
+            Status::<Cro>::Warning {
+                ltv: Percent::from_permille(1),
+                level: WarningLevel::First
+            } < Status::Warning {
+                ltv: Percent::from_permille(1),
+                level: WarningLevel::Second
+            }
+        );
+        assert!(
+            Status::<Cro>::Warning {
+                ltv: Percent::from_permille(1),
+                level: WarningLevel::First
+            } < Status::Warning {
+                ltv: Percent::from_permille(2),
+                level: WarningLevel::First
+            }
+        );
+        assert!(
+            Status::<Cro>::Warning {
+                ltv: Percent::from_permille(1),
+                level: WarningLevel::Second
+            } < Status::Warning {
+                ltv: Percent::from_permille(2),
+                level: WarningLevel::First
+            }
+        );
+        assert!(
+            Status::Warning {
+                ltv: Percent::from_permille(100),
+                level: WarningLevel::Third
+            } < Status::<Cro>::PartialLiquidation {
+                amount: 1.into(),
+                cause: Cause::Overdue()
+            }
+        );
+        assert!(
+            Status::<Cro>::PartialLiquidation {
+                amount: 1.into(),
+                cause: Cause::Overdue()
+            } < Status::<Cro>::PartialLiquidation {
+                amount: 1.into(),
+                cause: Cause::Liability {
+                    ltv: Percent::from_permille(1),
+                    healthy_ltv: Percent::from_permille(1)
+                }
+            }
+        );
+        assert!(
+            Status::<Cro>::PartialLiquidation {
+                amount: 1.into(),
+                cause: Cause::Overdue()
+            } < Status::<Cro>::PartialLiquidation {
+                amount: 2.into(),
+                cause: Cause::Overdue()
+            }
+        );
+        assert!(
+            Status::<Cro>::PartialLiquidation {
+                amount: 1.into(),
+                cause: Cause::Liability {
+                    ltv: Percent::from_permille(1),
+                    healthy_ltv: Percent::from_permille(1)
+                }
+            } < Status::<Cro>::PartialLiquidation {
+                amount: 2.into(),
+                cause: Cause::Liability {
+                    ltv: Percent::from_permille(1),
+                    healthy_ltv: Percent::from_permille(1)
+                }
+            }
+        );
+        assert!(
+            Status::<Cro>::PartialLiquidation {
+                amount: 1.into(),
+                cause: Cause::Liability {
+                    ltv: Percent::from_permille(1),
+                    healthy_ltv: Percent::from_permille(1)
+                }
+            } < Status::<Cro>::PartialLiquidation {
+                amount: 1.into(),
+                cause: Cause::Liability {
+                    ltv: Percent::from_permille(1),
+                    healthy_ltv: Percent::from_permille(2)
+                }
+            }
+        );
+        assert!(
+            Status::<Cro>::PartialLiquidation {
+                amount: 1.into(),
+                cause: Cause::Liability {
+                    ltv: Percent::from_permille(1),
+                    healthy_ltv: Percent::from_permille(1)
+                }
+            } < Status::<Cro>::FullLiquidation(Cause::Liability {
+                ltv: Percent::from_permille(1),
+                healthy_ltv: Percent::from_permille(2)
             })
+        );
+        assert!(
+            Status::<Cro>::FullLiquidation(Cause::Liability {
+                ltv: Percent::from_permille(1),
+                healthy_ltv: Percent::from_permille(1)
+            }) < Status::<Cro>::FullLiquidation(Cause::Liability {
+                ltv: Percent::from_permille(1),
+                healthy_ltv: Percent::from_permille(2)
+            })
+        );
+        assert!(
+            Status::<Cro>::FullLiquidation(Cause::Overdue())
+                < Status::<Cro>::FullLiquidation(Cause::Liability {
+                    ltv: Percent::from_permille(1),
+                    healthy_ltv: Percent::from_permille(1)
+                })
         );
     }
 }

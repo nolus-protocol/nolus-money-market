@@ -11,6 +11,7 @@ use crate::{
     fractionable::Percentable,
     percent::{Percent, Units},
     ratio::Rational,
+    zero::Zero,
 };
 
 mod unchecked;
@@ -114,8 +115,11 @@ impl Liability {
     /// Otherwise, amount_to_liquidate == total_due
     pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
-        P: Percentable + Copy + Ord + Sub<Output = P>,
+        P: Percentable + Copy + Ord + Sub<Output = P> + Zero,
     {
+        if total_due < self.max_percent().of(lease_amount) {
+            return P::ZERO;
+        }
         if lease_amount <= total_due {
             return lease_amount;
         }
@@ -292,31 +296,39 @@ mod test {
     #[test]
     fn amount_to_liquidate() {
         let healthy = 85;
+        let max = 90;
         let liability = Liability {
             initial: Percent::from_percent(60),
             healthy: Percent::from_percent(healthy),
-            max: Percent::from_percent(100),
-            first_liq_warn: Percent::from_permille(992),
-            second_liq_warn: Percent::from_permille(995),
-            third_liq_warn: Percent::from_permille(998),
+            max: Percent::from_percent(max),
+            first_liq_warn: Percent::from_permille(860),
+            second_liq_warn: Percent::from_permille(865),
+            third_liq_warn: Percent::from_permille(870),
             recalc_time: Duration::from_secs(20000),
         };
         let lease_amount: Amount = 100;
         let healthy_amount = Percent::from_percent(healthy).of(lease_amount);
+        let max_amount = Percent::from_percent(max).of(lease_amount);
+        amount_to_liquidate_int(liability, lease_amount, Amount::ZERO, Amount::ZERO);
+        amount_to_liquidate_int(liability, lease_amount, healthy_amount - 10, Amount::ZERO);
         amount_to_liquidate_int(liability, lease_amount, healthy_amount - 1, Amount::ZERO);
         amount_to_liquidate_int(liability, lease_amount, healthy_amount, Amount::ZERO);
-        amount_to_liquidate_int(liability, lease_amount, healthy_amount + 1, 6);
-        amount_to_liquidate_int(liability, lease_amount, healthy_amount + 10, 66);
+        amount_to_liquidate_int(liability, lease_amount, healthy_amount + 1, Amount::ZERO);
+        amount_to_liquidate_int(liability, lease_amount, max_amount - 1, Amount::ZERO);
+        amount_to_liquidate_int(liability, lease_amount, max_amount, 33);
+        amount_to_liquidate_int(liability, lease_amount, max_amount + 1, 40);
+        amount_to_liquidate_int(liability, lease_amount, max_amount + 8, 86);
         amount_to_liquidate_int(liability, lease_amount, lease_amount - 1, 93);
         amount_to_liquidate_int(liability, lease_amount, lease_amount, lease_amount);
         amount_to_liquidate_int(liability, lease_amount, lease_amount + 1, lease_amount);
         amount_to_liquidate_int(liability, lease_amount, lease_amount + 10, lease_amount);
     }
 
+    #[track_caller]
     fn amount_to_liquidate_int(liability: Liability, lease: Amount, due: Amount, exp: Amount) {
         let liq = liability.amount_to_liquidate(lease, due);
         assert_eq!(exp, liq);
-        if due >= liability.healthy_percent().of(lease) && due <= lease {
+        if due.clamp(liability.max_percent().of(lease), lease) == due {
             assert!(
                 liability
                     .healthy_percent()

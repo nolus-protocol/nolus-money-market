@@ -6,6 +6,7 @@ use finance::{
     fraction::Fraction,
     percent::Percent,
     price::{total, total_of, Price},
+    zero::Zero,
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use marketprice::SpotPrice;
@@ -16,7 +17,7 @@ use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractResult,
-    lease::{IntoDTOResult, Lease, OnAlarmResult, Status, WarningLevel},
+    lease::{Lease, Status, WarningLevel},
     loan::LiabilityStatus,
 };
 
@@ -37,75 +38,46 @@ where
         self.reschedule(self.lease_amount_lpn()?, now, &Status::None)
     }
 
-    pub(crate) fn on_price_alarm(self, now: Timestamp) -> ContractResult<OnAlarmResult<Asset>> {
-        self.on_alarm(Self::act_on_liability, now)
+    pub(crate) fn on_price_alarm(self, now: Timestamp) -> ContractResult<Status<Asset>> {
+        self.on_alarm(now)
     }
 
-    pub(crate) fn on_time_alarm(self, now: Timestamp) -> ContractResult<OnAlarmResult<Asset>> {
-        self.on_alarm(Self::act_on_overdue, now)
+    pub(crate) fn on_time_alarm(self, now: Timestamp) -> ContractResult<Status<Asset>> {
+        self.on_alarm(now)
     }
 
     #[inline]
     pub(in crate::lease) fn reschedule_on_repay(&mut self, now: &Timestamp) -> ContractResult<()> {
         let lease_lpn = self.lease_amount_lpn()?;
 
-        self.reschedule(
-            lease_lpn,
-            now,
-            &self.handle_warnings(
-                self.loan
-                    .liability_status(*now, self.addr.clone(), lease_lpn)?
-                    .ltv,
-            ),
-        )
+        self.reschedule(lease_lpn, now, &self.on_alarm(*now)?)
     }
 
-    fn on_alarm<F>(mut self, handler: F, now: Timestamp) -> ContractResult<OnAlarmResult<Asset>>
-    where
-        F: FnOnce(&mut Self, Timestamp, Percent, Coin<Asset>, Coin<Asset>) -> Status<Asset>,
-    {
+    fn on_alarm(&self, now: Timestamp) -> ContractResult<Status<Asset>> {
         let price_to_asset = self.price_of_lease_currency()?.inv();
 
         let lease_lpn = total(self.amount, price_to_asset.inv());
 
         let LiabilityStatus {
-            ltv,
+            ltv: _,
             total: total_due,
-            previous_interest: overdue,
+            previous_interest,
         } = self
             .loan
             .liability_status(now, self.addr.clone(), lease_lpn)?;
 
-        let status = handler(
-            &mut self,
-            now,
-            ltv,
+        let overdue = if self.loan.grace_period_end() <= now {
+            previous_interest
+        } else {
+            Coin::ZERO
+        };
+
+        Ok(super::check_liability(
+            &self.liability,
+            self.amount,
             total(total_due, price_to_asset),
             total(overdue, price_to_asset),
-        );
-
-        // if let Status::PartialLiquidation {
-        //     liquidation_info: LiquidationInfo { receipt, .. },
-        //     ..
-        // } = &status
-        // {
-        //     self.amount -= total(receipt.total(), price_to_asset.inv());
-        // }
-
-        // if !matches!(status, Status::FullLiquidation { .. }) {
-        //     self.reschedule(lease_lpn, &now, &status)?;
-        // }
-
-        Ok(self.into_on_alarm_result(status))
-    }
-
-    fn into_on_alarm_result(self, liquidation_status: Status<Asset>) -> OnAlarmResult<Asset> {
-        let IntoDTOResult { lease: _, batch } = self.into_dto();
-
-        OnAlarmResult {
-            batch,
-            liquidation_status,
-        }
+        ))
     }
 
     #[inline]
