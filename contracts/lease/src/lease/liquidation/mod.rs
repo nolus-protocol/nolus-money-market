@@ -1,10 +1,55 @@
-use finance::{coin::Coin, currency::Currency, liability::Liability, percent::Percent};
-use platform::{batch::Batch, generate_ids};
-use sdk::cosmwasm_std::Addr;
+use serde::Serialize;
 
-use crate::loan::RepayReceipt;
+use finance::{
+    coin::Coin, currency::Currency, liability::Liability, percent::Percent, price, zero::Zero,
+};
+use lpp::stub::lender::LppLender as LppLenderTrait;
+use oracle::stub::Oracle as OracleTrait;
+use platform::{batch::Batch, generate_ids};
+use profit::stub::Profit as ProfitTrait;
+use sdk::cosmwasm_std::{Addr, Timestamp};
+use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
+
+use crate::{
+    error::ContractResult,
+    loan::{LiabilityStatus, RepayReceipt},
+};
+
+use super::Lease;
 
 mod alarm;
+
+impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
+where
+    Lpn: Currency + Serialize,
+    Lpp: LppLenderTrait<Lpn>,
+    TimeAlarms: TimeAlarmsTrait,
+    Oracle: OracleTrait<Lpn>,
+    Profit: ProfitTrait,
+    Asset: Currency + Serialize,
+{
+    pub(crate) fn liquidation_status(&self, now: Timestamp) -> ContractResult<Status<Asset>> {
+        let price_to_asset = self.price_of_lease_currency()?.inv();
+
+        let LiabilityStatus {
+            total: total_due,
+            previous_interest,
+        } = self.loan.liability_status(now, self.addr.clone())?;
+
+        let overdue = if self.loan.grace_period_end() <= now {
+            previous_interest
+        } else {
+            Coin::ZERO
+        };
+
+        Ok(check_liability(
+            &self.liability,
+            self.amount,
+            price::total(total_due, price_to_asset),
+            price::total(overdue, price_to_asset),
+        ))
+    }
+}
 
 fn check_liability<Asset>(
     spec: &Liability,

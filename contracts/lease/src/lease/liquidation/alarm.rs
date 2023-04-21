@@ -5,8 +5,7 @@ use finance::{
     currency::{self, Currency},
     fraction::Fraction,
     percent::Percent,
-    price::{total, total_of, Price},
-    zero::Zero,
+    price::{total_of, Price},
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use marketprice::SpotPrice;
@@ -18,7 +17,6 @@ use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 use crate::{
     error::ContractResult,
     lease::{Lease, Status, WarningLevel},
-    loan::LiabilityStatus,
 };
 
 impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
@@ -41,28 +39,6 @@ where
     #[inline]
     pub(in crate::lease) fn reschedule_on_repay(&mut self, now: &Timestamp) -> ContractResult<()> {
         self.reschedule(now, &self.liquidation_status(*now)?)
-    }
-
-    pub(crate) fn liquidation_status(&self, now: Timestamp) -> ContractResult<Status<Asset>> {
-        let price_to_asset = self.price_of_lease_currency()?.inv();
-
-        let LiabilityStatus {
-            total: total_due,
-            previous_interest,
-        } = self.loan.liability_status(now, self.addr.clone())?;
-
-        let overdue = if self.loan.grace_period_end() <= now {
-            previous_interest
-        } else {
-            Coin::ZERO
-        };
-
-        Ok(super::check_liability(
-            &self.liability,
-            self.amount,
-            total(total_due, price_to_asset),
-            total(overdue, price_to_asset),
-        ))
     }
 
     #[inline]
