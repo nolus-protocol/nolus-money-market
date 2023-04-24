@@ -16,8 +16,8 @@ pub struct TimeAlarms {
 }
 
 impl TimeAlarms {
-    const ALARMS_NAMESPACE: &'static str = "pk";
-    const ALARMS_IDX_NAMESPACE: &'static str = "idx";
+    const ALARMS_NAMESPACE: &'static str = "alarms";
+    const ALARMS_IDX_NAMESPACE: &'static str = "alarms_idx";
     const REPLY_ID: Id = 0;
 
     pub(super) fn new() -> Self {
@@ -83,10 +83,6 @@ impl TimeAlarms {
         Ok(AlarmsStatusResponse { remaining_alarms })
     }
 
-    ///TODO remove once the migration is done
-    pub(super) fn alarms(&self) -> &Alarms<'_> {
-        &self.time_alarms
-    }
 }
 
 #[cfg(test)]
