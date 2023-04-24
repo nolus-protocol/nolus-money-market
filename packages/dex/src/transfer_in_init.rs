@@ -90,12 +90,7 @@ where
     fn on_timeout(self, _deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
         let state_label = self.spec.label();
         let timealarms = self.spec.time_alarm().clone();
-        Ok(timeout::on_timeout_repair_channel(
-            self,
-            state_label,
-            timealarms,
-            env,
-        ))
+        timeout::on_timeout_repair_channel(self, state_label, timealarms, env)
     }
 }
 

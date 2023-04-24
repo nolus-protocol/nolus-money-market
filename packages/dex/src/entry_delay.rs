@@ -23,14 +23,18 @@ impl<Enterable> EntryDelay<Enterable> {
             time_alarms,
         }
     }
-}
 
-impl<Enterable> EnterableT for EntryDelay<Enterable> {
-    fn enter(&self, now: Timestamp, _querier: &QuerierWrapper<'_>) -> DexResult<Batch> {
+    pub(super) fn enter(&self, now: Timestamp) -> DexResult<Batch> {
         self.time_alarms
             .clone()
             .setup_alarm(now + Self::RIGHT_AFTER_NOW)
             .map_err(Into::into)
+    }
+}
+
+impl<Enterable> EnterableT for EntryDelay<Enterable> {
+    fn enter(&self, now: Timestamp, _querier: &QuerierWrapper<'_>) -> DexResult<Batch> {
+        Self::enter(self, now)
     }
 }
 

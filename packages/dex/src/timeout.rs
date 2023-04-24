@@ -41,9 +41,10 @@ pub(crate) fn on_timeout_repair_channel<S, L, SEnum, SwapResult>(
     state_label: L,
     time_alarms: TimeAlarmsRef,
     env: Env,
-) -> StateMachineResponse<SEnum>
+) -> Result<StateMachineResponse<SEnum>>
 where
     S: Enterable + DexConnectable + Into<SEnum>,
+    EntryDelay<IcaConnector<InRecovery<S, SEnum>, SwapResult>>: Into<SEnum>,
     IcaConnector<InRecovery<S, SEnum>, SwapResult>: Into<SEnum>,
     EntryDelay<S>: Into<SEnum>,
     L: Into<String>,
@@ -53,10 +54,14 @@ where
         env.contract.address,
         TimeoutPolicy::RepairICS27Channel,
     );
-    let recover_ica = IcaConnector::new(InRecovery::<_, SEnum>::new(current_state, time_alarms));
-    let batch = recover_ica.enter();
-    let resp = MessageResponse::messages_with_events(batch, emitter);
-    StateMachineResponse::from(resp, recover_ica)
+    let pre_recover_ica = EntryDelay::new(
+        IcaConnector::new(InRecovery::new(current_state, time_alarms.clone())),
+        time_alarms,
+    );
+    pre_recover_ica
+        .enter(env.block.time)
+        .map(|batch| MessageResponse::messages_with_events(batch, emitter))
+        .map(|resp| StateMachineResponse::from(resp, pre_recover_ica))
 }
 
 #[derive(Debug)]

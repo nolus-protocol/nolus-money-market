@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{SwapExactIn, SwapExactInPostRecoverIca, SwapExactInRecoverIca, TransferOut};
+use crate::{
+    SwapExactIn, SwapExactInPostRecoverIca, SwapExactInPreRecoverIca, SwapExactInRecoverIca,
+    TransferOut,
+};
 
 use super::swap_task::SwapTask as SwapTaskT;
 
@@ -11,6 +14,7 @@ where
 {
     TransferOut(TransferOut<SwapTask, Self>),
     SwapExactIn(SwapExactIn<SwapTask, Self>),
+    SwapExactInPreRecoverIca(SwapExactInPreRecoverIca<SwapTask, Self>),
     SwapExactInRecoverIca(SwapExactInRecoverIca<SwapTask, Self>),
     SwapExactInPostRecoverIca(SwapExactInPostRecoverIca<SwapTask, Self>),
 }
@@ -28,7 +32,7 @@ mod impl_into {
 
     use crate::{
         swap_task::SwapTask as SwapTaskT, SwapExactIn, SwapExactInPostRecoverIca,
-        SwapExactInRecoverIca, TransferOut,
+        SwapExactInPreRecoverIca, SwapExactInRecoverIca, TransferOut,
     };
 
     use super::State;
@@ -48,6 +52,15 @@ mod impl_into {
     {
         fn from(value: SwapExactIn<SwapTask, Self>) -> Self {
             Self::SwapExactIn(value)
+        }
+    }
+
+    impl<SwapTask> From<SwapExactInPreRecoverIca<SwapTask, Self>> for State<SwapTask>
+    where
+        SwapTask: SwapTaskT,
+    {
+        fn from(value: SwapExactInPreRecoverIca<SwapTask, Self>) -> Self {
+            Self::SwapExactInPreRecoverIca(value)
         }
     }
 
@@ -99,6 +112,9 @@ mod impl_handler {
                 State::TransferOut(inner) => {
                     Handler::on_open_ica(inner, counterparty_version, deps, env)
                 }
+                State::SwapExactInPreRecoverIca(inner) => {
+                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                }
                 State::SwapExactIn(inner) => {
                     Handler::on_open_ica(inner, counterparty_version, deps, env)
                 }
@@ -114,6 +130,9 @@ mod impl_handler {
         fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> Result<Self> {
             match self {
                 State::TransferOut(inner) => {
+                    Handler::on_response(inner, data, deps, env).map_into()
+                }
+                State::SwapExactInPreRecoverIca(inner) => {
                     Handler::on_response(inner, data, deps, env).map_into()
                 }
                 State::SwapExactIn(inner) => {
@@ -132,6 +151,7 @@ mod impl_handler {
             match self {
                 State::TransferOut(inner) => Handler::on_error(inner, deps, env),
                 State::SwapExactIn(inner) => Handler::on_error(inner, deps, env),
+                State::SwapExactInPreRecoverIca(inner) => Handler::on_error(inner, deps, env),
                 State::SwapExactInRecoverIca(inner) => Handler::on_error(inner, deps, env),
                 State::SwapExactInPostRecoverIca(inner) => Handler::on_error(inner, deps, env),
             }
@@ -141,6 +161,7 @@ mod impl_handler {
             match self {
                 State::TransferOut(inner) => Handler::on_timeout(inner, deps, env),
                 State::SwapExactIn(inner) => Handler::on_timeout(inner, deps, env),
+                State::SwapExactInPreRecoverIca(inner) => Handler::on_timeout(inner, deps, env),
                 State::SwapExactInRecoverIca(inner) => Handler::on_timeout(inner, deps, env),
                 State::SwapExactInPostRecoverIca(inner) => Handler::on_timeout(inner, deps, env),
             }
@@ -150,6 +171,9 @@ mod impl_handler {
             match self {
                 State::TransferOut(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
                 State::SwapExactIn(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
+                State::SwapExactInPreRecoverIca(inner) => {
+                    Handler::on_time_alarm(inner, deps, env).map_into()
+                }
                 State::SwapExactInRecoverIca(inner) => {
                     Handler::on_time_alarm(inner, deps, env).map_into()
                 }
@@ -182,6 +206,7 @@ mod impl_contract {
             match self {
                 State::TransferOut(inner) => Contract::state(inner, now, querier),
                 State::SwapExactIn(inner) => Contract::state(inner, now, querier),
+                State::SwapExactInPreRecoverIca(inner) => Contract::state(inner, now, querier),
                 State::SwapExactInRecoverIca(inner) => Contract::state(inner, now, querier),
                 State::SwapExactInPostRecoverIca(inner) => Contract::state(inner, now, querier),
             }

@@ -46,10 +46,15 @@ pub use {
     transfer_out::TransferOut,
 };
 
+type SwapExactInPreRecoverIca<SwapTask, SEnum> = EntryDelay<SwapExactInRecoverIca<SwapTask, SEnum>>;
+
 type SwapExactInRecoverIca<SwapTask, SEnum> =
     IcaConnector<InRecovery<SwapExactIn<SwapTask, SEnum>, SEnum>, <SwapTask as SwapTaskT>::Result>;
 
 type SwapExactInPostRecoverIca<SwapTask, SEnum> = EntryDelay<SwapExactIn<SwapTask, SEnum>>;
+
+type TransferInInitPreRecoverIca<SwapTask, SEnum> =
+    EntryDelay<TransferInInitRecoverIca<SwapTask, SEnum>>;
 
 type TransferInInitRecoverIca<SwapTask, SEnum> =
     IcaConnector<InRecovery<TransferInInit<SwapTask>, SEnum>, <SwapTask as SwapTaskT>::Result>;
