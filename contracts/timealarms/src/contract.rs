@@ -13,14 +13,13 @@ use versioning::{package_version, version, VersionSegment};
 
 use crate::{
     alarms::TimeAlarms,
-    migrate_v1,
     msg::{DispatchAlarmsResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
     ContractError,
 };
 
 // version info for migration info
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -37,13 +36,8 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _>(
-        deps.storage,
-        version!(CONTRACT_STORAGE_VERSION),
-        |storage: &mut _| migrate_v1::migrate(storage),
-    )?;
-
-    response::response(versioning::release())
+    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))
+        .and_then(|()| response::response(versioning::release()))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

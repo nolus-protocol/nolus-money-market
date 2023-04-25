@@ -51,13 +51,12 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
         deps.storage,
         version!(CONTRACT_STORAGE_VERSION),
         |storage: &mut _| {
-            let migrated_contract = state::load_v2(storage)?.into_last_version();
-
-            state::save(storage, &migrated_contract)
+            state::load_v2(storage)
+                .map(|lease_v2| lease_v2.into_last_version())
+                .and_then(|lease_v3| state::save(storage, &lease_v3))
         },
     )
-    .map(|()| response::empty_response())
-    .map_err(Into::into)
+    .and_then(|()| response::response(versioning::release()))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

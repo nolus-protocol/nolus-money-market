@@ -55,11 +55,8 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
-
-    SingleUserAccess::remove_contract_owner(deps.storage);
-
-    response::response(versioning::release())
+    versioning::update_software::<ContractError>(deps.storage, version!(CONTRACT_STORAGE_VERSION))
+        .and_then(|()| response::response(versioning::release()))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
