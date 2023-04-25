@@ -1,3 +1,4 @@
+use release::ReleaseLabel;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "schema")]
@@ -8,7 +9,6 @@ use sdk::{
 };
 
 mod release;
-pub use release::release;
 
 pub type VersionSegment = u16;
 
@@ -28,7 +28,7 @@ pub struct Version {
 }
 
 impl Version {
-    pub fn new(storage: VersionSegment, software: SemVer) -> Self {
+    pub const fn new(storage: VersionSegment, software: SemVer) -> Self {
         Self { storage, software }
     }
 }
@@ -93,15 +93,18 @@ pub fn initialize(storage: &mut dyn Storage, version: Version) -> StdResult<()> 
     VERSION_STORAGE_KEY.save(storage, &version)
 }
 
-#[inline]
 pub fn update_software<ContractError>(
     storage: &mut dyn Storage,
-    new_version: Version,
-) -> Result<(), ContractError>
+    new: Version,
+) -> Result<ReleaseLabel, ContractError>
 where
     StdError: Into<ContractError>,
 {
-    update_version(storage, new_version.storage, new_version).map(|_| ())
+    load_version(storage)
+        .and_then(|current| release::allow_software_update(&current, &new))
+        .and_then(|()| save_version(storage, &new))
+        .map(|()| release::label())
+        .map_err(Into::into)
 }
 
 pub fn update_software_and_storage<
@@ -110,54 +113,27 @@ pub fn update_software_and_storage<
     ContractError,
 >(
     storage: &mut dyn Storage,
-    new_version: Version,
+    new: Version,
     migrate_storage: MigrateStorageFunctor,
-) -> Result<(), ContractError>
+) -> Result<ReleaseLabel, ContractError>
 where
     MigrateStorageFunctor: FnOnce(&mut dyn Storage) -> Result<(), ContractError>,
     StdError: Into<ContractError>,
 {
-    if new_version.storage == FROM_STORAGE_VERSION {
-        return Err(StdError::generic_err("Software and storage update handler called, but expected and new storage versions are the same!").into());
-    }
-
-    if new_version.storage != FROM_STORAGE_VERSION.wrapping_add(1) {
-        return Err(StdError::generic_err("Expected and new storage versions are not directly adjacent! This could indicate an error!").into());
-    }
-
-    update_version(storage, FROM_STORAGE_VERSION, new_version).map_err(Into::into)?;
-
-    migrate_storage(storage)
+    load_version(storage)
+        .and_then(|current| {
+            release::allow_software_and_storage_update::<FROM_STORAGE_VERSION>(&current, &new)
+        })
+        .and_then(|()| save_version(storage, &new))
+        .map_err(Into::into)
+        .and_then(|()| migrate_storage(storage))
+        .map(|()| release::label())
 }
 
-// trait Release {
-//     fn allow_update(&self, current: &Version, new: &Version) -> Result<(), MigrateStorageError>;
-// }
+fn load_version(storage: &mut dyn Storage) -> Result<Version, StdError> {
+    VERSION_STORAGE_KEY.load(storage)
+}
 
-fn update_version<ContractError>(
-    storage: &mut dyn Storage,
-    expected_storage: VersionSegment,
-    new_version: Version,
-) -> Result<Version, ContractError>
-where
-    StdError: Into<ContractError>,
-{
-    VERSION_STORAGE_KEY.update(storage, |saved_version| {
-        if saved_version.storage != expected_storage {
-            return Err(StdError::generic_err(format!(
-                "Software update handler called, but storage versions differ! Saved storage version is {saved}, but storage version used by this software is {current}!",
-                saved = saved_version.storage,
-                current = expected_storage,
-            )));
-        }
-
-        if saved_version.software < new_version.software
-            || (release::dev_release() && saved_version.software == new_version.software) {
-            Ok(new_version)
-        } else {
-            Err(StdError::generic_err(
-                "Couldn't upgrade contract because software version isn't monotonically increasing!",
-            ))
-        }
-    }).map_err(Into::into)
+fn save_version(storage: &mut dyn Storage, new: &Version) -> Result<(), StdError> {
+    VERSION_STORAGE_KEY.save(storage, new)
 }
