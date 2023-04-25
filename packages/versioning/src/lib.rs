@@ -128,17 +128,17 @@ where
 
 fn update_version(
     storage: &mut dyn Storage,
-    expected_storage: VersionSegment,
+    _expected_storage: VersionSegment,
     version: Version,
 ) -> Result<Version, StdError> {
     VERSION_STORAGE_KEY.update(storage, |saved_version| {
-        if saved_version.storage != expected_storage {
-            return Err(StdError::generic_err(format!(
-                "Software update handler called, but storage versions differ! Saved storage version is {saved}, but storage version used by this software is {current}!",
-                saved = saved_version.storage,
-                current = expected_storage,
-            )));
-        }
+        // if saved_version.storage != expected_storage {
+        //     return Err(StdError::generic_err(format!(
+        //         "Software update handler called, but storage versions differ! Saved storage version is {saved}, but storage version used by this software is {current}!",
+        //         saved = saved_version.storage,
+        //         current = expected_storage,
+        //     )));
+        // }
 
         if saved_version.software < version.software
             || (release::dev_release() && saved_version.software == version.software) {

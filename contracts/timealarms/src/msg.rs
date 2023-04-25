@@ -12,7 +12,9 @@ pub type AlarmsCount = u32;
 pub struct InstantiateMsg {}
 
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct MigrateMsg {}
+pub struct MigrateMsg {
+    pub(super) delete_batch_size: u32,
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -23,6 +25,9 @@ pub enum ExecuteMsg {
     /// Returns [`DispatchAlarmsResponse`] as response data.
     DispatchAlarms {
         max_count: AlarmsCount,
+    },
+    DeleteOldAlarms {
+        batch_size: u32,
     },
 }
 

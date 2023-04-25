@@ -5,7 +5,6 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
 };
-use time_oracle::Alarms;
 use versioning::{package_version, version, VersionSegment};
 
 use crate::{
@@ -36,7 +35,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _>(
         deps.storage,
         version!(CONTRACT_STORAGE_VERSION),
-        |storage: &mut _| migrate_v1::migrate_dev(storage, &Alarms::new("alarms", "alarms_idx")),
+        |storage: &mut _| migrate_v1::cleanup_v0(storage, _msg.delete_batch_size),
     )?;
 
     response::response(versioning::release())
@@ -55,6 +54,9 @@ pub fn execute(
         ExecuteMsg::AddAlarm { time } => TimeAlarms::new().try_add(deps, env, info.sender, time),
         ExecuteMsg::DispatchAlarms { max_count } => {
             TimeAlarms::new().try_notify(deps.storage, env.block.time, max_count)
+        }
+        ExecuteMsg::DeleteOldAlarms { batch_size } => {
+            migrate_v1::cleanup_v0(deps.storage, batch_size).map(|()| Response::default())
         }
     }
 }
