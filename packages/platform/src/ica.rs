@@ -10,7 +10,10 @@ use crate::{
     trx::Transaction,
 };
 
+#[cfg(not(feature = "testing"))]
 use self::impl_::OpenAckVersion;
+#[cfg(feature = "testing")]
+pub use self::impl_::OpenAckVersion;
 
 /// Identifier of the ICA account opened by a lease
 /// It is unique for a lease and allows the support of multiple accounts per lease
