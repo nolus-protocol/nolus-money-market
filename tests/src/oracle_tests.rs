@@ -13,10 +13,13 @@ use finance::{
 };
 use leaser::msg::QueryMsg;
 use marketprice::{config::Config as PriceConfig, SpotPrice};
-use oracle::{alarms::Alarm, msg::QueryMsg as OracleQ};
+use oracle::{
+    alarms::Alarm,
+    msg::{DispatchAlarmsResponse, QueryMsg as OracleQ},
+};
 use platform::coin_legacy;
 use sdk::{
-    cosmwasm_std::{coin, wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
+    cosmwasm_std::{coin, from_binary, wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
     cw_multi_test::{AppResponse, Executor},
     schemars::_serde_json::from_str,
 };
@@ -86,40 +89,14 @@ fn register_feeder() {
     let _user = Addr::unchecked(USER);
     let _admin = Addr::unchecked(ADMIN);
 
-    // check whether can register new feeder
-    let msg = oracle::msg::SudoMsg::RegisterFeeder {
-        feeder_address: ADMIN.to_string(),
-    };
-
-    let response: AppResponse = test_case
-        .app
-        .wasm_sudo(test_case.oracle.clone().unwrap(), &msg)
-        .unwrap();
-    assert_eq!(response.data, None);
-    assert_eq!(
-        &response.events,
-        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
-    );
+    oracle_wrapper::add_feeder(&mut test_case, ADMIN);
 }
 
 #[test]
 fn internal_test_integration_setup_test() {
     let mut test_case = create_test_case();
 
-    let response: AppResponse = test_case
-        .app
-        .wasm_sudo(
-            test_case.oracle.clone().unwrap(),
-            &oracle::msg::SudoMsg::RegisterFeeder {
-                feeder_address: ADMIN.into(),
-            },
-        )
-        .unwrap();
-    assert_eq!(response.data, None);
-    assert_eq!(
-        &response.events,
-        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
-    );
+    oracle_wrapper::add_feeder(&mut test_case, ADMIN);
 
     let response: AppResponse = oracle_wrapper::feed_price::<_, BaseC, Usdc>(
         &mut test_case,
@@ -138,16 +115,7 @@ fn internal_test_integration_setup_test() {
 #[test]
 fn feed_price_with_alarm_issue() {
     let mut test_case = create_test_case();
-
-    test_case
-        .app
-        .wasm_sudo(
-            test_case.oracle.clone().unwrap(),
-            &oracle::msg::SudoMsg::RegisterFeeder {
-                feeder_address: ADMIN.into(),
-            },
-        )
-        .unwrap();
+    oracle_wrapper::add_feeder(&mut test_case, ADMIN);
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
 
@@ -178,21 +146,7 @@ fn feed_price_with_alarm_issue() {
 #[test]
 fn feed_price_with_alarm() {
     let mut test_case = create_test_case();
-
-    let response: AppResponse = test_case
-        .app
-        .wasm_sudo(
-            test_case.oracle.clone().unwrap(),
-            &oracle::msg::SudoMsg::RegisterFeeder {
-                feeder_address: ADMIN.into(),
-            },
-        )
-        .unwrap();
-    assert_eq!(response.data, None);
-    assert_eq!(
-        &response.events,
-        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
-    );
+    oracle_wrapper::add_feeder(&mut test_case, ADMIN);
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
 
@@ -221,7 +175,7 @@ fn feed_price_with_alarm() {
     dbg!(res);
 }
 
-fn open_lease(test_case: &mut TestCase<Lpn>, value: TheCoin) -> Addr {
+fn open_lease(test_case: &mut TestCase<Lpn>, downpayment: TheCoin) -> Addr {
     test_case
         .app
         .execute_contract(
@@ -231,7 +185,7 @@ fn open_lease(test_case: &mut TestCase<Lpn>, value: TheCoin) -> Addr {
                 currency: LeaseCurrency::TICKER.into(),
                 max_ltv: None,
             },
-            &[cw_coin(value)],
+            &[cw_coin(downpayment)],
         )
         .unwrap();
 
@@ -274,27 +228,9 @@ fn wrong_timealarms_addr() {
 }
 
 #[test]
-#[ignore = "not yet implemented: add addr to the lease reply data"]
 fn integration_with_timealarms() {
     let mut test_case = create_test_case();
-
-    let response: AppResponse = test_case
-        .app
-        .wasm_sudo(
-            test_case.oracle.clone().unwrap(),
-            &oracle::msg::SudoMsg::RegisterFeeder {
-                feeder_address: ADMIN.into(),
-            },
-        )
-        .unwrap();
-    assert_eq!(response.data, None);
-    assert_eq!(
-        &response.events,
-        &[Event::new("sudo").add_attribute("_contract_addr", "contract2")]
-    );
-
-    // Lease address is not relevant.
-    drop(open_lease(&mut test_case, TheCoin::from(1_000)));
+    oracle_wrapper::add_feeder(&mut test_case, ADMIN);
 
     test_case.app.time_shift(
         LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::GRACE_PERIOD + LeaserWrapper::GRACE_PERIOD,
@@ -314,8 +250,11 @@ fn integration_with_timealarms() {
             &[],
         )
         .unwrap();
-
-    resp.assert_event(&Event::new("wasm").add_attribute("alarm", "success"))
+    assert_eq!(
+        from_binary(&resp.data.clone().unwrap()),
+        Ok(DispatchAlarmsResponse(1))
+    );
+    resp.assert_event(&Event::new("wasm-time-alarm").add_attribute("delivered", "success"));
 }
 
 #[test]

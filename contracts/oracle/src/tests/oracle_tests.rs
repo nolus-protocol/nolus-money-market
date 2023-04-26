@@ -1,15 +1,19 @@
+use cosmwasm_std::testing::MockQuerier;
 use currency::{
     lease::{Atom, Osmo, Wbtc, Weth},
     lpn::Usdc,
 };
 use finance::{coin::Coin, currency::Currency, price, price::dto::PriceDTO};
 use marketprice::SpotPrice;
+use platform::contract;
 use sdk::cosmwasm_std::{
     from_binary,
     testing::{mock_env, mock_info},
+    Response as CwResponse,
 };
 
 use crate::{
+    alarms::Alarm,
     contract::{execute, query},
     msg::{ExecuteMsg, QueryMsg},
     tests::{dummy_default_instantiate_msg, setup_test},
@@ -123,4 +127,48 @@ fn feed_prices_unsupported_pairs() {
     let msg = ExecuteMsg::FeedPrices { prices };
     let err = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
     assert_eq!(ContractError::UnsupportedDenomPairs {}, err);
+}
+
+#[test]
+fn deliver_alarm() {
+    let (mut deps, info) = setup_test(dummy_default_instantiate_msg());
+    setup_receiver(&mut deps.querier);
+
+    let current_price = price::total_of(Coin::<Weth>::new(10)).is(Coin::<Usdc>::new(23451));
+    let feed_price_msg = ExecuteMsg::FeedPrices {
+        prices: vec![current_price.try_into().unwrap()],
+    };
+    let feed_resp = execute(deps.as_mut(), mock_env(), info.clone(), feed_price_msg);
+    assert_eq!(Ok(CwResponse::default()), feed_resp);
+
+    {
+        let alarm_below_price = price::total_of(Coin::<Weth>::new(10)).is(Coin::<Usdc>::new(23450));
+        let add_alarm_msg = ExecuteMsg::AddPriceAlarm {
+            alarm: Alarm::new(alarm_below_price, None),
+        };
+        let add_alarm_resp = execute(deps.as_mut(), mock_env(), info.clone(), add_alarm_msg);
+        assert_eq!(Ok(CwResponse::default()), add_alarm_resp);
+
+        let dispatch_alarms_msg = ExecuteMsg::DispatchAlarms { max_count: 10 };
+        let dispatch_alarms_resp =
+            execute(deps.as_mut(), mock_env(), info.clone(), dispatch_alarms_msg).unwrap();
+        assert_eq!(CwResponse::default(), dispatch_alarms_resp);
+    }
+    {
+        let alarm_below_price = price::total_of(Coin::<Weth>::new(10)).is(Coin::<Usdc>::new(23452));
+        let add_alarm_msg = ExecuteMsg::AddPriceAlarm {
+            alarm: Alarm::new(alarm_below_price, None),
+        };
+        let add_alarm_resp = execute(deps.as_mut(), mock_env(), info.clone(), add_alarm_msg);
+        assert_eq!(Ok(CwResponse::default()), add_alarm_resp);
+
+        let dispatch_alarms_msg = ExecuteMsg::DispatchAlarms { max_count: 10 };
+        let dispatch_alarms_resp =
+            execute(deps.as_mut(), mock_env(), info, dispatch_alarms_msg).unwrap();
+        assert_eq!(1, dispatch_alarms_resp.messages.len());
+    }
+}
+
+fn setup_receiver(querier: &mut MockQuerier) {
+    querier.update_wasm(contract::testing::valid_contract_handler);
 }

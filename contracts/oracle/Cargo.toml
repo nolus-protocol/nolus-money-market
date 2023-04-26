@@ -38,6 +38,7 @@ serde = { workspace = true, features = ["derive"] }
 [dev-dependencies]
 currency = { workspace = true, features = ["testing"] }
 finance = { workspace = true, features = ["testing"] }
+platform = { workspace = true, features = ["testing"] }
 schema = { workspace = true }
 marketprice = { workspace = true, features = ["testing"] }
 tree = { workspace = true, features = ["schema", "testing"] }

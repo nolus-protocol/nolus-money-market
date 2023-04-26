@@ -1,34 +1,45 @@
 use currency::{lpn::Usdc, native::Nls};
 use finance::{coin::Coin, currency::Currency, duration::Duration};
 use sdk::{
-    cosmwasm_std::{coin, from_binary, Addr, Attribute, Timestamp},
+    cosmwasm_std::{coin, from_binary, Addr, Attribute, Event, Timestamp},
     cw_multi_test::{AppResponse, Executor},
 };
 use timealarms::msg::DispatchAlarmsResponse;
 
 use crate::{
     common::{cwcoin, test_case::TestCase, AppExt, ADMIN},
-    timealarms_tests::mock_lease::proper_instantiate,
+    timealarms_tests::mock_lease::{
+        instantiate_may_fail_contract, instantiate_reschedule_contract,
+    },
 };
 
 /// The mock for lease SC. It mimics the scheme for time notification.
 /// If GATE, it returns Ok on notifications, returns Err otherwise.
 mod mock_lease {
+    use finance::duration::Duration;
     use serde::{Deserialize, Serialize};
 
     use sdk::{
         cosmwasm_ext::Response,
         cosmwasm_std::{
-            to_binary, Addr, Binary, Deps, DepsMut, Empty, Env, MessageInfo, StdError, StdResult,
+            to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, StdError, StdResult,
         },
         cw_storage_plus::Item,
         schemars::{self, JsonSchema},
         testing::{Contract, ContractWrapper, Executor},
     };
+    use timealarms::stub::TimeAlarmsRef;
 
     use crate::common::{MockApp, ADMIN};
 
     const GATE: Item<'static, bool> = Item::new("alarm gate");
+    const TIMEALARMS_ADDR: Item<'static, Addr> = Item::new("ta_addr");
+
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+    #[serde(rename_all = "snake_case")]
+    pub struct MockInstantiateMsg {
+        time_alarms_contract: Addr,
+    }
 
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
     #[serde(rename_all = "snake_case")]
@@ -39,8 +50,14 @@ mod mock_lease {
         Gate(bool),
     }
 
-    fn instantiate(deps: DepsMut<'_>, _: Env, _: MessageInfo, _: Empty) -> StdResult<Response> {
+    fn instantiate(
+        deps: DepsMut<'_>,
+        _: Env,
+        _: MessageInfo,
+        msg: MockInstantiateMsg,
+    ) -> StdResult<Response> {
         GATE.save(deps.storage, &true)?;
+        TIMEALARMS_ADDR.save(deps.storage, &msg.time_alarms_contract)?;
         Ok(Response::new().add_attribute("method", "instantiate"))
     }
 
@@ -70,21 +87,69 @@ mod mock_lease {
         }
     }
 
+    fn execute_reschedule_alarm(
+        deps: DepsMut<'_>,
+        env: Env,
+        _: MessageInfo,
+        msg: MockExecuteMsg,
+    ) -> StdResult<Response> {
+        match msg {
+            MockExecuteMsg::TimeAlarm {} => {
+                let timealarms = TIMEALARMS_ADDR
+                    .load(deps.storage)
+                    .expect("test setup error");
+                TimeAlarmsRef::unchecked(timealarms)
+                    .setup_alarm(env.block.time + Duration::from_secs(5))
+                    .unwrap();
+
+                Ok(Response::new()
+                    .add_attribute("lease_reply", env.block.time.to_string())
+                    .set_data(to_binary(&env.contract.address)?))
+            }
+            MockExecuteMsg::Gate(_gate) => {
+                unimplemented!()
+            }
+        }
+    }
+
     fn query(_: Deps<'_>, _: Env, _msg: MockExecuteMsg) -> StdResult<Binary> {
         Err(StdError::generic_err("not implemented"))
     }
 
-    fn contract_template() -> Box<Contract> {
+    fn contract_may_fail_endpoints() -> Box<Contract> {
         let contract = ContractWrapper::new(execute, instantiate, query);
         Box::new(contract)
     }
 
-    pub fn proper_instantiate(app: &mut MockApp) -> Addr {
-        let cw_template_id = app.store_code(contract_template());
+    fn contract_reschedule_endpoints() -> Box<Contract> {
+        let contract = ContractWrapper::new(execute_reschedule_alarm, instantiate, query);
+        Box::new(contract)
+    }
+
+    pub fn instantiate_may_fail_contract(app: &mut MockApp) -> Addr {
+        proper_instantiate(
+            app,
+            contract_may_fail_endpoints(),
+            Addr::unchecked("unused"),
+        )
+    }
+
+    pub fn instantiate_reschedule_contract(app: &mut MockApp, timealarms_contract: Addr) -> Addr {
+        proper_instantiate(app, contract_reschedule_endpoints(), timealarms_contract)
+    }
+
+    fn proper_instantiate(
+        app: &mut MockApp,
+        endpoints: Box<Contract>,
+        timealarms_contract: Addr,
+    ) -> Addr {
+        let cw_template_id = app.store_code(endpoints);
         app.instantiate_contract(
             cw_template_id,
             Addr::unchecked(ADMIN),
-            &Empty {},
+            &MockInstantiateMsg {
+                time_alarms_contract: timealarms_contract,
+            },
             &[],
             "test",
             None,
@@ -173,8 +238,8 @@ fn sent_alarms(resp: &AppResponse) -> Option<u32> {
 #[test]
 fn fired_alarms_are_removed() {
     let mut test_case = test_case();
-    let lease1 = proper_instantiate(&mut test_case.app);
-    let lease2 = proper_instantiate(&mut test_case.app);
+    let lease1 = instantiate_may_fail_contract(&mut test_case.app);
+    let lease2 = instantiate_may_fail_contract(&mut test_case.app);
 
     add_alarm(&mut test_case, &lease1, 1);
     //overwritten
@@ -195,14 +260,35 @@ fn fired_alarms_are_removed() {
 }
 
 #[test]
+#[ignore = "bug: reply removes rescheduled alarm"]
+fn reschedule_alarm() {
+    let mut test_case = test_case();
+    let lease1 =
+        instantiate_reschedule_contract(&mut test_case.app, test_case.timealarms.clone().unwrap());
+
+    add_alarm(&mut test_case, &lease1, 1);
+
+    test_case.app.time_shift(Duration::from_secs(5));
+
+    let resp = dispatch(&mut test_case, 100);
+    assert!(!any_error(&resp));
+    assert_eq!(sent_alarms(&resp), Some(1));
+
+    // try to resend the newly scheduled alarms
+    let resp = dispatch(&mut test_case, 100);
+    assert!(!any_error(&resp));
+    assert_eq!(sent_alarms(&resp), Some(1));
+}
+
+#[test]
 fn test_time_notify() {
     let mut test_case = test_case();
 
     // instantiate lease, add alarms
-    let lease1 = proper_instantiate(&mut test_case.app);
-    let lease2 = proper_instantiate(&mut test_case.app);
-    let lease3 = proper_instantiate(&mut test_case.app);
-    let lease4 = proper_instantiate(&mut test_case.app);
+    let lease1 = instantiate_may_fail_contract(&mut test_case.app);
+    let lease2 = instantiate_may_fail_contract(&mut test_case.app);
+    let lease3 = instantiate_may_fail_contract(&mut test_case.app);
+    let lease4 = instantiate_may_fail_contract(&mut test_case.app);
 
     add_alarm(&mut test_case, &lease1, 1);
     add_alarm(&mut test_case, &lease2, 2);
@@ -232,17 +318,21 @@ fn test_time_notify() {
     let resp = dispatch(&mut test_case, 100);
     dbg!(&resp);
     assert!(any_error(&resp));
+    assert_eq!(sent_alarms(&resp), Some(2));
+    resp.assert_event(&Event::new("wasm-timealarm").add_attribute("receiver", lease3.clone()));
+    resp.assert_event(&Event::new("wasm-timealarm").add_attribute("receiver", lease4.clone()));
 
     // open the GATE, check for remaining alarm
     let open_gate = mock_lease::MockExecuteMsg::Gate(true);
     test_case
         .app
-        .execute_contract(Addr::unchecked(ADMIN), lease3, &open_gate, &[])
+        .execute_contract(Addr::unchecked(ADMIN), lease3.clone(), &open_gate, &[])
         .unwrap();
 
     let resp = dispatch(&mut test_case, 100);
     assert!(!any_error(&resp));
     assert_eq!(sent_alarms(&resp), Some(1));
+    resp.assert_event(&Event::new("wasm-timealarm").add_attribute("receiver", lease3.clone()));
 
     // check if something is left
     let resp = dispatch(&mut test_case, 100);
