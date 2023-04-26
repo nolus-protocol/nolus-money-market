@@ -66,7 +66,7 @@ where
     ) -> ContractResult<()> {
         debug_assert!(!currency::equal::<Lpn, Asset>());
 
-        let (below, above) = match liquidation_status {
+        let (below, above_or_equal) = match liquidation_status {
             Status::None | Status::PartialLiquidation { .. } => {
                 (self.liability.first_liq_warn_percent(), None)
             }
@@ -104,12 +104,15 @@ where
 
         let below = self.price_alarm_by_percent(total_liability, below)?;
 
-        let above = above
+        let above_or_equal = above_or_equal
             .map(|above| self.price_alarm_by_percent(total_liability, above))
             .transpose()?;
 
         self.oracle
-            .add_alarm(Alarm::new(below.into(), above.map(Into::<SpotPrice>::into)))
+            .add_alarm(Alarm::new(
+                below.into(),
+                above_or_equal.map(Into::<SpotPrice>::into),
+            ))
             .map_err(Into::into)
     }
 

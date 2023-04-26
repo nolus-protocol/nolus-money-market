@@ -115,7 +115,7 @@ impl<'m> PriceAlarms<'m> {
             .save(storage, addr.to_owned(), &AlarmStore::new(&alarm))?)
     }
 
-    pub fn add_alarm_above<C, BaseC>(
+    pub fn add_alarm_above_or_equal<C, BaseC>(
         &self,
         storage: &mut dyn Storage,
         addr: &Addr,
@@ -126,13 +126,13 @@ impl<'m> PriceAlarms<'m> {
         BaseC: Currency,
     {
         Ok(self
-            .alarms_above()
+            .alarms_above_or_equal()
             .save(storage, addr.to_owned(), &AlarmStore::new(&alarm))?)
     }
 
     pub fn remove(&self, storage: &mut dyn Storage, addr: Addr) -> Result<(), AlarmError> {
         self.alarms_below().remove(storage, addr.clone())?;
-        self.alarms_above().remove(storage, addr)?;
+        self.alarms_above_or_equal().remove(storage, addr)?;
         Ok(())
     }
 
@@ -149,7 +149,7 @@ impl<'m> PriceAlarms<'m> {
 
         AlarmsIterator(
             self.iter_below::<C>(storage, &norm_price)
-                .chain(self.iter_above::<C>(storage, &norm_price)),
+                .chain(self.iter_above_or_equal::<C>(storage, &norm_price)),
         )
     }
 
@@ -162,7 +162,7 @@ impl<'m> PriceAlarms<'m> {
         IndexedMap::new(self.alarms_below_namespace, indexes)
     }
 
-    fn alarms_above(&self) -> IndexedMap<'_, Addr, AlarmStore, AlarmsIndexes<'_>> {
+    fn alarms_above_or_equal(&self) -> IndexedMap<'_, Addr, AlarmStore, AlarmsIndexes<'_>> {
         let indexes = AlarmsIndexes(MultiIndex::new(
             |_, price| price.to_owned(),
             self.alarms_above_namespace,
@@ -187,11 +187,15 @@ impl<'m> PriceAlarms<'m> {
             )
     }
 
-    fn iter_above<'a, C>(&self, storage: &'a dyn Storage, price: &AlarmStore) -> BoxedIter<'a>
+    fn iter_above_or_equal<'a, C>(
+        &self,
+        storage: &'a dyn Storage,
+        price: &AlarmStore,
+    ) -> BoxedIter<'a>
     where
         C: Currency,
     {
-        self.alarms_above()
+        self.alarms_above_or_equal()
             .idx
             .0
             .sub_prefix(C::TICKER.into())
@@ -218,8 +222,56 @@ pub mod tests {
     type Base = Usdc;
 
     #[test]
+    fn test_below_exclusive() {
+        let alarms = alarms();
+        let storage = &mut mock_dependencies().storage;
+
+        let addr1 = Addr::unchecked("addr1");
+
+        let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(20));
+        alarms.add_alarm_below(storage, &addr1, price).unwrap();
+
+        assert_eq!(None, alarms.alarms(storage, price).next());
+    }
+
+    #[test]
+    fn test_above_inclusive() {
+        let alarms = alarms();
+        let storage = &mut mock_dependencies().storage;
+
+        let addr1 = Addr::unchecked("addr1");
+
+        let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(20));
+        alarms
+            .add_alarm_above_or_equal(storage, &addr1, price)
+            .unwrap();
+
+        let mut triggered_alarms = alarms.alarms(storage, price);
+        assert_eq!(Some(Ok(addr1)), triggered_alarms.next());
+        assert_eq!(None, triggered_alarms.next());
+    }
+
+    #[test]
+    fn test_equal_alarms() {
+        let alarms = alarms();
+        let storage = &mut mock_dependencies().storage;
+
+        let addr1 = Addr::unchecked("addr1");
+
+        let price = price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(20));
+        alarms.add_alarm_below(storage, &addr1, price).unwrap();
+        alarms
+            .add_alarm_above_or_equal(storage, &addr1, price)
+            .unwrap();
+
+        let mut triggered_alarms = alarms.alarms(storage, price);
+        assert_eq!(Some(Ok(addr1)), triggered_alarms.next());
+        assert_eq!(None, triggered_alarms.next());
+    }
+
+    #[test]
     fn test_add_remove() {
-        let alarms = PriceAlarms::new("alarms_below", "index_below", "alarms_above", "index_above");
+        let alarms = alarms();
         let storage = &mut mock_dependencies().storage;
 
         let addr1 = Addr::unchecked("addr1");
@@ -242,7 +294,7 @@ pub mod tests {
             )
             .unwrap();
         alarms
-            .add_alarm_above(
+            .add_alarm_above_or_equal(
                 storage,
                 &addr2,
                 price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(10)),
@@ -271,7 +323,7 @@ pub mod tests {
 
     #[test]
     fn test_alarms_selection() {
-        let alarms = PriceAlarms::new("alarms_below", "index_below", "alarms_above", "index_above");
+        let alarms = alarms();
         let storage = &mut mock_dependencies().storage;
 
         let addr1 = Addr::unchecked("addr1");
@@ -309,7 +361,7 @@ pub mod tests {
             )
             .unwrap();
         alarms
-            .add_alarm_above(
+            .add_alarm_above_or_equal(
                 storage,
                 &addr4,
                 price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(25)),
@@ -323,7 +375,7 @@ pub mod tests {
             )
             .unwrap();
         alarms
-            .add_alarm_above(
+            .add_alarm_above_or_equal(
                 storage,
                 &addr5,
                 price::total_of(Coin::<Weth>::new(1)).is(Coin::<Base>::new(35)),
@@ -347,5 +399,9 @@ pub mod tests {
             .collect();
 
         assert_eq!(resp, vec![Ok(addr3), Ok(addr4)]);
+    }
+
+    fn alarms() -> PriceAlarms<'static> {
+        PriceAlarms::new("alarms_below", "index_below", "alarms_above", "index_above")
     }
 }

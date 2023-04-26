@@ -12,42 +12,37 @@ pub type Id = u64;
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(try_from = "unchecked::Alarm")]
 pub struct Alarm {
-    pub below: SpotPrice,
-    pub above: Option<SpotPrice>,
+    below: SpotPrice,
+    above: Option<SpotPrice>,
 }
 
 impl Alarm {
-    pub fn new<P>(below: P, above: Option<P>) -> Alarm
+    pub fn new<P>(below: P, above_or_equal: Option<P>) -> Alarm
     where
         P: Into<SpotPrice>,
     {
         let below = below.into();
-        let above = above.map(Into::into);
-        let res = Self { below, above };
+        let above_or_equal = above_or_equal.map(Into::into);
+        let res = Self {
+            below,
+            above: above_or_equal,
+        };
         debug_assert_eq!(Ok(()), res.invariant_held());
         res
     }
 
-    pub fn below(&self) -> &SpotPrice {
-        &self.below
-    }
-
-    pub fn above(&self) -> &Option<SpotPrice> {
-        &self.above
-    }
-
     fn invariant_held(&self) -> Result<(), AlarmError> {
-        if let Some(above) = &self.above {
-            if self.below.base().ticker() != above.base().ticker()
-                || self.below.quote().ticker() != above.quote().ticker()
+        if let Some(above_or_equal) = &self.above {
+            if self.below.base().ticker() != above_or_equal.base().ticker()
+                || self.below.quote().ticker() != above_or_equal.quote().ticker()
             {
                 Err(AlarmError(
                     "Mismatch of above alarm and below alarm currencies",
                 ))?
             }
-            if &self.below >= above {
+            if &self.below > above_or_equal {
                 Err(AlarmError(
-                    "The below alarm price should be less than the above alarm price",
+                    "The below alarm price should be less than or equal to the above_or_equal alarm price",
                 ))?
             }
         }
@@ -70,7 +65,7 @@ pub struct AlarmError(&'static str);
 #[cfg(test)]
 mod test {
     use super::*;
-    use currency::lease::Weth;
+    use currency::lease::{Cro, Weth};
     use finance::coin::Coin;
     use sdk::cosmwasm_std::{from_slice, StdError};
 
@@ -117,7 +112,25 @@ mod test {
                                                 "amount_quote": {"amount": "10", "ticker": "CRO"}},
                                         "above": {"amount": {"amount": "2", "ticker": "WBTC"}, 
                                                 "amount_quote": {"amount": "9", "ticker": "CRO"}}}"#),
-                                "should be less than the above");
+                                "should be less than or equal to the above");
+    }
+
+    #[test]
+    fn below_price_eq_above() {
+        let price = SpotPrice::new(Coin::<Weth>::new(1).into(), Coin::<Cro>::new(10).into());
+        let alarm = Alarm::new(price.clone(), Some(price));
+        alarm
+            .invariant_held()
+            .expect("valid alarm with equal above_or_equal and below prices");
+    }
+
+    #[test]
+    fn below_price_less_than_above() {
+        let price_below = SpotPrice::new(Coin::<Weth>::new(1).into(), Coin::<Cro>::new(10).into());
+        let price_above_or_equal =
+            SpotPrice::new(Coin::<Weth>::new(1).into(), Coin::<Cro>::new(11).into());
+        let alarm = Alarm::new(price_below, Some(price_above_or_equal));
+        alarm.invariant_held().expect("valid alarm");
     }
 
     #[track_caller]

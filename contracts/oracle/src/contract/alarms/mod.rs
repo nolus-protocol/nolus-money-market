@@ -38,7 +38,7 @@ impl MarketAlarms {
         struct AddAlarms<'m> {
             storage: &'m mut dyn Storage,
             receiver: Addr,
-            above: Option<SpotPrice>,
+            above_or_equal: Option<SpotPrice>,
             price_alarms: PriceAlarms<'m>,
         }
 
@@ -53,8 +53,8 @@ impl MarketAlarms {
             where
                 C: Currency,
             {
-                if let Some(above) = self.above {
-                    self.price_alarms.add_alarm_above::<C, BaseC>(
+                if let Some(above) = self.above_or_equal {
+                    self.price_alarms.add_alarm_above_or_equal::<C, BaseC>(
                         self.storage,
                         &self.receiver,
                         above.try_into()?,
@@ -66,13 +66,13 @@ impl MarketAlarms {
             }
         }
 
-        let (below, above) = alarm.into();
+        let (below, above_or_equal) = alarm.into();
         with_quote::execute::<_, _, _, BaseC>(
             &below,
             AddAlarms {
                 storage,
                 receiver,
-                above,
+                above_or_equal,
                 price_alarms: Self::PRICE_ALARMS,
             },
         )
