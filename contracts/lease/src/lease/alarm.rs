@@ -44,21 +44,12 @@ where
         now: &Timestamp,
         liquidation_status: &Status<Asset>,
     ) -> ContractResult<()> {
-        self.reschedule_time_alarm(now, liquidation_status)?;
+        self.reschedule_time_alarm(now)?;
 
         self.reschedule_price_alarm(now, liquidation_status)
     }
 
-    fn reschedule_time_alarm(
-        &mut self,
-        now: &Timestamp,
-        liquidation_status: &Status<Asset>,
-    ) -> ContractResult<()> {
-        debug_assert!(!matches!(
-            liquidation_status,
-            Status::FullLiquidation { .. }
-        ));
-
+    fn reschedule_time_alarm(&mut self, now: &Timestamp) -> ContractResult<()> {
         self.alarms
             .add_alarm({
                 self.loan
@@ -152,7 +143,6 @@ mod tests {
             loan, open_lease, LppLenderLocalStub, OracleLocalStub, ProfitLocalStubUnreachable,
             TimeAlarmsLocalStub, LEASE_START,
         },
-        Status, WarningLevel,
     };
 
     #[test]
@@ -227,10 +217,6 @@ mod tests {
                 &(lease.loan.grace_period_end()
                     - lease.liability.recalculation_time()
                     - lease.liability.recalculation_time()),
-                &Status::Warning {
-                    ltv: Default::default(),
-                    level: WarningLevel::Second,
-                },
             )
             .unwrap();
         assert_eq!(lease.alarms.batch, {
@@ -265,10 +251,6 @@ mod tests {
             .reschedule_time_alarm(
                 &(lease.loan.grace_period_end() - lease.liability.recalculation_time()
                     + Duration::from_nanos(1)),
-                &Status::Warning {
-                    ltv: Default::default(),
-                    level: WarningLevel::Second,
-                },
             )
             .unwrap();
 
