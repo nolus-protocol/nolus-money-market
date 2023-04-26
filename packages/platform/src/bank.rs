@@ -1,11 +1,9 @@
-use std::{
-    convert::Infallible, error::Error as StdError, marker::PhantomData, result::Result as StdResult,
-};
+use std::{error::Error as StdError, result::Result as StdResult};
 
 use serde::{de::DeserializeOwned, Serialize};
 
 use finance::{
-    coin::{Amount as CoinAmount, Coin, CoinDTO, WithCoin, WithCoinResult},
+    coin::{Amount as CoinAmount, Coin, WithCoin, WithCoinResult},
     currency::{AnyVisitor, AnyVisitorResult, Currency, Group},
 };
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
@@ -23,11 +21,7 @@ pub trait BankAccountView {
     where
         C: Currency;
 
-    fn balances<G>(&self) -> Result<Vec<CoinDTO<G>>>
-    where
-        G: Group;
-
-    fn for_each_balance<G, Cmd>(&self, cmd: Cmd) -> StdResult<Option<Cmd::Output>, Cmd::Error>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> StdResult<Option<Cmd::Output>, Cmd::Error>
     where
         G: Group,
         Cmd: WithCoin,
@@ -130,49 +124,7 @@ impl<'a> BankAccountView for BankView<'a> {
         from_cosmwasm_impl(coin)
     }
 
-    fn balances<G>(&self) -> Result<Vec<CoinDTO<G>>>
-    where
-        G: Group,
-    {
-        struct Cmd<G>(PhantomData<G>);
-
-        impl<G> WithCoin for Cmd<G>
-        where
-            G: Group,
-        {
-            type Output = CoinDTO<G>;
-            type Error = Infallible;
-
-            fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
-            where
-                C: Currency,
-            {
-                Ok(coin.into())
-            }
-        }
-
-        self.querier
-            .query_all_balances(self.account)
-            .map_err(Into::<Error>::into)
-            .map(|coins| {
-                coins
-                    .into_iter()
-                    .filter_map(|cw_coin| {
-                        if let Ok(maybe_coin_dto) =
-                            maybe_from_cosmwasm_any_impl::<G, _>(cw_coin, &Cmd(PhantomData))
-                                .transpose()
-                        {
-                            maybe_coin_dto
-                        } else {
-                            unreachable!()
-                        }
-                    })
-                    .collect()
-            })
-            .map_err(Into::into)
-    }
-
-    fn for_each_balance<G, Cmd>(&self, cmd: Cmd) -> StdResult<Option<Cmd::Output>, Cmd::Error>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> StdResult<Option<Cmd::Output>, Cmd::Error>
     where
         G: Group,
         Cmd: WithCoin,
@@ -233,17 +185,7 @@ where
         self.view.balance()
     }
 
-    fn balances<G>(&self) -> Result<Vec<CoinDTO<G>>>
-    where
-        G: Group,
-    {
-        self.view.balances()
-    }
-
-    fn for_each_balance<G, Cmd>(
-        &self,
-        cmd: Cmd,
-    ) -> std::result::Result<Option<Cmd::Output>, Cmd::Error>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> std::result::Result<Option<Cmd::Output>, Cmd::Error>
     where
         G: Group,
         Cmd: WithCoin,
@@ -252,7 +194,7 @@ where
         Error: Into<Cmd::Error>,
         finance::error::Error: Into<Cmd::Error>,
     {
-        self.view.for_each_balance::<G, Cmd>(cmd)
+        self.view.balances::<G, Cmd>(cmd)
     }
 }
 
@@ -549,10 +491,7 @@ mod test {
         let cmd: Cmd<'_> = Cmd::new(expected);
 
         assert_eq!(
-            bank_view
-                .for_each_balance::<G, Cmd<'_>>(cmd)
-                .unwrap()
-                .is_none(),
+            bank_view.balances::<G, Cmd<'_>>(cmd).unwrap().is_none(),
             expected.is_empty()
         );
     }
