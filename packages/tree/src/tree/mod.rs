@@ -41,7 +41,6 @@ impl<T> Tree<T> {
         NodeRef::with_index(self, Self::ROOT_INDEX)
     }
 
-    #[inline]
     pub fn into_human_readable(self) -> HumanReadableTree<T> {
         HumanReadableTree::from_tree(self)
     }
@@ -117,7 +116,6 @@ impl<T> Tree<T> {
         &self.nodes[usize::from(index)]
     }
 
-    #[inline]
     fn vector_range(&self) -> Range<NodeIndex> {
         0..self.node_index_len()
     }

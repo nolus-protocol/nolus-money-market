@@ -17,22 +17,18 @@ impl<T> Node<T> {
         Self { parent, value }
     }
 
-    #[inline]
     pub(crate) fn parent_index(&self) -> NodeIndex {
         self.parent
     }
 
-    #[inline]
     pub(crate) fn value(&self) -> &T {
         &self.value
     }
 
-    #[inline]
     pub(crate) fn into_value(self) -> T {
         self.value
     }
 
-    #[inline]
     pub(crate) fn map<F, R>(self, f: F) -> Node<R>
     where
         F: FnOnce(T) -> R,
@@ -56,7 +52,6 @@ impl<'r, T> NodeRef<'r, T> {
         NodeRef { ..*self }
     }
 
-    #[inline]
     pub fn value(&self) -> &'r T {
         &self.tree.node(self.this).value
     }
@@ -74,31 +69,26 @@ impl<'r, T> NodeRef<'r, T> {
         }
     }
 
-    #[inline]
     pub fn parents_iter(&self) -> ParentsIter<'r, T> {
         ParentsIter {
             inner: ParentsIterInner::Unresolved { node: *self },
         }
     }
 
-    #[inline]
     /// This exists as a functional approach to converting node reference into
     /// a subtree.
     pub fn to_subtree(&self) -> Subtree<'r, T> {
         Subtree::from_node(*self)
     }
 
-    #[inline]
     pub(crate) fn tree(&self) -> &'r Tree<T> {
         self.tree
     }
 
-    #[inline]
     pub(crate) fn this_index(&self) -> NodeIndex {
         self.this
     }
 
-    #[inline]
     pub(crate) const fn with_index(tree: &'r Tree<T>, this: NodeIndex) -> Self {
         Self { tree, this }
     }

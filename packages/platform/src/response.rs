@@ -3,12 +3,10 @@ use serde::Serialize;
 
 use crate::{error, message::Response as MessageResponse};
 
-#[inline]
 pub fn empty_response() -> CwResponse {
     response_only_messages(MessageResponse::default())
 }
 
-#[inline]
 pub fn response<T, E>(response: &T) -> Result<CwResponse, E>
 where
     T: Serialize + ?Sized,

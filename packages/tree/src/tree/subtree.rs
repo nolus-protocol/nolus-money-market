@@ -54,7 +54,6 @@ impl<'r, T> Subtree<'r, T> {
         }
     }
 
-    #[inline]
     fn subtree_range(&self) -> Range<NodeIndex> {
         self.subtree_root_index..self.subtree_root_index + self.length
     }

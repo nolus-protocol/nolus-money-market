@@ -344,7 +344,6 @@ where
         self.current_period.till() <= when
     }
 
-    #[inline]
     fn due_period_from(&self, start: Timestamp) -> InterestPeriod<Units, Percent> {
         Self::due_period(
             self.annual_margin_interest,
@@ -353,7 +352,6 @@ where
         )
     }
 
-    #[inline]
     fn due_period_from_with_length(
         &self,
         start: Timestamp,

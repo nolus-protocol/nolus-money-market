@@ -33,7 +33,6 @@ where
         .map_err(|transformer| transformer.1)
 }
 
-#[inline]
 pub(crate) fn maybe_from_cosmwasm_any_impl<G, V>(
     coin: CosmWasmCoin,
     v: V,

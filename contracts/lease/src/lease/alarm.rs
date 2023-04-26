@@ -28,7 +28,6 @@ where
     Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
-    #[inline]
     pub(in crate::lease) fn initial_alarm_schedule(
         &mut self,
         now: &Timestamp,
@@ -36,12 +35,10 @@ where
         self.reschedule(now, &Status::None)
     }
 
-    #[inline]
     pub(in crate::lease) fn reschedule_on_repay(&mut self, now: &Timestamp) -> ContractResult<()> {
         self.reschedule(now, &self.liquidation_status(*now)?)
     }
 
-    #[inline]
     fn reschedule(
         &mut self,
         now: &Timestamp,

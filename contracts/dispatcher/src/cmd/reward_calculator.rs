@@ -49,7 +49,6 @@ impl<'r> WithLpp for RewardCalculator<'r> {
     type Output = Percent;
     type Error = ContractError;
 
-    #[inline]
     fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency,

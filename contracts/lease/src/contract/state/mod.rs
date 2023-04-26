@@ -155,7 +155,6 @@ mod impl_dex_handler {
         type Response = Self;
         type SwapResult = ContractResult<Response>;
 
-        #[inline]
         fn on_open_ica(
             self,
             counterparty_version: String,
@@ -190,7 +189,6 @@ mod impl_dex_handler {
             }
         }
 
-        #[inline]
         fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> Result<Self> {
             match self {
                 State::RequestLoan(inner) => {
@@ -212,7 +210,6 @@ mod impl_dex_handler {
             }
         }
 
-        #[inline]
         fn on_error(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
             match self {
                 State::RequestLoan(inner) => Handler::on_error(inner, deps, env),
@@ -226,7 +223,6 @@ mod impl_dex_handler {
             }
         }
 
-        #[inline]
         fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
             match self {
                 State::RequestLoan(inner) => Handler::on_timeout(inner, deps, env),
@@ -240,7 +236,6 @@ mod impl_dex_handler {
             }
         }
 
-        #[inline]
         fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> Result<Self> {
             match self {
                 State::RequestLoan(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
