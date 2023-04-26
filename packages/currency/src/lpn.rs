@@ -1,6 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 use finance::currency::{self, AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 use sdk::schemars::{self, JsonSchema};
-use serde::{Deserialize, Serialize};
 
 use crate::{define_currency, define_symbol, SingleVisitorAdapter};
 
@@ -25,6 +26,7 @@ define_currency!(Usdc, USDC);
 #[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct Lpns {}
+
 impl Group for Lpns {
     const DESCR: SymbolStatic = "lpns";
 
