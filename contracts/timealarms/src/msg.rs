@@ -49,6 +49,7 @@ pub enum ExecuteAlarmMsg {
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[cfg_attr(feature = "testing", derive(PartialEq))]
 #[serde(rename_all = "snake_case")]
 /// number of sent alarms
 pub struct DispatchAlarmsResponse(pub AlarmsCount);

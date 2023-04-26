@@ -1,6 +1,6 @@
 use currency::{lpn::Usdc, native::Nls};
 use finance::currency::Currency;
-use rewards_dispatcher::ContractError;
+use rewards_dispatcher::{msg::ConfigResponse, ContractError};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Event},
     cw_multi_test::{AppResponse, ContractWrapper, Executor},
@@ -12,10 +12,10 @@ use crate::common::{
     UTILIZATION_OPTIMAL,
 };
 
+type Lpn = Usdc;
+
 #[test]
 fn on_alarm_zero_reward() {
-    type Lpn = Usdc;
-
     let user = Addr::unchecked(USER);
     let mut test_case = TestCase::<Usdc>::new(None);
     test_case.init(&user, cwcoins::<Lpn, _>(500));
@@ -61,8 +61,6 @@ fn on_alarm_zero_reward() {
 #[test]
 #[ignore = "No support for swapping NLS to other currencies"]
 fn on_alarm() {
-    type Lpn = Usdc;
-
     let lender = Addr::unchecked(USER);
 
     let mut test_case = TestCase::<Usdc>::new(None);
@@ -246,31 +244,9 @@ fn on_alarm() {
 
 #[test]
 fn test_config() {
-    type Lpn = Usdc;
-    let user_addr = Addr::unchecked(ADMIN);
-    let mut test_case = TestCase::<Usdc>::new(None);
-    test_case
-        .init(&user_addr, cwcoins::<Lpn, _>(500))
-        .init_lpp(
-            None,
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
-        .init_treasury()
-        .init_timealarms()
-        .init_oracle(None)
-        .init_dispatcher();
+    let mut test_case = new_test_case();
 
-    let resp: rewards_dispatcher::msg::ConfigResponse = test_case
-        .app
-        .wrap()
-        .query_wasm_smart(
-            test_case.dispatcher_addr.clone().unwrap(),
-            &rewards_dispatcher::msg::QueryMsg::Config {},
-        )
-        .unwrap();
-
+    let resp = query_config(&test_case);
     assert_eq!(resp.cadence_hours, 10);
 
     let response: AppResponse = test_case
@@ -286,15 +262,7 @@ fn test_config() {
         &[Event::new("sudo").add_attribute("_contract_addr", "contract4"),]
     );
 
-    let resp: rewards_dispatcher::msg::ConfigResponse = test_case
-        .app
-        .wrap()
-        .query_wasm_smart(
-            test_case.dispatcher_addr.clone().unwrap(),
-            &rewards_dispatcher::msg::QueryMsg::Config {},
-        )
-        .unwrap();
-
+    let resp = query_config(&test_case);
     assert_eq!(resp.cadence_hours, 30);
 }
 
@@ -353,3 +321,31 @@ fn test_config() {
 //         ]
 //     );
 // }
+
+fn new_test_case() -> TestCase<Lpn> {
+    let mut test_case = TestCase::new(None);
+    test_case
+        .init(&Addr::unchecked(ADMIN), cwcoins::<Lpn, _>(500))
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_treasury()
+        .init_timealarms()
+        .init_oracle(None)
+        .init_dispatcher();
+    test_case
+}
+
+fn query_config(test_case: &TestCase<Lpn>) -> ConfigResponse {
+    test_case
+        .app
+        .wrap()
+        .query_wasm_smart(
+            test_case.dispatcher_addr.clone().unwrap(),
+            &rewards_dispatcher::msg::QueryMsg::Config {},
+        )
+        .unwrap()
+}

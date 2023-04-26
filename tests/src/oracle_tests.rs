@@ -13,13 +13,10 @@ use finance::{
 };
 use leaser::msg::QueryMsg;
 use marketprice::{config::Config as PriceConfig, SpotPrice};
-use oracle::{
-    alarms::Alarm,
-    msg::{DispatchAlarmsResponse, QueryMsg as OracleQ},
-};
+use oracle::{alarms::Alarm, msg::QueryMsg as OracleQ};
 use platform::coin_legacy;
 use sdk::{
-    cosmwasm_std::{coin, from_binary, wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
+    cosmwasm_std::{coin, wasm_execute, Addr, Coin as CwCoin, Event, Timestamp},
     cw_multi_test::{AppResponse, Executor},
     schemars::_serde_json::from_str,
 };
@@ -27,8 +24,8 @@ use swap::SwapTarget;
 use tree::HumanReadableTree;
 
 use crate::common::{
-    leaser_wrapper::LeaserWrapper, native_cwcoin, oracle_wrapper, test_case::TestCase, AppExt,
-    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
+    oracle_wrapper, test_case::TestCase, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE,
+    USER, UTILIZATION_OPTIMAL,
 };
 
 type Lpn = Usdc;
@@ -225,36 +222,6 @@ fn wrong_timealarms_addr() {
             &[],
         )
         .unwrap();
-}
-
-#[test]
-fn integration_with_timealarms() {
-    let mut test_case = create_test_case();
-    oracle_wrapper::add_feeder(&mut test_case, ADMIN);
-
-    test_case.app.time_shift(
-        LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::GRACE_PERIOD + LeaserWrapper::GRACE_PERIOD,
-    );
-
-    test_case.send_funds(
-        &test_case.profit_addr.clone().unwrap(),
-        vec![native_cwcoin(500)],
-    );
-
-    let resp = test_case
-        .app
-        .execute_contract(
-            Addr::unchecked(ADMIN),
-            test_case.timealarms.unwrap(),
-            &timealarms::msg::ExecuteMsg::DispatchAlarms { max_count: 10 },
-            &[],
-        )
-        .unwrap();
-    assert_eq!(
-        from_binary(&resp.data.clone().unwrap()),
-        Ok(DispatchAlarmsResponse(1))
-    );
-    resp.assert_event(&Event::new("wasm-time-alarm").add_attribute("delivered", "success"));
 }
 
 #[test]

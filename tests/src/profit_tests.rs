@@ -2,11 +2,16 @@ use currency::lpn::Usdc;
 use finance::{
     coin::{Amount, Coin},
     currency::Currency,
+    duration::Duration,
 };
 use platform::bank;
-use sdk::{cosmwasm_std::Addr, cw_multi_test::Executor};
+use sdk::{
+    cosmwasm_std::{from_binary, Addr, Event},
+    cw_multi_test::Executor,
+};
+use timealarms::msg::DispatchAlarmsResponse;
 
-use crate::common::{cwcoins, test_case::TestCase, Native, ADMIN, USER};
+use crate::common::{cwcoins, test_case::TestCase, AppExt, Native, ADMIN, USER};
 
 #[test]
 fn on_alarm_from_unknown() {
@@ -159,4 +164,41 @@ fn on_alarm_transfer() {
         )
         .unwrap()
     );
+}
+
+#[test]
+fn integration_with_timealarms() {
+    type Lpn = Usdc;
+    const CADENCE_HOURS: u16 = 2;
+
+    let mut test_case = TestCase::<Lpn>::new(None);
+
+    test_case
+        .init_treasury()
+        .init_timealarms()
+        .init_profit(CADENCE_HOURS);
+
+    test_case
+        .app
+        .time_shift(Duration::from_hours(CADENCE_HOURS));
+
+    test_case.send_funds(
+        &test_case.profit_addr.clone().unwrap(),
+        cwcoins::<Native, _>(500),
+    );
+
+    let resp = test_case
+        .app
+        .execute_contract(
+            Addr::unchecked(ADMIN),
+            test_case.timealarms.unwrap(),
+            &timealarms::msg::ExecuteMsg::DispatchAlarms { max_count: 10 },
+            &[],
+        )
+        .unwrap();
+    assert_eq!(
+        from_binary(&resp.data.clone().unwrap()),
+        Ok(DispatchAlarmsResponse(1))
+    );
+    resp.assert_event(&Event::new("wasm-time-alarm").add_attribute("delivered", "success"));
 }
