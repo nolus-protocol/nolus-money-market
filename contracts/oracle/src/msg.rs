@@ -34,7 +34,6 @@ pub enum ExecuteMsg {
     AddPriceAlarm {
         alarm: Alarm,
     },
-    RemovePriceAlarm {},
     /// Returns [`Status`] as response data.
     DispatchAlarms {
         max_count: u32,

@@ -59,6 +59,7 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                     self.sender,
                     prices,
                 )
+                .map(|()| Default::default())
             }
             ExecuteMsg::DispatchAlarms { max_count } => Oracle::<OracleBase>::load(
                 self.deps.storage,
@@ -73,9 +74,6 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                 )
                 .map(|()| Default::default())
             }
-            ExecuteMsg::RemovePriceAlarm {} => {
-                MarketAlarms::remove(self.deps.storage, self.sender).map(|()| Default::default())
-            }
         }
     }
 }
@@ -85,7 +83,7 @@ fn try_feed_prices<OracleBase>(
     block_time: Timestamp,
     sender: Addr,
     prices: Vec<SpotPrice>,
-) -> ContractResult<MessageResponse>
+) -> ContractResult<()>
 where
     OracleBase: Currency + DeserializeOwned,
 {

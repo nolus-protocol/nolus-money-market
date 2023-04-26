@@ -23,8 +23,9 @@ impl MarketAlarms {
         PriceAlarms::new("alarms_below", "index_below", "alarms_above", "index_above");
 
     pub(super) fn remove(storage: &mut dyn Storage, receiver: Addr) -> Result<(), ContractError> {
-        Self::PRICE_ALARMS.remove(storage, receiver)?;
-        Ok(())
+        Self::PRICE_ALARMS
+            .remove(storage, receiver)
+            .map_err(Into::into)
     }
 
     pub(super) fn try_add_price_alarm<BaseC>(
