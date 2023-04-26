@@ -397,7 +397,7 @@ mod tests {
     use serde::{Deserialize, Serialize};
 
     use finance::{
-        coin::{Amount, Coin, WithCoin},
+        coin::{Amount, Coin, CoinDTO, WithCoin},
         currency::{Currency, Group},
         duration::Duration,
         error::Error as FinanceError,
@@ -447,7 +447,14 @@ mod tests {
             Ok(Coin::<C>::new(self.balance))
         }
 
-        fn total_balance<G, Cmd>(&self, _: Cmd) -> Result<Option<Cmd::Output>, Cmd::Error>
+        fn balances<G>(&self) -> PlatformResult<Vec<CoinDTO<G>>>
+        where
+            G: Group,
+        {
+            unimplemented!()
+        }
+
+        fn for_each_balance<G, Cmd>(&self, _: Cmd) -> Result<Option<Cmd::Output>, Cmd::Error>
         where
             G: Group,
             Cmd: WithCoin,
