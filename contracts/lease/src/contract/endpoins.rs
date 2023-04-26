@@ -56,8 +56,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
                 .and_then(|lease_v3| state::save(storage, &lease_v3))
         },
     )
-    .map_err(Into::into)
-    .and_then(|label| response::response(&label))
+    .and_then(response::response)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
