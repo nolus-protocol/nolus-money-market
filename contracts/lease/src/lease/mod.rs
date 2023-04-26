@@ -220,7 +220,7 @@ mod tests {
 
     use ::currency::{lease::Atom, lpn::Usdc};
     use finance::{
-        coin::{Coin, CoinDTO, WithCoin},
+        coin::{Coin, WithCoin},
         currency::{self, Currency, Group},
         duration::Duration,
         error::Error as FinanceError,
@@ -310,14 +310,7 @@ mod tests {
             }
         }
 
-        fn balances<G>(&self) -> PlatformResult<Vec<CoinDTO<G>>>
-        where
-            G: Group,
-        {
-            unimplemented!()
-        }
-
-        fn for_each_balance<G, Cmd>(&self, _: Cmd) -> Result<Option<Cmd::Output>, Cmd::Error>
+        fn balances<G, Cmd>(&self, _: Cmd) -> Result<Option<Cmd::Output>, Cmd::Error>
         where
             G: Group,
             Cmd: WithCoin,
