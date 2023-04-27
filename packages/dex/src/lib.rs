@@ -10,7 +10,6 @@ mod error;
 mod filter;
 mod ica_connector;
 mod ica_recover;
-mod never;
 mod out_local;
 mod out_remote;
 mod response;

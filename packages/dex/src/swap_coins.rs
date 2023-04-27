@@ -39,11 +39,9 @@ mod test {
         currency::Group,
         test::currency::{Dai, TestCurrencies, TestExtraCurrencies, Usdc},
     };
+    use platform::never::{self, Never};
 
-    use crate::{
-        never::{self, Never},
-        swap_task::{CoinVisitor, IterNext, IterState},
-    };
+    use crate::swap_task::{CoinVisitor, IterNext, IterState};
 
     fn coin1() -> CoinDTO<TestCurrencies> {
         Coin::<Usdc>::new(32).into()
