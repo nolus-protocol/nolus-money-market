@@ -335,17 +335,15 @@ where
     where
         F: FnMut(T, T) -> T,
     {
-        Ok(
-            if let Some(mut last) = self.next().transpose().map_err(Into::into)? {
-                for item in self {
-                    last = f(last, item.map_err(Into::into)?);
-                }
+        Ok(if let Some(mut last) = self.next().transpose()? {
+            for item in self {
+                last = f(last, item?);
+            }
 
-                Some(last)
-            } else {
-                None
-            },
-        )
+            Some(last)
+        } else {
+            None
+        })
     }
 }
 
