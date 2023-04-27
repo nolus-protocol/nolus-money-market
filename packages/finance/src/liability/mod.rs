@@ -94,6 +94,24 @@ impl Liability {
         Level::Max(self.max)
     }
 
+    pub fn closest_level_below(&self, ltv: Percent) -> Option<Level> {
+        if ltv < self.first_liq_warn {
+            return None;
+        }
+
+        let level = if self.max <= ltv {
+            self.max()
+        } else if self.third_liq_warn <= ltv {
+            self.third_liq_warn()
+        } else if self.second_liq_warn <= ltv {
+            self.second_liq_warn()
+        } else {
+            debug_assert!(self.first_liq_warn <= ltv);
+            self.first_liq_warn()
+        };
+        Some(level)
+    }
+
     pub const fn recalculation_time(&self) -> Duration {
         self.recalc_time
     }
@@ -182,7 +200,8 @@ mod test {
         coin::{Amount, Coin},
         duration::Duration,
         fraction::Fraction,
-        percent::Percent,
+        liability::Level,
+        percent::{Percent, Units},
         test::currency::Usdc,
         zero::Zero,
     };
@@ -274,6 +293,50 @@ mod test {
     }
 
     #[test]
+    fn closest_level() {
+        let liability = Liability {
+            initial: Percent::from_percent(60),
+            healthy: Percent::from_percent(65),
+            max: Percent::from_percent(85),
+            first_liq_warn: Percent::from_permille(792),
+            second_liq_warn: Percent::from_permille(815),
+            third_liq_warn: Percent::from_permille(826),
+            recalc_time: Duration::from_secs(20000),
+        };
+        assert_eq!(level_below(&liability, 0), None);
+        assert_eq!(level_below(&liability, 660), None);
+        assert_eq!(level_below(&liability, 791), None);
+        assert_eq!(
+            level_below(&liability, 792),
+            Some(liability.first_liq_warn())
+        );
+        assert_eq!(
+            level_below(&liability, 814),
+            Some(liability.first_liq_warn())
+        );
+        assert_eq!(
+            level_below(&liability, 815),
+            Some(liability.second_liq_warn())
+        );
+        assert_eq!(
+            level_below(&liability, 825),
+            Some(liability.second_liq_warn())
+        );
+        assert_eq!(
+            level_below(&liability, 826),
+            Some(liability.third_liq_warn())
+        );
+        assert_eq!(
+            level_below(&liability, 849),
+            Some(liability.third_liq_warn())
+        );
+        assert_eq!(level_below(&liability, 850), Some(liability.max()));
+        assert_eq!(level_below(&liability, 878), Some(liability.max()));
+        assert_eq!(level_below(&liability, 999), Some(liability.max()));
+        assert_eq!(level_below(&liability, 1000), Some(liability.max()));
+    }
+
+    #[test]
     fn init_borrow() {
         test_init_borrow_amount(1000, 10, 111, None);
         test_init_borrow_amount(1, 10, 0, None);
@@ -356,6 +419,10 @@ mod test {
                 msg: real_msg
             }) if target_type.contains("Liability") && real_msg.contains(msg)
         ));
+    }
+
+    fn level_below(l: &Liability, permilles: Units) -> Option<Level> {
+        l.closest_level_below(Percent::from_permille(permilles))
     }
 
     fn test_init_borrow_amount(d: u128, p: u16, exp: u128, max_p: Option<Percent>) {

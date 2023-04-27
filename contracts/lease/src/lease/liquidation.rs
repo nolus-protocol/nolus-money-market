@@ -83,20 +83,12 @@ where
     let ltv = Percent::from_ratio(total_due, asset);
     debug_assert!(ltv < spec.max().ltv());
 
-    if ltv < spec.first_liq_warn().ltv() {
-        return Status::None;
-    }
-
-    let level = if spec.third_liq_warn().ltv() <= ltv {
-        spec.third_liq_warn()
-    } else if spec.second_liq_warn().ltv() <= ltv {
-        spec.second_liq_warn()
-    } else {
-        debug_assert!(spec.first_liq_warn().ltv() <= ltv);
-        spec.first_liq_warn()
-    };
-
-    Status::Warning(level)
+    let res = spec
+        .closest_level_below(ltv)
+        .map_or(Status::None, |level| Status::Warning(level));
+    debug_assert!(!matches!(res, Status::Warning(Level::Max(_))));
+    debug_assert!(matches!(res, Status::None | Status::Warning(_)));
+    res
 }
 
 fn may_ask_liquidation_liability<Asset>(
