@@ -16,19 +16,18 @@ use crate::{
     error::{Error, Result},
 };
 
+pub type BalancesResult<Cmd> = StdResult<Option<WithCoinResult<Cmd>>, Error>;
+
 pub trait BankAccountView {
     fn balance<C>(&self) -> Result<Coin<C>>
     where
         C: Currency;
 
-    fn balances<G, Cmd>(&self, cmd: Cmd) -> StdResult<Option<Cmd::Output>, Cmd::Error>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
     where
         G: Group,
         Cmd: WithCoin,
-        Cmd::Output: Aggregate,
-        Cmd::Error: StdError,
-        Error: Into<Cmd::Error>,
-        finance::error::Error: Into<Cmd::Error>;
+        Cmd::Output: Aggregate;
 }
 
 pub trait BankAccount
@@ -90,8 +89,6 @@ impl<'r, Cmd> AnyVisitor for CoinVisitor<'r, Cmd>
 where
     Cmd: WithCoin,
     Cmd::Output: Aggregate,
-    Error: Into<Cmd::Error>,
-    finance::error::Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;
@@ -124,22 +121,22 @@ impl<'a> BankAccountView for BankView<'a> {
         from_cosmwasm_impl(coin)
     }
 
-    fn balances<G, Cmd>(&self, cmd: Cmd) -> StdResult<Option<Cmd::Output>, Cmd::Error>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
     where
         G: Group,
         Cmd: WithCoin,
         Cmd::Output: Aggregate,
-        Cmd::Error: StdError,
-        Error: Into<Cmd::Error>,
-        finance::error::Error: Into<Cmd::Error>,
     {
         self.querier
             .query_all_balances(self.account)
-            .map_err(Into::<Error>::into)
-            .map_err(Into::<Cmd::Error>::into)?
-            .into_iter()
-            .filter_map(|cw_coin| maybe_from_cosmwasm_any_impl::<G, _>(cw_coin, &cmd))
-            .reduce_results(Aggregate::aggregate)
+            .map(|cw_coins| {
+                cw_coins
+                    .into_iter()
+                    .filter_map(|cw_coin| maybe_from_cosmwasm_any_impl::<G, _>(cw_coin, &cmd))
+                    .reduce_results(Aggregate::aggregate)
+                    .transpose()
+            })
+            .map_err(Into::into)
     }
 }
 
@@ -185,14 +182,11 @@ where
         self.view.balance()
     }
 
-    fn balances<G, Cmd>(&self, cmd: Cmd) -> std::result::Result<Option<Cmd::Output>, Cmd::Error>
+    fn balances<G, Cmd>(&self, cmd: Cmd) -> BalancesResult<Cmd>
     where
         G: Group,
         Cmd: WithCoin,
         Cmd::Output: Aggregate,
-        Cmd::Error: StdError,
-        Error: Into<Cmd::Error>,
-        finance::error::Error: Into<Cmd::Error>,
     {
         self.view.balances::<G, Cmd>(cmd)
     }
