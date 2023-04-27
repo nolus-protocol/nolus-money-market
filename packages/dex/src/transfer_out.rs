@@ -8,11 +8,11 @@ use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use finance::{coin::CoinDTO, currency::Group, zero::Zero};
+use platform::never::{self, Never};
 
 use crate::{
     error::{Error, Result},
     ica_connector::Enterable,
-    never::{self, Never},
     response::{self, ContinueResult, Handler, Result as HandlerResult},
     swap_task::{CoinVisitor, IterNext},
     timeout,
