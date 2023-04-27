@@ -5,6 +5,7 @@ use finance::{
     currency::{self, Currency},
     fraction::Fraction,
     liability::Level,
+    percent::Percent,
     price::{total_of, Price},
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
@@ -35,6 +36,7 @@ where
         self.reschedule(now, &Status::None)
     }
 
+    //TODO take the paid amount as input since the liquidation status would not take them into account
     pub(in crate::lease) fn reschedule_on_repay(&mut self, now: &Timestamp) -> ContractResult<()> {
         self.reschedule(now, &self.liquidation_status(*now)?)
     }
@@ -110,18 +112,17 @@ where
     fn price_alarm_at_level(
         &self,
         liability: Coin<Lpn>,
-        alarm_at: Level,
+        alarm_at: Percent,
     ) -> ContractResult<Price<Asset, Lpn>> {
         debug_assert!(!self.amount.is_zero(), "Loan already paid!");
 
-        Ok(total_of(alarm_at.ltv().of(self.amount)).is(liability))
+        Ok(total_of(alarm_at.of(self.amount)).is(liability))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use currency::{lease::Cro, lpn::Usdc};
-    use finance::liability::Level;
     use finance::percent::Percent;
     use finance::{coin::Coin, duration::Duration, fraction::Fraction, price::total_of};
     use lpp::msg::LoanResponse;
@@ -180,7 +181,7 @@ mod tests {
                 funds: vec![],
             });
 
-            let below_alarm: SpotPrice = total_of(liability_alarm_on.ltv().of(asset))
+            let below_alarm: SpotPrice = total_of(liability_alarm_on.of(asset))
                 .is(projected_liability)
                 .into();
             batch.schedule_execute_no_reply(WasmMsg::Execute {
@@ -286,10 +287,10 @@ mod tests {
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
-        let alarm_at = Level::Second(Percent::from_percent(80));
+        let alarm_at = Percent::from_percent(80);
         assert_eq!(
             lease.price_alarm_at_level(principal, alarm_at).unwrap(),
-            total_of(alarm_at.ltv().of(lease_amount)).is(principal)
+            total_of(alarm_at.of(lease_amount)).is(principal)
         );
     }
 }

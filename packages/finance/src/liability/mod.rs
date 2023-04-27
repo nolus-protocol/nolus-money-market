@@ -15,9 +15,11 @@ use crate::{
 };
 
 pub use self::level::Level;
+pub use self::zone::Zone;
 
 mod level;
 mod unchecked;
+mod zone;
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, Eq, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -78,38 +80,34 @@ impl Liability {
         self.healthy
     }
 
-    pub const fn first_liq_warn(&self) -> Level {
-        Level::First(self.first_liq_warn)
+    pub const fn first_liq_warn(&self) -> Percent {
+        self.first_liq_warn
     }
 
-    pub const fn second_liq_warn(&self) -> Level {
-        Level::Second(self.second_liq_warn)
+    pub const fn second_liq_warn(&self) -> Percent {
+        self.second_liq_warn
     }
 
-    pub const fn third_liq_warn(&self) -> Level {
-        Level::Third(self.third_liq_warn)
+    pub const fn third_liq_warn(&self) -> Percent {
+        self.third_liq_warn
     }
 
-    pub const fn max(&self) -> Level {
-        Level::Max(self.max)
+    pub const fn max(&self) -> Percent {
+        self.max
     }
 
-    pub fn closest_level_below(&self, ltv: Percent) -> Option<Level> {
+    pub fn zone_of(&self, ltv: Percent) -> Zone {
+        debug_assert!(ltv < self.max, "Ltv >= max is outside any liability zone!");
+
         if ltv < self.first_liq_warn {
-            return None;
-        }
-
-        let level = if self.max <= ltv {
-            self.max()
-        } else if self.third_liq_warn <= ltv {
-            self.third_liq_warn()
-        } else if self.second_liq_warn <= ltv {
-            self.second_liq_warn()
+            Zone::no_warnings(self.first_liq_warn)
+        } else if ltv < self.second_liq_warn {
+            Zone::first(self.first_liq_warn, self.second_liq_warn)
+        } else if ltv < self.third_liq_warn {
+            Zone::second(self.second_liq_warn, self.third_liq_warn)
         } else {
-            debug_assert!(self.first_liq_warn <= ltv);
-            self.first_liq_warn()
-        };
-        Some(level)
+            Zone::third(self.third_liq_warn, self.max)
+        }
     }
 
     pub const fn recalculation_time(&self) -> Duration {
@@ -200,13 +198,12 @@ mod test {
         coin::{Amount, Coin},
         duration::Duration,
         fraction::Fraction,
-        liability::Level,
         percent::{Percent, Units},
         test::currency::Usdc,
         zero::Zero,
     };
 
-    use super::Liability;
+    use super::{Liability, Zone};
 
     #[test]
     fn new_valid() {
@@ -293,8 +290,8 @@ mod test {
     }
 
     #[test]
-    fn closest_level() {
-        let liability = Liability {
+    fn test_zone_of() {
+        let l = Liability {
             initial: Percent::from_percent(60),
             healthy: Percent::from_percent(65),
             max: Percent::from_percent(85),
@@ -303,37 +300,27 @@ mod test {
             third_liq_warn: Percent::from_permille(826),
             recalc_time: Duration::from_secs(20000),
         };
-        assert_eq!(level_below(&liability, 0), None);
-        assert_eq!(level_below(&liability, 660), None);
-        assert_eq!(level_below(&liability, 791), None);
+        assert_eq!(zone_of(&l, 0), Zone::no_warnings(l.first_liq_warn()));
+        assert_eq!(zone_of(&l, 660), Zone::no_warnings(l.first_liq_warn()));
+        assert_eq!(zone_of(&l, 791), Zone::no_warnings(l.first_liq_warn()));
         assert_eq!(
-            level_below(&liability, 792),
-            Some(liability.first_liq_warn())
+            zone_of(&l, 792),
+            Zone::first(l.first_liq_warn(), l.second_liq_warn())
         );
         assert_eq!(
-            level_below(&liability, 814),
-            Some(liability.first_liq_warn())
+            zone_of(&l, 814),
+            Zone::first(l.first_liq_warn(), l.second_liq_warn())
         );
         assert_eq!(
-            level_below(&liability, 815),
-            Some(liability.second_liq_warn())
+            zone_of(&l, 815),
+            Zone::second(l.second_liq_warn(), l.third_liq_warn())
         );
         assert_eq!(
-            level_below(&liability, 825),
-            Some(liability.second_liq_warn())
+            zone_of(&l, 825),
+            Zone::second(l.second_liq_warn(), l.third_liq_warn())
         );
-        assert_eq!(
-            level_below(&liability, 826),
-            Some(liability.third_liq_warn())
-        );
-        assert_eq!(
-            level_below(&liability, 849),
-            Some(liability.third_liq_warn())
-        );
-        assert_eq!(level_below(&liability, 850), Some(liability.max()));
-        assert_eq!(level_below(&liability, 878), Some(liability.max()));
-        assert_eq!(level_below(&liability, 999), Some(liability.max()));
-        assert_eq!(level_below(&liability, 1000), Some(liability.max()));
+        assert_eq!(zone_of(&l, 826), Zone::third(l.third_liq_warn(), l.max()));
+        assert_eq!(zone_of(&l, 849), Zone::third(l.third_liq_warn(), l.max()));
     }
 
     #[test]
@@ -421,8 +408,8 @@ mod test {
         ));
     }
 
-    fn level_below(l: &Liability, permilles: Units) -> Option<Level> {
-        l.closest_level_below(Percent::from_permille(permilles))
+    fn zone_of(l: &Liability, permilles: Units) -> Zone {
+        l.zone_of(Percent::from_permille(permilles))
     }
 
     fn test_init_borrow_amount(d: u128, p: u16, exp: u128, max_p: Option<Percent>) {

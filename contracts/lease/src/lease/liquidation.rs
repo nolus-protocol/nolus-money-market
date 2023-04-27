@@ -81,10 +81,11 @@ where
     Asset: Currency,
 {
     let ltv = Percent::from_ratio(total_due, asset);
-    debug_assert!(ltv < spec.max().ltv());
+    debug_assert!(ltv < spec.max());
 
     let res = spec
-        .closest_level_below(ltv)
+        .zone_of(ltv)
+        .low()
         .map_or(Status::None, |level| Status::Warning(level));
     debug_assert!(!matches!(res, Status::Warning(Level::Max(_))));
     debug_assert!(matches!(res, Status::None | Status::Warning(_)));
@@ -102,7 +103,7 @@ where
     may_ask_liquidation(
         asset,
         Cause::Liability {
-            ltv: spec.max().ltv(),
+            ltv: spec.max(),
             healthy_ltv: spec.healthy_percent(),
         },
         spec.amount_to_liquidate(asset, total_due),
@@ -185,7 +186,11 @@ where
 mod tests {
     use crate::lease::{liquidation::check_liability, Status};
     use currency::lease::Atom;
-    use finance::{duration::Duration, liability::Liability, percent::Percent};
+    use finance::{
+        duration::Duration,
+        liability::{Level, Liability},
+        percent::Percent,
+    };
 
     use super::Cause;
 
@@ -218,7 +223,7 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 510.into(), 0.into()),
-            Status::Warning(spec.first_liq_warn())
+            Status::Warning(Level::First(spec.first_liq_warn()))
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 510.into(), 1.into()),
@@ -239,7 +244,7 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 712.into(), 0.into()),
-            Status::Warning(spec.first_liq_warn())
+            Status::Warning(Level::First(spec.first_liq_warn()))
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 712.into(), 1.into()),
@@ -250,15 +255,15 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 715.into(), 0.into()),
-            Status::Warning(spec.first_liq_warn()),
+            Status::Warning(Level::First(spec.first_liq_warn())),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 721.into(), 0.into()),
-            Status::Warning(spec.first_liq_warn()),
+            Status::Warning(Level::First(spec.first_liq_warn())),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 722.into(), 0.into()),
-            Status::Warning(spec.second_liq_warn()),
+            Status::Warning(Level::Second(spec.second_liq_warn())),
         );
     }
 
@@ -268,15 +273,15 @@ mod tests {
 
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 122.into(), 0.into()),
-            Status::Warning(spec.first_liq_warn()),
+            Status::Warning(Level::First(spec.first_liq_warn())),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 123.into(), 0.into()),
-            Status::Warning(spec.second_liq_warn()),
+            Status::Warning(Level::Second(spec.second_liq_warn())),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 124.into(), 0.into()),
-            Status::Warning(spec.second_liq_warn()),
+            Status::Warning(Level::Second(spec.second_liq_warn())),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 128.into(), 1.into()),
@@ -287,11 +292,11 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 132.into(), 0.into()),
-            Status::Warning(spec.second_liq_warn()),
+            Status::Warning(Level::Second(spec.second_liq_warn())),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 133.into(), 0.into()),
-            Status::Warning(spec.third_liq_warn()),
+            Status::Warning(Level::Third(spec.third_liq_warn())),
         );
     }
 
@@ -303,7 +308,7 @@ mod tests {
 
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 380.into(), 0.into()),
-            Status::Warning(spec.second_liq_warn()),
+            Status::Warning(Level::Second(spec.second_liq_warn())),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 381.into(), 1.into()),
@@ -314,15 +319,15 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 381.into(), 0.into()),
-            Status::Warning(spec.third_liq_warn()),
+            Status::Warning(Level::Third(spec.third_liq_warn())),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 382.into(), 0.into()),
-            Status::Warning(spec.third_liq_warn()),
+            Status::Warning(Level::Third(spec.third_liq_warn())),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 390.into(), 0.into()),
-            Status::Warning(spec.third_liq_warn()),
+            Status::Warning(Level::Third(spec.third_liq_warn())),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 391.into(), 0.into()),
@@ -343,7 +348,7 @@ mod tests {
 
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 880.into(), 0.into()),
-            Status::Warning(spec.third_liq_warn()),
+            Status::Warning(Level::Third(spec.third_liq_warn())),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 880.into(), 1.into()),
