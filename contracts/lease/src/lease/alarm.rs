@@ -70,24 +70,15 @@ where
             Status::None | Status::PartialLiquidation { .. } => {
                 (self.liability.first_liq_warn_percent(), None)
             }
-            Status::Warning {
-                ltv: _,
-                level: WarningLevel::First,
-            } => (
+            Status::Warning(WarningLevel::First(_)) => (
                 self.liability.second_liq_warn_percent(),
                 Some(self.liability.first_liq_warn_percent()),
             ),
-            Status::Warning {
-                ltv: _,
-                level: WarningLevel::Second,
-            } => (
+            Status::Warning(WarningLevel::Second(_)) => (
                 self.liability.third_liq_warn_percent(),
                 Some(self.liability.second_liq_warn_percent()),
             ),
-            Status::Warning {
-                ltv: _,
-                level: WarningLevel::Third,
-            } => (
+            Status::Warning(WarningLevel::Third(_)) => (
                 self.liability.max_percent(),
                 Some(self.liability.third_liq_warn_percent()),
             ),

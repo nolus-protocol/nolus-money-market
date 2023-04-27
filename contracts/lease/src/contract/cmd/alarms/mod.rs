@@ -1,4 +1,4 @@
-use finance::{currency::Currency, percent::Percent};
+use finance::currency::Currency;
 use platform::batch::{Emit, Emitter};
 
 use crate::{
@@ -16,7 +16,7 @@ where
 {
     match liquidation {
         Status::None => None,
-        &Status::Warning { ltv, level } => Some(emit_warning(lease, ltv, level)),
+        Status::Warning(level) => Some(emit_warning(lease, level)),
         Status::PartialLiquidation { amount, cause } => {
             Some(emit_liquidation_start(lease, cause).emit_coin("amount", *amount))
         }
@@ -34,14 +34,14 @@ where
         .emit_currency::<_, L::Asset>("lease-asset")
 }
 
-fn emit_warning<Asset, L>(lease: &L, ltv: Percent, level: WarningLevel) -> Emitter
+fn emit_warning<Asset, L>(lease: &L, level: &WarningLevel) -> Emitter
 where
     Asset: Currency,
     L: LeaseInfo<Asset = Asset>,
 {
     emit_lease(Emitter::of_type(Type::LiquidationWarning), lease)
-        .emit_percent_amount("ltv", ltv)
-        .emit_to_string_value("level", level.to_uint())
+        .emit_percent_amount("ltv", level.ltv())
+        .emit_to_string_value("level", level.ordinal())
 }
 
 fn emit_liquidation_start<L>(lease: &L, cause: &Cause) -> Emitter
