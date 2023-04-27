@@ -214,7 +214,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::error::Error as StdError;
 
     use serde::{Deserialize, Serialize};
 
@@ -223,7 +222,6 @@ mod tests {
         coin::{Coin, WithCoin},
         currency::{self, Currency, Group},
         duration::Duration,
-        error::Error as FinanceError,
         liability::Liability,
         percent::Percent,
         price::Price,
@@ -242,10 +240,11 @@ mod tests {
         msg::ExecuteMsg::AddPriceAlarm,
         stub::{Oracle, OracleBatch, OracleRef},
     };
+    use platform::bank::BalancesResult;
     use platform::{
         bank::{Aggregate, BankAccountView, BankStub},
         batch::Batch,
-        error::{Error as PlatformError, Result as PlatformResult},
+        error::Result as PlatformResult,
     };
     use profit::stub::{Profit, ProfitBatch, ProfitRef};
     use sdk::cosmwasm_std::{wasm_execute, Addr, BankMsg, Timestamp};
@@ -310,14 +309,11 @@ mod tests {
             }
         }
 
-        fn balances<G, Cmd>(&self, _: Cmd) -> Result<Option<Cmd::Output>, Cmd::Error>
+        fn balances<G, Cmd>(&self, _: Cmd) -> BalancesResult<Cmd>
         where
             G: Group,
             Cmd: WithCoin,
             Cmd::Output: Aggregate,
-            Cmd::Error: StdError,
-            PlatformError: Into<Cmd::Error>,
-            FinanceError: Into<Cmd::Error>,
         {
             unimplemented!()
         }
