@@ -68,20 +68,19 @@ where
 
         let (below, above_or_equal) = match liquidation_status {
             Status::None | Status::PartialLiquidation { .. } => {
-                (self.liability.first_liq_warn_percent(), None)
+                (self.liability.first_liq_warn(), None)
             }
             Status::Warning(Level::First(_)) => (
-                self.liability.second_liq_warn_percent(),
-                Some(self.liability.first_liq_warn_percent()),
+                self.liability.second_liq_warn(),
+                Some(self.liability.first_liq_warn()),
             ),
             Status::Warning(Level::Second(_)) => (
-                self.liability.third_liq_warn_percent(),
-                Some(self.liability.second_liq_warn_percent()),
+                self.liability.third_liq_warn(),
+                Some(self.liability.second_liq_warn()),
             ),
-            Status::Warning(Level::Third(_)) => (
-                self.liability.max_percent(),
-                Some(self.liability.third_liq_warn_percent()),
-            ),
+            Status::Warning(Level::Third(_)) => {
+                (self.liability.max(), Some(self.liability.third_liq_warn()))
+            }
             Status::Warning(Level::Max(_)) => unreachable!(),
             Status::FullLiquidation { .. } => unreachable!(),
         };
@@ -158,7 +157,7 @@ mod tests {
             ProfitLocalStubUnreachable,
         );
         let recalc_time = LEASE_START + lease.liability.recalculation_time();
-        let liability_alarm_on = lease.liability.first_liq_warn_percent();
+        let liability_alarm_on = lease.liability.first_liq_warn();
         let projected_liability = {
             let l = lease
                 .loan

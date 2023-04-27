@@ -78,19 +78,19 @@ impl Liability {
         self.healthy
     }
 
-    pub const fn first_liq_warn_percent(&self) -> Level {
+    pub const fn first_liq_warn(&self) -> Level {
         Level::First(self.first_liq_warn)
     }
 
-    pub const fn second_liq_warn_percent(&self) -> Level {
+    pub const fn second_liq_warn(&self) -> Level {
         Level::Second(self.second_liq_warn)
     }
 
-    pub const fn third_liq_warn_percent(&self) -> Level {
+    pub const fn third_liq_warn(&self) -> Level {
         Level::Third(self.third_liq_warn)
     }
 
-    pub const fn max_percent(&self) -> Level {
+    pub const fn max(&self) -> Level {
         Level::Max(self.max)
     }
 

@@ -573,7 +573,7 @@ fn liquidation_warning_price_0() {
     liquidation_warning(
         2085713.into(),
         1857159.into(),
-        LeaserWrapper::liability().max_percent(), //not used
+        LeaserWrapper::liability().max(), //not used
         "N/A",
     );
 }
@@ -586,7 +586,7 @@ fn liquidation_warning_price_1() {
         2085713.into(),
         // ref: 1857159
         1827159.into(),
-        LeaserWrapper::liability().first_liq_warn_percent(),
+        LeaserWrapper::liability().first_liq_warn(),
         "1",
     );
 }
@@ -599,7 +599,7 @@ fn liquidation_warning_price_2() {
         2085713.into(),
         // ref: 1857159
         1757159.into(),
-        LeaserWrapper::liability().second_liq_warn_percent(),
+        LeaserWrapper::liability().second_liq_warn(),
         "2",
     );
 }
@@ -612,7 +612,7 @@ fn liquidation_warning_price_3() {
         2085713.into(),
         // ref: 1857159
         1707159.into(),
-        LeaserWrapper::liability().third_liq_warn_percent(),
+        LeaserWrapper::liability().third_liq_warn(),
         "3",
     );
 }
