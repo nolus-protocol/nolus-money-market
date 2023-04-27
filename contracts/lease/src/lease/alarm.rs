@@ -4,7 +4,7 @@ use finance::{
     coin::Coin,
     currency::{self, Currency},
     fraction::Fraction,
-    percent::Percent,
+    liability::Level,
     price::{total_of, Price},
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
@@ -16,7 +16,7 @@ use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractResult,
-    lease::{Lease, Status, WarningLevel},
+    lease::{Lease, Status},
 };
 
 impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
@@ -70,18 +70,19 @@ where
             Status::None | Status::PartialLiquidation { .. } => {
                 (self.liability.first_liq_warn_percent(), None)
             }
-            Status::Warning(WarningLevel::First(_)) => (
+            Status::Warning(Level::First(_)) => (
                 self.liability.second_liq_warn_percent(),
                 Some(self.liability.first_liq_warn_percent()),
             ),
-            Status::Warning(WarningLevel::Second(_)) => (
+            Status::Warning(Level::Second(_)) => (
                 self.liability.third_liq_warn_percent(),
                 Some(self.liability.second_liq_warn_percent()),
             ),
-            Status::Warning(WarningLevel::Third(_)) => (
+            Status::Warning(Level::Third(_)) => (
                 self.liability.max_percent(),
                 Some(self.liability.third_liq_warn_percent()),
             ),
+            Status::Warning(Level::Max(_)) => unreachable!(),
             Status::FullLiquidation { .. } => unreachable!(),
         };
 
@@ -93,10 +94,10 @@ where
             )?
             .total;
 
-        let below = self.price_alarm_by_percent(total_liability, below)?;
+        let below = self.price_alarm_at_level(total_liability, below)?;
 
         let above_or_equal = above_or_equal
-            .map(|above| self.price_alarm_by_percent(total_liability, above))
+            .map(|above| self.price_alarm_at_level(total_liability, above))
             .transpose()?;
 
         self.oracle
@@ -107,20 +108,21 @@ where
             .map_err(Into::into)
     }
 
-    fn price_alarm_by_percent(
+    fn price_alarm_at_level(
         &self,
         liability: Coin<Lpn>,
-        percent: Percent,
+        alarm_at: Level,
     ) -> ContractResult<Price<Asset, Lpn>> {
         debug_assert!(!self.amount.is_zero(), "Loan already paid!");
 
-        Ok(total_of(percent.of(self.amount)).is(liability))
+        Ok(total_of(alarm_at.ltv().of(self.amount)).is(liability))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use currency::{lease::Cro, lpn::Usdc};
+    use finance::liability::Level;
     use finance::percent::Percent;
     use finance::{coin::Coin, duration::Duration, fraction::Fraction, price::total_of};
     use lpp::msg::LoanResponse;
@@ -179,7 +181,7 @@ mod tests {
                 funds: vec![],
             });
 
-            let below_alarm: SpotPrice = total_of(liability_alarm_on.of(asset))
+            let below_alarm: SpotPrice = total_of(liability_alarm_on.ltv().of(asset))
                 .is(projected_liability)
                 .into();
             batch.schedule_execute_no_reply(WasmMsg::Execute {
@@ -285,10 +287,10 @@ mod tests {
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
-        let alarm_at = Percent::from_percent(80);
+        let alarm_at = Level::Second(Percent::from_percent(80));
         assert_eq!(
-            lease.price_alarm_by_percent(principal, alarm_at).unwrap(),
-            total_of(alarm_at.of(lease_amount)).is(principal)
+            lease.price_alarm_at_level(principal, alarm_at).unwrap(),
+            total_of(alarm_at.ltv().of(lease_amount)).is(principal)
         );
     }
 }

@@ -14,6 +14,9 @@ use crate::{
     zero::Zero,
 };
 
+pub use self::level::Level;
+
+mod level;
 mod unchecked;
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, Eq, PartialEq, JsonSchema)]
@@ -75,20 +78,20 @@ impl Liability {
         self.healthy
     }
 
-    pub const fn first_liq_warn_percent(&self) -> Percent {
-        self.first_liq_warn
+    pub const fn first_liq_warn_percent(&self) -> Level {
+        Level::First(self.first_liq_warn)
     }
 
-    pub const fn second_liq_warn_percent(&self) -> Percent {
-        self.second_liq_warn
+    pub const fn second_liq_warn_percent(&self) -> Level {
+        Level::Second(self.second_liq_warn)
     }
 
-    pub const fn third_liq_warn_percent(&self) -> Percent {
-        self.third_liq_warn
+    pub const fn third_liq_warn_percent(&self) -> Level {
+        Level::Third(self.third_liq_warn)
     }
 
-    pub const fn max_percent(&self) -> Percent {
-        self.max
+    pub const fn max_percent(&self) -> Level {
+        Level::Max(self.max)
     }
 
     pub const fn recalculation_time(&self) -> Duration {
@@ -117,7 +120,7 @@ impl Liability {
     where
         P: Percentable + Copy + Ord + Sub<Output = P> + Zero,
     {
-        if total_due < self.max_percent().of(lease_amount) {
+        if total_due < self.max.of(lease_amount) {
             return P::ZERO;
         }
         if lease_amount <= total_due {
@@ -328,7 +331,7 @@ mod test {
     fn amount_to_liquidate_int(liability: Liability, lease: Amount, due: Amount, exp: Amount) {
         let liq = liability.amount_to_liquidate(lease, due);
         assert_eq!(exp, liq);
-        if due.clamp(liability.max_percent().of(lease), lease) == due {
+        if due.clamp(liability.max.of(lease), lease) == due {
             assert!(
                 liability
                     .healthy_percent()

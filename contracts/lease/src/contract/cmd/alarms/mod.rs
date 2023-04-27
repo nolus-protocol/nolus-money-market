@@ -1,9 +1,9 @@
-use finance::currency::Currency;
+use finance::{currency::Currency, liability::Level};
 use platform::batch::{Emit, Emitter};
 
 use crate::{
     event::Type,
-    lease::{Cause, LeaseInfo, Status, WarningLevel},
+    lease::{Cause, LeaseInfo, Status},
 };
 
 pub mod price;
@@ -34,7 +34,7 @@ where
         .emit_currency::<_, L::Asset>("lease-asset")
 }
 
-fn emit_warning<Asset, L>(lease: &L, level: &WarningLevel) -> Emitter
+fn emit_warning<Asset, L>(lease: &L, level: &Level) -> Emitter
 where
     Asset: Currency,
     L: LeaseInfo<Asset = Asset>,

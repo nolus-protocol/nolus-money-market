@@ -10,6 +10,7 @@ use finance::{
     duration::Duration,
     fraction::Fraction as _,
     interest::InterestPeriod,
+    liability::Level,
     percent::Percent,
     price::{self, Price},
 };
@@ -509,7 +510,7 @@ fn state_paid_when_overpaid() {
     );
 }
 
-fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, percent: Percent, level: &str) {
+fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Level, level: &str) {
     let (mut test_case, neutron_message_receiver) = create_test_case::<PaymentCurrency>();
     let downpayment = create_payment_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, &neutron_message_receiver, downpayment, None);
@@ -547,7 +548,7 @@ fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, percent: Percent, level:
         .find(|attribute| attribute.key == "ltv")
         .expect("LTV attribute not present!");
 
-    assert_eq!(attribute.value, percent.units().to_string());
+    assert_eq!(attribute.value, liability.ltv().units().to_string());
 
     let attribute = event
         .attributes
@@ -572,7 +573,7 @@ fn liquidation_warning_price_0() {
     liquidation_warning(
         2085713.into(),
         1857159.into(),
-        LeaserWrapper::liability().healthy_percent(),
+        LeaserWrapper::liability().max_percent(), //not used
         "N/A",
     );
 }

@@ -1,7 +1,12 @@
 use serde::Serialize;
 
 use finance::{
-    coin::Coin, currency::Currency, liability::Liability, percent::Percent, price, zero::Zero,
+    coin::Coin,
+    currency::Currency,
+    liability::{Level, Liability},
+    percent::Percent,
+    price,
+    zero::Zero,
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
@@ -76,19 +81,19 @@ where
     Asset: Currency,
 {
     let ltv = Percent::from_ratio(total_due, asset);
-    debug_assert!(ltv < spec.max_percent());
+    debug_assert!(ltv < spec.max_percent().ltv());
 
-    if ltv < spec.first_liq_warn_percent() {
+    if ltv < spec.first_liq_warn_percent().ltv() {
         return Status::None;
     }
 
-    let level = if spec.third_liq_warn_percent() <= ltv {
-        WarningLevel::third(spec)
-    } else if spec.second_liq_warn_percent() <= ltv {
-        WarningLevel::second(spec)
+    let level = if spec.third_liq_warn_percent().ltv() <= ltv {
+        spec.third_liq_warn_percent()
+    } else if spec.second_liq_warn_percent().ltv() <= ltv {
+        spec.second_liq_warn_percent()
     } else {
-        debug_assert!(spec.first_liq_warn_percent() <= ltv);
-        WarningLevel::first(spec)
+        debug_assert!(spec.first_liq_warn_percent().ltv() <= ltv);
+        spec.first_liq_warn_percent()
     };
 
     Status::Warning(level)
@@ -105,7 +110,7 @@ where
     may_ask_liquidation(
         asset,
         Cause::Liability {
-            ltv: spec.max_percent(),
+            ltv: spec.max_percent().ltv(),
             healthy_ltv: spec.healthy_percent(),
         },
         spec.amount_to_liquidate(asset, total_due),
@@ -155,7 +160,7 @@ where
     Asset: Currency,
 {
     None,
-    Warning(WarningLevel),
+    Warning(Level),
     PartialLiquidation { amount: Coin<Asset>, cause: Cause },
     FullLiquidation(Cause),
 }
@@ -184,45 +189,9 @@ where
     pub receipt: RepayReceipt<Lpn>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(test, derive(Debug))]
-pub(crate) enum WarningLevel {
-    First(Percent),
-    Second(Percent),
-    Third(Percent),
-}
-
-impl WarningLevel {
-    pub fn first(spec: &Liability) -> Self {
-        Self::First(spec.first_liq_warn_percent())
-    }
-
-    pub fn second(spec: &Liability) -> Self {
-        Self::Second(spec.second_liq_warn_percent())
-    }
-
-    pub fn third(spec: &Liability) -> Self {
-        Self::Third(spec.third_liq_warn_percent())
-    }
-
-    pub fn ltv(&self) -> Percent {
-        *match self {
-            Self::First(ltv) | Self::Second(ltv) | Self::Third(ltv) => ltv,
-        }
-    }
-
-    pub fn ordinal(self) -> u8 {
-        match self {
-            Self::First(_) => 1,
-            Self::Second(_) => 2,
-            Self::Third(_) => 3,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::lease::{liquidation::check_liability, Status, WarningLevel};
+    use crate::lease::{liquidation::check_liability, Status};
     use currency::lease::Atom;
     use finance::{duration::Duration, liability::Liability, percent::Percent};
 
@@ -257,7 +226,7 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 510.into(), 0.into()),
-            Status::Warning(WarningLevel::first(&spec))
+            Status::Warning(spec.first_liq_warn_percent())
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 510.into(), 1.into()),
@@ -278,7 +247,7 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 712.into(), 0.into()),
-            Status::Warning(WarningLevel::first(&spec))
+            Status::Warning(spec.first_liq_warn_percent())
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 712.into(), 1.into()),
@@ -289,15 +258,15 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 715.into(), 0.into()),
-            Status::Warning(WarningLevel::first(&spec)),
+            Status::Warning(spec.first_liq_warn_percent()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 721.into(), 0.into()),
-            Status::Warning(WarningLevel::first(&spec)),
+            Status::Warning(spec.first_liq_warn_percent()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 722.into(), 0.into()),
-            Status::Warning(WarningLevel::second(&spec)),
+            Status::Warning(spec.second_liq_warn_percent()),
         );
     }
 
@@ -307,15 +276,15 @@ mod tests {
 
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 122.into(), 0.into()),
-            Status::Warning(WarningLevel::first(&spec)),
+            Status::Warning(spec.first_liq_warn_percent()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 123.into(), 0.into()),
-            Status::Warning(WarningLevel::second(&spec)),
+            Status::Warning(spec.second_liq_warn_percent()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 124.into(), 0.into()),
-            Status::Warning(WarningLevel::second(&spec)),
+            Status::Warning(spec.second_liq_warn_percent()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 128.into(), 1.into()),
@@ -326,11 +295,11 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 132.into(), 0.into()),
-            Status::Warning(WarningLevel::second(&spec)),
+            Status::Warning(spec.second_liq_warn_percent()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 133.into(), 0.into()),
-            Status::Warning(WarningLevel::third(&spec)),
+            Status::Warning(spec.third_liq_warn_percent()),
         );
     }
 
@@ -342,7 +311,7 @@ mod tests {
 
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 380.into(), 0.into()),
-            Status::Warning(WarningLevel::second(&spec)),
+            Status::Warning(spec.second_liq_warn_percent()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 381.into(), 1.into()),
@@ -353,15 +322,15 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 381.into(), 0.into()),
-            Status::Warning(WarningLevel::third(&spec)),
+            Status::Warning(spec.third_liq_warn_percent()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 382.into(), 0.into()),
-            Status::Warning(WarningLevel::third(&spec)),
+            Status::Warning(spec.third_liq_warn_percent()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 390.into(), 0.into()),
-            Status::Warning(WarningLevel::third(&spec)),
+            Status::Warning(spec.third_liq_warn_percent()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 391.into(), 0.into()),
@@ -382,7 +351,7 @@ mod tests {
 
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 880.into(), 0.into()),
-            Status::Warning(WarningLevel::third(&spec)),
+            Status::Warning(spec.third_liq_warn_percent()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 880.into(), 1.into()),
@@ -523,32 +492,30 @@ mod tests {
 #[cfg(test)]
 mod test_status {
     use currency::lease::Cro;
-    use finance::percent::Percent;
+    use finance::{liability::Level, percent::Percent};
 
-    use crate::lease::{Cause, WarningLevel};
+    use crate::lease::Cause;
 
     use super::Status;
 
     #[test]
     fn ord() {
+        assert!(Status::<Cro>::None < Status::Warning(Level::First(Percent::from_permille(1))));
         assert!(
-            Status::<Cro>::None < Status::Warning(WarningLevel::First(Percent::from_permille(1)))
+            Status::<Cro>::Warning(Level::First(Percent::from_permille(1)))
+                < Status::Warning(Level::Second(Percent::from_permille(1)))
         );
         assert!(
-            Status::<Cro>::Warning(WarningLevel::First(Percent::from_permille(1)))
-                < Status::Warning(WarningLevel::Second(Percent::from_permille(1)))
-        );
-        assert!(
-            Status::<Cro>::Warning(WarningLevel::First(Percent::from_permille(1)))
-                < Status::Warning(WarningLevel::First(Percent::from_permille(2)))
+            Status::<Cro>::Warning(Level::First(Percent::from_permille(1)))
+                < Status::Warning(Level::First(Percent::from_permille(2)))
         );
         // NB! the contract is not respected
         assert!(
-            Status::Warning(WarningLevel::First(Percent::from_permille(2)))
-                < Status::<Cro>::Warning(WarningLevel::Second(Percent::from_permille(1)))
+            Status::Warning(Level::First(Percent::from_permille(2)))
+                < Status::<Cro>::Warning(Level::Second(Percent::from_permille(1)))
         );
         assert!(
-            Status::Warning(WarningLevel::Third(Percent::from_permille(100)))
+            Status::Warning(Level::Third(Percent::from_permille(100)))
                 < Status::<Cro>::PartialLiquidation {
                     amount: 1.into(),
                     cause: Cause::Overdue()
