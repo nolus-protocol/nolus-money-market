@@ -29,7 +29,6 @@ where
 }
 
 mod impl_into {
-
     use crate::{
         swap_task::SwapTask as SwapTaskT, SwapExactIn, SwapExactInPostRecoverIca,
         SwapExactInPreRecoverIca, SwapExactInRecoverIca, TransferOut,
@@ -79,6 +78,62 @@ mod impl_into {
     {
         fn from(value: SwapExactInPostRecoverIca<SwapTask, Self>) -> Self {
             Self::SwapExactInPostRecoverIca(value)
+        }
+    }
+}
+
+mod impl_borrow {
+    use std::borrow::{Borrow, BorrowMut};
+
+    use crate::SwapTask;
+
+    use super::State;
+
+    impl<Task> Borrow<Task> for State<Task>
+    where
+        Task: SwapTask,
+    {
+        fn borrow(&self) -> &Task {
+            match self {
+                State::TransferOut(variant) => variant.borrow(),
+                State::SwapExactIn(variant) => variant.borrow(),
+                State::SwapExactInPreRecoverIca(variant) => crate::SwapExactIn::borrow(
+                    crate::InRecovery::borrow(crate::SwapExactInRecoverIca::borrow(
+                        crate::SwapExactInPreRecoverIca::borrow(variant),
+                    )),
+                ),
+                State::SwapExactInRecoverIca(variant) => crate::SwapExactIn::borrow(
+                    crate::InRecovery::borrow(crate::SwapExactInRecoverIca::borrow(variant)),
+                ),
+                State::SwapExactInPostRecoverIca(variant) => {
+                    crate::SwapExactIn::borrow(crate::SwapExactInPostRecoverIca::borrow(variant))
+                }
+            }
+        }
+    }
+
+    impl<Task> BorrowMut<Task> for State<Task>
+    where
+        Task: SwapTask,
+    {
+        fn borrow_mut(&mut self) -> &mut Task {
+            match self {
+                State::TransferOut(variant) => variant.borrow_mut(),
+                State::SwapExactIn(variant) => variant.borrow_mut(),
+                State::SwapExactInPreRecoverIca(variant) => crate::SwapExactIn::borrow_mut(
+                    crate::InRecovery::borrow_mut(crate::SwapExactInRecoverIca::borrow_mut(
+                        crate::SwapExactInPreRecoverIca::borrow_mut(variant),
+                    )),
+                ),
+                State::SwapExactInRecoverIca(variant) => {
+                    crate::SwapExactIn::borrow_mut(crate::InRecovery::borrow_mut(
+                        crate::SwapExactInRecoverIca::borrow_mut(variant),
+                    ))
+                }
+                State::SwapExactInPostRecoverIca(variant) => crate::SwapExactIn::borrow_mut(
+                    crate::SwapExactInPostRecoverIca::borrow_mut(variant),
+                ),
+            }
         }
     }
 }
@@ -188,11 +243,11 @@ mod impl_handler {
 mod impl_contract {
     use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
-    use super::State;
-
     use crate::{
         swap_task::SwapTask as SwapTaskT, Contract, ContractInSwap, SwapState, TransferOutState,
     };
+
+    use super::State;
 
     impl<SwapTask> Contract for State<SwapTask>
     where

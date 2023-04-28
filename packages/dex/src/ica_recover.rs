@@ -1,7 +1,11 @@
-use std::marker::PhantomData;
+use std::{
+    borrow::{Borrow, BorrowMut},
+    marker::PhantomData,
+};
+
+use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
-use serde::{Deserialize, Serialize};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
@@ -26,6 +30,18 @@ impl<S, SEnum> InRecovery<S, SEnum> {
             time_alarms,
             _state_enum: PhantomData,
         }
+    }
+}
+
+impl<State, StateEnum> Borrow<State> for InRecovery<State, StateEnum> {
+    fn borrow(&self) -> &State {
+        &self.state
+    }
+}
+
+impl<State, StateEnum> BorrowMut<State> for InRecovery<State, StateEnum> {
+    fn borrow_mut(&mut self) -> &mut State {
+        &mut self.state
     }
 }
 

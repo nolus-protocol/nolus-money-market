@@ -1,11 +1,13 @@
-use finance::coin::CoinDTO;
-use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
+use std::borrow::{Borrow, BorrowMut};
+
 use serde::{Deserialize, Serialize};
 
+use finance::coin::CoinDTO;
 use platform::{
     batch::{Emit, Emitter},
     message::Response as MessageResponse,
 };
+use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     response::{self, Handler, Result as HandlerResult},
@@ -93,6 +95,24 @@ where
         Emitter::of_type(self.spec.label())
             .emit("stage", "transfer-in")
             .emit_coin_dto("amount", self.amount_in.clone())
+    }
+}
+
+impl<SwapTask> Borrow<SwapTask> for TransferInFinish<SwapTask>
+where
+    SwapTask: SwapTaskT,
+{
+    fn borrow(&self) -> &SwapTask {
+        &self.spec
+    }
+}
+
+impl<SwapTask> BorrowMut<SwapTask> for TransferInFinish<SwapTask>
+where
+    SwapTask: SwapTaskT,
+{
+    fn borrow_mut(&mut self) -> &mut SwapTask {
+        &mut self.spec
     }
 }
 

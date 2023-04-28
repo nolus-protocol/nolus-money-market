@@ -1,7 +1,10 @@
+use std::borrow::{Borrow, BorrowMut};
+
+use serde::{Deserialize, Serialize};
+
 use finance::duration::Duration;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
-use serde::{Deserialize, Serialize};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{error::Result as DexResult, Contract, Handler, Result};
@@ -29,6 +32,18 @@ impl<Enterable> EntryDelay<Enterable> {
             .clone()
             .setup_alarm(now + Self::RIGHT_AFTER_NOW)
             .map_err(Into::into)
+    }
+}
+
+impl<Enterable> Borrow<Enterable> for EntryDelay<Enterable> {
+    fn borrow(&self) -> &Enterable {
+        &self.enterable
+    }
+}
+
+impl<Enterable> BorrowMut<Enterable> for EntryDelay<Enterable> {
+    fn borrow_mut(&mut self) -> &mut Enterable {
+        &mut self.enterable
     }
 }
 

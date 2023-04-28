@@ -1,6 +1,8 @@
-use std::marker::PhantomData;
+use std::{
+    borrow::{Borrow, BorrowMut},
+    marker::PhantomData,
+};
 
-use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use finance::{
@@ -9,10 +11,12 @@ use finance::{
     zero::Zero,
 };
 use platform::{batch::Batch, trx};
-use sdk::{cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData, cosmwasm_std::Binary};
+use sdk::{
+    cosmos_sdk_proto::cosmos::base::abci::v1beta1::MsgData,
+    cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp},
+};
 use swap::trx as swap_trx;
 
-use super::{Contract, SwapState};
 #[cfg(debug_assertions)]
 use crate::swap_task::IterState;
 use crate::{
@@ -28,6 +32,8 @@ use crate::{
     trx::SwapTrx,
     ContractInSwap,
 };
+
+use super::{Contract, SwapState};
 
 #[derive(Serialize, Deserialize)]
 pub struct SwapExactIn<SwapTask, SEnum> {
@@ -127,6 +133,18 @@ where
             self.spec.out_currency()
         );
         debug_assert_eq!(res, IterState::Complete);
+    }
+}
+
+impl<SwapTask, SEnum> Borrow<SwapTask> for SwapExactIn<SwapTask, SEnum> {
+    fn borrow(&self) -> &SwapTask {
+        &self.spec
+    }
+}
+
+impl<SwapTask, SEnum> BorrowMut<SwapTask> for SwapExactIn<SwapTask, SEnum> {
+    fn borrow_mut(&mut self) -> &mut SwapTask {
+        &mut self.spec
     }
 }
 

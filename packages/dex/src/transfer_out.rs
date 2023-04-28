@@ -1,14 +1,18 @@
-use std::{marker::PhantomData, result::Result as StdResult};
-
-use platform::{
-    batch::{Batch, Emitter},
-    message::Response as MessageResponse,
+use std::{
+    borrow::{Borrow, BorrowMut},
+    marker::PhantomData,
+    result::Result as StdResult,
 };
-use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
+
 use serde::{Deserialize, Serialize};
 
 use finance::{coin::CoinDTO, currency::Group, zero::Zero};
-use platform::never::{self, Never};
+use platform::{
+    batch::{Batch, Emitter},
+    message::Response as MessageResponse,
+    never::{self, Never},
+};
+use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     error::{Error, Result},
@@ -128,6 +132,28 @@ where
                 next,
             )
         })
+    }
+}
+
+impl<Task, StateEnum> Borrow<Task> for TransferOut<Task, StateEnum>
+where
+    Task: SwapTaskT,
+    Self: Into<StateEnum>,
+    SwapExactIn<Task, StateEnum>: Into<StateEnum>,
+{
+    fn borrow(&self) -> &Task {
+        &self.spec
+    }
+}
+
+impl<Task, StateEnum> BorrowMut<Task> for TransferOut<Task, StateEnum>
+where
+    Task: SwapTaskT,
+    Self: Into<StateEnum>,
+    SwapExactIn<Task, StateEnum>: Into<StateEnum>,
+{
+    fn borrow_mut(&mut self) -> &mut Task {
+        &mut self.spec
     }
 }
 

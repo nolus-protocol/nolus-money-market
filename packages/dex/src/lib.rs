@@ -1,5 +1,26 @@
-use entry_delay::EntryDelay;
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
+
+pub use crate::{
+    account::Account,
+    connectable::DexConnectable,
+    connection::{ConnectionParams, Ics20Channel},
+    error::Error,
+    ica_connector::{
+        Enterable, IcaConnectee, IcaConnector, ICS27_MESSAGE_ENTERING_NEXT_STATE,
+        NO_ICS27_MESSAGE_ENTERING_NEXT_STATE,
+    },
+    ica_recover::InRecovery,
+    out_local::{start_local_local, StartLocalLocalState, State as StateLocalOut},
+    out_remote::{start as start_local_remote, StartLocalRemoteState, State as StateRemoteOut},
+    response::{ContinueResult, Handler, Response, Result},
+    swap_coins::{on_coin, on_coins},
+    swap_exact_in::SwapExactIn,
+    swap_task::{CoinVisitor, CoinsNb, IterNext, IterState, SwapTask},
+    transfer_in_finish::TransferInFinish,
+    transfer_in_init::TransferInInit,
+    transfer_out::TransferOut,
+};
+use crate::{entry_delay::EntryDelay, SwapTask as SwapTaskT};
 
 mod account;
 mod coin_index;
@@ -22,28 +43,6 @@ mod transfer_in_finish;
 mod transfer_in_init;
 mod transfer_out;
 mod trx;
-
-use crate::SwapTask as SwapTaskT;
-pub use {
-    account::Account,
-    connectable::DexConnectable,
-    connection::{ConnectionParams, Ics20Channel},
-    error::Error,
-    ica_connector::{
-        Enterable, IcaConnectee, IcaConnector, ICS27_MESSAGE_ENTERING_NEXT_STATE,
-        NO_ICS27_MESSAGE_ENTERING_NEXT_STATE,
-    },
-    ica_recover::InRecovery,
-    out_local::{start_local_local, StartLocalLocalState, State as StateLocalOut},
-    out_remote::{start as start_local_remote, StartLocalRemoteState, State as StateRemoteOut},
-    response::{ContinueResult, Handler, Response, Result},
-    swap_coins::{on_coin, on_coins},
-    swap_exact_in::SwapExactIn,
-    swap_task::{CoinVisitor, CoinsNb, IterNext, IterState, SwapTask},
-    transfer_in_finish::TransferInFinish,
-    transfer_in_init::TransferInInit,
-    transfer_out::TransferOut,
-};
 
 type SwapExactInPreRecoverIca<SwapTask, SEnum> = EntryDelay<SwapExactInRecoverIca<SwapTask, SEnum>>;
 

@@ -1,6 +1,8 @@
-use std::marker::PhantomData;
+use std::{
+    borrow::{Borrow, BorrowMut},
+    marker::PhantomData,
+};
 
-use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use platform::{
@@ -8,6 +10,7 @@ use platform::{
     ica::HostAccount,
     message,
 };
+use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     account::Account,
@@ -50,7 +53,7 @@ impl<Connectee, SwapResult> IcaConnector<Connectee, SwapResult>
 where
     Connectee: IcaConnectee + DexConnectable,
 {
-    const STATE_LABEL: &str = "register-ica";
+    const STATE_LABEL: &'static str = "register-ica";
 
     pub fn new(connectee: Connectee) -> Self {
         Self {
@@ -76,6 +79,18 @@ where
         Emitter::of_type(Self::STATE_LABEL)
             .emit("id", contract)
             .emit("ica_host", ica_host)
+    }
+}
+
+impl<Connectee, SwapResult> Borrow<Connectee> for IcaConnector<Connectee, SwapResult> {
+    fn borrow(&self) -> &Connectee {
+        &self.connectee
+    }
+}
+
+impl<Connectee, SwapResult> BorrowMut<Connectee> for IcaConnector<Connectee, SwapResult> {
+    fn borrow_mut(&mut self) -> &mut Connectee {
+        &mut self.connectee
     }
 }
 

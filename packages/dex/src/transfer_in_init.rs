@@ -1,6 +1,10 @@
-use finance::coin::CoinDTO;
-use sdk::cosmwasm_std::Binary;
+use std::borrow::{Borrow, BorrowMut};
+
 use serde::{Deserialize, Serialize};
+
+use finance::coin::CoinDTO;
+use platform::batch::Batch;
+use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     error::Result,
@@ -10,8 +14,6 @@ use crate::{
     trx::IBC_TIMEOUT,
     ConnectionParams, Contract, ContractInSwap, DexConnectable, Enterable, TransferInInitState,
 };
-use platform::batch::Batch;
-use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 
 use super::transfer_in_finish::TransferInFinish;
 
@@ -54,6 +56,24 @@ where
     fn on_response(self, deps: Deps<'_>, env: Env) -> HandlerResult<Self> {
         let finish = TransferInFinish::new(self.spec, self.amount_in, env.block.time + IBC_TIMEOUT);
         finish.try_complete(deps, env).map_into()
+    }
+}
+
+impl<SwapTask> Borrow<SwapTask> for TransferInInit<SwapTask>
+where
+    SwapTask: SwapTaskT,
+{
+    fn borrow(&self) -> &SwapTask {
+        &self.spec
+    }
+}
+
+impl<SwapTask> BorrowMut<SwapTask> for TransferInInit<SwapTask>
+where
+    SwapTask: SwapTaskT,
+{
+    fn borrow_mut(&mut self) -> &mut SwapTask {
+        &mut self.spec
     }
 }
 
