@@ -15,7 +15,7 @@ use crate::{
     api::LpnCoin,
     error::ContractError,
     event::Type,
-    lease::{with_lease::WithLease, Lease, LeaseDTO, RepayResult as LeaseRepayResult},
+    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO, Status},
 };
 
 pub struct Repay<'a> {
@@ -42,7 +42,7 @@ impl<'a> WithLease for Repay<'a> {
 
     fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
         self,
-        lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
+        mut lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
@@ -52,13 +52,17 @@ impl<'a> WithLease for Repay<'a> {
         Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
+        let now = self.env.block.time;
         let payment = self.payment.try_into()?;
 
-        let LeaseRepayResult {
-            batch,
-            lease,
-            receipt,
-        } = lease.repay(payment, self.env.block.time)?;
+        let receipt = lease.repay(payment, now)?;
+
+        match lease.liquidation_status(now)? {
+            Status::No(zone) => lease.reschedule(&now, &zone)?,
+            _ => todo!("init liquidation"),
+        }
+
+        let IntoDTOResult { lease, batch } = lease.into_dto();
 
         let emitter = Emitter::of_type(Type::PaidActive)
             .emit_tx_info(self.env)
