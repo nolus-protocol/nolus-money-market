@@ -1,53 +1,93 @@
 use finance::{currency::Currency, liability::Level};
-use platform::batch::{Emit, Emitter};
+use lpp::stub::lender::LppLender as LppLenderTrait;
+use oracle::stub::Oracle as OracleTrait;
+use platform::{
+    batch::{Emit, Emitter},
+    message::Response as MessageResponse,
+};
+use profit::stub::Profit as ProfitTrait;
+use sdk::cosmwasm_std::Timestamp;
+use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
+
+use serde::Serialize;
 
 use crate::{
+    error::ContractError,
     event::Type,
-    lease::{Cause, LeaseInfo, Status},
+    lease::{Cause, IntoDTOResult, Lease, LeaseDTO, Status},
 };
 
 pub mod price;
 pub mod time;
 
-fn emit_events<Lpn, Asset, L>(liquidation: &Status<Lpn>, lease: &L) -> Option<Emitter>
+fn handle<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
+    now: Timestamp,
+    mut lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
+) -> Result<MessageResponse, ContractError>
+where
+    Lpn: Currency + Serialize,
+    Lpp: LppLenderTrait<Lpn>,
+    TimeAlarms: TimeAlarmsTrait,
+    Oracle: OracleTrait<Lpn>,
+    Profit: ProfitTrait,
+    Asset: Currency + Serialize,
+{
+    let status = lease.liquidation_status(now)?;
+    match status {
+        Status::No(zone) => lease.reschedule(&now, &zone)?,
+        _ => todo!("init liquidation"),
+    }
+
+    let IntoDTOResult { batch, lease } = lease.into_dto();
+    Ok(
+        if let Some(events) = emit_events::<_, Asset>(&status, lease) {
+            MessageResponse::messages_with_events(batch, events)
+        } else {
+            MessageResponse::messages_only(batch)
+        },
+    )
+}
+
+fn emit_events<Lpn, Asset>(liquidation: &Status<Lpn>, lease: LeaseDTO) -> Option<Emitter>
 where
     Lpn: Currency,
-    L: LeaseInfo,
+    Asset: Currency,
 {
     match liquidation {
-        Status::No(zone) => zone.low().map(|low_level| emit_warning(lease, &low_level)),
+        Status::No(zone) => zone
+            .low()
+            .map(|low_level| emit_warning::<Asset>(lease, &low_level)),
         Status::Partial { amount, cause } => {
-            Some(emit_liquidation_start(lease, cause).emit_coin("amount", *amount))
+            Some(emit_liquidation_start::<Asset>(lease, cause).emit_coin("amount", *amount))
         }
-        Status::Full(cause) => Some(emit_liquidation_start(lease, cause)),
+        Status::Full(cause) => Some(emit_liquidation_start::<Asset>(lease, cause)),
     }
 }
 
-fn emit_lease<L>(emitter: Emitter, lease: &L) -> Emitter
-where
-    L: LeaseInfo,
-{
-    emitter
-        .emit("customer", lease.customer())
-        .emit("lease", lease.lease())
-        .emit_currency::<_, L::Asset>("lease-asset")
-}
-
-fn emit_warning<Asset, L>(lease: &L, level: &Level) -> Emitter
+fn emit_lease<Asset>(emitter: Emitter, lease: LeaseDTO) -> Emitter
 where
     Asset: Currency,
-    L: LeaseInfo<Asset = Asset>,
 {
-    emit_lease(Emitter::of_type(Type::LiquidationWarning), lease)
+    emitter
+        .emit("customer", lease.customer)
+        .emit("lease", lease.addr)
+        .emit_currency::<_, Asset>("lease-asset")
+}
+
+fn emit_warning<Asset>(lease: LeaseDTO, level: &Level) -> Emitter
+where
+    Asset: Currency,
+{
+    emit_lease::<Asset>(Emitter::of_type(Type::LiquidationWarning), lease)
         .emit_percent_amount("ltv", level.ltv())
         .emit_to_string_value("level", level.ordinal())
 }
 
-fn emit_liquidation_start<L>(lease: &L, cause: &Cause) -> Emitter
+fn emit_liquidation_start<Asset>(lease: LeaseDTO, cause: &Cause) -> Emitter
 where
-    L: LeaseInfo,
+    Asset: Currency,
 {
-    let emitter = emit_lease(Emitter::of_type(Type::LiquidationStart), lease);
+    let emitter = emit_lease::<Asset>(Emitter::of_type(Type::LiquidationStart), lease);
     match cause {
         Cause::Liability { ltv, healthy_ltv } => emitter
             .emit("cause", "high liability")

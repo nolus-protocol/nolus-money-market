@@ -10,7 +10,7 @@ use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractError,
-    lease::{with_lease::WithLease, IntoDTOResult, Lease},
+    lease::{with_lease::WithLease, Lease},
 };
 
 pub struct PriceAlarm<'a> {
@@ -46,19 +46,6 @@ impl<'a> WithLease for PriceAlarm<'a> {
             return Err(Self::Error::Unauthorized {});
         }
 
-        //TODO revive once https://github.com/nolus-protocol/nolus-money-market/issues/49 is done
-        // let liquidation_status = lease.liquidation_status(self.now)?;
-
-        // let resp = super::emit_events(self.env, &liquidation_status).map_or_else(
-        //     || MessageResponse::messages_only(batch),
-        //     |events| MessageResponse::messages_with_events(batch, events),
-        // );
-
-        // response::response_with_messages(
-        //     &self.env.contract.address,
-        //     resp,
-        // )
-        let IntoDTOResult { batch, lease: _ } = lease.into_dto();
-        Ok(batch.into())
+        super::handle(self.now, lease)
     }
 }

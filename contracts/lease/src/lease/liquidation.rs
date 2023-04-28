@@ -39,13 +39,6 @@ pub(crate) enum Cause {
     Liability { ltv: Percent, healthy_ltv: Percent },
 }
 
-pub(crate) trait LeaseInfo {
-    type Asset: Currency;
-
-    fn lease(&self) -> &Addr;
-    fn customer(&self) -> &Addr;
-}
-
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 pub(crate) struct LiquidationInfo<Lpn>
 where
