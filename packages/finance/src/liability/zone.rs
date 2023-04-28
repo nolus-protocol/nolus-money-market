@@ -5,7 +5,7 @@ use super::Level;
 /// Liability zone representing a key property of a lease that is not pending a liquidation.
 ///
 /// A zone is defined as an interval of LTVs between two Levels.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
 pub struct Zone {
     low: Option<Level>,
@@ -50,5 +50,30 @@ impl Zone {
 
     pub fn high(&self) -> Level {
         self.high
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{liability::Zone, percent::Percent};
+
+    #[test]
+    fn ord() {
+        assert!(
+            Zone::no_warnings(Percent::HUNDRED)
+                < Zone::first(Percent::from_percent(0), Percent::from_percent(10))
+        );
+        assert!(
+            Zone::first(Percent::from_percent(0), Percent::from_percent(10))
+                < Zone::first(Percent::from_percent(0), Percent::from_percent(11))
+        );
+        assert!(
+            Zone::first(Percent::from_percent(0), Percent::from_percent(10))
+                < Zone::first(Percent::from_percent(5), Percent::from_percent(6))
+        );
+        assert!(
+            Zone::first(Percent::from_percent(23), Percent::from_percent(24))
+                < Zone::second(Percent::from_percent(0), Percent::from_percent(10))
+        );
     }
 }

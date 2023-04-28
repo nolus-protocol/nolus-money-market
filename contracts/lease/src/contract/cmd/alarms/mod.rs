@@ -15,12 +15,11 @@ where
     L: LeaseInfo,
 {
     match liquidation {
-        Status::None => None,
-        Status::Warning(level) => Some(emit_warning(lease, level)),
-        Status::PartialLiquidation { amount, cause } => {
+        Status::No(zone) => zone.low().map(|low_level| emit_warning(lease, &low_level)),
+        Status::Partial { amount, cause } => {
             Some(emit_liquidation_start(lease, cause).emit_coin("amount", *amount))
         }
-        Status::FullLiquidation(cause) => Some(emit_liquidation_start(lease, cause)),
+        Status::Full(cause) => Some(emit_liquidation_start(lease, cause)),
     }
 }
 

@@ -4,8 +4,7 @@ use finance::{
     coin::Coin,
     currency::{self, Currency},
     fraction::Fraction,
-    liability::Level,
-    percent::Percent,
+    liability::{Level, Zone},
     price::{total_of, Price},
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
@@ -33,10 +32,13 @@ where
         &mut self,
         now: &Timestamp,
     ) -> ContractResult<()> {
-        self.reschedule(now, &Status::None)
+        self.reschedule(
+            now,
+            &Status::No(Zone::no_warnings(self.liability.first_liq_warn())),
+        )
     }
 
-    //TODO take the paid amount as input since the liquidation status would not take them into account
+    //TODO keep loan state updated on payments and liquidations to have the liquidation status accurate
     pub(in crate::lease) fn reschedule_on_repay(&mut self, now: &Timestamp) -> ContractResult<()> {
         self.reschedule(now, &self.liquidation_status(*now)?)
     }
@@ -69,22 +71,9 @@ where
         debug_assert!(!currency::equal::<Lpn, Asset>());
 
         let (below, above_or_equal) = match liquidation_status {
-            Status::None | Status::PartialLiquidation { .. } => {
-                (self.liability.first_liq_warn(), None)
-            }
-            Status::Warning(Level::First(_)) => (
-                self.liability.second_liq_warn(),
-                Some(self.liability.first_liq_warn()),
-            ),
-            Status::Warning(Level::Second(_)) => (
-                self.liability.third_liq_warn(),
-                Some(self.liability.second_liq_warn()),
-            ),
-            Status::Warning(Level::Third(_)) => {
-                (self.liability.max(), Some(self.liability.third_liq_warn()))
-            }
-            Status::Warning(Level::Max(_)) => unreachable!(),
-            Status::FullLiquidation { .. } => unreachable!(),
+            Status::No(zone) => (zone.high(), zone.low()),
+            Status::Partial { .. } => unreachable!(),
+            Status::Full { .. } => unreachable!(),
         };
 
         let total_liability = self
@@ -112,17 +101,18 @@ where
     fn price_alarm_at_level(
         &self,
         liability: Coin<Lpn>,
-        alarm_at: Percent,
+        alarm_at: Level,
     ) -> ContractResult<Price<Asset, Lpn>> {
         debug_assert!(!self.amount.is_zero(), "Loan already paid!");
 
-        Ok(total_of(alarm_at.of(self.amount)).is(liability))
+        Ok(total_of(alarm_at.ltv().of(self.amount)).is(liability))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use currency::{lease::Cro, lpn::Usdc};
+    use finance::liability::Level;
     use finance::percent::Percent;
     use finance::{coin::Coin, duration::Duration, fraction::Fraction, price::total_of};
     use lpp::msg::LoanResponse;
@@ -287,10 +277,10 @@ mod tests {
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
-        let alarm_at = Percent::from_percent(80);
+        let alarm_at = Level::Max(Percent::from_percent(80));
         assert_eq!(
             lease.price_alarm_at_level(principal, alarm_at).unwrap(),
-            total_of(alarm_at.of(lease_amount)).is(principal)
+            total_of(alarm_at.ltv().of(lease_amount)).is(principal)
         );
     }
 }
