@@ -10,7 +10,6 @@ use finance::{
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
-use platform::batch::Batch;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
@@ -21,6 +20,41 @@ use crate::{
 };
 
 use super::Lease;
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+#[cfg_attr(test, derive(Debug))]
+pub(crate) enum Status<Asset>
+where
+    Asset: Currency,
+{
+    No(Zone),
+    Partial { amount: Coin<Asset>, cause: Cause },
+    Full(Cause),
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
+#[cfg_attr(test, derive(Debug))]
+pub(crate) enum Cause {
+    Overdue(),
+    Liability { ltv: Percent, healthy_ltv: Percent },
+}
+
+pub(crate) trait LeaseInfo {
+    type Asset: Currency;
+
+    fn lease(&self) -> &Addr;
+    fn customer(&self) -> &Addr;
+}
+
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+pub(crate) struct LiquidationInfo<Lpn>
+where
+    Lpn: Currency,
+{
+    pub cause: Cause,
+    pub lease: Addr,
+    pub receipt: RepayReceipt<Lpn>,
+}
 
 impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
@@ -129,49 +163,6 @@ where
             cause,
         })
     }
-}
-
-pub(crate) struct OnAlarmResult<Lpn>
-where
-    Lpn: Currency,
-{
-    pub batch: Batch,
-    pub liquidation_status: Status<Lpn>,
-}
-
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
-#[cfg_attr(test, derive(Debug))]
-pub(crate) enum Status<Asset>
-where
-    Asset: Currency,
-{
-    No(Zone),
-    Partial { amount: Coin<Asset>, cause: Cause },
-    Full(Cause),
-}
-
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
-#[cfg_attr(test, derive(Debug))]
-pub(crate) enum Cause {
-    Overdue(),
-    Liability { ltv: Percent, healthy_ltv: Percent },
-}
-
-pub(crate) trait LeaseInfo {
-    type Asset: Currency;
-
-    fn lease(&self) -> &Addr;
-    fn customer(&self) -> &Addr;
-}
-
-#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-pub(crate) struct LiquidationInfo<Lpn>
-where
-    Lpn: Currency,
-{
-    pub cause: Cause,
-    pub lease: Addr,
-    pub receipt: RepayReceipt<Lpn>,
 }
 
 #[cfg(test)]
