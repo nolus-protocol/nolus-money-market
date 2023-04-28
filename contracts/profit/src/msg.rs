@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use dex::ConnectionParams;
 use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},
@@ -9,7 +10,9 @@ use sdk::{
 pub struct InstantiateMsg {
     pub cadence_hours: u16,
     pub treasury: Addr,
+    pub oracle: Addr,
     pub timealarms: Addr,
+    pub connection_id: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -19,12 +22,17 @@ pub struct MigrateMsg {}
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     TimeAlarm {},
+    Config { cadence_hours: u16 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SudoMsg {
-    Config { cadence_hours: u16 },
+    SetupDex {
+        dex: ConnectionParams,
+        oracle: Addr,
+        time_alarms: Addr,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

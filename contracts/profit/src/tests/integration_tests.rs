@@ -6,10 +6,7 @@ use sdk::{
     },
 };
 
-use crate::{
-    msg::{InstantiateMsg, SudoMsg},
-    tests::helpers::CwTemplateContract,
-};
+use crate::{msg::InstantiateMsg, tests::helpers::CwTemplateContract};
 
 pub fn contract_template() -> Box<Contract> {
     let contract = ContractWrapper::new(
@@ -51,7 +48,9 @@ fn proper_instantiate() -> (App, CwTemplateContract, WrappedCustomMessageReceive
     let msg = InstantiateMsg {
         cadence_hours: 3u16,
         treasury: Addr::unchecked("treasury"),
+        oracle: Addr::unchecked("oracle"),
         timealarms: Addr::unchecked("timealarms"),
+        connection_id: "dex-connection".into(),
     };
     let cw_template_contract_addr = app
         .instantiate_contract(
@@ -71,6 +70,7 @@ fn proper_instantiate() -> (App, CwTemplateContract, WrappedCustomMessageReceive
 
 mod config {
     use super::*;
+    use crate::msg::ExecuteMsg;
 
     #[test]
     #[should_panic(expected = "ContractData not found")]
@@ -81,11 +81,13 @@ mod config {
             WrappedCustomMessageReceiver,
         ) = proper_instantiate();
 
-        app.wasm_sudo(
+        app.execute_contract(
+            Addr::unchecked(ADMIN),
             cw_template_contract.addr(),
-            &SudoMsg::Config {
+            &ExecuteMsg::Config {
                 cadence_hours: 12u16,
             },
+            &[],
         )
         .unwrap_err();
     }
