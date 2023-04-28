@@ -71,16 +71,15 @@ where
         addr: Addr,
         customer: Addr,
         amount: Coin<Asset>,
-        start_at: Timestamp,
         liability: Liability,
         loan: Loan<Lpn, Lpp, Profit>,
         deps: (TimeAlarms, Oracle),
-    ) -> ContractResult<Self> {
+    ) -> Self {
         debug_assert!(!amount.is_zero());
         debug_assert!(!currency::equal::<Lpn, Asset>());
         // TODO specify that Lpn is of Lpns and Asset is of LeaseGroup
 
-        let mut res = Self {
+        Self {
             addr,
             customer,
             amount,
@@ -88,9 +87,7 @@ where
             loan,
             alarms: deps.0,
             oracle: deps.1,
-        };
-        res.initial_alarm_schedule(&start_at)?;
-        Ok(res)
+        }
     }
 
     pub(super) fn from_dto(
@@ -625,7 +622,6 @@ mod tests {
             addr,
             Addr::unchecked(CUSTOMER),
             amount,
-            LEASE_START,
             Liability::new(
                 Percent::from_percent(65),
                 Percent::from_percent(5),
@@ -638,7 +634,6 @@ mod tests {
             loan,
             (time_alarms, oracle),
         )
-        .unwrap()
     }
 
     pub fn open_lease(

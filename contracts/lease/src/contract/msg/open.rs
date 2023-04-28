@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use finance::{coin::Coin, currency::Currency};
+use finance::{coin::Coin, currency::Currency, liability::Zone};
 use lpp::stub::lender::{LppLender as LppLenderTrait, LppLenderRef};
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use profit::stub::{Profit as ProfitTrait, ProfitRef};
@@ -88,15 +88,18 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         );
         let amount: Coin<Asset> = self.amount.try_into()?;
 
-        Ok(Lease::<_, Asset, _, _, _, _>::new(
+        let mut lease = Lease::<_, Asset, _, _, _, _>::new(
             self.lease_addr,
             self.form.customer,
             amount,
-            self.start_at,
             liability,
             loan,
             (alarms, oracle),
-        )?
-        .into_dto())
+        );
+        lease.reschedule(
+            &self.start_at,
+            &Zone::no_warnings(liability.first_liq_warn()),
+        )?;
+        Ok(lease.into_dto())
     }
 }

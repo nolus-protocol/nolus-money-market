@@ -25,15 +25,8 @@ where
     Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
-    pub(in crate::lease) fn initial_alarm_schedule(
-        &mut self,
-        now: &Timestamp,
-    ) -> ContractResult<()> {
-        self.reschedule(now, &Zone::no_warnings(self.liability.first_liq_warn()))
-    }
-
     //TODO keep loan state updated on payments and liquidations to have the liquidation status accurate
-    pub(in crate::lease) fn reschedule(
+    pub(crate) fn reschedule(
         &mut self,
         now: &Timestamp,
         liquidation_zone: &Zone,
@@ -97,14 +90,13 @@ where
 #[cfg(test)]
 mod tests {
     use currency::{lease::Cro, lpn::Usdc};
-    use finance::liability::Level;
+    use finance::liability::Zone;
     use finance::percent::Percent;
     use finance::{coin::Coin, duration::Duration, fraction::Fraction, price::total_of};
     use lpp::msg::LoanResponse;
     use marketprice::SpotPrice;
     use oracle::{alarms::Alarm, msg::ExecuteMsg::AddPriceAlarm};
     use platform::batch::Batch;
-    use sdk::cosmwasm_std::Timestamp;
     use sdk::cosmwasm_std::{to_binary, Addr, WasmMsg};
     use timealarms::msg::ExecuteMsg::AddAlarm;
 
@@ -124,7 +116,7 @@ mod tests {
         let lease_addr = Addr::unchecked("lease");
         let timealarms_addr = Addr::unchecked("timealarms");
         let oracle_addr = Addr::unchecked("oracle");
-        let lease = lease::tests::create_lease::<Lpn, Asset, _, _, _, _>(
+        let mut lease = lease::tests::create_lease::<Lpn, Asset, _, _, _, _>(
             lease_addr,
             asset,
             LppLenderLocalStub::from(Some(loan())),
@@ -146,6 +138,12 @@ mod tests {
                 + l.current_interest_due
                 + l.current_margin_interest_due
         };
+        lease
+            .reschedule(
+                &LEASE_START,
+                &Zone::no_warnings(lease.liability.first_liq_warn()),
+            )
+            .unwrap();
 
         assert_eq!(lease.into_dto().batch, {
             let mut batch = Batch::default();
@@ -190,15 +188,14 @@ mod tests {
                     - lease.liability.recalculation_time()),
             )
             .unwrap();
-        assert_eq!(lease.alarms.batch, {
+        let recalc_time = lease.loan.grace_period_end() - lease.liability.recalculation_time();
+
+        assert_eq!(lease.into_dto().batch, {
             let mut batch = Batch::default();
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: String::new(),
-                msg: to_binary(&AddAlarm {
-                    time: lease.loan.grace_period_end() - lease.liability.recalculation_time(),
-                })
-                .unwrap(),
+                msg: to_binary(&AddAlarm { time: recalc_time }).unwrap(),
                 funds: vec![],
             });
 
@@ -224,16 +221,14 @@ mod tests {
                     + Duration::from_nanos(1)),
             )
             .unwrap();
+        let recalc_time = lease.loan.grace_period_end();
 
-        assert_eq!(lease.alarms.batch, {
+        assert_eq!(lease.into_dto().batch, {
             let mut batch = Batch::default();
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
                 contract_addr: String::new(),
-                msg: to_binary(&AddAlarm {
-                    time: lease.loan.grace_period_end(),
-                })
-                .unwrap(),
+                msg: to_binary(&AddAlarm { time: recalc_time }).unwrap(),
                 funds: vec![],
             });
 
@@ -244,17 +239,17 @@ mod tests {
     #[test]
     fn price_alarm_by_percent() {
         let principal = 300.into();
-        let interest_rate = Percent::from_permille(50);
-        // LPP loan
+        let interest_rate = Percent::from_permille(145);
+
         let loan = LoanResponse {
             principal_due: principal,
             annual_interest_rate: interest_rate,
-            interest_paid: Timestamp::from_nanos(0),
+            interest_paid: LEASE_START,
         };
 
         let lease_addr = Addr::unchecked("lease");
         let lease_amount = 1000.into();
-        let lease = open_lease(
+        let mut lease = open_lease(
             lease_addr,
             lease_amount,
             Some(loan),
@@ -262,10 +257,50 @@ mod tests {
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
-        let alarm_at = Level::Max(Percent::from_percent(80));
-        assert_eq!(
-            lease.price_alarm_at_level(principal, alarm_at).unwrap(),
-            total_of(alarm_at.ltv().of(lease_amount)).is(principal)
+
+        let reschedule_at = LEASE_START + Duration::from_days(50);
+        let projected_liability = {
+            let l = lease
+                .loan
+                .state(
+                    reschedule_at + lease.liability.recalculation_time(),
+                    lease.addr.clone(),
+                )
+                .unwrap()
+                .unwrap();
+            l.principal_due
+                + l.previous_interest_due
+                + l.previous_margin_interest_due
+                + l.current_interest_due
+                + l.current_margin_interest_due
+        };
+        dbg!(projected_liability);
+
+        let zone = Zone::second(
+            lease.liability.second_liq_warn(),
+            lease.liability.third_liq_warn(),
         );
+        lease.reschedule_price_alarm(&reschedule_at, &zone).unwrap();
+        let exp_below: SpotPrice = total_of(zone.high().ltv().of(lease_amount))
+            .is(projected_liability)
+            .into();
+        let exp_above: SpotPrice = total_of(zone.low().unwrap().ltv().of(lease_amount))
+            .is(projected_liability)
+            .into();
+
+        assert_eq!(lease.into_dto().batch, {
+            let mut batch = Batch::default();
+
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: String::new(),
+                msg: to_binary(&AddPriceAlarm {
+                    alarm: Alarm::new(exp_below, Some(exp_above)),
+                })
+                .unwrap(),
+                funds: vec![],
+            });
+
+            batch
+        });
     }
 }
