@@ -18,7 +18,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{self, opening::OngoingTrx, DownpaymentCoin, NewLeaseForm, StateResponse},
     contract::{
-        cmd::OpenLoanRespResult,
+        cmd::{self, OpenLoanRespResult},
         state::{opened::active::Active, SwapResult},
         Lease,
     },
@@ -136,7 +136,8 @@ impl SwapTask for BuyAsset {
         env: &Env,
         querier: &QuerierWrapper<'_>,
     ) -> Self::Result {
-        let IntoDTOResult { lease, batch } = self.form.into_lease(
+        let IntoDTOResult { lease, batch } = cmd::open_lease(
+            self.form,
             self.dex_account.owner().clone(),
             env.block.time,
             &amount_out,

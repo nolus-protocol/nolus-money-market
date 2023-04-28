@@ -17,38 +17,36 @@ use crate::{
     loan::Loan,
 };
 
-impl NewLeaseForm {
-    pub(crate) fn into_lease(
-        self,
-        lease_addr: Addr,
-        start_at: Timestamp,
-        amount: &LeaseCoin,
-        querier: &QuerierWrapper<'_>,
-        deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
-    ) -> ContractResult<IntoDTOResult> {
-        debug_assert_eq!(amount.ticker(), &self.currency);
-        debug_assert!(amount.amount() > 0);
+pub(crate) fn open_lease(
+    form: NewLeaseForm,
+    lease_addr: Addr,
+    start_at: Timestamp,
+    amount: &LeaseCoin,
+    querier: &QuerierWrapper<'_>,
+    deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
+) -> ContractResult<IntoDTOResult> {
+    debug_assert_eq!(amount.ticker(), &form.currency);
+    debug_assert!(amount.amount() > 0);
 
-        let profit = ProfitRef::new(self.loan.profit.clone(), querier)?;
+    let profit = ProfitRef::new(form.loan.profit.clone(), querier)?;
 
-        let cmd = LeaseFactory {
-            form: self,
-            lease_addr,
-            start_at,
-            amount,
-        };
-        //TODO avoid cloning by extending the trait WithLeaseDeps to provide it
-        let asset_currency = cmd.form.currency.clone();
-        with_lease_deps::execute(
-            cmd,
-            &asset_currency,
-            deps.0,
-            profit,
-            deps.2,
-            deps.1,
-            querier,
-        )
-    }
+    let cmd = LeaseFactory {
+        form,
+        lease_addr,
+        start_at,
+        amount,
+    };
+    //TODO avoid cloning by extending the trait WithLeaseDeps to provide it
+    let asset_currency = cmd.form.currency.clone();
+    with_lease_deps::execute(
+        cmd,
+        &asset_currency,
+        deps.0,
+        profit,
+        deps.2,
+        deps.1,
+        querier,
+    )
 }
 
 struct LeaseFactory<'a> {
