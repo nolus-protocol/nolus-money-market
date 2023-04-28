@@ -14,10 +14,7 @@ use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
-use crate::{
-    error::ContractResult,
-    lease::{Lease, Status},
-};
+use crate::{error::ContractResult, lease::Lease};
 
 impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
@@ -32,49 +29,36 @@ where
         &mut self,
         now: &Timestamp,
     ) -> ContractResult<()> {
-        self.reschedule(
-            now,
-            &Status::No(Zone::no_warnings(self.liability.first_liq_warn())),
-        )
+        self.reschedule(now, &Zone::no_warnings(self.liability.first_liq_warn()))
     }
 
     //TODO keep loan state updated on payments and liquidations to have the liquidation status accurate
-    pub(in crate::lease) fn reschedule_on_repay(&mut self, now: &Timestamp) -> ContractResult<()> {
-        self.reschedule(now, &self.liquidation_status(*now)?)
-    }
-
-    fn reschedule(
+    pub(in crate::lease) fn reschedule(
         &mut self,
         now: &Timestamp,
-        liquidation_status: &Status<Asset>,
+        liquidation_zone: &Zone,
     ) -> ContractResult<()> {
         self.reschedule_time_alarm(now)?;
 
-        self.reschedule_price_alarm(now, liquidation_status)
+        self.reschedule_price_alarm(now, liquidation_zone)
     }
 
     fn reschedule_time_alarm(&mut self, now: &Timestamp) -> ContractResult<()> {
         self.alarms
-            .add_alarm({
+            .add_alarm(
                 self.loan
                     .grace_period_end()
-                    .min(*now + self.liability.recalculation_time())
-            })
+                    .min(*now + self.liability.recalculation_time()),
+            )
             .map_err(Into::into)
     }
 
     fn reschedule_price_alarm(
         &mut self,
         now: &Timestamp,
-        liquidation_status: &Status<Asset>,
+        liquidation_zone: &Zone,
     ) -> ContractResult<()> {
         debug_assert!(!currency::equal::<Lpn, Asset>());
-
-        let (below, above_or_equal) = match liquidation_status {
-            Status::No(zone) => (zone.high(), zone.low()),
-            Status::Partial { .. } => unreachable!(),
-            Status::Full { .. } => unreachable!(),
-        };
 
         let total_liability = self
             .loan
@@ -84,10 +68,11 @@ where
             )?
             .total;
 
-        let below = self.price_alarm_at_level(total_liability, below)?;
+        let below = self.price_alarm_at_level(total_liability, liquidation_zone.high())?;
 
-        let above_or_equal = above_or_equal
-            .map(|above| self.price_alarm_at_level(total_liability, above))
+        let above_or_equal = liquidation_zone
+            .low()
+            .map(|low| self.price_alarm_at_level(total_liability, low))
             .transpose()?;
 
         self.oracle

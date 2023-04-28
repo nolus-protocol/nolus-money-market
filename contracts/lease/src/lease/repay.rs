@@ -14,7 +14,7 @@ use crate::{
     loan::RepayReceipt,
 };
 
-use super::IntoDTOResult;
+use super::{IntoDTOResult, Status};
 
 impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
 where
@@ -32,7 +32,11 @@ where
     ) -> ContractResult<Result<Lpn>> {
         let receipt = self.no_reschedule_repay(payment, now)?;
 
-        self.reschedule_on_repay(&now)?;
+        //TODO move the liquidation status checks and alarm rescheduling up to the cmd-s
+        match self.liquidation_status(now)? {
+            Status::No(zone) => self.reschedule(&now, &zone)?,
+            _ => todo!(),
+        }
 
         let IntoDTOResult { lease, batch } = self.into_dto();
 
