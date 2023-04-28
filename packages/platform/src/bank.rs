@@ -134,7 +134,6 @@ impl<'a> BankAccountView for BankView<'a> {
                     .into_iter()
                     .filter_map(|cw_coin| maybe_from_cosmwasm_any_impl::<G, _>(cw_coin, &cmd))
                     .reduce_results(Aggregate::aggregate)
-                    .transpose()
             })
             .map_err(Into::into)
     }
@@ -311,6 +310,8 @@ impl<T> Aggregate for Vec<T> {
     }
 }
 
+/// Temporary replacement for functionality similar to
+/// [`Iterator::try_reduce`] until the feature is stabilized.
 trait ReduceResults
 where
     Self: Iterator<Item = StdResult<Self::InnerItem, Self::Error>>,
@@ -318,7 +319,7 @@ where
     type InnerItem;
     type Error: StdError;
 
-    fn reduce_results<F>(&mut self, f: F) -> StdResult<Option<Self::InnerItem>, Self::Error>
+    fn reduce_results<F>(&mut self, f: F) -> Option<StdResult<Self::InnerItem, Self::Error>>
     where
         F: FnMut(Self::InnerItem, Self::InnerItem) -> Self::InnerItem;
 }
@@ -331,18 +332,16 @@ where
     type InnerItem = T;
     type Error = E;
 
-    fn reduce_results<F>(&mut self, mut f: F) -> StdResult<Option<T>, E>
+    fn reduce_results<F>(&mut self, mut f: F) -> Option<StdResult<T, E>>
     where
         F: FnMut(T, T) -> T,
     {
-        Ok(if let Some(mut last) = self.next().transpose()? {
-            for item in self {
-                last = f(last, item?);
-            }
-
-            Some(last)
-        } else {
-            None
+        self.next().map(|first: StdResult<T, E>| {
+            first.and_then(|first: T| {
+                self.try_fold(first, |acc: T, element: StdResult<T, E>| {
+                    element.map(|element: T| f(acc, element))
+                })
+            })
         })
     }
 }
