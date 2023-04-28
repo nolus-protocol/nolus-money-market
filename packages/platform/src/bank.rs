@@ -366,18 +366,92 @@ mod test {
         cw_multi_test::BasicApp,
     };
 
-    use crate::{
-        bank::{BankAccountView, BankView},
-        coin_legacy,
-        error::Error,
-    };
+    use crate::{coin_legacy, error::Error};
 
-    use super::may_received;
+    use super::{may_received, BankAccountView as _, BankView, ReduceResults as _};
 
     type TheCurrency = Usdc;
     type ExtraCurrency = Dai;
 
     const AMOUNT: Amount = 42;
+
+    #[derive(Debug, Copy, Clone, Eq, PartialEq, thiserror::Error)]
+    #[error("Test error")]
+    struct TestError;
+
+    #[test]
+    fn reduce_results_empty() {
+        assert_eq!(
+            [Ok::<(), TestError>(()); 0]
+                .into_iter()
+                .reduce_results(|(), ()| unreachable!()),
+            None
+        );
+    }
+
+    #[test]
+    fn reduce_results_1_ok() {
+        assert_eq!(
+            [Ok::<u8, TestError>(1)]
+                .into_iter()
+                .reduce_results(|_, _| unreachable!()),
+            Some(Ok(1))
+        );
+    }
+
+    #[test]
+    fn reduce_results_3_ok() {
+        assert_eq!(
+            [Ok::<u8, TestError>(1), Ok(2), Ok(3)]
+                .into_iter()
+                .reduce_results(|acc, element| acc + element),
+            Some(Ok(6))
+        );
+    }
+
+    #[test]
+    fn reduce_results_1_err() {
+        assert_eq!(
+            [Err::<u8, TestError>(TestError)]
+                .into_iter()
+                .reduce_results(|_, _| unreachable!()),
+            Some(Err(TestError))
+        );
+    }
+
+    #[test]
+    fn reduce_results_1_ok_1_err() {
+        assert_eq!(
+            [Ok::<u8, TestError>(1), Err(TestError)]
+                .into_iter()
+                .reduce_results(|_, _| unreachable!()),
+            Some(Err(TestError))
+        );
+    }
+
+    #[test]
+    fn reduce_results_1_err_1_ok() {
+        assert_eq!(
+            [Err::<u8, TestError>(TestError), Ok(2)]
+                .into_iter()
+                .reduce_results(|_, _| unreachable!()),
+            Some(Err(TestError))
+        );
+    }
+
+    #[test]
+    fn reduce_results_2_ok_1_err_1_ok() {
+        assert_eq!(
+            [Ok::<u8, TestError>(1), Ok(2), Err(TestError), Ok(4)]
+                .into_iter()
+                .reduce_results(|acc, element| {
+                    assert_ne!(element, 4);
+
+                    acc + element
+                }),
+            Some(Err(TestError))
+        );
+    }
 
     #[test]
     fn may_received_no_input() {
