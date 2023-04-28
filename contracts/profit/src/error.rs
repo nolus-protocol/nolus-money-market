@@ -8,6 +8,15 @@ pub enum ContractError {
     Std(#[from] StdError),
 
     #[error("[Profit] {0}")]
+    Dex(#[from] dex::Error),
+
+    #[error("[Profit] {0}")]
+    Finance(#[from] finance::error::Error),
+
+    #[error("[Profit] {0}")]
+    Oracle(#[from] oracle::ContractError),
+
+    #[error("[Profit] {0}")]
     Platform(#[from] platform::error::Error),
 
     #[error("[Profit] {0}")]
@@ -25,6 +34,9 @@ pub enum ContractError {
     #[error("[Profit] Alarm comming from unknown address: {0:?}")]
     UnrecognisedAlarm(Addr),
 
+    #[error("[Profit] Operation is not supported at this time. Cause: {0}")]
+    UnsupportedOperation(String),
+
     #[error(
         "[Profit] Invalid time configuration. Current profit transfer time is before the last transfer time"
     )]
@@ -32,4 +44,13 @@ pub enum ContractError {
 
     #[error("[Profit] EmptyBalance. No profit to dispatch")]
     EmptyBalance {},
+}
+
+impl ContractError {
+    pub(crate) fn unsupported_operation<Ctx>(context: Ctx) -> Self
+    where
+        Ctx: ToString,
+    {
+        Self::UnsupportedOperation(context.to_string())
+    }
 }

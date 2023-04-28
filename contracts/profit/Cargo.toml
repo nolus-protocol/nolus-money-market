@@ -1,6 +1,6 @@
 [package]
 name = "profit"
-version = "0.2.3"
+version = "0.3.0"
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -20,7 +20,9 @@ testing = []
 [dependencies]
 access-control = { workspace = true }
 currency = { workspace = true }
+dex = { workspace = true }
 finance = { workspace = true }
+oracle = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 timealarms = { workspace = true, features = ["stub"]}

@@ -1,83 +1,52 @@
 use currency::native::Nls;
-use finance::duration::Duration;
+use finance::coin::Coin;
 use platform::{
-    bank::{self, BankAccount, BankAccountView},
-    batch::{Batch, Emit, Emitter},
-    message::Response as MessageResponse,
+    bank::BankAccount,
+    batch::{Batch, Emit as _, Emitter},
+    error::Error as PlatformError,
 };
-use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Storage, Timestamp};
-use timealarms::stub::TimeAlarmsRef;
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage};
 
-use crate::{msg::ConfigResponse, result::ContractResult, state::config::Config, ContractError};
+use crate::{
+    msg::ConfigResponse,
+    result::ContractResult,
+    state::{
+        config::Config,
+        contract_state::{State, STATE},
+    },
+};
 
-pub struct Profit {}
+pub struct Profit;
 
 impl Profit {
-    pub(crate) fn try_config(storage: &mut dyn Storage, cadence_hours: u16) -> ContractResult<()> {
-        Config::update(storage, cadence_hours)
-    }
-
-    pub(crate) fn transfer(
-        deps: Deps<'_>,
+    pub(crate) fn transfer_nls<B>(
+        mut account: B,
         env: &Env,
-        timealarms: Addr,
-    ) -> ContractResult<MessageResponse> {
-        let config = Config::load(deps.storage)?;
+        treasury_addr: &Addr,
+    ) -> Result<(Batch, Emitter), PlatformError>
+    where
+        B: BankAccount,
+    {
+        let balance_nls: Coin<Nls> = account.balance()?;
 
-        let balance = deps.querier.query_all_balances(&env.contract.address)?;
+        account.send(balance_nls, treasury_addr);
 
-        if balance.is_empty() {
-            return Err(ContractError::EmptyBalance {});
-        }
-
-        Self::setup_alarm(
-            timealarms,
-            &deps.querier,
-            env.block.time,
-            Duration::from_hours(config.cadence_hours),
-        )
-        .and_then(|time_alarm| add_transfers(time_alarm, env, &deps.querier, config))
-        // TODO add in_stable(wasm-tr-profit.profit-amount) The amount transferred in stable.
-        //.emit_coin("profit-amount", balance))
+        Ok((
+            account.into(),
+            Emitter::of_type("tr-profit")
+                .emit_tx_info(env)
+                .emit_coin("profit-amount", balance_nls),
+        ))
     }
 
     pub fn query_config(storage: &dyn Storage) -> ContractResult<ConfigResponse> {
-        Config::load(storage).map(|config| ConfigResponse {
-            cadence_hours: config.cadence_hours,
-        })
-    }
-
-    pub(crate) fn setup_alarm(
-        timealarms: Addr,
-        querier: &QuerierWrapper<'_>,
-        current_time: Timestamp,
-        cadence: Duration,
-    ) -> ContractResult<Batch> {
-        TimeAlarmsRef::new(timealarms, querier)
-            .and_then(|timealarms| timealarms.setup_alarm(current_time + cadence))
+        STATE
+            .load(storage)
             .map_err(Into::into)
+            .and_then(|state: State| {
+                state.config().map(|config: &Config| ConfigResponse {
+                    cadence_hours: config.cadence_hours(),
+                })
+            })
     }
-}
-
-fn add_transfers(
-    messages: Batch,
-    env: &Env,
-    querier: &QuerierWrapper<'_>,
-    config: Config,
-) -> ContractResult<MessageResponse> {
-    let mut bank = bank::account(&env.contract.address, querier);
-    bank.balance::<Nls>()
-        .map(|balance| {
-            bank.send(balance, &config.treasury);
-            Emitter::of_type("tr-profit")
-                .emit_tx_info(env)
-                .emit_coin("profit-amount", balance)
-        })
-        .map(|emitter| {
-            MessageResponse::messages_with_events(
-                Into::<Batch>::into(bank).merge(messages),
-                emitter,
-            )
-        })
-        .map_err(Into::into)
 }
