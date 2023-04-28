@@ -651,23 +651,19 @@ mod tests {
         TimeAlarmsLocalStub,
         OracleLocalStub,
     > {
-        let loan_init = loan_response.clone().or_else(|| Some(loan()));
-        let into_dto = create_lease::<TestLpn, TestCurrency, _, TimeAlarmsLocalStub, _, _>(
-            lease_addr,
-            amount,
-            LppLenderLocalStub::from(loan_init),
-            Addr::unchecked("dummy").into(),
-            OracleLocalStub::from(oracle_addr.clone()),
-            ProfitLocalStubUnreachable {},
-        )
-        .into_dto();
-
         let lpp: LppLenderLocalStub<TestLpn> = loan_response.into();
         let time_alarms: TimeAlarmsLocalStub = time_alarms_addr.into();
         let oracle: OracleLocalStub = oracle_addr.into();
         let profit: ProfitLocalStub = profit_addr.into();
 
-        Lease::from_dto(into_dto.lease, lpp, time_alarms, oracle, profit)
+        create_lease::<TestLpn, TestCurrency, _, TimeAlarmsLocalStub, _, _>(
+            lease_addr,
+            amount,
+            lpp,
+            time_alarms,
+            oracle,
+            profit,
+        )
     }
 
     pub fn request_state(

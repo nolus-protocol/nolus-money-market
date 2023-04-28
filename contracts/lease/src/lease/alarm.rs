@@ -89,7 +89,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use currency::{lease::Cro, lpn::Usdc};
     use finance::liability::Zone;
     use finance::percent::Percent;
     use finance::{coin::Coin, duration::Duration, fraction::Fraction, price::total_of};
@@ -102,27 +101,22 @@ mod tests {
 
     use crate::lease::{
         self,
-        tests::{
-            loan, open_lease, LppLenderLocalStub, OracleLocalStub, ProfitLocalStubUnreachable,
-            TimeAlarmsLocalStub, LEASE_START,
-        },
+        tests::{loan, open_lease, LEASE_START},
     };
 
     #[test]
     fn initial_alarm_schedule() {
-        type Lpn = Usdc;
-        type Asset = Cro;
         let asset = Coin::from(10);
         let lease_addr = Addr::unchecked("lease");
         let timealarms_addr = Addr::unchecked("timealarms");
         let oracle_addr = Addr::unchecked("oracle");
-        let mut lease = lease::tests::create_lease::<Lpn, Asset, _, _, _, _>(
+        let mut lease = lease::tests::open_lease(
             lease_addr,
             asset,
-            LppLenderLocalStub::from(Some(loan())),
-            TimeAlarmsLocalStub::from(timealarms_addr.clone()),
-            OracleLocalStub::from(oracle_addr.clone()),
-            ProfitLocalStubUnreachable,
+            Some(loan()),
+            timealarms_addr.clone(),
+            oracle_addr.clone(),
+            Addr::unchecked(String::new()),
         );
         let recalc_time = LEASE_START + lease.liability.recalculation_time();
         let liability_alarm_on = lease.liability.first_liq_warn();
