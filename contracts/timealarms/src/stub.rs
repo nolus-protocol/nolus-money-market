@@ -18,8 +18,6 @@ pub trait TimeAlarms
 where
     Self: Into<TimeAlarmsBatch>,
 {
-    fn owned_by(&self, addr: &Addr) -> bool;
-
     fn add_alarm(&mut self, time: Timestamp) -> Result<()>;
 }
 
@@ -44,7 +42,7 @@ impl TimeAlarmsRef {
         Ok(Self { addr })
     }
 
-    fn owned_by(&self, addr: &Addr) -> bool {
+    pub fn owned_by(&self, addr: &Addr) -> bool {
         &self.addr == addr
     }
 
@@ -103,10 +101,6 @@ impl TimeAlarmsStub {
 }
 
 impl TimeAlarms for TimeAlarmsStub {
-    fn owned_by(&self, addr: &Addr) -> bool {
-        self.time_alarms_ref.owned_by(addr)
-    }
-
     fn add_alarm(&mut self, time: Timestamp) -> Result<()> {
         self.batch.schedule_execute_no_reply(wasm_execute(
             self.addr().clone(),

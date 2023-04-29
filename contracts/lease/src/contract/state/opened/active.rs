@@ -12,7 +12,7 @@ use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timesta
 use crate::{
     api::{DownpaymentCoin, ExecuteMsg, LpnCoin, StateResponse},
     contract::{
-        cmd::{OpenLoanRespResult, PriceAlarm, Repay, RepayResult, TimeAlarm},
+        cmd::{LiquidationStatus, OpenLoanRespResult, Repay, RepayResult},
         state::{handler, paid, Handler, Response},
         Contract, Lease,
     },
@@ -94,9 +94,13 @@ impl Active {
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
+        if !self.lease.lease.oracle.owned_by(&info.sender) {
+            return Err(ContractError::Unauthorized {});
+        }
+
         let response = with_lease::execute(
             self.lease.lease.clone(),
-            PriceAlarm::new(&info.sender, env.block.time),
+            LiquidationStatus::new(env.block.time),
             querier,
         )?;
 
@@ -109,9 +113,13 @@ impl Active {
         env: &Env,
         info: MessageInfo,
     ) -> ContractResult<Response> {
+        if !self.lease.lease.time_alarms.owned_by(&info.sender) {
+            return Err(ContractError::Unauthorized {});
+        }
+
         let response = with_lease::execute(
             self.lease.lease.clone(),
-            TimeAlarm::new(&info.sender, env.block.time),
+            LiquidationStatus::new(env.block.time),
             querier,
         )?;
 

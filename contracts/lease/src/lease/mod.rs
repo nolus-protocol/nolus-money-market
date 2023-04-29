@@ -135,14 +135,6 @@ where
         }
     }
 
-    pub(crate) fn sent_by_time_alarms(&self, addr: &Addr) -> bool {
-        self.alarms.owned_by(addr)
-    }
-
-    pub(crate) fn sent_by_oracle(&self, addr: &Addr) -> bool {
-        self.oracle.owned_by(addr)
-    }
-
     pub(crate) fn close<B>(mut self, lease_account: B) -> ContractResult<IntoDTOResult>
     where
         B: BankAccount,
@@ -418,10 +410,6 @@ mod tests {
     }
 
     impl TimeAlarms for TimeAlarmsLocalStub {
-        fn owned_by(&self, addr: &Addr) -> bool {
-            &self.address == addr
-        }
-
         fn add_alarm(&mut self, time: Timestamp) -> timealarms::stub::Result<()> {
             self.batch.schedule_execute_no_reply(wasm_execute(
                 self.address.clone(),
@@ -445,10 +433,6 @@ mod tests {
     pub struct TimeAlarmsLocalStubUnreachable;
 
     impl TimeAlarms for TimeAlarmsLocalStubUnreachable {
-        fn owned_by(&self, _addr: &Addr) -> bool {
-            unreachable!()
-        }
-
         fn add_alarm(&mut self, _time: Timestamp) -> timealarms::stub::Result<()> {
             unreachable!()
         }

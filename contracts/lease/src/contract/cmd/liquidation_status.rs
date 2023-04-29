@@ -14,42 +14,55 @@ use serde::Serialize;
 use crate::{
     error::ContractError,
     event::Type,
-    lease::{Cause, IntoDTOResult, Lease, LeaseDTO, Status},
+    lease::{with_lease::WithLease, Cause, IntoDTOResult, Lease, LeaseDTO, Status},
 };
 
-pub mod price;
-pub mod time;
-
-fn handle<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
+pub struct LiquidationStatus {
     now: Timestamp,
-    mut lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
-) -> Result<MessageResponse, ContractError>
-where
-    Lpn: Currency + Serialize,
-    Lpp: LppLenderTrait<Lpn>,
-    TimeAlarms: TimeAlarmsTrait,
-    Oracle: OracleTrait<Lpn>,
-    Profit: ProfitTrait,
-    Asset: Currency + Serialize,
-{
-    let status = lease.liquidation_status(now)?;
-    match status {
-        Status::No(zone) => lease.reschedule(&now, &zone)?,
-        Status::Partial {
-            amount: _,
-            cause: _,
-        } => todo!("init liquidation"),
-        Status::Full(_cause) => todo!("init liquidation"),
-    }
+}
 
-    let IntoDTOResult { batch, lease } = lease.into_dto();
-    Ok(
-        if let Some(events) = emit_events::<_, Asset>(&status, lease) {
-            MessageResponse::messages_with_events(batch, events)
-        } else {
-            MessageResponse::messages_only(batch)
-        },
-    )
+impl LiquidationStatus {
+    pub fn new(now: Timestamp) -> Self {
+        Self { now }
+    }
+}
+
+impl WithLease for LiquidationStatus {
+    type Output = MessageResponse;
+
+    type Error = ContractError;
+
+    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
+        self,
+        mut lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
+    ) -> Result<Self::Output, Self::Error>
+    where
+        Lpn: Currency + Serialize,
+        Lpp: LppLenderTrait<Lpn>,
+        TimeAlarms: TimeAlarmsTrait,
+        Oracle: OracleTrait<Lpn>,
+        Profit: ProfitTrait,
+        Asset: Currency + Serialize,
+    {
+        let status = lease.liquidation_status(self.now)?;
+        match status {
+            Status::No(zone) => lease.reschedule(&self.now, &zone)?,
+            Status::Partial {
+                amount: _,
+                cause: _,
+            } => todo!("init liquidation"),
+            Status::Full(_cause) => todo!("init liquidation"),
+        }
+
+        let IntoDTOResult { batch, lease } = lease.into_dto();
+        Ok(
+            if let Some(events) = emit_events::<_, Asset>(&status, lease) {
+                MessageResponse::messages_with_events(batch, events)
+            } else {
+                MessageResponse::messages_only(batch)
+            },
+        )
+    }
 }
 
 fn emit_events<Lpn, Asset>(liquidation: &Status<Lpn>, lease: LeaseDTO) -> Option<Emitter>
