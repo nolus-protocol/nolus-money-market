@@ -59,7 +59,7 @@ pub mod opened {
     use sdk::schemars::{self, JsonSchema};
     use serde::{Deserialize, Serialize};
 
-    use crate::api::{LpnCoin, PaymentCoin};
+    use crate::api::{LeaseCoin, PaymentCoin};
 
     #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
     #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
@@ -70,7 +70,7 @@ pub mod opened {
             in_progress: RepayTrx,
         },
         Liquidation {
-            amount_out: LpnCoin,
+            liquidation: LeaseCoin,
             in_progress: LiquidateTrx,
         },
     }
@@ -90,7 +90,8 @@ pub mod opened {
     #[serde(rename_all = "snake_case")]
     pub enum LiquidateTrx {
         Swap,
-        TransferIn,
+        TransferInInit,
+        TransferInFinish,
     }
 }
 

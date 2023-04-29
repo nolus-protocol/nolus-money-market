@@ -34,7 +34,10 @@ pub use {
         NO_ICS27_MESSAGE_ENTERING_NEXT_STATE,
     },
     ica_recover::InRecovery,
-    out_local::{start_local_local, StartLocalLocalState, State as StateLocalOut},
+    out_local::{
+        start_local_local, start_remote_local, StartLocalLocalState, StartRemoteLocalState,
+        State as StateLocalOut,
+    },
     out_remote::{start as start_local_remote, StartLocalRemoteState, State as StateRemoteOut},
     response::{ContinueResult, Handler, Response, Result},
     swap_coins::{on_coin, on_coins},
@@ -77,7 +80,7 @@ pub struct TransferInFinishState {}
 
 /// Contract in a swap state
 ///
-/// The states are `TransferOutState`, `SwapState`, and `TransferInState`
+/// The states are `TransferOutState`, `SwapState`, `TransferInInitState`, and `TransferInFinishState`
 pub trait ContractInSwap<State, StateResponse>
 where
     Self: Sized,

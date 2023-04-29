@@ -96,7 +96,7 @@ impl Active {
     ) -> ContractResult<Response> {
         let response = with_lease::execute(
             self.lease.lease.clone(),
-            PriceAlarm::new(env, &info.sender, env.block.time),
+            PriceAlarm::new(&info.sender, env.block.time),
             querier,
         )?;
 
@@ -111,7 +111,7 @@ impl Active {
     ) -> ContractResult<Response> {
         let response = with_lease::execute(
             self.lease.lease.clone(),
-            TimeAlarm::new(env, &info.sender, env.block.time),
+            TimeAlarm::new(&info.sender, env.block.time),
             querier,
         )?;
 

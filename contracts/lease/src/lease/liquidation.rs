@@ -11,13 +11,10 @@ use finance::{
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
 use profit::stub::Profit as ProfitTrait;
-use sdk::cosmwasm_std::{Addr, Timestamp};
+use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
-use crate::{
-    error::ContractResult,
-    loan::{LiabilityStatus, RepayReceipt},
-};
+use crate::{error::ContractResult, loan::LiabilityStatus};
 
 use super::Lease;
 
@@ -37,16 +34,6 @@ where
 pub(crate) enum Cause {
     Overdue(),
     Liability { ltv: Percent, healthy_ltv: Percent },
-}
-
-#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-pub(crate) struct LiquidationInfo<Lpn>
-where
-    Lpn: Currency,
-{
-    pub cause: Cause,
-    pub lease: Addr,
-    pub receipt: RepayReceipt<Lpn>,
 }
 
 impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>

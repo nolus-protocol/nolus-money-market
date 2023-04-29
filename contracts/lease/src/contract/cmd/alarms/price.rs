@@ -5,7 +5,7 @@ use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::message::Response as MessageResponse;
 use profit::stub::Profit as ProfitTrait;
-use sdk::cosmwasm_std::{Addr, Env, Timestamp};
+use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
@@ -14,14 +14,13 @@ use crate::{
 };
 
 pub struct PriceAlarm<'a> {
-    env: &'a Env,
     sender: &'a Addr,
     now: Timestamp,
 }
 
 impl<'a> PriceAlarm<'a> {
-    pub fn new(env: &'a Env, sender: &'a Addr, now: Timestamp) -> Self {
-        Self { env, sender, now }
+    pub fn new(sender: &'a Addr, now: Timestamp) -> Self {
+        Self { sender, now }
     }
 }
 

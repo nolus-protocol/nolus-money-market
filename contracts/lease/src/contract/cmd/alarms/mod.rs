@@ -35,7 +35,11 @@ where
     let status = lease.liquidation_status(now)?;
     match status {
         Status::No(zone) => lease.reschedule(&now, &zone)?,
-        _ => todo!("init liquidation"),
+        Status::Partial {
+            amount: _,
+            cause: _,
+        } => todo!("init liquidation"),
+        Status::Full(_cause) => todo!("init liquidation"),
     }
 
     let IntoDTOResult { batch, lease } = lease.into_dto();

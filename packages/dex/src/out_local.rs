@@ -25,12 +25,20 @@ where
 }
 
 pub type StartLocalLocalState<SwapTask> = TransferOut<SwapTask, State<SwapTask>>;
+pub type StartRemoteLocalState<SwapTask> = SwapExactIn<SwapTask, State<SwapTask>>;
 
 pub fn start_local_local<SwapTask>(spec: SwapTask) -> StartLocalLocalState<SwapTask>
 where
     SwapTask: SwapTaskT,
 {
     StartLocalLocalState::new(spec)
+}
+
+pub fn start_remote_local<SwapTask>(spec: SwapTask) -> StartRemoteLocalState<SwapTask>
+where
+    SwapTask: SwapTaskT,
+{
+    StartRemoteLocalState::new(spec)
 }
 
 mod impl_into {

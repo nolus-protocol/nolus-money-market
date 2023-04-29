@@ -41,6 +41,8 @@ type OpenedActive = LeaseState<opened::active::Active>;
 
 type BuyLpn = DexState<opened::repay::buy_lpn::DexState>;
 
+type SellAsset = DexState<opened::liquidation::sell_asset::DexState>;
+
 type PaidActive = LeaseState<paid::Active>;
 
 type ClosingTransferIn = DexState<paid::transfer_in::DexState>;
@@ -57,6 +59,7 @@ pub(crate) enum State {
     BuyAsset,
     OpenedActive,
     BuyLpn,
+    SellAsset,
     PaidActive,
     ClosingTransferIn,
     Closed,
@@ -95,7 +98,8 @@ where
 
 mod impl_from {
     use super::{
-        BuyAsset, BuyLpn, Closed, ClosingTransferIn, OpenedActive, PaidActive, RequestLoan, State,
+        BuyAsset, BuyLpn, Closed, ClosingTransferIn, OpenedActive, PaidActive, RequestLoan,
+        SellAsset, State,
     };
 
     impl From<super::opening::request_loan::RequestLoan> for State {
@@ -119,6 +123,12 @@ mod impl_from {
     impl From<super::opened::repay::buy_lpn::DexState> for State {
         fn from(value: super::opened::repay::buy_lpn::DexState) -> Self {
             BuyLpn::new(value).into()
+        }
+    }
+
+    impl From<super::opened::liquidation::sell_asset::DexState> for State {
+        fn from(value: super::opened::liquidation::sell_asset::DexState) -> Self {
+            SellAsset::new(value).into()
         }
     }
 
@@ -177,6 +187,9 @@ mod impl_dex_handler {
                 State::BuyLpn(inner) => {
                     Handler::on_open_ica(inner, counterparty_version, deps, env)
                 }
+                State::SellAsset(inner) => {
+                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                }
                 State::PaidActive(inner) => {
                     Handler::on_open_ica(inner, counterparty_version, deps, env)
                 }
@@ -202,6 +215,7 @@ mod impl_dex_handler {
                     Handler::on_response(inner, data, deps, env).map_into()
                 }
                 State::BuyLpn(inner) => Handler::on_response(inner, data, deps, env).map_into(),
+                State::SellAsset(inner) => Handler::on_response(inner, data, deps, env).map_into(),
                 State::PaidActive(inner) => Handler::on_response(inner, data, deps, env).map_into(),
                 State::ClosingTransferIn(inner) => {
                     Handler::on_response(inner, data, deps, env).map_into()
@@ -217,6 +231,7 @@ mod impl_dex_handler {
                 State::BuyAsset(inner) => Handler::on_error(inner, deps, env),
                 State::OpenedActive(inner) => Handler::on_error(inner, deps, env),
                 State::BuyLpn(inner) => Handler::on_error(inner, deps, env),
+                State::SellAsset(inner) => Handler::on_error(inner, deps, env),
                 State::PaidActive(inner) => Handler::on_error(inner, deps, env),
                 State::ClosingTransferIn(inner) => Handler::on_error(inner, deps, env),
                 State::Closed(inner) => Handler::on_error(inner, deps, env),
@@ -230,6 +245,7 @@ mod impl_dex_handler {
                 State::BuyAsset(inner) => Handler::on_timeout(inner, deps, env),
                 State::OpenedActive(inner) => Handler::on_timeout(inner, deps, env),
                 State::BuyLpn(inner) => Handler::on_timeout(inner, deps, env),
+                State::SellAsset(inner) => Handler::on_timeout(inner, deps, env),
                 State::PaidActive(inner) => Handler::on_timeout(inner, deps, env),
                 State::ClosingTransferIn(inner) => Handler::on_timeout(inner, deps, env),
                 State::Closed(inner) => Handler::on_timeout(inner, deps, env),
@@ -243,6 +259,7 @@ mod impl_dex_handler {
                 State::BuyAsset(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
                 State::OpenedActive(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
                 State::BuyLpn(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
+                State::SellAsset(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
                 State::PaidActive(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
                 State::ClosingTransferIn(inner) => {
                     Handler::on_time_alarm(inner, deps, env).map_into()

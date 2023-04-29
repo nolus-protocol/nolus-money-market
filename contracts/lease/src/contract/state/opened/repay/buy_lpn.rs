@@ -22,7 +22,6 @@ use crate::{
     event::Type,
 };
 
-type AssetGroup = Lpns;
 pub(crate) type DexState = dex::StateLocalOut<BuyLpn>;
 
 pub(in crate::contract::state) fn start(
@@ -56,7 +55,7 @@ impl BuyLpn {
 }
 
 impl SwapTask for BuyLpn {
-    type OutG = AssetGroup;
+    type OutG = Lpns;
     type Label = Type;
     type StateResponse = ContractResult<api::StateResponse>;
     type Result = SwapResult;
