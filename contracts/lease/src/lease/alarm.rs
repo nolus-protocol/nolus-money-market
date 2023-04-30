@@ -26,6 +26,7 @@ where
     Asset: Currency + Serialize,
 {
     //TODO keep loan state updated on payments and liquidations to have the liquidation status accurate
+    //do it at the LppStub
     pub(crate) fn reschedule(
         &mut self,
         now: &Timestamp,

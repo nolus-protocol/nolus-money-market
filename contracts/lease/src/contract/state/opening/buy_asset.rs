@@ -149,7 +149,7 @@ impl SwapTask for BuyAsset {
             lease,
             dex: self.dex_account,
         });
-        let emitter = active.emit_ok(env, self.downpayment, self.loan);
+        let emitter = active.emit_opened(env, self.downpayment, self.loan);
         Ok(StateMachineResponse::from(
             MessageResponse::messages_with_events(batch, emitter),
             active,

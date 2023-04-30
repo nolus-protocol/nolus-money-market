@@ -10,21 +10,21 @@ use serde::{Deserialize, Serialize};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{self, opened::LiquidateTrx, LeaseCoin},
+    api::{self, opened::LiquidateTrx},
     contract::{
         state::{opened::active::Active, SwapResult},
         Lease,
     },
     error::ContractResult,
     event::Type,
+    lease::LiquidationDTO,
 };
 
 pub(crate) type DexState = dex::StateLocalOut<SellAsset>;
 
-#[allow(dead_code)]
 pub(in crate::contract::state) fn start(
     lease: Lease,
-    liquidation: LeaseCoin,
+    liquidation: LiquidationDTO,
 ) -> StartRemoteLocalState<SellAsset> {
     dex::start_remote_local(SellAsset::new(lease, liquidation))
 }
@@ -34,11 +34,11 @@ type SellAssetStateResponse = <SellAsset as SwapTask>::StateResponse;
 #[derive(Serialize, Deserialize)]
 pub(crate) struct SellAsset {
     lease: Lease,
-    liquidation: LeaseCoin,
+    liquidation: LiquidationDTO,
 }
 
 impl SellAsset {
-    pub(in crate::contract::state) fn new(lease: Lease, liquidation: LeaseCoin) -> Self {
+    pub(in crate::contract::state) fn new(lease: Lease, liquidation: LiquidationDTO) -> Self {
         Self { lease, liquidation }
     }
 }
@@ -73,7 +73,7 @@ impl SwapTask for SellAsset {
     where
         Visitor: CoinVisitor<Result = IterNext>,
     {
-        dex::on_coin(&self.liquidation, visitor)
+        dex::on_coin(self.liquidation.amount(&self.lease.lease), visitor)
     }
 
     fn finish(

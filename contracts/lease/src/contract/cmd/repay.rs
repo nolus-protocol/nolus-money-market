@@ -15,10 +15,10 @@ use crate::{
     api::LpnCoin,
     error::ContractError,
     event::Type,
-    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO, Status},
+    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO, LiquidationDTO, Status},
 };
 
-pub struct Repay<'a> {
+pub(crate) struct Repay<'a> {
     payment: LpnCoin,
     env: &'a Env,
 }
@@ -29,10 +29,12 @@ impl<'a> Repay<'a> {
     }
 }
 
-pub struct RepayResult {
+pub(crate) struct RepayResult {
     pub lease: LeaseDTO,
     pub paid: bool,
     pub response: MessageResponse,
+    #[allow(dead_code)]
+    pub liquidation: Option<LiquidationDTO>,
 }
 
 impl<'a> WithLease for Repay<'a> {
@@ -81,6 +83,7 @@ impl<'a> WithLease for Repay<'a> {
             lease,
             paid: receipt.close(),
             response: MessageResponse::messages_with_events(batch, emitter),
+            liquidation: None,
         })
     }
 }

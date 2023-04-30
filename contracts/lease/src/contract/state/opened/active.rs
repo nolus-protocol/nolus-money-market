@@ -3,25 +3,28 @@ use serde::{Deserialize, Serialize};
 use currency::{lpn::Lpns, payment::PaymentGroup};
 use dex::Enterable;
 use finance::coin::IntoDTO;
-use platform::{
-    bank,
-    batch::{Emit, Emitter},
-};
+use platform::{bank, batch::Emitter, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{DownpaymentCoin, ExecuteMsg, LpnCoin, StateResponse},
     contract::{
-        cmd::{LiquidationStatus, OpenLoanRespResult, Repay, RepayResult},
+        cmd::{
+            LiquidationStatusCmd, LiquidationStatusCmdResult, OpenLoanRespResult, Repay,
+            RepayResult,
+        },
         state::{handler, paid, Handler, Response},
         Contract, Lease,
     },
     error::{ContractError, ContractResult},
-    event::Type,
-    lease::{with_lease, LeaseDTO},
+    lease::with_lease,
 };
 
-use super::repay::buy_lpn::{self, DexState};
+use super::{
+    event,
+    liquidation::sell_asset::{self, DexState as SellAssetState},
+    repay::buy_lpn::{self, DexState as BuyLpnState},
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct Active {
@@ -33,13 +36,13 @@ impl Active {
         Self { lease }
     }
 
-    pub(in crate::contract::state) fn emit_ok(
+    pub(in crate::contract::state) fn emit_opened(
         &self,
         env: &Env,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
     ) -> Emitter {
-        build_emitter(env, &self.lease.lease, loan, downpayment)
+        event::emit_lease_opened(env, &self.lease.lease, loan, downpayment)
     }
 
     pub(in crate::contract::state::opened) fn try_repay_lpn(
@@ -52,6 +55,7 @@ impl Active {
             lease: lease_updated,
             paid,
             response,
+            liquidation: _,
         } = with_lease::execute(lease.lease, Repay::new(payment, env), querier)?;
 
         let new_lease = Lease {
@@ -83,7 +87,7 @@ impl Active {
             let start_buy_lpn = buy_lpn::start(self.lease, payment);
             start_buy_lpn
                 .enter(env.block.time, &deps.querier)
-                .map(|batch| Response::from(batch, DexState::from(start_buy_lpn)))
+                .map(|batch| Response::from(batch, BuyLpnState::from(start_buy_lpn)))
                 .map_err(Into::into)
         }
     }
@@ -98,13 +102,7 @@ impl Active {
             return Err(ContractError::Unauthorized {});
         }
 
-        let response = with_lease::execute(
-            self.lease.lease.clone(),
-            LiquidationStatus::new(env.block.time),
-            querier,
-        )?;
-
-        Ok(Response::from(response, self))
+        self.try_on_alarm(querier, env)
     }
 
     fn try_on_time_alarm(
@@ -117,13 +115,46 @@ impl Active {
             return Err(ContractError::Unauthorized {});
         }
 
-        let response = with_lease::execute(
+        self.try_on_alarm(querier, env)
+    }
+
+    fn try_on_alarm(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
+        let liquidation_status = with_lease::execute(
             self.lease.lease.clone(),
-            LiquidationStatus::new(env.block.time),
+            LiquidationStatusCmd::new(env.block.time),
             querier,
         )?;
 
-        Ok(Response::from(response, self))
+        match liquidation_status {
+            LiquidationStatusCmdResult::NewAlarms {
+                current_liability,
+                alarms,
+            } => {
+                let resp = if let Some(events) = current_liability
+                    .low()
+                    .map(|low_level| event::emit_liquidation_warning(&self.lease.lease, &low_level))
+                {
+                    MessageResponse::messages_with_events(alarms, events)
+                } else {
+                    MessageResponse::messages_only(alarms)
+                };
+                Ok(Response::from(resp, self))
+            }
+            LiquidationStatusCmdResult::NeedLiquidation(liquidation) => {
+                let start_liq_event =
+                    event::emit_liquidation_start(&self.lease.lease, &liquidation);
+                let start_liquidaion = sell_asset::start(self.lease, liquidation);
+                start_liquidaion
+                    .enter(env.block.time, querier)
+                    .map(|swap_msg| {
+                        MessageResponse::messages_with_events(swap_msg, start_liq_event)
+                    })
+                    .map(|swap_msg| {
+                        Response::from(swap_msg, SellAssetState::from(start_liquidaion))
+                    })
+                    .map_err(Into::into)
+            }
+        }
     }
 }
 
@@ -148,24 +179,4 @@ impl Contract for Active {
     fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
         super::lease_state(self.lease.lease, None, now, querier)
     }
-}
-
-fn build_emitter(
-    env: &Env,
-    lease: &LeaseDTO,
-    loan: OpenLoanRespResult,
-    downpayment: DownpaymentCoin,
-) -> Emitter {
-    Emitter::of_type(Type::OpenedActive)
-        .emit_tx_info(env)
-        .emit("id", &lease.addr)
-        .emit("customer", lease.customer.clone())
-        .emit_percent_amount(
-            "air",
-            loan.annual_interest_rate + lease.loan.annual_margin_interest(),
-        )
-        .emit("currency", lease.amount.ticker())
-        .emit("loan-pool-id", lease.loan.lpp().addr())
-        .emit_coin_dto("loan", loan.principal)
-        .emit_coin_dto("downpayment", downpayment)
 }

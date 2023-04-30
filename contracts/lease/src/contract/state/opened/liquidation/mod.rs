@@ -3,23 +3,23 @@ use cosmwasm_std::{QuerierWrapper, Timestamp};
 use crate::{
     api::{
         opened::{LiquidateTrx, OngoingTrx},
-        LeaseCoin, StateResponse,
+        StateResponse,
     },
     error::ContractResult,
-    lease::LeaseDTO,
+    lease::{LeaseDTO, LiquidationDTO},
 };
 
 pub mod sell_asset;
 
 fn query(
     lease: LeaseDTO,
-    liquidation: LeaseCoin,
+    liquidation: LiquidationDTO,
     in_progress: LiquidateTrx,
     now: Timestamp,
     querier: &QuerierWrapper<'_>,
 ) -> ContractResult<StateResponse> {
     let in_progress = OngoingTrx::Liquidation {
-        liquidation,
+        liquidation: liquidation.amount(&lease).clone(),
         in_progress,
     };
 

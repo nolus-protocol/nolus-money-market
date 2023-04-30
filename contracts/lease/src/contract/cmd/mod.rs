@@ -1,9 +1,11 @@
-pub use close::Close;
-pub use liquidation_status::LiquidationStatus;
+pub(crate) use close::Close;
+pub(crate) use liquidation_status::{
+    Cmd as LiquidationStatusCmd, CmdResult as LiquidationStatusCmdResult,
+};
 pub(crate) use open::open_lease;
-pub use open_loan::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp, OpenLoanRespResult};
-pub use repay::{Repay, RepayResult};
-pub use state::LeaseState;
+pub(crate) use open_loan::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp, OpenLoanRespResult};
+pub(crate) use repay::{Repay, RepayResult};
+pub(crate) use state::LeaseState;
 
 mod close;
 mod liquidation_status;

@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use finance::{
     coin::Coin,
@@ -14,9 +14,9 @@ use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
-use crate::{error::ContractResult, loan::LiabilityStatus};
+use crate::{api::LeaseCoin, error::ContractResult, loan::LiabilityStatus};
 
-use super::Lease;
+use super::{Lease, LeaseDTO};
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 #[cfg_attr(test, derive(Debug))]
@@ -25,15 +25,52 @@ where
     Asset: Currency,
 {
     No(Zone),
-    Partial { amount: Coin<Asset>, cause: Cause },
-    Full(Cause),
+    Liquidation(Liquidation<Asset>),
+}
+
+impl<Asset> Status<Asset>
+where
+    Asset: Currency,
+{
+    fn partial(amount: Coin<Asset>, cause: Cause) -> Self {
+        Self::Liquidation(Liquidation::Partial { amount, cause })
+    }
+
+    fn full(cause: Cause) -> Self {
+        Self::Liquidation(Liquidation::Full(cause))
+    }
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 #[cfg_attr(test, derive(Debug))]
+pub(crate) enum Liquidation<Asset>
+where
+    Asset: Currency,
+{
+    Partial { amount: Coin<Asset>, cause: Cause },
+    Full(Cause),
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Debug))]
 pub(crate) enum Cause {
     Overdue(),
     Liability { ltv: Percent, healthy_ltv: Percent },
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) enum LiquidationDTO {
+    Partial { amount: LeaseCoin, cause: Cause },
+    Full(Cause),
+}
+
+impl LiquidationDTO {
+    pub(crate) fn amount<'a>(&'a self, lease: &'a LeaseDTO) -> &LeaseCoin {
+        match self {
+            Self::Partial { amount, cause: _ } => amount,
+            Self::Full(_) => &lease.amount,
+        }
+    }
 }
 
 impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
@@ -136,12 +173,24 @@ where
     if liquidation.is_zero() {
         None
     } else if asset <= liquidation {
-        Some(Status::Full(cause))
+        Some(Status::full(cause))
     } else {
-        Some(Status::Partial {
-            amount: liquidation,
-            cause,
-        })
+        Some(Status::partial(liquidation, cause))
+    }
+}
+
+impl<Asset> From<Liquidation<Asset>> for LiquidationDTO
+where
+    Asset: Currency,
+{
+    fn from(value: Liquidation<Asset>) -> Self {
+        match value {
+            Liquidation::Partial { amount, cause } => Self::Partial {
+                amount: amount.into(),
+                cause,
+            },
+            Liquidation::Full(cause) => Self::Full(cause),
+        }
     }
 }
 
@@ -175,10 +224,7 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 505.into(), 1.into()),
-            Status::Partial {
-                amount: 1.into(),
-                cause: Cause::Overdue()
-            },
+            Status::partial(1.into(), Cause::Overdue()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 509.into(), 0.into()),
@@ -190,10 +236,7 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 510.into(), 1.into()),
-            Status::Partial {
-                amount: 1.into(),
-                cause: Cause::Overdue()
-            },
+            Status::partial(1.into(), Cause::Overdue()),
         );
     }
 
@@ -211,10 +254,7 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 712.into(), 1.into()),
-            Status::Partial {
-                amount: 1.into(),
-                cause: Cause::Overdue()
-            }
+            Status::partial(1.into(), Cause::Overdue())
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 715.into(), 0.into()),
@@ -248,10 +288,7 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 128.into(), 1.into()),
-            Status::Partial {
-                amount: 1.into(),
-                cause: Cause::Overdue()
-            }
+            Status::partial(1.into(), Cause::Overdue())
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 132.into(), 0.into()),
@@ -275,10 +312,7 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 381.into(), 1.into()),
-            Status::Partial {
-                amount: 1.into(),
-                cause: Cause::Overdue()
-            }
+            Status::partial(1.into(), Cause::Overdue())
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 381.into(), 0.into()),
@@ -294,13 +328,13 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 391.into(), 0.into()),
-            Status::Partial {
-                amount: 384.into(),
-                cause: Cause::Liability {
+            Status::partial(
+                384.into(),
+                Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
                 }
-            },
+            ),
         );
     }
 
@@ -315,61 +349,55 @@ mod tests {
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 880.into(), 1.into()),
-            Status::Partial {
-                amount: 1.into(),
-                cause: Cause::Overdue()
-            },
+            Status::partial(1.into(), Cause::Overdue()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 881.into(), 0.into()),
-            Status::Partial {
-                amount: 879.into(),
-                cause: Cause::Liability {
+            Status::partial(
+                879.into(),
+                Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
                 }
-            },
+            ),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 881.into(), 878.into()),
-            Status::Partial {
-                amount: 879.into(),
-                cause: Cause::Liability {
+            Status::partial(
+                879.into(),
+                Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
                 }
-            },
+            ),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 881.into(), 879.into()),
-            Status::Partial {
-                amount: 879.into(),
-                cause: Cause::Liability {
+            Status::partial(
+                879.into(),
+                Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
                 }
-            },
+            ),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 881.into(), 880.into()),
-            Status::Partial {
-                amount: 880.into(),
-                cause: Cause::Overdue()
-            },
+            Status::partial(880.into(), Cause::Overdue()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 999.into(), 997.into()),
-            Status::Partial {
-                amount: 998.into(),
-                cause: Cause::Liability {
+            Status::partial(
+                998.into(),
+                Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
                 }
-            },
+            ),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 1000.into(), 1.into()),
-            Status::Full(Cause::Liability {
+            Status::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
@@ -383,38 +411,35 @@ mod tests {
 
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 768.into(), 765.into()),
-            Status::Partial {
-                amount: 765.into(),
-                cause: Cause::Liability {
+            Status::partial(
+                765.into(),
+                Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
                 }
-            },
+            ),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 768.into(), 766.into()),
-            Status::Partial {
-                amount: 766.into(),
-                cause: Cause::Overdue()
-            },
+            Status::partial(766.into(), Cause::Overdue()),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 1000.into(), 1.into()),
-            Status::Full(Cause::Liability {
+            Status::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 1000.into(), 1000.into()),
-            Status::Full(Cause::Liability {
+            Status::full(Cause::Liability {
                 ltv: max_ltv,
                 healthy_ltv: STEP
             }),
         );
         assert_eq!(
             check_liability::<Atom>(&spec, 1000.into(), 999.into(), 1000.into()),
-            Status::Full(Cause::Overdue()),
+            Status::full(Cause::Overdue()),
         );
     }
 
@@ -454,7 +479,7 @@ mod test_status {
     use currency::lease::Cro;
     use finance::{liability::Zone, percent::Percent};
 
-    use crate::lease::Cause;
+    use crate::lease::{liquidation::Liquidation, Cause};
 
     use super::Status;
 
@@ -498,86 +523,86 @@ mod test_status {
             Status::No(Zone::third(
                 Percent::from_permille(991),
                 Percent::from_permille(1000)
-            )) < Status::<Cro>::Partial {
+            )) < Status::<Cro>::Liquidation(Liquidation::Partial {
                 amount: 1.into(),
                 cause: Cause::Overdue()
-            }
+            })
         );
         assert!(
-            Status::<Cro>::Partial {
+            Status::<Cro>::Liquidation(Liquidation::Partial {
                 amount: 1.into(),
                 cause: Cause::Overdue()
-            } < Status::<Cro>::Partial {
+            }) < Status::<Cro>::Liquidation(Liquidation::Partial {
                 amount: 1.into(),
                 cause: Cause::Liability {
                     ltv: Percent::from_permille(1),
                     healthy_ltv: Percent::from_permille(1)
                 }
-            }
+            })
         );
         assert!(
-            Status::<Cro>::Partial {
+            Status::<Cro>::Liquidation(Liquidation::Partial {
                 amount: 1.into(),
                 cause: Cause::Overdue()
-            } < Status::<Cro>::Partial {
+            }) < Status::<Cro>::Liquidation(Liquidation::Partial {
                 amount: 2.into(),
                 cause: Cause::Overdue()
-            }
+            })
         );
         assert!(
-            Status::<Cro>::Partial {
+            Status::<Cro>::Liquidation(Liquidation::Partial {
                 amount: 1.into(),
                 cause: Cause::Liability {
                     ltv: Percent::from_permille(1),
                     healthy_ltv: Percent::from_permille(1)
                 }
-            } < Status::<Cro>::Partial {
+            }) < Status::<Cro>::Liquidation(Liquidation::Partial {
                 amount: 2.into(),
                 cause: Cause::Liability {
                     ltv: Percent::from_permille(1),
                     healthy_ltv: Percent::from_permille(1)
                 }
-            }
+            })
         );
         assert!(
-            Status::<Cro>::Partial {
-                amount: 1.into(),
-                cause: Cause::Liability {
+            Status::<Cro>::partial(
+                1.into(),
+                Cause::Liability {
                     ltv: Percent::from_permille(1),
                     healthy_ltv: Percent::from_permille(1)
                 }
-            } < Status::<Cro>::Partial {
-                amount: 1.into(),
-                cause: Cause::Liability {
+            ) < Status::<Cro>::partial(
+                1.into(),
+                Cause::Liability {
                     ltv: Percent::from_permille(1),
                     healthy_ltv: Percent::from_permille(2)
                 }
-            }
+            )
         );
         assert!(
-            Status::<Cro>::Partial {
-                amount: 1.into(),
-                cause: Cause::Liability {
+            Status::<Cro>::partial(
+                1.into(),
+                Cause::Liability {
                     ltv: Percent::from_permille(1),
                     healthy_ltv: Percent::from_permille(1)
                 }
-            } < Status::<Cro>::Full(Cause::Liability {
+            ) < Status::<Cro>::full(Cause::Liability {
                 ltv: Percent::from_permille(1),
                 healthy_ltv: Percent::from_permille(2)
             })
         );
         assert!(
-            Status::<Cro>::Full(Cause::Liability {
+            Status::<Cro>::full(Cause::Liability {
                 ltv: Percent::from_permille(1),
                 healthy_ltv: Percent::from_permille(1)
-            }) < Status::<Cro>::Full(Cause::Liability {
+            }) < Status::<Cro>::full(Cause::Liability {
                 ltv: Percent::from_permille(1),
                 healthy_ltv: Percent::from_permille(2)
             })
         );
         assert!(
-            Status::<Cro>::Full(Cause::Overdue())
-                < Status::<Cro>::Full(Cause::Liability {
+            Status::<Cro>::full(Cause::Overdue())
+                < Status::<Cro>::full(Cause::Liability {
                     ltv: Percent::from_permille(1),
                     healthy_ltv: Percent::from_permille(1)
                 })

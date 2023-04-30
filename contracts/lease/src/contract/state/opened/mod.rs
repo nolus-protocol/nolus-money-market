@@ -8,6 +8,7 @@ use crate::{
 };
 
 pub mod active;
+mod event;
 pub mod liquidation;
 pub mod repay;
 #[cfg(feature = "migration")]
