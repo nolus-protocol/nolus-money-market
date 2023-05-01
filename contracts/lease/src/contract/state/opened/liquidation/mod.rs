@@ -6,7 +6,7 @@ use crate::{
         StateResponse,
     },
     error::ContractResult,
-    lease::{LeaseDTO, LiquidationDTO},
+    lease::LeaseDTO, contract::cmd::LiquidationDTO,
 };
 
 pub mod sell_asset;

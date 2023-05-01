@@ -4,8 +4,7 @@ use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::{
-    batch::{Emit, Emitter},
-    message::Response as MessageResponse,
+    batch::{Batch},
 };
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Env;
@@ -14,9 +13,11 @@ use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 use crate::{
     api::LpnCoin,
     error::ContractError,
-    event::Type,
-    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO, LiquidationDTO, Status},
+    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO, Status},
+    loan::RepayReceipt,
 };
+
+use super::liquidation_status::LiquidationDTO;
 
 pub(crate) struct Repay<'a> {
     payment: LpnCoin,
@@ -31,10 +32,20 @@ impl<'a> Repay<'a> {
 
 pub(crate) struct RepayResult {
     pub lease: LeaseDTO,
-    pub paid: bool,
-    pub response: MessageResponse,
-    #[allow(dead_code)]
+    pub receipt: ReceiptDTO,
+    pub messages: Batch,
     pub liquidation: Option<LiquidationDTO>,
+}
+
+pub(crate) struct ReceiptDTO {
+    pub total: LpnCoin,
+    pub previous_margin_paid: LpnCoin,
+    pub current_margin_paid: LpnCoin,
+    pub previous_interest_paid: LpnCoin,
+    pub current_interest_paid: LpnCoin,
+    pub principal_paid: LpnCoin,
+    pub change: LpnCoin,
+    pub close: bool,
 }
 
 impl<'a> WithLease for Repay<'a> {
@@ -59,31 +70,42 @@ impl<'a> WithLease for Repay<'a> {
 
         let receipt = lease.repay(payment, now)?;
 
-        match lease.liquidation_status(now)? {
-            Status::No(zone) => lease.reschedule(&now, &zone)?,
-            _ => todo!("init liquidation"),
-        }
+        let liquidation = match lease.liquidation_status(now)? {
+            Status::No(zone) => {
+                lease.reschedule(&now, &zone)?;
+                None
+            }
+            Status::Liquidation(liquidation) => Some(liquidation.into()),
+        };
 
-        let IntoDTOResult { lease, batch } = lease.into_dto();
-
-        let emitter = Emitter::of_type(Type::PaidActive)
-            .emit_tx_info(self.env)
-            .emit("to", lease.addr.clone())
-            .emit_currency::<_, Lpn>("payment-symbol")
-            .emit_coin_amount("payment-amount", payment)
-            .emit_to_string_value("loan-close", receipt.close())
-            .emit_coin_amount("prev-margin-interest", receipt.previous_margin_paid())
-            .emit_coin_amount("prev-loan-interest", receipt.previous_interest_paid())
-            .emit_coin_amount("curr-margin-interest", receipt.current_margin_paid())
-            .emit_coin_amount("curr-loan-interest", receipt.current_interest_paid())
-            .emit_coin_amount("principal", receipt.principal_paid())
-            .emit_coin_amount("change", receipt.change());
+        let IntoDTOResult {
+            lease,
+            batch: messages,
+        } = lease.into_dto();
 
         Ok(RepayResult {
             lease,
-            paid: receipt.close(),
-            response: MessageResponse::messages_with_events(batch, emitter),
-            liquidation: None,
+            receipt: receipt.into(),
+            messages,
+            liquidation,
         })
+    }
+}
+
+impl<Lpn> From<RepayReceipt<Lpn>> for ReceiptDTO
+where
+    Lpn: Currency,
+{
+    fn from(value: RepayReceipt<Lpn>) -> Self {
+        Self {
+            total: value.total().into(),
+            previous_margin_paid: value.previous_margin_paid().into(),
+            current_margin_paid: value.current_margin_paid().into(),
+            previous_interest_paid: value.previous_interest_paid().into(),
+            current_interest_paid: value.current_interest_paid().into(),
+            principal_paid: value.principal_paid().into(),
+            change: value.change().into(),
+            close: value.close(),
+        }
     }
 }

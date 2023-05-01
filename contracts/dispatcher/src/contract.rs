@@ -152,7 +152,7 @@ fn try_dispatch(deps: DepsMut<'_>, env: Env, timealarm: Addr) -> ContractResult<
     let emitter = Emitter::of_type("tr-rewards")
         .emit_tx_info(&env)
         .emit_to_string_value("to", lpp_address)
-        .emit_coin_dto("rewards", result.receipt.in_nls);
+        .emit_coin_dto("rewards", &result.receipt.in_nls);
     Ok(MessageResponse::messages_with_events(
         result.batch.merge(setup_alarm),
         emitter,

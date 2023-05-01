@@ -4,9 +4,9 @@ use platform::batch::{Emit, Emitter};
 
 use crate::{
     api::DownpaymentCoin,
-    contract::cmd::OpenLoanRespResult,
+    contract::cmd::{LiquidationDTO, OpenLoanRespResult, ReceiptDTO},
     event::Type,
-    lease::{Cause, LeaseDTO, LiquidationDTO},
+    lease::{Cause, LeaseDTO},
 };
 
 pub(super) fn emit_lease_opened(
@@ -25,8 +25,28 @@ pub(super) fn emit_lease_opened(
         )
         .emit("currency", lease.amount.ticker())
         .emit("loan-pool-id", lease.loan.lpp().addr())
-        .emit_coin_dto("loan", loan.principal)
-        .emit_coin_dto("downpayment", downpayment)
+        .emit_coin_dto("loan", &loan.principal)
+        .emit_coin_dto("downpayment", &downpayment)
+}
+
+pub(super) fn emit_payment(env: &Env, lease: &LeaseDTO, receipt: &ReceiptDTO) -> Emitter {
+    Emitter::of_type(Type::PaidActive)
+        .emit_tx_info(env)
+        .emit("to", lease.addr.clone())
+        .emit_coin_dto("payment", &receipt.total)
+        .emit_to_string_value("loan-close", receipt.close)
+        .emit_coin_amount(
+            "prev-margin-interest",
+            receipt.previous_margin_paid.amount(),
+        )
+        .emit_coin_amount(
+            "prev-loan-interest",
+            receipt.previous_interest_paid.amount(),
+        )
+        .emit_coin_amount("curr-margin-interest", receipt.current_margin_paid.amount())
+        .emit_coin_amount("curr-loan-interest", receipt.current_interest_paid.amount())
+        .emit_coin_amount("principal", receipt.principal_paid.amount())
+        .emit_coin_amount("change", receipt.change.amount())
 }
 
 pub(super) fn emit_liquidation_warning(lease: &LeaseDTO, level: &Level) -> Emitter {
@@ -39,7 +59,7 @@ pub(super) fn emit_liquidation_start(lease: &LeaseDTO, liquidation: &Liquidation
     let emitter = emit_lease(Emitter::of_type(Type::LiquidationStart), lease);
     match liquidation {
         LiquidationDTO::Partial { amount, cause } => {
-            emit_liquidation_cause(emitter, cause).emit_coin_dto("amount", amount.clone())
+            emit_liquidation_cause(emitter, cause).emit_coin_dto("amount", amount)
         }
         LiquidationDTO::Full(cause) => emit_liquidation_cause(emitter, cause),
     }

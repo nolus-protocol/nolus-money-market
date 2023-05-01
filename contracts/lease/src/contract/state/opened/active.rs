@@ -3,15 +3,19 @@ use serde::{Deserialize, Serialize};
 use currency::{lpn::Lpns, payment::PaymentGroup};
 use dex::Enterable;
 use finance::coin::IntoDTO;
-use platform::{bank, batch::Emitter, message::Response as MessageResponse};
+use platform::{
+    bank,
+    batch::{Batch, Emitter},
+    message::Response as MessageResponse,
+};
 use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{DownpaymentCoin, ExecuteMsg, LpnCoin, StateResponse},
     contract::{
         cmd::{
-            LiquidationStatusCmd, LiquidationStatusCmdResult, OpenLoanRespResult, Repay,
-            RepayResult,
+            LiquidationDTO, LiquidationStatusCmd, LiquidationStatusCmdResult, OpenLoanRespResult,
+            Repay, RepayResult,
         },
         state::{handler, paid, Handler, Response},
         Contract, Lease,
@@ -53,21 +57,34 @@ impl Active {
     ) -> ContractResult<Response> {
         let RepayResult {
             lease: lease_updated,
-            paid,
-            response,
-            liquidation: _,
+            receipt,
+            messages: repay_messages,
+            liquidation,
         } = with_lease::execute(lease.lease, Repay::new(payment, env), querier)?;
 
         let new_lease = Lease {
             lease: lease_updated,
             dex: lease.dex,
         };
-
-        Ok(if paid {
-            Response::from(response, paid::Active::new(new_lease))
+        let repay_event = event::emit_payment(env, &new_lease.lease, &receipt);
+        if let Some(liquidation) = liquidation {
+            Self::start_liquidation(
+                new_lease,
+                liquidation,
+                repay_messages,
+                repay_event,
+                env,
+                querier,
+            )
         } else {
-            Response::from(response, Active::new(new_lease))
-        })
+            let response = MessageResponse::messages_with_events(repay_messages, repay_event);
+
+            Ok(if receipt.close {
+                Response::from(response, paid::Active::new(new_lease))
+            } else {
+                Response::from(response, Active::new(new_lease))
+            })
+        }
     }
 
     fn try_repay(self, deps: Deps<'_>, env: Env, info: MessageInfo) -> ContractResult<Response> {
@@ -143,18 +160,33 @@ impl Active {
             LiquidationStatusCmdResult::NeedLiquidation(liquidation) => {
                 let start_liq_event =
                     event::emit_liquidation_start(&self.lease.lease, &liquidation);
-                let start_liquidaion = sell_asset::start(self.lease, liquidation);
-                start_liquidaion
-                    .enter(env.block.time, querier)
-                    .map(|swap_msg| {
-                        MessageResponse::messages_with_events(swap_msg, start_liq_event)
-                    })
-                    .map(|swap_msg| {
-                        Response::from(swap_msg, SellAssetState::from(start_liquidaion))
-                    })
-                    .map_err(Into::into)
+                Self::start_liquidation(
+                    self.lease,
+                    liquidation,
+                    Batch::default(),
+                    start_liq_event,
+                    env,
+                    querier,
+                )
             }
         }
+    }
+
+    fn start_liquidation(
+        lease: Lease,
+        liquidation: LiquidationDTO,
+        curr_request_messages: Batch,
+        curr_request_event: Emitter,
+        env: &Env,
+        querier: &QuerierWrapper,
+    ) -> ContractResult<Response> {
+        let start_liquidaion = sell_asset::start(lease, liquidation);
+        start_liquidaion
+            .enter(env.block.time, querier)
+            .map(|swap_msg| swap_msg.merge(curr_request_messages))
+            .map(|swap_msg| MessageResponse::messages_with_events(swap_msg, curr_request_event))
+            .map(|start_liq| Response::from(start_liq, SellAssetState::from(start_liquidaion)))
+            .map_err(Into::into)
     }
 }
 

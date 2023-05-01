@@ -13,11 +13,10 @@ use crate::{
     api::{self, opened::LiquidateTrx},
     contract::{
         state::{opened::active::Active, SwapResult},
-        Lease,
+        Lease, cmd::LiquidationDTO,
     },
     error::ContractResult,
     event::Type,
-    lease::LiquidationDTO,
 };
 
 pub(crate) type DexState = dex::StateLocalOut<SellAsset>;
@@ -83,6 +82,7 @@ impl SwapTask for SellAsset {
         querier: &QuerierWrapper<'_>,
     ) -> Self::Result {
         Active::try_repay_lpn(self.lease, amount_out, querier, env)
+        //TODO ::try_liquidate
     }
 }
 

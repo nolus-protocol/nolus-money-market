@@ -20,7 +20,7 @@ use crate::{
 
 pub(super) use self::{
     dto::LeaseDTO,
-    liquidation::{Cause, LiquidationDTO, Status},
+    liquidation::{Cause, Liquidation, Status},
     state::State,
 };
 

@@ -92,7 +92,7 @@ where
     fn emit_ok(&self) -> Emitter {
         Emitter::of_type(self.spec.label())
             .emit("stage", "transfer-in")
-            .emit_coin_dto("amount", self.amount_in.clone())
+            .emit_coin_dto("amount", &self.amount_in)
     }
 }
 

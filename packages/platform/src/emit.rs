@@ -73,7 +73,7 @@ where
         emit_coinable(self, event_key, coin.into(), C::TICKER)
     }
 
-    fn emit_coin_dto<K, G>(self, event_key: K, coin: CoinDTO<G>) -> Self
+    fn emit_coin_dto<K, G>(self, event_key: K, coin: &CoinDTO<G>) -> Self
     where
         K: Into<String>,
     {

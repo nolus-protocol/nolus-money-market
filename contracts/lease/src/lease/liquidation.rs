@@ -14,9 +14,9 @@ use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
-use crate::{api::LeaseCoin, error::ContractResult, loan::LiabilityStatus};
+use crate::{error::ContractResult, loan::LiabilityStatus};
 
-use super::{Lease, LeaseDTO};
+use super::Lease;
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 #[cfg_attr(test, derive(Debug))]
@@ -56,21 +56,6 @@ where
 pub(crate) enum Cause {
     Overdue(),
     Liability { ltv: Percent, healthy_ltv: Percent },
-}
-
-#[derive(Serialize, Deserialize)]
-pub(crate) enum LiquidationDTO {
-    Partial { amount: LeaseCoin, cause: Cause },
-    Full(Cause),
-}
-
-impl LiquidationDTO {
-    pub(crate) fn amount<'a>(&'a self, lease: &'a LeaseDTO) -> &LeaseCoin {
-        match self {
-            Self::Partial { amount, cause: _ } => amount,
-            Self::Full(_) => &lease.amount,
-        }
-    }
 }
 
 impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
@@ -176,21 +161,6 @@ where
         Some(Status::full(cause))
     } else {
         Some(Status::partial(liquidation, cause))
-    }
-}
-
-impl<Asset> From<Liquidation<Asset>> for LiquidationDTO
-where
-    Asset: Currency,
-{
-    fn from(value: Liquidation<Asset>) -> Self {
-        match value {
-            Liquidation::Partial { amount, cause } => Self::Partial {
-                amount: amount.into(),
-                cause,
-            },
-            Liquidation::Full(cause) => Self::Full(cause),
-        }
     }
 }
 

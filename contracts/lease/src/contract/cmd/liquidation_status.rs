@@ -6,11 +6,15 @@ use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
+    api::LeaseCoin,
     error::ContractError,
-    lease::{with_lease::WithLease, IntoDTOResult, Lease, LiquidationDTO, Status},
+    lease::{
+        with_lease::WithLease, Cause, IntoDTOResult, Lease, LeaseDTO, Liquidation,
+        Status,
+    },
 };
 
 pub(crate) struct Cmd {
@@ -23,6 +27,36 @@ pub(crate) enum CmdResult {
         alarms: Batch,
     },
     NeedLiquidation(LiquidationDTO),
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) enum LiquidationDTO {
+    Partial { amount: LeaseCoin, cause: Cause },
+    Full(Cause),
+}
+
+impl LiquidationDTO {
+    pub(crate) fn amount<'a>(&'a self, lease: &'a LeaseDTO) -> &LeaseCoin {
+        match self {
+            Self::Partial { amount, cause: _ } => amount,
+            Self::Full(_) => &lease.amount,
+        }
+    }
+}
+
+impl<Asset> From<Liquidation<Asset>> for LiquidationDTO
+where
+    Asset: Currency,
+{
+    fn from(value: Liquidation<Asset>) -> Self {
+        match value {
+            Liquidation::Partial { amount, cause } => Self::Partial {
+                amount: amount.into(),
+                cause,
+            },
+            Liquidation::Full(cause) => Self::Full(cause),
+        }
+    }
 }
 
 impl Cmd {

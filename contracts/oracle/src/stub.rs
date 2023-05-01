@@ -35,6 +35,7 @@ where
     where
         C: Currency;
 
+    //TODO use a type-safe Alarm, one with the typed Price
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()>;
 }
 
