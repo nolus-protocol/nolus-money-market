@@ -5,8 +5,9 @@ use crate::{
         opened::{LiquidateTrx, OngoingTrx},
         StateResponse,
     },
+    contract::cmd::LiquidationDTO,
     error::ContractResult,
-    lease::LeaseDTO, contract::cmd::LiquidationDTO,
+    lease::LeaseDTO,
 };
 
 pub mod sell_asset;

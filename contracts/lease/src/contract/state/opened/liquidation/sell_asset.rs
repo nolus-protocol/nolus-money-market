@@ -12,8 +12,9 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{self, opened::LiquidateTrx},
     contract::{
+        cmd::LiquidationDTO,
         state::{opened::active::Active, SwapResult},
-        Lease, cmd::LiquidationDTO,
+        Lease,
     },
     error::ContractResult,
     event::Type,
@@ -81,8 +82,7 @@ impl SwapTask for SellAsset {
         env: &Env,
         querier: &QuerierWrapper<'_>,
     ) -> Self::Result {
-        Active::try_repay_lpn(self.lease, amount_out, querier, env)
-        //TODO ::try_liquidate
+        Active::try_liquidate(self.lease, amount_out, querier, env)
     }
 }
 

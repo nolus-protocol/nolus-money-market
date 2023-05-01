@@ -1,6 +1,6 @@
 pub(crate) use close::Close;
 pub(crate) use liquidation_status::{
-    Cmd as LiquidationStatusCmd, CmdResult as LiquidationStatusCmdResult, LiquidationDTO
+    Cmd as LiquidationStatusCmd, CmdResult as LiquidationStatusCmdResult, LiquidationDTO,
 };
 pub(crate) use open::open_lease;
 pub(crate) use open_loan::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp, OpenLoanRespResult};

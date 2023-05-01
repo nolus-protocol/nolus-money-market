@@ -87,6 +87,15 @@ impl Active {
         }
     }
 
+    pub(in crate::contract::state::opened) fn try_liquidate(
+        _lease: Lease,
+        _liquidation_lpn: LpnCoin,
+        _querier: &QuerierWrapper<'_>,
+        _env: &Env,
+    ) -> ContractResult<Response> {
+        todo!()
+    }
+
     fn try_repay(self, deps: Deps<'_>, env: Env, info: MessageInfo) -> ContractResult<Response> {
         let payment = bank::may_received::<PaymentGroup, _>(
             info.funds.clone(),
@@ -178,7 +187,7 @@ impl Active {
         curr_request_messages: Batch,
         curr_request_event: Emitter,
         env: &Env,
-        querier: &QuerierWrapper,
+        querier: &QuerierWrapper<'_>,
     ) -> ContractResult<Response> {
         let start_liquidaion = sell_asset::start(lease, liquidation);
         start_liquidaion

@@ -135,47 +135,31 @@ where
         }
     }
 
-    pub(crate) fn close<B>(mut self, lease_account: B) -> ContractResult<IntoDTOResult>
+    pub(crate) fn close<B>(self, lease_account: B) -> ContractResult<Batch>
     where
         B: BankAccount,
     {
         let state = self.state(Timestamp::from_nanos(u64::MAX))?;
         match state {
             State::Opened { .. } => Err(ContractError::LoanNotPaid()),
-            State::Paid(..) => {
-                let bank_transfers = self.send_funds_to_customer(lease_account)?;
-                self.amount = Coin::<Asset>::default();
-
-                let IntoDTOResult { lease, batch } = self.into_dto();
-                Ok(IntoDTOResult {
-                    lease,
-                    batch: batch.merge(bank_transfers),
-                })
-            }
-            State::Closed() => Err(ContractError::LoanClosed()),
+            State::Paid(..) => self.send_funds_to_customer(lease_account),
         }
     }
 
     pub(crate) fn state(&self, now: Timestamp) -> ContractResult<State<Asset, Lpn>> {
-        if self.amount.is_zero() {
-            Ok(State::Closed())
-        } else {
-            let loan_state = self.loan.state(now, self.addr.clone())?;
-
-            loan_state.map_or(Ok(State::Paid(self.amount)), |state| {
-                Ok(State::Opened {
-                    amount: self.amount,
-                    interest_rate: state.annual_interest,
-                    interest_rate_margin: state.annual_interest_margin,
-                    principal_due: state.principal_due,
-                    previous_margin_due: state.previous_margin_interest_due,
-                    previous_interest_due: state.previous_interest_due,
-                    current_margin_due: state.current_margin_interest_due,
-                    current_interest_due: state.current_interest_due,
-                    validity: now,
-                })
+        self.loan.state(now, self.addr.clone()).map(|loan_state| {
+            loan_state.map_or(State::Paid(self.amount), |state| State::Opened {
+                amount: self.amount,
+                interest_rate: state.annual_interest,
+                interest_rate_margin: state.annual_interest_margin,
+                principal_due: state.principal_due,
+                previous_margin_due: state.previous_margin_interest_due,
+                previous_interest_due: state.previous_interest_due,
+                current_margin_due: state.current_margin_interest_due,
+                current_interest_due: state.current_interest_due,
+                validity: now,
             })
-        }
+        })
     }
 
     fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
@@ -725,35 +709,6 @@ mod tests {
     }
 
     #[test]
-    fn state_closed() {
-        let lease_addr = Addr::unchecked("lease");
-        let lease_amount = 10.into();
-        let time_alarms_addr = Addr::unchecked(String::new());
-        let oracle_addr = Addr::unchecked(String::new());
-        let profit_addr = Addr::unchecked(String::new());
-        let lease = open_lease(
-            lease_addr,
-            lease_amount,
-            None,
-            time_alarms_addr,
-            oracle_addr,
-            profit_addr,
-        );
-        let lease_account = BankStub::new(MockBankView::only_balance(lease_amount));
-        let res = lease.close(lease_account).unwrap();
-        let lease = Lease::<_, TestCurrency, _, _, _, _>::from_dto(
-            res.lease,
-            LppLenderLocalStubUnreachable {},
-            TimeAlarmsLocalStubUnreachable {},
-            OracleLocalStubUnreachable {},
-            ProfitLocalStubUnreachable {},
-        );
-        let res = lease.state(LEASE_STATE_AT).unwrap();
-        let exp = State::Closed();
-        assert_eq!(exp, res);
-    }
-
-    #[test]
     fn close_no_surplus() {
         let lease_addr = Addr::unchecked("lease");
         let lease_amount = 10.into();
@@ -770,7 +725,7 @@ mod tests {
         );
         let lease_account = BankStub::new(MockBankView::only_balance(lease_amount));
         let res = lease.close(lease_account).unwrap();
-        assert_eq!(res.batch, expect_bank_send(Batch::default(), lease_amount));
+        assert_eq!(res, expect_bank_send(Batch::default(), lease_amount));
     }
 
     #[test]
@@ -791,7 +746,7 @@ mod tests {
         );
         let lease_account = BankStub::new(MockBankView::new(lease_amount, surplus_amount));
         let res = lease.close(lease_account).unwrap();
-        assert_eq!(res.batch, {
+        assert_eq!(res, {
             let surplus_sent = expect_bank_send(Batch::default(), surplus_amount);
             expect_bank_send(surplus_sent, lease_amount)
         });

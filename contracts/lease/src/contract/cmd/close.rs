@@ -3,13 +3,13 @@ use serde::Serialize;
 use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
-use platform::bank::BankAccount;
+use platform::{bank::BankAccount, batch::Batch};
 use profit::stub::Profit as ProfitTrait;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractError,
-    lease::{with_lease::WithLease, IntoDTOResult, Lease},
+    lease::{with_lease::WithLease, Lease},
 };
 
 pub struct Close<Bank> {
@@ -26,7 +26,7 @@ impl<Bank> WithLease for Close<Bank>
 where
     Bank: BankAccount,
 {
-    type Output = IntoDTOResult;
+    type Output = Batch;
 
     type Error = ContractError;
 

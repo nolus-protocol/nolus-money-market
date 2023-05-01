@@ -11,7 +11,7 @@ use crate::{
     contract::{cmd::Close, Contract},
     error::ContractResult,
     event::Type,
-    lease::{with_lease, IntoDTOResult, LeaseDTO},
+    lease::{with_lease, LeaseDTO},
 };
 
 use super::{handler, Handler, Response};
@@ -27,11 +27,7 @@ impl Closed {
     ) -> ContractResult<Batch> {
         let lease_addr = lease.addr.clone();
         let lease_account = bank::account(&lease_addr, querier);
-        let IntoDTOResult {
-            lease: _abandon,
-            batch,
-        } = with_lease::execute(lease, Close::new(lease_account), querier)?;
-        Ok(batch)
+        with_lease::execute(lease, Close::new(lease_account), querier)
     }
 
     pub(super) fn emit_ok(&self, env: &Env, lease: &LeaseDTO) -> Emitter {

@@ -19,5 +19,4 @@ where
         validity: Timestamp,
     },
     Paid(Coin<Asset>),
-    Closed(),
 }

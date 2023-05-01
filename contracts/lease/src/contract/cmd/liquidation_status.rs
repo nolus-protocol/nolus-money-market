@@ -11,10 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     api::LeaseCoin,
     error::ContractError,
-    lease::{
-        with_lease::WithLease, Cause, IntoDTOResult, Lease, LeaseDTO, Liquidation,
-        Status,
-    },
+    lease::{with_lease::WithLease, Cause, IntoDTOResult, Lease, LeaseDTO, Liquidation, Status},
 };
 
 pub(crate) struct Cmd {
