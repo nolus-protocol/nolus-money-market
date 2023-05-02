@@ -1,10 +1,12 @@
+use std::cmp;
+
 use cosmwasm_std::Timestamp;
+use serde::{Deserialize, Serialize};
+
 use finance::{
     coin::Coin, currency::Currency, duration::Duration, interest::InterestPeriod, percent::Percent,
 };
 use sdk::schemars::{self, JsonSchema};
-use serde::{Deserialize, Serialize};
-use std::cmp;
 
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
@@ -35,10 +37,10 @@ where
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::Timestamp;
     use finance::{
         coin::Coin, duration::Duration, percent::Percent, test::currency::Usdc, zero::Zero,
     };
+    use sdk::cosmwasm_std::Timestamp;
 
     use crate::loan::LoanData;
 

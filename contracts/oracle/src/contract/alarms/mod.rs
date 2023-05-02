@@ -1,4 +1,3 @@
-use crate::{alarms::Alarm as AlarmDTO, ContractError};
 use finance::{
     currency::Currency,
     price::{
@@ -11,8 +10,11 @@ use marketprice::{alarms::PriceAlarms, SpotPrice};
 use sdk::cosmwasm_std::{Addr, Storage};
 use swap::SwapGroup;
 
+use crate::{alarms::Alarm as AlarmDTO, ContractError};
+
+use self::iter::AlarmsFlatten;
+
 mod iter;
-use iter::AlarmsFlatten;
 
 pub type PriceResult<BaseC> = Result<BasePrice<SwapGroup, BaseC>, ContractError>;
 
@@ -108,12 +110,13 @@ impl MarketAlarms {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
-    use crate::tests::{self, TheCurrency as Base};
     use ::currency::lease::{Atom, Weth};
     use currency::lease::Juno;
     use sdk::cosmwasm_std::testing::MockStorage;
+
+    use crate::tests::{self, TheCurrency as Base};
+
+    use super::*;
 
     fn alarm_dto<C>(below: (u128, u128), above: Option<(u128, u128)>) -> AlarmDTO
     where

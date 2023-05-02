@@ -1,5 +1,5 @@
-use cosmwasm_std::Timestamp;
 use finance::{coin::Coin, currency::Currency, percent::Percent};
+use sdk::cosmwasm_std::Timestamp;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum State<Asset, Lpn>

@@ -1,4 +1,3 @@
-use release::ReleaseLabel;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "schema")]
@@ -7,6 +6,8 @@ use sdk::{
     cosmwasm_std::{StdError, StdResult, Storage},
     cw_storage_plus::Item,
 };
+
+use self::release::ReleaseLabel;
 
 mod release;
 

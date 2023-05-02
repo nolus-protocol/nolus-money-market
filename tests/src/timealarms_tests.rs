@@ -16,9 +16,9 @@ use crate::{
 /// The mock for lease SC. It mimics the scheme for time notification.
 /// If GATE, it returns Ok on notifications, returns Err otherwise.
 mod mock_lease {
-    use finance::duration::Duration;
     use serde::{Deserialize, Serialize};
 
+    use finance::duration::Duration;
     use sdk::{
         cosmwasm_ext::Response,
         cosmwasm_std::{

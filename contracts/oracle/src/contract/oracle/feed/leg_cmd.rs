@@ -1,11 +1,14 @@
-use super::price_querier::PriceQuerier;
-use crate::ContractError;
+use serde::de::DeserializeOwned;
+
 use finance::{
     currency::{AnyVisitorPair, Currency},
     price::{base::BasePrice, Price},
 };
-use serde::de::DeserializeOwned;
 use swap::SwapGroup;
+
+use crate::ContractError;
+
+use super::price_querier::PriceQuerier;
 
 pub struct LegCmd<OracleBase, Querier>
 where
@@ -85,13 +88,13 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use std::collections::HashMap;
 
-    use crate::contract::oracle::feed::test::TestFeeds;
-    use crate::tests::{self, TheCurrency};
     use ::currency::lease::{Atom, Cro, Juno, Wbtc, Weth};
+
+    use crate::tests::{self, TheCurrency};
+
+    use super::{super::test::TestFeeds, *};
 
     #[test]
     fn leg_cmd_normal_flow() {

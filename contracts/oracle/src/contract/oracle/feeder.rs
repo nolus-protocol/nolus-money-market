@@ -46,11 +46,12 @@ impl Feeders {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
         cosmwasm_std::{from_binary, testing::mock_env, Addr, DepsMut},
     };
-    use std::collections::HashSet;
 
     use crate::{
         contract::{query, sudo},

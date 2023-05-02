@@ -42,8 +42,9 @@ pub enum StateResponse {
 }
 
 pub mod opening {
-    use sdk::schemars::{self, JsonSchema};
     use serde::{Deserialize, Serialize};
+
+    use sdk::schemars::{self, JsonSchema};
 
     #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
     #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]
@@ -56,8 +57,9 @@ pub mod opening {
 }
 
 pub mod opened {
-    use sdk::schemars::{self, JsonSchema};
     use serde::{Deserialize, Serialize};
+
+    use sdk::schemars::{self, JsonSchema};
 
     use crate::api::{LeaseCoin, PaymentCoin};
 
@@ -96,8 +98,9 @@ pub mod opened {
 }
 
 pub mod paid {
-    use sdk::schemars::{self, JsonSchema};
     use serde::{Deserialize, Serialize};
+
+    use sdk::schemars::{self, JsonSchema};
 
     #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
     #[cfg_attr(any(test, feature = "testing"), derive(Clone, Debug))]

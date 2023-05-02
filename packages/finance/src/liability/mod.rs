@@ -191,7 +191,6 @@ fn check(invariant: bool, msg: &str) -> Result<()> {
 
 #[cfg(test)]
 mod test {
-
     use sdk::cosmwasm_std::{from_slice, StdError};
 
     use crate::{

@@ -1,14 +1,14 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
-use platform::{
-    batch::{Batch, Emitter},
-    message::Response as MessageResponse,
-};
-use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use finance::{coin::CoinDTO, currency::Group, zero::Zero};
-use platform::never::{self, Never};
+use platform::{
+    batch::{Batch, Emitter},
+    message::Response as MessageResponse,
+    never::{self, Never},
+};
+use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     error::{Error, Result},

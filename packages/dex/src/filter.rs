@@ -56,7 +56,6 @@ where
 
 #[cfg(test)]
 mod test {
-
     use finance::{
         coin::{Amount, Coin},
         currency::Currency,

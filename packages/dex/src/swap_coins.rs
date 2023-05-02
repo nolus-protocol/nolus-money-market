@@ -2,6 +2,9 @@ use finance::{coin::CoinDTO, currency::Group};
 
 use super::swap_task::{CoinVisitor, IterNext, IterState};
 
+#[cfg(test)]
+pub(super) use self::test::TestVisitor;
+
 pub fn on_coin<G, Visitor>(
     coin: &CoinDTO<G>,
     visitor: &mut Visitor,
@@ -28,9 +31,6 @@ where
         IterNext::Stop => Ok(IterState::Incomplete),
     })
 }
-
-#[cfg(test)]
-pub(super) use test::TestVisitor;
 
 #[cfg(test)]
 mod test {

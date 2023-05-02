@@ -29,7 +29,6 @@ where
 }
 
 mod impl_into {
-
     use crate::{
         swap_task::SwapTask as SwapTaskT, SwapExactIn, SwapExactInPostRecoverIca,
         SwapExactInPreRecoverIca, SwapExactInRecoverIca, TransferOut,
@@ -188,11 +187,11 @@ mod impl_handler {
 mod impl_contract {
     use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
-    use super::State;
-
     use crate::{
         swap_task::SwapTask as SwapTaskT, Contract, ContractInSwap, SwapState, TransferOutState,
     };
+
+    use super::State;
 
     impl<SwapTask> Contract for State<SwapTask>
     where

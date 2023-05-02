@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 
-use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
+
+use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
