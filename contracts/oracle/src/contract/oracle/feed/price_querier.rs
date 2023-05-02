@@ -1,8 +1,10 @@
-use crate::ContractError;
+use serde::de::DeserializeOwned;
+
 use finance::{currency::Currency, price::Price};
 use marketprice::{error::PriceFeedsError, market_price::PriceFeeds};
 use sdk::cosmwasm_std::{Storage, Timestamp};
-use serde::de::DeserializeOwned;
+
+use crate::ContractError;
 
 pub struct FedPrices<'a> {
     storage: &'a dyn Storage,
@@ -62,10 +64,10 @@ where
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     use ::currency::lease::{Atom, Weth};
     use finance::{coin::Coin, price::total_of};
+
+    use super::*;
 
     #[test]
     fn test_maybe_price() {

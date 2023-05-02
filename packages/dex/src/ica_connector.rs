@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use platform::{
@@ -8,6 +7,7 @@ use platform::{
     ica::HostAccount,
     message,
 };
+use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     account::Account,
@@ -50,7 +50,7 @@ impl<Connectee, SwapResult> IcaConnector<Connectee, SwapResult>
 where
     Connectee: IcaConnectee + DexConnectable,
 {
-    const STATE_LABEL: &str = "register-ica";
+    const STATE_LABEL: &'static str = "register-ica";
 
     pub fn new(connectee: Connectee) -> Self {
         Self {

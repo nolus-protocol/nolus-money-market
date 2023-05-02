@@ -1,5 +1,6 @@
-use sdk::{cosmwasm_ext::Response as CwResponse, cosmwasm_std::to_binary};
 use serde::Serialize;
+
+use sdk::{cosmwasm_ext::Response as CwResponse, cosmwasm_std::to_binary};
 
 use crate::{error, message::Response as MessageResponse};
 

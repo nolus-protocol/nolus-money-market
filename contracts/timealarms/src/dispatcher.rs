@@ -1,8 +1,9 @@
-use crate::{msg::ExecuteAlarmMsg, ContractError};
 use currency::native::Nls;
 use platform::batch::{Batch, Emit, Emitter};
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::Addr;
+
+use crate::{msg::ExecuteAlarmMsg, ContractError};
 
 pub type Id = u64;
 
@@ -51,15 +52,15 @@ impl From<OracleAlarmDispatcher> for MessageResponse {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
-    use crate::dispatcher::{EVENT_KEY, EVENT_TYPE};
-
     use platform::response;
     use sdk::{
         cosmwasm_ext::Response as CwResponse,
         cosmwasm_std::{Addr, Event, ReplyOn},
     };
+
+    use crate::dispatcher::{EVENT_KEY, EVENT_TYPE};
+
+    use super::*;
 
     #[test]
     fn empty() {

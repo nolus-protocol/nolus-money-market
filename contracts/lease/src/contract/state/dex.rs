@@ -1,7 +1,8 @@
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
+use serde::{Deserialize, Serialize};
+
 use dex::{ContinueResult, Contract as DexContract, Handler as DexHandler, Result as DexResult};
 use platform::state_machine;
-use serde::{Deserialize, Serialize};
+use sdk::cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{self, ExecuteMsg, StateResponse},

@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
-
-use sdk::schemars::{self, JsonSchema};
+use thiserror::Error;
 
 use marketprice::SpotPrice;
+use sdk::schemars::{self, JsonSchema};
 
 mod unchecked;
 
@@ -56,18 +56,17 @@ impl From<Alarm> for (SpotPrice, Option<SpotPrice>) {
     }
 }
 
-use thiserror::Error;
-
 #[derive(Error, Debug, PartialEq)]
 #[error("[PriceAlarms] {0}")]
 pub struct AlarmError(&'static str);
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use currency::lease::{Cro, Weth};
     use finance::coin::Coin;
     use sdk::cosmwasm_std::{from_slice, StdError};
+
+    use super::*;
 
     #[test]
     fn below_price_ok() {

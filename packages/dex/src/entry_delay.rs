@@ -1,7 +1,8 @@
+use serde::{Deserialize, Serialize};
+
 use finance::duration::Duration;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
-use serde::{Deserialize, Serialize};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{error::Result as DexResult, Contract, Handler, Result};

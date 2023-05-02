@@ -1,11 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use super::swap_task::SwapTask as SwapTaskT;
 use crate::{
     SwapExactIn, SwapExactInPostRecoverIca, SwapExactInPreRecoverIca, SwapExactInRecoverIca,
     TransferInFinish, TransferInInit, TransferInInitPostRecoverIca, TransferInInitPreRecoverIca,
     TransferInInitRecoverIca, TransferOut,
 };
+
+use super::swap_task::SwapTask as SwapTaskT;
 
 #[derive(Serialize, Deserialize)]
 pub enum State<SwapTask>
@@ -42,7 +43,6 @@ where
 }
 
 mod impl_into {
-
     use crate::{
         swap_task::SwapTask as SwapTaskT, SwapExactIn, SwapExactInPostRecoverIca,
         SwapExactInPreRecoverIca, SwapExactInRecoverIca, TransferInFinish, TransferInInit,
@@ -301,12 +301,12 @@ mod impl_handler {
 mod impl_contract {
     use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
-    use super::State;
-
     use crate::{
         swap_task::SwapTask as SwapTaskT, Contract, ContractInSwap, SwapState,
         TransferInFinishState, TransferInInitState, TransferOutState,
     };
+
+    use super::State;
 
     impl<SwapTask> Contract for State<SwapTask>
     where

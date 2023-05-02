@@ -2,7 +2,6 @@ use serde::de::DeserializeOwned;
 
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
-
 use sdk::cosmwasm_std::DepsMut;
 
 use crate::{

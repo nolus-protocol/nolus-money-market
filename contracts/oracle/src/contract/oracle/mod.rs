@@ -1,18 +1,21 @@
-use crate::contract::alarms::{MarketAlarms, PriceResult};
-use crate::contract::oracle::feed::Feeds;
-use crate::result::ContractResult;
-use crate::state::config::Config;
-use crate::{
-    msg::{AlarmsStatusResponse, ExecuteAlarmMsg},
-    state::supported_pairs::SupportedPairs,
-    ContractError,
-};
+use serde::de::DeserializeOwned;
+
 use ::currency::native::Nls;
 use finance::currency::{Currency, SymbolOwned};
 use marketprice::SpotPrice;
 use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::cosmwasm_std::{Storage, Timestamp};
-use serde::de::DeserializeOwned;
+
+use crate::{
+    contract::{
+        alarms::{MarketAlarms, PriceResult},
+        oracle::feed::Feeds,
+    },
+    msg::{AlarmsStatusResponse, ExecuteAlarmMsg},
+    result::ContractResult,
+    state::{config::Config, supported_pairs::SupportedPairs},
+    ContractError,
+};
 
 use self::feeder::Feeders;
 

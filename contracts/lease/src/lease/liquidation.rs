@@ -166,7 +166,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::lease::{liquidation::check_liability, Status};
     use currency::lease::Atom;
     use finance::{
         duration::Duration,
@@ -174,7 +173,7 @@ mod tests {
         percent::Percent,
     };
 
-    use super::Cause;
+    use super::{super::Status, check_liability, Cause};
 
     #[test]
     fn warnings_none() {

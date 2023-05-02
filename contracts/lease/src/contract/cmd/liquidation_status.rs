@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use finance::{currency::Currency, liability::Zone};
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
@@ -5,8 +7,6 @@ use platform::batch::Batch;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
-
-use serde::{Deserialize, Serialize};
 
 use crate::{
     api::LeaseCoin,

@@ -1,8 +1,7 @@
-use cosmwasm_std::{QuerierWrapper, Timestamp};
-use dex::Enterable;
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo};
+use dex::Enterable;
+use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{ExecuteMsg, StateResponse},
@@ -10,9 +9,9 @@ use crate::{
     error::ContractResult,
 };
 
-use self::transfer_in::DexState;
-
 use super::{handler, Handler, Response};
+
+use self::transfer_in::DexState;
 
 pub mod transfer_in;
 #[cfg(feature = "migration")]

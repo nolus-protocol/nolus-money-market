@@ -5,8 +5,9 @@ use sdk::{
     cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex},
 };
 
-use super::Alarms;
 use crate::AlarmError;
+
+use super::Alarms;
 
 type TimeSeconds = u64;
 type Id = u64;

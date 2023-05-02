@@ -1,4 +1,3 @@
-use cosmwasm_std::QuerierWrapper;
 use currency::native::Nls;
 use finance::duration::Duration;
 use platform::{
@@ -6,7 +5,7 @@ use platform::{
     batch::{Batch, Emit, Emitter},
     message::Response as MessageResponse,
 };
-use sdk::cosmwasm_std::{Addr, Deps, Env, Storage, Timestamp};
+use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Storage, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{msg::ConfigResponse, result::ContractResult, state::config::Config, ContractError};

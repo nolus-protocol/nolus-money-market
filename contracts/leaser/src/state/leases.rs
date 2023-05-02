@@ -113,11 +113,15 @@ where
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::Addr;
-    use sdk::{cosmwasm_std::testing, cw_storage_plus::Item};
+    use sdk::{
+        cosmwasm_std::{testing, Addr},
+        cw_storage_plus::Item,
+    };
 
-    use crate::result::ContractResult;
-    use crate::state::leases::{InstantiateReplyId, Leases};
+    use crate::{
+        result::ContractResult,
+        state::leases::{InstantiateReplyId, Leases},
+    };
 
     #[test]
     fn test_id_overflow() {

@@ -1,10 +1,10 @@
 use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
 
+use dex::{Account, ConnectionParams, DexConnectable};
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
 use crate::{api::StateResponse, error::ContractResult, lease::LeaseDTO};
-use dex::{Account, ConnectionParams, DexConnectable};
 
 pub use self::endpoins::{execute, instantiate, migrate, query, reply, sudo};
 use self::state::State;
