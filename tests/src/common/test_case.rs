@@ -5,10 +5,11 @@ use finance::{
     percent::Percent,
 };
 use lease::api::{ConnectionParams, Ics20Channel};
+
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Uint64},
     cw_multi_test::{next_block, Executor},
-    testing::CustomMessageSender,
+    testing::{new_custom_msg_queue, CustomMessageSender, WrappedCustomMessageReceiver},
 };
 
 use crate::common::{
@@ -59,6 +60,7 @@ type OptionalOracleWrapper = Option<
 
 pub struct TestCase<Lpn> {
     pub app: MockApp,
+    pub message_receiver: WrappedCustomMessageReceiver,
     pub dispatcher_addr: Option<Addr>,
     pub treasury_addr: Option<Addr>,
     pub profit_addr: Option<Addr>,
@@ -74,16 +76,21 @@ impl<Lpn> TestCase<Lpn>
 where
     Lpn: Currency,
 {
-    pub fn new(custom_message_sender: Option<CustomMessageSender>) -> Self {
-        Self::with_reserve(custom_message_sender, &[cwcoin::<Lpn, _>(10_000)])
+    pub const LEASER_CONNECTION_ID: &'static str = "connection-0";
+
+    pub fn new() -> Self {
+        Self::with_reserve(&[cwcoin::<Lpn, _>(10_000)])
     }
 
-    pub fn with_reserve(
-        custom_message_sender: Option<CustomMessageSender>,
-        reserve: &[CwCoin],
-    ) -> Self {
+    pub fn with_reserve(reserve: &[CwCoin]) -> Self {
+        let (custom_message_sender, custom_message_receiver): (
+            CustomMessageSender,
+            WrappedCustomMessageReceiver,
+        ) = new_custom_msg_queue();
+
         Self {
             app: mock_app(custom_message_sender, reserve),
+            message_receiver: custom_message_receiver,
             dispatcher_addr: None,
             treasury_addr: None,
             profit_addr: None,
@@ -138,7 +145,7 @@ where
     where
         D: Currency,
     {
-        LeaseWrapper::default().instantiate::<D>(
+        let lease: Addr = LeaseWrapper::default().instantiate::<D>(
             &mut self.app,
             self.lease_code_id,
             LeaseWrapperAddresses {
@@ -161,11 +168,18 @@ where
             },
             LeaseInitConfig::new(lease_currency, 1000.into(), None),
             LeaseWrapperConfig::default(),
-        )
+        );
+
+        self.message_receiver.assert_empty();
+
+        lease
     }
 
     pub fn init_lease(&mut self) -> &mut Self {
         self.lease_code_id = Some(LeaseWrapper::default().store(&mut self.app));
+
+        self.message_receiver.assert_empty();
+
         self
     }
 
@@ -200,6 +214,7 @@ where
             Some(wrapper) => LppWrapper::with_contract_wrapper(wrapper),
             None => LppWrapper::default(),
         };
+
         self.lpp_addr = Some(
             mocked_lpp
                 .instantiate::<Lpn>(
@@ -212,7 +227,11 @@ where
                 )
                 .0,
         );
+
         self.app.update_block(next_block);
+
+        self.message_receiver.assert_empty();
+
         self
     }
 
@@ -231,6 +250,9 @@ where
                 self.profit_addr.clone().expect("Profit not initialized!"),
             ),
         );
+
+        self.message_receiver.assert_empty();
+
         self.app
             .wasm_sudo(
                 self.leaser_addr.clone().unwrap(),
@@ -246,31 +268,46 @@ where
 
         self.app.update_block(next_block);
 
+        self.message_receiver.assert_empty();
+
         self
     }
 
     pub fn init_treasury(&mut self) -> &mut Self {
         self.treasury_addr = Some(TreasuryWrapper::default().instantiate::<Lpn>(&mut self.app));
+
         self.app.update_block(next_block);
+
+        self.message_receiver.assert_empty();
 
         self
     }
 
     pub fn init_profit(&mut self, cadence_hours: u16) -> &mut Self {
-        self.profit_addr = Some(ProfitWrapper::default().instantiate(
-            &mut self.app,
-            cadence_hours,
-            self.treasury_addr.as_ref().unwrap(),
-            self.timealarms.as_ref().unwrap(),
-        ));
+        const CONNECTION_ID: &str = "dex-connection";
+
+        let _: &Addr = self
+            .profit_addr
+            .insert(ProfitWrapper::default().instantiate(
+                &mut self.app,
+                cadence_hours,
+                self.treasury_addr.clone().unwrap(),
+                self.timealarms.clone().unwrap(),
+            ));
+
         self.app.update_block(next_block);
+
+        self.message_receiver.assert_empty();
 
         self
     }
 
     pub fn init_timealarms(&mut self) -> &mut Self {
         self.timealarms = Some(TimeAlarmsWrapper::default().instantiate(&mut self.app));
+
         self.app.update_block(next_block);
+
+        self.message_receiver.assert_empty();
 
         self
     }
@@ -282,7 +319,10 @@ where
         };
 
         self.oracle = Some(mocked_oracle.instantiate::<Lpn>(&mut self.app));
+
         self.app.update_block(next_block);
+
+        self.message_receiver.assert_empty();
 
         self
     }
@@ -296,7 +336,10 @@ where
             self.timealarms.as_ref().unwrap(),
             &self.treasury_addr.as_ref().unwrap().clone(),
         );
+
         self.app.update_block(next_block);
+
+        self.message_receiver.assert_empty();
 
         self.app
             .wasm_sudo(
@@ -309,7 +352,10 @@ where
 
         self.app.update_block(next_block);
 
+        self.message_receiver.assert_empty();
+
         self.dispatcher_addr = Some(dispatcher_addr);
+
         self
     }
 

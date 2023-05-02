@@ -18,9 +18,13 @@ fn on_alarm_from_unknown() {
     type Lpn = Usdc;
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::<Lpn>::new(None);
-    test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
-    test_case.init_treasury().init_timealarms().init_profit(2);
+    let mut test_case = TestCase::<Lpn>::new();
+    test_case
+        .init(&user_addr, cwcoins::<Lpn, _>(500))
+        .init_treasury()
+        .init_timealarms()
+        .init_oracle(None)
+        .init_profit(2);
 
     let treasury_balance = test_case
         .app
@@ -53,9 +57,13 @@ fn on_alarm_zero_balance() {
     type Lpn = Usdc;
     let time_oracle_addr = Addr::unchecked("time");
 
-    let mut test_case = TestCase::<Lpn>::new(None);
-    test_case.init(&time_oracle_addr, cwcoins::<Lpn, _>(500));
-    test_case.init_treasury().init_timealarms().init_profit(2);
+    let mut test_case = TestCase::<Lpn>::new();
+    test_case
+        .init(&time_oracle_addr, cwcoins::<Lpn, _>(500))
+        .init_treasury()
+        .init_timealarms()
+        .init_oracle(None)
+        .init_profit(2);
 
     test_case
         .app
@@ -69,11 +77,15 @@ fn on_alarm_zero_balance() {
 }
 
 #[test]
-fn on_alarm_transfer() {
+fn on_alarm_native_only_transfer() {
     type Lpn = Usdc;
 
-    let mut test_case = TestCase::<Lpn>::new(None);
-    test_case.init_treasury().init_timealarms().init_profit(2);
+    let mut test_case = TestCase::<Lpn>::new();
+    test_case
+        .init_treasury()
+        .init_timealarms()
+        .init_oracle(None)
+        .init_profit(2);
 
     let init_balance = bank::balance::<Native>(
         test_case.treasury_addr.as_ref().unwrap(),
@@ -103,13 +115,15 @@ fn on_alarm_transfer() {
         .unwrap();
 
     // ensure the attributes were relayed from the sub-message
-    assert_eq!(4, res.events.len(), "{:?}", res.events);
+    assert_eq!(res.events.len(), 4, "{:?}", res.events);
+
     let profit_exec = &res.events[0];
     assert_eq!(profit_exec.ty.as_str(), "execute");
     assert_eq!(
         profit_exec.attributes,
         [("_contract_addr", test_case.profit_addr.as_ref().unwrap())]
     );
+
     let profit_exec = &res.events[1];
 
     assert_eq!(profit_exec.ty.as_str(), "wasm-tr-profit");
@@ -127,6 +141,7 @@ fn on_alarm_transfer() {
             ("profit-amount-symbol", Native::TICKER.into())
         ]
     );
+
     let profit_exec = &res.events[2];
     assert_eq!(profit_exec.ty.as_str(), "transfer");
     assert_eq!(
@@ -146,6 +161,7 @@ fn on_alarm_transfer() {
             )
         ]
     );
+
     let profit_exec = &res.events[3];
     assert_eq!(profit_exec.ty.as_str(), "execute");
     assert_eq!(
@@ -171,7 +187,7 @@ fn integration_with_timealarms() {
     type Lpn = Usdc;
     const CADENCE_HOURS: u16 = 2;
 
-    let mut test_case = TestCase::<Lpn>::new(None);
+    let mut test_case = TestCase::<Lpn>::new();
 
     test_case
         .init_treasury()

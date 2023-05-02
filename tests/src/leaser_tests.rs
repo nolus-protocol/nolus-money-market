@@ -16,7 +16,7 @@ use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{coin, Addr, Coin as CwCoin, DepsMut, Env, Event, MessageInfo},
     cw_multi_test::{next_block, ContractWrapper, Executor},
-    testing::{new_custom_msg_queue, CustomMessageReceiver},
+    testing::new_custom_msg_queue,
 };
 
 use crate::common::{
@@ -54,7 +54,7 @@ fn init_lpp_with_unknown_currency() {
 
     type NotLpn = Osmo;
 
-    let mut test_case = TestCase::<NotLpn>::new(None);
+    let mut test_case = TestCase::<NotLpn>::new();
     test_case.init(&user_addr, cwcoins::<NotLpn, _>(500));
     test_case.init_lpp(
         None,
@@ -71,9 +71,7 @@ fn open_lease_not_in_lease_currency() {
     type Lpn = Usdc;
     let lease_currency = Nls::TICKER;
 
-    let (neutron_message_sender, _neutron_message_receiver) = new_custom_msg_queue();
-
-    let mut test_case = TestCase::<Lpn>::new(Some(neutron_message_sender));
+    let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
     test_case.init_lpp(
         None,
@@ -124,7 +122,7 @@ fn open_multiple_loans() {
     type Lpn = Usdc;
     type LeaseCurrency = Atom;
 
-    let mut test_case = TestCase::<Lpn>::new(None);
+    let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
     test_case.init_lpp(
         None,
@@ -174,6 +172,13 @@ fn open_multiple_loans() {
             )
             .unwrap();
         test_case.app.update_block(next_block);
+
+        test_case
+            .message_receiver
+            .assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+
+        test_case.message_receiver.assert_empty();
+
         let addr = lease_addr(&res.events);
         loans.insert(Addr::unchecked(addr));
     }
@@ -193,6 +198,13 @@ fn open_multiple_loans() {
         )
         .unwrap();
     test_case.app.update_block(next_block);
+
+    test_case
+        .message_receiver
+        .assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+
+    test_case.message_receiver.assert_empty();
+
     let user1_lease_addr = lease_addr(&res.events);
 
     let resp: HashSet<Addr> = test_case
@@ -224,7 +236,8 @@ fn test_quote() {
     type LeaseCurrency = Osmo;
 
     let user_addr = Addr::unchecked(USER);
-    let mut test_case = TestCase::<Lpn>::new(None);
+
+    let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
     test_case.init_lpp(
         None,
@@ -297,7 +310,8 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
     let user_reserve = cwcoins::<Atom, _>(USER_ATOMS);
 
     let user_addr = Addr::unchecked(USER);
-    let mut test_case = TestCase::<Lpn>::with_reserve(None, &{
+
+    let mut test_case = TestCase::<Lpn>::with_reserve(&{
         let mut reserve = cwcoins::<Lpn, _>(1_000_000_000);
 
         reserve.extend_from_slice(lpp_reserve.as_slice());
@@ -388,7 +402,8 @@ fn test_quote_fixed_rate() {
     type LeaseCurrency = Osmo;
 
     let user_addr = Addr::unchecked(USER);
-    let mut test_case = TestCase::<Lpn>::new(None);
+
+    let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
     test_case.init_lpp(
         Some(
@@ -463,7 +478,9 @@ fn open_loans_lpp_fails() {
         }
     }
 
-    let mut test_case = TestCase::<Lpn>::new(None);
+    let (_message_sender, _message_receiver) = new_custom_msg_queue();
+
+    let mut test_case = TestCase::<Lpn>::new();
     test_case
         .init(&user_addr, cwcoins::<Lpn, _>(500))
         .init_lpp(
@@ -499,7 +516,7 @@ fn open_loans_lpp_fails() {
         .unwrap();
 }
 
-fn open_lease_impl<Lpn, LeaseC, DownpaymentC>(feed_prices: bool) -> CustomMessageReceiver
+fn open_lease_impl<Lpn, LeaseC, DownpaymentC>(feed_prices: bool)
 where
     Lpn: Currency,
     LeaseC: Currency,
@@ -507,9 +524,7 @@ where
 {
     let user_addr = Addr::unchecked(USER);
 
-    let (neutron_message_sender, neutron_message_receiver) = new_custom_msg_queue();
-
-    let mut test_case = TestCase::<Lpn>::new(Some(neutron_message_sender));
+    let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, vec![cwcoin::<DownpaymentC, _>(500)]);
     test_case.init_lpp(
         None,
@@ -583,14 +598,12 @@ where
 
     complete_lease_initialization::<Lpn, DownpaymentC, LeaseC>(
         &mut test_case.app,
-        &neutron_message_receiver,
+        &test_case.message_receiver,
         &lease_addr,
         downpayment,
         exp_borrow,
         exp_lease,
     );
-
-    neutron_message_receiver
 }
 
 fn lease_addr(events: &[Event]) -> String {

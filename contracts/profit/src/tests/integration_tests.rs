@@ -1,6 +1,9 @@
 use sdk::{
     cosmwasm_std::{Addr, Coin, Uint128},
-    testing::{new_app, App, Contract, ContractWrapper, Executor},
+    testing::{
+        new_app, new_custom_msg_queue, App, Contract, ContractWrapper, CustomMessageSender,
+        Executor, WrappedCustomMessageReceiver,
+    },
 };
 
 use crate::{
@@ -21,8 +24,8 @@ const USER: &str = "USER";
 const ADMIN: &str = "ADMIN";
 const NATIVE_DENOM: &str = "denom";
 
-fn mock_app() -> App {
-    new_app(None).build(|router, _, storage| {
+fn mock_app(custom_message_sender: CustomMessageSender) -> App {
+    new_app(custom_message_sender).build(|router, _, storage| {
         router
             .bank
             .init_balance(
@@ -37,8 +40,12 @@ fn mock_app() -> App {
     })
 }
 
-fn proper_instantiate() -> (App, CwTemplateContract) {
-    let mut app = mock_app();
+fn proper_instantiate() -> (App, CwTemplateContract, WrappedCustomMessageReceiver) {
+    let (custom_message_sender, custom_message_receiver): (
+        CustomMessageSender,
+        WrappedCustomMessageReceiver,
+    ) = new_custom_msg_queue();
+    let mut app = mock_app(custom_message_sender);
     let cw_template_id = app.store_code(contract_template());
 
     let msg = InstantiateMsg {
@@ -59,7 +66,7 @@ fn proper_instantiate() -> (App, CwTemplateContract) {
 
     let cw_template_contract = CwTemplateContract(cw_template_contract_addr);
 
-    (app, cw_template_contract)
+    (app, cw_template_contract, custom_message_receiver)
 }
 
 mod config {
@@ -68,7 +75,11 @@ mod config {
     #[test]
     #[should_panic(expected = "ContractData not found")]
     fn config() {
-        let (mut app, cw_template_contract) = proper_instantiate();
+        let (mut app, cw_template_contract, _custom_message_receiver): (
+            App,
+            CwTemplateContract,
+            WrappedCustomMessageReceiver,
+        ) = proper_instantiate();
 
         app.wasm_sudo(
             cw_template_contract.addr(),

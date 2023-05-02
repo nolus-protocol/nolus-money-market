@@ -41,8 +41,7 @@ where
 }
 
 fn create_test_case() -> TestCase<Lpn> {
-    let mut test_case =
-        TestCase::with_reserve(None, &[cw_coin(10_000_000_000_000_000_000_000_000_000)]);
+    let mut test_case = TestCase::with_reserve(&[cw_coin(10_000_000_000_000_000_000_000_000_000)]);
     test_case.init(
         &Addr::unchecked(ADMIN),
         vec![cw_coin(1_000_000_000_000_000_000_000_000)],
@@ -132,6 +131,8 @@ fn feed_price_with_alarm_issue() {
         )
         .unwrap();
 
+    test_case.message_receiver.assert_empty();
+
     let _ = oracle_wrapper::feed_price::<_, BaseC, Usdc>(
         &mut test_case,
         &Addr::unchecked(ADMIN),
@@ -162,6 +163,8 @@ fn feed_price_with_alarm() {
         )
         .unwrap();
 
+    test_case.message_receiver.assert_empty();
+
     let res = oracle_wrapper::feed_price::<_, Cro, Usdc>(
         &mut test_case,
         &Addr::unchecked(ADMIN),
@@ -185,6 +188,12 @@ fn open_lease(test_case: &mut TestCase<Lpn>, downpayment: TheCoin) -> Addr {
             &[cw_coin(downpayment)],
         )
         .unwrap();
+
+    test_case
+        .message_receiver
+        .assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+
+    test_case.message_receiver.assert_empty();
 
     get_lease_address(test_case)
 }
@@ -238,6 +247,8 @@ fn test_config_update() {
     oracle_wrapper::add_feeder(&mut test_case, &feeder1);
     oracle_wrapper::add_feeder(&mut test_case, &feeder2);
     oracle_wrapper::add_feeder(&mut test_case, &feeder3);
+
+    test_case.message_receiver.assert_empty();
 
     oracle_wrapper::feed_price::<_, BaseC, Usdc>(
         &mut test_case,

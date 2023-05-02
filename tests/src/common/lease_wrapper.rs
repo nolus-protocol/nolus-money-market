@@ -1,5 +1,3 @@
-use std::sync::mpsc::Receiver;
-
 use finance::{
     coin::{Amount, Coin},
     currency::{self, Currency},
@@ -24,7 +22,7 @@ use sdk::{
         bindings::msg::NeutronMsg,
         sudo::msg::{RequestPacket, SudoMsg},
     },
-    testing::CustomMessageReceiver,
+    testing::WrappedCustomMessageReceiver,
 };
 use swap::trx as swap_trx;
 
@@ -224,7 +222,7 @@ type LeaseContractWrapperReply = Box<
 
 pub fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
     mock_app: &mut MockApp,
-    neutron_message_receiver: &CustomMessageReceiver,
+    message_receiver: &WrappedCustomMessageReceiver,
     lease: &Addr,
     downpayment: Coin<DownpaymentC>,
     exp_borrow: Coin<Lpn>,
@@ -242,7 +240,7 @@ pub fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
     let ica_channel = format!("channel-{ica_addr}");
     let ica_channel = ica_channel.as_str();
     let (connection_id, interchain_account_id) = open_ica(
-        neutron_message_receiver,
+        message_receiver,
         mock_app,
         lease,
         ica_channel,
@@ -252,7 +250,7 @@ pub fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
     check_state_opening(mock_app, lease);
 
     transfer_out(
-        neutron_message_receiver,
+        message_receiver,
         mock_app,
         lease,
         downpayment,
@@ -263,7 +261,7 @@ pub fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
     check_state_opening(mock_app, lease);
 
     transfer_out(
-        neutron_message_receiver,
+        message_receiver,
         mock_app,
         lease,
         exp_borrow,
@@ -280,7 +278,7 @@ pub fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
     };
     swap::<DownpaymentC, LeaseC>(
         mock_app,
-        neutron_message_receiver,
+        message_receiver,
         lease,
         exp_swap_out,
         connection_id,
@@ -291,7 +289,7 @@ pub fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
 }
 
 fn open_ica(
-    neutron_message_receiver: &Receiver<NeutronMsg>,
+    message_receiver: &WrappedCustomMessageReceiver,
     mock_app: &mut MockApp,
     lease_addr: &Addr,
     ica_channel: &str,
@@ -302,9 +300,9 @@ fn open_ica(
         connection_id,
         interchain_account_id,
     } = ({
-        let msg: NeutronMsg = neutron_message_receiver.recv().expect("Expected a Neutron message, but no was available!");
+        let msg: NeutronMsg = message_receiver.try_recv().expect("Expected a Neutron message, but no was available!");
 
-        let _ = neutron_message_receiver.try_recv().expect_err("Expected queue to be empty, but a second message has been sent!");
+        let _ = message_receiver.try_recv().expect_err("Expected queue to be empty, but a second message has been sent!");
 
         msg
     }) else {
@@ -336,7 +334,7 @@ fn open_ica(
 }
 
 fn transfer_out<OutC>(
-    neutron_message_receiver: &CustomMessageReceiver,
+    message_receiver: &WrappedCustomMessageReceiver,
     mock_app: &mut MockApp,
     lease: &Addr,
     amount_out: Coin<OutC>,
@@ -348,7 +346,7 @@ fn transfer_out<OutC>(
 {
     assert_eq!(
         expect_ibc_transfer(
-            neutron_message_receiver,
+            message_receiver,
             ica_channel,
             lease.as_str(),
             ica_addr,
@@ -379,7 +377,7 @@ fn check_state_opened(mock_app: &mut MockApp, lease: &Addr) {
 
 fn swap<DownpaymentC, LeaseC>(
     mock_app: &mut MockApp,
-    neutron_message_receiver: &Receiver<NeutronMsg>,
+    message_receiver: &WrappedCustomMessageReceiver,
     lease: &Addr,
     swap_out: Coin<LeaseC>,
     connection_id: String,
@@ -401,7 +399,7 @@ fn swap<DownpaymentC, LeaseC>(
             interchain_account_id: tx_ica_id,
             msgs,
             ..
-        } = neutron_message_receiver.recv().expect("Expected to receive a `SubmitTx` message but no message was available!") else {
+        } = message_receiver.try_recv().expect("Expected to receive a `SubmitTx` message but no message was available!") else {
             unreachable!("Unexpected message type!")
         };
 
@@ -452,7 +450,7 @@ fn send_response(mock_app: &mut MockApp, lease_addr: &Addr, resp: Binary) -> App
 }
 
 pub fn expect_ibc_transfer(
-    neutron_message_receiver: &CustomMessageReceiver,
+    message_receiver: &WrappedCustomMessageReceiver,
     ica_channel: &str,
     sender_addr: &str,
     ica_addr: &str,
@@ -460,12 +458,12 @@ pub fn expect_ibc_transfer(
 ) -> CwCoin {
     let NeutronMsg::IbcTransfer {
         source_port, source_channel, token, sender, receiver, ..
-    } = neutron_message_receiver.recv().unwrap() else {
+    } = message_receiver.try_recv().unwrap() else {
         unreachable!("Unexpected message type!")
     };
 
     if last_msg {
-        neutron_message_receiver
+        message_receiver
             .try_recv()
             .expect_err("Expected queue to be empty, but other message(s) has been sent!");
     }

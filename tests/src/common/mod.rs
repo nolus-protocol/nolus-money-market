@@ -99,10 +99,7 @@ fn mock_query(_deps: Deps<'_>, _env: Env, _msg: MockQueryMsg) -> StdResult<Binar
 
 pub type MockApp = App<CustomMsg, Empty>;
 
-pub fn mock_app(
-    custom_message_sender: Option<CustomMessageSender>,
-    init_funds: &[CwCoin],
-) -> MockApp {
+pub fn mock_app(message_sender: CustomMessageSender, init_funds: &[CwCoin]) -> MockApp {
     let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);
 
     let mock_start_block = BlockInfo {
@@ -114,7 +111,7 @@ pub fn mock_app(
     let mut funds = vec![native_cwcoin(100000)];
     funds.append(&mut init_funds.to_vec());
 
-    new_app(custom_message_sender)
+    new_app(message_sender)
         .with_block(mock_start_block)
         .build(|router, _, storage| {
             router
