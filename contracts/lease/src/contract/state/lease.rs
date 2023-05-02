@@ -1,6 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 use dex::Handler as DexHandler;
 use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
-use serde::{Deserialize, Serialize};
 
 use crate::{
     api::{ExecuteMsg, StateResponse},

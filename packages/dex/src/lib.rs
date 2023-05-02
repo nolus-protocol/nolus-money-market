@@ -1,30 +1,6 @@
-use entry_delay::EntryDelay;
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 
-mod account;
-mod coin_index;
-mod connectable;
-mod connection;
-mod entry_delay;
-mod error;
-mod filter;
-mod ica_connector;
-mod ica_recover;
-mod out_local;
-mod out_remote;
-mod response;
-mod swap_coins;
-mod swap_exact_in;
-mod swap_task;
-mod timeout;
-mod transfer_in;
-mod transfer_in_finish;
-mod transfer_in_init;
-mod transfer_out;
-mod trx;
-
-use crate::SwapTask as SwapTaskT;
-pub use {
+pub use crate::{
     account::Account,
     connectable::DexConnectable,
     connection::{ConnectionParams, Ics20Channel},
@@ -47,6 +23,29 @@ pub use {
     transfer_in_init::TransferInInit,
     transfer_out::TransferOut,
 };
+use crate::{entry_delay::EntryDelay, SwapTask as SwapTaskT};
+
+mod account;
+mod coin_index;
+mod connectable;
+mod connection;
+mod entry_delay;
+mod error;
+mod filter;
+mod ica_connector;
+mod ica_recover;
+mod out_local;
+mod out_remote;
+mod response;
+mod swap_coins;
+mod swap_exact_in;
+mod swap_task;
+mod timeout;
+mod transfer_in;
+mod transfer_in_finish;
+mod transfer_in_init;
+mod transfer_out;
+mod trx;
 
 type SwapExactInPreRecoverIca<SwapTask, SEnum> = EntryDelay<SwapExactInRecoverIca<SwapTask, SEnum>>;
 

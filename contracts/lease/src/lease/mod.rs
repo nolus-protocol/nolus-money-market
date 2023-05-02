@@ -184,7 +184,6 @@ where
 
 #[cfg(test)]
 mod tests {
-
     use serde::{Deserialize, Serialize};
 
     use ::currency::{lease::Atom, lpn::Usdc};
@@ -210,9 +209,8 @@ mod tests {
         msg::ExecuteMsg::AddPriceAlarm,
         stub::{Oracle, OracleBatch, OracleRef},
     };
-    use platform::bank::BalancesResult;
     use platform::{
-        bank::{Aggregate, BankAccountView, BankStub},
+        bank::{Aggregate, BalancesResult, BankAccountView, BankStub},
         batch::Batch,
         error::Result as PlatformResult,
     };

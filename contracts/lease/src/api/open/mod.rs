@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+pub use dex::{ConnectionParams, Ics20Channel};
 use finance::{currency::SymbolOwned, duration::Duration, liability::Liability, percent::Percent};
 use sdk::{
     cosmwasm_std::Addr,
@@ -7,8 +8,6 @@ use sdk::{
 };
 
 use crate::{error::ContractError, error::ContractResult};
-
-pub use dex::{ConnectionParams, Ics20Channel};
 
 mod unchecked;
 

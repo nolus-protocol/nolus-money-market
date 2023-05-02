@@ -1,13 +1,16 @@
-use super::{MarketAlarms, PriceResult};
-use crate::ContractError;
+use serde::{de::DeserializeOwned, Serialize};
+
 use finance::{
     currency::{self, AnyVisitor, AnyVisitorResult, Currency},
     price::base::BasePrice,
 };
 use marketprice::alarms::{AlarmsIterator, PriceAlarms};
 use sdk::cosmwasm_std::{Addr, Storage};
-use serde::{de::DeserializeOwned, Serialize};
 use swap::SwapGroup;
+
+use crate::ContractError;
+
+use super::{MarketAlarms, PriceResult};
 
 struct AlarmsCmd<'a, 'b, OracleBase>
 where
@@ -98,11 +101,12 @@ fn next_alarm(iter: &mut AlarmsIterator<'_>) -> Option<Result<Addr, ContractErro
 
 #[cfg(test)]
 mod test {
-    use super::super::test::test_case;
-    use super::*;
-    use crate::tests;
     use ::currency::lease::{Atom, Cro, Juno, Weth};
     use sdk::cosmwasm_std::{testing::MockStorage, StdError};
+
+    use crate::tests;
+
+    use super::{super::test::test_case, *};
 
     #[test]
     fn error_handling() {

@@ -1,7 +1,6 @@
-use sdk::cosmwasm_std::Addr;
-
 use lease::api::MigrateMsg;
 use platform::batch::Batch;
+use sdk::cosmwasm_std::Addr;
 
 use crate::{error::ContractError, result::ContractResult};
 
@@ -52,8 +51,7 @@ impl TryFrom<MigrateBatch> for Batch {
 mod test {
     use lease::api::MigrateMsg;
     use platform::batch::Batch;
-
-    use cosmwasm_std::Addr;
+    use sdk::cosmwasm_std::Addr;
 
     use crate::ContractError;
 

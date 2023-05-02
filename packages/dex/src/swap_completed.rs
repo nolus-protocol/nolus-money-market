@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use finance::coin::CoinDTO;
 use serde::{Deserialize, Serialize};
 
-use crate::{swap_task::SwapTask as SwapTaskT, Handler, Error};
+use crate::{Error, Handler, swap_task::SwapTask as SwapTaskT};
 
 #[derive(Serialize, Deserialize)]
 pub struct Completed<SwapTask, SEnum>

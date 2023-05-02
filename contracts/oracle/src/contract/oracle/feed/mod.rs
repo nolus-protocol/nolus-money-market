@@ -1,20 +1,22 @@
+use std::marker::PhantomData;
+
+use serde::de::DeserializeOwned;
+
+use finance::currency::{self, Currency, SymbolOwned};
+use leg_cmd::LegCmd;
+use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
+use price_querier::FedPrices;
+use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
+use swap::{SwapGroup, SwapTarget};
+
 use crate::{
     contract::alarms::PriceResult,
     state::supported_pairs::{SupportedPairs, SwapLeg},
     ContractError,
 };
-use finance::currency::{self, Currency, SymbolOwned};
-use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
-use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
-use serde::de::DeserializeOwned;
-use std::marker::PhantomData;
-use swap::{SwapGroup, SwapTarget};
-
-mod price_querier;
-use price_querier::FedPrices;
 
 mod leg_cmd;
-use leg_cmd::LegCmd;
+mod price_querier;
 
 pub struct Feeds<OracleBase> {
     feeds: PriceFeeds<'static>,
@@ -100,8 +102,6 @@ where
 mod test {
     use std::collections::HashMap;
 
-    use super::*;
-    use crate::tests::{self, TheCurrency};
     use ::currency::lease::{Atom, Cro, Juno, Osmo, Wbtc, Weth};
     use finance::{
         coin::Amount,
@@ -113,6 +113,10 @@ mod test {
     use price_querier::PriceQuerier;
     use sdk::cosmwasm_std::testing::{self, MockStorage};
     use tree::HumanReadableTree;
+
+    use crate::tests::{self, TheCurrency};
+
+    use super::*;
 
     #[derive(Clone)]
     pub struct TestFeeds(pub HashMap<(SymbolStatic, SymbolStatic), PriceDTO<SwapGroup, SwapGroup>>);
@@ -182,8 +186,9 @@ mod test {
     }
 
     mod all_prices_iter {
-        use super::*;
         use finance::price::base::BasePrice;
+
+        use super::*;
 
         #[test]
         fn normal() {

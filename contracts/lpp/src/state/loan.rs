@@ -117,9 +117,8 @@ where
 
 #[cfg(test)]
 mod test {
-    use cosmwasm_std::{Addr, Timestamp};
     use finance::{coin::Coin, duration::Duration, percent::Percent, test::currency::Usdc};
-    use sdk::cosmwasm_std::testing;
+    use sdk::cosmwasm_std::{testing, Addr, Timestamp};
 
     use crate::{error::ContractError, state::Loan};
 

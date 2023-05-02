@@ -15,8 +15,9 @@ use sdk::{
 };
 use swap::SwapGroup;
 
+use self::errors::AlarmError;
+
 pub mod errors;
-use errors::AlarmError;
 
 pub type AlarmsCount = u32;
 

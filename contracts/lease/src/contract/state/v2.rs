@@ -1,10 +1,11 @@
 use std::marker::PhantomData;
 
-use cosmwasm_std::Addr;
-use dex::{Account as AccountV3, ConnectionParams, IcaConnector as IcaConnectorV3};
 use enum_dispatch::enum_dispatch;
-use platform::ica::HostAccount;
 use serde::{Deserialize, Serialize, Serializer};
+
+use dex::{Account as AccountV3, ConnectionParams, IcaConnector as IcaConnectorV3};
+use platform::ica::HostAccount;
+use sdk::cosmwasm_std::Addr;
 
 use crate::{
     contract::{state::Closed, Lease as LeaseV3},
@@ -12,9 +13,7 @@ use crate::{
 };
 
 use super::{
-    opened::{self},
-    opening::v2::RequestLoan,
-    OpenIcaAccount as OpenIcaAccountV3, State as StateV3,
+    opened, opening::v2::RequestLoan, OpenIcaAccount as OpenIcaAccountV3, State as StateV3,
 };
 
 const NOT_SUPPORTED: &str = "Migration expects no timed out channels";

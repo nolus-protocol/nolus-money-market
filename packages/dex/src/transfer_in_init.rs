@@ -1,6 +1,8 @@
-use finance::coin::CoinDTO;
-use sdk::cosmwasm_std::Binary;
 use serde::{Deserialize, Serialize};
+
+use finance::coin::CoinDTO;
+use platform::batch::Batch;
+use sdk::cosmwasm_std::{Binary, Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{
     error::Result,
@@ -10,8 +12,6 @@ use crate::{
     trx::IBC_TIMEOUT,
     ConnectionParams, Contract, ContractInSwap, DexConnectable, Enterable, TransferInInitState,
 };
-use platform::batch::Batch;
-use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 
 use super::transfer_in_finish::TransferInFinish;
 

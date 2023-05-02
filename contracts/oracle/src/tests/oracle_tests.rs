@@ -1,4 +1,3 @@
-use cosmwasm_std::testing::MockQuerier;
 use currency::{
     lease::{Atom, Osmo, Wbtc, Weth},
     lpn::Usdc,
@@ -8,7 +7,7 @@ use marketprice::SpotPrice;
 use platform::contract;
 use sdk::cosmwasm_std::{
     from_binary,
-    testing::{mock_env, mock_info},
+    testing::{mock_env, mock_info, MockQuerier},
     Response as CwResponse,
 };
 

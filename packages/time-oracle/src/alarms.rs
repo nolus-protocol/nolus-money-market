@@ -76,8 +76,9 @@ impl<'a> Alarms<'a> {
 
 #[cfg(test)]
 pub mod tests {
-    use super::*;
     use sdk::cosmwasm_std::testing;
+
+    use super::*;
 
     fn query_alarms(
         storage: &dyn Storage,

@@ -392,7 +392,6 @@ where
 
 #[cfg(test)]
 mod tests {
-
     use serde::{Deserialize, Serialize};
 
     use finance::{
@@ -413,9 +412,8 @@ mod tests {
             LppBatch,
         },
     };
-    use platform::bank::BalancesResult;
     use platform::{
-        bank::{Aggregate, BankAccountView},
+        bank::{Aggregate, BalancesResult, BankAccountView},
         error::Result as PlatformResult,
     };
     use profit::stub::{Profit, ProfitBatch};

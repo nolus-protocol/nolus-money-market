@@ -1,12 +1,11 @@
-use cosmwasm_std::Storage;
-use enum_dispatch::enum_dispatch;
-use platform::batch::Batch;
-use serde::{Deserialize, Serialize};
 use std::str;
 
-use platform::message::Response as MessageResponse;
+use enum_dispatch::enum_dispatch;
+use serde::{Deserialize, Serialize};
+
+use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::{
-    cosmwasm_std::{DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{DepsMut, Env, MessageInfo, Reply, Storage},
     cw_storage_plus::Item,
 };
 
@@ -15,11 +14,10 @@ use crate::{
     error::ContractResult,
 };
 
+pub(crate) use self::handler::{Handler, Response};
 #[cfg(feature = "migration")]
 pub(in crate::contract) use self::v2::{Migrate, StateV2};
 use self::{dex::State as DexState, lease::State as LeaseState};
-
-pub(crate) use self::handler::{Handler, Response};
 
 mod closed;
 mod dex;
@@ -153,7 +151,6 @@ mod impl_from {
 
 /// would have used `enum_dispatch` it it supported trait associated types
 mod impl_dex_handler {
-
     use dex::{ContinueResult, Handler, Result};
     use sdk::cosmwasm_std::{Binary, Deps, Env};
 
