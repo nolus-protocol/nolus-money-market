@@ -17,7 +17,7 @@ type Lpn = Usdc;
 #[test]
 fn on_alarm_zero_reward() {
     let user = Addr::unchecked(USER);
-    let mut test_case = TestCase::<Usdc>::new(None);
+    let mut test_case = TestCase::<Usdc>::new();
     test_case.init(&user, cwcoins::<Lpn, _>(500));
 
     test_case
@@ -63,7 +63,7 @@ fn on_alarm_zero_reward() {
 fn on_alarm() {
     let lender = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::<Usdc>::new(None);
+    let mut test_case = TestCase::<Usdc>::new();
     test_case
         .init(&lender, cwcoins::<Lpn, _>(500))
         .init_timealarms()
@@ -323,7 +323,7 @@ fn test_config() {
 // }
 
 fn new_test_case() -> TestCase<Lpn> {
-    let mut test_case = TestCase::new(None);
+    let mut test_case = TestCase::new();
     test_case
         .init(&Addr::unchecked(ADMIN), cwcoins::<Lpn, _>(500))
         .init_lpp(

@@ -18,9 +18,11 @@ use lpp::{
     state::Config,
 };
 use platform::{bank, coin_legacy};
+use sdk::testing::{CustomMessageSender, WrappedCustomMessageReceiver};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Event, Timestamp},
     cw_multi_test::{AppResponse, Executor},
+    testing::new_custom_msg_queue,
 };
 
 use crate::common::{
@@ -67,8 +69,13 @@ fn config_update_parameters() {
     let addon_optimal_interest_rate = Percent::from_percent(20);
     let utilization_optimal = Percent::from_percent(55);
 
+    let (custom_message_sender, _custom_message_receiver): (
+        CustomMessageSender,
+        WrappedCustomMessageReceiver,
+    ) = new_custom_msg_queue();
+
     let mut app = mock_app(
-        None,
+        custom_message_sender,
         &[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)],
     );
     let lease_id = LeaseWrapper::default().store(&mut app);
@@ -122,7 +129,7 @@ fn config_update_parameters() {
 fn open_loan_unauthorized_contract_id() {
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::<Lpn>::new(None);
+    let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, vec![lpn_cwcoin(500)]);
     test_case.init_lpp(
         None,
@@ -158,7 +165,7 @@ fn open_loan_unauthorized_contract_id() {
 fn open_loan_no_liquidity() {
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::<Lpn>::new(None);
+    let mut test_case = TestCase::<Lpn>::new();
     test_case.init(&user_addr, vec![lpn_cwcoin(500)]);
     test_case.init_lpp(
         None,
@@ -206,7 +213,10 @@ fn deposit_and_withdraw() {
     let lender2 = Addr::unchecked("lender2");
     let lender3 = Addr::unchecked("lender3");
 
-    let mut app = mock_app(None, &[lpn_cwcoin(app_balance)]);
+    let (message_sender, message_receiver): (CustomMessageSender, WrappedCustomMessageReceiver) =
+        new_custom_msg_queue();
+
+    let mut app = mock_app(message_sender, &[lpn_cwcoin(app_balance)]);
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
         &mut app,
@@ -216,10 +226,24 @@ fn deposit_and_withdraw() {
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
     );
+
+    message_receiver.assert_empty();
+
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app);
+
+    message_receiver.assert_empty();
+
     let market_price_oracle = MarketOracleWrapper::default().instantiate::<Lpn>(&mut app);
+
+    message_receiver.assert_empty();
+
     let treasury = TreasuryWrapper::default().instantiate::<Lpn>(&mut app);
-    let profit = ProfitWrapper::default().instantiate(&mut app, 24, &treasury, &time_alarms);
+
+    message_receiver.assert_empty();
+
+    let profit = ProfitWrapper::default().instantiate(&mut app, 24, treasury, time_alarms.clone());
+
+    message_receiver.assert_empty();
 
     app.send_tokens(admin.clone(), lender1.clone(), &[lpn_cwcoin(init_deposit)])
         .unwrap();
@@ -236,6 +260,8 @@ fn deposit_and_withdraw() {
         &[lpn_cwcoin(init_deposit)],
     )
     .unwrap();
+
+    message_receiver.assert_empty();
 
     // push the price from 1, should be allowed as an interest from previous leases for example.
     app.send_tokens(admin, lpp.clone(), &[lpn_cwcoin(lpp_balance_push)])
@@ -258,6 +284,8 @@ fn deposit_and_withdraw() {
         &[lpn_cwcoin(test_deposit)],
     )
     .unwrap();
+
+    message_receiver.assert_empty();
 
     // got rounding error
     let balance_nlpn: BalanceResponse = app
@@ -287,6 +315,8 @@ fn deposit_and_withdraw() {
     )
     .unwrap();
 
+    message_receiver.assert_empty();
+
     let balance_nlpn: BalanceResponse = app
         .wrap()
         .query_wasm_smart(
@@ -311,6 +341,7 @@ fn deposit_and_withdraw() {
         .query_wasm_smart(lpp.clone(), &QueryLpp::LppBalance())
         .unwrap();
     dbg!(balance_lpp);
+
     LeaseWrapper::default().instantiate::<Lpn>(
         &mut app,
         Some(lease_id),
@@ -326,6 +357,11 @@ fn deposit_and_withdraw() {
             ..LeaseWrapperConfig::default()
         },
     );
+
+    message_receiver.assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+
+    message_receiver.assert_empty();
+
     let balance_lpp: LppBalanceResponse<Lpn> = app
         .wrap()
         .query_wasm_smart(lpp.clone(), &QueryLpp::LppBalance())
@@ -378,6 +414,8 @@ fn deposit_and_withdraw() {
     );
     assert!(resp.is_err());
 
+    message_receiver.assert_empty();
+
     // partial withdraw
     app.execute_contract(
         lender2.clone(),
@@ -388,6 +426,8 @@ fn deposit_and_withdraw() {
         &[],
     )
     .unwrap();
+
+    message_receiver.assert_empty();
 
     let balance_nlpn: BalanceResponse = app
         .wrap()
@@ -410,6 +450,9 @@ fn deposit_and_withdraw() {
         &[],
     )
     .unwrap();
+
+    message_receiver.assert_empty();
+
     let balance_nlpn: BalanceResponse = app
         .wrap()
         .query_wasm_smart(lpp, &QueryLpp::Balance { address: lender2 })
@@ -428,7 +471,12 @@ fn loan_open_wrong_id() {
     let init_deposit = 20_000_000u128;
     let loan = 10_000u128;
 
-    let mut app = mock_app(None, &lpn_cwcoins(app_balance));
+    let (custom_message_sender, _custom_message_receiver): (
+        CustomMessageSender,
+        WrappedCustomMessageReceiver,
+    ) = new_custom_msg_queue();
+
+    let mut app = mock_app(custom_message_sender, &lpn_cwcoins(app_balance));
     let lease_id = LeaseWrapper::default().store(&mut app);
     let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
         &mut app,
@@ -491,9 +539,12 @@ fn loan_open_and_repay() {
 
     let interest1 = interest_rate(loan1_u32, balance1_u32);
 
+    let (message_sender, message_receiver): (CustomMessageSender, WrappedCustomMessageReceiver) =
+        new_custom_msg_queue();
+
     // net setup
     let mut app = mock_app(
-        None,
+        message_sender,
         &[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)],
     );
     let lease_id = LeaseWrapper::default().store(&mut app);
@@ -505,10 +556,25 @@ fn loan_open_and_repay() {
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
     );
+
+    message_receiver.assert_empty();
+
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app);
+
+    message_receiver.assert_empty();
+
     let oracle = MarketOracleWrapper::default().instantiate::<Lpn>(&mut app);
+
+    message_receiver.assert_empty();
+
     let treasury = TreasuryWrapper::default().instantiate::<Lpn>(&mut app);
-    let profit = ProfitWrapper::default().instantiate(&mut app, 24, &treasury, &time_alarms);
+
+    message_receiver.assert_empty();
+
+    let profit = ProfitWrapper::default().instantiate(&mut app, 24, treasury, time_alarms.clone());
+
+    message_receiver.assert_empty();
+
     let lease_addresses = LeaseWrapperAddresses {
         lpp: lpp.clone(),
         time_alarms,
@@ -529,6 +595,8 @@ fn loan_open_and_repay() {
     )
     .unwrap();
 
+    message_receiver.assert_empty();
+
     app.wasm_sudo(
         lpp.clone(),
         &SudoMsg::NewBorrowRate {
@@ -541,6 +609,8 @@ fn loan_open_and_repay() {
         },
     )
     .unwrap();
+
+    message_receiver.assert_empty();
 
     let quote: QueryQuoteResponse = app
         .wrap()
@@ -568,6 +638,10 @@ fn loan_open_and_repay() {
         },
     );
 
+    message_receiver.assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+
+    message_receiver.assert_empty();
+
     // double borrow
     app.execute_contract(
         loan_addr1.clone(),
@@ -578,6 +652,8 @@ fn loan_open_and_repay() {
         &[],
     )
     .unwrap_err();
+
+    message_receiver.assert_empty();
 
     app.time_shift(Duration::from_nanos(YEAR / 2));
 
@@ -619,6 +695,10 @@ fn loan_open_and_repay() {
         },
     );
 
+    message_receiver.assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+
+    message_receiver.assert_empty();
+
     app.time_shift(Duration::from_nanos(YEAR / 2));
 
     let maybe_loan1: QueryLoanResponse<Lpn> = app
@@ -647,6 +727,8 @@ fn loan_open_and_repay() {
     )
     .unwrap_err();
 
+    message_receiver.assert_empty();
+
     // repay zero
     app.execute_contract(
         loan_addr1.clone(),
@@ -655,6 +737,8 @@ fn loan_open_and_repay() {
         &[lpn_cwcoin(0)],
     )
     .unwrap_err();
+
+    message_receiver.assert_empty();
 
     // repay wrong currency
     app.send_tokens(
@@ -671,6 +755,8 @@ fn loan_open_and_repay() {
     )
     .unwrap_err();
 
+    message_receiver.assert_empty();
+
     // repay interest part
     app.execute_contract(
         loan_addr1.clone(),
@@ -679,6 +765,8 @@ fn loan_open_and_repay() {
         &[lpn_cwcoin(repay_interest_part)],
     )
     .unwrap();
+
+    message_receiver.assert_empty();
 
     let maybe_loan1: QueryLoanResponse<Lpn> = app
         .wrap()
@@ -707,6 +795,8 @@ fn loan_open_and_repay() {
     )
     .unwrap();
 
+    message_receiver.assert_empty();
+
     let maybe_loan1: QueryLoanResponse<Lpn> = app
         .wrap()
         .query_wasm_smart(
@@ -728,6 +818,8 @@ fn loan_open_and_repay() {
         &[lpn_cwcoin(loan1 - repay_due_part + repay_excess)],
     )
     .unwrap();
+
+    message_receiver.assert_empty();
 
     let maybe_loan1: QueryLoanResponse<Lpn> = app
         .wrap()
@@ -798,9 +890,14 @@ fn compare_lpp_states() {
 
     let interest1 = interest_rate(loan1_u32, balance1_u32);
 
+    let (custom_message_sender, message_receiver): (
+        CustomMessageSender,
+        WrappedCustomMessageReceiver,
+    ) = new_custom_msg_queue();
+
     // net setup
     let mut app = mock_app(
-        None,
+        custom_message_sender,
         &[
             lpn_cwcoin(app_balance),
             coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),
@@ -815,10 +912,25 @@ fn compare_lpp_states() {
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
     );
+
+    message_receiver.assert_empty();
+
     let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app);
+
+    message_receiver.assert_empty();
+
     let market_oracle = MarketOracleWrapper::default().instantiate::<Lpn>(&mut app);
+
+    message_receiver.assert_empty();
+
     let treasury = TreasuryWrapper::default().instantiate::<Lpn>(&mut app);
-    let profit = ProfitWrapper::default().instantiate(&mut app, 24, &treasury, &time_alarms);
+
+    message_receiver.assert_empty();
+
+    let profit = ProfitWrapper::default().instantiate(&mut app, 24, treasury, time_alarms.clone());
+
+    message_receiver.assert_empty();
+
     app.send_tokens(admin.clone(), lender.clone(), &[lpn_cwcoin(init_deposit)])
         .unwrap();
     app.send_tokens(admin.clone(), hacker.clone(), &[lpn_cwcoin(hacker_balance)])
@@ -833,6 +945,8 @@ fn compare_lpp_states() {
     )
     .unwrap();
 
+    message_receiver.assert_empty();
+
     app.wasm_sudo(
         lpp.clone(),
         &SudoMsg::NewBorrowRate {
@@ -845,6 +959,8 @@ fn compare_lpp_states() {
         },
     )
     .unwrap();
+
+    message_receiver.assert_empty();
 
     let quote: QueryQuoteResponse = app
         .wrap()
@@ -877,6 +993,10 @@ fn compare_lpp_states() {
         },
     );
 
+    message_receiver.assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+
+    message_receiver.assert_empty();
+
     // double borrow
     app.execute_contract(
         loan_addr1.clone(),
@@ -887,6 +1007,8 @@ fn compare_lpp_states() {
         &[],
     )
     .unwrap_err();
+
+    message_receiver.assert_empty();
 
     app.time_shift(Duration::from_nanos(YEAR / 2));
 
@@ -933,6 +1055,10 @@ fn compare_lpp_states() {
         },
     );
 
+    message_receiver.assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+
+    message_receiver.assert_empty();
+
     app.time_shift(Duration::from_nanos(YEAR / 2));
 
     let maybe_loan1: QueryLoanResponse<Lpn> = app
@@ -961,6 +1087,8 @@ fn compare_lpp_states() {
     )
     .unwrap_err();
 
+    message_receiver.assert_empty();
+
     // repay zero
     app.execute_contract(
         loan_addr1.clone(),
@@ -969,6 +1097,8 @@ fn compare_lpp_states() {
         &[lpn_cwcoin(0)],
     )
     .unwrap_err();
+
+    message_receiver.assert_empty();
 
     // repay wrong currency
     app.send_tokens(
@@ -985,6 +1115,8 @@ fn compare_lpp_states() {
     )
     .unwrap_err();
 
+    message_receiver.assert_empty();
+
     // repay interest part
     app.execute_contract(
         loan_addr1.clone(),
@@ -993,6 +1125,8 @@ fn compare_lpp_states() {
         &[lpn_cwcoin(repay_interest_part)],
     )
     .unwrap();
+
+    message_receiver.assert_empty();
 
     let maybe_loan1: QueryLoanResponse<Lpn> = app
         .wrap()
@@ -1021,6 +1155,8 @@ fn compare_lpp_states() {
     )
     .unwrap();
 
+    message_receiver.assert_empty();
+
     let maybe_loan1: QueryLoanResponse<Lpn> = app
         .wrap()
         .query_wasm_smart(
@@ -1042,6 +1178,8 @@ fn compare_lpp_states() {
         &[lpn_cwcoin(loan1 - repay_due_part + repay_excess)],
     )
     .unwrap();
+
+    message_receiver.assert_empty();
 
     let maybe_loan1: QueryLoanResponse<Lpn> = app
         .wrap()
@@ -1100,8 +1238,13 @@ fn test_rewards() {
     // TODO: any checks for the sender of rewards?
     let treasury = Addr::unchecked("treasury");
 
+    let (custom_message_sender, _custom_message_receiver): (
+        CustomMessageSender,
+        WrappedCustomMessageReceiver,
+    ) = new_custom_msg_queue();
+
     let mut app = mock_app(
-        None,
+        custom_message_sender,
         &[
             lpn_cwcoin(app_balance),
             coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),

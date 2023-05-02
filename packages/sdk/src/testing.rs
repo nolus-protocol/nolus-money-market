@@ -1,3 +1,8 @@
+use std::{
+    ops::{Deref, DerefMut},
+    sync::mpsc::TryRecvError,
+};
+
 use cosmwasm_std::{
     testing::{mock_dependencies, MockApi, MockQuerier, MockStorage},
     Binary, ContractResult, Empty, GovMsg, IbcMsg, IbcQuery, OwnedDeps, SystemError, SystemResult,
@@ -30,10 +35,57 @@ pub type AppBuilder<Exec = CustomMsg, Query = Empty> = cw_multi_test::AppBuilder
 pub type Contract = dyn cw_multi_test::Contract<CustomMsg>;
 
 pub type CustomMessageSender = std::sync::mpsc::Sender<CustomMsg>;
-pub type CustomMessageReceiver = std::sync::mpsc::Receiver<CustomMsg>;
+type CustomMessageReceiver = std::sync::mpsc::Receiver<CustomMsg>;
 
-pub fn new_custom_msg_queue() -> (CustomMessageSender, CustomMessageReceiver) {
-    std::sync::mpsc::channel()
+pub struct WrappedCustomMessageReceiver(CustomMessageReceiver);
+
+impl WrappedCustomMessageReceiver {
+    #[cfg(feature = "neutron")]
+    pub fn assert_register_ica(&self, expected_connection_id: &str) {
+        let message = self
+            .0
+            .try_recv()
+            .expect("Expected message for ICA registration!");
+
+        if let CustomMsg::RegisterInterchainAccount { connection_id, .. } = message {
+            assert_eq!(connection_id, expected_connection_id);
+        } else {
+            panic!("Expected message for ICA registration, got {message:?}!");
+        }
+    }
+
+    pub fn assert_empty(&self) {
+        assert_eq!(self.0.try_recv(), Err(TryRecvError::Empty));
+    }
+}
+
+impl Deref for WrappedCustomMessageReceiver {
+    type Target = CustomMessageReceiver;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for WrappedCustomMessageReceiver {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl Drop for WrappedCustomMessageReceiver {
+    fn drop(&mut self) {
+        if let Ok(message) = self.0.try_recv() {
+            panic!("Custom message receiver dropped with messages in the queue! First message: {message:?}");
+        }
+    }
+}
+
+pub fn new_custom_msg_queue() -> (CustomMessageSender, WrappedCustomMessageReceiver) {
+    let (sender, receiver): (CustomMessageSender, CustomMessageReceiver) =
+        std::sync::mpsc::channel();
+
+    (sender, WrappedCustomMessageReceiver(receiver))
 }
 
 pub fn mock_deps_with_contracts<const N: usize>(
@@ -68,9 +120,9 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
     deps
 }
 
-pub fn new_app(custom_message_sender: Option<CustomMessageSender>) -> AppBuilder {
+pub fn new_app(message_sender: CustomMessageSender) -> AppBuilder {
     BasicAppBuilder::<CustomMsg, Empty>::new_custom()
-        .with_custom(CustomMsgModule::new(custom_message_sender))
+        .with_custom(CustomMsgModule::new(message_sender))
         .with_wasm::<CustomMsgModule, _>(WasmKeeper::new())
 }
 
@@ -86,11 +138,11 @@ mod custom_msg {
     use super::CustomMessageSender;
 
     pub struct Module {
-        message_sender: Option<CustomMessageSender>,
+        message_sender: CustomMessageSender,
     }
 
     impl Module {
-        pub fn new(message_sender: Option<CustomMessageSender>) -> Self {
+        pub fn new(message_sender: CustomMessageSender) -> Self {
             Self { message_sender }
         }
     }
@@ -115,11 +167,9 @@ mod custom_msg {
             ExecC: std::fmt::Debug + Clone + PartialEq + JsonSchema + DeserializeOwned + 'static,
             QueryC: CustomQuery + DeserializeOwned + 'static,
         {
-            if let Some(sender) = self.message_sender.as_ref() {
-                sender
-                    .send(msg)
-                    .expect("Receiver closed but message had to be sent!");
-            }
+            self.message_sender
+                .send(msg)
+                .expect("Receiver closed but message had to be sent!");
 
             Ok(AppResponse::default())
         }
