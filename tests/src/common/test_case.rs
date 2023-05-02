@@ -286,9 +286,8 @@ where
     pub fn init_profit(&mut self, cadence_hours: u16) -> &mut Self {
         const CONNECTION_ID: &str = "dex-connection";
 
-        let _: &Addr = self
-            .profit_addr
-            .insert(ProfitWrapper::default().instantiate(
+        self
+            .profit_addr = Some(ProfitWrapper::default().instantiate(
                 &mut self.app,
                 cadence_hours,
                 self.treasury_addr.clone().unwrap(),
