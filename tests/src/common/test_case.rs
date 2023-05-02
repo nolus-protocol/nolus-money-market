@@ -5,7 +5,6 @@ use finance::{
     percent::Percent,
 };
 use lease::api::{ConnectionParams, Ics20Channel};
-
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Uint64},
     cw_multi_test::{next_block, Executor},
@@ -286,13 +285,12 @@ where
     pub fn init_profit(&mut self, cadence_hours: u16) -> &mut Self {
         const CONNECTION_ID: &str = "dex-connection";
 
-        self
-            .profit_addr = Some(ProfitWrapper::default().instantiate(
-                &mut self.app,
-                cadence_hours,
-                self.treasury_addr.clone().unwrap(),
-                self.timealarms.clone().unwrap(),
-            ));
+        self.profit_addr = Some(ProfitWrapper::default().instantiate(
+            &mut self.app,
+            cadence_hours,
+            self.treasury_addr.clone().unwrap(),
+            self.timealarms.clone().unwrap(),
+        ));
 
         self.app.update_block(next_block);
 
