@@ -7,7 +7,7 @@ use dex::{
 use oracle::stub::OracleRef;
 use platform::state_machine;
 use sdk::{
-    cosmwasm_std::{Addr, Binary, Deps, Env, QuerierWrapper},
+    cosmwasm_std::{Addr, Binary, Deps, Env, QuerierWrapper, Storage},
     cw_storage_plus::Item,
 };
 use timealarms::stub::TimeAlarmsRef;
@@ -23,7 +23,7 @@ pub(crate) mod idle;
 pub(crate) mod open_ica;
 pub(crate) mod open_transfer_channel;
 
-pub(crate) const STATE: Item<'static, State> = Item::new("contract_state");
+const STATE: Item<'static, State> = Item::new("contract_state");
 
 pub(crate) type IcaConnector = dex::IcaConnector<OpenIca, DexResponse<Idle>>;
 
@@ -71,6 +71,14 @@ impl State {
             OracleRef::try_from(oracle_addr, querier)?,
             TimeAlarmsRef::new(time_alarms_addr, querier)?,
         )))
+    }
+
+    pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
+        STATE.load(storage).map_err(Into::into)
+    }
+
+    pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
+        STATE.save(storage, self).map_err(Into::into)
     }
 
     pub fn try_update_config(self, cadence_hours: u16) -> ContractResult<Self> {

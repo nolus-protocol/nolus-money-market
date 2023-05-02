@@ -16,7 +16,7 @@ use crate::{
     result::ContractResult,
     state::{
         config::Config,
-        contract_state::{ProfitMessageHandler as _, State, STATE},
+        contract_state::{ProfitMessageHandler as _, State},
     },
     ContractError,
 };
@@ -46,16 +46,14 @@ pub fn instantiate(
     )
     .store(deps.storage)?;
 
-    STATE.save(
-        deps.storage,
-        &State::new(
-            &deps.querier,
-            Config::new(msg.cadence_hours, msg.treasury),
-            msg.connection_id,
-            msg.oracle,
-            msg.timealarms,
-        )?,
-    )?;
+    State::new(
+        &deps.querier,
+        Config::new(msg.cadence_hours, msg.treasury),
+        msg.connection_id,
+        msg.oracle,
+        msg.timealarms,
+    )?
+    .store(deps.storage)?;
 
     Ok(response::empty_response())
 }
@@ -87,9 +85,9 @@ pub fn execute(
         ExecuteMsg::Config { cadence_hours } => {
             SingleUserAccess::check_owner_access::<ContractError>(deps.storage, &info.sender)?;
 
-            let state: State = STATE.load(deps.storage)?;
-
-            STATE.save(deps.storage, &state.try_update_config(cadence_hours)?)?;
+            State::load(deps.storage)?
+                .try_update_config(cadence_hours)?
+                .store(deps.storage)?;
 
             Ok(response::empty_response())
         }
@@ -98,7 +96,7 @@ pub fn execute(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn sudo(deps: DepsMut<'_>, env: Env, msg: NeutronSudoMsg) -> ContractResult<CwResponse> {
-    let state: State = STATE.load(deps.storage)?;
+    let state: State = State::load(deps.storage)?;
 
     let DexResponse::<State> {
         response,
@@ -134,13 +132,13 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: NeutronSudoMsg) -> ContractResult<
         }
     };
 
-    STATE.save(deps.storage, &next_state)?;
+    next_state.store(deps.storage)?;
 
     Ok(response::response_only_messages(response))
 }
 
 fn try_time_alarm(deps: DepsMut<'_>, env: Env) -> ContractResult<MessageResponse> {
-    let state: State = STATE.load(deps.storage)?;
+    let state: State = State::load(deps.storage)?;
 
     let DexResponse::<State> {
         response,
@@ -150,7 +148,7 @@ fn try_time_alarm(deps: DepsMut<'_>, env: Env) -> ContractResult<MessageResponse
         DexResult::Finished(response) => response,
     };
 
-    STATE.save(deps.storage, &next_state)?;
+    next_state.store(deps.storage)?;
 
     Ok(response)
 }

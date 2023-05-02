@@ -10,10 +10,7 @@ use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage};
 use crate::{
     msg::ConfigResponse,
     result::ContractResult,
-    state::{
-        config::Config,
-        contract_state::{State, STATE},
-    },
+    state::{config::Config, contract_state::State},
 };
 
 pub struct Profit;
@@ -40,13 +37,10 @@ impl Profit {
     }
 
     pub fn query_config(storage: &dyn Storage) -> ContractResult<ConfigResponse> {
-        STATE
-            .load(storage)
-            .map_err(Into::into)
-            .and_then(|state: State| {
-                state.config().map(|config: &Config| ConfigResponse {
-                    cadence_hours: config.cadence_hours(),
-                })
+        State::load(storage).and_then(|state: State| {
+            state.config().map(|config: &Config| ConfigResponse {
+                cadence_hours: config.cadence_hours(),
             })
+        })
     }
 }
