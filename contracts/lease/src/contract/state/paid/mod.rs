@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 use crate::{
     api::{ExecuteMsg, StateResponse},
     contract::{Contract, Lease},
-    error::ContractResult,
+    error::{ContractError, ContractResult},
 };
 
 use super::{handler, Handler, Response};
@@ -39,6 +39,9 @@ impl Handler for Active {
         match msg {
             ExecuteMsg::Repay() => handler::err("repay", deps.api),
             ExecuteMsg::Close() => {
+                if self.lease.lease.customer != _info.sender {
+                    return Err(ContractError::Unauthorized {});
+                }
                 let start_transfer_in = transfer_in::start(self.lease);
                 start_transfer_in
                     .enter(env.block.time, &deps.querier)
