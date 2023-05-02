@@ -4,17 +4,20 @@ use currency::{
 };
 use finance::{coin::Coin, currency::Currency, price, price::dto::PriceDTO};
 use marketprice::SpotPrice;
-use platform::contract;
-use sdk::cosmwasm_std::{
-    from_binary,
-    testing::{mock_env, mock_info, MockQuerier},
-    Response as CwResponse,
+use platform::{contract, tests};
+use sdk::{
+    cosmwasm_ext::Response as CwResponse,
+    cosmwasm_std::{
+        from_binary,
+        testing::{mock_env, mock_info, MockQuerier},
+        Event,
+    },
 };
 
 use crate::{
     alarms::Alarm,
     contract::{execute, query},
-    msg::{ExecuteMsg, QueryMsg},
+    msg::{AlarmsCount, DispatchAlarmsResponse, ExecuteMsg, QueryMsg},
     tests::{dummy_default_instantiate_msg, setup_test},
     ContractError,
 };
@@ -151,7 +154,9 @@ fn deliver_alarm() {
         let dispatch_alarms_msg = ExecuteMsg::DispatchAlarms { max_count: 10 };
         let dispatch_alarms_resp =
             execute(deps.as_mut(), mock_env(), info.clone(), dispatch_alarms_msg).unwrap();
-        assert_eq!(CwResponse::default(), dispatch_alarms_resp);
+        assert!(!any_error(&dispatch_alarms_resp));
+        assert_eq!(sent_alarms(&dispatch_alarms_resp), Some(0));
+        assert_eq!(0, dispatch_alarms_resp.messages.len());
     }
     {
         let alarm_below_price = price::total_of(Coin::<Weth>::new(10)).is(Coin::<Usdc>::new(23452));
@@ -162,12 +167,27 @@ fn deliver_alarm() {
         assert_eq!(Ok(CwResponse::default()), add_alarm_resp);
 
         let dispatch_alarms_msg = ExecuteMsg::DispatchAlarms { max_count: 10 };
+        let receiver = info.sender.clone();
         let dispatch_alarms_resp =
             execute(deps.as_mut(), mock_env(), info, dispatch_alarms_msg).unwrap();
+        assert!(!any_error(&dispatch_alarms_resp));
+        tests::assert_event(
+            &dispatch_alarms_resp.events,
+            &Event::new("pricealarm").add_attribute("receiver", receiver),
+        );
+        assert_eq!(sent_alarms(&dispatch_alarms_resp), Some(1));
         assert_eq!(1, dispatch_alarms_resp.messages.len());
     }
 }
 
 fn setup_receiver(querier: &mut MockQuerier) {
     querier.update_wasm(contract::testing::valid_contract_handler);
+}
+
+fn sent_alarms(resp: &CwResponse) -> Option<AlarmsCount> {
+    tests::parse_resp::<DispatchAlarmsResponse>(&resp.data).map(|resp| resp.0)
+}
+
+fn any_error(resp: &CwResponse) -> bool {
+    tests::any_error(&resp.events)
 }

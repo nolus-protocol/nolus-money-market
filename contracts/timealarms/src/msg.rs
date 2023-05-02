@@ -6,7 +6,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-pub type AlarmsCount = u32;
+pub type AlarmsCount = platform::dispatcher::AlarmsCount;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {}
@@ -42,7 +42,7 @@ pub enum QueryMsg {
     AlarmsStatus {},
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
     TimeAlarm {},

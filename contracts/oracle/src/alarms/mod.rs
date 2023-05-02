@@ -6,8 +6,6 @@ use sdk::schemars::{self, JsonSchema};
 
 mod unchecked;
 
-pub type Id = u64;
-
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(try_from = "unchecked::Alarm")]

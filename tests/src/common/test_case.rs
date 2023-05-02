@@ -283,8 +283,6 @@ where
     }
 
     pub fn init_profit(&mut self, cadence_hours: u16) -> &mut Self {
-        const CONNECTION_ID: &str = "dex-connection";
-
         self.profit_addr = Some(ProfitWrapper::default().instantiate(
             &mut self.app,
             cadence_hours,

@@ -1,10 +1,11 @@
 use currency::{lpn::Usdc, native::Nls};
 use finance::{coin::Coin, currency::Currency, duration::Duration};
+use platform::tests::{self};
 use sdk::{
-    cosmwasm_std::{coin, from_binary, Addr, Attribute, Event, Timestamp},
+    cosmwasm_std::{coin, Addr, Attribute, Event, Timestamp},
     cw_multi_test::{AppResponse, Executor},
 };
-use timealarms::msg::DispatchAlarmsResponse;
+use timealarms::msg::{AlarmsCount, DispatchAlarmsResponse};
 
 use crate::{
     common::{cwcoin, test_case::TestCase, AppExt, ADMIN},
@@ -216,22 +217,6 @@ fn dispatch(test_case: &mut TestCase<Lpn>, max_count: u32) -> AppResponse {
         .unwrap()
 }
 
-fn any_error(resp: &AppResponse) -> bool {
-    let maybe_attr = resp
-        .events
-        .iter()
-        .flat_map(|ev| &ev.attributes)
-        .find(|atr| atr.key == "delivered");
-
-    matches!(maybe_attr.map(|attr| attr.value.as_str()), Some("error"))
-}
-
-fn sent_alarms(resp: &AppResponse) -> Option<u32> {
-    resp.data
-        .as_ref()
-        .map(|data| from_binary::<DispatchAlarmsResponse>(data).unwrap().0)
-}
-
 #[test]
 fn fired_alarms_are_removed() {
     let mut test_case = test_case();
@@ -383,4 +368,12 @@ fn test_profit_alarms() {
         resp.events.last().unwrap().attributes.last().unwrap(),
         Attribute::new("delivered", "success")
     );
+}
+
+fn sent_alarms(resp: &AppResponse) -> Option<AlarmsCount> {
+    tests::parse_resp::<DispatchAlarmsResponse>(&resp.data).map(|resp| resp.0)
+}
+
+fn any_error(resp: &AppResponse) -> bool {
+    tests::any_error(&resp.events)
 }

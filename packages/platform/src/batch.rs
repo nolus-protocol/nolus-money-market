@@ -76,18 +76,16 @@ impl Batch {
         Ok(())
     }
 
-    pub fn schedule_execute_wasm_reply_always<M, C>(
+    pub fn schedule_execute_wasm_reply_always_no_funds<M>(
         &mut self,
         addr: &Addr,
         msg: M,
-        funds: Option<Coin<C>>,
         reply_id: ReplyId,
     ) -> Result<()>
     where
         M: Serialize,
-        C: Currency,
     {
-        let wasm_msg = Self::wasm_exec_msg(addr, msg, funds)?;
+        let wasm_msg = Self::wasm_exec_msg_no_funds(addr, msg)?;
         let msg_cw = SubMsg::reply_always(wasm_msg, reply_id);
 
         self.msgs.push(msg_cw);
@@ -161,21 +159,26 @@ impl Batch {
         self.msgs.is_empty()
     }
 
+    fn wasm_exec_msg_no_funds<M>(addr: &Addr, msg: M) -> Result<WasmMsg>
+    where
+        M: Serialize,
+    {
+        Ok(WasmMsg::Execute {
+            contract_addr: addr.into(),
+            funds: vec![],
+            msg: to_binary(&msg)?,
+        })
+    }
+
     fn wasm_exec_msg<M, C>(addr: &Addr, msg: M, funds: Option<Coin<C>>) -> Result<WasmMsg>
     where
         M: Serialize,
         C: Currency,
     {
-        let msg_bin = to_binary(&msg)?;
-        let mut funds_cw = vec![];
-        if let Some(coin) = funds {
-            funds_cw.push(to_cosmwasm_impl(coin));
-        }
-
         Ok(WasmMsg::Execute {
             contract_addr: addr.into(),
-            funds: funds_cw,
-            msg: msg_bin,
+            funds: funds.into_iter().map(to_cosmwasm_impl).collect(),
+            msg: to_binary(&msg)?,
         })
     }
 

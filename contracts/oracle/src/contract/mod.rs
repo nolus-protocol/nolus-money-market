@@ -109,7 +109,7 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
-    ExecWithOracleBase::cmd(deps, env, msg, info.sender).map(response::response_only_messages)
+    ExecWithOracleBase::cmd(deps, env, msg, info.sender)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

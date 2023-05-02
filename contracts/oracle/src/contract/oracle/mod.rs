@@ -1,9 +1,9 @@
 use serde::de::DeserializeOwned;
 
-use ::currency::native::Nls;
 use finance::currency::{Currency, SymbolOwned};
 use marketprice::SpotPrice;
-use platform::{batch::Batch, message::Response as MessageResponse};
+use platform::dispatcher::{AlarmsDispatcher, Id};
+use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Storage, Timestamp};
 
 use crate::{
@@ -35,6 +35,9 @@ impl<OracleBase> Oracle<OracleBase>
 where
     OracleBase: Currency + DeserializeOwned,
 {
+    const REPLY_ID: Id = 0;
+    const EVENT_TYPE: &str = "pricealarm";
+
     pub fn load(storage: &dyn Storage) -> Result<Self, ContractError> {
         let tree = SupportedPairs::load(storage)?;
         let feeders = Feeders::total_registered(storage)?;
@@ -53,7 +56,7 @@ where
         storage: &dyn Storage,
         block_time: Timestamp,
         max_count: u32,
-    ) -> ContractResult<MessageResponse>
+    ) -> ContractResult<(u32, MessageResponse)>
     where
         OracleBase: Currency + DeserializeOwned,
     {
@@ -61,19 +64,14 @@ where
 
         MarketAlarms::notify_alarms_iter::<OracleBase>(storage, prices, max_count.try_into()?)
             .try_fold(
-                Batch::default(),
-                |mut batch, receiver| -> Result<Batch, ContractError> {
-                    // TODO: get rid of the Nls dummy type argument
-                    batch.schedule_execute_wasm_reply_always::<_, Nls>(
-                        &receiver?,
-                        ExecuteAlarmMsg::PriceAlarm(),
-                        None,
-                        batch.len().try_into()?,
-                    )?;
-                    Ok(batch)
+                AlarmsDispatcher::new(ExecuteAlarmMsg::PriceAlarm(), Self::EVENT_TYPE),
+                |dispatcher, receiver| {
+                    dispatcher
+                        .send_to(&receiver?, Self::REPLY_ID)
+                        .map_err::<ContractError, _>(Into::into)
                 },
             )
-            .map(Into::into)
+            .map(|dispatcher| (dispatcher.nb_sent(), dispatcher.into()))
     }
 
     pub(super) fn try_query_alarms(

@@ -15,7 +15,6 @@ use crate::{
     alarms::TimeAlarms,
     msg::{DispatchAlarmsResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
-    ContractError,
 };
 
 // version info for migration info
@@ -54,10 +53,7 @@ pub fn execute(
         ExecuteMsg::DispatchAlarms { max_count } => TimeAlarms::new()
             .try_notify(deps.storage, env.block.time, max_count)
             .and_then(|(total, resp)| {
-                response::response_with_messages::<_, _, ContractError>(
-                    &DispatchAlarmsResponse(total),
-                    resp,
-                )
+                response::response_with_messages(&DispatchAlarmsResponse(total), resp)
             }),
     }
 }

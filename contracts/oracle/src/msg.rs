@@ -14,6 +14,8 @@ use crate::{
     state::{config::Config, supported_pairs::SwapLeg},
 };
 
+pub type AlarmsCount = platform::dispatcher::AlarmsCount;
+
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 pub struct InstantiateMsg {
@@ -34,9 +36,9 @@ pub enum ExecuteMsg {
     AddPriceAlarm {
         alarm: Alarm,
     },
-    /// Returns [`Status`] as response data.
+    /// Returns [`DispatchAlarmsResponse`] as response data.
     DispatchAlarms {
-        max_count: u32,
+        max_count: AlarmsCount,
     },
 }
 
@@ -111,7 +113,7 @@ pub struct PricesResponse {
     pub prices: Vec<SpotPrice>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteAlarmMsg {
     PriceAlarm(),
@@ -120,7 +122,7 @@ pub enum ExecuteAlarmMsg {
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[cfg_attr(feature = "testing", derive(PartialEq))]
 #[serde(rename_all = "snake_case")]
-pub struct DispatchAlarmsResponse(pub u32);
+pub struct DispatchAlarmsResponse(pub AlarmsCount);
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]

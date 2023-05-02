@@ -1,10 +1,13 @@
-use platform::{contract, message::Response as MessageResponse};
+use platform::{
+    contract,
+    dispatcher::{AlarmsDispatcher, Id},
+    message::Response as MessageResponse,
+};
 use sdk::cosmwasm_std::{Addr, DepsMut, Env, Storage, Timestamp};
 use time_oracle::Alarms;
 
 use crate::{
-    dispatcher::{Id, OracleAlarmDispatcher},
-    msg::{AlarmsCount, AlarmsStatusResponse},
+    msg::{AlarmsCount, AlarmsStatusResponse, ExecuteAlarmMsg},
     result::ContractResult,
     ContractError,
 };
@@ -17,6 +20,7 @@ impl TimeAlarms {
     const ALARMS_NAMESPACE: &'static str = "alarms";
     const ALARMS_IDX_NAMESPACE: &'static str = "alarms_idx";
     const REPLY_ID: Id = 0;
+    const EVENT_TYPE: &str = "timealarm";
 
     pub(super) fn new() -> Self {
         Self {
@@ -58,14 +62,16 @@ impl TimeAlarms {
         storage: &mut dyn Storage,
         ctime: Timestamp,
         max_count: AlarmsCount,
-    ) -> ContractResult<(u32, MessageResponse)> {
+    ) -> ContractResult<(AlarmsCount, MessageResponse)> {
         self.time_alarms
             .alarms_selection(storage, ctime)
             .take(max_count.try_into()?)
             .try_fold(
-                OracleAlarmDispatcher::new(),
-                |dispatcher, alarm| -> Result<OracleAlarmDispatcher, ContractError> {
-                    dispatcher.send_to(Self::REPLY_ID, alarm?.0)
+                AlarmsDispatcher::new(ExecuteAlarmMsg::TimeAlarm {}, Self::EVENT_TYPE),
+                |dispatcher, alarm| {
+                    dispatcher
+                        .send_to(&alarm?.0, Self::REPLY_ID)
+                        .map_err::<ContractError, _>(Into::into)
                 },
             )
             .map(|dispatcher| (dispatcher.nb_sent(), dispatcher.into()))

@@ -6,7 +6,6 @@ mod profit_tests;
 
 mod lpp_tests;
 
-#[allow(dead_code)]
 mod common;
 
 mod leaser_tests;

@@ -3,10 +3,18 @@ use serde::de::DeserializeOwned;
 use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
 use marketprice::SpotPrice;
-use platform::{contract, message::Response as MessageResponse};
-use sdk::cosmwasm_std::{Addr, DepsMut, Env, Storage, Timestamp};
+use platform::{contract, response};
+use sdk::{
+    cosmwasm_ext::Response as CwResponse,
+    cosmwasm_std::{Addr, DepsMut, Env, Storage, Timestamp},
+};
 
-use crate::{error::ContractError, msg::ExecuteMsg, result::ContractResult, state::config::Config};
+use crate::{
+    error::ContractError,
+    msg::{DispatchAlarmsResponse, ExecuteMsg},
+    result::ContractResult,
+    state::config::Config,
+};
 
 use super::{
     alarms::MarketAlarms,
@@ -26,7 +34,7 @@ impl<'a> ExecWithOracleBase<'a> {
         env: Env,
         msg: ExecuteMsg,
         sender: Addr,
-    ) -> ContractResult<MessageResponse> {
+    ) -> ContractResult<CwResponse> {
         let visitor = Self {
             deps,
             env,
@@ -40,7 +48,7 @@ impl<'a> ExecWithOracleBase<'a> {
 }
 
 impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
-    type Output = MessageResponse;
+    type Output = CwResponse;
     type Error = ContractError;
 
     fn on<OracleBase>(self) -> AnyVisitorResult<Self>
@@ -61,10 +69,13 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                 )
                 .map(|()| Default::default())
             }
-            ExecuteMsg::DispatchAlarms { max_count } => Oracle::<OracleBase>::load(
-                self.deps.storage,
-            )?
-            .try_notify_alarms(self.deps.storage, self.env.block.time, max_count),
+            ExecuteMsg::DispatchAlarms { max_count } => {
+                Oracle::<OracleBase>::load(self.deps.storage)?
+                    .try_notify_alarms(self.deps.storage, self.env.block.time, max_count)
+                    .and_then(|(total, resp)| {
+                        response::response_with_messages(&DispatchAlarmsResponse(total), resp)
+                    })
+            }
             ExecuteMsg::AddPriceAlarm { alarm } => {
                 contract::validate_addr(&self.deps.querier, &self.sender)?;
                 MarketAlarms::try_add_price_alarm::<OracleBase>(
