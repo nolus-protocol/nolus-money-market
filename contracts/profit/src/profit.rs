@@ -5,7 +5,7 @@ use platform::{
     batch::{Batch, Emit as _, Emitter},
     error::Error as PlatformError,
 };
-use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage};
+use sdk::cosmwasm_std::{Addr, Env, Storage};
 
 use crate::{
     msg::ConfigResponse,
