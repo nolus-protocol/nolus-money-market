@@ -21,12 +21,12 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{profit::Profit, state::config::Config};
+use crate::profit::Profit;
 
-use super::{idle::Idle, ProfitMessageHandler, State};
+use super::{idle::Idle, Config, ProfitMessageHandler, State, StateEnum};
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct BuyBack {
+pub(super) struct BuyBack {
     contract_addr: Addr,
     config: Config,
     account: Account,
@@ -118,7 +118,7 @@ impl SwapTask for BuyBack {
 
         Ok(DexResponse::<State> {
             response: PlatformResponse::messages_with_events(batch.merge(bank_batch), bank_emitter),
-            next_state: State::Idle(state),
+            next_state: State(StateEnum::Idle(state)),
         })
     }
 }

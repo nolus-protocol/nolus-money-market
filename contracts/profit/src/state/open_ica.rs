@@ -4,12 +4,10 @@ use dex::{Account, ConnectionParams, DexConnectable, IcaConnectee, Ics20Channel}
 use oracle::stub::OracleRef;
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::state::config::Config;
-
-use super::{idle::Idle, IcaConnector, ProfitMessageHandler, State};
+use super::{idle::Idle, Config, IcaConnector, ProfitMessageHandler, State};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub(crate) struct OpenIca {
+pub(super) struct OpenIca {
     config: Config,
     dex: ConnectionParams,
     oracle: OracleRef,
