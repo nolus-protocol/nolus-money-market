@@ -46,30 +46,14 @@ impl TimeAlarmsRef {
         &self.addr == addr
     }
 
-    pub fn execute<Cmd>(self, cmd: Cmd) -> StdResult<Cmd::Output, Cmd::Error>
-    where
-        Cmd: WithTimeAlarms,
-    {
-        cmd.exec(self.into_stub())
-    }
-
     pub fn setup_alarm(self, when: Timestamp) -> Result<Batch> {
-        struct SetupAlarm(Timestamp);
-        impl WithTimeAlarms for SetupAlarm {
-            type Output = Batch;
-            type Error = ContractError;
-
-            fn exec<TA>(self, mut time_alarms: TA) -> StdResult<Self::Output, Self::Error>
-            where
-                TA: TimeAlarms,
-            {
-                time_alarms.add_alarm(self.0)?;
-                Ok(time_alarms.into().batch)
-            }
-        }
-        self.execute(SetupAlarm(when))
+        let mut stub = self.into_stub();
+        stub.add_alarm(when)?;
+        Ok(stub.batch)
     }
-    fn into_stub(self) -> TimeAlarmsStub {
+
+    /// It would be overengineering to hide the `TimeAlarms` implementation
+    pub fn into_stub(self) -> TimeAlarmsStub {
         TimeAlarmsStub {
             time_alarms_ref: self,
             batch: Default::default(),
@@ -89,7 +73,7 @@ impl TimeAlarmsRef {
     }
 }
 
-struct TimeAlarmsStub {
+pub struct TimeAlarmsStub {
     time_alarms_ref: TimeAlarmsRef,
     batch: Batch,
 }

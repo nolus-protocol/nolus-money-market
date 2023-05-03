@@ -12,18 +12,13 @@ use lpp::stub::lender::LppLender as LppLenderTrait;
 use marketprice::SpotPrice;
 use oracle::{
     alarms::Alarm,
-    stub::{Oracle as OracleTrait, OracleRef, PriceAlarms as PriceAlarmsTrait, WithPriceAlarms},
+    stub::{Oracle as OracleTrait, OracleRef, PriceAlarms as PriceAlarmsTrait},
 };
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
-use timealarms::stub::{
-    TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch, TimeAlarmsRef, WithTimeAlarms,
-};
+use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch, TimeAlarmsRef};
 
-use crate::{
-    error::{ContractError, ContractResult},
-    lease::Lease,
-};
+use crate::{error::ContractResult, lease::Lease};
 
 pub struct AlarmsBatch {
     pub time_alarms_ref: TimeAlarmsRef,
@@ -47,11 +42,21 @@ where
         time_alarms: TimeAlarmsRef,
         price_alarms: OracleRef,
     ) -> ContractResult<AlarmsBatch> {
-        // TODO simplify the impl by removing the Cmd indirection
-        price_alarms.execute_as_alarms(RescheduleStage1(self, now, liquidation_zone, time_alarms))
+        let mut time_alarms = time_alarms.into_stub();
+        let mut price_alarms = price_alarms.into_alarms_stub::<Lpn>();
+        self.reschedule_typed(now, liquidation_zone, &mut time_alarms, &mut price_alarms)?;
+
+        let TimeAlarmsBatch {
+            time_alarms_ref,
+            batch: time_alarm_messages,
+        } = time_alarms.into();
+        Ok(AlarmsBatch {
+            time_alarms_ref,
+            batch: time_alarm_messages.merge(price_alarms.into()),
+        })
     }
 
-    fn reschedule_int<TimeAlarms, PriceAlarms>(
+    fn reschedule_typed<TimeAlarms, PriceAlarms>(
         &self,
         now: &Timestamp,
         liquidation_zone: &Zone,
@@ -125,73 +130,6 @@ where
         debug_assert!(!self.amount.is_zero(), "Loan already paid!");
 
         Ok(total_of(alarm_at.ltv().of(self.amount)).is(liability))
-    }
-}
-
-struct RescheduleStage1<'a, Lpn, Asset, Lpp, Profit, Oracle>(
-    &'a Lease<Lpn, Asset, Lpp, Profit, Oracle>,
-    &'a Timestamp,
-    &'a Zone,
-    TimeAlarmsRef,
-);
-
-struct RescheduleStage2<'a, Lpn, Asset, Lpp, Profit, Oracle, PriceAlarms>(
-    &'a Lease<Lpn, Asset, Lpp, Profit, Oracle>,
-    &'a Timestamp,
-    &'a Zone,
-    PriceAlarms,
-);
-
-impl<'a, Lpn, Asset, Lpp, Profit, Oracle> WithPriceAlarms<Lpn>
-    for RescheduleStage1<'a, Lpn, Asset, Lpp, Profit, Oracle>
-where
-    Lpn: Currency + Serialize,
-    Lpp: LppLenderTrait<Lpn>,
-    Oracle: OracleTrait<Lpn>,
-    Profit: ProfitTrait,
-    Asset: Currency + Serialize,
-{
-    type Output = AlarmsBatch;
-    type Error = ContractError;
-
-    fn exec<A>(self, alarms: A) -> Result<Self::Output, Self::Error>
-    where
-        A: PriceAlarmsTrait,
-    {
-        self.3
-            .execute(RescheduleStage2(self.0, self.1, self.2, alarms))
-    }
-}
-
-impl<'a, Lpn, Asset, Lpp, Profit, Oracle, PriceAlarms> WithTimeAlarms
-    for RescheduleStage2<'a, Lpn, Asset, Lpp, Profit, Oracle, PriceAlarms>
-where
-    Lpn: Currency + Serialize,
-    Lpp: LppLenderTrait<Lpn>,
-    Oracle: OracleTrait<Lpn>,
-    Profit: ProfitTrait,
-    Asset: Currency + Serialize,
-    PriceAlarms: PriceAlarmsTrait,
-{
-    type Output = AlarmsBatch;
-    type Error = ContractError;
-
-    fn exec<TA>(self, mut time_alarms: TA) -> Result<Self::Output, Self::Error>
-    where
-        TA: TimeAlarmsTrait,
-    {
-        let mut price_alarms = self.3;
-        self.0
-            .reschedule_int(self.1, self.2, &mut time_alarms, &mut price_alarms)?;
-
-        let TimeAlarmsBatch {
-            time_alarms_ref,
-            batch,
-        } = time_alarms.into();
-        Ok(Self::Output {
-            time_alarms_ref,
-            batch: batch.merge(price_alarms.into()),
-        })
     }
 }
 

@@ -103,14 +103,12 @@ impl OracleRef {
         cmd.exec(self.into_oracle_stub::<OracleBase>(querier))
     }
 
-    pub fn execute_as_alarms<OracleBase, V>(self, cmd: V) -> StdResult<V::Output, V::Error>
-    where
-        OracleBase: Currency,
-        V: WithPriceAlarms<OracleBase>,
-        ContractError: Into<V::Error>,
-    {
-        self.check_base::<OracleBase, _>()?;
-        cmd.exec(self.into_alarms_stub::<OracleBase>())
+    pub fn into_alarms_stub<OracleBase>(self) -> AlarmsStub<OracleBase> {
+        AlarmsStub {
+            oracle_ref: self,
+            batch: Batch::default(),
+            _quote_currency: PhantomData::<OracleBase>,
+        }
     }
 
     pub fn swap_path(
@@ -149,14 +147,6 @@ impl OracleRef {
         OracleStub {
             oracle_ref: self,
             querier,
-            _quote_currency: PhantomData::<OracleBase>,
-        }
-    }
-
-    fn into_alarms_stub<OracleBase>(self) -> AlarmsStub<OracleBase> {
-        AlarmsStub {
-            oracle_ref: self,
-            batch: Batch::default(),
             _quote_currency: PhantomData::<OracleBase>,
         }
     }
@@ -222,7 +212,7 @@ impl<'a, OracleBase> From<OracleStub<'a, OracleBase>> for OracleRef {
     }
 }
 
-struct AlarmsStub<OracleBase> {
+pub struct AlarmsStub<OracleBase> {
     oracle_ref: OracleRef,
     _quote_currency: PhantomData<OracleBase>,
     batch: Batch,
