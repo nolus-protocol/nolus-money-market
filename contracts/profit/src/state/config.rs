@@ -6,7 +6,7 @@ use sdk::{
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, JsonSchema)]
-pub struct Config {
+pub(crate) struct Config {
     cadence_hours: u16,
     treasury: Addr,
 }
