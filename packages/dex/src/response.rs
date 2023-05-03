@@ -71,15 +71,29 @@ impl<H> Result<H>
 where
     H: Handler,
 {
-    pub fn map_into<RFrom, HTo, RTo, S>(self) -> Result<HTo>
+    pub fn map_into<HTo>(self) -> Result<HTo>
     where
-        H: Handler<Response = RFrom, SwapResult = S>,
-        HTo: Handler<Response = RTo, SwapResult = S>,
-        RFrom: Into<RTo>,
+        HTo: Handler<SwapResult = H::SwapResult>,
+        H::Response: Into<HTo::Response>,
     {
         match self {
             Result::Continue(cont_res) => Result::Continue(cont_res.map(state_machine::from)),
             Result::Finished(finish_res) => Result::Finished(finish_res),
+        }
+    }
+}
+
+impl<H> Result<H>
+where
+    H: Handler<SwapResult = Response<H>>,
+{
+    pub fn continue_or_ok(self) -> StdResult<Response<H>, Error>
+    where
+        H: Handler,
+    {
+        match self {
+            Result::Continue(cont_res) => cont_res,
+            Result::Finished(finish_res) => Ok(finish_res),
         }
     }
 }
