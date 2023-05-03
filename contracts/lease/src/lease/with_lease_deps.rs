@@ -8,23 +8,20 @@ use lpp::stub::lender::{LppLender as LppLenderTrait, LppLenderRef, WithLppLender
 use oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
 use profit::stub::{Profit as ProfitTrait, ProfitRef, WithProfit};
 use sdk::cosmwasm_std::QuerierWrapper;
-use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef, WithTimeAlarms};
 
 pub trait WithLeaseDeps {
     type Output;
     type Error;
 
-    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
+    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
         self,
         lpp: Lpp,
         profit: Profit,
-        alarms: TimeAlarms,
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppLenderTrait<Lpn>,
-        TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
         Asset: Currency + Serialize;
@@ -35,7 +32,6 @@ pub fn execute<Cmd>(
     asset: Symbol<'_>,
     lpp: LppLenderRef,
     profit: ProfitRef,
-    alarms: TimeAlarmsRef,
     oracle: OracleRef,
     querier: &QuerierWrapper<'_>,
 ) -> Result<Cmd::Output, Cmd::Error>
@@ -51,7 +47,6 @@ where
             cmd,
             lpp,
             profit,
-            alarms,
             oracle,
             querier,
         },
@@ -63,7 +58,6 @@ struct FactoryStage1<'r, Cmd> {
     lpp: LppLenderRef,
     profit: ProfitRef,
     oracle: OracleRef,
-    alarms: TimeAlarmsRef,
     querier: &'r QuerierWrapper<'r>,
 }
 
@@ -86,7 +80,6 @@ where
                 cmd: self.cmd,
                 asset: PhantomData::<C>,
                 profit: self.profit,
-                alarms: self.alarms,
                 oracle: self.oracle,
                 querier: self.querier,
             },
@@ -99,7 +92,6 @@ struct FactoryStage2<'r, Cmd, Asset> {
     asset: PhantomData<Asset>,
     profit: ProfitRef,
     oracle: OracleRef,
-    alarms: TimeAlarmsRef,
     querier: &'r QuerierWrapper<'r>,
 }
 
@@ -124,7 +116,6 @@ where
             lpn: PhantomData::<Lpn>,
             lpp,
             oracle: self.oracle,
-            alarms: self.alarms,
             querier: self.querier,
         })
     }
@@ -136,7 +127,6 @@ struct FactoryStage3<'r, Cmd, Asset, Lpn, Lpp> {
     lpn: PhantomData<Lpn>,
     lpp: Lpp,
     oracle: OracleRef,
-    alarms: TimeAlarmsRef,
     querier: &'r QuerierWrapper<'r>,
 }
 
@@ -162,7 +152,6 @@ where
                 lpn: self.lpn,
                 lpp: self.lpp,
                 profit,
-                alarms: self.alarms,
             },
             self.querier,
         )
@@ -175,7 +164,6 @@ struct FactoryStage4<Cmd, Asset, Lpn, Lpp, Profit> {
     lpn: PhantomData<Lpn>,
     lpp: Lpp,
     profit: Profit,
-    alarms: TimeAlarmsRef,
 }
 
 impl<Cmd, Asset, Lpn, Lpp, Profit> WithOracle<Lpn> for FactoryStage4<Cmd, Asset, Lpn, Lpp, Profit>
@@ -193,44 +181,7 @@ where
     where
         Oracle: OracleTrait<Lpn>,
     {
-        self.alarms.execute(FactoryStage5 {
-            cmd: self.cmd,
-            asset: self.asset,
-            lpn: self.lpn,
-            lpp: self.lpp,
-            profit: self.profit,
-            oracle,
-        })
-    }
-}
-
-struct FactoryStage5<Cmd, Asset, Lpn, Lpp, Profit, Oracle> {
-    cmd: Cmd,
-    asset: PhantomData<Asset>,
-    lpn: PhantomData<Lpn>,
-    lpp: Lpp,
-    profit: Profit,
-    oracle: Oracle,
-}
-
-impl<Cmd, Asset, Lpn, Lpp, Profit, Oracle> WithTimeAlarms
-    for FactoryStage5<Cmd, Asset, Lpn, Lpp, Profit, Oracle>
-where
-    Cmd: WithLeaseDeps,
-    Asset: Currency + Serialize,
-    Lpn: Currency + Serialize,
-    Lpp: LppLenderTrait<Lpn>,
-    Profit: ProfitTrait,
-    Oracle: OracleTrait<Lpn>,
-{
-    type Output = Cmd::Output;
-    type Error = Cmd::Error;
-
-    fn exec<TimeAlarms>(self, alarms: TimeAlarms) -> Result<Self::Output, Self::Error>
-    where
-        TimeAlarms: TimeAlarmsTrait,
-    {
         self.cmd
-            .exec::<_, Asset, _, _, _, _>(self.lpp, self.profit, alarms, self.oracle)
+            .exec::<_, Asset, _, _, _>(self.lpp, self.profit, oracle)
     }
 }

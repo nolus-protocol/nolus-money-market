@@ -5,7 +5,7 @@ use lpp::stub::lender::{LppLender as LppLenderTrait, LppLenderRef};
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use profit::stub::{Profit as ProfitTrait, ProfitRef};
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
-use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef};
+use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::{LeaseCoin, NewLeaseForm},
@@ -23,7 +23,7 @@ pub(crate) fn open_lease(
     start_at: Timestamp,
     amount: &LeaseCoin,
     querier: &QuerierWrapper<'_>,
-    deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
+    deps: (LppLenderRef, OracleRef),
 ) -> ContractResult<IntoDTOResult> {
     debug_assert_eq!(amount.ticker(), &form.currency);
     debug_assert!(amount.amount() > 0);
@@ -40,15 +40,7 @@ pub(crate) fn open_lease(
     };
     //TODO avoid cloning by extending the trait WithLeaseDeps to provide it
     let asset_currency = cmd.form.currency.clone();
-    with_lease_deps::execute(
-        cmd,
-        &asset_currency,
-        deps.0,
-        profit,
-        deps.2,
-        deps.1,
-        querier,
-    )
+    with_lease_deps::execute(cmd, &asset_currency, deps.0, profit, deps.1, querier)
 }
 
 struct LeaseFactory<'a> {
@@ -63,18 +55,16 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
     type Output = IntoDTOResult;
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
+    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
         self,
         lpp: Lpp,
         profit: Profit,
-        _alarms: TimeAlarms,
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Asset: Currency + Serialize,
         Lpp: LppLenderTrait<Lpn>,
-        TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
     {

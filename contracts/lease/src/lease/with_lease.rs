@@ -5,7 +5,6 @@ use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::QuerierWrapper;
-use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use super::{
     with_lease_deps::{self, WithLeaseDeps},
@@ -43,7 +42,6 @@ where
     let asset = lease_dto.amount.ticker().clone();
     let lpp = lease_dto.loan.lpp().clone();
     let profit = lease_dto.loan.profit().clone();
-    let alarms = lease_dto.time_alarms.clone();
     let oracle = lease_dto.oracle.clone();
 
     with_lease_deps::execute(
@@ -51,7 +49,6 @@ where
         &asset,
         lpp,
         profit,
-        alarms,
         oracle,
         querier,
     )
@@ -74,17 +71,15 @@ where
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
-    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
+    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
         self,
         lpp: Lpp,
         profit: Profit,
-        _time_alarms: TimeAlarms,
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppLenderTrait<Lpn>,
-        TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
         Asset: Currency + Serialize,

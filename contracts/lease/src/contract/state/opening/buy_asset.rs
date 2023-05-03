@@ -142,7 +142,7 @@ impl SwapTask for BuyAsset {
             env.block.time,
             &amount_out,
             querier,
-            self.deps,
+            (self.deps.0, self.deps.1),
         )?;
 
         let active = Active::new(Lease {
