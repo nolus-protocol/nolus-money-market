@@ -33,13 +33,13 @@ impl Handler for Active {
         self,
         deps: &mut DepsMut<'_>,
         env: Env,
-        _info: MessageInfo,
+        info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
         match msg {
             ExecuteMsg::Repay() => handler::err("repay", deps.api),
             ExecuteMsg::Close() => {
-                if self.lease.lease.customer != _info.sender {
+                if self.lease.lease.customer != info.sender {
                     return Err(ContractError::Unauthorized {});
                 }
                 let start_transfer_in = transfer_in::start(self.lease);
