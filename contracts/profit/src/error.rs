@@ -45,12 +45,3 @@ pub enum ContractError {
     #[error("[Profit] EmptyBalance. No profit to dispatch")]
     EmptyBalance {},
 }
-
-impl ContractError {
-    pub(crate) fn unsupported_operation<Ctx>(context: Ctx) -> Self
-    where
-        Ctx: ToString,
-    {
-        Self::UnsupportedOperation(context.to_string())
-    }
-}

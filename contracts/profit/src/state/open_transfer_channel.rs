@@ -6,7 +6,11 @@ use platform::message::Response as PlatformResponse;
 use sdk::cosmwasm_std::{Deps, Env};
 use timealarms::stub::TimeAlarmsRef;
 
-use super::{open_ica::OpenIca, Config, IcaConnector, ProfitMessageHandler, State, UpdateConfig};
+use crate::{msg::ConfigResponse, result::ContractResult};
+
+use super::{
+    open_ica::OpenIca, Config, ConfigManagement, IcaConnector, ProfitMessageHandler, State,
+};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct OpenTransferChannel {
@@ -30,10 +34,6 @@ impl OpenTransferChannel {
             time_alarms,
         }
     }
-
-    pub fn config(&self) -> &Config {
-        &self.config
-    }
 }
 
 impl Handler for OpenTransferChannel {
@@ -41,12 +41,18 @@ impl Handler for OpenTransferChannel {
     type SwapResult = DexResponse<State>;
 }
 
-impl UpdateConfig for OpenTransferChannel {
-    fn update_config(self, cadence_hours: u16) -> Self {
-        Self {
+impl ConfigManagement for OpenTransferChannel {
+    fn try_update_config(self, cadence_hours: u16) -> ContractResult<Self> {
+        Ok(Self {
             config: self.config.update(cadence_hours),
             ..self
-        }
+        })
+    }
+
+    fn try_query_config(&self) -> ContractResult<ConfigResponse> {
+        Ok(ConfigResponse {
+            cadence_hours: self.config.cadence_hours(),
+        })
     }
 }
 

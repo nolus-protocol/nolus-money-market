@@ -12,7 +12,7 @@ use sdk::{
 };
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{result::ContractResult, ContractError};
+use crate::{msg::ConfigResponse, result::ContractResult};
 
 pub(crate) use self::config::Config;
 use self::{
@@ -29,11 +29,13 @@ const STATE: Item<'static, State> = Item::new("contract_state");
 
 type IcaConnector = dex::IcaConnector<OpenIca, DexResponse<Idle>>;
 
-trait UpdateConfig
+pub(crate) trait ConfigManagement
 where
     Self: Sized,
 {
-    fn update_config(self, cadence_hours: u16) -> Self;
+    fn try_update_config(self, cadence_hours: u16) -> ContractResult<Self>;
+
+    fn try_query_config(&self) -> ContractResult<ConfigResponse>;
 }
 
 pub(crate) trait ProfitMessageHandler
@@ -52,16 +54,40 @@ where
 }
 
 #[derive(Serialize, Deserialize)]
-#[repr(transparent)]
-#[serde(transparent)]
-pub(crate) struct State(StateEnum);
-
-#[derive(Serialize, Deserialize)]
 enum StateEnum {
     OpenTransferChannel(OpenTransferChannel),
     OpenIca(IcaConnector),
     Idle(Idle),
     BuyBack(StateLocalOut<BuyBack>),
+}
+
+#[derive(Serialize, Deserialize)]
+#[repr(transparent)]
+#[serde(transparent)]
+pub(crate) struct State(StateEnum);
+
+impl ConfigManagement for State {
+    fn try_update_config(self, cadence_hours: u16) -> ContractResult<Self> {
+        match self.0 {
+            StateEnum::OpenTransferChannel(transfer) => {
+                transfer.try_update_config(cadence_hours).map(Into::into)
+            }
+            StateEnum::OpenIca(ica) => ica.try_update_config(cadence_hours).map(Into::into),
+            StateEnum::Idle(idle) => idle.try_update_config(cadence_hours).map(Into::into),
+            StateEnum::BuyBack(buy_back) => {
+                buy_back.try_update_config(cadence_hours).map(Into::into)
+            }
+        }
+    }
+
+    fn try_query_config(&self) -> ContractResult<ConfigResponse> {
+        match &self.0 {
+            StateEnum::OpenTransferChannel(transfer) => transfer.try_query_config(),
+            StateEnum::OpenIca(ica) => ica.try_query_config(),
+            StateEnum::Idle(idle) => idle.try_query_config(),
+            StateEnum::BuyBack(buy_back) => buy_back.try_query_config(),
+        }
+    }
 }
 
 impl State {
@@ -88,34 +114,6 @@ impl State {
 
     pub fn store(&self, storage: &mut dyn Storage) -> ContractResult<()> {
         STATE.save(storage, self).map_err(Into::into)
-    }
-
-    pub fn try_update_config(self, cadence_hours: u16) -> ContractResult<Self> {
-        match self.0 {
-            StateEnum::OpenTransferChannel(transfer) => Ok(Self(StateEnum::OpenTransferChannel(
-                transfer.update_config(cadence_hours),
-            ))),
-            StateEnum::OpenIca(_) => Err(ContractError::unsupported_operation(
-                "Configuration changes are not allowed during ICA opening process.",
-            )),
-            StateEnum::Idle(idle) => Ok(Self(StateEnum::Idle(idle.update_config(cadence_hours)))),
-            StateEnum::BuyBack(_) => Err(ContractError::unsupported_operation(
-                "Configuration changes are not allowed during buy-back.",
-            )),
-        }
-    }
-
-    pub fn config(&self) -> ContractResult<&Config> {
-        match &self.0 {
-            StateEnum::OpenTransferChannel(transfer) => Ok(transfer.config()),
-            StateEnum::OpenIca(_) => Err(ContractError::unsupported_operation(
-                "Querying configuration is not allowed during ICA opening process.",
-            )),
-            StateEnum::Idle(idle) => Ok(idle.config()),
-            StateEnum::BuyBack(_) => Err(ContractError::unsupported_operation(
-                "Querying configuration is not allowed during buy-back.",
-            )),
-        }
     }
 }
 

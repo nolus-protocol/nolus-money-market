@@ -21,9 +21,9 @@ use platform::{
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::profit::Profit;
+use crate::{error::ContractError, msg::ConfigResponse, profit::Profit, result::ContractResult};
 
-use super::{idle::Idle, Config, ProfitMessageHandler, State, StateEnum};
+use super::{idle::Idle, Config, ConfigManagement, ProfitMessageHandler, State, StateEnum};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct BuyBack {
@@ -120,6 +120,20 @@ impl SwapTask for BuyBack {
             response: PlatformResponse::messages_with_events(batch.merge(bank_batch), bank_emitter),
             next_state: State(StateEnum::Idle(state)),
         })
+    }
+}
+
+impl ConfigManagement for StateLocalOut<BuyBack> {
+    fn try_update_config(self, _: u16) -> ContractResult<Self> {
+        Err(ContractError::UnsupportedOperation(String::from(
+            "Configuration changes are not allowed during ICA opening process.",
+        )))
+    }
+
+    fn try_query_config(&self) -> ContractResult<ConfigResponse> {
+        Err(ContractError::UnsupportedOperation(String::from(
+            "Querying configuration is not allowed during buy-back.",
+        )))
     }
 }
 
