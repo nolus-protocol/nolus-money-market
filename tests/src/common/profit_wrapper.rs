@@ -1,9 +1,11 @@
 use profit::{
     contract::{execute, instantiate, query, sudo},
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
     ContractError,
 };
-use sdk::{cosmwasm_std::Addr, cw_multi_test::Executor};
+use sdk::{
+    cosmwasm_std::Addr, cw_multi_test::Executor, neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
+};
 
 use crate::common::{ContractWrapper, MockApp};
 
@@ -20,13 +22,17 @@ impl ProfitWrapper {
         app: &mut MockApp,
         cadence_hours: u16,
         treasury: Addr,
+        oracle: Addr,
         timealarms: Addr,
+        connection_id: String,
     ) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {
             cadence_hours,
             treasury,
+            oracle,
             timealarms,
+            connection_id,
         };
 
         app.instantiate_contract(code_id, Addr::unchecked(ADMIN), &msg, &[], "profit", None)
@@ -51,6 +57,6 @@ type ProfitContractWrapper = ContractWrapper<
     ContractError,
     QueryMsg,
     ContractError,
-    SudoMsg,
+    NeutronSudoMsg,
     ContractError,
 >;

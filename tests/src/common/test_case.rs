@@ -5,9 +5,12 @@ use finance::{
     percent::Percent,
 };
 use lease::api::{ConnectionParams, Ics20Channel};
+use platform::ica::OpenAckVersion;
+use profit::msg::{ConfigResponse as ProfitConfigResponse, QueryMsg as ProfitQueryMsg};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Uint64},
     cw_multi_test::{next_block, Executor},
+    neutron_sdk::{bindings::msg::NeutronMsg, sudo::msg::SudoMsg as NeutronSudoMsg},
     testing::{new_custom_msg_queue, CustomMessageSender, WrappedCustomMessageReceiver},
 };
 
@@ -283,16 +286,69 @@ where
     }
 
     pub fn init_profit(&mut self, cadence_hours: u16) -> &mut Self {
-        self.profit_addr = Some(ProfitWrapper::default().instantiate(
-            &mut self.app,
-            cadence_hours,
-            self.treasury_addr.clone().unwrap(),
-            self.timealarms.clone().unwrap(),
-        ));
+        const CONNECTION_ID: &str = "dex-connection";
+
+        let profit_addr: &Addr = self
+            .profit_addr
+            .insert(ProfitWrapper::default().instantiate(
+                &mut self.app,
+                cadence_hours,
+                self.treasury_addr.clone().unwrap(),
+                self.oracle.clone().unwrap(),
+                self.timealarms.clone().unwrap(),
+                CONNECTION_ID.into(),
+            ));
 
         self.app.update_block(next_block);
 
+        self.app
+            .wasm_sudo(
+                profit_addr.clone(),
+                &NeutronSudoMsg::OpenAck {
+                    port_id: "transfer".into(),
+                    channel_id: "channel-1".into(),
+                    counterparty_channel_id: "channel-1".into(),
+                    counterparty_version: "1".into(),
+                },
+            )
+            .unwrap();
+
+        let NeutronMsg::RegisterInterchainAccount { connection_id, .. } = self.message_receiver.try_recv().unwrap() else {
+            unreachable!()
+        };
+        assert_eq!(&connection_id, CONNECTION_ID);
+
+        self.app
+            .wasm_sudo(
+                profit_addr.clone(),
+                &NeutronSudoMsg::OpenAck {
+                    port_id: "ica-port".into(),
+                    channel_id: "channel-1".into(),
+                    counterparty_channel_id: "channel-1".into(),
+                    counterparty_version: serde_json_wasm::to_string(&OpenAckVersion {
+                        version: "1".into(),
+                        controller_connection_id: CONNECTION_ID.into(),
+                        host_connection_id: "DEADCODE".into(),
+                        address: "ica1".into(),
+                        encoding: "DEADCODE".into(),
+                        tx_type: "DEADCODE".into(),
+                    })
+                    .unwrap(),
+                },
+            )
+            .unwrap();
+
         self.message_receiver.assert_empty();
+
+        let ProfitConfigResponse {
+            cadence_hours: reported_cadence_hours,
+        } = self
+            .app
+            .wrap()
+            .query_wasm_smart(profit_addr, &ProfitQueryMsg::Config {})
+            .unwrap();
+
+        assert_eq!(reported_cadence_hours, cadence_hours);
 
         self
     }
