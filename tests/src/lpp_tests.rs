@@ -18,11 +18,10 @@ use lpp::{
     state::Config,
 };
 use platform::{bank, coin_legacy};
-use sdk::testing::{CustomMessageSender, WrappedCustomMessageReceiver};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Event, Timestamp},
     cw_multi_test::{AppResponse, Executor},
-    testing::new_custom_msg_queue,
+    testing::{new_custom_msg_queue, CustomMessageSender, WrappedCustomMessageReceiver},
 };
 
 use crate::common::{
@@ -41,6 +40,8 @@ use crate::common::{
 
 type Lpn = Usdc;
 type LeaseCurrency = Atom;
+
+const PROFIT_DEX_CONNECTION_ID: &'static str = "dex-connection";
 
 fn general_interest_rate(
     loan: u32,
@@ -247,7 +248,7 @@ fn deposit_and_withdraw() {
         treasury,
         market_price_oracle.clone(),
         time_alarms.clone(),
-        "dex-connection".into(),
+        PROFIT_DEX_CONNECTION_ID.into(),
     );
 
     message_receiver.assert_empty();
@@ -584,7 +585,7 @@ fn loan_open_and_repay() {
         treasury,
         oracle.clone(),
         time_alarms.clone(),
-        "connection-1".into(),
+        PROFIT_DEX_CONNECTION_ID.into(),
     );
 
     message_receiver.assert_empty();
@@ -945,7 +946,7 @@ fn compare_lpp_states() {
         treasury,
         market_oracle.clone(),
         time_alarms.clone(),
-        "connection-1".into(),
+        PROFIT_DEX_CONNECTION_ID.into(),
     );
 
     message_receiver.assert_empty();
