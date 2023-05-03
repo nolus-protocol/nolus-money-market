@@ -1,5 +1,5 @@
 use access_control::SingleUserAccess;
-use dex::{Handler, Ics20Channel, Response as DexResponse, Result as DexResult};
+use dex::{Handler as _, Ics20Channel, Response as DexResponse, Result as DexResult};
 use platform::{message::Response as MessageResponse, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;

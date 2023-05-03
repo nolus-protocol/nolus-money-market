@@ -22,12 +22,12 @@ use platform::{
 use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{profit::Profit, state::config::Config};
+use crate::profit::Profit;
 
-use super::{buy_back::BuyBack, ProfitMessageHandler, State, UpdateConfig};
+use super::{buy_back::BuyBack, Config, ProfitMessageHandler, State, StateEnum, UpdateConfig};
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct Idle {
+pub(super) struct Idle {
     config: Config,
     account: Account,
     oracle: OracleRef,
@@ -109,7 +109,7 @@ impl Idle {
 
         Ok(DexResponse::<Self> {
             response: Self::combine_batches(state_batch, bank_batch),
-            next_state: State::BuyBack(state.into()),
+            next_state: State(StateEnum::BuyBack(state.into())),
         })
     }
 }

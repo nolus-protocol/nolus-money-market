@@ -6,12 +6,10 @@ use platform::message::Response as PlatformResponse;
 use sdk::cosmwasm_std::{Deps, Env};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::state::config::Config;
-
-use super::{open_ica::OpenIca, IcaConnector, ProfitMessageHandler, State, UpdateConfig};
+use super::{open_ica::OpenIca, Config, IcaConnector, ProfitMessageHandler, State, UpdateConfig};
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct OpenTransferChannel {
+pub(super) struct OpenTransferChannel {
     config: Config,
     connection_id: String,
     oracle: OracleRef,

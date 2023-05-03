@@ -19,15 +19,15 @@ use self::{
     buy_back::BuyBack, idle::Idle, open_ica::OpenIca, open_transfer_channel::OpenTransferChannel,
 };
 
-pub(crate) mod buy_back;
+mod buy_back;
 mod config;
-pub(crate) mod idle;
-pub(crate) mod open_ica;
-pub(crate) mod open_transfer_channel;
+mod idle;
+mod open_ica;
+mod open_transfer_channel;
 
 const STATE: Item<'static, State> = Item::new("contract_state");
 
-pub(crate) type IcaConnector = dex::IcaConnector<OpenIca, DexResponse<Idle>>;
+type IcaConnector = dex::IcaConnector<OpenIca, DexResponse<Idle>>;
 
 trait UpdateConfig
 where
@@ -52,7 +52,12 @@ where
 }
 
 #[derive(Serialize, Deserialize)]
-pub(crate) enum State {
+#[repr(transparent)]
+#[serde(transparent)]
+pub(crate) struct State(StateEnum);
+
+#[derive(Serialize, Deserialize)]
+enum StateEnum {
     OpenTransferChannel(OpenTransferChannel),
     OpenIca(IcaConnector),
     Idle(Idle),
@@ -67,11 +72,13 @@ impl State {
         oracle_addr: Addr,
         time_alarms_addr: Addr,
     ) -> ContractResult<Self> {
-        Ok(Self::OpenTransferChannel(OpenTransferChannel::new(
-            config,
-            connection_id,
-            OracleRef::try_from(oracle_addr, querier)?,
-            TimeAlarmsRef::new(time_alarms_addr, querier)?,
+        Ok(Self(StateEnum::OpenTransferChannel(
+            OpenTransferChannel::new(
+                config,
+                connection_id,
+                OracleRef::try_from(oracle_addr, querier)?,
+                TimeAlarmsRef::new(time_alarms_addr, querier)?,
+            ),
         )))
     }
 
@@ -84,28 +91,28 @@ impl State {
     }
 
     pub fn try_update_config(self, cadence_hours: u16) -> ContractResult<Self> {
-        match self {
-            State::OpenTransferChannel(transfer) => Ok(Self::OpenTransferChannel(
+        match self.0 {
+            StateEnum::OpenTransferChannel(transfer) => Ok(Self(StateEnum::OpenTransferChannel(
                 transfer.update_config(cadence_hours),
-            )),
-            State::OpenIca(_) => Err(ContractError::unsupported_operation(
+            ))),
+            StateEnum::OpenIca(_) => Err(ContractError::unsupported_operation(
                 "Configuration changes are not allowed during ICA opening process.",
             )),
-            State::Idle(idle) => Ok(Self::Idle(idle.update_config(cadence_hours))),
-            State::BuyBack(_) => Err(ContractError::unsupported_operation(
+            StateEnum::Idle(idle) => Ok(Self(StateEnum::Idle(idle.update_config(cadence_hours)))),
+            StateEnum::BuyBack(_) => Err(ContractError::unsupported_operation(
                 "Configuration changes are not allowed during buy-back.",
             )),
         }
     }
 
     pub fn config(&self) -> ContractResult<&Config> {
-        match self {
-            State::OpenTransferChannel(transfer) => Ok(transfer.config()),
-            State::OpenIca(_) => Err(ContractError::unsupported_operation(
+        match &self.0 {
+            StateEnum::OpenTransferChannel(transfer) => Ok(transfer.config()),
+            StateEnum::OpenIca(_) => Err(ContractError::unsupported_operation(
                 "Querying configuration is not allowed during ICA opening process.",
             )),
-            State::Idle(idle) => Ok(idle.config()),
-            State::BuyBack(_) => Err(ContractError::unsupported_operation(
+            StateEnum::Idle(idle) => Ok(idle.config()),
+            StateEnum::BuyBack(_) => Err(ContractError::unsupported_operation(
                 "Querying configuration is not allowed during buy-back.",
             )),
         }
@@ -114,25 +121,25 @@ impl State {
 
 impl From<OpenTransferChannel> for State {
     fn from(value: OpenTransferChannel) -> Self {
-        Self::OpenTransferChannel(value)
+        Self(StateEnum::OpenTransferChannel(value))
     }
 }
 
 impl From<IcaConnector> for State {
     fn from(value: IcaConnector) -> Self {
-        Self::OpenIca(value)
+        Self(StateEnum::OpenIca(value))
     }
 }
 
 impl From<Idle> for State {
     fn from(value: Idle) -> Self {
-        Self::Idle(value)
+        Self(StateEnum::Idle(value))
     }
 }
 
 impl From<StateLocalOut<BuyBack>> for State {
     fn from(value: StateLocalOut<BuyBack>) -> Self {
-        Self::BuyBack(value)
+        Self(StateEnum::BuyBack(value))
     }
 }
 
@@ -144,13 +151,13 @@ impl ProfitMessageHandler for State {
         channel: Ics20Channel,
         counterparty_version: String,
     ) -> ContinueResult<Self> {
-        match self {
-            State::OpenTransferChannel(transfer) => {
+        match self.0 {
+            StateEnum::OpenTransferChannel(transfer) => {
                 transfer.confirm_open(deps, env, channel, counterparty_version)
             }
-            State::OpenIca(ica) => ica.confirm_open(deps, env, channel, counterparty_version),
-            State::Idle(idle) => idle.confirm_open(deps, env, channel, counterparty_version),
-            State::BuyBack(buy_back) => buy_back
+            StateEnum::OpenIca(ica) => ica.confirm_open(deps, env, channel, counterparty_version),
+            StateEnum::Idle(idle) => idle.confirm_open(deps, env, channel, counterparty_version),
+            StateEnum::BuyBack(buy_back) => buy_back
                 .confirm_open(deps, env, channel, counterparty_version)
                 .map(state_machine::from),
         }
@@ -167,7 +174,7 @@ impl Handler for State {
         deps: Deps<'_>,
         env: Env,
     ) -> ContinueResult<Self> {
-        if let State::OpenIca(ica) = self {
+        if let StateEnum::OpenIca(ica) = self.0 {
             ica.on_open_ica(counterparty_version, deps, env)
         } else {
             unimplemented!()
@@ -175,13 +182,13 @@ impl Handler for State {
     }
 
     fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> DexResult<Self> {
-        match self {
-            State::OpenTransferChannel(transfer) => {
+        match self.0 {
+            StateEnum::OpenTransferChannel(transfer) => {
                 transfer.on_response(data, deps, env).map_into()
             }
-            State::OpenIca(ica) => ica.on_response(data, deps, env).map_into(),
-            State::Idle(idle) => idle.on_response(data, deps, env).map_into(),
-            State::BuyBack(buy_back) => match buy_back.on_response(data, deps, env) {
+            StateEnum::OpenIca(ica) => ica.on_response(data, deps, env).map_into(),
+            StateEnum::Idle(idle) => idle.on_response(data, deps, env).map_into(),
+            StateEnum::BuyBack(buy_back) => match buy_back.on_response(data, deps, env) {
                 DexResult::Continue(result) => DexResult::Continue(result.map(state_machine::from)),
                 DexResult::Finished(result) => DexResult::Continue(result),
             },
@@ -189,31 +196,33 @@ impl Handler for State {
     }
 
     fn on_error(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
-        match self {
-            State::OpenTransferChannel(transfer) => transfer.on_error(deps, env),
-            State::OpenIca(ica) => ica.on_error(deps, env),
-            State::Idle(idle) => idle.on_error(deps, env),
-            State::BuyBack(buy_back) => buy_back.on_error(deps, env).map(state_machine::from),
+        match self.0 {
+            StateEnum::OpenTransferChannel(transfer) => transfer.on_error(deps, env),
+            StateEnum::OpenIca(ica) => ica.on_error(deps, env),
+            StateEnum::Idle(idle) => idle.on_error(deps, env),
+            StateEnum::BuyBack(buy_back) => buy_back.on_error(deps, env).map(state_machine::from),
         }
     }
 
     fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
-        match self {
-            State::OpenTransferChannel(transfer) => {
+        match self.0 {
+            StateEnum::OpenTransferChannel(transfer) => {
                 transfer.on_timeout(deps, env).map(state_machine::from)
             }
-            State::OpenIca(ica) => ica.on_timeout(deps, env).map(state_machine::from),
-            State::Idle(idle) => idle.on_timeout(deps, env).map(state_machine::from),
-            State::BuyBack(buy_back) => buy_back.on_timeout(deps, env).map(state_machine::from),
+            StateEnum::OpenIca(ica) => ica.on_timeout(deps, env).map(state_machine::from),
+            StateEnum::Idle(idle) => idle.on_timeout(deps, env).map(state_machine::from),
+            StateEnum::BuyBack(buy_back) => buy_back.on_timeout(deps, env).map(state_machine::from),
         }
     }
 
     fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> DexResult<Self> {
-        match self {
-            State::OpenTransferChannel(transfer) => transfer.on_time_alarm(deps, env).map_into(),
-            State::OpenIca(ica) => ica.on_time_alarm(deps, env).map_into(),
-            State::Idle(idle) => idle.on_time_alarm(deps, env).map_into(),
-            State::BuyBack(buy_back) => match buy_back.on_time_alarm(deps, env) {
+        match self.0 {
+            StateEnum::OpenTransferChannel(transfer) => {
+                transfer.on_time_alarm(deps, env).map_into()
+            }
+            StateEnum::OpenIca(ica) => ica.on_time_alarm(deps, env).map_into(),
+            StateEnum::Idle(idle) => idle.on_time_alarm(deps, env).map_into(),
+            StateEnum::BuyBack(buy_back) => match buy_back.on_time_alarm(deps, env) {
                 DexResult::Continue(result) => DexResult::Continue(result.map(state_machine::from)),
                 DexResult::Finished(result) => result.into(),
             },
