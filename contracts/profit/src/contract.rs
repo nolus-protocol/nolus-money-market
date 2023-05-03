@@ -1,5 +1,5 @@
 use access_control::SingleUserAccess;
-use dex::{Handler as _, Ics20Channel, Response as DexResponse, Result as DexResult};
+use dex::{Handler as _, Ics20Channel, Response as DexResponse};
 use platform::{message::Response as MessageResponse, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
@@ -99,12 +99,9 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: NeutronSudoMsg) -> ContractResult<
         response,
         next_state,
     } = match msg {
-        NeutronSudoMsg::Response { data, .. } => {
-            match state.on_response(data, deps.as_ref(), env) {
-                DexResult::Continue(result) => result?,
-                DexResult::Finished(response) => response,
-            }
-        }
+        NeutronSudoMsg::Response { data, .. } => state
+            .on_response(data, deps.as_ref(), env)
+            .continue_or_ok()?,
         NeutronSudoMsg::Error { .. } => state.on_error(deps.as_ref(), env)?,
         NeutronSudoMsg::Timeout { .. } => state.on_timeout(deps.as_ref(), env)?,
         NeutronSudoMsg::OpenAck {
@@ -140,10 +137,7 @@ fn try_time_alarm(deps: DepsMut<'_>, env: Env) -> ContractResult<MessageResponse
     let DexResponse::<State> {
         response,
         next_state,
-    } = match state.on_time_alarm(deps.as_ref(), env) {
-        DexResult::Continue(result) => result?,
-        DexResult::Finished(response) => response,
-    };
+    } = state.on_time_alarm(deps.as_ref(), env).continue_or_ok()?;
 
     next_state.store(deps.storage)?;
 
