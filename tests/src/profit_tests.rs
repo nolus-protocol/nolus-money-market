@@ -52,7 +52,6 @@ fn on_alarm_from_unknown() {
 }
 
 #[test]
-#[should_panic(expected = "EmptyBalance. No profit to dispatch")]
 fn on_alarm_zero_balance() {
     type Lpn = Usdc;
     let time_oracle_addr = Addr::unchecked("time");
@@ -143,6 +142,16 @@ fn on_alarm_native_only_transfer() {
     );
 
     let profit_exec = &res.events[2];
+    assert_eq!(profit_exec.ty.as_str(), "execute");
+    assert_eq!(
+        profit_exec.attributes,
+        [(
+            "_contract_addr",
+            test_case.timealarms.as_ref().unwrap().to_string()
+        )]
+    );
+
+    let profit_exec = &res.events[3];
     assert_eq!(profit_exec.ty.as_str(), "transfer");
     assert_eq!(
         profit_exec.attributes,
@@ -160,16 +169,6 @@ fn on_alarm_native_only_transfer() {
                 format!("{}{}", Amount::from(profit), Native::BANK_SYMBOL)
             )
         ]
-    );
-
-    let profit_exec = &res.events[3];
-    assert_eq!(profit_exec.ty.as_str(), "execute");
-    assert_eq!(
-        profit_exec.attributes,
-        [(
-            "_contract_addr",
-            test_case.timealarms.as_ref().unwrap().to_string()
-        )]
     );
 
     assert_eq!(
@@ -192,16 +191,25 @@ fn integration_with_timealarms() {
     test_case
         .init_treasury()
         .init_timealarms()
+        .init_oracle(None)
         .init_profit(CADENCE_HOURS);
 
     test_case
         .app
-        .time_shift(Duration::from_hours(CADENCE_HOURS));
+        .time_shift(Duration::from_hours(CADENCE_HOURS) + Duration::from_secs(1));
 
     test_case.send_funds(
         &test_case.profit_addr.clone().unwrap(),
         cwcoins::<Native, _>(500),
     );
+
+    assert!(!test_case
+        .app
+        .wrap()
+        .query_balance(test_case.profit_addr.clone().unwrap(), Native::BANK_SYMBOL,)
+        .unwrap()
+        .amount
+        .is_zero());
 
     let resp = test_case
         .app
@@ -217,4 +225,12 @@ fn integration_with_timealarms() {
         Ok(DispatchAlarmsResponse(1))
     );
     resp.assert_event(&Event::new("wasm-time-alarm").add_attribute("delivered", "success"));
+
+    assert!(test_case
+        .app
+        .wrap()
+        .query_balance(test_case.profit_addr.clone().unwrap(), Native::BANK_SYMBOL,)
+        .unwrap()
+        .amount
+        .is_zero());
 }

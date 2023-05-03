@@ -240,7 +240,14 @@ fn deposit_and_withdraw() {
 
     message_receiver.assert_empty();
 
-    let profit = ProfitWrapper::default().instantiate(&mut app, 24, treasury, time_alarms.clone());
+    let profit = ProfitWrapper::default().instantiate(
+        &mut app,
+        24,
+        treasury,
+        market_price_oracle.clone(),
+        time_alarms.clone(),
+        "dex-connection".into(),
+    );
 
     message_receiver.assert_empty();
 
@@ -570,7 +577,14 @@ fn loan_open_and_repay() {
 
     message_receiver.assert_empty();
 
-    let profit = ProfitWrapper::default().instantiate(&mut app, 24, treasury, time_alarms.clone());
+    let profit = ProfitWrapper::default().instantiate(
+        &mut app,
+        24,
+        treasury,
+        oracle.clone(),
+        time_alarms.clone(),
+        "connection-1".into(),
+    );
 
     message_receiver.assert_empty();
 
@@ -889,14 +903,12 @@ fn compare_lpp_states() {
 
     let interest1 = interest_rate(loan1_u32, balance1_u32);
 
-    let (custom_message_sender, message_receiver): (
-        CustomMessageSender,
-        WrappedCustomMessageReceiver,
-    ) = new_custom_msg_queue();
+    let (message_sender, message_receiver): (CustomMessageSender, WrappedCustomMessageReceiver) =
+        new_custom_msg_queue();
 
     // net setup
     let mut app = mock_app(
-        custom_message_sender,
+        message_sender,
         &[
             lpn_cwcoin(app_balance),
             coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),
@@ -926,7 +938,14 @@ fn compare_lpp_states() {
 
     message_receiver.assert_empty();
 
-    let profit = ProfitWrapper::default().instantiate(&mut app, 24, treasury, time_alarms.clone());
+    let profit = ProfitWrapper::default().instantiate(
+        &mut app,
+        24,
+        treasury,
+        market_oracle.clone(),
+        time_alarms.clone(),
+        "connection-1".into(),
+    );
 
     message_receiver.assert_empty();
 

@@ -338,6 +338,7 @@ fn test_profit_alarms() {
         ],
     );
     test_case.init_timealarms();
+    test_case.init_oracle(None);
     test_case.init_treasury();
     test_case.init_profit(1);
 
