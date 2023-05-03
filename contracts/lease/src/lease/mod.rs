@@ -11,7 +11,7 @@ use oracle::stub::{Oracle as OracleTrait, OracleBatch};
 use platform::{bank::BankAccount, batch::Batch};
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::{Addr, Timestamp};
-use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch};
+use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -19,6 +19,7 @@ use crate::{
 };
 
 pub(super) use self::{
+    alarm::Reschedule,
     dto::LeaseDTO,
     liquidation::{Cause, Liquidation, Status},
     state::State,
@@ -36,16 +37,12 @@ pub(crate) mod with_lease_deps;
 // the others could be provided on demand when certain operation is being performed
 // then review the methods that take `&mut self` whether could be transformed into `&self`
 // and those that take `self` into `&mut self` or `&self`
-pub struct Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
-where
-    Asset: Currency,
-{
+pub struct Lease<Lpn, Asset, Lpp, Profit, Oracle> {
     addr: Addr,
     customer: Addr,
     amount: Coin<Asset>,
     liability: Liability,
     loan: Loan<Lpn, Lpp, Profit>,
-    alarms: TimeAlarms,
     oracle: Oracle,
 }
 
@@ -55,12 +52,11 @@ pub struct IntoDTOResult {
     pub batch: Batch,
 }
 
-impl<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle> Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>
+impl<Lpn, Asset, Lpp, Profit, Oracle> Lease<Lpn, Asset, Lpp, Profit, Oracle>
 where
     Lpn: Currency + Serialize,
     Asset: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
-    TimeAlarms: TimeAlarmsTrait,
     Oracle: OracleTrait<Lpn>,
     Profit: ProfitTrait,
 {
@@ -70,7 +66,7 @@ where
         amount: Coin<Asset>,
         liability: Liability,
         loan: Loan<Lpn, Lpp, Profit>,
-        deps: (TimeAlarms, Oracle),
+        oracle: Oracle,
     ) -> Self {
         debug_assert!(!amount.is_zero());
         debug_assert!(!currency::equal::<Lpn, Asset>());
@@ -82,18 +78,11 @@ where
             amount,
             liability,
             loan,
-            alarms: deps.0,
-            oracle: deps.1,
+            oracle,
         }
     }
 
-    pub(super) fn from_dto(
-        dto: LeaseDTO,
-        lpp: Lpp,
-        time_alarms: TimeAlarms,
-        oracle: Oracle,
-        profit: Profit,
-    ) -> Self {
+    pub(super) fn from_dto(dto: LeaseDTO, lpp: Lpp, oracle: Oracle, profit: Profit) -> Self {
         let amount = dto.amount.try_into().expect(
             "The DTO -> Lease conversion should have resulted in Asset == dto.amount.symbol()",
         );
@@ -103,18 +92,12 @@ where
             amount,
             liability: dto.liability,
             loan: Loan::from_dto(dto.loan, lpp, profit),
-            alarms: time_alarms,
             oracle,
         }
     }
 
-    pub(super) fn into_dto(self) -> IntoDTOResult {
+    pub(super) fn into_dto(self, time_alarms: TimeAlarmsRef) -> IntoDTOResult {
         let (loan_dto, loan_batch) = self.loan.into_dto();
-
-        let TimeAlarmsBatch {
-            time_alarms_ref,
-            batch: time_alarms_batch,
-        } = self.alarms.into();
 
         let OracleBatch {
             oracle_ref,
@@ -128,10 +111,10 @@ where
                 self.amount.into(),
                 self.liability,
                 loan_dto,
-                time_alarms_ref,
+                time_alarms,
                 oracle_ref,
             ),
-            batch: loan_batch.merge(time_alarms_batch).merge(oracle_batch),
+            batch: loan_batch.merge(oracle_batch),
         }
     }
 
@@ -216,10 +199,6 @@ mod tests {
     };
     use profit::stub::{Profit, ProfitBatch, ProfitRef};
     use sdk::cosmwasm_std::{wasm_execute, Addr, BankMsg, Timestamp};
-    use timealarms::{
-        msg::ExecuteMsg::AddAlarm,
-        stub::{TimeAlarms, TimeAlarmsBatch, TimeAlarmsRef},
-    };
 
     use crate::{api::InterestPaymentSpec, loan::Loan, reply_id::ReplyId};
 
@@ -377,55 +356,6 @@ mod tests {
         }
     }
 
-    pub struct TimeAlarmsLocalStub {
-        address: Addr,
-        pub(super) batch: Batch,
-    }
-
-    impl From<Addr> for TimeAlarmsLocalStub {
-        fn from(alarms: Addr) -> Self {
-            Self {
-                address: alarms,
-                batch: Batch::default(),
-            }
-        }
-    }
-
-    impl TimeAlarms for TimeAlarmsLocalStub {
-        fn add_alarm(&mut self, time: Timestamp) -> timealarms::stub::Result<()> {
-            self.batch.schedule_execute_no_reply(wasm_execute(
-                self.address.clone(),
-                &AddAlarm { time },
-                vec![],
-            )?);
-
-            Ok(())
-        }
-    }
-
-    impl From<TimeAlarmsLocalStub> for TimeAlarmsBatch {
-        fn from(stub: TimeAlarmsLocalStub) -> Self {
-            TimeAlarmsBatch {
-                time_alarms_ref: TimeAlarmsRef::unchecked(stub.address),
-                batch: stub.batch,
-            }
-        }
-    }
-
-    pub struct TimeAlarmsLocalStubUnreachable;
-
-    impl TimeAlarms for TimeAlarmsLocalStubUnreachable {
-        fn add_alarm(&mut self, _time: Timestamp) -> timealarms::stub::Result<()> {
-            unreachable!()
-        }
-    }
-
-    impl From<TimeAlarmsLocalStubUnreachable> for TimeAlarmsBatch {
-        fn from(_: TimeAlarmsLocalStubUnreachable) -> Self {
-            unreachable!()
-        }
-    }
-
     pub struct OracleLocalStub {
         address: Addr,
         pub batch: Batch,
@@ -558,19 +488,17 @@ mod tests {
         }
     }
 
-    pub fn create_lease<Lpn, AssetC, L, TA, O, P>(
+    pub fn create_lease<Lpn, AssetC, L, O, P>(
         addr: Addr,
         amount: Coin<AssetC>,
         lpp: L,
-        time_alarms: TA,
         oracle: O,
         profit: P,
-    ) -> Lease<Lpn, AssetC, L, P, TA, O>
+    ) -> Lease<Lpn, AssetC, L, P, O>
     where
         Lpn: Currency + Serialize,
         AssetC: Currency + Serialize,
         L: LppLender<Lpn>,
-        TA: TimeAlarms,
         O: Oracle<Lpn>,
         P: Profit,
     {
@@ -595,7 +523,7 @@ mod tests {
                 Duration::from_hours(24),
             ),
             loan,
-            (time_alarms, oracle),
+            oracle,
         )
     }
 
@@ -603,30 +531,15 @@ mod tests {
         lease_addr: Addr,
         amount: Coin<TestCurrency>,
         loan_response: Option<LoanResponse<TestLpn>>,
-        time_alarms_addr: Addr,
         oracle_addr: Addr,
         profit_addr: Addr,
-    ) -> Lease<
-        TestLpn,
-        TestCurrency,
-        LppLenderLocalStub<TestLpn>,
-        ProfitLocalStub,
-        TimeAlarmsLocalStub,
-        OracleLocalStub,
-    > {
+    ) -> Lease<TestLpn, TestCurrency, LppLenderLocalStub<TestLpn>, ProfitLocalStub, OracleLocalStub>
+    {
         let lpp: LppLenderLocalStub<TestLpn> = loan_response.into();
-        let time_alarms: TimeAlarmsLocalStub = time_alarms_addr.into();
         let oracle: OracleLocalStub = oracle_addr.into();
         let profit: ProfitLocalStub = profit_addr.into();
 
-        create_lease::<TestLpn, TestCurrency, _, TimeAlarmsLocalStub, _, _>(
-            lease_addr,
-            amount,
-            lpp,
-            time_alarms,
-            oracle,
-            profit,
-        )
+        create_lease::<TestLpn, TestCurrency, _, _, _>(lease_addr, amount, lpp, oracle, profit)
     }
 
     pub fn request_state(
@@ -635,7 +548,6 @@ mod tests {
             TestCurrency,
             LppLenderLocalStub<TestLpn>,
             ProfitLocalStub,
-            TimeAlarmsLocalStub,
             OracleLocalStub,
         >,
     ) -> State<TestCurrency, TestLpn> {
@@ -669,7 +581,6 @@ mod tests {
             Some(loan.clone()),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
         );
 
         let res = request_state(lease);
@@ -698,7 +609,6 @@ mod tests {
             None,
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
         );
 
         let res = request_state(lease);
@@ -710,17 +620,9 @@ mod tests {
     fn close_no_surplus() {
         let lease_addr = Addr::unchecked("lease");
         let lease_amount = 10.into();
-        let time_alarms_addr = Addr::unchecked(String::new());
         let oracle_addr = Addr::unchecked(String::new());
         let profit_addr = Addr::unchecked(String::new());
-        let lease = open_lease(
-            lease_addr,
-            lease_amount,
-            None,
-            time_alarms_addr,
-            oracle_addr,
-            profit_addr,
-        );
+        let lease = open_lease(lease_addr, lease_amount, None, oracle_addr, profit_addr);
         let lease_account = BankStub::new(MockBankView::only_balance(lease_amount));
         let res = lease.close(lease_account).unwrap();
         assert_eq!(res, expect_bank_send(Batch::default(), lease_amount));
@@ -731,17 +633,9 @@ mod tests {
         let lease_addr = Addr::unchecked("lease");
         let lease_amount = 10.into();
         let surplus_amount = 2.into();
-        let time_alarms_addr = Addr::unchecked(String::new());
         let oracle_addr = Addr::unchecked(String::new());
         let profit_addr = Addr::unchecked(String::new());
-        let lease = open_lease(
-            lease_addr,
-            lease_amount,
-            None,
-            time_alarms_addr,
-            oracle_addr,
-            profit_addr,
-        );
+        let lease = open_lease(lease_addr, lease_amount, None, oracle_addr, profit_addr);
         let lease_account = BankStub::new(MockBankView::new(lease_amount, surplus_amount));
         let res = lease.close(lease_account).unwrap();
         assert_eq!(res, {

@@ -51,12 +51,17 @@ impl Active {
         querier: &QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
+        let time_alarms = lease.lease.time_alarms.clone();
         let RepayResult {
             lease: lease_updated,
             receipt,
             messages: repay_messages,
             liquidation,
-        } = with_lease::execute(lease.lease, Repay::new(payment, env.block.time), querier)?;
+        } = with_lease::execute(
+            lease.lease,
+            Repay::new(payment, env.block.time, time_alarms),
+            querier,
+        )?;
 
         let repay_response = MessageResponse::messages_with_events(
             repay_messages,
@@ -78,6 +83,7 @@ impl Active {
         querier: &QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
+        let time_alarms = lease.lease.time_alarms.clone();
         let liquidation_asset = liquidation.amount(&lease.lease).clone();
         let LiquidateResult {
             lease: lease_updated,
@@ -86,7 +92,12 @@ impl Active {
             liquidation: next_liquidation,
         } = with_lease::execute(
             lease.lease,
-            Liquidate::new(liquidation_asset, liquidation_lpn, env.block.time),
+            Liquidate::new(
+                liquidation_asset,
+                liquidation_lpn,
+                env.block.time,
+                time_alarms,
+            ),
             querier,
         )?;
 
@@ -156,9 +167,10 @@ impl Active {
     }
 
     fn try_on_alarm(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
+        let time_alarms = self.lease.lease.time_alarms.clone();
         let liquidation_status = with_lease::execute(
             self.lease.lease.clone(),
-            LiquidationStatusCmd::new(env.block.time),
+            LiquidationStatusCmd::new(env.block.time, time_alarms),
             querier,
         )?;
 

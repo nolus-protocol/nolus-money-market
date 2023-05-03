@@ -6,12 +6,12 @@ use oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
-use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
+use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::LpnCoin,
     error::ContractError,
-    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO, Status},
+    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO, Reschedule, Status},
     loan::RepayReceipt,
 };
 
@@ -20,11 +20,16 @@ use super::liquidation_status::LiquidationDTO;
 pub(crate) struct Repay {
     payment: LpnCoin,
     now: Timestamp,
+    time_alarms: TimeAlarmsRef,
 }
 
 impl Repay {
-    pub fn new(payment: LpnCoin, now: Timestamp) -> Self {
-        Self { payment, now }
+    pub fn new(payment: LpnCoin, now: Timestamp, time_alarms: TimeAlarmsRef) -> Self {
+        Self {
+            payment,
+            now,
+            time_alarms,
+        }
     }
 }
 
@@ -51,14 +56,13 @@ impl WithLease for Repay {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
+    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
         self,
-        mut lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
+        mut lease: Lease<Lpn, Asset, Lpp, Profit, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppLenderTrait<Lpn>,
-        TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
         Asset: Currency + Serialize,
@@ -67,18 +71,20 @@ impl WithLease for Repay {
 
         let receipt = lease.repay(payment, self.now)?;
 
-        let liquidation = match lease.liquidation_status(self.now)? {
+        let (liquidation, time_alarms) = match lease.liquidation_status(self.now)? {
             Status::No(zone) => {
-                lease.reschedule(&self.now, &zone)?;
-                None
+                let alarms_batch = self
+                    .time_alarms
+                    .execute(Reschedule(&mut lease, &self.now, &zone))?;
+                (None, alarms_batch.time_alarms_ref)
             }
-            Status::Liquidation(liquidation) => Some(liquidation.into()),
+            Status::Liquidation(liquidation) => (Some(liquidation.into()), self.time_alarms),
         };
 
         let IntoDTOResult {
             lease,
             batch: messages,
-        } = lease.into_dto();
+        } = lease.into_dto(time_alarms);
 
         Ok(RepayResult {
             lease,

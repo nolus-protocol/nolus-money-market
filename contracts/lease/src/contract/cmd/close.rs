@@ -5,7 +5,6 @@ use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::{bank::BankAccount, batch::Batch};
 use profit::stub::Profit as ProfitTrait;
-use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     error::ContractError,
@@ -30,14 +29,13 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
+    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
         self,
-        lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
+        lease: Lease<Lpn, Asset, Lpp, Profit, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppLenderTrait<Lpn>,
-        TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
         Asset: Currency + Serialize,

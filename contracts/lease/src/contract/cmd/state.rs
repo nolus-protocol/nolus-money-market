@@ -5,7 +5,6 @@ use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
-use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
     api::{opened::OngoingTrx, StateResponse},
@@ -29,14 +28,13 @@ impl WithLease for LeaseState {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
+    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
         self,
-        lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
+        lease: Lease<Lpn, Asset, Lpp, Profit, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppLenderTrait<Lpn>,
-        TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
         Asset: Currency + Serialize,

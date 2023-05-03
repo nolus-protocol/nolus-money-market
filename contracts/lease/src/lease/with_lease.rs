@@ -16,14 +16,13 @@ pub trait WithLease {
     type Output;
     type Error;
 
-    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
+    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
         self,
-        lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
+        lease: Lease<Lpn, Asset, Lpp, Profit, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppLenderTrait<Lpn>,
-        TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
         Asset: Currency + Serialize;
@@ -79,7 +78,7 @@ where
         self,
         lpp: Lpp,
         profit: Profit,
-        time_alarms: TimeAlarms,
+        _time_alarms: TimeAlarms,
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
@@ -90,10 +89,9 @@ where
         Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
-        self.cmd.exec(Lease::<_, Asset, _, _, _, _>::from_dto(
+        self.cmd.exec(Lease::<_, Asset, _, _, _>::from_dto(
             self.lease_dto,
             lpp,
-            time_alarms,
             oracle,
             profit,
         ))

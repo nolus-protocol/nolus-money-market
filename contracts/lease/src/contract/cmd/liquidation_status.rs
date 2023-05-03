@@ -6,16 +6,17 @@ use oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
-use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
+use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::LeaseCoin,
     error::ContractError,
-    lease::{with_lease::WithLease, Cause, IntoDTOResult, Lease, LeaseDTO, Liquidation, Status},
+    lease::{with_lease::WithLease, Cause, Lease, LeaseDTO, Liquidation, Reschedule, Status},
 };
 
 pub(crate) struct Cmd {
     now: Timestamp,
+    time_alarms: TimeAlarmsRef,
 }
 
 pub(crate) enum CmdResult {
@@ -64,8 +65,8 @@ where
 }
 
 impl Cmd {
-    pub fn new(now: Timestamp) -> Self {
-        Self { now }
+    pub fn new(now: Timestamp, time_alarms: TimeAlarmsRef) -> Self {
+        Self { now, time_alarms }
     }
 }
 
@@ -74,14 +75,13 @@ impl WithLease for Cmd {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>(
+    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
         self,
-        mut lease: Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
+        mut lease: Lease<Lpn, Asset, Lpp, Profit, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppLenderTrait<Lpn>,
-        TimeAlarms: TimeAlarmsTrait,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
         Asset: Currency + Serialize,
@@ -89,13 +89,11 @@ impl WithLease for Cmd {
         let status = lease.liquidation_status(self.now)?;
         let res = match status {
             Status::No(zone) => {
-                lease.reschedule(&self.now, &zone)?;
-                let IntoDTOResult {
-                    batch: alarms,
-                    lease: _,
-                } = lease.into_dto();
+                let alarms = self
+                    .time_alarms
+                    .execute(Reschedule(&mut lease, &self.now, &zone))?;
                 CmdResult::NewAlarms {
-                    alarms,
+                    alarms: alarms.batch,
                     current_liability: zone,
                 }
             }

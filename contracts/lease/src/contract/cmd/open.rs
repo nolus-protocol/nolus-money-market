@@ -12,7 +12,7 @@ use crate::{
     error::{ContractError, ContractResult},
     lease::{
         with_lease_deps::{self, WithLeaseDeps},
-        IntoDTOResult, Lease,
+        IntoDTOResult, Lease, Reschedule,
     },
     loan::Loan,
 };
@@ -28,11 +28,13 @@ pub(crate) fn open_lease(
     debug_assert_eq!(amount.ticker(), &form.currency);
     debug_assert!(amount.amount() > 0);
 
+    let time_alarms = TimeAlarmsRef::new(form.time_alarms.clone(), querier)?;
     let profit = ProfitRef::new(form.loan.profit.clone(), querier)?;
 
     let cmd = LeaseFactory {
         form,
         lease_addr,
+        time_alarms,
         start_at,
         amount,
     };
@@ -52,6 +54,7 @@ pub(crate) fn open_lease(
 struct LeaseFactory<'a> {
     form: NewLeaseForm,
     lease_addr: Addr,
+    time_alarms: TimeAlarmsRef,
     start_at: Timestamp,
     amount: &'a LeaseCoin,
 }
@@ -64,7 +67,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         self,
         lpp: Lpp,
         profit: Profit,
-        alarms: TimeAlarms,
+        _alarms: TimeAlarms,
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
@@ -86,18 +89,22 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         );
         let amount: Coin<Asset> = self.amount.try_into()?;
 
-        let mut lease = Lease::<_, Asset, _, _, _, _>::new(
+        let mut lease = Lease::<_, Asset, _, _, _>::new(
             self.lease_addr,
             self.form.customer,
             amount,
             liability,
             loan,
-            (alarms, oracle),
+            oracle,
         );
-        lease.reschedule(
+
+        let alarms = self.time_alarms.execute(Reschedule(
+            &mut lease,
             &self.start_at,
             &Zone::no_warnings(liability.first_liq_warn()),
-        )?;
-        Ok(lease.into_dto())
+        ))?;
+        let mut dto = lease.into_dto(alarms.time_alarms_ref);
+        dto.batch = dto.batch.merge(alarms.batch);
+        Ok(dto)
     }
 }

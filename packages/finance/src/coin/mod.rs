@@ -22,10 +22,7 @@ pub type Amount = u128;
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize, JsonSchema,
 )]
-pub struct Coin<C>
-where
-    C: Currency,
-{
+pub struct Coin<C> {
     amount: Amount,
     #[serde(skip)]
     ticker: PhantomData<C>,
