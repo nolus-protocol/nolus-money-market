@@ -25,4 +25,19 @@ where
     ) -> ContractResult<RepayReceipt<Lpn>> {
         self.loan.repay(payment, now, self.addr.clone())
     }
+
+    pub(crate) fn liquidate(
+        &mut self,
+        asset: Coin<Asset>,
+        payment: Coin<Lpn>,
+        now: Timestamp,
+    ) -> ContractResult<RepayReceipt<Lpn>> {
+        debug_assert!(
+            asset <= self.amount,
+            "Liquidating {asset} is greater than the available {0}",
+            self.amount
+        );
+        self.amount -= asset;
+        self.loan.repay(payment, now, self.addr.clone())
+    }
 }

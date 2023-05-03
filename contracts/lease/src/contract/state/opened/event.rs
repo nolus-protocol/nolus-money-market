@@ -30,7 +30,37 @@ pub(super) fn emit_lease_opened(
 }
 
 pub(super) fn emit_payment(env: &Env, lease: &LeaseDTO, receipt: &ReceiptDTO) -> Emitter {
-    Emitter::of_type(Type::PaidActive)
+    emit_payment_int(Type::PaidActive, env, lease, receipt)
+}
+
+pub(super) fn emit_liquidation_warning(lease: &LeaseDTO, level: &Level) -> Emitter {
+    emit_lease(Emitter::of_type(Type::LiquidationWarning), lease)
+        .emit_percent_amount("ltv", level.ltv())
+        .emit_to_string_value("level", level.ordinal())
+}
+
+pub(super) fn emit_liquidation_start(lease: &LeaseDTO, liquidation: &LiquidationDTO) -> Emitter {
+    let emitter = emit_lease(Emitter::of_type(Type::LiquidationStart), lease);
+    emit_liquidation_info(emitter, lease, liquidation)
+}
+
+pub(super) fn emit_liquidation(
+    env: &Env,
+    lease: &LeaseDTO,
+    receipt: &ReceiptDTO,
+    liquidation: &LiquidationDTO,
+) -> Emitter {
+    let emitter = emit_payment_int(Type::Liquidation, env, lease, receipt);
+    emit_liquidation_info(emitter, lease, liquidation)
+}
+
+fn emit_payment_int(
+    event_type: Type,
+    env: &Env,
+    lease: &LeaseDTO,
+    receipt: &ReceiptDTO,
+) -> Emitter {
+    Emitter::of_type(event_type)
         .emit_tx_info(env)
         .emit("to", lease.addr.clone())
         .emit_coin_dto("payment", &receipt.total)
@@ -49,20 +79,13 @@ pub(super) fn emit_payment(env: &Env, lease: &LeaseDTO, receipt: &ReceiptDTO) ->
         .emit_coin_amount("change", receipt.change.amount())
 }
 
-pub(super) fn emit_liquidation_warning(lease: &LeaseDTO, level: &Level) -> Emitter {
-    emit_lease(Emitter::of_type(Type::LiquidationWarning), lease)
-        .emit_percent_amount("ltv", level.ltv())
-        .emit_to_string_value("level", level.ordinal())
-}
-
-pub(super) fn emit_liquidation_start(lease: &LeaseDTO, liquidation: &LiquidationDTO) -> Emitter {
-    let emitter = emit_lease(Emitter::of_type(Type::LiquidationStart), lease);
-    match liquidation {
-        LiquidationDTO::Partial { amount, cause } => {
-            emit_liquidation_cause(emitter, cause).emit_coin_dto("amount", amount)
-        }
-        LiquidationDTO::Full(cause) => emit_liquidation_cause(emitter, cause),
-    }
+fn emit_liquidation_info(
+    emitter: Emitter,
+    lease: &LeaseDTO,
+    liquidation: &LiquidationDTO,
+) -> Emitter {
+    let emitter = emit_liquidation_cause(emitter, liquidation.cause());
+    emitter.emit_coin_dto("amount", liquidation.amount(lease))
 }
 
 fn emit_liquidation_cause(emitter: Emitter, cause: &Cause) -> Emitter {
@@ -81,37 +104,3 @@ fn emit_lease(emitter: Emitter, lease: &LeaseDTO) -> Emitter {
         .emit("lease", lease.addr.clone())
         .emit_currency_symbol("lease-asset", lease.amount.ticker())
 }
-
-// fn emit_liquidation_info<Lpn>(emitter: Emitter, info: &LiquidationInfo<Lpn>) -> Emitter
-// where
-//     Lpn: Currency,
-// {
-//     emitter
-//         .emit("of", info.lease.as_str())
-//         .emit_coin("liquidation", info.receipt.total())
-//         .emit_to_string_value("type", info.cause.to_uint())
-//         .emit_coin_amount("prev-margin-interest", info.receipt.previous_margin_paid())
-//         .emit_coin_amount("prev-loan-interest", info.receipt.previous_interest_paid())
-//         .emit_coin_amount("curr-margin-interest", info.receipt.current_margin_paid())
-//         .emit_coin_amount("curr-loan-interest", info.receipt.current_interest_paid())
-//         .emit_coin_amount("principal", info.receipt.principal_paid())
-//         .emit_coin_amount("excess", info.receipt.change())
-// }
-
-// fn emit_liquidation<Lpn, Asset, L>(
-//     env: &Env,
-//     lease: &L,
-//     ltv: Percent,
-//     liquidation_info: &LiquidationInfo<Lpn>,
-// ) -> Emitter
-// where
-//     Lpn: Currency,
-//     Asset: Currency,
-//     L: LeaseInfo<Asset = Asset>,
-// {
-//     emit_liquidation_info(
-//         emit_lease_info(Emitter::of_type(Type::Liquidation).emit_tx_info(env), lease)
-//             .emit_percent_amount("ltv", ltv),
-//         liquidation_info,
-//     )
-// }

@@ -25,6 +25,12 @@ pub(crate) struct Lease {
     dex: Account,
 }
 
+impl Lease {
+    fn new(lease: LeaseDTO, dex: Account) -> Self {
+        Self { lease, dex }
+    }
+}
+
 impl DexConnectable for Lease {
     fn dex(&self) -> &ConnectionParams {
         self.dex.dex()

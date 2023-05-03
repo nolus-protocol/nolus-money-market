@@ -39,6 +39,13 @@ impl LiquidationDTO {
             Self::Full(_) => &lease.amount,
         }
     }
+
+    pub(crate) fn cause(&self) -> &Cause {
+        match self {
+            Self::Partial { amount: _, cause } => cause,
+            Self::Full(cause) => cause,
+        }
+    }
 }
 
 impl<Asset> From<Liquidation<Asset>> for LiquidationDTO

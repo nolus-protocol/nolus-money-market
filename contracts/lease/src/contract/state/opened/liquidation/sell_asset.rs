@@ -83,7 +83,7 @@ impl SwapTask for SellAsset {
         env: &Env,
         querier: &QuerierWrapper<'_>,
     ) -> Self::Result {
-        Active::try_liquidate(self.lease, amount_out, querier, env)
+        Active::try_liquidate(self.lease, self.liquidation, amount_out, querier, env)
     }
 }
 

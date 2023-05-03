@@ -39,6 +39,17 @@ where
     fn full(cause: Cause) -> Self {
         Self::Liquidation(Liquidation::Full(cause))
     }
+
+    #[cfg(debug_assertion)]
+    fn amount<Lpn, Lpp, Profit, TimeAlarms, Oracle>(
+        &self,
+        lease: &Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
+    ) -> Coin<Asset> {
+        match self {
+            Self::No(_) => Default::default(),
+            Self::Liquidation(liq) => liq.amount(lease),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
@@ -81,12 +92,31 @@ where
             Coin::ZERO
         };
 
-        Ok(check_liability(
+        let status = check_liability(
             &self.liability,
             self.amount,
             price::total(total_due, price_to_asset),
             price::total(overdue, price_to_asset),
-        ))
+        );
+        #[cfg(debug_assertion)]
+        debug_assert!(status.amount() <= self.amount());
+        Ok(status)
+    }
+}
+
+impl<Asset> Liquidation<Asset>
+where
+    Asset: Currency,
+{
+    #[cfg(debug_assertion)]
+    pub(crate) fn amount<Lpn, Lpp, Profit, TimeAlarms, Oracle>(
+        &self,
+        lease: &Lease<Lpn, Asset, Lpp, Profit, TimeAlarms, Oracle>,
+    ) -> Coin<Asset> {
+        match self {
+            Self::Partial { amount, cause: _ } => *amount,
+            Self::Full(_) => lease.amount,
+        }
     }
 }
 

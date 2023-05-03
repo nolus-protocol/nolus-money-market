@@ -8,18 +8,23 @@ pub struct Response {
 }
 
 impl Response {
-    pub fn messages_only(messages: Batch) -> Response {
+    pub fn messages_only(messages: Batch) -> Self {
         Self {
             messages,
             events: None,
         }
     }
 
-    pub fn messages_with_events(messages: Batch, events: Emitter) -> Response {
+    pub fn messages_with_events(messages: Batch, events: Emitter) -> Self {
         Self {
             messages,
             events: Some(events),
         }
+    }
+
+    pub fn add_messages(mut self, more: Batch) -> Self {
+        self.messages = self.messages.merge(more);
+        self
     }
 }
 

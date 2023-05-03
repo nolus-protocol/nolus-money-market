@@ -5,7 +5,7 @@ use lpp::stub::lender::LppLender as LppLenderTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
 use profit::stub::Profit as ProfitTrait;
-use sdk::cosmwasm_std::Env;
+use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarms as TimeAlarmsTrait;
 
 use crate::{
@@ -17,14 +17,14 @@ use crate::{
 
 use super::liquidation_status::LiquidationDTO;
 
-pub(crate) struct Repay<'a> {
+pub(crate) struct Repay {
     payment: LpnCoin,
-    env: &'a Env,
+    now: Timestamp,
 }
 
-impl<'a> Repay<'a> {
-    pub fn new(payment: LpnCoin, env: &'a Env) -> Self {
-        Self { payment, env }
+impl Repay {
+    pub fn new(payment: LpnCoin, now: Timestamp) -> Self {
+        Self { payment, now }
     }
 }
 
@@ -46,7 +46,7 @@ pub(crate) struct ReceiptDTO {
     pub close: bool,
 }
 
-impl<'a> WithLease for Repay<'a> {
+impl WithLease for Repay {
     type Output = RepayResult;
 
     type Error = ContractError;
@@ -63,14 +63,13 @@ impl<'a> WithLease for Repay<'a> {
         Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
-        let now = self.env.block.time;
         let payment = self.payment.try_into()?;
 
-        let receipt = lease.repay(payment, now)?;
+        let receipt = lease.repay(payment, self.now)?;
 
-        let liquidation = match lease.liquidation_status(now)? {
+        let liquidation = match lease.liquidation_status(self.now)? {
             Status::No(zone) => {
-                lease.reschedule(&now, &zone)?;
+                lease.reschedule(&self.now, &zone)?;
                 None
             }
             Status::Liquidation(liquidation) => Some(liquidation.into()),

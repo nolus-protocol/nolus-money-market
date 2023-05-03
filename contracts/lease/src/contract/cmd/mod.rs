@@ -1,4 +1,5 @@
 pub(crate) use close::Close;
+pub(crate) use liquidate::{Liquidate, LiquidateResult};
 pub(crate) use liquidation_status::{
     Cmd as LiquidationStatusCmd, CmdResult as LiquidationStatusCmdResult, LiquidationDTO,
 };
@@ -8,6 +9,7 @@ pub(crate) use repay::{ReceiptDTO, Repay, RepayResult};
 pub(crate) use state::LeaseState;
 
 mod close;
+mod liquidate;
 mod liquidation_status;
 mod open;
 mod open_loan;
