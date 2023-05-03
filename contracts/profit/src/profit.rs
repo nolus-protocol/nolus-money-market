@@ -10,7 +10,7 @@ use sdk::cosmwasm_std::{Addr, Env, Storage};
 use crate::{
     msg::ConfigResponse,
     result::ContractResult,
-    state::{config::Config, contract_state::State},
+    state::{Config, State},
 };
 
 pub struct Profit;
