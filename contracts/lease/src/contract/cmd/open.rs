@@ -12,7 +12,7 @@ use crate::{
     error::{ContractError, ContractResult},
     lease::{
         with_lease_deps::{self, WithLeaseDeps},
-        IntoDTOResult, Lease, Reschedule,
+        IntoDTOResult, Lease,
     },
     loan::Loan,
 };
@@ -35,6 +35,7 @@ pub(crate) fn open_lease(
         form,
         lease_addr,
         time_alarms,
+        price_alarms: deps.1.clone(),
         start_at,
         amount,
     };
@@ -47,6 +48,7 @@ struct LeaseFactory<'a> {
     form: NewLeaseForm,
     lease_addr: Addr,
     time_alarms: TimeAlarmsRef,
+    price_alarms: OracleRef,
     start_at: Timestamp,
     amount: &'a LeaseCoin,
 }
@@ -79,7 +81,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         );
         let amount: Coin<Asset> = self.amount.try_into()?;
 
-        let mut lease = Lease::<_, Asset, _, _, _>::new(
+        let lease = Lease::<_, Asset, _, _, _>::new(
             self.lease_addr,
             self.form.customer,
             amount,
@@ -88,11 +90,12 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             oracle,
         );
 
-        let alarms = self.time_alarms.execute(Reschedule(
-            &mut lease,
+        let alarms = lease.reschedule(
             &self.start_at,
             &Zone::no_warnings(liability.first_liq_warn()),
-        ))?;
+            self.time_alarms,
+            self.price_alarms,
+        )?;
         let mut dto = lease.into_dto(alarms.time_alarms_ref);
         dto.batch = dto.batch.merge(alarms.batch);
         Ok(dto)

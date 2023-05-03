@@ -52,6 +52,7 @@ impl Active {
         env: &Env,
     ) -> ContractResult<Response> {
         let time_alarms = lease.lease.time_alarms.clone();
+        let price_alarms = lease.lease.oracle.clone();
         let RepayResult {
             lease: lease_updated,
             receipt,
@@ -59,7 +60,7 @@ impl Active {
             liquidation,
         } = with_lease::execute(
             lease.lease,
-            Repay::new(payment, env.block.time, time_alarms),
+            Repay::new(payment, env.block.time, time_alarms, price_alarms),
             querier,
         )?;
 
@@ -84,6 +85,7 @@ impl Active {
         env: &Env,
     ) -> ContractResult<Response> {
         let time_alarms = lease.lease.time_alarms.clone();
+        let price_alarms = lease.lease.oracle.clone();
         let liquidation_asset = liquidation.amount(&lease.lease).clone();
         let LiquidateResult {
             lease: lease_updated,
@@ -97,6 +99,7 @@ impl Active {
                 liquidation_lpn,
                 env.block.time,
                 time_alarms,
+                price_alarms,
             ),
             querier,
         )?;
@@ -168,9 +171,10 @@ impl Active {
 
     fn try_on_alarm(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
         let time_alarms = self.lease.lease.time_alarms.clone();
+        let price_alarms = self.lease.lease.oracle.clone();
         let liquidation_status = with_lease::execute(
             self.lease.lease.clone(),
-            LiquidationStatusCmd::new(env.block.time, time_alarms),
+            LiquidationStatusCmd::new(env.block.time, time_alarms, price_alarms),
             querier,
         )?;
 

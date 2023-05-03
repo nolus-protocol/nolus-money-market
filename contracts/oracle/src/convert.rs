@@ -42,7 +42,7 @@ where
         }
     }
 
-    oracle_ref.execute(
+    oracle_ref.execute_as_oracle(
         PriceConvert {
             in_amount,
             _out: PhantomData,
@@ -85,7 +85,7 @@ where
         }
     }
 
-    oracle_ref.execute(
+    oracle_ref.execute_as_oracle(
         PriceConvert {
             in_amount,
             _out: PhantomData,

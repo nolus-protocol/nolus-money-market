@@ -31,7 +31,7 @@ impl<'r> WithLppLender for Quote<'r> {
         Lpp: LppLenderTrait<Lpn>,
         Lpn: Currency + Serialize,
     {
-        self.oracle.execute(
+        self.oracle.execute_as_oracle(
             QuoteStage2 {
                 downpayment: self.downpayment,
                 lease_asset: self.lease_asset,

@@ -2,7 +2,7 @@ use serde::Serialize;
 
 use finance::currency::Currency;
 use lpp::stub::lender::LppLender as LppLenderTrait;
-use oracle::stub::Oracle as OracleTrait;
+use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use platform::batch::Batch;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
@@ -11,7 +11,7 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::LpnCoin,
     error::ContractError,
-    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO, Reschedule, Status},
+    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO, Status},
     loan::RepayReceipt,
 };
 
@@ -21,14 +21,21 @@ pub(crate) struct Repay {
     payment: LpnCoin,
     now: Timestamp,
     time_alarms: TimeAlarmsRef,
+    price_alarms: OracleRef,
 }
 
 impl Repay {
-    pub fn new(payment: LpnCoin, now: Timestamp, time_alarms: TimeAlarmsRef) -> Self {
+    pub fn new(
+        payment: LpnCoin,
+        now: Timestamp,
+        time_alarms: TimeAlarmsRef,
+        price_alarms: OracleRef,
+    ) -> Self {
         Self {
             payment,
             now,
             time_alarms,
+            price_alarms,
         }
     }
 }
@@ -73,9 +80,8 @@ impl WithLease for Repay {
 
         let (liquidation, time_alarms) = match lease.liquidation_status(self.now)? {
             Status::No(zone) => {
-                let alarms_batch = self
-                    .time_alarms
-                    .execute(Reschedule(&mut lease, &self.now, &zone))?;
+                let alarms_batch =
+                    lease.reschedule(&self.now, &zone, self.time_alarms, self.price_alarms)?;
                 (None, alarms_batch.time_alarms_ref)
             }
             Status::Liquidation(liquidation) => (Some(liquidation.into()), self.time_alarms),

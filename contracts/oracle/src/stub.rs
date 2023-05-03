@@ -26,15 +26,18 @@ pub struct OracleBatch {
 
 pub trait Oracle<OracleBase>
 where
-    Self: Into<OracleBatch>,
+    Self: Into<OracleRef>,
     OracleBase: Currency,
 {
-    fn owned_by(&self, addr: &Addr) -> bool;
-
     fn price_of<C>(&self) -> Result<Price<C, OracleBase>>
     where
         C: Currency;
+}
 
+pub trait PriceAlarms
+where
+    Self: Into<Batch>,
+{
     //TODO use a type-safe Alarm, one with the typed Price
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()>;
 }
@@ -51,29 +54,42 @@ where
         O: Oracle<OracleBase>;
 }
 
+pub trait WithPriceAlarms<OracleBase>
+where
+    OracleBase: Currency,
+{
+    type Output;
+    type Error;
+
+    fn exec<A>(self, alarms: A) -> StdResult<Self::Output, Self::Error>
+    where
+        A: PriceAlarms;
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OracleRef {
-    addr: Addr,
+    contract: Addr,
     base_currency: SymbolOwned,
 }
 
 impl OracleRef {
-    pub fn try_from(addr: Addr, querier: &QuerierWrapper<'_>) -> Result<Self> {
-        let resp: ConfigResponse = querier.query_wasm_smart(addr.clone(), &QueryMsg::Config {})?;
+    pub fn try_from(contract: Addr, querier: &QuerierWrapper<'_>) -> Result<Self> {
+        let resp: ConfigResponse =
+            querier.query_wasm_smart(contract.clone(), &QueryMsg::Config {})?;
 
         let base_currency = resp.config.base_asset;
 
         Ok(Self {
-            addr,
+            contract,
             base_currency,
         })
     }
 
-    pub fn owned_by(&self, addr: &Addr) -> bool {
-        &self.addr == addr
+    pub fn owned_by(&self, contract: &Addr) -> bool {
+        &self.contract == contract
     }
 
-    pub fn execute<OracleBase, V>(
+    pub fn execute_as_oracle<OracleBase, V>(
         self,
         cmd: V,
         querier: &QuerierWrapper<'_>,
@@ -83,15 +99,18 @@ impl OracleRef {
         V: WithOracle<OracleBase>,
         ContractError: Into<V::Error>,
     {
-        if OracleBase::TICKER == self.base_currency {
-            cmd.exec(self.into_stub::<OracleBase>(querier))
-        } else {
-            Err(ContractError::CurrencyMismatch {
-                expected: OracleBase::TICKER.into(),
-                found: self.base_currency,
-            }
-            .into())
-        }
+        self.check_base::<OracleBase, _>()?;
+        cmd.exec(self.into_oracle_stub::<OracleBase>(querier))
+    }
+
+    pub fn execute_as_alarms<OracleBase, V>(self, cmd: V) -> StdResult<V::Output, V::Error>
+    where
+        OracleBase: Currency,
+        V: WithPriceAlarms<OracleBase>,
+        ContractError: Into<V::Error>,
+    {
+        self.check_base::<OracleBase, _>()?;
+        cmd.exec(self.into_alarms_stub::<OracleBase>())
     }
 
     pub fn swap_path(
@@ -103,17 +122,40 @@ impl OracleRef {
         let msg = QueryMsg::SwapPath { from, to };
 
         querier
-            .query_wasm_smart(self.addr.clone(), &msg)
+            .query_wasm_smart(self.contract.clone(), &msg)
             .map_err(ContractError::from)
     }
 
-    fn into_stub<'a, OracleBase>(
+    fn check_base<OracleBase, Err>(&self) -> StdResult<(), Err>
+    where
+        OracleBase: Currency,
+        ContractError: Into<Err>,
+    {
+        if OracleBase::TICKER != self.base_currency {
+            Err(ContractError::CurrencyMismatch {
+                expected: OracleBase::TICKER.into(),
+                found: self.base_currency.clone(),
+            }
+            .into())
+        } else {
+            Ok(())
+        }
+    }
+
+    fn into_oracle_stub<'a, OracleBase>(
         self,
         querier: &'a QuerierWrapper<'a>,
     ) -> OracleStub<'a, OracleBase> {
         OracleStub {
             oracle_ref: self,
             querier,
+            _quote_currency: PhantomData::<OracleBase>,
+        }
+    }
+
+    fn into_alarms_stub<OracleBase>(self) -> AlarmsStub<OracleBase> {
+        AlarmsStub {
+            oracle_ref: self,
             batch: Batch::default(),
             _quote_currency: PhantomData::<OracleBase>,
         }
@@ -128,7 +170,7 @@ impl OracleRef {
         C: Currency,
     {
         Self {
-            addr: Addr::unchecked(addr),
+            contract: Addr::unchecked(addr),
             base_currency: C::TICKER.into(),
         }
     }
@@ -138,12 +180,11 @@ struct OracleStub<'a, OracleBase> {
     oracle_ref: OracleRef,
     _quote_currency: PhantomData<OracleBase>,
     querier: &'a QuerierWrapper<'a>,
-    batch: Batch,
 }
 
 impl<'a, OracleBase> OracleStub<'a, OracleBase> {
     fn addr(&self) -> &Addr {
-        &self.oracle_ref.addr
+        &self.oracle_ref.contract
     }
 }
 
@@ -151,10 +192,6 @@ impl<'a, OracleBase> Oracle<OracleBase> for OracleStub<'a, OracleBase>
 where
     OracleBase: Currency,
 {
-    fn owned_by(&self, addr: &Addr) -> bool {
-        self.oracle_ref.owned_by(addr)
-    }
-
     fn price_of<C>(&self) -> Result<Price<C, OracleBase>>
     where
         C: Currency,
@@ -177,7 +214,30 @@ where
 
         Ok(dto.try_into()?)
     }
+}
 
+impl<'a, OracleBase> From<OracleStub<'a, OracleBase>> for OracleRef {
+    fn from(stub: OracleStub<'a, OracleBase>) -> Self {
+        stub.oracle_ref
+    }
+}
+
+struct AlarmsStub<OracleBase> {
+    oracle_ref: OracleRef,
+    _quote_currency: PhantomData<OracleBase>,
+    batch: Batch,
+}
+
+impl<OracleBase> AlarmsStub<OracleBase> {
+    fn addr(&self) -> &Addr {
+        &self.oracle_ref.contract
+    }
+}
+
+impl<OracleBase> PriceAlarms for AlarmsStub<OracleBase>
+where
+    OracleBase: Currency,
+{
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()> {
         self.batch.schedule_execute_no_reply(wasm_execute(
             self.addr().clone(),
@@ -189,11 +249,8 @@ where
     }
 }
 
-impl<'a, OracleBase> From<OracleStub<'a, OracleBase>> for OracleBatch {
-    fn from(stub: OracleStub<'a, OracleBase>) -> Self {
-        OracleBatch {
-            oracle_ref: stub.oracle_ref,
-            batch: stub.batch,
-        }
+impl<OracleBase> From<AlarmsStub<OracleBase>> for Batch {
+    fn from(stub: AlarmsStub<OracleBase>) -> Self {
+        stub.batch
     }
 }

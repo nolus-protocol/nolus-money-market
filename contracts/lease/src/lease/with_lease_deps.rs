@@ -145,7 +145,7 @@ where
     where
         P: ProfitTrait,
     {
-        self.oracle.execute(
+        self.oracle.execute_as_oracle(
             FactoryStage4 {
                 cmd: self.cmd,
                 asset: self.asset,

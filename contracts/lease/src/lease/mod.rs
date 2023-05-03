@@ -7,7 +7,7 @@ use finance::{
     price::Price,
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
-use oracle::stub::{Oracle as OracleTrait, OracleBatch};
+use oracle::stub::Oracle as OracleTrait;
 use platform::{bank::BankAccount, batch::Batch};
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::{Addr, Timestamp};
@@ -19,7 +19,6 @@ use crate::{
 };
 
 pub(super) use self::{
-    alarm::Reschedule,
     dto::LeaseDTO,
     liquidation::{Cause, Liquidation, Status},
     state::State,
@@ -99,11 +98,6 @@ where
     pub(super) fn into_dto(self, time_alarms: TimeAlarmsRef) -> IntoDTOResult {
         let (loan_dto, loan_batch) = self.loan.into_dto();
 
-        let OracleBatch {
-            oracle_ref,
-            batch: oracle_batch,
-        } = self.oracle.into();
-
         IntoDTOResult {
             lease: LeaseDTO::new(
                 self.addr,
@@ -112,9 +106,9 @@ where
                 self.liability,
                 loan_dto,
                 time_alarms,
-                oracle_ref,
+                self.oracle.into(),
             ),
-            batch: loan_batch.merge(oracle_batch),
+            batch: loan_batch,
         }
     }
 
@@ -187,18 +181,14 @@ mod tests {
             LppBatch,
         },
     };
-    use oracle::{
-        alarms::Alarm,
-        msg::ExecuteMsg::AddPriceAlarm,
-        stub::{Oracle, OracleBatch, OracleRef},
-    };
+    use oracle::stub::{Oracle, OracleRef};
     use platform::{
         bank::{Aggregate, BalancesResult, BankAccountView, BankStub},
         batch::Batch,
         error::Result as PlatformResult,
     };
     use profit::stub::{Profit, ProfitBatch, ProfitRef};
-    use sdk::cosmwasm_std::{wasm_execute, Addr, BankMsg, Timestamp};
+    use sdk::cosmwasm_std::{Addr, BankMsg, Timestamp};
 
     use crate::{api::InterestPaymentSpec, loan::Loan, reply_id::ReplyId};
 
@@ -358,83 +348,30 @@ mod tests {
 
     pub struct OracleLocalStub {
         address: Addr,
-        pub batch: Batch,
     }
 
     impl From<Addr> for OracleLocalStub {
         fn from(oracle: Addr) -> Self {
-            Self {
-                address: oracle,
-                batch: Batch::default(),
-            }
+            Self { address: oracle }
         }
     }
 
     impl<OracleBase> Oracle<OracleBase> for OracleLocalStub
     where
+        Self: Into<OracleRef>,
         OracleBase: Currency + Serialize,
     {
-        fn owned_by(&self, addr: &Addr) -> bool {
-            &self.address == addr
-        }
-
         fn price_of<C>(&self) -> oracle::stub::Result<Price<C, OracleBase>>
         where
             C: Currency,
         {
             Ok(Price::identity())
         }
-
-        fn add_alarm(&mut self, alarm: Alarm) -> oracle::stub::Result<()> {
-            self.batch.schedule_execute_no_reply(wasm_execute(
-                self.address.clone(),
-                &AddPriceAlarm { alarm },
-                vec![],
-            )?);
-
-            Ok(())
-        }
     }
 
-    impl From<OracleLocalStub> for OracleBatch {
+    impl From<OracleLocalStub> for OracleRef {
         fn from(stub: OracleLocalStub) -> Self {
-            OracleBatch {
-                oracle_ref: OracleRef::unchecked::<_, TestCurrency>(stub.address),
-                batch: stub.batch,
-            }
-        }
-    }
-
-    pub struct OracleLocalStubUnreachable;
-
-    impl<OracleBase> Oracle<OracleBase> for OracleLocalStubUnreachable
-    where
-        OracleBase: Currency + Serialize,
-    {
-        fn owned_by(&self, _addr: &Addr) -> bool {
-            unreachable!()
-        }
-
-        fn price_of<C>(&self) -> oracle::stub::Result<Price<C, OracleBase>>
-        where
-            C: Currency,
-        {
-            Ok(Price::identity())
-        }
-
-        fn add_alarm(&mut self, _alarm: Alarm) -> oracle::stub::Result<()> {
-            unreachable!()
-        }
-    }
-
-    impl From<OracleLocalStubUnreachable> for OracleBatch {
-        fn from(_: OracleLocalStubUnreachable) -> Self {
-            Self {
-                oracle_ref: OracleRef::unchecked::<_, TestLpn>(Addr::unchecked(
-                    "local_test_oracle_addr",
-                )),
-                batch: Batch::default(),
-            }
+            OracleRef::unchecked::<_, TestCurrency>(stub.address)
         }
     }
 

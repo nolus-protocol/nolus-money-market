@@ -1,3 +1,4 @@
+use platform::batch::Batch;
 use serde::Serialize;
 
 use finance::{
@@ -9,15 +10,25 @@ use finance::{
 };
 use lpp::stub::lender::LppLender as LppLenderTrait;
 use marketprice::SpotPrice;
-use oracle::{alarms::Alarm, stub::Oracle as OracleTrait};
+use oracle::{
+    alarms::Alarm,
+    stub::{Oracle as OracleTrait, OracleRef, PriceAlarms as PriceAlarmsTrait, WithPriceAlarms},
+};
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
-use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch, WithTimeAlarms};
+use timealarms::stub::{
+    TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch, TimeAlarmsRef, WithTimeAlarms,
+};
 
 use crate::{
     error::{ContractError, ContractResult},
     lease::Lease,
 };
+
+pub struct AlarmsBatch {
+    pub time_alarms_ref: TimeAlarmsRef,
+    pub batch: Batch,
+}
 
 impl<Lpn, Asset, Lpp, Profit, Oracle> Lease<Lpn, Asset, Lpp, Profit, Oracle>
 where
@@ -29,18 +40,30 @@ where
 {
     //TODO keep loan state updated on payments and liquidations to have the liquidation status accurate
     //do it at the LppStub
-    pub(crate) fn reschedule<TimeAlarms>(
-        &mut self,
+    pub(crate) fn reschedule(
+        &self,
+        now: &Timestamp,
+        liquidation_zone: &Zone,
+        time_alarms: TimeAlarmsRef,
+        price_alarms: OracleRef,
+    ) -> ContractResult<AlarmsBatch> {
+        // TODO simplify the impl by removing the Cmd indirection
+        price_alarms.execute_as_alarms(RescheduleStage1(self, now, liquidation_zone, time_alarms))
+    }
+
+    fn reschedule_int<TimeAlarms, PriceAlarms>(
+        &self,
         now: &Timestamp,
         liquidation_zone: &Zone,
         time_alarms: &mut TimeAlarms,
+        price_alarms: &mut PriceAlarms,
     ) -> ContractResult<()>
     where
         TimeAlarms: TimeAlarmsTrait,
+        PriceAlarms: PriceAlarmsTrait,
     {
-        self.reschedule_time_alarm(now, time_alarms)?;
-
-        self.reschedule_price_alarm(now, liquidation_zone)
+        self.reschedule_time_alarm(now, time_alarms)
+            .and_then(|()| self.reschedule_price_alarm(now, liquidation_zone, price_alarms))
     }
 
     fn reschedule_time_alarm<TimeAlarms>(
@@ -60,11 +83,15 @@ where
             .map_err(Into::into)
     }
 
-    fn reschedule_price_alarm(
-        &mut self,
+    fn reschedule_price_alarm<PriceAlarms>(
+        &self,
         now: &Timestamp,
         liquidation_zone: &Zone,
-    ) -> ContractResult<()> {
+        price_alarms: &mut PriceAlarms,
+    ) -> ContractResult<()>
+    where
+        PriceAlarms: PriceAlarmsTrait,
+    {
         debug_assert!(!currency::equal::<Lpn, Asset>());
 
         let total_liability = self
@@ -82,7 +109,7 @@ where
             .map(|low| self.price_alarm_at_level(total_liability, low))
             .transpose()?;
 
-        self.oracle
+        price_alarms
             .add_alarm(Alarm::new(
                 below.into(),
                 above_or_equal.map(Into::<SpotPrice>::into),
@@ -101,13 +128,22 @@ where
     }
 }
 
-pub(crate) struct Reschedule<'a, Lpn, Asset, Lpp, Profit, Oracle>(
-    pub &'a mut Lease<Lpn, Asset, Lpp, Profit, Oracle>,
-    pub &'a Timestamp,
-    pub &'a Zone,
+struct RescheduleStage1<'a, Lpn, Asset, Lpp, Profit, Oracle>(
+    &'a Lease<Lpn, Asset, Lpp, Profit, Oracle>,
+    &'a Timestamp,
+    &'a Zone,
+    TimeAlarmsRef,
 );
-impl<'a, Lpn, Asset, Lpp, Profit, Oracle> WithTimeAlarms
-    for Reschedule<'a, Lpn, Asset, Lpp, Profit, Oracle>
+
+struct RescheduleStage2<'a, Lpn, Asset, Lpp, Profit, Oracle, PriceAlarms>(
+    &'a Lease<Lpn, Asset, Lpp, Profit, Oracle>,
+    &'a Timestamp,
+    &'a Zone,
+    PriceAlarms,
+);
+
+impl<'a, Lpn, Asset, Lpp, Profit, Oracle> WithPriceAlarms<Lpn>
+    for RescheduleStage1<'a, Lpn, Asset, Lpp, Profit, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppLenderTrait<Lpn>,
@@ -115,15 +151,47 @@ where
     Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
-    type Output = TimeAlarmsBatch;
+    type Output = AlarmsBatch;
     type Error = ContractError;
 
-    fn exec<TA>(self, mut time_alarms: TA) -> std::result::Result<Self::Output, Self::Error>
+    fn exec<A>(self, alarms: A) -> Result<Self::Output, Self::Error>
+    where
+        A: PriceAlarmsTrait,
+    {
+        self.3
+            .execute(RescheduleStage2(self.0, self.1, self.2, alarms))
+    }
+}
+
+impl<'a, Lpn, Asset, Lpp, Profit, Oracle, PriceAlarms> WithTimeAlarms
+    for RescheduleStage2<'a, Lpn, Asset, Lpp, Profit, Oracle, PriceAlarms>
+where
+    Lpn: Currency + Serialize,
+    Lpp: LppLenderTrait<Lpn>,
+    Oracle: OracleTrait<Lpn>,
+    Profit: ProfitTrait,
+    Asset: Currency + Serialize,
+    PriceAlarms: PriceAlarmsTrait,
+{
+    type Output = AlarmsBatch;
+    type Error = ContractError;
+
+    fn exec<TA>(self, mut time_alarms: TA) -> Result<Self::Output, Self::Error>
     where
         TA: TimeAlarmsTrait,
     {
-        self.0.reschedule(self.1, self.2, &mut time_alarms)?;
-        Ok(time_alarms.into())
+        let mut price_alarms = self.3;
+        self.0
+            .reschedule_int(self.1, self.2, &mut time_alarms, &mut price_alarms)?;
+
+        let TimeAlarmsBatch {
+            time_alarms_ref,
+            batch,
+        } = time_alarms.into();
+        Ok(Self::Output {
+            time_alarms_ref,
+            batch: batch.merge(price_alarms.into()),
+        })
     }
 }
 
@@ -137,13 +205,13 @@ mod tests {
     use finance::{coin::Coin, duration::Duration, fraction::Fraction, price::total_of};
     use lpp::msg::LoanResponse;
     use marketprice::SpotPrice;
+    use oracle::stub::OracleRef;
     use oracle::{alarms::Alarm, msg::ExecuteMsg::AddPriceAlarm};
     use platform::batch::Batch;
     use sdk::cosmwasm_std::{to_binary, Addr, WasmMsg};
     use timealarms::msg::ExecuteMsg::AddAlarm;
     use timealarms::stub::TimeAlarmsRef;
 
-    use crate::lease::alarm::Reschedule;
     use crate::lease::tests::{LppLenderLocalStub, OracleLocalStub, ProfitLocalStub};
     use crate::lease::Lease;
     use crate::lease::{
@@ -151,69 +219,66 @@ mod tests {
         tests::{loan, open_lease, LEASE_START},
     };
 
-    const TIME_ALARMD_ADDR: &str = "timealarms";
+    const TIME_ALARMS_ADDR: &str = "timealarms";
+    const ORACLE_ADDR: &str = "oracle";
 
     #[test]
     fn initial_alarm_schedule() {
         let asset = Coin::from(10);
         let lease_addr = Addr::unchecked("lease");
-        let oracle_addr = Addr::unchecked("oracle");
-        let mut lease = lease::tests::open_lease(
+        let lease = lease::tests::open_lease(
             lease_addr,
             asset,
             Some(loan()),
-            oracle_addr.clone(),
+            Addr::unchecked(ORACLE_ADDR),
             Addr::unchecked(String::new()),
         );
         let recalc_time = LEASE_START + lease.liability.recalculation_time();
         let liability_alarm_on = lease.liability.first_liq_warn();
         let projected_liability = projected_liability(&lease, recalc_time);
-        let alarm_msgs = timealarms()
-            .execute(Reschedule(
-                &mut lease,
+        let alarm_msgs = lease
+            .reschedule(
                 &LEASE_START,
                 &Zone::no_warnings(liability_alarm_on),
-            ))
+                timealarms(),
+                pricealarms(),
+            )
             .unwrap();
 
-        assert_eq!(
-            alarm_msgs.batch.merge(lease.into_dto(timealarms()).batch),
-            {
-                let mut batch = Batch::default();
+        assert_eq!(alarm_msgs.batch, {
+            let mut batch = Batch::default();
 
-                batch.schedule_execute_no_reply(WasmMsg::Execute {
-                    contract_addr: TIME_ALARMD_ADDR.into(),
-                    msg: to_binary(&AddAlarm { time: recalc_time }).unwrap(),
-                    funds: vec![],
-                });
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: TIME_ALARMS_ADDR.into(),
+                msg: to_binary(&AddAlarm { time: recalc_time }).unwrap(),
+                funds: vec![],
+            });
 
-                let below_alarm: SpotPrice = total_of(liability_alarm_on.of(asset))
-                    .is(projected_liability)
-                    .into();
-                batch.schedule_execute_no_reply(WasmMsg::Execute {
-                    contract_addr: oracle_addr.into(),
-                    msg: to_binary(&AddPriceAlarm {
-                        alarm: Alarm::new(below_alarm, None),
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                });
+            let below_alarm: SpotPrice = total_of(liability_alarm_on.of(asset))
+                .is(projected_liability)
+                .into();
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: ORACLE_ADDR.into(),
+                msg: to_binary(&AddPriceAlarm {
+                    alarm: Alarm::new(below_alarm, None),
+                })
+                .unwrap(),
+                funds: vec![],
+            });
 
-                batch
-            }
-        );
+            batch
+        });
     }
 
     #[test]
     fn reschedule_time_alarm_recalc() {
         let lease_addr = Addr::unchecked("lease");
-        let oracle_addr = Addr::unchecked(String::new());
         let lease_amount = 20.into();
-        let mut lease = open_lease(
+        let lease = open_lease(
             lease_addr,
             lease_amount,
             Some(loan()),
-            oracle_addr.clone(),
+            Addr::unchecked(ORACLE_ADDR),
             Addr::unchecked(String::new()),
         );
         let now = lease.loan.grace_period_end()
@@ -222,36 +287,33 @@ mod tests {
         let recalc_time = now + lease.liability.recalculation_time();
         let up_to = lease.liability.first_liq_warn();
         let no_warnings = Zone::no_warnings(up_to);
-        let alarm_msgs = timealarms()
-            .execute(Reschedule(&mut lease, &now, &no_warnings))
+        let alarm_msgs = lease
+            .reschedule(&now, &no_warnings, timealarms(), pricealarms())
             .unwrap();
         let exp_below: SpotPrice = total_of(no_warnings.high().ltv().of(lease_amount))
             .is(projected_liability(&lease, recalc_time))
             .into();
 
-        assert_eq!(
-            alarm_msgs.batch.merge(lease.into_dto(timealarms()).batch),
-            {
-                let mut batch = Batch::default();
+        assert_eq!(alarm_msgs.batch, {
+            let mut batch = Batch::default();
 
-                batch.schedule_execute_no_reply(WasmMsg::Execute {
-                    contract_addr: TIME_ALARMD_ADDR.into(),
-                    msg: to_binary(&AddAlarm { time: recalc_time }).unwrap(),
-                    funds: vec![],
-                });
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: TIME_ALARMS_ADDR.into(),
+                msg: to_binary(&AddAlarm { time: recalc_time }).unwrap(),
+                funds: vec![],
+            });
 
-                batch.schedule_execute_no_reply(WasmMsg::Execute {
-                    contract_addr: oracle_addr.into(),
-                    msg: to_binary(&AddPriceAlarm {
-                        alarm: Alarm::new(exp_below, None),
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                });
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: ORACLE_ADDR.into(),
+                msg: to_binary(&AddPriceAlarm {
+                    alarm: Alarm::new(exp_below, None),
+                })
+                .unwrap(),
+                funds: vec![],
+            });
 
-                batch
-            }
-        );
+            batch
+        });
     }
 
     #[test]
@@ -259,7 +321,7 @@ mod tests {
         let lease_addr = Addr::unchecked("lease");
         let oracle_addr = Addr::unchecked("oracle");
         let lease_amount = 300.into();
-        let mut lease = open_lease(
+        let lease = open_lease(
             lease_addr,
             lease_amount,
             Some(loan()),
@@ -273,36 +335,33 @@ mod tests {
         let exp_alarm_at = lease.loan.grace_period_end();
         let up_to = lease.liability.first_liq_warn();
         let no_warnings = Zone::no_warnings(up_to);
-        let alarm_msgs = timealarms()
-            .execute(Reschedule(&mut lease, &now, &no_warnings))
+        let alarm_msgs = lease
+            .reschedule(&now, &no_warnings, timealarms(), pricealarms())
             .unwrap();
         let exp_below: SpotPrice = total_of(no_warnings.high().ltv().of(lease_amount))
             .is(projected_liability(&lease, recalc_time))
             .into();
 
-        assert_eq!(
-            alarm_msgs.batch.merge(lease.into_dto(timealarms()).batch),
-            {
-                let mut batch = Batch::default();
+        assert_eq!(alarm_msgs.batch, {
+            let mut batch = Batch::default();
 
-                batch.schedule_execute_no_reply(WasmMsg::Execute {
-                    contract_addr: TIME_ALARMD_ADDR.into(),
-                    msg: to_binary(&AddAlarm { time: exp_alarm_at }).unwrap(),
-                    funds: vec![],
-                });
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: TIME_ALARMS_ADDR.into(),
+                msg: to_binary(&AddAlarm { time: exp_alarm_at }).unwrap(),
+                funds: vec![],
+            });
 
-                batch.schedule_execute_no_reply(WasmMsg::Execute {
-                    contract_addr: oracle_addr.into(),
-                    msg: to_binary(&AddPriceAlarm {
-                        alarm: Alarm::new(exp_below, None),
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                });
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: oracle_addr.into(),
+                msg: to_binary(&AddPriceAlarm {
+                    alarm: Alarm::new(exp_below, None),
+                })
+                .unwrap(),
+                funds: vec![],
+            });
 
-                batch
-            }
-        );
+            batch
+        });
     }
 
     #[test]
@@ -318,12 +377,11 @@ mod tests {
 
         let lease_addr = Addr::unchecked("lease");
         let lease_amount = 1000.into();
-        let oracle_addr = Addr::unchecked(String::new());
-        let mut lease = open_lease(
+        let lease = open_lease(
             lease_addr,
             lease_amount,
             Some(loan),
-            oracle_addr.clone(),
+            Addr::unchecked(ORACLE_ADDR),
             Addr::unchecked(String::new()),
         );
 
@@ -336,8 +394,8 @@ mod tests {
             lease.liability.second_liq_warn(),
             lease.liability.third_liq_warn(),
         );
-        let alarm_msgs = timealarms()
-            .execute(Reschedule(&mut lease, &reschedule_at, &zone))
+        let alarm_msgs = lease
+            .reschedule(&reschedule_at, &zone, timealarms(), pricealarms())
             .unwrap();
 
         let exp_below: SpotPrice = total_of(zone.high().ltv().of(lease_amount))
@@ -347,33 +405,34 @@ mod tests {
             .is(projected_liability)
             .into();
 
-        assert_eq!(
-            alarm_msgs.batch.merge(lease.into_dto(timealarms()).batch),
-            {
-                let mut batch = Batch::default();
+        assert_eq!(alarm_msgs.batch, {
+            let mut batch = Batch::default();
 
-                batch.schedule_execute_no_reply(WasmMsg::Execute {
-                    contract_addr: TIME_ALARMD_ADDR.into(),
-                    msg: to_binary(&AddAlarm { time: recalc_at }).unwrap(),
-                    funds: vec![],
-                });
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: TIME_ALARMS_ADDR.into(),
+                msg: to_binary(&AddAlarm { time: recalc_at }).unwrap(),
+                funds: vec![],
+            });
 
-                batch.schedule_execute_no_reply(WasmMsg::Execute {
-                    contract_addr: oracle_addr.into(),
-                    msg: to_binary(&AddPriceAlarm {
-                        alarm: Alarm::new(exp_below, Some(exp_above)),
-                    })
-                    .unwrap(),
-                    funds: vec![],
-                });
+            batch.schedule_execute_no_reply(WasmMsg::Execute {
+                contract_addr: ORACLE_ADDR.into(),
+                msg: to_binary(&AddPriceAlarm {
+                    alarm: Alarm::new(exp_below, Some(exp_above)),
+                })
+                .unwrap(),
+                funds: vec![],
+            });
 
-                batch
-            }
-        );
+            batch
+        });
     }
 
     fn timealarms() -> TimeAlarmsRef {
-        TimeAlarmsRef::unchecked(TIME_ALARMD_ADDR)
+        TimeAlarmsRef::unchecked(TIME_ALARMS_ADDR)
+    }
+
+    fn pricealarms() -> OracleRef {
+        OracleRef::unchecked::<_, Usdc>(ORACLE_ADDR)
     }
 
     fn projected_liability(

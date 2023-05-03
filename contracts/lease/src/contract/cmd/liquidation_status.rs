@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use finance::{currency::Currency, liability::Zone};
 use lpp::stub::lender::LppLender as LppLenderTrait;
-use oracle::stub::Oracle as OracleTrait;
+use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use platform::batch::Batch;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
@@ -11,12 +11,13 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::LeaseCoin,
     error::ContractError,
-    lease::{with_lease::WithLease, Cause, Lease, LeaseDTO, Liquidation, Reschedule, Status},
+    lease::{with_lease::WithLease, Cause, Lease, LeaseDTO, Liquidation, Status},
 };
 
 pub(crate) struct Cmd {
     now: Timestamp,
     time_alarms: TimeAlarmsRef,
+    price_alarms: OracleRef,
 }
 
 pub(crate) enum CmdResult {
@@ -65,8 +66,12 @@ where
 }
 
 impl Cmd {
-    pub fn new(now: Timestamp, time_alarms: TimeAlarmsRef) -> Self {
-        Self { now, time_alarms }
+    pub fn new(now: Timestamp, time_alarms: TimeAlarmsRef, price_alarms: OracleRef) -> Self {
+        Self {
+            now,
+            time_alarms,
+            price_alarms,
+        }
     }
 }
 
@@ -77,7 +82,7 @@ impl WithLease for Cmd {
 
     fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
         self,
-        mut lease: Lease<Lpn, Asset, Lpp, Profit, Oracle>,
+        lease: Lease<Lpn, Asset, Lpp, Profit, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
@@ -89,9 +94,8 @@ impl WithLease for Cmd {
         let status = lease.liquidation_status(self.now)?;
         let res = match status {
             Status::No(zone) => {
-                let alarms = self
-                    .time_alarms
-                    .execute(Reschedule(&mut lease, &self.now, &zone))?;
+                let alarms =
+                    lease.reschedule(&self.now, &zone, self.time_alarms, self.price_alarms)?;
                 CmdResult::NewAlarms {
                     alarms: alarms.batch,
                     current_liability: zone,
