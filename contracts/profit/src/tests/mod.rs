@@ -1,6 +1,4 @@
-#[cfg(feature = "contract")]
-#[cfg(test)]
+#![cfg(all(feature = "contract", test))]
+
 mod helpers;
-#[cfg(feature = "contract")]
-#[cfg(test)]
 mod integration_tests;
