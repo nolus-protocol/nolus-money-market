@@ -14,7 +14,7 @@ use crate::{
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     profit::Profit,
     result::ContractResult,
-    state::{Config, ProfitMessageHandler as _, State},
+    state::{Config, ConfigManagement as _, ProfitMessageHandler as _, State},
     ContractError,
 };
 

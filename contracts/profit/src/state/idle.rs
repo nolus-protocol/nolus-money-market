@@ -22,9 +22,9 @@ use platform::{
 use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::profit::Profit;
+use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult};
 
-use super::{buy_back::BuyBack, Config, ProfitMessageHandler, State, StateEnum, UpdateConfig};
+use super::{buy_back::BuyBack, Config, ConfigManagement, ProfitMessageHandler, State, StateEnum};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct Idle {
@@ -47,10 +47,6 @@ impl Idle {
             oracle,
             time_alarms,
         }
-    }
-
-    pub fn config(&self) -> &Config {
-        &self.config
     }
 
     fn send_nls<B>(&self, env: &Env, account: B) -> Result<Option<(Batch, Emitter)>, DexError>
@@ -123,6 +119,21 @@ impl Enterable for Idle {
     }
 }
 
+impl ConfigManagement for Idle {
+    fn try_update_config(self, cadence_hours: u16) -> ContractResult<Self> {
+        Ok(Self {
+            config: self.config.update(cadence_hours),
+            ..self
+        })
+    }
+
+    fn try_query_config(&self) -> ContractResult<ConfigResponse> {
+        Ok(ConfigResponse {
+            cadence_hours: self.config.cadence_hours(),
+        })
+    }
+}
+
 impl Handler for Idle {
     type Response = State;
     type SwapResult = DexResponse<State>;
@@ -131,15 +142,6 @@ impl Handler for Idle {
         match self.on_time_alarm(deps, env) {
             Ok(response) => DexResult::Finished(response),
             Err(error) => DexResult::Continue(Err(error)),
-        }
-    }
-}
-
-impl UpdateConfig for Idle {
-    fn update_config(self, cadence_hours: u16) -> Self {
-        Self {
-            config: self.config.update(cadence_hours),
-            ..self
         }
     }
 }
