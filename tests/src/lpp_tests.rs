@@ -41,7 +41,7 @@ use crate::common::{
 type Lpn = Usdc;
 type LeaseCurrency = Atom;
 
-const PROFIT_DEX_CONNECTION_ID: &'static str = "dex-connection";
+const PROFIT_DEX_CONNECTION_ID: &str = "dex-connection";
 
 fn general_interest_rate(
     loan: u32,
