@@ -1,18 +1,17 @@
 use serde::{Deserialize, Serialize};
 
 use dex::{
-    ContinueResult, Handler, Ics20Channel, Response as DexResponse, Result as DexResult,
+    ConnectionParams, ContinueResult, Handler, Response as DexResponse, Result as DexResult,
     StateLocalOut,
 };
-use oracle::stub::OracleRef;
-use platform::state_machine;
+
+use platform::state_machine::{self, Response as StateMachineResponse};
 use sdk::{
-    cosmwasm_std::{Addr, Binary, Deps, Env, QuerierWrapper, Storage},
+    cosmwasm_std::{Binary, Deps, Env, Storage},
     cw_storage_plus::Item,
 };
-use timealarms::stub::TimeAlarmsRef;
 
-use crate::{msg::ConfigResponse, result::ContractResult};
+use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
 
 pub(crate) use self::config::Config;
 use self::{
@@ -38,18 +37,21 @@ where
     fn try_query_config(&self) -> ContractResult<ConfigResponse>;
 }
 
-pub(crate) trait ProfitMessageHandler
+pub(crate) trait SetupDexHandler
 where
-    Self: Handler,
+    Self: Sized,
 {
-    fn confirm_open(
+    type State: Into<State>;
+
+    fn setup_dex(
         self,
-        deps: Deps<'_>,
-        env: Env,
-        _channel: Ics20Channel,
-        counterparty_version: String,
-    ) -> ContinueResult<Self> {
-        self.on_open_ica(counterparty_version, deps, env)
+        _: Deps<'_>,
+        _: Env,
+        _: ConnectionParams,
+    ) -> ContractResult<StateMachineResponse<Self::State>> {
+        Err(ContractError::UnsupportedOperation(String::from(
+            "Dex is already setup!",
+        )))
     }
 }
 
@@ -91,20 +93,9 @@ impl ConfigManagement for State {
 }
 
 impl State {
-    pub fn new(
-        querier: &QuerierWrapper<'_>,
-        config: Config,
-        connection_id: String,
-        oracle_addr: Addr,
-        time_alarms_addr: Addr,
-    ) -> ContractResult<Self> {
-        Ok(Self(StateEnum::OpenTransferChannel(
-            OpenTransferChannel::new(
-                config,
-                connection_id,
-                OracleRef::try_from(oracle_addr, querier)?,
-                TimeAlarmsRef::new(time_alarms_addr, querier)?,
-            ),
+    pub fn new(config: Config) -> Self {
+        Self(StateEnum::OpenTransferChannel(OpenTransferChannel::new(
+            config,
         )))
     }
 
@@ -141,22 +132,27 @@ impl From<StateLocalOut<BuyBack>> for State {
     }
 }
 
-impl ProfitMessageHandler for State {
-    fn confirm_open(
+impl SetupDexHandler for State {
+    type State = Self;
+
+    fn setup_dex(
         self,
         deps: Deps<'_>,
         env: Env,
-        channel: Ics20Channel,
-        counterparty_version: String,
-    ) -> ContinueResult<Self> {
+        connection: ConnectionParams,
+    ) -> ContractResult<StateMachineResponse<Self>> {
         match self.0 {
-            StateEnum::OpenTransferChannel(transfer) => {
-                transfer.confirm_open(deps, env, channel, counterparty_version)
-            }
-            StateEnum::OpenIca(ica) => ica.confirm_open(deps, env, channel, counterparty_version),
-            StateEnum::Idle(idle) => idle.confirm_open(deps, env, channel, counterparty_version),
+            StateEnum::OpenTransferChannel(transfer) => transfer
+                .setup_dex(deps, env, connection)
+                .map(state_machine::from),
+            StateEnum::OpenIca(ica) => ica
+                .setup_dex(deps, env, connection)
+                .map(state_machine::from),
+            StateEnum::Idle(idle) => idle
+                .setup_dex(deps, env, connection)
+                .map(state_machine::from),
             StateEnum::BuyBack(buy_back) => buy_back
-                .confirm_open(deps, env, channel, counterparty_version)
+                .setup_dex(deps, env, connection)
                 .map(state_machine::from),
         }
     }
@@ -172,10 +168,15 @@ impl Handler for State {
         deps: Deps<'_>,
         env: Env,
     ) -> ContinueResult<Self> {
-        if let StateEnum::OpenIca(ica) = self.0 {
-            ica.on_open_ica(counterparty_version, deps, env)
-        } else {
-            unimplemented!()
+        match self.0 {
+            StateEnum::OpenTransferChannel(transfer) => {
+                transfer.on_open_ica(counterparty_version, deps, env)
+            }
+            StateEnum::OpenIca(ica) => ica.on_open_ica(counterparty_version, deps, env),
+            StateEnum::Idle(idle) => idle.on_open_ica(counterparty_version, deps, env),
+            StateEnum::BuyBack(buy_back) => buy_back
+                .on_open_ica(counterparty_version, deps, env)
+                .map(state_machine::from),
         }
     }
 

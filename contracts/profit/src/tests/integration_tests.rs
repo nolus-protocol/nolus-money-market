@@ -50,7 +50,6 @@ fn proper_instantiate() -> (App, CwTemplateContract, WrappedCustomMessageReceive
         treasury: Addr::unchecked("treasury"),
         oracle: Addr::unchecked("oracle"),
         timealarms: Addr::unchecked("timealarms"),
-        connection_id: "dex-connection".into(),
     };
     let cw_template_contract_addr = app
         .instantiate_contract(

@@ -1,5 +1,6 @@
 use access_control::SingleUserAccess;
-use dex::{Handler as _, Ics20Channel, Response as DexResponse};
+use dex::{ConnectionParams, Handler as _, Ics20Channel, Response as DexResponse};
+use oracle::stub::OracleRef;
 use platform::{message::Response as MessageResponse, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
@@ -8,13 +9,14 @@ use sdk::{
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo},
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
 };
+use timealarms::stub::TimeAlarmsRef;
 use versioning::{version, VersionSegment};
 
 use crate::{
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     profit::Profit,
     result::ContractResult,
-    state::{Config, ConfigManagement as _, ProfitMessageHandler as _, State},
+    state::{Config, ConfigManagement as _, SetupDexHandler as _, State},
     ContractError,
 };
 
@@ -43,13 +45,12 @@ pub fn instantiate(
     )
     .store(deps.storage)?;
 
-    State::new(
-        &deps.querier,
-        Config::new(msg.cadence_hours, msg.treasury),
-        msg.connection_id,
-        msg.oracle,
-        msg.timealarms,
-    )?
+    State::new(Config::new(
+        msg.cadence_hours,
+        msg.treasury,
+        OracleRef::try_from(msg.oracle, &deps.querier)?,
+        TimeAlarmsRef::new(msg.timealarms, &deps.querier)?,
+    ))
     .store(deps.storage)?;
 
     Ok(response::empty_response())
@@ -105,19 +106,25 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: NeutronSudoMsg) -> ContractResult<
         NeutronSudoMsg::Error { .. } => state.on_error(deps.as_ref(), env)?,
         NeutronSudoMsg::Timeout { .. } => state.on_timeout(deps.as_ref(), env)?,
         NeutronSudoMsg::OpenAck {
-            channel_id,
-            counterparty_channel_id,
+            port_id: connection_id,
+            channel_id: local_endpoint,
+            counterparty_channel_id: remote_endpoint,
             counterparty_version,
-            ..
-        } => state.confirm_open(
+        } if counterparty_version.is_empty() => state.setup_dex(
             deps.as_ref(),
             env,
-            Ics20Channel {
-                local_endpoint: channel_id,
-                remote_endpoint: counterparty_channel_id,
+            ConnectionParams {
+                connection_id,
+                transfer_channel: Ics20Channel {
+                    local_endpoint,
+                    remote_endpoint,
+                },
             },
-            counterparty_version,
         )?,
+        NeutronSudoMsg::OpenAck {
+            counterparty_version,
+            ..
+        } => state.on_open_ica(counterparty_version, deps.as_ref(), env)?,
         NeutronSudoMsg::TxQueryResult { .. } => {
             unimplemented!()
         }

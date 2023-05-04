@@ -41,8 +41,6 @@ use crate::common::{
 type Lpn = Usdc;
 type LeaseCurrency = Atom;
 
-const PROFIT_DEX_CONNECTION_ID: &str = "dex-connection";
-
 fn general_interest_rate(
     loan: u32,
     balance: u32,
@@ -248,7 +246,6 @@ fn deposit_and_withdraw() {
         treasury,
         market_price_oracle.clone(),
         time_alarms.clone(),
-        PROFIT_DEX_CONNECTION_ID.into(),
     );
 
     message_receiver.assert_empty();
@@ -585,7 +582,6 @@ fn loan_open_and_repay() {
         treasury,
         oracle.clone(),
         time_alarms.clone(),
-        PROFIT_DEX_CONNECTION_ID.into(),
     );
 
     message_receiver.assert_empty();
@@ -946,7 +942,6 @@ fn compare_lpp_states() {
         treasury,
         market_oracle.clone(),
         time_alarms.clone(),
-        PROFIT_DEX_CONNECTION_ID.into(),
     );
 
     message_receiver.assert_empty();

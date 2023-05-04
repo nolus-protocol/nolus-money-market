@@ -1,37 +1,22 @@
 use serde::{Deserialize, Serialize};
 
-use dex::{Account, ConnectionParams, DexConnectable, IcaConnectee, Ics20Channel};
-use oracle::stub::OracleRef;
-use timealarms::stub::TimeAlarmsRef;
+use dex::{Account, ConnectionParams, DexConnectable, IcaConnectee};
 
 use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
 
-use super::{idle::Idle, Config, ConfigManagement, IcaConnector, ProfitMessageHandler, State};
+use super::{idle::Idle, Config, ConfigManagement, IcaConnector, SetupDexHandler, State};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct OpenIca {
     config: Config,
     dex: ConnectionParams,
-    oracle: OracleRef,
-    time_alarms: TimeAlarmsRef,
 }
 
 impl OpenIca {
-    pub fn new(
-        config: Config,
-        connection_id: String,
-        oracle: OracleRef,
-        time_alarms: TimeAlarmsRef,
-        transfer_channel: Ics20Channel,
-    ) -> Self {
+    pub fn new(config: Config, connection: ConnectionParams) -> Self {
         Self {
             config,
-            dex: ConnectionParams {
-                connection_id,
-                transfer_channel,
-            },
-            oracle,
-            time_alarms,
+            dex: connection,
         }
     }
 }
@@ -41,7 +26,7 @@ impl IcaConnectee for OpenIca {
     type NextState = Idle;
 
     fn connected(self, account: Account) -> Self::NextState {
-        Idle::new(self.config, account, self.oracle, self.time_alarms)
+        Idle::new(self.config, account)
     }
 }
 
@@ -65,4 +50,6 @@ impl ConfigManagement for IcaConnector {
     }
 }
 
-impl ProfitMessageHandler for IcaConnector {}
+impl SetupDexHandler for IcaConnector {
+    type State = Self;
+}
