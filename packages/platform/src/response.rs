@@ -20,20 +20,15 @@ pub fn response_only_messages<M>(messages: M) -> CwResponse
 where
     M: Into<MessageResponse>,
 {
-    let MessageResponse {
-        messages,
-        events: may_events,
-    } = messages.into();
+    let MessageResponse { messages, events } = messages.into();
 
     let cw_resp: CwResponse = messages
         .into_iter()
         .fold(Default::default(), |res, msg| res.add_submessage(msg));
 
-    if let Some(events) = may_events {
-        cw_resp.add_event(events.into())
-    } else {
-        cw_resp
-    }
+    events
+        .into_iter()
+        .fold(cw_resp, |res, event| res.add_event(event.into()))
 }
 
 pub fn response_with_messages<T, M, E>(response: &T, messages: M) -> Result<CwResponse, E>

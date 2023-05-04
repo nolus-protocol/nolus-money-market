@@ -4,26 +4,27 @@ use crate::batch::{Batch, Emitter};
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, PartialEq))]
 pub struct Response {
     pub(super) messages: Batch,
-    pub(super) events: Option<Emitter>,
+    pub(super) events: Vec<Emitter>,
 }
 
 impl Response {
     pub fn messages_only(messages: Batch) -> Self {
         Self {
             messages,
-            events: None,
+            events: vec![],
         }
     }
 
     pub fn messages_with_events(messages: Batch, events: Emitter) -> Self {
         Self {
             messages,
-            events: Some(events),
+            events: vec![events],
         }
     }
 
-    pub fn add_messages(mut self, more: Batch) -> Self {
-        self.messages = self.messages.merge(more);
+    pub fn merge_with(mut self, mut other: Self) -> Self {
+        self.messages = self.messages.merge(other.messages);
+        self.events.append(&mut other.events);
         self
     }
 }

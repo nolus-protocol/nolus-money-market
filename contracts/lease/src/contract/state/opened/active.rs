@@ -79,8 +79,9 @@ impl Active {
                 current_liability,
                 alarms,
             } => {
-                let _alarms_resp = alarms_resp(&lease, current_liability, alarms);
-                Ok(finish_repay(receipt.close, repay_response, lease))
+                let response =
+                    alarms_resp(&lease, current_liability, alarms).merge_with(repay_response);
+                Ok(finish_repay(receipt.close, response, lease))
             }
             LiquidationStatus::NeedLiquidation(liquidation) => {
                 Self::start_liquidation(lease, liquidation, repay_response, env, querier)
@@ -126,8 +127,9 @@ impl Active {
                 current_liability,
                 alarms,
             } => {
-                let _alarms_resp = alarms_resp(&lease, current_liability, alarms);
-                Ok(finish_repay(receipt.close, liquidate_response, lease))
+                let response =
+                    alarms_resp(&lease, current_liability, alarms).merge_with(liquidate_response);
+                Ok(finish_repay(receipt.close, response, lease))
             }
             LiquidationStatus::NeedLiquidation(liquidation) => {
                 Self::start_liquidation(lease, liquidation, liquidate_response, env, querier)
@@ -222,7 +224,7 @@ impl Active {
         let start_liquidaion = sell_asset::start(lease, liquidation);
         start_liquidaion
             .enter(env.block.time, querier)
-            .map(|swap_msg| curr_request_response.add_messages(swap_msg))
+            .map(|swap_msg| curr_request_response.merge_with(swap_msg.into()))
             .map(|start_liq| Response::from(start_liq, SellAssetState::from(start_liquidaion)))
             .map_err(Into::into)
     }
