@@ -61,13 +61,14 @@ impl InterestRate {
     where
         Lpn: Currency,
     {
+        let utilization_max = Percent::from_ratio(
+            self.utilization_optimal.units(),
+            (Percent::HUNDRED - self.utilization_optimal).units(),
+        );
         let utilization = if balance.is_zero() {
-            Percent::ZERO
+            utilization_max
         } else {
-            Percent::from_ratio(total_liability, balance).min(Percent::from_ratio(
-                self.utilization_optimal.units(),
-                (Percent::HUNDRED - self.utilization_optimal).units(),
-            ))
+            Percent::from_ratio(total_liability, balance).min(utilization_max)
         };
 
         let config = Rational::new(
@@ -81,7 +82,7 @@ impl InterestRate {
     fn validate(&self) -> bool {
         self.base_interest_rate <= Percent::HUNDRED
             && self.utilization_optimal > Percent::ZERO
-            && self.utilization_optimal <= Percent::HUNDRED
+            && self.utilization_optimal < Percent::HUNDRED
             && self.addon_optimal_interest_rate <= Percent::HUNDRED
     }
 }
@@ -118,14 +119,14 @@ mod tests {
             InterestRate::new(Percent::ZERO, Percent::from_percent(1), Percent::ZERO).is_some(),
             ""
         );
-        assert!(InterestRate::new(Percent::ZERO, Percent::HUNDRED, Percent::ZERO).is_some());
+        assert!(InterestRate::new(Percent::ZERO, Percent::HUNDRED, Percent::ZERO).is_none());
         assert!(InterestRate::new(
             Percent::from_percent(25),
             Percent::from_percent(50),
             Percent::from_percent(75)
         )
         .is_some());
-        assert!(InterestRate::new(Percent::HUNDRED, Percent::HUNDRED, Percent::HUNDRED).is_some());
+        assert!(InterestRate::new(Percent::HUNDRED, Percent::HUNDRED, Percent::HUNDRED).is_none());
 
         assert!(InterestRate::new(Percent::ZERO, Percent::ZERO, Percent::ZERO).is_none());
         assert!(InterestRate::new(
@@ -254,9 +255,9 @@ mod tests {
 
         #[test]
         fn test_corner_set() {
-            let rate = rate(1000, 1000, 1000);
+            let rate = rate(1000, 900, 1000);
 
-            let set = [InOut((0, 0), (1, 1)), InOut((10, 0), (1, 1))];
+            let set = [InOut((0, 0), (11, 1)), InOut((10, 0), (11, 1))];
             do_test_calculate(rate, &set);
         }
 
@@ -292,15 +293,15 @@ mod tests {
             let rate = rate(120, 700, 20);
 
             let set = [
-                InOut((0, 0), (3, 25)),
                 InOut((0, 1), (3, 25)),
-                InOut((1, 0), (3, 25)),
                 InOut((1, 9), (123, 1000)),
                 InOut((3, 7), (132, 1000)),
                 InOut((5, 5), (148, 1000)),
                 InOut((7, 3), (186, 1000)),
                 InOut((8, 2), (186, 1000)),
                 InOut((9, 1), (186, 1000)),
+                InOut((0, 0), (186, 1000)),
+                InOut((1, 0), (186, 1000)),
             ];
 
             do_test_calculate(rate, &set);
