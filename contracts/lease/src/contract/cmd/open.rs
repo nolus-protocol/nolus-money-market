@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use finance::{coin::Coin, currency::Currency, liability::Zone};
+use finance::{coin::Coin, currency::Currency};
 use lpp::stub::lender::{LppLender as LppLenderTrait, LppLenderRef};
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use profit::stub::{Profit as ProfitTrait, ProfitRef};
@@ -16,6 +16,8 @@ use crate::{
     },
     loan::Loan,
 };
+
+use super::{liquidation_status, LiquidationStatus};
 
 pub(crate) fn open_lease(
     form: NewLeaseForm,
@@ -90,14 +92,21 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             oracle,
         );
 
-        let alarms = lease.reschedule(
-            &self.start_at,
-            &Zone::no_warnings(liability.first_liq_warn()),
-            self.time_alarms,
-            self.price_alarms,
-        )?;
-        let mut dto = lease.into_dto(alarms.time_alarms_ref);
-        dto.batch = dto.batch.merge(alarms.batch);
+        let alarms = match liquidation_status::status_and_schedule(
+            &lease,
+            self.start_at,
+            &self.time_alarms,
+            &self.price_alarms,
+        )? {
+            LiquidationStatus::NewAlarms {
+                current_liability: _,
+                alarms,
+            } => alarms,
+            LiquidationStatus::NeedLiquidation(_) => unreachable!(),
+        };
+
+        let mut dto = lease.into_dto(self.time_alarms);
+        dto.batch = dto.batch.merge(alarms);
         Ok(dto)
     }
 }

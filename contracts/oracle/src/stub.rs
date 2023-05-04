@@ -103,7 +103,7 @@ impl OracleRef {
         cmd.exec(self.into_oracle_stub::<OracleBase>(querier))
     }
 
-    pub fn into_alarms_stub<OracleBase>(self) -> AlarmsStub<OracleBase> {
+    pub fn as_alarms_stub<OracleBase>(&self) -> AlarmsStub<'_, OracleBase> {
         AlarmsStub {
             oracle_ref: self,
             batch: Batch::default(),
@@ -212,19 +212,19 @@ impl<'a, OracleBase> From<OracleStub<'a, OracleBase>> for OracleRef {
     }
 }
 
-pub struct AlarmsStub<OracleBase> {
-    oracle_ref: OracleRef,
+pub struct AlarmsStub<'a, OracleBase> {
+    oracle_ref: &'a OracleRef,
     _quote_currency: PhantomData<OracleBase>,
     batch: Batch,
 }
 
-impl<OracleBase> AlarmsStub<OracleBase> {
+impl<'a, OracleBase> AlarmsStub<'a, OracleBase> {
     fn addr(&self) -> &Addr {
         &self.oracle_ref.contract
     }
 }
 
-impl<OracleBase> PriceAlarms for AlarmsStub<OracleBase>
+impl<'a, OracleBase> PriceAlarms for AlarmsStub<'a, OracleBase>
 where
     OracleBase: Currency,
 {
@@ -239,8 +239,8 @@ where
     }
 }
 
-impl<OracleBase> From<AlarmsStub<OracleBase>> for Batch {
-    fn from(stub: AlarmsStub<OracleBase>) -> Self {
+impl<'a, OracleBase> From<AlarmsStub<'a, OracleBase>> for Batch {
+    fn from(stub: AlarmsStub<'a, OracleBase>) -> Self {
         stub.batch
     }
 }

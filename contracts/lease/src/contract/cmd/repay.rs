@@ -11,11 +11,11 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::LpnCoin,
     error::ContractError,
-    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO, Status},
+    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO},
     loan::RepayReceipt,
 };
 
-use super::liquidation_status::LiquidationDTO;
+use super::{liquidation_status, LiquidationStatus};
 
 pub(crate) struct Repay {
     payment: LpnCoin,
@@ -44,7 +44,7 @@ pub(crate) struct RepayResult {
     pub lease: LeaseDTO,
     pub receipt: ReceiptDTO,
     pub messages: Batch,
-    pub liquidation: Option<LiquidationDTO>,
+    pub liquidation: LiquidationStatus,
 }
 
 pub(crate) struct ReceiptDTO {
@@ -78,19 +78,17 @@ impl WithLease for Repay {
 
         let receipt = lease.repay(payment, self.now)?;
 
-        let (liquidation, time_alarms) = match lease.liquidation_status(self.now)? {
-            Status::No(zone) => {
-                let alarms_batch =
-                    lease.reschedule(&self.now, &zone, self.time_alarms, self.price_alarms)?;
-                (None, alarms_batch.time_alarms_ref)
-            }
-            Status::Liquidation(liquidation) => (Some(liquidation.into()), self.time_alarms),
-        };
+        let liquidation = liquidation_status::status_and_schedule(
+            &lease,
+            self.now,
+            &self.time_alarms,
+            &self.price_alarms,
+        )?;
 
         let IntoDTOResult {
             lease,
             batch: messages,
-        } = lease.into_dto(time_alarms);
+        } = lease.into_dto(self.time_alarms);
 
         Ok(RepayResult {
             lease,

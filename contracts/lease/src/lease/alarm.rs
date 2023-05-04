@@ -16,14 +16,9 @@ use oracle::{
 };
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
-use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsBatch, TimeAlarmsRef};
+use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef};
 
 use crate::{error::ContractResult, lease::Lease};
-
-pub struct AlarmsBatch {
-    pub time_alarms_ref: TimeAlarmsRef,
-    pub batch: Batch,
-}
 
 impl<Lpn, Asset, Lpp, Profit, Oracle> Lease<Lpn, Asset, Lpp, Profit, Oracle>
 where
@@ -39,21 +34,14 @@ where
         &self,
         now: &Timestamp,
         liquidation_zone: &Zone,
-        time_alarms: TimeAlarmsRef,
-        price_alarms: OracleRef,
-    ) -> ContractResult<AlarmsBatch> {
-        let mut time_alarms = time_alarms.into_stub();
-        let mut price_alarms = price_alarms.into_alarms_stub::<Lpn>();
+        time_alarms: &TimeAlarmsRef,
+        price_alarms: &OracleRef,
+    ) -> ContractResult<Batch> {
+        let mut time_alarms = time_alarms.as_stub();
+        let mut price_alarms = price_alarms.as_alarms_stub::<Lpn>();
         self.reschedule_typed(now, liquidation_zone, &mut time_alarms, &mut price_alarms)?;
 
-        let TimeAlarmsBatch {
-            time_alarms_ref,
-            batch: time_alarm_messages,
-        } = time_alarms.into();
-        Ok(AlarmsBatch {
-            time_alarms_ref,
-            batch: time_alarm_messages.merge(price_alarms.into()),
-        })
+        Ok(Batch::from(time_alarms).merge(price_alarms.into()))
     }
 
     fn reschedule_typed<TimeAlarms, PriceAlarms>(
@@ -178,12 +166,12 @@ mod tests {
             .reschedule(
                 &LEASE_START,
                 &Zone::no_warnings(liability_alarm_on),
-                timealarms(),
-                pricealarms(),
+                &timealarms(),
+                &pricealarms(),
             )
             .unwrap();
 
-        assert_eq!(alarm_msgs.batch, {
+        assert_eq!(alarm_msgs, {
             let mut batch = Batch::default();
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
@@ -226,13 +214,13 @@ mod tests {
         let up_to = lease.liability.first_liq_warn();
         let no_warnings = Zone::no_warnings(up_to);
         let alarm_msgs = lease
-            .reschedule(&now, &no_warnings, timealarms(), pricealarms())
+            .reschedule(&now, &no_warnings, &timealarms(), &pricealarms())
             .unwrap();
         let exp_below: SpotPrice = total_of(no_warnings.high().ltv().of(lease_amount))
             .is(projected_liability(&lease, recalc_time))
             .into();
 
-        assert_eq!(alarm_msgs.batch, {
+        assert_eq!(alarm_msgs, {
             let mut batch = Batch::default();
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
@@ -274,13 +262,13 @@ mod tests {
         let up_to = lease.liability.first_liq_warn();
         let no_warnings = Zone::no_warnings(up_to);
         let alarm_msgs = lease
-            .reschedule(&now, &no_warnings, timealarms(), pricealarms())
+            .reschedule(&now, &no_warnings, &timealarms(), &pricealarms())
             .unwrap();
         let exp_below: SpotPrice = total_of(no_warnings.high().ltv().of(lease_amount))
             .is(projected_liability(&lease, recalc_time))
             .into();
 
-        assert_eq!(alarm_msgs.batch, {
+        assert_eq!(alarm_msgs, {
             let mut batch = Batch::default();
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {
@@ -333,7 +321,7 @@ mod tests {
             lease.liability.third_liq_warn(),
         );
         let alarm_msgs = lease
-            .reschedule(&reschedule_at, &zone, timealarms(), pricealarms())
+            .reschedule(&reschedule_at, &zone, &timealarms(), &pricealarms())
             .unwrap();
 
         let exp_below: SpotPrice = total_of(zone.high().ltv().of(lease_amount))
@@ -343,7 +331,7 @@ mod tests {
             .is(projected_liability)
             .into();
 
-        assert_eq!(alarm_msgs.batch, {
+        assert_eq!(alarm_msgs, {
             let mut batch = Batch::default();
 
             batch.schedule_execute_no_reply(WasmMsg::Execute {

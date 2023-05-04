@@ -2,16 +2,20 @@ use serde::{Deserialize, Serialize};
 
 use currency::{lpn::Lpns, payment::PaymentGroup};
 use dex::Enterable;
-use finance::coin::IntoDTO;
-use platform::{bank, batch::Emitter, message::Response as MessageResponse};
+use finance::{coin::IntoDTO, liability::Zone};
+use platform::{
+    bank,
+    batch::{Batch, Emitter},
+    message::Response as MessageResponse,
+};
 use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{DownpaymentCoin, ExecuteMsg, LpnCoin, StateResponse},
     contract::{
         cmd::{
-            Liquidate, LiquidateResult, LiquidationDTO, LiquidationStatusCmd,
-            LiquidationStatusCmdResult, OpenLoanRespResult, Repay, RepayResult,
+            Liquidate, LiquidateResult, LiquidationDTO, LiquidationStatus, LiquidationStatusCmd,
+            OpenLoanRespResult, Repay, RepayResult,
         },
         state::{handler, paid, Handler, Response},
         Contract, Lease,
@@ -70,10 +74,17 @@ impl Active {
         );
 
         let lease = Lease::new(lease_updated, lease.dex);
-        if let Some(liquidation) = liquidation {
-            Self::start_liquidation(lease, liquidation, repay_response, env, querier)
-        } else {
-            Ok(finish_no_liquidation(receipt.close, repay_response, lease))
+        match liquidation {
+            LiquidationStatus::NewAlarms {
+                current_liability,
+                alarms,
+            } => {
+                let _alarms_resp = alarms_resp(&lease, current_liability, alarms);
+                Ok(finish_repay(receipt.close, repay_response, lease))
+            }
+            LiquidationStatus::NeedLiquidation(liquidation) => {
+                Self::start_liquidation(lease, liquidation, repay_response, env, querier)
+            }
         }
     }
 
@@ -110,14 +121,17 @@ impl Active {
         );
 
         let lease = Lease::new(lease_updated, lease.dex);
-        if let Some(liquidation) = next_liquidation {
-            Self::start_liquidation(lease, liquidation, liquidate_response, env, querier)
-        } else {
-            Ok(finish_no_liquidation(
-                receipt.close,
-                liquidate_response,
-                lease,
-            ))
+        match next_liquidation {
+            LiquidationStatus::NewAlarms {
+                current_liability,
+                alarms,
+            } => {
+                let _alarms_resp = alarms_resp(&lease, current_liability, alarms);
+                Ok(finish_repay(receipt.close, liquidate_response, lease))
+            }
+            LiquidationStatus::NeedLiquidation(liquidation) => {
+                Self::start_liquidation(lease, liquidation, liquidate_response, env, querier)
+            }
         }
     }
 
@@ -170,30 +184,25 @@ impl Active {
     }
 
     fn try_on_alarm(self, querier: &QuerierWrapper<'_>, env: &Env) -> ContractResult<Response> {
-        let time_alarms = self.lease.lease.time_alarms.clone();
-        let price_alarms = self.lease.lease.oracle.clone();
         let liquidation_status = with_lease::execute(
             self.lease.lease.clone(),
-            LiquidationStatusCmd::new(env.block.time, time_alarms, price_alarms),
+            LiquidationStatusCmd::new(
+                env.block.time,
+                &self.lease.lease.time_alarms,
+                &self.lease.lease.oracle,
+            ),
             querier,
         )?;
 
         match liquidation_status {
-            LiquidationStatusCmdResult::NewAlarms {
+            LiquidationStatus::NewAlarms {
                 current_liability,
                 alarms,
-            } => {
-                let resp = if let Some(events) = current_liability
-                    .low()
-                    .map(|low_level| event::emit_liquidation_warning(&self.lease.lease, &low_level))
-                {
-                    MessageResponse::messages_with_events(alarms, events)
-                } else {
-                    MessageResponse::messages_only(alarms)
-                };
-                Ok(Response::from(resp, self))
-            }
-            LiquidationStatusCmdResult::NeedLiquidation(liquidation) => {
+            } => Ok(Response::from(
+                alarms_resp(&self.lease, current_liability, alarms),
+                self,
+            )),
+            LiquidationStatus::NeedLiquidation(liquidation) => {
                 let start_liq = MessageResponse::messages_with_events(
                     Default::default(),
                     event::emit_liquidation_start(&self.lease.lease, &liquidation),
@@ -219,12 +228,19 @@ impl Active {
     }
 }
 
-fn finish_no_liquidation(
-    lease_closed: bool,
-    repay_response: MessageResponse,
-    lease: Lease,
-) -> Response {
-    if lease_closed {
+fn alarms_resp(lease: &Lease, current_liability: Zone, alarms: Batch) -> MessageResponse {
+    if let Some(events) = current_liability
+        .low()
+        .map(|low_level| event::emit_liquidation_warning(&lease.lease, &low_level))
+    {
+        MessageResponse::messages_with_events(alarms, events)
+    } else {
+        MessageResponse::messages_only(alarms)
+    }
+}
+
+fn finish_repay(loan_paid: bool, repay_response: MessageResponse, lease: Lease) -> Response {
+    if loan_paid {
         Response::from(repay_response, paid::Active::new(lease))
     } else {
         Response::from(repay_response, Active::new(lease))

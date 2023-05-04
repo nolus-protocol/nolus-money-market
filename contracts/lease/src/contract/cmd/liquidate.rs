@@ -9,10 +9,10 @@ use timealarms::stub::TimeAlarmsRef;
 use crate::{
     api::{LeaseCoin, LpnCoin},
     error::ContractError,
-    lease::{with_lease::WithLease, IntoDTOResult, Lease, Status},
+    lease::{with_lease::WithLease, IntoDTOResult, Lease},
 };
 
-use super::RepayResult;
+use super::{liquidation_status, RepayResult};
 
 pub(crate) type LiquidateResult = RepayResult;
 
@@ -61,19 +61,17 @@ impl WithLease for Liquidate {
         let receipt =
             lease.liquidate(self.asset.try_into()?, self.payment.try_into()?, self.now)?;
 
-        let (liquidation, time_alarms) = match lease.liquidation_status(self.now)? {
-            Status::No(zone) => {
-                let alarms =
-                    lease.reschedule(&self.now, &zone, self.time_alarms, self.price_alarms)?;
-                (None, alarms.time_alarms_ref)
-            }
-            Status::Liquidation(liquidation) => (Some(liquidation.into()), self.time_alarms),
-        };
+        let liquidation = liquidation_status::status_and_schedule(
+            &lease,
+            self.now,
+            &self.time_alarms,
+            &self.price_alarms,
+        )?;
 
         let IntoDTOResult {
             lease,
             batch: messages,
-        } = lease.into_dto(time_alarms);
+        } = lease.into_dto(self.time_alarms);
 
         Ok(Self::Output {
             lease,

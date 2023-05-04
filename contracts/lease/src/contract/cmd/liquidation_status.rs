@@ -10,14 +10,37 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
     api::LeaseCoin,
-    error::ContractError,
+    error::{ContractError, ContractResult},
     lease::{with_lease::WithLease, Cause, Lease, LeaseDTO, Liquidation, Status},
 };
 
-pub(crate) struct Cmd {
+pub(crate) fn status_and_schedule<Lpn, Asset, Lpp, Profit, Oracle>(
+    lease: &Lease<Lpn, Asset, Lpp, Profit, Oracle>,
+    when: Timestamp,
+    time_alarms: &TimeAlarmsRef,
+    price_alarms: &OracleRef,
+) -> ContractResult<CmdResult>
+where
+    Lpn: Currency + Serialize,
+    Lpp: LppLenderTrait<Lpn>,
+    Oracle: OracleTrait<Lpn>,
+    Profit: ProfitTrait,
+    Asset: Currency + Serialize,
+{
+    let status = lease.liquidation_status(when)?;
+    Ok(match status {
+        Status::No(zone) => CmdResult::NewAlarms {
+            alarms: lease.reschedule(&when, &zone, time_alarms, price_alarms)?,
+            current_liability: zone,
+        },
+        Status::Liquidation(liquidation) => CmdResult::NeedLiquidation(liquidation.into()),
+    })
+}
+
+pub(crate) struct Cmd<'a> {
     now: Timestamp,
-    time_alarms: TimeAlarmsRef,
-    price_alarms: OracleRef,
+    time_alarms: &'a TimeAlarmsRef,
+    price_alarms: &'a OracleRef,
 }
 
 pub(crate) enum CmdResult {
@@ -65,8 +88,12 @@ where
     }
 }
 
-impl Cmd {
-    pub fn new(now: Timestamp, time_alarms: TimeAlarmsRef, price_alarms: OracleRef) -> Self {
+impl<'a> Cmd<'a> {
+    pub fn new(
+        now: Timestamp,
+        time_alarms: &'a TimeAlarmsRef,
+        price_alarms: &'a OracleRef,
+    ) -> Self {
         Self {
             now,
             time_alarms,
@@ -75,7 +102,7 @@ impl Cmd {
     }
 }
 
-impl WithLease for Cmd {
+impl<'a> WithLease for Cmd<'a> {
     type Output = CmdResult;
 
     type Error = ContractError;
@@ -91,18 +118,6 @@ impl WithLease for Cmd {
         Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
-        let status = lease.liquidation_status(self.now)?;
-        let res = match status {
-            Status::No(zone) => {
-                let alarms =
-                    lease.reschedule(&self.now, &zone, self.time_alarms, self.price_alarms)?;
-                CmdResult::NewAlarms {
-                    alarms: alarms.batch,
-                    current_liability: zone,
-                }
-            }
-            Status::Liquidation(liquidation) => CmdResult::NeedLiquidation(liquidation.into()),
-        };
-        Ok(res)
+        status_and_schedule(&lease, self.now, self.time_alarms, self.price_alarms)
     }
 }

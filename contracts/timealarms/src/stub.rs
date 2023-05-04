@@ -9,14 +9,9 @@ use crate::{msg::ExecuteMsg, ContractError};
 
 pub type Result<T> = StdResult<T, ContractError>;
 
-pub struct TimeAlarmsBatch {
-    pub time_alarms_ref: TimeAlarmsRef,
-    pub batch: Batch,
-}
-
 pub trait TimeAlarms
 where
-    Self: Into<TimeAlarmsBatch>,
+    Self: Into<Batch>,
 {
     fn add_alarm(&mut self, time: Timestamp) -> Result<()>;
 }
@@ -47,13 +42,13 @@ impl TimeAlarmsRef {
     }
 
     pub fn setup_alarm(self, when: Timestamp) -> Result<Batch> {
-        let mut stub = self.into_stub();
+        let mut stub = self.as_stub();
         stub.add_alarm(when)?;
-        Ok(stub.batch)
+        Ok(stub.into())
     }
 
     /// It would be overengineering to hide the `TimeAlarms` implementation
-    pub fn into_stub(self) -> TimeAlarmsStub {
+    pub fn as_stub(&self) -> TimeAlarmsStub<'_> {
         TimeAlarmsStub {
             time_alarms_ref: self,
             batch: Default::default(),
@@ -73,18 +68,18 @@ impl TimeAlarmsRef {
     }
 }
 
-pub struct TimeAlarmsStub {
-    time_alarms_ref: TimeAlarmsRef,
+pub struct TimeAlarmsStub<'a> {
+    time_alarms_ref: &'a TimeAlarmsRef,
     batch: Batch,
 }
 
-impl TimeAlarmsStub {
+impl<'a> TimeAlarmsStub<'a> {
     fn addr(&self) -> &Addr {
         &self.time_alarms_ref.addr
     }
 }
 
-impl TimeAlarms for TimeAlarmsStub {
+impl<'a> TimeAlarms for TimeAlarmsStub<'a> {
     fn add_alarm(&mut self, time: Timestamp) -> Result<()> {
         self.batch.schedule_execute_no_reply(wasm_execute(
             self.addr().clone(),
@@ -96,11 +91,8 @@ impl TimeAlarms for TimeAlarmsStub {
     }
 }
 
-impl From<TimeAlarmsStub> for TimeAlarmsBatch {
-    fn from(stub: TimeAlarmsStub) -> Self {
-        TimeAlarmsBatch {
-            time_alarms_ref: stub.time_alarms_ref,
-            batch: stub.batch,
-        }
+impl<'a> From<TimeAlarmsStub<'a>> for Batch {
+    fn from(stub: TimeAlarmsStub<'a>) -> Self {
+        stub.batch
     }
 }
