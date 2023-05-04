@@ -88,9 +88,6 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<Respon
             liability,
             lease_interest_payment,
         ),
-        SudoMsg::MigrateLeases { new_code_id } => {
-            leaser::try_migrate_leases(deps.storage, new_code_id.u64())
-        }
     }
     .map(response::response_only_messages)
 }

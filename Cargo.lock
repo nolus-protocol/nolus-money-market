@@ -661,7 +661,7 @@ dependencies = [
 
 [[package]]
 name = "leaser"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "access-control",
  "cosmwasm-std",

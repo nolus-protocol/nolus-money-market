@@ -47,9 +47,6 @@ pub enum SudoMsg {
         liability: Liability,
         lease_interest_payment: InterestPaymentSpec,
     },
-    MigrateLeases {
-        new_code_id: Uint64,
-    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
