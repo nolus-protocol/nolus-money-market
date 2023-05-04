@@ -306,7 +306,6 @@ where
                 self.treasury_addr.clone().unwrap(),
                 self.oracle.clone().unwrap(),
                 self.timealarms.clone().unwrap(),
-                CONNECTION_ID.into(),
             ));
 
         self.app.update_block(next_block);

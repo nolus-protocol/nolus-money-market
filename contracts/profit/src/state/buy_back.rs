@@ -23,15 +23,13 @@ use timealarms::stub::TimeAlarmsRef;
 
 use crate::{error::ContractError, msg::ConfigResponse, profit::Profit, result::ContractResult};
 
-use super::{idle::Idle, Config, ConfigManagement, ProfitMessageHandler, State, StateEnum};
+use super::{idle::Idle, Config, ConfigManagement, SetupDexHandler, State, StateEnum};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct BuyBack {
     contract_addr: Addr,
     config: Config,
     account: Account,
-    oracle: OracleRef,
-    time_alarms: TimeAlarmsRef,
     coins: Vec<CoinDTO<PaymentGroup>>,
 }
 
@@ -40,16 +38,12 @@ impl BuyBack {
         contract_addr: Addr,
         config: Config,
         account: Account,
-        oracle: OracleRef,
-        time_alarms: TimeAlarmsRef,
         coins: Vec<CoinDTO<PaymentGroup>>,
     ) -> Self {
         Self {
             contract_addr,
             config,
             account,
-            oracle,
-            time_alarms,
             coins,
         }
     }
@@ -70,11 +64,11 @@ impl SwapTask for BuyBack {
     }
 
     fn oracle(&self) -> &OracleRef {
-        &self.oracle
+        self.config.oracle()
     }
 
     fn time_alarm(&self) -> &TimeAlarmsRef {
-        &self.time_alarms
+        self.config.time_alarms()
     }
 
     fn out_currency(&self) -> Symbol<'_> {
@@ -112,7 +106,7 @@ impl SwapTask for BuyBack {
             self.config.treasury(),
         )?;
 
-        let state: Idle = Idle::new(self.config, self.account, self.oracle, self.time_alarms);
+        let state: Idle = Idle::new(self.config, self.account);
 
         let batch: Batch = state.enter(env.block.time, querier)?;
 
@@ -137,4 +131,6 @@ impl ConfigManagement for StateLocalOut<BuyBack> {
     }
 }
 
-impl ProfitMessageHandler for StateLocalOut<BuyBack> {}
+impl SetupDexHandler for StateLocalOut<BuyBack> {
+    type State = Self;
+}

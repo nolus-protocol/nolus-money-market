@@ -12,7 +12,7 @@ use finance::{
     currency::{Currency, Group},
     duration::Duration,
 };
-use oracle::stub::OracleRef;
+
 use platform::{
     bank::{self, BankAccount, BankAccountView, BankStub, BankView},
     batch::{Batch, Emitter},
@@ -20,33 +20,20 @@ use platform::{
     never::{self, Never},
 };
 use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
-use timealarms::stub::TimeAlarmsRef;
 
 use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult};
 
-use super::{buy_back::BuyBack, Config, ConfigManagement, ProfitMessageHandler, State, StateEnum};
+use super::{buy_back::BuyBack, Config, ConfigManagement, SetupDexHandler, State, StateEnum};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct Idle {
     config: Config,
     account: Account,
-    oracle: OracleRef,
-    time_alarms: TimeAlarmsRef,
 }
 
 impl Idle {
-    pub fn new(
-        config: Config,
-        account: Account,
-        oracle: OracleRef,
-        time_alarms: TimeAlarmsRef,
-    ) -> Self {
-        Self {
-            config,
-            account,
-            oracle,
-            time_alarms,
-        }
+    pub fn new(config: Config, account: Account) -> Self {
+        Self { config, account }
     }
 
     fn send_nls<B>(&self, env: &Env, account: B) -> Result<Option<(Batch, Emitter)>, DexError>
@@ -96,8 +83,6 @@ impl Idle {
             env.contract.address,
             self.config,
             self.account,
-            self.oracle,
-            self.time_alarms,
             balances,
         ));
 
@@ -112,7 +97,8 @@ impl Idle {
 
 impl Enterable for Idle {
     fn enter(&self, now: Timestamp, _: &QuerierWrapper<'_>) -> Result<Batch, DexError> {
-        self.time_alarms
+        self.config
+            .time_alarms()
             .clone()
             .setup_alarm(now + Duration::from_hours(self.config.cadence_hours()))
             .map_err(DexError::TimeAlarmError)
@@ -146,7 +132,9 @@ impl Handler for Idle {
     }
 }
 
-impl ProfitMessageHandler for Idle {}
+impl SetupDexHandler for Idle {
+    type State = Self;
+}
 
 struct CoinToDTO<G>(PhantomData<G>)
 where
