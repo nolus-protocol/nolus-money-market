@@ -335,41 +335,17 @@ mod test {
     }
 
     #[test]
-    fn init_borrow_max_ltv() {
-        test_init_borrow_amount(1000, 10, 52, Some(Percent::from_percent(5)));
+    fn init_borrow_max_ltd() {
+        test_init_borrow_amount(50000, 60, 25000, Some(Percent::from_percent(50)));
+        test_init_borrow_amount(1000, 10, 50, Some(Percent::from_percent(5)));
         test_init_borrow_amount(1, 10, 0, Some(Percent::from_percent(5)));
-        test_init_borrow_amount(1000, 99, 4000, Some(Percent::from_percent(80)));
+        test_init_borrow_amount(1000, 99, 800, Some(Percent::from_percent(80)));
         test_init_borrow_amount(10, 65, 1, Some(Percent::from_percent(10)));
-        test_init_borrow_amount(1, 65, 1, Some(Percent::from_percent(65)));
-        test_init_borrow_amount(2, 65, 3, Some(Percent::from_percent(65)));
-        test_init_borrow_amount(2, 65, 3, Some(Percent::from_permille(999)));
+        test_init_borrow_amount(1, 65, 0, Some(Percent::from_percent(65)));
+        test_init_borrow_amount(2, 65, 1, Some(Percent::from_percent(65)));
+        test_init_borrow_amount(2, 65, 1, Some(Percent::from_permille(999)));
 
         test_init_borrow_amount(1000, 65, 0, Some(Percent::ZERO));
-    }
-
-    #[test]
-    fn init_borrow_max_ltd() {
-        type Currency = Usdc;
-
-        let downpayment = Coin::<Currency>::new(50000);
-        let percent = Percent::from_percent(60);
-        let max_p = Some(Percent::from_percent(50));
-        let calculated = Liability {
-            initial: percent,
-            healthy: Percent::from_percent(99),
-            max: Percent::from_percent(100),
-            first_liq_warn: Percent::from_permille(992),
-            second_liq_warn: Percent::from_permille(995),
-            third_liq_warn: Percent::from_permille(998),
-            recalc_time: Duration::from_secs(20000),
-        }
-        .init_borrow_amount(downpayment, max_p);
-
-        let default_ltd: Percent = Percent::from_ratio(percent.units(), (Percent::HUNDRED - percent).units());
-        let selected_p = max_p.map_or(default_ltd, |max_ltv| max_ltv.min(percent));
-        
-        assert_eq!(calculated, Coin::<Currency>::new(25000));
-        assert_eq!(selected_p.of(downpayment), calculated);
     }
 
     #[test]
@@ -456,9 +432,34 @@ mod test {
         }
         .init_borrow_amount(downpayment, max_p);
 
-        let selected_p = max_p.map_or(percent, |max_ltv| max_ltv.min(percent));
+        let default_ltd: Percent = Percent::from_ratio(percent.units(), (Percent::HUNDRED - percent).units());
+        let selected_p = max_p.map_or(default_ltd, |max_ltv| max_ltv.min(percent));
 
         assert_eq!(calculated, Coin::<Currency>::new(exp));
-        assert_eq!(selected_p.of(downpayment + calculated), calculated);
+        assert_eq!(selected_p.of(downpayment), calculated);
     }
+
+    // fn test_init_borrow_amount(d: u128, p: u16, exp: u128, max_p: Option<Percent>) {
+    //     use crate::fraction::Fraction as _;
+
+    //     type Currency = Usdc;
+
+    //     let downpayment = Coin::<Currency>::new(d);
+    //     let percent = Percent::from_percent(p);
+    //     let calculated = Liability {
+    //         initial: percent,
+    //         healthy: Percent::from_percent(99),
+    //         max: Percent::from_percent(100),
+    //         first_liq_warn: Percent::from_permille(992),
+    //         second_liq_warn: Percent::from_permille(995),
+    //         third_liq_warn: Percent::from_permille(998),
+    //         recalc_time: Duration::from_secs(20000),
+    //     }
+    //     .init_borrow_amount(downpayment, max_p);
+
+    //     let selected_p = max_p.map_or(percent, |max_ltv| max_ltv.min(percent));
+
+    //     assert_eq!(calculated, Coin::<Currency>::new(exp));
+    //     assert_eq!(selected_p.of(downpayment + calculated), calculated);
+    // }
 }
