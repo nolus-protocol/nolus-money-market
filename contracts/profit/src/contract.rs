@@ -76,7 +76,7 @@ pub fn execute(
 
             let alarm_recepient = env.contract.address.clone();
 
-            try_time_alarm(deps.branch(), env).and_then(|resp| {
+            try_time_alarm(deps, env).and_then(|resp| {
                 response::response_with_messages::<_, _, ContractError>(&alarm_recepient, resp)
             })
         }
