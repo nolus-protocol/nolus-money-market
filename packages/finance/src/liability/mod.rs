@@ -114,24 +114,26 @@ impl Liability {
         self.recalc_time
     }
 
-    pub fn init_borrow_amount<P>(&self, downpayment: P, max_ltv: Option<Percent>) -> P
+    pub fn init_borrow_amount<P>(&self, downpayment: P, max_ltd: Option<Percent>) -> P
     where
         P: Percentable,
     {
         debug_assert!(self.initial > Percent::ZERO);
-        debug_assert!(self.initial < Percent::HUNDRED);
-
-        let initial_ltv: Percent =
-            max_ltv.map_or(self.initial, |max_ltv| max_ltv.min(self.initial));
+        let default_ltd: Percent = Percent::from_ratio(self.initial.units(), (Percent::HUNDRED - self.initial).units());
+        let initial_ltd: Percent =
+            max_ltd.map_or(default_ltd, |max_ltd| max_ltd.min(default_ltd));
 
         // borrow = ltv%.of(borrow + downpayment)
-        // (100% - ltv%).of(borrow) = ltv%.of(downpayment)
+        //(100% - ltv%).of(borrow) = ltv%.of(downpayment)
         // borrow = (ltv% / (100% - ltv%)).of(downpayment)
-        Rational::new(initial_ltv, Percent::HUNDRED - initial_ltv).of(downpayment)
+        // Rational::new(initial_ltd, Percent::HUNDRED - initial_ltd).of(downpayment)
+
+        //borrow = ltd%.of(downplayment)
+        initial_ltd.of(downpayment)
     }
 
     /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
-    /// Otherwise, amount_to_liquidate == total_due
+    /// Otherwise, amou//nt_to_liquidate == total_due
     pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
         P: Percentable + Copy + Ord + Sub<Output = P> + Zero,
@@ -343,6 +345,31 @@ mod test {
         test_init_borrow_amount(2, 65, 3, Some(Percent::from_permille(999)));
 
         test_init_borrow_amount(1000, 65, 0, Some(Percent::ZERO));
+    }
+
+    #[test]
+    fn init_borrow_max_ltd() {
+        type Currency = Usdc;
+
+        let downpayment = Coin::<Currency>::new(50000);
+        let percent = Percent::from_percent(60);
+        let max_p = Some(Percent::from_percent(50));
+        let calculated = Liability {
+            initial: percent,
+            healthy: Percent::from_percent(99),
+            max: Percent::from_percent(100),
+            first_liq_warn: Percent::from_permille(992),
+            second_liq_warn: Percent::from_permille(995),
+            third_liq_warn: Percent::from_permille(998),
+            recalc_time: Duration::from_secs(20000),
+        }
+        .init_borrow_amount(downpayment, max_p);
+
+        let default_ltd: Percent = Percent::from_ratio(percent.units(), (Percent::HUNDRED - percent).units());
+        let selected_p = max_p.map_or(default_ltd, |max_ltv| max_ltv.min(percent));
+        
+        assert_eq!(calculated, Coin::<Currency>::new(25000));
+        assert_eq!(selected_p.of(downpayment), calculated);
     }
 
     #[test]
