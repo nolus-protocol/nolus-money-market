@@ -11,7 +11,7 @@ use sdk::schemars::{self, JsonSchema};
 #[derive(Serialize, Deserialize, Clone, Debug, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Eq, PartialEq))]
 #[serde(rename_all = "snake_case")]
-pub struct LoanData<Lpn>
+pub struct Loan<Lpn>
 where
     Lpn: Currency,
 {
@@ -20,7 +20,7 @@ where
     pub interest_paid: Timestamp,
 }
 
-impl<Lpn> LoanData<Lpn>
+impl<Lpn> Loan<Lpn>
 where
     Lpn: Currency,
 {
@@ -42,11 +42,11 @@ mod test {
     };
     use sdk::cosmwasm_std::Timestamp;
 
-    use crate::loan::LoanData;
+    use crate::loan::Loan;
 
     #[test]
     fn interest() {
-        let l = LoanData {
+        let l = Loan {
             principal_due: Coin::<Usdc>::from(100),
             annual_interest_rate: Percent::from_percent(50),
             interest_paid: Timestamp::from_nanos(200),

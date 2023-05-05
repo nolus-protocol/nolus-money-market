@@ -10,7 +10,7 @@ use finance::{
     percent::{Percent, Units},
 };
 use lpp::{
-    loan::LoanData,
+    loan::Loan as LppLoan,
     msg::QueryLoanResponse,
     stub::{
         lender::{LppLender as LppLenderTrait, LppLenderRef},
@@ -254,7 +254,7 @@ where
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
-        loan: &LoanData<Lpn>,
+        loan: &LppLoan<Lpn>,
         receipt: &mut RepayReceipt<Lpn>,
     ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
         let (prev_margin_paid, change) =
@@ -282,7 +282,7 @@ where
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
-        loan: &LoanData<Lpn>,
+        loan: &LppLoan<Lpn>,
         receipt: &mut RepayReceipt<Lpn>,
     ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
         let mut loan_repay = Coin::default();
@@ -405,7 +405,7 @@ mod tests {
     };
     use lpp::{
         error::ContractError as LppError,
-        loan::LoanData,
+        loan::Loan as LppLoan,
         msg::{LoanResponse, QueryLoanResponse, QueryQuoteResponse},
         stub::{
             lender::{LppLender, LppLenderRef},
@@ -461,7 +461,7 @@ mod tests {
     }
 
     impl LppLenderLocalStub {
-        fn new(loan: LoanData<TestCurrency>, now: Timestamp) -> Self {
+        fn new(loan: LppLoan<TestCurrency>, now: Timestamp) -> Self {
             Self { loan, now }
         }
     }

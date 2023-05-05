@@ -20,6 +20,14 @@ use crate::{
     stub::LppBatch,
 };
 
+// pub struct LppLoan<'a, Lpn>
+// where
+//     Lpn: Currency,
+// {
+//     loan: Loan<Lpn>,
+//     stub: LppLenderStub<'a, Lpn>,
+// }
+
 pub trait LppLender<Lpn>
 where
     Self: Into<LppBatch<LppLenderRef>>,
@@ -116,7 +124,10 @@ impl LppLenderRef {
         )
     }
 
-    fn into_stub<'a, C>(self, querier: &'a QuerierWrapper<'a>) -> LppLenderStub<'a, C> {
+    fn into_stub<'a, C>(self, querier: &'a QuerierWrapper<'a>) -> LppLenderStub<'a, C>
+    where
+        C: Currency,
+    {
         LppLenderStub {
             lpp_ref: self,
             currency: PhantomData::<C>,
@@ -141,14 +152,14 @@ impl LppLenderRef {
     }
 }
 
-struct LppLenderStub<'a, C> {
+struct LppLenderStub<'a, Lpn> {
     lpp_ref: LppLenderRef,
-    currency: PhantomData<C>,
+    currency: PhantomData<Lpn>,
     querier: &'a QuerierWrapper<'a>,
     batch: Batch,
 }
 
-impl<'a, C> LppLenderStub<'a, C> {
+impl<'a, Lpn> LppLenderStub<'a, Lpn> {
     fn id(&self) -> Addr {
         self.lpp_ref.addr.clone()
     }

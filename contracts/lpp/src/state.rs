@@ -1,6 +1,6 @@
 pub use self::config::Config;
 #[cfg(any(feature = "contract", test))]
-pub use self::{deposit::Deposit, loan::Loan, total::Total};
+pub use self::{deposit::Deposit, total::Total};
 
 mod config;
 

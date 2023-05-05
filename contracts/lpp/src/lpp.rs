@@ -14,9 +14,10 @@ use sdk::cosmwasm_std::{Addr, Deps, DepsMut, Env, QuerierWrapper, Storage, Times
 
 use crate::{
     error::{ContractError, Result},
+    loan::Loan,
     msg::{LoanResponse, LppBalanceResponse, PriceResponse},
     nlpn::NLpn,
-    state::{Config, Deposit, Loan, Total},
+    state::{Config, Deposit, Total},
 };
 
 pub struct NTokenPrice<LPN>
@@ -186,24 +187,24 @@ where
             return Err(ContractError::ZeroLoanAmount);
         }
 
-        let current_time = env.block.time;
+        let now = env.block.time;
 
         let annual_interest_rate =
-            match self.query_quote(amount, &env.contract.address, &deps.querier, env.block.time)? {
+            match self.query_quote(amount, &env.contract.address, &deps.querier, now)? {
                 Some(rate) => Ok(rate),
                 None => Err(ContractError::NoLiquidity {}),
             }?;
 
-        Loan::open(
-            deps.storage,
-            lease_addr,
-            amount,
+        let loan = Loan {
+            principal_due: amount,
             annual_interest_rate,
-            current_time,
-        )?;
+            interest_paid: now,
+        };
+
+        Loan::open(deps.storage, lease_addr, &loan)?;
 
         self.total
-            .borrow(env.block.time, amount, annual_interest_rate)?
+            .borrow(now, amount, annual_interest_rate)?
             .store(deps.storage)?;
 
         Ok(annual_interest_rate)
@@ -217,9 +218,10 @@ where
         lease_addr: Addr,
         repay_amount: Coin<LPN>,
     ) -> Result<Coin<LPN>> {
-        let loan = Loan::load(deps.storage, lease_addr)?;
-        let loan_annual_interest_rate = loan.data().annual_interest_rate;
-        let payment = loan.repay(deps.storage, env.block.time, repay_amount)?;
+        let mut loan = Loan::load(deps.storage, lease_addr.clone())?;
+        let loan_annual_interest_rate = loan.annual_interest_rate;
+        let payment = loan.repay(env.block.time, repay_amount)?;
+        Loan::save(deps.storage, lease_addr, loan)?;
 
         self.total
             .repay(

@@ -12,7 +12,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::{borrow::InterestRate, loan::LoanData, nlpn::NLpn};
+use crate::{borrow::InterestRate, loan::Loan, nlpn::NLpn};
 
 pub type LpnCoin = CoinDTO<Lpns>;
 
@@ -81,7 +81,7 @@ pub enum QueryQuoteResponse {
     NoLiquidity,
 }
 
-pub type LoanResponse<Lpn> = LoanData<Lpn>;
+pub type LoanResponse<Lpn> = Loan<Lpn>;
 
 pub type QueryLoanResponse<Lpn> = Option<LoanResponse<Lpn>>;
 
