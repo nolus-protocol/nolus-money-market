@@ -13,10 +13,7 @@ use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{
-    error::{ContractError, ContractResult},
-    loan::Loan,
-};
+use crate::{error::ContractResult, loan::Loan};
 
 pub(super) use self::{
     dto::LeaseDTO,
@@ -112,20 +109,23 @@ where
         }
     }
 
+    //TODO take this out into a dedicated type `LeasePaid`
     pub(crate) fn close<B>(self, lease_account: B) -> ContractResult<Batch>
     where
         B: BankAccount,
     {
-        let state = self.state(Timestamp::from_nanos(u64::MAX))?;
-        match state {
-            State::Opened { .. } => Err(ContractError::LoanNotPaid()),
-            State::Paid(..) => self.send_funds_to_customer(lease_account),
-        }
+        debug_assert!(self
+            .loan
+            .state(Timestamp::from_nanos(u64::MAX), self.addr.clone())?
+            .is_none());
+
+        self.send_funds_to_customer(lease_account)
     }
 
     pub(crate) fn state(&self, now: Timestamp) -> ContractResult<State<Asset, Lpn>> {
         self.loan.state(now, self.addr.clone()).map(|loan_state| {
-            loan_state.map_or(State::Paid(self.amount), |state| State::Opened {
+            let state = loan_state.expect("not paid");
+            State::Opened {
                 amount: self.amount,
                 interest_rate: state.annual_interest,
                 interest_rate_margin: state.annual_interest_margin,
@@ -135,7 +135,7 @@ where
                 current_margin_due: state.current_margin_interest_due,
                 current_interest_due: state.current_interest_due,
                 validity: now,
-            })
+            }
         })
     }
 
@@ -533,23 +533,6 @@ mod tests {
             validity: LEASE_STATE_AT,
         };
 
-        assert_eq!(exp, res);
-    }
-
-    #[test]
-    fn state_paid() {
-        let lease_amount = coin(1000);
-        let lease_addr = Addr::unchecked("lease");
-        let lease = open_lease(
-            lease_addr,
-            lease_amount,
-            None,
-            Addr::unchecked(String::new()),
-            Addr::unchecked(String::new()),
-        );
-
-        let res = request_state(lease);
-        let exp = State::Paid(lease_amount);
         assert_eq!(exp, res);
     }
 

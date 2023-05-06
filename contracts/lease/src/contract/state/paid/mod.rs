@@ -59,9 +59,6 @@ impl Contract for Active {
         _now: Timestamp,
         _querier: &QuerierWrapper<'_>,
     ) -> ContractResult<StateResponse> {
-        Ok(StateResponse::Paid {
-            amount: self.lease.lease.amount,
-            in_progress: None,
-        })
+        Ok(StateResponse::paid_from(self.lease.lease, None))
     }
 }

@@ -45,10 +45,10 @@ impl TransferIn {
     }
 
     fn state(self, in_progress: ClosingTrx) -> <Self as SwapTask>::StateResponse {
-        Ok(StateResponse::Paid {
-            amount: self.lease.lease.amount,
-            in_progress: Some(in_progress),
-        })
+        Ok(StateResponse::paid_from(
+            self.lease.lease,
+            Some(in_progress),
+        ))
     }
 
     // fn emit_ok(&self) -> Emitter {

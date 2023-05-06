@@ -18,5 +18,4 @@ where
         current_interest_due: Coin<Lpn>,
         validity: Timestamp,
     },
-    Paid(Coin<Asset>),
 }
