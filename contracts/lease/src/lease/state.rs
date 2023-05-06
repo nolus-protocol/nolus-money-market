@@ -2,20 +2,18 @@ use finance::{coin::Coin, currency::Currency, percent::Percent};
 use sdk::cosmwasm_std::Timestamp;
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum State<Asset, Lpn>
+pub struct State<Asset, Lpn>
 where
     Asset: Currency,
     Lpn: Currency,
 {
-    Opened {
-        amount: Coin<Asset>,
-        interest_rate: Percent,
-        interest_rate_margin: Percent,
-        principal_due: Coin<Lpn>,
-        previous_margin_due: Coin<Lpn>,
-        previous_interest_due: Coin<Lpn>,
-        current_margin_due: Coin<Lpn>,
-        current_interest_due: Coin<Lpn>,
-        validity: Timestamp,
-    },
+    pub amount: Coin<Asset>,
+    pub interest_rate: Percent,
+    pub interest_rate_margin: Percent,
+    pub principal_due: Coin<Lpn>,
+    pub previous_margin_due: Coin<Lpn>,
+    pub previous_interest_due: Coin<Lpn>,
+    pub current_margin_due: Coin<Lpn>,
+    pub current_interest_due: Coin<Lpn>,
+    pub validity: Timestamp,
 }

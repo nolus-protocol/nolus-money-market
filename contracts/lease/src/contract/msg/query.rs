@@ -7,34 +7,23 @@ use crate::{
 
 impl StateResponse {
     pub fn opened_from<Asset, Lpn>(
-        lease_state: State<Asset, Lpn>,
+        open_lease: State<Asset, Lpn>,
         in_progress: Option<opened::OngoingTrx>,
     ) -> Self
     where
         Asset: Currency,
         Lpn: Currency,
     {
-        let State::Opened {
-            amount,
-            interest_rate,
-            interest_rate_margin,
-            principal_due,
-            previous_margin_due,
-            previous_interest_due,
-            current_margin_due,
-            current_interest_due,
-            validity,
-        } = lease_state;
         Self::Opened {
-            amount: amount.into(),
-            loan_interest_rate: interest_rate,
-            margin_interest_rate: interest_rate_margin,
-            principal_due: principal_due.into(),
-            previous_margin_due: previous_margin_due.into(),
-            previous_interest_due: previous_interest_due.into(),
-            current_margin_due: current_margin_due.into(),
-            current_interest_due: current_interest_due.into(),
-            validity,
+            amount: open_lease.amount.into(),
+            loan_interest_rate: open_lease.interest_rate,
+            margin_interest_rate: open_lease.interest_rate_margin,
+            principal_due: open_lease.principal_due.into(),
+            previous_margin_due: open_lease.previous_margin_due.into(),
+            previous_interest_due: open_lease.previous_interest_due.into(),
+            current_margin_due: open_lease.current_margin_due.into(),
+            current_interest_due: open_lease.current_interest_due.into(),
+            validity: open_lease.validity,
             in_progress,
         }
     }

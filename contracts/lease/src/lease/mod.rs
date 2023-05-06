@@ -124,16 +124,16 @@ where
 
     pub(crate) fn state(&self, now: Timestamp) -> ContractResult<State<Asset, Lpn>> {
         self.loan.state(now, self.addr.clone()).map(|loan_state| {
-            let state = loan_state.expect("not paid");
-            State::Opened {
+            let loan = loan_state.expect("not paid");
+            State {
                 amount: self.amount,
-                interest_rate: state.annual_interest,
-                interest_rate_margin: state.annual_interest_margin,
-                principal_due: state.principal_due,
-                previous_margin_due: state.previous_margin_interest_due,
-                previous_interest_due: state.previous_interest_due,
-                current_margin_due: state.current_margin_interest_due,
-                current_interest_due: state.current_interest_due,
+                interest_rate: loan.annual_interest,
+                interest_rate_margin: loan.annual_interest_margin,
+                principal_due: loan.principal_due,
+                previous_margin_due: loan.previous_margin_interest_due,
+                previous_interest_due: loan.previous_interest_due,
+                current_margin_due: loan.current_margin_interest_due,
+                current_interest_due: loan.current_interest_due,
                 validity: now,
             }
         })
@@ -521,7 +521,7 @@ mod tests {
         );
 
         let res = request_state(lease);
-        let exp = State::Opened {
+        let exp = State {
             amount: lease_amount,
             interest_rate,
             interest_rate_margin: MARGIN_INTEREST_RATE,
