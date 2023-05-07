@@ -7,6 +7,4 @@ mod config;
 #[cfg(any(feature = "contract", test))]
 mod deposit;
 #[cfg(any(feature = "contract", test))]
-mod loan;
-#[cfg(any(feature = "contract", test))]
 mod total;

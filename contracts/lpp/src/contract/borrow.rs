@@ -27,19 +27,14 @@ where
     let mut lpp = LiquidityPool::<LPN>::load(deps.storage)?;
     lpp.validate_lease_addr(&deps.as_ref(), &lease_addr)?;
 
-    let annual_interest_rate = lpp.try_open_loan(&mut deps, &env, lease_addr.clone(), amount)?;
+    let loan = lpp.try_open_loan(&mut deps, &env, lease_addr.clone(), amount)?;
 
     let mut bank = bank::account(&env.contract.address, &deps.querier);
     bank.send(amount, &lease_addr);
 
-    let loan_response = LoanResponse {
-        principal_due: amount,
-        annual_interest_rate,
-        interest_paid: env.block.time,
-    };
     let messages: Batch = bank.into();
 
-    Ok((loan_response, messages.into()))
+    Ok((loan, messages.into()))
 }
 
 pub(super) fn try_repay_loan<LPN>(

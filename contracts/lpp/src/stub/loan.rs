@@ -20,7 +20,7 @@ where
 {
     fn principal_due(&self) -> Coin<Lpn>;
     fn interest_due(&self, by: Timestamp) -> Coin<Lpn>;
-    fn repay(&mut self, repayment: Coin<Lpn>) -> Result<()>;
+    fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> Result<()>;
     fn annual_interest_rate(&self) -> Percent;
 }
 
@@ -69,8 +69,8 @@ where
         self.loan.interest_due(by)
     }
 
-    fn repay(&mut self, repayment: Coin<Lpn>) -> Result<()> {
-        // todo!("self.loan.repay()");
+    fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> Result<()> {
+        self.loan.repay(by, repayment)?;
         self.batch
             .schedule_execute_wasm_no_reply(
                 &self.lpp_ref.addr,

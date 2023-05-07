@@ -284,8 +284,8 @@ mod tests {
             self.loan.interest_due(by)
         }
 
-        fn repay(&mut self, _repayment: Coin<Lpn>) -> lpp::error::Result<()> {
-            todo!()
+        fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> lpp::error::Result<()> {
+            self.loan.repay(by, repayment).map(|_| ())
         }
 
         fn annual_interest_rate(&self) -> Percent {

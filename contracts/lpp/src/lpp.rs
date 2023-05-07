@@ -182,7 +182,7 @@ where
         env: &Env,
         lease_addr: Addr,
         amount: Coin<LPN>,
-    ) -> Result<Percent> {
+    ) -> Result<Loan<LPN>> {
         if amount.is_zero() {
             return Err(ContractError::ZeroLoanAmount);
         }
@@ -207,7 +207,7 @@ where
             .borrow(now, amount, annual_interest_rate)?
             .store(deps.storage)?;
 
-        Ok(annual_interest_rate)
+        Ok(loan)
     }
 
     /// return amount of lpp currency to pay back to lease_addr
