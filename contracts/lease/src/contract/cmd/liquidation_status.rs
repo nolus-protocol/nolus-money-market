@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use finance::{currency::Currency, liability::Zone};
-use lpp::stub::lender::LppLender as LppLenderTrait;
+use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use platform::batch::Batch;
 use profit::stub::Profit as ProfitTrait;
@@ -22,7 +22,7 @@ pub(crate) fn status_and_schedule<Lpn, Asset, Lpp, Profit, Oracle>(
 ) -> ContractResult<CmdResult>
 where
     Lpn: Currency + Serialize,
-    Lpp: LppLenderTrait<Lpn>,
+    Lpp: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
     Profit: ProfitTrait,
     Asset: Currency + Serialize,
@@ -113,7 +113,7 @@ impl<'a> WithLease for Cmd<'a> {
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppLenderTrait<Lpn>,
+        Lpp: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
         Asset: Currency + Serialize,

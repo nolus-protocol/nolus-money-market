@@ -7,7 +7,7 @@ use dex::{
     SwapTask, TransferOutState,
 };
 use finance::{coin::CoinDTO, currency::Symbol};
-use lpp::stub::lender::LppLenderRef;
+use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
 use platform::{
     ica::HostAccount, message::Response as MessageResponse,
@@ -36,7 +36,7 @@ pub(in crate::contract::state::opening) fn start(
     dex_account: Account,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
+    deps: (LppRef, OracleRef, TimeAlarmsRef),
 ) -> StartLocalRemoteState<BuyAsset> {
     dex::start_local_remote(BuyAsset::new(form, dex_account, downpayment, loan, deps))
 }
@@ -49,7 +49,7 @@ pub(crate) struct BuyAsset {
     dex_account: Account,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
+    deps: (LppRef, OracleRef, TimeAlarmsRef),
 }
 
 impl BuyAsset {
@@ -59,7 +59,7 @@ impl BuyAsset {
         dex_account: Account,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
+        deps: (LppRef, OracleRef, TimeAlarmsRef),
     ) -> Self {
         Self::new(form, dex_account, downpayment, loan, deps)
     }
@@ -69,7 +69,7 @@ impl BuyAsset {
         dex_account: Account,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
+        deps: (LppRef, OracleRef, TimeAlarmsRef),
     ) -> Self {
         Self {
             form,

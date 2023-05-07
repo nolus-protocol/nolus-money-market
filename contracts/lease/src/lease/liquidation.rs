@@ -8,7 +8,7 @@ use finance::{
     price,
     zero::Zero,
 };
-use lpp::stub::lender::LppLender as LppLenderTrait;
+use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
@@ -71,7 +71,7 @@ pub(crate) enum Cause {
 impl<Lpn, Asset, Lpp, Profit, Oracle> Lease<Lpn, Asset, Lpp, Profit, Oracle>
 where
     Lpn: Currency + Serialize,
-    Lpp: LppLenderTrait<Lpn>,
+    Lpp: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
     Profit: ProfitTrait,
     Asset: Currency + Serialize,

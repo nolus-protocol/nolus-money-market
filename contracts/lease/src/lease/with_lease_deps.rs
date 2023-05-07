@@ -1,10 +1,14 @@
 use std::marker::PhantomData;
 
+use cosmwasm_std::Addr;
 use serde::{de::DeserializeOwned, Serialize};
 
 use ::currency::lease::LeaseGroup;
 use finance::currency::{self, AnyVisitor, AnyVisitorResult, Currency, Symbol};
-use lpp::stub::lender::{LppLender as LppLenderTrait, LppLenderRef, WithLppLender};
+use lpp::stub::{
+    loan::{LppLoan as LppLoanTrait, WithLppLoan},
+    LppRef,
+};
 use oracle::stub::{Oracle as OracleTrait, OracleRef, WithOracle};
 use profit::stub::{Profit as ProfitTrait, ProfitRef, WithProfit};
 use sdk::cosmwasm_std::QuerierWrapper;
@@ -13,15 +17,15 @@ pub trait WithLeaseDeps {
     type Output;
     type Error;
 
-    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
+    fn exec<Lpn, Asset, LppLoan, Profit, Oracle>(
         self,
-        lpp: Lpp,
+        lpp_loan: Option<LppLoan>,
         profit: Profit,
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppLenderTrait<Lpn>,
+        LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
         Asset: Currency + Serialize;
@@ -29,14 +33,16 @@ pub trait WithLeaseDeps {
 
 pub fn execute<Cmd>(
     cmd: Cmd,
+    lease_addr: Addr,
     asset: Symbol<'_>,
-    lpp: LppLenderRef,
+    lpp: LppRef,
     profit: ProfitRef,
     oracle: OracleRef,
     querier: &QuerierWrapper<'_>,
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLeaseDeps,
+    Cmd::Error: From<lpp::error::ContractError>,
     finance::error::Error: Into<Cmd::Error>,
     oracle::error::ContractError: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
@@ -45,6 +51,7 @@ where
         asset,
         FactoryStage1 {
             cmd,
+            lease_addr,
             lpp,
             profit,
             oracle,
@@ -55,7 +62,8 @@ where
 
 struct FactoryStage1<'r, Cmd> {
     cmd: Cmd,
-    lpp: LppLenderRef,
+    lease_addr: Addr,
+    lpp: LppRef,
     profit: ProfitRef,
     oracle: OracleRef,
     querier: &'r QuerierWrapper<'r>,
@@ -64,6 +72,7 @@ struct FactoryStage1<'r, Cmd> {
 impl<'r, Cmd> AnyVisitor for FactoryStage1<'r, Cmd>
 where
     Cmd: WithLeaseDeps,
+    Cmd::Error: From<lpp::error::ContractError>,
     finance::error::Error: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
     oracle::error::ContractError: Into<Cmd::Error>,
@@ -75,7 +84,7 @@ where
     where
         C: 'static + Currency + Serialize + DeserializeOwned,
     {
-        self.lpp.execute(
+        self.lpp.execute_loan(
             FactoryStage2 {
                 cmd: self.cmd,
                 asset: PhantomData::<C>,
@@ -83,6 +92,7 @@ where
                 oracle: self.oracle,
                 querier: self.querier,
             },
+            self.lease_addr,
             self.querier,
         )
     }
@@ -95,47 +105,48 @@ struct FactoryStage2<'r, Cmd, Asset> {
     querier: &'r QuerierWrapper<'r>,
 }
 
-impl<'r, Cmd, Asset> WithLppLender for FactoryStage2<'r, Cmd, Asset>
+impl<'r, Cmd, Asset> WithLppLoan for FactoryStage2<'r, Cmd, Asset>
 where
     Cmd: WithLeaseDeps,
     Asset: Currency + Serialize,
+    lpp::error::ContractError: Into<Cmd::Error>,
     oracle::error::ContractError: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
-    fn exec<Lpn, Lpp>(self, lpp: Lpp) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, LppLoan>(self, lpp: Option<LppLoan>) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppLenderTrait<Lpn>,
+        LppLoan: LppLoanTrait<Lpn>,
     {
         self.profit.execute(FactoryStage3 {
             cmd: self.cmd,
             asset: self.asset,
             lpn: PhantomData::<Lpn>,
-            lpp,
+            lpp_loan: lpp,
             oracle: self.oracle,
             querier: self.querier,
         })
     }
 }
 
-struct FactoryStage3<'r, Cmd, Asset, Lpn, Lpp> {
+struct FactoryStage3<'r, Cmd, Asset, Lpn, LppLoan> {
     cmd: Cmd,
     asset: PhantomData<Asset>,
     lpn: PhantomData<Lpn>,
-    lpp: Lpp,
+    lpp_loan: Option<LppLoan>,
     oracle: OracleRef,
     querier: &'r QuerierWrapper<'r>,
 }
 
-impl<'r, Cmd, Asset, Lpn, Lpp> WithProfit for FactoryStage3<'r, Cmd, Asset, Lpn, Lpp>
+impl<'r, Cmd, Asset, Lpn, LppLoan> WithProfit for FactoryStage3<'r, Cmd, Asset, Lpn, LppLoan>
 where
     Cmd: WithLeaseDeps,
     Asset: Currency + Serialize,
     Lpn: Currency + Serialize,
-    Lpp: LppLenderTrait<Lpn>,
+    LppLoan: LppLoanTrait<Lpn>,
     oracle::error::ContractError: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
@@ -150,7 +161,7 @@ where
                 cmd: self.cmd,
                 asset: self.asset,
                 lpn: self.lpn,
-                lpp: self.lpp,
+                lpp_loan: self.lpp_loan,
                 profit,
             },
             self.querier,
@@ -158,20 +169,21 @@ where
     }
 }
 
-struct FactoryStage4<Cmd, Asset, Lpn, Lpp, Profit> {
+struct FactoryStage4<Cmd, Asset, Lpn, LppLoan, Profit> {
     cmd: Cmd,
     asset: PhantomData<Asset>,
     lpn: PhantomData<Lpn>,
-    lpp: Lpp,
+    lpp_loan: Option<LppLoan>,
     profit: Profit,
 }
 
-impl<Cmd, Asset, Lpn, Lpp, Profit> WithOracle<Lpn> for FactoryStage4<Cmd, Asset, Lpn, Lpp, Profit>
+impl<Cmd, Asset, Lpn, LppLoan, Profit> WithOracle<Lpn>
+    for FactoryStage4<Cmd, Asset, Lpn, LppLoan, Profit>
 where
     Cmd: WithLeaseDeps,
     Asset: Currency + Serialize,
     Lpn: Currency + Serialize,
-    Lpp: LppLenderTrait<Lpn>,
+    LppLoan: LppLoanTrait<Lpn>,
     Profit: ProfitTrait,
 {
     type Output = Cmd::Output;
@@ -182,6 +194,6 @@ where
         Oracle: OracleTrait<Lpn>,
     {
         self.cmd
-            .exec::<_, Asset, _, _, _>(self.lpp, self.profit, oracle)
+            .exec::<_, Asset, _, _, _>(self.lpp_loan, self.profit, oracle)
     }
 }

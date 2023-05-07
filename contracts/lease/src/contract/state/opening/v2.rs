@@ -1,7 +1,10 @@
+use cosmwasm_std::Addr;
+use finance::currency::SymbolOwned;
+use lpp::stub::LppRef;
+use platform::batch::ReplyId;
 use serde::Deserialize;
 
 use dex::{SwapExactIn as SwapExactInV3, TransferOut as TransferOutV3};
-use lpp::stub::lender::LppLenderRef;
 use oracle::stub::OracleRef;
 use timealarms::stub::TimeAlarmsRef;
 
@@ -26,6 +29,19 @@ pub(in crate::contract) type Transfer = TransferOut;
 pub(in crate::contract) type Swap = SwapExactIn;
 
 #[derive(Deserialize)]
+pub struct LppLenderRef {
+    addr: Addr,
+    currency: SymbolOwned,
+    #[serde(skip)]
+    _open_loan_req_id: ReplyId,
+}
+impl From<LppLenderRef> for LppRef {
+    fn from(value: LppLenderRef) -> Self {
+        Self::new(value.addr, value.currency)
+    }
+}
+
+#[derive(Deserialize)]
 pub(in crate::contract) struct RequestLoan();
 impl Migrate for RequestLoan {
     fn into_last_version(self) -> State {
@@ -44,7 +60,7 @@ pub(in crate::contract) struct OpenIcaAccount {
 impl From<OpenIcaAccount> for OpenIcaAccountV3 {
     fn from(value: OpenIcaAccount) -> Self {
         let timealarms = TimeAlarmsRef::unchecked(value.new_lease.form.time_alarms.clone());
-        let deps = (value.deps.0, value.deps.1, timealarms);
+        let deps = (value.deps.0.into(), value.deps.1, timealarms);
         Self::new(value.new_lease, value.downpayment, value.loan, deps)
     }
 }
@@ -61,7 +77,7 @@ pub(in crate::contract) struct BuyAsset {
 impl From<BuyAsset> for BuyAssetV3 {
     fn from(value: BuyAsset) -> Self {
         let timealarms = TimeAlarmsRef::unchecked(value.form.time_alarms.clone());
-        let deps = (value.deps.0, value.deps.1, timealarms);
+        let deps = (value.deps.0.into(), value.deps.1, timealarms);
         Self::migrate_to(
             value.form,
             value.dex_account.into(),

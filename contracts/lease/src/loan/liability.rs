@@ -1,5 +1,5 @@
 use finance::{coin::Coin, currency::Currency};
-use lpp::stub::lender::LppLender as LppLenderTrait;
+use lpp::stub::loan::LppLoan as LppLoanTrait;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
@@ -11,7 +11,7 @@ use crate::{
 impl<Lpn, Lpp, Profit> Loan<Lpn, Lpp, Profit>
 where
     Lpn: Currency,
-    Lpp: LppLenderTrait<Lpn>,
+    Lpp: LppLoanTrait<Lpn>,
     Profit: ProfitTrait,
 {
     pub(crate) fn liability_status<A>(

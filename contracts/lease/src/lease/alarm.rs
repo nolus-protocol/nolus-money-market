@@ -8,7 +8,7 @@ use finance::{
     liability::{Level, Zone},
     price::{total_of, Price},
 };
-use lpp::stub::lender::LppLender as LppLenderTrait;
+use lpp::stub::loan::LppLoan as LppLoanTrait;
 use marketprice::SpotPrice;
 use oracle::{
     alarms::Alarm,
@@ -23,7 +23,7 @@ use crate::{error::ContractResult, lease::Lease};
 impl<Lpn, Asset, Lpp, Profit, Oracle> Lease<Lpn, Asset, Lpp, Profit, Oracle>
 where
     Lpn: Currency + Serialize,
-    Lpp: LppLenderTrait<Lpn>,
+    Lpp: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
     Profit: ProfitTrait,
     Asset: Currency + Serialize,
@@ -138,7 +138,7 @@ mod tests {
     use timealarms::msg::ExecuteMsg::AddAlarm;
     use timealarms::stub::TimeAlarmsRef;
 
-    use crate::lease::tests::{LppLenderLocalStub, OracleLocalStub, ProfitLocalStub};
+    use crate::lease::tests::{LppLoanLocal, OracleLocalStub, ProfitLocalStub};
     use crate::lease::Lease;
     use crate::lease::{
         self,
@@ -362,7 +362,7 @@ mod tests {
     }
 
     fn projected_liability(
-        lease: &Lease<Usdc, Atom, LppLenderLocalStub<Usdc>, ProfitLocalStub, OracleLocalStub>,
+        lease: &Lease<Usdc, Atom, LppLoanLocal<Usdc>, ProfitLocalStub, OracleLocalStub>,
         at: Timestamp,
     ) -> Coin<Usdc> {
         let l = lease.loan.state(at, lease.addr.clone()).unwrap().unwrap();

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use dex::{Account, ConnectionParams, Contract as DexContract, DexConnectable, IcaConnectee};
-use lpp::stub::lender::LppLenderRef;
+use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::{QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
@@ -19,7 +19,7 @@ pub(crate) struct OpenIcaAccount {
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
     loan: OpenLoanRespResult,
-    deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
+    deps: (LppRef, OracleRef, TimeAlarmsRef),
 }
 
 impl OpenIcaAccount {
@@ -27,7 +27,7 @@ impl OpenIcaAccount {
         new_lease: NewLeaseContract,
         downpayment: DownpaymentCoin,
         loan: OpenLoanRespResult,
-        deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
+        deps: (LppRef, OracleRef, TimeAlarmsRef),
     ) -> Self {
         Self {
             new_lease,

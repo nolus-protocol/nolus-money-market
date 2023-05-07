@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use finance::currency::Currency;
-use lpp::stub::lender::LppLender as LppLenderTrait;
+use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use platform::batch::Batch;
 use profit::stub::Profit as ProfitTrait;
@@ -69,7 +69,7 @@ impl WithLease for Repay {
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppLenderTrait<Lpn>,
+        Lpp: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
         Asset: Currency + Serialize,

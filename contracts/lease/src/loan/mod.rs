@@ -9,22 +9,12 @@ use finance::{
     interest::InterestPeriod,
     percent::{Percent, Units},
 };
-use lpp::{
-    loan::Loan as LppLoan,
-    msg::QueryLoanResponse,
-    stub::{
-        lender::{LppLender as LppLenderTrait, LppLenderRef},
-        LppBatch,
-    },
-};
+use lpp::stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef};
 use platform::batch::Batch;
 use profit::stub::{Profit as ProfitTrait, ProfitBatch, ProfitRef};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
-use crate::{
-    api::InterestPaymentSpec,
-    error::{ContractError, ContractResult},
-};
+use crate::{api::InterestPaymentSpec, error::ContractResult};
 
 pub use self::state::State;
 pub(crate) use self::{liability::LiabilityStatus, repay::Receipt as RepayReceipt};
@@ -36,7 +26,7 @@ mod state;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct LoanDTO {
     annual_margin_interest: Percent,
-    lpp: LppLenderRef,
+    lpp: LppRef,
     interest_payment_spec: InterestPaymentSpec,
     current_period: InterestPeriod<Units, Percent>,
     profit: ProfitRef,
@@ -45,7 +35,7 @@ pub(crate) struct LoanDTO {
 impl LoanDTO {
     fn new(
         annual_margin_interest: Percent,
-        lpp: LppLenderRef,
+        lpp: LppRef,
         interest_payment_spec: InterestPaymentSpec,
         current_period: InterestPeriod<Units, Percent>,
         profit: ProfitRef,
@@ -63,7 +53,7 @@ impl LoanDTO {
         self.annual_margin_interest
     }
 
-    pub(crate) fn lpp(&self) -> &LppLenderRef {
+    pub(crate) fn lpp(&self) -> &LppRef {
         &self.lpp
     }
 
@@ -72,24 +62,24 @@ impl LoanDTO {
     }
 }
 
-pub struct Loan<Lpn, Lpp, Profit> {
+pub struct Loan<Lpn, LppLoan, Profit> {
     annual_margin_interest: Percent,
     lpn: PhantomData<Lpn>,
-    lpp: Lpp,
+    lpp_loan: Option<LppLoan>,
     interest_payment_spec: InterestPaymentSpec,
     current_period: InterestPeriod<Units, Percent>,
     profit: Profit,
 }
 
-impl<Lpn, Lpp, Profit> Loan<Lpn, Lpp, Profit>
+impl<Lpn, LppLoan, Profit> Loan<Lpn, LppLoan, Profit>
 where
     Lpn: Currency + Debug,
-    Lpp: LppLenderTrait<Lpn>,
+    LppLoan: LppLoanTrait<Lpn>,
     Profit: ProfitTrait,
 {
     pub(super) fn new(
         start: Timestamp,
-        lpp: Lpp,
+        lpp_loan: Option<LppLoan>,
         annual_margin_interest: Percent,
         interest_payment_spec: InterestPaymentSpec,
         profit: Profit,
@@ -102,14 +92,14 @@ where
         Self {
             annual_margin_interest,
             lpn: PhantomData,
-            lpp,
+            lpp_loan,
             interest_payment_spec,
             current_period,
             profit,
         }
     }
 
-    pub(super) fn from_dto(dto: LoanDTO, lpp: Lpp, profit: Profit) -> Self {
+    pub(super) fn from_dto(dto: LoanDTO, lpp_loan: Option<LppLoan>, profit: Profit) -> Self {
         {
             let annual_margin_interest = dto.annual_margin_interest;
             let interest_payment_spec = dto.interest_payment_spec;
@@ -117,7 +107,7 @@ where
             Self {
                 annual_margin_interest,
                 lpn: PhantomData,
-                lpp,
+                lpp_loan,
                 interest_payment_spec,
                 current_period,
                 profit,
@@ -129,7 +119,7 @@ where
         let LppBatch {
             lpp_ref,
             batch: lpp_batch,
-        } = self.lpp.into();
+        } = self.lpp_loan.expect("").into();
 
         let ProfitBatch {
             profit_ref,
@@ -155,7 +145,7 @@ where
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
-        lease: A,
+        _lease: A,
     ) -> ContractResult<RepayReceipt<Lpn>>
     where
         A: Into<Addr>,
@@ -165,10 +155,8 @@ where
 
         let mut receipt = RepayReceipt::default();
 
-        let loan = self.load_loan(lease)?.ok_or(ContractError::LoanClosed())?;
-
         let (change, loan_prev_period_payment) = if self.overdue_at(by) {
-            self.repay_previous_period(payment, by, &loan, &mut receipt)?
+            self.repay_previous_period(payment, by, &mut receipt)?
         } else {
             (payment, Coin::default())
         };
@@ -177,7 +165,7 @@ where
         debug_assert!(!self.overdue_at(by) || change == Coin::default());
 
         let (change, loan_curr_period_payment) = if !self.overdue_at(by) {
-            self.repay_current_period(change, by, &loan, &mut receipt)?
+            self.repay_current_period(change, by, &mut receipt)?
         } else {
             (change, Coin::default())
         };
@@ -194,21 +182,22 @@ where
         if !loan_payment.is_zero() {
             // In theory, zero loan payment may occur if two consecutive repayments are executed within the same time.
             // In practice, that means two repayment transactions of the same lease enter the same block.
-            self.lpp.repay_loan_req(loan_payment)?;
+            self.lpp_loan.as_mut().unwrap().repay(loan_payment)?;
+            // self.lpp_loan.as_ref().and_then(|loan| loan.repay(loan_payment))?;
         }
         Ok(receipt)
     }
 
-    pub(crate) fn state(&self, now: Timestamp, lease: Addr) -> ContractResult<Option<State<Lpn>>> {
+    pub(crate) fn state(&self, now: Timestamp, _lease: Addr) -> ContractResult<Option<State<Lpn>>> {
         self.debug_check_start_due_before(now, "in the past of");
 
-        let loan = if let Some(loan) = self.load_loan(lease)? {
+        let loan = if let Some(loan) = self.lpp_loan.as_ref() {
             loan
         } else {
             return Ok(None);
         };
 
-        let principal_due = loan.principal_due;
+        let principal_due = loan.principal_due();
 
         let margin_interest_overdue_period = if self.overdue_at(now) {
             self.current_period
@@ -236,7 +225,7 @@ where
         let current_interest_due = loan.interest_due(now) - previous_interest_due;
 
         Ok(Some(State {
-            annual_interest: loan.annual_interest_rate,
+            annual_interest: loan.annual_interest_rate(),
             annual_interest_margin: self.annual_margin_interest,
             principal_due,
             previous_interest_due,
@@ -246,19 +235,17 @@ where
         }))
     }
 
-    fn load_loan(&self, lease: impl Into<Addr>) -> ContractResult<QueryLoanResponse<Lpn>> {
-        self.lpp.loan(lease).map_err(ContractError::from)
-    }
-
     fn repay_previous_period(
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
-        loan: &LppLoan<Lpn>,
         receipt: &mut RepayReceipt<Lpn>,
     ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
-        let (prev_margin_paid, change) =
-            self.repay_margin_interest(loan.principal_due, by, payment)?;
+        let (prev_margin_paid, change) = self.repay_margin_interest(
+            self.lpp_loan.as_ref().unwrap().principal_due(),
+            by,
+            payment,
+        )?;
         receipt.pay_previous_margin(prev_margin_paid);
 
         if change.is_zero() {
@@ -267,7 +254,11 @@ where
 
         debug_assert!(self.current_period.zero_length()); // no prev_margin due
 
-        let previous_interest_due = loan.interest_due(self.current_period.till());
+        let previous_interest_due = self
+            .lpp_loan
+            .as_ref()
+            .unwrap()
+            .interest_due(self.current_period.till());
         let previous_interest_paid = previous_interest_due.min(change);
         receipt.pay_previous_interest(previous_interest_paid);
 
@@ -282,19 +273,22 @@ where
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
-        loan: &LppLoan<Lpn>,
         receipt: &mut RepayReceipt<Lpn>,
     ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
         let mut loan_repay = Coin::default();
 
-        let (curr_margin_paid, mut change) =
-            self.repay_margin_interest(loan.principal_due, by, payment)?;
+        let (curr_margin_paid, mut change) = self.repay_margin_interest(
+            self.lpp_loan.as_ref().unwrap().principal_due(),
+            by,
+            payment,
+        )?;
 
         receipt.pay_current_margin(curr_margin_paid);
 
         {
-            let curr_interest_paid =
-                change.min(loan.interest_due(by) - receipt.previous_interest_paid());
+            let curr_interest_paid = change.min(
+                self.lpp_loan.as_ref().unwrap().interest_due(by) - receipt.previous_interest_paid(),
+            );
 
             change -= curr_interest_paid;
 
@@ -304,13 +298,16 @@ where
         }
 
         {
-            let principal_paid = change.min(loan.principal_due);
+            let principal_paid = change.min(self.lpp_loan.as_ref().unwrap().principal_due());
 
             change -= principal_paid;
 
             loan_repay += principal_paid;
 
-            receipt.pay_principal(loan.principal_due, principal_paid);
+            receipt.pay_principal(
+                self.lpp_loan.as_ref().unwrap().principal_due(),
+                principal_paid,
+            );
         }
 
         Ok((change, loan_repay))
@@ -406,11 +403,8 @@ mod tests {
     use lpp::{
         error::ContractError as LppError,
         loan::Loan as LppLoan,
-        msg::{LoanResponse, QueryLoanResponse, QueryQuoteResponse},
-        stub::{
-            lender::{LppLender, LppLenderRef},
-            LppBatch,
-        },
+        msg::LoanResponse,
+        stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef},
     };
     use platform::{
         bank::{Aggregate, BalancesResult, BankAccountView},
@@ -455,30 +449,27 @@ mod tests {
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-    struct LppLenderLocalStub {
+    struct LppLoanLocal {
         loan: LoanResponse<TestCurrency>,
         now: Timestamp,
     }
 
-    impl LppLenderLocalStub {
+    impl LppLoanLocal {
         fn new(loan: LppLoan<TestCurrency>, now: Timestamp) -> Self {
             Self { loan, now }
         }
     }
 
-    impl LppLender<TestCurrency> for LppLenderLocalStub {
-        fn open_loan_req(&mut self, _amount: Coin<TestCurrency>) -> LppResult<()> {
-            unreachable!()
+    impl LppLoanTrait<TestCurrency> for LppLoanLocal {
+        fn principal_due(&self) -> Coin<TestCurrency> {
+            self.loan.principal_due
         }
 
-        fn open_loan_resp(
-            &self,
-            _resp: cosmwasm_std::Reply,
-        ) -> LppResult<LoanResponse<TestCurrency>> {
-            unreachable!()
+        fn interest_due(&self, by: Timestamp) -> Coin<TestCurrency> {
+            self.loan.interest_due(by)
         }
 
-        fn repay_loan_req(&mut self, repayment: Coin<TestCurrency>) -> LppResult<()> {
+        fn repay(&mut self, repayment: Coin<TestCurrency>) -> LppResult<()> {
             let (due_period, change) =
                 InterestPeriod::with_interest(self.loan.annual_interest_rate)
                     .from(self.loan.interest_paid)
@@ -495,17 +486,13 @@ mod tests {
             Ok(())
         }
 
-        fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestCurrency>> {
-            Ok(Some(self.loan.clone()))
-        }
-
-        fn quote(&self, _amount: Coin<TestCurrency>) -> LppResult<QueryQuoteResponse> {
-            unreachable!()
+        fn annual_interest_rate(&self) -> Percent {
+            self.loan.annual_interest_rate
         }
     }
 
-    impl From<LppLenderLocalStub> for LppBatch<LppLenderRef> {
-        fn from(_: LppLenderLocalStub) -> Self {
+    impl From<LppLoanLocal> for LppBatch<LppRef> {
+        fn from(_: LppLoanLocal) -> Self {
             unreachable!()
         }
     }
@@ -530,10 +517,10 @@ mod tests {
     fn create_loan(
         loan: LoanResponse<TestCurrency>,
         now: Timestamp,
-    ) -> Loan<TestCurrency, LppLenderLocalStub, ProfitLocalStub> {
+    ) -> Loan<TestCurrency, LppLoanLocal, ProfitLocalStub> {
         Loan::new(
             LEASE_START,
-            LppLenderLocalStub::new(loan, now),
+            Some(LppLoanLocal::new(loan, now)),
             MARGIN_INTEREST_RATE,
             InterestPaymentSpec::new(Duration::YEAR, Duration::from_secs(0)),
             ProfitLocalStub {},

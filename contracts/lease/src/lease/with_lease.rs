@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use finance::currency::Currency;
-use lpp::stub::lender::LppLender as LppLenderTrait;
+use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::QuerierWrapper;
@@ -15,13 +15,13 @@ pub trait WithLease {
     type Output;
     type Error;
 
-    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
+    fn exec<Lpn, Asset, LppLoan, Profit, Oracle>(
         self,
-        lease: Lease<Lpn, Asset, Lpp, Profit, Oracle>,
+        lease: Lease<Lpn, Asset, LppLoan, Profit, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppLenderTrait<Lpn>,
+        LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
         Asset: Currency + Serialize;
@@ -34,11 +34,13 @@ pub fn execute<Cmd>(
 ) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLease,
+    Cmd::Error: From<lpp::error::ContractError>,
     finance::error::Error: Into<Cmd::Error>,
     timealarms::error::ContractError: Into<Cmd::Error>,
     oracle::error::ContractError: Into<Cmd::Error>,
     profit::error::ContractError: Into<Cmd::Error>,
 {
+    let lease = lease_dto.addr.clone();
     let asset = lease_dto.amount.ticker().clone();
     let lpp = lease_dto.loan.lpp().clone();
     let profit = lease_dto.loan.profit().clone();
@@ -46,6 +48,7 @@ where
 
     with_lease_deps::execute(
         Factory::new(cmd, lease_dto),
+        lease,
         &asset,
         lpp,
         profit,
@@ -71,22 +74,22 @@ where
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
-    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
+    fn exec<Lpn, Asset, LppLoan, Profit, Oracle>(
         self,
-        lpp: Lpp,
+        lpp_loan: Option<LppLoan>,
         profit: Profit,
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppLenderTrait<Lpn>,
+        LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
         self.cmd.exec(Lease::<_, Asset, _, _, _>::from_dto(
             self.lease_dto,
-            lpp,
+            lpp_loan,
             oracle,
             profit,
         ))

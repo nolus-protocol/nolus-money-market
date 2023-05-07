@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use finance::{coin::Coin, currency::Currency};
-use lpp::stub::lender::LppLender as LppLenderTrait;
+use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
@@ -11,7 +11,7 @@ use crate::{error::ContractResult, lease::Lease, loan::RepayReceipt};
 impl<Lpn, Asset, Lpp, Profit, Oracle> Lease<Lpn, Asset, Lpp, Profit, Oracle>
 where
     Lpn: Currency + Serialize,
-    Lpp: LppLenderTrait<Lpn>,
+    Lpp: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
     Profit: ProfitTrait,
     Asset: Currency + Serialize,

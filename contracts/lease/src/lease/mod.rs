@@ -6,7 +6,7 @@ use finance::{
     liability::Liability,
     price::Price,
 };
-use lpp::stub::lender::LppLender as LppLenderTrait;
+use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::{bank::BankAccount, batch::Batch};
 use profit::stub::Profit as ProfitTrait;
@@ -48,11 +48,11 @@ pub struct IntoDTOResult {
     pub batch: Batch,
 }
 
-impl<Lpn, Asset, Lpp, Profit, Oracle> Lease<Lpn, Asset, Lpp, Profit, Oracle>
+impl<Lpn, Asset, LppLoan, Profit, Oracle> Lease<Lpn, Asset, LppLoan, Profit, Oracle>
 where
     Lpn: Currency + Serialize,
     Asset: Currency + Serialize,
-    Lpp: LppLenderTrait<Lpn>,
+    LppLoan: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
     Profit: ProfitTrait,
 {
@@ -61,7 +61,7 @@ where
         customer: Addr,
         amount: Coin<Asset>,
         liability: Liability,
-        loan: Loan<Lpn, Lpp, Profit>,
+        loan: Loan<Lpn, LppLoan, Profit>,
         oracle: Oracle,
     ) -> Self {
         debug_assert!(!amount.is_zero());
@@ -78,7 +78,12 @@ where
         }
     }
 
-    pub(super) fn from_dto(dto: LeaseDTO, lpp: Lpp, oracle: Oracle, profit: Profit) -> Self {
+    pub(super) fn from_dto(
+        dto: LeaseDTO,
+        lpp_loan: Option<LppLoan>,
+        oracle: Oracle,
+        profit: Profit,
+    ) -> Self {
         let amount = dto.amount.try_into().expect(
             "The DTO -> Lease conversion should have resulted in Asset == dto.amount.symbol()",
         );
@@ -87,7 +92,7 @@ where
             customer: dto.customer,
             amount,
             liability: dto.liability,
-            loan: Loan::from_dto(dto.loan, lpp, profit),
+            loan: Loan::from_dto(dto.loan, lpp_loan, profit),
             oracle,
         }
     }
@@ -174,12 +179,8 @@ mod tests {
         zero::Zero,
     };
     use lpp::{
-        error::ContractError as LppError,
-        msg::{LoanResponse, QueryLoanResponse},
-        stub::{
-            lender::{LppLender, LppLenderRef},
-            LppBatch,
-        },
+        msg::LoanResponse,
+        stub::{loan::LppLoan, LppBatch, LppRef},
     };
     use oracle::stub::{Oracle, OracleRef};
     use platform::{
@@ -190,7 +191,7 @@ mod tests {
     use profit::stub::{Profit, ProfitBatch, ProfitRef};
     use sdk::cosmwasm_std::{Addr, BankMsg, Timestamp};
 
-    use crate::{api::InterestPaymentSpec, loan::Loan, reply_id::ReplyId};
+    use crate::{api::InterestPaymentSpec, loan::Loan};
 
     use super::{Lease, State};
 
@@ -200,7 +201,6 @@ mod tests {
     pub const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
     type TestLpn = Usdc;
     pub type TestCurrency = Atom;
-    pub type LppResult<T> = Result<T, LppError>;
 
     pub fn loan<Lpn>() -> LoanResponse<Lpn>
     where
@@ -256,93 +256,52 @@ mod tests {
         }
     }
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-    pub struct LppLenderLocalStub<Lpn>
+    pub struct LppLoanLocal<Lpn>
     where
         Lpn: Currency,
     {
-        loan: Option<LoanResponse<Lpn>>,
+        loan: LoanResponse<Lpn>,
     }
 
-    impl<Lpn> From<Option<LoanResponse<Lpn>>> for LppLenderLocalStub<Lpn>
+    impl<Lpn> From<LoanResponse<Lpn>> for LppLoanLocal<Lpn>
     where
         Lpn: Currency,
     {
-        fn from(loan: Option<LoanResponse<Lpn>>) -> Self {
+        fn from(loan: LoanResponse<Lpn>) -> Self {
             Self { loan }
         }
     }
 
-    impl<Lpn> LppLender<Lpn> for LppLenderLocalStub<Lpn>
+    impl<Lpn> LppLoan<Lpn> for LppLoanLocal<Lpn>
     where
         Lpn: Currency,
     {
-        fn open_loan_req(&mut self, _amount: Coin<Lpn>) -> LppResult<()> {
-            unreachable!()
+        fn principal_due(&self) -> Coin<Lpn> {
+            self.loan.principal_due
         }
 
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<LoanResponse<Lpn>> {
-            unreachable!()
+        fn interest_due(&self, by: Timestamp) -> Coin<Lpn> {
+            self.loan.interest_due(by)
         }
 
-        fn repay_loan_req(&mut self, _repayment: Coin<Lpn>) -> LppResult<()> {
-            Ok(())
+        fn repay(&mut self, _repayment: Coin<Lpn>) -> lpp::error::Result<()> {
+            todo!()
         }
 
-        fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<Lpn>> {
-            Ok(self.loan.clone())
-        }
-
-        fn quote(&self, _amount: Coin<Lpn>) -> LppResult<lpp::msg::QueryQuoteResponse> {
-            unreachable!()
+        fn annual_interest_rate(&self) -> Percent {
+            self.loan.annual_interest_rate
         }
     }
 
-    impl<Lpn> From<LppLenderLocalStub<Lpn>> for LppBatch<LppLenderRef>
+    impl<Lpn> From<LppLoanLocal<Lpn>> for LppBatch<LppRef>
     where
         Lpn: Currency,
     {
-        fn from(_: LppLenderLocalStub<Lpn>) -> Self {
+        fn from(_: LppLoanLocal<Lpn>) -> Self {
             Self {
-                lpp_ref: LppLenderRef::unchecked::<_, TestLpn>(Addr::unchecked("test_lpp"), 0),
+                lpp_ref: LppRef::unchecked::<_, TestLpn>(Addr::unchecked("test_lpp")),
                 batch: Batch::default(),
             }
-        }
-    }
-
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-    pub struct LppLenderLocalStubUnreachable {}
-
-    impl From<LppLenderLocalStubUnreachable> for LppBatch<LppLenderRef> {
-        fn from(_: LppLenderLocalStubUnreachable) -> Self {
-            Self {
-                lpp_ref: LppLenderRef::unchecked::<_, TestLpn>(
-                    "local_test_lpp_lender_addr",
-                    ReplyId::OpenLoanReq.into(),
-                ),
-                batch: Batch::default(),
-            }
-        }
-    }
-
-    impl LppLender<TestLpn> for LppLenderLocalStubUnreachable {
-        fn open_loan_req(&mut self, _amount: Coin<TestLpn>) -> LppResult<()> {
-            unreachable!()
-        }
-
-        fn open_loan_resp(&self, _resp: cosmwasm_std::Reply) -> LppResult<LoanResponse<TestLpn>> {
-            unreachable!()
-        }
-
-        fn repay_loan_req(&mut self, _repayment: Coin<TestLpn>) -> LppResult<()> {
-            unreachable!()
-        }
-
-        fn loan(&self, _lease: impl Into<Addr>) -> LppResult<QueryLoanResponse<TestLpn>> {
-            unreachable!()
-        }
-
-        fn quote(&self, _amount: Coin<TestLpn>) -> LppResult<lpp::msg::QueryQuoteResponse> {
-            unreachable!()
         }
     }
 
@@ -428,14 +387,14 @@ mod tests {
     pub fn create_lease<Lpn, AssetC, L, O, P>(
         addr: Addr,
         amount: Coin<AssetC>,
-        lpp: L,
+        lpp: Option<L>,
         oracle: O,
         profit: P,
     ) -> Lease<Lpn, AssetC, L, P, O>
     where
         Lpn: Currency + Serialize,
         AssetC: Currency + Serialize,
-        L: LppLender<Lpn>,
+        L: LppLoan<Lpn>,
         O: Oracle<Lpn>,
         P: Profit,
     {
@@ -470,9 +429,8 @@ mod tests {
         loan_response: Option<LoanResponse<TestLpn>>,
         oracle_addr: Addr,
         profit_addr: Addr,
-    ) -> Lease<TestLpn, TestCurrency, LppLenderLocalStub<TestLpn>, ProfitLocalStub, OracleLocalStub>
-    {
-        let lpp: LppLenderLocalStub<TestLpn> = loan_response.into();
+    ) -> Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, ProfitLocalStub, OracleLocalStub> {
+        let lpp = loan_response.map(Into::into);
         let oracle: OracleLocalStub = oracle_addr.into();
         let profit: ProfitLocalStub = profit_addr.into();
 
@@ -483,7 +441,7 @@ mod tests {
         lease: Lease<
             TestLpn,
             TestCurrency,
-            LppLenderLocalStub<TestLpn>,
+            LppLoanLocal<TestLpn>,
             ProfitLocalStub,
             OracleLocalStub,
         >,

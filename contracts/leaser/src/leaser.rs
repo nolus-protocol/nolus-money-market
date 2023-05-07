@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use currency::native::Nls;
 use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
 use lease::api::{ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
-use lpp::{msg::ExecuteMsg, stub::lender::LppLenderRef};
+use lpp::{msg::ExecuteMsg, stub::LppRef};
 use oracle::stub::OracleRef;
 use platform::batch::Batch;
 use platform::message::Response as MessageResponse;
@@ -43,11 +43,11 @@ impl<'a> Leaser<'a> {
     ) -> Result<QuoteResponse, ContractError> {
         let config = Config::load(self.deps.storage)?;
 
-        let lpp = LppLenderRef::try_new(config.lpp_addr, &self.deps.querier, 0xDEADC0DEDEADC0DE)?;
+        let lpp = LppRef::try_new(config.lpp_addr, &self.deps.querier)?;
 
         let oracle = OracleRef::try_from(config.market_price_oracle, &self.deps.querier)?;
 
-        let resp = lpp.execute(
+        let resp = lpp.execute_lender(
             Quote::new(
                 self.deps.querier,
                 downpayment,

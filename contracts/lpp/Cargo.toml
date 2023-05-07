@@ -16,6 +16,7 @@ default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
 contract = ["stub"]
 stub = []
+migration = []
 testing = []
 
 [dependencies]

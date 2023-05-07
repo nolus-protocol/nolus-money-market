@@ -3,17 +3,25 @@ use std::{marker::PhantomData, result::Result as StdResult};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::lpn::Lpns;
-use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, SymbolOwned};
+use finance::currency::{
+    visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolOwned,
+};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
     error::{ContractError, Result},
-    msg::{LppBalanceResponse, QueryMsg},
+    msg::{LppBalanceResponse, QueryLoanResponse, QueryMsg},
     state::Config,
 };
 
+use self::{
+    lender::{LppLenderStub, WithLppLender},
+    loan::{LppLoanImpl, WithLppLoan},
+};
+
 pub mod lender;
+pub mod loan;
 
 pub trait Lpp<Lpn>
 where
@@ -48,8 +56,17 @@ impl LppRef {
         Ok(Self { addr, currency })
     }
 
+    #[cfg(feature = "migration")]
+    pub fn new(addr: Addr, currency: SymbolOwned) -> Self {
+        Self { addr, currency }
+    }
+
     pub fn addr(&self) -> &Addr {
         &self.addr
+    }
+
+    pub fn currency(&self) -> Symbol<'_> {
+        &self.currency
     }
 
     pub fn execute<V>(self, cmd: V, querier: &QuerierWrapper<'_>) -> StdResult<V::Output, V::Error>
@@ -88,12 +105,127 @@ impl LppRef {
         )
     }
 
+    pub fn execute_loan<Cmd>(
+        self,
+        cmd: Cmd,
+        lease: impl Into<Addr>,
+        querier: &QuerierWrapper<'_>,
+    ) -> StdResult<Cmd::Output, Cmd::Error>
+    where
+        Cmd: WithLppLoan,
+        Cmd::Error: From<ContractError>,
+        finance::error::Error: Into<Cmd::Error>,
+    {
+        struct CurrencyVisitor<'a, Cmd, Lease> {
+            cmd: Cmd,
+            lpp_ref: LppRef,
+            lease: Lease,
+            querier: &'a QuerierWrapper<'a>,
+        }
+
+        impl<'a, Cmd, Lease> AnyVisitor for CurrencyVisitor<'a, Cmd, Lease>
+        where
+            Cmd: WithLppLoan,
+            Cmd::Error: From<ContractError>,
+            Lease: Into<Addr>,
+        {
+            type Output = Cmd::Output;
+            type Error = Cmd::Error;
+
+            fn on<C>(self) -> AnyVisitorResult<Self>
+            where
+                C: Currency + Serialize + DeserializeOwned,
+            {
+                self.cmd
+                    .exec(self.lpp_ref.into_loan::<C>(self.lease, self.querier)?)
+            }
+        }
+
+        visit_any_on_ticker::<Lpns, _>(
+            &self.currency.clone(),
+            CurrencyVisitor {
+                cmd,
+                lpp_ref: self,
+                lease,
+                querier,
+            },
+        )
+    }
+
+    pub fn execute_lender<Cmd>(
+        self,
+        cmd: Cmd,
+        querier: &QuerierWrapper<'_>,
+    ) -> StdResult<Cmd::Output, Cmd::Error>
+    where
+        Cmd: WithLppLender,
+        finance::error::Error: Into<Cmd::Error>,
+    {
+        struct CurrencyVisitor<'a, Cmd> {
+            cmd: Cmd,
+            lpp_ref: LppRef,
+            querier: &'a QuerierWrapper<'a>,
+        }
+
+        impl<'a, Cmd> AnyVisitor for CurrencyVisitor<'a, Cmd>
+        where
+            Cmd: WithLppLender,
+        {
+            type Output = Cmd::Output;
+            type Error = Cmd::Error;
+
+            fn on<C>(self) -> AnyVisitorResult<Self>
+            where
+                C: Currency + Serialize + DeserializeOwned,
+            {
+                self.cmd.exec(self.lpp_ref.into_lender::<C>(self.querier))
+            }
+        }
+
+        visit_any_on_ticker::<Lpns, _>(
+            &self.currency.clone(),
+            CurrencyVisitor {
+                cmd,
+                lpp_ref: self,
+                querier,
+            },
+        )
+    }
+
     fn into_stub<'a, C>(self, querier: &'a QuerierWrapper<'_>) -> LppStub<'a, C> {
         LppStub {
             lpp_ref: self,
             currency: PhantomData::<C>,
             querier,
         }
+    }
+
+    fn into_loan<Lpn>(
+        self,
+        lease: impl Into<Addr>,
+        querier: &QuerierWrapper<'_>,
+    ) -> Result<Option<LppLoanImpl<Lpn>>>
+    where
+        Lpn: Currency + DeserializeOwned,
+    {
+        querier
+            .query_wasm_smart(
+                self.addr(),
+                &QueryMsg::Loan {
+                    lease_addr: lease.into(),
+                },
+            )
+            .map(|may_loan: QueryLoanResponse<Lpn>| {
+                may_loan.map(|loan| LppLoanImpl::new(self, loan))
+            })
+            .map_err(Into::into)
+    }
+
+    fn into_lender<'a, C>(self, querier: &'a QuerierWrapper<'a>) -> LppLenderStub<'a, C>
+    where
+        C: Currency,
+    {
+        LppLenderStub::new(self, querier)
     }
 }
 

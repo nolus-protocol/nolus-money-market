@@ -2,7 +2,7 @@ use cosmwasm_std::{QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use dex::IcaConnector;
-use lpp::stub::lender::LppLenderRef;
+use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
@@ -19,9 +19,8 @@ use crate::{
         state::{dex::State as LeaseDexState, Handler, Response},
         Contract,
     },
-    error::{ContractError, ContractResult},
+    error::ContractResult,
     event::Type,
-    reply_id::ReplyId,
 };
 
 use super::open_ica::OpenIcaAccount;
@@ -30,7 +29,7 @@ use super::open_ica::OpenIcaAccount;
 pub(crate) struct RequestLoan {
     new_lease: NewLeaseContract,
     downpayment: DownpaymentCoin,
-    deps: (LppLenderRef, OracleRef, TimeAlarmsRef),
+    deps: (LppRef, OracleRef, TimeAlarmsRef),
 }
 
 impl RequestLoan {
@@ -39,18 +38,14 @@ impl RequestLoan {
         info: MessageInfo,
         spec: NewLeaseContract,
     ) -> ContractResult<(Batch, Self)> {
-        let lpp = LppLenderRef::try_new(
-            spec.form.loan.lpp.clone(),
-            &deps.querier,
-            ReplyId::OpenLoanReq.into(),
-        )?;
+        let lpp = LppRef::try_new(spec.form.loan.lpp.clone(), &deps.querier)?;
 
         let oracle = OracleRef::try_from(spec.form.market_price_oracle.clone(), &deps.querier)
             .expect("Market Price Oracle is not deployed, or wrong address is passed!");
 
         let timealarms = TimeAlarmsRef::new(spec.form.time_alarms.clone(), &deps.querier)?;
 
-        let OpenLoanReqResult { batch, downpayment } = lpp.clone().execute(
+        let OpenLoanReqResult { batch, downpayment } = lpp.clone().execute_lender(
             OpenLoanReq::new(
                 &spec.form.liability,
                 info.funds,
@@ -70,31 +65,24 @@ impl RequestLoan {
     }
 
     fn on_response(self, deps: Deps<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
-        let id = ReplyId::try_from(msg.id)
-            .map_err(|_| ContractError::InvalidParameters("Invalid reply ID passed!".into()))?;
+        let loan = self
+            .deps
+            .0
+            .clone()
+            .execute_lender(OpenLoanResp::new(msg), &deps.querier)?;
 
-        match id {
-            ReplyId::OpenLoanReq => {
-                let loan = self
-                    .deps
-                    .0
-                    .clone()
-                    .execute(OpenLoanResp::new(msg), &deps.querier)?;
+        let emitter = self.emit_ok(env.contract.address);
 
-                let emitter = self.emit_ok(env.contract.address);
-
-                let open_ica = IcaConnector::new(OpenIcaAccount::new(
-                    self.new_lease,
-                    self.downpayment,
-                    loan,
-                    self.deps,
-                ));
-                Ok(StateMachineResponse::from(
-                    MessageResponse::messages_with_events(open_ica.enter(), emitter),
-                    LeaseDexState::new(open_ica),
-                ))
-            }
-        }
+        let open_ica = IcaConnector::new(OpenIcaAccount::new(
+            self.new_lease,
+            self.downpayment,
+            loan,
+            self.deps,
+        ));
+        Ok(StateMachineResponse::from(
+            MessageResponse::messages_with_events(open_ica.enter(), emitter),
+            LeaseDexState::new(open_ica),
+        ))
     }
 
     fn emit_ok(&self, contract: Addr) -> Emitter {

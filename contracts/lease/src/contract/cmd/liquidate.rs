@@ -1,5 +1,5 @@
 use finance::currency::Currency;
-use lpp::stub::lender::LppLender as LppLenderTrait;
+use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
@@ -53,7 +53,7 @@ impl WithLease for Liquidate {
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppLenderTrait<Lpn>,
+        Lpp: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
         Asset: Currency + Serialize,
