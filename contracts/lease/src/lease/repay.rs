@@ -21,7 +21,7 @@ where
         payment: Coin<Lpn>,
         now: Timestamp,
     ) -> ContractResult<RepayReceipt<Lpn>> {
-        self.loan.repay(payment, now, self.addr.clone())
+        self.loan.repay(payment, now)
     }
 
     pub(crate) fn liquidate(
@@ -36,6 +36,6 @@ where
             self.amount
         );
         self.amount -= asset;
-        self.loan.repay(payment, now, self.addr.clone())
+        self.loan.repay(payment, now)
     }
 }

@@ -119,16 +119,13 @@ where
     where
         B: BankAccount,
     {
-        debug_assert!(self
-            .loan
-            .state(Timestamp::from_nanos(u64::MAX), self.addr.clone())?
-            .is_none());
+        debug_assert!(self.loan.state(Timestamp::from_nanos(u64::MAX))?.is_none());
 
         self.send_funds_to_customer(lease_account)
     }
 
     pub(crate) fn state(&self, now: Timestamp) -> ContractResult<State<Asset, Lpn>> {
-        self.loan.state(now, self.addr.clone()).map(|loan_state| {
+        self.loan.state(now).map(|loan_state| {
             let loan = loan_state.expect("not paid");
             State {
                 amount: self.amount,

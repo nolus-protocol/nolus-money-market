@@ -12,7 +12,7 @@ use finance::{
 use lpp::stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef};
 use platform::batch::Batch;
 use profit::stub::{Profit as ProfitTrait, ProfitBatch, ProfitRef};
-use sdk::cosmwasm_std::{Addr, Timestamp};
+use sdk::cosmwasm_std::Timestamp;
 
 use crate::{api::InterestPaymentSpec, error::ContractResult};
 
@@ -144,15 +144,11 @@ where
     /// Repay the loan interests and principal by the given timestamp.
     ///
     /// The time intervals are always open-ended!
-    pub(crate) fn repay<A>(
+    pub(crate) fn repay(
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
-        _lease: A,
-    ) -> ContractResult<RepayReceipt<Lpn>>
-    where
-        A: Into<Addr>,
-    {
+    ) -> ContractResult<RepayReceipt<Lpn>> {
         self.debug_check_start_due_before(by, "before the 'repay-by' time");
         self.debug_check_before_next_due_end(by);
 
@@ -191,7 +187,7 @@ where
         Ok(receipt)
     }
 
-    pub(crate) fn state(&self, now: Timestamp, _lease: Addr) -> ContractResult<Option<State<Lpn>>> {
+    pub(crate) fn state(&self, now: Timestamp) -> ContractResult<Option<State<Lpn>>> {
         self.debug_check_start_due_before(now, "in the past of");
 
         let loan = if let Some(loan) = self.lpp_loan.as_ref() {
@@ -414,7 +410,7 @@ mod tests {
         error::Result as PlatformResult,
     };
     use profit::stub::{Profit, ProfitBatch};
-    use sdk::cosmwasm_std::{Addr, Timestamp};
+    use sdk::cosmwasm_std::Timestamp;
 
     use crate::{
         api::InterestPaymentSpec,
@@ -517,8 +513,6 @@ mod tests {
 
     #[test]
     fn two_periods_span_repay() {
-        let lease = Addr::unchecked("my lease");
-
         let lease_coin = coin(1000);
         let interest_rate = Percent::from_percent(80);
         let delta_to_fully_due = coin(50);
@@ -537,10 +531,7 @@ mod tests {
             let mut receipt = RepayReceipt::default();
             receipt.pay_previous_margin(repay_prev_margin);
 
-            assert_eq!(
-                loan.repay(repay_prev_margin, payment_at, lease.clone(),),
-                Ok(receipt)
-            );
+            assert_eq!(loan.repay(repay_prev_margin, payment_at,), Ok(receipt));
         }
         {
             let repay_fully_prev_margin_and_some_interest = interest_rate.of(lease_coin);
@@ -550,11 +541,7 @@ mod tests {
                 repay_fully_prev_margin_and_some_interest - delta_to_fully_due,
             );
             assert_eq!(
-                loan.repay(
-                    repay_fully_prev_margin_and_some_interest,
-                    payment_at,
-                    lease.clone(),
-                ),
+                loan.repay(repay_fully_prev_margin_and_some_interest, payment_at,),
                 Ok(receipt)
             );
         }
@@ -566,11 +553,7 @@ mod tests {
                 repay_fully_prev_amount_and_some_curr_margin - delta_to_fully_due,
             );
             assert_eq!(
-                loan.repay(
-                    repay_fully_prev_amount_and_some_curr_margin,
-                    payment_at,
-                    lease.clone(),
-                ),
+                loan.repay(repay_fully_prev_amount_and_some_curr_margin, payment_at,),
                 Ok(receipt)
             );
         }
@@ -584,14 +567,12 @@ mod tests {
             receipt.pay_current_interest(interest_due);
             receipt.pay_principal(lease_coin, lease_coin);
             receipt.keep_change(surplus);
-            assert_eq!(loan.repay(repay_fully, payment_at, lease,), Ok(receipt));
+            assert_eq!(loan.repay(repay_fully, payment_at), Ok(receipt));
         }
     }
 
     #[test]
     fn partial_current_margin_repay() {
-        let addr = "unused_addr";
-
         let lease_amount = 1000;
         let lease_coin = coin(lease_amount);
 
@@ -611,7 +592,7 @@ mod tests {
 
         let mut loan = create_loan(loan);
 
-        let receipt = loan.repay(repay_coin, now, Addr::unchecked(addr)).unwrap();
+        let receipt = loan.repay(repay_coin, now).unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = RepayReceipt::default();
@@ -621,7 +602,7 @@ mod tests {
             receipt
         },);
 
-        let state = loan.state(now, Addr::unchecked(addr)).unwrap().unwrap();
+        let state = loan.state(now).unwrap().unwrap();
 
         assert_eq!(state.previous_margin_interest_due, Coin::default());
 
@@ -630,9 +611,6 @@ mod tests {
 
     #[test]
     fn partial_previous_interest_repay() {
-        let addr = "unused_addr";
-        let addr_obj = Addr::unchecked(addr);
-
         let lease_amount = 1000;
         let lease_coin = coin(lease_amount);
 
@@ -656,25 +634,19 @@ mod tests {
             exp_full_prev_margin.pay_previous_margin(margin_interest);
             assert_eq!(
                 exp_full_prev_margin,
-                loan.repay(margin_interest, repay_at, addr_obj.clone())
-                    .unwrap()
+                loan.repay(margin_interest, repay_at,).unwrap()
             );
         }
 
         {
             let mut exp_receipt = RepayReceipt::default();
             exp_receipt.pay_previous_interest(repay_coin);
-            assert_eq!(
-                exp_receipt,
-                loan.repay(repay_coin, repay_at, addr_obj).unwrap()
-            );
+            assert_eq!(exp_receipt, loan.repay(repay_coin, repay_at,).unwrap());
         }
     }
 
     #[test]
     fn full_previous_partial_current_interest_repay() {
-        let addr = "unused_addr";
-
         let lease_amount = 1000;
         let lease_coin = coin(lease_amount);
 
@@ -696,9 +668,7 @@ mod tests {
         let repay_at = LEASE_START + Duration::YEAR + Duration::from_nanos(1);
         let mut loan = create_loan(loan);
 
-        let receipt = loan
-            .repay(repay_coin, repay_at, Addr::unchecked(addr))
-            .unwrap();
+        let receipt = loan.repay(repay_coin, repay_at).unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = RepayReceipt::default();
@@ -713,8 +683,6 @@ mod tests {
 
     #[test]
     fn partial_principal_repay() {
-        let addr = "unused_addr";
-
         let lease_amount = 1000;
         let lease_coin = coin(lease_amount);
 
@@ -733,9 +701,7 @@ mod tests {
         let repay_at = LEASE_START;
         let mut lease = create_loan(loan);
 
-        let receipt = lease
-            .repay(repay_coin, repay_at, Addr::unchecked(addr))
-            .unwrap();
+        let receipt = lease.repay(repay_coin, repay_at).unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = RepayReceipt::default();
@@ -748,8 +714,6 @@ mod tests {
 
     #[test]
     fn partial_interest_principal_repay() {
-        let addr = "unused_addr";
-
         let lease_amount = 1000;
         let lease_coin = coin(lease_amount);
 
@@ -771,9 +735,7 @@ mod tests {
         let repay_at = LEASE_START + Duration::YEAR + Duration::from_nanos(1);
         let mut loan = create_loan(loan);
 
-        let receipt = loan
-            .repay(repay_coin, repay_at, Addr::unchecked(addr))
-            .unwrap();
+        let receipt = loan.repay(repay_coin, repay_at).unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = RepayReceipt::default();
@@ -793,8 +755,6 @@ mod tests {
 
     #[test]
     fn full_principal_repay() {
-        let addr = "unused_addr";
-
         let lease_amount = 1000;
         let lease_coin = coin(lease_amount);
 
@@ -810,9 +770,7 @@ mod tests {
         let repay_at = LEASE_START;
         let mut lease = create_loan(loan);
 
-        let receipt = lease
-            .repay(lease_coin, repay_at, Addr::unchecked(addr))
-            .unwrap();
+        let receipt = lease.repay(lease_coin, repay_at).unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = RepayReceipt::default();
@@ -878,8 +836,6 @@ mod tests {
     }
 
     fn test_state(period: Duration) {
-        const LEASE_ADDRESS: &str = "";
-
         let principal_due = coin(10000);
 
         let interest_rate = Percent::from_permille(25);
@@ -903,10 +859,7 @@ mod tests {
             loan_resp.annual_interest_rate,
         );
 
-        let res = loan
-            .state(now, Addr::unchecked(LEASE_ADDRESS))
-            .unwrap()
-            .unwrap();
+        let res = loan.state(now).unwrap().unwrap();
 
         assert_eq!(
             res.previous_margin_interest_due, expected_margin_overdue,

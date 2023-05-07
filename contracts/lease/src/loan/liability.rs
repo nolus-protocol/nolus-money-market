@@ -1,7 +1,7 @@
 use finance::{coin::Coin, currency::Currency};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use profit::stub::Profit as ProfitTrait;
-use sdk::cosmwasm_std::{Addr, Timestamp};
+use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     error::{ContractError, ContractResult},
@@ -14,15 +14,8 @@ where
     Lpp: LppLoanTrait<Lpn>,
     Profit: ProfitTrait,
 {
-    pub(crate) fn liability_status<A>(
-        &self,
-        now: Timestamp,
-        lease: A,
-    ) -> ContractResult<LiabilityStatus<Lpn>>
-    where
-        A: Into<Addr>,
-    {
-        self.state(now, lease.into())?
+    pub(crate) fn liability_status(&self, now: Timestamp) -> ContractResult<LiabilityStatus<Lpn>> {
+        self.state(now)?
             .map(|state| {
                 let previous_interest =
                     state.previous_margin_interest_due + state.previous_interest_due;
