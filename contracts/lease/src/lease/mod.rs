@@ -4,11 +4,10 @@ use finance::{
     coin::Coin,
     currency::{self, Currency},
     liability::Liability,
-    price::Price,
 };
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
-use platform::{bank::BankAccount, batch::Batch};
+use platform::batch::Batch;
 use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
@@ -18,16 +17,19 @@ use crate::{error::ContractResult, loan::Loan};
 pub(super) use self::{
     dto::LeaseDTO,
     liquidation::{Cause, Liquidation, Status},
+    paid::Lease as LeasePaid,
     state::State,
 };
 
 mod alarm;
 mod dto;
 mod liquidation;
+mod paid;
 mod repay;
 mod state;
 pub(crate) mod with_lease;
 pub(crate) mod with_lease_deps;
+pub(crate) mod with_lease_paid;
 
 // TODO look into reducing the type parameters to Lpn and Asset only!
 // the others could be provided on demand when certain operation is being performed
@@ -114,16 +116,6 @@ where
         }
     }
 
-    //TODO take this out into a dedicated type `LeasePaid`
-    pub(crate) fn close<B>(self, lease_account: B) -> ContractResult<Batch>
-    where
-        B: BankAccount,
-    {
-        debug_assert!(self.loan.state(Timestamp::from_nanos(u64::MAX))?.is_none());
-
-        self.send_funds_to_customer(lease_account)
-    }
-
     pub(crate) fn state(&self, now: Timestamp) -> ContractResult<State<Asset, Lpn>> {
         self.loan.state(now).map(|loan_state| {
             let loan = loan_state.expect("not paid");
@@ -140,25 +132,6 @@ where
             }
         })
     }
-
-    fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
-        Ok(self.oracle.price_of::<Asset>()?)
-    }
-
-    fn send_funds_to_customer<B>(&self, mut lease_account: B) -> ContractResult<Batch>
-    where
-        B: BankAccount,
-    {
-        let surplus = lease_account.balance::<Lpn>()?;
-
-        if !surplus.is_zero() {
-            lease_account.send(surplus, &self.customer);
-        }
-
-        lease_account.send(self.amount, &self.customer);
-
-        Ok(lease_account.into())
-    }
 }
 
 #[cfg(test)]
@@ -167,26 +140,17 @@ mod tests {
 
     use ::currency::{lease::Atom, lpn::Usdc};
     use finance::{
-        coin::{Coin, WithCoin},
-        currency::{self, Currency, Group},
-        duration::Duration,
-        liability::Liability,
-        percent::Percent,
+        coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
         price::Price,
-        zero::Zero,
     };
     use lpp::{
         msg::LoanResponse,
         stub::{loan::LppLoan, LppBatch, LppRef},
     };
     use oracle::stub::{Oracle, OracleRef};
-    use platform::{
-        bank::{Aggregate, BalancesResult, BankAccountView, BankStub},
-        batch::Batch,
-        error::Result as PlatformResult,
-    };
+    use platform::batch::Batch;
     use profit::stub::{Profit, ProfitBatch, ProfitRef};
-    use sdk::cosmwasm_std::{Addr, BankMsg, Timestamp};
+    use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{api::InterestPaymentSpec, loan::Loan};
 
@@ -209,49 +173,7 @@ mod tests {
             interest_paid: LEASE_START,
         }
     }
-    pub struct MockBankView {
-        balance: Coin<TestCurrency>,
-        balance_surplus: Coin<TestLpn>,
-    }
 
-    impl MockBankView {
-        fn new(amount: Coin<TestCurrency>, amount_surplus: Coin<TestLpn>) -> Self {
-            Self {
-                balance: amount,
-                balance_surplus: amount_surplus,
-            }
-        }
-        fn only_balance(amount: Coin<TestCurrency>) -> Self {
-            Self {
-                balance: amount,
-                balance_surplus: Coin::ZERO,
-            }
-        }
-    }
-
-    impl BankAccountView for MockBankView {
-        fn balance<C>(&self) -> PlatformResult<Coin<C>>
-        where
-            C: Currency,
-        {
-            if currency::equal::<C, TestCurrency>() {
-                Ok(Coin::<C>::new(self.balance.into()))
-            } else if currency::equal::<C, TestLpn>() {
-                Ok(Coin::<C>::new(self.balance_surplus.into()))
-            } else {
-                unreachable!("Expected {}, found {}", TestCurrency::TICKER, C::TICKER);
-            }
-        }
-
-        fn balances<G, Cmd>(&self, _: Cmd) -> BalancesResult<Cmd>
-        where
-            G: Group,
-            Cmd: WithCoin,
-            Cmd::Output: Aggregate,
-        {
-            unimplemented!()
-        }
-    }
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     pub struct LppLoanLocal<Lpn>
     where
@@ -489,44 +411,5 @@ mod tests {
         };
 
         assert_eq!(exp, res);
-    }
-
-    #[test]
-    fn close_no_surplus() {
-        let lease_addr = Addr::unchecked("lease");
-        let lease_amount = 10.into();
-        let oracle_addr = Addr::unchecked(String::new());
-        let profit_addr = Addr::unchecked(String::new());
-        let lease = open_lease(lease_addr, lease_amount, None, oracle_addr, profit_addr);
-        let lease_account = BankStub::new(MockBankView::only_balance(lease_amount));
-        let res = lease.close(lease_account).unwrap();
-        assert_eq!(res, expect_bank_send(Batch::default(), lease_amount));
-    }
-
-    #[test]
-    fn close_with_surplus() {
-        let lease_addr = Addr::unchecked("lease");
-        let lease_amount = 10.into();
-        let surplus_amount = 2.into();
-        let oracle_addr = Addr::unchecked(String::new());
-        let profit_addr = Addr::unchecked(String::new());
-        let lease = open_lease(lease_addr, lease_amount, None, oracle_addr, profit_addr);
-        let lease_account = BankStub::new(MockBankView::new(lease_amount, surplus_amount));
-        let res = lease.close(lease_account).unwrap();
-        assert_eq!(res, {
-            let surplus_sent = expect_bank_send(Batch::default(), surplus_amount);
-            expect_bank_send(surplus_sent, lease_amount)
-        });
-    }
-
-    fn expect_bank_send<C>(mut batch: Batch, amount: Coin<C>) -> Batch
-    where
-        C: Currency,
-    {
-        batch.schedule_execute_no_reply(BankMsg::Send {
-            amount: vec![cosmwasm_std::coin(amount.into(), C::BANK_SYMBOL)],
-            to_address: CUSTOMER.into(),
-        });
-        batch
     }
 }

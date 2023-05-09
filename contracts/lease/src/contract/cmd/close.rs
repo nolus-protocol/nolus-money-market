@@ -1,14 +1,9 @@
-use serde::Serialize;
-
 use finance::currency::Currency;
-use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle::stub::Oracle as OracleTrait;
 use platform::{bank::BankAccount, batch::Batch};
-use profit::stub::Profit as ProfitTrait;
 
 use crate::{
     error::ContractError,
-    lease::{with_lease::WithLease, Lease},
+    lease::{with_lease_paid::WithLeaseTypes, LeaseDTO, LeasePaid},
 };
 
 pub struct Close<Bank> {
@@ -21,7 +16,7 @@ impl<Bank> Close<Bank> {
     }
 }
 
-impl<Bank> WithLease for Close<Bank>
+impl<Bank> WithLeaseTypes for Close<Bank>
 where
     Bank: BankAccount,
 {
@@ -29,17 +24,11 @@ where
 
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, LppLoan, Profit, Oracle>(
-        self,
-        lease: Lease<Lpn, Asset, LppLoan, Profit, Oracle>,
-    ) -> Result<Self::Output, Self::Error>
+    fn exec<Asset, Lpn>(self, dto: LeaseDTO) -> Result<Self::Output, Self::Error>
     where
-        Lpn: Currency + Serialize,
-        LppLoan: LppLoanTrait<Lpn>,
-        Oracle: OracleTrait<Lpn>,
-        Profit: ProfitTrait,
-        Asset: Currency + Serialize,
+        Asset: Currency,
+        Lpn: Currency,
     {
-        lease.close(self.lease_account)
+        LeasePaid::<Asset, Lpn>::from_dto(dto).close(self.lease_account)
     }
 }

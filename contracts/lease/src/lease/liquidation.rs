@@ -5,7 +5,7 @@ use finance::{
     currency::Currency,
     liability::{Liability, Zone},
     percent::Percent,
-    price,
+    price::{self, Price},
     zero::Zero,
 };
 use lpp::stub::loan::LppLoan as LppLoanTrait;
@@ -99,6 +99,10 @@ where
         #[cfg(debug_assertion)]
         debug_assert!(status.amount() <= self.amount());
         Ok(status)
+    }
+
+    fn price_of_lease_currency(&self) -> ContractResult<Price<Asset, Lpn>> {
+        Ok(self.oracle.price_of::<Asset>()?)
     }
 }
 
