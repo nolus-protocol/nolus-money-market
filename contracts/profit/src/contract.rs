@@ -64,7 +64,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn execute(
-    mut deps: DepsMut<'_>,
+    deps: DepsMut<'_>,
     env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
