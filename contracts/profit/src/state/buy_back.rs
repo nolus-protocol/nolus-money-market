@@ -14,6 +14,7 @@ use finance::{
 };
 use oracle::stub::OracleRef;
 use platform::{bank, batch::Batch, message::Response as PlatformResponse};
+use platform::never::Never;
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -48,7 +49,7 @@ impl BuyBack {
 impl SwapTask for BuyBack {
     type OutG = Native;
     type Label = String;
-    type StateResponse = State;
+    type StateResponse = Never;
     type Result = ContractResult<DexResponse<State>>;
 
     fn label(&self) -> Self::Label {
