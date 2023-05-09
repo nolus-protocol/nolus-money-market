@@ -69,7 +69,7 @@ impl SwapTask for BuyBack {
     }
 
     fn out_currency(&self) -> Symbol<'_> {
-        Nls::DEX_SYMBOL
+        Nls::TICKER
     }
 
     fn on_coins<Visitor>(&self, visitor: &mut Visitor) -> Result<IterState, Visitor::Error>
