@@ -23,7 +23,7 @@ add_wasm_messages() {
 
   local id=0
 
-  local -r treasury_init_msg='{}'
+  local -r treasury_init_msg='{"rewards_dispatcher":'"${REWARDS_DISPATCHER_ADDRESS}"'}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "treasury" "$((++id))" \
     "$ADMIN_CONTRACT_ADDRESS" "$treasury_init_tokens"  "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" \
     "$treasury_init_msg"
