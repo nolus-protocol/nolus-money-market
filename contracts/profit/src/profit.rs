@@ -3,7 +3,6 @@ use finance::coin::Coin;
 use platform::{
     bank::BankAccount,
     batch::{Batch, Emit as _, Emitter},
-    error::Error as PlatformError,
 };
 use sdk::cosmwasm_std::{Addr, Env, Storage};
 
@@ -20,7 +19,7 @@ impl Profit {
         mut account: B,
         env: &Env,
         treasury_addr: &Addr,
-    ) -> Result<(Batch, Emitter), PlatformError>
+    ) -> ContractResult<(Batch, Emitter)>
     where
         B: BankAccount,
     {

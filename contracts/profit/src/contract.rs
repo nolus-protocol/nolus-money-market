@@ -100,9 +100,9 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: NeutronSudoMsg) -> ContractResult<
         response,
         next_state,
     } = match msg {
-        NeutronSudoMsg::Response { data, .. } => state
-            .on_response(data, deps.as_ref(), env)
-            .continue_or_ok()?,
+        NeutronSudoMsg::Response { data, .. } => {
+            Result::from(state.on_response(data, deps.as_ref(), env))?
+        }
         NeutronSudoMsg::Error { .. } => state.on_error(deps.as_ref(), env)?,
         NeutronSudoMsg::Timeout { .. } => state.on_timeout(deps.as_ref(), env)?,
         NeutronSudoMsg::OpenAck {
@@ -144,7 +144,7 @@ fn try_time_alarm(deps: DepsMut<'_>, env: Env) -> ContractResult<MessageResponse
     let DexResponse::<State> {
         response,
         next_state,
-    } = state.on_time_alarm(deps.as_ref(), env).continue_or_ok()?;
+    } = Result::from(state.on_time_alarm(deps.as_ref(), env))?;
 
     next_state.store(deps.storage)?;
 
