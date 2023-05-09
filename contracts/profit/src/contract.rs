@@ -99,19 +99,27 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: NeutronSudoMsg) -> ContractResult<
     let DexResponse::<State> {
         response,
         next_state,
-    } = match msg {
+    } = try_handle_neutron_msg(deps.as_ref(), env, msg, state)?;
+
+    next_state.store(deps.storage)?;
+
+    Ok(response::response_only_messages(response))
+}
+
+fn try_handle_neutron_msg(deps: Deps<'_>, env: Env, msg: NeutronSudoMsg, state: State) -> ContractResult<DexResponse<State>> {
+    match msg {
         NeutronSudoMsg::Response { data, .. } => {
-            Result::from(state.on_response(data, deps.as_ref(), env))?
+            Result::from(state.on_response(data, deps, env))
         }
-        NeutronSudoMsg::Error { .. } => state.on_error(deps.as_ref(), env)?,
-        NeutronSudoMsg::Timeout { .. } => state.on_timeout(deps.as_ref(), env)?,
+        NeutronSudoMsg::Error { .. } => state.on_error(deps, env).map_err(Into::into),
+        NeutronSudoMsg::Timeout { .. } => state.on_timeout(deps, env).map_err(Into::into),
         NeutronSudoMsg::OpenAck {
             port_id: connection_id,
             channel_id: local_endpoint,
             counterparty_channel_id: remote_endpoint,
             counterparty_version,
         } if counterparty_version.is_empty() => state.setup_dex(
-            deps.as_ref(),
+            deps,
             env,
             ConnectionParams {
                 connection_id,
@@ -120,22 +128,15 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: NeutronSudoMsg) -> ContractResult<
                     remote_endpoint,
                 },
             },
-        )?,
+        ),
         NeutronSudoMsg::OpenAck {
             counterparty_version,
             ..
-        } => state.on_open_ica(counterparty_version, deps.as_ref(), env)?,
-        NeutronSudoMsg::TxQueryResult { .. } => {
+        } => state.on_open_ica(counterparty_version, deps, env).map_err(Into::into),
+        NeutronSudoMsg::TxQueryResult { .. } | NeutronSudoMsg::KVQueryResult { .. } => {
             unimplemented!()
         }
-        NeutronSudoMsg::KVQueryResult { .. } => {
-            unimplemented!()
-        }
-    };
-
-    next_state.store(deps.storage)?;
-
-    Ok(response::response_only_messages(response))
+    }
 }
 
 fn try_time_alarm(deps: DepsMut<'_>, env: Env) -> ContractResult<MessageResponse> {
