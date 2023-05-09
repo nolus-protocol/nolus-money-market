@@ -13,8 +13,7 @@ use finance::{
     currency::{Currency as _, Symbol},
 };
 use oracle::stub::OracleRef;
-use platform::{bank, batch::Batch, message::Response as PlatformResponse};
-use platform::never::Never;
+use platform::{bank, batch::Batch, message::Response as PlatformResponse, never::Never};
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -76,19 +75,18 @@ impl SwapTask for BuyBack {
     where
         Visitor: CoinVisitor<Result = IterNext>,
     {
-        let mut early_exit: bool = false;
-
-        for coin in &self.coins {
-            if early_exit {
-                return Ok(IterState::Incomplete);
+        TryFind::try_find(&mut self.coins.iter(), |coin: &&CoinDTO<PaymentGroup>| {
+            visitor
+                .visit(coin)
+                .map(|result: IterNext| matches!(result, IterNext::Stop))
+        })
+        .map(|maybe_coin: Option<&CoinDTO<PaymentGroup>>| {
+            if maybe_coin.is_some() {
+                IterState::Complete
+            } else {
+                IterState::Incomplete
             }
-
-            if matches!(visitor.visit(coin)?, IterNext::Stop) {
-                early_exit = true;
-            }
-        }
-
-        Ok(IterState::Complete)
+        })
     }
 
     fn finish(
@@ -131,3 +129,23 @@ impl ConfigManagement for StateLocalOut<BuyBack> {
 impl SetupDexHandler for StateLocalOut<BuyBack> {
     type State = Self;
 }
+
+trait TryFind
+where
+    Self: Iterator,
+{
+    fn try_find<F, E>(&mut self, mut f: F) -> Result<Option<Self::Item>, E>
+    where
+        F: FnMut(&Self::Item) -> Result<bool, E>,
+    {
+        for item in self {
+            if f(&item)? {
+                return Ok(Some(item));
+            }
+        }
+
+        Ok(None)
+    }
+}
+
+impl<I> TryFind for I where I: Iterator + ?Sized {}
