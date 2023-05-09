@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 
 use dex::{ConnectionParams, Handler, Response as DexResponse};
-
 use platform::{
     message::Response as PlatformResponse, state_machine::Response as StateMachineResponse,
 };

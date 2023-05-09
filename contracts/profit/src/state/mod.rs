@@ -4,7 +4,6 @@ use dex::{
     ConnectionParams, ContinueResult, Handler, Response as DexResponse, Result as DexResult,
     StateLocalOut,
 };
-
 use platform::state_machine::{self, Response as StateMachineResponse};
 use sdk::{
     cosmwasm_std::{Binary, Deps, Env, Storage},
