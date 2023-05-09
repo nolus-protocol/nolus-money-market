@@ -36,17 +36,17 @@ impl Idle {
         Self { config, account }
     }
 
-    fn send_nls<B>(&self, env: &Env, account: B) -> Result<Option<(Batch, Emitter)>, DexError>
+    fn send_nls<B>(&self, env: &Env, account: B) -> ContractResult<Option<(Batch, Emitter)>>
     where
         B: BankAccount,
     {
         let balance_nls: Coin<Nls> = account.balance()?;
 
-        Ok(if balance_nls.is_zero() {
-            None
+        if balance_nls.is_zero() {
+            Ok(None)
         } else {
-            Profit::transfer_nls(account, env, self.config.treasury()).map(Some)?
-        })
+            Profit::transfer_nls(account, env, self.config.treasury()).map(Some)
+        }
     }
 
     fn combine_batches(
@@ -60,7 +60,7 @@ impl Idle {
         }
     }
 
-    fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> Result<DexResponse<Self>, DexError> {
+    fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> ContractResult<DexResponse<Self>> {
         let account: BankStub<BankView<'_>> = bank::account(&env.contract.address, &deps.querier);
 
         let balances: Vec<CoinDTO<PaymentGroup>> = account
@@ -76,7 +76,8 @@ impl Idle {
                 .map(|state_batch: Batch| DexResponse::<Self> {
                     response: Self::combine_batches(state_batch, bank_batch),
                     next_state: self.into(),
-                });
+                })
+                .map_err(Into::into);
         }
 
         let state: StartLocalLocalState<BuyBack> = dex::start_local_local(BuyBack::new(
@@ -122,13 +123,10 @@ impl ConfigManagement for Idle {
 
 impl Handler for Idle {
     type Response = State;
-    type SwapResult = DexResponse<State>;
+    type SwapResult = ContractResult<DexResponse<State>>;
 
     fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> DexResult<Self> {
-        match self.on_time_alarm(deps, env) {
-            Ok(response) => DexResult::Finished(response),
-            Err(error) => DexResult::Continue(Err(error)),
-        }
+        DexResult::Finished(self.on_time_alarm(deps, env))
     }
 }
 

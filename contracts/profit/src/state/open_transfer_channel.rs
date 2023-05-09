@@ -24,7 +24,7 @@ impl OpenTransferChannel {
 
 impl Handler for OpenTransferChannel {
     type Response = State;
-    type SwapResult = DexResponse<State>;
+    type SwapResult = ContractResult<DexResponse<State>>;
 }
 
 impl ConfigManagement for OpenTransferChannel {

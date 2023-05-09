@@ -26,7 +26,7 @@ mod open_transfer_channel;
 
 const STATE: Item<'static, State> = Item::new("contract_state");
 
-type IcaConnector = dex::IcaConnector<OpenIca, DexResponse<Idle>>;
+type IcaConnector = dex::IcaConnector<OpenIca, ContractResult<DexResponse<Idle>>>;
 
 pub(crate) trait ConfigManagement
 where
@@ -160,7 +160,7 @@ impl SetupDexHandler for State {
 
 impl Handler for State {
     type Response = State;
-    type SwapResult = DexResponse<State>;
+    type SwapResult = ContractResult<DexResponse<State>>;
 
     fn on_open_ica(
         self,
@@ -187,10 +187,7 @@ impl Handler for State {
             }
             StateEnum::OpenIca(ica) => ica.on_response(data, deps, env).map_into(),
             StateEnum::Idle(idle) => idle.on_response(data, deps, env).map_into(),
-            StateEnum::BuyBack(buy_back) => match buy_back.on_response(data, deps, env) {
-                DexResult::Continue(result) => DexResult::Continue(result.map(state_machine::from)),
-                DexResult::Finished(result) => DexResult::Continue(result),
-            },
+            StateEnum::BuyBack(buy_back) => buy_back.on_response(data, deps, env).map_into(),
         }
     }
 
@@ -221,10 +218,7 @@ impl Handler for State {
             }
             StateEnum::OpenIca(ica) => ica.on_time_alarm(deps, env).map_into(),
             StateEnum::Idle(idle) => idle.on_time_alarm(deps, env).map_into(),
-            StateEnum::BuyBack(buy_back) => match buy_back.on_time_alarm(deps, env) {
-                DexResult::Continue(result) => DexResult::Continue(result.map(state_machine::from)),
-                DexResult::Finished(result) => result.into(),
-            },
+            StateEnum::BuyBack(buy_back) => buy_back.on_time_alarm(deps, env).map_into(),
         }
     }
 }

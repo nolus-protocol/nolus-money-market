@@ -53,7 +53,7 @@ impl SwapTask for BuyBack {
     type OutG = Native;
     type Label = String;
     type StateResponse = State;
-    type Result = Result<DexResponse<State>, DexError>;
+    type Result = ContractResult<DexResponse<State>>;
 
     fn label(&self) -> Self::Label {
         String::from("BuyBack")
