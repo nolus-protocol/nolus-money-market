@@ -111,7 +111,7 @@ where
             &QueryMsg::Quote {
                 downpayment: test::funds::<_, DownpaymentC>(downpayment.into()),
                 lease_asset: LeaseC::TICKER.into(),
-                max_ltv: None,
+                max_ltd: None,
             },
         )
         .unwrap()

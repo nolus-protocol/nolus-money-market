@@ -36,18 +36,18 @@ where
 {
     lease_currency: &'r str,
     downpayment: Coin<D>,
-    max_ltv: Option<Percent>,
+    max_ltd: Option<Percent>,
 }
 
 impl<'r, D> LeaseInitConfig<'r, D>
 where
     D: Currency,
 {
-    pub fn new(lease_currency: &'r str, downpayment: Coin<D>, max_ltv: Option<Percent>) -> Self {
+    pub fn new(lease_currency: &'r str, downpayment: Coin<D>, max_ltd: Option<Percent>) -> Self {
         Self {
             lease_currency,
             downpayment,
-            max_ltv,
+            max_ltd,
         }
     }
 }
@@ -129,7 +129,7 @@ impl LeaseWrapper {
             lease_config.lease_currency,
             addresses,
             config,
-            lease_config.max_ltv,
+            lease_config.max_ltd,
         );
 
         let result = app.instantiate_contract(
@@ -156,13 +156,13 @@ impl LeaseWrapper {
         lease_currency: &str,
         addresses: LeaseWrapperAddresses,
         config: LeaseWrapperConfig,
-        max_ltv: Option<Percent>,
+        max_ltd: Option<Percent>,
     ) -> NewLeaseContract {
         NewLeaseContract {
             form: NewLeaseForm {
                 customer: config.customer,
                 currency: lease_currency.into(),
-                max_ltv,
+                max_ltd,
                 liability: Liability::new(
                     config.liability_init_percent,
                     config.liability_delta_to_healthy_percent,

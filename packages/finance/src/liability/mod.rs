@@ -133,7 +133,7 @@ impl Liability {
     }
 
     /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
-    /// Otherwise, amou//nt_to_liquidate == total_due
+    /// Otherwise, amount_to_liquidate == total_due
     pub fn amount_to_liquidate<P>(&self, lease_amount: P, total_due: P) -> P
     where
         P: Percentable + Copy + Ord + Sub<Output = P> + Zero,
@@ -433,7 +433,7 @@ mod test {
         .init_borrow_amount(downpayment, max_p);
 
         let default_ltd: Percent = Percent::from_ratio(percent.units(), (Percent::HUNDRED - percent).units());
-        let selected_p = max_p.map_or(default_ltd, |max_ltv| max_ltv.min(percent));
+        let selected_p = max_p.map_or(default_ltd, |max_p| max_p.min(percent));
 
         assert_eq!(calculated, Coin::<Currency>::new(exp));
         assert_eq!(selected_p.of(downpayment), calculated);

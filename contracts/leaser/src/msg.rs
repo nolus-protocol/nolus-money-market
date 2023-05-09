@@ -31,7 +31,7 @@ pub enum ExecuteMsg {
     OpenLease {
         currency: SymbolOwned,
         #[serde(default)]
-        max_ltv: Option<Percent>,
+        max_ltd: Option<Percent>,
     },
     MigrateLeases {
         new_code_id: Uint64,
@@ -57,7 +57,7 @@ pub enum QueryMsg {
         downpayment: DownpaymentCoin,
         lease_asset: SymbolOwned,
         #[serde(default)]
-        max_ltv: Option<Percent>,
+        max_ltd: Option<Percent>,
     },
     Leases {
         owner: Addr,

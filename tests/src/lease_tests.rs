@@ -107,12 +107,12 @@ fn calculate_interest(principal: Coin<Lpn>, interest_rate: Percent, duration: u6
 fn open_lease<DownpaymentC>(
     test_case: &mut TestCase<Lpn>,
     downpayment: Coin<DownpaymentC>,
-    max_ltv: Option<Percent>,
+    max_ltd: Option<Percent>,
 ) -> Addr
 where
     DownpaymentC: Currency,
 {
-    try_init_lease(test_case, downpayment, max_ltv);
+    try_init_lease(test_case, downpayment, max_ltd);
 
     let lease = get_lease_address(test_case);
     let leaser = test_case.leaser();
@@ -137,7 +137,7 @@ where
     lease
 }
 
-fn try_init_lease<D>(test_case: &mut TestCase<Lpn>, downpayment: Coin<D>, max_ltv: Option<Percent>)
+fn try_init_lease<D>(test_case: &mut TestCase<Lpn>, downpayment: Coin<D>, max_ltd: Option<Percent>)
 where
     D: Currency,
 {
@@ -148,7 +148,7 @@ where
             test_case.leaser_addr.clone().unwrap(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: LeaseCurrency::TICKER.into(),
-                max_ltv,
+                max_ltd,
             },
             &if downpayment.is_zero() {
                 vec![]
@@ -217,7 +217,7 @@ where
             &QueryMsg::Quote {
                 downpayment: downpayment.into(),
                 lease_asset: LeaseCurrency::TICKER.into(),
-                max_ltv: None,
+                max_ltd: None,
             },
         )
         .unwrap()

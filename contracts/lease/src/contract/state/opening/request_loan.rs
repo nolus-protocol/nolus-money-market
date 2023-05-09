@@ -49,7 +49,7 @@ impl RequestLoan {
             OpenLoanReq::new(
                 &spec.form.liability,
                 info.funds,
-                spec.form.max_ltv,
+                spec.form.max_ltd,
                 oracle.clone(),
                 &deps.querier,
             ),

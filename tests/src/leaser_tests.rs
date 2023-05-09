@@ -94,7 +94,7 @@ fn open_lease_not_in_lease_currency() {
             test_case.leaser_addr.unwrap(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: lease_currency.into(),
-                max_ltv: None,
+                max_ltd: None,
             },
             &[downpayment],
         )
@@ -166,7 +166,7 @@ fn open_multiple_loans() {
                 test_case.leaser_addr.clone().unwrap(),
                 &leaser::msg::ExecuteMsg::OpenLease {
                     currency: LeaseCurrency::TICKER.into(),
-                    max_ltv: None,
+                    max_ltd: None,
                 },
                 &[cwcoin::<Lpn, _>(3)],
             )
@@ -192,7 +192,7 @@ fn open_multiple_loans() {
             test_case.leaser_addr.as_ref().unwrap().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: LeaseCurrency::TICKER.into(),
-                max_ltv: None,
+                max_ltd: None,
             },
             &[cwcoin::<Lpn, _>(30)],
         )
@@ -509,7 +509,7 @@ fn open_loans_lpp_fails() {
             test_case.leaser_addr.as_ref().unwrap().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: LeaseCurrency::TICKER.into(),
-                max_ltv: None,
+                max_ltd: None,
             },
             &[cwcoin::<Lpn, _>(30)],
         )
@@ -590,7 +590,7 @@ where
             leaser_addr,
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: LeaseC::TICKER.into(),
-                max_ltv: None,
+                max_ltd: None,
             },
             &[cwcoin(downpayment)],
         )
