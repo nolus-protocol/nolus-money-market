@@ -273,7 +273,17 @@ where
     }
 
     pub fn init_treasury(&mut self) -> &mut Self {
-        self.treasury_addr = Some(TreasuryWrapper::default().instantiate::<Lpn>(&mut self.app));
+        self.treasury_addr =
+            Some(TreasuryWrapper::new_with_no_dispatcher().instantiate::<Lpn>(&mut self.app));
+
+        self.app.update_block(next_block);
+
+        self
+    }
+
+    pub fn init_treasury_with_dispatcher(&mut self, rewards_dispatcher: Addr) -> &mut Self {
+        self.treasury_addr =
+            Some(TreasuryWrapper::new(rewards_dispatcher).instantiate::<Lpn>(&mut self.app));
 
         self.app.update_block(next_block);
 

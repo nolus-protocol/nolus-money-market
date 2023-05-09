@@ -13,22 +13,39 @@ use crate::common::{ContractWrapper, MockApp};
 
 use super::{cwcoin, mock_query, native_cwcoin, MockQueryMsg, ADMIN};
 
-pub fn treasury_instantiate_msg() -> InstantiateMsg {
-    InstantiateMsg {}
-}
-
 pub struct TreasuryWrapper {
     contract_wrapper: Box<TreasuryContractWrapper>,
+    rewards_dispatcher: Addr,
 }
 
 impl TreasuryWrapper {
+    pub fn new(rewards_dispatcher: Addr) -> Self {
+        Self {
+            contract_wrapper: Box::new(
+                ContractWrapper::new(
+                    treasury::contract::execute,
+                    treasury::contract::instantiate,
+                    mock_query,
+                )
+                .with_sudo(sudo),
+            ),
+            rewards_dispatcher,
+        }
+    }
+
+    pub fn new_with_no_dispatcher() -> Self {
+        Self::new(Addr::unchecked("DEADCODE"))
+    }
+
     #[track_caller]
     pub fn instantiate<Lpn>(self, app: &mut MockApp) -> Addr
     where
         Lpn: Currency,
     {
         let code_id = app.store_code(self.contract_wrapper);
-        let msg = treasury_instantiate_msg();
+        let msg = InstantiateMsg {
+            rewards_dispatcher: self.rewards_dispatcher,
+        };
 
         app.instantiate_contract(
             code_id,
@@ -39,21 +56,6 @@ impl TreasuryWrapper {
             None,
         )
         .unwrap()
-    }
-}
-
-impl Default for TreasuryWrapper {
-    fn default() -> Self {
-        let contract = ContractWrapper::new(
-            treasury::contract::execute,
-            treasury::contract::instantiate,
-            mock_query,
-        )
-        .with_sudo(sudo);
-
-        Self {
-            contract_wrapper: Box::new(contract),
-        }
     }
 }
 

@@ -18,11 +18,10 @@ use lpp::{
     state::Config,
 };
 use platform::{bank, coin_legacy};
-use sdk::testing::{CustomMessageSender, WrappedCustomMessageReceiver};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Event, Timestamp},
     cw_multi_test::{AppResponse, Executor},
-    testing::new_custom_msg_queue,
+    testing::{new_custom_msg_queue, CustomMessageSender, WrappedCustomMessageReceiver},
 };
 
 use crate::common::{
@@ -237,7 +236,7 @@ fn deposit_and_withdraw() {
 
     message_receiver.assert_empty();
 
-    let treasury = TreasuryWrapper::default().instantiate::<Lpn>(&mut app);
+    let treasury = TreasuryWrapper::new_with_no_dispatcher().instantiate::<Lpn>(&mut app);
 
     message_receiver.assert_empty();
 
@@ -567,7 +566,7 @@ fn loan_open_and_repay() {
 
     message_receiver.assert_empty();
 
-    let treasury = TreasuryWrapper::default().instantiate::<Lpn>(&mut app);
+    let treasury = TreasuryWrapper::new_with_no_dispatcher().instantiate::<Lpn>(&mut app);
 
     message_receiver.assert_empty();
 
@@ -923,7 +922,7 @@ fn compare_lpp_states() {
 
     message_receiver.assert_empty();
 
-    let treasury = TreasuryWrapper::default().instantiate::<Lpn>(&mut app);
+    let treasury = TreasuryWrapper::new_with_no_dispatcher().instantiate::<Lpn>(&mut app);
 
     message_receiver.assert_empty();
 

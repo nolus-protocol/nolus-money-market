@@ -37,8 +37,13 @@ fn on_alarm_zero_reward() {
             .with_reply(oracle::contract::reply)
             .with_sudo(oracle::contract::sudo),
         ))
-        .init_treasury()
+        .init_treasury_with_dispatcher(Addr::unchecked("contract4"))
         .init_dispatcher();
+
+    assert_eq!(
+        test_case.dispatcher_addr.as_ref().unwrap().as_str(),
+        "contract4"
+    );
 
     test_case.send_funds(
         &test_case.timealarms.clone().unwrap(),
@@ -332,10 +337,11 @@ fn new_test_case() -> TestCase<Lpn> {
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
         )
-        .init_treasury()
+        .init_treasury_with_dispatcher(Addr::unchecked("contract4"))
         .init_timealarms()
         .init_oracle(None)
         .init_dispatcher();
+
     test_case
 }
 
