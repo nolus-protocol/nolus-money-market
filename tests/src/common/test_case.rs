@@ -314,10 +314,10 @@ where
             .wasm_sudo(
                 profit_addr.clone(),
                 &NeutronSudoMsg::OpenAck {
-                    port_id: "transfer".into(),
+                    port_id: CONNECTION_ID.into(),
                     channel_id: "channel-1".into(),
                     counterparty_channel_id: "channel-1".into(),
-                    counterparty_version: "1".into(),
+                    counterparty_version: String::new(),
                 },
             )
             .unwrap();
