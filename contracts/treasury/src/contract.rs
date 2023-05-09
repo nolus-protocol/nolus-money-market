@@ -3,8 +3,8 @@ use currency::native::Nls;
 use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount},
-    batch::Batch,
-    response::{self},
+    message::Response as PlatformResponse,
+    response,
 };
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
@@ -28,9 +28,11 @@ pub fn instantiate(
     deps: DepsMut<'_>,
     _env: Env,
     _info: MessageInfo,
-    _msg: InstantiateMsg,
+    msg: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
     versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
+
+    try_configure_reward_dispatcher(deps.storage, msg.rewards_dispatcher)?;
 
     Ok(response::empty_response())
 }
@@ -48,14 +50,15 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
-    let sender = info.sender;
     match msg {
         ExecuteMsg::SendRewards { amount } => {
             let mut bank_account = bank::account(&env.contract.address, &deps.querier);
 
-            try_send_rewards(deps.storage, sender, amount, &mut bank_account)?;
-            let batch: Batch = bank_account.into();
-            Ok(response::response_only_messages(batch))
+            try_send_rewards(deps.storage, info.sender, amount, &mut bank_account)?;
+
+            Ok(response::response_only_messages(
+                PlatformResponse::messages_only(bank_account.into()),
+            ))
         }
     }
 }
@@ -66,22 +69,23 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
         SudoMsg::ConfigureRewardTransfer { rewards_dispatcher } => {
             platform::contract::validate_addr(&deps.querier, &rewards_dispatcher)?;
 
-            try_configure_reward_transfer(deps.storage, rewards_dispatcher)
+            try_configure_reward_dispatcher(deps.storage, rewards_dispatcher)?;
+
+            Ok(response::empty_response())
         }
     }
 }
 
-fn try_configure_reward_transfer(
+fn try_configure_reward_dispatcher(
     storage: &mut dyn Storage,
     rewards_dispatcher: Addr,
-) -> ContractResult<CwResponse> {
+) -> ContractResult<()> {
     SingleUserAccess::new(
         crate::access_control::REWARDS_DISPATCHER_NAMESPACE,
         rewards_dispatcher,
     )
-    .store(storage)?;
-
-    Ok(response::empty_response())
+    .store(storage)
+    .map_err(Into::into)
 }
 
 fn try_send_rewards<B>(
