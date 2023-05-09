@@ -5,19 +5,15 @@ use currency::{
     payment::PaymentGroup,
 };
 use dex::{
-    Account, CoinVisitor, Enterable, Error as DexError, IterNext, IterState,
-    Response as DexResponse, StateLocalOut, SwapTask,
+    Account, CoinVisitor, Enterable, IterNext, IterState, Response as DexResponse, StateLocalOut,
+    SwapTask,
 };
 use finance::{
     coin::CoinDTO,
     currency::{Currency as _, Symbol},
 };
 use oracle::stub::OracleRef;
-use platform::{
-    bank::{self},
-    batch::Batch,
-    message::Response as PlatformResponse,
-};
+use platform::{bank, batch::Batch, message::Response as PlatformResponse};
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 

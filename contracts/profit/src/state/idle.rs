@@ -12,7 +12,6 @@ use finance::{
     currency::{Currency, Group},
     duration::Duration,
 };
-
 use platform::{
     bank::{self, BankAccount, BankAccountView, BankStub, BankView},
     batch::{Batch, Emitter},
