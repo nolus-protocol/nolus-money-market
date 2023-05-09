@@ -14,7 +14,7 @@ use finance::{
 };
 use platform::{
     bank::{self, BankAccount, BankAccountView, BankStub, BankView},
-    batch::{Batch, Emitter},
+    batch::Batch,
     message::Response as PlatformResponse,
     never::{self, Never},
 };
@@ -35,28 +35,27 @@ impl Idle {
         Self { config, account }
     }
 
-    fn send_nls<B>(&self, env: &Env, account: B) -> ContractResult<Option<(Batch, Emitter)>>
+    fn send_nls<B>(
+        &self,
+        env: &Env,
+        querier: &QuerierWrapper<'_>,
+        account: B,
+    ) -> ContractResult<PlatformResponse>
     where
         B: BankAccount,
     {
+        let state_batch = self.enter(env.block.time, querier)?;
+
         let balance_nls: Coin<Nls> = account.balance()?;
 
-        if balance_nls.is_zero() {
-            Ok(None)
-        } else {
-            Profit::transfer_nls(account, env, self.config.treasury()).map(Some)
-        }
-    }
-
-    fn combine_batches(
-        state_batch: Batch,
-        bank_batch: Option<(Batch, Emitter)>,
-    ) -> PlatformResponse {
-        if let Some((bank_batch, bank_emitter)) = bank_batch {
-            PlatformResponse::messages_with_events(state_batch.merge(bank_batch), bank_emitter)
-        } else {
+        Ok(if balance_nls.is_zero() {
             PlatformResponse::messages_only(state_batch)
-        }
+        } else {
+            let (bank_batch, bank_emitter) =
+                Profit::transfer_nls(account, env, self.config.treasury())?;
+
+            PlatformResponse::messages_with_events(state_batch.merge(bank_batch), bank_emitter)
+        })
     }
 
     fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> ContractResult<DexResponse<Self>> {
@@ -67,18 +66,26 @@ impl Idle {
             .map(never::safe_unwrap)
             .unwrap_or_default();
 
-        let bank_batch: Option<(Batch, Emitter)> = self.send_nls(&env, account)?;
-
         if balances.is_empty() {
-            return self
-                .enter(env.block.time, &deps.querier)
-                .map(|state_batch: Batch| DexResponse::<Self> {
-                    response: Self::combine_batches(state_batch, bank_batch),
-                    next_state: self.into(),
-                })
-                .map_err(Into::into);
+            self.send_nls(&env, &deps.querier, account)
+                .map(|response: PlatformResponse| (self.into(), response))
+        } else {
+            self.enter_buy_back(&deps, env, balances)
         }
+        .map(
+            |(next_state, response): (State, PlatformResponse)| DexResponse::<Self> {
+                response,
+                next_state,
+            },
+        )
+    }
 
+    fn enter_buy_back(
+        self,
+        deps: &Deps,
+        env: Env,
+        balances: Vec<CoinDTO<PaymentGroup>>,
+    ) -> ContractResult<(State, PlatformResponse)> {
         let state: StartLocalLocalState<BuyBack> = dex::start_local_local(BuyBack::new(
             env.contract.address,
             self.config,
@@ -86,12 +93,15 @@ impl Idle {
             balances,
         ));
 
-        let state_batch: Batch = state.enter(env.block.time, &deps.querier)?;
-
-        Ok(DexResponse::<Self> {
-            response: Self::combine_batches(state_batch, bank_batch),
-            next_state: State(StateEnum::BuyBack(state.into())),
-        })
+        state
+            .enter(env.block.time, &deps.querier)
+            .map(|batch: Batch| {
+                (
+                    State(StateEnum::BuyBack(state.into())),
+                    PlatformResponse::messages_only(batch),
+                )
+            })
+            .map_err(Into::into)
     }
 }
 
