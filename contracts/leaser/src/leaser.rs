@@ -39,7 +39,7 @@ impl<'a> Leaser<'a> {
         &self,
         downpayment: DownpaymentCoin,
         lease_asset: SymbolOwned,
-        max_ltv: Option<Percent>,
+        max_ltd: Option<Percent>,
     ) -> Result<QuoteResponse, ContractError> {
         let config = Config::load(self.deps.storage)?;
 
@@ -55,7 +55,7 @@ impl<'a> Leaser<'a> {
                 oracle,
                 config.liability,
                 config.lease_interest_rate_margin,
-                max_ltv,
+                max_ltd,
             ),
             &self.deps.querier,
         )?;

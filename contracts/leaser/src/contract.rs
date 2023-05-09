@@ -58,13 +58,13 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<Response> {
     match msg {
-        ExecuteMsg::OpenLease { currency, max_ltv } => Borrow::with(
+        ExecuteMsg::OpenLease { currency, max_ltd } => Borrow::with(
             deps,
             info.funds,
             info.sender,
             env.contract.address,
             currency,
-            max_ltv,
+            max_ltd,
         ),
         ExecuteMsg::MigrateLeases { new_code_id } => {
             SingleUserAccess::check_owner_access(deps.storage, &info.sender)
@@ -99,8 +99,8 @@ pub fn query(deps: Deps<'_>, _env: Env, msg: QueryMsg) -> ContractResult<Binary>
         QueryMsg::Quote {
             downpayment,
             lease_asset,
-            max_ltv,
-        } => to_binary(&Leaser::new(deps).quote(downpayment, lease_asset, max_ltv)?),
+            max_ltd,
+        } => to_binary(&Leaser::new(deps).quote(downpayment, lease_asset, max_ltd)?),
         QueryMsg::Leases { owner } => to_binary(&Leaser::new(deps).customer_leases(owner)?),
     }
     .map_err(Into::into)

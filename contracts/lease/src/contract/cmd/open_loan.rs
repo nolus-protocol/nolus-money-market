@@ -22,7 +22,7 @@ use crate::{
 pub struct OpenLoanReq<'a> {
     liability: &'a Liability,
     funds_in: Vec<CwCoin>,
-    max_ltv: Option<Percent>,
+    max_ltd: Option<Percent>,
     oracle: OracleRef,
     querier: &'a QuerierWrapper<'a>,
 }
@@ -31,14 +31,14 @@ impl<'a> OpenLoanReq<'a> {
     pub fn new(
         liability: &'a Liability,
         funds_in: Vec<CwCoin>,
-        max_ltv: Option<Percent>,
+        max_ltd: Option<Percent>,
         oracle: OracleRef,
         querier: &'a QuerierWrapper<'a>,
     ) -> Self {
         Self {
             liability,
             funds_in,
-            max_ltv,
+            max_ltd,
             oracle,
             querier,
         }
@@ -71,7 +71,7 @@ impl<'a> WithLppLender for OpenLoanReq<'a> {
 
         let borrow_lpn = self
             .liability
-            .init_borrow_amount(downpayment_lpn, self.max_ltv);
+            .init_borrow_amount(downpayment_lpn, self.max_ltd);
 
         lpp.open_loan_req(borrow_lpn)?;
 

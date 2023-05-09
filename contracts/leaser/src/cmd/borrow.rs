@@ -19,7 +19,7 @@ impl Borrow {
         customer: Addr,
         admin: Addr,
         currency: SymbolOwned,
-        max_ltv: Option<Percent>,
+        max_ltd: Option<Percent>,
     ) -> Result<MessageResponse, ContractError> {
         let config = Config::load(deps.storage)?;
         let instance_reply_id = Leases::next(deps.storage, customer.clone())?;
@@ -27,7 +27,7 @@ impl Borrow {
         let mut batch = Batch::default();
         batch.schedule_instantiate_wasm_on_success_reply(
             config.lease_code_id,
-            Self::open_lease_msg(customer, config, currency, max_ltv)?,
+            Self::open_lease_msg(customer, config, currency, max_ltd)?,
             Some(amount),
             "lease",
             Some(admin), // allows lease migrations from this contract
@@ -40,7 +40,7 @@ impl Borrow {
         customer: Addr,
         config: Config,
         currency: SymbolOwned,
-        max_ltv: Option<Percent>,
+        max_ltd: Option<Percent>,
     ) -> ContractResult<NewLeaseContract> {
         config
             .dex
@@ -48,7 +48,7 @@ impl Borrow {
                 form: NewLeaseForm {
                     customer,
                     currency,
-                    max_ltv,
+                    max_ltd,
                     liability: config.liability,
                     loan: LoanForm {
                         annual_margin_interest: config.lease_interest_rate_margin,

@@ -213,7 +213,7 @@ fn test_no_dex_setup() {
 
     let msg = ExecuteMsg::OpenLease {
         currency: DENOM.to_string(),
-        max_ltv: None,
+        max_ltd: None,
     };
 
     let res = execute(deps.as_mut(), mock_env(), customer(), msg);
@@ -232,7 +232,7 @@ fn test_setup_dex_again() {
     assert_eq!(res, Err(ContractError::DEXConnectivityAlreadySetup {}));
 }
 
-fn open_lease_with(max_ltv: Option<Percent>) {
+fn open_lease_with(max_ltd: Option<Percent>) {
     let mut deps = mock_deps_with_contracts([LPP_ADDR, TIMEALARMS_ADDR, PROFIT_ADDR, ORACLE_ADDR]);
 
     setup_test_case(deps.as_mut());
@@ -242,14 +242,14 @@ fn open_lease_with(max_ltv: Option<Percent>) {
 
     let msg = ExecuteMsg::OpenLease {
         currency: DENOM.to_string(),
-        max_ltv,
+        max_ltd,
     };
     let info = customer();
     let env = mock_env();
     let admin = env.contract.address.clone();
     let res = execute(deps.as_mut(), env, info.clone(), msg).unwrap();
 
-    let msg = Borrow::open_lease_msg(info.sender, config, DENOM.to_string(), max_ltv).unwrap();
+    let msg = Borrow::open_lease_msg(info.sender, config, DENOM.to_string(), max_ltd).unwrap();
     assert_eq!(
         res.messages,
         vec![SubMsg::reply_on_success(
@@ -271,7 +271,7 @@ fn test_open_lease() {
 }
 
 #[test]
-fn test_open_lease_with_max_ltv() {
+fn test_open_lease_with_max_ltd() {
     open_lease_with(None);
     open_lease_with(Some(Percent::from_percent(5)));
 }
