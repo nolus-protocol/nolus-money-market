@@ -106,11 +106,14 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: NeutronSudoMsg) -> ContractResult<
     Ok(response::response_only_messages(response))
 }
 
-fn try_handle_neutron_msg(deps: Deps<'_>, env: Env, msg: NeutronSudoMsg, state: State) -> ContractResult<DexResponse<State>> {
+fn try_handle_neutron_msg(
+    deps: Deps<'_>,
+    env: Env,
+    msg: NeutronSudoMsg,
+    state: State,
+) -> ContractResult<DexResponse<State>> {
     match msg {
-        NeutronSudoMsg::Response { data, .. } => {
-            Result::from(state.on_response(data, deps, env))
-        }
+        NeutronSudoMsg::Response { data, .. } => Result::from(state.on_response(data, deps, env)),
         NeutronSudoMsg::Error { .. } => state.on_error(deps, env).map_err(Into::into),
         NeutronSudoMsg::Timeout { .. } => state.on_timeout(deps, env).map_err(Into::into),
         NeutronSudoMsg::OpenAck {
@@ -132,7 +135,9 @@ fn try_handle_neutron_msg(deps: Deps<'_>, env: Env, msg: NeutronSudoMsg, state: 
         NeutronSudoMsg::OpenAck {
             counterparty_version,
             ..
-        } => state.on_open_ica(counterparty_version, deps, env).map_err(Into::into),
+        } => state
+            .on_open_ica(counterparty_version, deps, env)
+            .map_err(Into::into),
         NeutronSudoMsg::TxQueryResult { .. } | NeutronSudoMsg::KVQueryResult { .. } => {
             unimplemented!()
         }
