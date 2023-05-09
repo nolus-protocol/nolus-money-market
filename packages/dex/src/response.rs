@@ -83,18 +83,6 @@ where
     }
 }
 
-impl<H> Result<H>
-where
-    H: Handler<SwapResult = Response<H>>,
-{
-    pub fn continue_or_ok(self) -> StdResult<Response<H>, Error> {
-        match self {
-            Result::Continue(cont_res) => cont_res,
-            Result::Finished(finish_res) => Ok(finish_res),
-        }
-    }
-}
-
 impl<H, Err> From<Result<H>> for StdResult<Response<H>, Err>
 where
     H: Handler<SwapResult = Self>,
