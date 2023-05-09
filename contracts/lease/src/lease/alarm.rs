@@ -152,7 +152,7 @@ mod tests {
         let lease = lease::tests::open_lease(
             lease_addr,
             asset,
-            Some(loan()),
+            loan(),
             Addr::unchecked(ORACLE_ADDR),
             Addr::unchecked(String::new()),
         );
@@ -200,7 +200,7 @@ mod tests {
         let lease = open_lease(
             lease_addr,
             lease_amount,
-            Some(loan()),
+            loan(),
             Addr::unchecked(ORACLE_ADDR),
             Addr::unchecked(String::new()),
         );
@@ -247,7 +247,7 @@ mod tests {
         let lease = open_lease(
             lease_addr,
             lease_amount,
-            Some(loan()),
+            loan(),
             oracle_addr.clone(),
             Addr::unchecked(String::new()),
         );
@@ -303,7 +303,7 @@ mod tests {
         let lease = open_lease(
             lease_addr,
             lease_amount,
-            Some(loan),
+            loan,
             Addr::unchecked(ORACLE_ADDR),
             Addr::unchecked(String::new()),
         );

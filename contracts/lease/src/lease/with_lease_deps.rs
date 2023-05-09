@@ -19,7 +19,7 @@ pub trait WithLeaseDeps {
 
     fn exec<Lpn, Asset, LppLoan, Profit, Oracle>(
         self,
-        lpp_loan: Option<LppLoan>,
+        lpp_loan: LppLoan,
         profit: Profit,
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
@@ -116,7 +116,7 @@ where
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
-    fn exec<Lpn, LppLoan>(self, lpp: Option<LppLoan>) -> Result<Self::Output, Self::Error>
+    fn exec<Lpn, LppLoan>(self, lpp: LppLoan) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         LppLoan: LppLoanTrait<Lpn>,
@@ -136,7 +136,7 @@ struct FactoryStage3<'r, Cmd, Asset, Lpn, LppLoan> {
     cmd: Cmd,
     asset: PhantomData<Asset>,
     lpn: PhantomData<Lpn>,
-    lpp_loan: Option<LppLoan>,
+    lpp_loan: LppLoan,
     oracle: OracleRef,
     querier: &'r QuerierWrapper<'r>,
 }
@@ -173,7 +173,7 @@ struct FactoryStage4<Cmd, Asset, Lpn, LppLoan, Profit> {
     cmd: Cmd,
     asset: PhantomData<Asset>,
     lpn: PhantomData<Lpn>,
-    lpp_loan: Option<LppLoan>,
+    lpp_loan: LppLoan,
     profit: Profit,
 }
 

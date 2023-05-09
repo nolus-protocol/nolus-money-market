@@ -76,7 +76,7 @@ where
 
     fn exec<Lpn, Asset, LppLoan, Profit, Oracle>(
         self,
-        lpp_loan: Option<LppLoan>,
+        lpp_loan: LppLoan,
         profit: Profit,
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>

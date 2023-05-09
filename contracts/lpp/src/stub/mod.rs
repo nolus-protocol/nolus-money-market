@@ -11,7 +11,7 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
 use crate::{
     error::{ContractError, Result},
-    msg::{LppBalanceResponse, QueryLoanResponse, QueryMsg},
+    msg::{LoanResponse, LppBalanceResponse, QueryLoanResponse, QueryMsg},
     state::Config,
 };
 
@@ -204,7 +204,7 @@ impl LppRef {
         self,
         lease: impl Into<Addr>,
         querier: &QuerierWrapper<'_>,
-    ) -> Result<Option<LppLoanImpl<Lpn>>>
+    ) -> Result<LppLoanImpl<Lpn>>
     where
         Lpn: Currency + DeserializeOwned,
     {
@@ -215,10 +215,9 @@ impl LppRef {
                     lease_addr: lease.into(),
                 },
             )
-            .map(|may_loan: QueryLoanResponse<Lpn>| {
-                may_loan.map(|loan| LppLoanImpl::new(self, loan))
-            })
             .map_err(Into::into)
+            .and_then(|may_loan: QueryLoanResponse<Lpn>| may_loan.ok_or(ContractError::NoLoan {}))
+            .map(|loan: LoanResponse<Lpn>| LppLoanImpl::new(self, loan))
     }
 
     fn into_lender<'a, C>(self, querier: &'a QuerierWrapper<'a>) -> LppLenderStub<'a, C>

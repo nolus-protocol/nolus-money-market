@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
+use super::LeaseDTO;
 use ::currency::{lease::LeaseGroup, lpn::Lpns};
 use finance::currency::{self, AnyVisitor, AnyVisitorResult, Currency};
-use super::LeaseDTO;
 
 pub trait WithLeaseTypes {
     type Output;
@@ -40,7 +40,7 @@ where
 
     fn on<Asset>(self) -> AnyVisitorResult<Self>
     where
-        Asset: Currency ,
+        Asset: Currency,
     {
         let lpn = self.lease_dto.loan.lpp().currency().to_owned();
         currency::visit_any_on_ticker::<Lpns, _>(

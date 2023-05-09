@@ -82,7 +82,7 @@ where
 
     pub(super) fn from_dto(
         dto: LeaseDTO,
-        lpp_loan: Option<LppLoan>,
+        lpp_loan: LppLoan,
         oracle: Oracle,
         profit: Profit,
     ) -> Self {
@@ -306,7 +306,7 @@ mod tests {
     pub fn create_lease<Lpn, AssetC, L, O, P>(
         addr: Addr,
         amount: Coin<AssetC>,
-        lpp: Option<L>,
+        loan: L,
         oracle: O,
         profit: P,
     ) -> Lease<Lpn, AssetC, L, P, O>
@@ -319,7 +319,7 @@ mod tests {
     {
         let loan = Loan::new(
             LEASE_START,
-            lpp,
+            loan,
             MARGIN_INTEREST_RATE,
             InterestPaymentSpec::new(Duration::from_days(100), Duration::from_days(10)),
             profit,
@@ -345,15 +345,20 @@ mod tests {
     pub fn open_lease(
         lease_addr: Addr,
         amount: Coin<TestCurrency>,
-        loan_response: Option<LoanResponse<TestLpn>>,
+        loan: LoanResponse<TestLpn>,
         oracle_addr: Addr,
         profit_addr: Addr,
     ) -> Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, ProfitLocalStub, OracleLocalStub> {
-        let lpp = loan_response.map(Into::into);
         let oracle: OracleLocalStub = oracle_addr.into();
         let profit: ProfitLocalStub = profit_addr.into();
 
-        create_lease::<TestLpn, TestCurrency, _, _, _>(lease_addr, amount, lpp, oracle, profit)
+        create_lease::<TestLpn, TestCurrency, _, _, _>(
+            lease_addr,
+            amount,
+            loan.into(),
+            oracle,
+            profit,
+        )
     }
 
     pub fn request_state(
@@ -392,7 +397,7 @@ mod tests {
         let lease = open_lease(
             lease_addr,
             lease_amount,
-            Some(loan.clone()),
+            loan.clone(),
             Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );

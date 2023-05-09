@@ -69,7 +69,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
 
     fn exec<Lpn, Asset, LppLoan, Profit, Oracle>(
         self,
-        lpp_loan: Option<LppLoan>,
+        lpp_loan: LppLoan,
         profit: Profit,
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
@@ -80,7 +80,6 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         Oracle: OracleTrait<Lpn>,
         Profit: ProfitTrait,
     {
-        debug_assert!(lpp_loan.is_some());
         let liability = self.form.liability;
 
         let loan = Loan::new(

@@ -28,10 +28,10 @@ pub trait WithLppLoan {
     type Output;
     type Error;
 
-    fn exec<Lpn, L>(self, may_lpp: Option<L>) -> StdResult<Self::Output, Self::Error>
+    fn exec<Lpn, Loan>(self, loan: Loan) -> StdResult<Self::Output, Self::Error>
     where
-        L: LppLoan<Lpn>,
-        Lpn: Currency + Serialize;
+        Lpn: Currency + Serialize,
+        Loan: LppLoan<Lpn>;
 }
 
 pub(super) struct LppLoanImpl<Lpn>
