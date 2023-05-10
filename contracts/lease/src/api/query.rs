@@ -39,6 +39,7 @@ pub enum StateResponse {
         in_progress: Option<paid::ClosingTrx>,
     },
     Closed(),
+    Liquidated(),
 }
 
 pub mod opening {

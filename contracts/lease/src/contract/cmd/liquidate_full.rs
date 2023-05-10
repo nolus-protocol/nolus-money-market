@@ -1,46 +1,45 @@
 use finance::currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
-use oracle::stub::{Oracle as OracleTrait, OracleRef};
+use oracle::stub::Oracle as OracleTrait;
+use platform::batch::Batch;
 use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 use serde::Serialize;
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{LeaseCoin, LpnCoin},
+    api::LpnCoin,
     error::ContractError,
-    lease::{with_lease::WithLease, IntoDTOResult, Lease},
+    lease::{with_lease::WithLease, IntoDTOResult, Lease, LeaseDTO},
 };
 
-use super::{liquidation_status, RepayResult};
+use super::ReceiptDTO;
 
-pub(crate) type LiquidateResult = RepayResult;
+pub(crate) struct LiquidateResult {
+    pub lease: LeaseDTO,
+    pub receipt: ReceiptDTO,
+    pub messages: Batch,
+}
 
 pub(crate) struct Liquidate {
-    asset: LeaseCoin,
     payment: LpnCoin,
     now: Timestamp,
     profit: ProfitRef,
     time_alarms: TimeAlarmsRef,
-    price_alarms: OracleRef,
 }
 
 impl Liquidate {
     pub fn new(
-        asset: LeaseCoin,
         payment: LpnCoin,
         now: Timestamp,
         profit: ProfitRef,
         time_alarms: TimeAlarmsRef,
-        price_alarms: OracleRef,
     ) -> Self {
         Self {
-            asset,
             payment,
             now,
             profit,
             time_alarms,
-            price_alarms,
         }
     }
 }
@@ -61,19 +60,11 @@ impl WithLease for Liquidate {
         Asset: Currency + Serialize,
     {
         let mut profit = self.profit.as_stub();
-        let receipt = lease.liquidate_partial(
-            self.asset.try_into()?,
-            self.payment.try_into()?,
-            self.now,
-            &mut profit,
-        )?;
+        let receipt = lease.repay(self.payment.try_into()?, self.now, &mut profit)?;
 
-        let liquidation = liquidation_status::status_and_schedule(
-            &lease,
-            self.now,
-            &self.time_alarms,
-            &self.price_alarms,
-        )?;
+        if !receipt.close() {
+            return Err(ContractError::InsufficientLiquidation()); //issue #92
+        }
 
         let IntoDTOResult {
             lease,
@@ -84,7 +75,6 @@ impl WithLease for Liquidate {
             lease,
             receipt: receipt.into(),
             messages,
-            liquidation,
         })
     }
 }

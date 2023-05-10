@@ -52,6 +52,9 @@ pub enum ContractError {
     #[error("[Lease] Insufficient payment amount {0}")]
     InsufficientPayment(PaymentCoin),
 
+    #[error("[Lease] Insufficient liquidation amount")]
+    InsufficientLiquidation(),
+
     #[error("[Lease] The underlying loan is closed")]
     LoanClosed(),
 

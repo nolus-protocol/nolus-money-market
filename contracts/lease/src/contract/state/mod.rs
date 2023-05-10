@@ -23,6 +23,7 @@ mod closed;
 mod dex;
 mod handler;
 mod lease;
+mod liquidated;
 mod opened;
 mod opening;
 mod paid;
@@ -47,6 +48,8 @@ type ClosingTransferIn = DexState<paid::transfer_in::DexState>;
 
 type Closed = LeaseState<closed::Closed>;
 
+type Liquidated = LeaseState<liquidated::Liquidated>;
+
 type SwapResult = ContractResult<Response>;
 
 #[enum_dispatch(Handler, Contract)]
@@ -61,6 +64,7 @@ pub(crate) enum State {
     PaidActive,
     ClosingTransferIn,
     Closed,
+    Liquidated,
 }
 
 const STATE_DB_ITEM: Item<'static, State> = Item::new("state");
@@ -96,8 +100,8 @@ where
 
 mod impl_from {
     use super::{
-        BuyAsset, BuyLpn, Closed, ClosingTransferIn, OpenedActive, PaidActive, RequestLoan,
-        SellAsset, State,
+        BuyAsset, BuyLpn, Closed, ClosingTransferIn, Liquidated, OpenedActive, PaidActive,
+        RequestLoan, SellAsset, State,
     };
 
     impl From<super::opening::request_loan::RequestLoan> for State {
@@ -145,6 +149,12 @@ mod impl_from {
     impl From<super::closed::Closed> for State {
         fn from(value: super::closed::Closed) -> Self {
             Closed::new(value).into()
+        }
+    }
+
+    impl From<super::liquidated::Liquidated> for State {
+        fn from(value: super::liquidated::Liquidated) -> Self {
+            Liquidated::new(value).into()
         }
     }
 }
@@ -196,6 +206,9 @@ mod impl_dex_handler {
                 State::Closed(inner) => {
                     Handler::on_open_ica(inner, counterparty_version, deps, env)
                 }
+                State::Liquidated(inner) => {
+                    Handler::on_open_ica(inner, counterparty_version, deps, env)
+                }
             }
         }
 
@@ -218,6 +231,7 @@ mod impl_dex_handler {
                     Handler::on_response(inner, data, deps, env).map_into()
                 }
                 State::Closed(inner) => Handler::on_response(inner, data, deps, env).map_into(),
+                State::Liquidated(inner) => Handler::on_response(inner, data, deps, env).map_into(),
             }
         }
 
@@ -232,6 +246,7 @@ mod impl_dex_handler {
                 State::PaidActive(inner) => Handler::on_error(inner, deps, env),
                 State::ClosingTransferIn(inner) => Handler::on_error(inner, deps, env),
                 State::Closed(inner) => Handler::on_error(inner, deps, env),
+                State::Liquidated(inner) => Handler::on_error(inner, deps, env),
             }
         }
 
@@ -246,6 +261,7 @@ mod impl_dex_handler {
                 State::PaidActive(inner) => Handler::on_timeout(inner, deps, env),
                 State::ClosingTransferIn(inner) => Handler::on_timeout(inner, deps, env),
                 State::Closed(inner) => Handler::on_timeout(inner, deps, env),
+                State::Liquidated(inner) => Handler::on_timeout(inner, deps, env),
             }
         }
 
@@ -262,6 +278,7 @@ mod impl_dex_handler {
                     Handler::on_time_alarm(inner, deps, env).map_into()
                 }
                 State::Closed(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
+                State::Liquidated(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
             }
         }
     }

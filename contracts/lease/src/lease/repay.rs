@@ -27,7 +27,7 @@ where
         self.loan.repay(payment, now, profit)
     }
 
-    pub(crate) fn liquidate<Profit>(
+    pub(crate) fn liquidate_partial<Profit>(
         &mut self,
         asset: Coin<Asset>,
         payment: Coin<Lpn>,
@@ -38,8 +38,8 @@ where
         Profit: ProfitTrait,
     {
         debug_assert!(
-            asset <= self.amount,
-            "Liquidating {asset} is greater than the available {0}",
+            asset < self.amount,
+            "Liquidated asset {asset} should be less than the available {0}",
             self.amount
         );
         self.amount -= asset;
