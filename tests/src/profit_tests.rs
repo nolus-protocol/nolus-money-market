@@ -7,8 +7,9 @@ use finance::{
 };
 use platform::bank;
 use sdk::{
+    cosmwasm_ext::CustomMsg,
     cosmwasm_std::{from_binary, Addr, Event},
-    cw_multi_test::{AppResponse, Executor as _},
+    cw_multi_test::Executor as _,
 };
 use timealarms::msg::DispatchAlarmsResponse;
 
@@ -76,14 +77,58 @@ fn on_alarm_zero_balance() {
         .unwrap();
 }
 
-fn assert_transfer_events<Lpn>(
-    test_case: &TestCase<Lpn>,
-    init_balance: Coin<Native>,
-    profit: Coin<Native>,
-    response: AppResponse,
-) where
-    Lpn: Currency,
-{
+#[test]
+fn on_alarm_native_only_transfer() {
+    type Lpn = Usdc;
+
+    let mut test_case = TestCase::<Lpn>::new();
+    test_case
+        .init_treasury()
+        .init_timealarms()
+        .init_oracle(None)
+        .init_profit(2);
+
+    let init_balance_nls = bank::balance::<Native>(
+        test_case.treasury_addr.as_ref().unwrap(),
+        &test_case.app.wrap(),
+    )
+    .unwrap();
+    let init_balance_lpn = bank::balance::<Lpn>(
+        test_case.treasury_addr.as_ref().unwrap(),
+        &test_case.app.wrap(),
+    )
+    .unwrap();
+    let profit = Coin::<Native>::from(100);
+
+    //send tokens to the profit contract
+    test_case
+        .app
+        .send_tokens(
+            Addr::unchecked(ADMIN),
+            test_case.profit_addr.clone().unwrap(),
+            &cwcoins::<Native, _>(profit),
+        )
+        .unwrap();
+
+    assert_eq!(
+        bank::balance::<Lpn>(
+            test_case.profit_addr.as_ref().unwrap(),
+            &test_case.app.wrap(),
+        )
+        .unwrap(),
+        Coin::ZERO,
+    );
+
+    let response = test_case
+        .app
+        .execute_contract(
+            test_case.timealarms.clone().unwrap(),
+            test_case.profit_addr.as_ref().unwrap().clone(),
+            &profit::msg::ExecuteMsg::TimeAlarm {},
+            &[],
+        )
+        .unwrap();
+
     // ensure the attributes were relayed from the sub-message
     assert_eq!(response.events.len(), 4, "{:?}", response.events);
 
@@ -148,7 +193,7 @@ fn assert_transfer_events<Lpn>(
             &test_case.app.wrap(),
         )
         .unwrap(),
-        init_balance + profit,
+        init_balance_nls + profit,
     );
 
     assert_eq!(
@@ -166,58 +211,8 @@ fn assert_transfer_events<Lpn>(
             &test_case.app.wrap(),
         )
         .unwrap(),
-        Coin::ZERO,
+        init_balance_lpn,
     );
-}
-
-#[test]
-fn on_alarm_native_only_transfer() {
-    type Lpn = Usdc;
-
-    let mut test_case = TestCase::<Lpn>::new();
-    test_case
-        .init_treasury()
-        .init_timealarms()
-        .init_oracle(None)
-        .init_profit(2);
-
-    let init_balance = bank::balance::<Native>(
-        test_case.treasury_addr.as_ref().unwrap(),
-        &test_case.app.wrap(),
-    )
-    .unwrap();
-    let profit = Coin::<Native>::from(100);
-
-    //send tokens to the profit contract
-    test_case
-        .app
-        .send_tokens(
-            Addr::unchecked(ADMIN),
-            test_case.profit_addr.clone().unwrap(),
-            &cwcoins::<Native, _>(profit),
-        )
-        .unwrap();
-
-    assert_eq!(
-        bank::balance::<Lpn>(
-            test_case.profit_addr.as_ref().unwrap(),
-            &test_case.app.wrap(),
-        )
-        .unwrap(),
-        Coin::ZERO,
-    );
-
-    let response = test_case
-        .app
-        .execute_contract(
-            test_case.timealarms.clone().unwrap(),
-            test_case.profit_addr.as_ref().unwrap().clone(),
-            &profit::msg::ExecuteMsg::TimeAlarm {},
-            &[],
-        )
-        .unwrap();
-
-    assert_transfer_events(&test_case, init_balance, profit, response);
 }
 
 #[test]
@@ -231,11 +226,6 @@ fn on_alarm_foreign_only_transfer() {
         .init_oracle(None)
         .init_profit(2);
 
-    let init_balance = bank::balance::<Native>(
-        test_case.treasury_addr.as_ref().unwrap(),
-        &test_case.app.wrap(),
-    )
-    .unwrap();
     let profit_lpn = Coin::<Lpn>::from(100);
 
     //send tokens to the profit contract
@@ -267,7 +257,20 @@ fn on_alarm_foreign_only_transfer() {
         )
         .unwrap();
 
-    assert_transfer_events(&test_case, init_balance, Coin::ZERO, response);
+    assert!(matches!(
+        test_case
+            .message_receiver
+            .try_recv()
+            .expect("Expected IBC transfer message!"),
+        CustomMsg::IbcTransfer { .. }
+    ));
+
+    // ensure the attributes were relayed from the sub-message
+    assert_eq!(
+        response.events.as_slice(),
+        &[Event::new("execute")
+            .add_attribute("_contract_addr", test_case.profit_addr.as_ref().unwrap())]
+    );
 }
 
 #[test]
@@ -281,11 +284,6 @@ fn on_alarm_native_and_foreign_transfer() {
         .init_oracle(None)
         .init_profit(2);
 
-    let init_balance = bank::balance::<Native>(
-        test_case.treasury_addr.as_ref().unwrap(),
-        &test_case.app.wrap(),
-    )
-    .unwrap();
     let profit_nls = Coin::<Native>::from(100);
     let profit_lpn = Coin::<Lpn>::from(100);
 
@@ -330,7 +328,20 @@ fn on_alarm_native_and_foreign_transfer() {
         )
         .unwrap();
 
-    assert_transfer_events(&test_case, init_balance, profit_nls, response);
+    assert!(matches!(
+        test_case
+            .message_receiver
+            .try_recv()
+            .expect("Expected IBC transfer message!"),
+        CustomMsg::IbcTransfer { .. }
+    ));
+
+    // ensure the attributes were relayed from the sub-message
+    assert_eq!(
+        response.events.as_slice(),
+        &[Event::new("execute")
+            .add_attribute("_contract_addr", test_case.profit_addr.as_ref().unwrap())]
+    );
 }
 
 #[test]
