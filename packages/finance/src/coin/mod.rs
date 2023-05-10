@@ -53,6 +53,11 @@ where
     }
 
     #[track_caller]
+    pub fn saturating_sub(self, rhs: Self) -> Self {
+        self.amount.saturating_sub(rhs.amount).into()
+    }
+
+    #[track_caller]
     pub fn checked_mul(self, rhs: Amount) -> Option<Self> {
         let may_amount = self.amount.checked_mul(rhs);
         may_amount.map(|amount| Self {
@@ -278,6 +283,19 @@ mod test {
             None,
             usdc(Amount::MAX - amount2).checked_add(usdc(amount2 + 1))
         );
+    }
+
+    #[test]
+    fn saturating_sub() {
+        assert_eq!(usdc(17), usdc(21).saturating_sub(usdc(4)));
+
+        assert_eq!(usdc(1), usdc(21).saturating_sub(usdc(20)));
+
+        assert_eq!(usdc(0), usdc(21).saturating_sub(usdc(21)));
+
+        assert_eq!(usdc(0), usdc(21).saturating_sub(usdc(22)));
+
+        assert_eq!(usdc(0), usdc(21).saturating_sub(usdc(122)));
     }
 
     #[test]
