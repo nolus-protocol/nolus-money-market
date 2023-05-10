@@ -83,15 +83,11 @@ where
     }
 
     fn open_loan_resp(&self, resp: Reply) -> Result<LoanResponse<Lpn>> {
-        debug_assert_eq!(resp.id, Self::OPEN_LOAN_REQ_ID,);
+        debug_assert_eq!(resp.id, Self::OPEN_LOAN_REQ_ID);
 
         from_execute(resp)
             .map_err(Into::into)
-            .and_then(|maybe_data| {
-                maybe_data.ok_or_else(|| ContractError::CustomError {
-                    val: "No data passed as response!".into(),
-                })
-            })
+            .and_then(|maybe_data| maybe_data.ok_or(ContractError::NoResponseStubError))
     }
 
     fn quote(&self, amount: Coin<Lpn>) -> Result<QueryQuoteResponse> {
