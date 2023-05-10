@@ -114,21 +114,19 @@ impl Liability {
         self.recalc_time
     }
 
-    pub fn init_borrow_amount<P>(&self, downpayment: P, max_ltd: Option<Percent>) -> P
+    pub fn init_borrow_amount<P>(&self, downpayment: P, may_max_ltd: Option<Percent>) -> P
     where
-        P: Percentable,
+        P: Percentable + Ord + Copy,
     {
         debug_assert!(self.initial > Percent::ZERO);
         debug_assert!(self.initial < Percent::HUNDRED);
 
-        let default_ltd: Percent = Percent::from_ratio(
-            self.initial.units(),
-            (Percent::HUNDRED - self.initial).units(),
-        );
-        let initial_ltd: Percent = max_ltd.map_or(default_ltd, |max_ltd| max_ltd.min(default_ltd));
-
-        //borrow = ltd%.of(downplayment)
-        initial_ltd.of(downpayment)
+        let default_ltd = Rational::new(self.initial, Percent::HUNDRED - self.initial);
+        let default_borrow = default_ltd.of(downpayment);
+        may_max_ltd
+            .map(|max_ltd| max_ltd.of(downpayment))
+            .map(|requested_borrow| requested_borrow.min(default_borrow))
+            .unwrap_or(default_borrow)
     }
 
     /// Post-assert: (total_due - amount_to_liquidate) / (lease_amount - amount_to_liquidate) ~= self.healthy_percent(), if total_due < lease_amount.
