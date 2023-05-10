@@ -82,7 +82,7 @@ impl Idle {
 
     fn enter_buy_back(
         self,
-        deps: &Deps,
+        deps: &Deps<'_>,
         env: Env,
         balances: Vec<CoinDTO<PaymentGroup>>,
     ) -> ContractResult<(State, PlatformResponse)> {
