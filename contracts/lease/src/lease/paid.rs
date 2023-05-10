@@ -51,14 +51,14 @@ mod tests {
     use std::marker::PhantomData;
 
     use ::currency::{lease::Atom, lpn::Usdc};
-    use cosmwasm_std::{Addr, BankMsg};
+    use cosmwasm_std::Addr;
     use finance::{
         coin::{Coin, WithCoin},
         currency::{self, Currency, Group},
         zero::Zero,
     };
     use platform::{
-        bank::{Aggregate, BalancesResult, BankAccountView, BankStub},
+        bank::{self, Aggregate, BalancesResult, BankAccountView, BankStub},
         batch::Batch,
         error::Result as PlatformResult,
     };
@@ -131,7 +131,10 @@ mod tests {
         let lease: Lease<TestAsset, TestLpn> = create_lease(lease_amount);
         let lease_account = BankStub::new(MockBankView::only_balance(lease_amount));
         let res = lease.close(lease_account).unwrap();
-        assert_eq!(res, expect_bank_send(Batch::default(), lease_amount));
+        assert_eq!(
+            res,
+            bank::bank_send(Batch::default(), CUSTOMER, lease_amount)
+        );
     }
 
     #[test]
@@ -142,19 +145,11 @@ mod tests {
         let lease_account = BankStub::new(MockBankView::new(lease_amount, surplus_amount));
         let res = lease.close(lease_account).unwrap();
         assert_eq!(res, {
-            let surplus_sent = expect_bank_send(Batch::default(), surplus_amount);
-            expect_bank_send(surplus_sent, lease_amount)
+            bank::bank_send(
+                bank::bank_send(Batch::default(), CUSTOMER, surplus_amount),
+                CUSTOMER,
+                lease_amount,
+            )
         });
-    }
-
-    fn expect_bank_send<C>(mut batch: Batch, amount: Coin<C>) -> Batch
-    where
-        C: Currency,
-    {
-        batch.schedule_execute_no_reply(BankMsg::Send {
-            amount: vec![cosmwasm_std::coin(amount.into(), C::BANK_SYMBOL)],
-            to_address: CUSTOMER.into(),
-        });
-        batch
     }
 }

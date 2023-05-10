@@ -201,10 +201,7 @@ where
         C: Currency,
     {
         debug_assert!(!amount.is_zero());
-        self.batch.schedule_execute_no_reply(BankMsg::Send {
-            to_address: to.into(),
-            amount: vec![to_cosmwasm_impl(amount)],
-        });
+        bank_send_impl(&mut self.batch, to, amount)
     }
 }
 
@@ -237,6 +234,16 @@ where
         }
         _ => Err(unexp_funds_err()),
     }
+}
+
+fn bank_send_impl<C>(batch: &mut Batch, to: &Addr, amount: Coin<C>)
+where
+    C: Currency,
+{
+    batch.schedule_execute_no_reply(BankMsg::Send {
+        amount: vec![to_cosmwasm_impl(amount)],
+        to_address: to.into(),
+    });
 }
 
 pub struct LazySenderStub {
@@ -344,6 +351,15 @@ where
             })
         })
     }
+}
+
+#[cfg(feature = "testing")]
+pub fn bank_send<C>(mut batch: Batch, to: &str, amount: Coin<C>) -> Batch
+where
+    C: Currency,
+{
+    bank_send_impl(&mut batch, &Addr::unchecked(to), amount);
+    batch
 }
 
 #[cfg(test)]

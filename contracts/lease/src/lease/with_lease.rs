@@ -3,7 +3,6 @@ use serde::Serialize;
 use finance::currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
-use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::QuerierWrapper;
 
 use super::{
@@ -15,16 +14,15 @@ pub trait WithLease {
     type Output;
     type Error;
 
-    fn exec<Lpn, Asset, LppLoan, Profit, Oracle>(
+    fn exec<Lpn, Asset, LppLoan, Oracle>(
         self,
-        lease: Lease<Lpn, Asset, LppLoan, Profit, Oracle>,
+        lease: Lease<Lpn, Asset, LppLoan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
+        Asset: Currency + Serialize,
         LppLoan: LppLoanTrait<Lpn>,
-        Oracle: OracleTrait<Lpn>,
-        Profit: ProfitTrait,
-        Asset: Currency + Serialize;
+        Oracle: OracleTrait<Lpn>;
 }
 
 pub fn execute<Cmd>(
@@ -38,12 +36,10 @@ where
     finance::error::Error: Into<Cmd::Error>,
     timealarms::error::ContractError: Into<Cmd::Error>,
     oracle::error::ContractError: Into<Cmd::Error>,
-    profit::error::ContractError: Into<Cmd::Error>,
 {
     let lease = lease_dto.addr.clone();
     let asset = lease_dto.amount.ticker().clone();
     let lpp = lease_dto.loan.lpp().clone();
-    let profit = lease_dto.loan.profit().clone();
     let oracle = lease_dto.oracle.clone();
 
     with_lease_deps::execute(
@@ -51,7 +47,6 @@ where
         lease,
         &asset,
         lpp,
-        profit,
         oracle,
         querier,
     )
@@ -74,24 +69,21 @@ where
     type Output = Cmd::Output;
     type Error = Cmd::Error;
 
-    fn exec<Lpn, Asset, LppLoan, Profit, Oracle>(
+    fn exec<Lpn, Asset, LppLoan, Oracle>(
         self,
         lpp_loan: LppLoan,
-        profit: Profit,
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
-        Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
-        self.cmd.exec(Lease::<_, Asset, _, _, _>::from_dto(
+        self.cmd.exec(Lease::<_, Asset, _, _>::from_dto(
             self.lease_dto,
             lpp_loan,
             oracle,
-            profit,
         ))
     }
 }

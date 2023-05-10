@@ -55,6 +55,7 @@ impl Active {
         querier: &QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
+        let profit = lease.lease.loan.profit().clone();
         let time_alarms = lease.lease.time_alarms.clone();
         let price_alarms = lease.lease.oracle.clone();
         let RepayResult {
@@ -64,7 +65,7 @@ impl Active {
             liquidation,
         } = with_lease::execute(
             lease.lease,
-            Repay::new(payment, env.block.time, time_alarms, price_alarms),
+            Repay::new(payment, env.block.time, profit, time_alarms, price_alarms),
             querier,
         )?;
 
@@ -96,6 +97,7 @@ impl Active {
         querier: &QuerierWrapper<'_>,
         env: &Env,
     ) -> ContractResult<Response> {
+        let profit = lease.lease.loan.profit().clone();
         let time_alarms = lease.lease.time_alarms.clone();
         let price_alarms = lease.lease.oracle.clone();
         let liquidation_asset = liquidation.amount(&lease.lease).clone();
@@ -110,6 +112,7 @@ impl Active {
                 liquidation_asset,
                 liquidation_lpn,
                 env.block.time,
+                profit,
                 time_alarms,
                 price_alarms,
             ),

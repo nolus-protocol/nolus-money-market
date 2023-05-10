@@ -4,7 +4,6 @@ use finance::{currency::Currency, liability::Zone};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use platform::batch::Batch;
-use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
@@ -14,8 +13,8 @@ use crate::{
     lease::{with_lease::WithLease, Cause, Lease, LeaseDTO, Liquidation, Status},
 };
 
-pub(crate) fn status_and_schedule<Lpn, Asset, Lpp, Profit, Oracle>(
-    lease: &Lease<Lpn, Asset, Lpp, Profit, Oracle>,
+pub(crate) fn status_and_schedule<Lpn, Asset, Lpp, Oracle>(
+    lease: &Lease<Lpn, Asset, Lpp, Oracle>,
     when: Timestamp,
     time_alarms: &TimeAlarmsRef,
     price_alarms: &OracleRef,
@@ -24,7 +23,6 @@ where
     Lpn: Currency + Serialize,
     Lpp: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
-    Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
     let status = lease.liquidation_status(when)?;
@@ -107,15 +105,14 @@ impl<'a> WithLease for Cmd<'a> {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
+    fn exec<Lpn, Asset, Loan, Oracle>(
         self,
-        lease: Lease<Lpn, Asset, Lpp, Profit, Oracle>,
+        lease: Lease<Lpn, Asset, Loan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppLoanTrait<Lpn>,
+        Loan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
-        Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
         status_and_schedule(&lease, self.now, self.time_alarms, self.price_alarms)

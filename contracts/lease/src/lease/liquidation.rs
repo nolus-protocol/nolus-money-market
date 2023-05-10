@@ -10,7 +10,6 @@ use finance::{
 };
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
-use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{error::ContractResult, loan::LiabilityStatus};
@@ -68,12 +67,11 @@ pub(crate) enum Cause {
     Liability { ltv: Percent, healthy_ltv: Percent },
 }
 
-impl<Lpn, Asset, Lpp, Profit, Oracle> Lease<Lpn, Asset, Lpp, Profit, Oracle>
+impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
-    Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
     pub(crate) fn liquidation_status(&self, now: Timestamp) -> ContractResult<Status<Asset>> {

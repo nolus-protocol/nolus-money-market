@@ -4,7 +4,7 @@ use finance::currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use platform::batch::Batch;
-use profit::stub::Profit as ProfitTrait;
+use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::TimeAlarmsRef;
 
@@ -20,6 +20,7 @@ use super::{liquidation_status, LiquidationStatus};
 pub(crate) struct Repay {
     payment: LpnCoin,
     now: Timestamp,
+    profit: ProfitRef,
     time_alarms: TimeAlarmsRef,
     price_alarms: OracleRef,
 }
@@ -28,12 +29,14 @@ impl Repay {
     pub fn new(
         payment: LpnCoin,
         now: Timestamp,
+        profit: ProfitRef,
         time_alarms: TimeAlarmsRef,
         price_alarms: OracleRef,
     ) -> Self {
         Self {
             payment,
             now,
+            profit,
             time_alarms,
             price_alarms,
         }
@@ -63,20 +66,20 @@ impl WithLease for Repay {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
+    fn exec<Lpn, Asset, Lpp, Oracle>(
         self,
-        mut lease: Lease<Lpn, Asset, Lpp, Profit, Oracle>,
+        mut lease: Lease<Lpn, Asset, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
-        Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
         let payment = self.payment.try_into()?;
+        let mut profit = self.profit.as_stub();
 
-        let receipt = lease.repay(payment, self.now)?;
+        let receipt = lease.repay(payment, self.now, &mut profit)?;
 
         let liquidation = liquidation_status::status_and_schedule(
             &lease,
@@ -88,12 +91,12 @@ impl WithLease for Repay {
         let IntoDTOResult {
             lease,
             batch: messages,
-        } = lease.into_dto(self.time_alarms);
+        } = lease.into_dto(self.profit, self.time_alarms);
 
         Ok(RepayResult {
             lease,
             receipt: receipt.into(),
-            messages,
+            messages: messages.merge(profit.into()),
             liquidation,
         })
     }

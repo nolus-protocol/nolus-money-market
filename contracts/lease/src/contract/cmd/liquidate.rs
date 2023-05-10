@@ -1,7 +1,7 @@
 use finance::currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
-use profit::stub::Profit as ProfitTrait;
+use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::Timestamp;
 use serde::Serialize;
 use timealarms::stub::TimeAlarmsRef;
@@ -20,6 +20,7 @@ pub(crate) struct Liquidate {
     asset: LeaseCoin,
     payment: LpnCoin,
     now: Timestamp,
+    profit: ProfitRef,
     time_alarms: TimeAlarmsRef,
     price_alarms: OracleRef,
 }
@@ -29,6 +30,7 @@ impl Liquidate {
         asset: LeaseCoin,
         payment: LpnCoin,
         now: Timestamp,
+        profit: ProfitRef,
         time_alarms: TimeAlarmsRef,
         price_alarms: OracleRef,
     ) -> Self {
@@ -36,6 +38,7 @@ impl Liquidate {
             asset,
             payment,
             now,
+            profit,
             time_alarms,
             price_alarms,
         }
@@ -47,19 +50,23 @@ impl WithLease for Liquidate {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
+    fn exec<Lpn, Asset, Lpp, Oracle>(
         self,
-        mut lease: Lease<Lpn, Asset, Lpp, Profit, Oracle>,
+        mut lease: Lease<Lpn, Asset, Lpp, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
         Lpp: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
-        Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
-        let receipt =
-            lease.liquidate(self.asset.try_into()?, self.payment.try_into()?, self.now)?;
+        let mut profit = self.profit.as_stub();
+        let receipt = lease.liquidate(
+            self.asset.try_into()?,
+            self.payment.try_into()?,
+            self.now,
+            &mut profit,
+        )?;
 
         let liquidation = liquidation_status::status_and_schedule(
             &lease,
@@ -71,7 +78,7 @@ impl WithLease for Liquidate {
         let IntoDTOResult {
             lease,
             batch: messages,
-        } = lease.into_dto(self.time_alarms);
+        } = lease.into_dto(self.profit, self.time_alarms);
 
         Ok(Self::Output {
             lease,

@@ -14,18 +14,16 @@ use oracle::{
     alarms::Alarm,
     stub::{Oracle as OracleTrait, OracleRef, PriceAlarms as PriceAlarmsTrait},
 };
-use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
 use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef};
 
 use crate::{error::ContractResult, lease::Lease};
 
-impl<Lpn, Asset, Lpp, Profit, Oracle> Lease<Lpn, Asset, Lpp, Profit, Oracle>
+impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
-    Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
     //TODO keep loan state updated on payments and liquidations to have the liquidation status accurate
@@ -135,7 +133,7 @@ mod tests {
     use timealarms::msg::ExecuteMsg::AddAlarm;
     use timealarms::stub::TimeAlarmsRef;
 
-    use crate::lease::tests::{LppLoanLocal, OracleLocalStub, ProfitLocalStub};
+    use crate::lease::tests::{LppLoanLocal, OracleLocalStub};
     use crate::lease::Lease;
     use crate::lease::{
         self,
@@ -149,13 +147,8 @@ mod tests {
     fn initial_alarm_schedule() {
         let asset = Coin::from(10);
         let lease_addr = Addr::unchecked("lease");
-        let lease = lease::tests::open_lease(
-            lease_addr,
-            asset,
-            loan(),
-            Addr::unchecked(ORACLE_ADDR),
-            Addr::unchecked(String::new()),
-        );
+        let lease =
+            lease::tests::open_lease(lease_addr, asset, loan(), Addr::unchecked(ORACLE_ADDR));
         let recalc_time = LEASE_START + lease.liability.recalculation_time();
         let liability_alarm_on = lease.liability.first_liq_warn();
         let projected_liability = projected_liability(&lease, recalc_time);
@@ -202,7 +195,6 @@ mod tests {
             lease_amount,
             loan(),
             Addr::unchecked(ORACLE_ADDR),
-            Addr::unchecked(String::new()),
         );
         let now = lease.loan.grace_period_end()
             - lease.liability.recalculation_time()
@@ -244,13 +236,7 @@ mod tests {
         let lease_addr = Addr::unchecked("lease");
         let oracle_addr = Addr::unchecked("oracle");
         let lease_amount = 300.into();
-        let lease = open_lease(
-            lease_addr,
-            lease_amount,
-            loan(),
-            oracle_addr.clone(),
-            Addr::unchecked(String::new()),
-        );
+        let lease = open_lease(lease_addr, lease_amount, loan(), oracle_addr.clone());
 
         let now = lease.loan.grace_period_end() - lease.liability.recalculation_time()
             + Duration::from_nanos(1);
@@ -300,13 +286,7 @@ mod tests {
 
         let lease_addr = Addr::unchecked("lease");
         let lease_amount = 1000.into();
-        let lease = open_lease(
-            lease_addr,
-            lease_amount,
-            loan,
-            Addr::unchecked(ORACLE_ADDR),
-            Addr::unchecked(String::new()),
-        );
+        let lease = open_lease(lease_addr, lease_amount, loan, Addr::unchecked(ORACLE_ADDR));
 
         let reschedule_at = LEASE_START + Duration::from_days(50);
         let recalc_at = reschedule_at + lease.liability.recalculation_time();
@@ -359,7 +339,7 @@ mod tests {
     }
 
     fn projected_liability(
-        lease: &Lease<Usdc, Atom, LppLoanLocal<Usdc>, ProfitLocalStub, OracleLocalStub>,
+        lease: &Lease<Usdc, Atom, LppLoanLocal<Usdc>, OracleLocalStub>,
         at: Timestamp,
     ) -> Coin<Usdc> {
         let l = lease.loan.state(at).unwrap().unwrap();

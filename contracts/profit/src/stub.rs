@@ -1,5 +1,3 @@
-use std::result::Result as StdResult;
-
 use serde::{Deserialize, Serialize};
 
 use finance::{coin::Coin, currency::Currency};
@@ -14,27 +12,13 @@ use crate::{
     result::ContractResult,
 };
 
-pub struct ProfitBatch {
-    pub profit_ref: ProfitRef,
-    pub batch: Batch,
-}
-
 pub trait Profit
 where
-    Self: Into<ProfitBatch>,
+    Self: Into<Batch>,
 {
     fn send<C>(&mut self, amount: Coin<C>)
     where
         C: Currency;
-}
-
-pub trait WithProfit {
-    type Output;
-    type Error;
-
-    fn exec<P>(self, profit: P) -> StdResult<Self::Output, Self::Error>
-    where
-        P: Profit;
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -55,16 +39,10 @@ impl ProfitRef {
         Ok(Self { addr })
     }
 
-    pub fn execute<Cmd>(self, cmd: Cmd) -> StdResult<Cmd::Output, Cmd::Error>
-    where
-        Cmd: WithProfit,
-    {
-        let profit_address = self.addr.clone();
-
-        cmd.exec(ProfitStub {
-            profit_ref: self,
-            sender: LazySenderStub::new(profit_address),
-        })
+    pub fn as_stub(&self) -> ProfitStub<LazySenderStub> {
+        ProfitStub {
+            sender: LazySenderStub::new(self.addr.clone()),
+        }
     }
 }
 
@@ -80,8 +58,7 @@ impl ProfitRef {
     }
 }
 
-struct ProfitStub<Sender> {
-    profit_ref: ProfitRef,
+pub struct ProfitStub<Sender> {
     sender: Sender,
 }
 
@@ -97,14 +74,11 @@ where
     }
 }
 
-impl<Sender> From<ProfitStub<Sender>> for ProfitBatch
+impl<Sender> From<ProfitStub<Sender>> for Batch
 where
     Sender: FixedAddressSender,
 {
     fn from(stub: ProfitStub<Sender>) -> Self {
-        ProfitBatch {
-            profit_ref: stub.profit_ref,
-            batch: stub.sender.into(),
-        }
+        stub.sender.into()
     }
 }

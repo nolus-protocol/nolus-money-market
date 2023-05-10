@@ -3,7 +3,7 @@ use serde::Serialize;
 use finance::{coin::Coin, currency::Currency};
 use lpp::stub::{loan::LppLoan as LppLoanTrait, LppRef};
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
-use profit::stub::{Profit as ProfitTrait, ProfitRef};
+use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -36,6 +36,7 @@ pub(crate) fn open_lease(
     let cmd = LeaseFactory {
         form,
         lease_addr: lease_addr.clone(),
+        profit,
         time_alarms,
         price_alarms: deps.1.clone(),
         start_at,
@@ -43,20 +44,13 @@ pub(crate) fn open_lease(
     };
     //TODO avoid cloning by extending the trait WithLeaseDeps to provide it
     let asset_currency = cmd.form.currency.clone();
-    with_lease_deps::execute(
-        cmd,
-        lease_addr,
-        &asset_currency,
-        deps.0,
-        profit,
-        deps.1,
-        querier,
-    )
+    with_lease_deps::execute(cmd, lease_addr, &asset_currency, deps.0, deps.1, querier)
 }
 
 struct LeaseFactory<'a> {
     form: NewLeaseForm,
     lease_addr: Addr,
+    profit: ProfitRef,
     time_alarms: TimeAlarmsRef,
     price_alarms: OracleRef,
     start_at: Timestamp,
@@ -67,10 +61,9 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
     type Output = IntoDTOResult;
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, LppLoan, Profit, Oracle>(
+    fn exec<Lpn, Asset, LppLoan, Oracle>(
         self,
         lpp_loan: LppLoan,
-        profit: Profit,
         oracle: Oracle,
     ) -> Result<Self::Output, Self::Error>
     where
@@ -78,7 +71,6 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
         Asset: Currency + Serialize,
         LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
-        Profit: ProfitTrait,
     {
         let liability = self.form.liability;
 
@@ -87,11 +79,10 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             lpp_loan,
             self.form.loan.annual_margin_interest,
             self.form.loan.interest_payment,
-            profit,
         );
         let amount: Coin<Asset> = self.amount.try_into()?;
 
-        let lease = Lease::<_, Asset, _, _, _>::new(
+        let lease = Lease::<_, Asset, _, _>::new(
             self.lease_addr,
             self.form.customer,
             amount,
@@ -113,7 +104,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             LiquidationStatus::NeedLiquidation(_) => unreachable!(),
         };
 
-        let mut dto = lease.into_dto(self.time_alarms);
+        let mut dto = lease.into_dto(self.profit, self.time_alarms);
         dto.batch = dto.batch.merge(alarms);
         Ok(dto)
     }

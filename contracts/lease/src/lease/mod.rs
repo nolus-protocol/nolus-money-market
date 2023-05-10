@@ -8,7 +8,7 @@ use finance::{
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
-use profit::stub::Profit as ProfitTrait;
+use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -35,12 +35,12 @@ pub(crate) mod with_lease_paid;
 // the others could be provided on demand when certain operation is being performed
 // then review the methods that take `&mut self` whether could be transformed into `&self`
 // and those that take `self` into `&mut self` or `&self`
-pub struct Lease<Lpn, Asset, Lpp, Profit, Oracle> {
+pub struct Lease<Lpn, Asset, Lpp, Oracle> {
     addr: Addr,
     customer: Addr,
     amount: Coin<Asset>,
     liability: Liability,
-    loan: Loan<Lpn, Lpp, Profit>,
+    loan: Loan<Lpn, Lpp>,
     oracle: Oracle,
 }
 
@@ -50,20 +50,19 @@ pub struct IntoDTOResult {
     pub batch: Batch,
 }
 
-impl<Lpn, Asset, LppLoan, Profit, Oracle> Lease<Lpn, Asset, LppLoan, Profit, Oracle>
+impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle>
 where
     Lpn: Currency + Serialize,
     Asset: Currency + Serialize,
     LppLoan: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
-    Profit: ProfitTrait,
 {
     pub(super) fn new(
         addr: Addr,
         customer: Addr,
         amount: Coin<Asset>,
         liability: Liability,
-        loan: Loan<Lpn, LppLoan, Profit>,
+        loan: Loan<Lpn, LppLoan>,
         oracle: Oracle,
     ) -> Self {
         debug_assert!(!amount.is_zero());
@@ -80,12 +79,7 @@ where
         }
     }
 
-    pub(super) fn from_dto(
-        dto: LeaseDTO,
-        lpp_loan: LppLoan,
-        oracle: Oracle,
-        profit: Profit,
-    ) -> Self {
+    pub(super) fn from_dto(dto: LeaseDTO, lpp_loan: LppLoan, oracle: Oracle) -> Self {
         let amount = dto.amount.try_into().expect(
             "The DTO -> Lease conversion should have resulted in Asset == dto.amount.symbol()",
         );
@@ -94,13 +88,13 @@ where
             customer: dto.customer,
             amount,
             liability: dto.liability,
-            loan: Loan::from_dto(dto.loan, lpp_loan, profit),
+            loan: Loan::from_dto(dto.loan, lpp_loan),
             oracle,
         }
     }
 
-    pub(super) fn into_dto(self, time_alarms: TimeAlarmsRef) -> IntoDTOResult {
-        let (loan_dto, loan_batch) = self.loan.into_dto();
+    pub(super) fn into_dto(self, profit: ProfitRef, time_alarms: TimeAlarmsRef) -> IntoDTOResult {
+        let (loan_dto, loan_batch) = self.loan.into_dto(profit);
 
         IntoDTOResult {
             lease: LeaseDTO::new(
@@ -149,7 +143,7 @@ mod tests {
     };
     use oracle::stub::{Oracle, OracleRef};
     use platform::batch::Batch;
-    use profit::stub::{Profit, ProfitBatch, ProfitRef};
+    use profit::stub::Profit;
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{api::InterestPaymentSpec, loan::Loan};
@@ -254,17 +248,7 @@ mod tests {
     }
 
     pub struct ProfitLocalStub {
-        address: Addr,
         pub batch: Batch,
-    }
-
-    impl From<Addr> for ProfitLocalStub {
-        fn from(profit: Addr) -> Self {
-            Self {
-                address: profit,
-                batch: Batch::default(),
-            }
-        }
     }
 
     impl Profit for ProfitLocalStub {
@@ -275,54 +259,29 @@ mod tests {
         }
     }
 
-    impl From<ProfitLocalStub> for ProfitBatch {
+    impl From<ProfitLocalStub> for Batch {
         fn from(stub: ProfitLocalStub) -> Self {
-            ProfitBatch {
-                profit_ref: ProfitRef::unchecked(stub.address),
-                batch: stub.batch,
-            }
+            stub.batch
         }
     }
 
-    pub struct ProfitLocalStubUnreachable;
-
-    impl Profit for ProfitLocalStubUnreachable {
-        fn send<C>(&mut self, _coins: Coin<C>)
-        where
-            C: Currency,
-        {
-        }
-    }
-
-    impl From<ProfitLocalStubUnreachable> for ProfitBatch {
-        fn from(_: ProfitLocalStubUnreachable) -> Self {
-            Self {
-                profit_ref: ProfitRef::unchecked(Addr::unchecked("local_test_profit_addr")),
-                batch: Batch::default(),
-            }
-        }
-    }
-
-    pub fn create_lease<Lpn, AssetC, L, O, P>(
+    pub fn create_lease<Lpn, AssetC, L, O>(
         addr: Addr,
         amount: Coin<AssetC>,
         loan: L,
         oracle: O,
-        profit: P,
-    ) -> Lease<Lpn, AssetC, L, P, O>
+    ) -> Lease<Lpn, AssetC, L, O>
     where
         Lpn: Currency + Serialize,
         AssetC: Currency + Serialize,
         L: LppLoan<Lpn>,
         O: Oracle<Lpn>,
-        P: Profit,
     {
         let loan = Loan::new(
             LEASE_START,
             loan,
             MARGIN_INTEREST_RATE,
             InterestPaymentSpec::new(Duration::from_days(100), Duration::from_days(10)),
-            profit,
         );
         Lease::new(
             addr,
@@ -347,28 +306,14 @@ mod tests {
         amount: Coin<TestCurrency>,
         loan: LoanResponse<TestLpn>,
         oracle_addr: Addr,
-        profit_addr: Addr,
-    ) -> Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, ProfitLocalStub, OracleLocalStub> {
+    ) -> Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub> {
         let oracle: OracleLocalStub = oracle_addr.into();
-        let profit: ProfitLocalStub = profit_addr.into();
 
-        create_lease::<TestLpn, TestCurrency, _, _, _>(
-            lease_addr,
-            amount,
-            loan.into(),
-            oracle,
-            profit,
-        )
+        create_lease::<TestLpn, TestCurrency, _, _>(lease_addr, amount, loan.into(), oracle)
     }
 
     pub fn request_state(
-        lease: Lease<
-            TestLpn,
-            TestCurrency,
-            LppLoanLocal<TestLpn>,
-            ProfitLocalStub,
-            OracleLocalStub,
-        >,
+        lease: Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>,
     ) -> State<TestCurrency, TestLpn> {
         lease.state(LEASE_STATE_AT).unwrap()
     }
@@ -398,7 +343,6 @@ mod tests {
             lease_addr,
             lease_amount,
             loan.clone(),
-            Addr::unchecked(String::new()),
             Addr::unchecked(String::new()),
         );
 

@@ -11,7 +11,7 @@ use finance::{
 };
 use lpp::stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef};
 use platform::batch::Batch;
-use profit::stub::{Profit as ProfitTrait, ProfitBatch, ProfitRef};
+use profit::stub::{Profit as ProfitTrait, ProfitRef};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{api::InterestPaymentSpec, error::ContractResult};
@@ -62,27 +62,24 @@ impl LoanDTO {
     }
 }
 
-pub struct Loan<Lpn, LppLoan, Profit> {
+pub struct Loan<Lpn, LppLoan> {
     annual_margin_interest: Percent,
     lpn: PhantomData<Lpn>,
     lpp_loan: LppLoan,
     interest_payment_spec: InterestPaymentSpec,
     current_period: InterestPeriod<Units, Percent>,
-    profit: Profit,
 }
 
-impl<Lpn, LppLoan, Profit> Loan<Lpn, LppLoan, Profit>
+impl<Lpn, LppLoan> Loan<Lpn, LppLoan>
 where
     Lpn: Currency + Debug,
     LppLoan: LppLoanTrait<Lpn>,
-    Profit: ProfitTrait,
 {
     pub(super) fn new(
         start: Timestamp,
         lpp_loan: LppLoan,
         annual_margin_interest: Percent,
         interest_payment_spec: InterestPaymentSpec,
-        profit: Profit,
     ) -> Self {
         let current_period = Self::due_period(
             annual_margin_interest,
@@ -95,11 +92,10 @@ where
             lpp_loan,
             interest_payment_spec,
             current_period,
-            profit,
         }
     }
 
-    pub(super) fn from_dto(dto: LoanDTO, lpp_loan: LppLoan, profit: Profit) -> Self {
+    pub(super) fn from_dto(dto: LoanDTO, lpp_loan: LppLoan) -> Self {
         {
             let annual_margin_interest = dto.annual_margin_interest;
             let interest_payment_spec = dto.interest_payment_spec;
@@ -110,31 +106,25 @@ where
                 lpp_loan,
                 interest_payment_spec,
                 current_period,
-                profit,
             }
         }
     }
 
-    pub(super) fn into_dto(self) -> (LoanDTO, Batch) {
+    pub(super) fn into_dto(self, profit: ProfitRef) -> (LoanDTO, Batch) {
         let LppBatch {
             lpp_ref,
-            batch: lpp_batch,
+            batch: lpp_messages,
         } = self.lpp_loan.into();
-
-        let ProfitBatch {
-            profit_ref,
-            batch: profit_batch,
-        } = self.profit.into();
 
         let dto = LoanDTO::new(
             self.annual_margin_interest,
             lpp_ref,
             self.interest_payment_spec,
             self.current_period,
-            profit_ref,
+            profit,
         );
 
-        (dto, lpp_batch.merge(profit_batch))
+        (dto, lpp_messages)
     }
 
     pub(crate) fn grace_period_end(&self) -> Timestamp {
@@ -144,18 +134,22 @@ where
     /// Repay the loan interests and principal by the given timestamp.
     ///
     /// The time intervals are always open-ended!
-    pub(crate) fn repay(
+    pub(crate) fn repay<Profit>(
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
-    ) -> ContractResult<RepayReceipt<Lpn>> {
+        profit: &mut Profit,
+    ) -> ContractResult<RepayReceipt<Lpn>>
+    where
+        Profit: ProfitTrait,
+    {
         self.debug_check_start_due_before(by, "before the 'repay-by' time");
         self.debug_check_before_next_due_end(by);
 
         let mut receipt = RepayReceipt::default();
 
         let (change, loan_prev_period_payment) = if self.overdue_at(by) {
-            self.repay_previous_period(payment, by, &mut receipt)?
+            self.repay_previous_period(payment, by, profit, &mut receipt)?
         } else {
             (payment, Coin::default())
         };
@@ -164,7 +158,7 @@ where
         debug_assert!(!self.overdue_at(by) || change == Coin::default());
 
         let (change, loan_curr_period_payment) = if !self.overdue_at(by) {
-            self.repay_current_period(change, by, &mut receipt)?
+            self.repay_current_period(change, by, profit, &mut receipt)?
         } else {
             (change, Coin::default())
         };
@@ -230,14 +224,18 @@ where
         }))
     }
 
-    fn repay_previous_period(
+    fn repay_previous_period<Profit>(
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
+        profit: &mut Profit,
         receipt: &mut RepayReceipt<Lpn>,
-    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
+    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)>
+    where
+        Profit: ProfitTrait,
+    {
         let (prev_margin_paid, change) =
-            self.repay_margin_interest(self.lpp_loan.principal_due(), by, payment)?;
+            self.repay_margin_interest(self.lpp_loan.principal_due(), by, payment, profit)?;
         receipt.pay_previous_margin(prev_margin_paid);
 
         if change.is_zero() {
@@ -257,16 +255,20 @@ where
         Ok((change - previous_interest_paid, previous_interest_paid))
     }
 
-    fn repay_current_period(
+    fn repay_current_period<Profit>(
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
+        profit: &mut Profit,
         receipt: &mut RepayReceipt<Lpn>,
-    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
+    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)>
+    where
+        Profit: ProfitTrait,
+    {
         let mut loan_repay = Coin::default();
 
         let (curr_margin_paid, mut change) =
-            self.repay_margin_interest(self.lpp_loan.principal_due(), by, payment)?;
+            self.repay_margin_interest(self.lpp_loan.principal_due(), by, payment, profit)?;
 
         receipt.pay_current_margin(curr_margin_paid);
 
@@ -294,19 +296,23 @@ where
         Ok((change, loan_repay))
     }
 
-    fn repay_margin_interest(
+    fn repay_margin_interest<Profit>(
         &mut self,
         principal_due: Coin<Lpn>,
         by: Timestamp,
         payment: Coin<Lpn>,
-    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)> {
+        profit: &mut Profit,
+    ) -> ContractResult<(Coin<Lpn>, Coin<Lpn>)>
+    where
+        Profit: ProfitTrait,
+    {
         let (period, change) = self.current_period.pay(principal_due, payment, by);
         self.current_period = period;
 
         let paid = payment - change;
 
         if !paid.is_zero() {
-            self.profit.send(paid);
+            profit.send(paid);
         }
 
         Ok((paid, change))
@@ -388,10 +394,11 @@ mod tests {
         stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef},
     };
     use platform::{
-        bank::{Aggregate, BalancesResult, BankAccountView},
+        bank::{self, Aggregate, BalancesResult, BankAccountView, LazySenderStub},
+        batch::Batch,
         error::Result as PlatformResult,
     };
-    use profit::stub::{Profit, ProfitBatch};
+    use profit::stub::{ProfitRef, ProfitStub};
     use sdk::cosmwasm_std::Timestamp;
 
     use crate::{
@@ -402,6 +409,7 @@ mod tests {
     // 50%
     const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(500);
     const LEASE_START: Timestamp = Timestamp::from_nanos(100);
+    const PROFIT_ADDR: &str = "profit_addr";
 
     type TestCurrency = Usdc;
     type LppResult<T> = Result<T, LppError>;
@@ -464,32 +472,12 @@ mod tests {
         }
     }
 
-    #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-    struct ProfitLocalStub {}
-
-    impl Profit for ProfitLocalStub {
-        fn send<C>(&mut self, _coins: Coin<C>)
-        where
-            C: Currency,
-        {
-        }
-    }
-
-    impl From<ProfitLocalStub> for ProfitBatch {
-        fn from(_: ProfitLocalStub) -> Self {
-            unreachable!()
-        }
-    }
-
-    fn create_loan(
-        loan: LoanResponse<TestCurrency>,
-    ) -> Loan<TestCurrency, LppLoanLocal, ProfitLocalStub> {
+    fn create_loan(loan: LoanResponse<TestCurrency>) -> Loan<TestCurrency, LppLoanLocal> {
         Loan::new(
             LEASE_START,
             LppLoanLocal::new(loan),
             MARGIN_INTEREST_RATE,
             InterestPaymentSpec::new(Duration::YEAR, Duration::from_secs(0)),
-            ProfitLocalStub {},
         )
     }
 
@@ -507,13 +495,25 @@ mod tests {
         };
 
         let mut loan = create_loan(loan);
-
         {
             let repay_prev_margin = MARGIN_INTEREST_RATE.of(lease_coin) - delta_to_fully_due;
             let mut receipt = RepayReceipt::default();
             receipt.pay_previous_margin(repay_prev_margin);
+            let mut profit = profit_stub();
 
-            assert_eq!(loan.repay(repay_prev_margin, payment_at,), Ok(receipt));
+            assert_eq!(
+                loan.repay(repay_prev_margin, payment_at, &mut profit)
+                    .unwrap(),
+                receipt
+            );
+            assert_eq!(
+                Into::<Batch>::into(profit),
+                bank::bank_send(
+                    Batch::default(),
+                    PROFIT_ADDR,
+                    receipt.previous_margin_paid()
+                )
+            )
         }
         {
             let repay_fully_prev_margin_and_some_interest = interest_rate.of(lease_coin);
@@ -522,10 +522,24 @@ mod tests {
             receipt.pay_previous_interest(
                 repay_fully_prev_margin_and_some_interest - delta_to_fully_due,
             );
+            let mut profit = profit_stub();
             assert_eq!(
-                loan.repay(repay_fully_prev_margin_and_some_interest, payment_at,),
-                Ok(receipt)
+                loan.repay(
+                    repay_fully_prev_margin_and_some_interest,
+                    payment_at,
+                    &mut profit
+                )
+                .unwrap(),
+                receipt
             );
+            assert_eq!(
+                Into::<Batch>::into(profit),
+                bank::bank_send(
+                    Batch::default(),
+                    PROFIT_ADDR,
+                    receipt.previous_margin_paid()
+                )
+            )
         }
         {
             let repay_fully_prev_amount_and_some_curr_margin = MARGIN_INTEREST_RATE.of(lease_coin);
@@ -534,10 +548,20 @@ mod tests {
             receipt.pay_current_margin(
                 repay_fully_prev_amount_and_some_curr_margin - delta_to_fully_due,
             );
+            let mut profit = profit_stub();
             assert_eq!(
-                loan.repay(repay_fully_prev_amount_and_some_curr_margin, payment_at,),
-                Ok(receipt)
+                loan.repay(
+                    repay_fully_prev_amount_and_some_curr_margin,
+                    payment_at,
+                    &mut profit
+                )
+                .unwrap(),
+                receipt
             );
+            assert_eq!(
+                Into::<Batch>::into(profit),
+                bank::bank_send(Batch::default(), PROFIT_ADDR, receipt.current_margin_paid())
+            )
         }
         {
             let margin_due = delta_to_fully_due;
@@ -549,7 +573,15 @@ mod tests {
             receipt.pay_current_interest(interest_due);
             receipt.pay_principal(lease_coin, lease_coin);
             receipt.keep_change(surplus);
-            assert_eq!(loan.repay(repay_fully, payment_at), Ok(receipt));
+            let mut profit = profit_stub();
+            assert_eq!(
+                loan.repay(repay_fully, payment_at, &mut profit).unwrap(),
+                receipt
+            );
+            assert_eq!(
+                Into::<Batch>::into(profit),
+                bank::bank_send(Batch::default(), PROFIT_ADDR, receipt.current_margin_paid())
+            )
         }
     }
 
@@ -573,8 +605,9 @@ mod tests {
         let now = LEASE_START + Duration::YEAR;
 
         let mut loan = create_loan(loan);
+        let mut profit = profit_stub();
 
-        let receipt = loan.repay(repay_coin, now).unwrap();
+        let receipt = loan.repay(repay_coin, now, &mut profit).unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = RepayReceipt::default();
@@ -583,6 +616,10 @@ mod tests {
 
             receipt
         },);
+        assert_eq!(
+            Into::<Batch>::into(profit),
+            bank::bank_send(Batch::default(), PROFIT_ADDR, receipt.current_margin_paid())
+        );
 
         let state = loan.state(now).unwrap().unwrap();
 
@@ -612,18 +649,32 @@ mod tests {
         let mut loan = create_loan(loan);
         let margin_interest = MARGIN_INTEREST_RATE.of(lease_coin);
         {
+            let mut profit = profit_stub();
             let mut exp_full_prev_margin = RepayReceipt::default();
             exp_full_prev_margin.pay_previous_margin(margin_interest);
             assert_eq!(
                 exp_full_prev_margin,
-                loan.repay(margin_interest, repay_at,).unwrap()
+                loan.repay(margin_interest, repay_at, &mut profit).unwrap()
             );
+            assert_eq!(
+                Into::<Batch>::into(profit),
+                bank::bank_send(
+                    Batch::default(),
+                    PROFIT_ADDR,
+                    exp_full_prev_margin.previous_margin_paid()
+                )
+            )
         }
 
         {
+            let mut profit = profit_stub();
             let mut exp_receipt = RepayReceipt::default();
             exp_receipt.pay_previous_interest(repay_coin);
-            assert_eq!(exp_receipt, loan.repay(repay_coin, repay_at,).unwrap());
+            assert_eq!(
+                exp_receipt,
+                loan.repay(repay_coin, repay_at, &mut profit).unwrap()
+            );
+            assert_eq!(Into::<Batch>::into(profit), Batch::default(),)
         }
     }
 
@@ -649,8 +700,9 @@ mod tests {
 
         let repay_at = LEASE_START + Duration::YEAR + Duration::from_nanos(1);
         let mut loan = create_loan(loan);
+        let mut profit = profit_stub();
 
-        let receipt = loan.repay(repay_coin, repay_at).unwrap();
+        let receipt = loan.repay(repay_coin, repay_at, &mut profit).unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = RepayReceipt::default();
@@ -661,6 +713,14 @@ mod tests {
 
             receipt
         },);
+        assert_eq!(
+            Into::<Batch>::into(profit),
+            bank::bank_send(
+                Batch::default(),
+                PROFIT_ADDR,
+                receipt.previous_margin_paid()
+            )
+        )
     }
 
     #[test]
@@ -682,8 +742,9 @@ mod tests {
 
         let repay_at = LEASE_START;
         let mut lease = create_loan(loan);
+        let mut profit = profit_stub();
 
-        let receipt = lease.repay(repay_coin, repay_at).unwrap();
+        let receipt = lease.repay(repay_coin, repay_at, &mut profit).unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = RepayReceipt::default();
@@ -692,6 +753,7 @@ mod tests {
 
             receipt
         },);
+        assert_eq!(Into::<Batch>::into(profit), Batch::default(),)
     }
 
     #[test]
@@ -716,8 +778,9 @@ mod tests {
 
         let repay_at = LEASE_START + Duration::YEAR + Duration::from_nanos(1);
         let mut loan = create_loan(loan);
+        let mut profit = profit_stub();
 
-        let receipt = loan.repay(repay_coin, repay_at).unwrap();
+        let receipt = loan.repay(repay_coin, repay_at, &mut profit).unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = RepayReceipt::default();
@@ -733,6 +796,14 @@ mod tests {
 
             receipt
         },);
+        assert_eq!(
+            Into::<Batch>::into(profit),
+            bank::bank_send(
+                Batch::default(),
+                PROFIT_ADDR,
+                receipt.previous_margin_paid()
+            )
+        )
     }
 
     #[test]
@@ -751,8 +822,9 @@ mod tests {
 
         let repay_at = LEASE_START;
         let mut lease = create_loan(loan);
+        let mut profit = profit_stub();
 
-        let receipt = lease.repay(lease_coin, repay_at).unwrap();
+        let receipt = lease.repay(lease_coin, repay_at, &mut profit).unwrap();
 
         assert_eq!(receipt, {
             let mut receipt = RepayReceipt::default();
@@ -761,6 +833,7 @@ mod tests {
 
             receipt
         },);
+        assert_eq!(Into::<Batch>::into(profit), Batch::default(),)
     }
 
     fn interest<Lpn>(period: Duration, principal_due: Coin<Lpn>, rate: Percent) -> Coin<Lpn>
@@ -891,5 +964,9 @@ mod tests {
 
     fn coin(a: Amount) -> Coin<TestCurrency> {
         Coin::<TestCurrency>::new(a)
+    }
+
+    fn profit_stub() -> ProfitStub<LazySenderStub> {
+        ProfitRef::unchecked(PROFIT_ADDR).as_stub()
     }
 }

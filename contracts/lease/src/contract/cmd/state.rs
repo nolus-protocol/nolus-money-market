@@ -3,7 +3,6 @@ use serde::Serialize;
 use finance::currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
-use profit::stub::Profit as ProfitTrait;
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
@@ -28,15 +27,14 @@ impl WithLease for LeaseState {
 
     type Error = ContractError;
 
-    fn exec<Lpn, Asset, Lpp, Profit, Oracle>(
+    fn exec<Lpn, Asset, LppLoan, Oracle>(
         self,
-        lease: Lease<Lpn, Asset, Lpp, Profit, Oracle>,
+        lease: Lease<Lpn, Asset, LppLoan, Oracle>,
     ) -> Result<Self::Output, Self::Error>
     where
         Lpn: Currency + Serialize,
-        Lpp: LppLoanTrait<Lpn>,
+        LppLoan: LppLoanTrait<Lpn>,
         Oracle: OracleTrait<Lpn>,
-        Profit: ProfitTrait,
         Asset: Currency + Serialize,
     {
         let state = lease.state(self.now)?;

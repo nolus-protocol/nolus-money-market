@@ -8,34 +8,41 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{error::ContractResult, lease::Lease, loan::RepayReceipt};
 
-impl<Lpn, Asset, Lpp, Profit, Oracle> Lease<Lpn, Asset, Lpp, Profit, Oracle>
+impl<Lpn, Asset, Lpp, Oracle> Lease<Lpn, Asset, Lpp, Oracle>
 where
     Lpn: Currency + Serialize,
     Lpp: LppLoanTrait<Lpn>,
     Oracle: OracleTrait<Lpn>,
-    Profit: ProfitTrait,
     Asset: Currency + Serialize,
 {
-    pub(crate) fn repay(
+    pub(crate) fn repay<Profit>(
         &mut self,
         payment: Coin<Lpn>,
         now: Timestamp,
-    ) -> ContractResult<RepayReceipt<Lpn>> {
-        self.loan.repay(payment, now)
+        profit: &mut Profit,
+    ) -> ContractResult<RepayReceipt<Lpn>>
+    where
+        Profit: ProfitTrait,
+    {
+        self.loan.repay(payment, now, profit)
     }
 
-    pub(crate) fn liquidate(
+    pub(crate) fn liquidate<Profit>(
         &mut self,
         asset: Coin<Asset>,
         payment: Coin<Lpn>,
         now: Timestamp,
-    ) -> ContractResult<RepayReceipt<Lpn>> {
+        profit: &mut Profit,
+    ) -> ContractResult<RepayReceipt<Lpn>>
+    where
+        Profit: ProfitTrait,
+    {
         debug_assert!(
             asset <= self.amount,
             "Liquidating {asset} is greater than the available {0}",
             self.amount
         );
         self.amount -= asset;
-        self.loan.repay(payment, now)
+        self.loan.repay(payment, now, profit)
     }
 }
