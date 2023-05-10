@@ -61,10 +61,8 @@ pub enum ContractError {
     #[error("[Lpp] Balance overflow")]
     OverflowError,
 
-    #[error("[Lpp] Custom Error val: {val:?}")]
-    CustomError { val: String },
-    // Add any other custom errors you like here.
-    // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
+    #[error("[Lpp Stub] No response sent back from LPP contract")]
+    NoResponseStubError,
 }
 
 pub type Result<T> = std::result::Result<T, ContractError>;
