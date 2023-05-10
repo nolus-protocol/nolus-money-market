@@ -6,7 +6,7 @@ edition.workspace = true
 license.workspace = true
 
 [features]
-testing = []
+testing = ["sdk/testing"]
 
 [dependencies]
 finance = { workspace = true }
@@ -20,3 +20,4 @@ serde-json-wasm = { workspace = true }
 [dev-dependencies]
 currency = { workspace = true }
 finance = { workspace = true, features = ["testing"] }
+sdk = { workspace = true, features = ["testing"] }
