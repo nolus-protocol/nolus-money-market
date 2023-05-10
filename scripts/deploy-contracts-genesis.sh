@@ -47,7 +47,7 @@ add_wasm_messages() {
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$oracle_init_msg"
   _export_to_file "oracle" "$ORACLE_ADDRESS" "$contracts_info_file"
 
-  local -r profit_init_msg='{"cadence_hours":7200,"treasury":"'"$TREASURY_ADDRESS"'","timealarms":"'"$TIMEALARMS_ADDRESS"'"}'
+  local -r profit_init_msg='{"cadence_hours":7200,"treasury":"'"$TREASURY_ADDRESS"'","oracle":"'"$ORACLE_ADDRESS"'","timealarms":"'"$TIMEALARMS_ADDRESS"'"}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "profit" "$((++id))" \
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$profit_init_msg"
   _export_to_file "profit" "$PROFIT_ADDRESS" "$contracts_info_file"
