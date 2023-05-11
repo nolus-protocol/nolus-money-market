@@ -68,7 +68,7 @@ where
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct OracleRef {
-    contract: Addr,
+    addr: Addr,
     base_currency: SymbolOwned,
 }
 
@@ -80,13 +80,13 @@ impl OracleRef {
         let base_currency = resp.config.base_asset;
 
         Ok(Self {
-            contract,
+            addr: contract,
             base_currency,
         })
     }
 
     pub fn owned_by(&self, contract: &Addr) -> bool {
-        &self.contract == contract
+        &self.addr == contract
     }
 
     pub fn execute_as_oracle<OracleBase, V>(
@@ -120,7 +120,7 @@ impl OracleRef {
         let msg = QueryMsg::SwapPath { from, to };
 
         querier
-            .query_wasm_smart(self.contract.clone(), &msg)
+            .query_wasm_smart(self.addr.clone(), &msg)
             .map_err(ContractError::from)
     }
 
@@ -160,7 +160,7 @@ impl OracleRef {
         C: Currency,
     {
         Self {
-            contract: Addr::unchecked(addr),
+            addr: Addr::unchecked(addr),
             base_currency: C::TICKER.into(),
         }
     }
@@ -174,7 +174,7 @@ struct OracleStub<'a, OracleBase> {
 
 impl<'a, OracleBase> OracleStub<'a, OracleBase> {
     fn addr(&self) -> &Addr {
-        &self.oracle_ref.contract
+        &self.oracle_ref.addr
     }
 }
 
@@ -220,7 +220,7 @@ pub struct AlarmsStub<'a, OracleBase> {
 
 impl<'a, OracleBase> AlarmsStub<'a, OracleBase> {
     fn addr(&self) -> &Addr {
-        &self.oracle_ref.contract
+        &self.oracle_ref.addr
     }
 }
 
