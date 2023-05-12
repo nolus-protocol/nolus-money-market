@@ -1,3 +1,5 @@
+use std::array::from_fn;
+
 use currency::{lpn::Usdc, native::Nls};
 use finance::{coin::Coin, currency::Currency, duration::Duration};
 use platform::tests::{self};
@@ -7,12 +9,9 @@ use sdk::{
 };
 use timealarms::msg::{AlarmsCount, DispatchAlarmsResponse};
 
-use crate::{
-    common::{cwcoin, test_case::TestCase, AppExt, ADMIN},
-    timealarms_tests::mock_lease::{
-        instantiate_may_fail_contract, instantiate_reschedule_contract,
-    },
-};
+use crate::common::{cwcoin, test_case::TestCase, AppExt, ADMIN};
+
+use self::mock_lease::*;
 
 /// The mock for lease SC. It mimics the scheme for time notification.
 /// If GATE, it returns Ok on notifications, returns Err otherwise.
@@ -20,6 +19,7 @@ mod mock_lease {
     use serde::{Deserialize, Serialize};
 
     use finance::duration::Duration;
+    use platform::{message::Response as PlatformResponse, response};
     use sdk::{
         cosmwasm_ext::Response,
         cosmwasm_std::{
@@ -62,7 +62,14 @@ mod mock_lease {
         Ok(Response::new().add_attribute("method", "instantiate"))
     }
 
-    fn execute(
+    fn execute(_: DepsMut<'_>, _: Env, _: MessageInfo, msg: MockExecuteMsg) -> StdResult<Response> {
+        match msg {
+            MockExecuteMsg::TimeAlarm {} => Ok(Response::new()),
+            MockExecuteMsg::Gate(_) => unreachable!(),
+        }
+    }
+
+    fn execute_may_fail(
         deps: DepsMut<'_>,
         env: Env,
         _: MessageInfo,
@@ -99,13 +106,13 @@ mod mock_lease {
                 let timealarms = TIMEALARMS_ADDR
                     .load(deps.storage)
                     .expect("test setup error");
-                TimeAlarmsRef::unchecked(timealarms)
+                let batch = TimeAlarmsRef::unchecked(timealarms)
                     .setup_alarm(env.block.time + Duration::from_secs(5))
                     .unwrap();
 
-                Ok(Response::new()
-                    .add_attribute("lease_reply", env.block.time.to_string())
-                    .set_data(to_binary(&env.contract.address)?))
+                Ok(response::response_only_messages(
+                    PlatformResponse::messages_only(batch),
+                ))
             }
             MockExecuteMsg::Gate(_gate) => {
                 unimplemented!()
@@ -117,8 +124,13 @@ mod mock_lease {
         Err(StdError::generic_err("not implemented"))
     }
 
-    fn contract_may_fail_endpoints() -> Box<Contract> {
+    fn contract_no_reschedule_endpoints() -> Box<Contract> {
         let contract = ContractWrapper::new(execute, instantiate, query);
+        Box::new(contract)
+    }
+
+    fn contract_may_fail_endpoints() -> Box<Contract> {
+        let contract = ContractWrapper::new(execute_may_fail, instantiate, query);
         Box::new(contract)
     }
 
@@ -127,11 +139,19 @@ mod mock_lease {
         Box::new(contract)
     }
 
+    pub fn instantiate_no_reschedule_contract(app: &mut MockApp) -> Addr {
+        proper_instantiate(
+            app,
+            contract_no_reschedule_endpoints(),
+            Addr::unchecked("DEADCODE"),
+        )
+    }
+
     pub fn instantiate_may_fail_contract(app: &mut MockApp) -> Addr {
         proper_instantiate(
             app,
             contract_may_fail_endpoints(),
-            Addr::unchecked("unused"),
+            Addr::unchecked("DEADCODE"),
         )
     }
 
@@ -242,7 +262,29 @@ fn fired_alarms_are_removed() {
 }
 
 #[test]
-#[ignore = "bug: reply removes rescheduled alarm"]
+fn no_reschedule_alarm() {
+    let mut test_case = test_case();
+    let lease1 = instantiate_no_reschedule_contract(&mut test_case.app);
+
+    add_alarm(&mut test_case, &lease1, 1);
+
+    test_case.app.time_shift(Duration::from_secs(5));
+
+    let resp = dispatch(&mut test_case, 100);
+    assert!(!any_error(&resp));
+    assert_eq!(sent_alarms(&resp), Some(1));
+
+    test_case.app.time_shift(Duration::from_secs(
+        5 + /* One second added because of time alarms contract's granularity */ 1,
+    ));
+
+    // try to resend the newly scheduled alarms
+    let resp = dispatch(&mut test_case, 100);
+    assert!(!any_error(&resp));
+    assert_eq!(sent_alarms(&resp), Some(0));
+}
+
+#[test]
 fn reschedule_alarm() {
     let mut test_case = test_case();
     let lease1 =
@@ -256,10 +298,142 @@ fn reschedule_alarm() {
     assert!(!any_error(&resp));
     assert_eq!(sent_alarms(&resp), Some(1));
 
+    test_case.app.time_shift(Duration::from_secs(
+        5 + /* One second added because of time alarms contract's granularity */ 1,
+    ));
+
     // try to resend the newly scheduled alarms
     let resp = dispatch(&mut test_case, 100);
     assert!(!any_error(&resp));
     assert_eq!(sent_alarms(&resp), Some(1));
+}
+
+#[test]
+fn reschedule_failed_alarm() {
+    let mut test_case = test_case();
+    let lease1 = instantiate_may_fail_contract(&mut test_case.app);
+
+    test_case
+        .app
+        .execute_contract(
+            Addr::unchecked(ADMIN),
+            lease1.clone(),
+            &MockExecuteMsg::Gate(false),
+            &[],
+        )
+        .unwrap();
+
+    add_alarm(&mut test_case, &lease1, 1);
+
+    test_case.app.time_shift(Duration::from_secs(5));
+
+    let resp = dispatch(&mut test_case, 100);
+    assert!(any_error(&resp));
+    assert_eq!(sent_alarms(&resp), Some(1));
+
+    // try to resend the newly scheduled alarms
+    let resp = dispatch(&mut test_case, 100);
+    assert!(any_error(&resp));
+    assert_eq!(sent_alarms(&resp), Some(1));
+}
+
+#[test]
+fn reschedule_failing_alarms_mix() {
+    let mut test_case = test_case();
+
+    let leases: [Addr; 8] = from_fn(|index| {
+        let addr = instantiate_may_fail_contract(&mut test_case.app);
+
+        test_case
+            .app
+            .execute_contract(
+                Addr::unchecked(ADMIN),
+                addr.clone(),
+                &MockExecuteMsg::Gate((index % 2) == 0),
+                &[],
+            )
+            .unwrap();
+
+        add_alarm(&mut test_case, &addr, 1);
+
+        addr
+    });
+
+    test_case.app.time_shift(Duration::from_secs(5));
+
+    let resp = dispatch(&mut test_case, 100);
+
+    for (index, event) in resp
+        .events
+        .into_iter()
+        .filter(|event| {
+            event
+                .attributes
+                .iter()
+                .find(|attribute| attribute.key == "delivered")
+                .is_some()
+        })
+        .enumerate()
+    {
+        // Only leases with odd indexes fail.
+        let fail = (index % 2) != 0;
+
+        assert_eq!(
+            event
+                .attributes
+                .iter()
+                .find(|attribute| attribute.key == "delivered")
+                .unwrap()
+                .value,
+            if fail { "error" } else { "success" }
+        );
+
+        if fail {
+            assert!(event
+                .attributes
+                .iter()
+                .find(|attribute| attribute.key == "details")
+                .unwrap()
+                .value
+                .contains(leases[index].as_str()));
+        }
+    }
+
+    // try to resend the failed alarms
+    let resp = dispatch(&mut test_case, 100);
+    assert_eq!(sent_alarms(&resp), Some(leases.len() as u32 / 2));
+
+    for (index, event) in resp
+        .events
+        .into_iter()
+        .filter(|event| {
+            event
+                .attributes
+                .iter()
+                .find(|attribute| attribute.key == "delivered")
+                .is_some()
+        })
+        .enumerate()
+    {
+        assert_eq!(
+            event
+                .attributes
+                .iter()
+                .find(|attribute| attribute.key == "delivered")
+                .unwrap()
+                .value,
+            "error"
+        );
+
+        // Only leases with odd indexes fail.
+        assert!(event
+            .attributes
+            .iter()
+            .find(|attribute| attribute.key == "details")
+            .unwrap()
+            .value
+            .contains(leases[(index * 2) + 1].as_str()));
+    }
 }
 
 #[test]
