@@ -111,19 +111,16 @@ where
     }
 
     pub(crate) fn state(&self, now: Timestamp) -> ContractResult<State<Asset, Lpn>> {
-        self.loan.state(now).map(|loan_state| {
-            let loan = loan_state.expect("not paid");
-            State {
-                amount: self.amount,
-                interest_rate: loan.annual_interest,
-                interest_rate_margin: loan.annual_interest_margin,
-                principal_due: loan.principal_due,
-                previous_margin_due: loan.previous_margin_interest_due,
-                previous_interest_due: loan.previous_interest_due,
-                current_margin_due: loan.current_margin_interest_due,
-                current_interest_due: loan.current_interest_due,
-                validity: now,
-            }
+        self.loan.state(now).map(|loan| State {
+            amount: self.amount,
+            interest_rate: loan.annual_interest,
+            interest_rate_margin: loan.annual_interest_margin,
+            principal_due: loan.principal_due,
+            previous_margin_due: loan.previous_margin_interest_due,
+            previous_interest_due: loan.previous_interest_due,
+            current_margin_due: loan.current_margin_interest_due,
+            current_interest_due: loan.current_interest_due,
+            validity: now,
         })
     }
 }

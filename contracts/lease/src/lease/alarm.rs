@@ -342,7 +342,7 @@ mod tests {
         lease: &Lease<Usdc, Atom, LppLoanLocal<Usdc>, OracleLocalStub>,
         at: Timestamp,
     ) -> Coin<Usdc> {
-        let l = lease.loan.state(at).unwrap().unwrap();
+        let l = lease.loan.state(at).unwrap();
         l.principal_due
             + l.previous_interest_due
             + l.previous_margin_interest_due

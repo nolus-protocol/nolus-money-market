@@ -181,7 +181,7 @@ where
         Ok(receipt)
     }
 
-    pub(crate) fn state(&self, now: Timestamp) -> ContractResult<Option<State<Lpn>>> {
+    pub(crate) fn state(&self, now: Timestamp) -> ContractResult<State<Lpn>> {
         self.debug_check_start_due_before(now, "in the past of");
 
         let principal_due = self.lpp_loan.principal_due();
@@ -213,7 +213,7 @@ where
             .interest_due(margin_interest_overdue_period.till());
         let current_interest_due = self.lpp_loan.interest_due(now) - previous_interest_due;
 
-        Ok(Some(State {
+        Ok(State {
             annual_interest: self.lpp_loan.annual_interest_rate(),
             annual_interest_margin: self.annual_margin_interest,
             principal_due,
@@ -221,7 +221,7 @@ where
             current_interest_due,
             previous_margin_interest_due,
             current_margin_interest_due,
-        }))
+        })
     }
 
     fn repay_previous_period<Profit>(
@@ -621,7 +621,7 @@ mod tests {
             bank::bank_send(Batch::default(), PROFIT_ADDR, receipt.current_margin_paid())
         );
 
-        let state = loan.state(now).unwrap().unwrap();
+        let state = loan.state(now).unwrap();
 
         assert_eq!(state.previous_margin_interest_due, Coin::default());
 
@@ -914,7 +914,7 @@ mod tests {
             loan_resp.annual_interest_rate,
         );
 
-        let res = loan.state(now).unwrap().unwrap();
+        let res = loan.state(now).unwrap();
 
         assert_eq!(
             res.previous_margin_interest_due, expected_margin_overdue,

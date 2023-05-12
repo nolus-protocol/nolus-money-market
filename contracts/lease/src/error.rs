@@ -55,9 +55,6 @@ pub enum ContractError {
     #[error("[Lease] Insufficient liquidation amount")]
     InsufficientLiquidation(),
 
-    #[error("[Lease] The underlying loan is closed")]
-    LoanClosed(),
-
     #[error("[Lease] The operation '{0}' is not supported in the current state")]
     UnsupportedOperation(String),
 
