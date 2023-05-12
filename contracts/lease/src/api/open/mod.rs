@@ -28,6 +28,7 @@ pub struct NewLeaseForm {
     /// Ticker of the currency this lease will be about.
     pub currency: SymbolOwned,
     /// Maximum Loan-to-Downpayment percentage of the new lease, optional.
+    #[cfg_attr(feature = "migration", serde(default))] //due to the migrate v2
     pub max_ltd: Option<Percent>,
     /// Liability parameters
     pub liability: Liability,
