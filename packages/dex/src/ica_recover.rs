@@ -21,6 +21,11 @@ pub struct InRecovery<S, SEnum> {
 }
 
 impl<S, SEnum> InRecovery<S, SEnum> {
+    #[cfg(feature = "migration")]
+    pub fn new_migrate(state: S, time_alarms: TimeAlarmsRef) -> Self {
+        Self::new(state, time_alarms)
+    }
+
     pub(super) fn new(state: S, time_alarms: TimeAlarmsRef) -> Self {
         Self {
             state,

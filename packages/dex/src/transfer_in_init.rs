@@ -33,6 +33,11 @@ where
     pub fn new(spec: SwapTask, amount_in: CoinDTO<SwapTask::OutG>) -> Self {
         Self { spec, amount_in }
     }
+
+    #[cfg(feature = "migration")]
+    pub fn migrate_from(spec: SwapTask, amount_in: CoinDTO<SwapTask::OutG>) -> Self {
+        Self::new(spec, amount_in)
+    }
 }
 
 impl<SwapTask> TransferInInit<SwapTask>

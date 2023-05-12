@@ -1,8 +1,10 @@
 use serde::Deserialize;
 
 use dex::{
-    CoinsNb, SwapExactIn as SwapExactInV3, TransferInFinish as TransferInFinishV3,
-    TransferInInit as TransferInInitV3, TransferOut as TransferOutV3,
+    CoinsNb, InRecovery, SwapExactIn as SwapExactInV3, SwapExactInPostRecoverIca,
+    SwapExactInRecoverIca, TransferInFinish as TransferInFinishV3,
+    TransferInInit as TransferInInitV3, TransferInInitPostRecoverIca, TransferInInitRecoverIca,
+    TransferOut as TransferOutV3,
 };
 use sdk::cosmwasm_std::Timestamp;
 
@@ -34,29 +36,76 @@ impl Migrate for TransferOut {
 }
 
 #[derive(Deserialize)]
-pub struct BuyLpn {
+pub(crate) struct BuyLpn {
     lease: LeaseV2,
     payment: PaymentCoin,
 }
 
+impl BuyLpn {
+    pub fn into_recovery(self) -> DexState {
+        let timealarms = self.lease.lease().time_alarms.clone();
+        DexState::SwapExactInRecoverIca(SwapExactInRecoverIca::new(InRecovery::new_migrate(
+            self.into(),
+            timealarms,
+        )))
+    }
+
+    pub fn into_post_recovery(self) -> DexState {
+        let timealarms = self.lease.lease().time_alarms.clone();
+        DexState::SwapExactInPostRecoverIca(SwapExactInPostRecoverIca::new_migrate(
+            self.into(),
+            timealarms,
+        ))
+    }
+}
+
 impl Migrate for BuyLpn {
     fn into_last_version(self) -> State {
-        let spec = BuyLpnSpec::migrate_to(self.lease.into(), self.payment);
-        DexState::from(SwapExactInV3::migrate_from(spec)).into()
+        DexState::from(Into::<SwapExactInV3<BuyLpnSpec, DexState>>::into(self)).into()
+    }
+}
+
+impl From<BuyLpn> for SwapExactInV3<BuyLpnSpec, DexState> {
+    fn from(value: BuyLpn) -> Self {
+        SwapExactInV3::migrate_from(BuyLpnSpec::migrate_to(value.lease.into(), value.payment))
     }
 }
 
 #[derive(Deserialize)]
-pub struct TransferInInit {
+pub(crate) struct TransferInInit {
     lease: LeaseV2,
     payment: PaymentCoin,
     payment_lpn: LpnCoin,
 }
 
+impl TransferInInit {
+    pub fn into_recovery(self) -> DexState {
+        let timealarms = self.lease.lease().time_alarms.clone();
+        DexState::TransferInInitRecoverIca(TransferInInitRecoverIca::new(InRecovery::new_migrate(
+            self.into(),
+            timealarms,
+        )))
+    }
+
+    pub fn into_post_recovery(self) -> DexState {
+        let timealarms = self.lease.lease().time_alarms.clone();
+        DexState::TransferInInitPostRecoverIca(TransferInInitPostRecoverIca::new_migrate(
+            self.into(),
+            timealarms,
+        ))
+    }
+}
+
 impl Migrate for TransferInInit {
     fn into_last_version(self) -> State {
-        let spec = BuyLpnSpec::migrate_to(self.lease.into(), self.payment);
-        DexState::from(TransferInInitV3::new(spec, self.payment_lpn)).into()
+        DexState::from(Into::<TransferInInitV3<BuyLpnSpec>>::into(self)).into()
+    }
+}
+
+impl From<TransferInInit> for TransferInInitV3<BuyLpnSpec> {
+    fn from(value: TransferInInit) -> Self {
+        let spec = BuyLpnSpec::migrate_to(value.lease.into(), value.payment);
+        TransferInInitV3::migrate_from(spec, value.payment_lpn)
     }
 }
 

@@ -1,6 +1,9 @@
 use serde::Deserialize;
 
-use dex::TransferInFinish as TransferInFinishV3;
+use dex::{
+    InRecovery, TransferInFinish as TransferInFinishV3, TransferInInit as TransferInInitV3,
+    TransferInInitPostRecoverIca, TransferInInitRecoverIca,
+};
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::contract::{
@@ -25,14 +28,37 @@ impl Migrate for Active {
 }
 
 #[derive(Deserialize)]
-pub struct TransferInInit {
+pub(crate) struct TransferInInit {
     lease: LeaseV2,
+}
+
+impl TransferInInit {
+    pub fn into_recovery(self) -> DexState {
+        let timealarms = self.lease.lease().time_alarms.clone();
+        let swap_v3 = self.into();
+        DexState::TransferInInitRecoverIca(TransferInInitRecoverIca::new(InRecovery::new_migrate(
+            swap_v3, timealarms,
+        )))
+    }
+
+    pub fn into_post_recovery(self) -> DexState {
+        let timealarms = self.lease.lease().time_alarms.clone();
+        DexState::TransferInInitPostRecoverIca(TransferInInitPostRecoverIca::new_migrate(
+            self.into(),
+            timealarms,
+        ))
+    }
 }
 
 impl Migrate for TransferInInit {
     fn into_last_version(self) -> StateV3 {
-        let start = transfer_in::start(self.lease.into());
-        DexState::from(start).into()
+        DexState::from(Into::<TransferInInitV3<TransferInSpec>>::into(self)).into()
+    }
+}
+
+impl From<TransferInInit> for TransferInInitV3<TransferInSpec> {
+    fn from(value: TransferInInit) -> Self {
+        transfer_in::start(value.lease.into())
     }
 }
 

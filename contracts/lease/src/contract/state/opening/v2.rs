@@ -4,7 +4,10 @@ use lpp::stub::LppRef;
 use platform::batch::ReplyId;
 use serde::Deserialize;
 
-use dex::{SwapExactIn as SwapExactInV3, TransferOut as TransferOutV3};
+use dex::{
+    InRecovery, SwapExactIn as SwapExactInV3, SwapExactInPostRecoverIca, SwapExactInRecoverIca,
+    TransferOut as TransferOutV3,
+};
 use oracle::stub::OracleRef;
 use timealarms::stub::TimeAlarmsRef;
 
@@ -111,8 +114,32 @@ pub(in crate::contract) struct SwapExactIn {
     pub spec: BuyAsset,
 }
 
+impl SwapExactIn {
+    pub fn into_recovery(self) -> DexState {
+        let timealarms = TimeAlarmsRef::unchecked(self.spec.form.time_alarms.clone());
+        DexState::SwapExactInRecoverIca(SwapExactInRecoverIca::new(InRecovery::new_migrate(
+            self.into(),
+            timealarms,
+        )))
+    }
+
+    pub fn into_post_recovery(self) -> DexState {
+        let timealarms = TimeAlarmsRef::unchecked(self.spec.form.time_alarms.clone());
+        DexState::SwapExactInPostRecoverIca(SwapExactInPostRecoverIca::new_migrate(
+            self.into(),
+            timealarms,
+        ))
+    }
+}
+
 impl Migrate for SwapExactIn {
     fn into_last_version(self) -> State {
-        DexState::from(SwapExactInV3::migrate_from(self.spec.into())).into()
+        DexState::from(Into::<SwapExactInV3<BuyAssetV3, DexState>>::into(self)).into()
+    }
+}
+
+impl From<SwapExactIn> for SwapExactInV3<BuyAssetV3, DexState> {
+    fn from(value: SwapExactIn) -> Self {
+        SwapExactInV3::migrate_from(value.spec.into())
     }
 }
