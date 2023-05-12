@@ -20,6 +20,9 @@ pub enum ContractError {
     #[error("[TimeAlarms] Alarm is in the past: {0:?}")]
     InvalidAlarm(Timestamp),
 
+    #[error("[TimeAlarms] Alarms delivery queue is empty but received reply")]
+    ReplyOnEmptyAlarmQueue,
+
     #[error("[TimeAlarms] {0}")]
     Platform(#[from] platform::error::Error),
 

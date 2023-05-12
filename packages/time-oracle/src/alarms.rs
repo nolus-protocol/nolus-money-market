@@ -5,7 +5,7 @@ use sdk::{
 
 use crate::AlarmError;
 
-type TimeSeconds = u64;
+pub type TimeSeconds = u64;
 
 fn as_seconds(from: Timestamp) -> TimeSeconds {
     from.seconds()
