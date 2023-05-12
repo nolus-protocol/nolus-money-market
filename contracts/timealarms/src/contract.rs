@@ -1,18 +1,17 @@
 use platform::{
     batch::{Emit, Emitter},
-    reply,
-    response::{self},
+    response,
 };
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, SubMsgResult},
 };
 use versioning::{package_version, version, VersionSegment};
 
 use crate::{
-    alarms::TimeAlarms,
+    alarms::{InDelivery, TimeAlarms},
     msg::{DispatchAlarmsResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
 };
@@ -48,7 +47,7 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::AddAlarm { time } => TimeAlarms::new()
-            .try_add(deps, env, info.sender, time)
+            .try_add_new(&deps.querier, deps.storage, &env, info.sender, time)
             .map(response::response_only_messages),
         ExecuteMsg::DispatchAlarms { max_count } => TimeAlarms::new()
             .try_notify(deps.storage, env.block.time, max_count)
@@ -83,19 +82,20 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
     const KEY_DELIVERED: &str = "delivered";
     const KEY_DETAILS: &str = "details";
 
-    match reply::from_execute(msg) {
-        Ok(Some(addr)) => TimeAlarms::new()
-            .remove(deps.storage, addr)
-            .map(|()| Emitter::of_type(EVENT_TYPE).emit(KEY_DELIVERED, "success")),
-        Err(err) => Ok(Emitter::of_type(EVENT_TYPE)
-            .emit(KEY_DELIVERED, "error")
-            .emit(KEY_DETAILS, err.to_string())),
+    let emitter: Emitter = Emitter::of_type(EVENT_TYPE);
 
-        Ok(None) => Ok(Emitter::of_type(EVENT_TYPE)
-            .emit(KEY_DELIVERED, "error")
-            .emit(KEY_DETAILS, "no reply")),
-    }
-    .map(response::response_only_messages)
+    Ok(response::response_only_messages(match msg.result {
+        SubMsgResult::Ok(_) => {
+            InDelivery::delivered(deps.storage)?;
+
+            emitter.emit(KEY_DELIVERED, "success")
+        }
+        SubMsgResult::Err(err) => {
+            InDelivery::failed(deps.storage)?;
+
+            emitter.emit(KEY_DELIVERED, "error").emit(KEY_DETAILS, err)
+        }
+    }))
 }
 
 #[cfg(test)]
