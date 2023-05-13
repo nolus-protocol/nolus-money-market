@@ -82,7 +82,7 @@ where
         let LiabilityStatus {
             total: total_due,
             previous_interest,
-        } = self.loan.liability_status(now)?;
+        } = self.loan.liability_status(now);
 
         let overdue = if self.loan.grace_period_end() <= now {
             previous_interest

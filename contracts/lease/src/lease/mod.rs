@@ -12,7 +12,7 @@ use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::{error::ContractResult, loan::Loan};
+use crate::loan::Loan;
 
 pub(super) use self::{
     dto::LeaseDTO,
@@ -110,8 +110,9 @@ where
         }
     }
 
-    pub(crate) fn state(&self, now: Timestamp) -> ContractResult<State<Asset, Lpn>> {
-        self.loan.state(now).map(|loan| State {
+    pub(crate) fn state(&self, now: Timestamp) -> State<Asset, Lpn> {
+        let loan = self.loan.state(now);
+        State {
             amount: self.amount,
             interest_rate: loan.annual_interest,
             interest_rate_margin: loan.annual_interest_margin,
@@ -121,7 +122,7 @@ where
             current_margin_due: loan.current_margin_interest_due,
             current_interest_due: loan.current_interest_due,
             validity: now,
-        })
+        }
     }
 }
 
@@ -312,7 +313,7 @@ mod tests {
     pub fn request_state(
         lease: Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>,
     ) -> State<TestCurrency, TestLpn> {
-        lease.state(LEASE_STATE_AT).unwrap()
+        lease.state(LEASE_STATE_AT)
     }
 
     pub fn coin(a: u128) -> Coin<TestCurrency> {

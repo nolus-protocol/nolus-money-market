@@ -1,5 +1,6 @@
 use finance::{coin::Coin, currency::Currency, percent::Percent};
 
+#[cfg_attr(test, derive(PartialEq, Eq, Debug))]
 pub struct State<Lpn>
 where
     Lpn: Currency,

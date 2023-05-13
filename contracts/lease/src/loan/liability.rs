@@ -2,28 +2,27 @@ use finance::{coin::Coin, currency::Currency};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use sdk::cosmwasm_std::Timestamp;
 
-use crate::{error::ContractResult, loan::Loan};
+use crate::loan::Loan;
 
 impl<Lpn, Lpp> Loan<Lpn, Lpp>
 where
     Lpn: Currency,
     Lpp: LppLoanTrait<Lpn>,
 {
-    pub(crate) fn liability_status(&self, now: Timestamp) -> ContractResult<LiabilityStatus<Lpn>> {
-        self.state(now).map(|state| {
-            let previous_interest =
-                state.previous_margin_interest_due + state.previous_interest_due;
+    pub(crate) fn liability_status(&self, now: Timestamp) -> LiabilityStatus<Lpn> {
+        let state = self.state(now);
 
-            let total = state.principal_due
-                + previous_interest
-                + state.current_margin_interest_due
-                + state.current_interest_due;
+        let previous_interest = state.previous_margin_interest_due + state.previous_interest_due;
 
-            LiabilityStatus {
-                total,
-                previous_interest,
-            }
-        })
+        let total = state.principal_due
+            + previous_interest
+            + state.current_margin_interest_due
+            + state.current_interest_due;
+
+        LiabilityStatus {
+            total,
+            previous_interest,
+        }
     }
 }
 

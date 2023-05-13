@@ -87,7 +87,7 @@ where
 
         let total_liability = self
             .loan
-            .liability_status(*now + self.liability.recalculation_time())?
+            .liability_status(*now + self.liability.recalculation_time())
             .total;
 
         let below = self.price_alarm_at_level(total_liability, liquidation_zone.high())?;
@@ -342,7 +342,7 @@ mod tests {
         lease: &Lease<Usdc, Atom, LppLoanLocal<Usdc>, OracleLocalStub>,
         at: Timestamp,
     ) -> Coin<Usdc> {
-        let l = lease.loan.state(at).unwrap();
+        let l = lease.loan.state(at);
         l.principal_due
             + l.previous_interest_due
             + l.previous_margin_interest_due

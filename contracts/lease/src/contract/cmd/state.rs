@@ -37,7 +37,9 @@ impl WithLease for LeaseState {
         Oracle: OracleTrait<Lpn>,
         Asset: Currency + Serialize,
     {
-        let state = lease.state(self.now)?;
-        Ok(StateResponse::opened_from(state, self.in_progress))
+        Ok(StateResponse::opened_from(
+            lease.state(self.now),
+            self.in_progress,
+        ))
     }
 }

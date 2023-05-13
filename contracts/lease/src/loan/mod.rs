@@ -176,12 +176,11 @@ where
             // In theory, zero loan payment may occur if two consecutive repayments are executed within the same time.
             // In practice, that means two repayment transactions of the same lease enter the same block.
             self.lpp_loan.repay(by, loan_payment)?;
-            // self.lpp_loan.as_ref().and_then(|loan| loan.repay(loan_payment))?;
         }
         Ok(receipt)
     }
 
-    pub(crate) fn state(&self, now: Timestamp) -> ContractResult<State<Lpn>> {
+    pub(crate) fn state(&self, now: Timestamp) -> State<Lpn> {
         self.debug_check_start_due_before(now, "in the past of");
 
         let principal_due = self.lpp_loan.principal_due();
@@ -195,14 +194,14 @@ where
             )
         };
 
+        let margin_interest_due_period_start = self
+            .current_period
+            .start()
+            .max(margin_interest_overdue_period.till());
         let margin_interest_due_period = self
             .current_period
-            .from(margin_interest_overdue_period.till())
-            .spanning(Duration::between(
-                margin_interest_overdue_period.till(),
-                now,
-            ));
-
+            .from(margin_interest_due_period_start)
+            .spanning(Duration::between(margin_interest_due_period_start, now));
         debug_assert_eq!(margin_interest_due_period.till(), now);
 
         let previous_margin_interest_due = margin_interest_overdue_period.interest(principal_due);
@@ -213,7 +212,7 @@ where
             .interest_due(margin_interest_overdue_period.till());
         let current_interest_due = self.lpp_loan.interest_due(now) - previous_interest_due;
 
-        Ok(State {
+        State {
             annual_interest: self.lpp_loan.annual_interest_rate(),
             annual_interest_margin: self.annual_margin_interest,
             principal_due,
@@ -221,7 +220,7 @@ where
             current_interest_due,
             previous_margin_interest_due,
             current_margin_interest_due,
-        })
+        }
     }
 
     fn repay_previous_period<Profit>(
@@ -403,7 +402,7 @@ mod tests {
 
     use crate::{
         api::InterestPaymentSpec,
-        loan::{repay::Receipt as RepayReceipt, Loan},
+        loan::{repay::Receipt as RepayReceipt, Loan, State},
     };
 
     // 50%
@@ -607,6 +606,19 @@ mod tests {
         let mut loan = create_loan(loan);
         let mut profit = profit_stub();
 
+        assert_eq!(
+            State {
+                annual_interest: interest_rate,
+                annual_interest_margin: MARGIN_INTEREST_RATE,
+                principal_due: lease_coin,
+                previous_interest_due: Default::default(),
+                current_interest_due: interest_rate.of(lease_coin),
+                previous_margin_interest_due: Default::default(),
+                current_margin_interest_due: MARGIN_INTEREST_RATE.of(lease_coin)
+            },
+            loan.state(now)
+        );
+
         let receipt = loan.repay(repay_coin, now, &mut profit).unwrap();
 
         assert_eq!(receipt, {
@@ -617,11 +629,23 @@ mod tests {
             receipt
         },);
         assert_eq!(
+            State {
+                annual_interest: interest_rate,
+                annual_interest_margin: MARGIN_INTEREST_RATE,
+                principal_due: lease_coin,
+                previous_interest_due: Default::default(),
+                current_interest_due: interest_rate.of(lease_coin),
+                previous_margin_interest_due: Default::default(),
+                current_margin_interest_due: MARGIN_INTEREST_RATE.of(lease_coin) - repay_coin,
+            },
+            loan.state(now)
+        );
+        assert_eq!(
             Into::<Batch>::into(profit),
             bank::bank_send(Batch::default(), PROFIT_ADDR, receipt.current_margin_paid())
         );
 
-        let state = loan.state(now).unwrap();
+        let state = loan.state(now);
 
         assert_eq!(state.previous_margin_interest_due, Coin::default());
 
@@ -914,7 +938,7 @@ mod tests {
             loan_resp.annual_interest_rate,
         );
 
-        let res = loan.state(now).unwrap();
+        let res = loan.state(now);
 
         assert_eq!(
             res.previous_margin_interest_due, expected_margin_overdue,
