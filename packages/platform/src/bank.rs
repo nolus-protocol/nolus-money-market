@@ -201,7 +201,7 @@ where
         C: Currency,
     {
         debug_assert!(!amount.is_zero());
-        bank_send_impl(&mut self.batch, to, amount)
+        bank_send_impl(&mut self.batch, to, &[amount])
     }
 }
 
@@ -236,12 +236,15 @@ where
     }
 }
 
-fn bank_send_impl<C>(batch: &mut Batch, to: &Addr, amount: Coin<C>)
+fn bank_send_impl<C>(batch: &mut Batch, to: &Addr, amount: &[Coin<C>])
 where
     C: Currency,
 {
     batch.schedule_execute_no_reply(BankMsg::Send {
-        amount: vec![to_cosmwasm_impl(amount)],
+        amount: amount
+            .iter()
+            .map(|coin| to_cosmwasm_impl(coin.to_owned()))
+            .collect(),
         to_address: to.into(),
     });
 }
@@ -354,7 +357,15 @@ where
 }
 
 #[cfg(feature = "testing")]
-pub fn bank_send<C>(mut batch: Batch, to: &str, amount: Coin<C>) -> Batch
+pub fn bank_send<C>(batch: Batch, to: &str, amount: Coin<C>) -> Batch
+where
+    C: Currency,
+{
+    bank_send_multiple(batch, to, &[amount])
+}
+
+#[cfg(feature = "testing")]
+pub fn bank_send_multiple<C>(mut batch: Batch, to: &str, amount: &[Coin<C>]) -> Batch
 where
     C: Currency,
 {
