@@ -111,14 +111,16 @@ where
 pub fn update_software_and_storage<
     const FROM_STORAGE_VERSION: VersionSegment,
     MigrateStorageFunctor,
+    MigrateStorageFunctorResponse,
     ContractError,
 >(
     storage: &mut dyn Storage,
     new: Version,
     migrate_storage: MigrateStorageFunctor,
-) -> Result<ReleaseLabel, ContractError>
+) -> Result<(ReleaseLabel, MigrateStorageFunctorResponse), ContractError>
 where
-    MigrateStorageFunctor: FnOnce(&mut dyn Storage) -> Result<(), ContractError>,
+    MigrateStorageFunctor:
+        FnOnce(&mut dyn Storage) -> Result<MigrateStorageFunctorResponse, ContractError>,
     StdError: Into<ContractError>,
 {
     load_version(storage)
@@ -128,7 +130,7 @@ where
         .and_then(|()| save_version(storage, &new))
         .map_err(Into::into)
         .and_then(|()| migrate_storage(storage))
-        .map(|()| release::label())
+        .map(|response| (release::label(), response))
 }
 
 fn load_version(storage: &mut dyn Storage) -> Result<Version, StdError> {

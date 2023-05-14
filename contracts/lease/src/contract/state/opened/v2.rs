@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use crate::contract::state::{
     v2::{Lease, Migrate},
-    State as StateV3,
+    Response,
 };
 
 use super::active::Active as ActiveV3;
@@ -13,7 +13,7 @@ pub struct Active {
 }
 
 impl Migrate for Active {
-    fn into_last_version(self) -> StateV3 {
-        ActiveV3::new(self.lease.into()).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(ActiveV3::new(self.lease.into()))
     }
 }

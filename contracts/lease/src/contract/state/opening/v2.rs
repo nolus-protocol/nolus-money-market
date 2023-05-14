@@ -17,7 +17,7 @@ use crate::{
         cmd::OpenLoanRespResult,
         state::{
             v2::{Account as AccountV2, Migrate},
-            State,
+            Response,
         },
     },
 };
@@ -47,7 +47,7 @@ impl From<LppLenderRef> for LppRef {
 #[derive(Deserialize)]
 pub(in crate::contract) struct RequestLoan();
 impl Migrate for RequestLoan {
-    fn into_last_version(self) -> State {
+    fn into_last_version(self) -> Response {
         unreachable!("This state is transient and do not last past a transaction is over")
     }
 }
@@ -99,13 +99,12 @@ pub(in crate::contract) struct TransferOut {
 }
 
 impl Migrate for TransferOut {
-    fn into_last_version(self) -> State {
-        DexState::from(TransferOutV3::migrate_from(
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(DexState::from(TransferOutV3::migrate_from(
             self.spec.into(),
             self.coin_index,
             self.last_coin_index,
-        ))
-        .into()
+        )))
     }
 }
 
@@ -133,8 +132,10 @@ impl SwapExactIn {
 }
 
 impl Migrate for SwapExactIn {
-    fn into_last_version(self) -> State {
-        DexState::from(Into::<SwapExactInV3<BuyAssetV3, DexState>>::into(self)).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(DexState::from(
+            Into::<SwapExactInV3<BuyAssetV3, DexState>>::into(self),
+        ))
     }
 }
 

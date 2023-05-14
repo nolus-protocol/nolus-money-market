@@ -10,7 +10,7 @@ use sdk::cosmwasm_std::Timestamp;
 
 use crate::{
     api::{LpnCoin, PaymentCoin},
-    contract::state::{v2::Lease as LeaseV2, v2::Migrate, State},
+    contract::state::{v2::Lease as LeaseV2, v2::Migrate, Response},
 };
 
 use super::buy_lpn::{BuyLpn as BuyLpnSpec, DexState};
@@ -24,14 +24,13 @@ pub struct TransferOut {
 }
 
 impl Migrate for TransferOut {
-    fn into_last_version(self) -> State {
+    fn into_last_version(self) -> Response {
         let spec = BuyLpnSpec::migrate_to(self.lease.into(), self.payment);
-        DexState::from(TransferOutV3::migrate_from(
+        Response::no_msgs(DexState::from(TransferOutV3::migrate_from(
             spec,
             CoinsNb::default(),
             CoinsNb::default(),
-        ))
-        .into()
+        )))
     }
 }
 
@@ -60,8 +59,10 @@ impl BuyLpn {
 }
 
 impl Migrate for BuyLpn {
-    fn into_last_version(self) -> State {
-        DexState::from(Into::<SwapExactInV3<BuyLpnSpec, DexState>>::into(self)).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(DexState::from(
+            Into::<SwapExactInV3<BuyLpnSpec, DexState>>::into(self),
+        ))
     }
 }
 
@@ -97,8 +98,10 @@ impl TransferInInit {
 }
 
 impl Migrate for TransferInInit {
-    fn into_last_version(self) -> State {
-        DexState::from(Into::<TransferInInitV3<BuyLpnSpec>>::into(self)).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(DexState::from(Into::<TransferInInitV3<BuyLpnSpec>>::into(
+            self,
+        )))
     }
 }
 
@@ -118,13 +121,12 @@ pub struct TransferInFinish {
 }
 
 impl Migrate for TransferInFinish {
-    fn into_last_version(self) -> State {
+    fn into_last_version(self) -> Response {
         let spec = BuyLpnSpec::migrate_to(self.lease.into(), self.payment);
-        DexState::from(TransferInFinishV3::migrate_from(
+        Response::no_msgs(DexState::from(TransferInFinishV3::migrate_from(
             spec,
             self.payment_lpn,
             self.timeout,
-        ))
-        .into()
+        )))
     }
 }

@@ -16,9 +16,7 @@ use crate::{
     lease::LeaseDTO,
 };
 
-use super::{
-    opened, opening::v2::RequestLoan, OpenIcaAccount as OpenIcaAccountV3, State as StateV3,
-};
+use super::{opened, opening::v2::RequestLoan, OpenIcaAccount as OpenIcaAccountV3, Response};
 
 type OpenIcaAccount = IcaConnector<super::opening::v2::OpenIcaAccount>;
 type OpeningTransferOut = super::opening::v2::Transfer;
@@ -50,7 +48,7 @@ pub(crate) trait Migrate
 where
     Self: Sized,
 {
-    fn into_last_version(self) -> StateV3;
+    fn into_last_version(self) -> Response;
 }
 
 #[enum_dispatch(Migrate)]
@@ -85,32 +83,36 @@ pub(in crate::contract) struct IcaConnector<Connectee> {
 }
 
 impl Migrate for OpenIcaAccount {
-    fn into_last_version(self) -> StateV3 {
-        OpenIcaAccountV3::new(IcaConnectorV3::new(self.connectee.into())).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(OpenIcaAccountV3::new(IcaConnectorV3::new(
+            self.connectee.into(),
+        )))
     }
 }
 
 impl Migrate for BuyAssetRecoverIca {
-    fn into_last_version(self) -> StateV3 {
-        BuyAssetV3::new(self.connectee.state.into_recovery()).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(BuyAssetV3::new(self.connectee.state.into_recovery()))
     }
 }
 
 impl Migrate for BuyLpnRecoverIca {
-    fn into_last_version(self) -> StateV3 {
-        BuyLpnV3::new(self.connectee.state.into_recovery()).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(BuyLpnV3::new(self.connectee.state.into_recovery()))
     }
 }
 
 impl Migrate for RepaymentTransferInInitRecoverIca {
-    fn into_last_version(self) -> StateV3 {
-        BuyLpnV3::new(self.connectee.state.into_recovery()).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(BuyLpnV3::new(self.connectee.state.into_recovery()))
     }
 }
 
 impl Migrate for ClosingTransferInInitRecoverIca {
-    fn into_last_version(self) -> StateV3 {
-        ClosingTransferInV3::new(self.connectee.state.into_recovery()).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(ClosingTransferInV3::new(
+            self.connectee.state.into_recovery(),
+        ))
     }
 }
 
@@ -121,26 +123,28 @@ pub(crate) struct PostConnector<Connectee> {
 }
 
 impl Migrate for BuyAssetPostRecoverIca {
-    fn into_last_version(self) -> StateV3 {
-        BuyAssetV3::new(self.connectee.state.into_post_recovery()).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(BuyAssetV3::new(self.connectee.state.into_post_recovery()))
     }
 }
 
 impl Migrate for BuyLpnPostRecoverIca {
-    fn into_last_version(self) -> StateV3 {
-        BuyLpnV3::new(self.connectee.state.into_post_recovery()).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(BuyLpnV3::new(self.connectee.state.into_post_recovery()))
     }
 }
 
 impl Migrate for RepaymentTransferInInitPostRecoverIca {
-    fn into_last_version(self) -> StateV3 {
-        BuyLpnV3::new(self.connectee.state.into_post_recovery()).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(BuyLpnV3::new(self.connectee.state.into_post_recovery()))
     }
 }
 
 impl Migrate for ClosingTransferInInitPostRecoverIca {
-    fn into_last_version(self) -> StateV3 {
-        ClosingTransferInV3::new(self.connectee.state.into_post_recovery()).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(ClosingTransferInV3::new(
+            self.connectee.state.into_post_recovery(),
+        ))
     }
 }
 
@@ -184,8 +188,8 @@ impl From<Account> for AccountV3 {
 }
 
 impl Migrate for Closed {
-    fn into_last_version(self) -> StateV3 {
-        self.into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(self)
     }
 }
 

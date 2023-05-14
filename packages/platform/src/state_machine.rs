@@ -16,6 +16,13 @@ impl<State> Response<State> {
             next_state: next_state.into(),
         }
     }
+
+    pub fn no_msgs<S>(next_state: S) -> Self
+    where
+        S: Into<State>,
+    {
+        Self::from(MessageResponse::default(), next_state)
+    }
 }
 
 pub fn from<StateFrom, StateTo>(value: Response<StateFrom>) -> Response<StateTo>

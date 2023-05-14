@@ -47,16 +47,21 @@ pub fn instantiate(
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _>(
+    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _>(
         deps.storage,
         version!(CONTRACT_STORAGE_VERSION),
         |storage: &mut _| {
             state::load_v2(storage)
                 .map(|lease_v2| lease_v2.into_last_version())
-                .and_then(|lease_v3| state::save(storage, &lease_v3))
+                .and_then(
+                    |Response {
+                         response,
+                         next_state: lease_v3,
+                     }| state::save(storage, &lease_v3).map(|()| response),
+                )
         },
     )
-    .and_then(response::response)
+    .and_then(|(release_label, resp)| response::response_with_messages(release_label, resp))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

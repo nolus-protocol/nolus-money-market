@@ -7,7 +7,7 @@ use dex::{
 use sdk::cosmwasm_std::Timestamp;
 
 use crate::contract::{
-    state::{v2::Lease as LeaseV2, v2::Migrate, State as StateV3},
+    state::{v2::Lease as LeaseV2, v2::Migrate, Response},
     Lease as LeaseV3,
 };
 
@@ -22,8 +22,8 @@ pub struct Active {
 }
 
 impl Migrate for Active {
-    fn into_last_version(self) -> StateV3 {
-        ActiveV3::new(self.lease.into()).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(ActiveV3::new(self.lease.into()))
     }
 }
 
@@ -51,8 +51,10 @@ impl TransferInInit {
 }
 
 impl Migrate for TransferInInit {
-    fn into_last_version(self) -> StateV3 {
-        DexState::from(Into::<TransferInInitV3<TransferInSpec>>::into(self)).into()
+    fn into_last_version(self) -> Response {
+        Response::no_msgs(DexState::from(
+            Into::<TransferInInitV3<TransferInSpec>>::into(self),
+        ))
     }
 }
 
@@ -69,7 +71,7 @@ pub struct TransferInFinish {
 }
 
 impl Migrate for TransferInFinish {
-    fn into_last_version(self) -> StateV3 {
+    fn into_last_version(self) -> Response {
         let lease_v3: LeaseV3 = self.lease.into();
         let amount_in = lease_v3.lease.amount.clone();
         let dex_state = TransferInFinishV3::migrate_from(
@@ -77,6 +79,6 @@ impl Migrate for TransferInFinish {
             amount_in,
             self.timeout,
         );
-        DexState::from(dex_state).into()
+        Response::no_msgs(DexState::from(dex_state))
     }
 }
