@@ -47,14 +47,15 @@ mod transfer_in_init;
 mod transfer_out;
 mod trx;
 
-type SwapExactInPreRecoverIca<SwapTask, SEnum> = EntryDelay<SwapExactInRecoverIca<SwapTask, SEnum>>;
+pub type SwapExactInPreRecoverIca<SwapTask, SEnum> =
+    EntryDelay<SwapExactInRecoverIca<SwapTask, SEnum>>;
 
 pub type SwapExactInRecoverIca<SwapTask, SEnum> =
     IcaConnector<InRecovery<SwapExactIn<SwapTask, SEnum>, SEnum>, <SwapTask as SwapTaskT>::Result>;
 
 pub type SwapExactInPostRecoverIca<SwapTask, SEnum> = EntryDelay<SwapExactIn<SwapTask, SEnum>>;
 
-type TransferInInitPreRecoverIca<SwapTask, SEnum> =
+pub type TransferInInitPreRecoverIca<SwapTask, SEnum> =
     EntryDelay<TransferInInitRecoverIca<SwapTask, SEnum>>;
 
 pub type TransferInInitRecoverIca<SwapTask, SEnum> =

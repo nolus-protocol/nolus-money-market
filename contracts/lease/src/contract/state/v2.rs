@@ -2,8 +2,8 @@ use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize, Serializer};
 
 use dex::{Account as AccountV3, ConnectionParams, IcaConnector as IcaConnectorV3};
-use platform::ica::HostAccount;
-use sdk::cosmwasm_std::Addr;
+use platform::{ica::HostAccount, message::Response as MessageResponse};
+use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{
     contract::{
@@ -13,6 +13,7 @@ use crate::{
         },
         Lease as LeaseV3,
     },
+    error::ContractResult,
     lease::LeaseDTO,
 };
 
@@ -48,7 +49,7 @@ pub(crate) trait Migrate
 where
     Self: Sized,
 {
-    fn into_last_version(self) -> Response;
+    fn into_last_version(self, now: Timestamp) -> ContractResult<Response>;
 }
 
 #[enum_dispatch(Migrate)]
@@ -83,35 +84,53 @@ pub(in crate::contract) struct IcaConnector<Connectee> {
 }
 
 impl Migrate for OpenIcaAccount {
-    fn into_last_version(self) -> Response {
-        Response::no_msgs(OpenIcaAccountV3::new(IcaConnectorV3::new(
-            self.connectee.into(),
+    fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
+        Ok(Response::no_msgs(OpenIcaAccountV3::new(
+            IcaConnectorV3::new(self.connectee.into()),
         )))
     }
 }
 
 impl Migrate for BuyAssetRecoverIca {
-    fn into_last_version(self) -> Response {
-        Response::no_msgs(BuyAssetV3::new(self.connectee.state.into_recovery()))
+    fn into_last_version(self, now: Timestamp) -> ContractResult<Response> {
+        let (time_alarm_msg, dex_pre_recovery) = self.connectee.state.into_recovery(now)?;
+        let next_state = BuyAssetV3::new(dex_pre_recovery);
+        Ok(Response::from(
+            Into::<MessageResponse>::into(time_alarm_msg),
+            next_state,
+        ))
     }
 }
 
 impl Migrate for BuyLpnRecoverIca {
-    fn into_last_version(self) -> Response {
-        Response::no_msgs(BuyLpnV3::new(self.connectee.state.into_recovery()))
+    fn into_last_version(self, now: Timestamp) -> ContractResult<Response> {
+        let (time_alarm_msg, dex_pre_recovery) = self.connectee.state.into_recovery(now)?;
+        let next_state = BuyLpnV3::new(dex_pre_recovery);
+        Ok(Response::from(
+            Into::<MessageResponse>::into(time_alarm_msg),
+            next_state,
+        ))
     }
 }
 
 impl Migrate for RepaymentTransferInInitRecoverIca {
-    fn into_last_version(self) -> Response {
-        Response::no_msgs(BuyLpnV3::new(self.connectee.state.into_recovery()))
+    fn into_last_version(self, now: Timestamp) -> ContractResult<Response> {
+        let (time_alarm_msg, dex_pre_recovery) = self.connectee.state.into_recovery(now)?;
+        let next_state = BuyLpnV3::new(dex_pre_recovery);
+        Ok(Response::from(
+            Into::<MessageResponse>::into(time_alarm_msg),
+            next_state,
+        ))
     }
 }
 
 impl Migrate for ClosingTransferInInitRecoverIca {
-    fn into_last_version(self) -> Response {
-        Response::no_msgs(ClosingTransferInV3::new(
-            self.connectee.state.into_recovery(),
+    fn into_last_version(self, now: Timestamp) -> ContractResult<Response> {
+        let (time_alarm_msg, dex_pre_recovery) = self.connectee.state.into_recovery(now)?;
+        let next_state = ClosingTransferInV3::new(dex_pre_recovery);
+        Ok(Response::from(
+            Into::<MessageResponse>::into(time_alarm_msg),
+            next_state,
         ))
     }
 }
@@ -123,28 +142,34 @@ pub(crate) struct PostConnector<Connectee> {
 }
 
 impl Migrate for BuyAssetPostRecoverIca {
-    fn into_last_version(self) -> Response {
-        Response::no_msgs(BuyAssetV3::new(self.connectee.state.into_post_recovery()))
+    fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
+        Ok(Response::no_msgs(BuyAssetV3::new(
+            self.connectee.state.into_post_recovery(),
+        )))
     }
 }
 
 impl Migrate for BuyLpnPostRecoverIca {
-    fn into_last_version(self) -> Response {
-        Response::no_msgs(BuyLpnV3::new(self.connectee.state.into_post_recovery()))
+    fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
+        Ok(Response::no_msgs(BuyLpnV3::new(
+            self.connectee.state.into_post_recovery(),
+        )))
     }
 }
 
 impl Migrate for RepaymentTransferInInitPostRecoverIca {
-    fn into_last_version(self) -> Response {
-        Response::no_msgs(BuyLpnV3::new(self.connectee.state.into_post_recovery()))
+    fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
+        Ok(Response::no_msgs(BuyLpnV3::new(
+            self.connectee.state.into_post_recovery(),
+        )))
     }
 }
 
 impl Migrate for ClosingTransferInInitPostRecoverIca {
-    fn into_last_version(self) -> Response {
-        Response::no_msgs(ClosingTransferInV3::new(
+    fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
+        Ok(Response::no_msgs(ClosingTransferInV3::new(
             self.connectee.state.into_post_recovery(),
-        ))
+        )))
     }
 }
 
@@ -188,8 +213,8 @@ impl From<Account> for AccountV3 {
 }
 
 impl Migrate for Closed {
-    fn into_last_version(self) -> Response {
-        Response::no_msgs(self)
+    fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
+        Ok(Response::no_msgs(self))
     }
 }
 

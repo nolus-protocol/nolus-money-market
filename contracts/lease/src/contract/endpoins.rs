@@ -46,13 +46,13 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
+pub fn migrate(deps: DepsMut<'_>, env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _>(
         deps.storage,
         version!(CONTRACT_STORAGE_VERSION),
         |storage: &mut _| {
             state::load_v2(storage)
-                .map(|lease_v2| lease_v2.into_last_version())
+                .and_then(|lease_v2| lease_v2.into_last_version(env.block.time))
                 .and_then(
                     |Response {
                          response,

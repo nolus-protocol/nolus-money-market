@@ -1,12 +1,12 @@
-use cosmwasm_std::Addr;
 use finance::currency::SymbolOwned;
 use lpp::stub::LppRef;
-use platform::batch::ReplyId;
+use platform::batch::{Batch, ReplyId};
+use sdk::cosmwasm_std::{Addr, Timestamp};
 use serde::Deserialize;
 
 use dex::{
-    InRecovery, SwapExactIn as SwapExactInV3, SwapExactInPostRecoverIca, SwapExactInRecoverIca,
-    TransferOut as TransferOutV3,
+    IcaConnector, InRecovery, SwapExactIn as SwapExactInV3, SwapExactInPostRecoverIca,
+    SwapExactInPreRecoverIca, TransferOut as TransferOutV3,
 };
 use oracle::stub::OracleRef;
 use timealarms::stub::TimeAlarmsRef;
@@ -20,6 +20,7 @@ use crate::{
             Response,
         },
     },
+    error::ContractResult,
 };
 
 use super::{
@@ -47,7 +48,7 @@ impl From<LppLenderRef> for LppRef {
 #[derive(Deserialize)]
 pub(in crate::contract) struct RequestLoan();
 impl Migrate for RequestLoan {
-    fn into_last_version(self) -> Response {
+    fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
         unreachable!("This state is transient and do not last past a transaction is over")
     }
 }
@@ -99,11 +100,9 @@ pub(in crate::contract) struct TransferOut {
 }
 
 impl Migrate for TransferOut {
-    fn into_last_version(self) -> Response {
-        Response::no_msgs(DexState::from(TransferOutV3::migrate_from(
-            self.spec.into(),
-            self.coin_index,
-            self.last_coin_index,
+    fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
+        Ok(Response::no_msgs(DexState::from(
+            TransferOutV3::migrate_from(self.spec.into(), self.coin_index, self.last_coin_index),
         )))
     }
 }
@@ -114,28 +113,29 @@ pub(in crate::contract) struct SwapExactIn {
 }
 
 impl SwapExactIn {
-    pub fn into_recovery(self) -> DexState {
+    pub fn into_recovery(self, now: Timestamp) -> ContractResult<(Batch, DexState)> {
         let timealarms = TimeAlarmsRef::unchecked(self.spec.form.time_alarms.clone());
-        DexState::SwapExactInRecoverIca(SwapExactInRecoverIca::new(InRecovery::new_migrate(
-            self.into(),
+        let pre_recovery = SwapExactInPreRecoverIca::new_migrate(
+            IcaConnector::new(InRecovery::new_migrate(self.into(), timealarms.clone())),
             timealarms,
-        )))
+        );
+        pre_recovery
+            .enter_migrate(now)
+            .map(|msgs| (msgs, pre_recovery.into()))
+            .map_err(Into::into)
     }
 
     pub fn into_post_recovery(self) -> DexState {
         let timealarms = TimeAlarmsRef::unchecked(self.spec.form.time_alarms.clone());
-        DexState::SwapExactInPostRecoverIca(SwapExactInPostRecoverIca::new_migrate(
-            self.into(),
-            timealarms,
-        ))
+        SwapExactInPostRecoverIca::new_migrate(self.into(), timealarms).into()
     }
 }
 
 impl Migrate for SwapExactIn {
-    fn into_last_version(self) -> Response {
-        Response::no_msgs(DexState::from(
-            Into::<SwapExactInV3<BuyAssetV3, DexState>>::into(self),
-        ))
+    fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
+        Ok(Response::no_msgs(DexState::from(Into::<
+            SwapExactInV3<BuyAssetV3, DexState>,
+        >::into(self))))
     }
 }
 

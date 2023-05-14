@@ -30,6 +30,11 @@ impl<Enterable> EntryDelay<Enterable> {
         }
     }
 
+    #[cfg(feature = "migration")]
+    pub fn enter_migrate(&self, now: Timestamp) -> DexResult<Batch> {
+        self.enter(now)
+    }
+
     pub(super) fn enter(&self, now: Timestamp) -> DexResult<Batch> {
         self.time_alarms
             .clone()

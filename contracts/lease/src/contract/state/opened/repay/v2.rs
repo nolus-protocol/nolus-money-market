@@ -1,9 +1,10 @@
+use platform::batch::Batch;
 use serde::Deserialize;
 
 use dex::{
-    CoinsNb, InRecovery, SwapExactIn as SwapExactInV3, SwapExactInPostRecoverIca,
-    SwapExactInRecoverIca, TransferInFinish as TransferInFinishV3,
-    TransferInInit as TransferInInitV3, TransferInInitPostRecoverIca, TransferInInitRecoverIca,
+    CoinsNb, IcaConnector, InRecovery, SwapExactIn as SwapExactInV3, SwapExactInPostRecoverIca,
+    SwapExactInPreRecoverIca, TransferInFinish as TransferInFinishV3,
+    TransferInInit as TransferInInitV3, TransferInInitPostRecoverIca, TransferInInitPreRecoverIca,
     TransferOut as TransferOutV3,
 };
 use sdk::cosmwasm_std::Timestamp;
@@ -11,6 +12,7 @@ use sdk::cosmwasm_std::Timestamp;
 use crate::{
     api::{LpnCoin, PaymentCoin},
     contract::state::{v2::Lease as LeaseV2, v2::Migrate, Response},
+    error::ContractResult,
 };
 
 use super::buy_lpn::{BuyLpn as BuyLpnSpec, DexState};
@@ -24,12 +26,10 @@ pub struct TransferOut {
 }
 
 impl Migrate for TransferOut {
-    fn into_last_version(self) -> Response {
+    fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
         let spec = BuyLpnSpec::migrate_to(self.lease.into(), self.payment);
-        Response::no_msgs(DexState::from(TransferOutV3::migrate_from(
-            spec,
-            CoinsNb::default(),
-            CoinsNb::default(),
+        Ok(Response::no_msgs(DexState::from(
+            TransferOutV3::migrate_from(spec, CoinsNb::default(), CoinsNb::default()),
         )))
     }
 }
@@ -41,12 +41,16 @@ pub(crate) struct BuyLpn {
 }
 
 impl BuyLpn {
-    pub fn into_recovery(self) -> DexState {
+    pub fn into_recovery(self, now: Timestamp) -> ContractResult<(Batch, DexState)> {
         let timealarms = self.lease.lease().time_alarms.clone();
-        DexState::SwapExactInRecoverIca(SwapExactInRecoverIca::new(InRecovery::new_migrate(
-            self.into(),
+        let pre_recovery = SwapExactInPreRecoverIca::new_migrate(
+            IcaConnector::new(InRecovery::new_migrate(self.into(), timealarms.clone())),
             timealarms,
-        )))
+        );
+        pre_recovery
+            .enter_migrate(now)
+            .map(|msgs| (msgs, pre_recovery.into()))
+            .map_err(Into::into)
     }
 
     pub fn into_post_recovery(self) -> DexState {
@@ -59,10 +63,10 @@ impl BuyLpn {
 }
 
 impl Migrate for BuyLpn {
-    fn into_last_version(self) -> Response {
-        Response::no_msgs(DexState::from(
-            Into::<SwapExactInV3<BuyLpnSpec, DexState>>::into(self),
-        ))
+    fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
+        Ok(Response::no_msgs(DexState::from(Into::<
+            SwapExactInV3<BuyLpnSpec, DexState>,
+        >::into(self))))
     }
 }
 
@@ -80,12 +84,16 @@ pub(crate) struct TransferInInit {
 }
 
 impl TransferInInit {
-    pub fn into_recovery(self) -> DexState {
+    pub fn into_recovery(self, now: Timestamp) -> ContractResult<(Batch, DexState)> {
         let timealarms = self.lease.lease().time_alarms.clone();
-        DexState::TransferInInitRecoverIca(TransferInInitRecoverIca::new(InRecovery::new_migrate(
-            self.into(),
+        let pre_recovery = TransferInInitPreRecoverIca::new_migrate(
+            IcaConnector::new(InRecovery::new_migrate(self.into(), timealarms.clone())),
             timealarms,
-        )))
+        );
+        pre_recovery
+            .enter_migrate(now)
+            .map(|msgs| (msgs, pre_recovery.into()))
+            .map_err(Into::into)
     }
 
     pub fn into_post_recovery(self) -> DexState {
@@ -98,10 +106,10 @@ impl TransferInInit {
 }
 
 impl Migrate for TransferInInit {
-    fn into_last_version(self) -> Response {
-        Response::no_msgs(DexState::from(Into::<TransferInInitV3<BuyLpnSpec>>::into(
-            self,
-        )))
+    fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
+        Ok(Response::no_msgs(DexState::from(Into::<
+            TransferInInitV3<BuyLpnSpec>,
+        >::into(self))))
     }
 }
 
@@ -121,12 +129,10 @@ pub struct TransferInFinish {
 }
 
 impl Migrate for TransferInFinish {
-    fn into_last_version(self) -> Response {
+    fn into_last_version(self, _now: Timestamp) -> ContractResult<Response> {
         let spec = BuyLpnSpec::migrate_to(self.lease.into(), self.payment);
-        Response::no_msgs(DexState::from(TransferInFinishV3::migrate_from(
-            spec,
-            self.payment_lpn,
-            self.timeout,
+        Ok(Response::no_msgs(DexState::from(
+            TransferInFinishV3::migrate_from(spec, self.payment_lpn, self.timeout),
         )))
     }
 }
