@@ -370,8 +370,7 @@ fn reschedule_failing_alarms_mix() {
             event
                 .attributes
                 .iter()
-                .find(|attribute| attribute.key == "delivered")
-                .is_some()
+                .any(|attribute| attribute.key == "delivered")
         })
         .enumerate()
     {
@@ -410,8 +409,7 @@ fn reschedule_failing_alarms_mix() {
             event
                 .attributes
                 .iter()
-                .find(|attribute| attribute.key == "delivered")
-                .is_some()
+                .any(|attribute| attribute.key == "delivered")
         })
         .enumerate()
     {

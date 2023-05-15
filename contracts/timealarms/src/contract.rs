@@ -8,10 +8,11 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, SubMsgResult},
 };
+use time_oracle::InDelivery;
 use versioning::{package_version, version, VersionSegment};
 
 use crate::{
-    alarms::{InDelivery, TimeAlarms},
+    alarms::TimeAlarms,
     msg::{DispatchAlarmsResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
 };
@@ -47,7 +48,7 @@ pub fn execute(
 ) -> ContractResult<CwResponse> {
     match msg {
         ExecuteMsg::AddAlarm { time } => TimeAlarms::new()
-            .try_add_new(&deps.querier, deps.storage, &env, info.sender, time)
+            .try_add(&deps.querier, deps.storage, &env, info.sender, time)
             .map(response::response_only_messages),
         ExecuteMsg::DispatchAlarms { max_count } => TimeAlarms::new()
             .try_notify(deps.storage, env.block.time, max_count)
@@ -84,14 +85,16 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
 
     let emitter: Emitter = Emitter::of_type(EVENT_TYPE);
 
+    let mut in_delivery: InDelivery<'_> = InDelivery::new(deps.storage);
+
     Ok(response::response_only_messages(match msg.result {
         SubMsgResult::Ok(_) => {
-            InDelivery::delivered(deps.storage)?;
+            in_delivery.delivered()?;
 
             emitter.emit(KEY_DELIVERED, "success")
         }
         SubMsgResult::Err(err) => {
-            InDelivery::failed(deps.storage)?;
+            TimeAlarms::new().failed(&mut in_delivery)?;
 
             emitter.emit(KEY_DELIVERED, "error").emit(KEY_DETAILS, err)
         }
