@@ -45,11 +45,13 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
+    let mut time_alarms: TimeAlarmsMut<'_> = TimeAlarmsMut::new(deps.storage);
+
     match msg {
-        ExecuteMsg::AddAlarm { time } => TimeAlarmsMut::new(deps.storage)
+        ExecuteMsg::AddAlarm { time } => time_alarms
             .try_add(&deps.querier, &env, info.sender, time)
             .map(response::response_only_messages),
-        ExecuteMsg::DispatchAlarms { max_count } => TimeAlarmsMut::new(deps.storage)
+        ExecuteMsg::DispatchAlarms { max_count } => time_alarms
             .try_notify(env.block.time, max_count)
             .and_then(|(total, resp)| {
                 response::response_with_messages(&DispatchAlarmsResponse(total), resp)
@@ -84,7 +86,7 @@ pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwRespon
 
     let emitter: Emitter = Emitter::of_type(EVENT_TYPE);
 
-    let mut time_alarms: TimeAlarmsMut = TimeAlarmsMut::new(deps.storage);
+    let mut time_alarms: TimeAlarmsMut<'_> = TimeAlarmsMut::new(deps.storage);
 
     Ok(response::response_only_messages(match msg.result {
         SubMsgResult::Ok(_) => {

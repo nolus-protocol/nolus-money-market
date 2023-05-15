@@ -12,10 +12,10 @@ use crate::{
     ContractError,
 };
 
-const ALARMS_NAMESPACE: &'static str = "alarms";
-const ALARMS_IDX_NAMESPACE: &'static str = "alarms_idx";
+const ALARMS_NAMESPACE: &str = "alarms";
+const ALARMS_IDX_NAMESPACE: &str = "alarms_idx";
 const REPLY_ID: Id = 0;
-const EVENT_TYPE: &'static str = "timealarm";
+const EVENT_TYPE: &str = "timealarm";
 
 pub(super) struct TimeAlarms<'r> {
     time_alarms: Alarms<'r, 'static, 'static>,
@@ -115,10 +115,7 @@ mod tests {
         Addr, QuerierWrapper, Timestamp,
     };
 
-    use crate::{
-        alarms::TimeAlarmsMut,
-        ContractError,
-    };
+    use crate::{alarms::TimeAlarmsMut, ContractError};
 
     #[test]
     fn try_add_invalid_contract_address() {
