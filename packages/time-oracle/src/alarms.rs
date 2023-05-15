@@ -40,21 +40,41 @@ impl<'a> Alarms<'a> {
         Self { alarms }
     }
 
+    #[inline]
     pub fn add(
         &self,
         storage: &mut dyn Storage,
         subscriber: Addr,
         time: Timestamp,
     ) -> Result<(), AlarmError> {
-        self.alarms.save(storage, subscriber, &as_seconds(time))?;
-
-        Ok(())
+        self.add_internal(storage, subscriber, as_seconds(time))
     }
 
     pub fn remove(&self, storage: &mut dyn Storage, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms.remove(storage, subscriber)?;
 
         Ok(())
+    }
+
+    pub fn out_for_delivery(
+        &self,
+        storage: &mut dyn Storage,
+        subscriber: Addr,
+        time: TimeSeconds,
+    ) -> Result<(), AlarmError> {
+        self.alarms.remove(storage, subscriber.clone())?;
+
+        InDelivery::new(storage).add(subscriber, time)
+    }
+
+    #[inline]
+    pub fn last_delivered(&self, storage: &mut dyn Storage) -> Result<(), AlarmError> {
+        InDelivery::new(storage).delivered()
+    }
+
+    #[inline]
+    pub fn last_failed(&self, storage: &mut dyn Storage) -> Result<(), AlarmError> {
+        InDelivery::new(storage).failed(self)
     }
 
     pub fn alarms_selection<'b>(
@@ -76,33 +96,46 @@ impl<'a> Alarms<'a> {
             )
             .map(|res| res.map_err(AlarmError::from))
     }
+
+    fn add_internal(
+        &self,
+        storage: &mut dyn Storage,
+        subscriber: Addr,
+        time: TimeSeconds,
+    ) -> Result<(), AlarmError> {
+        self.alarms
+            .save(storage, subscriber, &time)
+            .map_err(Into::into)
+    }
 }
 
-pub struct InDelivery<'r> {
+#[must_use]
+struct InDelivery<'r> {
     storage: &'r mut dyn Storage,
 }
 
 impl<'r> InDelivery<'r> {
     const ALARMS: Deque<'_, TimeAlarm> = Deque::new("in_delivery");
 
-    pub fn new(storage: &'r mut dyn Storage) -> Self {
+    #[inline]
+    fn new(storage: &'r mut dyn Storage) -> Self {
         Self { storage }
     }
 
-    pub fn add(&mut self, subscriber: Addr, time: TimeSeconds) -> Result<(), AlarmError> {
+    fn add(&mut self, subscriber: Addr, time: TimeSeconds) -> Result<(), AlarmError> {
         Self::ALARMS
             .push_back(self.storage, &TimeAlarm { subscriber, time })
             .map_err(Into::into)
     }
 
-    pub fn delivered(&mut self) -> Result<(), AlarmError> {
+    fn delivered(&mut self) -> Result<(), AlarmError> {
         Self::ALARMS
             .pop_front(self.storage)
             .map(|maybe_alarm: Option<TimeAlarm>| debug_assert!(maybe_alarm.is_some()))
             .map_err(Into::into)
     }
 
-    pub fn failed(&mut self, alarms: &mut Alarms<'_>) -> Result<(), AlarmError> {
+    fn failed(&mut self, alarms: &Alarms<'_>) -> Result<(), AlarmError> {
         Self::ALARMS
             .pop_front(self.storage)
             .map_err(Into::into)
@@ -110,7 +143,7 @@ impl<'r> InDelivery<'r> {
                 maybe_alarm.ok_or(AlarmError::ReplyOnEmptyAlarmQueue)
             })
             .and_then(|TimeAlarm { subscriber, time }| {
-                alarms.add(self.storage, subscriber, Timestamp::from_seconds(time))
+                alarms.add_internal(self.storage, subscriber, time)
             })
     }
 }
