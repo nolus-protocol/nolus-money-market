@@ -23,11 +23,11 @@ struct AlarmOld {
     pub addr: Addr,
 }
 
-struct AlarmIndexes<'a> {
-    alarms: MultiIndex<'a, TimeSeconds, AlarmOld, Id>,
+struct AlarmIndexes {
+    alarms: MultiIndex<'static, TimeSeconds, AlarmOld, Id>,
 }
 
-impl<'a> IndexList<AlarmOld> for AlarmIndexes<'a> {
+impl IndexList<AlarmOld> for AlarmIndexes {
     fn get_indexes(&self) -> Box<dyn Iterator<Item = &'_ dyn Index<AlarmOld>> + '_> {
         let v: Vec<&dyn Index<AlarmOld>> = vec![&self.alarms];
 
@@ -35,17 +35,17 @@ impl<'a> IndexList<AlarmOld> for AlarmIndexes<'a> {
     }
 }
 
-pub struct AlarmsOld<'a> {
-    namespace_alarms: &'a str,
-    namespace_index: &'a str,
-    next_id: Item<'a, Id>,
+pub struct AlarmsOld {
+    namespace_alarms: &'static str,
+    namespace_index: &'static str,
+    next_id: Item<'static, Id>,
 }
 
-impl<'a> AlarmsOld<'a> {
+impl AlarmsOld {
     pub const fn new(
-        namespace_alarms: &'a str,
-        namespace_index: &'a str,
-        namespace_next_id: &'a str,
+        namespace_alarms: &'static str,
+        namespace_index: &'static str,
+        namespace_next_id: &'static str,
     ) -> Self {
         Self {
             namespace_alarms,
@@ -114,7 +114,7 @@ impl<'a> AlarmsOld<'a> {
         Ok(())
     }
 
-    fn alarms(&self) -> IndexedMap<'a, TimeSeconds, AlarmOld, AlarmIndexes<'a>> {
+    fn alarms(&self) -> IndexedMap<'static, TimeSeconds, AlarmOld, AlarmIndexes> {
         let indexes = AlarmIndexes {
             alarms: MultiIndex::new(|_, d| d.time, self.namespace_alarms, self.namespace_index),
         };

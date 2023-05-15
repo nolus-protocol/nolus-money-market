@@ -18,11 +18,11 @@ const REPLY_ID: Id = 0;
 const EVENT_TYPE: &str = "timealarm";
 
 pub(super) struct TimeAlarms<'r> {
-    time_alarms: Alarms<'r, 'static>,
+    time_alarms: Alarms<'r>,
 }
 
 pub(super) struct TimeAlarmsMut<'r> {
-    time_alarms: AlarmsMut<'r, 'static>,
+    time_alarms: AlarmsMut<'r>,
 }
 
 impl<'r> TimeAlarms<'r> {

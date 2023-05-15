@@ -13,11 +13,11 @@ fn as_seconds(from: Timestamp) -> TimeSeconds {
     from.seconds()
 }
 
-struct AlarmIndexes<'a> {
-    alarms: MultiIndex<'a, TimeSeconds, TimeSeconds, Addr>,
+struct AlarmIndexes {
+    alarms: MultiIndex<'static, TimeSeconds, TimeSeconds, Addr>,
 }
 
-impl<'a> IndexList<TimeSeconds> for AlarmIndexes<'a> {
+impl IndexList<TimeSeconds> for AlarmIndexes {
     fn get_indexes(&self) -> Box<dyn Iterator<Item = &'_ dyn Index<TimeSeconds>> + '_> {
         let v: Vec<&dyn Index<TimeSeconds>> = vec![&self.alarms];
 
@@ -25,10 +25,7 @@ impl<'a> IndexList<TimeSeconds> for AlarmIndexes<'a> {
     }
 }
 
-fn indexed_map<'namespace>(
-    namespace_alarms: &'namespace str,
-    namespace_index: &'namespace str,
-) -> IndexedMap<'namespace> {
+fn indexed_map(namespace_alarms: &'static str, namespace_index: &'static str) -> IndexedMap {
     let indexes = AlarmIndexes {
         alarms: MultiIndex::new(|_, d| *d, namespace_alarms, namespace_index),
     };
@@ -36,7 +33,7 @@ fn indexed_map<'namespace>(
     IndexedMap::new(namespace_alarms, indexes)
 }
 
-type IndexedMap<'namespace> = CwIndexedMap<'namespace, Addr, TimeSeconds, AlarmIndexes<'namespace>>;
+type IndexedMap = CwIndexedMap<'static, Addr, TimeSeconds, AlarmIndexes>;
 
 const ALARMS_IN_DELIVERY: Deque<'static, Addr> = Deque::new("in_delivery");
 
@@ -49,16 +46,16 @@ pub trait AlarmsSelection {
     fn alarms_selection(&self, ctime: Timestamp) -> AlarmsSelectionIterator<'_>;
 }
 
-pub struct Alarms<'storage, 'namespace> {
+pub struct Alarms<'storage> {
     storage: &'storage dyn Storage,
-    alarms: IndexedMap<'namespace>,
+    alarms: IndexedMap,
 }
 
-impl<'storage, 'namespace> Alarms<'storage, 'namespace> {
+impl<'storage> Alarms<'storage> {
     pub fn new(
         storage: &'storage dyn Storage,
-        namespace_alarms: &'namespace str,
-        namespace_index: &'namespace str,
+        namespace_alarms: &'static str,
+        namespace_index: &'static str,
     ) -> Self {
         Self {
             storage,
@@ -67,22 +64,22 @@ impl<'storage, 'namespace> Alarms<'storage, 'namespace> {
     }
 }
 
-impl<'storage, 'namespace> AlarmsSelection for Alarms<'storage, 'namespace> {
+impl<'storage> AlarmsSelection for Alarms<'storage> {
     fn alarms_selection(&self, ctime: Timestamp) -> AlarmsSelectionIterator<'_> {
         alarms_selection(self.storage, &self.alarms, as_seconds(ctime))
     }
 }
 
-pub struct AlarmsMut<'storage, 'namespace> {
+pub struct AlarmsMut<'storage> {
     storage: &'storage mut dyn Storage,
-    alarms: IndexedMap<'namespace>,
+    alarms: IndexedMap,
 }
 
-impl<'storage, 'namespace> AlarmsMut<'storage, 'namespace> {
+impl<'storage> AlarmsMut<'storage> {
     pub fn new(
         storage: &'storage mut dyn Storage,
-        namespace_alarms: &'namespace str,
-        namespace_index: &'namespace str,
+        namespace_alarms: &'static str,
+        namespace_index: &'static str,
     ) -> Self {
         Self {
             storage,
@@ -128,7 +125,7 @@ impl<'storage, 'namespace> AlarmsMut<'storage, 'namespace> {
     }
 }
 
-impl<'storage, 'namespace> AlarmsSelection for AlarmsMut<'storage, 'namespace> {
+impl<'storage> AlarmsSelection for AlarmsMut<'storage> {
     fn alarms_selection(&self, ctime: Timestamp) -> AlarmsSelectionIterator<'_> {
         alarms_selection(self.storage, &self.alarms, as_seconds(ctime))
     }
@@ -136,7 +133,7 @@ impl<'storage, 'namespace> AlarmsSelection for AlarmsMut<'storage, 'namespace> {
 
 fn alarms_selection<'storage>(
     storage: &'storage dyn Storage,
-    alarms: &IndexedMap<'_>,
+    alarms: &IndexedMap,
     time: TimeSeconds,
 ) -> AlarmsSelectionIterator<'storage> {
     alarms
