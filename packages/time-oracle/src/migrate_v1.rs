@@ -2,12 +2,12 @@ use serde::{Deserialize, Serialize};
 
 use sdk::{
     cosmwasm_std::{Addr, Order, StdError, Storage, Timestamp},
-    cw_storage_plus::{Index, IndexList, IndexedMap, Item, MultiIndex},
+    cw_storage_plus::{Index, IndexedMap, IndexList, Item, MultiIndex},
 };
 
 use crate::AlarmError;
 
-use super::Alarms;
+use super::AlarmsMut;
 
 type TimeSeconds = u64;
 type Id = u64;
@@ -83,11 +83,11 @@ impl<'a> AlarmsOld<'a> {
         }
         self.next_id.remove(storage);
 
-        let alarms_new = Alarms::new(self.namespace_alarms, self.namespace_index);
+        let mut alarms_new = AlarmsMut::new(storage, self.namespace_alarms, self.namespace_index);
 
         // restore to new alarms
         for alarm in alarms {
-            alarms_new.add(storage, alarm.addr, Timestamp::from_seconds(alarm.time))?;
+            alarms_new.add(alarm.addr, Timestamp::from_seconds(alarm.time))?;
         }
 
         Ok(())

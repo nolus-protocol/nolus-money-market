@@ -1,8 +1,8 @@
-use serde::{Deserialize, Serialize};
+use std::ops::Deref;
 
 use sdk::{
     cosmwasm_std::{Addr, Order, Storage, Timestamp},
-    cw_storage_plus::{Bound, Deque, Index, IndexList, IndexedMap, MultiIndex},
+    cw_storage_plus::{Bound, Deque, Index, IndexList, IndexedMap as CwIndexedMap, MultiIndex},
 };
 
 use crate::AlarmError;
@@ -25,133 +25,136 @@ impl<'a> IndexList<TimeSeconds> for AlarmIndexes<'a> {
     }
 }
 
-pub struct Alarms<'a> {
-    alarms: IndexedMap<'a, Addr, TimeSeconds, AlarmIndexes<'a>>,
+fn indexed_map<'namespace>(
+    namespace_alarms: &'namespace str,
+    namespace_index: &'namespace str,
+) -> IndexedMap<'namespace> {
+    let indexes = AlarmIndexes {
+        alarms: MultiIndex::new(|_, d| *d, namespace_alarms, namespace_index),
+    };
+
+    IndexedMap::new(namespace_alarms, indexes)
 }
 
-impl<'a> Alarms<'a> {
-    pub fn new(namespace_alarms: &'a str, namespace_index: &'a str) -> Self {
-        let indexes = AlarmIndexes {
-            alarms: MultiIndex::new(|_, d| *d, namespace_alarms, namespace_index),
-        };
+enum MaybeOwned<'r, T> {
+    Borrowed(&'r T),
+    Owned(T),
+}
 
-        let alarms = IndexedMap::new(namespace_alarms, indexes);
+impl<'r, T> Deref for MaybeOwned<'r, T> {
+    type Target = T;
 
-        Self { alarms }
+    fn deref(&self) -> &Self::Target {
+        match self {
+            &Self::Borrowed(value) => value,
+            Self::Owned(value) => value,
+        }
     }
+}
 
-    #[inline]
-    pub fn add(
+type IndexedMap<'namespace> = CwIndexedMap<'namespace, Addr, TimeSeconds, AlarmIndexes<'namespace>>;
+
+const ALARMS_IN_DELIVERY: Deque<'static, Addr> = Deque::new("in_delivery");
+
+pub struct Alarms<'storage, 'map, 'namespace> {
+    storage: &'storage dyn Storage,
+    alarms: MaybeOwned<'map, IndexedMap<'namespace>>,
+}
+
+impl<'storage, 'namespace> Alarms<'storage, 'static, 'namespace> {
+    pub fn new(
+        storage: &'storage dyn Storage,
+        namespace_alarms: &'namespace str,
+        namespace_index: &'namespace str,
+    ) -> Self {
+        let alarms = MaybeOwned::Owned(indexed_map(namespace_alarms, namespace_index));
+
+        Self { storage, alarms }
+    }
+}
+
+impl<'storage, 'map, 'namespace> Alarms<'storage, 'map, 'namespace> {
+    pub fn alarms_selection(
         &self,
-        storage: &mut dyn Storage,
-        subscriber: Addr,
-        time: Timestamp,
-    ) -> Result<(), AlarmError> {
-        self.add_internal(storage, subscriber, as_seconds(time))
-    }
-
-    pub fn remove(&self, storage: &mut dyn Storage, subscriber: Addr) -> Result<(), AlarmError> {
-        self.alarms.remove(storage, subscriber)?;
-
-        Ok(())
-    }
-
-    pub fn out_for_delivery(
-        &self,
-        storage: &mut dyn Storage,
-        subscriber: Addr,
-        time: TimeSeconds,
-    ) -> Result<(), AlarmError> {
-        self.alarms.remove(storage, subscriber.clone())?;
-
-        InDelivery::new(storage).add(subscriber, time)
-    }
-
-    #[inline]
-    pub fn last_delivered(&self, storage: &mut dyn Storage) -> Result<(), AlarmError> {
-        InDelivery::new(storage).delivered()
-    }
-
-    #[inline]
-    pub fn last_failed(&self, storage: &mut dyn Storage) -> Result<(), AlarmError> {
-        InDelivery::new(storage).failed(self)
-    }
-
-    pub fn alarms_selection<'b>(
-        &self,
-        storage: &'b dyn Storage,
         ctime: Timestamp,
-    ) -> impl Iterator<Item = Result<(Addr, TimeSeconds), AlarmError>> + 'b
-    where
-        'a: 'b,
-    {
+    ) -> impl Iterator<Item = Result<(Addr, TimeSeconds), AlarmError>> + 'storage {
         self.alarms
             .idx
             .alarms
             .range(
-                storage,
+                self.storage,
                 None,
                 Some(Bound::inclusive((as_seconds(ctime), Addr::unchecked("")))),
                 Order::Ascending,
             )
             .map(|res| res.map_err(AlarmError::from))
     }
-
-    fn add_internal(
-        &self,
-        storage: &mut dyn Storage,
-        subscriber: Addr,
-        time: TimeSeconds,
-    ) -> Result<(), AlarmError> {
-        self.alarms
-            .save(storage, subscriber, &time)
-            .map_err(Into::into)
-    }
 }
 
-#[must_use]
-struct InDelivery<'r> {
-    storage: &'r mut dyn Storage,
+pub struct AlarmsMut<'storage, 'namespace> {
+    storage: &'storage mut dyn Storage,
+    alarms: IndexedMap<'namespace>,
 }
 
-impl<'r> InDelivery<'r> {
-    const ALARMS: Deque<'_, TimeAlarm> = Deque::new("in_delivery");
-
-    #[inline]
-    fn new(storage: &'r mut dyn Storage) -> Self {
-        Self { storage }
+impl<'storage, 'namespace> AlarmsMut<'storage, 'namespace> {
+    pub fn new(
+        storage: &'storage mut dyn Storage,
+        namespace_alarms: &'namespace str,
+        namespace_index: &'namespace str,
+    ) -> Self {
+        Self {
+            storage,
+            alarms: indexed_map(namespace_alarms, namespace_index),
+        }
     }
 
-    fn add(&mut self, subscriber: Addr, time: TimeSeconds) -> Result<(), AlarmError> {
-        Self::ALARMS
-            .push_back(self.storage, &TimeAlarm { subscriber, time })
+    pub fn as_alarms<'r>(&'r self) -> Alarms<'r, 'r, 'namespace> {
+        Alarms {
+            storage: self.storage,
+            alarms: MaybeOwned::Borrowed(&self.alarms),
+        }
+    }
+
+    pub fn add(&mut self, subscriber: Addr, time: Timestamp) -> Result<(), AlarmError> {
+        self.add_internal(subscriber, as_seconds(time))
+    }
+
+    pub fn remove(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
+        self.alarms.remove(self.storage, subscriber)?;
+
+        Ok(())
+    }
+
+    pub fn out_for_delivery(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
+        self.alarms.remove(self.storage, subscriber.clone())?;
+
+        ALARMS_IN_DELIVERY
+            .push_back(self.storage, &subscriber)
             .map_err(Into::into)
     }
 
-    fn delivered(&mut self) -> Result<(), AlarmError> {
-        Self::ALARMS
+    pub fn last_delivered(&mut self) -> Result<(), AlarmError> {
+        ALARMS_IN_DELIVERY
             .pop_front(self.storage)
-            .map(|maybe_alarm: Option<TimeAlarm>| debug_assert!(maybe_alarm.is_some()))
+            .map(|maybe_alarm: Option<Addr>| debug_assert!(maybe_alarm.is_some()))
             .map_err(Into::into)
     }
 
-    fn failed(&mut self, alarms: &Alarms<'_>) -> Result<(), AlarmError> {
-        Self::ALARMS
+    pub fn last_failed(&mut self, now: Timestamp) -> Result<(), AlarmError> {
+        ALARMS_IN_DELIVERY
             .pop_front(self.storage)
             .map_err(Into::into)
-            .and_then(|maybe_alarm: Option<TimeAlarm>| {
+            .and_then(|maybe_alarm: Option<Addr>| {
                 maybe_alarm.ok_or(AlarmError::ReplyOnEmptyAlarmQueue)
             })
-            .and_then(|TimeAlarm { subscriber, time }| {
-                alarms.add_internal(self.storage, subscriber, time)
-            })
+            .and_then(|subscriber: Addr| self.add_internal(subscriber, as_seconds(now) - /* Minus one second, to ensure it can be run within the same block */ 1))
     }
-}
 
-#[derive(Serialize, Deserialize)]
-struct TimeAlarm {
-    subscriber: Addr,
-    time: TimeSeconds,
+    fn add_internal(&mut self, subscriber: Addr, time: TimeSeconds) -> Result<(), AlarmError> {
+        self.alarms
+            .save(self.storage, subscriber, &time)
+            .map_err(Into::into)
+    }
 }
 
 #[cfg(test)]
