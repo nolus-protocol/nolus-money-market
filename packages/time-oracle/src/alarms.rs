@@ -1,11 +1,13 @@
+use serde::{Deserialize, Serialize};
+
 use sdk::{
     cosmwasm_std::{Addr, Order, Storage, Timestamp},
-    cw_storage_plus::{Bound, Index, IndexList, IndexedMap, MultiIndex},
+    cw_storage_plus::{Bound, Deque, Index, IndexList, IndexedMap, MultiIndex},
 };
 
 use crate::AlarmError;
 
-pub type TimeSeconds = u64;
+type TimeSeconds = u64;
 
 fn as_seconds(from: Timestamp) -> TimeSeconds {
     from.seconds()
@@ -41,15 +43,17 @@ impl<'a> Alarms<'a> {
     pub fn add(
         &self,
         storage: &mut dyn Storage,
-        addr: Addr,
+        subscriber: Addr,
         time: Timestamp,
     ) -> Result<(), AlarmError> {
-        self.alarms.save(storage, addr, &as_seconds(time))?;
+        self.alarms.save(storage, subscriber, &as_seconds(time))?;
+
         Ok(())
     }
 
-    pub fn remove(&self, storage: &mut dyn Storage, addr: Addr) -> Result<(), AlarmError> {
-        self.alarms.remove(storage, addr)?;
+    pub fn remove(&self, storage: &mut dyn Storage, subscriber: Addr) -> Result<(), AlarmError> {
+        self.alarms.remove(storage, subscriber)?;
+
         Ok(())
     }
 
@@ -72,6 +76,49 @@ impl<'a> Alarms<'a> {
             )
             .map(|res| res.map_err(AlarmError::from))
     }
+}
+
+pub struct InDelivery<'r> {
+    storage: &'r mut dyn Storage,
+}
+
+impl<'r> InDelivery<'r> {
+    const ALARMS: Deque<'_, TimeAlarm> = Deque::new("in_delivery");
+
+    pub fn new(storage: &'r mut dyn Storage) -> Self {
+        Self { storage }
+    }
+
+    pub fn add(&mut self, subscriber: Addr, time: TimeSeconds) -> Result<(), AlarmError> {
+        Self::ALARMS
+            .push_back(self.storage, &TimeAlarm { subscriber, time })
+            .map_err(Into::into)
+    }
+
+    pub fn delivered(&mut self) -> Result<(), AlarmError> {
+        Self::ALARMS
+            .pop_front(self.storage)
+            .map(|maybe_alarm: Option<TimeAlarm>| debug_assert!(maybe_alarm.is_some()))
+            .map_err(Into::into)
+    }
+
+    pub fn failed(&mut self, alarms: &mut Alarms<'_>) -> Result<(), AlarmError> {
+        Self::ALARMS
+            .pop_front(self.storage)
+            .map_err(Into::into)
+            .and_then(|maybe_alarm: Option<TimeAlarm>| {
+                maybe_alarm.ok_or(AlarmError::ReplyOnEmptyAlarmQueue)
+            })
+            .and_then(|TimeAlarm { subscriber, time }| {
+                alarms.add(self.storage, subscriber, Timestamp::from_seconds(time))
+            })
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct TimeAlarm {
+    subscriber: Addr,
+    time: TimeSeconds,
 }
 
 #[cfg(test)]

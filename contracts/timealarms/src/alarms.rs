@@ -1,15 +1,10 @@
-use serde::{Deserialize, Serialize};
-
 use platform::{
     contract,
     dispatcher::{AlarmsDispatcher, Id},
     message::Response as MessageResponse,
 };
-use sdk::{
-    cosmwasm_std::{Addr, Env, QuerierWrapper, Storage, Timestamp, Uint64},
-    cw_storage_plus::Deque,
-};
-use time_oracle::{Alarms, TimeSeconds};
+use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage, Timestamp};
+use time_oracle::{Alarms, InDelivery};
 
 use crate::{
     msg::{AlarmsCount, AlarmsStatusResponse, ExecuteAlarmMsg},
@@ -38,23 +33,23 @@ impl TimeAlarms {
         Ok(())
     }
 
-    pub fn try_add_new(
+    pub fn try_add(
         &self,
         querier: &QuerierWrapper<'_>,
         storage: &mut dyn Storage,
         env: &Env,
-        address: Addr,
+        subscriber: Addr,
         time: Timestamp,
     ) -> ContractResult<MessageResponse> {
         if time < env.block.time {
             return Err(ContractError::InvalidAlarm(time));
         }
 
-        contract::validate_addr(querier, &address)
+        contract::validate_addr(querier, &subscriber)
             .map_err(ContractError::from)
             .and_then(|()| {
                 self.time_alarms
-                    .add(storage, address, time)
+                    .add(storage, subscriber, time)
                     .map_err(Into::into)
             })
             .map(|()| Default::default())
@@ -78,7 +73,7 @@ impl TimeAlarms {
 
                     self.time_alarms.remove(storage, addr.clone())?;
 
-                    InDelivery::add(storage, addr, time)?;
+                    InDelivery::new(storage).add(addr, time)?;
 
                     Ok(dispatcher)
                 },
@@ -97,62 +92,15 @@ impl TimeAlarms {
             .next()
             .transpose()?
             .is_some();
+
         Ok(AlarmsStatusResponse { remaining_alarms })
     }
 
-    fn try_add_old(
-        &self,
-        storage: &mut dyn Storage,
-        address: Addr,
-        time: TimeSeconds,
-    ) -> ContractResult<()> {
-        self.time_alarms
-            .add(storage, address, Timestamp::from_seconds(time))
+    pub fn failed(&mut self, in_delivery: &mut InDelivery<'_>) -> ContractResult<()> {
+        in_delivery
+            .failed(&mut self.time_alarms)
             .map_err(Into::into)
     }
-}
-
-pub(super) struct InDelivery;
-
-impl InDelivery {
-    const ALARMS: Deque<'_, TimeAlarm> = Deque::new("alarms_in_delivery");
-
-    fn add(storage: &mut dyn Storage, addr: Addr, time: TimeSeconds) -> ContractResult<()> {
-        Self::ALARMS
-            .push_back(
-                storage,
-                &TimeAlarm {
-                    addr,
-                    time: Uint64::new(time),
-                },
-            )
-            .map_err(Into::into)
-    }
-
-    pub fn delivered(storage: &mut dyn Storage) -> ContractResult<()> {
-        Self::ALARMS
-            .pop_front(storage)
-            .map(|maybe_alarm: Option<TimeAlarm>| debug_assert!(maybe_alarm.is_some()))
-            .map_err(Into::into)
-    }
-
-    pub fn failed(storage: &mut dyn Storage) -> ContractResult<()> {
-        Self::ALARMS
-            .pop_front(storage)
-            .map_err(Into::into)
-            .and_then(|maybe_alarm: Option<TimeAlarm>| {
-                maybe_alarm.ok_or(ContractError::ReplyOnEmptyAlarmQueue)
-            })
-            .and_then(|TimeAlarm { addr, time }| {
-                TimeAlarms::new().try_add_old(storage, addr, time.u64())
-            })
-    }
-}
-
-#[derive(Serialize, Deserialize)]
-struct TimeAlarm {
-    addr: Addr,
-    time: Uint64,
 }
 
 #[cfg(test)]
@@ -174,7 +122,7 @@ mod tests {
 
         let msg_sender = Addr::unchecked("some address");
         assert!(TimeAlarms::new()
-            .try_add_new(
+            .try_add(
                 &deps.querier,
                 deps.storage,
                 &env,
@@ -188,7 +136,7 @@ mod tests {
             .into();
 
         let result = TimeAlarms::new()
-            .try_add_new(
+            .try_add(
                 &deps.querier,
                 deps.storage,
                 &env,
@@ -213,7 +161,7 @@ mod tests {
 
         let msg_sender = Addr::unchecked("some address");
         assert!(TimeAlarms::new()
-            .try_add_new(
+            .try_add(
                 &deps.querier,
                 deps.storage,
                 &env,
@@ -237,7 +185,7 @@ mod tests {
 
         let msg_sender = Addr::unchecked("some address");
         TimeAlarms::new()
-            .try_add_new(
+            .try_add(
                 &deps.querier,
                 deps.storage,
                 &env,

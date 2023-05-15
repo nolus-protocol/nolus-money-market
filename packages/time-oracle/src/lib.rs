@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError;
 
-pub use crate::alarms::{Alarms, TimeSeconds};
+pub use crate::alarms::{Alarms, InDelivery};
 
 mod alarms;
 pub mod migrate_v1;
@@ -11,4 +11,7 @@ pub mod migrate_v1;
 pub enum AlarmError {
     #[error("{0}")]
     Std(#[from] StdError),
+
+    #[error("[Time Oracle] Alarms delivery queue is empty but received reply status")]
+    ReplyOnEmptyAlarmQueue,
 }
