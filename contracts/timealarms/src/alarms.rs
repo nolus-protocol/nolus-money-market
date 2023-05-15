@@ -4,7 +4,7 @@ use platform::{
     message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage, Timestamp};
-use time_oracle::{Alarms, InDelivery};
+use time_oracle::Alarms;
 
 use crate::{
     msg::{AlarmsCount, AlarmsStatusResponse, ExecuteAlarmMsg},
@@ -30,6 +30,7 @@ impl TimeAlarms {
 
     pub fn remove(&self, storage: &mut dyn Storage, addr: Addr) -> Result<(), ContractError> {
         self.time_alarms.remove(storage, addr)?;
+
         Ok(())
     }
 
@@ -68,12 +69,11 @@ impl TimeAlarms {
             .into_iter()
             .try_fold(
                 AlarmsDispatcher::new(ExecuteAlarmMsg::TimeAlarm {}, Self::EVENT_TYPE),
-                |mut dispatcher, (addr, time)| -> ContractResult<_> {
-                    dispatcher = dispatcher.send_to(&addr, Self::REPLY_ID)?;
+                |mut dispatcher, (subscriber, time)| -> ContractResult<_> {
+                    dispatcher = dispatcher.send_to(&subscriber, Self::REPLY_ID)?;
 
-                    self.time_alarms.remove(storage, addr.clone())?;
-
-                    InDelivery::new(storage).add(addr, time)?;
+                    self.time_alarms
+                        .out_for_delivery(storage, subscriber, time)?;
 
                     Ok(dispatcher)
                 },
@@ -96,10 +96,14 @@ impl TimeAlarms {
         Ok(AlarmsStatusResponse { remaining_alarms })
     }
 
-    pub fn failed(&mut self, in_delivery: &mut InDelivery<'_>) -> ContractResult<()> {
-        in_delivery
-            .failed(&mut self.time_alarms)
-            .map_err(Into::into)
+    #[inline]
+    pub fn last_delivered(&self, storage: &mut dyn Storage) -> ContractResult<()> {
+        self.time_alarms.last_delivered(storage).map_err(Into::into)
+    }
+
+    #[inline]
+    pub fn last_failed(&self, storage: &mut dyn Storage) -> ContractResult<()> {
+        self.time_alarms.last_failed(storage).map_err(Into::into)
     }
 }
 

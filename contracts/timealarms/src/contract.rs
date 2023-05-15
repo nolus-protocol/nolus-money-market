@@ -8,7 +8,6 @@ use sdk::{
     cosmwasm_ext::Response as CwResponse,
     cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, SubMsgResult},
 };
-use time_oracle::InDelivery;
 use versioning::{package_version, version, VersionSegment};
 
 use crate::{
@@ -85,16 +84,16 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
 
     let emitter: Emitter = Emitter::of_type(EVENT_TYPE);
 
-    let mut in_delivery: InDelivery<'_> = InDelivery::new(deps.storage);
+    let time_alarms: TimeAlarms = TimeAlarms::new();
 
     Ok(response::response_only_messages(match msg.result {
         SubMsgResult::Ok(_) => {
-            in_delivery.delivered()?;
+            time_alarms.last_delivered(deps.storage)?;
 
             emitter.emit(KEY_DELIVERED, "success")
         }
         SubMsgResult::Err(err) => {
-            TimeAlarms::new().failed(&mut in_delivery)?;
+            time_alarms.last_failed(deps.storage)?;
 
             emitter.emit(KEY_DELIVERED, "error").emit(KEY_DETAILS, err)
         }
