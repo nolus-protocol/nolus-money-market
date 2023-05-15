@@ -127,7 +127,10 @@ impl<'a> AlarmsOld<'a> {
 pub mod tests {
     use sdk::cosmwasm_std::testing;
 
-    use super::*;
+    use super::{
+        *,
+        super::Alarms,
+    };
 
     #[test]
     fn test_migration() {
@@ -166,11 +169,8 @@ pub mod tests {
         // single alarm per address(4) + index(4)
         assert_eq!(8, storage.range(None, None, Order::Ascending).count());
 
-        let new_alarms = Alarms::new("alarms", "alarms_idx");
-        let result: Vec<_> = new_alarms
-            .alarms_selection(storage, Timestamp::from_seconds(10))
-            .map(Result::unwrap)
-            .collect();
+        let new_alarms = Alarms::new(storage, "alarms", "alarms_idx");
+        let result: Vec<_> = new_alarms.alarms_selection(Timestamp::from_seconds(10)).map(Result::unwrap).collect();
 
         assert_eq!(
             result,

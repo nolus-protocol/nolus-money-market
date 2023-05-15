@@ -163,82 +163,78 @@ pub mod tests {
 
     use super::*;
 
-    fn query_alarms(
-        storage: &dyn Storage,
-        alarms: &Alarms<'_>,
-        t_sec: TimeSeconds,
-    ) -> Vec<(Addr, TimeSeconds)> {
+    fn query_alarms(alarms: &Alarms<'_, '_, '_>, t_sec: TimeSeconds) -> Vec<(Addr, TimeSeconds)> {
         alarms
-            .alarms_selection(storage, Timestamp::from_seconds(t_sec))
+            .alarms_selection(Timestamp::from_seconds(t_sec))
             .map(Result::unwrap)
             .collect()
     }
 
     #[test]
     fn test_add() {
-        let alarms = Alarms::new("alarms", "alarms_idx");
         let storage = &mut testing::mock_dependencies().storage;
+        let mut alarms = AlarmsMut::new(storage, "alarms", "alarms_idx");
 
         let t1 = Timestamp::from_seconds(1);
         let t2 = Timestamp::from_seconds(3);
         let addr1 = Addr::unchecked("addr1");
         let addr2 = Addr::unchecked("addr2");
 
-        alarms.add(storage, addr1.clone(), t1).unwrap();
+        alarms.add(addr1.clone(), t1).unwrap();
 
         assert_eq!(
-            query_alarms(storage, &alarms, 10),
+            query_alarms(&alarms.as_alarms(), 10),
             vec![(addr1.clone(), as_seconds(t1))]
         );
 
         // single alarm per addr
-        alarms.add(storage, addr1.clone(), t2).unwrap();
+        alarms.add(addr1.clone(), t2).unwrap();
 
         assert_eq!(
-            query_alarms(storage, &alarms, 10),
+            query_alarms(&alarms.as_alarms(), 10),
             vec![(addr1.clone(), as_seconds(t2))]
         );
 
-        alarms.add(storage, addr2.clone(), t2).unwrap();
+        alarms.add(addr2.clone(), t2).unwrap();
 
         assert_eq!(
-            query_alarms(storage, &alarms, 10),
+            query_alarms(&alarms.as_alarms(), 10),
             vec![(addr1, as_seconds(t2)), (addr2, as_seconds(t2))]
         );
     }
 
     #[test]
     fn test_remove() {
-        let alarms = Alarms::new("alarms", "alarms_idx");
         let storage = &mut testing::mock_dependencies().storage;
+        let mut alarms = AlarmsMut::new(storage, "alarms", "alarms_idx");
 
         let t1 = Timestamp::from_seconds(10);
         let t2 = Timestamp::from_seconds(20);
         let addr1 = Addr::unchecked("addr1");
         let addr2 = Addr::unchecked("addr2");
 
-        alarms.add(storage, addr1.clone(), t1).unwrap();
-        alarms.add(storage, addr2.clone(), t2).unwrap();
+        alarms.add(addr1.clone(), t1).unwrap();
+        alarms.add(addr2.clone(), t2).unwrap();
 
         assert_eq!(
-            query_alarms(storage, &alarms, 30),
+            query_alarms(&alarms.as_alarms(), 30),
             vec![
                 (addr1.clone(), as_seconds(t1)),
-                (addr2.clone(), as_seconds(t2))
+                (addr2.clone(), as_seconds(t2)),
             ]
         );
 
-        alarms.remove(storage, addr1).unwrap();
+        alarms.remove(addr1).unwrap();
         assert_eq!(
-            query_alarms(storage, &alarms, 30),
+            query_alarms(&alarms.as_alarms(), 30),
             vec![(addr2, as_seconds(t2))]
         );
     }
 
     #[test]
     fn test_selection() {
-        let alarms = Alarms::new("alarms", "alarms_idx");
         let storage = &mut testing::mock_dependencies().storage;
+        let mut alarms = AlarmsMut::new(storage, "alarms", "alarms_idx");
         let t1 = Timestamp::from_seconds(1);
         let t2 = Timestamp::from_seconds(2);
         let t3_sec = 3;
@@ -249,19 +245,19 @@ pub mod tests {
         let addr4 = Addr::unchecked("addr4");
 
         // same timestamp
-        alarms.add(storage, addr1.clone(), t1).unwrap();
-        alarms.add(storage, addr2.clone(), t1).unwrap();
+        alarms.add(addr1.clone(), t1).unwrap();
+        alarms.add(addr2.clone(), t1).unwrap();
         // different timestamp
-        alarms.add(storage, addr3.clone(), t2).unwrap();
+        alarms.add(addr3.clone(), t2).unwrap();
         // rest
-        alarms.add(storage, addr4, t4).unwrap();
+        alarms.add(addr4, t4).unwrap();
 
         assert_eq!(
-            query_alarms(storage, &alarms, t3_sec),
+            query_alarms(&alarms.as_alarms(), t3_sec),
             vec![
                 (addr1, as_seconds(t1)),
                 (addr2, as_seconds(t1)),
-                (addr3, as_seconds(t2))
+                (addr3, as_seconds(t2)),
             ]
         );
     }

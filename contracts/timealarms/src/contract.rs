@@ -11,7 +11,7 @@ use sdk::{
 use versioning::{package_version, version, VersionSegment};
 
 use crate::{
-    alarms::TimeAlarms,
+    alarms::{TimeAlarms, TimeAlarmsMut},
     msg::{DispatchAlarmsResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
 };

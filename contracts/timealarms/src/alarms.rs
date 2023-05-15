@@ -115,7 +115,10 @@ mod tests {
         Addr, QuerierWrapper, Timestamp,
     };
 
-    use crate::{alarms::TimeAlarms, ContractError};
+    use crate::{
+        alarms::TimeAlarmsMut,
+        ContractError,
+    };
 
     #[test]
     fn try_add_invalid_contract_address() {
@@ -125,10 +128,9 @@ mod tests {
         env.block.time = Timestamp::from_seconds(0);
 
         let msg_sender = Addr::unchecked("some address");
-        assert!(TimeAlarms::new()
+        assert!(TimeAlarmsMut::new(deps.storage)
             .try_add(
                 &deps.querier,
-                deps.storage,
                 &env,
                 msg_sender.clone(),
                 Timestamp::from_nanos(8),
@@ -139,14 +141,8 @@ mod tests {
             .unwrap_err()
             .into();
 
-        let result = TimeAlarms::new()
-            .try_add(
-                &deps.querier,
-                deps.storage,
-                &env,
-                msg_sender,
-                Timestamp::from_nanos(8),
-            )
+        let result = TimeAlarmsMut::new(deps.storage)
+            .try_add(&deps.querier, &env, msg_sender, Timestamp::from_nanos(8))
             .unwrap_err();
 
         assert_eq!(expected_error, result);
@@ -164,14 +160,8 @@ mod tests {
         env.block.time = Timestamp::from_seconds(0);
 
         let msg_sender = Addr::unchecked("some address");
-        assert!(TimeAlarms::new()
-            .try_add(
-                &deps.querier,
-                deps.storage,
-                &env,
-                msg_sender,
-                Timestamp::from_nanos(4),
-            )
+        assert!(TimeAlarmsMut::new(deps.storage)
+            .try_add(&deps.querier, &env, msg_sender, Timestamp::from_nanos(4),)
             .is_ok());
     }
 
@@ -188,14 +178,8 @@ mod tests {
         env.block.time = Timestamp::from_seconds(100);
 
         let msg_sender = Addr::unchecked("some address");
-        TimeAlarms::new()
-            .try_add(
-                &deps.querier,
-                deps.storage,
-                &env,
-                msg_sender,
-                Timestamp::from_nanos(4),
-            )
+        TimeAlarmsMut::new(deps.storage)
+            .try_add(&deps.querier, &env, msg_sender, Timestamp::from_nanos(4))
             .unwrap_err();
     }
 }
