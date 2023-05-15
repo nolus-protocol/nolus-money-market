@@ -46,11 +46,11 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
     match msg {
-        ExecuteMsg::AddAlarm { time } => TimeAlarms::new()
-            .try_add(&deps.querier, deps.storage, &env, info.sender, time)
+        ExecuteMsg::AddAlarm { time } => TimeAlarmsMut::new(deps.storage)
+            .try_add(&deps.querier, &env, info.sender, time)
             .map(response::response_only_messages),
-        ExecuteMsg::DispatchAlarms { max_count } => TimeAlarms::new()
-            .try_notify(deps.storage, env.block.time, max_count)
+        ExecuteMsg::DispatchAlarms { max_count } => TimeAlarmsMut::new(deps.storage)
+            .try_notify(env.block.time, max_count)
             .and_then(|(total, resp)| {
                 response::response_with_messages(&DispatchAlarmsResponse(total), resp)
             }),
@@ -60,8 +60,8 @@ pub fn execute(
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
-        SudoMsg::RemoveTimeAlarm { receiver } => TimeAlarms::new()
-            .remove(deps.storage, receiver)
+        SudoMsg::RemoveTimeAlarm { receiver } => TimeAlarmsMut::new(deps.storage)
+            .remove(receiver)
             .map(|()| Default::default()),
     }
 }
@@ -71,29 +71,29 @@ pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> 
     match msg {
         QueryMsg::ContractVersion {} => Ok(to_binary(&package_version!())?),
         QueryMsg::AlarmsStatus {} => Ok(to_binary(
-            &TimeAlarms::new().try_any_alarm(deps.storage, env.block.time)?,
+            &TimeAlarms::new(deps.storage).try_any_alarm(env.block.time)?,
         )?),
     }
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwResponse> {
+pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwResponse> {
     const EVENT_TYPE: &str = "time-alarm";
     const KEY_DELIVERED: &str = "delivered";
     const KEY_DETAILS: &str = "details";
 
     let emitter: Emitter = Emitter::of_type(EVENT_TYPE);
 
-    let time_alarms: TimeAlarms = TimeAlarms::new();
+    let mut time_alarms: TimeAlarmsMut = TimeAlarmsMut::new(deps.storage);
 
     Ok(response::response_only_messages(match msg.result {
         SubMsgResult::Ok(_) => {
-            time_alarms.last_delivered(deps.storage)?;
+            time_alarms.last_delivered()?;
 
             emitter.emit(KEY_DELIVERED, "success")
         }
         SubMsgResult::Err(err) => {
-            time_alarms.last_failed(deps.storage)?;
+            time_alarms.last_failed(env.block.time)?;
 
             emitter.emit(KEY_DELIVERED, "error").emit(KEY_DETAILS, err)
         }

@@ -4,7 +4,7 @@ use platform::{
     message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage, Timestamp};
-use time_oracle::Alarms;
+use time_oracle::{Alarms, AlarmsMut};
 
 use crate::{
     msg::{AlarmsCount, AlarmsStatusResponse, ExecuteAlarmMsg},
@@ -12,32 +12,54 @@ use crate::{
     ContractError,
 };
 
-pub(super) struct TimeAlarms {
-    time_alarms: Alarms<'static>,
+const ALARMS_NAMESPACE: &'static str = "alarms";
+const ALARMS_IDX_NAMESPACE: &'static str = "alarms_idx";
+const REPLY_ID: Id = 0;
+const EVENT_TYPE: &'static str = "timealarm";
+
+pub(super) struct TimeAlarms<'r> {
+    time_alarms: Alarms<'r, 'static, 'static>,
 }
 
-impl TimeAlarms {
-    const ALARMS_NAMESPACE: &'static str = "alarms";
-    const ALARMS_IDX_NAMESPACE: &'static str = "alarms_idx";
-    const REPLY_ID: Id = 0;
-    const EVENT_TYPE: &'static str = "timealarm";
+pub(super) struct TimeAlarmsMut<'r> {
+    time_alarms: AlarmsMut<'r, 'static>,
+}
 
-    pub fn new() -> Self {
+impl<'r> TimeAlarms<'r> {
+    pub fn new(storage: &'r dyn Storage) -> Self {
         Self {
-            time_alarms: Alarms::new(Self::ALARMS_NAMESPACE, Self::ALARMS_IDX_NAMESPACE),
+            time_alarms: Alarms::new(storage, ALARMS_NAMESPACE, ALARMS_IDX_NAMESPACE),
         }
     }
 
-    pub fn remove(&self, storage: &mut dyn Storage, addr: Addr) -> Result<(), ContractError> {
-        self.time_alarms.remove(storage, addr)?;
+    pub fn try_any_alarm(&self, ctime: Timestamp) -> Result<AlarmsStatusResponse, ContractError> {
+        let remaining_alarms = self
+            .time_alarms
+            .alarms_selection(ctime)
+            .next()
+            .transpose()?
+            .is_some();
+
+        Ok(AlarmsStatusResponse { remaining_alarms })
+    }
+}
+
+impl<'r> TimeAlarmsMut<'r> {
+    pub fn new(storage: &'r mut dyn Storage) -> Self {
+        Self {
+            time_alarms: AlarmsMut::new(storage, ALARMS_NAMESPACE, ALARMS_IDX_NAMESPACE),
+        }
+    }
+
+    pub fn remove(&mut self, addr: Addr) -> Result<(), ContractError> {
+        self.time_alarms.remove(addr)?;
 
         Ok(())
     }
 
     pub fn try_add(
-        &self,
+        &mut self,
         querier: &QuerierWrapper<'_>,
-        storage: &mut dyn Storage,
         env: &Env,
         subscriber: Addr,
         time: Timestamp,
@@ -48,32 +70,27 @@ impl TimeAlarms {
 
         contract::validate_addr(querier, &subscriber)
             .map_err(ContractError::from)
-            .and_then(|()| {
-                self.time_alarms
-                    .add(storage, subscriber, time)
-                    .map_err(Into::into)
-            })
+            .and_then(|()| self.time_alarms.add(subscriber, time).map_err(Into::into))
             .map(|()| Default::default())
     }
 
     pub fn try_notify(
-        &self,
-        storage: &mut dyn Storage,
+        &mut self,
         ctime: Timestamp,
         max_count: AlarmsCount,
     ) -> ContractResult<(AlarmsCount, MessageResponse)> {
         self.time_alarms
-            .alarms_selection(storage, ctime)
+            .as_alarms()
+            .alarms_selection(ctime)
             .take(max_count.try_into()?)
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .try_fold(
-                AlarmsDispatcher::new(ExecuteAlarmMsg::TimeAlarm {}, Self::EVENT_TYPE),
-                |mut dispatcher, (subscriber, time)| -> ContractResult<_> {
-                    dispatcher = dispatcher.send_to(&subscriber, Self::REPLY_ID)?;
+                AlarmsDispatcher::new(ExecuteAlarmMsg::TimeAlarm {}, EVENT_TYPE),
+                |mut dispatcher, (subscriber, _)| -> ContractResult<_> {
+                    dispatcher = dispatcher.send_to(&subscriber, REPLY_ID)?;
 
-                    self.time_alarms
-                        .out_for_delivery(storage, subscriber, time)?;
+                    self.time_alarms.out_for_delivery(subscriber)?;
 
                     Ok(dispatcher)
                 },
@@ -81,29 +98,12 @@ impl TimeAlarms {
             .map(|dispatcher| (dispatcher.nb_sent(), dispatcher.into()))
     }
 
-    pub fn try_any_alarm(
-        &self,
-        storage: &dyn Storage,
-        ctime: Timestamp,
-    ) -> Result<AlarmsStatusResponse, ContractError> {
-        let remaining_alarms = self
-            .time_alarms
-            .alarms_selection(storage, ctime)
-            .next()
-            .transpose()?
-            .is_some();
-
-        Ok(AlarmsStatusResponse { remaining_alarms })
+    pub fn last_delivered(&mut self) -> ContractResult<()> {
+        self.time_alarms.last_delivered().map_err(Into::into)
     }
 
-    #[inline]
-    pub fn last_delivered(&self, storage: &mut dyn Storage) -> ContractResult<()> {
-        self.time_alarms.last_delivered(storage).map_err(Into::into)
-    }
-
-    #[inline]
-    pub fn last_failed(&self, storage: &mut dyn Storage) -> ContractResult<()> {
-        self.time_alarms.last_failed(storage).map_err(Into::into)
+    pub fn last_failed(&mut self, now: Timestamp) -> ContractResult<()> {
+        self.time_alarms.last_failed(now).map_err(Into::into)
     }
 }
 
