@@ -4,7 +4,7 @@ use platform::{
     message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage, Timestamp};
-use time_oracle::{Alarms, AlarmsMut};
+use time_oracle::{Alarms, AlarmsMut, AlarmsSelection as _};
 
 use crate::{
     msg::{AlarmsCount, AlarmsStatusResponse, ExecuteAlarmMsg},
@@ -18,7 +18,7 @@ const REPLY_ID: Id = 0;
 const EVENT_TYPE: &str = "timealarm";
 
 pub(super) struct TimeAlarms<'r> {
-    time_alarms: Alarms<'r, 'static, 'static>,
+    time_alarms: Alarms<'r, 'static>,
 }
 
 pub(super) struct TimeAlarmsMut<'r> {
@@ -80,14 +80,15 @@ impl<'r> TimeAlarmsMut<'r> {
         max_count: AlarmsCount,
     ) -> ContractResult<(AlarmsCount, MessageResponse)> {
         self.time_alarms
-            .as_alarms()
             .alarms_selection(ctime)
             .take(max_count.try_into()?)
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .try_fold(
                 AlarmsDispatcher::new(ExecuteAlarmMsg::TimeAlarm {}, EVENT_TYPE),
-                |mut dispatcher, (subscriber, _)| -> ContractResult<_> {
+                |mut dispatcher: AlarmsDispatcher<ExecuteAlarmMsg>,
+                 subscriber: Addr|
+                 -> ContractResult<_> {
                     dispatcher = dispatcher.send_to(&subscriber, REPLY_ID)?;
 
                     self.time_alarms.out_for_delivery(subscriber)?;
