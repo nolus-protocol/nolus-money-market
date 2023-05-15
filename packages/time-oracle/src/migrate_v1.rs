@@ -127,6 +127,8 @@ impl<'a> AlarmsOld<'a> {
 pub mod tests {
     use sdk::cosmwasm_std::testing;
 
+    use crate::alarms::AlarmsSelection;
+
     use super::{super::Alarms, *};
 
     #[test]
@@ -172,9 +174,6 @@ pub mod tests {
             .map(Result::unwrap)
             .collect();
 
-        assert_eq!(
-            result,
-            vec![(addr1, t1), (addr2, t1), (addr3, t2), (addr4, t4),]
-        );
+        assert_eq!(result, vec![addr1, addr2, addr3, addr4]);
     }
 }
