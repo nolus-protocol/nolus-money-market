@@ -1,4 +1,3 @@
-use cosmwasm_std::Addr;
 use serde::{Deserialize, Serialize};
 
 use sdk::{
@@ -26,14 +25,9 @@ pub enum ExecuteMsg {
     },
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
-#[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
-pub enum SudoMsg {
-    /// The aim is to remove time alarms for leases that are in
-    /// the process of decommissioning
-    RemoveTimeAlarm { receiver: Addr },
-}
+pub enum SudoMsg {}
 
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

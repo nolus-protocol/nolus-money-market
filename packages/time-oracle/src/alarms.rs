@@ -91,12 +91,6 @@ impl<'storage> AlarmsMut<'storage> {
         self.add_internal(subscriber, as_seconds(time))
     }
 
-    pub fn remove(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
-        self.alarms.remove(self.storage, subscriber)?;
-
-        Ok(())
-    }
-
     pub fn out_for_delivery(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms.remove(self.storage, subscriber.clone())?;
 
@@ -189,28 +183,6 @@ pub mod tests {
         alarms.add(addr2.clone(), t2).unwrap();
 
         assert_eq!(query_alarms(&alarms, 10), vec![addr1, addr2]);
-    }
-
-    #[test]
-    fn test_remove() {
-        let storage = &mut testing::mock_dependencies().storage;
-        let mut alarms = AlarmsMut::new(storage, "alarms", "alarms_idx");
-
-        let t1 = Timestamp::from_seconds(10);
-        let t2 = Timestamp::from_seconds(20);
-        let addr1 = Addr::unchecked("addr1");
-        let addr2 = Addr::unchecked("addr2");
-
-        alarms.add(addr1.clone(), t1).unwrap();
-        alarms.add(addr2.clone(), t2).unwrap();
-
-        assert_eq!(
-            query_alarms(&alarms, 30),
-            vec![addr1.clone(), addr2.clone()]
-        );
-
-        alarms.remove(addr1).unwrap();
-        assert_eq!(query_alarms(&alarms, 30), vec![addr2]);
     }
 
     #[test]
