@@ -91,6 +91,13 @@ impl<'storage> AlarmsMut<'storage> {
         self.add_internal(subscriber, as_seconds(time))
     }
 
+    pub fn ensure_no_in_delivery(&mut self) -> Result<&mut Self, AlarmError> {
+        ALARMS_IN_DELIVERY
+            .is_empty(self.storage)?
+            .then_some(self)
+            .ok_or(AlarmError::NonEmptyAlarmQueue)
+    }
+
     pub fn out_for_delivery(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms.remove(self.storage, subscriber.clone())?;
 

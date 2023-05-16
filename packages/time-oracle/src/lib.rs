@@ -14,4 +14,7 @@ pub enum AlarmError {
 
     #[error("[Time Oracle] Alarms delivery queue is empty but received reply status")]
     ReplyOnEmptyAlarmQueue,
+
+    #[error("[Time Oracle] Alarms delivery queue is not empty! Assertion failed")]
+    NonEmptyAlarmQueue,
 }
