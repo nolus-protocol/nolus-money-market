@@ -96,7 +96,9 @@ impl<'storage> AlarmsMut<'storage> {
         self.in_delivery
             .is_empty(self.storage)?
             .then_some(self)
-            .ok_or(AlarmError::NonEmptyAlarmQueue)
+            .ok_or(AlarmError::NonEmptyAlarmsInDeliveryQueue(String::from(
+                "Assertion requested",
+            )))
     }
 
     pub fn out_for_delivery(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
@@ -115,7 +117,9 @@ impl<'storage> AlarmsMut<'storage> {
                 if maybe_alarm.is_some() {
                     Ok(())
                 } else {
-                    Err(AlarmError::ReplyOnEmptyAlarmQueue)
+                    Err(AlarmError::EmptyAlarmsInDeliveryQueue(String::from(
+                        "Received success reply status",
+                    )))
                 }
             })
     }
@@ -124,7 +128,9 @@ impl<'storage> AlarmsMut<'storage> {
         self.in_delivery
             .pop_front(self.storage)
             .map_err(Into::into)
-            .and_then(|maybe_alarm: Option<Addr>| maybe_alarm.ok_or(AlarmError::ReplyOnEmptyAlarmQueue))
+            .and_then(|maybe_alarm: Option<Addr>| maybe_alarm.ok_or(AlarmError::EmptyAlarmsInDeliveryQueue(
+                String::from("Received failure reply status"))
+            ))
             .and_then(|subscriber: Addr| self.add_internal(subscriber, as_seconds(now) - /* Minus one second, to ensure it can be run within the same block */ 1))
     }
 

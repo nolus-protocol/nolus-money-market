@@ -12,9 +12,9 @@ pub enum AlarmError {
     #[error("{0}")]
     Std(#[from] StdError),
 
-    #[error("[Time Oracle] Alarms delivery queue is empty but received reply status")]
-    ReplyOnEmptyAlarmQueue,
+    #[error("[Time Oracle] Alarms delivery queue is empty! Cause: {0}")]
+    EmptyAlarmsInDeliveryQueue(String),
 
-    #[error("[Time Oracle] Alarms delivery queue is not empty! Assertion failed")]
-    NonEmptyAlarmQueue,
+    #[error("[Time Oracle] Alarms delivery queue is not empty! Cause: {0}")]
+    NonEmptyAlarmsInDeliveryQueue(String),
 }
