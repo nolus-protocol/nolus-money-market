@@ -121,9 +121,11 @@ impl<'storage> AlarmsMut<'storage> {
     }
 
     pub fn last_failed(&mut self, now: Timestamp) -> Result<(), AlarmError> {
-        self.in_delivery.pop_front(self.storage).map_err(Into::into).and_then(|maybe_alarm: Option<Addr>| {
-            maybe_alarm.ok_or(AlarmError::ReplyOnEmptyAlarmQueue)
-        }).and_then(|subscriber: Addr| self.add_internal(subscriber, as_seconds(now) - /* Minus one second, to ensure it can be run within the same block */ 1))
+        self.in_delivery
+            .pop_front(self.storage)
+            .map_err(Into::into)
+            .and_then(|maybe_alarm: Option<Addr>| maybe_alarm.ok_or(AlarmError::ReplyOnEmptyAlarmQueue))
+            .and_then(|subscriber: Addr| self.add_internal(subscriber, as_seconds(now) - /* Minus one second, to ensure it can be run within the same block */ 1))
     }
 
     fn add_internal(&mut self, subscriber: Addr, time: TimeSeconds) -> Result<(), AlarmError> {
