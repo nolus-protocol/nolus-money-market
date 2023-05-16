@@ -14,6 +14,7 @@ use crate::{
 
 const ALARMS_NAMESPACE: &str = "alarms";
 const ALARMS_IDX_NAMESPACE: &str = "alarms_idx";
+const IN_DELIVERY_NAMESPACE: &str = "in_delivery";
 const REPLY_ID: Id = 0;
 const EVENT_TYPE: &str = "timealarm";
 
@@ -47,7 +48,7 @@ impl<'r> TimeAlarms<'r> {
 impl<'r> TimeAlarmsMut<'r> {
     pub fn new(storage: &'r mut dyn Storage) -> Self {
         Self {
-            time_alarms: AlarmsMut::new(storage, ALARMS_NAMESPACE, ALARMS_IDX_NAMESPACE),
+            time_alarms: AlarmsMut::new(storage, ALARMS_NAMESPACE, ALARMS_IDX_NAMESPACE, IN_DELIVERY_NAMESPACE),
         }
     }
 
