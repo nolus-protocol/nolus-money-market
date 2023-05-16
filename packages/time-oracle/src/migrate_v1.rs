@@ -38,6 +38,7 @@ impl IndexList<AlarmOld> for AlarmIndexes {
 pub struct AlarmsOld {
     namespace_alarms: &'static str,
     namespace_index: &'static str,
+    namespace_in_delivery: &'static str,
     next_id: Item<'static, Id>,
 }
 
@@ -45,11 +46,13 @@ impl AlarmsOld {
     pub const fn new(
         namespace_alarms: &'static str,
         namespace_index: &'static str,
+        namespace_in_delivery: &'static str,
         namespace_next_id: &'static str,
     ) -> Self {
         Self {
             namespace_alarms,
             namespace_index,
+            namespace_in_delivery,
             next_id: Item::new(namespace_next_id),
         }
     }
@@ -83,7 +86,12 @@ impl AlarmsOld {
         }
         self.next_id.remove(storage);
 
-        let mut alarms_new = AlarmsMut::new(storage, self.namespace_alarms, self.namespace_index);
+        let mut alarms_new = AlarmsMut::new(
+            storage,
+            self.namespace_alarms,
+            self.namespace_index,
+            self.namespace_in_delivery,
+        );
 
         // restore to new alarms
         for alarm in alarms {
@@ -133,7 +141,7 @@ pub mod tests {
 
     #[test]
     fn test_migration() {
-        let alarms = AlarmsOld::new("alarms", "alarms_idx", "alarms_next_id");
+        let alarms = AlarmsOld::new("alarms", "alarms_idx", "in_delivery", "alarms_next_id");
         let storage = &mut testing::mock_dependencies().storage;
         let t1 = 1;
         let t2 = 2;
