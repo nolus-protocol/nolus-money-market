@@ -110,8 +110,14 @@ impl<'storage> AlarmsMut<'storage> {
     pub fn last_delivered(&mut self) -> Result<(), AlarmError> {
         self.in_delivery
             .pop_front(self.storage)
-            .map(|maybe_alarm: Option<Addr>| debug_assert!(maybe_alarm.is_some()))
             .map_err(Into::into)
+            .and_then(|maybe_alarm: Option<Addr>| {
+                if maybe_alarm.is_some() {
+                    Ok(())
+                } else {
+                    Err(AlarmError::ReplyOnEmptyAlarmQueue)
+                }
+            })
     }
 
     pub fn last_failed(&mut self, now: Timestamp) -> Result<(), AlarmError> {
