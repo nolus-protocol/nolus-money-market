@@ -48,7 +48,12 @@ impl<'r> TimeAlarms<'r> {
 impl<'r> TimeAlarmsMut<'r> {
     pub fn new(storage: &'r mut dyn Storage) -> Self {
         Self {
-            time_alarms: AlarmsMut::new(storage, ALARMS_NAMESPACE, ALARMS_IDX_NAMESPACE, IN_DELIVERY_NAMESPACE),
+            time_alarms: AlarmsMut::new(
+                storage,
+                ALARMS_NAMESPACE,
+                ALARMS_IDX_NAMESPACE,
+                IN_DELIVERY_NAMESPACE,
+            ),
         }
     }
 
