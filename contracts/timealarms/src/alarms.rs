@@ -74,6 +74,7 @@ impl<'r> TimeAlarmsMut<'r> {
         max_count: AlarmsCount,
     ) -> ContractResult<(AlarmsCount, MessageResponse)> {
         self.time_alarms
+            .ensure_no_in_delivery()?
             .alarms_selection(ctime)
             .take(max_count.try_into()?)
             .collect::<Result<Vec<_>, _>>()?
