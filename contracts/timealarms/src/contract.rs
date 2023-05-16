@@ -60,12 +60,8 @@ pub fn execute(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
-    match msg {
-        SudoMsg::RemoveTimeAlarm { receiver } => TimeAlarmsMut::new(deps.storage)
-            .remove(receiver)
-            .map(|()| Default::default()),
-    }
+pub fn sudo(_deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
+    match msg {}
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

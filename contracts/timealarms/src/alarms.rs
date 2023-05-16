@@ -51,12 +51,6 @@ impl<'r> TimeAlarmsMut<'r> {
         }
     }
 
-    pub fn remove(&mut self, addr: Addr) -> Result<(), ContractError> {
-        self.time_alarms.remove(addr)?;
-
-        Ok(())
-    }
-
     pub fn try_add(
         &mut self,
         querier: &QuerierWrapper<'_>,
