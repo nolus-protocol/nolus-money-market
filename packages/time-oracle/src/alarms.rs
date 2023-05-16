@@ -35,8 +35,6 @@ fn indexed_map(namespace_alarms: &'static str, namespace_index: &'static str) ->
 
 type IndexedMap = CwIndexedMap<'static, Addr, TimeSeconds, AlarmIndexes>;
 
-const ALARMS_IN_DELIVERY: Deque<'static, Addr> = Deque::new("in_delivery");
-
 type AlarmsSelectionIterator<'storage> = iter::Map<
     Box<dyn Iterator<Item = CwResult<(Addr, TimeSeconds)>> + 'storage>,
     fn(CwResult<(Addr, TimeSeconds)>) -> Result<Addr, AlarmError>,
@@ -73,6 +71,7 @@ impl<'storage> AlarmsSelection for Alarms<'storage> {
 pub struct AlarmsMut<'storage> {
     storage: &'storage mut dyn Storage,
     alarms: IndexedMap,
+    in_delivery: Deque<'static, Addr>,
 }
 
 impl<'storage> AlarmsMut<'storage> {
@@ -80,10 +79,12 @@ impl<'storage> AlarmsMut<'storage> {
         storage: &'storage mut dyn Storage,
         namespace_alarms: &'static str,
         namespace_index: &'static str,
+        namespace_in_delivery: &'static str,
     ) -> Self {
         Self {
             storage,
             alarms: indexed_map(namespace_alarms, namespace_index),
+            in_delivery: Deque::new(namespace_in_delivery),
         }
     }
 
@@ -92,7 +93,7 @@ impl<'storage> AlarmsMut<'storage> {
     }
 
     pub fn ensure_no_in_delivery(&mut self) -> Result<&mut Self, AlarmError> {
-        ALARMS_IN_DELIVERY
+        self.in_delivery
             .is_empty(self.storage)?
             .then_some(self)
             .ok_or(AlarmError::NonEmptyAlarmQueue)
@@ -101,20 +102,20 @@ impl<'storage> AlarmsMut<'storage> {
     pub fn out_for_delivery(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms.remove(self.storage, subscriber.clone())?;
 
-        ALARMS_IN_DELIVERY
+        self.in_delivery
             .push_back(self.storage, &subscriber)
             .map_err(Into::into)
     }
 
     pub fn last_delivered(&mut self) -> Result<(), AlarmError> {
-        ALARMS_IN_DELIVERY
+        self.in_delivery
             .pop_front(self.storage)
             .map(|maybe_alarm: Option<Addr>| debug_assert!(maybe_alarm.is_some()))
             .map_err(Into::into)
     }
 
     pub fn last_failed(&mut self, now: Timestamp) -> Result<(), AlarmError> {
-        ALARMS_IN_DELIVERY.pop_front(self.storage).map_err(Into::into).and_then(|maybe_alarm: Option<Addr>| {
+        self.in_delivery.pop_front(self.storage).map_err(Into::into).and_then(|maybe_alarm: Option<Addr>| {
             maybe_alarm.ok_or(AlarmError::ReplyOnEmptyAlarmQueue)
         }).and_then(|subscriber: Addr| self.add_internal(subscriber, as_seconds(now) - /* Minus one second, to ensure it can be run within the same block */ 1))
     }
@@ -171,7 +172,7 @@ pub mod tests {
     #[test]
     fn test_add() {
         let storage = &mut testing::mock_dependencies().storage;
-        let mut alarms = AlarmsMut::new(storage, "alarms", "alarms_idx");
+        let mut alarms = AlarmsMut::new(storage, "alarms", "alarms_idx", "in_delivery");
 
         let t1 = Timestamp::from_seconds(1);
         let t2 = Timestamp::from_seconds(3);
@@ -195,7 +196,7 @@ pub mod tests {
     #[test]
     fn test_selection() {
         let storage = &mut testing::mock_dependencies().storage;
-        let mut alarms = AlarmsMut::new(storage, "alarms", "alarms_idx");
+        let mut alarms = AlarmsMut::new(storage, "alarms", "alarms_idx", "in_delivery");
         let t1 = Timestamp::from_seconds(1);
         let t2 = Timestamp::from_seconds(2);
         let t3_sec = 3;
