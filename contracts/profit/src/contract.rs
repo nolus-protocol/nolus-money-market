@@ -21,8 +21,8 @@ use crate::{
 };
 
 // version info for migration info
-// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
-const CONTRACT_STORAGE_VERSION: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 0;
+const CONTRACT_STORAGE_VERSION: VersionSegment = 1;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn instantiate(
@@ -57,9 +57,39 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software::<ContractError>(deps.storage, version!(CONTRACT_STORAGE_VERSION))
-        .and_then(response::response)
+pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<CwResponse> {
+    use sdk::{
+        cosmwasm_std::{Addr, Storage},
+        cw_storage_plus::Item,
+    };
+
+    #[derive(serde::Serialize, serde::Deserialize)]
+    struct OldConfig {
+        cadence_hours: u16,
+        treasury: Addr,
+    }
+
+    let migration_closure = move |storage: &mut dyn Storage| {
+        let old_config: Item<'_, OldConfig> = Item::new("profit_config");
+        let OldConfig {
+            cadence_hours,
+            treasury,
+        } = old_config.load(storage)?;
+        old_config.remove(storage);
+
+        let oracle: OracleRef = OracleRef::try_from(msg.oracle, &deps.querier)?;
+        let time_alarms: TimeAlarmsRef = TimeAlarmsRef::new(msg.timealarms, &deps.querier)?;
+
+        State::new(Config::new(cadence_hours, treasury, oracle, time_alarms)).store(storage)
+    };
+
+    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, ContractError>(
+        deps.storage,
+        version!(CONTRACT_STORAGE_VERSION),
+        migration_closure,
+    )
+    .map(|(label, _)| label)
+    .and_then(response::response)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
