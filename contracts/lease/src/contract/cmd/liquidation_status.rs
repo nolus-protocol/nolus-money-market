@@ -27,6 +27,7 @@ where
 {
     let status = lease.liquidation_status(when)?;
     Ok(match status {
+        Status::NoDebt => CmdResult::NoDebt,
         Status::No(zone) => CmdResult::NewAlarms {
             alarms: lease.reschedule(&when, &zone, time_alarms, price_alarms)?,
             current_liability: zone,
@@ -42,6 +43,7 @@ pub(crate) struct Cmd<'a> {
 }
 
 pub(crate) enum CmdResult {
+    NoDebt,
     NewAlarms {
         current_liability: Zone,
         alarms: Batch,

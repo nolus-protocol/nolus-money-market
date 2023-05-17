@@ -19,6 +19,7 @@ where
             + state.current_margin_interest_due
             + state.current_interest_due;
 
+        debug_assert!(previous_interest <= total);
         LiabilityStatus {
             total,
             previous_interest,

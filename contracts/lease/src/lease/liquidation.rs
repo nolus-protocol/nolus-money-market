@@ -22,6 +22,7 @@ pub(crate) enum Status<Asset>
 where
     Asset: Currency,
 {
+    NoDebt,
     No(Zone),
     Liquidation(Liquidation<Asset>),
 }
@@ -150,10 +151,14 @@ fn no_liquidation<Asset>(
 where
     Asset: Currency,
 {
-    let ltv = Percent::from_ratio(total_due, asset);
-    debug_assert!(ltv < spec.max());
+    if total_due.is_zero() {
+        Status::NoDebt
+    } else {
+        let ltv = Percent::from_ratio(total_due, asset);
+        debug_assert!(ltv < spec.max());
 
-    Status::No(spec.zone_of(ltv))
+        Status::No(spec.zone_of(ltv))
+    }
 }
 
 fn may_ask_liquidation_liability<Asset>(
@@ -218,11 +223,21 @@ mod tests {
     use super::{super::Status, check_liability, Cause};
 
     #[test]
+    fn no_debt() {
+        let warn_ltv = Percent::from_permille(11);
+        let spec = liability_with_first(warn_ltv);
+        assert_eq!(
+            check_liability::<Atom>(&spec, 100.into(), 0.into(), 0.into(), 0.into()),
+            Status::NoDebt,
+        );
+    }
+
+    #[test]
     fn warnings_none() {
         let warn_ltv = Percent::from_percent(51);
         let spec = liability_with_first(warn_ltv);
         assert_eq!(
-            check_liability::<Atom>(&spec, 100.into(), 0.into(), 0.into(), 0.into()),
+            check_liability::<Atom>(&spec, 100.into(), 1.into(), 0.into(), 0.into()),
             Status::No(Zone::no_warnings(spec.first_liq_warn())),
         );
         assert_eq!(

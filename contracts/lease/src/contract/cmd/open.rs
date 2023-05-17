@@ -97,6 +97,7 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             &self.time_alarms,
             &self.price_alarms,
         )? {
+            LiquidationStatus::NoDebt => unreachable!(),
             LiquidationStatus::NewAlarms {
                 current_liability: _,
                 alarms,

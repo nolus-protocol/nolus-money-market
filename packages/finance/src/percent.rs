@@ -53,6 +53,10 @@ impl Percent {
         self.0
     }
 
+    pub fn is_zero(&self) -> bool {
+        self == &Self::ZERO
+    }
+
     pub fn checked_add(self, other: Self) -> FinanceResult<Self> {
         self.0
             .checked_add(other.0)

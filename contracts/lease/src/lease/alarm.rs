@@ -89,6 +89,7 @@ where
             .loan
             .liability_status(*now + self.liability.recalculation_time())
             .total;
+        debug_assert!(!total_liability.is_zero());
 
         let below = self.price_alarm_at_level(total_liability, liquidation_zone.high())?;
 
@@ -110,7 +111,12 @@ where
         liability: Coin<Lpn>,
         alarm_at: Level,
     ) -> ContractResult<Price<Asset, Lpn>> {
-        debug_assert!(!self.amount.is_zero(), "Loan already paid!");
+        debug_assert!(!self.amount.is_zero(), "Invariant broken, asset = 0!");
+        debug_assert!(
+            !liability.is_zero(),
+            "Loan already paid, no need of next alarms!"
+        );
+        debug_assert!(!alarm_at.ltv().is_zero());
 
         Ok(total_of(alarm_at.ltv().of(self.amount)).is(liability))
     }

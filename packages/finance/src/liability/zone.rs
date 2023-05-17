@@ -2,7 +2,9 @@ use crate::percent::Percent;
 
 use super::Level;
 
-/// Liability zone representing a key property of a lease that is not pending a liquidation.
+/// Liability zone is an interval a lease LTV belongs to.
+///
+/// Zones cover only the leases that are not pending a liquidation.
 ///
 /// A zone is defined as an interval of LTVs between two Levels.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

@@ -79,6 +79,7 @@ impl Active {
 
         let lease = Lease::new(lease_updated, lease.dex);
         match liquidation {
+            LiquidationStatus::NoDebt => Ok(finish_repay(receipt.close, repay_response, lease)),
             LiquidationStatus::NewAlarms {
                 current_liability,
                 alarms,
@@ -188,6 +189,7 @@ impl Active {
         )?;
 
         match liquidation_status {
+            LiquidationStatus::NoDebt => Ok(Response::no_msgs(self)),
             LiquidationStatus::NewAlarms {
                 current_liability,
                 alarms,
@@ -242,6 +244,7 @@ fn try_partial_liquidation(
 
     let lease = Lease::new(lease_updated, lease.dex);
     match next_liquidation {
+        LiquidationStatus::NoDebt => Ok(finish_repay(receipt.close, liquidate_response, lease)),
         LiquidationStatus::NewAlarms {
             current_liability,
             alarms,
