@@ -26,8 +26,6 @@ where
     Oracle: OracleTrait<Lpn>,
     Asset: Currency + Serialize,
 {
-    //TODO keep loan state updated on payments and liquidations to have the liquidation status accurate
-    //do it at the LppStub
     pub(crate) fn reschedule(
         &self,
         now: &Timestamp,
@@ -37,24 +35,10 @@ where
     ) -> ContractResult<Batch> {
         let mut time_alarms = time_alarms.as_stub();
         let mut price_alarms = price_alarms.as_alarms_stub::<Lpn>();
-        self.reschedule_typed(now, liquidation_zone, &mut time_alarms, &mut price_alarms)?;
+        self.reschedule_time_alarm(now, &mut time_alarms)
+            .and_then(|()| self.reschedule_price_alarm(now, liquidation_zone, &mut price_alarms))?;
 
         Ok(Batch::from(time_alarms).merge(price_alarms.into()))
-    }
-
-    fn reschedule_typed<TimeAlarms, PriceAlarms>(
-        &self,
-        now: &Timestamp,
-        liquidation_zone: &Zone,
-        time_alarms: &mut TimeAlarms,
-        price_alarms: &mut PriceAlarms,
-    ) -> ContractResult<()>
-    where
-        TimeAlarms: TimeAlarmsTrait,
-        PriceAlarms: PriceAlarmsTrait,
-    {
-        self.reschedule_time_alarm(now, time_alarms)
-            .and_then(|()| self.reschedule_price_alarm(now, liquidation_zone, price_alarms))
     }
 
     fn reschedule_time_alarm<TimeAlarms>(

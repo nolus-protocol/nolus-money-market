@@ -17,9 +17,9 @@ use crate::{
     error::{ContractError, ContractResult},
 };
 
-use super::state::{self, Migrate, Response, State};
+use super::state::{self, Response, State};
 
-const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 2;
+// const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 2;
 const CONTRACT_STORAGE_VERSION: VersionSegment = 3;
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -46,22 +46,11 @@ pub fn instantiate(
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
-pub fn migrate(deps: DepsMut<'_>, env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
-    versioning::update_software_and_storage::<CONTRACT_STORAGE_VERSION_FROM, _, _, _>(
-        deps.storage,
-        version!(CONTRACT_STORAGE_VERSION),
-        |storage: &mut _| {
-            state::load_v2(storage)
-                .and_then(|lease_v2| lease_v2.into_last_version(env.block.time))
-                .and_then(
-                    |Response {
-                         response,
-                         next_state: lease_v3,
-                     }| state::save(storage, &lease_v3).map(|()| response),
-                )
-        },
-    )
-    .and_then(|(release_label, resp)| response::response_with_messages(release_label, resp))
+pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
+    #[cfg(feature = "migration")]
+    state::load_v2(deps.storage)?;
+    versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))
+        .and_then(response::response)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

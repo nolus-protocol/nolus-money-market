@@ -16,7 +16,7 @@ use crate::{
 
 pub(crate) use self::handler::{Handler, Response};
 #[cfg(feature = "migration")]
-pub(in crate::contract) use self::v2::{Migrate, StateV2};
+pub(in crate::contract) use self::v2::StateV2;
 use self::{dex::State as DexState, lease::State as LeaseState};
 
 mod closed;
