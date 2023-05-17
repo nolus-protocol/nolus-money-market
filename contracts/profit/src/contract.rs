@@ -70,6 +70,8 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<
     }
 
     let migration_closure = move |storage: &mut dyn Storage| {
+        SingleUserAccess::new_contract_owner(msg.owner).store(storage)?;
+
         let old_config: Item<'_, OldConfig> = Item::new("profit_config");
         let OldConfig {
             cadence_hours,
