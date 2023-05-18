@@ -16,7 +16,7 @@ pub type ReplyId = u64;
 #[derive(Default)]
 #[cfg_attr(
     any(debug_assertions, test, feature = "testing"),
-    derive(Debug, PartialEq)
+    derive(Debug, PartialEq, Eq)
 )]
 pub struct Batch {
     msgs: Vec<SubMsg>,

@@ -25,6 +25,8 @@ pub struct InstantiateMsg {
 #[derive(Serialize, Deserialize)]
 pub struct MigrateMsg {}
 
+pub type NbInstances = u32;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
@@ -33,9 +35,25 @@ pub enum ExecuteMsg {
         #[serde(default)]
         max_ltd: Option<Percent>,
     },
+    /// Start a Lease migration
+    ///
+    /// The consumed gas is a limitaton factor for the maximum lease instances that
+    /// can be processed in a transaction. For that reason, the process does the migration
+    /// in batches. A new batch is started with this transaction. It processes the specified
+    /// maximum number of leases and emits a continuation key as an event
+    /// 'wasm-migrate-leases.contunuation-key=<key>'. That key should be provided
+    /// with the next `MigrateLeasesCont` message. It in turn emits
+    /// a continuation key with the same event and the procedure continues until
+    /// no key is provided and a 'wasm-migrate-leases.status=done'.
     MigrateLeases {
         new_code_id: Uint64,
+        max_leases: NbInstances,
     },
+    /// Continue a Lease migration
+    ///
+    /// It migrates the next batch of up to `max_leases` number of Lease instances
+    /// and emits the status as specified in `MigrateLeases`.
+    MigrateLeasesCont { key: Addr, max_leases: NbInstances },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
