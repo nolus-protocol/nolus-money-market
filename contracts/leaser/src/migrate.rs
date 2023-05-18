@@ -170,7 +170,7 @@ mod test {
             exp.last_instance = None;
             assert_eq!(
                 Ok(exp),
-                super::migrate_leases(leases.into_iter().take(2 + 3).map(Ok), new_code, 15)
+                super::migrate_leases(leases.into_iter().skip(2 + 3).map(Ok), new_code, 15)
             );
         }
     }
