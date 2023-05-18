@@ -7,6 +7,9 @@ use super::{Currency, Group, Symbol};
 use self::impl_any_tickers::FirstTickerVisitor;
 
 pub type AnyVisitorResult<V> = Result<<V as AnyVisitor>::Output, <V as AnyVisitor>::Error>;
+pub type AnyVisitorPairResult<V> =
+    Result<<V as AnyVisitorPair>::Output, <V as AnyVisitorPair>::Error>;
+
 pub trait AnyVisitor {
     type Output;
     type Error;
@@ -19,7 +22,7 @@ pub trait AnyVisitorPair {
     type Output;
     type Error;
 
-    fn on<C1, C2>(self) -> Result<Self::Output, Self::Error>
+    fn on<C1, C2>(self) -> AnyVisitorPairResult<Self>
     where
         C1: Currency + Serialize + DeserializeOwned,
         C2: Currency + Serialize + DeserializeOwned;

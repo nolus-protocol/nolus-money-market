@@ -10,16 +10,14 @@ use sdk::{
 };
 
 use crate::{
+    contract::{alarms::MarketAlarms, oracle::Oracle},
     error::ContractError,
     msg::{DispatchAlarmsResponse, ExecuteMsg},
     result::ContractResult,
     state::config::Config,
 };
 
-use super::{
-    alarms::MarketAlarms,
-    oracle::{feed::Feeds, feeder::Feeders, Oracle},
-};
+use super::oracle::{feed::Feeds, feeder::Feeders};
 
 pub struct ExecWithOracleBase<'a> {
     deps: DepsMut<'a>,
@@ -70,20 +68,18 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
                 .map(|()| Default::default())
             }
             ExecuteMsg::DispatchAlarms { max_count } => {
-                Oracle::<OracleBase>::load(self.deps.storage)?
-                    .try_notify_alarms(self.deps.storage, self.env.block.time, max_count)
+                Oracle::<_, OracleBase>::load(self.deps.storage)?
+                    .try_notify_alarms(self.env.block.time, max_count)
                     .and_then(|(total, resp)| {
                         response::response_with_messages(&DispatchAlarmsResponse(total), resp)
                     })
             }
             ExecuteMsg::AddPriceAlarm { alarm } => {
                 contract::validate_addr(&self.deps.querier, &self.sender)?;
-                MarketAlarms::try_add_price_alarm::<OracleBase>(
-                    self.deps.storage,
-                    self.sender,
-                    alarm,
-                )
-                .map(|()| Default::default())
+
+                MarketAlarms::new(self.deps.storage)
+                    .try_add_price_alarm::<OracleBase>(self.sender, alarm)
+                    .map(|()| Default::default())
             }
         }
     }

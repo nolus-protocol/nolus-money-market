@@ -1,3 +1,5 @@
+use std::ops::{Deref, DerefMut};
+
 use finance::{
     currency::Currency,
     price::{
@@ -10,101 +12,141 @@ use marketprice::{alarms::PriceAlarms, SpotPrice};
 use sdk::cosmwasm_std::{Addr, Storage};
 use swap::SwapGroup;
 
-use crate::{alarms::Alarm as AlarmDTO, ContractError};
+use crate::{alarms::Alarm as AlarmDTO, error::ContractError, result::ContractResult};
 
-use self::iter::AlarmsFlatten;
+use self::iter::Iter as AlarmsIter;
 
 mod iter;
 
-pub type PriceResult<BaseC> = Result<BasePrice<SwapGroup, BaseC>, ContractError>;
+pub type PriceResult<BaseC> = ContractResult<BasePrice<SwapGroup, BaseC>>;
 
-pub struct MarketAlarms;
+const NAMESPACE_ALARMS_BELOW: &str = "alarms_below";
+const NAMESPACE_INDEX_BELOW: &str = "index_below";
+const NAMESPACE_ALARMS_ABOVE: &str = "alarms_above";
+const NAMESPACE_INDEX_ABOVE: &str = "index_above";
+const NAMESPACE_IN_DELIVERY: &str = "in_delivery";
 
-impl MarketAlarms {
-    const PRICE_ALARMS: PriceAlarms<'static> =
-        PriceAlarms::new("alarms_below", "index_below", "alarms_above", "index_above");
+pub(super) struct MarketAlarms<'storage, S>
+where
+    S: Deref<Target = dyn Storage + 'storage>,
+{
+    alarms: PriceAlarms<'storage, S>,
+}
 
-    pub(super) fn remove(storage: &mut dyn Storage, receiver: Addr) -> Result<(), ContractError> {
-        Self::PRICE_ALARMS
-            .remove(storage, receiver)
-            .map_err(Into::into)
+impl<'storage, S> MarketAlarms<'storage, S>
+where
+    S: Deref<Target = dyn Storage + 'storage>,
+{
+    pub fn new(storage: S) -> Self {
+        Self {
+            alarms: PriceAlarms::new(
+                storage,
+                NAMESPACE_ALARMS_BELOW,
+                NAMESPACE_INDEX_BELOW,
+                NAMESPACE_ALARMS_ABOVE,
+                NAMESPACE_INDEX_ABOVE,
+                NAMESPACE_IN_DELIVERY,
+            ),
+        }
     }
 
-    pub(super) fn try_add_price_alarm<BaseC>(
-        storage: &mut dyn Storage,
+    pub fn notify_alarms_iter<I, BaseC>(&self, prices: I) -> AlarmsIter<'storage, '_, S, I, BaseC>
+    where
+        I: Iterator<Item = PriceResult<BaseC>>,
+        BaseC: Currency,
+    {
+        AlarmsIter::new(&self.alarms, prices)
+    }
+
+    pub fn try_query_alarms<I, BaseC>(&self, prices: I) -> Result<bool, ContractError>
+    where
+        I: Iterator<Item = PriceResult<BaseC>>,
+        BaseC: Currency,
+    {
+        Ok(AlarmsIter::new(&self.alarms, prices)
+            .next()
+            .transpose()?
+            .is_some())
+    }
+
+    pub fn ensure_no_in_delivery(&self) -> ContractResult<&Self> {
+        self.alarms
+            .ensure_no_in_delivery()
+            .map(|()| self)
+            .map_err(Into::into)
+    }
+}
+
+impl<'storage, S> MarketAlarms<'storage, S>
+where
+    S: Deref<Target = dyn Storage + 'storage> + DerefMut,
+{
+    pub fn remove(&mut self, receiver: Addr) -> Result<(), ContractError> {
+        self.alarms.remove(receiver).map_err(Into::into)
+    }
+
+    pub fn try_add_price_alarm<BaseC>(
+        &mut self,
         receiver: Addr,
         alarm: AlarmDTO,
     ) -> Result<(), ContractError>
     where
         BaseC: Currency,
     {
-        struct AddAlarms<'m> {
-            storage: &'m mut dyn Storage,
-            receiver: Addr,
-            above_or_equal: Option<SpotPrice>,
-            price_alarms: PriceAlarms<'m>,
-        }
-
-        impl<'m, BaseC> WithQuote<BaseC> for AddAlarms<'m>
-        where
-            BaseC: Currency,
-        {
-            type Output = ();
-            type Error = ContractError;
-
-            fn exec<C>(self, below: Price<C, BaseC>) -> Result<Self::Output, Self::Error>
-            where
-                C: Currency,
-            {
-                if let Some(above) = self.above_or_equal {
-                    self.price_alarms.add_alarm_above_or_equal::<C, BaseC>(
-                        self.storage,
-                        &self.receiver,
-                        above.try_into()?,
-                    )?;
-                }
-                self.price_alarms
-                    .add_alarm_below(self.storage, &self.receiver, below)?;
-                Ok(())
-            }
-        }
-
         let (below, above_or_equal) = alarm.into();
+
         with_quote::execute::<_, _, _, BaseC>(
             &below,
-            AddAlarms {
-                storage,
+            AddAlarmsCmd {
                 receiver,
                 above_or_equal,
-                price_alarms: Self::PRICE_ALARMS,
+                price_alarms: &mut self.alarms,
             },
         )
     }
 
-    pub(super) fn notify_alarms_iter<'a, BaseC>(
-        storage: &'a dyn Storage,
-        prices: impl Iterator<Item = PriceResult<BaseC>> + 'a,
-        max_count: usize,
-    ) -> impl Iterator<Item = Result<Addr, ContractError>> + 'a
-    where
-        BaseC: Currency,
-    {
-        AlarmsFlatten::new(storage, prices)
-            .take(max_count)
-            .map(|item| item.map_err(Into::into))
+    pub fn out_for_delivery(&mut self, subscriber: Addr) -> ContractResult<()> {
+        self.alarms.out_for_delivery(subscriber).map_err(Into::into)
     }
 
-    pub(super) fn try_query_alarms<'a, BaseC>(
-        storage: &dyn Storage,
-        prices: impl Iterator<Item = PriceResult<BaseC>> + 'a,
-    ) -> Result<bool, ContractError>
+    pub fn last_delivered(&mut self) -> ContractResult<()> {
+        self.alarms.last_delivered().map_err(Into::into)
+    }
+
+    pub fn last_failed(&mut self) -> ContractResult<()> {
+        self.alarms.last_failed().map_err(Into::into)
+    }
+}
+
+struct AddAlarmsCmd<'storage, 'alarms, S>
+where
+    S: Deref<Target = dyn Storage + 'storage> + DerefMut,
+{
+    receiver: Addr,
+    above_or_equal: Option<SpotPrice>,
+    price_alarms: &'alarms mut PriceAlarms<'storage, S>,
+}
+
+impl<'storage, 'alarms, S, BaseC> WithQuote<BaseC> for AddAlarmsCmd<'storage, 'alarms, S>
+where
+    S: Deref<Target = dyn Storage + 'storage> + DerefMut,
+    BaseC: Currency,
+{
+    type Output = ();
+    type Error = ContractError;
+
+    fn exec<C>(self, below: Price<C, BaseC>) -> Result<Self::Output, Self::Error>
     where
-        BaseC: Currency,
+        C: Currency,
     {
-        Ok(AlarmsFlatten::new(storage, prices)
-            .next()
-            .transpose()?
-            .is_some())
+        if let Some(above) = self.above_or_equal {
+            self.price_alarms
+                .add_alarm_above_or_equal::<C, BaseC>(self.receiver.clone(), above.try_into()?)?;
+        }
+
+        self.price_alarms
+            .add_alarm_below(self.receiver.clone(), below)
+            .map_err(Into::into)
     }
 }
 
@@ -133,7 +175,8 @@ mod test {
         mut alarms: impl Iterator<Item = (&'a str, AlarmDTO)>,
     ) -> Result<(), ContractError> {
         alarms.try_for_each(|(receiver, alarm)| -> Result<(), ContractError> {
-            MarketAlarms::try_add_price_alarm::<Base>(storage, Addr::unchecked(receiver), alarm)
+            MarketAlarms::new(&mut *storage)
+                .try_add_price_alarm::<Base>(Addr::unchecked(receiver), alarm)
         })
     }
 
@@ -159,8 +202,7 @@ mod test {
 
         let receiver = Addr::unchecked("receiver");
 
-        let _ = MarketAlarms::try_add_price_alarm::<Base>(
-            &mut storage,
+        let _ = MarketAlarms::new(&mut storage as &mut dyn Storage).try_add_price_alarm::<Base>(
             receiver,
             AlarmDTO::new(tests::dto_price::<Base, Atom>(1, 20), None),
         );
@@ -169,37 +211,31 @@ mod test {
     #[test]
     fn add_remove() {
         let mut storage = MockStorage::new();
+        let mut alarms = MarketAlarms::new(&mut storage as &mut dyn Storage);
 
         let receiver1 = Addr::unchecked("receiver1");
         let receiver2 = Addr::unchecked("receiver2");
 
-        MarketAlarms::try_add_price_alarm::<Base>(
-            &mut storage,
-            receiver1,
-            alarm_dto::<Atom>((1, 20), None),
-        )
-        .unwrap();
+        alarms
+            .try_add_price_alarm::<Base>(receiver1, alarm_dto::<Atom>((1, 20), None))
+            .unwrap();
 
-        MarketAlarms::try_add_price_alarm::<Base>(
-            &mut storage,
-            receiver2.clone(),
-            alarm_dto::<Weth>((1, 20), Some((1, 30))),
-        )
-        .unwrap();
+        alarms
+            .try_add_price_alarm::<Base>(
+                receiver2.clone(),
+                alarm_dto::<Weth>((1, 20), Some((1, 30))),
+            )
+            .unwrap();
 
-        assert!(MarketAlarms::try_query_alarms::<Base>(
-            &storage,
-            [tests::base_price::<Weth>(1, 35)].into_iter().map(Ok)
-        )
-        .unwrap());
+        assert!(alarms
+            .try_query_alarms::<_, Base>([tests::base_price::<Weth>(1, 35)].into_iter().map(Ok),)
+            .unwrap());
 
-        MarketAlarms::remove(&mut storage, receiver2).unwrap();
+        alarms.remove(receiver2).unwrap();
 
-        assert!(!MarketAlarms::try_query_alarms::<Base>(
-            &storage,
-            [tests::base_price::<Weth>(1, 10)].into_iter().map(Ok)
-        )
-        .unwrap());
+        assert!(!alarms
+            .try_query_alarms::<_, Base>([tests::base_price::<Weth>(1, 10)].into_iter().map(Ok))
+            .unwrap());
     }
 
     #[test]
@@ -210,17 +246,16 @@ mod test {
 
         let mut storage = MockStorage::new();
 
-        let res = MarketAlarms::notify_alarms_iter::<Base>(
-            &mut storage,
-            [price::total_of(Coin::<Nls>::new(1))
-                .is(Coin::<Base>::new(25))
-                .into()]
-            .into_iter()
-            .map(Ok),
-            1,
-        )
-        .next()
-        .unwrap();
+        let res = MarketAlarms::new(&storage as &dyn Storage)
+            .notify_alarms_iter::<_, Base>(
+                [price::total_of(Coin::<Nls>::new(1))
+                    .is(Coin::<Base>::new(25))
+                    .into()]
+                .into_iter()
+                .map(Ok),
+            )
+            .next()
+            .unwrap();
 
         assert!(res.is_err())
     }
@@ -231,11 +266,10 @@ mod test {
 
         test_case(&mut storage);
 
-        let mut sent = MarketAlarms::notify_alarms_iter::<Base>(
-            &storage,
-            [tests::base_price::<Weth>(1, 25)].into_iter().map(Ok),
-            100,
-        );
+        let alarms = MarketAlarms::new(&storage as &dyn Storage);
+
+        let mut sent = alarms
+            .notify_alarms_iter::<_, Base>([tests::base_price::<Weth>(1, 25)].into_iter().map(Ok));
 
         assert!(sent.next().is_none());
     }
@@ -246,13 +280,10 @@ mod test {
 
         test_case(&mut storage);
 
-        let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
-            &storage,
-            [tests::base_price::<Weth>(1, 15)].into_iter().map(Ok),
-            100,
-        )
-        .flatten()
-        .collect();
+        let sent: Vec<_> = MarketAlarms::new(&storage as &dyn Storage)
+            .notify_alarms_iter::<_, Base>([tests::base_price::<Weth>(1, 15)].into_iter().map(Ok))
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
 
         assert_eq!(sent, vec!["recv2"]);
     }
@@ -263,13 +294,10 @@ mod test {
 
         test_case(&mut storage);
 
-        let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
-            &storage,
-            [tests::base_price::<Weth>(1, 5)].into_iter().map(Ok),
-            100,
-        )
-        .flatten()
-        .collect();
+        let sent: Vec<_> = MarketAlarms::new(&storage as &dyn Storage)
+            .notify_alarms_iter::<_, Base>([tests::base_price::<Weth>(1, 5)].into_iter().map(Ok))
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
 
         assert_eq!(sent, vec!["recv2", "recv1"]);
     }
@@ -280,11 +308,10 @@ mod test {
 
         test_case(&mut storage);
 
-        let mut sent = MarketAlarms::notify_alarms_iter::<Base>(
-            &storage,
-            [tests::base_price::<Weth>(1, 25)].into_iter().map(Ok),
-            100,
-        );
+        let alarms = MarketAlarms::new(&storage as &dyn Storage);
+
+        let mut sent = alarms
+            .notify_alarms_iter::<_, Base>([tests::base_price::<Weth>(1, 25)].into_iter().map(Ok));
 
         assert!(sent.next().is_none());
     }
@@ -295,13 +322,12 @@ mod test {
 
         test_case(&mut storage);
 
-        let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
-            &storage,
-            [tests::base_price::<Weth>(1, 55)].into_iter().map(Ok),
-            100,
-        )
-        .flatten()
-        .collect();
+        let alarms = MarketAlarms::new(&storage as &dyn Storage);
+
+        let sent: Vec<_> = alarms
+            .notify_alarms_iter::<_, Base>([tests::base_price::<Weth>(1, 55)].into_iter().map(Ok))
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
 
         assert_eq!(sent, vec!["recv2"]);
     }
@@ -312,13 +338,12 @@ mod test {
 
         test_case(&mut storage);
 
-        let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
-            &storage,
-            [tests::base_price::<Weth>(1, 65)].into_iter().map(Ok),
-            100,
-        )
-        .flatten()
-        .collect();
+        let alarms = MarketAlarms::new(&storage as &dyn Storage);
+
+        let sent: Vec<_> = alarms
+            .notify_alarms_iter::<_, Base>([tests::base_price::<Weth>(1, 65)].into_iter().map(Ok))
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
 
         assert_eq!(sent, vec!["recv1", "recv2"]);
     }
@@ -329,40 +354,19 @@ mod test {
 
         test_case(&mut storage);
 
-        let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
-            &storage,
-            [
-                tests::base_price::<Weth>(1, 65),
-                tests::base_price::<Atom>(1, 25),
-            ]
-            .into_iter()
-            .map(Ok),
-            100,
-        )
-        .flatten()
-        .collect();
+        let alarms = MarketAlarms::new(&storage as &dyn Storage);
 
-        assert_eq!(sent, vec!["recv1", "recv2", "recv4"]);
-    }
-
-    #[test]
-    fn alarms_max_count() {
-        let mut storage = MockStorage::new();
-
-        test_case(&mut storage);
-
-        let sent: Vec<_> = MarketAlarms::notify_alarms_iter::<Base>(
-            &storage,
-            [
-                tests::base_price::<Weth>(1, 65),
-                tests::base_price::<Atom>(1, 15),
-            ]
-            .into_iter()
-            .map(Ok),
-            3,
-        )
-        .flatten()
-        .collect();
+        let sent: Vec<_> = alarms
+            .notify_alarms_iter::<_, Base>(
+                [
+                    tests::base_price::<Weth>(1, 65),
+                    tests::base_price::<Atom>(1, 25),
+                ]
+                .into_iter()
+                .map(Ok),
+            )
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
 
         assert_eq!(sent, vec!["recv1", "recv2", "recv4"]);
     }

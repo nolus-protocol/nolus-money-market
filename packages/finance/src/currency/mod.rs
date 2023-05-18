@@ -9,7 +9,7 @@ pub use self::{
     },
     from_symbol_any::{
         maybe_visit_any_on_ticker, visit_any_on_ticker, visit_any_on_tickers, AnyVisitor,
-        AnyVisitorPair, AnyVisitorResult,
+        AnyVisitorPair, AnyVisitorPairResult, AnyVisitorResult,
     },
     group::{Group, MaybeAnyVisitResult},
 };

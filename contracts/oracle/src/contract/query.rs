@@ -34,42 +34,39 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
     where
         OracleBase: 'static + Currency + DeserializeOwned + Serialize,
     {
-        let res = match self.msg {
-            QueryMsg::SupportedCurrencyPairs {} => Ok(to_binary(
+        match self.msg {
+            QueryMsg::SupportedCurrencyPairs {} => to_binary(
                 &SupportedPairs::<OracleBase>::load(self.deps.storage)?
                     .swap_pairs_df()
                     .collect::<Vec<_>>(),
-            )?),
-
+            ),
             QueryMsg::Price { currency } => to_binary(
-                &Oracle::<OracleBase>::load(self.deps.storage)?.try_query_price(
-                    self.deps.storage,
-                    self.env.block.time,
-                    &currency,
-                )?,
+                &Oracle::<'_, _, OracleBase>::load(self.deps.storage)?
+                    .try_query_price(self.env.block.time, &currency)?,
             ),
             QueryMsg::Prices {} => {
-                let prices = Oracle::<OracleBase>::load(self.deps.storage)?
-                    .try_query_prices(self.deps.storage, self.env.block.time)?;
-                Ok(to_binary(&PricesResponse { prices })?)
+                let prices = Oracle::<'_, _, OracleBase>::load(self.deps.storage)?
+                    .try_query_prices(self.env.block.time)?;
+
+                to_binary(&PricesResponse { prices })
             }
-            QueryMsg::SwapPath { from, to } => Ok(to_binary(
+            QueryMsg::SwapPath { from, to } => to_binary(
                 &SupportedPairs::<OracleBase>::load(self.deps.storage)?
                     .load_swap_path(&from, &to)?,
-            )?),
-            QueryMsg::SwapTree {} => Ok(to_binary(&SwapTreeResponse {
+            ),
+            QueryMsg::SwapTree {} => to_binary(&SwapTreeResponse {
                 tree: SupportedPairs::<OracleBase>::load(self.deps.storage)?
                     .query_swap_tree()
                     .into_human_readable(),
-            })?),
-            QueryMsg::AlarmsStatus {} => Ok(to_binary(
-                &Oracle::<OracleBase>::load(self.deps.storage)?
-                    .try_query_alarms(self.deps.storage, self.env.block.time)?,
-            )?),
+            }),
+            QueryMsg::AlarmsStatus {} => to_binary(
+                &Oracle::<'_, _, OracleBase>::load(self.deps.storage)?
+                    .try_query_alarms(self.env.block.time)?,
+            ),
             _ => {
                 unreachable!() // should be done already
             }
-        }?;
-        Ok(res)
+        }
+        .map_err(Into::into)
     }
 }

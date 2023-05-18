@@ -1,8 +1,11 @@
-use std::marker::PhantomData;
+use std::{iter, marker::PhantomData};
 
 use serde::de::DeserializeOwned;
 
-use finance::currency::{self, Currency, SymbolOwned};
+use finance::{
+    currency::{self, AnyVisitorPair, Currency, SymbolOwned},
+    price::base::BasePrice,
+};
 use leg_cmd::LegCmd;
 use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
 use price_querier::FedPrices;
@@ -10,13 +13,28 @@ use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 use swap::{SwapGroup, SwapTarget};
 
 use crate::{
-    contract::alarms::PriceResult,
     state::supported_pairs::{SupportedPairs, SwapLeg},
     ContractError,
 };
 
 mod leg_cmd;
 mod price_querier;
+
+pub type AllPricesIterCmd<'r, OracleBase> = LegCmd<OracleBase, FedPrices<'r>>;
+pub type AllPricesIterScanFnItem<'r, 't, OracleBase> = Option<
+    Result<
+        BasePrice<SwapGroup, OracleBase>,
+        <&'t mut AllPricesIterCmd<'r, OracleBase> as AnyVisitorPair>::Error,
+    >,
+>;
+pub type AllPricesIterScanFn<'r, OracleBase> =
+    for<'t> fn(
+        &'t mut AllPricesIterCmd<'r, OracleBase>,
+        SwapLeg,
+    ) -> Option<AllPricesIterScanFnItem<'r, 't, OracleBase>>;
+pub type AllPricesIter<'r, I, OracleBase> = iter::Flatten<
+    iter::Scan<I, AllPricesIterCmd<'r, OracleBase>, AllPricesIterScanFn<'r, OracleBase>>,
+>;
 
 pub struct Feeds<OracleBase> {
     feeds: PriceFeeds<'static>,
@@ -60,27 +78,37 @@ where
         Ok(())
     }
 
-    pub fn all_prices_iter<'a>(
-        &'a self,
-        storage: &'a dyn Storage,
-        swap_pairs_df: impl Iterator<Item = SwapLeg> + 'a,
+    pub fn all_prices_iter<'r, 'self_, 'storage, I>(
+        &'self_ self,
+        storage: &'storage dyn Storage,
+        swap_pairs_df: I,
         at: Timestamp,
         total_feeders: usize,
-    ) -> impl Iterator<Item = PriceResult<OracleBase>> + 'a {
-        let cmd = LegCmd::new(
+    ) -> AllPricesIter<'r, I, OracleBase>
+    where
+        'self_: 'r,
+        'storage: 'r,
+        I: Iterator<Item = SwapLeg>,
+    {
+        let cmd: AllPricesIterCmd<'r, OracleBase> = LegCmd::new(
             FedPrices::new(storage, &self.feeds, at, total_feeders),
             vec![],
         );
+
         swap_pairs_df
-            .scan(cmd, |cmd, leg| {
-                let res = currency::visit_any_on_tickers::<SwapGroup, SwapGroup, _>(
-                    &leg.from,
-                    &leg.to.target,
-                    cmd,
-                )
-                .transpose();
-                Some(res)
-            })
+            .scan::<_, _, AllPricesIterScanFn<'r, OracleBase>>(
+                cmd,
+                |cmd: &mut AllPricesIterCmd<'r, OracleBase>, leg: SwapLeg| {
+                    Some(
+                        currency::visit_any_on_tickers::<SwapGroup, SwapGroup, _>(
+                            &leg.from,
+                            &leg.to.target,
+                            cmd,
+                        )
+                        .transpose(),
+                    )
+                },
+            )
             .flatten()
     }
 
@@ -282,10 +310,10 @@ mod test {
 
             let prices: Vec<_> = oracle
                 .all_prices_iter(&storage, tree.swap_pairs_df(), env.block.time, 1)
-                .flatten()
-                .collect();
+                .collect::<Result<_, _>>()
+                .unwrap();
 
-            assert_eq!(expected, prices);
+            assert_eq!(prices, expected);
         }
     }
 }

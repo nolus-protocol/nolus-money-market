@@ -6,40 +6,40 @@ use sdk::cosmwasm_std::StdError;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum PriceFeedsError {
-    #[error("{0}")]
+    #[error("[Market Price; Feeds] {0}")]
     Std(#[from] StdError),
 
-    #[error("Given address already registered as a price feeder")]
+    #[error("[Market Price; Feeds] Given address already registered as a price feeder")]
     FeederAlreadyRegistered {},
 
-    #[error("Given address not registered as a price feeder")]
+    #[error("[Market Price; Feeds] Given address not registered as a price feeder")]
     FeederNotRegistered {},
 
-    #[error("No price")]
+    #[error("[Market Price; Feeds] No price")]
     NoPrice(),
 
-    #[error("Invalid price")]
+    #[error("[Market Price; Feeds] Invalid price")]
     InvalidPrice(),
 
-    #[error("Found currency {0} expecting {1}")]
+    #[error("[Market Price; Feeds] Found currency {0} expecting {1}")]
     UnexpectedCurrency(String, String),
 
-    #[error("{0}")]
+    #[error("[Market Price; Feeds] {0}")]
     FromInfallible(#[from] Infallible),
 
-    #[error("Configuration error: {0}")]
+    #[error("[Market Price; Feeds] Configuration error: {0}")]
     Configuration(String),
 
-    #[error("{0}")]
+    #[error("[Market Price; Feeds] {0}")]
     TryFromInt(#[from] TryFromIntError),
 
-    #[error("{0}")]
+    #[error("[Market Price; Feeds] {0}")]
     Finance(#[from] finance::error::Error),
 
-    #[error("Unknown currency")]
+    #[error("[Market Price; Feeds] Unknown currency")]
     UnknownCurrency {},
 
-    #[error("{0}")]
+    #[error("[Market Price; Feeds] {0}")]
     FeedSerdeError(String),
 }
 
