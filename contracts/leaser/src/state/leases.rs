@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use sdk::{
     cosmwasm_std::{Addr, StdResult, Storage},
-    cw_storage_plus::{Item, Map},
+    cw_storage_plus::{Bound, Item, Map},
 };
 
 use crate::{error::ContractError, result::ContractResult};
@@ -74,10 +74,14 @@ impl Leases {
         })
     }
 
-    pub fn iter(storage: &dyn Storage) -> impl Iterator<Item = ContractResult<Addr>> + '_ {
+    pub fn iter(
+        storage: &dyn Storage,
+        start_past: Option<Addr>,
+    ) -> impl Iterator<Item = ContractResult<Addr>> + '_ {
+        let start_bound = start_past.map(Bound::<Addr>::exclusive);
         Self::STORAGE
             .prefix(())
-            .range_raw(storage, None, None, cosmwasm_std::Order::Ascending)
+            .range_raw(storage, start_bound, None, cosmwasm_std::Order::Ascending)
             .map(|may_kv| may_kv.map(|kv| kv.1).map_err(Into::into))
             .flat_map(transpose)
     }

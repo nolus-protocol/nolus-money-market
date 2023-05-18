@@ -5,7 +5,7 @@ use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
 use lease::api::{ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
 use lpp::{msg::ExecuteMsg, stub::LppRef};
 use oracle::stub::OracleRef;
-use platform::batch::Batch;
+use platform::batch::{Batch, Emit, Emitter};
 use platform::message::Response as MessageResponse;
 use sdk::cosmwasm_std::{Addr, Deps, StdResult, Storage};
 
@@ -13,7 +13,7 @@ use crate::{
     cmd::Quote,
     error::ContractError,
     migrate::{self},
-    msg::{ConfigResponse, QuoteResponse},
+    msg::{ConfigResponse, NbInstances, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
 };
@@ -92,24 +92,58 @@ pub(super) fn try_configure(
 pub(super) fn try_migrate_leases(
     storage: &mut dyn Storage,
     new_code_id: u64,
+    max_leases: NbInstances,
 ) -> ContractResult<MessageResponse> {
     Config::update_lease_code(storage, new_code_id)?;
 
-    migrate::migrate_leases(Leases::iter(storage), new_code_id)
-        .and_then(|batch| update_lpp(storage, new_code_id, batch))
+    let leases = Leases::iter(storage, None);
+    migrate::migrate_leases(leases, new_code_id, max_leases)
+        .and_then(|result| result.try_add_msgs(|msgs| update_lpp_impl(storage, new_code_id, msgs)))
+        .map(|result| {
+            MessageResponse::messages_with_events(result.msgs, emit_status(result.last_instance))
+        })
+}
+
+pub(super) fn try_migrate_leases_cont(
+    storage: &mut dyn Storage,
+    start_past: Addr,
+    max_leases: NbInstances,
+) -> ContractResult<MessageResponse> {
+    let lease_code_id = Config::load(storage)?.lease_code_id;
+
+    let leases = Leases::iter(storage, Some(start_past));
+    migrate::migrate_leases(leases, lease_code_id, max_leases).map(|result| {
+        MessageResponse::messages_with_events(result.msgs, emit_status(result.last_instance))
+    })
 }
 
 pub(super) fn update_lpp(
-    storage: &mut dyn Storage,
+    storage: &dyn Storage,
     new_code_id: u64,
     mut batch: Batch,
-) -> ContractResult<MessageResponse> {
+) -> ContractResult<Batch> {
+    update_lpp_impl(storage, new_code_id, &mut batch).map(|()| batch)
+}
+
+fn update_lpp_impl(
+    storage: &dyn Storage,
+    new_code_id: u64,
+    batch: &mut Batch,
+) -> ContractResult<()> {
     let lpp = Config::load(storage)?.lpp_addr;
     let lpp_update_code = ExecuteMsg::NewLeaseCode {
         lease_code_id: new_code_id.into(),
     };
     batch
         .schedule_execute_wasm_no_reply::<_, Nls>(&lpp, lpp_update_code, None)
-        .map(|()| batch.into())
         .map_err(Into::into)
+}
+
+fn emit_status(last_instance: Option<Addr>) -> Emitter {
+    let emitter = Emitter::of_type("migrate-leases");
+    if let Some(last) = last_instance {
+        emitter.emit("contunuation-key", last)
+    } else {
+        emitter.emit("status", "done")
+    }
 }

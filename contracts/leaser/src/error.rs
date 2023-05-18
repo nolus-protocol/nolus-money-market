@@ -1,3 +1,5 @@
+use std::num::TryFromIntError;
+
 use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError;
@@ -6,6 +8,9 @@ use sdk::cosmwasm_std::StdError;
 pub enum ContractError {
     #[error("[Leaser] [Std] {0}")]
     Std(#[from] StdError),
+
+    #[error("[Leaser] integer conversion {0}")]
+    Conversion(#[from] TryFromIntError),
 
     #[error("[Leaser] {0}")]
     Finance(#[from] finance::error::Error),
