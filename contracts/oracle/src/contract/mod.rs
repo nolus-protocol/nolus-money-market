@@ -2,18 +2,20 @@ use currency::lpn::Lpns;
 use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
 use platform::{
     batch::{Emit, Emitter},
-    reply,
-    response::{self},
+    response,
 };
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{
+        to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult,
+    },
 };
 use versioning::{package_version, version, VersionSegment};
 
 use crate::{
+    contract::alarms::MarketAlarms,
     error::ContractError,
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
@@ -21,7 +23,7 @@ use crate::{
 };
 
 use self::{
-    alarms::MarketAlarms, config::query_config, exec::ExecWithOracleBase, oracle::feeder::Feeders,
+    config::query_config, exec::ExecWithOracleBase, oracle::feeder::Feeders,
     query::QueryWithOracleBase, sudo::SudoWithOracleBase,
 };
 
@@ -118,7 +120,7 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
         SudoMsg::UpdateConfig(price_config) => Config::update(deps.storage, price_config),
         SudoMsg::RegisterFeeder { feeder_address } => Feeders::try_register(deps, feeder_address),
         SudoMsg::RemoveFeeder { feeder_address } => Feeders::try_remove(deps, feeder_address),
-        SudoMsg::RemovePriceAlarm { receiver } => MarketAlarms::remove(deps.storage, receiver),
+        SudoMsg::RemovePriceAlarm { receiver } => MarketAlarms::new(deps.storage).remove(receiver),
         _ => SudoWithOracleBase::cmd(deps, msg),
     }
     .map(|()| response::empty_response())
@@ -131,16 +133,19 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
     const KEY_DELIVERED: &str = "delivered";
     const KEY_DETAILS: &str = "details";
 
-    match reply::from_execute(msg) {
-        Ok(Some(addr)) => MarketAlarms::remove(deps.storage, addr)
-            .map(|()| Emitter::of_type(EVENT_TYPE).emit(KEY_DELIVERED, "success")),
-        Err(err) => Ok(Emitter::of_type(EVENT_TYPE)
-            .emit(KEY_DELIVERED, "error")
-            .emit(KEY_DETAILS, err.to_string())),
+    let mut alarms: MarketAlarms<'_, &mut (dyn Storage + '_)> = MarketAlarms::new(deps.storage);
 
-        Ok(None) => Ok(Emitter::of_type(EVENT_TYPE)
-            .emit(KEY_DELIVERED, "error")
-            .emit(KEY_DETAILS, "no reply")),
+    let emitter: Emitter = Emitter::of_type(EVENT_TYPE);
+
+    match msg.result {
+        SubMsgResult::Ok(_) => alarms
+            .last_delivered()
+            .map(|()| emitter.emit(KEY_DELIVERED, "success")),
+        SubMsgResult::Err(error) => alarms.last_failed().map(|()| {
+            emitter
+                .emit(KEY_DELIVERED, "error")
+                .emit(KEY_DETAILS, error)
+        }),
     }
     .map(response::response_only_messages)
 }

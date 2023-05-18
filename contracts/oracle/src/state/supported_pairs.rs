@@ -1,6 +1,6 @@
-use std::{fmt::Debug, marker::PhantomData};
+use std::{fmt::Debug, iter, marker::PhantomData};
 
-use ::serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
+use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 
 use currency::payment::PaymentGroup;
 use finance::currency::{
@@ -46,6 +46,10 @@ impl<'de> Deserialize<'de> for SwapLeg {
 }
 
 type Tree = tree::Tree<SwapTarget>;
+
+pub type SwapPairsDfFilterMapFn<'r> = fn(NodeRef<'r, SwapTarget>) -> Option<SwapLeg>;
+pub type SwapPairsDfIter<'r> =
+    iter::FilterMap<tree::TreeIter<'r, SwapTarget>, SwapPairsDfFilterMapFn<'r>>;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
 pub struct SupportedPairs<B>
@@ -194,23 +198,25 @@ where
         ))
     }
 
-    pub fn swap_pairs_df(&self) -> impl Iterator<Item = SwapLeg> + '_ {
-        self.tree.iter().filter_map(|node| {
-            let parent = node.parent()?;
+    pub fn swap_pairs_df(&self) -> SwapPairsDfIter<'_> {
+        self.tree
+            .iter()
+            .filter_map::<SwapLeg, SwapPairsDfFilterMapFn<'_>>(|node| {
+                let parent = node.parent()?;
 
-            let SwapTarget {
-                pool_id,
-                target: child,
-            } = node.value().clone();
-
-            Some(SwapLeg {
-                from: child,
-                to: SwapTarget {
+                let SwapTarget {
                     pool_id,
-                    target: parent.value().target.clone(),
-                },
+                    target: child,
+                } = node.value().clone();
+
+                Some(SwapLeg {
+                    from: child,
+                    to: SwapTarget {
+                        pool_id,
+                        target: parent.value().target.clone(),
+                    },
+                })
             })
-        })
     }
 
     pub fn query_swap_tree(self) -> Tree {
