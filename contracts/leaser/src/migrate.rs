@@ -16,7 +16,7 @@ pub struct MigrationResult {
     pub next_customer: Option<Addr>,
 }
 
-pub type MayCustomer<LI> = ContractResult<Customer<LI>>;
+pub type MaybeCustomer<LI> = ContractResult<Customer<LI>>;
 
 /// Builds a batch of messages for the migration of up to `max_leases`
 ///
@@ -27,7 +27,7 @@ pub fn migrate_leases<I, LI>(
     max_leases: MaxLeases,
 ) -> ContractResult<MigrationResult>
 where
-    I: Iterator<Item = MayCustomer<LI>>,
+    I: Iterator<Item = MaybeCustomer<LI>>,
     LI: ExactSizeIterator<Item = Addr>,
 {
     let mut msgs = MigrateBatch::new(lease_code_id, max_leases);
@@ -84,8 +84,8 @@ impl MigrateBatch {
         match maybe_leases_nb {
             Err(err) => Some(Err(err.into())),
             Ok(leases_nb) => {
-                if leases_nb <= self.leases_left {
-                    self.leases_left -= leases_nb;
+                if let Some(left) = self.leases_left.checked_sub(leases_nb) {
+                    self.leases_left = left;
                     customer.leases.find_map(|lease| {
                         self.msgs
                             .schedule_migrate_wasm_no_reply(&lease, MigrateMsg {}, self.new_code_id)

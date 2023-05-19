@@ -7,7 +7,7 @@ use sdk::{
 
 use crate::{
     error::ContractError,
-    migrate::{Customer, MayCustomer},
+    migrate::{Customer, MaybeCustomer},
 };
 
 const IDS: InstantiateReplyIdSeq<'static> = InstantiateReplyIdSeq::new("instantiate_reply_ids");
@@ -80,7 +80,7 @@ impl Leases {
     pub fn iter(
         storage: &dyn Storage,
         next_customer: Option<Addr>,
-    ) -> impl Iterator<Item = MayCustomer<IntoIter<Addr>>> + '_ {
+    ) -> impl Iterator<Item = MaybeCustomer<IntoIter<Addr>>> + '_ {
         let start_bound = next_customer.map(Bound::<Addr>::inclusive);
         Self::STORAGE
             .prefix(())
