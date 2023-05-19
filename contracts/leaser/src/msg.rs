@@ -25,7 +25,7 @@ pub struct InstantiateMsg {
 #[derive(Serialize, Deserialize)]
 pub struct MigrateMsg {}
 
-pub type NbInstances = u32;
+pub type MaxLeases = u32;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -47,13 +47,13 @@ pub enum ExecuteMsg {
     /// no key is provided and 'wasm-migrate-leases.status=done'.
     MigrateLeases {
         new_code_id: Uint64,
-        max_leases: NbInstances,
+        max_leases: MaxLeases,
     },
     /// Continue a Lease migration
     ///
     /// It migrates the next batch of up to `max_leases` number of Lease instances
     /// and emits the status as specified in `MigrateLeases`.
-    MigrateLeasesCont { key: Addr, max_leases: NbInstances },
+    MigrateLeasesCont { key: Addr, max_leases: MaxLeases },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
