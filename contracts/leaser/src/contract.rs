@@ -73,10 +73,10 @@ pub fn execute(
             leaser::try_migrate_leases(deps.storage, new_code_id.u64(), max_leases)
         }),
         ExecuteMsg::MigrateLeasesCont {
-            key: start_past,
+            key: next_customer,
             max_leases,
         } => SingleUserAccess::check_owner_access(deps.storage, &info.sender).and_then(move |()| {
-            leaser::try_migrate_leases_cont(deps.storage, start_past, max_leases)
+            leaser::try_migrate_leases_cont(deps.storage, next_customer, max_leases)
         }),
     }
     .map(response::response_only_messages)

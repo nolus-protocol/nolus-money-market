@@ -100,20 +100,20 @@ pub(super) fn try_migrate_leases(
     migrate::migrate_leases(leases, new_code_id, max_leases)
         .and_then(|result| result.try_add_msgs(|msgs| update_lpp_impl(storage, new_code_id, msgs)))
         .map(|result| {
-            MessageResponse::messages_with_events(result.msgs, emit_status(result.last_instance))
+            MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
         })
 }
 
 pub(super) fn try_migrate_leases_cont(
     storage: &mut dyn Storage,
-    start_past: Addr,
+    next_customer: Addr,
     max_leases: NbInstances,
 ) -> ContractResult<MessageResponse> {
     let lease_code_id = Config::load(storage)?.lease_code_id;
 
-    let leases = Leases::iter(storage, Some(start_past));
+    let leases = Leases::iter(storage, Some(next_customer));
     migrate::migrate_leases(leases, lease_code_id, max_leases).map(|result| {
-        MessageResponse::messages_with_events(result.msgs, emit_status(result.last_instance))
+        MessageResponse::messages_with_events(result.msgs, emit_status(result.next_customer))
     })
 }
 
@@ -139,10 +139,10 @@ fn update_lpp_impl(
         .map_err(Into::into)
 }
 
-fn emit_status(last_instance: Option<Addr>) -> Emitter {
+fn emit_status(next_customer: Option<Addr>) -> Emitter {
     let emitter = Emitter::of_type("migrate-leases");
-    if let Some(last) = last_instance {
-        emitter.emit("contunuation-key", last)
+    if let Some(next) = next_customer {
+        emitter.emit("contunuation-key", next)
     } else {
         emitter.emit("status", "done")
     }

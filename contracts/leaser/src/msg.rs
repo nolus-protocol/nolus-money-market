@@ -44,7 +44,7 @@ pub enum ExecuteMsg {
     /// 'wasm-migrate-leases.contunuation-key=<key>'. That key should be provided
     /// with the next `MigrateLeasesCont` message. It in turn emits
     /// a continuation key with the same event and the procedure continues until
-    /// no key is provided and a 'wasm-migrate-leases.status=done'.
+    /// no key is provided and 'wasm-migrate-leases.status=done'.
     MigrateLeases {
         new_code_id: Uint64,
         max_leases: NbInstances,
