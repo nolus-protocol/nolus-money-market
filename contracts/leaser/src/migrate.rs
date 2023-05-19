@@ -304,8 +304,8 @@ mod test {
         let lease42 = Addr::unchecked(LEASE42);
         let lease43 = Addr::unchecked(LEASE43);
         let customer_addr4 = Addr::unchecked(CUSTOMER_ADDR4);
-        let cust4 = Customer::from(customer_addr4, vec![lease41, lease42, lease43].into_iter());    
-    
+        let cust4 = Customer::from(customer_addr4, vec![lease41, lease42, lease43].into_iter());
+
         vec![Ok(cust1), Ok(cust2), Ok(cust3), Ok(cust4)].into_iter()
     }
 }
