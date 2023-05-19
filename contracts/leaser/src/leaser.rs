@@ -13,7 +13,7 @@ use crate::{
     cmd::Quote,
     error::ContractError,
     migrate::{self},
-    msg::{ConfigResponse, NbInstances, QuoteResponse},
+    msg::{ConfigResponse, MaxLeases, QuoteResponse},
     result::ContractResult,
     state::{config::Config, leases::Leases},
 };
@@ -92,7 +92,7 @@ pub(super) fn try_configure(
 pub(super) fn try_migrate_leases(
     storage: &mut dyn Storage,
     new_code_id: u64,
-    max_leases: NbInstances,
+    max_leases: MaxLeases,
 ) -> ContractResult<MessageResponse> {
     Config::update_lease_code(storage, new_code_id)?;
 
@@ -107,7 +107,7 @@ pub(super) fn try_migrate_leases(
 pub(super) fn try_migrate_leases_cont(
     storage: &mut dyn Storage,
     next_customer: Addr,
-    max_leases: NbInstances,
+    max_leases: MaxLeases,
 ) -> ContractResult<MessageResponse> {
     let lease_code_id = Config::load(storage)?.lease_code_id;
 

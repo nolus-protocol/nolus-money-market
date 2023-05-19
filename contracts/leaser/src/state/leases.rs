@@ -5,7 +5,10 @@ use sdk::{
     cw_storage_plus::{Bound, Item, Map},
 };
 
-use crate::{error::ContractError, migrate::Customer, result::ContractResult};
+use crate::{
+    error::ContractError,
+    migrate::{Customer, MayCustomer},
+};
 
 const IDS: InstantiateReplyIdSeq<'static> = InstantiateReplyIdSeq::new("instantiate_reply_ids");
 const PENDING: Map<'static, InstantiateReplyId, Addr> = Map::new("pending_instance_creations");
@@ -77,13 +80,14 @@ impl Leases {
     pub fn iter(
         storage: &dyn Storage,
         next_customer: Option<Addr>,
-    ) -> impl Iterator<Item = ContractResult<Customer<IntoIter<Addr>>>> + '_ {
+    ) -> impl Iterator<Item = MayCustomer<IntoIter<Addr>>> + '_ {
         let start_bound = next_customer.map(Bound::<Addr>::inclusive);
         Self::STORAGE
             .prefix(())
             .range(storage, start_bound, None, cosmwasm_std::Order::Ascending)
-            .map(|e| {
-                e.map(|(customer, leases)| Customer::from(customer, leases.into_iter()))
+            .map(|record| {
+                record
+                    .map(|(customer, leases)| Customer::from(customer, leases.into_iter()))
                     .map_err(Into::into)
             })
     }
