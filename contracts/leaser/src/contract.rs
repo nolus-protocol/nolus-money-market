@@ -1,4 +1,5 @@
 use access_control::SingleUserAccess;
+use cosmwasm_std::{Addr, Api, QuerierWrapper};
 use platform::{batch::Batch, reply::from_instantiate, response};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
@@ -75,9 +76,11 @@ pub fn execute(
         ExecuteMsg::MigrateLeasesCont {
             key: next_customer,
             max_leases,
-        } => SingleUserAccess::check_owner_access(deps.storage, &info.sender).and_then(move |()| {
-            leaser::try_migrate_leases_cont(deps.storage, next_customer, max_leases)
-        }),
+        } => SingleUserAccess::check_owner_access(deps.storage, &info.sender)
+            .and_then(|()| validate(next_customer, deps.api, &deps.querier))
+            .and_then(move |next_customer_validated| {
+                leaser::try_migrate_leases_cont(deps.storage, next_customer_validated, max_leases)
+            }),
     }
     .map(response::response_only_messages)
 }
@@ -125,4 +128,23 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<Respons
 
     Leases::save(deps.storage, msg_id, contract_addr.clone())?;
     Ok(Response::new().add_attribute("lease_address", contract_addr))
+}
+
+fn validate(
+    next_customer: Addr,
+    api: &dyn Api,
+    querier: &QuerierWrapper<'_>,
+) -> ContractResult<Addr> {
+    api.addr_validate(next_customer.as_str())
+        .map_err(|_| ContractError::InvalidContinuationKey {
+            err: "invalid address".into(),
+        })
+        .and_then(|next_customer| {
+            platform::contract::validate_addr(querier, &next_customer)
+                .is_err()
+                .then_some(next_customer)
+                .ok_or_else(|| ContractError::InvalidContinuationKey {
+                    err: "smart contract key".into(),
+                })
+        })
 }

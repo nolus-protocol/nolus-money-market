@@ -44,4 +44,7 @@ pub enum ContractError {
 
     #[error("[Leaser] DEX connectivity already setup")]
     DEXConnectivityAlreadySetup {},
+
+    #[error("[Leaser] Invalid continuation key, cause: {err} ")]
+    InvalidContinuationKey { err: String },
 }
