@@ -56,11 +56,6 @@ pub enum SudoMsg {
     SwapTree {
         tree: HumanReadableTree<SwapTarget>,
     },
-    /// The aim is to remove price alarms for leases that are in
-    /// the process of decommissioning
-    RemovePriceAlarm {
-        receiver: Addr,
-    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

@@ -120,7 +120,6 @@ pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResp
         SudoMsg::UpdateConfig(price_config) => Config::update(deps.storage, price_config),
         SudoMsg::RegisterFeeder { feeder_address } => Feeders::try_register(deps, feeder_address),
         SudoMsg::RemoveFeeder { feeder_address } => Feeders::try_remove(deps, feeder_address),
-        SudoMsg::RemovePriceAlarm { receiver } => MarketAlarms::new(deps.storage).remove(receiver),
         _ => SudoWithOracleBase::cmd(deps, msg),
     }
     .map(|()| response::empty_response())
