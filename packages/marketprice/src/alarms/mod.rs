@@ -277,17 +277,13 @@ where
                 })
             })
             .and_then(|alarm: AlarmWithSubscriber| {
-                Self::add_alarm_internal(
-                    self.storage.deref_mut(),
-                    &self.alarms_below,
+                self.add_alarm_below_internal(
                     alarm.subscriber.clone(),
                     &alarm.below,
                 )
                 .and_then(|()| {
                     if let Some(above) = alarm.above {
-                        Self::add_alarm_internal(
-                            self.storage.deref_mut(),
-                            &self.alarms_above_or_equal,
+                        self.add_alarm_above_or_equal_internal(
                             alarm.subscriber.clone(),
                             &above,
                         )
