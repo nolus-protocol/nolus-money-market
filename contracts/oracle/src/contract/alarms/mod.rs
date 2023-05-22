@@ -81,10 +81,6 @@ impl<'storage, S> MarketAlarms<'storage, S>
 where
     S: Deref<Target = dyn Storage + 'storage> + DerefMut,
 {
-    pub fn remove(&mut self, receiver: Addr) -> Result<(), ContractError> {
-        self.alarms.remove(receiver).map_err(Into::into)
-    }
-
     pub fn try_add_price_alarm<BaseC>(
         &mut self,
         receiver: Addr,
@@ -115,6 +111,11 @@ where
 
     pub fn last_failed(&mut self) -> ContractResult<()> {
         self.alarms.last_failed().map_err(Into::into)
+    }
+
+    #[cfg(test)]
+    fn remove(&mut self, receiver: Addr) -> Result<(), ContractError> {
+        self.alarms.remove(receiver).map_err(Into::into)
     }
 }
 
