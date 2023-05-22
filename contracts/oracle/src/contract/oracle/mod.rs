@@ -69,7 +69,7 @@ where
         &self,
         block_time: Timestamp,
     ) -> Result<AlarmsStatusResponse, ContractError> {
-        MarketAlarms::new(&*self.storage)
+        MarketAlarms::new(self.storage.deref())
             .try_query_alarms::<_, OracleBase>(self.calc_all_prices(block_time))
             .map(|remaining_alarms| AlarmsStatusResponse { remaining_alarms })
     }
@@ -97,12 +97,12 @@ where
         currency: &SymbolOwned,
     ) -> Result<SpotPrice, ContractError> {
         self.feeds
-            .calc_price(&*self.storage, &self.tree, currency, at, self.feeders)
+            .calc_price(self.storage.deref(), &self.tree, currency, at, self.feeders)
     }
 
     fn calc_all_prices(&self, at: Timestamp) -> CalculateAllPricesIter<'_, OracleBase> {
         self.feeds
-            .all_prices_iter(&*self.storage, self.tree.swap_pairs_df(), at, self.feeders)
+            .all_prices_iter(self.storage.deref(), self.tree.swap_pairs_df(), at, self.feeders)
     }
 }
 
@@ -119,14 +119,14 @@ where
         block_time: Timestamp,
         max_count: u32,
     ) -> ContractResult<(u32, MessageResponse)> {
-        let subscribers: Vec<Addr> = MarketAlarms::new(&*self.storage)
+        let subscribers: Vec<Addr> = MarketAlarms::new(self.storage.deref())
             .ensure_no_in_delivery()?
             .notify_alarms_iter::<_, OracleBase>(self.calc_all_prices(block_time))
             .take(max_count.try_into()?)
             .collect::<ContractResult<Vec<Addr>>>()?;
 
         let mut alarms: MarketAlarms<'_, &mut (dyn Storage + 'storage)> =
-            MarketAlarms::new(&mut *self.storage);
+            MarketAlarms::new(self.storage.deref_mut());
 
         subscribers
             .into_iter()

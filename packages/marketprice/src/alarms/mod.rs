@@ -139,7 +139,7 @@ where
     }
 
     pub fn ensure_no_in_delivery(&self) -> Result<(), AlarmError> {
-        if self.in_delivery.is_empty(&*self.storage)? {
+        if self.in_delivery.is_empty(self.storage.deref())? {
             Ok(())
         } else {
             Err(AlarmError::NonEmptyAlarmsInDeliveryQueue(String::from(
@@ -153,7 +153,7 @@ where
         C: Currency,
     {
         self.alarms_below.idx.0.sub_prefix(C::TICKER.into()).range(
-            &*self.storage,
+            self.storage.deref(),
             None,
             Some(Bound::exclusive((price.0.amount(), Addr::unchecked("")))),
             Order::Ascending,
@@ -169,7 +169,7 @@ where
             .0
             .sub_prefix(C::TICKER.into())
             .range(
-                &*self.storage,
+                self.storage.deref(),
                 Some(Bound::exclusive((price.0.amount(), Addr::unchecked("")))),
                 None,
                 Order::Ascending,
@@ -192,7 +192,7 @@ where
     {
         Self::add_alarm_internal(
             &self.alarms_below,
-            &mut *self.storage,
+            self.storage.deref_mut(),
             subscriber,
             &AlarmStore::new(&alarm),
         )
@@ -209,7 +209,7 @@ where
     {
         Self::add_alarm_internal(
             &self.alarms_above_or_equal,
-            &mut *self.storage,
+            self.storage.deref_mut(),
             subscriber,
             &AlarmStore::new(&alarm),
         )
@@ -217,29 +217,29 @@ where
 
     pub fn remove(&mut self, addr: Addr) -> Result<(), AlarmError> {
         self.alarms_below
-            .remove(&mut *self.storage, addr.clone())
-            .and_then(|()| self.alarms_above_or_equal.remove(&mut *self.storage, addr))
+            .remove(self.storage.deref_mut(), addr.clone())
+            .and_then(|()| self.alarms_above_or_equal.remove(self.storage.deref_mut(), addr))
             .map_err(Into::into)
     }
 
     pub fn out_for_delivery(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
-        let below: AlarmStore = self.alarms_below.load(&*self.storage, subscriber.clone())?;
+        let below: AlarmStore = self.alarms_below.load(self.storage.deref(), subscriber.clone())?;
 
         self.alarms_below
-            .replace(&mut *self.storage, subscriber.clone(), None, Some(&below))?;
+            .replace(self.storage.deref_mut(), subscriber.clone(), None, Some(&below))?;
 
         let above: Option<AlarmStore> = self
             .alarms_above_or_equal
-            .may_load(&*self.storage, subscriber.clone())?;
+            .may_load(self.storage.deref(), subscriber.clone())?;
 
         if let Some(above) = &above {
             self.alarms_below
-                .replace(&mut *self.storage, subscriber.clone(), None, Some(above))?;
+                .replace(self.storage.deref_mut(), subscriber.clone(), None, Some(above))?;
         }
 
         self.in_delivery
             .push_back(
-                &mut *self.storage,
+                self.storage.deref_mut(),
                 &AlarmWithSubscriber {
                     subscriber,
                     below,
@@ -251,7 +251,7 @@ where
 
     pub fn last_delivered(&mut self) -> Result<(), AlarmError> {
         self.in_delivery
-            .pop_front(&mut *self.storage)
+            .pop_front(self.storage.deref_mut())
             .map_err(Into::into)
             .and_then(|maybe_alarm: Option<AlarmWithSubscriber>| {
                 if maybe_alarm.is_some() {
@@ -266,7 +266,7 @@ where
 
     pub fn last_failed(&mut self) -> Result<(), AlarmError> {
         self.in_delivery
-            .pop_front(&mut *self.storage)
+            .pop_front(self.storage.deref_mut())
             .map_err(Into::into)
             .and_then(|maybe_alarm: Option<AlarmWithSubscriber>| {
                 maybe_alarm.ok_or(AlarmError::EmptyAlarmsInDeliveryQueue(String::from(
@@ -276,7 +276,7 @@ where
             .and_then(|alarm: AlarmWithSubscriber| {
                 Self::add_alarm_internal(
                     &self.alarms_below,
-                    &mut *self.storage,
+                    self.storage.deref_mut(),
                     alarm.subscriber.clone(),
                     &alarm.below,
                 )
@@ -284,7 +284,7 @@ where
                     if let Some(above) = alarm.above {
                         Self::add_alarm_internal(
                             &self.alarms_above_or_equal,
-                            &mut *self.storage,
+                            self.storage.deref_mut(),
                             alarm.subscriber.clone(),
                             &above,
                         )
