@@ -26,12 +26,12 @@ pub mod errors;
 pub type AlarmsCount = u32;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-struct AlarmStore(CoinDTO<SwapGroup>);
+struct NormalizedPrice(CoinDTO<SwapGroup>);
 
 const NORM_SCALE: u128 = 10u128.pow(18);
 
 type BoxedIter<'storage> =
-    Box<dyn Iterator<Item = Result<(Addr, AlarmStore), StdError>> + 'storage>;
+    Box<dyn Iterator<Item = Result<(Addr, NormalizedPrice), StdError>> + 'storage>;
 
 pub struct AlarmsIterator<'alarms>(iter::Chain<BoxedIter<'alarms>, BoxedIter<'alarms>>);
 
@@ -45,17 +45,17 @@ impl<'alarms> Iterator for AlarmsIterator<'alarms> {
     }
 }
 
-impl AlarmStore {
+impl NormalizedPrice {
     fn new<C, BaseC>(price: &Price<C, BaseC>) -> Self
     where
         C: Currency,
         BaseC: Currency,
     {
-        AlarmStore(price::total(Coin::new(NORM_SCALE), price.inv()).into())
+        NormalizedPrice(price::total(Coin::new(NORM_SCALE), price.inv()).into())
     }
 }
 
-impl<'a> PrimaryKey<'a> for AlarmStore {
+impl<'a> PrimaryKey<'a> for NormalizedPrice {
     type Prefix = SymbolOwned;
     type Suffix = Amount;
     type SubPrefix = ();
@@ -69,21 +69,21 @@ impl<'a> PrimaryKey<'a> for AlarmStore {
     }
 }
 
-impl<'a> Prefixer<'a> for AlarmStore {
+impl<'a> Prefixer<'a> for NormalizedPrice {
     fn prefix(&self) -> Vec<Key<'_>> {
         self.key()
     }
 }
 
-struct AlarmsIndexes(MultiIndex<'static, AlarmStore, AlarmStore, Addr>);
+struct AlarmsIndexes(MultiIndex<'static, NormalizedPrice, NormalizedPrice, Addr>);
 
-impl IndexList<AlarmStore> for AlarmsIndexes {
-    fn get_indexes(&self) -> Box<dyn Iterator<Item = &dyn Index<AlarmStore>> + '_> {
+impl IndexList<NormalizedPrice> for AlarmsIndexes {
+    fn get_indexes(&self) -> Box<dyn Iterator<Item = &dyn Index<NormalizedPrice>> + '_> {
         Box::new(vec![&self.0 as &_].into_iter())
     }
 }
 
-type IndexedMap = CwIndexedMap<'static, Addr, AlarmStore, AlarmsIndexes>;
+type IndexedMap = CwIndexedMap<'static, Addr, NormalizedPrice, AlarmsIndexes>;
 
 fn alarms_index(alarms_namespace: &'static str, index_namespace: &'static str) -> IndexedMap {
     let indexes = AlarmsIndexes(MultiIndex::new(
@@ -130,7 +130,7 @@ where
         C: Currency,
         BaseC: Currency,
     {
-        let norm_price = AlarmStore::new(&price);
+        let norm_price = NormalizedPrice::new(&price);
 
         AlarmsIterator(
             self.iter_below::<C>(&norm_price)
@@ -148,7 +148,7 @@ where
         }
     }
 
-    fn iter_below<C>(&self, price: &AlarmStore) -> BoxedIter<'_>
+    fn iter_below<C>(&self, price: &NormalizedPrice) -> BoxedIter<'_>
     where
         C: Currency,
     {
@@ -160,7 +160,7 @@ where
         )
     }
 
-    fn iter_above_or_equal<C>(&self, price: &AlarmStore) -> BoxedIter<'_>
+    fn iter_above_or_equal<C>(&self, price: &NormalizedPrice) -> BoxedIter<'_>
     where
         C: Currency,
     {
@@ -194,7 +194,7 @@ where
             self.storage.deref_mut(),
             &self.alarms_below,
             subscriber,
-            &AlarmStore::new(&alarm),
+            &NormalizedPrice::new(&alarm),
         )
     }
 
@@ -211,7 +211,7 @@ where
             self.storage.deref_mut(),
             &self.alarms_above_or_equal,
             subscriber,
-            &AlarmStore::new(&alarm),
+            &NormalizedPrice::new(&alarm),
         )
     }
 
@@ -226,7 +226,7 @@ where
     }
 
     pub fn out_for_delivery(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
-        let below: AlarmStore = self
+        let below: NormalizedPrice = self
             .alarms_below
             .load(self.storage.deref(), subscriber.clone())?;
 
@@ -237,7 +237,7 @@ where
             Some(&below),
         )?;
 
-        let above: Option<AlarmStore> = self
+        let above: Option<NormalizedPrice> = self
             .alarms_above_or_equal
             .may_load(self.storage.deref(), subscriber.clone())?;
 
@@ -312,7 +312,7 @@ where
         storage: &mut dyn Storage,
         alarms: &IndexedMap,
         subscriber: Addr,
-        alarm: &AlarmStore,
+        alarm: &NormalizedPrice,
     ) -> Result<(), AlarmError> {
         alarms.save(storage, subscriber, alarm).map_err(Into::into)
     }
@@ -321,8 +321,8 @@ where
 #[derive(Serialize, Deserialize)]
 struct AlarmWithSubscriber {
     subscriber: Addr,
-    below: AlarmStore,
-    above: Option<AlarmStore>,
+    below: NormalizedPrice,
+    above: Option<NormalizedPrice>,
 }
 
 #[cfg(test)]
