@@ -277,20 +277,14 @@ where
                 })
             })
             .and_then(|alarm: AlarmWithSubscriber| {
-                self.add_alarm_below_internal(
-                    alarm.subscriber.clone(),
-                    &alarm.below,
-                )
-                .and_then(|()| {
-                    if let Some(above) = alarm.above {
-                        self.add_alarm_above_or_equal_internal(
-                            alarm.subscriber.clone(),
-                            &above,
-                        )
-                    } else {
-                        Ok(())
-                    }
-                })
+                self.add_alarm_below_internal(alarm.subscriber.clone(), &alarm.below)
+                    .and_then(|()| {
+                        if let Some(above) = alarm.above {
+                            self.add_alarm_above_or_equal_internal(alarm.subscriber.clone(), &above)
+                        } else {
+                            Ok(())
+                        }
+                    })
             })
     }
 
