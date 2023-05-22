@@ -504,6 +504,121 @@ pub mod tests {
         assert_eq!(resp, vec![Ok(addr3), Ok(addr4)]);
     }
 
+    #[test]
+    fn test_delivered() {
+        let mut storage = MockStorage::new();
+        let mut alarms = alarms(&mut storage);
+
+        let subscriber1 = Addr::unchecked("subscriber1");
+        let subscriber2 = Addr::unchecked("subscriber2");
+
+        alarms.ensure_no_in_delivery().unwrap();
+
+        alarms
+            .add_alarm_below(subscriber1.clone(), Price::<Atom, Base>::identity())
+            .unwrap();
+        alarms
+            .add_alarm_below(
+                subscriber1.clone(),
+                price::total_of::<Atom>(1.into()).is::<Base>(2.into()),
+            )
+            .unwrap();
+
+        alarms.ensure_no_in_delivery().unwrap();
+
+        alarms
+            .add_alarm_below(subscriber2.clone(), Price::<Atom, Base>::identity())
+            .unwrap();
+        alarms
+            .add_alarm_below(
+                subscriber2.clone(),
+                price::total_of::<Atom>(1.into()).is::<Base>(2.into()),
+            )
+            .unwrap();
+
+        alarms.ensure_no_in_delivery().unwrap();
+
+        alarms.out_for_delivery(subscriber1).unwrap();
+        alarms.out_for_delivery(subscriber2).unwrap();
+
+        assert!(matches!(
+            alarms.ensure_no_in_delivery().unwrap_err(),
+            AlarmError::NonEmptyAlarmsInDeliveryQueue(_)
+        ));
+
+        alarms.last_delivered().unwrap();
+
+        assert!(matches!(
+            alarms.ensure_no_in_delivery().unwrap_err(),
+            AlarmError::NonEmptyAlarmsInDeliveryQueue(_)
+        ));
+
+        alarms.last_delivered().unwrap();
+
+        alarms.ensure_no_in_delivery().unwrap();
+    }
+
+    #[test]
+    fn test_failed() {
+        let mut storage = MockStorage::new();
+        let mut alarms = alarms(&mut storage);
+
+        let subscriber1 = Addr::unchecked("subscriber1");
+        let subscriber2 = Addr::unchecked("subscriber2");
+
+        alarms.ensure_no_in_delivery().unwrap();
+
+        alarms
+            .add_alarm_below(subscriber1.clone(), Price::<Atom, Base>::identity())
+            .unwrap();
+        alarms
+            .add_alarm_below(
+                subscriber1.clone(),
+                price::total_of::<Atom>(1.into()).is::<Base>(2.into()),
+            )
+            .unwrap();
+
+        alarms.ensure_no_in_delivery().unwrap();
+
+        alarms
+            .add_alarm_below(subscriber2.clone(), Price::<Atom, Base>::identity())
+            .unwrap();
+        alarms
+            .add_alarm_below(
+                subscriber2.clone(),
+                price::total_of::<Atom>(1.into()).is::<Base>(2.into()),
+            )
+            .unwrap();
+
+        alarms.ensure_no_in_delivery().unwrap();
+
+        alarms.out_for_delivery(subscriber1).unwrap();
+        alarms.out_for_delivery(subscriber2).unwrap();
+
+        assert!(matches!(
+            alarms.ensure_no_in_delivery().unwrap_err(),
+            AlarmError::NonEmptyAlarmsInDeliveryQueue(_)
+        ));
+
+        alarms.last_delivered().unwrap();
+
+        assert!(matches!(
+            alarms.ensure_no_in_delivery().unwrap_err(),
+            AlarmError::NonEmptyAlarmsInDeliveryQueue(_)
+        ));
+
+        alarms.last_failed().unwrap();
+
+        assert!(matches!(
+            alarms.ensure_no_in_delivery().unwrap_err(),
+            AlarmError::NonEmptyAlarmsInDeliveryQueue(_)
+        ));
+
+        alarms.last_delivered().unwrap();
+
+        alarms.ensure_no_in_delivery().unwrap();
+    }
+
     fn alarms<'storage, 'storage_ref>(
         storage: &'storage_ref mut (dyn Storage + 'storage),
     ) -> PriceAlarms<'storage, &'storage_ref mut (dyn Storage + 'storage)> {
