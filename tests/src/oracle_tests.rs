@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use serde_json_wasm::from_str;
+
 use currency::{
     lease::{Atom, Cro, Osmo, Wbtc, Weth},
     lpn::Usdc,
@@ -96,7 +98,7 @@ fn internal_test_integration_setup_test() {
 
     let response: AppResponse = oracle_wrapper::feed_price::<_, BaseC, Usdc>(
         &mut test_case,
-        &Addr::unchecked(ADMIN),
+        Addr::unchecked(ADMIN),
         Coin::new(5),
         Coin::new(7),
     );
@@ -135,7 +137,7 @@ fn feed_price_with_alarm_issue() {
 
     let _ = oracle_wrapper::feed_price::<_, BaseC, Usdc>(
         &mut test_case,
-        &Addr::unchecked(ADMIN),
+        Addr::unchecked(ADMIN),
         Coin::new(5),
         Coin::new(7),
     );
@@ -167,7 +169,7 @@ fn feed_price_with_alarm() {
 
     let res = oracle_wrapper::feed_price::<_, Cro, Usdc>(
         &mut test_case,
-        &Addr::unchecked(ADMIN),
+        Addr::unchecked(ADMIN),
         Coin::new(1),
         Coin::new(5),
     );
@@ -252,13 +254,13 @@ fn test_config_update() {
 
     oracle_wrapper::feed_price::<_, BaseC, Usdc>(
         &mut test_case,
-        &feeder1,
+        feeder1,
         Coin::new(base),
         Coin::new(quote),
     );
     oracle_wrapper::feed_price::<_, BaseC, Usdc>(
         &mut test_case,
-        &feeder2,
+        feeder2,
         Coin::new(base),
         Coin::new(quote),
     );
@@ -309,7 +311,7 @@ fn test_config_update() {
 }
 
 fn swap_tree() -> HumanReadableTree<SwapTarget> {
-    serde_json_wasm::from_str(&format!(
+    from_str(&format!(
         r#"{{
                 "value":[0,"{usdc}"],
                 "children":[

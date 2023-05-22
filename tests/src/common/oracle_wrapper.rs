@@ -126,7 +126,7 @@ where
 
 pub fn feed_a_price<Lpn, C1, C2>(
     test_case: &mut TestCase<Lpn>,
-    addr: &Addr,
+    addr: Addr,
     price: Price<C1, C2>,
 ) -> AppResponse
 where
@@ -137,7 +137,7 @@ where
     test_case
         .app
         .execute(
-            addr.clone(),
+            addr,
             wasm_execute(
                 test_case.oracle.clone().unwrap(),
                 &ExecuteMsg::FeedPrices {
@@ -153,7 +153,7 @@ where
 
 pub fn feed_price<Lpn, C1, C2>(
     test_case: &mut TestCase<Lpn>,
-    addr: &Addr,
+    addr: Addr,
     base: Coin<C1>,
     quote: Coin<C2>,
 ) -> AppResponse

@@ -253,7 +253,7 @@ fn test_quote() {
 
     let price_lease_lpn: Price<LeaseCurrency, Lpn> = price::total_of(2.into()).is(1.into());
     let feeder = setup_feeder(&mut test_case);
-    feed_price::<_, LeaseCurrency, Lpn>(&mut test_case, &feeder, Coin::new(2), Coin::new(1));
+    feed_price::<_, LeaseCurrency, Lpn>(&mut test_case, feeder, Coin::new(2), Coin::new(1));
 
     let leaser = test_case.leaser();
     let downpayment = Coin::new(100);
@@ -350,10 +350,15 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
     let lpn_asset_quote = Coin::<LeaseCurrency>::new(2);
     let lpn_asset_price = total_of(lpn_asset_base).is(lpn_asset_quote);
 
-    feed_price::<_, Osmo, TheCurrency>(&mut test_case, &feeder_addr, dpn_lpn_base, dpn_lpn_quote);
+    feed_price::<_, Osmo, TheCurrency>(
+        &mut test_case,
+        feeder_addr.clone(),
+        dpn_lpn_base,
+        dpn_lpn_quote,
+    );
     feed_price::<_, LeaseCurrency, TheCurrency>(
         &mut test_case,
-        &feeder_addr,
+        feeder_addr,
         lpn_asset_quote,
         lpn_asset_base,
     );
@@ -425,7 +430,7 @@ fn test_quote_fixed_rate() {
     test_case.init_leaser();
 
     let feeder = setup_feeder(&mut test_case);
-    feed_price::<_, LeaseCurrency, Lpn>(&mut test_case, &feeder, Coin::new(3), Coin::new(1));
+    feed_price::<_, LeaseCurrency, Lpn>(&mut test_case, feeder, Coin::new(3), Coin::new(1));
     let resp = leaser_wrapper::query_quote::<Lpn, Downpayment, LeaseCurrency>(
         &mut test_case.app,
         test_case.leaser_addr.clone().unwrap(),
@@ -558,7 +563,7 @@ where
         if !finance::currency::equal::<DownpaymentC, Lpn>() {
             feed_price(
                 &mut test_case,
-                &user_addr,
+                user_addr.clone(),
                 Coin::<DownpaymentC>::new(1),
                 Coin::<Lpn>::new(1),
             );
@@ -567,7 +572,7 @@ where
         if !finance::currency::equal::<LeaseC, Lpn>() {
             feed_price(
                 &mut test_case,
-                &user_addr,
+                user_addr.clone(),
                 Coin::<LeaseC>::new(1),
                 Coin::<Lpn>::new(1),
             );
@@ -586,7 +591,7 @@ where
     test_case
         .app
         .execute_contract(
-            user_addr.clone(),
+            user_addr,
             leaser_addr,
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: LeaseC::TICKER.into(),
