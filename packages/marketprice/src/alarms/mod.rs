@@ -218,23 +218,36 @@ where
     pub fn remove(&mut self, addr: Addr) -> Result<(), AlarmError> {
         self.alarms_below
             .remove(self.storage.deref_mut(), addr.clone())
-            .and_then(|()| self.alarms_above_or_equal.remove(self.storage.deref_mut(), addr))
+            .and_then(|()| {
+                self.alarms_above_or_equal
+                    .remove(self.storage.deref_mut(), addr)
+            })
             .map_err(Into::into)
     }
 
     pub fn out_for_delivery(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
-        let below: AlarmStore = self.alarms_below.load(self.storage.deref(), subscriber.clone())?;
+        let below: AlarmStore = self
+            .alarms_below
+            .load(self.storage.deref(), subscriber.clone())?;
 
-        self.alarms_below
-            .replace(self.storage.deref_mut(), subscriber.clone(), None, Some(&below))?;
+        self.alarms_below.replace(
+            self.storage.deref_mut(),
+            subscriber.clone(),
+            None,
+            Some(&below),
+        )?;
 
         let above: Option<AlarmStore> = self
             .alarms_above_or_equal
             .may_load(self.storage.deref(), subscriber.clone())?;
 
         if let Some(above) = &above {
-            self.alarms_below
-                .replace(self.storage.deref_mut(), subscriber.clone(), None, Some(above))?;
+            self.alarms_below.replace(
+                self.storage.deref_mut(),
+                subscriber.clone(),
+                None,
+                Some(above),
+            )?;
         }
 
         self.in_delivery

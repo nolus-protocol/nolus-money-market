@@ -20,18 +20,21 @@ use finance::{
 use leaser::msg::QueryMsg;
 use marketprice::{config::Config as PriceConfig, SpotPrice};
 use oracle::{
+    msg::{
+        AlarmsCount,
+        ExecuteAlarmMsg,
+        QueryMsg as OracleQ
+    },
     alarms::Alarm,
-    ContractError,
-    msg::{ExecuteAlarmMsg, QueryMsg as OracleQ},
     result::ContractResult,
+    ContractError
 };
-use oracle::msg::AlarmsCount;
 use platform::{batch::Batch, coin_legacy};
 use sdk::{
     cosmwasm_ext::{CustomMsg, Response as CwResponse},
     cosmwasm_std::{
-        Addr, Attribute, Binary, coin, Coin as CwCoin, Deps, DepsMut, Env, Event, MessageInfo,
-        StdError as CwError, Storage, Timestamp, wasm_execute,
+        coin, wasm_execute, Addr, Attribute, Binary, Coin as CwCoin, Deps, DepsMut, Env, Event,
+        MessageInfo, StdError as CwError, Storage, Timestamp,
     },
     cw_multi_test::{AppResponse, Contract as CwContract, Executor},
     cw_storage_plus::Item,
@@ -40,7 +43,10 @@ use sdk::{
 use swap::SwapTarget;
 use tree::HumanReadableTree;
 
-use crate::common::{ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, MockApp, oracle_wrapper, test_case::TestCase, USER, UTILIZATION_OPTIMAL};
+use crate::common::{
+    oracle_wrapper, test_case::TestCase, MockApp, ADDON_OPTIMAL_INTEREST_RATE, ADMIN,
+    BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
+};
 
 type Lpn = Usdc;
 type LeaseCurrency = Atom;
@@ -440,8 +446,11 @@ fn test_zero_price_dto() {
                     prices: vec![price],
                 },
                 vec![],
-            ).unwrap().into(),
-        ).unwrap();
+            )
+            .unwrap()
+            .into(),
+        )
+        .unwrap();
     assert_eq!(response.data, None);
     assert_eq!(&response.events, &[]);
 }
@@ -532,10 +541,10 @@ fn dummy_contract<const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
     Box::new(ContractWrapper::new(
         execute,
         |DepsMut { storage, .. },
-            _: Env,
-            _: MessageInfo,
-            DummyInstMsg { oracle }: DummyInstMsg|
-            -> ContractResult<CwResponse> {
+         _: Env,
+         _: MessageInfo,
+         DummyInstMsg { oracle }: DummyInstMsg|
+         -> ContractResult<CwResponse> {
             ORACLE_ADDR.save(storage, &oracle)?;
 
             schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
@@ -548,13 +557,12 @@ fn instantiate_dummy_contract(app: &mut MockApp, dummy_code: u64, oracle: Addr) 
     app.instantiate_contract(
         dummy_code,
         Addr::unchecked(ADMIN),
-        &DummyInstMsg {
-            oracle,
-        },
+        &DummyInstMsg { oracle },
         &[],
         "dummy_contract",
         None,
-    ).unwrap()
+    )
+    .unwrap()
 }
 
 fn dispatch_alarms(app: &mut MockApp, oracle: Addr, max_count: AlarmsCount) -> AppResponse {
@@ -563,20 +571,33 @@ fn dispatch_alarms(app: &mut MockApp, oracle: Addr, max_count: AlarmsCount) -> A
         oracle,
         &oracle::msg::ExecuteMsg::DispatchAlarms { max_count },
         &[],
-    ).unwrap()
+    )
+    .unwrap()
 }
 
 #[test]
 fn price_alarm_rescheduling() {
     let mut test_case = create_test_case();
 
-    let dummy_code = test_case.app.store_code(dummy_contract::<2, 1>(execute_success::<false, 2, 1>));
+    let dummy_code = test_case
+        .app
+        .store_code(dummy_contract::<2, 1>(execute_success::<false, 2, 1>));
 
-    instantiate_dummy_contract(&mut test_case.app, dummy_code, test_case.oracle.clone().unwrap());
+    instantiate_dummy_contract(
+        &mut test_case.app,
+        dummy_code,
+        test_case.oracle.clone().unwrap(),
+    );
 
-    let dummy_code = test_case.app.store_code(dummy_contract::<2, 1>(execute_success::<true, 3, 1>));
+    let dummy_code = test_case
+        .app
+        .store_code(dummy_contract::<2, 1>(execute_success::<true, 3, 1>));
 
-    instantiate_dummy_contract(&mut test_case.app, dummy_code, test_case.oracle.clone().unwrap());
+    instantiate_dummy_contract(
+        &mut test_case.app,
+        dummy_code,
+        test_case.oracle.clone().unwrap(),
+    );
 
     let feeder_addr = Addr::unchecked("feeder");
 
@@ -592,15 +613,25 @@ fn price_alarm_rescheduling() {
     let response = dispatch_alarms(&mut test_case.app, test_case.oracle.clone().unwrap(), 5);
 
     assert!(
-        response.events.iter().filter(|event| event.ty == "wasm-market-alarm").all(|event| {
-            event.attributes.contains(&Attribute::new("delivered", "success"))
-        }),
+        response
+            .events
+            .iter()
+            .filter(|event| event.ty == "wasm-market-alarm")
+            .all(|event| {
+                event
+                    .attributes
+                    .contains(&Attribute::new("delivered", "success"))
+            }),
         "{:?}",
         response.events
     );
 
     assert_eq!(
-        response.events.iter().filter(|event| event.ty == "wasm-market-alarm").count(),
+        response
+            .events
+            .iter()
+            .filter(|event| event.ty == "wasm-market-alarm")
+            .count(),
         2,
         "{:?}",
         response.events
@@ -609,7 +640,10 @@ fn price_alarm_rescheduling() {
     let response = dispatch_alarms(&mut test_case.app, test_case.oracle.clone().unwrap(), 5);
 
     assert_eq!(
-        response.events.iter().find(|event| event.ty == "wasm-market-alarm"),
+        response
+            .events
+            .iter()
+            .find(|event| event.ty == "wasm-market-alarm"),
         None,
         "{:?}",
         response.events
@@ -625,15 +659,25 @@ fn price_alarm_rescheduling() {
     let response = dispatch_alarms(&mut test_case.app, test_case.oracle.unwrap(), 5);
 
     assert!(
-        response.events.iter().filter(|event| event.ty == "wasm-market-alarm").all(|event| {
-            event.attributes.contains(&Attribute::new("delivered", "success"))
-        }),
+        response
+            .events
+            .iter()
+            .filter(|event| event.ty == "wasm-market-alarm")
+            .all(|event| {
+                event
+                    .attributes
+                    .contains(&Attribute::new("delivered", "success"))
+            }),
         "{:?}",
         response.events
     );
 
     assert_eq!(
-        response.events.iter().filter(|event| event.ty == "wasm-market-alarm").count(),
+        response
+            .events
+            .iter()
+            .filter(|event| event.ty == "wasm-market-alarm")
+            .count(),
         1,
         "{:?}",
         response.events
@@ -646,13 +690,25 @@ fn price_alarm_rescheduling_with_failing() {
 
     let mut test_case = create_test_case();
 
-    let dummy_code = test_case.app.store_code(dummy_contract::<2, 1>(execute_success::<false, 2, 1>));
+    let dummy_code = test_case
+        .app
+        .store_code(dummy_contract::<2, 1>(execute_success::<false, 2, 1>));
 
-    instantiate_dummy_contract(&mut test_case.app, dummy_code, test_case.oracle.clone().unwrap());
+    instantiate_dummy_contract(
+        &mut test_case.app,
+        dummy_code,
+        test_case.oracle.clone().unwrap(),
+    );
 
-    let dummy_code = test_case.app.store_code(dummy_contract::<2, 1>(execute_fail_success::<false, 3, 1>));
+    let dummy_code = test_case
+        .app
+        .store_code(dummy_contract::<2, 1>(execute_fail_success::<false, 3, 1>));
 
-    instantiate_dummy_contract(&mut test_case.app, dummy_code, test_case.oracle.clone().unwrap());
+    instantiate_dummy_contract(
+        &mut test_case.app,
+        dummy_code,
+        test_case.oracle.clone().unwrap(),
+    );
 
     let feeder_addr = Addr::unchecked("feeder");
 
@@ -668,25 +724,43 @@ fn price_alarm_rescheduling_with_failing() {
     let response = dispatch_alarms(&mut test_case.app, test_case.oracle.clone().unwrap(), 5);
 
     assert_eq!(
-        response.events.iter().filter(|event| event.ty == "wasm-market-alarm").filter(|event| {
-            event.attributes.contains(&Attribute::new("delivered", "success"))
-        }).count(),
+        response
+            .events
+            .iter()
+            .filter(|event| event.ty == "wasm-market-alarm")
+            .filter(|event| {
+                event
+                    .attributes
+                    .contains(&Attribute::new("delivered", "success"))
+            })
+            .count(),
         1,
         "{:?}",
         response.events
     );
 
     assert_eq!(
-        response.events.iter().filter(|event| event.ty == "wasm-market-alarm").filter(|event| {
-            event.attributes.contains(&Attribute::new("delivered", "error"))
-        }).count(),
+        response
+            .events
+            .iter()
+            .filter(|event| event.ty == "wasm-market-alarm")
+            .filter(|event| {
+                event
+                    .attributes
+                    .contains(&Attribute::new("delivered", "error"))
+            })
+            .count(),
         1,
         "{:?}",
         response.events
     );
 
     assert_eq!(
-        response.events.iter().filter(|event| event.ty == "wasm-market-alarm").count(),
+        response
+            .events
+            .iter()
+            .filter(|event| event.ty == "wasm-market-alarm")
+            .count(),
         2,
         "{:?}",
         response.events
@@ -695,16 +769,27 @@ fn price_alarm_rescheduling_with_failing() {
     let response = dispatch_alarms(&mut test_case.app, test_case.oracle.clone().unwrap(), 5);
 
     assert_eq!(
-        response.events.iter().filter(|event| event.ty == "wasm-market-alarm").filter(|event| {
-            event.attributes.contains(&Attribute::new("delivered", "success"))
-        }).count(),
+        response
+            .events
+            .iter()
+            .filter(|event| event.ty == "wasm-market-alarm")
+            .filter(|event| {
+                event
+                    .attributes
+                    .contains(&Attribute::new("delivered", "success"))
+            })
+            .count(),
         1,
         "{:?}",
         response.events
     );
 
     assert_eq!(
-        response.events.iter().filter(|event| event.ty == "wasm-market-alarm").count(),
+        response
+            .events
+            .iter()
+            .filter(|event| event.ty == "wasm-market-alarm")
+            .count(),
         1,
         "{:?}",
         response.events
@@ -713,7 +798,10 @@ fn price_alarm_rescheduling_with_failing() {
     let response = dispatch_alarms(&mut test_case.app, test_case.oracle.unwrap(), 5);
 
     assert_eq!(
-        response.events.iter().find(|event| event.ty == "wasm-market-alarm"),
+        response
+            .events
+            .iter()
+            .find(|event| event.ty == "wasm-market-alarm"),
         None,
         "{:?}",
         response.events

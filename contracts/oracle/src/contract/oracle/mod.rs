@@ -101,8 +101,12 @@ where
     }
 
     fn calc_all_prices(&self, at: Timestamp) -> CalculateAllPricesIter<'_, OracleBase> {
-        self.feeds
-            .all_prices_iter(self.storage.deref(), self.tree.swap_pairs_df(), at, self.feeders)
+        self.feeds.all_prices_iter(
+            self.storage.deref(),
+            self.tree.swap_pairs_df(),
+            at,
+            self.feeders,
+        )
     }
 }
 
