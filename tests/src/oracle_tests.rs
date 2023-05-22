@@ -456,7 +456,7 @@ enum SuccessOrFail {
 
 impl SuccessOrFail {
     pub fn should_fail(&self) -> bool {
-        matches!(self, Self::Switching { should_fail } | Self::Const { should_fail } if should_fail)
+        matches!(self, Self::Switching { should_fail } | Self::Const { should_fail } if *should_fail)
     }
 
     pub fn switch(self) -> Self {
@@ -592,7 +592,7 @@ fn price_alarm_rescheduling() {
 
     let dummy_code = test_case
         .app
-        .store_code(dummy_contract::<2, 1>(execute_success::<false, 2, 1>));
+        .store_code(dummy_contract::<2, 1>(execute::<false, 2, 1>));
 
     instantiate_dummy_contract(
         &mut test_case.app,
@@ -603,7 +603,7 @@ fn price_alarm_rescheduling() {
 
     let dummy_code = test_case
         .app
-        .store_code(dummy_contract::<2, 1>(execute_success::<true, 3, 1>));
+        .store_code(dummy_contract::<2, 1>(execute::<true, 3, 1>));
 
     instantiate_dummy_contract(
         &mut test_case.app,
@@ -703,7 +703,7 @@ fn price_alarm_rescheduling_with_failing() {
 
     let dummy_code = test_case
         .app
-        .store_code(dummy_contract::<2, 1>(execute_success::<false, 2, 1>));
+        .store_code(dummy_contract::<2, 1>(execute::<false, 2, 1>));
 
     instantiate_dummy_contract(
         &mut test_case.app,
@@ -714,7 +714,7 @@ fn price_alarm_rescheduling_with_failing() {
 
     let dummy_code = test_case
         .app
-        .store_code(dummy_contract::<2, 1>(execute_fail_success::<false, 3, 1>));
+        .store_code(dummy_contract::<2, 1>(execute::<false, 3, 1>));
 
     instantiate_dummy_contract(
         &mut test_case.app,
