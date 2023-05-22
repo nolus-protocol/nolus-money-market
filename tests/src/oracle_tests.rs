@@ -18,7 +18,7 @@ use leaser::msg::QueryMsg;
 use marketprice::{config::Config as PriceConfig, SpotPrice};
 use oracle::{
     alarms::Alarm,
-    msg::{AlarmsCount, ExecuteAlarmMsg, QueryMsg as OracleQ},
+    msg::{AlarmsCount, QueryMsg as OracleQ},
     result::ContractResult,
     ContractError,
 };
@@ -449,36 +449,21 @@ fn test_zero_price_dto() {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-enum SuccessOrFail {
-    Const { should_fail: bool },
-    Switching { should_fail: bool },
-}
-
-impl SuccessOrFail {
-    pub fn should_fail(&self) -> bool {
-        matches!(self, Self::Switching { should_fail } | Self::Const { should_fail } if *should_fail)
-    }
-
-    pub fn switch(self) -> Self {
-        if let Self::Switching { should_fail } = self {
-            Self::Switching {
-                should_fail: !should_fail,
-            }
-        } else {
-            self
-        }
-    }
+struct DummyInstMsg {
+    oracle: Addr,
+    should_fail: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-struct DummyInstMsg {
-    oracle: Addr,
-    success_or_fail: SuccessOrFail,
+#[serde(rename_all = "snake_case")]
+enum DummyExecMsg {
+    PriceAlarm(),
+    ShouldFail(bool),
 }
 
 const ORACLE_ADDR: Item<'static, Addr> = Item::new("oracle_addr");
 
-const SHOULD_FAIL: Item<'static, SuccessOrFail> = Item::new("should_fail");
+const SHOULD_FAIL: Item<'static, bool> = Item::new("should_fail");
 
 fn schedule_alarm(
     storage: &dyn Storage,
@@ -509,29 +494,30 @@ fn execute<const RESCHEDULE: bool, const PRICE_BASE: Amount, const PRICE_QUOTE: 
     DepsMut { storage, .. }: DepsMut<'_>,
     _: Env,
     _: MessageInfo,
-    ExecuteAlarmMsg::PriceAlarm(): ExecuteAlarmMsg,
+    msg: DummyExecMsg,
 ) -> ContractResult<CwResponse> {
-    let state: SuccessOrFail = SHOULD_FAIL.load(storage)?;
-
-    let result: ContractResult<CwResponse> = if state.should_fail() {
-        if RESCHEDULE {
-            schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
-        } else {
-            Ok(CwResponse::new())
+    match msg {
+        DummyExecMsg::PriceAlarm() => {
+            if SHOULD_FAIL.load(storage)? {
+                Err(ContractError::Std(CwError::generic_err(
+                    "Error while delivering price alarm!",
+                )))
+            } else {
+                if RESCHEDULE {
+                    schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
+                } else {
+                    Ok(CwResponse::new())
+                }
+            }
         }
-    } else {
-        Err(ContractError::Std(CwError::generic_err(
-            "Error while delivering price alarm!",
-        )))
-    };
-
-    SHOULD_FAIL
-        .save(storage, &state.switch())
-        .map_err(Into::into)
-        .and(result)
+        DummyExecMsg::ShouldFail(value) => SHOULD_FAIL
+            .save(storage, &value)
+            .map(|()| CwResponse::new())
+            .map_err(Into::into),
+    }
 }
 
-type ExecFn = fn(DepsMut<'_>, Env, MessageInfo, ExecuteAlarmMsg) -> ContractResult<CwResponse>;
+type ExecFn = fn(DepsMut<'_>, Env, MessageInfo, DummyExecMsg) -> ContractResult<CwResponse>;
 
 fn dummy_contract<const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
     execute: ExecFn,
@@ -543,12 +529,12 @@ fn dummy_contract<const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
          _: MessageInfo,
          DummyInstMsg {
              oracle,
-             success_or_fail,
+             should_fail,
          }: DummyInstMsg|
          -> ContractResult<CwResponse> {
             ORACLE_ADDR.save(storage, &oracle)?;
 
-            SHOULD_FAIL.save(storage, &success_or_fail)?;
+            SHOULD_FAIL.save(storage, &should_fail)?;
 
             schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
         },
@@ -560,14 +546,14 @@ fn instantiate_dummy_contract(
     app: &mut MockApp,
     dummy_code: u64,
     oracle: Addr,
-    success_or_fail: SuccessOrFail,
+    should_fail: bool,
 ) -> Addr {
     app.instantiate_contract(
         dummy_code,
         Addr::unchecked(ADMIN),
         &DummyInstMsg {
             oracle,
-            success_or_fail,
+            should_fail,
         },
         &[],
         "dummy_contract",
@@ -586,6 +572,16 @@ fn dispatch_alarms(app: &mut MockApp, oracle: Addr, max_count: AlarmsCount) -> A
     .unwrap()
 }
 
+fn set_should_fail(app: &mut MockApp, dummy_contract: Addr, should_fail: bool) {
+    app.execute_contract(
+        Addr::unchecked(ADMIN),
+        dummy_contract,
+        &DummyExecMsg::ShouldFail(should_fail),
+        &[],
+    )
+    .unwrap();
+}
+
 #[test]
 fn price_alarm_rescheduling() {
     let mut test_case = create_test_case();
@@ -598,7 +594,7 @@ fn price_alarm_rescheduling() {
         &mut test_case.app,
         dummy_code,
         test_case.oracle.clone().unwrap(),
-        SuccessOrFail::Const { should_fail: false },
+        false,
     );
 
     let dummy_code = test_case
@@ -609,7 +605,7 @@ fn price_alarm_rescheduling() {
         &mut test_case.app,
         dummy_code,
         test_case.oracle.clone().unwrap(),
-        SuccessOrFail::Const { should_fail: false },
+        false,
     );
 
     let feeder_addr = Addr::unchecked("feeder");
@@ -709,18 +705,18 @@ fn price_alarm_rescheduling_with_failing() {
         &mut test_case.app,
         dummy_code,
         test_case.oracle.clone().unwrap(),
-        SuccessOrFail::Const { should_fail: false },
+        false,
     );
 
     let dummy_code = test_case
         .app
         .store_code(dummy_contract::<2, 1>(execute::<false, 3, 1>));
 
-    instantiate_dummy_contract(
+    let dummy_failing = instantiate_dummy_contract(
         &mut test_case.app,
         dummy_code,
         test_case.oracle.clone().unwrap(),
-        SuccessOrFail::Switching { should_fail: true },
+        true,
     );
 
     let feeder_addr = Addr::unchecked("feeder");
@@ -778,6 +774,8 @@ fn price_alarm_rescheduling_with_failing() {
         "{:?}",
         response.events
     );
+
+    set_should_fail(&mut test_case.app, dummy_failing, false);
 
     let response = dispatch_alarms(&mut test_case.app, test_case.oracle.clone().unwrap(), 5);
 
