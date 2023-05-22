@@ -267,13 +267,11 @@ where
             .pop_front(self.storage.deref_mut())
             .map_err(Into::into)
             .and_then(|maybe_alarm: Option<AlarmWithSubscriber>| {
-                if maybe_alarm.is_some() {
-                    Ok(())
-                } else {
-                    Err(AlarmError::EmptyAlarmsInDeliveryQueue(String::from(
+                maybe_alarm.map(|_: AlarmWithSubscriber| ()).ok_or_else(|| {
+                    AlarmError::EmptyAlarmsInDeliveryQueue(String::from(
                         "Received success reply status",
-                    )))
-                }
+                    ))
+                })
             })
     }
 
