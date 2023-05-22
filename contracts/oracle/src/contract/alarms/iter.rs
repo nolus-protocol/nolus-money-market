@@ -79,11 +79,9 @@ where
 
                 None
             })
-            .or_else(|| {
-                match self.update_alarm_iterator()? {
-                    Ok(iter) => iter.next(),
-                    Err(err) => Some(Err(err))
-                }
+            .or_else(|| match self.update_alarm_iterator()? {
+                Ok(iter) => iter.next(),
+                Err(err) => Some(Err(err)),
             })
     }
 }
