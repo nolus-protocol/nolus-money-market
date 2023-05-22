@@ -1,7 +1,4 @@
-use std::{
-    collections::HashSet,
-    sync::atomic::{AtomicBool, Ordering::SeqCst},
-};
+use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 use serde_json_wasm::from_str;
@@ -452,11 +449,36 @@ fn test_zero_price_dto() {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+enum SuccessOrFail {
+    Const { should_fail: bool },
+    Switching { should_fail: bool },
+}
+
+impl SuccessOrFail {
+    pub fn should_fail(&self) -> bool {
+        matches!(self, Self::Switching { should_fail } | Self::Const { should_fail } if should_fail)
+    }
+
+    pub fn switch(self) -> Self {
+        if let Self::Switching { should_fail } = self {
+            Self::Switching {
+                should_fail: !should_fail,
+            }
+        } else {
+            self
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct DummyInstMsg {
     oracle: Addr,
+    success_or_fail: SuccessOrFail,
 }
 
 const ORACLE_ADDR: Item<'static, Addr> = Item::new("oracle_addr");
+
+const SHOULD_FAIL: Item<'static, SuccessOrFail> = Item::new("should_fail");
 
 fn schedule_alarm(
     storage: &dyn Storage,
@@ -483,40 +505,15 @@ fn schedule_alarm(
     ))
 }
 
-fn execute_success<const RESCHEDULE: bool, const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
+fn execute<const RESCHEDULE: bool, const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
     DepsMut { storage, .. }: DepsMut<'_>,
     _: Env,
     _: MessageInfo,
     ExecuteAlarmMsg::PriceAlarm(): ExecuteAlarmMsg,
 ) -> ContractResult<CwResponse> {
-    if RESCHEDULE {
-        schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
-    } else {
-        Ok(CwResponse::new())
-    }
-}
+    let state: SuccessOrFail = SHOULD_FAIL.load(storage)?;
 
-static EXECUTE_FAIL_SUCCESS_FLAG: AtomicBool = AtomicBool::new(false);
-
-fn reset_execute_fail_success() {
-    EXECUTE_FAIL_SUCCESS_FLAG.store(false, SeqCst)
-}
-
-fn load_and_update_execute_fail_success() -> bool {
-    EXECUTE_FAIL_SUCCESS_FLAG.fetch_xor(true, SeqCst)
-}
-
-fn execute_fail_success<
-    const RESCHEDULE: bool,
-    const PRICE_BASE: Amount,
-    const PRICE_QUOTE: Amount,
->(
-    DepsMut { storage, .. }: DepsMut<'_>,
-    _: Env,
-    _: MessageInfo,
-    ExecuteAlarmMsg::PriceAlarm(): ExecuteAlarmMsg,
-) -> ContractResult<CwResponse> {
-    if load_and_update_execute_fail_success() {
+    let result: ContractResult<CwResponse> = if state.should_fail() {
         if RESCHEDULE {
             schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
         } else {
@@ -526,7 +523,12 @@ fn execute_fail_success<
         Err(ContractError::Std(CwError::generic_err(
             "Error while delivering price alarm!",
         )))
-    }
+    };
+
+    SHOULD_FAIL
+        .save(storage, &state.switch())
+        .map_err(Into::into)
+        .and(result)
 }
 
 type ExecFn = fn(DepsMut<'_>, Env, MessageInfo, ExecuteAlarmMsg) -> ContractResult<CwResponse>;
@@ -539,9 +541,14 @@ fn dummy_contract<const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
         |DepsMut { storage, .. },
          _: Env,
          _: MessageInfo,
-         DummyInstMsg { oracle }: DummyInstMsg|
+         DummyInstMsg {
+             oracle,
+             success_or_fail,
+         }: DummyInstMsg|
          -> ContractResult<CwResponse> {
             ORACLE_ADDR.save(storage, &oracle)?;
+
+            SHOULD_FAIL.save(storage, &success_or_fail)?;
 
             schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
         },
@@ -549,11 +556,19 @@ fn dummy_contract<const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
     ))
 }
 
-fn instantiate_dummy_contract(app: &mut MockApp, dummy_code: u64, oracle: Addr) -> Addr {
+fn instantiate_dummy_contract(
+    app: &mut MockApp,
+    dummy_code: u64,
+    oracle: Addr,
+    success_or_fail: SuccessOrFail,
+) -> Addr {
     app.instantiate_contract(
         dummy_code,
         Addr::unchecked(ADMIN),
-        &DummyInstMsg { oracle },
+        &DummyInstMsg {
+            oracle,
+            success_or_fail,
+        },
         &[],
         "dummy_contract",
         None,
@@ -583,6 +598,7 @@ fn price_alarm_rescheduling() {
         &mut test_case.app,
         dummy_code,
         test_case.oracle.clone().unwrap(),
+        SuccessOrFail::Const { should_fail: false },
     );
 
     let dummy_code = test_case
@@ -593,6 +609,7 @@ fn price_alarm_rescheduling() {
         &mut test_case.app,
         dummy_code,
         test_case.oracle.clone().unwrap(),
+        SuccessOrFail::Const { should_fail: false },
     );
 
     let feeder_addr = Addr::unchecked("feeder");
@@ -682,8 +699,6 @@ fn price_alarm_rescheduling() {
 
 #[test]
 fn price_alarm_rescheduling_with_failing() {
-    reset_execute_fail_success();
-
     let mut test_case = create_test_case();
 
     let dummy_code = test_case
@@ -694,6 +709,7 @@ fn price_alarm_rescheduling_with_failing() {
         &mut test_case.app,
         dummy_code,
         test_case.oracle.clone().unwrap(),
+        SuccessOrFail::Const { should_fail: false },
     );
 
     let dummy_code = test_case
@@ -704,6 +720,7 @@ fn price_alarm_rescheduling_with_failing() {
         &mut test_case.app,
         dummy_code,
         test_case.oracle.clone().unwrap(),
+        SuccessOrFail::Switching { should_fail: true },
     );
 
     let feeder_addr = Addr::unchecked("feeder");
