@@ -55,10 +55,10 @@ where
 
 fn feed_price(test_case: &mut TestCase<Lpn>) {
     let lease_price = price_lpn_of::<LeaseCurrency>();
-    oracle_feed_a_price(test_case, &Addr::unchecked(ADMIN), lease_price);
+    oracle_feed_a_price(test_case, Addr::unchecked(ADMIN), lease_price);
 
     let payment_price = price_lpn_of::<PaymentCurrency>();
-    oracle_feed_a_price(test_case, &Addr::unchecked(ADMIN), payment_price);
+    oracle_feed_a_price(test_case, Addr::unchecked(ADMIN), payment_price);
 }
 
 fn create_test_case<InitFundsC>() -> TestCase<Lpn>
@@ -502,7 +502,7 @@ fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent, leve
     let downpayment = create_payment_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment, None);
 
-    oracle_feed_price(&mut test_case, &Addr::unchecked(ADMIN), base, quote);
+    oracle_feed_price(&mut test_case, Addr::unchecked(ADMIN), base, quote);
 
     let response = test_case
         .app
