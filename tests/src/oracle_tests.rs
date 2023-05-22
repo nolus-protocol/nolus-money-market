@@ -20,14 +20,10 @@ use finance::{
 use leaser::msg::QueryMsg;
 use marketprice::{config::Config as PriceConfig, SpotPrice};
 use oracle::{
-    msg::{
-        AlarmsCount,
-        ExecuteAlarmMsg,
-        QueryMsg as OracleQ
-    },
     alarms::Alarm,
+    msg::{AlarmsCount, ExecuteAlarmMsg, QueryMsg as OracleQ},
     result::ContractResult,
-    ContractError
+    ContractError,
 };
 use platform::{batch::Batch, coin_legacy};
 use sdk::{
