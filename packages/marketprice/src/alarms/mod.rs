@@ -280,9 +280,11 @@ where
             .pop_front(self.storage.deref_mut())
             .map_err(Into::into)
             .and_then(|maybe_alarm: Option<AlarmWithSubscriber>| {
-                maybe_alarm.ok_or(AlarmError::EmptyAlarmsInDeliveryQueue(String::from(
-                    "Received failure reply status",
-                )))
+                maybe_alarm.ok_or_else(|| {
+                    AlarmError::EmptyAlarmsInDeliveryQueue(String::from(
+                        "Received failure reply status",
+                    ))
+                })
             })
             .and_then(|alarm: AlarmWithSubscriber| {
                 Self::add_alarm_internal(
