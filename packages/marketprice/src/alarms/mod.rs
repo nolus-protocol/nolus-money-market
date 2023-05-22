@@ -190,12 +190,7 @@ where
         C: Currency,
         BaseC: Currency,
     {
-        Self::add_alarm_internal(
-            self.storage.deref_mut(),
-            &self.alarms_below,
-            subscriber,
-            &NormalizedPrice::new(&alarm),
-        )
+        self.add_alarm_below_internal(subscriber, &NormalizedPrice::new(&alarm))
     }
 
     pub fn add_alarm_above_or_equal<C, BaseC>(
@@ -207,12 +202,7 @@ where
         C: Currency,
         BaseC: Currency,
     {
-        Self::add_alarm_internal(
-            self.storage.deref_mut(),
-            &self.alarms_above_or_equal,
-            subscriber,
-            &NormalizedPrice::new(&alarm),
-        )
+        self.add_alarm_above_or_equal_internal(subscriber, &NormalizedPrice::new(&alarm))
     }
 
     pub fn remove(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
@@ -306,6 +296,32 @@ where
                     }
                 })
             })
+    }
+
+    fn add_alarm_below_internal(
+        &mut self,
+        subscriber: Addr,
+        alarm: &NormalizedPrice,
+    ) -> Result<(), AlarmError> {
+        Self::add_alarm_internal(
+            self.storage.deref_mut(),
+            &self.alarms_below,
+            subscriber,
+            alarm,
+        )
+    }
+
+    fn add_alarm_above_or_equal_internal(
+        &mut self,
+        subscriber: Addr,
+        alarm: &NormalizedPrice,
+    ) -> Result<(), AlarmError> {
+        Self::add_alarm_internal(
+            self.storage.deref_mut(),
+            &self.alarms_above_or_equal,
+            subscriber,
+            alarm,
+        )
     }
 
     fn add_alarm_internal(
