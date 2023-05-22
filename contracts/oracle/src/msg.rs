@@ -46,16 +46,10 @@ pub enum ExecuteMsg {
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 #[serde(rename_all = "snake_case")]
 pub enum SudoMsg {
-    RegisterFeeder {
-        feeder_address: String,
-    },
-    RemoveFeeder {
-        feeder_address: String,
-    },
+    RegisterFeeder { feeder_address: String },
+    RemoveFeeder { feeder_address: String },
     UpdateConfig(PriceConfig),
-    SwapTree {
-        tree: HumanReadableTree<SwapTarget>,
-    },
+    SwapTree { tree: HumanReadableTree<SwapTarget> },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
