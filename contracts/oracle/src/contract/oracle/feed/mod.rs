@@ -1,40 +1,26 @@
-use std::{iter, marker::PhantomData};
+use std::marker::PhantomData;
 
 use serde::de::DeserializeOwned;
 
 use finance::{
-    currency::{self, AnyVisitorPair, Currency, SymbolOwned},
+    currency::{self, Currency, SymbolOwned},
     price::base::BasePrice,
 };
-use leg_cmd::LegCmd;
 use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
-use price_querier::FedPrices;
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 use swap::{SwapGroup, SwapTarget};
 
 use crate::{
+    error::ContractError,
     state::supported_pairs::{SupportedPairs, SwapLeg},
-    ContractError,
 };
+
+use self::{leg_cmd::LegCmd, price_querier::FedPrices};
 
 mod leg_cmd;
 mod price_querier;
 
-pub type AllPricesIterCmd<'r, OracleBase> = LegCmd<OracleBase, FedPrices<'r>>;
-pub type AllPricesIterScanFnItem<'r, 't, OracleBase> = Option<
-    Result<
-        BasePrice<SwapGroup, OracleBase>,
-        <&'t mut AllPricesIterCmd<'r, OracleBase> as AnyVisitorPair>::Error,
-    >,
->;
-pub type AllPricesIterScanFn<'r, OracleBase> =
-    for<'t> fn(
-        &'t mut AllPricesIterCmd<'r, OracleBase>,
-        SwapLeg,
-    ) -> Option<AllPricesIterScanFnItem<'r, 't, OracleBase>>;
-pub type AllPricesIter<'r, I, OracleBase> = iter::Flatten<
-    iter::Scan<I, AllPricesIterCmd<'r, OracleBase>, AllPricesIterScanFn<'r, OracleBase>>,
->;
+pub type AllPricesIterItem<OracleBase> = Result<BasePrice<SwapGroup, OracleBase>, ContractError>;
 
 pub struct Feeds<OracleBase> {
     feeds: PriceFeeds<'static>,
@@ -84,21 +70,21 @@ where
         swap_pairs_df: I,
         at: Timestamp,
         total_feeders: usize,
-    ) -> AllPricesIter<'r, I, OracleBase>
+    ) -> impl Iterator<Item = AllPricesIterItem<OracleBase>> + 'r
     where
         'self_: 'r,
         'storage: 'r,
-        I: Iterator<Item = SwapLeg>,
+        I: Iterator<Item = SwapLeg> + 'r,
     {
-        let cmd: AllPricesIterCmd<'r, OracleBase> = LegCmd::new(
+        let cmd: LegCmd<OracleBase, FedPrices<'_>> = LegCmd::new(
             FedPrices::new(storage, &self.feeds, at, total_feeders),
             vec![],
         );
 
         swap_pairs_df
-            .scan::<_, _, AllPricesIterScanFn<'r, OracleBase>>(
+            .scan(
                 cmd,
-                |cmd: &mut AllPricesIterCmd<'r, OracleBase>, leg: SwapLeg| {
+                |cmd: &mut LegCmd<OracleBase, FedPrices>, leg: SwapLeg| {
                     Some(
                         currency::visit_any_on_tickers::<SwapGroup, SwapGroup, _>(
                             &leg.from,
