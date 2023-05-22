@@ -191,8 +191,8 @@ where
         BaseC: Currency,
     {
         Self::add_alarm_internal(
-            &self.alarms_below,
             self.storage.deref_mut(),
+            &self.alarms_below,
             subscriber,
             &AlarmStore::new(&alarm),
         )
@@ -208,8 +208,8 @@ where
         BaseC: Currency,
     {
         Self::add_alarm_internal(
-            &self.alarms_above_or_equal,
             self.storage.deref_mut(),
+            &self.alarms_above_or_equal,
             subscriber,
             &AlarmStore::new(&alarm),
         )
@@ -286,16 +286,16 @@ where
             })
             .and_then(|alarm: AlarmWithSubscriber| {
                 Self::add_alarm_internal(
-                    &self.alarms_below,
                     self.storage.deref_mut(),
+                    &self.alarms_below,
                     alarm.subscriber.clone(),
                     &alarm.below,
                 )
                 .and_then(|()| {
                     if let Some(above) = alarm.above {
                         Self::add_alarm_internal(
-                            &self.alarms_above_or_equal,
                             self.storage.deref_mut(),
+                            &self.alarms_above_or_equal,
                             alarm.subscriber.clone(),
                             &above,
                         )
@@ -307,8 +307,8 @@ where
     }
 
     fn add_alarm_internal(
-        alarms: &IndexedMap,
         storage: &mut dyn Storage,
+        alarms: &IndexedMap,
         subscriber: Addr,
         alarm: &AlarmStore,
     ) -> Result<(), AlarmError> {
