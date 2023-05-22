@@ -84,12 +84,12 @@ where
         })
     }
 
-    pub fn with(&self, downpayment: Coin<Lpn>) -> Result<Percent, ContractError> {
-        if downpayment.is_zero() {
+    pub fn with(&self, borrow: Coin<Lpn>) -> Result<Percent, ContractError> {
+        if borrow.is_zero() {
             return Err(ContractError::ZeroDownpayment {});
         }
 
-        let annual_interest_rate = match self.lpp.quote(downpayment)? {
+        let annual_interest_rate = match self.lpp.quote(borrow)? {
             QueryQuoteResponse::QuoteInterestRate(rate) => rate,
             QueryQuoteResponse::NoLiquidity => return Err(ContractError::NoLiquidity {}),
         };

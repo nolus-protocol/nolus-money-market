@@ -306,5 +306,15 @@ mod tests {
 
             do_test_calculate(rate, &set);
         }
+
+        #[test]
+        /// Verifies correctness of results against manually calculated, thus verified, set.
+        fn test_set_6() {
+            let rate = rate(100, 750, 20);
+
+            let set = [InOut((2584283, 40054 - 18571), (18, 100))];
+
+            do_test_calculate(rate, &set);
+        }
     }
 }
