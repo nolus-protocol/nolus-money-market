@@ -566,13 +566,16 @@ pub mod tests {
         let subscriber1 = Addr::unchecked("subscriber1");
         let subscriber2 = Addr::unchecked("subscriber2");
 
+        let subscriber2_below_price = Price::<Atom, Base>::identity();
+        let subscriber2_above_or_equal_price = Price::<Atom, Base>::identity();
+
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms
             .add_alarm_below(subscriber1.clone(), Price::<Atom, Base>::identity())
             .unwrap();
         alarms
-            .add_alarm_below(
+            .add_alarm_above_or_equal(
                 subscriber1.clone(),
                 price::total_of::<Atom>(1.into()).is::<Base>(2.into()),
             )
@@ -581,19 +584,16 @@ pub mod tests {
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms
-            .add_alarm_below(subscriber2.clone(), Price::<Atom, Base>::identity())
+            .add_alarm_below(subscriber2.clone(), subscriber2_below_price)
             .unwrap();
         alarms
-            .add_alarm_below(
-                subscriber2.clone(),
-                price::total_of::<Atom>(1.into()).is::<Base>(2.into()),
-            )
+            .add_alarm_above_or_equal(subscriber2.clone(), subscriber2_above_or_equal_price)
             .unwrap();
 
         alarms.ensure_no_in_delivery().unwrap();
 
         alarms.out_for_delivery(subscriber1).unwrap();
-        alarms.out_for_delivery(subscriber2).unwrap();
+        alarms.out_for_delivery(subscriber2.clone()).unwrap();
 
         assert!(matches!(
             alarms.ensure_no_in_delivery().unwrap_err(),
@@ -609,14 +609,22 @@ pub mod tests {
 
         alarms.last_failed().unwrap();
 
-        assert!(matches!(
-            alarms.ensure_no_in_delivery().unwrap_err(),
-            AlarmError::NonEmptyAlarmsInDeliveryQueue(_)
-        ));
-
-        alarms.last_delivered().unwrap();
-
         alarms.ensure_no_in_delivery().unwrap();
+
+        assert_eq!(
+            alarms
+                .alarms(subscriber2_below_price)
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap(),
+            vec![subscriber2.clone()]
+        );
+        assert_eq!(
+            alarms
+                .alarms(subscriber2_above_or_equal_price)
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap(),
+            vec![subscriber2]
+        );
     }
 
     fn alarms<'storage, 'storage_ref>(
