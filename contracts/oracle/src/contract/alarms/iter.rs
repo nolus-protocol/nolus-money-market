@@ -39,6 +39,27 @@ where
             alarm_iter: None,
         }
     }
+
+    fn update_alarm_iterator(&mut self) -> Option<ContractResult<&mut AlarmIter<'alarms>>> {
+        self.price_iter.next()?.map_or_else(
+            |error: ContractError| Some(Err(error)),
+            |ref price| {
+                let iter: AlarmIter<'alarms> =
+                    match visit_any_on_ticker::<SwapGroup, Cmd<'storage, 'alarms, '_, S, BaseC>>(
+                        price.base_ticker(),
+                        Cmd {
+                            alarms: self.alarms,
+                            price,
+                        },
+                    ) {
+                        Ok(iter) => iter,
+                        Err(error) => return Some(Err(error)),
+                    };
+
+                Some(Ok(self.alarm_iter.insert(iter)))
+            },
+        )
+    }
 }
 
 impl<'storage, 'alarms, S, I, BaseC> Iterator for Iter<'storage, 'alarms, S, I, BaseC>
@@ -59,26 +80,10 @@ where
                 None
             })
             .or_else(|| {
-                self.price_iter.next()?.map_or_else(
-                    |error: ContractError| Some(Err(error)),
-                    |ref price| {
-                        let iter: AlarmIter<'alarms> = match visit_any_on_ticker::<
-                            SwapGroup,
-                            Cmd<'storage, 'alarms, '_, S, BaseC>,
-                        >(
-                            price.base_ticker(),
-                            Cmd {
-                                alarms: self.alarms,
-                                price,
-                            },
-                        ) {
-                            Ok(iter) => iter,
-                            Err(error) => return Some(Err(error)),
-                        };
-
-                        self.alarm_iter.insert(iter).next()
-                    },
-                )
+                match self.update_alarm_iterator()? {
+                    Ok(iter) => iter.next(),
+                    Err(err) => Some(Err(err))
+                }
             })
     }
 }
