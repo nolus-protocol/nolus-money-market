@@ -17,15 +17,12 @@ use swap::SwapGroup;
 use crate::{
     contract::{
         alarms::MarketAlarms,
-        oracle::{feed::AllPricesIter, feed::Feeds},
+        oracle::feed::{AllPricesIterItem, Feeds},
     },
+    error::ContractError,
     msg::{AlarmsStatusResponse, ExecuteAlarmMsg},
     result::ContractResult,
-    state::{
-        config::Config,
-        supported_pairs::{SupportedPairs, SwapPairsDfIter},
-    },
-    ContractError,
+    state::{config::Config, supported_pairs::SupportedPairs},
 };
 
 use self::feeder::Feeders;
@@ -33,7 +30,7 @@ use self::feeder::Feeders;
 pub mod feed;
 pub mod feeder;
 
-pub(crate) type CalculateAllPricesIter<'r, BaseC> = AllPricesIter<'r, SwapPairsDfIter<'r>, BaseC>;
+pub(crate) type CalculateAllPricesIterItem<OracleBase> = AllPricesIterItem<OracleBase>;
 
 pub(crate) struct Oracle<'storage, S, OracleBase>
 where
@@ -100,7 +97,10 @@ where
             .calc_price(self.storage.deref(), &self.tree, currency, at, self.feeders)
     }
 
-    fn calc_all_prices(&self, at: Timestamp) -> CalculateAllPricesIter<'_, OracleBase> {
+    fn calc_all_prices(
+        &self,
+        at: Timestamp,
+    ) -> impl Iterator<Item = CalculateAllPricesIterItem<OracleBase>> + '_ {
         self.feeds.all_prices_iter(
             self.storage.deref(),
             self.tree.swap_pairs_df(),
