@@ -195,22 +195,24 @@ where
     }
 
     pub fn swap_pairs_df(&self) -> impl Iterator<Item = SwapLeg> + '_ {
-        self.tree.iter().filter_map(|node: NodeRef<SwapTarget>| {
-            let parent: NodeRef<SwapTarget> = node.parent()?;
+        self.tree
+            .iter()
+            .filter_map(|node: NodeRef<'_, SwapTarget>| {
+                let parent: NodeRef<'_, SwapTarget> = node.parent()?;
 
-            let SwapTarget {
-                pool_id,
-                target: child,
-            } = node.value().clone();
-
-            Some(SwapLeg {
-                from: child,
-                to: SwapTarget {
+                let SwapTarget {
                     pool_id,
-                    target: parent.value().target.clone(),
-                },
+                    target: child,
+                } = node.value().clone();
+
+                Some(SwapLeg {
+                    from: child,
+                    to: SwapTarget {
+                        pool_id,
+                        target: parent.value().target.clone(),
+                    },
+                })
             })
-        })
     }
 
     pub fn query_swap_tree(self) -> Tree {

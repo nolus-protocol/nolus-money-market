@@ -84,7 +84,7 @@ where
         swap_pairs_df
             .scan(
                 cmd,
-                |cmd: &mut LegCmd<OracleBase, FedPrices>, leg: SwapLeg| {
+                |cmd: &mut LegCmd<OracleBase, FedPrices<'_>>, leg: SwapLeg| {
                     Some(
                         currency::visit_any_on_tickers::<SwapGroup, SwapGroup, _>(
                             &leg.from,
