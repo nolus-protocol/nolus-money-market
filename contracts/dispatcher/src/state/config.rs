@@ -34,14 +34,31 @@ impl Config {
         Self::STORAGE.load(storage)
     }
 
-    pub fn update(storage: &mut dyn Storage, cadence_hours: u16) -> ContractResult<()> {
-        Self::load(storage)?;
-
+    pub fn update_cadence_hours(
+        storage: &mut dyn Storage,
+        cadence_hours: u16,
+    ) -> ContractResult<()> {
         Self::STORAGE
-            .update(storage, |mut c| -> Result<Config, ContractError> {
-                c.cadence_hours = cadence_hours;
+            .update(storage, |config| -> Result<Config, ContractError> {
+                Ok(Self {
+                    cadence_hours,
+                    ..config
+                })
+            })
+            .map(|_| ())
+            .map_err(Into::into)
+    }
 
-                Ok(c)
+    pub fn update_tvl_to_apr(
+        storage: &mut dyn Storage,
+        tvl_to_apr: RewardScale,
+    ) -> ContractResult<()> {
+        Self::STORAGE
+            .update(storage, |config| -> Result<Config, ContractError> {
+                Ok(Self {
+                    tvl_to_apr,
+                    ..config
+                })
             })
             .map(|_| ())
             .map_err(Into::into)

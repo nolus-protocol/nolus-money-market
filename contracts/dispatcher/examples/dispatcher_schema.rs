@@ -1,6 +1,6 @@
 use rewards_dispatcher::{
-    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::{Config, DispatchLog},
+    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
+    state::DispatchLog,
 };
 use sdk::cosmwasm_schema::{export_schema, schema_for};
 
@@ -10,7 +10,7 @@ fn main() {
     export_schema(&schema_for!(InstantiateMsg), &out_dir);
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
     export_schema(&schema_for!(QueryMsg), &out_dir);
-    export_schema(&schema_for!(Config), &out_dir);
+    export_schema(&schema_for!(SudoMsg), &out_dir);
     export_schema(&schema_for!(ConfigResponse), &out_dir);
     export_schema(&schema_for!(DispatchLog), &out_dir);
 }

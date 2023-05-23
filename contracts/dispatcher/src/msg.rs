@@ -30,6 +30,7 @@ pub enum ExecuteMsg {
 #[serde(rename_all = "snake_case")]
 pub enum SudoMsg {
     Config { cadence_hours: u16 },
+    Rewards { tvl_to_apr: RewardScale },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]

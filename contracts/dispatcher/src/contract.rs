@@ -18,9 +18,8 @@ use sdk::{
 use timealarms::stub::TimeAlarmsRef;
 use versioning::{version, VersionSegment};
 
-use crate::cmd::RewardCalculator;
 use crate::{
-    cmd::Dispatch,
+    cmd::{Dispatch, RewardCalculator},
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
     state::{Config, DispatchLog},
@@ -100,7 +99,11 @@ pub fn execute(
 pub fn sudo(deps: DepsMut<'_>, _env: Env, msg: SudoMsg) -> ContractResult<CwResponse> {
     match msg {
         SudoMsg::Config { cadence_hours } => {
-            Config::update(deps.storage, cadence_hours).map(|()| response::empty_response())
+            Config::update_cadence_hours(deps.storage, cadence_hours)
+                .map(|()| response::empty_response())
+        }
+        SudoMsg::Rewards { tvl_to_apr } => {
+            Config::update_tvl_to_apr(deps.storage, tvl_to_apr).map(|()| response::empty_response())
         }
     }
 }
