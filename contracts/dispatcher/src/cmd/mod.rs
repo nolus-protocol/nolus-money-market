@@ -2,7 +2,7 @@ use currency::{lpn::Lpns, native::Native};
 use finance::coin::CoinDTO;
 use platform::batch::Batch;
 
-pub use self::{dispatch::Dispatch, reward_calculator::RewardCalculator};
+pub(crate) use self::{dispatch::Dispatch, reward_calculator::RewardCalculator};
 
 mod dispatch;
 mod reward_calculator;
