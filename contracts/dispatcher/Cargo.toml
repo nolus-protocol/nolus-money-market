@@ -10,6 +10,10 @@ license.workspace = true
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[[example]]
+name = "dispatcher_schema"
+test = true
+
 [features]
 default = ["contract-with-bindings"]
 contract-with-bindings = ["contract"]
