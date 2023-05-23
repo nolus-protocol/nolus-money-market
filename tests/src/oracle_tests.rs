@@ -502,12 +502,10 @@ fn execute<const RESCHEDULE: bool, const PRICE_BASE: Amount, const PRICE_QUOTE: 
                 Err(ContractError::Std(CwError::generic_err(
                     "Error while delivering price alarm!",
                 )))
+            } else if RESCHEDULE {
+                schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
             } else {
-                if RESCHEDULE {
-                    schedule_alarm(storage, PRICE_BASE, PRICE_QUOTE)
-                } else {
-                    Ok(CwResponse::new())
-                }
+                Ok(CwResponse::new())
             }
         }
         DummyExecMsg::ShouldFail(value) => SHOULD_FAIL
