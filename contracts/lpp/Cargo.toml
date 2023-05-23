@@ -9,7 +9,8 @@ license.workspace = true
 crate-type = ["cdylib", "rlib"]
 
 [[example]]
-name = "schema"
+name = "lpp_schema"
+test = true
 
 [features]
 default = ["contract-with-bindings"]
