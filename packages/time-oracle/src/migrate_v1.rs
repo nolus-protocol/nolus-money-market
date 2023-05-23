@@ -7,7 +7,7 @@ use sdk::{
 
 use crate::AlarmError;
 
-use super::AlarmsMut;
+use super::Alarms;
 
 type TimeSeconds = u64;
 type Id = u64;
@@ -86,7 +86,7 @@ impl AlarmsOld {
         }
         self.next_id.remove(storage);
 
-        let mut alarms_new = AlarmsMut::new(
+        let mut alarms_new = Alarms::new(
             storage,
             self.namespace_alarms,
             self.namespace_index,
@@ -133,16 +133,15 @@ impl AlarmsOld {
 
 #[cfg(test)]
 pub mod tests {
-    use sdk::cosmwasm_std::testing;
-
-    use crate::alarms::AlarmsSelection;
+    use sdk::cosmwasm_std::testing::MockStorage;
 
     use super::{super::Alarms, *};
 
     #[test]
     fn test_migration() {
+        let mut storage = MockStorage::new();
         let alarms = AlarmsOld::new("alarms", "alarms_idx", "in_delivery", "alarms_next_id");
-        let storage = &mut testing::mock_dependencies().storage;
+
         let t1 = 1;
         let t2 = 2;
         let t3 = 3;
@@ -153,30 +152,35 @@ pub mod tests {
         let addr4 = Addr::unchecked("addr4");
 
         alarms
-            .add(storage, addr1.clone(), Timestamp::from_seconds(t1))
+            .add(&mut storage, addr1.clone(), Timestamp::from_seconds(t1))
             .unwrap();
         alarms
-            .add(storage, addr2.clone(), Timestamp::from_seconds(t1))
+            .add(&mut storage, addr2.clone(), Timestamp::from_seconds(t1))
             .unwrap();
         alarms
-            .add(storage, addr3.clone(), Timestamp::from_seconds(t2))
+            .add(&mut storage, addr3.clone(), Timestamp::from_seconds(t2))
             .unwrap();
         alarms
-            .add(storage, addr3.clone(), Timestamp::from_seconds(t3))
+            .add(&mut storage, addr3.clone(), Timestamp::from_seconds(t3))
             .unwrap();
         alarms
-            .add(storage, addr4.clone(), Timestamp::from_seconds(t4))
+            .add(&mut storage, addr4.clone(), Timestamp::from_seconds(t4))
             .unwrap();
 
         // multiple alarms per address(5) + index(5) + next_id(1)
         assert_eq!(11, storage.range(None, None, Order::Ascending).count());
 
-        alarms.migrate(storage).unwrap();
+        alarms.migrate(&mut storage).unwrap();
 
         // single alarm per address(4) + index(4)
         assert_eq!(8, storage.range(None, None, Order::Ascending).count());
 
-        let new_alarms = Alarms::new(storage, "alarms", "alarms_idx");
+        let new_alarms = Alarms::new(
+            &mut storage as &mut dyn Storage,
+            "alarms",
+            "alarms_idx",
+            "in_delivery",
+        );
         let result: Vec<_> = new_alarms
             .alarms_selection(Timestamp::from_seconds(10))
             .map(Result::unwrap)
