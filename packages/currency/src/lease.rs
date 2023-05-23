@@ -62,6 +62,7 @@ define_symbol! {
         },
     }
 }
+#[cfg(feature = "testing")]
 define_currency!(Weth, WETH);
 
 define_symbol! {
@@ -82,6 +83,7 @@ define_symbol! {
         },
     }
 }
+#[cfg(feature = "testing")]
 define_currency!(Wbtc, WBTC);
 
 define_symbol! {
@@ -100,6 +102,7 @@ define_symbol! {
         },
     }
 }
+#[cfg(feature = "testing")]
 define_currency!(Evmos, EVMOS);
 
 define_symbol! {
@@ -118,6 +121,7 @@ define_symbol! {
         },
     }
 }
+#[cfg(feature = "testing")]
 define_currency!(Juno, JUNO);
 
 define_symbol! {
@@ -136,6 +140,7 @@ define_symbol! {
         },
     }
 }
+#[cfg(feature = "testing")]
 define_currency!(Stars, STARS);
 
 define_symbol! {
@@ -154,6 +159,7 @@ define_symbol! {
         },
     }
 }
+#[cfg(feature = "testing")]
 define_currency!(Cro, CRO);
 
 define_symbol! {
@@ -172,6 +178,7 @@ define_symbol! {
         },
     }
 }
+#[cfg(feature = "testing")]
 define_currency!(Secret, SCRT);
 
 #[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
@@ -187,16 +194,19 @@ impl Group for LeaseGroup {
     {
         use finance::currency::maybe_visit_on_ticker as maybe_visit;
         let v: SingleVisitorAdapter<_> = visitor.into();
-        maybe_visit::<Atom, _>(ticker, v)
-            .or_else(|v| maybe_visit::<Osmo, _>(ticker, v))
+        let r = maybe_visit::<Atom, _>(ticker, v).or_else(|v| maybe_visit::<Osmo, _>(ticker, v));
+
+        #[cfg(feature = "testing")]
+        let r = r
             .or_else(|v| maybe_visit::<Weth, _>(ticker, v))
             .or_else(|v| maybe_visit::<Wbtc, _>(ticker, v))
             .or_else(|v| maybe_visit::<Evmos, _>(ticker, v))
             .or_else(|v| maybe_visit::<Juno, _>(ticker, v))
             .or_else(|v| maybe_visit::<Stars, _>(ticker, v))
             .or_else(|v| maybe_visit::<Cro, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Secret, _>(ticker, v))
-            .map_err(|v| v.0)
+            .or_else(|v| maybe_visit::<Secret, _>(ticker, v));
+
+        r.map_err(|v| v.0)
     }
 
     fn maybe_visit_on_bank_symbol<V>(bank_symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
@@ -206,16 +216,20 @@ impl Group for LeaseGroup {
     {
         use finance::currency::maybe_visit_on_bank_symbol as maybe_visit;
         let v: SingleVisitorAdapter<_> = visitor.into();
-        maybe_visit::<Atom, _>(bank_symbol, v)
-            .or_else(|v| maybe_visit::<Osmo, _>(bank_symbol, v))
+        let r = maybe_visit::<Atom, _>(bank_symbol, v)
+            .or_else(|v| maybe_visit::<Osmo, _>(bank_symbol, v));
+
+        #[cfg(feature = "testing")]
+        let r = r
             .or_else(|v| maybe_visit::<Weth, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Wbtc, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Evmos, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Juno, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Stars, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Cro, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Secret, _>(bank_symbol, v))
-            .map_err(|v| v.0)
+            .or_else(|v| maybe_visit::<Secret, _>(bank_symbol, v));
+
+        r.map_err(|v| v.0)
     }
 }
 
