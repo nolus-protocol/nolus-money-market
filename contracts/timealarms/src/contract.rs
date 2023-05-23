@@ -6,12 +6,14 @@ use platform::{
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, SubMsgResult},
+    cosmwasm_std::{
+        to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage, SubMsgResult,
+    },
 };
 use versioning::{package_version, version, VersionSegment};
 
 use crate::{
-    alarms::{TimeAlarms, TimeAlarmsMut},
+    alarms::TimeAlarms,
     msg::{DispatchAlarmsResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
 };
@@ -45,7 +47,7 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
-    let mut time_alarms: TimeAlarmsMut<'_> = TimeAlarmsMut::new(deps.storage);
+    let mut time_alarms: TimeAlarms<'_, &mut dyn Storage> = TimeAlarms::new(deps.storage);
 
     match msg {
         ExecuteMsg::AddAlarm { time } => time_alarms
@@ -82,7 +84,7 @@ pub fn reply(deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwRespon
 
     let emitter: Emitter = Emitter::of_type(EVENT_TYPE);
 
-    let mut time_alarms: TimeAlarmsMut<'_> = TimeAlarmsMut::new(deps.storage);
+    let mut time_alarms: TimeAlarms<'_, &mut dyn Storage> = TimeAlarms::new(deps.storage);
 
     Ok(response::response_only_messages(match msg.result {
         SubMsgResult::Ok(_) => {

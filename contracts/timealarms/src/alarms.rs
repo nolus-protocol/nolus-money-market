@@ -1,10 +1,12 @@
+use std::ops::{Deref, DerefMut};
+
 use platform::{
     contract,
     dispatcher::{AlarmsDispatcher, Id},
     message::Response as MessageResponse,
 };
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper, Storage, Timestamp};
-use time_oracle::{Alarms, AlarmsMut, AlarmsSelection as _};
+use time_oracle::Alarms;
 
 use crate::{
     msg::{AlarmsCount, AlarmsStatusResponse, ExecuteAlarmMsg},
@@ -18,18 +20,25 @@ const IN_DELIVERY_NAMESPACE: &str = "in_delivery";
 const REPLY_ID: Id = 0;
 const EVENT_TYPE: &str = "timealarm";
 
-pub(super) struct TimeAlarms<'r> {
-    time_alarms: Alarms<'r>,
+pub(super) struct TimeAlarms<'storage, S>
+where
+    S: Deref<Target = dyn Storage + 'storage>,
+{
+    time_alarms: Alarms<'storage, S>,
 }
 
-pub(super) struct TimeAlarmsMut<'r> {
-    time_alarms: AlarmsMut<'r>,
-}
-
-impl<'r> TimeAlarms<'r> {
-    pub fn new(storage: &'r dyn Storage) -> Self {
+impl<'storage, S> TimeAlarms<'storage, S>
+where
+    S: Deref<Target = dyn Storage + 'storage>,
+{
+    pub fn new(storage: S) -> Self {
         Self {
-            time_alarms: Alarms::new(storage, ALARMS_NAMESPACE, ALARMS_IDX_NAMESPACE),
+            time_alarms: Alarms::new(
+                storage,
+                ALARMS_NAMESPACE,
+                ALARMS_IDX_NAMESPACE,
+                IN_DELIVERY_NAMESPACE,
+            ),
         }
     }
 
@@ -45,18 +54,10 @@ impl<'r> TimeAlarms<'r> {
     }
 }
 
-impl<'r> TimeAlarmsMut<'r> {
-    pub fn new(storage: &'r mut dyn Storage) -> Self {
-        Self {
-            time_alarms: AlarmsMut::new(
-                storage,
-                ALARMS_NAMESPACE,
-                ALARMS_IDX_NAMESPACE,
-                IN_DELIVERY_NAMESPACE,
-            ),
-        }
-    }
-
+impl<'storage, S> TimeAlarms<'storage, S>
+where
+    S: Deref<Target = dyn Storage + 'storage> + DerefMut,
+{
     pub fn try_add(
         &mut self,
         querier: &QuerierWrapper<'_>,
@@ -114,10 +115,12 @@ mod tests {
     use platform::contract;
     use sdk::cosmwasm_std::{
         testing::{self, mock_dependencies, MockQuerier},
-        Addr, QuerierWrapper, Timestamp,
+        Addr, QuerierWrapper, Storage, Timestamp,
     };
 
-    use crate::{alarms::TimeAlarmsMut, ContractError};
+    use crate::ContractError;
+
+    use super::TimeAlarms;
 
     #[test]
     fn try_add_invalid_contract_address() {
@@ -127,7 +130,7 @@ mod tests {
         env.block.time = Timestamp::from_seconds(0);
 
         let msg_sender = Addr::unchecked("some address");
-        assert!(TimeAlarmsMut::new(deps.storage)
+        assert!(TimeAlarms::new(&mut *deps.storage as &mut dyn Storage)
             .try_add(
                 &deps.querier,
                 &env,
@@ -140,7 +143,7 @@ mod tests {
             .unwrap_err()
             .into();
 
-        let result = TimeAlarmsMut::new(deps.storage)
+        let result = TimeAlarms::new(deps.storage as &mut dyn Storage)
             .try_add(&deps.querier, &env, msg_sender, Timestamp::from_nanos(8))
             .unwrap_err();
 
@@ -159,7 +162,7 @@ mod tests {
         env.block.time = Timestamp::from_seconds(0);
 
         let msg_sender = Addr::unchecked("some address");
-        assert!(TimeAlarmsMut::new(deps.storage)
+        assert!(TimeAlarms::new(deps.storage)
             .try_add(&deps.querier, &env, msg_sender, Timestamp::from_nanos(4),)
             .is_ok());
     }
@@ -177,7 +180,7 @@ mod tests {
         env.block.time = Timestamp::from_seconds(100);
 
         let msg_sender = Addr::unchecked("some address");
-        TimeAlarmsMut::new(deps.storage)
+        TimeAlarms::new(deps.storage)
             .try_add(&deps.querier, &env, msg_sender, Timestamp::from_nanos(4))
             .unwrap_err();
     }

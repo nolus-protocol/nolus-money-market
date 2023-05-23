@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use sdk::cosmwasm_std::StdError;
 
-pub use crate::alarms::{Alarms, AlarmsMut, AlarmsSelection};
+pub use crate::alarms::Alarms;
 
 mod alarms;
 pub mod migrate_v1;
