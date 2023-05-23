@@ -17,7 +17,7 @@ pub struct DispatchLog {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
-pub struct Config {
+pub(crate) struct Config {
     // Time duration in hours defining the periods of time this instance is awaken
     pub cadence_hours: u16,
     // An LPP instance address

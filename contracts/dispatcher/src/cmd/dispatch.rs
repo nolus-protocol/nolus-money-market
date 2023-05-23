@@ -9,7 +9,7 @@ use crate::{result::ContractResult, state::Config, ContractError};
 
 use super::{reward_calculator::Reward, Result as DispatcherResult, RewardCalculator};
 
-pub struct Dispatch<'a> {
+pub(crate) struct Dispatch<'a> {
     last_dispatch: Timestamp,
     config: Config,
     block_time: Timestamp,
