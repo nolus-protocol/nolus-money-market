@@ -50,7 +50,10 @@ where
         }
     }
 
-    pub fn notify_alarms_iter<I, BaseC>(&self, prices: I) -> AlarmsIter<'storage, '_, S, I, BaseC>
+    pub const fn notify_alarms_iter<I, BaseC>(
+        &self,
+        prices: I,
+    ) -> AlarmsIter<'storage, '_, S, I, BaseC>
     where
         I: Iterator<Item = PriceResult<BaseC>>,
         BaseC: Currency,
