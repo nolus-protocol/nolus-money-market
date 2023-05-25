@@ -32,7 +32,7 @@ where
     I: Iterator<Item = PriceResult<BaseC>>,
     BaseC: Currency,
 {
-    pub fn new(alarms: &'alarms PriceAlarms<'storage, S>, price_iter: I) -> Self {
+    pub const fn new(alarms: &'alarms PriceAlarms<'storage, S>, price_iter: I) -> Self {
         Self {
             alarms,
             price_iter,
