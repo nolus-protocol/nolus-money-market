@@ -76,7 +76,7 @@ where
         if result.is_some() {
             result
         } else if let Err(error) = self.update_alarm_iterator() {
-                Some(Err(error))
+            Some(Err(error))
         } else {
             self.alarm_iter.as_mut().and_then(Iterator::next)
         }
