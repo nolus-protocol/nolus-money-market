@@ -33,7 +33,7 @@ pub(crate) trait ConfigManagement
 where
     Self: Sized,
 {
-    fn try_update_config(self, cadence_hours: u16) -> ContractResult<Self>;
+    fn try_update_config(self, cadence_hours: CadenceHours) -> ContractResult<Self>;
 
     fn try_query_config(&self) -> ContractResult<ConfigResponse>;
 }
