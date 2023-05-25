@@ -17,8 +17,8 @@ use crate::{
     profit::Profit,
     result::ContractResult,
     state::{Config, ConfigManagement as _, SetupDexHandler as _, State},
-    ContractError,
     typedefs::CadenceHours,
+    ContractError,
 };
 
 // version info for migration info

@@ -10,7 +10,9 @@ use sdk::{
     cw_storage_plus::Item,
 };
 
-use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult, typedefs::CadenceHours};
+use crate::{
+    error::ContractError, msg::ConfigResponse, result::ContractResult, typedefs::CadenceHours,
+};
 
 pub(crate) use self::config::Config;
 use self::{
