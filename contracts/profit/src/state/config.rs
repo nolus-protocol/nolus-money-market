@@ -4,7 +4,7 @@ use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::Addr;
 use timealarms::stub::TimeAlarmsRef;
 
-pub type CadenceHours = u16;
+use crate::typedefs::CadenceHours;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct Config {

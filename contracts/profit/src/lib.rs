@@ -3,6 +3,7 @@ pub use crate::error::ContractError;
 pub mod error;
 pub mod msg;
 pub mod result;
+pub mod typedefs;
 
 #[cfg(any(feature = "stub", test))]
 pub mod stub;

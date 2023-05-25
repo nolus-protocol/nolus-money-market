@@ -5,7 +5,7 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::state::CadenceHours;
+use crate::typedefs::CadenceHours;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
