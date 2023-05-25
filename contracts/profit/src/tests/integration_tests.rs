@@ -83,9 +83,7 @@ mod config {
         app.execute_contract(
             Addr::unchecked(ADMIN),
             cw_template_contract.addr(),
-            &ExecuteMsg::Config {
-                cadence_hours: 12,
-            },
+            &ExecuteMsg::Config { cadence_hours: 12 },
             &[],
         )
         .unwrap_err();

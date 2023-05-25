@@ -4,7 +4,9 @@ use dex::{Account, ConnectionParams, DexConnectable, IcaConnectee};
 
 use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
 
-use super::{idle::Idle, Config, ConfigManagement, IcaConnector, SetupDexHandler, State, CadenceHours};
+use super::{
+    idle::Idle, CadenceHours, Config, ConfigManagement, IcaConnector, SetupDexHandler, State,
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct OpenIca {
