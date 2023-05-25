@@ -5,11 +5,11 @@ use sdk::{
     schemars::{self, JsonSchema},
 };
 
-use crate::state::reward_scale::RewardScale;
+use crate::state::{reward_scale::RewardScale, CadenceHours};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct InstantiateMsg {
-    pub cadence_hours: u16,
+    pub cadence_hours: CadenceHours,
     pub lpp: Addr,
     pub oracle: Addr,
     pub timealarms: Addr,
@@ -29,7 +29,7 @@ pub enum ExecuteMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum SudoMsg {
-    Config { cadence_hours: u16 },
+    Config { cadence_hours: CadenceHours },
     Rewards { tvl_to_apr: RewardScale },
 }
 
@@ -43,7 +43,7 @@ pub enum QueryMsg {
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub struct ConfigResponse {
-    pub cadence_hours: u16,
+    pub cadence_hours: CadenceHours,
 }
 
 pub type RewardScaleResponse = RewardScale;

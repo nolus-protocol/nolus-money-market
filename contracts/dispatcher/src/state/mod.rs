@@ -16,10 +16,12 @@ pub struct DispatchLog {
     pub last_dispatch: Timestamp,
 }
 
+pub type CadenceHours = u16;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 pub(crate) struct Config {
     // Time duration in hours defining the periods of time this instance is awaken
-    pub cadence_hours: u16,
+    pub cadence_hours: CadenceHours,
     // An LPP instance address
     pub lpp: Addr,
     // address to treasury contract
