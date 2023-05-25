@@ -75,11 +75,9 @@ where
 
         if result.is_some() {
             result
+        } else if let Err(error) = self.update_alarm_iterator() {
+                Some(Err(error))
         } else {
-            if let Err(error) = self.update_alarm_iterator() {
-                return Some(Err(error));
-            }
-
             self.alarm_iter.as_mut().and_then(Iterator::next)
         }
     }
