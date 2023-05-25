@@ -1,7 +1,7 @@
 use profit::{
     contract::{execute, instantiate, query, sudo},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    ContractError,
+    ContractError, state::CadenceHours,
 };
 use sdk::{
     cosmwasm_std::Addr, cw_multi_test::Executor, neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
@@ -20,7 +20,7 @@ impl ProfitWrapper {
     pub fn instantiate(
         self,
         app: &mut MockApp,
-        cadence_hours: u16,
+        cadence_hours: CadenceHours,
         treasury: Addr,
         oracle: Addr,
         timealarms: Addr,

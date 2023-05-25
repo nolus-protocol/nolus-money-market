@@ -16,7 +16,7 @@ use crate::{
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     profit::Profit,
     result::ContractResult,
-    state::{Config, ConfigManagement as _, SetupDexHandler as _, State},
+    state::{Config, ConfigManagement as _, SetupDexHandler as _, State, CadenceHours},
     ContractError,
 };
 
@@ -65,7 +65,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, msg: MigrateMsg) -> ContractResult<
 
     #[derive(serde::Serialize, serde::Deserialize)]
     struct OldConfig {
-        cadence_hours: u16,
+        cadence_hours: CadenceHours,
         treasury: Addr,
     }
 

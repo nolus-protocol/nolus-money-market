@@ -4,7 +4,7 @@ use dex::{Account, ConnectionParams, DexConnectable, IcaConnectee};
 
 use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
 
-use super::{idle::Idle, Config, ConfigManagement, IcaConnector, SetupDexHandler, State};
+use super::{idle::Idle, Config, ConfigManagement, IcaConnector, SetupDexHandler, State, CadenceHours};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(super) struct OpenIca {
@@ -37,7 +37,7 @@ impl DexConnectable for OpenIca {
 }
 
 impl ConfigManagement for IcaConnector {
-    fn try_update_config(self, _: u16) -> ContractResult<Self> {
+    fn try_update_config(self, _: CadenceHours) -> ContractResult<Self> {
         Err(ContractError::UnsupportedOperation(String::from(
             "Configuration changes are not allowed during ICA opening process.",
         )))

@@ -22,7 +22,7 @@ use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult};
 
-use super::{buy_back::BuyBack, Config, ConfigManagement, SetupDexHandler, State, StateEnum};
+use super::{buy_back::BuyBack, Config, ConfigManagement, SetupDexHandler, State, StateEnum, CadenceHours};
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct Idle {
@@ -116,7 +116,7 @@ impl Enterable for Idle {
 }
 
 impl ConfigManagement for Idle {
-    fn try_update_config(self, cadence_hours: u16) -> ContractResult<Self> {
+    fn try_update_config(self, cadence_hours: CadenceHours) -> ContractResult<Self> {
         Ok(Self {
             config: self.config.update(cadence_hours),
             ..self
