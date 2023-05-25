@@ -12,6 +12,7 @@ use sdk::{
 
 use crate::{error::ContractError, msg::ConfigResponse, result::ContractResult};
 
+pub use self::config::CadenceHours;
 pub(crate) use self::config::Config;
 use self::{
     buy_back::BuyBack, idle::Idle, open_ica::OpenIca, open_transfer_channel::OpenTransferChannel,
@@ -68,7 +69,7 @@ enum StateEnum {
 pub(crate) struct State(StateEnum);
 
 impl ConfigManagement for State {
-    fn try_update_config(self, cadence_hours: u16) -> ContractResult<Self> {
+    fn try_update_config(self, cadence_hours: CadenceHours) -> ContractResult<Self> {
         match self.0 {
             StateEnum::OpenTransferChannel(transfer) => {
                 transfer.try_update_config(cadence_hours).map(Into::into)

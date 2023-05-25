@@ -46,7 +46,7 @@ fn proper_instantiate() -> (App, CwTemplateContract, WrappedCustomMessageReceive
     let cw_template_id = app.store_code(contract_template());
 
     let msg = InstantiateMsg {
-        cadence_hours: 3u16,
+        cadence_hours: 3,
         treasury: Addr::unchecked("treasury"),
         oracle: Addr::unchecked("oracle"),
         timealarms: Addr::unchecked("timealarms"),
@@ -84,7 +84,7 @@ mod config {
             Addr::unchecked(ADMIN),
             cw_template_contract.addr(),
             &ExecuteMsg::Config {
-                cadence_hours: 12u16,
+                cadence_hours: 12,
             },
             &[],
         )
