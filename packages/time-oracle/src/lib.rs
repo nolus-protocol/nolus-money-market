@@ -5,6 +5,8 @@ use sdk::cosmwasm_std::StdError;
 pub use crate::alarms::Alarms;
 
 mod alarms;
+
+#[cfg(feature = "migrate")]
 pub mod migrate_v1;
 
 #[derive(Error, Debug, PartialEq)]

@@ -5,6 +5,9 @@ authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
 
+[features]
+migrate = []
+
 [dependencies]
 platform = { workspace = true }
 sdk = { workspace = true, features = ["storage"] }
