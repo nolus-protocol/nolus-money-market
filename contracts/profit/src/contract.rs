@@ -16,8 +16,9 @@ use crate::{
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     profit::Profit,
     result::ContractResult,
-    state::{CadenceHours, Config, ConfigManagement as _, SetupDexHandler as _, State},
+    state::{Config, ConfigManagement as _, SetupDexHandler as _, State},
     ContractError,
+    typedefs::CadenceHours,
 };
 
 // version info for migration info

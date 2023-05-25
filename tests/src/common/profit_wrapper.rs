@@ -1,7 +1,7 @@
 use profit::{
     contract::{execute, instantiate, query, sudo},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    state::CadenceHours,
+    typedefs::CadenceHours,
     ContractError,
 };
 use sdk::{
