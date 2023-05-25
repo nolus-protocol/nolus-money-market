@@ -5,7 +5,7 @@ use sdk::{
 
 use crate::{error::ContractError, result::ContractResult};
 
-use super::{reward_scale::RewardScale, Config, CadenceHours};
+use super::{reward_scale::RewardScale, CadenceHours, Config};
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("dispatcher_config");
