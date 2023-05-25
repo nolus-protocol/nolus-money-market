@@ -42,7 +42,7 @@ add_wasm_messages() {
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$timealarms_init_msg"
   _export_to_file "timealarms" "$TIMEALARMS_ADDRESS" "$contracts_info_file"
 
-  local -r oracle_init_msg='{"config":{"base_asset":"'"$lpp_native"'","price_config":{"min_feeders":500,"sample_period_secs":10,"samples_number":12,"discount_factor":750}},"swap_tree":{"value":[0,"USDC"],"children":[{"value":[766,"OSMO"],"children":[{"value":[1,"ATOM"]},{"value":[722,"EVMOS"]},{"value":[9,"CRO"]},{"value":[604,"STARS"]},{"value":[584,"SCRT"]},{"value":[704,"WETH"]},{"value":[712,"WBTC"]},{"value":[497,"JUNO"]}]}]}}'
+  local -r oracle_init_msg='{"config":{"base_asset":"'"$lpp_native"'","price_config":{"min_feeders":500,"sample_period_secs":10,"samples_number":12,"discount_factor":750}},"swap_tree":{"value":[0,"USDC"],"children":[{"value":[5,"OSMO"],"children":[{"value":[12,"ATOM"]}]}]}}'
   _add_wasm_message "$genesis_home_dir" "$wasm_code_path" "oracle" "$((++id))" \
     "$ADMIN_CONTRACT_ADDRESS" "" "--instantiate-anyof-addresses $ADMIN_CONTRACT_ADDRESS" "$oracle_init_msg"
   _export_to_file "oracle" "$ORACLE_ADDRESS" "$contracts_info_file"
