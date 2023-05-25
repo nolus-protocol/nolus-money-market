@@ -1,7 +1,8 @@
 use profit::{
     contract::{execute, instantiate, query, sudo},
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
-    ContractError, state::CadenceHours,
+    state::CadenceHours,
+    ContractError,
 };
 use sdk::{
     cosmwasm_std::Addr, cw_multi_test::Executor, neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,

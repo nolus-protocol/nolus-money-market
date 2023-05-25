@@ -16,7 +16,7 @@ use crate::{
     msg::{ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg},
     profit::Profit,
     result::ContractResult,
-    state::{Config, ConfigManagement as _, SetupDexHandler as _, State, CadenceHours},
+    state::{CadenceHours, Config, ConfigManagement as _, SetupDexHandler as _, State},
     ContractError,
 };
 
