@@ -40,25 +40,24 @@ where
         }
     }
 
-    fn update_alarm_iterator(&mut self) -> Option<ContractResult<&mut AlarmIter<'alarms>>> {
-        self.price_iter.next()?.map_or_else(
-            |error: ContractError| Some(Err(error)),
-            |ref price| {
-                let iter: AlarmIter<'alarms> =
-                    match visit_any_on_ticker::<SwapGroup, Cmd<'storage, 'alarms, '_, S, BaseC>>(
+    fn update_alarm_iterator(&mut self) -> ContractResult<()> {
+        self.alarm_iter = self
+            .price_iter
+            .next()
+            .map(|price_result: PriceResult<BaseC>| {
+                price_result.and_then(|ref price| {
+                    visit_any_on_ticker::<SwapGroup, Cmd<'storage, 'alarms, '_, S, BaseC>>(
                         price.base_ticker(),
                         Cmd {
                             alarms: self.alarms,
                             price,
                         },
-                    ) {
-                        Ok(iter) => iter,
-                        Err(error) => return Some(Err(error)),
-                    };
+                    )
+                })
+            })
+            .transpose()?;
 
-                Some(Ok(self.alarm_iter.insert(iter)))
-            },
-        )
+        Ok(())
     }
 }
 
@@ -71,18 +70,18 @@ where
     type Item = ContractResult<Addr>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.alarm_iter
-            .as_mut()
-            .map(Iterator::next)
-            .unwrap_or_else(|| {
-                self.alarm_iter = None;
+        let result: Option<ContractResult<Addr>> =
+            self.alarm_iter.as_mut().and_then(Iterator::next);
 
-                None
-            })
-            .or_else(|| match self.update_alarm_iterator()? {
-                Ok(iter) => iter.next(),
-                Err(err) => Some(Err(err)),
-            })
+        if result.is_some() {
+            result
+        } else {
+            if let Err(error) = self.update_alarm_iterator() {
+                return Some(Err(error));
+            }
+
+            self.alarm_iter.as_mut().and_then(Iterator::next)
+        }
     }
 }
 
