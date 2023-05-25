@@ -5,13 +5,13 @@ use sdk::{
 
 use crate::{error::ContractError, result::ContractResult};
 
-use super::{reward_scale::RewardScale, Config};
+use super::{reward_scale::RewardScale, Config, CadenceHours};
 
 impl Config {
     const STORAGE: Item<'static, Self> = Item::new("dispatcher_config");
 
     pub fn new(
-        cadence_hours: u16,
+        cadence_hours: CadenceHours,
         lpp: Addr,
         oracle: Addr,
         treasury: Addr,
@@ -36,7 +36,7 @@ impl Config {
 
     pub fn update_cadence_hours(
         storage: &mut dyn Storage,
-        cadence_hours: u16,
+        cadence_hours: CadenceHours,
     ) -> ContractResult<()> {
         Self::STORAGE
             .update(storage, |config| -> Result<Config, ContractError> {
