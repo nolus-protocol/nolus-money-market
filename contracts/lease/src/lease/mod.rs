@@ -212,9 +212,8 @@ mod tests {
             self.loan.interest_due(by)
         }
 
-        fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> lpp::error::Result<()> {
+        fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) {
             self.loan.repay(by, repayment);
-            Ok(())
         }
 
         fn annual_interest_rate(&self) -> Percent {

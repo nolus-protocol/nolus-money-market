@@ -26,6 +26,7 @@ where
     pub interest_paid: Timestamp,
 }
 
+#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
 pub struct RepayShares<LPN>
 where
     LPN: Currency,
@@ -116,11 +117,12 @@ where
 #[cfg(test)]
 mod test {
     use finance::{
-        coin::Coin, duration::Duration, percent::Percent, test::currency::Usdc, zero::Zero,
+        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, test::currency::Usdc,
+        zero::Zero,
     };
     use sdk::cosmwasm_std::Timestamp;
 
-    use crate::loan::Loan;
+    use crate::loan::{Loan, RepayShares};
 
     #[test]
     fn interest() {
@@ -137,6 +139,98 @@ mod test {
 
         assert_eq!(Coin::ZERO, l.interest_due(l.interest_paid));
         assert_eq!(Coin::ZERO, l.interest_due(l.interest_paid.minus_nanos(1)));
+    }
+
+    #[test]
+    fn repay_no_interest() {
+        let principal_at_start = Coin::<Usdc>::from(500);
+        let interest = Percent::from_percent(50);
+        let start_at = Timestamp::from_nanos(200);
+        let mut l = Loan {
+            principal_due: principal_at_start,
+            annual_interest_rate: interest,
+            interest_paid: start_at,
+        };
+
+        let payment1 = 10.into();
+        assert_eq!(
+            RepayShares {
+                interest: Coin::ZERO,
+                principal: payment1,
+                excess: Coin::ZERO
+            },
+            l.repay(l.interest_paid, payment1)
+        );
+        assert_eq!(
+            Loan {
+                principal_due: principal_at_start - payment1,
+                annual_interest_rate: interest,
+                interest_paid: l.interest_paid
+            },
+            l
+        );
+    }
+
+    #[test]
+    fn repay_interest_only() {
+        let principal_start = Coin::<Usdc>::from(500);
+        let interest = Percent::from_percent(50);
+        let mut l = Loan {
+            principal_due: principal_start,
+            annual_interest_rate: interest,
+            interest_paid: Timestamp::from_nanos(200),
+        };
+
+        let interest_a_year = interest.of(principal_start);
+        let at_first_year_end = l.interest_paid + Duration::YEAR;
+        assert_eq!(
+            RepayShares {
+                interest: interest_a_year,
+                principal: Coin::ZERO,
+                excess: Coin::ZERO
+            },
+            l.repay(at_first_year_end, interest_a_year)
+        );
+        assert_eq!(
+            Loan {
+                principal_due: principal_start,
+                annual_interest_rate: interest,
+                interest_paid: at_first_year_end
+            },
+            l
+        );
+    }
+
+    #[test]
+    fn repay_all() {
+        let principal_start = Coin::<Usdc>::from(50000000000);
+        let interest = Percent::from_percent(50);
+        let mut l = Loan {
+            principal_due: principal_start,
+            annual_interest_rate: interest,
+            interest_paid: Timestamp::from_nanos(200),
+        };
+
+        let interest_a_year = interest.of(principal_start);
+        let at_first_hour_end = l.interest_paid + Duration::HOUR;
+        let exp_interest = interest_a_year.checked_div(365 * 24).unwrap();
+        let excess = 12441.into();
+        assert_eq!(
+            RepayShares {
+                interest: exp_interest,
+                principal: principal_start,
+                excess,
+            },
+            l.repay(at_first_hour_end, exp_interest + principal_start + excess)
+        );
+        assert_eq!(
+            Loan {
+                principal_due: Coin::ZERO,
+                annual_interest_rate: interest,
+                interest_paid: at_first_hour_end
+            },
+            l
+        );
     }
 
     mod persistence {

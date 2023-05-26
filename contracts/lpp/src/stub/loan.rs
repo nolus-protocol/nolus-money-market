@@ -5,11 +5,7 @@ use finance::{coin::Coin, currency::Currency, percent::Percent};
 use platform::batch::Batch;
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{
-    error::{ContractError, Result},
-    loan::Loan,
-    msg::ExecuteMsg,
-};
+use crate::{error::ContractError, loan::Loan, msg::ExecuteMsg};
 
 use super::{LppBatch, LppRef};
 
@@ -20,7 +16,7 @@ where
 {
     fn principal_due(&self) -> Coin<Lpn>;
     fn interest_due(&self, by: Timestamp) -> Coin<Lpn>;
-    fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> Result<()>;
+    fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>);
     fn annual_interest_rate(&self) -> Percent;
 }
 
@@ -41,7 +37,7 @@ where
     lpp_ref: LppRef,
     currency: PhantomData<Lpn>,
     loan: Loan<Lpn>,
-    batch: Batch,
+    repayment: Coin<Lpn>,
 }
 
 impl<Lpn> LppLoanImpl<Lpn>
@@ -53,7 +49,7 @@ where
             lpp_ref,
             currency: PhantomData,
             loan,
-            batch: Batch::default(),
+            repayment: Default::default(),
         }
     }
 }
@@ -69,15 +65,9 @@ where
         self.loan.interest_due(by)
     }
 
-    fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> Result<()> {
+    fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) {
         self.loan.repay(by, repayment);
-        self.batch
-            .schedule_execute_wasm_no_reply(
-                &self.lpp_ref.addr,
-                ExecuteMsg::RepayLoan(),
-                Some(repayment),
-            )
-            .map_err(ContractError::from)
+        self.repayment += repayment;
     }
 
     fn annual_interest_rate(&self) -> Percent {
@@ -92,9 +82,78 @@ where
     type Error = ContractError;
 
     fn try_from(stub: LppLoanImpl<Lpn>) -> StdResult<Self, Self::Error> {
+        let mut batch = Batch::default();
+        if !stub.repayment.is_zero() {
+            batch.schedule_execute_wasm_no_reply(
+                &stub.lpp_ref.addr,
+                ExecuteMsg::RepayLoan(),
+                Some(stub.repayment),
+            )?;
+        }
         Ok(Self {
             lpp_ref: stub.lpp_ref,
-            batch: stub.batch,
+            batch,
         })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use cosmwasm_std::Timestamp;
+    use finance::{coin::Coin, duration::Duration, percent::Percent, test::currency::Usdc};
+    use platform::batch::Batch;
+
+    use crate::{
+        loan::Loan,
+        msg::ExecuteMsg,
+        stub::{loan::LppLoan, LppBatch, LppRef},
+    };
+
+    use super::LppLoanImpl;
+
+    #[test]
+    fn try_from_no_payments() {
+        let lpp_ref = LppRef::unchecked::<_, Usdc>("lpp_address");
+        let loan = LppLoanImpl::new(
+            lpp_ref.clone(),
+            Loan {
+                principal_due: Coin::<Usdc>::new(100),
+                annual_interest_rate: Percent::from_percent(12),
+                interest_paid: Timestamp::from_seconds(10),
+            },
+        );
+        let batch: LppBatch<LppRef> = loan.try_into().unwrap();
+        assert_eq!(lpp_ref, batch.lpp_ref);
+        assert_eq!(Batch::default(), batch.batch);
+    }
+
+    #[test]
+    fn try_from_a_few_payments() {
+        let lpp_ref = LppRef::unchecked::<_, Usdc>("lpp_address");
+        let start = Timestamp::from_seconds(0);
+        let mut loan = LppLoanImpl::new(
+            lpp_ref.clone(),
+            Loan {
+                principal_due: Coin::<Usdc>::new(100),
+                annual_interest_rate: Percent::from_percent(12),
+                interest_paid: start,
+            },
+        );
+        let payment1 = 8.into();
+        let payment2 = 4.into();
+        loan.repay(start + Duration::YEAR, payment1);
+        loan.repay(start + Duration::YEAR, payment2);
+        let batch: LppBatch<LppRef> = loan.try_into().unwrap();
+        assert_eq!(lpp_ref, batch.lpp_ref);
+        {
+            let mut exp = Batch::default();
+            exp.schedule_execute_wasm_no_reply(
+                lpp_ref.addr(),
+                ExecuteMsg::RepayLoan(),
+                Some(payment1 + payment2),
+            )
+            .unwrap();
+            assert_eq!(exp, batch.batch);
+        }
     }
 }

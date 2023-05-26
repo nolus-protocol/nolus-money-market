@@ -41,6 +41,7 @@ pub trait WithLpp {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct LppRef {
     addr: Addr,
     currency: SymbolOwned,
@@ -227,7 +228,7 @@ impl LppRef {
     }
 }
 
-#[cfg(feature = "testing")]
+#[cfg(any(test, feature = "testing"))]
 impl LppRef {
     pub fn unchecked<A, Lpn>(addr: A) -> Self
     where

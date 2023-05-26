@@ -171,7 +171,7 @@ where
         if !loan_payment.is_zero() {
             // In theory, zero loan payment may occur if two consecutive repayments are executed within the same time.
             // In practice, that means two repayment transactions of the same lease enter the same block.
-            self.lpp_loan.repay(by, loan_payment)?;
+            self.lpp_loan.repay(by, loan_payment);
         }
         Ok(receipt)
     }
@@ -994,9 +994,8 @@ mod tests {
             self.loan.interest_due(by)
         }
 
-        fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> LppResult<()> {
+        fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) {
             self.loan.repay(by, repayment);
-            Ok(())
         }
 
         fn annual_interest_rate(&self) -> Percent {
