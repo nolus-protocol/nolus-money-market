@@ -77,6 +77,10 @@ where
         self.start + self.length
     }
 
+    pub fn interest_rate(&self) -> F {
+        self.interest
+    }
+
     pub fn interest<P>(&self, principal: P) -> P
     where
         P: Fractionable<U> + TimeSliceable,
@@ -248,12 +252,15 @@ mod tests {
         exp_change: MyCoin,
     ) {
         let ip = ip(p);
+        assert_eq!(p, ip.interest_rate());
+
         let (ip_res, change) = ip.pay(principal, payment, by);
         let ip_exp = InterestPeriod::with_interest(p)
             .from(exp_start)
             .spanning(exp_length);
         assert_eq!(ip_exp, ip_res);
         assert_eq!(exp_change, change);
+        assert_eq!(p, ip_res.interest_rate());
     }
 
     fn ip<U, F>(fraction: F) -> InterestPeriod<U, F>

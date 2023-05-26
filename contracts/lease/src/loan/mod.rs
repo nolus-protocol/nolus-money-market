@@ -25,7 +25,6 @@ mod state;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub(crate) struct LoanDTO {
-    annual_margin_interest: Percent,
     lpp: LppRef,
     interest_payment_spec: InterestPaymentSpec,
     current_period: InterestPeriod<Units, Percent>,
@@ -34,14 +33,12 @@ pub(crate) struct LoanDTO {
 
 impl LoanDTO {
     fn new(
-        annual_margin_interest: Percent,
         lpp: LppRef,
         interest_payment_spec: InterestPaymentSpec,
         current_period: InterestPeriod<Units, Percent>,
         profit: ProfitRef,
     ) -> Self {
         Self {
-            annual_margin_interest,
             lpp,
             interest_payment_spec,
             current_period,
@@ -50,7 +47,7 @@ impl LoanDTO {
     }
 
     pub(crate) fn annual_margin_interest(&self) -> Percent {
-        self.annual_margin_interest
+        self.current_period.interest_rate()
     }
 
     pub(crate) fn lpp(&self) -> &LppRef {
@@ -63,11 +60,10 @@ impl LoanDTO {
 }
 
 pub struct Loan<Lpn, LppLoan> {
-    annual_margin_interest: Percent,
     lpn: PhantomData<Lpn>,
     lpp_loan: LppLoan,
     interest_payment_spec: InterestPaymentSpec,
-    current_period: InterestPeriod<Units, Percent>,
+    due_period: InterestPeriod<Units, Percent>,
 }
 
 impl<Lpn, LppLoan> Loan<Lpn, LppLoan>
@@ -81,31 +77,24 @@ where
         annual_margin_interest: Percent,
         interest_payment_spec: InterestPaymentSpec,
     ) -> Self {
-        let current_period = Self::due_period(
-            annual_margin_interest,
-            start,
-            interest_payment_spec.due_period(),
-        );
+        let due_period = InterestPeriod::with_interest(annual_margin_interest)
+            .from(start)
+            .spanning(interest_payment_spec.due_period());
         Self {
-            annual_margin_interest,
             lpn: PhantomData,
             lpp_loan,
             interest_payment_spec,
-            current_period,
+            due_period,
         }
     }
 
     pub(super) fn from_dto(dto: LoanDTO, lpp_loan: LppLoan) -> Self {
         {
-            let annual_margin_interest = dto.annual_margin_interest;
-            let interest_payment_spec = dto.interest_payment_spec;
-            let current_period = dto.current_period;
             Self {
-                annual_margin_interest,
                 lpn: PhantomData,
                 lpp_loan,
-                interest_payment_spec,
-                current_period,
+                interest_payment_spec: dto.interest_payment_spec,
+                due_period: dto.current_period,
             }
         }
     }
@@ -116,19 +105,13 @@ where
             batch: lpp_messages,
         } = self.lpp_loan.into();
 
-        let dto = LoanDTO::new(
-            self.annual_margin_interest,
-            lpp_ref,
-            self.interest_payment_spec,
-            self.current_period,
-            profit,
-        );
+        let dto = LoanDTO::new(lpp_ref, self.interest_payment_spec, self.due_period, profit);
 
         (dto, lpp_messages)
     }
 
     pub(crate) fn grace_period_end(&self) -> Timestamp {
-        self.current_period.till() + self.interest_payment_spec.grace_period()
+        self.due_period.till() + self.interest_payment_spec.grace_period()
     }
 
     /// Repay the loan interests and principal by the given timestamp.
@@ -186,20 +169,17 @@ where
         let principal_due = self.lpp_loan.principal_due();
 
         let margin_interest_overdue_period = if self.overdue_at(now) {
-            self.current_period
+            self.due_period
         } else {
-            self.due_period_from_with_length(
-                self.current_period.till() - self.interest_payment_spec.due_period(),
-                Duration::default(),
-            )
+            self.prev_due_period().spanning(Duration::default())
         };
 
         let margin_interest_due_period_start = self
-            .current_period
+            .due_period
             .start()
             .max(margin_interest_overdue_period.till());
         let margin_interest_due_period = self
-            .current_period
+            .due_period
             .from(margin_interest_due_period_start)
             .spanning(Duration::between(margin_interest_due_period_start, now));
         debug_assert_eq!(margin_interest_due_period.till(), now);
@@ -214,7 +194,7 @@ where
 
         State {
             annual_interest: self.lpp_loan.annual_interest_rate(),
-            annual_interest_margin: self.annual_margin_interest,
+            annual_interest_margin: self.due_period.interest_rate(),
             principal_due,
             previous_interest_due,
             current_interest_due,
@@ -241,9 +221,9 @@ where
             return Ok((Coin::default(), Coin::default()));
         }
 
-        debug_assert!(self.current_period.zero_length()); // no prev_margin due
+        debug_assert!(self.due_period.zero_length()); // no prev_margin due
 
-        let previous_interest_due = self.lpp_loan.interest_due(self.current_period.till());
+        let previous_interest_due = self.lpp_loan.interest_due(self.due_period.till());
         let previous_interest_paid = previous_interest_due.min(change);
         receipt.pay_previous_interest(previous_interest_paid);
 
@@ -305,8 +285,8 @@ where
     where
         Profit: ProfitTrait,
     {
-        let (period, change) = self.current_period.pay(principal_due, payment, by);
-        self.current_period = period;
+        let (period, change) = self.due_period.pay(principal_due, payment, by);
+        self.due_period = period;
 
         let paid = payment - change;
 
@@ -318,52 +298,38 @@ where
     }
 
     fn open_next_period(&mut self) {
-        debug_assert!(self.current_period.zero_length());
+        debug_assert!(self.due_period.zero_length());
 
-        self.current_period = self.due_period_from(self.current_period.till());
+        self.due_period = self.next_due_period();
     }
 
     fn overdue_at(&self, when: Timestamp) -> bool {
-        self.current_period.till() < when
+        self.due_period.till() < when
     }
 
-    fn due_period_from(&self, start: Timestamp) -> InterestPeriod<Units, Percent> {
-        Self::due_period(
-            self.annual_margin_interest,
-            start,
-            self.interest_payment_spec.due_period(),
-        )
+    fn next_due_period(&self) -> InterestPeriod<Units, Percent> {
+        self.due_period
+            .from(self.due_period.till())
+            .spanning(self.interest_payment_spec.due_period())
     }
 
-    fn due_period_from_with_length(
-        &self,
-        start: Timestamp,
-        period: Duration,
-    ) -> InterestPeriod<Units, Percent> {
-        Self::due_period(self.annual_margin_interest, start, period)
-    }
-
-    fn due_period(
-        margin_interest: Percent,
-        start: Timestamp,
-        period: Duration,
-    ) -> InterestPeriod<Units, Percent> {
-        InterestPeriod::with_interest(margin_interest)
-            .from(start)
-            .spanning(period)
+    fn prev_due_period(&self) -> InterestPeriod<Units, Percent> {
+        self.due_period
+            .from(self.due_period.till() - self.interest_payment_spec.due_period())
+            .spanning(self.interest_payment_spec.due_period())
     }
 
     fn debug_check_start_due_before(&self, when: Timestamp, when_descr: &str) {
         debug_assert!(
-            self.current_period.start() <= when,
+            self.due_period.start() <= when,
             "The current due period starting at {}s, should begin {} {}s",
-            self.current_period.start(),
+            self.due_period.start(),
             when_descr,
             when
         );
     }
     fn debug_check_before_next_due_end(&self, when: Timestamp) {
-        let next_due_end = self.current_period.till() + self.interest_payment_spec.due_period();
+        let next_due_end = self.due_period.till() + self.interest_payment_spec.due_period();
         debug_assert!(
             when <= next_due_end,
             "Payment is tried at {}s which is not before the next period ending at {}s",
