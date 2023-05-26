@@ -105,8 +105,11 @@ impl<'a> WithLeaseDeps for LeaseFactory<'a> {
             LiquidationStatus::NeedLiquidation(_) => unreachable!(),
         };
 
-        let mut dto = lease.into_dto(self.profit, self.time_alarms);
-        dto.batch = dto.batch.merge(alarms);
-        Ok(dto)
+        lease
+            .try_into_dto(self.profit, self.time_alarms)
+            .map(|mut dto| {
+                dto.batch = dto.batch.merge(alarms);
+                dto
+            })
     }
 }

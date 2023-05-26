@@ -88,17 +88,19 @@ impl WithLease for Repay {
             &self.price_alarms,
         )?;
 
-        let IntoDTOResult {
-            lease,
-            batch: messages,
-        } = lease.into_dto(self.profit, self.time_alarms);
-
-        Ok(RepayResult {
-            lease,
-            receipt: receipt.into(),
-            messages: messages.merge(profit.into()),
-            liquidation,
-        })
+        lease.try_into_dto(self.profit, self.time_alarms).map(
+            |IntoDTOResult {
+                 lease,
+                 batch: messages,
+             }| {
+                RepayResult {
+                    lease,
+                    receipt: receipt.into(),
+                    messages: messages.merge(profit.into()),
+                    liquidation,
+                }
+            },
+        )
     }
 }
 

@@ -12,7 +12,10 @@ use profit::stub::ProfitRef;
 use sdk::cosmwasm_std::{Addr, Timestamp};
 use timealarms::stub::TimeAlarmsRef;
 
-use crate::loan::Loan;
+use crate::{
+    error::{ContractError, ContractResult},
+    loan::Loan,
+};
 
 pub(super) use self::{
     dto::LeaseDTO,
@@ -93,23 +96,6 @@ where
         }
     }
 
-    pub(super) fn into_dto(self, profit: ProfitRef, time_alarms: TimeAlarmsRef) -> IntoDTOResult {
-        let (loan_dto, loan_batch) = self.loan.into_dto(profit);
-
-        IntoDTOResult {
-            lease: LeaseDTO::new(
-                self.addr,
-                self.customer,
-                self.amount.into(),
-                self.liability,
-                loan_dto,
-                time_alarms,
-                self.oracle.into(),
-            ),
-            batch: loan_batch,
-        }
-    }
-
     pub(crate) fn state(&self, now: Timestamp) -> State<Asset, Lpn> {
         let loan = self.loan.state(now);
         State {
@@ -126,6 +112,36 @@ where
     }
 }
 
+impl<Lpn, Asset, LppLoan, Oracle> Lease<Lpn, Asset, LppLoan, Oracle>
+where
+    Lpn: Currency + Serialize,
+    Asset: Currency + Serialize,
+    LppLoan: LppLoanTrait<Lpn>,
+    LppLoan::Error: Into<ContractError>,
+    Oracle: OracleTrait<Lpn>,
+{
+    pub(super) fn try_into_dto(
+        self,
+        profit: ProfitRef,
+        time_alarms: TimeAlarmsRef,
+    ) -> ContractResult<IntoDTOResult> {
+        let (loan_dto, loan_batch) = self.loan.try_into_dto(profit)?;
+
+        Ok(IntoDTOResult {
+            lease: LeaseDTO::new(
+                self.addr,
+                self.customer,
+                self.amount.into(),
+                self.liability,
+                loan_dto,
+                time_alarms,
+                self.oracle.into(),
+            ),
+            batch: loan_batch,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use serde::{Deserialize, Serialize};
@@ -136,6 +152,7 @@ mod tests {
         price::Price,
     };
     use lpp::{
+        error::{ContractError as LppError, Result as LppResult},
         msg::LoanResponse,
         stub::{loan::LppLoan, LppBatch, LppRef},
     };
@@ -205,15 +222,17 @@ mod tests {
         }
     }
 
-    impl<Lpn> From<LppLoanLocal<Lpn>> for LppBatch<LppRef>
+    impl<Lpn> TryFrom<LppLoanLocal<Lpn>> for LppBatch<LppRef>
     where
         Lpn: Currency,
     {
-        fn from(_: LppLoanLocal<Lpn>) -> Self {
-            Self {
+        type Error = LppError;
+
+        fn try_from(_: LppLoanLocal<Lpn>) -> LppResult<Self> {
+            Ok(Self {
                 lpp_ref: LppRef::unchecked::<_, TestLpn>(Addr::unchecked("test_lpp")),
                 batch: Batch::default(),
-            }
+            })
         }
     }
 

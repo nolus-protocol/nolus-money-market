@@ -14,7 +14,10 @@ use platform::batch::Batch;
 use profit::stub::{Profit as ProfitTrait, ProfitRef};
 use sdk::cosmwasm_std::Timestamp;
 
-use crate::{api::InterestPaymentSpec, error::ContractResult};
+use crate::{
+    api::InterestPaymentSpec,
+    error::{ContractError, ContractResult},
+};
 
 pub use self::state::State;
 pub(crate) use self::{liability::LiabilityStatus, repay::Receipt as RepayReceipt};
@@ -70,6 +73,27 @@ impl<Lpn, LppLoan> Loan<Lpn, LppLoan>
 where
     Lpn: Currency + Debug,
     LppLoan: LppLoanTrait<Lpn>,
+    LppLoan::Error: Into<ContractError>,
+{
+    pub(super) fn try_into_dto(self, profit: ProfitRef) -> ContractResult<(LoanDTO, Batch)> {
+        let LppBatch {
+            lpp_ref,
+            batch: lpp_messages,
+        } = self
+            .lpp_loan
+            .try_into()
+            .map_err(Into::<ContractError>::into)?;
+
+        let dto = LoanDTO::new(lpp_ref, self.interest_payment_spec, self.due_period, profit);
+
+        Ok((dto, lpp_messages))
+    }
+}
+
+impl<Lpn, LppLoan> Loan<Lpn, LppLoan>
+where
+    Lpn: Currency + Debug,
+    LppLoan: LppLoanTrait<Lpn>,
 {
     pub(super) fn new(
         start: Timestamp,
@@ -97,17 +121,6 @@ where
                 due_period: dto.current_period,
             }
         }
-    }
-
-    pub(super) fn into_dto(self, profit: ProfitRef) -> (LoanDTO, Batch) {
-        let LppBatch {
-            lpp_ref,
-            batch: lpp_messages,
-        } = self.lpp_loan.into();
-
-        let dto = LoanDTO::new(lpp_ref, self.interest_payment_spec, self.due_period, profit);
-
-        (dto, lpp_messages)
     }
 
     pub(crate) fn grace_period_end(&self) -> Timestamp {
@@ -991,8 +1004,9 @@ mod tests {
         }
     }
 
-    impl From<LppLoanLocal> for LppBatch<LppRef> {
-        fn from(_: LppLoanLocal) -> Self {
+    impl TryFrom<LppLoanLocal> for LppBatch<LppRef> {
+        type Error = LppError;
+        fn try_from(_: LppLoanLocal) -> LppResult<Self> {
             unreachable!()
         }
     }

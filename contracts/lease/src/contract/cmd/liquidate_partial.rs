@@ -75,16 +75,16 @@ impl WithLease for Liquidate {
             &self.price_alarms,
         )?;
 
-        let IntoDTOResult {
-            lease,
-            batch: messages,
-        } = lease.into_dto(self.profit, self.time_alarms);
-
-        Ok(Self::Output {
-            lease,
-            receipt: receipt.into(),
-            messages,
-            liquidation,
-        })
+        lease.try_into_dto(self.profit, self.time_alarms).map(
+            |IntoDTOResult {
+                 lease,
+                 batch: messages,
+             }| Self::Output {
+                lease,
+                receipt: receipt.into(),
+                messages,
+                liquidation,
+            },
+        )
     }
 }

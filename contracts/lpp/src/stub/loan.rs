@@ -15,7 +15,7 @@ use super::{LppBatch, LppRef};
 
 pub trait LppLoan<Lpn>
 where
-    Self: Into<LppBatch<LppRef>>,
+    Self: TryInto<LppBatch<LppRef>, Error = ContractError>,
     Lpn: Currency,
 {
     fn principal_due(&self) -> Coin<Lpn>;
@@ -85,14 +85,16 @@ where
     }
 }
 
-impl<Lpn> From<LppLoanImpl<Lpn>> for LppBatch<LppRef>
+impl<Lpn> TryFrom<LppLoanImpl<Lpn>> for LppBatch<LppRef>
 where
     Lpn: Currency,
 {
-    fn from(stub: LppLoanImpl<Lpn>) -> Self {
-        Self {
+    type Error = ContractError;
+
+    fn try_from(stub: LppLoanImpl<Lpn>) -> StdResult<Self, Self::Error> {
+        Ok(Self {
             lpp_ref: stub.lpp_ref,
             batch: stub.batch,
-        }
+        })
     }
 }

@@ -66,15 +66,15 @@ impl WithLease for Liquidate {
             return Err(ContractError::InsufficientLiquidation()); //issue #92
         }
 
-        let IntoDTOResult {
-            lease,
-            batch: messages,
-        } = lease.into_dto(self.profit, self.time_alarms);
-
-        Ok(Self::Output {
-            lease,
-            receipt: receipt.into(),
-            messages,
-        })
+        lease.try_into_dto(self.profit, self.time_alarms).map(
+            |IntoDTOResult {
+                 lease,
+                 batch: messages,
+             }| Self::Output {
+                lease,
+                receipt: receipt.into(),
+                messages,
+            },
+        )
     }
 }
