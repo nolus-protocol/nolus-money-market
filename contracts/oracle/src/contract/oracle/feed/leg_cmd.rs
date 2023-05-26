@@ -10,7 +10,7 @@ use crate::ContractError;
 
 use super::price_querier::PriceQuerier;
 
-pub struct LegCmd<OracleBase, Querier>
+pub(crate) struct LegCmd<OracleBase, Querier>
 where
     OracleBase: Currency,
     Querier: PriceQuerier,

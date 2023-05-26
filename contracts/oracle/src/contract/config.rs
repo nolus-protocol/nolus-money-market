@@ -19,12 +19,14 @@ mod tests {
         cosmwasm_ext::Response,
         cosmwasm_std::{from_binary, testing::mock_env},
     };
-    use swap::SwapTarget;
 
     use crate::{
         contract::{query, sudo},
-        msg::{ConfigResponse, QueryMsg, SudoMsg},
-        state::{config::Config, supported_pairs::SwapLeg},
+        msg::{ConfigResponse, QueryMsg, SudoMsg, SupportedCurrencyPairsResponse},
+        state::{
+            config::Config,
+            supported_pairs::{SwapLegWithIbc, SwapTargetWithIbc, TickerAndIbc},
+        },
         swap_tree,
         tests::{dummy_default_instantiate_msg, dummy_instantiate_msg, setup_test},
     };
@@ -97,22 +99,22 @@ mod tests {
             QueryMsg::SupportedCurrencyPairs {},
         )
         .unwrap();
-        let mut value: Vec<SwapLeg> = from_binary(&res).unwrap();
+        let mut value: SupportedCurrencyPairsResponse = from_binary(&res).unwrap();
         value.sort_by(|a, b| a.from.cmp(&b.from));
 
         let mut expected = vec![
-            SwapLeg {
-                from: Cro::TICKER.into(),
-                to: SwapTarget {
+            SwapLegWithIbc {
+                from: TickerAndIbc::new::<Cro>(),
+                to: SwapTargetWithIbc {
                     pool_id: 1,
-                    target: Usdc::TICKER.into(),
+                    target: TickerAndIbc::new::<Usdc>(),
                 },
             },
-            SwapLeg {
-                from: Osmo::TICKER.into(),
-                to: SwapTarget {
+            SwapLegWithIbc {
+                from: TickerAndIbc::new::<Osmo>(),
+                to: SwapTargetWithIbc {
                     pool_id: 2,
-                    target: Usdc::TICKER.into(),
+                    target: TickerAndIbc::new::<Usdc>(),
                 },
             },
         ];

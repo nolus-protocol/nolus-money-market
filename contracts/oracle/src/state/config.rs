@@ -13,8 +13,8 @@ use crate::ContractError;
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug, Clone))]
 pub struct Config {
-    pub base_asset: SymbolOwned,
-    pub price_config: PriceConfig,
+    pub(crate) base_asset: SymbolOwned,
+    pub(crate) price_config: PriceConfig,
 }
 
 impl Config {
@@ -44,5 +44,13 @@ impl Config {
             Ok(c)
         })?;
         Ok(())
+    }
+
+    pub fn base_asset(&self) -> &str {
+        &self.base_asset
+    }
+
+    pub fn price_config(&self) -> &PriceConfig {
+        &self.price_config
     }
 }

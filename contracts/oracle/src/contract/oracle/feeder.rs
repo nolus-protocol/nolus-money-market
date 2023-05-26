@@ -8,7 +8,7 @@ use sdk::cosmwasm_std::{Addr, DepsMut, StdResult, Storage};
 use crate::{result::ContractResult, state::config::Config, ContractError};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
-pub struct Feeders {
+pub(crate) struct Feeders {
     config: Config,
 }
 

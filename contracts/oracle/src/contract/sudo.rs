@@ -11,7 +11,7 @@ use crate::{
     state::{config::Config, supported_pairs::SupportedPairs},
 };
 
-pub struct SudoWithOracleBase<'a> {
+pub(crate) struct SudoWithOracleBase<'a> {
     deps: DepsMut<'a>,
     msg: SudoMsg,
 }

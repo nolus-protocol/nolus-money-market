@@ -19,7 +19,7 @@ use crate::{
 
 use super::oracle::{feed::Feeds, feeder::Feeders};
 
-pub struct ExecWithOracleBase<'a> {
+pub(crate) struct ExecWithOracleBase<'a> {
     deps: DepsMut<'a>,
     env: Env,
     msg: ExecuteMsg,

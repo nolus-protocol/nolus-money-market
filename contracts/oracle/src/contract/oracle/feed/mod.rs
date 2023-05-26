@@ -22,7 +22,7 @@ mod price_querier;
 
 pub type AllPricesIterItem<OracleBase> = Result<BasePrice<SwapGroup, OracleBase>, ContractError>;
 
-pub struct Feeds<OracleBase> {
+pub(crate) struct Feeds<OracleBase> {
     feeds: PriceFeeds<'static>,
     _base: PhantomData<OracleBase>,
 }

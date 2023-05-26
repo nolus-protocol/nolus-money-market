@@ -41,15 +41,15 @@ impl MarketOracleWrapper {
     {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {
-            config: Config {
-                base_asset: BaseC::TICKER.into(),
-                price_config: PriceConfig::new(
+            config: Config::new(
+                BaseC::TICKER.into(),
+                PriceConfig::new(
                     Percent::from_percent(1),
                     Duration::from_secs(5),
                     12,
                     Percent::from_percent(75),
                 ),
-            },
+            ),
             swap_tree: oracle::swap_tree!((1, Osmo::TICKER), (3, Cro::TICKER), (13, Atom::TICKER)),
         };
 

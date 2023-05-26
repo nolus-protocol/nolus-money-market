@@ -6,12 +6,13 @@ use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
 
 use crate::{
     contract::oracle::Oracle,
-    msg::{PricesResponse, QueryMsg, SwapTreeResponse},
+    error::ContractError,
+    msg::{PricesResponse, QueryMsg, SupportedCurrencyPairsResponse, SwapTreeResponse},
+    result::ContractResult,
     state::{config::Config, supported_pairs::SupportedPairs},
-    ContractError,
 };
 
-pub struct QueryWithOracleBase<'a> {
+pub(crate) struct QueryWithOracleBase<'a> {
     deps: Deps<'a>,
     env: Env,
     msg: QueryMsg,
@@ -35,11 +36,14 @@ impl<'a> AnyVisitor for QueryWithOracleBase<'a> {
         OracleBase: 'static + Currency + DeserializeOwned + Serialize,
     {
         match self.msg {
-            QueryMsg::SupportedCurrencyPairs {} => to_binary(
-                &SupportedPairs::<OracleBase>::load(self.deps.storage)?
-                    .swap_pairs_df()
-                    .collect::<Vec<_>>(),
-            ),
+            QueryMsg::SupportedCurrencyPairs {} => {
+                /* Specified type to enforce proper result */
+                to_binary::<SupportedCurrencyPairsResponse>(
+                    &SupportedPairs::<OracleBase>::load(self.deps.storage)?
+                        .supported_pairs_with_dex_symbol()
+                        .collect::<ContractResult<Vec<_>>>()?,
+                )
+            }
             QueryMsg::Price { currency } => to_binary(
                 &Oracle::<'_, _, OracleBase>::load(self.deps.storage)?
                     .try_query_price(self.env.block.time, &currency)?,

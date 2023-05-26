@@ -1,5 +1,5 @@
 use oracle::{
-    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg},
+    msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, QueryMsg, SupportedCurrencyPairsResponse},
     state::config::Config,
 };
 use sdk::cosmwasm_schema::{export_schema, schema_for};
@@ -13,5 +13,6 @@ fn main() {
     export_schema(&schema_for!(QueryMsg), &out_dir);
     export_schema(&schema_for!(Config), &out_dir);
     export_schema(&schema_for!(ConfigResponse), &out_dir);
+    export_schema(&schema_for!(SupportedCurrencyPairsResponse), &out_dir);
     export_schema(&schema_for!(SemVer), &out_dir);
 }

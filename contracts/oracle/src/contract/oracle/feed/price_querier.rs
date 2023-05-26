@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{Storage, Timestamp};
 
 use crate::ContractError;
 
-pub struct FedPrices<'a> {
+pub(crate) struct FedPrices<'a> {
     storage: &'a dyn Storage,
     feeds: &'a PriceFeeds<'static>,
     at: Timestamp,

@@ -29,9 +29,9 @@ use self::{
 
 mod alarms;
 mod config;
-pub mod exec;
+pub(crate) mod exec;
 mod oracle;
-pub mod query;
+pub(crate) mod query;
 mod sudo;
 
 // version info for migration info
@@ -154,12 +154,14 @@ mod tests {
     use currency::{lease::Osmo, lpn::Usdc};
     use finance::{currency::Currency, duration::Duration, percent::Percent};
     use sdk::cosmwasm_std::{from_binary, testing::mock_env};
-    use swap::SwapTarget;
 
     use crate::{
         contract::query,
-        msg::{ConfigResponse, QueryMsg},
-        state::{config::Config, supported_pairs::SwapLeg},
+        msg::{ConfigResponse, QueryMsg, SupportedCurrencyPairsResponse},
+        state::{
+            config::Config,
+            supported_pairs::{SwapLegWithIbc, SwapTargetWithIbc, TickerAndIbc},
+        },
         swap_tree,
         tests::{dummy_instantiate_msg, setup_test},
     };
@@ -198,13 +200,13 @@ mod tests {
             QueryMsg::SupportedCurrencyPairs {},
         )
         .unwrap();
-        let value: Vec<SwapLeg> = from_binary(&res).unwrap();
+        let value: SupportedCurrencyPairsResponse = from_binary(&res).unwrap();
 
-        let expected = vec![SwapLeg {
-            from: Osmo::TICKER.into(),
-            to: SwapTarget {
+        let expected = vec![SwapLegWithIbc {
+            from: TickerAndIbc::new::<Osmo>(),
+            to: SwapTargetWithIbc {
                 pool_id: 1,
-                target: Usdc::TICKER.into(),
+                target: TickerAndIbc::new::<Usdc>(),
             },
         }];
 

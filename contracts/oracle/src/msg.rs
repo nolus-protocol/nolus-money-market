@@ -11,7 +11,7 @@ use tree::HumanReadableTree;
 
 use crate::{
     alarms::Alarm,
-    state::{config::Config, supported_pairs::SwapLeg},
+    state::{config::Config, supported_pairs::SwapLegWithIbc},
 };
 
 pub type AlarmsCount = platform::dispatcher::AlarmsCount;
@@ -83,7 +83,7 @@ pub enum QueryMsg {
     AlarmsStatus {},
 }
 
-pub type SupportedCurrencyPairsResponse = Vec<SwapLeg>;
+pub type SupportedCurrencyPairsResponse = Vec<SwapLegWithIbc>;
 
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, PartialEq, Eq, JsonSchema)]

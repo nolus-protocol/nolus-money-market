@@ -9,8 +9,9 @@ use finance::currency::{
 use sdk::{
     cosmwasm_std::{StdError, Storage},
     cw_storage_plus::Item,
+    schemars::{self, JsonSchema},
 };
-use swap::SwapTarget;
+use swap::{PoolId, SwapTarget};
 use tree::{FindBy as _, NodeRef};
 
 use crate::{
@@ -45,10 +46,47 @@ impl<'de> Deserialize<'de> for SwapLeg {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Serialize, JsonSchema)]
+#[cfg_attr(test, derive(Deserialize))]
+pub struct TickerAndIbc {
+    pub ticker: SymbolOwned,
+    pub ibc: SymbolOwned,
+}
+
+impl TickerAndIbc {
+    pub fn new<C>() -> Self
+    where
+        C: Currency,
+    {
+        Self {
+            ticker: C::TICKER.into(),
+            ibc: C::DEX_SYMBOL.into(),
+        }
+    }
+
+    pub fn new_with<C>(ticker: SymbolOwned, ibc: SymbolOwned) -> Self {
+        Self { ticker, ibc }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, JsonSchema)]
+#[cfg_attr(test, derive(Deserialize))]
+pub struct SwapTargetWithIbc {
+    pub pool_id: PoolId,
+    pub target: TickerAndIbc,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, JsonSchema)]
+#[cfg_attr(test, derive(Deserialize))]
+pub struct SwapLegWithIbc {
+    pub from: TickerAndIbc,
+    pub to: SwapTargetWithIbc,
+}
+
 type Tree = tree::Tree<SwapTarget>;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
-pub struct SupportedPairs<B>
+pub(crate) struct SupportedPairs<B>
 where
     B: Currency,
 {
@@ -174,26 +212,6 @@ where
         Ok(path)
     }
 
-    pub fn load_affected(&self, pair: CurrencyPair<'_>) -> Result<Vec<SymbolOwned>, ContractError> {
-        if let Some(node) = self.tree.find_by(|target| target.target == pair.0) {
-            if node
-                .parent()
-                .map_or(false, |parent| parent.value().target == pair.1)
-            {
-                return Ok(node
-                    .to_subtree()
-                    .iter()
-                    .map(|node| node.value().target.clone())
-                    .collect());
-            }
-        }
-
-        Err(ContractError::InvalidDenomPair(
-            ToOwned::to_owned(pair.0),
-            ToOwned::to_owned(pair.1),
-        ))
-    }
-
     pub fn swap_pairs_df(&self) -> impl Iterator<Item = SwapLeg> + '_ {
         self.tree
             .iter()
@@ -215,6 +233,44 @@ where
             })
     }
 
+    pub fn supported_pairs_with_dex_symbol(
+        &self,
+    ) -> impl Iterator<Item = ContractResult<SwapLegWithIbc>> + '_ {
+        self.tree
+            .iter()
+            .filter_map(|node: NodeRef<'_, SwapTarget>| {
+                let SwapTarget {
+                    pool_id: _,
+                    target: parent,
+                } = node.parent()?.value();
+
+                let &SwapTarget {
+                    pool_id,
+                    target: ref child,
+                } = node.value();
+
+                Some(
+                    visit_any_on_ticker::<PaymentGroup, ToTickerAndIbc>(child, ToTickerAndIbc)
+                        .and_then(|child: TickerAndIbc| {
+                            visit_any_on_ticker::<PaymentGroup, ToTickerAndIbc>(
+                                parent,
+                                ToTickerAndIbc,
+                            )
+                            .map(|parent: TickerAndIbc| (child, parent))
+                        })
+                        .map(
+                            |(child, parent): (TickerAndIbc, TickerAndIbc)| SwapLegWithIbc {
+                                from: child,
+                                to: SwapTargetWithIbc {
+                                    pool_id,
+                                    target: parent,
+                                },
+                            },
+                        ),
+                )
+            })
+    }
+
     pub fn query_swap_tree(self) -> Tree {
         self.tree
     }
@@ -230,6 +286,24 @@ where
             .find_by(|target| target.target == query)
             .map(|node| std::iter::once(node).chain(node.parents_iter()))
             .ok_or_else(|| error::unsupported_currency::<B>(query))
+    }
+}
+
+struct ToTickerAndIbc;
+
+impl AnyVisitor for ToTickerAndIbc {
+    type Output = TickerAndIbc;
+
+    type Error = ContractError;
+
+    fn on<C>(self) -> AnyVisitorResult<Self>
+    where
+        C: Currency + Serialize + DeserializeOwned,
+    {
+        Ok(TickerAndIbc {
+            ticker: C::TICKER.into(),
+            ibc: C::DEX_SYMBOL.into(),
+        })
     }
 }
 
@@ -387,24 +461,6 @@ mod tests {
                 target: "token4".into(),
             },
         ];
-        assert_eq!(resp, expect);
-    }
-
-    #[test]
-    fn test_load_affected() {
-        let tree = SupportedPairs::<Usdc>::new(test_case().into_tree()).unwrap();
-
-        let mut resp = tree.load_affected(("token2", TheCurrency::TICKER)).unwrap();
-        resp.sort();
-
-        let mut expect = vec![
-            "token1".to_string(),
-            "token2".to_string(),
-            "token5".to_string(),
-            "token6".to_string(),
-        ];
-        expect.sort();
-
         assert_eq!(resp, expect);
     }
 
