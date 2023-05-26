@@ -982,7 +982,8 @@ mod tests {
         }
 
         fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> LppResult<()> {
-            self.loan.repay(by, repayment).map(|_| ())
+            self.loan.repay(by, repayment);
+            Ok(())
         }
 
         fn annual_interest_rate(&self) -> Percent {

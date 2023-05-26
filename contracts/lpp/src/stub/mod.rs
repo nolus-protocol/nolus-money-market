@@ -25,7 +25,6 @@ pub mod loan;
 
 pub trait Lpp<Lpn>
 where
-    Self: Into<LppBatch<LppRef>>,
     Lpn: Currency,
 {
     fn lpp_balance(&self) -> Result<LppBalanceResponse<Lpn>>;
@@ -269,13 +268,4 @@ where
 pub struct LppBatch<Ref> {
     pub lpp_ref: Ref,
     pub batch: Batch,
-}
-
-impl<'a, C> From<LppStub<'a, C>> for LppBatch<LppRef> {
-    fn from(stub: LppStub<'a, C>) -> Self {
-        Self {
-            lpp_ref: stub.lpp_ref,
-            batch: Batch::default(),
-        }
-    }
 }

@@ -70,7 +70,7 @@ where
     }
 
     fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> Result<()> {
-        self.loan.repay(by, repayment)?;
+        self.loan.repay(by, repayment);
         self.batch
             .schedule_execute_wasm_no_reply(
                 &self.lpp_ref.addr,

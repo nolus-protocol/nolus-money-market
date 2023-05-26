@@ -51,7 +51,7 @@ where
         interest_period.interest(self.principal_due)
     }
 
-    pub fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> Result<RepayShares<Lpn>> {
+    pub fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
         let (due_period, interest_change) =
             InterestPeriod::with_interest(self.annual_interest_rate)
                 .from(self.interest_paid)
@@ -65,11 +65,11 @@ where
         self.principal_due -= principal_paid;
         self.interest_paid = due_period.start();
 
-        Ok(RepayShares {
+        RepayShares {
             interest: interest_paid,
             principal: principal_paid,
             excess,
-        })
+        }
     }
 }
 
@@ -172,7 +172,7 @@ mod test {
             assert_eq!(interest, 100u128.into());
 
             // partial repay
-            let payment = loan.repay(time, 600u128.into()).expect("should repay");
+            let payment = loan.repay(time, 600u128.into());
             assert_eq!(payment.interest, 100u128.into());
             assert_eq!(payment.principal, 500u128.into());
             assert_eq!(payment.excess, 0u128.into());
@@ -184,7 +184,7 @@ mod test {
                 Loan::load(deps.as_ref().storage, addr.clone()).expect("should load loan");
 
             // repay with excess, should close the loan
-            let payment = loan.repay(time, 600u128.into()).expect("should repay");
+            let payment = loan.repay(time, 600u128.into());
             assert_eq!(payment.interest, 0u128.into());
             assert_eq!(payment.principal, 500u128.into());
             assert_eq!(payment.excess, 100u128.into());

@@ -220,7 +220,7 @@ where
     ) -> Result<Coin<LPN>> {
         let mut loan = Loan::load(deps.storage, lease_addr.clone())?;
         let loan_annual_interest_rate = loan.annual_interest_rate;
-        let payment = loan.repay(env.block.time, repay_amount)?;
+        let payment = loan.repay(env.block.time, repay_amount);
         Loan::save(deps.storage, lease_addr, loan)?;
 
         self.total

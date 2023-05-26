@@ -12,10 +12,9 @@ use sdk::cosmwasm_std::{Addr, QuerierWrapper, Reply};
 use crate::{
     error::{ContractError, Result},
     msg::{ExecuteMsg, LoanResponse, QueryMsg, QueryQuoteResponse},
-    stub::LppBatch,
 };
 
-use super::LppRef;
+use super::{LppBatch, LppRef};
 
 pub trait LppLender<Lpn>
 where
