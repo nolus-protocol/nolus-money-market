@@ -19,10 +19,10 @@ define_symbol! {
             dex: "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
         },
         alt: {
-            /// full ibc route: transfer/channel-0/transfer/channel-0/uatom
-            bank: "ibc/6CDD4663F2F09CD62285E2D45891FC149A3568E316CE3EBBE201A71A78A69388",
-            /// full ibc route: transfer/channel-0/uatom
-            dex: "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+            /// full ibc route: transfer/channel-0/transfer/channel-12/uatom
+            bank: "ibc/ECFDE61B64BB920E087E7448C4C3FE356B7BD13A1C2153119E98816C964FE196",
+            /// full ibc route: transfer/channel-12/uatom
+            dex: "ibc/A8C2D23A1E6F95DA4E48BA349667E322BD7A6C996D8A4AAE8BA72E190F3D1477",
         },
     }
 }
