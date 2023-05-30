@@ -10,7 +10,10 @@ use finance::{
     percent::{Percent, Units},
     zero::Zero,
 };
-use lpp::stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef};
+use lpp::{
+    loan::RepayShares,
+    stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef},
+};
 use platform::batch::Batch;
 use profit::stub::{Profit as ProfitTrait, ProfitRef};
 use sdk::cosmwasm_std::Timestamp;
@@ -282,7 +285,16 @@ where
         let due = self.lpp_loan.interest_due(by);
         let paid = due.min(payment);
         let change = payment - paid;
-        self.lpp_loan.repay(by, paid);
+
+        let repay_shares = self.lpp_loan.repay(by, paid);
+        debug_assert_eq!(
+            RepayShares {
+                interest: paid,
+                ..Default::default()
+            },
+            repay_shares
+        );
+
         if paid == due && by == self.due_period.till() {
             self.open_next_period();
         }
@@ -292,8 +304,14 @@ where
     fn repay_principal(&mut self, payment: Coin<Lpn>, by: Timestamp) -> (Coin<Lpn>, Coin<Lpn>) {
         self.debug_check_late_payment(by, "principal");
         let paid = payment.min(self.lpp_loan.principal_due());
-        self.lpp_loan.repay(by, paid);
-        //TODO add asserts on the 'repay' result
+        let repay_shares = self.lpp_loan.repay(by, paid);
+        debug_assert_eq!(
+            RepayShares {
+                principal: paid,
+                ..Default::default()
+            },
+            repay_shares
+        );
         (paid, payment - paid)
     }
 
@@ -385,6 +403,7 @@ mod tests {
     use finance::{coin::Coin, duration::Duration, percent::Percent};
     use lpp::{
         error::ContractError as LppError,
+        loan::RepayShares,
         msg::LoanResponse,
         stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef},
     };
@@ -1020,8 +1039,8 @@ mod tests {
             self.loan.interest_due(by)
         }
 
-        fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) {
-            self.loan.repay(by, repayment);
+        fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
+            self.loan.repay(by, repayment)
         }
 
         fn annual_interest_rate(&self) -> Percent {

@@ -153,6 +153,7 @@ mod tests {
     };
     use lpp::{
         error::{ContractError as LppError, Result as LppResult},
+        loan::RepayShares,
         msg::LoanResponse,
         stub::{loan::LppLoan, LppBatch, LppRef},
     };
@@ -212,8 +213,8 @@ mod tests {
             self.loan.interest_due(by)
         }
 
-        fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) {
-            self.loan.repay(by, repayment);
+        fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
+            self.loan.repay(by, repayment)
         }
 
         fn annual_interest_rate(&self) -> Percent {

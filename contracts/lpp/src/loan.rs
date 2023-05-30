@@ -26,7 +26,7 @@ where
     pub interest_paid: Timestamp,
 }
 
-#[cfg_attr(test, derive(Debug, Eq, PartialEq))]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct RepayShares<LPN>
 where
     LPN: Currency,

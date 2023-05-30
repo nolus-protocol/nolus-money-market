@@ -5,7 +5,11 @@ use finance::{coin::Coin, currency::Currency, percent::Percent};
 use platform::batch::Batch;
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{error::ContractError, loan::Loan, msg::ExecuteMsg};
+use crate::{
+    error::ContractError,
+    loan::{Loan, RepayShares},
+    msg::ExecuteMsg,
+};
 
 use super::{LppBatch, LppRef};
 
@@ -21,7 +25,7 @@ where
     /// First, the provided 'repayment' is used to repay the due interest,
     /// and then, if there is any remaining amount, to repay the principal.
     /// Amount 0 is acceptable although does not change the loan.
-    fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>);
+    fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn>;
     fn annual_interest_rate(&self) -> Percent;
 }
 
@@ -70,9 +74,9 @@ where
         self.loan.interest_due(by)
     }
 
-    fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) {
-        self.loan.repay(by, repayment);
+    fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
         self.repayment += repayment;
+        self.loan.repay(by, repayment)
     }
 
     fn annual_interest_rate(&self) -> Percent {
