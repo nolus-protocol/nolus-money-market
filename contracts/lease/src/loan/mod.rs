@@ -160,6 +160,7 @@ where
         };
         debug_assert_eq!(payment, change + receipt.total());
 
+        let change = self.repay_principal(change, &mut receipt, by);
         receipt.keep_change(change);
         debug_assert_eq!(payment, receipt.total());
         Ok(receipt)
@@ -280,8 +281,6 @@ where
             self.lpp_loan.repay(by, curr_interest_paid);
             receipt.pay_current_interest(curr_interest_paid);
         }
-
-        change = self.repay_principal(change, receipt, by);
 
         Ok(change)
     }
