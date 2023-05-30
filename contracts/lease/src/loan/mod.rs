@@ -146,7 +146,8 @@ where
         let mut receipt = RepayReceipt::default();
 
         let change = if self.overdue_at(by) {
-            let period_receipt = self.repay_previous_period(payment, by, profit);
+            let period_receipt =
+                self.repay_previous_period(payment, self.due_period.till(), profit);
             receipt.pay_previous_margin(period_receipt.margin_paid);
             receipt.pay_previous_interest(period_receipt.interest_paid);
             period_receipt.change
@@ -175,7 +176,7 @@ where
     }
 
     pub(crate) fn state(&self, now: Timestamp) -> State<Lpn> {
-        self.debug_check_start_due_before(now, "in the past of");
+        self.debug_check_start_due_before(now, "in the past. Now is ");
 
         let principal_due = self.lpp_loan.principal_due();
 
@@ -223,43 +224,10 @@ where
     where
         Profit: ProfitTrait,
     {
-        let (prev_margin_paid, mut change) =
+        let (prev_margin_paid, change) =
             self.repay_margin_interest(self.lpp_loan.principal_due(), by, payment, profit);
-        let mut res = RepayPeriodReceipt::with_margin(prev_margin_paid);
+        let res = RepayPeriodReceipt::with_margin(prev_margin_paid);
 
-        if change.is_zero() {
-            return res;
-        }
-        debug_assert_eq!(self.due_period.start(), by.min(self.due_period.till()));
-
-        {
-            let previous_interest_due = self.lpp_loan.interest_due(self.due_period.till());
-            let previous_interest_paid = previous_interest_due.min(change);
-            change -= previous_interest_paid;
-
-            self.lpp_loan
-                .repay(self.due_period.till(), previous_interest_paid);
-
-            if previous_interest_paid == previous_interest_due {
-                self.open_next_period();
-            }
-            res = res.and_interest(previous_interest_paid, change);
-        }
-        res
-    }
-
-    fn repay_current_period<Profit>(
-        &mut self,
-        payment: Coin<Lpn>,
-        by: Timestamp,
-        profit: &mut Profit,
-    ) -> RepayPeriodReceipt<Lpn>
-    where
-        Profit: ProfitTrait,
-    {
-        let (curr_margin_paid, mut change) =
-            self.repay_margin_interest(self.lpp_loan.principal_due(), by, payment, profit);
-        let mut res = RepayPeriodReceipt::with_margin(curr_margin_paid);
         if change.is_zero() {
             return res;
         }
@@ -274,18 +242,39 @@ where
             "some margin left"
         );
 
-        {
-            let curr_interest_due = self.lpp_loan.interest_due(by);
-            let curr_interest_paid = change.min(curr_interest_due);
+        // In rare cases there still might be some very tiny due period for which the calculated
+        // due amount is zero. Therefore, we should pay the loan interest up to that time
+        // to avoid breaking the invariant 'loan_interest.paid_by_time <= margin_interest.paid_by_time'.
+        self.repay_loan_interest(change, self.due_period.start(), res)
+    }
 
-            change -= curr_interest_paid;
+    fn repay_current_period<Profit>(
+        &mut self,
+        payment: Coin<Lpn>,
+        by: Timestamp,
+        profit: &mut Profit,
+    ) -> RepayPeriodReceipt<Lpn>
+    where
+        Profit: ProfitTrait,
+    {
+        let (curr_margin_paid, change) =
+            self.repay_margin_interest(self.lpp_loan.principal_due(), by, payment, profit);
+        let res = RepayPeriodReceipt::with_margin(curr_margin_paid);
 
-            // In theory, zero loan payment may occur if two consecutive repayments are executed within the same time.
-            // In practice, that means two repayment transactions of the same lease enter the same block.
-            self.lpp_loan.repay(by, curr_interest_paid);
-            res = res.and_interest(curr_interest_paid, change);
+        if change.is_zero() {
+            return res;
         }
-        res
+        debug_assert_eq!(
+            Coin::ZERO,
+            self.due_period
+                .spanning(Duration::between(
+                    self.due_period.start(),
+                    by.min(self.due_period.till())
+                ))
+                .interest(self.lpp_loan.principal_due()),
+            "some margin left"
+        );
+        self.repay_loan_interest(change, by, res)
     }
 
     fn repay_margin_interest<Profit>(
@@ -308,6 +297,28 @@ where
         }
 
         (paid, change)
+    }
+
+    fn repay_loan_interest(
+        &mut self,
+        payment: Coin<Lpn>,
+        by: Timestamp,
+        receipt: RepayPeriodReceipt<Lpn>,
+    ) -> RepayPeriodReceipt<Lpn> {
+        debug_assert!(
+            !self.overdue_at(by),
+            "An attempt to repay loan interest at {1} that is past the due period end time {0}!",
+            self.due_period.till(),
+            by
+        );
+        let due = self.lpp_loan.interest_due(by);
+        let paid = due.min(payment);
+        let change = payment - paid;
+        self.lpp_loan.repay(by, paid);
+        if paid == due && by == self.due_period.till() {
+            self.open_next_period();
+        }
+        receipt.and_interest(paid, change)
     }
 
     fn repay_principal(&mut self, payment: Coin<Lpn>, by: Timestamp) -> (Coin<Lpn>, Coin<Lpn>) {
@@ -348,6 +359,7 @@ where
             when
         );
     }
+
     fn debug_check_before_next_due_end(&self, when: Timestamp) {
         let next_due_end = self.due_period.till() + self.interest_payment_spec.due_period();
         debug_assert!(
