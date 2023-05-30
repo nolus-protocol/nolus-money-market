@@ -8,6 +8,7 @@ use finance::{
     duration::Duration,
     interest::InterestPeriod,
     percent::{Percent, Units},
+    zero::Zero,
 };
 use lpp::stub::{loan::LppLoan as LppLoanTrait, LppBatch, LppRef};
 use platform::batch::Batch;
@@ -221,8 +222,8 @@ where
         if change.is_zero() {
             return Ok(Coin::default());
         }
-        debug_assert!(self.due_period.zero_length()); // no prev_margin due
-        
+        debug_assert_eq!(self.due_period.start(), by.min(self.due_period.till()));
+
         {
             let previous_interest_due = self.lpp_loan.interest_due(self.due_period.till());
             let previous_interest_paid = previous_interest_due.min(change);
@@ -252,8 +253,21 @@ where
     {
         let (curr_margin_paid, mut change) =
             self.repay_margin_interest(self.lpp_loan.principal_due(), by, payment, profit)?;
-
         receipt.pay_current_margin(curr_margin_paid);
+
+        if change.is_zero() {
+            return Ok(Coin::default());
+        }
+        debug_assert_eq!(
+            Coin::ZERO,
+            self.due_period
+                .spanning(Duration::between(
+                    self.due_period.start(),
+                    by.min(self.due_period.till())
+                ))
+                .interest(self.lpp_loan.principal_due()),
+            "some margin left"
+        );
 
         {
             let curr_interest_due = self.lpp_loan.interest_due(by);
@@ -267,16 +281,23 @@ where
             receipt.pay_current_interest(curr_interest_paid);
         }
 
-        {
-            let principal_paid = change.min(self.lpp_loan.principal_due());
-
-            change -= principal_paid;
-
-            receipt.pay_principal(self.lpp_loan.principal_due(), principal_paid);
-            self.lpp_loan.repay(by, principal_paid);
-        }
+        change = self.repay_principal(change, receipt, by);
 
         Ok(change)
+    }
+
+    fn repay_principal(
+        &mut self,
+        payment: Coin<Lpn>,
+        receipt: &mut RepayReceipt<Lpn>,
+        by: Timestamp,
+    ) -> Coin<Lpn> {
+        let due = self.lpp_loan.principal_due();
+        let paid = payment.min(due);
+        let change = payment - paid;
+        receipt.pay_principal(due, paid);
+        self.lpp_loan.repay(by, paid);
+        change
     }
 
     fn repay_margin_interest<Profit>(
