@@ -16,6 +16,11 @@ where
 {
     fn principal_due(&self) -> Coin<Lpn>;
     fn interest_due(&self, by: Timestamp) -> Coin<Lpn>;
+    /// Repay the due interest and principal by the specified time
+    ///
+    /// First, the provided 'repayment' is used to repay the due interest,
+    /// and then, if there is any remaining amount, to repay the principal.
+    /// Amount 0 is acceptable although does not change the loan.
     fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>);
     fn annual_interest_rate(&self) -> Percent;
 }
@@ -100,7 +105,9 @@ where
 #[cfg(test)]
 mod test {
     use cosmwasm_std::Timestamp;
-    use finance::{coin::Coin, duration::Duration, percent::Percent, test::currency::Usdc};
+    use finance::{
+        coin::Coin, duration::Duration, percent::Percent, test::currency::Usdc, zero::Zero,
+    };
     use platform::batch::Batch;
 
     use crate::{
@@ -114,14 +121,16 @@ mod test {
     #[test]
     fn try_from_no_payments() {
         let lpp_ref = LppRef::unchecked::<_, Usdc>("lpp_address");
-        let loan = LppLoanImpl::new(
+        let start = Timestamp::from_seconds(10);
+        let mut loan = LppLoanImpl::new(
             lpp_ref.clone(),
             Loan {
                 principal_due: Coin::<Usdc>::new(100),
                 annual_interest_rate: Percent::from_percent(12),
-                interest_paid: Timestamp::from_seconds(10),
+                interest_paid: start,
             },
         );
+        loan.repay(start + Duration::YEAR, Coin::ZERO);
         let batch: LppBatch<LppRef> = loan.try_into().unwrap();
         assert_eq!(lpp_ref, batch.lpp_ref);
         assert_eq!(Batch::default(), batch.batch);
