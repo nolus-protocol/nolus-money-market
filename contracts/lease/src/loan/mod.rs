@@ -146,8 +146,7 @@ where
         let mut receipt = RepayReceipt::default();
 
         let change = if self.overdue_at(by) {
-            let period_receipt =
-                self.repay_previous_period(payment, self.due_period.till(), profit);
+            let period_receipt = self.repay_due_period(payment, self.due_period.till(), profit);
             receipt.pay_previous_margin(period_receipt.margin_paid);
             receipt.pay_previous_interest(period_receipt.interest_paid);
             period_receipt.change
@@ -155,21 +154,22 @@ where
             payment
         };
         debug_assert_eq!(payment, change + receipt.total());
-        debug_assert!(!self.overdue_at(by) || change == Coin::default());
 
         let change = if !self.overdue_at(by) {
-            let period_receipt = self.repay_current_period(change, by, profit);
+            let period_receipt = self.repay_due_period(change, by, profit);
             receipt.pay_current_margin(period_receipt.margin_paid);
             receipt.pay_current_interest(period_receipt.interest_paid);
-            period_receipt.change
+
+            let principal_due = self.lpp_loan.principal_due();
+            let (principal_paid, change) = self.repay_principal(period_receipt.change, by);
+            receipt.pay_principal(principal_due, principal_paid);
+            change
         } else {
+            debug_assert!(change == Coin::ZERO);
             change
         };
         debug_assert_eq!(payment, change + receipt.total());
 
-        let principal_due = self.lpp_loan.principal_due();
-        let (principal_paid, change) = self.repay_principal(change, by);
-        receipt.pay_principal(principal_due, principal_paid);
         receipt.keep_change(change);
         debug_assert_eq!(payment, receipt.total());
         Ok(receipt)
@@ -215,7 +215,7 @@ where
         }
     }
 
-    fn repay_previous_period<Profit>(
+    fn repay_due_period<Profit>(
         &mut self,
         payment: Coin<Lpn>,
         by: Timestamp,
@@ -224,6 +224,7 @@ where
     where
         Profit: ProfitTrait,
     {
+        self.debug_check_late_payment(by, "due period");
         let (prev_margin_paid, change) =
             self.repay_margin_interest(self.lpp_loan.principal_due(), by, payment, profit);
         let res = RepayPeriodReceipt::with_margin(prev_margin_paid);
@@ -248,35 +249,6 @@ where
         self.repay_loan_interest(change, self.due_period.start(), res)
     }
 
-    fn repay_current_period<Profit>(
-        &mut self,
-        payment: Coin<Lpn>,
-        by: Timestamp,
-        profit: &mut Profit,
-    ) -> RepayPeriodReceipt<Lpn>
-    where
-        Profit: ProfitTrait,
-    {
-        let (curr_margin_paid, change) =
-            self.repay_margin_interest(self.lpp_loan.principal_due(), by, payment, profit);
-        let res = RepayPeriodReceipt::with_margin(curr_margin_paid);
-
-        if change.is_zero() {
-            return res;
-        }
-        debug_assert_eq!(
-            Coin::ZERO,
-            self.due_period
-                .spanning(Duration::between(
-                    self.due_period.start(),
-                    by.min(self.due_period.till())
-                ))
-                .interest(self.lpp_loan.principal_due()),
-            "some margin left"
-        );
-        self.repay_loan_interest(change, by, res)
-    }
-
     fn repay_margin_interest<Profit>(
         &mut self,
         principal_due: Coin<Lpn>,
@@ -287,6 +259,7 @@ where
     where
         Profit: ProfitTrait,
     {
+        self.debug_check_late_payment(by, "margin interest");
         let (period, change) = self.due_period.pay(principal_due, payment, by);
         self.due_period = period;
 
@@ -305,12 +278,7 @@ where
         by: Timestamp,
         receipt: RepayPeriodReceipt<Lpn>,
     ) -> RepayPeriodReceipt<Lpn> {
-        debug_assert!(
-            !self.overdue_at(by),
-            "An attempt to repay loan interest at {1} that is past the due period end time {0}!",
-            self.due_period.till(),
-            by
-        );
+        self.debug_check_late_payment(by, "loan interest");
         let due = self.lpp_loan.interest_due(by);
         let paid = due.min(payment);
         let change = payment - paid;
@@ -322,6 +290,7 @@ where
     }
 
     fn repay_principal(&mut self, payment: Coin<Lpn>, by: Timestamp) -> (Coin<Lpn>, Coin<Lpn>) {
+        self.debug_check_late_payment(by, "principal");
         let paid = payment.min(self.lpp_loan.principal_due());
         self.lpp_loan.repay(by, paid);
         //TODO add asserts on the 'repay' result
@@ -357,6 +326,15 @@ where
             self.due_period.start(),
             when_descr,
             when
+        );
+    }
+
+    #[track_caller]
+    fn debug_check_late_payment(&self, when: Timestamp, what_descr: &str) {
+        debug_assert!(
+            !self.overdue_at(when),
+            "An attempt to repay {what_descr} at {when} that is past the due period end time {end_time}!",
+            end_time = self.due_period.till(),
         );
     }
 
