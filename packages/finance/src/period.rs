@@ -37,4 +37,69 @@ impl Period {
         debug_assert_eq!(self.till(), res.till());
         res
     }
+
+    pub fn next(self, length: Duration) -> Self {
+        Self::from_length(self.till(), length)
+    }
+
+    pub fn this(self, length: Duration) -> Self {
+        Self::from_length(self.till() - length, length)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use sdk::cosmwasm_std::Timestamp;
+
+    use crate::duration::Duration;
+
+    use super::Period;
+
+    #[test]
+    fn shift_start() {
+        let p = Period::from_till(
+            Timestamp::from_nanos(100),
+            Timestamp::from_nanos(100) + Duration::YEAR,
+        );
+        assert_eq!(
+            Period::from_length(
+                Timestamp::from_nanos(100) + Duration::HOUR,
+                Duration::YEAR - Duration::HOUR
+            ),
+            p.shift_start(Duration::HOUR)
+        );
+    }
+
+    #[test]
+    fn next() {
+        let p = Period::from_length(Timestamp::from_nanos(100), Duration::YEAR);
+        assert_eq!(
+            Period::from_length(Timestamp::from_nanos(100) + Duration::YEAR, Duration::HOUR),
+            p.next(Duration::HOUR)
+        );
+
+        assert_eq!(
+            p.shift_start(Duration::HOUR).next(Duration::HOUR),
+            p.next(Duration::HOUR)
+        );
+    }
+
+    #[test]
+    fn this() {
+        let p = Period::from_length(Timestamp::from_nanos(100) + Duration::YEAR, Duration::YEAR);
+        assert_eq!(
+            Period::from_length(
+                Timestamp::from_nanos(100) + Duration::YEAR + Duration::YEAR - Duration::HOUR,
+                Duration::HOUR
+            ),
+            p.this(Duration::HOUR)
+        );
+
+        assert_eq!(
+            p.this(Duration::HOUR).next(Duration::HOUR),
+            p.this(Duration::HOUR)
+                .next(Duration::HOUR)
+                .this(Duration::HOUR)
+        )
+    }
 }

@@ -46,6 +46,10 @@ where
         self.period.length() == Duration::default()
     }
 
+    pub fn period(&self) -> Period {
+        self.period
+    }
+
     pub fn start(&self) -> Timestamp {
         self.period.start()
     }

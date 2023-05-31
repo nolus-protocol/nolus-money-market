@@ -182,16 +182,15 @@ where
 
         let mut current_period = self.due_period_before_payments();
         while overdue_at(&current_period, now) {
-            current_period = next_due_period(&current_period, &self.interest_payment_spec);
+            current_period = next_due_period(current_period, &self.interest_payment_spec);
         }
-        let current_due_period = current_period.and_period(Period::from_till(
+        let current_due_period = self.due_period.and_period(Period::from_till(
             current_period.start().max(self.due_period.start()),
             now,
         ));
 
-        // TODO define fn intersect(&Period)
         let prev_due_periods = self.due_period.and_period(Period::from_till(
-            self.due_period.start().min(current_period.start()),
+            current_period.start().min(self.due_period.start()),
             current_period.start(),
         ));
 
@@ -304,22 +303,20 @@ where
     fn open_next_period(&mut self) {
         debug_assert!(self.due_period.zero_length());
 
-        self.due_period = self.next_due_period();
+        self.due_period = self.due_period.and_period(next_due_period(
+            self.due_period.period(),
+            &self.interest_payment_spec,
+        ));
     }
 
     fn overdue_at(&self, when: Timestamp) -> bool {
-        overdue_at(&self.due_period, when)
+        overdue_at(&self.due_period.period(), when)
     }
 
-    fn next_due_period(&self) -> InterestPeriod<Units, Percent> {
-        next_due_period(&self.due_period, &self.interest_payment_spec)
-    }
-
-    fn due_period_before_payments(&self) -> InterestPeriod<Units, Percent> {
-        self.due_period.and_period(Period::from_length(
-            self.due_period.till() - self.interest_payment_spec.due_period(),
-            self.interest_payment_spec.due_period(),
-        ))
+    fn due_period_before_payments(&self) -> Period {
+        self.due_period
+            .period()
+            .this(self.interest_payment_spec.due_period())
     }
 
     fn debug_check_start_due_before(&self, when: Timestamp, when_descr: &str) {
@@ -342,18 +339,12 @@ where
     }
 }
 
-fn overdue_at(due_period: &InterestPeriod<Units, Percent>, when: Timestamp) -> bool {
+fn overdue_at(due_period: &Period, when: Timestamp) -> bool {
     due_period.till() < when
 }
 
-fn next_due_period(
-    due_period: &InterestPeriod<Units, Percent>,
-    payment_spec: &InterestPaymentSpec,
-) -> InterestPeriod<Units, Percent> {
-    due_period.and_period(Period::from_length(
-        due_period.till(),
-        payment_spec.due_period(),
-    ))
+fn next_due_period(due_period: Period, payment_spec: &InterestPaymentSpec) -> Period {
+    due_period.next(payment_spec.due_period())
 }
 
 struct RepayPeriodReceipt<C>
