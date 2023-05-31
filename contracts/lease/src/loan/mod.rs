@@ -5,9 +5,9 @@ use serde::{Deserialize, Serialize};
 use finance::{
     coin::Coin,
     currency::Currency,
-    duration::Duration,
     interest::InterestPeriod,
     percent::{Percent, Units},
+    period::Period,
     zero::Zero,
 };
 use lpp::{
@@ -105,9 +105,9 @@ where
         annual_margin_interest: Percent,
         interest_payment_spec: InterestPaymentSpec,
     ) -> Self {
-        let due_period = InterestPeriod::with_interest(annual_margin_interest)
-            .from(start)
-            .spanning(interest_payment_spec.due_period());
+        let due_period = InterestPeriod::with_interest(annual_margin_interest).and_period(
+            Period::from_length(start, interest_payment_spec.due_period()),
+        );
         Self {
             lpn: PhantomData,
             lpp_loan,
@@ -184,21 +184,16 @@ where
         while overdue_at(&current_period, now) {
             current_period = next_due_period(&current_period, &self.interest_payment_spec);
         }
-        let current_due_period = current_period
-            .from(current_period.start().max(self.due_period.start()))
-            .spanning(Duration::between(
-                current_period.start().max(self.due_period.start()),
-                now,
-            ));
+        let current_due_period = current_period.and_period(Period::from_till(
+            current_period.start().max(self.due_period.start()),
+            now,
+        ));
 
         // TODO define fn intersect(&Period)
-        let prev_due_periods = self
-            .due_period
-            .from(self.due_period.start().min(current_period.start()))
-            .spanning(Duration::between(
-                self.due_period.start().min(current_period.start()),
-                current_period.start(),
-            ));
+        let prev_due_periods = self.due_period.and_period(Period::from_till(
+            self.due_period.start().min(current_period.start()),
+            current_period.start(),
+        ));
 
         let previous_margin_interest_due = prev_due_periods.interest(principal_due);
         let current_margin_interest_due = current_due_period.interest(principal_due);
@@ -242,7 +237,7 @@ where
         debug_assert_eq!(
             Coin::ZERO,
             self.due_period
-                .spanning(Duration::between(self.due_period.start(), by))
+                .and_period(Period::from_till(self.due_period.start(), by))
                 .interest(self.lpp_loan.principal_due()),
             "some margin left"
         );
@@ -321,9 +316,10 @@ where
     }
 
     fn due_period_before_payments(&self) -> InterestPeriod<Units, Percent> {
-        self.due_period
-            .from(self.due_period.till() - self.interest_payment_spec.due_period())
-            .spanning(self.interest_payment_spec.due_period())
+        self.due_period.and_period(Period::from_length(
+            self.due_period.till() - self.interest_payment_spec.due_period(),
+            self.interest_payment_spec.due_period(),
+        ))
     }
 
     fn debug_check_start_due_before(&self, when: Timestamp, when_descr: &str) {
@@ -354,9 +350,10 @@ fn next_due_period(
     due_period: &InterestPeriod<Units, Percent>,
     payment_spec: &InterestPaymentSpec,
 ) -> InterestPeriod<Units, Percent> {
-    due_period
-        .from(due_period.till())
-        .spanning(payment_spec.due_period())
+    due_period.and_period(Period::from_length(
+        due_period.till(),
+        payment_spec.due_period(),
+    ))
 }
 
 struct RepayPeriodReceipt<C>
@@ -997,7 +994,7 @@ mod tests {
         use cosmwasm_std::Timestamp;
         use finance::{
             coin::Coin, currency::Currency, duration::Duration, interest::InterestPeriod,
-            percent::Percent,
+            percent::Percent, period::Period,
         };
         use lpp::msg::LoanResponse;
 
@@ -1005,12 +1002,12 @@ mod tests {
 
         use super::{LEASE_START, MARGIN_INTEREST_RATE};
 
-        fn interest<Lpn>(period: Duration, principal_due: Coin<Lpn>, rate: Percent) -> Coin<Lpn>
+        fn interest<Lpn>(period_len: Duration, principal_due: Coin<Lpn>, rate: Percent) -> Coin<Lpn>
         where
             Lpn: Currency,
         {
             InterestPeriod::with_interest(rate)
-                .spanning(period)
+                .and_period(Period::from_length(Timestamp::default(), period_len))
                 .interest(principal_due)
         }
 

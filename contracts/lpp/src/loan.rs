@@ -1,5 +1,3 @@
-use std::cmp;
-
 use cosmwasm_std::Storage;
 use sdk::{
     cosmwasm_std::{Addr, Timestamp},
@@ -8,7 +6,11 @@ use sdk::{
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use finance::{
-    coin::Coin, currency::Currency, duration::Duration, interest::InterestPeriod, percent::Percent,
+    coin::Coin,
+    currency::Currency,
+    interest::InterestPeriod,
+    percent::{Percent, Units},
+    period::Period,
 };
 use sdk::schemars::{self, JsonSchema};
 
@@ -43,24 +45,15 @@ where
     const STORAGE: Map<'static, Addr, Loan<Lpn>> = Map::new("loans");
 
     pub fn interest_due(&self, by: Timestamp) -> Coin<Lpn> {
-        let delta_t = Duration::between(self.interest_paid, cmp::max(by, self.interest_paid));
-
-        let interest_period = InterestPeriod::with_interest(self.annual_interest_rate)
-            .from(self.interest_paid)
-            .spanning(delta_t);
-
-        interest_period.interest(self.principal_due)
+        self.due_period(by).interest(self.principal_due)
     }
 
     pub fn repay(&mut self, by: Timestamp, repayment: Coin<Lpn>) -> RepayShares<Lpn> {
         let (due_period, interest_change) =
-            InterestPeriod::with_interest(self.annual_interest_rate)
-                .from(self.interest_paid)
-                .spanning(Duration::between(self.interest_paid, by))
-                .pay(self.principal_due, repayment, by);
+            self.due_period(by).pay(self.principal_due, repayment, by);
 
         let interest_paid = repayment - interest_change;
-        let principal_paid = cmp::min(interest_change, self.principal_due);
+        let principal_paid = interest_change.min(self.principal_due);
         let excess = interest_change - principal_paid;
 
         self.principal_due -= principal_paid;
@@ -71,6 +64,13 @@ where
             principal: principal_paid,
             excess,
         }
+    }
+
+    fn due_period(&self, by: Timestamp) -> InterestPeriod<Units, Percent> {
+        InterestPeriod::with_interest(self.annual_interest_rate).and_period(Period::from_till(
+            self.interest_paid,
+            by.max(self.interest_paid),
+        ))
     }
 }
 

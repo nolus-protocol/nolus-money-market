@@ -7,6 +7,7 @@ pub mod fractionable;
 pub mod interest;
 pub mod liability;
 pub mod percent;
+pub mod period;
 pub mod price;
 pub mod ratio;
 pub mod zero;

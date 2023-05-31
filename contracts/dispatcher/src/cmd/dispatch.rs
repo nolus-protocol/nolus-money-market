@@ -1,5 +1,5 @@
 use currency::native::Nls;
-use finance::{coin::Coin, currency::Currency, duration::Duration, interest::InterestPeriod};
+use finance::{coin::Coin, currency::Currency, interest::InterestPeriod, period::Period};
 use lpp::stub::{Lpp as LppTrait, WithLpp};
 use oracle::{convert, stub::OracleRef};
 use platform::batch::Batch;
@@ -72,8 +72,7 @@ impl<'a> WithLpp for Dispatch<'a> {
         // Calculate the reward in LPN,
         // which matches TVLdenom, since the last calculation
         let reward_in_lppdenom = InterestPeriod::with_interest(apr_permille)
-            .from(self.last_dispatch)
-            .spanning(Duration::between(self.last_dispatch, self.block_time))
+            .and_period(Period::from_till(self.last_dispatch, self.block_time))
             .interest(tvl);
 
         if reward_in_lppdenom.is_zero() {

@@ -1,8 +1,8 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use finance::{
-    coin::Coin, currency::Currency, duration::Duration, fraction::Fraction,
-    interest::InterestPeriod, percent::Percent, ratio::Rational,
+    coin::Coin, currency::Currency, fraction::Fraction, interest::InterestPeriod, percent::Percent,
+    period::Period, ratio::Rational,
 };
 use sdk::{
     cosmwasm_std::{StdResult, Storage, Timestamp},
@@ -61,8 +61,7 @@ where
 
     pub fn total_interest_due_by_now(&self, ctime: Timestamp) -> Coin<LPN> {
         InterestPeriod::<Coin<LPN>, _>::with_interest(self.annual_interest_rate)
-            .from(self.last_update_time)
-            .spanning(Duration::between(self.last_update_time, ctime))
+            .and_period(Period::from_till(self.last_update_time, ctime))
             .interest(self.total_principal_due)
             + self.total_interest_due
     }

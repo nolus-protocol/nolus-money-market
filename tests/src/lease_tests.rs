@@ -11,6 +11,7 @@ use finance::{
     fraction::Fraction as _,
     interest::InterestPeriod,
     percent::Percent,
+    period::Period,
     price::{self, Price},
 };
 use lease::api::{ExecuteMsg, StateQuery, StateResponse};
@@ -99,8 +100,10 @@ where
 
 fn calculate_interest(principal: Coin<Lpn>, interest_rate: Percent, duration: u64) -> Coin<Lpn> {
     InterestPeriod::with_interest(interest_rate)
-        .from(Timestamp::from_nanos(0))
-        .spanning(Duration::from_nanos(duration))
+        .and_period(Period::from_length(
+            Timestamp::default(),
+            Duration::from_nanos(duration),
+        ))
         .interest(principal)
 }
 

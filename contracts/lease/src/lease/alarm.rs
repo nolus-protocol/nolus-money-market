@@ -49,12 +49,13 @@ where
     where
         TimeAlarms: TimeAlarmsTrait,
     {
+        let grace_period_end = self.loan.grace_period_end();
+        debug_assert!(
+            now < &grace_period_end,
+            "Rescheduling when the lease is in overdue! A liquidation is expected!"
+        );
         time_alarms
-            .add_alarm(
-                self.loan
-                    .grace_period_end()
-                    .min(*now + self.liability.recalculation_time()),
-            )
+            .add_alarm(grace_period_end.min(*now + self.liability.recalculation_time()))
             .map_err(Into::into)
     }
 

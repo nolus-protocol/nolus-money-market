@@ -8,13 +8,14 @@ use crate::{
     duration::Duration,
     fraction::Fraction,
     fractionable::{Fractionable, TimeSliceable},
+    period::Period,
     zero::Zero,
 };
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct InterestPeriod<U, F> {
-    start: Timestamp,
-    length: Duration,
+    #[serde(flatten)]
+    period: Period,
     #[serde(skip)]
     interest_units: PhantomData<U>,
     interest: F,
@@ -27,54 +28,30 @@ where
 {
     pub fn with_interest(interest: F) -> Self {
         Self {
-            start: Timestamp::default(),
-            length: Duration::default(),
+            period: Period::default(),
             interest_units: PhantomData,
             interest,
         }
     }
 
-    pub fn from(self, start: Timestamp) -> Self {
+    pub fn and_period(self, period: Period) -> Self {
         Self {
-            start,
-            length: self.length,
+            period,
             interest_units: self.interest_units,
             interest: self.interest,
         }
-    }
-
-    pub fn spanning(self, length: Duration) -> Self {
-        Self {
-            start: self.start,
-            length,
-            interest_units: self.interest_units,
-            interest: self.interest,
-        }
-    }
-
-    #[track_caller]
-    pub fn shift_start(self, delta: Duration) -> Self {
-        debug_assert!(delta <= self.length);
-        let res = Self {
-            start: self.start + delta,
-            length: self.length - delta,
-            interest_units: self.interest_units,
-            interest: self.interest,
-        };
-        debug_assert_eq!(self.till(), res.till());
-        res
     }
 
     pub fn zero_length(&self) -> bool {
-        self.length == Duration::default()
+        self.period.length() == Duration::default()
     }
 
     pub fn start(&self) -> Timestamp {
-        self.start
+        self.period.start()
     }
 
     pub fn till(&self) -> Timestamp {
-        self.start + self.length
+        self.period.till()
     }
 
     pub fn interest_rate(&self) -> F {
@@ -104,7 +81,7 @@ where
         } else {
             let repayment = cmp::min(interest_due_per_period, payment);
 
-            let period = Duration::between(self.start, by_within_period);
+            let period = Duration::between(self.start(), by_within_period);
             let period_paid_for = period.into_slice_per_ratio(repayment, interest_due_per_period);
 
             let change = payment - repayment;
@@ -112,17 +89,24 @@ where
         }
     }
 
+    #[track_caller]
+    fn shift_start(self, delta: Duration) -> Self {
+        let res = Self::with_interest(self.interest).and_period(self.period.shift_start(delta));
+        debug_assert_eq!(self.till(), res.till());
+        res
+    }
+
     fn move_within_period(&self, t: Timestamp) -> Timestamp {
-        t.clamp(self.start, self.till())
+        t.clamp(self.start(), self.till())
     }
 
     fn interest_by<P>(&self, principal: P, by: Timestamp) -> P
     where
         P: Fractionable<U> + TimeSliceable,
     {
-        debug_assert!(self.start <= by);
+        debug_assert!(self.start() <= by);
         debug_assert!(by <= self.till());
-        let period = Duration::between(self.start, by);
+        let period = Duration::between(self.start(), by);
 
         let interest_due_per_year = self.interest.of(principal);
         period.annualized_slice_of(interest_due_per_year)
@@ -134,8 +118,8 @@ mod tests {
     use sdk::cosmwasm_std::Timestamp;
 
     use crate::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, ratio::Rational,
-        test::currency::Usdc, zero::Zero,
+        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, period::Period,
+        ratio::Rational, test::currency::Usdc, zero::Zero,
     };
 
     use super::InterestPeriod;
@@ -255,9 +239,8 @@ mod tests {
         assert_eq!(p, ip.interest_rate());
 
         let (ip_res, change) = ip.pay(principal, payment, by);
-        let ip_exp = InterestPeriod::with_interest(p)
-            .from(exp_start)
-            .spanning(exp_length);
+        let ip_exp =
+            InterestPeriod::with_interest(p).and_period(Period::from_length(exp_start, exp_length));
         assert_eq!(ip_exp, ip_res);
         assert_eq!(exp_change, change);
         assert_eq!(p, ip_res.interest_rate());
@@ -269,7 +252,6 @@ mod tests {
         F: Copy + Fraction<U>,
     {
         InterestPeriod::with_interest(fraction)
-            .from(PERIOD_START)
-            .spanning(PERIOD_LENGTH)
+            .and_period(Period::from_length(PERIOD_START, PERIOD_LENGTH))
     }
 }
