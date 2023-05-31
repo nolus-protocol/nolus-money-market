@@ -279,13 +279,9 @@ where
     where
         C: Currency,
     {
-        debug_assert!(!amount.is_zero());
-
-        if amount.is_zero() {
-            return;
+        if !amount.is_zero() {
+            self.amounts.push(to_cosmwasm_impl(amount));
         }
-
-        self.amounts.push(to_cosmwasm_impl(amount));
     }
 }
 
