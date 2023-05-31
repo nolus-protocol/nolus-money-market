@@ -240,11 +240,19 @@ fn bank_send_impl<C>(batch: &mut Batch, to: &Addr, amount: &[Coin<C>])
 where
     C: Currency,
 {
-    batch.schedule_execute_no_reply(BankMsg::Send {
-        amount: amount
+    bank_send_cosmwasm(
+        batch,
+        to,
+        amount
             .iter()
             .map(|coin| to_cosmwasm_impl(coin.to_owned()))
             .collect(),
+    )
+}
+
+fn bank_send_cosmwasm(batch: &mut Batch, to: &Addr, amount: Vec<CwCoin>) {
+    batch.schedule_execute_no_reply(BankMsg::Send {
+        amount,
         to_address: to.into(),
     });
 }
@@ -286,10 +294,7 @@ impl From<LazySenderStub> for Batch {
         let mut batch = Batch::default();
 
         if !stub.amounts.is_empty() {
-            batch.schedule_execute_no_reply(BankMsg::Send {
-                to_address: stub.receiver.to_string(),
-                amount: stub.amounts,
-            });
+            bank_send_cosmwasm(&mut batch, &stub.receiver, stub.amounts);
         }
 
         batch

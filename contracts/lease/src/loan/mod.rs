@@ -144,18 +144,13 @@ where
         Profit: ProfitTrait,
     {
         self.debug_check_start_due_before(by, "before the 'repay-by' time");
-        self.debug_check_before_next_due_end(by);
+
+        let prev_period_receipt = self.repay_prev_periods(payment, by, profit);
+        let change = prev_period_receipt.change;
 
         let mut receipt = RepayReceipt::default();
-
-        let change = if self.overdue_at(by) {
-            let period_receipt = self.repay_due_period(payment, self.due_period.till(), profit);
-            receipt.pay_previous_margin(period_receipt.margin_paid);
-            receipt.pay_previous_interest(period_receipt.interest_paid);
-            period_receipt.change
-        } else {
-            payment
-        };
+        receipt.pay_previous_margin(prev_period_receipt.margin_paid);
+        receipt.pay_previous_interest(prev_period_receipt.interest_paid);
         debug_assert_eq!(payment, change + receipt.total());
 
         let change = if !self.overdue_at(by) {
@@ -183,28 +178,30 @@ where
 
         let principal_due = self.lpp_loan.principal_due();
 
-        let margin_interest_overdue_period = if self.overdue_at(now) {
-            self.due_period
-        } else {
-            self.prev_due_period().spanning(Duration::default())
-        };
+        let mut current_period = self.due_period_before_payments();
+        while overdue_at(&current_period, now) {
+            current_period = next_due_period(&current_period, &self.interest_payment_spec);
+        }
+        let current_due_period = current_period
+            .from(current_period.start().max(self.due_period.start()))
+            .spanning(Duration::between(
+                current_period.start().max(self.due_period.start()),
+                now,
+            ));
 
-        let margin_interest_due_period_start = self
+        // TODO define fn intersect(&Period)
+        let prev_due_periods = self
             .due_period
-            .start()
-            .max(margin_interest_overdue_period.till());
-        let margin_interest_due_period = self
-            .due_period
-            .from(margin_interest_due_period_start)
-            .spanning(Duration::between(margin_interest_due_period_start, now));
-        debug_assert_eq!(margin_interest_due_period.till(), now);
+            .from(self.due_period.start().min(current_period.start()))
+            .spanning(Duration::between(
+                self.due_period.start().min(current_period.start()),
+                current_period.start(),
+            ));
 
-        let previous_margin_interest_due = margin_interest_overdue_period.interest(principal_due);
-        let current_margin_interest_due = margin_interest_due_period.interest(principal_due);
+        let previous_margin_interest_due = prev_due_periods.interest(principal_due);
+        let current_margin_interest_due = current_due_period.interest(principal_due);
 
-        let previous_interest_due = self
-            .lpp_loan
-            .interest_due(margin_interest_overdue_period.till());
+        let previous_interest_due = self.lpp_loan.interest_due(prev_due_periods.till());
         let current_interest_due = self.lpp_loan.interest_due(now) - previous_interest_due;
 
         State {
@@ -216,6 +213,27 @@ where
             previous_margin_interest_due,
             current_margin_interest_due,
         }
+    }
+
+    fn repay_prev_periods<Profit>(
+        &mut self,
+        payment: Coin<Lpn>,
+        by: Timestamp,
+        profit: &mut Profit,
+    ) -> RepayPeriodReceipt<Lpn>
+    where
+        Profit: ProfitTrait,
+    {
+        let mut margin_paid = Coin::default();
+        let mut interest_paid = Coin::default();
+        let mut change = payment;
+        while self.overdue_at(by) && change != Coin::ZERO {
+            let period_receipt = self.repay_due_period(change, self.due_period.till(), profit);
+            margin_paid += period_receipt.margin_paid;
+            interest_paid += period_receipt.interest_paid;
+            change = period_receipt.change;
+        }
+        RepayPeriodReceipt::with_margin(margin_paid).and_interest(interest_paid, change)
     }
 
     fn repay_due_period<Profit>(
@@ -238,10 +256,7 @@ where
         debug_assert_eq!(
             Coin::ZERO,
             self.due_period
-                .spanning(Duration::between(
-                    self.due_period.start(),
-                    by.min(self.due_period.till())
-                ))
+                .spanning(Duration::between(self.due_period.start(), by))
                 .interest(self.lpp_loan.principal_due()),
             "some margin left"
         );
@@ -322,16 +337,14 @@ where
     }
 
     fn overdue_at(&self, when: Timestamp) -> bool {
-        self.due_period.till() < when
+        overdue_at(&self.due_period, when)
     }
 
     fn next_due_period(&self) -> InterestPeriod<Units, Percent> {
-        self.due_period
-            .from(self.due_period.till())
-            .spanning(self.interest_payment_spec.due_period())
+        next_due_period(&self.due_period, &self.interest_payment_spec)
     }
 
-    fn prev_due_period(&self) -> InterestPeriod<Units, Percent> {
+    fn due_period_before_payments(&self) -> InterestPeriod<Units, Percent> {
         self.due_period
             .from(self.due_period.till() - self.interest_payment_spec.due_period())
             .spanning(self.interest_payment_spec.due_period())
@@ -355,16 +368,19 @@ where
             end_time = self.due_period.till(),
         );
     }
+}
 
-    fn debug_check_before_next_due_end(&self, when: Timestamp) {
-        let next_due_end = self.due_period.till() + self.interest_payment_spec.due_period();
-        debug_assert!(
-            when <= next_due_end,
-            "Payment is tried at {}s which is not before the next period ending at {}s",
-            when,
-            next_due_end,
-        );
-    }
+fn overdue_at(due_period: &InterestPeriod<Units, Percent>, when: Timestamp) -> bool {
+    due_period.till() < when
+}
+
+fn next_due_period(
+    due_period: &InterestPeriod<Units, Percent>,
+    payment_spec: &InterestPaymentSpec,
+) -> InterestPeriod<Units, Percent> {
+    due_period
+        .from(due_period.till())
+        .spanning(payment_spec.due_period())
 }
 
 struct RepayPeriodReceipt<C>
@@ -633,6 +649,47 @@ mod tests {
         }
 
         #[test]
+        #[ignore]
+        fn previous_multiple_periods() {
+            let principal = 1000;
+            let interest_payment = 43;
+            let one_year_margin = MARGIN_INTEREST_RATE.of(principal);
+            let one_year_interest = LOAN_INTEREST_RATE.of(principal);
+            let repay_at = LEASE_START
+                + Duration::YEAR
+                + Duration::YEAR
+                + Duration::YEAR
+                + Duration::from_nanos(1);
+
+            let loan = LoanResponse {
+                principal_due: principal.into(),
+                annual_interest_rate: LOAN_INTEREST_RATE,
+                interest_paid: LEASE_START,
+            };
+
+            let mut loan = create_loan(loan);
+            {
+                let payment =
+                    one_year_margin + one_year_interest + one_year_margin + interest_payment;
+                repay(
+                    &mut loan,
+                    payment,
+                    state(principal, one_year_margin * 3, one_year_interest * 3, 0, 0),
+                    receipt(
+                        principal,
+                        0,
+                        one_year_margin * 2,
+                        one_year_interest + interest_payment,
+                        0,
+                        0,
+                        0,
+                    ),
+                    repay_at,
+                );
+            }
+        }
+
+        #[test]
         fn full_previous_partial_current_interest_repay() {
             let principal = 57326;
             let curr_interest_payment = 42;
@@ -646,13 +703,12 @@ mod tests {
                 interest_paid: LEASE_START,
             };
 
-            let pay_since_start_current_period =
+            let since_start_current_period =
                 Duration::YEAR - Duration::HOUR - Duration::HOUR - Duration::HOUR - Duration::HOUR;
-            let repay_at = LEASE_START + Duration::YEAR + pay_since_start_current_period;
-            let curr_margin_due =
-                pay_since_start_current_period.annualized_slice_of(one_year_margin);
+            let repay_at = LEASE_START + Duration::YEAR + since_start_current_period;
+            let curr_margin_due = since_start_current_period.annualized_slice_of(one_year_margin);
             let curr_interest_due =
-                pay_since_start_current_period.annualized_slice_of(one_year_interest);
+                since_start_current_period.annualized_slice_of(one_year_interest);
             let payment =
                 one_year_margin + one_year_interest + curr_margin_due + curr_interest_payment;
 
@@ -808,7 +864,7 @@ mod tests {
 
             let receipt = loan.repay(payment.into(), now, &mut profit).unwrap();
 
-            assert_eq!(receipt, exp_receipt);
+            assert_eq!(exp_receipt, receipt);
             assert_eq!(
                 state(
                     before_state.principal_due - exp_receipt.principal_paid(),
@@ -819,20 +875,23 @@ mod tests {
                 ),
                 loan.state(now)
             );
-            assert_eq!(Into::<Batch>::into(profit), {
-                let mut profit_amounts = vec![];
-                if exp_receipt.previous_margin_paid() != Coin::default() {
-                    profit_amounts.push(exp_receipt.previous_margin_paid());
-                }
-                if exp_receipt.current_margin_paid() != Coin::default() {
-                    profit_amounts.push(exp_receipt.current_margin_paid());
-                }
-                if !profit_amounts.is_empty() {
-                    bank::bank_send_multiple(Batch::default(), PROFIT_ADDR, &profit_amounts)
-                } else {
-                    Batch::default()
-                }
-            })
+            assert_eq!(
+                {
+                    let mut profit_amounts = vec![];
+                    if exp_receipt.previous_margin_paid() != Coin::default() {
+                        profit_amounts.push(exp_receipt.previous_margin_paid());
+                    }
+                    if exp_receipt.current_margin_paid() != Coin::default() {
+                        profit_amounts.push(exp_receipt.current_margin_paid());
+                    }
+                    if !profit_amounts.is_empty() {
+                        bank::bank_send_multiple(Batch::default(), PROFIT_ADDR, &profit_amounts)
+                    } else {
+                        Batch::default()
+                    }
+                },
+                Into::<Batch>::into(profit)
+            )
         }
 
         fn state<P>(
@@ -902,7 +961,7 @@ mod tests {
         }
 
         fn interests<Lpn>(
-            paid: Timestamp,
+            paid_by: Timestamp,
             now: Timestamp,
             principal_due: Coin<Lpn>,
             rate: Percent,
@@ -915,7 +974,7 @@ mod tests {
                     if now <= LEASE_START + Duration::YEAR {
                         Duration::default()
                     } else {
-                        Duration::between(paid, LEASE_START + Duration::YEAR)
+                        Duration::between(paid_by, LEASE_START + Duration::YEAR)
                     },
                     principal_due,
                     rate,
@@ -923,7 +982,7 @@ mod tests {
                 interest(
                     Duration::between(
                         if now <= LEASE_START + Duration::YEAR {
-                            paid
+                            paid_by
                         } else {
                             LEASE_START + Duration::YEAR
                         },
@@ -936,24 +995,24 @@ mod tests {
         }
 
         fn margin_interests<Lpn>(
-            paid: Timestamp,
+            paid_by: Timestamp,
             now: Timestamp,
             principal_due: Coin<Lpn>,
         ) -> (Coin<Lpn>, Coin<Lpn>)
         where
             Lpn: Currency,
         {
-            interests(paid, now, principal_due, MARGIN_INTEREST_RATE)
+            interests(paid_by, now, principal_due, MARGIN_INTEREST_RATE)
         }
 
         fn test_state(period: Duration) {
             let principal_due = 10000.into();
 
-            let interest_rate = Percent::from_permille(25);
+            let loan_interest_rate = Percent::from_permille(25);
 
             let loan_resp = LoanResponse {
                 principal_due,
-                annual_interest_rate: interest_rate,
+                annual_interest_rate: loan_interest_rate,
                 interest_paid: LEASE_START,
             };
 
@@ -973,22 +1032,22 @@ mod tests {
             let res = loan.state(now);
 
             assert_eq!(
-                res.previous_margin_interest_due, expected_margin_overdue,
+                expected_margin_overdue, res.previous_margin_interest_due,
                 "Got different margin overdue than expected!",
             );
 
             assert_eq!(
-                res.current_margin_interest_due, expected_margin_due,
+                expected_margin_due, res.current_margin_interest_due,
                 "Got different margin due than expected!",
             );
 
             assert_eq!(
-                res.previous_interest_due, expected_interest_overdue,
+                expected_interest_overdue, res.previous_interest_due,
                 "Got different interest overdue than expected!",
             );
 
             assert_eq!(
-                res.current_interest_due, expected_interest_due,
+                expected_interest_due, res.current_interest_due,
                 "Got different interest due than expected!",
             );
         }
