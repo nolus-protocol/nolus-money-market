@@ -15,9 +15,14 @@ use crate::{
 };
 
 pub use self::level::Level;
+pub use self::liquidation::check_liability;
+pub use self::liquidation::Cause;
+pub use self::liquidation::Liquidation;
+pub use self::liquidation::Status;
 pub use self::zone::Zone;
 
 mod level;
+mod liquidation;
 mod unchecked;
 mod zone;
 

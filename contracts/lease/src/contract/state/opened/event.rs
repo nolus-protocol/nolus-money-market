@@ -1,4 +1,4 @@
-use finance::liability::Level;
+use finance::liability::{Cause, Level};
 use platform::batch::{Emit, Emitter};
 use sdk::cosmwasm_std::Env;
 
@@ -6,7 +6,7 @@ use crate::{
     api::DownpaymentCoin,
     contract::cmd::{LiquidationDTO, OpenLoanRespResult, ReceiptDTO},
     event::Type,
-    lease::{Cause, LeaseDTO},
+    lease::LeaseDTO,
 };
 
 pub(super) fn emit_lease_opened(
