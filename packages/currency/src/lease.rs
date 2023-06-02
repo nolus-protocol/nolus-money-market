@@ -53,16 +53,15 @@ define_symbol! {
             dex: "ibc/EA1D43981D5C9A1C4AAEA9C23BB1D4FA126BA9BC7020A25E0AE4AA841EA25DC5",
         },
         alt: {
-            /// full ibc route: transfer/channel-0/transfer/channel-312/eth-wei
-            bank: "ibc/E402E4FDD236172DB494E3E8A38D97BE641DD2CE2D089C1F116F5897CDBD40E9",
-            /// full ibc route: transfer/channel-312/eth-wei
-            /// channel-312 is the official channel with Axelar as per https://docs.axelar.dev/resources/testnet
-            /// with WETH currency listed as `eth-wei`
-            dex: "ibc/8AE11672A7DF38BF7B484AB642C5C85BA4A94810D57AE8945151818CD6179427",
+            /// full ibc route: transfer/channel-0/transfer/channel-3/eth-wei
+            bank: "ibc/98CD37B180F06F954AFC71804049BE6EEA2A3B0CCEA1F425D141245BCFFBBD33",
+            /// full ibc route: transfer/channel-3/eth-wei
+            /// channel-3 is the official channel with Axelar as per https://docs.axelar.dev/resources/testnet
+            /// although there is no pool WETH participates in
+            dex: "ibc/29320BE25C3BF64A2355344625410899C1EB164038E328531C36095B0AA8BBFC",
         },
     }
 }
-#[cfg(feature = "testing")]
 define_currency!(Weth, WETH);
 
 define_symbol! {
@@ -74,16 +73,15 @@ define_symbol! {
             dex: "ibc/D1542AA8762DB13087D8364F3EA6509FD6F009A34F00426AF9E4F9FA85CBBF1F",
         },
         alt: {
-            /// full ibc route: transfer/channel-0/transfer/channel-312/btc-satoshi
-            bank: "ibc/215A3334E07EAE7E7B47617272472CAF903E99EDE3A80A2CF7CA8BE1F761AC68",
-            /// full ibc route: transfer/channel-312/btc-satoshi
-            /// channel-312 is the official channel with Axelar as per https://docs.axelar.dev/resources/testnet
-            /// but there is no WBTC currency listed
-            dex: "ibc/BDA12A41BCF2DFB005A0794876E0E71D9538E0A7EB9607F600435EDDE5393EC4",
+            /// full ibc route: transfer/channel-0/transfer/channel-3/btc-satoshi
+            bank: "ibc/680E95D3CEA378B7302926B8A5892442F1F7DF78E22199AE248DCBADC9A0C1A2",
+            /// full ibc route: transfer/channel-3/btc-satoshi
+            /// channel-3 is the official channel with Axelar as per https://docs.axelar.dev/resources/testnet
+            /// although there is no pool WBTC participates in
+            dex: "ibc/CEDA3AFF171E72ACB689B7B64E988C0077DA7D4BF157637FFBDEB688D205A473",
         },
     }
 }
-#[cfg(feature = "testing")]
 define_currency!(Wbtc, WBTC);
 
 define_symbol! {
@@ -194,12 +192,13 @@ impl Group for LeaseGroup {
     {
         use finance::currency::maybe_visit_on_ticker as maybe_visit;
         let v: SingleVisitorAdapter<_> = visitor.into();
-        let r = maybe_visit::<Atom, _>(ticker, v).or_else(|v| maybe_visit::<Osmo, _>(ticker, v));
+        let r = maybe_visit::<Atom, _>(ticker, v)
+            .or_else(|v| maybe_visit::<Osmo, _>(ticker, v))
+            .or_else(|v| maybe_visit::<Weth, _>(ticker, v))
+            .or_else(|v| maybe_visit::<Wbtc, _>(ticker, v));
 
         #[cfg(feature = "testing")]
         let r = r
-            .or_else(|v| maybe_visit::<Weth, _>(ticker, v))
-            .or_else(|v| maybe_visit::<Wbtc, _>(ticker, v))
             .or_else(|v| maybe_visit::<Evmos, _>(ticker, v))
             .or_else(|v| maybe_visit::<Juno, _>(ticker, v))
             .or_else(|v| maybe_visit::<Stars, _>(ticker, v))
@@ -217,12 +216,12 @@ impl Group for LeaseGroup {
         use finance::currency::maybe_visit_on_bank_symbol as maybe_visit;
         let v: SingleVisitorAdapter<_> = visitor.into();
         let r = maybe_visit::<Atom, _>(bank_symbol, v)
-            .or_else(|v| maybe_visit::<Osmo, _>(bank_symbol, v));
+            .or_else(|v| maybe_visit::<Osmo, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<Weth, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<Wbtc, _>(bank_symbol, v));
 
         #[cfg(feature = "testing")]
         let r = r
-            .or_else(|v| maybe_visit::<Weth, _>(bank_symbol, v))
-            .or_else(|v| maybe_visit::<Wbtc, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Evmos, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Juno, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Stars, _>(bank_symbol, v))
