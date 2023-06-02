@@ -38,7 +38,7 @@ where
             Coin::ZERO
         };
 
-        let status = liability::inspect(
+        let status = liability::check_liability(
             &self.liability,
             self.amount,
             price::total(total_due, price_in_asset),
