@@ -3,7 +3,7 @@ use serde::Serialize;
 use finance::{
     coin::Coin,
     currency::Currency,
-    liability::{check_liability, Status},
+    liability::{self, Status},
     price::{self, Price},
     zero::Zero,
 };
@@ -38,7 +38,7 @@ where
             Coin::ZERO
         };
 
-        let status = check_liability(
+        let status = liability::inspect(
             &self.liability,
             self.amount,
             price::total(total_due, price_in_asset),
