@@ -29,6 +29,24 @@ define_symbol! {
 define_currency!(Atom, ATOM);
 
 define_symbol! {
+    ST_ATOM {
+        {
+            /// full ibc route: transfer/channel-0/transfer/channel-326/stuatom
+            bank: "ibc/FCFF8B19C61677F3B78E2A5AE3B4A34A8D23858D16905F253B8438B3AFD07FF8",
+            /// full ibc route: transfer/channel-326/stuatom
+            dex: "ibc/C140AFD542AE77BD7DCC83F13FDD8C5E5BB8C4929785E6EC2F4C636F98F17901",
+        },
+        alt: {
+            /// full ibc route: transfer/channel-0/transfer/channel-??/uatom
+            bank: "ibc/NA",
+            /// full ibc route: transfer/channel-??/uatom
+            dex: "ibc/NA",
+        },
+    }
+}
+define_currency!(StAtom, ST_ATOM);
+
+define_symbol! {
     OSMO {
         {
             /// full ibc route: transfer/channel-0/uosmo
@@ -43,6 +61,24 @@ define_symbol! {
     }
 }
 define_currency!(Osmo, OSMO);
+
+define_symbol! {
+    ST_OSMO {
+        {
+            /// full ibc route: transfer/channel-0/transfer/channel-326/stuosmo
+            bank: "ibc/AF5559D128329B6C753F15481BEC26E533B847A471074703FA4903E7E6F61BA1",
+            /// full ibc route: transfer/channel-326/stuosmo
+            dex: "ibc/D176154B0C63D1F9C6DCFB4F70349EBF2E2B5A87A05902F57A6AE92B863E9AEC",
+        },
+        alt: {
+            /// full ibc route: transfer/channel-0/transfer/channel-??/uatom
+            bank: "ibc/NA",
+            /// full ibc route: transfer/channel-??/uatom
+            dex: "ibc/NA",
+        },
+    }
+}
+define_currency!(StOsmo, ST_OSMO);
 
 define_symbol! {
     WETH {
@@ -77,7 +113,7 @@ define_symbol! {
             bank: "ibc/680E95D3CEA378B7302926B8A5892442F1F7DF78E22199AE248DCBADC9A0C1A2",
             /// full ibc route: transfer/channel-3/btc-satoshi
             /// channel-3 is the official channel with Axelar as per https://docs.axelar.dev/resources/testnet
-            /// although there is no pool WBTC participates in
+            /// although there is no denomination trace as per `osmosisd q ibc-transfer denom-trace`
             dex: "ibc/CEDA3AFF171E72ACB689B7B64E988C0077DA7D4BF157637FFBDEB688D205A473",
         },
     }
@@ -193,7 +229,9 @@ impl Group for LeaseGroup {
         use finance::currency::maybe_visit_on_ticker as maybe_visit;
         let v: SingleVisitorAdapter<_> = visitor.into();
         let r = maybe_visit::<Atom, _>(ticker, v)
+            .or_else(|v| maybe_visit::<StAtom, _>(ticker, v))
             .or_else(|v| maybe_visit::<Osmo, _>(ticker, v))
+            .or_else(|v| maybe_visit::<StOsmo, _>(ticker, v))
             .or_else(|v| maybe_visit::<Weth, _>(ticker, v))
             .or_else(|v| maybe_visit::<Wbtc, _>(ticker, v));
 
@@ -216,7 +254,9 @@ impl Group for LeaseGroup {
         use finance::currency::maybe_visit_on_bank_symbol as maybe_visit;
         let v: SingleVisitorAdapter<_> = visitor.into();
         let r = maybe_visit::<Atom, _>(bank_symbol, v)
+            .or_else(|v| maybe_visit::<StAtom, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Osmo, _>(bank_symbol, v))
+            .or_else(|v| maybe_visit::<StOsmo, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Weth, _>(bank_symbol, v))
             .or_else(|v| maybe_visit::<Wbtc, _>(bank_symbol, v));
 
