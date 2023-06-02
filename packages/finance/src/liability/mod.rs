@@ -15,7 +15,7 @@ use crate::{
 };
 
 pub use self::level::Level;
-pub use self::liquidation::check_liability;
+pub use self::liquidation::inspect_liability as inspect;
 pub use self::liquidation::Cause;
 pub use self::liquidation::Liquidation;
 pub use self::liquidation::Status;
