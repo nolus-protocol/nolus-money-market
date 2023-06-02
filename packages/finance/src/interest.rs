@@ -14,7 +14,6 @@ use crate::{
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct InterestPeriod<U, F> {
-    #[serde(flatten)]
     period: Period,
     #[serde(skip)]
     interest_units: PhantomData<U>,
