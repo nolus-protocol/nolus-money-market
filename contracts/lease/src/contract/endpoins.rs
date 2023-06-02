@@ -17,9 +17,9 @@ use crate::{
     error::{ContractError, ContractResult},
 };
 
-use super::state::{self, Response, State};
 #[cfg(feature = "migration")]
 use super::state::Migrate;
+use super::state::{self, Response, State};
 
 #[cfg(feature = "migration")]
 const CONTRACT_STORAGE_VERSION_FROM: VersionSegment = 3;
