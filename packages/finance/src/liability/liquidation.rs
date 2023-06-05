@@ -83,18 +83,18 @@ pub fn check_liability<Asset>(
     asset: Coin<Asset>,
     total_due: Coin<Asset>,
     overdue: Coin<Asset>,
-    liquidation_threshold: Coin<Asset>,
+    min_asset_threshold: Coin<Asset>,
 ) -> Status<Asset>
 where
     Asset: Currency,
 {
     debug_assert!(total_due <= asset);
     debug_assert!(overdue <= total_due);
-    may_ask_liquidation_liability(spec, asset, total_due, liquidation_threshold)
+    may_ask_liquidation_liability(spec, asset, total_due, min_asset_threshold)
         .max(may_ask_liquidation_overdue(
             asset,
             overdue,
-            liquidation_threshold,
+            min_asset_threshold,
         ))
         .unwrap_or_else(|| no_liquidation(spec, asset, total_due))
 }
@@ -121,7 +121,7 @@ fn may_ask_liquidation_liability<Asset>(
     spec: &Liability,
     asset: Coin<Asset>,
     total_due: Coin<Asset>,
-    liquidation_threshold: Coin<Asset>,
+    min_asset_threshold: Coin<Asset>,
 ) -> Option<Status<Asset>>
 where
     Asset: Currency,
@@ -133,14 +133,14 @@ where
             healthy_ltv: spec.healthy_percent(),
         },
         spec.amount_to_liquidate(asset, total_due),
-        liquidation_threshold,
+        min_asset_threshold,
     )
 }
 
 fn may_ask_liquidation_overdue<Asset>(
     asset: Coin<Asset>,
     overdue: Coin<Asset>,
-    liquidation_threshold: Coin<Asset>,
+    min_asset_threshold: Coin<Asset>,
 ) -> Option<Status<Asset>>
 where
     Asset: Currency,
@@ -148,7 +148,7 @@ where
     if overdue < Coin::new(MIN_LIQUIDATION_AMOUNT) {
         None
     } else {
-        may_ask_liquidation(asset, Cause::Overdue(), overdue, liquidation_threshold)
+        may_ask_liquidation(asset, Cause::Overdue(), overdue, min_asset_threshold)
     }
 }
 
