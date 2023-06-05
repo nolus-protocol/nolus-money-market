@@ -55,7 +55,7 @@ run from the workspace directory:
 docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  --env RELEASE_VERSION=`git describe`-`date -Iminute` --env NET_NAME=dev cosmwasm/workspace-optimizer:0.12.11
+  --env RELEASE_VERSION=`git describe`-`date -Iminute` --env NET_NAME=dev cosmwasm/workspace-optimizer:0.12.13
 ```
 
 ### Test
