@@ -123,15 +123,15 @@ where
     Asset: Currency,
 {
     may_ask_liquidation(
-        asset,
-        Cause::Liability {
-            ltv: spec.max(),
-            healthy_ltv: spec.healthy_percent(),
-        },
+            asset,
+            Cause::Liability {
+                ltv: spec.max(),
+                healthy_ltv: spec.healthy_percent(),
+            },
         spec.amount_to_liquidate(asset, total_due),
-        min_asset,
-    )
-}
+            min_asset,
+        )
+    }    
 
 fn may_ask_liquidation_overdue<Asset>(
     asset: Coin<Asset>,
@@ -178,7 +178,8 @@ mod tests {
 
     use super::{check_liability, Cause, Liability, Status, Zone};
 
-    const MIN_DUE_AMOUNT: Coin<Nls> = Coin::new(10000);
+    const MIN_DUE_AMOUNT: Coin<Nls> = Coin::new(100);
+    const LEASE_AMOUNT: Coin<Nls> = Coin::new(1000);
 
     #[test]
     fn no_debt() {
@@ -237,8 +238,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                50500.into(),
+                LEASE_AMOUNT,
+                505.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -248,8 +249,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                50500.into(),
+                LEASE_AMOUNT,
+                505.into(),
                 MIN_DUE_AMOUNT,
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -259,7 +260,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 509.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -270,7 +271,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 510.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -281,8 +282,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                51000.into(),
+                LEASE_AMOUNT,
+                510.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -292,8 +293,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                51000.into(),
+                LEASE_AMOUNT,
+                510.into(),
                 MIN_DUE_AMOUNT,
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -309,7 +310,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 711.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -320,7 +321,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 712.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -331,8 +332,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                71200.into(),
+                LEASE_AMOUNT,
+                712.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -342,8 +343,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                71200.into(),
+                LEASE_AMOUNT,
+                712.into(),
                 MIN_DUE_AMOUNT,
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -353,7 +354,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 715.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -364,7 +365,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 721.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -375,7 +376,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 722.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -392,7 +393,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 122.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -403,7 +404,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 123.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -414,7 +415,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 124.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -425,8 +426,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                12800.into(),
+                LEASE_AMOUNT,
+                128.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -436,8 +437,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                12800.into(),
+                LEASE_AMOUNT,
+                128.into(),
                 MIN_DUE_AMOUNT,
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -447,7 +448,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 132.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -458,7 +459,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 133.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -477,7 +478,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 380.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -488,8 +489,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                38000.into(),
+                LEASE_AMOUNT,
+                380.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -499,8 +500,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                38100.into(),
+                LEASE_AMOUNT,
+                381.into(),
                 MIN_DUE_AMOUNT,
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -510,7 +511,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 381.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -521,7 +522,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 382.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -532,7 +533,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 390.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -543,7 +544,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 391.into(),
                 0.into(),
                 MIN_DUE_AMOUNT,
@@ -562,14 +563,14 @@ mod tests {
     #[test]
     fn liquidate_partial() {
         let max_ltv = Percent::from_permille(881);
-        const BACK_TO_HEALTHY: Amount = 87979;
+        const BACK_TO_HEALTHY: Amount = 879;
         let spec = liability_with_max(max_ltv);
 
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                88099.into(),
+                LEASE_AMOUNT,
+                880.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -579,8 +580,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                88099.into(),
+                LEASE_AMOUNT,
+                880.into(),
                 MIN_DUE_AMOUNT,
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -590,8 +591,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                88100.into(),
+                LEASE_AMOUNT,
+                881.into(),
                 MIN_DUE_AMOUNT,
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -607,8 +608,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                88100.into(),
+                LEASE_AMOUNT,
+                881.into(),
                 (BACK_TO_HEALTHY - 1).into(),
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -624,8 +625,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                88100.into(),
+                LEASE_AMOUNT,
+                881.into(),
                 BACK_TO_HEALTHY.into(),
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -641,8 +642,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                88100.into(),
+                LEASE_AMOUNT,
+                881.into(),
                 (BACK_TO_HEALTHY + 1).into(),
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -652,7 +653,7 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
+                LEASE_AMOUNT,
                 999.into(),
                 997.into(),
                 MIN_DUE_AMOUNT,
@@ -669,8 +670,8 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
-                1000.into(),
+                LEASE_AMOUNT,
+                LEASE_AMOUNT,
                 1.into(),
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -690,14 +691,14 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                76800.into(),
-                76565.into(),
+                LEASE_AMOUNT,
+                768.into(),
+                765.into(),
                 MIN_DUE_AMOUNT,
                 0.into()
             ),
             Status::partial(
-                76565.into(),
+                765.into(),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -707,19 +708,19 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                76800.into(),
-                76566.into(),
+                LEASE_AMOUNT,
+                768.into(),
+                768.into(),
                 MIN_DUE_AMOUNT,
                 0.into()
             ),
-            Status::partial(76566.into(), Cause::Overdue()),
+            Status::partial(768.into(), Cause::Overdue()),
         );
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
-                1000.into(),
+                LEASE_AMOUNT,
+                LEASE_AMOUNT,
                 1.into(),
                 MIN_DUE_AMOUNT,
                 0.into()
@@ -736,15 +737,15 @@ mod tests {
         let max_ltv = Percent::from_permille(573);
         let spec = liability_with_max(max_ltv);
 
-        const BACK_TO_HEALTHY: Amount = 89898;
+        const BACK_TO_HEALTHY: Amount = 898;
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                90000.into(),
+                LEASE_AMOUNT,
+                900.into(),
                 BACK_TO_HEALTHY.into(),
                 MIN_DUE_AMOUNT,
-                (100000 - BACK_TO_HEALTHY - 1).into()
+                LEASE_AMOUNT - BACK_TO_HEALTHY.into() - 1.into()
             ),
             Status::partial(
                 BACK_TO_HEALTHY.into(),
@@ -757,33 +758,33 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                90000.into(),
+                LEASE_AMOUNT,
+                900.into(),
                 (BACK_TO_HEALTHY + 1).into(),
                 MIN_DUE_AMOUNT,
-                (100000 - BACK_TO_HEALTHY - 2).into()
+                LEASE_AMOUNT - BACK_TO_HEALTHY.into() - 2.into()
             ),
             Status::partial((BACK_TO_HEALTHY + 1).into(), Cause::Overdue()),
         );
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                57299.into(),
+                LEASE_AMOUNT,
+                572.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 MIN_DUE_AMOUNT,
-                100000.into()
+                LEASE_AMOUNT
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                90000.into(),
+                LEASE_AMOUNT,
+                900.into(),
                 BACK_TO_HEALTHY.into(),
                 MIN_DUE_AMOUNT,
-                (100000 - BACK_TO_HEALTHY).into()
+                LEASE_AMOUNT - BACK_TO_HEALTHY.into()
             ),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
@@ -793,11 +794,11 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                100000.into(),
-                90000.into(),
+                LEASE_AMOUNT,
+                900.into(),
                 (BACK_TO_HEALTHY + 1).into(),
                 MIN_DUE_AMOUNT,
-                (100000 - BACK_TO_HEALTHY - 1).into()
+                LEASE_AMOUNT - BACK_TO_HEALTHY.into() - 1.into()
             ),
             Status::full(Cause::Overdue()),
         );
