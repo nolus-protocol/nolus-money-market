@@ -1,8 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{coin::Coin, currency::Currency, percent::Percent};
+use crate::{
+    coin::{Amount, Coin},
+    currency::Currency,
+    percent::Percent,
+};
 
 use super::{Liability, Zone};
+
+const MIN_LIQUIDATION_AMOUNT: Amount = 10_000; // $0.01 TODO #40
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 #[cfg_attr(test, derive(Debug))]
@@ -82,6 +88,8 @@ pub fn check_liability<Asset>(
 where
     Asset: Currency,
 {
+    debug_assert!(total_due <= asset);
+    debug_assert!(overdue <= total_due);
     may_ask_liquidation_liability(spec, asset, total_due, liquidation_threshold)
         .max(may_ask_liquidation_overdue(
             asset,
@@ -137,7 +145,11 @@ fn may_ask_liquidation_overdue<Asset>(
 where
     Asset: Currency,
 {
-    may_ask_liquidation(asset, Cause::Overdue(), overdue, liquidation_threshold)
+    if overdue < Coin::new(MIN_LIQUIDATION_AMOUNT) {
+        None
+    } else {
+        may_ask_liquidation(asset, Cause::Overdue(), overdue, liquidation_threshold)
+    }
 }
 
 fn may_ask_liquidation<Asset>(
@@ -160,9 +172,16 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{coin::Amount, duration::Duration, percent::Percent, test::currency::Nls};
+    use crate::{
+        coin::{Amount, Coin},
+        duration::Duration,
+        percent::Percent,
+        test::currency::Nls,
+    };
 
     use super::{check_liability, Cause, Liability, Status, Zone};
+
+    const MIN_DUE_AMOUNT: Coin<Nls> = Coin::new(10000);
 
     #[test]
     fn no_debt() {
@@ -191,8 +210,18 @@ mod tests {
             Status::No(Zone::no_warnings(spec.first_liq_warn())),
         );
         assert_eq!(
-            check_liability::<Nls>(&spec, 1000.into(), 505.into(), 1.into(), 0.into()),
-            Status::partial(1.into(), Cause::Overdue()),
+            check_liability::<Nls>(
+                &spec,
+                100000.into(),
+                50500.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                0.into()
+            ),
+            Status::No(Zone::no_warnings(spec.first_liq_warn())),
+        );
+        assert_eq!(
+            check_liability::<Nls>(&spec, 100000.into(), 50500.into(), MIN_DUE_AMOUNT, 0.into()),
+            Status::partial(MIN_DUE_AMOUNT, Cause::Overdue()),
         );
         assert_eq!(
             check_liability::<Nls>(&spec, 1000.into(), 509.into(), 0.into(), 0.into()),
@@ -203,8 +232,18 @@ mod tests {
             Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
         );
         assert_eq!(
-            check_liability::<Nls>(&spec, 1000.into(), 510.into(), 1.into(), 0.into()),
-            Status::partial(1.into(), Cause::Overdue()),
+            check_liability::<Nls>(
+                &spec,
+                100000.into(),
+                51000.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                0.into()
+            ),
+            Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
+        );
+        assert_eq!(
+            check_liability::<Nls>(&spec, 100000.into(), 51000.into(), MIN_DUE_AMOUNT, 0.into()),
+            Status::partial(MIN_DUE_AMOUNT, Cause::Overdue()),
         );
     }
 
@@ -221,8 +260,18 @@ mod tests {
             Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
         );
         assert_eq!(
-            check_liability::<Nls>(&spec, 1000.into(), 712.into(), 1.into(), 0.into()),
-            Status::partial(1.into(), Cause::Overdue())
+            check_liability::<Nls>(
+                &spec,
+                100000.into(),
+                71200.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                0.into()
+            ),
+            Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
+        );
+        assert_eq!(
+            check_liability::<Nls>(&spec, 100000.into(), 71200.into(), MIN_DUE_AMOUNT, 0.into()),
+            Status::partial(MIN_DUE_AMOUNT, Cause::Overdue())
         );
         assert_eq!(
             check_liability::<Nls>(&spec, 1000.into(), 715.into(), 0.into(), 0.into()),
@@ -255,8 +304,18 @@ mod tests {
             Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
         );
         assert_eq!(
-            check_liability::<Nls>(&spec, 1000.into(), 128.into(), 1.into(), 0.into()),
-            Status::partial(1.into(), Cause::Overdue())
+            check_liability::<Nls>(
+                &spec,
+                100000.into(),
+                12800.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                0.into()
+            ),
+            Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
+        );
+        assert_eq!(
+            check_liability::<Nls>(&spec, 100000.into(), 12800.into(), MIN_DUE_AMOUNT, 0.into()),
+            Status::partial(MIN_DUE_AMOUNT, Cause::Overdue())
         );
         assert_eq!(
             check_liability::<Nls>(&spec, 1000.into(), 132.into(), 0.into(), 0.into()),
@@ -279,8 +338,18 @@ mod tests {
             Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
         );
         assert_eq!(
-            check_liability::<Nls>(&spec, 1000.into(), 381.into(), 1.into(), 0.into()),
-            Status::partial(1.into(), Cause::Overdue())
+            check_liability::<Nls>(
+                &spec,
+                100000.into(),
+                38000.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                0.into()
+            ),
+            Status::No(Zone::second(spec.second_liq_warn(), spec.third_liq_warn())),
+        );
+        assert_eq!(
+            check_liability::<Nls>(&spec, 100000.into(), 38100.into(), MIN_DUE_AMOUNT, 0.into()),
+            Status::partial(MIN_DUE_AMOUNT, Cause::Overdue())
         );
         assert_eq!(
             check_liability::<Nls>(&spec, 1000.into(), 381.into(), 0.into(), 0.into()),
@@ -309,20 +378,27 @@ mod tests {
     #[test]
     fn liquidate_partial() {
         let max_ltv = Percent::from_permille(881);
+        const BACK_TO_HEALTHY: Amount = 87979;
         let spec = liability_with_max(max_ltv);
 
         assert_eq!(
-            check_liability::<Nls>(&spec, 1000.into(), 880.into(), 0.into(), 0.into()),
+            check_liability::<Nls>(
+                &spec,
+                100000.into(),
+                88099.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                0.into()
+            ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
         assert_eq!(
-            check_liability::<Nls>(&spec, 1000.into(), 880.into(), 1.into(), 0.into()),
-            Status::partial(1.into(), Cause::Overdue()),
+            check_liability::<Nls>(&spec, 100000.into(), 88099.into(), MIN_DUE_AMOUNT, 0.into()),
+            Status::partial(MIN_DUE_AMOUNT, Cause::Overdue()),
         );
         assert_eq!(
-            check_liability::<Nls>(&spec, 1000.into(), 881.into(), 0.into(), 0.into()),
+            check_liability::<Nls>(&spec, 100000.into(), 88100.into(), MIN_DUE_AMOUNT, 0.into()),
             Status::partial(
-                879.into(),
+                BACK_TO_HEALTHY.into(),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -330,9 +406,15 @@ mod tests {
             ),
         );
         assert_eq!(
-            check_liability::<Nls>(&spec, 1000.into(), 881.into(), 878.into(), 0.into()),
+            check_liability::<Nls>(
+                &spec,
+                100000.into(),
+                88100.into(),
+                (BACK_TO_HEALTHY - 1).into(),
+                0.into()
+            ),
             Status::partial(
-                879.into(),
+                BACK_TO_HEALTHY.into(),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -340,9 +422,15 @@ mod tests {
             ),
         );
         assert_eq!(
-            check_liability::<Nls>(&spec, 1000.into(), 881.into(), 879.into(), 0.into()),
+            check_liability::<Nls>(
+                &spec,
+                100000.into(),
+                88100.into(),
+                BACK_TO_HEALTHY.into(),
+                0.into()
+            ),
             Status::partial(
-                879.into(),
+                BACK_TO_HEALTHY.into(),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -350,8 +438,14 @@ mod tests {
             ),
         );
         assert_eq!(
-            check_liability::<Nls>(&spec, 1000.into(), 881.into(), 880.into(), 0.into()),
-            Status::partial(880.into(), Cause::Overdue()),
+            check_liability::<Nls>(
+                &spec,
+                100000.into(),
+                88100.into(),
+                (BACK_TO_HEALTHY + 1).into(),
+                0.into()
+            ),
+            Status::partial((BACK_TO_HEALTHY + 1).into(), Cause::Overdue()),
         );
         assert_eq!(
             check_liability::<Nls>(&spec, 1000.into(), 999.into(), 997.into(), 0.into()),
@@ -378,9 +472,9 @@ mod tests {
         let spec = liability_with_max(max_ltv);
 
         assert_eq!(
-            check_liability::<Nls>(&spec, 1000.into(), 768.into(), 765.into(), 0.into()),
+            check_liability::<Nls>(&spec, 100000.into(), 76800.into(), 76565.into(), 0.into()),
             Status::partial(
-                765.into(),
+                76565.into(),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -388,8 +482,8 @@ mod tests {
             ),
         );
         assert_eq!(
-            check_liability::<Nls>(&spec, 1000.into(), 768.into(), 766.into(), 0.into()),
-            Status::partial(766.into(), Cause::Overdue()),
+            check_liability::<Nls>(&spec, 100000.into(), 76800.into(), 76566.into(), 0.into()),
+            Status::partial(76566.into(), Cause::Overdue()),
         );
         assert_eq!(
             check_liability::<Nls>(&spec, 1000.into(), 1000.into(), 1.into(), 0.into()),
@@ -398,17 +492,24 @@ mod tests {
                 healthy_ltv: STEP
             }),
         );
-        let back_to_healthy: Amount = spec.amount_to_liquidate(1000, 900);
+    }
+
+    #[test]
+    fn liquidate_full_with_threshold() {
+        let max_ltv = Percent::from_permille(573);
+        let spec = liability_with_max(max_ltv);
+
+        const BACK_TO_HEALTHY: Amount = 89898;
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
-                900.into(),
-                back_to_healthy.into(),
-                (1000 - back_to_healthy - 1).into()
+                100000.into(),
+                90000.into(),
+                BACK_TO_HEALTHY.into(),
+                (100000 - BACK_TO_HEALTHY - 1).into()
             ),
             Status::partial(
-                back_to_healthy.into(),
+                BACK_TO_HEALTHY.into(),
                 Cause::Liability {
                     ltv: max_ltv,
                     healthy_ltv: STEP
@@ -418,20 +519,30 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
-                900.into(),
-                (back_to_healthy + 1).into(),
-                (1000 - back_to_healthy - 2).into()
+                100000.into(),
+                90000.into(),
+                (BACK_TO_HEALTHY + 1).into(),
+                (100000 - BACK_TO_HEALTHY - 2).into()
             ),
-            Status::partial((back_to_healthy + 1).into(), Cause::Overdue()),
+            Status::partial((BACK_TO_HEALTHY + 1).into(), Cause::Overdue()),
         );
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
-                900.into(),
-                back_to_healthy.into(),
-                (1000 - back_to_healthy).into()
+                100000.into(),
+                572.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                100000.into()
+            ),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
+        assert_eq!(
+            check_liability::<Nls>(
+                &spec,
+                100000.into(),
+                90000.into(),
+                BACK_TO_HEALTHY.into(),
+                (100000 - BACK_TO_HEALTHY).into()
             ),
             Status::full(Cause::Liability {
                 ltv: max_ltv,
@@ -441,10 +552,10 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                1000.into(),
-                900.into(),
-                (back_to_healthy + 1).into(),
-                (1000 - back_to_healthy - 1).into()
+                100000.into(),
+                90000.into(),
+                (BACK_TO_HEALTHY + 1).into(),
+                (100000 - BACK_TO_HEALTHY - 1).into()
             ),
             Status::full(Cause::Overdue()),
         );
