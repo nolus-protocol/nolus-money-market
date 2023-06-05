@@ -85,14 +85,53 @@ where
 {
     debug_assert!(total_due <= asset);
     debug_assert!(overdue <= total_due);
-    may_ask_liquidation_liability(spec, asset, total_due, min_asset)
-        .max(may_ask_liquidation_overdue(
+    may_ask_liquidation_liability(spec, asset, total_due, min_liquidation, min_asset).max(
+        may_ask_liquidation_overdue(spec, asset, overdue, min_liquidation, min_asset),
+    )
+}
+
+fn may_ask_liquidation_liability<Asset>(
+    spec: &Liability,
+    asset: Coin<Asset>,
+    total_due: Coin<Asset>,
+    min_liquidation: Coin<Asset>,
+    min_asset: Coin<Asset>,
+) -> Status<Asset>
+where
+    Asset: Currency,
+{
+    let liquidation_amount = spec.amount_to_liquidate(asset, total_due);
+    dbg!(liquidation_amount);
+    if liquidation_amount < min_liquidation {
+        no_liquidation(spec, asset, total_due)
+    } else {
+        ask_liquidation(
             asset,
-            overdue,
-            min_liquidation,
+            Cause::Liability {
+                ltv: spec.max(),
+                healthy_ltv: spec.healthy_percent(),
+            },
+            liquidation_amount,
             min_asset,
-        ))
-        .unwrap_or_else(|| no_liquidation(spec, asset, total_due))
+        )
+    }
+}
+
+fn may_ask_liquidation_overdue<Asset>(
+    spec: &Liability,
+    asset: Coin<Asset>,
+    overdue: Coin<Asset>,
+    min_liquidation: Coin<Asset>,
+    min_asset: Coin<Asset>,
+) -> Status<Asset>
+where
+    Asset: Currency,
+{
+    if overdue < min_liquidation {
+        no_liquidation(spec, asset, overdue)
+    } else {
+        ask_liquidation(asset, Cause::Overdue(), overdue, min_asset)
+    }
 }
 
 fn no_liquidation<Asset>(
@@ -113,57 +152,19 @@ where
     }
 }
 
-fn may_ask_liquidation_liability<Asset>(
-    spec: &Liability,
-    asset: Coin<Asset>,
-    total_due: Coin<Asset>,
-    min_asset: Coin<Asset>,
-) -> Option<Status<Asset>>
-where
-    Asset: Currency,
-{
-    may_ask_liquidation(
-            asset,
-            Cause::Liability {
-                ltv: spec.max(),
-                healthy_ltv: spec.healthy_percent(),
-            },
-        spec.amount_to_liquidate(asset, total_due),
-            min_asset,
-        )
-    }    
-
-fn may_ask_liquidation_overdue<Asset>(
-    asset: Coin<Asset>,
-    overdue: Coin<Asset>,
-    min_liquidation: Coin<Asset>,
-    min_asset: Coin<Asset>,
-) -> Option<Status<Asset>>
-where
-    Asset: Currency,
-{
-    if overdue < min_liquidation {
-        None
-    } else {
-        may_ask_liquidation(asset, Cause::Overdue(), overdue, min_asset)
-    }
-}
-
-fn may_ask_liquidation<Asset>(
+fn ask_liquidation<Asset>(
     asset: Coin<Asset>,
     cause: Cause,
     liquidation: Coin<Asset>,
     min_asset: Coin<Asset>,
-) -> Option<Status<Asset>>
+) -> Status<Asset>
 where
     Asset: Currency,
 {
-    if liquidation.is_zero() {
-        None
-    } else if asset.saturating_sub(liquidation) <= min_asset {
-        Some(Status::full(cause))
+    if asset.saturating_sub(liquidation) <= min_asset {
+        Status::full(cause)
     } else {
-        Some(Status::partial(liquidation, cause))
+        Status::partial(liquidation, cause)
     }
 }
 
@@ -301,6 +302,17 @@ mod tests {
             ),
             Status::partial(MIN_DUE_AMOUNT, Cause::Overdue()),
         );
+        assert_eq!(
+            check_liability::<Nls>(
+                &spec,
+                LEASE_AMOUNT,
+                515.into(),
+                MIN_DUE_AMOUNT - 1.into(),
+                MIN_DUE_AMOUNT,
+                0.into()
+            ),
+            Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
+        );
     }
 
     #[test]
@@ -372,6 +384,17 @@ mod tests {
                 0.into()
             ),
             Status::No(Zone::first(spec.first_liq_warn(), spec.second_liq_warn())),
+        );
+        assert_eq!(
+            check_liability::<Nls>(
+                &spec,
+                LEASE_AMOUNT,
+                721.into(),
+                MIN_DUE_AMOUNT,
+                MIN_DUE_AMOUNT,
+                0.into()
+            ),
+            Status::partial(MIN_DUE_AMOUNT, Cause::Overdue()),
         );
         assert_eq!(
             check_liability::<Nls>(
