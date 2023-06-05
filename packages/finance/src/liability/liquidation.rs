@@ -530,7 +530,7 @@ mod tests {
             check_liability::<Nls>(
                 &spec,
                 100000.into(),
-                572.into(),
+                57299.into(),
                 MIN_DUE_AMOUNT - 1.into(),
                 100000.into()
             ),
