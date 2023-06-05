@@ -10,18 +10,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - shell: "sh"
-      run: |
-        if test "${{ inputs.target_net }}" = "test";
-          then exit 0;
-        elif test "${{ inputs.target_net }}" = "main";
-          then exit 0;
-        else
-          (
-            echo "Input is neither \"test\", nor \"main\"!"
-            exit 1
-          );
-        fi
     - name: "Build optimized versions of contracts"
       shell: "sh"
       run: |
@@ -35,12 +23,7 @@ runs:
         --mount type=volume,source="rustup_dir_cache",target="/usr/local/rustup/" \
         --mount type=volume,source="cargo_dir_cache",target="/usr/local/cargo/" \
         --mount type=volume,source="registry_cache",target="/usr/local/cargo/registry/" \
-        --env ALT_NET_SYMBOLS=$( \
-            if test "${{ inputs.target_net }}" = "test"; \
-              then echo 1; \
-              else echo 0; \
-            fi \
-          ) \
+        --env NET_NAME="${{ inputs.target_net }}" \
         --env RELEASE_VERSION="${RELEASE_VERSION}" \
         cosmwasm/workspace-optimizer:0.12.13
     - name: "Check for WASM binaries larger than allowed limit"
