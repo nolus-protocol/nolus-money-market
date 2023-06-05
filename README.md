@@ -35,8 +35,7 @@ Implementation of the core business logic as CosmWasm contracts.
 
 The build is controlled with a few environment variables:
 * `RELEASE_VERSION` - an arbitrary string giving the release a name
-* `ALT_NET_SYMBOLS` - `1`, `y` or `Y` if the build is intended for deployment
-  on a test net
+* `NET_NAME` - the name of the targeted network, e.g.: `dev`, `test`, `main`
 
 **A non-optimized version**
 
@@ -44,7 +43,7 @@ The command below builds a contract if ran from the contract directory,
 or builds all contracts if ran from the workspace directory:
 
 ```sh
-RELEASE_VERSION=dev-release ALT_NET_SYMBOLS=Y cargo build --target=wasm32-unknown-unknown
+RELEASE_VERSION=dev-release NET_NAME=dev cargo build --target=wasm32-unknown-unknown
 ```
 
 **An optimized version**
@@ -56,7 +55,7 @@ run from the workspace directory:
 docker run --rm -v "$(pwd)":/code \
   --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
   --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
-  --env RELEASE_VERSION=`git describe`-`date -Iminute` --env ALT_NET_SYMBOLS=Y cosmwasm/workspace-optimizer:0.12.11
+  --env RELEASE_VERSION=`git describe`-`date -Iminute` --env NET_NAME=dev cosmwasm/workspace-optimizer:0.12.11
 ```
 
 ### Test
