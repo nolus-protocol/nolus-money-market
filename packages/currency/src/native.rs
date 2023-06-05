@@ -4,11 +4,7 @@ use crate::{currency_macro::schemars, define_currency, define_symbol, SingleVisi
 
 define_symbol! {
     NLS {
-        {
-            bank: "unls",
-            dex: "ibc/DEADCODEDEADCODE"
-        },
-        alt: {
+        ["dev", "test", "main"]: {
             bank: "unls",
             dex: "ibc/DEADCODEDEADCODE"
         },

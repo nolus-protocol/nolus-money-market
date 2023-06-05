@@ -7,17 +7,18 @@ pub struct CurrencySymbols {
 macro_rules! define_symbol {
     (
         $currency: ident {
-            { $($default_body:tt)* },
-            alt: { $($gated_body:tt)* } $(,)?
+            $([$($net: literal),+ $(,)?]: { $($body:tt)* }),+ $(,)?
         } $(,)?
     ) => {
         pub const $currency: $crate::symbols_macro::CurrencySymbols = {
             use $crate::symbols_macro::CurrencySymbols;
 
-            #[cfg(not(feature = "alt_net_symbols"))]
-            { CurrencySymbols { $($default_body)* } }
-            #[cfg(feature = "alt_net_symbols")]
-            { CurrencySymbols { $($gated_body)* } }
+            $(
+                #[cfg(any($(net_name = $net),+))]
+                { CurrencySymbols { $($body)* } }
+            )+
+            #[cfg(all($($(not(net_name = $net)),+),+))]
+            { compile_error!(concat!("No symbols defined for network with name \"", env!("NET_NAME"), "\"!")) }
         };
     };
 }
