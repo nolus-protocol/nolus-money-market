@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use currency::{
     native::{Native, Nls},
@@ -10,10 +10,15 @@ use dex::{
 };
 use finance::{
     coin::CoinDTO,
-    currency::{Currency as _, Symbol},
+    currency::{maybe_visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Symbol},
 };
 use oracle::stub::OracleRef;
-use platform::{bank, batch::Batch, message::Response as PlatformResponse, never::Never};
+use platform::{
+    bank,
+    batch::Batch,
+    message::Response as PlatformResponse,
+    never::{safe_unwrap, Never},
+};
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -26,34 +31,33 @@ use super::{idle::Idle, Config, ConfigManagement, SetupDexHandler, State, StateE
 
 #[derive(Serialize, Deserialize)]
 pub(super) struct BuyBack {
-    contract_addr: Addr,
+    profit_contract: Addr,
     config: Config,
     account: Account,
     coins: Vec<CoinDTO<PaymentGroup>>,
 }
 
 impl BuyBack {
-    pub fn try_new(
-        contract_addr: Addr,
+    pub fn new(
+        profit_contract: Addr,
         config: Config,
         account: Account,
         mut coins: Vec<CoinDTO<PaymentGroup>>,
-    ) -> Result<Self, TryNewError> {
-        coins.retain(|coin_dto: &CoinDTO<PaymentGroup>| coin_dto.ticker() != Nls::TICKER);
+    ) -> Self {
+        coins.retain(|coin_dto: &CoinDTO<PaymentGroup>| {
+            maybe_visit_any_on_ticker::<Native, NativeCoinVisitor>(
+                coin_dto.ticker(),
+                NativeCoinVisitor,
+            )
+            .map(safe_unwrap)
+            .is_some()
+        });
 
-        if coins.is_empty() {
-            Err(TryNewError {
-                contract_addr,
-                config,
-                account,
-            })
-        } else {
-            Ok(Self {
-                contract_addr,
-                config,
-                account,
-                coins,
-            })
+        Self {
+            profit_contract,
+            config,
+            account,
+            coins,
         }
     }
 }
@@ -109,7 +113,7 @@ impl SwapTask for BuyBack {
         querier: &QuerierWrapper<'_>,
     ) -> Self::Result {
         let (bank_batch, bank_emitter) = Profit::transfer_nls(
-            bank::account(&self.contract_addr, querier),
+            bank::account(&self.profit_contract, querier),
             env,
             self.config.treasury(),
         )?;
@@ -143,10 +147,18 @@ impl SetupDexHandler for StateLocalOut<BuyBack> {
     type State = Self;
 }
 
-pub(super) struct TryNewError {
-    pub contract_addr: Addr,
-    pub config: Config,
-    pub account: Account,
+pub struct NativeCoinVisitor;
+
+impl AnyVisitor for NativeCoinVisitor {
+    type Output = ();
+    type Error = Never;
+
+    fn on<C>(self) -> AnyVisitorResult<Self>
+    where
+        C: Currency + Serialize + DeserializeOwned,
+    {
+        Ok(())
+    }
 }
 
 trait TryFind

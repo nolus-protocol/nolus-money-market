@@ -38,77 +38,39 @@ impl Idle {
         Self { config, account }
     }
 
-    fn send_nls<B>(
-        &self,
+    fn on_time_alarm(
+        mut self,
         querier: &QuerierWrapper<'_>,
-        env: &Env,
-        account: B,
-    ) -> ContractResult<PlatformResponse>
-    where
-        B: BankAccount,
-    {
-        let state_batch = self.enter(env.block.time, querier)?;
-
-        let balance_nls: Coin<Nls> = account.balance()?;
-
-        Ok(if balance_nls.is_zero() {
-            PlatformResponse::messages_only(state_batch)
-        } else {
-            let (bank_batch, bank_emitter) =
-                Profit::transfer_nls(account, env, self.config.treasury())?;
-
-            PlatformResponse::messages_with_events(state_batch.merge(bank_batch), bank_emitter)
-        })
-    }
-
-    fn on_time_alarm(mut self, querier: &QuerierWrapper<'_>, mut env: Env) -> ContractResult<DexResponse<Self>> {
-        let contract_addr: Addr = env.contract.address.clone();
-
-        let account: BankStub<BankView<'_>> = bank::account(&contract_addr, querier);
+        mut env: Env,
+    ) -> ContractResult<DexResponse<Self>> {
+        let account: BankStub<BankView<'_>> = bank::account(&env.contract.address, querier);
 
         let balances: Vec<CoinDTO<PaymentGroup>> = account
             .balances::<PaymentGroup, _>(CoinToDTO(PhantomData))?
             .map(never::safe_unwrap)
             .unwrap_or_default();
 
-        match BuyBack::try_new(env.contract.address, self.config, self.account, balances) {
-            Ok(buy_back) => Self::try_enter_buy_back(querier, env.block.time, buy_back),
-            Err(buy_back::TryNewError {
-                contract_addr,
-                config,
-                account: self_account,
-            }) => {
-                // Set back moved out values to allow usage of whole object.
-                env.contract.address = contract_addr;
-                self.config = config;
-                self.account = self_account;
-
-                self.send_nls(querier, &env, account)
-                    .map(|response: PlatformResponse| (self.into(), response))
-            }
-        }
-        .map(
-            |(next_state, response): (State, PlatformResponse)| DexResponse::<Self> {
-                response,
-                next_state,
-            },
-        )
+        self.try_enter_buy_back(querier, env.block.time, balances)
     }
 
     fn try_enter_buy_back(
+        self,
         querier: &QuerierWrapper<'_>,
         now: Timestamp,
-        buy_back: BuyBack,
-    ) -> ContractResult<(State, PlatformResponse)> {
-        let state: StartLocalLocalState<BuyBack> = dex::start_local_local(buy_back);
+        balances: Vec<CoinDTO<PaymentGroup>>,
+    ) -> ContractResult<DexResponse<Self>> {
+        let state: StartLocalLocalState<BuyBack> = dex::start_local_local(BuyBack::new(
+            env.contract.address,
+            self.config,
+            self.account,
+            balances,
+        ));
 
         state
             .enter(now, &querier)
-            .map(|batch: Batch| {
-                (
-                    State(StateEnum::BuyBack(state.into())),
-                    PlatformResponse::messages_only(batch),
-                )
+            .map(|batch: Batch| DexResponse::<Self> {
+                response: PlatformResponse::messages_only(batch),
+                next_state: State(StateEnum::BuyBack(state.into())),
             })
             .map_err(Into::into)
     }
