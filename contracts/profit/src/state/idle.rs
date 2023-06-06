@@ -18,12 +18,13 @@ use platform::{
     message::Response as PlatformResponse,
     never::{self, Never},
 };
-use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
 
 use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult};
 
 use super::{
-    buy_back::BuyBack, CadenceHours, Config, ConfigManagement, SetupDexHandler, State, StateEnum,
+    buy_back::{self, BuyBack},
+    CadenceHours, Config, ConfigManagement, SetupDexHandler, State, StateEnum,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -39,8 +40,8 @@ impl Idle {
 
     fn send_nls<B>(
         &self,
-        env: &Env,
         querier: &QuerierWrapper<'_>,
+        env: &Env,
         account: B,
     ) -> ContractResult<PlatformResponse>
     where
@@ -60,19 +61,31 @@ impl Idle {
         })
     }
 
-    fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> ContractResult<DexResponse<Self>> {
-        let account: BankStub<BankView<'_>> = bank::account(&env.contract.address, &deps.querier);
+    fn on_time_alarm(mut self, querier: &QuerierWrapper<'_>, mut env: Env) -> ContractResult<DexResponse<Self>> {
+        let contract_addr: Addr = env.contract.address.clone();
+
+        let account: BankStub<BankView<'_>> = bank::account(&contract_addr, querier);
 
         let balances: Vec<CoinDTO<PaymentGroup>> = account
             .balances::<PaymentGroup, _>(CoinToDTO(PhantomData))?
             .map(never::safe_unwrap)
             .unwrap_or_default();
 
-        if balances.is_empty() {
-            self.send_nls(&env, &deps.querier, account)
-                .map(|response: PlatformResponse| (self.into(), response))
-        } else {
-            self.enter_buy_back(&deps, env, balances)
+        match BuyBack::try_new(env.contract.address, self.config, self.account, balances) {
+            Ok(buy_back) => Self::try_enter_buy_back(querier, env.block.time, buy_back),
+            Err(buy_back::TryNewError {
+                contract_addr,
+                config,
+                account: self_account,
+            }) => {
+                // Set back moved out values to allow usage of whole object.
+                env.contract.address = contract_addr;
+                self.config = config;
+                self.account = self_account;
+
+                self.send_nls(querier, &env, account)
+                    .map(|response: PlatformResponse| (self.into(), response))
+            }
         }
         .map(
             |(next_state, response): (State, PlatformResponse)| DexResponse::<Self> {
@@ -82,21 +95,15 @@ impl Idle {
         )
     }
 
-    fn enter_buy_back(
-        self,
-        deps: &Deps<'_>,
-        env: Env,
-        balances: Vec<CoinDTO<PaymentGroup>>,
+    fn try_enter_buy_back(
+        querier: &QuerierWrapper<'_>,
+        now: Timestamp,
+        buy_back: BuyBack,
     ) -> ContractResult<(State, PlatformResponse)> {
-        let state: StartLocalLocalState<BuyBack> = dex::start_local_local(BuyBack::new(
-            env.contract.address,
-            self.config,
-            self.account,
-            balances,
-        ));
+        let state: StartLocalLocalState<BuyBack> = dex::start_local_local(buy_back);
 
         state
-            .enter(env.block.time, &deps.querier)
+            .enter(now, &querier)
             .map(|batch: Batch| {
                 (
                     State(StateEnum::BuyBack(state.into())),
@@ -137,7 +144,7 @@ impl Handler for Idle {
     type SwapResult = ContractResult<DexResponse<State>>;
 
     fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> DexResult<Self> {
-        DexResult::Finished(self.on_time_alarm(deps, env))
+        DexResult::Finished(self.on_time_alarm(&deps.querier, env))
     }
 }
 

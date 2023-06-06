@@ -33,17 +33,27 @@ pub(super) struct BuyBack {
 }
 
 impl BuyBack {
-    pub fn new(
+    pub fn try_new(
         contract_addr: Addr,
         config: Config,
         account: Account,
-        coins: Vec<CoinDTO<PaymentGroup>>,
-    ) -> Self {
-        Self {
-            contract_addr,
-            config,
-            account,
-            coins,
+        mut coins: Vec<CoinDTO<PaymentGroup>>,
+    ) -> Result<Self, TryNewError> {
+        coins.retain(|coin_dto: &CoinDTO<PaymentGroup>| coin_dto.ticker() != Nls::TICKER);
+
+        if coins.is_empty() {
+            Err(TryNewError {
+                contract_addr,
+                config,
+                account,
+            })
+        } else {
+            Ok(Self {
+                contract_addr,
+                config,
+                account,
+                coins,
+            })
         }
     }
 }
@@ -131,6 +141,12 @@ impl ConfigManagement for StateLocalOut<BuyBack> {
 
 impl SetupDexHandler for StateLocalOut<BuyBack> {
     type State = Self;
+}
+
+pub(super) struct TryNewError {
+    pub contract_addr: Addr,
+    pub config: Config,
+    pub account: Account,
 }
 
 trait TryFind
