@@ -1,6 +1,13 @@
+use std::ops::Sub;
+
 use serde::{Deserialize, Serialize};
 
-use crate::{coin::Coin, currency::Currency, percent::Percent};
+use crate::{
+    coin::{Amount, Coin},
+    currency::Currency,
+    percent::Percent,
+    ratio::Ratio,
+};
 
 use super::{Liability, Zone};
 
@@ -101,9 +108,15 @@ where
     Asset: Currency,
 {
     let liquidation_amount = spec.amount_to_liquidate(asset, total_due);
-    dbg!(liquidation_amount);
     if liquidation_amount < min_liquidation {
-        no_liquidation(spec, asset, total_due)
+        let ltv = Percent::from_ratio(total_due, asset);
+        if ltv >= spec.max() {
+            let max_ltv_before_liq: Amount =
+                spec.max().sub(Percent::from_permille(1)).parts().into();
+            no_liquidation(spec, asset, Coin::new(max_ltv_before_liq))
+        } else {
+            no_liquidation(spec, asset, total_due)
+        }
     } else {
         ask_liquidation(
             asset,
@@ -580,6 +593,46 @@ mod tests {
                     healthy_ltv: STEP
                 }
             ),
+        );
+    }
+
+    #[test]
+    fn min_liquidation() {
+        let max_ltv = Percent::from_permille(751);
+        let spec = liability_with_max(max_ltv);
+
+        assert_eq!(
+            check_liability::<Nls>(
+                &spec,
+                LEASE_AMOUNT,
+                750.into(),
+                99.into(),
+                1000.into(),
+                0.into()
+            ),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
+        assert_eq!(
+            check_liability::<Nls>(
+                &spec,
+                LEASE_AMOUNT,
+                751.into(),
+                99.into(),
+                1000.into(),
+                0.into()
+            ),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
+        assert_eq!(
+            check_liability::<Nls>(
+                &spec,
+                LEASE_AMOUNT,
+                761.into(),
+                0.into(),
+                1000.into(),
+                0.into()
+            ),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
         );
     }
 
