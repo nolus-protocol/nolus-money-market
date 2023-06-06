@@ -54,6 +54,7 @@ impl Idle {
         let state_response: PlatformResponse =
             PlatformResponse::messages_only(self.enter(env.block.time, querier)?);
 
+        // TODO Generalize to handle all native currencies
         let nls: Option<Coin<Nls>> = native
             .into_iter()
             .find_map(|coin_dto: CoinDTO<Native>| coin_dto.try_into().ok());
