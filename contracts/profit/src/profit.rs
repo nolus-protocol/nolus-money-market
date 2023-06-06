@@ -2,7 +2,8 @@ use currency::native::Nls;
 use finance::coin::Coin;
 use platform::{
     bank::BankAccount,
-    batch::{Batch, Emit as _, Emitter},
+    batch::{Emit as _, Emitter},
+    message::Response as PlatformResponse,
 };
 use sdk::cosmwasm_std::{Addr, Env, Storage};
 
@@ -19,20 +20,23 @@ impl Profit {
         mut account: B,
         env: &Env,
         treasury_addr: &Addr,
-    ) -> ContractResult<(Batch, Emitter)>
+        balance_nls: Coin<Nls>,
+    ) -> PlatformResponse
     where
         B: BankAccount,
     {
-        let balance_nls: Coin<Nls> = account.balance()?;
+        if balance_nls.is_zero() {
+            PlatformResponse::messages_only(account.into())
+        } else {
+            account.send(balance_nls, treasury_addr);
 
-        account.send(balance_nls, treasury_addr);
-
-        Ok((
-            account.into(),
-            Emitter::of_type("tr-profit")
-                .emit_tx_info(env)
-                .emit_coin("profit-amount", balance_nls),
-        ))
+            PlatformResponse::messages_with_events(
+                account.into(),
+                Emitter::of_type("tr-profit")
+                    .emit_tx_info(env)
+                    .emit_coin("profit-amount", balance_nls),
+            )
+        }
     }
 
     pub fn query_config(storage: &dyn Storage) -> ContractResult<ConfigResponse> {

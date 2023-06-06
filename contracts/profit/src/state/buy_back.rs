@@ -1,4 +1,4 @@
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use currency::{
     native::{Native, Nls},
@@ -9,15 +9,14 @@ use dex::{
     SwapTask,
 };
 use finance::{
-    coin::CoinDTO,
-    currency::{maybe_visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Symbol},
+    coin::{Coin, CoinDTO},
+    currency::{Currency, Symbol},
 };
 use oracle::stub::OracleRef;
 use platform::{
-    bank,
-    batch::Batch,
+    bank::{self, BankAccountView},
     message::Response as PlatformResponse,
-    never::{safe_unwrap, Never},
+    never::Never,
 };
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
@@ -42,17 +41,8 @@ impl BuyBack {
         profit_contract: Addr,
         config: Config,
         account: Account,
-        mut coins: Vec<CoinDTO<PaymentGroup>>,
+        coins: Vec<CoinDTO<PaymentGroup>>,
     ) -> Self {
-        coins.retain(|coin_dto: &CoinDTO<PaymentGroup>| {
-            maybe_visit_any_on_ticker::<Native, NativeCoinVisitor>(
-                coin_dto.ticker(),
-                NativeCoinVisitor,
-            )
-            .map(safe_unwrap)
-            .is_some()
-        });
-
         Self {
             profit_contract,
             config,
@@ -112,18 +102,20 @@ impl SwapTask for BuyBack {
         env: &Env,
         querier: &QuerierWrapper<'_>,
     ) -> Self::Result {
-        let (bank_batch, bank_emitter) = Profit::transfer_nls(
-            bank::account(&self.profit_contract, querier),
-            env,
-            self.config.treasury(),
-        )?;
+        let account = bank::account(&self.profit_contract, querier);
+
+        let balance_nls: Coin<Nls> = account.balance()?;
+
+        let bank_response: PlatformResponse =
+            Profit::transfer_nls(account, env, self.config.treasury(), balance_nls);
 
         let state: Idle = Idle::new(self.config, self.account);
 
-        let batch: Batch = state.enter(env.block.time, querier)?;
-
         Ok(DexResponse::<State> {
-            response: PlatformResponse::messages_with_events(batch.merge(bank_batch), bank_emitter),
+            response: state
+                .enter(env.block.time, querier)
+                .map(PlatformResponse::messages_only)
+                .map(|state_response: PlatformResponse| state_response.merge_with(bank_response))?,
             next_state: State(StateEnum::Idle(state)),
         })
     }
@@ -145,20 +137,6 @@ impl ConfigManagement for StateLocalOut<BuyBack> {
 
 impl SetupDexHandler for StateLocalOut<BuyBack> {
     type State = Self;
-}
-
-pub struct NativeCoinVisitor;
-
-impl AnyVisitor for NativeCoinVisitor {
-    type Output = ();
-    type Error = Never;
-
-    fn on<C>(self) -> AnyVisitorResult<Self>
-    where
-        C: Currency + Serialize + DeserializeOwned,
-    {
-        Ok(())
-    }
 }
 
 trait TryFind
