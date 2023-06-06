@@ -1,4 +1,6 @@
-use finance::currency::{self, AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
+use finance::currency::{
+    self, equal, AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic,
+};
 
 use crate::{currency_macro::schemars, define_currency, define_symbol, SingleVisitorAdapter};
 
@@ -28,6 +30,13 @@ define_currency!(Nls, NLS);
 pub struct Native {}
 impl Group for Native {
     const DESCR: SymbolStatic = "native";
+
+    fn contains<C>() -> bool
+    where
+        C: Currency,
+    {
+        equal::<C, Nls>()
+    }
 
     fn maybe_visit_on_ticker<V>(ticker: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
     where

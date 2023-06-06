@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
+use finance::currency::{AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{lease::LeaseGroup, lpn::Lpns};
@@ -10,6 +10,13 @@ pub struct PaymentGroup {}
 
 impl Group for PaymentGroup {
     const DESCR: SymbolStatic = "payment";
+
+    fn contains<C>() -> bool
+    where
+        C: Currency,
+    {
+        LeaseGroup::contains::<C>() || Lpns::contains::<C>()
+    }
 
     fn maybe_visit_on_ticker<V>(ticker: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
     where
