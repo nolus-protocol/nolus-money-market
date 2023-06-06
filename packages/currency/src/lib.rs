@@ -6,6 +6,7 @@ mod currency_macro;
 pub mod lease;
 pub mod lpn;
 pub mod native;
+pub mod non_native_payment;
 pub mod payment;
 mod symbols_macro;
 

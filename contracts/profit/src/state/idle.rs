@@ -26,7 +26,8 @@ use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
 use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult};
 
 use super::{
-    buy_back::BuyBack, CadenceHours, Config, ConfigManagement, SetupDexHandler, State, StateEnum,
+    buy_back::{BuyBack, BuyBackCurrencies},
+    CadenceHours, Config, ConfigManagement, SetupDexHandler, State, StateEnum,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -72,7 +73,7 @@ impl Idle {
     ) -> ContractResult<DexResponse<Self>> {
         let account: BankStub<BankView<'_>> = bank::account(&env.contract.address, querier);
 
-        let balances: SplitCoins<Native, PaymentGroup> = account
+        let balances: SplitCoins<Native, BuyBackCurrencies> = account
             .balances::<PaymentGroup, _>(CoinToDTO(PhantomData, PhantomData))?
             .map(safe_unwrap)
             .unwrap_or_default();
@@ -99,7 +100,7 @@ impl Idle {
         querier: &QuerierWrapper<'_>,
         profit_addr: Addr,
         now: Timestamp,
-        balances: Vec<CoinDTO<PaymentGroup>>,
+        balances: Vec<CoinDTO<BuyBackCurrencies>>,
     ) -> ContractResult<DexResponse<Self>> {
         let state: StartLocalLocalState<BuyBack> = dex::start_local_local(BuyBack::new(
             profit_addr,

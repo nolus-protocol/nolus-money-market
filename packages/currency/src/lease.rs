@@ -34,9 +34,9 @@ define_symbol! {
     ST_ATOM {
         ["dev", "test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-??/uatom
-            bank: "ibc/NA",
+            bank: "ibc/NA_ST_ATOM",
             /// full ibc route: transfer/channel-??/uatom
-            dex: "ibc/NA",
+            dex: "ibc/NA_ST_ATOM",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-326/stuatom
@@ -63,9 +63,9 @@ define_symbol! {
     ST_OSMO {
         ["dev", "test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-??/uatom
-            bank: "ibc/NA",
+            bank: "ibc/NA_ST_OSMO",
             /// full ibc route: transfer/channel-??/uatom
-            dex: "ibc/NA",
+            dex: "ibc/NA_ST_OSMO",
         },
         ["main"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-326/stuosmo
@@ -285,39 +285,35 @@ mod test {
         },
     };
 
-    use super::{Atom, Cro, Evmos, Juno, LeaseGroup, Secret, Stars, Wbtc, Weth};
+    use super::{Atom, LeaseGroup, StAtom, StOsmo, Wbtc, Weth};
 
     #[test]
     fn maybe_visit_on_ticker() {
         maybe_visit_on_ticker_impl::<Atom, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<StAtom, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Osmo, LeaseGroup>();
+        maybe_visit_on_ticker_impl::<StOsmo, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Weth, LeaseGroup>();
         maybe_visit_on_ticker_impl::<Wbtc, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<Evmos, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<Juno, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<Stars, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<Cro, LeaseGroup>();
-        maybe_visit_on_ticker_impl::<Secret, LeaseGroup>();
         maybe_visit_on_ticker_err::<Usdc, LeaseGroup>(Usdc::TICKER);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Atom::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::TICKER);
+        maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
         maybe_visit_on_ticker_err::<Atom, LeaseGroup>(Usdc::BANK_SYMBOL);
     }
 
     #[test]
     fn maybe_visit_on_bank_symbol() {
         maybe_visit_on_bank_symbol_impl::<Atom, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<StAtom, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Osmo, LeaseGroup>();
+        maybe_visit_on_bank_symbol_impl::<StOsmo, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Weth, LeaseGroup>();
         maybe_visit_on_bank_symbol_impl::<Wbtc, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<Evmos, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<Juno, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<Stars, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<Cro, LeaseGroup>();
-        maybe_visit_on_bank_symbol_impl::<Secret, LeaseGroup>();
         maybe_visit_on_bank_symbol_err::<Usdc, LeaseGroup>(Usdc::BANK_SYMBOL);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Atom::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Usdc::TICKER);
         maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::BANK_SYMBOL);
+        maybe_visit_on_bank_symbol_err::<Atom, LeaseGroup>(Nls::TICKER);
     }
 }

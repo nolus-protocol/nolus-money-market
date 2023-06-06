@@ -158,16 +158,6 @@ fn on_alarm_native_only_transfer() {
     );
 
     let profit_exec = &response.events[2];
-    assert_eq!(profit_exec.ty.as_str(), "execute");
-    assert_eq!(
-        profit_exec.attributes,
-        [(
-            "_contract_addr",
-            test_case.timealarms.as_ref().unwrap().to_string()
-        )]
-    );
-
-    let profit_exec = &response.events[3];
     assert_eq!(profit_exec.ty.as_str(), "transfer");
     assert_eq!(
         profit_exec.attributes,
@@ -185,6 +175,16 @@ fn on_alarm_native_only_transfer() {
                 format!("{}{}", Amount::from(profit), Native::BANK_SYMBOL)
             )
         ]
+    );
+
+    let profit_exec = &response.events[3];
+    assert_eq!(profit_exec.ty.as_str(), "execute");
+    assert_eq!(
+        profit_exec.attributes,
+        [(
+            "_contract_addr",
+            test_case.timealarms.as_ref().unwrap().to_string()
+        )]
     );
 
     assert_eq!(
