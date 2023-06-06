@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::{
     native::{Native, Nls},
-    payment::PaymentGroup,
+    non_native_payment::NonNativePaymentGroup,
 };
 use dex::{
     Account, CoinVisitor, Enterable, IterNext, IterState, Response as DexResponse, StateLocalOut,
@@ -24,12 +24,14 @@ use crate::{
 
 use super::{idle::Idle, Config, ConfigManagement, SetupDexHandler, State, StateEnum};
 
+pub type BuyBackCurrencies = NonNativePaymentGroup;
+
 #[derive(Serialize, Deserialize)]
 pub(super) struct BuyBack {
     contract_addr: Addr,
     config: Config,
     account: Account,
-    coins: Vec<CoinDTO<PaymentGroup>>,
+    coins: Vec<CoinDTO<BuyBackCurrencies>>,
 }
 
 impl BuyBack {
@@ -37,7 +39,7 @@ impl BuyBack {
         contract_addr: Addr,
         config: Config,
         account: Account,
-        coins: Vec<CoinDTO<PaymentGroup>>,
+        coins: Vec<CoinDTO<BuyBackCurrencies>>,
     ) -> Self {
         Self {
             contract_addr,
@@ -78,12 +80,15 @@ impl SwapTask for BuyBack {
     where
         Visitor: CoinVisitor<Result = IterNext>,
     {
-        TryFind::try_find(&mut self.coins.iter(), |coin: &&CoinDTO<PaymentGroup>| {
-            visitor
-                .visit(coin)
-                .map(|result: IterNext| matches!(result, IterNext::Stop))
-        })
-        .map(|maybe_coin: Option<&CoinDTO<PaymentGroup>>| {
+        TryFind::try_find(
+            &mut self.coins.iter(),
+            |coin: &&CoinDTO<BuyBackCurrencies>| {
+                visitor
+                    .visit(coin)
+                    .map(|result: IterNext| matches!(result, IterNext::Stop))
+            },
+        )
+        .map(|maybe_coin: Option<&CoinDTO<BuyBackCurrencies>>| {
             if maybe_coin.is_some() {
                 IterState::Complete
             } else {

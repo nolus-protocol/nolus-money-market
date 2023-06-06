@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{native::Nls, payment::PaymentGroup};
+use currency::native::Nls;
 use dex::{
     Account, Enterable, Error as DexError, Handler, Response as DexResponse, Result as DexResult,
     StartLocalLocalState,
@@ -23,7 +23,8 @@ use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
 use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult};
 
 use super::{
-    buy_back::BuyBack, CadenceHours, Config, ConfigManagement, SetupDexHandler, State, StateEnum,
+    buy_back::{BuyBack, BuyBackCurrencies},
+    CadenceHours, Config, ConfigManagement, SetupDexHandler, State, StateEnum,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -63,8 +64,8 @@ impl Idle {
     fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> ContractResult<DexResponse<Self>> {
         let account: BankStub<BankView<'_>> = bank::account(&env.contract.address, &deps.querier);
 
-        let balances: Vec<CoinDTO<PaymentGroup>> = account
-            .balances::<PaymentGroup, _>(CoinToDTO(PhantomData))?
+        let balances: Vec<CoinDTO<BuyBackCurrencies>> = account
+            .balances::<BuyBackCurrencies, _>(CoinToDTO(PhantomData))?
             .map(never::safe_unwrap)
             .unwrap_or_default();
 
@@ -86,7 +87,7 @@ impl Idle {
         self,
         deps: &Deps<'_>,
         env: Env,
-        balances: Vec<CoinDTO<PaymentGroup>>,
+        balances: Vec<CoinDTO<BuyBackCurrencies>>,
     ) -> ContractResult<(State, PlatformResponse)> {
         let state: StartLocalLocalState<BuyBack> = dex::start_local_local(BuyBack::new(
             env.contract.address,
