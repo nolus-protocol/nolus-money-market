@@ -41,7 +41,7 @@ impl LppWrapper {
         self,
         app: &mut MockApp,
         lease_code_id: Uint64,
-        init_balance: Vec<CwCoin>,
+        init_balance: &[CwCoin],
         base_interest_rate: Percent,
         utilization_optimal: Percent,
         addon_optimal_interest_rate: Percent,

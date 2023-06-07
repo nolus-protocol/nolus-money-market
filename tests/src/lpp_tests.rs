@@ -20,19 +20,12 @@ use platform::{bank, coin_legacy};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Event, Timestamp},
     cw_multi_test::{AppResponse, Executor},
-    testing::{new_custom_msg_queue, CustomMessageSender, WrappedCustomMessageReceiver},
 };
 
 use crate::common::{
     cwcoin, cwcoins,
     lease_wrapper::{LeaseInitConfig, LeaseWrapper, LeaseWrapperAddresses, LeaseWrapperConfig},
-    lpp_wrapper::LppWrapper,
-    mock_app,
-    oracle_wrapper::MarketOracleWrapper,
-    profit_wrapper::ProfitWrapper,
     test_case::TestCase,
-    timealarms_wrapper::TimeAlarmsWrapper,
-    treasury_wrapper::TreasuryWrapper,
     AppExt, MockApp, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER,
     UTILIZATION_OPTIMAL,
 };
@@ -67,26 +60,19 @@ fn config_update_parameters() {
     let addon_optimal_interest_rate = Percent::from_percent(20);
     let utilization_optimal = Percent::from_percent(55);
 
-    let (custom_message_sender, _custom_message_receiver): (
-        CustomMessageSender,
-        WrappedCustomMessageReceiver,
-    ) = new_custom_msg_queue();
-
-    let mut app = mock_app(
-        custom_message_sender,
-        &[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)],
-    );
-    let lease_id = LeaseWrapper::default().store(&mut app);
-    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
-        &mut app,
-        lease_id.into(),
-        vec![],
+    let mut test_case: TestCase<Lpn> =
+        TestCase::with_reserve(&[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)]);
+    test_case.init_lease().init_lpp(
+        None,
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
     );
 
-    let response: AppResponse = app
+    let lpp = test_case.lpp().clone();
+
+    let response: AppResponse = test_case
+        .app
         .wasm_sudo(
             lpp.clone(),
             &SudoMsg::NewBorrowRate {
@@ -106,7 +92,8 @@ fn config_update_parameters() {
         &[Event::new("sudo").add_attribute("_contract_addr", "contract0"),]
     );
 
-    let quote: Config = app
+    let quote: Config = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp, &QueryLpp::Config())
         .unwrap();
@@ -128,17 +115,20 @@ fn open_loan_unauthorized_contract_id() {
     let user_addr = Addr::unchecked(USER);
 
     let mut test_case = TestCase::<Lpn>::new();
-    test_case.init(&user_addr, vec![lpn_cwcoin(500)]);
-    test_case.init_lpp(
-        None,
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
-    test_case.init_timealarms();
-    test_case.init_oracle(None);
-    test_case.init_treasury();
-    test_case.init_profit(24);
+    test_case
+        .init(user_addr, &mut [lpn_cwcoin(500)])
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_timealarms()
+        .init_oracle(None)
+        .init_treasury()
+        .init_profit(24);
+
+    let lpp_addr = test_case.lpp().clone();
 
     //redeploy lease contract to change the code_id
     test_case.init_lease();
@@ -149,7 +139,7 @@ fn open_loan_unauthorized_contract_id() {
         .app
         .execute_contract(
             lease_addr,
-            test_case.lpp_addr.unwrap(),
+            lpp_addr,
             &lpp::msg::ExecuteMsg::OpenLoan {
                 amount: test::funds::<_, Lpn>(100),
             },
@@ -164,25 +154,28 @@ fn open_loan_no_liquidity() {
     let user_addr = Addr::unchecked(USER);
 
     let mut test_case = TestCase::<Lpn>::new();
-    test_case.init(&user_addr, vec![lpn_cwcoin(500)]);
-    test_case.init_lpp(
-        None,
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
-    test_case.init_timealarms();
-    test_case.init_oracle(None);
-    test_case.init_treasury();
-    test_case.init_profit(24);
+    test_case
+        .init(user_addr, &mut [lpn_cwcoin(500)])
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_timealarms()
+        .init_oracle(None)
+        .init_treasury()
+        .init_profit(24);
 
     let lease_addr = test_case.open_lease::<Lpn>(LeaseCurrency::TICKER);
+
+    let lpp_addr = test_case.lpp().clone();
 
     test_case
         .app
         .execute_contract(
             lease_addr,
-            test_case.lpp_addr.unwrap(),
+            lpp_addr,
             &lpp::msg::ExecuteMsg::OpenLoan {
                 amount: test::funds::<_, Lpn>(100),
             },
@@ -211,67 +204,51 @@ fn deposit_and_withdraw() {
     let lender2 = Addr::unchecked("lender2");
     let lender3 = Addr::unchecked("lender3");
 
-    let (message_sender, message_receiver): (CustomMessageSender, WrappedCustomMessageReceiver) =
-        new_custom_msg_queue();
+    let mut test_case: TestCase<Lpn> = TestCase::with_reserve(&[lpn_cwcoin(app_balance)]);
+    test_case
+        .init_lease()
+        .init_lpp_with_funds(
+            None,
+            &[],
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_timealarms()
+        .init_oracle(None)
+        .init_treasury()
+        .init_profit(24)
+        .send_funds_from_admin(lender1.clone(), &[lpn_cwcoin(init_deposit)])
+        .send_funds_from_admin(lender2.clone(), &[lpn_cwcoin(init_deposit)])
+        .send_funds_from_admin(lender3.clone(), &[lpn_cwcoin(init_deposit)]);
 
-    let mut app = mock_app(message_sender, &[lpn_cwcoin(app_balance)]);
-    let lease_id = LeaseWrapper::default().store(&mut app);
-    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
-        &mut app,
-        lease_id.into(),
-        vec![],
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
-
-    message_receiver.assert_empty();
-
-    let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app);
-
-    message_receiver.assert_empty();
-
-    let market_price_oracle = MarketOracleWrapper::default().instantiate::<Lpn>(&mut app);
-
-    message_receiver.assert_empty();
-
-    let treasury = TreasuryWrapper::new_with_no_dispatcher().instantiate::<Lpn>(&mut app);
-
-    message_receiver.assert_empty();
-
-    let profit = ProfitWrapper::default().instantiate(
-        &mut app,
-        24,
-        treasury,
-        market_price_oracle.clone(),
-        time_alarms.clone(),
-    );
-
-    message_receiver.assert_empty();
-
-    app.send_tokens(admin.clone(), lender1.clone(), &[lpn_cwcoin(init_deposit)])
-        .unwrap();
-    app.send_tokens(admin.clone(), lender2.clone(), &[lpn_cwcoin(test_deposit)])
-        .unwrap();
-    app.send_tokens(admin.clone(), lender3.clone(), &[lpn_cwcoin(post_deposit)])
-        .unwrap();
+    let lease_id = test_case.lease_code_id();
+    let lpp = test_case.lpp().clone();
+    let time_alarms = test_case.time_alarms().clone();
+    let market_price_oracle = test_case.oracle().clone();
+    let profit = test_case.profit().clone();
 
     // initial deposit
-    app.execute_contract(
-        lender1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::Deposit(),
-        &[lpn_cwcoin(init_deposit)],
-    )
-    .unwrap();
-
-    message_receiver.assert_empty();
-
-    // push the price from 1, should be allowed as an interest from previous leases for example.
-    app.send_tokens(admin, lpp.clone(), &[lpn_cwcoin(lpp_balance_push)])
+    test_case
+        .app
+        .execute_contract(
+            lender1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::Deposit(),
+            &[lpn_cwcoin(init_deposit)],
+        )
         .unwrap();
 
-    let price: PriceResponse<Lpn> = app
+    test_case.message_receiver.assert_empty();
+
+    // push the price from 1, should be allowed as an interest from previous leases for example.
+    test_case
+        .app
+        .send_tokens(admin, lpp.clone(), &[lpn_cwcoin(lpp_balance_push)])
+        .unwrap();
+
+    let price: PriceResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp.clone(), &QueryLpp::Price())
         .unwrap();
@@ -281,18 +258,21 @@ fn deposit_and_withdraw() {
     );
 
     // deposit to check,
-    app.execute_contract(
-        lender2.clone(),
-        lpp.clone(),
-        &ExecuteLpp::Deposit(),
-        &[lpn_cwcoin(test_deposit)],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            lender2.clone(),
+            lpp.clone(),
+            &ExecuteLpp::Deposit(),
+            &[lpn_cwcoin(test_deposit)],
+        )
+        .unwrap();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
     // got rounding error
-    let balance_nlpn: BalanceResponse = app
+    let balance_nlpn: BalanceResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -301,7 +281,8 @@ fn deposit_and_withdraw() {
             },
         )
         .unwrap();
-    let price: PriceResponse<Lpn> = app
+    let price: PriceResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp.clone(), &QueryLpp::Price())
         .unwrap();
@@ -311,17 +292,18 @@ fn deposit_and_withdraw() {
     );
 
     // other deposits should not change asserts for lender2
-    app.execute_contract(
-        lender3.clone(),
-        lpp.clone(),
-        &ExecuteLpp::Deposit(),
-        &[lpn_cwcoin(post_deposit)],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            lender3.clone(),
+            lpp.clone(),
+            &ExecuteLpp::Deposit(),
+            &[lpn_cwcoin(post_deposit)],
+        )
+        .unwrap();
 
-    message_receiver.assert_empty();
-
-    let balance_nlpn: BalanceResponse = app
+    let balance_nlpn: BalanceResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -330,7 +312,8 @@ fn deposit_and_withdraw() {
             },
         )
         .unwrap();
-    let price: PriceResponse<Lpn> = app
+    let price: PriceResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp.clone(), &QueryLpp::Price())
         .unwrap();
@@ -340,14 +323,15 @@ fn deposit_and_withdraw() {
     );
 
     // loans should not change asserts for lender2, the default loan
-    let balance_lpp: LppBalanceResponse<Lpn> = app
+    let balance_lpp: LppBalanceResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp.clone(), &QueryLpp::LppBalance())
         .unwrap();
     dbg!(balance_lpp);
 
     LeaseWrapper::default().instantiate::<Lpn>(
-        &mut app,
+        &mut test_case.app,
         Some(lease_id),
         LeaseWrapperAddresses {
             lpp: lpp.clone(),
@@ -362,17 +346,21 @@ fn deposit_and_withdraw() {
         },
     );
 
-    message_receiver.assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+    test_case
+        .message_receiver
+        .assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    let balance_lpp: LppBalanceResponse<Lpn> = app
+    let balance_lpp: LppBalanceResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp.clone(), &QueryLpp::LppBalance())
         .unwrap();
     dbg!(&balance_lpp);
 
-    let balance_nlpn2: BalanceResponse = app
+    let balance_nlpn2: BalanceResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -381,7 +369,8 @@ fn deposit_and_withdraw() {
             },
         )
         .unwrap();
-    let price: PriceResponse<Lpn> = app
+    let price: PriceResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp.clone(), &QueryLpp::Price())
         .unwrap();
@@ -390,12 +379,14 @@ fn deposit_and_withdraw() {
         Coin::<Lpn>::new(test_deposit - rounding_error)
     );
 
-    let balance_nlpn1: BalanceResponse = app
+    let balance_nlpn1: BalanceResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp.clone(), &QueryLpp::Balance { address: lender1 })
         .unwrap();
 
-    let balance_nlpn3: BalanceResponse = app
+    let balance_nlpn3: BalanceResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp.clone(), &QueryLpp::Balance { address: lender3 })
         .unwrap();
@@ -408,7 +399,7 @@ fn deposit_and_withdraw() {
 
     // try to withdraw with overdraft
     let to_burn: u128 = balance_nlpn.balance.u128() - rounding_error + overdraft;
-    let resp = app.execute_contract(
+    let resp = test_case.app.execute_contract(
         lender2.clone(),
         lpp.clone(),
         &ExecuteLpp::Burn {
@@ -418,22 +409,25 @@ fn deposit_and_withdraw() {
     );
     assert!(resp.is_err());
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
     // partial withdraw
-    app.execute_contract(
-        lender2.clone(),
-        lpp.clone(),
-        &ExecuteLpp::Burn {
-            amount: withdraw_amount_nlpn.into(),
-        },
-        &[],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            lender2.clone(),
+            lpp.clone(),
+            &ExecuteLpp::Burn {
+                amount: withdraw_amount_nlpn.into(),
+            },
+            &[],
+        )
+        .unwrap();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    let balance_nlpn: BalanceResponse = app
+    let balance_nlpn: BalanceResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -445,19 +439,22 @@ fn deposit_and_withdraw() {
     assert_eq!(balance_nlpn.balance.u128(), rest_nlpn);
 
     // full withdraw, should close lender's account
-    app.execute_contract(
-        lender2.clone(),
-        lpp.clone(),
-        &ExecuteLpp::Burn {
-            amount: (rest_nlpn).into(),
-        },
-        &[],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            lender2.clone(),
+            lpp.clone(),
+            &ExecuteLpp::Burn {
+                amount: (rest_nlpn).into(),
+            },
+            &[],
+        )
+        .unwrap();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    let balance_nlpn: BalanceResponse = app
+    let balance_nlpn: BalanceResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp, &QueryLpp::Balance { address: lender2 })
         .unwrap();
@@ -466,7 +463,7 @@ fn deposit_and_withdraw() {
 
 #[test]
 fn loan_open_wrong_id() {
-    let admin = Addr::unchecked(ADMIN);
+    let _admin = Addr::unchecked(ADMIN);
     let lender = Addr::unchecked("lender");
     let hacker = Addr::unchecked("Mallory");
 
@@ -475,27 +472,21 @@ fn loan_open_wrong_id() {
     let init_deposit = 20_000_000u128;
     let loan = 10_000u128;
 
-    let (custom_message_sender, _custom_message_receiver): (
-        CustomMessageSender,
-        WrappedCustomMessageReceiver,
-    ) = new_custom_msg_queue();
+    let mut test_case: TestCase<Lpn> = TestCase::with_reserve(&lpn_cwcoins(app_balance));
+    test_case
+        .init_lease()
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .send_funds_from_admin(lender, &lpn_cwcoins(init_deposit))
+        .send_funds_from_admin(hacker.clone(), &lpn_cwcoins(hacker_balance));
 
-    let mut app = mock_app(custom_message_sender, &lpn_cwcoins(app_balance));
-    let lease_id = LeaseWrapper::default().store(&mut app);
-    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
-        &mut app,
-        lease_id.into(),
-        vec![],
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
-    app.send_tokens(admin.clone(), lender, &lpn_cwcoins(init_deposit))
-        .unwrap();
-    app.send_tokens(admin, hacker.clone(), &lpn_cwcoins(hacker_balance))
-        .unwrap();
+    let lpp = test_case.lpp().clone();
 
-    let res = app.execute_contract(
+    let res = test_case.app.execute_contract(
         hacker,
         lpp,
         &ExecuteLpp::OpenLoan {
@@ -543,47 +534,31 @@ fn loan_open_and_repay() {
 
     let interest1 = interest_rate(loan1_u32, balance1_u32);
 
-    let (message_sender, message_receiver): (CustomMessageSender, WrappedCustomMessageReceiver) =
-        new_custom_msg_queue();
+    let mut test_case: TestCase<Lpn> =
+        TestCase::with_reserve(&[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)]);
+    test_case
+        .init_lease()
+        .init_lpp_with_funds(
+            None,
+            &[],
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_timealarms()
+        .init_oracle(None)
+        .init_treasury()
+        .init_profit(24)
+        .send_funds_from_admin(lender.clone(), &[lpn_cwcoin(init_deposit)])
+        .send_funds_from_admin(hacker.clone(), &[lpn_cwcoin(hacker_balance)]);
 
-    // net setup
-    let mut app = mock_app(
-        message_sender,
-        &[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)],
-    );
-    let lease_id = LeaseWrapper::default().store(&mut app);
-    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
-        &mut app,
-        lease_id.into(),
-        vec![],
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
+    let lpp = test_case.lpp().clone();
+    let time_alarms = test_case.time_alarms().clone();
+    let oracle = test_case.oracle().clone();
+    let profit = test_case.profit().clone();
+    let lease_id = test_case.lease_code_id();
 
-    message_receiver.assert_empty();
-
-    let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app);
-
-    message_receiver.assert_empty();
-
-    let oracle = MarketOracleWrapper::default().instantiate::<Lpn>(&mut app);
-
-    message_receiver.assert_empty();
-
-    let treasury = TreasuryWrapper::new_with_no_dispatcher().instantiate::<Lpn>(&mut app);
-
-    message_receiver.assert_empty();
-
-    let profit = ProfitWrapper::default().instantiate(
-        &mut app,
-        24,
-        treasury,
-        oracle.clone(),
-        time_alarms.clone(),
-    );
-
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
     let lease_addresses = LeaseWrapperAddresses {
         lpp: lpp.clone(),
@@ -591,38 +566,39 @@ fn loan_open_and_repay() {
         oracle,
         profit,
     };
-    app.send_tokens(admin.clone(), lender.clone(), &[lpn_cwcoin(init_deposit)])
-        .unwrap();
-    app.send_tokens(admin.clone(), hacker.clone(), &[lpn_cwcoin(hacker_balance)])
-        .unwrap();
 
     // initial deposit
-    app.execute_contract(
-        lender,
-        lpp.clone(),
-        &ExecuteLpp::Deposit(),
-        &[lpn_cwcoin(init_deposit)],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            lender,
+            lpp.clone(),
+            &ExecuteLpp::Deposit(),
+            &[lpn_cwcoin(init_deposit)],
+        )
+        .unwrap();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    app.wasm_sudo(
-        lpp.clone(),
-        &SudoMsg::NewBorrowRate {
-            borrow_rate: InterestRate::new(
-                LOCAL_BASE_INTEREST_RATE,
-                LOCAL_UTILIZATION_OPTIMAL_RATE,
-                LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
-            )
-            .expect("Couldn't construct interest rate value!"),
-        },
-    )
-    .unwrap();
+    test_case
+        .app
+        .wasm_sudo(
+            lpp.clone(),
+            &SudoMsg::NewBorrowRate {
+                borrow_rate: InterestRate::new(
+                    LOCAL_BASE_INTEREST_RATE,
+                    LOCAL_UTILIZATION_OPTIMAL_RATE,
+                    LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+            },
+        )
+        .unwrap();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    let quote: QueryQuoteResponse = app
+    let quote: QueryQuoteResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -638,7 +614,7 @@ fn loan_open_and_repay() {
 
     // borrow
     let loan_addr1 = LeaseWrapper::default().instantiate::<Lpn>(
-        &mut app,
+        &mut test_case.app,
         Some(lease_id),
         lease_addresses.clone(),
         LeaseInitConfig::new(LeaseCurrency::TICKER, loan1.into(), None),
@@ -648,29 +624,34 @@ fn loan_open_and_repay() {
         },
     );
 
-    message_receiver.assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+    test_case
+        .message_receiver
+        .assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
     // double borrow
-    app.execute_contract(
-        loan_addr1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::OpenLoan {
-            amount: Coin::<Lpn>::new(loan1).into(),
-        },
-        &[],
-    )
-    .unwrap_err();
+    test_case
+        .app
+        .execute_contract(
+            loan_addr1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::OpenLoan {
+                amount: Coin::<Lpn>::new(loan1).into(),
+            },
+            &[],
+        )
+        .unwrap_err();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    app.time_shift(Duration::from_nanos(YEAR / 2));
+    test_case.app.time_shift(Duration::from_nanos(YEAR / 2));
 
     let total_interest_due_u32 = interest1.of(loan1_u32) / 2;
     let total_interest_due = Amount::from(total_interest_due_u32);
 
-    let resp: LppBalanceResponse<Lpn> = app
+    let resp: LppBalanceResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp.clone(), &QueryLpp::LppBalance())
         .unwrap();
@@ -679,7 +660,8 @@ fn loan_open_and_repay() {
 
     let interest2 = interest_rate(loan1_u32 + loan2_u32 + total_interest_due_u32, balance1_u32);
 
-    let quote: QueryQuoteResponse = app
+    let quote: QueryQuoteResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -695,7 +677,7 @@ fn loan_open_and_repay() {
 
     // borrow 2
     let loan_addr2 = LeaseWrapper::default().instantiate::<Lpn>(
-        &mut app,
+        &mut test_case.app,
         Some(lease_id),
         lease_addresses,
         LeaseInitConfig::new(LeaseCurrency::TICKER, loan2.into(), None),
@@ -705,13 +687,16 @@ fn loan_open_and_repay() {
         },
     );
 
-    message_receiver.assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+    test_case
+        .message_receiver
+        .assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    app.time_shift(Duration::from_nanos(YEAR / 2));
+    test_case.app.time_shift(Duration::from_nanos(YEAR / 2));
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = app
+    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -724,61 +709,72 @@ fn loan_open_and_repay() {
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
     assert_eq!(
-        loan1_resp.interest_due(block_time(&app)),
+        loan1_resp.interest_due(block_time(&test_case.app)),
         interest1.of(loan1).into()
     );
 
     // repay from other addr
-    app.execute_contract(
-        hacker,
-        lpp.clone(),
-        &ExecuteLpp::RepayLoan(),
-        &[lpn_cwcoin(loan1)],
-    )
-    .unwrap_err();
+    test_case
+        .app
+        .execute_contract(
+            hacker,
+            lpp.clone(),
+            &ExecuteLpp::RepayLoan(),
+            &[lpn_cwcoin(loan1)],
+        )
+        .unwrap_err();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
     // repay zero
-    app.execute_contract(
-        loan_addr1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::RepayLoan(),
-        &[lpn_cwcoin(0)],
-    )
-    .unwrap_err();
+    test_case
+        .app
+        .execute_contract(
+            loan_addr1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::RepayLoan(),
+            &[lpn_cwcoin(0)],
+        )
+        .unwrap_err();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
     // repay wrong currency
-    app.send_tokens(
-        admin,
-        loan_addr2.clone(),
-        &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
-    )
-    .unwrap();
-    app.execute_contract(
-        loan_addr2,
-        lpp.clone(),
-        &ExecuteLpp::RepayLoan(),
-        &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
-    )
-    .unwrap_err();
+    test_case
+        .app
+        .send_tokens(
+            admin,
+            loan_addr2.clone(),
+            &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
+        )
+        .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            loan_addr2,
+            lpp.clone(),
+            &ExecuteLpp::RepayLoan(),
+            &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
+        )
+        .unwrap_err();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
     // repay interest part
-    app.execute_contract(
-        loan_addr1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::RepayLoan(),
-        &[lpn_cwcoin(repay_interest_part)],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            loan_addr1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::RepayLoan(),
+            &[lpn_cwcoin(repay_interest_part)],
+        )
+        .unwrap();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = app
+    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -790,24 +786,27 @@ fn loan_open_and_repay() {
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(
-        loan1_resp.interest_due(block_time(&app)),
+        loan1_resp.interest_due(block_time(&test_case.app)),
         (interest1.of(loan1) - repay_interest_part).into()
     );
 
     // repay interest + due part
-    app.execute_contract(
-        loan_addr1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::RepayLoan(),
-        &[lpn_cwcoin(
-            interest1.of(loan1) - repay_interest_part + repay_due_part,
-        )],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            loan_addr1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::RepayLoan(),
+            &[lpn_cwcoin(
+                interest1.of(loan1) - repay_interest_part + repay_due_part,
+            )],
+        )
+        .unwrap();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = app
+    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -818,20 +817,26 @@ fn loan_open_and_repay() {
         .unwrap();
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, (loan1 - repay_due_part).into());
-    assert_eq!(loan1_resp.interest_due(block_time(&app)), Coin::new(0));
+    assert_eq!(
+        loan1_resp.interest_due(block_time(&test_case.app)),
+        Coin::new(0)
+    );
 
     // repay interest + due part, close the loan
-    app.execute_contract(
-        loan_addr1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::RepayLoan(),
-        &[lpn_cwcoin(loan1 - repay_due_part + repay_excess)],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            loan_addr1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::RepayLoan(),
+            &[lpn_cwcoin(loan1 - repay_due_part + repay_excess)],
+        )
+        .unwrap();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = app
+    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -843,10 +848,11 @@ fn loan_open_and_repay() {
     assert!(maybe_loan1.is_none());
 
     // repay excess is returned
-    let balance = bank::balance(&loan_addr1, &app.wrap()).unwrap();
+    let balance = bank::balance(&loan_addr1, &test_case.app.wrap()).unwrap();
     assert_eq!(balance, Coin::<Lpn>::from(loan1 - interest1.of(loan1)));
 
-    let resp: LppBalanceResponse<Lpn> = app
+    let resp: LppBalanceResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp, &QueryLpp::LppBalance())
         .unwrap();
@@ -900,83 +906,66 @@ fn compare_lpp_states() {
 
     let interest1 = interest_rate(loan1_u32, balance1_u32);
 
-    let (message_sender, message_receiver): (CustomMessageSender, WrappedCustomMessageReceiver) =
-        new_custom_msg_queue();
+    let mut test_case: TestCase<Lpn> = TestCase::with_reserve(&[
+        lpn_cwcoin(app_balance),
+        coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),
+    ]);
+    test_case
+        .init_lease()
+        .init_lpp_with_funds(
+            None,
+            &[],
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_timealarms()
+        .init_oracle(None)
+        .init_treasury()
+        .init_profit(24)
+        .send_funds_from_admin(lender.clone(), &[lpn_cwcoin(init_deposit)])
+        .send_funds_from_admin(hacker.clone(), &[lpn_cwcoin(hacker_balance)]);
 
-    // net setup
-    let mut app = mock_app(
-        message_sender,
-        &[
-            lpn_cwcoin(app_balance),
-            coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),
-        ],
-    );
-    let lease_id = LeaseWrapper::default().store(&mut app);
-    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
-        &mut app,
-        lease_id.into(),
-        vec![],
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
+    test_case.message_receiver.assert_empty();
 
-    message_receiver.assert_empty();
-
-    let time_alarms = TimeAlarmsWrapper::default().instantiate(&mut app);
-
-    message_receiver.assert_empty();
-
-    let market_oracle = MarketOracleWrapper::default().instantiate::<Lpn>(&mut app);
-
-    message_receiver.assert_empty();
-
-    let treasury = TreasuryWrapper::new_with_no_dispatcher().instantiate::<Lpn>(&mut app);
-
-    message_receiver.assert_empty();
-
-    let profit = ProfitWrapper::default().instantiate(
-        &mut app,
-        24,
-        treasury,
-        market_oracle.clone(),
-        time_alarms.clone(),
-    );
-
-    message_receiver.assert_empty();
-
-    app.send_tokens(admin.clone(), lender.clone(), &[lpn_cwcoin(init_deposit)])
-        .unwrap();
-    app.send_tokens(admin.clone(), hacker.clone(), &[lpn_cwcoin(hacker_balance)])
-        .unwrap();
+    let lease_id = test_case.lease_code_id();
+    let lpp = test_case.lpp().clone();
+    let time_alarms = test_case.time_alarms().clone();
+    let market_oracle = test_case.oracle().clone();
+    let profit = test_case.profit().clone();
 
     // initial deposit
-    app.execute_contract(
-        lender,
-        lpp.clone(),
-        &ExecuteLpp::Deposit(),
-        &[lpn_cwcoin(init_deposit)],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            lender,
+            lpp.clone(),
+            &ExecuteLpp::Deposit(),
+            &[lpn_cwcoin(init_deposit)],
+        )
+        .unwrap();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    app.wasm_sudo(
-        lpp.clone(),
-        &SudoMsg::NewBorrowRate {
-            borrow_rate: InterestRate::new(
-                LOCAL_BASE_INTEREST_RATE,
-                LOCAL_UTILIZATION_OPTIMAL_RATE,
-                LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
-            )
-            .expect("Couldn't construct interest rate value!"),
-        },
-    )
-    .unwrap();
+    test_case
+        .app
+        .wasm_sudo(
+            lpp.clone(),
+            &SudoMsg::NewBorrowRate {
+                borrow_rate: InterestRate::new(
+                    LOCAL_BASE_INTEREST_RATE,
+                    LOCAL_UTILIZATION_OPTIMAL_RATE,
+                    LOCAL_ADDON_OPTIMAL_INTEREST_RATE,
+                )
+                .expect("Couldn't construct interest rate value!"),
+            },
+        )
+        .unwrap();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    let quote: QueryQuoteResponse = app
+    let quote: QueryQuoteResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -992,7 +981,7 @@ fn compare_lpp_states() {
 
     // borrow
     let loan_addr1 = LeaseWrapper::default().instantiate::<Lpn>(
-        &mut app,
+        &mut test_case.app,
         Some(lease_id),
         LeaseWrapperAddresses {
             lpp: lpp.clone(),
@@ -1007,29 +996,34 @@ fn compare_lpp_states() {
         },
     );
 
-    message_receiver.assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+    test_case
+        .message_receiver
+        .assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
     // double borrow
-    app.execute_contract(
-        loan_addr1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::OpenLoan {
-            amount: Coin::<Lpn>::new(loan1).into(),
-        },
-        &[],
-    )
-    .unwrap_err();
+    test_case
+        .app
+        .execute_contract(
+            loan_addr1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::OpenLoan {
+                amount: Coin::<Lpn>::new(loan1).into(),
+            },
+            &[],
+        )
+        .unwrap_err();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    app.time_shift(Duration::from_nanos(YEAR / 2));
+    test_case.app.time_shift(Duration::from_nanos(YEAR / 2));
 
     let total_interest_due_u32 = interest1.of(loan1_u32) / 2;
     let total_interest_due = Amount::from(total_interest_due_u32);
 
-    let resp: LppBalanceResponse<Lpn> = app
+    let resp: LppBalanceResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp.clone(), &QueryLpp::LppBalance())
         .unwrap();
@@ -1038,7 +1032,8 @@ fn compare_lpp_states() {
 
     let interest2 = interest_rate(loan1_u32 + loan2_u32 + total_interest_due_u32, balance1_u32);
 
-    let quote: QueryQuoteResponse = app
+    let quote: QueryQuoteResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -1054,7 +1049,7 @@ fn compare_lpp_states() {
 
     // borrow 2
     let loan_addr2 = LeaseWrapper::default().instantiate::<Lpn>(
-        &mut app,
+        &mut test_case.app,
         Some(lease_id),
         LeaseWrapperAddresses {
             lpp: lpp.clone(),
@@ -1069,13 +1064,16 @@ fn compare_lpp_states() {
         },
     );
 
-    message_receiver.assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+    test_case
+        .message_receiver
+        .assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    app.time_shift(Duration::from_nanos(YEAR / 2));
+    test_case.app.time_shift(Duration::from_nanos(YEAR / 2));
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = app
+    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -1088,61 +1086,72 @@ fn compare_lpp_states() {
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(loan1_resp.annual_interest_rate, interest1);
     assert_eq!(
-        loan1_resp.interest_due(block_time(&app)),
+        loan1_resp.interest_due(block_time(&test_case.app)),
         interest1.of(loan1).into()
     );
 
     // repay from other addr
-    app.execute_contract(
-        hacker,
-        lpp.clone(),
-        &ExecuteLpp::RepayLoan(),
-        &[lpn_cwcoin(loan1)],
-    )
-    .unwrap_err();
+    test_case
+        .app
+        .execute_contract(
+            hacker,
+            lpp.clone(),
+            &ExecuteLpp::RepayLoan(),
+            &[lpn_cwcoin(loan1)],
+        )
+        .unwrap_err();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
     // repay zero
-    app.execute_contract(
-        loan_addr1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::RepayLoan(),
-        &[lpn_cwcoin(0)],
-    )
-    .unwrap_err();
+    test_case
+        .app
+        .execute_contract(
+            loan_addr1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::RepayLoan(),
+            &[lpn_cwcoin(0)],
+        )
+        .unwrap_err();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
     // repay wrong currency
-    app.send_tokens(
-        admin,
-        loan_addr2.clone(),
-        &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
-    )
-    .unwrap();
-    app.execute_contract(
-        loan_addr2,
-        lpp.clone(),
-        &ExecuteLpp::RepayLoan(),
-        &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
-    )
-    .unwrap_err();
+    test_case
+        .app
+        .send_tokens(
+            admin,
+            loan_addr2.clone(),
+            &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
+        )
+        .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            loan_addr2,
+            lpp.clone(),
+            &ExecuteLpp::RepayLoan(),
+            &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
+        )
+        .unwrap_err();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
     // repay interest part
-    app.execute_contract(
-        loan_addr1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::RepayLoan(),
-        &[lpn_cwcoin(repay_interest_part)],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            loan_addr1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::RepayLoan(),
+            &[lpn_cwcoin(repay_interest_part)],
+        )
+        .unwrap();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = app
+    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -1154,24 +1163,27 @@ fn compare_lpp_states() {
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, loan1.into());
     assert_eq!(
-        loan1_resp.interest_due(block_time(&app)),
+        loan1_resp.interest_due(block_time(&test_case.app)),
         (interest1.of(loan1) - repay_interest_part).into()
     );
 
     // repay interest + due part
-    app.execute_contract(
-        loan_addr1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::RepayLoan(),
-        &[lpn_cwcoin(
-            interest1.of(loan1) - repay_interest_part + repay_due_part,
-        )],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            loan_addr1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::RepayLoan(),
+            &[lpn_cwcoin(
+                interest1.of(loan1) - repay_interest_part + repay_due_part,
+            )],
+        )
+        .unwrap();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = app
+    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -1182,20 +1194,26 @@ fn compare_lpp_states() {
         .unwrap();
     let loan1_resp = maybe_loan1.unwrap();
     assert_eq!(loan1_resp.principal_due, (loan1 - repay_due_part).into());
-    assert_eq!(loan1_resp.interest_due(block_time(&app)), Coin::new(0));
+    assert_eq!(
+        loan1_resp.interest_due(block_time(&test_case.app)),
+        Coin::new(0)
+    );
 
     // repay interest + due part, close the loan
-    app.execute_contract(
-        loan_addr1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::RepayLoan(),
-        &[lpn_cwcoin(loan1 - repay_due_part + repay_excess)],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            loan_addr1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::RepayLoan(),
+            &[lpn_cwcoin(loan1 - repay_due_part + repay_excess)],
+        )
+        .unwrap();
 
-    message_receiver.assert_empty();
+    test_case.message_receiver.assert_empty();
 
-    let maybe_loan1: QueryLoanResponse<Lpn> = app
+    let maybe_loan1: QueryLoanResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -1207,10 +1225,11 @@ fn compare_lpp_states() {
     assert!(maybe_loan1.is_none());
 
     // repay excess is returned
-    let balance = bank::balance(&loan_addr1, &app.wrap()).unwrap();
+    let balance = bank::balance(&loan_addr1, &test_case.app.wrap()).unwrap();
     assert_eq!(balance, Coin::<Lpn>::from(loan1 - interest1.of(loan1)));
 
-    let resp: LppBalanceResponse<Lpn> = app
+    let resp: LppBalanceResponse<Lpn> = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp, &QueryLpp::LppBalance())
         .unwrap();
@@ -1243,7 +1262,7 @@ fn test_rewards() {
     let lender_reward2 =
         tot_rewards2 * (deposit2 / pushed_price) / (deposit1 + deposit2 / pushed_price);
 
-    let admin = Addr::unchecked(ADMIN);
+    let _admin = Addr::unchecked(ADMIN);
 
     let lender1 = Addr::unchecked("lender1");
     let lender2 = Addr::unchecked("lender2");
@@ -1252,79 +1271,74 @@ fn test_rewards() {
     // TODO: any checks for the sender of rewards?
     let treasury = Addr::unchecked("treasury");
 
-    let (custom_message_sender, _custom_message_receiver): (
-        CustomMessageSender,
-        WrappedCustomMessageReceiver,
-    ) = new_custom_msg_queue();
+    let mut test_case: TestCase<Lpn> =
+        TestCase::with_reserve(&[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)]);
+    test_case
+        .init_lease()
+        .init_lpp_with_funds(
+            None,
+            &[],
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .send_funds_from_admin(lender1.clone(), &[lpn_cwcoin(deposit1)])
+        .send_funds_from_admin(lender2.clone(), &[lpn_cwcoin(deposit2)])
+        .send_funds_from_admin(
+            treasury.clone(),
+            &[coin_legacy::to_cosmwasm::<Nls>(treasury_balance.into())],
+        );
 
-    let mut app = mock_app(
-        custom_message_sender,
-        &[
-            lpn_cwcoin(app_balance),
-            coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),
-        ],
-    );
-    let lease_id = LeaseWrapper::default().store(&mut app);
-    let (lpp, _) = LppWrapper::default().instantiate::<Lpn>(
-        &mut app,
-        lease_id.into(),
-        vec![],
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
-
-    app.send_tokens(admin.clone(), lender1.clone(), &[lpn_cwcoin(deposit1)])
-        .unwrap();
-    app.send_tokens(admin.clone(), lender2.clone(), &[lpn_cwcoin(deposit2)])
-        .unwrap();
-    app.send_tokens(
-        admin.clone(),
-        treasury.clone(),
-        &[coin_legacy::to_cosmwasm::<Nls>(treasury_balance.into())],
-    )
-    .unwrap();
+    let lpp = test_case.lpp().clone();
 
     // rewards before deposits
-    app.execute_contract(
-        treasury.clone(),
-        lpp.clone(),
-        &ExecuteLpp::DistributeRewards(),
-        &[coin_legacy::to_cosmwasm::<Nls>(tot_rewards0.into())],
-    )
-    .unwrap_err();
+    test_case
+        .app
+        .execute_contract(
+            treasury.clone(),
+            lpp.clone(),
+            &ExecuteLpp::DistributeRewards(),
+            &[coin_legacy::to_cosmwasm::<Nls>(tot_rewards0.into())],
+        )
+        .unwrap_err();
 
     // initial deposit
-    app.execute_contract(
-        lender1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::Deposit(),
-        &[lpn_cwcoin(deposit1)],
-    )
-    .unwrap();
-
-    // push the price from 1, should be allowed as an interest from previous leases for example.
-    app.send_tokens(admin, lpp.clone(), &[lpn_cwcoin(lpp_balance_push)])
+    test_case
+        .app
+        .execute_contract(
+            lender1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::Deposit(),
+            &[lpn_cwcoin(deposit1)],
+        )
         .unwrap();
 
-    app.execute_contract(
-        treasury.clone(),
-        lpp.clone(),
-        &ExecuteLpp::DistributeRewards(),
-        &[coin_legacy::to_cosmwasm::<Nls>(tot_rewards1.into())],
-    )
-    .unwrap();
+    // push the price from 1, should be allowed as an interest from previous leases for example.
+    test_case.send_funds_from_admin(lpp.clone(), &[lpn_cwcoin(lpp_balance_push)]);
+
+    test_case
+        .app
+        .execute_contract(
+            treasury.clone(),
+            lpp.clone(),
+            &ExecuteLpp::DistributeRewards(),
+            &[coin_legacy::to_cosmwasm::<Nls>(tot_rewards1.into())],
+        )
+        .unwrap();
 
     // deposit after disributing rewards should not get anything
-    app.execute_contract(
-        lender2.clone(),
-        lpp.clone(),
-        &ExecuteLpp::Deposit(),
-        &[lpn_cwcoin(deposit2)],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            lender2.clone(),
+            lpp.clone(),
+            &ExecuteLpp::Deposit(),
+            &[lpn_cwcoin(deposit2)],
+        )
+        .unwrap();
 
-    let resp: RewardsResponse = app
+    let resp: RewardsResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -1336,7 +1350,8 @@ fn test_rewards() {
 
     assert_eq!(resp.rewards, tot_rewards1.into());
 
-    let resp: RewardsResponse = app
+    let resp: RewardsResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -1349,39 +1364,46 @@ fn test_rewards() {
     assert_eq!(resp.rewards, Coin::new(0));
 
     // claim zero rewards
-    app.execute_contract(
-        lender2.clone(),
-        lpp.clone(),
-        &ExecuteLpp::ClaimRewards {
-            other_recipient: None,
-        },
-        &[],
-    )
-    .unwrap_err();
+    test_case
+        .app
+        .execute_contract(
+            lender2.clone(),
+            lpp.clone(),
+            &ExecuteLpp::ClaimRewards {
+                other_recipient: None,
+            },
+            &[],
+        )
+        .unwrap_err();
 
     // check reward claim with nonvalid recipient
-    app.execute_contract(
-        lender1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::ClaimRewards {
-            other_recipient: Some(Addr::unchecked("-")),
-        },
-        &[],
-    )
-    .unwrap_err();
+    test_case
+        .app
+        .execute_contract(
+            lender1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::ClaimRewards {
+                other_recipient: Some(Addr::unchecked("-")),
+            },
+            &[],
+        )
+        .unwrap_err();
 
     // check reward claim
-    app.execute_contract(
-        lender1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::ClaimRewards {
-            other_recipient: None,
-        },
-        &[],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            lender1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::ClaimRewards {
+                other_recipient: None,
+            },
+            &[],
+        )
+        .unwrap();
 
-    let resp: RewardsResponse = app
+    let resp: RewardsResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -1393,18 +1415,21 @@ fn test_rewards() {
 
     assert_eq!(resp.rewards, Coin::new(0));
 
-    let balance = bank::balance(&lender1, &app.wrap()).unwrap();
+    let balance = bank::balance(&lender1, &test_case.app.wrap()).unwrap();
     assert_eq!(balance, Coin::<Nls>::from(tot_rewards1));
 
-    app.execute_contract(
-        treasury,
-        lpp.clone(),
-        &ExecuteLpp::DistributeRewards(),
-        &[coin_legacy::to_cosmwasm::<Nls>(tot_rewards2.into())],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            treasury,
+            lpp.clone(),
+            &ExecuteLpp::DistributeRewards(),
+            &[coin_legacy::to_cosmwasm::<Nls>(tot_rewards2.into())],
+        )
+        .unwrap();
 
-    let resp: RewardsResponse = app
+    let resp: RewardsResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -1416,7 +1441,8 @@ fn test_rewards() {
 
     assert_eq!(resp.rewards, lender_reward1.into());
 
-    let resp: RewardsResponse = app
+    let resp: RewardsResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(
             lpp.clone(),
@@ -1429,44 +1455,50 @@ fn test_rewards() {
     assert_eq!(resp.rewards, lender_reward2.into());
 
     // full withdraw, should send rewards to the lender
-    app.execute_contract(
-        lender1.clone(),
-        lpp.clone(),
-        &ExecuteLpp::Burn {
-            amount: deposit1.into(),
-        },
-        &[],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            lender1.clone(),
+            lpp.clone(),
+            &ExecuteLpp::Burn {
+                amount: deposit1.into(),
+            },
+            &[],
+        )
+        .unwrap();
 
-    let balance = bank::balance(&lender1, &app.wrap()).unwrap();
+    let balance = bank::balance(&lender1, &test_case.app.wrap()).unwrap();
     assert_eq!(balance, Coin::<Nls>::from(tot_rewards1 + lender_reward1));
 
     // lender account is removed
-    let resp: Result<RewardsResponse, _> = app
+    let resp: Result<RewardsResponse, _> = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp.clone(), &QueryLpp::Rewards { address: lender1 });
 
     assert!(resp.is_err());
 
     // claim rewards to other recipient
-    app.execute_contract(
-        lender2.clone(),
-        lpp.clone(),
-        &ExecuteLpp::ClaimRewards {
-            other_recipient: Some(recipient.clone()),
-        },
-        &[],
-    )
-    .unwrap();
+    test_case
+        .app
+        .execute_contract(
+            lender2.clone(),
+            lpp.clone(),
+            &ExecuteLpp::ClaimRewards {
+                other_recipient: Some(recipient.clone()),
+            },
+            &[],
+        )
+        .unwrap();
 
-    let resp: RewardsResponse = app
+    let resp: RewardsResponse = test_case
+        .app
         .wrap()
         .query_wasm_smart(lpp, &QueryLpp::Rewards { address: lender2 })
         .unwrap();
 
     assert_eq!(resp.rewards, Coin::new(0));
-    let balance = bank::balance(&recipient, &app.wrap()).unwrap();
+    let balance = bank::balance(&recipient, &test_case.app.wrap()).unwrap();
     assert_eq!(balance, Coin::<Nls>::from(lender_reward2));
 }
 

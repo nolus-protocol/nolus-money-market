@@ -106,10 +106,12 @@ pub fn add_feeder<Lpn>(test_case: &mut TestCase<Lpn>, addr: impl Into<String>)
 where
     Lpn: Currency,
 {
+    let oracle = test_case.oracle().clone();
+
     let response: AppResponse = test_case
         .app
         .wasm_sudo(
-            test_case.oracle.clone().unwrap(),
+            oracle,
             &SudoMsg::RegisterFeeder {
                 feeder_address: addr.into(),
             },
@@ -134,12 +136,14 @@ where
     C1: Currency,
     C2: Currency,
 {
+    let oracle = test_case.oracle().clone();
+
     test_case
         .app
         .execute(
             addr,
             wasm_execute(
-                test_case.oracle.clone().unwrap(),
+                oracle,
                 &ExecuteMsg::FeedPrices {
                     prices: vec![price.into()],
                 },
