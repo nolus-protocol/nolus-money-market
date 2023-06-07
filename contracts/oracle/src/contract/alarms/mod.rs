@@ -245,7 +245,7 @@ mod test {
     #[test]
     #[cfg(not(debug_assertions))]
     fn notify_with_wrong_currency_group() {
-        use finance::{coin::Coin, price, test::currency::Dai};
+        use finance::test::currency::Dai;
 
         let storage = MockStorage::new();
 
