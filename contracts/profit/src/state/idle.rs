@@ -1,6 +1,4 @@
-use std::marker::PhantomData;
-
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use currency::{
     native::{Native, Nls},
@@ -12,18 +10,21 @@ use dex::{
 };
 use finance::{
     coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
-    currency::{AnyVisitor, AnyVisitorResult, Currency, Group},
+    currency::{
+        Currency,
+        Group,
+        equal
+    },
     duration::Duration,
 };
 use platform::{
     bank::{self, Aggregate, BankAccount, BankAccountView, BankStub, BankView},
     batch::Batch,
     message::Response as PlatformResponse,
-    never::{safe_unwrap, Never},
 };
 use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
 
-use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult};
+use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult, ContractError};
 
 use super::{
     buy_back::{BuyBack, BuyBackCurrencies},
@@ -46,7 +47,7 @@ impl Idle {
         env: &Env,
         querier: &QuerierWrapper<'_>,
         account: B,
-        native: Vec<CoinDTO<Native>>,
+        native: Option<CoinDTO<Native>>,
     ) -> ContractResult<PlatformResponse>
     where
         B: BankAccount,
@@ -54,10 +55,8 @@ impl Idle {
         let state_response: PlatformResponse =
             PlatformResponse::messages_only(self.enter(env.block.time, querier)?);
 
-        // TODO Generalize to handle all native currencies
-        let nls: Option<Coin<Nls>> = native
-            .into_iter()
-            .find_map(|coin_dto: CoinDTO<Native>| coin_dto.try_into().ok());
+        let nls: Option<Coin<Nls>> =
+            native.and_then(|coin_dto: CoinDTO<Native>| coin_dto.try_into().ok());
 
         Ok(if let Some(nls) = nls {
             Profit::transfer_nls(account, self.config.treasury(), nls, env)
@@ -74,25 +73,28 @@ impl Idle {
     ) -> ContractResult<DexResponse<Self>> {
         let account: BankStub<BankView<'_>> = bank::account(&env.contract.address, querier);
 
-        let balances: SplitCoins<Native, BuyBackCurrencies> = account
-            .balances::<PaymentGroup, _>(CoinToDTO(PhantomData, PhantomData))?
-            .map(safe_unwrap)
+        let mut balances: SplitCoins<Native, BuyBackCurrencies> = account
+            .balances::<PaymentGroup, _>(CoinToDTO)?
+            .transpose()?
             .unwrap_or_default();
 
-        if balances.second.is_empty() {
-            self.send_nls(&env, querier, account, balances.first).map(
-                |response: PlatformResponse| DexResponse::<Self> {
-                    response,
-                    next_state: State(StateEnum::Idle(self)),
-                },
-            )
-        } else {
+        if !balances.second.is_empty() {
             self.try_enter_buy_back(
                 querier,
                 env.contract.address,
                 env.block.time,
                 balances.second,
             )
+        } else if balances.first.len() <= 1 {
+            self.send_nls(&env, querier, account, balances.first.pop())
+                .map(|response: PlatformResponse| DexResponse::<Self> {
+                    response,
+                    next_state: State(StateEnum::Idle(self)),
+                })
+        } else {
+            Err(ContractError::BuybackBrokenInvariant(String::from(
+                "More than one entry in native currencies list encountered!"
+            )))
         }
     }
 
@@ -158,48 +160,29 @@ impl SetupDexHandler for Idle {
     type State = Self;
 }
 
-pub struct BlankCoinVisitor;
+struct CoinToDTO;
 
-impl AnyVisitor for BlankCoinVisitor {
-    type Output = ();
-    type Error = Never;
-
-    fn on<C>(self) -> AnyVisitorResult<Self>
-    where
-        C: Currency + Serialize + DeserializeOwned,
-    {
-        Ok(())
-    }
-}
-
-struct CoinToDTO<G1, G2>(PhantomData<G1>, PhantomData<G2>)
-where
-    G1: Group,
-    G2: Group;
-
-impl<G1, G2> WithCoin for CoinToDTO<G1, G2>
-where
-    G1: Group,
-    G2: Group,
-{
-    type Output = SplitCoins<G1, G2>;
-    type Error = Never;
+impl WithCoin for CoinToDTO {
+    type Output = SplitCoins<Native, BuyBackCurrencies>;
+    type Error = ContractError;
 
     fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
     where
         C: Currency,
     {
-        Ok(if G1::contains::<C>() {
-            SplitCoins {
+        if equal::<C, Nls>() {
+            Ok(SplitCoins {
                 first: vec![coin.into()],
                 second: Vec::new(),
-            }
-        } else {
-            SplitCoins {
+            })
+        } else if BuyBackCurrencies::contains::<C>() {
+            Ok(SplitCoins {
                 first: Vec::new(),
                 second: vec![coin.into()],
-            }
-        })
+            })
+        } else {
+            Err(ContractError::BuybackUnrecognisedCurrency(C::TICKER))
+        }
     }
 }
 
