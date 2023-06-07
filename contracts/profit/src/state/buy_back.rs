@@ -114,14 +114,14 @@ impl SwapTask for BuyBack {
         let bank_response: PlatformResponse =
             Profit::transfer_nls(account, self.config.treasury(), balance_nls, env);
 
-        let state: Idle = Idle::new(self.config, self.account);
+        let next_state: Idle = Idle::new(self.config, self.account);
 
         Ok(DexResponse::<State> {
-            response: state
+            response: next_state
                 .enter(env.block.time, querier)
                 .map(PlatformResponse::messages_only)
                 .map(|state_response: PlatformResponse| state_response.merge_with(bank_response))?,
-            next_state: State(StateEnum::Idle(state)),
+            next_state: State(StateEnum::Idle(next_state)),
         })
     }
 }
