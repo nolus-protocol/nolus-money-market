@@ -10,11 +10,7 @@ use dex::{
 };
 use finance::{
     coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
-    currency::{
-        Currency,
-        Group,
-        equal
-    },
+    currency::{equal, Currency, Group},
     duration::Duration,
 };
 use platform::{
@@ -93,7 +89,7 @@ impl Idle {
                 })
         } else {
             Err(ContractError::BuybackBrokenInvariant(String::from(
-                "More than one entry in native currencies list encountered!"
+                "More than one entry in native currencies list encountered!",
             )))
         }
     }
