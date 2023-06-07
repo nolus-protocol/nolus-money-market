@@ -112,7 +112,7 @@ impl SwapTask for BuyBack {
         let balance_nls: Coin<Nls> = account.balance()?;
 
         let bank_response: PlatformResponse =
-            Profit::transfer_nls(account, env, self.config.treasury(), balance_nls);
+            Profit::transfer_nls(account, self.config.treasury(), balance_nls, env);
 
         let state: Idle = Idle::new(self.config, self.account);
 

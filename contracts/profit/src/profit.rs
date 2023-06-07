@@ -18,9 +18,9 @@ pub struct Profit;
 impl Profit {
     pub(crate) fn transfer_nls<B>(
         mut account: B,
-        env: &Env,
         treasury_addr: &Addr,
         balance_nls: Coin<Nls>,
+        env: &Env,
     ) -> PlatformResponse
     where
         B: BankAccount,

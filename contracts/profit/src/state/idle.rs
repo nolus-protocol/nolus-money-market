@@ -60,7 +60,7 @@ impl Idle {
             .find_map(|coin_dto: CoinDTO<Native>| coin_dto.try_into().ok());
 
         Ok(if let Some(nls) = nls {
-            Profit::transfer_nls(account, env, self.config.treasury(), nls)
+            Profit::transfer_nls(account, self.config.treasury(), nls, env)
                 .merge_with(state_response)
         } else {
             state_response
