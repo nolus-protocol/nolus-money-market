@@ -17,24 +17,24 @@ pub struct Profit;
 
 impl Profit {
     pub(crate) fn transfer_nls<B>(
-        mut account: B,
-        treasury_addr: &Addr,
-        balance_nls: Coin<Nls>,
+        mut from_my_account: B,
+        to_treasury: &Addr,
+        amount: Coin<Nls>,
         env: &Env,
     ) -> PlatformResponse
     where
         B: BankAccount,
     {
-        if balance_nls.is_zero() {
-            PlatformResponse::messages_only(account.into())
+        if amount.is_zero() {
+            PlatformResponse::messages_only(from_my_account.into())
         } else {
-            account.send(balance_nls, treasury_addr);
+            from_my_account.send(amount, to_treasury);
 
             PlatformResponse::messages_with_events(
-                account.into(),
+                from_my_account.into(),
                 Emitter::of_type("tr-profit")
                     .emit_tx_info(env)
-                    .emit_coin("profit-amount", balance_nls),
+                    .emit_coin("profit-amount", amount),
             )
         }
     }
