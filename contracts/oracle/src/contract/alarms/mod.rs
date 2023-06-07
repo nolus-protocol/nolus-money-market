@@ -245,19 +245,12 @@ mod test {
     #[test]
     #[cfg(not(debug_assertions))]
     fn notify_with_wrong_currency_group() {
-        use ::currency::native::Nls;
-        use finance::{coin::Coin, price};
+        use finance::{coin::Coin, price, test::currency::Dai};
 
-        let mut storage = MockStorage::new();
+        let storage = MockStorage::new();
 
         let res = MarketAlarms::new(&storage as &dyn Storage)
-            .notify_alarms_iter::<_, Base>(
-                [price::total_of(Coin::<Nls>::new(1))
-                    .is(Coin::<Base>::new(25))
-                    .into()]
-                .into_iter()
-                .map(Ok),
-            )
+            .notify_alarms_iter::<_, Base>([tests::base_price::<Dai>(1, 25)].into_iter().map(Ok))
             .next()
             .unwrap();
 
