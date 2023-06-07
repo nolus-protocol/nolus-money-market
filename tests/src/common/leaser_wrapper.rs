@@ -42,7 +42,7 @@ impl LeaserWrapper {
         self,
         app: &mut MockApp,
         lease_code_id: u64,
-        lpp_addr: &Addr,
+        lpp_addr: Addr,
         time_alarms: Addr,
         market_price_oracle: Addr,
         profit: Addr,
@@ -50,7 +50,7 @@ impl LeaserWrapper {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {
             lease_code_id: Uint64::new(lease_code_id),
-            lpp_ust_addr: lpp_addr.clone(),
+            lpp_ust_addr: lpp_addr,
             lease_interest_rate_margin: Self::INTEREST_RATE_MARGIN,
             liability: Self::liability(),
             lease_interest_payment: InterestPaymentSpec::new(

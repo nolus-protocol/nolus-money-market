@@ -19,18 +19,18 @@ impl DispatcherWrapper {
     pub fn instantiate(
         self,
         app: &mut MockApp,
-        lpp: &Addr,
-        oracle: &Addr,
-        timealarms: &Addr,
-        treasury: &Addr,
+        lpp: Addr,
+        oracle: Addr,
+        timealarms: Addr,
+        treasury: Addr,
     ) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {
             cadence_hours: 10,
-            lpp: lpp.clone(),
-            oracle: oracle.clone(),
-            timealarms: timealarms.clone(),
-            treasury: treasury.clone(),
+            lpp,
+            oracle,
+            timealarms,
+            treasury,
             tvl_to_apr: RewardScale::try_from(vec![
                 Bar {
                     tvl: Default::default(),

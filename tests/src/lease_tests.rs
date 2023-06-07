@@ -21,6 +21,7 @@ use sdk::{
     cw_multi_test::{AppResponse, Executor},
 };
 
+use crate::common::test_case::GenericTestCase;
 use crate::common::{
     cwcoin, cwcoins,
     lease_wrapper::complete_lease_initialization,
@@ -72,12 +73,12 @@ where
         cwcoin::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
     ]);
     test_case.init(
-        &Addr::unchecked(USER),
-        cwcoins::<InitFundsC, _>(1_000_000_000_000_000_000_000_000),
+        Addr::unchecked(USER),
+        &mut [cwcoin::<InitFundsC, _>(1_000_000_000_000_000_000_000_000)],
     );
     test_case.init_lpp_with_funds(
         None,
-        vec![coin(
+        &[coin(
             5_000_000_000_000_000_000_000_000_000,
             Lpn::BANK_SYMBOL,
         )],
@@ -118,7 +119,7 @@ where
     try_init_lease(test_case, downpayment, max_ltd);
 
     let lease = get_lease_address(test_case);
-    let leaser = test_case.leaser();
+    let leaser = test_case.leaser().clone();
 
     let quote = leaser_wrapper::query_quote::<DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
@@ -127,6 +128,8 @@ where
     );
     let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
     let exp_lease = TryInto::<Coin<LeaseCurrency>>::try_into(quote.total).unwrap();
+
+    let test_case = &mut **test_case;
 
     complete_lease_initialization::<Lpn, DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
@@ -140,15 +143,18 @@ where
     lease
 }
 
-fn try_init_lease<D>(test_case: &mut TestCase<Lpn>, downpayment: Coin<D>, max_ltd: Option<Percent>)
-where
+fn try_init_lease<D>(
+    test_case: &mut GenericTestCase,
+    downpayment: Coin<D>,
+    max_ltd: Option<Percent>,
+) where
     D: Currency,
 {
     test_case
         .app
         .execute_contract(
             Addr::unchecked(USER),
-            test_case.leaser_addr.clone().unwrap(),
+            test_case.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: LeaseCurrency::TICKER.into(),
                 max_ltd,
@@ -167,7 +173,7 @@ fn get_lease_address(test_case: &TestCase<Lpn>) -> Addr {
         .app
         .wrap()
         .query_wasm_smart(
-            test_case.leaser_addr.clone().unwrap(),
+            test_case.leaser().clone(),
             &QueryMsg::Leases {
                 owner: Addr::unchecked(USER),
             },
@@ -216,7 +222,7 @@ where
         .app
         .wrap()
         .query_wasm_smart(
-            test_case.leaser_addr.clone().unwrap(),
+            test_case.leaser().clone(),
             &QueryMsg::Quote {
                 downpayment: downpayment.into(),
                 lease_asset: LeaseCurrency::TICKER.into(),
@@ -505,12 +511,14 @@ fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent, leve
     let downpayment = create_payment_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment, None);
 
+    let oracle = test_case.oracle().clone();
+
     oracle_feed_price(&mut test_case, Addr::unchecked(ADMIN), base, quote);
 
     let response = test_case
         .app
         .execute_contract(
-            test_case.oracle.unwrap(),
+            oracle,
             lease_address,
             &ExecuteMsg::PriceAlarm(),
             // &cwcoins::<LeaseCurrency, _>(10000),
@@ -612,6 +620,8 @@ fn liquidation_time_alarm(time_pass: Duration) {
     let downpayment = create_payment_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment, None);
 
+    let time_alarms = test_case.time_alarms().clone();
+
     let lease_amount = if let StateResponse::Opened {
         amount: lease_amount,
         ..
@@ -629,7 +639,7 @@ fn liquidation_time_alarm(time_pass: Duration) {
     let response = test_case
         .app
         .execute_contract(
-            test_case.timealarms.clone().unwrap(),
+            time_alarms,
             lease_address.clone(),
             &ExecuteMsg::TimeAlarm {},
             &[],
@@ -744,7 +754,7 @@ fn compare_state_with_lpp_state_implicit_time() {
         .app
         .wrap()
         .query_wasm_smart(
-            test_case.lpp_addr.clone().unwrap(),
+            test_case.lpp().clone(),
             &lpp::msg::QueryMsg::Loan {
                 lease_addr: lease_address.clone(),
             },
@@ -796,7 +806,7 @@ fn compare_state_with_lpp_state_explicit_time() {
         .app
         .wrap()
         .query_wasm_smart(
-            test_case.lpp_addr.clone().unwrap(),
+            test_case.lpp().clone(),
             &lpp::msg::QueryMsg::Loan {
                 lease_addr: lease_address.clone(),
             },

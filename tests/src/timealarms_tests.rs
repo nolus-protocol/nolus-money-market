@@ -9,7 +9,7 @@ use sdk::{
 };
 use timealarms::msg::{AlarmsCount, DispatchAlarmsResponse};
 
-use crate::common::{cwcoin, test_case::TestCase, AppExt, ADMIN};
+use crate::common::{cwcoin, test_case::GenericTestCase, test_case::TestCase, AppExt, ADMIN};
 
 use self::mock_lease::*;
 
@@ -199,12 +199,12 @@ fn test_case() -> TestCase<Lpn> {
         10_000_000_000_000_000_000_000_000_000,
         Lpn::BANK_SYMBOL,
     )]);
-    test_case.init(
-        &Addr::unchecked(ADMIN),
-        vec![coin(1_000_000_000_000_000_000_000_000, Lpn::BANK_SYMBOL)],
-    );
-
-    test_case.init_timealarms();
+    test_case
+        .init(
+            Addr::unchecked(ADMIN),
+            &mut [coin(1_000_000_000_000_000_000_000_000, Lpn::BANK_SYMBOL)],
+        )
+        .init_timealarms();
 
     test_case
         .app
@@ -217,20 +217,20 @@ fn add_alarm(test_case: &mut TestCase<Lpn>, recv: &Addr, time_secs: u64) {
     let alarm_msg = timealarms::msg::ExecuteMsg::AddAlarm {
         time: Timestamp::from_seconds(time_secs),
     };
-    let timealarms = test_case.timealarms.clone().unwrap();
+    let timealarms = test_case.time_alarms().clone();
     test_case
         .app
         .execute_contract(recv.clone(), timealarms, &alarm_msg, &[])
         .unwrap();
 }
 
-fn dispatch(test_case: &mut TestCase<Lpn>, max_count: u32) -> AppResponse {
+fn dispatch(test_case: &mut GenericTestCase, max_count: u32) -> AppResponse {
     let dispatch_msg = timealarms::msg::ExecuteMsg::DispatchAlarms { max_count };
     test_case
         .app
         .execute_contract(
             Addr::unchecked(ADMIN),
-            test_case.timealarms.clone().unwrap(),
+            test_case.time_alarms().clone(),
             &dispatch_msg,
             &[],
         )
@@ -287,8 +287,10 @@ fn no_reschedule_alarm() {
 #[test]
 fn reschedule_alarm() {
     let mut test_case = test_case();
-    let lease1 =
-        instantiate_reschedule_contract(&mut test_case.app, test_case.timealarms.clone().unwrap());
+
+    let time_alarms = test_case.time_alarms().clone();
+
+    let lease1 = instantiate_reschedule_contract(&mut test_case.app, time_alarms);
 
     add_alarm(&mut test_case, &lease1, 1);
 
@@ -311,6 +313,7 @@ fn reschedule_alarm() {
 #[test]
 fn reschedule_failed_alarm() {
     let mut test_case = test_case();
+
     let lease1 = instantiate_may_fail_contract(&mut test_case.app);
 
     test_case
@@ -502,26 +505,23 @@ fn test_profit_alarms() {
         cwcoin(Coin::<Lpn>::new(1_000_000)),
         cwcoin(Coin::<Nls>::new(1_000_000)),
     ]);
-    test_case.init(
-        &admin,
-        vec![
-            cwcoin(Coin::<Lpn>::new(100_000)),
-            cwcoin(Coin::<Nls>::new(100_000)),
-        ],
-    );
-    test_case.init_timealarms();
-    test_case.init_oracle(None);
-    test_case.init_treasury();
-    test_case.init_profit(1);
-
     test_case
-        .app
-        .send_tokens(
-            admin.clone(),
-            test_case.profit_addr.clone().unwrap(),
-            &[cwcoin(Coin::<Nls>::new(100_000))],
+        .init(
+            admin,
+            &mut [
+                cwcoin(Coin::<Lpn>::new(100_000)),
+                cwcoin(Coin::<Nls>::new(100_000)),
+            ],
         )
-        .unwrap();
+        .init_timealarms()
+        .init_oracle(None)
+        .init_treasury()
+        .init_profit(1);
+
+    let time_alarms = test_case.time_alarms().clone();
+    let profit = test_case.profit().clone();
+
+    test_case.send_funds_from_admin(profit, &[cwcoin(Coin::<Nls>::new(100_000))]);
 
     test_case.app.time_shift(Duration::from_hours(10));
 
@@ -529,12 +529,7 @@ fn test_profit_alarms() {
 
     let resp = test_case
         .app
-        .execute_contract(
-            Addr::unchecked(ADMIN),
-            test_case.timealarms.clone().unwrap(),
-            &dispatch_msg,
-            &[],
-        )
+        .execute_contract(Addr::unchecked(ADMIN), time_alarms, &dispatch_msg, &[])
         .unwrap();
 
     assert_eq!(

@@ -9,13 +9,13 @@ use currency::{
 use finance::{
     coin::{Amount, Coin},
     percent::Percent,
-    price::{self, total, total_of, Price},
+    price::{total, total_of, Price},
 };
 use leaser::msg::QueryMsg;
 use sdk::{
     cosmwasm_ext::Response,
     cosmwasm_std::{coin, Addr, Coin as CwCoin, DepsMut, Env, Event, MessageInfo},
-    cw_multi_test::{next_block, ContractWrapper, Executor},
+    cw_multi_test::{next_block, AppResponse, ContractWrapper, Executor},
     testing::new_custom_msg_queue,
 };
 
@@ -26,7 +26,7 @@ use crate::common::{
     lpp_wrapper::mock_lpp_quote_query,
     oracle_wrapper::{add_feeder, feed_price},
     test_case::TestCase,
-    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
+    ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type TheCurrency = Usdc;
@@ -55,43 +55,48 @@ fn init_lpp_with_unknown_currency() {
     type NotLpn = Osmo;
 
     let mut test_case = TestCase::<NotLpn>::new();
-    test_case.init(&user_addr, cwcoins::<NotLpn, _>(500));
-    test_case.init_lpp(
-        None,
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
+    test_case
+        .init(user_addr, &mut [cwcoin::<NotLpn, _>(500)])
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        );
 }
 
 #[test]
 fn open_lease_not_in_lease_currency() {
-    let user_addr = Addr::unchecked(USER);
-
     type Lpn = Usdc;
+
     let lease_currency = Nls::TICKER;
 
-    let mut test_case = TestCase::<Lpn>::new();
-    test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
-    test_case.init_lpp(
-        None,
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
-    test_case.init_timealarms();
-    test_case.init_oracle(None);
-    test_case.init_treasury();
-    test_case.init_profit(24);
-    test_case.init_leaser();
+    let user_addr = Addr::unchecked(USER);
+
+    let mut test_case: TestCase<Lpn> = TestCase::new();
+    test_case
+        .init(user_addr.clone(), &mut [cwcoin::<Lpn, _>(500)])
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_timealarms()
+        .init_oracle(None)
+        .init_treasury()
+        .init_profit(24)
+        .init_leaser();
+
+    let leaser = test_case.leaser().clone();
 
     let downpayment: CwCoin = cwcoin::<Lpn, _>(3);
 
     let err = test_case
         .app
         .execute_contract(
-            user_addr.clone(),
-            test_case.leaser_addr.unwrap(),
+            user_addr,
+            leaser,
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: lease_currency.into(),
                 max_ltd: None,
@@ -116,40 +121,35 @@ fn open_lease_not_in_lease_currency() {
 
 #[test]
 fn open_multiple_loans() {
-    let user_addr = Addr::unchecked(USER);
-    let user1_addr = Addr::unchecked("user1");
-
     type Lpn = Usdc;
     type LeaseCurrency = Atom;
 
-    let mut test_case = TestCase::<Lpn>::new();
-    test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
-    test_case.init_lpp(
-        None,
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
-    test_case.init_timealarms();
-    test_case.init_oracle(None);
-    test_case.init_treasury();
-    test_case.init_profit(24);
-    test_case.init_leaser();
+    let user_addr = Addr::unchecked(USER);
+    let user1_addr = Addr::unchecked("user1");
 
+    let mut test_case: TestCase<Lpn> = TestCase::new();
     test_case
-        .app
-        .send_tokens(
-            Addr::unchecked(ADMIN),
-            user1_addr.clone(),
-            &[cwcoin::<Lpn, _>(50)],
+        .init(user_addr.clone(), &mut [cwcoin::<Lpn, _>(500)])
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
         )
-        .unwrap();
+        .init_timealarms()
+        .init_oracle(None)
+        .init_treasury()
+        .init_profit(24)
+        .init_leaser()
+        .send_funds_from_admin(user1_addr.clone(), &cwcoins::<Lpn, _>(50));
+
+    let leaser = test_case.leaser().clone();
 
     let resp: HashSet<Addr> = test_case
         .app
         .wrap()
         .query_wasm_smart(
-            test_case.leaser_addr.clone().unwrap(),
+            leaser.clone(),
             &QueryMsg::Leases {
                 owner: user_addr.clone(),
             },
@@ -163,12 +163,12 @@ fn open_multiple_loans() {
             .app
             .execute_contract(
                 user_addr.clone(),
-                test_case.leaser_addr.clone().unwrap(),
+                leaser.clone(),
                 &leaser::msg::ExecuteMsg::OpenLease {
                     currency: LeaseCurrency::TICKER.into(),
                     max_ltd: None,
                 },
-                &[cwcoin::<Lpn, _>(3)],
+                &cwcoins::<Lpn, _>(3),
             )
             .unwrap();
         test_case.app.update_block(next_block);
@@ -189,12 +189,12 @@ fn open_multiple_loans() {
         .app
         .execute_contract(
             user1_addr.clone(),
-            test_case.leaser_addr.as_ref().unwrap().clone(),
+            leaser.clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: LeaseCurrency::TICKER.into(),
                 max_ltd: None,
             },
-            &[cwcoin::<Lpn, _>(30)],
+            &cwcoins::<Lpn, _>(30),
         )
         .unwrap();
     test_case.app.update_block(next_block);
@@ -210,10 +210,7 @@ fn open_multiple_loans() {
     let resp: HashSet<Addr> = test_case
         .app
         .wrap()
-        .query_wasm_smart(
-            test_case.leaser_addr.clone().unwrap(),
-            &QueryMsg::Leases { owner: user1_addr },
-        )
+        .query_wasm_smart(leaser.clone(), &QueryMsg::Leases { owner: user1_addr })
         .unwrap();
     assert!(resp.contains(&Addr::unchecked(user1_lease_addr)));
     assert_eq!(resp.len(), 1);
@@ -221,10 +218,7 @@ fn open_multiple_loans() {
     let user0_loans: HashSet<Addr> = test_case
         .app
         .wrap()
-        .query_wasm_smart(
-            test_case.leaser_addr.unwrap(),
-            &QueryMsg::Leases { owner: user_addr },
-        )
+        .query_wasm_smart(leaser, &QueryMsg::Leases { owner: user_addr })
         .unwrap();
     assert_eq!(user0_loans, loans);
 }
@@ -237,25 +231,26 @@ fn test_quote() {
 
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::<Lpn>::new();
-    test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
-    test_case.init_lpp(
-        None,
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
-    test_case.init_timealarms();
-    test_case.init_oracle(None);
-    test_case.init_treasury();
-    test_case.init_profit(24);
-    test_case.init_leaser();
+    let mut test_case: TestCase<Lpn> = TestCase::new();
+    test_case
+        .init(user_addr, &mut [cwcoin::<Lpn, _>(500)])
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_timealarms()
+        .init_oracle(None)
+        .init_treasury()
+        .init_profit(24)
+        .init_leaser();
 
-    let price_lease_lpn: Price<LeaseCurrency, Lpn> = price::total_of(2.into()).is(1.into());
+    let price_lease_lpn: Price<LeaseCurrency, Lpn> = total_of(2.into()).is(1.into());
     let feeder = setup_feeder(&mut test_case);
     feed_price::<_, LeaseCurrency, Lpn>(&mut test_case, feeder, Coin::new(2), Coin::new(1));
 
-    let leaser = test_case.leaser();
+    let leaser = test_case.leaser().clone();
     let downpayment = Coin::new(100);
     let borrow = Coin::<Lpn>::new(185);
     let resp = leaser_wrapper::query_quote::<Downpayment, LeaseCurrency>(
@@ -267,7 +262,7 @@ fn test_quote() {
     assert_eq!(resp.borrow.try_into(), Ok(borrow));
     assert_eq!(
         resp.total.try_into(),
-        Ok(price::total(downpayment + borrow, price_lease_lpn.inv()))
+        Ok(total(downpayment + borrow, price_lease_lpn.inv()))
     );
 
     /*   TODO: test with different time periods and amounts in LPP
@@ -277,7 +272,7 @@ fn test_quote() {
 
     assert_eq!(resp.annual_interest_rate_margin, Percent::from_permille(30),);
 
-    let leaser = test_case.leaser();
+    let leaser = test_case.leaser().clone();
     let resp = leaser_wrapper::query_quote::<Downpayment, LeaseCurrency>(
         &mut test_case.app,
         leaser,
@@ -307,36 +302,37 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
         cwcoin::<LeaseCurrency, _>(CROS),
     ];
 
-    let user_reserve = cwcoins::<Atom, _>(USER_ATOMS);
+    let mut user_reserve = cwcoins::<Atom, _>(USER_ATOMS);
 
     let user_addr = Addr::unchecked(USER);
 
     let mut test_case = TestCase::<Lpn>::with_reserve(&{
         let mut reserve = cwcoins::<Lpn, _>(1_000_000_000);
 
-        reserve.extend_from_slice(lpp_reserve.as_slice());
+        reserve.extend_from_slice(&lpp_reserve);
 
-        reserve.extend_from_slice(user_reserve.as_slice());
+        reserve.extend_from_slice(&user_reserve);
 
         reserve
     });
-    test_case.init(&user_addr, user_reserve);
-    test_case.init_lpp_with_funds(
-        None,
-        vec![
-            coin(LPNS, Lpn::BANK_SYMBOL),
-            coin(OSMOS, Osmo::BANK_SYMBOL),
-            coin(CROS, LeaseCurrency::BANK_SYMBOL),
-        ],
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
-    test_case.init_timealarms();
-    test_case.init_oracle(None);
-    test_case.init_treasury();
-    test_case.init_profit(24);
-    test_case.init_leaser();
+    test_case
+        .init(user_addr, &mut user_reserve)
+        .init_lpp_with_funds(
+            None,
+            &[
+                coin(LPNS, Lpn::BANK_SYMBOL),
+                coin(OSMOS, Osmo::BANK_SYMBOL),
+                coin(CROS, LeaseCurrency::BANK_SYMBOL),
+            ],
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_timealarms()
+        .init_oracle(None)
+        .init_treasury()
+        .init_profit(24)
+        .init_leaser();
 
     let feeder_addr = Addr::unchecked("feeder1");
 
@@ -363,9 +359,12 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
         lpn_asset_base,
     );
 
-    let leaser = test_case.leaser();
-    let resp =
-        leaser_wrapper::query_quote::<Osmo, LeaseCurrency>(&mut test_case.app, leaser, downpayment);
+    let leaser = test_case.leaser().clone();
+    let resp = leaser_wrapper::query_quote::<Osmo, LeaseCurrency>(
+        &mut test_case.app,
+        leaser,
+        downpayment,
+    );
 
     assert_eq!(
         resp.borrow.try_into(),
@@ -406,31 +405,34 @@ fn test_quote_fixed_rate() {
     let user_addr = Addr::unchecked(USER);
 
     let mut test_case = TestCase::<Lpn>::new();
-    test_case.init(&user_addr, cwcoins::<Lpn, _>(500));
-    test_case.init_lpp(
-        Some(
-            ContractWrapper::new(
-                lpp::contract::execute,
-                lpp::contract::instantiate,
-                mock_lpp_quote_query,
-            )
-            .with_sudo(lpp::contract::sudo),
-        ),
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
-    test_case.init_timealarms();
-    test_case.init_oracle(None);
-    test_case.init_treasury();
-    test_case.init_profit(24);
-    test_case.init_leaser();
+    test_case
+        .init(user_addr, &mut [cwcoin::<Lpn, _>(500)])
+        .init_lpp(
+            Some(
+                ContractWrapper::new(
+                    lpp::contract::execute,
+                    lpp::contract::instantiate,
+                    mock_lpp_quote_query,
+                )
+                .with_sudo(lpp::contract::sudo),
+            ),
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_timealarms()
+        .init_oracle(None)
+        .init_treasury()
+        .init_profit(24)
+        .init_leaser();
+
+    let leaser = test_case.leaser().clone();
 
     let feeder = setup_feeder(&mut test_case);
     feed_price::<_, LeaseCurrency, Lpn>(&mut test_case, feeder, Coin::new(3), Coin::new(1));
     let resp = leaser_wrapper::query_quote::<Downpayment, LeaseCurrency>(
         &mut test_case.app,
-        test_case.leaser_addr.clone().unwrap(),
+        leaser,
         Coin::<Downpayment>::new(100),
     );
 
@@ -484,7 +486,7 @@ fn open_loans_lpp_fails() {
 
     let mut test_case = TestCase::<Lpn>::new();
     test_case
-        .init(&user_addr, cwcoins::<Lpn, _>(500))
+        .init(user_addr.clone(), &mut [cwcoin::<Lpn, _>(500)])
         .init_lpp(
             Some(
                 ContractWrapper::new(
@@ -504,11 +506,13 @@ fn open_loans_lpp_fails() {
         .init_profit(24)
         .init_leaser();
 
-    let _res = test_case
+    let leaser = test_case.leaser().clone();
+
+    let _res: AppResponse = test_case
         .app
         .execute_contract(
-            user_addr.clone(),
-            test_case.leaser_addr.as_ref().unwrap().clone(),
+            user_addr,
+            leaser,
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: LeaseCurrency::TICKER.into(),
                 max_ltd: None,
@@ -527,31 +531,26 @@ where
     let user_addr = Addr::unchecked(USER);
 
     let mut test_case = TestCase::<Lpn>::new();
-    test_case.init(&user_addr, vec![cwcoin::<DownpaymentC, _>(500)]);
-    test_case.init_lpp(
-        None,
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
-    test_case.init_timealarms();
-    test_case.init_oracle(None);
-    test_case.init_treasury();
-    test_case.init_profit(24);
-    test_case.init_leaser();
+    test_case
+        .init(user_addr.clone(), &mut [cwcoin::<DownpaymentC, _>(500)])
+        .init_lpp(
+            None,
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_timealarms()
+        .init_oracle(None)
+        .init_treasury()
+        .init_profit(24)
+        .init_leaser();
 
-    let _lpp_addr: Addr = test_case.lpp_addr.as_ref().unwrap().clone(); // 0
-
-    let _time_alarms_addr: Addr = test_case.timealarms.as_ref().unwrap().clone(); // 1
-
-    let _oracle_addr: Addr = test_case.oracle.as_ref().unwrap().clone(); // 2
-
-    let _treasury_addr: Addr = test_case.leaser_addr.as_ref().unwrap().clone(); // 3
-
-    let _profit_addr: Addr = test_case.leaser_addr.as_ref().unwrap().clone(); // 4
-
-    let leaser_addr: Addr = test_case.leaser_addr.as_ref().unwrap().clone(); // 5
-
+    let _lpp_addr: &Addr = test_case.lpp(); // 0
+    let _time_alarms_addr: &Addr = test_case.time_alarms(); // 1
+    let _oracle_addr: &Addr = test_case.oracle(); // 2
+    let _treasury_addr: &Addr = test_case.treasury(); // 3
+    let _profit_addr: &Addr = test_case.profit(); // 4
+    let leaser_addr: Addr = test_case.leaser().clone(); // 5
     let lease_addr: Addr = Addr::unchecked("contract6"); // 6
 
     if feed_prices {
@@ -597,6 +596,8 @@ where
             &[cwcoin(downpayment)],
         )
         .unwrap();
+
+    let test_case = &mut *test_case;
 
     complete_lease_initialization::<Lpn, DownpaymentC, LeaseC>(
         &mut test_case.app,

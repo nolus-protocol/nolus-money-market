@@ -7,7 +7,7 @@ use sdk::{
 
 use crate::common::{
     cwcoins, lpp_wrapper::mock_lpp_query, native_cwcoin, oracle_wrapper::mock_oracle_query,
-    test_case::TestCase, Native, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER,
+    test_case::TestCase, Native, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER,
     UTILIZATION_OPTIMAL,
 };
 
@@ -16,10 +16,10 @@ type Lpn = Usdc;
 #[test]
 fn on_alarm_zero_reward() {
     let user = Addr::unchecked(USER);
-    let mut test_case = TestCase::<Usdc>::new();
-    test_case.init(&user, cwcoins::<Lpn, _>(500));
 
+    let mut test_case: TestCase<Lpn> = TestCase::new();
     test_case
+        .init(user, &mut cwcoins::<Lpn, _>(500))
         .init_lpp(
             None,
             BASE_INTEREST_RATE,
@@ -39,21 +39,19 @@ fn on_alarm_zero_reward() {
         .init_treasury_with_dispatcher(Addr::unchecked("contract4"))
         .init_dispatcher();
 
-    assert_eq!(
-        test_case.dispatcher_addr.as_ref().unwrap().as_str(),
-        "contract4"
-    );
+    let time_alarms = test_case.time_alarms().clone();
 
-    test_case.send_funds(
-        &test_case.timealarms.clone().unwrap(),
-        cwcoins::<Lpn, _>(500),
-    );
+    test_case.send_funds_from_admin(time_alarms.clone(), &cwcoins::<Lpn, _>(500));
+
+    let dispatcher = test_case.dispatcher().clone();
+
+    assert_eq!(dispatcher.as_str(), "contract4");
 
     let err = test_case
         .app
         .execute_contract(
-            test_case.timealarms.unwrap(),
-            test_case.dispatcher_addr.as_ref().unwrap().clone(),
+            time_alarms,
+            dispatcher,
             &rewards_dispatcher::msg::ExecuteMsg::TimeAlarm {},
             &cwcoins::<Lpn, _>(40),
         )
@@ -67,13 +65,11 @@ fn on_alarm_zero_reward() {
 fn on_alarm() {
     let lender = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::<Usdc>::new();
+    let mut test_case: TestCase<Lpn> = TestCase::new();
     test_case
-        .init(&lender, cwcoins::<Lpn, _>(500))
+        .init(lender.clone(), &mut cwcoins::<Lpn, _>(500))
         .init_timealarms()
-        .init_oracle(None);
-
-    test_case
+        .init_oracle(None)
         .init_lpp(
             Some(
                 ContractWrapper::new(
@@ -99,16 +95,19 @@ fn on_alarm() {
         ))
         .init_treasury()
         .init_dispatcher();
-    test_case.send_funds(
-        &test_case.timealarms.clone().unwrap(),
-        cwcoins::<Lpn, _>(500),
-    );
+
+    let lpp = test_case.lpp().clone();
+    let time_alarms = test_case.time_alarms().clone();
+    let treasury = test_case.treasury().clone();
+    let dispatcher = test_case.dispatcher().clone();
+
+    test_case.send_funds_from_admin(time_alarms.clone(), &cwcoins::<Lpn, _>(500));
 
     assert_eq!(
         test_case
             .app
             .wrap()
-            .query_balance(test_case.lpp_addr.clone().unwrap(), Nls::TICKER)
+            .query_balance(lpp.clone(), Nls::TICKER)
             .unwrap(),
         CwCoin::new(0, Nls::TICKER)
     );
@@ -116,7 +115,7 @@ fn on_alarm() {
     let treasury_balance = test_case
         .app
         .wrap()
-        .query_all_balances(test_case.treasury_addr.clone().unwrap())
+        .query_all_balances(treasury.clone())
         .unwrap();
 
     println!("treasury_balance = {:?}", treasury_balance);
@@ -126,7 +125,7 @@ fn on_alarm() {
         .app
         .execute_contract(
             lender.clone(),
-            test_case.lpp_addr.clone().unwrap(),
+            lpp.clone(),
             &lpp::msg::ExecuteMsg::Deposit {},
             &cwcoins::<Lpn, _>(100),
         )
@@ -136,8 +135,8 @@ fn on_alarm() {
     let res = test_case
         .app
         .execute_contract(
-            test_case.timealarms.unwrap(),
-            test_case.dispatcher_addr.clone().unwrap(),
+            time_alarms,
+            dispatcher.clone(),
             &rewards_dispatcher::msg::ExecuteMsg::TimeAlarm {},
             &[],
         )
@@ -150,41 +149,35 @@ fn on_alarm() {
     assert_eq!(dispatcher_exec.ty.as_str(), "execute");
     assert_eq!(
         dispatcher_exec.attributes,
-        [("_contract_addr", test_case.dispatcher_addr.clone().unwrap())]
+        [("_contract_addr", dispatcher.as_str())]
     );
     let treasury_exec = &res.events[1];
     assert_eq!(treasury_exec.ty.as_str(), "wasm-tr-rewards");
     assert_eq!(
         treasury_exec.attributes,
         [
-            (
-                "_contract_addr",
-                test_case.dispatcher_addr.clone().unwrap().to_string()
-            ),
+            ("_contract_addr", test_case.dispatcher().to_string()),
             ("rewards-amount", String::from("11")),
             ("rewards-symbol", String::from(Nls::TICKER)),
             ("height", test_case.app.block_info().height.to_string()),
             ("at", test_case.app.block_info().time.nanos().to_string()),
             ("idx", 0.to_string()),
-            ("to", test_case.lpp_addr.as_ref().unwrap().to_string()),
+            ("to", test_case.lpp().to_string()),
         ]
     );
     let treasury_exec = &res.events[2];
     assert_eq!(treasury_exec.ty.as_str(), "execute");
     assert_eq!(
         treasury_exec.attributes,
-        [("_contract_addr", &test_case.treasury_addr.clone().unwrap())]
+        [("_contract_addr", treasury.as_str())]
     );
     let treasury_wasm = &res.events[3];
     assert_eq!(treasury_wasm.ty.as_str(), "wasm");
     assert_eq!(
         treasury_wasm.attributes,
         [
-            (
-                "_contract_addr",
-                test_case.treasury_addr.clone().unwrap().to_string()
-            ),
-            ("method", "try_send_rewards".to_string())
+            ("_contract_addr", treasury.as_str()),
+            ("method", "try_send_rewards")
         ]
     );
 
@@ -193,34 +186,22 @@ fn on_alarm() {
     assert_eq!(
         treasury_exec.attributes,
         [
-            (
-                "recipient",
-                &test_case.dispatcher_addr.clone().unwrap().to_string()
-            ),
-            (
-                "sender",
-                &test_case.treasury_addr.clone().unwrap().to_string()
-            ),
+            ("recipient", dispatcher.as_str()),
+            ("sender", treasury.as_str()),
             ("amount", &format!("11{}", Native::BANK_SYMBOL))
         ]
     );
 
     let treasury_exec = &res.events[5];
     assert_eq!(treasury_exec.ty.as_str(), "execute");
-    assert_eq!(
-        treasury_exec.attributes,
-        [("_contract_addr", &test_case.lpp_addr.clone().unwrap())]
-    );
+    assert_eq!(treasury_exec.attributes, [("_contract_addr", &lpp)]);
     let treasury_exec = &res.events[6];
     assert_eq!(treasury_exec.ty.as_str(), "wasm");
     assert_eq!(
         treasury_exec.attributes,
         [
-            (
-                "_contract_addr",
-                test_case.lpp_addr.clone().unwrap().to_string()
-            ),
-            ("method", "try_distribute_rewards".to_string())
+            ("_contract_addr", lpp.as_str()),
+            ("method", "try_distribute_rewards")
         ]
     );
 
@@ -228,7 +209,7 @@ fn on_alarm() {
         test_case
             .app
             .wrap()
-            .query_balance(test_case.lpp_addr.clone().unwrap(), Native::BANK_SYMBOL)
+            .query_balance(lpp.clone(), Native::BANK_SYMBOL)
             .unwrap(),
         native_cwcoin(11)
     );
@@ -237,10 +218,7 @@ fn on_alarm() {
     let resp: lpp::msg::RewardsResponse = test_case
         .app
         .wrap()
-        .query_wasm_smart(
-            test_case.lpp_addr.clone().unwrap(),
-            &lpp::msg::QueryMsg::Rewards { address: lender },
-        )
+        .query_wasm_smart(lpp, &lpp::msg::QueryMsg::Rewards { address: lender })
         .unwrap();
 
     println!("LPP rewards {:?}", resp);
@@ -250,13 +228,15 @@ fn on_alarm() {
 fn test_config() {
     let mut test_case = new_test_case();
 
+    let dispatcher = test_case.dispatcher().clone();
+
     let resp = query_config(&test_case);
     assert_eq!(resp.cadence_hours, 10);
 
     let response: AppResponse = test_case
         .app
         .wasm_sudo(
-            test_case.dispatcher_addr.clone().unwrap(),
+            dispatcher,
             &rewards_dispatcher::msg::SudoMsg::Config { cadence_hours: 30 },
         )
         .unwrap();
@@ -327,9 +307,9 @@ fn test_config() {
 // }
 
 fn new_test_case() -> TestCase<Lpn> {
-    let mut test_case = TestCase::new();
+    let mut test_case: TestCase<Lpn> = TestCase::new();
     test_case
-        .init(&Addr::unchecked(ADMIN), cwcoins::<Lpn, _>(500))
+        .init_lease()
         .init_lpp(
             None,
             BASE_INTEREST_RATE,
@@ -349,7 +329,7 @@ fn query_config(test_case: &TestCase<Lpn>) -> ConfigResponse {
         .app
         .wrap()
         .query_wasm_smart(
-            test_case.dispatcher_addr.clone().unwrap(),
+            test_case.dispatcher().clone(),
             &rewards_dispatcher::msg::QueryMsg::Config {},
         )
         .unwrap()

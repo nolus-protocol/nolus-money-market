@@ -36,6 +36,7 @@ use sdk::{
 use swap::SwapTarget;
 use tree::HumanReadableTree;
 
+use crate::common::test_case::GenericTestCase;
 use crate::common::{
     oracle_wrapper, test_case::TestCase, MockApp, ADDON_OPTIMAL_INTEREST_RATE, ADMIN,
     BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
@@ -55,25 +56,26 @@ where
 
 fn create_test_case() -> TestCase<Lpn> {
     let mut test_case = TestCase::with_reserve(&[cw_coin(10_000_000_000_000_000_000_000_000_000)]);
-    test_case.init(
-        &Addr::unchecked(ADMIN),
-        vec![cw_coin(1_000_000_000_000_000_000_000_000)],
-    );
-    test_case.init_lpp_with_funds(
-        None,
-        vec![coin(
-            5_000_000_000_000_000_000_000_000_000,
-            Lpn::BANK_SYMBOL,
-        )],
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    );
-    test_case.init_timealarms();
-    test_case.init_oracle(None);
-    test_case.init_treasury();
-    test_case.init_profit(24);
-    test_case.init_leaser();
+    test_case
+        .init(
+            Addr::unchecked(ADMIN),
+            &mut [cw_coin(1_000_000_000_000_000_000_000_000)],
+        )
+        .init_lpp_with_funds(
+            None,
+            &[coin(
+                5_000_000_000_000_000_000_000_000_000,
+                Lpn::BANK_SYMBOL,
+            )],
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_timealarms()
+        .init_oracle(None)
+        .init_treasury()
+        .init_profit(24)
+        .init_leaser();
 
     test_case
 }
@@ -128,12 +130,14 @@ fn feed_price_with_alarm_issue() {
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
 
+    let oracle = test_case.oracle().clone();
+
     // there is no price in the oracle and feed for this alarm
     test_case
         .app
         .execute_contract(
             lease,
-            test_case.oracle.clone().unwrap(),
+            oracle,
             &oracle::msg::ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
                     price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(1)),
@@ -161,11 +165,13 @@ fn feed_price_with_alarm() {
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
 
+    let oracle = test_case.oracle().clone();
+
     test_case
         .app
         .execute_contract(
             lease,
-            test_case.oracle.clone().unwrap(),
+            oracle,
             &oracle::msg::ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
                     price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(10)),
@@ -194,12 +200,13 @@ fn overwrite_alarm_and_dispatch() {
     oracle_wrapper::add_feeder(&mut test_case, ADMIN);
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
+    let oracle = test_case.oracle().clone();
 
     test_case
         .app
         .execute_contract(
             lease.clone(),
-            test_case.oracle.clone().unwrap(),
+            oracle.clone(),
             &oracle::msg::ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
                     price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(5)),
@@ -214,7 +221,7 @@ fn overwrite_alarm_and_dispatch() {
         .app
         .execute_contract(
             lease.clone(),
-            test_case.oracle.clone().unwrap(),
+            oracle.clone(),
             &oracle::msg::ExecuteMsg::AddPriceAlarm {
                 alarm: Alarm::new(
                     price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(10)),
@@ -239,7 +246,7 @@ fn overwrite_alarm_and_dispatch() {
         .app
         .execute_contract(
             lease,
-            test_case.oracle.clone().unwrap(),
+            oracle,
             &oracle::msg::ExecuteMsg::DispatchAlarms { max_count: 5 },
             &[],
         )
@@ -261,12 +268,12 @@ fn overwrite_alarm_and_dispatch() {
     );
 }
 
-fn open_lease(test_case: &mut TestCase<Lpn>, downpayment: TheCoin) -> Addr {
+fn open_lease(test_case: &mut GenericTestCase, downpayment: TheCoin) -> Addr {
     test_case
         .app
         .execute_contract(
             Addr::unchecked(ADMIN),
-            test_case.leaser_addr.clone().unwrap(),
+            test_case.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: LeaseCurrency::TICKER.into(),
                 max_ltd: None,
@@ -284,12 +291,12 @@ fn open_lease(test_case: &mut TestCase<Lpn>, downpayment: TheCoin) -> Addr {
     get_lease_address(test_case)
 }
 
-fn get_lease_address(test_case: &TestCase<Lpn>) -> Addr {
+fn get_lease_address(test_case: &GenericTestCase) -> Addr {
     let query_response: HashSet<Addr> = test_case
         .app
         .wrap()
         .query_wasm_smart(
-            test_case.leaser_addr.clone().unwrap(),
+            test_case.leaser().clone(),
             &QueryMsg::Leases {
                 owner: Addr::unchecked(ADMIN),
             },
@@ -308,20 +315,19 @@ fn wrong_timealarms_addr() {
         time: Timestamp::from_seconds(100),
     };
 
+    let oracle = test_case.oracle().clone();
+
     test_case
         .app
-        .execute_contract(
-            Addr::unchecked(USER),
-            test_case.oracle.clone().unwrap(),
-            &alarm_msg,
-            &[],
-        )
+        .execute_contract(Addr::unchecked(USER), oracle, &alarm_msg, &[])
         .unwrap();
 }
 
 #[test]
 fn test_config_update() {
     let mut test_case = create_test_case();
+
+    let oracle = test_case.oracle().clone();
 
     let _admin = Addr::unchecked(ADMIN);
     let feeder1 = Addr::unchecked("feeder1");
@@ -353,7 +359,7 @@ fn test_config_update() {
         .app
         .wrap()
         .query_wasm_smart(
-            test_case.oracle.clone().unwrap(),
+            test_case.oracle().clone(),
             &OracleQ::Price {
                 currency: BaseC::TICKER.into(),
             },
@@ -369,7 +375,7 @@ fn test_config_update() {
     let response: AppResponse = test_case
         .app
         .wasm_sudo(
-            test_case.oracle.clone().unwrap(),
+            oracle.clone(),
             &oracle::msg::SudoMsg::UpdateConfig(PriceConfig::new(
                 Percent::from_percent(100),
                 Duration::from_secs(5),
@@ -385,7 +391,7 @@ fn test_config_update() {
     );
 
     let price: Result<SpotPrice, _> = test_case.app.wrap().query_wasm_smart(
-        test_case.oracle.clone().unwrap(),
+        oracle,
         &OracleQ::Price {
             currency: BaseC::TICKER.into(),
         },
@@ -420,10 +426,12 @@ fn swap_tree() -> HumanReadableTree<SwapTarget> {
 fn test_swap_path() {
     let mut test_case = create_test_case();
 
+    let oracle = test_case.oracle().clone();
+
     let response: AppResponse = test_case
         .app
         .wasm_sudo(
-            test_case.oracle.clone().unwrap(),
+            oracle.clone(),
             &oracle::msg::SudoMsg::SwapTree { tree: swap_tree() },
         )
         .unwrap();
@@ -437,7 +445,7 @@ fn test_swap_path() {
         .app
         .wrap()
         .query_wasm_smart(
-            test_case.oracle.unwrap(),
+            oracle,
             &OracleQ::SwapPath {
                 from: Wbtc::TICKER.into(),
                 to: Weth::TICKER.into(),
@@ -463,12 +471,14 @@ fn test_swap_path() {
 fn test_query_swap_tree() {
     let mut test_case = create_test_case();
 
+    let oracle = test_case.oracle().clone();
+
     let tree: HumanReadableTree<SwapTarget> = swap_tree();
 
     let response: AppResponse = test_case
         .app
         .wasm_sudo(
-            test_case.oracle.clone().unwrap(),
+            oracle.clone(),
             &oracle::msg::SudoMsg::SwapTree { tree: tree.clone() },
         )
         .unwrap();
@@ -481,7 +491,7 @@ fn test_query_swap_tree() {
     let resp: oracle::msg::SwapTreeResponse = test_case
         .app
         .wrap()
-        .query_wasm_smart(test_case.oracle.unwrap(), &OracleQ::SwapTree {})
+        .query_wasm_smart(oracle, &OracleQ::SwapTree {})
         .unwrap();
 
     assert_eq!(resp.tree, tree);
@@ -491,6 +501,8 @@ fn test_query_swap_tree() {
 #[should_panic]
 fn test_zero_price_dto() {
     let mut test_case = create_test_case();
+
+    let oracle = test_case.oracle().clone();
 
     let feeder1 = Addr::unchecked("feeder1");
 
@@ -507,7 +519,7 @@ fn test_zero_price_dto() {
         .execute(
             feeder1,
             wasm_execute(
-                test_case.oracle.clone().unwrap(),
+                oracle,
                 &oracle::msg::ExecuteMsg::FeedPrices {
                     prices: vec![price],
                 },
@@ -658,27 +670,19 @@ fn set_should_fail(app: &mut MockApp, dummy_contract: Addr, should_fail: bool) {
 fn price_alarm_rescheduling() {
     let mut test_case = create_test_case();
 
+    let oracle = test_case.oracle().clone();
+
     let dummy_code = test_case
         .app
         .store_code(dummy_contract::<2, 1>(execute::<false, 2, 1>));
 
-    instantiate_dummy_contract(
-        &mut test_case.app,
-        dummy_code,
-        test_case.oracle.clone().unwrap(),
-        false,
-    );
+    instantiate_dummy_contract(&mut test_case.app, dummy_code, oracle.clone(), false);
 
     let dummy_code = test_case
         .app
         .store_code(dummy_contract::<2, 1>(execute::<true, 3, 1>));
 
-    instantiate_dummy_contract(
-        &mut test_case.app,
-        dummy_code,
-        test_case.oracle.clone().unwrap(),
-        false,
-    );
+    instantiate_dummy_contract(&mut test_case.app, dummy_code, oracle.clone(), false);
 
     let feeder_addr = Addr::unchecked("feeder");
 
@@ -691,7 +695,7 @@ fn price_alarm_rescheduling() {
         Coin::<Usdc>::new(1),
     );
 
-    let response = dispatch_alarms(&mut test_case.app, test_case.oracle.clone().unwrap(), 5);
+    let response = dispatch_alarms(&mut test_case.app, oracle.clone(), 5);
 
     assert!(
         response
@@ -718,7 +722,7 @@ fn price_alarm_rescheduling() {
         response.events
     );
 
-    let response = dispatch_alarms(&mut test_case.app, test_case.oracle.clone().unwrap(), 5);
+    let response = dispatch_alarms(&mut test_case.app, oracle.clone(), 5);
 
     assert_eq!(
         response
@@ -737,7 +741,7 @@ fn price_alarm_rescheduling() {
         Coin::<Usdc>::new(1),
     );
 
-    let response = dispatch_alarms(&mut test_case.app, test_case.oracle.unwrap(), 5);
+    let response = dispatch_alarms(&mut test_case.app, oracle, 5);
 
     assert!(
         response
@@ -769,27 +773,20 @@ fn price_alarm_rescheduling() {
 fn price_alarm_rescheduling_with_failing() {
     let mut test_case = create_test_case();
 
+    let oracle = test_case.oracle().clone();
+
     let dummy_code = test_case
         .app
         .store_code(dummy_contract::<2, 1>(execute::<false, 2, 1>));
 
-    instantiate_dummy_contract(
-        &mut test_case.app,
-        dummy_code,
-        test_case.oracle.clone().unwrap(),
-        false,
-    );
+    instantiate_dummy_contract(&mut test_case.app, dummy_code, oracle.clone(), false);
 
     let dummy_code = test_case
         .app
         .store_code(dummy_contract::<2, 1>(execute::<false, 3, 1>));
 
-    let dummy_failing = instantiate_dummy_contract(
-        &mut test_case.app,
-        dummy_code,
-        test_case.oracle.clone().unwrap(),
-        true,
-    );
+    let dummy_failing =
+        instantiate_dummy_contract(&mut test_case.app, dummy_code, oracle.clone(), true);
 
     let feeder_addr = Addr::unchecked("feeder");
 
@@ -802,7 +799,7 @@ fn price_alarm_rescheduling_with_failing() {
         Coin::<Usdc>::new(1),
     );
 
-    let response = dispatch_alarms(&mut test_case.app, test_case.oracle.clone().unwrap(), 5);
+    let response = dispatch_alarms(&mut test_case.app, oracle.clone(), 5);
 
     assert_eq!(
         response
@@ -849,7 +846,7 @@ fn price_alarm_rescheduling_with_failing() {
 
     set_should_fail(&mut test_case.app, dummy_failing, false);
 
-    let response = dispatch_alarms(&mut test_case.app, test_case.oracle.clone().unwrap(), 5);
+    let response = dispatch_alarms(&mut test_case.app, oracle.clone(), 5);
 
     assert_eq!(
         response
@@ -878,7 +875,7 @@ fn price_alarm_rescheduling_with_failing() {
         response.events
     );
 
-    let response = dispatch_alarms(&mut test_case.app, test_case.oracle.unwrap(), 5);
+    let response = dispatch_alarms(&mut test_case.app, oracle, 5);
 
     assert_eq!(
         response
