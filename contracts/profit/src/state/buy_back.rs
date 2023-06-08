@@ -48,15 +48,9 @@ impl BuyBack {
         coins: Vec<CoinDTO<PaymentGroup>>,
     ) -> Self {
         debug_assert!(
-            coins.iter().all(|coin_dto: &CoinDTO<PaymentGroup>| {
-                <
-                currency::non_native_payment::NonNativePaymentGroup as finance::currency::Group
-            >::maybe_visit_on_ticker(
-                coin_dto.ticker(),
-                BlankVisitor
-            )
-                .is_ok()
-            }),
+            coins
+                .iter()
+                .all(|coin_dto: &CoinDTO<PaymentGroup>| coin_dto.ticker() != Nls::TICKER),
             "{:?}",
             coins
         );
@@ -176,29 +170,3 @@ where
 }
 
 impl<I> TryFind for I where I: Iterator + ?Sized {}
-
-#[cfg(debug_assertions)]
-#[derive(Debug)]
-struct BlankVisitor;
-
-#[cfg(debug_assertions)]
-mod blank_visitor_impl {
-    use serde::{de::DeserializeOwned, Serialize};
-
-    use finance::currency::{AnyVisitor, AnyVisitorResult, Currency};
-    use platform::never::Never;
-
-    use super::BlankVisitor;
-
-    impl AnyVisitor for BlankVisitor {
-        type Output = ();
-        type Error = Never;
-
-        fn on<C>(self) -> AnyVisitorResult<Self>
-        where
-            C: Currency + Serialize + DeserializeOwned,
-        {
-            Ok(())
-        }
-    }
-}
