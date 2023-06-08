@@ -2,29 +2,27 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use currency::native::Nls;
+use currency::{native::Nls, payment::PaymentGroup};
 use dex::{
     Account, Enterable, Error as DexError, Handler, Response as DexResponse, Result as DexResult,
     StartLocalLocalState,
 };
 use finance::{
     coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
-    currency::{Currency, Group},
+    currency::{equal, Currency, Group},
     duration::Duration,
 };
 use platform::{
-    bank::{self, BankAccount, BankAccountView, BankStub, BankView},
+    bank::{self, Aggregate, BankAccount, BankAccountView, BankStub, BankView},
     batch::Batch,
     message::Response as PlatformResponse,
-    never::{self, Never},
 };
-use sdk::cosmwasm_std::{Deps, Env, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
 
-use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult};
+use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult, ContractError};
 
 use super::{
-    buy_back::{BuyBack, BuyBackCurrencies},
-    CadenceHours, Config, ConfigManagement, SetupDexHandler, State, StateEnum,
+    buy_back::BuyBack, CadenceHours, Config, ConfigManagement, SetupDexHandler, State, StateEnum,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -43,66 +41,62 @@ impl Idle {
         env: &Env,
         querier: &QuerierWrapper<'_>,
         account: B,
+        nls: Coin<Nls>,
     ) -> ContractResult<PlatformResponse>
     where
         B: BankAccount,
     {
-        let state_batch = self.enter(env.block.time, querier)?;
-
-        let balance_nls: Coin<Nls> = account.balance()?;
-
-        Ok(if balance_nls.is_zero() {
-            PlatformResponse::messages_only(state_batch)
-        } else {
-            let (bank_batch, bank_emitter) =
-                Profit::transfer_nls(account, env, self.config.treasury())?;
-
-            PlatformResponse::messages_with_events(state_batch.merge(bank_batch), bank_emitter)
-        })
+        self.enter(env.block.time, querier)
+            .map(PlatformResponse::messages_only)
+            .map(|state_response: PlatformResponse| {
+                Profit::transfer_nls(account, self.config.treasury(), nls, env)
+                    .merge_with(state_response)
+            })
+            .map_err(Into::into)
     }
 
-    fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> ContractResult<DexResponse<Self>> {
-        let account: BankStub<BankView<'_>> = bank::account(&env.contract.address, &deps.querier);
+    fn on_time_alarm(
+        self,
+        querier: &QuerierWrapper<'_>,
+        env: Env,
+    ) -> ContractResult<DexResponse<Self>> {
+        let account: BankStub<BankView<'_>> = bank::account(&env.contract.address, querier);
 
-        let balances: Vec<CoinDTO<BuyBackCurrencies>> = account
-            .balances::<BuyBackCurrencies, _>(CoinToDTO(PhantomData))?
-            .map(never::safe_unwrap)
+        let balances: SplitCoins<Nls, PaymentGroup> = account
+            .balances::<PaymentGroup, _>(CoinToDTO(PhantomData, PhantomData))?
+            .transpose()?
             .unwrap_or_default();
 
-        if balances.is_empty() {
-            self.send_nls(&env, &deps.querier, account)
-                .map(|response: PlatformResponse| (self.into(), response))
+        if balances.rest.is_empty() {
+            self.send_nls(&env, querier, account, balances.filtered)
+                .map(|response: PlatformResponse| DexResponse::<Self> {
+                    response,
+                    next_state: State(StateEnum::Idle(self)),
+                })
         } else {
-            self.enter_buy_back(&deps, env, balances)
+            self.try_enter_buy_back(querier, env.contract.address, env.block.time, balances.rest)
         }
-        .map(
-            |(next_state, response): (State, PlatformResponse)| DexResponse::<Self> {
-                response,
-                next_state,
-            },
-        )
     }
 
-    fn enter_buy_back(
+    fn try_enter_buy_back(
         self,
-        deps: &Deps<'_>,
-        env: Env,
-        balances: Vec<CoinDTO<BuyBackCurrencies>>,
-    ) -> ContractResult<(State, PlatformResponse)> {
+        querier: &QuerierWrapper<'_>,
+        profit_addr: Addr,
+        now: Timestamp,
+        balances: Vec<CoinDTO<PaymentGroup>>,
+    ) -> ContractResult<DexResponse<Self>> {
         let state: StartLocalLocalState<BuyBack> = dex::start_local_local(BuyBack::new(
-            env.contract.address,
+            profit_addr,
             self.config,
             self.account,
             balances,
         ));
 
         state
-            .enter(env.block.time, &deps.querier)
-            .map(|batch: Batch| {
-                (
-                    State(StateEnum::BuyBack(state.into())),
-                    PlatformResponse::messages_only(batch),
-                )
+            .enter(now, querier)
+            .map(|batch: Batch| DexResponse::<Self> {
+                response: PlatformResponse::messages_only(batch),
+                next_state: State(StateEnum::BuyBack(state.into())),
             })
             .map_err(Into::into)
     }
@@ -138,7 +132,7 @@ impl Handler for Idle {
     type SwapResult = ContractResult<DexResponse<State>>;
 
     fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> DexResult<Self> {
-        DexResult::Finished(self.on_time_alarm(deps, env))
+        DexResult::Finished(self.on_time_alarm(&deps.querier, env))
     }
 }
 
@@ -146,21 +140,71 @@ impl SetupDexHandler for Idle {
     type State = Self;
 }
 
-struct CoinToDTO<G>(PhantomData<G>)
+struct CoinToDTO<FilterC, G>(PhantomData<FilterC>, PhantomData<G>)
 where
+    FilterC: Currency,
     G: Group;
 
-impl<G> WithCoin for CoinToDTO<G>
+impl<FilterC, G> WithCoin for CoinToDTO<FilterC, G>
 where
+    FilterC: Currency,
     G: Group,
 {
-    type Output = Vec<CoinDTO<G>>;
-    type Error = Never;
+    type Output = SplitCoins<FilterC, G>;
+    type Error = ContractError;
 
     fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
     where
         C: Currency,
     {
-        Ok(vec![coin.into()])
+        Ok(if equal::<C, FilterC>() {
+            SplitCoins {
+                filtered: Coin::new(coin.into()),
+                rest: Vec::new(),
+            }
+        } else {
+            SplitCoins {
+                filtered: Coin::default(),
+                rest: vec![coin.into()],
+            }
+        })
+    }
+}
+
+struct SplitCoins<FilterC, G>
+where
+    FilterC: Currency,
+    G: Group,
+{
+    filtered: Coin<FilterC>,
+    rest: Vec<CoinDTO<G>>,
+}
+
+impl<FilterC, G> Default for SplitCoins<FilterC, G>
+where
+    FilterC: Currency,
+    G: Group,
+{
+    fn default() -> Self {
+        Self {
+            filtered: Coin::default(),
+            rest: Vec::new(),
+        }
+    }
+}
+
+impl<FilterC, G> Aggregate for SplitCoins<FilterC, G>
+where
+    FilterC: Currency,
+    G: Group,
+{
+    fn aggregate(self, other: Self) -> Self
+    where
+        Self: Sized,
+    {
+        Self {
+            filtered: self.filtered + other.filtered,
+            rest: self.rest.aggregate(other.rest),
+        }
     }
 }

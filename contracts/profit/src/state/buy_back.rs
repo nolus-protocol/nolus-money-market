@@ -2,18 +2,22 @@ use serde::{Deserialize, Serialize};
 
 use currency::{
     native::{Native, Nls},
-    non_native_payment::NonNativePaymentGroup,
+    payment::PaymentGroup,
 };
 use dex::{
     Account, CoinVisitor, Enterable, IterNext, IterState, Response as DexResponse, StateLocalOut,
     SwapTask,
 };
 use finance::{
-    coin::CoinDTO,
-    currency::{Currency as _, Symbol},
+    coin::{Coin, CoinDTO},
+    currency::{Currency, Symbol},
 };
 use oracle::stub::OracleRef;
-use platform::{bank, batch::Batch, message::Response as PlatformResponse, never::Never};
+use platform::{
+    bank::{self, BankAccountView},
+    message::Response as PlatformResponse,
+    never::Never,
+};
 use sdk::cosmwasm_std::{Addr, Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;
 
@@ -24,25 +28,35 @@ use crate::{
 
 use super::{idle::Idle, Config, ConfigManagement, SetupDexHandler, State, StateEnum};
 
-pub type BuyBackCurrencies = NonNativePaymentGroup;
-
 #[derive(Serialize, Deserialize)]
 pub(super) struct BuyBack {
-    contract_addr: Addr,
+    profit_contract: Addr,
     config: Config,
     account: Account,
-    coins: Vec<CoinDTO<BuyBackCurrencies>>,
+    coins: Vec<CoinDTO<PaymentGroup>>,
 }
 
 impl BuyBack {
+    /// Until [issue #7](https://github.com/nolus-protocol/nolus-money-market/issues/7)
+    /// is closed, best action is to verify the pinkie-promise
+    /// to not pass in [native currencies](Native) via a debug
+    /// assertion.
     pub fn new(
-        contract_addr: Addr,
+        profit_contract: Addr,
         config: Config,
         account: Account,
-        coins: Vec<CoinDTO<BuyBackCurrencies>>,
+        coins: Vec<CoinDTO<PaymentGroup>>,
     ) -> Self {
+        debug_assert!(
+            coins
+                .iter()
+                .all(|coin_dto: &CoinDTO<PaymentGroup>| coin_dto.ticker() != Nls::TICKER),
+            "{:?}",
+            coins
+        );
+
         Self {
-            contract_addr,
+            profit_contract,
             config,
             account,
             coins,
@@ -80,15 +94,12 @@ impl SwapTask for BuyBack {
     where
         Visitor: CoinVisitor<Result = IterNext>,
     {
-        TryFind::try_find(
-            &mut self.coins.iter(),
-            |coin: &&CoinDTO<BuyBackCurrencies>| {
-                visitor
-                    .visit(coin)
-                    .map(|result: IterNext| matches!(result, IterNext::Stop))
-            },
-        )
-        .map(|maybe_coin: Option<&CoinDTO<BuyBackCurrencies>>| {
+        TryFind::try_find(&mut self.coins.iter(), |coin: &&CoinDTO<PaymentGroup>| {
+            visitor
+                .visit(coin)
+                .map(|result: IterNext| matches!(result, IterNext::Stop))
+        })
+        .map(|maybe_coin: Option<&CoinDTO<PaymentGroup>>| {
             if maybe_coin.is_some() {
                 IterState::Complete
             } else {
@@ -103,19 +114,21 @@ impl SwapTask for BuyBack {
         env: &Env,
         querier: &QuerierWrapper<'_>,
     ) -> Self::Result {
-        let (bank_batch, bank_emitter) = Profit::transfer_nls(
-            bank::account(&self.contract_addr, querier),
-            env,
-            self.config.treasury(),
-        )?;
+        let account = bank::account(&self.profit_contract, querier);
 
-        let state: Idle = Idle::new(self.config, self.account);
+        let balance_nls: Coin<Nls> = account.balance()?;
 
-        let batch: Batch = state.enter(env.block.time, querier)?;
+        let bank_response: PlatformResponse =
+            Profit::transfer_nls(account, self.config.treasury(), balance_nls, env);
+
+        let next_state: Idle = Idle::new(self.config, self.account);
 
         Ok(DexResponse::<State> {
-            response: PlatformResponse::messages_with_events(batch.merge(bank_batch), bank_emitter),
-            next_state: State(StateEnum::Idle(state)),
+            response: next_state
+                .enter(env.block.time, querier)
+                .map(PlatformResponse::messages_only)
+                .map(|state_response: PlatformResponse| state_response.merge_with(bank_response))?,
+            next_state: State(StateEnum::Idle(next_state)),
         })
     }
 }
