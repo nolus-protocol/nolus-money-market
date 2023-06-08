@@ -779,7 +779,7 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "oracle"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -994,7 +994,7 @@ dependencies = [
 
 [[package]]
 name = "rewards_dispatcher"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "access-control",
  "cosmwasm-std",
