@@ -1,9 +1,8 @@
+use std::marker::PhantomData;
+
 use serde::{Deserialize, Serialize};
 
-use currency::{
-    native::{Native, Nls},
-    payment::PaymentGroup,
-};
+use currency::{native::Nls, payment::PaymentGroup};
 use dex::{
     Account, Enterable, Error as DexError, Handler, Response as DexResponse, Result as DexResult,
     StartLocalLocalState,
@@ -23,8 +22,7 @@ use sdk::cosmwasm_std::{Addr, Deps, Env, QuerierWrapper, Timestamp};
 use crate::{msg::ConfigResponse, profit::Profit, result::ContractResult, ContractError};
 
 use super::{
-    buy_back::{BuyBack, BuyBackCurrencies},
-    CadenceHours, Config, ConfigManagement, SetupDexHandler, State, StateEnum,
+    buy_back::BuyBack, CadenceHours, Config, ConfigManagement, SetupDexHandler, State, StateEnum,
 };
 
 #[derive(Serialize, Deserialize)]
@@ -43,23 +41,18 @@ impl Idle {
         env: &Env,
         querier: &QuerierWrapper<'_>,
         account: B,
-        native: Option<CoinDTO<Native>>,
+        nls: Coin<Nls>,
     ) -> ContractResult<PlatformResponse>
     where
         B: BankAccount,
     {
-        let state_response: PlatformResponse =
-            PlatformResponse::messages_only(self.enter(env.block.time, querier)?);
-
-        let nls: Option<Coin<Nls>> =
-            native.and_then(|coin_dto: CoinDTO<Native>| coin_dto.try_into().ok());
-
-        Ok(if let Some(nls) = nls {
-            Profit::transfer_nls(account, self.config.treasury(), nls, env)
-                .merge_with(state_response)
-        } else {
-            state_response
-        })
+        self.enter(env.block.time, querier)
+            .map(PlatformResponse::messages_only)
+            .map(|state_response: PlatformResponse| {
+                Profit::transfer_nls(account, self.config.treasury(), nls, env)
+                    .merge_with(state_response)
+            })
+            .map_err(Into::into)
     }
 
     fn on_time_alarm(
@@ -69,28 +62,19 @@ impl Idle {
     ) -> ContractResult<DexResponse<Self>> {
         let account: BankStub<BankView<'_>> = bank::account(&env.contract.address, querier);
 
-        let mut balances: SplitCoins<Native, BuyBackCurrencies> = account
-            .balances::<PaymentGroup, _>(CoinToDTO)?
+        let balances: SplitCoins<Nls, PaymentGroup> = account
+            .balances::<PaymentGroup, _>(CoinToDTO(PhantomData, PhantomData))?
             .transpose()?
             .unwrap_or_default();
 
-        if !balances.second.is_empty() {
-            self.try_enter_buy_back(
-                querier,
-                env.contract.address,
-                env.block.time,
-                balances.second,
-            )
-        } else if balances.first.len() <= 1 {
-            self.send_nls(&env, querier, account, balances.first.pop())
+        if balances.rest.is_empty() {
+            self.send_nls(&env, querier, account, balances.filtered)
                 .map(|response: PlatformResponse| DexResponse::<Self> {
                     response,
                     next_state: State(StateEnum::Idle(self)),
                 })
         } else {
-            Err(ContractError::BuybackBrokenInvariant(String::from(
-                "More than one entry in native currencies list encountered!",
-            )))
+            self.try_enter_buy_back(querier, env.contract.address, env.block.time, balances.rest)
         }
     }
 
@@ -99,7 +83,7 @@ impl Idle {
         querier: &QuerierWrapper<'_>,
         profit_addr: Addr,
         now: Timestamp,
-        balances: Vec<CoinDTO<BuyBackCurrencies>>,
+        balances: Vec<CoinDTO<PaymentGroup>>,
     ) -> ContractResult<DexResponse<Self>> {
         let state: StartLocalLocalState<BuyBack> = dex::start_local_local(BuyBack::new(
             profit_addr,
@@ -156,66 +140,71 @@ impl SetupDexHandler for Idle {
     type State = Self;
 }
 
-struct CoinToDTO;
+struct CoinToDTO<FilterC, G>(PhantomData<FilterC>, PhantomData<G>)
+where
+    FilterC: Currency,
+    G: Group;
 
-impl WithCoin for CoinToDTO {
-    type Output = SplitCoins<Native, BuyBackCurrencies>;
+impl<FilterC, G> WithCoin for CoinToDTO<FilterC, G>
+where
+    FilterC: Currency,
+    G: Group,
+{
+    type Output = SplitCoins<FilterC, G>;
     type Error = ContractError;
 
     fn on<C>(&self, coin: Coin<C>) -> WithCoinResult<Self>
     where
         C: Currency,
     {
-        if equal::<C, Nls>() {
-            Ok(SplitCoins {
-                first: vec![coin.into()],
-                second: Vec::new(),
-            })
-        } else if BuyBackCurrencies::contains::<C>() {
-            Ok(SplitCoins {
-                first: Vec::new(),
-                second: vec![coin.into()],
-            })
+        Ok(if equal::<C, FilterC>() {
+            SplitCoins {
+                filtered: Coin::new(coin.into()),
+                rest: Vec::new(),
+            }
         } else {
-            Err(ContractError::BuybackUnrecognisedCurrency(C::TICKER))
-        }
+            SplitCoins {
+                filtered: Coin::default(),
+                rest: vec![coin.into()],
+            }
+        })
     }
 }
 
-struct SplitCoins<G1, G2>
+struct SplitCoins<FilterC, G>
 where
-    G1: Group,
-    G2: Group,
+    FilterC: Currency,
+    G: Group,
 {
-    first: Vec<CoinDTO<G1>>,
-    second: Vec<CoinDTO<G2>>,
+    filtered: Coin<FilterC>,
+    rest: Vec<CoinDTO<G>>,
 }
 
-impl<G1, G2> Default for SplitCoins<G1, G2>
+impl<FilterC, G> Default for SplitCoins<FilterC, G>
 where
-    G1: Group,
-    G2: Group,
+    FilterC: Currency,
+    G: Group,
 {
     fn default() -> Self {
         Self {
-            first: vec![],
-            second: vec![],
+            filtered: Coin::default(),
+            rest: Vec::new(),
         }
     }
 }
 
-impl<G1, G2> Aggregate for SplitCoins<G1, G2>
+impl<FilterC, G> Aggregate for SplitCoins<FilterC, G>
 where
-    G1: Group,
-    G2: Group,
+    FilterC: Currency,
+    G: Group,
 {
     fn aggregate(self, other: Self) -> Self
     where
         Self: Sized,
     {
         Self {
-            first: self.first.aggregate(other.first),
-            second: self.second.aggregate(other.second),
+            filtered: self.filtered + other.filtered,
+            rest: self.rest.aggregate(other.rest),
         }
     }
 }

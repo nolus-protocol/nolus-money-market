@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use currency::{
     native::{Native, Nls},
-    non_native_payment::NonNativePaymentGroup,
+    payment::PaymentGroup,
 };
 use dex::{
     Account, CoinVisitor, Enterable, IterNext, IterState, Response as DexResponse, StateLocalOut,
@@ -28,23 +28,39 @@ use crate::{
 
 use super::{idle::Idle, Config, ConfigManagement, SetupDexHandler, State, StateEnum};
 
-pub type BuyBackCurrencies = NonNativePaymentGroup;
-
 #[derive(Serialize, Deserialize)]
 pub(super) struct BuyBack {
     profit_contract: Addr,
     config: Config,
     account: Account,
-    coins: Vec<CoinDTO<BuyBackCurrencies>>,
+    coins: Vec<CoinDTO<PaymentGroup>>,
 }
 
 impl BuyBack {
+    /// Until [issue #7](https://github.com/nolus-protocol/nolus-money-market/issues/7)
+    /// is closed, best action is to verify the pinkie-promise
+    /// to not pass in [native currencies](Native) via a debug
+    /// assertion.
     pub fn new(
         profit_contract: Addr,
         config: Config,
         account: Account,
-        coins: Vec<CoinDTO<BuyBackCurrencies>>,
+        coins: Vec<CoinDTO<PaymentGroup>>,
     ) -> Self {
+        debug_assert!(
+            coins.iter().all(|coin_dto: &CoinDTO<PaymentGroup>| {
+                <
+                currency::non_native_payment::NonNativePaymentGroup as finance::currency::Group
+            >::maybe_visit_on_ticker(
+                coin_dto.ticker(),
+                BlankVisitor
+            )
+                .is_ok()
+            }),
+            "{:?}",
+            coins
+        );
+
         Self {
             profit_contract,
             config,
@@ -84,15 +100,12 @@ impl SwapTask for BuyBack {
     where
         Visitor: CoinVisitor<Result = IterNext>,
     {
-        TryFind::try_find(
-            &mut self.coins.iter(),
-            |coin: &&CoinDTO<BuyBackCurrencies>| {
-                visitor
-                    .visit(coin)
-                    .map(|result: IterNext| matches!(result, IterNext::Stop))
-            },
-        )
-        .map(|maybe_coin: Option<&CoinDTO<BuyBackCurrencies>>| {
+        TryFind::try_find(&mut self.coins.iter(), |coin: &&CoinDTO<PaymentGroup>| {
+            visitor
+                .visit(coin)
+                .map(|result: IterNext| matches!(result, IterNext::Stop))
+        })
+        .map(|maybe_coin: Option<&CoinDTO<PaymentGroup>>| {
             if maybe_coin.is_some() {
                 IterState::Complete
             } else {
@@ -163,3 +176,29 @@ where
 }
 
 impl<I> TryFind for I where I: Iterator + ?Sized {}
+
+#[cfg(debug_assertions)]
+#[derive(Debug)]
+struct BlankVisitor;
+
+#[cfg(debug_assertions)]
+mod blank_visitor_impl {
+    use serde::{de::DeserializeOwned, Serialize};
+
+    use finance::currency::{AnyVisitor, AnyVisitorResult, Currency};
+    use platform::never::Never;
+
+    use super::BlankVisitor;
+
+    impl AnyVisitor for BlankVisitor {
+        type Output = ();
+        type Error = Never;
+
+        fn on<C>(self) -> AnyVisitorResult<Self>
+        where
+            C: Currency + Serialize + DeserializeOwned,
+        {
+            Ok(())
+        }
+    }
+}
