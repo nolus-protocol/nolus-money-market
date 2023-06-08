@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use finance::currency::{AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 use sdk::schemars::{self, JsonSchema};
 
-use crate::{native::Native, non_native_payment::NonNativePaymentGroup};
+use crate::{lease::LeaseGroup, lpn::Lpns, native::Native};
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct PaymentGroup {}
@@ -15,7 +15,8 @@ impl Group for PaymentGroup {
     where
         V: AnyVisitor,
     {
-        NonNativePaymentGroup::maybe_visit_on_ticker(ticker, visitor)
+        LeaseGroup::maybe_visit_on_ticker(ticker, visitor)
+            .or_else(|v| Lpns::maybe_visit_on_ticker(ticker, v))
             .or_else(|v| Native::maybe_visit_on_ticker(ticker, v))
     }
 
@@ -24,7 +25,8 @@ impl Group for PaymentGroup {
         Self: Sized,
         V: AnyVisitor,
     {
-        NonNativePaymentGroup::maybe_visit_on_bank_symbol(bank_symbol, visitor)
+        LeaseGroup::maybe_visit_on_bank_symbol(bank_symbol, visitor)
+            .or_else(|v| Lpns::maybe_visit_on_bank_symbol(bank_symbol, v))
             .or_else(|v| Native::maybe_visit_on_bank_symbol(bank_symbol, v))
     }
 }
