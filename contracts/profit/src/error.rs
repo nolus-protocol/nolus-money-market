@@ -1,4 +1,3 @@
-use finance::currency::SymbolStatic;
 use thiserror::Error;
 
 use sdk::cosmwasm_std::{Addr, StdError};
@@ -34,12 +33,6 @@ pub enum ContractError {
 
     #[error("[Profit] Alarm comming from unknown address: {0:?}")]
     UnrecognisedAlarm(Addr),
-
-    #[error("[Profit:Buyback] Got currency \"{0}\" when either NLS or one from the buyback group was expected!")]
-    BuybackUnrecognisedCurrency(SymbolStatic),
-
-    #[error("[Profit:Buyback] Broken invariant! {0}")]
-    BuybackBrokenInvariant(String),
 
     #[error("[Profit] Operation is not supported at this time. Cause: {0}")]
     UnsupportedOperation(String),
