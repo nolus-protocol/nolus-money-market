@@ -13,9 +13,7 @@ where
 pub mod currency {
     use serde::{Deserialize, Serialize};
 
-    use crate::currency::{
-        equal, AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic,
-    };
+    use crate::currency::{AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 
     #[derive(
         Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Serialize, Deserialize,
@@ -52,13 +50,6 @@ pub mod currency {
     impl Group for TestCurrencies {
         const DESCR: SymbolStatic = "test";
 
-        fn contains<C>() -> bool
-        where
-            C: Currency,
-        {
-            equal::<C, Usdc>() || equal::<C, Nls>()
-        }
-
         fn maybe_visit_on_ticker<V>(symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
         where
             V: AnyVisitor,
@@ -87,13 +78,6 @@ pub mod currency {
     pub struct TestExtraCurrencies {}
     impl Group for TestExtraCurrencies {
         const DESCR: SymbolStatic = "test_extra";
-
-        fn contains<C>() -> bool
-        where
-            C: Currency,
-        {
-            equal::<C, Usdc>() || equal::<C, Nls>() || equal::<C, Dai>()
-        }
 
         fn maybe_visit_on_ticker<V>(symbol: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
         where
