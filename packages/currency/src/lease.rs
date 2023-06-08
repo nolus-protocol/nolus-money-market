@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{
-    equal, AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic,
-};
+use finance::currency::{AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{define_currency, define_symbol, SingleVisitorAdapter};
@@ -194,32 +192,6 @@ pub struct LeaseGroup {}
 
 impl Group for LeaseGroup {
     const DESCR: SymbolStatic = "lease";
-
-    fn contains<C>() -> bool
-    where
-        C: Currency,
-    {
-        let result = equal::<C, Atom>()
-            || equal::<C, StAtom>()
-            || equal::<C, Osmo>()
-            || equal::<C, StOsmo>()
-            || equal::<C, Weth>()
-            || equal::<C, Wbtc>();
-
-        #[cfg(not(feature = "testing"))]
-        {
-            result
-        }
-        #[cfg(feature = "testing")]
-        {
-            result
-                || equal::<C, Evmos>()
-                || equal::<C, Juno>()
-                || equal::<C, Stars>()
-                || equal::<C, Cro>()
-                || equal::<C, Secret>()
-        }
-    }
 
     fn maybe_visit_on_ticker<V>(ticker: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
     where

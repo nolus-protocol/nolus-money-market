@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{
-    self, equal, AnyVisitor, Currency, Group, MaybeAnyVisitResult, Symbol, SymbolStatic,
-};
+use finance::currency::{self, AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 use sdk::schemars::{self, JsonSchema};
 
 use crate::{define_currency, define_symbol, SingleVisitorAdapter};
@@ -31,13 +29,6 @@ pub struct Lpns {}
 
 impl Group for Lpns {
     const DESCR: SymbolStatic = "lpns";
-
-    fn contains<C>() -> bool
-    where
-        C: Currency,
-    {
-        equal::<C, Usdc>()
-    }
 
     fn maybe_visit_on_ticker<V>(ticker: Symbol<'_>, visitor: V) -> MaybeAnyVisitResult<V>
     where
