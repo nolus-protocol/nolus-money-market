@@ -128,7 +128,15 @@ where
     }
 
     pub(crate) fn grace_period_end(&self) -> Timestamp {
-        self.due_period.till() + self.interest_payment_spec.grace_period()
+        self.grace_period_end_impl(&self.due_period.period())
+    }
+
+    pub(crate) fn grace_period_end_not_before(&self, when: &Timestamp) -> Timestamp {
+        let mut current_period = self.due_period.period();
+        while &self.grace_period_end_impl(&current_period) < when {
+            current_period = next_due_period(current_period, &self.interest_payment_spec);
+        }
+        self.grace_period_end_impl(&current_period)
     }
 
     /// Repay the loan interests and principal by the given timestamp.
@@ -209,6 +217,10 @@ where
             previous_margin_interest_due,
             current_margin_interest_due,
         }
+    }
+
+    fn grace_period_end_impl(&self, due_period: &Period) -> Timestamp {
+        due_period.till() + self.interest_payment_spec.grace_period()
     }
 
     fn repay_prev_periods(&mut self, payment: Coin<Lpn>, by: Timestamp) -> RepayPeriodReceipt<Lpn> {
@@ -980,7 +992,6 @@ mod tests {
         }
     }
 
-    #[cfg(test)]
     mod test_state {
         use cosmwasm_std::Timestamp;
         use finance::{
@@ -1120,6 +1131,69 @@ mod tests {
         }
     }
 
+    mod test_grace_period_end {
+        use finance::duration::Duration;
+        use lpp::msg::LoanResponse;
+
+        use crate::api::InterestPaymentSpec;
+
+        use super::{create_loan_with_interest_spec, LEASE_START, LOAN_INTEREST_RATE};
+
+        #[test]
+        fn in_current_period() {
+            const BIT: Duration = Duration::from_nanos(1);
+            let due_period = Duration::YEAR;
+            let grace_period = Duration::HOUR;
+            let next_grace_period_end = LEASE_START + due_period + grace_period;
+
+            let loan = create_loan_with_interest_spec(
+                LoanResponse {
+                    principal_due: 1000.into(),
+                    annual_interest_rate: LOAN_INTEREST_RATE,
+                    interest_paid: LEASE_START,
+                },
+                InterestPaymentSpec::new(due_period, grace_period),
+            );
+            assert_eq!(next_grace_period_end, loan.grace_period_end());
+            assert_eq!(
+                next_grace_period_end,
+                loan.grace_period_end_not_before(&(LEASE_START + Duration::from_days(10)))
+            );
+            assert_eq!(
+                next_grace_period_end,
+                loan.grace_period_end_not_before(&(LEASE_START + due_period))
+            );
+            assert_eq!(
+                next_grace_period_end,
+                loan.grace_period_end_not_before(&(LEASE_START + due_period + BIT))
+            );
+            assert_eq!(
+                next_grace_period_end,
+                loan.grace_period_end_not_before(&(next_grace_period_end - BIT))
+            );
+            assert_eq!(
+                next_grace_period_end,
+                loan.grace_period_end_not_before(&next_grace_period_end)
+            );
+            assert_eq!(
+                next_grace_period_end + due_period,
+                loan.grace_period_end_not_before(&(next_grace_period_end + BIT))
+            );
+            assert_eq!(
+                next_grace_period_end + due_period,
+                loan.grace_period_end_not_before(&(next_grace_period_end + due_period - BIT))
+            );
+            assert_eq!(
+                next_grace_period_end + due_period,
+                loan.grace_period_end_not_before(&(next_grace_period_end + due_period))
+            );
+            assert_eq!(
+                next_grace_period_end + due_period + due_period,
+                loan.grace_period_end_not_before(&(next_grace_period_end + due_period + BIT))
+            );
+        }
+    }
+
     #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
     struct LppLoanLocal {
         loan: LoanResponse<Lpn>,
@@ -1157,11 +1231,20 @@ mod tests {
     }
 
     fn create_loan(loan: LoanResponse<Lpn>) -> Loan<Lpn, LppLoanLocal> {
+        create_loan_with_interest_spec(
+            loan,
+            InterestPaymentSpec::new(Duration::YEAR, Duration::from_secs(0)),
+        )
+    }
+    fn create_loan_with_interest_spec(
+        loan: LoanResponse<Lpn>,
+        interest_spec: InterestPaymentSpec,
+    ) -> Loan<Lpn, LppLoanLocal> {
         Loan::new(
             LEASE_START,
             LppLoanLocal::new(loan),
             MARGIN_INTEREST_RATE,
-            InterestPaymentSpec::new(Duration::YEAR, Duration::from_secs(0)),
+            interest_spec,
         )
     }
 

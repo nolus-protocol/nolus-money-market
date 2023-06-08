@@ -162,11 +162,17 @@ mod tests {
     use super::{Lease, State};
 
     const CUSTOMER: &str = "customer";
+    const LEASE_ADDR: &str = "lease_addr";
+    const ORACLE_ADDR: &str = "oracle_addr";
     pub const MARGIN_INTEREST_RATE: Percent = Percent::from_permille(23);
     pub const LEASE_START: Timestamp = Timestamp::from_nanos(100);
     pub const LEASE_STATE_AT: Timestamp = Timestamp::from_nanos(200);
+    pub const DUE_PERIOD: Duration = Duration::from_days(100);
+    pub const GRACE_PERIOD: Duration = Duration::from_days(10);
+    pub const RECALC_TIME: Duration = Duration::from_hours(24);
     type TestLpn = Usdc;
     pub type TestCurrency = Atom;
+    pub type TestLease = Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub>;
 
     pub fn loan<Lpn>() -> LoanResponse<Lpn>
     where
@@ -278,26 +284,26 @@ mod tests {
         }
     }
 
-    pub fn create_lease<Lpn, AssetC, L, O>(
-        addr: Addr,
-        amount: Coin<AssetC>,
-        loan: L,
-        oracle: O,
-    ) -> Lease<Lpn, AssetC, L, O>
-    where
-        Lpn: Currency + Serialize,
-        AssetC: Currency + Serialize,
-        L: LppLoan<Lpn>,
-        O: Oracle<Lpn>,
-    {
-        let loan = Loan::new(
-            LEASE_START,
+    pub fn open_lease(amount: Coin<TestCurrency>, loan: LoanResponse<TestLpn>) -> TestLease {
+        open_lease_with_payment_spec(
+            amount,
             loan,
-            MARGIN_INTEREST_RATE,
-            InterestPaymentSpec::new(Duration::from_days(100), Duration::from_days(10)),
-        );
+            InterestPaymentSpec::new(DUE_PERIOD, GRACE_PERIOD),
+        )
+    }
+
+    pub fn open_lease_with_payment_spec(
+        amount: Coin<TestCurrency>,
+        loan: LoanResponse<TestLpn>,
+        interest_spec: InterestPaymentSpec,
+    ) -> TestLease {
+        let lease = Addr::unchecked(LEASE_ADDR);
+        let oracle: OracleLocalStub = Addr::unchecked(ORACLE_ADDR).into();
+
+        let loan = loan.into();
+        let loan = Loan::new(LEASE_START, loan, MARGIN_INTEREST_RATE, interest_spec);
         Lease::new(
-            addr,
+            lease,
             Addr::unchecked(CUSTOMER),
             amount,
             Liability::new(
@@ -307,22 +313,11 @@ mod tests {
                 Percent::from_percent(2),
                 Percent::from_percent(3),
                 Percent::from_percent(2),
-                Duration::from_hours(24),
+                RECALC_TIME,
             ),
             loan,
             oracle,
         )
-    }
-
-    pub fn open_lease(
-        lease_addr: Addr,
-        amount: Coin<TestCurrency>,
-        loan: LoanResponse<TestLpn>,
-        oracle_addr: Addr,
-    ) -> Lease<TestLpn, TestCurrency, LppLoanLocal<TestLpn>, OracleLocalStub> {
-        let oracle: OracleLocalStub = oracle_addr.into();
-
-        create_lease::<TestLpn, TestCurrency, _, _>(lease_addr, amount, loan.into(), oracle)
     }
 
     pub fn request_state(
@@ -351,13 +346,7 @@ mod tests {
             interest_paid: Timestamp::from_nanos(0),
         };
 
-        let lease_addr = Addr::unchecked("lease");
-        let lease = open_lease(
-            lease_addr,
-            lease_amount,
-            loan.clone(),
-            Addr::unchecked(String::new()),
-        );
+        let lease = open_lease(lease_amount, loan.clone());
 
         let res = request_state(lease);
         let exp = State {
