@@ -1,13 +1,6 @@
-use std::ops::Sub;
-
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    coin::{Amount, Coin},
-    currency::Currency,
-    percent::Percent,
-    ratio::Ratio,
-};
+use crate::{coin::Coin, currency::Currency, percent::Percent};
 
 use super::{Liability, Zone};
 
@@ -108,14 +101,12 @@ where
     Asset: Currency,
 {
     let liquidation_amount = spec.amount_to_liquidate(asset, total_due);
+    let ltv = ltv(total_due, asset);
     if liquidation_amount < min_liquidation {
-        let ltv = Percent::from_ratio(total_due, asset);
         if ltv >= spec.max() {
-            let max_ltv_before_liq: Amount =
-                spec.max().sub(Percent::from_permille(1)).parts().into();
-            no_liquidation(spec, asset, Coin::new(max_ltv_before_liq))
+            no_liquidation(spec, total_due, spec.third_liq_warn())
         } else {
-            no_liquidation(spec, asset, total_due)
+            no_liquidation(spec, total_due, ltv)
         }
     } else {
         ask_liquidation(
@@ -140,29 +131,32 @@ fn may_ask_liquidation_overdue<Asset>(
 where
     Asset: Currency,
 {
+    let ltv = ltv(overdue, asset);
     if overdue < min_liquidation {
-        no_liquidation(spec, asset, overdue)
+        no_liquidation(spec, overdue, ltv)
     } else {
         ask_liquidation(asset, Cause::Overdue(), overdue, min_asset)
     }
 }
 
-fn no_liquidation<Asset>(
-    spec: &Liability,
-    asset: Coin<Asset>,
-    total_due: Coin<Asset>,
-) -> Status<Asset>
+fn no_liquidation<Asset>(spec: &Liability, total_due: Coin<Asset>, ltv: Percent) -> Status<Asset>
 where
     Asset: Currency,
 {
     if total_due.is_zero() {
         Status::NoDebt
     } else {
-        let ltv = Percent::from_ratio(total_due, asset);
         debug_assert!(ltv < spec.max());
 
         Status::No(spec.zone_of(ltv))
     }
+}
+
+fn ltv<Asset>(total_due: Coin<Asset>, asset: Coin<Asset>) -> Percent
+where
+    Asset: Currency,
+{
+    Percent::from_ratio(total_due, asset)
 }
 
 fn ask_liquidation<Asset>(
@@ -596,11 +590,40 @@ mod tests {
         );
     }
 
+    // #[test]
+    // fn min_liquidation_overdue() {
+    //     let max_ltv = Percent::from_permille(751);
+    //     let spec = liability_with_max(max_ltv);
+
+    //     assert_eq!(
+    //         check_liability::<Nls>(
+    //             &spec,
+    //             878.into(),
+    //             745.into(),
+    //             740.into(),
+    //             740.into(),
+    //             0.into()
+    //         ),
+    //         Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+    //     );
+    // }
+
     #[test]
     fn min_liquidation() {
         let max_ltv = Percent::from_permille(751);
         let spec = liability_with_max(max_ltv);
 
+        assert_eq!(
+            check_liability::<Nls>(
+                &spec,
+                878.into(),
+                752.into(),
+                0.into(),
+                800.into(),
+                0.into()
+            ),
+            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+        );
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
