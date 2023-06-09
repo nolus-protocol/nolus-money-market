@@ -164,15 +164,15 @@ mod test {
 
         // initial deposit
         lpp_balance += init_deposit;
-        let info = mock_info("lender1", &cwcoins(init_deposit));
+        let info = mock_info("lender1", &[cwcoin(init_deposit)]);
         deps.querier
-            .update_balance(MOCK_CONTRACT_ADDR, cwcoins(lpp_balance));
+            .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(lpp_balance)]);
         try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
 
         // push the price from 1, should be allowed as an interest from previous leases for example.
         lpp_balance += lpp_balance_push;
         deps.querier
-            .update_balance(MOCK_CONTRACT_ADDR, cwcoins(lpp_balance));
+            .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(lpp_balance)]);
 
         let price = query_ntoken_price(deps.as_ref(), env.clone()).unwrap().0;
         assert_eq!(
@@ -182,9 +182,9 @@ mod test {
 
         // deposit to check,
         lpp_balance += test_deposit;
-        let info = mock_info("lender2", &cwcoins(test_deposit));
+        let info = mock_info("lender2", &[cwcoin(test_deposit)]);
         deps.querier
-            .update_balance(MOCK_CONTRACT_ADDR, cwcoins(lpp_balance));
+            .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(lpp_balance)]);
         try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
 
         // got rounding error
@@ -199,9 +199,9 @@ mod test {
 
         // should not change asserts for lender2
         lpp_balance += post_deposit;
-        let info = mock_info("lender3", &cwcoins(post_deposit));
+        let info = mock_info("lender3", &[cwcoin(post_deposit)]);
         deps.querier
-            .update_balance(MOCK_CONTRACT_ADDR, cwcoins(lpp_balance));
+            .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(lpp_balance)]);
         try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
 
         let balance_nlpn = query_balance(deps.as_ref().storage, Addr::unchecked("lender2"))
@@ -214,7 +214,7 @@ mod test {
         );
 
         //try to deposit zero
-        let info = mock_info("lender4", &cwcoins(zero));
+        let info = mock_info("lender4", &[cwcoin(zero)]);
         let result = try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info);
         assert!(result.is_err());
 
@@ -254,10 +254,10 @@ mod test {
         assert_eq!(balance_nlpn.u128(), zero);
     }
 
-    fn cwcoins<A>(amount: A) -> Vec<CwCoin>
+    fn cwcoin<A>(amount: A) -> CwCoin
     where
         A: Into<Coin<TheCurrency>>,
     {
-        vec![coin_legacy::to_cosmwasm::<TheCurrency>(amount.into())]
+        coin_legacy::to_cosmwasm::<TheCurrency>(amount.into())
     }
 }
