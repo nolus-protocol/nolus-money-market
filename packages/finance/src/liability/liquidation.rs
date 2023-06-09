@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{coin::Coin, currency::Currency, percent::Percent};
+use crate::{coin::Coin, currency::Currency, percent::Percent, zero::Zero};
 
 use super::{Liability, Zone};
 
@@ -83,60 +83,18 @@ pub fn check_liability<Asset>(
 where
     Asset: Currency,
 {
+    debug_assert!(asset != Coin::ZERO);
     debug_assert!(total_due <= asset);
     debug_assert!(overdue <= total_due);
-    may_ask_liquidation_liability(spec, asset, total_due, min_liquidation, min_asset).max(
-        may_ask_liquidation_overdue(spec, asset, overdue, min_liquidation, min_asset),
-    )
-}
-
-fn may_ask_liquidation_liability<Asset>(
-    spec: &Liability,
-    asset: Coin<Asset>,
-    total_due: Coin<Asset>,
-    min_liquidation: Coin<Asset>,
-    min_asset: Coin<Asset>,
-) -> Status<Asset>
-where
-    Asset: Currency,
-{
-    let liquidation_amount = spec.amount_to_liquidate(asset, total_due);
-    let ltv = ltv(total_due, asset);
-    if liquidation_amount < min_liquidation {
-        if ltv >= spec.max() {
-            no_liquidation(spec, total_due, spec.third_liq_warn())
-        } else {
-            no_liquidation(spec, total_due, ltv)
-        }
-    } else {
-        ask_liquidation(
+    let ltv = Percent::from_ratio(total_due, asset);
+    may_ask_liquidation_liability(spec, asset, total_due, min_liquidation, min_asset)
+        .max(may_ask_liquidation_overdue(
             asset,
-            Cause::Liability {
-                ltv: spec.max(),
-                healthy_ltv: spec.healthy_percent(),
-            },
-            liquidation_amount,
+            overdue,
+            min_liquidation,
             min_asset,
-        )
-    }
-}
-
-fn may_ask_liquidation_overdue<Asset>(
-    spec: &Liability,
-    asset: Coin<Asset>,
-    overdue: Coin<Asset>,
-    min_liquidation: Coin<Asset>,
-    min_asset: Coin<Asset>,
-) -> Status<Asset>
-where
-    Asset: Currency,
-{
-    let ltv = ltv(overdue, asset);
-    if overdue < min_liquidation {
-        no_liquidation(spec, overdue, ltv)
-    } else {
-        ask_liquidation(asset, Cause::Overdue(), overdue, min_asset)
-    }
+        ))
+        .unwrap_or_else(|| no_liquidation(spec, total_due, ltv.min(spec.third_liq_warn())))
 }
 
 fn no_liquidation<Asset>(spec: &Liability, total_due: Coin<Asset>, ltv: Percent) -> Status<Asset>
@@ -152,26 +110,63 @@ where
     }
 }
 
-fn ltv<Asset>(total_due: Coin<Asset>, asset: Coin<Asset>) -> Percent
+fn may_ask_liquidation_liability<Asset>(
+    spec: &Liability,
+    asset: Coin<Asset>,
+    total_due: Coin<Asset>,
+    min_liquidation: Coin<Asset>,
+    min_asset: Coin<Asset>,
+) -> Option<Status<Asset>>
 where
     Asset: Currency,
 {
-    Percent::from_ratio(total_due, asset)
+    let liquidation_amount = spec.amount_to_liquidate(asset, total_due);
+    if liquidation_amount < min_liquidation {
+        None
+    } else {
+        may_ask_liquidation(
+            asset,
+            Cause::Liability {
+                ltv: spec.max(),
+                healthy_ltv: spec.healthy_percent(),
+            },
+            liquidation_amount,
+            min_asset,
+        )
+    }
 }
 
-fn ask_liquidation<Asset>(
+fn may_ask_liquidation_overdue<Asset>(
+    asset: Coin<Asset>,
+    overdue: Coin<Asset>,
+    min_liquidation: Coin<Asset>,
+    min_asset: Coin<Asset>,
+) -> Option<Status<Asset>>
+where
+    Asset: Currency,
+{
+    if overdue < min_liquidation {
+        None
+    } else {
+        may_ask_liquidation(asset, Cause::Overdue(), overdue, min_asset)
+    }
+}
+
+fn may_ask_liquidation<Asset>(
     asset: Coin<Asset>,
     cause: Cause,
     liquidation: Coin<Asset>,
     min_asset: Coin<Asset>,
-) -> Status<Asset>
+) -> Option<Status<Asset>>
 where
     Asset: Currency,
 {
-    if asset.saturating_sub(liquidation) <= min_asset {
-        Status::full(cause)
+    if liquidation.is_zero() {
+        None
+    } else if asset.saturating_sub(liquidation) <= min_asset {
+        Some(Status::full(cause))
     } else {
-        Status::partial(liquidation, cause)
+        Some(Status::partial(liquidation, cause))
     }
 }
 
@@ -589,24 +584,6 @@ mod tests {
             ),
         );
     }
-
-    // #[test]
-    // fn min_liquidation_overdue() {
-    //     let max_ltv = Percent::from_permille(751);
-    //     let spec = liability_with_max(max_ltv);
-
-    //     assert_eq!(
-    //         check_liability::<Nls>(
-    //             &spec,
-    //             878.into(),
-    //             745.into(),
-    //             740.into(),
-    //             740.into(),
-    //             0.into()
-    //         ),
-    //         Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
-    //     );
-    // }
 
     #[test]
     fn min_liquidation() {
