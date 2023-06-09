@@ -121,19 +121,16 @@ where
     Asset: Currency,
 {
     let liquidation_amount = spec.amount_to_liquidate(asset, total_due);
-    if liquidation_amount < min_liquidation {
-        None
-    } else {
-        may_ask_liquidation(
-            asset,
-            Cause::Liability {
-                ltv: spec.max(),
-                healthy_ltv: spec.healthy_percent(),
-            },
-            liquidation_amount,
-            min_asset,
-        )
-    }
+    may_ask_liquidation(
+        asset,
+        Cause::Liability {
+            ltv: spec.max(),
+            healthy_ltv: spec.healthy_percent(),
+        },
+        liquidation_amount,
+        min_liquidation,
+        min_asset,
+    )
 }
 
 fn may_ask_liquidation_overdue<Asset>(
@@ -145,23 +142,20 @@ fn may_ask_liquidation_overdue<Asset>(
 where
     Asset: Currency,
 {
-    if overdue < min_liquidation {
-        None
-    } else {
-        may_ask_liquidation(asset, Cause::Overdue(), overdue, min_asset)
-    }
+    may_ask_liquidation(asset, Cause::Overdue(), overdue, min_liquidation, min_asset)
 }
 
 fn may_ask_liquidation<Asset>(
     asset: Coin<Asset>,
     cause: Cause,
     liquidation: Coin<Asset>,
+    min_liquidation: Coin<Asset>,
     min_asset: Coin<Asset>,
 ) -> Option<Status<Asset>>
 where
     Asset: Currency,
 {
-    if liquidation.is_zero() {
+    if liquidation.is_zero() || liquidation < min_liquidation {
         None
     } else if asset.saturating_sub(liquidation) <= min_asset {
         Some(Status::full(cause))
