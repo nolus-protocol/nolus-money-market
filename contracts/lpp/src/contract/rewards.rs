@@ -122,9 +122,9 @@ mod test {
         assert_eq!(response, Err(ContractError::NoDeposit {}));
 
         lpp_balance += deposit;
-        let info = mock_info("lender", &cwcoins(deposit));
+        let info = mock_info("lender", &[cwcoin(deposit)]);
         deps.querier
-            .update_balance(MOCK_CONTRACT_ADDR, cwcoins(lpp_balance));
+            .update_balance(MOCK_CONTRACT_ADDR, vec![cwcoin(lpp_balance)]);
         lender::try_deposit::<TheCurrency>(deps.as_mut(), env.clone(), info).unwrap();
 
         // pending rewards == 0
@@ -133,10 +133,10 @@ mod test {
         assert_eq!(response, Err(ContractError::NoRewards {}));
     }
 
-    fn cwcoins<A>(amount: A) -> Vec<CwCoin>
+    fn cwcoin<A>(amount: A) -> CwCoin
     where
         A: Into<Coin<TheCurrency>>,
     {
-        vec![coin_legacy::to_cosmwasm::<TheCurrency>(amount.into())]
+        coin_legacy::to_cosmwasm::<TheCurrency>(amount.into())
     }
 }
