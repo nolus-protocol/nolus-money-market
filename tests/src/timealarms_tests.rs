@@ -9,7 +9,11 @@ use sdk::{
 };
 use timealarms::msg::{AlarmsCount, DispatchAlarmsResponse};
 
-use crate::common::{cwcoin, test_case::GenericTestCase, test_case::TestCase, AppExt, ADMIN};
+use crate::common::{
+    cwcoin,
+    test_case::{Builder as TestCaseBuilder, TestCase},
+    AppExt, ADMIN,
+};
 
 use self::mock_lease::*;
 
@@ -194,17 +198,13 @@ fn test_lease_serde() {
         serde_json_wasm::from_slice(&serde_json_wasm::to_vec(&LeaseTimeAlarm {}).unwrap()).unwrap();
 }
 
-fn test_case() -> TestCase<Lpn> {
-    let mut test_case = TestCase::<Lpn>::with_reserve(&[coin(
+fn test_case() -> TestCase {
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::with_reserve(&[coin(
         10_000_000_000_000_000_000_000_000_000,
         Lpn::BANK_SYMBOL,
-    )]);
-    test_case
-        .init(
-            Addr::unchecked(ADMIN),
-            &mut [coin(1_000_000_000_000_000_000_000_000, Lpn::BANK_SYMBOL)],
-        )
-        .init_timealarms();
+    )])
+    .init_time_alarms()
+    .into_generic();
 
     test_case
         .app
@@ -213,7 +213,7 @@ fn test_case() -> TestCase<Lpn> {
     test_case
 }
 
-fn add_alarm(test_case: &mut TestCase<Lpn>, recv: &Addr, time_secs: u64) {
+fn add_alarm(test_case: &mut TestCase, recv: &Addr, time_secs: u64) {
     let alarm_msg = timealarms::msg::ExecuteMsg::AddAlarm {
         time: Timestamp::from_seconds(time_secs),
     };
@@ -224,7 +224,7 @@ fn add_alarm(test_case: &mut TestCase<Lpn>, recv: &Addr, time_secs: u64) {
         .unwrap();
 }
 
-fn dispatch(test_case: &mut GenericTestCase, max_count: u32) -> AppResponse {
+fn dispatch(test_case: &mut TestCase, max_count: u32) -> AppResponse {
     let dispatch_msg = timealarms::msg::ExecuteMsg::DispatchAlarms { max_count };
     test_case
         .app
@@ -499,24 +499,15 @@ fn test_time_notify() {
 
 #[test]
 fn test_profit_alarms() {
-    let admin = Addr::unchecked(ADMIN);
-
-    let mut test_case = TestCase::<Lpn>::with_reserve(&[
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::with_reserve(&[
         cwcoin(Coin::<Lpn>::new(1_000_000)),
         cwcoin(Coin::<Nls>::new(1_000_000)),
-    ]);
-    test_case
-        .init(
-            admin,
-            &mut [
-                cwcoin(Coin::<Lpn>::new(100_000)),
-                cwcoin(Coin::<Nls>::new(100_000)),
-            ],
-        )
-        .init_timealarms()
-        .init_oracle(None)
-        .init_treasury()
-        .init_profit(1);
+    ])
+    .init_time_alarms()
+    .init_oracle(None)
+    .init_treasury()
+    .init_profit(1)
+    .into_generic();
 
     let time_alarms = test_case.time_alarms().clone();
     let profit = test_case.profit().clone();

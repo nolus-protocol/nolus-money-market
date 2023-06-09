@@ -21,15 +21,14 @@ use sdk::{
     cw_multi_test::{AppResponse, Executor},
 };
 
-use crate::common::test_case::GenericTestCase;
 use crate::common::{
-    cwcoin, cwcoins,
+    cwcoin,
     lease_wrapper::complete_lease_initialization,
     leaser_wrapper::{self, LeaserWrapper},
     oracle_wrapper::{
         add_feeder, feed_a_price as oracle_feed_a_price, feed_price as oracle_feed_price,
     },
-    test_case::TestCase,
+    test_case::{Builder as TestCaseBuilder, TestCase},
     AppExt, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -55,7 +54,7 @@ where
     Price::identity()
 }
 
-fn feed_price(test_case: &mut TestCase<Lpn>) {
+fn feed_price(test_case: &mut TestCase) {
     let lease_price = price_lpn_of::<LeaseCurrency>();
     oracle_feed_a_price(test_case, Addr::unchecked(ADMIN), lease_price);
 
@@ -63,20 +62,16 @@ fn feed_price(test_case: &mut TestCase<Lpn>) {
     oracle_feed_a_price(test_case, Addr::unchecked(ADMIN), payment_price);
 }
 
-fn create_test_case<InitFundsC>() -> TestCase<Lpn>
+fn create_test_case<InitFundsC>() -> TestCase
 where
     InitFundsC: Currency,
 {
-    let mut test_case = TestCase::with_reserve(&[
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::with_reserve(&[
         cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin::<Lpn, _>(10_000_000_000_000_000_000_000_000_000),
         cwcoin::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-    ]);
-    test_case.init(
-        Addr::unchecked(USER),
-        &mut [cwcoin::<InitFundsC, _>(1_000_000_000_000_000_000_000_000)],
-    );
-    test_case.init_lpp_with_funds(
+    ])
+    .init_lpp_with_funds(
         None,
         &[coin(
             5_000_000_000_000_000_000_000_000_000,
@@ -85,12 +80,18 @@ where
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
+    )
+    .init_time_alarms()
+    .init_oracle(None)
+    .init_treasury()
+    .init_profit(24)
+    .init_leaser()
+    .into_generic();
+
+    test_case.send_funds_from_admin(
+        Addr::unchecked(USER),
+        &[cwcoin::<InitFundsC, _>(1_000_000_000_000_000_000_000_000)],
     );
-    test_case.init_timealarms();
-    test_case.init_oracle(None);
-    test_case.init_treasury();
-    test_case.init_profit(24);
-    test_case.init_leaser();
 
     add_feeder(&mut test_case, ADMIN);
 
@@ -109,7 +110,7 @@ fn calculate_interest(principal: Coin<Lpn>, interest_rate: Percent, duration: u6
 }
 
 fn open_lease<DownpaymentC>(
-    test_case: &mut TestCase<Lpn>,
+    test_case: &mut TestCase,
     downpayment: Coin<DownpaymentC>,
     max_ltd: Option<Percent>,
 ) -> Addr
@@ -129,8 +130,6 @@ where
     let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
     let exp_lease = TryInto::<Coin<LeaseCurrency>>::try_into(quote.total).unwrap();
 
-    let test_case = &mut **test_case;
-
     complete_lease_initialization::<Lpn, DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
         &test_case.message_receiver,
@@ -143,13 +142,12 @@ where
     lease
 }
 
-fn try_init_lease<D>(
-    test_case: &mut GenericTestCase,
-    downpayment: Coin<D>,
-    max_ltd: Option<Percent>,
-) where
+fn try_init_lease<D>(test_case: &mut TestCase, downpayment: Coin<D>, max_ltd: Option<Percent>)
+where
     D: Currency,
 {
+    let downpayment = (!downpayment.is_zero()).then(|| cwcoin::<D, _>(downpayment));
+
     test_case
         .app
         .execute_contract(
@@ -159,16 +157,12 @@ fn try_init_lease<D>(
                 currency: LeaseCurrency::TICKER.into(),
                 max_ltd,
             },
-            &if downpayment.is_zero() {
-                vec![]
-            } else {
-                cwcoins::<D, _>(downpayment)
-            },
+            downpayment.as_ref().map_or(&[], std::slice::from_ref),
         )
         .unwrap();
 }
 
-fn get_lease_address(test_case: &TestCase<Lpn>) -> Addr {
+fn get_lease_address(test_case: &TestCase) -> Addr {
     let query_response: HashSet<Addr> = test_case
         .app
         .wrap()
@@ -183,19 +177,19 @@ fn get_lease_address(test_case: &TestCase<Lpn>) -> Addr {
     query_response.iter().next().unwrap().clone()
 }
 
-fn repay(test_case: &mut TestCase<Lpn>, contract_addr: &Addr, payment: PaymentCoin) -> AppResponse {
+fn repay(test_case: &mut TestCase, contract_addr: &Addr, payment: PaymentCoin) -> AppResponse {
     test_case
         .app
         .execute_contract(
             Addr::unchecked(USER),
             contract_addr.clone(),
             &ExecuteMsg::Repay {},
-            &cwcoins::<PaymentCurrency, _>(payment),
+            &[cwcoin::<PaymentCurrency, _>(payment)],
         )
         .unwrap()
 }
 
-fn close(test_case: &mut TestCase<Lpn>, contract_addr: &Addr) -> AppResponse {
+fn close(test_case: &mut TestCase, contract_addr: &Addr) -> AppResponse {
     test_case
         .app
         .execute_contract(
@@ -207,14 +201,11 @@ fn close(test_case: &mut TestCase<Lpn>, contract_addr: &Addr) -> AppResponse {
         .unwrap()
 }
 
-fn quote_borrow(test_case: &TestCase<Lpn>, downpayment: PaymentCoin) -> LpnCoin {
+fn quote_borrow(test_case: &TestCase, downpayment: PaymentCoin) -> LpnCoin {
     LpnCoin::try_from(quote_query(test_case, downpayment).borrow).unwrap()
 }
 
-fn quote_query<DownpaymentC>(
-    test_case: &TestCase<Lpn>,
-    downpayment: Coin<DownpaymentC>,
-) -> QuoteResponse
+fn quote_query<DownpaymentC>(test_case: &TestCase, downpayment: Coin<DownpaymentC>) -> QuoteResponse
 where
     DownpaymentC: Currency,
 {
@@ -232,7 +223,7 @@ where
         .unwrap()
 }
 
-fn state_query(test_case: &TestCase<Lpn>, contract_addr: &String) -> StateResponse {
+fn state_query(test_case: &TestCase, contract_addr: &String) -> StateResponse {
     test_case
         .app
         .wrap()
@@ -241,7 +232,7 @@ fn state_query(test_case: &TestCase<Lpn>, contract_addr: &String) -> StateRespon
 }
 
 fn expected_open_state<DownpaymentC>(
-    test_case: &TestCase<Lpn>,
+    test_case: &TestCase,
     downpayment: Coin<DownpaymentC>,
     payments: PaymentCoin,
     last_paid: Timestamp,
@@ -294,7 +285,7 @@ where
 }
 
 fn expected_newly_opened_state<DownpaymentC>(
-    test_case: &TestCase<Lpn>,
+    test_case: &TestCase,
     downpayment: Coin<DownpaymentC>,
     payments: PaymentCoin,
 ) -> StateResponse
@@ -494,7 +485,7 @@ fn state_paid_when_overpaid() {
         .unwrap();
     assert_eq!(
         balance,
-        cwcoins::<PaymentCurrency, _>(downpayment + payment)
+        &[cwcoin::<PaymentCurrency, _>(downpayment + payment)],
     );
 
     assert_eq!(
@@ -521,7 +512,7 @@ fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent, leve
             oracle,
             lease_address,
             &ExecuteMsg::PriceAlarm(),
-            // &cwcoins::<LeaseCurrency, _>(10000),
+            // &cwcoin::<LeaseCurrency, _>(10000),
             &[],
         )
         .unwrap();
@@ -847,6 +838,6 @@ fn state_closed() {
     assert_eq!(query_result, expected_result);
 }
 
-fn block_time(test_case: &TestCase<Lpn>) -> Timestamp {
+fn block_time(test_case: &TestCase) -> Timestamp {
     test_case.app.block_info().time
 }

@@ -67,7 +67,7 @@ impl LppWrapper {
                 lpp_id,
                 Addr::unchecked(ADMIN),
                 &msg,
-                &init_balance,
+                init_balance,
                 "lpp",
                 None,
             )

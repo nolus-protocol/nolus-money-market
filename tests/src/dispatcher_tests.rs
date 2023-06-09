@@ -6,27 +6,26 @@ use sdk::{
 };
 
 use crate::common::{
-    cwcoins, lpp_wrapper::mock_lpp_query, native_cwcoin, oracle_wrapper::mock_oracle_query,
-    test_case::TestCase, Native, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER,
-    UTILIZATION_OPTIMAL,
+    cwcoin,
+    lpp_wrapper::mock_lpp_query,
+    native_cwcoin,
+    oracle_wrapper::mock_oracle_query,
+    test_case::{Builder as TestCaseBuilder, TestCase},
+    Native, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type Lpn = Usdc;
 
 #[test]
 fn on_alarm_zero_reward() {
-    let user = Addr::unchecked(USER);
-
-    let mut test_case: TestCase<Lpn> = TestCase::new();
-    test_case
-        .init(user, &mut cwcoins::<Lpn, _>(500))
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             None,
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
         )
-        .init_timealarms()
+        .init_time_alarms()
         .init_oracle(Some(
             ContractWrapper::new(
                 oracle::contract::execute,
@@ -37,11 +36,14 @@ fn on_alarm_zero_reward() {
             .with_sudo(oracle::contract::sudo),
         ))
         .init_treasury_with_dispatcher(Addr::unchecked("contract4"))
-        .init_dispatcher();
+        .init_dispatcher()
+        .into_generic();
+
+    test_case.send_funds_from_admin(Addr::unchecked(USER), &[cwcoin::<Lpn, _>(500)]);
 
     let time_alarms = test_case.time_alarms().clone();
 
-    test_case.send_funds_from_admin(time_alarms.clone(), &cwcoins::<Lpn, _>(500));
+    test_case.send_funds_from_admin(time_alarms.clone(), &[cwcoin::<Lpn, _>(500)]);
 
     let dispatcher = test_case.dispatcher().clone();
 
@@ -53,7 +55,7 @@ fn on_alarm_zero_reward() {
             time_alarms,
             dispatcher,
             &rewards_dispatcher::msg::ExecuteMsg::TimeAlarm {},
-            &cwcoins::<Lpn, _>(40),
+            &[cwcoin::<Lpn, _>(40)],
         )
         .unwrap_err();
     let root_err = err.root_cause().downcast_ref::<ContractError>();
@@ -65,11 +67,7 @@ fn on_alarm_zero_reward() {
 fn on_alarm() {
     let lender = Addr::unchecked(USER);
 
-    let mut test_case: TestCase<Lpn> = TestCase::new();
-    test_case
-        .init(lender.clone(), &mut cwcoins::<Lpn, _>(500))
-        .init_timealarms()
-        .init_oracle(None)
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             Some(
                 ContractWrapper::new(
@@ -83,7 +81,7 @@ fn on_alarm() {
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
         )
-        .init_timealarms()
+        .init_time_alarms()
         .init_oracle(Some(
             ContractWrapper::new(
                 oracle::contract::execute,
@@ -94,14 +92,17 @@ fn on_alarm() {
             .with_sudo(oracle::contract::sudo),
         ))
         .init_treasury()
-        .init_dispatcher();
+        .init_dispatcher()
+        .into_generic();
 
     let lpp = test_case.lpp().clone();
     let time_alarms = test_case.time_alarms().clone();
     let treasury = test_case.treasury().clone();
     let dispatcher = test_case.dispatcher().clone();
 
-    test_case.send_funds_from_admin(time_alarms.clone(), &cwcoins::<Lpn, _>(500));
+    test_case
+        .send_funds_from_admin(time_alarms.clone(), &[cwcoin::<Lpn, _>(500)])
+        .send_funds_from_admin(lender.clone(), &[cwcoin::<Lpn, _>(500)]);
 
     assert_eq!(
         test_case
@@ -127,7 +128,7 @@ fn on_alarm() {
             lender.clone(),
             lpp.clone(),
             &lpp::msg::ExecuteMsg::Deposit {},
-            &cwcoins::<Lpn, _>(100),
+            &[cwcoin::<Lpn, _>(100)],
         )
         .unwrap();
 
@@ -306,10 +307,8 @@ fn test_config() {
 //     );
 // }
 
-fn new_test_case() -> TestCase<Lpn> {
-    let mut test_case: TestCase<Lpn> = TestCase::new();
-    test_case
-        .init_lease()
+fn new_test_case() -> TestCase {
+    TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             None,
             BASE_INTEREST_RATE,
@@ -317,14 +316,13 @@ fn new_test_case() -> TestCase<Lpn> {
             ADDON_OPTIMAL_INTEREST_RATE,
         )
         .init_treasury_with_dispatcher(Addr::unchecked("contract4"))
-        .init_timealarms()
+        .init_time_alarms()
         .init_oracle(None)
-        .init_dispatcher();
-
-    test_case
+        .init_dispatcher()
+        .into_generic()
 }
 
-fn query_config(test_case: &TestCase<Lpn>) -> ConfigResponse {
+fn query_config(test_case: &TestCase) -> ConfigResponse {
     test_case
         .app
         .wrap()
