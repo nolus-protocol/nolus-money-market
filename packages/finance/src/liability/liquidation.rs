@@ -27,6 +27,7 @@ where
     Asset: Currency,
 {
     fn partial(amount: Coin<Asset>, cause: Cause) -> Self {
+        debug_assert!(amount != Coin::ZERO);
         Self::Liquidation(Liquidation::Partial { amount, cause })
     }
 
@@ -101,11 +102,10 @@ fn no_liquidation<Asset>(spec: &Liability, total_due: Coin<Asset>, ltv: Percent)
 where
     Asset: Currency,
 {
+    debug_assert!(ltv < spec.max());
     if total_due.is_zero() {
         Status::NoDebt
     } else {
-        debug_assert!(ltv < spec.max());
-
         Status::No(spec.zone_of(ltv))
     }
 }
