@@ -1,6 +1,6 @@
 [package]
 name = "currency"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
