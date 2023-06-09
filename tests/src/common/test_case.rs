@@ -1,7 +1,4 @@
-use std::{
-    marker::PhantomData,
-    ops::{Deref, DerefMut},
-};
+use std::marker::PhantomData;
 
 use currency::{Currency, Symbol};
 use finance::percent::Percent;
@@ -61,7 +58,7 @@ type OptionalOracleWrapper = Option<
     >,
 >;
 
-pub struct GenericTestCase {
+pub struct TestCase {
     pub app: MockApp,
     pub message_receiver: WrappedCustomMessageReceiver,
     dispatcher_addr: Option<Addr>,
@@ -71,18 +68,24 @@ pub struct GenericTestCase {
     lpp_addr: Option<Addr>,
     oracle_addr: Option<Addr>,
     time_alarms_addr: Option<Addr>,
-    lease_code_id: Option<u64>,
+    lease_code_id: u64,
 }
 
-impl GenericTestCase {
+impl TestCase {
+    pub const LEASER_CONNECTION_ID: &'static str = "connection-0";
+
     fn with_reserve(reserve: &[CwCoin]) -> Self {
         let (custom_message_sender, custom_message_receiver): (
             CustomMessageSender,
             WrappedCustomMessageReceiver,
         ) = new_custom_msg_queue();
 
+        let mut app: MockApp = mock_app(custom_message_sender, reserve);
+
+        let lease_code_id: u64 = Self::store_lease(&mut app);
+
         Self {
-            app: mock_app(custom_message_sender, reserve),
+            app,
             message_receiver: custom_message_receiver,
             dispatcher_addr: None,
             treasury_addr: None,
@@ -91,7 +94,7 @@ impl GenericTestCase {
             lpp_addr: None,
             oracle_addr: None,
             time_alarms_addr: None,
-            lease_code_id: None,
+            lease_code_id,
         }
     }
 
@@ -132,60 +135,7 @@ impl GenericTestCase {
     }
 
     pub fn lease_code_id(&self) -> u64 {
-        self.lease_code_id.unwrap()
-    }
-}
-
-pub struct TestCase<Lpn> {
-    test_case: GenericTestCase,
-    _lpn: PhantomData<Lpn>,
-}
-
-impl<Lpn> TestCase<Lpn>
-where
-    Lpn: Currency,
-{
-    pub const LEASER_CONNECTION_ID: &'static str = "connection-0";
-
-    pub fn new() -> Self {
-        Self::with_reserve(&[cwcoin::<Lpn, _>(10_000)])
-    }
-
-    pub fn with_reserve(reserve: &[CwCoin]) -> Self {
-        Self {
-            test_case: GenericTestCase::with_reserve(reserve),
-            _lpn: PhantomData,
-        }
-    }
-
-    pub fn init(&mut self, user: Addr, init_funds: &mut [CwCoin]) -> &mut Self {
-        self.init_lease();
-        // Bonus: set some funds on the user for future proposals
-        let admin = Addr::unchecked(ADMIN);
-
-        if !init_funds.is_empty() && user != admin {
-            let coin_sort_fn = |coin: &CwCoin| (coin.denom.clone(), coin.amount.u128());
-
-            init_funds.sort_by_key(coin_sort_fn);
-
-            self.app
-                .send_tokens(admin, user.clone(), init_funds)
-                .unwrap();
-
-            assert_eq!(
-                {
-                    let mut funds = self.app.wrap().query_all_balances(user).unwrap();
-
-                    funds.sort_by_key(coin_sort_fn);
-
-                    funds
-                },
-                init_funds,
-                "Initial funds are not the same!"
-            );
-        }
-
-        self
+        self.lease_code_id
     }
 
     pub fn open_lease<D>(&mut self, lease_currency: Symbol<'_>) -> Addr
@@ -216,31 +166,13 @@ where
         lease
     }
 
-    pub fn init_lease(&mut self) -> &mut Self {
-        self.lease_code_id = Some(LeaseWrapper::default().store(&mut self.app));
-
-        self.message_receiver.assert_empty();
+    pub fn store_new_lease_code(&mut self) -> &mut Self {
+        self.lease_code_id = Self::store_lease(&mut self.app);
 
         self
     }
 
-    pub fn init_lpp(
-        &mut self,
-        custom_wrapper: OptionalLppWrapper,
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
-    ) -> &mut Self {
-        self.init_lpp_with_funds(
-            custom_wrapper,
-            &[CwCoin::new(400, Lpn::BANK_SYMBOL)],
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
-        )
-    }
-
-    pub fn init_lpp_with_funds(
+    fn init_lpp<Lpn>(
         &mut self,
         custom_wrapper: OptionalLppWrapper,
         init_balance: &[CwCoin],
@@ -251,6 +183,8 @@ where
     where
         Lpn: Currency,
     {
+        assert_eq!(self.lpp_addr, None);
+
         let mocked_lpp = match custom_wrapper {
             Some(wrapper) => LppWrapper::with_contract_wrapper(wrapper),
             None => LppWrapper::default(),
@@ -278,7 +212,9 @@ where
         self
     }
 
-    pub fn init_leaser(&mut self) -> &mut Self {
+    fn init_leaser(&mut self) -> &mut Self {
+        assert_eq!(self.leaser_addr, None);
+
         let lease_code_id = self.lease_code_id();
         let lpp = self.lpp().clone();
         let time_alarms = self.time_alarms().clone();
@@ -318,18 +254,13 @@ where
         self
     }
 
-    pub fn init_treasury(&mut self) -> &mut Self {
-        self.treasury_addr =
-            Some(TreasuryWrapper::new_with_no_dispatcher().instantiate::<Lpn>(&mut self.app));
+    fn init_treasury<Lpn>(&mut self, wrapper: TreasuryWrapper) -> &mut Self
+    where
+        Lpn: Currency,
+    {
+        assert_eq!(self.treasury_addr, None);
 
-        self.app.update_block(next_block);
-
-        self
-    }
-
-    pub fn init_treasury_with_dispatcher(&mut self, rewards_dispatcher: Addr) -> &mut Self {
-        self.treasury_addr =
-            Some(TreasuryWrapper::new(rewards_dispatcher).instantiate::<Lpn>(&mut self.app));
+        self.treasury_addr = Some(wrapper.instantiate::<Lpn>(&mut self.app));
 
         self.app.update_block(next_block);
 
@@ -338,7 +269,9 @@ where
         self
     }
 
-    pub fn init_profit(&mut self, cadence_hours: u16) -> &mut Self {
+    fn init_profit(&mut self, cadence_hours: u16) -> &mut Self {
+        assert_eq!(self.profit_addr, None);
+
         const CONNECTION_ID: &str = "dex-connection";
 
         let treasury = self.treasury().clone();
@@ -409,7 +342,9 @@ where
         self
     }
 
-    pub fn init_timealarms(&mut self) -> &mut Self {
+    fn init_time_alarms(&mut self) -> &mut Self {
+        assert_eq!(self.time_alarms_addr, None);
+
         self.time_alarms_addr = Some(TimeAlarmsWrapper::default().instantiate(&mut self.app));
 
         self.app.update_block(next_block);
@@ -419,13 +354,17 @@ where
         self
     }
 
-    pub fn init_oracle(&mut self, custom_wrapper: OptionalOracleWrapper) -> &mut Self {
-        let mocked_oracle = match custom_wrapper {
-            Some(wrapper) => MarketOracleWrapper::with_contract_wrapper(wrapper),
-            None => MarketOracleWrapper::default(),
-        };
+    fn init_oracle<Lpn>(&mut self, custom_wrapper: OptionalOracleWrapper) -> &mut Self
+    where
+        Lpn: Currency,
+    {
+        assert_eq!(self.oracle_addr, None);
 
-        self.oracle_addr = Some(mocked_oracle.instantiate::<Lpn>(&mut self.app));
+        self.oracle_addr = Some(
+            custom_wrapper
+                .map_or_else(Default::default, MarketOracleWrapper::with_contract_wrapper)
+                .instantiate::<Lpn>(&mut self.app),
+        );
 
         self.app.update_block(next_block);
 
@@ -434,7 +373,9 @@ where
         self
     }
 
-    pub fn init_dispatcher(&mut self) -> &mut Self {
+    fn init_dispatcher(&mut self) -> &mut Self {
+        assert_eq!(self.dispatcher_addr, None);
+
         let lpp = self.lpp().clone();
         let oracle = self.oracle().clone();
         let time_alarms = self.time_alarms().clone();
@@ -470,24 +411,112 @@ where
 
         self
     }
-}
 
-impl<Lpn> Deref for TestCase<Lpn>
-where
-    Lpn: Currency,
-{
-    type Target = GenericTestCase;
-
-    fn deref(&self) -> &Self::Target {
-        &self.test_case
+    fn store_lease(app: &mut MockApp) -> u64 {
+        LeaseWrapper::default().store(app)
     }
 }
 
-impl<Lpn> DerefMut for TestCase<Lpn>
+pub struct Builder<Lpn> {
+    test_case: TestCase,
+    _lpn: PhantomData<Lpn>,
+}
+
+impl<Lpn> Builder<Lpn>
 where
     Lpn: Currency,
 {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.test_case
+    pub fn new() -> Self {
+        Self::with_reserve(&[cwcoin::<Lpn, _>(10_000)])
+    }
+
+    pub fn with_reserve(reserve: &[CwCoin]) -> Self {
+        Self {
+            test_case: TestCase::with_reserve(reserve),
+            _lpn: PhantomData,
+        }
+    }
+
+    pub fn init_lpp(
+        self,
+        custom_wrapper: OptionalLppWrapper,
+        base_interest_rate: Percent,
+        utilization_optimal: Percent,
+        addon_optimal_interest_rate: Percent,
+    ) -> Self {
+        self.init_lpp_with_funds(
+            custom_wrapper,
+            &[CwCoin::new(400, Lpn::BANK_SYMBOL)],
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        )
+    }
+
+    pub fn init_lpp_with_funds(
+        mut self,
+        custom_wrapper: OptionalLppWrapper,
+        init_balance: &[CwCoin],
+        base_interest_rate: Percent,
+        utilization_optimal: Percent,
+        addon_optimal_interest_rate: Percent,
+    ) -> Self {
+        self.test_case.init_lpp::<Lpn>(
+            custom_wrapper,
+            init_balance,
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        );
+
+        self
+    }
+
+    pub fn init_leaser(mut self) -> Self {
+        self.test_case.init_leaser();
+
+        self
+    }
+
+    pub fn init_treasury(mut self) -> Self {
+        self.test_case
+            .init_treasury::<Lpn>(TreasuryWrapper::new_with_no_dispatcher());
+
+        self
+    }
+
+    pub fn init_treasury_with_dispatcher(mut self, rewards_dispatcher: Addr) -> Self {
+        self.test_case
+            .init_treasury::<Lpn>(TreasuryWrapper::new(rewards_dispatcher));
+
+        self
+    }
+
+    pub fn init_profit(mut self, cadence_hours: u16) -> Self {
+        self.test_case.init_profit(cadence_hours);
+
+        self
+    }
+
+    pub fn init_time_alarms(mut self) -> Self {
+        self.test_case.init_time_alarms();
+
+        self
+    }
+
+    pub fn init_oracle(mut self, custom_wrapper: OptionalOracleWrapper) -> Self {
+        self.test_case.init_oracle::<Lpn>(custom_wrapper);
+
+        self
+    }
+
+    pub fn init_dispatcher(mut self) -> Self {
+        self.test_case.init_dispatcher();
+
+        self
+    }
+
+    pub fn into_generic(self) -> TestCase {
+        self.test_case
     }
 }

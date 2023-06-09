@@ -36,10 +36,10 @@ use sdk::{
 use swap::SwapTarget;
 use tree::HumanReadableTree;
 
-use crate::common::test_case::GenericTestCase;
 use crate::common::{
-    oracle_wrapper, test_case::TestCase, MockApp, ADDON_OPTIMAL_INTEREST_RATE, ADMIN,
-    BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
+    oracle_wrapper,
+    test_case::{Builder as TestCaseBuilder, TestCase},
+    MockApp, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type Lpn = Usdc;
@@ -54,13 +54,8 @@ where
     coin_legacy::to_cosmwasm(coin.into())
 }
 
-fn create_test_case() -> TestCase<Lpn> {
-    let mut test_case = TestCase::with_reserve(&[cw_coin(10_000_000_000_000_000_000_000_000_000)]);
-    test_case
-        .init(
-            Addr::unchecked(ADMIN),
-            &mut [cw_coin(1_000_000_000_000_000_000_000_000)],
-        )
+fn create_test_case() -> TestCase {
+    TestCaseBuilder::<Lpn>::with_reserve(&[cw_coin(10_000_000_000_000_000_000_000_000_000)])
         .init_lpp_with_funds(
             None,
             &[coin(
@@ -71,13 +66,12 @@ fn create_test_case() -> TestCase<Lpn> {
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
         )
-        .init_timealarms()
+        .init_time_alarms()
         .init_oracle(None)
         .init_treasury()
         .init_profit(24)
-        .init_leaser();
-
-    test_case
+        .init_leaser()
+        .into_generic()
 }
 
 #[test]
@@ -109,7 +103,7 @@ fn internal_test_integration_setup_test() {
 
     oracle_wrapper::add_feeder(&mut test_case, ADMIN);
 
-    let response: AppResponse = oracle_wrapper::feed_price::<_, BaseC, Usdc>(
+    let response: AppResponse = oracle_wrapper::feed_price::<BaseC, Usdc>(
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::new(5),
@@ -150,7 +144,7 @@ fn feed_price_with_alarm_issue() {
 
     test_case.message_receiver.assert_empty();
 
-    let _ = oracle_wrapper::feed_price::<_, BaseC, Usdc>(
+    let _ = oracle_wrapper::feed_price::<BaseC, Usdc>(
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::new(5),
@@ -184,7 +178,7 @@ fn feed_price_with_alarm() {
 
     test_case.message_receiver.assert_empty();
 
-    let res = oracle_wrapper::feed_price::<_, Cro, Usdc>(
+    let res = oracle_wrapper::feed_price::<Cro, Usdc>(
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::new(1),
@@ -235,7 +229,7 @@ fn overwrite_alarm_and_dispatch() {
     test_case.message_receiver.assert_empty();
 
     // If doesn't panic, then prices should be fed successfully.
-    let _: AppResponse = oracle_wrapper::feed_price::<_, Cro, Usdc>(
+    let _: AppResponse = oracle_wrapper::feed_price::<Cro, Usdc>(
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::new(1),
@@ -268,7 +262,7 @@ fn overwrite_alarm_and_dispatch() {
     );
 }
 
-fn open_lease(test_case: &mut GenericTestCase, downpayment: TheCoin) -> Addr {
+fn open_lease(test_case: &mut TestCase, downpayment: TheCoin) -> Addr {
     test_case
         .app
         .execute_contract(
@@ -284,14 +278,14 @@ fn open_lease(test_case: &mut GenericTestCase, downpayment: TheCoin) -> Addr {
 
     test_case
         .message_receiver
-        .assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+        .assert_register_ica(TestCase::LEASER_CONNECTION_ID);
 
     test_case.message_receiver.assert_empty();
 
     get_lease_address(test_case)
 }
 
-fn get_lease_address(test_case: &GenericTestCase) -> Addr {
+fn get_lease_address(test_case: &TestCase) -> Addr {
     let query_response: HashSet<Addr> = test_case
         .app
         .wrap()
@@ -342,13 +336,13 @@ fn test_config_update() {
 
     test_case.message_receiver.assert_empty();
 
-    oracle_wrapper::feed_price::<_, BaseC, Usdc>(
+    oracle_wrapper::feed_price::<BaseC, Usdc>(
         &mut test_case,
         feeder1,
         Coin::new(base),
         Coin::new(quote),
     );
-    oracle_wrapper::feed_price::<_, BaseC, Usdc>(
+    oracle_wrapper::feed_price::<BaseC, Usdc>(
         &mut test_case,
         feeder2,
         Coin::new(base),

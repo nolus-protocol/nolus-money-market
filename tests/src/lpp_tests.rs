@@ -23,11 +23,10 @@ use sdk::{
 };
 
 use crate::common::{
-    cwcoin, cwcoins,
+    cwcoin,
     lease_wrapper::{LeaseInitConfig, LeaseWrapper, LeaseWrapperAddresses, LeaseWrapperConfig},
-    test_case::TestCase,
-    AppExt, MockApp, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER,
-    UTILIZATION_OPTIMAL,
+    test_case::{Builder as TestCaseBuilder, TestCase},
+    AppExt, MockApp, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, UTILIZATION_OPTIMAL,
 };
 
 type Lpn = Usdc;
@@ -60,14 +59,17 @@ fn config_update_parameters() {
     let addon_optimal_interest_rate = Percent::from_percent(20);
     let utilization_optimal = Percent::from_percent(55);
 
-    let mut test_case: TestCase<Lpn> =
-        TestCase::with_reserve(&[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)]);
-    test_case.init_lease().init_lpp(
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::with_reserve(&[
+        lpn_cwcoin(app_balance),
+        cwcoin::<Nls, _>(app_balance),
+    ])
+    .init_lpp(
         None,
         BASE_INTEREST_RATE,
         UTILIZATION_OPTIMAL,
         ADDON_OPTIMAL_INTEREST_RATE,
-    );
+    )
+    .into_generic();
 
     let lpp = test_case.lpp().clone();
 
@@ -112,26 +114,23 @@ fn config_update_parameters() {
 #[test]
 #[should_panic(expected = "Expecting code id 1 for the contract contract5")]
 fn open_loan_unauthorized_contract_id() {
-    let user_addr = Addr::unchecked(USER);
-
-    let mut test_case = TestCase::<Lpn>::new();
-    test_case
-        .init(user_addr, &mut [lpn_cwcoin(500)])
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             None,
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
         )
-        .init_timealarms()
+        .init_time_alarms()
         .init_oracle(None)
         .init_treasury()
-        .init_profit(24);
+        .init_profit(24)
+        .into_generic();
 
     let lpp_addr = test_case.lpp().clone();
 
     //redeploy lease contract to change the code_id
-    test_case.init_lease();
+    test_case.store_new_lease_code();
 
     let lease_addr = test_case.open_lease::<Lpn>(LeaseCurrency::TICKER);
 
@@ -151,21 +150,18 @@ fn open_loan_unauthorized_contract_id() {
 #[test]
 #[should_panic(expected = "No liquidity")]
 fn open_loan_no_liquidity() {
-    let user_addr = Addr::unchecked(USER);
-
-    let mut test_case = TestCase::<Lpn>::new();
-    test_case
-        .init(user_addr, &mut [lpn_cwcoin(500)])
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
             None,
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
         )
-        .init_timealarms()
+        .init_time_alarms()
         .init_oracle(None)
         .init_treasury()
-        .init_profit(24);
+        .init_profit(24)
+        .into_generic();
 
     let lease_addr = test_case.open_lease::<Lpn>(LeaseCurrency::TICKER);
 
@@ -204,9 +200,7 @@ fn deposit_and_withdraw() {
     let lender2 = Addr::unchecked("lender2");
     let lender3 = Addr::unchecked("lender3");
 
-    let mut test_case: TestCase<Lpn> = TestCase::with_reserve(&[lpn_cwcoin(app_balance)]);
-    test_case
-        .init_lease()
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::with_reserve(&[lpn_cwcoin(app_balance)])
         .init_lpp_with_funds(
             None,
             &[],
@@ -214,13 +208,16 @@ fn deposit_and_withdraw() {
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
         )
-        .init_timealarms()
+        .init_time_alarms()
         .init_oracle(None)
         .init_treasury()
         .init_profit(24)
+        .into_generic();
+
+    test_case
         .send_funds_from_admin(lender1.clone(), &[lpn_cwcoin(init_deposit)])
-        .send_funds_from_admin(lender2.clone(), &[lpn_cwcoin(init_deposit)])
-        .send_funds_from_admin(lender3.clone(), &[lpn_cwcoin(init_deposit)]);
+        .send_funds_from_admin(lender2.clone(), &[lpn_cwcoin(init_deposit.max(test_deposit))])
+        .send_funds_from_admin(lender3.clone(), &[lpn_cwcoin(init_deposit.max(post_deposit))]);
 
     let lease_id = test_case.lease_code_id();
     let lpp = test_case.lpp().clone();
@@ -348,7 +345,7 @@ fn deposit_and_withdraw() {
 
     test_case
         .message_receiver
-        .assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+        .assert_register_ica(TestCase::LEASER_CONNECTION_ID);
 
     test_case.message_receiver.assert_empty();
 
@@ -472,17 +469,18 @@ fn loan_open_wrong_id() {
     let init_deposit = 20_000_000u128;
     let loan = 10_000u128;
 
-    let mut test_case: TestCase<Lpn> = TestCase::with_reserve(&lpn_cwcoins(app_balance));
-    test_case
-        .init_lease()
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::with_reserve(&[lpn_cwcoin(app_balance)])
         .init_lpp(
             None,
             BASE_INTEREST_RATE,
             UTILIZATION_OPTIMAL,
             ADDON_OPTIMAL_INTEREST_RATE,
         )
-        .send_funds_from_admin(lender, &lpn_cwcoins(init_deposit))
-        .send_funds_from_admin(hacker.clone(), &lpn_cwcoins(hacker_balance));
+        .into_generic();
+
+    test_case
+        .send_funds_from_admin(lender, &[lpn_cwcoin(init_deposit)])
+        .send_funds_from_admin(hacker.clone(), &[lpn_cwcoin(hacker_balance)]);
 
     let lpp = test_case.lpp().clone();
 
@@ -534,21 +532,24 @@ fn loan_open_and_repay() {
 
     let interest1 = interest_rate(loan1_u32, balance1_u32);
 
-    let mut test_case: TestCase<Lpn> =
-        TestCase::with_reserve(&[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)]);
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::with_reserve(&[
+        lpn_cwcoin(app_balance),
+        cwcoin::<Nls, _>(app_balance),
+    ])
+    .init_lpp_with_funds(
+        None,
+        &[],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    )
+    .init_time_alarms()
+    .init_oracle(None)
+    .init_treasury()
+    .init_profit(24)
+    .into_generic();
+
     test_case
-        .init_lease()
-        .init_lpp_with_funds(
-            None,
-            &[],
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
-        .init_timealarms()
-        .init_oracle(None)
-        .init_treasury()
-        .init_profit(24)
         .send_funds_from_admin(lender.clone(), &[lpn_cwcoin(init_deposit)])
         .send_funds_from_admin(hacker.clone(), &[lpn_cwcoin(hacker_balance)]);
 
@@ -626,7 +627,7 @@ fn loan_open_and_repay() {
 
     test_case
         .message_receiver
-        .assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+        .assert_register_ica(TestCase::LEASER_CONNECTION_ID);
 
     test_case.message_receiver.assert_empty();
 
@@ -689,7 +690,7 @@ fn loan_open_and_repay() {
 
     test_case
         .message_receiver
-        .assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+        .assert_register_ica(TestCase::LEASER_CONNECTION_ID);
 
     test_case.message_receiver.assert_empty();
 
@@ -906,23 +907,24 @@ fn compare_lpp_states() {
 
     let interest1 = interest_rate(loan1_u32, balance1_u32);
 
-    let mut test_case: TestCase<Lpn> = TestCase::with_reserve(&[
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::with_reserve(&[
         lpn_cwcoin(app_balance),
         coin_legacy::to_cosmwasm::<Nls>(app_balance.into()),
-    ]);
+    ])
+    .init_lpp_with_funds(
+        None,
+        &[],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    )
+    .init_time_alarms()
+    .init_oracle(None)
+    .init_treasury()
+    .init_profit(24)
+    .into_generic();
+
     test_case
-        .init_lease()
-        .init_lpp_with_funds(
-            None,
-            &[],
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
-        .init_timealarms()
-        .init_oracle(None)
-        .init_treasury()
-        .init_profit(24)
         .send_funds_from_admin(lender.clone(), &[lpn_cwcoin(init_deposit)])
         .send_funds_from_admin(hacker.clone(), &[lpn_cwcoin(hacker_balance)]);
 
@@ -998,7 +1000,7 @@ fn compare_lpp_states() {
 
     test_case
         .message_receiver
-        .assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+        .assert_register_ica(TestCase::LEASER_CONNECTION_ID);
 
     test_case.message_receiver.assert_empty();
 
@@ -1066,7 +1068,7 @@ fn compare_lpp_states() {
 
     test_case
         .message_receiver
-        .assert_register_ica(TestCase::<Lpn>::LEASER_CONNECTION_ID);
+        .assert_register_ica(TestCase::LEASER_CONNECTION_ID);
 
     test_case.message_receiver.assert_empty();
 
@@ -1271,17 +1273,20 @@ fn test_rewards() {
     // TODO: any checks for the sender of rewards?
     let treasury = Addr::unchecked("treasury");
 
-    let mut test_case: TestCase<Lpn> =
-        TestCase::with_reserve(&[lpn_cwcoin(app_balance), cwcoin::<Nls, _>(app_balance)]);
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::with_reserve(&[
+        lpn_cwcoin(app_balance),
+        cwcoin::<Nls, _>(app_balance),
+    ])
+    .init_lpp_with_funds(
+        None,
+        &[],
+        BASE_INTEREST_RATE,
+        UTILIZATION_OPTIMAL,
+        ADDON_OPTIMAL_INTEREST_RATE,
+    )
+    .into_generic();
+
     test_case
-        .init_lease()
-        .init_lpp_with_funds(
-            None,
-            &[],
-            BASE_INTEREST_RATE,
-            UTILIZATION_OPTIMAL,
-            ADDON_OPTIMAL_INTEREST_RATE,
-        )
         .send_funds_from_admin(lender1.clone(), &[lpn_cwcoin(deposit1)])
         .send_funds_from_admin(lender2.clone(), &[lpn_cwcoin(deposit2)])
         .send_funds_from_admin(
@@ -1507,13 +1512,6 @@ where
     A: Into<Coin<Lpn>>,
 {
     cwcoin(amount)
-}
-
-fn lpn_cwcoins<A>(amount: A) -> Vec<CwCoin>
-where
-    A: Into<Coin<Lpn>>,
-{
-    cwcoins(amount)
 }
 
 fn block_time(app: &MockApp) -> Timestamp {

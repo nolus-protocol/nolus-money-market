@@ -102,10 +102,7 @@ type OracleContractWrapper = ContractWrapper<
     ContractError,
 >;
 
-pub fn add_feeder<Lpn>(test_case: &mut TestCase<Lpn>, addr: impl Into<String>)
-where
-    Lpn: Currency,
-{
+pub fn add_feeder(test_case: &mut TestCase, addr: impl Into<String>) {
     let oracle = test_case.oracle().clone();
 
     let response: AppResponse = test_case
@@ -126,13 +123,12 @@ where
     );
 }
 
-pub fn feed_a_price<Lpn, C1, C2>(
-    test_case: &mut TestCase<Lpn>,
+pub fn feed_a_price<C1, C2>(
+    test_case: &mut TestCase,
     addr: Addr,
     price: Price<C1, C2>,
 ) -> AppResponse
 where
-    Lpn: Currency,
     C1: Currency,
     C2: Currency,
 {
@@ -155,14 +151,13 @@ where
         .expect("Oracle not properly connected!")
 }
 
-pub fn feed_price<Lpn, C1, C2>(
-    test_case: &mut TestCase<Lpn>,
+pub fn feed_price<C1, C2>(
+    test_case: &mut TestCase,
     addr: Addr,
     base: Coin<C1>,
     quote: Coin<C2>,
 ) -> AppResponse
 where
-    Lpn: Currency,
     C1: Currency,
     C2: Currency,
 {

@@ -78,14 +78,6 @@ where
     coin_legacy::to_cosmwasm(amount.into())
 }
 
-pub fn cwcoins<C, A>(amount: A) -> Vec<CwCoin>
-where
-    C: Currency,
-    A: Into<Coin<C>>,
-{
-    vec![cwcoin(amount)]
-}
-
 #[derive(Serialize, Clone, Debug, PartialEq)]
 struct MockResponse {}
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]

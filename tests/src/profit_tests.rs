@@ -12,20 +12,25 @@ use sdk::{
 };
 use timealarms::msg::DispatchAlarmsResponse;
 
-use crate::common::{cwcoin, cwcoins, test_case::TestCase, AppExt as _, Native, ADMIN, USER};
+use crate::common::{
+    cwcoin,
+    test_case::{Builder as TestCaseBuilder, TestCase},
+    AppExt as _, Native, ADMIN, USER,
+};
 
 #[test]
 fn on_alarm_from_unknown() {
     type Lpn = Usdc;
     let user_addr = Addr::unchecked(USER);
 
-    let mut test_case = TestCase::<Lpn>::new();
-    test_case
-        .init(user_addr.clone(), &mut [cwcoin::<Lpn, _>(500)])
+    let mut test_case = TestCaseBuilder::<Lpn>::new()
         .init_treasury()
-        .init_timealarms()
+        .init_time_alarms()
         .init_oracle(None)
-        .init_profit(2);
+        .init_profit(2)
+        .into_generic();
+
+    test_case.send_funds_from_admin(user_addr.clone(), &[cwcoin::<Lpn, _>(500)]);
 
     let treasury = test_case.treasury().clone();
     let profit = test_case.profit().clone();
@@ -40,7 +45,7 @@ fn on_alarm_from_unknown() {
         user_addr,
         profit,
         &profit::msg::ExecuteMsg::TimeAlarm {},
-        &cwcoins::<Lpn, _>(40),
+        &[cwcoin::<Lpn, _>(40)],
     );
     assert!(res.is_err());
 
@@ -56,13 +61,14 @@ fn on_alarm_zero_balance() {
     type Lpn = Usdc;
     let time_oracle_addr = Addr::unchecked("time");
 
-    let mut test_case = TestCase::<Lpn>::new();
-    test_case
-        .init(time_oracle_addr, &mut [cwcoin::<Lpn, _>(500)])
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::new()
         .init_treasury()
-        .init_timealarms()
+        .init_time_alarms()
         .init_oracle(None)
-        .init_profit(2);
+        .init_profit(2)
+        .into_generic();
+
+    test_case.send_funds_from_admin(time_oracle_addr, &[cwcoin::<Lpn, _>(500)]);
 
     let time_alarms = test_case.time_alarms().clone();
     let profit = test_case.profit().clone();
@@ -82,25 +88,23 @@ fn on_alarm_zero_balance() {
 fn on_alarm_native_only_transfer() {
     type Lpn = Usdc;
 
-    let mut test_case = TestCase::<Lpn>::new();
-    test_case
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::new()
         .init_treasury()
-        .init_timealarms()
+        .init_time_alarms()
         .init_oracle(None)
-        .init_profit(2);
+        .init_profit(2)
+        .into_generic();
 
     let time_alarms_addr = test_case.time_alarms().clone();
     let treasury_addr = test_case.treasury().clone();
     let profit_addr = test_case.profit().clone();
 
-    let init_balance_nls =
-        bank::balance::<Native>(&treasury_addr, &test_case.app.wrap()).unwrap();
-    let init_balance_lpn =
-        bank::balance::<Lpn>(&treasury_addr, &test_case.app.wrap()).unwrap();
+    let init_balance_nls = bank::balance::<Native>(&treasury_addr, &test_case.app.wrap()).unwrap();
+    let init_balance_lpn = bank::balance::<Lpn>(&treasury_addr, &test_case.app.wrap()).unwrap();
     let profit = Coin::<Native>::from(100);
 
     //send tokens to the profit contract
-    test_case.send_funds_from_admin(profit_addr.clone(), &cwcoins::<Native, _>(profit));
+    test_case.send_funds_from_admin(profit_addr.clone(), &[cwcoin::<Native, _>(profit)]);
 
     assert_eq!(
         bank::balance::<Lpn>(&profit_addr, &test_case.app.wrap()).unwrap(),
@@ -159,10 +163,7 @@ fn on_alarm_native_only_transfer() {
     assert_eq!(profit_exec.ty.as_str(), "execute");
     assert_eq!(
         profit_exec.attributes,
-        [(
-            "_contract_addr",
-            &time_alarms_addr,
-        )]
+        [("_contract_addr", &time_alarms_addr,)]
     );
 
     assert_eq!(
@@ -185,12 +186,12 @@ fn on_alarm_native_only_transfer() {
 fn on_alarm_foreign_only_transfer() {
     type Lpn = Usdc;
 
-    let mut test_case = TestCase::<Lpn>::new();
-    test_case
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::new()
         .init_treasury()
-        .init_timealarms()
+        .init_time_alarms()
         .init_oracle(None)
-        .init_profit(2);
+        .init_profit(2)
+        .into_generic();
 
     let time_alarms = test_case.time_alarms().clone();
     let profit = test_case.profit().clone();
@@ -198,7 +199,7 @@ fn on_alarm_foreign_only_transfer() {
     let profit_lpn = Coin::<Lpn>::from(100);
 
     //send tokens to the profit contract
-    test_case.send_funds_from_admin(profit.clone(), &cwcoins::<Lpn, _>(profit_lpn));
+    test_case.send_funds_from_admin(profit.clone(), &[cwcoin::<Lpn, _>(profit_lpn)]);
 
     assert_eq!(
         bank::balance::<Lpn>(&profit, &test_case.app.wrap()).unwrap(),
@@ -234,12 +235,12 @@ fn on_alarm_foreign_only_transfer() {
 fn on_alarm_native_and_foreign_transfer() {
     type Lpn = Usdc;
 
-    let mut test_case = TestCase::<Lpn>::new();
-    test_case
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::new()
         .init_treasury()
-        .init_timealarms()
+        .init_time_alarms()
         .init_oracle(None)
-        .init_profit(2);
+        .init_profit(2)
+        .into_generic();
 
     let time_alarms = test_case.time_alarms().clone();
     let profit = test_case.profit().clone();
@@ -292,17 +293,16 @@ fn on_alarm_native_and_foreign_transfer() {
 }
 
 #[test]
-fn integration_with_timealarms() {
+fn integration_with_time_alarms() {
     type Lpn = Usdc;
     const CADENCE_HOURS: u16 = 2;
 
-    let mut test_case = TestCase::<Lpn>::new();
-
-    test_case
+    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::new()
         .init_treasury()
-        .init_timealarms()
+        .init_time_alarms()
         .init_oracle(None)
-        .init_profit(CADENCE_HOURS);
+        .init_profit(CADENCE_HOURS)
+        .into_generic();
 
     let time_alarms = test_case.time_alarms().clone();
     let profit = test_case.profit().clone();
@@ -311,7 +311,7 @@ fn integration_with_timealarms() {
         .app
         .time_shift(Duration::from_hours(CADENCE_HOURS) + Duration::from_secs(1));
 
-    test_case.send_funds_from_admin(profit.clone(), &cwcoins::<Native, _>(500));
+    test_case.send_funds_from_admin(profit.clone(), &[cwcoin::<Native, _>(500)]);
 
     assert!(!test_case
         .app
