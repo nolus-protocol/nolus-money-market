@@ -583,36 +583,16 @@ mod tests {
     fn min_liquidation() {
         let max_ltv = Percent::from_permille(751);
         let spec = liability_with_max(max_ltv);
+        let lease_amount: Coin<Nls> = Coin::new(878);
+        let min_due_amount: Coin<Nls> = Coin::new(751);
 
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                878.into(),
-                752.into(),
-                0.into(),
-                800.into(),
-                0.into()
-            ),
-            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
-        );
-        assert_eq!(
-            check_liability::<Nls>(
-                &spec,
-                LEASE_AMOUNT,
-                750.into(),
-                99.into(),
-                1000.into(),
-                0.into()
-            ),
-            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
-        );
-        assert_eq!(
-            check_liability::<Nls>(
-                &spec,
-                LEASE_AMOUNT,
+                lease_amount,
                 751.into(),
-                99.into(),
-                1000.into(),
+                0.into(),
+                min_due_amount,
                 0.into()
             ),
             Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
@@ -620,13 +600,47 @@ mod tests {
         assert_eq!(
             check_liability::<Nls>(
                 &spec,
-                LEASE_AMOUNT,
-                761.into(),
-                0.into(),
-                1000.into(),
+                lease_amount,
+                752.into(),
+                min_due_amount - 1.into(),
+                min_due_amount,
                 0.into()
             ),
-            Status::No(Zone::third(spec.third_liq_warn(), spec.max())),
+            Status::partial(
+                min_due_amount,
+                Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            ),
+        );
+        assert_eq!(
+            check_liability::<Nls>(
+                &spec,
+                lease_amount,
+                752.into(),
+                min_due_amount,
+                min_due_amount,
+                0.into()
+            ),
+            Status::partial(
+                min_due_amount,
+                Cause::Liability {
+                    ltv: max_ltv,
+                    healthy_ltv: STEP
+                }
+            ),
+        );
+        assert_eq!(
+            check_liability::<Nls>(
+                &spec,
+                lease_amount,
+                751.into(),
+                min_due_amount,
+                min_due_amount,
+                0.into()
+            ),
+            Status::partial(min_due_amount, Cause::Overdue()),
         );
     }
 
