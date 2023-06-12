@@ -22,8 +22,6 @@ stub = []
 testing = []
 
 [dependencies]
-currency = { workspace = true }
-finance = { workspace = true }
 platform = { workspace = true }
 sdk = { workspace = true, features = ["contract"] }
 time-oracle = { workspace = true }

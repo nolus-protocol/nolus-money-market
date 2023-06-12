@@ -20,8 +20,6 @@ contract-with-bindings = ["contract"]
 contract = []
 
 [dependencies]
-lpp = { workspace = true }
-
 access-control = { workspace = true }
 currency = { workspace = true }
 finance = { workspace = true }
