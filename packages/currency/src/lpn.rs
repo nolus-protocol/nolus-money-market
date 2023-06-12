@@ -6,7 +6,7 @@ use sdk::schemars::{self, JsonSchema};
 use crate::{define_currency, define_symbol, SingleVisitorAdapter};
 
 define_symbol! {
-    USDC {
+    USDC_AXELAR {
         ["dev", "test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-3/uausdc
             bank: "ibc/5DE4FCAF68AE40F81F738C857C0D95F7C1BC47B00FA1026E85C1DD92524D4A11",
@@ -21,7 +21,7 @@ define_symbol! {
         },
     }
 }
-define_currency!(Usdc, USDC);
+define_currency!(Usdc, USDC_AXELAR);
 
 #[derive(Clone, PartialEq, Eq, JsonSchema, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "testing"), derive(Debug))]
