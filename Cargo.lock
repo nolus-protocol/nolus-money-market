@@ -638,7 +638,7 @@ dependencies = [
 
 [[package]]
 name = "lease"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "cosmwasm-std",
  "currency",
@@ -661,7 +661,7 @@ dependencies = [
 
 [[package]]
 name = "leaser"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -686,7 +686,7 @@ checksum = "6a987beff54b60ffa6d51982e1aa1146bc42f19bd26be28b0586f252fccf5317"
 
 [[package]]
 name = "lpp"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -779,7 +779,7 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "oracle"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -994,7 +994,7 @@ dependencies = [
 
 [[package]]
 name = "rewards_dispatcher"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -1369,8 +1369,6 @@ name = "timealarms"
 version = "0.4.1"
 dependencies = [
  "cosmwasm-std",
- "currency",
- "finance",
  "platform",
  "schema",
  "sdk",
@@ -1388,7 +1386,6 @@ dependencies = [
  "cosmwasm-std",
  "currency",
  "finance",
- "lpp",
  "platform",
  "schema",
  "sdk",
