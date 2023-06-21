@@ -32,17 +32,25 @@ where
     I: Iterator<Item = PriceResult<BaseC>>,
     BaseC: Currency,
 {
-    pub const fn new(alarms: &'alarms PriceAlarms<'storage, S>, price_iter: I) -> Self {
-        Self {
+    pub fn new(alarms: &'alarms PriceAlarms<'storage, S>, price_iter: I) -> ContractResult<Self> {
+        let mut iter = Self {
             alarms,
             price_iter,
             alarm_iter: None,
-        }
+        };
+        iter.alarm_iter = iter.next_alarms()?;
+        Ok(iter)
     }
 
-    fn update_alarm_iterator(&mut self) -> ContractResult<()> {
-        self.alarm_iter = self
-            .price_iter
+    fn move_to_next_alarms(&mut self) -> ContractResult<()> {
+        debug_assert!(self.next_alarm().is_none());
+
+        self.alarm_iter = self.next_alarms()?;
+        Ok(())
+    }
+
+    fn next_alarms(&mut self) -> ContractResult<Option<AlarmIter<'alarms>>> {
+        self.price_iter
             .next()
             .map(|price_result: PriceResult<BaseC>| {
                 price_result.and_then(|ref price| {
@@ -55,9 +63,15 @@ where
                     )
                 })
             })
-            .transpose()?;
+            .transpose()
+    }
 
-        Ok(())
+    fn next_alarm(&mut self) -> Option<ContractResult<Addr>> {
+        debug_assert!(self.alarm_iter.is_some());
+        self.alarm_iter
+            .as_mut()
+            .expect("calling 'next_alarm' on Some price alarms")
+            .next()
     }
 }
 
@@ -70,16 +84,19 @@ where
     type Item = ContractResult<Addr>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let result: Option<ContractResult<Addr>> =
-            self.alarm_iter.as_mut().and_then(Iterator::next);
+        self.alarm_iter.as_ref()?;
 
-        if result.is_some() {
-            result
-        } else if let Err(error) = self.update_alarm_iterator() {
-            Some(Err(error))
-        } else {
-            self.alarm_iter.as_mut().and_then(Iterator::next)
+        let mut result = self.next_alarm();
+        while result.is_none() && self.alarm_iter.is_some() {
+            result = if let Err(error) = self.move_to_next_alarms() {
+                Some(Err(error))
+            } else if self.alarm_iter.is_none() {
+                None
+            } else {
+                self.next_alarm()
+            }
         }
+        result
     }
 }
 

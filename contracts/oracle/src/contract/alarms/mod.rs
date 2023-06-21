@@ -50,10 +50,10 @@ where
         }
     }
 
-    pub const fn notify_alarms_iter<I, BaseC>(
+    pub fn notify_alarms_iter<I, BaseC>(
         &self,
         prices: I,
-    ) -> AlarmsIter<'storage, '_, S, I, BaseC>
+    ) -> ContractResult<AlarmsIter<'storage, '_, S, I, BaseC>>
     where
         I: Iterator<Item = PriceResult<BaseC>>,
         BaseC: Currency,
@@ -66,7 +66,7 @@ where
         I: Iterator<Item = PriceResult<BaseC>>,
         BaseC: Currency,
     {
-        Ok(AlarmsIter::new(&self.alarms, prices)
+        Ok(AlarmsIter::new(&self.alarms, prices)?
             .next()
             .transpose()?
             .is_some())
@@ -231,6 +231,17 @@ mod test {
             )
             .unwrap();
 
+        assert!(!alarms
+            .try_query_alarms::<_, Base>(
+                [
+                    tests::base_price::<Atom>(1, 20),
+                    tests::base_price::<Weth>(1, 20)
+                ]
+                .into_iter()
+                .map(Ok),
+            )
+            .unwrap());
+
         assert!(alarms
             .try_query_alarms::<_, Base>([tests::base_price::<Weth>(1, 35)].into_iter().map(Ok),)
             .unwrap());
@@ -258,6 +269,21 @@ mod test {
     }
 
     #[test]
+    fn alarms_no_pices() {
+        let mut storage = MockStorage::new();
+
+        test_case(&mut storage);
+
+        let alarms = MarketAlarms::new(&storage as &dyn Storage);
+
+        let mut sent = alarms
+            .notify_alarms_iter::<_, Base>([].into_iter().map(Ok))
+            .unwrap();
+
+        assert!(sent.next().is_none());
+    }
+
+    #[test]
     fn alarms_below_none() {
         let mut storage = MockStorage::new();
 
@@ -266,7 +292,8 @@ mod test {
         let alarms = MarketAlarms::new(&storage as &dyn Storage);
 
         let mut sent = alarms
-            .notify_alarms_iter::<_, Base>([tests::base_price::<Weth>(1, 25)].into_iter().map(Ok));
+            .notify_alarms_iter::<_, Base>([tests::base_price::<Weth>(1, 25)].into_iter().map(Ok))
+            .unwrap();
 
         assert!(sent.next().is_none());
     }
@@ -279,6 +306,7 @@ mod test {
 
         let sent: Vec<_> = MarketAlarms::new(&storage as &dyn Storage)
             .notify_alarms_iter::<_, Base>([tests::base_price::<Weth>(1, 15)].into_iter().map(Ok))
+            .unwrap()
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 
@@ -293,6 +321,7 @@ mod test {
 
         let sent: Vec<_> = MarketAlarms::new(&storage as &dyn Storage)
             .notify_alarms_iter::<_, Base>([tests::base_price::<Weth>(1, 5)].into_iter().map(Ok))
+            .unwrap()
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 
@@ -308,7 +337,8 @@ mod test {
         let alarms = MarketAlarms::new(&storage as &dyn Storage);
 
         let mut sent = alarms
-            .notify_alarms_iter::<_, Base>([tests::base_price::<Weth>(1, 25)].into_iter().map(Ok));
+            .notify_alarms_iter::<_, Base>([tests::base_price::<Weth>(1, 25)].into_iter().map(Ok))
+            .unwrap();
 
         assert!(sent.next().is_none());
     }
@@ -323,6 +353,7 @@ mod test {
 
         let sent: Vec<_> = alarms
             .notify_alarms_iter::<_, Base>([tests::base_price::<Weth>(1, 55)].into_iter().map(Ok))
+            .unwrap()
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 
@@ -339,6 +370,7 @@ mod test {
 
         let sent: Vec<_> = alarms
             .notify_alarms_iter::<_, Base>([tests::base_price::<Weth>(1, 65)].into_iter().map(Ok))
+            .unwrap()
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 
@@ -362,9 +394,36 @@ mod test {
                 .into_iter()
                 .map(Ok),
             )
+            .unwrap()
             .collect::<Result<Vec<_>, _>>()
             .unwrap();
 
         assert_eq!(sent, vec!["recv1", "recv2", "recv4"]);
+    }
+
+    #[test]
+    fn alarms_middle_none() {
+        let mut storage = MockStorage::new();
+
+        test_case(&mut storage);
+
+        let alarms = MarketAlarms::new(&storage as &dyn Storage);
+
+        let sent: Vec<_> = alarms
+            .notify_alarms_iter::<_, Base>(
+                [
+                    tests::base_price::<Weth>(1, 55),
+                    tests::base_price::<Weth>(1, 35),
+                    tests::base_price::<Atom>(1, 32),
+                    tests::base_price::<Juno>(1, 29),
+                ]
+                .into_iter()
+                .map(Ok),
+            )
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+
+        assert_eq!(sent, vec!["recv2", "recv5"]);
     }
 }

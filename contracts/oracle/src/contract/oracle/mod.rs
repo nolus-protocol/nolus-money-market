@@ -125,7 +125,7 @@ where
     ) -> ContractResult<(u32, MessageResponse)> {
         let subscribers: Vec<Addr> = MarketAlarms::new(self.storage.deref())
             .ensure_no_in_delivery()?
-            .notify_alarms_iter::<_, OracleBase>(self.calc_all_prices(block_time))
+            .notify_alarms_iter::<_, OracleBase>(self.calc_all_prices(block_time))?
             .take(max_count.try_into()?)
             .collect::<ContractResult<Vec<Addr>>>()?;
 
