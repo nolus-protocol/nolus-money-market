@@ -229,7 +229,7 @@ where
                 payment.interest,
                 payment.principal,
                 loan_annual_interest_rate,
-            )?
+            )
             .store(deps.storage)?;
 
         Ok(payment.excess)
