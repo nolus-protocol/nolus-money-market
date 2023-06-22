@@ -260,11 +260,9 @@ mod test {
 
         let storage = MockStorage::new();
 
-        let res = MarketAlarms::new(&storage as &dyn Storage)
-            .notify_alarms_iter::<_, Base>([tests::base_price::<Dai>(1, 25)].into_iter().map(Ok))
-            .next()
-            .unwrap();
-
+        let alarms = MarketAlarms::new(&storage as &dyn Storage);
+        let res = alarms
+            .notify_alarms_iter::<_, Base>([tests::base_price::<Dai>(1, 25)].into_iter().map(Ok));
         assert!(res.is_err())
     }
 
