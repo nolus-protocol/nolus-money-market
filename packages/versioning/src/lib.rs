@@ -94,18 +94,11 @@ pub fn initialize(storage: &mut dyn Storage, version: Version) -> StdResult<()> 
     VERSION_STORAGE_KEY.save(storage, &version)
 }
 
-pub fn update_software<ContractError>(
-    storage: &mut dyn Storage,
-    new: Version,
-) -> Result<ReleaseLabel, ContractError>
-where
-    StdError: Into<ContractError>,
-{
+pub fn update_software(storage: &mut dyn Storage, new: Version) -> Result<ReleaseLabel, StdError> {
     load_version(storage)
         .and_then(|current| release::allow_software_update(&current, &new))
         .and_then(|()| save_version(storage, &new))
         .map(|()| release::label())
-        .map_err(Into::into)
 }
 
 pub fn update_software_and_storage<
