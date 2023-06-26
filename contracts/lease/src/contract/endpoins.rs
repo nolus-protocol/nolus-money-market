@@ -59,8 +59,8 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
                 .and_then(
                     |Response {
                          response,
-                         next_state: lease_v3,
-                     }| state::save(storage, &lease_v3).map(|()| response),
+                         next_state: lease_v5,
+                     }| state::save(storage, &lease_v5).map(|()| response),
                 )
         },
     )
@@ -69,7 +69,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
     #[cfg(not(feature = "migration"))]
     let resp = versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))
         .and_then(response::response);
-    resp.or_else(|err| log_error(err, deps.api))
+    resp
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
