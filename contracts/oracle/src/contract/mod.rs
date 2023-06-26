@@ -61,7 +61,10 @@ impl<'a> AnyVisitor for InstantiateWithCurrency<'a> {
     where
         C: Currency,
     {
-        self.msg.config.store(self.deps.storage)?;
+        self.msg
+            .config
+            .store(self.deps.storage)
+            .map_err(ContractError::StoreConfig)?;
 
         SupportedPairs::<C>::new(self.msg.swap_tree.into_tree())?
             .validate_tickers()?
@@ -78,7 +81,8 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> ContractResult<CwResponse> {
-    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))?;
+    versioning::initialize(deps.storage, version!(CONTRACT_STORAGE_VERSION))
+        .map_err(ContractError::InitializeVersioning)?;
 
     InstantiateWithCurrency::cmd(deps, msg)?;
 
@@ -88,20 +92,26 @@ pub fn instantiate(
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult<CwResponse> {
     versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))
-        .map_err(Into::into)
+        .map_err(ContractError::UpdateSoftware)
         .and_then(response::response)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
 pub fn query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> ContractResult<Binary> {
     match msg {
-        QueryMsg::ContractVersion {} => Ok(to_binary(&package_version!())?),
-        QueryMsg::Config {} => Ok(to_binary(&query_config(deps.storage)?)?),
-        QueryMsg::Feeders {} => Ok(to_binary(&Feeders::get(deps.storage)?)?),
-        QueryMsg::IsFeeder { address } => {
-            Ok(to_binary(&Feeders::is_feeder(deps.storage, &address)?)?)
+        QueryMsg::ContractVersion {} => {
+            to_binary(&package_version!()).map_err(ContractError::ConvertToBinary)
         }
-        _ => Ok(QueryWithOracleBase::cmd(deps, env, msg)?),
+        QueryMsg::Config {} => {
+            to_binary(&query_config(deps.storage)?).map_err(ContractError::ConvertToBinary)
+        }
+        QueryMsg::Feeders {} => Feeders::get(deps.storage)
+            .map_err(ContractError::LoadFeeders)
+            .and_then(|ref feeders| to_binary(feeders).map_err(ContractError::ConvertToBinary)),
+        QueryMsg::IsFeeder { address } => Feeders::is_feeder(deps.storage, &address)
+            .map_err(ContractError::LoadFeeders)
+            .and_then(|ref f| to_binary(&f).map_err(ContractError::ConvertToBinary)),
+        _ => QueryWithOracleBase::cmd(deps, env, msg),
     }
 }
 

@@ -72,8 +72,9 @@ pub struct OracleRef {
 
 impl OracleRef {
     pub fn try_from(contract: Addr, querier: &QuerierWrapper<'_>) -> Result<Self> {
-        let resp: ConfigResponse =
-            querier.query_wasm_smart(contract.clone(), &QueryMsg::Config {})?;
+        let resp: ConfigResponse = querier
+            .query_wasm_smart(contract.clone(), &QueryMsg::Config {})
+            .map_err(ContractError::StubConfigQuery)?;
 
         let base_currency = resp.config.base_asset;
 
@@ -119,7 +120,7 @@ impl OracleRef {
 
         querier
             .query_wasm_smart(self.addr.clone(), &msg)
-            .map_err(ContractError::from)
+            .map_err(ContractError::StubSwapPathQuery)
     }
 
     fn check_base<OracleBase, Err>(&self) -> StdResult<(), Err>
@@ -227,11 +228,14 @@ where
     OracleBase: Currency,
 {
     fn add_alarm(&mut self, alarm: Alarm) -> Result<()> {
-        self.batch.schedule_execute_no_reply(wasm_execute(
-            self.addr().clone(),
-            &ExecuteMsg::AddPriceAlarm { alarm },
-            vec![],
-        )?);
+        self.batch.schedule_execute_no_reply(
+            wasm_execute(
+                self.addr().clone(),
+                &ExecuteMsg::AddPriceAlarm { alarm },
+                vec![],
+            )
+            .map_err(ContractError::StubAddAlarm)?,
+        );
 
         Ok(())
     }

@@ -40,8 +40,11 @@ impl<'a> ExecWithOracleBase<'a> {
             sender,
         };
 
-        let config = Config::load(visitor.deps.storage)?;
-        currency::visit_any_on_ticker::<Lpns, _>(&config.base_asset, visitor)
+        Config::load(visitor.deps.storage)
+            .map_err(ContractError::LoadConfig)
+            .and_then(|config: Config| {
+                currency::visit_any_on_ticker::<Lpns, _>(&config.base_asset, visitor)
+            })
     }
 }
 
@@ -55,7 +58,9 @@ impl<'a> AnyVisitor for ExecWithOracleBase<'a> {
     {
         match self.msg {
             ExecuteMsg::FeedPrices { prices } => {
-                if !Feeders::is_feeder(self.deps.storage, &self.sender)? {
+                if !Feeders::is_feeder(self.deps.storage, &self.sender)
+                    .map_err(ContractError::LoadFeeders)?
+                {
                     return Err(ContractError::UnknownFeeder {});
                 }
 
@@ -94,7 +99,7 @@ fn try_feed_prices<OracleBase>(
 where
     OracleBase: Currency + DeserializeOwned,
 {
-    let config = Config::load(storage)?;
+    let config = Config::load(storage).map_err(ContractError::LoadConfig)?;
     let oracle = Feeds::<OracleBase>::with(config.price_config);
 
     oracle

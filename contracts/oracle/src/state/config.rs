@@ -39,10 +39,12 @@ impl Config {
         storage: &mut dyn Storage,
         price_config: PriceConfig,
     ) -> Result<(), ContractError> {
-        Self::STORAGE.update(storage, |mut c| -> StdResult<_> {
-            c.price_config = price_config;
-            Ok(c)
-        })?;
-        Ok(())
+        Self::STORAGE
+            .update(storage, |mut c| -> StdResult<_> {
+                c.price_config = price_config;
+                Ok(c)
+            })
+            .map(|_| ())
+            .map_err(ContractError::UpdateConfig)
     }
 }

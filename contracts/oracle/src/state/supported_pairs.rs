@@ -6,10 +6,7 @@ use currency::{
     payment::PaymentGroup, visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Symbol,
     SymbolOwned,
 };
-use sdk::{
-    cosmwasm_std::{StdError, Storage},
-    cw_storage_plus::Item,
-};
+use sdk::{cosmwasm_std::Storage, cw_storage_plus::Item};
 use swap::SwapTarget;
 use tree::{FindBy as _, NodeRef};
 
@@ -112,16 +109,14 @@ where
 
     pub fn load(storage: &dyn Storage) -> ContractResult<Self> {
         Self::DB_ITEM
-            .may_load(storage)
-            .map_err(Into::into)
-            .and_then(|may_pairs| {
-                may_pairs
-                    .ok_or_else(|| StdError::generic_err("supported pairs tree not found").into())
-            })
+            .load(storage)
+            .map_err(ContractError::LoadSupportedPairs)
     }
 
     pub fn save(&self, storage: &mut dyn Storage) -> ContractResult<()> {
-        Self::DB_ITEM.save(storage, self).map_err(Into::into)
+        Self::DB_ITEM
+            .save(storage, self)
+            .map_err(ContractError::StoreSupportedPairs)
     }
 
     pub fn load_path(
