@@ -214,11 +214,8 @@ where
     pub fn remove_all(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms_below
             .remove(self.storage.deref_mut(), subscriber.clone())
-            .and_then(|()| {
-                self.alarms_above_or_equal
-                    .remove(self.storage.deref_mut(), subscriber)
-            })
             .map_err(Into::into)
+            .and_then(|()| self.remove_above_or_equal(subscriber))
     }
 
     pub fn out_for_delivery(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
