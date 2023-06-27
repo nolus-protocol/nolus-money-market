@@ -247,20 +247,17 @@ fn overwrite_alarm_and_dispatch() {
 
     platform::tests::assert_event(
         &res.events,
-        &Event::new("wasm-pricealarm")
-            .add_attribute("receiver", "contract6"),
+        &Event::new("wasm-pricealarm").add_attribute("receiver", "contract6"),
     );
 
     platform::tests::assert_event(
         &res.events,
-        &Event::new("reply")
-            .add_attribute("mode", "handle_success"),
+        &Event::new("reply").add_attribute("mode", "handle_success"),
     );
 
     platform::tests::assert_event(
         &res.events,
-        &Event::new("wasm-market-alarm")
-            .add_attribute("delivered", "success"),
+        &Event::new("wasm-market-alarm").add_attribute("delivered", "success"),
     );
 }
 
