@@ -78,12 +78,6 @@ where
         Ok(LiquidityPool { config, total })
     }
 
-    pub fn balance(&self, account: &Addr, querier: &QuerierWrapper<'_>) -> Result<Coin<LPN>> {
-        let balance = bank::balance(account, querier)?;
-
-        Ok(balance)
-    }
-
     pub fn total_lpn(&self, deps: &Deps<'_>, env: &Env) -> Result<Coin<LPN>> {
         let res = self.balance(&env.contract.address, &deps.querier)?
             + self.total.total_principal_due()
@@ -241,6 +235,12 @@ where
         lease_addr: Addr,
     ) -> Result<Option<LoanResponse<LPN>>> {
         Loan::query(storage, lease_addr)
+    }
+
+    fn balance(&self, account: &Addr, querier: &QuerierWrapper<'_>) -> Result<Coin<LPN>> {
+        let balance = bank::balance(account, querier)?;
+
+        Ok(balance)
     }
 }
 
