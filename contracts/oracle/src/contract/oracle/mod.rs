@@ -148,13 +148,12 @@ where
             .map(|dispatcher| (dispatcher.nb_sent(), dispatcher.into()))
     }
 
-
     #[cfg(debug_assertions)]
     fn assert_unique_subscribers(subscribers: &[Addr]) {
         use std::collections::HashSet;
-    
+
         let set: HashSet<&Addr> = HashSet::from_iter(subscribers);
-    
+
         assert_eq!(set.len(), subscribers.len());
-    }    
+    }
 }
