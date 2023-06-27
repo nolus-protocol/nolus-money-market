@@ -118,7 +118,7 @@ where
 
     #[cfg(test)]
     fn remove(&mut self, receiver: Addr) -> Result<(), ContractError> {
-        self.alarms.remove(receiver).map_err(Into::into)
+        self.alarms.remove_all(receiver).map_err(Into::into)
     }
 }
 
@@ -146,6 +146,8 @@ where
         if let Some(above) = self.above_or_equal {
             self.price_alarms
                 .add_alarm_above_or_equal::<C, BaseC>(self.receiver.clone(), above.try_into()?)?;
+        } else {
+            self.price_alarms.remove_above_or_equal(self.receiver.clone())?;
         }
 
         self.price_alarms

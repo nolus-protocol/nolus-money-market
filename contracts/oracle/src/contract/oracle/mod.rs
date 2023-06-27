@@ -129,6 +129,15 @@ where
             .take(max_count.try_into()?)
             .collect::<ContractResult<Vec<Addr>>>()?;
 
+        #[cfg(debug_assertions)]
+        {
+            use std::collections::HashSet;
+
+            let set: HashSet<&Addr> = HashSet::from_iter(subscribers.as_slice());
+
+            debug_assert_eq!(set.len(), subscribers.len());
+        }
+
         let mut alarms: MarketAlarms<'_, &mut (dyn Storage + 'storage)> =
             MarketAlarms::new(self.storage.deref_mut());
 

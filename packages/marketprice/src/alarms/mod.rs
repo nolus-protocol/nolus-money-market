@@ -205,7 +205,13 @@ where
         self.add_alarm_above_or_equal_internal(subscriber, &NormalizedPrice::new(&alarm))
     }
 
-    pub fn remove(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
+    pub fn remove_above_or_equal(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
+        self.alarms_above_or_equal
+            .remove(self.storage.deref_mut(), subscriber)
+            .map_err(Into::into)
+    }
+
+    pub fn remove_all(&mut self, subscriber: Addr) -> Result<(), AlarmError> {
         self.alarms_below
             .remove(self.storage.deref_mut(), subscriber.clone())
             .and_then(|()| {
@@ -427,8 +433,8 @@ pub mod tests {
             )
             .unwrap();
 
-        alarms.remove(addr1).unwrap();
-        alarms.remove(addr2).unwrap();
+        alarms.remove_all(addr1).unwrap();
+        alarms.remove_all(addr2).unwrap();
 
         let resp: Vec<_> = alarms
             .alarms(price::total_of(Coin::<Atom>::new(1)).is(Coin::<Base>::new(15)))
