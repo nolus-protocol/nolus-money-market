@@ -147,7 +147,8 @@ where
             self.price_alarms
                 .add_alarm_above_or_equal::<C, BaseC>(self.receiver.clone(), above.try_into()?)?;
         } else {
-            self.price_alarms.remove_above_or_equal(self.receiver.clone())?;
+            self.price_alarms
+                .remove_above_or_equal(self.receiver.clone())?;
         }
 
         self.price_alarms
