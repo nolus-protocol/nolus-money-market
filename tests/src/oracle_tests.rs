@@ -227,14 +227,13 @@ fn overwrite_alarm_and_dispatch() {
 
     test_case.message_receiver.assert_empty();
 
-    let res: AppResponse = oracle_wrapper::feed_price::<_, Cro, Usdc>(
+    // If doesn't panic, then prices should be fed successfully.
+    let _: AppResponse = oracle_wrapper::feed_price::<_, Cro, Usdc>(
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::new(1),
         Coin::new(5),
     );
-
-    dbg!(res);
 
     let res: AppResponse = test_case
         .app
@@ -246,7 +245,23 @@ fn overwrite_alarm_and_dispatch() {
         )
         .unwrap();
 
-    dbg!(res);
+    platform::tests::assert_event(
+        &res.events,
+        &Event::new("wasm-pricealarm")
+            .add_attribute("receiver", "contract6"),
+    );
+
+    platform::tests::assert_event(
+        &res.events,
+        &Event::new("reply")
+            .add_attribute("mode", "handle_success"),
+    );
+
+    platform::tests::assert_event(
+        &res.events,
+        &Event::new("wasm-market-alarm")
+            .add_attribute("delivered", "success"),
+    );
 }
 
 fn open_lease(test_case: &mut TestCase<Lpn>, downpayment: TheCoin) -> Addr {
