@@ -188,6 +188,79 @@ fn feed_price_with_alarm() {
     dbg!(res);
 }
 
+#[test]
+fn overwrite_alarm_and_dispatch() {
+    let mut test_case = create_test_case();
+    oracle_wrapper::add_feeder(&mut test_case, ADMIN);
+
+    let lease = open_lease(&mut test_case, Coin::new(1000));
+
+    test_case
+        .app
+        .execute_contract(
+            lease.clone(),
+            test_case.oracle.clone().unwrap(),
+            &oracle::msg::ExecuteMsg::AddPriceAlarm {
+                alarm: Alarm::new(
+                    price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(5)),
+                    Some(price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(5))),
+                ),
+            },
+            &[],
+        )
+        .unwrap();
+
+    test_case
+        .app
+        .execute_contract(
+            lease.clone(),
+            test_case.oracle.clone().unwrap(),
+            &oracle::msg::ExecuteMsg::AddPriceAlarm {
+                alarm: Alarm::new(
+                    price::total_of(Coin::<Cro>::new(1)).is(Coin::<Usdc>::new(10)),
+                    None,
+                ),
+            },
+            &[],
+        )
+        .unwrap();
+
+    test_case.message_receiver.assert_empty();
+
+    // If doesn't panic, then prices should be fed successfully.
+    let _: AppResponse = oracle_wrapper::feed_price::<_, Cro, Usdc>(
+        &mut test_case,
+        Addr::unchecked(ADMIN),
+        Coin::new(1),
+        Coin::new(5),
+    );
+
+    let res: AppResponse = test_case
+        .app
+        .execute_contract(
+            lease,
+            test_case.oracle.clone().unwrap(),
+            &oracle::msg::ExecuteMsg::DispatchAlarms { max_count: 5 },
+            &[],
+        )
+        .unwrap();
+
+    platform::tests::assert_event(
+        &res.events,
+        &Event::new("wasm-pricealarm").add_attribute("receiver", "contract6"),
+    );
+
+    platform::tests::assert_event(
+        &res.events,
+        &Event::new("reply").add_attribute("mode", "handle_success"),
+    );
+
+    platform::tests::assert_event(
+        &res.events,
+        &Event::new("wasm-market-alarm").add_attribute("delivered", "success"),
+    );
+}
+
 fn open_lease(test_case: &mut TestCase<Lpn>, downpayment: TheCoin) -> Addr {
     test_case
         .app
