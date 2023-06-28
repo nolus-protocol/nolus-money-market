@@ -1,4 +1,5 @@
-use finance::{coin::CoinDTO, currency::Group};
+use currency::Group;
+use finance::coin::CoinDTO;
 use sdk::{
     cosmos_sdk_proto::{
         cosmos::base::v1beta1::Coin as CosmosSdkCoin, ibc::applications::transfer::v1::MsgTransfer,
@@ -98,11 +99,11 @@ impl<'c> From<Sender<'c>> for Transaction {
 
 #[cfg(test)]
 mod test {
-    use finance::{
-        coin::{Amount, Coin},
-        currency::Currency,
-        test::currency::{Nls, TestExtraCurrencies, Usdc},
+    use currency::{
+        test::{Nls, TestExtraCurrencies, Usdc},
+        Currency,
     };
+    use finance::coin::{Amount, Coin};
     use sdk::{
         cosmos_sdk_proto::{
             cosmos::base::v1beta1::Coin as CosmosSdkCoin,

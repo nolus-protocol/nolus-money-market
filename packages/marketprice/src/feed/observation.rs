@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{currency::Currency, price::Price};
+use currency::Currency;
+use finance::price::Price;
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 #[derive(Serialize, Deserialize)]

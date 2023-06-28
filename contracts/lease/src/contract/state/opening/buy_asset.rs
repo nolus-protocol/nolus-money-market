@@ -1,12 +1,12 @@
 use cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use serde::{Deserialize, Serialize};
 
-use currency::lease::LeaseGroup;
+use currency::{lease::LeaseGroup, Symbol};
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartLocalRemoteState, SwapState,
     SwapTask, TransferOutState,
 };
-use finance::{coin::CoinDTO, currency::Symbol};
+use finance::coin::CoinDTO;
 use lpp::stub::LppRef;
 use oracle::stub::OracleRef;
 use platform::{

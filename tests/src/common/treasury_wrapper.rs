@@ -1,4 +1,4 @@
-use finance::currency::Currency;
+use currency::Currency;
 use sdk::{
     cosmwasm_std::{Addr, StdError},
     cw_multi_test::Executor,

@@ -122,8 +122,9 @@ mod tests {
 
     use crate::{
         coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, period::Period,
-        ratio::Rational, test::currency::Usdc, zero::Zero,
+        ratio::Rational, zero::Zero,
     };
+    use currency::test::Usdc;
 
     use super::InterestPeriod;
 

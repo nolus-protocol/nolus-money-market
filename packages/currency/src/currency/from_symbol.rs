@@ -62,13 +62,11 @@ where
 
 #[cfg(test)]
 mod test {
+    use crate::test::{Nls, Usdc};
     use crate::{
         currency::Currency,
         error::Error,
-        test::{
-            currency::{Nls, Usdc},
-            visitor::{Expect, ExpectUnknownCurrency},
-        },
+        test::visitor::{Expect, ExpectUnknownCurrency},
     };
 
     #[test]

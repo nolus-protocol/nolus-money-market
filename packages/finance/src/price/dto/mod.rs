@@ -6,13 +6,12 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::CoinDTO,
-    currency::{Currency, Group},
     error::{Error, Result as FinanceResult},
     price::Price,
 };
+use currency::{Currency, Group};
 
 mod unchecked;
-pub mod with_base;
 pub mod with_price;
 pub mod with_quote;
 
@@ -201,8 +200,8 @@ mod test {
     use crate::{
         coin::Coin,
         price::{self, dto::PriceDTO, Price},
-        test::currency::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
     };
+    use currency::test::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc};
 
     type TestPriceDTO = PriceDTO<TestExtraCurrencies, TestCurrencies>;
 
@@ -256,11 +255,9 @@ mod test_invariant {
 
     use sdk::cosmwasm_std::{from_slice, StdError, StdResult};
 
-    use crate::{
-        coin::{Coin, CoinDTO},
-        currency::{Currency, Group},
-        test::currency::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
-    };
+    use crate::coin::{Coin, CoinDTO};
+    use currency::test::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc};
+    use currency::{Currency, Group};
 
     use super::PriceDTO;
 

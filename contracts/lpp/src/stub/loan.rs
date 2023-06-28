@@ -1,7 +1,8 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
 use cosmwasm_std::Timestamp;
-use finance::{coin::Coin, currency::Currency, percent::Percent};
+use currency::Currency;
+use finance::{coin::Coin, percent::Percent};
 use platform::batch::Batch;
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -109,9 +110,8 @@ where
 #[cfg(test)]
 mod test {
     use cosmwasm_std::Timestamp;
-    use finance::{
-        coin::Coin, duration::Duration, percent::Percent, test::currency::Usdc, zero::Zero,
-    };
+    use currency::test::Usdc;
+    use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
     use platform::batch::Batch;
 
     use crate::{

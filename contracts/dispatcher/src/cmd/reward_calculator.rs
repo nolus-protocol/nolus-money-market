@@ -1,4 +1,5 @@
-use finance::{coin::Coin, currency::Currency, percent::Percent};
+use currency::Currency;
+use finance::{coin::Coin, percent::Percent};
 use lpp::{
     msg::LppBalanceResponse,
     stub::{Lpp as LppTrait, WithLpp},

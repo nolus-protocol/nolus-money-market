@@ -1,6 +1,8 @@
-use finance::currency::{self, AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
-
-use crate::{currency_macro::schemars, define_currency, define_symbol, SingleVisitorAdapter};
+use crate::{
+    currency::{self, AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic},
+    currency_macro::schemars,
+    define_currency, define_symbol, SingleVisitorAdapter,
+};
 
 define_symbol! {
     NLS {

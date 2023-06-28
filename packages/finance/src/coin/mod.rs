@@ -10,7 +10,8 @@ use gcd::Gcd;
 
 use sdk::schemars::{self, JsonSchema};
 
-use crate::{currency::Currency, zero::Zero};
+use crate::zero::Zero;
+use currency::Currency;
 
 pub use self::coinc::{from_amount_ticker, CoinDTO, IntoDTO};
 
@@ -221,10 +222,8 @@ where
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        percent::test::test_of,
-        test::currency::{Nls, Usdc},
-    };
+    use crate::percent::test::test_of;
+    use currency::test::{Nls, Usdc};
 
     use super::{Amount, Coin};
 

@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use currency::lease::LeaseGroup;
+use currency::{lease::LeaseGroup, Symbol};
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, SwapState, SwapTask,
     TransferInFinishState, TransferInInitState, TransferOutState,
 };
-use finance::{coin::CoinDTO, currency::Symbol};
+use finance::coin::CoinDTO;
 use oracle::stub::OracleRef;
 use platform::{
     message::Response as MessageResponse, state_machine::Response as StateMachineResponse,

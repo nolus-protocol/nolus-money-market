@@ -1,6 +1,6 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use finance::currency::Currency;
+use currency::Currency;
 use platform::{
     bank::{self, BankAccount},
     batch::Batch,
@@ -71,7 +71,8 @@ pub(super) fn query_rewards(storage: &dyn Storage, addr: Addr) -> Result<Rewards
 #[cfg(test)]
 mod test {
     use access_control::SingleUserAccess;
-    use finance::{coin::Coin, percent::Percent, test::currency::Usdc};
+    use currency::test::Usdc;
+    use finance::{coin::Coin, percent::Percent};
     use platform::coin_legacy;
     use sdk::cosmwasm_std::{
         testing::{mock_dependencies, mock_env, mock_info, MOCK_CONTRACT_ADDR},

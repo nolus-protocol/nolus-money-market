@@ -152,8 +152,8 @@ mod test {
         currency::{Currency, Group},
         error::Error,
         test::{
-            currency::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
             visitor::{Expect, ExpectPair, ExpectUnknownCurrency},
+            Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc,
         },
     };
 

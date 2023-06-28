@@ -1,7 +1,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 
 use currency::lpn::Lpns;
-use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
+use currency::{self, AnyVisitor, AnyVisitorResult, Currency};
 use sdk::cosmwasm_std::{to_binary, Binary, Deps, Env};
 
 use crate::{
@@ -22,7 +22,7 @@ impl<'a> QueryWithOracleBase<'a> {
         let visitor = Self { deps, env, msg };
 
         let config = Config::load(visitor.deps.storage)?;
-        visit_any_on_ticker::<Lpns, _>(&config.base_asset, visitor)
+        currency::visit_any_on_ticker::<Lpns, _>(&config.base_asset, visitor)
     }
 }
 

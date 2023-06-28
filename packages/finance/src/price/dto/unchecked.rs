@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
-use crate::{coin::CoinDTO, currency::Group, error::Error};
+use crate::{coin::CoinDTO, error::Error};
+use currency::Group;
 
 use super::PriceDTO as ValidatedDTO;
 

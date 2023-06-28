@@ -2,7 +2,7 @@ use std::num::TryFromIntError;
 
 use thiserror::Error;
 
-use finance::currency::{Currency, Symbol, SymbolOwned};
+use currency::{Currency, Symbol, SymbolOwned};
 use marketprice::{alarms::errors::AlarmError, error::PriceFeedsError, feeders::PriceFeedersError};
 use sdk::cosmwasm_std::{Addr, StdError};
 
@@ -19,6 +19,9 @@ pub enum ContractError {
 
     #[error("[Oracle] {0}")]
     AlarmError(#[from] AlarmError),
+
+    #[error("[Oracle] {0}")]
+    Currency(#[from] currency::error::Error),
 
     #[error("[Oracle] {0}")]
     Finance(#[from] finance::error::Error),

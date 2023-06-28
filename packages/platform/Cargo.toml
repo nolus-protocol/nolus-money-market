@@ -9,6 +9,7 @@ license.workspace = true
 testing = ["sdk/testing"]
 
 [dependencies]
+currency = { workspace = true }
 finance = { workspace = true }
 sdk = { workspace = true, features = ["cosmos", "cosmos_ibc", "neutron"] }
 

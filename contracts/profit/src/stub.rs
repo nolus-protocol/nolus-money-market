@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{coin::Coin, currency::Currency};
+use currency::Currency;
+use finance::coin::Coin;
 use platform::{
     bank::{FixedAddressSender, LazySenderStub},
     batch::Batch,

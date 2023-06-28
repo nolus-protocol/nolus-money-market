@@ -1,5 +1,5 @@
-use currency::native::Nls;
-use finance::{coin::Coin, currency::Currency, interest::InterestPeriod, period::Period};
+use currency::{native::Nls, Currency};
+use finance::{coin::Coin, interest::InterestPeriod, period::Period};
 use lpp::stub::{Lpp as LppTrait, WithLpp};
 use oracle::{convert, stub::OracleRef};
 use platform::batch::Batch;

@@ -1,5 +1,4 @@
-use currency::{lpn::Usdc, native::Nls};
-use finance::currency::Currency;
+use currency::{lpn::Usdc, native::Nls, Currency};
 use rewards_dispatcher::{msg::ConfigResponse, ContractError};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Event},

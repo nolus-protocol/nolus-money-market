@@ -4,15 +4,16 @@ use std::{
     result::Result as StdResult,
 };
 
+use sdk::schemars::{self, JsonSchema};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use sdk::schemars::{self, JsonSchema};
+use currency::{
+    self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor, Symbol,
+    SymbolOwned,
+};
 
 use crate::{
     coin::Amount,
-    currency::{
-        self, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor, Symbol, SymbolOwned,
-    },
     error::{Error, Result},
 };
 
@@ -62,16 +63,20 @@ where
             V: WithCoin,
         {
             type Output = V::Output;
-            type Error = V::Error;
+            type Error = CmdError<V::Error, Error>;
 
             fn on<C>(self) -> AnyVisitorResult<Self>
             where
                 C: Currency,
             {
-                self.1.on::<C>(self.0.amount().into())
+                self.1
+                    .on::<C>(self.0.amount().into())
+                    .map_err(Self::Error::from_customer_err)
             }
         }
+
         currency::visit_any_on_ticker::<G, _>(&self.ticker, CoinTransformerAny(self, cmd))
+            .map_err(CmdError::into_customer_err)
     }
 }
 
@@ -184,11 +189,14 @@ impl<G> WithCoin for IntoDTO<G> {
 mod test {
     use sdk::cosmwasm_std::{from_slice, to_vec};
 
+    use currency::{
+        test::{Dai, Nls, TestCurrencies, Usdc},
+        Currency, Group, SymbolStatic,
+    };
+
     use crate::{
         coin::{Amount, Coin, CoinDTO},
-        currency::{Currency, Group, SymbolStatic},
         error::Error,
-        test::currency::{Dai, Nls, TestCurrencies, Usdc},
     };
 
     #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -236,11 +244,11 @@ mod test {
         type TheCurrency = Usdc;
         assert!(matches!(
             super::from_amount_ticker::<TestCurrencies>(amount, TheCurrency::DEX_SYMBOL),
-            Err(Error::NotInCurrencyGroup { .. })
+            Err(Error::CurrencyError { .. })
         ));
         assert!(matches!(
             super::from_amount_ticker::<TestCurrencies>(amount, TheCurrency::BANK_SYMBOL),
-            Err(Error::NotInCurrencyGroup { .. })
+            Err(Error::CurrencyError { .. })
         ));
     }
 
@@ -248,7 +256,7 @@ mod test {
     fn from_amount_ticker_not_in_the_group() {
         assert!(matches!(
             super::from_amount_ticker::<TestCurrencies>(20, Dai::TICKER),
-            Err(Error::NotInCurrencyGroup { .. })
+            Err(Error::CurrencyError { .. })
         ));
     }
 

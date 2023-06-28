@@ -1,7 +1,7 @@
 use prost::DecodeError;
 use thiserror::Error;
 
-use finance::currency::Currency;
+use currency::Currency;
 use sdk::cosmwasm_std::{Addr, StdError};
 
 #[derive(Error, Debug, PartialEq)]
@@ -20,6 +20,9 @@ pub enum Error {
 
     #[error("[Platform] Expecting code id {0} for the contract {1}")]
     UnexpectedCode(String, String),
+
+    #[error("[Platform] {0}")]
+    Currency(#[from] currency::error::Error),
 
     #[error("[Platform] {0}")]
     Finance(#[from] finance::error::Error),

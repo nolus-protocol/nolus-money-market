@@ -1,6 +1,7 @@
 use sdk::cosmwasm_std::{Uint128, Uint256};
 
-use crate::{coin::Coin, currency::Currency, duration::Duration, ratio::Ratio};
+use crate::{coin::Coin, duration::Duration, ratio::Ratio};
+use currency::Currency;
 
 use super::{Fractionable, HigherRank};
 
@@ -31,10 +32,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        coin::Coin, duration::Duration, fractionable::Fractionable, ratio::Rational,
-        test::currency::Nls,
-    };
+    use crate::{coin::Coin, duration::Duration, fractionable::Fractionable, ratio::Rational};
+    use currency::test::Nls;
 
     #[test]
     fn safe_mul() {

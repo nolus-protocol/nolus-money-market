@@ -1,6 +1,7 @@
 use serde::Serialize;
 
-use finance::{coin::Coin, currency::Currency};
+use currency::Currency;
+use finance::coin::Coin;
 use lpp::stub::{loan::LppLoan as LppLoanTrait, LppRef};
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use profit::stub::ProfitRef;

@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use currency::native::Nls;
-use finance::{currency::SymbolOwned, liability::Liability, percent::Percent};
+use currency::{native::Nls, SymbolOwned};
+use finance::{liability::Liability, percent::Percent};
 use lease::api::{ConnectionParams, DownpaymentCoin, InterestPaymentSpec};
 use lpp::{msg::ExecuteMsg, stub::LppRef};
 use oracle::stub::OracleRef;

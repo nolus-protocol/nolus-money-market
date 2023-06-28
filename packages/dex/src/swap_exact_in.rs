@@ -2,9 +2,9 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
+use currency::{Group, Symbol};
 use finance::{
     coin::{self, Amount, CoinDTO},
-    currency::{Group, Symbol},
     zero::Zero,
 };
 use platform::{batch::Batch, trx};

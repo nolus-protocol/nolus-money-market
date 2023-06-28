@@ -1,7 +1,8 @@
 pub use serde::{Deserialize, Serialize};
 
-pub use finance::currency::{Currency, SymbolStatic};
 pub use sdk::schemars::{self, JsonSchema};
+
+pub use crate::currency::{Currency, SymbolStatic};
 
 #[macro_export]
 macro_rules! define_currency {

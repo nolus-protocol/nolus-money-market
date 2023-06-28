@@ -1,5 +1,4 @@
 pub mod coin;
-pub mod currency;
 pub mod duration;
 pub mod error;
 pub mod fraction;

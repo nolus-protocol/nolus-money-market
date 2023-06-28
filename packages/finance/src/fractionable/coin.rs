@@ -1,9 +1,7 @@
 use sdk::cosmwasm_std::{Uint128, Uint256};
 
-use crate::{
-    coin::{Amount, Coin},
-    currency::Currency,
-};
+use crate::coin::{Amount, Coin};
+use currency::Currency;
 
 use super::HigherRank;
 
@@ -42,8 +40,8 @@ mod test {
         coin::{Amount, Coin},
         percent::Percent,
         ratio::Rational,
-        test::currency::Nls,
     };
+    use currency::test::Nls;
 
     #[test]
     fn safe_mul() {

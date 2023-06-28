@@ -3,9 +3,9 @@ use currency::{
     lpn::Usdc,
     native::Nls,
 };
+use currency::{Currency, SymbolOwned};
 use finance::{
     coin::{Amount, Coin},
-    currency::{Currency, SymbolOwned},
     duration::Duration,
     percent::Percent,
     price::{self, base::BasePrice, dto::PriceDTO},

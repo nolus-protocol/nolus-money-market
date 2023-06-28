@@ -2,9 +2,9 @@ use std::{fmt::Debug, marker::PhantomData};
 
 use serde::{de::DeserializeOwned, Deserialize, Deserializer, Serialize, Serializer};
 
-use currency::payment::PaymentGroup;
-use finance::currency::{
-    visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolOwned,
+use currency::{
+    payment::PaymentGroup, visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Symbol,
+    SymbolOwned,
 };
 use sdk::{
     cosmwasm_std::{StdError, Storage},
@@ -237,7 +237,7 @@ where
 mod tests {
     use std::cmp::Ordering;
 
-    use finance::{currency::Currency, test::currency::Usdc};
+    use currency::{test::Usdc, Currency};
     use sdk::cosmwasm_std::testing;
     use tree::HumanReadableTree;
 

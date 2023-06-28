@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+use currency::Currency;
 use finance::{
     coin::Coin,
-    currency::Currency,
     fraction::Fraction,
     percent::{Percent, Units},
     ratio::Rational,

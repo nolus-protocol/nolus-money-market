@@ -1,7 +1,5 @@
-use finance::{
-    coin::{Coin, CoinDTO},
-    currency::{Currency, Group},
-};
+use currency::{Currency, Group};
+use finance::coin::{Coin, CoinDTO};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Timestamp},
     neutron_sdk::{
@@ -127,10 +125,8 @@ impl<'c> From<Sender<'c>> for Batch {
 
 #[cfg(test)]
 mod test {
-    use finance::{
-        coin::Coin,
-        test::currency::{Dai, Nls, TestExtraCurrencies, Usdc},
-    };
+    use currency::test::{Dai, Nls, TestExtraCurrencies, Usdc};
+    use finance::coin::Coin;
     use sdk::cosmwasm_std::{Addr, Timestamp};
 
     use crate::{

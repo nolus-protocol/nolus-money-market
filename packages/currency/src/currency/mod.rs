@@ -65,9 +65,9 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        currency::Currency,
         error::Error,
-        test::currency::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
+        test::{Dai, Nls, TestCurrencies, TestExtraCurrencies, Usdc},
+        Currency,
     };
 
     #[test]

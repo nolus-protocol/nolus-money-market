@@ -1,8 +1,8 @@
 use serde::Serialize;
 
+use currency::Currency;
 use finance::{
     coin::Coin,
-    currency::Currency,
     liability::{self, Status},
     price::{self, Price},
     zero::Zero,

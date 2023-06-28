@@ -2,6 +2,7 @@ use std::any::type_name;
 
 use thiserror::Error;
 
+use currency::error::Error as CurrencyError;
 use dex::Error as DexError;
 use finance::error::Error as FinanceError;
 use lpp::error::ContractError as LppError;
@@ -21,6 +22,9 @@ pub enum ContractError {
 
     #[error("[Lease] Unauthorized")]
     Unauthorized {},
+
+    #[error("[Lease] {0}")]
+    CurrencyError(#[from] CurrencyError),
 
     #[error("[Lease] {0}")]
     FinanceError(#[from] FinanceError),

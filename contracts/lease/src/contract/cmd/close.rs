@@ -1,4 +1,4 @@
-use finance::currency::Currency;
+use currency::Currency;
 use platform::{bank::BankAccount, batch::Batch};
 
 use crate::{

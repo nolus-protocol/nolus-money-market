@@ -1,8 +1,8 @@
 use serde::{de::DeserializeOwned, Serialize};
 
+use currency::Currency;
 use finance::{
     coin::Coin,
-    currency::Currency,
     percent::Percent,
     price::{self, Price},
 };
@@ -247,7 +247,8 @@ where
 #[cfg(test)]
 mod test {
     use access_control::SingleUserAccess;
-    use finance::{duration::Duration, price, test::currency::Usdc};
+    use currency::test::Usdc;
+    use finance::{duration::Duration, price};
     use platform::coin_legacy;
     use sdk::cosmwasm_std::{
         testing::{self, MOCK_CONTRACT_ADDR},

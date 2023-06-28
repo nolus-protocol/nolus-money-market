@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{coin::Coin, currency::Currency, percent::Percent, zero::Zero};
+use crate::{coin::Coin, percent::Percent, zero::Zero};
+use currency::Currency;
 
 use super::{Liability, Zone};
 
@@ -170,8 +171,8 @@ mod tests {
         coin::{Amount, Coin},
         duration::Duration,
         percent::Percent,
-        test::currency::Nls,
     };
+    use currency::test::Nls;
 
     use super::{check_liability, Cause, Liability, Status, Zone};
 
@@ -921,7 +922,8 @@ mod tests {
 
 #[cfg(test)]
 mod test_status {
-    use crate::{percent::Percent, test::currency::Usdc};
+    use crate::percent::Percent;
+    use currency::test::Usdc;
 
     use super::{Cause, Liquidation, Status, Zone};
 

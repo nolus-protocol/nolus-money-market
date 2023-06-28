@@ -2,7 +2,8 @@ use std::{marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
-use finance::{coin::CoinDTO, currency::Group, zero::Zero};
+use currency::Group;
+use finance::{coin::CoinDTO, zero::Zero};
 use platform::{
     batch::{Batch, Emitter},
     message::Response as MessageResponse,
@@ -206,10 +207,8 @@ impl CoinVisitor for Counter {
 
 #[cfg(test)]
 mod test {
-    use finance::{
-        coin::{Coin, CoinDTO},
-        test::currency::{TestCurrencies, Usdc},
-    };
+    use currency::test::{TestCurrencies, Usdc};
+    use finance::coin::{Coin, CoinDTO};
 
     use crate::swap_task::{CoinVisitor, CoinsNb, IterNext};
 

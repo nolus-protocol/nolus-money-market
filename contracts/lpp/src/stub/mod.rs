@@ -1,11 +1,9 @@
 use std::{marker::PhantomData, result::Result as StdResult};
 
+use currency::error::CmdError;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use currency::lpn::Lpns;
-use finance::currency::{
-    visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolOwned,
-};
+use currency::{self, lpn::Lpns, AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolOwned};
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{Addr, QuerierWrapper};
 
@@ -72,7 +70,7 @@ impl LppRef {
     pub fn execute<V>(self, cmd: V, querier: &QuerierWrapper<'_>) -> StdResult<V::Output, V::Error>
     where
         V: WithLpp,
-        finance::error::Error: Into<V::Error>,
+        ContractError: Into<V::Error>,
     {
         struct CurrencyVisitor<'a, V> {
             cmd: V,
@@ -85,17 +83,19 @@ impl LppRef {
             V: WithLpp,
         {
             type Output = V::Output;
-            type Error = V::Error;
+            type Error = CmdError<V::Error, ContractError>;
 
             fn on<C>(self) -> AnyVisitorResult<Self>
             where
                 C: Currency + Serialize + DeserializeOwned,
             {
-                self.cmd.exec(self.lpp_ref.into_stub::<C>(self.querier))
+                self.cmd
+                    .exec(self.lpp_ref.into_stub::<C>(self.querier))
+                    .map_err(CmdError::from_customer_err)
             }
         }
 
-        visit_any_on_ticker::<Lpns, _>(
+        currency::visit_any_on_ticker::<Lpns, _>(
             &self.currency.clone(),
             CurrencyVisitor {
                 cmd,
@@ -103,6 +103,7 @@ impl LppRef {
                 querier,
             },
         )
+        .map_err(CmdError::into_customer_err)
     }
 
     pub fn execute_loan<Cmd>(
@@ -113,8 +114,7 @@ impl LppRef {
     ) -> StdResult<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLppLoan,
-        Cmd::Error: From<ContractError>,
-        finance::error::Error: Into<Cmd::Error>,
+        ContractError: Into<Cmd::Error>,
     {
         struct CurrencyVisitor<'a, Cmd, Lease> {
             cmd: Cmd,
@@ -126,22 +126,26 @@ impl LppRef {
         impl<'a, Cmd, Lease> AnyVisitor for CurrencyVisitor<'a, Cmd, Lease>
         where
             Cmd: WithLppLoan,
-            Cmd::Error: From<ContractError>,
+            ContractError: Into<Cmd::Error>,
             Lease: Into<Addr>,
         {
             type Output = Cmd::Output;
-            type Error = Cmd::Error;
+            type Error = CmdError<Cmd::Error, ContractError>;
 
             fn on<C>(self) -> AnyVisitorResult<Self>
             where
                 C: Currency + Serialize + DeserializeOwned,
             {
-                self.cmd
-                    .exec(self.lpp_ref.into_loan::<C>(self.lease, self.querier)?)
+                self.lpp_ref
+                    .into_loan::<C>(self.lease, self.querier)
+                    .map_err(CmdError::from_api_err)
+                    .and_then(|lpp_loan| {
+                        self.cmd.exec(lpp_loan).map_err(CmdError::from_customer_err)
+                    })
             }
         }
 
-        visit_any_on_ticker::<Lpns, _>(
+        currency::visit_any_on_ticker::<Lpns, _>(
             &self.currency.clone(),
             CurrencyVisitor {
                 cmd,
@@ -150,6 +154,7 @@ impl LppRef {
                 querier,
             },
         )
+        .map_err(CmdError::into_customer_err)
     }
 
     pub fn execute_lender<Cmd>(
@@ -159,7 +164,7 @@ impl LppRef {
     ) -> StdResult<Cmd::Output, Cmd::Error>
     where
         Cmd: WithLppLender,
-        finance::error::Error: Into<Cmd::Error>,
+        ContractError: Into<Cmd::Error>,
     {
         struct CurrencyVisitor<'a, Cmd> {
             cmd: Cmd,
@@ -172,17 +177,19 @@ impl LppRef {
             Cmd: WithLppLender,
         {
             type Output = Cmd::Output;
-            type Error = Cmd::Error;
+            type Error = CmdError<Cmd::Error, ContractError>;
 
             fn on<C>(self) -> AnyVisitorResult<Self>
             where
                 C: Currency + Serialize + DeserializeOwned,
             {
-                self.cmd.exec(self.lpp_ref.into_lender::<C>(self.querier))
+                self.cmd
+                    .exec(self.lpp_ref.into_lender::<C>(self.querier))
+                    .map_err(CmdError::from_customer_err)
             }
         }
 
-        visit_any_on_ticker::<Lpns, _>(
+        currency::visit_any_on_ticker::<Lpns, _>(
             &self.currency.clone(),
             CurrencyVisitor {
                 cmd,
@@ -190,6 +197,7 @@ impl LppRef {
                 querier,
             },
         )
+        .map_err(CmdError::into_customer_err)
     }
 
     fn into_stub<'a, C>(self, querier: &'a QuerierWrapper<'_>) -> LppStub<'a, C> {

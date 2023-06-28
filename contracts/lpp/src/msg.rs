@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use currency::{lpn::Lpns, native::Nls};
+use currency::{lpn::Lpns, native::Nls, Currency, SymbolOwned};
 use finance::{
     coin::{Coin, CoinDTO},
-    currency::{Currency, SymbolOwned},
     percent::Percent,
     price::Price,
 };

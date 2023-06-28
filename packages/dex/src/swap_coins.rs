@@ -1,4 +1,5 @@
-use finance::{coin::CoinDTO, currency::Group};
+use currency::Group;
+use finance::coin::CoinDTO;
 
 use super::swap_task::{CoinVisitor, IterNext, IterState};
 
@@ -34,11 +35,12 @@ where
 
 #[cfg(test)]
 mod test {
-    use finance::{
-        coin::{Amount, Coin, CoinDTO},
-        currency::Group,
-        test::currency::{Dai, TestCurrencies, TestExtraCurrencies, Usdc},
+    use currency::{
+        test::{Dai, TestCurrencies, TestExtraCurrencies, Usdc},
+        Group,
     };
+
+    use finance::coin::{Amount, Coin, CoinDTO};
     use platform::never::{self, Never};
 
     use crate::swap_task::{CoinVisitor, IterNext, IterState};

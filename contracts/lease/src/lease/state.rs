@@ -1,4 +1,5 @@
-use finance::{coin::Coin, currency::Currency, percent::Percent};
+use currency::Currency;
+use finance::{coin::Coin, percent::Percent};
 use sdk::cosmwasm_std::Timestamp;
 
 #[derive(Debug, PartialEq, Eq)]

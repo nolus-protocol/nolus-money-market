@@ -6,12 +6,12 @@ use sdk::schemars::{self, JsonSchema};
 
 use crate::{
     coin::{Amount, Coin},
-    currency::{self, Currency},
     error::{Error, Result},
     fraction::Fraction,
     fractionable::HigherRank,
     ratio::{Ratio, Rational},
 };
+use currency::{self, Currency};
 
 pub mod base;
 pub mod dto;
@@ -280,11 +280,11 @@ mod test {
 
     use crate::{
         coin::{Amount, Coin as CoinT},
-        currency::{Currency, SymbolStatic},
         price::{self, Price},
         ratio::Rational,
-        test::currency::{Nls, Usdc},
     };
+    use currency::test::{Nls, Usdc};
+    use currency::{Currency, SymbolStatic};
 
     #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
     struct QuoteQuoteCurrency {}
@@ -615,12 +615,9 @@ mod test {
 
 #[cfg(test)]
 mod test_invariant {
-    use crate::{
-        coin::Coin,
-        currency::Currency,
-        price::Price,
-        test::currency::{Nls, Usdc},
-    };
+    use crate::{coin::Coin, price::Price};
+    use currency::test::{Nls, Usdc};
+    use currency::Currency;
 
     #[test]
     #[should_panic = "zero"]

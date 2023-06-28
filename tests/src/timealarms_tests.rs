@@ -1,7 +1,7 @@
 use std::array::from_fn;
 
-use currency::{lpn::Usdc, native::Nls};
-use finance::{coin::Coin, currency::Currency, duration::Duration};
+use currency::{lpn::Usdc, native::Nls, Currency};
+use finance::{coin::Coin, duration::Duration};
 use platform::tests::{self};
 use sdk::{
     cosmwasm_std::{coin, Addr, Attribute, Event, Timestamp},

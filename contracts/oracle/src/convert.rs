@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
-use finance::{coin::Coin, currency::Currency, price};
+use currency::Currency;
+use finance::{coin::Coin, price};
 use sdk::cosmwasm_std::QuerierWrapper;
 
 use crate::{

@@ -1,4 +1,5 @@
-use finance::{coin::Coin, currency::Currency};
+use currency::Currency;
+use finance::coin::Coin;
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub(crate) struct Receipt<C>
@@ -98,7 +99,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use finance::{coin::Coin, test::currency::Nls};
+    use currency::test::Nls;
+    use finance::coin::Coin;
 
     use crate::loan::RepayReceipt;
 

@@ -1,6 +1,6 @@
+use currency::{self, Currency};
 use finance::{
     coin::{Amount, Coin},
-    currency::{self, Currency},
     duration::Duration,
     liability::Liability,
     percent::Percent,

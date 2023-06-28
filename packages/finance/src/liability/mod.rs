@@ -202,11 +202,11 @@ mod test {
         duration::Duration,
         fraction::Fraction,
         percent::{Percent, Units},
-        test::currency::Usdc,
         zero::Zero,
     };
 
     use super::{Liability, Zone};
+    use currency::test::Usdc;
 
     #[test]
     fn new_valid() {

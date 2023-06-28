@@ -2,14 +2,11 @@ use std::marker::PhantomData;
 
 use serde::{de::DeserializeOwned, Serialize};
 
-use currency::{lease::LeaseGroup, payment::PaymentGroup};
-use finance::{
-    coin::Coin,
-    currency::{AnyVisitor, AnyVisitorResult, Currency, Group, SymbolOwned},
-    liability::Liability,
-    percent::Percent,
-    price::total,
+use currency::{
+    lease::LeaseGroup, payment::PaymentGroup, AnyVisitor, AnyVisitorResult, Currency, Group,
+    SymbolOwned,
 };
+use finance::{coin::Coin, liability::Liability, percent::Percent, price::total};
 use lease::api::DownpaymentCoin;
 use lpp::{
     msg::QueryQuoteResponse,

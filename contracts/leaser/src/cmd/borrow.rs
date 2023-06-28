@@ -1,4 +1,5 @@
-use finance::{currency::SymbolOwned, percent::Percent};
+use currency::SymbolOwned;
+use finance::percent::Percent;
 use lease::api::{LoanForm, NewLeaseContract, NewLeaseForm};
 use platform::batch::Batch;
 use platform::message::Response as MessageResponse;

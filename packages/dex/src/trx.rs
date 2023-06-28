@@ -1,7 +1,6 @@
-use currency::native::Nls;
+use currency::{native::Nls, Group, Symbol};
 use finance::{
     coin::{Coin, CoinDTO},
-    currency::{Group, Symbol},
     duration::Duration,
 };
 use oracle::stub::OracleRef;

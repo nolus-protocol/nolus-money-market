@@ -1,10 +1,7 @@
 use serde::Serialize;
 
-use finance::{
-    coin::Coin,
-    currency::{self, Currency},
-    liability::Liability,
-};
+use currency::{self, Currency};
+use finance::{coin::Coin, liability::Liability};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use platform::batch::Batch;
@@ -141,10 +138,9 @@ where
 mod tests {
     use serde::{Deserialize, Serialize};
 
-    use ::currency::{lease::Atom, lpn::Usdc};
+    use ::currency::{lease::Atom, lpn::Usdc, Currency};
     use finance::{
-        coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
-        price::Price,
+        coin::Coin, duration::Duration, liability::Liability, percent::Percent, price::Price,
     };
     use lpp::{
         error::{ContractError as LppError, Result as LppResult},

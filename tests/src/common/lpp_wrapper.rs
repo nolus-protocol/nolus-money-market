@@ -1,5 +1,5 @@
-use currency::lpn::Usdc;
-use finance::{coin::Coin, currency::Currency, percent::Percent};
+use currency::{lpn::Usdc, Currency};
+use finance::{coin::Coin, percent::Percent};
 use lpp::{
     borrow::InterestRate,
     contract::sudo,

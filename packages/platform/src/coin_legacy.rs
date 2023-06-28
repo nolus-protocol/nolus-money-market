@@ -1,12 +1,8 @@
 use std::marker::PhantomData;
 use std::result::Result as StdResult;
 
-use finance::{
-    coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
-    currency::{
-        visit_on_bank_symbol, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor,
-    },
-};
+use currency::{self, AnyVisitor, AnyVisitorResult, Currency, Group, SingleVisitor};
+use finance::coin::{Coin, CoinDTO, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
 use crate::{
@@ -18,7 +14,7 @@ pub(crate) fn from_cosmwasm_impl<C>(coin: CosmWasmCoin) -> Result<Coin<C>>
 where
     C: Currency,
 {
-    visit_on_bank_symbol(&coin.denom, CoinTransformer(&coin))
+    currency::visit_on_bank_symbol(&coin.denom, CoinTransformer(&coin))
 }
 
 pub(crate) fn from_cosmwasm_any_impl<G, V>(
@@ -134,13 +130,11 @@ where
 
 #[cfg(test)]
 mod test {
-    use finance::{
-        currency::Currency,
-        test::{
-            coin,
-            currency::{Nls, TestCurrencies, Usdc},
-        },
+    use currency::{
+        test::{Nls, TestCurrencies, Usdc},
+        Currency,
     };
+    use finance::test::coin;
     use sdk::cosmwasm_std::Coin as CosmWasmCoin;
 
     use crate::{coin_legacy::from_cosmwasm_impl, error::Error};
@@ -166,8 +160,8 @@ mod test {
 
         assert_eq!(
             c1,
-            Err(Error::Finance(
-                finance::error::Error::unexpected_bank_symbol::<_, Nls>(Usdc::BANK_SYMBOL,)
+            Err(Error::Currency(
+                currency::error::Error::unexpected_bank_symbol::<_, Nls>(Usdc::BANK_SYMBOL,)
             )),
         );
 
@@ -175,8 +169,8 @@ mod test {
 
         assert_eq!(
             c2,
-            Err(Error::Finance(
-                finance::error::Error::unexpected_bank_symbol::<_, Usdc>(Nls::BANK_SYMBOL,)
+            Err(Error::Currency(
+                currency::error::Error::unexpected_bank_symbol::<_, Usdc>(Nls::BANK_SYMBOL,)
             )),
         );
     }

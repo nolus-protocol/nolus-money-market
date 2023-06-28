@@ -1,12 +1,10 @@
 use std::ops::{Deref, DerefMut};
 
-use finance::{
-    currency::Currency,
-    price::{
-        base::BasePrice,
-        dto::{with_quote, WithQuote},
-        Price,
-    },
+use currency::Currency;
+use finance::price::{
+    base::BasePrice,
+    dto::{with_quote, WithQuote},
+    Price,
 };
 use marketprice::{alarms::PriceAlarms, SpotPrice};
 use sdk::cosmwasm_std::{Addr, Storage};
@@ -259,7 +257,7 @@ mod test {
     #[test]
     #[cfg(not(debug_assertions))]
     fn notify_with_wrong_currency_group() {
-        use finance::test::currency::Dai;
+        use currency::test::Dai;
 
         let storage = MockStorage::new();
 

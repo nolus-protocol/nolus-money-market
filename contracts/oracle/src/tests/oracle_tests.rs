@@ -1,8 +1,9 @@
 use currency::{
     lease::{Atom, Osmo, Wbtc, Weth},
     lpn::Usdc,
+    Currency,
 };
-use finance::{coin::Coin, currency::Currency, price, price::dto::PriceDTO};
+use finance::{coin::Coin, price, price::dto::PriceDTO};
 use marketprice::SpotPrice;
 use platform::{contract, tests};
 use sdk::{

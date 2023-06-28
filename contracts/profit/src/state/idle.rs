@@ -2,14 +2,13 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use currency::{native::Nls, payment::PaymentGroup};
+use currency::{self, native::Nls, payment::PaymentGroup, Currency, Group};
 use dex::{
     Account, Enterable, Error as DexError, Handler, Response as DexResponse, Result as DexResult,
     StartLocalLocalState,
 };
 use finance::{
     coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
-    currency::{equal, Currency, Group},
     duration::Duration,
 };
 use platform::{
@@ -157,7 +156,7 @@ where
     where
         C: Currency,
     {
-        Ok(if equal::<C, FilterC>() {
+        Ok(if currency::equal::<C, FilterC>() {
             SplitCoins {
                 filtered: Coin::new(coin.into()),
                 rest: Vec::new(),

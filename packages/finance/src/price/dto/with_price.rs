@@ -1,9 +1,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use crate::{
-    currency::{self, AnyVisitorPair, Currency, Group},
-    error::Error,
-};
+use crate::error::Error;
+use currency::{self, error::CmdError, AnyVisitorPair, Currency, Group};
 
 use super::{PriceDTO, WithPrice};
 
@@ -22,6 +20,7 @@ where
         price.amount_quote.ticker(),
         PairVisitor { price, cmd },
     )
+    .map_err(CmdError::into_customer_err)
 }
 
 struct PairVisitor<'a, G, QuoteG, Cmd>
@@ -42,14 +41,20 @@ where
     Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
-    type Error = Cmd::Error;
+    type Error = CmdError<Cmd::Error, Error>;
 
     fn on<C1, C2>(self) -> Result<Self::Output, Self::Error>
     where
         C1: Currency + Serialize + DeserializeOwned,
         C2: Currency + Serialize + DeserializeOwned,
     {
-        let price = self.price.try_into().map_err(Error::into)?;
-        self.cmd.exec::<C1, C2>(price)
+        self.price
+            .try_into()
+            .map_err(Self::Error::from_api_err)
+            .and_then(|price| {
+                self.cmd
+                    .exec::<C1, C2>(price)
+                    .map_err(Self::Error::from_customer_err)
+            })
     }
 }

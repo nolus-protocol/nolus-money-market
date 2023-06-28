@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use currency::native::Nls;
-use finance::{coin::Coin, currency::Currency, duration::Duration, percent::Percent};
+use currency::{native::Nls, Currency};
+use finance::{coin::Coin, duration::Duration, percent::Percent};
 use platform::coin_legacy;
 use sdk::{
     cosmwasm_ext::CustomMsg,

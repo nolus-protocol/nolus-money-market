@@ -4,13 +4,10 @@ mod test {
 
     use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+    use crate::coin::Coin;
+    use currency::test::{Nls, Usdc};
+    use currency::Currency;
     use sdk::cosmwasm_std::{from_slice, to_vec};
-
-    use crate::{
-        coin::Coin,
-        currency::Currency,
-        test::currency::{Nls, Usdc},
-    };
 
     #[test]
     fn serialize_deserialize() {

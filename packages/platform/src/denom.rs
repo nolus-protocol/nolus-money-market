@@ -1,4 +1,4 @@
-use finance::currency::{Currency, Symbol};
+use currency::{Currency, Symbol};
 
 pub trait CurrencyMapper<'a> {
     fn map<C>() -> Symbol<'a>
@@ -7,7 +7,7 @@ pub trait CurrencyMapper<'a> {
 }
 
 pub mod local {
-    use finance::currency::{Currency, Symbol};
+    use currency::{Currency, Symbol};
 
     use super::CurrencyMapper;
 
@@ -23,7 +23,7 @@ pub mod local {
 }
 
 pub mod dex {
-    use finance::currency::{AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolStatic};
+    use currency::{AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolStatic};
 
     use crate::error::Error;
 

@@ -1,7 +1,5 @@
-use finance::{
-    coin::Coin, currency::Currency, duration::Duration, liability::Liability, percent::Percent,
-    test,
-};
+use currency::Currency;
+use finance::{coin::Coin, duration::Duration, liability::Liability, percent::Percent, test};
 use lease::api::InterestPaymentSpec;
 use leaser::{
     contract::{execute, instantiate, query, reply, sudo},

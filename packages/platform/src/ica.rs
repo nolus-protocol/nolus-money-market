@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{coin::Coin, currency::Currency, duration::Duration};
+use currency::Currency;
+use finance::{coin::Coin, duration::Duration};
 use sdk::neutron_sdk::bindings::msg::{IbcFee, NeutronMsg};
 
 use crate::{

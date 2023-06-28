@@ -1,6 +1,6 @@
 [package]
 name = "currency"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
@@ -9,11 +9,7 @@ license.workspace = true
 testing = []
 
 [dependencies]
-finance = { workspace = true }
 sdk = { workspace = true, features = ["schema"] }
 
 thiserror = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
-
-[dev-dependencies]
-finance = { workspace = true, features = ["testing"] }

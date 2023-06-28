@@ -1,11 +1,9 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use finance::{
-    currency::{self, AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolOwned},
-    price::{
-        dto::{with_price, WithPrice},
-        Price,
-    },
+use currency::{self, AnyVisitor, AnyVisitorResult, Currency, Symbol, SymbolOwned};
+use finance::price::{
+    dto::{with_price, WithPrice},
+    Price,
 };
 use sdk::{
     cosmwasm_std::{Addr, Storage, Timestamp},
@@ -228,10 +226,10 @@ mod test {
     use currency::{
         lease::{Atom, Cro, Osmo, Stars, Wbtc},
         lpn::Usdc,
+        Currency,
     };
     use finance::{
         coin::Coin,
-        currency::Currency,
         duration::Duration,
         percent::Percent,
         price::{self, Price},

@@ -1,4 +1,5 @@
-use finance::{coin::Coin, currency::Currency};
+use currency::Currency;
+use finance::coin::Coin;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use sdk::cosmwasm_std::Timestamp;
 

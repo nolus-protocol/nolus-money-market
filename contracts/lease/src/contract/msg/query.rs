@@ -1,4 +1,4 @@
-use finance::currency::Currency;
+use currency::Currency;
 
 use crate::{
     api::{opened, paid, StateResponse},

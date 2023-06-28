@@ -1,9 +1,8 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
-use currency::native::Nls;
+use currency::{native::Nls, Currency};
 use finance::{
     coin::Coin,
-    currency::Currency,
     price::{self, Price},
 };
 use sdk::{
@@ -200,7 +199,7 @@ impl Deposit {
 
 #[cfg(test)]
 mod test {
-    use finance::test::currency::Usdc;
+    use currency::test::Usdc;
     use sdk::cosmwasm_std::testing;
 
     use crate::lpp::NTokenPrice;

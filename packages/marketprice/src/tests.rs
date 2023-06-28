@@ -3,10 +3,10 @@ use std::time::SystemTime;
 use currency::{
     lease::{Atom, Cro, Evmos, Juno, Osmo, Wbtc, Weth},
     lpn::Usdc,
+    Currency,
 };
 use finance::{
     coin::Coin,
-    currency::Currency,
     duration::Duration,
     percent::Percent,
     price::{self, dto::PriceDTO, Price},

@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 use sdk::schemars::{self, JsonSchema};
 
-use crate::{define_currency, define_symbol, SingleVisitorAdapter};
+use crate::{
+    currency::{AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic},
+    define_currency, define_symbol, SingleVisitorAdapter,
+};
 
 // Resources:
 // 1. Symbol hashes are computed using the SHA256 Hash Generator https://coding.tools/sha256
@@ -197,7 +199,7 @@ impl Group for LeaseGroup {
     where
         V: AnyVisitor,
     {
-        use finance::currency::maybe_visit_on_ticker as maybe_visit;
+        use crate::currency::maybe_visit_on_ticker as maybe_visit;
         let v: SingleVisitorAdapter<_> = visitor.into();
         let r = maybe_visit::<Atom, _>(ticker, v)
             .or_else(|v| maybe_visit::<StAtom, _>(ticker, v))
@@ -222,7 +224,7 @@ impl Group for LeaseGroup {
         Self: Sized,
         V: AnyVisitor,
     {
-        use finance::currency::maybe_visit_on_bank_symbol as maybe_visit;
+        use crate::currency::maybe_visit_on_bank_symbol as maybe_visit;
         let v: SingleVisitorAdapter<_> = visitor.into();
         let r = maybe_visit::<Atom, _>(bank_symbol, v)
             .or_else(|v| maybe_visit::<StAtom, _>(bank_symbol, v))
@@ -245,16 +247,16 @@ impl Group for LeaseGroup {
 
 #[cfg(test)]
 mod test {
-    use finance::currency::Currency;
 
     use crate::{
         lease::Osmo,
         lpn::Usdc,
         native::Nls,
-        test::{
+        test::group::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
+        Currency,
     };
 
     use super::{Atom, LeaseGroup, StAtom, StOsmo, Wbtc, Weth};

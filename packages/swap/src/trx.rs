@@ -2,10 +2,8 @@ use osmosis_std::types::osmosis::gamm::v1beta1::{
     MsgSwapExactAmountIn, MsgSwapExactAmountInResponse, SwapAmountInRoute,
 };
 
-use finance::{
-    coin::{Amount, CoinDTO},
-    currency::{self, Group, Symbol},
-};
+use currency::{self, Group, Symbol};
+use finance::coin::{Amount, CoinDTO};
 use platform::{
     coin_legacy,
     denom::dex::DexMapper,
@@ -105,11 +103,11 @@ fn to_dex_symbol(ticker: Symbol<'_>) -> Result<Symbol<'_>> {
 mod test {
     use osmosis_std::types::osmosis::gamm::v1beta1::SwapAmountInRoute;
 
-    use currency::lpn::{Lpns, Usdc};
-    use finance::{
-        coin::Coin,
-        currency::{Currency as _, SymbolStatic},
+    use currency::{
+        lpn::{Lpns, Usdc},
+        Currency as _, SymbolStatic,
     };
+    use finance::coin::Coin;
     use sdk::cosmwasm_std::Coin as CwCoin;
 
     use crate::error::Error;

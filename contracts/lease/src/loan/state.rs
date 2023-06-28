@@ -1,4 +1,5 @@
-use finance::{coin::Coin, currency::Currency, percent::Percent};
+use currency::Currency;
+use finance::{coin::Coin, percent::Percent};
 
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
 pub struct State<Lpn>

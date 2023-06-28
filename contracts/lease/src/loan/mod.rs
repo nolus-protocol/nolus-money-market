@@ -2,9 +2,9 @@ use std::{fmt::Debug, marker::PhantomData};
 
 use serde::{Deserialize, Serialize};
 
+use currency::Currency;
 use finance::{
     coin::Coin,
-    currency::Currency,
     interest::InterestPeriod,
     percent::{Percent, Units},
     period::Period,
@@ -418,9 +418,9 @@ mod tests {
     mod test_repay {
         use serde::{Deserialize, Serialize};
 
+        use currency::{Currency, Group};
         use finance::{
             coin::{Amount, Coin, WithCoin},
-            currency::{Currency, Group},
             duration::Duration,
             fraction::Fraction,
         };
@@ -994,9 +994,10 @@ mod tests {
 
     mod test_state {
         use cosmwasm_std::Timestamp;
+        use currency::Currency;
         use finance::{
-            coin::Coin, currency::Currency, duration::Duration, interest::InterestPeriod,
-            percent::Percent, period::Period,
+            coin::Coin, duration::Duration, interest::InterestPeriod, percent::Percent,
+            period::Period,
         };
         use lpp::msg::LoanResponse;
 

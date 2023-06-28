@@ -1,6 +1,6 @@
+use currency::{Group, Symbol};
 use finance::{
     coin::{Amount, CoinDTO},
-    currency::{Group, Symbol},
     zero::Zero,
 };
 
@@ -56,11 +56,11 @@ where
 
 #[cfg(test)]
 mod test {
-    use finance::{
-        coin::{Amount, Coin},
-        currency::Currency,
-        test::currency::{Dai, Nls, TestCurrencies, Usdc},
+    use currency::{
+        test::{Dai, Nls, TestCurrencies, Usdc},
+        Currency,
     };
+    use finance::coin::{Amount, Coin};
 
     use crate::{
         swap_coins::TestVisitor,

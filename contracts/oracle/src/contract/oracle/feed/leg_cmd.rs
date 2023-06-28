@@ -1,9 +1,7 @@
 use serde::de::DeserializeOwned;
 
-use finance::{
-    currency::{AnyVisitorPair, Currency},
-    price::{base::BasePrice, Price},
-};
+use currency::{AnyVisitorPair, Currency};
+use finance::price::{base::BasePrice, Price};
 use swap::SwapGroup;
 
 use crate::ContractError;

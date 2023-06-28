@@ -1,5 +1,5 @@
 use currency::lpn::Lpns;
-use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
+use currency::{self, AnyVisitor, AnyVisitorResult, Currency};
 use platform::{
     batch::{Emit, Emitter},
     response,
@@ -49,7 +49,7 @@ impl<'a> InstantiateWithCurrency<'a> {
         msg: InstantiateMsg,
     ) -> ContractResult<<Self as AnyVisitor>::Output> {
         let context = Self { deps, msg };
-        visit_any_on_ticker::<Lpns, _>(&context.msg.config.base_asset.clone(), context)
+        currency::visit_any_on_ticker::<Lpns, _>(&context.msg.config.base_asset.clone(), context)
     }
 }
 
@@ -151,8 +151,8 @@ pub fn reply(deps: DepsMut<'_>, _env: Env, msg: Reply) -> ContractResult<CwRespo
 
 #[cfg(test)]
 mod tests {
-    use currency::{lease::Osmo, lpn::Usdc};
-    use finance::{currency::Currency, duration::Duration, percent::Percent};
+    use currency::{lease::Osmo, lpn::Usdc, Currency};
+    use finance::{duration::Duration, percent::Percent};
     use sdk::cosmwasm_std::{from_binary, testing::mock_env};
     use swap::SwapTarget;
 

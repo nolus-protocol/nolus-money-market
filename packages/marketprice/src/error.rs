@@ -1,4 +1,4 @@
-use std::{convert::Infallible, num::TryFromIntError};
+use std::convert::Infallible;
 
 use thiserror::Error;
 
@@ -9,20 +9,8 @@ pub enum PriceFeedsError {
     #[error("[Market Price; Feeds] {0}")]
     Std(#[from] StdError),
 
-    #[error("[Market Price; Feeds] Given address already registered as a price feeder")]
-    FeederAlreadyRegistered {},
-
-    #[error("[Market Price; Feeds] Given address not registered as a price feeder")]
-    FeederNotRegistered {},
-
     #[error("[Market Price; Feeds] No price")]
     NoPrice(),
-
-    #[error("[Market Price; Feeds] Invalid price")]
-    InvalidPrice(),
-
-    #[error("[Market Price; Feeds] Found currency {0} expecting {1}")]
-    UnexpectedCurrency(String, String),
 
     #[error("[Market Price; Feeds] {0}")]
     FromInfallible(#[from] Infallible),
@@ -31,13 +19,10 @@ pub enum PriceFeedsError {
     Configuration(String),
 
     #[error("[Market Price; Feeds] {0}")]
-    TryFromInt(#[from] TryFromIntError),
+    Currency(#[from] currency::error::Error),
 
     #[error("[Market Price; Feeds] {0}")]
     Finance(#[from] finance::error::Error),
-
-    #[error("[Market Price; Feeds] Unknown currency")]
-    UnknownCurrency {},
 
     #[error("[Market Price; Feeds] {0}")]
     FeedSerdeError(String),

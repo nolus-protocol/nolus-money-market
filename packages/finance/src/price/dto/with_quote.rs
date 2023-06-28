@@ -1,9 +1,9 @@
 use crate::{
     coin::{Coin, CoinDTO},
-    currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency, Group},
     error::Error,
     price,
 };
+use currency::{self, error::CmdError, AnyVisitor, AnyVisitorResult, Currency, Group};
 
 use super::{PriceDTO, WithQuote};
 
@@ -22,7 +22,7 @@ where
     Cmd: WithQuote<C>,
 {
     type Output = Cmd::Output;
-    type Error = Cmd::Error;
+    type Error = CmdError<Cmd::Error, Error>;
 
     #[track_caller]
     fn on<BaseC>(self) -> AnyVisitorResult<Self>
@@ -32,7 +32,7 @@ where
         let amount_base =
             Coin::<BaseC>::try_from(self.base_dto).expect("Got different currency in visitor!");
         let price = price::total_of(amount_base).is(self.quote);
-        self.cmd.exec(price)
+        self.cmd.exec(price).map_err(Self::Error::from_customer_err)
     }
 }
 
@@ -48,7 +48,8 @@ where
     C: Currency,
     Error: Into<Cmd::Error>,
 {
-    visit_any_on_ticker::<G, _>(
+    //TODO use CoinDTO::with_coin instead
+    currency::visit_any_on_ticker::<G, _>(
         &price.amount.ticker().clone(),
         BaseCVisitor {
             base_dto: &price.amount,
@@ -57,4 +58,5 @@ where
             cmd,
         },
     )
+    .map_err(CmdError::into_customer_err)
 }

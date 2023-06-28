@@ -1,6 +1,7 @@
 use serde::de::DeserializeOwned;
 
-use finance::{currency::Currency, price::Price};
+use currency::Currency;
+use finance::price::Price;
 use marketprice::{error::PriceFeedsError, market_price::PriceFeeds};
 use sdk::cosmwasm_std::{Storage, Timestamp};
 
@@ -78,9 +79,10 @@ mod test {
             Ok(None)
         );
         // other errors
+        let err_msg: String = "test_err".into();
         assert_eq!(
-            maybe_price::<Atom, Weth>(Err(PriceFeedsError::InvalidPrice())),
-            Err(PriceFeedsError::InvalidPrice().into())
+            maybe_price::<Atom, Weth>(Err(PriceFeedsError::Configuration(err_msg.clone()))),
+            Err(PriceFeedsError::Configuration(err_msg).into())
         );
     }
 }

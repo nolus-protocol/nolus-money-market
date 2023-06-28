@@ -1,10 +1,9 @@
+use super::{dto::PriceDTO, Price};
 use crate::{
     coin::{Coin, CoinDTO},
-    currency::{Currency, Group, Symbol},
     error::Error,
 };
-
-use super::{dto::PriceDTO, Price};
+use currency::{Currency, Group, Symbol};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BasePrice<BaseG, QuoteC>

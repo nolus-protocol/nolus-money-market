@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::currency::SymbolOwned;
+use currency::SymbolOwned;
 use marketprice::{config::Config as PriceConfig, SpotPrice};
 use sdk::{
     cosmwasm_std::Addr,

@@ -4,10 +4,10 @@ use currency::{
     lease::{Atom, Cro, Juno, Osmo},
     lpn::Usdc,
     native::Nls,
+    Currency,
 };
 use finance::{
     coin::{Amount, Coin},
-    currency::Currency,
     percent::Percent,
     price::{self, total, total_of, Price},
 };
@@ -560,7 +560,7 @@ where
     if feed_prices {
         add_feeder(&mut test_case, user_addr.clone());
 
-        if !finance::currency::equal::<DownpaymentC, Lpn>() {
+        if !currency::equal::<DownpaymentC, Lpn>() {
             feed_price(
                 &mut test_case,
                 user_addr.clone(),
@@ -569,7 +569,7 @@ where
             );
         }
 
-        if !finance::currency::equal::<LeaseC, Lpn>() {
+        if !currency::equal::<LeaseC, Lpn>() {
             feed_price(
                 &mut test_case,
                 user_addr.clone(),

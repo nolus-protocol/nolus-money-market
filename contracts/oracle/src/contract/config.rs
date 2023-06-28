@@ -13,8 +13,9 @@ mod tests {
     use currency::{
         lease::{Cro, Osmo},
         lpn::Usdc,
+        Currency,
     };
-    use finance::{currency::Currency, duration::Duration, percent::Percent};
+    use finance::{duration::Duration, percent::Percent};
     use sdk::{
         cosmwasm_ext::Response,
         cosmwasm_std::{from_binary, testing::mock_env},

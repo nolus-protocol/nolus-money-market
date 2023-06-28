@@ -6,10 +6,10 @@ use serde_json_wasm::from_str;
 use currency::{
     lease::{Atom, Cro, Osmo, Wbtc, Weth},
     lpn::Usdc,
+    Currency,
 };
 use finance::{
     coin::{Amount, Coin},
-    currency::Currency,
     duration::Duration,
     percent::Percent,
     price::{self, dto::PriceDTO},

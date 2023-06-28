@@ -2,7 +2,8 @@ use std::{marker::PhantomData, result::Result as StdResult};
 
 use serde::{de::DeserializeOwned, Serialize};
 
-use finance::{coin::Coin, currency::Currency};
+use currency::Currency;
+use finance::coin::Coin;
 use platform::{
     batch::{Batch, ReplyId},
     reply::from_execute,
@@ -110,7 +111,8 @@ impl<'a, C> From<LppLenderStub<'a, C>> for LppBatch<LppRef> {
 
 #[cfg(test)]
 mod test {
-    use finance::{coin::Coin, currency::Currency, test::currency::Nls};
+    use currency::{test::Nls, Currency};
+    use finance::coin::Coin;
     use platform::response::{self};
     use sdk::{
         cosmwasm_ext::{CosmosMsg, Response as CwResponse},

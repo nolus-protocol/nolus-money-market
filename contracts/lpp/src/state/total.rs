@@ -1,8 +1,9 @@
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use currency::Currency;
 use finance::{
-    coin::Coin, currency::Currency, fraction::Fraction, interest::InterestPeriod, percent::Percent,
-    period::Period, ratio::Rational,
+    coin::Coin, fraction::Fraction, interest::InterestPeriod, percent::Percent, period::Period,
+    ratio::Rational,
 };
 use sdk::{
     cosmwasm_std::{StdResult, Storage, Timestamp},
@@ -117,7 +118,8 @@ where
 
 #[cfg(test)]
 mod test {
-    use finance::{duration::Duration, test::currency::Usdc};
+    use currency::test::Usdc;
+    use finance::duration::Duration;
     use sdk::cosmwasm_std::testing;
 
     use super::*;

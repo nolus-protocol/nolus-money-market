@@ -1,9 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{self, AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 use sdk::schemars::{self, JsonSchema};
 
-use crate::{define_currency, define_symbol, SingleVisitorAdapter};
+use crate::{
+    currency::{self, AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic},
+    define_currency, define_symbol, SingleVisitorAdapter,
+};
 
 define_symbol! {
     USDC {
@@ -50,15 +52,14 @@ impl Group for Lpns {
 
 #[cfg(test)]
 mod test {
-    use finance::currency::Currency;
-
     use crate::{
         lease::Osmo,
         native::Nls,
-        test::{
+        test::group::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
+        Currency,
     };
 
     use super::{Lpns, Usdc};

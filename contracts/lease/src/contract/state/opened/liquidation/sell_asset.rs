@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 
-use currency::lpn::Lpns;
+use currency::{lpn::Lpns, Symbol};
 use dex::{
     Account, CoinVisitor, ContractInSwap, IterNext, IterState, StartRemoteLocalState, SwapState,
     SwapTask, TransferInFinishState, TransferInInitState, TransferOutState,
 };
-use finance::{coin::CoinDTO, currency::Symbol};
+use finance::coin::CoinDTO;
 use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::{Env, QuerierWrapper, Timestamp};
 use timealarms::stub::TimeAlarmsRef;

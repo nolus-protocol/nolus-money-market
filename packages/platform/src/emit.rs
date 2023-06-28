@@ -1,6 +1,6 @@
+use currency::{Currency, Symbol};
 use finance::{
     coin::{Amount, Coin, CoinDTO},
-    currency::{Currency, Symbol},
     percent::Percent,
 };
 use sdk::cosmwasm_std::{Env, Event, Timestamp};

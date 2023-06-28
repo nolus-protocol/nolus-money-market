@@ -3,10 +3,10 @@ use std::collections::{HashMap, HashSet};
 use currency::{
     lease::{Atom, Cro},
     lpn::Usdc,
+    Currency,
 };
 use finance::{
     coin::{Amount, Coin},
-    currency::Currency,
     duration::Duration,
     fraction::Fraction as _,
     interest::InterestPeriod,

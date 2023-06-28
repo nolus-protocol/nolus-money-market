@@ -3,15 +3,13 @@ use serde::{Deserialize, Serialize};
 use currency::{
     native::{Native, Nls},
     payment::PaymentGroup,
+    Currency, Symbol,
 };
 use dex::{
     Account, CoinVisitor, Enterable, IterNext, IterState, Response as DexResponse, StateLocalOut,
     SwapTask,
 };
-use finance::{
-    coin::{Coin, CoinDTO},
-    currency::{Currency, Symbol},
-};
+use finance::coin::{Coin, CoinDTO};
 use oracle::stub::OracleRef;
 use platform::{
     bank::{self, BankAccountView},

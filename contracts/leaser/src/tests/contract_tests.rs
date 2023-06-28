@@ -1,9 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    currency::Currency, duration::Duration, liability::Liability, percent::Percent,
-    test::currency::Usdc,
-};
+use currency::{test::Usdc, Currency};
+use finance::{duration::Duration, liability::Liability, percent::Percent};
 use lease::api::{ConnectionParams, Ics20Channel, InterestPaymentSpec};
 use sdk::{
     cosmwasm_ext::Response,

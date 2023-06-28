@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use finance::currency::Currency;
+use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use platform::batch::Batch;

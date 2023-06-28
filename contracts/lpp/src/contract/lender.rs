@@ -1,6 +1,7 @@
 use serde::{de::DeserializeOwned, Serialize};
 
-use finance::{coin::Coin, currency::Currency};
+use currency::Currency;
+use finance::coin::Coin;
 use platform::{
     bank::{self, BankAccount},
     batch::Batch,

@@ -2,10 +2,9 @@ use std::marker::PhantomData;
 
 use serde::{Deserialize, Serialize};
 
-use currency::payment::PaymentGroup;
+use currency::{payment::PaymentGroup, Currency};
 use finance::{
     coin::{Coin, WithCoin, WithCoinResult},
-    currency::Currency,
     liability::Liability,
     percent::Percent,
 };

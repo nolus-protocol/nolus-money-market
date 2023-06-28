@@ -2,7 +2,8 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 
-use finance::{currency::Currency, fraction::Fraction, percent::Percent, price::Price};
+use currency::Currency;
+use finance::{fraction::Fraction, percent::Percent, price::Price};
 use sdk::cosmwasm_std::{Addr, Timestamp};
 
 use crate::{config::Config, error::PriceFeedsError, feed::sample::Sample};

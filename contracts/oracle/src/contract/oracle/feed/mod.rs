@@ -2,10 +2,8 @@ use std::marker::PhantomData;
 
 use serde::de::DeserializeOwned;
 
-use finance::{
-    currency::{self, Currency, SymbolOwned},
-    price::base::BasePrice,
-};
+use currency::{self, Currency, SymbolOwned};
+use finance::price::base::BasePrice;
 use marketprice::{config::Config, market_price::PriceFeeds, SpotPrice};
 use sdk::cosmwasm_std::{Addr, Storage, Timestamp};
 use swap::{SwapGroup, SwapTarget};
@@ -116,10 +114,12 @@ where
 mod test {
     use std::collections::HashMap;
 
-    use ::currency::lease::{Atom, Cro, Juno, Osmo, Wbtc, Weth};
+    use ::currency::{
+        lease::{Atom, Cro, Juno, Osmo, Wbtc, Weth},
+        SymbolStatic,
+    };
     use finance::{
         coin::Amount,
-        currency::SymbolStatic,
         duration::Duration,
         percent::Percent,
         price::{dto::PriceDTO, Price},

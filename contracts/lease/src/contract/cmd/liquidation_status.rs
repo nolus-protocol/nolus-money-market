@@ -1,9 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    currency::Currency,
-    liability::{Cause, Liquidation, Status, Zone},
-};
+use currency::Currency;
+use finance::liability::{Cause, Liquidation, Status, Zone};
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::{Oracle as OracleTrait, OracleRef};
 use platform::batch::Batch;

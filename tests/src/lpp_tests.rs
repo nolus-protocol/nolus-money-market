@@ -1,7 +1,6 @@
-use currency::{lease::Atom, lpn::Usdc, native::Nls};
+use currency::{lease::Atom, lpn::Usdc, native::Nls, Currency};
 use finance::{
     coin::{Amount, Coin},
-    currency::Currency,
     duration::Duration,
     fraction::Fraction,
     percent::{Percent, Units as PercentUnits},

@@ -1,6 +1,6 @@
 use ::currency::lease::LeaseGroup;
+use currency;
 use dex::Handler;
-use finance::currency;
 use platform::response;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;

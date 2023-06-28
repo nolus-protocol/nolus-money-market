@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use super::LeaseDTO;
 use ::currency::{lease::LeaseGroup, lpn::Lpns};
-use finance::currency::{self, AnyVisitor, AnyVisitorResult, Currency};
+use currency::{self, AnyVisitor, AnyVisitorResult, Currency};
 
 pub trait WithLeaseTypes {
     type Output;
@@ -17,7 +17,7 @@ pub trait WithLeaseTypes {
 pub fn execute<Cmd>(lease_dto: LeaseDTO, cmd: Cmd) -> Result<Cmd::Output, Cmd::Error>
 where
     Cmd: WithLeaseTypes,
-    finance::error::Error: Into<Cmd::Error>,
+    currency::error::Error: Into<Cmd::Error>,
 {
     currency::visit_any_on_ticker::<LeaseGroup, _>(
         &lease_dto.amount.ticker().clone(),
@@ -33,7 +33,7 @@ struct FactoryStage1<Cmd> {
 impl<Cmd> AnyVisitor for FactoryStage1<Cmd>
 where
     Cmd: WithLeaseTypes,
-    finance::error::Error: Into<Cmd::Error>,
+    currency::error::Error: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;
     type Error = Cmd::Error;

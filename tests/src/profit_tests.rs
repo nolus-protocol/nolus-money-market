@@ -1,7 +1,6 @@
-use currency::lpn::Usdc;
+use currency::{lpn::Usdc, Currency};
 use finance::{
     coin::{Amount, Coin},
-    currency::Currency,
     duration::Duration,
     zero::Zero as _,
 };

@@ -2,7 +2,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use access_control::SingleUserAccess;
 use currency::lpn::Lpns;
-use finance::currency::{visit_any_on_ticker, AnyVisitor, AnyVisitorResult, Currency};
+use currency::{self, AnyVisitor, AnyVisitorResult, Currency};
 use platform::response::{self};
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
@@ -53,7 +53,7 @@ impl<'a> InstantiateWithLpn<'a> {
     pub fn cmd(deps: DepsMut<'a>, msg: InstantiateMsg) -> Result<()> {
         let context = Self { deps, msg };
 
-        visit_any_on_ticker::<Lpns, _>(&context.msg.lpn_ticker.clone(), context)
+        currency::visit_any_on_ticker::<Lpns, _>(&context.msg.lpn_ticker.clone(), context)
     }
 }
 
@@ -77,7 +77,7 @@ pub fn instantiate(
     msg: InstantiateMsg,
 ) -> Result<CwResponse> {
     // TODO move these checks on deserialization
-    finance::currency::validate::<Lpns>(&msg.lpn_ticker)?;
+    currency::validate::<Lpns>(&msg.lpn_ticker)?;
     deps.api.addr_validate(msg.lease_code_admin.as_str())?;
 
     InstantiateWithLpn::cmd(deps, msg).map(|()| response::empty_response())
@@ -151,7 +151,7 @@ impl<'a> ExecuteWithLpn<'a> {
 
         let config = Config::load(context.deps.storage)?;
 
-        visit_any_on_ticker::<Lpns, _>(config.lpn_ticker(), context)
+        currency::visit_any_on_ticker::<Lpns, _>(config.lpn_ticker(), context)
     }
 }
 
@@ -241,7 +241,7 @@ impl<'a> QueryWithLpn<'a> {
 
         let config = Config::load(context.deps.storage)?;
 
-        visit_any_on_ticker::<Lpns, _>(config.lpn_ticker(), context)
+        currency::visit_any_on_ticker::<Lpns, _>(config.lpn_ticker(), context)
     }
 }
 

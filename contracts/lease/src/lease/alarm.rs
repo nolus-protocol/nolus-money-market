@@ -1,9 +1,9 @@
 use platform::batch::Batch;
 use serde::Serialize;
 
+use currency::{self, Currency};
 use finance::{
     coin::Coin,
-    currency::{self, Currency},
     fraction::Fraction,
     liability::{Level, Zone},
     price::{total_of, Price},

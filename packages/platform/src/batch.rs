@@ -2,7 +2,8 @@ use std::vec;
 
 use serde::Serialize;
 
-use finance::{coin::Coin, currency::Currency};
+use currency::Currency;
+use finance::coin::Coin;
 use sdk::{
     cosmwasm_ext::{CosmosMsg, SubMsg},
     cosmwasm_std::{to_binary, Addr, Coin as CoinCw, WasmMsg},

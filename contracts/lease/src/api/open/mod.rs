@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+use currency::SymbolOwned;
 pub use dex::{ConnectionParams, Ics20Channel};
-use finance::{currency::SymbolOwned, duration::Duration, liability::Liability, percent::Percent};
+use finance::{duration::Duration, liability::Liability, percent::Percent};
 use sdk::{
     cosmwasm_std::Addr,
     schemars::{self, JsonSchema},

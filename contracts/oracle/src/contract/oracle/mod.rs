@@ -2,10 +2,8 @@ use std::ops::{Deref, DerefMut};
 
 use serde::de::DeserializeOwned;
 
-use finance::{
-    currency::{Currency, SymbolOwned},
-    price::base::BasePrice,
-};
+use currency::{Currency, SymbolOwned};
+use finance::price::base::BasePrice;
 use marketprice::SpotPrice;
 use platform::{
     dispatcher::{AlarmsDispatcher, Id},

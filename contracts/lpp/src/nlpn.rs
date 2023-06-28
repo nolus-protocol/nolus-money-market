@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{Currency, SymbolStatic};
+use currency::{Currency, SymbolStatic};
 use sdk::schemars::{self, JsonSchema};
 
 #[derive(

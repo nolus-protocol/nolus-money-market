@@ -1,4 +1,4 @@
-use finance::currency::SymbolOwned;
+use currency::SymbolOwned;
 use lpp::stub::LppRef;
 use platform::batch::{Batch, ReplyId};
 use sdk::cosmwasm_std::{Addr, Timestamp};

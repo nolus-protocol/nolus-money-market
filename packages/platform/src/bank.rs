@@ -1,11 +1,7 @@
 use std::{error::Error as StdError, result::Result as StdResult};
 
-use serde::{de::DeserializeOwned, Serialize};
-
-use finance::{
-    coin::{Amount as CoinAmount, Coin, WithCoin, WithCoinResult},
-    currency::{AnyVisitor, AnyVisitorResult, Currency, Group},
-};
+use currency::{Currency, Group};
+use finance::coin::{Coin, WithCoin, WithCoinResult};
 use sdk::cosmwasm_std::{Addr, BankMsg, Coin as CwCoin, QuerierWrapper};
 
 use crate::{
@@ -78,27 +74,6 @@ where
         }
     }
     may_res
-}
-
-struct CoinVisitor<'r, Cmd> {
-    amount: CoinAmount,
-    cmd: &'r Cmd,
-}
-
-impl<'r, Cmd> AnyVisitor for CoinVisitor<'r, Cmd>
-where
-    Cmd: WithCoin,
-    Cmd::Output: Aggregate,
-{
-    type Output = Cmd::Output;
-    type Error = Cmd::Error;
-
-    fn on<C>(self) -> AnyVisitorResult<Self>
-    where
-        C: Currency + Serialize + DeserializeOwned,
-    {
-        self.cmd.on(Coin::<C>::new(self.amount))
-    }
 }
 
 pub struct BankView<'a> {
@@ -381,13 +356,13 @@ mod test {
         native::{Native, Nls},
         payment::PaymentGroup,
     };
+    use currency::{
+        test::{Dai, TestCurrencies, Usdc},
+        Currency, Group, SymbolStatic,
+    };
     use finance::{
         coin::{Amount, Coin, WithCoin, WithCoinResult},
-        currency::{Currency, Group, SymbolStatic},
-        test::{
-            coin::Expect,
-            currency::{Dai, TestCurrencies, Usdc},
-        },
+        test::coin::Expect,
     };
     use sdk::{
         cosmwasm_std::{coin as cw_coin, Addr, Coin as CwCoin, Empty, QuerierWrapper},

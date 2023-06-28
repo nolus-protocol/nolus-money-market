@@ -1,9 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-use finance::currency::{AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic};
 use sdk::schemars::{self, JsonSchema};
 
-use crate::{lease::LeaseGroup, lpn::Lpns, native::Native};
+use crate::{
+    currency::{AnyVisitor, Group, MaybeAnyVisitResult, Symbol, SymbolStatic},
+    lease::LeaseGroup,
+    lpn::Lpns,
+    native::Native,
+};
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize, JsonSchema)]
 pub struct PaymentGroup {}
@@ -33,16 +37,15 @@ impl Group for PaymentGroup {
 
 #[cfg(test)]
 mod test {
-    use finance::currency::Currency;
-
     use crate::{
         lease::{Atom, Osmo, StAtom, StOsmo, Wbtc, Weth},
         lpn::Usdc,
         native::Nls,
-        test::{
+        test::group::{
             maybe_visit_on_bank_symbol_err, maybe_visit_on_bank_symbol_impl,
             maybe_visit_on_ticker_err, maybe_visit_on_ticker_impl,
         },
+        Currency,
     };
 
     use super::PaymentGroup;

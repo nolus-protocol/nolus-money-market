@@ -1,9 +1,9 @@
 use crate::{
     coin::Coin,
-    currency::Currency,
     percent::{Percent, Units},
     ratio::Ratio,
 };
+use currency::Currency;
 
 use super::{Fractionable, HigherRank};
 
@@ -94,8 +94,8 @@ mod test {
             fractionable::Fractionable,
             percent::{Percent, Units},
             ratio::Rational,
-            test::currency::Nls,
         };
+        use currency::test::Nls;
 
         #[test]
         fn safe_mul() {

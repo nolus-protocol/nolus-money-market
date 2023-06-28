@@ -1,6 +1,6 @@
+use currency::{Currency, Group};
 use finance::{
     coin::{Coin, CoinDTO, WithCoin, WithCoinResult},
-    currency::{Currency, Group},
     duration::Duration,
 };
 use platform::{bank, batch::Batch};

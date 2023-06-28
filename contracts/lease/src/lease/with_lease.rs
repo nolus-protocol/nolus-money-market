@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use finance::currency::Currency;
+use currency::Currency;
 use lpp::stub::loan::LppLoan as LppLoanTrait;
 use oracle::stub::Oracle as OracleTrait;
 use sdk::cosmwasm_std::QuerierWrapper;
@@ -33,7 +33,7 @@ pub fn execute<Cmd>(
 where
     Cmd: WithLease,
     Cmd::Error: From<lpp::error::ContractError>,
-    finance::error::Error: Into<Cmd::Error>,
+    currency::error::Error: Into<Cmd::Error>,
     timealarms::error::ContractError: Into<Cmd::Error>,
     oracle::error::ContractError: Into<Cmd::Error>,
 {

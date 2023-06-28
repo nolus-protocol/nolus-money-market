@@ -1,6 +1,6 @@
 [package]
 name = "finance"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["The Dev Nolus Team <dev@nolus.io>"]
 edition.workspace = true
 license.workspace = true
@@ -9,7 +9,8 @@ license.workspace = true
 testing = []
 
 [dependencies]
-sdk = { workspace = true, features = ["cosmos", "schema"] }
+currency = { workspace = true }
+sdk = { workspace = true, features = ["schema"] }
 
 gcd = "2.1"
 thiserror = { workspace = true }

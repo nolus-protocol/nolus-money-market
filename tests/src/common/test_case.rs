@@ -1,9 +1,7 @@
 use std::marker::PhantomData;
 
-use finance::{
-    currency::{Currency, Symbol},
-    percent::Percent,
-};
+use currency::{Currency, Symbol};
+use finance::percent::Percent;
 use lease::api::{ConnectionParams, Ics20Channel};
 use platform::ica::OpenAckVersion;
 use profit::msg::{ConfigResponse as ProfitConfigResponse, QueryMsg as ProfitQueryMsg};

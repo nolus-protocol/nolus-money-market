@@ -2,10 +2,10 @@ use currency::{
     lease::{Atom, Cro, Osmo},
     lpn::Usdc,
     native::Nls,
+    Currency,
 };
 use finance::{
     coin::Coin,
-    currency::Currency,
     duration::Duration,
     percent::Percent,
     price::{self, Price},

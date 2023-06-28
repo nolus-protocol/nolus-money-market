@@ -5,9 +5,9 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 
+use currency::{Currency, SymbolOwned};
 use finance::{
     coin::{Amount, Coin, CoinDTO},
-    currency::{Currency, SymbolOwned},
     price::{self, Price},
 };
 use sdk::{

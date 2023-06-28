@@ -3,8 +3,7 @@ use std::marker::PhantomData;
 use cosmwasm_std::Addr;
 use serde::{de::DeserializeOwned, Serialize};
 
-use ::currency::lease::LeaseGroup;
-use finance::currency::{self, AnyVisitor, AnyVisitorResult, Currency, Symbol};
+use currency::{self, lease::LeaseGroup, AnyVisitor, AnyVisitorResult, Currency, Symbol};
 use lpp::stub::{
     loan::{LppLoan as LppLoanTrait, WithLppLoan},
     LppRef,
@@ -39,7 +38,7 @@ pub fn execute<Cmd>(
 where
     Cmd: WithLeaseDeps,
     Cmd::Error: From<lpp::error::ContractError>,
-    finance::error::Error: Into<Cmd::Error>,
+    currency::error::Error: Into<Cmd::Error>,
     oracle::error::ContractError: Into<Cmd::Error>,
 {
     currency::visit_any_on_ticker::<LeaseGroup, _>(
@@ -66,7 +65,7 @@ impl<'r, Cmd> AnyVisitor for FactoryStage1<'r, Cmd>
 where
     Cmd: WithLeaseDeps,
     Cmd::Error: From<lpp::error::ContractError>,
-    finance::error::Error: Into<Cmd::Error>,
+    currency::error::Error: Into<Cmd::Error>,
     oracle::error::ContractError: Into<Cmd::Error>,
 {
     type Output = Cmd::Output;

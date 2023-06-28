@@ -2,10 +2,8 @@ use std::{convert::TryInto, marker::PhantomData, result::Result as StdResult};
 
 use serde::{Deserialize, Serialize};
 
-use finance::{
-    currency::{self, Currency, SymbolOwned},
-    price::Price,
-};
+use currency::{self, Currency, SymbolOwned};
+use finance::price::Price;
 use marketprice::SpotPrice;
 use platform::batch::Batch;
 use sdk::cosmwasm_std::{wasm_execute, Addr, QuerierWrapper};

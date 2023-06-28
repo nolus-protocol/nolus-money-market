@@ -1,7 +1,5 @@
-use finance::{
-    coin::CoinDTO,
-    currency::{Group, Symbol},
-};
+use currency::{Group, Symbol};
+use finance::coin::CoinDTO;
 use oracle::stub::OracleRef;
 use sdk::cosmwasm_std::{Env, QuerierWrapper};
 use timealarms::stub::TimeAlarmsRef;

@@ -281,9 +281,8 @@ dependencies = [
 
 [[package]]
 name = "currency"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
- "finance",
  "sdk",
  "serde",
  "thiserror",
@@ -499,8 +498,9 @@ dependencies = [
 
 [[package]]
 name = "finance"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
+ "currency",
  "gcd",
  "sdk",
  "serde",

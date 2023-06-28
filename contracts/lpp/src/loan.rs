@@ -5,9 +5,9 @@ use sdk::{
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
+use currency::Currency;
 use finance::{
     coin::Coin,
-    currency::Currency,
     interest::InterestPeriod,
     percent::{Percent, Units},
     period::Period,
@@ -116,9 +116,9 @@ where
 
 #[cfg(test)]
 mod test {
+    use currency::test::Usdc;
     use finance::{
-        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, test::currency::Usdc,
-        zero::Zero,
+        coin::Coin, duration::Duration, fraction::Fraction, percent::Percent, zero::Zero,
     };
     use sdk::cosmwasm_std::Timestamp;
 
@@ -234,9 +234,8 @@ mod test {
     }
 
     mod persistence {
-        use finance::{
-            coin::Coin, duration::Duration, percent::Percent, test::currency::Usdc, zero::Zero,
-        };
+        use currency::test::Usdc;
+        use finance::{coin::Coin, duration::Duration, percent::Percent, zero::Zero};
         use sdk::cosmwasm_std::{testing, Addr, Timestamp};
 
         use crate::{error::ContractError, loan::Loan};
