@@ -10,7 +10,7 @@ testing = []
 
 [dependencies]
 currency = { workspace = true }
-sdk = { workspace = true, features = ["schema"] }
+sdk = { workspace = true, features = ["cosmos", "schema"] }
 
 gcd = "2.1"
 thiserror = { workspace = true }
