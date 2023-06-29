@@ -364,11 +364,8 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
     );
 
     let leaser = test_case.leaser();
-    let resp = leaser_wrapper::query_quote::<Osmo, LeaseCurrency>(
-        &mut test_case.app,
-        leaser,
-        downpayment,
-    );
+    let resp =
+        leaser_wrapper::query_quote::<Osmo, LeaseCurrency>(&mut test_case.app, leaser, downpayment);
 
     assert_eq!(
         resp.borrow.try_into(),
