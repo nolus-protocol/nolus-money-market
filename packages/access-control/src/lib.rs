@@ -40,7 +40,7 @@ impl<'r> SingleUserAccess<'r> {
     }
 
     pub fn check_access(&self, addr: &Addr) -> Result<(), Unauthorized> {
-        if &self.address == addr {
+        if self.address == addr {
             Ok(())
         } else {
             Err(Unauthorized)

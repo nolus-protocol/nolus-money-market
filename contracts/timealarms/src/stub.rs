@@ -38,7 +38,7 @@ impl TimeAlarmsRef {
     }
 
     pub fn owned_by(&self, addr: &Addr) -> bool {
-        &self.addr == addr
+        self.addr == addr
     }
 
     pub fn setup_alarm(self, when: Timestamp) -> Result<Batch> {

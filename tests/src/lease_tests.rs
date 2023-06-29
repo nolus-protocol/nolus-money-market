@@ -120,7 +120,7 @@ where
     let lease = get_lease_address(test_case);
     let leaser = test_case.leaser();
 
-    let quote = leaser_wrapper::query_quote::<Lpn, DownpaymentC, LeaseCurrency>(
+    let quote = leaser_wrapper::query_quote::<DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
         leaser,
         downpayment,

@@ -116,7 +116,7 @@ where
         // Bonus: set some funds on the user for future proposals
         let admin = Addr::unchecked(ADMIN);
 
-        if !init_funds.is_empty() && user != &admin {
+        if !init_funds.is_empty() && user != admin {
             let coin_sort_fn = |coin: &CwCoin| (coin.denom.clone(), coin.amount.u128());
 
             init_funds.sort_by_key(coin_sort_fn);

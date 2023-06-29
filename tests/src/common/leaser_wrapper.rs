@@ -93,13 +93,12 @@ type LeaserContractWrapperReply = Box<
     >,
 >;
 
-pub fn query_quote<LpnC, DownpaymentC, LeaseC>(
+pub fn query_quote<DownpaymentC, LeaseC>(
     app: &mut MockApp,
     leaser: Addr,
     downpayment: Coin<DownpaymentC>,
 ) -> QuoteResponse
 where
-    LpnC: Currency,
     DownpaymentC: Currency,
     LeaseC: Currency,
 {

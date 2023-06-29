@@ -258,7 +258,7 @@ fn test_quote() {
     let leaser = test_case.leaser();
     let downpayment = Coin::new(100);
     let borrow = Coin::<Lpn>::new(185);
-    let resp = leaser_wrapper::query_quote::<Lpn, Downpayment, LeaseCurrency>(
+    let resp = leaser_wrapper::query_quote::<Downpayment, LeaseCurrency>(
         &mut test_case.app,
         leaser,
         downpayment,
@@ -278,7 +278,7 @@ fn test_quote() {
     assert_eq!(resp.annual_interest_rate_margin, Percent::from_permille(30),);
 
     let leaser = test_case.leaser();
-    let resp = leaser_wrapper::query_quote::<Lpn, Downpayment, LeaseCurrency>(
+    let resp = leaser_wrapper::query_quote::<Downpayment, LeaseCurrency>(
         &mut test_case.app,
         leaser,
         Coin::new(15),
@@ -364,7 +364,7 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
     );
 
     let leaser = test_case.leaser();
-    let resp = leaser_wrapper::query_quote::<Lpn, Osmo, LeaseCurrency>(
+    let resp = leaser_wrapper::query_quote::<Osmo, LeaseCurrency>(
         &mut test_case.app,
         leaser,
         downpayment,
@@ -431,7 +431,7 @@ fn test_quote_fixed_rate() {
 
     let feeder = setup_feeder(&mut test_case);
     feed_price::<_, LeaseCurrency, Lpn>(&mut test_case, feeder, Coin::new(3), Coin::new(1));
-    let resp = leaser_wrapper::query_quote::<Lpn, Downpayment, LeaseCurrency>(
+    let resp = leaser_wrapper::query_quote::<Downpayment, LeaseCurrency>(
         &mut test_case.app,
         test_case.leaser_addr.clone().unwrap(),
         Coin::<Downpayment>::new(100),
@@ -580,7 +580,7 @@ where
     }
 
     let downpayment: Coin<DownpaymentC> = Coin::new(40);
-    let quote = leaser_wrapper::query_quote::<Lpn, DownpaymentC, LeaseC>(
+    let quote = leaser_wrapper::query_quote::<DownpaymentC, LeaseC>(
         &mut test_case.app,
         leaser_addr.clone(),
         downpayment,

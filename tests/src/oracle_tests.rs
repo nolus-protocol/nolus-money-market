@@ -518,7 +518,8 @@ fn test_zero_price_dto() {
         )
         .unwrap();
     assert_eq!(response.data, None);
-    assert_eq!(&response.events, &[]);
+    let no_events: &[Event; 0] = &[];
+    assert_eq!(&response.events, no_events);
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

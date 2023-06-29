@@ -271,7 +271,7 @@ mod test_invariant {
 
     #[test]
     fn base_zero_json() {
-        let r = load::<Usdc, Nls>(br#"{"amount": {"amount": "0", "ticker": "uusdc"}, "amount_quote": {"amount": "5", "ticker": "unls"}}"#);
+        let r = load(br#"{"amount": {"amount": "0", "ticker": "uusdc"}, "amount_quote": {"amount": "5", "ticker": "unls"}}"#);
         assert_err(r, "not be zero");
     }
 
@@ -283,7 +283,7 @@ mod test_invariant {
 
     #[test]
     fn quote_zero_json() {
-        let r = load::<Usdc, Nls>(br#"{"amount": {"amount": "10", "ticker": "uusdc"}, "amount_quote": {"amount": "0", "ticker": "unls"}}"#);
+        let r = load(br#"{"amount": {"amount": "10", "ticker": "uusdc"}, "amount_quote": {"amount": "0", "ticker": "unls"}}"#);
         assert_err(r, "not be zero");
     }
 
@@ -295,7 +295,7 @@ mod test_invariant {
 
     #[test]
     fn currencies_match_json() {
-        let r = load::<Dai, Dai>(br#"{"amount": {"amount": "10", "ticker": "udai"}, "amount_quote": {"amount": "5", "ticker": "udai"}}"#);
+        let r = load(br#"{"amount": {"amount": "10", "ticker": "udai"}, "amount_quote": {"amount": "5", "ticker": "udai"}}"#);
         assert_err(r, "should be equal to the identity if the currencies match");
     }
 
@@ -307,7 +307,7 @@ mod test_invariant {
 
     #[test]
     fn currencies_match_ok_json() {
-        let p = load::<Nls, Nls>(br#"{"amount": {"amount": "4", "ticker": "unls"}, "amount_quote": {"amount": "4", "ticker": "unls"}}"#).expect("should have an identity");
+        let p = load(br#"{"amount": {"amount": "4", "ticker": "unls"}, "amount_quote": {"amount": "4", "ticker": "unls"}}"#).expect("should have an identity");
         assert_eq!(&CoinDTO::<TC>::from(Coin::<Nls>::new(4)), p.base());
     }
 
@@ -322,7 +322,7 @@ mod test_invariant {
 
     #[test]
     fn group_mismatch_json() {
-        let r = load_with_groups::<TC, TestCurrencies, Nls, Dai>(br#"{"amount": {"amount": "4", "ticker": "unls"}, "amount_quote": {"amount": "5", "ticker": "udai"}}"#);
+        let r = load_with_groups::<TC, TestCurrencies>(br#"{"amount": {"amount": "4", "ticker": "unls"}, "amount_quote": {"amount": "5", "ticker": "udai"}}"#);
         assert_err(r, "not defined in the test currency group");
     }
 
@@ -348,20 +348,14 @@ mod test_invariant {
         }
     }
 
-    fn load<C, QuoteC>(json: &[u8]) -> StdResult<PriceDTO<TC, TC>>
-    where
-        C: Currency,
-        QuoteC: Currency,
-    {
-        load_with_groups::<TC, TC, C, QuoteC>(json)
+    fn load(json: &[u8]) -> StdResult<PriceDTO<TC, TC>> {
+        load_with_groups::<TC, TC>(json)
     }
 
-    fn load_with_groups<G, QuoteG, C, QuoteC>(json: &[u8]) -> StdResult<PriceDTO<G, QuoteG>>
+    fn load_with_groups<G, QuoteG>(json: &[u8]) -> StdResult<PriceDTO<G, QuoteG>>
     where
         G: Group + for<'a> Deserialize<'a> + Debug,
         QuoteG: Group + for<'a> Deserialize<'a> + Debug,
-        C: Currency,
-        QuoteC: Currency,
     {
         from_slice::<PriceDTO<G, QuoteG>>(json)
     }

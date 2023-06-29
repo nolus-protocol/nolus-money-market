@@ -84,7 +84,7 @@ impl OracleRef {
     }
 
     pub fn owned_by(&self, contract: &Addr) -> bool {
-        &self.addr == contract
+        self.addr == contract
     }
 
     pub fn execute_as_oracle<OracleBase, V>(
