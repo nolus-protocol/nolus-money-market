@@ -45,7 +45,7 @@ pub(crate) fn on_timeout_repair_channel<S, L, SEnum, SwapResult>(
 where
     S: Enterable + DexConnectable + Into<SEnum>,
     EntryDelay<IcaConnector<InRecovery<S, SEnum>, SwapResult>>: Into<SEnum>,
-    IcaConnector<InRecovery<S, SEnum>, SwapResult>: Into<SEnum>,
+    SEnum: From<IcaConnector<InRecovery<S, SEnum>, SwapResult>>,
     EntryDelay<S>: Into<SEnum>,
     L: Into<String>,
 {
