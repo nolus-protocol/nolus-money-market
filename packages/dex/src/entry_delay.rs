@@ -37,7 +37,6 @@ impl<Enterable> EntryDelay<Enterable> {
 
     pub(super) fn enter(&self, now: Timestamp) -> DexResult<Batch> {
         self.time_alarms
-            .clone()
             .setup_alarm(now + Self::RIGHT_AFTER_NOW)
             .map_err(Into::into)
     }

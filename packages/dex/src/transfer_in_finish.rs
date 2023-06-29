@@ -82,7 +82,7 @@ where
                 .and_then(|resp| response::res_continue::<_, _, Self>(resp, next_state))
                 .into()
         } else {
-            transfer_in::setup_alarm(self.spec.time_alarm().clone(), now)
+            transfer_in::setup_alarm(self.spec.time_alarm(), now)
                 .map(|batch| MessageResponse::messages_with_events(batch, emitter))
                 .and_then(|resp| response::res_continue::<_, _, Self>(resp, self))
                 .into()

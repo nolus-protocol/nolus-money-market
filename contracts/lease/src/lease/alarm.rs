@@ -15,7 +15,7 @@ use oracle::{
     stub::{Oracle as OracleTrait, OracleRef, PriceAlarms as PriceAlarmsTrait},
 };
 use sdk::cosmwasm_std::Timestamp;
-use timealarms::stub::{TimeAlarms as TimeAlarmsTrait, TimeAlarmsRef};
+use timealarms::stub::TimeAlarmsRef;
 
 use crate::{error::ContractResult, lease::Lease};
 
@@ -33,29 +33,26 @@ where
         time_alarms: &TimeAlarmsRef,
         price_alarms: &OracleRef,
     ) -> ContractResult<Batch> {
-        let mut time_alarms = time_alarms.as_stub();
-        let mut price_alarms = price_alarms.as_alarms_stub::<Lpn>();
-        self.reschedule_time_alarm(now, &mut time_alarms)
-            .and_then(|()| self.reschedule_price_alarm(now, liquidation_zone, &mut price_alarms))?;
-
-        Ok(Batch::from(time_alarms).merge(price_alarms.into()))
+        self.reschedule_time_alarm(now, time_alarms)
+            .and_then(|schedule_time_alarm| {
+                let mut price_alarms = price_alarms.as_alarms_stub::<Lpn>();
+                self.reschedule_price_alarm(now, liquidation_zone, &mut price_alarms)
+                    .map(|_| schedule_time_alarm.merge(price_alarms.into()))
+            })
     }
 
-    fn reschedule_time_alarm<TimeAlarms>(
+    fn reschedule_time_alarm(
         &self,
         now: &Timestamp,
-        time_alarms: &mut TimeAlarms,
-    ) -> ContractResult<()>
-    where
-        TimeAlarms: TimeAlarmsTrait,
-    {
+        time_alarms: &TimeAlarmsRef,
+    ) -> ContractResult<Batch> {
         let grace_period_end = self.loan.grace_period_end_not_before(now);
         debug_assert!(
             now < &grace_period_end,
             "Rescheduling when the lease is in overdue! A liquidation is expected!"
         );
         time_alarms
-            .add_alarm(grace_period_end.min(*now + self.liability.recalculation_time()))
+            .setup_alarm(grace_period_end.min(*now + self.liability.recalculation_time()))
             .map_err(Into::into)
     }
 

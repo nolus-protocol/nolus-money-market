@@ -39,7 +39,7 @@ where
     payment.with_coin(CheckBalance { account, querier })
 }
 
-pub(super) fn setup_alarm(time_alarms: TimeAlarmsRef, now: Timestamp) -> Result<Batch> {
+pub(super) fn setup_alarm(time_alarms: &TimeAlarmsRef, now: Timestamp) -> Result<Batch> {
     time_alarms
         .setup_alarm(now + POLLING_INTERVAL)
         .map_err(Into::into)

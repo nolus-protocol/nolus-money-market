@@ -105,7 +105,6 @@ impl Enterable for Idle {
     fn enter(&self, now: Timestamp, _: &QuerierWrapper<'_>) -> Result<Batch, DexError> {
         self.config
             .time_alarms()
-            .clone()
             .setup_alarm(now + Duration::from_hours(self.config.cadence_hours()))
             .map_err(DexError::TimeAlarmError)
     }

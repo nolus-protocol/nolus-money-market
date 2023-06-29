@@ -41,14 +41,14 @@ impl TimeAlarmsRef {
         self.addr == addr
     }
 
-    pub fn setup_alarm(self, when: Timestamp) -> Result<Batch> {
+    pub fn setup_alarm(&self, when: Timestamp) -> Result<Batch> {
         let mut stub = self.as_stub();
         stub.add_alarm(when)?;
         Ok(stub.into())
     }
 
     /// It would be overengineering to hide the `TimeAlarms` implementation
-    pub fn as_stub(&self) -> TimeAlarmsStub<'_> {
+    fn as_stub(&self) -> TimeAlarmsStub<'_> {
         TimeAlarmsStub {
             time_alarms_ref: self,
             batch: Default::default(),
@@ -68,7 +68,7 @@ impl TimeAlarmsRef {
     }
 }
 
-pub struct TimeAlarmsStub<'a> {
+struct TimeAlarmsStub<'a> {
     time_alarms_ref: &'a TimeAlarmsRef,
     batch: Batch,
 }
