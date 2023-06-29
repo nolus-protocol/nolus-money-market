@@ -73,11 +73,7 @@ pub fn execute(
             SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
                 .check_access(&info.sender)?;
 
-            let alarm_recepient = env.contract.address.clone();
-
-            try_time_alarm(deps, env).and_then(|resp| {
-                response::response_with_messages::<_, _, ContractError>(&alarm_recepient, resp)
-            })
+            try_time_alarm(deps, env).map(response::response_only_messages)
         }
         ExecuteMsg::Config { cadence_hours } => {
             SingleUserAccess::check_owner_access::<ContractError>(deps.storage, &info.sender)?;

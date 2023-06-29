@@ -1,5 +1,4 @@
-use ::currency::lease::LeaseGroup;
-use currency;
+use currency::lease::LeaseGroup;
 use dex::Handler;
 use platform::response;
 #[cfg(feature = "contract-with-bindings")]
@@ -14,7 +13,7 @@ use versioning::{version, VersionSegment};
 use crate::{
     api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
     contract::{state::Handler as LeaseHandler, Contract},
-    error::{ContractError, ContractResult},
+    error::ContractResult,
 };
 
 #[cfg(feature = "migration")]
@@ -93,8 +92,6 @@ pub fn execute(
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
-    let may_resp = matches!(msg, ExecuteMsg::TimeAlarm {} | ExecuteMsg::PriceAlarm {})
-        .then(|| env.contract.address.clone());
     state::load(deps.storage)
         .and_then(|state| state.execute(&mut deps, env, info, msg))
         .and_then(
@@ -103,13 +100,7 @@ pub fn execute(
                  next_state,
              }| state::save(deps.storage, &next_state).map(|()| response),
         )
-        .and_then(|resp| {
-            if let Some(contract_resp) = may_resp {
-                response::response_with_messages::<_, _, ContractError>(&contract_resp, resp)
-            } else {
-                Ok(response::response_only_messages(resp))
-            }
-        })
+        .map(response::response_only_messages)
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]

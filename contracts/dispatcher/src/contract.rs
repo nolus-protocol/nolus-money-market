@@ -4,7 +4,7 @@ use lpp::stub::LppRef;
 use platform::{
     batch::{Batch, Emit, Emitter},
     message::Response as MessageResponse,
-    response::{self},
+    response,
 };
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
@@ -23,7 +23,6 @@ use crate::{
     msg::{ConfigResponse, ExecuteMsg, InstantiateMsg, MigrateMsg, QueryMsg, SudoMsg},
     result::ContractResult,
     state::{Config, DispatchLog},
-    ContractError,
 };
 
 // version info for migration info
@@ -87,10 +86,7 @@ pub fn execute(
             SingleUserAccess::load(deps.storage, crate::access_control::TIMEALARMS_NAMESPACE)?
                 .check_access(&info.sender)?;
 
-            let resp = env.contract.address.clone();
-            try_dispatch(deps, env, info.sender).and_then(|messages| {
-                response::response_with_messages::<_, _, ContractError>(&resp, messages)
-            })
+            try_dispatch(deps, env, info.sender).map(response::response_only_messages)
         }
     }
 }
