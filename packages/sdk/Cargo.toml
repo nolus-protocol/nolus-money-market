@@ -28,7 +28,7 @@ cosmwasm-storage = { workspace = true, optional = true }
 cosmwasm-schema = { workspace = true, optional = true }
 cw-storage-plus = { workspace = true, optional = true }
 cosmos-sdk-proto = { workspace = true, optional = true }
-neutron-sdk = { git = "https://github.com/neutron-org/neutron-contracts", workspace = true, optional = true }
+neutron-sdk = { workspace = true, optional = true }
 
 serde = { workspace = true, optional = true }
 
