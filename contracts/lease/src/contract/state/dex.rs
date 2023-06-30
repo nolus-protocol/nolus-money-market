@@ -40,14 +40,10 @@ where
         _info: MessageInfo,
         msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        // TODO combine the LeaseHandler and DexHandler into a common trait each Lease State implements
-        // Then use `enum_dispatch` to implement it on the State itself
-        if matches!(msg, ExecuteMsg::TimeAlarm {}) {
-            DexHandler::on_time_alarm(self, deps.as_ref(), env).into()
-        } else if matches!(msg, ExecuteMsg::PriceAlarm {}) {
-            super::ignore_msg(self)
-        } else {
-            handler::err("execute", deps.api)
+        match msg {
+            ExecuteMsg::TimeAlarm {} => DexHandler::on_time_alarm(self, deps.as_ref(), env).into(),
+            ExecuteMsg::PriceAlarm {} => super::ignore_msg(self),
+            _ => handler::err("execute", deps.api),
         }
     }
 }
