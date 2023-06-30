@@ -1,15 +1,15 @@
 use serde::{Deserialize, Serialize};
 
 use dex::Enterable;
-use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
-    api::{ExecuteMsg, StateResponse},
+    api::StateResponse,
     contract::{Contract, Lease},
     error::{ContractError, ContractResult},
 };
 
-use super::{handler, Handler, Response};
+use super::{Handler, Response};
 
 use self::transfer_in::DexState;
 
@@ -29,27 +29,36 @@ impl Active {
 }
 
 impl Handler for Active {
-    fn execute(
+    fn close(
         self,
         deps: &mut DepsMut<'_>,
         env: Env,
         info: MessageInfo,
-        msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        match msg {
-            ExecuteMsg::Repay() => handler::err("repay", deps.api),
-            ExecuteMsg::Close() => {
-                if self.lease.lease.customer != info.sender {
-                    return Err(ContractError::Unauthorized {});
-                }
-                let start_transfer_in = transfer_in::start(self.lease);
-                start_transfer_in
-                    .enter(env.block.time, &deps.querier)
-                    .map(|batch| Response::from(batch, DexState::from(start_transfer_in)))
-                    .map_err(Into::into)
-            }
-            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => super::ignore_msg(self),
+        if self.lease.lease.customer != info.sender {
+            return Err(ContractError::Unauthorized {});
         }
+        let start_transfer_in = transfer_in::start(self.lease);
+        start_transfer_in
+            .enter(env.block.time, &deps.querier)
+            .map(|batch| Response::from(batch, DexState::from(start_transfer_in)))
+            .map_err(Into::into)
+    }
+    fn on_time_alarm(
+        self,
+        _deps: Deps<'_>,
+        _env: Env,
+        _info: MessageInfo,
+    ) -> ContractResult<Response> {
+        super::ignore_msg(self)
+    }
+    fn on_price_alarm(
+        self,
+        _deps: Deps<'_>,
+        _env: Env,
+        _info: MessageInfo,
+    ) -> ContractResult<Response> {
+        super::ignore_msg(self)
     }
 }
 

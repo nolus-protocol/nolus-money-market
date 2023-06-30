@@ -5,14 +5,11 @@ use serde::{Deserialize, Serialize};
 
 use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::{
-    cosmwasm_std::{DepsMut, Env, MessageInfo, Reply, Storage},
+    cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, Reply, Storage},
     cw_storage_plus::Item,
 };
 
-use crate::{
-    api::{ExecuteMsg, NewLeaseContract},
-    error::ContractResult,
-};
+use crate::{api::NewLeaseContract, error::ContractResult};
 
 pub(crate) use self::handler::{Handler, Response};
 #[cfg(feature = "migration")]

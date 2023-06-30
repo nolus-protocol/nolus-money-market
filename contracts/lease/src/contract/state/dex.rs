@@ -2,18 +2,15 @@ use serde::{Deserialize, Serialize};
 
 use dex::{ContinueResult, Contract as DexContract, Handler as DexHandler, Result as DexResult};
 use platform::state_machine;
-use sdk::cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Binary, Deps, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
-    api::{self, ExecuteMsg, StateResponse},
+    api::{self, StateResponse},
     contract::Contract,
     error::ContractResult,
 };
 
-use super::{
-    handler::{self, Handler as LeaseHandler},
-    Response, State as ContractState,
-};
+use super::{handler::Handler as LeaseHandler, Response, State as ContractState};
 
 #[derive(Serialize, Deserialize)]
 #[serde(transparent)]
@@ -33,18 +30,22 @@ where
     H::Response: Into<ContractState>,
     Self: Into<ContractState>,
 {
-    fn execute(
+    fn on_time_alarm(
         self,
-        deps: &mut DepsMut<'_>,
+        deps: Deps<'_>,
         env: Env,
         _info: MessageInfo,
-        msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        match msg {
-            ExecuteMsg::TimeAlarm {} => DexHandler::on_time_alarm(self, deps.as_ref(), env).into(),
-            ExecuteMsg::PriceAlarm {} => super::ignore_msg(self),
-            _ => handler::err("execute", deps.api),
-        }
+        DexHandler::on_time_alarm(self, deps, env).into()
+    }
+
+    fn on_price_alarm(
+        self,
+        _deps: Deps<'_>,
+        _env: Env,
+        _info: MessageInfo,
+    ) -> ContractResult<Response> {
+        super::ignore_msg(self)
     }
 }
 

@@ -1,13 +1,10 @@
+use cosmwasm_std::Deps;
 use serde::{Deserialize, Serialize};
 
 use dex::Handler as DexHandler;
 use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
-use crate::{
-    api::{ExecuteMsg, StateResponse},
-    contract::Contract,
-    error::ContractResult,
-};
+use crate::{api::StateResponse, contract::Contract, error::ContractResult};
 
 use super::{handler::Handler as LeaseHandler, Response};
 
@@ -36,14 +33,40 @@ where
         self.handler.reply(deps, env, msg)
     }
 
-    fn execute(
+    fn repay(
         self,
         deps: &mut DepsMut<'_>,
         env: Env,
         info: MessageInfo,
-        msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        self.handler.execute(deps, env, info, msg)
+        self.handler.repay(deps, env, info)
+    }
+
+    fn close(
+        self,
+        deps: &mut DepsMut<'_>,
+        env: Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        self.handler.close(deps, env, info)
+    }
+
+    fn on_time_alarm(
+        self,
+        deps: Deps<'_>,
+        env: Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        self.handler.on_time_alarm(deps, env, info)
+    }
+
+    fn on_price_alarm(
+        self,
+        deps: Deps<'_>,
+        env: Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        self.handler.on_price_alarm(deps, env, info)
     }
 }
 

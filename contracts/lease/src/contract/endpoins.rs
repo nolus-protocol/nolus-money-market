@@ -93,7 +93,7 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> ContractResult<CwResponse> {
     state::load(deps.storage)
-        .and_then(|state| state.execute(&mut deps, env, info, msg))
+        .and_then(|state| process_execute(msg, state, &mut deps, env, info))
         .and_then(
             |Response {
                  response,
@@ -121,6 +121,21 @@ pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binar
     state::load(deps.storage)
         .and_then(|state| state.state(env.block.time, &deps.querier))
         .and_then(|resp| to_binary(&resp).map_err(Into::into))
+}
+
+fn process_execute(
+    msg: ExecuteMsg,
+    state: State,
+    deps: &mut DepsMut<'_>,
+    env: Env,
+    info: MessageInfo,
+) -> ContractResult<Response> {
+    match msg {
+        ExecuteMsg::Repay() => state.repay(deps, env, info),
+        ExecuteMsg::Close() => state.close(deps, env, info),
+        ExecuteMsg::TimeAlarm {} => LeaseHandler::on_time_alarm(state, deps.as_ref(), env, info),
+        ExecuteMsg::PriceAlarm() => LeaseHandler::on_price_alarm(state, deps.as_ref(), env, info),
+    }
 }
 
 fn process_sudo(msg: SudoMsg, state: State, deps: Deps<'_>, env: Env) -> ContractResult<Response> {

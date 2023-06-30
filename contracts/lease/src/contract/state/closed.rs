@@ -4,17 +4,17 @@ use platform::{
     bank,
     batch::{Batch, Emit, Emitter},
 };
-use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Deps, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
-    api::{ExecuteMsg, StateResponse},
+    api::StateResponse,
     contract::{cmd::Close, Contract},
     error::ContractResult,
     event::Type,
     lease::{with_lease_paid, LeaseDTO},
 };
 
-use super::{handler, Handler, Response};
+use super::{Handler, Response};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Closed {}
@@ -38,18 +38,21 @@ impl Closed {
 }
 
 impl Handler for Closed {
-    fn execute(
+    fn on_time_alarm(
         self,
-        deps: &mut DepsMut<'_>,
+        _deps: Deps<'_>,
         _env: Env,
         _info: MessageInfo,
-        msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        match msg {
-            ExecuteMsg::Repay() => handler::err("repay", deps.api),
-            ExecuteMsg::Close() => handler::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => super::ignore_msg(self),
-        }
+        super::ignore_msg(self)
+    }
+    fn on_price_alarm(
+        self,
+        _deps: Deps<'_>,
+        _env: Env,
+        _info: MessageInfo,
+    ) -> ContractResult<Response> {
+        super::ignore_msg(self)
     }
 }
 

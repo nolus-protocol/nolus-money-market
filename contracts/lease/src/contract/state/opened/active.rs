@@ -13,14 +13,14 @@ use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timesta
 use timealarms::stub::TimeAlarmsRef;
 
 use crate::{
-    api::{DownpaymentCoin, ExecuteMsg, LpnCoin, StateResponse},
+    api::{DownpaymentCoin, LpnCoin, StateResponse},
     contract::{
         cmd::{
             FullLiquidation, FullLiquidationResult, LiquidationDTO, LiquidationStatus,
             LiquidationStatusCmd, OpenLoanRespResult, PartialLiquidation, PartialLiquidationResult,
             Repay, RepayResult,
         },
-        state::{handler, liquidated, paid, Handler, Response},
+        state::{liquidated, paid, Handler, Response},
         Contract, Lease,
     },
     error::{ContractError, ContractResult},
@@ -129,7 +129,7 @@ impl Active {
         }
     }
 
-    fn try_repay(self, deps: Deps<'_>, env: Env, info: MessageInfo) -> ContractResult<Response> {
+    fn try_repay(self, deps: Deps<'_>, env: &Env, info: MessageInfo) -> ContractResult<Response> {
         let payment = bank::may_received::<PaymentGroup, _>(
             info.funds.clone(),
             IntoDTO::<PaymentGroup>::new(),
@@ -141,7 +141,7 @@ impl Active {
             let payment_lpn = bank::may_received::<Lpns, _>(info.funds, IntoDTO::<Lpns>::new())
                 .ok_or_else(ContractError::NoPaymentError)??;
 
-            Self::try_repay_lpn(self.lease, payment_lpn, &deps.querier, &env)
+            Self::try_repay_lpn(self.lease, payment_lpn, &deps.querier, env)
         } else {
             let start_buy_lpn = buy_lpn::start(self.lease, payment);
             start_buy_lpn
@@ -324,19 +324,29 @@ fn finish_repay(loan_paid: bool, repay_response: MessageResponse, lease: Lease) 
 }
 
 impl Handler for Active {
-    fn execute(
+    fn repay(
         self,
         deps: &mut DepsMut<'_>,
         env: Env,
         info: MessageInfo,
-        msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        match msg {
-            ExecuteMsg::Repay() => self.try_repay(deps.as_ref(), env, info),
-            ExecuteMsg::Close() => handler::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() => self.try_on_price_alarm(&deps.querier, &env, info),
-            ExecuteMsg::TimeAlarm {} => self.try_on_time_alarm(&deps.querier, &env, info),
-        }
+        self.try_repay(deps.as_ref(), &env, info)
+    }
+    fn on_time_alarm(
+        self,
+        deps: Deps<'_>,
+        env: Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        self.try_on_time_alarm(&deps.querier, &env, info)
+    }
+    fn on_price_alarm(
+        self,
+        deps: Deps<'_>,
+        env: Env,
+        info: MessageInfo,
+    ) -> ContractResult<Response> {
+        self.try_on_price_alarm(&deps.querier, &env, info)
     }
 }
 

@@ -1,31 +1,30 @@
 use serde::{Deserialize, Serialize};
 
-use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Timestamp};
+use sdk::cosmwasm_std::{Deps, Env, MessageInfo, QuerierWrapper, Timestamp};
 
-use crate::{
-    api::{ExecuteMsg, StateResponse},
-    contract::Contract,
-    error::ContractResult,
-};
+use crate::{api::StateResponse, contract::Contract, error::ContractResult};
 
-use super::{handler, Handler, Response};
+use super::{Handler, Response};
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Liquidated {}
 
 impl Handler for Liquidated {
-    fn execute(
+    fn on_time_alarm(
         self,
-        deps: &mut DepsMut<'_>,
+        _deps: Deps<'_>,
         _env: Env,
         _info: MessageInfo,
-        msg: ExecuteMsg,
     ) -> ContractResult<Response> {
-        match msg {
-            ExecuteMsg::Repay() => handler::err("repay", deps.api),
-            ExecuteMsg::Close() => handler::err("close", deps.api),
-            ExecuteMsg::PriceAlarm() | ExecuteMsg::TimeAlarm {} => super::ignore_msg(self),
-        }
+        super::ignore_msg(self)
+    }
+    fn on_price_alarm(
+        self,
+        _deps: Deps<'_>,
+        _env: Env,
+        _info: MessageInfo,
+    ) -> ContractResult<Response> {
+        super::ignore_msg(self)
     }
 }
 
