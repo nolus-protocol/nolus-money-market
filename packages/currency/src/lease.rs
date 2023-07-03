@@ -118,6 +118,24 @@ define_symbol! {
 define_currency!(Wbtc, WBTC);
 
 define_symbol! {
+    AKT {
+        ["dev", "test"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-73/uakt
+            bank: "ibc/1064EED4A8E99F9C1158680236D0C5C3EA6B8BB65C9F87DAC6BC759DD904D818",
+            /// full ibc route: transfer/channel-73/uakt
+            dex: "ibc/7153C8C55DB988805FAC69E449B680A8BAAC15944B87CF210ADCD1A3A9542857",
+        },
+        ["main"]: {
+            /// full ibc route: transfer/channel-0/transfer/channel-1/uakt
+            bank: "ibc/ADC63C00000CA75F909D2BE3ACB5A9980BED3A73B92746E0FCE6C67414055459",
+            /// full ibc route: transfer/channel-1/uakt
+            dex: "ibc/1480B8FD20AD5FCAE81EA87584D269547DD4D436843C1D20F15E00EB64743EF4",
+        },
+    }
+}
+define_currency!(Akt, AKT);
+
+define_symbol! {
     EVMOS {
         ["dev", "test"]: {
             /// full ibc route: transfer/channel-0/transfer/channel-227/atevmos
