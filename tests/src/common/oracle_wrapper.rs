@@ -102,8 +102,11 @@ type OracleContractWrapper = ContractWrapper<
     ContractError,
 >;
 
-pub fn add_feeder(test_case: &mut TestCase, addr: impl Into<String>) {
-    let oracle = test_case.oracle().clone();
+pub fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
+    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
+    addr: impl Into<String>,
+) {
+    let oracle = test_case.address_book.oracle().clone();
 
     let response: AppResponse = test_case
         .app
@@ -123,8 +126,8 @@ pub fn add_feeder(test_case: &mut TestCase, addr: impl Into<String>) {
     );
 }
 
-pub fn feed_a_price<C1, C2>(
-    test_case: &mut TestCase,
+pub fn feed_a_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
+    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
     addr: Addr,
     price: Price<C1, C2>,
 ) -> AppResponse
@@ -132,7 +135,7 @@ where
     C1: Currency,
     C2: Currency,
 {
-    let oracle = test_case.oracle().clone();
+    let oracle = test_case.address_book.oracle().clone();
 
     test_case
         .app
@@ -151,8 +154,8 @@ where
         .expect("Oracle not properly connected!")
 }
 
-pub fn feed_price<C1, C2>(
-    test_case: &mut TestCase,
+pub fn feed_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
+    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
     addr: Addr,
     base: Coin<C1>,
     quote: Coin<C2>,
