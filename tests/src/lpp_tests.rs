@@ -216,8 +216,14 @@ fn deposit_and_withdraw() {
 
     test_case
         .send_funds_from_admin(lender1.clone(), &[lpn_cwcoin(init_deposit)])
-        .send_funds_from_admin(lender2.clone(), &[lpn_cwcoin(init_deposit.max(test_deposit))])
-        .send_funds_from_admin(lender3.clone(), &[lpn_cwcoin(init_deposit.max(post_deposit))]);
+        .send_funds_from_admin(
+            lender2.clone(),
+            &[lpn_cwcoin(init_deposit.max(test_deposit))],
+        )
+        .send_funds_from_admin(
+            lender3.clone(),
+            &[lpn_cwcoin(init_deposit.max(post_deposit))],
+        );
 
     let lease_id = test_case.lease_code_id();
     let lpp = test_case.lpp().clone();
