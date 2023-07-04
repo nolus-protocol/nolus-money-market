@@ -11,7 +11,7 @@ use timealarms::msg::{AlarmsCount, DispatchAlarmsResponse};
 
 use crate::common::{
     cwcoin,
-    test_case::{Builder as TestCaseBuilder, TestCase},
+    test_case::{BlankBuilder as TestCaseBuilder, TestCase},
     AppExt, ADMIN,
 };
 
@@ -198,13 +198,14 @@ fn test_lease_serde() {
         serde_json_wasm::from_slice(&serde_json_wasm::to_vec(&LeaseTimeAlarm {}).unwrap()).unwrap();
 }
 
-fn test_case() -> TestCase {
-    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::with_reserve(&[coin(
-        10_000_000_000_000_000_000_000_000_000,
-        Lpn::BANK_SYMBOL,
-    )])
-    .init_time_alarms()
-    .into_generic();
+fn test_case() -> TestCase<(), (), (), (), (), (), Addr> {
+    let mut test_case: TestCase<_, _, _, _, _, _, _> =
+        TestCaseBuilder::<Lpn>::with_reserve(&[coin(
+            10_000_000_000_000_000_000_000_000_000,
+            Lpn::BANK_SYMBOL,
+        )])
+        .init_time_alarms()
+        .into_generic();
 
     test_case
         .app
@@ -213,24 +214,35 @@ fn test_case() -> TestCase {
     test_case
 }
 
-fn add_alarm(test_case: &mut TestCase, recv: &Addr, time_secs: u64) {
+fn add_alarm<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
+    recv: &Addr,
+    time_secs: u64,
+) {
     let alarm_msg = timealarms::msg::ExecuteMsg::AddAlarm {
         time: Timestamp::from_seconds(time_secs),
     };
-    let timealarms = test_case.time_alarms().clone();
     test_case
         .app
-        .execute_contract(recv.clone(), timealarms, &alarm_msg, &[])
+        .execute_contract(
+            recv.clone(),
+            test_case.address_book.time_alarms().clone(),
+            &alarm_msg,
+            &[],
+        )
         .unwrap();
 }
 
-fn dispatch(test_case: &mut TestCase, max_count: u32) -> AppResponse {
+fn dispatch<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
+    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>,
+    max_count: u32,
+) -> AppResponse {
     let dispatch_msg = timealarms::msg::ExecuteMsg::DispatchAlarms { max_count };
     test_case
         .app
         .execute_contract(
             Addr::unchecked(ADMIN),
-            test_case.time_alarms().clone(),
+            test_case.address_book.time_alarms().clone(),
             &dispatch_msg,
             &[],
         )
@@ -288,9 +300,10 @@ fn no_reschedule_alarm() {
 fn reschedule_alarm() {
     let mut test_case = test_case();
 
-    let time_alarms = test_case.time_alarms().clone();
-
-    let lease1 = instantiate_reschedule_contract(&mut test_case.app, time_alarms);
+    let lease1 = instantiate_reschedule_contract(
+        &mut test_case.app,
+        test_case.address_book.time_alarms().clone(),
+    );
 
     add_alarm(&mut test_case, &lease1, 1);
 
@@ -499,20 +512,20 @@ fn test_time_notify() {
 
 #[test]
 fn test_profit_alarms() {
-    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::with_reserve(&[
+    let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::with_reserve(&[
         cwcoin(Coin::<Lpn>::new(1_000_000)),
         cwcoin(Coin::<Nls>::new(1_000_000)),
     ])
     .init_time_alarms()
     .init_oracle(None)
-    .init_treasury()
+    .init_treasury_without_dispatcher()
     .init_profit(1)
     .into_generic();
 
-    let time_alarms = test_case.time_alarms().clone();
-    let profit = test_case.profit().clone();
-
-    test_case.send_funds_from_admin(profit, &[cwcoin(Coin::<Nls>::new(100_000))]);
+    test_case.send_funds_from_admin(
+        test_case.address_book.profit().clone(),
+        &[cwcoin(Coin::<Nls>::new(100_000))],
+    );
 
     test_case.app.time_shift(Duration::from_hours(10));
 
@@ -520,7 +533,12 @@ fn test_profit_alarms() {
 
     let resp = test_case
         .app
-        .execute_contract(Addr::unchecked(ADMIN), time_alarms, &dispatch_msg, &[])
+        .execute_contract(
+            Addr::unchecked(ADMIN),
+            test_case.address_book.time_alarms().clone(),
+            &dispatch_msg,
+            &[],
+        )
         .unwrap();
 
     assert_eq!(

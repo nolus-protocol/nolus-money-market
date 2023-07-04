@@ -54,7 +54,9 @@ where
     Price::identity()
 }
 
-fn feed_price(test_case: &mut TestCase) {
+fn feed_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
+    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
+) {
     let lease_price = price_lpn_of::<LeaseCurrency>();
     oracle_feed_a_price(test_case, Addr::unchecked(ADMIN), lease_price);
 
@@ -62,31 +64,32 @@ fn feed_price(test_case: &mut TestCase) {
     oracle_feed_a_price(test_case, Addr::unchecked(ADMIN), payment_price);
 }
 
-fn create_test_case<InitFundsC>() -> TestCase
+fn create_test_case<InitFundsC>() -> TestCase<(), Addr, Addr, Addr, Addr, Addr, Addr>
 where
     InitFundsC: Currency,
 {
-    let mut test_case: TestCase = TestCaseBuilder::<Lpn>::with_reserve(&[
-        cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-        cwcoin::<Lpn, _>(10_000_000_000_000_000_000_000_000_000),
-        cwcoin::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
-    ])
-    .init_lpp_with_funds(
-        None,
-        &[coin(
-            5_000_000_000_000_000_000_000_000_000,
-            Lpn::BANK_SYMBOL,
-        )],
-        BASE_INTEREST_RATE,
-        UTILIZATION_OPTIMAL,
-        ADDON_OPTIMAL_INTEREST_RATE,
-    )
-    .init_time_alarms()
-    .init_oracle(None)
-    .init_treasury()
-    .init_profit(24)
-    .init_leaser()
-    .into_generic();
+    let mut test_case: TestCase<_, _, _, _, _, _, _> =
+        TestCaseBuilder::<Lpn, _, _, _, _, _, _, _>::with_reserve(&[
+            cwcoin::<PaymentCurrency, _>(10_000_000_000_000_000_000_000_000_000),
+            cwcoin::<Lpn, _>(10_000_000_000_000_000_000_000_000_000),
+            cwcoin::<LeaseCurrency, _>(10_000_000_000_000_000_000_000_000_000),
+        ])
+        .init_lpp_with_funds(
+            None,
+            &[coin(
+                5_000_000_000_000_000_000_000_000_000,
+                Lpn::BANK_SYMBOL,
+            )],
+            BASE_INTEREST_RATE,
+            UTILIZATION_OPTIMAL,
+            ADDON_OPTIMAL_INTEREST_RATE,
+        )
+        .init_time_alarms()
+        .init_oracle(None)
+        .init_treasury_without_dispatcher()
+        .init_profit(24)
+        .init_leaser()
+        .into_generic();
 
     test_case.send_funds_from_admin(
         Addr::unchecked(USER),
@@ -109,8 +112,8 @@ fn calculate_interest(principal: Coin<Lpn>, interest_rate: Percent, duration: u6
         .interest(principal)
 }
 
-fn open_lease<DownpaymentC>(
-    test_case: &mut TestCase,
+fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, DownpaymentC>(
+    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<DownpaymentC>,
     max_ltd: Option<Percent>,
 ) -> Addr
@@ -120,11 +123,10 @@ where
     try_init_lease(test_case, downpayment, max_ltd);
 
     let lease = get_lease_address(test_case);
-    let leaser = test_case.leaser().clone();
 
     let quote = leaser_wrapper::query_quote::<DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
-        leaser,
+        test_case.address_book.leaser().clone(),
         downpayment,
     );
     let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
@@ -142,8 +144,11 @@ where
     lease
 }
 
-fn try_init_lease<D>(test_case: &mut TestCase, downpayment: Coin<D>, max_ltd: Option<Percent>)
-where
+fn try_init_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, D>(
+    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+    downpayment: Coin<D>,
+    max_ltd: Option<Percent>,
+) where
     D: Currency,
 {
     let downpayment = (!downpayment.is_zero()).then(|| cwcoin::<D, _>(downpayment));
@@ -152,7 +157,7 @@ where
         .app
         .execute_contract(
             Addr::unchecked(USER),
-            test_case.leaser().clone(),
+            test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
                 currency: LeaseCurrency::TICKER.into(),
                 max_ltd,
@@ -162,12 +167,14 @@ where
         .unwrap();
 }
 
-fn get_lease_address(test_case: &TestCase) -> Addr {
+fn get_lease_address<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
+    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+) -> Addr {
     let query_response: HashSet<Addr> = test_case
         .app
         .wrap()
         .query_wasm_smart(
-            test_case.leaser().clone(),
+            test_case.address_book.leaser().clone(),
             &QueryMsg::Leases {
                 owner: Addr::unchecked(USER),
             },
@@ -177,7 +184,11 @@ fn get_lease_address(test_case: &TestCase) -> Addr {
     query_response.iter().next().unwrap().clone()
 }
 
-fn repay(test_case: &mut TestCase, contract_addr: &Addr, payment: PaymentCoin) -> AppResponse {
+fn repay<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+    contract_addr: &Addr,
+    payment: PaymentCoin,
+) -> AppResponse {
     test_case
         .app
         .execute_contract(
@@ -189,7 +200,10 @@ fn repay(test_case: &mut TestCase, contract_addr: &Addr, payment: PaymentCoin) -
         .unwrap()
 }
 
-fn close(test_case: &mut TestCase, contract_addr: &Addr) -> AppResponse {
+fn close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+    contract_addr: &Addr,
+) -> AppResponse {
     test_case
         .app
         .execute_contract(
@@ -201,11 +215,17 @@ fn close(test_case: &mut TestCase, contract_addr: &Addr) -> AppResponse {
         .unwrap()
 }
 
-fn quote_borrow(test_case: &TestCase, downpayment: PaymentCoin) -> LpnCoin {
+fn quote_borrow<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
+    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+    downpayment: PaymentCoin,
+) -> LpnCoin {
     LpnCoin::try_from(quote_query(test_case, downpayment).borrow).unwrap()
 }
 
-fn quote_query<DownpaymentC>(test_case: &TestCase, downpayment: Coin<DownpaymentC>) -> QuoteResponse
+fn quote_query<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, DownpaymentC>(
+    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
+    downpayment: Coin<DownpaymentC>,
+) -> QuoteResponse
 where
     DownpaymentC: Currency,
 {
@@ -213,7 +233,7 @@ where
         .app
         .wrap()
         .query_wasm_smart(
-            test_case.leaser().clone(),
+            test_case.address_book.leaser().clone(),
             &QueryMsg::Quote {
                 downpayment: downpayment.into(),
                 lease_asset: LeaseCurrency::TICKER.into(),
@@ -223,7 +243,10 @@ where
         .unwrap()
 }
 
-fn state_query(test_case: &TestCase, contract_addr: &String) -> StateResponse {
+fn state_query<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+    contract_addr: &String,
+) -> StateResponse {
     test_case
         .app
         .wrap()
@@ -231,8 +254,8 @@ fn state_query(test_case: &TestCase, contract_addr: &String) -> StateResponse {
         .unwrap()
 }
 
-fn expected_open_state<DownpaymentC>(
-    test_case: &TestCase,
+fn expected_open_state<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, DownpaymentC>(
+    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<DownpaymentC>,
     payments: PaymentCoin,
     last_paid: Timestamp,
@@ -284,8 +307,16 @@ where
     }
 }
 
-fn expected_newly_opened_state<DownpaymentC>(
-    test_case: &TestCase,
+fn expected_newly_opened_state<
+    Dispatcher,
+    Treasury,
+    Profit,
+    Lpp,
+    Oracle,
+    TimeAlarms,
+    DownpaymentC,
+>(
+    test_case: &TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<DownpaymentC>,
     payments: PaymentCoin,
 ) -> StateResponse
@@ -502,14 +533,12 @@ fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent, leve
     let downpayment = create_payment_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment, None);
 
-    let oracle = test_case.oracle().clone();
-
     oracle_feed_price(&mut test_case, Addr::unchecked(ADMIN), base, quote);
 
     let response = test_case
         .app
         .execute_contract(
-            oracle,
+            test_case.address_book.oracle().clone(),
             lease_address,
             &ExecuteMsg::PriceAlarm(),
             // &cwcoin::<LeaseCurrency, _>(10000),
@@ -611,8 +640,6 @@ fn liquidation_time_alarm(time_pass: Duration) {
     let downpayment = create_payment_coin(DOWNPAYMENT);
     let lease_address = open_lease(&mut test_case, downpayment, None);
 
-    let time_alarms = test_case.time_alarms().clone();
-
     let lease_amount = if let StateResponse::Opened {
         amount: lease_amount,
         ..
@@ -630,7 +657,7 @@ fn liquidation_time_alarm(time_pass: Duration) {
     let response = test_case
         .app
         .execute_contract(
-            time_alarms,
+            test_case.address_book.time_alarms().clone(),
             lease_address.clone(),
             &ExecuteMsg::TimeAlarm {},
             &[],
@@ -745,7 +772,7 @@ fn compare_state_with_lpp_state_implicit_time() {
         .app
         .wrap()
         .query_wasm_smart(
-            test_case.lpp().clone(),
+            test_case.address_book.lpp().clone(),
             &lpp::msg::QueryMsg::Loan {
                 lease_addr: lease_address.clone(),
             },
@@ -797,7 +824,7 @@ fn compare_state_with_lpp_state_explicit_time() {
         .app
         .wrap()
         .query_wasm_smart(
-            test_case.lpp().clone(),
+            test_case.address_book.lpp().clone(),
             &lpp::msg::QueryMsg::Loan {
                 lease_addr: lease_address.clone(),
             },
@@ -838,6 +865,8 @@ fn state_closed() {
     assert_eq!(query_result, expected_result);
 }
 
-fn block_time(test_case: &TestCase) -> Timestamp {
+fn block_time<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
+    test_case: &TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+) -> Timestamp {
     test_case.app.block_info().time
 }

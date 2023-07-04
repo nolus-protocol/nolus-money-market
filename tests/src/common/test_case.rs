@@ -58,20 +58,243 @@ type OptionalOracleWrapper = Option<
     >,
 >;
 
-pub struct TestCase {
-    pub app: MockApp,
-    pub message_receiver: WrappedCustomMessageReceiver,
-    dispatcher_addr: Option<Addr>,
-    treasury_addr: Option<Addr>,
-    profit_addr: Option<Addr>,
-    leaser_addr: Option<Addr>,
-    lpp_addr: Option<Addr>,
-    oracle_addr: Option<Addr>,
-    time_alarms_addr: Option<Addr>,
+pub struct AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+    dispatcher_addr: Dispatcher,
+    treasury_addr: Treasury,
+    profit_addr: Profit,
+    leaser_addr: Leaser,
+    lpp_addr: Lpp,
+    oracle_addr: Oracle,
+    time_alarms_addr: TimeAlarms,
     lease_code_id: u64,
 }
 
-impl TestCase {
+impl AddressBook<(), (), (), (), (), (), ()> {
+    const fn new(lease_code_id: u64) -> Self {
+        Self {
+            dispatcher_addr: (),
+            treasury_addr: (),
+            profit_addr: (),
+            leaser_addr: (),
+            lpp_addr: (),
+            oracle_addr: (),
+            time_alarms_addr: (),
+            lease_code_id,
+        }
+    }
+}
+
+impl<Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+    AddressBook<(), Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+{
+    fn with_dispatcher(
+        self,
+        dispatcher_addr: Addr,
+    ) -> AddressBook<Addr, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+        AddressBook {
+            dispatcher_addr,
+            treasury_addr: self.treasury_addr,
+            profit_addr: self.profit_addr,
+            leaser_addr: self.leaser_addr,
+            lpp_addr: self.lpp_addr,
+            oracle_addr: self.oracle_addr,
+            time_alarms_addr: self.time_alarms_addr,
+            lease_code_id: self.lease_code_id,
+        }
+    }
+}
+
+impl<Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+    AddressBook<Addr, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+{
+    pub const fn dispatcher(&self) -> &Addr {
+        &self.dispatcher_addr
+    }
+}
+
+impl<Dispatcher, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+    AddressBook<Dispatcher, (), Profit, Leaser, Lpp, Oracle, TimeAlarms>
+{
+    fn with_treasury(
+        self,
+        treasury_addr: Addr,
+    ) -> AddressBook<Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+        AddressBook {
+            dispatcher_addr: self.dispatcher_addr,
+            treasury_addr,
+            profit_addr: self.profit_addr,
+            leaser_addr: self.leaser_addr,
+            lpp_addr: self.lpp_addr,
+            oracle_addr: self.oracle_addr,
+            time_alarms_addr: self.time_alarms_addr,
+            lease_code_id: self.lease_code_id,
+        }
+    }
+}
+
+impl<Dispatcher, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+    AddressBook<Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+{
+    pub const fn treasury(&self) -> &Addr {
+        &self.treasury_addr
+    }
+}
+
+impl<Dispatcher, Treasury, Leaser, Lpp, Oracle, TimeAlarms>
+    AddressBook<Dispatcher, Treasury, (), Leaser, Lpp, Oracle, TimeAlarms>
+{
+    fn with_profit(
+        self,
+        profit_addr: Addr,
+    ) -> AddressBook<Dispatcher, Treasury, Addr, Leaser, Lpp, Oracle, TimeAlarms> {
+        AddressBook {
+            dispatcher_addr: self.dispatcher_addr,
+            treasury_addr: self.treasury_addr,
+            profit_addr,
+            leaser_addr: self.leaser_addr,
+            lpp_addr: self.lpp_addr,
+            oracle_addr: self.oracle_addr,
+            time_alarms_addr: self.time_alarms_addr,
+            lease_code_id: self.lease_code_id,
+        }
+    }
+}
+
+impl<Dispatcher, Treasury, Leaser, Lpp, Oracle, TimeAlarms>
+    AddressBook<Dispatcher, Treasury, Addr, Leaser, Lpp, Oracle, TimeAlarms>
+{
+    pub const fn profit(&self) -> &Addr {
+        &self.profit_addr
+    }
+}
+
+impl<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>
+    AddressBook<Dispatcher, Treasury, Profit, (), Lpp, Oracle, TimeAlarms>
+{
+    fn with_leaser(
+        self,
+        leaser_addr: Addr,
+    ) -> AddressBook<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms> {
+        AddressBook {
+            dispatcher_addr: self.dispatcher_addr,
+            treasury_addr: self.treasury_addr,
+            profit_addr: self.profit_addr,
+            leaser_addr,
+            lpp_addr: self.lpp_addr,
+            oracle_addr: self.oracle_addr,
+            time_alarms_addr: self.time_alarms_addr,
+            lease_code_id: self.lease_code_id,
+        }
+    }
+}
+
+impl<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>
+    AddressBook<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>
+{
+    pub const fn leaser(&self) -> &Addr {
+        &self.leaser_addr
+    }
+}
+
+impl<Dispatcher, Treasury, Profit, Leaser, Oracle, TimeAlarms>
+    AddressBook<Dispatcher, Treasury, Profit, Leaser, (), Oracle, TimeAlarms>
+{
+    fn with_lpp(
+        self,
+        lpp_addr: Addr,
+    ) -> AddressBook<Dispatcher, Treasury, Profit, Leaser, Addr, Oracle, TimeAlarms> {
+        AddressBook {
+            dispatcher_addr: self.dispatcher_addr,
+            treasury_addr: self.treasury_addr,
+            profit_addr: self.profit_addr,
+            leaser_addr: self.leaser_addr,
+            lpp_addr,
+            oracle_addr: self.oracle_addr,
+            time_alarms_addr: self.time_alarms_addr,
+            lease_code_id: self.lease_code_id,
+        }
+    }
+}
+
+impl<Dispatcher, Treasury, Profit, Leaser, Oracle, TimeAlarms>
+    AddressBook<Dispatcher, Treasury, Profit, Leaser, Addr, Oracle, TimeAlarms>
+{
+    pub const fn lpp(&self) -> &Addr {
+        &self.lpp_addr
+    }
+}
+
+impl<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>
+    AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, (), TimeAlarms>
+{
+    fn with_oracle(
+        self,
+        oracle_addr: Addr,
+    ) -> AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms> {
+        AddressBook {
+            dispatcher_addr: self.dispatcher_addr,
+            treasury_addr: self.treasury_addr,
+            profit_addr: self.profit_addr,
+            leaser_addr: self.leaser_addr,
+            lpp_addr: self.lpp_addr,
+            oracle_addr,
+            time_alarms_addr: self.time_alarms_addr,
+            lease_code_id: self.lease_code_id,
+        }
+    }
+}
+
+impl<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>
+    AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>
+{
+    pub const fn oracle(&self) -> &Addr {
+        &self.oracle_addr
+    }
+}
+
+impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>
+    AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, ()>
+{
+    fn with_time_alarms(
+        self,
+        time_alarms_addr: Addr,
+    ) -> AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr> {
+        AddressBook {
+            dispatcher_addr: self.dispatcher_addr,
+            treasury_addr: self.treasury_addr,
+            profit_addr: self.profit_addr,
+            leaser_addr: self.leaser_addr,
+            lpp_addr: self.lpp_addr,
+            oracle_addr: self.oracle_addr,
+            time_alarms_addr,
+            lease_code_id: self.lease_code_id,
+        }
+    }
+}
+
+impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>
+    AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr>
+{
+    pub const fn time_alarms(&self) -> &Addr {
+        &self.time_alarms_addr
+    }
+}
+
+impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+    AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+{
+    pub const fn lease_code_id(&self) -> u64 {
+        self.lease_code_id
+    }
+}
+
+pub struct TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+    pub app: MockApp,
+    pub message_receiver: WrappedCustomMessageReceiver,
+    pub address_book: AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+}
+
+impl TestCase<(), (), (), (), (), (), ()> {
     pub const LEASER_CONNECTION_ID: &'static str = "connection-0";
 
     fn with_reserve(reserve: &[CwCoin]) -> Self {
@@ -82,22 +305,19 @@ impl TestCase {
 
         let mut app: MockApp = mock_app(custom_message_sender, reserve);
 
-        let lease_code_id: u64 = Self::store_lease(&mut app);
+        let lease_code_id: u64 = Self::store_lease_code(&mut app);
 
         Self {
             app,
             message_receiver: custom_message_receiver,
-            dispatcher_addr: None,
-            treasury_addr: None,
-            profit_addr: None,
-            leaser_addr: None,
-            lpp_addr: None,
-            oracle_addr: None,
-            time_alarms_addr: None,
-            lease_code_id,
+            address_book: AddressBook::new(lease_code_id),
         }
     }
+}
 
+impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+    TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+{
     pub fn send_funds_from_admin(&mut self, user_addr: Addr, funds: &[CwCoin]) -> &mut Self {
         self.app
             .send_tokens(Addr::unchecked(ADMIN), user_addr, funds)
@@ -106,56 +326,30 @@ impl TestCase {
         self
     }
 
-    pub fn dispatcher(&self) -> &Addr {
-        self.dispatcher_addr.as_ref().unwrap()
+    pub fn store_new_lease_code(&mut self) -> &mut Self {
+        self.address_book.lease_code_id = Self::store_lease_code(&mut self.app);
+
+        self
     }
 
-    pub fn treasury(&self) -> &Addr {
-        self.treasury_addr.as_ref().unwrap()
+    fn store_lease_code(app: &mut MockApp) -> u64 {
+        LeaseWrapper::default().store(app)
     }
+}
 
-    pub fn profit(&self) -> &Addr {
-        self.profit_addr.as_ref().unwrap()
-    }
-
-    pub fn leaser(&self) -> &Addr {
-        self.leaser_addr.as_ref().unwrap()
-    }
-
-    pub fn lpp(&self) -> &Addr {
-        self.lpp_addr.as_ref().unwrap()
-    }
-
-    pub fn oracle(&self) -> &Addr {
-        self.oracle_addr.as_ref().unwrap()
-    }
-
-    pub fn time_alarms(&self) -> &Addr {
-        self.time_alarms_addr.as_ref().unwrap()
-    }
-
-    pub fn lease_code_id(&self) -> u64 {
-        self.lease_code_id
-    }
-
+impl<Dispatcher, Treasury, Leaser> TestCase<Dispatcher, Treasury, Addr, Leaser, Addr, Addr, Addr> {
     pub fn open_lease<D>(&mut self, lease_currency: Symbol<'_>) -> Addr
     where
         D: Currency,
     {
-        let lease_code_id = self.lease_code_id();
-        let lpp = self.lpp().clone();
-        let time_alarms = self.time_alarms().clone();
-        let oracle = self.oracle().clone();
-        let profit = self.profit().clone();
-
         let lease: Addr = LeaseWrapper::default().instantiate::<D>(
             &mut self.app,
-            Some(lease_code_id),
+            Some(self.address_book.lease_code_id),
             LeaseWrapperAddresses {
-                lpp,
-                time_alarms,
-                oracle,
-                profit,
+                lpp: self.address_book.lpp_addr.clone(),
+                time_alarms: self.address_book.time_alarms_addr.clone(),
+                oracle: self.address_book.oracle_addr.clone(),
+                profit: self.address_book.profit_addr.clone(),
             },
             LeaseInitConfig::new(lease_currency, 1000.into(), None),
             LeaseWrapperConfig::default(),
@@ -165,134 +359,164 @@ impl TestCase {
 
         lease
     }
+}
 
-    pub fn store_new_lease_code(&mut self) -> &mut Self {
-        self.lease_code_id = Self::store_lease(&mut self.app);
+pub type BlankBuilder<Lpn> = Builder<Lpn, (), (), (), (), (), (), ()>;
 
-        self
+pub struct Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+    test_case: TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
+    _lpn: PhantomData<Lpn>,
+}
+
+impl<Lpn> Builder<Lpn, (), (), (), (), (), (), ()>
+where
+    Lpn: Currency,
+{
+    pub fn new() -> Self {
+        Self::with_reserve(&[cwcoin::<Lpn, _>(10_000)])
     }
 
-    fn init_lpp<Lpn>(
-        &mut self,
-        custom_wrapper: OptionalLppWrapper,
-        init_balance: &[CwCoin],
-        base_interest_rate: Percent,
-        utilization_optimal: Percent,
-        addon_optimal_interest_rate: Percent,
-    ) -> &mut Self
-    where
-        Lpn: Currency,
-    {
-        assert_eq!(self.lpp_addr, None);
-
-        let mocked_lpp = match custom_wrapper {
-            Some(wrapper) => LppWrapper::with_contract_wrapper(wrapper),
-            None => LppWrapper::default(),
-        };
-
-        let lease_code_id = self.lease_code_id();
-
-        self.lpp_addr = Some(
-            mocked_lpp
-                .instantiate::<Lpn>(
-                    &mut self.app,
-                    Uint64::new(lease_code_id),
-                    init_balance,
-                    base_interest_rate,
-                    utilization_optimal,
-                    addon_optimal_interest_rate,
-                )
-                .0,
-        );
-
-        self.app.update_block(next_block);
-
-        self.message_receiver.assert_empty();
-
-        self
+    pub fn with_reserve(reserve: &[CwCoin]) -> Self {
+        Self {
+            test_case: TestCase::with_reserve(reserve),
+            _lpn: PhantomData,
+        }
     }
+}
 
-    fn init_leaser(&mut self) -> &mut Self {
-        assert_eq!(self.leaser_addr, None);
+impl<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+    Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+where
+    Lpn: Currency,
+{
+    pub fn into_generic(
+        self,
+    ) -> TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+        self.test_case
+    }
+}
 
-        let lease_code_id = self.lease_code_id();
-        let lpp = self.lpp().clone();
-        let time_alarms = self.time_alarms().clone();
-        let oracle = self.oracle().clone();
-        let profit = self.profit().clone();
+impl<Lpn, Profit, Leaser> Builder<Lpn, (), Addr, Profit, Leaser, Addr, Addr, Addr>
+where
+    Lpn: Currency,
+{
+    pub fn init_dispatcher(self) -> Builder<Lpn, Addr, Addr, Profit, Leaser, Addr, Addr, Addr> {
+        let Self {
+            mut test_case,
+            _lpn,
+        } = self;
 
-        let leaser = LeaserWrapper::default().instantiate(
-            &mut self.app,
-            lease_code_id,
-            lpp,
-            time_alarms,
-            oracle,
-            profit,
+        // Instantiate Dispatcher contract
+        let dispatcher_addr: Addr = DispatcherWrapper::default().instantiate(
+            &mut test_case.app,
+            test_case.address_book.lpp_addr.clone(),
+            test_case.address_book.oracle_addr.clone(),
+            test_case.address_book.time_alarms_addr.clone(),
+            test_case.address_book.treasury_addr.clone(),
         );
 
-        self.leaser_addr = Some(leaser.clone());
+        test_case.app.update_block(next_block);
 
-        self.message_receiver.assert_empty();
+        test_case.message_receiver.assert_empty();
 
-        self.app
+        test_case
+            .app
             .wasm_sudo(
-                leaser,
-                &leaser::msg::SudoMsg::SetupDex(ConnectionParams {
-                    connection_id: "connection-0".into(),
-                    transfer_channel: Ics20Channel {
-                        local_endpoint: "channel-0".into(),
-                        remote_endpoint: "channel-422".into(),
-                    },
-                }),
+                test_case.address_book.treasury_addr.clone(),
+                &treasury::msg::SudoMsg::ConfigureRewardTransfer {
+                    rewards_dispatcher: dispatcher_addr.clone(),
+                },
             )
             .unwrap();
 
-        self.app.update_block(next_block);
+        test_case.app.update_block(next_block);
 
-        self.message_receiver.assert_empty();
+        test_case.message_receiver.assert_empty();
 
-        self
+        Builder {
+            test_case: TestCase {
+                app: test_case.app,
+                message_receiver: test_case.message_receiver,
+                address_book: test_case.address_book.with_dispatcher(dispatcher_addr),
+            },
+            _lpn,
+        }
+    }
+}
+
+impl<Lpn, Dispatcher, Profit, Leaser, Lpp, Oracle, TimeAlarms>
+    Builder<Lpn, Dispatcher, (), Profit, Leaser, Lpp, Oracle, TimeAlarms>
+where
+    Lpn: Currency,
+{
+    pub fn init_treasury_without_dispatcher(
+        self,
+    ) -> Builder<Lpn, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+        self.init_treasury(TreasuryWrapper::new_with_no_dispatcher())
     }
 
-    fn init_treasury<Lpn>(&mut self, wrapper: TreasuryWrapper) -> &mut Self
-    where
-        Lpn: Currency,
-    {
-        assert_eq!(self.treasury_addr, None);
-
-        self.treasury_addr = Some(wrapper.instantiate::<Lpn>(&mut self.app));
-
-        self.app.update_block(next_block);
-
-        self.message_receiver.assert_empty();
-
-        self
+    pub fn init_treasury_with_dispatcher(
+        self,
+        rewards_dispatcher: Addr,
+    ) -> Builder<Lpn, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+        self.init_treasury(TreasuryWrapper::new(rewards_dispatcher))
     }
 
-    fn init_profit(&mut self, cadence_hours: u16) -> &mut Self {
-        assert_eq!(self.profit_addr, None);
+    fn init_treasury(
+        self,
+        treasury: TreasuryWrapper,
+    ) -> Builder<Lpn, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+        let Self {
+            mut test_case,
+            _lpn,
+        } = self;
 
+        let treasury_addr: Addr = treasury.instantiate::<Lpn>(&mut test_case.app);
+
+        test_case.app.update_block(next_block);
+
+        test_case.message_receiver.assert_empty();
+
+        Builder {
+            test_case: TestCase {
+                app: test_case.app,
+                message_receiver: test_case.message_receiver,
+                address_book: test_case.address_book.with_treasury(treasury_addr),
+            },
+            _lpn,
+        }
+    }
+}
+
+impl<Lpn, Dispatcher, Leaser, Lpp> Builder<Lpn, Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>
+where
+    Lpn: Currency,
+{
+    pub fn init_profit(
+        self,
+        cadence_hours: u16,
+    ) -> Builder<Lpn, Dispatcher, Addr, Addr, Leaser, Lpp, Addr, Addr> {
         const CONNECTION_ID: &str = "dex-connection";
 
-        let treasury = self.treasury().clone();
-        let oracle = self.oracle().clone();
-        let time_alarms = self.time_alarms().clone();
+        let Self {
+            mut test_case,
+            _lpn,
+        } = self;
 
-        let profit = ProfitWrapper::default().instantiate(
-            &mut self.app,
+        let profit_addr: Addr = ProfitWrapper::default().instantiate(
+            &mut test_case.app,
             cadence_hours,
-            treasury,
-            oracle,
-            time_alarms,
+            test_case.address_book.treasury_addr.clone(),
+            test_case.address_book.oracle_addr.clone(),
+            test_case.address_book.time_alarms_addr.clone(),
         );
 
-        self.profit_addr = Some(profit.clone());
+        test_case.app.update_block(next_block);
 
-        self.app.update_block(next_block);
-
-        self.app
+        test_case
+            .app
             .wasm_sudo(
-                profit.clone(),
+                profit_addr.clone(),
                 &NeutronSudoMsg::OpenAck {
                     port_id: CONNECTION_ID.into(),
                     channel_id: "channel-1".into(),
@@ -302,14 +526,15 @@ impl TestCase {
             )
             .unwrap();
 
-        let NeutronMsg::RegisterInterchainAccount { connection_id, .. } = self.message_receiver.try_recv().unwrap() else {
+        let NeutronMsg::RegisterInterchainAccount { connection_id, .. } = test_case.message_receiver.try_recv().unwrap() else {
             unreachable!()
         };
         assert_eq!(&connection_id, CONNECTION_ID);
 
-        self.app
+        test_case
+            .app
             .wasm_sudo(
-                profit.clone(),
+                profit_addr.clone(),
                 &NeutronSudoMsg::OpenAck {
                     port_id: "ica-port".into(),
                     channel_id: "channel-1".into(),
@@ -327,123 +552,91 @@ impl TestCase {
             )
             .unwrap();
 
-        self.message_receiver.assert_empty();
+        test_case.message_receiver.assert_empty();
 
         let ProfitConfigResponse {
             cadence_hours: reported_cadence_hours,
-        } = self
+        } = test_case
             .app
             .wrap()
-            .query_wasm_smart(profit, &ProfitQueryMsg::Config {})
+            .query_wasm_smart(profit_addr.clone(), &ProfitQueryMsg::Config {})
             .unwrap();
 
         assert_eq!(reported_cadence_hours, cadence_hours);
 
-        self
-    }
-
-    fn init_time_alarms(&mut self) -> &mut Self {
-        assert_eq!(self.time_alarms_addr, None);
-
-        self.time_alarms_addr = Some(TimeAlarmsWrapper::default().instantiate(&mut self.app));
-
-        self.app.update_block(next_block);
-
-        self.message_receiver.assert_empty();
-
-        self
-    }
-
-    fn init_oracle<Lpn>(&mut self, custom_wrapper: OptionalOracleWrapper) -> &mut Self
-    where
-        Lpn: Currency,
-    {
-        assert_eq!(self.oracle_addr, None);
-
-        self.oracle_addr = Some(
-            custom_wrapper
-                .map_or_else(Default::default, MarketOracleWrapper::with_contract_wrapper)
-                .instantiate::<Lpn>(&mut self.app),
-        );
-
-        self.app.update_block(next_block);
-
-        self.message_receiver.assert_empty();
-
-        self
-    }
-
-    fn init_dispatcher(&mut self) -> &mut Self {
-        assert_eq!(self.dispatcher_addr, None);
-
-        let lpp = self.lpp().clone();
-        let oracle = self.oracle().clone();
-        let time_alarms = self.time_alarms().clone();
-        let treasury = self.treasury().clone();
-
-        // Instantiate Dispatcher contract
-        let dispatcher_addr = DispatcherWrapper::default().instantiate(
-            &mut self.app,
-            lpp,
-            oracle,
-            time_alarms,
-            treasury.clone(),
-        );
-
-        self.dispatcher_addr = Some(dispatcher_addr.clone());
-
-        self.app.update_block(next_block);
-
-        self.message_receiver.assert_empty();
-
-        self.app
-            .wasm_sudo(
-                treasury,
-                &treasury::msg::SudoMsg::ConfigureRewardTransfer {
-                    rewards_dispatcher: dispatcher_addr,
-                },
-            )
-            .unwrap();
-
-        self.app.update_block(next_block);
-
-        self.message_receiver.assert_empty();
-
-        self
-    }
-
-    fn store_lease(app: &mut MockApp) -> u64 {
-        LeaseWrapper::default().store(app)
+        Builder {
+            test_case: TestCase {
+                app: test_case.app,
+                message_receiver: test_case.message_receiver,
+                address_book: test_case.address_book.with_profit(profit_addr),
+            },
+            _lpn,
+        }
     }
 }
 
-pub struct Builder<Lpn> {
-    test_case: TestCase,
-    _lpn: PhantomData<Lpn>,
-}
-
-impl<Lpn> Builder<Lpn>
+impl<Lpn, Dispatcher, Treasury> Builder<Lpn, Dispatcher, Treasury, Addr, (), Addr, Addr, Addr>
 where
     Lpn: Currency,
 {
-    pub fn new() -> Self {
-        Self::with_reserve(&[cwcoin::<Lpn, _>(10_000)])
-    }
+    pub fn init_leaser(self) -> Builder<Lpn, Dispatcher, Treasury, Addr, Addr, Addr, Addr, Addr> {
+        let Self {
+            mut test_case,
+            _lpn,
+        } = self;
 
-    pub fn with_reserve(reserve: &[CwCoin]) -> Self {
-        Self {
-            test_case: TestCase::with_reserve(reserve),
-            _lpn: PhantomData,
+        let leaser_addr = LeaserWrapper::default().instantiate(
+            &mut test_case.app,
+            test_case.address_book.lease_code_id,
+            test_case.address_book.lpp_addr.clone(),
+            test_case.address_book.time_alarms_addr.clone(),
+            test_case.address_book.oracle_addr.clone(),
+            test_case.address_book.profit_addr.clone(),
+        );
+
+        test_case.message_receiver.assert_empty();
+
+        test_case
+            .app
+            .wasm_sudo(
+                leaser_addr.clone(),
+                &leaser::msg::SudoMsg::SetupDex(ConnectionParams {
+                    connection_id: "connection-0".into(),
+                    transfer_channel: Ics20Channel {
+                        local_endpoint: "channel-0".into(),
+                        remote_endpoint: "channel-422".into(),
+                    },
+                }),
+            )
+            .unwrap();
+
+        test_case.app.update_block(next_block);
+
+        test_case.message_receiver.assert_empty();
+
+        Builder {
+            test_case: TestCase {
+                app: test_case.app,
+                message_receiver: test_case.message_receiver,
+                address_book: test_case.address_book.with_leaser(leaser_addr),
+            },
+            _lpn,
         }
     }
+}
 
+impl<Lpn, Dispatcher, Treasury, Profit, Leaser, Oracle, TimeAlarms>
+    Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, (), Oracle, TimeAlarms>
+where
+    Lpn: Currency,
+{
     pub fn init_lpp(
         self,
         custom_wrapper: OptionalLppWrapper,
         base_interest_rate: Percent,
         utilization_optimal: Percent,
         addon_optimal_interest_rate: Percent,
-    ) -> Self {
+    ) -> Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Addr, Oracle, TimeAlarms> {
         self.init_lpp_with_funds(
             custom_wrapper,
             &[CwCoin::new(400, Lpn::BANK_SYMBOL)],
@@ -454,69 +647,108 @@ where
     }
 
     pub fn init_lpp_with_funds(
-        mut self,
+        self,
         custom_wrapper: OptionalLppWrapper,
         init_balance: &[CwCoin],
         base_interest_rate: Percent,
         utilization_optimal: Percent,
         addon_optimal_interest_rate: Percent,
-    ) -> Self {
-        self.test_case.init_lpp::<Lpn>(
-            custom_wrapper,
-            init_balance,
-            base_interest_rate,
-            utilization_optimal,
-            addon_optimal_interest_rate,
-        );
+    ) -> Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Addr, Oracle, TimeAlarms> {
+        let mocked_lpp = match custom_wrapper {
+            Some(wrapper) => LppWrapper::with_contract_wrapper(wrapper),
+            None => LppWrapper::default(),
+        };
 
-        self
+        let Self {
+            mut test_case,
+            _lpn,
+        } = self;
+
+        let lpp_addr = mocked_lpp
+            .instantiate::<Lpn>(
+                &mut test_case.app,
+                Uint64::new(test_case.address_book.lease_code_id),
+                init_balance,
+                base_interest_rate,
+                utilization_optimal,
+                addon_optimal_interest_rate,
+            )
+            .0;
+
+        test_case.message_receiver.assert_empty();
+
+        test_case.app.update_block(next_block);
+
+        Builder {
+            test_case: TestCase {
+                app: test_case.app,
+                message_receiver: test_case.message_receiver,
+                address_book: test_case.address_book.with_lpp(lpp_addr),
+            },
+            _lpn,
+        }
     }
+}
 
-    pub fn init_leaser(mut self) -> Self {
-        self.test_case.init_leaser();
+impl<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>
+    Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, (), TimeAlarms>
+where
+    Lpn: Currency,
+{
+    pub fn init_oracle(
+        self,
+        custom_wrapper: OptionalOracleWrapper,
+    ) -> Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms> {
+        let Self {
+            mut test_case,
+            _lpn,
+        } = self;
 
-        self
+        let oracle_addr: Addr = custom_wrapper
+            .map_or_else(Default::default, MarketOracleWrapper::with_contract_wrapper)
+            .instantiate::<Lpn>(&mut test_case.app);
+
+        test_case.app.update_block(next_block);
+
+        test_case.message_receiver.assert_empty();
+
+        Builder {
+            test_case: TestCase {
+                app: test_case.app,
+                message_receiver: test_case.message_receiver,
+                address_book: test_case.address_book.with_oracle(oracle_addr),
+            },
+            _lpn,
+        }
     }
+}
 
-    pub fn init_treasury(mut self) -> Self {
-        self.test_case
-            .init_treasury::<Lpn>(TreasuryWrapper::new_with_no_dispatcher());
+impl<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>
+    Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, ()>
+where
+    Lpn: Currency,
+{
+    pub fn init_time_alarms(
+        self,
+    ) -> Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Addr> {
+        let Self {
+            mut test_case,
+            _lpn,
+        } = self;
 
-        self
-    }
+        let time_alarms_addr: Addr = TimeAlarmsWrapper::default().instantiate(&mut test_case.app);
 
-    pub fn init_treasury_with_dispatcher(mut self, rewards_dispatcher: Addr) -> Self {
-        self.test_case
-            .init_treasury::<Lpn>(TreasuryWrapper::new(rewards_dispatcher));
+        test_case.app.update_block(next_block);
 
-        self
-    }
+        test_case.message_receiver.assert_empty();
 
-    pub fn init_profit(mut self, cadence_hours: u16) -> Self {
-        self.test_case.init_profit(cadence_hours);
-
-        self
-    }
-
-    pub fn init_time_alarms(mut self) -> Self {
-        self.test_case.init_time_alarms();
-
-        self
-    }
-
-    pub fn init_oracle(mut self, custom_wrapper: OptionalOracleWrapper) -> Self {
-        self.test_case.init_oracle::<Lpn>(custom_wrapper);
-
-        self
-    }
-
-    pub fn init_dispatcher(mut self) -> Self {
-        self.test_case.init_dispatcher();
-
-        self
-    }
-
-    pub fn into_generic(self) -> TestCase {
-        self.test_case
+        Builder {
+            test_case: TestCase {
+                app: test_case.app,
+                message_receiver: test_case.message_receiver,
+                address_book: test_case.address_book.with_time_alarms(time_alarms_addr),
+            },
+            _lpn,
+        }
     }
 }
