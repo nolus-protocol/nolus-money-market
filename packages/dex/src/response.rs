@@ -83,14 +83,15 @@ where
     }
 }
 
-impl<H, Err> From<Result<H>> for StdResult<Response<H>, Err>
+impl<H, StateTo, Err> From<Result<H>> for StdResult<StateMachineResponse<StateTo>, Err>
 where
     H: Handler<SwapResult = Self>,
+    H::Response: Into<StateTo>,
     Error: Into<Err>,
 {
     fn from(value: Result<H>) -> Self {
         match value {
-            Result::Continue(cont_res) => cont_res.map_err(Into::into),
+            Result::Continue(cont_res) => cont_res.map(state_machine::from).map_err(Into::into),
             Result::Finished(finish_res) => finish_res,
         }
     }

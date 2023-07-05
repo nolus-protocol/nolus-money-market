@@ -1,12 +1,11 @@
 use cosmwasm_std::Deps;
 use serde::{Deserialize, Serialize};
 
-use dex::Handler as DexHandler;
 use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
 use crate::{api::StateResponse, contract::Contract, error::ContractResult};
 
-use super::{handler::Handler as LeaseHandler, Response};
+use super::{handler::Handler as LeaseHandler, ContractApi, Response};
 
 #[derive(Serialize, Deserialize)]
 #[serde(transparent)]
@@ -20,12 +19,7 @@ impl<H> State<H> {
     }
 }
 
-impl<H> DexHandler for State<H> {
-    type Response = super::State;
-    type SwapResult = ContractResult<Response>;
-}
-
-impl<H> LeaseHandler for State<H>
+impl<H> ContractApi for State<H>
 where
     H: LeaseHandler,
 {

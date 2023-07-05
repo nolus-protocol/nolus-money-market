@@ -1,16 +1,16 @@
 use serde::{Deserialize, Serialize};
 
-use dex::{ContinueResult, Contract as DexContract, Handler as DexHandler, Result as DexResult};
+use dex::{Contract as DexContract, Handler as DexHandler};
 use platform::state_machine;
 use sdk::cosmwasm_std::{Binary, Deps, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::{self, StateResponse},
-    contract::Contract,
+    contract::{api::ContractApi, Contract},
     error::ContractResult,
 };
 
-use super::{handler::Handler as LeaseHandler, Response, State as ContractState};
+use super::{Response, State as ContractState};
 
 #[derive(Serialize, Deserialize)]
 #[serde(transparent)]
@@ -24,19 +24,49 @@ impl<H> State<H> {
     }
 }
 
-impl<H> LeaseHandler for State<H>
+impl<H> ContractApi for State<H>
 where
     H: DexHandler<SwapResult = ContractResult<Response>>,
     H::Response: Into<ContractState>,
     Self: Into<ContractState>,
 {
+    fn on_open_ica(
+        self,
+        counterparty_version: String,
+        deps: Deps<'_>,
+        env: Env,
+    ) -> ContractResult<Response> {
+        self.handler
+            .on_open_ica(counterparty_version, deps, env)
+            .map(state_machine::from)
+            .map_err(Into::into)
+    }
+
+    fn on_dex_response(self, data: Binary, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        self.handler.on_response(data, deps, env).into()
+    }
+
+    fn on_dex_error(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        self.handler
+            .on_error(deps, env)
+            .map(state_machine::from)
+            .map_err(Into::into)
+    }
+
+    fn on_dex_timeout(self, deps: Deps<'_>, env: Env) -> ContractResult<Response> {
+        self.handler
+            .on_timeout(deps, env)
+            .map(state_machine::from)
+            .map_err(Into::into)
+    }
+
     fn on_time_alarm(
         self,
         deps: Deps<'_>,
         env: Env,
         _info: MessageInfo,
     ) -> ContractResult<Response> {
-        DexHandler::on_time_alarm(self, deps, env).into()
+        self.handler.on_time_alarm(deps, env).into()
     }
 
     fn on_price_alarm(
@@ -46,42 +76,6 @@ where
         _info: MessageInfo,
     ) -> ContractResult<Response> {
         super::ignore_msg(self)
-    }
-}
-
-impl<H> DexHandler for State<H>
-where
-    H: DexHandler<SwapResult = ContractResult<Response>>,
-    H::Response: Into<ContractState>,
-{
-    type Response = ContractState;
-    type SwapResult = H::SwapResult;
-
-    fn on_open_ica(
-        self,
-        counterparty_version: String,
-        deps: Deps<'_>,
-        env: Env,
-    ) -> ContinueResult<Self> {
-        self.handler
-            .on_open_ica(counterparty_version, deps, env)
-            .map(state_machine::from)
-    }
-
-    fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> DexResult<Self> {
-        self.handler.on_response(data, deps, env).map_into()
-    }
-
-    fn on_error(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
-        self.handler.on_error(deps, env).map(state_machine::from)
-    }
-
-    fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
-        self.handler.on_timeout(deps, env).map(state_machine::from)
-    }
-
-    fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> DexResult<Self> {
-        self.handler.on_time_alarm(deps, env).map_into()
     }
 }
 
