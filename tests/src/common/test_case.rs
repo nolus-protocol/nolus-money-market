@@ -526,7 +526,7 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
 }
 
 impl<Dispatcher, Treasury, Leaser> TestCase<Dispatcher, Treasury, Addr, Leaser, Addr, Addr, Addr> {
-    pub fn open_lease<'r, D>(&'r mut self, lease_currency: Symbol<'_>) -> Addr
+    pub fn open_lease<D>(&mut self, lease_currency: Symbol<'_>) -> Addr
     where
         D: Currency,
     {

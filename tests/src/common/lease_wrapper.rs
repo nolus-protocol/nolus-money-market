@@ -113,9 +113,9 @@ impl LeaseWrapper {
     }
 
     #[track_caller]
-    pub fn instantiate<'r, D>(
+    pub fn instantiate<D>(
         self,
-        app: &'r mut WrappedApp,
+        app: &mut WrappedApp,
         code_id: Option<u64>,
         addresses: LeaseWrapperAddresses,
         lease_config: LeaseInitConfig<'_, D>,
