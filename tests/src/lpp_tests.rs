@@ -1116,7 +1116,7 @@ fn compare_lpp_states() {
         .unwrap_err();
 
     // repay interest part
-    _ = test_case
+    () = test_case
         .app
         .execute(
             loan_addr1.clone(),
