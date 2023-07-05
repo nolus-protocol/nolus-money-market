@@ -31,11 +31,11 @@ mod mock_lease {
         },
         cw_storage_plus::Item,
         schemars::{self, JsonSchema},
-        testing::{Contract, ContractWrapper},
+        testing::{CwContract, CwContractWrapper},
     };
     use timealarms::stub::TimeAlarmsRef;
 
-    use crate::common::{test_case::WrappedApp, ADMIN};
+    use crate::common::{test_case::App, ADMIN};
 
     const GATE: Item<'static, bool> = Item::new("alarm gate");
     const TIMEALARMS_ADDR: Item<'static, Addr> = Item::new("ta_addr");
@@ -128,22 +128,22 @@ mod mock_lease {
         Err(StdError::generic_err("not implemented"))
     }
 
-    fn contract_no_reschedule_endpoints() -> Box<Contract> {
-        let contract = ContractWrapper::new(execute, instantiate, query);
+    fn contract_no_reschedule_endpoints() -> Box<CwContract> {
+        let contract = CwContractWrapper::new(execute, instantiate, query);
         Box::new(contract)
     }
 
-    fn contract_may_fail_endpoints() -> Box<Contract> {
-        let contract = ContractWrapper::new(execute_may_fail, instantiate, query);
+    fn contract_may_fail_endpoints() -> Box<CwContract> {
+        let contract = CwContractWrapper::new(execute_may_fail, instantiate, query);
         Box::new(contract)
     }
 
-    fn contract_reschedule_endpoints() -> Box<Contract> {
-        let contract = ContractWrapper::new(execute_reschedule_alarm, instantiate, query);
+    fn contract_reschedule_endpoints() -> Box<CwContract> {
+        let contract = CwContractWrapper::new(execute_reschedule_alarm, instantiate, query);
         Box::new(contract)
     }
 
-    pub(crate) fn instantiate_no_reschedule_contract(app: &mut WrappedApp) -> Addr {
+    pub(crate) fn instantiate_no_reschedule_contract(app: &mut App) -> Addr {
         proper_instantiate(
             app,
             contract_no_reschedule_endpoints(),
@@ -151,7 +151,7 @@ mod mock_lease {
         )
     }
 
-    pub(crate) fn instantiate_may_fail_contract(app: &mut WrappedApp) -> Addr {
+    pub(crate) fn instantiate_may_fail_contract(app: &mut App) -> Addr {
         proper_instantiate(
             app,
             contract_may_fail_endpoints(),
@@ -160,15 +160,15 @@ mod mock_lease {
     }
 
     pub(crate) fn instantiate_reschedule_contract(
-        app: &mut WrappedApp,
+        app: &mut App,
         timealarms_contract: Addr,
     ) -> Addr {
         proper_instantiate(app, contract_reschedule_endpoints(), timealarms_contract)
     }
 
     fn proper_instantiate(
-        app: &mut WrappedApp,
-        endpoints: Box<Contract>,
+        app: &mut App,
+        endpoints: Box<CwContract>,
         timealarms_contract: Addr,
     ) -> Addr {
         let cw_template_id = app.store_code(endpoints);

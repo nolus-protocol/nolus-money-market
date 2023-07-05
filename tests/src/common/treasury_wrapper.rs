@@ -7,7 +7,7 @@ use treasury::{
 };
 
 use super::{
-    cwcoin, mock_query, native_cwcoin, test_case::WrappedApp, ContractWrapper, MockQueryMsg, ADMIN,
+    cwcoin, mock_query, native_cwcoin, test_case::App, CwContractWrapper, MockQueryMsg, ADMIN,
 };
 
 pub(crate) struct TreasuryWrapper {
@@ -19,7 +19,7 @@ impl TreasuryWrapper {
     pub fn new(rewards_dispatcher: Addr) -> Self {
         Self {
             contract_wrapper: Box::new(
-                ContractWrapper::new(
+                CwContractWrapper::new(
                     treasury::contract::execute,
                     treasury::contract::instantiate,
                     mock_query,
@@ -35,7 +35,7 @@ impl TreasuryWrapper {
     }
 
     #[track_caller]
-    pub fn instantiate<Lpn>(self, app: &mut WrappedApp) -> Addr
+    pub fn instantiate<Lpn>(self, app: &mut App) -> Addr
     where
         Lpn: Currency,
     {
@@ -57,7 +57,7 @@ impl TreasuryWrapper {
     }
 }
 
-type TreasuryContractWrapper = ContractWrapper<
+type TreasuryContractWrapper = CwContractWrapper<
     ExecuteMsg,
     ContractError,
     InstantiateMsg,

@@ -31,14 +31,14 @@ use sdk::{
     },
     cw_multi_test::{AppResponse, Contract as CwContract},
     cw_storage_plus::Item,
-    testing::ContractWrapper,
+    testing::CwContractWrapper,
 };
 use swap::SwapTarget;
 use tree::HumanReadableTree;
 
 use crate::common::{
     oracle_wrapper,
-    test_case::{BlankBuilder as TestCaseBuilder, TestCase, WrappedApp, WrappedResponse},
+    test_case::{App, BlankBuilder as TestCaseBuilder, TestCase, WrappedResponse},
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -608,7 +608,7 @@ type ExecFn = fn(DepsMut<'_>, Env, MessageInfo, DummyExecMsg) -> ContractResult<
 fn dummy_contract<const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
     execute: ExecFn,
 ) -> Box<dyn CwContract<CustomMsg>> {
-    Box::new(ContractWrapper::new(
+    Box::new(CwContractWrapper::new(
         execute,
         |DepsMut { storage, .. },
          _: Env,
@@ -629,7 +629,7 @@ fn dummy_contract<const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
 }
 
 fn instantiate_dummy_contract(
-    app: &mut WrappedApp,
+    app: &mut App,
     dummy_code: u64,
     oracle: Addr,
     should_fail: bool,
@@ -649,7 +649,7 @@ fn instantiate_dummy_contract(
     .unwrap_response()
 }
 
-fn dispatch_alarms(app: &mut WrappedApp, oracle: Addr, max_count: AlarmsCount) -> AppResponse {
+fn dispatch_alarms(app: &mut App, oracle: Addr, max_count: AlarmsCount) -> AppResponse {
     app.execute(
         Addr::unchecked("unlisted_client"),
         oracle,
@@ -660,7 +660,7 @@ fn dispatch_alarms(app: &mut WrappedApp, oracle: Addr, max_count: AlarmsCount) -
     .unwrap_response()
 }
 
-fn set_should_fail(app: &mut WrappedApp, dummy_contract: Addr, should_fail: bool) {
+fn set_should_fail(app: &mut App, dummy_contract: Addr, should_fail: bool) {
     () = app
         .execute(
             Addr::unchecked(ADMIN),

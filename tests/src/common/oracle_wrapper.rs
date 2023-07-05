@@ -23,8 +23,8 @@ use sdk::{
 };
 
 use super::{
-    test_case::{TestCase, WrappedApp},
-    ContractWrapper, ADMIN,
+    test_case::{App, TestCase},
+    CwContractWrapper, ADMIN,
 };
 
 pub(crate) struct MarketOracleWrapper {
@@ -38,7 +38,7 @@ impl MarketOracleWrapper {
         }
     }
     #[track_caller]
-    pub fn instantiate<BaseC>(self, app: &mut WrappedApp) -> Addr
+    pub fn instantiate<BaseC>(self, app: &mut App) -> Addr
     where
         BaseC: Currency,
     {
@@ -71,7 +71,7 @@ impl MarketOracleWrapper {
 
 impl Default for MarketOracleWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(execute, instantiate, query)
+        let contract = CwContractWrapper::new(execute, instantiate, query)
             .with_reply(reply)
             .with_sudo(sudo);
 
@@ -98,7 +98,7 @@ pub(crate) fn mock_oracle_query(
     Ok(res)
 }
 
-type OracleContractWrapper = ContractWrapper<
+type OracleContractWrapper = CwContractWrapper<
     ExecuteMsg,
     ContractError,
     InstantiateMsg,

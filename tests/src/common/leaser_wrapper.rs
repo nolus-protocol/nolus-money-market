@@ -8,7 +8,7 @@ use leaser::{
 };
 use sdk::cosmwasm_std::{Addr, Uint64};
 
-use super::{test_case::WrappedApp, ContractWrapper, ADMIN};
+use super::{test_case::App, CwContractWrapper, ADMIN};
 
 pub(crate) struct LeaserWrapper {
     contract_wrapper: LeaserContractWrapperReply,
@@ -35,7 +35,7 @@ impl LeaserWrapper {
     #[track_caller]
     pub fn instantiate(
         self,
-        app: &mut WrappedApp,
+        app: &mut App,
         lease_code_id: u64,
         lpp_addr: Addr,
         time_alarms: Addr,
@@ -65,7 +65,7 @@ impl LeaserWrapper {
 
 impl Default for LeaserWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(execute, instantiate, query)
+        let contract = CwContractWrapper::new(execute, instantiate, query)
             .with_reply(reply)
             .with_sudo(sudo);
 
@@ -76,7 +76,7 @@ impl Default for LeaserWrapper {
 }
 
 type LeaserContractWrapperReply = Box<
-    ContractWrapper<
+    CwContractWrapper<
         ExecuteMsg,
         ContractError,
         InstantiateMsg,
@@ -90,7 +90,7 @@ type LeaserContractWrapperReply = Box<
 >;
 
 pub(crate) fn query_quote<DownpaymentC, LeaseC>(
-    app: &mut WrappedApp,
+    app: &mut App,
     leaser: Addr,
     downpayment: Coin<DownpaymentC>,
 ) -> QuoteResponse

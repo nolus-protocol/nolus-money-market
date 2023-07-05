@@ -5,7 +5,7 @@ use timealarms::{
     ContractError,
 };
 
-use super::{mock_query, test_case::WrappedApp, ContractWrapper, MockQueryMsg, ADMIN};
+use super::{mock_query, test_case::App, CwContractWrapper, MockQueryMsg, ADMIN};
 
 pub(crate) struct TimeAlarmsWrapper {
     contract_wrapper: Box<TimeAlarmsContractWrapper>,
@@ -13,7 +13,7 @@ pub(crate) struct TimeAlarmsWrapper {
 
 impl TimeAlarmsWrapper {
     #[track_caller]
-    pub fn instantiate(self, app: &mut WrappedApp) -> Addr {
+    pub fn instantiate(self, app: &mut App) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {};
 
@@ -32,7 +32,7 @@ impl TimeAlarmsWrapper {
 
 impl Default for TimeAlarmsWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(execute, instantiate, mock_query).with_reply(reply);
+        let contract = CwContractWrapper::new(execute, instantiate, mock_query).with_reply(reply);
 
         Self {
             contract_wrapper: Box::new(contract),
@@ -40,7 +40,7 @@ impl Default for TimeAlarmsWrapper {
     }
 }
 
-type TimeAlarmsContractWrapper = ContractWrapper<
+type TimeAlarmsContractWrapper = CwContractWrapper<
     ExecuteMsg,
     ContractError,
     InstantiateMsg,

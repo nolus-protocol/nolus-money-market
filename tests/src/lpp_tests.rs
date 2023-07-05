@@ -25,7 +25,7 @@ use sdk::{
 use crate::common::{
     cwcoin,
     lease_wrapper::{LeaseInitConfig, LeaseWrapper, LeaseWrapperAddresses, LeaseWrapperConfig},
-    test_case::WrappedApp,
+    test_case::App,
     test_case::{BlankBuilder as TestCaseBuilder, TestCase},
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, UTILIZATION_OPTIMAL,
 };
@@ -1511,6 +1511,6 @@ where
     cwcoin(amount)
 }
 
-fn block_time(app: &WrappedApp) -> Timestamp {
+fn block_time(app: &App) -> Timestamp {
     app.block_info().time
 }

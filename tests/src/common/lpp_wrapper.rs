@@ -11,7 +11,7 @@ use sdk::{
     cw_multi_test::AppResponse,
 };
 
-use super::{test_case::WrappedApp, ContractWrapper, ADMIN};
+use super::{test_case::App, CwContractWrapper, ADMIN};
 
 pub(crate) struct LppWrapper {
     contract_wrapper: Box<LppContractWrapper>,
@@ -19,7 +19,7 @@ pub(crate) struct LppWrapper {
 
 impl LppWrapper {
     pub fn with_contract_wrapper(
-        contract: ContractWrapper<
+        contract: CwContractWrapper<
             ExecuteMsg,
             ContractError,
             InstantiateMsg,
@@ -37,7 +37,7 @@ impl LppWrapper {
     #[track_caller]
     pub fn instantiate<Lpn>(
         self,
-        app: &mut WrappedApp,
+        app: &mut App,
         lease_code_id: Uint64,
         init_balance: &[CwCoin],
         base_interest_rate: Percent,
@@ -87,7 +87,7 @@ impl LppWrapper {
 
 impl Default for LppWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(
+        let contract = CwContractWrapper::new(
             lpp::contract::execute,
             lpp::contract::instantiate,
             lpp::contract::query,
@@ -133,7 +133,7 @@ pub(crate) fn mock_lpp_quote_query(
     Ok(res)
 }
 
-type LppContractWrapper = ContractWrapper<
+type LppContractWrapper = CwContractWrapper<
     ExecuteMsg,
     ContractError,
     InstantiateMsg,

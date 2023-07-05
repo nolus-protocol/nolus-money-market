@@ -1,7 +1,4 @@
-use std::{
-    ops::{Deref, DerefMut},
-    sync::mpsc::TryRecvError,
-};
+use std::ops::{Deref, DerefMut};
 
 use cosmwasm_std::{
     testing::{mock_dependencies, MockApi, MockQuerier, MockStorage},
@@ -9,18 +6,19 @@ use cosmwasm_std::{
     WasmQuery,
 };
 use cw_multi_test::{
-    BankKeeper, BasicAppBuilder, DistributionKeeper, FailingModule, StakeKeeper, WasmKeeper,
+    BankKeeper, BasicAppBuilder as BasicCwAppBuilder, DistributionKeeper, FailingModule,
+    StakeKeeper, WasmKeeper,
 };
-pub use cw_multi_test::{ContractWrapper, Executor};
+pub use cw_multi_test::{ContractWrapper as CwContractWrapper, Executor as CwExecutor};
 
 use crate::cosmwasm_ext::CustomMsg;
 
 use self::custom_msg::Module as CustomMsgModule;
 
-pub type App<Exec = CustomMsg, Query = Empty> =
+pub type CwApp<Exec = CustomMsg, Query = Empty> =
     cw_multi_test::App<BankKeeper, MockApi, MockStorage, CustomMsgModule, WasmKeeper<Exec, Query>>;
 
-pub type AppBuilder<Exec = CustomMsg, Query = Empty> = cw_multi_test::AppBuilder<
+pub type CwAppBuilder<Exec = CustomMsg, Query = Empty> = cw_multi_test::AppBuilder<
     BankKeeper,
     MockApi,
     MockStorage,
@@ -32,15 +30,15 @@ pub type AppBuilder<Exec = CustomMsg, Query = Empty> = cw_multi_test::AppBuilder
     FailingModule<GovMsg, Empty, Empty>,
 >;
 
-pub type Contract = dyn cw_multi_test::Contract<CustomMsg>;
+pub type CwContract = dyn cw_multi_test::Contract<CustomMsg>;
 
 pub type CustomMessageSender = std::sync::mpsc::Sender<CustomMsg>;
 type CustomMessageReceiver = std::sync::mpsc::Receiver<CustomMsg>;
 
 #[derive(Debug)]
-pub struct WrappedCustomMessageReceiver(CustomMessageReceiver);
+pub struct CustomMessageReceiverExt(CustomMessageReceiver);
 
-impl WrappedCustomMessageReceiver {
+impl CustomMessageReceiverExt {
     #[cfg(feature = "neutron")]
     pub fn assert_register_ica(&self, expected_connection_id: &str) {
         let message = self
@@ -56,11 +54,11 @@ impl WrappedCustomMessageReceiver {
     }
 
     pub fn assert_empty(&self) {
-        assert_eq!(self.0.try_recv(), Err(TryRecvError::Empty));
+        assert_eq!(self.0.try_recv().ok(), None);
     }
 }
 
-impl Deref for WrappedCustomMessageReceiver {
+impl Deref for CustomMessageReceiverExt {
     type Target = CustomMessageReceiver;
 
     fn deref(&self) -> &Self::Target {
@@ -68,13 +66,13 @@ impl Deref for WrappedCustomMessageReceiver {
     }
 }
 
-impl DerefMut for WrappedCustomMessageReceiver {
+impl DerefMut for CustomMessageReceiverExt {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl Drop for WrappedCustomMessageReceiver {
+impl Drop for CustomMessageReceiverExt {
     fn drop(&mut self) {
         if let Ok(message) = self.0.try_recv() {
             panic!("Custom message receiver dropped with messages in the queue! First message: {message:?}");
@@ -82,11 +80,11 @@ impl Drop for WrappedCustomMessageReceiver {
     }
 }
 
-pub fn new_custom_msg_queue() -> (CustomMessageSender, WrappedCustomMessageReceiver) {
+pub fn new_custom_msg_queue() -> (CustomMessageSender, CustomMessageReceiverExt) {
     let (sender, receiver): (CustomMessageSender, CustomMessageReceiver) =
         std::sync::mpsc::channel();
 
-    (sender, WrappedCustomMessageReceiver(receiver))
+    (sender, CustomMessageReceiverExt(receiver))
 }
 
 pub fn mock_deps_with_contracts<const N: usize>(
@@ -121,8 +119,8 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
     deps
 }
 
-pub fn new_app(message_sender: CustomMessageSender) -> AppBuilder {
-    BasicAppBuilder::<CustomMsg, Empty>::new_custom()
+pub fn new_app(message_sender: CustomMessageSender) -> CwAppBuilder {
+    BasicCwAppBuilder::<CustomMsg, Empty>::new_custom()
         .with_custom(CustomMsgModule::new(message_sender))
         .with_wasm::<CustomMsgModule, _>(WasmKeeper::new())
 }

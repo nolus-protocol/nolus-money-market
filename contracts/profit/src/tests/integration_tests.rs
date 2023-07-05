@@ -1,15 +1,15 @@
 use sdk::{
     cosmwasm_std::{Addr, Coin, Uint128},
     testing::{
-        new_app, new_custom_msg_queue, App, Contract, ContractWrapper, CustomMessageSender,
-        Executor, WrappedCustomMessageReceiver,
+        new_app, new_custom_msg_queue, CustomMessageReceiverExt, CustomMessageSender, CwApp,
+        CwContract, CwContractWrapper, CwExecutor as _,
     },
 };
 
 use crate::{msg::InstantiateMsg, tests::helpers::CwTemplateContract};
 
-pub fn contract_template() -> Box<Contract> {
-    let contract = ContractWrapper::new(
+pub fn contract_template() -> Box<CwContract> {
+    let contract = CwContractWrapper::new(
         crate::contract::execute,
         crate::contract::instantiate,
         crate::contract::query,
@@ -21,7 +21,7 @@ const USER: &str = "USER";
 const ADMIN: &str = "ADMIN";
 const NATIVE_DENOM: &str = "denom";
 
-fn mock_app(custom_message_sender: CustomMessageSender) -> App {
+fn mock_app(custom_message_sender: CustomMessageSender) -> CwApp {
     new_app(custom_message_sender).build(|router, _, storage| {
         router
             .bank
@@ -37,10 +37,10 @@ fn mock_app(custom_message_sender: CustomMessageSender) -> App {
     })
 }
 
-fn proper_instantiate() -> (App, CwTemplateContract, WrappedCustomMessageReceiver) {
+fn proper_instantiate() -> (CwApp, CwTemplateContract, CustomMessageReceiverExt) {
     let (custom_message_sender, custom_message_receiver): (
         CustomMessageSender,
-        WrappedCustomMessageReceiver,
+        CustomMessageReceiverExt,
     ) = new_custom_msg_queue();
     let mut app = mock_app(custom_message_sender);
     let cw_template_id = app.store_code(contract_template());
@@ -75,9 +75,9 @@ mod config {
     #[should_panic(expected = "ContractData not found")]
     fn config() {
         let (mut app, cw_template_contract, _custom_message_receiver): (
-            App,
+            CwApp,
             CwTemplateContract,
-            WrappedCustomMessageReceiver,
+            CustomMessageReceiverExt,
         ) = proper_instantiate();
 
         app.execute_contract(

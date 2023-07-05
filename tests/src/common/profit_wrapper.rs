@@ -6,7 +6,7 @@ use profit::{
 };
 use sdk::{cosmwasm_std::Addr, neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg};
 
-use super::{test_case::WrappedApp, ContractWrapper, ADMIN};
+use super::{test_case::App, CwContractWrapper, ADMIN};
 
 pub(crate) struct ProfitWrapper {
     contract_wrapper: Box<ProfitContractWrapper>,
@@ -16,7 +16,7 @@ impl ProfitWrapper {
     #[track_caller]
     pub fn instantiate(
         self,
-        app: &mut WrappedApp,
+        app: &mut App,
         cadence_hours: CadenceHours,
         treasury: Addr,
         oracle: Addr,
@@ -38,7 +38,7 @@ impl ProfitWrapper {
 
 impl Default for ProfitWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(execute, instantiate, query).with_sudo(sudo);
+        let contract = CwContractWrapper::new(execute, instantiate, query).with_sudo(sudo);
 
         Self {
             contract_wrapper: Box::new(contract),
@@ -46,7 +46,7 @@ impl Default for ProfitWrapper {
     }
 }
 
-type ProfitContractWrapper = ContractWrapper<
+type ProfitContractWrapper = CwContractWrapper<
     ExecuteMsg,
     ContractError,
     InstantiateMsg,

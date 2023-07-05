@@ -30,8 +30,8 @@ use swap::trx as swap_trx;
 
 use super::{
     cwcoin,
-    test_case::{WrappedApp, WrappedResponse},
-    ContractWrapper, MockApp, ADMIN, USER,
+    test_case::{App, WrappedResponse},
+    CwContractWrapper, MockApp, ADMIN, USER,
 };
 
 pub(crate) struct LeaseInitConfig<'r, D>
@@ -108,14 +108,14 @@ impl Default for LeaseWrapperConfig {
 }
 
 impl LeaseWrapper {
-    pub fn store(self, app: &mut WrappedApp) -> u64 {
+    pub fn store(self, app: &mut App) -> u64 {
         app.store_code(self.contract_wrapper)
     }
 
     #[track_caller]
     pub fn instantiate<D>(
         self,
-        app: &mut WrappedApp,
+        app: &mut App,
         code_id: Option<u64>,
         addresses: LeaseWrapperAddresses,
         lease_config: LeaseInitConfig<'_, D>,
@@ -128,7 +128,7 @@ impl LeaseWrapper {
         let code_id = match code_id {
             Some(id) => id,
             None => app
-                .with_app(|app: &mut MockApp| Ok(app.store_code(self.contract_wrapper)))
+                .with_mock_app(|app: &mut MockApp| Ok(app.store_code(self.contract_wrapper)))
                 .unwrap()
                 .unwrap_response(),
         };
@@ -141,7 +141,7 @@ impl LeaseWrapper {
         );
 
         let mut response: WrappedResponse<'_, Addr> = app
-            .with_app(|app: &mut MockApp| {
+            .with_mock_app(|app: &mut MockApp| {
                 app.instantiate_contract(
                     code_id,
                     Addr::unchecked(ADMIN),
@@ -196,7 +196,7 @@ impl LeaseWrapper {
 
 impl Default for LeaseWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(execute, instantiate, query)
+        let contract = CwContractWrapper::new(execute, instantiate, query)
             .with_reply(reply)
             .with_sudo(sudo);
 
@@ -215,7 +215,7 @@ pub struct LeaseWrapperAddresses {
 }
 
 type LeaseContractWrapperReply = Box<
-    ContractWrapper<
+    CwContractWrapper<
         ExecuteMsg,
         ContractError,
         NewLeaseContract,
@@ -229,7 +229,7 @@ type LeaseContractWrapperReply = Box<
 >;
 
 pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
-    wrapped_app: &mut WrappedApp,
+    wrapped_app: &mut App,
     lease_addr: &Addr,
     messages: VecDeque<NeutronMsg>,
     downpayment: Coin<DownpaymentC>,
@@ -304,7 +304,7 @@ pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
 }
 
 fn open_ica<'r>(
-    wrapped_app: &'r mut WrappedApp,
+    wrapped_app: &'r mut App,
     lease_addr: &Addr,
     mut messages: VecDeque<NeutronMsg>,
     ica_channel: &str,
@@ -350,7 +350,7 @@ fn open_ica<'r>(
 }
 
 fn transfer_out<'r, OutC>(
-    wrapped_app: &'r mut WrappedApp,
+    wrapped_app: &'r mut App,
     lease: &Addr,
     messages: VecDeque<NeutronMsg>,
     amount_out: Coin<OutC>,
@@ -367,7 +367,7 @@ where
     send_blank_response(wrapped_app, lease)
 }
 
-fn check_state_opening(wrapped_app: &mut WrappedApp, lease: &Addr) {
+fn check_state_opening(wrapped_app: &mut App, lease: &Addr) {
     let StateResponse::Opening { .. } = wrapped_app.query().query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: lease.to_string(),
         msg: to_binary(&StateQuery {}).unwrap(),
@@ -376,7 +376,7 @@ fn check_state_opening(wrapped_app: &mut WrappedApp, lease: &Addr) {
     };
 }
 
-fn check_state_opened(wrapped_app: &mut WrappedApp, lease: &Addr) {
+fn check_state_opened(wrapped_app: &mut App, lease: &Addr) {
     let StateResponse::Opened { .. } = wrapped_app.query().query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: lease.to_string(),
         msg: to_binary(&StateQuery {}).unwrap(),
@@ -386,7 +386,7 @@ fn check_state_opened(wrapped_app: &mut WrappedApp, lease: &Addr) {
 }
 
 fn swap<DownpaymentC, LeaseC>(
-    wrapped_app: &mut WrappedApp,
+    wrapped_app: &mut App,
     lease: &Addr,
     mut messages: VecDeque<CustomMsg>,
     swap_out: Coin<LeaseC>,
@@ -439,14 +439,14 @@ where
 }
 
 fn send_blank_response<'r>(
-    wrapped_app: &'r mut WrappedApp,
+    wrapped_app: &'r mut App,
     lease_addr: &Addr,
 ) -> WrappedResponse<'r, AppResponse> {
     send_response(wrapped_app, lease_addr, Default::default())
 }
 
 fn send_response<'r>(
-    wrapped_app: &'r mut WrappedApp,
+    wrapped_app: &'r mut App,
     lease_addr: &Addr,
     resp: Binary,
 ) -> WrappedResponse<'r, AppResponse> {

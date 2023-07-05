@@ -6,7 +6,7 @@ use rewards_dispatcher::{
 };
 use sdk::cosmwasm_std::Addr;
 
-use super::{test_case::WrappedApp, ContractWrapper, ADMIN};
+use super::{test_case::App, CwContractWrapper, ADMIN};
 
 pub(crate) struct DispatcherWrapper {
     contract_wrapper: Box<DispatcherContractWrapper>,
@@ -16,7 +16,7 @@ impl DispatcherWrapper {
     #[track_caller]
     pub fn instantiate(
         self,
-        app: &mut WrappedApp,
+        app: &mut App,
         lpp: Addr,
         oracle: Addr,
         timealarms: Addr,
@@ -58,7 +58,7 @@ impl DispatcherWrapper {
 
 impl Default for DispatcherWrapper {
     fn default() -> Self {
-        let contract = ContractWrapper::new(
+        let contract = CwContractWrapper::new(
             rewards_dispatcher::contract::execute,
             rewards_dispatcher::contract::instantiate,
             rewards_dispatcher::contract::query,
@@ -71,7 +71,7 @@ impl Default for DispatcherWrapper {
     }
 }
 
-type DispatcherContractWrapper = ContractWrapper<
+type DispatcherContractWrapper = CwContractWrapper<
     ExecuteMsg,
     ContractError,
     InstantiateMsg,

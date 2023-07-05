@@ -12,12 +12,12 @@ use sdk::{
     cosmwasm_std::{Addr, BlockInfo, Coin as CwCoin, Empty, QuerierWrapper, Uint64},
     cw_multi_test::{next_block, AppResponse, Contract as CwContract, Executor as _},
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
-    testing::{new_custom_msg_queue, CustomMessageSender, WrappedCustomMessageReceiver},
+    testing::{new_custom_msg_queue, CustomMessageReceiverExt, CustomMessageSender},
 };
 
 use crate::common::{
     lease_wrapper::{LeaseInitConfig, LeaseWrapperAddresses},
-    ContractWrapper, MockApp,
+    CwContractWrapper, MockApp,
 };
 
 use super::{
@@ -35,7 +35,7 @@ use super::{
 };
 
 type OptionalLppWrapper = Option<
-    ContractWrapper<
+    CwContractWrapper<
         lpp::msg::ExecuteMsg,
         lpp::error::ContractError,
         lpp::msg::InstantiateMsg,
@@ -48,7 +48,7 @@ type OptionalLppWrapper = Option<
 >;
 
 type OptionalOracleWrapper = Option<
-    ContractWrapper<
+    CwContractWrapper<
         oracle::msg::ExecuteMsg,
         oracle::ContractError,
         oracle::msg::InstantiateMsg,
@@ -292,13 +292,13 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
 }
 
 #[must_use]
-pub(crate) struct WrappedApp {
+pub(crate) struct App {
     app: MockApp,
-    message_receiver: WrappedCustomMessageReceiver,
+    message_receiver: CustomMessageReceiverExt,
 }
 
-impl WrappedApp {
-    pub const fn new(app: MockApp, message_receiver: WrappedCustomMessageReceiver) -> Self {
+impl App {
+    pub const fn new(app: MockApp, message_receiver: CustomMessageReceiverExt) -> Self {
         Self {
             app,
             message_receiver,
@@ -353,7 +353,7 @@ impl WrappedApp {
         T: Debug + Serialize,
         U: Into<String>,
     {
-        self.with_app(|app: &mut MockApp| {
+        self.with_mock_app(|app: &mut MockApp| {
             app.instantiate_contract(code_id, sender, init_msg, send_funds, label, admin)
         })
     }
@@ -368,7 +368,7 @@ impl WrappedApp {
     where
         T: Debug + Serialize,
     {
-        self.with_app(|app: &mut MockApp| {
+        self.with_mock_app(|app: &mut MockApp| {
             app.execute_contract(sender, contract_addr, msg, send_funds)
         })
     }
@@ -381,7 +381,7 @@ impl WrappedApp {
     where
         T: Into<CosmosMsg>,
     {
-        self.with_app(|app: &mut MockApp| app.execute(sender, msg.into()))
+        self.with_mock_app(|app: &mut MockApp| app.execute(sender, msg.into()))
     }
 
     pub fn sudo<'r, T, U>(
@@ -393,14 +393,14 @@ impl WrappedApp {
         T: Into<Addr>,
         U: Serialize,
     {
-        self.with_app(|app: &mut MockApp| app.wasm_sudo(contract_addr, msg))
+        self.with_mock_app(|app: &mut MockApp| app.wasm_sudo(contract_addr, msg))
     }
 
-    pub fn with_app<'r, F, R>(&'r mut self, f: F) -> anyhow::Result<WrappedResponse<'r, R>>
+    pub fn with_mock_app<'r, F, R>(&'r mut self, f: F) -> anyhow::Result<WrappedResponse<'r, R>>
     where
         F: FnOnce(&'r mut MockApp) -> anyhow::Result<R>,
     {
-        self.message_receiver.try_recv().unwrap_err();
+        self.message_receiver.assert_empty();
 
         match f(&mut self.app) {
             Ok(result) => Ok(WrappedResponse {
@@ -418,6 +418,8 @@ impl WrappedApp {
 
     #[must_use]
     pub fn query(&self) -> QuerierWrapper<'_, Empty> {
+        self.message_receiver.assert_empty();
+
         self.app.wrap()
     }
 }
@@ -425,7 +427,7 @@ impl WrappedApp {
 #[must_use]
 #[derive(Debug)]
 pub struct WrappedResponse<'r, T> {
-    receiver: &'r mut WrappedCustomMessageReceiver,
+    receiver: &'r mut CustomMessageReceiverExt,
     result: T,
 }
 
@@ -439,7 +441,7 @@ impl<'r> Iterator for WrappedResponse<'r, ()> {
 
 impl<'r, T> WrappedResponse<'r, T> {
     #[must_use]
-    pub fn receiver(&mut self) -> &mut WrappedCustomMessageReceiver {
+    pub fn receiver(&mut self) -> &mut CustomMessageReceiverExt {
         self.receiver
     }
 
@@ -457,7 +459,7 @@ impl<'r, T> WrappedResponse<'r, T> {
 
     #[must_use]
     pub fn unwrap_response(self) -> T {
-        assert_eq!(self.receiver.try_recv().ok(), None);
+        self.receiver.assert_empty();
 
         self.result
     }
@@ -474,7 +476,7 @@ impl<'r> WrappedResponse<'r, ()> {
 
 #[must_use]
 pub(crate) struct TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
-    pub app: WrappedApp,
+    pub app: App,
     pub address_book: AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
 }
 
@@ -484,10 +486,10 @@ impl TestCase<(), (), (), (), (), (), ()> {
     fn with_reserve(reserve: &[CwCoin]) -> Self {
         let (custom_message_sender, custom_message_receiver): (
             CustomMessageSender,
-            WrappedCustomMessageReceiver,
+            CustomMessageReceiverExt,
         ) = new_custom_msg_queue();
 
-        let mut app: WrappedApp = WrappedApp::new(
+        let mut app: App = App::new(
             mock_app(custom_message_sender, reserve),
             custom_message_receiver,
         );
@@ -507,7 +509,7 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
     pub fn send_funds_from_admin(&mut self, user_addr: Addr, funds: &[CwCoin]) -> &mut Self {
         let _: AppResponse = self
             .app
-            .with_app(|app| app.send_tokens(Addr::unchecked(ADMIN), user_addr, funds))
+            .with_mock_app(|app| app.send_tokens(Addr::unchecked(ADMIN), user_addr, funds))
             .unwrap()
             .unwrap_response();
 
@@ -520,7 +522,7 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
         self
     }
 
-    fn store_lease_code(app: &mut WrappedApp) -> u64 {
+    fn store_lease_code(app: &mut App) -> u64 {
         LeaseWrapper::default().store(app)
     }
 }
