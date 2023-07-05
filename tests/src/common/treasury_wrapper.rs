@@ -1,19 +1,16 @@
 use currency::Currency;
-use sdk::{
-    cosmwasm_std::{Addr, StdError},
-    cw_multi_test::Executor,
-};
+use sdk::cosmwasm_std::{Addr, StdError};
 use treasury::{
     contract::sudo,
     msg::{ExecuteMsg, InstantiateMsg, SudoMsg},
     ContractError,
 };
 
-use crate::common::{ContractWrapper, MockApp};
+use super::{
+    cwcoin, mock_query, native_cwcoin, test_case::WrappedApp, ContractWrapper, MockQueryMsg, ADMIN,
+};
 
-use super::{cwcoin, mock_query, native_cwcoin, MockQueryMsg, ADMIN};
-
-pub struct TreasuryWrapper {
+pub(crate) struct TreasuryWrapper {
     contract_wrapper: Box<TreasuryContractWrapper>,
     rewards_dispatcher: Addr,
 }
@@ -38,7 +35,7 @@ impl TreasuryWrapper {
     }
 
     #[track_caller]
-    pub fn instantiate<Lpn>(self, app: &mut MockApp) -> Addr
+    pub fn instantiate<Lpn>(self, app: &mut WrappedApp) -> Addr
     where
         Lpn: Currency,
     {
@@ -47,7 +44,7 @@ impl TreasuryWrapper {
             rewards_dispatcher: self.rewards_dispatcher,
         };
 
-        app.instantiate_contract(
+        app.instantiate(
             code_id,
             Addr::unchecked(ADMIN),
             &msg,
@@ -56,6 +53,7 @@ impl TreasuryWrapper {
             None,
         )
         .unwrap()
+        .unwrap_response()
     }
 }
 

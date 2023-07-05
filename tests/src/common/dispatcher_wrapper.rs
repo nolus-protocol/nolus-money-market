@@ -4,13 +4,11 @@ use rewards_dispatcher::{
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
     state::reward_scale::{Bar, RewardScale, TotalValueLocked},
 };
-use sdk::{cosmwasm_std::Addr, cw_multi_test::Executor};
+use sdk::cosmwasm_std::Addr;
 
-use crate::common::{ContractWrapper, MockApp};
+use super::{test_case::WrappedApp, ContractWrapper, ADMIN};
 
-use super::ADMIN;
-
-pub struct DispatcherWrapper {
+pub(crate) struct DispatcherWrapper {
     contract_wrapper: Box<DispatcherContractWrapper>,
 }
 
@@ -18,13 +16,14 @@ impl DispatcherWrapper {
     #[track_caller]
     pub fn instantiate(
         self,
-        app: &mut MockApp,
+        app: &mut WrappedApp,
         lpp: Addr,
         oracle: Addr,
         timealarms: Addr,
         treasury: Addr,
     ) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
+
         let msg = InstantiateMsg {
             cadence_hours: 10,
             lpp,
@@ -44,7 +43,7 @@ impl DispatcherWrapper {
             .unwrap(),
         };
 
-        app.instantiate_contract(
+        app.instantiate(
             code_id,
             Addr::unchecked(ADMIN),
             &msg,
@@ -53,6 +52,7 @@ impl DispatcherWrapper {
             None,
         )
         .unwrap()
+        .unwrap_response()
     }
 }
 

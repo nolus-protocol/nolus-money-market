@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use currency::{self, Currency};
 use finance::{
     coin::{Amount, Coin},
@@ -16,21 +18,23 @@ use lease::{
 };
 use platform::{coin_legacy, trx};
 use sdk::{
+    cosmwasm_ext::CustomMsg,
     cosmwasm_std::{to_binary, Addr, Binary, Coin as CwCoin, QueryRequest, WasmQuery},
     cw_multi_test::{AppResponse, Executor},
     neutron_sdk::{
         bindings::msg::NeutronMsg,
         sudo::msg::{RequestPacket, SudoMsg},
     },
-    testing::WrappedCustomMessageReceiver,
 };
 use swap::trx as swap_trx;
 
-use crate::common::cwcoin;
+use super::{
+    cwcoin,
+    test_case::{WrappedApp, WrappedResponse},
+    ContractWrapper, MockApp, ADMIN, USER,
+};
 
-use super::{ContractWrapper, MockApp, ADMIN, USER};
-
-pub struct LeaseInitConfig<'r, D>
+pub(crate) struct LeaseInitConfig<'r, D>
 where
     D: Currency,
 {
@@ -52,11 +56,11 @@ where
     }
 }
 
-pub struct LeaseWrapper {
+pub(crate) struct LeaseWrapper {
     contract_wrapper: LeaseContractWrapperReply,
 }
 
-pub struct LeaseWrapperConfig {
+pub(crate) struct LeaseWrapperConfig {
     //NewLeaseForm
     pub customer: Addr,
     // Liability
@@ -104,25 +108,29 @@ impl Default for LeaseWrapperConfig {
 }
 
 impl LeaseWrapper {
-    pub fn store(self, app: &mut MockApp) -> u64 {
+    pub fn store(self, app: &mut WrappedApp) -> u64 {
         app.store_code(self.contract_wrapper)
     }
 
     #[track_caller]
-    pub fn instantiate<D>(
+    pub fn instantiate<'r, D>(
         self,
-        app: &mut MockApp,
+        app: &'r mut WrappedApp,
         code_id: Option<u64>,
         addresses: LeaseWrapperAddresses,
         lease_config: LeaseInitConfig<'_, D>,
         config: LeaseWrapperConfig,
+        leaser_connection_id: &str,
     ) -> Addr
     where
         D: Currency,
     {
         let code_id = match code_id {
             Some(id) => id,
-            None => app.store_code(self.contract_wrapper),
+            None => app
+                .with_app(|app: &mut MockApp| Ok(app.store_code(self.contract_wrapper)))
+                .unwrap()
+                .unwrap_response(),
         };
 
         let msg = Self::lease_instantiate_msg(
@@ -132,24 +140,24 @@ impl LeaseWrapper {
             lease_config.max_ltd,
         );
 
-        let result = app.instantiate_contract(
-            code_id,
-            Addr::unchecked(ADMIN),
-            &msg,
-            &[coin_legacy::to_cosmwasm(lease_config.downpayment)],
-            "lease",
-            None,
-        );
+        let mut response: WrappedResponse<'_, Addr> = app
+            .with_app(|app: &mut MockApp| {
+                app.instantiate_contract(
+                    code_id,
+                    Addr::unchecked(ADMIN),
+                    &msg,
+                    &[coin_legacy::to_cosmwasm(lease_config.downpayment)],
+                    "lease",
+                    None,
+                )
+            })
+            .unwrap();
 
-        if let Err(error) = result.as_ref() {
-            eprintln!("Error: {:?}", error);
+        response
+            .receiver()
+            .assert_register_ica(leaser_connection_id);
 
-            if let Some(source) = error.source() {
-                eprintln!("Source Error: {:?}", source);
-            }
-        }
-
-        result.unwrap()
+        response.unwrap_response()
     }
 
     fn lease_instantiate_msg(
@@ -220,10 +228,10 @@ type LeaseContractWrapperReply = Box<
     >,
 >;
 
-pub fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
-    mock_app: &mut MockApp,
-    message_receiver: &WrappedCustomMessageReceiver,
-    lease: &Addr,
+pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
+    wrapped_app: &mut WrappedApp,
+    lease_addr: &Addr,
+    messages: VecDeque<NeutronMsg>,
     downpayment: Coin<DownpaymentC>,
     exp_borrow: Coin<Lpn>,
     exp_lease: Coin<LeaseC>,
@@ -232,85 +240,92 @@ pub fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
     DownpaymentC: Currency,
     LeaseC: Currency,
 {
-    check_state_opening(mock_app, lease);
+    check_state_opening(wrapped_app, lease_addr);
 
     let ica_addr = "ica0";
     let ica_port = format!("icacontroller-{ica_addr}");
     let ica_port = ica_port.as_str();
     let ica_channel = format!("channel-{ica_addr}");
     let ica_channel = ica_channel.as_str();
-    let (connection_id, interchain_account_id) = open_ica(
-        message_receiver,
-        mock_app,
-        lease,
+    let mut response: WrappedResponse<'_, (String, String)> = open_ica(
+        wrapped_app,
+        lease_addr,
+        messages,
         ica_channel,
         ica_port,
         ica_addr,
     );
-    check_state_opening(mock_app, lease);
+    let messages: VecDeque<CustomMsg> = response.iter().collect();
+    let (connection_id, interchain_account_id) = response.unwrap_response();
+    check_state_opening(wrapped_app, lease_addr);
 
-    transfer_out(
-        message_receiver,
-        mock_app,
-        lease,
+    let messages: VecDeque<CustomMsg> = transfer_out(
+        wrapped_app,
+        lease_addr,
+        messages,
         downpayment,
         ica_channel,
         ica_addr,
-        false,
-    );
-    check_state_opening(mock_app, lease);
+    )
+    .clear_result()
+    .collect();
 
-    transfer_out(
-        message_receiver,
-        mock_app,
-        lease,
+    check_state_opening(wrapped_app, lease_addr);
+
+    let messages: VecDeque<CustomMsg> = transfer_out(
+        wrapped_app,
+        lease_addr,
+        messages,
         exp_borrow,
         ica_channel,
         ica_addr,
-        true,
-    );
-    check_state_opening(mock_app, lease);
+    )
+    .clear_result()
+    .collect();
+
+    check_state_opening(wrapped_app, lease_addr);
 
     let exp_swap_out = if currency::equal::<DownpaymentC, LeaseC>() {
         exp_lease - price::total(downpayment, Price::identity())
     } else {
         exp_lease
     };
+
     swap::<DownpaymentC, LeaseC>(
-        mock_app,
-        message_receiver,
-        lease,
+        wrapped_app,
+        lease_addr,
+        messages,
         exp_swap_out,
         connection_id,
         interchain_account_id,
     );
 
-    check_state_opened(mock_app, lease);
+    check_state_opened(wrapped_app, lease_addr);
 }
 
-fn open_ica(
-    message_receiver: &WrappedCustomMessageReceiver,
-    mock_app: &mut MockApp,
+fn open_ica<'r>(
+    wrapped_app: &'r mut WrappedApp,
     lease_addr: &Addr,
+    mut messages: VecDeque<NeutronMsg>,
     ica_channel: &str,
     ica_port: &str,
     ica_addr: &str,
-) -> (String, String) {
+) -> WrappedResponse<'r, (String, String)> {
     let NeutronMsg::RegisterInterchainAccount {
         connection_id,
         interchain_account_id,
     } = ({
-        let msg: NeutronMsg = message_receiver.try_recv().expect("Expected a Neutron message, but no was available!");
+        let msg: NeutronMsg = messages.pop_front().unwrap();
 
-        let _ = message_receiver.try_recv().expect_err("Expected queue to be empty, but a second message has been sent!");
+        assert_eq!(messages.as_slices(), (&[] as &[NeutronMsg], &[] as &[NeutronMsg]));
 
         msg
     }) else {
         unreachable!("Unexpected message type!")
     };
 
-    mock_app
-        .wasm_sudo(
+    wrapped_app
+        .sudo(
             Addr::unchecked(lease_addr),
             &SudoMsg::OpenAck {
                 port_id: ica_port.to_string(),
@@ -329,36 +344,31 @@ fn open_ica(
                 ),
             },
         )
-        .unwrap();
-    (connection_id, interchain_account_id)
+        .unwrap()
+        .clear_result()
+        .set_result((connection_id, interchain_account_id))
 }
 
-fn transfer_out<OutC>(
-    message_receiver: &WrappedCustomMessageReceiver,
-    mock_app: &mut MockApp,
+fn transfer_out<'r, OutC>(
+    wrapped_app: &'r mut WrappedApp,
     lease: &Addr,
+    messages: VecDeque<NeutronMsg>,
     amount_out: Coin<OutC>,
     ica_channel: &str,
     ica_addr: &str,
-    last_transfer: bool,
-) where
+) -> WrappedResponse<'r, AppResponse>
+where
     OutC: Currency,
 {
-    assert_eq!(
-        expect_ibc_transfer(
-            message_receiver,
-            ica_channel,
-            lease.as_str(),
-            ica_addr,
-            last_transfer,
-        ),
-        cwcoin(amount_out)
-    );
-    send_blank_response(mock_app, lease);
+    let coin = expect_ibc_transfer(messages, ica_channel, lease.as_str(), ica_addr);
+
+    assert_eq!(coin, cwcoin(amount_out));
+
+    send_blank_response(wrapped_app, lease)
 }
 
-fn check_state_opening(mock_app: &mut MockApp, lease: &Addr) {
-    let StateResponse::Opening { .. } = mock_app.wrap().query(&QueryRequest::Wasm(WasmQuery::Smart {
+fn check_state_opening(wrapped_app: &mut WrappedApp, lease: &Addr) {
+    let StateResponse::Opening { .. } = wrapped_app.query().query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: lease.to_string(),
         msg: to_binary(&StateQuery {}).unwrap(),
     })).unwrap() else {
@@ -366,8 +376,8 @@ fn check_state_opening(mock_app: &mut MockApp, lease: &Addr) {
     };
 }
 
-fn check_state_opened(mock_app: &mut MockApp, lease: &Addr) {
-    let StateResponse::Opened { .. } = mock_app.wrap().query(&QueryRequest::Wasm(WasmQuery::Smart {
+fn check_state_opened(wrapped_app: &mut WrappedApp, lease: &Addr) {
+    let StateResponse::Opened { .. } = wrapped_app.query().query(&QueryRequest::Wasm(WasmQuery::Smart {
         contract_addr: lease.to_string(),
         msg: to_binary(&StateQuery {}).unwrap(),
     })).unwrap() else {
@@ -376,9 +386,9 @@ fn check_state_opened(mock_app: &mut MockApp, lease: &Addr) {
 }
 
 fn swap<DownpaymentC, LeaseC>(
-    mock_app: &mut MockApp,
-    message_receiver: &WrappedCustomMessageReceiver,
+    wrapped_app: &mut WrappedApp,
     lease: &Addr,
+    mut messages: VecDeque<CustomMsg>,
     swap_out: Coin<LeaseC>,
     connection_id: String,
     interchain_account_id: String,
@@ -399,18 +409,23 @@ fn swap<DownpaymentC, LeaseC>(
             interchain_account_id: tx_ica_id,
             msgs,
             ..
-        } = message_receiver.try_recv().expect("Expected to receive a `SubmitTx` message but no message was available!") else {
+        } = messages.pop_front().expect("Expected to receive a `SubmitTx` message but no message was available!") else {
             unreachable!("Unexpected message type!")
         };
+
+        assert_eq!(
+            messages.as_slices(),
+            (&[] as &[CustomMsg], &[] as &[CustomMsg])
+        );
 
         assert_eq!(tx_conn_id, connection_id);
         assert_eq!(tx_ica_id, interchain_account_id);
         assert_eq!(msgs.len(), amounts_out.len());
     }
-    check_state_opening(mock_app, lease);
+    check_state_opening(wrapped_app, lease);
 
     let swap_resp = swap_exact_in_resp(amounts_out);
-    send_response(mock_app, lease, swap_resp);
+    let _: AppResponse = send_response(wrapped_app, lease, swap_resp).unwrap_response();
 }
 
 fn swap_exact_in_resp<I>(amounts: I) -> Binary
@@ -423,13 +438,20 @@ where
     trx::encode_msg_responses(msgs).into()
 }
 
-fn send_blank_response(mock_app: &mut MockApp, lease_addr: &Addr) -> AppResponse {
-    send_response(mock_app, lease_addr, Default::default())
+fn send_blank_response<'r>(
+    wrapped_app: &'r mut WrappedApp,
+    lease_addr: &Addr,
+) -> WrappedResponse<'r, AppResponse> {
+    send_response(wrapped_app, lease_addr, Default::default())
 }
 
-fn send_response(mock_app: &mut MockApp, lease_addr: &Addr, resp: Binary) -> AppResponse {
-    mock_app
-        .wasm_sudo(
+fn send_response<'r>(
+    wrapped_app: &'r mut WrappedApp,
+    lease_addr: &Addr,
+    resp: Binary,
+) -> WrappedResponse<'r, AppResponse> {
+    wrapped_app
+        .sudo(
             Addr::unchecked(lease_addr),
             &SudoMsg::Response {
                 // TODO fill-in with real/valid response data
@@ -450,23 +472,22 @@ fn send_response(mock_app: &mut MockApp, lease_addr: &Addr, resp: Binary) -> App
 }
 
 pub fn expect_ibc_transfer(
-    message_receiver: &WrappedCustomMessageReceiver,
+    mut messages: VecDeque<NeutronMsg>,
     ica_channel: &str,
     sender_addr: &str,
     ica_addr: &str,
-    last_msg: bool,
 ) -> CwCoin {
     let NeutronMsg::IbcTransfer {
         source_port, source_channel, token, sender, receiver, ..
-    } = message_receiver.try_recv().unwrap() else {
+    } = messages.pop_front().unwrap() else {
         unreachable!("Unexpected message type!")
     };
 
-    if last_msg {
-        message_receiver
-            .try_recv()
-            .expect_err("Expected queue to be empty, but other message(s) has been sent!");
-    }
+    assert_eq!(
+        messages.as_slices(),
+        (&[] as &[CustomMsg], &[] as &[CustomMsg]),
+        "Expected queue to be empty, but other message(s) has been sent!"
+    );
 
     assert_eq!(&source_port, "transfer");
     assert_ne!(&source_channel, ica_channel);

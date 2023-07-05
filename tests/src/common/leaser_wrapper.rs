@@ -6,16 +6,11 @@ use leaser::{
     msg::{ExecuteMsg, InstantiateMsg, QueryMsg, QuoteResponse, SudoMsg},
     ContractError,
 };
-use sdk::{
-    cosmwasm_std::{Addr, Uint64},
-    cw_multi_test::Executor,
-};
+use sdk::cosmwasm_std::{Addr, Uint64};
 
-use crate::common::{ContractWrapper, MockApp};
+use super::{test_case::WrappedApp, ContractWrapper, ADMIN};
 
-use super::ADMIN;
-
-pub struct LeaserWrapper {
+pub(crate) struct LeaserWrapper {
     contract_wrapper: LeaserContractWrapperReply,
 }
 impl LeaserWrapper {
@@ -40,7 +35,7 @@ impl LeaserWrapper {
     #[track_caller]
     pub fn instantiate(
         self,
-        app: &mut MockApp,
+        app: &mut WrappedApp,
         lease_code_id: u64,
         lpp_addr: Addr,
         time_alarms: Addr,
@@ -62,8 +57,9 @@ impl LeaserWrapper {
             profit,
         };
 
-        app.instantiate_contract(code_id, Addr::unchecked(ADMIN), &msg, &[], "leaser", None)
+        app.instantiate(code_id, Addr::unchecked(ADMIN), &msg, &[], "leaser", None)
             .unwrap()
+            .unwrap_response()
     }
 }
 
@@ -93,8 +89,8 @@ type LeaserContractWrapperReply = Box<
     >,
 >;
 
-pub fn query_quote<DownpaymentC, LeaseC>(
-    app: &mut MockApp,
+pub(crate) fn query_quote<DownpaymentC, LeaseC>(
+    app: &mut WrappedApp,
     leaser: Addr,
     downpayment: Coin<DownpaymentC>,
 ) -> QuoteResponse
@@ -102,7 +98,7 @@ where
     DownpaymentC: Currency,
     LeaseC: Currency,
 {
-    app.wrap()
+    app.query()
         .query_wasm_smart(
             leaser,
             &QueryMsg::Quote {

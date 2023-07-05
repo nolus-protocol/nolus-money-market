@@ -1,28 +1,23 @@
-use sdk::{
-    cosmwasm_std::{Addr, Empty, StdError},
-    cw_multi_test::Executor,
-};
+use sdk::cosmwasm_std::{Addr, Empty, StdError};
 use timealarms::{
     contract::{execute, instantiate, reply},
     msg::{ExecuteMsg, InstantiateMsg},
     ContractError,
 };
 
-use crate::common::{ContractWrapper, MockApp};
+use super::{mock_query, test_case::WrappedApp, ContractWrapper, MockQueryMsg, ADMIN};
 
-use super::{mock_query, MockQueryMsg, ADMIN};
-
-pub struct TimeAlarmsWrapper {
+pub(crate) struct TimeAlarmsWrapper {
     contract_wrapper: Box<TimeAlarmsContractWrapper>,
 }
 
 impl TimeAlarmsWrapper {
     #[track_caller]
-    pub fn instantiate(self, app: &mut MockApp) -> Addr {
+    pub fn instantiate(self, app: &mut WrappedApp) -> Addr {
         let code_id = app.store_code(self.contract_wrapper);
         let msg = InstantiateMsg {};
 
-        app.instantiate_contract(
+        app.instantiate(
             code_id,
             Addr::unchecked(ADMIN),
             &msg,
@@ -31,6 +26,7 @@ impl TimeAlarmsWrapper {
             None,
         )
         .unwrap()
+        .unwrap_response()
     }
 }
 

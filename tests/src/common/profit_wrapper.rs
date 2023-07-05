@@ -4,15 +4,11 @@ use profit::{
     typedefs::CadenceHours,
     ContractError,
 };
-use sdk::{
-    cosmwasm_std::Addr, cw_multi_test::Executor, neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
-};
+use sdk::{cosmwasm_std::Addr, neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg};
 
-use crate::common::{ContractWrapper, MockApp};
+use super::{test_case::WrappedApp, ContractWrapper, ADMIN};
 
-use super::ADMIN;
-
-pub struct ProfitWrapper {
+pub(crate) struct ProfitWrapper {
     contract_wrapper: Box<ProfitContractWrapper>,
 }
 
@@ -20,7 +16,7 @@ impl ProfitWrapper {
     #[track_caller]
     pub fn instantiate(
         self,
-        app: &mut MockApp,
+        app: &mut WrappedApp,
         cadence_hours: CadenceHours,
         treasury: Addr,
         oracle: Addr,
@@ -34,8 +30,9 @@ impl ProfitWrapper {
             timealarms,
         };
 
-        app.instantiate_contract(code_id, Addr::unchecked(ADMIN), &msg, &[], "profit", None)
+        app.instantiate(code_id, Addr::unchecked(ADMIN), &msg, &[], "profit", None)
             .unwrap()
+            .unwrap_response()
     }
 }
 

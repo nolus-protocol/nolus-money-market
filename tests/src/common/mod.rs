@@ -87,9 +87,9 @@ fn mock_query(_deps: Deps<'_>, _env: Env, _msg: MockQueryMsg) -> StdResult<Binar
     to_binary(&MockResponse {})
 }
 
-pub type MockApp = App<CustomMsg, Empty>;
+pub(crate) type MockApp = App<CustomMsg, Empty>;
 
-pub fn mock_app(message_sender: CustomMessageSender, init_funds: &[CwCoin]) -> MockApp {
+pub(crate) fn mock_app(message_sender: CustomMessageSender, init_funds: &[CwCoin]) -> MockApp {
     let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);
 
     let mock_start_block = BlockInfo {
@@ -111,7 +111,7 @@ pub fn mock_app(message_sender: CustomMessageSender, init_funds: &[CwCoin]) -> M
         })
 }
 
-pub trait AppExt {
+pub(crate) trait AppExt {
     fn time_shift(&mut self, t: Duration);
 }
 

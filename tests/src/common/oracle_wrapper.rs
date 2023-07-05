@@ -19,12 +19,15 @@ use oracle::{
 };
 use sdk::{
     cosmwasm_std::{to_binary, wasm_execute, Addr, Binary, Deps, Env, Event},
-    cw_multi_test::{AppResponse, Executor},
+    cw_multi_test::AppResponse,
 };
 
-use super::{test_case::TestCase, ContractWrapper, MockApp, ADMIN};
+use super::{
+    test_case::{TestCase, WrappedApp},
+    ContractWrapper, ADMIN,
+};
 
-pub struct MarketOracleWrapper {
+pub(crate) struct MarketOracleWrapper {
     contract_wrapper: Box<OracleContractWrapper>,
 }
 
@@ -35,7 +38,7 @@ impl MarketOracleWrapper {
         }
     }
     #[track_caller]
-    pub fn instantiate<BaseC>(self, app: &mut MockApp) -> Addr
+    pub fn instantiate<BaseC>(self, app: &mut WrappedApp) -> Addr
     where
         BaseC: Currency,
     {
@@ -53,7 +56,7 @@ impl MarketOracleWrapper {
             swap_tree: oracle::swap_tree!((1, Osmo::TICKER), (3, Cro::TICKER), (13, Atom::TICKER)),
         };
 
-        app.instantiate_contract(
+        app.instantiate(
             code_id,
             Addr::unchecked(ADMIN),
             &msg,
@@ -62,6 +65,7 @@ impl MarketOracleWrapper {
             None,
         )
         .unwrap()
+        .unwrap_response()
     }
 }
 
@@ -77,7 +81,11 @@ impl Default for MarketOracleWrapper {
     }
 }
 
-pub fn mock_oracle_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub(crate) fn mock_oracle_query(
+    deps: Deps<'_>,
+    env: Env,
+    msg: QueryMsg,
+) -> Result<Binary, ContractError> {
     let price = price::total_of(Coin::<Nls>::new(123456789)).is(Coin::<Usdc>::new(100000000));
     let res = match msg {
         QueryMsg::Prices {} => to_binary(&oracle::msg::PricesResponse {
@@ -102,7 +110,7 @@ type OracleContractWrapper = ContractWrapper<
     ContractError,
 >;
 
-pub fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
+pub(crate) fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
     addr: impl Into<String>,
 ) {
@@ -110,13 +118,14 @@ pub fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
 
     let response: AppResponse = test_case
         .app
-        .wasm_sudo(
+        .sudo(
             oracle,
             &SudoMsg::RegisterFeeder {
                 feeder_address: addr.into(),
             },
         )
-        .unwrap();
+        .unwrap()
+        .unwrap_response();
 
     assert!(response.data.is_none());
 
@@ -126,7 +135,7 @@ pub fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
     );
 }
 
-pub fn feed_a_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
+pub(crate) fn feed_a_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
     addr: Addr,
     price: Price<C1, C2>,
@@ -139,7 +148,7 @@ where
 
     test_case
         .app
-        .execute(
+        .execute_raw(
             addr,
             wasm_execute(
                 oracle,
@@ -148,13 +157,13 @@ where
                 },
                 vec![],
             )
-            .unwrap()
-            .into(),
+            .unwrap(),
         )
         .expect("Oracle not properly connected!")
+        .unwrap_response()
 }
 
-pub fn feed_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
+pub(crate) fn feed_price<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms, C1, C2>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,
     addr: Addr,
     base: Coin<C1>,

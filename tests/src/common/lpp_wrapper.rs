@@ -8,14 +8,12 @@ use lpp::{
 };
 use sdk::{
     cosmwasm_std::{to_binary, Addr, Binary, Coin as CwCoin, Deps, Env, Uint64},
-    cw_multi_test::Executor,
+    cw_multi_test::AppResponse,
 };
 
-use crate::common::{ContractWrapper, MockApp};
+use super::{test_case::WrappedApp, ContractWrapper, ADMIN};
 
-use super::ADMIN;
-
-pub struct LppWrapper {
+pub(crate) struct LppWrapper {
     contract_wrapper: Box<LppContractWrapper>,
 }
 
@@ -39,7 +37,7 @@ impl LppWrapper {
     #[track_caller]
     pub fn instantiate<Lpn>(
         self,
-        app: &mut MockApp,
+        app: &mut WrappedApp,
         lease_code_id: Uint64,
         init_balance: &[CwCoin],
         base_interest_rate: Percent,
@@ -63,7 +61,7 @@ impl LppWrapper {
         };
 
         let lpp = app
-            .instantiate_contract(
+            .instantiate(
                 lpp_id,
                 Addr::unchecked(ADMIN),
                 &msg,
@@ -71,14 +69,17 @@ impl LppWrapper {
                 "lpp",
                 None,
             )
-            .unwrap();
-        app.execute_contract(
-            lease_code_admin,
-            lpp.clone(),
-            &ExecuteMsg::NewLeaseCode { lease_code_id },
-            &[],
-        )
-        .unwrap();
+            .unwrap()
+            .unwrap_response();
+        let _: AppResponse = app
+            .execute(
+                lease_code_admin,
+                lpp.clone(),
+                &ExecuteMsg::NewLeaseCode { lease_code_id },
+                &[],
+            )
+            .unwrap()
+            .unwrap_response();
 
         (lpp, lpp_id)
     }
@@ -99,7 +100,11 @@ impl Default for LppWrapper {
     }
 }
 
-pub fn mock_lpp_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary, ContractError> {
+pub(crate) fn mock_lpp_query(
+    deps: Deps<'_>,
+    env: Env,
+    msg: QueryMsg,
+) -> Result<Binary, ContractError> {
     let res = match msg {
         QueryMsg::LppBalance() => to_binary(&lpp::msg::LppBalanceResponse::<Usdc> {
             balance: Coin::new(1000000000),
@@ -113,7 +118,7 @@ pub fn mock_lpp_query(deps: Deps<'_>, env: Env, msg: QueryMsg) -> Result<Binary,
     Ok(res)
 }
 
-pub fn mock_lpp_quote_query(
+pub(crate) fn mock_lpp_quote_query(
     deps: Deps<'_>,
     env: Env,
     msg: QueryMsg,

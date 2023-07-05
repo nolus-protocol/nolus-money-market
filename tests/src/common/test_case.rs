@@ -1,14 +1,17 @@
-use std::marker::PhantomData;
+use std::{fmt::Debug, marker::PhantomData, sync::mpsc::TryIter as MpscIter};
+
+use serde::Serialize;
 
 use currency::{Currency, Symbol};
-use finance::percent::Percent;
+use finance::{duration::Duration, percent::Percent};
 use lease::api::{ConnectionParams, Ics20Channel};
 use platform::ica::OpenAckVersion;
 use profit::msg::{ConfigResponse as ProfitConfigResponse, QueryMsg as ProfitQueryMsg};
 use sdk::{
-    cosmwasm_std::{Addr, Coin as CwCoin, Uint64},
-    cw_multi_test::{next_block, Executor},
-    neutron_sdk::{bindings::msg::NeutronMsg, sudo::msg::SudoMsg as NeutronSudoMsg},
+    cosmwasm_ext::{CosmosMsg, CustomMsg},
+    cosmwasm_std::{Addr, BlockInfo, Coin as CwCoin, Empty, QuerierWrapper, Uint64},
+    cw_multi_test::{next_block, AppResponse, Contract as CwContract, Executor as _},
+    neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
     testing::{new_custom_msg_queue, CustomMessageSender, WrappedCustomMessageReceiver},
 };
 
@@ -28,7 +31,7 @@ use super::{
     profit_wrapper::ProfitWrapper,
     timealarms_wrapper::TimeAlarmsWrapper,
     treasury_wrapper::TreasuryWrapper,
-    ADMIN,
+    AppExt, ADMIN,
 };
 
 type OptionalLppWrapper = Option<
@@ -58,7 +61,7 @@ type OptionalOracleWrapper = Option<
     >,
 >;
 
-pub struct AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+pub(crate) struct AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
     dispatcher_addr: Dispatcher,
     treasury_addr: Treasury,
     profit_addr: Profit,
@@ -288,9 +291,197 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
     }
 }
 
-pub struct TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
-    pub app: MockApp,
-    pub message_receiver: WrappedCustomMessageReceiver,
+#[must_use]
+pub(crate) struct WrappedApp {
+    app: MockApp,
+    message_receiver: WrappedCustomMessageReceiver,
+}
+
+impl WrappedApp {
+    pub const fn new(app: MockApp, message_receiver: WrappedCustomMessageReceiver) -> Self {
+        Self {
+            app,
+            message_receiver,
+        }
+    }
+
+    #[must_use]
+    #[inline]
+    pub fn store_code(&mut self, code: Box<dyn CwContract<CustomMsg, Empty>>) -> u64 {
+        self.app.store_code(code)
+    }
+
+    #[inline]
+    pub fn time_shift(&mut self, duration: Duration) {
+        self.app.time_shift(duration)
+    }
+
+    #[inline]
+    pub fn update_block<F>(&mut self, f: F)
+    where
+        F: Fn(&mut BlockInfo),
+    {
+        self.app.update_block(f)
+    }
+
+    #[inline]
+    pub fn block_info(&self) -> BlockInfo {
+        self.app.block_info()
+    }
+
+    #[inline]
+    pub fn send_tokens<'r>(
+        &'r mut self,
+        sender: Addr,
+        recipient: Addr,
+        amount: &[CwCoin],
+    ) -> anyhow::Result<WrappedResponse<'r, AppResponse>> {
+        self.app
+            .send_tokens(sender, recipient, amount)
+            .map(|result: AppResponse| WrappedResponse {
+                receiver: &mut self.message_receiver,
+                result,
+            })
+    }
+
+    #[must_use]
+    pub fn instantiate<'r, T, U>(
+        &'r mut self,
+        code_id: u64,
+        sender: Addr,
+        init_msg: &T,
+        send_funds: &[CwCoin],
+        label: U,
+        admin: Option<String>,
+    ) -> anyhow::Result<WrappedResponse<'r, Addr>>
+    where
+        T: Debug + Serialize,
+        U: Into<String>,
+    {
+        self.with_app(|app: &mut MockApp| {
+            app.instantiate_contract(code_id, sender, init_msg, send_funds, label, admin)
+        })
+    }
+
+    #[must_use]
+    pub fn execute<'r, T>(
+        &'r mut self,
+        sender: Addr,
+        contract_addr: Addr,
+        msg: &T,
+        send_funds: &[CwCoin],
+    ) -> anyhow::Result<WrappedResponse<'r, AppResponse>>
+    where
+        T: Debug + Serialize,
+    {
+        self.with_app(|app: &mut MockApp| {
+            app.execute_contract(sender, contract_addr, msg, send_funds)
+        })
+    }
+
+    #[must_use]
+    pub fn execute_raw<T>(
+        &mut self,
+        sender: Addr,
+        msg: T,
+    ) -> anyhow::Result<WrappedResponse<'_, AppResponse>>
+    where
+        T: Into<CosmosMsg>,
+    {
+        self.with_app(|app: &mut MockApp| app.execute(sender, msg.into()))
+    }
+
+    #[must_use]
+    pub fn sudo<'r, T, U>(
+        &'r mut self,
+        contract_addr: T,
+        msg: &U,
+    ) -> anyhow::Result<WrappedResponse<'r, AppResponse>>
+    where
+        T: Into<Addr>,
+        U: Serialize,
+    {
+        self.with_app(|app: &mut MockApp| app.wasm_sudo(contract_addr, msg))
+    }
+
+    #[must_use]
+    pub fn with_app<'r, F, R>(&'r mut self, f: F) -> anyhow::Result<WrappedResponse<'r, R>>
+    where
+        F: FnOnce(&'r mut MockApp) -> anyhow::Result<R>,
+    {
+        self.message_receiver.try_recv().unwrap_err();
+
+        match f(&mut self.app) {
+            Ok(result) => Ok(WrappedResponse {
+                receiver: &mut self.message_receiver,
+                result,
+            }),
+            Err(error) => {
+                // On error no messages should be "sent out".
+                while self.message_receiver.try_iter().next().is_some() {}
+
+                Err(error)
+            }
+        }
+    }
+
+    pub fn query(&self) -> QuerierWrapper<'_, Empty> {
+        self.app.wrap()
+    }
+}
+
+#[must_use]
+#[derive(Debug)]
+pub struct WrappedResponse<'r, T> {
+    receiver: &'r mut WrappedCustomMessageReceiver,
+    result: T,
+}
+
+impl<'r> Iterator for WrappedResponse<'r, ()> {
+    type Item = CustomMsg;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.receiver.try_recv().ok()
+    }
+}
+
+impl<'r, T> WrappedResponse<'r, T> {
+    #[inline]
+    pub fn receiver(&mut self) -> &mut WrappedCustomMessageReceiver {
+        self.receiver
+    }
+
+    #[inline]
+    pub fn iter(&mut self) -> MpscIter<'_, CustomMsg> {
+        self.receiver.try_iter()
+    }
+
+    pub fn clear_result(self) -> WrappedResponse<'r, ()> {
+        WrappedResponse {
+            receiver: self.receiver,
+            result: (),
+        }
+    }
+
+    #[must_use]
+    pub fn unwrap_response(self) -> T {
+        assert_eq!(self.receiver.try_recv().ok(), None);
+
+        self.result
+    }
+}
+
+impl<'r> WrappedResponse<'r, ()> {
+    pub fn set_result<T>(self, result: T) -> WrappedResponse<'r, T> {
+        WrappedResponse {
+            receiver: self.receiver,
+            result,
+        }
+    }
+}
+
+pub(crate) struct TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+    pub app: WrappedApp,
     pub address_book: AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
 }
 
@@ -303,13 +494,15 @@ impl TestCase<(), (), (), (), (), (), ()> {
             WrappedCustomMessageReceiver,
         ) = new_custom_msg_queue();
 
-        let mut app: MockApp = mock_app(custom_message_sender, reserve);
+        let mut app: WrappedApp = WrappedApp::new(
+            mock_app(custom_message_sender, reserve),
+            custom_message_receiver,
+        );
 
         let lease_code_id: u64 = Self::store_lease_code(&mut app);
 
         Self {
             app,
-            message_receiver: custom_message_receiver,
             address_book: AddressBook::new(lease_code_id),
         }
     }
@@ -319,9 +512,11 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
     TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
 {
     pub fn send_funds_from_admin(&mut self, user_addr: Addr, funds: &[CwCoin]) -> &mut Self {
-        self.app
-            .send_tokens(Addr::unchecked(ADMIN), user_addr, funds)
-            .unwrap();
+        let _: AppResponse = self
+            .app
+            .with_app(|app| app.send_tokens(Addr::unchecked(ADMIN), user_addr, funds))
+            .unwrap()
+            .unwrap_response();
 
         self
     }
@@ -332,17 +527,17 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
         self
     }
 
-    fn store_lease_code(app: &mut MockApp) -> u64 {
+    fn store_lease_code(app: &mut WrappedApp) -> u64 {
         LeaseWrapper::default().store(app)
     }
 }
 
 impl<Dispatcher, Treasury, Leaser> TestCase<Dispatcher, Treasury, Addr, Leaser, Addr, Addr, Addr> {
-    pub fn open_lease<D>(&mut self, lease_currency: Symbol<'_>) -> Addr
+    pub fn open_lease<'r, D>(&'r mut self, lease_currency: Symbol<'_>) -> Addr
     where
         D: Currency,
     {
-        let lease: Addr = LeaseWrapper::default().instantiate::<D>(
+        LeaseWrapper::default().instantiate::<D>(
             &mut self.app,
             Some(self.address_book.lease_code_id),
             LeaseWrapperAddresses {
@@ -353,17 +548,14 @@ impl<Dispatcher, Treasury, Leaser> TestCase<Dispatcher, Treasury, Addr, Leaser, 
             },
             LeaseInitConfig::new(lease_currency, 1000.into(), None),
             LeaseWrapperConfig::default(),
-        );
-
-        self.message_receiver.assert_empty();
-
-        lease
+            TestCase::LEASER_CONNECTION_ID,
+        )
     }
 }
 
-pub type BlankBuilder<Lpn> = Builder<Lpn, (), (), (), (), (), (), ()>;
+pub(crate) type BlankBuilder<Lpn> = Builder<Lpn, (), (), (), (), (), (), ()>;
 
-pub struct Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
+pub(crate) struct Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
     test_case: TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
     _lpn: PhantomData<Lpn>,
 }
@@ -417,26 +609,22 @@ where
 
         test_case.app.update_block(next_block);
 
-        test_case.message_receiver.assert_empty();
-
-        test_case
+        let _: AppResponse = test_case
             .app
-            .wasm_sudo(
+            .sudo(
                 test_case.address_book.treasury_addr.clone(),
                 &treasury::msg::SudoMsg::ConfigureRewardTransfer {
                     rewards_dispatcher: dispatcher_addr.clone(),
                 },
             )
-            .unwrap();
+            .unwrap()
+            .unwrap_response();
 
         test_case.app.update_block(next_block);
-
-        test_case.message_receiver.assert_empty();
 
         Builder {
             test_case: TestCase {
                 app: test_case.app,
-                message_receiver: test_case.message_receiver,
                 address_book: test_case.address_book.with_dispatcher(dispatcher_addr),
             },
             _lpn,
@@ -475,12 +663,9 @@ where
 
         test_case.app.update_block(next_block);
 
-        test_case.message_receiver.assert_empty();
-
         Builder {
             test_case: TestCase {
                 app: test_case.app,
-                message_receiver: test_case.message_receiver,
                 address_book: test_case.address_book.with_treasury(treasury_addr),
             },
             _lpn,
@@ -513,9 +698,9 @@ where
 
         test_case.app.update_block(next_block);
 
-        test_case
+        let mut response: WrappedResponse<'_, AppResponse> = test_case
             .app
-            .wasm_sudo(
+            .sudo(
                 profit_addr.clone(),
                 &NeutronSudoMsg::OpenAck {
                     port_id: CONNECTION_ID.into(),
@@ -526,14 +711,14 @@ where
             )
             .unwrap();
 
-        let NeutronMsg::RegisterInterchainAccount { connection_id, .. } = test_case.message_receiver.try_recv().unwrap() else {
-            unreachable!()
-        };
-        assert_eq!(&connection_id, CONNECTION_ID);
+        response.receiver().assert_register_ica(CONNECTION_ID);
+        let _: AppResponse = response.unwrap_response();
 
-        test_case
+        test_case.app.update_block(next_block);
+
+        let _: AppResponse = test_case
             .app
-            .wasm_sudo(
+            .sudo(
                 profit_addr.clone(),
                 &NeutronSudoMsg::OpenAck {
                     port_id: "ica-port".into(),
@@ -550,15 +735,14 @@ where
                     .unwrap(),
                 },
             )
-            .unwrap();
-
-        test_case.message_receiver.assert_empty();
+            .unwrap()
+            .unwrap_response();
 
         let ProfitConfigResponse {
             cadence_hours: reported_cadence_hours,
         } = test_case
             .app
-            .wrap()
+            .query()
             .query_wasm_smart(profit_addr.clone(), &ProfitQueryMsg::Config {})
             .unwrap();
 
@@ -567,7 +751,6 @@ where
         Builder {
             test_case: TestCase {
                 app: test_case.app,
-                message_receiver: test_case.message_receiver,
                 address_book: test_case.address_book.with_profit(profit_addr),
             },
             _lpn,
@@ -594,11 +777,9 @@ where
             test_case.address_book.profit_addr.clone(),
         );
 
-        test_case.message_receiver.assert_empty();
-
-        test_case
+        let _: AppResponse = test_case
             .app
-            .wasm_sudo(
+            .sudo(
                 leaser_addr.clone(),
                 &leaser::msg::SudoMsg::SetupDex(ConnectionParams {
                     connection_id: "connection-0".into(),
@@ -608,16 +789,14 @@ where
                     },
                 }),
             )
-            .unwrap();
+            .unwrap()
+            .unwrap_response();
 
         test_case.app.update_block(next_block);
-
-        test_case.message_receiver.assert_empty();
 
         Builder {
             test_case: TestCase {
                 app: test_case.app,
-                message_receiver: test_case.message_receiver,
                 address_book: test_case.address_book.with_leaser(leaser_addr),
             },
             _lpn,
@@ -675,14 +854,11 @@ where
             )
             .0;
 
-        test_case.message_receiver.assert_empty();
-
         test_case.app.update_block(next_block);
 
         Builder {
             test_case: TestCase {
                 app: test_case.app,
-                message_receiver: test_case.message_receiver,
                 address_book: test_case.address_book.with_lpp(lpp_addr),
             },
             _lpn,
@@ -710,12 +886,9 @@ where
 
         test_case.app.update_block(next_block);
 
-        test_case.message_receiver.assert_empty();
-
         Builder {
             test_case: TestCase {
                 app: test_case.app,
-                message_receiver: test_case.message_receiver,
                 address_book: test_case.address_book.with_oracle(oracle_addr),
             },
             _lpn,
@@ -740,12 +913,9 @@ where
 
         test_case.app.update_block(next_block);
 
-        test_case.message_receiver.assert_empty();
-
         Builder {
             test_case: TestCase {
                 app: test_case.app,
-                message_receiver: test_case.message_receiver,
                 address_book: test_case.address_book.with_time_alarms(time_alarms_addr),
             },
             _lpn,
