@@ -5,14 +5,14 @@ use finance::{coin::Coin, duration::Duration};
 use platform::tests::{self};
 use sdk::{
     cosmwasm_std::{coin, Addr, Attribute, Event, Timestamp},
-    cw_multi_test::{AppResponse, Executor},
+    cw_multi_test::AppResponse,
 };
 use timealarms::msg::{AlarmsCount, DispatchAlarmsResponse};
 
 use crate::common::{
     cwcoin,
     test_case::{BlankBuilder as TestCaseBuilder, TestCase},
-    AppExt, ADMIN,
+    ADMIN,
 };
 
 use self::mock_lease::*;
@@ -31,11 +31,11 @@ mod mock_lease {
         },
         cw_storage_plus::Item,
         schemars::{self, JsonSchema},
-        testing::{Contract, ContractWrapper, Executor},
+        testing::{Contract, ContractWrapper},
     };
     use timealarms::stub::TimeAlarmsRef;
 
-    use crate::common::{MockApp, ADMIN};
+    use crate::common::{test_case::WrappedApp, ADMIN};
 
     const GATE: Item<'static, bool> = Item::new("alarm gate");
     const TIMEALARMS_ADDR: Item<'static, Addr> = Item::new("ta_addr");
@@ -143,7 +143,7 @@ mod mock_lease {
         Box::new(contract)
     }
 
-    pub fn instantiate_no_reschedule_contract(app: &mut MockApp) -> Addr {
+    pub(crate) fn instantiate_no_reschedule_contract(app: &mut WrappedApp) -> Addr {
         proper_instantiate(
             app,
             contract_no_reschedule_endpoints(),
@@ -151,7 +151,7 @@ mod mock_lease {
         )
     }
 
-    pub fn instantiate_may_fail_contract(app: &mut MockApp) -> Addr {
+    pub(crate) fn instantiate_may_fail_contract(app: &mut WrappedApp) -> Addr {
         proper_instantiate(
             app,
             contract_may_fail_endpoints(),
@@ -159,17 +159,20 @@ mod mock_lease {
         )
     }
 
-    pub fn instantiate_reschedule_contract(app: &mut MockApp, timealarms_contract: Addr) -> Addr {
+    pub(crate) fn instantiate_reschedule_contract(
+        app: &mut WrappedApp,
+        timealarms_contract: Addr,
+    ) -> Addr {
         proper_instantiate(app, contract_reschedule_endpoints(), timealarms_contract)
     }
 
     fn proper_instantiate(
-        app: &mut MockApp,
+        app: &mut WrappedApp,
         endpoints: Box<Contract>,
         timealarms_contract: Addr,
     ) -> Addr {
         let cw_template_id = app.store_code(endpoints);
-        app.instantiate_contract(
+        app.instantiate(
             cw_template_id,
             Addr::unchecked(ADMIN),
             &MockInstantiateMsg {
@@ -180,6 +183,7 @@ mod mock_lease {
             None,
         )
         .unwrap()
+        .unwrap_response()
     }
 }
 
@@ -222,15 +226,17 @@ fn add_alarm<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
     let alarm_msg = timealarms::msg::ExecuteMsg::AddAlarm {
         time: Timestamp::from_seconds(time_secs),
     };
-    test_case
+    () = test_case
         .app
-        .execute_contract(
+        .execute(
             recv.clone(),
             test_case.address_book.time_alarms().clone(),
             &alarm_msg,
             &[],
         )
-        .unwrap();
+        .unwrap()
+        .clear_result()
+        .unwrap_response();
 }
 
 fn dispatch<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
@@ -240,13 +246,14 @@ fn dispatch<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
     let dispatch_msg = timealarms::msg::ExecuteMsg::DispatchAlarms { max_count };
     test_case
         .app
-        .execute_contract(
+        .execute(
             Addr::unchecked(ADMIN),
             test_case.address_book.time_alarms().clone(),
             &dispatch_msg,
             &[],
         )
         .unwrap()
+        .unwrap_response()
 }
 
 #[test]
@@ -327,17 +334,19 @@ fn reschedule_alarm() {
 fn reschedule_failed_alarm() {
     let mut test_case = test_case();
 
-    let lease1 = instantiate_may_fail_contract(&mut test_case.app);
+    let lease1: Addr = instantiate_may_fail_contract(&mut test_case.app);
 
-    test_case
+    () = test_case
         .app
-        .execute_contract(
+        .execute(
             Addr::unchecked(ADMIN),
             lease1.clone(),
             &MockExecuteMsg::Gate(false),
             &[],
         )
-        .unwrap();
+        .unwrap()
+        .clear_result()
+        .unwrap_response();
 
     add_alarm(&mut test_case, &lease1, 1);
 
@@ -358,17 +367,19 @@ fn reschedule_failing_alarms_mix() {
     let mut test_case = test_case();
 
     let leases: [Addr; 8] = from_fn(|index| {
-        let addr = instantiate_may_fail_contract(&mut test_case.app);
+        let addr: Addr = instantiate_may_fail_contract(&mut test_case.app);
 
-        test_case
+        () = test_case
             .app
-            .execute_contract(
+            .execute(
                 Addr::unchecked(ADMIN),
                 addr.clone(),
                 &MockExecuteMsg::Gate((index % 2) == 0),
                 &[],
             )
-            .unwrap();
+            .unwrap()
+            .clear_result()
+            .unwrap_response();
 
         add_alarm(&mut test_case, &addr, 1);
 
@@ -481,10 +492,12 @@ fn test_time_notify() {
 
     // close the GATE, lease return error on notification
     let close_gate = mock_lease::MockExecuteMsg::Gate(false);
-    test_case
+    () = test_case
         .app
-        .execute_contract(Addr::unchecked(ADMIN), lease3.clone(), &close_gate, &[])
-        .unwrap();
+        .execute(Addr::unchecked(ADMIN), lease3.clone(), &close_gate, &[])
+        .unwrap()
+        .clear_result()
+        .unwrap_response();
     let resp = dispatch(&mut test_case, 100);
     dbg!(&resp);
     assert!(any_error(&resp));
@@ -494,10 +507,12 @@ fn test_time_notify() {
 
     // open the GATE, check for remaining alarm
     let open_gate = mock_lease::MockExecuteMsg::Gate(true);
-    test_case
+    () = test_case
         .app
-        .execute_contract(Addr::unchecked(ADMIN), lease3.clone(), &open_gate, &[])
-        .unwrap();
+        .execute(Addr::unchecked(ADMIN), lease3.clone(), &open_gate, &[])
+        .unwrap()
+        .clear_result()
+        .unwrap_response();
 
     let resp = dispatch(&mut test_case, 100);
     assert!(!any_error(&resp));
@@ -533,13 +548,14 @@ fn test_profit_alarms() {
 
     let resp = test_case
         .app
-        .execute_contract(
+        .execute(
             Addr::unchecked(ADMIN),
             test_case.address_book.time_alarms().clone(),
             &dispatch_msg,
             &[],
         )
-        .unwrap();
+        .unwrap()
+        .unwrap_response();
 
     assert_eq!(
         resp.events.last().unwrap().attributes.last().unwrap(),

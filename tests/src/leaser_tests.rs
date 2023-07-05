@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 
 use currency::{
     lease::{Atom, Cro, Juno, Osmo},
@@ -13,9 +13,9 @@ use finance::{
 };
 use leaser::msg::QueryMsg;
 use sdk::{
-    cosmwasm_ext::Response,
+    cosmwasm_ext::{CustomMsg, Response},
     cosmwasm_std::{coin, Addr, Coin as CwCoin, DepsMut, Env, Event, MessageInfo},
-    cw_multi_test::{next_block, AppResponse, ContractWrapper, Executor as _},
+    cw_multi_test::{next_block, AppResponse, ContractWrapper},
 };
 
 use crate::common::{
@@ -24,7 +24,7 @@ use crate::common::{
     leaser_wrapper,
     lpp_wrapper::mock_lpp_quote_query,
     oracle_wrapper::{add_feeder, feed_price},
-    test_case::{BlankBuilder as TestCaseBuilder, TestCase},
+    test_case::{BlankBuilder as TestCaseBuilder, TestCase, WrappedResponse},
     ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -87,7 +87,7 @@ fn open_lease_not_in_lease_currency() {
 
     let err = test_case
         .app
-        .execute_contract(
+        .execute(
             user_addr,
             test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
@@ -140,7 +140,7 @@ fn open_multiple_loans() {
 
     let resp: HashSet<Addr> = test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(
             test_case.address_book.leaser().clone(),
             &QueryMsg::Leases {
@@ -152,9 +152,9 @@ fn open_multiple_loans() {
 
     let mut loans = HashSet::new();
     for _ in 0..5 {
-        let res = test_case
+        let mut response: WrappedResponse<'_, AppResponse> = test_case
             .app
-            .execute_contract(
+            .execute(
                 user_addr.clone(),
                 test_case.address_book.leaser().clone(),
                 &leaser::msg::ExecuteMsg::OpenLease {
@@ -164,23 +164,24 @@ fn open_multiple_loans() {
                 &[cwcoin::<Lpn, _>(3)],
             )
             .unwrap();
-        test_case.app.update_block(next_block);
 
-        test_case
-            .message_receiver
+        response
+            .receiver()
             .assert_register_ica(TestCase::LEASER_CONNECTION_ID);
 
-        test_case.message_receiver.assert_empty();
+        let response: AppResponse = response.unwrap_response();
 
-        let addr = lease_addr(&res.events);
+        test_case.app.update_block(next_block);
+
+        let addr = lease_addr(&response.events);
         loans.insert(Addr::unchecked(addr));
     }
 
     assert_eq!(loans.len(), 5);
 
-    let res = test_case
+    let mut response = test_case
         .app
-        .execute_contract(
+        .execute(
             other_user_addr.clone(),
             test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
@@ -190,19 +191,20 @@ fn open_multiple_loans() {
             &[cwcoin::<Lpn, _>(30)],
         )
         .unwrap();
-    test_case.app.update_block(next_block);
 
-    test_case
-        .message_receiver
+    response
+        .receiver()
         .assert_register_ica(TestCase::LEASER_CONNECTION_ID);
 
-    test_case.message_receiver.assert_empty();
+    let response: AppResponse = response.unwrap_response();
 
-    let user1_lease_addr = lease_addr(&res.events);
+    test_case.app.update_block(next_block);
+
+    let user1_lease_addr = lease_addr(&response.events);
 
     let resp: HashSet<Addr> = test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(
             test_case.address_book.leaser().clone(),
             &QueryMsg::Leases {
@@ -215,7 +217,7 @@ fn open_multiple_loans() {
 
     let user0_loans: HashSet<Addr> = test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(
             test_case.address_book.leaser().clone(),
             &QueryMsg::Leases { owner: user_addr },
@@ -510,7 +512,7 @@ fn open_loans_lpp_fails() {
 
     let _res: AppResponse = test_case
         .app
-        .execute_contract(
+        .execute(
             user_addr,
             test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
@@ -519,7 +521,8 @@ fn open_loans_lpp_fails() {
             },
             &[downpayment],
         )
-        .unwrap();
+        .unwrap()
+        .unwrap_response();
 }
 
 fn open_lease_impl<Lpn, LeaseC, DownpaymentC>(feed_prices: bool)
@@ -585,9 +588,9 @@ where
     let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
     let exp_lease = TryInto::<Coin<LeaseC>>::try_into(quote.total).unwrap();
 
-    test_case
+    let mut response: WrappedResponse<'_, AppResponse> = test_case
         .app
-        .execute_contract(
+        .execute(
             user_addr,
             leaser_addr,
             &leaser::msg::ExecuteMsg::OpenLease {
@@ -598,10 +601,14 @@ where
         )
         .unwrap();
 
+    let messages: VecDeque<CustomMsg> = response.iter().collect();
+
+    let _: AppResponse = response.unwrap_response();
+
     complete_lease_initialization::<Lpn, DownpaymentC, LeaseC>(
         &mut test_case.app,
-        &test_case.message_receiver,
         &lease_addr,
+        messages,
         downpayment,
         exp_borrow,
         exp_lease,

@@ -2,7 +2,7 @@ use currency::{lpn::Usdc, native::Nls, Currency};
 use rewards_dispatcher::{msg::ConfigResponse, ContractError};
 use sdk::{
     cosmwasm_std::{Addr, Coin as CwCoin, Event},
-    cw_multi_test::{AppResponse, ContractWrapper, Executor as _},
+    cw_multi_test::{AppResponse, ContractWrapper},
 };
 
 use crate::common::{
@@ -50,7 +50,7 @@ fn on_alarm_zero_reward() {
 
     let err = test_case
         .app
-        .execute_contract(
+        .execute(
             test_case.address_book.time_alarms().clone(),
             test_case.address_book.dispatcher().clone(),
             &rewards_dispatcher::msg::ExecuteMsg::TimeAlarm {},
@@ -104,7 +104,7 @@ fn on_alarm() {
     assert_eq!(
         test_case
             .app
-            .wrap()
+            .query()
             .query_balance(test_case.address_book.lpp().clone(), Nls::TICKER)
             .unwrap(),
         CwCoin::new(0, Nls::TICKER)
@@ -112,33 +112,35 @@ fn on_alarm() {
 
     let treasury_balance = test_case
         .app
-        .wrap()
+        .query()
         .query_all_balances(test_case.address_book.treasury().clone())
         .unwrap();
 
     println!("treasury_balance = {:?}", treasury_balance);
 
     // make a deposit to LPP from lenders address
-    let _res = test_case
+    let _res: AppResponse = test_case
         .app
-        .execute_contract(
+        .execute(
             lender.clone(),
             test_case.address_book.lpp().clone(),
             &lpp::msg::ExecuteMsg::Deposit {},
             &[cwcoin::<Lpn, _>(100)],
         )
-        .unwrap();
+        .unwrap()
+        .unwrap_response();
 
     // call dispatcher on alarm
-    let res = test_case
+    let res: AppResponse = test_case
         .app
-        .execute_contract(
+        .execute(
             test_case.address_book.time_alarms().clone(),
             test_case.address_book.dispatcher().clone(),
             &rewards_dispatcher::msg::ExecuteMsg::TimeAlarm {},
             &[],
         )
-        .unwrap();
+        .unwrap()
+        .unwrap_response();
 
     // ensure the attributes were relayed from the sub-message
     assert_eq!(res.events.len(), 8, "{:?}", res.events);
@@ -215,7 +217,7 @@ fn on_alarm() {
     assert_eq!(
         test_case
             .app
-            .wrap()
+            .query()
             .query_balance(test_case.address_book.lpp().clone(), Native::BANK_SYMBOL)
             .unwrap(),
         native_cwcoin(11)
@@ -224,7 +226,7 @@ fn on_alarm() {
     //query calculated reward for the lender
     let resp: lpp::msg::RewardsResponse = test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
             &lpp::msg::QueryMsg::Rewards { address: lender },
@@ -243,11 +245,12 @@ fn test_config() {
 
     let response: AppResponse = test_case
         .app
-        .wasm_sudo(
+        .sudo(
             test_case.address_book.dispatcher().clone(),
             &rewards_dispatcher::msg::SudoMsg::Config { cadence_hours: 30 },
         )
-        .unwrap();
+        .unwrap()
+        .unwrap_response();
     assert_eq!(response.data, None);
     assert_eq!(
         &response.events,
@@ -334,7 +337,7 @@ fn query_config<Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
 ) -> ConfigResponse {
     test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(
             test_case.address_book.dispatcher().clone(),
             &rewards_dispatcher::msg::QueryMsg::Config {},

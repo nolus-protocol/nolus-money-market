@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use currency::{
     lease::{Atom, Cro},
@@ -17,8 +17,9 @@ use finance::{
 use lease::api::{ExecuteMsg, StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
 use sdk::{
+    cosmwasm_ext::CustomMsg,
     cosmwasm_std::{coin, Addr, Timestamp},
-    cw_multi_test::{AppResponse, Executor},
+    cw_multi_test::AppResponse,
 };
 
 use crate::common::{
@@ -29,7 +30,7 @@ use crate::common::{
         add_feeder, feed_a_price as oracle_feed_a_price, feed_price as oracle_feed_price,
     },
     test_case::{Builder as TestCaseBuilder, TestCase},
-    AppExt, ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
+    ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
 type Lpn = Usdc;
@@ -120,7 +121,7 @@ fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, Downpayment
 where
     DownpaymentC: Currency,
 {
-    try_init_lease(test_case, downpayment, max_ltd);
+    let messages = try_init_lease(test_case, downpayment, max_ltd);
 
     let lease = get_lease_address(test_case);
 
@@ -134,8 +135,8 @@ where
 
     complete_lease_initialization::<Lpn, DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
-        &test_case.message_receiver,
         &lease,
+        messages,
         downpayment,
         exp_borrow,
         exp_lease,
@@ -148,14 +149,15 @@ fn try_init_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, D>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<D>,
     max_ltd: Option<Percent>,
-) where
+) -> VecDeque<CustomMsg>
+where
     D: Currency,
 {
     let downpayment = (!downpayment.is_zero()).then(|| cwcoin::<D, _>(downpayment));
 
-    test_case
+    let mut response = test_case
         .app
-        .execute_contract(
+        .execute(
             Addr::unchecked(USER),
             test_case.address_book.leaser().clone(),
             &leaser::msg::ExecuteMsg::OpenLease {
@@ -165,6 +167,12 @@ fn try_init_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, D>(
             downpayment.as_ref().map_or(&[], std::slice::from_ref),
         )
         .unwrap();
+
+    let messages: VecDeque<CustomMsg> = response.iter().collect();
+
+    let _: AppResponse = response.unwrap_response();
+
+    messages
 }
 
 fn get_lease_address<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
@@ -172,7 +180,7 @@ fn get_lease_address<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
 ) -> Addr {
     let query_response: HashSet<Addr> = test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(
             test_case.address_book.leaser().clone(),
             &QueryMsg::Leases {
@@ -191,13 +199,14 @@ fn repay<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
 ) -> AppResponse {
     test_case
         .app
-        .execute_contract(
+        .execute(
             Addr::unchecked(USER),
             contract_addr.clone(),
             &ExecuteMsg::Repay {},
             &[cwcoin::<PaymentCurrency, _>(payment)],
         )
         .unwrap()
+        .unwrap_response()
 }
 
 fn close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
@@ -206,13 +215,14 @@ fn close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
 ) -> AppResponse {
     test_case
         .app
-        .execute_contract(
+        .execute(
             Addr::unchecked(USER),
             contract_addr.clone(),
             &ExecuteMsg::Close {},
             &[],
         )
         .unwrap()
+        .unwrap_response()
 }
 
 fn quote_borrow<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
@@ -231,7 +241,7 @@ where
 {
     test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(
             test_case.address_book.leaser().clone(),
             &QueryMsg::Quote {
@@ -249,7 +259,7 @@ fn state_query<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
 ) -> StateResponse {
     test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(contract_addr, &StateQuery {})
         .unwrap()
 }
@@ -511,7 +521,7 @@ fn state_paid_when_overpaid() {
 
     let balance = test_case
         .app
-        .wrap()
+        .query()
         .query_all_balances(lease_address)
         .unwrap();
     assert_eq!(
@@ -535,16 +545,17 @@ fn liquidation_warning(base: LeaseCoin, quote: LpnCoin, liability: Percent, leve
 
     oracle_feed_price(&mut test_case, Addr::unchecked(ADMIN), base, quote);
 
-    let response = test_case
+    let response: AppResponse = test_case
         .app
-        .execute_contract(
+        .execute(
             test_case.address_book.oracle().clone(),
             lease_address,
             &ExecuteMsg::PriceAlarm(),
             // &cwcoin::<LeaseCurrency, _>(10000),
             &[],
         )
-        .unwrap();
+        .unwrap()
+        .unwrap_response();
 
     let event = response
         .events
@@ -654,15 +665,16 @@ fn liquidation_time_alarm(time_pass: Duration) {
 
     feed_price(&mut test_case);
 
-    let response = test_case
+    let response: AppResponse = test_case
         .app
-        .execute_contract(
+        .execute(
             test_case.address_book.time_alarms().clone(),
             lease_address.clone(),
             &ExecuteMsg::TimeAlarm {},
             &[],
         )
-        .unwrap();
+        .unwrap()
+        .unwrap_response();
 
     let liquidation_attributes: HashMap<String, String> = response
         .events
@@ -770,7 +782,7 @@ fn compare_state_with_lpp_state_implicit_time() {
 
     let loan_resp: lpp::msg::LoanResponse<Lpn> = test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
             &lpp::msg::QueryMsg::Loan {
@@ -822,7 +834,7 @@ fn compare_state_with_lpp_state_explicit_time() {
 
     let loan: lpp::msg::LoanResponse<Lpn> = test_case
         .app
-        .wrap()
+        .query()
         .query_wasm_smart(
             test_case.address_book.lpp().clone(),
             &lpp::msg::QueryMsg::Loan {
