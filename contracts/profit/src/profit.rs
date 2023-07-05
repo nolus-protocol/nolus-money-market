@@ -16,15 +16,19 @@ use crate::{
 pub struct Profit;
 
 impl Profit {
+    const IBC_FEE_RESERVE: Coin<Nls> = Coin::new(100);
+
     pub(crate) fn transfer_nls<B>(
         mut from_my_account: B,
         to_treasury: &Addr,
-        amount: Coin<Nls>,
+        mut amount: Coin<Nls>,
         env: &Env,
     ) -> PlatformResponse
     where
         B: BankAccount,
     {
+        amount = amount.saturating_sub(Self::IBC_FEE_RESERVE);
+
         if amount.is_zero() {
             PlatformResponse::messages_only(from_my_account.into())
         } else {
