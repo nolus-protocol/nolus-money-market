@@ -306,17 +306,14 @@ impl WrappedApp {
     }
 
     #[must_use]
-    #[inline]
     pub fn store_code(&mut self, code: Box<dyn CwContract<CustomMsg, Empty>>) -> u64 {
         self.app.store_code(code)
     }
 
-    #[inline]
     pub fn time_shift(&mut self, duration: Duration) {
         self.app.time_shift(duration)
     }
 
-    #[inline]
     pub fn update_block<F>(&mut self, f: F)
     where
         F: Fn(&mut BlockInfo),
@@ -324,12 +321,11 @@ impl WrappedApp {
         self.app.update_block(f)
     }
 
-    #[inline]
+    #[must_use]
     pub fn block_info(&self) -> BlockInfo {
         self.app.block_info()
     }
 
-    #[inline]
     pub fn send_tokens<'r>(
         &'r mut self,
         sender: Addr,
@@ -344,7 +340,6 @@ impl WrappedApp {
             })
     }
 
-    #[must_use]
     pub fn instantiate<'r, T, U>(
         &'r mut self,
         code_id: u64,
@@ -363,7 +358,6 @@ impl WrappedApp {
         })
     }
 
-    #[must_use]
     pub fn execute<'r, T>(
         &'r mut self,
         sender: Addr,
@@ -379,7 +373,6 @@ impl WrappedApp {
         })
     }
 
-    #[must_use]
     pub fn execute_raw<T>(
         &mut self,
         sender: Addr,
@@ -391,7 +384,6 @@ impl WrappedApp {
         self.with_app(|app: &mut MockApp| app.execute(sender, msg.into()))
     }
 
-    #[must_use]
     pub fn sudo<'r, T, U>(
         &'r mut self,
         contract_addr: T,
@@ -404,7 +396,6 @@ impl WrappedApp {
         self.with_app(|app: &mut MockApp| app.wasm_sudo(contract_addr, msg))
     }
 
-    #[must_use]
     pub fn with_app<'r, F, R>(&'r mut self, f: F) -> anyhow::Result<WrappedResponse<'r, R>>
     where
         F: FnOnce(&'r mut MockApp) -> anyhow::Result<R>,
@@ -425,6 +416,7 @@ impl WrappedApp {
         }
     }
 
+    #[must_use]
     pub fn query(&self) -> QuerierWrapper<'_, Empty> {
         self.app.wrap()
     }
@@ -446,12 +438,12 @@ impl<'r> Iterator for WrappedResponse<'r, ()> {
 }
 
 impl<'r, T> WrappedResponse<'r, T> {
-    #[inline]
+    #[must_use]
     pub fn receiver(&mut self) -> &mut WrappedCustomMessageReceiver {
         self.receiver
     }
 
-    #[inline]
+    #[must_use]
     pub fn iter(&mut self) -> MpscIter<'_, CustomMsg> {
         self.receiver.try_iter()
     }
@@ -480,6 +472,7 @@ impl<'r> WrappedResponse<'r, ()> {
     }
 }
 
+#[must_use]
 pub(crate) struct TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
     pub app: WrappedApp,
     pub address_book: AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>,
