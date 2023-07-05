@@ -37,6 +37,7 @@ pub type Contract = dyn cw_multi_test::Contract<CustomMsg>;
 pub type CustomMessageSender = std::sync::mpsc::Sender<CustomMsg>;
 type CustomMessageReceiver = std::sync::mpsc::Receiver<CustomMsg>;
 
+#[derive(Debug)]
 pub struct WrappedCustomMessageReceiver(CustomMessageReceiver);
 
 impl WrappedCustomMessageReceiver {
