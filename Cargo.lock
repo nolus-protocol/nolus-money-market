@@ -593,7 +593,7 @@ dependencies = [
 
 [[package]]
 name = "integration_tests"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "access-control",
  "anyhow",
@@ -872,7 +872,7 @@ dependencies = [
 
 [[package]]
 name = "profit"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "access-control",
  "cosmwasm-std",
@@ -1059,7 +1059,7 @@ dependencies = [
 
 [[package]]
 name = "sdk"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "cosmos-sdk-proto 0.17.0",
