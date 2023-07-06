@@ -1,9 +1,7 @@
-use std::ops::{Deref, DerefMut};
-
 use cosmwasm_std::{
     testing::{mock_dependencies, MockApi, MockQuerier, MockStorage},
     Binary, ContractResult, Empty, GovMsg, IbcMsg, IbcQuery, OwnedDeps, SystemError, SystemResult,
-    WasmQuery,
+    WasmQuery, Coin as CwCoin,
 };
 use cw_multi_test::{
     BankKeeper, BasicAppBuilder as BasicCwAppBuilder, DistributionKeeper, FailingModule,
@@ -11,14 +9,14 @@ use cw_multi_test::{
 };
 pub use cw_multi_test::{ContractWrapper as CwContractWrapper, Executor as CwExecutor};
 
-use crate::cosmwasm_ext::CustomMsg;
+use crate::cosmwasm_ext::InterChainMsg;
 
 use self::custom_msg::Module as CustomMsgModule;
 
-pub type CwApp<Exec = CustomMsg, Query = Empty> =
+pub type CwApp<Exec = InterChainMsg, Query = Empty> =
     cw_multi_test::App<BankKeeper, MockApi, MockStorage, CustomMsgModule, WasmKeeper<Exec, Query>>;
 
-pub type CwAppBuilder<Exec = CustomMsg, Query = Empty> = cw_multi_test::AppBuilder<
+pub type CwAppBuilder<Exec = InterChainMsg, Query = Empty> = cw_multi_test::AppBuilder<
     BankKeeper,
     MockApi,
     MockStorage,
@@ -30,61 +28,70 @@ pub type CwAppBuilder<Exec = CustomMsg, Query = Empty> = cw_multi_test::AppBuild
     FailingModule<GovMsg, Empty, Empty>,
 >;
 
-pub type CwContract = dyn cw_multi_test::Contract<CustomMsg>;
+pub type CwContract = dyn cw_multi_test::Contract<InterChainMsg>;
 
-pub type CustomMessageSender = std::sync::mpsc::Sender<CustomMsg>;
-type CustomMessageReceiver = std::sync::mpsc::Receiver<CustomMsg>;
+pub type InterChainMsgSender = std::sync::mpsc::Sender<InterChainMsg>;
+pub type InterChainMsgReceiver = std::sync::mpsc::Receiver<InterChainMsg>;
 
-#[derive(Debug)]
-pub struct CustomMessageReceiverExt(CustomMessageReceiver);
-
-impl CustomMessageReceiverExt {
+pub trait InterChainMsgReceiverExt {
     #[cfg(feature = "neutron")]
-    pub fn assert_register_ica(&self, expected_connection_id: &str) {
+    #[track_caller]
+    fn assert_register_ica(&self, expected_connection_id: &str);
+
+    #[cfg(feature = "neutron")]
+    #[track_caller]
+    fn assert_ibc_transfer(&self, channel: Option<&str>, coin: CwCoin, sender: &str, receiver: &str);
+
+    #[track_caller]
+    fn assert_empty(&self);
+}
+
+impl InterChainMsgReceiverExt for InterChainMsgReceiver {
+    #[cfg(feature = "neutron")]
+    #[track_caller]
+    fn assert_register_ica(&self, expected_connection_id: &str) {
         let message = self
-            .0
             .try_recv()
             .expect("Expected message for ICA registration!");
 
-        if let CustomMsg::RegisterInterchainAccount { connection_id, .. } = message {
+        if let InterChainMsg::RegisterInterchainAccount { connection_id, .. } = message {
             assert_eq!(connection_id, expected_connection_id);
         } else {
             panic!("Expected message for ICA registration, got {message:?}!");
         }
     }
 
-    pub fn assert_empty(&self) {
-        assert_eq!(self.0.try_recv().ok(), None);
-    }
-}
+    #[cfg(feature = "neutron")]
+    #[track_caller]
+    fn assert_ibc_transfer(&self, channel: Option<&str>, coin: CwCoin, sender: &str, receiver: &str) {
+        let message = self
+            .try_recv()
+            .expect("Expected message for ICA registration!");
 
-impl Deref for CustomMessageReceiverExt {
-    type Target = CustomMessageReceiver;
+        if let InterChainMsg::IbcTransfer { source_channel, token, sender: actual_sender, receiver: actual_receiver, .. } = message {
+            if let Some(channel) = channel {
+                assert_eq!(source_channel, channel);
+            }
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for CustomMessageReceiverExt {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl Drop for CustomMessageReceiverExt {
-    fn drop(&mut self) {
-        if let Ok(message) = self.0.try_recv() {
-            panic!("Custom message receiver dropped with messages in the queue! First message: {message:?}");
+            assert_eq!(token, coin);
+            assert_eq!(actual_sender, sender);
+            assert_eq!(actual_receiver, receiver);
+        } else {
+            panic!("Expected message for ICA registration, got {message:?}!");
         }
     }
+
+    #[track_caller]
+    fn assert_empty(&self) {
+        assert_eq!(self.try_recv().ok(), None);
+    }
 }
 
-pub fn new_custom_msg_queue() -> (CustomMessageSender, CustomMessageReceiverExt) {
-    let (sender, receiver): (CustomMessageSender, CustomMessageReceiver) =
+pub fn new_inter_chain_msg_queue() -> (InterChainMsgSender, InterChainMsgReceiver) {
+    let (sender, receiver): (InterChainMsgSender, InterChainMsgReceiver) =
         std::sync::mpsc::channel();
 
-    (sender, CustomMessageReceiverExt(receiver))
+    (sender, receiver)
 }
 
 pub fn mock_deps_with_contracts<const N: usize>(
@@ -119,8 +126,8 @@ pub fn customized_mock_deps_with_contracts<const N: usize>(
     deps
 }
 
-pub fn new_app(message_sender: CustomMessageSender) -> CwAppBuilder {
-    BasicCwAppBuilder::<CustomMsg, Empty>::new_custom()
+pub fn new_app(message_sender: InterChainMsgSender) -> CwAppBuilder {
+    BasicCwAppBuilder::<InterChainMsg, Empty>::new_custom()
         .with_custom(CustomMsgModule::new(message_sender))
         .with_wasm::<CustomMsgModule, _>(WasmKeeper::new())
 }
@@ -132,22 +139,22 @@ mod custom_msg {
     use cw_multi_test::{AppResponse, CosmosRouter, Module as ModuleTrait};
     use serde::de::DeserializeOwned;
 
-    use crate::cosmwasm_ext::CustomMsg;
+    use crate::cosmwasm_ext::InterChainMsg;
 
-    use super::CustomMessageSender;
+    use super::InterChainMsgSender;
 
     pub struct Module {
-        message_sender: CustomMessageSender,
+        message_sender: InterChainMsgSender,
     }
 
     impl Module {
-        pub fn new(message_sender: CustomMessageSender) -> Self {
+        pub fn new(message_sender: InterChainMsgSender) -> Self {
             Self { message_sender }
         }
     }
 
     impl ModuleTrait for Module {
-        type ExecT = CustomMsg;
+        type ExecT = InterChainMsg;
 
         type QueryT = Empty;
 
