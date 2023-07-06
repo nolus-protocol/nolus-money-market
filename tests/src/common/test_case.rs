@@ -8,33 +8,36 @@ use lease::api::{ConnectionParams, Ics20Channel};
 use platform::ica::OpenAckVersion;
 use profit::msg::{ConfigResponse as ProfitConfigResponse, QueryMsg as ProfitQueryMsg};
 use sdk::{
-    cosmwasm_ext::{CosmosMsg, CustomMsg},
+    cosmwasm_ext::{CosmosMsg, InterChainMsg},
     cosmwasm_std::{Addr, BlockInfo, Coin as CwCoin, Empty, QuerierWrapper, Uint64},
     cw_multi_test::{next_block, AppResponse, Contract as CwContract, Executor as _},
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
-    testing::{new_custom_msg_queue, CustomMessageReceiverExt, CustomMessageSender},
+    testing::{
+        new_inter_chain_msg_queue, InterChainMsgReceiver, InterChainMsgReceiverExt as _,
+        InterChainMsgSender,
+    },
 };
 
-use crate::common::{
-    lease_wrapper::{LeaseInitConfig, LeaseWrapperAddresses},
+use super::{
+    lease::{InitConfig, InstantiatorAddresses},
     CwContractWrapper, MockApp,
 };
 
 use super::{
     cwcoin,
-    dispatcher_wrapper::DispatcherWrapper,
-    lease_wrapper::{LeaseWrapper, LeaseWrapperConfig},
-    leaser_wrapper::LeaserWrapper,
-    lpp_wrapper::LppWrapper,
+    dispatcher::Instantiator as DispatcherInstantiator,
+    lease::{Instantiator as LeaseInstantiator, InstantiatorConfig as LeaseInstantiatorConfig},
+    leaser::Instantiator as LeaserInstantiator,
+    lpp::Instantiator as LppInstantiator,
     mock_app,
-    oracle_wrapper::MarketOracleWrapper,
-    profit_wrapper::ProfitWrapper,
-    timealarms_wrapper::TimeAlarmsWrapper,
-    treasury_wrapper::TreasuryWrapper,
+    oracle::Instantiator as OracleInstantiator,
+    profit::Instantiator as ProfitInstantiator,
+    timealarms::Instantiator as TimeAlarmsInstantiator,
+    treasury::Instantiator as TreasuryInstantiator,
     AppExt, ADMIN,
 };
 
-type OptionalLppWrapper = Option<
+type OptionalLppEndpoints = Option<
     CwContractWrapper<
         lpp::msg::ExecuteMsg,
         lpp::error::ContractError,
@@ -294,11 +297,11 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
 #[must_use]
 pub(crate) struct App {
     app: MockApp,
-    message_receiver: CustomMessageReceiverExt,
+    message_receiver: InterChainMsgReceiver,
 }
 
 impl App {
-    pub const fn new(app: MockApp, message_receiver: CustomMessageReceiverExt) -> Self {
+    pub const fn new(app: MockApp, message_receiver: InterChainMsgReceiver) -> Self {
         Self {
             app,
             message_receiver,
@@ -306,7 +309,7 @@ impl App {
     }
 
     #[must_use]
-    pub fn store_code(&mut self, code: Box<dyn CwContract<CustomMsg, Empty>>) -> u64 {
+    pub fn store_code(&mut self, code: Box<dyn CwContract<InterChainMsg, Empty>>) -> u64 {
         self.app.store_code(code)
     }
 
@@ -331,10 +334,10 @@ impl App {
         sender: Addr,
         recipient: Addr,
         amount: &[CwCoin],
-    ) -> anyhow::Result<WrappedResponse<'r, AppResponse>> {
+    ) -> anyhow::Result<ResponseWithInterChainMsgs<'r, AppResponse>> {
         self.app
             .send_tokens(sender, recipient, amount)
-            .map(|result: AppResponse| WrappedResponse {
+            .map(|result: AppResponse| ResponseWithInterChainMsgs {
                 receiver: &mut self.message_receiver,
                 result,
             })
@@ -348,7 +351,7 @@ impl App {
         send_funds: &[CwCoin],
         label: U,
         admin: Option<String>,
-    ) -> anyhow::Result<WrappedResponse<'r, Addr>>
+    ) -> anyhow::Result<ResponseWithInterChainMsgs<'r, Addr>>
     where
         T: Debug + Serialize,
         U: Into<String>,
@@ -364,7 +367,7 @@ impl App {
         contract_addr: Addr,
         msg: &T,
         send_funds: &[CwCoin],
-    ) -> anyhow::Result<WrappedResponse<'r, AppResponse>>
+    ) -> anyhow::Result<ResponseWithInterChainMsgs<'r, AppResponse>>
     where
         T: Debug + Serialize,
     {
@@ -377,7 +380,7 @@ impl App {
         &mut self,
         sender: Addr,
         msg: T,
-    ) -> anyhow::Result<WrappedResponse<'_, AppResponse>>
+    ) -> anyhow::Result<ResponseWithInterChainMsgs<'_, AppResponse>>
     where
         T: Into<CosmosMsg>,
     {
@@ -388,7 +391,7 @@ impl App {
         &'r mut self,
         contract_addr: T,
         msg: &U,
-    ) -> anyhow::Result<WrappedResponse<'r, AppResponse>>
+    ) -> anyhow::Result<ResponseWithInterChainMsgs<'r, AppResponse>>
     where
         T: Into<Addr>,
         U: Serialize,
@@ -396,14 +399,17 @@ impl App {
         self.with_mock_app(|app: &mut MockApp| app.wasm_sudo(contract_addr, msg))
     }
 
-    pub fn with_mock_app<'r, F, R>(&'r mut self, f: F) -> anyhow::Result<WrappedResponse<'r, R>>
+    pub fn with_mock_app<'r, F, R>(
+        &'r mut self,
+        f: F,
+    ) -> anyhow::Result<ResponseWithInterChainMsgs<'r, R>>
     where
         F: FnOnce(&'r mut MockApp) -> anyhow::Result<R>,
     {
         self.message_receiver.assert_empty();
 
         match f(&mut self.app) {
-            Ok(result) => Ok(WrappedResponse {
+            Ok(result) => Ok(ResponseWithInterChainMsgs {
                 receiver: &mut self.message_receiver,
                 result,
             }),
@@ -426,38 +432,39 @@ impl App {
 
 #[must_use]
 #[derive(Debug)]
-pub struct WrappedResponse<'r, T> {
-    receiver: &'r mut CustomMessageReceiverExt,
+pub struct ResponseWithInterChainMsgs<'r, T> {
+    receiver: &'r mut InterChainMsgReceiver,
     result: T,
 }
 
-impl<'r> Iterator for WrappedResponse<'r, ()> {
-    type Item = CustomMsg;
+impl<'r> Iterator for ResponseWithInterChainMsgs<'r, ()> {
+    type Item = InterChainMsg;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.receiver.try_recv().ok()
     }
 }
 
-impl<'r, T> WrappedResponse<'r, T> {
+impl<'r, T> ResponseWithInterChainMsgs<'r, T> {
     #[must_use]
-    pub fn receiver(&mut self) -> &mut CustomMessageReceiverExt {
+    pub fn receiver(&mut self) -> &mut InterChainMsgReceiver {
         self.receiver
     }
 
     #[must_use]
-    pub fn iter(&mut self) -> MpscIter<'_, CustomMsg> {
+    pub fn iter(&mut self) -> MpscIter<'_, InterChainMsg> {
         self.receiver.try_iter()
     }
 
-    pub fn clear_result(self) -> WrappedResponse<'r, ()> {
-        WrappedResponse {
+    pub fn clear_result(self) -> ResponseWithInterChainMsgs<'r, ()> {
+        ResponseWithInterChainMsgs {
             receiver: self.receiver,
             result: (),
         }
     }
 
     #[must_use]
+    #[track_caller]
     pub fn unwrap_response(self) -> T {
         self.receiver.assert_empty();
 
@@ -465,9 +472,9 @@ impl<'r, T> WrappedResponse<'r, T> {
     }
 }
 
-impl<'r> WrappedResponse<'r, ()> {
-    pub fn set_result<T>(self, result: T) -> WrappedResponse<'r, T> {
-        WrappedResponse {
+impl<'r> ResponseWithInterChainMsgs<'r, ()> {
+    pub fn set_result<T>(self, result: T) -> ResponseWithInterChainMsgs<'r, T> {
+        ResponseWithInterChainMsgs {
             receiver: self.receiver,
             result,
         }
@@ -485,9 +492,9 @@ impl TestCase<(), (), (), (), (), (), ()> {
 
     fn with_reserve(reserve: &[CwCoin]) -> Self {
         let (custom_message_sender, custom_message_receiver): (
-            CustomMessageSender,
-            CustomMessageReceiverExt,
-        ) = new_custom_msg_queue();
+            InterChainMsgSender,
+            InterChainMsgReceiver,
+        ) = new_inter_chain_msg_queue();
 
         let mut app: App = App::new(
             mock_app(custom_message_sender, reserve),
@@ -523,7 +530,7 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
     }
 
     fn store_lease_code(app: &mut App) -> u64 {
-        LeaseWrapper::default().store(app)
+        LeaseInstantiator::store(app)
     }
 }
 
@@ -532,17 +539,17 @@ impl<Dispatcher, Treasury, Leaser> TestCase<Dispatcher, Treasury, Addr, Leaser, 
     where
         D: Currency,
     {
-        LeaseWrapper::default().instantiate::<D>(
+        LeaseInstantiator::instantiate::<D>(
             &mut self.app,
-            Some(self.address_book.lease_code_id),
-            LeaseWrapperAddresses {
+            self.address_book.lease_code_id,
+            InstantiatorAddresses {
                 lpp: self.address_book.lpp_addr.clone(),
                 time_alarms: self.address_book.time_alarms_addr.clone(),
                 oracle: self.address_book.oracle_addr.clone(),
                 profit: self.address_book.profit_addr.clone(),
             },
-            LeaseInitConfig::new(lease_currency, 1000.into(), None),
-            LeaseWrapperConfig::default(),
+            InitConfig::new(lease_currency, 1000.into(), None),
+            LeaseInstantiatorConfig::default(),
             TestCase::LEASER_CONNECTION_ID,
         )
     }
@@ -594,7 +601,7 @@ where
         } = self;
 
         // Instantiate Dispatcher contract
-        let dispatcher_addr: Addr = DispatcherWrapper::default().instantiate(
+        let dispatcher_addr: Addr = DispatcherInstantiator::instantiate(
             &mut test_case.app,
             test_case.address_book.lpp_addr.clone(),
             test_case.address_book.oracle_addr.clone(),
@@ -635,19 +642,19 @@ where
     pub fn init_treasury_without_dispatcher(
         self,
     ) -> Builder<Lpn, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
-        self.init_treasury(TreasuryWrapper::new_with_no_dispatcher())
+        self.init_treasury(TreasuryInstantiator::new_with_no_dispatcher())
     }
 
     pub fn init_treasury_with_dispatcher(
         self,
         rewards_dispatcher: Addr,
     ) -> Builder<Lpn, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
-        self.init_treasury(TreasuryWrapper::new(rewards_dispatcher))
+        self.init_treasury(TreasuryInstantiator::new(rewards_dispatcher))
     }
 
     fn init_treasury(
         self,
-        treasury: TreasuryWrapper,
+        treasury: TreasuryInstantiator,
     ) -> Builder<Lpn, Dispatcher, Addr, Profit, Leaser, Lpp, Oracle, TimeAlarms> {
         let Self {
             mut test_case,
@@ -683,7 +690,7 @@ where
             _lpn,
         } = self;
 
-        let profit_addr: Addr = ProfitWrapper::default().instantiate(
+        let profit_addr: Addr = ProfitInstantiator::instantiate(
             &mut test_case.app,
             cadence_hours,
             test_case.address_book.treasury_addr.clone(),
@@ -693,7 +700,7 @@ where
 
         test_case.app.update_block(next_block);
 
-        let mut response: WrappedResponse<'_, AppResponse> = test_case
+        let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
             .app
             .sudo(
                 profit_addr.clone(),
@@ -763,7 +770,7 @@ where
             _lpn,
         } = self;
 
-        let leaser_addr = LeaserWrapper::default().instantiate(
+        let leaser_addr = LeaserInstantiator::instantiate(
             &mut test_case.app,
             test_case.address_book.lease_code_id,
             test_case.address_book.lpp_addr.clone(),
@@ -806,7 +813,7 @@ where
 {
     pub fn init_lpp(
         self,
-        custom_wrapper: OptionalLppWrapper,
+        custom_wrapper: OptionalLppEndpoints,
         base_interest_rate: Percent,
         utilization_optimal: Percent,
         addon_optimal_interest_rate: Percent,
@@ -822,32 +829,40 @@ where
 
     pub fn init_lpp_with_funds(
         self,
-        custom_wrapper: OptionalLppWrapper,
+        endpoints: OptionalLppEndpoints,
         init_balance: &[CwCoin],
         base_interest_rate: Percent,
         utilization_optimal: Percent,
         addon_optimal_interest_rate: Percent,
     ) -> Builder<Lpn, Dispatcher, Treasury, Profit, Leaser, Addr, Oracle, TimeAlarms> {
-        let mocked_lpp = match custom_wrapper {
-            Some(wrapper) => LppWrapper::with_contract_wrapper(wrapper),
-            None => LppWrapper::default(),
-        };
-
         let Self {
             mut test_case,
             _lpn,
         } = self;
 
-        let lpp_addr = mocked_lpp
-            .instantiate::<Lpn>(
+        let lease_code_id: Uint64 = Uint64::new(test_case.address_book.lease_code_id);
+
+        let lpp_addr: Addr = if let Some(endpoints) = endpoints {
+            LppInstantiator::instantiate::<Lpn>(
                 &mut test_case.app,
-                Uint64::new(test_case.address_book.lease_code_id),
+                Box::new(endpoints),
+                lease_code_id,
                 init_balance,
                 base_interest_rate,
                 utilization_optimal,
                 addon_optimal_interest_rate,
             )
-            .0;
+        } else {
+            LppInstantiator::instantiate_default::<Lpn>(
+                &mut test_case.app,
+                lease_code_id,
+                init_balance,
+                base_interest_rate,
+                utilization_optimal,
+                addon_optimal_interest_rate,
+            )
+        }
+        .0;
 
         test_case.app.update_block(next_block);
 
@@ -875,9 +890,11 @@ where
             _lpn,
         } = self;
 
-        let oracle_addr: Addr = custom_wrapper
-            .map_or_else(Default::default, MarketOracleWrapper::with_contract_wrapper)
-            .instantiate::<Lpn>(&mut test_case.app);
+        let oracle_addr: Addr = if let Some(contract) = custom_wrapper {
+            OracleInstantiator::instantiate::<Lpn>(&mut test_case.app, Box::new(contract))
+        } else {
+            OracleInstantiator::instantiate_default::<Lpn>(&mut test_case.app)
+        };
 
         test_case.app.update_block(next_block);
 
@@ -904,7 +921,7 @@ where
             _lpn,
         } = self;
 
-        let time_alarms_addr: Addr = TimeAlarmsWrapper::default().instantiate(&mut test_case.app);
+        let time_alarms_addr: Addr = TimeAlarmsInstantiator::instantiate(&mut test_case.app);
 
         test_case.app.update_block(next_block);
 

@@ -1,28 +1,32 @@
 use finance::percent::Percent;
 use rewards_dispatcher::{
-    error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
+    msg::InstantiateMsg,
     state::reward_scale::{Bar, RewardScale, TotalValueLocked},
 };
 use sdk::cosmwasm_std::Addr;
 
 use super::{test_case::App, CwContractWrapper, ADMIN};
 
-pub(crate) struct DispatcherWrapper {
-    contract_wrapper: Box<DispatcherContractWrapper>,
-}
+pub(crate) struct Instantiator;
 
-impl DispatcherWrapper {
+impl Instantiator {
     #[track_caller]
     pub fn instantiate(
-        self,
         app: &mut App,
         lpp: Addr,
         oracle: Addr,
         timealarms: Addr,
         treasury: Addr,
     ) -> Addr {
-        let code_id = app.store_code(self.contract_wrapper);
+        // TODO [Rust 1.70] Convert to static item with OnceCell
+        let endpoints: CwContractWrapper<_, _, _, _, _, _, _, _, _, _, _> = CwContractWrapper::new(
+            rewards_dispatcher::contract::execute,
+            rewards_dispatcher::contract::instantiate,
+            rewards_dispatcher::contract::query,
+        )
+        .with_sudo(rewards_dispatcher::contract::sudo);
+
+        let code_id = app.store_code(Box::new(endpoints));
 
         let msg = InstantiateMsg {
             cadence_hours: 10,
@@ -55,29 +59,3 @@ impl DispatcherWrapper {
         .unwrap_response()
     }
 }
-
-impl Default for DispatcherWrapper {
-    fn default() -> Self {
-        let contract = CwContractWrapper::new(
-            rewards_dispatcher::contract::execute,
-            rewards_dispatcher::contract::instantiate,
-            rewards_dispatcher::contract::query,
-        )
-        .with_sudo(rewards_dispatcher::contract::sudo);
-
-        Self {
-            contract_wrapper: Box::new(contract),
-        }
-    }
-}
-
-type DispatcherContractWrapper = CwContractWrapper<
-    ExecuteMsg,
-    ContractError,
-    InstantiateMsg,
-    ContractError,
-    QueryMsg,
-    ContractError,
-    SudoMsg,
-    ContractError,
->;

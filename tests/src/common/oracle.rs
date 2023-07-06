@@ -20,29 +20,36 @@ use oracle::{
 use sdk::{
     cosmwasm_std::{to_binary, wasm_execute, Addr, Binary, Deps, Env, Event},
     cw_multi_test::AppResponse,
+    testing::{CwContract, CwContractWrapper},
 };
 
 use super::{
     test_case::{App, TestCase},
-    CwContractWrapper, ADMIN,
+    ADMIN,
 };
 
-pub(crate) struct MarketOracleWrapper {
-    contract_wrapper: Box<OracleContractWrapper>,
-}
+pub(crate) struct Instantiator;
 
-impl MarketOracleWrapper {
-    pub fn with_contract_wrapper(contract: OracleContractWrapper) -> Self {
-        Self {
-            contract_wrapper: Box::new(contract),
-        }
-    }
+impl Instantiator {
     #[track_caller]
-    pub fn instantiate<BaseC>(self, app: &mut App) -> Addr
+    pub fn instantiate_default<BaseC>(app: &mut App) -> Addr
     where
         BaseC: Currency,
     {
-        let code_id = app.store_code(self.contract_wrapper);
+        let endpoints: CwContractWrapper<_, _, _, _, _, _, _, _, _, _, _> =
+            CwContractWrapper::new(execute, instantiate, query)
+                .with_reply(reply)
+                .with_sudo(sudo);
+
+        Self::instantiate::<BaseC>(app, Box::new(endpoints))
+    }
+
+    #[track_caller]
+    pub fn instantiate<BaseC>(app: &mut App, endpoints: Box<CwContract>) -> Addr
+    where
+        BaseC: Currency,
+    {
+        let code_id = app.store_code(endpoints);
         let msg = InstantiateMsg {
             config: Config {
                 base_asset: BaseC::TICKER.into(),
@@ -69,18 +76,6 @@ impl MarketOracleWrapper {
     }
 }
 
-impl Default for MarketOracleWrapper {
-    fn default() -> Self {
-        let contract = CwContractWrapper::new(execute, instantiate, query)
-            .with_reply(reply)
-            .with_sudo(sudo);
-
-        Self {
-            contract_wrapper: Box::new(contract),
-        }
-    }
-}
-
 pub(crate) fn mock_oracle_query(
     deps: Deps<'_>,
     env: Env,
@@ -97,18 +92,6 @@ pub(crate) fn mock_oracle_query(
 
     Ok(res)
 }
-
-type OracleContractWrapper = CwContractWrapper<
-    ExecuteMsg,
-    ContractError,
-    InstantiateMsg,
-    ContractError,
-    QueryMsg,
-    ContractError,
-    SudoMsg,
-    ContractError,
-    ContractError,
->;
 
 pub(crate) fn add_feeder<Dispatcher, Treasury, Profit, Leaser, Lpp, TimeAlarms>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Addr, TimeAlarms>,

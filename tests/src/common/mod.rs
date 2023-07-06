@@ -4,12 +4,12 @@ use currency::{native::Nls, Currency};
 use finance::{coin::Coin, duration::Duration, percent::Percent};
 use platform::coin_legacy;
 use sdk::{
-    cosmwasm_ext::CustomMsg,
+    cosmwasm_ext::InterChainMsg,
     cosmwasm_std::{
         testing::mock_env, to_binary, Addr, Binary, BlockInfo, Coin as CwCoin, Deps, Empty, Env,
         StdResult, Timestamp,
     },
-    testing::{self, new_app, CustomMessageSender, CwApp},
+    testing::{self, new_app, CwApp, InterChainMsgSender},
 };
 
 pub(crate) const BASE_INTEREST_RATE: Percent = Percent::from_permille(70);
@@ -29,35 +29,30 @@ type CwContractWrapper<
     MigrMsg = Empty,
     MigrErr = anyhow::Error,
 > = testing::CwContractWrapper<
-    ExecMsg,   // execute msg
-    InstMsg,   // instantiate msg
-    QueryMsg,  // query msg
-    ExecErr,   // execute err
-    InstErr,   // instantiate err
-    QueryErr,  // query err
-    CustomMsg, // C
-    Empty,     // Q
-    Sudo,      // sudo msg
-    SudoErr,   // sudo err
-    ReplyErr,  // reply err
-    MigrMsg,   // migrate msg
-    MigrErr,   // migrate err
+    ExecMsg,       // execute msg
+    InstMsg,       // instantiate msg
+    QueryMsg,      // query msg
+    ExecErr,       // execute err
+    InstErr,       // instantiate err
+    QueryErr,      // query err
+    InterChainMsg, // C
+    Empty,         // Q
+    Sudo,          // sudo msg
+    SudoErr,       // sudo err
+    ReplyErr,      // reply err
+    MigrMsg,       // migrate msg
+    MigrErr,       // migrate err
 >;
 
-#[cfg(test)]
-pub mod dispatcher_wrapper;
-pub mod lease_wrapper;
-#[cfg(test)]
-pub mod leaser_wrapper;
-#[cfg(test)]
-pub mod lpp_wrapper;
-pub mod oracle_wrapper;
-pub mod profit_wrapper;
-pub mod timealarms_wrapper;
-
-#[cfg(test)]
+pub mod dispatcher;
+pub mod lease;
+pub mod leaser;
+pub mod lpp;
+pub mod oracle;
+pub mod profit;
 pub mod test_case;
-pub mod treasury_wrapper;
+pub mod timealarms;
+pub mod treasury;
 
 pub const USER: &str = "user";
 pub const ADMIN: &str = "admin";
@@ -87,9 +82,9 @@ fn mock_query(_deps: Deps<'_>, _env: Env, _msg: MockQueryMsg) -> StdResult<Binar
     to_binary(&MockResponse {})
 }
 
-pub(crate) type MockApp = CwApp<CustomMsg, Empty>;
+pub(crate) type MockApp = CwApp<InterChainMsg, Empty>;
 
-pub(crate) fn mock_app(message_sender: CustomMessageSender, init_funds: &[CwCoin]) -> MockApp {
+pub(crate) fn mock_app(message_sender: InterChainMsgSender, init_funds: &[CwCoin]) -> MockApp {
     let return_time = mock_env().block.time.minus_seconds(400 * 24 * 60 * 60);
 
     let mock_start_block = BlockInfo {

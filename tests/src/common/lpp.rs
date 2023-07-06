@@ -4,39 +4,21 @@ use lpp::{
     borrow::InterestRate,
     contract::sudo,
     error::ContractError,
-    msg::{ExecuteMsg, InstantiateMsg, QueryMsg, SudoMsg},
+    msg::{ExecuteMsg, InstantiateMsg, QueryMsg},
 };
 use sdk::{
     cosmwasm_std::{to_binary, Addr, Binary, Coin as CwCoin, Deps, Env, Uint64},
     cw_multi_test::AppResponse,
+    testing::CwContract,
 };
 
 use super::{test_case::App, CwContractWrapper, ADMIN};
 
-pub(crate) struct LppWrapper {
-    contract_wrapper: Box<LppContractWrapper>,
-}
+pub(crate) struct Instantiator;
 
-impl LppWrapper {
-    pub fn with_contract_wrapper(
-        contract: CwContractWrapper<
-            ExecuteMsg,
-            ContractError,
-            InstantiateMsg,
-            ContractError,
-            QueryMsg,
-            ContractError,
-            SudoMsg,
-            ContractError,
-        >,
-    ) -> Self {
-        Self {
-            contract_wrapper: Box::new(contract),
-        }
-    }
+impl Instantiator {
     #[track_caller]
-    pub fn instantiate<Lpn>(
-        self,
+    pub fn instantiate_default<Lpn>(
         app: &mut App,
         lease_code_id: Uint64,
         init_balance: &[CwCoin],
@@ -47,7 +29,38 @@ impl LppWrapper {
     where
         Lpn: Currency,
     {
-        let lpp_id = app.store_code(self.contract_wrapper);
+        let endpoints: CwContractWrapper<_, _, _, _, _, _, _, _, _, _, _> = CwContractWrapper::new(
+            lpp::contract::execute,
+            lpp::contract::instantiate,
+            lpp::contract::query,
+        )
+        .with_sudo(sudo);
+
+        Self::instantiate::<Lpn>(
+            app,
+            Box::new(endpoints),
+            lease_code_id,
+            init_balance,
+            base_interest_rate,
+            utilization_optimal,
+            addon_optimal_interest_rate,
+        )
+    }
+
+    #[track_caller]
+    pub fn instantiate<Lpn>(
+        app: &mut App,
+        endpoints: Box<CwContract>,
+        lease_code_id: Uint64,
+        init_balance: &[CwCoin],
+        base_interest_rate: Percent,
+        utilization_optimal: Percent,
+        addon_optimal_interest_rate: Percent,
+    ) -> (Addr, u64)
+    where
+        Lpn: Currency,
+    {
+        let lpp_id = app.store_code(endpoints);
         let lease_code_admin = Addr::unchecked("contract5");
         let msg = InstantiateMsg {
             lpn_ticker: Lpn::TICKER.into(),
@@ -85,21 +98,6 @@ impl LppWrapper {
     }
 }
 
-impl Default for LppWrapper {
-    fn default() -> Self {
-        let contract = CwContractWrapper::new(
-            lpp::contract::execute,
-            lpp::contract::instantiate,
-            lpp::contract::query,
-        )
-        .with_sudo(sudo);
-
-        Self {
-            contract_wrapper: Box::new(contract),
-        }
-    }
-}
-
 pub(crate) fn mock_lpp_query(
     deps: Deps<'_>,
     env: Env,
@@ -132,14 +130,3 @@ pub(crate) fn mock_lpp_quote_query(
 
     Ok(res)
 }
-
-type LppContractWrapper = CwContractWrapper<
-    ExecuteMsg,
-    ContractError,
-    InstantiateMsg,
-    ContractError,
-    QueryMsg,
-    ContractError,
-    SudoMsg,
-    ContractError,
->;
