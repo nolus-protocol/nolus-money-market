@@ -146,7 +146,10 @@ fn on_alarm_native_only_transfer() {
             ("height", &test_case.app.block_info().height.to_string()),
             ("at", &test_case.app.block_info().time.nanos().to_string()),
             ("idx", "0"),
-            ("profit-amount-amount", &Amount::from(sent_profit).to_string()),
+            (
+                "profit-amount-amount",
+                &Amount::from(sent_profit).to_string()
+            ),
             ("profit-amount-symbol", Native::TICKER)
         ]
     );
@@ -339,13 +342,14 @@ fn integration_with_time_alarms() {
     );
     resp.assert_event(&Event::new("wasm-time-alarm").add_attribute("delivered", "success"));
 
-    assert_eq!(test_case
-        .app
-        .wrap()
-        .query_balance(test_case.address_book.profit().clone(), Native::BANK_SYMBOL)
-        .unwrap()
-        .amount
-        .u128(),
+    assert_eq!(
+        test_case
+            .app
+            .wrap()
+            .query_balance(test_case.address_book.profit().clone(), Native::BANK_SYMBOL)
+            .unwrap()
+            .amount
+            .u128(),
         ::profit::profit::Profit::IBC_FEE_RESERVE.into(),
     );
 }
