@@ -6,7 +6,7 @@ use finance::{
 };
 use platform::bank;
 use sdk::{
-    cosmwasm_ext::CustomMsg,
+    cosmwasm_ext::InterChainMsg,
     cosmwasm_std::{from_binary, Addr, Event},
     cw_multi_test::AppResponse,
 };
@@ -14,7 +14,7 @@ use timealarms::msg::DispatchAlarmsResponse;
 
 use crate::common::{
     cwcoin,
-    test_case::{BlankBuilder as TestCaseBuilder, TestCase, WrappedResponse},
+    test_case::{BlankBuilder as TestCaseBuilder, ResponseWithInterChainMsgs, TestCase},
     Native, ADMIN, USER,
 };
 
@@ -220,7 +220,7 @@ fn on_alarm_foreign_only_transfer() {
         profit_lpn,
     );
 
-    let mut response: WrappedResponse<'_, AppResponse> = test_case
+    let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
         .execute(
             test_case.address_book.time_alarms().clone(),
@@ -231,12 +231,12 @@ fn on_alarm_foreign_only_transfer() {
         .unwrap();
 
     {
-        let message: CustomMsg = response
+        let message: InterChainMsg = response
             .receiver()
             .try_recv()
             .expect("Expected IBC transfer message!");
 
-        assert!(matches!(message, CustomMsg::IbcTransfer { .. }));
+        assert!(matches!(message, InterChainMsg::IbcTransfer { .. }));
     }
 
     let response: AppResponse = response.unwrap_response();
@@ -281,7 +281,7 @@ fn on_alarm_native_and_foreign_transfer() {
         profit_lpn,
     );
 
-    let mut response: WrappedResponse<'_, AppResponse> = test_case
+    let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
         .execute(
             test_case.address_book.time_alarms().clone(),
@@ -292,12 +292,12 @@ fn on_alarm_native_and_foreign_transfer() {
         .unwrap();
 
     {
-        let message: CustomMsg = response
+        let message: InterChainMsg = response
             .receiver()
             .try_recv()
             .expect("Expected IBC transfer message!");
 
-        assert!(matches!(message, CustomMsg::IbcTransfer { .. }));
+        assert!(matches!(message, InterChainMsg::IbcTransfer { .. }));
     }
 
     let response: AppResponse = response.unwrap_response();

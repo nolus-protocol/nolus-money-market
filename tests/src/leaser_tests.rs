@@ -13,18 +13,19 @@ use finance::{
 };
 use leaser::msg::QueryMsg;
 use sdk::{
-    cosmwasm_ext::{CustomMsg, Response},
+    cosmwasm_ext::{InterChainMsg, Response},
     cosmwasm_std::{coin, Addr, Coin as CwCoin, DepsMut, Env, Event, MessageInfo},
     cw_multi_test::{next_block, AppResponse, ContractWrapper},
+    testing::InterChainMsgReceiverExt as _,
 };
 
 use crate::common::{
     cwcoin,
-    lease_wrapper::complete_lease_initialization,
-    leaser_wrapper,
-    lpp_wrapper::mock_lpp_quote_query,
-    oracle_wrapper::{add_feeder, feed_price},
-    test_case::{BlankBuilder as TestCaseBuilder, TestCase, WrappedResponse},
+    lease::complete_lease_initialization,
+    leaser::query_quote,
+    lpp::mock_lpp_quote_query,
+    oracle::{add_feeder, feed_price},
+    test_case::{BlankBuilder as TestCaseBuilder, ResponseWithInterChainMsgs, TestCase},
     ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -152,7 +153,7 @@ fn open_multiple_loans() {
 
     let mut loans = HashSet::new();
     for _ in 0..5 {
-        let mut response: WrappedResponse<'_, AppResponse> = test_case
+        let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
             .app
             .execute(
                 user_addr.clone(),
@@ -260,11 +261,7 @@ fn test_quote() {
     let leaser = test_case.address_book.leaser().clone();
     let downpayment = Coin::new(100);
     let borrow = Coin::<Lpn>::new(185);
-    let resp = leaser_wrapper::query_quote::<Downpayment, LeaseCurrency>(
-        &mut test_case.app,
-        leaser,
-        downpayment,
-    );
+    let resp = query_quote::<Downpayment, LeaseCurrency>(&mut test_case.app, leaser, downpayment);
 
     assert_eq!(resp.borrow.try_into(), Ok(borrow));
     assert_eq!(
@@ -280,11 +277,7 @@ fn test_quote() {
     assert_eq!(resp.annual_interest_rate_margin, Percent::from_permille(30),);
 
     let leaser = test_case.address_book.leaser().clone();
-    let resp = leaser_wrapper::query_quote::<Downpayment, LeaseCurrency>(
-        &mut test_case.app,
-        leaser,
-        Coin::new(15),
-    );
+    let resp = query_quote::<Downpayment, LeaseCurrency>(&mut test_case.app, leaser, Coin::new(15));
 
     assert_eq!(resp.borrow.try_into(), Ok(Coin::<Lpn>::new(27)));
     assert_eq!(
@@ -362,7 +355,7 @@ fn common_quote_with_conversion(downpayment: Coin<Osmo>, borrow_after_mul2: Coin
     );
     feed_price(&mut test_case, feeder_addr, lpn_asset_quote, lpn_asset_base);
 
-    let resp = leaser_wrapper::query_quote::<Osmo, LeaseCurrency>(
+    let resp = query_quote::<Osmo, LeaseCurrency>(
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
         downpayment,
@@ -432,7 +425,7 @@ fn test_quote_fixed_rate() {
         Coin::<LeaseCurrency>::new(3),
         Coin::<Lpn>::new(1),
     );
-    let resp = leaser_wrapper::query_quote::<Downpayment, LeaseCurrency>(
+    let resp = query_quote::<Downpayment, LeaseCurrency>(
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
         Coin::<Downpayment>::new(100),
@@ -580,15 +573,12 @@ where
     }
 
     let downpayment: Coin<DownpaymentC> = Coin::new(40);
-    let quote = leaser_wrapper::query_quote::<DownpaymentC, LeaseC>(
-        &mut test_case.app,
-        leaser_addr.clone(),
-        downpayment,
-    );
+    let quote =
+        query_quote::<DownpaymentC, LeaseC>(&mut test_case.app, leaser_addr.clone(), downpayment);
     let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
     let exp_lease = TryInto::<Coin<LeaseC>>::try_into(quote.total).unwrap();
 
-    let mut response: WrappedResponse<'_, AppResponse> = test_case
+    let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
         .execute(
             user_addr,
@@ -601,7 +591,7 @@ where
         )
         .unwrap();
 
-    let messages: VecDeque<CustomMsg> = response.iter().collect();
+    let messages: VecDeque<InterChainMsg> = response.iter().collect();
 
     let _: AppResponse = response.unwrap_response();
 

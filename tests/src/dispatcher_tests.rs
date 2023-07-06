@@ -7,9 +7,9 @@ use sdk::{
 
 use crate::common::{
     cwcoin,
-    lpp_wrapper::mock_lpp_query,
+    lpp::mock_lpp_query,
     native_cwcoin,
-    oracle_wrapper::mock_oracle_query,
+    oracle::mock_oracle_query,
     test_case::{BlankBuilder as TestCaseBuilder, TestCase},
     Native, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
@@ -119,7 +119,7 @@ fn on_alarm() {
     println!("treasury_balance = {:?}", treasury_balance);
 
     // make a deposit to LPP from lenders address
-    let _res: AppResponse = test_case
+    () = test_case
         .app
         .execute(
             lender.clone(),
@@ -128,6 +128,7 @@ fn on_alarm() {
             &[cwcoin::<Lpn, _>(100)],
         )
         .unwrap()
+        .clear_result()
         .unwrap_response();
 
     // call dispatcher on alarm
@@ -143,51 +144,39 @@ fn on_alarm() {
         .unwrap_response();
 
     // ensure the attributes were relayed from the sub-message
-    assert_eq!(res.events.len(), 8, "{:?}", res.events);
+    assert_eq!(res.events.len(), 6, "{:?}", res.events);
 
     let dispatcher_exec = &res.events[0];
-    assert_eq!(dispatcher_exec.ty.as_str(), "execute");
+    assert_eq!(dispatcher_exec.ty, "execute");
     assert_eq!(
         dispatcher_exec.attributes,
-        [(
-            "_contract_addr",
-            test_case.address_book.dispatcher().as_str()
-        )]
+        [("_contract_addr", test_case.address_book.dispatcher())]
     );
-    let treasury_exec = &res.events[1];
-    assert_eq!(treasury_exec.ty.as_str(), "wasm-tr-rewards");
+    let dispatcher_exec = &res.events[1];
+    assert_eq!(dispatcher_exec.ty.as_str(), "wasm-tr-rewards");
     assert_eq!(
-        treasury_exec.attributes,
+        dispatcher_exec.attributes,
         [
             (
                 "_contract_addr",
-                test_case.address_book.dispatcher().to_string()
+                test_case.address_book.dispatcher().as_str()
             ),
-            ("rewards-amount", String::from("11")),
-            ("rewards-symbol", String::from(Nls::TICKER)),
-            ("height", test_case.app.block_info().height.to_string()),
-            ("at", test_case.app.block_info().time.nanos().to_string()),
-            ("idx", String::from("0")),
-            ("to", test_case.address_book.lpp().to_string()),
+            ("height", &test_case.app.block_info().height.to_string()),
+            ("at", &test_case.app.block_info().time.nanos().to_string()),
+            ("idx", "0"),
+            ("to", test_case.address_book.lpp().as_str()),
+            ("rewards-amount", "11"),
+            ("rewards-symbol", Nls::TICKER),
         ]
     );
     let treasury_exec = &res.events[2];
     assert_eq!(treasury_exec.ty.as_str(), "execute");
     assert_eq!(
         treasury_exec.attributes,
-        [("_contract_addr", test_case.address_book.treasury().as_str())]
-    );
-    let treasury_wasm = &res.events[3];
-    assert_eq!(treasury_wasm.ty.as_str(), "wasm");
-    assert_eq!(
-        treasury_wasm.attributes,
-        [
-            ("_contract_addr", test_case.address_book.treasury().as_str()),
-            ("method", "try_send_rewards")
-        ]
+        [("_contract_addr", test_case.address_book.treasury())]
     );
 
-    let treasury_exec = &res.events[4];
+    let treasury_exec = &res.events[3];
     assert_eq!(treasury_exec.ty.as_str(), "transfer");
     assert_eq!(
         treasury_exec.attributes,
@@ -198,20 +187,18 @@ fn on_alarm() {
         ]
     );
 
-    let treasury_exec = &res.events[5];
-    assert_eq!(treasury_exec.ty.as_str(), "execute");
+    let lpp_exec = &res.events[4];
+    assert_eq!(lpp_exec.ty.as_str(), "execute");
     assert_eq!(
-        treasury_exec.attributes,
+        lpp_exec.attributes,
         [("_contract_addr", &test_case.address_book.lpp())]
     );
-    let treasury_exec = &res.events[6];
-    assert_eq!(treasury_exec.ty.as_str(), "wasm");
+
+    let time_alarms_exec = &res.events[5];
+    assert_eq!(time_alarms_exec.ty.as_str(), "execute");
     assert_eq!(
-        treasury_exec.attributes,
-        [
-            ("_contract_addr", test_case.address_book.lpp().as_str()),
-            ("method", "try_distribute_rewards")
-        ]
+        time_alarms_exec.attributes,
+        [("_contract_addr", &test_case.address_book.time_alarms())]
     );
 
     assert_eq!(

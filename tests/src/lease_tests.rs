@@ -17,19 +17,18 @@ use finance::{
 use lease::api::{ExecuteMsg, StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
 use sdk::{
-    cosmwasm_ext::CustomMsg,
-    cosmwasm_std::{coin, Addr, Timestamp},
+    cosmwasm_ext::InterChainMsg,
+    cosmwasm_std::{coin, Addr, Coin as CwCoin, Timestamp},
     cw_multi_test::AppResponse,
+    testing::InterChainMsgReceiverExt as _,
 };
 
 use crate::common::{
     cwcoin,
-    lease_wrapper::complete_lease_initialization,
-    leaser_wrapper::{self, LeaserWrapper},
-    oracle_wrapper::{
-        add_feeder, feed_a_price as oracle_feed_a_price, feed_price as oracle_feed_price,
-    },
-    test_case::{Builder as TestCaseBuilder, TestCase},
+    lease::complete_lease_initialization,
+    leaser::{query_quote, Instantiator as LeaserInstantiator},
+    oracle::{add_feeder, feed_a_price as oracle_feed_a_price, feed_price as oracle_feed_price},
+    test_case::{Builder as TestCaseBuilder, ResponseWithInterChainMsgs, TestCase},
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -125,7 +124,7 @@ where
 
     let lease = get_lease_address(test_case);
 
-    let quote = leaser_wrapper::query_quote::<DownpaymentC, LeaseCurrency>(
+    let quote = query_quote::<DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
         test_case.address_book.leaser().clone(),
         downpayment,
@@ -149,7 +148,7 @@ fn try_init_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, D>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<D>,
     max_ltd: Option<Percent>,
-) -> VecDeque<CustomMsg>
+) -> VecDeque<InterChainMsg>
 where
     D: Currency,
 {
@@ -168,7 +167,7 @@ where
         )
         .unwrap();
 
-    let messages: VecDeque<CustomMsg> = response.iter().collect();
+    let messages: VecDeque<InterChainMsg> = response.iter().collect();
 
     let _: AppResponse = response.unwrap_response();
 
@@ -197,7 +196,8 @@ fn repay<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
     contract_addr: &Addr,
     payment: PaymentCoin,
 ) -> AppResponse {
-    test_case
+    let cw_payment: CwCoin = cwcoin::<PaymentCurrency, _>(payment);
+    let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
         .execute(
             Addr::unchecked(USER),
@@ -205,8 +205,13 @@ fn repay<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
             &ExecuteMsg::Repay {},
             &[cwcoin::<PaymentCurrency, _>(payment)],
         )
-        .unwrap()
-        .unwrap_response()
+        .unwrap();
+
+    response
+        .receiver()
+        .assert_ibc_transfer(None, cw_payment, contract_addr.as_str(), "ica0");
+
+    response.unwrap_response()
 }
 
 fn close<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
@@ -403,7 +408,7 @@ fn state_opened_when_partially_paid_after_time() {
     let lease_address = open_lease(&mut test_case, downpayment, None);
 
     test_case.app.time_shift(Duration::from_nanos(
-        LeaserWrapper::REPAYMENT_PERIOD.nanos() >> 1,
+        LeaserInstantiator::REPAYMENT_PERIOD.nanos() >> 1,
     ));
 
     let query_result = state_query(&test_case, &lease_address.to_string());
@@ -602,7 +607,7 @@ fn liquidation_warning_price_0() {
     liquidation_warning(
         2085713.into(),
         1857159.into(),
-        LeaserWrapper::liability().max(), //not used
+        LeaserInstantiator::liability().max(), //not used
         "N/A",
     );
 }
@@ -615,7 +620,7 @@ fn liquidation_warning_price_1() {
         2085713.into(),
         // ref: 1857159
         1827159.into(),
-        LeaserWrapper::liability().first_liq_warn(),
+        LeaserInstantiator::liability().first_liq_warn(),
         "1",
     );
 }
@@ -628,7 +633,7 @@ fn liquidation_warning_price_2() {
         2085713.into(),
         // ref: 1857159
         1757159.into(),
-        LeaserWrapper::liability().second_liq_warn(),
+        LeaserInstantiator::liability().second_liq_warn(),
         "2",
     );
 }
@@ -641,7 +646,7 @@ fn liquidation_warning_price_3() {
         2085713.into(),
         // ref: 1857159
         1707159.into(),
-        LeaserWrapper::liability().third_liq_warn(),
+        LeaserInstantiator::liability().third_liq_warn(),
         "3",
     );
 }
@@ -713,21 +718,22 @@ fn liquidation_time_alarm(time_pass: Duration) {
 #[test]
 #[should_panic = "No liquidation emitted!"]
 fn liquidation_time_alarm_0() {
-    liquidation_time_alarm(LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1));
+    liquidation_time_alarm(LeaserInstantiator::REPAYMENT_PERIOD - Duration::from_nanos(1));
 }
 
 #[test]
 #[should_panic = "No liquidation emitted!"]
 fn liquidation_time_alarm_1() {
     liquidation_time_alarm(
-        LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::GRACE_PERIOD - Duration::from_nanos(1),
+        LeaserInstantiator::REPAYMENT_PERIOD + LeaserInstantiator::GRACE_PERIOD
+            - Duration::from_nanos(1),
     );
 }
 
 #[test]
 #[ignore = "liquidations on time have been disabled until https://github.com/nolus-protocol/nolus-money-market/issues/49 gets implemented"]
 fn liquidation_time_alarm_2() {
-    liquidation_time_alarm(LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::GRACE_PERIOD);
+    liquidation_time_alarm(LeaserInstantiator::REPAYMENT_PERIOD + LeaserInstantiator::GRACE_PERIOD);
 }
 
 #[test]
@@ -744,7 +750,8 @@ fn compare_state_with_manual_calculation() {
     assert_eq!(dbg!(query_result), expected_result);
 
     test_case.app.time_shift(
-        LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1),
+        LeaserInstantiator::REPAYMENT_PERIOD + LeaserInstantiator::REPAYMENT_PERIOD
+            - Duration::from_nanos(1),
     );
 
     let query_result = state_query(&test_case, &lease_address.into_string());
@@ -777,7 +784,8 @@ fn compare_state_with_lpp_state_implicit_time() {
     assert_eq!(dbg!(query_result), expected_result);
 
     test_case.app.time_shift(
-        LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1),
+        LeaserInstantiator::REPAYMENT_PERIOD + LeaserInstantiator::REPAYMENT_PERIOD
+            - Duration::from_nanos(1),
     );
 
     let loan_resp: lpp::msg::LoanResponse<Lpn> = test_case
@@ -829,7 +837,8 @@ fn compare_state_with_lpp_state_explicit_time() {
     assert_eq!(dbg!(query_result), expected_result);
 
     test_case.app.time_shift(
-        LeaserWrapper::REPAYMENT_PERIOD + LeaserWrapper::REPAYMENT_PERIOD - Duration::from_nanos(1),
+        LeaserInstantiator::REPAYMENT_PERIOD + LeaserInstantiator::REPAYMENT_PERIOD
+            - Duration::from_nanos(1),
     );
 
     let loan: lpp::msg::LoanResponse<Lpn> = test_case

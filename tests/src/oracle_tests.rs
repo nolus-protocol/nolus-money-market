@@ -24,21 +24,21 @@ use oracle::{
 };
 use platform::{batch::Batch, coin_legacy};
 use sdk::{
-    cosmwasm_ext::{CustomMsg, Response as CwResponse},
+    cosmwasm_ext::{InterChainMsg, Response as CwResponse},
     cosmwasm_std::{
         coin, wasm_execute, Addr, Attribute, Binary, Coin as CwCoin, Deps, DepsMut, Env, Event,
         MessageInfo, StdError as CwError, Storage, Timestamp,
     },
     cw_multi_test::{AppResponse, Contract as CwContract},
     cw_storage_plus::Item,
-    testing::CwContractWrapper,
+    testing::{CwContractWrapper, InterChainMsgReceiverExt as _},
 };
 use swap::SwapTarget;
 use tree::HumanReadableTree;
 
 use crate::common::{
-    oracle_wrapper,
-    test_case::{App, BlankBuilder as TestCaseBuilder, TestCase, WrappedResponse},
+    oracle::{add_feeder, feed_price},
+    test_case::{App, BlankBuilder as TestCaseBuilder, ResponseWithInterChainMsgs, TestCase},
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -94,16 +94,16 @@ fn register_feeder() {
     let _user = Addr::unchecked(USER);
     let _admin = Addr::unchecked(ADMIN);
 
-    oracle_wrapper::add_feeder(&mut test_case, ADMIN);
+    add_feeder(&mut test_case, ADMIN);
 }
 
 #[test]
 fn internal_test_integration_setup_test() {
     let mut test_case = create_test_case();
 
-    oracle_wrapper::add_feeder(&mut test_case, ADMIN);
+    add_feeder(&mut test_case, ADMIN);
 
-    let response: AppResponse = oracle_wrapper::feed_price(
+    let response: AppResponse = feed_price(
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::<BaseC>::new(5),
@@ -120,7 +120,7 @@ fn internal_test_integration_setup_test() {
 #[test]
 fn feed_price_with_alarm_issue() {
     let mut test_case = create_test_case();
-    oracle_wrapper::add_feeder(&mut test_case, ADMIN);
+    add_feeder(&mut test_case, ADMIN);
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
 
@@ -142,7 +142,7 @@ fn feed_price_with_alarm_issue() {
         .clear_result()
         .unwrap_response();
 
-    let _: AppResponse = oracle_wrapper::feed_price(
+    let _: AppResponse = feed_price(
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::<BaseC>::new(5),
@@ -153,7 +153,7 @@ fn feed_price_with_alarm_issue() {
 #[test]
 fn feed_price_with_alarm() {
     let mut test_case = create_test_case();
-    oracle_wrapper::add_feeder(&mut test_case, ADMIN);
+    add_feeder(&mut test_case, ADMIN);
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
 
@@ -174,7 +174,7 @@ fn feed_price_with_alarm() {
         .clear_result()
         .unwrap_response();
 
-    let _: AppResponse = oracle_wrapper::feed_price(
+    let _: AppResponse = feed_price(
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::<Cro>::new(1),
@@ -185,7 +185,7 @@ fn feed_price_with_alarm() {
 #[test]
 fn overwrite_alarm_and_dispatch() {
     let mut test_case = create_test_case();
-    oracle_wrapper::add_feeder(&mut test_case, ADMIN);
+    add_feeder(&mut test_case, ADMIN);
 
     let lease = open_lease(&mut test_case, Coin::new(1000));
 
@@ -224,7 +224,7 @@ fn overwrite_alarm_and_dispatch() {
         .unwrap_response();
 
     // If doesn't panic, then prices should be fed successfully.
-    let _: AppResponse = oracle_wrapper::feed_price(
+    let _: AppResponse = feed_price(
         &mut test_case,
         Addr::unchecked(ADMIN),
         Coin::<Cro>::new(1),
@@ -262,7 +262,7 @@ fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: TheCoin,
 ) -> Addr {
-    let mut response: WrappedResponse<'_, AppResponse> = test_case
+    let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
         .app
         .execute(
             Addr::unchecked(ADMIN),
@@ -340,17 +340,17 @@ fn test_config_update() {
     let base = 2;
     let quote = 10;
 
-    oracle_wrapper::add_feeder(&mut test_case, &feeder1);
-    oracle_wrapper::add_feeder(&mut test_case, &feeder2);
-    oracle_wrapper::add_feeder(&mut test_case, &feeder3);
+    add_feeder(&mut test_case, &feeder1);
+    add_feeder(&mut test_case, &feeder2);
+    add_feeder(&mut test_case, &feeder3);
 
-    oracle_wrapper::feed_price(
+    feed_price(
         &mut test_case,
         feeder1,
         Coin::<BaseC>::new(base),
         Coin::<Usdc>::new(quote),
     );
-    oracle_wrapper::feed_price(
+    feed_price(
         &mut test_case,
         feeder2,
         Coin::<BaseC>::new(base),
@@ -508,7 +508,7 @@ fn test_zero_price_dto() {
 
     let feeder1 = Addr::unchecked("feeder1");
 
-    oracle_wrapper::add_feeder(&mut test_case, &feeder1);
+    add_feeder(&mut test_case, &feeder1);
 
     // can be created only via deserialization
     let price: SpotPrice = from_str(
@@ -607,7 +607,7 @@ type ExecFn = fn(DepsMut<'_>, Env, MessageInfo, DummyExecMsg) -> ContractResult<
 
 fn dummy_contract<const PRICE_BASE: Amount, const PRICE_QUOTE: Amount>(
     execute: ExecFn,
-) -> Box<dyn CwContract<CustomMsg>> {
+) -> Box<dyn CwContract<InterChainMsg>> {
     Box::new(CwContractWrapper::new(
         execute,
         |DepsMut { storage, .. },
@@ -701,9 +701,9 @@ fn price_alarm_rescheduling() {
 
     let feeder_addr = Addr::unchecked("feeder");
 
-    oracle_wrapper::add_feeder(&mut test_case, feeder_addr.as_str());
+    add_feeder(&mut test_case, feeder_addr.as_str());
 
-    oracle_wrapper::feed_price(
+    feed_price(
         &mut test_case,
         feeder_addr.clone(),
         Coin::<BaseC>::new(3),
@@ -757,7 +757,7 @@ fn price_alarm_rescheduling() {
         response.events
     );
 
-    oracle_wrapper::feed_price(
+    feed_price(
         &mut test_case,
         feeder_addr.clone(),
         Coin::<BaseC>::new(4),
@@ -824,9 +824,9 @@ fn price_alarm_rescheduling_with_failing() {
 
     let feeder_addr = Addr::unchecked("feeder");
 
-    oracle_wrapper::add_feeder(&mut test_case, feeder_addr.as_str());
+    add_feeder(&mut test_case, feeder_addr.as_str());
 
-    oracle_wrapper::feed_price(
+    feed_price(
         &mut test_case,
         feeder_addr.clone(),
         Coin::<BaseC>::new(3),
