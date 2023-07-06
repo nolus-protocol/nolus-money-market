@@ -9,11 +9,8 @@ use crate::{
 
 use super::state::Response;
 
-// TODO consider merging it with crate::contract::Contract
-// now this has a different name to workaround enum_dispatch failure to work with two distinct traits
-// named the same way
 #[enum_dispatch]
-pub(super) trait ContractApi
+pub(super) trait Contract
 where
     Self: Sized,
 {

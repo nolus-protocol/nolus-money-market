@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{Binary, Deps, Env, MessageInfo, QuerierWrapper, Timestam
 
 use crate::{
     api::{self, StateResponse},
-    contract::api::ContractApi,
+    contract::api::Contract,
     error::ContractResult,
 };
 
@@ -24,7 +24,7 @@ impl<H> State<H> {
     }
 }
 
-impl<H> ContractApi for State<H>
+impl<H> Contract for State<H>
 where
     H: DexHandler<SwapResult = ContractResult<Response>>,
     H: DexContract<StateResponse = ContractResult<api::StateResponse>>,

@@ -13,7 +13,7 @@ use sdk::{
 
 use crate::{
     api::{NewLeaseContract, StateResponse},
-    contract::api::ContractApi,
+    contract::api::Contract,
     error::ContractResult,
 };
 
@@ -55,7 +55,7 @@ type Liquidated = LeaseState<liquidated::Liquidated>;
 
 type SwapResult = ContractResult<Response>;
 
-#[enum_dispatch(ContractApi)]
+#[enum_dispatch(Contract)]
 #[derive(Serialize, Deserialize)]
 pub(crate) enum State {
     RequestLoan,

@@ -4,15 +4,15 @@ use platform::response;
 use sdk::cosmwasm_std::entry_point;
 use sdk::{
     cosmwasm_ext::Response as CwResponse,
-    cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
+    cosmwasm_std::{to_binary, Api, Binary, Deps, DepsMut, Env, MessageInfo, Reply},
     neutron_sdk::sudo::msg::SudoMsg,
 };
 use versioning::{version, VersionSegment};
 
 use crate::{
     api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
-    contract::api::ContractApi,
-    error::ContractResult,
+    contract::api::Contract,
+    error::{ContractError, ContractResult},
 };
 
 #[cfg(feature = "migration")]
@@ -44,6 +44,7 @@ pub fn instantiate(
     state::new_lease(&mut deps, info, new_lease)
         .and_then(|(batch, next_state)| state::save(deps.storage, &next_state).map(|()| batch))
         .map(response::response_only_messages)
+        .or_else(|err| log_error(err, deps.api))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -68,7 +69,7 @@ pub fn migrate(deps: DepsMut<'_>, _env: Env, _msg: MigrateMsg) -> ContractResult
     #[cfg(not(feature = "migration"))]
     let resp = versioning::update_software(deps.storage, version!(CONTRACT_STORAGE_VERSION))
         .and_then(response::response);
-    resp
+    resp.or_else(|err| log_error(err, deps.api))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -82,6 +83,7 @@ pub fn reply(mut deps: DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<CwRe
              }| state::save(deps.storage, &next_state).map(|()| response),
         )
         .map(response::response_only_messages)
+        .or_else(|err| log_error(err, deps.api))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -100,6 +102,7 @@ pub fn execute(
              }| state::save(deps.storage, &next_state).map(|()| response),
         )
         .map(response::response_only_messages)
+        .or_else(|err| log_error(err, deps.api))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -113,6 +116,7 @@ pub fn sudo(deps: DepsMut<'_>, env: Env, msg: SudoMsg) -> ContractResult<CwRespo
              }| state::save(deps.storage, &next_state).map(|()| response),
         )
         .map(response::response_only_messages)
+        .or_else(|err| log_error(err, deps.api))
 }
 
 #[cfg_attr(feature = "contract-with-bindings", entry_point)]
@@ -120,6 +124,7 @@ pub fn query(deps: Deps<'_>, env: Env, _msg: StateQuery) -> ContractResult<Binar
     state::load(deps.storage)
         .and_then(|state| state.state(env.block.time, &deps.querier))
         .and_then(|resp| to_binary(&resp).map_err(Into::into))
+        .or_else(|err| log_error(err, deps.api))
 }
 
 fn process_execute(
@@ -132,8 +137,8 @@ fn process_execute(
     match msg {
         ExecuteMsg::Repay() => state.repay(deps, env, info),
         ExecuteMsg::Close() => state.close(deps, env, info),
-        ExecuteMsg::TimeAlarm {} => ContractApi::on_time_alarm(state, deps.as_ref(), env, info),
-        ExecuteMsg::PriceAlarm() => ContractApi::on_price_alarm(state, deps.as_ref(), env, info),
+        ExecuteMsg::TimeAlarm {} => state.on_time_alarm(deps.as_ref(), env, info),
+        ExecuteMsg::PriceAlarm() => state.on_price_alarm(deps.as_ref(), env, info),
     }
 }
 
@@ -154,5 +159,9 @@ fn process_sudo(msg: SudoMsg, state: State, deps: Deps<'_>, env: Env) -> Contrac
         _ => unreachable!(),
     }
 }
-//TODO     , api: &dyn Api
-//            api.debug(&format!("{:?}", err));
+
+fn log_error<T>(err: ContractError, api: &dyn Api) -> ContractResult<T> {
+    //TODO switch to calling this with Result::inspect_err once stabilized
+    api.debug(&format!("{:?}", err));
+    Err(err)
+}

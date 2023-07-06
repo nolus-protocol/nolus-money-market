@@ -5,7 +5,7 @@ use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timest
 
 use crate::{api::StateResponse, error::ContractResult};
 
-use super::{handler::Handler as LeaseHandler, ContractApi, Response};
+use super::{handler::Handler as LeaseHandler, Contract, Response};
 
 #[derive(Serialize, Deserialize)]
 #[serde(transparent)]
@@ -19,7 +19,7 @@ impl<H> State<H> {
     }
 }
 
-impl<H> ContractApi for State<H>
+impl<H> Contract for State<H>
 where
     H: LeaseHandler,
 {
