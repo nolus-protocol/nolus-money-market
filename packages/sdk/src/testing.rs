@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     testing::{mock_dependencies, MockApi, MockQuerier, MockStorage},
-    Binary, ContractResult, Empty, GovMsg, IbcMsg, IbcQuery, OwnedDeps, SystemError, SystemResult,
-    WasmQuery, Coin as CwCoin,
+    Binary, Coin as CwCoin, ContractResult, Empty, GovMsg, IbcMsg, IbcQuery, OwnedDeps,
+    SystemError, SystemResult, WasmQuery,
 };
 use cw_multi_test::{
     BankKeeper, BasicAppBuilder as BasicCwAppBuilder, DistributionKeeper, FailingModule,
@@ -40,7 +40,13 @@ pub trait InterChainMsgReceiverExt {
 
     #[cfg(feature = "neutron")]
     #[track_caller]
-    fn assert_ibc_transfer(&self, channel: Option<&str>, coin: CwCoin, sender: &str, receiver: &str);
+    fn assert_ibc_transfer(
+        &self,
+        channel: Option<&str>,
+        coin: CwCoin,
+        sender: &str,
+        receiver: &str,
+    );
 
     #[track_caller]
     fn assert_empty(&self);
@@ -63,12 +69,25 @@ impl InterChainMsgReceiverExt for InterChainMsgReceiver {
 
     #[cfg(feature = "neutron")]
     #[track_caller]
-    fn assert_ibc_transfer(&self, channel: Option<&str>, coin: CwCoin, sender: &str, receiver: &str) {
+    fn assert_ibc_transfer(
+        &self,
+        channel: Option<&str>,
+        coin: CwCoin,
+        sender: &str,
+        receiver: &str,
+    ) {
         let message = self
             .try_recv()
             .expect("Expected message for ICA registration!");
 
-        if let InterChainMsg::IbcTransfer { source_channel, token, sender: actual_sender, receiver: actual_receiver, .. } = message {
+        if let InterChainMsg::IbcTransfer {
+            source_channel,
+            token,
+            sender: actual_sender,
+            receiver: actual_receiver,
+            ..
+        } = message
+        {
             if let Some(channel) = channel {
                 assert_eq!(source_channel, channel);
             }

@@ -1,8 +1,8 @@
 use sdk::{
     cosmwasm_std::{Addr, Coin, Uint128},
     testing::{
-        new_app, new_inter_chain_msg_queue, InterChainMsgReceiver, InterChainMsgSender, CwApp,
-        CwContract, CwContractWrapper, CwExecutor as _,
+        new_app, new_inter_chain_msg_queue, CwApp, CwContract, CwContractWrapper, CwExecutor as _,
+        InterChainMsgReceiver, InterChainMsgSender,
     },
 };
 
