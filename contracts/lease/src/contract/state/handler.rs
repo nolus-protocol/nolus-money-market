@@ -1,9 +1,12 @@
 use enum_dispatch::enum_dispatch;
 
 use platform::state_machine::Response as StateMachineResponse;
-use sdk::cosmwasm_std::{Api, Deps, DepsMut, Env, MessageInfo, Reply};
+use sdk::cosmwasm_std::{Api, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
-use crate::error::{ContractError, ContractResult};
+use crate::{
+    api::StateResponse,
+    error::{ContractError, ContractResult},
+};
 
 use super::State;
 
@@ -13,6 +16,8 @@ pub(crate) trait Handler
 where
     Self: Sized,
 {
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse>;
+
     fn reply(self, deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {
         err("reply", deps.api)
     }

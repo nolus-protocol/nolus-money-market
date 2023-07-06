@@ -1,7 +1,11 @@
+use cosmwasm_std::QuerierWrapper;
 use enum_dispatch::enum_dispatch;
-use sdk::cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply};
+use sdk::cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Timestamp};
 
-use crate::error::{ContractError, ContractResult};
+use crate::{
+    api::StateResponse,
+    error::{ContractError, ContractResult},
+};
 
 use super::state::Response;
 
@@ -38,6 +42,8 @@ where
     fn on_dex_timeout(self, _deps: Deps<'_>, _env: Env) -> ContractResult<Response> {
         err("dex timeout")
     }
+
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse>;
 
     fn reply(self, _deps: &mut DepsMut<'_>, _env: Env, _msg: Reply) -> ContractResult<Response> {
         err("reply")

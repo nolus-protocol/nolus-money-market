@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use sdk::cosmwasm_std::{DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Timestamp};
 
-use crate::{api::StateResponse, contract::Contract, error::ContractResult};
+use crate::{api::StateResponse, error::ContractResult};
 
 use super::{handler::Handler as LeaseHandler, ContractApi, Response};
 
@@ -23,6 +23,10 @@ impl<H> ContractApi for State<H>
 where
     H: LeaseHandler,
 {
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+        self.handler.state(now, querier)
+    }
+
     fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
         self.handler.reply(deps, env, msg)
     }
@@ -61,14 +65,5 @@ where
         info: MessageInfo,
     ) -> ContractResult<Response> {
         self.handler.on_price_alarm(deps, env, info)
-    }
-}
-
-impl<H> Contract for State<H>
-where
-    H: Contract,
-{
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
-        self.handler.state(now, querier)
     }
 }

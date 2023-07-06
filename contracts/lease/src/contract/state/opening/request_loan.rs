@@ -17,7 +17,6 @@ use crate::{
     contract::{
         cmd::{OpenLoanReq, OpenLoanReqResult, OpenLoanResp},
         state::{dex::State as LeaseDexState, Handler, Response},
-        Contract,
     },
     error::ContractResult,
     event::Type,
@@ -91,17 +90,15 @@ impl RequestLoan {
 }
 
 impl Handler for RequestLoan {
-    fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
-        self.on_response(deps.as_ref(), env, msg)
-    }
-}
-
-impl Contract for RequestLoan {
     fn state(
         self,
         _now: Timestamp,
         _querier: &QuerierWrapper<'_>,
     ) -> ContractResult<crate::api::StateResponse> {
         unreachable!()
+    }
+
+    fn reply(self, deps: &mut DepsMut<'_>, env: Env, msg: Reply) -> ContractResult<Response> {
+        self.on_response(deps.as_ref(), env, msg)
     }
 }

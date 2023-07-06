@@ -8,7 +8,7 @@ use sdk::cosmwasm_std::{Deps, Env, MessageInfo, QuerierWrapper, Timestamp};
 
 use crate::{
     api::StateResponse,
-    contract::{cmd::Close, Contract},
+    contract::cmd::Close,
     error::ContractResult,
     event::Type,
     lease::{with_lease_paid, LeaseDTO},
@@ -38,6 +38,14 @@ impl Closed {
 }
 
 impl Handler for Closed {
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
+        Ok(StateResponse::Closed())
+    }
+
     fn on_time_alarm(
         self,
         _deps: Deps<'_>,
@@ -53,15 +61,5 @@ impl Handler for Closed {
         _info: MessageInfo,
     ) -> ContractResult<Response> {
         super::ignore_msg(self)
-    }
-}
-
-impl Contract for Closed {
-    fn state(
-        self,
-        _now: Timestamp,
-        _querier: &QuerierWrapper<'_>,
-    ) -> ContractResult<StateResponse> {
-        Ok(StateResponse::Closed())
     }
 }

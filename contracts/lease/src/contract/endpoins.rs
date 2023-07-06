@@ -11,7 +11,7 @@ use versioning::{version, VersionSegment};
 
 use crate::{
     api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
-    contract::{api::ContractApi, Contract},
+    contract::api::ContractApi,
     error::ContractResult,
 };
 

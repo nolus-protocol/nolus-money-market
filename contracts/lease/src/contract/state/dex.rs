@@ -6,7 +6,7 @@ use sdk::cosmwasm_std::{Binary, Deps, Env, MessageInfo, QuerierWrapper, Timestam
 
 use crate::{
     api::{self, StateResponse},
-    contract::{api::ContractApi, Contract},
+    contract::api::ContractApi,
     error::ContractResult,
 };
 
@@ -27,6 +27,7 @@ impl<H> State<H> {
 impl<H> ContractApi for State<H>
 where
     H: DexHandler<SwapResult = ContractResult<Response>>,
+    H: DexContract<StateResponse = ContractResult<api::StateResponse>>,
     H::Response: Into<ContractState>,
     Self: Into<ContractState>,
 {
@@ -60,6 +61,10 @@ where
             .map_err(Into::into)
     }
 
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+        self.handler.state(now, querier)
+    }
+
     fn on_time_alarm(
         self,
         deps: Deps<'_>,
@@ -76,14 +81,5 @@ where
         _info: MessageInfo,
     ) -> ContractResult<Response> {
         super::ignore_msg(self)
-    }
-}
-
-impl<H> Contract for State<H>
-where
-    H: DexContract<StateResponse = ContractResult<api::StateResponse>>,
-{
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
-        self.handler.state(now, querier)
     }
 }

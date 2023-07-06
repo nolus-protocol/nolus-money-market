@@ -21,7 +21,7 @@ use crate::{
             Repay, RepayResult,
         },
         state::{liquidated, paid, Handler, Response},
-        Contract, Lease,
+        Lease,
     },
     error::{ContractError, ContractResult},
     lease::with_lease,
@@ -324,6 +324,10 @@ fn finish_repay(loan_paid: bool, repay_response: MessageResponse, lease: Lease) 
 }
 
 impl Handler for Active {
+    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
+        super::lease_state(self.lease.lease, None, now, querier)
+    }
+
     fn repay(
         self,
         deps: &mut DepsMut<'_>,
@@ -347,11 +351,5 @@ impl Handler for Active {
         info: MessageInfo,
     ) -> ContractResult<Response> {
         self.try_on_price_alarm(&deps.querier, &env, info)
-    }
-}
-
-impl Contract for Active {
-    fn state(self, now: Timestamp, querier: &QuerierWrapper<'_>) -> ContractResult<StateResponse> {
-        super::lease_state(self.lease.lease, None, now, querier)
     }
 }

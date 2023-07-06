@@ -5,7 +5,7 @@ use sdk::cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Timesta
 
 use crate::{
     api::StateResponse,
-    contract::{Contract, Lease},
+    contract::Lease,
     error::{ContractError, ContractResult},
 };
 
@@ -29,6 +29,14 @@ impl Active {
 }
 
 impl Handler for Active {
+    fn state(
+        self,
+        _now: Timestamp,
+        _querier: &QuerierWrapper<'_>,
+    ) -> ContractResult<StateResponse> {
+        Ok(StateResponse::paid_from(self.lease.lease, None))
+    }
+
     fn close(
         self,
         deps: &mut DepsMut<'_>,
@@ -59,15 +67,5 @@ impl Handler for Active {
         _info: MessageInfo,
     ) -> ContractResult<Response> {
         super::ignore_msg(self)
-    }
-}
-
-impl Contract for Active {
-    fn state(
-        self,
-        _now: Timestamp,
-        _querier: &QuerierWrapper<'_>,
-    ) -> ContractResult<StateResponse> {
-        Ok(StateResponse::paid_from(self.lease.lease, None))
     }
 }

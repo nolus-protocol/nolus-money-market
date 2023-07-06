@@ -5,11 +5,17 @@ use serde::{Deserialize, Serialize};
 
 use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::{
-    cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage},
+    cosmwasm_std::{
+        Binary, Deps, DepsMut, Env, MessageInfo, QuerierWrapper, Reply, Storage, Timestamp,
+    },
     cw_storage_plus::Item,
 };
 
-use crate::{api::NewLeaseContract, contract::api::ContractApi, error::ContractResult};
+use crate::{
+    api::{NewLeaseContract, StateResponse},
+    contract::api::ContractApi,
+    error::ContractResult,
+};
 
 pub(crate) use self::handler::{Handler, Response};
 #[cfg(feature = "migration")]
@@ -49,7 +55,7 @@ type Liquidated = LeaseState<liquidated::Liquidated>;
 
 type SwapResult = ContractResult<Response>;
 
-#[enum_dispatch(ContractApi, Contract)]
+#[enum_dispatch(ContractApi)]
 #[derive(Serialize, Deserialize)]
 pub(crate) enum State {
     RequestLoan,
