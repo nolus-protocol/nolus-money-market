@@ -1,7 +1,7 @@
 use sdk::{
     cosmwasm_std::{Addr, Coin, Uint128},
     testing::{
-        new_app, new_custom_msg_queue, CustomMessageReceiverExt, CustomMessageSender, CwApp,
+        new_app, new_inter_chain_msg_queue, InterChainMsgReceiver, InterChainMsgSender, CwApp,
         CwContract, CwContractWrapper, CwExecutor as _,
     },
 };
@@ -21,7 +21,7 @@ const USER: &str = "USER";
 const ADMIN: &str = "ADMIN";
 const NATIVE_DENOM: &str = "denom";
 
-fn mock_app(custom_message_sender: CustomMessageSender) -> CwApp {
+fn mock_app(custom_message_sender: InterChainMsgSender) -> CwApp {
     new_app(custom_message_sender).build(|router, _, storage| {
         router
             .bank
@@ -37,11 +37,11 @@ fn mock_app(custom_message_sender: CustomMessageSender) -> CwApp {
     })
 }
 
-fn proper_instantiate() -> (CwApp, CwTemplateContract, CustomMessageReceiverExt) {
+fn proper_instantiate() -> (CwApp, CwTemplateContract, InterChainMsgReceiver) {
     let (custom_message_sender, custom_message_receiver): (
-        CustomMessageSender,
-        CustomMessageReceiverExt,
-    ) = new_custom_msg_queue();
+        InterChainMsgSender,
+        InterChainMsgReceiver,
+    ) = new_inter_chain_msg_queue();
     let mut app = mock_app(custom_message_sender);
     let cw_template_id = app.store_code(contract_template());
 
@@ -77,7 +77,7 @@ mod config {
         let (mut app, cw_template_contract, _custom_message_receiver): (
             CwApp,
             CwTemplateContract,
-            CustomMessageReceiverExt,
+            InterChainMsgReceiver,
         ) = proper_instantiate();
 
         app.execute_contract(
