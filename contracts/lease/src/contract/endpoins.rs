@@ -1,5 +1,4 @@
 use currency::lease::LeaseGroup;
-use dex::Handler;
 use platform::response;
 #[cfg(feature = "contract-with-bindings")]
 use sdk::cosmwasm_std::entry_point;
@@ -12,7 +11,7 @@ use versioning::{version, VersionSegment};
 
 use crate::{
     api::{ExecuteMsg, MigrateMsg, NewLeaseContract, StateQuery},
-    contract::{state::Handler as LeaseHandler, Contract},
+    contract::{api::ContractApi, Contract},
     error::ContractResult,
 };
 
@@ -133,8 +132,8 @@ fn process_execute(
     match msg {
         ExecuteMsg::Repay() => state.repay(deps, env, info),
         ExecuteMsg::Close() => state.close(deps, env, info),
-        ExecuteMsg::TimeAlarm {} => LeaseHandler::on_time_alarm(state, deps.as_ref(), env, info),
-        ExecuteMsg::PriceAlarm() => LeaseHandler::on_price_alarm(state, deps.as_ref(), env, info),
+        ExecuteMsg::TimeAlarm {} => ContractApi::on_time_alarm(state, deps.as_ref(), env, info),
+        ExecuteMsg::PriceAlarm() => ContractApi::on_price_alarm(state, deps.as_ref(), env, info),
     }
 }
 
@@ -145,14 +144,15 @@ fn process_sudo(msg: SudoMsg, state: State, deps: Deps<'_>, env: Env) -> Contrac
             channel_id: _,
             counterparty_channel_id: _,
             counterparty_version,
-        } => state.on_open_ica(counterparty_version, deps, env).into(),
-        SudoMsg::Response { request: _, data } => state.on_response(data, deps, env),
-        SudoMsg::Timeout { request: _ } => state.on_timeout(deps, env).into(),
+        } => state.on_open_ica(counterparty_version, deps, env),
+        SudoMsg::Response { request: _, data } => state.on_dex_response(data, deps, env),
+        SudoMsg::Timeout { request: _ } => state.on_dex_timeout(deps, env),
         SudoMsg::Error {
             request: _,
             details: _,
-        } => state.on_error(deps, env).into(),
+        } => state.on_dex_error(deps, env),
         _ => unreachable!(),
     }
-    .into()
 }
+//TODO     , api: &dyn Api
+//            api.debug(&format!("{:?}", err));

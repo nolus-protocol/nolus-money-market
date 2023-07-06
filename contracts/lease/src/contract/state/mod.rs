@@ -5,11 +5,11 @@ use serde::{Deserialize, Serialize};
 
 use platform::{batch::Batch, message::Response as MessageResponse};
 use sdk::{
-    cosmwasm_std::{Deps, DepsMut, Env, MessageInfo, Reply, Storage},
+    cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Reply, Storage},
     cw_storage_plus::Item,
 };
 
-use crate::{api::NewLeaseContract, error::ContractResult};
+use crate::{api::NewLeaseContract, contract::api::ContractApi, error::ContractResult};
 
 pub(crate) use self::handler::{Handler, Response};
 #[cfg(feature = "migration")]
@@ -49,7 +49,7 @@ type Liquidated = LeaseState<liquidated::Liquidated>;
 
 type SwapResult = ContractResult<Response>;
 
-#[enum_dispatch(Handler, Contract)]
+#[enum_dispatch(ContractApi, Contract)]
 #[derive(Serialize, Deserialize)]
 pub(crate) enum State {
     RequestLoan,
@@ -152,131 +152,6 @@ mod impl_from {
     impl From<super::liquidated::Liquidated> for State {
         fn from(value: super::liquidated::Liquidated) -> Self {
             Liquidated::new(value).into()
-        }
-    }
-}
-
-/// would have used `enum_dispatch` it it supported trait associated types
-mod impl_dex_handler {
-    use dex::{ContinueResult, Handler, Result};
-    use sdk::cosmwasm_std::{Binary, Deps, Env};
-
-    use crate::error::ContractResult;
-
-    use super::{Response, State};
-
-    impl Handler for State {
-        type Response = Self;
-        type SwapResult = ContractResult<Response>;
-
-        fn on_open_ica(
-            self,
-            counterparty_version: String,
-            deps: Deps<'_>,
-            env: Env,
-        ) -> ContinueResult<Self> {
-            match self {
-                State::RequestLoan(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
-                }
-                State::OpenIcaAccount(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
-                }
-                State::BuyAsset(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
-                }
-                State::OpenedActive(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
-                }
-                State::BuyLpn(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
-                }
-                State::SellAsset(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
-                }
-                State::PaidActive(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
-                }
-                State::ClosingTransferIn(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
-                }
-                State::Closed(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
-                }
-                State::Liquidated(inner) => {
-                    Handler::on_open_ica(inner, counterparty_version, deps, env)
-                }
-            }
-        }
-
-        fn on_response(self, data: Binary, deps: Deps<'_>, env: Env) -> Result<Self> {
-            match self {
-                State::RequestLoan(inner) => {
-                    Handler::on_response(inner, data, deps, env).map_into()
-                }
-                State::OpenIcaAccount(inner) => {
-                    Handler::on_response(inner, data, deps, env).map_into()
-                }
-                State::BuyAsset(inner) => Handler::on_response(inner, data, deps, env).map_into(),
-                State::OpenedActive(inner) => {
-                    Handler::on_response(inner, data, deps, env).map_into()
-                }
-                State::BuyLpn(inner) => Handler::on_response(inner, data, deps, env).map_into(),
-                State::SellAsset(inner) => Handler::on_response(inner, data, deps, env).map_into(),
-                State::PaidActive(inner) => Handler::on_response(inner, data, deps, env).map_into(),
-                State::ClosingTransferIn(inner) => {
-                    Handler::on_response(inner, data, deps, env).map_into()
-                }
-                State::Closed(inner) => Handler::on_response(inner, data, deps, env).map_into(),
-                State::Liquidated(inner) => Handler::on_response(inner, data, deps, env).map_into(),
-            }
-        }
-
-        fn on_error(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
-            match self {
-                State::RequestLoan(inner) => Handler::on_error(inner, deps, env),
-                State::OpenIcaAccount(inner) => Handler::on_error(inner, deps, env),
-                State::BuyAsset(inner) => Handler::on_error(inner, deps, env),
-                State::OpenedActive(inner) => Handler::on_error(inner, deps, env),
-                State::BuyLpn(inner) => Handler::on_error(inner, deps, env),
-                State::SellAsset(inner) => Handler::on_error(inner, deps, env),
-                State::PaidActive(inner) => Handler::on_error(inner, deps, env),
-                State::ClosingTransferIn(inner) => Handler::on_error(inner, deps, env),
-                State::Closed(inner) => Handler::on_error(inner, deps, env),
-                State::Liquidated(inner) => Handler::on_error(inner, deps, env),
-            }
-        }
-
-        fn on_timeout(self, deps: Deps<'_>, env: Env) -> ContinueResult<Self> {
-            match self {
-                State::RequestLoan(inner) => Handler::on_timeout(inner, deps, env),
-                State::OpenIcaAccount(inner) => Handler::on_timeout(inner, deps, env),
-                State::BuyAsset(inner) => Handler::on_timeout(inner, deps, env),
-                State::OpenedActive(inner) => Handler::on_timeout(inner, deps, env),
-                State::BuyLpn(inner) => Handler::on_timeout(inner, deps, env),
-                State::SellAsset(inner) => Handler::on_timeout(inner, deps, env),
-                State::PaidActive(inner) => Handler::on_timeout(inner, deps, env),
-                State::ClosingTransferIn(inner) => Handler::on_timeout(inner, deps, env),
-                State::Closed(inner) => Handler::on_timeout(inner, deps, env),
-                State::Liquidated(inner) => Handler::on_timeout(inner, deps, env),
-            }
-        }
-
-        fn on_time_alarm(self, deps: Deps<'_>, env: Env) -> Result<Self> {
-            match self {
-                State::RequestLoan(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
-                State::OpenIcaAccount(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
-                State::BuyAsset(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
-                State::OpenedActive(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
-                State::BuyLpn(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
-                State::SellAsset(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
-                State::PaidActive(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
-                State::ClosingTransferIn(inner) => {
-                    Handler::on_time_alarm(inner, deps, env).map_into()
-                }
-                State::Closed(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
-                State::Liquidated(inner) => Handler::on_time_alarm(inner, deps, env).map_into(),
-            }
         }
     }
 }

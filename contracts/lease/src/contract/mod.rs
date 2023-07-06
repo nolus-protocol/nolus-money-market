@@ -9,6 +9,7 @@ use crate::{api::StateResponse, error::ContractResult, lease::LeaseDTO};
 pub use self::endpoins::{execute, instantiate, migrate, query, reply, sudo};
 use self::state::State;
 
+mod api;
 mod cmd;
 mod endpoins;
 pub mod msg;

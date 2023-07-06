@@ -107,7 +107,8 @@ fn on_alarm_native_only_transfer() {
         &test_case.app.query(),
     )
     .unwrap();
-    let profit = Coin::<Native>::from(100);
+    let profit = Coin::<Native>::from(1000);
+    let sent_profit = profit - ::profit::profit::Profit::IBC_FEE_RESERVE;
 
     //send tokens to the profit contract
     test_case.send_funds_from_admin(
@@ -150,7 +151,10 @@ fn on_alarm_native_only_transfer() {
             ("height", &test_case.app.block_info().height.to_string()),
             ("at", &test_case.app.block_info().time.nanos().to_string()),
             ("idx", "0"),
-            ("profit-amount-amount", &Amount::from(profit).to_string()),
+            (
+                "profit-amount-amount",
+                &Amount::from(sent_profit).to_string()
+            ),
             ("profit-amount-symbol", Native::TICKER)
         ]
     );
@@ -164,7 +168,7 @@ fn on_alarm_native_only_transfer() {
             ("sender", test_case.address_book.profit().as_str()),
             (
                 "amount",
-                &format!("{}{}", Amount::from(profit), Native::BANK_SYMBOL)
+                &format!("{}{}", Amount::from(sent_profit), Native::BANK_SYMBOL)
             )
         ]
     );
@@ -178,7 +182,7 @@ fn on_alarm_native_only_transfer() {
 
     assert_eq!(
         bank::balance::<Native>(test_case.address_book.treasury(), &test_case.app.query()).unwrap(),
-        init_balance_nls + profit,
+        init_balance_nls + sent_profit,
     );
 
     assert_eq!(
@@ -352,11 +356,14 @@ fn integration_with_time_alarms() {
 
     resp.assert_event(&Event::new("wasm-time-alarm").add_attribute("delivered", "success"));
 
-    assert!(test_case
-        .app
-        .query()
-        .query_balance(test_case.address_book.profit().clone(), Native::BANK_SYMBOL)
-        .unwrap()
-        .amount
-        .is_zero());
+    assert_eq!(
+        test_case
+            .app
+            .query()
+            .query_balance(test_case.address_book.profit().clone(), Native::BANK_SYMBOL)
+            .unwrap()
+            .amount
+            .u128(),
+        ::profit::profit::Profit::IBC_FEE_RESERVE.into(),
+    );
 }
