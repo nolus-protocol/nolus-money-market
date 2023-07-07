@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 
 use currency::{
     lease::{Atom, Cro},
@@ -17,10 +17,8 @@ use finance::{
 use lease::api::{ExecuteMsg, StateQuery, StateResponse};
 use leaser::msg::{QueryMsg, QuoteResponse};
 use sdk::{
-    cosmwasm_ext::InterChainMsg,
     cosmwasm_std::{coin, Addr, Coin as CwCoin, Timestamp},
     cw_multi_test::AppResponse,
-    testing::InterChainMsgReceiverExt as _,
 };
 
 use crate::common::{
@@ -28,7 +26,9 @@ use crate::common::{
     lease::complete_lease_initialization,
     leaser::{query_quote, Instantiator as LeaserInstantiator},
     oracle::{add_feeder, feed_a_price as oracle_feed_a_price, feed_price as oracle_feed_price},
-    test_case::{Builder as TestCaseBuilder, ResponseWithInterChainMsgs, TestCase},
+    test_case::{
+        Builder as TestCaseBuilder, RemoteChain as _, ResponseWithInterChainMsgs, TestCase,
+    },
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -120,7 +120,7 @@ fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, Downpayment
 where
     DownpaymentC: Currency,
 {
-    let messages = try_init_lease(test_case, downpayment, max_ltd);
+    try_init_lease(test_case, downpayment, max_ltd);
 
     let lease = get_lease_address(test_case);
 
@@ -134,8 +134,8 @@ where
 
     complete_lease_initialization::<Lpn, DownpaymentC, LeaseCurrency>(
         &mut test_case.app,
+        TestCase::LEASER_CONNECTION_ID,
         &lease,
-        messages,
         downpayment,
         exp_borrow,
         exp_lease,
@@ -148,8 +148,7 @@ fn try_init_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, D>(
     test_case: &mut TestCase<Dispatcher, Treasury, Profit, Addr, Lpp, Oracle, TimeAlarms>,
     downpayment: Coin<D>,
     max_ltd: Option<Percent>,
-) -> VecDeque<InterChainMsg>
-where
+) where
     D: Currency,
 {
     let downpayment = (!downpayment.is_zero()).then(|| cwcoin::<D, _>(downpayment));
@@ -167,11 +166,9 @@ where
         )
         .unwrap();
 
-    let messages: VecDeque<InterChainMsg> = response.iter().collect();
+    response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
 
-    let _: AppResponse = response.unwrap_response();
-
-    messages
+    () = response.ignore_result().unwrap_response();
 }
 
 fn get_lease_address<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
@@ -207,9 +204,7 @@ fn repay<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>(
         )
         .unwrap();
 
-    response
-        .receiver()
-        .assert_ibc_transfer(None, cw_payment, contract_addr.as_str(), "ica0");
+    response.expect_ibc_transfer("channel-0", cw_payment, contract_addr.as_str(), "ica0");
 
     response.unwrap_response()
 }

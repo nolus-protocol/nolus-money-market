@@ -146,7 +146,7 @@ fn open_loan_unauthorized_contract_id() {
             &[lpn_cwcoin(200)],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 }
 
@@ -179,7 +179,7 @@ fn open_loan_no_liquidity() {
             &[lpn_cwcoin(200)],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 }
 
@@ -250,7 +250,7 @@ fn deposit_and_withdraw() {
             &[lpn_cwcoin(lpp_balance_push)],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let price: PriceResponse<Lpn> = test_case
@@ -436,7 +436,7 @@ fn deposit_and_withdraw() {
             &[],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let balance_nlpn: BalanceResponse = test_case
@@ -463,7 +463,7 @@ fn deposit_and_withdraw() {
             &[],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let balance_nlpn: BalanceResponse = test_case
@@ -590,7 +590,7 @@ fn loan_open_and_repay() {
             &[lpn_cwcoin(init_deposit)],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     () = test_case
@@ -607,7 +607,7 @@ fn loan_open_and_repay() {
             },
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let quote: QueryQuoteResponse = test_case
@@ -768,7 +768,7 @@ fn loan_open_and_repay() {
             &[lpn_cwcoin(repay_interest_part)],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let maybe_loan1: QueryLoanResponse<Lpn> = test_case
@@ -800,7 +800,7 @@ fn loan_open_and_repay() {
             )],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let maybe_loan1: QueryLoanResponse<Lpn> = test_case
@@ -830,7 +830,7 @@ fn loan_open_and_repay() {
             &[lpn_cwcoin(loan1 - repay_due_part + repay_excess)],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let maybe_loan1: QueryLoanResponse<Lpn> = test_case
@@ -938,7 +938,7 @@ fn compare_lpp_states() {
             &[lpn_cwcoin(init_deposit)],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     () = test_case
@@ -955,7 +955,7 @@ fn compare_lpp_states() {
             },
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let quote: QueryQuoteResponse = test_case
@@ -1106,7 +1106,7 @@ fn compare_lpp_states() {
             &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
     _ = test_case
         .app
@@ -1128,7 +1128,7 @@ fn compare_lpp_states() {
             &[lpn_cwcoin(repay_interest_part)],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let maybe_loan1: QueryLoanResponse<Lpn> = test_case
@@ -1160,7 +1160,7 @@ fn compare_lpp_states() {
             )],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let maybe_loan1: QueryLoanResponse<Lpn> = test_case
@@ -1190,7 +1190,7 @@ fn compare_lpp_states() {
             &[lpn_cwcoin(loan1 - repay_due_part + repay_excess)],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let maybe_loan1: QueryLoanResponse<Lpn> = test_case
@@ -1297,7 +1297,7 @@ fn test_rewards() {
             &[lpn_cwcoin(deposit1)],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     // push the price from 1, should be allowed as an interest from previous leases for example.
@@ -1315,7 +1315,7 @@ fn test_rewards() {
             &[coin_legacy::to_cosmwasm::<Nls>(tot_rewards1.into())],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     // deposit after disributing rewards should not get anything
@@ -1328,7 +1328,7 @@ fn test_rewards() {
             &[lpn_cwcoin(deposit2)],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let resp: RewardsResponse = test_case
@@ -1395,7 +1395,7 @@ fn test_rewards() {
             &[],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let resp: RewardsResponse = test_case
@@ -1423,7 +1423,7 @@ fn test_rewards() {
             &[coin_legacy::to_cosmwasm::<Nls>(tot_rewards2.into())],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let resp: RewardsResponse = test_case
@@ -1464,7 +1464,7 @@ fn test_rewards() {
             &[],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let balance = bank::balance(&lender1, &test_case.app.query()).unwrap();
@@ -1490,7 +1490,7 @@ fn test_rewards() {
             &[],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let resp: RewardsResponse = test_case

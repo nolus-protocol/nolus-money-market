@@ -6,7 +6,6 @@ use finance::{
 };
 use platform::bank;
 use sdk::{
-    cosmwasm_ext::InterChainMsg,
     cosmwasm_std::{from_binary, Addr, Event},
     cw_multi_test::AppResponse,
 };
@@ -14,7 +13,9 @@ use timealarms::msg::DispatchAlarmsResponse;
 
 use crate::common::{
     cwcoin,
-    test_case::{BlankBuilder as TestCaseBuilder, ResponseWithInterChainMsgs, TestCase},
+    test_case::{
+        BlankBuilder as TestCaseBuilder, RemoteChain as _, ResponseWithInterChainMsgs, TestCase,
+    },
     Native, ADMIN, USER,
 };
 
@@ -82,7 +83,7 @@ fn on_alarm_zero_balance() {
             &[],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 }
 
@@ -230,14 +231,12 @@ fn on_alarm_foreign_only_transfer() {
         )
         .unwrap();
 
-    {
-        let message: InterChainMsg = response
-            .receiver()
-            .try_recv()
-            .expect("Expected IBC transfer message!");
-
-        assert!(matches!(message, InterChainMsg::IbcTransfer { .. }));
-    }
+    response.expect_ibc_transfer(
+        TestCase::PROFIT_ICA_CHANNEL,
+        cwcoin::<Lpn, _>(profit_lpn),
+        test_case.address_book.profit().as_str(),
+        TestCase::PROFIT_ICA_ADDR,
+    );
 
     let response: AppResponse = response.unwrap_response();
 
@@ -291,14 +290,12 @@ fn on_alarm_native_and_foreign_transfer() {
         )
         .unwrap();
 
-    {
-        let message: InterChainMsg = response
-            .receiver()
-            .try_recv()
-            .expect("Expected IBC transfer message!");
-
-        assert!(matches!(message, InterChainMsg::IbcTransfer { .. }));
-    }
+    response.expect_ibc_transfer(
+        TestCase::PROFIT_ICA_CHANNEL,
+        cwcoin::<Lpn, _>(profit_lpn),
+        test_case.address_book.profit().as_str(),
+        TestCase::PROFIT_ICA_ADDR,
+    );
 
     let response: AppResponse = response.unwrap_response();
 

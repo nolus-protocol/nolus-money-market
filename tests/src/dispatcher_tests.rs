@@ -128,7 +128,7 @@ fn on_alarm() {
             &[cwcoin::<Lpn, _>(100)],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     // call dispatcher on alarm

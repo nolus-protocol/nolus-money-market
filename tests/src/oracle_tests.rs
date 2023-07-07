@@ -31,14 +31,17 @@ use sdk::{
     },
     cw_multi_test::{AppResponse, Contract as CwContract},
     cw_storage_plus::Item,
-    testing::{CwContractWrapper, InterChainMsgReceiverExt as _},
+    testing::CwContractWrapper,
 };
 use swap::SwapTarget;
 use tree::HumanReadableTree;
 
 use crate::common::{
     oracle::{add_feeder, feed_price},
-    test_case::{App, BlankBuilder as TestCaseBuilder, ResponseWithInterChainMsgs, TestCase},
+    test_case::{
+        App, BlankBuilder as TestCaseBuilder, RemoteChain as _, ResponseWithInterChainMsgs,
+        TestCase,
+    },
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -139,7 +142,7 @@ fn feed_price_with_alarm_issue() {
             &[],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let _: AppResponse = feed_price(
@@ -171,7 +174,7 @@ fn feed_price_with_alarm() {
             &[],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     let _: AppResponse = feed_price(
@@ -203,7 +206,7 @@ fn overwrite_alarm_and_dispatch() {
             &[],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     () = test_case
@@ -220,7 +223,7 @@ fn overwrite_alarm_and_dispatch() {
             &[],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 
     // If doesn't panic, then prices should be fed successfully.
@@ -275,11 +278,9 @@ fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
         )
         .unwrap();
 
-    response
-        .receiver()
-        .assert_register_ica(TestCase::LEASER_CONNECTION_ID);
+    response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
 
-    () = response.clear_result().unwrap_response();
+    () = response.ignore_result().unwrap_response();
 
     get_lease_address(test_case)
 }
@@ -325,7 +326,7 @@ fn wrong_timealarms_addr() {
             &[],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 }
 
@@ -669,7 +670,7 @@ fn set_should_fail(app: &mut App, dummy_contract: Addr, should_fail: bool) {
             &[],
         )
         .unwrap()
-        .clear_result()
+        .ignore_result()
         .unwrap_response();
 }
 

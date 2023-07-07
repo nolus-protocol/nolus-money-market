@@ -1,4 +1,4 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::HashSet;
 
 use currency::{
     lease::{Atom, Cro, Juno, Osmo},
@@ -13,10 +13,9 @@ use finance::{
 };
 use leaser::msg::QueryMsg;
 use sdk::{
-    cosmwasm_ext::{InterChainMsg, Response},
+    cosmwasm_ext::Response,
     cosmwasm_std::{coin, Addr, Coin as CwCoin, DepsMut, Env, Event, MessageInfo},
     cw_multi_test::{next_block, AppResponse, ContractWrapper},
-    testing::InterChainMsgReceiverExt as _,
 };
 
 use crate::common::{
@@ -25,7 +24,9 @@ use crate::common::{
     leaser::query_quote,
     lpp::mock_lpp_quote_query,
     oracle::{add_feeder, feed_price},
-    test_case::{BlankBuilder as TestCaseBuilder, ResponseWithInterChainMsgs, TestCase},
+    test_case::{
+        BlankBuilder as TestCaseBuilder, RemoteChain as _, ResponseWithInterChainMsgs, TestCase,
+    },
     ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 
@@ -166,9 +167,7 @@ fn open_multiple_loans() {
             )
             .unwrap();
 
-        response
-            .receiver()
-            .assert_register_ica(TestCase::LEASER_CONNECTION_ID);
+        response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
 
         let response: AppResponse = response.unwrap_response();
 
@@ -193,9 +192,7 @@ fn open_multiple_loans() {
         )
         .unwrap();
 
-    response
-        .receiver()
-        .assert_register_ica(TestCase::LEASER_CONNECTION_ID);
+    response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
 
     let response: AppResponse = response.unwrap_response();
 
@@ -578,7 +575,7 @@ where
     let exp_borrow = TryInto::<Coin<Lpn>>::try_into(quote.borrow).unwrap();
     let exp_lease = TryInto::<Coin<LeaseC>>::try_into(quote.total).unwrap();
 
-    let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
+    let mut response: ResponseWithInterChainMsgs<'_, ()> = test_case
         .app
         .execute(
             user_addr,
@@ -589,16 +586,17 @@ where
             },
             &[cwcoin(downpayment)],
         )
-        .unwrap();
+        .unwrap()
+        .ignore_result();
 
-    let messages: VecDeque<InterChainMsg> = response.iter().collect();
+    response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
 
-    let _: AppResponse = response.unwrap_response();
+    () = response.unwrap_response();
 
     complete_lease_initialization::<Lpn, DownpaymentC, LeaseC>(
         &mut test_case.app,
+        TestCase::LEASER_CONNECTION_ID,
         &lease_addr,
-        messages,
         downpayment,
         exp_borrow,
         exp_lease,
