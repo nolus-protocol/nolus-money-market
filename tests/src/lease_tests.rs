@@ -27,7 +27,9 @@ use crate::common::{
     leaser::{query_quote, Instantiator as LeaserInstantiator},
     oracle::{add_feeder, feed_a_price as oracle_feed_a_price, feed_price as oracle_feed_price},
     test_case::{
-        Builder as TestCaseBuilder, RemoteChain as _, ResponseWithInterChainMsgs, TestCase,
+        builder::Builder as TestCaseBuilder,
+        response::{RemoteChain as _, ResponseWithInterChainMsgs},
+        TestCase,
     },
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };

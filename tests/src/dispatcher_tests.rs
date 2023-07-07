@@ -10,7 +10,7 @@ use crate::common::{
     lpp::mock_lpp_query,
     native_cwcoin,
     oracle::mock_oracle_query,
-    test_case::{BlankBuilder as TestCaseBuilder, TestCase},
+    test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase},
     Native, ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };
 

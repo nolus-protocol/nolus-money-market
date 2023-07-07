@@ -39,7 +39,9 @@ use tree::HumanReadableTree;
 use crate::common::{
     oracle::{add_feeder, feed_price},
     test_case::{
-        App, BlankBuilder as TestCaseBuilder, RemoteChain as _, ResponseWithInterChainMsgs,
+        app::App,
+        builder::BlankBuilder as TestCaseBuilder,
+        response::{RemoteChain as _, ResponseWithInterChainMsgs},
         TestCase,
     },
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,

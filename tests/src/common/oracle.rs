@@ -23,10 +23,9 @@ use sdk::{
     testing::{CwContract, CwContractWrapper},
 };
 
-use super::{
-    test_case::{App, TestCase},
-    ADMIN,
-};
+use crate::common::test_case::app::App;
+
+use super::{test_case::TestCase, ADMIN};
 
 pub(crate) struct Instantiator;
 

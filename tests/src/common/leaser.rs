@@ -7,7 +7,9 @@ use leaser::{
 };
 use sdk::cosmwasm_std::{Addr, Uint64};
 
-use super::{test_case::App, CwContractWrapper, ADMIN};
+use crate::common::test_case::app::App;
+
+use super::{CwContractWrapper, ADMIN};
 
 pub(crate) struct Instantiator;
 

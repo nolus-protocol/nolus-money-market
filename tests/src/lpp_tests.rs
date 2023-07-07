@@ -29,7 +29,7 @@ use crate::common::{
         InstantiatorAddresses as LeaseInstantiatorAddresses,
         InstantiatorConfig as LeaseInstantiatorConfig,
     },
-    test_case::{App, BlankBuilder as TestCaseBuilder, TestCase},
+    test_case::{app::App, builder::BlankBuilder as TestCaseBuilder, TestCase},
     ADDON_OPTIMAL_INTEREST_RATE, ADMIN, BASE_INTEREST_RATE, UTILIZATION_OPTIMAL,
 };
 

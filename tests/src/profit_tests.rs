@@ -14,7 +14,9 @@ use timealarms::msg::DispatchAlarmsResponse;
 use crate::common::{
     cwcoin,
     test_case::{
-        BlankBuilder as TestCaseBuilder, RemoteChain as _, ResponseWithInterChainMsgs, TestCase,
+        builder::BlankBuilder as TestCaseBuilder,
+        response::{RemoteChain as _, ResponseWithInterChainMsgs},
+        TestCase,
     },
     Native, ADMIN, USER,
 };

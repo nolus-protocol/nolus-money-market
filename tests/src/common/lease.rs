@@ -21,11 +21,10 @@ use sdk::{
 };
 use swap::trx as swap_trx;
 
-use super::{
-    cwcoin,
-    test_case::{App, RemoteChain as _, ResponseWithInterChainMsgs, TestCase},
-    CwContractWrapper, Native, ADMIN, USER,
-};
+use crate::common::test_case::app::App;
+use crate::common::test_case::response::{RemoteChain as _, ResponseWithInterChainMsgs};
+
+use super::{cwcoin, test_case::TestCase, CwContractWrapper, Native, ADMIN, USER};
 
 pub(crate) struct Instantiator;
 
@@ -239,12 +238,11 @@ pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
     let mut response: ResponseWithInterChainMsgs<'_, ()> =
         send_blank_response(app, lease_addr).ignore_result();
 
-    let remote_tx_count: usize =
-        usize::from(!currency::equal::<Lpn, Native>())
-            + usize::from(
-                !(currency::equal::<DownpaymentC, LeaseC>()
-                    || currency::equal::<DownpaymentC, Native>()),
-            );
+    let remote_tx_count: usize = usize::from(!currency::equal::<Lpn, Native>())
+        + usize::from(
+            !(currency::equal::<DownpaymentC, LeaseC>()
+                || currency::equal::<DownpaymentC, Native>()),
+        );
 
     if remote_tx_count != 0 {
         response.expect_submit_tx(connection_id, "0", remote_tx_count);

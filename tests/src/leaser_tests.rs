@@ -25,7 +25,9 @@ use crate::common::{
     lpp::mock_lpp_quote_query,
     oracle::{add_feeder, feed_price},
     test_case::{
-        BlankBuilder as TestCaseBuilder, RemoteChain as _, ResponseWithInterChainMsgs, TestCase,
+        builder::BlankBuilder as TestCaseBuilder,
+        response::{RemoteChain as _, ResponseWithInterChainMsgs},
+        TestCase,
     },
     ADDON_OPTIMAL_INTEREST_RATE, BASE_INTEREST_RATE, USER, UTILIZATION_OPTIMAL,
 };

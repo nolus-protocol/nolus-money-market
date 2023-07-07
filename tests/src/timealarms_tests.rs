@@ -11,7 +11,7 @@ use timealarms::msg::{AlarmsCount, DispatchAlarmsResponse};
 
 use crate::common::{
     cwcoin,
-    test_case::{BlankBuilder as TestCaseBuilder, TestCase},
+    test_case::{builder::BlankBuilder as TestCaseBuilder, TestCase},
     ADMIN,
 };
 
@@ -35,7 +35,8 @@ mod mock_lease {
     };
     use timealarms::stub::TimeAlarmsRef;
 
-    use crate::common::{test_case::App, ADMIN};
+    use crate::common::test_case::app::App;
+    use crate::common::ADMIN;
 
     const GATE: Item<'static, bool> = Item::new("alarm gate");
     const TIMEALARMS_ADDR: Item<'static, Addr> = Item::new("ta_addr");
