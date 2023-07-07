@@ -1,7 +1,7 @@
 use cosmwasm_std::{
     testing::{mock_dependencies, MockApi, MockQuerier, MockStorage},
-    Binary, Coin as CwCoin, ContractResult, Empty, GovMsg, IbcMsg, IbcQuery, OwnedDeps,
-    SystemError, SystemResult, WasmQuery,
+    Binary, ContractResult, Empty, GovMsg, IbcMsg, IbcQuery, OwnedDeps, SystemError, SystemResult,
+    WasmQuery,
 };
 use cw_multi_test::{
     BankKeeper, BasicAppBuilder as BasicCwAppBuilder, DistributionKeeper, FailingModule,
@@ -32,79 +32,6 @@ pub type CwContract = dyn cw_multi_test::Contract<InterChainMsg>;
 
 pub type InterChainMsgSender = std::sync::mpsc::Sender<InterChainMsg>;
 pub type InterChainMsgReceiver = std::sync::mpsc::Receiver<InterChainMsg>;
-
-pub trait InterChainMsgReceiverExt {
-    #[cfg(feature = "neutron")]
-    #[track_caller]
-    fn assert_register_ica(&self, expected_connection_id: &str);
-
-    #[cfg(feature = "neutron")]
-    #[track_caller]
-    fn assert_ibc_transfer(
-        &self,
-        channel: Option<&str>,
-        coin: CwCoin,
-        sender: &str,
-        receiver: &str,
-    );
-
-    #[track_caller]
-    fn assert_empty(&self);
-}
-
-impl InterChainMsgReceiverExt for InterChainMsgReceiver {
-    #[cfg(feature = "neutron")]
-    #[track_caller]
-    fn assert_register_ica(&self, expected_connection_id: &str) {
-        let message = self
-            .try_recv()
-            .expect("Expected message for ICA registration!");
-
-        if let InterChainMsg::RegisterInterchainAccount { connection_id, .. } = message {
-            assert_eq!(connection_id, expected_connection_id);
-        } else {
-            panic!("Expected message for ICA registration, got {message:?}!");
-        }
-    }
-
-    #[cfg(feature = "neutron")]
-    #[track_caller]
-    fn assert_ibc_transfer(
-        &self,
-        channel: Option<&str>,
-        coin: CwCoin,
-        sender: &str,
-        receiver: &str,
-    ) {
-        let message = self
-            .try_recv()
-            .expect("Expected message for ICA registration!");
-
-        if let InterChainMsg::IbcTransfer {
-            source_channel,
-            token,
-            sender: actual_sender,
-            receiver: actual_receiver,
-            ..
-        } = message
-        {
-            if let Some(channel) = channel {
-                assert_eq!(source_channel, channel);
-            }
-
-            assert_eq!(token, coin);
-            assert_eq!(actual_sender, sender);
-            assert_eq!(actual_receiver, receiver);
-        } else {
-            panic!("Expected message for ICA registration, got {message:?}!");
-        }
-    }
-
-    #[track_caller]
-    fn assert_empty(&self) {
-        assert_eq!(self.try_recv().ok(), None);
-    }
-}
 
 pub fn new_inter_chain_msg_queue() -> (InterChainMsgSender, InterChainMsgReceiver) {
     let (sender, receiver): (InterChainMsgSender, InterChainMsgReceiver) =

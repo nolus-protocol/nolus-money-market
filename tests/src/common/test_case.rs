@@ -1,4 +1,4 @@
-use std::{fmt::Debug, marker::PhantomData, sync::mpsc::TryIter as MpscIter};
+use std::{fmt::Debug, marker::PhantomData};
 
 use serde::Serialize;
 
@@ -12,21 +12,16 @@ use sdk::{
     cosmwasm_std::{Addr, BlockInfo, Coin as CwCoin, Empty, QuerierWrapper, Uint64},
     cw_multi_test::{next_block, AppResponse, Contract as CwContract, Executor as _},
     neutron_sdk::sudo::msg::SudoMsg as NeutronSudoMsg,
-    testing::{
-        new_inter_chain_msg_queue, InterChainMsgReceiver, InterChainMsgReceiverExt as _,
-        InterChainMsgSender,
-    },
-};
-
-use super::{
-    lease::{InitConfig, InstantiatorAddresses},
-    CwContractWrapper, MockApp,
+    testing::{new_inter_chain_msg_queue, InterChainMsgReceiver, InterChainMsgSender},
 };
 
 use super::{
     cwcoin,
     dispatcher::Instantiator as DispatcherInstantiator,
-    lease::{Instantiator as LeaseInstantiator, InstantiatorConfig as LeaseInstantiatorConfig},
+    lease::{
+        InitConfig, Instantiator as LeaseInstantiator, InstantiatorAddresses,
+        InstantiatorConfig as LeaseInstantiatorConfig,
+    },
     leaser::Instantiator as LeaserInstantiator,
     lpp::Instantiator as LppInstantiator,
     mock_app,
@@ -34,7 +29,7 @@ use super::{
     profit::Instantiator as ProfitInstantiator,
     timealarms::Instantiator as TimeAlarmsInstantiator,
     treasury::Instantiator as TreasuryInstantiator,
-    AppExt, ADMIN,
+    AppExt, CwContractWrapper, MockApp, ADMIN,
 };
 
 type OptionalLppEndpoints = Option<
@@ -406,7 +401,7 @@ impl App {
     where
         F: FnOnce(&'r mut MockApp) -> anyhow::Result<R>,
     {
-        self.message_receiver.assert_empty();
+        assert_eq!(self.message_receiver.try_recv().ok(), None);
 
         match f(&mut self.app) {
             Ok(result) => Ok(ResponseWithInterChainMsgs {
@@ -424,8 +419,6 @@ impl App {
 
     #[must_use]
     pub fn query(&self) -> QuerierWrapper<'_, Empty> {
-        self.message_receiver.assert_empty();
-
         self.app.wrap()
     }
 }
@@ -437,26 +430,8 @@ pub struct ResponseWithInterChainMsgs<'r, T> {
     result: T,
 }
 
-impl<'r> Iterator for ResponseWithInterChainMsgs<'r, ()> {
-    type Item = InterChainMsg;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.receiver.try_recv().ok()
-    }
-}
-
 impl<'r, T> ResponseWithInterChainMsgs<'r, T> {
-    #[must_use]
-    pub fn receiver(&mut self) -> &mut InterChainMsgReceiver {
-        self.receiver
-    }
-
-    #[must_use]
-    pub fn iter(&mut self) -> MpscIter<'_, InterChainMsg> {
-        self.receiver.try_iter()
-    }
-
-    pub fn clear_result(self) -> ResponseWithInterChainMsgs<'r, ()> {
+    pub fn ignore_result(self) -> ResponseWithInterChainMsgs<'r, ()> {
         ResponseWithInterChainMsgs {
             receiver: self.receiver,
             result: (),
@@ -465,18 +440,105 @@ impl<'r, T> ResponseWithInterChainMsgs<'r, T> {
 
     #[must_use]
     #[track_caller]
-    pub fn unwrap_response(self) -> T {
-        self.receiver.assert_empty();
+    pub fn unwrap_response(mut self) -> T {
+        self.expect_empty();
 
         self.result
     }
 }
 
-impl<'r> ResponseWithInterChainMsgs<'r, ()> {
-    pub fn set_result<T>(self, result: T) -> ResponseWithInterChainMsgs<'r, T> {
-        ResponseWithInterChainMsgs {
-            receiver: self.receiver,
-            result,
+pub trait RemoteChain {
+    #[track_caller]
+    fn expect_empty(&mut self);
+
+    #[track_caller]
+    fn expect_register_ica(&mut self, expected_connection_id: &str, expected_ica_id: &str);
+
+    #[track_caller]
+    fn expect_ibc_transfer(&mut self, channel: &str, coin: CwCoin, sender: &str, receiver: &str);
+
+    #[track_caller]
+    fn expect_submit_tx(
+        &mut self,
+        expected_connection_id: &str,
+        expected_ica_id: &str,
+        expected_tx_count: usize,
+    );
+}
+
+impl<'r, T> RemoteChain for ResponseWithInterChainMsgs<'r, T> {
+    #[track_caller]
+    fn expect_empty(&mut self) {
+        assert_eq!(self.receiver.try_recv().ok(), None);
+    }
+
+    #[track_caller]
+    fn expect_register_ica(&mut self, expected_connection_id: &str, expected_ica_id: &str) {
+        let message = self
+            .receiver
+            .try_recv()
+            .expect("Expected message for ICA registration!");
+
+        if let InterChainMsg::RegisterInterchainAccount {
+            connection_id,
+            interchain_account_id,
+        } = message
+        {
+            assert_eq!(connection_id, expected_connection_id);
+            assert_eq!(interchain_account_id, expected_ica_id);
+        } else {
+            panic!("Expected message for ICA registration, got {message:?}!");
+        }
+    }
+
+    #[track_caller]
+    fn expect_ibc_transfer(&mut self, channel: &str, coin: CwCoin, sender: &str, receiver: &str) {
+        let message = self
+            .receiver
+            .try_recv()
+            .expect("Expected message for ICA registration!");
+
+        if let InterChainMsg::IbcTransfer {
+            source_channel,
+            token,
+            sender: actual_sender,
+            receiver: actual_receiver,
+            ..
+        } = message
+        {
+            assert_eq!(source_channel, channel);
+            assert_eq!(token, coin);
+            assert_eq!(actual_sender, sender);
+            assert_eq!(actual_receiver, receiver);
+        } else {
+            panic!("Expected message for ICA registration, got {message:?}!");
+        }
+    }
+
+    #[track_caller]
+    fn expect_submit_tx(
+        &mut self,
+        expected_connection_id: &str,
+        expected_ica_id: &str,
+        expected_tx_count: usize,
+    ) {
+        let message = self
+            .receiver
+            .try_recv()
+            .expect("Expected message for submitting transactions!");
+
+        if let InterChainMsg::SubmitTx {
+            connection_id,
+            interchain_account_id,
+            msgs,
+            ..
+        } = message
+        {
+            assert_eq!(connection_id, expected_connection_id);
+            assert_eq!(interchain_account_id, expected_ica_id);
+            assert_eq!(msgs.len(), expected_tx_count, "{msgs:?}");
+        } else {
+            panic!("Expected message for ICA registration, got {message:?}!");
         }
     }
 }
@@ -489,6 +551,10 @@ pub(crate) struct TestCase<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, Ti
 
 impl TestCase<(), (), (), (), (), (), ()> {
     pub const LEASER_CONNECTION_ID: &'static str = "connection-0";
+    pub const LEASER_IBC_CHANNEL: &'static str = "channel-0";
+
+    pub const PROFIT_ICA_CHANNEL: &'static str = "channel-0";
+    pub const PROFIT_ICA_ADDR: &'static str = "ica1";
 
     fn with_reserve(reserve: &[CwCoin]) -> Self {
         let (custom_message_sender, custom_message_receiver): (
@@ -706,31 +772,32 @@ where
                 profit_addr.clone(),
                 &NeutronSudoMsg::OpenAck {
                     port_id: CONNECTION_ID.into(),
-                    channel_id: "channel-1".into(),
-                    counterparty_channel_id: "channel-1".into(),
+                    channel_id: TestCase::PROFIT_ICA_CHANNEL.into(),
+                    counterparty_channel_id: TestCase::PROFIT_ICA_CHANNEL.into(),
                     counterparty_version: String::new(),
                 },
             )
             .unwrap();
 
-        response.receiver().assert_register_ica(CONNECTION_ID);
-        let _: AppResponse = response.unwrap_response();
+        response.expect_register_ica(CONNECTION_ID, "0");
+
+        () = response.ignore_result().unwrap_response();
 
         test_case.app.update_block(next_block);
 
-        let _: AppResponse = test_case
+        () = test_case
             .app
             .sudo(
                 profit_addr.clone(),
                 &NeutronSudoMsg::OpenAck {
                     port_id: "ica-port".into(),
-                    channel_id: "channel-1".into(),
-                    counterparty_channel_id: "channel-1".into(),
+                    channel_id: TestCase::PROFIT_ICA_CHANNEL.into(),
+                    counterparty_channel_id: TestCase::PROFIT_ICA_CHANNEL.into(),
                     counterparty_version: serde_json_wasm::to_string(&OpenAckVersion {
                         version: "1".into(),
                         controller_connection_id: CONNECTION_ID.into(),
                         host_connection_id: "DEADCODE".into(),
-                        address: "ica1".into(),
+                        address: TestCase::PROFIT_ICA_ADDR.into(),
                         encoding: "DEADCODE".into(),
                         tx_type: "DEADCODE".into(),
                     })
@@ -738,6 +805,7 @@ where
                 },
             )
             .unwrap()
+            .ignore_result()
             .unwrap_response();
 
         let ProfitConfigResponse {
@@ -779,19 +847,20 @@ where
             test_case.address_book.profit_addr.clone(),
         );
 
-        let _: AppResponse = test_case
+        () = test_case
             .app
             .sudo(
                 leaser_addr.clone(),
                 &leaser::msg::SudoMsg::SetupDex(ConnectionParams {
-                    connection_id: "connection-0".into(),
+                    connection_id: TestCase::LEASER_CONNECTION_ID.into(),
                     transfer_channel: Ics20Channel {
-                        local_endpoint: "channel-0".into(),
+                        local_endpoint: TestCase::LEASER_IBC_CHANNEL.into(),
                         remote_endpoint: "channel-422".into(),
                     },
                 }),
             )
             .unwrap()
+            .ignore_result()
             .unwrap_response();
 
         test_case.app.update_block(next_block);

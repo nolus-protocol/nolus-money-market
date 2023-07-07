@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use currency::{self, Currency};
 use finance::{
     coin::{Amount, Coin},
@@ -17,21 +15,16 @@ use lease::{
 };
 use platform::{coin_legacy, trx};
 use sdk::{
-    cosmwasm_ext::InterChainMsg,
-    cosmwasm_std::{to_binary, Addr, Binary, Coin as CwCoin, QueryRequest, WasmQuery},
+    cosmwasm_std::{to_binary, Addr, Binary, QueryRequest, WasmQuery},
     cw_multi_test::AppResponse,
-    neutron_sdk::{
-        bindings::msg::NeutronMsg,
-        sudo::msg::{RequestPacket, SudoMsg},
-    },
-    testing::InterChainMsgReceiverExt as _,
+    neutron_sdk::sudo::msg::{RequestPacket, SudoMsg},
 };
 use swap::trx as swap_trx;
 
 use super::{
     cwcoin,
-    test_case::{App, ResponseWithInterChainMsgs},
-    CwContractWrapper, ADMIN, USER,
+    test_case::{App, RemoteChain as _, ResponseWithInterChainMsgs, TestCase},
+    CwContractWrapper, Native, ADMIN, USER,
 };
 
 pub(crate) struct Instantiator;
@@ -76,9 +69,7 @@ impl Instantiator {
             )
             .unwrap();
 
-        response
-            .receiver()
-            .assert_register_ica(leaser_connection_id);
+        response.expect_register_ica(leaser_connection_id, "0");
 
         response.unwrap_response()
     }
@@ -196,8 +187,8 @@ pub struct InstantiatorAddresses {
 
 pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
     app: &mut App,
+    connection_id: &str,
     lease_addr: &Addr,
-    messages: VecDeque<NeutronMsg>,
     downpayment: Coin<DownpaymentC>,
     exp_borrow: Coin<Lpn>,
     exp_lease: Coin<LeaseC>,
@@ -210,32 +201,56 @@ pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
 
     let ica_addr = "ica0";
     let ica_port = format!("icacontroller-{ica_addr}");
-    let ica_port = ica_port.as_str();
     let ica_channel = format!("channel-{ica_addr}");
-    let ica_channel = ica_channel.as_str();
-    let mut response: ResponseWithInterChainMsgs<'_, (String, String)> =
-        open_ica(app, lease_addr, messages, ica_channel, ica_port, ica_addr);
-    let messages: VecDeque<InterChainMsg> = response.iter().collect();
-    let (connection_id, interchain_account_id) = response.unwrap_response();
-    check_state_opening(app, lease_addr);
 
-    let messages: VecDeque<InterChainMsg> = transfer_out(
+    let mut response: ResponseWithInterChainMsgs<'_, ()> = open_ica(
         app,
         lease_addr,
-        messages,
-        downpayment,
-        ica_channel,
+        connection_id,
+        &ica_channel,
+        &ica_port,
         ica_addr,
     )
-    .clear_result()
-    .collect();
+    .ignore_result();
+
+    response.expect_ibc_transfer(
+        TestCase::LEASER_IBC_CHANNEL,
+        cwcoin::<DownpaymentC, _>(downpayment),
+        lease_addr.as_str(),
+        ica_addr,
+    );
+
+    () = response.unwrap_response();
 
     check_state_opening(app, lease_addr);
 
-    let messages: VecDeque<InterChainMsg> =
-        transfer_out(app, lease_addr, messages, exp_borrow, ica_channel, ica_addr)
-            .clear_result()
-            .collect();
+    let mut response: ResponseWithInterChainMsgs<'_, ()> =
+        send_blank_response(app, lease_addr).ignore_result();
+
+    response.expect_ibc_transfer(
+        TestCase::LEASER_IBC_CHANNEL,
+        cwcoin::<Lpn, _>(exp_borrow),
+        lease_addr.as_str(),
+        ica_addr,
+    );
+
+    () = response.unwrap_response();
+
+    let mut response: ResponseWithInterChainMsgs<'_, ()> =
+        send_blank_response(app, lease_addr).ignore_result();
+
+    let remote_tx_count: usize =
+        usize::from(!currency::equal::<Lpn, Native>())
+            + usize::from(
+                !(currency::equal::<DownpaymentC, LeaseC>()
+                    || currency::equal::<DownpaymentC, Native>()),
+            );
+
+    if remote_tx_count != 0 {
+        response.expect_submit_tx(connection_id, "0", remote_tx_count);
+    }
+
+    () = response.unwrap_response();
 
     check_state_opening(app, lease_addr);
 
@@ -245,14 +260,7 @@ pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
         exp_lease
     };
 
-    swap::<DownpaymentC, LeaseC>(
-        app,
-        lease_addr,
-        messages,
-        exp_swap_out,
-        connection_id,
-        interchain_account_id,
-    );
+    swap_response::<DownpaymentC, LeaseC>(app, lease_addr, exp_swap_out, remote_tx_count);
 
     check_state_opened(app, lease_addr);
 }
@@ -260,24 +268,11 @@ pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
 fn open_ica<'r>(
     app: &'r mut App,
     lease_addr: &Addr,
-    mut messages: VecDeque<NeutronMsg>,
+    connection_id: &str,
     ica_channel: &str,
     ica_port: &str,
     ica_addr: &str,
-) -> ResponseWithInterChainMsgs<'r, (String, String)> {
-    let NeutronMsg::RegisterInterchainAccount {
-        connection_id,
-        interchain_account_id,
-    } = ({
-        let msg: NeutronMsg = messages.pop_front().unwrap();
-
-        assert_eq!(messages.as_slices(), (&[] as &[NeutronMsg], &[] as &[NeutronMsg]));
-
-        msg
-    }) else {
-        unreachable!("Unexpected message type!")
-    };
-
+) -> ResponseWithInterChainMsgs<'r, AppResponse> {
     app.sudo(
         Addr::unchecked(lease_addr),
         &SudoMsg::OpenAck {
@@ -298,26 +293,6 @@ fn open_ica<'r>(
         },
     )
     .unwrap()
-    .clear_result()
-    .set_result((connection_id, interchain_account_id))
-}
-
-fn transfer_out<'r, OutC>(
-    app: &'r mut App,
-    lease: &Addr,
-    messages: VecDeque<NeutronMsg>,
-    amount_out: Coin<OutC>,
-    ica_channel: &str,
-    ica_addr: &str,
-) -> ResponseWithInterChainMsgs<'r, AppResponse>
-where
-    OutC: Currency,
-{
-    let coin = expect_ibc_transfer(messages, ica_channel, lease.as_str(), ica_addr);
-
-    assert_eq!(coin, cwcoin(amount_out));
-
-    send_blank_response(app, lease)
 }
 
 fn check_state_opening(app: &mut App, lease: &Addr) {
@@ -338,13 +313,11 @@ fn check_state_opened(app: &mut App, lease: &Addr) {
     };
 }
 
-fn swap<DownpaymentC, LeaseC>(
+fn swap_response<DownpaymentC, LeaseC>(
     app: &mut App,
     lease: &Addr,
-    mut messages: VecDeque<InterChainMsg>,
     swap_out: Coin<LeaseC>,
-    connection_id: String,
-    interchain_account_id: String,
+    expected_amounts_count: usize,
 ) where
     DownpaymentC: Currency,
     LeaseC: Currency,
@@ -356,29 +329,16 @@ fn swap<DownpaymentC, LeaseC>(
         let borrow_amount = Into::<Amount>::into(swap_out) - downpayment_out;
         vec![downpayment_out, borrow_amount]
     };
-    {
-        let NeutronMsg::SubmitTx {
-            connection_id: tx_conn_id,
-            interchain_account_id: tx_ica_id,
-            msgs,
-            ..
-        } = messages.pop_front().expect("Expected to receive a `SubmitTx` message but no message was available!") else {
-            unreachable!("Unexpected message type!")
-        };
 
-        assert_eq!(
-            messages.as_slices(),
-            (&[] as &[InterChainMsg], &[] as &[InterChainMsg])
-        );
+    assert_eq!(amounts_out.len(), expected_amounts_count);
 
-        assert_eq!(tx_conn_id, connection_id);
-        assert_eq!(tx_ica_id, interchain_account_id);
-        assert_eq!(msgs.len(), amounts_out.len());
-    }
     check_state_opening(app, lease);
 
     let swap_resp = swap_exact_in_resp(amounts_out);
-    let _: AppResponse = send_response(app, lease, swap_resp).unwrap_response();
+
+    () = send_response(app, lease, swap_resp)
+        .ignore_result()
+        .unwrap_response();
 }
 
 fn swap_exact_in_resp<I>(amounts: I) -> Binary
@@ -421,30 +381,4 @@ fn send_response<'r>(
         },
     )
     .unwrap()
-}
-
-pub fn expect_ibc_transfer(
-    mut messages: VecDeque<NeutronMsg>,
-    ica_channel: &str,
-    sender_addr: &str,
-    ica_addr: &str,
-) -> CwCoin {
-    let NeutronMsg::IbcTransfer {
-        source_port, source_channel, token, sender, receiver, ..
-    } = messages.pop_front().unwrap() else {
-        unreachable!("Unexpected message type!")
-    };
-
-    assert_eq!(
-        messages.as_slices(),
-        (&[] as &[InterChainMsg], &[] as &[InterChainMsg]),
-        "Expected queue to be empty, but other message(s) has been sent!"
-    );
-
-    assert_eq!(&source_port, "transfer");
-    assert_ne!(&source_channel, ica_channel);
-    assert_eq!(&sender, sender_addr);
-    assert_eq!(&receiver, ica_addr);
-
-    token
 }
