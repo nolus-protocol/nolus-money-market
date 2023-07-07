@@ -249,9 +249,7 @@ fn deposit_and_withdraw() {
             test_case.address_book.lpp().clone(),
             &[lpn_cwcoin(lpp_balance_push)],
         )
-        .unwrap()
-        .ignore_result()
-        .unwrap_response();
+        .unwrap();
 
     let price: PriceResponse<Lpn> = test_case
         .app
@@ -740,7 +738,7 @@ fn loan_open_and_repay() {
         .unwrap_err();
 
     // repay wrong currency
-    _ = test_case
+    () = test_case
         .app
         .send_tokens(
             admin,
@@ -748,6 +746,7 @@ fn loan_open_and_repay() {
             &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
         )
         .unwrap();
+
     _ = test_case
         .app
         .execute(
@@ -1105,9 +1104,8 @@ fn compare_lpp_states() {
             loan_addr2.clone(),
             &[coin_legacy::to_cosmwasm::<Nls>(repay_interest_part.into())],
         )
-        .unwrap()
-        .ignore_result()
-        .unwrap_response();
+        .unwrap();
+
     _ = test_case
         .app
         .execute(
