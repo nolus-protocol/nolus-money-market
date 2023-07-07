@@ -10,7 +10,7 @@ use sdk::{
     testing::InterChainMsgReceiver,
 };
 
-use crate::common::{test_case::response::ResponseWithInterChainMsgs, MockApp};
+use crate::common::{test_case::response::ResponseWithInterChainMsgs, AppExt as _, MockApp};
 
 #[must_use]
 pub(crate) struct App {
