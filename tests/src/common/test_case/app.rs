@@ -114,10 +114,7 @@ impl App {
         self.with_mock_app(|app: &mut MockApp| app.wasm_sudo(contract_addr, msg))
     }
 
-    pub fn with_mock_app<'r, F, R>(
-        &'r mut self,
-        f: F,
-    ) -> anyhow::Result<ResponseWithInterChainMsgs<'r, R>>
+    pub fn with_mock_app<F, R>(&mut self, f: F) -> anyhow::Result<ResponseWithInterChainMsgs<'_, R>>
     where
         F: FnOnce(&'_ mut MockApp) -> anyhow::Result<R>,
     {
