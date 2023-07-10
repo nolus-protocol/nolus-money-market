@@ -341,22 +341,25 @@ fn send_open_ica_response<'r>(
     .unwrap()
 }
 
+fn fetch_state(app: &mut App, lease: &Addr) -> StateResponse {
+    app.query()
+        .query(&QueryRequest::Wasm(WasmQuery::Smart {
+            contract_addr: lease.to_string(),
+            msg: to_binary(&StateQuery {}).unwrap(),
+        }))
+        .unwrap()
+}
+
 fn check_state_opening(app: &mut App, lease: &Addr) {
-    let StateResponse::Opening { .. } = app.query().query(&QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: lease.to_string(),
-        msg: to_binary(&StateQuery {}).unwrap(),
-    })).unwrap() else {
+    if !matches!(fetch_state(app, lease), StateResponse::Opening { .. }) {
         panic!("Opening lease failed! Lease is expected to be in opening state!");
-    };
+    }
 }
 
 fn check_state_opened(app: &mut App, lease: &Addr) {
-    let StateResponse::Opened { .. } = app.query().query(&QueryRequest::Wasm(WasmQuery::Smart {
-        contract_addr: lease.to_string(),
-        msg: to_binary(&StateQuery {}).unwrap(),
-    })).unwrap() else {
+    if !matches!(fetch_state(app, lease), StateResponse::Opened { .. }) {
         panic!("Opening lease failed! Lease is not yet it opened state!");
-    };
+    }
 }
 
 fn send_swap_response<DownpaymentC, LeaseC>(
