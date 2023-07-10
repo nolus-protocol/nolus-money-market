@@ -184,7 +184,7 @@ where
 
         response.expect_register_ica(CONNECTION_ID, "0");
 
-        () = response.ignore_result().unwrap_response();
+        () = response.ignore_response().unwrap_response();
 
         test_case.app.update_block(next_block);
 
@@ -208,7 +208,7 @@ where
                 },
             )
             .unwrap()
-            .ignore_result()
+            .ignore_response()
             .unwrap_response();
 
         let ProfitConfigResponse {
@@ -263,7 +263,7 @@ where
                 }),
             )
             .unwrap()
-            .ignore_result()
+            .ignore_response()
             .unwrap_response();
 
         test_case.app.update_block(next_block);

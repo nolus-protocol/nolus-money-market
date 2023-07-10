@@ -589,7 +589,7 @@ where
             &[cwcoin(downpayment)],
         )
         .unwrap()
-        .ignore_result();
+        .ignore_response();
 
     response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
 

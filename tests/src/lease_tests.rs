@@ -170,7 +170,7 @@ fn try_init_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms, D>(
 
     response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
 
-    () = response.ignore_result().unwrap_response();
+    () = response.ignore_response().unwrap_response();
 }
 
 fn get_lease_address<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(

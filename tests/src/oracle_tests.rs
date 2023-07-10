@@ -144,7 +144,7 @@ fn feed_price_with_alarm_issue() {
             &[],
         )
         .unwrap()
-        .ignore_result()
+        .ignore_response()
         .unwrap_response();
 
     let _: AppResponse = feed_price(
@@ -176,7 +176,7 @@ fn feed_price_with_alarm() {
             &[],
         )
         .unwrap()
-        .ignore_result()
+        .ignore_response()
         .unwrap_response();
 
     let _: AppResponse = feed_price(
@@ -208,7 +208,7 @@ fn overwrite_alarm_and_dispatch() {
             &[],
         )
         .unwrap()
-        .ignore_result()
+        .ignore_response()
         .unwrap_response();
 
     () = test_case
@@ -225,7 +225,7 @@ fn overwrite_alarm_and_dispatch() {
             &[],
         )
         .unwrap()
-        .ignore_result()
+        .ignore_response()
         .unwrap_response();
 
     // If doesn't panic, then prices should be fed successfully.
@@ -282,7 +282,7 @@ fn open_lease<Dispatcher, Treasury, Profit, Lpp, Oracle, TimeAlarms>(
 
     response.expect_register_ica(TestCase::LEASER_CONNECTION_ID, "0");
 
-    () = response.ignore_result().unwrap_response();
+    () = response.ignore_response().unwrap_response();
 
     get_lease_address(test_case)
 }
@@ -328,7 +328,7 @@ fn wrong_timealarms_addr() {
             &[],
         )
         .unwrap()
-        .ignore_result()
+        .ignore_response()
         .unwrap_response();
 }
 
@@ -672,7 +672,7 @@ fn set_should_fail(app: &mut App, dummy_contract: Addr, should_fail: bool) {
             &[],
         )
         .unwrap()
-        .ignore_result()
+        .ignore_response()
         .unwrap_response();
 }
 

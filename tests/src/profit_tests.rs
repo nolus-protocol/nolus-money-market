@@ -85,7 +85,7 @@ fn on_alarm_zero_balance() {
             &[],
         )
         .unwrap()
-        .ignore_result()
+        .ignore_response()
         .unwrap_response();
 }
 

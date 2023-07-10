@@ -236,7 +236,7 @@ fn add_alarm<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>(
             &[],
         )
         .unwrap()
-        .ignore_result()
+        .ignore_response()
         .unwrap_response();
 }
 
@@ -346,7 +346,7 @@ fn reschedule_failed_alarm() {
             &[],
         )
         .unwrap()
-        .ignore_result()
+        .ignore_response()
         .unwrap_response();
 
     add_alarm(&mut test_case, &lease1, 1);
@@ -379,7 +379,7 @@ fn reschedule_failing_alarms_mix() {
                 &[],
             )
             .unwrap()
-            .ignore_result()
+            .ignore_response()
             .unwrap_response();
 
         add_alarm(&mut test_case, &addr, 1);
@@ -497,7 +497,7 @@ fn test_time_notify() {
         .app
         .execute(Addr::unchecked(ADMIN), lease3.clone(), &close_gate, &[])
         .unwrap()
-        .ignore_result()
+        .ignore_response()
         .unwrap_response();
     let resp = dispatch(&mut test_case, 100);
     dbg!(&resp);
@@ -512,7 +512,7 @@ fn test_time_notify() {
         .app
         .execute(Addr::unchecked(ADMIN), lease3.clone(), &open_gate, &[])
         .unwrap()
-        .ignore_result()
+        .ignore_response()
         .unwrap_response();
 
     let resp = dispatch(&mut test_case, 100);

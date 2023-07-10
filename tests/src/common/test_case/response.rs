@@ -6,18 +6,18 @@ use sdk::{
 #[derive(Debug)]
 pub(crate) struct ResponseWithInterChainMsgs<'r, T> {
     receiver: &'r mut InterChainMsgReceiver,
-    result: T,
+    response: T,
 }
 
 impl<'r, T> ResponseWithInterChainMsgs<'r, T> {
     pub(super) fn new(receiver: &'r mut InterChainMsgReceiver, result: T) -> Self {
-        Self { receiver, result }
+        Self { receiver, response: result }
     }
 
-    pub fn ignore_result(self) -> ResponseWithInterChainMsgs<'r, ()> {
+    pub fn ignore_response(self) -> ResponseWithInterChainMsgs<'r, ()> {
         ResponseWithInterChainMsgs {
             receiver: self.receiver,
-            result: (),
+            response: (),
         }
     }
 
@@ -26,7 +26,7 @@ impl<'r, T> ResponseWithInterChainMsgs<'r, T> {
     pub fn unwrap_response(mut self) -> T {
         self.expect_empty();
 
-        self.result
+        self.response
     }
 }
 

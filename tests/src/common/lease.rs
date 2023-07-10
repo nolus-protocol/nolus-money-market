@@ -229,7 +229,7 @@ fn do_swap<DownpaymentC, LeaseC>(
     LeaseC: Currency,
 {
     let mut response: ResponseWithInterChainMsgs<'_, ()> =
-        send_blank_response(app, lease_addr).ignore_result();
+        send_blank_response(app, lease_addr).ignore_response();
 
     let remote_tx_count: usize = 1 + usize::from(!currency::equal::<DownpaymentC, LeaseC>());
 
@@ -297,7 +297,7 @@ fn send_response_and_expect<F, C>(
     F: for<'t> FnOnce(&'t mut App) -> ResponseWithInterChainMsgs<'t, AppResponse>,
     C: Currency,
 {
-    let mut response: ResponseWithInterChainMsgs<'_, ()> = send_response(app).ignore_result();
+    let mut response: ResponseWithInterChainMsgs<'_, ()> = send_response(app).ignore_response();
 
     response.expect_ibc_transfer(
         TestCase::LEASER_IBC_CHANNEL,
@@ -383,7 +383,7 @@ fn send_swap_response<DownpaymentC, LeaseC>(
     let swap_resp = swap_exact_in_resp(amounts_out);
 
     () = send_response(app, lease, swap_resp)
-        .ignore_result()
+        .ignore_response()
         .unwrap_response();
 }
 
