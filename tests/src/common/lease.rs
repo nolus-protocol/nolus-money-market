@@ -258,7 +258,7 @@ pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
         exp_lease
     };
 
-    swap_response::<DownpaymentC, LeaseC>(app, lease_addr, exp_swap_out, remote_tx_count);
+    send_swap_response::<DownpaymentC, LeaseC>(app, lease_addr, exp_swap_out, remote_tx_count);
 
     check_state_opened(app, lease_addr);
 }
@@ -311,7 +311,7 @@ fn check_state_opened(app: &mut App, lease: &Addr) {
     };
 }
 
-fn swap_response<DownpaymentC, LeaseC>(
+fn send_swap_response<DownpaymentC, LeaseC>(
     app: &mut App,
     lease: &Addr,
     swap_out: Coin<LeaseC>,
