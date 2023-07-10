@@ -25,7 +25,7 @@ impl Instantiator {
         Lpn: Currency,
     {
         // TODO [Rust 1.70] Convert to static item with OnceCell
-        let endpoints: CwContractWrapper<_, _, _, _, _, _, _, _, _, _, _> = CwContractWrapper::new(
+        let endpoints = CwContractWrapper::new(
             treasury::contract::execute,
             treasury::contract::instantiate,
             mock_query,

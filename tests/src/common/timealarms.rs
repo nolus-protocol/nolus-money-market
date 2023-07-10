@@ -13,7 +13,8 @@ pub(crate) struct Instantiator;
 impl Instantiator {
     #[track_caller]
     pub fn instantiate(app: &mut App) -> Addr {
-        let endpoints: CwContractWrapper<_, _, _, _, _, _, _, _, _, _, _> =
+        // TODO [Rust 1.70] Convert to static item with OnceCell
+        let endpoints =
             CwContractWrapper::new(execute, instantiate, mock_query).with_reply(reply);
 
         let code_id = app.store_code(Box::new(endpoints));

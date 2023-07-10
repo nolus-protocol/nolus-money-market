@@ -42,7 +42,7 @@ impl Instantiator {
         profit: Addr,
     ) -> Addr {
         // TODO [Rust 1.70] Convert to static item with OnceCell
-        let endpoints: CwContractWrapper<_, _, _, _, _, _, _, _, _, _, _> =
+        let endpoints =
             CwContractWrapper::new(execute, instantiate, query)
                 .with_reply(reply)
                 .with_sudo(sudo);

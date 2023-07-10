@@ -30,7 +30,7 @@ pub(crate) struct Instantiator;
 
 impl Instantiator {
     pub fn store(app: &mut App) -> u64 {
-        let endpoints: CwContractWrapper<_, _, _, _, _, _, _, _, _, _, _> =
+        let endpoints =
             CwContractWrapper::new(execute, instantiate, query)
                 .with_reply(reply)
                 .with_sudo(sudo);

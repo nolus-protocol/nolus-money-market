@@ -21,7 +21,7 @@ impl Instantiator {
         treasury: Addr,
     ) -> Addr {
         // TODO [Rust 1.70] Convert to static item with OnceCell
-        let endpoints: CwContractWrapper<_, _, _, _, _, _, _, _, _, _, _> = CwContractWrapper::new(
+        let endpoints = CwContractWrapper::new(
             rewards_dispatcher::contract::execute,
             rewards_dispatcher::contract::instantiate,
             rewards_dispatcher::contract::query,
