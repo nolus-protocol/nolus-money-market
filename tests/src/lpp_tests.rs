@@ -115,7 +115,7 @@ fn config_update_parameters() {
 }
 
 #[test]
-#[should_panic(expected = "Expecting code id 1 for the contract contract5")]
+#[should_panic(expected = "Expecting code id 1 for the contract contract0")]
 fn open_loan_unauthorized_contract_id() {
     let mut test_case: TestCase<_, _, _, _, _, _, _> = TestCaseBuilder::<Lpn>::new()
         .init_lpp(
@@ -130,15 +130,10 @@ fn open_loan_unauthorized_contract_id() {
         .init_profit(24)
         .into_generic();
 
-    //redeploy lease contract to change the code_id
-    test_case.store_new_lease_code();
-
-    let lease_addr = test_case.open_lease::<Lpn>(LeaseCurrency::TICKER);
-
     () = test_case
         .app
         .execute(
-            lease_addr,
+            test_case.address_book.lpp().clone(),
             test_case.address_book.lpp().clone(),
             &lpp::msg::ExecuteMsg::OpenLoan {
                 amount: test::funds::<_, Lpn>(100),

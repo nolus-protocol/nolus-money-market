@@ -72,7 +72,7 @@ impl TestCase<(), (), (), (), (), (), ()> {
             custom_message_receiver,
         );
 
-        let lease_code_id: u64 = Self::store_lease_code(&mut app);
+        let lease_code_id: u64 = LeaseInstantiator::store(&mut app);
 
         Self {
             app,
@@ -92,17 +92,6 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
             .unwrap_response();
 
         self
-    }
-
-    pub fn store_new_lease_code(&mut self) -> &mut Self {
-        self.address_book
-            .set_lease_code_id(Self::store_lease_code(&mut self.app));
-
-        self
-    }
-
-    fn store_lease_code(app: &mut App) -> u64 {
-        LeaseInstantiator::store(app)
     }
 }
 

@@ -225,10 +225,6 @@ impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle>
 impl<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
     AddressBook<Dispatcher, Treasury, Profit, Leaser, Lpp, Oracle, TimeAlarms>
 {
-    pub(super) fn set_lease_code_id(&mut self, lease_code_id: u64) {
-        self.lease_code_id = lease_code_id;
-    }
-
     pub const fn lease_code_id(&self) -> u64 {
         self.lease_code_id
     }
