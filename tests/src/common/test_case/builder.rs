@@ -148,12 +148,12 @@ impl<Lpn, Dispatcher, Leaser, Lpp> Builder<Lpn, Dispatcher, Addr, (), Leaser, Lp
 where
     Lpn: Currency,
 {
+    const PROFIT_CONNECTION_ID: &str = "dex-connection";
+
     pub fn init_profit(
         self,
         cadence_hours: u16,
     ) -> Builder<Lpn, Dispatcher, Addr, Addr, Leaser, Lpp, Addr, Addr> {
-        const CONNECTION_ID: &str = "dex-connection";
-
         let Self {
             mut test_case,
             _lpn,
@@ -169,47 +169,27 @@ where
 
         test_case.app.update_block(next_block);
 
-        let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
-            .app
-            .sudo(
-                profit_addr.clone(),
-                &NeutronSudoMsg::OpenAck {
-                    port_id: CONNECTION_ID.into(),
-                    channel_id: TestCase::PROFIT_ICA_CHANNEL.into(),
-                    counterparty_channel_id: TestCase::PROFIT_ICA_CHANNEL.into(),
-                    counterparty_version: String::new(),
-                },
-            )
-            .unwrap();
+        Self::initialize(&mut test_case, &profit_addr, cadence_hours);
 
-        response.expect_register_ica(CONNECTION_ID, "0");
+        Builder {
+            test_case: TestCase {
+                app: test_case.app,
+                address_book: test_case.address_book.with_profit(profit_addr),
+            },
+            _lpn,
+        }
+    }
 
-        () = response.ignore_response().unwrap_response();
+    fn initialize(
+        test_case: &mut TestCase<Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>,
+        profit_addr: &Addr,
+        cadence_hours: u16,
+    ) {
+        Self::send_open_channel_response(test_case, profit_addr);
 
         test_case.app.update_block(next_block);
 
-        () = test_case
-            .app
-            .sudo(
-                profit_addr.clone(),
-                &NeutronSudoMsg::OpenAck {
-                    port_id: "ica-port".into(),
-                    channel_id: TestCase::PROFIT_ICA_CHANNEL.into(),
-                    counterparty_channel_id: TestCase::PROFIT_ICA_CHANNEL.into(),
-                    counterparty_version: serde_json_wasm::to_string(&OpenAckVersion {
-                        version: "1".into(),
-                        controller_connection_id: CONNECTION_ID.into(),
-                        host_connection_id: "DEADCODE".into(),
-                        address: TestCase::PROFIT_ICA_ADDR.into(),
-                        encoding: "DEADCODE".into(),
-                        tx_type: "DEADCODE".into(),
-                    })
-                    .unwrap(),
-                },
-            )
-            .unwrap()
-            .ignore_response()
-            .unwrap_response();
+        Self::send_open_ica_response(test_case, profit_addr);
 
         let ProfitConfigResponse {
             cadence_hours: reported_cadence_hours,
@@ -220,14 +200,56 @@ where
             .unwrap();
 
         assert_eq!(reported_cadence_hours, cadence_hours);
+    }
 
-        Builder {
-            test_case: TestCase {
-                app: test_case.app,
-                address_book: test_case.address_book.with_profit(profit_addr),
-            },
-            _lpn,
-        }
+    fn send_open_channel_response(
+        test_case: &mut TestCase<Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>,
+        profit_addr: &Addr,
+    ) {
+        let mut response: ResponseWithInterChainMsgs<'_, AppResponse> = test_case
+            .app
+            .sudo(
+                profit_addr.clone(),
+                &NeutronSudoMsg::OpenAck {
+                    port_id: Self::PROFIT_CONNECTION_ID.into(),
+                    channel_id: TestCase::PROFIT_ICA_CHANNEL.into(),
+                    counterparty_channel_id: TestCase::PROFIT_ICA_CHANNEL.into(),
+                    counterparty_version: String::new(),
+                },
+            )
+            .unwrap();
+
+        response.expect_register_ica(Self::PROFIT_CONNECTION_ID, "0");
+
+        response.ignore_response().unwrap_response()
+    }
+
+    fn send_open_ica_response(
+        test_case: &mut TestCase<Dispatcher, Addr, (), Leaser, Lpp, Addr, Addr>,
+        profit_addr: &Addr,
+    ) {
+        test_case
+            .app
+            .sudo(
+                profit_addr.clone(),
+                &NeutronSudoMsg::OpenAck {
+                    port_id: "ica-port".into(),
+                    channel_id: TestCase::PROFIT_ICA_CHANNEL.into(),
+                    counterparty_channel_id: TestCase::PROFIT_ICA_CHANNEL.into(),
+                    counterparty_version: serde_json_wasm::to_string(&OpenAckVersion {
+                        version: "1".into(),
+                        controller_connection_id: Self::PROFIT_CONNECTION_ID.into(),
+                        host_connection_id: "DEADCODE".into(),
+                        address: TestCase::PROFIT_ICA_ADDR.into(),
+                        encoding: "DEADCODE".into(),
+                        tx_type: "DEADCODE".into(),
+                    })
+                    .unwrap(),
+                },
+            )
+            .unwrap()
+            .ignore_response()
+            .unwrap_response()
     }
 }
 
