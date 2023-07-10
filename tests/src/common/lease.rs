@@ -215,6 +215,19 @@ pub(crate) fn complete_lease_initialization<Lpn, DownpaymentC, LeaseC>(
         exp_borrow,
     );
 
+    do_swap(app, lease_addr, connection_id, downpayment, exp_lease);
+}
+
+fn do_swap<DownpaymentC, LeaseC>(
+    app: &mut App,
+    lease_addr: &Addr,
+    connection_id: &str,
+    downpayment: Coin<DownpaymentC>,
+    exp_lease: Coin<LeaseC>,
+) where
+    DownpaymentC: Currency,
+    LeaseC: Currency,
+{
     let mut response: ResponseWithInterChainMsgs<'_, ()> =
         send_blank_response(app, lease_addr).ignore_result();
 
